@@ -1455,7 +1455,7 @@ Dev-only Routes (non-production only):
 
 > **Note:** `/register` (phone registration) is a legacy fallback on `/login`. The primary new-user path is the personality-test → WeChat-login flow. `/chats/direct/:threadId` has been removed (DM system removed). The `连接` tab at `/connections` shows structured post-event connections. Event coordination is at `/event-coordination/:groupId`.
 
-> **Note on admin routes:** All `/admin/*` routes in the user client redirect to `https://admin.yuejuapp.com`. The admin portal is a separate deployment (`apps/admin-client`).
+> **Note on admin routes:** All `/admin/*` routes in the user client redirect to `https://admin.joyjoinapp.com`. The admin portal is a separate deployment (`apps/admin-client`).
 
 ---
 

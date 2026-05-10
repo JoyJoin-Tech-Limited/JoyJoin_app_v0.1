@@ -168,8 +168,12 @@ export const MINISCRIPT_CATALOG: MiniscriptCatalog = {
   ],
 };
 
-// Validate at module load in development
-if (process.env.NODE_ENV !== 'production') {
+// Validate at module load in development (no `process` in WeChat mini-program runtime)
+const _nodeEnv =
+  typeof process !== 'undefined' && process.env && typeof process.env.NODE_ENV === 'string'
+    ? process.env.NODE_ENV
+    : 'production'
+if (_nodeEnv !== 'production') {
   const result = miniscriptCatalogSchema.safeParse(MINISCRIPT_CATALOG);
   if (!result.success) {
     // eslint-disable-next-line no-console

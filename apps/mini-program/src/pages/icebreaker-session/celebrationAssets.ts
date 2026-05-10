@@ -10,6 +10,7 @@
  *   - Total: ~753KB for 5 frames
  */
 
+/** Root-relative — same paths exist under `dist/assets/` after copy; avoids broken `require` when hoisted to `common.js`. */
 export const CELEBRATION_FRAME_MAP = {
   auction_sold: '/assets/lovart/icebreaker/celebrations/celebration-auction-sold.png',
   dice_reveal: '/assets/lovart/icebreaker/celebrations/celebration-dice-reveal.png',

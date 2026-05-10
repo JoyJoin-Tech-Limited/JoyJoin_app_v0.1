@@ -12,6 +12,7 @@ export interface SessionParticipant {
   isActive?: boolean
 }
 
+/** Root-relative paths — work from any JS chunk (e.g. `dist/common.js`); avoid `require('../../assets/…')` which resolves wrong when hoisted. */
 export const MOOD_OPTIONS: Array<{ mood: AtmosphereMood; label: string; asset: string }> = [
   { mood: 'funny', label: '搞笑', asset: '/assets/icons/mood-icons/mood-funny.png' },
   { mood: 'life', label: '生活', asset: '/assets/icons/mood-icons/mood-life.png' },

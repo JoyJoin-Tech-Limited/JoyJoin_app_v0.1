@@ -563,7 +563,7 @@ export function setupWechatAuth(app: Express) {
    * tested without a registered WeChat Official Account.
    */
   app.get("/api/auth/wechat/oauth/start", (req: Request, res) => {
-    // APP_URL is the public-facing origin of the app (e.g. https://yuejuapp.com).
+    // APP_URL is the public-facing origin of the app (e.g. https://joyjoinapp.com).
     // The Nginx reverse proxy routes /api/* from this same origin to the backend
     // (path-based, not subdomain), so a single variable covers both the WeChat OAuth2
     // redirect_uri AND the post-login redirect target.
@@ -606,7 +606,7 @@ export function setupWechatAuth(app: Express) {
       // openid only. This is suitable for login because we only need identity, not profile.
       // Use snsapi_userinfo instead if you need nickname/avatar from WeChat directly.
       //
-      // "网页授权域名" prerequisite: the domain in APP_URL (e.g. yuejuapp.com) must be
+      // "网页授权域名" prerequisite: the domain in APP_URL (e.g. joyjoinapp.com) must be
       // registered as the webpage authorization domain in the WeChat OA backend settings.
       const callbackUri = `${appUrl}/api/auth/wechat/oauth/callback`;
       const oauthUrl =

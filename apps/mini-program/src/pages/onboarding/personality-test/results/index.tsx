@@ -13,6 +13,7 @@ import {
   readAnonymousAssessmentSession,
   saveAnonymousAssessmentSession,
   type AnonymousAssessmentSessionSnapshot,
+  type AnonymousAssessmentTopMatch,
 } from '../../../../lib/auth/anonymousOnboarding'
 import { getDegradationTier, type DegradationTier } from '../../../../lib/utils/frameBudget'
 import { haptics } from '../../../../lib/utils/haptics'
@@ -267,7 +268,7 @@ export default function PersonalityTestResultsPage() {
         sessionId: string
         completedAt?: string
         result: NonNullable<typeof latestSnapshot.result>
-        topArchetypes?: typeof topMatches
+        topArchetypes?: AnonymousAssessmentTopMatch[]
       }>({
         path: `/api/assessment/v4/${encodeURIComponent(latestSnapshot.sessionId)}/result`,
         // @ts-expect-error - apiRequest may not expose signal yet; handled gracefully

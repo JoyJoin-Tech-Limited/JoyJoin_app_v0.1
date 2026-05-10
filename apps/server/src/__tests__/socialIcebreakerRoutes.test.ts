@@ -167,7 +167,7 @@ vi.mock('../socialIcebreakerAIService', () => ({
   }),
   generatePersonalityDiceChallenges: vi.fn().mockImplementation(async ({ participants }: { participants: Array<{ userId: string; displayName: string }> }) => {
     return {
-      data: participants.map((participant: { userId: string; displayName: string }, i: number) => ({
+      data: params.participants.map((participant: { userId: string; displayName: string }, i: number) => ({
         userId: participant.userId,
         displayName: participant.displayName,
         dominantTrait: 'A' as const,
