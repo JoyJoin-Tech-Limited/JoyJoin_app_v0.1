@@ -1,7 +1,7 @@
 import { Image, Input, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ARCHETYPE_CANONICAL_ORDER, getArchetypeIndex } from '@shared/personality/archetypeNames'
+import { ARCHETYPE_BY_ID, ARCHETYPE_CANONICAL_ORDER, getArchetypeIndex } from '@shared/personality/archetypeNames'
 import Button from '../../../../components/ui/Button'
 import Card from '../../../../components/ui/Card'
 import { COLOR_PRIMARY } from '../../../../lib/utils/uiConstants'
@@ -566,7 +566,7 @@ export default function FinalStage({
                     className='personality-results__collect-name'
                     style={{ opacity: isUnlocked ? 1 : 0.35 }}
                   >
-                    {isUnlocked ? archetype : '???'}
+                    {isUnlocked ? (ARCHETYPE_BY_ID[archetype]?.nameCn ?? archetype) : '???'}
                   </Text>
                   {isUnlocked && (
                     <View className='personality-results__collect-glow' style={{ background: visual.accentSoft }} />

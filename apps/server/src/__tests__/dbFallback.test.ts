@@ -1,11 +1,25 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("db fallback", () => {
   const originalEnv = process.env.DATABASE_URL;
 
-  afterEach(() => {
+  beforeEach(() => {
     vi.resetModules();
+    vi.doMock("@neondatabase/serverless", () => ({
+      neonConfig: {},
+      Pool: class Pool {
+        constructor() {
+          throw new Error("Pool should not be instantiated without DATABASE_URL");
+        }
+      },
+    }));
+    vi.doMock("ws", () => ({ default: class WebSocket {} }));
+    vi.doMock("drizzle-orm/neon-serverless", () => ({
+      drizzle: () => ({}),
+    }));
+  });
 
+  afterEach(() => {
     if (originalEnv === undefined) {
       delete process.env.DATABASE_URL;
     } else {

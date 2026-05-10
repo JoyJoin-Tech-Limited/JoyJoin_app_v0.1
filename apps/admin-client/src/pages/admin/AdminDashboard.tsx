@@ -5,58 +5,7 @@ import { Users, CreditCard, Calendar, DollarSign, UserPlus, TrendingUp, AlertCir
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useMemo } from "react";
-
-interface WeakUser {
-  id: string;
-  displayName: string;
-  score: number;
-  starRating: number;
-  missingFields: string[];
-}
-
-interface AdminStats {
-  totalUsers: number;
-  subscribedUsers: number;
-  eventsThisMonth: number;
-  monthlyRevenue: number;
-  newUsersThisWeek: number;
-  userGrowth: number;
-  personalityDistribution: Record<string, number>;
-  archetypeDistribution?: Record<string, number>;
-  completenessStats?: {
-    star1: number;
-    star2: number;
-    star3: number;
-    star4: number;
-    star5: number;
-    weakUsers: WeakUser[];
-  };
-  cityDistribution?: Record<string, number>;
-  weeklyMatchingSatisfaction?: number;
-  lowScoringMatches?: number;
-  gamificationStats?: {
-    levelDistribution: Record<string, number>;
-    totalXP: number;
-    totalJoyCoins: number;
-    activeStreakUsers: number;
-    avgLevel: number;
-  };
-  matchingMetrics?: {
-    semanticFeatureEnabled: boolean;
-    semanticSimilarity: {
-      sampleCount: number;
-      average: number | null;
-      min: number | null;
-      max: number | null;
-    };
-    semanticPairDelta: {
-      sampleCount: number;
-      average: number | null;
-      min: number | null;
-      max: number | null;
-    };
-  };
-}
+import type { WeakUser, AdminStats } from "./types";
 
 interface TodayEvent {
   id: string;
@@ -530,12 +479,12 @@ export default function AdminDashboard() {
             <AlertCircle className={`h-4 w-4 ${stats?.lowScoringMatches && stats.lowScoringMatches > 0 ? "text-red-500" : "text-muted-foreground"}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600" data-testid="stat-value-low-matches">
+            <div className="text-2xl font-bold text-destructive" data-testid="stat-value-low-matches">
               {stats?.lowScoringMatches ?? 0}
             </div>
             <p className="text-xs text-muted-foreground">匹配得分 &lt; 50</p>
             {stats?.lowScoringMatches && stats.lowScoringMatches > 0 && (
-              <Button size="sm" variant="ghost" className="mt-2 h-6 text-xs" data-testid="button-view-low-matches">
+              <Button size="sm" variant="ghost" className="mt-2 h-6 text-xs" onClick={() => setLocation("/admin/matching")} data-testid="button-view-low-matches">
                 查看详情 →
               </Button>
             )}

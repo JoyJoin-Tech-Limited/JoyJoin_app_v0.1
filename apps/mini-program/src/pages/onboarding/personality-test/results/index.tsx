@@ -13,6 +13,7 @@ import {
   readAnonymousAssessmentSession,
   saveAnonymousAssessmentSession,
   type AnonymousAssessmentSessionSnapshot,
+  type AnonymousAssessmentTopMatch,
 } from '../../../../lib/auth/anonymousOnboarding'
 import { getDegradationTier, type DegradationTier } from '../../../../lib/utils/frameBudget'
 import { haptics } from '../../../../lib/utils/haptics'
@@ -38,6 +39,7 @@ import {
   type PersonalitySquarePosterInput,
 } from '../../../../lib/utils/momentsPosterFactory'
 import {
+  ARCHETYPE_SEQUENCE,
   buildResolvedResultState,
   buildShareLine,
   buildShareTitle,
@@ -74,17 +76,15 @@ export default function PersonalityTestResultsPage() {
   const [flowStage, setFlowStage] = useState<FlowStage>(hasCompletedReplay ? 'result' : 'loading')
   const [slotPhase, setSlotPhase] = useState<SlotPhase>('anticipation')
   const [revealPhase, setRevealPhase] = useState<RevealPhase>('silhouette')
-  const [progress, setProgress] = useState(hasCompletedReplay ? 100 : 0)
+  const [slotDisplay, setSlotDisplay] = useState({
+    reelIndex: 0,
+    progress: hasCompletedReplay ? 100 : 0,
+  })
+  const { reelIndex, progress } = slotDisplay
   const [phaseText, setPhaseText] = useState(hasCompletedReplay ? '' : '准备揭晓...')
   const [isFetchingResult, setIsFetchingResult] = useState(false)
   const [isSlowNetwork, setIsSlowNetwork] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
-  const [reelIndex, setReelIndex] = useState(() =>
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    buildResolvedResultState(initialSnapshot)?.result.primaryArchetype
-      ? 0
-      : 0,
-  )
   const [sharePosterPath, setSharePosterPath] = useState('')
   const [squarePosterPath, setSquarePosterPath] = useState('')
   const [isGeneratingPoster, setIsGeneratingPoster] = useState(false)
@@ -111,6 +111,7 @@ export default function PersonalityTestResultsPage() {
   const abortControllerRef = useRef<AbortController | null>(null)
   const timeoutHandlesRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const degradationTierRef = useRef<DegradationTier>('full')
+  const isAnimatingRef = useRef(false)
 
   const profileRef = useRef<AnimationProfile>(getAnimationProfile())
 
@@ -129,6 +130,7 @@ export default function PersonalityTestResultsPage() {
     return () => {
       mountedRef.current = false
       runIdRef.current += 1
+      isAnimatingRef.current = false
       // Bulk-clear all pending timeouts
       timeoutHandlesRef.current.forEach((handle) => clearTimeout(handle))
       timeoutHandlesRef.current = []
@@ -257,17 +259,25 @@ export default function PersonalityTestResultsPage() {
     const controller = new AbortController()
     abortControllerRef.current = controller
 
+    // 8s request-level timeout
+    const timeoutId = setTimeout(() => controller.abort(), 8000)
+    timeoutHandlesRef.current.push(timeoutId)
+
     try {
       const response = await apiRequest<{
         sessionId: string
         completedAt?: string
         result: NonNullable<typeof latestSnapshot.result>
-        topArchetypes?: typeof topMatches
+        topArchetypes?: AnonymousAssessmentTopMatch[]
       }>({
         path: `/api/assessment/v4/${encodeURIComponent(latestSnapshot.sessionId)}/result`,
         // @ts-expect-error - apiRequest may not expose signal yet; handled gracefully
         signal: controller.signal,
       })
+
+      clearTimeout(timeoutId)
+      const timeoutIdx = timeoutHandlesRef.current.indexOf(timeoutId)
+      if (timeoutIdx >= 0) timeoutHandlesRef.current.splice(timeoutIdx, 1)
 
       if (!mountedRef.current || runId !== runIdRef.current) {
         return null
@@ -304,6 +314,9 @@ export default function PersonalityTestResultsPage() {
 
       return resolved
     } catch (error) {
+      clearTimeout(timeoutId)
+      const timeoutIdx = timeoutHandlesRef.current.indexOf(timeoutId)
+      if (timeoutIdx >= 0) timeoutHandlesRef.current.splice(timeoutIdx, 1)
       const message = resolveResultErrorMessage(error)
       if (mountedRef.current && runId === runIdRef.current) {
         setErrorMessage(message)
@@ -312,287 +325,326 @@ export default function PersonalityTestResultsPage() {
       logError('[PersonalityResults] Failed to fetch result', { message })
       return null
     } finally {
+      clearTimeout(timeoutId)
+      const timeoutIdx = timeoutHandlesRef.current.indexOf(timeoutId)
+      if (timeoutIdx >= 0) timeoutHandlesRef.current.splice(timeoutIdx, 1)
       if (mountedRef.current && runId === runIdRef.current) {
         setIsFetchingResult(false)
       }
     }
-  }, [analytics, topMatches])
+  }, [analytics])
 
   const runResultFlow = useCallback(async (options?: { forceRefresh?: boolean }) => {
-    const nextRunId = runIdRef.current + 1
-    runIdRef.current = nextRunId
-    didTrackCompletionRef.current = false
-    setCompletionMode(null)
+    if (isAnimatingRef.current) return
+    isAnimatingRef.current = true
 
-    const flowStartedAt = Date.now()
-    const latestSnapshot = readAnonymousAssessmentSession()
+    try {
+      const nextRunId = runIdRef.current + 1
+      runIdRef.current = nextRunId
+      didTrackCompletionRef.current = false
+      setCompletionMode(null)
 
-    setSessionSnapshot(latestSnapshot)
-    setIsSlowNetwork(false)
-    setErrorMessage('')
-    setPhaseText('准备揭晓...')
-    setProgress(0)
-    setRevealPhase('silhouette')
-    setSlotPhase('anticipation')
-    setSharePosterPath('')
-    setReelIndex(0)
+      const flowStartedAt = Date.now()
+      const latestSnapshot = readAnonymousAssessmentSession()
 
-    if (!latestSnapshot?.sessionId) {
-      logWarn('[PersonalityResults] Missing anonymous session id')
-      analytics.validationFailed('session', 'missing-session-id')
-      setFlowStage('empty')
-      return
-    }
+      setSessionSnapshot(latestSnapshot)
+      setIsSlowNetwork(false)
+      setErrorMessage('')
+      setPhaseText('准备揭晓...')
+      setSlotDisplay({ reelIndex: 0, progress: 0 })
+      setRevealPhase('silhouette')
+      setSlotPhase('anticipation')
+      setSharePosterPath('')
 
-    if (!isAnonymousAssessmentSessionCompleted(latestSnapshot) && !hasAnonymousAssessmentResult(latestSnapshot)) {
-      logWarn('[PersonalityResults] Assessment session is not completed yet', {
-        sessionId: latestSnapshot.sessionId,
-      })
-      analytics.validationFailed('session', 'assessment-not-complete')
-      setFlowStage('empty')
-      return
-    }
-
-    const hasReplayFastPath = Boolean(
-      latestSnapshot.resultSequenceCompletedAt
-      && hasAnonymousAssessmentResult(latestSnapshot)
-      && !options?.forceRefresh,
-    )
-
-    if (hasReplayFastPath) {
-      const cachedResult = buildResolvedResultState(latestSnapshot)
-      if (cachedResult) {
-        resultStateRef.current = cachedResult
-        setResultState(cachedResult)
-      }
-      setFlowStage('result')
-      setProgress(100)
-      setPhaseText('')
-      setCompletionMode('replay')
-      return
-    }
-
-    resultStateRef.current = options?.forceRefresh ? null : resultStateRef.current
-    if (options?.forceRefresh) {
-      setResultState(null)
-    }
-
-    const profile = profileRef.current
-    const fetchPromise = fetchResult(nextRunId, Boolean(options?.forceRefresh))
-    let didFetchResolve = false
-    let fetchedResult: ResolvedResultState | null = null
-
-    void fetchPromise.then((value) => {
-      didFetchResolve = true
-      fetchedResult = value
-    })
-
-    setFlowStage('slot')
-    setPhaseText('即将揭晓...')
-
-    // Show skip button for returning users after 1s
-    const skipTimeout = setTimeout(() => {
-      if (hasCompletedReplay && mountedRef.current) {
-        setShowSkipAnimation(true)
-      }
-    }, 1000)
-    timeoutHandlesRef.current.push(skipTimeout)
-
-    await waitFor(profile.slotAnticipationMs)
-    if (!mountedRef.current || nextRunId !== runIdRef.current) {
-      return
-    }
-
-    setSlotPhase('spinning')
-    setPhaseText('命运转动中...')
-
-    // Measure frame budget during first half of spin for tiered degradation
-    const frameBudgetPromise = getDegradationTier()
-
-    const spinSteps = Math.max(1, Math.floor(profile.slotSpinMs / profile.slotSpinIntervalMs))
-    const budgetCheckStep = Math.floor(spinSteps * 0.5)
-
-    for (let step = 0; step < spinSteps; step += 1) {
-      setReelIndex((previous) => (previous + 1) % 12)
-      setProgress(10 + ((step + 1) / spinSteps) * 50)
-
-      // Check frame budget mid-spin
-      if (step === budgetCheckStep) {
-        const tier = await frameBudgetPromise
-        degradationTierRef.current = tier
-        logInfo('[PersonalityResults] Degradation tier', { tier })
-      }
-
-      await waitFor(profile.slotSpinIntervalMs)
-      if (!mountedRef.current || nextRunId !== runIdRef.current) {
+      if (!latestSnapshot?.sessionId) {
+        logWarn('[PersonalityResults] Missing anonymous session id')
+        analytics.validationFailed('session', 'missing-session-id')
+        setFlowStage('empty')
         return
       }
-    }
 
-    let resolvedResult = resultStateRef.current ?? (didFetchResolve ? fetchedResult : null)
+      if (!isAnonymousAssessmentSessionCompleted(latestSnapshot) && !hasAnonymousAssessmentResult(latestSnapshot)) {
+        logWarn('[PersonalityResults] Assessment session is not completed yet', {
+          sessionId: latestSnapshot.sessionId,
+        })
+        analytics.validationFailed('session', 'assessment-not-complete')
+        setFlowStage('empty')
+        return
+      }
 
-    while (!resolvedResult && !didFetchResolve) {
-      const elapsed = Date.now() - flowStartedAt
-      const shouldShowSlowNetwork = elapsed >= profile.slowNetworkMs
+      const hasReplayFastPath = Boolean(
+        latestSnapshot.resultSequenceCompletedAt
+        && hasAnonymousAssessmentResult(latestSnapshot)
+        && !options?.forceRefresh,
+      )
 
-      setIsSlowNetwork(shouldShowSlowNetwork)
-      setSlotPhase('holding')
-      setPhaseText(shouldShowSlowNetwork ? '网络有点慢，动画继续等结果到位...' : '正在同步最终画像...')
-      setProgress(68)
-      setReelIndex((previous) => (previous + 1) % 12)
+      if (hasReplayFastPath) {
+        const cachedResult = buildResolvedResultState(latestSnapshot)
+        if (cachedResult) {
+          resultStateRef.current = cachedResult
+          setResultState(cachedResult)
+        }
+        setFlowStage('result')
+        setSlotDisplay(prev => ({ ...prev, progress: 100 }))
+        setPhaseText('')
+        setCompletionMode('replay')
+        return
+      }
 
-      await waitFor(profile.slotHoldIntervalMs)
+      resultStateRef.current = options?.forceRefresh ? null : resultStateRef.current
+      if (options?.forceRefresh) {
+        setResultState(null)
+      }
+
+      const profile = profileRef.current
+      const fetchPromise = fetchResult(nextRunId, Boolean(options?.forceRefresh))
+      let didFetchResolve = false
+      let fetchedResult: ResolvedResultState | null = null
+
+      void fetchPromise
+        .then((value) => {
+          didFetchResolve = true
+          fetchedResult = value
+        })
+        .catch(() => {
+          didFetchResolve = true
+          fetchedResult = null
+        })
+
+      setFlowStage('slot')
+      setPhaseText('即将揭晓...')
+
+      // Show skip button for returning users after 1s
+      const skipTimeout = setTimeout(() => {
+        if (hasCompletedReplay && mountedRef.current) {
+          setShowSkipAnimation(true)
+        }
+      }, 1000)
+      timeoutHandlesRef.current.push(skipTimeout)
+
+      await waitFor(profile.slotAnticipationMs)
       if (!mountedRef.current || nextRunId !== runIdRef.current) {
         return
       }
 
-      if (Date.now() - flowStartedAt >= profile.flowSafetyTimeoutMs) {
-        runIdRef.current += 1
-        setIsFetchingResult(false)
+      setSlotPhase('spinning')
+      setPhaseText('命运转动中...')
+
+      // Measure frame budget during first half of spin for tiered degradation
+      const frameBudgetPromise = getDegradationTier()
+
+      const spinSteps = Math.max(1, Math.floor(profile.slotSpinMs / profile.slotSpinIntervalMs))
+      const budgetCheckStep = Math.floor(spinSteps * 0.5)
+
+      for (let step = 0; step < spinSteps; step += 1) {
+        setSlotDisplay(prev => ({
+          reelIndex: (prev.reelIndex + 1) % 12,
+          progress: 10 + ((step + 1) / spinSteps) * 50,
+        }))
+
+        // Check frame budget mid-spin
+        if (step === budgetCheckStep) {
+          const tier = await frameBudgetPromise
+          degradationTierRef.current = tier
+          logInfo('[PersonalityResults] Degradation tier', { tier })
+        }
+
+        await waitFor(profile.slotSpinIntervalMs)
+        if (!mountedRef.current || nextRunId !== runIdRef.current) {
+          return
+        }
+      }
+
+      let resolvedResult = resultStateRef.current ?? (didFetchResolve ? fetchedResult : null)
+
+      let holdCycle = 0
+      const HOLDING_MESSAGES = [
+        '正在同步最终画像…',
+        '悦仔在整理你的回答…',
+        '马上就能揭晓了…',
+      ]
+
+      while (!resolvedResult && !didFetchResolve) {
+        const elapsed = Date.now() - flowStartedAt
+        const shouldShowSlowNetwork = elapsed >= profile.slowNetworkMs
+
+        setIsSlowNetwork(shouldShowSlowNetwork)
+        setSlotPhase('holding')
+        // Cycle through 2-3 messages during holding (~every 4 ticks ≈ 720ms)
+        const messageIndex = Math.floor(holdCycle / 4) % HOLDING_MESSAGES.length
+        setPhaseText(
+          shouldShowSlowNetwork
+            ? `${HOLDING_MESSAGES[messageIndex]}（网络有点慢，动画继续等结果到位）`
+            : HOLDING_MESSAGES[messageIndex],
+        )
+        // Animate progress from 60 → 68 incrementally during holding
+        setSlotDisplay(prev => ({
+          reelIndex: (prev.reelIndex + 1) % 12,
+          progress: 60 + Math.min((holdCycle / 12) * 8, 8),
+        }))
+
+        holdCycle += 1
+        await waitFor(profile.slotHoldIntervalMs)
+        if (!mountedRef.current || nextRunId !== runIdRef.current) {
+          return
+        }
+
+        if (Date.now() - flowStartedAt >= profile.flowSafetyTimeoutMs) {
+          runIdRef.current += 1
+          setIsFetchingResult(false)
+          setFlowStage('error')
+          setErrorMessage('网络有点慢，结果还没完全同步，请重试一次。')
+          analytics.errorOccurred('result_flow_timeout', 'personality result flow timed out')
+          return
+        }
+
+        resolvedResult = resultStateRef.current ?? (didFetchResolve ? fetchedResult : null)
+      }
+
+      resolvedResult = resolvedResult ?? resultStateRef.current ?? fetchedResult
+
+      if (!mountedRef.current || nextRunId !== runIdRef.current) {
+        return
+      }
+
+      if (!resolvedResult) {
         setFlowStage('error')
-        setErrorMessage('网络有点慢，结果还没完全同步，请重试一次。')
-        analytics.errorOccurred('result_flow_timeout', 'personality result flow timed out')
+        setErrorMessage((previousMessage) => previousMessage || '结果同步失败，请重试一次。')
         return
       }
 
-      resolvedResult = resultStateRef.current ?? (didFetchResolve ? fetchedResult : null)
-    }
+      const targetName = resolvedResult.result.primaryArchetype ?? 'corgi'
+      const targetIndex = ARCHETYPE_SEQUENCE.indexOf(targetName)
+      const safeTargetIndex = targetIndex >= 0 ? targetIndex : 0
+      const approachPositions = profile.slotSlowStepDelays.map((_, index) => (
+        safeTargetIndex - profile.slotSlowStepDelays.length + index + 12
+      ) % 12)
 
-    resolvedResult = resolvedResult ?? resultStateRef.current ?? fetchedResult
+      setSlotPhase('slowing')
+      setPhaseText('就快锁定了...')
 
-    if (!mountedRef.current || nextRunId !== runIdRef.current) {
-      return
-    }
+      for (let index = 0; index < approachPositions.length; index += 1) {
+        setSlotDisplay({
+          reelIndex: approachPositions[index] ?? safeTargetIndex,
+          progress: 60 + ((index + 1) / approachPositions.length) * 28,
+        })
+        // Haptic tick on each slowing step
+        haptics('slotTick')
+        await waitFor(profile.slotSlowStepDelays[index] ?? 180)
 
-    if (!resolvedResult) {
-      setFlowStage('error')
-      setErrorMessage((previousMessage) => previousMessage || '结果同步失败，请重试一次。')
-      return
-    }
+        if (!mountedRef.current || nextRunId !== runIdRef.current) {
+          return
+        }
+      }
 
-    const targetName = resolvedResult.result.primaryArchetype ?? 'corgi'
-    const targetIndex = ['corgi', 'rooster', 'hamster_praise', 'fox', 'dolphin_calm', 'spider', 'koala', 'octopus', 'owl', 'elephant', 'turtle', 'cat'].indexOf(targetName)
-    const safeTargetIndex = targetIndex >= 0 ? targetIndex : 0
-    const approachPositions = profile.slotSlowStepDelays.map((_, index) => (
-      safeTargetIndex - profile.slotSlowStepDelays.length + index + 12
-    ) % 12)
+      const shouldDoNearMiss = shouldNearMiss(latestSnapshot.sessionId, profile.slotNearMissProbability)
+      if (shouldDoNearMiss) {
+        setSlotPhase('nearMiss')
+        setPhaseText('等等...')
+        setSlotDisplay({
+          reelIndex: (safeTargetIndex + 1) % 12,
+          progress: 92,
+        })
+        await waitFor(profile.slotNearMissMs)
 
-    setSlotPhase('slowing')
-    setPhaseText('就快锁定了...')
+        if (!mountedRef.current || nextRunId !== runIdRef.current) {
+          return
+        }
+      }
 
-    for (let index = 0; index < approachPositions.length; index += 1) {
-      setReelIndex(approachPositions[index] ?? safeTargetIndex)
-      setProgress(60 + ((index + 1) / approachPositions.length) * 28)
-      // Haptic tick on each slowing step
-      haptics('slotTick')
-      await waitFor(profile.slotSlowStepDelays[index] ?? 180)
+      setSlotPhase('landed')
+      setPhaseText('锁定成功')
+      setSlotDisplay({
+        reelIndex: safeTargetIndex,
+        progress: 100,
+      })
+      setShowSkipAnimation(false)
 
+      haptics('slotLand')
+
+      await waitFor(profile.slotRevealPauseMs)
       if (!mountedRef.current || nextRunId !== runIdRef.current) {
         return
       }
-    }
 
-    const shouldDoNearMiss = shouldNearMiss(latestSnapshot.sessionId, profile.slotNearMissProbability)
-    if (shouldDoNearMiss) {
-      setSlotPhase('nearMiss')
-      setPhaseText('等等...')
-      setReelIndex((safeTargetIndex + 1) % 12)
-      setProgress(92)
-      await waitFor(profile.slotNearMissMs)
+      // Tiered degradation: skip effects if frame budget is constrained
+      const tier = degradationTierRef.current
 
+      if (tier === 'minimal' || tier === 'emergency') {
+        // Skip all reveal effects; jump straight to result
+        setFlowStage('result')
+        setPhaseText('')
+        setCompletionMode('animated')
+        analytics.stepCompleted({
+          completionMode: 'animated',
+          isAuthenticated: auth.isAuthenticated,
+          primaryArchetype: displayArchetypeName,
+          degradationTier: tier,
+        })
+        return
+      }
+
+      setFlowStage('reveal')
+      setRevealPhase('silhouette')
+      setPhaseText('先看轮廓...')
+
+      await waitFor(profile.revealSilhouetteMs)
       if (!mountedRef.current || nextRunId !== runIdRef.current) {
         return
       }
-    }
 
-    setSlotPhase('landed')
-    setPhaseText('锁定成功')
-    setProgress(100)
-    setReelIndex(safeTargetIndex)
-    setShowSkipAnimation(false)
+      setRevealPhase('fill')
+      setPhaseText('颜色回来了...')
 
-    haptics('slotLand')
+      await waitFor(profile.revealFillMs)
+      if (!mountedRef.current || nextRunId !== runIdRef.current) {
+        return
+      }
 
-    await waitFor(profile.slotRevealPauseMs)
-    if (!mountedRef.current || nextRunId !== runIdRef.current) {
-      return
-    }
+      // Reduced tier: skip glow/sparkle, go straight to result
+      if (tier !== 'reduced') {
+        setRevealPhase('sparkle')
+        setPhaseText('灵感点亮...')
+        haptics('cardReveal')
 
-    // Tiered degradation: skip effects if frame budget is constrained
-    const tier = degradationTierRef.current
+        await waitFor(profile.revealGlowMs)
+        if (!mountedRef.current || nextRunId !== runIdRef.current) {
+          return
+        }
+      }
 
-    if (tier === 'minimal' || tier === 'emergency') {
-      // Skip all reveal effects; jump straight to result
+      // Bridge: skip if fetch already resolved (no dead air)
+      if (!didFetchResolve) {
+        setFlowStage('bridge')
+        setPhaseText('我在把这份结果装进一张更好分享的 JoyJoin 卡面。')
+
+        await waitFor(profile.bridgeMs)
+        if (!mountedRef.current || nextRunId !== runIdRef.current) {
+          return
+        }
+      }
+
+      const currentSnapshot = readAnonymousAssessmentSession()
+      const completedSnapshot: AnonymousAssessmentSessionSnapshot = {
+        sessionId: resolvedResult.sessionId,
+        phase: 'completed',
+        timestamp: Date.now(),
+        completedAt: resolvedResult.completedAt ?? currentSnapshot?.completedAt,
+        result: resolvedResult.result,
+        topArchetypes: resolvedResult.topMatches,
+        resultSequenceCompletedAt: new Date().toISOString(),
+      }
+
+      saveAnonymousAssessmentSession(completedSnapshot)
+      resultStateRef.current = resolvedResult
+      setSessionSnapshot(completedSnapshot)
+      setResultState(resolvedResult)
       setFlowStage('result')
       setPhaseText('')
       setCompletionMode('animated')
-      analytics.stepCompleted({
-        completionMode: 'animated',
-        isAuthenticated: auth.isAuthenticated,
-        primaryArchetype: displayArchetypeName,
-        degradationTier: tier,
-      })
-      return
+    } finally {
+      isAnimatingRef.current = false
     }
-
-    setFlowStage('reveal')
-    setRevealPhase('silhouette')
-    setPhaseText('先看轮廓...')
-
-    await waitFor(profile.revealSilhouetteMs)
-    if (!mountedRef.current || nextRunId !== runIdRef.current) {
-      return
-    }
-
-    setRevealPhase('fill')
-    setPhaseText('颜色回来了...')
-
-    await waitFor(profile.revealFillMs)
-    if (!mountedRef.current || nextRunId !== runIdRef.current) {
-      return
-    }
-
-    // Reduced tier: skip glow/sparkle, go straight to result
-    if (tier !== 'reduced') {
-      setRevealPhase('sparkle')
-      setPhaseText('灵感点亮...')
-      haptics('cardReveal')
-
-      await waitFor(profile.revealGlowMs)
-      if (!mountedRef.current || nextRunId !== runIdRef.current) {
-        return
-      }
-    }
-
-    // Bridge: skip if fetch already resolved (no dead air)
-    if (!didFetchResolve) {
-      setFlowStage('bridge')
-      setPhaseText('我在把这份结果装进一张更好分享的 JoyJoin 卡面。')
-
-      await waitFor(profile.bridgeMs)
-      if (!mountedRef.current || nextRunId !== runIdRef.current) {
-        return
-      }
-    }
-
-    const currentSnapshot = readAnonymousAssessmentSession()
-    const completedSnapshot: AnonymousAssessmentSessionSnapshot = {
-      sessionId: resolvedResult.sessionId,
-      phase: 'completed',
-      timestamp: Date.now(),
-      completedAt: resolvedResult.completedAt ?? currentSnapshot?.completedAt,
-      result: resolvedResult.result,
-      topArchetypes: resolvedResult.topMatches,
-      resultSequenceCompletedAt: new Date().toISOString(),
-    }
-
-    saveAnonymousAssessmentSession(completedSnapshot)
-    resultStateRef.current = resolvedResult
-    setSessionSnapshot(completedSnapshot)
-    setResultState(resolvedResult)
-    setFlowStage('result')
-    setPhaseText('')
-    setCompletionMode('animated')
   }, [analytics, fetchResult])
 
   useEffect(() => {
@@ -622,7 +674,7 @@ export default function PersonalityTestResultsPage() {
     if (cached) {
       setResultState(cached)
       setFlowStage('result')
-      setProgress(100)
+      setSlotDisplay(prev => ({ ...prev, progress: 100 }))
       setPhaseText('')
       setCompletionMode('replay')
       analytics.interaction('skip_animation', { primaryArchetype: displayArchetypeName })
@@ -884,7 +936,8 @@ export default function PersonalityTestResultsPage() {
       }
       analytics.interaction('share_square_poster', { primaryArchetype: displayArchetypeName })
     } catch (err) {
-      console.error('[PersonalityResults] square poster generation failed:', err)
+      const message = err instanceof Error && err.message ? err.message : 'square poster generation failed'
+      logError('[PersonalityResults] square poster generation failed', { message, primaryArchetype: displayArchetypeName })
       void Taro.showToast({ title: '海报生成失败，请重试', icon: 'none', duration: 2500 })
     } finally {
       setIsGeneratingSquarePoster(false)

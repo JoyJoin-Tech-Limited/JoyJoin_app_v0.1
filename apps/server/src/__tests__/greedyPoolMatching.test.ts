@@ -61,6 +61,9 @@ function makeUser(id: string, archetype: string): UserWithProfile {
     barThemes: null,
     alcoholComfort: null,
     eventType: '饭局',
+    ageMatchPreference: null,
+    tableVibePreference: null,
+    vibeVector: null,
   };
 }
 

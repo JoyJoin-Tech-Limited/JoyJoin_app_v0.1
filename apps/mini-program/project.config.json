@@ -31,12 +31,30 @@
   },
   "packOptions": {
     "ignore": [
-      { "type": "regexp", "value": "assets/icons/archetype/.*grid.*\\.png$" },
-      { "type": "regexp", "value": "assets/icons/archetype-glyphs/.*grid.*\\.png$" },
-      { "type": "file", "value": "assets/icons/phase-icons/reference-grid.png" },
-      { "type": "regexp", "value": "assets/icons/mood-icons/.*grid.*\\.png$" },
-      { "type": "regexp", "value": "assets/icons/info-labels/.*grid.*\\.png$" },
-      { "type": "regexp", "value": "assets/icons/rating-faces/.*grid.*\\.png$" }
+      {
+        "type": "regexp",
+        "value": "assets/icons/archetype/.*grid.*\\.png$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/icons/archetype-glyphs/.*grid.*\\.png$"
+      },
+      {
+        "type": "file",
+        "value": "assets/icons/phase-icons/reference-grid.png"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/icons/mood-icons/.*grid.*\\.png$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/icons/info-labels/.*grid.*\\.png$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/icons/rating-faces/.*grid.*\\.png$"
+      }
     ],
     "include": []
   },

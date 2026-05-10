@@ -9,7 +9,7 @@ export {
   insertUserEngagementMetricsSchema,
   insertEventSatisfactionSummarySchema,
   insertOnboardingAnalyticsSchema,
-} from './_definitions.js';
+} from './_definitions_extended.js';
 
 export type {
   Notification,
@@ -23,4 +23,4 @@ export type {
   InsertEventSatisfactionSummary,
   OnboardingAnalytics,
   InsertOnboardingAnalytics,
-} from './_definitions.js';
+} from './_definitions_extended.js';

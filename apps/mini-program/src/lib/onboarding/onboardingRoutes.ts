@@ -26,6 +26,7 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   poolGroupDetail: 'pages/pool-group-detail/index',
   centerTabEmpty: 'pages/center-tab-empty/index',
   icebreakerSession: 'pages/icebreaker-session/index',
+  tierSelector: 'pages/icebreaker-session/tier-selector/index',
   editProfile: 'pages/edit-profile/index',
   rewards: 'pages/rewards/index',
   invite: 'pages/invite/index',
@@ -52,6 +53,7 @@ export const MINI_PROGRAM_ROUTES = {
   poolGroupDetail: `/${MINI_PROGRAM_PAGE_PATHS.poolGroupDetail}`,
   centerTabEmpty: `/${MINI_PROGRAM_PAGE_PATHS.centerTabEmpty}`,
   icebreakerSession: `/${MINI_PROGRAM_PAGE_PATHS.icebreakerSession}`,
+  tierSelector: `/${MINI_PROGRAM_PAGE_PATHS.tierSelector}`,
   editProfile: `/${MINI_PROGRAM_PAGE_PATHS.editProfile}`,
   rewards: `/${MINI_PROGRAM_PAGE_PATHS.rewards}`,
   invite: `/${MINI_PROGRAM_PAGE_PATHS.invite}`,
@@ -82,7 +84,6 @@ export const MINI_PROGRAM_ONBOARDING_PACKAGE_PAGE_PATHS = [
 export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.index,
   MINI_PROGRAM_PAGE_PATHS.discover,
-  MINI_PROGRAM_PAGE_PATHS.blindBoxPayment,
   MINI_PROGRAM_PAGE_PATHS.paymentVerification,
   MINI_PROGRAM_PAGE_PATHS.events,
   MINI_PROGRAM_PAGE_PATHS.connections,
@@ -93,11 +94,9 @@ export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.eventFeedback,
   MINI_PROGRAM_PAGE_PATHS.poolRegistration,
   MINI_PROGRAM_PAGE_PATHS.eventCoordination,
-  MINI_PROGRAM_PAGE_PATHS.matchingStatus,
   MINI_PROGRAM_PAGE_PATHS.squadUnboxing,
   MINI_PROGRAM_PAGE_PATHS.poolGroupDetail,
   MINI_PROGRAM_PAGE_PATHS.centerTabEmpty,
-  MINI_PROGRAM_PAGE_PATHS.icebreakerSession,
   MINI_PROGRAM_PAGE_PATHS.editProfile,
   MINI_PROGRAM_PAGE_PATHS.rewards,
   MINI_PROGRAM_PAGE_PATHS.invite,
@@ -106,12 +105,36 @@ export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
 export const MINI_PROGRAM_PAGES = [
   ...MINI_PROGRAM_MAIN_PACKAGE_PAGES,
   ...MINI_PROGRAM_ONBOARDING_PACKAGE_PAGE_PATHS,
+  MINI_PROGRAM_PAGE_PATHS.icebreakerSession,
+  MINI_PROGRAM_PAGE_PATHS.tierSelector,
+  MINI_PROGRAM_PAGE_PATHS.matchingStatus,
+] as const
+
+export const MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT = 'pages/icebreaker-session' as const
+
+export const MINI_PROGRAM_MATCHING_SUBPACKAGE_ROOT = 'pages/matching-status' as const
+
+export const MINI_PROGRAM_MATCHING_SUBPACKAGE_PAGES = [
+  'index',
+] as const
+
+export const MINI_PROGRAM_FEATURES_SUBPACKAGE_PAGES = [
+  'index',
+  'tier-selector/index',
 ] as const
 
 export const MINI_PROGRAM_SUBPACKAGES = [
   {
     root: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT,
     pages: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES,
+  },
+  {
+    root: MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_FEATURES_SUBPACKAGE_PAGES,
+  },
+  {
+    root: MINI_PROGRAM_MATCHING_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_MATCHING_SUBPACKAGE_PAGES,
   },
 ] as const
 

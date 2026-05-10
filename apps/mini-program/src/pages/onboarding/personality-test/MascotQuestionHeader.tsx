@@ -1,12 +1,6 @@
 import { View, Text } from '@tarojs/components'
-import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
-import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
+import { memo } from 'react'
 import './MascotQuestionHeader.scss'
-
-interface MatchChip {
-  archetype: string
-}
 
 interface QuestionStub {
   scenarioText?: string
@@ -15,61 +9,39 @@ interface QuestionStub {
 
 export interface MascotQuestionHeaderProps {
   question: QuestionStub | null
-  currentMatches?: MatchChip[]
-  expressionId: XiaoyueExpressionId
   isLoading?: boolean
 }
 
-export default function MascotQuestionHeader({
+export default memo(function MascotQuestionHeader({
   question,
-  currentMatches = [],
-  expressionId,
   isLoading = false,
 }: MascotQuestionHeaderProps) {
   if (!question) {
     return (
       <View className='mascot-question-header mascot-question-header--empty'>
-        <XiaoyueChatBubble
-          content={`${DEFAULT_MASCOT_DISPLAY_NAME}正在准备下一题…`}
-          expressionId='loadingSystem'
-          wide
-          showGlow
-          isLoading
-        />
+        <View className='mascot-question-header__card mascot-question-header__card--loading'>
+          <View className='mascot-question-header__skeleton-eyebrow' />
+          <View className='mascot-question-header__skeleton-line' />
+          <View className='mascot-question-header__skeleton-line mascot-question-header__skeleton-line--short' />
+        </View>
       </View>
     )
   }
 
-  const bubbleContent = question.scenarioText
-    ? `${question.scenarioText}。${question.questionText}`
-    : question.questionText
-
   return (
     <View className='mascot-question-header'>
-      {question.scenarioText ? (
-        <Text className='mascot-question-header__eyebrow'>
-          {question.scenarioText}
+      <View className='mascot-question-header__card'>
+        {question.scenarioText ? (
+          <Text className='mascot-question-header__eyebrow'>
+            {question.scenarioText}
+          </Text>
+        ) : null}
+        <Text
+          className={`mascot-question-header__question${isLoading ? ' mascot-question-header__question--loading' : ''}`}
+        >
+          {question.questionText}
         </Text>
-      ) : null}
-
-      <XiaoyueChatBubble
-        content={bubbleContent}
-        expressionId={expressionId}
-        wide
-        showGlow={!isLoading}
-        isLoading={isLoading}
-        staggerDelay={50}
-      />
-
-      {currentMatches.length > 0 ? (
-        <View className='mascot-question-header__matches'>
-          {currentMatches.slice(0, 2).map((match) => (
-            <Text key={match.archetype} className='mascot-question-header__match-chip'>
-              {match.archetype}
-            </Text>
-          ))}
-        </View>
-      ) : null}
+      </View>
     </View>
   )
-}
+})

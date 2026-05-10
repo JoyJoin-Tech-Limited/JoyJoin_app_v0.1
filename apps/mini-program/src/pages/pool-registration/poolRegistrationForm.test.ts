@@ -40,13 +40,12 @@ describe('poolRegistrationForm', () => {
     const base = {
       eventIntent: ['a'],
       preferredLanguages: ['粤语'],
-      cuisinePreferences: [],
       dietaryRestrictions: [],
       barThemes: [],
     }
-    expect(buildRegistrationPayload({ ...base, budgetRange: ['150-200'], tasteIntensity: 'mild' }, '饭局')).toMatchObject({
+    expect(buildRegistrationPayload({ ...base, budgetRange: ['150-200'], dietaryRestrictions: ['vegetarian'] }, '饭局')).toMatchObject({
       budgetRange: ['150-200'],
-      tasteIntensity: ['mild'],
+      dietaryRestrictions: ['vegetarian'],
     })
     expect(
       buildRegistrationPayload(

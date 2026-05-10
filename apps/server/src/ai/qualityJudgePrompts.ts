@@ -154,7 +154,7 @@ function buildFunRubricModifier(featureType: JudgeFeatureType): string {
   switch (featureType) {
     case 'icebreaker_warmup':
       return `
-PHASE: Warmup (破冰)
+PHASE: Topic Cards (话题卡)
 Goal: Create initial 气氛 with ZERO face risk. The group should feel "this is safe."
 
 Score HIGH when:

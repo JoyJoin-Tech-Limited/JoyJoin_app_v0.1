@@ -43,7 +43,7 @@ Discover → Browse Pools → Register (Preferences) → Wait/Queue → Match Re
 | **Registration** | `JoinEventPoolSheet.tsx` (multi-step sheet) | In-page sheet from Discover | Steps: `SmartDefaultsStep` → `BudgetSelectionStep` → `SocialGoalsStep` → `DinnerPreferencesStep` / `BarPreferencesStep` → `SuccessCelebration` |
 | **Queue / Wait** | `MatchingStatusPage.tsx` + `MatchingWaitingScreen.tsx` | `/pool-matching/:registrationId` | WebSocket subscription for `POOL_MATCHED` and `EVENT_THEME_TITLE_REVEALED`; fill-state tracking (`waiting` → `can_form` → `full`) |
 | **Match Reveal** | `MatchCelebrationOverlay.tsx` → `MatchSuccessSheet.tsx` | Overlay, then `/pool-groups/:groupId`; `/squad-unboxing` and `/squad-unboxing/:groupId` for `SquadUnboxingFlow.tsx` | `MatchSuccessSheet` contains `CardDeckReveal` with haptic/confetti effects; separate `SquadUnboxingFlow.tsx` |
-| **Icebreaker** | `SocialIcebreakerOrchestrator.tsx` | `/icebreaker/:sessionId` | 4-phase flow: 热身 → 挑战 → 侦探 → 回顾 |
+| **Icebreaker** | `SocialIcebreakerOrchestrator.tsx` | `/icebreaker/:sessionId` | 4-phase flow: 话题卡 → 挑战 → 侦探 → 回顾 |
 | **Feedback** | `EventFeedbackFlow.tsx` / `DeepFeedbackFlow.tsx` | `/events/:eventId/feedback` | Atmosphere score, connection radar, match point validation |
 
 ### Where It Feels Commoditized

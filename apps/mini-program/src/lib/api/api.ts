@@ -6,7 +6,8 @@ const DEFAULT_MINI_PROGRAM_API_BASE_URL = 'http://localhost:5001'
 const API_BASE_URL = (process.env.TARO_APP_API_BASE_URL ?? DEFAULT_MINI_PROGRAM_API_BASE_URL).replace(/\/$/, '')
 // Keep requests responsive on mobile networks while still allowing payment and
 // auth calls enough time to complete under normal latency.
-const REQUEST_TIMEOUT_MS = 15000
+const REQUEST_TIMEOUT_MS =
+  process.env.NODE_ENV === 'development' ? 5000 : 15000
 
 export interface ApiError extends Error {
   statusCode?: number
@@ -165,6 +166,20 @@ function createTransportApiError(requestUrl: string, error: unknown): ApiError {
   )
 }
 
+const LOCALHOST_DEV_FALLBACK_URL = 'http://localhost:5000'
+const IS_DEV = process.env.NODE_ENV === 'development'
+
+function shouldAttemptLocalhostFallback(error: unknown): boolean {
+  if (!IS_DEV) return false
+  const debugMsg = getTransportErrorDebugMessage(error).toLowerCase()
+  return (
+    debugMsg.includes('timeout') ||
+    debugMsg.includes('refused') ||
+    debugMsg.includes('failed') ||
+    debugMsg.includes('connection')
+  )
+}
+
 export async function apiRequest<T>(options: {
   path: string
   method?: HttpMethod
@@ -192,7 +207,35 @@ export async function apiRequest<T>(options: {
       })
     }
   } catch (error) {
-    throw createTransportApiError(requestUrl, error)
+    // Dev-mode fallback: if the configured API URL (e.g. LAN IP) is unreachable,
+    // retry once with localhost:5000 before giving up.
+    if (
+      shouldAttemptLocalhostFallback(error) &&
+      !API_BASE_URL.includes('localhost') &&
+      !API_BASE_URL.includes('127.0.0.1')
+    ) {
+      const fallbackUrl = `${LOCALHOST_DEV_FALLBACK_URL}${options.path.startsWith('/') ? options.path : `/${options.path}`}`
+      try {
+        response = await executeMiniProgramRequest({
+          requestUrl: fallbackUrl,
+          method,
+          data: options.data,
+        })
+
+        if (response.statusCode === 304 && method === 'GET') {
+          response = await executeMiniProgramRequest({
+            requestUrl: appendCacheBustParam(fallbackUrl),
+            method,
+            data: options.data,
+          })
+        }
+      } catch {
+        // Fallback also failed — throw the original error for accurate diagnostics
+        throw createTransportApiError(requestUrl, error)
+      }
+    } else {
+      throw createTransportApiError(requestUrl, error)
+    }
   }
 
   if (response.statusCode >= 200 && response.statusCode < 300) {

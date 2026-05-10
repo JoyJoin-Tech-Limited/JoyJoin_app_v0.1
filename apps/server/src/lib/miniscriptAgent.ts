@@ -33,6 +33,7 @@ import { recordAIProviderRecoveryMetric } from '../middleware/metrics';
 import { validateMiniScriptFramework } from './miniscriptValidator';
 import { findCatalogEntry, getRandomCatalogEntry } from './miniscriptCatalog';
 import { logger } from "./logger";
+import { buildArchetypeContext } from './contextInjector';
 
 /** Total timeout for both passes + overhead. */
 const PIPELINE_TIMEOUT_MS = 32_000;
@@ -202,6 +203,7 @@ async function pass1Generate(params: {
   config: ReturnType<typeof getGameModeConfig>;
   lite?: boolean;
   signal?: AbortSignal;
+  roster?: Array<{ archetype?: string }>;
 }): Promise<{
   ok: boolean;
   framework?: MiniScriptStoryFramework;
@@ -212,12 +214,14 @@ async function pass1Generate(params: {
   errorCode?: string;
 }> {
   const t0 = Date.now();
+  const sessionContext = params.roster ? buildArchetypeContext(params.roster) : undefined;
   const prompt = buildMiniScriptGenerationPrompt({
     playerCount: params.playerCount,
     style: params.style,
     genres: params.genres,
     config: params.config,
     lite: params.lite,
+    sessionContext: sessionContext?.mixText ? { mixText: sessionContext.mixText } : undefined,
   });
 
   let selection;
@@ -232,7 +236,7 @@ async function pass1Generate(params: {
     selection,
     system: prompt.system,
     user: prompt.user,
-    useJsonObject: selection.provider === 'deepseek',
+    useJsonObject: true,
     signal: params.signal,
   });
 
@@ -393,6 +397,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   style: MiniScriptStyle;
   genres: MiniScriptGenre[];
   lite?: boolean;
+  roster?: Array<{ archetype?: string }>;
 }): Promise<{
   framework: MiniScriptStoryFramework;
   meta: GenerateMiniScriptFrameworkMeta;
@@ -449,6 +454,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
     ...params,
     config,
     signal: controller.signal,
+    roster: params.roster,
   });
 
   if (!pass1.ok || !pass1.framework) {

@@ -9,8 +9,8 @@ describe("resolveApiUrl", () => {
   });
 
   it("prefixes a custom origin override when one is configured", () => {
-    expect(resolveApiUrl("/api/auth/user", "https://api.yuejuapp.com")).toBe(
-      "https://api.yuejuapp.com/api/auth/user",
+    expect(resolveApiUrl("/api/auth/user", "https://api.joyjoin.com")).toBe(
+      "https://api.joyjoin.com/api/auth/user",
     );
   });
 

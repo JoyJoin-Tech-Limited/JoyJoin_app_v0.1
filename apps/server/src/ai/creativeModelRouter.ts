@@ -1,14 +1,14 @@
 /**
- * Creative Model Router — Phase 3 hybrid AI provider
+ * Creative Model Router — DeepSeek V4 primary
  *
  * Controls which AI provider handles each creative/identity-facing generation
- * surface introduced in Phase 3. Provider selection is centralised here so
- * that future changes only need a single edit.
+ * surface. Provider selection is centralised here so that future changes only
+ * need a single edit.
  *
  * Resolution order (per function):
- *  1. Function-level env override  (e.g. CREATIVE_AI_TAGS_PROVIDER=deepseek)
+ *  1. Function-level env override  (e.g. CREATIVE_AI_TAGS_PROVIDER=minimax)
  *  2. Global creative provider     (CREATIVE_AI_PROVIDER=minimax|deepseek)
- *  3. Default: minimax if configured, otherwise deepseek
+ *  3. Default: deepseek
  *
  * Valid provider values: 'minimax' | 'deepseek'
  */
@@ -39,7 +39,7 @@ function parseProviderOverride(rawValue: string | undefined): AIProvider | null 
 
 /**
  * Resolve the provider for a given function, applying env overrides.
- * Falls back to MiniMax when available, otherwise DeepSeek.
+ * Defaults to DeepSeek.
  */
 function resolveProvider(fn: CreativeFunction): AIProvider {
   const functionOverrideEnvVar = CREATIVE_FUNCTION_ENV_OVERRIDES[fn];
@@ -56,8 +56,8 @@ function resolveProvider(fn: CreativeFunction): AIProvider {
     return globalOverride;
   }
 
-  // Default: use MiniMax if configured
-  return isMiniMaxAvailable() ? 'minimax' : 'deepseek';
+  // Default: use DeepSeek
+  return 'deepseek';
 }
 
 /**

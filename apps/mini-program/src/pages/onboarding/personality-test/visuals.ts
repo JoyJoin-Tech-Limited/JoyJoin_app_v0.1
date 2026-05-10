@@ -21,18 +21,18 @@ export interface ArchetypeAssetPaths {
 }
 
 const ARCHETYPE_ASSET_MAP: Record<string, ArchetypeAssetPaths> = {
-  corgi: { webp: '/pages/onboarding/assets/archetypes/archetype-corgi.webp', png: '/pages/onboarding/assets/archetypes/archetype-corgi.png' },
-  rooster: { webp: '/pages/onboarding/assets/archetypes/archetype-rooster.webp', png: '/pages/onboarding/assets/archetypes/archetype-rooster.png' },
-  hamster_praise: { webp: '/pages/onboarding/assets/archetypes/archetype-hamster_praise.webp', png: '/pages/onboarding/assets/archetypes/archetype-hamster_praise.png' },
-  fox: { webp: '/pages/onboarding/assets/archetypes/archetype-fox.webp', png: '/pages/onboarding/assets/archetypes/archetype-fox.png' },
-  dolphin_calm: { webp: '/pages/onboarding/assets/archetypes/archetype-dolphin_calm.webp', png: '/pages/onboarding/assets/archetypes/archetype-dolphin_calm.png' },
-  spider: { webp: '/pages/onboarding/assets/archetypes/archetype-spider.webp', png: '/pages/onboarding/assets/archetypes/archetype-spider.png' },
-  koala: { webp: '/pages/onboarding/assets/archetypes/archetype-koala.webp', png: '/pages/onboarding/assets/archetypes/archetype-koala.png' },
-  octopus: { webp: '/pages/onboarding/assets/archetypes/archetype-octopus.webp', png: '/pages/onboarding/assets/archetypes/archetype-octopus.png' },
-  owl: { webp: '/pages/onboarding/assets/archetypes/archetype-owl.webp', png: '/pages/onboarding/assets/archetypes/archetype-owl.png' },
-  elephant: { webp: '/pages/onboarding/assets/archetypes/archetype-elephant.webp', png: '/pages/onboarding/assets/archetypes/archetype-elephant.png' },
-  turtle: { webp: '/pages/onboarding/assets/archetypes/archetype-turtle.webp', png: '/pages/onboarding/assets/archetypes/archetype-turtle.png' },
-  cat: { webp: '/pages/onboarding/assets/archetypes/archetype-cat.webp', png: '/pages/onboarding/assets/archetypes/archetype-cat.png' },
+  corgi: { webp: '/pages/onboarding/assets/archetypes/archetype-corgi.webp', png: '/pages/onboarding/assets/archetypes/archetype-corgi.webp' },
+  rooster: { webp: '/pages/onboarding/assets/archetypes/archetype-rooster.webp', png: '/pages/onboarding/assets/archetypes/archetype-rooster.webp' },
+  hamster_praise: { webp: '/pages/onboarding/assets/archetypes/archetype-hamster_praise.webp', png: '/pages/onboarding/assets/archetypes/archetype-hamster_praise.webp' },
+  fox: { webp: '/pages/onboarding/assets/archetypes/archetype-fox.webp', png: '/pages/onboarding/assets/archetypes/archetype-fox.webp' },
+  dolphin_calm: { webp: '/pages/onboarding/assets/archetypes/archetype-dolphin_calm.webp', png: '/pages/onboarding/assets/archetypes/archetype-dolphin_calm.webp' },
+  spider: { webp: '/pages/onboarding/assets/archetypes/archetype-spider.webp', png: '/pages/onboarding/assets/archetypes/archetype-spider.webp' },
+  koala: { webp: '/pages/onboarding/assets/archetypes/archetype-koala.webp', png: '/pages/onboarding/assets/archetypes/archetype-koala.webp' },
+  octopus: { webp: '/pages/onboarding/assets/archetypes/archetype-octopus.webp', png: '/pages/onboarding/assets/archetypes/archetype-octopus.webp' },
+  owl: { webp: '/pages/onboarding/assets/archetypes/archetype-owl.webp', png: '/pages/onboarding/assets/archetypes/archetype-owl.webp' },
+  elephant: { webp: '/pages/onboarding/assets/archetypes/archetype-elephant.webp', png: '/pages/onboarding/assets/archetypes/archetype-elephant.webp' },
+  turtle: { webp: '/pages/onboarding/assets/archetypes/archetype-turtle.webp', png: '/pages/onboarding/assets/archetypes/archetype-turtle.webp' },
+  cat: { webp: '/pages/onboarding/assets/archetypes/archetype-cat.webp', png: '/pages/onboarding/assets/archetypes/archetype-cat.webp' },
 }
 
 const ARCHETYPE_SUMMARIES: Record<string, string> = {

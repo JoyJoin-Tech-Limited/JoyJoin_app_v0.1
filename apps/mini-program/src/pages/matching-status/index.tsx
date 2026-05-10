@@ -12,7 +12,12 @@ import {
   MatchingStatusLiveOverlay,
   MatchingStatusPendingSection,
 } from './MatchingStatusSections'
-import * as matchingStatusViewModels from './matchingStatusViewModels'
+import { getStatusLabel } from '@shared/features/matching-status'
+import { formatDateTime } from '../../lib/matching/groupDisplay'
+import {
+  MATCHING_NO_MATCH_HERO_SRC,
+  MATCHING_WAITING_HERO_SRC,
+} from './constants'
 import { useMatchingStatusController } from './useMatchingStatusController'
 import './index.scss'
 
@@ -141,7 +146,7 @@ export default function MatchingStatusPage() {
       return (
         <ScrollView className={rootClassName} scrollY enhanced showScrollbar={false}>
           <MatchingHero
-            heroSrc={matchingStatusViewModels.MATCHING_NO_MATCH_HERO_SRC}
+            heroSrc={MATCHING_NO_MATCH_HERO_SRC}
             className='matching-status__hero--no-match'
           />
 
@@ -176,7 +181,7 @@ export default function MatchingStatusPage() {
                     {pool.district ? ` ${pool.district}` : ''}
                   </Text>
                   <Text className='matching-status__similar-meta'>
-                    {matchingStatusViewModels.formatDateTime(pool.dateTime)}
+                    {formatDateTime(pool.dateTime)}
                     {typeof pool.registrationCount === 'number'
                       ? ` · 已有 ${pool.registrationCount} 人入座`
                       : ''}
@@ -214,7 +219,7 @@ export default function MatchingStatusPage() {
     <ScrollView className={rootClassName} scrollY enhanced showScrollbar={false}>
       {matchStatus === 'pending' ? (
         <MatchingHero
-          heroSrc={matchingStatusViewModels.MATCHING_WAITING_HERO_SRC}
+          heroSrc={MATCHING_WAITING_HERO_SRC}
           className='matching-status__hero--waiting'
         />
       ) : null}
@@ -226,7 +231,7 @@ export default function MatchingStatusPage() {
           className={`matching-status__status-dot matching-status__status-dot--${matchStatus}`}
         />
         <Text className='matching-status__status-title'>
-          {matchingStatusViewModels.getStatusLabel(matchStatus)}
+          {getStatusLabel(matchStatus)}
         </Text>
         {matchStatus === 'pending' ? (
           <View className='matching-status__dots'>
@@ -280,7 +285,7 @@ export default function MatchingStatusPage() {
               <Text>时间</Text>
             </View>
             <Text className='matching-status__info-value'>
-              {matchingStatusViewModels.formatDateTime(
+              {formatDateTime(
                 effectiveEventDateTime ?? currentRegistration.poolDateTime,
               )}
             </Text>

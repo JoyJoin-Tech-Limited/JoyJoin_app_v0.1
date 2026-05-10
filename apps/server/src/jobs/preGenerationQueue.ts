@@ -6,9 +6,9 @@
  *   await enqueuePreGeneration(sessionId, phase, payload);
  *
  * Phases that benefit from pre-generation:
- *   - warmup, micro_challenge, lie_detective, personality_dice, auction, quip_battle
+ *   - warmup, micro_challenge, lie_detective, personality_dice, auction, quip_battle, undercover_word, group_mirror
  * Phases that do NOT pre-generate (lightweight or real-time dependent):
- *   - mini_script (framework pre-gen handled separately), group_mirror, undercover_word, vote, summary
+ *   - mini_script (framework pre-gen handled separately), vote, summary
  */
 
 import { enqueuePreGenerationJob } from '../lib/socialIcebreakerStore';
@@ -23,6 +23,8 @@ const ELIGIBLE_PHASES: SocialIcebreakerPhase[] = [
   'personality_dice',
   'auction',
   'quip_battle',
+  'undercover_word',
+  'group_mirror',
 ];
 
 /**
@@ -62,7 +64,7 @@ export async function enqueuePreGeneration(
  */
 export async function enqueueRunPlanPreGeneration(
   socialSessionId: string,
-  runPlan: { phases: Array<{ phase: string; durationMinutes: number }> },
+  runPlan: { segments: Array<{ phase: string; durationMinutes?: number }> },
   sessionPayload: {
     participantCount?: number;
     eventType?: string;
@@ -77,7 +79,7 @@ export async function enqueueRunPlanPreGeneration(
 ): Promise<string[]> {
   const jobIds: string[] = [];
 
-  for (const entry of runPlan.phases) {
+  for (const entry of runPlan.segments) {
     if (!ELIGIBLE_PHASES.includes(entry.phase as SocialIcebreakerPhase)) {
       continue;
     }
@@ -101,6 +103,7 @@ export async function enqueueRunPlanPreGeneration(
       case 'auction':
       case 'quip_battle':
       case 'micro_challenge':
+      case 'undercover_word':
       default:
         // Minimal payload, generator fills in
         break;

@@ -1,5 +1,6 @@
 import { View, Text, Image } from '@tarojs/components'
-import { getXiaoyueExpressionAsset, type XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
+import { getXiaoyueExpressionAsset, XIAOYUE_EXPRESSION_TO_SPRITE_STATE, type XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
+import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from './XiaoyueSpriteAnimator'
 import './XiaoyueChatBubble.scss'
 
 export type XiaoyuePose = 'thinking' | 'casual' | 'pointing'
@@ -28,6 +29,10 @@ export interface XiaoyueChatBubbleProps {
   /** Stagger delay per sentence (ms) */
   staggerDelay?: number
   className?: string
+  /** Whether to use sprite animation instead of static image */
+  animate?: boolean
+  /** Direct sprite state override (takes precedence over expressionId mapping) */
+  spriteState?: XiaoyueSpriteState
 }
 
 /**
@@ -50,6 +55,8 @@ export default function XiaoyueChatBubble({
   isLoading = false,
   staggerDelay = 80,
   className = '',
+  animate = false,
+  spriteState,
 }: XiaoyueChatBubbleProps) {
   const resolvedExpressionId = isLoading
     ? 'loadingSystem'
@@ -68,14 +75,23 @@ export default function XiaoyueChatBubble({
       <View
         className={`xiaoyue-chat-bubble__avatar-wrap ${showGlow ? 'xiaoyue-chat-bubble__avatar-wrap--glow' : ''} ${isLoading ? 'xiaoyue-chat-bubble__avatar-wrap--loading' : ''}`}
       >
-        <Image
-          className='xiaoyue-chat-bubble__avatar'
-          mode='aspectFit'
-          src={getXiaoyueExpressionAsset(resolvedExpressionId)}
-          onError={() => {
-            // Graceful degradation: avatar hides, bubble remains
-          }}
-        />
+        {animate ? (
+          <XiaoyueSpriteAnimator
+            state={spriteState ?? XIAOYUE_EXPRESSION_TO_SPRITE_STATE[resolvedExpressionId] ?? 'neutral'}
+            size={wide ? '120rpx' : '96rpx'}
+            showGlow={false}
+            isLoading={isLoading}
+          />
+        ) : (
+          <Image
+            className='xiaoyue-chat-bubble__avatar'
+            mode='aspectFit'
+            src={getXiaoyueExpressionAsset(resolvedExpressionId)}
+            onError={() => {
+              // Graceful degradation: avatar hides, bubble remains
+            }}
+          />
+        )}
       </View>
 
       {/* Bubble */}

@@ -1,6 +1,6 @@
 # Admin Client — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents. Last updated: 2026-05-04
+> Compact instructions for AI coding agents. Last updated: 2026-05-08
 
 ---
 
@@ -125,7 +125,7 @@ src/
     ui/                  # use-toast, use-mobile, useSoundEffects, usePreloadImages
     game/                # useLevelUp, useXPNotification
     icebreaker/          # use-icebreaker-messages, use-icebreaker-topics
-  lib/                   # Utilities (queryClient, api helpers, formatters)
+  lib/                   # Utilities (queryClient, api helpers, formatters, csvExport, dateUtils)
   static-data/           # Static data / lookup tables
 ```
 
@@ -135,6 +135,8 @@ src/
 - Hooks go in domain subdirs (auth/, event/, ui/, etc.) — NOT flat at `hooks/`
 - Admin-local UI goes in `components/` — shared primitives go to `packages/shared/src/ui/`
 - Every page must handle: loading, empty, error, unauthorized states
+- **Date formatting:** Use `@/lib/dateUtils` (`safeFormat`, `fmtDate`, `fmtDateTime`) instead of raw `format(new Date(...))` to avoid crashes on invalid strings
+- **CSV export:** Use `@/lib/csvExport` (`downloadCsv`) — formula-injection safe with UTF-8 BOM for Excel
 - Data tables use shadcn/ui Table + TanStack Query (`useQuery`)
 - Forms use `react-hook-form` + `zod` schemas
 

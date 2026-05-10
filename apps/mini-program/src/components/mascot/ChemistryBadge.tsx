@@ -52,17 +52,7 @@ export default function ChemistryBadge({
     )
   }
 
-  let src: string
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    src = require(`../../assets/icons/chemistry-badges/${assetKey}.png`) as string
-  } catch {
-    return (
-      <Text className={className} style={{ fontSize: sizeStr, lineHeight: sizeStr }}>
-        {fallbackLabel}
-      </Text>
-    )
-  }
+  const src = `/assets/icons/chemistry-badges/${assetKey}.webp`
 
   return (
     <Image

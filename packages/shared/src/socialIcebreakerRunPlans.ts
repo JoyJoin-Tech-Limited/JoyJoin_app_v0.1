@@ -1,4 +1,6 @@
 /**
+ * @deprecated Use compileAgentRunPlan() from @shared/runPlanCompiler for new code. Hardcoded plans remain as fallback only.
+ *
  * Social Icebreaker — Tier Run Plans
  *
  * Hardcoded run plans for the three session tiers.

@@ -39,7 +39,7 @@ export const YUEZAI_TIER_COPY: Record<TierMachineId, YuezaiTierCopy> = {
     phaseCountLabel: '4个环节',
     contextTagline: '几道趣味问答 + 猜猜谁在说谎，节奏轻快不冷场',
     vibe: '轻快、安全、零压力',
-    selectionReaction: '好，我们就玩破冰局！我先去给大家热个场~',
+    selectionReaction: '好，我们就玩破冰局！让我给大家把气氛先热起来~',
   },
   glow: {
     quote: '想聊得深一点、找到同频的人？这个适合你们！',

@@ -15,12 +15,12 @@
 #   ./scripts/upload-miniscript-assets-to-cdn.sh
 #
 # After upload, verify:
-#   curl -I https://cdn.yuejuapp.com/miniscript/medieval-hero.webp
+#   curl -I https://cdn.joyjoinapp.com/miniscript/medieval-hero.webp
 
 set -euo pipefail
 
 HERO_DIR="apps/mini-program/src/assets/miniscript"
-CDN_BASE="https://cdn.yuejuapp.com/miniscript"
+CDN_BASE="https://cdn.joyjoinapp.com/miniscript"
 
 # Check if coscmd is available
 if command -v coscmd &> /dev/null; then

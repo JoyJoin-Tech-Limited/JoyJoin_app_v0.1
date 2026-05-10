@@ -1,7 +1,10 @@
-import { View, Text, Slider } from '@tarojs/components'
+import { View, Text, Slider, Image } from '@tarojs/components'
+import { memo, useState, useCallback, useEffect, useRef } from 'react'
 import Button from '../../../components/ui/Button'
 import { COLOR_PRIMARY, COLOR_PRIMARY_LIGHT } from '../../../lib/utils/uiConstants'
 import { haptics } from '../../../lib/utils/haptics'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
+import { resolvePersonalityEmoji } from './emojiAssets'
 import './PersonalityTestAnswerArea.scss'
 
 export type QuestionType = 'choice' | 'slider' | 'emoji_tap'
@@ -55,7 +58,7 @@ function getNearestSliderOption(
   }, null)
 }
 
-export default function PersonalityTestAnswerArea({
+export default memo(function PersonalityTestAnswerArea({
   questionType,
   options,
   sliderConfig,
@@ -65,16 +68,66 @@ export default function PersonalityTestAnswerArea({
   onSliderChange,
   onSliderSubmit,
 }: AnswerAreaProps) {
+  const [selectedValue, setSelectedValue] = useState<string | null>(null)
+  const selectedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Reset selection when question changes
+  useEffect(() => {
+    setSelectedValue(null)
+    if (selectedTimeoutRef.current) {
+      clearTimeout(selectedTimeoutRef.current)
+      selectedTimeoutRef.current = null
+    }
+  }, [options, questionType])
+
+  const handleAnswer = useCallback((option: AnswerOption) => {
+    if (selectedTimeoutRef.current) {
+      clearTimeout(selectedTimeoutRef.current)
+    }
+    setSelectedValue(option.value)
+    onAnswer(option)
+    // Clear selection flash after 300ms
+    selectedTimeoutRef.current = setTimeout(() => {
+      setSelectedValue(null)
+      selectedTimeoutRef.current = null
+    }, 300)
+  }, [onAnswer])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (selectedTimeoutRef.current) {
+        clearTimeout(selectedTimeoutRef.current)
+      }
+    }
+  }, [])
+
   if (questionType === 'slider' && sliderConfig) {
     return (
       <View className='answer-area__slider-shell'>
         <View className='answer-area__slider-labels'>
           <View className='answer-area__slider-pill'>
-            <Text className='answer-area__slider-pill-emoji'>{sliderConfig.leftEmoji}</Text>
+            {resolvePersonalityEmoji(sliderConfig.leftEmoji) ? (
+              <Image
+                className='answer-area__slider-pill-emoji'
+                src={cdnAsset(resolvePersonalityEmoji(sliderConfig.leftEmoji)!)}
+                mode='aspectFit'
+              />
+            ) : (
+              <Text className='answer-area__slider-pill-emoji'>{sliderConfig.leftEmoji}</Text>
+            )}
             <Text className='answer-area__slider-pill-text'>{sliderConfig.leftLabel}</Text>
           </View>
           <View className='answer-area__slider-pill answer-area__slider-pill--right'>
-            <Text className='answer-area__slider-pill-emoji'>{sliderConfig.rightEmoji}</Text>
+            {resolvePersonalityEmoji(sliderConfig.rightEmoji) ? (
+              <Image
+                className='answer-area__slider-pill-emoji'
+                src={cdnAsset(resolvePersonalityEmoji(sliderConfig.rightEmoji)!)}
+                mode='aspectFit'
+              />
+            ) : (
+              <Text className='answer-area__slider-pill-emoji'>{sliderConfig.rightEmoji}</Text>
+            )}
             <Text className='answer-area__slider-pill-text'>{sliderConfig.rightLabel}</Text>
           </View>
         </View>
@@ -115,20 +168,30 @@ export default function PersonalityTestAnswerArea({
   if (questionType === 'emoji_tap') {
     return (
       <View className='answer-area__emoji-grid'>
-        {options.map((option) => {
+        {options.map((option, index) => {
           const parts = splitEmojiLabel(option.text)
+          const isSelected = selectedValue === option.value
           return (
             <Button
               key={option.value}
-              className='answer-area__emoji-option'
+              className={`answer-area__emoji-option${isSelected ? ' answer-area__emoji-option--selected' : ''}`}
+              style={{ animationDelay: `${index * 0.05}s` }}
               onClick={() => {
                 haptics('light')
-                onAnswer(option)
+                handleAnswer(option)
               }}
               disabled={isSubmitting}
               hoverClass='answer-area__emoji-option--active'
             >
-              <Text className='answer-area__emoji-option-emoji'>{parts.emoji}</Text>
+              {resolvePersonalityEmoji(parts.emoji) ? (
+                <Image
+                  className='answer-area__emoji-option-emoji'
+                  src={cdnAsset(resolvePersonalityEmoji(parts.emoji)!)}
+                  mode='aspectFit'
+                />
+              ) : (
+                <Text className='answer-area__emoji-option-emoji'>{parts.emoji}</Text>
+              )}
               <Text className='answer-area__emoji-option-text'>{parts.label}</Text>
             </Button>
           )
@@ -140,22 +203,26 @@ export default function PersonalityTestAnswerArea({
   // Default: choice
   return (
     <View className='answer-area__options'>
-      {options.map((option) => (
-        <Button
-          key={option.value}
-          className='answer-area__option'
-          onClick={() => {
-            haptics('light')
-            onAnswer(option)
-          }}
-          disabled={isSubmitting}
-          hoverClass='answer-area__option--active'
-        >
-          <Text className='answer-area__option-text'>{option.text}</Text>
-        </Button>
-      ))}
+      {options.map((option, index) => {
+        const isSelected = selectedValue === option.value
+        return (
+          <Button
+            key={option.value}
+            className={`answer-area__option${isSelected ? ' answer-area__option--selected' : ''}`}
+            style={{ animationDelay: `${index * 0.05}s` }}
+            onClick={() => {
+              haptics('light')
+              handleAnswer(option)
+            }}
+            disabled={isSubmitting}
+            hoverClass='answer-area__option--active'
+          >
+            <Text className='answer-area__option-text'>{option.text}</Text>
+          </Button>
+        )
+      })}
     </View>
   )
-}
+})
 
 export { getNearestSliderOption }

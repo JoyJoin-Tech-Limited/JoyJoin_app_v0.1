@@ -1,21 +1,27 @@
 export {
   chatMessages,
   connections,
+  insertChatMessageSchema,
+} from './_definitions.js';
+
+export {
   chatReports,
   chatLogs,
   goldenDialogues,
   dialogueEmbeddings,
-  insertChatMessageSchema,
   insertChatReportSchema,
   insertChatLogSchema,
   insertGoldenDialogueSchema,
   insertDialogueEmbeddingSchema,
-} from './_definitions.js';
+} from './_definitions_extended.js';
 
 export type {
   ChatMessage,
   InsertChatMessage,
   Connection,
+} from './_definitions.js';
+
+export type {
   ChatReport,
   InsertChatReport,
   ChatLog,
@@ -24,4 +30,4 @@ export type {
   InsertGoldenDialogue,
   DialogueEmbedding,
   InsertDialogueEmbedding,
-} from './_definitions.js';
+} from './_definitions_extended.js';

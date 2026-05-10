@@ -13,6 +13,78 @@
   }
 }
 
+@keyframes mascot-float {
+  0%, 100% {
+    transform: translateY(0) rotate(-1.5deg);
+  }
+  50% {
+    transform: translateY(-10rpx) rotate(1.5deg);
+  }
+}
+
+@keyframes mascot-breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes start-btn-glow {
+  0%, 100% {
+    box-shadow: 0 10rpx 30rpx rgba($brand-gradient-to, 0.24);
+  }
+  50% {
+    box-shadow: 0 14rpx 42rpx rgba($brand-gradient-to, 0.32);
+  }
+}
+
+@keyframes milestone-flash-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    transform: translateX(-150%);
+  }
+  100% {
+    transform: translateX(150%);
+  }
+
+}
+
+@keyframes thin-progress-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes mascot-commentary-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-12rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 .personality-test {
   @include page-gradient-bg;
   @include onboarding-page-exit-transition;
@@ -26,6 +98,7 @@
 
   &__intro-scroll {
     flex: 1;
+    min-height: 100%;
     min-height: 100dvh;
   }
 
@@ -64,7 +137,7 @@
     align-self: flex-start;
     display: inline-flex;
     align-items: center;
-    padding: 10rpx 20rpx;
+    padding: 8rpx 16rpx;
     border-radius: 999rpx;
     background: rgba($color-primary-light, 0.94);
     color: $color-primary;
@@ -80,7 +153,7 @@
 
   &__intro-title {
     display: block;
-    font-size: 30rpx; // Intentional: between base (28) and md (32) for intro rhythm
+    font-size: $font-size-md;
     font-weight: $font-weight-semibold;
     color: $color-primary-dark;
     letter-spacing: 1rpx;
@@ -88,16 +161,17 @@
   }
 
   &__intro-title--accent {
-    margin-top: 6rpx;
-    font-size: 68rpx; // Intentional: slightly larger than 4XL (64) for accent impact
+    margin-top: 8rpx;
+    font-size: $font-size-4xl;
     color: $color-primary;
     @include type-display-accent-line;
+    @include gradient-text;
   }
 
   &__intro-subtitle {
     display: block;
     max-width: 620rpx;
-    margin-top: 20rpx;
+    margin-top: $spacing-md;
     @include type-body;
     color: $color-text-secondary;
     line-height: 1.68;
@@ -106,29 +180,37 @@
 
   &__intro-hero {
     @include card-premium;
-    padding: 36rpx;
+    padding: $spacing-lg;
     background: $color-surface;
   }
 
   &__intro-hero-visual {
     position: relative;
-    min-height: 300rpx;
+    min-height: 336rpx;
     display: flex;
     align-items: center;
     justify-content: center;
+    will-change: transform;
+    transform: translateZ(0);
+    animation: mascot-float 3.2s ease-in-out infinite;
   }
 
   &__intro-hero-halo {
     position: absolute;
-    inset: 32rpx 80rpx 52rpx;
+    inset: 24rpx 64rpx 40rpx;
     border-radius: 999rpx;
-    background: rgba($color-primary, 0.04);
+    background: radial-gradient(
+      circle at center,
+      rgba($color-primary, 0.08) 0%,
+      rgba($color-secondary, 0.04) 60%,
+      transparent 80%
+    );
   }
 
   &__intro-bubble {
     margin-top: $spacing-md;
-    padding: 22rpx 24rpx;
-    border-radius: 28rpx;
+    padding: 24rpx;
+    border-radius: $card-radius;
     border: 2rpx solid rgba($color-border, 0.92);
     background: rgba($color-surface, 0.9);
   }
@@ -152,7 +234,7 @@
   &__intro-meta-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 12rpx;
+    gap: 16rpx;
     margin-top: $spacing-md;
   }
 
@@ -160,9 +242,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 12rpx 18rpx;
+    padding: 12rpx 16rpx;
     border-radius: 999rpx;
-    background: rgba($color-surface, 0.86);
+    background: rgba($color-surface, 0.88);
     border: 2rpx solid rgba($color-primary, 0.08);
   }
 
@@ -177,19 +259,23 @@
     display: block;
     position: relative;
     z-index: 1;
-    width: 280rpx;
-    height: 280rpx;
+    width: 320rpx;
+    height: 320rpx;
   }
 
   &__mascot--animated {
-    // Animated WebP plays automatically in WeChat Image component
-    // No additional CSS animation needed
+    width: 320rpx;
+    height: 320rpx;
+    will-change: transform;
+    transform: translateZ(0);
+    animation: mascot-breathe 2.4s ease-in-out infinite;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    &__mascot--animated {
-      // Fall back to static frame for users who prefer reduced motion
-      content: url('/assets/personality/xiaoyue/xiaoyue-home-welcome.webp');
+    &__intro-hero-visual,
+    &__mascot--animated,
+    &__start-btn {
+      animation: none;
     }
   }
 
@@ -220,20 +306,15 @@
     padding-top: 4rpx;
   }
 
-  &__intro-trust-index {
+  &__intro-trust-icon {
     @include flex-center;
-    width: 50rpx;
-    height: 50rpx;
+    width: 48rpx;
+    height: 48rpx;
     flex-shrink: 0;
     border-radius: 999rpx;
     background: rgba($color-primary-light, 0.9);
     border: 2rpx solid rgba($color-primary, 0.08);
-  }
-
-  &__intro-trust-index-text {
-    font-size: $font-size-xs;
-    color: $color-primary-dark;
-    font-weight: $font-weight-bold;
+    font-size: $font-size-sm;
   }
 
   &__intro-trust-copy {
@@ -286,7 +367,7 @@
   &__intro-value-description,
   &__value-description {
     display: block;
-    margin-top: 10rpx;
+    margin-top: $spacing-xs;
     font-size: $font-size-xs;
     color: $color-text-secondary;
     line-height: 1.45;
@@ -296,7 +377,7 @@
     @include card-premium;
     position: relative;
     padding: $spacing-lg;
-    padding-top: calc(#{$spacing-lg} + 6rpx);
+    padding-top: calc(#{$spacing-lg} + 8rpx);
     background: $color-surface;
 
     &::before {
@@ -347,8 +428,8 @@
 
   &__intro-tease-list {
     display: inline-flex;
-    gap: $spacing-sm;
-    padding-right: $spacing-sm;
+    gap: $spacing-md;
+    padding-right: $spacing-md;
   }
 
   &__intro-tease-card {
@@ -356,10 +437,10 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    width: 220rpx;
-    min-width: 220rpx;
-    min-height: 280rpx;
-    padding: 20rpx;
+    width: 240rpx;
+    min-width: 240rpx;
+    min-height: 300rpx;
+    padding: 24rpx;
     border: 2rpx solid rgba($color-border, 0.92);
     background: rgba($color-surface, 0.96);
     box-shadow: 0 10rpx 28rpx rgba(0, 0, 0, 0.05);
@@ -368,8 +449,8 @@
 
   &__intro-tease-avatar-wrap {
     position: relative;
-    width: 136rpx;
-    height: 136rpx;
+    width: 144rpx;
+    height: 144rpx;
     margin: 0 auto $spacing-sm;
   }
 
@@ -385,8 +466,8 @@
     @include flex-center;
     position: relative;
     z-index: 1;
-    width: 128rpx;
-    height: 128rpx;
+    width: 136rpx;
+    height: 136rpx;
     margin: 4rpx auto 0;
     border-radius: 999rpx;
     border: 2rpx solid rgba($color-primary, 0.1);
@@ -394,8 +475,8 @@
   }
 
   &__intro-tease-avatar {
-    width: 108rpx;
-    height: 108rpx;
+    width: 112rpx;
+    height: 112rpx;
   }
 
   &__intro-tease-name {
@@ -434,9 +515,9 @@
     z-index: 8;
     background: linear-gradient(
       180deg,
-      rgba(250, 250, 250, 0) 0%,
-      rgba(250, 250, 250, 0.88) 18%,
-      rgba(250, 250, 250, 0.98) 100%
+      rgba($color-bg, 0) 0%,
+      rgba($color-bg, 0.88) 18%,
+      rgba($color-bg, 0.98) 100%
     );
   }
 
@@ -455,11 +536,13 @@
     @include type-brand-cta-label;
     width: 100%;
     border: 0;
-    box-shadow: 0 10rpx 30rpx rgba(168, 107, 255, 0.24);
+    box-shadow: 0 10rpx 30rpx rgba($brand-gradient-to, 0.24);
+    animation: start-btn-glow 2.4s ease-in-out infinite;
 
     &--hover {
       opacity: 0.96;
       transform: translateY(1rpx) scale(0.995);
+      animation: none;
     }
   }
 
@@ -484,245 +567,16 @@
     line-height: 1.56;
   }
 
-  // Progress bar
-  &__progress-wrap {
-    padding: $spacing-md $container-padding $spacing-lg;
-    @include safe-area-inline($container-padding);
-  }
+  // ───────────────────────────────────────────
+  //  Testing Phase — Expert Commentator Layout
+  // ───────────────────────────────────────────
 
-  &__progress-label {
-    text-align: center;
-    margin-top: $spacing-sm;
-  }
-
-  &__progress-text {
-    font-size: $font-size-sm;
-    color: $color-text-muted;
-  }
-
-  // Milestone coaching bubbles
-  &__milestone-coach {
-    padding: 0 $container-padding $spacing-md;
-    @include safe-area-inline($container-padding);
-    @include onboarding-stage(0.06s, 0.34s, 20rpx);
-  }
-
-  // Question
-  &__question {
-    @include onboarding-stage(0.04s, 0.34s, 20rpx);
-    padding: 0 $container-padding $spacing-2xl;
-  }
-
-  &__question-card {
-    @include card-premium;
-    padding: $spacing-lg;
-  }
-
-  &__scenario {
-    display: block;
-    font-size: $font-size-sm;
-    color: rgba($color-primary-dark, 0.85);
-    font-weight: $font-weight-semibold;
-    margin-bottom: $spacing-md;
-    overflow-wrap: anywhere;
-  }
-
-  &__question-text {
-    display: block;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-    line-height: 1.6;
-    margin-bottom: $spacing-xl;
-    overflow-wrap: anywhere;
-  }
-
-  &__matches {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $spacing-xs;
-    margin-bottom: $spacing-lg;
-  }
-
-  &__match-chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    max-width: 100%;
-    padding: 10rpx 20rpx;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.1);
-    color: $color-primary-dark;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    overflow-wrap: anywhere;
-  }
-
-  // Options
-  &__options {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-md;
-  }
-
-  &__option {
-    @include card;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 100%;
-    min-width: 0;
-    min-height: $button-height;
-    padding: $spacing-md $spacing-lg;
-    border: 2rpx solid transparent;
-    font-size: $font-size-base;
-    color: $color-text-primary;
-    text-align: left;
-    line-height: 1.5;
-
-    &::after {
-      border: none;
-    }
-
-    &--active {
-      border-color: $color-primary;
-      background: $color-primary-light;
-    }
-  }
-
-  &__option-text {
-    flex: 1;
-    min-width: 0;
-    font-size: $font-size-base;
-    color: $color-text-primary;
-    line-height: 1.5;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
-
-  &__emoji-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: $spacing-sm;
-  }
-
-  &__emoji-option {
-    @include card-premium;
-    min-width: 0;
-    min-height: 200rpx;
-    padding: $spacing-md;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: $spacing-sm;
-    border: 2rpx solid transparent;
-    background: $color-surface;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-
-    &:active {
-      transform: scale(0.97);
-    }
-
-    &::after {
-      border: none;
-    }
-
-    &--active {
-      border-color: $color-primary;
-      background: rgba($color-primary, 0.04);
-      box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.08);
-    }
-  }
-
-  &__emoji-option-emoji {
-    font-size: 52rpx; // Decorative emoji — not part of hierarchy
-    line-height: 1;
-    flex-shrink: 0;
-  }
-
-  &__emoji-option-text {
-    width: 100%;
-    min-width: 0;
-    font-size: $font-size-sm;
-    color: $color-text-primary;
-    text-align: center;
-    line-height: 1.6;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
-
-  &__slider-shell {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-md;
-  }
-
-  &__slider-labels {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: $spacing-sm;
-  }
-
-  &__slider-pill {
-    display: flex;
-    align-items: center;
-    gap: 10rpx;
-    flex: 1;
-    min-width: 0;
-    max-width: 48%;
-    padding: 14rpx 18rpx;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.06);
-
-    &--right {
-      justify-content: flex-end;
-      margin-left: auto;
-    }
-  }
-
-  &__slider-pill-emoji {
-    font-size: $font-size-base; // Emoji icon — decorative
-    line-height: 1;
-    flex-shrink: 0;
-  }
-
-  &__slider-pill-text {
-    flex: 1;
-    min-width: 0;
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    line-height: 1.45;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
-
-  &__slider-value {
-    display: block;
-    text-align: center;
-    @include type-title;
-    color: $color-primary-dark;
-  }
-
-  &__slider {
-    margin: 0;
-  }
-
-  &__slider-submit {
-    @include button-primary;
-    @include type-brand-cta-label;
-    width: 100%;
-    border: 0;
-  }
-
-    // ─── Mascot questioner layout (Duolingo-style) ───
   &--mascot-layout {
     @include page-clean-bg;
     @include onboarding-page-exit-transition;
     display: flex;
     flex-direction: column;
-    height: 100dvh;
+    height: 100%;
     height: 100dvh;
     overflow: hidden;
   }
@@ -731,33 +585,186 @@
     position: absolute;
     left: -9999rpx;
     top: -9999rpx;
-    width: 1rpx;
-    height: 1rpx;
+    width: 2rpx;
+    height: 2rpx;
     opacity: 0;
     pointer-events: none;
   }
 
   &__preload-image {
-    width: 1rpx;
-    height: 1rpx;
+    width: 2rpx;
+    height: 2rpx;
   }
 
+  // Thin progress bar at very top
+  &__progress-track {
+    position: relative;
+    width: 100%;
+    height: 4rpx;
+    background: rgba($color-primary, 0.1);
+    overflow: hidden;
+  }
+
+  &__progress-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: $brand-gradient;
+    border-radius: 0 2rpx 2rpx 0;
+    transform-origin: left center;
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__progress-label {
+    text-align: center;
+    padding: $spacing-sm 0;
+  }
+
+  &__progress-text {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    font-weight: $font-weight-medium;
+  }
+
+  // Host zone: mascot left + glass card right
   &__host-zone {
-    flex: 0 1 auto;
-    min-height: 0;
-    padding: $spacing-sm $container-padding $spacing-md;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    flex: 0 0 auto;
+    padding: $spacing-md $container-padding $spacing-lg;
+    @include safe-area-inline($container-padding);
   }
 
+  &__commentary-row {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-md;
+    animation: mascot-commentary-enter 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__commentary-mascot {
+    flex-shrink: 0;
+    width: 144rpx;
+    height: 144rpx;
+    margin-top: $spacing-sm;
+    animation: mascot-float 3.2s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  &__commentary-card-wrap {
+    flex: 1;
+    min-width: 0;
+    max-height: 38vh;
+    overflow: hidden;
+  }
+
+  // Milestone coaching — positioned near mascot, subtle
+  &__milestone-coach {
+    position: relative;
+    flex: 0 0 auto;
+    padding: 0 $container-padding $spacing-md;
+    @include safe-area-inline($container-padding);
+    animation: mascot-commentary-enter 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &--flash::before {
+      content: '';
+      position: absolute;
+      top: -20rpx;
+      right: calc(-1 * #{$container-padding});
+      bottom: -20rpx;
+      left: calc(-1 * #{$container-padding});
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba($color-primary, 0.08) 0%, transparent 70%);
+      animation: milestone-flash-pulse 0.6s ease-out;
+      pointer-events: none;
+      z-index: -1;
+    }
+  }
+
+  &__milestone-coach-inner {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    padding-left: calc(144rpx + #{$spacing-md}); // align with card start (mascot + gap)
+  }
+
+  &__milestone-coach-bubble {
+    flex: 1;
+    min-width: 0;
+    padding: $spacing-md $spacing-lg;
+    border-radius: 24rpx;
+    background: rgba($color-primary-light, 0.72);
+    border: 1rpx solid rgba($color-primary, 0.1);
+  }
+
+  &__milestone-coach-text {
+    font-size: $font-size-sm;
+    color: $color-primary-dark;
+    line-height: 1.6;
+    font-weight: $font-weight-medium;
+  }
+
+  // Answer zone
   &__answer-zone {
     flex: 1;
     min-height: 0;
-    padding: 0 $container-padding $spacing-lg;
+    padding: 0 $container-padding $spacing-xl;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    @include safe-area-inline($container-padding);
+    @include safe-area-bottom-padding(padding-bottom, $spacing-xl);
+  }
+
+  &__skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+    width: 100%;
+    padding-top: $spacing-sm;
+
+    &-scenario,
+    &-question,
+    &-option {
+      position: relative;
+      overflow: hidden;
+      background: $color-divider;
+      border-radius: $radius-pill;
+
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.5) 50%,
+          transparent 100%
+        );
+        transform: translateX(-150%);
+        animation: skeleton-shimmer 1.5s ease-in-out infinite;
+      }
+    }
+
+    &-scenario {
+      width: 60%;
+      height: 24rpx;
+    }
+
+    &-question {
+      width: 90%;
+      height: 32rpx;
+    }
+
+    &-options {
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-md;
+      margin-top: $spacing-sm;
+    }
+
+    &-option {
+      width: 100%;
+      height: 104rpx;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -786,6 +793,26 @@
 
     &__progress-fill {
       transition: none;
+    }
+
+    &__commentary-mascot {
+      animation: none;
+    }
+
+    &__commentary-row,
+    &__milestone-coach {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+
+    &__skeleton-scenario,
+    &__skeleton-question,
+    &__skeleton-option {
+      &::after {
+        animation: none;
+        display: none;
+      }
     }
   }
 }

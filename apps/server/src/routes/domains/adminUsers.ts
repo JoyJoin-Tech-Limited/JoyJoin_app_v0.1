@@ -9,7 +9,7 @@ import { logAdminAudit } from "../../lib/adminAuditLogger";
 import { storage } from "../../storage";
 import { getMatchingMetricsSnapshot } from "../../matchingMetrics";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
-import { assessmentSessions, eventPoolRegistrations, eventPoolGroups, connections, matchHistory, userInterests, poolMatchingLogs } from "@shared/schema";
+import { assessmentSessions, eventPoolRegistrations, eventPoolGroups, connections, matchHistory, userInterests, poolMatchingLogs, users, events } from "@shared/schema";
 
 function calculateProfileCompletenessSimple(user: any): { score: number; starRating: number; missingFields: string[] } {
   const fields = [
@@ -547,8 +547,25 @@ export function registerAdminUserRoutes(app: Express): void {
           .orderBy(desc(connections.createdAt))
           .limit(20),
         db
-          .select()
+          .select({
+            id: matchHistory.id,
+            user1Id: matchHistory.user1Id,
+            user2Id: matchHistory.user2Id,
+            eventId: matchHistory.eventId,
+            matchedAt: matchHistory.matchedAt,
+            connectionQuality: matchHistory.connectionQuality,
+            wouldMeetAgain: matchHistory.wouldMeetAgain,
+            connectionPointTypes: matchHistory.connectionPointTypes,
+            partnerName: users.displayName,
+            partnerArchetype: users.archetype,
+            eventTitle: events.title,
+          })
           .from(matchHistory)
+          .leftJoin(users, or(
+            and(eq(matchHistory.user1Id, userId), eq(matchHistory.user2Id, users.id)),
+            and(eq(matchHistory.user2Id, userId), eq(matchHistory.user1Id, users.id))
+          ))
+          .leftJoin(events, eq(matchHistory.eventId, events.id))
           .where(or(eq(matchHistory.user1Id, userId), eq(matchHistory.user2Id, userId)))
           .orderBy(desc(matchHistory.matchedAt))
           .limit(20),
@@ -658,6 +675,11 @@ export function registerAdminUserRoutes(app: Express): void {
         return res.status(404).json({ message: "User not found" });
       }
 
+      const { reason } = req.body;
+      if (!reason || typeof reason !== 'string' || reason.trim().length < 5) {
+        return res.status(400).json({ message: "封禁原因必填，至少5个字符" });
+      }
+
       const updatedUser = await storage.updateUser(req.params.id, { isBanned: true });
 
       logAdminAudit({
@@ -667,7 +689,8 @@ export function registerAdminUserRoutes(app: Express): void {
         targetEntityType: 'user',
         targetEntityId: req.params.id,
         before: { isBanned: user.isBanned },
-        after: { isBanned: true },
+        after: { isBanned: true, reason: reason.trim() },
+        context: { reason: reason.trim() },
       });
 
       res.json(updatedUser);

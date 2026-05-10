@@ -30,7 +30,33 @@
 
   // ── Hero ──────────────────────────────────────────────────────
   &__hero {
-    padding: $spacing-xl $container-padding $spacing-lg;
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-lg $container-padding $spacing-md;
+  }
+
+  &__hero-mascot {
+    flex-shrink: 0;
+    width: 96rpx;
+    height: 96rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  &__hero-mascot-img {
+    width: 88rpx;
+    height: 88rpx;
+    display: block;
+  }
+
+  &__hero-text {
+    flex: 1;
+    min-width: 0;
   }
 
   &__greeting {
@@ -43,14 +69,13 @@
 
   &__subtitle {
     display: block;
-    font-size: $font-size-base;
+    font-size: $font-size-sm;
     color: $color-text-secondary;
+    line-height: 1.5;
   }
 
-  // ── Quick actions row ─────────────────────────────────────────
-  &__actions {
-    display: flex;
-    gap: $spacing-md;
+  // ── Primary action (contextual single CTA) ────────────────────
+  &__primary-action {
     padding: 0 $container-padding;
     margin-bottom: $spacing-lg;
   }
@@ -61,13 +86,13 @@
   }
 
   &__action-card {
-    flex: 1;
     @include card;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: $spacing-xs;
-    padding: $spacing-lg $spacing-sm;
+    justify-content: center;
+    gap: $spacing-sm;
+    padding: $spacing-md $spacing-lg;
     &:active {
       transform: scale(0.97);
     }

@@ -1,0 +1,109 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.box-logo-entry {
+  @include viewport-min-height;
+  @include flex-center;
+  background: $color-bg-warm-to;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: $z-loading-overlay;
+  opacity: 1;
+  transition: opacity 150ms ease-out;
+
+  &--exiting {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &__stage {
+    position: relative;
+    @include flex-center;
+    width: 320rpx;
+    height: 320rpx;
+  }
+
+  &__logo {
+    position: relative;
+    z-index: 2;
+    width: 240rpx;
+    height: 240rpx;
+    opacity: 0;
+    will-change: transform, opacity;
+    animation: box-logo-entry-logo 500ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  &__glow {
+    position: absolute;
+    z-index: 1;
+    width: 320rpx;
+    height: 320rpx;
+    border-radius: 999rpx;
+    background: radial-gradient(
+      circle,
+      rgba(255, 248, 240, 0.18) 0%,
+      rgba(255, 248, 240, 0.06) 40%,
+      transparent 70%
+    );
+    opacity: 0;
+    will-change: transform, opacity;
+    animation: box-logo-entry-glow 700ms ease-out forwards;
+  }
+}
+
+// ─── Logo entrance: rise + settle ───────────────────────────────────
+@keyframes box-logo-entry-logo {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18rpx, 0) scale(0.94);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+// ─── Warm glow: bloom then fade ─────────────────────────────────────
+@keyframes box-logo-entry-glow {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  42.9% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+}
+
+// ─── Reduced motion: skip glow, minimal fade ────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .box-logo-entry {
+    &__logo {
+      animation: box-logo-entry-logo-reduced 200ms ease-out forwards;
+    }
+
+    &__glow {
+      animation: none;
+      opacity: 0;
+    }
+  }
+}
+
+@keyframes box-logo-entry-logo-reduced {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

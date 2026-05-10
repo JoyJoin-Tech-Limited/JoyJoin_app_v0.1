@@ -262,7 +262,7 @@
 - **质量：** q75
 - **目标大小：** ≤ 80KB / 张
 - **命名：** `miniscript-style-{key}-hero.webp`
-- **CDN 路径：** `https://cdn.yuejuapp.com/miniscript/miniscript-style-{key}-hero.webp`
+- **CDN 路径：** `https://cdn.joyjoinapp.com/miniscript/miniscript-style-{key}-hero.webp`
 
 ---
 

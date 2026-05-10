@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { View, Image } from '@tarojs/components'
+import { View } from '@tarojs/components'
+import BrandLogo from '../ui/BrandLogo'
 import './FancyLineLoadingScreen.scss'
 
 export type FancyLineLoadingScreenProps = {
@@ -46,10 +47,9 @@ export function FancyLineLoadingScreen({
       ariaLabel='加载中'
     >
       <View className='fancy-line-loading-screen__inner'>
-        <Image
+        <BrandLogo
+          size='xl'
           className='fancy-line-loading-screen__logo'
-          src='/assets/box-logo.webp'
-          mode='aspectFit'
           ariaLabel='悦聚 JoyJoin'
         />
         {bottomContent ? (

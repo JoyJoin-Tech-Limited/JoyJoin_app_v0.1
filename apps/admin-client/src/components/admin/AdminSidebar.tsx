@@ -52,6 +52,7 @@ const coreOpsItems: NavItem[] = [
   { title: "数据看板", url: "/admin/dashboard", icon: LayoutDashboard, roles: ALL_ROLES },
   { title: "用户管理", url: "/admin/users", icon: Users, roles: ALL_ROLES },
   { title: "活动池管理", url: "/admin/event-pools", icon: Layers, roles: ALL_ROLES },
+  { title: "活动模板", url: "/admin/templates", icon: CalendarDays, roles: SUPER_OPERATOR },
   { title: "场地管理", url: "/admin/venues", icon: MapPin, roles: ALL_ROLES },
 ];
 
@@ -64,6 +65,7 @@ const matchingItems: NavItem[] = [
 const safetyItems: NavItem[] = [
   { title: "反馈管理", url: "/admin/feedback", icon: MessageSquare, roles: SUPER_OPERATOR },
   { title: "举报审核", url: "/admin/moderation", icon: Flag, roles: SUPER_OPERATOR },
+  { title: "举报管理", url: "/admin/reports", icon: ReceiptText, roles: SUPER_OPERATOR },
   { title: "连接日志", url: "/admin/interaction-logs", icon: FileText, roles: SUPER_ONLY },
 ];
 
@@ -78,12 +80,12 @@ const contentRevenueItems: NavItem[] = [
   { title: "定价管理", url: "/admin/pricing", icon: DollarSign, roles: SUPER_ONLY },
   { title: "优惠券", url: "/admin/coupons", icon: Tag, roles: SUPER_ONLY },
   { title: "财务管理", url: "/admin/finance", icon: DollarSign, roles: SUPER_OPERATOR },
-  { title: "举报管理", url: "/admin/reports", icon: ReceiptText, roles: SUPER_OPERATOR },
   { title: "悦仔进化", url: "/admin/evolution", icon: Brain, roles: SUPER_ONLY },
 ];
 
 const systemItems: NavItem[] = [
   { title: "管理员账号", url: "/admin/accounts", icon: ShieldCheck, roles: SUPER_ONLY },
+  { title: "审计日志", url: "/admin/audit-logs", icon: ScrollText, roles: SUPER_ONLY },
 ];
 
 function filterByRole(items: NavItem[], role?: string): NavItem[] {

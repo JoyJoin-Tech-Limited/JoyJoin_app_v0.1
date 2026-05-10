@@ -20,7 +20,7 @@ Not counted as AI for this document:
 
 | Feature | Mini-program entry point | Backend path | Model/service | Current state | Fallback behavior |
 | --- | --- | --- | --- | --- | --- |
-| Social icebreaker warmup topics | `apps/mini-program/src/pages/icebreaker-session/index.tsx` -> `POST /api/social-icebreaker/:id/topics` | `generateWarmupTopics` in `apps/server/src/socialIcebreakerAIService.ts` | `socialModelRouter` with MiniMax preferred in hybrid mode, DeepSeek fallback | Active | Curated `FALLBACK_WARMUP_TOPICS` |
+| Social icebreaker topic cards | `apps/mini-program/src/pages/icebreaker-session/index.tsx` -> `POST /api/social-icebreaker/:id/topics` | `generateWarmupTopics` in `apps/server/src/socialIcebreakerAIService.ts` | `socialModelRouter` with MiniMax preferred in hybrid mode, DeepSeek fallback | Active | Curated `FALLBACK_WARMUP_TOPICS` |
 | Social icebreaker micro-challenges | `apps/mini-program/src/pages/icebreaker-session/index.tsx` -> `POST /api/social-icebreaker/:id/advance` into `micro_challenge` | `generateMicroChallenges` in `apps/server/src/socialIcebreakerAIService.ts` | `socialModelRouter` — MiniMax preferred in hybrid when `MINIMAX_API_KEY` is set; JSON extracted from model text | Active | Curated `FALLBACK_MICRO_CHALLENGES` |
 | Social icebreaker lie-detective statements | `apps/mini-program/src/pages/icebreaker-session/index.tsx` -> `POST /api/social-icebreaker/:id/lie-detective/generate` | `generateLieDetectiveStatements` in `apps/server/src/socialIcebreakerAIService.ts` | `socialModelRouter` with MiniMax preferred in hybrid mode, DeepSeek fallback | Active | Curated `FALLBACK_LIE_DETECTIVE_STATEMENTS` |
 | Social icebreaker recap summary | `apps/mini-program/src/pages/icebreaker-session/index.tsx` -> `GET /api/social-icebreaker/:id/recap` | `generateRecapSummary` in `apps/server/src/socialIcebreakerAIService.ts` | `socialModelRouter` with MiniMax preferred in hybrid mode, DeepSeek fallback | Active | Deterministic `getDefaultRecap(...)` |
@@ -34,7 +34,7 @@ Not counted as AI for this document:
 
 ### Confirmed live, user-facing AI in the mini-program
 
-1. Social icebreaker warmup topic generation.
+1. Social icebreaker topic card generation.
 2. Social icebreaker micro-challenge generation.
 3. Social icebreaker lie-detective statement generation.
 4. Social icebreaker recap summary generation.
@@ -56,7 +56,7 @@ Not counted as AI for this document:
 
 ## Detailed Breakdown Per Feature
 
-### 1. Social Icebreaker Warmup Topic Generation
+### 1. Social Icebreaker Topic Card Generation
 
 - Description: Generates a fresh set of five opening prompts for the live social-icebreaker session.
 - Entry point(s): `apps/mini-program/src/pages/icebreaker-session/index.tsx` host action `handleGenerateTopics(...)`, calling `POST /api/social-icebreaker/:socialSessionId/topics`.

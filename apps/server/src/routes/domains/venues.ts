@@ -113,7 +113,8 @@ export function registerVenueRoutes(app: Express): void {
         name, type, address, city, district, clusterId, districtId,
         contactName, contactPhone, commissionRate, tags, cuisines, 
         priceRange, maxConcurrentEvents, notes, decorStyle, tasteIntensity,
-        barThemes, alcoholOptions, vibeDescriptor
+        barThemes, alcoholOptions, vibeDescriptor,
+        latitude, longitude
       } = req.body;
       
       if (!name || !type || !address || !city || !district) {
@@ -142,6 +143,8 @@ export function registerVenueRoutes(app: Express): void {
         barThemes: barThemes || [],
         alcoholOptions: alcoholOptions || [],
         vibeDescriptor: vibeDescriptor || null,
+        latitude,
+        longitude,
       });
 
       logAdminAudit({
@@ -206,7 +209,8 @@ export function registerVenueRoutes(app: Express): void {
   // Get all deals for a venue (admin)
   app.get("/api/admin/venues/:venueId/deals", requireAdmin, async (req, res) => {
     try {
-      const deals = await storage.getVenueDeals(req.params.venueId);
+      const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
+      const deals = (await storage.getVenueDeals(req.params.venueId)).slice(0, limit);
       res.json(deals);
     } catch (error) {
       logger.error("Error fetching venue deals", { error: String(error) });
@@ -217,7 +221,8 @@ export function registerVenueRoutes(app: Express): void {
   // Get active deals for a venue (public - for event detail page)
   app.get("/api/venues/:venueId/deals", async (req, res) => {
     try {
-      const deals = await storage.getActiveVenueDeals(req.params.venueId);
+      const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
+      const deals = (await storage.getActiveVenueDeals(req.params.venueId)).slice(0, limit);
       res.json(deals);
     } catch (error) {
       logger.error("Error fetching active venue deals", { error: String(error) });
@@ -379,7 +384,8 @@ export function registerVenueRoutes(app: Express): void {
   // Venue Booking - Get bookings for a venue
   app.get("/api/admin/venues/:venueId/bookings", requireAdmin, async (req, res) => {
     try {
-      const bookings = await storage.getVenueBookings(req.params.venueId);
+      const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
+      const bookings = (await storage.getVenueBookings(req.params.venueId)).slice(0, limit);
       res.json(bookings);
     } catch (error) {
       logger.error("Error fetching venue bookings", { error: String(error) });
@@ -431,7 +437,8 @@ export function registerVenueRoutes(app: Express): void {
   // Get active bookings for a venue (for migration planning)
   app.get("/api/admin/venues/:venueId/active-bookings", requireAdmin, async (req, res) => {
     try {
-      const bookings = await storage.getActiveBookingsForVenue(req.params.venueId);
+      const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
+      const bookings = (await storage.getActiveBookingsForVenue(req.params.venueId)).slice(0, limit);
       res.json(bookings);
     } catch (error) {
       logger.error("Error fetching active venue bookings", { error: String(error) });
@@ -500,7 +507,8 @@ export function registerVenueRoutes(app: Express): void {
   // Get all time slots across all venues (for calendar overview)
   app.get("/api/admin/time-slots/all", requireAdmin, async (req, res) => {
     try {
-      const timeSlots = await storage.getAllVenueTimeSlotsWithVenue();
+      const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
+      const timeSlots = (await storage.getAllVenueTimeSlotsWithVenue()).slice(0, limit);
       res.json(timeSlots);
     } catch (error) {
       logger.error("Error fetching all venue time slots", { error: String(error) });
@@ -511,7 +519,8 @@ export function registerVenueRoutes(app: Express): void {
   // Get all time slots for a venue
   app.get("/api/admin/venues/:venueId/time-slots", requireAdmin, async (req, res) => {
     try {
-      const timeSlots = await storage.getVenueTimeSlots(req.params.venueId);
+      const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
+      const timeSlots = (await storage.getVenueTimeSlots(req.params.venueId)).slice(0, limit);
       res.json(timeSlots);
     } catch (error) {
       logger.error("Error fetching venue time slots", { error: String(error) });
@@ -676,7 +685,8 @@ export function registerVenueRoutes(app: Express): void {
       const filteredVenues = await db
         .select()
         .from(venues)
-        .where(whereConditions);
+        .where(whereConditions)
+        .limit(1000);
       
       // Batch check which venues have time slots configured
       let venuesWithSlots;
@@ -687,7 +697,8 @@ export function registerVenueRoutes(app: Express): void {
         const activeSlots = await db
           .select({ venueId: venueTimeSlots.venueId })
           .from(venueTimeSlots)
-          .where(eq(venueTimeSlots.isActive, true));
+          .where(eq(venueTimeSlots.isActive, true))
+          .limit(1000);
 
         const venuesWithActiveSlots = new Set(
           activeSlots.map((slot: { venueId: string | null }) => slot.venueId)

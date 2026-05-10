@@ -8,7 +8,7 @@ This is the JoyJoin application monorepo, managed with **npm workspaces**.
 /
 ├── apps/
 │   ├── user-client/     # React 18 + Vite PWA (user-facing, port 5001)
-│   ├── admin-client/    # React 18 + Vite admin portal (port 5002, deployed to admin.yuejuapp.com)
+│   ├── admin-client/    # React 18 + Vite admin portal (port 5002, deployed to admin.joyjoinapp.com)
 │   └── server/          # Node.js + Express API server (recommended local port 5000 via PORT env)
 ├── packages/
 │   └── shared/          # @joyjoin/shared — internal shared library
@@ -350,7 +350,7 @@ Verify the local setup for both roles:
   - Fix: this usually means DB schema drift (missing columns in `users` table). Run non-destructive migration steps first and avoid destructive `db:push` options on existing data.
 
 - **User app redirects admin links to production**
-  - Symptom: clicking an admin link from the user app sends you to `https://admin.yuejuapp.com`.
+  - Symptom: clicking an admin link from the user app sends you to `https://admin.joyjoinapp.com`.
   - Fix: set `VITE_ADMIN_PORTAL_URL=http://localhost:5002/admin` in `apps/user-client/.env.local` (or export it in the shell before `npm run dev:user`), then restart the user app.
 
 ## Validation commands
@@ -414,3 +414,25 @@ Start with these files in order when you are new to the repo or touching an unfa
 - [`.github/agents/README.md`](./.github/agents/README.md) — focused custom agents for recurring workflows
 - [`apps/server/src/README.md`](./apps/server/src/README.md) — server domain ownership and file placement
 - [`packages/shared/src/README.md`](./packages/shared/src/README.md) — shared package boundary rules
+
+## Embedding Model
+
+JoyJoin uses [`granite-embedding-97m-multilingual-r2`](https://huggingface.co/ibm-granite/granite-embedding-97m-multilingual-r2) (384-dim, Apache 2.0) for semantic profile embeddings and professional similarity matching.
+
+### Installation
+
+```bash
+pip install sentence-transformers
+```
+
+### Usage
+
+```python
+from sentence_transformers import SentenceTransformer
+
+model = SentenceTransformer("ibm-granite/granite-embedding-97m-multilingual-r2")
+
+sentences = ["The weather is lovely today.", "It's so sunny outside!", "He drove to the stadium."]
+embeddings = model.encode(sentences)          # shape: (n, 384)
+similarities = model.similarity(embeddings, embeddings)
+```

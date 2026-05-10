@@ -571,6 +571,17 @@ export async function generateXiaoyueAnalysis(
   }
 }
 
+export function peekCachedAnalysis(
+  input: ArchetypeAnalysisInput
+): Omit<XiaoyueAnalysisResult, 'cached'> | null {
+  const cacheKey = getCacheKey(input);
+  const cached = analysisCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.result;
+  }
+  return null;
+}
+
 export async function prefetchAnalysisIfReady(
   input: Omit<ArchetypeAnalysisInput, 'confidence'>,
   confidence: number

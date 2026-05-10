@@ -74,30 +74,24 @@ export function buildSemanticProfileDocument(
     .map((selection) => selection.fullName ?? selection.label ?? selection.topicId ?? '')
     .filter(Boolean);
 
-  const intents = Array.isArray(user.intent) ? user.intent : [];
-  const languages = Array.isArray(user.preferredLanguages) ? user.preferredLanguages : [];
   const deepInterests = Array.isArray(user.interestsDeep) ? user.interestsDeep : [];
 
+  // Only include fields NOT already scored by the 6D matching dimensions.
+  // bio, socialTag, and favoriteRestaurantReason are unique free-text signals.
+  // All other profile fields (archetype, city, education, industry, workMode,
+  // hometown, languages, intent, tableVibe) are already measured with higher
+  // precision by chemistry / interest / socialAffinity / backgroundDiversity /
+  // preference / language dimensions.
   const profileLines = uniqueValues([
     user.bio ?? null,
-    user.archetype ? `Archetype: ${user.archetype}` : null,
-    user.secondaryArchetype ? `Secondary archetype: ${user.secondaryArchetype}` : null,
-    user.currentCity ? `Current city: ${user.currentCity}` : null,
-    user.hometownRegionCity ? `Hometown: ${user.hometownRegionCity}` : null,
-    user.educationLevel ? `Education: ${user.educationLevel}` : null,
-    user.workMode ? `Work mode: ${user.workMode}` : null,
-    user.industryCategoryLabel ? `Industry: ${user.industryCategoryLabel}` : null,
-    user.industrySegmentLabel ? `Industry segment: ${user.industrySegmentLabel}` : null,
-    user.industryNicheLabel ? `Industry niche: ${user.industryNicheLabel}` : null,
-    user.tableVibePreference ? `Preferred vibe: ${user.tableVibePreference}` : null,
-    intents.length > 0 ? `Intent: ${intents.join(', ')}` : null,
-    languages.length > 0 ? `Languages: ${languages.join(', ')}` : null,
+    user.socialTag ? `Social tag: ${user.socialTag}` : null,
+    user.favoriteRestaurantReason ? `Favorite reason: ${user.favoriteRestaurantReason}` : null,
     topInterestLabels.length > 0 ? `Top interests: ${topInterestLabels.join(', ')}` : null,
     deepInterests.length > 0 ? `Deep interests: ${deepInterests.join(', ')}` : null,
   ]);
 
   if (profileLines.length === 0) {
-    return 'Semantic profile unavailable: add a bio, interests, or archetype to enable semantic matching enrichment.';
+    return 'Semantic profile unavailable: add a bio, interests, or social tag to enable semantic matching enrichment.';
   }
 
   return profileLines.join('\n');

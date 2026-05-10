@@ -1,0 +1,429 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// ═══════════════════════════════════════════════════════════════
+//  Personality Dice Phase — V2
+// ═══════════════════════════════════════════════════════════════
+
+.personality-dice {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+
+  // ── CardFlip container ──────────────────────────────────────
+  &__card {
+    position: relative;
+    width: 100%;
+
+    &--shake {
+      animation: personality-dice-shake 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+  }
+
+  // ── Dice face (CardFlip front) ──────────────────────────────
+  &__dice-face {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-md;
+    padding: $spacing-xl $spacing-lg;
+    min-height: 400rpx;
+    text-align: center;
+    background: linear-gradient(135deg, #FAFAFA 0%, #F3F4F6 100%);
+    border-radius: $card-radius;
+  }
+
+  &__dice-emoji {
+    font-size: 96rpx;
+    line-height: 1;
+  }
+
+  &__dice-title {
+    @include type-heading;
+    color: $color-text-primary;
+  }
+
+  &__dice-desc {
+    @include type-body;
+    color: $color-text-secondary;
+    max-width: 480rpx;
+  }
+
+  // ── Challenge face (CardFlip back) ──────────────────────────
+  &__challenge-face {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-sm;
+    padding: $spacing-xl $spacing-lg;
+    min-height: 400rpx;
+    text-align: center;
+    background: url('../../../assets/lovart/icebreaker/backgrounds/bg-personality-dice.jpg')
+      center / cover no-repeat;
+    border-radius: $card-radius;
+    animation: personality-dice-slide-up 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__challenge-emoji {
+    font-size: 72rpx;
+    line-height: 1;
+    text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.3);
+  }
+
+  &__challenge-player {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: rgba(255, 255, 255, 0.85);
+    text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.4);
+  }
+
+  &__challenge-title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+    line-height: 1.5;
+    text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.4);
+  }
+
+  &__challenge-body {
+    font-size: $font-size-base;
+    color: rgba(255, 255, 255, 0.92);
+    line-height: 1.6;
+    text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.35);
+    max-width: 520rpx;
+  }
+
+  &__challenge-pass-line {
+    font-size: $font-size-sm;
+    color: rgba(255, 255, 255, 0.75);
+    font-style: italic;
+    text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.3);
+  }
+
+  &__challenge-meta {
+    display: flex;
+    align-items: center;
+    gap: $spacing-lg;
+    margin-top: $spacing-sm;
+  }
+
+  &__challenge-meta-item {
+    font-size: $font-size-sm;
+    color: rgba(255, 255, 255, 0.8);
+    text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.3);
+
+    &--completed {
+      color: rgba($color-success, 0.95);
+    }
+  }
+
+  // ── Particle burst ──────────────────────────────────────────
+  &__burst-container {
+    position: absolute;
+    top: 120rpx;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    pointer-events: none;
+
+    &--summary {
+      position: relative;
+      top: auto;
+      left: auto;
+      transform: none;
+      @include flex-center;
+      margin-bottom: $spacing-md;
+    }
+  }
+
+  // ── Swipe area ──────────────────────────────────────────────
+  &__swipe-area {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: $spacing-lg $spacing-md;
+    background: rgba($color-primary, 0.06);
+    border: 2rpx solid rgba($color-primary, 0.15);
+    border-radius: $card-radius-sm;
+    margin-top: $spacing-sm;
+  }
+
+  &__swipe-hint {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+  }
+
+  &__swipe-subhint {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+
+  // ── Tap fallback (accessibility) ────────────────────────────
+  &__tap-fallback {
+    @include flex-center;
+    margin-top: $spacing-sm;
+  }
+
+  &__tap-fallback-text {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-pill;
+    background: rgba($color-text-primary, 0.04);
+  }
+
+  // ── Status badges ───────────────────────────────────────────
+  &__status-badge {
+    @include flex-center;
+    gap: $spacing-xs;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-pill;
+    margin-top: $spacing-sm;
+    animation: personality-dice-badge-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+
+    &--accept {
+      background: rgba($color-success, 0.12);
+    }
+
+    &--pass {
+      background: rgba($color-warning, 0.12);
+    }
+  }
+
+  &__status-emoji {
+    font-size: $font-size-md;
+    line-height: 1;
+  }
+
+  &__status-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+
+    .personality-dice__status-badge--accept & {
+      color: $color-success;
+    }
+
+    .personality-dice__status-badge--pass & {
+      color: $color-warning;
+    }
+  }
+
+  // ── Spectator hint ──────────────────────────────────────────
+  &__spectator-hint {
+    @include type-caption;
+    text-align: center;
+    margin-top: $spacing-sm;
+  }
+
+  // ── Reaction row ────────────────────────────────────────────
+  &__reaction-row {
+    margin-top: $spacing-md;
+  }
+
+  // ── Pass reveal (inline) ────────────────────────────────────
+  &__pass-reveal {
+    margin-top: $spacing-md;
+    padding: $spacing-md;
+    background: rgba($color-error, 0.08);
+    border: 2rpx solid rgba($color-error, 0.2);
+    border-radius: $card-radius-sm;
+    animation: personality-dice-pass-flash 0.4s ease both;
+  }
+
+  &__pass-reveal-label {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-error;
+    margin-bottom: $spacing-xs;
+    display: block;
+  }
+
+  &__pass-reveal-text {
+    font-size: $font-size-base;
+    color: $color-error;
+    line-height: 1.5;
+    display: block;
+  }
+
+  // ── Next hint ───────────────────────────────────────────────
+  &__next-hint {
+    @include type-caption;
+    text-align: center;
+    margin-top: $spacing-sm;
+    color: $color-text-muted;
+  }
+
+  // ── Action stack (no-challenges state) ──────────────────────
+  &__action-stack {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__action-btn {
+    width: 100%;
+  }
+
+  &__helper-text {
+    @include type-caption;
+    text-align: center;
+  }
+
+  // ── Summary card (all completed) ────────────────────────────
+  &__summary-card {
+    @include card;
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-md;
+    padding: $spacing-xl $spacing-lg;
+    text-align: center;
+  }
+
+  &__summary-emoji {
+    width: 80rpx;
+    height: 80rpx;
+    display: block;
+  }
+
+  &__summary-title {
+    @include type-heading;
+    color: $color-text-primary;
+  }
+
+  &__summary-subtitle {
+    @include type-body;
+    color: $color-text-secondary;
+  }
+
+  &__summary-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    width: 100%;
+    margin-top: $spacing-sm;
+  }
+
+  &__summary-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    background: rgba($color-text-primary, 0.03);
+    border-radius: $card-radius-sm;
+    opacity: 0;
+    animation: personality-dice-stagger-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  &__summary-check {
+    font-size: $font-size-md;
+    line-height: 1;
+  }
+
+  &__summary-name {
+    flex: 1;
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    text-align: left;
+  }
+
+  &__summary-tag {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    padding: 4rpx 12rpx;
+    border-radius: 100rpx;
+
+    &--completed {
+      background: rgba($color-success, 0.12);
+      color: $color-success;
+    }
+
+    &--passed {
+      background: rgba($color-warning, 0.12);
+      color: $color-warning;
+    }
+  }
+
+  &__summary-cta {
+    width: 100%;
+    margin-top: $spacing-sm;
+  }
+}
+
+// ─── Keyframes ────────────────────────────────────────────────────
+
+@keyframes personality-dice-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8rpx);
+  }
+  40% {
+    transform: translateX(8rpx);
+  }
+  60% {
+    transform: translateX(-4rpx);
+  }
+  80% {
+    transform: translateX(4rpx);
+  }
+}
+
+@keyframes personality-dice-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes personality-dice-badge-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes personality-dice-pass-flash {
+  from {
+    opacity: 0;
+    transform: translateY(6rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes personality-dice-stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(10rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ─── Reduced motion ───────────────────────────────────────────────
+
+@media (prefers-reduced-motion: reduce) {
+  .personality-dice {
+    &__card--shake,
+    &__challenge-face,
+    &__status-badge,
+    &__pass-reveal,
+    &__summary-row {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
+}

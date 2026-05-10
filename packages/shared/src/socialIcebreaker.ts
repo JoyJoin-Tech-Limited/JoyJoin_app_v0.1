@@ -2,6 +2,7 @@
 
 import { z } from 'zod';
 import type { AIResponseMeta } from './types/aiMeta';
+import type { ArchetypeHSL } from './archetypeColors';
 import type { MiniScriptStoryFramework, MiniScriptStoryFrameworkPublic, MiniScriptVoteInput } from './miniscriptStoryFramework';
 export type { MiniScriptStoryFrameworkPublic } from './miniscriptStoryFramework';
 import type { IcebreakerRunPlan } from './phaseModule';
@@ -49,6 +50,10 @@ export interface LieDetectiveStatement {
   index: number; // 1, 2, or 3
   text: string;
   isLie: boolean; // only known server-side / to owner
+  /** V2: true if this statement was AI-generated (server secret). */
+  is_ai?: boolean;
+  /** V2: the original user tag that this statement was expanded from (server secret). */
+  source_tag?: string | null;
 }
 
 export interface LieDetectivePlayer {
@@ -67,6 +72,8 @@ export interface PersonalityDiceChallenge {
   userId: string;
   displayName: string;
   archetype?: string;
+  /** Archetype accent color for ParticleBurst / UI theming */
+  archetypeColor?: ArchetypeHSL;
   dominantTrait: 'A' | 'C' | 'E' | 'O' | 'X' | 'P';
   challengeTitle: string;
   challengeBody: string;
@@ -78,10 +85,47 @@ export interface PersonalityDiceChallenge {
   passConsequence?: string;
 }
 
+/** Lightweight profile for AI prompt context. Server-only — stripped before client delivery. */
+export interface SocialSessionParticipantProfile {
+  /** 12-archetype ID (e.g. '气氛组柯基') */
+  archetype?: string | null;
+  /** Industry niche label (e.g. '医疗AI', '社交产品') */
+  industryLabel?: string | null;
+  /** Approximate age derived from birthdate */
+  age?: number | null;
+  /** Current city (e.g. '深圳', '上海') */
+  city?: string | null;
+  /** Social energy label: 快热带动型, 慢热深聊型, etc. */
+  stateLabel?: string | null;
+  /** Gender: 女性, 男性, 不透露 */
+  gender?: string | null;
+  /** Education level (e.g. '本科', '硕士') */
+  educationLevel?: string | null;
+  /** Life stage (e.g. '职场新人', '创业中') */
+  lifeStage?: string | null;
+  /** Short bio / personal tagline (≤100 chars) — drives emotional depth */
+  bio?: string | null;
+  /** Preferred table atmosphere: 'light_fun' | 'natural_chat' | 'deep_talk' */
+  tableVibePreference?: string | null;
+}
+
 export interface SocialSessionParticipantSummary {
   userId: string;
   displayName: string;
   archetype?: string;
+  /** Server-only: AI prompt context. Must be stripped before sending to clients. */
+  profile?: SocialSessionParticipantProfile | null;
+  joinedAt?: string;
+  lastSeenAt?: string;
+  isActive?: boolean;
+}
+
+export interface SocialSessionParticipantSummary {
+  userId: string;
+  displayName: string;
+  archetype?: string;
+  /** Rich profile data for AI personalisation */
+  profile?: SocialSessionParticipantProfile | null;
   joinedAt?: string;
   lastSeenAt?: string;
   isActive?: boolean;
@@ -98,6 +142,10 @@ export interface LieDetectiveReveal {
   voteCount: number;
   correctVoteCount: number;
   revealedAt: number;
+  /** V2: which statement was AI-generated (same as lieIndex in V2 mode). */
+  aiStatementIndex?: number;
+  /** V2: per-statement vote tallies. */
+  voteCounts?: Record<number, number>;
 }
 
 /** Virtual-currency auction lots (no real-money semantics). */
@@ -105,11 +153,21 @@ export interface AuctionLot {
   id: string;
   title: string;
   teaser?: string;
+  /** Optional emoji / category icon for visual presentation (D9) */
+  emoji?: string;
 }
 
 export interface AuctionHighBid {
   userId: string;
   amount: number;
+}
+
+/** Persistent bid record for cross-session rejoin (D5) */
+export interface AuctionBidRecord {
+  userId: string;
+  amount: number;
+  at: number;
+  lotIndex: number;
 }
 
 // ─── Undercover Word (谁是卧底) ────────────────────────────────────────────
@@ -247,6 +305,7 @@ export const auctionLotSchema = z.object({
   id: z.string().min(1).max(48),
   title: z.string().min(1).max(100),
   teaser: z.string().max(200).optional(),
+  emoji: z.string().max(8).optional(),
 });
 
 export const auctionLotsLlmPayloadSchema = z.object({
@@ -340,6 +399,7 @@ export interface SocialSessionState {
   completedPhases: SocialIcebreakerPhase[];
   eventType?: string;
   eventTier?: TierMachineId;
+  vibe?: 'chat' | 'balanced' | 'game';
   enabledPhases?: SocialIcebreakerPhase[];
   /** Compiled run plan from Game Design Agent; if present, session follows this instead of hardcoded PHASE_ORDER. */
   runPlan?: IcebreakerRunPlan;
@@ -381,6 +441,10 @@ export interface SocialSessionState {
   auctionAllLotsClosed?: boolean;
   /** Server-written one-liners for recap LLM (bounded strings). */
   auctionRecapLines?: string[];
+  /** Timestamp (ms) when the current lot started; client syncs timer from this (D3) */
+  auctionLotStartedAt?: number;
+  /** Persistent bid history across the whole auction phase (D5) */
+  auctionBidHistory?: AuctionBidRecord[];
   // Quip Battle phase data
   quipBattlePrompts?: Array<{ id: string; promptText: string; category: string }>;
   quipBattlePromptsMeta?: AIResponseMeta;
@@ -421,12 +485,47 @@ export interface SocialSessionState {
     challengesCompleted: number;
     lieDetectiveWinner?: string;
     funMoments: string[];
+    /** V2 lie-detective recap metrics (populated after phase completes). */
+    lieDetective?: {
+      aiWinRate: number;
+      hardestRound: number;
+      fooledEveryone: number;
+    };
   };
   /** Cached AI-generated recap summary and medals when session enters recap phase. */
   recapSnapshot?: {
     recapSummary?: RecapSummary;
     medals?: Medal[];
     meta?: AIResponseMeta;
+    /** V2 lie-detective recap metrics (populated when reveal history exists). */
+    lieDetectiveV2Stats?: {
+      aiWinRate: number;
+      hardestRound: number;
+      fooledEveryone: number;
+    };
+    /** Personality dice completion highlights. */
+    personalityDiceHighlights?: {
+      completedCount: number;
+      passedCount: number;
+      completionRate: number;
+    };
+    /** Undercover word game result. */
+    undercoverWordResult?: {
+      caught: boolean;
+      undercoverDisplayName: string;
+    };
+    /** Micro challenge completion highlights. */
+    microChallengeHighlights?: {
+      completedCount: number;
+      totalCount: number;
+      completionRate: number;
+    };
+    /** Group mirror top-voted player highlight. */
+    groupMirrorHighlights?: {
+      topVotedDisplayName: string;
+      questionText: string;
+      voteCount: number;
+    };
   };
   /** 迷你剧本杀 — generated story framework (JSON), host-only mutation via POST /api/miniscript/generate */
   miniScriptFramework?: MiniScriptStoryFrameworkPublic;
@@ -447,14 +546,22 @@ export interface SocialSessionState {
   xiaoyueSessionPackMeta?: AIResponseMeta;
   /** Xiaoyue Adaptive Suggestion — latest pulse-check-driven host nudge */
   xiaoyueAdaptiveSuggestion?: XiaoyueAdaptiveSuggestion;
+  /** Lie detective mode: v1 = AI generates all 3 statements; v2 = players submit 2 tags, AI expands + inserts 1 fake. */
+  lieDetectiveMode?: 'v1' | 'v2';
+  /** V2: tag submissions per userId — each player submits exactly 2 tags. */
+  lieDetectiveV2Tags?: Record<string, [string, string]>;
+  /** V2: history of reveal correct-rates for dynamic difficulty calibration. */
+  lieDetectiveRevealHistory?: Array<{ round: number; correctRate: number }>;
+  /** V2: current dynamic difficulty (easy / medium / hard). Defaults to medium. */
+  lieDetectiveDynamicDifficulty?: 'easy' | 'medium' | 'hard';
 }
 
 // Phase config
 export const PHASE_CONFIG = {
   warmup: {
     emoji: '',
-    name: '热身',
-    nameEn: 'Warmup',
+    name: '话题卡',
+    nameEn: 'Topic Cards',
     gradient: 'from-amber-400 to-orange-400',
     bgGradient: 'from-amber-50 via-rose-50 to-purple-50',
     darkBgGradient: 'from-zinc-900 via-amber-950 to-zinc-900',

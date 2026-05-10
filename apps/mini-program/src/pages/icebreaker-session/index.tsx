@@ -377,6 +377,13 @@ export default function IcebreakerSessionPage() {
     })
   }, [performSocialAction, currentUserDisplayName, currentUserArchetype, currentUserInterests])
 
+  const handleSubmitTags = useCallback(
+    (tags: [string, string]) => {
+      void performSocialAction('lie-submit-tags', '/lie-detective/submit-tags', { tags })
+    },
+    [performSocialAction],
+  )
+
   const handleCastVote = useCallback(
     (statementIndex: number) => {
       const targetPlayer = session?.lieDetectivePlayers?.[session.currentLieDetectivePlayerIndex ?? 0]
@@ -506,7 +513,7 @@ export default function IcebreakerSessionPage() {
         <View className='icebreaker__error'>
           <Image
             className='icebreaker__error-hero'
-            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
+            src={cdnAsset('/assets/lovart/lovart-generic-error.png')}
             mode='aspectFit'
             lazyLoad
           />
@@ -557,7 +564,7 @@ export default function IcebreakerSessionPage() {
       <View className='icebreaker__host-badge'>
         <View className='icebreaker__host-badge-text'>
           <Image
-            src={require('../../assets/icons/status-icons/status-crown.png')}
+            src='/assets/icons/status-icons/status-crown.png'
             style={{ width: '24rpx', height: '24rpx' }}
             lazyLoad
           />
@@ -717,6 +724,9 @@ export default function IcebreakerSessionPage() {
             isMovingNextPlayer={pendingAction === 'lie-next-player'}
             onAdvance={handleAdvancePhase}
             isAdvancing={pendingAction === 'advance'}
+            lieDetectiveMode={session.lieDetectiveMode ?? 'v1'}
+            onSubmitTags={handleSubmitTags}
+            isSubmittingTags={pendingAction === 'lie-submit-tags'}
           />
         )}
 
@@ -878,7 +888,7 @@ function WaitingPhase({
     <View className='icebreaker__waiting'>
       <Card className='icebreaker__waiting-card'>
         <Image
-          src={require('../../assets/icons/status-icons/status-waiting.png')}
+          src='/assets/icons/status-icons/status-waiting.png'
           style={{ width: '80rpx', height: '80rpx' }}
           lazyLoad
           className='icebreaker__waiting-emoji'

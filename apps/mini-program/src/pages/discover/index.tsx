@@ -1,4 +1,4 @@
-import { View, Text, ScrollView } from '@tarojs/components'
+import { View, Text, Image, ScrollView } from '@tarojs/components'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Taro, { useReady, usePullDownRefresh } from '@tarojs/taro'
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
@@ -26,7 +26,12 @@ import VirtualList from '../../components/VirtualList'
 import ArchetypeGlyph from '../../components/mascot/ArchetypeGlyph'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
-import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
+import { getTimeGreeting } from '../../lib/utils/timeGreeting'
+import {
+  getDiscoverSubtitle,
+  getDiscoverActionLabel,
+} from '../../lib/utils/discoverHeaderCopy'
+import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import MiniProgramLandingPage from '../index/LandingPage'
 import './index.scss'
 
@@ -285,13 +290,6 @@ function AuthenticatedDiscover() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const displayName = (user as any)?.displayName || (user as any)?.nickname || '悦聚用户'
-  const handleOpenPayment = useCallback(() => {
-    void openMiniProgramPaymentPage({
-      paymentsEnabled: user?.paymentsEnabled,
-      currentUserId: user?.id,
-      returnTab: 'discover',
-    })
-  }, [user?.id, user?.paymentsEnabled])
 
   // ── Filter state ──
   const [selectedCluster, setSelectedCluster] = useState<string>(ALL_CLUSTER_ID)
@@ -364,6 +362,31 @@ function AuthenticatedDiscover() {
     })
   }, [pools, selectedCluster, selectedDistrict, visibleDistricts])
 
+  // ── Header copy (computed after data fetch) ──
+  const archetype = (user as any)?.archetype || (user as any)?.primaryArchetype || null
+  const timeGreeting = useMemo(() => getTimeGreeting(displayName), [displayName])
+  const xiaoyueAsset = useMemo(() => getXiaoyueExpressionAsset('homeWelcome'), [])
+  const dynamicSubtitle = useMemo(
+    () =>
+      getDiscoverSubtitle({
+        displayName,
+        archetype,
+        registrationCount: registrations.length,
+        openPoolCount: pools.filter((p) => p.status !== 'closed').length,
+      }),
+    [displayName, archetype, registrations.length, pools],
+  )
+  const primaryAction = useMemo(
+    () =>
+      getDiscoverActionLabel({
+        displayName,
+        archetype,
+        registrationCount: registrations.length,
+        openPoolCount: pools.filter((p) => p.status !== 'closed').length,
+      }),
+    [displayName, archetype, registrations.length, pools],
+  )
+
   // ── Handlers ──
   const handleClusterTap = useCallback((clusterId: string) => {
     setSelectedCluster(clusterId)
@@ -416,24 +439,35 @@ function AuthenticatedDiscover() {
       {/* Sticky header: hero + actions + promo + filters */}
       <View className='discover-auth__sticky-header'>
         <View className='discover-auth__hero'>
-          <Text className='discover-auth__greeting'>你好，{displayName}</Text>
-          <Text className='discover-auth__subtitle'>探索你的下一场悦聚</Text>
+          <View className='discover-auth__hero-mascot'>
+            <Image
+              className='discover-auth__hero-mascot-img'
+              src={xiaoyueAsset}
+              mode='aspectFit'
+              ariaLabel='悦仔'
+            />
+          </View>
+          <View className='discover-auth__hero-text'>
+            <Text className='discover-auth__greeting'>{timeGreeting}</Text>
+            <Text className='discover-auth__subtitle'>{dynamicSubtitle}</Text>
+          </View>
         </View>
 
-        <View className='discover-auth__actions'>
-          <Card className='discover-auth__action-card' onClick={handleOpenPayment}>
-            <JoyJoinIcon emoji='✨' size={40} className='discover-auth__action-emoji' />
-            <Text className='discover-auth__action-label'>开通权益</Text>
-          </Card>
-          <Card className='discover-auth__action-card' onClick={() => Taro.switchTab({ url: '/pages/events/index' })}>
-            <JoyJoinIcon emoji='📅' size={40} className='discover-auth__action-emoji' />
-            <Text className='discover-auth__action-label'>我的活动</Text>
-          </Card>
-          <Card className='discover-auth__action-card' onClick={() => Taro.switchTab({ url: '/pages/connections/index' })}>
-            <JoyJoinIcon emoji='🤝' size={40} className='discover-auth__action-emoji' />
-            <Text className='discover-auth__action-label'>我的连接</Text>
-          </Card>
-        </View>
+        {primaryAction && (
+          <View className='discover-auth__primary-action'>
+            <Card
+              className='discover-auth__action-card'
+              onClick={() => Taro.navigateTo({ url: primaryAction.path })}
+            >
+              <JoyJoinIcon
+                emoji={primaryAction.emoji}
+                size={40}
+                className='discover-auth__action-emoji'
+              />
+              <Text className='discover-auth__action-label'>{primaryAction.label}</Text>
+            </Card>
+          </View>
+        )}
 
         <AiMatchPromoCarousel className='discover-auth__promo' />
 

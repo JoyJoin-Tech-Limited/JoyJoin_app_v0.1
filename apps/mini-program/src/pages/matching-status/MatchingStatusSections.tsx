@@ -10,8 +10,6 @@ import ChemistryBadge from '../../components/mascot/ChemistryBadge'
 import UnifiedRevealCard from './UnifiedRevealCard'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import {
-  getVibeLabel,
-  MATCHING_BG_SRC,
   type ChemistryTokens,
   type LiveRevealStage,
   type TemperatureCopy,
@@ -20,7 +18,9 @@ import {
   type WaitingSeatViewModel,
   type WaitingStateCopy,
   type UnifiedRevealTokens,
-} from './matchingStatusViewModels'
+} from '@shared/features/matching-status'
+import { getVibeLabel } from '../../lib/matching/groupDisplay'
+import { MATCHING_BG_SRC } from './constants'
 
 export function MatchingHero({ heroSrc, className = '' }: { heroSrc: string; className?: string }) {
   return (

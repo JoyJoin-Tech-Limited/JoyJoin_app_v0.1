@@ -140,7 +140,7 @@ fi
 | info-labels | 12 | 3 | 0.3KB | < 4% | ✅ PASS |
 | mood-icons | 12 | 4 | 0.5KB | < 2% | ✅ PASS |
 | status-icons | 9 | 7 | 1.1KB | < 4% | ✅ PASS |
-| phase-icons | 21 | 32 | 4.0KB | N/A (single size) | ✅ PASS |
+| phase-icons | 21 | 32 | ~12KB | N/A (single size, WebP) | ✅ PASS |
 
 ---
 

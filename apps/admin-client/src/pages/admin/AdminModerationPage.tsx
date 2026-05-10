@@ -14,6 +14,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -43,46 +53,8 @@ import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
-
-interface ModerationStats {
-  totalReports: number;
-  pendingReports: number;
-  resolvedReports: number;
-  bannedUsers: number;
-}
-
-interface Report {
-  id: string;
-  reporter_id: string;
-  reported_user_id: string;
-  report_type: "harassment" | "inappropriate_content" | "spam" | "other";
-  description: string;
-  evidence: string | null;
-  status: "pending" | "resolved" | "dismissed";
-  admin_notes: string | null;
-  created_at: string;
-  reporter_first_name: string | null;
-  reporter_last_name: string | null;
-  reporter_email: string | null;
-  reported_first_name: string | null;
-  reported_last_name: string | null;
-  reported_email: string | null;
-}
-
-interface ModerationLog {
-  id: string;
-  admin_id: string;
-  action: "ban" | "warn" | "unban";
-  target_user_id: string;
-  reason: string | null;
-  notes: string | null;
-  created_at: string;
-  admin_first_name: string | null;
-  admin_last_name: string | null;
-  target_first_name: string | null;
-  target_last_name: string | null;
-  target_email: string | null;
-}
+import EmptyState from "@/components/admin/EmptyState";
+import type { ModerationStats, Report, ModerationLog } from "./types";
 
 const REPORT_TYPE_MAP: Record<string, { label: string; variant: "default" | "destructive" | "secondary" | "outline" }> = {
   harassment: { label: "骚扰", variant: "destructive" },
@@ -109,6 +81,7 @@ export default function AdminModerationPage() {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [editStatus, setEditStatus] = useState<string>("");
   const [adminNotes, setAdminNotes] = useState<string>("");
+  const [confirmAction, setConfirmAction] = useState<"ban" | "warn" | "dismiss" | null>(null);
   const { toast } = useToast();
 
   const { data: stats, isLoading: statsLoading } = useQuery<ModerationStats>({
@@ -162,11 +135,19 @@ export default function AdminModerationPage() {
   });
 
   const banUserMutation = useMutation({
-    mutationFn: (userId: string) =>
-      fetch(`/api/admin/users/${userId}/ban`, {
+    mutationFn: async ({ userId, reason }: { userId: string; reason: string }) => {
+      const res = await fetch(`/api/admin/users/${userId}/ban`, {
         method: "PATCH",
         credentials: "include",
-      }).then(r => r.json()),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
+        throw new Error(err.message || `Failed to ban user: ${res.status}`);
+      }
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/moderation/stats"] });
@@ -213,11 +194,12 @@ export default function AdminModerationPage() {
   const handleBanUser = async () => {
     if (!selectedReport) return;
 
-    await banUserMutation.mutateAsync(selectedReport.reported_user_id);
+    const reason = `举报: ${REPORT_TYPE_MAP[selectedReport.report_type]?.label}`;
+    await banUserMutation.mutateAsync({ userId: selectedReport.reported_user_id, reason });
     await createLogMutation.mutateAsync({
       action: "ban",
       target_user_id: selectedReport.reported_user_id,
-      reason: `举报: ${REPORT_TYPE_MAP[selectedReport.report_type]?.label}`,
+      reason,
       notes: selectedReport.description,
     });
 
@@ -238,6 +220,8 @@ export default function AdminModerationPage() {
       title: "警告已记录",
       description: "已对用户发出警告",
     });
+
+    handleCloseDialog();
   };
 
   const handleDismiss = async () => {
@@ -381,9 +365,7 @@ export default function AdminModerationPage() {
                   加载中...
                 </div>
               ) : reports.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground" data-testid="text-no-reports">
-                  暂无举报记录
-                </div>
+                <EmptyState title="暂无举报记录" data-testid="text-no-reports" />
               ) : (
                 <div className="space-y-4">
                   {reports.map((report) => {
@@ -445,7 +427,7 @@ export default function AdminModerationPage() {
                           
                           <div>
                             <p className="text-muted-foreground text-sm mb-1">举报描述</p>
-                            <p className="text-sm" data-testid={`text-description-${report.id}`}>
+                            <p className="text-sm font-medium" data-testid={`text-description-${report.id}`}>
                               {report.description}
                             </p>
                           </div>
@@ -483,11 +465,12 @@ export default function AdminModerationPage() {
                                   variant="destructive"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    banUserMutation.mutate(report.reported_user_id);
+                                    const reason = `举报: ${REPORT_TYPE_MAP[report.report_type]?.label}`;
+                                    banUserMutation.mutate({ userId: report.reported_user_id, reason });
                                     createLogMutation.mutate({
                                       action: "ban",
                                       target_user_id: report.reported_user_id,
-                                      reason: `举报: ${REPORT_TYPE_MAP[report.report_type]?.label}`,
+                                      reason,
                                       notes: report.description,
                                     });
                                     updateReportMutation.mutate({
@@ -548,9 +531,7 @@ export default function AdminModerationPage() {
                   加载中...
                 </div>
               ) : logs.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground" data-testid="text-no-logs">
-                  暂无操作日志
-                </div>
+                <EmptyState title="暂无操作日志" data-testid="text-no-logs" />
               ) : (
                 <div className="rounded-md border">
                   <Table>
@@ -726,7 +707,7 @@ export default function AdminModerationPage() {
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={handleBanUser}
+                      onClick={() => setConfirmAction("ban")}
                       disabled={banUserMutation.isPending}
                       data-testid="button-ban-user"
                     >
@@ -736,7 +717,7 @@ export default function AdminModerationPage() {
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={handleWarnUser}
+                      onClick={() => setConfirmAction("warn")}
                       disabled={createLogMutation.isPending}
                       data-testid="button-warn-user"
                     >
@@ -746,7 +727,7 @@ export default function AdminModerationPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleDismiss}
+                      onClick={() => setConfirmAction("dismiss")}
                       disabled={updateReportMutation.isPending}
                       data-testid="button-dismiss"
                     >
@@ -777,6 +758,44 @@ export default function AdminModerationPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction === "ban" && "确认封禁用户"}
+              {confirmAction === "warn" && "确认警告用户"}
+              {confirmAction === "dismiss" && "确认驳回举报"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction === "ban" && selectedReport && (
+                <>你即将封禁用户 <strong>{[selectedReport.reported_first_name, selectedReport.reported_last_name].filter(Boolean).join(" ") || selectedReport.reported_user_id}</strong>。此操作将立即生效。</>
+              )}
+              {confirmAction === "warn" && selectedReport && (
+                <>你即将对用户 <strong>{[selectedReport.reported_first_name, selectedReport.reported_last_name].filter(Boolean).join(" ") || selectedReport.reported_user_id}</strong> 发出警告。</>
+              )}
+              {confirmAction === "dismiss" && selectedReport && (
+                <>你即将驳回该举报。此操作将标记举报为已处理。</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmAction(null)}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmAction === "ban") handleBanUser();
+                if (confirmAction === "warn") handleWarnUser();
+                if (confirmAction === "dismiss") handleDismiss();
+                setConfirmAction(null);
+              }}
+              disabled={banUserMutation.isPending || createLogMutation.isPending || updateReportMutation.isPending}
+              className={confirmAction === "ban" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+            >
+              {banUserMutation.isPending ? "处理中..." : "确认"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

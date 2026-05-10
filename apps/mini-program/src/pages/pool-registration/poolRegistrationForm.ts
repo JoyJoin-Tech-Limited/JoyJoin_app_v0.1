@@ -10,9 +10,7 @@ export interface RegistrationFormState {
   eventIntent: string[]
   preferredLanguages: string[]
   budgetRange?: string[]
-  cuisinePreferences: string[]
   dietaryRestrictions: string[]
-  tasteIntensity?: string
   barThemes: string[]
   alcoholComfort?: string
   barBudgetRange?: string[]
@@ -21,7 +19,6 @@ export interface RegistrationFormState {
 export const INITIAL_FORM_STATE: RegistrationFormState = {
   eventIntent: [],
   preferredLanguages: [],
-  cuisinePreferences: [],
   dietaryRestrictions: [],
   barThemes: [],
 }
@@ -49,9 +46,7 @@ export function buildRegistrationPayload(
         }
       : {
           budgetRange: formState.budgetRange,
-          cuisinePreferences: formState.cuisinePreferences,
           dietaryRestrictions: formState.dietaryRestrictions,
-          tasteIntensity: formState.tasteIntensity ? [formState.tasteIntensity] : undefined,
         }),
   }
 }
@@ -62,17 +57,12 @@ export function buildFormStateFromDraft(
   const alcoholComfort = Array.isArray(draft.alcoholComfort)
     ? draft.alcoholComfort[0]
     : undefined
-  const tasteIntensity = Array.isArray(draft.tasteIntensity)
-    ? draft.tasteIntensity[0]
-    : undefined
 
   return {
     eventIntent: draft.eventIntent ?? [],
     preferredLanguages: draft.preferredLanguages ?? [],
     budgetRange: draft.budgetRange?.slice(0, 1),
-    cuisinePreferences: draft.cuisinePreferences ?? [],
     dietaryRestrictions: draft.dietaryRestrictions ?? [],
-    tasteIntensity,
     barThemes: draft.barThemes ?? [],
     alcoholComfort,
     barBudgetRange: draft.barBudgetRange?.slice(0, 1),

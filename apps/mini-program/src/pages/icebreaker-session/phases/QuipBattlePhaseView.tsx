@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, Input } from '@tarojs/components';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
 import { apiRequest } from '../../../lib/api/api';
 import { buildSocialPath } from '../icebreakerSessionModel';
 import { CelebrationOverlay } from '../overlays/CelebrationOverlay';
+import { SwipeCard } from '../../../components/gesture';
+import { TapReaction } from '../../../components/gesture';
+import { ParticleBurst } from '../../../components/reveal';
 
 interface QuipBattlePrompt {
   id: string;
@@ -44,6 +47,13 @@ interface QuipBattlePhaseViewProps {
   isAdvancing?: boolean;
 }
 
+const REACTIONS = [
+  { emoji: '😂', label: '好笑' },
+  { emoji: '🔥', label: '绝了' },
+  { emoji: '👏', label: '鼓掌' },
+  { emoji: '🌹', label: '玫瑰' },
+];
+
 export default function QuipBattlePhaseView({
   socialSessionId,
   isHost,
@@ -66,6 +76,20 @@ export default function QuipBattlePhaseView({
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
   const [showChampion, setShowChampion] = useState(false);
+  const [stackIndex, setStackIndex] = useState(0);
+  const [burstTrigger, setBurstTrigger] = useState(false);
+  const burstTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [reactionCounts, setReactionCounts] = useState<number[]>([0, 0, 0, 0]);
+  const [selectedReaction, setSelectedReaction] = useState<number | undefined>();
+
+  useEffect(() => {
+    return () => {
+      if (burstTimeoutRef.current) {
+        clearTimeout(burstTimeoutRef.current);
+        burstTimeoutRef.current = undefined;
+      }
+    };
+  }, []);
 
   const hasSubmitted = userId ? submittedUserIds.includes(userId) : false;
   const hasVoted = userId ? votedUserIds.includes(userId) : false;
@@ -73,6 +97,25 @@ export default function QuipBattlePhaseView({
   const allVoted = votedUserIds.length >= playerCount;
 
   const championResult = revealed && results.length > 0 ? results[0] : null;
+
+  // Build flat swipe stack: one card per answer, grouped by prompt order
+  const swipeStack = useMemo(() => {
+    const stack: { prompt: QuipBattlePrompt; answer: QuipBattleAnswer }[] = [];
+    for (const prompt of prompts) {
+      const promptAnswers = answers.filter((a) => a.promptId === prompt.id);
+      for (const answer of promptAnswers) {
+        stack.push({ prompt, answer });
+      }
+    }
+    return stack;
+  }, [prompts, answers]);
+
+  // Reset stack index when entering voting phase
+  useEffect(() => {
+    if (hasSubmitted && allSubmitted && !hasVoted && !revealed) {
+      setStackIndex(0);
+    }
+  }, [hasSubmitted, allSubmitted, hasVoted, revealed]);
 
   useEffect(() => {
     if (revealed && championResult) {
@@ -166,6 +209,71 @@ export default function QuipBattlePhaseView({
     }
   };
 
+  const handleSwipeRight = useCallback(() => {
+    const current = swipeStack[stackIndex];
+    if (!current) return;
+
+    // Record vote for this prompt
+    setVoteMap((prev) => ({
+      ...prev,
+      [current.prompt.id]: `${current.answer.userId}::${current.prompt.id}`,
+    }));
+
+    // Trigger burst
+    setBurstTrigger(true);
+    if (burstTimeoutRef.current) clearTimeout(burstTimeoutRef.current);
+    burstTimeoutRef.current = setTimeout(() => setBurstTrigger(false), 300);
+
+    // Advance stack
+    setStackIndex((i) => Math.min(i + 1, swipeStack.length));
+  }, [stackIndex, swipeStack]);
+
+  const handleSwipeLeft = useCallback(() => {
+    // Skip — advance without voting
+    setStackIndex((i) => Math.min(i + 1, swipeStack.length));
+  }, [swipeStack.length]);
+
+  const handleReaction = useCallback((index: number) => {
+    setSelectedReaction(index);
+    setReactionCounts((prev) => {
+      const next = [...prev];
+      next[index] = (next[index] || 0) + 1;
+      return next;
+    });
+  }, []);
+
+  // Derive "best of" top 3 answers across all results
+  const bestOfAnswers = useMemo(() => {
+    if (!revealed || results.length === 0) return [];
+    const allAnswers: {
+      promptText: string;
+      displayName: string;
+      answerText: string;
+      voteCount: number;
+      isWinner: boolean;
+    }[] = [];
+    for (const result of results) {
+      for (const answer of result.answers) {
+        const isWinner = answer.userId === result.winnerUserId;
+        allAnswers.push({
+          promptText: result.promptText,
+          displayName: answer.displayName,
+          answerText: answer.answerText,
+          voteCount: isWinner ? result.voteCount : 0,
+          isWinner,
+        });
+      }
+    }
+    // Sort by winner first, then by vote count
+    return allAnswers
+      .sort((a, b) => (b.isWinner ? 1 : 0) - (a.isWinner ? 1 : 0) || b.voteCount - a.voteCount)
+      .slice(0, 3);
+  }, [revealed, results]);
+
+  // How many prompts still need a vote?
+  const votedPromptCount = Object.keys(voteMap).length;
+  const totalPromptCount = prompts.length;
+
   // Phase 1: Submit answers
   if (!hasSubmitted && !revealed) {
     return (
@@ -218,38 +326,56 @@ export default function QuipBattlePhaseView({
 
   // Phase 2: Voting (all submitted, not revealed)
   if (hasSubmitted && allSubmitted && !hasVoted && !revealed) {
+    const currentCard = swipeStack[stackIndex];
+
     return (
       <View className='icebreaker__phase'>
         <Text className='icebreaker__phase-title'>投票环节</Text>
         <Text className='icebreaker__phase-subtitle'>选出每个题目最搞笑的回复</Text>
 
-        {prompts.map((prompt) => {
-          const promptAnswers = answers.filter((a) => a.promptId === prompt.id);
-          return (
-            <Card key={prompt.id} className='icebreaker__challenge-card icebreaker__challenge-card--quip-battle icebreaker__challenge-card--has-bg'>
-              <Text className='icebreaker__challenge-text'>{prompt.promptText}</Text>
-              {promptAnswers.map((answer) => (
-                <View
-                  key={answer.userId}
-                  className={`icebreaker__answer-item ${voteMap[prompt.id] === `${answer.userId}::${prompt.id}` ? 'selected' : ''}`}
-                  onClick={() =>
-                    setVoteMap((prev) => ({
-                      ...prev,
-                      [prompt.id]: `${answer.userId}::${prompt.id}`,
-                    }))
-                  }
-                >
-                  <Text className='icebreaker__answer-author'>{answer.displayName}</Text>
-                  <Text className='icebreaker__answer-text'>"{answer.answerText}"</Text>
-                </View>
-              ))}
-            </Card>
-          );
-        })}
+        {/* Particle burst on upvote */}
+        <View style={{ position: 'absolute', top: '40%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 20, pointerEvents: 'none' }}>
+          <ParticleBurst trigger={burstTrigger} type='confetti' count={30} />
+        </View>
+
+        {currentCard ? (
+          <View className='icebreaker__quip-stack'>
+            <SwipeCard
+              onSwipeRight={handleSwipeRight}
+              onSwipeLeft={handleSwipeLeft}
+              threshold={0.35}
+            >
+              <View className='icebreaker__quip-stack-card'>
+                <Text className='icebreaker__quip-stack-prompt'>
+                  {currentCard.prompt.promptText}
+                </Text>
+                <Text className='icebreaker__quip-stack-author'>
+                  {currentCard.answer.displayName}
+                </Text>
+                <Text className='icebreaker__quip-stack-answer'>
+                  “{currentCard.answer.answerText}”
+                </Text>
+              </View>
+            </SwipeCard>
+            <Text className='icebreaker__quip-stack-progress'>
+              卡片 {stackIndex + 1} / {swipeStack.length} · 已选 {votedPromptCount} / {totalPromptCount} 题
+            </Text>
+            <Text className='icebreaker__phase-subtitle' style={{ marginTop: '8rpx', fontSize: '22rpx' }}>
+              右滑 = 投票 · 左滑 = 跳过
+            </Text>
+          </View>
+        ) : (
+          <Card className='icebreaker__challenge-card icebreaker__challenge-card--quip-battle'>
+            <Text className='icebreaker__challenge-title'>所有卡片已浏览</Text>
+            <Text className='icebreaker__challenge-desc'>
+              已为 {votedPromptCount} / {totalPromptCount} 个题目投票
+            </Text>
+          </Card>
+        )}
 
         {error ? <Text className='icebreaker__error'>{error}</Text> : null}
 
-        <Button variant='primary' onClick={handleVote} disabled={voting}>
+        <Button variant='primary' onClick={handleVote} disabled={voting || votedPromptCount === 0}>
           {voting ? '投票中...' : '提交投票'}
         </Button>
       </View>
@@ -331,6 +457,41 @@ export default function QuipBattlePhaseView({
             )}
           </Card>
         ))}
+
+        {/* Best-of reel */}
+        {bestOfAnswers.length > 0 && (
+          <View className='icebreaker__best-of-reel'>
+            <Text className='icebreaker__phase-title' style={{ fontSize: '32rpx' }}>
+              🏆 最佳回复 TOP 3
+            </Text>
+            {bestOfAnswers.map((item, idx) => (
+              <View
+                key={`${item.displayName}-${idx}`}
+                className={`icebreaker__best-of-card icebreaker__best-of-card--delay-${idx}`}
+              >
+                <Text className='icebreaker__best-of-rank'>
+                  {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'} TOP {idx + 1}
+                  {item.isWinner ? ' · 冠军' : ''}
+                </Text>
+                <Text className='icebreaker__best-of-author'>{item.displayName}</Text>
+                <Text className='icebreaker__best-of-text'>“{item.answerText}”</Text>
+                <Text className='icebreaker__best-of-votes'>
+                  题目：{item.promptText}
+                  {item.voteCount > 0 ? ` · ${item.voteCount} 票` : ''}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* TapReaction during reveal */}
+        <View className='icebreaker__quip-reaction-row'>
+          <TapReaction
+            reactions={REACTIONS.map((r, i) => ({ ...r, count: reactionCounts[i] }))}
+            onReact={handleReaction}
+            selectedIndex={selectedReaction}
+          />
+        </View>
 
         {isHost && onAdvance && (
           <Button

@@ -3,7 +3,7 @@ import type { GroupAnalysisResponse } from '@shared/types/groupAnalysis'
 import ChemistryBadge from '../../components/mascot/ChemistryBadge'
 import ConnectionPointPill from '../../components/ConnectionPointPill'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
-import type { ChemistryTokens, UnifiedRevealTokens } from './matchingStatusViewModels'
+import type { ChemistryTokens, UnifiedRevealTokens } from '@shared/features/matching-status'
 
 export interface UnifiedRevealCardProps {
   chemistryTokens: ChemistryTokens

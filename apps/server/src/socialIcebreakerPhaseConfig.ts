@@ -19,10 +19,34 @@ export function getServerEnabledPhases(env: NodeJS.ProcessEnv = process.env): So
   const enabledPhases = [...DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES];
   const personalityDiceEnabled = isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE, true);
 
+  if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR, false)) {
+    const personalityDiceIndex = enabledPhases.indexOf('personality_dice');
+    const insertAt = personalityDiceIndex >= 0 ? personalityDiceIndex + 1 : enabledPhases.length;
+    enabledPhases.splice(insertAt, 0, 'group_mirror');
+  }
+
+  if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD, false)) {
+    const groupMirrorIndex = enabledPhases.indexOf('group_mirror');
+    const personalityDiceIndex = enabledPhases.indexOf('personality_dice');
+    const insertAt =
+      groupMirrorIndex >= 0
+        ? groupMirrorIndex + 1
+        : personalityDiceIndex >= 0
+          ? personalityDiceIndex + 1
+          : enabledPhases.length;
+    enabledPhases.splice(insertAt, 0, 'undercover_word');
+  }
+
   if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_AUCTION, false)) {
     const personalityDiceIndex = enabledPhases.indexOf('personality_dice');
     const insertAt = personalityDiceIndex >= 0 ? personalityDiceIndex : enabledPhases.length;
     enabledPhases.splice(insertAt, 0, 'auction');
+  }
+
+  if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE, false)) {
+    const auctionIndex = enabledPhases.indexOf('auction');
+    const insertAt = auctionIndex >= 0 ? auctionIndex + 1 : enabledPhases.length;
+    enabledPhases.splice(insertAt, 0, 'quip_battle');
   }
 
   if (personalityDiceEnabled === false) {
@@ -151,6 +175,36 @@ export function cleanupPhaseStateForNextPhase(
       state.auctionHighBid = undefined;
       state.auctionAllLotsClosed = undefined;
       state.auctionRecapLines = undefined;
+      return;
+    case 'group_mirror':
+      state.groupMirrorQuestions = undefined;
+      state.groupMirrorQuestionsMeta = undefined;
+      state.groupMirrorAnswers = undefined;
+      state.groupMirrorVotes = undefined;
+      state.groupMirrorSubmittedUserIds = undefined;
+      state.groupMirrorRevealed = undefined;
+      state.groupMirrorResults = undefined;
+      return;
+    case 'undercover_word':
+      state.undercoverWordPair = undefined;
+      state.undercoverWordPairMeta = undefined;
+      state.undercoverUserId = undefined;
+      state.undercoverWordRounds = undefined;
+      state.undercoverWordCurrentRound = undefined;
+      state.undercoverWordVotes = undefined;
+      state.undercoverWordVotedUserIds = undefined;
+      state.undercoverWordRevealed = undefined;
+      state.undercoverWordResults = undefined;
+      return;
+    case 'quip_battle':
+      state.quipBattlePrompts = undefined;
+      state.quipBattlePromptsMeta = undefined;
+      state.quipBattleAnswers = undefined;
+      state.quipBattleSubmittedUserIds = undefined;
+      state.quipBattleVotes = undefined;
+      state.quipBattleVotedUserIds = undefined;
+      state.quipBattleRevealed = undefined;
+      state.quipBattleResults = undefined;
       return;
     default:
       return;

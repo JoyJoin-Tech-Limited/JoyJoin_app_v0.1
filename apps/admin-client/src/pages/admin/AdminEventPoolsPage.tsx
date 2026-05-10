@@ -34,44 +34,30 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Calendar, Users, Eye, MapPin, Clock, Store, Copy, Check, Pencil, UserPlus, ChevronDown } from "lucide-react";
+
+import { Users, Eye, MapPin, Clock, Store, Copy, Check, Pencil, UserPlus, ChevronDown } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
-import { format } from "date-fns";
+import EventPoolCreateDialog from "./EventPoolCreateDialog";
+import EventPoolMetrics from "./EventPoolMetrics";
+import EventPoolFilters from "./EventPoolFilters";
+import type {
+  CityFilter,
+  WaitingFilter,
+  EventsFilter,
+  SortOption,
+  AdminEventPool,
+  AdminPoolRegistration,
+  PoolGroup,
+  PoolGroupMember,
+  PairScoreEntry,
+} from "./types";
+import { fmtDateTime, fmtDateTimeLocal, safeFormat } from "@/lib/dateUtils";
 import { zhCN } from "date-fns/locale";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-interface AvailableVenueSlot {
-  id: string;
-  startTime: string;
-  endTime: string;
-  maxConcurrentEvents: number;
-}
-
-interface AvailableVenue {
-  venue: {
-    id: string;
-    name: string;
-    venueType: string;
-    address: string;
-    city: string;
-    area: string;
-    priceRange: string | null;
-    tags: string[] | null;
-    cuisines: string[] | null;
-  };
-  availableSlots: AvailableVenueSlot[];
-}
 
 // ====== Form schema：简化版，只保留我们现在用得到的字段 ======
 const createPoolSchema = z.object({
@@ -87,79 +73,6 @@ const createPoolSchema = z.object({
   maxGroupSize: z.number().min(2).max(10).default(6),
   targetGroups: z.number().min(1).default(1),
 });
-
-interface EventPool {
-  id: string;
-  title: string;
-  description: string | null;
-  eventType: string;
-  city: string;
-  district: string | null;
-  dateTime: string;
-  registrationDeadline: string;
-  status: string;
-  totalRegistrations: number;
-  successfulMatches: number;
-  minGroupSize: number;
-  maxGroupSize: number;
-  targetGroups: number;
-  createdAt: string;
-  registrationCount?: number;
-  matchedCount?: number;
-  pendingCount?: number;
-}
-
-// 详情里要用到的报名记录
-interface PoolRegistration {
-  id: string;
-  poolId: string;
-  userId: string;
-  budgetRange: string | null;
-  preferredLanguages: string[] | null;
-  eventIntent: string[] | null;
-  cuisinePreferences: string[] | null;
-  dietaryRestrictions: string[] | null;
-  tasteIntensity: string[] | null;
-  matchStatus: string;
-  assignedGroupId: string | null;
-  matchScore: number | null;
-  registeredAt: string;
-  userName: string | null;
-  userFirstName: string | null;
-  userLastName: string | null;
-  userEmail: string | null;
-  userGender: string | null;
-  userAge: number | null;
-  userIndustry: string | null;
-  userSeniority: string | null;
-  userArchetype: string | null;
-}
-
-// 详情里要用到的小组信息（一个小组 ≈ 一桌盲盒活动）
-interface PoolGroupMember {
-  registrationId: string;
-  userId: string;
-  userName: string | null;
-  userFirstName: string | null;
-  userLastName: string | null;
-  userGender: string | null;
-  userArchetype: string | null;
-  userIndustry: string | null;
-  matchScore: number | null;
-}
-
-interface PoolGroup {
-  id: string;
-  poolId: string;
-  groupNumber: number;
-  status: string | null;
-  venueName?: string | null;
-  venueAddress?: string | null;
-  venueId?: string | null;
-  createdAt: string;
-  updatedAt?: string;
-  members: PoolGroupMember[];
-}
 
 // 用来做「后端 status + 业务状态」的 badge
 const RAW_STATUS_LABEL: Record<
@@ -199,9 +112,7 @@ const CITY_DISTRICTS: Record<"深圳" | "香港", string[]> = {
   ],
 };
 
-type CityFilter = "all" | "深圳" | "香港";
-type WaitingFilter = "all" | "hasWaiting" | "noWaiting";
-type EventsFilter = "all" | "hasEvents" | "noEvents";
+
 
 // Capacity fill thresholds for visual indicator
 const FILL_THRESHOLD_GREEN = 80;   // >= 80% fill is healthy (green)
@@ -216,11 +127,12 @@ export default function AdminEventPoolsPage() {
   const [cityFilter, setCityFilter] = useState<CityFilter>("all");
   const [waitingFilter, setWaitingFilter] = useState<WaitingFilter>("all");
   const [eventsFilter, setEventsFilter] = useState<EventsFilter>("all");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
 
   // 创建 / 编辑 / 详情弹窗
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingPoolId, setEditingPoolId] = useState<string | null>(null);
-  const [selectedPool, setSelectedPool] = useState<EventPool | null>(null);
+  const [selectedPool, setSelectedPool] = useState<AdminEventPool | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [copiedPoolId, setCopiedPoolId] = useState<string | null>(null);
   // 手动添加用户弹出层
@@ -229,7 +141,7 @@ export default function AdminEventPoolsPage() {
   const { toast } = useToast();
 
   // 活动池列表
-  const { data: pools = [], isLoading } = useQuery<EventPool[]>({
+  const { data: pools = [], isLoading } = useQuery<AdminEventPool[]>({
     queryKey: ["/api/admin/event-pools"],
   });
 
@@ -255,58 +167,11 @@ export default function AdminEventPoolsPage() {
   const currentDateTime = form.watch("dateTime");
   const currentCityDistricts = CITY_DISTRICTS[currentCity] ?? [];
 
-  // Query for available venues based on selected city, district, and dateTime
-  // Updated to use smart-venues endpoint with budget filtering
-  const { data: availableVenues = [], isLoading: isLoadingVenues, isError: isVenuesError } = useQuery<AvailableVenue[]>({
-    queryKey: [
-      "/api/admin/smart-venues", 
-      currentCity, 
-      currentDistrict, 
-      currentDateTime,
-      form.watch("eventType") // Add event type dependency
-    ],
-    queryFn: async () => {
-      if (!currentCity || !currentDateTime) return [];
-      
-      const eventType = form.watch("eventType");
-      const params = new URLSearchParams({
-        city: currentCity,
-        eventType: eventType || "饭局",
-      });
-      
-      if (currentDistrict) {
-        params.append("district", currentDistrict);
-      }
-      
-      const res = await apiRequest("GET", `/api/admin/smart-venues?${params}`);
-      const venues = await res.json() as any[];
-      
-      // Transform to match existing interface
-      return venues
-        .filter((v: any) => v.hasTimeSlots) // Only show venues with configured time slots
-        .map((v: any) => ({
-          venue: {
-            id: v.id,
-            name: v.name,
-            venueType: v.venueType,
-            address: v.address,
-            city: v.city,
-            area: v.area,
-            priceRange: v.priceRange,
-            tags: v.tags,
-            cuisines: v.cuisines,
-          },
-          availableSlots: [], // Will be populated by existing time slot logic if needed
-        }));
-    },
-    enabled: showCreateDialog && !!currentCity && !!currentDateTime,
-  });
-
   // 选中池子的报名情况
   const {
     data: registrations = [],
     isLoading: isLoadingRegistrations,
-  } = useQuery<PoolRegistration[]>({
+  } = useQuery<AdminPoolRegistration[]>({
     queryKey: ["/api/admin/event-pools", selectedPool?.id, "registrations"],
     enabled: !!selectedPool,
     queryFn: async () => {
@@ -314,10 +179,11 @@ export default function AdminEventPoolsPage() {
         "GET",
         `/api/admin/event-pools/${selectedPool!.id}/registrations`,
       );
+      const data = await res.json();
       // 兼容后端可能返回 { registrations: [...] } 或直接返回数组
-      if (Array.isArray(res)) return res as PoolRegistration[];
-      if (res && Array.isArray((res as any).registrations)) {
-        return (res as any).registrations as PoolRegistration[];
+      if (Array.isArray(data)) return data as AdminPoolRegistration[];
+      if (data && Array.isArray(data.registrations)) {
+        return data.registrations as AdminPoolRegistration[];
       }
       return [];
     },
@@ -333,14 +199,33 @@ export default function AdminEventPoolsPage() {
           "GET",
           `/api/admin/event-pools/${selectedPool!.id}/groups`,
         );
+        const data = await res.json();
         // 兼容数组或 { groups: [...] }
-        if (Array.isArray(res)) return res as PoolGroup[];
-        if (res && Array.isArray((res as any).groups)) {
-          return (res as any).groups as PoolGroup[];
+        if (Array.isArray(data)) return data as PoolGroup[];
+        if (data && Array.isArray(data.groups)) {
+          return data.groups as PoolGroup[];
         }
         return [];
       },
     });
+
+  const { data: pairScores = [] } = useQuery<PairScoreEntry[]>({
+    queryKey: ["/api/admin/event-pools", selectedPool?.id, "pair-scores"],
+    enabled: !!selectedPool,
+    queryFn: async () => {
+      try {
+        return await apiRequest(
+          "GET",
+          `/api/admin/event-pools/${selectedPool!.id}/pair-scores`,
+        ).then(async (res) => {
+          const data = await res.json();
+          return Array.isArray(data) ? data : [];
+        });
+      } catch {
+        return [];
+      }
+    },
+  });
 
   const safeRegistrations = Array.isArray(registrations)
     ? registrations
@@ -424,20 +309,20 @@ export default function AdminEventPoolsPage() {
     },
   });
 
-  const handleViewDetails = (pool: EventPool) => {
+  const handleViewDetails = (pool: AdminEventPool) => {
     setSelectedPool(pool);
     setShowDetailsDialog(true);
   };
 
-  const handleEditPool = (pool: EventPool) => {
+  const handleEditPool = (pool: AdminEventPool) => {
     form.reset({
       title: pool.title,
       description: pool.description || "",
       eventType: pool.eventType as any,
       city: pool.city as any,
       district: pool.district || "",
-      dateTime: pool.dateTime ? format(new Date(pool.dateTime), "yyyy-MM-dd'T'HH:mm") : "",
-      registrationDeadline: pool.registrationDeadline ? format(new Date(pool.registrationDeadline), "yyyy-MM-dd'T'HH:mm") : "",
+      dateTime: fmtDateTimeLocal(pool.dateTime),
+      registrationDeadline: fmtDateTimeLocal(pool.registrationDeadline),
       minGroupSize: pool.minGroupSize,
       maxGroupSize: pool.maxGroupSize,
       targetGroups: pool.targetGroups,
@@ -475,28 +360,40 @@ export default function AdminEventPoolsPage() {
   const poolsWithWaiting = poolsWithFlags.filter((p) => p._hasWaiting).length;
   const poolsWithEvents = poolsWithFlags.filter((p) => p._hasEvents).length;
 
-  const filteredPools = poolsWithFlags.filter((pool) => {
-    if (cityFilter !== "all" && pool.city !== cityFilter) return false;
+  const filteredPools = poolsWithFlags
+    .filter((pool) => {
+      if (cityFilter !== "all" && pool.city !== cityFilter) return false;
+      if (waitingFilter === "hasWaiting" && !pool._hasWaiting) return false;
+      if (waitingFilter === "noWaiting" && pool._hasWaiting) return false;
+      if (eventsFilter === "hasEvents" && !pool._hasEvents) return false;
+      if (eventsFilter === "noEvents" && pool._hasEvents) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const time = (d: string | undefined) => {
+        const t = d ? new Date(d).getTime() : 0;
+        return Number.isNaN(t) ? 0 : t;
+      };
+      switch (sortBy) {
+        case "newest":
+          return time(b.createdAt) - time(a.createdAt);
+        case "oldest":
+          return time(a.createdAt) - time(b.createdAt);
+        case "title":
+          return (a.title || "").localeCompare(b.title || "");
+        case "mostRegistrations":
+          return (b.registrationCount ?? 0) - (a.registrationCount ?? 0);
+        case "mostMatched":
+          return (b.matchedCount ?? 0) - (a.matchedCount ?? 0);
+        default:
+          return 0;
+      }
+    });
 
-    if (waitingFilter === "hasWaiting" && !pool._hasWaiting) return false;
-    if (waitingFilter === "noWaiting" && pool._hasWaiting) return false;
+  const formatDateTime = (dateTimeStr: string) =>
+    safeFormat(dateTimeStr, "yyyy年MM月dd日 HH:mm", { locale: zhCN, fallback: dateTimeStr });
 
-    if (eventsFilter === "hasEvents" && !pool._hasEvents) return false;
-    if (eventsFilter === "noEvents" && pool._hasEvents) return false;
-
-    return true;
-  });
-
-  const formatDateTime = (dateTimeStr: string) => {
-    try {
-      const date = new Date(dateTimeStr);
-      return format(date, "yyyy年MM月dd日 HH:mm", { locale: zhCN });
-    } catch {
-      return dateTimeStr;
-    }
-  };
-
-  const handleCopyPool = (pool: EventPool) => {
+  const handleCopyPool = (pool: AdminEventPool) => {
     // 快速复制：将池子信息填充到表单
     form.reset({
       title: `${pool.title} (副本)`,
@@ -578,463 +475,36 @@ export default function AdminEventPoolsPage() {
             按城市 / 区 / 活动类型划分的「常驻池」，用于集中招募用户，方便后续从池子里“捞人”成局。
           </p>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={handleCloseDialog}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-create-pool" onClick={() => { setEditingPoolId(null); form.reset(); }}>
-              <Calendar className="mr-2 h-4 w-4" />
-              创建活动池
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingPoolId ? "编辑活动池" : "创建新活动池"}</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
-              >
-                {/* 基本信息 */}
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>活动标题 *</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="例如：深圳·南山 饭局常驻池"
-                          {...field}
-                          data-testid="input-title"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>活动池介绍</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="向运营/自己解释一下这个池子的定位（可选）"
-                          {...field}
-                          data-testid="textarea-description"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="eventType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>活动类型 *</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger data-testid="select-event-type">
-                              <SelectValue placeholder="选择类型" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="饭局">饭局</SelectItem>
-                            <SelectItem value="酒局">酒局</SelectItem>
-                            <SelectItem value="其他">其他</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="city"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>城市 *</FormLabel>
-                        <Select
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            // 城市切换时重置区，避免「城市=香港 区=南山」这种组合
-                            form.setValue("district", "");
-                          }}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger data-testid="select-city">
-                              <SelectValue placeholder="选择城市" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="深圳">深圳</SelectItem>
-                            <SelectItem value="香港">香港</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="district"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>区域 *</FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                      >
-                        <FormControl>
-                          <SelectTrigger data-testid="select-district">
-                            <SelectValue placeholder="选择区域" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {currentCityDistricts.map((d) => (
-                            <SelectItem key={d} value={d}>
-                              {d}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="dateTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>推荐活动时间 *</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="datetime-local"
-                            {...field}
-                            data-testid="input-datetime"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="registrationDeadline"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>报名截止时间 *</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="datetime-local"
-                            {...field}
-                            data-testid="input-deadline"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {/* 可用场地提示 */}
-                {currentCity && currentDateTime && (
-                  <div className="border-t pt-4 mt-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Store className="h-4 w-4 text-primary" />
-                      <h3 className="font-semibold">可用场地</h3>
-                      {isLoadingVenues && <span className="text-xs text-muted-foreground">加载中...</span>}
-                    </div>
-                    
-                    {isVenuesError && (
-                      <div className="text-sm text-destructive bg-destructive/10 rounded-md p-3">
-                        加载可用场地失败，请检查网络连接后重试
-                      </div>
-                    )}
-                    
-                    {!isLoadingVenues && !isVenuesError && availableVenues.length === 0 && (
-                      <div className="text-sm text-muted-foreground bg-muted/50 rounded-md p-3">
-                        {currentDistrict 
-                          ? `${currentCity} ${currentDistrict} 在所选时间暂无可用场地，请调整区域或时间`
-                          : `${currentCity} 在所选时间暂无可用场地，请先选择区域或调整时间`
-                        }
-                      </div>
-                    )}
-                    
-                    {!isLoadingVenues && availableVenues.length > 0 && (
-                      <ScrollArea className="h-[160px] rounded-md border p-2">
-                        <div className="space-y-2">
-                          {availableVenues.map(({ venue, availableSlots }) => (
-                            <div 
-                              key={venue.id} 
-                              className="p-3 bg-muted/30 rounded-md"
-                              data-testid={`available-venue-${venue.id}`}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <div className="font-medium text-sm">{venue.name}</div>
-                                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                                    <MapPin className="h-3 w-3" />
-                                    <span>{venue.area}</span>
-                                    {venue.priceRange && (
-                                      <>
-                                        <span className="mx-1">·</span>
-                                        <span>¥{venue.priceRange}/人</span>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                                <Badge variant="outline" className="text-xs shrink-0">
-                                  {venue.venueType === "restaurant" ? "餐厅" : "酒吧"}
-                                </Badge>
-                              </div>
-                              <div className="flex flex-wrap gap-1 mt-2">
-                                {availableSlots.map(slot => (
-                                  <Badge key={slot.id} variant="secondary" className="text-xs">
-                                    <Clock className="h-3 w-3 mr-1" />
-                                    {slot.startTime}-{slot.endTime}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    )}
-                  </div>
-                )}
-
-                {/* 组局配置 */}
-                <div className="border-t pt-4 mt-4">
-                  <h3 className="font-semibold mb-3">组局配置</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="minGroupSize"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>最小人数 *</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min={2}
-                              max={10}
-                              {...field}
-                              onChange={(e) =>
-                                field.onChange(parseInt(e.target.value || "4"))
-                              }
-                              data-testid="input-min-size"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="maxGroupSize"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>最大人数 *</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min={2}
-                              max={10}
-                              {...field}
-                              onChange={(e) =>
-                                field.onChange(parseInt(e.target.value || "6"))
-                              }
-                              data-testid="input-max-size"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="targetGroups"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-1.5">
-                            目标组数 *
-                            <FieldInfoTooltip
-                              title="目标组数"
-                              description="预计分成几组，影响场地预订数量。每组建议 4-8 人，人数过多会降低互动质量。"
-                            />
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min={1}
-                              {...field}
-                              onChange={(e) =>
-                                field.onChange(parseInt(e.target.value || "1"))
-                              }
-                              data-testid="input-target-groups"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleCloseDialog(false)}
-                  >
-                    取消
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={createPoolMutation.isPending || updatePoolMutation.isPending}
-                    data-testid="button-submit-pool"
-                  >
-                    {editingPoolId
-                      ? (updatePoolMutation.isPending ? "更新中..." : "保存修改")
-                      : (createPoolMutation.isPending ? "创建中..." : "创建活动池")}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <EventPoolCreateDialog
+        open={showCreateDialog}
+        onOpenChange={handleCloseDialog}
+        editingPoolId={editingPoolId}
+        setEditingPoolId={setEditingPoolId}
+        form={form}
+        onSubmit={onSubmit}
+        createPoolMutation={createPoolMutation}
+        updatePoolMutation={updatePoolMutation}
+      />
       </div>
 
       {/* 顶部指标：总数 / 招募中 / 有等待 / 有成局 */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card data-testid="metric-total">
-          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">总活动池数</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalPools}</div>
-          </CardContent>
-        </Card>
+      <EventPoolMetrics
+        totalPools={totalPools}
+        activePools={activePools}
+        poolsWithWaiting={poolsWithWaiting}
+        poolsWithEvents={poolsWithEvents}
+      />
 
-        <Card data-testid="metric-active">
-          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">招募中池子</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activePools}</div>
-          </CardContent>
-        </Card>
-
-        <Card data-testid="metric-waiting">
-          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              有人等待报名的池
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{poolsWithWaiting}</div>
-          </CardContent>
-        </Card>
-
-        <Card data-testid="metric-with-events">
-          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              已有成局/小组的池
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{poolsWithEvents}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 筛选区域：城市 / 是否有人在等 / 是否有成局 */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">筛选条件</CardTitle>
-          <CardDescription className="text-xs">
-            通过城市 + 是否有等待报名 + 是否已有成局来筛活动池。
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">城市</span>
-            <Select
-              value={cityFilter}
-              onValueChange={(v) => setCityFilter(v as CityFilter)}
-            >
-              <SelectTrigger className="h-8 w-[120px] text-xs">
-                <SelectValue placeholder="全部城市" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部城市</SelectItem>
-                <SelectItem value="深圳">深圳</SelectItem>
-                <SelectItem value="香港">香港</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">
-              池子里是否有人在等
-            </span>
-            <Select
-              value={waitingFilter}
-              onValueChange={(v) => setWaitingFilter(v as WaitingFilter)}
-            >
-              <SelectTrigger className="h-8 w-[150px] text-xs">
-                <SelectValue placeholder="全部" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部</SelectItem>
-                <SelectItem value="hasWaiting">只看有人等待</SelectItem>
-                <SelectItem value="noWaiting">只看没人等待</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">
-              池子里是否已有成局
-            </span>
-            <Select
-              value={eventsFilter}
-              onValueChange={(v) => setEventsFilter(v as EventsFilter)}
-            >
-              <SelectTrigger className="h-8 w-[160px] text-xs">
-                <SelectValue placeholder="全部" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部</SelectItem>
-                <SelectItem value="hasEvents">只看有成局</SelectItem>
-                <SelectItem value="noEvents">只看还没成局</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      <EventPoolFilters
+        cityFilter={cityFilter}
+        setCityFilter={setCityFilter}
+        waitingFilter={waitingFilter}
+        setWaitingFilter={setWaitingFilter}
+        eventsFilter={eventsFilter}
+        setEventsFilter={setEventsFilter}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
+      />
 
       {/* 活动池列表 */}
       <div className="grid gap-4">
@@ -1288,7 +758,7 @@ export default function AdminEventPoolsPage() {
                   <div className="space-y-3">
                     {safeGroups.map((group, groupIdx) => {
                       const maxSize = selectedPool?.maxGroupSize ?? 6;
-                      const fillPercent = Math.min(100, (group.members.length / maxSize) * 100);
+                      const fillPercent = maxSize > 0 ? Math.min(100, (group.members.length / maxSize) * 100) : 0;
                       const vacantSeats = Math.max(0, maxSize - group.members.length);
                       // Pending registrations not yet in any group
                       const pendingUnassigned = safeRegistrations.filter(
@@ -1442,6 +912,73 @@ export default function AdminEventPoolsPage() {
                   </div>
                 )}
               </div>
+
+              {/* Pair Scores Matrix */}
+              {pairScores.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold">匹配质量矩阵</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm border rounded-md">
+                      <thead>
+                        <tr className="bg-muted">
+                          <th className="px-3 py-2 text-left font-medium">组号</th>
+                          <th className="px-3 py-2 text-center font-medium">人数</th>
+                          <th className="px-3 py-2 text-center font-medium">化学分</th>
+                          <th className="px-3 py-2 text-center font-medium">多样性</th>
+                          <th className="px-3 py-2 text-center font-medium">沟通平衡</th>
+                          <th className="px-3 py-2 text-center font-medium">性别平衡</th>
+                          <th className="px-3 py-2 text-center font-medium">总分</th>
+                          <th className="px-3 py-2 text-center font-medium">温度</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pairScores.map((score) => (
+                          <tr key={score.groupId} className="border-t">
+                            <td className="px-3 py-2 font-medium">第{score.groupNumber}组</td>
+                            <td className="px-3 py-2 text-center">{score.memberCount}</td>
+                            <td className="px-3 py-2 text-center">
+                              {score.avgChemistryScore != null ? (
+                                <Badge variant="outline" className={score.avgChemistryScore >= 80 ? 'text-green-700 border-green-300' : score.avgChemistryScore >= 60 ? 'text-amber-700 border-amber-300' : 'text-red-700 border-red-300'}>
+                                  {score.avgChemistryScore}
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {score.diversityScore != null ? score.diversityScore : '-'}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {score.communicationBalance != null ? score.communicationBalance : '-'}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {score.genderBalanceScore != null ? score.genderBalanceScore : '-'}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {score.overallScore != null ? (
+                                <Badge variant="outline" className={score.overallScore >= 80 ? 'text-green-700 border-green-300' : score.overallScore >= 60 ? 'text-amber-700 border-amber-300' : 'text-red-700 border-red-300'}>
+                                  {score.overallScore}
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {score.temperatureLevel ? (
+                                <Badge variant="secondary" className="text-xs">
+                                  {score.temperatureLevel === 'fire' ? '🔥 热烈' : score.temperatureLevel === 'warm' ? '☀️ 温暖' : score.temperatureLevel === 'mild' ? '🌤️ 温和' : '❄️ 冷静'}
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               <div className="border-t pt-4 text-[11px] text-muted-foreground">
                 提示：这里只负责展示这个池子里有哪些人、已经开了哪些组。

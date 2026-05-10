@@ -24,6 +24,8 @@ import {
   buildWarmupTopicsPrompt,
   buildMicroChallengesPrompt,
   buildLieDetectivePrompt,
+  buildLieDetectiveV2Prompt,
+  LieDetectiveV2ResponseSchema,
   buildXiaoYueCommentPrompt,
   buildRecapSummaryPrompt,
   buildPersonalityDicePrompt,
@@ -37,6 +39,7 @@ import {
   WARMUP_TOPICS_PROMPT_VERSION,
   MICRO_CHALLENGES_PROMPT_VERSION,
   LIE_DETECTIVE_PROMPT_VERSION,
+  LIE_DETECTIVE_V2_PROMPT_VERSION,
   RECAP_SUMMARY_PROMPT_VERSION,
   PERSONALITY_DICE_PROMPT_VERSION,
   AUCTION_LOTS_PROMPT_VERSION,
@@ -49,10 +52,14 @@ import {
 import { selectMicroChallenges } from '@joyjoin/shared';
 import { getRandomQuipBattlePrompts, type QuipBattlePrompt } from '@shared/quipBattle';
 import { getFallbackUndercoverPair, type UndercoverWordPair } from '@shared/undercoverWord';
+import { buildArchetypeContext } from './lib/contextInjector';
 import { getFallbackGroupMirrorQuestions, type GroupMirrorQuestion } from '@shared/groupMirror';
+import { getRandomFallbackSet, type LieDetectiveV2FallbackStatement } from '@shared/lieDetectiveFallback';
 import { logger } from "./lib/logger";
+import { XIAOYUE_PERSONA } from './prompts';
 import { evaluateContent, formatQualityMetrics } from './ai/aiQualityGate';
 import type { JudgeFeatureType } from './ai/qualityJudgePrompts';
+import { filterContent } from './contentFilter';
 
 type AIServiceResult<T> = {
   data: T;
@@ -254,12 +261,17 @@ export async function generateWarmupTopics(params: {
   participantCount: number;
   avoidTopics?: string[];
   _refinementHint?: string;
+  roster?: Array<{ archetype?: string }>;
 }): Promise<AIServiceResult<SocialTopic[]>> {
   const aiCorrelationId = createAiCorrelationId();
   const { client, model, provider } = getClientForFunction('generateWarmupTopics');
   const t0 = Date.now();
   try {
-    const prompt = buildWarmupTopicsPrompt(params);
+    const sessionContext = params.roster ? buildArchetypeContext(params.roster) : undefined;
+    if (sessionContext?.mixText) {
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'contextInjector', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: false, fromCache: false, promptVersion: 'context-injector-v1', extra: { mixText: sessionContext.mixText, diversityScore: sessionContext.diversityScore } });
+    }
+    const prompt = buildWarmupTopicsPrompt({ ...params, sessionContext });
 
     const response = await client.chat.completions.create({
       model,
@@ -344,6 +356,7 @@ export async function generateMicroChallenges(params: {
   /** Deterministic seed for template selector (e.g. session ID). */
   seed?: string;
   _refinementHint?: string;
+  roster?: Array<{ archetype?: string }>;
 }): Promise<AIServiceResult<MicroChallenge[]>> {
   const aiCorrelationId = createAiCorrelationId();
 
@@ -378,7 +391,11 @@ export async function generateMicroChallenges(params: {
   const { client, model, provider } = getClientForFunction('generateMicroChallenges');
   const t0 = Date.now();
   try {
-    const prompt = buildMicroChallengesPrompt(params);
+    const sessionContext = params.roster ? buildArchetypeContext(params.roster) : undefined;
+    if (sessionContext?.mixText) {
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'contextInjector', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: false, fromCache: false, promptVersion: 'context-injector-v1', extra: { mixText: sessionContext.mixText, diversityScore: sessionContext.diversityScore } });
+    }
+    const prompt = buildMicroChallengesPrompt({ ...params, sessionContext });
 
     const response = await client.chat.completions.create({
       model,
@@ -426,7 +443,87 @@ export async function generateMicroChallenges(params: {
   }
 }
 
+/** Determine the effective lie-detective mode. */
+export function getLieDetectiveMode(sessionMode?: 'v1' | 'v2'): 'v1' | 'v2' {
+  if (sessionMode) return sessionMode;
+  const envMode = process.env.LIE_DETECTIVE_MODE;
+  return envMode === 'v2' ? 'v2' : 'v1';
+}
+
+/** Compute dynamic difficulty based on reveal history. First 2 rounds always medium. */
+export function getDynamicDifficulty(
+  history?: Array<{ round: number; correctRate: number }>,
+): 'easy' | 'medium' | 'hard' {
+  if (!history || history.length < 2) return 'medium';
+  const lastTwo = history.slice(-2);
+  const avgCorrectRate = lastTwo.reduce((sum, h) => sum + h.correctRate, 0) / lastTwo.length;
+  if (avgCorrectRate < 0.4) return 'easy';
+  if (avgCorrectRate > 0.6) return 'hard';
+  return 'medium';
+}
+
+/** Validate user-submitted tags for V2. */
+export function validateLieDetectiveV2Tags(tags: unknown): { valid: false; error: string } | { valid: true; tags: [string, string] } {
+  if (!Array.isArray(tags) || tags.length !== 2) {
+    return { valid: false, error: 'Exactly 2 tags are required' };
+  }
+  for (const tag of tags) {
+    if (typeof tag !== 'string' || tag.length < 2 || tag.length > 20) {
+      return { valid: false, error: 'Each tag must be 2–20 characters' };
+    }
+    const filterResult = filterContent(tag);
+    if (filterResult.isViolation) {
+      return { valid: false, error: filterResult.message || 'Tag contains inappropriate content' };
+    }
+  }
+  return { valid: true, tags: [tags[0].trim(), tags[1].trim()] as [string, string] };
+}
+
+/** Build V2 recap data from reveal history. */
+export function buildLieDetectiveV2RecapData(
+  history: Array<{ round: number; correctRate: number }>,
+): { aiWinRate: number; hardestRound: number; fooledEveryone: number } {
+  if (history.length === 0) {
+    return { aiWinRate: 0, hardestRound: 0, fooledEveryone: 0 };
+  }
+  const aiWonRounds = history.filter((h) => h.correctRate < 0.5).length;
+  const aiWinRate = Math.round((aiWonRounds / history.length) * 100);
+  const hardestEntry = history.reduce((min, h) => (h.correctRate < min.correctRate ? h : min), history[0]);
+  const fooledEveryone = history.filter((h) => h.correctRate === 0).length;
+  return {
+    aiWinRate,
+    hardestRound: hardestEntry.round,
+    fooledEveryone,
+  };
+}
+
 export async function generateLieDetectiveStatements(params: {
+  userId: string;
+  displayName: string;
+  archetype?: string;
+  interests?: string[];
+  mode?: 'v1' | 'v2';
+  tags?: [string, string];
+  difficulty?: 'easy' | 'medium' | 'hard';
+  _refinementHint?: string;
+}): Promise<AIServiceResult<LieDetectiveStatement[]>> {
+  const effectiveMode = params.mode ?? getLieDetectiveMode();
+
+  if (effectiveMode === 'v2' && params.tags) {
+    return generateLieDetectiveV2Statements({
+      userId: params.userId,
+      displayName: params.displayName,
+      archetype: params.archetype,
+      tags: params.tags,
+      difficulty: params.difficulty,
+    });
+  }
+
+  // V1 path (existing behavior)
+  return generateLieDetectiveV1Statements(params);
+}
+
+async function generateLieDetectiveV1Statements(params: {
   userId: string;
   displayName: string;
   archetype?: string;
@@ -485,19 +582,185 @@ function getRandomFallbackStatements(): LieDetectiveStatement[] {
   return sets[0];
 }
 
+// ─── Lie Detective V2 ───────────────────────────────────────────────────────
+
+/**
+ * 4-tier degrade chain for Lie Detective V2:
+ * 1. V2 prompt → buildLieDetectiveV2Prompt() + LieDetectiveV2ResponseSchema.safeParse()
+ * 2. V2 fallback sets → getRandomFallbackSet(archetype)
+ * 3. V1 prompt → buildLieDetectivePrompt() (AI generates all 3)
+ * 4. V1 hardcoded → existing deterministic fallback
+ *
+ * All tiers are AITraced with fallbackUsed: true.
+ */
+async function generateLieDetectiveV2Statements(params: {
+  userId: string;
+  displayName: string;
+  archetype?: string;
+  interests?: string[];
+  tags: [string, string];
+  difficulty?: 'easy' | 'medium' | 'hard';
+}): Promise<AIServiceResult<LieDetectiveStatement[]>> {
+  const aiCorrelationId = createAiCorrelationId();
+  const difficulty = params.difficulty ?? 'medium';
+
+  // Tier 1: V2 prompt
+  const tier1 = await tryV2Prompt(params, aiCorrelationId, difficulty);
+  if (tier1.success) return tier1.result;
+
+  // Tier 2: V2 fallback sets
+  const tier2 = tryV2Fallback(params, aiCorrelationId);
+  if (tier2.success) return tier2.result;
+
+  // Tier 3: V1 prompt
+  const tier3 = await tryV1PromptAsFallback(params, aiCorrelationId);
+  if (tier3.success) return tier3.result;
+
+  // Tier 4: V1 hardcoded fallback
+  return tier4HardcodedFallback(aiCorrelationId);
+}
+
+async function tryV2Prompt(
+  params: { displayName: string; archetype?: string; tags: [string, string] },
+  aiCorrelationId: string,
+  difficulty: 'easy' | 'medium' | 'hard',
+): Promise<{ success: true; result: AIServiceResult<LieDetectiveStatement[]> } | { success: false }> {
+  const { client, model, provider } = getClientForFunction('generateLieDetectiveStatements');
+  const t0 = Date.now();
+  try {
+    const prompt = buildLieDetectiveV2Prompt({
+      displayName: params.displayName,
+      tags: params.tags,
+      archetype: params.archetype,
+      difficulty,
+    });
+
+    const response = await client.chat.completions.create({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.9,
+      max_tokens: 400,
+    });
+
+    const content = response.choices[0]?.message?.content?.trim();
+    if (!content) {
+      const latencyMs = Date.now() - t0;
+      logger.warn(`[SocialIcebreakerAI] V2 prompt empty response provider=${provider} latency=${latencyMs}ms`);
+      const meta = buildFallbackAIMeta('empty_response', LIE_DETECTIVE_V2_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveV2Statements', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+      return { success: false };
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      const latencyMs = Date.now() - t0;
+      logger.warn(`[SocialIcebreakerAI] V2 prompt JSON parse failed provider=${provider} latency=${latencyMs}ms`);
+      const meta = buildFallbackAIMeta('parse_error', LIE_DETECTIVE_V2_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveV2Statements', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+      return { success: false };
+    }
+
+    const validation = LieDetectiveV2ResponseSchema.safeParse(parsed);
+    if (!validation.success) {
+      const latencyMs = Date.now() - t0;
+      logger.warn(`[SocialIcebreakerAI] V2 prompt validation failed provider=${provider} latency=${latencyMs}ms: ${validation.error.message}`);
+      const meta = buildFallbackAIMeta('parse_error', LIE_DETECTIVE_V2_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveV2Statements', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+      return { success: false };
+    }
+
+    // Convert V2 shape to LieDetectiveStatement[] (is_ai → isLie for compatibility)
+    const statements: LieDetectiveStatement[] = validation.data.map((s) => ({
+      index: s.index,
+      text: s.text,
+      isLie: s.is_ai,
+      is_ai: s.is_ai,
+      source_tag: s.source_tag ?? null,
+    }));
+
+    const latencyMs = Date.now() - t0;
+    logger.info(`[SocialIcebreakerAI] V2 prompt success provider=${provider} latency=${latencyMs}ms`);
+    const meta = buildLiveAIMeta(provider, LIE_DETECTIVE_V2_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveV2Statements', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
+    fireAndForgetQualityGate(content, 'icebreaker_lie_detective', aiCorrelationId, 'lie_detective');
+    return { success: true, result: { data: statements, meta } };
+  } catch (error) {
+    const latencyMs = Date.now() - t0;
+    logger.error(`[SocialIcebreakerAI] V2 prompt error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
+    const meta = buildFallbackAIMeta('llm_error', LIE_DETECTIVE_V2_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveV2Statements', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    return { success: false };
+  }
+}
+
+function tryV2Fallback(
+  params: { archetype?: string },
+  aiCorrelationId: string,
+): { success: true; result: AIServiceResult<LieDetectiveStatement[]> } | { success: false } {
+  try {
+    const fallbackSet = getRandomFallbackSet(params.archetype);
+    const statements: LieDetectiveStatement[] = fallbackSet.statements.map((s: LieDetectiveV2FallbackStatement) => ({
+      index: s.index,
+      text: s.text,
+      isLie: s.is_ai,
+      is_ai: s.is_ai,
+      source_tag: s.source_tag,
+    }));
+
+    const meta = buildFallbackAIMeta('v2_fallback_pool', LIE_DETECTIVE_V2_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveV2Statements', provider: null, model: 'v2-fallback-pool', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    logger.info('[SocialIcebreakerAI] V2 fallback set used');
+    return { success: true, result: { data: statements, meta } };
+  } catch (error) {
+    logger.error('[SocialIcebreakerAI] V2 fallback set error:', { error: error instanceof Error ? error.message : String(error) });
+    return { success: false };
+  }
+}
+
+async function tryV1PromptAsFallback(
+  params: { userId: string; displayName: string; archetype?: string; interests?: string[] },
+  aiCorrelationId: string,
+): Promise<{ success: true; result: AIServiceResult<LieDetectiveStatement[]> } | { success: false }> {
+  try {
+    const v1Result = await generateLieDetectiveV1Statements(params);
+    // Overwrite meta to indicate V1 fallback was used
+    const meta: AIResponseMeta = {
+      ...v1Result.meta,
+      fallbackUsed: true,
+      promptVersion: `${v1Result.meta.promptVersion}-v1-degrade`,
+    };
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveV2Statements', provider: v1Result.meta.provider, model: 'v1-degrade', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion });
+    return { success: true, result: { data: v1Result.data, meta } };
+  } catch {
+    return { success: false };
+  }
+}
+
+function tier4HardcodedFallback(aiCorrelationId: string): AIServiceResult<LieDetectiveStatement[]> {
+  const statements = getRandomFallbackStatements();
+  const meta = buildFallbackAIMeta('v1_hardcoded_fallback', LIE_DETECTIVE_PROMPT_VERSION, aiCorrelationId);
+  logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveV2Statements', provider: null, model: 'v1-hardcoded', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+  logger.info('[SocialIcebreakerAI] V1 hardcoded fallback used (tier 4)');
+  return { data: statements, meta };
+}
+
 export async function generateXiaoYueComment(params: {
   phase: string;
   event: string;
   context?: string;
+  playerCount?: number;
+  participants?: Array<{ displayName: string; archetype?: string | null; profile?: { archetype?: string | null; industryLabel?: string | null; age?: number | null; city?: string | null; stateLabel?: string | null; gender?: string | null; educationLevel?: string | null; lifeStage?: string | null; bio?: string | null } | null }>;
 }): Promise<AIServiceResult<string>> {
   const defaultComments: Record<string, Record<string, string>> = {
     warmup: {
-      phase_start: '来，先随便聊聊，不用紧张 🌅',
+      phase_start: '来，先抽张话题卡，不用紧张 🌅',
       topic_refresh: '换个话题，这个更有意思～ ✨',
       mood_change: '行，换换口味，新话题来了 🎯',
     },
     micro_challenge: {
-      phase_start: '热身差不多了，来点小挑战？⚡',
+      phase_start: '话题卡环节差不多了，来点小挑战？⚡',
       timer_warning: '时间不多啦，抓紧 ⚡',
       challenge_complete: '可以啊，大家都完成了 🎉',
     },
@@ -530,7 +793,10 @@ export async function generateXiaoYueComment(params: {
 
     const response = await client.chat.completions.create({
       model,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [
+        { role: 'system', content: XIAOYUE_PERSONA },
+        { role: 'user', content: prompt },
+      ],
       temperature: 0.8,
       max_tokens: 100,
     });
@@ -608,34 +874,12 @@ export async function generateRecapSummary(params: {
   const { client, model, provider } = getClientForFunction('generateRecapSummary');
   const t0 = Date.now();
   try {
-    const diceBlock =
-      params.personalityDiceRecapLines?.length ?
-        `人格骰子亮点：${params.personalityDiceRecapLines.join('；')}`
-      : '';
-    const miniBlock = params.miniScriptRecapLine ? `迷你剧本杀：${params.miniScriptRecapLine}` : '';
-    const auctionBlock =
-      params.auctionRecapLines?.length ? `拍卖环节：${params.auctionRecapLines.join('；')}` : '';
+    const sessionContext = buildArchetypeContext(params.participants);
+    if (sessionContext?.mixText) {
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'contextInjector', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: false, fromCache: false, promptVersion: 'context-injector-v1', extra: { mixText: sessionContext.mixText, diversityScore: sessionContext.diversityScore } });
+    }
 
-    const prompt = `你是社交破冰助手悦仔。请为今晚的活动生成一个温馨的总结：
-
-参与者：${params.participants.map(p => p.displayName).join('、')}
-讨论话题数：${params.topicsDiscussed.length}
-完成挑战数：${params.challengesCompleted}
- 发现共同点：${params.commonGroundCount}
-活动时长：${params.durationMinutes}分钟
-${params.lieDetectiveHighlights?.length ? `谎言侦探亮点：${params.lieDetectiveHighlights.join('、')}` : ''}
-${diceBlock}
-${miniBlock}
-${auctionBlock}
-
-请以JSON格式返回：
-{
-  "headline": "一句话总结（15字内）",
-  "moments": ["精彩瞬间1", "精彩瞬间2", "精彩瞬间3"],
-  "closingLine": "温馨结束语（20-30字）"
-}
-
-直接返回JSON，不要其他内容。`;
+    const prompt = buildRecapSummaryPrompt({ ...params, sessionContext });
 
     const response = await client.chat.completions.create({
       model,
@@ -701,7 +945,7 @@ const FALLBACK_SESSION_PACK: XiaoyueSessionPack = {
   generatedAt: new Date().toISOString(),
   opener: '来了来了，先放松，这局不会尬，我保证。',
   phaseCoaching: {
-    warmup: { toneLine: '先随便聊聊，不用急着交心', hostHint: '没人开口？你先抛个自己的糗事呗' },
+    warmup: { toneLine: '先抽张话题卡，不用急着交心', hostHint: '没人开口？你先抽一张打个样呗' },
     micro_challenge: { toneLine: '来点小挑战，两分钟的事', energyRescue: '别急，慢慢玩，时间够的' },
     lie_detective: { toneLine: '仔细听，找出那个编的', hostHint: '大胆猜，错了也没人记仇' },
     auction: { toneLine: '虚拟拍卖，脑洞越大越好', energyRescue: '没人出价？自己夸自己也算' },
@@ -923,6 +1167,11 @@ export async function generatePersonalityDiceChallenges(params: {
   // Build archetype-aware v2 fallbacks first
   const fallbacks: PersonalityDiceChallenge[] = participants.map(p => buildArchetypeFallback(p));
 
+  const sessionContext = buildArchetypeContext(participants);
+  if (sessionContext?.mixText) {
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'contextInjector', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: false, fromCache: false, promptVersion: 'context-injector-v1', extra: { mixText: sessionContext.mixText, diversityScore: sessionContext.diversityScore } });
+  }
+
   const { client, model, provider } = getClientForFunction('generatePersonalityDiceChallenges');
   const t0 = Date.now();
   try {
@@ -932,7 +1181,7 @@ export async function generatePersonalityDiceChallenges(params: {
       dominantTrait: getDominantTrait(p.traitScores),
     }));
 
-    const prompt = buildPersonalityDicePrompt({ participants: participantList, _refinementHint: params._refinementHint });
+    const prompt = buildPersonalityDicePrompt({ participants: participantList, _refinementHint: params._refinementHint, sessionContext });
 
     const response = await client.chat.completions.create({
       model,
@@ -992,9 +1241,9 @@ export async function generatePersonalityDiceChallenges(params: {
 }
 
 const FALLBACK_AUCTION_LOTS: AuctionLot[] = [
-  { id: 'lot_fb_1', title: '分享一个无伤大雅的社死瞬间', teaser: '越离谱越好，反正大家都不认识' },
-  { id: 'lot_fb_2', title: '用三句话编一个离谱旅行故事', teaser: '现场即兴，瞎编也行' },
-  { id: 'lot_fb_3', title: '爆料一个今晚之前没人知道的小习惯', teaser: '说完就翻篇，不截图' },
+  { id: 'lot_fb_1', title: '分享一个无伤大雅的社死瞬间', teaser: '越离谱越好，反正大家都不认识', emoji: '😅' },
+  { id: 'lot_fb_2', title: '用三句话编一个离谱旅行故事', teaser: '现场即兴，瞎编也行', emoji: '✈️' },
+  { id: 'lot_fb_3', title: '爆料一个今晚之前没人知道的小习惯', teaser: '说完就翻篇，不截图', emoji: '🤫' },
 ];
 
 function isAuctionLlmEnabled(): boolean {
@@ -1008,6 +1257,7 @@ function normalizeAuctionLots(raw: AuctionLot[]): AuctionLot[] {
     id: (lot.id || `lot_${i + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 48),
     title: lot.title?.trim() || `竞拍项 ${i + 1}`,
     teaser: lot.teaser?.trim() ? lot.teaser.trim().slice(0, 200) : undefined,
+    emoji: lot.emoji?.trim() || undefined,
   }));
 }
 
@@ -1015,6 +1265,7 @@ export async function generateAuctionLots(params: {
   participantCount: number;
   eventType?: string;
   _refinementHint?: string;
+  sessionContext?: { mixText?: string };
 }): Promise<AIServiceResult<AuctionLot[]>> {
   const aiCorrelationId = createAiCorrelationId();
   const t0 = Date.now();
@@ -1039,7 +1290,12 @@ export async function generateAuctionLots(params: {
 
   const { client, model, provider } = getClientForFunction('generateAuctionLots');
   try {
-    const prompt = buildAuctionLotsPrompt(params);
+    const prompt = buildAuctionLotsPrompt({
+      participantCount: params.participantCount,
+      eventType: params.eventType,
+      _refinementHint: params._refinementHint,
+      mixText: params.sessionContext?.mixText,
+    });
 
     const response = await client.chat.completions.create({
       model,
@@ -1245,7 +1501,7 @@ export async function fetchMiniScriptFrameworkModelJson(params: {
   const primary = await fetchMiniScriptFrameworkOnce({
     selection,
     userMessage,
-    useJsonObject: selection.provider === 'deepseek',
+    useJsonObject: true,
     signal: params.signal,
   });
 
@@ -1276,6 +1532,7 @@ export async function generateQuipBattlePrompts(params: {
   participantCount: number;
   participants: Array<{ displayName: string; archetype?: string }>;
   _refinementHint?: string;
+  roster?: Array<{ archetype?: string }>;
 }): Promise<AIServiceResult<QuipBattlePrompt[]>> {
   const aiCorrelationId = createAiCorrelationId();
   const { client, model, provider } = getClientForFunction('generateQuipBattlePrompts');
@@ -1285,7 +1542,11 @@ export async function generateQuipBattlePrompts(params: {
   const fallbackPrompts = getRandomQuipBattlePrompts(3);
 
   try {
-    const prompt = buildQuipBattlePrompt(params);
+    const sessionContext = params.roster ? buildArchetypeContext(params.roster) : undefined;
+    if (sessionContext?.mixText) {
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'contextInjector', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: false, fromCache: false, promptVersion: 'context-injector-v1', extra: { mixText: sessionContext.mixText, diversityScore: sessionContext.diversityScore } });
+    }
+    const prompt = buildQuipBattlePrompt({ ...params, sessionContext });
 
     const response = await client.chat.completions.create({
       model,
@@ -1347,6 +1608,8 @@ export async function generateQuipBattlePrompts(params: {
 export async function generateUndercoverWordPair(params: {
   eventType?: string;
   participantCount: number;
+  roster?: Array<{ userId: string; displayName: string; archetype?: string }>;
+  _refinementHint?: string;
 }): Promise<AIServiceResult<UndercoverWordPair>> {
   const aiCorrelationId = createAiCorrelationId();
   const { client, model, provider } = getClientForFunction('generateUndercoverWordPair');
@@ -1355,7 +1618,19 @@ export async function generateUndercoverWordPair(params: {
   const fallback = getFallbackUndercoverPair();
 
   try {
-    const prompt = buildUndercoverWordPrompt(params);
+    const sessionContext = params.roster ? buildArchetypeContext(params.roster) : undefined;
+    if (sessionContext?.mixText) {
+      logger.info('[SocialIcebreakerAI] Undercover word context injected', {
+        aiCorrelationId,
+        mixText: sessionContext.mixText,
+        diversityScore: sessionContext.diversityScore,
+      });
+    }
+    const prompt = buildUndercoverWordPrompt({
+      participantCount: params.participantCount,
+      eventType: params.eventType,
+      sessionContext,
+    });
     const response = await client.chat.completions.create({
       model,
       messages: [{ role: 'user', content: prompt }],
@@ -1412,6 +1687,8 @@ export async function generateGroupMirrorQuestions(params: {
   eventType?: string;
   participantCount: number;
   participantNames: string[];
+  roster?: Array<{ userId: string; displayName: string; archetype?: string }>;
+  _refinementHint?: string;
 }): Promise<AIServiceResult<GroupMirrorQuestion[]>> {
   const aiCorrelationId = createAiCorrelationId();
   const { client, model, provider } = getClientForFunction('generateGroupMirrorQuestions');
@@ -1420,7 +1697,11 @@ export async function generateGroupMirrorQuestions(params: {
   const fallback = getFallbackGroupMirrorQuestions(5);
 
   try {
-    const prompt = buildGroupMirrorPrompt(params);
+    const sessionContext = params.roster ? buildArchetypeContext(params.roster) : undefined;
+    if (sessionContext?.mixText) {
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'contextInjector', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: false, fromCache: false, promptVersion: 'context-injector-v1', extra: { mixText: sessionContext.mixText, diversityScore: sessionContext.diversityScore } });
+    }
+    const prompt = buildGroupMirrorPrompt({ ...params, sessionContext });
     const response = await client.chat.completions.create({
       model,
       messages: [{ role: 'user', content: prompt }],
