@@ -133,7 +133,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can advance phases' });
   }
 
@@ -570,7 +570,7 @@ router.post('/:socialSessionId/auction/generate-lots', async (req: any, res) => 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can generate auction lots' });
   }
 
@@ -715,7 +715,7 @@ router.post('/:socialSessionId/auction/close-lot', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can close an auction lot' });
   }
 
@@ -778,7 +778,7 @@ router.get('/:socialSessionId/quip-battle/results', async (req: any, res) => {
   const userId = requireAuthenticatedUserId(req, res);
   if (!userId) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can reveal quip battle results' });
   }
 
