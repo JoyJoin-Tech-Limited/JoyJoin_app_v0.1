@@ -1,13 +1,16 @@
 /**
- * Quip battle GET /quip-battle/results must not mutate session state without auth
+ * Quip battle auth: GET /quip-battle/results must not mutate session state without auth
  * (regression: unauthenticated requests could force reveal).
+ * POST /quip-battle/generate must require host session (regression: unauthenticated could
+ * overwrite prompts and burn LLM quota).
  */
 import express from 'express';
 import session from 'express-session';
 import type { AddressInfo } from 'net';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { SocialSessionState } from '@shared/socialIcebreaker';
 import { BLAZE_RUN_PLAN } from '@shared/socialIcebreakerRunPlans';
+import { generateQuipBattlePrompts } from '../socialIcebreakerAIService';
 
 const storeCtx = vi.hoisted(() => {
   const sessions = new Map<string, SocialSessionState>();
@@ -202,6 +205,55 @@ function seedQuipSession(socialSessionId: string): void {
   storeCtx.sessions.set(socialSessionId, state);
 }
 
+function seedQuipSessionForGenerate(
+  socialSessionId: string,
+  opts?: { phase?: SocialSessionState['currentPhase']; withPrompts?: boolean },
+): void {
+  const phase = opts?.phase ?? 'quip_battle';
+  const state: SocialSessionState = {
+    socialSessionId,
+    icebreakerSessionId: 'quip-gen-test',
+    currentPhase: phase,
+    hostUserId: 'host-user',
+    hostDisplayName: 'Host',
+    playerCount: 2,
+    activePlayerCount: 2,
+    phaseStartedAt: Date.now(),
+    sessionStartedAt: Date.now(),
+    completedPhases: ['warmup'],
+    eventType: '测试',
+    eventTier: 'blaze',
+    enabledPhases: [],
+    commonGroundCount: 0,
+    warmupReadyUserIds: [],
+    lieDetectiveCompletedUserIds: [],
+    autoAdvanceEnabled: false,
+    runPlan: BLAZE_RUN_PLAN,
+  };
+  if (opts?.withPrompts) {
+    state.quipBattlePrompts = [{ id: 'p0', promptText: '已有题目', category: 'fun' }];
+    state.quipBattlePromptsMeta = {
+      generatedAt: new Date().toISOString(),
+      fromCache: false,
+      provider: null,
+      fallbackUsed: false,
+      promptVersion: 'social-quip-battle-v1',
+    };
+  }
+  storeCtx.sessions.set(socialSessionId, state);
+  const pmap = new Map<
+    string,
+    { userId: string; displayName: string; joinedAt: number; lastSeenAt: number }
+  >();
+  pmap.set('host-user', {
+    userId: 'host-user',
+    displayName: 'Host',
+    joinedAt: Date.now(),
+    lastSeenAt: Date.now(),
+  });
+  storeCtx.participants.set(socialSessionId, pmap);
+}
+
 describe('GET /api/social-icebreaker/:id/quip-battle/results', () => {
   it('returns 401 without session cookie and does not reveal', async () => {
     const socialSessionId = 'social_quip-auth-401';
@@ -246,6 +298,100 @@ describe('GET /api/social-icebreaker/:id/quip-battle/results', () => {
       expect(body.allVoted).toBe(true);
       expect(Array.isArray(body.results)).toBe(true);
       expect(storeCtx.sessions.get(socialSessionId)?.quipBattleRevealed).toBe(true);
+    });
+  });
+});
+
+describe('POST /api/social-icebreaker/:id/quip-battle/generate', () => {
+  beforeEach(() => {
+    vi.mocked(generateQuipBattlePrompts).mockReset();
+    vi.mocked(generateQuipBattlePrompts).mockResolvedValue({
+      data: [{ id: 'gen1', promptText: '新生成__', category: 'fun' }],
+      meta: {
+        generatedAt: new Date().toISOString(),
+        fromCache: false,
+        provider: null,
+        fallbackUsed: false,
+        promptVersion: 'social-quip-battle-v1',
+      },
+    });
+  });
+
+  it('returns 401 without session and does not call LLM or persist prompts', async () => {
+    const socialSessionId = 'social_quip-gen-401';
+    seedQuipSessionForGenerate(socialSessionId);
+
+    await withServer(async (baseUrl) => {
+      const res = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/quip-battle/generate`, {
+        method: 'POST',
+      });
+      expect(res.status).toBe(401);
+      expect(vi.mocked(generateQuipBattlePrompts)).not.toHaveBeenCalled();
+      expect(storeCtx.sessions.get(socialSessionId)?.quipBattlePrompts).toBeUndefined();
+    });
+  });
+
+  it('returns 403 for non-host', async () => {
+    const socialSessionId = 'social_quip-gen-403';
+    seedQuipSessionForGenerate(socialSessionId);
+
+    await withServer(async (baseUrl) => {
+      const guestCookie = await login(baseUrl, 'guest-user');
+      const res = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/quip-battle/generate`, {
+        method: 'POST',
+        headers: { cookie: guestCookie },
+      });
+      expect(res.status).toBe(403);
+      expect(vi.mocked(generateQuipBattlePrompts)).not.toHaveBeenCalled();
+    });
+  });
+
+  it('returns 400 when not in quip_battle phase', async () => {
+    const socialSessionId = 'social_quip-gen-phase';
+    seedQuipSessionForGenerate(socialSessionId, { phase: 'warmup' });
+
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'host-user');
+      const res = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/quip-battle/generate`, {
+        method: 'POST',
+        headers: { cookie: hostCookie },
+      });
+      expect(res.status).toBe(400);
+      expect(vi.mocked(generateQuipBattlePrompts)).not.toHaveBeenCalled();
+    });
+  });
+
+  it('allows host to generate prompts and persists state', async () => {
+    const socialSessionId = 'social_quip-gen-200';
+    seedQuipSessionForGenerate(socialSessionId);
+
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'host-user');
+      const res = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/quip-battle/generate`, {
+        method: 'POST',
+        headers: { cookie: hostCookie },
+      });
+      expect(res.status).toBe(200);
+      expect(vi.mocked(generateQuipBattlePrompts)).toHaveBeenCalledTimes(1);
+      const stored = storeCtx.sessions.get(socialSessionId);
+      expect(stored?.quipBattlePrompts?.[0]?.id).toBe('gen1');
+    });
+  });
+
+  it('returns existing prompts without calling LLM when already generated', async () => {
+    const socialSessionId = 'social_quip-gen-idem';
+    seedQuipSessionForGenerate(socialSessionId, { withPrompts: true });
+
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'host-user');
+      const res = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/quip-battle/generate`, {
+        method: 'POST',
+        headers: { cookie: hostCookie },
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { prompts?: { id: string }[] };
+      expect(body.prompts?.[0]?.id).toBe('p0');
+      expect(vi.mocked(generateQuipBattlePrompts)).not.toHaveBeenCalled();
     });
   });
 });
