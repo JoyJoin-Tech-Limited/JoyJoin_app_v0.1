@@ -700,8 +700,27 @@ jobs:
               fi
             done
             if [ "$missing_tls" -ne 0 ]; then
-              echo "❌ Aborting deploy before nginx reload. Provision the Let's Encrypt certificates on the host first."
-              exit 1
+              echo "⚠️ Provisioning missing Let's Encrypt certificates..."
+              # Extract unique domain names from missing cert paths
+              MISSING_DOMAINS=$(for f in "${REQUIRED_TLS_FILES[@]}"; do
+                if ! sudo test -r "$f"; then
+                  echo "$f" | sed -n 's|/etc/letsencrypt/live/\(.*\)/.*|\1|p'
+                fi
+              done | sort -u)
+              for domain in $MISSING_DOMAINS; do
+                echo "   Provisioning cert for: $domain"
+                sudo certbot --nginx -d "$domain" --non-interactive --agree-tos --email ops@joyjoin.com --no-redirect || \
+                  sudo certbot certonly --standalone -d "$domain" --non-interactive --agree-tos --email ops@joyjoin.com || \
+                  { echo "❌ Failed to provision cert for $domain"; exit 1; }
+              done
+              # Re-check after provisioning
+              for tls_file in "${REQUIRED_TLS_FILES[@]}"; do
+                if ! sudo test -r "$tls_file"; then
+                  echo "❌ Still missing after provisioning: $tls_file"
+                  exit 1
+                fi
+              done
+              echo "✅ All TLS certificates provisioned successfully"
             fi
             sudo cp ~/JoyJoin/deployment/nginx/joyjoin.conf /etc/nginx/conf.d/joyjoin.conf
             sudo nginx -t
