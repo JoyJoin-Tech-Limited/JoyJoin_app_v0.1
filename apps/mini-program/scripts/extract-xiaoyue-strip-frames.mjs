@@ -105,7 +105,6 @@ async function extractFrames(stripPath, stateName, options = {}) {
       left = i * cellW
       top = 0
       width = Math.min(cellW, stripW - left)
-      height = stripH
 
       // Trim gutter if detected
       const centerX = left + Math.floor(width / 2)
