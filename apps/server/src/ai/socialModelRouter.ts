@@ -285,7 +285,6 @@ export async function callSocialAI(
   const { messages, temperature = 0.8, max_tokens = 600, callerTag, socialFunction } = params;
   const overallStartedAt = Date.now();
   const routedSelection = socialFunction ? getClientForFunction(socialFunction) : null;
-  let attemptedDeepseek = false;
 
   // DeepSeek primary path
   const deepseekSelection = routedSelection?.provider === 'deepseek'
@@ -294,7 +293,6 @@ export async function callSocialAI(
   const modelName = routedSelection?.model ?? deepseekSelection.model;
 
   if (routedSelection?.provider === 'deepseek' || !routedSelection) {
-    attemptedDeepseek = true;
     const start = Date.now();
 
     const requestPayload: OpenAI.Chat.ChatCompletionCreateParams = {
