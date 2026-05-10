@@ -6,6 +6,7 @@ import type {
 import { migrateLegacySocialIcebreakerPhases, getNextEligiblePhase } from '@shared/socialIcebreaker';
 import {
   getSessionWithExpiry,
+  getParticipant,
   listParticipants,
   updateSession,
 } from '../lib/socialIcebreakerStore';
@@ -193,11 +194,19 @@ export function getCurrentLieDetectivePlayer(state: SocialSessionState): LieDete
 
 /**
  * Check if a user is authorized to perform host actions.
- * When autoAdvanceEnabled is true, any participant can trigger actions (democratized hosting).
+ * When autoAdvanceEnabled is true, any roster participant can trigger actions (democratized hosting).
  * When false, only the designated hostUserId can act (legacy mode).
  */
-export function isHostAuthorized(state: SocialSessionState, userId: string): boolean {
-  if (state.autoAdvanceEnabled === true) return true;
+export async function isHostAuthorized(
+  state: SocialSessionState,
+  userId: string | undefined,
+  socialSessionId: string,
+): Promise<boolean> {
+  if (!userId) return false;
+  if (state.autoAdvanceEnabled === true) {
+    const participant = await getParticipant(socialSessionId, userId);
+    return !!participant;
+  }
   return state.hostUserId === userId;
 }
 

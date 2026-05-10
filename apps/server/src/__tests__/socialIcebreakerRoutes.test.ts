@@ -167,7 +167,7 @@ vi.mock('../socialIcebreakerAIService', () => ({
   }),
   generatePersonalityDiceChallenges: vi.fn().mockImplementation(async ({ participants }: { participants: Array<{ userId: string; displayName: string }> }) => {
     return {
-      data: params.participants.map((participant: { userId: string; displayName: string }, i: number) => ({
+      data: participants.map((participant: { userId: string; displayName: string }, i: number) => ({
         userId: participant.userId,
         displayName: participant.displayName,
         dominantTrait: 'A' as const,
@@ -459,6 +459,29 @@ describe('social icebreaker routes', () => {
         compilerId: 'compiler-rule-v1-blaze',
         totalMinutes: 90,
       });
+    });
+  });
+
+  it('rejects set-tier from authenticated non-participants (auto-advance default)', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'tier-stranger-host');
+      const strangerCookie = await login(baseUrl, 'tier-stranger-outsider');
+      const sessionId = `session-tier-stranger-${Date.now()}`;
+
+      const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'breeze' }),
+      });
+      const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+
+      const setTierResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/set-tier`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: strangerCookie },
+        body: JSON.stringify({ tier: 'glow' }),
+      });
+
+      expect(setTierResponse.status).toBe(403);
     });
   });
 
