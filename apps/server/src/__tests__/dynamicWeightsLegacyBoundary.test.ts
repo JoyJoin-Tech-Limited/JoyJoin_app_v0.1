@@ -22,8 +22,8 @@ describe("dynamicWeights legacy boundary", () => {
   });
 
   it("documents Thompson Sampling as the preferred adaptive-weight path", () => {
-    const integrationPlan = readRepoFile("docs/AI_INTEGRATION_PLAN.md");
-    const harnessStrategy = readRepoFile("docs/ai-agent-harness-separation-strategy.md");
+    const integrationPlan = readRepoFile("docs/ai/AI_INTEGRATION_PLAN.md");
+    const harnessStrategy = readRepoFile("docs/ai/ai-agent-harness-separation-strategy.md");
 
     expect(integrationPlan).toContain("Primary adaptive-weight path");
     expect(integrationPlan).toContain("Deprecated legacy tombstone");
