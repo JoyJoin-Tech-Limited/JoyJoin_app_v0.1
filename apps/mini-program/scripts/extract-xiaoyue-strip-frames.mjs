@@ -118,7 +118,6 @@ async function extractFrames(stripPath, stateName, options = {}) {
       const cellH = Math.floor(stripH / frameCount)
       left = 0
       top = i * cellH
-      width = stripW
       height = Math.min(cellH, stripH - top)
 
       const centerY = top + Math.floor(height / 2)
