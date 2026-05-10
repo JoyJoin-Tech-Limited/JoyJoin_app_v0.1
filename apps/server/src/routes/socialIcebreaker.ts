@@ -64,6 +64,7 @@ import {
   logMomentCardInteraction,
   getMomentCardStats,
   getPreGenerationResult,
+  invalidatePreGenerationForSession,
 } from '../lib/socialIcebreakerStore';
 import { getSocialIcebreakerAccess } from '../lib/socialIcebreakerAccess';
 import { buildMomentCardPayload } from '../lib/momentCardPayload';
@@ -300,6 +301,8 @@ router.post('/:socialSessionId/set-tier', async (req: any, res) => {
   state.eventTier = newTier;
   state.runPlan = runPlan;
   await updateSession(socialSessionId, state);
+
+  await invalidatePreGenerationForSession(socialSessionId);
 
   // Re-enqueue pre-generation for the new run plan (best-effort)
   const rosterAfterTierChange = await listParticipants(socialSessionId);

@@ -94,6 +94,7 @@ vi.mock('../lib/socialIcebreakerStore', () => {
       if (!m) return new Map();
       return new Map(m.entries());
     },
+    invalidatePreGenerationForSession: vi.fn().mockResolvedValue(undefined),
     sweepExpiredSessions: async () => {},
   };
 });
