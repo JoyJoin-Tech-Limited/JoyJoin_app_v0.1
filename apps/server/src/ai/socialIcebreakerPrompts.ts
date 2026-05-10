@@ -12,13 +12,16 @@
  * params for special cases like MiniScript).
  */
 
+import { z } from 'zod';
 import type { AtmosphereMood } from '@shared/socialIcebreaker';
+import type { SessionArchetypeContext } from '../lib/contextInjector';
 import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework';
 
 export const XIAOYUE_COMMENT_PROMPT_VERSION = 'social-xiaoyue-comment-v2';
 export const WARMUP_TOPICS_PROMPT_VERSION = 'social-warmup-topics-v2';
 export const MICRO_CHALLENGES_PROMPT_VERSION = 'social-micro-challenges-v2';
 export const LIE_DETECTIVE_PROMPT_VERSION = 'social-lie-detective-v1';
+export const LIE_DETECTIVE_V2_PROMPT_VERSION = 'social-lie-detective-v2';
 export const RECAP_SUMMARY_PROMPT_VERSION = 'social-recap-summary-v3';
 export const PERSONALITY_DICE_PROMPT_VERSION = 'social-personality-dice-v3';
 export const AUCTION_LOTS_PROMPT_VERSION = 'social-auction-lots-v2';
@@ -33,6 +36,7 @@ export function buildWarmupTopicsPrompt(params: {
   mood: AtmosphereMood;
   avoidTopics?: string[];
   _refinementHint?: string;
+  sessionContext?: SessionArchetypeContext;
 }): string {
   const moodMap: Record<AtmosphereMood, string> = {
     relaxed: '轻松',
@@ -60,6 +64,10 @@ ${params.avoidTopics?.length ? `- 避免以下话题：${params.avoidTopics.join
 请以JSON格式返回：
 [{"id":"ai1","question":"话题文本","mood":"${params.mood}","emoji":"相关emoji","category":"话题类别","depthLevel":1,"promptStyle":"binary","safety":"gentle"}]
 
+${params.sessionContext?.mixText ? `
+
+【本组画像】${params.sessionContext.mixText}` : ''}
+
 直接返回JSON数组，不要其他内容。${params._refinementHint ? `
 
 【改进建议】${params._refinementHint}` : ''}`;
@@ -71,6 +79,7 @@ export function buildMicroChallengesPrompt(params: {
   eventType: string;
   participantCount: number;
   _refinementHint?: string;
+  sessionContext?: SessionArchetypeContext;
 }): string {
   return `你是JoyJoin的社交破冰专家。请为一个${params.eventType}活动（${params.participantCount}人）生成3个有趣的微挑战。
 
@@ -84,18 +93,22 @@ export function buildMicroChallengesPrompt(params: {
 
 内容要求：
 - 简单易执行，2-5分钟内可完成
-- 适合在餐桌/酒桌旁进行，不需要太多空间
+- 适合坐着进行，不需要太多空间
 - 有趣且能促进互动，不搞尴尬惩罚
 
 请以JSON格式返回：
 [{"id":"ai_c1","title":"挑战名称","description":"详细描述","durationSeconds":120,"completionCTA":"完成按钮文字","visualHint":"2-3个相关emoji"}]
+
+${params.sessionContext?.mixText ? `
+
+【本组画像】${params.sessionContext.mixText}` : ''}
 
 直接返回JSON数组，不要其他内容。${params._refinementHint ? `
 
 【改进建议】${params._refinementHint}` : ''}`;
 }
 
-// ─── Lie Detective ───────────────────────────────────────────────────────────
+// ─── Lie Detective V1 (legacy — AI generates all 3) ──────────────────────────
 
 export function buildLieDetectivePrompt(params: {
   displayName: string;
@@ -125,20 +138,163 @@ ${context ? `关于这个人的信息：\n${context}` : ''}
 直接返回JSON数组，确保只有一个isLie为true。`;
 }
 
+// ─── Lie Detective V2 (tag-based — user writes 2 tags, AI expands + fakes 1) ─
+
+/**
+ * Zod schema for a single Lie Detective V2 statement.
+ */
+export const LieDetectiveV2StatementSchema = z.object({
+  index: z.number().int().min(1).max(3),
+  text: z.string().max(30),
+  is_ai: z.boolean(),
+  source_tag: z.string().nullable().optional(),
+});
+
+/**
+ * Zod schema for the complete Lie Detective V2 AI response.
+ *
+ * Validation rules enforced:
+ *   - Exactly 3 items in the array
+ *   - Exactly 1 item has `is_ai: true`
+ *   - All `index` values are unique (1–3)
+ *   - `text` is a string ≤ 30 characters
+ *   - `source_tag` is string | null | undefined
+ */
+export const LieDetectiveV2ResponseSchema = z
+  .array(LieDetectiveV2StatementSchema)
+  .length(3)
+  .refine((items) => items.filter((i) => i.is_ai).length === 1, {
+    message: 'Exactly one statement must have is_ai=true',
+  })
+  .refine((items) => new Set(items.map((i) => i.index)).size === 3, {
+    message: 'All index values must be unique',
+  });
+
+export type LieDetectiveV2Statement = z.infer<typeof LieDetectiveV2StatementSchema>;
+
+/**
+ * Build the Lie Detective V2 prompt.
+ *
+ * Input contract:
+ * @param displayName - Player's display name (shown in prompt context)
+ * @param tags        - Exactly 2 user-written tags, 2–20 chars each
+ * @param archetype   - Optional archetype (e.g. "开心柯基") to influence tone/style
+ * @param difficulty  - 'easy' | 'medium' | 'hard' — controls how convincing the fake is
+ *
+ * Expected AI output (JSON array of 3 objects):
+ *   [
+ *     { index: 1, text: "≤30字陈述", is_ai: false, source_tag: "tag1" },
+ *     { index: 2, text: "≤30字陈述", is_ai: false, source_tag: "tag2" },
+ *     { index: 3, text: "≤30字陈述", is_ai: true,  source_tag: null   }
+ *   ]
+ *
+ * Validation rules:
+ *   - Exactly 3 items
+ *   - Exactly 1 item has `is_ai: true`
+ *   - No duplicate `index` values
+ *   - `text` ≤ 30 characters
+ *   - `source_tag` must match the original tag when `is_ai: false`
+ *
+ * Fallback / degrade guidance for Backend Engineer:
+ *   1. Parse raw LLM response → attempt `JSON.parse`.
+ *   2. Validate with `LieDetectiveV2ResponseSchema.safeParse(parsed)`.
+ *   3. If validation fails OR `is_ai` count ≠ 1:
+ *        - Log `fallbackUsed: true` with reason `parse_error` or `validation_error`.
+ *        - Do NOT surface malformed V2 data to clients.
+ *        - Fall back to V1 flow: call the existing `generateLieDetectiveStatements()` (V1).
+ *   4. If V1 also fails, use deterministic fallback statements
+ *      (`getRandomFallbackStatements()` in `socialIcebreakerAIService.ts`).
+ *   5. Never return partial / invalid V2 arrays to the game state.
+ */
+export function buildLieDetectiveV2Prompt(params: {
+  displayName: string;
+  tags: [string, string];
+  archetype?: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+}): string {
+  const difficultyGuide: Record<typeof params.difficulty, string> = {
+    easy: 'AI生成的假陈述要有轻微破绽（比如用词稍正式、细节稍夸张），让细心玩家能察觉。',
+    medium: 'AI生成的假陈述要足够自然，与玩家自己写的风格接近，真假难辨。',
+    hard: 'AI生成的假陈述必须非常逼真，几乎无法与玩家自己写的区分，甚至要模仿该玩家的口吻和细节密度。',
+  };
+
+  const context = [params.archetype ? `性格类型：${params.archetype}` : ''].filter(Boolean).join('\n');
+
+  return `你是社交破冰专家悦仔。现在要进行V2版"找出AI"游戏。
+
+玩家"${params.displayName}"写了2个关于自己的标签，你的任务是：
+1. 把标签1扩展成一句自然、口语化的个人陈述
+2. 把标签2扩展成一句自然、口语化的个人陈述
+3. 再额外生成1条"AI假陈述"——这条必须看起来也像是玩家自己写的
+
+游戏规则变了：大家不再猜"哪句是谎言"，而是猜"哪句是AI生成的"。
+${context ? `\n关于这个人的信息：\n${context}` : ''}
+
+难度设定：${difficultyGuide[params.difficulty]}
+
+要求：
+- 3条陈述都必须像玩家亲口说的，口语化、有画面感
+- 扩展时要保留原标签的核心信息，不能偏离原意
+- AI假陈述必须融入整体风格，不能突兀
+- 每条不超过30字
+- 禁止：过度书面语、AI腔（"作为一个..."）、过度热情（"哇！""嘻嘻"）
+
+输入标签：
+- 标签1：${params.tags[0]}
+- 标签2：${params.tags[1]}
+
+示例（难度medium，标签为"爱爬山"和"怕蟑螂"）：
+[{"index":1,"text":"我每周末都往山里跑，觉得山顶的风比空调舒服","is_ai":false,"source_tag":"爱爬山"},{"index":2,"text":"看见蟑螂我会先僵住三秒，然后才想起来要跑","is_ai":false,"source_tag":"怕蟑螂"},{"index":3,"text":"有次爬山遇到暴雨，我在山洞里躲了两个小时才下来","is_ai":true,"source_tag":null}]
+
+请以JSON格式返回，不要markdown代码块：
+[{"index":1,"text":"陈述文本","is_ai":false,"source_tag":"${params.tags[0]}"},{"index":2,"text":"陈述文本","is_ai":false,"source_tag":"${params.tags[1]}"},{"index":3,"text":"陈述文本","is_ai":true,"source_tag":null}]`;
+}
+
 // ─── XiaoYue Comment (facilitator) ───────────────────────────────────────────
 
 export function buildXiaoYueCommentPrompt(params: {
   phase: string;
   event: string;
   context?: string;
+  playerCount?: number;
+  participants?: Array<{ displayName: string; archetype?: string | null; profile?: { archetype?: string | null; industryLabel?: string | null; age?: number | null; city?: string | null; stateLabel?: string | null; gender?: string | null; educationLevel?: string | null; lifeStage?: string | null; bio?: string | null } | null }>;
 }): string {
+  const sizeHint = params.playerCount
+    ? params.playerCount <= 4
+      ? `（${params.playerCount}人小局，语气亲密一点，每个人的参与感都很重要）`
+      : `（${params.playerCount}人局，节奏可以稍快，但仍要给每个人开口的机会）`
+    : '';
+
+  let participantHint = '';
+  if (params.participants && params.participants.length > 0) {
+    const lines: string[] = [];
+    for (const p of params.participants) {
+      const pf = p.profile;
+      const parts: string[] = [p.displayName];
+      if (p.archetype) parts.push(p.archetype);
+      if (pf) {
+        if (pf.industryLabel) parts.push(pf.industryLabel);
+        if (pf.age) parts.push(`${pf.age}岁`);
+        if (pf.city) parts.push(pf.city);
+        if (pf.stateLabel) parts.push(pf.stateLabel);
+        if (pf.gender && pf.gender !== '不透露') parts.push(pf.gender);
+        if (pf.educationLevel) parts.push(pf.educationLevel);
+        if (pf.lifeStage) parts.push(pf.lifeStage);
+        if (pf.bio) parts.push(`"${pf.bio}"`);
+      }
+      lines.push(parts.join('，'));
+    }
+    participantHint = `\n本局参与者快照（你对他们已知的了解——仅来自他们的自述档案，不是实时看到的）：\n${lines.map(l => `- ${l}`).join('\n')}\n\n数据真实性原则：你只能引用他们档案里写的东西，以及本局的游戏状态数据。你无法实时看到或听到他们。不要把档案里的特征假装成你正在观察的行为——说"你的资料显示你笑点低"而不是"我看见你笑了"。`;
+  }
+
   return `你是JoyJoin的社交破冰主持人。请为以下场景生成一句简短的主持评语（20-30字）：
 - 当前阶段：${params.phase}
 - 触发事件：${params.event}
 ${params.context ? `- 上下文：${params.context}` : ''}
+${sizeHint}${participantHint}
 
 语气要求（活人感）：
-- 像局上最会带气氛的那个朋友，不是官方主持人
+- 像最会把聊天节奏带舒服的那个声音，不是官方主持人
 - 短句为主，偶尔抛个梗或调侃
 - 善用语气词：啦、嘛、呢、吧
 - 可以自黑或吐槽（"好吧，这个环节我也没想到会这样"）
@@ -161,6 +317,7 @@ export function buildRecapSummaryPrompt(params: {
   miniScriptRecapLine?: string;
   auctionRecapLines?: string[];
   durationMinutes: number;
+  sessionContext?: SessionArchetypeContext;
 }): string {
   const diceBlock =
     params.personalityDiceRecapLines?.length
@@ -197,7 +354,9 @@ ${auctionBlock}
   "closingLine": "温馨结束语（20-30字）"
 }
 
-直接返回JSON，不要其他内容。`;
+${params.sessionContext?.mixText ? `【本组画像】${params.sessionContext.mixText}
+
+` : ''}直接返回JSON，不要其他内容。`;
 }
 
 // ─── Personality Dice ────────────────────────────────────────────────────────
@@ -209,6 +368,7 @@ export function buildPersonalityDicePrompt(params: {
     dominantTrait: string;
   }>;
   _refinementHint?: string;
+  sessionContext?: SessionArchetypeContext;
 }): string {
   const participantList = params.participants.map((p) => ({
     displayName: p.displayName,
@@ -266,9 +426,16 @@ export function buildAuctionLotsPrompt(params: {
   participantCount: number;
   eventType?: string;
   _refinementHint?: string;
+  mixText?: string;
 }): string {
   const eventLabel = params.eventType ? `「${params.eventType}」` : '';
+  const mixBlock = params.mixText
+    ? `\n【本组画像】${params.mixText}。请根据这组性格画像调整竞拍条目的风格与难度，让不同性格的人都能找到舒适的参与方式。`
+    : '';
   return `你是JoyJoin的社交破冰主持人。为一场线下小局（约${params.participantCount}人）设计${eventLabel}虚拟脑洞拍卖的竞拍条目。
+
+（你是纯数字助手，不身处现场——不要承诺任何物理世界的行动，不要涉及金钱交易。）
+${mixBlock}
 
 语气要求（活人感）：
 - title像朋友间随口抛出的脑洞，不是正式拍卖品
@@ -281,9 +448,10 @@ export function buildAuctionLotsPrompt(params: {
 - 全部是轻松、低压力的分享或小表演类条目，不要涉及金钱、酒精、恋爱隐私、政治、宗教、身体伤害
 - 每个条目要能在几分钟内完成
 - 生成 3 到 5 条竞拍品
+- 为每条竞拍品选一个贴合主题的emoji（如 🎭、🎤、🍀、🔮），放在 emoji 字段
 
 请以 JSON 对象返回（仅此对象，不要 markdown）：
-{"lots":[{"id":"lot_1","title":"竞拍标题（≤20字）","teaser":"一句话说明（≤40字，可选）"}]}${params._refinementHint ? `
+{"lots":[{"id":"lot_1","title":"竞拍标题（≤20字）","teaser":"一句话说明（≤40字，可选）","emoji":"🎭"}]}${params._refinementHint ? `
 
 【改进建议】${params._refinementHint}` : ''}`;
 }
@@ -327,6 +495,7 @@ export function buildXiaoyueSessionPackPrompt(params: {
 
   return (
     `你是社交破冰主持人悦仔。为一场${eventLabel}（约${params.participantCount}人）生成一份开场会话包。\n\n` +
+    `（你是纯数字助手，不身处现场——不要承诺任何物理世界的行动。）\n\n` +
     `参与者：\n${participantList}\n\n` +
     '要求：\n' +
     '- 语气松弛、有故事感，像一位靠谱的街头老狐狸，不要客服腔\n' +
@@ -365,6 +534,7 @@ export function buildQuipBattlePrompt(params: {
   eventType?: string;
   participants: Array<{ displayName: string; archetype?: string }>;
   _refinementHint?: string;
+  sessionContext?: SessionArchetypeContext;
 }): string {
   const eventLabel = params.eventType ? `「${params.eventType}」` : '线下小局';
   const participantList = params.participants
@@ -372,6 +542,8 @@ export function buildQuipBattlePrompt(params: {
     .join('、');
 
   return `你是JoyJoin的社交喜剧编剧。为一场${eventLabel}（${params.participantCount}人）生成3个"机智对决"填空题。
+
+（你是纯数字助手，不身处现场——生成的题目是所有玩家在手机/屏幕上共用完成的。）
 
 参与者：${participantList}
 
@@ -387,6 +559,8 @@ export function buildQuipBattlePrompt(params: {
 请以JSON数组返回：
 [{"id":"qb_1","promptText":"如果_____有段位，你已经是王者了","category":"自嘲"},{"id":"qb_2","promptText":"...","category":"..."},{"id":"qb_3","promptText":"...","category":"..."}]
 
+${params.sessionContext?.mixText ? `【本组画像】${params.sessionContext.mixText}` : ''}
+
 直接返回JSON，不要其他内容。${params._refinementHint ? `
 
 【改进建议】${params._refinementHint}` : ''}`;
@@ -399,10 +573,13 @@ export const UNDERCOVER_WORD_PROMPT_VERSION = 'social-undercover-word-v1';
 export function buildUndercoverWordPrompt(params: {
   participantCount: number;
   eventType?: string;
+  sessionContext?: SessionArchetypeContext;
 }): string {
   const eventLabel = params.eventType ? `「${params.eventType}」` : '线下聚会';
 
   return `你是JoyJoin的社交游戏设计师。为一场${eventLabel}（${params.participantCount}人）设计一组"谁是卧底"词对。
+
+（你是纯数字助手，不身处现场——生成的词对通过应用界面分发给各玩家。）
 
 游戏规则：
 - 大部分玩家（平民）拿到同一个词A
@@ -417,6 +594,7 @@ export function buildUndercoverWordPrompt(params: {
 - 但又不能太像，否则游戏无法推进
 - 禁止使用敏感话题（政治、宗教、种族、性、疾病、地域歧视）
 - 优先选择年轻人熟悉的日常词汇
+${params.sessionContext?.mixText ? `\n【本组画像】${params.sessionContext.mixText}` : ''}
 
 请以JSON返回：
 {"civilianWord":"奶茶","undercoverWord":"咖啡","category":"饮品"}
@@ -432,11 +610,14 @@ export function buildGroupMirrorPrompt(params: {
   participantCount: number;
   eventType?: string;
   participantNames: string[];
+  sessionContext?: SessionArchetypeContext;
 }): string {
   const eventLabel = params.eventType ? `「${params.eventType}」` : '线下聚会';
   const names = params.participantNames.join('、');
 
   return `你是JoyJoin的社交观察家。为一场${eventLabel}（${params.participantCount}人，参与者：${names}）生成5个"群像镜像"问题。
+
+（你是纯数字助手，不身处现场——生成的问题通过应用界面完成匿名投票。）
 
 游戏规则：
 - 每个问题都是关于在场某人的趣味观察/猜测
@@ -452,8 +633,10 @@ export function buildGroupMirrorPrompt(params: {
 - 语气像朋友间的好奇打量，不要像心理测试
 
 请以JSON数组返回：
-[{"id":"gm_1","questionText":"谁最有可能在聚会后请大家吃夜宵？","category":"perception"},{"id":"gm_2","questionText":"...","category":"..."}]
+[{"id":"gm_1","questionText":"谁最有可能在聚会结束后第一个提议续摊？","category":"perception"},{"id":"gm_2","questionText":"...","category":"..."}]
 
 category只能是 perception / memory / prediction 之一。
-直接返回JSON，不要其他内容。`;
+直接返回JSON，不要其他内容。${params.sessionContext?.mixText ? `
+
+【本组画像】${params.sessionContext.mixText}` : ''}`;
 }

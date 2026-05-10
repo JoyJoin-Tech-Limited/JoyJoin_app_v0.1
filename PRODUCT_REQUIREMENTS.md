@@ -1,7 +1,7 @@
 # JoyJoin (悦聚·Joy) - Product Requirements Document
 
 **Version:** 1.5  
-**Last Updated:** April 22, 2026  
+**Last Updated:** May 7, 2026  
 **Platform:** WeChat Mini Program (Taro) — launch-primary  
 **Reference Surface:** Web (React + Vite) — development sandbox / parity reference only, not shipping  
 **Target Market:** Hong Kong & Shenzhen  
@@ -77,7 +77,15 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-04-07)
+## 🆕 Recent Updates (Last updated: 2026-05-07)
+
+### 2026 Milestones (May 2026)
+
+**29. Social Icebreaker Phase Quality Sprints** 🧊 *(2026-05-05 to 2026-05-07)*
+- **Sprint C — Warmup Boost:** Archetype mix badge ("今晚气氛组"), mood selection animations with scale/glow/dim states, CardFlip topic card entrance animation, ParticleBurst all-ready celebration. Shared infra: `ParticleBurst`, `CardFlip`.
+- **Sprint D — Auction Enhancement:** Server-synced timer (`auctionLotStartedAt`), persistent bid history (`auctionBidHistory`), outbid toast notifications, archetype-aware lot generation via `buildArchetypeContext` → prompt injection, lot emoji categorization fallback, CardFlip lot reveal, ParticleBurst win celebration, IdentityReveal high-bidder spotlight. Negative balance guards preserved.
+- **Sprint B — Recap Redesign:** IdentityReveal hero headline with dramatic reveal sequencing, CardFlip dynamic share card (front=summary, back=session data), ParticleBurst mount celebration, staggered CSS medal grid entrance, all V2 data fields rendered (lieDetective stats, personalityDice highlights, undercoverWord result). Removed inline styles and non-token hex colors.
+- **Shared infra established:** `ParticleBurst`, `CardFlip`, `IdentityReveal` in `apps/mini-program/src/components/reveal/` — reused across warmup (2), auction (3), and recap (3).
 
 ### 2026 Milestones (Mar–Apr 2026)
 
@@ -180,7 +188,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 **13. Social Icebreaker — Primary In-Event Flow** 🧊 *(added §1.7)*
 - `/icebreaker/:sessionId` (`IcebreakerSessionPage`) is now the canonical in-event experience
-- Phases: 热身 → 挑战 → 侦探 → 回顾; full reference in `docs/icebreaker-system.md`
+- Phases: 话题卡 → 挑战 → 侦探 → 回顾; full reference in `docs/icebreaker-system.md`
 
 ### 2025 Milestones (Nov 18-20, 2025)
 
@@ -234,7 +242,7 @@ JoyJoin is an AI-powered social networking platform that connects individuals lo
 - **AI-Driven Matching:** 12 personality archetypes (V4 animal system) with 7-dimensional pool compatibility scoring
 - **Micro-Event Format:** Small group sizes (5-10 people) for meaningful interactions
 - **Blind Box Experience:** Gamified event discovery with surprise reveals
-- **In-Event Social Experience:** Social Icebreaker multi-phase group facilitation (热身 → 挑战 → 侦探 → 回顾) as the core in-event engagement tool
+- **In-Event Social Experience:** Social Icebreaker multi-phase group facilitation (话题卡 → 挑战 → 侦探 → 回顾) as the core in-event engagement tool
 - **Data-Driven Insights:** Comprehensive feedback system to refine matching algorithms
 - **权益 (Membership Benefits) System:** ¥98/month or ¥294/3-month 权益方案 with WeChat Pay integration (user-facing copy must use `权益`, not `会员`)
 
@@ -625,7 +633,7 @@ Full Access:
   - Venue address + map
   - Check-in functionality
   - In-Event Icebreaker: Social Icebreaker session available via `/icebreaker/:sessionId`
-    — multi-phase group experience (热身 → 挑战 → 侦探 → 回顾)
+    — multi-phase group experience (话题卡 → 挑战 → 侦探 → 回顾)
 ```
 
 **Phase 7: Post-Event**
@@ -1078,7 +1086,7 @@ Phase progression is **server-authoritative**. The server determines the current
 
 | Phase | CN Name | Duration | Mechanic |
 |-------|---------|----------|----------|
-| `warmup` | 🌅 热身 | 20 min | Mood-filtered conversation topics |
+| `warmup` | 🌅 话题卡 | 20 min | Mood-filtered conversation topics |
 | `micro_challenge` | ⚡ 挑战 | 15 min | Group challenge, tap "done" |
 | `lie_detective` | 🕵️ 侦探 | 25 min | Two Truths One Lie — AI-generated |
 | `recap` | ✨ 回顾 | 5 min | AI-generated session summary |

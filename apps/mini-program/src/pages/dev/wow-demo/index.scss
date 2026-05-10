@@ -1,0 +1,179 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.wow-demo {
+  min-min-height: 100dvh;
+  min-height: 100dvh;
+  background: $color-bg-gradient;
+  padding: $spacing-lg $container-padding;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xl;
+
+  &__header {
+    text-align: center;
+    margin-bottom: $spacing-md;
+  }
+
+  &__title {
+    @include type-title;
+    display: block;
+  }
+
+  &__subtitle {
+    @include type-body;
+    color: $color-text-secondary;
+    display: block;
+    margin-top: $spacing-xs;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-sm $spacing-md;
+    background: $color-surface;
+    border-radius: $card-radius-sm;
+    box-shadow: $shadow-sm;
+
+    &--toggle {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+  }
+
+  &__label {
+    @include type-body-emphasis;
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-lg;
+  }
+
+  &__section-title {
+    @include type-heading;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__demo-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-lg;
+    background: $color-surface;
+    border-radius: $card-radius;
+    box-shadow: $shadow-card;
+  }
+
+  &__demo-label {
+    @include type-subheading;
+    align-self: flex-start;
+  }
+
+  // CardFlip demo helpers
+  &__card-flip-wrap {
+    width: 240rpx;
+    height: 320rpx;
+  }
+
+  &__card-face {
+    width: 240rpx;
+    height: 320rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $card-radius;
+
+    &--front {
+      background: linear-gradient(135deg, rgba($color-primary, 0.15), rgba($color-secondary, 0.15));
+      border: 4rpx solid rgba($color-primary, 0.2);
+    }
+
+    &--back {
+      background: linear-gradient(135deg, rgba($color-secondary, 0.2), rgba($color-primary, 0.2));
+      border: 4rpx solid rgba($color-secondary, 0.3);
+    }
+  }
+
+  &__card-text {
+    font-size: 80rpx;
+    line-height: 1;
+  }
+
+  // ParticleBurst demo helpers
+  &__burst-controls {
+    display: flex;
+    flex-direction: row;
+    gap: $spacing-sm;
+  }
+
+  &__burst-chip {
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-pill;
+    background: $color-divider;
+    transition: background 0.15s ease;
+
+    &--active {
+      background: rgba($color-primary, 0.15);
+      border: 2rpx solid rgba($color-primary, 0.3);
+    }
+  }
+
+  &__burst-chip-text {
+    @include type-caption;
+    color: $color-text-secondary;
+  }
+
+  &__burst-stage {
+    width: 300rpx;
+    height: 300rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $color-bg-warm-mid;
+    border-radius: $card-radius;
+  }
+
+  // SwipeCard demo helpers
+  &__swipe-card {
+    width: 100%;
+    height: 200rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba($color-primary, 0.1), rgba($color-secondary, 0.1));
+    border-radius: $card-radius;
+    border: 2rpx solid rgba($color-primary, 0.15);
+  }
+
+  &__swipe-text {
+    @include type-body-emphasis;
+    color: $color-text-secondary;
+  }
+
+  &__swipe-log {
+    @include type-caption;
+    color: $color-primary;
+    font-weight: $font-weight-semibold;
+  }
+
+  // TapReaction demo helpers
+  &__reaction-log {
+    @include type-caption;
+    color: $color-text-secondary;
+  }
+
+  &__footer {
+    text-align: center;
+    padding: $spacing-xl 0;
+  }
+
+  &__footer-text {
+    @include type-micro;
+    color: $color-text-muted;
+  }
+}

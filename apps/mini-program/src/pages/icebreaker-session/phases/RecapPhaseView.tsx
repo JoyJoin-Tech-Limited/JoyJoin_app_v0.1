@@ -1,5 +1,5 @@
 import { View, Text } from '@tarojs/components'
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
 import { PhaseHeaderIcon } from '../phaseUtils'
@@ -7,11 +7,10 @@ import { apiRequest } from '../../../lib/api/api'
 import { buildSocialPath } from '../icebreakerSessionModel'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
 import MomentCardView from '../overlays/MomentCardView'
-
-// Recap section color constants
-const RECAP_BG_DARK = '#1a1a2e';
-const RECAP_GOLD_BRIGHT = '#ffd700';
-const RECAP_TEXT_MUTED = '#9CA3AF';
+import ParticleBurst from '../../../components/reveal/ParticleBurst'
+import IdentityReveal from '../../../components/reveal/IdentityReveal'
+import CardFlip from '../../../components/reveal/CardFlip'
+import './RecapPhaseView.scss'
 
 function RecapAiFeedbackBar({
   socialSessionId,
@@ -27,8 +26,8 @@ function RecapAiFeedbackBar({
   }
   if (done) {
     return (
-      <Card className='icebreaker__recap-section'>
-        <Text className='icebreaker__recap-item'>感谢你的反馈</Text>
+      <Card className='icebreaker__recap-section icebreaker__recap-section--compact'>
+        <Text className='icebreaker__recap-feedback-done'>感谢你的反馈 💜</Text>
       </Card>
     )
   }
@@ -52,7 +51,7 @@ function RecapAiFeedbackBar({
     }
   }
   return (
-    <Card className='icebreaker__recap-section'>
+    <Card className='icebreaker__recap-section icebreaker__recap-section--compact'>
       <Text className='icebreaker__recap-section-title'>这场 AI 回顾有帮助吗？</Text>
       <View className='icebreaker__feedback-row'>
         <Button variant='secondary' disabled={busy} onClick={() => void submit('helpful')}>
@@ -89,24 +88,17 @@ function MomentCardCTA({ socialSessionId }: { socialSessionId: string }) {
 
   return (
     <>
-      <Card
-        className='icebreaker__recap-section'
-        style={{ backgroundColor: RECAP_BG_DARK, borderColor: RECAP_GOLD_BRIGHT }}
-      >
-        <View style={{ display: 'flex', alignItems: 'center', gap: '16rpx' }}>
-          <View style={{ width: '40rpx', height: '40rpx', borderRadius: '20rpx', backgroundColor: RECAP_GOLD_BRIGHT }} />
-          <View style={{ flex: 1 }}>
-            <Text className='icebreaker__recap-section-title' style={{ color: RECAP_GOLD_BRIGHT }}>
-              生成专属回忆卡
-            </Text>
-            <Text className='icebreaker__recap-item' style={{ color: RECAP_TEXT_MUTED }}>
-              保存今晚的专属记忆，分享给朋友
-            </Text>
-          </View>
-          <Button variant='primary' onClick={handleOpen}>
-            生成
-          </Button>
+      <Card className='icebreaker__recap-moment-cta'>
+        <View className='icebreaker__recap-moment-cta-glow' />
+        <View className='icebreaker__recap-moment-cta-content'>
+          <Text className='icebreaker__recap-moment-cta-title'>✨ 生成专属回忆卡</Text>
+          <Text className='icebreaker__recap-moment-cta-sub'>
+            保存今晚的专属记忆，分享给朋友
+          </Text>
         </View>
+        <Button variant='primary' className='icebreaker__recap-moment-cta-btn' onClick={handleOpen}>
+          生成
+        </Button>
       </Card>
 
       {payload && (
@@ -120,20 +112,25 @@ function MomentCardCTA({ socialSessionId }: { socialSessionId: string }) {
   )
 }
 
-export function RecapPhaseView({
-  recapData,
-  summary,
-  medals,
-  playerCount,
-  onLeave,
-  socialSessionId,
-  recapMeta,
-}: {
+interface RecapPhaseViewProps {
   recapData: {
     topicsDiscussed: string[]
     challengesCompleted: number
     lieDetectiveWinner?: string
     funMoments: string[]
+    lieDetective?: {
+      aiWinRate: number
+      hardestRound: number
+      fooledEveryone: number
+    }
+    personalityDice?: {
+      completedBy: string[]
+      passedBy: string[]
+    }
+    undercoverWord?: {
+      caught: boolean
+      undercoverDisplayName: string
+    }
   } | null
   summary: {
     headline?: string
@@ -150,60 +147,151 @@ export function RecapPhaseView({
   onLeave: () => void
   socialSessionId?: string | null
   recapMeta?: AIResponseMeta | null
-}) {
+}
+
+export function RecapPhaseView({
+  recapData,
+  summary,
+  medals,
+  playerCount,
+  onLeave,
+  socialSessionId,
+  recapMeta,
+}: RecapPhaseViewProps) {
   const recapMoments = summary?.moments ?? recapData?.funMoments ?? []
+  const [showBurst, setShowBurst] = useState(false)
+  const [headlineRevealed, setHeadlineRevealed] = useState(false)
+  const [shareFlipped, setShareFlipped] = useState(false)
+
+  // Celebration burst on mount
+  useEffect(() => {
+    const t = setTimeout(() => setShowBurst(true), 300)
+    return () => clearTimeout(t)
+  }, [])
+
+  // Headline reveal after burst
+  useEffect(() => {
+    if (showBurst) {
+      const t = setTimeout(() => setHeadlineRevealed(true), 800)
+      return () => clearTimeout(t)
+    }
+  }, [showBurst])
+
+  const handleShareFlip = useCallback(() => {
+    setShareFlipped((prev) => !prev)
+  }, [])
+
+  // Build dynamic share card lines
+  const shareLines = useCallback(() => {
+    const lines: string[] = []
+    lines.push(`${playerCount} 位玩家一起度过了愉快的破冰时光`)
+    if ((recapData?.challengesCompleted ?? 0) > 0) {
+      lines.push(`完成了 ${recapData?.challengesCompleted} 个挑战`)
+    }
+    if (recapData?.lieDetectiveWinner) {
+      lines.push(`最佳侦探：${recapData.lieDetectiveWinner}`)
+    }
+    if (medals.length > 0) {
+      lines.push(`共颁发 ${medals.length} 个奖项`)
+    }
+    if (recapData?.undercoverWord) {
+      lines.push(
+        recapData.undercoverWord.caught
+          ? `卧底 ${recapData.undercoverWord.undercoverDisplayName} 已被揪出`
+          : `卧底 ${recapData.undercoverWord.undercoverDisplayName} 成功隐藏`,
+      )
+    }
+    if (recapData?.lieDetective) {
+      lines.push(`AI 谎言胜率 ${(recapData.lieDetective.aiWinRate * 100).toFixed(0)}%`)
+    }
+    return lines
+  }, [playerCount, recapData, medals.length])
 
   return (
     <View className='icebreaker__recap'>
-      <Card className='icebreaker__recap-card'>
-        <View className='icebreaker__recap-emoji'><PhaseHeaderIcon phase="recap" size={120} /></View>
-        <Text className='icebreaker__recap-title'>破冰回顾</Text>
+      {/* Celebration burst */}
+      {showBurst && (
+        <View className='icebreaker__recap-burst'>
+          <ParticleBurst trigger={showBurst} type='confetti' count={50} />
+        </View>
+      )}
+
+      {/* Hero headline with IdentityReveal */}
+      <View className='icebreaker__recap-hero'>
+        <View className='icebreaker__recap-hero-icon'>
+          <PhaseHeaderIcon phase='recap' size={100} />
+        </View>
         {summary?.headline ? (
-          <Text className='icebreaker__recap-subtitle'>{summary.headline}</Text>
-        ) : null}
-        <Text className='icebreaker__recap-subtitle'>
-          今晚 {playerCount} 人一起度过了愉快的破冰时光！
-        </Text>
+          <IdentityReveal
+            revealed={headlineRevealed}
+            identity={summary.headline}
+            label='今晚总结'
+            spotlightColor='#FF6B9D'
+          />
+        ) : (
+          <>
+            <Text className='icebreaker__recap-title'>破冰回顾</Text>
+            <Text className='icebreaker__recap-subtitle'>
+              今晚 {playerCount} 人一起度过了愉快的破冰时光！
+            </Text>
+          </>
+        )}
         {summary?.closingLine ? (
-          <Text className='icebreaker__recap-subtitle'>{summary.closingLine}</Text>
+          <Text className='icebreaker__recap-closing'>{summary.closingLine}</Text>
         ) : null}
-      </Card>
+      </View>
 
       {socialSessionId ? (
         <RecapAiFeedbackBar socialSessionId={socialSessionId} recapMeta={recapMeta} />
       ) : null}
 
-      {(recapData || medals.length > 0 || recapMoments.length > 0) && (
-        <View className='icebreaker__recap-details'>
-          {medals.length > 0 && (
-            <Card className='icebreaker__recap-section'>
-              <Text className='icebreaker__recap-section-title'>今晚奖项</Text>
-              {medals.map((medal) => (
-                <Text key={`${medal.title}-${medal.recipientDisplayName}`} className='icebreaker__recap-item'>
-                  {medal.emoji} {medal.title} · {medal.recipientDisplayName} · {medal.description}
+      {/* Medals section */}
+      {medals.length > 0 && (
+        <View className='icebreaker__recap-medals'>
+          <Text className='icebreaker__recap-section-title icebreaker__recap-section-title--center'>
+            🏆 今晚奖项
+          </Text>
+          <View className='icebreaker__recap-medals-grid'>
+            {medals.map((medal, idx) => (
+              <View
+                key={`${medal.title}-${medal.recipientDisplayName}`}
+                className='icebreaker__recap-medal'
+              >
+                <Text className='icebreaker__recap-medal-emoji'>{medal.emoji}</Text>
+                <Text className='icebreaker__recap-medal-title'>{medal.title}</Text>
+                <Text className='icebreaker__recap-medal-recipient'>
+                  {medal.recipientDisplayName}
                 </Text>
-              ))}
-            </Card>
-          )}
+                <Text className='icebreaker__recap-medal-desc'>{medal.description}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
 
+      {/* V2 Data cards */}
+      {(recapData || recapMoments.length > 0) && (
+        <View className='icebreaker__recap-details'>
+          {/* Topics */}
           {recapData?.topicsDiscussed.length ? (
             <Card className='icebreaker__recap-section'>
-              <Text className='icebreaker__recap-section-title'>
-                讨论话题
-              </Text>
-              {recapData.topicsDiscussed.map((topic, i) => (
-                <Text key={i} className='icebreaker__recap-item'>
-                  • {topic}
-                </Text>
-              ))}
+              <Text className='icebreaker__recap-section-title'>💬 讨论话题</Text>
+              <View className='icebreaker__recap-tags'>
+                {recapData.topicsDiscussed.map((topic, i) => (
+                  <View key={i} className='icebreaker__recap-tag'>
+                    <Text className='icebreaker__recap-tag-text'>{topic}</Text>
+                  </View>
+                ))}
+              </View>
             </Card>
           ) : null}
 
+          {/* Challenges */}
           {(recapData?.challengesCompleted ?? 0) > 0 ? (
             <Card className='icebreaker__recap-section'>
-              <View className='icebreaker__recap-section-title' style={{ display: 'flex', alignItems: 'center', gap: '8rpx' }}>
-                <PhaseHeaderIcon phase="micro_challenge" size={36} />
-                <Text>完成挑战</Text>
+              <View className='icebreaker__recap-section-header'>
+                <PhaseHeaderIcon phase='micro_challenge' size={32} />
+                <Text className='icebreaker__recap-section-title'>完成挑战</Text>
               </View>
               <Text className='icebreaker__recap-stat'>
                 {recapData?.challengesCompleted} 个挑战
@@ -211,48 +299,149 @@ export function RecapPhaseView({
             </Card>
           ) : null}
 
-          {recapData?.lieDetectiveWinner ? (
+          {/* Lie Detective V2 */}
+          {recapData?.lieDetective ? (
             <Card className='icebreaker__recap-section'>
-              <View className='icebreaker__recap-section-title' style={{ display: 'flex', alignItems: 'center', gap: '8rpx' }}>
-                <PhaseHeaderIcon phase="lie_detective" size={36} />
-                <Text>最佳侦探</Text>
+              <View className='icebreaker__recap-section-header'>
+                <PhaseHeaderIcon phase='lie_detective' size={32} />
+                <Text className='icebreaker__recap-section-title'>侦探风云</Text>
+              </View>
+              <View className='icebreaker__recap-stats-row'>
+                <View className='icebreaker__recap-stat-box'>
+                  <Text className='icebreaker__recap-stat-value'>
+                    {(recapData.lieDetective.aiWinRate * 100).toFixed(0)}%
+                  </Text>
+                  <Text className='icebreaker__recap-stat-label'>AI 胜率</Text>
+                </View>
+                <View className='icebreaker__recap-stat-box'>
+                  <Text className='icebreaker__recap-stat-value'>
+                    第 {recapData.lieDetective.hardestRound} 轮
+                  </Text>
+                  <Text className='icebreaker__recap-stat-label'>最难 round</Text>
+                </View>
+                <View className='icebreaker__recap-stat-box'>
+                  <Text className='icebreaker__recap-stat-value'>
+                    {recapData.lieDetective.fooledEveryone} 次
+                  </Text>
+                  <Text className='icebreaker__recap-stat-label'>骗过全场</Text>
+                </View>
+              </View>
+            </Card>
+          ) : null}
+
+          {/* Legacy lie detective winner */}
+          {recapData?.lieDetectiveWinner && !recapData?.lieDetective ? (
+            <Card className='icebreaker__recap-section'>
+              <View className='icebreaker__recap-section-header'>
+                <PhaseHeaderIcon phase='lie_detective' size={32} />
+                <Text className='icebreaker__recap-section-title'>最佳侦探</Text>
+              </View>
+              <Text className='icebreaker__recap-stat'>{recapData.lieDetectiveWinner}</Text>
+            </Card>
+          ) : null}
+
+          {/* Personality Dice */}
+          {recapData?.personalityDice ? (
+            <Card className='icebreaker__recap-section'>
+              <View className='icebreaker__recap-section-header'>
+                <PhaseHeaderIcon phase='personality_dice' size={32} />
+                <Text className='icebreaker__recap-section-title'>人格骰子</Text>
+              </View>
+              {recapData.personalityDice.completedBy.length > 0 && (
+                <View className='icebreaker__recap-v2-row'>
+                  <Text className='icebreaker__recap-v2-label'>完成挑战</Text>
+                  <Text className='icebreaker__recap-v2-value'>
+                    {recapData.personalityDice.completedBy.join('、')}
+                  </Text>
+                </View>
+              )}
+              {recapData.personalityDice.passedBy.length > 0 && (
+                <View className='icebreaker__recap-v2-row'>
+                  <Text className='icebreaker__recap-v2-label'>选择跳过</Text>
+                  <Text className='icebreaker__recap-v2-value'>
+                    {recapData.personalityDice.passedBy.join('、')}
+                  </Text>
+                </View>
+              )}
+            </Card>
+          ) : null}
+
+          {/* Undercover Word */}
+          {recapData?.undercoverWord ? (
+            <Card className='icebreaker__recap-section'>
+              <View className='icebreaker__recap-section-header'>
+                <PhaseHeaderIcon phase='undercover_word' size={32} />
+                <Text className='icebreaker__recap-section-title'>谁是卧底</Text>
               </View>
               <Text className='icebreaker__recap-stat'>
-                {recapData.lieDetectiveWinner}
+                {recapData.undercoverWord.caught
+                  ? `卧底 ${recapData.undercoverWord.undercoverDisplayName} 已被揪出 🎉`
+                  : `卧底 ${recapData.undercoverWord.undercoverDisplayName} 成功隐藏 😎`}
               </Text>
             </Card>
           ) : null}
 
+          {/* Fun moments */}
           {recapMoments.length > 0 && (
             <Card className='icebreaker__recap-section'>
-              <Text className='icebreaker__recap-section-title'>
-                精彩瞬间
-              </Text>
+              <Text className='icebreaker__recap-section-title'>✨ 精彩瞬间</Text>
               {recapMoments.map((moment, i) => (
-                <Text key={i} className='icebreaker__recap-item'>
-                  • {moment}
-                </Text>
+                <View key={i} className='icebreaker__recap-moment'>
+                  <Text className='icebreaker__recap-moment-bullet'>•</Text>
+                  <Text className='icebreaker__recap-moment-text'>{moment}</Text>
+                </View>
               ))}
             </Card>
           )}
         </View>
       )}
 
-      {!recapData && (
+      {/* Dynamic share card with CardFlip */}
+      {socialSessionId && (
+        <View className='icebreaker__recap-share-wrap'>
+          <CardFlip
+            front={
+              <View className='icebreaker__recap-share-front'>
+                <Text className='icebreaker__recap-share-front-emoji'>🎉</Text>
+                <Text className='icebreaker__recap-share-front-title'>今晚的破冰记忆</Text>
+                <Text className='icebreaker__recap-share-front-hint'>点我查看详情</Text>
+              </View>
+            }
+            back={
+              <View className='icebreaker__recap-share-back'>
+                {shareLines().map((line, i) => (
+                  <Text key={i} className='icebreaker__recap-share-back-line'>
+                    {line}
+                  </Text>
+                ))}
+                <View className='icebreaker__recap-share-back-cta'>
+                  <Button variant='primary' onClick={onLeave}>
+                    保存并分享
+                  </Button>
+                </View>
+              </View>
+            }
+            flipped={shareFlipped}
+            onFlip={handleShareFlip}
+            duration={500}
+          />
+        </View>
+      )}
+
+      {/* Empty state */}
+      {!recapData && medals.length === 0 && recapMoments.length === 0 && (
         <Card className='icebreaker__recap-section'>
-          <Text className='icebreaker__recap-section-title'>
-            感谢参与今晚的破冰！
-          </Text>
+          <Text className='icebreaker__recap-section-title'>感谢参与今晚的破冰！</Text>
           <Text className='icebreaker__recap-item'>
             希望你和新朋友们建立了更深的连接
           </Text>
         </Card>
       )}
 
-      {socialSessionId && (
-        <MomentCardCTA socialSessionId={socialSessionId} />
-      )}
+      {/* Moment card CTA */}
+      {socialSessionId && <MomentCardCTA socialSessionId={socialSessionId} />}
 
+      {/* Leave button */}
       <Button variant='primary' className='icebreaker__recap-leave-btn' onClick={onLeave}>
         返回活动
       </Button>

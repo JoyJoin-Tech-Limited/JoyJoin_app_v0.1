@@ -1,0 +1,419 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RecapPhaseView — Sprint B Redesign Styles
+// ═══════════════════════════════════════════════════════════════════════════
+
+.icebreaker__recap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+  width: 100%;
+  padding: $spacing-sm 0 $spacing-lg;
+  position: relative;
+}
+
+// ── Celebration burst ────────────────────────────────────────────
+.icebreaker__recap-burst {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+// ── Hero section ─────────────────────────────────────────────────
+.icebreaker__recap-hero {
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: 0 $container-padding;
+  text-align: center;
+}
+
+.icebreaker__recap-hero-icon {
+  opacity: 0.5;
+  margin-bottom: $spacing-xs;
+}
+
+.icebreaker__recap-title {
+  @include type-headline;
+  color: $color-text-primary;
+}
+
+.icebreaker__recap-subtitle {
+  @include type-body;
+  color: $color-text-secondary;
+}
+
+.icebreaker__recap-closing {
+  @include type-body-emphasis;
+  color: $color-primary;
+  margin-top: $spacing-xs;
+}
+
+// IdentityReveal inside hero
+.icebreaker__recap-hero {
+  .reveal-identity-reveal {
+    min-height: 140rpx;
+    border-radius: $card-radius;
+    overflow: hidden;
+    width: 100%;
+    max-width: 600rpx;
+  }
+
+  .reveal-identity-reveal__overlay {
+    border-radius: $card-radius;
+  }
+
+  .reveal-identity-reveal__identity {
+    font-size: $font-size-lg;
+    text-align: center;
+    padding: 0 $spacing-md;
+  }
+}
+
+// ── Feedback bar ─────────────────────────────────────────────────
+.icebreaker__recap-feedback-done {
+  @include type-caption;
+  color: $color-primary;
+  text-align: center;
+}
+
+.icebreaker__feedback-row {
+  display: flex;
+  gap: $spacing-sm;
+  justify-content: center;
+  margin-top: $spacing-xs;
+}
+
+// ── Medals section ───────────────────────────────────────────────
+.icebreaker__recap-medals {
+  width: 100%;
+  padding: 0 $container-padding;
+}
+
+.icebreaker__recap-medals-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+}
+
+.icebreaker__recap-medal {
+  @include flex-center;
+  flex-direction: column;
+  gap: 6rpx;
+  padding: $spacing-md $spacing-sm;
+  background: $color-surface;
+  border-radius: $card-radius-sm;
+  border: 2rpx solid $color-divider;
+  box-shadow: $shadow-sm;
+  animation: recap-medal-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  opacity: 0;
+
+  @for $i from 0 through 8 {
+    &:nth-child(#{$i + 1}) {
+      animation-delay: #{$i * 120}ms;
+    }
+  }
+}
+
+@keyframes recap-medal-in {
+  0% {
+    opacity: 0;
+    transform: translateY(20rpx) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.icebreaker__recap-medal-emoji {
+  font-size: $font-size-2xl;
+  line-height: 1;
+}
+
+.icebreaker__recap-medal-title {
+  @include type-label;
+  color: $color-text-primary;
+  font-weight: $font-weight-semibold;
+  text-align: center;
+}
+
+.icebreaker__recap-medal-recipient {
+  @include type-caption;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.icebreaker__recap-medal-desc {
+  @include type-micro;
+  color: $color-text-muted;
+  text-align: center;
+  max-width: 260rpx;
+}
+
+// ── Details sections ─────────────────────────────────────────────
+.icebreaker__recap-details {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: 0 $container-padding;
+}
+
+.icebreaker__recap-section {
+  @include card-premium;
+  padding: $spacing-md;
+  width: 100%;
+
+  &--compact {
+    padding: $spacing-sm $spacing-md;
+  }
+}
+
+.icebreaker__recap-section-title {
+  @include type-subheading;
+  color: $color-text-primary;
+  margin-bottom: $spacing-sm;
+
+  &--center {
+    text-align: center;
+    margin-bottom: $spacing-sm;
+  }
+}
+
+.icebreaker__recap-section-header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-sm;
+
+  .icebreaker__recap-section-title {
+    margin-bottom: 0;
+  }
+}
+
+.icebreaker__recap-item {
+  @include type-body;
+  color: $color-text-secondary;
+  padding: 4rpx 0;
+}
+
+.icebreaker__recap-stat {
+  @include type-body-emphasis;
+  color: $color-text-primary;
+}
+
+// ── Topic tags ───────────────────────────────────────────────────
+.icebreaker__recap-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+}
+
+.icebreaker__recap-tag {
+  padding: $spacing-xs $spacing-sm;
+  background: rgba($color-primary, 0.08);
+  border-radius: $radius-pill;
+}
+
+.icebreaker__recap-tag-text {
+  @include type-caption;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+// ── Stats row (lie detective etc) ────────────────────────────────
+.icebreaker__recap-stats-row {
+  display: flex;
+  gap: $spacing-sm;
+  justify-content: space-around;
+}
+
+.icebreaker__recap-stat-box {
+  @include flex-center;
+  flex-direction: column;
+  gap: 4rpx;
+  padding: $spacing-sm;
+  background: rgba($color-primary, 0.04);
+  border-radius: $card-radius-sm;
+  flex: 1;
+  min-width: 0;
+}
+
+.icebreaker__recap-stat-value {
+  @include type-body-emphasis;
+  color: $color-primary;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.icebreaker__recap-stat-label {
+  @include type-caption;
+  color: $color-text-secondary;
+  text-align: center;
+}
+
+// ── V2 rows ──────────────────────────────────────────────────────
+.icebreaker__recap-v2-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-xs 0;
+  border-bottom: 1rpx solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.icebreaker__recap-v2-label {
+  @include type-caption;
+  color: $color-text-secondary;
+}
+
+.icebreaker__recap-v2-value {
+  @include type-caption;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+  max-width: 60%;
+  text-align: right;
+}
+
+// ── Fun moments ──────────────────────────────────────────────────
+.icebreaker__recap-moment {
+  display: flex;
+  gap: $spacing-xs;
+  padding: 4rpx 0;
+}
+
+.icebreaker__recap-moment-bullet {
+  @include type-body;
+  color: $color-primary;
+  line-height: 1.6;
+}
+
+.icebreaker__recap-moment-text {
+  @include type-body;
+  color: $color-text-secondary;
+  flex: 1;
+}
+
+// ── Share card (CardFlip) ────────────────────────────────────────
+.icebreaker__recap-share-wrap {
+  width: 100%;
+  max-width: 640rpx;
+  padding: 0 $container-padding;
+
+  .reveal-card-flip {
+    min-height: 220rpx;
+  }
+
+  .reveal-card-flip__face {
+    @include card-premium;
+    padding: $spacing-lg;
+    min-height: 220rpx;
+  }
+}
+
+.icebreaker__recap-share-front {
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-sm;
+  min-height: 220rpx;
+  text-align: center;
+
+  &-emoji {
+    font-size: $font-size-3xl;
+    line-height: 1;
+  }
+
+  &-title {
+    @include type-heading;
+    color: $color-text-primary;
+  }
+
+  &-hint {
+    @include type-caption;
+    color: $color-text-muted;
+  }
+}
+
+.icebreaker__recap-share-back {
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-xs;
+  min-height: 220rpx;
+  text-align: center;
+
+  &-line {
+    @include type-body;
+    color: $color-text-secondary;
+  }
+
+  &-cta {
+    margin-top: $spacing-sm;
+  }
+}
+
+// ── Moment card CTA ──────────────────────────────────────────────
+.icebreaker__recap-moment-cta {
+  @include card-premium;
+  position: relative;
+  padding: $spacing-md;
+  width: 100%;
+  max-width: 640rpx;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba($color-primary-dark, 0.95) 0%, rgba($color-text-primary, 0.9) 100%);
+  border: 2rpx solid rgba($color-landed-gold, 0.3);
+}
+
+.icebreaker__recap-moment-cta-glow {
+  position: absolute;
+  top: -40rpx;
+  right: -40rpx;
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba($color-landed-gold, 0.25) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.icebreaker__recap-moment-cta-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.icebreaker__recap-moment-cta-title {
+  @include type-subheading;
+  color: $color-landed-gold;
+}
+
+.icebreaker__recap-moment-cta-sub {
+  @include type-caption;
+  color: rgba($color-text-white, 0.65);
+}
+
+.icebreaker__recap-moment-cta-btn {
+  position: relative;
+  z-index: 1;
+  margin-top: $spacing-sm;
+  width: 100%;
+}
+
+// ── Leave button ─────────────────────────────────────────────────
+.icebreaker__recap-leave-btn {
+  width: 100%;
+  max-width: 560rpx;
+  margin-top: $spacing-xs;
+}

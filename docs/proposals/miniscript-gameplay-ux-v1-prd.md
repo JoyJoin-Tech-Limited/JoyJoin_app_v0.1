@@ -421,7 +421,7 @@ function filterFrameworkForPlayer(
 | **Lie Detective** | Turn-based per player; host advances `currentLieDetectivePlayerIndex`; auto-reveal when all votes in | Act-based; host advances `miniScriptCurrentAct`; clues auto-reveal per act |
 | **Personality Dice** | Host generates roster-sized challenges; players complete sequentially; auto-advance index | Host generates framework; all players participate simultaneously in each act |
 | **Auction** | Host generates lots; host closes each lot one-by-one; advance guard = all lots closed | Host generates script; host advances acts one-by-one; advance guard = lenient (framework exists) |
-| **Warmup** | Host picks mood; topics generate; players ready-up; host next-topic | Host picks style/genre; framework generates; host starts game; host next-act |
+| **Topic Cards** | Host picks mood; topic cards generate; players ready-up; host next-topic | Host picks style/genre; framework generates; host starts game; host next-act |
 
 **Key insight:** MiniScript v1 is structurally closest to **Auction** (host closes lots one by one → host opens acts one by one) combined with **Lie Detective** secrecy (server hides truth until reveal moment).
 

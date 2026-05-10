@@ -36,6 +36,14 @@ export function sanitizeStateForClient(
   delete (sanitized as Partial<SocialSessionState>).xiaoyueAdaptiveSuggestion;
   delete (sanitized as Partial<SocialSessionState>).xiaoyueSessionPackMeta;
 
+  // Strip server-only participant profiles before sending to clients
+  if (sanitized.joinedParticipants) {
+    sanitized.joinedParticipants = sanitized.joinedParticipants.map(p => {
+      const { profile: _, ...safe } = p;
+      return safe;
+    }) as SocialSessionParticipantSummary[];
+  }
+
   if (sanitized.miniScriptFramework) {
     const framework = { ...sanitized.miniScriptFramework } as Record<string, unknown>;
     delete framework.clues;
@@ -157,7 +165,7 @@ export function buildRecapParticipants(
   state: SocialSessionState,
 ): Array<{ displayName: string; archetype?: string }> {
   if (roster.length > 0) {
-    return roster.map((p) => ({ displayName: p.displayName }));
+    return roster.map((p) => ({ displayName: p.displayName, archetype: p.archetype }));
   }
   const out: Array<{ displayName: string; archetype?: string }> = [];
   const seen = new Set<string>();

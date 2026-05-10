@@ -45,7 +45,8 @@
     "./miniscriptCatalog": "./src/miniscriptCatalog.ts",
     "./miniscriptGameModes": "./src/miniscriptGameModes.ts",
     "./schemaAnalytics": "./src/schemaAnalytics.ts",
-    "./iconSystem": "./src/iconSystem/index.ts"
+    "./iconSystem": "./src/iconSystem/index.ts",
+    "./features/matching-status": "./src/features/matching-status/index.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",

@@ -1,12 +1,22 @@
 export {
-  adminAccounts,
-  adminAuditLogs,
   reports,
   moderationLogs,
-  insertAdminAccountSchema,
-  insertAdminAuditLogSchema,
   insertReportSchema,
   insertModerationLogSchema,
+} from './_definitions.js';
+
+export {
+  adminAccounts,
+  adminAuditLogs,
+  insertAdminAccountSchema,
+  insertAdminAuditLogSchema,
+} from './_definitions_extended.js';
+
+export type {
+  Report,
+  InsertReport,
+  ModerationLog,
+  InsertModerationLog,
 } from './_definitions.js';
 
 export type {
@@ -14,8 +24,4 @@ export type {
   InsertAdminAccount,
   AdminAuditLog,
   InsertAdminAuditLog,
-  Report,
-  InsertReport,
-  ModerationLog,
-  InsertModerationLog,
-} from './_definitions.js';
+} from './_definitions_extended.js';

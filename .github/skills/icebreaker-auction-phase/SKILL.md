@@ -15,6 +15,9 @@ description: >-
 - **LLM optional**: default `SOCIAL_AUCTION_LLM_ENABLED` false → curated fallback lots only; still sets `auctionLotsMeta`.
 - **Advance guard**: host cannot `POST .../advance` out of `auction` until `auctionAllLotsClosed` is true (every lot closed via `close-lot`).
 - **Bidding rule**: each new high bid refunds the previous high bidder’s escrowed coins before deducting the new bidder.
+- **Server-synced timer**: `auctionLotStartedAt` is set on `generate-lots`; clients derive `timeLeft` from server timestamp (not local countdown).
+- **Bid history**: `auctionBidHistory` persists all bids per lot; filtered client-side by `lotIndex`.
+- **Archetype context**: `buildArchetypeContext(roster)` injects group archetype mix into the `generateAuctionLots` prompt for personalized lots.
 
 ## When to use this skill
 

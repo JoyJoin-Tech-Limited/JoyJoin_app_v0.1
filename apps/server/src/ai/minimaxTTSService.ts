@@ -186,8 +186,8 @@ export async function warmTTSCache(): Promise<void> {
   if (!isTTSEnabled()) return;
 
   const fixedLines = [
-    { text: '欢迎来到今晚的破冰时间！先从轻松的话题暖暖场吧 🌅', emotion: 'warm' as const, callerTag: 'warmup_phase_start' },
-    { text: '热身完毕！接下来是微挑战环节，大家准备好了吗？⚡', emotion: 'excited' as const, callerTag: 'micro_challenge_phase_start' },
+    { text: '欢迎来到今晚的破冰时间！先抽张话题卡，暖暖场吧 🌅', emotion: 'warm' as const, callerTag: 'warmup_phase_start' },
+    { text: '话题卡环节完毕！接下来是微挑战环节，大家准备好了吗？⚡', emotion: 'excited' as const, callerTag: 'micro_challenge_phase_start' },
     { text: '侦探们，仔细听每一句话，找出谎言！🕵️', emotion: 'playful' as const, callerTag: 'lie_detective_phase_start' },
     { text: '今晚的破冰之旅圆满结束！✨', emotion: 'warm' as const, callerTag: 'recap_phase_start' },
   ];

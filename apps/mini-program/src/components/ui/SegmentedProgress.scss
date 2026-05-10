@@ -1,5 +1,29 @@
 @use '../../styles/variables' as *;
 
+@keyframes progress-shimmer {
+  0% {
+    left: -50%;
+  }
+  100% {
+    left: 150%;
+  }
+}
+
+@keyframes milestone-pop {
+  0% {
+    transform: scaleY(1);
+    box-shadow: 0 0 0 rgba($color-primary, 0);
+  }
+  50% {
+    transform: scaleY(1.6);
+    box-shadow: 0 0 20rpx rgba($color-primary, 0.6);
+  }
+  100% {
+    transform: scaleY(1);
+    box-shadow: 0 0 0 rgba($color-primary, 0);
+  }
+}
+
 .segmented-progress {
   display: flex;
   align-items: center;
@@ -17,11 +41,30 @@
 
     &--filled {
       background: $brand-gradient;
-      box-shadow: 0 2rpx 8rpx rgba(168, 107, 255, 0.3);
+      box-shadow: 0 2rpx 8rpx rgba($brand-gradient-to, 0.3);
+
+      // Traveling shimmer highlight across filled portion
+      &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -50%;
+        width: 50%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.45) 50%,
+          transparent 100%
+        );
+        animation: progress-shimmer 1.5s ease-in-out infinite;
+        pointer-events: none;
+      }
     }
 
     &--milestone {
-      box-shadow: 0 0 16rpx rgba(139, 92, 246, 0.5);
+      animation: milestone-pop 0.5s ease-out;
+      box-shadow: 0 0 16rpx rgba($color-primary, 0.5);
     }
   }
 
@@ -53,5 +96,20 @@
 
   &--dots &__partial {
     border-radius: 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .segmented-progress__segment {
+    transition: none;
+    animation: none !important;
+
+    &::after {
+      display: none;
+    }
+  }
+
+  .segmented-progress__partial {
+    transition: none;
   }
 }

@@ -239,20 +239,24 @@ preserves the exact legacy 6-dimensional formula.
 
 ### 3.2 Dimension Detail
 
-#### 3.2.1 Chemistry Score (性格化学反应) — 28%
+#### 3.2.1 Chemistry Score (性格化学反应) — 26% (7D) / 28% (6D)
 
-- Reads from the **12×12 Chemistry Matrix** (`archetypeChemistry.ts`)
-- Weighted blend of primary + secondary archetypes:
+- **Archetype compatibility** (70%): Reads from the **12×12 Chemistry Matrix** (`archetypeChemistry.ts`), weighted blend of primary (70%) + secondary cross (15% × 2).
+- **vibeVector similarity** (30%): 5D continuous personality vector cosine similarity (`{energy, conversation_style, initiative, novelty, humor}` each 0–1). Falls back to pure archetype scoring when vibeVector data is missing.
 
 ```typescript
-chemistry =
+archetypeScore =
   CHEMISTRY_MATRIX[primary1][primary2]   × 0.70
 + CHEMISTRY_MATRIX[primary1][secondary2] × 0.15
 + CHEMISTRY_MATRIX[secondary1][primary2] × 0.15
-```
 
-- Matrix scores: 0–100 (90–100 = perfect complement, 0–29 = high conflict risk)
-- Default fallback: 50 if archetype is unknown
+vibeSim = cosineSimilarity(vibeVector1, vibeVector2)  // 0–1
+vibeScore = vibeSim × 100
+
+chemistry = hasVibe
+  ? archetypeScore × 0.70 + vibeScore × 0.30
+  : archetypeScore  // fallback when vibeVector missing
+```
 
 #### 3.2.2 Interest Score (兴趣重叠度) — 28%
 
@@ -299,6 +303,14 @@ Average of up to 3 sub-signals (equal weight per present factor):
 | Life stage affinity | `LIFE_STAGE_AFFINITY` 7×7 matrix | Asymmetric — averaged both directions |
 | Education affinity | Ordinal distance (`EDUCATION_ORDINAL`) | Same level = 100, each step apart = −20 |
 | Hometown affinity | `hometownRegionCity` matching | Only when **both** users opt in (`hometownAffinityOptin = true`) |
+| Age preference affinity | `ageMatchPreference` | Same = 100, "都可以" compatible = 75, complementary ("偏年轻"+"偏成熟") = 70, conflicting = 40 |
+| Table vibe affinity | `tableVibePreference` | Same = 100, compatible (light_fun+natural_chat) = 75, deep_talk+natural_chat = 65, clash (deep_talk+light_fun) = 30 |
+
+**Life Stage Matrix keys:** `founder`, `self_employed`, `employed`, `student`, `transitioning`, `caregiver_retired`, `successor`
+
+**Age preference values:** `同龄人`, `偏年轻`, `偏成熟`, `都可以`
+
+**Table vibe values:** `light_fun`, `natural_chat`, `deep_talk`
 
 **Life Stage Matrix keys:** `founder`, `self_employed`, `employed`, `student`, `transitioning`, `caregiver_retired`, `successor`
 
@@ -329,10 +341,15 @@ backgroundDiversity = mean(industryScore, genderScore)
 
 #### 3.2.5 Preference Score (活动偏好) — 5%
 
-Matches event-level preferences from registration:
-- Event intent / activity type alignment
-- Bar preferences, cuisine preferences (for bar/dining events)
-- Light signal — limited differentiation in current event types
+Event-type aware sub-scores:
+
+| Event Type | Signals |
+|-----------|---------|
+| 酒局 (bar) | Bar theme overlap + alcohol comfort overlap |
+| 饭局 (dining) | Social goal overlap only |
+| Both | Dietary restriction compatibility |
+
+**Diet compatibility**: when both users have restrictions, uses shared/all-diet overlap ratio. When only one side has restrictions, scores 100 (no conflict). Default when no preference data: 70.
 
 #### 3.2.6 Language Score (语言沟通) — 4%
 
@@ -406,6 +423,17 @@ Maximum score shift from enabling: ≤3.9 points (6% weight × 65-point semantic
 - Admin dashboard `/admin` → 🧠 语义匹配观测 card (average score, pair-delta range, flag status)
 - Prometheus endpoint `GET /api/metrics` → `joyjoin_matching_semantic_similarity_score` histogram
   and `joyjoin_matching_semantic_pair_score_delta` histogram
+
+**Semantic profile document** (generated via `userSemanticProfileService.ts`): Neutral embedding document stripped to unique free-text fields not already scored by existing dimensions. Only `bio`, `socialTag`, `favoriteRestaurantReason`, and top/deep interest labels are included. Archetype, city, education, industry, workMode, hometown, languages, intent, and table vibe are excluded (already measured with higher precision by specialized dimensions).
+
+### 3.2.8 Match History Anti-Repetition (Hard Constraint)
+
+When `matchHistory` records exist for a user pair:
+
+- **`wouldMeetAgain === false`**: The pair is hard-skipped — `calculatePairScore` returns `-1` (sentinel). `calculateGroupPairScore` excludes `-1` scores from averaging. The greedy seed selection naturally places these pairs at the bottom of the sorted list.
+- **`wouldMeetAgain === true`**: A flat **+5 bonus** is applied to the pair score — capped at 100.
+
+This operates as a pre-filter and post-bonus alongside the 6D/7D weighted scoring. It does not change dimension weights.
 
 ### 3.3 Adaptive Weights (Feature-Flagged Thompson Sampling)
 

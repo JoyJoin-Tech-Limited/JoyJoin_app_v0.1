@@ -7,19 +7,25 @@ export {
   insertMatchingConfigSchema,
   matchingResults,
   insertMatchingResultSchema,
+} from './_definitions.js';
+
+export {
   matchingShadowExperiments,
   insertMatchingShadowExperimentSchema,
   matchingWeightsConfig,
   matchingWeightsHistory,
   insertMatchingWeightsConfigSchema,
   insertMatchingWeightsHistorySchema,
-} from './_definitions.js';
+} from './_definitions_extended.js';
 
 export type {
   MatchingConfig,
   InsertMatchingConfig,
   MatchingResult,
   InsertMatchingResult,
+} from './_definitions.js';
+
+export type {
   MatchingShadowExperiment,
   InsertMatchingShadowExperiment,
   MatchingShadowComparison,
@@ -28,4 +34,4 @@ export type {
   InsertMatchingWeightsConfig,
   MatchingWeightsHistory,
   InsertMatchingWeightsHistory,
-} from './_definitions.js';
+} from './_definitions_extended.js';

@@ -19,8 +19,8 @@ describe('matching-status page composition', () => {
     expect(sectionsSource).toContain("className='matching-status__overlay-member-grid'")
   })
 
-  it('moves page-local helper ownership into the view-model module', () => {
-    expect(pageSource).toContain("from './matchingStatusViewModels'")
+  it('moves page-local helper ownership into the shared view-model module', () => {
+    expect(pageSource).toContain("from '@shared/features/matching-status'")
     expect(pageSource).not.toContain('function getWaitingStateCopy')
     expect(pageSource).not.toContain('function getChemistryTokens')
     expect(pageSource).not.toContain('function getCountdownState')

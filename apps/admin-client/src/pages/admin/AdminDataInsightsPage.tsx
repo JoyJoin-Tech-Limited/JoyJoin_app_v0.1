@@ -153,7 +153,7 @@ export default function AdminDataInsightsPage() {
   });
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold" data-testid="heading-insights">运营决策指挥中心</h1>
         <p className="text-muted-foreground mt-1">实时监控平台核心运营指标</p>

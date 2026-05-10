@@ -142,6 +142,7 @@ Skills for structured agent delivery loops, turn-end summaries, and bounded work
 | [`first-principles-velocity`](./first-principles-velocity/SKILL.md) | Mission → inversion → critical path → model-tier fit ([`MODEL_CATALOG.md`](../agents/MODEL_CATALOG.md)); **five themes:** constraints first, slice ownership, smallest proof, deletion/quarantine, blocked with evidence. Cross-lane policy: [`AI_WORKFLOW_POLICY.md`](../AI_WORKFLOW_POLICY.md) (core policy point 9); orchestration context: [`ORCHESTRATION.md`](../ORCHESTRATION.md) *Execution discipline*. Pairs with [`orchestration-turn-reporting`](./orchestration-turn-reporting/SKILL.md). |
 | [`subagent-context-delegation`](./subagent-context-delegation/SKILL.md) | Context capsules, parallel explore swarms, subagent resume/reuse, and parent-session hygiene for effective Kimi Code Agent delegation |
 | [`agent-coordination-patterns`](./agent-coordination-patterns/SKILL.md) | Sequential pipelines, parallel swarms, dependency graphs, fan-out/fan-in, convergence strategies, conflict resolution, and workload partitioning for multi-agent workflows |
+| [`omo-orchestration-bridge`](../../.agents/skills/omo-orchestration-bridge/SKILL.md) | Bridge Oh My OpenAgent (OMO) discipline-agent workflows into Kimi Code CLI. Maps `ultrawork`, `/start-work`, and boulder state to Kimi-native `Agent` tool orchestration using existing `.github/agents/` definitions |
 
 ---
 
@@ -224,6 +225,7 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | How do I merge outputs from parallel agents? | `agent-coordination-patterns` |
 | How do I resolve conflicting agent outputs? | `agent-coordination-patterns` |
 | How do I decide parallel vs sequential agents? | `agent-coordination-patterns` |
+| How do I run OMO workflows (ultrawork, boulder, Prometheus) in Kimi? | `omo-orchestration-bridge` |
 | How do I define a new database model? | `backend-models-standards` |
 | What colours can I use for a new UI element? | `joyjoin-brand-guidelines` + `design-system-governance` |
 | How do I keep a mini-program screen premium, on-brand, and Taro-native? | `mini-program-frontend-excellence` |

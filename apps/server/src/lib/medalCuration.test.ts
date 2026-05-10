@@ -249,7 +249,7 @@ describe('curateMedals', () => {
       emoji: '💬',
       title: '话题王',
       recipientDisplayName: 'Carol',
-      description: '在热身话题中最活跃',
+      description: '在话题卡环节中最活跃',
     });
   });
 });

@@ -21,12 +21,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { DollarSign, CreditCard, TrendingUp, Receipt, Store, RotateCcw, HelpCircle } from "lucide-react";
+import { DollarSign, CreditCard, TrendingUp, Receipt, Store, RotateCcw, HelpCircle, Download } from "lucide-react";
+import { downloadCsv } from "@/lib/csvExport";
 import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
-import { format } from "date-fns";
-import { zhCN } from "date-fns/locale";
+import { fmtDateTimeShort, safeFormat } from "@/lib/dateUtils";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
+import EmptyState from "@/components/admin/EmptyState";
 
 interface FinanceStats {
   totalRevenue: number;
@@ -39,13 +40,15 @@ interface Payment {
   id: string;
   user_id: string;
   amount: number;
-  payment_type: "subscription" | "event";
+  payment_type: "subscription" | "event" | "event_bundle";
   status: "completed" | "pending" | "failed" | "refunded";
   payment_method: string;
   created_at: string;
   user_first_name: string | null;
   user_last_name: string | null;
   user_email: string | null;
+  event_title: string | null;
+  subscription_plan: string | null;
 }
 
 interface VenueCommission {
@@ -67,6 +70,7 @@ const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondar
 const PAYMENT_TYPE_MAP: Record<string, { label: string; variant: "default" | "outline" }> = {
   subscription: { label: "会员", variant: "default" },
   event: { label: "活动", variant: "outline" },
+  event_bundle: { label: "活动套餐", variant: "outline" },
 };
 
 interface RefundAttempt {
@@ -106,7 +110,7 @@ export default function AdminFinancePage() {
   });
 
   const { data: payments = [], isLoading: paymentsLoading } = useQuery<Payment[]>({
-    queryKey: ["/api/admin/finance/payments", paymentFilter === "all" ? undefined : paymentFilter],
+    queryKey: paymentFilter === "all" ? ["/api/admin/finance/payments"] : ["/api/admin/finance/payments", paymentFilter],
   });
 
   const { data: commissions = [], isLoading: commissionsLoading } = useQuery<VenueCommission[]>({
@@ -135,6 +139,8 @@ export default function AdminFinancePage() {
       toast({ title: "退款已提交", description: "退款申请已成功提交处理。" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/finance/payments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/refund-attempts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/finance/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/finance/commissions"] });
       setRefundDialogOpen(false);
       setRefundPayment(null);
       setRefundReason("");
@@ -149,17 +155,11 @@ export default function AdminFinancePage() {
   });
 
   const formatCurrency = (amount: number) => {
-    return `¥${amount.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `¥${(amount / 100).toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const formatDateTime = (dateTimeStr: string) => {
-    try {
-      const date = new Date(dateTimeStr);
-      return format(date, "yyyy年MM月dd日 HH:mm", { locale: zhCN });
-    } catch (e) {
-      return dateTimeStr;
-    }
-  };
+  const formatDateTime = (dateTimeStr: string) =>
+    safeFormat(dateTimeStr, "yyyy年MM月dd日 HH:mm", { fallback: dateTimeStr });
 
   const getUserName = (payment: Payment) => {
     const firstName = payment.user_first_name || "";
@@ -279,28 +279,49 @@ export default function AdminFinancePage() {
           <CardContent>
             {/* Payment Records Tab */}
             <TabsContent value="payments" className="space-y-4">
-              <Tabs value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as any)}>
-                <TabsList data-testid="tabs-payment-filter">
-                  <TabsTrigger value="all" data-testid="filter-all">
-                    全部
-                  </TabsTrigger>
-                  <TabsTrigger value="subscription" data-testid="filter-subscription">
-                    会员
-                  </TabsTrigger>
-                  <TabsTrigger value="event" data-testid="filter-event">
-                    活动
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+              <div className="flex items-center justify-between">
+                <Tabs value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as "all" | "subscription" | "event")}>
+                  <TabsList data-testid="tabs-payment-filter">
+                    <TabsTrigger value="all" data-testid="filter-all">
+                      全部
+                    </TabsTrigger>
+                    <TabsTrigger value="subscription" data-testid="filter-subscription">
+                      会员
+                    </TabsTrigger>
+                    <TabsTrigger value="event" data-testid="filter-event">
+                      活动
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const headers = ["ID", "用户", "类型", "金额", "关联内容", "状态", "支付方式", "创建时间"];
+                    const rows = payments.map((p) => [
+                      p.id,
+                      `${p.user_first_name || ''} ${p.user_last_name || ''}`.trim() || p.user_email || '',
+                      p.payment_type,
+                      `¥${(p.amount / 100).toFixed(2)}`,
+                      p.event_title || p.subscription_plan || '',
+                      p.status,
+                      p.payment_method,
+                      fmtDateTimeShort(p.created_at),
+                    ]);
+                    downloadCsv({ filename: `payments-${safeFormat(new Date(), "yyyyMMdd")}.csv`, headers, rows });
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  导出 CSV
+                </Button>
+              </div>
 
               {paymentsLoading ? (
                 <div className="py-12 text-center text-muted-foreground" data-testid="text-loading-payments">
                   加载中...
                 </div>
               ) : payments.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground" data-testid="text-no-payments">
-                  暂无支付记录
-                </div>
+                <EmptyState title="暂无支付记录" data-testid="text-no-payments" />
               ) : (
                 <div className="rounded-md border">
                   <Table>
@@ -310,6 +331,7 @@ export default function AdminFinancePage() {
                         <TableHead data-testid="header-user">用户</TableHead>
                         <TableHead data-testid="header-payment-type">类型</TableHead>
                         <TableHead data-testid="header-amount">金额</TableHead>
+                        <TableHead data-testid="header-context">关联内容</TableHead>
                         <TableHead data-testid="header-status">状态</TableHead>
                         <TableHead data-testid="header-payment-method">支付方式</TableHead>
                         <TableHead data-testid="header-created-at">创建时间</TableHead>
@@ -344,6 +366,15 @@ export default function AdminFinancePage() {
                           </TableCell>
                           <TableCell className="font-semibold" data-testid={`text-amount-${payment.id}`}>
                             {formatCurrency(payment.amount)}
+                          </TableCell>
+                          <TableCell data-testid={`text-context-${payment.id}`}>
+                            {payment.event_title ? (
+                              <span className="text-sm text-muted-foreground">{payment.event_title}</span>
+                            ) : payment.subscription_plan ? (
+                              <Badge variant="secondary" className="text-xs">{payment.subscription_plan}</Badge>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Badge 
@@ -390,9 +421,7 @@ export default function AdminFinancePage() {
                   加载中...
                 </div>
               ) : refundAttempts.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground" data-testid="text-no-refunds">
-                  暂无退款记录
-                </div>
+                <EmptyState title="暂无退款记录" data-testid="text-no-refunds" />
               ) : (
                 <div className="rounded-md border">
                   <Table>
@@ -459,9 +488,7 @@ export default function AdminFinancePage() {
                   加载中...
                 </div>
               ) : sortedCommissions.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground" data-testid="text-no-commissions">
-                  暂无场地佣金数据
-                </div>
+                <EmptyState title="暂无场地佣金数据" data-testid="text-no-commissions" />
               ) : (
                 <div className="rounded-md border">
                   <Table>
@@ -517,6 +544,12 @@ export default function AdminFinancePage() {
               为用户 <strong>{refundPayment ? getUserName(refundPayment) : ""}</strong> 的支付{" "}
               <span className="font-mono">{refundPayment?.id.slice(0, 8)}...</span>{" "}
               申请退款，金额 <strong>{refundPayment ? formatCurrency(refundPayment.amount) : ""}</strong>。
+              {refundPayment?.event_title && (
+                <span className="block mt-1">活动: <strong>{refundPayment.event_title}</strong></span>
+              )}
+              {refundPayment?.subscription_plan && (
+                <span className="block mt-1">订阅计划: <strong>{refundPayment.subscription_plan}</strong></span>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

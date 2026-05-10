@@ -96,6 +96,10 @@ vi.mock('../lib/socialIcebreakerStore', () => {
 });
 
 vi.mock('../socialIcebreakerAIService', () => ({
+  getLieDetectiveMode: vi.fn().mockReturnValue('v1'),
+  getDynamicDifficulty: vi.fn().mockReturnValue('medium'),
+  validateLieDetectiveV2Tags: vi.fn().mockReturnValue({ valid: true, tags: ['tag1', 'tag2'] }),
+  buildLieDetectiveV2RecapData: vi.fn().mockReturnValue({ aiWinRate: 50, hardestRound: 1, fooledEveryone: 0 }),
   generateWarmupTopics: vi.fn(),
   generateMicroChallenges: vi.fn(),
   generateLieDetectiveStatements: vi.fn(),

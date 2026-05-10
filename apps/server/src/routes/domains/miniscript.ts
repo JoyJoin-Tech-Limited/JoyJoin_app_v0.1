@@ -18,6 +18,7 @@ import {
   getMiniScriptSecrets,
   listParticipants,
 } from '../../lib/socialIcebreakerStore';
+import { filterContent } from '../../contentFilter';
 import { requireAuthenticatedUserId } from '../../lib/requestAuth';
 import { generateMiniScriptFrameworkWithMeta } from '../../lib/miniscriptAgent';
 import { MINISCRIPT_GENERATION_PROMPT_VERSION } from '../../ai/miniscriptPrompts';
@@ -123,11 +124,13 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
   }
 
   try {
+    const roster = await listParticipants(socialSessionId);
     const { framework, aiResponseMeta } = await generateMiniScriptFrameworkWithMeta({
       playerCount: session.playerCount,
       style,
       genres,
       lite: lite ?? false,
+      roster,
     });
 
     // Slice 4: extract and persist secrets BEFORE storing framework on session state
@@ -204,9 +207,16 @@ router.post('/assign-roles', async (req: any, res) => {
   const participants = await listParticipants(socialSessionId);
   const characterCount = state.miniScriptFramework.characters.length;
 
+  if (participants.length > characterCount) {
+    return res.status(400).json({
+      error: 'TOO_MANY_PLAYERS',
+      message: `This script supports ${characterCount} characters, but ${participants.length} players joined.`,
+    });
+  }
+
   const roleAssignments: Record<string, number> = {};
   participants.forEach((p, idx) => {
-    roleAssignments[p.userId] = idx % characterCount;
+    roleAssignments[p.userId] = idx;
   });
 
   // Build player runtime views
@@ -359,6 +369,17 @@ router.post('/vote', async (req: any, res) => {
   }
 
   const { socialSessionId, vote } = parsed.data;
+
+  // Content-filter free-text fields
+  for (const field of [vote.who, vote.what, vote.why]) {
+    if (field) {
+      const filtered = filterContent(field);
+      if (filtered.isViolation && filtered.severity === 'severe') {
+        return res.status(400).json({ error: filtered.message || 'Content contains inappropriate material' });
+      }
+    }
+  }
+
   const { state, expired } = await getSessionWithExpiry(socialSessionId);
 
   if (!state) {

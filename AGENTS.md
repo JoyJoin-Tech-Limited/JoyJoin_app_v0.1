@@ -100,7 +100,7 @@ npm run db:push                       # sync schema; safe mode
 npm run db:generate                   # create .sql migration from schema changes
 npm run db:rebuild-journal            # register new migration in _journal.json
 npm run db:migrate                    # production & CI only
-npm run db:verify                     # CI gate: schema.ts vs live DB
+npm run db:verify                     # CI gate: schema/*.ts vs live DB
 
 # Testing reality: only server has real tests
 npm run test -w @joyjoin/server       # vitest, real tests
@@ -115,14 +115,17 @@ npm run harness:gate                  # 5-pillar quality gate
 ```
 
 **Migration discipline (Neon PostgreSQL):**
-- Local dev → `npm run db:push` (say No to destructive prompts)
-- Before commit → `npm run db:generate` then `npm run db:rebuild-journal`
+- Local dev → `npm run db:push` (say No to destructive prompts). Note: schema
+  introspection against remote Neon can take 2–3 min; this is normal.
+- Before commit → `npm run db:generate -- --custom` then `npm run db:rebuild-journal`
 - Production DDL → **manual** via generated `.sql` files + `psql`
   > ⚠️ `drizzle-kit migrate` (v0.31.10) exits code 1 silently on Neon.
-  > ⚠️ `drizzle-kit push --force` also fails — schema introspection regex
-    cannot parse this Postgres version ("Schema parser only found 0 tables").
-  > ✅ Generate SQL with `npx drizzle-kit generate`, then apply with
-    `psql "$DATABASE_URL" -f apps/server/migrations/<file>.sql`
+  > ⚠️ `drizzle-kit generate` (auto-diff) fails in non-interactive shells because
+    `0000_snapshot.json` is outdated (66 tables) vs the live schema (86 tables).
+    Use `--custom` to create an empty migration skeleton, then write SQL by hand.
+  > ✅ `db:generate --custom` works: it creates `migrations/####_name.sql` and
+    registers it in `_journal.json`. Fill the file with your DDL.
+  > ✅ Apply with `psql "$DATABASE_URL" -f apps/server/migrations/<file>.sql`
   > ✅ The CI/CD deploy script **skips drizzle-kit DDL** entirely.
     Schema changes must be applied separately before deploy.
   > ⚠️ `DATABASE_URL` for DDL must use the **direct** Neon endpoint

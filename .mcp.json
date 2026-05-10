@@ -9,10 +9,10 @@
       "args": ["mcp", "serve"]
     },
     "agentMemory": {
-      "command": "npx",
-      "args": ["-y", "@adamrdrew/agent-memory-mcp"],
+      "command": "agent-memory-mcp",
+      "args": [],
       "env": {
-        "MEMORY_DB_PATH": ".joyjoin/agent-memory-db"
+        "MEMORY_DB_PATH": "/Users/vincentlai/GitHub/JoyJoin_app_v0.1/.joyjoin/agent-memory-db"
       }
     },
     "github": {

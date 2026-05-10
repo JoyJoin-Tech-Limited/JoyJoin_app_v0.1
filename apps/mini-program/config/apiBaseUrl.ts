@@ -64,8 +64,6 @@ export function loadRepoRootEnvFile(
 export function resolveMiniProgramApiBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
   return (
     env.TARO_APP_API_BASE_URL ||
-    env.API_URL ||
-    env.APP_URL ||
     DEFAULT_MINI_PROGRAM_API_BASE_URL
   ).replace(/\/$/, '')
 }

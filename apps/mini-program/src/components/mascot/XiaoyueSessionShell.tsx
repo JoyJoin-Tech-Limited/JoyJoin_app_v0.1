@@ -26,7 +26,7 @@ function getPhaseCoachingLine(
   if (!sessionPack) {
     const defaults: Record<string, string> = {
       waiting: `欢迎来到今晚的破冰时间，我是${DEFAULT_MASCOT_DISPLAY_NAME}。`,
-      warmup: '先从轻松的话题暖暖场吧。',
+      warmup: '先抽张话题卡，暖暖场吧。',
       micro_challenge: '热身完毕，来个轻松的小挑战。',
       lie_detective: '侦探时间，仔细听每一句话。',
       auction: '虚拟拍卖开始，脑洞越大越好。',

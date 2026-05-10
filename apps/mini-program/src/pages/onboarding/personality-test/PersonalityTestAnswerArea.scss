@@ -1,6 +1,17 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
 
+@keyframes answer-stagger-enter {
+  from {
+    opacity: 0;
+    transform: translateY(24rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .answer-area {
   &__options {
     display: flex;
@@ -15,14 +26,16 @@
     justify-content: flex-start;
     width: 100%;
     min-width: 0;
-    min-height: $button-height;
+    min-height: 96rpx;
     padding: $spacing-md $spacing-lg;
     border: 2rpx solid transparent;
-    font-size: $font-size-base;
+    border-radius: $radius-pill;
+    font-size: $font-size-lg;
     color: $color-text-primary;
     text-align: left;
     line-height: 1.5;
-    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    transition: transform 0.1s ease, border-color 0.1s ease, background 0.1s ease;
+    animation: answer-stagger-enter 0.28s ease-out both;
 
     &::after {
       border: none;
@@ -37,12 +50,17 @@
       border-color: $color-primary;
       background: $color-primary-light;
     }
+
+    &--selected {
+      background: rgba($color-primary, 0.08);
+      border-color: rgba($color-primary, 0.3);
+    }
   }
 
   &__option-text {
     flex: 1;
     min-width: 0;
-    font-size: $font-size-base;
+    font-size: $font-size-lg;
     color: $color-text-primary;
     line-height: 1.5;
     overflow-wrap: anywhere;
@@ -52,25 +70,27 @@
   &__emoji-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: $spacing-sm;
+    gap: $spacing-md;
   }
 
   &__emoji-option {
     @include card-premium;
     min-width: 0;
-    min-height: 180rpx;
-    padding: $spacing-md;
+    min-height: 192rpx;
+    padding: $spacing-lg;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: $spacing-sm;
     border: 2rpx solid transparent;
+    border-radius: $radius-pill;
     background: $color-surface;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.1s ease;
+    animation: answer-stagger-enter 0.28s ease-out both;
 
     &:active {
-      transform: scale(0.97);
+      transform: scale(0.96);
     }
 
     &::after {
@@ -82,10 +102,15 @@
       background: rgba($color-primary, 0.04);
       box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.08);
     }
+
+    &--selected {
+      background: rgba($color-primary, 0.08);
+      border-color: rgba($color-primary, 0.3);
+    }
   }
 
   &__emoji-option-emoji {
-    font-size: 52rpx;
+    font-size: $font-size-4xl;
     line-height: 1;
     flex-shrink: 0;
   }
@@ -93,10 +118,10 @@
   &__emoji-option-text {
     width: 100%;
     min-width: 0;
-    font-size: $font-size-sm;
+    font-size: $font-size-base;
     color: $color-text-primary;
     text-align: center;
-    line-height: 1.6;
+    line-height: 1.5;
     overflow-wrap: anywhere;
     word-break: break-word;
   }
@@ -104,7 +129,8 @@
   &__slider-shell {
     display: flex;
     flex-direction: column;
-    gap: $spacing-md;
+    gap: $spacing-lg;
+    padding: $spacing-md 0;
   }
 
   &__slider-labels {
@@ -117,11 +143,11 @@
   &__slider-pill {
     display: flex;
     align-items: center;
-    gap: 10rpx;
+    gap: 8rpx;
     flex: 1;
     min-width: 0;
     max-width: 48%;
-    padding: 14rpx 18rpx;
+    padding: $spacing-sm $spacing-md;
     border-radius: 999rpx;
     background: rgba($color-primary, 0.06);
 
@@ -132,7 +158,7 @@
   }
 
   &__slider-pill-emoji {
-    font-size: 28rpx;
+    font-size: $font-size-lg;
     line-height: 1;
     flex-shrink: 0;
   }
@@ -140,7 +166,7 @@
   &__slider-pill-text {
     flex: 1;
     min-width: 0;
-    font-size: $font-size-xs;
+    font-size: $font-size-sm;
     color: $color-text-secondary;
     line-height: 1.45;
     overflow-wrap: anywhere;
@@ -150,7 +176,7 @@
   &__slider-value {
     display: block;
     text-align: center;
-    font-size: $font-size-2xl;
+    font-size: $font-size-3xl;
     font-weight: $font-weight-black;
     color: $color-primary-dark;
   }
@@ -162,7 +188,10 @@
   &__slider-submit {
     @include button-premium;
     width: 100%;
+    min-height: 104rpx;
+    height: auto;
     border: 0;
+    font-size: $font-size-lg;
   }
 }
 
@@ -171,5 +200,6 @@
   .answer-area__emoji-option {
     transition: none !important;
     transform: none !important;
+    animation: none !important;
   }
 }

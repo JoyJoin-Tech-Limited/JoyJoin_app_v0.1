@@ -4,7 +4,10 @@ import { apiRequest, type OnboardingStep } from '../lib/api/api'
 import {
   AUTH_QUERY_KEY,
   bootstrapMiniProgramAuthSession,
+  clearAuthStorage,
+  isTransportApiError,
   isUnauthorizedApiError,
+  persistAuthToStorage,
 } from '../lib/api/authSession'
 import { deriveMiniProgramAuthState } from './auth/authState'
 
@@ -20,11 +23,31 @@ export interface UseAuthResult {
   refetch: () => Promise<unknown>
 }
 
+const AUTH_REQUEST_TIMEOUT_MS = 8000
+
 async function getAuthUser(): Promise<AuthUser | null> {
   try {
-    return await apiRequest<AuthUser>({ path: '/api/auth/user' })
+    const authPromise = apiRequest<AuthUser>({ path: '/api/auth/user', handleUnauthorized: false })
+    authPromise.catch(() => { /* swallowed — timeout may have already settled the race */ })
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        const err = new Error('auth-request-timeout') as any
+        err.isTransportError = true
+        reject(err)
+      }, AUTH_REQUEST_TIMEOUT_MS)
+    })
+
+    const result = await Promise.race([authPromise, timeoutPromise])
+
+    if (result) {
+      persistAuthToStorage(result)
+    }
+
+    return result
   } catch (error) {
     if (isUnauthorizedApiError(error)) {
+      clearAuthStorage()
       return null
     }
 
@@ -48,6 +71,7 @@ export function useAuth(): UseAuthResult {
     queryFn: getAuthUser,
     retry: (failureCount, error) => {
       if (isUnauthorizedApiError(error)) return false
+      if (isTransportApiError(error)) return false
       return failureCount < 2
     },
     staleTime: Infinity,

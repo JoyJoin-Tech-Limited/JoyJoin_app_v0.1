@@ -12,9 +12,7 @@ interface EventPreferences {
   districts: string[];
   languages: string[];
   // Conditional based on eventType
-  cuisines?: string[];
   dietary?: string[];
-  tasteIntensity?: string;
   barThemes?: string[];
   alcoholComfort?: string;
   musicPreference?: string[];
@@ -100,11 +98,8 @@ export function useEventPoolRegistration({
         eventType === "饭局"
           ? {
               ...basePayload,
-              // 饭局使用通用 budgetRange
               budgetRange: preferences.budget ? [preferences.budget] : undefined,
-              cuisinePreferences: preferences.cuisines,
               dietaryRestrictions: preferences.dietary,
-              tasteIntensity: preferences.tasteIntensity ? [preferences.tasteIntensity] : undefined,
             }
           : {
               ...basePayload,

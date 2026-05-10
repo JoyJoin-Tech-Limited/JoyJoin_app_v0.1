@@ -205,4 +205,177 @@ describe('social icebreaker phase configuration', () => {
     expect(state.auctionRecapLines).toBeUndefined();
     expect(state.auctionAllLotsClosed).toBeUndefined();
   });
+
+  it('does not include group_mirror, undercover_word, or quip_battle by default', () => {
+    const result = getServerEnabledPhases({} as NodeJS.ProcessEnv);
+    expect(result).not.toContain('group_mirror');
+    expect(result).not.toContain('undercover_word');
+    expect(result).not.toContain('quip_battle');
+  });
+
+  it('includes group_mirror when SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR is true', () => {
+    expect(
+      getServerEnabledPhases({
+        SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR: 'true',
+      } as NodeJS.ProcessEnv),
+    ).toEqual([
+      'warmup',
+      'micro_challenge',
+      'lie_detective',
+      'personality_dice',
+      'group_mirror',
+    ]);
+  });
+
+  it('includes undercover_word when SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD is true', () => {
+    expect(
+      getServerEnabledPhases({
+        SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD: 'true',
+      } as NodeJS.ProcessEnv),
+    ).toEqual([
+      'warmup',
+      'micro_challenge',
+      'lie_detective',
+      'personality_dice',
+      'undercover_word',
+    ]);
+  });
+
+  it('includes quip_battle when SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE is true', () => {
+    expect(
+      getServerEnabledPhases({
+        SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE: 'true',
+      } as NodeJS.ProcessEnv),
+    ).toEqual([
+      'warmup',
+      'micro_challenge',
+      'lie_detective',
+      'personality_dice',
+      'quip_battle',
+    ]);
+  });
+
+  it('includes all three new phases in canonical order when all flags are true', () => {
+    expect(
+      getServerEnabledPhases({
+        SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR: 'true',
+        SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD: 'true',
+        SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE: 'true',
+        SOCIAL_ICEBREAKER_ENABLE_AUCTION: 'true',
+        SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT: 'true',
+      } as NodeJS.ProcessEnv),
+    ).toEqual([
+      'warmup',
+      'micro_challenge',
+      'lie_detective',
+      'auction',
+      'quip_battle',
+      'personality_dice',
+      'group_mirror',
+      'undercover_word',
+      'mini_script',
+    ]);
+  });
+
+  it('cleans group_mirror transient state', () => {
+    const state = {
+      socialSessionId: 'social_test',
+      icebreakerSessionId: 'test',
+      currentPhase: 'group_mirror',
+      hostUserId: 'host',
+      hostDisplayName: 'Host',
+      playerCount: 4,
+      phaseStartedAt: 1,
+      sessionStartedAt: 1,
+      completedPhases: [],
+      enabledPhases: DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES,
+      groupMirrorQuestions: [{ id: 'q1', questionText: 'Q1', category: 'perception' }],
+      groupMirrorQuestionsMeta: { generatedAt: '2024-01-01T00:00:00Z', provider: null, fromCache: false, fallbackUsed: false },
+      groupMirrorAnswers: [{ questionId: 'q1', targetUserId: 'u1', reasonText: 'R1' }],
+      groupMirrorVotes: [{ questionId: 'q1', targetUserId: 'u1', reasonText: 'R1' }],
+      groupMirrorSubmittedUserIds: ['u1'],
+      groupMirrorRevealed: true,
+      groupMirrorResults: [{ questionId: 'q1', consensusTargetUserId: 'u1', voteCount: 2 }],
+    } as unknown as SocialSessionState;
+
+    cleanupPhaseStateForNextPhase(state, 'group_mirror');
+
+    expect(state.groupMirrorQuestions).toBeUndefined();
+    expect(state.groupMirrorQuestionsMeta).toBeUndefined();
+    expect(state.groupMirrorAnswers).toBeUndefined();
+    expect(state.groupMirrorVotes).toBeUndefined();
+    expect(state.groupMirrorSubmittedUserIds).toBeUndefined();
+    expect(state.groupMirrorRevealed).toBeUndefined();
+    expect(state.groupMirrorResults).toBeUndefined();
+  });
+
+  it('cleans undercover_word transient state', () => {
+    const state = {
+      socialSessionId: 'social_test',
+      icebreakerSessionId: 'test',
+      currentPhase: 'undercover_word',
+      hostUserId: 'host',
+      hostDisplayName: 'Host',
+      playerCount: 4,
+      phaseStartedAt: 1,
+      sessionStartedAt: 1,
+      completedPhases: [],
+      enabledPhases: DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES,
+      undercoverWordPair: { civilianWord: 'apple', undercoverWord: 'orange', category: 'fruit' },
+      undercoverWordPairMeta: { generatedAt: '2024-01-01T00:00:00Z', provider: null, fromCache: false, fallbackUsed: false },
+      undercoverUserId: 'u1',
+      undercoverWordRounds: [{ roundNumber: 1, descriptions: [] }],
+      undercoverWordCurrentRound: 1,
+      undercoverWordVotes: [{ voterId: 'u2', targetUserId: 'u1' }],
+      undercoverWordVotedUserIds: ['u2'],
+      undercoverWordRevealed: true,
+      undercoverWordResults: { undercoverUserId: 'u1', undercoverDisplayName: 'U1', civilianWord: 'apple', undercoverWord: 'orange', voteCounts: {}, caught: true },
+    } as SocialSessionState;
+
+    cleanupPhaseStateForNextPhase(state, 'undercover_word');
+
+    expect(state.undercoverWordPair).toBeUndefined();
+    expect(state.undercoverWordPairMeta).toBeUndefined();
+    expect(state.undercoverUserId).toBeUndefined();
+    expect(state.undercoverWordRounds).toBeUndefined();
+    expect(state.undercoverWordCurrentRound).toBeUndefined();
+    expect(state.undercoverWordVotes).toBeUndefined();
+    expect(state.undercoverWordVotedUserIds).toBeUndefined();
+    expect(state.undercoverWordRevealed).toBeUndefined();
+    expect(state.undercoverWordResults).toBeUndefined();
+  });
+
+  it('cleans quip_battle transient state', () => {
+    const state = {
+      socialSessionId: 'social_test',
+      icebreakerSessionId: 'test',
+      currentPhase: 'quip_battle',
+      hostUserId: 'host',
+      hostDisplayName: 'Host',
+      playerCount: 4,
+      phaseStartedAt: 1,
+      sessionStartedAt: 1,
+      completedPhases: [],
+      enabledPhases: DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES,
+      quipBattlePrompts: [{ id: 'p1', promptText: 'P1', category: 'cat' }],
+      quipBattlePromptsMeta: { generatedAt: '2024-01-01T00:00:00Z', provider: null, fromCache: false, fallbackUsed: false },
+      quipBattleAnswers: [{ userId: 'u1', displayName: 'U1', promptId: 'p1', answerText: 'A1' }],
+      quipBattleSubmittedUserIds: ['u1'],
+      quipBattleVotes: [{ voterId: 'u2', answerId: 'a1', promptId: 'p1' }],
+      quipBattleVotedUserIds: ['u2'],
+      quipBattleRevealed: true,
+      quipBattleResults: [{ promptId: 'p1', promptText: 'P1', answers: [], winnerUserId: 'u1', winnerDisplayName: 'U1', voteCount: 2 }],
+    } as SocialSessionState;
+
+    cleanupPhaseStateForNextPhase(state, 'quip_battle');
+
+    expect(state.quipBattlePrompts).toBeUndefined();
+    expect(state.quipBattlePromptsMeta).toBeUndefined();
+    expect(state.quipBattleAnswers).toBeUndefined();
+    expect(state.quipBattleSubmittedUserIds).toBeUndefined();
+    expect(state.quipBattleVotes).toBeUndefined();
+    expect(state.quipBattleVotedUserIds).toBeUndefined();
+    expect(state.quipBattleRevealed).toBeUndefined();
+    expect(state.quipBattleResults).toBeUndefined();
+  });
 });

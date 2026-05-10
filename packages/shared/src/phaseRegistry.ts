@@ -6,8 +6,8 @@ import type { SocialIcebreakerPhase } from './socialIcebreaker';
 export const PHASE_REGISTRY: Record<SocialIcebreakerPhase, PhaseModule> = {
   warmup: {
     id: 'warmup',
-    name: '热身',
-    nameEn: 'Warmup',
+    name: '话题卡',
+    nameEn: 'Topic Cards',
     emoji: '🌅',
     durationMinutes: 8,
     minPlayers: 2,

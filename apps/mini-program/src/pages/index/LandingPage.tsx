@@ -2,8 +2,9 @@ import { View, Text, Image, Navigator } from "@tarojs/components"
 import Taro from "@tarojs/taro"
 import { useState } from "react"
 import Button from "../../components/ui/Button"
-import { DEFAULT_MASCOT_DISPLAY_NAME } from "@shared/mascotConfig"
-import { getXiaoyueExpressionAsset } from "../../lib/mascot/xiaoyueExpressions"
+import BrandLogo from "../../components/ui/BrandLogo"
+import BondingCloud from "../../components/landing/BondingCloud"
+import { ResponsiveSpacer } from "../../components/ui/ResponsiveSpacer"
 import { runMiniProgramRouteTransition } from "../../lib/onboarding/onboardingNavigation"
 import "./index.scss"
 
@@ -65,7 +66,7 @@ export default function MiniProgramLandingPage() {
       <View className="content-zone">
         <View className="logo-container">
           <View className="logo-aura"></View>
-          <Image src="/assets/box-logo.webp" className="logo-img" mode="aspectFit" />
+          <BrandLogo size="md" className="logo-img" />
         </View>
 
         <View className="hero-cards">
@@ -115,27 +116,23 @@ export default function MiniProgramLandingPage() {
           </View>
         </View>
 
-        <View className="text-content">
-          <Text className="headline">让对的相遇不再错过</Text>
-          <Text className="subtitle">找到你的氛围原型，遇见真正聊得来的人</Text>
-          <View className="badges">
-            {["氛围测试", "算法匹配", "4-6人小局"].map((label) => (
-              <View key={label} className="badge">
-                <Text>{label}</Text>
-              </View>
-            ))}
-          </View>
+      </View>
 
-          <View className="landing-page__xiaoyue-wrap">
-            <Image
-              className="landing-page__xiaoyue"
-              src={getXiaoyueExpressionAsset("homeWelcome")}
-              mode="aspectFit"
-            />
-            <Text className="landing-page__xiaoyue-caption">{`${DEFAULT_MASCOT_DISPLAY_NAME}在这等你`}</Text>
-          </View>
+      <View className="text-content">
+        <Text className="headline">让对的相遇不再错过</Text>
+        <Text className="subtitle">找到你的氛围原型，遇见真正聊得来的人</Text>
+        <View className="badges">
+          {["氛围测试", "算法匹配", "4-6人小局"].map((label) => (
+            <View key={label} className="badge">
+              <Text>{label}</Text>
+            </View>
+          ))}
         </View>
       </View>
+
+      <BondingCloud />
+
+      <ResponsiveSpacer heightRpx={24} collapseBelow={640} />
 
       <View className="bottom-zone">
         <Button
@@ -143,6 +140,7 @@ export default function MiniProgramLandingPage() {
           className={"landing-page__cta landing-page__cta--primary" + ctaDisabledClass}
           hoverClass={ctaHoverClass}
           disabled={!hasAcceptedLegal}
+          loading={isPageExiting}
           onClick={() => navigateWithLegalGate("/pages/onboarding/personality-test/index")}
         >
           看看我会遇见谁
@@ -153,6 +151,7 @@ export default function MiniProgramLandingPage() {
           className={"landing-page__cta landing-page__cta--login" + ctaDisabledClass}
           hoverClass={ctaHoverClass}
           disabled={!hasAcceptedLegal}
+          loading={isPageExiting}
           onClick={() => navigateWithLegalGate("/pages/login/index")}
         >
           已有账号？登录

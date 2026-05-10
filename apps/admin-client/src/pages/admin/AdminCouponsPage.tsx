@@ -209,10 +209,10 @@ export default function AdminCouponsPage() {
   const totalUsage = coupons.reduce((sum, c) => sum + parseInt(c.used_count || "0"), 0);
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">优惠券管理</h1>
+          <h1 className="text-2xl font-bold tracking-tight">优惠券管理</h1>
           <p className="text-muted-foreground mt-1">创建和管理平台优惠券</p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-coupon">

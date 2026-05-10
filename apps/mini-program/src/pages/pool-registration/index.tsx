@@ -30,14 +30,12 @@ import {
   BAR_THEME_OPTIONS,
   buildFallbackBrief,
   buildPreJoinVibeBriefPath,
-  CUISINE_OPTIONS,
   DIETARY_OPTIONS,
   getBudgetOptions,
   getFlowStepLabels,
   INTENT_FLOW_OPTIONS,
   LANGUAGE_OPTIONS,
   resolvePoolEventType,
-  TASTE_INTENSITY_OPTIONS,
   type FlowOption,
   type PoolEventType,
 } from './flowConfig'
@@ -315,13 +313,15 @@ export default function PoolRegistrationPage() {
   const summaryItems = useMemo(() => {
     const languages = findLabels(formState.preferredLanguages, LANGUAGE_OPTIONS)
     const intents = findLabels(formState.eventIntent, INTENT_FLOW_OPTIONS)
+    const dietary = findLabels(formState.dietaryRestrictions, DIETARY_OPTIONS)
 
     return [
       { label: '预算', value: selectedBudget || '未选择' },
       { label: '这次想收获', value: intents.length > 0 ? intents.join('、') : '未选择' },
       { label: '沟通语言', value: languages.length > 0 ? languages.join('、') : '交给系统判断' },
+      ...(dietary.length > 0 ? [{ label: '饮食要求', value: dietary.join('、') }] : []),
     ]
-  }, [formState.eventIntent, formState.preferredLanguages, selectedBudget])
+  }, [formState.eventIntent, formState.preferredLanguages, formState.dietaryRestrictions, selectedBudget])
 
   const successHighlights = useMemo(() => {
     const items = [selectedBudget, ...findLabels(formState.eventIntent, INTENT_FLOW_OPTIONS).slice(0, 2)]
@@ -361,13 +361,6 @@ export default function PoolRegistrationPage() {
     }))
   }, [])
 
-  const handleCuisineToggle = useCallback((value: string) => {
-    setFormState((currentState) => ({
-      ...currentState,
-      cuisinePreferences: toggleValue(currentState.cuisinePreferences, value),
-    }))
-  }, [])
-
   const handleDietaryToggle = useCallback((value: string) => {
     setFormState((currentState) => {
       if (value === 'none') {
@@ -387,13 +380,6 @@ export default function PoolRegistrationPage() {
         dietaryRestrictions: nextValues,
       }
     })
-  }, [])
-
-  const handleTasteIntensitySelect = useCallback((value: string) => {
-    setFormState((currentState) => ({
-      ...currentState,
-      tasteIntensity: currentState.tasteIntensity === value ? undefined : value,
-    }))
   }, [])
 
   const handleBarThemeToggle = useCallback((value: string) => {
@@ -851,21 +837,8 @@ export default function PoolRegistrationPage() {
             ) : (
               <>
                 <View className='pool-reg__field'>
-                  <Text className='pool-reg__field-title'>想吃什么</Text>
-                  <View className='pool-reg__chip-row'>
-                    {CUISINE_OPTIONS.map((option) => (
-                      <ChoiceChip
-                        key={option.value}
-                        option={option}
-                        selected={formState.cuisinePreferences.includes(option.value)}
-                        onClick={() => handleCuisineToggle(option.value)}
-                      />
-                    ))}
-                  </View>
-                </View>
-
-                <View className='pool-reg__field'>
                   <Text className='pool-reg__field-title'>需要避开什么</Text>
+                  <Text className='pool-reg__field-desc'>你的饮食要求会参与匹配，选好了大家吃起来更自在</Text>
                   <View className='pool-reg__chip-row'>
                     {DIETARY_OPTIONS.map((option) => (
                       <ChoiceChip
@@ -873,21 +846,6 @@ export default function PoolRegistrationPage() {
                         option={option}
                         selected={formState.dietaryRestrictions.includes(option.value)}
                         onClick={() => handleDietaryToggle(option.value)}
-                      />
-                    ))}
-                  </View>
-                </View>
-
-                <View className='pool-reg__field'>
-                  <Text className='pool-reg__field-title'>口味浓淡</Text>
-                  <View className='pool-reg__choice-grid'>
-                    {TASTE_INTENSITY_OPTIONS.map((option) => (
-                      <ChoiceCard
-                        key={option.value}
-                        option={option}
-                        selected={formState.tasteIntensity === option.value}
-                        onClick={() => handleTasteIntensitySelect(option.value)}
-                        compact
                       />
                     ))}
                   </View>

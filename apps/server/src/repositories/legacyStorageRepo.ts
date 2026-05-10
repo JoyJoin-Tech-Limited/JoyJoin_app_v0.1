@@ -504,18 +504,18 @@ export class LegacyStorageRepo implements LegacyStorage {
   async getFinanceStats(): Promise<any> {
     // Total revenue from all payments
     const totalRevenue = await db.execute(sql`
-      SELECT COALESCE(SUM(amount), 0)::int as total FROM payments WHERE status = 'completed'
+      SELECT COALESCE(SUM(final_amount), 0)::int as total FROM payments WHERE status = 'completed'
     `);
     
     // Subscription revenue
     const subscriptionRevenue = await db.execute(sql`
-      SELECT COALESCE(SUM(amount), 0)::int as total FROM payments 
+      SELECT COALESCE(SUM(final_amount), 0)::int as total FROM payments 
       WHERE payment_type = 'subscription' AND status = 'completed'
     `);
     
     // Event revenue
     const eventRevenue = await db.execute(sql`
-      SELECT COALESCE(SUM(amount), 0)::int as total FROM payments 
+      SELECT COALESCE(SUM(final_amount), 0)::int as total FROM payments 
       WHERE payment_type = 'event' AND status = 'completed'
     `);
     

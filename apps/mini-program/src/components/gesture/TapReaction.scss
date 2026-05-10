@@ -1,0 +1,53 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.gesture-tap-reaction {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-md;
+  padding: $spacing-sm 0;
+
+  &__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6rpx;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $card-radius-sm;
+    border: 2rpx solid transparent;
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.15s ease, box-shadow 0.15s ease;
+    will-change: transform;
+    @include tap-feedback;
+
+    &--selected {
+      border-color: rgba($color-primary, 0.4);
+      background: rgba($color-primary, 0.06);
+    }
+
+    &--pulse {
+      transform: scale(1.3);
+      box-shadow: 0 0 24rpx rgba($color-primary, 0.25);
+    }
+  }
+
+  &__emoji {
+    font-size: 56rpx;
+    line-height: 1;
+    user-select: none;
+  }
+
+  &__label {
+    @include type-caption;
+    color: $color-text-secondary;
+    white-space: nowrap;
+  }
+
+  &__count {
+    @include type-micro;
+    color: $color-primary;
+    font-weight: $font-weight-semibold;
+    min-height: 20rpx;
+  }
+}

@@ -11,6 +11,7 @@ import type { User } from './schema'
 import type { GroupAnalysisResponse } from './types/groupAnalysis'
 import type { MascotBackstory } from './mascotConfig'
 import type { TierDisplayFlags } from './socialIcebreakerTierManifest'
+import type { XiaoyueAnalysisPublicResult } from './personality/discovery'
 
 export type ApiMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
 
@@ -378,6 +379,8 @@ export interface AuthUserResponse extends SanitizedAuthUser {
   mascotBackstory?: MascotBackstory
   /** Server-resolved tier display flags. */
   tierDisplayFlags?: TierDisplayFlags
+  /** Cached Xiaoyue AI analysis (null when not yet computed). */
+  xiaoyueAnalysis?: XiaoyueAnalysisPublicResult | null
 }
 
 export interface CreateMiniProgramPaymentIntentRequest {

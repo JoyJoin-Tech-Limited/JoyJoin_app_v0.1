@@ -283,7 +283,7 @@ export default function AdminEventTemplatesPage() {
   const weeklyEvents = templates.filter(t => t.isActive).length;
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">活动模板管理</h1>

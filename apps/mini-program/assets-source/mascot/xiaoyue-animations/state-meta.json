@@ -1,0 +1,22 @@
+{
+  "idle": { "duration": 1200, "loop": true },
+  "listening": { "duration": 1000, "loop": true },
+  "thinking": { "duration": 1000, "loop": true },
+  "loading": { "duration": 1000, "loop": true },
+  "curious": { "duration": 1100, "loop": true },
+  "nod": { "duration": 900, "loop": false, "oneShot": true },
+  "surprised": { "duration": 1000, "loop": false, "oneShot": true },
+  "celebrate": { "duration": 1000, "loop": false, "oneShot": true },
+  "coach": { "duration": 1200, "loop": true },
+  "neutral": { "duration": 1200, "loop": true },
+  "error": { "duration": 1000, "loop": false, "oneShot": true },
+  "success": { "duration": 800, "loop": false, "oneShot": true },
+  "waiting": { "duration": 1600, "loop": true },
+  "reveal": { "duration": 1400, "loop": true },
+  "thanks": { "duration": 1200, "loop": false, "oneShot": true },
+  "trust": { "duration": 1400, "loop": true },
+  "reassure": { "duration": 1600, "loop": true },
+  "empty": { "duration": 1800, "loop": true },
+  "welcome": { "duration": 1400, "loop": false, "oneShot": true },
+  "intro": { "duration": 900, "loop": false, "oneShot": true }
+}

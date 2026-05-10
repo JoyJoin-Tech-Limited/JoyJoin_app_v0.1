@@ -58,7 +58,7 @@ import {
   type ThemeSummary,
   type ViewerPairSpotlight,
   type UnifiedRevealTokens,
-} from './matchingStatusViewModels'
+} from '@shared/features/matching-status'
 import { generateChemistryPayoff } from '../../lib/matching/chemistryPayoff'
 
 const REGISTRATION_REFETCH_INTERVAL_MS = 30_000

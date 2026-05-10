@@ -1,0 +1,46 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.gesture-swipe-card {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+  touch-action: pan-y;
+
+  &__inner {
+    position: relative;
+    width: 100%;
+    will-change: transform;
+  }
+
+  &__hint {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 80rpx;
+    height: 80rpx;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    transition: opacity 120ms ease;
+
+    &--left {
+      left: 24rpx;
+      background: rgba($color-error, 0.12);
+      color: $color-error;
+    }
+
+    &--right {
+      right: 24rpx;
+      background: rgba($color-success, 0.12);
+      color: $color-success;
+    }
+  }
+
+  &__hint-icon {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+  }
+}

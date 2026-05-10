@@ -29,7 +29,8 @@ import {
   invitationUses,
   invitations,
   coupons,
-  userCoupons
+  userCoupons,
+  matchHistory,
 } from "@shared/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { logger } from "./lib/logger";
@@ -109,6 +110,11 @@ export interface UserWithProfile {
   
   // 活动类型（用于判断使用哪种预算）
   eventType: string | null;
+  
+  // New matching signals
+  ageMatchPreference: string | null;
+  tableVibePreference: string | null;
+  vibeVector: Record<string, number> | null;
 }
 
 export interface MatchGroup {
@@ -216,8 +222,29 @@ function meetsHardConstraints(
 }
 
 /**
+ * Calculate vibe vector cosine similarity (0-1) from 5D personality vectors.
+ */
+function calculateVibeVectorSimilarity(
+  v1: Record<string, number> | null,
+  v2: Record<string, number> | null,
+): number {
+  if (!v1 || !v2) return 0;
+  const keys = ['energy', 'conversation_style', 'initiative', 'novelty', 'humor'];
+  let dot = 0, norm1 = 0, norm2 = 0;
+  for (const k of keys) {
+    const a = typeof v1[k] === 'number' ? v1[k] : 0;
+    const b = typeof v2[k] === 'number' ? v2[k] : 0;
+    dot += a * b;
+    norm1 += a * a;
+    norm2 += b * b;
+  }
+  if (norm1 === 0 || norm2 === 0) return 0;
+  return dot / (Math.sqrt(norm1) * Math.sqrt(norm2));
+}
+
+/**
  * 计算两个用户之间的性格化学反应分数 (0-100)
- * 考虑主角色（70%）和次要角色的交叉兼容性（各15%，共30%）
+ * 考虑主角色（70%）和次要角色的交叉兼容性（各15%，共30%）+ vibeVector 5D similarity (30%)
  */
 function calculateChemistryScore(
   user1: UserWithProfile,
@@ -239,12 +266,20 @@ function calculateChemistryScore(
   const crossChemistry1 = crossChemistry1Raw * 0.15;
   const crossChemistry2 = crossChemistry2Raw * 0.15;
 
+  const archetypeScore = primaryChemistry + crossChemistry1 + crossChemistry2;
+
+  // vibeVector 5D continuous personality similarity (30% weight)
+  const vibeSim = calculateVibeVectorSimilarity(user1.vibeVector, user2.vibeVector);
+  const vibeScore = vibeSim * 100;
+  const hasVibe = user1.vibeVector && user2.vibeVector;
+  const score = hasVibe ? archetypeScore * 0.7 + vibeScore * 0.3 : archetypeScore;
+
   // Temporary debug log for Phase 0 verification (OBS-01)
   if (primaryChemistryRaw === 50) {
     logger.warn(`[ChemistryDebug] Primary chemistry defaulted to 50 for pair: ${primary1} × ${primary2}`);
   }
 
-  return Math.round(primaryChemistry + crossChemistry1 + crossChemistry2);
+  return Math.round(score);
 }
 
 /**
@@ -435,13 +470,9 @@ function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile
   let score = 0;
   let factors = 0;
   
-  // 根据活动类型选择偏好字段
   const eventType = user1.eventType || user2.eventType || "饭局";
   
   if (eventType === "酒局") {
-    // ❌ REMOVED: Budget scoring (now L1 hard constraint)
-    
-    // 酒吧主题偏好兼容性
     const barThemes1 = user1.barThemes || [];
     const barThemes2 = user2.barThemes || [];
     if (barThemes1.length > 0 && barThemes2.length > 0) {
@@ -450,7 +481,6 @@ function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile
       factors++;
     }
     
-    // 饮酒程度兼容性
     const alcohol1 = user1.alcoholComfort || [];
     const alcohol2 = user2.alcoholComfort || [];
     if (alcohol1.length > 0 && alcohol2.length > 0) {
@@ -460,10 +490,24 @@ function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile
     }
   }
   
-  // ❌ REMOVED: Cuisine preferences and taste intensity (饭局 food preferences deprecated)
+  const diet1 = user1.dietaryRestrictions || [];
+  const diet2 = user2.dietaryRestrictions || [];
+  if (diet1.length > 0 || diet2.length > 0) {
+    // Only one side has restrictions: no conflict → 100
+    if (diet1.length === 0 || diet2.length === 0) {
+      score += 100;
+    } else {
+      // Both have restrictions: compute overlap ratio
+      const allDiets = new Set([...diet1, ...diet2]);
+      const shared = diet1.filter(d => diet2.includes(d));
+      const compatibility = allDiets.size > 0
+        ? (shared.length / allDiets.size) * 100
+        : 100;
+      score += Math.min(compatibility, 100);
+    }
+    factors++;
+  }
   
-  // 社交目的兼容性（两种活动都使用）- fallback chain applied
-  // Note: Treat "flexible" as neutral (no strong intent); do not let it create a perfect match.
   const goals1Raw = getEffectiveIntent(user1);
   const goals2Raw = getEffectiveIntent(user2);
   const goals1 = goals1Raw.filter(g => g !== "flexible");
@@ -601,31 +645,75 @@ function calculateEducationAffinityScore(edu1: string, edu2: string): number {
 }
 
 /**
+ * Calculate age match preference compatibility (0-100).
+ */
+function calculateAgePreferenceAffinity(
+  pref1: string | null,
+  pref2: string | null,
+): number {
+  if (!pref1 || !pref2) return 50;
+  if (pref1 === pref2) return 100;
+  if (pref1 === "都可以" || pref2 === "都可以") return 75;
+  const complementary =
+    (pref1 === "偏年轻" && pref2 === "偏成熟") ||
+    (pref1 === "偏成熟" && pref2 === "偏年轻");
+  if (complementary) return 70;
+  return 40;
+}
+
+/**
+ * Calculate table vibe preference compatibility (0-100).
+ */
+function calculateVibePreferenceAffinity(
+  vibe1: string | null,
+  vibe2: string | null,
+): number {
+  if (!vibe1 || !vibe2) return 50;
+  if (vibe1 === vibe2) return 100;
+  const compatible = ['light_fun', 'natural_chat'];
+  if (compatible.includes(vibe1) && compatible.includes(vibe2)) return 75;
+  if ((vibe1 === 'deep_talk' && vibe2 === 'natural_chat') ||
+      (vibe2 === 'deep_talk' && vibe1 === 'natural_chat')) return 65;
+  if ((vibe1 === 'deep_talk' && vibe2 === 'light_fun') ||
+      (vibe2 === 'deep_talk' && vibe1 === 'light_fun')) return 30;
+  return 50;
+}
+
+/**
  * Calculate Social Affinity score (0-100) — 社交同频度
  * Captures same-frequency / resonance-style signals:
- *   - Life stage affinity (人生阶段亲和力, from LIFE_STAGE_AFFINITY matrix)
- *   - Education affinity (学历同频度, ordinal-distance-based — NOT diversity)
- *   - Hometown affinity (同乡亲和力, only when both opted in)
+ *   - Life stage affinity
+ *   - Education affinity
+ *   - Hometown affinity (opt-in)
+ *   - Age preference affinity (NEW)
+ *   - Table vibe preference affinity (NEW)
  */
 function calculateSocialAffinityScore(user1: UserWithProfile, user2: UserWithProfile): number {
   let score = 0;
   let factors = 0;
 
-  // Life stage affinity: 0-100 (from LIFE_STAGE_AFFINITY matrix)
   if (user1.workMode && user2.workMode) {
     score += calculateLifeStageAffinity(user1, user2);
     factors++;
   }
 
-  // Education affinity: 0-100 (ordinal proximity, same level = 100)
   if (user1.educationLevel && user2.educationLevel) {
     score += calculateEducationAffinityScore(user1.educationLevel, user2.educationLevel);
     factors++;
   }
 
-  // Hometown affinity: 0-100 (only when both opted in)
   if (user1.hometownAffinityOptin && user2.hometownAffinityOptin) {
     score += calculateHometownAffinityScore(user1, user2);
+    factors++;
+  }
+
+  if (user1.ageMatchPreference && user2.ageMatchPreference) {
+    score += calculateAgePreferenceAffinity(user1.ageMatchPreference, user2.ageMatchPreference);
+    factors++;
+  }
+
+  if (user1.tableVibePreference && user2.tableVibePreference) {
+    score += calculateVibePreferenceAffinity(user1.tableVibePreference, user2.tableVibePreference);
     factors++;
   }
 
@@ -680,12 +768,16 @@ async function calculatePairScore(
   semanticSimilarityEnabled = isSemanticSimilarityEnabled(),
   chemistryCalibrationMap?: ChemistryCalibrationMap,
   customWeights?: MatchingWeights,
+  matchHistoryLookup?: Map<string, { wouldMeetAgain: boolean | null }>,
 ): Promise<number> {
-  // Use a sorted key so (A,B) and (B,A) map to the same cache entry
   const sortedUserIds = user1.userId < user2.userId
     ? `${user1.userId}|${user2.userId}`
     : `${user2.userId}|${user1.userId}`;
   const cacheKey = `${semanticSimilarityEnabled ? "semantic" : "legacy"}${customWeights ? "|adaptive" : ""}|${sortedUserIds}`;
+
+  const history = matchHistoryLookup?.get(sortedUserIds);
+  if (history?.wouldMeetAgain === false) return -1;
+
   if (pairScoreCache?.has(cacheKey)) {
     return pairScoreCache.get(cacheKey)!;
   }
@@ -695,10 +787,7 @@ async function calculatePairScore(
   const language = calculateLanguageScore(user1, user2);
   const preference = calculatePreferenceScore(user1, user2);
 
-  // Social Affinity: life stage affinity + education affinity + hometown (when opted in)
   const socialAffinity = calculateSocialAffinityScore(user1, user2);
-
-  // Background Diversity: industry diversity + gender diversity
   const backgroundDiversity = calculateBackgroundDiversityScore(user1, user2);
   const semanticSimilarity = semanticSimilarityEnabled
     ? calculateSemanticSimilarityScore(user1, user2, semanticProfileCache)
@@ -714,10 +803,14 @@ async function calculatePairScore(
     semanticSimilarity,
   };
   const legacyScore = calculateWeightedPairScore(dimensions, false);
-  const result = calculateWeightedPairScore(dimensions, semanticSimilarityEnabled, customWeights);
+  let result = calculateWeightedPairScore(dimensions, semanticSimilarityEnabled, customWeights);
 
   if (semanticSimilarityEnabled && typeof semanticSimilarity === "number" && !customWeights) {
     observeSemanticSimilarityMetrics(semanticSimilarity, result - legacyScore);
+  }
+
+  if (history?.wouldMeetAgain === true) {
+    result = Math.min(100, result + 5);
   }
 
   pairScoreCache?.set(cacheKey, result);
@@ -736,6 +829,7 @@ async function calculateGroupPairScore(
   semanticSimilarityEnabled = isSemanticSimilarityEnabled(),
   chemistryCalibrationMap?: ChemistryCalibrationMap,
   customWeights?: MatchingWeights,
+  matchHistoryLookup?: Map<string, { wouldMeetAgain: boolean | null }>,
 ): Promise<number> {
   if (members.length < 2) return 0;
   
@@ -744,7 +838,7 @@ async function calculateGroupPairScore(
   
   for (let i = 0; i < members.length; i++) {
     for (let j = i + 1; j < members.length; j++) {
-      totalScore += await calculatePairScore(
+      const pairScore = await calculatePairScore(
         members[i],
         members[j],
         interestsCache,
@@ -753,8 +847,13 @@ async function calculateGroupPairScore(
         semanticSimilarityEnabled,
         chemistryCalibrationMap,
         customWeights,
+        matchHistoryLookup,
       );
-      pairCount++;
+      // Skip anti-repetition sentinel (-1) pairs — they should not contaminate the average
+      if (pairScore >= 0) {
+        totalScore += pairScore;
+        pairCount++;
+      }
     }
   }
   
@@ -902,6 +1001,7 @@ export async function runGreedyPoolMatchingCore(
   chemistryCalibrationMap: ChemistryCalibrationMap | undefined,
   invitationPairs: Array<{ inviterId: string; inviteeId: string }>,
   customWeights?: MatchingWeights,
+  matchHistoryLookup?: Map<string, { wouldMeetAgain: boolean | null }>,
 ): Promise<MatchGroup[]> {
   // 4. 贪婪分组算法（优先处理邀请关系）
   const groups: MatchGroup[] = [];
@@ -925,6 +1025,7 @@ export async function runGreedyPoolMatchingCore(
         semanticSimilarityEnabled,
         chemistryCalibrationMap,
         customWeights,
+        matchHistoryLookup,
       );
 
       // Check if this pair has an invitation relationship
@@ -979,6 +1080,7 @@ export async function runGreedyPoolMatchingCore(
             semanticSimilarityEnabled,
             chemistryCalibrationMap,
             customWeights,
+          matchHistoryLookup,
           );
         }
         const avgScore = totalScore / groupMembers.length;
@@ -1007,6 +1109,7 @@ export async function runGreedyPoolMatchingCore(
         semanticSimilarityEnabled,
         chemistryCalibrationMap,
         customWeights,
+        matchHistoryLookup,
       );
       // E: Compute true chemistry-only average (distinct from avgPairScore)
       const avgChemistryScore = calculateGroupChemistryScore(groupMembers, chemistryCalibrationMap);
@@ -1068,6 +1171,7 @@ export async function runGreedyPoolMatchingCore(
               semanticSimilarityEnabled,
               chemistryCalibrationMap,
               customWeights,
+            matchHistoryLookup,
             );
           }
           const avgScore = totalScore / group.members.length;
@@ -1090,6 +1194,7 @@ export async function runGreedyPoolMatchingCore(
             semanticSimilarityEnabled,
             chemistryCalibrationMap,
             customWeights,
+          matchHistoryLookup,
           );
           bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap);
           bestGroup.diversityScore = calculateGroupDiversity(bestGroup.members);
@@ -1116,6 +1221,7 @@ export async function runGreedyPoolMatchingCore(
           semanticSimilarityEnabled,
           chemistryCalibrationMap,
           customWeights,
+        matchHistoryLookup,
         );
         const avgChemistryScore = calculateGroupChemistryScore(stillStranded, chemistryCalibrationMap);
         const diversity = calculateGroupDiversity(stillStranded);
@@ -1165,6 +1271,7 @@ export async function runGreedyPoolMatchingCore(
                 semanticSimilarityEnabled,
                 chemistryCalibrationMap,
                 customWeights,
+              matchHistoryLookup,
               );
             }
             const avgScore = totalScore / group.members.length;
@@ -1186,6 +1293,7 @@ export async function runGreedyPoolMatchingCore(
               semanticSimilarityEnabled,
               chemistryCalibrationMap,
               customWeights,
+            matchHistoryLookup,
             );
             bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap);
             bestGroup.diversityScore = calculateGroupDiversity(bestGroup.members);
@@ -1255,6 +1363,9 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       barBudgetRange: eventPoolRegistrations.barBudgetRange,
       barThemes: eventPoolRegistrations.barThemes,
       alcoholComfort: eventPoolRegistrations.alcoholComfort,
+      ageMatchPreference: users.ageMatchPreference,
+      tableVibePreference: users.tableVibePreference,
+      vibeVector: users.vibeVector,
     })
     .from(eventPoolRegistrations)
     .innerJoin(users, eq(eventPoolRegistrations.userId, users.id))
@@ -1285,8 +1396,30 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     : undefined;
   const chemistryCalibrationMap = await getArchetypePairCalibrationMap();
 
-  // In-memory pair score cache for this run (C: avoid recomputing the same pair twice)
+  // In-memory pair score cache for this run
   const pairScoreCache = new Map<string, number>();
+
+  // Preload matchHistory for eligible users (anti-repetition + re-match boost)
+  const matchHistoryLookup = new Map<string, { wouldMeetAgain: boolean | null }>();
+  if (eligibleUserIds.length >= 2) {
+    const historyRows = await db
+      .select({
+        user1Id: matchHistory.user1Id,
+        user2Id: matchHistory.user2Id,
+        wouldMeetAgain: matchHistory.wouldMeetAgain,
+      })
+      .from(matchHistory)
+      .where(
+        and(
+          inArray(matchHistory.user1Id, eligibleUserIds),
+          inArray(matchHistory.user2Id, eligibleUserIds),
+        ),
+      );
+    for (const row of historyRows) {
+      const key = [row.user1Id, row.user2Id].sort().join('|');
+      matchHistoryLookup.set(key, { wouldMeetAgain: row.wouldMeetAgain });
+    }
+  }
   
   // 3.6 获取邀请关系 (invitation relationships)
   // Batch query all invitation uses for registrations in this pool, then join in memory.
@@ -1345,6 +1478,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     chemistryCalibrationMap,
     invitationPairs,
     customWeights,
+  matchHistoryLookup,
   );
 }
 

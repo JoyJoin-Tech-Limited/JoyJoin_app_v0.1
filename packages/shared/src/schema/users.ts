@@ -9,8 +9,11 @@ export {
 export type {
   User,
   UserInterests,
-  UserSemanticProfile,
   UserSocialTagGeneration,
   UpsertUser,
   RegisterUser,
 } from './_definitions.js';
+
+export type {
+  UserSemanticProfile,
+} from './_definitions_extended.js';

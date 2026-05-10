@@ -1,9 +1,18 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminGuard } from "@/components/admin/AdminGuard";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation, Link } from "wouter";
 import { lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/auth/useAuth";
+import { usePageTitle, getPageTitle } from "@/hooks/admin/usePageTitle";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AdminUsersPage = lazy(() => import("@/pages/admin/AdminUsersPage"));
@@ -29,9 +38,14 @@ const AdminMatchingLogsPage = lazy(() => import("@/pages/admin/AdminMatchingLogs
 const AdminPricingPage = lazy(() => import("@/pages/admin/AdminPricingPage"));
 const AdminEvolutionPage = lazy(() => import("@/pages/admin/AdminEvolutionPage"));
 const AdminAccountsPage = lazy(() => import("@/pages/admin/AdminAccountsPage"));
+const AdminAuditLogsPage = lazy(() => import("@/pages/admin/AdminAuditLogsPage"));
 
 export default function AdminLayout() {
   const { user } = useAuth();
+  const [location] = useLocation();
+  usePageTitle(location);
+
+  const pageTitle = getPageTitle(location).split(" · ")[0];
   const sidebarStyle = {
     "--sidebar-width": "20rem",
     "--sidebar-width-icon": "4rem",
@@ -46,7 +60,7 @@ export default function AdminLayout() {
           <header className="flex items-center justify-between border-b px-6 py-3">
             <div className="flex items-center gap-2">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <h1 className="text-lg font-medium">管理后台</h1>
+              <h1 className="text-lg font-medium">{pageTitle}</h1>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
@@ -54,6 +68,21 @@ export default function AdminLayout() {
               </span>
             </div>
           </header>
+          <div className="border-b bg-background px-6 py-2">
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link href="/admin/dashboard">管理后台</Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
           <main className="flex-1 overflow-auto bg-muted/30">
             <Suspense fallback={<div className="flex h-full items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>}>
               <Switch>
@@ -82,6 +111,7 @@ export default function AdminLayout() {
                 <Route path="/admin/matching-logs" component={AdminMatchingLogsPage} />
                 <Route path="/admin/evolution" component={AdminEvolutionPage} />
                 <Route path="/admin/accounts" component={AdminAccountsPage} />
+                <Route path="/admin/audit-logs" component={AdminAuditLogsPage} />
               </Switch>
             </Suspense>
           </main>

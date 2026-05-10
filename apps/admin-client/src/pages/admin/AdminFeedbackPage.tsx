@@ -15,6 +15,7 @@ import { AlertCircle, MessageSquare, TrendingUp, Eye, CheckCircle, XCircle, User
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from "recharts";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import EmptyState from "@/components/admin/EmptyState";
 
 interface FeedbackStats {
   totalFeedbacks: number;
@@ -383,7 +384,7 @@ export default function AdminFeedbackPage() {
           {isLoading ? (
             <div className="text-center py-8">加载中...</div>
           ) : feedbacks.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">暂无反馈数据</div>
+            <EmptyState title="暂无反馈数据" />
           ) : (
             <div className="rounded-md border">
               <Table>

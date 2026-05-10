@@ -141,6 +141,22 @@
     box-shadow: 0 22rpx 70rpx rgba(76, 39, 146, 0.12);
     margin-bottom: $spacing-lg;
     overflow: hidden;
+
+    &--anticipation::before {
+      content: '';
+      position: absolute;
+      inset: -4rpx;
+      border-radius: 46rpx;
+      border: 4rpx solid $color-primary;
+      opacity: 0.25;
+      animation: slot-frame-pulse 0.8s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    &--landed {
+      box-shadow: 0 22rpx 70rpx rgba($color-landed-gold, 0.18);
+    }
   }
 
   &__slot-rail {
@@ -162,11 +178,63 @@
     box-shadow: 0 0 0 2rpx rgba(255, 255, 255, 0.9), inset 0 0 0 2rpx rgba($color-primary, 0.08);
   }
 
-  &__slot-track {
+  &__slot-gold-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 42rpx;
+    border: 4rpx solid $color-landed-gold;
+    z-index: 20;
+    pointer-events: none;
+    animation: gold-ring-expand 0.8s ease-out forwards;
+  }
+
+  &__slot-viewport {
     position: relative;
+    /* NOTE: 600rpx ≈ 300px on 375px-width screens. Total component height
+       (headers + frame + progress + network card) approaches viewport limit
+       on iPhone SE. If adapting for smaller screens, reduce CARD_HEIGHT
+       in SlotStage.tsx and adjust this value together. */
+    height: 600rpx;
+    overflow: hidden;
+  }
+
+  &__slot-track {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     display: flex;
     flex-direction: column;
     gap: $spacing-sm;
+    will-change: transform;
+
+    &--anticipation {
+      transition: none;
+    }
+
+    &--spinning {
+      transition: transform 0.12s linear;
+    }
+
+    &--holding {
+      transition: transform 0.18s ease-out;
+    }
+
+    &--slowing {
+      transition: transform 0.25s ease-out;
+    }
+
+    &--nearMiss {
+      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    &--landed {
+      transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    &--snap {
+      transition: none !important;
+    }
   }
 
   &__slot-card {
@@ -179,10 +247,65 @@
     padding: $spacing-md;
     border-radius: 30rpx;
     border: 2rpx solid rgba($color-primary, 0.1);
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    background: rgba(255, 255, 255, 0.78);
+    opacity: 0.55;
+    transform: scale(0.94);
+    transition: opacity 0.25s ease, transform 0.25s ease, background 0.25s ease;
 
     &--active {
-      transform: scale(1.025);
+      opacity: 0.85;
+      transform: scale(0.98);
+      background: rgba(255, 255, 255, 0.98);
+      border-color: rgba($color-primary, 0.18);
+      box-shadow: 0 8rpx 32rpx rgba($color-primary, 0.08);
+    }
+
+    &--anticipation {
+      opacity: 0.3;
+      transform: scale(0.86);
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    &--spinning {
+      animation: slot-spin-pulse 0.12s ease-in-out infinite;
+      transition: none;
+    }
+
+    &--holding {
+      animation: slot-hold-pulse 0.3s ease-in-out infinite;
+      transition: none;
+    }
+
+    &--slowing {
+      opacity: 0.75;
+      transform: scale(0.96);
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    &--nearMiss {
+      opacity: 0.85;
+      transform: scale(0.98);
+    }
+
+    &--landed {
+      opacity: 0.35;
+      transform: scale(0.9);
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    &--landed#{&}--active {
+      opacity: 1;
+      transform: scale(1.04);
+      transition: none;
+      animation: slot-land-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+
+      .personality-results__slot-image {
+        animation: slot-image-landed-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      }
+
+      .personality-results__slot-name {
+        animation: slot-name-landed-reveal 0.35s ease-out 0.15s forwards;
+      }
     }
   }
 
@@ -204,6 +327,36 @@
     word-break: break-word;
   }
 
+  /* ── particle burst on landed ── */
+  &__burst-rings {
+    position: absolute;
+    inset: 0;
+    z-index: 15;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__burst-ring {
+    position: absolute;
+    width: 200rpx;
+    height: 200rpx;
+    border-radius: 50%;
+    border: 3rpx dashed $color-primary;
+    animation: burst-ring-expand 1s ease-out forwards;
+
+    &--gold {
+      border-color: $color-landed-gold;
+      animation-delay: 0.15s;
+    }
+
+    &--pink {
+      border-color: $color-burst-pink;
+      animation-delay: 0.3s;
+    }
+  }
+
   &__progress-track {
     width: 100%;
     max-width: 620rpx;
@@ -218,6 +371,11 @@
     height: 100%;
     border-radius: inherit;
     transition: width 0.22s ease;
+
+    &--landed {
+      background: $color-landed-gold !important;
+      box-shadow: 0 0 16rpx rgba($color-landed-gold, 0.4);
+    }
   }
 
   &__progress-copy {
@@ -621,6 +779,18 @@
     z-index: 1;
     width: 100%;
     height: 100%;
+    animation: hero-art-settle 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
+  }
+
+  @keyframes hero-art-settle {
+    from {
+      opacity: 0;
+      transform: scale(0.92);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 
   &__section-card {
@@ -1494,6 +1664,12 @@
       transform: none;
     }
 
+    &__hero-art {
+      animation: none !important;
+      opacity: 1;
+      transform: none;
+    }
+
     &__detail-overlay,
     &__detail-sheet {
       animation: none !important;
@@ -1527,5 +1703,143 @@
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
     color: $color-primary-dark;
+  }
+}
+
+// ─── Results loading skeleton ─────────────────────────────────────
+@keyframes results-skeleton-shimmer {
+  0% {
+    transform: translateX(-150%);
+  }
+  100% {
+    transform: translateX(150%);
+  }
+}
+
+.personality-results__skeleton {
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-md;
+  width: 100%;
+  max-width: 620rpx;
+}
+
+.personality-results__skeleton-progress,
+.personality-results__skeleton-frame,
+.personality-results__skeleton-text {
+  position: relative;
+  overflow: hidden;
+  background: $color-divider;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.5) 50%,
+      transparent 100%
+    );
+    transform: translateX(-150%);
+    animation: results-skeleton-shimmer 1.5s ease-in-out infinite;
+  }
+}
+
+.personality-results__skeleton-progress {
+  width: 100%;
+  height: 12rpx;
+  border-radius: 999rpx;
+}
+
+.personality-results__skeleton-frame {
+  width: 300rpx;
+  height: 200rpx;
+  border-radius: $card-radius;
+}
+
+.personality-results__skeleton-text {
+  width: 60%;
+  height: 24rpx;
+  border-radius: $radius-pill;
+}
+
+/* ── slot machine keyframes ────────────────────────────────────────── */
+@keyframes slot-frame-pulse {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.55; }
+}
+
+@keyframes slot-spin-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.93); }
+  50% { opacity: 0.75; transform: scale(0.97); }
+}
+
+@keyframes slot-hold-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.94); }
+  50% { opacity: 0.7; transform: scale(0.96); }
+}
+
+@keyframes slot-land-pop {
+  0% { opacity: 0.7; transform: scale(0.88); }
+  60% { transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1.04); }
+}
+
+@keyframes slot-image-landed-pop {
+  0% { transform: scale(0.92); }
+  60% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+@keyframes slot-name-landed-reveal {
+  0% { opacity: 0; transform: translateY(8rpx); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gold-ring-expand {
+  0% { transform: scale(0.85); opacity: 0.7; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes burst-ring-expand {
+  0% { transform: scale(0.3); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* ── reduced motion ────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .personality-results__slot-track {
+    transition: none !important;
+  }
+
+  .personality-results__slot-card {
+    animation: none !important;
+    opacity: 0.85;
+    transform: scale(0.98);
+
+    &--active {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .personality-results__slot-gold-ring,
+  .personality-results__burst-rings {
+    display: none;
+  }
+
+  .personality-results__slot-image,
+  .personality-results__slot-name {
+    animation: none !important;
+  }
+
+  .personality-results__skeleton-progress,
+  .personality-results__skeleton-frame,
+  .personality-results__skeleton-text {
+    &::after {
+      animation: none;
+      display: none;
+    }
   }
 }
