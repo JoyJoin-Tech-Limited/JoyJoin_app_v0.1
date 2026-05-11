@@ -37,6 +37,7 @@ import {
   loadSessionLieTruths,
   setLieTruths,
   getLieTruths,
+  getParticipant,
 } from '../lib/socialIcebreakerStore';
 import { curateMedals } from '../lib/medalCuration';
 import { logger } from '../lib/logger';
@@ -387,6 +388,10 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
   // F3: Wrong-phase guard — statement generation is only valid during lie_detective phase
   if (state.currentPhase !== 'lie_detective') {
     return res.status(400).json({ error: 'Not in lie_detective phase' });
+  }
+
+  if (!(await getParticipant(socialSessionId, userId))) {
+    return res.status(403).json({ error: 'Not a participant in this session' });
   }
 
   try {

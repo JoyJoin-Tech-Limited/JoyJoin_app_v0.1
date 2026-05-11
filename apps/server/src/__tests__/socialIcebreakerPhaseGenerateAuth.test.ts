@@ -78,11 +78,15 @@ vi.mock('../lib/socialIcebreakerStore', () => {
 const generateQuipBattlePrompts = vi.fn();
 const generateUndercoverWordPair = vi.fn();
 const generateGroupMirrorQuestions = vi.fn();
+const generateLieDetectiveStatements = vi.fn();
 
 vi.mock('../socialIcebreakerAIService', () => ({
   generateWarmupTopics: vi.fn(),
   generateMicroChallenges: vi.fn(),
-  generateLieDetectiveStatements: vi.fn(),
+  generateLieDetectiveStatements,
+  getLieDetectiveMode: vi.fn().mockReturnValue('v1'),
+  getDynamicDifficulty: vi.fn().mockReturnValue('medium'),
+  buildLieDetectiveV2RecapData: vi.fn(),
   generateXiaoYueComment: vi.fn().mockResolvedValue({ data: '', meta: {} }),
   generateRecapSummary: vi.fn(),
   generatePersonalityDiceChallenges: vi.fn(),
@@ -286,6 +290,70 @@ describe('POST undercover-word/generate host auth', () => {
       });
       expect(res.status).toBe(200);
       expect(storeCtx.sessions.get(id)?.undercoverWordPair?.civilianWord).toBe('苹果');
+    });
+  });
+});
+
+describe('POST lie-detective/generate participant auth', () => {
+  it('returns 401 without session', async () => {
+    const id = 'social_ld-gen-401';
+    storeCtx.sessions.set(id, baseSession({ socialSessionId: id, currentPhase: 'lie_detective' }));
+    seedParticipants(id);
+    generateLieDetectiveStatements.mockClear();
+
+    await withServer(async (baseUrl) => {
+      const res = await fetch(`${baseUrl}/api/social-icebreaker/${id}/lie-detective/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ displayName: 'X' }),
+      });
+      expect(res.status).toBe(401);
+      expect(generateLieDetectiveStatements).not.toHaveBeenCalled();
+    });
+  });
+
+  it('returns 403 when authenticated but not a session participant', async () => {
+    const id = 'social_ld-gen-403';
+    storeCtx.sessions.set(id, baseSession({ socialSessionId: id, currentPhase: 'lie_detective' }));
+    seedParticipants(id);
+    generateLieDetectiveStatements.mockClear();
+
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl, 'stranger-user');
+      const res = await fetch(`${baseUrl}/api/social-icebreaker/${id}/lie-detective/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify({ displayName: 'Intruder' }),
+      });
+      expect(res.status).toBe(403);
+      expect(generateLieDetectiveStatements).not.toHaveBeenCalled();
+    });
+  });
+
+  it('allows roster participant to generate statements', async () => {
+    const id = 'social_ld-gen-200';
+    storeCtx.sessions.set(id, baseSession({ socialSessionId: id, currentPhase: 'lie_detective' }));
+    seedParticipants(id);
+    generateLieDetectiveStatements.mockResolvedValueOnce({
+      data: [
+        { index: 0, text: 'A', isLie: false },
+        { index: 1, text: 'B', isLie: false },
+        { index: 2, text: 'C', isLie: true },
+      ],
+      meta: { model: 'stub' },
+    } as any);
+
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl, 'guest-user');
+      const res = await fetch(`${baseUrl}/api/social-icebreaker/${id}/lie-detective/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify({ displayName: 'Guest' }),
+      });
+      expect(res.status).toBe(200);
+      expect(generateLieDetectiveStatements).toHaveBeenCalled();
+      const players = storeCtx.sessions.get(id)?.lieDetectivePlayers;
+      expect(players?.some((p) => p.userId === 'guest-user')).toBe(true);
     });
   });
 });
