@@ -33,5 +33,3 @@ jobs:
           context: deploy/granite-embedding
           push: true
           tags: ghcr.io/joyjoin-tech-limited/granite-embedding:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
