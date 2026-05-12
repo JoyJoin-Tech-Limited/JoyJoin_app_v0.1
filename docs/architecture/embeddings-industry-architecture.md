@@ -489,4 +489,4 @@ EMBEDDING_LOCAL_FALLBACK_ENABLED=false   # NEW：启用本地模型降级
 - `apps/server/src/matchingSemantic.ts` — 语义匹配评分
 - `apps/server/src/inference/industryClassifier.ts` — 行业分类引擎
 - `packages/shared/src/schema.ts` — `userSemanticProfiles` 表定义
-- `docs/MATCHING_ALGORITHM_REFERENCE.md` — 匹配算法参考
+- `docs/systems/systems/MATCHING_ALGORITHM_REFERENCE.md` — 匹配算法参考

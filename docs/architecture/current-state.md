@@ -5,8 +5,8 @@ This document is the active architecture map for contributors working in the cur
 Use it together with:
 - `.github/copilot-instructions.md`
 - `DEVELOPER_QUICK_REFERENCE.md`
-- `docs/onboarding-flow.md`
-- `docs/ai-workflow-documentation-refresh.md` — when updating documentation across `docs/`, `.github/skills/`, and `.github/agents/` in one effort (scope tiers, validation)
+- `docs/systems/systems/onboarding-flow.md`
+- `docs/ai/ai/ai-workflow-documentation-refresh.md` — when updating documentation across `docs/`, `.github/skills/`, and `.github/agents/` in one effort (scope tiers, validation)
 
 ## Monorepo map
 
@@ -46,7 +46,7 @@ Use it together with:
 - **`onboardingCheckpoint`** (optional on `users`) can let `auth.ts` advance `nextStep` forward for recovery when the checkpoint is ahead of the base step.
 - Legacy onboarding surfaces stay under `apps/user-client/src/legacy/onboarding/`.
 
-**Mini-program:** `apps/mini-program/src/pages/onboarding/` mirrors the value-first and post-auth steps; shared helpers live in `packages/shared/src/onboarding.ts`. **Personality test** UI: `pages/onboarding/personality-test/` (subpackage). **WeChat login:** returning users `pages/login` + `hooks/useWeChatLogin.ts` (`/api/auth/wechat/login`); first-time handoff from test results uses `authenticateMiniProgramUserWithTest` (`/api/auth/wechat/login-with-test`) on the auth-gate page. **Payments:** `pages/blind-box-payment`, `pages/payment-verification`, plus `lib/paymentPendingOrder*.ts` and `app.ts` pending-order resume — see [`docs/PLATFORM_COORDINATION.md`](../PLATFORM_COORDINATION.md).
+**Mini-program:** `apps/mini-program/src/pages/onboarding/` mirrors the value-first and post-auth steps; shared helpers live in `packages/shared/src/onboarding.ts`. **Personality test** UI: `pages/onboarding/personality-test/` (subpackage). **WeChat login:** returning users `pages/login` + `hooks/useWeChatLogin.ts` (`/api/auth/wechat/login`); first-time handoff from test results uses `authenticateMiniProgramUserWithTest` (`/api/auth/wechat/login-with-test`) on the auth-gate page. **Payments:** `pages/blind-box-payment`, `pages/payment-verification`, plus `lib/paymentPendingOrder*.ts` and `app.ts` pending-order resume — see [`docs/reference/reference/PLATFORM_COORDINATION.md`](../reference/PLATFORM_COORDINATION.md).
 
 Primary files:
 - `apps/user-client/src/features/onboarding/README.md`
@@ -137,7 +137,7 @@ Boundary:
 Boundary:
 - If more than one app/runtime must agree on a contract, define it in `packages/shared`.
 - If code is runtime-specific, keep it in that app and import only the shared definitions.
-- `apps/user-client` is the active web sandbox and future web release surface; **`apps/mini-program` is the launch-primary WeChat client** for the current track. Shared business rules should not fork between them — use `packages/shared` and [`docs/PLATFORM_COORDINATION.md`](../PLATFORM_COORDINATION.md) when behaviour must align.
+- `apps/user-client` is the active web sandbox and future web release surface; **`apps/mini-program` is the launch-primary WeChat client** for the current track. Shared business rules should not fork between them — use `packages/shared` and [`docs/reference/reference/PLATFORM_COORDINATION.md`](../reference/PLATFORM_COORDINATION.md) when behaviour must align.
 
 ### 5. Server domain ownership
 

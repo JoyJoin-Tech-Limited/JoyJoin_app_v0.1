@@ -115,6 +115,7 @@
     }
   },
   "permission": {
+    "*": "allow",
     "task": {
       "*": "allow"
     },

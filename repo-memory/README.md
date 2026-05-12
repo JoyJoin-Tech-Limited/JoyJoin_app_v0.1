@@ -2,7 +2,7 @@
 
 This directory holds JoyJoin's repo-owned memory substrate. It is intentionally separate from `.git/.orchestration/` and `.git/.auto-eval/`, which remain operational state only.
 
-**Non-technical decision guide (CEO / product owner):** [`docs/repo-memory-decisions-for-leaders.md`](../docs/repo-memory-decisions-for-leaders.md) — plain-English choices: draft vs official, when to review, automation boundaries.
+**Non-technical decision guide (CEO / product owner):** [`docs/reference/repo-memory-decisions-for-leaders.md`](../docs/reference/repo-memory-decisions-for-leaders.md) — plain-English choices: draft vs official, when to review, automation boundaries.
 
 ## Why this exists (and how it differs from orchestration state)
 

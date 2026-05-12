@@ -41,9 +41,9 @@
 - If you ever copied values from the removed tracked `.env` or the old hard-coded deployment database URL, rotate `DATABASE_URL`, `JWT_SECRET`, `SESSION_SECRET`, `WECHAT_SECRET`, and `ADMIN_CREATE_SECRET_KEY`.
 
 ### Guardrails: latent-state and multimodal AI work stays planning-only until gates pass
-- Read `docs/ai-agent-harness-separation-strategy.md` first for **current shipped AI behavior, architectural invariants, and separation boundaries**.
-- `docs/AI_INTEGRATION_PLAN.md` Phase 3 (`user_latent_state`, behavioral-history explanations, multimodal enrichment) is a **strategy / planning document**, not an instruction to add runtime code now.
-- Use `docs/AI_INTEGRATION_PLAN.md` for **phased roadmap, rollout gates, and exit criteria** only; it must not be used by itself to justify runtime features.
+- Read `docs/ai/ai-agent-harness-separation-strategy.md` first for **current shipped AI behavior, architectural invariants, and separation boundaries**.
+- `docs/ai/AI_INTEGRATION_PLAN.md` Phase 3 (`user_latent_state`, behavioral-history explanations, multimodal enrichment) is a **strategy / planning document**, not an instruction to add runtime code now.
+- Use `docs/ai/AI_INTEGRATION_PLAN.md` for **phased roadmap, rollout gates, and exit criteria** only; it must not be used by itself to justify runtime features.
 - Do **not** add schema migrations, background jobs, scoring inputs, API routes, consent/upload flows, or user-facing UI for latent-state or multimodal features until the documented prerequisites, consent requirements, fairness review, observability, and explicit product/engineering gate approval are all satisfied.
 - Planning-only shared contracts are allowed only when they are clearly marked as non-runtime and remain disconnected from active imports/callers.
 - Existing deterministic authority still applies: `poolMatchingService.ts` remains the matching authority, and no latent-state or multimodal signal may partially influence matching or user-facing explanations before its rollout gate is formally cleared.
@@ -51,8 +51,8 @@
 ### Guardrails: repo AI workflow and orchestration changes
 - Read `.github/AI_WORKFLOW_POLICY.md` before deciding whether work should stay in direct delivery, go through `Researcher` -> `Planner`, or escalate into the operational review lane.
 - Read `.github/ORCHESTRATION_GOVERNANCE.md` before changing `.github/agents/`, `.github/skills/`, `.github/orchestration.yaml`, hook behavior, or orchestration runtime scripts.
-- For coordinated refreshes across `docs/`, `.github/skills/`, and `.github/agents/`, follow `docs/ai-workflow-documentation-refresh.md` (scope tiers, routing lanes, `npm run orchestration:validate` when orchestration or skill routing changes).
-- Keep repo workflow governance separate from runtime product AI authority. For shipped AI behavior and rollout gates, continue to use `docs/ai-agent-harness-separation-strategy.md` and `docs/AI_INTEGRATION_PLAN.md`.
+- For coordinated refreshes across `docs/`, `.github/skills/`, and `.github/agents/`, follow `docs/ai/ai-workflow-documentation-refresh.md` (scope tiers, routing lanes, `npm run orchestration:validate` when orchestration or skill routing changes).
+- Keep repo workflow governance separate from runtime product AI authority. For shipped AI behavior and rollout gates, continue to use `docs/ai/ai-agent-harness-separation-strategy.md` and `docs/ai/AI_INTEGRATION_PLAN.md`.
 - Do not add a new agent or skill by default. Prefer existing skills and audited support agents unless repeated workflow evidence justifies expansion.
 
 ---
@@ -190,7 +190,7 @@ joyjoin-monorepo/
 
 ### Taro mini-program (launch focus)
 
-`apps/mini-program` is the **launch-primary** and only shipping user-facing client. The web sandbox (`apps/user-client`) was archived to `archived/workspaces/user-client/`. Cross-surface rules (mini-program ↔ admin-client): [`docs/PLATFORM_COORDINATION.md`](docs/PLATFORM_COORDINATION.md).
+`apps/mini-program` is the **launch-primary** and only shipping user-facing client. The web sandbox (`apps/user-client`) was archived to `archived/workspaces/user-client/`. Cross-surface rules (mini-program ↔ admin-client): [`docs/reference/PLATFORM_COORDINATION.md`](docs/reference/PLATFORM_COORDINATION.md).
 
 | Concern | Location |
 |---------|----------|
@@ -249,7 +249,7 @@ Active domain modules in `routes/domains/`:
 
 ## Observability & Ops
 
-> Full reference: `docs/observability.md` · `docs/runbooks/observability.md`
+> Full reference: `docs/systems/observability.md` · `docs/runbooks/observability.md`
 
 | Concern | File / endpoint |
 |---------|-----------------|
@@ -368,7 +368,7 @@ Pre-auth value-first entry remains `/personality-test` → `/personality-test/re
 Active onboarding pages: `apps/mini-program/src/pages/onboarding/`  
 Legacy surfaces: `archived/workspaces/user-client/src/legacy/onboarding/` — do not add new routes or CTAs there
 
-> Full reference: `docs/onboarding-flow.md` · skill: `onboarding-state-architecture`
+> Full reference: `docs/systems/onboarding-flow.md` · skill: `onboarding-state-architecture`
 
 ### Deprecated Fields
 
@@ -537,7 +537,7 @@ The IcebreakerToolkit (pre-event game browser) is a **LEGACY** tool replaced by 
 4. **Asset locations (archived):** `archived/workspaces/user-client/src/assets/matching/{shared,waiting,no-match,join-error,extended-data-empty,test-incomplete}/`
 5. **Active blind-pool entry flow:** `DiscoverPage` query-param join sheet → `MatchingStatusPage`; browser blind-box checkout returns through `BlindBoxConfirmationPage`, which confirms payment state and then hands off to `/events` or `/discover`.
 
-Full reference: `docs/ui-matching-reveal-improvements.md`, `docs/matching-reveal-implementation-summary.md`
+Full reference: `docs/reference/ui-matching-reveal-improvements.md`, `docs/matching-reveal-implementation-summary.md`
 
 ---
 
@@ -554,7 +554,7 @@ After `FinalProfileReviewPage`, a secondary CTA "先浏览 →" lets users enter
 
 ## Performance Guardrails
 
-> Full reference: `docs/perf.md`
+> Full reference: `docs/reference/perf.md`
 
 | Guardrail | Rule |
 |-----------|------|
@@ -1116,7 +1116,7 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | `DEBUG_AUTH` | `1` to enable verbose auth debug logging (non-production only) |
 | `ENABLE_EVENT_THEME_TITLE_GENERATION` | `true`/`false` to toggle AI event theme generation |
 | `DEEPSEEK_TIMEOUT_MS` | AI request timeout in ms (default: 5000) |
-| `ENABLE_SEMANTIC_SIMILARITY` | `true` enables the 7th pair-scoring dimension (6% weight, semantic similarity); default `false` — 6D scoring. See `docs/LAUNCH_CONFIG.md` and `apps/server/src/matchingSemantic.ts`. |
+| `ENABLE_SEMANTIC_SIMILARITY` | `true` enables the 7th pair-scoring dimension (6% weight, semantic similarity); default `false` — 6D scoring. See `docs/product/LAUNCH_CONFIG.md` and `apps/server/src/matchingSemantic.ts`. |
 | `EMBEDDING_TIMEOUT_MS` | Embedding API call timeout (default: 10000) |
 | `EMBEDDING_MAX_RETRIES` | Embedding API retry count (default: 2) |
 
@@ -1247,13 +1247,13 @@ const mutation = useMutation({
 | Database Schema | `packages/shared/src/schema.ts` | - |
 | Archetype Data | `packages/shared/src/personality/archetypeRegistry.ts` | - |
 | Legacy Redirect Only | `QUICK_REFERENCE.md` | Redirect stub only — not authoritative |
-| Platform Coordination Playbook | `docs/PLATFORM_COORDINATION.md` | Canonical web/mini-program auth and payment coordination |
-| AI Current-State Guardrails | `docs/ai-agent-harness-separation-strategy.md` | Read first for shipped AI boundaries |
-| AI Roadmap & Gates | `docs/AI_INTEGRATION_PLAN.md` | Planning-only phased delivery document |
-| **Admin RBAC Matrix** | `docs/admin-rbac-matrix.md` | Admin endpoint → role requirements |
+| Platform Coordination Playbook | `docs/reference/PLATFORM_COORDINATION.md` | Canonical web/mini-program auth and payment coordination |
+| AI Current-State Guardrails | `docs/ai/ai-agent-harness-separation-strategy.md` | Read first for shipped AI boundaries |
+| AI Roadmap & Gates | `docs/ai/AI_INTEGRATION_PLAN.md` | Planning-only phased delivery document |
+| **Admin RBAC Matrix** | `docs/admin/admin-rbac-matrix.md` | Admin endpoint → role requirements |
 | **Admin Incident Runbook** | `docs/runbooks/admin-incident-handling.md` | Ops tasks, triage, daily checklist |
-| **Observability Guide** | `docs/observability.md` | Structured logging, Prometheus, Grafana, alerting, synthetic monitoring |
-| **Internal Beta Launch Risks** | `docs/launch-risks.md` | MVP caveats + risk acceptance sign-off |
+| **Observability Guide** | `docs/systems/observability.md` | Structured logging, Prometheus, Grafana, alerting, synthetic monitoring |
+| **Internal Beta Launch Risks** | `docs/product/launch-risks.md` | MVP caveats + risk acceptance sign-off |
 
 ---
 

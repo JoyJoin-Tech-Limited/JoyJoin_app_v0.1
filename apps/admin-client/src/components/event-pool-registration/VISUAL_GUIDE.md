@@ -1,6 +1,6 @@
 # Event Pool Registration - Component Showcase
 
-> **Deprecated duplicate (not canonical).** This file is retained only as an old snapshot. Refer to the user-client flow and canonical docs in `DEVELOPER_QUICK_REFERENCE.md` and `docs/ui-matching-reveal-improvements.md`.
+> **Deprecated duplicate (not canonical).** This file is retained only as an old snapshot. Refer to the user-client flow and canonical docs in `DEVELOPER_QUICK_REFERENCE.md` and `docs/reference/ui-matching-reveal-improvements.md`.
 
 ## 🎨 Visual Component Guide
 

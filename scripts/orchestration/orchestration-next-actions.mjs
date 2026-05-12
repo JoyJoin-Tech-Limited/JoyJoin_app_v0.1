@@ -46,7 +46,7 @@ const TRACK_DEFINITIONS = [
     pathMatchers: [
       'docs/mini-program',
       'docs/runbooks/mini-program',
-      'docs/PLATFORM_COORDINATION.md',
+      'docs/reference/PLATFORM_COORDINATION.md',
       'docs/mini-program-data-fetching.md',
     ],
     keywords: ['mini-program', 'wechat', 'runbook', 'platform coordination'],

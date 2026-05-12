@@ -5,7 +5,7 @@
 **Status:** Proposal for review  
 **Scope:** Repo workflow architecture, durable memory-plane design, and staged rollout for JoyJoin's AI-assisted delivery system
 
-> **Proposal only.** This document is the first PR artifact for a future memory-plane rollout. It does not describe shipped behavior and does not replace the current-state authority of `.github/ORCHESTRATION.md`, `.github/AI_WORKFLOW_POLICY.md`, `.github/ORCHESTRATION_GOVERNANCE.md`, or `docs/ai-agent-harness-separation-strategy.md`.
+> **Proposal only.** This document is the first PR artifact for a future memory-plane rollout. It does not describe shipped behavior and does not replace the current-state authority of `.github/ORCHESTRATION.md`, `.github/AI_WORKFLOW_POLICY.md`, `.github/ORCHESTRATION_GOVERNANCE.md`, or `docs/ai/ai/ai-agent-harness-separation-strategy.md`.
 >
 > **Update (2026-04):** A first **file-backed** durable notes layer now lives under [`repo-memory/`](../repo-memory/README.md) (candidates → promoted, schema-validated). This RFC still describes the fuller **Profile C** vision (retrieval, SelfIteration publish path, richer planes); see also [`docs/proposals/README.md`](./README.md) for triage.
 
@@ -72,7 +72,7 @@ The result is a repo with a solid control plane but no durable memory plane. Joy
 2. Reusing `.git/.orchestration/*` or `.git/.auto-eval/pass-state.json` as durable memory storage.
 3. Shipping vector databases, embeddings, or autonomous background memory synthesis in the first rollout.
 4. Promoting `SelfIteration` into the core orchestration graph or giving it publish authority.
-5. Changing JoyJoin's shipped runtime AI product behavior described in `docs/ai-agent-harness-separation-strategy.md`.
+5. Changing JoyJoin's shipped runtime AI product behavior described in `docs/ai/ai/ai-agent-harness-separation-strategy.md`.
 
 ## Proposed Target State
 

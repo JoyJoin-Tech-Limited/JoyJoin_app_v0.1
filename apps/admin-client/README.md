@@ -7,7 +7,7 @@ This workspace contains JoyJoin's separate admin portal, built with React + Vite
 - `apps/admin-client/src/main.tsx` — Vite bootstrap
 - `apps/admin-client/src/AdminApp.tsx` — admin route composition and providers
 - `apps/server/src/routes/domains/admin.ts` — server-side admin API ownership
-- `docs/admin-rbac-matrix.md` — role/permission matrix
+- `docs/admin/admin-rbac-matrix.md` — role/permission matrix
 
 ## Where new files go
 
@@ -26,7 +26,7 @@ npm run test -w @joyjoin/admin-client
 
 ## Related docs
 
-- [`../../docs/admin-rbac-matrix.md`](../../docs/admin-rbac-matrix.md)
+- [`../../docs/admin/admin-rbac-matrix.md`](../../docs/admin/admin-rbac-matrix.md)
 - [`../../docs/README.md`](../../docs/README.md)
 - [`../../apps/server/src/README.md`](../../apps/server/src/README.md)
 - [`../../.github/skills/frontend-component-architecture/SKILL.md`](../../.github/skills/frontend-component-architecture/SKILL.md)

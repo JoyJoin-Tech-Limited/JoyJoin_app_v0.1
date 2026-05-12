@@ -2,7 +2,7 @@
 
 > **Status:** Implemented — last updated 2026-04-29  
 > **Scope:** Unified architecture for server-side connection points and client-side spark predictions  
-> **Related:** `docs/MATCHING_ALGORITHM_REFERENCE.md`, `docs/interest-signal-boost.md`
+> **Related:** `docs/systems/systems/MATCHING_ALGORITHM_REFERENCE.md`, `docs/systems/systems/interest-signal-boost.md`
 
 ---
 
@@ -62,7 +62,7 @@ Generates plain-text connection points by comparing two user profiles. These str
 | Interest heat | `user_interests.heat` | 深度同好 threshold check |
 | Chemistry matrix | `archetypeCompatibility.ts` | 性格互补 threshold (>85) |
 
-> **Architectural boundary:** `user_interest_signals` are **never** used in deterministic pair scoring (`poolMatchingService.ts`). They are valid **only** for AI prompt enrichment and connection point generation. See `docs/interest-signal-boost.md` §1.
+> **Architectural boundary:** `user_interest_signals` are **never** used in deterministic pair scoring (`poolMatchingService.ts`). They are valid **only** for AI prompt enrichment and connection point generation. See `docs/systems/systems/interest-signal-boost.md` §1.
 
 ### 2.4 API Contract
 
@@ -297,7 +297,7 @@ Timer leak fixes in the matching-status screen:
 | Mini-program unified reveal card | `apps/mini-program/src/pages/matching-status/components/UnifiedRevealCard.tsx` |
 | Mini-program reveal state hook | `apps/mini-program/src/pages/matching-status/hooks/useMatchingStatus.ts` |
 | Mini-program reveal VM tests | `apps/mini-program/src/pages/matching-status/viewModels/matchingStatusViewModels.test.ts` |
-| Interest signal system | `docs/interest-signal-boost.md` |
+| Interest signal system | `docs/systems/systems/interest-signal-boost.md` |
 
 ---
 

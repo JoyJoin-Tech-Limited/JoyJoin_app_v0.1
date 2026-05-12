@@ -8,18 +8,18 @@
 
 | Document | Role |
 |----------|------|
-| [`AI_INTEGRATION_PLAN.md`](./AI_INTEGRATION_PLAN.md) | Product AI phases A–E, gates, admin modules, trace schema — **source of truth for capability sequencing** |
-| [`ai-agent-harness-separation-strategy.md`](./ai-agent-harness-separation-strategy.md) | Runtime invariants — AI must not own deterministic matching or onboarding authority |
+| [`ai/AI_INTEGRATION_PLAN.md`](./ai/AI_INTEGRATION_PLAN.md) | Product AI phases A–E, gates, admin modules, trace schema — **source of truth for capability sequencing** |
+| [`ai/ai-agent-harness-separation-strategy.md`](./ai/ai-agent-harness-separation-strategy.md) | Runtime invariants — AI must not own deterministic matching or onboarding authority |
 | [`mini-program-ai-roadmap-handoff.md`](./mini-program-ai-roadmap-handoff.md) | **When** to use Supervisor → Researcher → Planner + MP inventory pointer |
-| [`AI_FEATURE_INVENTORY.md`](./AI_FEATURE_INVENTORY.md) | What the mini-program actually calls today |
+| [`ai/AI_FEATURE_INVENTORY.md`](./ai/AI_FEATURE_INVENTORY.md) | What the mini-program actually calls today |
 
-This plan turns the handoff **tranches** into **sequenced work packages** with owners, outputs, and verification. It does **not** replace `AI_INTEGRATION_PLAN.md`; it aligns MP and server execution with phases **A → C** first (observability + shadow), **D–E** only after gates.
+This plan turns the handoff **tranches** into **sequenced work packages** with owners, outputs, and verification. It does **not** replace `ai/AI_INTEGRATION_PLAN.md`; it aligns MP and server execution with phases **A → C** first (observability + shadow), **D–E** only after gates.
 
 ## Delivery lane
 
 - **Kickoff (recommended):** Supervisor → Researcher → Planner → approval → implementation ([`.github/AI_WORKFLOW_POLICY.md`](../.github/AI_WORKFLOW_POLICY.md)).
 - **Implementation:** **AI Engineer** (`apps/server` routers, services, metrics), **Backend Engineer** (flags, storage for traces), **Taro Mini-Program Frontend Engineer** (MP surfaces), **QA Agent** / **Verifier** (sign-off).
-- **Domain skills:** `matching-domain`, `onboarding-state-architecture`, `social-icebreaker-domain` under [`.github/skills/`](../.github/skills/README.md); runtime AI boundaries in [`ai-agent-harness-separation-strategy.md`](./ai-agent-harness-separation-strategy.md).
+- **Domain skills:** `matching-domain`, `onboarding-state-architecture`, `social-icebreaker-domain` under [`.github/skills/`](../.github/skills/README.md); runtime AI boundaries in [`ai/ai-agent-harness-separation-strategy.md`](./ai/ai-agent-harness-separation-strategy.md).
 
 ---
 
@@ -28,7 +28,7 @@ This plan turns the handoff **tranches** into **sequenced work packages** with o
 - MP uses `getPoolGroupAnalysis` on matching-status, squad-unboxing, pool-group-detail (shared query key).
 - MP profile review uses `getProfileTagline`.
 - Theme reveal invalidates registration, `my-pool-registrations`, and `pool-group` caches on matching-status.
-- [`AI_FEATURE_INVENTORY.md`](./AI_FEATURE_INVENTORY.md) reflects current behavior.
+- [`ai/AI_FEATURE_INVENTORY.md`](./ai/AI_FEATURE_INVENTORY.md) reflects current behavior.
 
 **No further work** unless regression tests or product copy changes are requested.
 
@@ -94,7 +94,7 @@ This plan turns the handoff **tranches** into **sequenced work packages** with o
 
 ## Work package 5 — Gated phases (D–E) — **do not start** until gates met
 
-- **Phase D (bounded rerank):** Only after shadow data and statistical gate in [`AI_INTEGRATION_PLAN.md`](./AI_INTEGRATION_PLAN.md) §10.3 Phase D.
+- **Phase D (bounded rerank):** Only after shadow data and statistical gate in [`ai/AI_INTEGRATION_PLAN.md`](./ai/AI_INTEGRATION_PLAN.md) §10.3 Phase D.
 - **Phase E (host/admin icebreaker console):** User-facing MP stays **non-autonomous**; host tools live in admin / host surfaces per plan.
 
 **Exit:** Explicit go/no-go from Product + metrics review.
@@ -130,4 +130,4 @@ Adjust to team capacity; **do not** parallelize WP3 shadow analysis with ungated
 | LLM latency hurts MP UX | Async + cache + fallbacks; never block pool matching |
 | Prompt drift without visibility | WP1 + WP2 versioning |
 | Over-trusting model order | Shadow first; deterministic authority preserved |
-| Doc drift | Update [`AI_FEATURE_INVENTORY.md`](./AI_FEATURE_INVENTORY.md) when MP calls change |
+| Doc drift | Update [`ai/AI_FEATURE_INVENTORY.md`](./ai/AI_FEATURE_INVENTORY.md) when MP calls change |

@@ -18,7 +18,7 @@
 |------------|-------------|
 | **WeChat runtime** | Subpackages, `preloadRule`, native tab bar, Skyline caveats — refactors must not assume web-only React patterns blindly. |
 | **Server authority** | Onboarding `nextStep`, match status, payments — client is **thin**; no new “source of truth” on device. See [`onboarding-state-architecture`](../../.github/skills/onboarding-state-architecture/SKILL.md), [`payment-entitlement-authority`](../../.github/skills/payment-entitlement-authority/SKILL.md). |
-| **Sibling surfaces** | Shared contracts live in `packages/shared`; coordinate with web per [`docs/PLATFORM_COORDINATION.md`](../PLATFORM_COORDINATION.md) and [`platform-coordination-protocol`](../../.github/skills/platform-coordination-protocol/SKILL.md). |
+| **Sibling surfaces** | Shared contracts live in `packages/shared`; coordinate with web per [`docs/reference/reference/PLATFORM_COORDINATION.md`](../reference/PLATFORM_COORDINATION.md) and [`platform-coordination-protocol`](../../.github/skills/platform-coordination-protocol/SKILL.md). |
 | **Blast radius** | `matching-status`, payments, icebreaker — treat as **high**; use stronger review / smaller PRs. |
 
 ---
@@ -51,7 +51,7 @@
 | Confirm `npm run typecheck -w mini-program` in CI / pre-push habit | Green on `main` |
 | Extend or run [`docs/runbooks/mini-program-ai-smoke.md`](../runbooks/mini-program-ai-smoke.md) for touched AI surfaces | Checklist signed for release candidate |
 | Document current **query key** conventions for pool registration / group analysis / matching (`['mini-program', ...]`) in MP README or a short `docs/mini-program-data-fetching.md` | New doc or README section merged |
-| Optional: snapshot **bundle / page list** for subpackage boundaries (reference [`docs/perf.md`](../perf.md)) | Baseline noted |
+| Optional: snapshot **bundle / page list** for subpackage boundaries (reference [`docs/reference/reference/perf.md`](../reference/perf.md)) | Baseline noted |
 
 **Exit:** Team agrees “what green looks like” for Phases 1–2.
 
@@ -97,7 +97,7 @@
 |-------------|--------|
 | `resolvePersistedThemeSummary(...)` (name illustrative) | Pure function + tests for ordering |
 | Comments at call sites | “Why this wins over that” |
-| Optional | Align field names with [`docs/PLATFORM_COORDINATION.md`](../PLATFORM_COORDINATION.md) |
+| Optional | Align field names with [`docs/reference/reference/PLATFORM_COORDINATION.md`](../reference/PLATFORM_COORDINATION.md) |
 
 **Exit:** No contradictory theme lines in dev; fewer “which field is live?” questions in review.
 
@@ -134,7 +134,7 @@
 
 - [ ] `npm run typecheck -w mini-program`
 - [ ] Relevant runbook section updated if user-visible behavior or flags change
-- [ ] If shared types or API contracts change: **`docs/PLATFORM_COORDINATION.md`** or sibling client noted
+- [ ] If shared types or API contracts change: **`docs/reference/reference/PLATFORM_COORDINATION.md`** or sibling client noted
 - [ ] Orchestration / agents unchanged unless `.github/` edited — then `npm run orchestration:validate`
 
 ---

@@ -22,16 +22,18 @@ describe('EmbeddingClient', () => {
     vi.resetModules();
     openAIConstructorMock.mockReset();
     embeddingsCreateMock.mockReset();
-    delete process.env.DEEPSEEK_API_KEY;
+    delete process.env.EMBEDDING_BASE_URL;
+    delete process.env.EMBEDDING_API_KEY;
     delete process.env.EMBEDDING_TIMEOUT_MS;
     delete process.env.EMBEDDING_MAX_RETRIES;
   });
 
-  it('creates a DeepSeek OpenAI-compatible client with timeout and retries', async () => {
-    process.env.DEEPSEEK_API_KEY = 'sk-deepseek-test';
+  it('creates a client from EMBEDDING_BASE_URL', async () => {
+    process.env.EMBEDDING_BASE_URL = 'http://localhost:8000/v1';
+    process.env.EMBEDDING_API_KEY = 'sk-local';
     embeddingsCreateMock.mockResolvedValue({
-      data: [{ embedding: [0.1, 0.2] }],
-      model: 'deepseek-embedding',
+      data: [{ embedding: [0.1, 0.2, 0.3] }],
+      model: 'granite-embedding-97m-multilingual-r2',
     });
 
     const { EmbeddingClient } = await import('../embeddingClient');
@@ -40,23 +42,44 @@ describe('EmbeddingClient', () => {
 
     expect(openAIConstructorMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        apiKey: 'sk-deepseek-test',
-        baseURL: 'https://api.deepseek.com',
+        apiKey: 'sk-local',
+        baseURL: 'http://localhost:8000/v1',
         timeout: 10000,
         maxRetries: 2,
       }),
     );
-    expect(result?.provider).toBe('deepseek');
-    expect(result?.vector).toEqual([0.1, 0.2]);
+    expect(result?.provider).toBe('self_hosted');
+    expect(result?.vector).toEqual([0.1, 0.2, 0.3]);
+  });
+
+  it('accepts empty API key for self-hosted endpoints without auth', async () => {
+    process.env.EMBEDDING_BASE_URL = 'http://localhost:8000/v1';
+    embeddingsCreateMock.mockResolvedValue({
+      data: [{ embedding: [0.42] }],
+      model: 'granite-embedding-97m-multilingual-r2',
+    });
+
+    const { EmbeddingClient } = await import('../embeddingClient');
+    const client = new EmbeddingClient();
+    const result = await client.embed('hello');
+
+    expect(openAIConstructorMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiKey: '',
+        baseURL: 'http://localhost:8000/v1',
+      }),
+    );
+    expect(result?.provider).toBe('self_hosted');
+    expect(result?.vector).toEqual([0.42]);
   });
 
   it('supports timeout and retry overrides from env', async () => {
-    process.env.DEEPSEEK_API_KEY = 'sk-deepseek-test';
+    process.env.EMBEDDING_BASE_URL = 'http://localhost:8000/v1';
     process.env.EMBEDDING_TIMEOUT_MS = '2500';
     process.env.EMBEDDING_MAX_RETRIES = '1';
     embeddingsCreateMock.mockResolvedValue({
       data: [{ embedding: [0.1, 0.2] }],
-      model: 'deepseek-embedding',
+      model: 'granite-embedding-97m-multilingual-r2',
     });
 
     const { EmbeddingClient } = await import('../embeddingClient');
@@ -65,15 +88,14 @@ describe('EmbeddingClient', () => {
 
     expect(openAIConstructorMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        apiKey: 'sk-deepseek-test',
-        baseURL: 'https://api.deepseek.com',
+        baseURL: 'http://localhost:8000/v1',
         timeout: 2500,
         maxRetries: 1,
       }),
     );
   });
 
-  it('returns null when DEEPSEEK_API_KEY is not set (no OpenAI vendor path)', async () => {
+  it('returns null when EMBEDDING_BASE_URL is not set', async () => {
     const { EmbeddingClient } = await import('../embeddingClient');
     const client = new EmbeddingClient();
     const result = await client.embed('hello');

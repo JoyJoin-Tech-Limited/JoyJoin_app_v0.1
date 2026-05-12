@@ -152,7 +152,7 @@ if (!user?.isAdmin) {
 }
 ```
 
-**Role hierarchy** (from `docs/admin-rbac-matrix.md`):
+**Role hierarchy** (from `docs/admin/admin-rbac-matrix.md`):
 - `super_admin` — all permissions
 - `operator` — pool management, user management, venue CRUD
 - `viewer` — read-only dashboards
@@ -198,7 +198,7 @@ Check specific permissions using the shared RBAC helpers, not hardcoded role che
 ## 9. Related Docs
 
 - [`README.md`](./README.md) — workspace overview, commands
-- [`../../docs/admin-rbac-matrix.md`](../../docs/admin-rbac-matrix.md) — role/permission matrix
+- [`../../docs/admin/admin-rbac-matrix.md`](../../docs/admin/admin-rbac-matrix.md) — role/permission matrix
 - [`../../apps/server/src/README.md`](../../apps/server/src/README.md) — server domain ownership
 - [`../../.github/skills/admin-client-frontend/SKILL.md`](../../.github/skills/admin-client-frontend/SKILL.md)
 - [`../../.github/skills/admin-audit-and-rbac-governance/SKILL.md`](../../.github/skills/admin-audit-and-rbac-governance/SKILL.md)

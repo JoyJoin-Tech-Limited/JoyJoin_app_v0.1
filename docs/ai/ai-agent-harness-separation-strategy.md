@@ -4,7 +4,7 @@
 **Last updated:** 2026-04-02  
 **Scope:** AI product agent systems for Onboarding Discovery, Match Intelligence, and Event Momentum
 
-> **Read this first for current shipped AI behavior.** Pair it with `docs/AI_INTEGRATION_PLAN.md` only when planning future phases or reviewing rollout gates; the roadmap document is not authority for what is live today.
+> **Read this first for current shipped AI behavior.** Pair it with `docs/ai/AI_INTEGRATION_PLAN.md` only when planning future phases or reviewing rollout gates; the roadmap document is not authority for what is live today.
 
 > **Audit note (2026-03-30):** This document has been revised from a forward-looking reference memo
 > to a current-state + next-state architecture guide. Sections now distinguish between **✅ Active today**,
@@ -467,10 +467,10 @@ Every orchestrator service should implement the same 7-stage structural pipeline
 | `apps/server/src/inference/llmFallbackInference.ts` | ⚡ Implemented, not wired | Attribute inference fallback via direct DeepSeek; `callLLMForInference()` has no runtime callers yet |
 | `apps/server/src/matchingWeightsService.ts` | ⚡ Primary adaptive-weight path, implemented but not wired | Thompson Sampling weight learning; not yet connected to `poolMatchingService.ts` |
 | `docs/icebreaker-system.md` | ✅ Active | Full technical reference for Social Icebreaker system |
-| `docs/MATCHING_ALGORITHM_REFERENCE.md` | ✅ Active | Matching algorithm documentation; cross-reference when scoping Match Intelligence evaluator |
-| `docs/PERSONALITY_TEST_SYSTEM.md` | ✅ Active | Personality test system documentation; cross-reference when scoping Onboarding Discovery |
-| `docs/interest-signal-boost.md` | ✅ Active | Interest signal boost feature reference; signals flow into icebreaker/explanation prompts, not pair scoring |
-| `docs/AI_INTEGRATION_PLAN.md` | ✅ Active | Phased AI roadmap including LLM provider architecture (§1.4); complementary to this document |
+| `docs/systems/MATCHING_ALGORITHM_REFERENCE.md` | ✅ Active | Matching algorithm documentation; cross-reference when scoping Match Intelligence evaluator |
+| `docs/systems/PERSONALITY_TEST_SYSTEM.md` | ✅ Active | Personality test system documentation; cross-reference when scoping Onboarding Discovery |
+| `docs/systems/interest-signal-boost.md` | ✅ Active | Interest signal boost feature reference; signals flow into icebreaker/explanation prompts, not pair scoring |
+| `docs/ai/AI_INTEGRATION_PLAN.md` | ✅ Active | Phased AI roadmap including LLM provider architecture (§1.4); complementary to this document |
 
 ---
 

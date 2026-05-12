@@ -5,7 +5,7 @@
 > This document describes the migration that introduced the anonymous-test-first, WeChat post-test signup flow (implemented 2026-02-04). The changes described here are **complete and in production**. This document is retained as a historical implementation record.
 >
 > For the **current active onboarding architecture**, refer to:
-> - `docs/onboarding-flow.md` — full flow documentation
+> - `docs/systems/systems/onboarding-flow.md` — full flow documentation
 > - `DEVELOPER_QUICK_REFERENCE.md` — developer reference
 > - `.github/copilot-instructions.md` → Onboarding Flow Architecture section
 
@@ -331,7 +331,7 @@ WECHAT_SECRET=your_wechat_mini_program_secret
 - [x] Component cleanup
 
 ### Phase 3: Documentation (Week 2)
-- [x] Update onboarding-flow.md
+- [x] Update systems/onboarding-flow.md
 - [x] Update DEVELOPER_QUICK_REFERENCE.md
 - [x] Create migration guide
 
@@ -364,7 +364,7 @@ WECHAT_SECRET=your_wechat_mini_program_secret
 ## References
 
 - [Original Problem Statement](../problem-statement.md)
-- [Onboarding Flow Documentation](./onboarding-flow.md)
+- [Onboarding Flow Documentation](./systems/onboarding-flow.md)
 - [Developer Quick Reference](../DEVELOPER_QUICK_REFERENCE.md)
 - [Soul App Benchmark](https://www.soulapp.cn/) (60% signup rate)
 - [16Personalities](https://www.16personalities.com/) (55% signup rate)

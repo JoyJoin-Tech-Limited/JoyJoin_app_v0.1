@@ -7,7 +7,7 @@ Located in `apps/server/src/embeddingClient.ts`.
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `DEEPSEEK_API_KEY` | — | **Required.** DeepSeek OpenAI-compatible API key |
-| `EMBEDDING_MODEL` | `text-embedding-3-small` | Model id passed to embeddings API |
+| `EMBEDDING_MODEL` | `granite-embedding-97m-multilingual-r2` | Model id passed to embeddings API (DeepSeek OpenAI-compatible endpoint) |
 | `EMBEDDING_TIMEOUT_MS` | `10000` | API call timeout |
 | `EMBEDDING_MAX_RETRIES` | `2` | Retry count on failure |
 
@@ -21,7 +21,7 @@ Located in `apps/server/src/userSemanticProfileService.ts` + `embeddingClient.ts
 - Triggered on: `profile_setup`, `interests_update`, `interests_nudge`, `full_profile_update`
 - Builds a human-readable profile document from bio, archetype, city, hometown, education, work mode, industry, intent, languages, interests
 - Calls `embeddingClient.embed()` → DeepSeek OpenAI-compatible API only
-- Default model: `text-embedding-3-small` (overridable via `EMBEDDING_MODEL`)
+- Default model: `granite-embedding-97m-multilingual-r2` (overridable via `EMBEDDING_MODEL`)
 - Stores result in `user_semantic_profiles` table with version vector for invalidation
 - Degrades gracefully: status = `degraded` with null embedding if provider fails
 - Version vector checks `profileUpdatedAt`, `interestsUpdatedAt`, and `generatorVersion` to skip unnecessary recomputes

@@ -85,7 +85,7 @@ describe('userSemanticProfileService', () => {
     getExistingMock.mockResolvedValue(null);
     embedMock.mockResolvedValue({
       vector: [0.1, 0.2, 0.3],
-      model: 'deepseek-embedding',
+      model: 'granite-embedding-97m-multilingual-r2',
       dimensions: 3,
       provider: 'deepseek',
     });
@@ -97,7 +97,7 @@ describe('userSemanticProfileService', () => {
       userId: 'user-1',
       status: 'ready',
       embedding: [0.1, 0.2, 0.3],
-      embeddingModel: 'deepseek-embedding',
+      embeddingModel: 'granite-embedding-97m-multilingual-r2',
       embeddingDimension: 3,
       lastError: null,
     }));

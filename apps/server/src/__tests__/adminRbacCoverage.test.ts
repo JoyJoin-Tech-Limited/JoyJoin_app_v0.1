@@ -22,7 +22,7 @@
  * ─────────────────
  *   npm test -w @joyjoin/server -- src/__tests__/adminRbacCoverage.test.ts
  *
- * Documented exceptions (see also docs/admin-rbac-matrix.md at project root)
+ * Documented exceptions (see also docs/admin/admin-rbac-matrix.md at project root)
  * ──────────────────────────────────────────────────────────
  * - `POST /api/admin/login`  — public; intentional; no session exists yet.
  * - `GET  /api/admin/me`     — protected by `requireAdmin`; returns the

@@ -587,7 +587,7 @@ scripts/
 
 ## 5. Documentation Taxonomy (`docs/`)
 
-> **Organization principle:** Subdirectories by content type. Flat files at root are grandfathered in; prefer subdirectories for new docs.
+> **Organization principle:** Subdirectories by content type. Only `README.md` (index) and this file (directory map) remain at root; all other docs live in subdirectories.
 
 ### 5.1 By Subdirectory
 
@@ -608,36 +608,27 @@ scripts/
 | `docs/superpowers/plans/` | Superpowers implementation plans | `2026-04-21-icebreaker-compilation-implementation-plan.md` |
 | `docs/tech-debt/` | Tech debt tracking | `connection-points-cleanup.md` |
 
-### 5.2 Key Flat Files at Root
+### 5.2 Subdirectory Layout
 
-| File | Purpose |
-|------|---------|
-| `README.md` | Docs index & navigation |
-| `PLATFORM_COORDINATION.md` | Mini-program ↔ web coordination rules |
-| `MATCHING_ALGORITHM_REFERENCE.md` | Canonical matching algorithm spec |
-| `PERSONALITY_TEST_SYSTEM.md` | 12-archetype V4 engine spec |
-| `LAUNCH_CONFIG.md` | Launch feature flags & config |
-| `MCP_SERVERS.md` | MCP server configuration |
-| `AI_INTEGRATION_PLAN.md` | AI feature integration roadmap |
-| `AI_FEATURE_INVENTORY.md` | AI feature catalog |
-| `harness-kpi-framework.md` | Harness KPI framework |
-| `observability.md` | Observability architecture |
-| `perf.md` | Performance baseline & targets |
-| `wechat-mini-program-reference.md` | WeChat mini-program reference |
-| `onboarding-flow.md` | Onboarding flow specification |
-| `admin-rbac-matrix.md` | Admin RBAC permission matrix |
+| Directory | Content | Example Files |
+|-----------|---------|---------------|
+| `docs/ai/` | AI system docs, roadmaps, prompts | `AI_INTEGRATION_PLAN.md`, `ai-agent-harness-separation-strategy.md`, `ai-feature-flags.md` |
+| `docs/systems/` | Architecture & system references | `MATCHING_ALGORITHM_REFERENCE.md`, `PERSONALITY_TEST_SYSTEM.md`, `onboarding-flow.md`, `observability.md` |
+| `docs/product/` | Product strategy & launch docs | `LAUNCH_CONFIG.md`, `launch-risks.md`, `open-beta-wider.md` |
+| `docs/reference/` | Cross-cutting reference docs | `PLATFORM_COORDINATION.md`, `CLI_TOOLS.md`, `perf.md`, `wechat-mini-program-reference.md` |
+| `docs/admin/` | Admin-specific docs | `admin-rbac-matrix.md` |
+| `docs/hiring/` | Hiring & internship JDs | `ai-evaluation-engineer-intern.md`, `ai-operations-engineer-intern.md` |
 
-### 5.3 Feature-Focused Subdirectories
+### 5.3 Content-Topic Subdirectories
 
-| Directory | Content | Moved From |
-|-----------|---------|------------|
-| `docs/design/xiaoyue/` | Xiaoyue mascot design docs | `docs/xiaoyue-*.md` |
-| `docs/design/lovart/` | Lovart AI design briefs, tier icons | `docs/lovart-brief-*.md`, `docs/tier*-*.md` |
-| `docs/icebreaker/` | Icebreaker system docs | `docs/icebreaker-*.md` |
-| `docs/mini-program/` | Mini-program product & UI docs | `docs/mini-program-*.md` |
-| `docs/slot-machine/` | Slot machine animation docs | `docs/slot-machine-animation-*.md` |
-| `docs/migrations/` | Migration & routing fix history | `docs/MIGRATION_*.md`, `docs/ONBOARDING_ROUTING_FIX_*.md` |
-| `docs/architecture/implementation-summaries/` | Implementation summary docs | `docs/*-implementation-summary.md` |
+| Directory | Content |
+|-----------|---------|
+| `docs/ai/` | AI/ML system docs (roadmaps, feature inventory, prompts, separation strategy, flags) |
+| `docs/systems/` | System architecture & reference (matching, personality, icebreaker, onboarding, observability) |
+| `docs/product/` | Product & launch strategy (launch config, risk register, beta checklists) |
+| `docs/reference/` | Cross-cutting references (platform coordination, CLI tools, performance, WeChat APIs) |
+| `docs/admin/` | Admin-specific docs (RBAC matrix) |
+| `docs/hiring/` | Intern & hiring role descriptions |
 
 ---
 
@@ -889,7 +880,7 @@ tools/
 | **Legacy storage facade** | `apps/server/src/repositories/legacyStorageRepo.ts` | 🟡 Medium | Migrate remaining consumers to repositories |
 | **Archived user-client refs** | Some docs/skills still reference `apps/user-client` | 🟢 Low | Update references to `archived/workspaces/user-client` |
 
-> ✅ **Resolved 2026-05-05:** `scripts/` reorganized into 12 functional subdirectories. `docs/` flat files reduced from 70+ to 30+ by migrating feature-specific docs into subdirectories. `apps/mini-program/src/` reorganized: `components/` → `ui/loading/mascot/`, `lib/` → 10 domain subdirectories, `hooks/` → `auth/payment/navigation/onboarding/`, `pages/icebreaker-session/` → `phases/overlays/`, `pages/matching-status/` SCSS partials → `styles/`.
+> ✅ **Resolved 2026-05-07:** `docs/` reorganized — all loose files moved into topical subdirectories (`ai/`, `systems/`, `product/`, `reference/`, `admin/`). Only `README.md` (index) and `FOLDER_STRUCTURE.md` (this map) remain at root. All hiring JDs moved into `hiring/`. All cross-references updated repo-wide.
 
 ---
 

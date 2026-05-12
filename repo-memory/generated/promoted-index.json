@@ -128,7 +128,7 @@
         "apps/mini-program/src/app.ts",
         "apps/mini-program/src/providers/AuthProvider.tsx",
         "apps/mini-program/src/lib/tabBarConfig.ts",
-        "docs/perf.md",
+        "docs/reference/perf.md",
         ".github/skills/frontend-performance-and-loading/SKILL.md",
         ".github/skills/performance-benchmark/SKILL.md",
         ".github/agents/taro-mini-program-frontend-engineer.agent.md"
@@ -138,7 +138,7 @@
         "apps/mini-program/src/app.config.ts",
         "apps/mini-program/src/app.ts",
         "apps/mini-program/src/providers/AuthProvider.tsx",
-        "docs/perf.md"
+        "docs/reference/perf.md"
       ],
       "confidence": "high",
       "path": "repo-memory/promoted/wechat-mini-program-subpackage-loading.md",
