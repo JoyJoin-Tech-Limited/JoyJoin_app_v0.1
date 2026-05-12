@@ -21,7 +21,7 @@ export default function RevealStage({ displayArchetypeName, displayAsset, visual
       </Text>
 
       <View className='personality-results__reveal-orb'>
-        <View className='personality-results__reveal-glow' style={{ background: visual.accent || COLOR_PRIMARY }} />
+        <View className='personality-results__reveal-glow' style={{ background: visual.accent }} />
         <Image
           className={`personality-results__reveal-image personality-results__reveal-image--${revealPhase}`}
           mode='aspectFit'

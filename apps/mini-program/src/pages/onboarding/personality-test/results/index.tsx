@@ -1,26 +1,30 @@
 import { Canvas, Text, View } from '@tarojs/components'
 import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
 import { getArchetypeSkills } from '@shared/personality/archetypeSkills'
 import { useAuth } from '../../../../hooks/useAuth'
 import { useOnboardingAnalytics } from '../../../../hooks/onboarding/useOnboardingAnalytics'
-import { apiRequest } from '../../../../lib/api/api'
+import { apiRequest, authenticateMiniProgramUserWithTest, getUserState, type ApiError } from '../../../../lib/api/api'
 import {
   clearAnonymousAssessmentStorage,
   hasAnonymousAssessmentResult,
   isAnonymousAssessmentSessionCompleted,
   readAnonymousAssessmentSession,
+  readAnonymousAssessmentAnswers,
   saveAnonymousAssessmentSession,
   type AnonymousAssessmentSessionSnapshot,
   type AnonymousAssessmentTopMatch,
 } from '../../../../lib/auth/anonymousOnboarding'
+import { seedMiniProgramAuthSession } from '../../../../lib/api/authSession'
 import { getDegradationTier, type DegradationTier } from '../../../../lib/utils/frameBudget'
 import { haptics } from '../../../../lib/utils/haptics'
 import { getMascotDisplayName } from '../../../../lib/mascot/mascotDisplay'
 import { logError, logInfo, logWarn } from '../../../../lib/utils/logger'
 import { MINI_PROGRAM_ROUTES } from '../../../../lib/onboarding/onboardingRoutes'
 import { navigateToMiniProgramNextStep } from '../../../../lib/onboarding/onboardingNavigation'
+import { TOAST_FATAL_MS } from '../../../../lib/utils/uiConstants'
 import {
   getArchetypeVisual,
   getXiaoyueExpressionAsset,
@@ -64,6 +68,25 @@ import RevealStage from './RevealStage'
 import BridgeStage from './BridgeStage'
 import FinalStage from './FinalStage'
 import './index.scss'
+
+interface XiaoyueAnalysisResult {
+  headline: string
+  analysis: string
+  socialRole: string
+  bestScene: string
+  microAction: string
+  shareLine: string
+  stateLabel: string
+  whyThisFits: string
+  blendLine: string
+  expressionTags: string[]
+  shareVariants: {
+    selfIntro: string
+    friendCallout: string
+    socialInvite: string
+  }
+  cached: boolean
+}
 
 export default function PersonalityTestResultsPage() {
   const auth = useAuth()
@@ -112,6 +135,7 @@ export default function PersonalityTestResultsPage() {
   const timeoutHandlesRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const degradationTierRef = useRef<DegradationTier>('full')
   const isAnimatingRef = useRef(false)
+  const analysisRequestedRef = useRef(false)
 
   const profileRef = useRef<AnimationProfile>(getAnimationProfile())
 
@@ -141,6 +165,64 @@ export default function PersonalityTestResultsPage() {
       }
     }
   }, [])
+
+  const fetchXiaoyueAnalysis = useCallback(async () => {
+    const result = resultStateRef.current?.result ?? sessionSnapshot?.result
+    if (!result?.primaryArchetype) return
+
+    const traitScores = result.traitScores ?? {}
+    const topMatches = resultStateRef.current?.topMatches ?? sessionSnapshot?.topArchetypes ?? []
+
+    setIsLoadingAnalysis(true)
+    try {
+      const response = await apiRequest<XiaoyueAnalysisResult>({
+        path: '/api/xiaoyue/analysis',
+        method: 'POST',
+        data: {
+          archetype: result.primaryArchetype,
+          secondaryArchetype: result.secondaryArchetype ?? null,
+          topArchetypes: topMatches,
+          traitScores: {
+            affinity: traitScores.A ?? traitScores.affinity ?? 0.5,
+            openness: traitScores.O ?? traitScores.openness ?? 0.5,
+            conscientiousness: traitScores.C ?? traitScores.conscientiousness ?? 0.5,
+            emotionalStability: traitScores.E ?? traitScores.emotionalStability ?? 0.5,
+            extraversion: traitScores.X ?? traitScores.extraversion ?? 0.5,
+            positivity: traitScores.P ?? traitScores.positivity ?? 0.5,
+          },
+          confidence: result.archetypeConfidence ?? 1,
+        },
+      })
+
+      if (mountedRef.current) {
+        setXiaoyueAnalysis(response)
+        logInfo('[PersonalityResults] Xiaoyue analysis loaded', {
+          headline: response.headline,
+          cached: response.cached,
+        })
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      logWarn('[PersonalityResults] Xiaoyue analysis failed', { message })
+      // Silently fail — UI gracefully falls back to static copy
+    } finally {
+      if (mountedRef.current) {
+        setIsLoadingAnalysis(false)
+      }
+    }
+  }, [sessionSnapshot])
+
+  useEffect(() => {
+    if (flowStage !== 'result') return
+    if (analysisRequestedRef.current) return
+    analysisRequestedRef.current = true
+
+    // Small delay so the result page is fully rendered before the API call starts
+    const timer = setTimeout(() => {
+      void fetchXiaoyueAnalysis()
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [flowStage, fetchXiaoyueAnalysis])
 
   useEffect(() => {
     resultStateRef.current = resultState
@@ -203,11 +285,18 @@ export default function PersonalityTestResultsPage() {
     () => visual.asset || getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCelebrate),
     [visual.asset],
   )
-  const continueButtonLabel = auth.isLoading
-    ? '检查登录状态中…'
-    : auth.isAuthenticated
-      ? '继续下一步'
-      : '微信登录，继续下一步'
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
+  const [xiaoyueAnalysis, setXiaoyueAnalysis] = useState<XiaoyueAnalysisResult | null>(null)
+  const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false)
+  const queryClient = useQueryClient()
+
+  const continueButtonLabel = isLoggingIn
+    ? '登录中…'
+    : auth.isLoading
+      ? '检查登录状态中…'
+      : auth.isAuthenticated
+        ? '开启匹配'
+        : '微信登录，查看谁和你最搭'
 
   useShareAppMessage(() => ({
     title: shareTitle,
@@ -645,7 +734,7 @@ export default function PersonalityTestResultsPage() {
     } finally {
       isAnimatingRef.current = false
     }
-  }, [analytics, fetchResult])
+  }, [analytics, auth.isAuthenticated, displayArchetypeName, fetchResult])
 
   useEffect(() => {
     void runResultFlow()
@@ -682,7 +771,7 @@ export default function PersonalityTestResultsPage() {
   }, [analytics, displayArchetypeName])
 
   const handleContinue = useCallback(async () => {
-    if (auth.isLoading) {
+    if (auth.isLoading || isLoggingIn) {
       return
     }
 
@@ -696,8 +785,50 @@ export default function PersonalityTestResultsPage() {
       return
     }
 
-    await Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestAuthGate })
-  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep])
+    // Inline login: import anonymous answers + WeChat login, skip the auth-gate page.
+    const answers = readAnonymousAssessmentAnswers()
+    const sessionSnapshot = readAnonymousAssessmentSession()
+
+    setIsLoggingIn(true)
+    try {
+      logInfo('[PersonalityResults] Importing anonymous assessment before login', {
+        answerCount: answers.length,
+        hasSessionId: !!sessionSnapshot?.sessionId,
+      })
+
+      await authenticateMiniProgramUserWithTest({
+        testAnswers: answers,
+        anonymousSessionId: sessionSnapshot?.sessionId ?? null,
+      })
+
+      const userState = await getUserState()
+      seedMiniProgramAuthSession(userState, queryClient)
+      clearAnonymousAssessmentStorage()
+
+      logInfo('[PersonalityResults] Login successful', { nextStep: userState.nextStep })
+      analytics.stepCompleted({
+        action: 'login-handoff-success',
+        answerCount: answers.length,
+        nextStep: userState.nextStep ?? 'essential-data',
+      })
+      await navigateToMiniProgramNextStep(userState.nextStep, { mode: 'root' })
+    } catch (error) {
+      const typedError = error as ApiError | undefined
+      const message =
+        typedError?.statusCode === 401
+          ? '微信授权已失效，请重新尝试'
+          : typedError?.statusCode === 500
+            ? '服务器暂时忙，请稍后再试'
+            : error instanceof Error && error.message
+              ? error.message
+              : '登录失败，请检查网络连接后重试'
+      analytics.errorOccurred('login_handoff_failed', message)
+      logError('[PersonalityResults] Login failed', { message })
+      Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
+    } finally {
+      setIsLoggingIn(false)
+    }
+  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, isLoggingIn, analytics, queryClient])
 
   /**
    * Present a frictionless action sheet for sharing the generated poster.
@@ -1016,6 +1147,9 @@ export default function PersonalityTestResultsPage() {
             onContinue={handleContinue}
             onRestart={handleRestart}
             authIsLoading={auth.isLoading}
+            isLoggingIn={isLoggingIn}
+            xiaoyueAnalysis={xiaoyueAnalysis}
+            isLoadingAnalysis={isLoadingAnalysis}
           />
         )
       case 'loading':
@@ -1058,6 +1192,8 @@ export default function PersonalityTestResultsPage() {
     continueButtonLabel,
     handleContinue,
     auth.isLoading,
+    xiaoyueAnalysis,
+    isLoadingAnalysis,
   ])
 
   return (

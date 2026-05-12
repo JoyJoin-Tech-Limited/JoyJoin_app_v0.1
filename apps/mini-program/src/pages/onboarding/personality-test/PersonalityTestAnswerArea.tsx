@@ -31,6 +31,10 @@ export interface AnswerAreaProps {
   onAnswer: (option: AnswerOption) => void
   onSliderChange: (value: number) => void
   onSliderSubmit: () => void
+  /** Called when user touches an option (for reactive mascot preview) */
+  onOptionTouchStart?: (option: AnswerOption) => void
+  /** Called when user releases an option touch */
+  onOptionTouchEnd?: () => void
 }
 
 function splitEmojiLabel(text: string): { emoji: string; label: string } {
@@ -58,6 +62,23 @@ function getNearestSliderOption(
   }, null)
 }
 
+/** Resolve a dynamic emoji for the slider based on current value (0-100).
+ *  Center zone (36–64) reuses leftEmoji visually; there is no neutral emoji in SliderConfig.
+ */
+function resolveSliderDynamicEmoji(
+  sliderConfig: SliderConfig,
+  value: number,
+): { emoji: string; lean: 'left' | 'center' | 'right' } {
+  if (value <= 35) {
+    return { emoji: sliderConfig.leftEmoji, lean: 'left' }
+  }
+  if (value >= 65) {
+    return { emoji: sliderConfig.rightEmoji, lean: 'right' }
+  }
+  // No neutral emoji available — visually center the left-side icon
+  return { emoji: sliderConfig.leftEmoji, lean: 'center' }
+}
+
 export default memo(function PersonalityTestAnswerArea({
   questionType,
   options,
@@ -67,9 +88,12 @@ export default memo(function PersonalityTestAnswerArea({
   onAnswer,
   onSliderChange,
   onSliderSubmit,
+  onOptionTouchStart,
+  onOptionTouchEnd,
 }: AnswerAreaProps) {
   const [selectedValue, setSelectedValue] = useState<string | null>(null)
   const selectedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastSliderValueRef = useRef(sliderValue)
 
   // Reset selection when question changes
   useEffect(() => {
@@ -103,15 +127,41 @@ export default memo(function PersonalityTestAnswerArea({
   }, [])
 
   if (questionType === 'slider' && sliderConfig) {
+    const dynamicEmoji = resolveSliderDynamicEmoji(sliderConfig, sliderValue)
+    const leftEmojiResolved = resolvePersonalityEmoji(sliderConfig.leftEmoji)
+    const rightEmojiResolved = resolvePersonalityEmoji(sliderConfig.rightEmoji)
+    const dynamicEmojiResolved = resolvePersonalityEmoji(dynamicEmoji.emoji)
+
     return (
       <View className='answer-area__slider-shell'>
+        {/* Dynamic emotion that reacts to drag */}
+        <View className='answer-area__slider-dynamic-emoji'>
+          <View
+            className={`answer-area__slider-dynamic-emoji-inner answer-area__slider-dynamic-emoji-inner--${dynamicEmoji.lean}`}
+          >
+            {dynamicEmojiResolved ? (
+              <Image
+                key={dynamicEmoji.emoji}
+                className='answer-area__slider-dynamic-emoji-img'
+                src={cdnAsset(dynamicEmojiResolved)}
+                mode='aspectFit'
+              />
+            ) : (
+              <Text key={dynamicEmoji.emoji} className='answer-area__slider-dynamic-emoji-text'>
+                {dynamicEmoji.emoji}
+              </Text>
+            )}
+          </View>
+        </View>
+
         <View className='answer-area__slider-labels'>
           <View className='answer-area__slider-pill'>
-            {resolvePersonalityEmoji(sliderConfig.leftEmoji) ? (
+            {leftEmojiResolved ? (
               <Image
                 className='answer-area__slider-pill-emoji'
-                src={cdnAsset(resolvePersonalityEmoji(sliderConfig.leftEmoji)!)}
+                src={cdnAsset(leftEmojiResolved)}
                 mode='aspectFit'
+                style={{ width: '36rpx', height: '36rpx' }}
               />
             ) : (
               <Text className='answer-area__slider-pill-emoji'>{sliderConfig.leftEmoji}</Text>
@@ -119,11 +169,12 @@ export default memo(function PersonalityTestAnswerArea({
             <Text className='answer-area__slider-pill-text'>{sliderConfig.leftLabel}</Text>
           </View>
           <View className='answer-area__slider-pill answer-area__slider-pill--right'>
-            {resolvePersonalityEmoji(sliderConfig.rightEmoji) ? (
+            {rightEmojiResolved ? (
               <Image
                 className='answer-area__slider-pill-emoji'
-                src={cdnAsset(resolvePersonalityEmoji(sliderConfig.rightEmoji)!)}
+                src={cdnAsset(rightEmojiResolved)}
                 mode='aspectFit'
+                style={{ width: '36rpx', height: '36rpx' }}
               />
             ) : (
               <Text className='answer-area__slider-pill-emoji'>{sliderConfig.rightEmoji}</Text>
@@ -132,7 +183,6 @@ export default memo(function PersonalityTestAnswerArea({
           </View>
         </View>
 
-        <Text className='answer-area__slider-value'>{sliderValue}</Text>
         <Slider
           className='answer-area__slider'
           min={0}
@@ -142,10 +192,19 @@ export default memo(function PersonalityTestAnswerArea({
           activeColor={COLOR_PRIMARY}
           backgroundColor={COLOR_PRIMARY_LIGHT}
           blockColor={COLOR_PRIMARY}
-          blockSize={22}
+          blockSize={28}
           showValue={false}
-          onChanging={(event) => onSliderChange(Number(event.detail.value))}
-          onChange={(event) => onSliderChange(Number(event.detail.value))}
+          onChanging={(event) => {
+            const val = Number(event.detail.value)
+            lastSliderValueRef.current = val
+            onSliderChange(val)
+          }}
+          onChange={(event) => {
+            const val = Number(event.detail.value)
+            if (val !== lastSliderValueRef.current) {
+              onSliderChange(val)
+            }
+          }}
           disabled={isSubmitting}
         />
 
@@ -176,11 +235,13 @@ export default memo(function PersonalityTestAnswerArea({
               key={option.value}
               className={`answer-area__emoji-option${isSelected ? ' answer-area__emoji-option--selected' : ''}`}
               style={{ animationDelay: `${index * 0.05}s` }}
+              onTouchStart={() => { onOptionTouchStart?.(option) }}
+              onTouchEnd={() => { onOptionTouchEnd?.() }}
               onClick={() => {
                 haptics('light')
                 handleAnswer(option)
               }}
-              disabled={isSubmitting}
+              disabled={isSubmitting || selectedValue !== null}
               hoverClass='answer-area__emoji-option--active'
             >
               {resolvePersonalityEmoji(parts.emoji) ? (
@@ -188,6 +249,7 @@ export default memo(function PersonalityTestAnswerArea({
                   className='answer-area__emoji-option-emoji'
                   src={cdnAsset(resolvePersonalityEmoji(parts.emoji)!)}
                   mode='aspectFit'
+                  style={{ width: '64rpx', height: '64rpx' }}
                 />
               ) : (
                 <Text className='answer-area__emoji-option-emoji'>{parts.emoji}</Text>
@@ -210,11 +272,13 @@ export default memo(function PersonalityTestAnswerArea({
             key={option.value}
             className={`answer-area__option${isSelected ? ' answer-area__option--selected' : ''}`}
             style={{ animationDelay: `${index * 0.05}s` }}
+            onTouchStart={() => { onOptionTouchStart?.(option) }}
+            onTouchEnd={() => { onOptionTouchEnd?.() }}
             onClick={() => {
               haptics('light')
               handleAnswer(option)
             }}
-            disabled={isSubmitting}
+            disabled={isSubmitting || selectedValue !== null}
             hoverClass='answer-area__option--active'
           >
             <Text className='answer-area__option-text'>{option.text}</Text>

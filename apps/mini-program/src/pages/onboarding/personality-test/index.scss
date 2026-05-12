@@ -85,6 +85,32 @@
   }
 }
 
+@keyframes speech-bubble-milestone-pop {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.96);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes speech-text-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .personality-test {
   @include page-gradient-bg;
   @include onboarding-page-exit-transition;
@@ -452,31 +478,14 @@
     width: 144rpx;
     height: 144rpx;
     margin: 0 auto $spacing-sm;
-  }
-
-  &__intro-tease-avatar-glow {
-    position: absolute;
-    inset: 8rpx;
-    border-radius: 999rpx;
-    opacity: 0.18;
-    pointer-events: none;
-  }
-
-  &__intro-tease-avatar-shell {
-    @include flex-center;
-    position: relative;
-    z-index: 1;
-    width: 136rpx;
-    height: 136rpx;
-    margin: 4rpx auto 0;
-    border-radius: 999rpx;
-    border: 2rpx solid rgba($color-primary, 0.1);
-    box-shadow: 0 12rpx 28rpx rgba(0, 0, 0, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   &__intro-tease-avatar {
-    width: 112rpx;
-    height: 112rpx;
+    width: 136rpx;
+    height: 136rpx;
   }
 
   &__intro-tease-name {
@@ -568,7 +577,7 @@
   }
 
   // ───────────────────────────────────────────
-  //  Testing Phase — Expert Commentator Layout
+  //  Testing Phase — Glassmium + Mascot Layout
   // ───────────────────────────────────────────
 
   &--mascot-layout {
@@ -614,11 +623,27 @@
     border-radius: 0 2rpx 2rpx 0;
     transform-origin: left center;
     transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+
+    &--milestone-pulse {
+      animation: milestone-progress-pulse 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+  }
+
+  @keyframes milestone-progress-pulse {
+    0% {
+      box-shadow: 0 0 0 0rpx rgba($color-primary, 0.35);
+    }
+    50% {
+      box-shadow: 0 0 12rpx 4rpx rgba($color-primary, 0.2);
+    }
+    100% {
+      box-shadow: 0 0 0 0rpx rgba($color-primary, 0);
+    }
   }
 
   &__progress-label {
     text-align: center;
-    padding: $spacing-sm 0;
+    padding: 8rpx 0;
   }
 
   &__progress-text {
@@ -627,91 +652,76 @@
     font-weight: $font-weight-medium;
   }
 
-  // Host zone: mascot left + glass card right
-  &__host-zone {
+  // ── Zone B: Full-width glassmium question banner ─────────────────
+  &__question-zone {
     flex: 0 0 auto;
-    padding: $spacing-md $container-padding $spacing-lg;
+    padding: 8rpx $container-padding 8rpx;
     @include safe-area-inline($container-padding);
   }
 
-  &__commentary-row {
+  // ── Zone C: Mascot row (mascot left + speech bubble right) ───────
+  &__mascot-zone {
+    flex: 0 0 auto;
+    padding: 0 $container-padding 8rpx;
+    @include safe-area-inline($container-padding);
+  }
+
+  &__mascot-row {
     display: flex;
-    align-items: flex-start;
+    align-items: flex-end;
     gap: $spacing-md;
     animation: mascot-commentary-enter 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  &__commentary-mascot {
+  &__mascot-avatar {
     flex-shrink: 0;
-    width: 144rpx;
-    height: 144rpx;
-    margin-top: $spacing-sm;
+    width: 152rpx;
+    height: 152rpx;
     animation: mascot-float 3.2s ease-in-out infinite;
     will-change: transform;
   }
 
-  &__commentary-card-wrap {
-    flex: 1;
-    min-width: 0;
-    max-height: 38vh;
-    overflow: hidden;
-  }
-
-  // Milestone coaching — positioned near mascot, subtle
-  &__milestone-coach {
+  &__speech-bubble {
     position: relative;
-    flex: 0 0 auto;
-    padding: 0 $container-padding $spacing-md;
-    @include safe-area-inline($container-padding);
-    animation: mascot-commentary-enter 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+    flex: 0 1 auto;
+    min-width: 0;
+    padding: 16rpx 24rpx;
+    border-radius: 24rpx 24rpx 24rpx 6rpx;
+    max-width: 520rpx;
+    background: rgba($color-primary-light, 0.78);
+    border: 1rpx solid rgba($color-primary, 0.1);
 
-    &--flash::before {
-      content: '';
-      position: absolute;
-      top: -20rpx;
-      right: calc(-1 * #{$container-padding});
-      bottom: -20rpx;
-      left: calc(-1 * #{$container-padding});
-      border-radius: 50%;
-      background: radial-gradient(circle at center, rgba($color-primary, 0.08) 0%, transparent 70%);
-      animation: milestone-flash-pulse 0.6s ease-out;
-      pointer-events: none;
-      z-index: -1;
+    /* Soft shadow for depth */
+    box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.06);
+    transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+
+    &--milestone {
+      background: rgba($color-primary-light, 0.94);
+      border-color: rgba($color-primary, 0.22);
+      box-shadow: 0 6rpx 24rpx rgba($color-primary, 0.1);
+      animation: speech-bubble-milestone-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
   }
 
-  &__milestone-coach-inner {
-    display: flex;
-    align-items: flex-start;
-    gap: $spacing-sm;
-    padding-left: calc(144rpx + #{$spacing-md}); // align with card start (mascot + gap)
-  }
-
-  &__milestone-coach-bubble {
-    flex: 1;
-    min-width: 0;
-    padding: $spacing-md $spacing-lg;
-    border-radius: 24rpx;
-    background: rgba($color-primary-light, 0.72);
-    border: 1rpx solid rgba($color-primary, 0.1);
-  }
-
-  &__milestone-coach-text {
-    font-size: $font-size-sm;
+  &__speech-bubble-text {
+    font-family: $font-ui;
+    font-size: 36rpx;
     color: $color-primary-dark;
-    line-height: 1.6;
+    line-height: 1.4;
     font-weight: $font-weight-medium;
+    overflow-wrap: anywhere;
+    animation: speech-text-enter 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   // Answer zone
   &__answer-zone {
-    flex: 1;
+    flex: 1 1 auto;
     min-height: 0;
-    padding: 0 $container-padding $spacing-xl;
+    padding: 0 $container-padding 24rpx;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     @include safe-area-inline($container-padding);
-    @include safe-area-bottom-padding(padding-bottom, $spacing-xl);
+    @include safe-area-bottom-padding(padding-bottom, 24rpx);
   }
 
   &__skeleton {
@@ -795,15 +805,22 @@
       transition: none;
     }
 
-    &__commentary-mascot {
+    &__mascot-avatar {
       animation: none;
     }
 
-    &__commentary-row,
-    &__milestone-coach {
+    &__mascot-row {
       animation: none;
       opacity: 1;
       transform: none;
+    }
+
+    &__speech-bubble-text {
+      animation: none;
+    }
+
+    &__speech-bubble--milestone {
+      animation: none;
     }
 
     &__skeleton-scenario,

@@ -13,10 +13,16 @@
 }
 
 .answer-area {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
   &__options {
     display: flex;
     flex-direction: column;
-    gap: $spacing-md;
+    justify-content: center;
+    gap: 16rpx;
+    min-height: 100%;
   }
 
   &__option {
@@ -26,15 +32,15 @@
     justify-content: flex-start;
     width: 100%;
     min-width: 0;
-    min-height: 96rpx;
-    padding: $spacing-md $spacing-lg;
+    min-height: 88rpx;
+    padding: 18rpx 32rpx;
     border: 2rpx solid transparent;
     border-radius: $radius-pill;
-    font-size: $font-size-lg;
+    font-size: 32rpx;
     color: $color-text-primary;
     text-align: left;
     line-height: 1.5;
-    transition: transform 0.1s ease, border-color 0.1s ease, background 0.1s ease;
+    transition: transform 0.1s ease;
     animation: answer-stagger-enter 0.28s ease-out both;
 
     &::after {
@@ -60,7 +66,7 @@
   &__option-text {
     flex: 1;
     min-width: 0;
-    font-size: $font-size-lg;
+    font-size: 32rpx;
     color: $color-text-primary;
     line-height: 1.5;
     overflow-wrap: anywhere;
@@ -68,16 +74,19 @@
   }
 
   &__emoji-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: $spacing-md;
   }
 
   &__emoji-option {
     @include card-premium;
+    box-sizing: border-box;
     min-width: 0;
-    min-height: 192rpx;
-    padding: $spacing-lg;
+    width: calc((100% - #{$spacing-md}) / 2);
+    min-height: 140rpx;
+    padding: 18rpx;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -86,7 +95,7 @@
     border: 2rpx solid transparent;
     border-radius: $radius-pill;
     background: $color-surface;
-    transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.1s ease;
+    transition: transform 0.1s ease;
     animation: answer-stagger-enter 0.28s ease-out both;
 
     &:active {
@@ -107,6 +116,11 @@
       background: rgba($color-primary, 0.08);
       border-color: rgba($color-primary, 0.3);
     }
+
+    /* When there's an odd number of options, the last item spans the full row */
+    &:last-child:nth-child(odd) {
+      width: 100%;
+    }
   }
 
   &__emoji-option-emoji {
@@ -118,7 +132,7 @@
   &__emoji-option-text {
     width: 100%;
     min-width: 0;
-    font-size: $font-size-base;
+    font-size: 32rpx;
     color: $color-text-primary;
     text-align: center;
     line-height: 1.5;
@@ -129,8 +143,68 @@
   &__slider-shell {
     display: flex;
     flex-direction: column;
-    gap: $spacing-lg;
-    padding: $spacing-md 0;
+    gap: $spacing-md;
+    padding: $spacing-sm 0;
+  }
+
+  &__slider-dynamic-emoji {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 120rpx;
+  }
+
+  &__slider-dynamic-emoji-inner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 96rpx;
+    height: 96rpx;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.06);
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+
+    /* Tint overlay — animated via opacity to stay compositor-only */
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: rgba($color-primary, 0.04);
+      opacity: 0;
+      transition: opacity 0.18s ease;
+    }
+
+    &--left {
+      transform: translateX(-20rpx) scale(1.05);
+
+      &::before {
+        opacity: 1;
+      }
+    }
+
+    &--center {
+      transform: translateX(0) scale(1);
+    }
+
+    &--right {
+      transform: translateX(20rpx) scale(1.05);
+
+      &::before {
+        opacity: 1;
+      }
+    }
+  }
+
+  &__slider-dynamic-emoji-img {
+    width: 64rpx;
+    height: 64rpx;
+  }
+
+  &__slider-dynamic-emoji-text {
+    font-size: $font-size-4xl;
+    line-height: 1;
   }
 
   &__slider-labels {
@@ -143,22 +217,20 @@
   &__slider-pill {
     display: flex;
     align-items: center;
-    gap: 8rpx;
-    flex: 1;
+    gap: $spacing-xs;
+    flex: 1 1 0;
     min-width: 0;
-    max-width: 48%;
     padding: $spacing-sm $spacing-md;
-    border-radius: 999rpx;
+    border-radius: $radius-pill;
     background: rgba($color-primary, 0.06);
 
     &--right {
       justify-content: flex-end;
-      margin-left: auto;
     }
   }
 
   &__slider-pill-emoji {
-    font-size: $font-size-lg;
+    font-size: 36rpx;
     line-height: 1;
     flex-shrink: 0;
   }
@@ -173,14 +245,6 @@
     word-break: break-word;
   }
 
-  &__slider-value {
-    display: block;
-    text-align: center;
-    font-size: $font-size-3xl;
-    font-weight: $font-weight-black;
-    color: $color-primary-dark;
-  }
-
   &__slider {
     margin: 0;
   }
@@ -191,13 +255,14 @@
     min-height: 104rpx;
     height: auto;
     border: 0;
-    font-size: $font-size-lg;
+    font-size: 32rpx;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .answer-area__option,
-  .answer-area__emoji-option {
+  .answer-area__emoji-option,
+  .answer-area__slider-dynamic-emoji-inner {
     transition: none !important;
     transform: none !important;
     animation: none !important;

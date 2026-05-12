@@ -165,7 +165,7 @@ export default function SlotStage({
   const slotFocusVisual = useMemo(() => getArchetypeVisual(activeArchetype), [activeArchetype])
 
   const translateY = CENTER_OFFSET - displayIndex * STEP
-  const progressWidth = `${Math.min(100, Math.max(progress, 4))}%`
+  const progressScale = Math.min(100, Math.max(progress, 4)) / 100
 
   const isLanded = slotPhase === 'landed'
   const isAnticipation = slotPhase === 'anticipation'
@@ -173,7 +173,7 @@ export default function SlotStage({
   return (
     <View className='personality-results__immersive-shell'>
       <Text className='personality-results__immersive-eyebrow'>JoyJoin 原型揭晓</Text>
-      <Text className='personality-results__immersive-title'>你的社交卡面正在靠近</Text>
+      <Text className='personality-results__immersive-title'>你的命格卡面正在靠近</Text>
       <Text className='personality-results__immersive-copy'>
         先让命运转几圈，再锁定真正属于你的那一张牌。
       </Text>
@@ -221,8 +221,9 @@ export default function SlotStage({
         <View
           className={`personality-results__progress-fill${isLanded ? ' personality-results__progress-fill--landed' : ''}`}
           style={{
-            width: progressWidth,
-            background: isLanded ? '#facc15' : slotFocusVisual.accent || COLOR_PRIMARY,
+            transform: `scaleX(${progressScale})`,
+            transformOrigin: 'left center',
+            background: isLanded ? '#facc15' : slotFocusVisual.accent,
           }}
         />
       </View>
