@@ -682,14 +682,14 @@ jobs:
             # This prevents 502s: Nginx stops routing to joyjoin-user BEFORE
             # Docker Compose removes the container as an orphan.
             echo "🌐 Syncing and reloading host Nginx config..."
+            # Only require certs for domains whose DNS actually points to this server
             REQUIRED_TLS_FILES=(
               /etc/letsencrypt/live/joyjoinapp.com/fullchain.pem
               /etc/letsencrypt/live/joyjoinapp.com/privkey.pem
               /etc/letsencrypt/live/admin.joyjoinapp.com/fullchain.pem
               /etc/letsencrypt/live/admin.joyjoinapp.com/privkey.pem
-              /etc/letsencrypt/live/api.joyjoin.com/fullchain.pem
-              /etc/letsencrypt/live/api.joyjoin.com/privkey.pem
             )
+            OPTIONAL_TLS_DOMAINS=(api.joyjoin.com)
             missing_tls=0
             for tls_file in "${REQUIRED_TLS_FILES[@]}"; do
               if ! sudo test -r "$tls_file"; then
@@ -699,7 +699,6 @@ jobs:
             done
             if [ "$missing_tls" -ne 0 ]; then
               echo "⚠️ Provisioning missing Let's Encrypt certificates..."
-              # Extract unique domain names from missing cert paths
               MISSING_DOMAINS=$(for f in "${REQUIRED_TLS_FILES[@]}"; do
                 if ! sudo test -r "$f"; then
                   echo "$f" | sed -n 's|/etc/letsencrypt/live/\(.*\)/.*|\1|p'
@@ -711,15 +710,26 @@ jobs:
                   sudo certbot certonly --standalone -d "$domain" --non-interactive --agree-tos --email ops@joyjoin.com || \
                   { echo "❌ Failed to provision cert for $domain"; exit 1; }
               done
-              # Re-check after provisioning
               for tls_file in "${REQUIRED_TLS_FILES[@]}"; do
                 if ! sudo test -r "$tls_file"; then
                   echo "❌ Still missing after provisioning: $tls_file"
                   exit 1
                 fi
               done
-              echo "✅ All TLS certificates provisioned successfully"
+              echo "✅ All required TLS certificates provisioned successfully"
             fi
+            # Try provisioning optional domain certs (non-fatal if DNS doesn't resolve)
+            for domain in "${OPTIONAL_TLS_DOMAINS[@]}"; do
+              cert_path="/etc/letsencrypt/live/$domain/fullchain.pem"
+              if sudo test -r "$cert_path"; then
+                echo "   ✓ Optional cert already exists for: $domain"
+              else
+                echo "   ⚠️ Attempting cert for optional domain: $domain (non-fatal)"
+                sudo certbot --nginx -d "$domain" --non-interactive --agree-tos --email ops@joyjoin.com --no-redirect || \
+                sudo certbot certonly --standalone -d "$domain" --non-interactive --agree-tos --email ops@joyjoin.com --preferred-challenges http || \
+                echo "   ⚠️ Skipping $domain — DNS may not resolve to this server"
+              fi
+            done
             sudo cp ~/JoyJoin/deployment/nginx/joyjoin.conf /etc/nginx/conf.d/joyjoin.conf
             sudo nginx -t
             sudo systemctl reload nginx
