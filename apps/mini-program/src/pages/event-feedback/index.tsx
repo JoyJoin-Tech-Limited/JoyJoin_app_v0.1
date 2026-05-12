@@ -226,7 +226,7 @@ export default function EventFeedbackPage() {
                       {p.displayName || p.firstName || '匿名'}
                     </Text>
                     {isSelected && (
-                      <View className='event-feedback__participant-check'>✓</View>
+                      <Text className='event-feedback__participant-check'>✓</Text>
                     )}
                   </View>
                 )
