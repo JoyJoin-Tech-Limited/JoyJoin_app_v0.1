@@ -1,5 +1,5 @@
 import { type ReactNode, useRef, useState, useCallback, useEffect } from 'react'
-import { View } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import './SwipeCard.scss'
 
