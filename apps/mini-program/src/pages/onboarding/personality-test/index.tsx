@@ -36,7 +36,7 @@ import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions
 import { haptics } from '../../../lib/utils/haptics'
 import MascotQuestionHeader from './MascotQuestionHeader'
 import PersonalityTestAnswerArea, { getNearestSliderOption, type AnswerOption } from './PersonalityTestAnswerArea'
-import { resolveCommentary } from './commentaryMap'
+
 import QuestionTransition from './QuestionTransition'
 import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
 import './index.scss'
@@ -421,9 +421,7 @@ export default function PersonalityTestPage() {
     }
     setPreviewSpriteState(null)
 
-    // Show post-answer commentary in the speech bubble
-    const commentary = resolveCommentary(question.id, option)
-    setPostAnswerCommentary(commentary)
+    // Post-answer commentary will be set from server response below
 
     // Stale-session guard: remember which session this answer belongs to
     const thisSessionId = sessionId
@@ -464,6 +462,9 @@ export default function PersonalityTestPage() {
 
       // Abandon stale async work if session has changed
       if (activeSessionRef.current !== thisSessionId) return
+
+      // Set server-delivered Xiaoyue commentary for the speech bubble
+      setPostAnswerCommentary(result.commentary ?? null)
 
       if (!isAuthenticated) {
         upsertAnonymousAssessmentAnswer({

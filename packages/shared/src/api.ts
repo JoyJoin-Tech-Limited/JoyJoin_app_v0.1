@@ -710,6 +710,8 @@ export interface AssessmentAnswerResponse {
   currentQuestionIndex: number
   isComplete: boolean
   phase?: string
+  /** Xiaoyue commentary for the selected option, shown in the mascot speech bubble */
+  commentary?: string
 }
 
 export interface AssessmentResultResponse {

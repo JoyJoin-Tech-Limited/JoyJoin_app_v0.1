@@ -259,6 +259,7 @@ export function registerAssessmentV4Routes(app: Express): void {
         isAssessmentComplete,
         getClosingQuestionsRemaining,
         getFinalResult,
+        getOptionFeedback,
         DEFAULT_ASSESSMENT_CONFIG,
         V2_ASSESSMENT_CONFIG,
         SECONDARY_QUESTION_MAP,
@@ -404,6 +405,7 @@ export function registerAssessmentV4Routes(app: Express): void {
           logger.info('[Assessment V4] Algorithm result', { algorithmVersion, primaryArchetype, primaryMatchScore, isDecisive, userId: session.userId });
         }
         
+        const commentary = getOptionFeedback(questionId, selectedOption);
         res.json({
           isComplete: true,
           result: finalResult,
@@ -413,6 +415,7 @@ export function registerAssessmentV4Routes(app: Express): void {
             softMaxQuestions: engineState.config.softMaxQuestions,
             hardMaxQuestions: engineState.config.hardMaxQuestions,
           },
+          commentary,
         });
       } else {
         // Get next question
@@ -433,6 +436,7 @@ export function registerAssessmentV4Routes(app: Express): void {
           topArchetypes: engineState.currentMatches,
         });
         
+        const commentary = getOptionFeedback(questionId, selectedOption);
         res.json({
           isComplete: false,
           nextQuestion: nextQuestion ? {
@@ -459,6 +463,7 @@ export function registerAssessmentV4Routes(app: Express): void {
           },
           currentMatches: engineState.currentMatches.slice(0, 3),
           encouragement,
+          commentary,
         });
         
         logger.info("[Assessment V4 Answer] Response", {
