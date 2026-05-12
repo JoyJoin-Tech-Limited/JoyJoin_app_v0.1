@@ -743,11 +743,14 @@ jobs:
             # --- 4) Restart containers ---
             echo "🐳 Removing stale joyjoin-api container if present..."
             docker rm -f joyjoin-api || true
-            echo "🐳 Pulling pre-built granite-embedding image..."
-            docker compose -f docker-compose.nginx.yml pull granite-embedding 2>/dev/null || echo "   (pull skipped — image will be fetched on up)"
-            echo "🐳 Restarting containers..."
+            echo "🐳 Restarting core containers (api, admin)..."
             cd ~/JoyJoin/deployment
-            retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans
+            retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build joyjoin-api joyjoin-admin
+
+            echo "🐳 Starting granite-embedding (non-blocking)..."
+            docker compose -f docker-compose.nginx.yml pull granite-embedding 2>/dev/null && \
+              docker compose -f docker-compose.nginx.yml up -d granite-embedding || \
+              echo "   ⚠️ granite-embedding skipped (image not available yet — will retry next deploy)"
 
             # --- 5) Health checks ---
             echo "🏥 Verifying service status..."

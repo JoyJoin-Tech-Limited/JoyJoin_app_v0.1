@@ -33,3 +33,11 @@ jobs:
           context: deploy/granite-embedding
           push: true
           tags: ghcr.io/joyjoin-tech-limited/granite-embedding:latest
+
+      - name: Make package public
+        run: |
+          gh api --method PATCH \
+            "/orgs/${{ github.repository_owner }}/packages/container/granite-embedding" \
+            -f visibility=public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
