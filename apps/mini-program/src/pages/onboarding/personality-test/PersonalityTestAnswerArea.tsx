@@ -257,6 +257,8 @@ export default memo(function PersonalityTestAnswerArea({
         <Button
           variant='brand'
           className='answer-area__slider-submit'
+          onTouchStart={() => { onOptionTouchStart?.({ value: 'slider', text: '确认这个感觉' }) }}
+          onTouchEnd={() => { onOptionTouchEnd?.() }}
           onClick={() => {
             haptics('light')
             onSliderSubmit()

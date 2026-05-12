@@ -95,6 +95,7 @@ interface AssessmentAnswerResponse {
   nextQuestion?: AssessmentQuestion | null
   progress?: AssessmentProgress
   currentMatches?: AssessmentMatch[]
+  commentary?: string
 }
 
 const INTRO_ARCHETYPE_TEASERS: { archetype: string; vibeLine: string }[] = [
