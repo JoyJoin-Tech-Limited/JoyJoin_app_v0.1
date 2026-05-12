@@ -1,0 +1,21 @@
+name: Sync CDN Assets
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync-cdn:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload static assets to server CDN
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          source: apps/mini-program/src/assets/
+          target: /var/www/cdn/
+          strip_components: 3
