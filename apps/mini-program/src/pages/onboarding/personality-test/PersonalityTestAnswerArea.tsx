@@ -7,6 +7,33 @@ import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import { resolvePersonalityEmoji } from './emojiAssets'
 import './PersonalityTestAnswerArea.scss'
 
+/** Poetic trait-fragment labels for Phase 2 wow element.
+ *  Deterministic mapping by option text hash — no "+1" gamification.
+ */
+const FRAGMENT_LABELS = [
+  '🌙 月光气质',
+  '🔥 热忱底色',
+  '💧 静水流深',
+  '🍃 清风徐来',
+  '⚡ 锐意思维',
+  '🌸 柔软内核',
+  '🪨 沉稳根基',
+  '🌊 包容广度',
+  '✨ 独特光芒',
+  '🌿 自然节律',
+  '💎 剔透本真',
+  '🌅 温暖曙光',
+  '🌌 深邃夜空',
+  '🍂 从容秋意',
+  '❄️ 清冽边界',
+  '🌻 向阳生长',
+]
+
+function resolveFragmentLabel(option: AnswerOption): string {
+  const hash = Math.abs(option.text.charCodeAt(0)) % FRAGMENT_LABELS.length
+  return FRAGMENT_LABELS[hash]!
+}
+
 export type QuestionType = 'choice' | 'slider' | 'emoji_tap'
 
 export interface AnswerOption {
@@ -92,7 +119,10 @@ export default memo(function PersonalityTestAnswerArea({
   onOptionTouchEnd,
 }: AnswerAreaProps) {
   const [selectedValue, setSelectedValue] = useState<string | null>(null)
+  const [fragmentLabel, setFragmentLabel] = useState<string>('')
+  const [fragmentVisible, setFragmentVisible] = useState(false)
   const selectedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fragmentTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastSliderValueRef = useRef(sliderValue)
 
   // Reset selection when question changes
@@ -108,7 +138,20 @@ export default memo(function PersonalityTestAnswerArea({
     if (selectedTimeoutRef.current) {
       clearTimeout(selectedTimeoutRef.current)
     }
+    if (fragmentTimeoutRef.current) {
+      clearTimeout(fragmentTimeoutRef.current)
+    }
     setSelectedValue(option.value)
+
+    // Trigger trait fragment reveal (pooled single node, 400ms)
+    const label = resolveFragmentLabel(option)
+    setFragmentLabel(label)
+    setFragmentVisible(true)
+    fragmentTimeoutRef.current = setTimeout(() => {
+      setFragmentVisible(false)
+      fragmentTimeoutRef.current = null
+    }, 400)
+
     onAnswer(option)
     // Clear selection flash after 300ms
     selectedTimeoutRef.current = setTimeout(() => {
@@ -122,6 +165,9 @@ export default memo(function PersonalityTestAnswerArea({
     return () => {
       if (selectedTimeoutRef.current) {
         clearTimeout(selectedTimeoutRef.current)
+      }
+      if (fragmentTimeoutRef.current) {
+        clearTimeout(fragmentTimeoutRef.current)
       }
     }
   }, [])
@@ -265,6 +311,13 @@ export default memo(function PersonalityTestAnswerArea({
   // Default: choice
   return (
     <View className='answer-area__options'>
+      {/* Trait fragment reveal — pooled single node, 400ms */}
+      <View
+        className={`answer-area__fragment${fragmentVisible ? ' answer-area__fragment--visible' : ''}`}
+        aria-hidden={!fragmentVisible}
+      >
+        <Text className='answer-area__fragment-text'>{fragmentLabel}</Text>
+      </View>
       {options.map((option, index) => {
         const isSelected = selectedValue === option.value
         return (
