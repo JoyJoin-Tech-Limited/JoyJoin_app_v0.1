@@ -231,7 +231,7 @@ Configuration: `temperature: 0.3`, `max_tokens: 500`. Returns structured JSON `{
 | Phase | Provider layer change |
 |---|---|
 | **Phase 1 (current)** | Both providers active as described above. Phase 1 feature work (icebreaker sequencing, scenario service, group-context explanations) slots into the existing routing with no changes to the provider layer. |
-| **Phase 2** | `embeddingClient.ts` is **now present** (`apps/server/src/embeddingClient.ts`) — shipped as part of the async semantic profile embeddings pipeline. It uses **DeepSeek only** (`DEEPSEEK_API_KEY`, OpenAI-compatible embeddings API). Embedding calls are background-only and are not routed through `socialModelRouter` or `creativeModelRouter`. The neural embedding path is available but the current live semantic scoring (`matchingSemantic.ts`) uses deterministic feature-hash vectors, not neural embeddings. |
+| **Phase 2** | `embeddingClient.ts` is **now present** (`apps/server/src/embeddingClient.ts`) — shipped as part of the async semantic profile embeddings pipeline. It uses **self-hosted endpoint only** (`EMBEDDING_BASE_URL`); default model is Granite `granite-embedding-97m-multilingual-r2`. Embedding calls are background-only and are not routed through `socialModelRouter` or `creativeModelRouter`. The neural embedding path is available but the current live semantic scoring (`matchingSemantic.ts`) uses deterministic feature-hash vectors, not neural embeddings. |
 | **Phase 3** | `minimaxClient.ts` is extended for multimodal input processing (`minimax-m2.7` already supports this natively). No new infrastructure client is needed — multimodal is an additional call pattern on the existing MiniMax client, gated by consent UI and fairness audit. |
 
 ---
