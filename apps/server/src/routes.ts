@@ -32,6 +32,7 @@ import { registerSocialRoutes } from "./routes/domains/social";
 import { registerTelemetryRoutes } from "./routes/domains/telemetry";
 import { registerUserEventPoolRoutes } from "./routes/domains/userEventPools";
 import { registerVenueRoutes } from "./routes/domains/venues";
+import { registerOccupationSearchRoutes } from "./routes/domains/occupationSearch";
 import { registerXiaoyueRoutes } from "./routes/domains/xiaoyue";
 import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
@@ -112,6 +113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAdminEventManagementRoutes(app);
   registerEventGroupOutcomeRoutes(app);
   registerVenueRoutes(app);
+  registerOccupationSearchRoutes(app);
   registerGeoRoutes(app);
   registerAttendanceRoutes(app);
   registerIcebreakerRoutes(app);

@@ -55,18 +55,19 @@ export async function testVocabularyCoverage(client: EmbeddingClient): Promise<T
   const coverage = covered.length / TERMS.length;
 
   const arity = 12;
-  const activity = 9;
+  const activity = 10;
   const socialTag = 4;
   const intent = 5;
   const deep = 3;
   const event = 3;
+  const pattern = deep + event;
 
   const domainBreakdown = [
     { domain: 'Archetypes', count: arity, covered: termResults.slice(0, arity).filter((r) => r.norm >= NEAR_ZERO_THRESHOLD).length },
-    { domain: 'Activities', count: activity + 4, covered: termResults.slice(arity, arity + activity).filter((r) => r.norm >= NEAR_ZERO_THRESHOLD).length },
+    { domain: 'Activities', count: activity, covered: termResults.slice(arity, arity + activity).filter((r) => r.norm >= NEAR_ZERO_THRESHOLD).length },
     { domain: 'Social tags', count: socialTag, covered: termResults.slice(arity + activity, arity + activity + socialTag).filter((r) => r.norm >= NEAR_ZERO_THRESHOLD).length },
     { domain: 'Intent', count: intent, covered: termResults.slice(arity + activity + socialTag, arity + activity + socialTag + intent).filter((r) => r.norm >= NEAR_ZERO_THRESHOLD).length },
-    { domain: 'Patterns', count: deep + event, covered: termResults.slice(arity + activity + socialTag + intent).filter((r) => r.norm >= NEAR_ZERO_THRESHOLD).length },
+    { domain: 'Patterns', count: pattern, covered: termResults.slice(arity + activity + socialTag + intent).filter((r) => r.norm >= NEAR_ZERO_THRESHOLD).length },
   ];
 
   const results: TestResult[] = [
