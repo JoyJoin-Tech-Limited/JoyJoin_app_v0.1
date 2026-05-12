@@ -1,5 +1,5 @@
 import type { Express, Request } from "express";
-import { requireAuth } from "../../phoneAuth";
+import { requireAuth } from "../../middleware/auth";
 import { setupWechatAuth } from "../../wechatAuth";
 import { storage } from "../../storage";
 import { authEndpointLimiter } from "../../rateLimiter";

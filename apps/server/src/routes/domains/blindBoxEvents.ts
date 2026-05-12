@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { z } from "zod";
-import { requireAuth } from "../../phoneAuth";
+import { requireAuth } from "../../middleware/auth";
 import { aiEndpointLimiter } from "../../rateLimiter";
 import { storage } from "../../storage";
 import { db } from "../../db";

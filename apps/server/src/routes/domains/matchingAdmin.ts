@@ -4,7 +4,7 @@ import { db } from "../../db";
 import { eq, and, desc } from "drizzle-orm";
 import { matchingThresholds, poolMatchingLogs, eventPools, insertChatReportSchema, insertChatLogSchema } from "@shared/schema";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
-import { requireAuth } from "../../phoneAuth";
+import { requireAuth } from "../../middleware/auth";
 import { storage } from "../../storage";
 import type { User } from "@shared/schema";
 

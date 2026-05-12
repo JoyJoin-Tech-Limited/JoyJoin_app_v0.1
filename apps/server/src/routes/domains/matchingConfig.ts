@@ -2,7 +2,7 @@ import { logger } from "../../lib/logger";
 import type { Express } from "express";
 import { venueMatchingService } from "../../venueMatchingService";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
-import { requireAuth } from "../../phoneAuth";
+import { requireAuth } from "../../middleware/auth";
 import { storage } from "../../storage";
 import { calculateUserMatchScore, matchUsersToGroups, validateWeights, DEFAULT_WEIGHTS, type MatchingWeights } from "../../userMatchingService";
 import type { User } from "@shared/schema";

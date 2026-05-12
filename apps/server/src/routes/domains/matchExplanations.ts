@@ -1,6 +1,6 @@
 import { logger } from "../../lib/logger";
 import type { Express } from "express";
-import { requireAuth } from "../../phoneAuth";
+import { requireAuth } from "../../middleware/auth";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { aiEndpointLimiter } from "../../rateLimiter";
 import { db } from "../../db";

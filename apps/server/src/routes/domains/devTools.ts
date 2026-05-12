@@ -3,7 +3,7 @@ import type { Express, Request } from "express";
 import { isDevAuthToolsEnabled } from "../../auth/policy";
 import { storage } from "../../storage";
 import { ARCHETYPE_NAMES, type ArchetypeName } from "../../archetypeConfig";
-import { requireAuth } from "../../phoneAuth";
+import { requireAuth } from "../../middleware/auth";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { db } from "../../db";
 import * as schema from "@shared/schema";

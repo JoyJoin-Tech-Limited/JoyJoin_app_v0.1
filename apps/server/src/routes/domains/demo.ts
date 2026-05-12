@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { randomUUID } from "crypto";
-import { requireAuth } from "../../phoneAuth";
+import { requireAuth } from "../../middleware/auth";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { db } from "../../db";
 import { storage } from "../../storage";

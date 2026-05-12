@@ -4,7 +4,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { embeddingClient } from '../../embeddingClient.js';
 import { OCCUPATIONS } from '@shared/occupations';
-import { requireAuth } from '../../phoneAuth';
+import { requireAuth } from '../../middleware/auth';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
