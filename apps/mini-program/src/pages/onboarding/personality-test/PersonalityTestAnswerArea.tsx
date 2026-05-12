@@ -5,42 +5,12 @@ import { COLOR_PRIMARY, COLOR_PRIMARY_LIGHT } from '../../../lib/utils/uiConstan
 import { haptics } from '../../../lib/utils/haptics'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import { resolvePersonalityEmoji } from './emojiAssets'
+import { resolveFragmentLabel, getNearestSliderOption, type AnswerOption } from './personalityTestLogic'
 import './PersonalityTestAnswerArea.scss'
 
-/** Poetic trait-fragment labels for Phase 2 wow element.
- *  Deterministic mapping by option text hash — no "+1" gamification.
- */
-const FRAGMENT_LABELS = [
-  '🌙 月光气质',
-  '🔥 热忱底色',
-  '💧 静水流深',
-  '🍃 清风徐来',
-  '⚡ 锐意思维',
-  '🌸 柔软内核',
-  '🪨 沉稳根基',
-  '🌊 包容广度',
-  '✨ 独特光芒',
-  '🌿 自然节律',
-  '💎 剔透本真',
-  '🌅 温暖曙光',
-  '🌌 深邃夜空',
-  '🍂 从容秋意',
-  '❄️ 清冽边界',
-  '🌻 向阳生长',
-]
-
-function resolveFragmentLabel(option: AnswerOption): string {
-  const hash = Math.abs(option.text.charCodeAt(0)) % FRAGMENT_LABELS.length
-  return FRAGMENT_LABELS[hash]!
-}
+export { resolveFragmentLabel, getNearestSliderOption, type AnswerOption } from './personalityTestLogic'
 
 export type QuestionType = 'choice' | 'slider' | 'emoji_tap'
-
-export interface AnswerOption {
-  value: string
-  text: string
-  traitScores?: Record<string, number>
-}
 
 export interface SliderConfig {
   leftLabel: string
@@ -70,23 +40,6 @@ function splitEmojiLabel(text: string): { emoji: string; label: string } {
     return { emoji: '', label: text }
   }
   return { emoji: match[1], label: match[2] }
-}
-
-function getNearestSliderOption(
-  options: AnswerOption[],
-  sliderValue: number,
-): AnswerOption | null {
-  if (options.length === 0) return null
-  return options.reduce<AnswerOption | null>((closest, option) => {
-    const match = option.value.match(/(-?\d+)/)
-    const optionValue = match ? Number(match[1]) : 50
-    if (!closest) return option
-    const closestMatch = closest.value.match(/(-?\d+)/)
-    const closestValue = closestMatch ? Number(closestMatch[1]) : 50
-    return Math.abs(optionValue - sliderValue) < Math.abs(closestValue - sliderValue)
-      ? option
-      : closest
-  }, null)
 }
 
 /** Resolve a dynamic emoji for the slider based on current value (0-100).
@@ -343,5 +296,3 @@ export default memo(function PersonalityTestAnswerArea({
     </View>
   )
 })
-
-export { getNearestSliderOption }

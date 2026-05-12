@@ -33,10 +33,12 @@
 
 @keyframes start-btn-glow {
   0%, 100% {
-    box-shadow: 0 10rpx 30rpx rgba($brand-gradient-to, 0.24);
+    opacity: 0.6;
+    transform: scale(1);
   }
   50% {
-    box-shadow: 0 14rpx 42rpx rgba($brand-gradient-to, 0.32);
+    opacity: 1;
+    transform: scale(1.03);
   }
 }
 
@@ -546,15 +548,33 @@
   &__start-btn {
     @include button-primary;
     @include type-brand-cta-label;
+    position: relative;
     width: 100%;
     border: 0;
-    box-shadow: 0 10rpx 30rpx rgba($brand-gradient-to, 0.24);
-    animation: start-btn-glow 2.4s ease-in-out infinite;
+
+    // Compositor-safe glow — pseudo-element animates opacity + scale
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      border-radius: inherit;
+      box-shadow: 0 10rpx 30rpx rgba($brand-gradient-to, 0.24);
+      opacity: 0.6;
+      animation: start-btn-glow 2.4s ease-in-out infinite;
+      pointer-events: none;
+      z-index: -1;
+    }
 
     &--hover {
       opacity: 0.96;
       transform: translateY(1rpx) scale(0.995);
-      animation: none;
+
+      &::after {
+        animation: none;
+      }
     }
   }
 
@@ -614,7 +634,7 @@
     width: 100%;
     height: 4rpx;
     background: rgba($color-primary, 0.1);
-    overflow: hidden;
+    overflow: visible;
   }
 
   &__progress-fill {
@@ -627,20 +647,41 @@
     transform-origin: left center;
     transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 
+    // Compositor-safe glow pulse — uses transform + opacity instead of box-shadow
+    &::after {
+      content: '';
+      position: absolute;
+      left: -2rpx;
+      top: -4rpx;
+      right: -2rpx;
+      bottom: -4rpx;
+      border-radius: 0 4rpx 4rpx 0;
+      background: rgba($color-primary, 0.35);
+      opacity: 0;
+      transform: scale(1);
+      transform-origin: left center;
+      pointer-events: none;
+    }
+
     &--milestone-pulse {
-      animation: milestone-progress-pulse 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+      &::after {
+        animation: milestone-progress-pulse 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
     }
   }
 
   @keyframes milestone-progress-pulse {
     0% {
-      box-shadow: 0 0 0 0rpx rgba($color-primary, 0.35);
+      opacity: 0.35;
+      transform: scale(1);
     }
     50% {
-      box-shadow: 0 0 12rpx 4rpx rgba($color-primary, 0.2);
+      opacity: 0.2;
+      transform: scale(1.06);
     }
     100% {
-      box-shadow: 0 0 0 0rpx rgba($color-primary, 0);
+      opacity: 0;
+      transform: scale(1);
     }
   }
 
@@ -696,7 +737,7 @@
 
     /* Soft shadow for depth */
     box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.06);
-    transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: background 0.3s ease, border-color 0.3s ease;
 
     &--milestone {
       background: rgba($color-primary-light, 0.94);

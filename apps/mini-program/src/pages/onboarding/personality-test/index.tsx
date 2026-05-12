@@ -36,6 +36,7 @@ import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions
 import { haptics } from '../../../lib/utils/haptics'
 import MascotQuestionHeader from './MascotQuestionHeader'
 import PersonalityTestAnswerArea, { getNearestSliderOption, type AnswerOption } from './PersonalityTestAnswerArea'
+import { resolveOptionPreviewSpriteState, isMilestoneQuestion } from './personalityTestLogic'
 
 import QuestionTransition from './QuestionTransition'
 import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
@@ -385,9 +386,7 @@ export default function PersonalityTestPage() {
 
   /** Map an option to a preview sprite state based on its text content. */
   const resolveOptionPreviewSpriteState = useCallback((option: AnswerOption): XiaoyueSpriteState => {
-    const states: XiaoyueSpriteState[] = ['listening', 'curious', 'thinking', 'surprised']
-    const hash = Math.abs(option.text.charCodeAt(0)) % states.length
-    return states[hash]!
+    return resolveOptionPreviewSpriteState(option)
   }, [])
 
   const previewDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -429,7 +428,7 @@ export default function PersonalityTestPage() {
     activeSessionRef.current = thisSessionId
 
     // Choose reaction based on milestone proximity
-    const isMilestone = progress && (progress.answered === 3 || progress.answered === 7)
+    const isMilestone = progress && isMilestoneQuestion(progress.answered)
     const reactionState: XiaoyueSpriteState = isMilestone ? 'celebrate' : 'nod'
 
     if (isMilestone) {
@@ -447,6 +446,10 @@ export default function PersonalityTestPage() {
       setSpriteLocked(false)
       setPostAnswerCommentary(null)
       setMilestonePulse(false)
+      // If server response hasn't arrived yet, transition to thinking state
+      if (isSubmitting) {
+        setSpriteState('thinking')
+      }
     }, 1500)
 
     setIsSubmitting(true)
@@ -510,6 +513,7 @@ export default function PersonalityTestPage() {
         return
       }
 
+      setSpriteState('idle')
       setQuestion(result.nextQuestion)
       setProgress(result.progress ?? null)
       setCurrentMatches(result.currentMatches ?? [])
@@ -553,7 +557,11 @@ export default function PersonalityTestPage() {
       spriteUnlockTimeoutRef.current = null
     }
     setSpriteLocked(false)
-  }, [])
+    // If server response hasn't arrived yet, transition to thinking state
+    if (isSubmitting) {
+      setSpriteState('thinking')
+    }
+  }, [isSubmitting])
 
   const preloadExpressions: XiaoyueExpressionId[] = [
     PERSONALITY_TEST_QUESTION_EXPRESSION.choice,
@@ -769,17 +777,19 @@ export default function PersonalityTestPage() {
                   className='personality-test__speech-bubble-text'
                   key={`speech-${progress?.answered ?? 0}-${question.id}-${postAnswerCommentary ?? 'default'}`}
                 >
-                  {postAnswerCommentary
-                    ? postAnswerCommentary
-                    : progress && progress.answered === 4
-                      ? '已经一半了！你的命格轮廓越来越清晰，继续凭直觉选。'
-                      : progress && progress.answered === 8
-                        ? '太棒了！进入精准阶段，接下来的题目会更聚焦，帮你锁定最像自己的氛围命格。'
-                        : questionType === 'slider'
-                          ? '滑到最符合你感觉的位置～'
-                          : questionType === 'emoji_tap'
-                            ? '选最戳你的那个～'
-                            : '凭直觉选就好，没有标准答案～'}
+                  {isSubmitting && spriteState === 'thinking'
+                    ? '悦仔正在分析你的选择…'
+                    : postAnswerCommentary
+                      ? postAnswerCommentary
+                      : progress && progress.answered === 4
+                        ? '已经一半了！你的命格轮廓越来越清晰，继续凭直觉选。'
+                        : progress && progress.answered === 8
+                          ? '太棒了！进入精准阶段，接下来的题目会更聚焦，帮你锁定最像自己的氛围命格。'
+                          : questionType === 'slider'
+                            ? '滑到最符合你感觉的位置～'
+                            : questionType === 'emoji_tap'
+                              ? '选最戳你的那个～'
+                              : '凭直觉选就好，没有标准答案～'}
                 </Text>
               </View>
             </View>
