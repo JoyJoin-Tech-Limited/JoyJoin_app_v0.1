@@ -6,15 +6,17 @@ on:
 
 concurrency:
   group: joyjoin-prod-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
+  actions: write
+  checks: write
 
 jobs:
   guardrails:
     name: Guardrails
-    runs-on: ubuntu-24.04
+    runs-on: macos-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -46,7 +48,7 @@ jobs:
   lint-shared:
     needs: [guardrails]
     name: Type Check Shared Package
-    runs-on: ubuntu-24.04
+    runs-on: macos-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -66,7 +68,7 @@ jobs:
   lint-admin:
     needs: [guardrails]
     name: Type Check Admin Client
-    runs-on: ubuntu-24.04
+    runs-on: macos-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -86,7 +88,7 @@ jobs:
   lint-server:
     needs: [guardrails]
     name: Type Check Server
-    runs-on: ubuntu-24.04
+    runs-on: macos-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -106,7 +108,7 @@ jobs:
   lint-mini-program:
     needs: [guardrails]
     name: Type Check Mini-Program
-    runs-on: ubuntu-24.04
+    runs-on: macos-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -123,7 +125,7 @@ jobs:
   test-server:
     needs: [guardrails]
     name: Server Tests
-    runs-on: ubuntu-24.04
+    runs-on: macos-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -143,7 +145,7 @@ jobs:
   test-shared:
     needs: [guardrails]
     name: Shared Tests
-    runs-on: ubuntu-24.04
+    runs-on: macos-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -160,7 +162,7 @@ jobs:
   test-admin-client:
     needs: [guardrails]
     name: Admin Client Tests
-    runs-on: ubuntu-24.04
+    runs-on: macos-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -177,7 +179,7 @@ jobs:
   test-mini-program:
     needs: [guardrails]
     name: Mini Program Tests
-    runs-on: ubuntu-24.04
+    runs-on: macos-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -194,7 +196,7 @@ jobs:
   harness-gate:
     needs: [guardrails]
     name: Harness Completion Gate
-    runs-on: ubuntu-24.04
+    runs-on: macos-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -214,7 +216,7 @@ jobs:
   ai-test:
     name: AI Simulation Test
     needs: [lint-shared, lint-admin, lint-server, lint-mini-program, test-server, test-shared, test-admin-client, test-mini-program, harness-gate]
-    runs-on: ubuntu-24.04
+    runs-on: macos-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -236,7 +238,7 @@ jobs:
   deploy:
     name: Production Deployment
     needs: [ai-test, harness-gate]
-    runs-on: ubuntu-24.04
+    runs-on: macos-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
