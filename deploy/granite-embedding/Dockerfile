@@ -1,5 +1,6 @@
-FROM pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime
+FROM python:3.11-slim
 
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir sentence-transformers fastapi uvicorn
 
 COPY server.py /app/server.py
