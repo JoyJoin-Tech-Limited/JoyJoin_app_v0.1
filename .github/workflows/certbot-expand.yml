@@ -15,4 +15,4 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
           script: |
-            sudo certbot --expand -d joyjoinapp.com -d www.joyjoinapp.com -d api.joyjoinapp.com --non-interactive --agree-tos --email ops@joyjoin.com
+            sudo certbot certonly --nginx --expand -d joyjoinapp.com -d www.joyjoinapp.com -d api.joyjoinapp.com --non-interactive --agree-tos --email ops@joyjoin.com
