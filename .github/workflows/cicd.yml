@@ -543,6 +543,8 @@ jobs:
             upsert_if_nonempty "DEBUG_AUTH" "$DEBUG_AUTH"
             upsert_if_nonempty "ENABLE_MATCHER_V2" "$ENABLE_MATCHER_V2"
             upsert_if_nonempty "ENABLE_SEMANTIC_SIMILARITY" "$ENABLE_SEMANTIC_SIMILARITY"
+            upsert_if_nonempty "EMBEDDING_BASE_URL" "$EMBEDDING_BASE_URL"
+            upsert_if_nonempty "EMBEDDING_MODEL" "$EMBEDDING_MODEL"
             upsert_if_nonempty "ENABLE_ADAPTIVE_WEIGHTS" "$ENABLE_ADAPTIVE_WEIGHTS"
             upsert_if_nonempty "LOG_LEVEL" "$LOG_LEVEL"
             upsert_if_nonempty "SOCIAL_DEFAULT_REASONING_EFFORT" "$SOCIAL_DEFAULT_REASONING_EFFORT"

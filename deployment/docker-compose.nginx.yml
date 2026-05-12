@@ -1,4 +1,19 @@
 services:
+  granite-embedding:
+    build:
+      context: ../deploy/granite-embedding
+    container_name: joyjoin-granite-embedding
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
   joyjoin-api:
     build:
       context: ..
