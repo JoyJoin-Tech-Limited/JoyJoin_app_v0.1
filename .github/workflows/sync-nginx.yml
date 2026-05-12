@@ -1,0 +1,26 @@
+name: Sync Nginx Config
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync-nginx:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          script: |
+            set -euo pipefail
+            echo "=== Copying nginx config ==="
+            sudo cp ~/JoyJoin/deployment/nginx/joyjoin.conf /etc/nginx/conf.d/joyjoin.conf
+            echo "=== Validating ==="
+            sudo nginx -t
+            echo "=== Reloading ==="
+            sudo systemctl reload nginx
+            echo "=== Done ==="
