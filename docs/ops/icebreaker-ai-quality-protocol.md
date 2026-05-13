@@ -2,11 +2,11 @@
 
 This document defines how JoyJoin assesses **in-event AI-assisted icebreaker content** for clarity, fun, appropriateness, and memorability — and how that ties to `promptVersion`, [`AIResponseMeta`](../../packages/shared/src/types/aiMeta.ts) (including `aiCorrelationId`), and persisted feedback.
 
-**Related:** [icebreaker-ai-observability.md](./icebreaker-ai-observability.md), [production-ai-surfaces.md](../../.github/skills/social-icebreaker-domain/references/production-ai-surfaces.md).
+**Related:** [icebreaker-ai-systems/observability.md](./icebreaker-ai-systems/observability.md), [production-ai-surfaces.md](../../.github/skills/social-icebreaker-domain/references/production-ai-surfaces.md).
 
 ## Principles
 
-- **Server authority:** Session phase progression and game rules stay deterministic; AI output is presentation-only ([`docs/ai-agent-harness-separation-strategy.md`](../ai-agent-harness-separation-strategy.md)).
+- **Server authority:** Session phase progression and game rules stay deterministic; AI output is presentation-only ([`docs/ai/ai/ai-agent-harness-separation-strategy.md`](../ai/ai-agent-harness-separation-strategy.md)).
 - **Terminology:** Use **memorable** or **rejoin intent** in copy and rubrics — avoid framing goals as “addictive” engagement.
 - **Privacy:** `aiCorrelationId` is an opaque UUID; it must not embed PII. Feedback rows store no prompt text or user-generated content by default.
 
@@ -39,7 +39,7 @@ API: `POST /api/social-icebreaker/:socialSessionId/ai-feedback` (authenticated; 
 
 ## Async LLM-as-judge (deferred / P3)
 
-A separate **sampled**, **offline** judge (see [`docs/AI_INTEGRATION_PLAN.md`](../AI_INTEGRATION_PLAN.md) — Evaluator Usage Policy) may score anonymized or hashed content for calibration against human ratings. It **never** runs on the user-facing critical path; batch or queue only; no PII in judge inputs.
+A separate **sampled**, **offline** judge (see [`docs/ai/ai/AI_INTEGRATION_PLAN.md`](../ai/AI_INTEGRATION_PLAN.md) — Evaluator Usage Policy) may score anonymized or hashed content for calibration against human ratings. It **never** runs on the user-facing critical path; batch or queue only; no PII in judge inputs.
 
 **Status:** Not implemented in application code; operate via future job + governance review before enabling in production.
 
@@ -51,4 +51,4 @@ A separate **sampled**, **offline** judge (see [`docs/AI_INTEGRATION_PLAN.md`](.
 ## Dashboards
 
 - Admin: `GET /api/admin/icebreaker-ai-feedback/summary` — aggregates by `phase`, `promptVersion`, and rating (see implementation).
-- Metrics: continue using `joyjoin_ai_*` from [icebreaker-ai-observability.md](./icebreaker-ai-observability.md) for technical health; combine with human aggregates for end-to-end quality.
+- Metrics: continue using `joyjoin_ai_*` from [icebreaker-ai-systems/observability.md](./icebreaker-ai-systems/observability.md) for technical health; combine with human aggregates for end-to-end quality.

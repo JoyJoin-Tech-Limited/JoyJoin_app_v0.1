@@ -3,7 +3,7 @@
 Status: Current shipped behavior
 Last updated: 2026-04-24
 
-This document describes the AI model routing and trace behavior that is currently live in the JoyJoin server. It is intentionally current-state only. For broader architecture boundaries, read `docs/ai-agent-harness-separation-strategy.md`. For future rollout ideas, read `docs/AI_INTEGRATION_PLAN.md` as roadmap material only.
+This document describes the AI model routing and trace behavior that is currently live in the JoyJoin server. It is intentionally current-state only. For broader architecture boundaries, read `docs/ai/ai-agent-harness-separation-strategy.md`. For future rollout ideas, read `docs/ai/AI_INTEGRATION_PLAN.md` as roadmap material only.
 
 ## DeepSeek V4 Migration
 

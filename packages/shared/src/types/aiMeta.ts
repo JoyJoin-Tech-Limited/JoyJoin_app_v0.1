@@ -17,7 +17,7 @@
  *   - Fields map to the `AICallTrace` shape in AI_INTEGRATION_PLAN.md §10.4
  *     (Trace Viewer MVP Requirements).
  *   - Also mirrors the 7-stage guardrail pipeline in
- *     docs/ai-agent-harness-separation-strategy.md §8 (stage 7: structured
+ *     docs/ai/ai-agent-harness-separation-strategy.md §8 (stage 7: structured
  *     output return + logging and observability metadata emission).
  *
  * Current repo state: `GroupAnalysisResponse` (packages/shared/src/types/groupAnalysis.ts)

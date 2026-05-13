@@ -664,7 +664,7 @@ test('payment flow sibling review via real file path → platform-coordination-p
 
 test('platform coordination doc usage → platform-coordination-protocol', () => {
   const r = routeSkill({
-    ask: 'How do I use docs/PLATFORM_COORDINATION.md to decide whether this payment change needs sibling platform review?',
+    ask: 'How do I use docs/reference/PLATFORM_COORDINATION.md to decide whether this payment change needs sibling platform review?',
   });
   assertEqual(r.primary_skill, 'platform-coordination-protocol');
 });

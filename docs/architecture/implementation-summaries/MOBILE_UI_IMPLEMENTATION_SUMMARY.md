@@ -1,7 +1,7 @@
 # Mobile UI Design Specification - Implementation Summary
 
 > **Status:** Active reference for the web-mobile implementation in `apps/user-client`; last verified 2026-04-11.
-> **Scope:** This document covers the mobile-first React/Vite implementation that came from the original mobile design specification. The repo now also has an active `apps/mini-program` client built with Taro + React, so mini-program execution should be read alongside `docs/PLATFORM_COORDINATION.md` rather than treated as a future port.
+> **Scope:** This document covers the mobile-first React/Vite implementation that came from the original mobile design specification. The repo now also has an active `apps/mini-program` client built with Taro + React, so mini-program execution should be read alongside `docs/reference/reference/PLATFORM_COORDINATION.md` rather than treated as a future port.
 
 ## Overview
 
@@ -24,7 +24,7 @@ The original specification was written with WeChat Mini Program concepts (`rpx`,
   - Shares design intent with the web client, but still requires explicit parity review and platform-specific adaptation
 
 3. **Legacy raw WeChat reference material** (supplemental)
-  - `docs/wechat-mini-program-reference.md` remains useful for original design translation concepts
+  - `docs/reference/reference/wechat-mini-program-reference.md` remains useful for original design translation concepts
   - It is no longer the source of truth for the active mini-program implementation
 
 ### Technology Stack
@@ -243,9 +243,9 @@ interface MobileContainerProps {
 
 ### 2. Mini-program references and coordination
 
-**Primary active coordination doc**: `docs/PLATFORM_COORDINATION.md`
+**Primary active coordination doc**: `docs/reference/reference/PLATFORM_COORDINATION.md`
 
-**Supplemental design translation reference**: `docs/wechat-mini-program-reference.md`
+**Supplemental design translation reference**: `docs/reference/reference/wechat-mini-program-reference.md`
 
 **Use these for**:
 - Current parity gaps and platform drift tracking
@@ -502,8 +502,8 @@ Before using in production:
 ### Documentation
 
 - [Mobile Design System](./mobile-design-system.md)
-- [Platform Coordination](./PLATFORM_COORDINATION.md)
-- [WeChat Mini Program Reference](./wechat-mini-program-reference.md)
+- [Platform Coordination](./reference/PLATFORM_COORDINATION.md)
+- [WeChat Mini Program Reference](./reference/wechat-mini-program-reference.md)
 - [Original Specification](../problem_statement.md)
 
 ### Component Files

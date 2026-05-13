@@ -1,6 +1,6 @@
 import { View, Text, Input, Picker, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   CURRENT_CITY_OPTIONS,
   EDUCATION_LEVEL_OPTIONS,
@@ -15,8 +15,9 @@ import {
   getIndustryId,
   getOccupationById,
   getOccupationGuidance,
+  OCCUPATIONS,
 } from '@shared/occupations'
-import { submitEssentialData } from '@shared/api'
+import { searchOccupation, submitEssentialData } from '@shared/api'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import { TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../../lib/utils/uiConstants'
 import { useInvalidateAuth } from '../../../hooks/useAuth'
@@ -161,6 +162,10 @@ export default function EssentialDataPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [error, setError] = useState('')
+  const [occupationQuery, setOccupationQuery] = useState('')
+  const [occupationSuggestions, setOccupationSuggestions] = useState<Array<{ occupationId: string; displayName: string; industryId: string }>>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
 
   const { user, isLoading } = useAuthGuard({
     suspendOnboardingRedirect: isSubmitting || isPageExiting,
@@ -308,6 +313,40 @@ export default function EssentialDataPage() {
     }
   }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, industryId, industryLabel, intent, invalidateAuth, isSubmitting, occupationId, relationshipStatus, saveCheckpoint])
 
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleOccupationInput = useCallback((value: string) => {
+    setOccupationQuery(value)
+    setOccupationId('')
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    if (value.trim().length < 1) {
+      setOccupationSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+    setIsSearching(true)
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const result = await searchOccupation(apiRequest, value.trim())
+        setOccupationSuggestions(result.matches ?? [])
+        setShowSuggestions(result.matches?.length > 0)
+      } catch {
+        setOccupationSuggestions([])
+      } finally {
+        setIsSearching(false)
+      }
+    }, 300)
+  }, [])
+
+  const handleSelectOccupation = useCallback((id: string) => {
+    const occ = OCCUPATIONS.find((o) => o.id === id)
+    if (occ) {
+      setOccupationId(id)
+      setOccupationQuery(occ.displayName)
+      setShowSuggestions(false)
+    }
+  }, [])
+
   const toggleIntent = useCallback(
     (value: string) => {
       if (value === INTENT_FLEXIBLE_OPTION.value) {
@@ -452,23 +491,41 @@ export default function EssentialDataPage() {
 
               <View className='essential-data__field'>
                 <Text className='essential-data__label'>{occupationGuidance.title}</Text>
-                <Picker
-                  mode='selector'
-                  range={occupationLabels}
-                  value={occupationIndex >= 0 ? occupationIndex : 0}
-                  onChange={(e) => {
-                    const next = occupationOptions[Number(e.detail.value)]
-                    if (next) setOccupationId(next.id)
-                  }}
-                >
-                  <View className='essential-data__picker'>
-                    <Text className={['essential-data__picker-text', occupationId !== '' ? 'essential-data__picker-text--filled' : ''].filter(Boolean).join(' ')}>
-                      {selectedOccupation?.displayName || '从热门职业里选一个'}
-                    </Text>
-                  </View>
-                </Picker>
+                <View className='essential-data__search-wrap'>
+                  <Input
+                    className={['essential-data__input', occupationId !== '' ? 'essential-data__input--filled' : ''].filter(Boolean).join(' ')}
+                    placeholder='搜索你的职业，如：产品经理、程序员、设计师'
+                    value={occupationQuery}
+                    onInput={(e) => handleOccupationInput(e.detail.value)}
+                    onConfirm={() => {}}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    maxlength={30}
+                  />
+                  {isSearching && (
+                    <View className='essential-data__search-spinner'>
+                      <Text className='essential-data__spinner-text'>搜索中…</Text>
+                    </View>
+                  )}
+                  {showSuggestions && occupationSuggestions.length > 0 && (
+                    <View className='essential-data__suggestions'>
+                      {occupationSuggestions.map((s) => (
+                        <View
+                          key={s.occupationId}
+                          className='essential-data__suggestion-item'
+                          onClick={() => handleSelectOccupation(s.occupationId)}
+                        >
+                          <Text className='essential-data__suggestion-name'>{s.displayName}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
                 <Text className='essential-data__hint'>
-                  {selectedOccupation ? (industryLabel ? `${selectedOccupation.displayName} · ${industryLabel}` : selectedOccupation.displayName) : occupationGuidance.matchPreview}
+                  {selectedOccupation
+                    ? (industryLabel ? `${selectedOccupation.displayName} · ${industryLabel}` : selectedOccupation.displayName)
+                    : occupationQuery && !isSearching && occupationSuggestions.length === 0
+                      ? '未找到匹配的职业，试试其他关键词'
+                      : occupationGuidance.matchPreview}
                 </Text>
               </View>
 

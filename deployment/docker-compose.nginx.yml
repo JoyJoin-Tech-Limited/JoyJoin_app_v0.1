@@ -1,4 +1,11 @@
 services:
+  granite-embedding:
+    image: ghcr.io/joyjoin-tech-limited/granite-embedding:latest
+    container_name: joyjoin-granite-embedding
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+
   joyjoin-api:
     build:
       context: ..

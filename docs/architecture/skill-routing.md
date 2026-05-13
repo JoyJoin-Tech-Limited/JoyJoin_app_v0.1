@@ -15,7 +15,7 @@ The JoyJoin skill routing system ensures that the right repo skill is loaded at 
 
 > **Note:** `.agents/skills/` is an OpenCode-specific mirror containing a subset (62 skills) of the canonical `.github/skills/` tree. See `skill-taxonomy.md` for the canonical classification.
 
-**Large coordinated refreshes** (product docs + skills + agents together): follow [`docs/ai-workflow-documentation-refresh.md`](../ai-workflow-documentation-refresh.md) for scope tiers, lanes, and `npm run orchestration:validate` when orchestration or routing metadata changes.
+**Large coordinated refreshes** (product docs + skills + agents together): follow [`docs/ai/ai/ai-workflow-documentation-refresh.md`](../ai/ai-workflow-documentation-refresh.md) for scope tiers, lanes, and `npm run orchestration:validate` when orchestration or routing metadata changes.
 
 ---
 

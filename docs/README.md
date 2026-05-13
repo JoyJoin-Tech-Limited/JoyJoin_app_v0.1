@@ -16,31 +16,31 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 
 - [`../apps/mini-program/README.md`](../apps/mini-program/README.md) — workspace entry points, `onboardingRoutes.ts` registration, native custom tab bar, build commands
 - [`mini-program-product-reference.md`](./mini-program-product-reference.md) — compact product-to-code bridge for page inventory, active journeys, admin impact, and docs-sync triggers
-- [`PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md) — web vs mini-program auth, API, and payment coordination
-- [`perf.md`](./perf.md) — web Vitals + **mini-program** subpackage / preload strategy
-- [`wechat-mini-program-reference.md`](./wechat-mini-program-reference.md) — supplemental WeChat primitives (rpx, APIs); **not** the Taro source of truth
+- [`reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md) — web vs mini-program auth, API, and payment coordination
+- [`reference/perf.md`](./reference/perf.md) — web Vitals + **mini-program** subpackage / preload strategy
+- [`reference/wechat-mini-program-reference.md`](./reference/wechat-mini-program-reference.md) — supplemental WeChat primitives (rpx, APIs); **not** the Taro source of truth
 - [`mini-program-data-fetching.md`](./mini-program-data-fetching.md) — mini-program React Query key conventions for pool/matching data
 - [`.github/skills/mini-program-frontend-excellence/SKILL.md`](../.github/skills/mini-program-frontend-excellence/SKILL.md) — quality bar (pixel precision, DevTools gate)
-- [`ai-workflow-documentation-refresh.md`](./ai-workflow-documentation-refresh.md) — if you are touching docs + skills + agents together
+- [`ai/ai-workflow-documentation-refresh.md`](./ai/ai-workflow-documentation-refresh.md) — if you are touching docs + skills + agents together
 
 ## By audience
 
 ### Leaders and product owners (non-technical)
 
-- [`repo-memory-decisions-for-leaders.md`](./repo-memory-decisions-for-leaders.md) — plain-English choices for durable repo memory (draft vs official, review, automation)
+- [`reference/repo-memory-decisions-for-leaders.md`](./reference/repo-memory-decisions-for-leaders.md) — plain-English choices for durable repo memory (draft vs official, review, automation)
 
 ### New contributors
 
 - [`../CONTRIBUTING.md`](../CONTRIBUTING.md)
 - [`architecture/current-state.md`](./architecture/current-state.md)
-- [`onboarding-flow.md`](./onboarding-flow.md)
+- [`systems/onboarding-flow.md`](./systems/onboarding-flow.md)
 
 ### Backend and platform engineers
 
 - [`architecture/current-state.md`](./architecture/current-state.md)
-- [`observability.md`](./observability.md)
-- [`PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md)
-- [`launch-risks.md`](./launch-risks.md)
+- [`systems/observability.md`](./systems/observability.md)
+- [`reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md)
+- [`product/launch-risks.md`](./product/launch-risks.md)
 
 ### Frontend engineers and designers
 
@@ -48,12 +48,12 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 - [`mobile-design-system.md`](./mobile-design-system.md)
 - [`MOBILE_UI_IMPLEMENTATION_SUMMARY.md`](./architecture/implementation-summaries/MOBILE_UI_IMPLEMENTATION_SUMMARY.md)
 - [`button-design.md`](./button-design.md)
-- [`ui-matching-reveal-improvements.md`](./ui-matching-reveal-improvements.md)
+- [`reference/ui-matching-reveal-improvements.md`](./reference/ui-matching-reveal-improvements.md)
 
 ### Ops and maintainers
 
-- [`LAUNCH_CONFIG.md`](./LAUNCH_CONFIG.md)
-- [`observability.md`](./observability.md)
+- [`product/LAUNCH_CONFIG.md`](./product/LAUNCH_CONFIG.md)
+- [`systems/observability.md`](./systems/observability.md)
 - [`runbooks/observability.md`](./runbooks/observability.md)
 - [`runbooks/alerting.md`](./runbooks/alerting.md)
 - [`runbooks/mini-program-events-tab-smoke.md`](./runbooks/mini-program-events-tab-smoke.md)
@@ -67,44 +67,44 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 
 ### Onboarding and auth
 
-- [`onboarding-flow.md`](./onboarding-flow.md) — active onboarding flow
+- [`systems/onboarding-flow.md`](./systems/onboarding-flow.md) — active onboarding flow
 - [`MIGRATION_2026-02-04_SIGNUP_FLOW.md`](./MIGRATION_2026-02-04_SIGNUP_FLOW.md) — historical migration record
 - [`ONBOARDING_ROUTING_FIX_2026-02-10.md`](./ONBOARDING_ROUTING_FIX_2026-02-10.md) — historical routing-fix record
 
 ### Personality, matching, and event experience
 
-- [`PERSONALITY_TEST_SYSTEM.md`](./PERSONALITY_TEST_SYSTEM.md) — V4 engine + web vs mini-program client surfaces
-- [`MATCHING_ALGORITHM_REFERENCE.md`](./MATCHING_ALGORITHM_REFERENCE.md)
+- [`systems/PERSONALITY_TEST_SYSTEM.md`](./systems/PERSONALITY_TEST_SYSTEM.md) — V4 engine + web vs mini-program client surfaces
+- [`systems/MATCHING_ALGORITHM_REFERENCE.md`](./systems/MATCHING_ALGORITHM_REFERENCE.md)
 - [`icebreaker-system.md`](./icebreaker-system.md)
 - [`matching-reveal-implementation-summary.md`](./matching-reveal-implementation-summary.md)
 
 ### AI systems
 
-- [`AI_FEATURE_INVENTORY.md`](./AI_FEATURE_INVENTORY.md) — mini-program-visible AI features and fallbacks (keep in sync with `apps/mini-program` + server)
-- [`mini-program-ai-roadmap-handoff.md`](./mini-program-ai-roadmap-handoff.md) — kickoff lane + deeper AI tranches for MP (see `AI_INTEGRATION_PLAN.md`)
+- [`ai/AI_FEATURE_INVENTORY.md`](./ai/AI_FEATURE_INVENTORY.md) — mini-program-visible AI features and fallbacks (keep in sync with `apps/mini-program` + server)
+- [`mini-program-ai-roadmap-handoff.md`](./mini-program-ai-roadmap-handoff.md) — kickoff lane + deeper AI tranches for MP (see `ai/AI_INTEGRATION_PLAN.md`)
 - [`mini-program-ai-further-execution-plan.md`](./mini-program-ai-further-execution-plan.md) — next implementation packages (instrumentation, shadow, gates) and verification
-- [`ai-feature-flags.md`](./ai-feature-flags.md) — environment variables and kill-switches for AI paths
-- [`ai-prompt-registry.md`](./ai-prompt-registry.md) — prompt version IDs by service
+- [`ai/ai-feature-flags.md`](./ai/ai-feature-flags.md) — environment variables and kill-switches for AI paths
+- [`ai/ai-prompt-registry.md`](./ai/ai-prompt-registry.md) — prompt version IDs by service
 - [`runbooks/mini-program-ai-smoke.md`](./runbooks/mini-program-ai-smoke.md) — manual smoke checklist for MP AI
 - [`runbooks/matching-stress-simulation.md`](./runbooks/matching-stress-simulation.md) — local greedy matcher + optional AI chat-flow CPU benchmark (`npm run benchmark:matching-stress` in `apps/server`)
-- [`ai-agent-harness-separation-strategy.md`](./ai-agent-harness-separation-strategy.md) — current-state AI architecture and invariants
-- [`AI_MODEL_ROUTING_STRATEGY.md`](./AI_MODEL_ROUTING_STRATEGY.md) — current-state provider allocation, function-level routing tables, and AI trace expectations
-- [`AI_INTEGRATION_PLAN.md`](./AI_INTEGRATION_PLAN.md) — phased roadmap and execution gates
-- [`AI_EXECUTION_ROADMAP.md`](./AI_EXECUTION_ROADMAP.md) — 30-60-90 roadmap for repo AI workflow governance, validation, and tooling maturity
-- [`ai-workflow-documentation-refresh.md`](./ai-workflow-documentation-refresh.md) — scope tiers, routing lanes (kickoff vs docs-sync vs governance), and Workflow Governance Reviewer vs bulk doc sync
+- [`ai/ai-agent-harness-separation-strategy.md`](./ai/ai-agent-harness-separation-strategy.md) — current-state AI architecture and invariants
+- [`ai/AI_MODEL_ROUTING_STRATEGY.md`](./ai/AI_MODEL_ROUTING_STRATEGY.md) — current-state provider allocation, function-level routing tables, and AI trace expectations
+- [`ai/AI_INTEGRATION_PLAN.md`](./ai/AI_INTEGRATION_PLAN.md) — phased roadmap and execution gates
+- [`ai/AI_EXECUTION_ROADMAP.md`](./ai/AI_EXECUTION_ROADMAP.md) — 30-60-90 roadmap for repo AI workflow governance, validation, and tooling maturity
+- [`ai/ai-workflow-documentation-refresh.md`](./ai/ai-workflow-documentation-refresh.md) — scope tiers, routing lanes (kickoff vs docs-sync vs governance), and Workflow Governance Reviewer vs bulk doc sync
 - [`proposals/profile-c-memory-layer-rfc.md`](./proposals/profile-c-memory-layer-rfc.md) — proposal for adding a durable memory plane to JoyJoin's AI workflow system without reusing `.git` operational state
 
 ### Platform coordination and launch readiness
 
-- [`PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md)
-- [`perf.md`](./perf.md) — performance budgets; mini-program package loading
-- [`wechat-mini-program-reference.md`](./wechat-mini-program-reference.md) — WeChat API / rpx supplement (Taro app is canonical)
-- [`launch-risks.md`](./launch-risks.md)
-- [`LAUNCH_CONFIG.md`](./LAUNCH_CONFIG.md)
+- [`reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md)
+- [`reference/perf.md`](./reference/perf.md) — performance budgets; mini-program package loading
+- [`reference/wechat-mini-program-reference.md`](./reference/wechat-mini-program-reference.md) — WeChat API / rpx supplement (Taro app is canonical)
+- [`product/launch-risks.md`](./product/launch-risks.md)
+- [`product/LAUNCH_CONFIG.md`](./product/LAUNCH_CONFIG.md)
 
 ### Operations and runbooks
 
-- [`observability.md`](./observability.md)
+- [`systems/observability.md`](./systems/observability.md)
 - [`runbooks/admin-incident-handling.md`](./runbooks/admin-incident-handling.md)
 - [`runbooks/alerting.md`](./runbooks/alerting.md)
 - [`runbooks/observability.md`](./runbooks/observability.md)

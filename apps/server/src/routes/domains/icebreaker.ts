@@ -1,6 +1,6 @@
 import { logger } from "../../lib/logger";
 import type { Express } from "express";
-import { requireAuth } from "../../phoneAuth";
+import { requireAuth } from "../../middleware/auth";
 import socialIcebreakerRoutes from "../socialIcebreaker";
 import ttsRoutes from "../tts";
 import miniscriptRoutes from "./miniscript";

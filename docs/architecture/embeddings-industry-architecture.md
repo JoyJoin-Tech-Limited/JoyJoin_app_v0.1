@@ -456,7 +456,8 @@ EMBEDDING_LOCAL_FALLBACK_ENABLED=false   # NEW：启用本地模型降级
 - [ ] `user_semantic_profiles` 表增强字段 (model, dimension, hash)
 
 ### Phase 3：职业语义匹配（4-5 天）
-- [ ] `generate-industry-knowledge-base.ts` 离线脚本
+- [x] `build-occupation-vectors.mts` 离线脚本 — 为 164 个职业预计算 embedding 向量
+- [x] `POST /api/occupation/search` 端点 — 精确匹配 + embedding 混合搜索，支持小程序自由文本输入
 - [ ] `industry_niche_embeddings` + `occupation_embeddings` 表
 - [ ] `calculateProfessionalSimilarity` 函数
 - [ ] 在 `PairScoreWeights` 中添加 `professionalSimilarity` 维度
@@ -488,5 +489,9 @@ EMBEDDING_LOCAL_FALLBACK_ENABLED=false   # NEW：启用本地模型降级
 - `apps/server/src/embeddingClient.ts` — embedding 客户端 (Granite)
 - `apps/server/src/matchingSemantic.ts` — 语义匹配评分
 - `apps/server/src/inference/industryClassifier.ts` — 行业分类引擎
+- `apps/server/src/routes/domains/occupationSearch.ts` — 职业自由文本搜索端点
+- `apps/server/scripts/build-occupation-vectors.mts` — 职业向量预计算脚本
+- `apps/server/data/occupation-vectors.json` — 164 个职业的预计算向量索引
+- `deploy/granite-embedding/` — Granite 97M embedding 服务器部署配置 (Docker + Python)
 - `packages/shared/src/schema.ts` — `userSemanticProfiles` 表定义
-- `docs/MATCHING_ALGORITHM_REFERENCE.md` — 匹配算法参考
+- `docs/systems/systems/MATCHING_ALGORITHM_REFERENCE.md` — 匹配算法参考

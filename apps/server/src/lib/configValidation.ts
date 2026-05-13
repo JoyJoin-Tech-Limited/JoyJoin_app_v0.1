@@ -245,7 +245,7 @@ export function validateConfig(
       console.error(`  ${e}`);
     }
     console.error(
-      "\n  Set these environment variables and restart. See docs/LAUNCH_CONFIG.md for details.\n"
+      "\n  Set these environment variables and restart. See docs/product/LAUNCH_CONFIG.md for details.\n"
     );
     if (options?.exitOnFatal ?? true) {
       process.exit(1);
@@ -259,7 +259,7 @@ export function validateConfig(
   if (warnings.length > 0 && !isProduction) {
     console.warn(
       "[config] Some optional or required (non-production) config is missing. " +
-        "This may cause feature degradation. See docs/LAUNCH_CONFIG.md.\n"
+        "This may cause feature degradation. See docs/product/LAUNCH_CONFIG.md.\n"
     );
   }
 

@@ -1,7 +1,7 @@
 /**
  * Documents and locks **degraded** env behaviour for social / icebreaker AI routing.
  *
- * Recommended prod: MINIMAX_API_KEY + DEEPSEEK_API_KEY (see docs/LAUNCH_CONFIG.md).
+ * Recommended prod: MINIMAX_API_KEY + DEEPSEEK_API_KEY (see docs/product/LAUNCH_CONFIG.md).
  * MiniMax-only: DeepSeek missing — some paths fall back to DeepSeek client with dummy key
  * (never for forced-DeepSeek functions); miniscript has no DeepSeek recovery without a real key.
  */

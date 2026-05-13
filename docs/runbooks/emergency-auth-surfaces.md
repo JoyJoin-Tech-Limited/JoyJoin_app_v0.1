@@ -18,4 +18,4 @@
 
 ## Single-replica reminder
 
-Restart clears in-process abuse counters and rate-limit buckets ([`abuseDetection.ts`](../../apps/server/src/abuseDetection.ts), [`rateLimiter.ts`](../../apps/server/src/rateLimiter.ts)). Document in deploy runbook; see [`open-beta-wider.md`](../open-beta-wider.md).
+Restart clears in-process abuse counters and rate-limit buckets ([`abuseDetection.ts`](../../apps/server/src/abuseDetection.ts), [`rateLimiter.ts`](../../apps/server/src/rateLimiter.ts)). Document in deploy runbook; see [`product/open-beta-wider.md`](../product/open-beta-wider.md).

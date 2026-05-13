@@ -5,7 +5,7 @@
 > This document describes the routing fix implemented on 2026-02-10 that added `extended-data` and `profile-review` steps to the server-side `nextStep` enum and switched to fully server-driven onboarding navigation. The changes described here are **complete and in production**.
 >
 > For the **current active onboarding architecture**, refer to:
-> - `docs/onboarding-flow.md` — full flow documentation
+> - `docs/systems/systems/onboarding-flow.md` — full flow documentation
 > - `DEVELOPER_QUICK_REFERENCE.md` — developer reference
 > - `.github/copilot-instructions.md` → Onboarding Flow Architecture section
 
@@ -37,7 +37,7 @@ The server's `nextStep` enum only knew 5 steps (`onboarding`, `personality-test`
 2. Updated server-side `nextStep` calculation to properly sequence all 7 steps:
    ```typescript
    // NOTE: hasCompletedRegistration / 'onboarding' step was subsequently removed
-   // from the active flow. See docs/onboarding-flow.md for the current sequence.
+   // from the active flow. See docs/systems/systems/onboarding-flow.md for the current sequence.
    if (!user.hasCompletedRegistration) nextStep = 'onboarding';
    else if (!user.hasCompletedPersonalityTest) nextStep = 'personality-test';
    else if (!profileEssentialComplete) nextStep = 'essential-data';
@@ -139,7 +139,7 @@ COMMIT;
 
 ## Documentation Updates
 
-### `docs/onboarding-flow.md`
+### `docs/systems/systems/onboarding-flow.md`
 - Added `extended-data` and `profile-review` to Server-Driven Navigation table
 - Added `hasSeenProfileReview` field documentation
 - Added new API endpoint `/api/profile-review/complete`
@@ -170,7 +170,7 @@ Based on code review feedback:
 
 ## Updated Flow Sequence
 
-> ⚠️ **Note:** Step 2 below (AI Chat Registration) was subsequently **removed** from the active onboarding flow. The current active sequence skips that step entirely — see `docs/onboarding-flow.md` for the current flow.
+> ⚠️ **Note:** Step 2 below (AI Chat Registration) was subsequently **removed** from the active onboarding flow. The current active sequence skips that step entirely — see `docs/systems/systems/onboarding-flow.md` for the current flow.
 
 ```
 1. Login/Landing
@@ -237,7 +237,7 @@ Based on code review feedback:
 8. `apps/user-client/src/pages/PersonalityTestPageV4.tsx` - Contextual back button
 
 **Documentation (2 files):**
-9. `docs/onboarding-flow.md`
+9. `docs/systems/systems/onboarding-flow.md`
 10. `.github/copilot-instructions.md`
 
 **Migration (1 file):**

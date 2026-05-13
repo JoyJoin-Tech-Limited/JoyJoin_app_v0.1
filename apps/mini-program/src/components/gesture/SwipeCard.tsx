@@ -1,5 +1,5 @@
 import { type ReactNode, useRef, useState, useCallback, useEffect } from 'react'
-import { View } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import './SwipeCard.scss'
 
@@ -185,7 +185,7 @@ export default function SwipeCard({
             className='gesture-swipe-card__hint gesture-swipe-card__hint--right'
             style={{ opacity: Math.abs(deltaX) > 20 && deltaX > 0 ? Math.min(Math.abs(deltaX) / 120, 0.8) : 0 }}
           >
-            <View className='gesture-swipe-card__hint-icon'>✓</View>
+            <Text className='gesture-swipe-card__hint-icon'>✓</Text>
           </View>
         </>
       )}

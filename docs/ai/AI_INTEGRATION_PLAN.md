@@ -7,14 +7,14 @@
 
 ## Document Relationships
 
-This file and `docs/ai-agent-harness-separation-strategy.md` serve **distinct but complementary roles** and must be read together when scoping any AI execution PR:
+This file and `docs/ai/ai-agent-harness-separation-strategy.md` serve **distinct but complementary roles** and must be read together when scoping any AI execution PR:
 
 | Document | Role |
 |---|---|
 | **`AI_INTEGRATION_PLAN.md`** (this file) | Phased delivery roadmap — what ships, in what order, gated by what metrics. Phase A–E sequencing, budget guidance, observability requirements, success gates. |
 | **`ai-agent-harness-separation-strategy.md`** | Current-state architecture guardrails and invariants reference — what is built, how roles are separated, what AI must never do, how the three product agent systems are structured. |
 
-**Read order:** Start with `docs/ai-agent-harness-separation-strategy.md` for current shipped behavior and architectural invariants, then use this plan for roadmap sequencing, budget guidance, and rollout gates.
+**Read order:** Start with `docs/ai/ai-agent-harness-separation-strategy.md` for current shipped behavior and architectural invariants, then use this plan for roadmap sequencing, budget guidance, and rollout gates.
 
 **Do not** use this roadmap by itself as evidence that a future AI capability is already approved for runtime.
 
@@ -77,7 +77,7 @@ LLMs are excellent **orchestration and explanation layers**. They should not be 
 
 ### 1.3 Current State (as of 2026-03-30)
 
-> **Key architectural note:** Several shipped items below represent de facto Level-1 orchestration services. See `docs/ai-agent-harness-separation-strategy.md` §4 for the formal separation level framework. The two services marked ★ are the current **primary AI integration points** — future execution PRs should extend these before introducing new parallel abstractions.
+> **Key architectural note:** Several shipped items below represent de facto Level-1 orchestration services. See `docs/ai/ai-agent-harness-separation-strategy.md` §4 for the formal separation level framework. The two services marked ★ are the current **primary AI integration points** — future execution PRs should extend these before introducing new parallel abstractions.
 
 | Area | Feature | Status |
 |------|---------|--------|
@@ -231,14 +231,14 @@ Configuration: `temperature: 0.3`, `max_tokens: 500`. Returns structured JSON `{
 | Phase | Provider layer change |
 |---|---|
 | **Phase 1 (current)** | Both providers active as described above. Phase 1 feature work (icebreaker sequencing, scenario service, group-context explanations) slots into the existing routing with no changes to the provider layer. |
-| **Phase 2** | `embeddingClient.ts` is **now present** (`apps/server/src/embeddingClient.ts`) — shipped as part of the async semantic profile embeddings pipeline. It uses **DeepSeek only** (`DEEPSEEK_API_KEY`, OpenAI-compatible embeddings API). Embedding calls are background-only and are not routed through `socialModelRouter` or `creativeModelRouter`. The neural embedding path is available but the current live semantic scoring (`matchingSemantic.ts`) uses deterministic feature-hash vectors, not neural embeddings. |
+| **Phase 2** | `embeddingClient.ts` is **now present** (`apps/server/src/embeddingClient.ts`) — shipped as part of the async semantic profile embeddings pipeline. It uses **self-hosted endpoint only** (`EMBEDDING_BASE_URL`); default model is Granite `granite-embedding-97m-multilingual-r2`. Embedding calls are background-only and are not routed through `socialModelRouter` or `creativeModelRouter`. The neural embedding path is available but the current live semantic scoring (`matchingSemantic.ts`) uses deterministic feature-hash vectors, not neural embeddings. |
 | **Phase 3** | `minimaxClient.ts` is extended for multimodal input processing (`minimax-m2.7` already supports this natively). No new infrastructure client is needed — multimodal is an additional call pattern on the existing MiniMax client, gated by consent UI and fairness audit. |
 
 ---
 
 ### 1.5 Architecture Invariants & Execution Guardrails
 
-> **For PR reviewers and contributors:** Every AI execution PR must be checked against the invariants below. These are also formally documented with rationale in `docs/ai-agent-harness-separation-strategy.md` §6–§8.
+> **For PR reviewers and contributors:** Every AI execution PR must be checked against the invariants below. These are also formally documented with rationale in `docs/ai/ai-agent-harness-separation-strategy.md` §6–§8.
 
 #### What future AI PRs must always preserve
 

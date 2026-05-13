@@ -50,6 +50,6 @@ Replace `N` / `M` with baselines from staging after a week of traffic.
 
 ## Related docs
 
-- [`docs/LAUNCH_CONFIG.md`](../LAUNCH_CONFIG.md) — API keys and degraded (MiniMax-only) posture.
+- [`docs/product/product/LAUNCH_CONFIG.md`](../product/LAUNCH_CONFIG.md) — API keys and degraded (MiniMax-only) posture.
 - [`.github/skills/social-icebreaker-domain/references/production-ai-surfaces.md`](../../.github/skills/social-icebreaker-domain/references/production-ai-surfaces.md) — phase → generator → `promptVersion` map.
 - [`docs/ops/icebreaker-ai-quality-protocol.md`](./icebreaker-ai-quality-protocol.md) — human ratings, `aiCorrelationId`, and admin aggregates.

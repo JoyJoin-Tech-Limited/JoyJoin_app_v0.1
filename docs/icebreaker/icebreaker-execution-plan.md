@@ -19,7 +19,7 @@
 |------|:------:|--------|
 | `compileAgentRunPlan()` Rule Engine | ✅ **COMPLETE** | `packages/shared/src/runPlanCompiler.ts` — deterministic rule engine with 159 passing tests. Energy-arc sorting, category spacing, proportional time allocation. |
 | `/start` + `/set-tier` wired to compiler | ✅ **COMPLETE** | `apps/server/src/routes/socialIcebreaker.ts` calls `compileForSession()` from `runPlanService.ts`. Fallback to hardcoded plans on error. |
-| `docs/unified-icebreaker-system.md` | ✅ **CREATED** | 12-section canonical spec consolidating tier definitions, game pool, compilation rules, REST surface, backward compat. |
+| `docs/systems/systems/unified-icebreaker-system.md` | ✅ **CREATED** | 12-section canonical spec consolidating tier definitions, game pool, compilation rules, REST surface, backward compat. |
 | `socialIcebreakerTierManifest.ts` | ✅ **WIRED** | `breeze`/`glow`/`blaze` machine IDs + `resolveTierDisplay()` active server-side and in mini-program tier selector. |
 | `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` | ✅ **ENABLED** | `.env` flag set to `true`. `mini_script` is playable as bonus phase. |
 | `quip_battle` / `undercover_word` / `group_mirror` wiring | ❌ **NOT DONE** | Server stubs exist in `socialIcebreaker.ts` (advance guards, routes). Mini-program references exist in `phaseUtils.tsx`. **Not wired into `getServerEnabledPhases()` — unreachable.** |
@@ -77,7 +77,7 @@ Sprint F: QA + Launch               (Week 10)
 |----------|--------|-----------------|
 | `docs/icebreaker/icebreaker-system.md` | Canonical architecture: session lifecycle, phase registry, REST surface, AI boundaries | All sprints |
 | `docs/icebreaker/icebreaker-execution-plan.md` | This document — master execution plan with sprint breakdown | All sprints |
-| `docs/unified-icebreaker-system.md` | Tier system, game pool, compilation rules, backward compat | Sprint B |
+| `docs/systems/systems/unified-icebreaker-system.md` | Tier system, game pool, compilation rules, backward compat | Sprint B |
 | `.git/.orchestration/deliberation/2026-04-30-icebreaker-tier-unification.md` | Tier definitions (breeze/glow/blaze), phase composition, backward compat rules | Sprint A–B |
 | `packages/shared/src/phaseRegistry.ts` | Phase module registry — game pool, energy arcs, durations, categories | Sprint A |
 | `packages/shared/src/runPlanCompiler.ts` | `compileAgentRunPlan()`, `CompilationContext`, deterministic rule engine | Sprint B |

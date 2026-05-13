@@ -8,8 +8,6 @@ concurrency:
   group: joyjoin-prod-${{ github.ref }}
   cancel-in-progress: false
 
-permissions:
-  contents: read
 
 jobs:
   guardrails:
@@ -344,6 +342,7 @@ jobs:
           APP_URL: ${{ vars.APP_URL }}
           COOKIE_DOMAIN: ${{ vars.COOKIE_DOMAIN }}
           CORS_ORIGINS: ${{ vars.CORS_ORIGINS }}
+          ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
           PAYMENTS_ENABLED: ${{ vars.PAYMENTS_ENABLED }}
           MINIMAX_BASE_URL: ${{ vars.MINIMAX_BASE_URL }}
           MINIMAX_MODEL: ${{ vars.MINIMAX_MODEL }}
@@ -368,6 +367,8 @@ jobs:
           DEBUG_AUTH: ${{ vars.DEBUG_AUTH }}
           ENABLE_MATCHER_V2: ${{ vars.ENABLE_MATCHER_V2 }}
           ENABLE_SEMANTIC_SIMILARITY: ${{ vars.ENABLE_SEMANTIC_SIMILARITY }}
+          EMBEDDING_BASE_URL: ${{ vars.EMBEDDING_BASE_URL }}
+          EMBEDDING_MODEL: ${{ vars.EMBEDDING_MODEL }}
           ENABLE_ADAPTIVE_WEIGHTS: ${{ vars.ENABLE_ADAPTIVE_WEIGHTS }}
           # ── Observability & tuning ───────────────────────────────────────
           LOG_LEVEL: ${{ vars.LOG_LEVEL }}
@@ -376,6 +377,7 @@ jobs:
           ENABLE_PRO_MATCH_EXPLANATIONS: ${{ vars.ENABLE_PRO_MATCH_EXPLANATIONS }}
           XIAOYUE_MAX_TURNS: ${{ vars.XIAOYUE_MAX_TURNS }}
           WECHAT_PAY_NOTIFY_URL: ${{ vars.WECHAT_PAY_NOTIFY_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -383,7 +385,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
           command_timeout: 60m
-          envs: DATABASE_URL,SESSION_SECRET,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,ADMIN_CREATE_SECRET_KEY,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,COOKIE_DOMAIN,CORS_ORIGINS,PAYMENTS_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,AI_TIMEOUT_MS,AMAP_API_KEY,AMAP_SECURITY_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL
+          envs: DATABASE_URL,SESSION_SECRET,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,ADMIN_CREATE_SECRET_KEY,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,COOKIE_DOMAIN,CORS_ORIGINS,ALLOWED_ORIGINS,PAYMENTS_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,AI_TIMEOUT_MS,AMAP_API_KEY,AMAP_SECURITY_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,EMBEDDING_BASE_URL,EMBEDDING_MODEL,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL,GITHUB_TOKEN
           script: |
             set -euo pipefail
 
@@ -522,6 +524,7 @@ jobs:
             upsert_if_nonempty "APP_URL" "$APP_URL"
             upsert_if_nonempty "COOKIE_DOMAIN" "$COOKIE_DOMAIN"
             upsert_if_nonempty "CORS_ORIGINS" "$CORS_ORIGINS"
+            upsert_if_nonempty "ALLOWED_ORIGINS" "$ALLOWED_ORIGINS"
             upsert_if_nonempty "PAYMENTS_ENABLED" "$PAYMENTS_ENABLED"
             upsert_if_nonempty "MINIMAX_BASE_URL" "$MINIMAX_BASE_URL"
             upsert_if_nonempty "MINIMAX_MODEL" "$MINIMAX_MODEL"
@@ -545,6 +548,8 @@ jobs:
             upsert_if_nonempty "DEBUG_AUTH" "$DEBUG_AUTH"
             upsert_if_nonempty "ENABLE_MATCHER_V2" "$ENABLE_MATCHER_V2"
             upsert_if_nonempty "ENABLE_SEMANTIC_SIMILARITY" "$ENABLE_SEMANTIC_SIMILARITY"
+            upsert_if_nonempty "EMBEDDING_BASE_URL" "$EMBEDDING_BASE_URL"
+            upsert_if_nonempty "EMBEDDING_MODEL" "$EMBEDDING_MODEL"
             upsert_if_nonempty "ENABLE_ADAPTIVE_WEIGHTS" "$ENABLE_ADAPTIVE_WEIGHTS"
             upsert_if_nonempty "LOG_LEVEL" "$LOG_LEVEL"
             upsert_if_nonempty "SOCIAL_DEFAULT_REASONING_EFFORT" "$SOCIAL_DEFAULT_REASONING_EFFORT"
@@ -684,14 +689,14 @@ jobs:
             # This prevents 502s: Nginx stops routing to joyjoin-user BEFORE
             # Docker Compose removes the container as an orphan.
             echo "🌐 Syncing and reloading host Nginx config..."
+            # Only require certs for domains whose DNS actually points to this server
             REQUIRED_TLS_FILES=(
               /etc/letsencrypt/live/joyjoinapp.com/fullchain.pem
               /etc/letsencrypt/live/joyjoinapp.com/privkey.pem
               /etc/letsencrypt/live/admin.joyjoinapp.com/fullchain.pem
               /etc/letsencrypt/live/admin.joyjoinapp.com/privkey.pem
-              /etc/letsencrypt/live/api.joyjoin.com/fullchain.pem
-              /etc/letsencrypt/live/api.joyjoin.com/privkey.pem
             )
+            OPTIONAL_TLS_DOMAINS=(api.joyjoin.com)
             missing_tls=0
             for tls_file in "${REQUIRED_TLS_FILES[@]}"; do
               if ! sudo test -r "$tls_file"; then
@@ -701,7 +706,6 @@ jobs:
             done
             if [ "$missing_tls" -ne 0 ]; then
               echo "⚠️ Provisioning missing Let's Encrypt certificates..."
-              # Extract unique domain names from missing cert paths
               MISSING_DOMAINS=$(for f in "${REQUIRED_TLS_FILES[@]}"; do
                 if ! sudo test -r "$f"; then
                   echo "$f" | sed -n 's|/etc/letsencrypt/live/\(.*\)/.*|\1|p'
@@ -713,15 +717,26 @@ jobs:
                   sudo certbot certonly --standalone -d "$domain" --non-interactive --agree-tos --email ops@joyjoin.com || \
                   { echo "❌ Failed to provision cert for $domain"; exit 1; }
               done
-              # Re-check after provisioning
               for tls_file in "${REQUIRED_TLS_FILES[@]}"; do
                 if ! sudo test -r "$tls_file"; then
                   echo "❌ Still missing after provisioning: $tls_file"
                   exit 1
                 fi
               done
-              echo "✅ All TLS certificates provisioned successfully"
+              echo "✅ All required TLS certificates provisioned successfully"
             fi
+            # Try provisioning optional domain certs (non-fatal if DNS doesn't resolve)
+            for domain in "${OPTIONAL_TLS_DOMAINS[@]}"; do
+              cert_path="/etc/letsencrypt/live/$domain/fullchain.pem"
+              if sudo test -r "$cert_path"; then
+                echo "   ✓ Optional cert already exists for: $domain"
+              else
+                echo "   ⚠️ Attempting cert for optional domain: $domain (non-fatal)"
+                sudo certbot --nginx -d "$domain" --non-interactive --agree-tos --email ops@joyjoin.com --no-redirect || \
+                sudo certbot certonly --standalone -d "$domain" --non-interactive --agree-tos --email ops@joyjoin.com --preferred-challenges http || \
+                echo "   ⚠️ Skipping $domain — DNS may not resolve to this server"
+              fi
+            done
             sudo cp ~/JoyJoin/deployment/nginx/joyjoin.conf /etc/nginx/conf.d/joyjoin.conf
             sudo nginx -t
             sudo systemctl reload nginx
@@ -731,9 +746,15 @@ jobs:
             # --- 4) Restart containers ---
             echo "🐳 Removing stale joyjoin-api container if present..."
             docker rm -f joyjoin-api || true
-            echo "🐳 Restarting containers..."
+            echo "🐳 Restarting core containers (api, admin)..."
             cd ~/JoyJoin/deployment
-            retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans
+            retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build joyjoin-api joyjoin-admin
+
+            echo "🐳 Starting granite-embedding (non-blocking)..."
+            echo "$GITHUB_TOKEN" | docker login ghcr.io -u x-access-token --password-stdin 2>/dev/null
+            docker compose -f docker-compose.nginx.yml pull granite-embedding 2>/dev/null && \
+              docker compose -f docker-compose.nginx.yml up -d granite-embedding || \
+              echo "   ⚠️ granite-embedding skipped (image not available yet — will retry next deploy)"
 
             # --- 5) Health checks ---
             echo "🏥 Verifying service status..."

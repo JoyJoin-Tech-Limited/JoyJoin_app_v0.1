@@ -59,4 +59,4 @@ Before public launch, the following must be completed:
 
 ---
 
-*See also: [`docs/admin-rbac-matrix.md`](admin-rbac-matrix.md), [`docs/runbooks/admin-incident-handling.md`](runbooks/admin-incident-handling.md)*
+*See also: [`docs/admin/admin-rbac-matrix.md`](admin-rbac-matrix.md), [`docs/runbooks/admin-incident-handling.md`](runbooks/admin-incident-handling.md)*

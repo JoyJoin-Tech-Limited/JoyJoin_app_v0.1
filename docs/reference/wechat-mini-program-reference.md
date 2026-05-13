@@ -4,7 +4,7 @@
 >
 > **Shipped client (launch-primary):** [`apps/mini-program`](../apps/mini-program/) — **Taro 4 + React 18**. Page registration, main package vs **subpackage** (`pages/onboarding`), **`preloadRule`** (from `MINI_PROGRAM_PRELOAD_RULES`), and **`lazyCodeLoading: 'requiredComponents'`** are defined or wired in [`apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts) and [`app.config.ts`](../apps/mini-program/src/app.config.ts). Auth/API: [`apps/mini-program/src/lib/api/api.ts`](../apps/mini-program/src/lib/api/api.ts). Native custom tab bar: [`apps/mini-program/README.md`](../apps/mini-program/README.md).
 >
-> **Read first for active work:** [`apps/mini-program/README.md`](../apps/mini-program/README.md) · [`docs/PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md) · [`.github/skills/mini-program-frontend-excellence/SKILL.md`](../.github/skills/mini-program-frontend-excellence/SKILL.md) · [`docs/perf.md`](./perf.md) (mini-program package loading).
+> **Read first for active work:** [`apps/mini-program/README.md`](../apps/mini-program/README.md) · [`docs/reference/PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md) · [`.github/skills/mini-program-frontend-excellence/SKILL.md`](../.github/skills/mini-program-frontend-excellence/SKILL.md) · [`docs/reference/perf.md`](./perf.md) (mini-program package loading).
 
 ## Overview
 
@@ -831,7 +831,7 @@ wx.request({
 
 Low-level patterns above (rpx, `hover-class`, `wx.request`) still apply inside Taro-generated layers, but **routing, bundling, and auth** are owned by **`apps/mini-program`**.
 
-**Shipped wiring** (same facts as [`docs/perf.md`](./perf.md) §7 — mini-program package loading):
+**Shipped wiring** (same facts as [`docs/reference/perf.md`](./perf.md) §7 — mini-program package loading):
 
 | Mechanism | Location |
 |-----------|----------|

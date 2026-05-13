@@ -178,6 +178,7 @@ export default function PersonalityTestPage() {
   const activeSessionRef = useRef<string>('')
   // Defensive timeout for sprite unlock if WeChat drops animationend
   const spriteUnlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleIntroSpriteComplete = useCallback(() => setIntroSpriteState('idle'), [])
 
   const isAuthenticated = auth.isAuthenticated
   const hasStoredIncompleteSession = useMemo(() => {
@@ -558,7 +559,7 @@ export default function PersonalityTestPage() {
                   state={introSpriteState}
                   size='320rpx'
                   className='personality-test__mascot personality-test__mascot--animated'
-                  onComplete={useCallback(() => setIntroSpriteState('idle'), [])}
+                  onComplete={handleIntroSpriteComplete}
                 />
               </View>
 

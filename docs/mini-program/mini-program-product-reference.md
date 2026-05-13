@@ -3,7 +3,7 @@
 > **Status:** Active launch-primary mini-program reference for `apps/mini-program`.
 > **Last verified:** 2026-04-20.
 > **Non-replacement note:** This document does **not** replace [`../PRODUCT_REQUIREMENTS.md`](../PRODUCT_REQUIREMENTS.md) or [`../apps/mini-program/README.md`](../apps/mini-program/README.md). It is a compact product-to-code bridge for the live WeChat mini-program surface.
-> **Authority chain:** 1. [`../PRODUCT_REQUIREMENTS.md`](../PRODUCT_REQUIREMENTS.md) for product canon and terminology. 2. [`../apps/mini-program/README.md`](../apps/mini-program/README.md), [`./architecture/current-state.md`](./architecture/current-state.md), [`./onboarding-flow.md`](./onboarding-flow.md), and [`./PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md) for runtime ownership and flow rules. 3. [`../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts), [`../apps/mini-program/src/app.config.ts`](../apps/mini-program/src/app.config.ts), [`../apps/mini-program/src/lib/api/api.ts`](../apps/mini-program/src/lib/api/api.ts), [`../packages/shared/src/README.md`](../packages/shared/src/README.md), [`../packages/shared/src/schema.ts`](../packages/shared/src/schema.ts), and [`../apps/server/src/README.md`](../apps/server/src/README.md) for active route, contract, and backend truth.
+> **Authority chain:** 1. [`../PRODUCT_REQUIREMENTS.md`](../PRODUCT_REQUIREMENTS.md) for product canon and terminology. 2. [`../apps/mini-program/README.md`](../apps/mini-program/README.md), [`./architecture/current-state.md`](./architecture/current-state.md), [`./systems/onboarding-flow.md`](./systems/onboarding-flow.md), and [`./reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md) for runtime ownership and flow rules. 3. [`../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts), [`../apps/mini-program/src/app.config.ts`](../apps/mini-program/src/app.config.ts), [`../apps/mini-program/src/lib/api/api.ts`](../apps/mini-program/src/lib/api/api.ts), [`../packages/shared/src/README.md`](../packages/shared/src/README.md), [`../packages/shared/src/schema.ts`](../packages/shared/src/schema.ts), and [`../apps/server/src/README.md`](../apps/server/src/README.md) for active route, contract, and backend truth.
 
 ## 1. Purpose and scope
 
@@ -14,7 +14,7 @@ This document intentionally stays shorter than the full product canon. It summar
 Out of scope:
 
 - Full product requirements, terminology rationale, and long-form feature history. Use [`../PRODUCT_REQUIREMENTS.md`](../PRODUCT_REQUIREMENTS.md).
-- Low-level Taro and WeChat platform primitives. Use [`../apps/mini-program/README.md`](../apps/mini-program/README.md) and, when needed, [`./wechat-mini-program-reference.md`](./wechat-mini-program-reference.md).
+- Low-level Taro and WeChat platform primitives. Use [`../apps/mini-program/README.md`](../apps/mini-program/README.md) and, when needed, [`./reference/wechat-mini-program-reference.md`](./reference/wechat-mini-program-reference.md).
 - Full table definitions. Use [`../packages/shared/src/schema.ts`](../packages/shared/src/schema.ts).
 
 ## 2. Product canon quick reference
@@ -26,8 +26,8 @@ Current product constraints that directly affect the mini-program:
 - Canonical bottom navigation intent is **发现** -> **足迹** -> center action icon -> **连接** -> **我的**. On the mini-program these anchors map to [`../apps/mini-program/src/pages/discover/index.tsx`](../apps/mini-program/src/pages/discover/index.tsx), [`../apps/mini-program/src/pages/events/index.tsx`](../apps/mini-program/src/pages/events/index.tsx), the center action routing logic, [`../apps/mini-program/src/pages/connections/index.tsx`](../apps/mini-program/src/pages/connections/index.tsx), and [`../apps/mini-program/src/pages/profile/index.tsx`](../apps/mini-program/src/pages/profile/index.tsx).
 - Use **连接** in current copy and documentation. **圈子** is legacy wording and should not be reintroduced as the active tab name.
 - Use **权益** for user-facing entitlement language. Do not reintroduce **会员** as the active user-facing product term.
-- Active value-first onboarding remains: personality test -> results -> auth gate -> authenticated onboarding -> discover. The canonical flow reference is [`./onboarding-flow.md`](./onboarding-flow.md).
-- After authentication, onboarding progression is server-owned through `nextStep` from `/api/auth/user`, not reconstructed locally on the client. See [`./onboarding-flow.md`](./onboarding-flow.md) and [`./architecture/current-state.md`](./architecture/current-state.md).
+- Active value-first onboarding remains: personality test -> results -> auth gate -> authenticated onboarding -> discover. The canonical flow reference is [`./systems/onboarding-flow.md`](./systems/onboarding-flow.md).
+- After authentication, onboarding progression is server-owned through `nextStep` from `/api/auth/user`, not reconstructed locally on the client. See [`./systems/onboarding-flow.md`](./systems/onboarding-flow.md) and [`./architecture/current-state.md`](./architecture/current-state.md).
 
 ## 3. Mini-program application structure
 
@@ -111,17 +111,17 @@ This inventory is derived from the registered paths in [`../apps/mini-program/sr
 
 | Journey | Main mini-program path | Canonical notes |
 | --- | --- | --- |
-| New user onboarding | `pages/index/index` -> `pages/onboarding/personality-test/index` -> `results` -> `auth-gate` -> `essential-data` -> `extended-data` -> `profile-review` -> `pages/discover/index` | Product and step ownership live in [`./onboarding-flow.md`](./onboarding-flow.md). |
+| New user onboarding | `pages/index/index` -> `pages/onboarding/personality-test/index` -> `results` -> `auth-gate` -> `essential-data` -> `extended-data` -> `profile-review` -> `pages/discover/index` | Product and step ownership live in [`./systems/onboarding-flow.md`](./systems/onboarding-flow.md). |
 | Returning login | `pages/index/index` or `pages/login/index` -> WeChat login -> `/api/auth/user` -> server-owned `nextStep` | Mini-program-native login only; no browser OAuth redirect. |
 | Discovery and pool registration | `pages/discover/index` -> optional `pages/event-detail/index` -> `pages/pool-registration/index` | Pool registration owns soft-preference capture before matching. |
-| Payment and verification | `pages/pool-registration/index` -> `pages/blind-box-payment/index` -> `pages/payment-verification/index` -> back to pool registration or onward to profile/events | Cross-platform coordination rules live in [`./PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md). |
+| Payment and verification | `pages/pool-registration/index` -> `pages/blind-box-payment/index` -> `pages/payment-verification/index` -> back to pool registration or onward to profile/events | Cross-platform coordination rules live in [`./reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md). |
 | Matching and reveal | `pages/matching-status/index` -> `pages/squad-unboxing/index` -> `pages/pool-group-detail/index` -> `pages/event-coordination/index` or `pages/events/index` | Query keys and invalidation rules live in [`./mini-program-data-fetching.md`](./mini-program-data-fetching.md). Matching-status now runs the **Unified Connection Reveal** — `composeUnifiedReveal()` fuses group chemistry with pair connection points into a single `UnifiedRevealCard`. |
-| In-event icebreaker | `pages/icebreaker-session/index` | Active in-event social flow; server-owned session state is described in [`./AI_FEATURE_INVENTORY.md`](./AI_FEATURE_INVENTORY.md) and [`./architecture/current-state.md`](./architecture/current-state.md). |
+| In-event icebreaker | `pages/icebreaker-session/index` | Active in-event social flow; server-owned session state is described in [`./ai/AI_FEATURE_INVENTORY.md`](./ai/AI_FEATURE_INVENTORY.md) and [`./architecture/current-state.md`](./architecture/current-state.md). |
 | Ongoing account, rewards, invite, and relationship use | `pages/profile/index`, `pages/events/index`, `pages/connections/index`, `pages/rewards/index`, `pages/invite/index`, `pages/edit-profile/index` | These are the steady-state anchors after onboarding and matching. |
 
 ## 6. AI features on the mini-program
 
-Mini-program-reachable AI features are inventoried canonically in [`./AI_FEATURE_INVENTORY.md`](./AI_FEATURE_INVENTORY.md). The live mini-program surfaces currently depend on the following feature families:
+Mini-program-reachable AI features are inventoried canonically in [`./ai/AI_FEATURE_INVENTORY.md`](./ai/AI_FEATURE_INVENTORY.md). The live mini-program surfaces currently depend on the following feature families:
 
 | Feature family | Mini-program entry surfaces | What matters here |
 | --- | --- | --- |
@@ -131,7 +131,7 @@ Mini-program-reachable AI features are inventoried canonically in [`./AI_FEATURE
 | Social Icebreaker generation | `pages/icebreaker-session/index` | AI-backed warmup topics, micro-challenges, lie-detective content, personality-dice content, and recap summary. |
 | Semantic profile embeddings | Onboarding, profile, and interest-update writes | Backend-only enrichment triggered by user changes; not shown as a direct UI widget. |
 
-Practical rule: AI is allowed to enrich copy and in-event facilitation, but the mini-program should still degrade gracefully. Current fallback behavior is documented in [`./AI_FEATURE_INVENTORY.md`](./AI_FEATURE_INVENTORY.md) and validated by [`./runbooks/mini-program-ai-smoke.md`](./runbooks/mini-program-ai-smoke.md).
+Practical rule: AI is allowed to enrich copy and in-event facilitation, but the mini-program should still degrade gracefully. Current fallback behavior is documented in [`./ai/AI_FEATURE_INVENTORY.md`](./ai/AI_FEATURE_INVENTORY.md) and validated by [`./runbooks/mini-program-ai-smoke.md`](./runbooks/mini-program-ai-smoke.md).
 
 ## 7. Shared contracts and server domain boundaries
 
@@ -147,7 +147,7 @@ Important boundary rules:
 
 - Treat `/api/auth/user` as the authority for authenticated user state and onboarding progression.
 - Treat `packages/shared` as the contract layer when both mini-program and another runtime must agree on payload shape or schema naming.
-- Treat auth, API wrapper semantics, payment mechanics, pricing, and entitlement changes as **coordination-sensitive**. Use [`./PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md) before deciding a change is mini-program-only.
+- Treat auth, API wrapper semantics, payment mechanics, pricing, and entitlement changes as **coordination-sensitive**. Use [`./reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md) before deciding a change is mini-program-only.
 - The mini-program is the strongest current reference for the live payment flow, but shared payment behavior is still a `BOTH_REQUIRED` review surface when business rules move.
 
 ## 8. Data model quick reference
@@ -169,11 +169,11 @@ This section names the core entities the mini-program relies on without duplicat
 
 ## 9. Admin flows affecting the mini-program
 
-Endpoint and role coverage live canonically in [`./admin-rbac-matrix.md`](./admin-rbac-matrix.md). Some sensitive writes are also recorded through [`../apps/server/src/lib/adminAuditLogger.ts`](../apps/server/src/lib/adminAuditLogger.ts) where the route has been instrumented, so verify audit coverage per endpoint instead of assuming every admin mutation already logs through that helper. The table below focuses only on the admin actions that mini-program users can feel directly.
+Endpoint and role coverage live canonically in [`./admin/admin-rbac-matrix.md`](./admin/admin-rbac-matrix.md). Some sensitive writes are also recorded through [`../apps/server/src/lib/adminAuditLogger.ts`](../apps/server/src/lib/adminAuditLogger.ts) where the route has been instrumented, so verify audit coverage per endpoint instead of assuming every admin mutation already logs through that helper. The table below focuses only on the admin actions that mini-program users can feel directly.
 
 | Admin action | Endpoint or authority | Mini-program effect |
 | --- | --- | --- |
-| Create or update event pools | [`./admin-rbac-matrix.md`](./admin-rbac-matrix.md) (`/api/admin/event-pools*`) | Changes what appears in discover, what users can register for, and the timing/location/constraint copy shown in event detail and pool registration. |
+| Create or update event pools | [`./admin/admin-rbac-matrix.md`](./admin/admin-rbac-matrix.md) (`/api/admin/event-pools*`) | Changes what appears in discover, what users can register for, and the timing/location/constraint copy shown in event detail and pool registration. |
 | Run matching for a pool | [`../apps/server/src/routes.ts`](../apps/server/src/routes.ts) (`POST /api/admin/event-pools/:id/match`) | Creates matched groups and unlocks or changes what registered users see in matching status, reveal, and group-detail flows. |
 | Override blind-box attendance | [`../apps/server/src/routes.ts`](../apps/server/src/routes.ts) (`PATCH /api/admin/blind-box-events/:eventId/attendees/:userId/attendance`) | Changes the stored pre-event attendance state that matched-event flows read later. |
 | Send or broadcast admin notifications | [`../apps/server/src/routes.ts`](../apps/server/src/routes.ts) (`POST /api/admin/notifications/broadcast`, `POST /api/admin/notifications/send`) | Changes the notification counts and user-facing reminder or announcement traffic that mini-program tabs mark as read. |
@@ -182,7 +182,7 @@ Endpoint and role coverage live canonically in [`./admin-rbac-matrix.md`](./admi
 
 ## 10. Platform coordination boundary
 
-Use [`./PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md) whenever the mini-program change might alter shared business behavior rather than only Taro runtime behavior.
+Use [`./reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md) whenever the mini-program change might alter shared business behavior rather than only Taro runtime behavior.
 
 | Scope | Typical examples | Review expectation |
 | --- | --- | --- |
@@ -190,7 +190,7 @@ Use [`./PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md) whenever the mini
 | `BOTH_REQUIRED` | Auth/session bootstrap, `/api/auth/user` semantics, payment flow behavior, pricing or entitlement rules, request wrapper semantics, shared DTO changes | Review the matching web or shared surface before finalizing the change. |
 | Shared-contract-first | Schema names, API DTOs, onboarding helpers, legal copy | Update `packages/shared` first and then confirm both consuming clients still align. |
 
-Default rule: if a mini-program task touches auth, payment, pricing, or another shared contract and the ownership is unclear, treat it as `BOTH_REQUIRED` until [`./PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md) says otherwise.
+Default rule: if a mini-program task touches auth, payment, pricing, or another shared contract and the ownership is unclear, treat it as `BOTH_REQUIRED` until [`./reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md) says otherwise.
 
 ## 11. Environment and build configuration
 
@@ -199,8 +199,8 @@ Default rule: if a mini-program task touches auth, payment, pricing, or another 
 | Workspace commands | [`../apps/mini-program/README.md`](../apps/mini-program/README.md) | Use `npm run dev:weapp --workspace=mini-program` and `npm run build:weapp --workspace=mini-program` for the live mini-program workspace. |
 | Page loading and package split | [`../apps/mini-program/src/app.config.ts`](../apps/mini-program/src/app.config.ts), [`../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts) | The app uses `lazyCodeLoading: 'requiredComponents'`, a main package, and a preloaded onboarding subpackage. |
 | Runtime API base URL | [`../apps/mini-program/src/lib/api/api.ts`](../apps/mini-program/src/lib/api/api.ts) | `TARO_APP_API_BASE_URL` controls the runtime API origin; local default is `http://localhost:5001`. |
-| Launch-critical server env | [`./LAUNCH_CONFIG.md`](./LAUNCH_CONFIG.md) | `DATABASE_URL`, `SESSION_SECRET`, `WECHAT_APPID`, and `WECHAT_SECRET` are required; `PAYMENTS_ENABLED` gates live payment availability. |
-| WeChat Pay enablement | [`./LAUNCH_CONFIG.md`](./LAUNCH_CONFIG.md) | When payments are enabled, the WeChat Pay variables must also be configured and stay consistent with the mini-program app identity. |
+| Launch-critical server env | [`./product/LAUNCH_CONFIG.md`](./product/LAUNCH_CONFIG.md) | `DATABASE_URL`, `SESSION_SECRET`, `WECHAT_APPID`, and `WECHAT_SECRET` are required; `PAYMENTS_ENABLED` gates live payment availability. |
+| WeChat Pay enablement | [`./product/LAUNCH_CONFIG.md`](./product/LAUNCH_CONFIG.md) | When payments are enabled, the WeChat Pay variables must also be configured and stay consistent with the mini-program app identity. |
 | Tab bar and shell runtime | [`../apps/mini-program/README.md`](../apps/mini-program/README.md), [`../apps/mini-program/src/app.config.ts`](../apps/mini-program/src/app.config.ts) | The active runtime uses a native custom tab bar with `tabBar.custom: true`. |
 
 ## 12. QA and maintenance
@@ -219,15 +219,15 @@ Update only the sections affected by the source change. Do not rewrite the whole
 | --- | --- | --- |
 | [`../PRODUCT_REQUIREMENTS.md`](../PRODUCT_REQUIREMENTS.md) | Header, 2, 5, 10 | Launch-primary status, nav terminology, entitlement wording, and journey language still match product canon. |
 | [`../apps/mini-program/README.md`](../apps/mini-program/README.md) | Header, 3, 11, 12 | Workspace commands, package strategy, custom tab bar ownership, and launch-primary guidance still match runtime docs. |
-| [`./onboarding-flow.md`](./onboarding-flow.md) | 2, 4, 5 | Onboarding routes, step order, and server-owned `nextStep` descriptions still match the active flow. |
-| [`./PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md) | 5, 7, 10, 11 | Auth, API, payment, and sibling-platform review rules are still described accurately. |
+| [`./systems/onboarding-flow.md`](./systems/onboarding-flow.md) | 2, 4, 5 | Onboarding routes, step order, and server-owned `nextStep` descriptions still match the active flow. |
+| [`./reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md) | 5, 7, 10, 11 | Auth, API, payment, and sibling-platform review rules are still described accurately. |
 | [`./mini-program-data-fetching.md`](./mini-program-data-fetching.md) | 5, 7, 12 | Query-key, invalidation, and waiting/reveal references still match live mini-program data flow. |
 | [`./architecture/current-state.md`](./architecture/current-state.md) | Header, 3, 7 | Ownership chain and launch-primary architecture notes still align with the current codebase. |
-| [`./AI_FEATURE_INVENTORY.md`](./AI_FEATURE_INVENTORY.md) | 6, 12 | The AI surface list, fallback claims, and smoke references are still current. |
-| [`./admin-rbac-matrix.md`](./admin-rbac-matrix.md) | 9 | The admin-impact table still maps to the right endpoints and role assumptions. |
+| [`./ai/AI_FEATURE_INVENTORY.md`](./ai/AI_FEATURE_INVENTORY.md) | 6, 12 | The AI surface list, fallback claims, and smoke references are still current. |
+| [`./admin/admin-rbac-matrix.md`](./admin/admin-rbac-matrix.md) | 9 | The admin-impact table still maps to the right endpoints and role assumptions. |
 | [`../apps/server/src/README.md`](../apps/server/src/README.md) | 7, 9 | Server domain ownership and admin or payment boundaries are still accurate. |
 | [`../packages/shared/src/README.md`](../packages/shared/src/README.md) and [`../packages/shared/src/schema.ts`](../packages/shared/src/schema.ts) | 7, 8 | Shared contract ownership and the named data entities still match the canonical schema. |
 | [`../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts) and [`../apps/mini-program/src/app.config.ts`](../apps/mini-program/src/app.config.ts) | 3, 4, 11 | Page inventory, main-package vs onboarding-subpackage split, preload rules, and tab anchors still match the live registry. |
 | [`../apps/mini-program/src/lib/api/api.ts`](../apps/mini-program/src/lib/api/api.ts) | 5, 7, 10, 11 | Auth bootstrap, API base URL, payment verification behavior, and coordination-sensitive notes still match implementation. |
 | [`./runbooks/mini-program-ai-smoke.md`](./runbooks/mini-program-ai-smoke.md) and [`./runbooks/mini-program-events-tab-smoke.md`](./runbooks/mini-program-events-tab-smoke.md) | 12 | The referenced QA commands and smoke expectations still cover the current routes. |
-| [`./LAUNCH_CONFIG.md`](./LAUNCH_CONFIG.md) | 11, 12 | Environment variable requirements and payment enablement notes are still accurate. |
+| [`./product/LAUNCH_CONFIG.md`](./product/LAUNCH_CONFIG.md) | 11, 12 | Environment variable requirements and payment enablement notes are still accurate. |

@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { db } from "../../db";
-import { requireAuth } from "../../phoneAuth";
+import { requireAuth } from "../../middleware/auth";
 import { storage } from "../../storage";
 import { processTestV2, type AnswerV2 } from "../../personalityMatching";
 import { isNotNull } from "drizzle-orm";

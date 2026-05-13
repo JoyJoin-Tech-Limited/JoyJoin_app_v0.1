@@ -26,9 +26,10 @@ Not counted as AI for this document:
 | Social icebreaker recap summary | `apps/mini-program/src/pages/icebreaker-session/index.tsx` -> `GET /api/social-icebreaker/:id/recap` | `generateRecapSummary` in `apps/server/src/socialIcebreakerAIService.ts` | `socialModelRouter` with MiniMax preferred in hybrid mode, DeepSeek fallback | Active | Deterministic `getDefaultRecap(...)` |
 | Social icebreaker personality-dice challenges | `apps/mini-program/src/pages/icebreaker-session/index.tsx` -> `POST /api/social-icebreaker/:id/personality-dice/generate` | `generatePersonalityDiceChallenges` in `apps/server/src/socialIcebreakerAIService.ts` | `socialModelRouter` — MiniMax preferred in hybrid when configured; JSON extracted from model text | Active when `personality_dice` phase is enabled | Curated `DICE_CURATED` map by dominant trait |
 | Match group analysis (pair copy, icebreakers, dynamics) | `matching-status/index.tsx`, `squad-unboxing/index.tsx`, `pool-group-detail/index.tsx` -> `GET /api/pool-groups/:groupId/analysis` via `getPoolGroupAnalysis` in `@shared/api` | `generateGroupAnalysis` in `apps/server/src/matchExplanationService.ts` | `socialModelRouter` (MiniMax / DeepSeek per router policy) | Active | Cached responses; structured fallbacks when generation fails |
-| Semantic profile embeddings | Onboarding/profile update pages submit profile and interests | `queueSemanticProfileRecompute(...)` -> `embeddingClient.embed(...)` | **DeepSeek only** (`DEEPSEEK_API_KEY`); default model from `EMBEDDING_MODEL` or `text-embedding-3-small` | Active backend AI triggered by mini-program actions | Stores profile as `degraded` with null embedding instead of breaking user flow |
+| Semantic profile embeddings | Onboarding/profile update pages submit profile and interests | `queueSemanticProfileRecompute(...)` -> `embeddingClient.embed(...)` | **Self-hosted** (`EMBEDDING_BASE_URL`); default model `granite-embedding-97m-multilingual-r2` overridable via `EMBEDDING_MODEL` | Active backend AI triggered by mini-program actions | Stores profile as `degraded` with null embedding instead of breaking user flow |
 | Event theme title reveal | `matching-status/index.tsx` (WebSocket `EVENT_THEME_TITLE_REVEALED` + `persistedThemeSummary` from `GET /api/my-pool-registrations` and `getPoolGroupDetails`) | `generateAndAssignEventThemeTitle(...)` in `apps/server/src/eventThemeTitleGenerator.ts` | `creativeModelRouter` with MiniMax or DeepSeek | Active | Template fallback via `generateFallbackEventThemeTitle(...)`; can be disabled with `ENABLE_EVENT_THEME_TITLE_GENERATION` |
 | Onboarding profile tagline | `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` (and shared API) | `generateProfileTagline` in `apps/server/src/profileTaglineService.ts` | `socialModelRouter` | Active | Short deterministic fallback string when the model fails validation |
+| Occupation free-text search | `apps/mini-program/src/pages/onboarding/essential-data/index.tsx` → text input with debounced `POST /api/occupation/search` | `registerOccupationSearchRoutes` in `apps/server/src/routes/domains/occupationSearch.ts` | **Granite** `granite-embedding-97m-multilingual-r2` via self-hosted endpoint; pre-computed occupation vectors in `apps/server/data/occupation-vectors.json` | Active | Exact match vs synonyms first; <0.85 confidence shows suggestions; <0.70 falls back to standard picker |
 
 ## Feature Identification
 
@@ -45,6 +46,7 @@ Not counted as AI for this document:
 ### Confirmed backend AI triggered by mini-program actions
 
 1. Semantic profile embedding generation after profile or interests updates.
+2. Occupation free-text search during onboarding: `POST /api/occupation/search` uses Granite embeddings to match user free-text input to the standardized occupation taxonomy (164 occupations). Exact display name/synonym match runs first (0ms), then embedding cosine similarity with pre-computed vectors (~24ms).
 
 ### Deterministic or non-reachable surfaces excluded from the counted inventory
 
@@ -150,6 +152,17 @@ Not counted as AI for this document:
 - `packages/shared/src/api.ts`: Shared registration and group DTOs, including optional theme fields and `matchExplanation` fields used by mini-program pages.
 - `packages/shared/src/wsEvents.ts`: Shared WebSocket event contract; `EVENT_THEME_TITLE_REVEALED` carries theme fields that `matching-status` merges with REST-fetched registration and group details.
 
+### 7. Occupation Free-Text Search
+
+- Description: During onboarding step 3 (职业身份), users type their occupation as free text. The input is matched against the 164-occupation JoyJoin taxonomy using Granite embedding cosine similarity, with an exact match bypass for display names and synonyms.
+- Mini-program entry point: `apps/mini-program/src/pages/onboarding/essential-data/index.tsx` — text `Input` with debounced `onInput` (300ms).
+- Backend path: `registerOccupationSearchRoutes` in `apps/server/src/routes/domains/occupationSearch.ts`.
+- AI model/service: **Granite** `granite-embedding-97m-multilingual-r2` via self-hosted OpenAI-compatible endpoint (`EMBEDDING_BASE_URL`). Pre-computed occupation vectors in `apps/server/data/occupation-vectors.json`.
+- Current state: Active. Enabled when Granite server is running and `EMBEDDING_BASE_URL` is set.
+- Fallback behavior: Two-stage — (1) exact match against displayName/synonyms (0ms, 100%); (2) embedding cosine similarity against 164 pre-computed vectors (~24ms, 79.7% P@1, 95.0% P@5). Confidence ≥0.85 auto-accept; ≥0.70 shows suggestions; <0.70 user can skip.
+- Configuration location: Vectors in `apps/server/data/occupation-vectors.json` (regenerate via `npx tsx scripts/build-occupation-vectors.mts`). Route at `apps/server/src/routes/domains/occupationSearch.ts`.
+- Edge cases: "全职女儿" → 全职家庭 (0.90); "家里蹲" → 全职家庭 (0.82); "无业" → 自由职业者 (0.85); "富二代" → suggestions below auto-threshold. All degrade gracefully.
+
 ### Feature flags and rollout controls
 
 No explicit client-side A/B testing or experiment bucketing was found for AI features in `apps/mini-program/src`. The current rollout controls are server-side environment flags and provider selection variables.
@@ -158,7 +171,9 @@ Relevant server-side flags and env controls found during the audit:
 
 - `SOCIAL_AI_PROVIDER`: `hybrid`, `minimax`, or `deepseek` for social-icebreaker and match-intelligence routing.
 - `MINIMAX_API_KEY`, `MINIMAX_MODEL`, `MINIMAX_BASE_URL`, `MINIMAX_TIMEOUT_MS`: MiniMax enablement and model/runtime configuration.
-- `DEEPSEEK_API_KEY`: DeepSeek enablement for chat and for **semantic profile embeddings** in `embeddingClient.ts`.
+- `DEEPSEEK_API_KEY`: DeepSeek enablement for chat/completion only. **Not used for embeddings** — DeepSeek has no embedding API.
+- `EMBEDDING_BASE_URL`: Required for self-hosted embedding (Granite or other OpenAI-compatible). Takes priority over `DEEPSEEK_API_KEY` for embedding calls.
+- `EMBEDDING_API_KEY`: Optional API key for the self-hosted embedding endpoint.
 - `EMBEDDING_MODEL`, `EMBEDDING_TIMEOUT_MS`, `EMBEDDING_MAX_RETRIES`: Embedding runtime controls.
 - `CREATIVE_AI_PROVIDER`: Global creative-provider override.
 - `CREATIVE_AI_TITLE_PROVIDER`: Function-level override for event theme title generation.
@@ -200,5 +215,6 @@ Today, the mini-program has:
 3. **Semantic profile embeddings** triggered by profile and interest updates (backend-only output).
 4. **Event theme title** reveal after matching (WebSocket + REST + group details).
 5. **Onboarding profile tagline** on the profile review step.
+6. **Occupation free-text search** during onboarding step 3 (`POST /api/occupation/search` with Granite embedding + exact-match hybrid).
 
-Several nearby surfaces remain deterministic or web-only (for example `group.matchExplanation` on pool group detail until analysis is loaded, and XiaoYue commentary). See `docs/mini-program-ai-roadmap-handoff.md` for deeper AI integration (Researcher → Planner → AI Engineer) and roadmap alignment with `docs/AI_INTEGRATION_PLAN.md`.
+Several nearby surfaces remain deterministic or web-only (for example `group.matchExplanation` on pool group detail until analysis is loaded, and XiaoYue commentary). See `docs/mini-program-ai-roadmap-handoff.md` for deeper AI integration (Researcher → Planner → AI Engineer) and roadmap alignment with `docs/ai/AI_INTEGRATION_PLAN.md`.

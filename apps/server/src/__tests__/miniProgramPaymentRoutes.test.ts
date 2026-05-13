@@ -54,7 +54,7 @@ vi.mock("../storage", () => ({
   },
 }));
 
-vi.mock("../phoneAuth", () => ({
+vi.mock("../middleware/auth", () => ({
   requireAuth: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 

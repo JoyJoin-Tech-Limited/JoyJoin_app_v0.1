@@ -4,7 +4,7 @@
 **Last updated:** 2026-04-02  
 **Scope:** AI product agent systems for Onboarding Discovery, Match Intelligence, and Event Momentum
 
-> **Read this first for current shipped AI behavior.** Pair it with `docs/AI_INTEGRATION_PLAN.md` only when planning future phases or reviewing rollout gates; the roadmap document is not authority for what is live today.
+> **Read this first for current shipped AI behavior.** Pair it with `docs/ai/AI_INTEGRATION_PLAN.md` only when planning future phases or reviewing rollout gates; the roadmap document is not authority for what is live today.
 
 > **Audit note (2026-03-30):** This document has been revised from a forward-looking reference memo
 > to a current-state + next-state architecture guide. Sections now distinguish between **✅ Active today**,
@@ -30,7 +30,7 @@ This section maps the three agent systems to what is **actually shipped in the r
 | **Match Intelligence** | Shared typed contract for group analysis | `packages/shared/src/groupAnalysis.ts`, `packages/shared/src/types/groupAnalysis.ts` | `MatchExplanationContract`, `GroupAnalysisContract`, `GroupAnalysisResponse` — consumed by both server and `user-client` |
 | **Match Intelligence** | Interest signal boost for icebreakers / conversation topics | `apps/server/src/matchExplanationService.ts` (l.104+), `apps/server/src/conversationTopicsService.ts` | `MatchMember.interestSignals[]` — loaded via `loadInterestSignalsByUserIds()` in `routes.ts`; used to enrich prompts for group analysis and blind-box conversation topics; does **not** affect `poolMatchingService.ts` pair scores |
 | **Match Intelligence** | Dual-provider LLM routing (social + creative) | `apps/server/src/ai/socialModelRouter.ts`, `apps/server/src/ai/creativeModelRouter.ts` | `callSocialAI()` MiniMax-first + DeepSeek fallback; `getClientForFunction()` per-function routing; logs `provider=` + `latency=ms` on every call |
-| **Match Intelligence** | Embedding client (background semantic profiles) | `apps/server/src/embeddingClient.ts` | `EmbeddingClient` class; **DeepSeek only** (`DEEPSEEK_API_KEY`, OpenAI-compatible embeddings); used by the async semantic profile pipeline; not routed through social/creative model routers |
+| **Match Intelligence** | Embedding client (background semantic profiles) | `apps/server/src/embeddingClient.ts` | `EmbeddingClient` class; **self-hosted only** (`EMBEDDING_BASE_URL`); default model Granite `granite-embedding-97m-multilingual-r2`; used by async semantic profile pipeline and occupation search; not routed through social/creative model routers |
 | **Onboarding Discovery** | Canonical adaptive V4 personality engine (deterministic) | `packages/shared/src/personality/` | Authoritative — AI layer must not replace this |
 | **Onboarding Discovery** | Server-driven onboarding state via `nextStep` | `apps/server/src/routes.ts`, `apps/user-client/src/App.tsx` | All progression flags (`hasCompletedPersonalityTest`, `profileEssentialComplete`, etc.) are server-owned; client reads only |
 | **Onboarding Discovery** | Shared AI onboarding contract | `packages/shared/src/ai/onboarding.ts` | Exports `ProfileTaglineResponse`; consumed by `profileTaglineService.ts` and the client hook |
@@ -467,10 +467,10 @@ Every orchestrator service should implement the same 7-stage structural pipeline
 | `apps/server/src/inference/llmFallbackInference.ts` | ⚡ Implemented, not wired | Attribute inference fallback via direct DeepSeek; `callLLMForInference()` has no runtime callers yet |
 | `apps/server/src/matchingWeightsService.ts` | ⚡ Primary adaptive-weight path, implemented but not wired | Thompson Sampling weight learning; not yet connected to `poolMatchingService.ts` |
 | `docs/icebreaker-system.md` | ✅ Active | Full technical reference for Social Icebreaker system |
-| `docs/MATCHING_ALGORITHM_REFERENCE.md` | ✅ Active | Matching algorithm documentation; cross-reference when scoping Match Intelligence evaluator |
-| `docs/PERSONALITY_TEST_SYSTEM.md` | ✅ Active | Personality test system documentation; cross-reference when scoping Onboarding Discovery |
-| `docs/interest-signal-boost.md` | ✅ Active | Interest signal boost feature reference; signals flow into icebreaker/explanation prompts, not pair scoring |
-| `docs/AI_INTEGRATION_PLAN.md` | ✅ Active | Phased AI roadmap including LLM provider architecture (§1.4); complementary to this document |
+| `docs/systems/MATCHING_ALGORITHM_REFERENCE.md` | ✅ Active | Matching algorithm documentation; cross-reference when scoping Match Intelligence evaluator |
+| `docs/systems/PERSONALITY_TEST_SYSTEM.md` | ✅ Active | Personality test system documentation; cross-reference when scoping Onboarding Discovery |
+| `docs/systems/interest-signal-boost.md` | ✅ Active | Interest signal boost feature reference; signals flow into icebreaker/explanation prompts, not pair scoring |
+| `docs/ai/AI_INTEGRATION_PLAN.md` | ✅ Active | Phased AI roadmap including LLM provider architecture (§1.4); complementary to this document |
 
 ---
 

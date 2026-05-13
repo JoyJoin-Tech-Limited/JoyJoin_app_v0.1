@@ -41,7 +41,7 @@ Server `nextStep` and assessment APIs are the same as web; only routes and stora
 | Login only (returning users) | `pages/login/index` | [`useWeChatLogin`](../apps/mini-program/src/hooks/auth/useWeChatLogin.ts) → `POST /api/auth/wechat/login` |
 | Post-auth onboarding | `pages/onboarding/onboarding`, `essential-data`, `extended-data`, `profile-review` | Navigate with [`navigateToMiniProgramNextStep`](../apps/mini-program/src/lib/onboarding/onboardingNavigation.ts) per `GET /api/auth/user` |
 
-Blind-box **payment** after onboarding is **not** part of this table; see [`docs/PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md) (mini-program `blind-box-payment` + `payment-verification` pages).
+Blind-box **payment** after onboarding is **not** part of this table; see [`docs/reference/PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md) (mini-program `blind-box-payment` + `payment-verification` pages).
 
 **Original planning target:** +15% signup conversion (based on Soul, 16Personalities benchmarks). Treat this as historical planning context, not a live KPI report.
 

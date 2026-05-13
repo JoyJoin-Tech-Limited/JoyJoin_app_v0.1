@@ -5,7 +5,7 @@ import { events } from "@shared/schema";
 import * as schema from "@shared/schema";
 import type { ChatMessage, User } from "@shared/schema";
 import { insertEventFeedbackSchema } from "@shared/schema";
-import { requireAuth } from "../../phoneAuth";
+import { requireAuth } from "../../middleware/auth";
 import { logger } from "../../lib/logger";
 import { storage } from "../../storage";
 

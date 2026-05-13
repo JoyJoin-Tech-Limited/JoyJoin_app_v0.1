@@ -1,7 +1,7 @@
 # Open beta — single replica contract
 
 **Audience:** Engineering + SRE  
-**Related:** [`open-beta-wider.md`](../open-beta-wider.md), [`launch-risks.md`](../launch-risks.md) (R-01, R-02)
+**Related:** [`product/open-beta-wider.md`](../product/open-beta-wider.md), [`product/launch-risks.md`](../product/launch-risks.md) (R-01, R-02)
 
 ## Contract
 
@@ -18,7 +18,7 @@ In-memory components are **not** shared across processes:
 ## Deploy checklist
 
 - [ ] Orchestrator / compose / platform **max replicas = 1** for the API service.
-- [ ] Document in release notes that **scaling out requires** Redis (or equivalent) for limits/cache and persisted abuse state per post-beta remediation in `launch-risks.md`.
+- [ ] Document in release notes that **scaling out requires** Redis (or equivalent) for limits/cache and persisted abuse state per post-beta remediation in `product/launch-risks.md`.
 - [ ] After **any** deploy or restart, run a quick smoke: `GET /api/readyz`, auth login rate limit sanity, payment create (staging).
 
 ## Restart effects (support)

@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  granite-embedding:
+    build: .
+    container_name: joyjoin-granite-embedding
+    ports:
+      - "8000:8000"
+    environment:
+      - HF_HOME=/models
+      - SENTENCE_TRANSFORMERS_HOME=/models
+    volumes:
+      - granite-models:/models
+    restart: unless-stopped
+
+volumes:
+  granite-models:

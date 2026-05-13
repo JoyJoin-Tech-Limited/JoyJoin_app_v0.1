@@ -29,15 +29,15 @@ These are the files most frequently referenced and treated as source-of-truth. W
 | `DEVELOPER_QUICK_REFERENCE.md` | Canonical engineering guardrails, active vs legacy | 6 | 1 |
 | `PRODUCT_REQUIREMENTS.md` | Product canon, terminology, screen families | 6 | **0** ⚠️ |
 | `docs/architecture/current-state.md` | Active architecture map | Cited in AGENTS.md | — |
-| `docs/PLATFORM_COORDINATION.md` | Web vs mini-program auth/API/payment source of truth | 12 | — |
-| `docs/onboarding-flow.md` | Active onboarding reference (last verified 2026-04-19) | — | — |
-| `docs/PERSONALITY_TEST_SYSTEM.md` | V4 engine + cross-client surfaces | — | — |
-| `docs/MATCHING_ALGORITHM_REFERENCE.md` | Deterministic matching authority | — | — |
+| `docs/reference/reference/PLATFORM_COORDINATION.md` | Web vs mini-program auth/API/payment source of truth | 12 | — |
+| `docs/systems/systems/onboarding-flow.md` | Active onboarding reference (last verified 2026-04-19) | — | — |
+| `docs/systems/systems/PERSONALITY_TEST_SYSTEM.md` | V4 engine + cross-client surfaces | — | — |
+| `docs/systems/systems/MATCHING_ALGORITHM_REFERENCE.md` | Deterministic matching authority | — | — |
 | `docs/icebreaker-system.md` | Primary Social Icebreaker reference (2026-04-21) | — | — |
 | `docs/mini-program-product-reference.md` | Product-to-code bridge for launch-primary client | 1 | 14 |
-| `docs/LAUNCH_CONFIG.md` | Launch readiness configuration | — | — |
-| `docs/perf.md` | Performance budgets; mini-program subpackage strategy | — | — |
-| `docs/observability.md` | Observability reference | — | — |
+| `docs/product/product/LAUNCH_CONFIG.md` | Launch readiness configuration | — | — |
+| `docs/reference/reference/perf.md` | Performance budgets; mini-program subpackage strategy | — | — |
+| `docs/systems/systems/observability.md` | Observability reference | — | — |
 
 ---
 
@@ -70,18 +70,18 @@ These docs matter but are not linked from anywhere else, making them hard to dis
 
 #### `PRODUCT_REQUIREMENTS.md`
 - **Outbound:** 0 — references code files inline (backticks) but does not hyperlink to other docs.
-- **Inbound from:** `README.md`, `CONTRIBUTING.md`, `QUICK_REFERENCE.md`, `docs/README.md`, `docs/ai-workflow-documentation-refresh.md`, `docs/mini-program-product-reference.md`
+- **Inbound from:** `README.md`, `CONTRIBUTING.md`, `QUICK_REFERENCE.md`, `docs/README.md`, `docs/ai/ai/ai-workflow-documentation-refresh.md`, `docs/mini-program-product-reference.md`
 
 #### `AGENTS.md`
 - **Outbound:** 0
 - **Inbound:** 0 — Completely isolated in the reference graph.
 
 #### `docs/mini-program-product-reference.md`
-- **Outbound (14):** `PRODUCT_REQUIREMENTS.md`, `apps/mini-program/README.md`, `apps/server/src/README.md`, `packages/shared/src/README.md`, `packages/shared/src/schema.ts`, `docs/AI_FEATURE_INVENTORY.md`, `docs/LAUNCH_CONFIG.md`, `docs/PLATFORM_COORDINATION.md`, `docs/admin-rbac-matrix.md`, `docs/architecture/current-state.md`, `docs/mini-program-data-fetching.md`, `docs/onboarding-flow.md`, `docs/runbooks/mini-program-ai-smoke.md`, `docs/runbooks/mini-program-events-tab-smoke.md`
+- **Outbound (14):** `PRODUCT_REQUIREMENTS.md`, `apps/mini-program/README.md`, `apps/server/src/README.md`, `packages/shared/src/README.md`, `packages/shared/src/schema.ts`, `docs/ai/ai/AI_FEATURE_INVENTORY.md`, `docs/product/product/LAUNCH_CONFIG.md`, `docs/reference/reference/PLATFORM_COORDINATION.md`, `docs/admin/admin/admin-rbac-matrix.md`, `docs/architecture/current-state.md`, `docs/mini-program-data-fetching.md`, `docs/systems/systems/onboarding-flow.md`, `docs/runbooks/mini-program-ai-smoke.md`, `docs/runbooks/mini-program-events-tab-smoke.md`
 - **Inbound from:** `docs/README.md` only.
 
 #### `docs/architecture/connection-points-system.md`
-- **Outbound:** 0 — Mentions `docs/MATCHING_ALGORITHM_REFERENCE.md` and `docs/interest-signal-boost.md` in backticks only.
+- **Outbound:** 0 — Mentions `docs/systems/systems/MATCHING_ALGORITHM_REFERENCE.md` and `docs/systems/systems/interest-signal-boost.md` in backticks only.
 - **Inbound:** 0
 
 ---
@@ -130,7 +130,7 @@ These docs matter but are not linked from anywhere else, making them hard to dis
 | `docs/xiaoyue-ui-mockup.txt` | Same deprecation | Quarantine or archive |
 | `docs/xiaoyue-visual-comparison.txt` | Same deprecation | Quarantine or archive |
 | `docs/README-xiaoyue-formatting.md` | Xiaoyue formatting guide; likely tied to deprecated chat UX | Review for archival |
-| `docs/wechat-mini-program-reference.md` | README explicitly says **"not the Taro source of truth"** | Mark supplemental; do not expand |
+| `docs/reference/reference/wechat-mini-program-reference.md` | README explicitly says **"not the Taro source of truth"** | Mark supplemental; do not expand |
 | `docs/architecture/implementation-summaries/MOBILE_UI_IMPLEMENTATION_SUMMARY.md` | Covers web-mobile; mini-program is now launch-primary | Add stale warning header |
 | `docs/icebreaker-ux-report.md` | UX analysis; may predate current Social Icebreaker dominance | Verify currency |
 | `docs/personality-accuracy-report.md` | May be outdated relative to V4 engine | Verify or archive |
@@ -145,8 +145,8 @@ These docs matter but are not linked from anywhere else, making them hard to dis
 ## 6. Structural Gaps & Anomalies
 
 ### 6.1 Duplicate / Overlapping Topic Files
-- **`docs/harness-kpi-framework.md`** and **`docs/proposals/harness-kpi-framework.md`** are **different documents** on the same topic. Risk of divergence.
-- **`docs/harness-kpi-framework.md`** (root) vs **`docs/proposals/harness-design-implementation-phase-mapping.md`** — related topics spread across root and proposals.
+- **`docs/systems/systems/harness-kpi-framework.md`** and **`docs/proposals/systems/harness-kpi-framework.md`** are **different documents** on the same topic. Risk of divergence.
+- **`docs/systems/systems/harness-kpi-framework.md`** (root) vs **`docs/proposals/harness-design-implementation-phase-mapping.md`** — related topics spread across root and proposals.
 
 ### 6.2 Missing Category Sub-Indices
 - `docs/runbooks/` — no `README.md`
@@ -159,7 +159,7 @@ These docs matter but are not linked from anywhere else, making them hard to dis
 - `docs/archetype-orbit-demo.html` — HTML demo; not mentioned in `README.md`
 - `docs/api/industry-classification.md` — API doc for a specific domain; lightly linked
 - `docs/tech-debt/connection-points-cleanup.md` — only one file in `tech-debt/`; no category index
-- `docs/admin-rbac-matrix.md` — standalone; not prominently indexed
+- `docs/admin/admin/admin-rbac-matrix.md` — standalone; not prominently indexed
 - `docs/handoffs/` — only one file; no handoff index
 - `docs/qa/` — only one file; no QA index
 
@@ -191,14 +191,14 @@ When you add, remove, or significantly change a documentation file:
 |-------------------|------------------------|
 | Mini-program page, flow, or UI | `PRODUCT_REQUIREMENTS.md`, `docs/mini-program-product-reference.md`, `apps/mini-program/README.md` |
 | Backend API route | `DEVELOPER_QUICK_REFERENCE.md`, `docs/api/`, `apps/server/src/README.md` |
-| Matching algorithm | `docs/MATCHING_ALGORITHM_REFERENCE.md`, `.github/skills/matching-domain/SKILL.md` |
-| Onboarding step | `PRODUCT_REQUIREMENTS.md`, `docs/onboarding-flow.md`, `.github/skills/onboarding-state-architecture/SKILL.md` |
-| Personality test | `docs/PERSONALITY_TEST_SYSTEM.md`, `docs/mini-program-product-reference.md` |
+| Matching algorithm | `docs/systems/systems/MATCHING_ALGORITHM_REFERENCE.md`, `.github/skills/matching-domain/SKILL.md` |
+| Onboarding step | `PRODUCT_REQUIREMENTS.md`, `docs/systems/systems/onboarding-flow.md`, `.github/skills/onboarding-state-architecture/SKILL.md` |
+| Personality test | `docs/systems/systems/PERSONALITY_TEST_SYSTEM.md`, `docs/mini-program-product-reference.md` |
 | Social icebreaker phase | `.github/skills/social-icebreaker-domain/SKILL.md`, `docs/icebreaker-system.md` |
 | Environment variable | `.env.example`, `DEVELOPER_QUICK_REFERENCE.md` |
 | Shared UI component | `packages/shared/src/README.md`, `.github/skills/design-system-governance/SKILL.md` |
 | Database schema | `docs/architecture/current-state.md`, `.github/skills/backend-models-standards/SKILL.md` |
-| Observability / metrics | `docs/observability.md`, `.github/skills/platform-observability-and-ops/SKILL.md` |
+| Observability / metrics | `docs/systems/systems/observability.md`, `.github/skills/platform-observability-and-ops/SKILL.md` |
 | Skill metadata | `.github/skills/README.md`, the specific `SKILL.md` |
 
 ---

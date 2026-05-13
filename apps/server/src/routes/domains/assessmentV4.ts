@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { logger } from "../../lib/logger";
-import { requireAuth } from "../../phoneAuth";
+import { requireAuth } from "../../middleware/auth";
 import { storage } from "../../storage";
 import { determineSubtype, generateInsights } from "./assessment";
 import type { ArchetypeName } from "../../archetypeConfig";

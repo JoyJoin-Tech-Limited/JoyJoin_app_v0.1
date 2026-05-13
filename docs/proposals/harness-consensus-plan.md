@@ -3,7 +3,7 @@
 > **Status:** Consensus plan — synthesizes 5 parallel agent analyses of Anthropic's "Harness design for long-running application development" (Mar 24, 2026)  
 > **Scope:** Implementation-phase harness integration (not kickoff, not post-review only)  
 > **Date:** 2026-04-23  
-> **Related:** `harness-design-implementation-phase-mapping.md`, `sprint-contract-implementation-phase.md`, `harness-architecture-mapping.md`, `harness-kpi-framework.md`
+> **Related:** `harness-design-implementation-phase-mapping.md`, `sprint-contract-implementation-phase.md`, `harness-architecture-mapping.md`, `systems/harness-kpi-framework.md`
 
 ---
 
@@ -135,7 +135,7 @@ Each pillar has 5 sub-criteria (A–E). The pillar score is the **minimum** of i
 | **Observability** | Structured error logging | Traceability / correlation | Metrics / alert coverage | Audit logging | Logger discipline |
 | **Maintainability** | Layer placement | Cross-app import hygiene | Shared package usage | Pattern consistency | File size / abstraction |
 
-*Full rubric with score definitions per sub-criterion: see `harness-kpi-framework.md` §2.*
+*Full rubric with score definitions per sub-criterion: see `systems/harness-kpi-framework.md` §2.*
 
 ### 3.2 Top-Level Effectiveness KPIs
 
@@ -149,7 +149,7 @@ Track these weekly to prove the harness is working:
 | **Sprint Contract Acceptance Rate** | >60% accepted on first review | Contracts accepted without amendment / total contracts |
 | **Mean Time to Harness Pass** | Tier 1 <5 min; Tier 2 <30 min; Tier 3 <2 hr | Time from "claim done" to first PASS |
 
-*Full KPI definitions: see `harness-kpi-framework.md` §6.*
+*Full KPI definitions: see `systems/harness-kpi-framework.md` §6.*
 
 ---
 
@@ -315,5 +315,5 @@ This consensus plan synthesizes the following parallel analyses, all conducted o
 1. **Pragmatist Analysis** (agent-nmcih9lf) — Tiered cost model, essential-vs-luxury decomposition, ROI metrics. *Output: full proposal in task notification.*
 2. **Sprint Contract Mechanism** (agent-1blpfp8t) — Contract format, negotiation protocol, per-pillar criteria templates, integration with existing orchestration. *Output: `sprint-contract-implementation-phase.md`.*
 3. **Architecture Mapping** (agent-lmj0xvlo) — Role mapping table, Supervisor routing decision tree, handoff graph changes, model tier recommendations. *Output: `harness-architecture-mapping.md`.*
-4. **KPI Framework** (agent-mmmc6ji7) — 1–5 scoring rubrics per pillar, hard thresholds per tier, Harness Scorecard JSON schema, effectiveness KPIs. *Output: `harness-kpi-framework.md`.*
+4. **KPI Framework** (agent-mmmc6ji7) — 1–5 scoring rubrics per pillar, hard thresholds per tier, Harness Scorecard JSON schema, effectiveness KPIs. *Output: `systems/harness-kpi-framework.md`.*
 5. **Design Mapping** (agent-kbhc847g) — Planner→Generator→Evaluator mapping to JoyJoin agents, Sprint Contract JSON artifacts, orchestration.yaml changes. *Output: `harness-design-implementation-phase-mapping.md`.*

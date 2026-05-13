@@ -16,7 +16,7 @@
 >
 > - ❌ Never reference, reintroduce, or copy-paste from legacy flows, removed features, old routes, or deprecated components — even if they appear in git history, archived docs (`archived/`), or inline `TODO` comments.
 > - ❌ Never treat `QUICK_REFERENCE.md` as authoritative — it is a legacy redirect-only stub. Use `DEVELOPER_QUICK_REFERENCE.md`, this document, and `docs/README.md` instead.
-> - ✅ Coordinated refreshes that touch product/architecture docs **and** repo AI workflow surfaces (`.github/skills/`, `.github/agents/`, orchestration) must follow `docs/ai-workflow-documentation-refresh.md` so scope, lanes, and validation stay aligned.
+> - ✅ Coordinated refreshes that touch product/architecture docs **and** repo AI workflow surfaces (`.github/skills/`, `.github/agents/`, orchestration) must follow `docs/ai/ai-workflow-documentation-refresh.md` so scope, lanes, and validation stay aligned.
 > - ✅ When in doubt about whether a pattern/term/route is active, check the canonical nav table below and §*Product Canon* before implementing.
 >
 > This rule applies to human engineers **and** AI coding agents.
@@ -3260,7 +3260,7 @@ export function useWebSocket() {
 - Recharts (data visualization)
 - Framer Motion (animations)
 
-> **Platform Policy:** The WeChat Mini Program is the launch-primary and only shipping user-facing client. The web app (`apps/user-client`) exists as a development sandbox and parity reference. Cross-platform coordination rules are in `docs/PLATFORM_COORDINATION.md`.
+> **Platform Policy:** The WeChat Mini Program is the launch-primary and only shipping user-facing client. The web app (`apps/user-client`) exists as a development sandbox and parity reference. Cross-platform coordination rules are in `docs/reference/PLATFORM_COORDINATION.md`.
 
 **Backend:**
 - Node.js + Express.js
@@ -3299,7 +3299,7 @@ export function useWebSocket() {
 - Health check: `GET /api/health` (liveness) and `GET /api/readyz` (readiness — verifies DB connectivity before accepting traffic; `/readyz` redirects here)
 - Admin action audit log: `apps/server/src/lib/adminAuditLogger.ts` — every sensitive admin action emits a structured audit event
 - AI call trace log: `apps/server/src/lib/aiTraceLogger.ts` — every AI invocation emits a single-line `[AITrace] {json}` to stdout
-- Full observability setup: `docs/observability.md`; incident runbooks: `docs/runbooks/observability.md`
+- Full observability setup: `docs/systems/observability.md`; incident runbooks: `docs/runbooks/observability.md`
 
 ---
 
@@ -4049,9 +4049,9 @@ joyjoin-monorepo/
 
 5. **Skills / Architecture guides:**
   - `.github/skills/README.md` — domain skill index for AI coding agents
-  - `docs/observability.md` — monitoring, logging, metrics
-  - `docs/onboarding-flow.md` — complete onboarding flow reference
-  - `docs/PLATFORM_COORDINATION.md` — current web/mini-program payment and auth coordination playbook
+  - `docs/systems/observability.md` — monitoring, logging, metrics
+  - `docs/systems/onboarding-flow.md` — complete onboarding flow reference
+  - `docs/reference/PLATFORM_COORDINATION.md` — current web/mini-program payment and auth coordination playbook
 
 **For Product Managers:**
 
@@ -4129,12 +4129,12 @@ joyjoin-monorepo/
 - `CONTRIBUTING.md` — contributor workflow and validation checklist
 - `docs/architecture/current-state.md` — active architecture map by domain
 - `apps/server/src/README.md` — server domain ownership and file placement
-- `docs/observability.md` — monitoring, structured logging, metrics, alerting
+- `docs/systems/observability.md` — monitoring, structured logging, metrics, alerting
 - `docs/runbooks/observability.md` — incident runbooks
-- `docs/onboarding-flow.md` — complete onboarding flow reference
-- `docs/PLATFORM_COORDINATION.md` — canonical cross-platform auth/payment coordination reference
-- `docs/ai-agent-harness-separation-strategy.md` — current shipped AI boundaries and architecture invariants
-- `docs/AI_INTEGRATION_PLAN.md` — planning-only AI roadmap, gates, and sequencing
+- `docs/systems/onboarding-flow.md` — complete onboarding flow reference
+- `docs/reference/PLATFORM_COORDINATION.md` — canonical cross-platform auth/payment coordination reference
+- `docs/ai/ai-agent-harness-separation-strategy.md` — current shipped AI boundaries and architecture invariants
+- `docs/ai/AI_INTEGRATION_PLAN.md` — planning-only AI roadmap, gates, and sequencing
 - `.github/skills/README.md` — domain skill index for AI coding agents
 
 **Developer Resources:**

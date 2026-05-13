@@ -1,6 +1,6 @@
 # Mini-program AI — deeper integration handoff
 
-This note ties **mini-program AI work** to the repo’s **governed planning lane** and the long-range roadmap. It is not a runtime authority document; pair it with [`AI_INTEGRATION_PLAN.md`](./AI_INTEGRATION_PLAN.md) and [`ai-agent-harness-separation-strategy.md`](./ai-agent-harness-separation-strategy.md).
+This note ties **mini-program AI work** to the repo’s **governed planning lane** and the long-range roadmap. It is not a runtime authority document; pair it with [`ai/AI_INTEGRATION_PLAN.md`](./ai/AI_INTEGRATION_PLAN.md) and [`ai/ai-agent-harness-separation-strategy.md`](./ai/ai-agent-harness-separation-strategy.md).
 
 **For sequenced work packages and acceptance criteria**, see [`mini-program-ai-further-execution-plan.md`](./mini-program-ai-further-execution-plan.md).
 
@@ -13,7 +13,7 @@ Use **Supervisor → Researcher → Planner** (see [`.github/AI_WORKFLOW_POLICY.
 
 After approval, route implementation to **AI Engineer** (server AI surfaces) and **Taro Mini-Program Frontend Engineer** (MP UX), then **QA Agent** / **Verifier**.
 
-## Roadmap slices (aligned with `AI_INTEGRATION_PLAN.md`)
+## Roadmap slices (aligned with `ai/AI_INTEGRATION_PLAN.md`)
 
 | Tranche | Focus | Guardrail |
 |--------|--------|-----------|
@@ -24,7 +24,7 @@ After approval, route implementation to **AI Engineer** (server AI surfaces) and
 
 ## Canonical MP inventory
 
-See [`AI_FEATURE_INVENTORY.md`](./AI_FEATURE_INVENTORY.md) for **mini-program-visible** AI features and fallbacks.
+See [`ai/AI_FEATURE_INVENTORY.md`](./ai/AI_FEATURE_INVENTORY.md) for **mini-program-visible** AI features and fallbacks.
 
 ## Theme reveal + cache consistency
 

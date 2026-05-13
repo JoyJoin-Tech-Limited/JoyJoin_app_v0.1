@@ -30,4 +30,4 @@ React Query keys for MP-specific fetches use a **`mini-program` prefix** as the 
 ## Related
 
 - [`apps/mini-program/README.md`](../apps/mini-program/README.md) — workspace entry
-- [`docs/PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md) — shared API contracts with web
+- [`docs/reference/reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md) — shared API contracts with web

@@ -13,7 +13,7 @@ import {
   normalizeVenueQualityRecord,
 } from "../../lib/venueDataQuality";
 import { venueMatchingService } from "../../venueMatchingService";
-import { requireAuth } from "../../phoneAuth";
+import { requireAuth } from "../../middleware/auth";
 
 function buildVenueAuditAfter(body: Record<string, unknown> | undefined): Record<string, unknown> {
   if (!body) return {};

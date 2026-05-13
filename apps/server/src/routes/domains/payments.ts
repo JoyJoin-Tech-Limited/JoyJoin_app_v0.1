@@ -12,7 +12,7 @@ import { refundAttemptsRepo } from "../../repositories/refundAttemptsRepo";
 import { usersRepo } from "../../repositories/usersRepo";
 import { subscriptionService } from "../../subscriptionService";
 import { storage } from "../../storage";
-import { requireAuth } from "../../phoneAuth";
+import { requireAuth } from "../../middleware/auth";
 import { logAdminAudit } from "../../lib/adminAuditLogger";
 import { db } from "../../db";
 import { getActingAdminId } from "../../lib/getActingAdminId";

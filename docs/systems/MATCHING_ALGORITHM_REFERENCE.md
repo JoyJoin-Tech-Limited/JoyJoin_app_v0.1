@@ -290,9 +290,9 @@ Default when one or both users have no interest data:
 > This invariant is verified by `apps/server/src/__tests__/interestSignalBoundary.test.ts`.
 >
 > `user_interest_signals` feed AI enrichment layers only (match explanation connection points and
-> icebreaker topic generation prompts). See `docs/interest-signal-boost.md` for full details.
+> icebreaker topic generation prompts). See `docs/systems/interest-signal-boost.md` for full details.
 
-**Interest model note:** Temporal heat decay was evaluated and rejected. The active model uses **stable declared interests** kept fresh by two explicit mechanisms: (1) an editable interest carousel at `/profile/edit/interests` (`EditInterestsCarouselPage`), and (2) a post-event interest nudge step in `EventFeedbackFlow` that bumps heat for relevant topics. `user_interests.updated_at` reflects intentional engagement, not time since signup. See `docs/AI_INTEGRATION_PLAN.md §2.2` for rationale.
+**Interest model note:** Temporal heat decay was evaluated and rejected. The active model uses **stable declared interests** kept fresh by two explicit mechanisms: (1) an editable interest carousel at `/profile/edit/interests` (`EditInterestsCarouselPage`), and (2) a post-event interest nudge step in `EventFeedbackFlow` that bumps heat for relevant topics. `user_interests.updated_at` reflects intentional engagement, not time since signup. See `docs/ai/AI_INTEGRATION_PLAN.md §2.2` for rationale.
 
 #### 3.2.3 Social Affinity Score (社交同频度) — 20%
 

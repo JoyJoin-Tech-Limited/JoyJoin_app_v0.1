@@ -1,6 +1,6 @@
 # Mini-program AI — smoke checklist
 
-Use after server or MP changes that touch AI routes. **Embeddings** require `DEEPSEEK_API_KEY` (OpenAI-compatible API); **chat** uses MiniMax and/or DeepSeek per [`docs/ai-feature-flags.md`](../ai-feature-flags.md).
+Use after server or MP changes that touch AI routes. **Embeddings** require `DEEPSEEK_API_KEY` (OpenAI-compatible API); **chat** uses MiniMax and/or DeepSeek per [`docs/ai/ai/ai-feature-flags.md`](../ai/ai-feature-flags.md).
 
 ## Preconditions
 

@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { describe, expect, it, vi } from "vitest";
-import { requireAuth } from "../phoneAuth";
+import { requireAuth } from "../middleware/auth";
 
 function mockReq(session: Record<string, unknown> | undefined): Partial<Request> {
   return { session: session as any };

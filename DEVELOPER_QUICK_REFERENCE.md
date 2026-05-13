@@ -41,9 +41,9 @@
 - If you ever copied values from the removed tracked `.env` or the old hard-coded deployment database URL, rotate `DATABASE_URL`, `JWT_SECRET`, `SESSION_SECRET`, `WECHAT_SECRET`, and `ADMIN_CREATE_SECRET_KEY`.
 
 ### Guardrails: latent-state and multimodal AI work stays planning-only until gates pass
-- Read `docs/ai-agent-harness-separation-strategy.md` first for **current shipped AI behavior, architectural invariants, and separation boundaries**.
-- `docs/AI_INTEGRATION_PLAN.md` Phase 3 (`user_latent_state`, behavioral-history explanations, multimodal enrichment) is a **strategy / planning document**, not an instruction to add runtime code now.
-- Use `docs/AI_INTEGRATION_PLAN.md` for **phased roadmap, rollout gates, and exit criteria** only; it must not be used by itself to justify runtime features.
+- Read `docs/ai/ai-agent-harness-separation-strategy.md` first for **current shipped AI behavior, architectural invariants, and separation boundaries**.
+- `docs/ai/AI_INTEGRATION_PLAN.md` Phase 3 (`user_latent_state`, behavioral-history explanations, multimodal enrichment) is a **strategy / planning document**, not an instruction to add runtime code now.
+- Use `docs/ai/AI_INTEGRATION_PLAN.md` for **phased roadmap, rollout gates, and exit criteria** only; it must not be used by itself to justify runtime features.
 - Do **not** add schema migrations, background jobs, scoring inputs, API routes, consent/upload flows, or user-facing UI for latent-state or multimodal features until the documented prerequisites, consent requirements, fairness review, observability, and explicit product/engineering gate approval are all satisfied.
 - Planning-only shared contracts are allowed only when they are clearly marked as non-runtime and remain disconnected from active imports/callers.
 - Existing deterministic authority still applies: `poolMatchingService.ts` remains the matching authority, and no latent-state or multimodal signal may partially influence matching or user-facing explanations before its rollout gate is formally cleared.
@@ -51,8 +51,8 @@
 ### Guardrails: repo AI workflow and orchestration changes
 - Read `.github/AI_WORKFLOW_POLICY.md` before deciding whether work should stay in direct delivery, go through `Researcher` -> `Planner`, or escalate into the operational review lane.
 - Read `.github/ORCHESTRATION_GOVERNANCE.md` before changing `.github/agents/`, `.github/skills/`, `.github/orchestration.yaml`, hook behavior, or orchestration runtime scripts.
-- For coordinated refreshes across `docs/`, `.github/skills/`, and `.github/agents/`, follow `docs/ai-workflow-documentation-refresh.md` (scope tiers, routing lanes, `npm run orchestration:validate` when orchestration or skill routing changes).
-- Keep repo workflow governance separate from runtime product AI authority. For shipped AI behavior and rollout gates, continue to use `docs/ai-agent-harness-separation-strategy.md` and `docs/AI_INTEGRATION_PLAN.md`.
+- For coordinated refreshes across `docs/`, `.github/skills/`, and `.github/agents/`, follow `docs/ai/ai-workflow-documentation-refresh.md` (scope tiers, routing lanes, `npm run orchestration:validate` when orchestration or skill routing changes).
+- Keep repo workflow governance separate from runtime product AI authority. For shipped AI behavior and rollout gates, continue to use `docs/ai/ai-agent-harness-separation-strategy.md` and `docs/ai/AI_INTEGRATION_PLAN.md`.
 - Do not add a new agent or skill by default. Prefer existing skills and audited support agents unless repeated workflow evidence justifies expansion.
 
 ---
@@ -75,6 +75,15 @@ npm run db:push
 ```bash
 npm run dev
 # Runs on port 5000 - serves both frontend and backend
+```
+
+### Optional: Start Granite Embedding Server
+Required for semantic similarity matching and occupation free-text search.
+```bash
+source /tmp/granite-deploy/bin/activate && python3 deploy/granite-embedding/server.py
+# Runs on port 8000 — set EMBEDDING_BASE_URL=http://localhost:8000/v1 in .env
+# Pre-compute occupation vectors (required for occupation search):
+#   EMBEDDING_BASE_URL=http://localhost:8000/v1 npx tsx scripts/build-occupation-vectors.mts
 ```
 
 ### Key Commands
@@ -156,7 +165,7 @@ joyjoin-monorepo/
 │           ├── matchExplanationService.ts           # AI match explanations
 │           ├── matchingSemantic.ts                  # Feature-flagged 7th scoring dimension (semantic similarity)
 │           ├── matchingMetrics.ts                   # Matching-specific Prometheus metrics
-│           ├── embeddingClient.ts                   # Embedding API client (DeepSeek OpenAI-compatible API only)
+│           ├── embeddingClient.ts                   # Embedding API client (self-hosted endpoint via EMBEDDING_BASE_URL; default model Granite 97M)
 │           ├── predictiveRerankingService.ts        # Shadow predictive reranking A/B experiment
 │           ├── xiaoyueAnalysisService.ts            # AI personality analysis
 │           ├── icebreakerAIService.ts               # AI conversation topics
@@ -190,7 +199,7 @@ joyjoin-monorepo/
 
 ### Taro mini-program (launch focus)
 
-`apps/mini-program` is the **launch-primary** and only shipping user-facing client. The web sandbox (`apps/user-client`) was archived to `archived/workspaces/user-client/`. Cross-surface rules (mini-program ↔ admin-client): [`docs/PLATFORM_COORDINATION.md`](docs/PLATFORM_COORDINATION.md).
+`apps/mini-program` is the **launch-primary** and only shipping user-facing client. The web sandbox (`apps/user-client`) was archived to `archived/workspaces/user-client/`. Cross-surface rules (mini-program ↔ admin-client): [`docs/reference/PLATFORM_COORDINATION.md`](docs/reference/PLATFORM_COORDINATION.md).
 
 | Concern | Location |
 |---------|----------|
@@ -243,13 +252,14 @@ Active domain modules in `routes/domains/`:
 | `eventGroupOutcomes.ts` | Protected `POST /api/event-pools/:poolId/group-outcome` outcome submission endpoint |
 | `adminMatchingShadow.ts` | Admin shadow matching experiments, predictive rerank status and controls |
 | `matchingShadowErrors.ts` | Shadow-matching error inspection endpoints |
+| `occupationSearch.ts` | `POST /api/occupation/search` — free-text occupation search using Granite embedding (exact + semantic hybrid) |
 | `helpers.ts` | Shared route helpers |
 
 ---
 
 ## Observability & Ops
 
-> Full reference: `docs/observability.md` · `docs/runbooks/observability.md`
+> Full reference: `docs/systems/observability.md` · `docs/runbooks/observability.md`
 
 | Concern | File / endpoint |
 |---------|-----------------|
@@ -368,7 +378,7 @@ Pre-auth value-first entry remains `/personality-test` → `/personality-test/re
 Active onboarding pages: `apps/mini-program/src/pages/onboarding/`  
 Legacy surfaces: `archived/workspaces/user-client/src/legacy/onboarding/` — do not add new routes or CTAs there
 
-> Full reference: `docs/onboarding-flow.md` · skill: `onboarding-state-architecture`
+> Full reference: `docs/systems/onboarding-flow.md` · skill: `onboarding-state-architecture`
 
 ### Deprecated Fields
 
@@ -537,7 +547,7 @@ The IcebreakerToolkit (pre-event game browser) is a **LEGACY** tool replaced by 
 4. **Asset locations (archived):** `archived/workspaces/user-client/src/assets/matching/{shared,waiting,no-match,join-error,extended-data-empty,test-incomplete}/`
 5. **Active blind-pool entry flow:** `DiscoverPage` query-param join sheet → `MatchingStatusPage`; browser blind-box checkout returns through `BlindBoxConfirmationPage`, which confirms payment state and then hands off to `/events` or `/discover`.
 
-Full reference: `docs/ui-matching-reveal-improvements.md`, `docs/matching-reveal-implementation-summary.md`
+Full reference: `docs/reference/ui-matching-reveal-improvements.md`, `docs/matching-reveal-implementation-summary.md`
 
 ---
 
@@ -554,7 +564,7 @@ After `FinalProfileReviewPage`, a secondary CTA "先浏览 →" lets users enter
 
 ## Performance Guardrails
 
-> Full reference: `docs/perf.md`
+> Full reference: `docs/reference/perf.md`
 
 | Guardrail | Rule |
 |-----------|------|
@@ -1027,7 +1037,7 @@ interface PoolMatchedData {
 | `subscriptions` | Premium subscriptions |
 | `matchingThresholds` | Per-pool matching config (includes predictive rerank controls) |
 | `poolMatchingLogs` | Matching decision history |
-| `user_semantic_profiles` | Persisted semantic embedding profiles generated by the async pipeline (`userSemanticProfileService.ts`); not read by live pair scoring today (current matching computes semantic feature-hash vectors in-memory) |
+| `user_semantic_profiles` | Persisted semantic embedding profiles generated by the async pipeline (`userSemanticProfileService.ts`); not read by live pair scoring today (current matching computes semantic feature-hash vectors in-memory). Also powers occupation free-text search via pre-computed vectors in `data/occupation-vectors.json` |
 | `event_group_outcomes` | Post-event outcome submissions (one per member per group; used for chemistry calibration + admin analytics) |
 
 ### Schema Location
@@ -1105,7 +1115,7 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | `ADMIN_CREATE_SECRET_KEY` | Admin CLI bootstrap secret |
 | `AMAP_API_KEY` | Gaode Maps API |
 | `AMAP_SECURITY_KEY` | Gaode Maps security |
-| `DEEPSEEK_API_KEY` | AI service (via integration); also powers semantic profile embeddings in `embeddingClient.ts`; AI features degrade if absent |
+| `DEEPSEEK_API_KEY` | AI service (via integration); chat/completion only — DeepSeek has no embedding API |
 | `APP_URL` | Base public app URL; used as the fallback source for the WeChat Pay notify URL when `WECHAT_PAY_NOTIFY_URL` is unset |
 
 ### Dev / feature-flag env vars
@@ -1116,7 +1126,10 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | `DEBUG_AUTH` | `1` to enable verbose auth debug logging (non-production only) |
 | `ENABLE_EVENT_THEME_TITLE_GENERATION` | `true`/`false` to toggle AI event theme generation |
 | `DEEPSEEK_TIMEOUT_MS` | AI request timeout in ms (default: 5000) |
-| `ENABLE_SEMANTIC_SIMILARITY` | `true` enables the 7th pair-scoring dimension (6% weight, semantic similarity); default `false` — 6D scoring. See `docs/LAUNCH_CONFIG.md` and `apps/server/src/matchingSemantic.ts`. |
+| `ENABLE_SEMANTIC_SIMILARITY` | `true` enables the 7th pair-scoring dimension (6% weight, semantic similarity); default `false` — 6D scoring. See `docs/product/LAUNCH_CONFIG.md` and `apps/server/src/matchingSemantic.ts`. |
+| `EMBEDDING_BASE_URL` | Required for self-hosted embedding server (e.g. `http://localhost:8000/v1`). DeepSeek has no embedding API — this must be set for any embedding feature to work |
+| `EMBEDDING_API_KEY` | Optional API key for self-hosted embedding endpoint (default empty) |
+| `EMBEDDING_MODEL` | Model ID passed to embedding API (default `granite-embedding-97m-multilingual-r2`) |
 | `EMBEDDING_TIMEOUT_MS` | Embedding API call timeout (default: 10000) |
 | `EMBEDDING_MAX_RETRIES` | Embedding API retry count (default: 2) |
 
@@ -1247,13 +1260,13 @@ const mutation = useMutation({
 | Database Schema | `packages/shared/src/schema.ts` | - |
 | Archetype Data | `packages/shared/src/personality/archetypeRegistry.ts` | - |
 | Legacy Redirect Only | `QUICK_REFERENCE.md` | Redirect stub only — not authoritative |
-| Platform Coordination Playbook | `docs/PLATFORM_COORDINATION.md` | Canonical web/mini-program auth and payment coordination |
-| AI Current-State Guardrails | `docs/ai-agent-harness-separation-strategy.md` | Read first for shipped AI boundaries |
-| AI Roadmap & Gates | `docs/AI_INTEGRATION_PLAN.md` | Planning-only phased delivery document |
-| **Admin RBAC Matrix** | `docs/admin-rbac-matrix.md` | Admin endpoint → role requirements |
+| Platform Coordination Playbook | `docs/reference/PLATFORM_COORDINATION.md` | Canonical web/mini-program auth and payment coordination |
+| AI Current-State Guardrails | `docs/ai/ai-agent-harness-separation-strategy.md` | Read first for shipped AI boundaries |
+| AI Roadmap & Gates | `docs/ai/AI_INTEGRATION_PLAN.md` | Planning-only phased delivery document |
+| **Admin RBAC Matrix** | `docs/admin/admin-rbac-matrix.md` | Admin endpoint → role requirements |
 | **Admin Incident Runbook** | `docs/runbooks/admin-incident-handling.md` | Ops tasks, triage, daily checklist |
-| **Observability Guide** | `docs/observability.md` | Structured logging, Prometheus, Grafana, alerting, synthetic monitoring |
-| **Internal Beta Launch Risks** | `docs/launch-risks.md` | MVP caveats + risk acceptance sign-off |
+| **Observability Guide** | `docs/systems/observability.md` | Structured logging, Prometheus, Grafana, alerting, synthetic monitoring |
+| **Internal Beta Launch Risks** | `docs/product/launch-risks.md` | MVP caveats + risk acceptance sign-off |
 
 ---
 

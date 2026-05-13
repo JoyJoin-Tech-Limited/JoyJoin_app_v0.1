@@ -7,7 +7,7 @@
  * future log-aggregation or admin inspection tooling can query them
  * without coupling to a specific storage backend.
  *
- * Shape aligns with `AICallTrace` from docs/AI_INTEGRATION_PLAN.md §10.4
+ * Shape aligns with `AICallTrace` from docs/ai/AI_INTEGRATION_PLAN.md §10.4
  * and uses the same `AIProvider` vocabulary as `packages/shared/src/types/aiMeta.ts`.
  *
  * Usage:

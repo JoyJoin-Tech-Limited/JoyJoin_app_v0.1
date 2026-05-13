@@ -1,13 +1,14 @@
 # AI feature flags and environment (server)
 
-**Policy:** Production **chat/completion** routes use **MiniMax** and/or **DeepSeek** via [`socialModelRouter`](../apps/server/src/ai/socialModelRouter.ts) and [`creativeModelRouter`](../apps/server/src/ai/creativeModelRouter.ts). **Embeddings** use the OpenAI SDK against **DeepSeek’s** OpenAI-compatible embeddings endpoint only ([`embeddingClient.ts`](../apps/server/src/embeddingClient.ts)); there is **no MiniMax embedding path** in this client yet—add one explicitly if product requires it.
+**Policy:** Production **chat/completion** routes use **MiniMax** and/or **DeepSeek** via [`socialModelRouter`](../apps/server/src/ai/socialModelRouter.ts) and [`creativeModelRouter`](../apps/server/src/ai/creativeModelRouter.ts). **Embeddings** are self-hosted only. Set `EMBEDDING_BASE_URL` to point to your OpenAI-compatible endpoint (default model: **Granite** `granite-embedding-97m-multilingual-r2`, overridable via `EMBEDDING_MODEL`). DeepSeek has no embedding API and is never used for embeddings.
 
 ## Semantic embeddings (`embeddingClient.ts`)
 
 | Variable | Values | Effect |
 |----------|--------|--------|
-| `DEEPSEEK_API_KEY` | string | Required for DeepSeek-backed embedding calls (OpenAI-compatible API). |
-| `EMBEDDING_MODEL` | string | Model id passed to the embeddings API (default `text-embedding-3-small` if unset). Set explicitly if your provider uses a different id. |
+| `EMBEDDING_BASE_URL` | URL | OpenAI-compatible endpoint for self-hosted embedding (e.g. `http://localhost:8000/v1`). Required for embeddings. |
+| `EMBEDDING_API_KEY` | string | API key for the self-hosted endpoint (optional, default empty). |
+| `EMBEDDING_MODEL` | string | Model id passed to the embeddings API (default `granite-embedding-97m-multilingual-r2`). Set explicitly if your provider uses a different id. |
 | `EMBEDDING_TIMEOUT_MS` | ms | Default `10000`. |
 | `EMBEDDING_MAX_RETRIES` | count | Default `2`. |
 

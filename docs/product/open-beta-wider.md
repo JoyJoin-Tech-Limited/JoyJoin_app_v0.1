@@ -49,7 +49,7 @@ Unauthenticated and high-risk routes are owned by domain routers registered from
 - **Assessment registration:** [`routes/domains/assessment.ts`](../apps/server/src/routes/domains/assessment.ts) — `POST /api/user/register` and related.
 - **Webhooks:** WeChat Pay webhook (signature per `LAUNCH_CONFIG.md`).
 
-Re-audit when adding new `app.post`/`get` without session middleware. Last reviewed: see git history for `docs/open-beta-wider.md`.
+Re-audit when adding new `app.post`/`get` without session middleware. Last reviewed: see git history for `docs/product/open-beta-wider.md`.
 
 ## Go / no-go (open beta)
 

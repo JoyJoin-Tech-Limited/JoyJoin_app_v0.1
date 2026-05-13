@@ -146,7 +146,7 @@ The shipped mini-program tab bar is the **native WeChat component** copied from 
 ## Coordination Rules
 
 - Treat the mini-program as the strongest current reference for payment mechanics.
-- Before changing auth/session, API wrapper behavior, or payment flow here, review the matching web surface in `apps/user-client` and the guidance in [`../../docs/PLATFORM_COORDINATION.md`](../../docs/PLATFORM_COORDINATION.md).
+- Before changing auth/session, API wrapper behavior, or payment flow here, review the matching web surface in `apps/user-client` and the guidance in [`../../docs/reference/PLATFORM_COORDINATION.md`](../../docs/reference/PLATFORM_COORDINATION.md).
 - Keep mini-program runtime wiring here, but move genuinely shared contracts toward `packages/shared/src/`.
 
 ---
@@ -194,9 +194,9 @@ For **matched** flows, `GET /api/pool-groups/:groupId/analysis` returns `fromCac
 
 | Document | Purpose |
 |----------|---------|
-| [`../../docs/PLATFORM_COORDINATION.md`](../../docs/PLATFORM_COORDINATION.md) | Auth, API, and payment flow parity between mini-program and web |
-| [`../../docs/perf.md`](../../docs/perf.md) | Performance guidelines for the monorepo |
-| [`../../docs/wechat-mini-program-reference.md`](../../docs/wechat-mini-program-reference.md) | WeChat-specific API reference |
+| [`../../docs/reference/PLATFORM_COORDINATION.md`](../../docs/reference/PLATFORM_COORDINATION.md) | Auth, API, and payment flow parity between mini-program and web |
+| [`../../docs/reference/perf.md`](../../docs/reference/perf.md) | Performance guidelines for the monorepo |
+| [`../../docs/reference/wechat-mini-program-reference.md`](../../docs/reference/wechat-mini-program-reference.md) | WeChat-specific API reference |
 | [`../../docs/mini-program-data-fetching.md`](../../docs/mini-program-data-fetching.md) | React Query key conventions |
 | [`docs/TECH_STACK.md`](./docs/TECH_STACK.md) | Deep technical stack reference |
 | [`docs/USER_FLOW.md`](./docs/USER_FLOW.md) | Complete user flow mapping |

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "../../db";
 import { eq, desc, sql } from "drizzle-orm";
 import { referralCodes, referralConversions, users, invitations } from "@shared/schema";
-import { requireAuth } from "../../phoneAuth";
+import { requireAuth } from "../../middleware/auth";
 import { logger } from "../../lib/logger";
 import { storage } from "../../storage";
 
