@@ -19,7 +19,7 @@ export default memo(function MascotQuestionHeader({
   if (!question) {
     return (
       <View className='mascot-question-header mascot-question-header--empty'>
-        <View className='mascot-question-header__card mascot-question-header__card--loading'>
+        <View className='mascot-question-header__banner mascot-question-header__banner--loading'>
           <View className='mascot-question-header__skeleton-eyebrow' />
           <View className='mascot-question-header__skeleton-line' />
           <View className='mascot-question-header__skeleton-line mascot-question-header__skeleton-line--short' />
@@ -30,7 +30,7 @@ export default memo(function MascotQuestionHeader({
 
   return (
     <View className='mascot-question-header'>
-      <View className='mascot-question-header__card'>
+      <View className='mascot-question-header__banner'>
         {question.scenarioText ? (
           <Text className='mascot-question-header__eyebrow'>
             {question.scenarioText}

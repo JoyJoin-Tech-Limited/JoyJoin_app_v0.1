@@ -1,5 +1,6 @@
 import Taro from '@tarojs/taro'
 import { CANVAS_PALETTE as PALETTE } from '@shared/personality/canvasPalette'
+import { logWarn } from '../../../../lib/utils/logger'
 
 const POSTER_WIDTH = 1080
 const POSTER_HEIGHT = 1920
@@ -304,7 +305,7 @@ async function resolveImagePath(src: string): Promise<string> {
     }
   } catch (err) {
     // Pre-flight failed — image may not be available locally
-    console.warn('[sharePoster] getImageInfo failed for', src, err)
+    logWarn('[sharePoster] getImageInfo failed', { src, error: err instanceof Error ? err.message : String(err) })
   }
   return ''
 }
@@ -470,7 +471,7 @@ function drawAttributionWatermark(
   ctx.setFontSize(16)
   ctx.setTextAlign('center')
   ctx.setTextBaseline('top')
-  ctx.fillText('悦聚 · 测测你的社交命格 · 找到同频的人', x + width / 2, y)
+  ctx.fillText('悦聚 · 测测你的氛围命格 · 找到同频的人', x + width / 2, y)
   ctx.restore()
 }
 
@@ -540,7 +541,7 @@ function drawEnergyBar(
 ): void {
   const sectionX = CARD_X + 46
   const trackWidth = CARD_WIDTH - 152
-  const label = '社交能量'
+  const label = '氛围能量'
 
   ctx.save()
   ctx.setFillStyle(PALETTE.traitLabel)
@@ -767,7 +768,7 @@ export async function generatePersonalitySharePoster(
   createCardBackground(ctx, input.accentColor)
 
   drawBadge(ctx, {
-    text: '悦聚 · 社交命盘',
+    text: '悦聚 · 氛围命盘',
     x: CARD_X + 36,
     y: CARD_Y + 40,
     width: 172,

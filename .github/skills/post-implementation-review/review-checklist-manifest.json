@@ -1,0 +1,193 @@
+{
+  "version": 1,
+  "description": "Deterministic checklist for post-implementation review. Each agent evaluates the same items every time. Severity: blocking (must fix), concern (log, optional fix), nit (log, non-blocking).",
+  "agents": {
+    "Auto-Eval": {
+      "description": "Deterministic gate runner. All checks are scripted, not LLM-judged.",
+      "items": [
+        {
+          "id": "AE-01",
+          "description": "npm run harness:gate passes (all 5 pillars)",
+          "severity": "blocking",
+          "verification": "shell: npm run harness:gate",
+          "auto": true
+        },
+        {
+          "id": "AE-02",
+          "description": "npm run guardrails passes (no secrets, no legacy identifiers, no cross-app imports)",
+          "severity": "blocking",
+          "verification": "shell: npm run guardrails",
+          "auto": true
+        },
+        {
+          "id": "AE-03",
+          "description": "No new console.log / console.error in diff (use logger instead)",
+          "severity": "blocking",
+          "verification": "shell: git diff | grep -E '^\\+.*console\\.(log|error)' || true",
+          "auto": true
+        },
+        {
+          "id": "AE-04",
+          "description": "Type check passes for affected workspaces",
+          "severity": "blocking",
+          "verification": "shell: npm run typecheck (scoped)",
+          "auto": true
+        }
+      ]
+    },
+    "QA Agent": {
+      "description": "Test and verification checklist. Mix of deterministic and agent-judged items.",
+      "items": [
+        {
+          "id": "QA-01",
+          "description": "At least one test was added or updated for new behavior",
+          "severity": "blocking",
+          "verification": "agent: inspect diff for test files (*.test.*, *.spec.*, __tests__)",
+          "auto": false
+        },
+        {
+          "id": "QA-02",
+          "description": "Claimed tests actually pass (agent ran them or CI passed)",
+          "severity": "blocking",
+          "verification": "shell: npm run test (scoped to affected workspace)",
+          "auto": true
+        },
+        {
+          "id": "QA-03",
+          "description": "Error paths have test coverage or explicit justification",
+          "severity": "concern",
+          "verification": "agent: inspect new routes/handlers for try/catch and check if tested",
+          "auto": false
+        },
+        {
+          "id": "QA-04",
+          "description": "No obvious journey gaps (e.g., new route not linked from UI)",
+          "severity": "concern",
+          "verification": "agent: trace user journey from entry point to new feature",
+          "auto": false
+        }
+      ]
+    },
+    "Verifier": {
+      "description": "Skeptical spot-check. Confirm claims match reality.",
+      "items": [
+        {
+          "id": "VF-01",
+          "description": "All claimed changed files exist at claimed paths",
+          "severity": "blocking",
+          "verification": "shell: ls <claimed files>",
+          "auto": true
+        },
+        {
+          "id": "VF-02",
+          "description": "Git diff shows the claimed changes (no phantom claims)",
+          "severity": "blocking",
+          "verification": "shell: git diff --stat",
+          "auto": true
+        },
+        {
+          "id": "VF-03",
+          "description": "Claimed behavior can be evidenced (test output, curl, or code trace)",
+          "severity": "blocking",
+          "verification": "agent: run narrowest command that exercises the claim",
+          "auto": false
+        },
+        {
+          "id": "VF-04",
+          "description": "No dead code or unused imports introduced",
+          "severity": "concern",
+          "verification": "agent: grep for unused variables/imports in changed files",
+          "auto": false
+        }
+      ]
+    },
+    "Product Manager": {
+      "description": "Product fit check. Only runs when acceptance criteria exist.",
+      "items": [
+        {
+          "id": "PM-01",
+          "description": "Each acceptance criterion is either met or explicitly deferred",
+          "severity": "blocking",
+          "verification": "agent: compare Sprint Contract criteria against implementation",
+          "auto": false
+        },
+        {
+          "id": "PM-02",
+          "description": "No scope creep beyond Sprint Contract or task description",
+          "severity": "concern",
+          "verification": "agent: compare diff scope against agreed scope",
+          "auto": false
+        },
+        {
+          "id": "PM-03",
+          "description": "User-facing copy/labels are correct and consistent with product terminology",
+          "severity": "concern",
+          "verification": "agent: inspect changed UI strings against PRODUCT_REQUIREMENTS.md",
+          "auto": false
+        }
+      ]
+    },
+    "Visual Designer": {
+      "description": "Design audit for UI-affecting changes only. Strict thresholds to prevent nit-chasing.",
+      "items": [
+        {
+          "id": "VD-01",
+          "description": "Spacing follows 8rpx rhythm (mini-program) or 8px grid (web)",
+          "severity": "concern",
+          "verification": "agent: inspect changed CSS/styled-components for irregular spacing",
+          "auto": false
+        },
+        {
+          "id": "VD-02",
+          "description": "Uses design-system tokens (colors, typography) instead of hardcoded values",
+          "severity": "blocking",
+          "verification": "agent: grep changed files for hex codes / px font sizes outside token system",
+          "auto": false
+        },
+        {
+          "id": "VD-03",
+          "description": "Accessibility: reduced-motion respected, touch targets ≥44px/88rpx",
+          "severity": "concern",
+          "verification": "agent: inspect animation code and touch target sizes",
+          "auto": false
+        },
+        {
+          "id": "VD-04",
+          "description": "No AI-generated visual slop (inconsistent borders, misaligned elements, generic layouts)",
+          "severity": "concern",
+          "verification": "agent: inspect for visual inconsistencies per frontend-design-audit skill",
+          "auto": false
+        }
+      ]
+    }
+  },
+  "severity_rules": {
+    "blocking": {
+      "requires_fix": true,
+      "max_per_review": 5,
+      "label": "FAIL"
+    },
+    "concern": {
+      "requires_fix": false,
+      "max_per_review": 10,
+      "label": "CONCERN"
+    },
+    "nit": {
+      "requires_fix": false,
+      "max_per_review": 5,
+      "label": "NIT"
+    }
+  },
+  "delta_review_rules": {
+    "enabled": true,
+    "description": "On re-review, only check items that previously failed or are new in this iteration.",
+    "pass_items_persist": true,
+    "previous_review_ttl_hours": 48
+  },
+  "consistency_guards": {
+    "review_fingerprint_fields": ["changedFiles", "checklistVersion", "agentName"],
+    "max_free_form_findings": 3,
+    "require_checklist_item_id": true,
+    "disallow_new_blocking_on_rereview": true
+  }
+}

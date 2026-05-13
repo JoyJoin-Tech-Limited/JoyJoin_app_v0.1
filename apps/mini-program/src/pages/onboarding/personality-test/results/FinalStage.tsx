@@ -1,4 +1,5 @@
 import { Image, Input, ScrollView, Text, View } from '@tarojs/components'
+// Note: ScrollView is also used for detail sheet overflow on small screens
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ARCHETYPE_BY_ID, ARCHETYPE_CANONICAL_ORDER, getArchetypeIndex } from '@shared/personality/archetypeNames'
@@ -14,6 +15,7 @@ import type { AnonymousAssessmentTopMatch } from '../../../../lib/auth/anonymous
 import type { ArchetypeSkillSet } from '@shared/personality/archetypeSkills'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { haptics } from '../../../../lib/utils/haptics'
+import { logWarn } from '../../../../lib/utils/logger'
 import type { ArchetypeCardVariant } from '../archetypeVariants'
 
 interface FinalStageProps {
@@ -45,6 +47,18 @@ interface FinalStageProps {
   onContinue: () => void
   onRestart: () => void
   authIsLoading: boolean
+  isLoggingIn?: boolean
+  xiaoyueAnalysis?: {
+    headline: string
+    analysis: string
+    socialRole: string
+    bestScene: string
+    microAction: string
+    expressionTags: string[]
+    whyThisFits: string
+    blendLine: string
+  } | null
+  isLoadingAnalysis?: boolean
 }
 
 /**
@@ -89,12 +103,16 @@ export default function FinalStage({
   onContinue,
   onRestart,
   authIsLoading,
+  isLoggingIn,
+  xiaoyueAnalysis,
+  isLoadingAnalysis,
 }: FinalStageProps) {
   const [tilt, setTilt] = useState({ rotateX: 0, rotateY: 0 })
   const [isTiltActive, setIsTiltActive] = useState(false)
   const [touchTilt, setTouchTilt] = useState({ rotateX: 0, rotateY: 0 })
   const [localNickname, setLocalNickname] = useState(controlledNickname || '')
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isCoachExpanded, setIsCoachExpanded] = useState(false)
   const [isCardPressed, setIsCardPressed] = useState(false)
   const touchActiveRef = useRef(false)
   const touchStartRef = useRef({ x: 0, y: 0 })
@@ -123,9 +141,13 @@ export default function FinalStage({
       mounted = false
       try {
         Taro.stopAccelerometer()
+      } catch (err) {
+        logWarn('[Accelerometer] stopAccelerometer failed', { error: String(err) })
+      }
+      try {
         Taro.offAccelerometerChange()
-      } catch {
-        // ignore
+      } catch (err) {
+        logWarn('[Accelerometer] offAccelerometerChange failed', { error: String(err) })
       }
     }
   }, [])
@@ -155,17 +177,8 @@ export default function FinalStage({
     touchStartRef.current = { x: touch.clientX, y: touch.clientY }
     setIsCardPressed(true)
 
-    // Lazy-measure if first touch and not yet measured
-    if (!cardMeasuredRef.current) {
-      const query = Taro.createSelectorQuery()
-      query.select('.personality-results__pokemon-card').boundingClientRect()
-      query.exec((res) => {
-        if (res?.[0]) {
-          cardRef.current = res[0]
-          cardMeasuredRef.current = true
-        }
-      })
-    }
+    // Note: card position is measured once on mount (see useEffect above).
+    // We do NOT call createSelectorQuery here to avoid jank during touch.
   }, [])
 
   const handleTouchMove = useCallback((e: any) => {
@@ -297,8 +310,8 @@ export default function FinalStage({
           }}
         >
           <View className='personality-results__hero-copy'>
-            <Text className='personality-results__hero-eyebrow'>命定结果已揭晓</Text>
-            <Text className='personality-results__hero-title'>你的社交命格是</Text>
+            <Text className='personality-results__hero-eyebrow'>解锁成功 🎉</Text>
+            <Text className='personality-results__hero-title'>你的氛围命格是</Text>
             <Text className='personality-results__hero-name'>{displayArchetypeName}</Text>
             <Text className='personality-results__hero-summary'>{summary}</Text>
 
@@ -395,8 +408,9 @@ export default function FinalStage({
                         <View
                           className='personality-results__pokemon-compact-trait-fill'
                           style={{
-                            width: `${trait.value}%`,
-                            background: visual.accent || COLOR_PRIMARY,
+                            transform: `scaleX(${trait.value / 100})`,
+                            transformOrigin: 'left center',
+                            background: visual.accent,
                           }}
                         />
                       </View>
@@ -410,7 +424,7 @@ export default function FinalStage({
             {typeof energyLevel === 'number' ? (
               <View className='personality-results__pokemon-energy'>
                 <View className='personality-results__pokemon-energy-header'>
-                  <Text className='personality-results__pokemon-energy-label'>社交能量</Text>
+                  <Text className='personality-results__pokemon-energy-label'>氛围能量</Text>
                   <Text className='personality-results__pokemon-energy-value'>{Math.round(energyLevel)}%</Text>
                 </View>
                 <View className='personality-results__pokemon-energy-track'>
@@ -457,7 +471,7 @@ export default function FinalStage({
 
             {/* Holographic edition stamp */}
             <View className='personality-results__pokemon-holo-stamp'>
-              <Text className='personality-results__pokemon-holo-stamp-text'>HOLOGRAPHIC EDITION</Text>
+              <Text className='personality-results__pokemon-holo-stamp-text'>全息命格版</Text>
             </View>
 
             {/* Nickname input */}
@@ -516,29 +530,71 @@ export default function FinalStage({
             />
             <View className='personality-results__coach-copy'>
               <Text className='personality-results__section-label'>{`${DEFAULT_MASCOT_DISPLAY_NAME}的解读`}</Text>
-              <Text className='personality-results__coach-title'>这个命格为什么像你</Text>
-              <Text className='personality-results__coach-text'>{summary}</Text>
-              <Text className='personality-results__coach-text'>
-                {visual.hiddenStrength || '你的社交存在感不是靠用力营业，而是靠稳定地把气氛带到对的位置。'}
-              </Text>
-            </View>
-          </View>
-        </Card>
 
-        <Card className='personality-results__section-card personality-results__stagger--4'>
-          <Text className='personality-results__section-label'>你的社交雷达</Text>
-          <View className='personality-results__trait-list'>
-            {traitEntries.map((trait) => (
-              <View key={trait.key} className='personality-results__trait-row'>
-                <View className='personality-results__trait-header'>
-                  <Text className='personality-results__trait-label'>{trait.label}</Text>
-                  <Text className='personality-results__trait-value'>{trait.value}</Text>
+              {isLoadingAnalysis && !xiaoyueAnalysis ? (
+                <View className='personality-results__coach-loading'>
+                  <Text className='personality-results__coach-loading-dot'>·</Text>
+                  <Text className='personality-results__coach-loading-dot'>·</Text>
+                  <Text className='personality-results__coach-loading-dot'>·</Text>
+                  <Text className='personality-results__coach-loading-text'>正在为你写专属解读…</Text>
                 </View>
-                <View className='personality-results__trait-track'>
-                  <View className='personality-results__trait-fill' style={{ width: `${trait.value}%`, background: visual.accent || COLOR_PRIMARY }} />
-                </View>
-              </View>
-            ))}
+              ) : xiaoyueAnalysis ? (
+                <>
+                  {/* 第一层：情绪冲击 — 你是谁 */}
+                  <Text className='personality-results__coach-headline'>「{xiaoyueAnalysis.headline}」</Text>
+                  <Text className='personality-results__coach-analysis'>{xiaoyueAnalysis.analysis}</Text>
+
+                  {xiaoyueAnalysis.expressionTags?.length > 0 && (
+                    <View className='personality-results__coach-tags'>
+                      {xiaoyueAnalysis.expressionTags.map((tag) => (
+                        <View key={tag} className='personality-results__coach-tag'>
+                          <Text className='personality-results__coach-tag-text'>{tag}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* 第二层：认知定位 — 你在哪发光（可折叠） */}
+                  {isCoachExpanded && (
+                    <>
+                      <View className='personality-results__coach-insight-row'>
+                        <View className='personality-results__coach-insight-pill'>
+                          <Text className='personality-results__coach-insight-pill-label'>💫 你的氛围定位</Text>
+                          <Text className='personality-results__coach-insight-pill-value'>{xiaoyueAnalysis.socialRole}</Text>
+                        </View>
+                        <View className='personality-results__coach-insight-pill'>
+                          <Text className='personality-results__coach-insight-pill-label'>🎯 适合你的局</Text>
+                          <Text className='personality-results__coach-insight-pill-value'>{xiaoyueAnalysis.bestScene}</Text>
+                        </View>
+                      </View>
+
+                      {/* 第三层：行动指引 — 你下一步做什么（高亮） */}
+                      <View className='personality-results__coach-insight-card personality-results__coach-insight-card--highlight'>
+                        <Text className='personality-results__coach-insight-label'>✨ 下次可以试试</Text>
+                        <Text className='personality-results__coach-insight-value'>{xiaoyueAnalysis.microAction}</Text>
+                      </View>
+                    </>
+                  )}
+
+                  <View
+                    className='personality-results__coach-toggle'
+                    onClick={() => setIsCoachExpanded((v) => !v)}
+                  >
+                    <Text className='personality-results__coach-toggle-text'>
+                      {isCoachExpanded ? '先到这里 ▲' : '悦仔还有话说 ▼'}
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Text className='personality-results__coach-title'>这个命格为什么像你</Text>
+                  <Text className='personality-results__coach-text'>{summary}</Text>
+                  <Text className='personality-results__coach-text'>
+                    {visual.hiddenStrength || '你的氛围感不是靠用力营业，而是靠稳定地把气氛带到对的位置。'}
+                  </Text>
+                </>
+              )}
+            </View>
           </View>
         </Card>
 
@@ -581,7 +637,7 @@ export default function FinalStage({
         </Card>
 
         <View className='personality-results__stack-actions personality-results__stack-actions--spacious personality-results__stagger--6'>
-          <Button onClick={() => void onContinue()} disabled={authIsLoading}>
+          <Button variant='wechat' onClick={() => void onContinue()} disabled={authIsLoading || isLoggingIn} loading={isLoggingIn}>
             {continueButtonLabel}
           </Button>
           <Button variant='secondary' onClick={onRestart}>重新测试一次</Button>
@@ -598,56 +654,76 @@ export default function FinalStage({
             {/* Sheet handle */}
             <View className='personality-results__detail-handle' />
 
-            {/* Sheet header */}
-            <View className='personality-results__detail-header'>
-              <Text className='personality-results__detail-title'>{displayArchetypeName}</Text>
-              <Text className='personality-results__detail-subtitle'>{visual.tagline || visual.description}</Text>
-            </View>
-
-            {/* Trait radar in detail */}
-            <View className='personality-results__detail-section'>
-              <Text className='personality-results__detail-section-label'>社交雷达</Text>
-              <View className='personality-results__trait-list'>
-                {traitEntries.map((trait) => (
-                  <View key={trait.key} className='personality-results__trait-row'>
-                    <View className='personality-results__trait-header'>
-                      <Text className='personality-results__trait-label'>{trait.label}</Text>
-                      <Text className='personality-results__trait-value'>{trait.value}</Text>
-                    </View>
-                    <View className='personality-results__trait-track'>
-                      <View className='personality-results__trait-fill' style={{ width: `${trait.value}%`, background: visual.accent || COLOR_PRIMARY }} />
-                    </View>
-                  </View>
-                ))}
+            <ScrollView
+              className='personality-results__detail-scroll'
+              scrollY
+              showScrollbar={false}
+            >
+              {/* Sheet header */}
+              <View className='personality-results__detail-header'>
+                <Text className='personality-results__detail-title'>{displayArchetypeName}</Text>
+                <Text className='personality-results__detail-subtitle'>{visual.tagline || visual.description}</Text>
               </View>
-            </View>
 
-            {/* Best partners in detail */}
-            {partnerData.length > 0 && (
+              {/* Full AI analysis in detail */}
+              {xiaoyueAnalysis && (
+                <View className='personality-results__detail-section'>
+                  <Text className='personality-results__detail-section-label'>悦仔完整解读</Text>
+                  <Text className='personality-results__detail-analysis'>{xiaoyueAnalysis.analysis}</Text>
+                  {xiaoyueAnalysis.whyThisFits && (
+                    <Text className='personality-results__detail-why'>{xiaoyueAnalysis.whyThisFits}</Text>
+                  )}
+                  {xiaoyueAnalysis.blendLine && (
+                    <Text className='personality-results__detail-blend'>{xiaoyueAnalysis.blendLine}</Text>
+                  )}
+                </View>
+              )}
+
+              {/* Trait radar in detail */}
               <View className='personality-results__detail-section'>
-                <Text className='personality-results__detail-section-label'>默契搭档</Text>
-                <View className='personality-results__detail-partners'>
-                  {partnerData.map((partner) => (
-                    <View key={partner.archetype} className='personality-results__detail-partner'>
-                      <View
-                        className='personality-results__detail-partner-dot'
-                        style={{ background: partner.chemistryColor }}
-                      />
-                      <View className='personality-results__detail-partner-info'>
-                        <Text className='personality-results__detail-partner-name'>
-                          {partner.archetype}
-                        </Text>
-                        <Text className='personality-results__detail-partner-meta'>
-                          {partner.chemistryLabel} · 匹配 {Math.round(partner.score)}%
-                        </Text>
+                <Text className='personality-results__detail-section-label'>氛围画像</Text>
+                <View className='personality-results__trait-list'>
+                  {traitEntries.map((trait) => (
+                    <View key={trait.key} className='personality-results__trait-row'>
+                      <View className='personality-results__trait-header'>
+                        <Text className='personality-results__trait-label'>{trait.label}</Text>
+                        <Text className='personality-results__trait-value'>{trait.value}</Text>
+                      </View>
+                      <View className='personality-results__trait-track'>
+                        <View className='personality-results__trait-fill' style={{ transform: `scaleX(${trait.value / 100})`, transformOrigin: 'left center', background: visual.accent }} />
                       </View>
                     </View>
                   ))}
                 </View>
               </View>
-            )}
 
-            {/* Quick actions in detail */}
+              {/* Best partners in detail */}
+              {partnerData.length > 0 && (
+                <View className='personality-results__detail-section'>
+                  <Text className='personality-results__detail-section-label'>默契搭档</Text>
+                  <View className='personality-results__detail-partners'>
+                    {partnerData.map((partner) => (
+                      <View key={partner.archetype} className='personality-results__detail-partner'>
+                        <View
+                          className='personality-results__detail-partner-dot'
+                          style={{ background: partner.chemistryColor }}
+                        />
+                        <View className='personality-results__detail-partner-info'>
+                          <Text className='personality-results__detail-partner-name'>
+                            {partner.archetype}
+                          </Text>
+                          <Text className='personality-results__detail-partner-meta'>
+                            {partner.chemistryLabel} · 匹配 {Math.round(partner.score)}%
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+
+            {/* Sticky bottom actions — outside ScrollView so always reachable */}
             <View className='personality-results__detail-actions'>
               <Button onClick={() => { handleCloseDetail(); handleSharePress(); }}>
                 生成命格海报
