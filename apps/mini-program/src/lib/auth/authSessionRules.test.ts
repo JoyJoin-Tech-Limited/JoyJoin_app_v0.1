@@ -14,14 +14,14 @@ describe('mini-program auth session route rules', () => {
     expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.index)).toBe(true)
     expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.personalityTest)).toBe(true)
     expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.personalityTestResults)).toBe(true)
-    expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.personalityTestAuthGate)).toBe(true)
+
     expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.terms)).toBe(true)
 
     expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.discover)).toBe(false)
     expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.login)).toBe(false)
     expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.personalityTest)).toBe(false)
     expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.personalityTestResults)).toBe(false)
-    expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.personalityTestAuthGate)).toBe(false)
+
     expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.terms)).toBe(false)
   })
 

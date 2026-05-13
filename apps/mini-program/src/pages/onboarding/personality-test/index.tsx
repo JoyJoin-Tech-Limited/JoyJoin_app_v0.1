@@ -247,9 +247,11 @@ export default function PersonalityTestPage() {
     : '没有标准答案，选最像你的感觉就好'
   const introPrimaryLabel = isSubmitting
     ? '准备中…'
-    : hasStoredIncompleteSession
-      ? '继续测试'
-      : '开始测试'
+    : error
+      ? '重试'
+      : hasStoredIncompleteSession
+        ? '继续测试'
+        : '开始测试'
 
   const getPageClassName = (...extraClasses: string[]) =>
     ['personality-test', ...extraClasses, isPageExiting ? 'personality-test--exiting' : '']
