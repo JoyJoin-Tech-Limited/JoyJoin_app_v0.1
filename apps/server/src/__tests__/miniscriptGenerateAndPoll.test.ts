@@ -271,6 +271,13 @@ describe('MiniScript generate + social poll', () => {
         enabledPhases: ['warmup', 'micro_challenge', 'lie_detective', 'personality_dice', 'mini_script', 'recap'],
       };
       storeCtx.sessions.set(socialSessionId, seed);
+      if (!storeCtx.participants.has(socialSessionId)) storeCtx.participants.set(socialSessionId, new Map());
+      storeCtx.participants.get(socialSessionId)!.set('host-smoke', {
+        userId: 'host-smoke',
+        displayName: 'Host',
+        joinedAt: Date.now(),
+        lastSeenAt: Date.now(),
+      });
 
       const genRes = await fetch(`${baseUrl}/api/miniscript/generate`, {
         method: 'POST',

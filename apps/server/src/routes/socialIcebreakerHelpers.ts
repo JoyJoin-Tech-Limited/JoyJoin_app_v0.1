@@ -259,7 +259,11 @@ export async function processAutoAdvance(state: SocialSessionState): Promise<Soc
   return state;
 }
 
-export async function resolveSession(
+/**
+ * Load + hydrate session state for authorization checks without running
+ * {@link processAutoAdvance} (which may persist phase transitions).
+ */
+export async function loadSessionForAuthGate(
   socialSessionId: string,
   res: any,
 ): Promise<SocialSessionState | null> {
@@ -272,8 +276,47 @@ export async function resolveSession(
     }
     return null;
   }
-  const hydrated = hydrateDerivedState({ ...state });
+  return hydrateDerivedState({ ...state });
+}
+
+export async function resolveSession(
+  socialSessionId: string,
+  res: any,
+): Promise<SocialSessionState | null> {
+  const hydrated = await loadSessionForAuthGate(socialSessionId, res);
+  if (!hydrated) return null;
   // Process auto-advance on every state read so clients don't need to poll separately
   await processAutoAdvance(hydrated);
   return hydrated;
+}
+
+/** Authorize roster membership before {@link resolveSession} side effects. */
+export async function ensureParticipantThenResolveSession(
+  socialSessionId: string,
+  userId: string,
+  res: any,
+): Promise<SocialSessionState | null> {
+  const prelim = await loadSessionForAuthGate(socialSessionId, res);
+  if (!prelim) return null;
+  if (!(await getParticipant(socialSessionId, userId))) {
+    res.status(403).json({ error: 'Not a participant in this session' });
+    return null;
+  }
+  return resolveSession(socialSessionId, res);
+}
+
+/** Authorize host (or democratized roster host) before {@link resolveSession} side effects. */
+export async function ensureHostThenResolveSession(
+  socialSessionId: string,
+  userId: string,
+  res: any,
+  forbiddenError: string,
+): Promise<SocialSessionState | null> {
+  const prelim = await loadSessionForAuthGate(socialSessionId, res);
+  if (!prelim) return null;
+  if (!(await isHostAuthorized(prelim, userId, socialSessionId))) {
+    res.status(403).json({ error: forbiddenError });
+    return null;
+  }
+  return resolveSession(socialSessionId, res);
 }
