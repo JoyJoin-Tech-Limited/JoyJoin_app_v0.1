@@ -41,6 +41,25 @@
     }
   }
 
+  &--wechat {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: max($button-height, $cta-min-tap);
+    height: $button-height;
+    border-radius: 16rpx;
+    background: #07C160;
+    color: $color-text-white;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    box-shadow: 0 4rpx 16rpx rgba(7, 193, 96, 0.25);
+
+    &:active {
+      opacity: 0.92;
+      transform: scale(0.98);
+    }
+  }
+
   &--loading {
     position: relative;
     pointer-events: none;

@@ -5,7 +5,7 @@ import { COLOR_PRIMARY, COLOR_PRIMARY_LIGHT } from '../../../lib/utils/uiConstan
 import { haptics } from '../../../lib/utils/haptics'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import { resolvePersonalityEmoji } from './emojiAssets'
-import { resolveFragmentLabel, getNearestSliderOption, type AnswerOption } from './personalityTestLogic'
+import { resolveFragmentLabel, type AnswerOption } from './personalityTestLogic'
 import './PersonalityTestAnswerArea.scss'
 
 export { resolveFragmentLabel, getNearestSliderOption, type AnswerOption } from './personalityTestLogic'
@@ -77,6 +77,15 @@ export default memo(function PersonalityTestAnswerArea({
   const selectedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fragmentTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastSliderValueRef = useRef(sliderValue)
+
+  // Guard: render fallback when no options are available
+  if (options.length === 0) {
+    return (
+      <View className='answer-area__options'>
+        <Text className='answer-area__empty-options'>题目加载中，请稍候…</Text>
+      </View>
+    )
+  }
 
   // Reset selection when question changes
   useEffect(() => {

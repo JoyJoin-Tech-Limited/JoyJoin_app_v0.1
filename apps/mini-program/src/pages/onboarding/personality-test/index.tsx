@@ -40,6 +40,7 @@ import { resolveOptionPreviewSpriteState, isMilestoneQuestion } from './personal
 
 import QuestionTransition from './QuestionTransition'
 import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
+import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
 import './index.scss'
 
 type Phase = 'intro' | 'testing' | 'completing'
@@ -182,6 +183,8 @@ export default function PersonalityTestPage() {
   const activeSessionRef = useRef<string>('')
   // Defensive timeout for sprite unlock if WeChat drops animationend
   const spriteUnlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Remember the last attempted option so we can retry on network failure
+  const lastAttemptedOptionRef = useRef<AssessmentOption | null>(null)
   const handleIntroSpriteComplete = useCallback(() => setIntroSpriteState('idle'), [])
 
   const isAuthenticated = auth.isAuthenticated
@@ -244,9 +247,11 @@ export default function PersonalityTestPage() {
     : '没有标准答案，选最像你的感觉就好'
   const introPrimaryLabel = isSubmitting
     ? '准备中…'
-    : hasStoredIncompleteSession
-      ? '继续测试'
-      : '开始测试'
+    : error
+      ? '重试'
+      : hasStoredIncompleteSession
+        ? '继续测试'
+        : '开始测试'
 
   const getPageClassName = (...extraClasses: string[]) =>
     ['personality-test', ...extraClasses, isPageExiting ? 'personality-test--exiting' : '']
@@ -384,11 +389,6 @@ export default function PersonalityTestPage() {
     saveCheckpoint,
   ])
 
-  /** Map an option to a preview sprite state based on its text content. */
-  const resolveOptionPreviewSpriteState = useCallback((option: AnswerOption): XiaoyueSpriteState => {
-    return resolveOptionPreviewSpriteState(option)
-  }, [])
-
   const previewDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleOptionTouchStart = useCallback((option: AnswerOption) => {
@@ -401,7 +401,7 @@ export default function PersonalityTestPage() {
         setPreviewSpriteState(resolveOptionPreviewSpriteState(option))
       }
     }, 80)
-  }, [spriteLocked, isSubmitting, resolveOptionPreviewSpriteState])
+  }, [spriteLocked, isSubmitting])
 
   const handleOptionTouchEnd = useCallback(() => {
     if (previewDebounceRef.current) {
@@ -451,6 +451,8 @@ export default function PersonalityTestPage() {
         setSpriteState('thinking')
       }
     }, 1500)
+
+    lastAttemptedOptionRef.current = option
 
     setIsSubmitting(true)
     setError('')
@@ -550,6 +552,14 @@ export default function PersonalityTestPage() {
     analytics.validationFailed('slider', 'no-option-mapped')
   }, [question, sliderValue, handleAnswer, analytics])
 
+  const handleRetry = useCallback(() => {
+    const option = lastAttemptedOptionRef.current
+    if (option) {
+      setError('')
+      void handleAnswer(option)
+    }
+  }, [handleAnswer])
+
   /** Release sprite lock after one-shot animation completes */
   const handleSpriteAnimationComplete = useCallback(() => {
     if (spriteUnlockTimeoutRef.current) {
@@ -587,101 +597,105 @@ export default function PersonalityTestPage() {
   if (phase === 'intro') {
     return (
       <View className={getPageClassName('personality-test--intro')}>
-        <ScrollView className='personality-test__intro-scroll' scrollY showScrollbar={false}>
-          <View className='personality-test__intro-shell'>
-            <View className='personality-test__stage personality-test__stage--1'>
-              <Text className='personality-test__eyebrow'>
-                <Text className='personality-test__eyebrow-en'>JoyJoin</Text>
-                <Text> · 氛围原型</Text>
-              </Text>
-              <Text className='personality-test__intro-title'>3 分钟，读懂你的</Text>
-              <Text className='personality-test__intro-title personality-test__intro-title--accent'>聚会气场</Text>
-              <Text className='personality-test__intro-subtitle'>
-                找到你的氛围命格，让后面的遇见都更对味。
-              </Text>
+        <View className='personality-test__intro-shell'>
+          <View className='personality-test__stage personality-test__stage--1'>
+            <Text className='personality-test__eyebrow'>
+              <Text className='personality-test__eyebrow-en'>JoyJoin</Text>
+              <Text> · 氛围原型</Text>
+            </Text>
+            <Text className='personality-test__intro-title'>3 分钟，读懂你的</Text>
+            <Text className='personality-test__intro-title personality-test__intro-title--accent'>聚会气场</Text>
+            <Text className='personality-test__intro-subtitle'>
+              找到你的氛围命格，让后面的遇见都更对味。
+            </Text>
+          </View>
+
+          <ResponsiveSpacer heightRpx={16} collapseBelow={700} />
+
+          <View className='personality-test__intro-hero personality-test__stage personality-test__stage--2'>
+            <View className='personality-test__intro-hero-visual'>
+              <View className='personality-test__intro-hero-halo' />
+              <XiaoyueSpriteAnimator
+                state={introSpriteState}
+                size='320rpx'
+                className='personality-test__mascot personality-test__mascot--animated'
+                onComplete={handleIntroSpriteComplete}
+              />
             </View>
 
-            <View className='personality-test__intro-hero personality-test__stage personality-test__stage--2'>
-              <View className='personality-test__intro-hero-visual'>
-                <View className='personality-test__intro-hero-halo' />
-                <XiaoyueSpriteAnimator
-                  state={introSpriteState}
-                  size='320rpx'
-                  className='personality-test__mascot personality-test__mascot--animated'
-                  onComplete={handleIntroSpriteComplete}
-                />
-              </View>
-
-              <View className='personality-test__intro-bubble'>
-                <Text className='personality-test__intro-bubble-title'>这一步会带给你什么</Text>
-                <Text className='personality-test__intro-bubble-text'>{introCoachLine}</Text>
-              </View>
-
-              <View className='personality-test__intro-meta-row'>
-                {INTRO_META_PILLS.map((item) => (
-                  <View key={item} className='personality-test__intro-meta-pill'>
-                    <Text className='personality-test__intro-meta-pill-text'>{item}</Text>
-                  </View>
-                ))}
-              </View>
+            <View className='personality-test__intro-bubble'>
+              <Text className='personality-test__intro-bubble-title'>这一步会带给你什么</Text>
+              <Text className='personality-test__intro-bubble-text'>{introCoachLine}</Text>
             </View>
 
-            <View className='personality-test__intro-trust personality-test__stage personality-test__stage--3'>
-              <Text className='personality-test__intro-trust-title'>开始前，三件事</Text>
-              <View className='personality-test__intro-trust-list'>
-                {INTRO_TRUST_POINTS.map((item) => (
-                  <View key={item.title} className='personality-test__intro-trust-item'>
-                    <View className='personality-test__intro-trust-icon'>
-                      <Text>{item.icon}</Text>
-                    </View>
-                    <View className='personality-test__intro-trust-copy'>
-                      <Text className='personality-test__intro-trust-item-title'>{item.title}</Text>
-                      <Text className='personality-test__intro-trust-item-description'>{item.description}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            </View>
-
-            <View className='personality-test__intro-tease personality-test__stage personality-test__stage--4'>
-              <Text className='personality-test__intro-tease-title'>完成后，你会看到自己的氛围命格</Text>
-              <Text className='personality-test__intro-tease-subtitle'>
-                不是贴标签，而是帮你找到最对味的人。
-              </Text>
-
-              <ScrollView
-                className='personality-test__intro-tease-scroll'
-                scrollX
-                enhanced
-                showScrollbar={false}
-              >
-                <View className='personality-test__intro-tease-list'>
-                  {introTeasers.map((item, teaserIndex) => (
-                    <View
-                      key={item.archetype}
-                      className='personality-test__intro-tease-card'
-                      style={{
-                        animationDelay: `${80 + teaserIndex * 100}ms`,
-                      }}
-                    >
-                      <View className='personality-test__intro-tease-avatar-wrap'>
-                        <Image
-                          className='personality-test__intro-tease-avatar'
-                          src={item.visual.asset}
-                          mode='aspectFit'
-                        />
-                      </View>
-                      <Text className='personality-test__intro-tease-name'>
-                        {ARCHETYPE_BY_ID[item.archetype]?.nameCn ?? item.archetype}
-                      </Text>
-                      <Text className='personality-test__intro-tease-vibe'>{item.vibeLine}</Text>
-                    </View>
-                  ))}
+            <View className='personality-test__intro-meta-row'>
+              {INTRO_META_PILLS.map((item) => (
+                <View key={item} className='personality-test__intro-meta-pill'>
+                  <Text className='personality-test__intro-meta-pill-text'>{item}</Text>
                 </View>
-              </ScrollView>
+              ))}
             </View>
           </View>
-        </ScrollView>
+
+          <ResponsiveSpacer heightRpx={16} collapseBelow={720} />
+
+          <View className='personality-test__intro-trust personality-test__stage personality-test__stage--3'>
+            <Text className='personality-test__intro-trust-title'>开始前，三件事</Text>
+            <View className='personality-test__intro-trust-list'>
+              {INTRO_TRUST_POINTS.map((item) => (
+                <View key={item.title} className='personality-test__intro-trust-item'>
+                  <View className='personality-test__intro-trust-icon'>
+                    <Text>{item.icon}</Text>
+                  </View>
+                  <View className='personality-test__intro-trust-copy'>
+                    <Text className='personality-test__intro-trust-item-title'>{item.title}</Text>
+                    <Text className='personality-test__intro-trust-item-description'>{item.description}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          <ResponsiveSpacer heightRpx={16} collapseBelow={780} />
+
+          <View className='personality-test__intro-tease personality-test__stage personality-test__stage--4'>
+            <Text className='personality-test__intro-tease-title'>完成后，你会看到自己的氛围命格</Text>
+            <Text className='personality-test__intro-tease-subtitle'>
+              不是贴标签，而是帮你找到最对味的人。
+            </Text>
+
+            <ScrollView
+              className='personality-test__intro-tease-scroll'
+              scrollX
+              enhanced
+              showScrollbar={false}
+            >
+              <View className='personality-test__intro-tease-list'>
+                {introTeasers.map((item, teaserIndex) => (
+                  <View
+                    key={item.archetype}
+                    className='personality-test__intro-tease-card'
+                    style={{
+                      animationDelay: `${80 + teaserIndex * 100}ms`,
+                    }}
+                  >
+                    <View className='personality-test__intro-tease-avatar-wrap'>
+                      <Image
+                        className='personality-test__intro-tease-avatar'
+                        src={item.visual.asset}
+                        mode='aspectFit'
+                      />
+                    </View>
+                    <Text className='personality-test__intro-tease-name'>
+                      {ARCHETYPE_BY_ID[item.archetype]?.nameCn ?? item.archetype}
+                    </Text>
+                    <Text className='personality-test__intro-tease-vibe'>{item.vibeLine}</Text>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
 
         <View className='personality-test__intro-footer'>
           <Text className='personality-test__intro-footer-kicker'>
@@ -826,7 +840,21 @@ export default function PersonalityTestPage() {
           ) : null}
         </View>
 
-        {error ? <Text className='personality-test__error'>{error}</Text> : null}
+        {error ? (
+          <View className='personality-test__error-row'>
+            <Text className='personality-test__error'>{error}</Text>
+            {lastAttemptedOptionRef.current ? (
+              <Button
+                variant='secondary'
+                className='personality-test__retry-btn'
+                onClick={handleRetry}
+                disabled={isSubmitting}
+              >
+                重试
+              </Button>
+            ) : null}
+          </View>
+        ) : null}
       </View>
     </>
   )

@@ -1,0 +1,57 @@
+name: Post-Implementation Review
+
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      commits:
+        description: 'Commit range to review (e.g., HEAD~5..HEAD)'
+        required: false
+        default: 'HEAD~5..HEAD'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  review:
+    name: Post-Implementation Deterministic Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate orchestration contract
+        run: npm run orchestration:validate
+
+      - name: Run deterministic post-implementation gate
+        run: |
+          set -eu
+          commit_range="${{ inputs.commits || 'HEAD~5..HEAD' }}"
+          mkdir -p reports/post-implementation-review
+          node scripts/harness/harness-completion-gate.mjs --json > reports/post-implementation-review/harness-gate.json || true
+          npm run guardrails > reports/post-implementation-review/guardrails.txt 2>&1 || true
+          echo "{\"commitRange\":\"$commit_range\",\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > reports/post-implementation-review/metadata.json
+
+      - name: Upload review artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-implementation-review
+          path: reports/post-implementation-review/
+          retention-days: 30
+
+      - name: Run orchestration advisory workflow
+        run: node scripts/orchestration/orchestration-supervisor.mjs workflow post-implementation-review

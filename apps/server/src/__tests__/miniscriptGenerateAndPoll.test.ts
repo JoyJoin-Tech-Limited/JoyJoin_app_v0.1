@@ -103,6 +103,7 @@ vi.mock('../lib/socialIcebreakerStore', () => {
     getMiniScriptSecrets: async (socialSessionId: string) => {
       return (storeCtx.miniscriptSecretsStore.get(socialSessionId) as any) ?? null;
     },
+    invalidatePreGenerationForSession: vi.fn().mockResolvedValue(undefined),
     sweepExpiredSessions: async () => {},
   };
 });

@@ -25,6 +25,7 @@ import {
   buildRecapParticipants,
   incrementCommonGround,
   getCurrentLieDetectivePlayer,
+  hydrateDerivedState,
   resolveSession,
   isHostAuthorized,
   recapDisplayNameByUserId,
@@ -32,11 +33,14 @@ import {
 import { filterContent } from '../contentFilter';
 import { buildArchetypeContext } from '../lib/contextInjector';
 import {
+  getSessionWithExpiry,
+  getParticipant,
   updateSession,
   listParticipants,
   loadSessionLieTruths,
   setLieTruths,
   getLieTruths,
+  getParticipant,
 } from '../lib/socialIcebreakerStore';
 import { curateMedals } from '../lib/medalCuration';
 import { logger } from '../lib/logger';
@@ -387,6 +391,10 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
   // F3: Wrong-phase guard — statement generation is only valid during lie_detective phase
   if (state.currentPhase !== 'lie_detective') {
     return res.status(400).json({ error: 'Not in lie_detective phase' });
+  }
+
+  if (!(await getParticipant(socialSessionId, userId))) {
+    return res.status(403).json({ error: 'Not a participant in this session' });
   }
 
   try {
@@ -772,15 +780,24 @@ router.post('/:socialSessionId/auction/close-lot', async (req: any, res) => {
 router.get('/:socialSessionId/quip-battle/results', async (req: any, res) => {
   const { socialSessionId } = req.params;
 
-  const state = await resolveSession(socialSessionId, res);
-  if (!state) return;
-
   const userId = requireAuthenticatedUserId(req, res);
   if (!userId) return;
 
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
+  // Authorize before resolveSession: resolveSession runs processAutoAdvance and may persist.
+  const { state: preAuthState, expired: preExpired } = await getSessionWithExpiry(socialSessionId);
+  if (!preAuthState) {
+    if (preExpired) {
+      return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
+    }
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+  const prelim = hydrateDerivedState({ ...preAuthState });
+  if (!(await isHostAuthorized(prelim, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can reveal quip battle results' });
   }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
 
   if (state.currentPhase !== 'quip_battle') {
     return res.status(400).json({ error: 'Not in quip_battle phase' });
@@ -857,6 +874,21 @@ router.get('/:socialSessionId/quip-battle/results', async (req: any, res) => {
 // ---------------------------------------------------------------------------
 router.get('/:socialSessionId/recap', async (req: any, res) => {
   const { socialSessionId } = req.params;
+
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const { state: preAuthState, expired: preExpired } = await getSessionWithExpiry(socialSessionId);
+  if (!preAuthState) {
+    if (preExpired) {
+      return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
+    }
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+  const participant = await getParticipant(socialSessionId, userId);
+  if (!participant) {
+    return res.status(403).json({ error: 'Not a participant in this session' });
+  }
 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;

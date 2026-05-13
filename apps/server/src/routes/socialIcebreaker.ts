@@ -64,6 +64,7 @@ import {
   logMomentCardInteraction,
   getMomentCardStats,
   getPreGenerationResult,
+  invalidatePreGenerationForSession,
 } from '../lib/socialIcebreakerStore';
 import { getSocialIcebreakerAccess } from '../lib/socialIcebreakerAccess';
 import { buildMomentCardPayload } from '../lib/momentCardPayload';
@@ -300,6 +301,8 @@ router.post('/:socialSessionId/set-tier', async (req: any, res) => {
   state.eventTier = newTier;
   state.runPlan = runPlan;
   await updateSession(socialSessionId, state);
+
+  await invalidatePreGenerationForSession(socialSessionId);
 
   // Re-enqueue pre-generation for the new run plan (best-effort)
   const rosterAfterTierChange = await listParticipants(socialSessionId);
@@ -1481,6 +1484,21 @@ router.post('/:socialSessionId/quip-battle/vote', async (req: any, res) => {
 
 router.get('/:socialSessionId/moment-card', async (req: any, res) => {
   const { socialSessionId } = req.params;
+
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const { state: preAuthState, expired: preExpired } = await getSessionWithExpiry(socialSessionId);
+  if (!preAuthState) {
+    if (preExpired) {
+      return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
+    }
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+  const participant = await getParticipant(socialSessionId, userId);
+  if (!participant) {
+    return res.status(403).json({ error: 'Not a participant in this session' });
+  }
 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;

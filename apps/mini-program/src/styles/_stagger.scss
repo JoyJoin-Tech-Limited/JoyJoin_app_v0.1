@@ -1,0 +1,41 @@
+@use './variables' as *;
+
+// ─── Stagger Entrance CSS Classes (pair with useStaggerMount) ─────
+// Global stylesheet — import once in app.scss to avoid duplication
+// across every page that @use's mixins.
+
+.stagger-in-hidden {
+  opacity: 0;
+  transform: translate3d(0, 20rpx, 0);
+}
+
+.stagger-in {
+  opacity: 0;
+  transform: translate3d(0, 20rpx, 0);
+  animation: stagger-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes stagger-in {
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+// Delay modifiers (0–6 covers logo → mascot → headline → badges → cloud → CTA)
+@for $i from 0 through 6 {
+  .stagger-in--#{$i} {
+    animation-delay: #{$i * 0.05}s;
+  }
+}
+
+// Reduced-motion fallback: show content instantly, skip motion
+@media (prefers-reduced-motion: reduce) {
+  .stagger-in-hidden,
+  .stagger-in,
+  [class^="stagger-in--"] {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

@@ -85,6 +85,7 @@ vi.mock('../lib/socialIcebreakerStore', () => {
     getPreGenerationResult: vi.fn(async (_socialSessionId: string, _phase: string) => {
       return preGenStore.get(`${_socialSessionId}:${_phase}`) ?? null;
     }),
+    invalidatePreGenerationForSession: vi.fn().mockResolvedValue(undefined),
     getInFlightJobForPhase: vi.fn(async () => null),
     sweepExpiredSessions: async () => {},
   };

@@ -47,7 +47,7 @@ export async function enqueuePreGeneration(
       socialSessionId,
       phase,
     });
-    return jobId;
+    return jobId ?? null;
   } catch (error) {
     logger.error('Failed to enqueue pre-generation job', {
       socialSessionId,

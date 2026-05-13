@@ -16,6 +16,8 @@ import {
   completePreGenerationJob,
   failPreGenerationJob,
   storePreGenerationResult,
+  isPreGenerationJobRunning,
+  deletePreGenerationResultById,
 } from '../lib/socialIcebreakerStore';
 import {
   generateWarmupTopics,
@@ -351,6 +353,15 @@ async function processOneJob(): Promise<void> {
       return;
     }
 
+    if (!(await isPreGenerationJobRunning(job.id))) {
+      logger.warn('Pre-generation job superseded before result write, skipping', {
+        jobId: job.id,
+        socialSessionId: job.socialSessionId,
+        phase: job.phase,
+      });
+      return;
+    }
+
     const resultId = await storePreGenerationResult(
       job.socialSessionId,
       job.phase,
@@ -358,7 +369,17 @@ async function processOneJob(): Promise<void> {
       result.meta,
     );
 
-    await completePreGenerationJob(job.id, resultId);
+    const completed = await completePreGenerationJob(job.id, resultId);
+    if (!completed) {
+      await deletePreGenerationResultById(resultId);
+      logger.warn('Pre-generation result discarded (job superseded during completion)', {
+        jobId: job.id,
+        resultId,
+        socialSessionId: job.socialSessionId,
+        phase: job.phase,
+      });
+      return;
+    }
 
     logger.info('Pre-generation worker completed job', {
       jobId: job.id,
