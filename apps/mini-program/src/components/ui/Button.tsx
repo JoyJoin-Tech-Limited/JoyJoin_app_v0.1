@@ -3,7 +3,7 @@ import './Button.scss'
 
 export interface JoyButtonProps extends Omit<ButtonProps, 'variant'> {
   /** `brand` uses the Alimama display face for high-emotion CTAs; default UI font otherwise. */
-  variant?: 'primary' | 'secondary' | 'brand'
+  variant?: 'primary' | 'secondary' | 'brand' | 'wechat'
   /** Show a loading dot-ellipsis spinner instead of the label. */
   loading?: boolean
 }
@@ -20,7 +20,11 @@ export default function Button({
   ...props
 }: JoyButtonProps) {
   const variantClass =
-    variant === 'brand' ? 'joy-button--brand joy-button--primary' : `joy-button--${variant}`
+    variant === 'brand'
+      ? 'joy-button--brand joy-button--primary'
+      : variant === 'wechat'
+        ? 'joy-button--wechat'
+        : `joy-button--${variant}`
   const loadingClass = loading ? ' joy-button--loading' : ''
 
   return (

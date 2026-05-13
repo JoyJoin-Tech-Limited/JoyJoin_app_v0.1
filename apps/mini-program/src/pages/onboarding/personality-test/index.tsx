@@ -843,7 +843,7 @@ export default function PersonalityTestPage() {
             <Text className='personality-test__error'>{error}</Text>
             {lastAttemptedOptionRef.current ? (
               <Button
-                variant='ghost'
+                variant='secondary'
                 className='personality-test__retry-btn'
                 onClick={handleRetry}
                 disabled={isSubmitting}
