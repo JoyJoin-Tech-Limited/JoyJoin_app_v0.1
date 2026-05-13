@@ -1,0 +1,28 @@
+skill: post-implementation-review
+primary_ownership: >
+  Blanket post-implementation review workflow — parallel review swarm
+  (Auto-Eval, QA Agent, Verifier, PM Advisor, Visual Designer) with
+  deterministic checklist, severity gating, and delta review.
+use_when:
+  - An implementation agent completes and records turnStatus: done
+  - A deterministic review swarm is needed before sign-off
+  - Catching blocking issues after implementation
+do_not_use_when:
+  - No files were modified (0 changes to review)
+  - skipReview: true is set in turn summary
+  - The agent is not an implementation agent
+strong_triggers:
+  - post-implementation review
+  - review swarm
+  - blanket review
+  - done check
+  - implementation review
+owned_files:
+  - .github/skills/post-implementation-review/**
+related_skills:
+  - skill: harness-completion-gate
+    when: post-implementation-review includes AE-01 (5-pillar gate)
+  - skill: orchestration-turn-reporting
+    when: review findings need to be recorded in turn summaries
+  - skill: code-review
+    when: structured PR review lens is needed
