@@ -89,8 +89,8 @@ import {
   buildRecapParticipants,
   incrementCommonGround,
   getCurrentLieDetectivePlayer,
-  resolveSession,
-  isHostAuthorized,
+  ensureParticipantThenResolveSession,
+  ensureHostThenResolveSession,
 } from './socialIcebreakerHelpers';
 import { registerExtendedRoutes } from './socialIcebreakerExtended';
 import { enqueueRunPlanPreGeneration, shouldSkipOnDemandGeneration } from '../jobs/preGenerationQueue';
@@ -272,12 +272,13 @@ router.post('/:socialSessionId/set-tier', async (req: any, res) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureHostThenResolveSession(
+    socialSessionId,
+    userId,
+    res,
+    'Only the host can set the tier',
+  );
   if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only the host can set the tier' });
-  }
 
   // Changing runPlan after warmup would desync currentPhase from the new segment order
   // (getNextEligiblePhase uses runPlan.segments); only allow while still in warmup.
@@ -347,21 +348,20 @@ router.post('/:socialSessionId/set-tier', async (req: any, res) => {
 // ---------------------------------------------------------------------------
 router.get('/:socialSessionId', async (req: any, res) => {
   const { socialSessionId } = req.params;
-  const userId: string = req.session?.userId;
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureParticipantThenResolveSession(socialSessionId, userId, res);
   if (!state) return;
 
   ensureSessionEnabledPhases(state);
 
-  if (userId) {
-    // Bump lastSeen so polling counts as presence.
-    await dbHeartbeat(socialSessionId, userId);
-    const rosterCount = await getRosterCount(socialSessionId);
-    const activeCount = await getActiveParticipantCount(socialSessionId);
-    state.playerCount = rosterCount;
-    state.activePlayerCount = activeCount;
-  }
+  // Bump lastSeen so polling counts as presence.
+  await dbHeartbeat(socialSessionId, userId);
+  const rosterCount = await getRosterCount(socialSessionId);
+  const activeCount = await getActiveParticipantCount(socialSessionId);
+  state.playerCount = rosterCount;
+  state.activePlayerCount = activeCount;
 
   return res.json(await buildClientState(state, userId));
 });
@@ -415,12 +415,13 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
     return res.status(400).json({ error: 'mood is required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureHostThenResolveSession(
+    socialSessionId,
+    userId,
+    res,
+    'Only the host can change topics',
+  );
   if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only the host can change topics' });
-  }
 
   try {
     const participants = await listParticipants(socialSessionId);
@@ -458,13 +459,8 @@ router.post('/:socialSessionId/warmup/ready', async (req: any, res) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureParticipantThenResolveSession(socialSessionId, userId, res);
   if (!state) return;
-
-  const participant = await getParticipant(socialSessionId, userId);
-  if (!participant) {
-    return res.status(403).json({ error: 'Not a participant in this session' });
-  }
 
   if (state.currentPhase !== 'warmup') {
     return res.status(400).json({ error: 'Not in warmup phase' });
@@ -500,12 +496,13 @@ router.post('/:socialSessionId/warmup/next-topic', async (req: any, res) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureHostThenResolveSession(
+    socialSessionId,
+    userId,
+    res,
+    'Only the host can move to the next topic',
+  );
   if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only the host can move to the next topic' });
-  }
 
   if (state.currentPhase !== 'warmup') {
     return res.status(400).json({ error: 'Not in warmup phase' });
@@ -554,7 +551,7 @@ router.post('/:socialSessionId/pulse-check', async (req: any, res) => {
     return res.status(400).json({ error: 'vibe must be 1, 2, or 3' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureParticipantThenResolveSession(socialSessionId, userId, res);
   if (!state) return;
 
   // Persist to session state (existing behavior)
@@ -601,7 +598,7 @@ router.post('/:socialSessionId/moment-card-event', async (req: any, res) => {
     return res.status(400).json({ error: 'action must be save, share, or qr_scan' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureParticipantThenResolveSession(socialSessionId, userId, res);
   if (!state) return;
 
   await logMomentCardInteraction(socialSessionId, userId, action, deviceInfo).catch(() => {
@@ -623,7 +620,7 @@ router.post('/:socialSessionId/micro-challenge/complete', async (req: any, res) 
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureParticipantThenResolveSession(socialSessionId, userId, res);
   if (!state) return;
 
   if (state.currentPhase !== 'micro_challenge') {
@@ -695,12 +692,13 @@ router.post('/:socialSessionId/micro-challenge/generate', async (req: any, res) 
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureHostThenResolveSession(
+    socialSessionId,
+    userId,
+    res,
+    'Only the host can generate challenges',
+  );
   if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only the host can generate challenges' });
-  }
 
   if (state.currentPhase !== 'micro_challenge') {
     return res.status(400).json({ error: 'Not in micro_challenge phase' });
@@ -776,7 +774,7 @@ router.post('/:socialSessionId/lie-detective/submit-tags', async (req: any, res)
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureParticipantThenResolveSession(socialSessionId, userId, res);
   if (!state) return;
 
   if (state.currentPhase !== 'lie_detective') {
@@ -822,12 +820,13 @@ router.post('/:socialSessionId/lie-detective/next-player', async (req: any, res)
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureHostThenResolveSession(
+    socialSessionId,
+    userId,
+    res,
+    'Only the host can advance lie-detective turns',
+  );
   if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only the host can advance lie-detective turns' });
-  }
 
   if (state.currentPhase !== 'lie_detective') {
     return res.status(400).json({ error: 'Not in lie_detective phase' });
@@ -871,12 +870,13 @@ router.post('/:socialSessionId/xiaoyue/session-pack', async (req: any, res) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureHostThenResolveSession(
+    socialSessionId,
+    userId,
+    res,
+    'Only the host can generate a session pack',
+  );
   if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only the host can generate a session pack' });
-  }
 
   if (state.currentPhase !== 'warmup') {
     return res.status(400).json({ error: 'Session pack can only be generated during warmup phase' });
@@ -934,12 +934,13 @@ router.post('/:socialSessionId/xiaoyue/adaptive-suggestion', async (req: any, re
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureHostThenResolveSession(
+    socialSessionId,
+    userId,
+    res,
+    'Only the host can request adaptive suggestions',
+  );
   if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only the host can request adaptive suggestions' });
-  }
 
   // Adaptive suggestions are meaningful only during active phases
   if (state.currentPhase === 'recap') {
@@ -977,12 +978,13 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureHostThenResolveSession(
+    socialSessionId,
+    userId,
+    res,
+    'Only the host can generate dice challenges',
+  );
   if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only the host can generate dice challenges' });
-  }
 
   if (state.currentPhase !== 'personality_dice') {
     return res.status(400).json({ error: 'Not in personality_dice phase' });
@@ -1065,7 +1067,7 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureParticipantThenResolveSession(socialSessionId, userId, res);
   if (!state) return;
 
   if (state.currentPhase !== 'personality_dice') {
@@ -1179,12 +1181,13 @@ router.post('/:socialSessionId/quip-battle/generate', async (req: any, res) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureHostThenResolveSession(
+    socialSessionId,
+    userId,
+    res,
+    'Only the host can generate quip battle prompts',
+  );
   if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only the host can generate quip battle prompts' });
-  }
 
   if (state.currentPhase !== 'quip_battle') {
     return res.status(400).json({ error: 'Not in quip_battle phase' });
@@ -1270,7 +1273,7 @@ router.post('/:socialSessionId/quip-battle/submit', async (req: any, res) => {
     return res.status(400).json({ error: 'answers array required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureParticipantThenResolveSession(socialSessionId, userId, res);
   if (!state) return;
 
   if (state.currentPhase !== 'quip_battle') {
@@ -1379,7 +1382,7 @@ router.post('/:socialSessionId/quip-battle/vote', async (req: any, res) => {
     return res.status(400).json({ error: 'votes array required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureParticipantThenResolveSession(socialSessionId, userId, res);
   if (!state) return;
 
   if (state.currentPhase !== 'quip_battle') {
@@ -1488,19 +1491,7 @@ router.get('/:socialSessionId/moment-card', async (req: any, res) => {
   const userId = requireAuthenticatedUserId(req, res);
   if (!userId) return;
 
-  const { state: preAuthState, expired: preExpired } = await getSessionWithExpiry(socialSessionId);
-  if (!preAuthState) {
-    if (preExpired) {
-      return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
-    }
-    return res.status(404).json({ error: 'Social session not found' });
-  }
-  const participant = await getParticipant(socialSessionId, userId);
-  if (!participant) {
-    return res.status(403).json({ error: 'Not a participant in this session' });
-  }
-
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureParticipantThenResolveSession(socialSessionId, userId, res);
   if (!state) return;
 
   const roster = await listParticipants(socialSessionId);
@@ -1526,13 +1517,8 @@ router.post('/:socialSessionId/ai-feedback', async (req: any, res) => {
   }
 
   const { socialSessionId } = req.params;
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureParticipantThenResolveSession(socialSessionId, userId, res);
   if (!state) return;
-
-  const participant = await getParticipant(socialSessionId, userId);
-  if (!participant) {
-    return res.status(403).json({ error: 'Not a participant in this session' });
-  }
 
   try {
     await socialIcebreakerAiFeedbackRepo.upsertFeedback({
@@ -1562,12 +1548,13 @@ router.post('/:socialSessionId/undercover-word/generate', async (req: any, res) 
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureHostThenResolveSession(
+    socialSessionId,
+    userId,
+    res,
+    'Only the host can generate word pairs',
+  );
   if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only the host can generate word pairs' });
-  }
 
   if (state.currentPhase !== 'undercover_word') {
     return res.status(400).json({ error: 'Not in undercover_word phase' });
@@ -1652,7 +1639,7 @@ router.post('/:socialSessionId/undercover-word/describe', async (req: any, res) 
   if (!userId) return res.status(401).json({ error: 'Authentication required' });
   if (!text || text.trim().length === 0) return res.status(400).json({ error: 'Description required' });
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureParticipantThenResolveSession(socialSessionId, userId, res);
   if (!state) return;
 
   if (operationId) {
@@ -1730,7 +1717,7 @@ router.post('/:socialSessionId/undercover-word/vote', async (req: any, res) => {
   if (!userId) return res.status(401).json({ error: 'Authentication required' });
   if (!targetUserId) return res.status(400).json({ error: 'targetUserId required' });
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureParticipantThenResolveSession(socialSessionId, userId, res);
   if (!state) return;
 
   if (operationId) {
@@ -1804,12 +1791,8 @@ router.post('/:socialSessionId/undercover-word/reveal', async (req: any, res) =>
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureHostThenResolveSession(socialSessionId, userId, res, 'Only host can reveal');
   if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only host can reveal' });
-  }
 
   const votes = state.undercoverWordVotes || [];
   const voteCounts: Record<string, number> = {};
@@ -1853,12 +1836,8 @@ router.post('/:socialSessionId/undercover-word/next-round', async (req: any, res
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureHostThenResolveSession(socialSessionId, userId, res, 'Only host can advance rounds');
   if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only host can advance rounds' });
-  }
 
   if (state.currentPhase !== 'undercover_word') {
     return res.status(400).json({ error: 'Not in undercover_word phase' });
@@ -1886,12 +1865,13 @@ router.post('/:socialSessionId/group-mirror/generate', async (req: any, res) => 
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureHostThenResolveSession(
+    socialSessionId,
+    userId,
+    res,
+    'Only the host can generate group mirror questions',
+  );
   if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only the host can generate group mirror questions' });
-  }
 
   if (state.currentPhase !== 'group_mirror') {
     return res.status(400).json({ error: 'Not in group_mirror phase' });
@@ -1970,7 +1950,7 @@ router.post('/:socialSessionId/group-mirror/submit', async (req: any, res) => {
   if (!userId) return res.status(401).json({ error: 'Authentication required' });
   if (!answers || !Array.isArray(answers)) return res.status(400).json({ error: 'answers array required' });
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureParticipantThenResolveSession(socialSessionId, userId, res);
   if (!state) return;
 
   if (state.currentPhase !== 'group_mirror') {
@@ -2080,12 +2060,8 @@ router.post('/:socialSessionId/group-mirror/reveal', async (req: any, res) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await ensureHostThenResolveSession(socialSessionId, userId, res, 'Only host can reveal');
   if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only host can reveal' });
-  }
 
   const questions = state.groupMirrorQuestions || [];
   const answers = state.groupMirrorAnswers || [];

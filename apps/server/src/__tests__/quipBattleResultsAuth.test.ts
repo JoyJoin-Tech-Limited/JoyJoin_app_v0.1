@@ -433,3 +433,48 @@ describe('POST /api/social-icebreaker/:id/quip-battle/generate', () => {
     });
   });
 });
+
+describe('GET /api/social-icebreaker/:id (session poll)', () => {
+  it('returns 403 for authenticated non-participant and does not auto-advance before auth', async () => {
+    const socialSessionId = 'social_poll-outsider';
+    seedQuipSession(socialSessionId);
+    const s = storeCtx.sessions.get(socialSessionId)!;
+    s.autoAdvanceEnabled = true;
+    s.autoAdvanceScheduledAt = Date.now() - 60_000;
+
+    await withServer(async (baseUrl) => {
+      const outsiderCookie = await login(baseUrl, 'outsider-user');
+      const res = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}`, {
+        headers: { cookie: outsiderCookie },
+      });
+      expect(res.status).toBe(403);
+      const after = storeCtx.sessions.get(socialSessionId);
+      expect(after?.currentPhase).toBe('quip_battle');
+      expect(after?.autoAdvanceScheduledAt).toBeDefined();
+    });
+  });
+
+  it('returns 200 for roster participant', async () => {
+    const socialSessionId = 'social_poll-participant';
+    seedQuipSession(socialSessionId);
+    const pmap = new Map<
+      string,
+      { userId: string; displayName: string; joinedAt: number; lastSeenAt: number }
+    >();
+    pmap.set('host-user', {
+      userId: 'host-user',
+      displayName: 'Host',
+      joinedAt: Date.now(),
+      lastSeenAt: Date.now(),
+    });
+    storeCtx.participants.set(socialSessionId, pmap);
+
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'host-user');
+      const res = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}`, {
+        headers: { cookie: hostCookie },
+      });
+      expect(res.status).toBe(200);
+    });
+  });
+});
