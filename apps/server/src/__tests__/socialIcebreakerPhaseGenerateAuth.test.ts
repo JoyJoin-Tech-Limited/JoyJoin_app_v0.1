@@ -69,6 +69,7 @@ vi.mock('../lib/socialIcebreakerStore', () => {
     setLieTruths: vi.fn(),
     getLieTruths: vi.fn(),
     loadSessionLieTruths: vi.fn(async () => new Map()),
+    invalidatePreGenerationForSession: vi.fn().mockResolvedValue(undefined),
     sweepExpiredSessions: async () => {},
     logMomentCardInteraction: vi.fn(),
     getMomentCardStats: vi.fn(),

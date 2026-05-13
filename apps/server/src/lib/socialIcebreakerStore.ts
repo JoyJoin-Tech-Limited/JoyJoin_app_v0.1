@@ -12,7 +12,7 @@
  * - Server-only lie-truth storage that is never returned to clients.
  */
 
-import { and, eq, gte, lt, sql } from 'drizzle-orm';
+import { and, eq, gte, lt, ne, sql } from 'drizzle-orm';
 import { db } from '../db';
 import {
   socialIcebreakerSessions,
@@ -581,18 +581,36 @@ export async function getMomentCardStats(
 // Pre-generation pipeline
 // ---------------------------------------------------------------------------
 
+/**
+ * When the host changes icebreaker tier during warmup, cached AI rows must be
+ * dropped: results are keyed only by (session, phase) and would otherwise
+ * make shouldSkipOnDemandGeneration serve content compiled for the old tier.
+ * Marks existing jobs failed so workers do not treat superseded runs as publishable.
+ */
+export async function invalidatePreGenerationForSession(socialSessionId: string): Promise<void> {
+  await db.transaction(async (tx: any) => {
+    await tx
+      .update(preGenerationJobs)
+      .set({ status: 'failed', errorCode: 'tier_change', updatedAt: new Date() })
+      .where(eq(preGenerationJobs.socialSessionId, socialSessionId));
+    await tx.delete(preGenerationResults).where(eq(preGenerationResults.socialSessionId, socialSessionId));
+  });
+}
+
 export async function enqueuePreGenerationJob(
   socialSessionId: string,
   phase: string,
   priority: number = 0,
   payload: Record<string, unknown> = {},
-): Promise<string> {
+): Promise<string | undefined> {
   const result = await db
     .insert(preGenerationJobs)
     .values({ socialSessionId, phase, priority, payload, status: 'pending' })
     .onConflictDoUpdate({
       target: [preGenerationJobs.socialSessionId, preGenerationJobs.phase],
       set: { priority, payload, status: 'pending', updatedAt: new Date() },
+      // Never downgrade an in-flight worker row to pending (avoids duplicate workers + wrong last-writer).
+      setWhere: ne(preGenerationJobs.status, 'running'),
     })
     .returning({ id: preGenerationJobs.id });
   return result[0]?.id;
@@ -638,24 +656,34 @@ export async function dequeuePendingJob(): Promise<{
   });
 }
 
-export async function completePreGenerationJob(
-  jobId: string,
-  resultId: string,
-): Promise<void> {
-  await db
+export async function completePreGenerationJob(jobId: string, resultId: string): Promise<boolean> {
+  const updated = await db
     .update(preGenerationJobs)
     .set({ status: 'completed', resultId, updatedAt: new Date() })
-    .where(eq(preGenerationJobs.id, jobId));
+    .where(and(eq(preGenerationJobs.id, jobId), eq(preGenerationJobs.status, 'running')))
+    .returning({ id: preGenerationJobs.id });
+  return updated.length > 0;
 }
 
-export async function failPreGenerationJob(
-  jobId: string,
-  errorCode: string,
-): Promise<void> {
+export async function failPreGenerationJob(jobId: string, errorCode: string): Promise<void> {
   await db
     .update(preGenerationJobs)
     .set({ status: 'failed', errorCode, updatedAt: new Date() })
-    .where(eq(preGenerationJobs.id, jobId));
+    .where(and(eq(preGenerationJobs.id, jobId), eq(preGenerationJobs.status, 'running')));
+}
+
+/** Used when a result row was written but the job row was superseded before completion. */
+export async function deletePreGenerationResultById(resultId: string): Promise<void> {
+  await db.delete(preGenerationResults).where(eq(preGenerationResults.id, resultId));
+}
+
+export async function isPreGenerationJobRunning(jobId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ status: preGenerationJobs.status })
+    .from(preGenerationJobs)
+    .where(eq(preGenerationJobs.id, jobId))
+    .limit(1);
+  return row?.status === 'running';
 }
 
 export async function storePreGenerationResult(
