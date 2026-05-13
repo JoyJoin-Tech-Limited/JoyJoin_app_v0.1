@@ -289,7 +289,7 @@ Bar styling: `color: #9CA3AF`, `selectedColor: #8B5CF6`, `backgroundColor: #ffff
 
 | Root | Pages |
 |------|-------|
-| `pages/onboarding` | `onboarding/index`, `personality-test/index`, `personality-test/results/index`, `personality-test/auth-gate/index`, `essential-data/index`, `extended-data/index`, `profile-review/index` |
+| `pages/onboarding` | `onboarding/index`, `personality-test/index`, `personality-test/results/index`, `essential-data/index`, `extended-data/index`, `profile-review/index` |
 
 ### Preload Rules
 

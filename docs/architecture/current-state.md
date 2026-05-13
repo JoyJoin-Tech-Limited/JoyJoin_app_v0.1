@@ -35,7 +35,7 @@ Use it together with:
 - `apps/user-client/src/features/onboarding/active/pages/FinalProfileReviewPage.tsx`
 
 **Active pre-auth route sequence**
-- `/personality-test` → `/personality-test/results` → `/personality-test/auth-gate`
+- `/personality-test` → `/personality-test/results` (inline WeChat login + anonymous answer import)
 - After auth succeeds, the server-owned `nextStep` contract takes over for `/onboarding/setup` → `/onboarding/extended` → `/onboarding/review` → `/discover`
 
 **Boundary rules**
@@ -46,7 +46,7 @@ Use it together with:
 - **`onboardingCheckpoint`** (optional on `users`) can let `auth.ts` advance `nextStep` forward for recovery when the checkpoint is ahead of the base step.
 - Legacy onboarding surfaces stay under `apps/user-client/src/legacy/onboarding/`.
 
-**Mini-program:** `apps/mini-program/src/pages/onboarding/` mirrors the value-first and post-auth steps; shared helpers live in `packages/shared/src/onboarding.ts`. **Personality test** UI: `pages/onboarding/personality-test/` (subpackage). **WeChat login:** returning users `pages/login` + `hooks/useWeChatLogin.ts` (`/api/auth/wechat/login`); first-time handoff from test results uses `authenticateMiniProgramUserWithTest` (`/api/auth/wechat/login-with-test`) on the auth-gate page. **Payments:** `pages/blind-box-payment`, `pages/payment-verification`, plus `lib/paymentPendingOrder*.ts` and `app.ts` pending-order resume — see [`docs/reference/reference/PLATFORM_COORDINATION.md`](../reference/PLATFORM_COORDINATION.md).
+**Mini-program:** `apps/mini-program/src/pages/onboarding/` mirrors the value-first and post-auth steps; shared helpers live in `packages/shared/src/onboarding.ts`. **Personality test** UI: `pages/onboarding/personality-test/` (subpackage). **WeChat login:** returning users `pages/login` + `hooks/useWeChatLogin.ts` (`/api/auth/wechat/login`); first-time handoff from test results uses `authenticateMiniProgramUserWithTest` (`/api/auth/wechat/login-with-test`) inline on the results page. The standalone auth-gate page was removed in 2026-05. **Payments:** `pages/blind-box-payment`, `pages/payment-verification`, plus `lib/paymentPendingOrder*.ts` and `app.ts` pending-order resume — see [`docs/reference/reference/PLATFORM_COORDINATION.md`](../reference/PLATFORM_COORDINATION.md).
 
 Primary files:
 - `apps/user-client/src/features/onboarding/README.md`
@@ -101,18 +101,22 @@ Boundary:
 - `apps/server/src/routes/socialIcebreaker.ts`
 - `apps/server/src/socialIcebreakerAIService.ts`
 - `apps/server/src/socialIcebreakerPhaseConfig.ts` — phase config aligned with `packages/shared/src/socialIcebreaker.ts`
-- `apps/server/src/lib/socialIcebreakerStore.ts` — PostgreSQL-backed session persistence layer (sessions, participants, lie-truths); replaced the previous in-memory Maps
+- `apps/server/src/lib/socialIcebreakerStore.ts` — PostgreSQL-backed session persistence layer (sessions, participants, lie-truths, phase metrics); replaced the previous in-memory Maps
 - `apps/server/src/lib/socialIcebreakerSweep.ts` — expiry sweep for persisted sessions
+- `apps/server/src/lib/momentCardRenderer.ts` — server-side Moment Card PNG renderer via `@napi-rs/canvas`; registers CJK fonts from common system paths on module load; logs warning if none found
 
 **Client hook/surfaces**
 - `apps/user-client/src/hooks/useSocialIcebreaker.ts`
 - `apps/user-client/src/pages/IcebreakerSessionPage.tsx`
-- `apps/mini-program/src/pages/icebreaker-session/index.tsx`
+- `apps/mini-program/src/pages/icebreaker-session/index.tsx` — hosts `BonusGateOverlay` for the `mini_script` bonus vote gate
+- `apps/mini-program/src/pages/icebreaker-session/overlays/BonusGateOverlay.tsx`
 
 Boundary:
 - This is the active in-event icebreaker system; do not route new primary icebreaker work through legacy toolkit flows.
 - All session reads and writes go through `lib/socialIcebreakerStore.ts`; do not add direct `db` calls in the route file.
 - `GET /api/social-icebreaker/:socialSessionId` returns `joinedParticipants` in `SocialSessionState`; client participant rendering should prefer that roster over event-attendee fallbacks when it is present.
+- `GET /api/social-icebreaker/:socialSessionId/moment-card.png` returns a server-rendered 640×1040 PNG share card when `SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER` is enabled. Rate-limited to 5 req/min per user.
+- Bonus gate: when `mini_script` is the next eligible phase and `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT=true`, phase advance pauses at a host+player vote gate (`bonusGateOffered`) instead of entering `mini_script` directly.
 
 ### 4. Shared contracts and cross-platform ownership
 

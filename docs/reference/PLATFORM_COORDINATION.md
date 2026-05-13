@@ -10,10 +10,10 @@
 
 | Concern | Canonical files |
 |---------|-------------------|
-| Personality test (V4 UI) | `apps/mini-program/src/pages/onboarding/personality-test/` — `index` (test), `results`, `auth-gate`; onboarding subpackage registration in `lib/onboarding/onboardingRoutes.ts` |
+| Personality test (V4 UI) | `apps/mini-program/src/pages/onboarding/personality-test/` — `index` (test), `results`; onboarding subpackage registration in `lib/onboarding/onboardingRoutes.ts` |
 | Anonymous assessment keys | `apps/mini-program/src/lib/auth/anonymousOnboarding.ts` (aligns with web `joyjoin_v4_presignup_answers` semantics) |
 | WeChat login — **returning** users | `apps/mini-program/src/pages/login/index.tsx`, `apps/mini-program/src/hooks/auth/useWeChatLogin.ts` → `authenticateMiniProgramUser()` → `POST /api/auth/wechat/login` (`Taro.login` → code2Session) |
-| WeChat login — **with test import** | `authenticateMiniProgramUserWithTest()` in `apps/mini-program/src/lib/api/api.ts` → `POST /api/auth/wechat/login-with-test` (used from personality-test auth-gate) |
+| WeChat login — **with test import** | `authenticateMiniProgramUserWithTest()` in `apps/mini-program/src/lib/api/api.ts` → `POST /api/auth/wechat/login-with-test` (inline from personality-test results page) |
 | Blind-box payment (JSAPI) | `apps/mini-program/src/pages/blind-box-payment/index.tsx` → `createMiniProgramPaymentIntent()` in `packages/shared/src/api.ts` → `POST /api/payments/miniprogram/create` → `Taro.requestPayment` |
 | Post-pay verification + pending order | `apps/mini-program/src/pages/payment-verification/index.tsx`, `lib/payment/paymentPendingOrder.ts`, `lib/payment/paymentPendingOrderStorage.ts`, `lib/payment/paymentVerificationStatus.ts`; app resume: `apps/mini-program/src/app.ts` |
 

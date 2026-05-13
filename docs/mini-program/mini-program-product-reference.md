@@ -1,7 +1,7 @@
 # Mini-Program Product Reference
 
 > **Status:** Active launch-primary mini-program reference for `apps/mini-program`.
-> **Last verified:** 2026-04-20.
+> **Last verified:** 2026-05-13.
 > **Non-replacement note:** This document does **not** replace [`../PRODUCT_REQUIREMENTS.md`](../PRODUCT_REQUIREMENTS.md) or [`../apps/mini-program/README.md`](../apps/mini-program/README.md). It is a compact product-to-code bridge for the live WeChat mini-program surface.
 > **Authority chain:** 1. [`../PRODUCT_REQUIREMENTS.md`](../PRODUCT_REQUIREMENTS.md) for product canon and terminology. 2. [`../apps/mini-program/README.md`](../apps/mini-program/README.md), [`./architecture/current-state.md`](./architecture/current-state.md), [`./systems/onboarding-flow.md`](./systems/onboarding-flow.md), and [`./reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md) for runtime ownership and flow rules. 3. [`../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts), [`../apps/mini-program/src/app.config.ts`](../apps/mini-program/src/app.config.ts), [`../apps/mini-program/src/lib/api/api.ts`](../apps/mini-program/src/lib/api/api.ts), [`../packages/shared/src/README.md`](../packages/shared/src/README.md), [`../packages/shared/src/schema.ts`](../packages/shared/src/schema.ts), and [`../apps/server/src/README.md`](../apps/server/src/README.md) for active route, contract, and backend truth.
 
@@ -56,7 +56,7 @@ This inventory is derived from the registered paths in [`../apps/mini-program/sr
 
 | Page path | Role | Purpose | Notes |
 | --- | --- | --- | --- |
-| `pages/index/index` | Root entry | Shows the mini-program landing page for signed-out users and redirects signed-in users to the server-owned next step. | Root launch route. |
+| `pages/index/index` | Root entry | Mascot-led landing page (Xiaoyue hero, staggered entrance, BondingCloud particle animation) for signed-out users; redirects signed-in users to the server-owned `nextStep`. | Uses `useStaggerMount` + `_stagger.scss` for entrance animation. `BondingCloud` component with benchmark-aware particle count and reduced-motion support. |
 | `pages/login/index` | Returning-user auth | Runs mini-program-native WeChat login and resumes the authenticated journey. | Uses `Taro.login()` via [`../apps/mini-program/src/lib/api/api.ts`](../apps/mini-program/src/lib/api/api.ts). |
 
 ### Onboarding subpackage (`pages/onboarding/*`)
@@ -66,7 +66,7 @@ This inventory is derived from the registered paths in [`../apps/mini-program/sr
 | `pages/onboarding/onboarding/index` | Redirect hub | Receives `nextStep=onboarding` and forwards immediately to the actual server-owned onboarding step. | Compatibility shell, not a standalone form step. |
 | `pages/onboarding/personality-test/index` | Onboarding step | Runs the adaptive personality assessment with anonymous pre-auth support. | Value-first entry surface. |
 | `pages/onboarding/personality-test/results/index` | Onboarding step | Reveals the archetype result, summary, and share/poster experience after the test completes. | Includes replayable reveal and native share hooks. |
-| `pages/onboarding/personality-test/auth-gate/index` | Onboarding step | Bridges anonymous test results into authenticated WeChat login and imports pre-auth answers after login. | Uses `/api/auth/wechat/login-with-test`. |
+| `pages/onboarding/personality-test/results/index` (inline login) | Onboarding step | Results page triggers inline WeChat login and imports anonymous answers after successful auth. | Uses `/api/auth/wechat/login-with-test`. The standalone auth-gate page was removed in 2026-05. |
 | `pages/onboarding/essential-data/index` | Onboarding step | Collects the essential profile fields required before users can continue deeper into onboarding. | Post-auth step owned by `nextStep`. |
 | `pages/onboarding/extended-data/index` | Onboarding step | Collects interest selections and heat/depth signals used by later matching and personalization flows. | Canonical extended-data step. |
 | `pages/onboarding/profile-review/index` | Onboarding step | Summarizes the profile, archetype, interests, and AI tagline before onboarding completion. | Presentation-only AI tagline lives here. |
@@ -98,7 +98,7 @@ This inventory is derived from the registered paths in [`../apps/mini-program/sr
 | `pages/matching-status/index` | Primary destination | Shows waiting, matched, no-match, and cancelled states for a pool registration. | Main waiting and reveal-state hub. Now includes **Unified Connection Reveal** — fuses `chemistryPayoff` group narrative with `connectionPoints` pair evidence into a single card. |
 | `pages/squad-unboxing/index` | Primary destination | Runs the matched reveal and post-reveal transition into group detail and event follow-up. | Reveal-heavy matched-state surface. |
 | `pages/pool-group-detail/index` | Primary destination | Shows the matched group detail, members, event details, and AI group analysis. | Read-only matched group surface. |
-| `pages/icebreaker-session/index` | Primary destination | Runs the live Social Icebreaker session for matched groups at event time. | Hosts warmup, challenge, lie-detective, personality-dice, and recap phases. |
+| `pages/icebreaker-session/index` | Primary destination | Runs the live Social Icebreaker session for matched groups at event time. | Hosts warmup, challenge, lie-detective, personality-dice, and recap phases. Includes `BonusGateOverlay` for the `mini_script` bonus vote gate and server-rendered Moment Card PNG share flow. |
 
 ### Compatibility and legacy alias routes still present in active code
 
@@ -111,7 +111,7 @@ This inventory is derived from the registered paths in [`../apps/mini-program/sr
 
 | Journey | Main mini-program path | Canonical notes |
 | --- | --- | --- |
-| New user onboarding | `pages/index/index` -> `pages/onboarding/personality-test/index` -> `results` -> `auth-gate` -> `essential-data` -> `extended-data` -> `profile-review` -> `pages/discover/index` | Product and step ownership live in [`./systems/onboarding-flow.md`](./systems/onboarding-flow.md). |
+| New user onboarding | `pages/index/index` -> `pages/onboarding/personality-test/index` -> `results` (inline login) -> `essential-data` -> `extended-data` -> `profile-review` -> `pages/discover/index` | Product and step ownership live in [`./systems/onboarding-flow.md`](./systems/onboarding-flow.md). |
 | Returning login | `pages/index/index` or `pages/login/index` -> WeChat login -> `/api/auth/user` -> server-owned `nextStep` | Mini-program-native login only; no browser OAuth redirect. |
 | Discovery and pool registration | `pages/discover/index` -> optional `pages/event-detail/index` -> `pages/pool-registration/index` | Pool registration owns soft-preference capture before matching. |
 | Payment and verification | `pages/pool-registration/index` -> `pages/blind-box-payment/index` -> `pages/payment-verification/index` -> back to pool registration or onward to profile/events | Cross-platform coordination rules live in [`./reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md). |

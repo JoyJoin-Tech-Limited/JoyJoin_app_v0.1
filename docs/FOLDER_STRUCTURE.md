@@ -250,8 +250,7 @@ apps/mini-program/
 │   │   │   ├── essential-data/    # Basic profile (name, gender, city)
 │   │   │   ├── extended-data/     # Extended profile (birth year, intent)
 │   │   │   ├── personality-test/  # V4 adaptive assessment
-│   │   │   │   ├── auth-gate/     # Post-test auth gate
-│   │   │   │   └── results/       # Test results (stages + components flattened)
+│   │   │   │   └── results/       # Test results + inline WeChat login (auth-gate removed 2026-05)
 │   │   ├── discover/              # Event discovery
 │   │   ├── events/                # Event listing
 │   │   ├── event-detail/          # Single event view

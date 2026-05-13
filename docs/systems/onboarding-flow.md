@@ -36,8 +36,8 @@ Server `nextStep` and assessment APIs are the same as web; only routes and stora
 | Phase | Taro location | WeChat / API notes |
 |--------|----------------|---------------------|
 | Personality test (anonymous) | `pages/onboarding/personality-test/index` | Same `/api/assessment/v4/*` calls as web; anonymous answers via Taro storage (`apps/mini-program/src/lib/auth/anonymousOnboarding.ts`) |
-| Results | `pages/onboarding/personality-test/results` | Reveal + share; primary claim routes to auth-gate |
-| Auth gate (post-result login) | `pages/onboarding/personality-test/auth-gate` | `authenticateMiniProgramUserWithTest()` in [`api.ts`](../apps/mini-program/src/lib/api/api.ts) → `POST /api/auth/wechat/login-with-test` |
+| Results | `pages/onboarding/personality-test/results` | Reveal + share; inline WeChat login imports anonymous answers |
+| Inline login (post-result) | Handled on results page | `authenticateMiniProgramUserWithTest()` in [`api.ts`](../apps/mini-program/src/lib/api/api.ts) → `POST /api/auth/wechat/login-with-test` |
 | Login only (returning users) | `pages/login/index` | [`useWeChatLogin`](../apps/mini-program/src/hooks/auth/useWeChatLogin.ts) → `POST /api/auth/wechat/login` |
 | Post-auth onboarding | `pages/onboarding/onboarding`, `essential-data`, `extended-data`, `profile-review` | Navigate with [`navigateToMiniProgramNextStep`](../apps/mini-program/src/lib/onboarding/onboardingNavigation.ts) per `GET /api/auth/user` |
 
@@ -98,11 +98,11 @@ Blind-box **payment** after onboarding is **not** part of this table; see [`docs
 - Native sharing is enabled on the page (`ShareAppMessage` and `ShareTimeline`), and the visible share CTA can generate a local poster before invoking the platform share sheet.
 - These share affordances sit alongside the same primary claim flow; they do not replace the auth gate or the backend result-linking step.
 
-**Auth-gate flow (current behaviour):**
-- The unauthenticated claim CTA on the results page routes to **`/personality-test/auth-gate`** rather than showing a loading spinner. This ensures users are not trapped in a spinner state if WeChat auth is not yet ready.
-- On the **`/personality-test/auth-gate`** page there is a **non-production-only testing quick-pass** text link labeled **`测试快速通过`**. It immediately continues the flow without triggering WeChat OAuth. This link is only rendered in development / staging builds, has **no `data-testid`**, and must never be exposed in production.
+**Inline login flow (current behaviour):**
+- The unauthenticated claim CTA on the results page triggers **inline WeChat login** (`authenticateMiniProgramUserWithTest`) directly on the results page. Anonymous answers are imported automatically after successful auth. No separate auth-gate page exists.
 - On the results page there is a **DEV-only WeChat bypass button** labeled **`⚡ 测试账号登录`** with `data-testid="button-dev-wechat-bypass"`. It logs in using a mock WeChat code for local testing, is hidden in production, and is not a user-facing CTA.
 - The floating **`你的专属匹配已生成！` login card** (a redundant secondary login prompt that appeared over the results page) has been **removed**. The primary WeChat login CTA is sufficient.
+- The standalone **`/personality-test/auth-gate`** page was removed in 2026-05. All post-result login logic lives inline on the results page.
 
 **WeChat Authentication Flow:**
 ```typescript
