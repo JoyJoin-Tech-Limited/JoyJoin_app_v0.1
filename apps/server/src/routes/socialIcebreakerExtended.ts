@@ -40,7 +40,6 @@ import {
   loadSessionLieTruths,
   setLieTruths,
   getLieTruths,
-  getParticipant,
 } from '../lib/socialIcebreakerStore';
 import { curateMedals } from '../lib/medalCuration';
 import { logger } from '../lib/logger';
