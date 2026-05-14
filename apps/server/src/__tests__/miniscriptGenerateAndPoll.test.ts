@@ -271,6 +271,8 @@ describe('MiniScript generate + social poll', () => {
         enabledPhases: ['warmup', 'micro_challenge', 'lie_detective', 'personality_dice', 'mini_script', 'recap'],
       };
       storeCtx.sessions.set(socialSessionId, seed);
+      const { upsertParticipant } = await import('../lib/socialIcebreakerStore');
+      await upsertParticipant(socialSessionId, 'host-smoke', 'Host');
 
       const genRes = await fetch(`${baseUrl}/api/miniscript/generate`, {
         method: 'POST',

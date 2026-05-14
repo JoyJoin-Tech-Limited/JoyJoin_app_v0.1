@@ -259,7 +259,11 @@ export async function processAutoAdvance(state: SocialSessionState): Promise<Soc
   return state;
 }
 
-export async function resolveSession(
+/**
+ * Load and hydrate session state without running {@link processAutoAdvance}.
+ * Use this before permission checks: `resolveSession` runs auto-advance which may persist.
+ */
+export async function loadHydratedSessionWithoutProcessAutoAdvance(
   socialSessionId: string,
   res: any,
 ): Promise<SocialSessionState | null> {
@@ -272,8 +276,35 @@ export async function resolveSession(
     }
     return null;
   }
-  const hydrated = hydrateDerivedState({ ...state });
+  return hydrateDerivedState({ ...state });
+}
+
+export async function resolveSession(
+  socialSessionId: string,
+  res: any,
+): Promise<SocialSessionState | null> {
+  const hydrated = await loadHydratedSessionWithoutProcessAutoAdvance(socialSessionId, res);
+  if (!hydrated) return null;
   // Process auto-advance on every state read so clients don't need to poll separately
   await processAutoAdvance(hydrated);
   return hydrated;
+}
+
+/**
+ * Enforce host (or democratized-host) authorization before `resolveSession`, which runs
+ * `processAutoAdvance` and may persist phase transitions.
+ */
+export async function resolveSessionAfterHostAuth(
+  socialSessionId: string,
+  res: any,
+  userId: string,
+  forbiddenBody: Record<string, unknown>,
+): Promise<SocialSessionState | null> {
+  const prelim = await loadHydratedSessionWithoutProcessAutoAdvance(socialSessionId, res);
+  if (!prelim) return null;
+  if (!(await isHostAuthorized(prelim, userId, socialSessionId))) {
+    res.status(403).json(forbiddenBody);
+    return null;
+  }
+  return resolveSession(socialSessionId, res);
 }

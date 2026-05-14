@@ -25,8 +25,9 @@ import {
   buildRecapParticipants,
   incrementCommonGround,
   getCurrentLieDetectivePlayer,
-  hydrateDerivedState,
+  loadHydratedSessionWithoutProcessAutoAdvance,
   resolveSession,
+  resolveSessionAfterHostAuth,
   isHostAuthorized,
   recapDisplayNameByUserId,
 } from './socialIcebreakerHelpers';
@@ -133,12 +134,10 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     return res.status(400).json({ error: 'currentPhase is required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await resolveSessionAfterHostAuth(socialSessionId, res, userId, {
+    error: 'Only the host can advance phases',
+  });
   if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only the host can advance phases' });
-  }
 
   if (state.currentPhase !== currentPhase) {
     return res.status(400).json({ error: 'Phase mismatch' });
@@ -384,16 +383,16 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
     return res.status(400).json({ error: 'displayName is required' });
   }
 
+  if (!(await getParticipant(socialSessionId, userId))) {
+    return res.status(403).json({ error: 'Not a participant in this session' });
+  }
+
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
   // F3: Wrong-phase guard — statement generation is only valid during lie_detective phase
   if (state.currentPhase !== 'lie_detective') {
     return res.status(400).json({ error: 'Not in lie_detective phase' });
-  }
-
-  if (!(await getParticipant(socialSessionId, userId))) {
-    return res.status(403).json({ error: 'Not a participant in this session' });
   }
 
   try {
@@ -462,6 +461,10 @@ router.post('/:socialSessionId/lie-detective/vote', async (req: any, res) => {
 
   if (!voterId || !targetUserId || guessedStatementIndex === undefined || guessedStatementIndex === null) {
     return res.status(400).json({ error: 'Authentication, targetUserId, and guessedStatementIndex are required' });
+  }
+
+  if (!(await getParticipant(socialSessionId, voterId))) {
+    return res.status(403).json({ error: 'Not a participant in this session' });
   }
 
   const state = await resolveSession(socialSessionId, res);
@@ -574,12 +577,10 @@ router.post('/:socialSessionId/auction/generate-lots', async (req: any, res) => 
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await resolveSessionAfterHostAuth(socialSessionId, res, userId, {
+    error: 'Only the host can generate auction lots',
+  });
   if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only the host can generate auction lots' });
-  }
 
   if (state.currentPhase !== 'auction') {
     return res.status(400).json({ error: 'Not in auction phase' });
@@ -655,6 +656,10 @@ router.post('/:socialSessionId/auction/bid', async (req: any, res) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
+  if (!(await getParticipant(socialSessionId, userId))) {
+    return res.status(403).json({ error: 'Not a participant in this session' });
+  }
+
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
@@ -719,12 +724,10 @@ router.post('/:socialSessionId/auction/close-lot', async (req: any, res) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  const state = await resolveSessionAfterHostAuth(socialSessionId, res, userId, {
+    error: 'Only the host can close an auction lot',
+  });
   if (!state) return;
-
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only the host can close an auction lot' });
-  }
 
   if (state.currentPhase !== 'auction') {
     return res.status(400).json({ error: 'Not in auction phase' });
@@ -782,15 +785,8 @@ router.get('/:socialSessionId/quip-battle/results', async (req: any, res) => {
   const userId = requireAuthenticatedUserId(req, res);
   if (!userId) return;
 
-  // Authorize before resolveSession: resolveSession runs processAutoAdvance and may persist.
-  const { state: preAuthState, expired: preExpired } = await getSessionWithExpiry(socialSessionId);
-  if (!preAuthState) {
-    if (preExpired) {
-      return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
-    }
-    return res.status(404).json({ error: 'Social session not found' });
-  }
-  const prelim = hydrateDerivedState({ ...preAuthState });
+  const prelim = await loadHydratedSessionWithoutProcessAutoAdvance(socialSessionId, res);
+  if (!prelim) return;
   if (!(await isHostAuthorized(prelim, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can reveal quip battle results' });
   }
