@@ -351,6 +351,30 @@ async function login(baseUrl: string, userId: string) {
 }
 
 describe('social icebreaker routes', () => {
+  it('rejects unauthenticated GET session poll before resolveSession side effects', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'poll-auth-host');
+      const sessionId = `session-poll-auth-${Date.now()}`;
+
+      const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host' }),
+      });
+      const startBody = await startResponse.json() as any;
+      expect(startResponse.status).toBe(200);
+
+      const unauthRes = await fetch(`${baseUrl}/api/social-icebreaker/${startBody.socialSessionId}`);
+      expect(unauthRes.status).toBe(401);
+
+      const otherCookie = await login(baseUrl, 'poll-auth-stranger');
+      const strangerRes = await fetch(`${baseUrl}/api/social-icebreaker/${startBody.socialSessionId}`, {
+        headers: { cookie: otherCookie },
+      });
+      expect(strangerRes.status).toBe(403);
+    });
+  });
+
   it('returns the joined participant roster in social session state responses', async () => {
     await withServer(async (baseUrl) => {
       const hostCookie = await login(baseUrl, 'roster-host');
