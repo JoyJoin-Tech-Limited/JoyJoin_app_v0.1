@@ -259,6 +259,26 @@ export async function processAutoAdvance(state: SocialSessionState): Promise<Soc
   return state;
 }
 
+/**
+ * Hydrated session read for authorization before resolveSession.
+ * Unlike resolveSession, does not run processAutoAdvance (no persisted side effects).
+ */
+export async function loadSessionForAuthGate(
+  socialSessionId: string,
+  res: any,
+): Promise<SocialSessionState | null> {
+  const { state, expired } = await getSessionWithExpiry(socialSessionId);
+  if (!state) {
+    if (expired) {
+      res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
+    } else {
+      res.status(404).json({ error: 'Social session not found' });
+    }
+    return null;
+  }
+  return hydrateDerivedState({ ...state });
+}
+
 export async function resolveSession(
   socialSessionId: string,
   res: any,
