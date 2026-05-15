@@ -138,10 +138,10 @@ export function trimSentence(text: string | undefined): string {
 export function buildShareLine(archetype: string, tagline: string, summary: string): string {
   const detail = trimSentence(tagline) || trimSentence(summary)
   if (!detail) {
-    return `我是${archetype}型，来 JoyJoin 看看我会点亮哪张卡。`
+    return `在 JoyJoin 解锁了 ${archetype} 氛围命格，来看看你的。`
   }
 
-  return `我是${archetype}型，${detail}。`
+  return `${archetype}：${detail}。`
 }
 
 export function buildShareTitle(archetype: string, tagline: string): string {
@@ -204,7 +204,7 @@ export function getConfidenceLabel(
 ): string | undefined {
   const topScore = Number(topMatches[0]?.score)
   if (Number.isFinite(topScore) && topScore > 0) {
-    return `匹配 ${Math.round(topScore)}%`
+    return `契合度 ${Math.round(topScore)}%`
   }
 
   const rawConfidence = Number(result?.archetypeConfidence)
@@ -213,7 +213,7 @@ export function getConfidenceLabel(
   }
 
   const normalized = rawConfidence <= 1 ? rawConfidence * 100 : rawConfidence
-  return `匹配 ${Math.round(normalized)}%`
+  return `契合度 ${Math.round(normalized)}%`
 }
 
 /**

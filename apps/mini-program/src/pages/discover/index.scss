@@ -38,8 +38,8 @@
 
   &__hero-mascot {
     flex-shrink: 0;
-    width: 96rpx;
-    height: 96rpx;
+    width: 148rpx;
+    height: 148rpx;
     border-radius: 999rpx;
     background: rgba($color-primary, 0.08);
     display: flex;
@@ -49,8 +49,8 @@
   }
 
   &__hero-mascot-img {
-    width: 88rpx;
-    height: 88rpx;
+    width: 140rpx;
+    height: 140rpx;
     display: block;
   }
 
@@ -61,6 +61,7 @@
 
   &__greeting {
     display: block;
+    font-family: $font-cn-display;
     font-size: $font-size-2xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
@@ -133,31 +134,43 @@
   }
 
   &__chip {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: $spacing-xs $spacing-md;
     border-radius: 999rpx;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
-    color: $color-text-secondary;
     background: $color-surface;
     box-shadow: $shadow-sm;
     white-space: nowrap;
-    transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
 
     &--sm {
       padding: 6rpx $spacing-sm;
-      font-size: $font-size-xs;
     }
 
     &--active {
-      color: $color-text-white;
       background: $brand-gradient;
-      box-shadow: 0 4rpx 16rpx rgba(168, 107, 255, 0.3);
+      box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.3);
+
+      .discover-auth__chip-text {
+        color: $color-text-white;
+      }
     }
 
-    &:active {
+    &--hover {
       transform: scale(0.95);
     }
+  }
+
+  &__chip-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    line-height: 1;
+  }
+
+  &__chip--sm .discover-auth__chip-text {
+    font-size: $font-size-xs;
   }
 
   // ── Section header ────────────────────────────────────────────
@@ -172,482 +185,11 @@
     margin-bottom: $spacing-md;
   }
 
-  // ── Pool list wrapper (VirtualList root) ──────────────────────
-  &__pool-list-wrapper {
-    // No special styles needed — VirtualList handles its own layout
-  }
-
   // ── Pool list ─────────────────────────────────────────────────
   &__pool-list {
     display: flex;
     flex-direction: column;
     gap: $spacing-md;
-  }
-
-  // ── VirtualList placeholder ───────────────────────────────────
-  .virtual-list__placeholder {
-    // Inherits height from inline style
-    // No visual styling — completely invisible spacer
-  }
-
-  // ── Pool card ─────────────────────────────────────────────────
-  &__pool-card {
-    @include card;
-    padding: $spacing-lg;
-    border: 2rpx solid rgba($color-surface, 0.9);
-    background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.48) 100%);
-    opacity: 0;
-    transform: translateY(18rpx);
-    animation: discover-card-enter 0.34s ease-out forwards;
-    will-change: transform, opacity;
-
-    &:active {
-      transform: scale(0.98);
-    }
-
-    &--hover {
-      transform: translateY(-2rpx);
-      box-shadow: 0 14rpx 36rpx rgba($color-primary, 0.12);
-    }
-
-    // Skeleton variant (initial loading state)
-    &--skeleton {
-      min-height: 200rpx;
-      pointer-events: none;
-      opacity: 1;
-      transform: none;
-      animation: none;
-    }
-
-    // Virtualized items without animation
-    &--no-animate {
-      opacity: 1;
-      transform: none;
-      animation: none;
-    }
-
-    // ── Quantized accent families (from archetypeColorTokens) ──
-    &--accent-warm {
-      border-left: 4rpx solid $color-archetype-warm;
-      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-archetype-warm, 0.06) 100%);
-    }
-
-    &--accent-cool {
-      border-left: 4rpx solid $color-archetype-cool;
-      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-archetype-cool, 0.06) 100%);
-    }
-
-    &--accent-fire {
-      border-left: 4rpx solid $color-archetype-fire;
-      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-archetype-fire, 0.06) 100%);
-    }
-
-    &--accent-calm {
-      border-left: 4rpx solid $color-archetype-calm;
-      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-archetype-calm, 0.06) 100%);
-    }
-  }
-
-  &__pool-topline {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $spacing-sm;
-    margin-bottom: $spacing-sm;
-  }
-
-  &__pool-live {
-    display: inline-flex;
-    align-items: center;
-    gap: 10rpx;
-    padding: 8rpx 16rpx;
-    border-radius: 999rpx;
-    background: rgba($color-primary-light, 0.92);
-  }
-
-  &__heat-dot {
-    width: 14rpx;
-    height: 14rpx;
-    border-radius: 50%;
-    background: $color-primary;
-    animation: discover-live-pulse 1.8s ease-in-out infinite;
-    will-change: transform, opacity;
-  }
-
-  &__pool-live-label {
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    color: $color-primary-dark;
-  }
-
-  &__pool-inline-cta {
-    font-size: $font-size-xs;
-    color: $color-text-muted;
-  }
-
-  &__pool-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: $spacing-sm;
-    margin-bottom: $spacing-sm;
-  }
-
-  &__pool-title {
-    flex: 1;
-    font-size: $font-size-base;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-    @include text-truncate;
-  }
-
-  &__pool-promise {
-    display: block;
-    margin-bottom: $spacing-sm;
-    font-size: $font-size-xs;
-    color: rgba($color-primary-dark, 0.86);
-    font-weight: $font-weight-semibold;
-  }
-
-  &__pool-badges {
-    display: flex;
-    gap: $spacing-xs;
-    flex-shrink: 0;
-  }
-
-  // ── Badges ────────────────────────────────────────────────────
-  &__badge {
-    display: inline-block;
-    padding: 4rpx 16rpx;
-    border-radius: 999rpx;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-medium;
-    white-space: nowrap;
-
-    &--type {
-      background: $color-primary-light;
-      color: $color-primary;
-    }
-
-    &--registered {
-      background: rgba($color-success, 0.15);
-      color: $color-success;
-    }
-  }
-
-  // ── Personality palette ───────────────────────────────────────
-  &__pool-palette {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    margin-bottom: $spacing-sm;
-    min-height: 40rpx;
-  }
-
-  &__pool-palette-label {
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    white-space: nowrap;
-  }
-
-  &__pool-palette-glyphs {
-    display: flex;
-    align-items: center;
-    gap: 8rpx;
-  }
-
-  &__pool-palette-more {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 32rpx;
-    height: 32rpx;
-    padding: 0 8rpx;
-    border-radius: 999rpx;
-    background: $color-divider;
-    @include type-micro;
-    font-weight: $font-weight-semibold;
-  }
-
-  &__pool-match-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4rpx;
-    padding: 4rpx 12rpx;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.1);
-    @include type-micro;
-    font-weight: $font-weight-semibold;
-    color: $color-primary-dark;
-    margin-left: auto;
-  }
-
-  // ── Pool meta (location / date) ───────────────────────────────
-  &__pool-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 6rpx;
-    margin-bottom: $spacing-md;
-  }
-
-  &__pool-location,
-  &__pool-date {
-    @include type-label;
-  }
-
-  // ── Pool footer (progress + status) ───────────────────────────
-  &__pool-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $spacing-md;
-  }
-
-  &__pool-signal {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: $spacing-md;
-    padding: $spacing-sm;
-    margin-bottom: $spacing-md;
-    border-radius: $card-radius-sm;
-    background: rgba($color-surface, 0.76);
-  }
-
-  &__pool-signal-copy {
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__pool-signal-title {
-    display: block;
-    @include type-body;
-    font-weight: $font-weight-semibold;
-  }
-
-  &__pool-signal-desc {
-    display: block;
-    margin-top: 6rpx;
-    @include type-caption;
-    line-height: 1.6;
-  }
-
-  &__pool-signal-count {
-    flex-shrink: 0;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    color: $color-primary-dark;
-    text-align: right;
-  }
-
-  &__progress-block {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $spacing-md;
-    margin-bottom: $spacing-md;
-  }
-
-  &__progress {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-  }
-
-  &__progress-track {
-    flex: 1;
-    height: 12rpx;
-    border-radius: 6rpx;
-    background: $color-divider;
-    overflow: hidden;
-  }
-
-  &__progress-fill {
-    height: 100%;
-    border-radius: 6rpx;
-    transform-origin: left;
-    transition: transform 0.4s ease-out;
-
-    &--open {
-      background: $color-primary;
-    }
-
-    &--filling {
-      background: $color-warning;
-    }
-
-    &--closed {
-      background: $color-text-muted;
-    }
-
-    // Family-driven accent colors (from archetypeColorTokens)
-    .discover-auth__pool-card--accent-warm &--open {
-      background: $color-archetype-warm;
-    }
-
-    .discover-auth__pool-card--accent-cool &--open {
-      background: $color-archetype-cool;
-    }
-
-    .discover-auth__pool-card--accent-fire &--open {
-      background: $color-archetype-fire;
-    }
-
-    .discover-auth__pool-card--accent-calm &--open {
-      background: $color-archetype-calm;
-    }
-  }
-
-  &__progress-text {
-    @include type-caption;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-
-  &__status {
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    white-space: nowrap;
-    padding: 4rpx 16rpx;
-    border-radius: 999rpx;
-
-    &--open {
-      color: $color-primary;
-      background: $color-primary-light;
-    }
-
-    &--filling {
-      color: $color-warning;
-      background: rgba($color-warning, 0.12);
-    }
-
-    &--closed {
-      color: $color-text-muted;
-      background: $color-divider;
-    }
-  }
-
-  &__trust-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12rpx;
-  }
-
-  &__trust-pill {
-    padding: 10rpx 16rpx;
-    border-radius: 999rpx;
-    background: rgba($color-surface, 0.94);
-    box-shadow: 0 8rpx 22rpx rgba($color-primary, 0.08);
-  }
-
-  &__trust-pill-text {
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    font-weight: $font-weight-semibold;
-  }
-
-  &__pool-action {
-    flex-shrink: 0;
-    @include type-label;
-    color: $color-primary-dark;
-    font-weight: $font-weight-bold;
-  }
-
-  // ── Skeleton shimmer ──────────────────────────────────────────
-  &__skeleton-line {
-    border-radius: $card-radius-sm;
-    background: linear-gradient(
-      90deg,
-      $color-divider 25%,
-      rgba($color-divider, 0.5) 50%,
-      $color-divider 75%
-    );
-    background-size: 400% 100%;
-    animation: shimmer 1.5s ease-in-out infinite;
-
-    &--title {
-      width: 60%;
-      height: 36rpx;
-      margin-bottom: $spacing-sm;
-    }
-
-    &--meta {
-      width: 80%;
-      height: 28rpx;
-      margin-bottom: $spacing-md;
-    }
-
-    &--bar {
-      width: 100%;
-      height: 12rpx;
-    }
-  }
-
-  @keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-  }
-
-  @keyframes discover-card-enter {
-    from {
-      opacity: 0;
-      transform: translateY(18rpx);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes discover-live-pulse {
-    0%,
-    100% {
-      opacity: 0.6;
-      transform: scale(1);
-    }
-
-    50% {
-      opacity: 1;
-      transform: scale(1.08);
-    }
-  }
-
-  @keyframes discover-palette-enter {
-    from {
-      opacity: 0;
-      transform: scale(0.8);
-    }
-
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
-  // ── Empty / error states ──────────────────────────────────────
-  &__empty-state {
-    @include card;
-    padding: $spacing-xl;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: $spacing-sm;
-  }
-
-  &__empty-emoji {
-    font-size: 64rpx; // Decorative — not part of hierarchy
-  }
-
-  &__empty {
-    @include type-body;
-    color: $color-text-secondary;
-  }
-
-  &__empty-hint {
-    @include type-label;
   }
 
   // ── Bottom safe-area reserve ──────────────────────────────────
@@ -657,28 +199,382 @@
   }
 }
 
-// ── Archetype Glyph (global, used inside PoolCard) ──────────────
-// ── Reduced motion respect ──────────────────────────────────────
+// ─── Oracle Card ─────────────────────────────────────────────────
+.oracle-card {
+  @include card;
+  box-sizing: border-box;
+  height: 464rpx;
+  padding: 20rpx $spacing-lg;
+  border-radius: 24rpx;
+  border: 2rpx solid rgba($color-surface, 0.9);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(18rpx);
+  animation: oracle-card-enter 0.34s ease-out forwards;
+
+  &--hover {
+    transform: translateY(-2rpx) scale(0.985);
+    box-shadow: 0 6rpx 20rpx rgba($color-primary, 0.08);
+  }
+
+  &--skeleton {
+    height: 464rpx;
+    pointer-events: none;
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  // ── Skeleton shimmer (GPU-composited via transform) ───────────
+  &__skeleton-line {
+    position: relative;
+    border-radius: $card-radius-sm;
+    background: $color-divider;
+    overflow: hidden;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba($color-surface, 0.5) 50%,
+        transparent 100%
+      );
+      transform: translateX(-100%);
+      animation: shimmer-slide 1.5s ease-in-out infinite;
+    }
+
+    &--hero {
+      width: 70%;
+      height: 48rpx;
+      margin-bottom: $spacing-sm;
+    }
+
+    &--meta {
+      width: 50%;
+      height: 28rpx;
+      margin-bottom: $spacing-sm;
+    }
+
+    &--teaser {
+      width: 80%;
+      height: 36rpx;
+      margin-bottom: $spacing-sm;
+    }
+
+    &--cta {
+      width: 100%;
+      height: 72rpx;
+    }
+  }
+
+  // ── Topline (live pulse + countdown) ──────────────────────────
+  &__topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6rpx;
+  }
+
+  &__pulse-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8rpx;
+    padding: 4rpx 16rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.08);
+  }
+
+  &__pulse-dot {
+    width: 8rpx;
+    height: 8rpx;
+    border-radius: 50%;
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  &__pulse-label {
+    font-size: 20rpx;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__countdown {
+    font-size: 20rpx;
+    color: $color-text-muted;
+  }
+
+  // ── Hero (personalized message) ───────────────────────────────
+  &__hero {
+    margin-bottom: 10rpx;
+  }
+
+  &__hero-message {
+    display: block;
+    font-size: 30rpx;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: 1.25;
+    @include text-truncate;
+  }
+
+  // ── Ecosystem bar ─────────────────────────────────────────────
+  &__ecosystem {
+    margin-bottom: 10rpx;
+  }
+
+  // ── Meta (muted event info) ───────────────────────────────────
+  &__meta {
+    margin-bottom: 10rpx;
+  }
+
+  &__title {
+    display: block;
+    font-size: 26rpx;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    line-height: 1.3;
+    @include text-truncate;
+    margin-bottom: 4rpx;
+  }
+
+  &__meta-line {
+    display: block;
+    font-size: 22rpx;
+    color: $color-text-muted;
+    line-height: 1.3;
+    @include text-truncate;
+  }
+
+  // ── Type-density teaser ───────────────────────────────────────
+  &__teaser {
+    padding: 8rpx 14rpx;
+    border-radius: 16rpx;
+    border: 1rpx solid;
+    margin-bottom: 12rpx;
+  }
+
+  &__teaser-text {
+    display: block;
+    font-size: 23rpx;
+    font-weight: $font-weight-semibold;
+    line-height: 1.25;
+    @include text-truncate;
+  }
+
+  &__teaser-subline {
+    display: block;
+    font-size: 19rpx;
+    color: $color-text-muted;
+    margin-top: 4rpx;
+    line-height: 1.25;
+    @include text-truncate;
+  }
+
+  // ── Footer (progress + CTA) ───────────────────────────────────
+  &__footer {
+    display: flex;
+    flex-direction: column;
+    gap: 10rpx;
+  }
+
+  &__progress-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__progress-track {
+    flex: 1;
+    height: 6rpx;
+    border-radius: 3rpx;
+    background: $color-divider;
+    overflow: hidden;
+  }
+
+  &__progress-fill {
+    height: 100%;
+    border-radius: 3rpx;
+    transform-origin: left;
+    transition: transform 0.4s ease-out;
+  }
+
+  &__progress-text {
+    font-size: 20rpx;
+    color: $color-text-muted;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  &__cta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 68rpx;
+    border-radius: 20rpx;
+    padding: 0 $spacing-md;
+
+    &:active {
+      transform: scale(0.97);
+    }
+
+    &--pulse {
+      animation: cta-pulse-once 0.3s ease-in-out;
+    }
+  }
+
+  &__cta-text {
+    font-size: 27rpx;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+    line-height: 1.2;
+  }
+
+  &__cta-subline {
+    font-size: 19rpx;
+    color: rgba($color-text-white, 0.8);
+    line-height: 1.2;
+    margin-top: 0;
+  }
+}
+
+// ─── EcosystemBar component styles ───────────────────────────────
+.ecosystem-bar {
+  &__glyphs {
+    display: flex;
+    align-items: center;
+    height: 48rpx;
+  }
+
+  &__glyph-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__more {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36rpx;
+    height: 36rpx;
+    padding: 0 8rpx;
+    border-radius: 999rpx;
+    background: $color-divider;
+    font-size: 20rpx;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+    margin-left: 8rpx;
+  }
+
+  &__empty-state {
+    display: flex;
+    align-items: center;
+    gap: 10rpx;
+  }
+
+  &__empty-glyph {
+    width: 32rpx;
+    height: 32rpx;
+    border-radius: 50%;
+    border: 2rpx dashed $color-divider;
+    background: rgba($color-surface, 0.5);
+    flex-shrink: 0;
+  }
+
+  &__empty {
+    display: block;
+    font-size: 22rpx;
+    line-height: 48rpx;
+    color: $color-text-muted;
+    @include text-truncate;
+  }
+}
+
+// ─── CompatibilityIndicator component styles ─────────────────────
+.compatibility-indicator {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-top: 8rpx;
+
+  &__bar {
+    flex: 1;
+  }
+
+  &__track {
+    height: 6rpx;
+    border-radius: 3rpx;
+    background: rgba($color-text-muted, 0.12);
+    overflow: hidden;
+  }
+
+  &__fill {
+    height: 100%;
+    border-radius: 3rpx;
+    transition: width 0.4s ease-out;
+  }
+
+  &__score {
+    font-size: 19rpx;
+    font-weight: $font-weight-semibold;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
+// ─── Keyframes ───────────────────────────────────────────────────
+@keyframes shimmer-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+@keyframes oracle-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cta-pulse-once {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+// ─── Reduced motion ──────────────────────────────────────────────
 @media (prefers-reduced-motion: reduce) {
-  .discover-auth__pool-card {
+  .oracle-card {
     animation: none;
     opacity: 1;
     transform: none;
   }
 
-  .discover-auth__live-pulse {
-    animation: none;
-  }
-
-  .discover-auth__skeleton-shimmer {
+  .oracle-card__skeleton-line {
     animation: none;
     background: $color-divider;
   }
-}
 
-.archetype-glyph {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
+  .oracle-card__cta--pulse {
+    animation: none;
+  }
 }

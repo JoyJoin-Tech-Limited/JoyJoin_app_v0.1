@@ -68,11 +68,13 @@ import {
 } from '../lib/socialIcebreakerStore';
 import { getSocialIcebreakerAccess } from '../lib/socialIcebreakerAccess';
 import { buildMomentCardPayload } from '../lib/momentCardPayload';
+import { renderMomentCardToPng } from '../lib/momentCardRenderer';
 import { curateMedals } from '../lib/medalCuration';
 import { logger } from '../lib/logger';
 import { filterContent } from '../contentFilter';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
 import { startSocialIcebreakerSweep } from '../lib/socialIcebreakerSweep';
+import { momentCardLimiter } from '../rateLimiter';
 import {
   isUniqueConstraintError,
   sanitizeStateForClient,
@@ -1511,6 +1513,57 @@ router.get('/:socialSessionId/moment-card', async (req: any, res) => {
   const payload = buildMomentCardPayload(state, roster, recapSummary, medals);
 
   return res.json({ payload });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/social-icebreaker/:socialSessionId/moment-card.png
+// ---------------------------------------------------------------------------
+
+router.get('/:socialSessionId/moment-card.png', momentCardLimiter, async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const reqLogger = logger.child({ request_id: req.requestId });
+
+  try {
+    const enabled = (process.env.SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER ?? 'false').toLowerCase() === 'true';
+    if (!enabled) {
+      return res.status(503).json({ error: 'SERVER_RENDER_DISABLED', message: 'Moment card server render is not enabled' });
+    }
+
+    const userId = requireAuthenticatedUserId(req, res);
+    if (!userId) return;
+
+    const { state: preAuthState, expired: preExpired } = await getSessionWithExpiry(socialSessionId);
+    if (!preAuthState) {
+      if (preExpired) {
+        return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
+      }
+      return res.status(404).json({ error: 'Social session not found' });
+    }
+    const participant = await getParticipant(socialSessionId, userId);
+    if (!participant) {
+      return res.status(403).json({ error: 'Not a participant in this session' });
+    }
+
+    const state = await resolveSession(socialSessionId, res);
+    if (!state) return;
+
+    const roster = await listParticipants(socialSessionId);
+    const recapSummary = state.recapSnapshot?.recapSummary;
+    const medals = state.recapSnapshot?.medals ?? [];
+    const payload = buildMomentCardPayload(state, roster, recapSummary, medals);
+
+    const pngBuffer = await renderMomentCardToPng(payload);
+
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.send(pngBuffer);
+  } catch (error) {
+    reqLogger.error('[MomentCardRenderer] Failed to render PNG', {
+      socialSessionId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return res.status(500).json({ error: 'RENDER_FAILED', message: 'Failed to render moment card' });
+  }
 });
 
 // ---------------------------------------------------------------------------

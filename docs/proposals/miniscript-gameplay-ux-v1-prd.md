@@ -61,11 +61,28 @@ The current `MiniScriptPhaseView` (mini-program + web) is a **static script read
 ### Story Map
 
 ```
-SETUP → ROLE_ASSIGNMENT → PREMISE → ACT_1 → ACT_2 → ... → ACT_N → RESOLUTION → RECAP
+BONUS_GATE_OFFER → (host accepts) → SETUP → ROLE_ASSIGNMENT → PREMISE → ACT_1 → ACT_2 → ... → ACT_N → RESOLUTION → RECAP
 ```
+
+> **2026-05-13 update:** `mini_script` is now preceded by a **bonus gate** in the Social Icebreaker session flow. When the server would advance into `mini_script`, it pauses at `bonusGateOffered` and asks the host + players whether they want to play. If the host declines, the session skips directly to `recap`.
+
+### US-0: Bonus Gate (session-level entry)
+> As a host, I want to decide whether our group plays the mini-script so that we only commit if everyone is up for it.
+
+**Flow:**
+1. Social Icebreaker session advances to the phase before `mini_script`.
+2. Server sets `bonusGateOffered = true` and pauses phase transition.
+3. Players see a **"想不想来一局迷你剧本杀?"** overlay and vote **"我也想玩!"** or **"下次吧"**.
+4. Host sees a live sentiment tally (e.g., "3/5 小伙伴想玩") and an **接受 / 跳过** CTA.
+5. Host clicks **接受**. Server sets `bonusGateAccepted = true` and transitions `currentPhase` to `mini_script`.
+6. *(Alternative)* Host clicks **跳过**. Server sets `bonusGateDeclined = true` and transitions `currentPhase` to `recap`, skipping `mini_script` entirely.
+
+**Privacy:** Individual sentiment votes are stored server-side in `bonusGatePlayerSentiment` but are **not** exposed to other clients; only the aggregate count is shown.
 
 ### US-1: Host generates and starts the game
 > As a host, I want to generate a script and then start the game so that players receive role assignments and we can play through acts together.
+
+**Prerequisite:** Bonus gate must be accepted (`bonusGateAccepted === true`).
 
 **Flow:**
 1. Host opens `MiniScriptConfigModal`, selects style + genre(s), clicks **生成剧本**.
@@ -378,9 +395,13 @@ function filterFrameworkForPlayer(
 | # | Dependency | Owner | Blocking? |
 |---|-----------|-------|-----------|
 | D1 | Add 4 new fields to `SocialSessionState` + Zod/TS types | Backend | Yes |
+| D1b | Add bonus-gate fields to `SocialSessionState` (`bonusGateOffered`, `bonusGateAccepted`, `bonusGateDeclined`, `bonusGatePlayerSentiment`, `bonusGateFrameworkPreloading`) | Backend | Yes |
 | D2 | New routes: `POST .../miniscript/start`, `POST .../miniscript/next-act`, `POST .../miniscript/reveal` (or generic act-advance route) | Backend | Yes |
+| D2b | Bonus gate routes: `POST .../social-icebreaker/:id/bonus/respond`, `POST .../social-icebreaker/:id/bonus/sentiment` | Backend | Yes |
 | D3 | Update `buildClientState` / `sanitizeStateForClient` to per-player framework filtering | Backend | Yes |
+| D3b | Ensure `sanitizeStateForClient` strips `bonusGatePlayerSentiment` to protect voter privacy | Backend | Yes |
 | D4 | Update `MiniScriptPhaseView` (Taro) with role card, act panel, clue panel, host CTAs | Mini-program FE | Yes |
+| D4b | Add `BonusGateOverlay` to mini-program icebreaker session | Mini-program FE | Yes |
 | D5 | Update `MiniScriptPhasePanel` (Web) with parity | Web FE | Yes |
 | D6 | Update `cleanupPhaseStateForNextPhase` to scrub new fields | Backend | Yes |
 | D7 | Add `miniScriptActsCompleted` and `miniScriptSolutionRevealed` to recap data passed to AI summarizer | Backend | No |
@@ -443,11 +464,13 @@ function filterFrameworkForPlayer(
 
 For the Harness Runtime Controller deliberation, the following are **decision-ready**:
 
-- [x] Gameplay state machine defined (SETUP → ROLE_ASSIGNMENT → ACT_1..N → RESOLUTION → RECAP)
+- [x] Gameplay state machine defined (BONUS_GATE → SETUP → ROLE_ASSIGNMENT → ACT_1..N → RESOLUTION → RECAP)
 - [x] Host vs player authority boundaries specified
 - [x] Server secrecy contract specified (what gets filtered in `buildClientState`)
 - [x] New session state fields listed (`miniScriptPlayerAssignments`, `miniScriptCurrentAct`, `miniScriptGameState`, `miniScriptSolutionRevealed`, `miniScriptActsCompleted`)
+- [x] Bonus gate state fields listed (`bonusGateOffered`, `bonusGateAccepted`, `bonusGateDeclined`, `bonusGatePlayerSentiment`, `bonusGateFrameworkPreloading`)
 - [x] New API routes identified (`/miniscript/start`, `/miniscript/next-act`, `/miniscript/reveal`)
+- [x] Bonus gate routes identified (`/social-icebreaker/:id/bonus/respond`, `/social-icebreaker/:id/bonus/sentiment`)
 - [x] Genre scope for v1 decided (`light_reasoning` + `absurd_comedy`)
 - [x] Advance guard rules specified
 - [x] Cleanup rules specified

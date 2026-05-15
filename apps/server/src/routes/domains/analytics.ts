@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { getMetricsText } from "../../middleware/metrics";
 import { logger } from "../../lib/logger";
 import { db } from "../../db";
-import { participationExperimentEvents } from "@shared/schema";
+import { participationExperimentEvents, discoverAnalyticsEvents } from "@shared/schema";
 import { createRateLimiter } from "../../rateLimiter";
 
 const participationAnalyticsLimiter = createRateLimiter({
@@ -15,6 +15,12 @@ const personalityResultAnalyticsLimiter = createRateLimiter({
   windowMs: 60_000,
   maxRequests: 80,
   keyPrefix: "personality-result-analytics",
+});
+
+const discoverAnalyticsLimiter = createRateLimiter({
+  windowMs: 60_000,
+  maxRequests: 120,
+  keyPrefix: "discover-analytics",
 });
 
 const PARTICIPATION_EVENT_TYPES = [
@@ -50,6 +56,18 @@ type PersonalityResultEventType = (typeof PERSONALITY_RESULT_EVENT_TYPES)[number
 const ALLOWED_PERSONALITY_RESULT_EVENT_TYPES = new Set<PersonalityResultEventType>(
   PERSONALITY_RESULT_EVENT_TYPES,
 );
+
+const DISCOVER_EVENT_TYPES = [
+  "pool_card_tap",
+  "pool_card_impression",
+  "registration_start",
+  "registration_complete",
+  "registration_abandoned",
+] as const;
+
+type DiscoverEventType = (typeof DISCOVER_EVENT_TYPES)[number];
+
+const ALLOWED_DISCOVER_EVENT_TYPES = new Set<DiscoverEventType>(DISCOVER_EVENT_TYPES);
 
 const MAX_METADATA_BYTES = 4_096;
 const MAX_POOL_ID_LENGTH = 120;
@@ -185,6 +203,57 @@ export function registerAnalyticsRoutes(app: Express): void {
       return res.status(200).json({ success: true });
     } catch (error) {
       logger.warn("personality_result analytics write failed (non-fatal)", {
+        request_id: req.requestId,
+        error: String(error),
+      });
+      return res.status(200).json({ success: false, error: "analytics write failed" });
+    }
+  });
+
+  /**
+   * POST /api/analytics/discover
+   *
+   * Discover page Oracle Card conversion funnel instrumentation.
+   * Tracks: pool_card_tap, registration_start, registration_complete.
+   *
+   * Fire-and-forget. Always returns 200. Silent fail.
+   */
+  app.post("/api/analytics/discover", discoverAnalyticsLimiter, async (req: Request, res) => {
+    try {
+      const { eventType, poolId, metadata, timestamp } = req.body as {
+        eventType?: unknown;
+        poolId?: unknown;
+        metadata?: unknown;
+        timestamp?: unknown;
+      };
+
+      if (
+        typeof eventType !== "string" ||
+        !ALLOWED_DISCOVER_EVENT_TYPES.has(eventType as DiscoverEventType)
+      ) {
+        return res.status(200).json({ success: false, error: "invalid eventType" });
+      }
+
+      const normalizedPoolId =
+        typeof poolId === "string" && poolId.length > 0 && poolId.length <= MAX_POOL_ID_LENGTH
+          ? poolId
+          : null;
+      const normalizedMetadata = sanitizeMetadata(metadata);
+      const userId = req.session.userId ?? null;
+      const sessionId = req.sessionID ?? null;
+
+      await db.insert(discoverAnalyticsEvents).values({
+        userId,
+        sessionId,
+        eventType,
+        poolId: normalizedPoolId,
+        metadata: normalizedMetadata,
+        timestamp: parseTimestamp(timestamp),
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      logger.warn("discover analytics write failed (non-fatal)", {
         request_id: req.requestId,
         error: String(error),
       });

@@ -88,24 +88,13 @@
     z-index: -1;
   }
 
-  &__eyebrow {
-    display: block;
-    margin-bottom: $spacing-sm;
-    font-family: $font-ui;
-    font-size: 24rpx;
-    font-weight: $font-weight-semibold;
-    color: rgba($color-primary-dark, 0.8);
-    line-height: 1.4;
-    overflow-wrap: anywhere;
-  }
-
-  &__question {
+  &__scenario {
     display: block;
     @include type-headline;
-    /* type-headline already sets: font-cn-display, 3xl, black weight, 1.14 lh */
-    font-size: 60rpx;
+    /* type-headline: font-cn-display (Alimama brand font), 3xl, black weight */
+    font-size: 52rpx;
     color: $color-text-primary;
-    line-height: 1.22;
+    line-height: 1.28;
     overflow-wrap: anywhere;
 
     &--loading {
@@ -114,8 +103,7 @@
   }
 
   /* Skeleton for loading state */
-  &__skeleton-eyebrow,
-  &__skeleton-line {
+  &__skeleton-scenario {
     position: relative;
     overflow: hidden;
     background: $color-divider;
@@ -139,15 +127,9 @@
     }
   }
 
-  &__skeleton-eyebrow {
-    width: 40%;
-    height: 24rpx;
-    margin-bottom: $spacing-sm;
-  }
-
-  &__skeleton-line {
+  &__skeleton-scenario {
     width: 100%;
-    height: 52rpx;
+    height: 56rpx;
     margin-bottom: $spacing-xs;
 
     &--short {
@@ -163,8 +145,7 @@
     transform: none;
   }
 
-  .mascot-question-header__skeleton-eyebrow::after,
-  .mascot-question-header__skeleton-line::after {
+  .mascot-question-header__skeleton-scenario::after {
     animation: none;
     display: none;
   }

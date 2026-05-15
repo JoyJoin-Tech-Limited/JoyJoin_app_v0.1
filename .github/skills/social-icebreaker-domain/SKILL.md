@@ -34,6 +34,9 @@ POST /start     → create or rejoin (first caller becomes host)
 GET /:id (poll) → 3s interval
 POST /advance   → host-driven phase transition
 GET /recap      → AI summary + medals
+GET /:id/moment-card.png → server-rendered shareable PNG (feature-flagged)
+POST /:id/bonus/respond  → host accepts/declines mini_script bonus gate
+POST /:id/bonus/sentiment → player votes want/pass on bonus gate
 TTL sweep (5m)  → deletes expired sessions (6h lifetime)
 ```
 
@@ -71,6 +74,8 @@ TTL sweep (5m)  → deletes expired sessions (6h lifetime)
 | Mini-program phase missing | Not in `phaseViews.tsx` `supportedPhases` | Add view function and register in the session page switch statement |
 | Lie truth leaked to client | `isLie` in `state_json` | Remove immediately; `isLie` lives only in `social_icebreaker_lie_truths` table |
 | Sweep not running | `startSocialIcebreakerSweep` threw | Check logs; sweep is fail-open (disables itself on error) |
+| Bonus gate not appearing | `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` is false or `mini_script` not in enabled phases | Verify env flag and tier run plan; check `bonusGateOffered` is set on advance |
+| Moment Card PNG 404 | `SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER` is false | Enable env flag; verify `@napi-rs/canvas` binary loads for the target platform |
 
 ## Review checklist
 
@@ -80,6 +85,7 @@ TTL sweep (5m)  → deletes expired sessions (6h lifetime)
 - [ ] `cleanupPhaseStateForNextPhase` scrubs ephemeral state when leaving the phase
 - [ ] Env flag added to `getServerEnabledPhases` if feature-gated
 - [ ] `buildClientState` / `sanitizeStateForClient` do not leak internal DB IDs or secrets
+- [ ] Bonus gate state (`bonusGateOffered`, `bonusGateAccepted`, `bonusGateDeclined`) is included in client state intentionally
 - [ ] AI generator has curated fallback and emits `logAITrace`
 - [ ] Mini-program `phaseViews.tsx` updated before or alongside web registry
 - [ ] Unique constraints and race-handling preserved on `POST /start`

@@ -2,6 +2,7 @@ import { View, Text, ScrollView } from '@tarojs/components'
 import { useRouter } from '@tarojs/taro'
 import {
   JOYJOIN_TERMS_SECTIONS_ZH,
+  JOYJOIN_PRIVACY_SECTIONS_ZH,
   LEGAL_LAST_UPDATED_LABEL_ZH,
   JOYJOIN_COPYRIGHT_YEAR,
   TERMS_ENTRY_META,
@@ -14,6 +15,10 @@ export default function TermsPage() {
   const entrySection: TermsEntrySection =
     router.params.section === 'privacy' ? 'privacy' : 'terms'
   const entryMeta = TERMS_ENTRY_META[entrySection]
+  const sections =
+    entrySection === 'privacy'
+      ? JOYJOIN_PRIVACY_SECTIONS_ZH
+      : JOYJOIN_TERMS_SECTIONS_ZH
 
   return (
     <ScrollView
@@ -21,7 +26,6 @@ export default function TermsPage() {
       scrollY
       enhanced
       showScrollbar={false}
-      scrollIntoView={entryMeta.focusId || ''}
       scrollWithAnimation
     >
       <View className='terms-page__banner'>
@@ -33,15 +37,11 @@ export default function TermsPage() {
         </Text>
       </View>
 
-      {JOYJOIN_TERMS_SECTIONS_ZH.map((section) => (
+      {sections.map((section) => (
         <View
           id={section.id}
           key={section.id}
-          className={
-            entryMeta.focusId === section.id
-              ? 'terms-page__section terms-page__section--focus'
-              : 'terms-page__section'
-          }
+          className='terms-page__section'
         >
           <Text className='terms-page__section-heading'>{section.heading}</Text>
           {section.paragraphs.map((para, idx) => (

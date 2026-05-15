@@ -1,16 +1,11 @@
-import { Image, Input, ScrollView, Text, View } from '@tarojs/components'
+import { Image, ScrollView, Text, View } from '@tarojs/components'
 // Note: ScrollView is also used for detail sheet overflow on small screens
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ARCHETYPE_BY_ID, ARCHETYPE_CANONICAL_ORDER, getArchetypeIndex } from '@shared/personality/archetypeNames'
 import Button from '../../../../components/ui/Button'
 import Card from '../../../../components/ui/Card'
-import { COLOR_PRIMARY } from '../../../../lib/utils/uiConstants'
 import type { ArchetypeVisual } from '../visuals'
-import {
-  getXiaoyueExpressionAsset,
-  PERSONALITY_TEST_XIAOYUE_EXPRESSION,
-} from '../visuals'
 import type { AnonymousAssessmentTopMatch } from '../../../../lib/auth/anonymousOnboarding'
 import type { ArchetypeSkillSet } from '@shared/personality/archetypeSkills'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
@@ -93,12 +88,8 @@ export default function FinalStage({
   serialNumber,
   variants,
   selectedVariantIndex,
-  nickname: controlledNickname,
   onGeneratePoster,
-  onGenerateSquarePoster,
   onInviteFriend,
-  onNicknameChange,
-  onVariantSelect,
   continueButtonLabel,
   onContinue,
   onRestart,
@@ -110,9 +101,7 @@ export default function FinalStage({
   const [tilt, setTilt] = useState({ rotateX: 0, rotateY: 0 })
   const [isTiltActive, setIsTiltActive] = useState(false)
   const [touchTilt, setTouchTilt] = useState({ rotateX: 0, rotateY: 0 })
-  const [localNickname, setLocalNickname] = useState(controlledNickname || '')
   const [isDetailOpen, setIsDetailOpen] = useState(false)
-  const [isCoachExpanded, setIsCoachExpanded] = useState(false)
   const [isCardPressed, setIsCardPressed] = useState(false)
   const touchActiveRef = useRef(false)
   const touchStartRef = useRef({ x: 0, y: 0 })
@@ -236,44 +225,6 @@ export default function FinalStage({
     onGeneratePoster()
   }, [onGeneratePoster])
 
-  const handleMoreShareOptions = useCallback(async () => {
-    haptics('light')
-    const taroWithShareImageMenu = Taro as typeof Taro & {
-      showShareImageMenu?: (options: { path: string }) => Promise<unknown>
-    }
-    const hasNativeShareMenu = typeof taroWithShareImageMenu.showShareImageMenu === 'function'
-
-    let tapIndex: number
-    try {
-      const res = await Taro.showActionSheet({
-        itemList: hasNativeShareMenu && sharePosterPath
-          ? ['分享到朋友圈', '邀请朋友来测', '预览卡片']
-          : ['分享到朋友圈', '邀请朋友来测'],
-      })
-      tapIndex = res.tapIndex
-    } catch {
-      return
-    }
-
-    if (tapIndex === 0) {
-      onGenerateSquarePoster?.()
-    } else if (tapIndex === 1) {
-      onInviteFriend()
-    } else if (tapIndex === 2 && sharePosterPath && hasNativeShareMenu) {
-      await taroWithShareImageMenu.showShareImageMenu!({ path: sharePosterPath })
-    }
-  }, [onGenerateSquarePoster, onInviteFriend, sharePosterPath])
-
-  const handleNicknameInput = useCallback((value: string) => {
-    setLocalNickname(value)
-    onNicknameChange?.(value)
-  }, [onNicknameChange])
-
-  const handleVariantSelect = useCallback((index: number) => {
-    haptics('light')
-    onVariantSelect?.(index)
-  }, [onVariantSelect])
-
   const activeVariant = variants?.[selectedVariantIndex ?? 0]
   const cardBackground = activeVariant
     ? `linear-gradient(160deg, ${activeVariant.accentSoft} 0%, #fff8ee 50%, rgba(255, 255, 255, 0.98) 100%)`
@@ -332,10 +283,59 @@ export default function FinalStage({
             <View className='personality-results__hero-art-bg' style={{ background: visual.accentSoft }} />
             <Image className='personality-results__hero-art' mode='aspectFit' src={displayAsset} />
           </View>
+
+          {/* Xiaoyue short analysis — integrated into hero card */}
+          <View className='personality-results__hero-xiaoyue'>
+            {isLoadingAnalysis && !xiaoyueAnalysis ? (
+              <View className='personality-results__hero-xiaoyue-loading'>
+                <Text className='personality-results__hero-xiaoyue-loading-text'>
+                  {DEFAULT_MASCOT_DISPLAY_NAME}正在为你写专属解读…
+                </Text>
+              </View>
+            ) : xiaoyueAnalysis ? (
+              <>
+                <Text className='personality-results__hero-xiaoyue-headline'>
+                  「{xiaoyueAnalysis.headline}」
+                </Text>
+                <Text className='personality-results__hero-xiaoyue-analysis'>
+                  {xiaoyueAnalysis.analysis}
+                </Text>
+                {xiaoyueAnalysis.expressionTags?.length > 0 && (
+                  <View className='personality-results__hero-xiaoyue-tags'>
+                    {xiaoyueAnalysis.expressionTags.map((tag) => (
+                      <View key={tag} className='personality-results__hero-xiaoyue-tag'>
+                        <Text className='personality-results__hero-xiaoyue-tag-text'>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                <View
+                  className='personality-results__hero-xiaoyue-cta'
+                  onClick={handleCardTap}
+                >
+                  <Text className='personality-results__hero-xiaoyue-cta-text'>
+                    查看完整解读 ▼
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text className='personality-results__hero-xiaoyue-fallback-title'>这个命格为什么像你</Text>
+                <Text className='personality-results__hero-xiaoyue-fallback-text'>{summary}</Text>
+                <Text className='personality-results__hero-xiaoyue-fallback-text'>
+                  {visual.hiddenStrength || '你的氛围感不是靠用力营业，而是靠稳定地把气氛带到对的位置。'}
+                </Text>
+              </>
+            )}
+          </View>
         </View>
 
-        <Card className='personality-results__section-card personality-results__stagger--2'>
-          <Text className='personality-results__section-label'>命格卡分享</Text>
+        <View className='personality-results__bridge personality-results__stagger--2'>
+          <Text className='personality-results__bridge-text'>你的专属氛围技能</Text>
+        </View>
+
+        <Card className='personality-results__section-card personality-results__stagger--3'>
+          <Text className='personality-results__section-label'>你的氛围技能卡</Text>
           <View
             className={`personality-results__pokemon-card ${isTiltActive ? 'personality-results__pokemon-card--tilt' : ''} ${isCardPressed ? 'personality-results__pokemon-card--pressed' : ''}`}
             style={{
@@ -361,8 +361,7 @@ export default function FinalStage({
             </View>
 
             <View className='personality-results__pokemon-card-top'>
-              <Text className='personality-results__pokemon-chip personality-results__pokemon-chip--dark'>悦聚命格卡</Text>
-              <Text className='personality-results__pokemon-chip'>{confidenceLabel || '悦聚命格卡'}</Text>
+              <Text className='personality-results__pokemon-chip personality-results__pokemon-chip--dark'>{confidenceLabel || '悦聚氛围卡'}</Text>
             </View>
 
             <View className='personality-results__pokemon-card-hero'>
@@ -372,14 +371,13 @@ export default function FinalStage({
               <View className='personality-results__pokemon-copy'>
                 <Text className='personality-results__pokemon-name'>{displayArchetypeName}</Text>
                 <Text className='personality-results__pokemon-tagline'>{visual.tagline || visual.description}</Text>
-                <Text className='personality-results__pokemon-share-line'>{shareLine}</Text>
               </View>
             </View>
 
             {/* Rank badges */}
             {(typeof archetypeRank === 'number' && serialNumber) ? (
               <View className='personality-results__pokemon-rank-row'>
-                <Text className='personality-results__pokemon-rank-chip'>命格编号 No.{archetypeRank}</Text>
+                <Text className='personality-results__pokemon-rank-chip'>氛围编号 #{archetypeRank}</Text>
                 <Text className='personality-results__pokemon-rank-chip personality-results__pokemon-rank-chip--gold'>{serialNumber}</Text>
               </View>
             ) : null}
@@ -388,43 +386,17 @@ export default function FinalStage({
               <View className='personality-results__pokemon-match-row'>
                 {topMatches.slice(0, 3).map((match) => (
                   <Text key={match.archetype} className='personality-results__pokemon-match-chip'>
-                    {match.archetype} 缘分{Math.round(match.score)}%
+                    {ARCHETYPE_BY_ID[match.archetype]?.nameCn ?? match.archetype} 默契度{Math.round(match.score)}%
                   </Text>
                 ))}
               </View>
             ) : null}
 
-            {/* Compact trait bars (top 3) — Pokémon card stats feel */}
-            {traitEntries.length > 0 && (
-              <View className='personality-results__pokemon-compact-traits'>
-                {traitEntries
-                  .slice()
-                  .sort((a, b) => b.value - a.value)
-                  .slice(0, 3)
-                  .map((trait) => (
-                    <View key={trait.key} className='personality-results__pokemon-compact-trait'>
-                      <Text className='personality-results__pokemon-compact-trait-label'>{trait.label}</Text>
-                      <View className='personality-results__pokemon-compact-trait-track'>
-                        <View
-                          className='personality-results__pokemon-compact-trait-fill'
-                          style={{
-                            transform: `scaleX(${trait.value / 100})`,
-                            transformOrigin: 'left center',
-                            background: visual.accent,
-                          }}
-                        />
-                      </View>
-                      <Text className='personality-results__pokemon-compact-trait-value'>{trait.value}</Text>
-                    </View>
-                  ))}
-              </View>
-            )}
-
             {/* Energy bar */}
             {typeof energyLevel === 'number' ? (
               <View className='personality-results__pokemon-energy'>
                 <View className='personality-results__pokemon-energy-header'>
-                  <Text className='personality-results__pokemon-energy-label'>氛围能量</Text>
+                  <Text className='personality-results__pokemon-energy-label'>社交续航力</Text>
                   <Text className='personality-results__pokemon-energy-value'>{Math.round(energyLevel)}%</Text>
                 </View>
                 <View className='personality-results__pokemon-energy-track'>
@@ -433,6 +405,7 @@ export default function FinalStage({
                     style={{ width: `${Math.min(energyLevel, 100)}%` }}
                   />
                 </View>
+                <Text className='personality-results__pokemon-energy-hint'>你在社交场合的持久活力</Text>
               </View>
             ) : null}
 
@@ -450,61 +423,29 @@ export default function FinalStage({
 
             <View className='personality-results__pokemon-skill-grid'>
               <View className='personality-results__pokemon-skill personality-results__pokemon-skill--warm'>
-                <Text className='personality-results__pokemon-skill-label'>主动技</Text>
+                <Text className='personality-results__pokemon-skill-label'>氛围技能</Text>
                 <Text className='personality-results__pokemon-skill-name'>
                   {skillSet?.activeSkill.name ?? '瞬间点亮全场'}
                 </Text>
                 <Text className='personality-results__pokemon-skill-copy'>
-                  {skillSet?.activeSkill.shortEffect ?? '把陌生局迅速带到更舒服的节奏。'}
+                  {skillSet?.activeSkill.shortEffect ?? '三句话内让冷场变暖场。'}
                 </Text>
               </View>
               <View className='personality-results__pokemon-skill personality-results__pokemon-skill--cool'>
-                <Text className='personality-results__pokemon-skill-label'>被动技</Text>
+                <Text className='personality-results__pokemon-skill-label'>氛围天赋</Text>
                 <Text className='personality-results__pokemon-skill-name'>
                   {skillSet?.passiveSkill.name ?? '气场持续发光'}
                 </Text>
                 <Text className='personality-results__pokemon-skill-copy'>
-                  {skillSet?.passiveSkill.shortEffect ?? '不用刻意用力，也会让人想靠近你。'}
+                  {skillSet?.passiveSkill.shortEffect ?? '不用刻意表现，自然让人想靠近。'}
                 </Text>
               </View>
             </View>
 
-            {/* Holographic edition stamp */}
+            {/* Collectible edition stamp */}
             <View className='personality-results__pokemon-holo-stamp'>
-              <Text className='personality-results__pokemon-holo-stamp-text'>全息命格版</Text>
+              <Text className='personality-results__pokemon-holo-stamp-text'>限量氛围版</Text>
             </View>
-
-            {/* Nickname input */}
-            <View className='personality-results__pokemon-nickname'>
-              <Text className='personality-results__pokemon-nickname-label'>给你的卡片起个名字</Text>
-              <Input
-                className='personality-results__pokemon-nickname-input'
-                type='text'
-                placeholder='输入昵称，显示在卡片上'
-                value={localNickname}
-                onInput={(e) => handleNicknameInput(e.detail.value)}
-                maxlength={12}
-              />
-            </View>
-
-            {/* Color variant selector */}
-            {variants && variants.length > 1 ? (
-              <View className='personality-results__pokemon-variants'>
-                <Text className='personality-results__pokemon-variants-label'>卡片配色</Text>
-                <View className='personality-results__pokemon-variants-row'>
-                  {variants.map((variant, index) => (
-                    <View
-                      key={variant.name}
-                      className={`personality-results__pokemon-variant-swatch ${index === (selectedVariantIndex ?? 0) ? 'personality-results__pokemon-variant-swatch--active' : ''}`}
-                      style={{ background: variant.accentColor }}
-                      onClick={() => handleVariantSelect(index)}
-                    >
-                      <Text className='personality-results__pokemon-variant-swatch-label'>{variant.name}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            ) : null}
 
             <View className='personality-results__pokemon-actions'>
               <Button onClick={handleSharePress} disabled={isGeneratingPoster} loading={isGeneratingPoster}>
@@ -512,88 +453,8 @@ export default function FinalStage({
                   ? (generationPhase || '正在渲染卡面…')
                   : sharePosterPath
                     ? '分享卡片'
-                    : '生成卡片'}
+                    : '保存我的氛围卡'}
               </Button>
-              <Button variant='secondary' onClick={handleMoreShareOptions}>
-                更多分享方式
-              </Button>
-            </View>
-          </View>
-        </Card>
-
-        <Card className='personality-results__section-card personality-results__stagger--3'>
-          <View className='personality-results__coach-card'>
-            <Image
-              className='personality-results__coach-image'
-              mode='aspectFit'
-              src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCoach)}
-            />
-            <View className='personality-results__coach-copy'>
-              <Text className='personality-results__section-label'>{`${DEFAULT_MASCOT_DISPLAY_NAME}的解读`}</Text>
-
-              {isLoadingAnalysis && !xiaoyueAnalysis ? (
-                <View className='personality-results__coach-loading'>
-                  <Text className='personality-results__coach-loading-dot'>·</Text>
-                  <Text className='personality-results__coach-loading-dot'>·</Text>
-                  <Text className='personality-results__coach-loading-dot'>·</Text>
-                  <Text className='personality-results__coach-loading-text'>正在为你写专属解读…</Text>
-                </View>
-              ) : xiaoyueAnalysis ? (
-                <>
-                  {/* 第一层：情绪冲击 — 你是谁 */}
-                  <Text className='personality-results__coach-headline'>「{xiaoyueAnalysis.headline}」</Text>
-                  <Text className='personality-results__coach-analysis'>{xiaoyueAnalysis.analysis}</Text>
-
-                  {xiaoyueAnalysis.expressionTags?.length > 0 && (
-                    <View className='personality-results__coach-tags'>
-                      {xiaoyueAnalysis.expressionTags.map((tag) => (
-                        <View key={tag} className='personality-results__coach-tag'>
-                          <Text className='personality-results__coach-tag-text'>{tag}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-
-                  {/* 第二层：认知定位 — 你在哪发光（可折叠） */}
-                  {isCoachExpanded && (
-                    <>
-                      <View className='personality-results__coach-insight-row'>
-                        <View className='personality-results__coach-insight-pill'>
-                          <Text className='personality-results__coach-insight-pill-label'>💫 你的氛围定位</Text>
-                          <Text className='personality-results__coach-insight-pill-value'>{xiaoyueAnalysis.socialRole}</Text>
-                        </View>
-                        <View className='personality-results__coach-insight-pill'>
-                          <Text className='personality-results__coach-insight-pill-label'>🎯 适合你的局</Text>
-                          <Text className='personality-results__coach-insight-pill-value'>{xiaoyueAnalysis.bestScene}</Text>
-                        </View>
-                      </View>
-
-                      {/* 第三层：行动指引 — 你下一步做什么（高亮） */}
-                      <View className='personality-results__coach-insight-card personality-results__coach-insight-card--highlight'>
-                        <Text className='personality-results__coach-insight-label'>✨ 下次可以试试</Text>
-                        <Text className='personality-results__coach-insight-value'>{xiaoyueAnalysis.microAction}</Text>
-                      </View>
-                    </>
-                  )}
-
-                  <View
-                    className='personality-results__coach-toggle'
-                    onClick={() => setIsCoachExpanded((v) => !v)}
-                  >
-                    <Text className='personality-results__coach-toggle-text'>
-                      {isCoachExpanded ? '先到这里 ▲' : '悦仔还有话说 ▼'}
-                    </Text>
-                  </View>
-                </>
-              ) : (
-                <>
-                  <Text className='personality-results__coach-title'>这个命格为什么像你</Text>
-                  <Text className='personality-results__coach-text'>{summary}</Text>
-                  <Text className='personality-results__coach-text'>
-                    {visual.hiddenStrength || '你的氛围感不是靠用力营业，而是靠稳定地把气氛带到对的位置。'}
-                  </Text>
-                </>
-              )}
             </View>
           </View>
         </Card>
@@ -710,10 +571,10 @@ export default function FinalStage({
                         />
                         <View className='personality-results__detail-partner-info'>
                           <Text className='personality-results__detail-partner-name'>
-                            {partner.archetype}
+                            {ARCHETYPE_BY_ID[partner.archetype]?.nameCn ?? partner.archetype}
                           </Text>
                           <Text className='personality-results__detail-partner-meta'>
-                            {partner.chemistryLabel} · 匹配 {Math.round(partner.score)}%
+                            {partner.chemistryLabel} · 契合度 {Math.round(partner.score)}%
                           </Text>
                         </View>
                       </View>
@@ -725,11 +586,8 @@ export default function FinalStage({
 
             {/* Sticky bottom actions — outside ScrollView so always reachable */}
             <View className='personality-results__detail-actions'>
-              <Button onClick={() => { handleCloseDetail(); handleSharePress(); }}>
-                生成命格海报
-              </Button>
               <Button variant='secondary' onClick={() => { handleCloseDetail(); onInviteFriend(); }}>
-                @朋友来测
+                邀请朋友来测
               </Button>
             </View>
 

@@ -46,7 +46,14 @@
     "./miniscriptGameModes": "./src/miniscriptGameModes.ts",
     "./schemaAnalytics": "./src/schemaAnalytics.ts",
     "./iconSystem": "./src/iconSystem/index.ts",
-    "./features/matching-status": "./src/features/matching-status/index.ts"
+    "./features/matching-status": "./src/features/matching-status/index.ts",
+    "./copy": "./src/copy/index.ts",
+    "./copy/terms": "./src/copy/terms.ts",
+    "./copy/errorBaselines": "./src/copy/errorBaselines.ts",
+    "./copy/emptyStates": "./src/copy/emptyStates.ts",
+    "./copy/mascotVoice": "./src/copy/mascotVoice.ts",
+    "./copy/toneMap": "./src/copy/toneMap.ts",
+    "./copy/exceptions": "./src/copy/exceptions.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",

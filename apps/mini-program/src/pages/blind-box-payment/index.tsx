@@ -92,7 +92,7 @@ function requestMiniProgramPayment(paymentIntent: PaymentIntentResponse): Promis
 // Returning null means the user explicitly cancelled the WeChat sheet, so the
 // caller should exit quietly without showing an error toast.
 function getFriendlyPaymentError(errMsg?: string): string | null {
-  if (!errMsg) return '支付失败，请稍后重试'
+  if (!errMsg) return '支付未成功，再试一次即可'
 
   const normalized = errMsg.toLowerCase()
   if (normalized.includes('cancel')) {
@@ -100,18 +100,18 @@ function getFriendlyPaymentError(errMsg?: string): string | null {
   }
 
   if (normalized.includes('parameter error')) {
-    return '支付参数错误，请稍后重试'
+    return '支付参数有误，重新试试'
   }
 
   if (normalized.includes('network')) {
-    return '网络连接失败，请检查网络后重试'
+    return '网络不太稳，检查后再试'
   }
 
   if (normalized.includes('limit') || normalized.includes('balance')) {
-    return '支付失败，请检查微信支付余额或联系客服'
+    return '支付未成功，检查余额或联系客服'
   }
 
-  return '支付失败，请稍后重试'
+  return '支付未成功，再试一次即可'
 }
 
 export default function BlindBoxPaymentPage() {

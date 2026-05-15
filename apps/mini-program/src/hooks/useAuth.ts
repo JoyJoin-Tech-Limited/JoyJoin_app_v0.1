@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import Taro from '@tarojs/taro'
 import type { AuthUserResponse } from '@shared/api'
 import { apiRequest, type OnboardingStep } from '../lib/api/api'
 import {
@@ -10,6 +11,34 @@ import {
   persistAuthToStorage,
 } from '../lib/api/authSession'
 import { deriveMiniProgramAuthState } from './auth/authState'
+
+const MOCK_AUTH_STORAGE_KEY = '__jj_mock_auth_for_devtools__'
+
+const MOCK_AUTH_USER: AuthUser = {
+  id: 'dev-test-user',
+  displayName: '悦仔测试',
+  archetype: 'corgi',
+  primaryArchetype: 'corgi',
+  nextStep: 'discover',
+  hasCompletedOnboarding: true,
+} as unknown as AuthUser
+
+function getMockAuthUser(): AuthUser | null {
+  // DEVTOOLS TESTING: always return mock user for visual verification
+  return MOCK_AUTH_USER
+  
+  // Production check below — restore after testing:
+  // try {
+  //   const raw = Taro.getStorageSync(MOCK_AUTH_STORAGE_KEY)
+  //   if (raw === '1') return MOCK_AUTH_USER
+  //   if (!raw) return null
+  //   const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+  //   if (parsed && parsed.id) return parsed as AuthUser
+  // } catch {
+  //   // ignore
+  // }
+  // return null
+}
 
 export type NextStepType = OnboardingStep
 
@@ -66,6 +95,8 @@ async function getAuthUser(): Promise<AuthUser | null> {
  *     trust stale cached auth state on foreground resume
  */
 export function useAuth(): UseAuthResult {
+  const mockUser = getMockAuthUser()
+
   const { data: user, isLoading, isFetching, refetch } = useQuery<AuthUser | null>({
     queryKey: AUTH_QUERY_KEY,
     queryFn: getAuthUser,
@@ -75,12 +106,15 @@ export function useAuth(): UseAuthResult {
       return failureCount < 2
     },
     staleTime: Infinity,
+    initialData: mockUser ?? undefined,
   })
 
+  const effectiveUser = mockUser ?? user
+
   const authState = deriveMiniProgramAuthState({
-    user,
-    isLoading,
-    isFetching,
+    user: effectiveUser,
+    isLoading: mockUser ? false : isLoading,
+    isFetching: mockUser ? false : isFetching,
   })
 
   return {

@@ -88,6 +88,28 @@ export function getArchetypeFamily(archetype: string | null | undefined): 'warm'
 }
 
 /**
+ * Family hex colors for mini-program card theming.
+ * Derived from the dominant archetype colors in each family.
+ */
+export const ARCHETYPE_FAMILY_COLORS: Record<string, string> = {
+  warm: '#C79450',
+  cool: '#5B8DB8',
+  fire: '#D4A843',
+  calm: '#6B9E75',
+}
+
+/**
+ * Family gradient backgrounds for Oracle Card surfaces.
+ * Subtle wash of family color on white base.
+ */
+export const ARCHETYPE_FAMILY_GRADIENTS: Record<string, string> = {
+  warm: 'linear-gradient(155deg, rgba(255,255,255,0.98) 0%, rgba(199,148,80,0.06) 100%)',
+  cool: 'linear-gradient(155deg, rgba(255,255,255,0.98) 0%, rgba(91,141,184,0.06) 100%)',
+  fire: 'linear-gradient(155deg, rgba(255,255,255,0.98) 0%, rgba(212,168,67,0.06) 100%)',
+  calm: 'linear-gradient(155deg, rgba(255,255,255,0.98) 0%, rgba(107,158,117,0.06) 100%)',
+}
+
+/**
  * Format HSL values as a CSS string.
  */
 export function formatHSL(hsl: ArchetypeHSL): string {

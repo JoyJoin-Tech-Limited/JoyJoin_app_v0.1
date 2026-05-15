@@ -88,6 +88,8 @@ vi.mock('../lib/socialIcebreakerStore', () => {
     invalidatePreGenerationForSession: vi.fn().mockResolvedValue(undefined),
     getInFlightJobForPhase: vi.fn(async () => null),
     sweepExpiredSessions: async () => {},
+    savePhaseMetric: vi.fn().mockResolvedValue(undefined),
+    getPhaseMetrics: vi.fn().mockResolvedValue([]),
   };
 });
 

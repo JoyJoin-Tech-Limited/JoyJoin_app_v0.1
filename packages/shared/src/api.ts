@@ -993,6 +993,9 @@ export function completeProfileReview(
 // Event pool discovery & registration API
 // ---------------------------------------------------------------------------
 
+export type PoolNarrativePivot = 'rare' | 'present' | 'dominant' | 'empty'
+export type PoolUserTypeRarity = 'rare' | 'present' | 'dominant'
+
 export interface EventPoolSummary {
   id: string
   title?: string
@@ -1002,7 +1005,9 @@ export interface EventPoolSummary {
   dateTime?: string
   status?: string
   description?: string
+  /** Normalized participant count for card/progress display. */
   maxParticipants?: number
+  /** Normalized current registrations for card/progress display. */
   currentParticipants?: number
   registrationCount?: number
   spotsLeft?: number
@@ -1011,6 +1016,14 @@ export interface EventPoolSummary {
   accentFamily?: 'warm' | 'cool' | 'fire' | 'calm'
   aiHeadline?: string | null
   hasUserArchetypeMatch?: boolean
+  // ── Oracle Card fields (Phase 1) ──
+  price?: number | null
+  userTypeCount?: number
+  userTypeRarity?: PoolUserTypeRarity
+  highChemistryCount?: number
+  topComplementaryType?: string | null
+  narrativePivot?: PoolNarrativePivot
+  hoursUntilDeadline?: number
   [key: string]: unknown
 }
 

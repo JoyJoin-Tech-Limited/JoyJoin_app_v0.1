@@ -19,6 +19,7 @@ import {
   socialIcebreakerParticipants,
   socialIcebreakerLieTruths,
   socialIcebreakerPhasePulseChecks,
+  socialIcebreakerPhaseMetrics,
   momentCardInteractions,
   preGenerationJobs,
   preGenerationResults,
@@ -491,6 +492,65 @@ export async function sweepExpiredSessions(): Promise<void> {
   await db
     .delete(socialIcebreakerSessions)
     .where(lt(socialIcebreakerSessions.expiresAt, new Date()));
+}
+
+// ---------------------------------------------------------------------------
+// Phase metrics (Q2 pilot instrumentation)
+// ---------------------------------------------------------------------------
+
+export async function savePhaseMetric(
+  socialSessionId: string,
+  phase: string,
+  metric: {
+    dwellTimeMs?: number;
+    startedAt?: Date;
+    endedAt?: Date;
+    participantCount?: number;
+    actionCount?: number;
+  },
+): Promise<void> {
+  await db
+    .insert(socialIcebreakerPhaseMetrics)
+    .values({
+      socialSessionId,
+      phase,
+      dwellTimeMs: metric.dwellTimeMs ?? null,
+      startedAt: metric.startedAt ?? null,
+      endedAt: metric.endedAt ?? null,
+      participantCount: metric.participantCount ?? null,
+      actionCount: metric.actionCount ?? null,
+    })
+    .onConflictDoUpdate({
+      target: [socialIcebreakerPhaseMetrics.socialSessionId, socialIcebreakerPhaseMetrics.phase],
+      set: {
+        dwellTimeMs: metric.dwellTimeMs ?? null,
+        startedAt: metric.startedAt ?? null,
+        endedAt: metric.endedAt ?? null,
+        participantCount: metric.participantCount ?? null,
+        actionCount: metric.actionCount ?? null,
+      },
+    });
+}
+
+/** Get per-phase metrics for a session. */
+export async function getPhaseMetrics(
+  socialSessionId: string,
+): Promise<Array<{ phase: string; avgDwellTimeMs: number | null; totalActions: number | null }>> {
+  const rows = await db
+    .select({
+      phase: socialIcebreakerPhaseMetrics.phase,
+      avgDwellTimeMs: sql<string | null>`avg(${socialIcebreakerPhaseMetrics.dwellTimeMs})`,
+      totalActions: sql<string | null>`sum(${socialIcebreakerPhaseMetrics.actionCount})`,
+    })
+    .from(socialIcebreakerPhaseMetrics)
+    .where(eq(socialIcebreakerPhaseMetrics.socialSessionId, socialSessionId))
+    .groupBy(socialIcebreakerPhaseMetrics.phase);
+
+  return rows.map((r: { phase: string; avgDwellTimeMs: string | null; totalActions: string | null }) => ({
+    phase: r.phase,
+    avgDwellTimeMs: r.avgDwellTimeMs ? Math.round(parseFloat(r.avgDwellTimeMs)) : null,
+    totalActions: r.totalActions ? parseInt(r.totalActions, 10) : null,
+  }));
 }
 
 // ---------------------------------------------------------------------------

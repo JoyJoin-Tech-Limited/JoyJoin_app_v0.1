@@ -11,7 +11,8 @@ import { registerAdminMatchingShadowRoutes } from "./adminMatchingShadow";
 import { adminOutcomeAnalyticsRepo } from "../../repositories/adminOutcomeAnalyticsRepo";
 import { socialIcebreakerAiFeedbackRepo } from "../../repositories/socialIcebreakerAiFeedbackRepo";
 import { queryAdminAuditLogs } from "../../repositories/adminAuditLogsRepo";
-import { getPhaseRatings, getMomentCardStats } from "../../lib/socialIcebreakerStore";  
+import { getPhaseRatings, getMomentCardStats, getPhaseMetrics } from "../../lib/socialIcebreakerStore";
+import { runSocialAIBenchmark, formatBenchmarkReport, getDefaultModelConfigs } from "../../benchmarks/socialAIBenchmark";  
 
 export function registerAdminRoutes(app: Express): void {
   registerAdminAuthRoutes(app);
@@ -93,19 +94,69 @@ export function registerAdminRoutes(app: Express): void {
       if (typeof socialSessionId !== "string") {
         return res.status(400).json({ message: "socialSessionId query param required" });
       }
-      const [phaseRatings, momentCardStats] = await Promise.all([
+      const [phaseRatings, momentCardStats, phaseMetrics] = await Promise.all([
         getPhaseRatings(socialSessionId),
         getMomentCardStats(socialSessionId),
+        getPhaseMetrics(socialSessionId),
       ]);
       res.json({
         socialSessionId,
         phaseRatings,
         momentCardStats,
+        phaseMetrics,
         generatedAt: new Date().toISOString(),
       });
     } catch (error) {
       logger.error("[AdminIcebreakerAnalytics] summary failed", { error: String(error) });
       res.status(500).json({ message: "Failed to load icebreaker analytics" });
+    }
+  });
+
+  // Social AI benchmark — admin-triggered benchmark run
+  app.get("/api/admin/benchmarks/social-ai", requireAdmin, async (req, res) => {
+    const reqLogger = logger.child({ request_id: (req as any).requestId });
+    try {
+      const iterationsRaw = req.query.iterations;
+      const modelsRaw = req.query.models;
+
+      const maxIterations = 10;
+      let iterations = 5;
+      if (typeof iterationsRaw === "string" && iterationsRaw) {
+        const parsed = parseInt(iterationsRaw, 10);
+        if (!Number.isNaN(parsed)) {
+          iterations = Math.min(maxIterations, Math.max(1, parsed));
+        }
+      }
+
+      let modelsOverride: string[] | undefined;
+      if (typeof modelsRaw === "string" && modelsRaw) {
+        modelsOverride = modelsRaw.split(",").map((s) => s.trim()).filter(Boolean);
+      }
+
+      const defaultConfigs = getDefaultModelConfigs();
+      const models = modelsOverride
+        ? defaultConfigs.filter((m) => modelsOverride.includes(m.label))
+        : defaultConfigs;
+
+      if (models.length === 0) {
+        return res.status(400).json({ message: "No valid models selected" });
+      }
+
+      const report = await runSocialAIBenchmark({ iterations, models });
+
+      res.json({
+        generatedAt: new Date().toISOString(),
+        report: {
+          ranAt: report.ranAt,
+          iterationsPerFixture: report.iterationsPerFixture,
+          models: report.models,
+          summary: report.summary,
+          formatted: formatBenchmarkReport(report),
+        },
+      });
+    } catch (error) {
+      reqLogger.error("[AdminBenchmarks] social-ai benchmark failed", { error: String(error) });
+      res.status(500).json({ message: "Benchmark failed" });
     }
   });
 

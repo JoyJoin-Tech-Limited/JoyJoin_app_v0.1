@@ -23,9 +23,10 @@ import { requireAuthenticatedUserId } from '../../lib/requestAuth';
 import { generateMiniScriptFrameworkWithMeta } from '../../lib/miniscriptAgent';
 import { MINISCRIPT_GENERATION_PROMPT_VERSION } from '../../ai/miniscriptPrompts';
 import { buildCachedAIMeta } from '@shared/types/aiMeta';
-import { ensureSessionEnabledPhases } from '../../socialIcebreakerPhaseConfig';
+import { ensureSessionEnabledPhases, cleanupPhaseStateForNextPhase } from '../../socialIcebreakerPhaseConfig';
 import { logger } from '../../lib/logger';
 import { aiEndpointLimiter } from '../../rateLimiter';
+import { buildClientState, isHostAuthorized } from '../socialIcebreakerHelpers';
 
 const router = Router();
 
@@ -516,6 +517,102 @@ router.post('/ready', async (req: any, res) => {
   });
 
   return res.json({ ok: true, readyMap });
+});
+
+// ── Bonus gate routes ──────────────────────────────────────────────────────
+
+const bonusRespondSchema = z.object({
+  socialSessionId: z.string(),
+  accept: z.boolean(),
+});
+
+router.post('/bonus/respond', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const parsed = bonusRespondSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
+  }
+
+  const { socialSessionId, accept } = parsed.data;
+  const { state, expired } = await getSessionWithExpiry(socialSessionId);
+
+  if (!state) {
+    if (expired) return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
+    return res.status(403).json({ error: 'HOST_ONLY' });
+  }
+
+  if (!state.bonusGateOffered) {
+    return res.status(400).json({ error: 'BONUS_GATE_NOT_OFFERED' });
+  }
+
+  if (state.bonusGateAccepted || state.bonusGateDeclined) {
+    return res.status(409).json({ error: 'BONUS_GATE_ALREADY_RESPONDED' });
+  }
+
+  if (accept) {
+    state.bonusGateAccepted = true;
+    // Transition into mini_script phase
+    const priorPhase = state.currentPhase;
+    cleanupPhaseStateForNextPhase(state, priorPhase);
+    state.currentPhase = 'mini_script';
+    state.phaseStartedAt = Date.now();
+    state.pulseChecks = [];
+    await updateSession(socialSessionId, state);
+    logger.info('[miniscript] bonus gate accepted', { socialSessionId, hostUserId: userId });
+    return res.json({ state: buildClientState(state) });
+  }
+
+  // Decline: skip mini_script and go to recap
+  state.bonusGateDeclined = true;
+  const priorPhase = state.currentPhase;
+  cleanupPhaseStateForNextPhase(state, priorPhase);
+  state.currentPhase = 'recap';
+  state.phaseStartedAt = Date.now();
+  state.pulseChecks = [];
+  await updateSession(socialSessionId, state);
+  logger.info('[miniscript] bonus gate declined', { socialSessionId, hostUserId: userId });
+  return res.json({ state: buildClientState(state) });
+});
+
+const bonusSentimentSchema = z.object({
+  socialSessionId: z.string(),
+  sentiment: z.enum(['want', 'pass']),
+});
+
+router.post('/bonus/sentiment', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const parsed = bonusSentimentSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
+  }
+
+  const { socialSessionId, sentiment } = parsed.data;
+  const { state, expired } = await getSessionWithExpiry(socialSessionId);
+
+  if (!state) {
+    if (expired) return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+
+  if (!state.bonusGateOffered || state.bonusGateAccepted || state.bonusGateDeclined) {
+    return res.status(400).json({ error: 'BONUS_GATE_NOT_ACTIVE' });
+  }
+
+  const sentimentMap = { ...(state.bonusGatePlayerSentiment ?? {}) };
+  sentimentMap[userId] = sentiment;
+  state.bonusGatePlayerSentiment = sentimentMap;
+  await updateSession(socialSessionId, state);
+
+  logger.info('[miniscript] bonus sentiment recorded', { socialSessionId, userId, sentiment });
+  return res.json({ ok: true, sentimentMap });
 });
 
 export default router;

@@ -498,7 +498,7 @@ export interface PersonalitySquarePosterTraitEntry {
 
 export interface PersonalitySquarePosterInput {
   archetype: string
-  englishName?: string
+  subtitle?: string
   tagline: string
   shareLine?: string
   rarityPercentage: number
@@ -549,14 +549,14 @@ export async function generatePersonalitySquarePoster(
   ctx.fillText(input.archetype, S / 2, M + 72)
   ctx.restore()
 
-  // English archetype name (small, centered)
-  if (input.englishName) {
+  // Archetype nickname subtitle (small, centered)
+  if (input.subtitle) {
     ctx.save()
     ctx.setFillStyle(PALETTE.textLight)
     ctx.setFontSize(20)
     ctx.setTextAlign('center')
     ctx.setTextBaseline('top')
-    ctx.fillText(input.englishName, S / 2, M + 120)
+    ctx.fillText(input.subtitle, S / 2, M + 120)
     ctx.restore()
   }
 

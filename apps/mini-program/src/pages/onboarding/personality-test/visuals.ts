@@ -79,6 +79,17 @@ export interface ArchetypeVisual {
   record?: ArchetypeRecord
 }
 
+/** High-resolution static mascot images (480×480px) for non-animated display. */
+const STATIC_MASCOT_BASE = '/assets/personality/xiaoyue'
+
+export function getIntroStaticAsset(): string {
+  return `${STATIC_MASCOT_BASE}/xiaoyue-intro-static.webp`
+}
+
+export function getTestCuriousStaticAsset(): string {
+  return `${STATIC_MASCOT_BASE}/xiaoyue-test-curious.webp`
+}
+
 export function getArchetypeVisual(archetype: string | null | undefined): ArchetypeVisual {
   const record = archetype ? archetypeRegistry[archetype] : undefined
   const accent = formatHSL(getArchetypeHSL(archetype))

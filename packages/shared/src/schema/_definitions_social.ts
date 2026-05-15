@@ -167,3 +167,25 @@ export const preGenerationResults = pgTable("pre_generation_results", {
 ]);
 
 export type PreGenerationResultRow = typeof preGenerationResults.$inferSelect;
+
+/**
+ * Per-phase session metrics for Q2 pilot instrumentation.
+ * Captures dwell time and engagement signals per phase per session.
+ */
+export const socialIcebreakerPhaseMetrics = pgTable("social_icebreaker_phase_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  socialSessionId: varchar("social_session_id").notNull().references(() => socialIcebreakerSessions.id, { onDelete: "cascade" }),
+  phase: varchar("phase").notNull(),
+  dwellTimeMs: integer("dwell_time_ms"), // time spent in phase
+  startedAt: timestamp("started_at"),
+  endedAt: timestamp("ended_at"),
+  participantCount: integer("participant_count"),
+  actionCount: integer("action_count"), // host+player actions during phase
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("idx_phase_metrics_session_phase").on(table.socialSessionId, table.phase),
+  index("idx_phase_metrics_session").on(table.socialSessionId),
+  index("idx_phase_metrics_phase").on(table.phase),
+]);
+
+export type SocialIcebreakerPhaseMetricRow = typeof socialIcebreakerPhaseMetrics.$inferSelect;

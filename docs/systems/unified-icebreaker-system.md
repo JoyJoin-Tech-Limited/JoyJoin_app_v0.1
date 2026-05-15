@@ -28,7 +28,7 @@ Display names: 破冰局 | 畅聊局 | 狂欢局
 | Detail | Value |
 |--------|-------|
 | **Sprint Contract "80-min Standard"** | Median across all 3 tiers (40/60/90). Original 80-min requirement tied to `mini_script` (now blaze-only). Not a per-tier requirement. |
-| **mini_script** | Optional bonus phase. Host can add to any tier as extended session. Inserted before recap. |
+| **mini_script** | Optional bonus phase. Host can add to any tier as extended session. Inserted before recap. **Bonus gate:** when `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT=true`, the server pauses at a group-vote gate before entering `mini_script`; host decides after seeing player sentiment tally. |
 | **Lie Detective V2** | Host-choosable toggle within `lie_detective` phase slot. Available to all tiers. |
 
 ### Phase composition per tier
@@ -56,7 +56,7 @@ Display names: 破冰局 | 畅聊局 | 狂欢局
 | undercover_word | ❌ | ❌ | ✅ | Blaze only |
 | auction | ❌ | ❌ | ✅ | Blaze only |
 | quip_battle | ❌ | ❌ | ✅ | Blaze only |
-| mini_script | 🎁 | 🎁 | 🎁 | All tiers (bonus) |
+| mini_script | 🎁 | 🎁 | 🎁 | All tiers (bonus, gated by host+player vote) |
 | recap | ✅ | ✅ | ✅ | All tiers |
 
 ### Phase exposure by tier (detailed)
@@ -71,7 +71,7 @@ Display names: 破冰局 | 畅聊局 | 狂欢局
 | undercover_word | ❌ | ❌ | ✅ | Medium |
 | auction | ❌ | ❌ | ✅ | Medium |
 | quip_battle | ❌ | ❌ | ✅ | Medium |
-| mini_script | 🎁 | 🎁 | 🎁 | Low (bonus add-on) |
+| mini_script | 🎁 | 🎁 | 🎁 | Low (bonus add-on, gated) |
 | recap | ✅ | ✅ | ✅ | Deferred (6.9) |
 
 ---

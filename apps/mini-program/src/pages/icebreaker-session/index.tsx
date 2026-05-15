@@ -31,6 +31,7 @@ import { PhaseIntroOverlay } from './overlays/PhaseIntroOverlay'
 import { MiniScriptPhaseView } from './phases/MiniScriptPhaseView'
 import { IcebreakerToolSelector } from './overlays/IcebreakerToolSelector'
 import { MiniScriptConfigModal } from './overlays/MiniScriptConfigModal'
+import BonusGateOverlay from './overlays/BonusGateOverlay'
 import type { AtmosphereMood, SocialSessionState } from '@shared/socialIcebreaker'
 import { PHASE_CONFIG } from '@shared/socialIcebreaker'
 import { resolveTierDisplay, type TierMachineId } from '@shared/socialIcebreakerTierManifest'
@@ -513,7 +514,7 @@ export default function IcebreakerSessionPage() {
         <View className='icebreaker__error'>
           <Image
             className='icebreaker__error-hero'
-            src={cdnAsset('/assets/lovart/lovart-generic-error.png')}
+            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             mode='aspectFit'
             lazyLoad
           />
@@ -609,6 +610,17 @@ export default function IcebreakerSessionPage() {
       {phaseHeader}
 
       <PhaseIntroOverlay phase={phase} visible={showPhaseIntro} />
+
+      {session?.bonusGateOffered && !session?.bonusGateAccepted && !session?.bonusGateDeclined && socialSessionId && (
+        <BonusGateOverlay
+          socialSessionId={socialSessionId}
+          isHost={isHost}
+          playerCount={playerCount}
+          sentimentMap={session.bonusGatePlayerSentiment}
+          currentUserId={currentUserId}
+          onResponded={() => socialSessionQuery.refetch()}
+        />
+      )}
 
       <View className='icebreaker__phase-shell' key={phase}>
         {phase === 'waiting' && (

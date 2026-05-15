@@ -1,20 +1,12 @@
 /**
  * CSV export utility for admin tables.
  *
- * Formula-injection safe: values starting with =, +, -, @, tab, or carriage
- * return are prefixed with a tab so Excel/LibreOffice treat them as text.
+ * Re-exports shared formula-injection safe helpers.
  */
 
-const FORMULA_PREFIX_RE = /^[=+\-@\t\r\n]/;
+import { escapeCsv, buildCsvContent } from "@joyjoin/shared";
 
-function escapeCsv(value: unknown): string {
-  let str = String(value ?? "");
-  // Defend against CSV formula injection (Excel/LibreOffice)
-  if (FORMULA_PREFIX_RE.test(str)) {
-    str = "\t" + str;
-  }
-  return `"${str.replace(/"/g, '""')}"`;
-}
+export { escapeCsv, buildCsvContent };
 
 export function downloadCsv(options: {
   filename: string;
@@ -22,11 +14,8 @@ export function downloadCsv(options: {
   rows: unknown[][];
 }) {
   const { filename, headers, rows } = options;
-  const csvRows = rows.map((row) => row.map(escapeCsv).join(","));
-  const blob = new Blob(
-    ["\uFEFF" + [headers.map(escapeCsv).join(","), ...csvRows].join("\n")],
-    { type: "text/csv;charset=utf-8;" }
-  );
+  const csv = buildCsvContent({ headers, rows });
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;

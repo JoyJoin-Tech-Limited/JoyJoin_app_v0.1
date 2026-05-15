@@ -20,9 +20,8 @@ export default memo(function MascotQuestionHeader({
     return (
       <View className='mascot-question-header mascot-question-header--empty'>
         <View className='mascot-question-header__banner mascot-question-header__banner--loading'>
-          <View className='mascot-question-header__skeleton-eyebrow' />
-          <View className='mascot-question-header__skeleton-line' />
-          <View className='mascot-question-header__skeleton-line mascot-question-header__skeleton-line--short' />
+          <View className='mascot-question-header__skeleton-scenario' />
+          <View className='mascot-question-header__skeleton-scenario mascot-question-header__skeleton-scenario--short' />
         </View>
       </View>
     )
@@ -31,15 +30,10 @@ export default memo(function MascotQuestionHeader({
   return (
     <View className='mascot-question-header'>
       <View className='mascot-question-header__banner'>
-        {question.scenarioText ? (
-          <Text className='mascot-question-header__eyebrow'>
-            {question.scenarioText}
-          </Text>
-        ) : null}
         <Text
-          className={`mascot-question-header__question${isLoading ? ' mascot-question-header__question--loading' : ''}`}
+          className={`mascot-question-header__scenario${isLoading ? ' mascot-question-header__scenario--loading' : ''}`}
         >
-          {question.questionText}
+          {question.scenarioText ?? question.questionText}
         </Text>
       </View>
     </View>

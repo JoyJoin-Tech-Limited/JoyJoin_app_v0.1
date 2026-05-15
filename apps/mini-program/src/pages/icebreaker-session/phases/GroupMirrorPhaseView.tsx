@@ -136,7 +136,7 @@ export default function GroupMirrorPhaseView({
     try {
       await apiRequest({ path: buildSocialPath(socialSessionId, '/group-mirror/generate'), method: 'POST' });
     } catch (e) {
-      setError('生成问题失败');
+      setError('问题没生成成功');
     } finally {
       setIsGenerating(false);
     }
@@ -149,7 +149,7 @@ export default function GroupMirrorPhaseView({
       .filter((a) => a.targetUserId);
 
     if (answersToSubmit.length === 0) {
-      setError('请至少回答一个问题');
+      setError('先回答一个问题吧');
       return;
     }
 
@@ -162,7 +162,7 @@ export default function GroupMirrorPhaseView({
         data: { answers: answersToSubmit },
       });
     } catch (e) {
-      setError('提交失败');
+      setError('提交没成功');
     } finally {
       setSubmitting(false);
     }
@@ -174,7 +174,7 @@ export default function GroupMirrorPhaseView({
     try {
       await apiRequest({ path: buildSocialPath(socialSessionId, '/group-mirror/reveal'), method: 'POST' });
     } catch (e) {
-      setError('揭晓失败');
+      setError('揭晓遇到小状况');
     } finally {
       setRevealing(false);
     }

@@ -1,7 +1,7 @@
 # JoyJoin (悦聚·Joy) - Product Requirements Document
 
-**Version:** 1.5  
-**Last Updated:** May 7, 2026  
+**Version:** 1.6  
+**Last Updated:** 2026-05-13  
 **Platform:** WeChat Mini Program (Taro) — launch-primary  
 **Reference Surface:** Web (React + Vite) — development sandbox / parity reference only, not shipping  
 **Target Market:** Hong Kong & Shenzhen  
@@ -86,6 +86,14 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Sprint D — Auction Enhancement:** Server-synced timer (`auctionLotStartedAt`), persistent bid history (`auctionBidHistory`), outbid toast notifications, archetype-aware lot generation via `buildArchetypeContext` → prompt injection, lot emoji categorization fallback, CardFlip lot reveal, ParticleBurst win celebration, IdentityReveal high-bidder spotlight. Negative balance guards preserved.
 - **Sprint B — Recap Redesign:** IdentityReveal hero headline with dramatic reveal sequencing, CardFlip dynamic share card (front=summary, back=session data), ParticleBurst mount celebration, staggered CSS medal grid entrance, all V2 data fields rendered (lieDetective stats, personalityDice highlights, undercoverWord result). Removed inline styles and non-token hex colors.
 - **Shared infra established:** `ParticleBurst`, `CardFlip`, `IdentityReveal` in `apps/mini-program/src/components/reveal/` — reused across warmup (2), auction (3), and recap (3).
+
+**30. Q2 Pilot — Moment Card, Bonus Gate, Phase Metrics, Admin Tooling** 🚀 *(2026-05-11 to 2026-05-13)*
+- **Moment Card server render:** `GET /api/social-icebreaker/:id/moment-card.png` produces a 640×1040 PNG share card via `@napi-rs/canvas`, replicating the client Canvas layout server-side. Feature-flagged: `SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER`.
+- **Mini-script bonus gate:** When `mini_script` would be the next phase and `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT=true`, the server pauses at a `bonusGateOffered` state. Host sees accept/decline CTAs; players vote `want`/`pass`. Live sentiment tally: "X/Y 小伙伴想玩". If accepted → `mini_script`; if declined → skip to `recap`. Mini-program overlay: `BonusGateOverlay.tsx` with Xiaoyue branding.
+- **Phase metrics instrumentation:** New `social_icebreaker_phase_metrics` table (migration `0040_late_black_knight.sql`) records `dwellTimeMs`, `startedAt`, `endedAt`, and `participantCount` per phase on every advance. Fire-and-forget insert from `socialIcebreakerExtended.ts`.
+- **Admin refund CSV export:** `GET /api/admin/refund-attempts/export` returns `text/csv` with BOM, optional `?since`/`?until` date filters, and formula-injection escape. Admin UI export button added.
+- **Admin social AI benchmark:** `GET /api/admin/benchmarks/social-ai` exposes `runSocialAIBenchmark()` with iteration cap (max 10), model whitelist validation, and 503 if API keys missing. Returns `{ generatedAt, report, iterations, modelsTested }`.
+- **Shared CSV utility:** `packages/shared/src/csvExport.ts` — `escapeCsv()` and `buildCsvContent()` used by server and admin client.
 
 ### 2026 Milestones (Mar–Apr 2026)
 

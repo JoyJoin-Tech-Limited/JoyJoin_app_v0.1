@@ -1,22 +1,17 @@
 #!/usr/bin/env node
 /**
- * Extract individual frames from AI-generated row strips.
+ * Extract 9 frames from Xiaoyue 2-row sprite strips with ZERO drift.
  *
- * Input: Horizontal strip images in assets-source/mascot/xiaoyue-strips/
- *   <state>.png — one strip per state, frames left-to-right
+ * Uses alpha-channel gap detection for precise frame boundaries,
+ * then applies a SHARED content bounding box across all frames
+ * so the mascot stays perfectly centered with no positional drift.
  *
- * Output: Extracted frames in assets-source/mascot/xiaoyue-animations/<state>/
- *   frame-00.png, frame-01.png, frame-02.png, frame-03.png
+ * Input:  assets-source/mascot/xiaoyue-strips/*.png
+ * Output: assets-source/mascot/xiaoyue-animations/<state>/frame-00.png ... frame-08.png
  *
- * Supports automatic frame count detection (via uniform spacing analysis)
- * or explicit frame count via manifest.
- *
- * Usage:
+ * Usage (from apps/mini-program):
  *   node scripts/extract-xiaoyue-strip-frames.mjs
- *   node scripts/extract-xiaoyue-strip-frames.mjs --state idle
- *   node scripts/extract-xiaoyue-strip-frames.mjs --all
- *
- * Requires: sharp
+ *   node scripts/extract-xiaoyue-strip-frames.mjs --state intro
  */
 
 import fs from 'node:fs'
@@ -27,139 +22,242 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const STRIP_DIR = path.join(ROOT, 'assets-source/mascot/xiaoyue-strips')
 const OUTPUT_DIR = path.join(ROOT, 'assets-source/mascot/xiaoyue-animations')
-const REPAIR_DIR = path.join(ROOT, 'assets-source/mascot/xiaoyue-strips/.repair')
 
-/** Expected frame dimensions */
-const FRAME_W = 200
-const FRAME_H = 200
+const TARGET_SIZE = 200
+const FILL_RATIO = 0.95
 
-/** Minimum gutter between frames for auto-detection */
-const MIN_GUTTER = 2
-
-async function detectFrameCount(stripPath) {
-  const { default: sharp } = await import('sharp')
-  const metadata = await sharp(stripPath).metadata()
-  const stripW = metadata.width
-  const stripH = metadata.height
-
-  // If height matches frame height, frames are horizontal
-  if (stripH === FRAME_H) {
-    const estimatedFrames = Math.round(stripW / FRAME_W)
-    return { frameCount: estimatedFrames, orientation: 'horizontal', stripW, stripH }
-  }
-
-  // If width matches frame width, frames are vertical
-  if (stripW === FRAME_W) {
-    const estimatedFrames = Math.round(stripH / FRAME_H)
-    return { frameCount: estimatedFrames, orientation: 'vertical', stripW, stripH }
-  }
-
-  // If strip is close to expected height but wider, assume horizontal with padding
-  if (Math.abs(stripH - FRAME_H) <= 10) {
-    const estimatedFrames = Math.round(stripW / FRAME_W)
-    return { frameCount: estimatedFrames, orientation: 'horizontal', stripW, stripH }
-  }
-
-  // Fallback: guess based on aspect ratio
-  const aspectRatio = stripW / stripH
-  if (aspectRatio > 1.5) {
-    const estimatedFrames = Math.max(1, Math.round(stripW / FRAME_W))
-    return { frameCount: estimatedFrames, orientation: 'horizontal', stripW, stripH }
-  } else {
-    const estimatedFrames = Math.max(1, Math.round(stripH / FRAME_H))
-    return { frameCount: estimatedFrames, orientation: 'vertical', stripW, stripH }
-  }
+const STATE_MAP = {
+  'celebrate sprite': 'celebrate',
+  'coach sprite': 'coach',
+  'curious sprite': 'curious',
+  'idle breathing sprite': 'idle',
+  'intro sprite': 'intro',
+  'listening sprite': 'listening',
+  'nod sprite': 'nod',
+  'surprise sprite': 'surprised',
+  'thinking sprite': 'thinking',
 }
 
-async function extractFrames(stripPath, stateName, options = {}) {
-  const { default: sharp } = await import('sharp')
-  const { force = false, verbose = true } = options
-
-  const stateOutputDir = path.join(OUTPUT_DIR, stateName)
-
-  // Check if already extracted
-  if (!force && fs.existsSync(stateOutputDir)) {
-    const existing = fs.readdirSync(stateOutputDir).filter(f => /^frame-\d+\.png$/i.test(f))
-    if (existing.length > 0) {
-      if (verbose) console.log(`  ${stateName}: already extracted (${existing.length} frames). Use --force to re-extract.`)
-      return { state: stateName, extracted: existing.length, skipped: true }
+function findHorizontalDivider(alpha, w, h) {
+  const rowSums = []
+  for (let y = 0; y < h; y++) {
+    let s = 0
+    for (let x = 0; x < w; x++) {
+      s += alpha[y * w + x]
+    }
+    rowSums.push(s)
+  }
+  const midStart = Math.floor(h / 3)
+  const midEnd = Math.floor(2 * h / 3)
+  let minIdx = midStart
+  let minVal = rowSums[midStart]
+  for (let i = midStart; i < midEnd; i++) {
+    if (rowSums[i] < minVal) {
+      minVal = rowSums[i]
+      minIdx = i
     }
   }
+  return minIdx
+}
 
-  const { frameCount, orientation, stripW, stripH } = await detectFrameCount(stripPath)
+function findGapsInRow(alpha, w, y0, y1) {
+  const colSums = []
+  for (let x = 0; x < w; x++) {
+    let s = 0
+    for (let y = y0; y < y1; y++) {
+      s += alpha[y * w + x]
+    }
+    colSums.push(s)
+  }
+  const maxSum = Math.max(...colSums) || 1
+  const threshold = 0.05
+  let inGap = false
+  let gapStart = 0
+  const gaps = []
+  for (let i = 0; i < colSums.length; i++) {
+    const v = colSums[i] / maxSum
+    if (v < threshold && !inGap) {
+      gapStart = i
+      inGap = true
+    } else if (v >= threshold && inGap) {
+      gaps.push([gapStart, i])
+      inGap = false
+    }
+  }
+  if (inGap) {
+    gaps.push([gapStart, colSums.length])
+  }
+  return gaps
+}
 
-  if (verbose) {
-    console.log(`  ${stateName}: ${stripW}×${stripH}px, detected ${frameCount} frames (${orientation})`)
+function extractFrames(stripPath, sharp) {
+  return sharp(stripPath)
+    .raw()
+    .ensureAlpha()
+    .toBuffer({ resolveWithObject: true })
+    .then(({ data, info }) => {
+      const w = info.width
+      const h = info.height
+      const alpha = new Uint8Array(w * h)
+      for (let i = 0; i < w * h; i++) {
+        alpha[i] = data[i * 4 + 3]
+      }
+
+      const dividerY = findHorizontalDivider(alpha, w, h)
+
+      const topGaps = findGapsInRow(alpha, w, 0, dividerY)
+      const topFrames = []
+      for (let i = 0; i < topGaps.length - 1; i++) {
+        const left = topGaps[i][1]
+        const right = topGaps[i + 1][0]
+        topFrames.push({ left, top: 0, width: right - left, height: dividerY })
+      }
+
+      const bottomGaps = findGapsInRow(alpha, w, dividerY, h)
+      const bottomFrames = []
+      for (let i = 0; i < bottomGaps.length - 1; i++) {
+        const left = bottomGaps[i][1]
+        const right = bottomGaps[i + 1][0]
+        bottomFrames.push({ left, top: dividerY, width: right - left, height: h - dividerY })
+      }
+
+      return topFrames.concat(bottomFrames)
+    })
+}
+
+function getContentBBox(buffer, w, h) {
+  let minX = w, minY = h, maxX = 0, maxY = 0
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const alpha = buffer[(y * w + x) * 4 + 3]
+      if (alpha > 10) {
+        if (x < minX) minX = x
+        if (y < minY) minY = y
+        if (x > maxX) maxX = x
+        if (y > maxY) maxY = y
+      }
+    }
+  }
+  if (minX > maxX) return null
+  return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 }
+}
+
+async function processStrip(stripPath, stateName, sharp) {
+  const stateOutDir = path.join(OUTPUT_DIR, stateName)
+  fs.mkdirSync(stateOutDir, { recursive: true })
+
+  // Clean existing frames
+  const existing = fs.readdirSync(stateOutDir).filter(f => f.startsWith('frame-'))
+  for (const f of existing) fs.unlinkSync(path.join(stateOutDir, f))
+
+  const rawFrames = await extractFrames(stripPath, sharp)
+  if (rawFrames.length !== 9) {
+    console.warn(`  ⚠️ expected 9 frames, got ${rawFrames.length}`)
   }
 
-  fs.mkdirSync(stateOutputDir, { recursive: true })
-
-  const stripImage = sharp(stripPath)
-  const extracted = []
-
-  for (let i = 0; i < frameCount; i++) {
-    let left, top, width, height
-
-    if (orientation === 'horizontal') {
-      const cellW = Math.floor(stripW / frameCount)
-      left = i * cellW
-      top = 0
-      width = Math.min(cellW, stripW - left)
-
-      // Trim gutter if detected
-      const centerX = left + Math.floor(width / 2)
-      const frameLeft = Math.max(0, centerX - Math.floor(FRAME_W / 2))
-      const frameTop = Math.max(0, Math.floor(stripH / 2) - Math.floor(FRAME_H / 2))
-      left = frameLeft
-      top = frameTop
-      width = FRAME_W
-      height = FRAME_H
-    } else {
-      const cellH = Math.floor(stripH / frameCount)
-      left = 0
-      top = i * cellH
-      height = Math.min(cellH, stripH - top)
-
-      const centerY = top + Math.floor(height / 2)
-      const frameLeft = Math.max(0, Math.floor(stripW / 2) - Math.floor(FRAME_W / 2))
-      const frameTop = Math.max(0, centerY - Math.floor(FRAME_H / 2))
-      left = frameLeft
-      top = frameTop
-      width = FRAME_W
-      height = FRAME_H
-    }
-
-    // Extract and resize to standard frame size
-    const frameBuffer = await stripImage
-      .clone()
-      .extract({ left, top, width, height })
-      .resize(FRAME_W, FRAME_H, { fit: 'contain', position: 'center', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .png({ compressionLevel: 9 })
+  // Extract frame buffers and compute content bboxes
+  const frames = []
+  const bboxes = []
+  for (let i = 0; i < rawFrames.length; i++) {
+    const coords = rawFrames[i]
+    const buffer = await sharp(stripPath)
+      .extract(coords)
+      .raw()
+      .ensureAlpha()
       .toBuffer()
 
-    const framePath = path.join(stateOutputDir, `frame-${String(i).padStart(2, '0')}.png`)
-    fs.writeFileSync(framePath, frameBuffer)
-    extracted.push(framePath)
+    const bbox = getContentBBox(buffer, coords.width, coords.height)
+    frames.push({ buffer, coords, bbox })
+    if (bbox) bboxes.push(bbox)
   }
 
-  if (verbose) console.log(`    → Extracted ${extracted.length} frames to ${stateOutputDir}`)
-  return { state: stateName, extracted: extracted.length, skipped: false }
+  if (bboxes.length === 0) {
+    console.warn(`  ⚠️ no content found in any frame`)
+    return
+  }
+
+  // Compute SHARED crop dimensions (max content size across all frames)
+  const maxContentW = Math.max(...bboxes.map(b => b.w))
+  const maxContentH = Math.max(...bboxes.map(b => b.h))
+
+  // Add small padding for breathing room
+  const pad = 4
+  const cropW = maxContentW + pad * 2
+  const cropH = maxContentH + pad * 2
+
+  // Target content size after scaling
+  const targetContentSize = Math.round(TARGET_SIZE * FILL_RATIO)
+  const scale = Math.min(targetContentSize / cropW, targetContentSize / cropH)
+  const finalW = Math.max(1, Math.round(cropW * scale))
+  const finalH = Math.max(1, Math.round(cropH * scale))
+
+  for (let i = 0; i < frames.length; i++) {
+    const { buffer, coords, bbox } = frames[i]
+    if (!bbox) {
+      console.warn(`  ⚠️ frame-${String(i).padStart(2, '0')}: empty`)
+      continue
+    }
+
+    // Center the shared crop on this frame's content center
+    const cx = bbox.x + bbox.w / 2
+    const cy = bbox.y + bbox.h / 2
+
+    let left = Math.round(cx - cropW / 2)
+    let top = Math.round(cy - cropH / 2)
+    let right = left + cropW
+    let bottom = top + cropH
+
+    // Clamp to source bounds
+    let padLeft = 0, padTop = 0, padRight = 0, padBottom = 0
+    if (left < 0) { padLeft = -left; left = 0 }
+    if (top < 0) { padTop = -top; top = 0 }
+    if (right > coords.width) { padRight = right - coords.width; right = coords.width }
+    if (bottom > coords.height) { padBottom = bottom - coords.height; bottom = coords.height }
+
+    const srcW = right - left
+    const srcH = bottom - top
+
+    // Build a square crop buffer with padding if needed
+    const squareSize = Math.max(srcW + padLeft + padRight, srcH + padTop + padBottom)
+    const squareBuffer = Buffer.alloc(squareSize * squareSize * 4, 0)
+
+    for (let y = 0; y < srcH; y++) {
+      for (let x = 0; x < srcW; x++) {
+        const srcIdx = ((top + y) * coords.width + (left + x)) * 4
+        const dstIdx = ((padTop + y) * squareSize + (padLeft + x)) * 4
+        squareBuffer[dstIdx] = buffer[srcIdx]
+        squareBuffer[dstIdx + 1] = buffer[srcIdx + 1]
+        squareBuffer[dstIdx + 2] = buffer[srcIdx + 2]
+        squareBuffer[dstIdx + 3] = buffer[srcIdx + 3]
+      }
+    }
+
+    // Resize to final frame size and save
+    const outPath = path.join(stateOutDir, `frame-${String(i).padStart(2, '0')}.png`)
+    await sharp(squareBuffer, { raw: { width: squareSize, height: squareSize, channels: 4 } })
+      .resize(finalW, finalH, { fit: 'contain', position: 'center', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .extend({
+        top: Math.floor((TARGET_SIZE - finalH) / 2),
+        bottom: Math.ceil((TARGET_SIZE - finalH) / 2),
+        left: Math.floor((TARGET_SIZE - finalW) / 2),
+        right: Math.ceil((TARGET_SIZE - finalW) / 2),
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
+      .png({ compressionLevel: 9 })
+      .toFile(outPath)
+  }
+
+  console.log(`  ✓ ${stateName}: ${frames.length} frames → ${stateOutDir}`)
 }
 
 async function main() {
+  const { default: sharp } = await import('sharp')
+
   const args = process.argv.slice(2)
   const targetState = args.includes('--state') ? args[args.indexOf('--state') + 1] : null
-  const force = args.includes('--force')
-  const all = args.includes('--all')
-
-  if (!fs.existsSync(STRIP_DIR)) {
-    console.error(`Strip directory does not exist: ${STRIP_DIR}`)
-    console.error('Place AI-generated strip images here: assets-source/mascot/xiaoyue-strips/<state>.png')
-    process.exit(1)
-  }
 
   const stripFiles = fs.readdirSync(STRIP_DIR)
-    .filter(f => f.endsWith('.png') && !f.startsWith('.') && !f.startsWith('_'))
+    .filter(f => f.endsWith('.png') && !f.startsWith('.') && !f.includes('_grid'))
     .sort()
 
   if (stripFiles.length === 0) {
@@ -167,39 +265,26 @@ async function main() {
     process.exit(1)
   }
 
-  console.log(`Found ${stripFiles.length} strip(s):`)
-  stripFiles.forEach(f => console.log(`  - ${f}`))
-  console.log('')
+  console.log(`Found ${stripFiles.length} strip files:\n  ${stripFiles.join('\n  ')}\n`)
 
-  const results = []
-
-  for (const stripFile of stripFiles) {
-    const stateName = path.basename(stripFile, '.png')
-
+  for (const file of stripFiles) {
+    const baseName = path.basename(file, '.png')
+    const stateName = STATE_MAP[baseName]
+    if (!stateName) {
+      console.log(`Skipping unknown strip: ${file}`)
+      continue
+    }
     if (targetState && stateName !== targetState) continue
 
-    const stripPath = path.join(STRIP_DIR, stripFile)
-    const result = await extractFrames(stripPath, stateName, { force, verbose: true })
-    results.push(result)
+    const stripPath = path.join(STRIP_DIR, file)
+    await processStrip(stripPath, stateName, sharp)
   }
 
-  console.log('\n--- Extraction Summary ---')
-  const extracted = results.filter(r => !r.skipped)
-  const skipped = results.filter(r => r.skipped)
-  console.log(`Extracted: ${extracted.length} states, ${extracted.reduce((s, r) => s + r.extracted, 0)} frames`)
-  console.log(`Skipped:   ${skipped.length} states`)
-
-  // Next step hint
-  if (extracted.length > 0) {
-    console.log('\nNext:')
-    console.log('  1. Review frames for consistency and quality')
-    console.log('  2. Fix any bad frames by replacing strip files and re-running with --force')
-    console.log('  3. Run: node scripts/generate-xiaoyue-spritesheet.mjs')
-    console.log('  4. Run: node scripts/generate-xiaoyue-contact-sheet.mjs')
-  }
+  console.log('\n✅ Extraction complete. Next: generate spritesheets')
+  console.log('   node scripts/generate-xiaoyue-spritesheet.mjs')
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error(err)
   process.exit(1)
 })

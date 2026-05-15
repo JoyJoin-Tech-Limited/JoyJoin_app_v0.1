@@ -130,3 +130,13 @@ export const webhookEndpointLimiter = createRateLimiter({
   maxRequests: 120,
   keyPrefix: 'wh',
 });
+
+/**
+ * Moment Card PNG endpoint limiter — canvas rendering is CPU/memory intensive.
+ * Allow 5 requests per minute per user; bursts are unlikely for share cards.
+ */
+export const momentCardLimiter = createRateLimiter({
+  windowMs: 60000,
+  maxRequests: 5,
+  keyPrefix: 'mc',
+});

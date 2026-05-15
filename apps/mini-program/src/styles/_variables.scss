@@ -30,6 +30,7 @@ $color-bg-tint-purple: #F5F0FF;
 $color-bg-tint-cream:  #FFFAF4;
 
 $color-text-primary:   #2D3142;
+$color-text-primary-warm: #2D2B28; // warm near-black for cream/warm backgrounds
 $color-text-secondary: #6B7280;
 $color-text-tertiary:  #8E949E;
 $color-text-link:      #A86BFF;
@@ -142,9 +143,9 @@ $z-toast:   300;
 
 // ─── Archetype family accent colors (discover page pool cards) ────
 $color-archetype-warm: #C79450;
-$color-archetype-cool: #C0A17B;
-$color-archetype-fire: #877B93;
-$color-archetype-calm: #8E8E88;
+$color-archetype-cool: #5B8DB8;
+$color-archetype-fire: #D4A843;
+$color-archetype-calm: #6B9E75;
 
 // ─── Semantic colors (game / icebreaker) ──────────────────────────
 $color-semantic-secret: #e67e22;

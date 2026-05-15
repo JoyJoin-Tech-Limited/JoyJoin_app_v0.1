@@ -1,29 +1,21 @@
 import { View, Text, Image, Navigator } from "@tarojs/components"
+import { PhaseHeaderIcon } from "../icebreaker-session/phaseUtils"
 import Taro from "@tarojs/taro"
 import { useState } from "react"
 import Button from "../../components/ui/Button"
 import BrandLogo from "../../components/ui/BrandLogo"
 import BondingCloud from "../../components/landing/BondingCloud"
-import { ResponsiveSpacer } from "../../components/ui/ResponsiveSpacer"
+import { useStaggerMount } from "../../hooks/useStaggerMount"
+import { getXiaoyueExpressionAsset } from "../../lib/mascot/xiaoyueExpressions"
 import { runMiniProgramRouteTransition } from "../../lib/onboarding/onboardingNavigation"
 import "./index.scss"
-
-type LandingHeroKey = "match" | "dinner" | "continue"
-
-const heroFallbackSources: Record<LandingHeroKey, string> = {
-  match: "/assets/match.webp",
-  dinner: "/assets/dinner.webp",
-  continue: "/assets/continue.webp",
-}
 
 export default function MiniProgramLandingPage() {
   const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
-  const [heroSources, setHeroSources] = useState<Record<LandingHeroKey, string>>({
-    match: "/assets/match.webp",
-    dinner: "/assets/dinner.webp",
-    continue: "/assets/continue.webp",
-  })
+  const [mascotSrc, setMascotSrc] = useState(getXiaoyueExpressionAsset("homeWelcome"))
+  const isMounted = useStaggerMount()
+
   const ctaDisabledClass = hasAcceptedLegal ? "" : " landing-page__cta--disabled"
   const ctaHoverClass = hasAcceptedLegal ? "landing-page__cta-hover" : ""
   const pageClassName = ["landing-page", isPageExiting ? "landing-page--exiting" : ""]
@@ -48,93 +40,79 @@ export default function MiniProgramLandingPage() {
     })()
   }
 
-  const handleHeroError = (key: LandingHeroKey) => {
-    setHeroSources((current) => {
-      if (current[key] === heroFallbackSources[key]) {
-        return current
-      }
-
-      return {
-        ...current,
-        [key]: heroFallbackSources[key],
-      }
-    })
-  }
-
   return (
     <View className={pageClassName}>
       <View className="content-zone">
-        <View className="logo-container">
-          <View className="logo-aura"></View>
-          <BrandLogo size="md" className="logo-img" />
+        {/* Brand watermark */}
+        <View
+          className={`brand-mark ${isMounted ? "stagger-in stagger-in--0" : "stagger-in-hidden"}`}
+        >
+          <BrandLogo size="md" />
         </View>
 
-        <View className="hero-cards">
-          <View className="landing-page__orbit landing-page__orbit--left" />
-          <View className="landing-page__orbit landing-page__orbit--right" />
-
-          <View className="card card-left">
-            <View className="card-img-wrap">
-              <Image
-                src={heroSources.match}
-                className="card-img"
-                mode="aspectFill"
-                onError={() => handleHeroError("match")}
-              />
+        {/* Hero: mascot + headline */}
+        <View
+          className={`hero-zone ${isMounted ? "stagger-in stagger-in--1" : "stagger-in-hidden"}`}
+        >
+          {mascotSrc !== '' ? (
+            <Image
+              className="hero-mascot"
+              src={mascotSrc}
+              mode="aspectFit"
+              ariaLabel="悦仔"
+              onError={() => setMascotSrc('')}
+            />
+          ) : (
+            <View className="hero-mascot-fallback">
+              <BrandLogo size="lg" />
             </View>
-            <View className="card-text">
-              <Text>匹配</Text>
-            </View>
-          </View>
-
-          <View className="card card-center">
-            <View className="card-img-wrap">
-              <Image
-                src={heroSources.dinner}
-                className="card-img"
-                mode="aspectFill"
-                onError={() => handleHeroError("dinner")}
-              />
-            </View>
-            <View className="card-text">
-              <Text>悦聚</Text>
-            </View>
-          </View>
-
-          <View className="card card-right">
-            <View className="card-img-wrap">
-              <Image
-                src={heroSources.continue}
-                className="card-img"
-                mode="aspectFill"
-                onError={() => handleHeroError("continue")}
-              />
-            </View>
-            <View className="card-text">
-              <Text>延续</Text>
-            </View>
+          )}
+          <View className="hero-text">
+            <Text className="headline">你的命格里，藏着谁</Text>
+            <Text className="subtitle">测出你的氛围命格，找到最聊得来的 4-6 人小局</Text>
           </View>
         </View>
 
+        {/* BondingCloud */}
+        <View
+          className={`bonding-cloud-wrap ${isMounted ? "stagger-in stagger-in--2" : "stagger-in-hidden"}`}
+        >
+          <BondingCloud />
+        </View>
+
+        {/* Game preview */}
+        <View
+          className={`game-preview ${isMounted ? "stagger-in stagger-in--3" : "stagger-in-hidden"}`}
+        >
+          {/* @ts-expect-error Taro TextProps lacks ARIA role typings; WeChat WXML supports it */}
+          <Text className="game-preview__title" role="heading" aria-level={3}>局里可能玩到</Text>
+          <View className="game-preview__grid">
+            {[
+              { phase: 'topic-card' as const, label: '话题卡' },
+              { phase: 'lie_detective' as const, label: '谎言侦探' },
+              { phase: 'personality_dice' as const, label: '人格骰子' },
+              { phase: 'auction' as const, label: '拍卖' },
+              { phase: 'mini_script' as const, label: '迷你剧本杀' },
+              { phase: 'quip_battle' as const, label: '机智对决' },
+            ].map((game, index) => (
+              <View
+                key={game.phase}
+                className={`game-preview__cell ${isMounted ? "game-preview__cell--in" : "game-preview__cell--hidden"}`}
+                style={{ animationDelay: `${index * 60}ms` }}
+                aria-label={game.label}
+              >
+                <PhaseHeaderIcon phase={game.phase} size={112} />
+                <Text className="game-preview__cell-label">{game.label}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
       </View>
 
-      <View className="text-content">
-        <Text className="headline">让对的相遇不再错过</Text>
-        <Text className="subtitle">找到你的氛围原型，遇见真正聊得来的人</Text>
-        <View className="badges">
-          {["氛围测试", "算法匹配", "4-6人小局"].map((label) => (
-            <View key={label} className="badge">
-              <Text>{label}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      <BondingCloud />
-
-      <ResponsiveSpacer heightRpx={24} collapseBelow={640} />
-
-      <View className="bottom-zone">
+      {/* CTA */}
+      <View
+        className={`bottom-zone ${isMounted ? "stagger-in stagger-in--4" : "stagger-in-hidden"}`}
+      >
         <Button
           variant="brand"
           className={"landing-page__cta landing-page__cta--primary" + ctaDisabledClass}
@@ -143,18 +121,7 @@ export default function MiniProgramLandingPage() {
           loading={isPageExiting}
           onClick={() => navigateWithLegalGate("/pages/onboarding/personality-test/index")}
         >
-          看看我会遇见谁
-        </Button>
-
-        <Button
-          variant="brand"
-          className={"landing-page__cta landing-page__cta--login" + ctaDisabledClass}
-          hoverClass={ctaHoverClass}
-          disabled={!hasAcceptedLegal}
-          loading={isPageExiting}
-          onClick={() => navigateWithLegalGate("/pages/login/index")}
-        >
-          已有账号？登录
+          测测我的社交 vibe →
         </Button>
 
         <View className="landing-page__legal-row">

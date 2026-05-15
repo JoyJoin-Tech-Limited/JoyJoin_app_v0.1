@@ -68,6 +68,10 @@ export function sanitizeStateForClient(
       : {};
   }
 
+  // Strip individual bonus-gate sentiment votes to protect voter privacy;
+  // clients only need the aggregate count computed server-side or in UI.
+  delete (sanitized as Partial<SocialSessionState>).bonusGatePlayerSentiment;
+
   return sanitized;
 }
 

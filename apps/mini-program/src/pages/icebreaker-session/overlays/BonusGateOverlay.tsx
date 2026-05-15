@@ -1,0 +1,189 @@
+import { useState } from 'react'
+import { View, Text } from '@tarojs/components'
+import Taro from '@tarojs/taro'
+import Button from '../../../components/ui/Button'
+import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
+import { apiRequest } from '../../../lib/api/api'
+import { logError } from '../../../lib/utils/logger'
+
+interface BonusGateOverlayProps {
+  socialSessionId: string
+  isHost: boolean
+  playerCount: number
+  sentimentMap?: Record<string, 'want' | 'pass'>
+  currentUserId: string
+  onResponded: () => void
+}
+
+export default function BonusGateOverlay({
+  socialSessionId,
+  isHost,
+  playerCount,
+  sentimentMap = {},
+  currentUserId,
+  onResponded,
+}: BonusGateOverlayProps) {
+  const [loading, setLoading] = useState(false)
+  const hasVoted = sentimentMap[currentUserId] !== undefined
+  const wantCount = Object.values(sentimentMap).filter((s) => s === 'want').length
+
+  const handleHostRespond = async (accept: boolean) => {
+    setLoading(true)
+    try {
+      await apiRequest({
+        path: `/api/social-icebreaker/${socialSessionId}/bonus/respond`,
+        method: 'POST',
+        data: { socialSessionId, accept },
+      })
+      onResponded()
+    } catch (err) {
+      logError('bonus-gate-respond', { error: String(err) })
+      Taro.showToast({ title: '操作失败，请重试', icon: 'none' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSentiment = async (sentiment: 'want' | 'pass') => {
+    setLoading(true)
+    try {
+      await apiRequest({
+        path: `/api/social-icebreaker/${socialSessionId}/bonus/sentiment`,
+        method: 'POST',
+        data: { socialSessionId, sentiment },
+      })
+      onResponded()
+    } catch (err) {
+      logError('bonus-gate-sentiment', { error: String(err) })
+      Taro.showToast({ title: '操作失败，请重试', icon: 'none' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <View
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.85)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        padding: '40rpx',
+      }}
+    >
+      <View
+        style={{
+          backgroundColor: '#1e1e2f',
+          borderRadius: '24rpx',
+          padding: '48rpx 32rpx',
+          width: '100%',
+          maxWidth: '640rpx',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '24rpx',
+        }}
+      >
+        <Text
+          style={{
+            fontSize: '40rpx',
+            fontWeight: 700,
+            color: '#d4af37',
+            textAlign: 'center',
+          }}
+        >
+          想不想来一局迷你剧本杀?
+        </Text>
+        <Text
+          style={{
+            fontSize: '28rpx',
+            color: '#9CA3AF',
+            textAlign: 'center',
+            lineHeight: '44rpx',
+          }}
+        >
+          {getMascotDisplayName()}为大家准备了一个特别的收尾环节，用推理和演技为今晚画上句号。
+        </Text>
+
+        {wantCount > 0 && (
+          <Text style={{ fontSize: '24rpx', color: '#6ee7b7', textAlign: 'center' }}>
+            {wantCount}/{playerCount} 小伙伴想玩
+          </Text>
+        )}
+
+        {isHost ? (
+          <View
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              gap: '24rpx',
+              width: '100%',
+              marginTop: '16rpx',
+            }}
+          >
+            <Button
+              variant='secondary'
+              className='flex-1'
+              onClick={() => handleHostRespond(false)}
+              disabled={loading}
+              loading={loading}
+            >
+              跳过
+            </Button>
+            <Button
+              variant='primary'
+              className='flex-1'
+              onClick={() => handleHostRespond(true)}
+              disabled={loading}
+              loading={loading}
+            >
+              接受
+            </Button>
+          </View>
+        ) : (
+          <View
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              gap: '24rpx',
+              width: '100%',
+              marginTop: '16rpx',
+            }}
+          >
+            <Button
+              variant='secondary'
+              className='flex-1'
+              onClick={() => handleSentiment('pass')}
+              disabled={loading || hasVoted}
+              loading={loading}
+            >
+              下次吧
+            </Button>
+            <Button
+              variant='primary'
+              className='flex-1'
+              onClick={() => handleSentiment('want')}
+              disabled={loading || hasVoted}
+              loading={loading}
+            >
+              我也想玩!
+            </Button>
+          </View>
+        )}
+
+        {hasVoted && !isHost && (
+          <Text style={{ fontSize: '24rpx', color: '#9CA3AF', marginTop: '8rpx' }}>
+            已投票，等待主持人决定…
+          </Text>
+        )}
+      </View>
+    </View>
+  )
+}

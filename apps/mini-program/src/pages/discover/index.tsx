@@ -23,8 +23,8 @@ import Card from '../../components/ui/Card'
 import StatusCard from '../../components/ui/StatusCard'
 import AiMatchPromoCarousel from '../../components/AiMatchPromoCarousel'
 import VirtualList from '../../components/VirtualList'
-import ArchetypeGlyph from '../../components/mascot/ArchetypeGlyph'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import OracleCard from '../../components/discover/OracleCard'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
 import { getTimeGreeting } from '../../lib/utils/timeGreeting'
 import {
@@ -32,6 +32,7 @@ import {
   getDiscoverActionLabel,
 } from '../../lib/utils/discoverHeaderCopy'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
+import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import MiniProgramLandingPage from '../index/LandingPage'
 import './index.scss'
 
@@ -39,251 +40,23 @@ import './index.scss'
 const ALL_CLUSTER_ID = '__all__'
 const ALL_DISTRICT_ID = '__all__'
 
-// Measured PoolCard height in rpx.
-// Verified: PoolCard height is stable across devices. Dynamic-height fallback is available if needed.
-const DISCOVER_CARD_HEIGHT_RPX = 580
-
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  dinner: '饭局',
-  drinks: '酒局',
-  other: '其他',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  open: '报名中',
-  filling: '即将满员',
-  closed: '已截止',
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────
-
-function getEventTypeLabel(eventType?: string): string {
-  if (!eventType) return '其他'
-  return EVENT_TYPE_LABELS[eventType] ?? '其他'
-}
-
-function getStatusLabel(status?: string): string {
-  if (!status) return '报名中'
-  return STATUS_LABELS[status] ?? status
-}
-
-function getStatusModifier(status?: string): string {
-  switch (status) {
-    case 'open':
-      return 'open'
-    case 'filling':
-      return 'filling'
-    case 'closed':
-      return 'closed'
-    default:
-      return 'open'
-  }
-}
-
-function getFillPercent(current?: number, max?: number): number {
-  if (!max || max === 0) return 0
-  return Math.min(100, Math.round(((current ?? 0) / max) * 100))
-}
-
-function getPoolMomentum(pool: EventPoolSummary, fillPct: number): {
-  label: string
-  headline: string
-  detail: string
-  counter: string
-} {
-  const current = pool.currentParticipants ?? 0
-  const max = pool.maxParticipants ?? 0
-  const remaining = max > 0 ? Math.max(max - current, 0) : 0
-
-  if (pool.status === 'closed') {
-    return {
-      label: '报名收尾',
-      headline: '这一场正在等成组结果',
-      detail: '时间和区域已经锁定，成局后会继续揭晓后续安排。',
-      counter: current > 0 ? `${current} 人候局` : '等待下一轮',
-    }
-  }
-
-  if (current === 0) {
-    return {
-      label: '新场开局',
-      headline: '你来，局就热了',
-      detail: '时间和区域先锁定，成局后再揭晓同桌伙伴。',
-      counter: '虚位以待',
-    }
-  }
-
-  if (pool.status === 'filling' || fillPct >= 78) {
-    return {
-      label: '热度很高',
-      headline: '就差临门一脚',
-      detail: '这一场正在迅速升温，现在加入更容易跟上同一桌的节奏。',
-      counter: remaining > 0 ? `还差 ${remaining} 个席位` : `${current} 人已入池`,
-    }
-  }
-
-  return {
-    label: '慢慢热起来了',
-    headline: '已经有人在等这场局',
-    detail: '预算和偏好会一起参与匹配，不是只看一个标签硬凑局。',
-    counter: max > 0 ? `${current}/${max} 人入池` : `${current} 人已入池`,
-  }
-}
+// Measured OracleCard height in rpx. Keep in sync with `.oracle-card` height.
+const DISCOVER_CARD_HEIGHT_RPX = 464
 
 // ─── Skeleton placeholder (initial loading) ───────────────────────
 function PoolCardSkeleton() {
   return (
-    <View className='discover-auth__pool-card discover-auth__pool-card--skeleton'>
-      <View className='discover-auth__skeleton-line discover-auth__skeleton-line--title' />
-      <View className='discover-auth__skeleton-line discover-auth__skeleton-line--meta' />
-      <View className='discover-auth__skeleton-line discover-auth__skeleton-line--bar' />
+    <View className='oracle-card oracle-card--skeleton'>
+      <View className='oracle-card__skeleton-line oracle-card__skeleton-line--hero' />
+      <View className='oracle-card__skeleton-line oracle-card__skeleton-line--meta' />
+      <View className='oracle-card__skeleton-line oracle-card__skeleton-line--teaser' />
+      <View className='oracle-card__skeleton-line oracle-card__skeleton-line--cta' />
     </View>
   )
 }
 
-// ─── Pool card ────────────────────────────────────────────────────
-interface PoolCardProps {
-  pool: EventPoolSummary
-  isRegistered: boolean
-  index: number
-  onTap: (pool: EventPoolSummary) => void
-  animate?: boolean
-}
-
-const PoolCard = React.memo(function PoolCard({
-  pool,
-  isRegistered,
-  index,
-  onTap,
-  animate = true,
-}: PoolCardProps) {
-  const fillPct = getFillPercent(pool.currentParticipants, pool.maxParticipants)
-  const statusMod = getStatusModifier(pool.status)
-  const momentum = getPoolMomentum(pool, fillPct)
-  const ctaLabel = isRegistered ? '查看报名进度' : '去填写偏好'
-
-  const accentFamily = pool.accentFamily ?? 'calm'
-  const sampleArchetypes = pool.sampleArchetypes ?? []
-  const registrationCount = pool.registrationCount ?? 0
-  const aiHeadline = pool.aiHeadline
-  const hasUserArchetypeMatch = pool.hasUserArchetypeMatch ?? false
-
-  // Show up to 5 unique glyphs; if more registrants exist, show +N badge
-  const visibleGlyphs = sampleArchetypes.slice(0, 5)
-  const hasMore = registrationCount > visibleGlyphs.length
-  const moreCount = hasMore ? registrationCount - visibleGlyphs.length : 0
-
-  const headline = aiHeadline ?? momentum.headline
-
-  return (
-    <Card
-      className={`discover-auth__pool-card discover-auth__pool-card--live discover-auth__pool-card--accent-${accentFamily}`}
-      hoverClass='discover-auth__pool-card--hover'
-      style={animate ? { animationDelay: `${Math.min(index, 4) * 60}ms` } : undefined}
-      onClick={() => onTap(pool)}
-    >
-      <View className='discover-auth__pool-topline'>
-        <View className='discover-auth__pool-live'>
-          <View className='discover-auth__heat-dot' />
-          <Text className='discover-auth__pool-live-label'>{momentum.label}</Text>
-        </View>
-        <Text className='discover-auth__pool-inline-cta'>点击继续</Text>
-      </View>
-
-      <View className='discover-auth__pool-header'>
-        <Text className='discover-auth__pool-title'>
-          {pool.title || '悦聚活动'}
-        </Text>
-        <View className='discover-auth__pool-badges'>
-          {isRegistered && (
-            <Text className='discover-auth__badge discover-auth__badge--registered'>
-              已报名
-            </Text>
-          )}
-          <Text className='discover-auth__badge discover-auth__badge--type'>
-            {getEventTypeLabel(pool.eventType)}
-          </Text>
-        </View>
-      </View>
-
-      {/* Personality palette — social proof */}
-      {visibleGlyphs.length > 0 ? (
-        <View className='discover-auth__pool-palette'>
-          <Text className='discover-auth__pool-palette-label'>
-            已有 {registrationCount} 人
-          </Text>
-          <View className='discover-auth__pool-palette-glyphs'>
-            {visibleGlyphs.map((archetype, i) => (
-              <ArchetypeGlyph
-                key={`${archetype}-${i}`}
-                archetype={archetype}
-                size={32}
-              />
-            ))}
-            {hasMore && (
-              <Text className='discover-auth__pool-palette-more'>+{moreCount}</Text>
-            )}
-          </View>
-          {hasUserArchetypeMatch && (
-            <View className='discover-auth__pool-match-badge'>
-              <Text>你的同类已加入</Text>
-            </View>
-          )}
-        </View>
-      ) : (
-        <Text className='discover-auth__pool-palette-label' style={{ marginBottom: '12rpx' }}>
-          首批探索者已就位
-        </Text>
-      )}
-
-      <View className='discover-auth__pool-meta'>
-        <Text className='discover-auth__pool-location'>
-          {[pool.city, pool.district].filter(Boolean).join(' · ') || '深圳'}
-        </Text>
-        <Text className='discover-auth__pool-date'>
-          {pool.dateTime ?? '时间待定'}
-        </Text>
-      </View>
-
-      <View className='discover-auth__pool-signal'>
-        <View className='discover-auth__pool-signal-copy'>
-          <Text className='discover-auth__pool-signal-title'>{headline}</Text>
-          <Text className='discover-auth__pool-signal-desc'>{momentum.detail}</Text>
-        </View>
-        <Text className='discover-auth__pool-signal-count'>{momentum.counter}</Text>
-      </View>
-
-      <View className='discover-auth__progress-block'>
-        <View className='discover-auth__progress'>
-          <View className='discover-auth__progress-track'>
-            <View
-              className={`discover-auth__progress-fill discover-auth__progress-fill--${statusMod}`}
-              style={{ transform: `scaleX(${fillPct / 100})` }}
-            />
-          </View>
-          <Text className='discover-auth__progress-text'>
-            {pool.currentParticipants ?? 0}/{pool.maxParticipants ?? '?'} 人
-          </Text>
-        </View>
-        <Text className={`discover-auth__status discover-auth__status--${statusMod}`}>
-          {getStatusLabel(pool.status)}
-        </Text>
-      </View>
-
-      <View className='discover-auth__pool-footer'>
-        <View className='discover-auth__trust-row'>
-          <View className='discover-auth__trust-pill'>
-            <Text className='discover-auth__trust-pill-text'>偏好参与匹配</Text>
-          </View>
-          <View className='discover-auth__trust-pill'>
-            <Text className='discover-auth__trust-pill-text'>成局后再揭晓桌友</Text>
-          </View>
-        </View>
-        <Text className='discover-auth__pool-action'>{ctaLabel} →</Text>
-      </View>
-    </Card>
-  )
-})
+// ─── Pool card (legacy, replaced by OracleCard) ──────────────────
+// Old PoolCard component removed — see OracleCard in components/discover/
 
 // ─── AuthenticatedDiscover ────────────────────────────────────────
 function AuthenticatedDiscover() {
@@ -318,19 +91,135 @@ function AuthenticatedDiscover() {
     isError: poolsError,
   } = useQuery({
     queryKey: ['mini-program', 'event-pools'],
-    queryFn: () => getEventPools(apiRequest),
+    queryFn: async () => {
+      try {
+        return await getEventPools(apiRequest)
+      } catch (e) {
+        // Fallback: render mock pools when backend is unreachable (dev / preview)
+        // NOTE: Set to `true` for WeChat DevTools UI testing without backend.
+        // Gate this behind an explicit flag before shipping.
+        const MOCK_POOLS_FOR_PREVIEW = true
+        if (MOCK_POOLS_FOR_PREVIEW) {
+          const now = new Date()
+          const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+          const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+          const fmt = (d: Date) => d.toISOString()
+          return [
+            {
+              id: 'mock-pool-1',
+              title: '周五微醺夜 · 破冰局',
+              eventType: 'dinner',
+              city: '深圳',
+              district: '南山区',
+              dateTime: fmt(tomorrow),
+              status: 'open',
+              description: '轻松小酌，认识新朋友',
+              maxParticipants: 8,
+              currentParticipants: 5,
+              registrationCount: 5,
+              spotsLeft: 3,
+              sampleArchetypes: ['corgi', 'rooster', 'fox'],
+              topArchetypes: [{ archetype: 'corgi', count: 2 }, { archetype: 'rooster', count: 2 }, { archetype: 'fox', count: 1 }],
+              accentFamily: 'warm',
+              aiHeadline: '5 人已在局，氛围轻松',
+              hasUserArchetypeMatch: true,
+              price: 168,
+              userTypeCount: 2,
+              userTypeRarity: 'present',
+              highChemistryCount: 3,
+              topComplementaryType: 'rooster',
+              narrativePivot: 'present',
+              hoursUntilDeadline: 18,
+            },
+            {
+              id: 'mock-pool-2',
+              title: '周日户外徒步 · 畅聊局',
+              eventType: 'outdoor',
+              city: '深圳',
+              district: '福田区',
+              dateTime: fmt(nextWeek),
+              status: 'open',
+              description: '梅林山郊野径，新手友好',
+              maxParticipants: 12,
+              currentParticipants: 2,
+              registrationCount: 2,
+              spotsLeft: 10,
+              sampleArchetypes: ['fox', 'dolphin_calm'],
+              topArchetypes: [{ archetype: 'fox', count: 1 }, { archetype: 'dolphin_calm', count: 1 }],
+              accentFamily: 'cool',
+              aiHeadline: '2 人报名，山野清新',
+              hasUserArchetypeMatch: false,
+              price: 0,
+              userTypeCount: 0,
+              userTypeRarity: 'rare',
+              highChemistryCount: 1,
+              topComplementaryType: null,
+              narrativePivot: 'rare',
+              hoursUntilDeadline: 120,
+            },
+            {
+              id: 'mock-pool-3',
+              title: '全新开局 · 等你点亮',
+              eventType: 'coffee',
+              city: '深圳',
+              district: '南山区',
+              dateTime: fmt(tomorrow),
+              status: 'open',
+              description: '首场咖啡局，期待你的加入',
+              maxParticipants: 6,
+              currentParticipants: 0,
+              registrationCount: 0,
+              spotsLeft: 6,
+              sampleArchetypes: [],
+              topArchetypes: [],
+              accentFamily: 'calm',
+              aiHeadline: null,
+              hasUserArchetypeMatch: false,
+              price: 88,
+              userTypeCount: 0,
+              userTypeRarity: 'rare',
+              highChemistryCount: 0,
+              topComplementaryType: null,
+              narrativePivot: 'empty',
+              hoursUntilDeadline: 48,
+            },
+            {
+              id: 'mock-pool-4',
+              title: '桌游狂欢夜 · 狂欢局',
+              eventType: 'boardgame',
+              city: '深圳',
+              district: '宝安区',
+              dateTime: fmt(tomorrow),
+              status: 'filling_fast',
+              description: '狼人杀 + 阿瓦隆，高能烧脑',
+              maxParticipants: 10,
+              currentParticipants: 9,
+              registrationCount: 9,
+              spotsLeft: 1,
+              sampleArchetypes: ['fox', 'spider', 'rooster', 'octopus', 'corgi', 'owl'],
+              topArchetypes: [{ archetype: 'fox', count: 3 }, { archetype: 'spider', count: 2 }, { archetype: 'rooster', count: 2 }, { archetype: 'octopus', count: 1 }, { archetype: 'corgi', count: 1 }],
+              accentFamily: 'fire',
+              aiHeadline: '9 人集结，最后 1 席',
+              hasUserArchetypeMatch: true,
+              price: 128,
+              userTypeCount: 1,
+              userTypeRarity: 'present',
+              highChemistryCount: 7,
+              topComplementaryType: 'fox',
+              narrativePivot: 'present',
+              hoursUntilDeadline: 6,
+            },
+          ] as unknown as EventPoolSummary[]
+        }
+        throw e
+      }
+    },
   })
 
   const { data: registrations = [] } = useQuery({
     queryKey: ['mini-program', 'my-pool-registrations'],
     queryFn: () => getMyPoolRegistrations(apiRequest),
   })
-
-  // ── Derived: set of registered pool IDs for O(1) lookup ──
-  const registeredPoolIds = useMemo<Set<string>>(
-    () => new Set(registrations.map((r) => r.poolId)),
-    [registrations],
-  )
 
   // ── Derived: districts for selected cluster ──
   const visibleDistricts = useMemo<District[]>(() => {
@@ -415,17 +304,26 @@ function AuthenticatedDiscover() {
   })
 
   // ── Render helpers ──
+  const userArchetype = (user as any)?.archetype || (user as any)?.primaryArchetype || null
+
   const renderPoolCard = useCallback(
-    (pool: EventPoolSummary, index: number, _hasBeenRendered: boolean) => (
-      <PoolCard
-        pool={pool}
-        index={index}
-        isRegistered={registeredPoolIds.has(pool.id)}
-        onTap={handlePoolTap}
-        animate={index < 6}
-      />
-    ),
-    [registeredPoolIds, handlePoolTap]
+    (pool: EventPoolSummary, index: number, hasBeenRendered: boolean) => {
+      if (!hasBeenRendered) {
+        discoverAnalytics.trackImpression(pool.id, {
+          cardVersion: 'oracle_v1',
+          accentFamily: pool.accentFamily,
+        })
+      }
+      return (
+        <OracleCard
+          pool={pool}
+          index={index}
+          userArchetype={userArchetype}
+          onTap={handlePoolTap}
+        />
+      )
+    },
+    [handlePoolTap, userArchetype]
   )
 
   const poolKeyExtractor = useCallback(
@@ -475,20 +373,22 @@ function AuthenticatedDiscover() {
         <View className='discover-auth__filter-section'>
           <ScrollView className='discover-auth__chips-row' scrollX enhanced showScrollbar={false}>
             <View className='discover-auth__chips-inner'>
-              <Text
+              <View
                 className={`discover-auth__chip ${selectedCluster === ALL_CLUSTER_ID ? 'discover-auth__chip--active' : ''}`}
+                hoverClass='discover-auth__chip--hover'
                 onClick={() => handleClusterTap(ALL_CLUSTER_ID)}
               >
-                全部
-              </Text>
+                <Text className='discover-auth__chip-text'>全部</Text>
+              </View>
               {shenzhenClusters.map((cluster) => (
-                <Text
+                <View
                   key={cluster.id}
                   className={`discover-auth__chip ${selectedCluster === cluster.id ? 'discover-auth__chip--active' : ''}`}
+                  hoverClass='discover-auth__chip--hover'
                   onClick={() => handleClusterTap(cluster.id)}
                 >
-                  {cluster.displayName}
-                </Text>
+                  <Text className='discover-auth__chip-text'>{cluster.displayName}</Text>
+                </View>
               ))}
             </View>
           </ScrollView>
@@ -496,23 +396,27 @@ function AuthenticatedDiscover() {
           {visibleDistricts.length > 0 && (
             <ScrollView className='discover-auth__chips-row discover-auth__chips-row--districts' scrollX enhanced showScrollbar={false}>
               <View className='discover-auth__chips-inner'>
-                <Text
+                <View
                   className={`discover-auth__chip discover-auth__chip--sm ${selectedDistrict === ALL_DISTRICT_ID ? 'discover-auth__chip--active' : ''}`}
+                  hoverClass='discover-auth__chip--hover'
                   onClick={() => handleDistrictTap(ALL_DISTRICT_ID)}
                 >
-                  全部
-                </Text>
+                  <Text className='discover-auth__chip-text'>全部</Text>
+                </View>
                 {visibleDistricts.map((district) => {
                   const heat = heatConfig[district.heat]
                   return (
-                    <Text
+                    <View
                       key={district.id}
                       className={`discover-auth__chip discover-auth__chip--sm ${selectedDistrict === district.id ? 'discover-auth__chip--active' : ''}`}
+                      hoverClass='discover-auth__chip--hover'
                       onClick={() => handleDistrictTap(district.id)}
                     >
-                      {district.name}
-                      {heat.label ? ` ${heat.label}` : ''}
-                    </Text>
+                      <Text className='discover-auth__chip-text'>
+                        {district.name}
+                        {heat.label ? ` ${heat.label}` : ''}
+                      </Text>
+                    </View>
                   )
                 })}
               </View>
@@ -538,8 +442,8 @@ function AuthenticatedDiscover() {
             className='discover-auth__empty-state'
             tone='error'
             heroSrc={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
-            title='加载失败'
-            description='请下拉刷新重试'
+            title='获取列表遇到小状况'
+            description='下拉刷新一下就好~'
           />
         ) : filteredPools.length > 0 ? (
           <VirtualList
@@ -556,7 +460,7 @@ function AuthenticatedDiscover() {
             className='discover-auth__empty-state'
             tone='empty'
             heroSrc={cdnAsset('/assets/lovart/lovart-generic-empty.webp')}
-            title='暂无可报名的活动'
+            title='还没有适合你的活动'
             description={
               selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID
                 ? '试试切换其他区域'

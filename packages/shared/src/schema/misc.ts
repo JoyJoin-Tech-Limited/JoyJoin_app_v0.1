@@ -49,6 +49,7 @@ export {
   insertIndustryAiLogSchema,
   insertIndustrySeedCandidateSchema,
   participationExperimentEvents,
+  discoverAnalyticsEvents,
   blindBoxPreAttendance,
   insertBlindBoxPreAttendanceSchema,
   userInterestSignals,

@@ -541,6 +541,12 @@ export interface SocialSessionState {
   miniScriptSolutionRevealed?: boolean;
   miniScriptPlayerReady?: Record<string, boolean>; // userId -> ready status
   miniScriptDeductionHints?: Array<{ stepNumber: number; conclusion: string }>;
+  // Bonus gate — post-core-phase mini_script offer
+  bonusGateOffered?: boolean;
+  bonusGateAccepted?: boolean;
+  bonusGateDeclined?: boolean;
+  bonusGatePlayerSentiment?: Record<string, 'want' | 'pass'>;
+  bonusGateFrameworkPreloading?: boolean;
   /** Xiaoyue Session Pack — generated once at session start, read-only content kit */
   xiaoyueSessionPack?: XiaoyueSessionPack;
   xiaoyueSessionPackMeta?: AIResponseMeta;

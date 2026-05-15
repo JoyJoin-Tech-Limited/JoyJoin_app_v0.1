@@ -25,6 +25,7 @@ import { loadInterestSignalsByUserIds } from "./helpers";
 import { recordPoolCardCopyCache } from "../../middleware/metrics";
 import { enrichProfileFromRegistration } from "../../lib/profileEnrichment";
 import { logger } from "../../lib/logger";
+import { computeOracleCardFields } from "../../lib/oracleCardComputation";
 import { broadcastAttendanceStatusUpdated } from "../../eventBroadcast";
 import { aiEndpointLimiter } from "../../rateLimiter";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
@@ -32,8 +33,19 @@ import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import * as schema from "@shared/schema";
 import type { NeonDatabase } from "drizzle-orm/neon-serverless";
 
-const SAMPLE_ARCHETYPE_COUNT = 3;
+const SAMPLE_ARCHETYPE_COUNT = 5;
 type DbTransaction = NeonDatabase<typeof schema>;
+
+function resolvePoolCapacity(pool: {
+  minGroupSize?: number | null;
+  maxGroupSize?: number | null;
+  targetGroups?: number | null;
+}): number {
+  const minGroupSize = Math.max(pool.minGroupSize ?? 4, 1);
+  const maxGroupSize = Math.max(pool.maxGroupSize ?? minGroupSize, minGroupSize);
+  const targetGroups = Math.max(pool.targetGroups ?? 1, 1);
+  return maxGroupSize * targetGroups;
+}
 
 function getUserDisplayName(user: any): string {
   return user?.displayName || user?.display_name || user?.firstName || 'Unknown';
@@ -190,12 +202,20 @@ export function registerUserEventPoolRoutes(app: Express): void {
             .orderBy(eventPoolRegistrations.poolId, sql`count(*) desc`)
         : [];
 
+      // Build full archetype breakdown (for Oracle Card computation) + capped top-3 (backward compat)
+      const allArchetypesByPool = new Map<string, Array<{ archetype: string; count: number }>>();
       const topArchetypesByPool = new Map<string, Array<{ archetype: string; count: number }>>();
       for (const row of topArchetypeRows as Array<{ poolId: string; archetype: string; count: number }>) {
-        const entries = topArchetypesByPool.get(row.poolId) ?? [];
-        if (entries.length < 3) {
-          entries.push({ archetype: row.archetype, count: row.count });
-          topArchetypesByPool.set(row.poolId, entries);
+        // All archetypes (no cap) — used for Oracle Card computation
+        const allEntries = allArchetypesByPool.get(row.poolId) ?? [];
+        allEntries.push({ archetype: row.archetype, count: row.count });
+        allArchetypesByPool.set(row.poolId, allEntries);
+
+        // Capped at 3 — backward compatible field
+        const topEntries = topArchetypesByPool.get(row.poolId) ?? [];
+        if (topEntries.length < 3) {
+          topEntries.push({ archetype: row.archetype, count: row.count });
+          topArchetypesByPool.set(row.poolId, topEntries);
         }
       }
 
@@ -231,6 +251,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
       const poolsWithSocialProof = visiblePools.map((pool: any) => {
         const registrations = sampleRegistrationsByPool.get(pool.id) ?? [];
         const registrationCount = registrationCountByPool.get(pool.id) ?? 0;
+        const capacity = resolvePoolCapacity(pool);
         const sampleArchetypes = registrations
           .map((registration) => userArchetypeMap.get(registration.userId))
           .filter((archetype): archetype is string => Boolean(archetype));
@@ -242,19 +263,32 @@ export function registerUserEventPoolRoutes(app: Express): void {
           ? sampleArchetypes.includes(userArchetype)
           : false;
 
+        // ── Oracle Card computation (Phase 1) ──
+        const allArchetypes = allArchetypesByPool.get(pool.id) ?? [];
+        const oracleFields = computeOracleCardFields({
+          pool,
+          allArchetypes,
+          userArchetype,
+          registrationCount,
+          now,
+        });
+
         return {
           ...pool,
           registrationCount,
-          spotsLeft: ((pool.minGroupSize || 4) * (pool.targetGroups || 1)) - registrationCount,
+          currentParticipants: registrationCount,
+          maxParticipants: capacity,
+          spotsLeft: Math.max(capacity - registrationCount, 0),
           sampleArchetypes,
           topArchetypes,
           accentFamily,
           aiHeadline: aiHeadlineByPool.get(pool.id) ?? null,
           hasUserArchetypeMatch,
+          ...oracleFields,
         };
       });
 
-      console.log("[EventPools] visible pools for user:", {
+      logger.info("[EventPools] visible pools for user", {
         userId,
         total: pools.length,
         registeredCount: userRegistrations.length,
@@ -263,13 +297,13 @@ export function registerUserEventPoolRoutes(app: Express): void {
 
       return res.json(poolsWithSocialProof);
     } catch (error) {
-      console.error("Error fetching event pools:", error);
+      logger.error(`Error fetching event pools for user ${req.session?.userId}: ${error}`);
       return res.status(500).json({ message: "Failed to fetch event pools" });
     }
   });
 
   // Get single event pool details
-  app.get("/api/event-pools/:id", async (req, res) => {
+  app.get("/api/event-pools/:id", requireAuth, async (req: any, res) => {
     try {
       const pool = await db.query.eventPools.findFirst({
         where: (pools: any, { eq }: any) => eq(pools.id, req.params.id),
@@ -303,25 +337,54 @@ export function registerUserEventPoolRoutes(app: Express): void {
       for (const a of sampleArchetypes) {
         archetypeCounts.set(a, (archetypeCounts.get(a) ?? 0) + 1);
       }
-      const topArchetypes = Array.from(archetypeCounts.entries())
+      const allArchetypes = Array.from(archetypeCounts.entries())
         .map(([archetype, count]) => ({ archetype, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 3);
+        .sort((a, b) => b.count - a.count);
+      const topArchetypes = allArchetypes.slice(0, 3);
 
       const accentFamily = getArchetypeFamily(topArchetypes[0]?.archetype);
+
+      // ── Fetch current user's archetype for Oracle Card personalization ──
+      const userId = req.session?.userId;
+      const [currentUserRow] = userId
+        ? await db
+            .select({
+              archetype: sql<string | null>`coalesce(${users.primaryArchetype}, ${users.archetype})`,
+            })
+            .from(users)
+            .where(eq(users.id, userId))
+            .limit(1)
+        : [null];
+      const userArchetype = currentUserRow?.archetype ?? null;
+      const hasUserArchetypeMatch = userArchetype
+        ? sampleArchetypes.includes(userArchetype)
+        : false;
+
+      // ── Oracle Card computation ──
+      const capacity = resolvePoolCapacity(pool);
+      const oracleFields = computeOracleCardFields({
+        pool,
+        allArchetypes,
+        userArchetype,
+        registrationCount: registrations.length,
+        now: new Date(),
+      });
 
       res.json({
         ...pool,
         registrationCount: registrations.length,
-        spotsLeft: ((pool.minGroupSize || 4) * (pool.targetGroups || 1)) - registrations.length,
+        currentParticipants: registrations.length,
+        maxParticipants: capacity,
+        spotsLeft: Math.max(capacity - registrations.length, 0),
         sampleArchetypes,
         topArchetypes,
         accentFamily,
         aiHeadline: null,
-        hasUserArchetypeMatch: false,
+        hasUserArchetypeMatch,
+        ...oracleFields,
       });
     } catch (error) {
-      console.error("Error fetching event pool:", error);
+      logger.error("Error fetching event pool", { error: String(error), poolId: req.params.id });
       res.status(500).json({ message: "Failed to fetch event pool" });
     }
   });
@@ -366,7 +429,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
         progress,
       });
     } catch (error) {
-      console.error("Error fetching group-fill progress:", error);
+      logger.error("Error fetching group-fill progress", { error: String(error), poolId: req.params.poolId });
       res.status(500).json({ message: "Failed to fetch group-fill progress" });
     }
   });
@@ -556,755 +619,755 @@ export function registerUserEventPoolRoutes(app: Express): void {
   });
 
 
-// Get user's pool registrations
-app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
-  try {
-    const anyReq = req as any;
-    const session = anyReq.session;
-    const reqUser = anyReq.user;
-
-    // 尽量兼容不同的 user 存放方式：req.user / session.userId / session.user.id
-    const userId: string | undefined =
-      reqUser?.id ||
-      session?.userId ||
-      session?.user?.id;
-
-    console.log("[MyPoolRegistrations] identity debug:", {
-      hasReqUser: !!reqUser,
-      hasSession: !!session,
-      sessionUserId: session?.userId,
-      sessionUser: session?.user,
-      finalUserId: userId,
-    });
-
-    if (!userId) {
-      console.error("[MyPoolRegistrations] No user on request/session");
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    console.log("[MyPoolRegistrations] fetching registrations for userId:", userId);
-
-    const registrations = await db
-      .select({
-        id: eventPoolRegistrations.id,
-        poolId: eventPoolRegistrations.poolId,
-        budgetRange: eventPoolRegistrations.budgetRange,
-        preferredLanguages: eventPoolRegistrations.preferredLanguages,
-        eventIntent: eventPoolRegistrations.eventIntent,
-        matchStatus: eventPoolRegistrations.matchStatus,
-        assignedGroupId: eventPoolRegistrations.assignedGroupId,
-        matchScore: eventPoolRegistrations.matchScore,
-        registeredAt: eventPoolRegistrations.registeredAt,
-        // Pool details
-        poolTitle: eventPools.title,
-        poolEventType: eventPools.eventType,
-        poolCity: eventPools.city,
-        poolDistrict: eventPools.district,
-        poolDateTime: eventPools.dateTime,
-        poolStatus: eventPools.status,
-        theme: eventPoolGroups.theme,
-        subtitle: eventPoolGroups.subtitle,
-        vibe: eventPoolGroups.vibe,
-        themeEmoji: eventPoolGroups.themeEmoji,
-        highlights: eventPoolGroups.themeHighlights,
-        venueName: eventPoolGroups.venueName,
-        venueAddress: eventPoolGroups.venueAddress,
-        finalDateTime: eventPoolGroups.finalDateTime,
-      })
-      .from(eventPoolRegistrations)
-      .innerJoin(eventPools, eq(eventPoolRegistrations.poolId, eventPools.id))
-      .leftJoin(eventPoolGroups, eq(eventPoolRegistrations.assignedGroupId, eventPoolGroups.id))
-      .where(eq(eventPoolRegistrations.userId, userId))
-      .orderBy(desc(eventPoolRegistrations.registeredAt));
-
-    console.log("[MyPoolRegistrations] base registrations count:", registrations.length);
-
-    const registrationIds = (registrations as any[]).map((registration: any) => registration.id);
-    const registrationPoolIds = Array.from(
-      new Set((registrations as any[]).map((registration: any) => registration.poolId)),
-    );
-
-    const inviteUses = registrationIds.length > 0
-      ? await db
-          .select({
-            poolRegistrationId: invitationUses.poolRegistrationId,
-            invitationId: invitationUses.invitationId,
-            inviteeId: invitationUses.inviteeId,
-          })
-          .from(invitationUses)
-          .where(inArray(invitationUses.poolRegistrationId, registrationIds))
-      : [];
-
-    const inviteUseByRegistrationId = new Map<
-      string,
-      { poolRegistrationId: string; invitationId: string | null; inviteeId: string | null }
-    >(
-      inviteUses.map((inviteUse: {
-        poolRegistrationId: string;
-        invitationId: string | null;
-        inviteeId: string | null;
-      }) => [inviteUse.poolRegistrationId, inviteUse]),
-    );
-
-    const invitationIds = Array.from(
-      new Set(
-        inviteUses
-          .map((inviteUse: { invitationId: string | null }) => inviteUse.invitationId)
-          .filter((invitationId: string | null): invitationId is string => Boolean(invitationId)),
-      ),
-    );
-
-    const invitationRows = invitationIds.length > 0
-      ? await db
-          .select({
-            id: invitations.id,
-            code: invitations.code,
-            inviterId: invitations.inviterId,
-          })
-          .from(invitations)
-          .where(inArray(invitations.id, invitationIds as string[]))
-      : [];
-
-    const invitationById = new Map<string, { id: string; code: string; inviterId: string }>(
-      invitationRows.map((invitation: { id: string; code: string; inviterId: string }) => [invitation.id, invitation]),
-    );
-
-    const userInvitations = await db
-      .select({ id: invitations.id })
-      .from(invitations)
-      .where(eq(invitations.inviterId, userId))
-      .limit(10);
-
-    const userInvitationIds = userInvitations.map((invitation: { id: string }) => invitation.id);
-
-    const relatedInviteUses = userInvitationIds.length > 0 && registrationPoolIds.length > 0
-      ? await db
-          .select({
-            invitationId: invitationUses.invitationId,
-            inviteeId: invitationUses.inviteeId,
-            poolId: eventPoolRegistrations.poolId,
-          })
-          .from(invitationUses)
-          .innerJoin(
-            eventPoolRegistrations,
-            eq(invitationUses.poolRegistrationId, eventPoolRegistrations.id),
-          )
-          .where(
-            and(
-              inArray(invitationUses.invitationId, userInvitationIds),
-              inArray(eventPoolRegistrations.poolId, registrationPoolIds),
-            ),
-          )
-      : [];
-
-    const relatedInviteUseByPoolId = new Map<string, { inviteeId: string | null }>();
-    for (const relatedInviteUse of relatedInviteUses) {
-      if (!relatedInviteUseByPoolId.has(relatedInviteUse.poolId)) {
-        relatedInviteUseByPoolId.set(relatedInviteUse.poolId, {
-          inviteeId: relatedInviteUse.inviteeId,
-        });
-      }
-    }
-
-    const relatedUserIds = Array.from(
-      new Set(
-        [
-          ...invitationRows.map((invitation: { inviterId: string }) => invitation.inviterId),
-          ...Array.from(relatedInviteUseByPoolId.values()).map((inviteUse) => inviteUse.inviteeId),
-        ].filter((candidate): candidate is string => Boolean(candidate)),
-      ),
-    );
-
-    const relatedUsers = relatedUserIds.length > 0
-      ? await db
-          .select({
-            id: users.id,
-            displayName: users.displayName,
-            firstName: users.firstName,
-            lastName: users.lastName,
-          })
-          .from(users)
-          .where(inArray(users.id, relatedUserIds))
-      : [];
-
-    const relatedUserMap = new Map<string, string>(
-      relatedUsers.map((relatedUser: {
-        id: string;
-        displayName: string | null;
-        firstName: string | null;
-        lastName: string | null;
-      }) => [
-        relatedUser.id,
-        relatedUser.displayName ||
-          `${relatedUser.firstName || ""} ${relatedUser.lastName || ""}`.trim() ||
-          "好友",
-      ]),
-    );
-
-    const enrichedRegistrations = (registrations as any[]).map((reg: any) => {
-      const inviteUse = inviteUseByRegistrationId.get(reg.id);
-      let invitationRole: "inviter" | "invitee" | null = null;
-      let relatedUserName: string | null = null;
-
-      if (inviteUse?.invitationId) {
-        const invitation = invitationById.get(inviteUse.invitationId);
-        if (invitation?.inviterId) {
-          invitationRole = "invitee";
-          relatedUserName = relatedUserMap.get(invitation.inviterId) ?? "好友";
-        }
-      } else {
-        const relatedInviteUse = relatedInviteUseByPoolId.get(reg.poolId);
-        if (relatedInviteUse?.inviteeId) {
-          invitationRole = "inviter";
-          relatedUserName = relatedUserMap.get(relatedInviteUse.inviteeId) ?? "好友";
-        }
-      }
-
-      return {
-        ...reg,
-        highlights: Array.isArray(reg.highlights) ? reg.highlights : [],
-        invitationRole,
-        relatedUserName,
-      };
-    });
-
-    console.log("[MyPoolRegistrations] enriched registrations:", enrichedRegistrations);
-
-    res.json(enrichedRegistrations);
-  } catch (error) {
-    console.error("Error fetching user pool registrations:", error);
-    res.status(500).json({ message: "Failed to fetch registrations" });
-  }
-});
-
-
-  // 取消盲盒报名（从活动池中移除当前用户的报名记录）
-  app.delete('/api/pool-registrations/:id', requireAuth, async (req: any, res) => {
+  // Get user's pool registrations
+  app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     try {
-      console.log('[MyPoolRegistrationsCancel] route hit for /api/pool-registrations/:id', {
-        method: req.method,
-        originalUrl: req.originalUrl,
-        params: req.params,
-        sessionUserId: req.session?.userId,
+      const anyReq = req as any;
+      const session = anyReq.session;
+      const reqUser = anyReq.user;
+
+      // 尽量兼容不同的 user 存放方式：req.user / session.userId / session.user.id
+      const userId: string | undefined =
+        reqUser?.id ||
+        session?.userId ||
+        session?.user?.id;
+
+      console.log("[MyPoolRegistrations] identity debug:", {
+        hasReqUser: !!reqUser,
+        hasSession: !!session,
+        sessionUserId: session?.userId,
+        sessionUser: session?.user,
+        finalUserId: userId,
       });
-
-      const userId = req.session.userId;
-      if (!userId) return res.status(401).json({ message: "Unauthorized" });
-
-      const { id } = req.params;
 
       if (!userId) {
-        console.error('[MyPoolRegistrationsCancel] No userId in session');
-        return res.status(401).json({ message: 'Unauthorized' });
-      }
-
-      console.log('[MyPoolRegistrationsCancel] attempting to delete registration', {
-        userId,
-        registrationId: id,
-      });
-
-      // 1) 删除当前用户在这个报名记录上的 row
-      let deletedRegistrations = await db
-        .delete(eventPoolRegistrations)
-        .where(
-          and(
-            eq(eventPoolRegistrations.id, id),
-            eq(eventPoolRegistrations.userId, userId),
-          )
-        )
-        .returning();
-
-      if (deletedRegistrations.length === 0) {
-        console.warn('[MyPoolRegistrationsCancel] no registration found to delete', {
-          userId,
-          registrationId: id,
-        });
-        return res.status(404).json({
-          message: '没有找到可以取消的报名记录，可能已经取消过了',
-        });
-      }
-
-      console.log('[MyPoolRegistrationsCancel] deleted registrations:', {
-        count: deletedRegistrations.length,
-        ids: deletedRegistrations.map((r: any) => r.id),
-        poolIds: deletedRegistrations.map((r: any) => r.poolId),
-      });
-
-      // 2) 对每个受影响的池子，把 totalRegistrations - 1
-      for (const reg of deletedRegistrations) {
-        if (reg.poolId) {
-          await db
-            .update(eventPools)
-            .set({
-              totalRegistrations: sql`${eventPools.totalRegistrations} - 1`,
-              updatedAt: new Date(),
-            })
-            .where(eq(eventPools.id, reg.poolId));
-        }
-      }
-
-      console.log('[MyPoolRegistrationsCancel] updated pools after deletion');
-
-      return res.json({
-        ok: true,
-        cancelledRegistrationIds: (deletedRegistrations as any[]).map((r: any) => r.id),
-      });
-    } catch (error) {
-      console.error('[MyPoolRegistrationsCancel] error while cancelling registration', error);
-      return res.status(500).json({ message: 'Failed to cancel pool registration' });
-    }
-  });
-
-  // Get pool group details (members + activity info)
-  app.get("/api/pool-groups/:groupId", requireAuth, async (req, res) => {
-    try {
-      const groupId = req.params.groupId;
-      const userId = (req.session as any).userId as string;
-
-      // Get group info
-      const group = await db.query.eventPoolGroups.findFirst({
-        where: (groups: any, { eq }: any) => eq(groups.id, groupId),
-      });
-
-      if (!group) {
-        return res.status(404).json({ message: "Group not found" });
-      }
-
-      // Get pool info
-      const pool = await db.query.eventPools.findFirst({
-        where: (pools: any, { eq }: any) => eq(pools.id, group.poolId),
-      });
-
-      if (!pool) {
-        return res.status(404).json({ message: "Event pool not found" });
-      }
-
-      // Check if user is in this group
-      const userRegistration = await db.query.eventPoolRegistrations.findFirst({
-        where: (regs: any, { eq, and }: any) => and(
-          eq(regs.assignedGroupId, groupId),
-          eq(regs.userId, userId)
-        ),
-      });
-
-      if (!userRegistration) {
-        return res.status(403).json({ message: "You are not a member of this group" });
-      }
-
-      // Get all group members with their profile info
-      const members = await db
-        .select({
-          userId: users.id,
-          displayName: users.displayName,
-          archetype: users.archetype,
-          topInterests: users.interestsRankedTop3,
-          birthdate: users.birthdate,
-          // ✅ UPDATED: Use 3-tier industry classification
-          industryNicheLabel: users.industryNicheLabel,
-          industryCategoryLabel: users.industryCategoryLabel,
-          ageVisible: users.ageVisibility,
-          industryVisible: users.workVisibility,
-          gender: users.gender,
-          educationLevel: users.educationLevel,
-          hometownRegionCity: users.hometownRegionCity,
-          hometownAffinityOptin: users.hometownAffinityOptin,
-          educationVisible: users.educationVisibility,
-          relationshipStatus: users.relationshipStatus,
-          // Event-specific preferences from registration
-          intent: eventPoolRegistrations.eventIntent,
-        })
-        .from(eventPoolRegistrations)
-        .innerJoin(users, eq(eventPoolRegistrations.userId, users.id))
-        .where(eq(eventPoolRegistrations.assignedGroupId, groupId));
-
-      const memberSummaries = members.map((member: (typeof members)[number]) => ({
-        userId: member.userId,
-        displayName: member.displayName,
-        archetype: member.archetype,
-        topInterests: member.topInterests,
-        ageLabel: formatAge(member.birthdate, member.ageVisible ?? 'hide_all'),
-        industryNicheLabel: member.industryNicheLabel,
-        industryCategoryLabel: member.industryCategoryLabel,
-        ageVisible: member.ageVisible !== 'hide_all',
-        industryVisible: member.industryVisible !== 'hide_all',
-        gender: member.gender,
-        educationLevel: member.educationLevel,
-        hometownRegionCity: member.hometownRegionCity,
-        hometownAffinityOptin: member.hometownAffinityOptin,
-        educationVisible: member.educationVisible !== 'hide_all',
-        relationshipStatus: member.relationshipStatus,
-        intent: member.intent,
-      }));
-
-      res.json({
-        group: {
-          id: group.id,
-          groupNumber: group.groupNumber,
-          memberCount: group.memberCount,
-          matchScore: group.overallScore,
-          avgPairScore: group.avgChemistryScore, // stored as avgChemistryScore in DB (= avgPairScore)
-          diversityScore: group.diversityScore,
-          energyBalance: group.energyBalance,
-          matchExplanation: group.matchExplanation,
-          theme: group.theme,
-          subtitle: group.subtitle,
-          vibe: group.vibe,
-          themeEmoji: group.themeEmoji,
-          highlights: Array.isArray(group.themeHighlights) ? group.themeHighlights : [],
-          venueName: group.venueName,
-          venueAddress: group.venueAddress,
-          finalDateTime: group.finalDateTime,
-          status: group.status,
-        },
-        pool: {
-          id: pool.id,
-          title: pool.title,
-          description: pool.description,
-          eventType: pool.eventType,
-          city: pool.city,
-          district: pool.district,
-          dateTime: pool.dateTime,
-        },
-        members: memberSummaries,
-      });
-    } catch (error) {
-      console.error("Error fetching pool group details:", error);
-      res.status(500).json({ message: "Failed to fetch group details" });
-    }
-  });
-
-  // Get AI-generated group analysis for a pool group
-  app.get('/api/pool-groups/:groupId/analysis', requireAuth, aiEndpointLimiter, async (req, res) => {
-    try {
-      const { groupId } = req.params;
-      const userId = (req.session as any).userId as string;
-
-      // Load group from DB
-      const group = await db.query.eventPoolGroups.findFirst({
-        where: eq(eventPoolGroups.id, groupId),
-      });
-      if (!group) {
-        return res.status(404).json({ error: 'Group not found' });
-      }
-
-      // Load pool for eventType context
-      const pool = await db.query.eventPools.findFirst({
-        where: eq(eventPools.id, group.poolId),
-      });
-
-      // Check if user is in this group
-      const userRegistration = await db.query.eventPoolRegistrations.findFirst({
-        where: and(
-          eq(eventPoolRegistrations.userId, userId),
-          eq(eventPoolRegistrations.assignedGroupId, groupId)
-        ),
-      });
-
-      if (!userRegistration) {
-        return res.status(403).json({ error: 'Not a member of this group' });
-      }
-
-      // Load all group registrations to get member IDs
-      const groupRegistrations = await db.query.eventPoolRegistrations.findMany({
-        where: eq(eventPoolRegistrations.assignedGroupId, groupId),
-      });
-
-      const memberIds = groupRegistrations.map((r: any) => r.userId as string);
-
-      if (memberIds.length === 0) {
-        return res.status(404).json({ error: 'Group has no members' });
-      }
-
-      // Load full user profiles for all members
-      const memberProfiles = await db.query.users.findMany({
-        where: inArray(users.id, memberIds),
-      });
-
-      // Load user interests (with heat levels) for deep interest overlap detection
-      const memberInterestsRows = await db.query.userInterests.findMany({
-        where: inArray(userInterests.userId, memberIds),
-      }) as Array<{
-        userId: string;
-        selections: Array<{ topicId: string; level?: number | null }> | null;
-      }>;
-      const interestSignalsByUserId = await loadInterestSignalsByUserIds(memberIds);
-      const interestsByUserId = new Map(
-        memberInterestsRows.map((row) => [row.userId, row] as const)
-      );
-
-      // Build MatchMember[] using the same field mapping as the existing handler
-      const members = memberProfiles.map((m: any) => {
-        const interestRow = interestsByUserId.get(m.id);
-        const interestsWithHeat = interestRow?.selections
-          ? interestRow.selections.map(
-              (s) => ({ topicId: s.topicId, heatLevel: s.level ?? 1 })
-            )
-          : null;
-        // Prefer interestsRankedTop3; fall back to top heat-sorted selections; then legacy field
-        const interestsTop =
-          Array.isArray(m.interestsRankedTop3) && m.interestsRankedTop3.length > 0
-            ? m.interestsRankedTop3
-            : interestsWithHeat
-            ? interestsWithHeat
-                .slice()
-                .sort((a: { heatLevel: number }, b: { heatLevel: number }) => b.heatLevel - a.heatLevel)
-                .slice(0, 3)
-                .map((s: { topicId: string }) => s.topicId)
-            : m.interestsTop;
-        return {
-          userId: m.id,
-          displayName: m.displayName || '神秘嘉宾',
-          archetype: m.archetype,
-          secondaryArchetype: m.secondaryArchetype,
-          interestsTop,
-          industry: m.industryNicheLabel || m.industryCategoryLabel,
-          hometown: m.hometownRegionCity,
-          socialStyle: m.socialStyle,
-          educationLevel: m.educationLevel,
-          relationshipStatus: m.relationshipStatus,
-          workMode: m.workMode,
-          industryCategory: m.industryCategory,
-          industryCategoryLabel: m.industryCategoryLabel,
-          interestsWithHeat,
-          interestSignals: interestSignalsByUserId.get(m.id) ?? null,
-        };
-      });
-
-      const { generateGroupAnalysis, getPairExplanationForUser } = await import('../../matchExplanationService');
-
-      // Call the existing service with caching enabled
-      const analysis = await generateGroupAnalysis(
-        groupId,
-        members,
-        pool?.eventType ?? '饭局',
-        true
-      );
-
-      // Helper: map an internal PairExplanation to the shared response type
-      const mapPe = (pe: {
-        pairKey: string;
-        explanation: string;
-        chemistryScore: number;
-        sharedInterests?: string[];
-        connectionPoints?: string[];
-        introAngle?: string;
-      }) => ({
-        pairKey: pe.pairKey,
-        explanation: pe.explanation,
-        chemistryScore: pe.chemistryScore,
-        sharedInterests: pe.sharedInterests ?? [],
-        connectionPoints: pe.connectionPoints ?? [],
-        ...(pe.introAngle ? { introAngle: pe.introAngle } : {}),
-      });
-
-      // Map internal GroupAnalysis → GroupAnalysisResponse
-      const response: GroupAnalysisResponse = {
-        groupId,
-        overallChemistry: analysis.overallChemistry as GroupAnalysisResponse['overallChemistry'],
-        groupDynamics: analysis.groupDynamics,
-        iceBreakers: analysis.iceBreakers,
-        pairExplanations: analysis.pairExplanations.map(mapPe),
-        fromCache: analysis.fromCache ?? false,
-        generatedAt: analysis.generatedAt ?? new Date().toISOString(),
-        provider: analysis.provider ?? null,
-        fallbackUsed: analysis.fallbackUsed ?? false,
-        promptVersion: analysis.promptVersion,
-        meta: {
-          generatedAt: analysis.generatedAt ?? new Date().toISOString(),
-          fromCache: analysis.fromCache ?? false,
-          provider: analysis.provider ?? null,
-          fallbackUsed: analysis.fallbackUsed ?? false,
-          promptVersion: analysis.promptVersion,
-        },
-        // Convenience field: pairs involving the authenticated viewer
-        myPairs: getPairExplanationForUser(analysis, userId).map(mapPe),
-        // Post-match theme layer
-        groupThemeTags: analysis.groupThemeTags,
-        groupThemeCompanion: analysis.groupThemeCompanion,
-      };
-
-      return res.json(response);
-    } catch (error) {
-      console.error('[analysis] Error generating group analysis:', error);
-      return res.status(500).json({ error: 'Failed to generate analysis' });
-    }
-  });
-
-  // Confirm attendance for a pool group
-  app.post("/api/pool-groups/:groupId/confirm-attendance", requireAuth, async (req, res) => {
-    try {
-      const groupId = req.params.groupId;
-      const session = req.session as any;
-      const userId = session?.userId;
-
-      if (!userId) {
+        console.error("[MyPoolRegistrations] No user on request/session");
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      // Verify the user is a member of this group
-      const userRegistration = await db.query.eventPoolRegistrations.findFirst({
-        where: (regs: any, { eq, and }: any) =>
-          and(eq(regs.assignedGroupId, groupId), eq(regs.userId, userId)),
-      });
+      console.log("[MyPoolRegistrations] fetching registrations for userId:", userId);
 
-      if (!userRegistration) {
-        return res.status(403).json({ message: "You are not a member of this group" });
-      }
+      const registrations = await db
+        .select({
+          id: eventPoolRegistrations.id,
+          poolId: eventPoolRegistrations.poolId,
+          budgetRange: eventPoolRegistrations.budgetRange,
+          preferredLanguages: eventPoolRegistrations.preferredLanguages,
+          eventIntent: eventPoolRegistrations.eventIntent,
+          matchStatus: eventPoolRegistrations.matchStatus,
+          assignedGroupId: eventPoolRegistrations.assignedGroupId,
+          matchScore: eventPoolRegistrations.matchScore,
+          registeredAt: eventPoolRegistrations.registeredAt,
+          // Pool details
+          poolTitle: eventPools.title,
+          poolEventType: eventPools.eventType,
+          poolCity: eventPools.city,
+          poolDistrict: eventPools.district,
+          poolDateTime: eventPools.dateTime,
+          poolStatus: eventPools.status,
+          theme: eventPoolGroups.theme,
+          subtitle: eventPoolGroups.subtitle,
+          vibe: eventPoolGroups.vibe,
+          themeEmoji: eventPoolGroups.themeEmoji,
+          highlights: eventPoolGroups.themeHighlights,
+          venueName: eventPoolGroups.venueName,
+          venueAddress: eventPoolGroups.venueAddress,
+          finalDateTime: eventPoolGroups.finalDateTime,
+        })
+        .from(eventPoolRegistrations)
+        .innerJoin(eventPools, eq(eventPoolRegistrations.poolId, eventPools.id))
+        .leftJoin(eventPoolGroups, eq(eventPoolRegistrations.assignedGroupId, eventPoolGroups.id))
+        .where(eq(eventPoolRegistrations.userId, userId))
+        .orderBy(desc(eventPoolRegistrations.registeredAt));
 
-      // Look up the event pool to find a linked blind box event
-      const group = await db.query.eventPoolGroups.findFirst({
-        where: (groups: any, { eq }: any) => eq(groups.id, groupId),
-      });
+      console.log("[MyPoolRegistrations] base registrations count:", registrations.length);
 
-      let blindBoxEventId: string | null = null;
-      if (group?.poolId) {
-        const linkedEvent = await db
-          .select({ id: blindBoxEvents.id })
-          .from(blindBoxEvents)
-          .where(eq(blindBoxEvents.poolId, group.poolId))
-          .limit(1);
-        if (linkedEvent.length > 0) {
-          blindBoxEventId = linkedEvent[0].id;
+      const registrationIds = (registrations as any[]).map((registration: any) => registration.id);
+      const registrationPoolIds = Array.from(
+        new Set((registrations as any[]).map((registration: any) => registration.poolId)),
+      );
+
+      const inviteUses = registrationIds.length > 0
+        ? await db
+            .select({
+              poolRegistrationId: invitationUses.poolRegistrationId,
+              invitationId: invitationUses.invitationId,
+              inviteeId: invitationUses.inviteeId,
+            })
+            .from(invitationUses)
+            .where(inArray(invitationUses.poolRegistrationId, registrationIds))
+        : [];
+
+      const inviteUseByRegistrationId = new Map<
+        string,
+        { poolRegistrationId: string; invitationId: string | null; inviteeId: string | null }
+      >(
+        inviteUses.map((inviteUse: {
+          poolRegistrationId: string;
+          invitationId: string | null;
+          inviteeId: string | null;
+        }) => [inviteUse.poolRegistrationId, inviteUse]),
+      );
+
+      const invitationIds = Array.from(
+        new Set(
+          inviteUses
+            .map((inviteUse: { invitationId: string | null }) => inviteUse.invitationId)
+            .filter((invitationId: string | null): invitationId is string => Boolean(invitationId)),
+        ),
+      );
+
+      const invitationRows = invitationIds.length > 0
+        ? await db
+            .select({
+              id: invitations.id,
+              code: invitations.code,
+              inviterId: invitations.inviterId,
+            })
+            .from(invitations)
+            .where(inArray(invitations.id, invitationIds as string[]))
+        : [];
+
+      const invitationById = new Map<string, { id: string; code: string; inviterId: string }>(
+        invitationRows.map((invitation: { id: string; code: string; inviterId: string }) => [invitation.id, invitation]),
+      );
+
+      const userInvitations = await db
+        .select({ id: invitations.id })
+        .from(invitations)
+        .where(eq(invitations.inviterId, userId))
+        .limit(10);
+
+      const userInvitationIds = userInvitations.map((invitation: { id: string }) => invitation.id);
+
+      const relatedInviteUses = userInvitationIds.length > 0 && registrationPoolIds.length > 0
+        ? await db
+            .select({
+              invitationId: invitationUses.invitationId,
+              inviteeId: invitationUses.inviteeId,
+              poolId: eventPoolRegistrations.poolId,
+            })
+            .from(invitationUses)
+            .innerJoin(
+              eventPoolRegistrations,
+              eq(invitationUses.poolRegistrationId, eventPoolRegistrations.id),
+            )
+            .where(
+              and(
+                inArray(invitationUses.invitationId, userInvitationIds),
+                inArray(eventPoolRegistrations.poolId, registrationPoolIds),
+              ),
+            )
+        : [];
+
+      const relatedInviteUseByPoolId = new Map<string, { inviteeId: string | null }>();
+      for (const relatedInviteUse of relatedInviteUses) {
+        if (!relatedInviteUseByPoolId.has(relatedInviteUse.poolId)) {
+          relatedInviteUseByPoolId.set(relatedInviteUse.poolId, {
+            inviteeId: relatedInviteUse.inviteeId,
+          });
         }
       }
 
-      if (!blindBoxEventId) {
-        return res.status(409).json({ message: "Blind box event is not ready for attendance confirmation" });
-      }
+      const relatedUserIds = Array.from(
+        new Set(
+          [
+            ...invitationRows.map((invitation: { inviterId: string }) => invitation.inviterId),
+            ...Array.from(relatedInviteUseByPoolId.values()).map((inviteUse) => inviteUse.inviteeId),
+          ].filter((candidate): candidate is string => Boolean(candidate)),
+        ),
+      );
 
-      await storage.updateAttendanceStatus(blindBoxEventId, userId, 'confirmed');
+      const relatedUsers = relatedUserIds.length > 0
+        ? await db
+            .select({
+              id: users.id,
+              displayName: users.displayName,
+              firstName: users.firstName,
+              lastName: users.lastName,
+            })
+            .from(users)
+            .where(inArray(users.id, relatedUserIds))
+        : [];
 
-      const user = await storage.getUser(userId);
-      const displayName = getUserDisplayName(user);
-      broadcastAttendanceStatusUpdated(blindBoxEventId, userId, displayName, 'confirmed');
+      const relatedUserMap = new Map<string, string>(
+        relatedUsers.map((relatedUser: {
+          id: string;
+          displayName: string | null;
+          firstName: string | null;
+          lastName: string | null;
+        }) => [
+          relatedUser.id,
+          relatedUser.displayName ||
+            `${relatedUser.firstName || ""} ${relatedUser.lastName || ""}`.trim() ||
+            "好友",
+        ]),
+      );
 
-      res.json({ success: true, blindBoxEventId, attendanceStatus: 'confirmed' });
-    } catch (error) {
-      console.error("Error confirming pool group attendance:", error);
-      res.status(500).json({ message: "Failed to confirm attendance" });
-    }
-  });
-  app.get("/api/admin/finance/stats", requireAdmin, async (req, res) => {
-    try {
-      const stats = await storage.getFinanceStats();
-      res.json(stats);
-    } catch (error) {
-      console.error("Error fetching finance stats:", error);
-      res.status(500).json({ message: "Failed to fetch finance stats" });
-    }
-  });
+      const enrichedRegistrations = (registrations as any[]).map((reg: any) => {
+        const inviteUse = inviteUseByRegistrationId.get(reg.id);
+        let invitationRole: "inviter" | "invitee" | null = null;
+        let relatedUserName: string | null = null;
 
-  // Finance - Get all payments
-  app.get("/api/admin/finance/payments", requireAdmin, async (req, res) => {
-    try {
-      const { type } = req.query;
-      const payments = type 
-        ? await storage.getPaymentsByType(type as string)
-        : await storage.getAllPayments();
-      res.json(payments);
-    } catch (error) {
-      console.error("Error fetching payments:", error);
-      res.status(500).json({ message: "Failed to fetch payments" });
-    }
-  });
+        if (inviteUse?.invitationId) {
+          const invitation = invitationById.get(inviteUse.invitationId);
+          if (invitation?.inviterId) {
+            invitationRole = "invitee";
+            relatedUserName = relatedUserMap.get(invitation.inviterId) ?? "好友";
+          }
+        } else {
+          const relatedInviteUse = relatedInviteUseByPoolId.get(reg.poolId);
+          if (relatedInviteUse?.inviteeId) {
+            invitationRole = "inviter";
+            relatedUserName = relatedUserMap.get(relatedInviteUse.inviteeId) ?? "好友";
+          }
+        }
 
-  // Finance - Get venue commissions
-  app.get("/api/admin/finance/commissions", requireAdmin, async (req, res) => {
-    try {
-      const commissions = await storage.getVenueCommissions();
-      res.json(commissions);
-    } catch (error) {
-      console.error("Error fetching commissions:", error);
-      res.status(500).json({ message: "Failed to fetch commissions" });
-    }
-  });
-
-  // Moderation - Get statistics
-  app.get("/api/admin/moderation/stats", requireAdmin, async (req, res) => {
-    try {
-      const stats = await storage.getModerationStats();
-      res.json(stats);
-    } catch (error) {
-      console.error("Error fetching moderation stats:", error);
-      res.status(500).json({ message: "Failed to fetch moderation stats" });
-    }
-  });
-
-  // Moderation - Get all reports
-  app.get("/api/admin/moderation/reports", requireAdmin, async (req, res) => {
-    try {
-      const { status } = req.query;
-      const reports = status === 'pending' 
-        ? await storage.getPendingReports()
-        : await storage.getAllReports();
-      res.json(reports);
-    } catch (error) {
-      console.error("Error fetching reports:", error);
-      res.status(500).json({ message: "Failed to fetch reports" });
-    }
-  });
-
-  // Moderation - Update report status
-  app.patch("/api/admin/moderation/reports/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
-    try {
-      const { status, adminNotes } = req.body;
-      const report = await storage.updateReportStatus(req.params.id, status, adminNotes);
-      res.json(report);
-    } catch (error) {
-      console.error("Error updating report:", error);
-      res.status(500).json({ message: "Failed to update report" });
-    }
-  });
-
-  // Moderation - Create moderation log
-  app.post("/api/admin/moderation/logs", requireAdmin, requireOperatorOrAbove, async (req, res) => {
-    try {
-      const session = req.session as any;
-      const log = await storage.createModerationLog({
-        adminId: session.userId,
-        action: req.body.action,
-        targetUserId: req.body.targetUserId,
-        reason: req.body.reason,
-        notes: req.body.notes,
+        return {
+          ...reg,
+          highlights: Array.isArray(reg.highlights) ? reg.highlights : [],
+          invitationRole,
+          relatedUserName,
+        };
       });
-      res.json(log);
+
+      console.log("[MyPoolRegistrations] enriched registrations:", enrichedRegistrations);
+
+      res.json(enrichedRegistrations);
     } catch (error) {
-      console.error("Error creating moderation log:", error);
-      res.status(500).json({ message: "Failed to create moderation log" });
+      console.error("Error fetching user pool registrations:", error);
+      res.status(500).json({ message: "Failed to fetch registrations" });
     }
   });
 
-  // Moderation - Get moderation logs
-  app.get("/api/admin/moderation/logs", requireAdmin, async (req, res) => {
-    try {
-      const logs = await storage.getModerationLogs();
-      res.json(logs);
-    } catch (error) {
-      console.error("Error fetching moderation logs:", error);
-      res.status(500).json({ message: "Failed to fetch moderation logs" });
-    }
-  });
 
-  // Data Insights - Get analytics data
-  app.get("/api/admin/insights", requireAdmin, async (req, res) => {
-    try {
-      const insights = await storage.getInsightsData();
-      res.json(insights);
-    } catch (error) {
-      console.error("Error fetching insights:", error);
-      res.status(500).json({ message: "Failed to fetch insights" });
-    }
-  });
+    // 取消盲盒报名（从活动池中移除当前用户的报名记录）
+    app.delete('/api/pool-registrations/:id', requireAuth, async (req: any, res) => {
+      try {
+        console.log('[MyPoolRegistrationsCancel] route hit for /api/pool-registrations/:id', {
+          method: req.method,
+          originalUrl: req.originalUrl,
+          params: req.params,
+          sessionUserId: req.session?.userId,
+        });
 
-  // Registration Funnel Analytics - Get registration funnel data
-  app.get("/api/admin/insights/registration-funnel", requireAdmin, async (req, res) => {
-    try {
-      const { getRegistrationFunnelData } = await import('../../analytics/registrationFunnelAnalytics');
-      const funnelData = await getRegistrationFunnelData();
-      res.json(funnelData);
-    } catch (error) {
-      console.error("Error fetching registration funnel data:", error);
-      res.status(500).json({ message: "Failed to fetch registration funnel data" });
-    }
-  });
+        const userId = req.session.userId;
+        if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+        const { id } = req.params;
+
+        if (!userId) {
+          console.error('[MyPoolRegistrationsCancel] No userId in session');
+          return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        console.log('[MyPoolRegistrationsCancel] attempting to delete registration', {
+          userId,
+          registrationId: id,
+        });
+
+        // 1) 删除当前用户在这个报名记录上的 row
+        let deletedRegistrations = await db
+          .delete(eventPoolRegistrations)
+          .where(
+            and(
+              eq(eventPoolRegistrations.id, id),
+              eq(eventPoolRegistrations.userId, userId),
+            )
+          )
+          .returning();
+
+        if (deletedRegistrations.length === 0) {
+          console.warn('[MyPoolRegistrationsCancel] no registration found to delete', {
+            userId,
+            registrationId: id,
+          });
+          return res.status(404).json({
+            message: '没有找到可以取消的报名记录，可能已经取消过了',
+          });
+        }
+
+        console.log('[MyPoolRegistrationsCancel] deleted registrations:', {
+          count: deletedRegistrations.length,
+          ids: deletedRegistrations.map((r: any) => r.id),
+          poolIds: deletedRegistrations.map((r: any) => r.poolId),
+        });
+
+        // 2) 对每个受影响的池子，把 totalRegistrations - 1
+        for (const reg of deletedRegistrations) {
+          if (reg.poolId) {
+            await db
+              .update(eventPools)
+              .set({
+                totalRegistrations: sql`${eventPools.totalRegistrations} - 1`,
+                updatedAt: new Date(),
+              })
+              .where(eq(eventPools.id, reg.poolId));
+          }
+        }
+
+        console.log('[MyPoolRegistrationsCancel] updated pools after deletion');
+
+        return res.json({
+          ok: true,
+          cancelledRegistrationIds: (deletedRegistrations as any[]).map((r: any) => r.id),
+        });
+      } catch (error) {
+        console.error('[MyPoolRegistrationsCancel] error while cancelling registration', error);
+        return res.status(500).json({ message: 'Failed to cancel pool registration' });
+      }
+    });
+
+    // Get pool group details (members + activity info)
+    app.get("/api/pool-groups/:groupId", requireAuth, async (req, res) => {
+      try {
+        const groupId = req.params.groupId;
+        const userId = (req.session as any).userId as string;
+
+        // Get group info
+        const group = await db.query.eventPoolGroups.findFirst({
+          where: (groups: any, { eq }: any) => eq(groups.id, groupId),
+        });
+
+        if (!group) {
+          return res.status(404).json({ message: "Group not found" });
+        }
+
+        // Get pool info
+        const pool = await db.query.eventPools.findFirst({
+          where: (pools: any, { eq }: any) => eq(pools.id, group.poolId),
+        });
+
+        if (!pool) {
+          return res.status(404).json({ message: "Event pool not found" });
+        }
+
+        // Check if user is in this group
+        const userRegistration = await db.query.eventPoolRegistrations.findFirst({
+          where: (regs: any, { eq, and }: any) => and(
+            eq(regs.assignedGroupId, groupId),
+            eq(regs.userId, userId)
+          ),
+        });
+
+        if (!userRegistration) {
+          return res.status(403).json({ message: "You are not a member of this group" });
+        }
+
+        // Get all group members with their profile info
+        const members = await db
+          .select({
+            userId: users.id,
+            displayName: users.displayName,
+            archetype: users.archetype,
+            topInterests: users.interestsRankedTop3,
+            birthdate: users.birthdate,
+            // ✅ UPDATED: Use 3-tier industry classification
+            industryNicheLabel: users.industryNicheLabel,
+            industryCategoryLabel: users.industryCategoryLabel,
+            ageVisible: users.ageVisibility,
+            industryVisible: users.workVisibility,
+            gender: users.gender,
+            educationLevel: users.educationLevel,
+            hometownRegionCity: users.hometownRegionCity,
+            hometownAffinityOptin: users.hometownAffinityOptin,
+            educationVisible: users.educationVisibility,
+            relationshipStatus: users.relationshipStatus,
+            // Event-specific preferences from registration
+            intent: eventPoolRegistrations.eventIntent,
+          })
+          .from(eventPoolRegistrations)
+          .innerJoin(users, eq(eventPoolRegistrations.userId, users.id))
+          .where(eq(eventPoolRegistrations.assignedGroupId, groupId));
+
+        const memberSummaries = members.map((member: (typeof members)[number]) => ({
+          userId: member.userId,
+          displayName: member.displayName,
+          archetype: member.archetype,
+          topInterests: member.topInterests,
+          ageLabel: formatAge(member.birthdate, member.ageVisible ?? 'hide_all'),
+          industryNicheLabel: member.industryNicheLabel,
+          industryCategoryLabel: member.industryCategoryLabel,
+          ageVisible: member.ageVisible !== 'hide_all',
+          industryVisible: member.industryVisible !== 'hide_all',
+          gender: member.gender,
+          educationLevel: member.educationLevel,
+          hometownRegionCity: member.hometownRegionCity,
+          hometownAffinityOptin: member.hometownAffinityOptin,
+          educationVisible: member.educationVisible !== 'hide_all',
+          relationshipStatus: member.relationshipStatus,
+          intent: member.intent,
+        }));
+
+        res.json({
+          group: {
+            id: group.id,
+            groupNumber: group.groupNumber,
+            memberCount: group.memberCount,
+            matchScore: group.overallScore,
+            avgPairScore: group.avgChemistryScore, // stored as avgChemistryScore in DB (= avgPairScore)
+            diversityScore: group.diversityScore,
+            energyBalance: group.energyBalance,
+            matchExplanation: group.matchExplanation,
+            theme: group.theme,
+            subtitle: group.subtitle,
+            vibe: group.vibe,
+            themeEmoji: group.themeEmoji,
+            highlights: Array.isArray(group.themeHighlights) ? group.themeHighlights : [],
+            venueName: group.venueName,
+            venueAddress: group.venueAddress,
+            finalDateTime: group.finalDateTime,
+            status: group.status,
+          },
+          pool: {
+            id: pool.id,
+            title: pool.title,
+            description: pool.description,
+            eventType: pool.eventType,
+            city: pool.city,
+            district: pool.district,
+            dateTime: pool.dateTime,
+          },
+          members: memberSummaries,
+        });
+      } catch (error) {
+        console.error("Error fetching pool group details:", error);
+        res.status(500).json({ message: "Failed to fetch group details" });
+      }
+    });
+
+    // Get AI-generated group analysis for a pool group
+    app.get('/api/pool-groups/:groupId/analysis', requireAuth, aiEndpointLimiter, async (req, res) => {
+      try {
+        const { groupId } = req.params;
+        const userId = (req.session as any).userId as string;
+
+        // Load group from DB
+        const group = await db.query.eventPoolGroups.findFirst({
+          where: eq(eventPoolGroups.id, groupId),
+        });
+        if (!group) {
+          return res.status(404).json({ error: 'Group not found' });
+        }
+
+        // Load pool for eventType context
+        const pool = await db.query.eventPools.findFirst({
+          where: eq(eventPools.id, group.poolId),
+        });
+
+        // Check if user is in this group
+        const userRegistration = await db.query.eventPoolRegistrations.findFirst({
+          where: and(
+            eq(eventPoolRegistrations.userId, userId),
+            eq(eventPoolRegistrations.assignedGroupId, groupId)
+          ),
+        });
+
+        if (!userRegistration) {
+          return res.status(403).json({ error: 'Not a member of this group' });
+        }
+
+        // Load all group registrations to get member IDs
+        const groupRegistrations = await db.query.eventPoolRegistrations.findMany({
+          where: eq(eventPoolRegistrations.assignedGroupId, groupId),
+        });
+
+        const memberIds = groupRegistrations.map((r: any) => r.userId as string);
+
+        if (memberIds.length === 0) {
+          return res.status(404).json({ error: 'Group has no members' });
+        }
+
+        // Load full user profiles for all members
+        const memberProfiles = await db.query.users.findMany({
+          where: inArray(users.id, memberIds),
+        });
+
+        // Load user interests (with heat levels) for deep interest overlap detection
+        const memberInterestsRows = await db.query.userInterests.findMany({
+          where: inArray(userInterests.userId, memberIds),
+        }) as Array<{
+          userId: string;
+          selections: Array<{ topicId: string; level?: number | null }> | null;
+        }>;
+        const interestSignalsByUserId = await loadInterestSignalsByUserIds(memberIds);
+        const interestsByUserId = new Map(
+          memberInterestsRows.map((row) => [row.userId, row] as const)
+        );
+
+        // Build MatchMember[] using the same field mapping as the existing handler
+        const members = memberProfiles.map((m: any) => {
+          const interestRow = interestsByUserId.get(m.id);
+          const interestsWithHeat = interestRow?.selections
+            ? interestRow.selections.map(
+                (s) => ({ topicId: s.topicId, heatLevel: s.level ?? 1 })
+              )
+            : null;
+          // Prefer interestsRankedTop3; fall back to top heat-sorted selections; then legacy field
+          const interestsTop =
+            Array.isArray(m.interestsRankedTop3) && m.interestsRankedTop3.length > 0
+              ? m.interestsRankedTop3
+              : interestsWithHeat
+              ? interestsWithHeat
+                  .slice()
+                  .sort((a: { heatLevel: number }, b: { heatLevel: number }) => b.heatLevel - a.heatLevel)
+                  .slice(0, 3)
+                  .map((s: { topicId: string }) => s.topicId)
+              : m.interestsTop;
+          return {
+            userId: m.id,
+            displayName: m.displayName || '神秘嘉宾',
+            archetype: m.archetype,
+            secondaryArchetype: m.secondaryArchetype,
+            interestsTop,
+            industry: m.industryNicheLabel || m.industryCategoryLabel,
+            hometown: m.hometownRegionCity,
+            socialStyle: m.socialStyle,
+            educationLevel: m.educationLevel,
+            relationshipStatus: m.relationshipStatus,
+            workMode: m.workMode,
+            industryCategory: m.industryCategory,
+            industryCategoryLabel: m.industryCategoryLabel,
+            interestsWithHeat,
+            interestSignals: interestSignalsByUserId.get(m.id) ?? null,
+          };
+        });
+
+        const { generateGroupAnalysis, getPairExplanationForUser } = await import('../../matchExplanationService');
+
+        // Call the existing service with caching enabled
+        const analysis = await generateGroupAnalysis(
+          groupId,
+          members,
+          pool?.eventType ?? '饭局',
+          true
+        );
+
+        // Helper: map an internal PairExplanation to the shared response type
+        const mapPe = (pe: {
+          pairKey: string;
+          explanation: string;
+          chemistryScore: number;
+          sharedInterests?: string[];
+          connectionPoints?: string[];
+          introAngle?: string;
+        }) => ({
+          pairKey: pe.pairKey,
+          explanation: pe.explanation,
+          chemistryScore: pe.chemistryScore,
+          sharedInterests: pe.sharedInterests ?? [],
+          connectionPoints: pe.connectionPoints ?? [],
+          ...(pe.introAngle ? { introAngle: pe.introAngle } : {}),
+        });
+
+        // Map internal GroupAnalysis → GroupAnalysisResponse
+        const response: GroupAnalysisResponse = {
+          groupId,
+          overallChemistry: analysis.overallChemistry as GroupAnalysisResponse['overallChemistry'],
+          groupDynamics: analysis.groupDynamics,
+          iceBreakers: analysis.iceBreakers,
+          pairExplanations: analysis.pairExplanations.map(mapPe),
+          fromCache: analysis.fromCache ?? false,
+          generatedAt: analysis.generatedAt ?? new Date().toISOString(),
+          provider: analysis.provider ?? null,
+          fallbackUsed: analysis.fallbackUsed ?? false,
+          promptVersion: analysis.promptVersion,
+          meta: {
+            generatedAt: analysis.generatedAt ?? new Date().toISOString(),
+            fromCache: analysis.fromCache ?? false,
+            provider: analysis.provider ?? null,
+            fallbackUsed: analysis.fallbackUsed ?? false,
+            promptVersion: analysis.promptVersion,
+          },
+          // Convenience field: pairs involving the authenticated viewer
+          myPairs: getPairExplanationForUser(analysis, userId).map(mapPe),
+          // Post-match theme layer
+          groupThemeTags: analysis.groupThemeTags,
+          groupThemeCompanion: analysis.groupThemeCompanion,
+        };
+
+        return res.json(response);
+      } catch (error) {
+        console.error('[analysis] Error generating group analysis:', error);
+        return res.status(500).json({ error: 'Failed to generate analysis' });
+      }
+    });
+
+    // Confirm attendance for a pool group
+    app.post("/api/pool-groups/:groupId/confirm-attendance", requireAuth, async (req, res) => {
+      try {
+        const groupId = req.params.groupId;
+        const session = req.session as any;
+        const userId = session?.userId;
+
+        if (!userId) {
+          return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        // Verify the user is a member of this group
+        const userRegistration = await db.query.eventPoolRegistrations.findFirst({
+          where: (regs: any, { eq, and }: any) =>
+            and(eq(regs.assignedGroupId, groupId), eq(regs.userId, userId)),
+        });
+
+        if (!userRegistration) {
+          return res.status(403).json({ message: "You are not a member of this group" });
+        }
+
+        // Look up the event pool to find a linked blind box event
+        const group = await db.query.eventPoolGroups.findFirst({
+          where: (groups: any, { eq }: any) => eq(groups.id, groupId),
+        });
+
+        let blindBoxEventId: string | null = null;
+        if (group?.poolId) {
+          const linkedEvent = await db
+            .select({ id: blindBoxEvents.id })
+            .from(blindBoxEvents)
+            .where(eq(blindBoxEvents.poolId, group.poolId))
+            .limit(1);
+          if (linkedEvent.length > 0) {
+            blindBoxEventId = linkedEvent[0].id;
+          }
+        }
+
+        if (!blindBoxEventId) {
+          return res.status(409).json({ message: "Blind box event is not ready for attendance confirmation" });
+        }
+
+        await storage.updateAttendanceStatus(blindBoxEventId, userId, 'confirmed');
+
+        const user = await storage.getUser(userId);
+        const displayName = getUserDisplayName(user);
+        broadcastAttendanceStatusUpdated(blindBoxEventId, userId, displayName, 'confirmed');
+
+        res.json({ success: true, blindBoxEventId, attendanceStatus: 'confirmed' });
+      } catch (error) {
+        console.error("Error confirming pool group attendance:", error);
+        res.status(500).json({ message: "Failed to confirm attendance" });
+      }
+    });
+    app.get("/api/admin/finance/stats", requireAdmin, async (req, res) => {
+      try {
+        const stats = await storage.getFinanceStats();
+        res.json(stats);
+      } catch (error) {
+        console.error("Error fetching finance stats:", error);
+        res.status(500).json({ message: "Failed to fetch finance stats" });
+      }
+    });
+
+    // Finance - Get all payments
+    app.get("/api/admin/finance/payments", requireAdmin, async (req, res) => {
+      try {
+        const { type } = req.query;
+        const payments = type
+          ? await storage.getPaymentsByType(type as string)
+          : await storage.getAllPayments();
+        res.json(payments);
+      } catch (error) {
+        console.error("Error fetching payments:", error);
+        res.status(500).json({ message: "Failed to fetch payments" });
+      }
+    });
+
+    // Finance - Get venue commissions
+    app.get("/api/admin/finance/commissions", requireAdmin, async (req, res) => {
+      try {
+        const commissions = await storage.getVenueCommissions();
+        res.json(commissions);
+      } catch (error) {
+        console.error("Error fetching commissions:", error);
+        res.status(500).json({ message: "Failed to fetch commissions" });
+      }
+    });
+
+    // Moderation - Get statistics
+    app.get("/api/admin/moderation/stats", requireAdmin, async (req, res) => {
+      try {
+        const stats = await storage.getModerationStats();
+        res.json(stats);
+      } catch (error) {
+        console.error("Error fetching moderation stats:", error);
+        res.status(500).json({ message: "Failed to fetch moderation stats" });
+      }
+    });
+
+    // Moderation - Get all reports
+    app.get("/api/admin/moderation/reports", requireAdmin, async (req, res) => {
+      try {
+        const { status } = req.query;
+        const reports = status === 'pending'
+          ? await storage.getPendingReports()
+          : await storage.getAllReports();
+        res.json(reports);
+      } catch (error) {
+        console.error("Error fetching reports:", error);
+        res.status(500).json({ message: "Failed to fetch reports" });
+      }
+    });
+
+    // Moderation - Update report status
+    app.patch("/api/admin/moderation/reports/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+      try {
+        const { status, adminNotes } = req.body;
+        const report = await storage.updateReportStatus(req.params.id, status, adminNotes);
+        res.json(report);
+      } catch (error) {
+        console.error("Error updating report:", error);
+        res.status(500).json({ message: "Failed to update report" });
+      }
+    });
+
+    // Moderation - Create moderation log
+    app.post("/api/admin/moderation/logs", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+      try {
+        const session = req.session as any;
+        const log = await storage.createModerationLog({
+          adminId: session.userId,
+          action: req.body.action,
+          targetUserId: req.body.targetUserId,
+          reason: req.body.reason,
+          notes: req.body.notes,
+        });
+        res.json(log);
+      } catch (error) {
+        console.error("Error creating moderation log:", error);
+        res.status(500).json({ message: "Failed to create moderation log" });
+      }
+    });
+
+    // Moderation - Get moderation logs
+    app.get("/api/admin/moderation/logs", requireAdmin, async (req, res) => {
+      try {
+        const logs = await storage.getModerationLogs();
+        res.json(logs);
+      } catch (error) {
+        console.error("Error fetching moderation logs:", error);
+        res.status(500).json({ message: "Failed to fetch moderation logs" });
+      }
+    });
+
+    // Data Insights - Get analytics data
+    app.get("/api/admin/insights", requireAdmin, async (req, res) => {
+      try {
+        const insights = await storage.getInsightsData();
+        res.json(insights);
+      } catch (error) {
+        console.error("Error fetching insights:", error);
+        res.status(500).json({ message: "Failed to fetch insights" });
+      }
+    });
+
+    // Registration Funnel Analytics - Get registration funnel data
+    app.get("/api/admin/insights/registration-funnel", requireAdmin, async (req, res) => {
+      try {
+        const { getRegistrationFunnelData } = await import('../../analytics/registrationFunnelAnalytics');
+        const funnelData = await getRegistrationFunnelData();
+        res.json(funnelData);
+      } catch (error) {
+        console.error("Error fetching registration funnel data:", error);
+        res.status(500).json({ message: "Failed to fetch registration funnel data" });
+      }
+    });
 }

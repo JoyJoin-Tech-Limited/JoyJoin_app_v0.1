@@ -129,7 +129,7 @@ export default function UndercoverWordPhaseView({
     try {
       await apiRequest({ path: buildSocialPath(socialSessionId, '/undercover-word/generate'), method: 'POST' });
     } catch (e) {
-      setError('生成词对失败');
+      setError('词对没生成成功');
     } finally {
       setIsGenerating(false);
     }
@@ -147,7 +147,7 @@ export default function UndercoverWordPhaseView({
       });
       setDescription('');
     } catch (e) {
-      setError('提交失败');
+      setError('提交没成功');
     } finally {
       setSubmitting(false);
     }
@@ -164,7 +164,7 @@ export default function UndercoverWordPhaseView({
         data: { targetUserId: selectedTarget },
       });
     } catch (e) {
-      setError('投票失败');
+      setError('投票没成功');
     } finally {
       setVoting(false);
     }
@@ -176,7 +176,7 @@ export default function UndercoverWordPhaseView({
     try {
       await apiRequest({ path: buildSocialPath(socialSessionId, '/undercover-word/reveal'), method: 'POST' });
     } catch (e) {
-      setError('揭晓失败');
+      setError('揭晓遇到小状况');
     } finally {
       setRevealing(false);
     }

@@ -1,0 +1,114 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+.legal-modal__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: $z-modal;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: flex-end;
+  animation: legal-modal-fadein 0.2s ease;
+}
+
+@keyframes legal-modal-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes legal-modal-slideup {
+  from { transform: translate3d(0, 100%, 0); }
+  to   { transform: translate3d(0, 0, 0); }
+}
+
+.legal-modal__sheet {
+  width: 100%;
+  max-height: 80vh;
+  background: $color-surface;
+  border-radius: $card-radius $card-radius 0 0;
+  display: flex;
+  flex-direction: column;
+  animation: legal-modal-slideup 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.legal-modal__header {
+  padding: $spacing-sm $container-padding $spacing-xs;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  flex-shrink: 0;
+}
+
+.legal-modal__handle {
+  width: 60rpx;
+  height: 6rpx;
+  border-radius: 3rpx;
+  background: rgba($color-text-primary, 0.12);
+}
+
+.legal-modal__title {
+  @include type-heading;
+  color: $color-text-primary;
+  text-align: center;
+}
+
+.legal-modal__date {
+  @include type-micro;
+  color: $color-text-tertiary;
+}
+
+.legal-modal__body {
+  flex: 1;
+  padding: 0 $container-padding $spacing-sm;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.legal-modal__section {
+  margin-bottom: $spacing-md;
+}
+
+.legal-modal__section-heading {
+  display: block;
+  @include type-subheading;
+  color: $color-text-primary;
+  margin-bottom: $spacing-xs;
+}
+
+.legal-modal__section-text {
+  display: block;
+  @include type-body;
+  color: $color-text-secondary;
+  line-height: 1.7;
+  margin-bottom: $spacing-xs;
+  white-space: pre-wrap;
+}
+
+.legal-modal__footer {
+  padding: $spacing-sm $container-padding;
+  padding-bottom: calc(#{$spacing-sm} + env(safe-area-inset-bottom, 0px));
+  flex-shrink: 0;
+  border-top: 2rpx solid $color-divider;
+}
+
+.legal-modal__agree-btn {
+  width: 100%;
+  height: $button-height;
+  border-radius: $card-radius-sm;
+  background: $color-text-primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.12s ease;
+
+  &--hover {
+    opacity: 0.85;
+  }
+}
+
+.legal-modal__agree-btn-text {
+  @include type-brand-cta-label;
+  color: $color-text-white;
+  font-size: $font-size-md;
+}

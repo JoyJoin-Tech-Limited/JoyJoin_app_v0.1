@@ -1,6 +1,7 @@
 @use './styles/variables' as *;
 @use './styles/mixins' as *;
 @use './styles/reset';
+@use './styles/stagger';
 
 page {
   font-family: $font-body;

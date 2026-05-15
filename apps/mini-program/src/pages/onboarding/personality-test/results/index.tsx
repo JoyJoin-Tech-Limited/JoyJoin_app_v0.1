@@ -32,7 +32,6 @@ import {
 } from '../visuals'
 import { getArchetypeCardVariants } from '../archetypeVariants'
 import {
-  ARCHETYPE_ENGLISH_NAMES,
   generatePersonalitySharePoster,
   PERSONALITY_SHARE_POSTER_CANVAS_ID,
   type PersonalitySharePosterInput,
@@ -881,7 +880,7 @@ export default function PersonalityTestResultsPage() {
         await Taro.saveImageToPhotosAlbum({ filePath: posterPath })
         haptics('success')
         analytics.interaction('share_save_success', { primaryArchetype: displayArchetypeName })
-        void Taro.showToast({ title: '已保存到相册', icon: 'success', duration: 2000 })
+        void Taro.showToast({ title: '氛围卡已保存', icon: 'success', duration: 2000 })
       } catch (saveErr) {
         const error = String(saveErr)
         logError('[PersonalityResults] Save to album failed', {
@@ -975,7 +974,7 @@ export default function PersonalityTestResultsPage() {
           score: Number(match.score) || 0,
         })),
         traitEntries: traitEntries.map(({ label, value }) => ({ label, value })),
-        englishName: ARCHETYPE_ENGLISH_NAMES[displayArchetype ?? ''] ?? displayArchetypeName,
+        subtitle: visual.nickname || displayArchetypeName,
         energyLevel,
         archetypeRank,
         serialNumber,
@@ -1034,7 +1033,7 @@ export default function PersonalityTestResultsPage() {
     try {
       const input: PersonalitySquarePosterInput = {
         archetype: displayArchetypeName,
-        englishName: ARCHETYPE_ENGLISH_NAMES[displayArchetype ?? ''] ?? displayArchetypeName,
+        subtitle: visual.nickname || displayArchetypeName,
         tagline: visual.tagline || visual.description || summary,
         shareLine,
         rarityPercentage: typeof visual.rarityPercentage === 'number' ? visual.rarityPercentage : 50,

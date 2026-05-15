@@ -1,6 +1,6 @@
 # Icebreaker System — Complete Reference
 
-**Last Updated:** 2026-05-07
+**Last Updated:** 2026-05-13
 
 > ⭐ **CANONICAL FLOW:** The Social Icebreaker is the **primary and default in-event icebreaking experience** for JoyJoin matched groups. When building any feature that relates to icebreaking or in-event social facilitation, you MUST integrate with or extend the Social Icebreaker. Do NOT build new standalone icebreaking UIs.
 
@@ -180,6 +180,13 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
   Host → POST .../quip-battle/results (reveals best-of reel per prompt)
         │
         ▼ Host calls POST .../advance
+[BONUS GATE] (when next phase would be `mini_script` and `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` is true)
+  Server pauses advancement and offers bonus gate to host + players
+  Host → POST .../bonus/respond { accept: boolean }
+  Players → POST .../bonus/sentiment { sentiment: 'want' | 'pass' }
+  If accepted → enter [MINI_SCRIPT]; if declined → skip to [RECAP]
+        │
+        ▼ Host calls POST .../advance
 [MINI_SCRIPT] (when `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` or legacy `_BETA` true)
   Host → POST /api/miniscript/generate (see miniscript routes)
   Players → CardFlip role reveal, TapReaction clue voting, IdentityReveal act transitions
@@ -247,6 +254,13 @@ interface SocialSessionState {
     lieDetectiveWinner?: string;
     funMoments: string[];
   };
+
+  // Bonus gate (mini_script offer)
+  bonusGateOffered?: boolean;
+  bonusGateAccepted?: boolean;
+  bonusGateDeclined?: boolean;
+  bonusGatePlayerSentiment?: Record<string, 'want' | 'pass'>;
+  bonusGateFrameworkPreloading?: boolean;
 }
 ```
 
@@ -265,6 +279,9 @@ socialIcebreakerParticipants
 
 socialIcebreakerLieTruths
   // server-only truth data; never returned to clients
+
+social_icebreaker_phase_metrics
+  // per-phase instrumentation: dwellTimeMs, startedAt, endedAt, participantCount
 ```
 
 Sessions expire after 6 hours and expired rows are swept periodically. Missing vs expired sessions are differentiated in the API so clients can handle `410 SESSION_EXPIRED` separately from a true `404`.
@@ -287,6 +304,9 @@ Sessions expire after 6 hours and expired rows are swept periodically. Missing v
 | `POST` | `/api/social-icebreaker/:socialSessionId/lie-detective/vote` | any | Vote on which statement is the lie; triggers reveal when all voted |
 | `POST` | `/api/social-icebreaker/:socialSessionId/lie-detective/next-player` | host | Advance to the next player after the current reveal resolves |
 | `GET` | `/api/social-icebreaker/:socialSessionId/recap` | any | Generates AI recap summary |
+| `GET` | `/api/social-icebreaker/:socialSessionId/moment-card.png` | any | Server-rendered shareable Moment Card PNG (feature-flagged: `SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER`; rate-limited: 5 req/min per user) |
+| `POST` | `/api/social-icebreaker/:socialSessionId/bonus/respond` | host | Host accepts or declines the bonus `mini_script` offer |
+| `POST` | `/api/social-icebreaker/:socialSessionId/bonus/sentiment` | any | Player votes `want` or `pass` on the bonus `mini_script` offer |
 
 ### Frontend Surfaces
 

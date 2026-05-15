@@ -14,7 +14,11 @@ export function formatDateTime(dateTime?: string | null): string {
   const parsedDate = new Date(dateTime)
   if (Number.isNaN(parsedDate.getTime())) return '时间待定'
 
+  const now = new Date()
+  const includeYear = parsedDate.getFullYear() !== now.getFullYear()
+
   return parsedDate.toLocaleDateString('zh-CN', {
+    year: includeYear ? 'numeric' : undefined,
     month: 'long',
     day: 'numeric',
     weekday: 'short',

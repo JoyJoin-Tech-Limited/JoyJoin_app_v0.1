@@ -302,6 +302,14 @@
     animation: mascot-breathe 2.4s ease-in-out infinite;
   }
 
+  &__mascot-static {
+    display: block;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba($color-primary, 0.04);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     &__intro-hero-visual,
     &__mascot--animated,
@@ -712,7 +720,7 @@
 
   &__mascot-row {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     gap: $spacing-md;
     animation: mascot-commentary-enter 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
   }

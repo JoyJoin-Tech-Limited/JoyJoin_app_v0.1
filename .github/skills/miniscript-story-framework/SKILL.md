@@ -14,6 +14,7 @@ description: >-
 - **4–6 players** roster gate on server; **host-only** `POST /api/miniscript/generate`.
 - **No violence / death**; low-stakes mishap tone only; worker output **JSON only** for machine parse.
 - **mini-program first:** Taro `phaseViews` + session page own the primary UX; web parity follows.
+- **Bonus gate:** `mini_script` is preceded by a host+player vote gate. When the session would advance into `mini_script`, the server sets `bonusGateOffered=true` and pauses. Host calls `POST /api/social-icebreaker/:id/bonus/respond` to accept/decline; players call `POST .../bonus/sentiment` to vote `want`/`pass`.
 
 ## References (progressive disclosure)
 
@@ -42,6 +43,7 @@ description: >-
 - **AI-generated story JSON fails schema validation** → Check `schemaVersion` matches the expected framework version; validate against `references/json-schema.md`.
 - **Taro phase view crashes on story load** → Ensure `phaseViews.tsx` `MiniScriptPhaseView` handles every `act_flow` enum value and provides a fallback for unknown acts.
 - **Mini-script state disappears after app backgrounding** → Session TTL may have expired; check `social_icebreaker_sessions` TTL and rejoin semantics per `social-icebreaker-domain`.
+- **Bonus gate skipped or mini_script starts immediately** → Verify `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT=true` and the advance handler checks `!state.bonusGateOffered` before entering `mini_script`.
 - **Story contains violent or high-stakes content** → Reject and regenerate; hard constraint mandates low-stakes mishap tone only, no violence or death.
 
 ## Review checklist

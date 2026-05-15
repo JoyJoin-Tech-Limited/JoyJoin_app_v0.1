@@ -28,6 +28,8 @@ import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { logInfo, logError } from '../../../lib/utils/logger'
 import {
   getArchetypeVisual,
+  getIntroStaticAsset,
+  getTestCuriousStaticAsset,
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
   PERSONALITY_TEST_QUESTION_EXPRESSION,
@@ -35,8 +37,8 @@ import {
 import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
 import { haptics } from '../../../lib/utils/haptics'
 import MascotQuestionHeader from './MascotQuestionHeader'
-import PersonalityTestAnswerArea, { getNearestSliderOption, type AnswerOption } from './PersonalityTestAnswerArea'
-import { resolveOptionPreviewSpriteState, isMilestoneQuestion } from './personalityTestLogic'
+import PersonalityTestAnswerArea, { getNearestSliderOption } from './PersonalityTestAnswerArea'
+import { isMilestoneQuestion } from './personalityTestLogic'
 
 import QuestionTransition from './QuestionTransition'
 import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
@@ -140,25 +142,6 @@ function getQuestionType(question: AssessmentQuestion | null): AssessmentQuestio
   return question.questionType
 }
 
-/** Resolve the sprite animation state for the current question context. */
-function resolveSpriteState(
-  questionType: AssessmentQuestionType,
-  isSubmitting: boolean,
-): XiaoyueSpriteState {
-  if (isSubmitting) {
-    return 'thinking'
-  }
-  switch (questionType) {
-    case 'slider':
-      return 'listening'
-    case 'emoji_tap':
-      return 'curious'
-    case 'choice':
-    default:
-      return 'curious'
-  }
-}
-
 export default function PersonalityTestPage() {
   const auth = useAuth()
   const invalidateAuth = useInvalidateAuth()
@@ -174,18 +157,15 @@ export default function PersonalityTestPage() {
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [error, setError] = useState('')
   const [spriteState, setSpriteState] = useState<XiaoyueSpriteState>('idle')
-  const [previewSpriteState, setPreviewSpriteState] = useState<XiaoyueSpriteState | null>(null)
   const [postAnswerCommentary, setPostAnswerCommentary] = useState<string | null>(null)
   const [milestonePulse, setMilestonePulse] = useState(false)
   const [spriteLocked, setSpriteLocked] = useState(false)
-  const [introSpriteState, setIntroSpriteState] = useState<XiaoyueSpriteState>('intro')
   // Guard against stale async closures hijacking navigation after session change
   const activeSessionRef = useRef<string>('')
   // Defensive timeout for sprite unlock if WeChat drops animationend
   const spriteUnlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Remember the last attempted option so we can retry on network failure
   const lastAttemptedOptionRef = useRef<AssessmentOption | null>(null)
-  const handleIntroSpriteComplete = useCallback(() => setIntroSpriteState('idle'), [])
 
   const isAuthenticated = auth.isAuthenticated
   const hasStoredIncompleteSession = useMemo(() => {
@@ -210,16 +190,6 @@ export default function PersonalityTestPage() {
     () => ({ scenarioText: question?.scenarioText, questionText: question?.questionText ?? '' }),
     [question?.scenarioText, question?.questionText],
   )
-  const baseSpriteState = resolveSpriteState(questionType, isSubmitting)
-
-  // Sync base sprite state when question changes (unless locked for one-shot)
-  // Preview state (hover) overrides base state when not locked
-  useEffect(() => {
-    if (!spriteLocked) {
-      setSpriteState(previewSpriteState ?? baseSpriteState)
-    }
-  }, [baseSpriteState, spriteLocked, previewSpriteState])
-
   const estimatedTotal = progress
     ? progress.answered + Math.max(progress.estimatedRemaining, 1)
     : 1
@@ -389,37 +359,11 @@ export default function PersonalityTestPage() {
     saveCheckpoint,
   ])
 
-  const previewDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const handleOptionTouchStart = useCallback((option: AnswerOption) => {
-    if (spriteLocked || isSubmitting) return
-    if (previewDebounceRef.current) {
-      clearTimeout(previewDebounceRef.current)
-    }
-    previewDebounceRef.current = setTimeout(() => {
-      if (!spriteLocked && !isSubmitting) {
-        setPreviewSpriteState(resolveOptionPreviewSpriteState(option))
-      }
-    }, 80)
-  }, [spriteLocked, isSubmitting])
-
-  const handleOptionTouchEnd = useCallback(() => {
-    if (previewDebounceRef.current) {
-      clearTimeout(previewDebounceRef.current)
-      previewDebounceRef.current = null
-    }
-    setPreviewSpriteState(null)
-  }, [])
-
   const handleAnswer = useCallback(async (option: AssessmentOption) => {
     if (!sessionId || !question || isSubmitting) return
 
-    // Clear any pending preview debounce and reset preview state immediately
-    if (previewDebounceRef.current) {
-      clearTimeout(previewDebounceRef.current)
-      previewDebounceRef.current = null
-    }
-    setPreviewSpriteState(null)
+    // Clear previous commentary so the speech bubble doesn't show stale feedback
+    setPostAnswerCommentary(null)
 
     // Post-answer commentary will be set from server response below
 
@@ -444,7 +388,7 @@ export default function PersonalityTestPage() {
     }
     spriteUnlockTimeoutRef.current = setTimeout(() => {
       setSpriteLocked(false)
-      setPostAnswerCommentary(null)
+      // Keep postAnswerCommentary visible — it's the feedback the user just received
       setMilestonePulse(false)
       // If server response hasn't arrived yet, transition to thinking state
       if (isSubmitting) {
@@ -515,7 +459,9 @@ export default function PersonalityTestPage() {
         return
       }
 
-      setSpriteState('idle')
+      // Clear commentary before showing the next question so the speech bubble
+      // transitions from feedback back to the new question text
+      setPostAnswerCommentary(null)
       setQuestion(result.nextQuestion)
       setProgress(result.progress ?? null)
       setCurrentMatches(result.currentMatches ?? [])
@@ -615,11 +561,12 @@ export default function PersonalityTestPage() {
           <View className='personality-test__intro-hero personality-test__stage personality-test__stage--2'>
             <View className='personality-test__intro-hero-visual'>
               <View className='personality-test__intro-hero-halo' />
-              <XiaoyueSpriteAnimator
-                state={introSpriteState}
-                size='320rpx'
-                className='personality-test__mascot personality-test__mascot--animated'
-                onComplete={handleIntroSpriteComplete}
+              <Image
+                className='personality-test__mascot-static'
+                src={getIntroStaticAsset()}
+                style={{ width: '320rpx', height: '320rpx' }}
+                mode='aspectFit'
+                lazyLoad={false}
               />
             </View>
 
@@ -778,11 +725,21 @@ export default function PersonalityTestPage() {
           {question ? (
             <View className='personality-test__mascot-row'>
               <View className='personality-test__mascot-avatar'>
-                <XiaoyueSpriteAnimator
-                  state={spriteState}
-                  size='152rpx'
-                  onComplete={handleSpriteAnimationComplete}
-                />
+                {spriteLocked ? (
+                  <XiaoyueSpriteAnimator
+                    state={spriteState}
+                    size='152rpx'
+                    onComplete={handleSpriteAnimationComplete}
+                  />
+                ) : (
+                  <Image
+                    className='personality-test__mascot-static'
+                    src={getTestCuriousStaticAsset()}
+                    style={{ width: '152rpx', height: '152rpx' }}
+                    mode='aspectFit'
+                    lazyLoad={false}
+                  />
+                )}
               </View>
               <View
                 className={`personality-test__speech-bubble${progress && (progress.answered === 4 || progress.answered === 8) ? ' personality-test__speech-bubble--milestone' : ''}`}
@@ -795,15 +752,13 @@ export default function PersonalityTestPage() {
                     ? '悦仔正在分析你的选择…'
                     : postAnswerCommentary
                       ? postAnswerCommentary
-                      : progress && progress.answered === 4
-                        ? '已经一半了！你的命格轮廓越来越清晰，继续凭直觉选。'
-                        : progress && progress.answered === 8
-                          ? '太棒了！进入精准阶段，接下来的题目会更聚焦，帮你锁定最像自己的氛围命格。'
-                          : questionType === 'slider'
-                            ? '滑到最符合你感觉的位置～'
-                            : questionType === 'emoji_tap'
-                              ? '选最戳你的那个～'
-                              : '凭直觉选就好，没有标准答案～'}
+                      : isSubmitting
+                        ? '收到～'
+                        : progress && progress.answered === 4
+                          ? '已经一半了！你的命格轮廓越来越清晰，继续凭直觉选。'
+                          : progress && progress.answered === 8
+                            ? '太棒了！进入精准阶段，接下来的题目会更聚焦，帮你锁定最像自己的氛围命格。'
+                            : question.questionText}
                 </Text>
               </View>
             </View>
@@ -833,8 +788,7 @@ export default function PersonalityTestPage() {
                 onAnswer={handleAnswer}
                 onSliderChange={setSliderValue}
                 onSliderSubmit={handleSliderSubmit}
-                onOptionTouchStart={handleOptionTouchStart}
-                onOptionTouchEnd={handleOptionTouchEnd}
+
               />
             </QuestionTransition>
           ) : null}

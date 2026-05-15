@@ -1,0 +1,160 @@
+@use '../../styles/variables' as *;
+
+.chemistry-mini-grid {
+  padding: $spacing-md;
+  background: $color-surface;
+  border-radius: $card-radius-sm;
+  margin-top: $spacing-md;
+
+  &--empty {
+    opacity: 0.7;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__title {
+    font-size: 28rpx;
+    font-weight: 600;
+    color: $color-text-primary;
+  }
+
+  &__user-badge {
+    padding: 4rpx 16rpx;
+    border-radius: 20rpx;
+    font-size: 20rpx;
+
+    &--warm {
+      background: rgba($color-archetype-warm, 0.12);
+      color: $color-archetype-warm;
+    }
+
+    &--cool {
+      background: rgba($color-archetype-cool, 0.12);
+      color: $color-archetype-cool;
+    }
+
+    &--fire {
+      background: rgba($color-archetype-fire, 0.12);
+      color: $color-archetype-fire;
+    }
+
+    &--calm {
+      background: rgba($color-archetype-calm, 0.12);
+      color: $color-archetype-calm;
+    }
+  }
+
+  &__user-badge-text {
+    font-size: 20rpx;
+    font-weight: 500;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 16rpx;
+  }
+
+  &__row {
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+  }
+
+  &__row-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__name {
+    font-size: 26rpx;
+    font-weight: 500;
+    color: $color-text-primary;
+  }
+
+  &__count {
+    font-size: 22rpx;
+    color: $color-text-muted;
+  }
+
+  &__row-bar {
+    height: 8rpx;
+    background: $color-divider;
+    border-radius: 4rpx;
+    overflow: hidden;
+  }
+
+  &__bar {
+    height: 100%;
+    border-radius: 4rpx;
+    transition: width 0.4s ease-out;
+
+    &--warm {
+      background: $color-archetype-warm;
+    }
+
+    &--cool {
+      background: $color-archetype-cool;
+    }
+
+    &--fire {
+      background: $color-archetype-fire;
+    }
+
+    &--calm {
+      background: $color-archetype-calm;
+    }
+  }
+
+  &__row-score {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+  }
+
+  &__score {
+    font-size: 22rpx;
+    font-weight: 500;
+
+    &--high {
+      color: $color-success;
+    }
+
+    &--good {
+      color: $color-archetype-warm;
+    }
+
+    &--neutral {
+      color: $color-text-muted;
+    }
+
+    &--low {
+      color: $color-error;
+    }
+  }
+
+  &__score-num {
+    font-size: 20rpx;
+    color: $color-text-muted;
+  }
+
+  &__footer {
+    margin-top: $spacing-sm;
+    font-size: 22rpx;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  &__empty-text {
+    font-size: 24rpx;
+    color: $color-text-muted;
+    text-align: center;
+    padding: $spacing-md 0;
+  }
+}

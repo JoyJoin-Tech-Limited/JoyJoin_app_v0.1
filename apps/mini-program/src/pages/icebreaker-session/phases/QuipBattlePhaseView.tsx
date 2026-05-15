@@ -137,7 +137,7 @@ export default function QuipBattlePhaseView({
       });
       onRefresh?.();
     } catch {
-      setError('生成题目失败');
+      setError('题目没生成成功');
     } finally {
       setIsGenerating(false);
     }
@@ -150,7 +150,7 @@ export default function QuipBattlePhaseView({
       .filter((a) => a.answerText.trim().length > 0);
 
     if (answersToSubmit.length === 0) {
-      setError('请至少回答一个题目');
+      setError('先回答一个题目吧');
       return;
     }
 
@@ -164,7 +164,7 @@ export default function QuipBattlePhaseView({
       });
       onRefresh?.();
     } catch {
-      setError('提交失败，请重试');
+      setError('提交遇到小状况');
     } finally {
       setSubmitting(false);
     }
@@ -177,7 +177,7 @@ export default function QuipBattlePhaseView({
       .map(([promptId, answerId]) => ({ promptId, answerId }));
 
     if (votesToSubmit.length === 0) {
-      setError('请至少投一票');
+      setError('先投一票再继续吧');
       return;
     }
 
@@ -191,7 +191,7 @@ export default function QuipBattlePhaseView({
       });
       onRefresh?.();
     } catch {
-      setError('投票失败，请重试');
+      setError('投票没成功');
     } finally {
       setVoting(false);
     }
@@ -205,7 +205,7 @@ export default function QuipBattlePhaseView({
       });
       onRefresh?.();
     } catch {
-      setError('揭晓失败，请重试');
+      setError('揭晓遇到小状况');
     }
   };
 

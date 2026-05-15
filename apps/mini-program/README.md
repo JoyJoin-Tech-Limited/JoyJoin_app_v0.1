@@ -59,12 +59,18 @@ src/
 │   ├── terms/
 │   └── center-tab-empty/
 ├── components/          # Shared UI components & primitives
-│   └── ui/              # BrandLogo, Button, Card, StatusCard, JoyJoinIcon, etc.
+│   ├── ui/              # BrandLogo, Button, Card, StatusCard, JoyJoinIcon, etc.
+│   ├── landing/         # Landing-page-specific components (BondingCloud)
+│   └── discover/        # Discover feed components (OracleCard, CompatibilityIndicator, EcosystemBar)
 ├── hooks/               # Custom React hooks
+│   ├── useStaggerMount.ts   # Single RAF mount trigger for CSS-staggered entrances
 ├── lib/                 # Runtime helpers & business logic
 ├── providers/           # App-level React context providers
 ├── assets/              # Static assets (copied to dist/assets)
 ├── styles/              # Global Sass token system
+│   ├── _variables.scss      # Color, spacing, typography tokens (includes $color-text-primary-warm)
+│   ├── _stagger.scss        # Stagger entrance animation utilities (.stagger-in, .stagger-in--N)
+│   └── colors.ts            # TypeScript brand color constants for JS consumption
 ├── native-custom-tab-bar/  # ACTIVE native WeChat tab bar (WXML/WXSS/JS)
 ├── custom-tab-bar/      # INACTIVE Taro JSX tab bar (not shipped)
 ├── app.ts               # App lifecycle entry

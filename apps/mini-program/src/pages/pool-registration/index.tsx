@@ -9,6 +9,7 @@ import { apiRequest, type ApiError } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { COLOR_PRIMARY, TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
 import { logInfo, logError } from '../../lib/utils/logger'
+import { formatDateTime } from '../../lib/matching/groupDisplay'
 import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import {
   buildPoolRegistrationPaymentReturnContext,
@@ -21,10 +22,12 @@ import {
   readStoredPaymentReturnContext,
 } from '../../lib/payment/paymentPendingOrderStorage'
 import LoadingScreen from '../../components/loading/LoadingScreen'
+import ChemistryMiniGrid from '../../components/discover/ChemistryMiniGrid'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscribeMessage'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import StatusCard from '../../components/ui/StatusCard'
 import {
   ALCOHOL_COMFORT_OPTIONS,
   BAR_THEME_OPTIONS,
@@ -51,6 +54,7 @@ import {
   type RegistrationFormState,
   type RegistrationStep,
 } from './poolRegistrationForm'
+import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import './index.scss'
 
 const PRIMARY_BRAND_COLOR = COLOR_PRIMARY
@@ -77,6 +81,7 @@ function ChoiceCard({ option, selected, onClick, compact = false }: ChoiceCardPr
       ]
         .filter(Boolean)
         .join(' ')}
+      hoverClass='pool-reg__choice-card--hover'
       onClick={onClick}
     >
       <View className='pool-reg__choice-label-row'>
@@ -100,6 +105,7 @@ function ChoiceChip({ option, selected, onClick }: ChoiceChipProps) {
       className={['pool-reg__chip', selected ? 'pool-reg__chip--active' : '']
         .filter(Boolean)
         .join(' ')}
+      hoverClass='pool-reg__chip--hover'
       onClick={onClick}
     >
       {option.emoji ? <Text className='pool-reg__chip-emoji'>{option.emoji}</Text> : null}
@@ -176,6 +182,8 @@ export default function PoolRegistrationPage() {
   const router = useRouter()
   const poolId = router.params.id ?? ''
   const { user, isLoading: authLoading } = useAuthGuard()
+  const hasTrackedStartRef = useRef(false)
+  const registeredRef = useRef(false)
   const queryClient = useQueryClient()
   const appliedReturnContextRef = useRef(0)
 
@@ -213,6 +221,11 @@ export default function PoolRegistrationPage() {
     return ''
   }, [pool?.city, pool?.district])
 
+  const poolDateTimeLabel = useMemo(
+    () => formatDateTime(pool?.dateTime),
+    [pool?.dateTime],
+  )
+
   const fallbackBrief = useMemo(
     () => buildFallbackBrief({ eventType, area: poolArea }),
     [eventType, poolArea],
@@ -246,9 +259,30 @@ export default function PoolRegistrationPage() {
     setStep(0)
     setFormState(INITIAL_FORM_STATE)
     setRegistered(false)
+    registeredRef.current = false
     setError('')
     setIsRegistering(false)
     setResumeContext(null)
+  }, [poolId])
+
+  useEffect(() => {
+    registeredRef.current = registered
+  }, [registered])
+
+  useEffect(() => {
+    if (!poolId || authLoading || hasTrackedStartRef.current) {
+      return
+    }
+    hasTrackedStartRef.current = true
+    discoverAnalytics.track('registration_start', poolId)
+  }, [poolId, authLoading])
+
+  useEffect(() => {
+    return () => {
+      if (poolId && !registeredRef.current) {
+        discoverAnalytics.track('registration_abandoned', poolId)
+      }
+    }
   }, [poolId])
 
   const applyStoredReturnContext = useCallback(() => {
@@ -471,6 +505,7 @@ export default function PoolRegistrationPage() {
       clearPaymentReturnContextStorage()
       setResumeContext(null)
       setRegistered(true)
+      discoverAnalytics.track('registration_complete', poolId)
       Taro.showToast({ title: '报名成功！', icon: 'success', duration: TOAST_DEFAULT_MS })
     } catch (err) {
       const entitlementCode = getEntitlementCode(err)
@@ -611,6 +646,7 @@ export default function PoolRegistrationPage() {
           >
             去看我的足迹
           </Button>
+          <ChemistryMiniGrid pool={pool} userArchetype={user?.primaryArchetype ?? null} />
         </Card>
       </View>
     )
@@ -636,7 +672,7 @@ export default function PoolRegistrationPage() {
         {pool.dateTime ? (
           <View className='pool-reg__info-row'>
             <Text className='pool-reg__info-label'>📅 时间</Text>
-            <Text className='pool-reg__info-value'>{pool.dateTime}</Text>
+            <Text className='pool-reg__info-value'>{poolDateTimeLabel}</Text>
           </View>
         ) : null}
         {poolArea ? (
@@ -698,7 +734,11 @@ export default function PoolRegistrationPage() {
         <Card className='pool-reg__brief-card'>
           <Text className='pool-reg__section-kicker'>加入前的一封小信</Text>
           {briefLoading ? (
-            <Text className='pool-reg__brief-loading'>正在为你准备这场{eventType}的报名简报…</Text>
+            <View className='pool-reg__brief-skeleton'>
+              <View className='pool-reg__brief-skeleton-line pool-reg__brief-skeleton-line--long' />
+              <View className='pool-reg__brief-skeleton-line pool-reg__brief-skeleton-line--medium' />
+              <View className='pool-reg__brief-skeleton-line pool-reg__brief-skeleton-line--short' />
+            </View>
           ) : null}
           <Text className='pool-reg__brief-insight'>{brief.insight}</Text>
           <Text className='pool-reg__brief-promise'>{brief.matchingPromise}</Text>
@@ -856,7 +896,14 @@ export default function PoolRegistrationPage() {
         </>
       ) : null}
 
-      {error ? <Text className='pool-reg__error'>{error}</Text> : null}
+      {error ? (
+        <StatusCard
+          tone='error'
+          title='提交失败'
+          description={error}
+          className='pool-reg__error-card'
+        />
+      ) : null}
 
       <View className='pool-reg__footer'>
         {step === 0 ? (

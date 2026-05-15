@@ -5,21 +5,6 @@ import { logWarn } from '../../../../lib/utils/logger'
 const POSTER_WIDTH = 1080
 const POSTER_HEIGHT = 1920
 
-export const ARCHETYPE_ENGLISH_NAMES: Record<string, string> = {
-  fox: 'Clever Fox',
-  corgi: 'Happy Corgi',
-  koala: 'Warm Koala',
-  spider: 'Weaver Spider',
-  hamster_praise: 'Cheerful Hamster',
-  rooster: 'Sunny Rooster',
-  dolphin_calm: 'Perceptive Dolphin',
-  owl: 'Thoughtful Owl',
-  turtle: 'Steady Turtle',
-  cat: 'Mysterious Cat',
-  elephant: 'Grounded Elephant',
-  octopus: 'Creative Octopus',
-}
-
 const charWeightCache = new Map<string, number>()
 
 const OUTER_MARGIN = 28
@@ -67,7 +52,7 @@ export interface PersonalitySharePosterInput {
   passiveSkillEffect: string
   topMatches: PersonalitySharePosterTopMatch[]
   traitEntries: PersonalitySharePosterTraitEntry[]
-  englishName: string
+  subtitle: string
   globalRank?: number
   energyLevel?: number
   archetypeRank?: number
@@ -541,7 +526,7 @@ function drawEnergyBar(
 ): void {
   const sectionX = CARD_X + 46
   const trackWidth = CARD_WIDTH - 152
-  const label = '氛围能量'
+  const label = '社交续航力'
 
   ctx.save()
   ctx.setFillStyle(PALETTE.traitLabel)
@@ -823,13 +808,13 @@ export async function generatePersonalitySharePoster(
   ctx.fillText(input.archetype, heroPanelX + 280, heroPanelY + 24)
   ctx.restore()
 
-  // English archetype name
+  // Archetype nickname subtitle
   ctx.save()
   ctx.setFillStyle(PALETTE.textMuted)
   ctx.setFontSize(28)
   ctx.setTextAlign('left')
   ctx.setTextBaseline('top')
-  ctx.fillText(input.englishName, heroPanelX + 280, heroPanelY + 76)
+  ctx.fillText(input.subtitle, heroPanelX + 280, heroPanelY + 76)
   ctx.restore()
 
   drawTextBlock(ctx, {
@@ -948,7 +933,7 @@ export async function generatePersonalitySharePoster(
     width: skillCardWidth,
     title: input.activeSkillTitle,
     effect: input.activeSkillEffect,
-    label: '主动技',
+    label: '氛围技能',
     fill: PALETTE.activeSkillFill,
     accent: PALETTE.activeSkillAccent,
   })
@@ -958,7 +943,7 @@ export async function generatePersonalitySharePoster(
     width: skillCardWidth,
     title: input.passiveSkillTitle,
     effect: input.passiveSkillEffect,
-    label: '被动技',
+    label: '氛围天赋',
     fill: PALETTE.passiveSkillFill,
     accent: PALETTE.passiveSkillAccent,
   })
@@ -980,7 +965,7 @@ export async function generatePersonalitySharePoster(
   ctx.restore()
 
   drawTextBlock(ctx, {
-    text: '来悦聚测测你的社交命格，看看缘分会带你去哪里',
+    text: '来悦聚测测你的社交命格，看看默契会带你去哪里',
     x: CARD_X + 52,
     y: footerY,
     maxCharsPerLine: 24,

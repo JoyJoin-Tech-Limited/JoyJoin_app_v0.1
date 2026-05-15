@@ -1,7 +1,7 @@
 # JoyJoin Developer Quick Reference Guide
 
-**Version:** 2.1  
-**Last Updated:** April 2026  
+**Version:** 2.2  
+**Last Updated:** 2026-05-13  
 **For:** Tech Team Onboarding & Codebase Navigation
 
 ---
@@ -487,7 +487,10 @@ The PRIMARY icebreaking experience for matched groups is the **Social Icebreaker
 - Hook: `useSocialIcebreaker`
 - Phases: governed by tier-based run plans — `breeze` (破冰局, 40min casual), `glow` (畅聊局, 60min standard), `blaze` (狂欢局, 90min full). Default enabled set is MVP (`warmup`, `micro_challenge`, `lie_detective`) **plus** `personality_dice` unless tier selection adds fan-out phases. Tier machine ID (`breeze`/`glow`/`blaze`) is decoupled from display name via `packages/shared/src/socialIcebreakerTierManifest.ts`. See `docs/deliberations/2026-04-29-tier-naming-mascot-rebrand-consensus.md`.
 - **Lie Detective V2:** `LIE_DETECTIVE_MODE=v2` switches to user-tag-based gameplay (2 tags + AI fake). V1 (AI-fabricated statements) remains default. Design spec: `docs/icebreaker/icebreaker-system.md`.
-- Full reference: `docs/icebreaker-system.md`
+- **Moment Card server render:** `GET /api/social-icebreaker/:id/moment-card.png` returns a 640×1040 PNG via `@napi-rs/canvas` when `SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER=true`.
+- **Bonus gate:** when `mini_script` would be next, phase advance pauses at a host+player vote gate (`bonusGateOffered`) if `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT=true`. Routes: `POST .../bonus/respond` (host), `POST .../bonus/sentiment` (player).
+- **Phase metrics:** `social_icebreaker_phase_metrics` table captures `dwellTimeMs` per phase on every advance.
+- Full reference: `docs/icebreaker/icebreaker-system.md`
 
 Do NOT direct users to `/icebreaker-game` (AI Card Game) as the first/default experience.
 The Card Game is an optional deep-dive accessible from within the Social Icebreaker.

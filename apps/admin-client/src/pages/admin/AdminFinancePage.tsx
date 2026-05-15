@@ -416,6 +416,22 @@ export default function AdminFinancePage() {
 
             {/* Refund History Tab */}
             <TabsContent value="refunds" className="space-y-4">
+              <div className="flex items-center justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    const since = new Date();
+                    since.setDate(since.getDate() - 30);
+                    params.append("since", since.toISOString());
+                    window.open(`/api/admin/refund-attempts/export?${params.toString()}`);
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  导出 CSV
+                </Button>
+              </div>
               {refundsLoading ? (
                 <div className="py-12 text-center text-muted-foreground" data-testid="text-loading-refunds">
                   加载中...

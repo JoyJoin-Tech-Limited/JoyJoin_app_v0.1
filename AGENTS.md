@@ -1,6 +1,6 @@
 # JoyJoin — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents. Last updated: 2026-05-07
+> Compact instructions for AI coding agents. Last updated: 2026-05-13
 
 ---
 
@@ -183,12 +183,15 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 **Matching:** `poolMatchingService.ts` is deterministic authority. 6D scoring (chemistry, interest, socialAffinity, backgroundDiversity, preference, language). Optional 7th semantic dimension behind `ENABLE_SEMANTIC_SIMILARITY`. AI may enrich explanations but **must not** redefine scoring.
 
 **Social Icebreaker:** Primary in-event flow is `/icebreaker/:sessionId` → Social Icebreaker. `/icebreaker-game` (AI Card Game) is optional deep-dive, not default.
+- **Moment Card server render:** `GET /api/social-icebreaker/:id/moment-card.png` (feature-flagged: `SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER`)
+- **Bonus gate:** when `mini_script` is next eligible, advance pauses at `bonusGateOffered` for host+player vote (`POST .../bonus/respond`, `POST .../bonus/sentiment`)
+- **Phase metrics:** `social_icebreaker_phase_metrics` table tracks `dwellTimeMs` per phase on every advance
 
 **Icebreaker tiers & vibe:** Host selects time budget + vibe. Budgets: `breeze` (破冰局, 40min) / `glow` (畅聊局, 60min) / `blaze` (狂欢局, 105min). Vibe: 聊天为主 / 混合 / 竞技为主. Resolved via `packages/shared/src/socialIcebreakerTierManifest.ts`. See `docs/icebreaker/icebreaker-system.md`.
 
 **Game Design Agent:** Compiles dynamic run plan per session using 70% rule engine + 30% LLM. Reads archetype mix + behavioral signals (mood, commonGround, completion rate, pulse). Rule engine runs on every compilation (deterministic); LLM enhances selection + ordering with 3s timeout fallback. See `docs/icebreaker/icebreaker-system.md` §5.
 
-**Phase pool (8 non-core + 1 bonus):** lie_detective, personality_dice, group_mirror, undercover_word, quip_battle, auction, speed_friending (NEW). Mini_script is bonus-only (悦仔 offers after last phase before recap, all tiers eligible).
+**Phase pool (8 non-core + 1 bonus):** lie_detective, personality_dice, group_mirror, undercover_word, quip_battle, auction, speed_friending. Mini_script is bonus-only (悦仔 offers after last phase before recap, all tiers eligible). **Bonus gate:** host+player vote gate precedes `mini_script` entry when `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT=true`.
 
 **Lie Detective V2:** `LIE_DETECTIVE_MODE=v2` enables user-tag-based gameplay (user writes 2 tags, AI expands + inserts 1 fake). V1 remains default. Host-choosable toggle, all tiers. Design: `docs/proposals/spot-the-bot-game-design.md`.
 

@@ -133,7 +133,8 @@
     box-sizing: border-box;
     min-width: 0;
     width: calc((100% - #{$spacing-md}) / 2);
-    min-height: 140rpx;
+    min-height: 200rpx;
+    height: auto;
     padding: 18rpx;
     display: flex;
     flex-direction: column;
@@ -145,6 +146,7 @@
     background: $color-surface;
     transition: transform 0.1s ease;
     animation: answer-stagger-enter 0.28s ease-out both;
+    overflow: visible;
 
     &:active {
       transform: scale(0.96);

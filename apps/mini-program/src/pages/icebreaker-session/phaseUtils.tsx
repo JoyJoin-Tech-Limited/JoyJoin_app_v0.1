@@ -1,4 +1,5 @@
-import { Image } from '@tarojs/components'
+import { Image, View } from '@tarojs/components'
+import { useState } from 'react'
 import type { AtmosphereMood, SocialIcebreakerPhase } from '@shared/socialIcebreaker'
 
 export type SessionPhase = 'waiting' | SocialIcebreakerPhase | 'ended'
@@ -80,14 +81,16 @@ export function PhaseHeaderIcon({
   size = 48,
   className,
 }: {
-  phase: SessionPhase
+  phase: SessionPhase | string
   size?: number
   className?: string
 }) {
+  const [hasError, setHasError] = useState(false)
   const sizeStr = `${size}rpx`
   // Canonical filename mapping — WebP primary (~80-90% smaller than PNG source)
   const srcMap: Record<string, string> = {
     warmup: '/assets/icons/phase-icons/phase-warmup.webp',
+    'topic-card': '/assets/icons/phase-icons/phase-topic-card.webp',
     micro_challenge: '/assets/icons/phase-icons/phase-micro-challenge.webp',
     lie_detective: '/assets/icons/phase-icons/phase-lie-detective.webp',
     personality_dice: '/assets/icons/phase-icons/phase-personality-dice.webp',
@@ -99,19 +102,34 @@ export function PhaseHeaderIcon({
     recap: '/assets/icons/phase-icons/phase-recap.webp',
   }
   const src = srcMap[phase]
-  if (src) {
+
+  if (!src || hasError) {
     return (
-      <Image
-        src={src}
-        mode='aspectFit'
+      <View
         className={className}
-        style={{ width: sizeStr, height: sizeStr, verticalAlign: 'middle' }}
-        lazyLoad
+        style={{
+          width: sizeStr,
+          height: sizeStr,
+          borderRadius: '50%',
+          background: 'rgba(139, 92, 246, 0.08)',
+          border: '1rpx solid rgba(139, 92, 246, 0.12)',
+          verticalAlign: 'middle',
+        }}
+        aria-hidden="true"
       />
     )
   }
-  // Zero-emoji policy: render nothing if asset missing
-  return null
+
+  return (
+    <Image
+      src={src}
+      mode='aspectFit'
+      className={className}
+      style={{ width: sizeStr, height: sizeStr, verticalAlign: 'middle' }}
+      lazyLoad
+      onError={() => setHasError(true)}
+    />
+  )
 }
 
 export function getMoodLabel(mood?: AtmosphereMood | null): string {

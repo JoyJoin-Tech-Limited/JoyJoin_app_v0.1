@@ -1,5 +1,6 @@
 import type { Express, Request } from "express";
 import { isEventPackPlanType, normalizeSubscriptionPlanType } from "@shared/api";
+import { buildCsvContent } from "@joyjoin/shared";
 import { eventPoolRegistrations } from "@shared/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
@@ -912,6 +913,80 @@ export function registerPaymentRoutes(app: Express): void {
         error: error instanceof Error ? error.message : String(error),
       });
       res.status(500).json({ message: "Failed to fetch refund attempts" });
+    }
+  });
+
+  app.get("/api/admin/refund-attempts/export", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    const reqLogger = logger.child({ request_id: req.requestId });
+    try {
+      const sinceRaw = req.query.since;
+      const untilRaw = req.query.until;
+      // Parse as UTC start-of-day / end-of-day to avoid timezone surprises with date-only inputs
+      const parseUtcDate = (raw: string, endOfDay: boolean): Date => {
+        const d = new Date(raw);
+        if (Number.isNaN(d.getTime())) throw new Error(`Invalid date: ${raw}`);
+        if (endOfDay) {
+          d.setUTCHours(23, 59, 59, 999);
+        } else {
+          d.setUTCHours(0, 0, 0, 0);
+        }
+        return d;
+      };
+      let since: Date | undefined;
+      let until: Date | undefined;
+      try {
+        since = typeof sinceRaw === "string" && sinceRaw ? parseUtcDate(sinceRaw, false) : undefined;
+        until = typeof untilRaw === "string" && untilRaw ? parseUtcDate(untilRaw, true) : undefined;
+      } catch (e) {
+        return res.status(400).json({ message: "Invalid date format" });
+      }
+
+      const attempts = await refundAttemptsRepo.getAllWithPaymentDetails({ since, until });
+
+      const headers = [
+        "退款ID",
+        "支付ID",
+        "微信支付订单号",
+        "支付类型",
+        "用户姓名",
+        "手机号",
+        "金额(分)",
+        "状态",
+        "原因",
+        "微信退款ID",
+        "发起时间",
+        "完成时间",
+        "失败原因",
+      ];
+
+      const rows = attempts.map((a: any) => [
+        a.id,
+        a.payment_id,
+        a.payment_wechat_order_id ?? "",
+        a.payment_type ?? "",
+        `${a.user_first_name ?? ""} ${a.user_last_name ?? ""}`.trim(),
+        a.user_phone_number ?? "",
+        a.amount,
+        a.status,
+        a.reason ?? "",
+        a.wechat_refund_id ?? "",
+        a.initiated_at ? new Date(a.initiated_at).toISOString() : "",
+        a.resolved_at ? new Date(a.resolved_at).toISOString() : "",
+        a.failure_reason ?? "",
+      ]);
+
+      const csv = buildCsvContent({ headers, rows });
+      const dateSuffix = new Date().toISOString().slice(0, 10);
+      const filename = `refunds-${dateSuffix}.csv`;
+
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.send(csv);
+    } catch (error) {
+      reqLogger.error("Failed to export refund attempts", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({ message: "Failed to export refund attempts" });
     }
   });
 }

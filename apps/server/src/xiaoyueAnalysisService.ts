@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames';
 import { XIAOYUE_PERSONA, GENDER_NEUTRAL, XIAOYUE_PERSONA_PROMPT_VERSION } from './prompts';
 import { getDeepseekClient, getDeepseekModel } from './ai/deepseekClient';
 import { logger } from './lib/logger';
@@ -56,6 +57,10 @@ interface DerivedSocialSnapshot {
   microAction: string;
   headlineHint: string;
   shareLineHint: string;
+}
+
+function archetypeToCn(id: string): string {
+  return ARCHETYPE_BY_ID[id]?.nameCn ?? id;
 }
 
 const HIGH_CONFIDENCE_THRESHOLD = 0.82;
@@ -164,7 +169,7 @@ export function deriveSocialSnapshot(input: ArchetypeAnalysisInput): DerivedSoci
       bestScene: '更适合6到8人的轻松热场局，有共同话题、能快速接梗的活动氛围会更对你胃口。',
       microAction: '下次进新局，先抛一个轻松问题，再顺手接住第一个回应你的人，把热度稳住就够了。',
       headlineHint: '你不是硬撑热闹，你是自然带热的人',
-      shareLineHint: `我是${input.archetype}，属于一进场就会慢慢把气氛带起来的那种。`,
+      shareLineHint: `我是${archetypeToCn(input.archetype)}，属于一进场就会慢慢把气氛带起来的那种。`,
     },
     '稳场推进型': {
       sceneLens: '你在局里的存在感不一定最炸，但大家会因为你在而更容易定下来。',
@@ -172,7 +177,7 @@ export function deriveSocialSnapshot(input: ArchetypeAnalysisInput): DerivedSoci
       bestScene: '更适合有一点主题、能边聊边推进的小局，比如晚餐局、桌游局或有明确话题的活动。',
       microAction: '下次参加活动，先认领一个小动作：带第一轮自我介绍，或把聊散的话题轻轻拉回来。',
       headlineHint: '你不抢戏，但场子会跟着你稳下来',
-      shareLineHint: `我是${input.archetype}，更像那种不吵但能把场子稳住的人。`,
+      shareLineHint: `我是${archetypeToCn(input.archetype)}，更像那种不吵但能把场子稳住的人。`,
     },
     '熟了更有火花型': {
       sceneLens: '你不是一上来就最满格的人，但一旦熟起来，别人会明显感受到你的温度和后劲。',
@@ -180,7 +185,7 @@ export function deriveSocialSnapshot(input: ArchetypeAnalysisInput): DerivedSoci
       bestScene: '更适合能给你一点预热空间的饭局、散步局或2到4人的深聊场景。',
       microAction: '下次别急着全场营业，先和一个你顺眼的人聊深两轮，再决定要不要把热度往外扩。',
       headlineHint: '你不是秒热型，你是越聊越有戏',
-      shareLineHint: `我是${input.archetype}，熟起来之后会比第一眼看上去更有火花。`,
+      shareLineHint: `我是${archetypeToCn(input.archetype)}，熟起来之后会比第一眼看上去更有火花。`,
     },
     '灵感破冰型': {
       sceneLens: '你在社交里最有辨识度的地方，不是会不会说，而是总能把话题拐到更有意思的角度。',
@@ -188,7 +193,7 @@ export function deriveSocialSnapshot(input: ArchetypeAnalysisInput): DerivedSoci
       bestScene: '更适合带一点探索感的新局、主题活动或能让人交换想法的场景。',
       microAction: '下次开场先准备一个“最近看到的有趣东西”，把你的灵感用成破冰器，不用一次讲太多。',
       headlineHint: '你不靠硬聊破冰，你靠灵感把场子聊活',
-      shareLineHint: `我是${input.archetype}，属于会把普通聊天聊出新鲜感的那种。`,
+      shareLineHint: `我是${archetypeToCn(input.archetype)}，属于会把普通聊天聊出新鲜感的那种。`,
     },
     '慢热深聊型': {
       sceneLens: '你不是难进入状态，只是需要先找到值得投入的人和话题。',
@@ -196,7 +201,7 @@ export function deriveSocialSnapshot(input: ArchetypeAnalysisInput): DerivedSoci
       bestScene: '更适合2到4人的小局、散步局、咖啡局，或者先有一点共同话题的场景。',
       microAction: '下次进新局先别逼自己全场发力，只要提前准备一个你真想聊的问题，先和一个人聊开就够了。',
       headlineHint: '你不是社交慢，你只是只对对的人升温',
-      shareLineHint: `我是${input.archetype}，看着慢热，其实聊到点上就很能聊。`,
+      shareLineHint: `我是${archetypeToCn(input.archetype)}，看着慢热，其实聊到点上就很能聊。`,
     },
     '低耗观察型': {
       sceneLens: '你会先看气场、看人，再决定自己要不要往前走，这让你的出手通常比别人更准。',
@@ -204,7 +209,7 @@ export function deriveSocialSnapshot(input: ArchetypeAnalysisInput): DerivedSoci
       bestScene: '更适合节奏不吵、允许各自留白的局，比如3到6人的轻松聚会或一对一深聊。',
       microAction: '下次别要求自己立刻融入，只要先记住一个让你感兴趣的人或话题，再顺着它接近就行。',
       headlineHint: '你不是掉线型，你是先观察再发力',
-      shareLineHint: `我是${input.archetype}，习惯先看气场，再决定什么时候出手。`,
+      shareLineHint: `我是${archetypeToCn(input.archetype)}，习惯先看气场，再决定什么时候出手。`,
     },
     '局内升温型': {
       sceneLens: '你在社交里不是靠某一个夸张动作被看见，而是靠自己的节奏让相处慢慢变舒服。',
@@ -212,7 +217,7 @@ export function deriveSocialSnapshot(input: ArchetypeAnalysisInput): DerivedSoci
       bestScene: '更适合有一点互动空间、能让人逐步进入状态的活动，而不是一上来就特别吵的场子。',
       microAction: '下次进新局，先锁定一个你能自然接上的话题，把第一轮存在感建立起来就够了。',
       headlineHint: '你不是硬撑社交，你是把关系慢慢聊热',
-      shareLineHint: `我是${input.archetype}，属于相处越往后越容易让人觉得舒服的那种。`,
+      shareLineHint: `我是${archetypeToCn(input.archetype)}，属于相处越往后越容易让人觉得舒服的那种。`,
     },
   };
 
@@ -323,49 +328,53 @@ function buildExpressionTags(input: ArchetypeAnalysisInput, snapshot: DerivedSoc
 
   const tags = [...(tagsByState[snapshot.stateLabel] ?? ['社交有自己的节奏', '相处久了更舒服'])];
   tags.push(deriveSceneTag(snapshot.bestScene));
-  tags.push(isBlendMatch(input) && getBlendSecondaryArchetype(input) ? '有点双原型感' : `${input.archetype}气质`);
+  tags.push(isBlendMatch(input) && getBlendSecondaryArchetype(input) ? '有点双原型感' : `${archetypeToCn(input.archetype)}气质`);
 
   return Array.from(new Set(tags)).slice(0, 4);
 }
 
 function buildBlendLine(input: ArchetypeAnalysisInput, snapshot: DerivedSocialSnapshot): string {
   const secondaryArchetype = getBlendSecondaryArchetype(input);
+  const primary = archetypeToCn(input.archetype);
   if (!secondaryArchetype || secondaryArchetype === input.archetype) {
-    return formatSentence(`这次更清楚落在${input.archetype}这边，你给人的第一感受会是${snapshot.stateLabel}`);
+    return formatSentence(`这次更清楚落在${primary}这边，你给人的第一感受会是${snapshot.stateLabel}`);
   }
 
+  const secondary = archetypeToCn(secondaryArchetype);
   if (isBlendMatch(input)) {
-    return formatSentence(`你底色更像${input.archetype}，但熟起来或遇到对频的话题时，会露出一点${secondaryArchetype}那一面`);
+    return formatSentence(`你底色更像${primary}，但熟起来或遇到对频的话题时，会露出一点${secondary}那一面`);
   }
 
-  return formatSentence(`虽然你身上也有一点${secondaryArchetype}的影子，但这次更稳定地落在${input.archetype}这边`);
+  return formatSentence(`虽然你身上也有一点${secondary}的影子，但这次更稳定地落在${primary}这边`);
 }
 
 function buildWhyThisFits(input: ArchetypeAnalysisInput, snapshot: DerivedSocialSnapshot): string {
   const rankedTraits = getRankedTraits(input);
   const topTraits = rankedTraits.slice(0, 2).map((trait) => trait.name);
   const secondaryArchetype = getBlendSecondaryArchetype(input);
+  const primary = archetypeToCn(input.archetype);
   const traitSummary = topTraits.length >= 2 ? `${topTraits[0]}和${topTraits[1]}` : topTraits[0] || '社交节奏';
 
   const suffix =
     secondaryArchetype && secondaryArchetype !== input.archetype
       ? isBlendMatch(input)
-        ? `你身上也带一点${secondaryArchetype}的感觉，所以不是单一一种路数。`
-        : `虽然也有一点${secondaryArchetype}的影子，但没有盖过主底色。`
+        ? `你身上也带一点${archetypeToCn(secondaryArchetype)}的感觉，所以不是单一一种路数。`
+        : `虽然也有一点${archetypeToCn(secondaryArchetype)}的影子，但没有盖过主底色。`
       : '';
 
-  return `${formatSentence(`这次会落到${input.archetype}，主要是因为你的${traitSummary}更突出，放进真实社交场里会变成一种${snapshot.stateLabel}的存在感`)}${suffix}`.trim();
+  return `${formatSentence(`这次会落到${primary}，主要是因为你的${traitSummary}更突出，放进真实社交场里会变成一种${snapshot.stateLabel}的存在感`)}${suffix}`.trim();
 }
 
 function buildShareVariants(input: ArchetypeAnalysisInput, snapshot: DerivedSocialSnapshot): XiaoyueShareVariants {
   const secondaryArchetype = getBlendSecondaryArchetype(input);
   const bestScene = trimSentence(snapshot.bestScene).replace(/^更适合/, '');
 
+  const primary = archetypeToCn(input.archetype);
   return {
     selfIntro: snapshot.shareLineHint,
     friendCallout:
       secondaryArchetype && secondaryArchetype !== input.archetype && isBlendMatch(input)
-        ? formatSentence(`认识我的人应该会懂，我平时更像${input.archetype}，熟起来会露出一点${secondaryArchetype}那面`)
+        ? formatSentence(`认识我的人应该会懂，我平时更像${primary}，熟起来会露出一点${archetypeToCn(secondaryArchetype)}那面`)
         : formatSentence(`认识我的人应该会懂，${trimSentence(snapshot.headlineHint)}`),
     socialInvite: formatSentence(`如果一起组局，我更适合${bestScene}，会比较容易进入状态`),
   };
@@ -382,6 +391,7 @@ function getCacheKey(input: ArchetypeAnalysisInput): string {
 
 function buildAnalysisPrompt(input: ArchetypeAnalysisInput): string {
   const { archetype, traitScores } = input;
+  const archetypeCn = archetypeToCn(archetype);
   const snapshot = deriveSocialSnapshot(input);
   const rankedCandidates = getTopArchetypeCandidates(input).slice(0, 2);
   const secondaryArchetype = getBlendSecondaryArchetype(input);
@@ -396,9 +406,9 @@ function buildAnalysisPrompt(input: ArchetypeAnalysisInput): string {
   const topTraits = rankedTraits.slice(0, 2).map((trait) => trait.name);
   const lowTraits = [...rankedTraits].reverse().slice(0, 2).map((trait) => trait.name);
 
-  return `你在为悦聚 personality result 生成“悦仔分析”文案。已有 Pokémon 风格海报承载“原型视觉感”，这次输出必须走“文字版社交表达”，不能重复海报上的原型卡、编号、限定、收藏感文案。
+  return `你在为悦聚 personality result 生成"悦仔分析"文案。已有 Pokémon 风格海报承载"原型视觉感"，这次输出必须走"文字版社交表达"，不能重复海报上的原型卡、编号、限定、收藏感文案。
 
-用户原型：${archetype}
+用户原型：${archetypeCn}
 用户六维特质：
 ${traitSummary}
 
@@ -409,8 +419,8 @@ ${traitSummary}
 适合场景提示：${snapshot.bestScene}
 微动作提示：${snapshot.microAction}
 分享短句参考：${snapshot.shareLineHint}
-次高原型：${secondaryArchetype ?? '无明显次高原型'}
-前二原型：${rankedCandidates.map((item) => `${item.archetype}(${Math.round(item.score)})`).join(' / ')}
+次高原型：${secondaryArchetype ? archetypeToCn(secondaryArchetype) : '无明显次高原型'}
+前二原型：${rankedCandidates.map((item) => `${archetypeToCn(item.archetype)}(${Math.round(item.score)})`).join(' / ')}
 是否属于边界混合：${isBlendMatch(input) ? '是' : '否'}
 前二差值：${topGap ?? '未知'}
 
@@ -478,10 +488,11 @@ function extractJsonPayload(content: string): string {
 
 function buildFallbackAnalysisPayload(input: ArchetypeAnalysisInput): Omit<XiaoyueAnalysisResult, 'cached'> {
   const snapshot = deriveSocialSnapshot(input);
+  const archetype = archetypeToCn(input.archetype);
   const openingByBand: Record<ConfidenceBand, string> = {
-    high: `你身上这股${input.archetype}的感觉挺明确，进到人群里会自然带出自己的节奏。`,
-    medium: `你这次更像${input.archetype}这一挂，和人相处时会慢慢显出自己的节奏。`,
-    low: `你身上像是站在两种社交节奏的交界处，这次更偏向${input.archetype}这边。`,
+    high: `你身上这股${archetype}的感觉挺明确，进到人群里会自然带出自己的节奏。`,
+    medium: `你这次更像${archetype}这一挂，和人相处时会慢慢显出自己的节奏。`,
+    low: `你身上像是站在两种社交节奏的交界处，这次更偏向${archetype}这边。`,
   };
 
   return {

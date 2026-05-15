@@ -40,6 +40,7 @@ import {
   loadSessionLieTruths,
   setLieTruths,
   getLieTruths,
+  savePhaseMetric,
 } from '../lib/socialIcebreakerStore';
 import { curateMedals } from '../lib/medalCuration';
 import { logger } from '../lib/logger';
@@ -248,13 +249,39 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     }
   }
 
-  const effectiveNextPhase = getNextEligiblePhase(currentPhase, state);
+  let effectiveNextPhase = getNextEligiblePhase(currentPhase, state);
 
+  // Close out the current phase bookkeeping before any transition logic
   if (!state.completedPhases.includes(currentPhase)) {
     state.completedPhases = [...(state.completedPhases || []), currentPhase];
   }
 
+  // Compute and persist phase dwell time for Q2 pilot instrumentation
+  const phaseStartedAt = state.phaseStartedAt ? new Date(state.phaseStartedAt).getTime() : Date.now();
+  const dwellTimeMs = Date.now() - phaseStartedAt;
+  savePhaseMetric(socialSessionId, currentPhase, {
+    dwellTimeMs,
+    startedAt: new Date(phaseStartedAt),
+    endedAt: new Date(),
+    participantCount: state.playerCount,
+  }).catch((err) => {
+    logger.warn('[PhaseMetrics] save failed', { socialSessionId, phase: currentPhase, error: err instanceof Error ? err.message : String(err) });
+  });
+
   cleanupPhaseStateForNextPhase(state, currentPhase);
+
+  // Bonus gate: if advancing to mini_script for the first time, pause for host decision
+  if (effectiveNextPhase === 'mini_script' && !state.bonusGateOffered && !state.bonusGateAccepted && !state.bonusGateDeclined) {
+    state.bonusGateOffered = true;
+    // Fire-and-forget background framework pre-generation
+    if (!state.bonusGateFrameworkPreloading) {
+      state.bonusGateFrameworkPreloading = true;
+      // Background pre-generation is optional; actual generation is triggered on accept
+    }
+    await updateSession(socialSessionId, state);
+    return res.json({ state: buildClientState(state) });
+  }
+
   state.currentPhase = effectiveNextPhase;
   state.phaseStartedAt = Date.now();
   state.pulseChecks = [];

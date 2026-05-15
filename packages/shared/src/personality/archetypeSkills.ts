@@ -64,7 +64,7 @@ export const archetypeSkills = {
       type: "active",
       energyCost: 2,
       energyType: "🔥",
-      shortEffect: "破冰启动，参与度+50%",
+      shortEffect: "三句话内让冷场变暖场",
       fullEffect: "立即打破沉默尴尬的氛围，使全员参与度提升50%，持续5分钟。特别适合活动开场或冷场时刻。",
       icon: "⚡"
     },
@@ -73,7 +73,7 @@ export const archetypeSkills = {
       type: "passive",
       energyCost: 0,
       energyType: "🔥",
-      shortEffect: "能量恢复速度+1/分钟",
+      shortEffect: "热闹会自然围着你转",
       fullEffect: "始终保持高能量状态，社交能量自然恢复速度提升至每分钟+1点，不易感到疲惫。",
       icon: "🔋"
     }
@@ -87,7 +87,7 @@ export const archetypeSkills = {
       type: "active",
       energyCost: 1,
       energyType: "🗺️",
-      shortEffect: "发现隐藏地点或玩法",
+      shortEffect: "拐个弯，聊天就有火花",
       fullEffect: "运用敏锐洞察力发现周围环境中的隐藏地点、特殊玩法或有趣细节，为团队带来惊喜体验。",
       icon: "🔦"
     },
@@ -96,7 +96,7 @@ export const archetypeSkills = {
       type: "passive",
       energyCost: 0,
       energyType: "🗺️",
-      shortEffect: "30%几率触发惊喜活动",
+      shortEffect: "总能在普通里找到新鲜",
       fullEffect: "对新鲜事物保持高度敏感，在活动中有30%概率自动触发惊喜彩蛋或特殊事件。",
       icon: "📡"
     }
@@ -110,7 +110,7 @@ export const archetypeSkills = {
       type: "active",
       energyCost: 2,
       energyType: "🧸",
-      shortEffect: "编织集体故事，连接++",
+      shortEffect: "让人说着说着就想交心",
       fullEffect: "引导大家分享个人经历，编织成共同的集体记忆，大幅提升成员间的情感连接和归属感。",
       icon: "📖"
     },
@@ -119,7 +119,7 @@ export const archetypeSkills = {
       type: "passive",
       energyCost: 0,
       energyType: "🧸",
-      shortEffect: "持续降低社交压力",
+      shortEffect: "靠近你的人会自动放松",
       fullEffect: "营造温暖包容的氛围，使周围成员的社交压力和焦虑感自然降低，更容易敞开心扉。",
       icon: "🤗"
     }
@@ -133,7 +133,7 @@ export const archetypeSkills = {
       type: "active",
       energyCost: 2,
       energyType: "💡",
-      shortEffect: "揭示本质议题",
+      shortEffect: "一句话点破事情核心",
       fullEffect: "通过深度思考和提问，引导讨论直达问题核心，揭示隐藏在表面现象下的本质议题。",
       icon: "🔍"
     },
@@ -142,7 +142,7 @@ export const archetypeSkills = {
       type: "passive",
       energyCost: 0,
       energyType: "💡",
-      shortEffect: "发言质量提升",
+      shortEffect: "你开口，全场会静下来听",
       fullEffect: "影响周围成员的思考深度，使团队讨论的质量和深度自然提升，减少肤浅闲聊。",
       icon: "🧠"
     }
@@ -156,7 +156,7 @@ export const archetypeSkills = {
       type: "active",
       energyCost: 1,
       energyType: "🕸️",
-      shortEffect: "发现隐藏共同点",
+      shortEffect: "两句话让陌生人变熟人",
       fullEffect: "快速识别团队成员间的隐藏共同点和潜在连接，促成意想不到的深度对话和合作关系。",
       icon: "🔗"
     },
@@ -165,7 +165,7 @@ export const archetypeSkills = {
       type: "passive",
       energyCost: 0,
       energyType: "🕸️",
-      shortEffect: "弱连接自动增强",
+      shortEffect: "你的人脉网会自己生长",
       fullEffect: "自然维护和强化与他人的弱连接关系，使人脉网络持续扩大和巩固，不需刻意经营。",
       icon: "🌐"
     }
@@ -179,7 +179,7 @@ export const archetypeSkills = {
       type: "active",
       energyCost: 1,
       energyType: "🌊",
-      shortEffect: "抵消尴尬与冲突",
+      shortEffect: "气氛一僵，你自然能圆回来",
       fullEffect: "巧妙化解紧张气氛和小型冲突，将负面情绪转化为平和状态，恢复团队和谐。",
       icon: "🏄"
     },
@@ -188,7 +188,7 @@ export const archetypeSkills = {
       type: "passive",
       energyCost: 0,
       energyType: "🌊",
-      shortEffect: "情绪波动减少40%",
+      shortEffect: "有你在，场子不会炸",
       fullEffect: "稳定周围的情绪波动，使团队氛围更加平和稳定，减少戏剧化的情绪起伏。",
       icon: "〰️"
     }
@@ -202,7 +202,7 @@ export const archetypeSkills = {
       type: "active",
       energyCost: 1,
       energyType: "✨",
-      shortEffect: "优点放大，自信++",
+      shortEffect: "夸得准，让人眼里有光",
       fullEffect: "精准捕捉他人的优点和闪光时刻，通过真诚赞美大幅提升对方的自信心和积极性。",
       icon: "✨"
     },
@@ -211,7 +211,7 @@ export const archetypeSkills = {
       type: "passive",
       energyCost: 0,
       energyType: "✨",
-      shortEffect: "自动鼓励机制",
+      shortEffect: "你的认可让人想再试一次",
       fullEffect: "为他人的努力和成就自动提供正向反馈，营造充满鼓励和认可的氛围。",
       icon: "👏"
     }
@@ -225,7 +225,7 @@ export const archetypeSkills = {
       type: "active",
       energyCost: 2,
       energyType: "☀️",
-      shortEffect: "持续幸福光环",
+      shortEffect: "你的在场就是好心情开关",
       fullEffect: "散发强大的正能量光环，持续提升周围所有人的心情和幸福感，效果可持续15分钟。",
       icon: "☀️"
     },
@@ -234,7 +234,7 @@ export const archetypeSkills = {
       type: "passive",
       energyCost: 0,
       energyType: "☀️",
-      shortEffect: "免疫负面氛围",
+      shortEffect: "坏情绪到你这儿自动过滤",
       fullEffect: "保持稳定的阳光心态，不易受周围负面情绪影响，同时为他人提供情绪避难所。",
       icon: "🌞"
     }
@@ -248,7 +248,7 @@ export const archetypeSkills = {
       type: "active",
       energyCost: 1,
       energyType: "🐘",
-      shortEffect: "提供绝对安心状态",
+      shortEffect: "你一表态，大家就有底",
       fullEffect: "在不确定或混乱的情况下，提供稳如泰山的安全感和确定性，让所有人都能安心。",
       icon: "⚓"
     },
@@ -257,7 +257,7 @@ export const archetypeSkills = {
       type: "passive",
       energyCost: 0,
       energyType: "🐘",
-      shortEffect: "安全感阈值提升",
+      shortEffect: "你的靠谱让人敢冒险",
       fullEffect: "凭借稳重可靠的存在感，持续提升团队的整体安全感和信任度。",
       icon: "🛡️"
     }
@@ -271,7 +271,7 @@ export const archetypeSkills = {
       type: "active",
       energyCost: 3,
       energyType: "💎",
-      shortEffect: "蓄力后触发顿悟",
+      shortEffect: "慢一拍，但每一拍都准",
       fullEffect: "经过深思熟虑后给出的见解往往一针见血，需要较长蓄力时间，但命中时能引发团队顿悟。",
       icon: "💎"
     },
@@ -280,7 +280,7 @@ export const archetypeSkills = {
       type: "passive",
       energyCost: 0,
       energyType: "💎",
-      shortEffect: "发现隐藏细节",
+      shortEffect: "你注意到的，别人常忽略",
       fullEffect: "保持细致入微的观察力，能察觉到他人容易忽略的重要细节和模式。",
       icon: "👀"
     }
@@ -294,7 +294,7 @@ export const archetypeSkills = {
       type: "active",
       energyCost: 1,
       energyType: "🎨",
-      shortEffect: "喷吐3个创意点子",
+      shortEffect: "三个方向，让讨论活起来",
       fullEffect: "快速产生3个不同方向的创意想法，为讨论注入新鲜视角，激发团队脑暴灵感。",
       icon: "💡"
     },
@@ -303,7 +303,7 @@ export const archetypeSkills = {
       type: "passive",
       energyCost: 0,
       energyType: "🎨",
-      shortEffect: "脑暴灵感+50%",
+      shortEffect: "你的脑洞会传染给全场",
       fullEffect: "保持多个思维线程并行运作，使脑暴会议的创意产出量提升50%。",
       icon: "🧵"
     }
@@ -317,7 +317,7 @@ export const archetypeSkills = {
       type: "active",
       energyCost: 1,
       energyType: "🌙",
-      shortEffect: "创造低压社交区",
+      shortEffect: "不说话也能让人安心",
       fullEffect: "营造一个没有表现压力的舒适空间，让内向者也能自在参与，不必强迫自己。",
       icon: "🔮"
     },
@@ -326,7 +326,7 @@ export const archetypeSkills = {
       type: "passive",
       energyCost: 0,
       energyType: "🌙",
-      shortEffect: "降低表现压力",
+      shortEffect: "你的存在就是避风港",
       fullEffect: "通过安静而温和的存在，让他人感到被接纳和理解，减轻社交表现焦虑。",
       icon: "🌙"
     }
