@@ -90,6 +90,7 @@ import {
   incrementCommonGround,
   getCurrentLieDetectivePlayer,
   resolveSession,
+  loadSessionForAuthGate,
   isHostAuthorized,
 } from './socialIcebreakerHelpers';
 import { registerExtendedRoutes } from './socialIcebreakerExtended';
@@ -272,12 +273,15 @@ router.post('/:socialSessionId/set-tier', async (req: any, res) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
-  if (!state) return;
+  const prelimSetTier = await loadSessionForAuthGate(socialSessionId, res);
+  if (!prelimSetTier) return;
 
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
+  if (!(await isHostAuthorized(prelimSetTier, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can set the tier' });
   }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
 
   // Changing runPlan after warmup would desync currentPhase from the new segment order
   // (getNextEligiblePhase uses runPlan.segments); only allow while still in warmup.
@@ -415,12 +419,15 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
     return res.status(400).json({ error: 'mood is required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
-  if (!state) return;
+  const prelimTopics = await loadSessionForAuthGate(socialSessionId, res);
+  if (!prelimTopics) return;
 
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
+  if (!(await isHostAuthorized(prelimTopics, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can change topics' });
   }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
 
   try {
     const participants = await listParticipants(socialSessionId);
@@ -1179,12 +1186,15 @@ router.post('/:socialSessionId/quip-battle/generate', async (req: any, res) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
-  if (!state) return;
+  const prelimQuipGen = await loadSessionForAuthGate(socialSessionId, res);
+  if (!prelimQuipGen) return;
 
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
+  if (!(await isHostAuthorized(prelimQuipGen, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can generate quip battle prompts' });
   }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
 
   if (state.currentPhase !== 'quip_battle') {
     return res.status(400).json({ error: 'Not in quip_battle phase' });

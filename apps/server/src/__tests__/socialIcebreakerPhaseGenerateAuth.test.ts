@@ -15,7 +15,20 @@ const storeCtx = vi.hoisted(() => {
     string,
     Map<string, { userId: string; displayName: string; joinedAt: number; lastSeenAt: number }>
   >();
-  return { sessions, participants };
+  let updateSessionCalls = 0;
+  return {
+    sessions,
+    participants,
+    get updateSessionCalls() {
+      return updateSessionCalls;
+    },
+    resetUpdateSessionCalls() {
+      updateSessionCalls = 0;
+    },
+    bumpUpdateSession() {
+      updateSessionCalls += 1;
+    },
+  };
 });
 
 vi.mock('../lib/socialIcebreakerStore', () => {
@@ -38,6 +51,7 @@ vi.mock('../lib/socialIcebreakerStore', () => {
       sessions.set(state.socialSessionId, state);
     },
     updateSession: async (socialSessionId: string, state: SocialSessionState) => {
+      storeCtx.bumpUpdateSession();
       sessions.set(socialSessionId, state);
     },
     upsertParticipant: async (socialSessionId: string, userId: string, displayName: string) => {
@@ -327,6 +341,36 @@ describe('POST lie-detective/generate participant auth', () => {
         body: JSON.stringify({ displayName: 'Intruder' }),
       });
       expect(res.status).toBe(403);
+      expect(generateLieDetectiveStatements).not.toHaveBeenCalled();
+    });
+  });
+
+  it('does not persist auto-advance before rejecting a non-participant', async () => {
+    const id = 'social_ld-gen-no-sidefx';
+    storeCtx.resetUpdateSessionCalls();
+    storeCtx.sessions.set(
+      id,
+      baseSession({
+        socialSessionId: id,
+        currentPhase: 'lie_detective',
+        autoAdvanceEnabled: true,
+        autoAdvanceScheduledAt: 1,
+        runPlan: BLAZE_RUN_PLAN,
+      }),
+    );
+    seedParticipants(id);
+    generateLieDetectiveStatements.mockClear();
+
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl, 'stranger-user');
+      const res = await fetch(`${baseUrl}/api/social-icebreaker/${id}/lie-detective/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie },
+        body: JSON.stringify({ displayName: 'Intruder' }),
+      });
+      expect(res.status).toBe(403);
+      expect(storeCtx.updateSessionCalls).toBe(0);
+      expect(storeCtx.sessions.get(id)?.currentPhase).toBe('lie_detective');
       expect(generateLieDetectiveStatements).not.toHaveBeenCalled();
     });
   });

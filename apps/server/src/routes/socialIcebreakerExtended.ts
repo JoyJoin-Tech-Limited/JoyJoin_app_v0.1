@@ -26,6 +26,7 @@ import {
   incrementCommonGround,
   getCurrentLieDetectivePlayer,
   hydrateDerivedState,
+  loadSessionForAuthGate,
   resolveSession,
   isHostAuthorized,
   recapDisplayNameByUserId,
@@ -133,12 +134,15 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     return res.status(400).json({ error: 'currentPhase is required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
-  if (!state) return;
+  const prelimAdvance = await loadSessionForAuthGate(socialSessionId, res);
+  if (!prelimAdvance) return;
 
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
+  if (!(await isHostAuthorized(prelimAdvance, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can advance phases' });
   }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
 
   if (state.currentPhase !== currentPhase) {
     return res.status(400).json({ error: 'Phase mismatch' });
@@ -384,16 +388,19 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
     return res.status(400).json({ error: 'displayName is required' });
   }
 
+  const prelimLieGen = await loadSessionForAuthGate(socialSessionId, res);
+  if (!prelimLieGen) return;
+
+  if (!(await getParticipant(socialSessionId, userId))) {
+    return res.status(403).json({ error: 'Not a participant in this session' });
+  }
+
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
   // F3: Wrong-phase guard — statement generation is only valid during lie_detective phase
   if (state.currentPhase !== 'lie_detective') {
     return res.status(400).json({ error: 'Not in lie_detective phase' });
-  }
-
-  if (!(await getParticipant(socialSessionId, userId))) {
-    return res.status(403).json({ error: 'Not a participant in this session' });
   }
 
   try {
@@ -462,6 +469,13 @@ router.post('/:socialSessionId/lie-detective/vote', async (req: any, res) => {
 
   if (!voterId || !targetUserId || guessedStatementIndex === undefined || guessedStatementIndex === null) {
     return res.status(400).json({ error: 'Authentication, targetUserId, and guessedStatementIndex are required' });
+  }
+
+  const prelimLieVote = await loadSessionForAuthGate(socialSessionId, res);
+  if (!prelimLieVote) return;
+
+  if (!(await getParticipant(socialSessionId, voterId))) {
+    return res.status(403).json({ error: 'Not a participant in this session' });
   }
 
   const state = await resolveSession(socialSessionId, res);
@@ -574,12 +588,15 @@ router.post('/:socialSessionId/auction/generate-lots', async (req: any, res) => 
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
-  if (!state) return;
+  const prelimAuctionGen = await loadSessionForAuthGate(socialSessionId, res);
+  if (!prelimAuctionGen) return;
 
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
+  if (!(await isHostAuthorized(prelimAuctionGen, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can generate auction lots' });
   }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
 
   if (state.currentPhase !== 'auction') {
     return res.status(400).json({ error: 'Not in auction phase' });
@@ -655,6 +672,13 @@ router.post('/:socialSessionId/auction/bid', async (req: any, res) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
+  const prelimAuctionBid = await loadSessionForAuthGate(socialSessionId, res);
+  if (!prelimAuctionBid) return;
+
+  if (!(await getParticipant(socialSessionId, userId))) {
+    return res.status(403).json({ error: 'Not a participant in this session' });
+  }
+
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
@@ -719,12 +743,15 @@ router.post('/:socialSessionId/auction/close-lot', async (req: any, res) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
-  if (!state) return;
+  const prelimAuctionClose = await loadSessionForAuthGate(socialSessionId, res);
+  if (!prelimAuctionClose) return;
 
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
+  if (!(await isHostAuthorized(prelimAuctionClose, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can close an auction lot' });
   }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
 
   if (state.currentPhase !== 'auction') {
     return res.status(400).json({ error: 'Not in auction phase' });
