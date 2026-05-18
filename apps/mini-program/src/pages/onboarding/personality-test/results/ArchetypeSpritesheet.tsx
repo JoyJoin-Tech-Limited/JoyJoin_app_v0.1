@@ -1,7 +1,8 @@
 import { View } from '@tarojs/components'
 import spritesheetManifest from '../../assets/archetypes/archetype-spritesheet.json'
+import { cdnAsset } from '../../../../lib/utils/cdnAssets'
 
-const SHEET_PATH = '/pages/onboarding/assets/archetypes/archetype-spritesheet.webp'
+const SHEET_PATH = cdnAsset('/pages/onboarding/assets/archetypes/archetype-spritesheet.webp')
 
 type ArchetypeName =
   | 'corgi' | 'rooster' | 'hamster_praise' | 'fox' | 'dolphin_calm' | 'spider'

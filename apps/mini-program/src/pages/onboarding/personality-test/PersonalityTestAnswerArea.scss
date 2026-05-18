@@ -109,6 +109,12 @@
       background: rgba($color-primary, 0.08);
       border-color: rgba($color-primary, 0.3);
     }
+
+    &--committed {
+      background: rgba($color-primary, 0.06);
+      border-color: rgba($color-primary, 0.22);
+      box-shadow: inset 0 0 0 2rpx rgba($color-primary, 0.12);
+    }
   }
 
   &__option-text {
@@ -167,6 +173,12 @@
       border-color: rgba($color-primary, 0.3);
     }
 
+    &--committed {
+      background: rgba($color-primary, 0.06);
+      border-color: rgba($color-primary, 0.22);
+      box-shadow: inset 0 0 0 2rpx rgba($color-primary, 0.12);
+    }
+
     /* When there's an odd number of options, the last item spans the full row */
     &:last-child:nth-child(odd) {
       width: 100%;
@@ -177,6 +189,11 @@
     font-size: $font-size-4xl;
     line-height: 1;
     flex-shrink: 0;
+
+    &--image {
+      width: 64rpx;
+      height: 64rpx;
+    }
   }
 
   &__emoji-option-text {
@@ -207,11 +224,13 @@
   &__slider-dynamic-emoji-inner {
     position: relative;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 96rpx;
-    height: 96rpx;
-    border-radius: 50%;
+    min-width: 160rpx;
+    max-width: 480rpx;
+    padding: 16rpx 32rpx;
+    border-radius: 48rpx;
     background: rgba($color-primary, 0.06);
     transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 
@@ -223,14 +242,14 @@
       right: 0;
       bottom: 0;
       left: 0;
-      border-radius: 50%;
+      border-radius: 48rpx;
       background: rgba($color-primary, 0.04);
       opacity: 0;
       transition: opacity 0.18s ease;
     }
 
     &--left {
-      transform: translateX(-20rpx) scale(1.05);
+      transform: translateX(-20rpx) scale(1.02);
 
       &::before {
         opacity: 1;
@@ -242,7 +261,7 @@
     }
 
     &--right {
-      transform: translateX(20rpx) scale(1.05);
+      transform: translateX(20rpx) scale(1.02);
 
       &::before {
         opacity: 1;
@@ -250,14 +269,21 @@
     }
   }
 
-  &__slider-dynamic-emoji-img {
-    width: 64rpx;
-    height: 64rpx;
+  &__slider-dynamic-label {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    line-height: 1.4;
+    text-align: center;
   }
 
-  &__slider-dynamic-emoji-text {
-    font-size: $font-size-4xl;
-    line-height: 1;
+  &__slider-dynamic-value {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: 1.4;
+    margin-top: 4rpx;
   }
 
   &__slider-labels {
@@ -267,35 +293,17 @@
     gap: $spacing-sm;
   }
 
-  &__slider-pill {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
+  &__slider-anchor {
     flex: 1 1 0;
-    min-width: 0;
-    padding: $spacing-sm $spacing-md;
-    border-radius: $radius-pill;
-    background: rgba($color-primary, 0.06);
-
-    &--right {
-      justify-content: flex-end;
-    }
-  }
-
-  &__slider-pill-emoji {
-    font-size: 36rpx;
-    line-height: 1;
-    flex-shrink: 0;
-  }
-
-  &__slider-pill-text {
-    flex: 1;
     min-width: 0;
     font-size: $font-size-sm;
     color: $color-text-secondary;
     line-height: 1.45;
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    text-align: left;
+
+    &--right {
+      text-align: right;
+    }
   }
 
   &__slider {
@@ -315,7 +323,9 @@
 @media (prefers-reduced-motion: reduce) {
   .answer-area__option,
   .answer-area__emoji-option,
-  .answer-area__slider-dynamic-emoji-inner {
+  .answer-area__slider-live-badge-inner,
+  .answer-area__slider-live-badge-label,
+  .answer-area__slider-live-badge-value {
     transition: none !important;
     transform: none !important;
     animation: none !important;

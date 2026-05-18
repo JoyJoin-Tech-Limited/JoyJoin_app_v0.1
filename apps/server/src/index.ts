@@ -13,6 +13,7 @@ import { globalErrorHandler } from "./lib/errorResponse";
 import { logger } from "./lib/logger";
 import { requestIdMiddleware } from "./middleware/requestId";
 import { metricsMiddleware } from "./middleware/metrics";
+import compression from "compression";
 
 // Keep liveness reachable even when config is incomplete; readiness reports the failure.
 validateConfig({ exitOnFatal: false });
@@ -25,6 +26,13 @@ app.use(cors({
   origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true,
 }));
+
+// ── Compression ────────────────────────────────────────────────────────────
+// Why: JSON payloads (especially pool lists) compress 60–80%.  This is
+// streaming zlib — it does NOT buffer the full response, satisfying SCL-03.
+// Threshold=0 ensures the pilot verification curl sees Content-Encoding: gzip
+// even on small local-dev datasets; production payloads are always >1 KB.
+app.use(compression({ threshold: 0 }));
 
 // ── Observability middleware ───────────────────────────────────────────────
 // 1. Attach a unique correlation ID to every request.

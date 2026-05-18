@@ -30,6 +30,16 @@ This package holds contracts and logic that are intentionally shared across mult
 ### Legal copy (Chinese)
 - `packages/shared/src/legal/joyjoinTermsZh.ts` — canonical 用户协议 / 隐私政策 text for web (`TermsPage`) and mini-program terms page; update here only.
 
+### Brand-governed copy
+- `packages/shared/src/copy/` — centralized copy modules for mini-program 文案 governance:
+  - `terms.ts` — core terminology table (canonical vs legacy), banned words
+  - `errorBaselines.ts` — error message factory functions (`getErrorMessage`, `getErrorForSurface`)
+  - `emptyStates.ts` — empty state templates with action guidance (`getEmptyStateMessage`)
+  - `mascotVoice.ts` — 悦仔常用句式库 (personified sentence patterns)
+  - `toneMap.ts` — surface ↔ tone mapping (System UI / 悦仔 Voice / Social Game)
+  - `exceptions.ts` — orange-word permit-with-framing exceptions
+  - `index.ts` — barrel export
+
 ### Shared cross-platform flow helpers
 - `packages/shared/src/onboarding.ts` — `nextStepToOnboardingStep`, `buildOnboardingProgress`, and related step-mapping utilities
 - `packages/shared/src/api.ts` — typed API helpers and DTOs for onboarding/profile, pricing, coupons, payments, notifications, blind-box events, and pool-group details (shared across web and mini-program)
@@ -59,6 +69,7 @@ Only put UI here when it is reusable across multiple apps without carrying user-
 - **New achievement definition:** add to `packages/shared/src/achievements.ts`
 - **New onboarding step-mapping or flow helper shared across platforms:** place in `packages/shared/src/onboarding.ts`
 - **New typed API helper used by both web and mini-program:** place in `packages/shared/src/api.ts`
+- **New brand-governed copy module or factory function:** place under `packages/shared/src/copy/`
 - **New shared UI primitive:** place under `packages/shared/src/ui/`
 
 ## Export boundary

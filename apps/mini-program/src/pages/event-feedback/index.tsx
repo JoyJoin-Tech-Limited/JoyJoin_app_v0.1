@@ -12,6 +12,7 @@ import RatingFace from '../../components/ui/RatingFace'
 import JoyJoinLoadingScreen from '../../components/loading/JoyJoinLoadingScreen'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import Card from '../../components/ui/Card'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 import './index.scss'
 
 interface Participant {
@@ -80,7 +81,7 @@ export default function EventFeedbackPage() {
       setStep('revealed')
       Taro.showToast({ title: '反馈已提交', icon: 'success', duration: TOAST_DEFAULT_MS })
     } catch (err) {
-      const message = err instanceof Error ? err.message : '提交失败，请重试'
+      const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
       setError(message)
       logError('[EventFeedback] Submit failed', { message })
       setIsSubmitting(false)
@@ -94,7 +95,7 @@ export default function EventFeedbackPage() {
         Taro.showToast({ title: '微信号已复制', icon: 'success', duration: TOAST_DEFAULT_MS })
       },
       fail: () => {
-        Taro.showToast({ title: '复制失败，请手动复制', icon: 'none', duration: TOAST_DEFAULT_MS })
+        Taro.showToast({ title: getErrorMessage('copy-failed'), icon: 'none', duration: TOAST_DEFAULT_MS })
       },
     })
   }, [])
@@ -206,7 +207,7 @@ export default function EventFeedbackPage() {
           <Text className='event-feedback__card-title'>选择想保持联系的人</Text>
           <Text className='event-feedback__card-hint'>互相选择后，即可看到对方的微信号</Text>
           {participants.length === 0 ? (
-            <Text className='event-feedback__empty-participants'>暂无其他参与者信息</Text>
+            <Text className='event-feedback__empty-participants'>暂时没有其他参与者信息</Text>
           ) : (
             <View className='event-feedback__participant-grid'>
               {participants.map((p) => {

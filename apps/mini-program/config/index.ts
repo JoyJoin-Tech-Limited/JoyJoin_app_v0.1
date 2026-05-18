@@ -68,22 +68,31 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
     },
     copy: {
       patterns: [
+        // Tab bar icons — stay in main package (~60KB)
         {
-          from: 'src/assets',
-          to: 'dist/assets',
-
-        },
-        // Archetype PNG fallbacks for canvas drawImage live in the onboarding
-        // subpackage to keep them out of the main package.
-        {
-          from: 'src/pages/onboarding/assets',
-          to: 'dist/pages/onboarding/assets',
+          from: 'src/assets/tab-icons',
+          to: 'dist/assets/tab-icons',
         },
         // Taro Vite runner does not auto-compile custom-tab-bar.
         // We ship it as a pre-built native WeChat component instead.
         {
           from: 'src/native-custom-tab-bar/',
           to: 'dist/custom-tab-bar/',
+        },
+        // Xiaoyue mascot personality assets (intro, test-phase, loading)
+        {
+          from: 'src/assets/personality/xiaoyue',
+          to: 'dist/assets/personality/xiaoyue',
+        },
+        // Xiaoyue mascot sprite animation sheets
+        {
+          from: 'src/assets/mascot',
+          to: 'dist/assets/mascot',
+        },
+        // Archetype result images (personality test slot animation + share poster)
+        {
+          from: 'src/pages/onboarding/assets/archetypes',
+          to: 'dist/pages/onboarding/assets/archetypes',
         },
       ],
       options: {

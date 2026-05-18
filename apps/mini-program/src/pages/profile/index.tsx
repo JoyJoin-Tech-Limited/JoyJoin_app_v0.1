@@ -2,9 +2,10 @@ import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { useRef } from 'react'
-import { getCurrentUser, getUserCoupons } from '@shared/api'
+import { getUserCoupons } from '@shared/api'
 import { getOnboardingStepLabel, nextStepToOnboardingStep } from '@shared/onboarding'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { apiRequest } from '../../lib/api/api'
 import {
   clearMiniProgramAuthSession,
@@ -32,12 +33,6 @@ export default function ProfilePage() {
     enabled: !authLoading,
   })
 
-  const { data: user } = useQuery<AuthUser>({
-    queryKey: ['mini-program', 'auth-user-profile'],
-    queryFn: () => getCurrentUser(apiRequest) as Promise<AuthUser>,
-    enabled: !authLoading && !!authUser,
-  })
-
   const { data: coupons = { count: 0, availableCount: 0, coupons: [] } } = useQuery({
     queryKey: ['mini-program', 'coupons'],
     queryFn: () => getUserCoupons(apiRequest),
@@ -46,8 +41,8 @@ export default function ProfilePage() {
 
   const handleOpenPayment = () => {
     void openMiniProgramPaymentPage({
-      paymentsEnabled: user?.paymentsEnabled ?? authUser?.paymentsEnabled,
-      currentUserId: user?.id ?? authUser?.id,
+      paymentsEnabled: authUser?.paymentsEnabled,
+      currentUserId: authUser?.id,
     })
   }
 
@@ -81,7 +76,7 @@ export default function ProfilePage() {
       })
 
       Taro.showToast({
-        title: '退出登录失败，请稍后重试',
+        title: getErrorMessage('logout-failed'),
         icon: 'none',
         duration: 3000,
       })
@@ -90,12 +85,12 @@ export default function ProfilePage() {
     }
   }
 
-  const displayName = user?.nickname || user?.displayName || authUser?.nickname || authUser?.displayName || '悦聚用户'
-  const archetype = user?.archetype || authUser?.archetype
-  const nextStep = user?.nextStep || authUser?.nextStep
+  const displayName = authUser?.nickname || authUser?.displayName || '悦聚用户'
+  const archetype = authUser?.archetype
+  const nextStep = authUser?.nextStep
 
   return renderGate(
-    <View className='profile-page'>
+    <View className='profile-page tab-page-enter'>
       <ScrollView className='profile-page__scroll' scrollY enhanced showScrollbar={false}>
         {/* Hero section */}
         <View className='profile-page__hero'>

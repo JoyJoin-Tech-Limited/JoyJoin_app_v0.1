@@ -1714,25 +1714,31 @@ export async function saveMatchResults(
   }
   
   // 7. 自动分配场地 (Automatic Venue Assignment)
-  logger.info(`[Pool Matching] ✅ ${groups.length} groups created, starting venue assignment...`);
+  const venueAssignmentEnabled = process.env.VENUE_ASSIGNMENT_ENABLED !== 'false';
   
-  try {
-    const venueAssignments = await assignVenuesToGroups(
-      groups,
-      poolId,
-      pool?.dateTime || new Date(),
-      pool?.city || "",
-      pool?.district,
-      pool?.eventType || "饭局"
-    );
+  if (venueAssignmentEnabled) {
+    logger.info(`[Pool Matching] ✅ ${groups.length} groups created, starting venue assignment...`);
     
-    // Save venue assignments to database
-    await saveVenueAssignments(poolId, venueAssignments);
-    
-    logger.info(`[Pool Matching] ✅ Venue assignment complete: ${venueAssignments.size}/${groups.length} groups assigned`);
-  } catch (error) {
-    logger.error(`[Pool Matching] ⚠️ Venue assignment failed:`, { error: error instanceof Error ? error.message : String(error) });
-    // Don't throw - matching already succeeded, venue assignment is best-effort
+    try {
+      const { assignments, unassigned } = await assignVenuesToGroups(
+        groups,
+        poolId,
+        pool?.dateTime || new Date(),
+        pool?.city || "",
+        pool?.district,
+        pool?.eventType || "饭局"
+      );
+      
+      // Save venue assignments to database
+      await saveVenueAssignments(poolId, pool?.dateTime || new Date(), assignments, unassigned);
+      
+      logger.info(`[Pool Matching] ✅ Venue assignment complete: ${assignments.size}/${groups.length} groups assigned, ${unassigned.size} unassigned`);
+    } catch (error) {
+      logger.error(`[Pool Matching] ⚠️ Venue assignment failed:`, { error: error instanceof Error ? error.message : String(error) });
+      // Don't throw - matching already succeeded, venue assignment is best-effort
+    }
+  } else {
+    logger.info(`[Pool Matching] ⏸️ Venue assignment skipped (VENUE_ASSIGNMENT_ENABLED=false)`);
   }
 
   // 8. 异步生成活动主题标题并广播 (Async Event Theme Title Generation & Broadcast)

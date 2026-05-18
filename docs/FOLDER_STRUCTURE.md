@@ -273,7 +273,7 @@ apps/mini-program/
 │   │   ├── squad-unboxing/        # Match reveal animation
 │   │   ├── invite/                # Referral / invite friends
 │   │   ├── terms/                 # Legal terms
-│   │   └── center-tab-empty/      # Empty state placeholder
+│   │   └── center-hub/            # Center tab hub page: active events, pending registrations, empty state
 │   ├── components/                # Shared Taro components
 │   │   ├── ui/                    # UI primitives (Button, Card, FormStepper, etc.)
 │   │   ├── loading/               # Loading states & animations
@@ -377,6 +377,14 @@ packages/shared/
 │   │   └── joyjoinTermsZh.ts
 │   ├── ai/                        # Shared AI prompts & types
 │   │   └── onboarding.ts
+│   ├── copy/                       # Brand-governed copy modules
+│   │   ├── errorBaselines.ts      # Error message factory functions
+│   │   ├── emptyStates.ts         # Empty state templates
+│   │   ├── mascotVoice.ts         # 悦仔常用句式库
+│   │   ├── toneMap.ts             # Surface ↔ tone mapping
+│   │   ├── terms.ts               # Core terminology + banned words
+│   │   ├── exceptions.ts          # Orange-word exception templates
+│   │   └── index.ts               # Barrel export
 │   ├── api.ts                     # Shared Zod DTOs & API contracts
 │   ├── index.ts                   # Package exports
 │   └── [domain modules]           # Business logic modules
@@ -594,6 +602,7 @@ scripts/
 |-----------|-------------|---------------|
 | `docs/agents/` | Agent-specific documentation | `SelfIteration.md` |
 | `docs/api/` | API contract docs | `industry-classification.md` |
+| `docs/copy/` | Brand copy strategy & governance | `brand-copy-strategy.md` |
 | `docs/architecture/` | System architecture | `current-state.md`, `skill-routing.md`, `documentation-ecosystem-map.md` |
 | `docs/automations/` | CI automation system | `README.md` (auto-debug, auto-docs, etc.) |
 | `docs/deliberations/` | Multi-agent deliberation transcripts | `2026-04-29-tier-naming-mascot-rebrand-consensus.md` |
@@ -854,6 +863,8 @@ tools/
 | New API DTO (Zod) | `packages/shared/src/api.ts` | Contract versioning |
 | New personality question | `packages/shared/src/personality/questionsV4*.ts` | V4 question banks |
 | New icebreaker phase | `packages/shared/src/phaseRegistry.ts` + `src/socialIcebreaker*.ts` | Phase system |
+| New copy module/string | `packages/shared/src/copy/` | Brand-governed copy |
+| New doc — copy strategy | `docs/copy/` | Brand copy governance |
 | New auto workflow script | `scripts/auto/<name>.mjs` | CI automation companion |
 | New guardrail script | `scripts/check/<name>.mjs` | Quality gate |
 | New harness script | `scripts/harness/<name>.mjs` | Quality framework |

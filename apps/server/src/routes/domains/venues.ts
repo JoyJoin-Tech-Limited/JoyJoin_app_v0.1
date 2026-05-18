@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { z } from "zod";
 import { db } from "../../db";
-import { venues, venueTimeSlots } from "@shared/schema";
+import { venues, venueTimeSlots, venueTimeSlotBookings, eventPoolGroups, eventPools } from "@shared/schema";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { logger } from "../../lib/logger";
@@ -19,7 +19,7 @@ function buildVenueAuditAfter(body: Record<string, unknown> | undefined): Record
   if (!body) return {};
   const allowedKeys = [
     "name", "type", "city", "district", "clusterId", "districtId",
-    "commissionRate", "tags", "cuisines", "priceRange", "maxConcurrentEvents",
+    "commissionRate", "tags", "cuisines", "priceRange", "budgetCategories", "maxConcurrentEvents", "seatingCapacity",
     "decorStyle", "tasteIntensity", "barThemes", "alcoholOptions", "vibeDescriptor", "isActive",
   ] as const;
   return Object.fromEntries(
@@ -29,18 +29,37 @@ function buildVenueAuditAfter(body: Record<string, unknown> | undefined): Record
 
 const venueSchema = z.object({
   name: z.string().min(1),
+  type: z.string().min(1).optional(),
   address: z.string().min(1),
   city: z.string().min(1),
   district: z.string().min(1),
-  capacity: z.number().int().min(1),
+  clusterId: z.string().optional(),
+  districtId: z.string().optional(),
+  contactName: z.string().optional(),
+  contactPhone: z.string().optional(),
+  commissionRate: z.number().optional(),
+  tags: z.array(z.string()).optional(),
+  cuisines: z.array(z.string()).optional(),
   priceRange: z.string().optional(),
+  budgetCategories: z.array(z.string()).optional(),
+  maxConcurrentEvents: z.number().int().min(1).optional(),
+  seatingCapacity: z.number().int().min(1).optional(),
+  decorStyle: z.array(z.string()).optional(),
+  tasteIntensity: z.array(z.string()).optional(),
+  notes: z.string().optional(),
+  barThemes: z.array(z.string()).optional(),
+  alcoholOptions: z.array(z.string()).optional(),
+  vibeDescriptor: z.string().optional(),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
+  isActive: z.boolean().optional(),
+  // Legacy backward-compat fields
+  capacity: z.number().int().min(1).optional(),
   cuisineType: z.string().optional(),
   phone: z.string().optional(),
   description: z.string().optional(),
   amenities: z.array(z.string()).optional(),
   images: z.array(z.string()).optional(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
 });
 
 const venueDealSchema = z.object({
@@ -112,7 +131,7 @@ export function registerVenueRoutes(app: Express): void {
       const { 
         name, type, address, city, district, clusterId, districtId,
         contactName, contactPhone, commissionRate, tags, cuisines, 
-        priceRange, maxConcurrentEvents, notes, decorStyle, tasteIntensity,
+        priceRange, budgetCategories, maxConcurrentEvents, seatingCapacity, notes, decorStyle, tasteIntensity,
         barThemes, alcoholOptions, vibeDescriptor,
         latitude, longitude
       } = req.body;
@@ -135,6 +154,8 @@ export function registerVenueRoutes(app: Express): void {
         tags: tags || [],
         cuisines: cuisines || [],
         priceRange: priceRange || null,
+        budgetCategories: budgetCategories || [],
+        seatingCapacity: seatingCapacity || 1,
         decorStyle: decorStyle || [],
         tasteIntensity: tasteIntensity || [],
         maxConcurrentEvents: maxConcurrentEvents || 1,
@@ -714,6 +735,184 @@ export function registerVenueRoutes(app: Express): void {
     } catch (error) {
       logger.error("Smart venue filter error", { error: String(error) });
       res.status(500).json({ message: "查询失败" });
+    }
+  });
+
+  // Venue Assignment Ops — list all unassigned groups across active pools
+  app.get("/api/admin/venue-assignment/unassigned", requireAdmin, async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      
+      const unassignedGroups = await db
+        .select({
+          groupId: eventPoolGroups.id,
+          groupNumber: eventPoolGroups.groupNumber,
+          poolId: eventPoolGroups.poolId,
+          poolTitle: eventPools.title,
+          poolDateTime: eventPools.dateTime,
+          poolCity: eventPools.city,
+          poolDistrict: eventPools.district,
+          memberCount: eventPoolGroups.memberCount,
+          venueAssignmentStatus: eventPoolGroups.venueAssignmentStatus,
+          venueAssignmentReason: eventPoolGroups.venueAssignmentReason,
+          createdAt: eventPoolGroups.createdAt,
+        })
+        .from(eventPoolGroups)
+        .innerJoin(eventPools, eq(eventPoolGroups.poolId, eventPools.id))
+        .where(eq(eventPoolGroups.venueAssignmentStatus, 'unassigned'))
+        .orderBy(desc(eventPoolGroups.createdAt))
+        .limit(limit);
+      
+      res.json(unassignedGroups);
+    } catch (error) {
+      logger.error("Error fetching unassigned groups", { error: String(error) });
+      res.status(500).json({ message: "Failed to fetch unassigned groups" });
+    }
+  });
+
+  const venueMigrateSchema = z.object({
+    newVenueId: z.string().min(1),
+    reason: z.string().optional(),
+  });
+
+  // Venue Assignment Ops — migrate an auto-assigned group to a new venue
+  app.post("/api/admin/venue-assignment/groups/:groupId/migrate", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    try {
+      const parsed = venueMigrateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid migrate data", errors: parsed.error.issues });
+      }
+      const { newVenueId, reason } = parsed.data;
+      const groupId = req.params.groupId;
+      
+      if (!newVenueId) {
+        return res.status(400).json({ message: "newVenueId is required" });
+      }
+
+      const group = await db.query.eventPoolGroups.findFirst({
+        where: (groups: any, { eq }: any) => eq(groups.id, groupId),
+      });
+      
+      if (!group) {
+        return res.status(404).json({ message: "Group not found" });
+      }
+
+      const pool = await db.query.eventPools.findFirst({
+        where: (pools: any, { eq }: any) => eq(pools.id, group.poolId),
+      });
+      
+      if (!pool) {
+        return res.status(404).json({ message: "Pool not found" });
+      }
+
+      const newVenue = await storage.getVenue(newVenueId);
+      if (!newVenue) {
+        return res.status(404).json({ message: "New venue not found" });
+      }
+
+      // Find existing time slot booking for this group
+      const existingBooking = await db
+        .select()
+        .from(venueTimeSlotBookings)
+        .where(and(
+          eq(venueTimeSlotBookings.eventGroupId, groupId),
+          eq(venueTimeSlotBookings.status, 'confirmed')
+        ));
+
+      // Find matching time slot for new venue at event datetime
+      const eventDateTime = pool.dateTime;
+      const dayOfWeek = eventDateTime.getDay();
+      const timeStr = eventDateTime.toTimeString().substring(0, 5);
+      const year = eventDateTime.getFullYear();
+      const month = String(eventDateTime.getMonth() + 1).padStart(2, '0');
+      const day = String(eventDateTime.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+
+      const weeklySlots = await db
+        .select()
+        .from(venueTimeSlots)
+        .where(and(
+          eq(venueTimeSlots.venueId, newVenueId),
+          eq(venueTimeSlots.dayOfWeek, dayOfWeek),
+          eq(venueTimeSlots.isActive, true),
+          sql`${venueTimeSlots.startTime} <= ${timeStr}`,
+          sql`${venueTimeSlots.endTime} >= ${timeStr}`
+        ));
+
+      const specificSlots = await db
+        .select()
+        .from(venueTimeSlots)
+        .where(and(
+          eq(venueTimeSlots.venueId, newVenueId),
+          sql`${venueTimeSlots.specificDate} = ${dateStr}::date`,
+          eq(venueTimeSlots.isActive, true),
+          sql`${venueTimeSlots.startTime} <= ${timeStr}`,
+          sql`${venueTimeSlots.endTime} >= ${timeStr}`
+        ));
+
+      const matchingSlot = weeklySlots[0] || specificSlots[0];
+      
+      if (!matchingSlot) {
+        return res.status(400).json({ message: "New venue has no available time slot at the event time" });
+      }
+
+      // Execute migration atomically
+      const result = await db.transaction(async (tx) => {
+        // Cancel existing booking
+        if (existingBooking.length > 0) {
+          await tx
+            .update(venueTimeSlotBookings)
+            .set({ status: 'cancelled', updatedAt: new Date() })
+            .where(eq(venueTimeSlotBookings.id, existingBooking[0].id));
+        }
+
+        // Create new booking
+        const [newBooking] = await tx
+          .insert(venueTimeSlotBookings)
+          .values({
+            venueId: newVenueId,
+            timeSlotId: matchingSlot.id,
+            eventPoolId: group.poolId,
+            eventGroupId: groupId,
+            bookingDate: dateStr,
+            status: 'confirmed',
+          })
+          .returning();
+
+        // Update group with new venue
+        await tx
+          .update(eventPoolGroups)
+          .set({
+            venueId: newVenueId,
+            venueName: newVenue.name,
+            venueAddress: newVenue.address,
+            venueAssignmentStatus: 'manual_override',
+            venueAssignmentReason: reason || 'admin_migrated',
+          })
+          .where(eq(eventPoolGroups.id, groupId));
+
+        return { newBooking, cancelledBookingId: existingBooking[0]?.id || null };
+      });
+
+      logAdminAudit({
+        action: 'VENUE_MIGRATED',
+        adminId: getActingAdminId(req),
+        adminRole: (req as any).adminRole,
+        targetEntityType: 'event_pool_group',
+        targetEntityId: groupId,
+        context: { oldVenueId: group.venueId, newVenueId, reason, cancelledBookingId: result.cancelledBookingId },
+      });
+
+      res.json({
+        success: true,
+        message: "Venue migrated successfully",
+        newVenue: { id: newVenue.id, name: newVenue.name, address: newVenue.address },
+        newBooking: result.newBooking,
+        cancelledBookingId: result.cancelledBookingId,
+      });
+    } catch (error: any) {
+      logger.error("Error migrating venue assignment", { groupId: req.params.groupId, error: String(error) });
+      res.status(400).json({ message: error.message || "Failed to migrate venue assignment" });
     }
   });
 }

@@ -86,7 +86,9 @@ interface Venue {
   cuisines: string[] | null;
   decorStyle: string[] | null;
   priceRange: string | null;
+  budgetCategories: string[] | null;
   maxConcurrentEvents: number;
+  seatingCapacity: number;
   isActive: boolean;
   notes: string | null;
   createdAt: string;
@@ -231,7 +233,9 @@ export default function AdminVenuesPage() {
     contactPhone: "",
     commissionRate: "20",
     priceRange: "150以下",
+    budgetCategories: [] as string[],
     maxConcurrentEvents: "1",
+    seatingCapacity: "8",
     tags: [] as string[],
     cuisines: [] as string[],
     decorStyle: [] as string[],
@@ -421,7 +425,9 @@ export default function AdminVenuesPage() {
       contactPhone: "",
       commissionRate: "20",
       priceRange: "150以下",
+      budgetCategories: [],
       maxConcurrentEvents: "1",
+      seatingCapacity: "8",
       tags: [],
       cuisines: [],
       decorStyle: [],
@@ -472,7 +478,9 @@ export default function AdminVenuesPage() {
       contactPhone: formData.contactPhone || undefined,
       commissionRate: parseInt(formData.commissionRate),
       priceRange: formData.priceRange || undefined,
+      budgetCategories: formData.budgetCategories.length > 0 ? formData.budgetCategories : undefined,
       maxConcurrentEvents: parseInt(formData.maxConcurrentEvents),
+      seatingCapacity: parseInt(formData.seatingCapacity),
       tags: formData.tags.length > 0 ? formData.tags : undefined,
       cuisines: formData.cuisines.length > 0 ? formData.cuisines : undefined,
       decorStyle: formData.decorStyle.length > 0 ? formData.decorStyle : undefined,
@@ -510,7 +518,9 @@ export default function AdminVenuesPage() {
       contactPhone: venue.contactPhone || "",
       commissionRate: venue.commissionRate.toString(),
       priceRange: venue.priceRange || "150以下",
+      budgetCategories: (venue as any).budgetCategories || (venue as any).budget_categories || [],
       maxConcurrentEvents: venue.maxConcurrentEvents.toString(),
+      seatingCapacity: ((venue as any).seatingCapacity ?? (venue as any).seating_capacity ?? 8).toString(),
       tags: venue.tags || [],
       cuisines: venue.cuisines || [],
       decorStyle: venue.decorStyle || [],
@@ -557,7 +567,9 @@ export default function AdminVenuesPage() {
         contactPhone: formData.contactPhone || null,
         commissionRate: parseInt(formData.commissionRate),
         priceRange: formData.priceRange || null,
+        budgetCategories: formData.budgetCategories.length > 0 ? formData.budgetCategories : null,
         maxConcurrentEvents: parseInt(formData.maxConcurrentEvents),
+        seatingCapacity: parseInt(formData.seatingCapacity),
         tags: formData.tags.length > 0 ? formData.tags : null,
         cuisines: formData.cuisines.length > 0 ? formData.cuisines : null,
         decorStyle: formData.decorStyle.length > 0 ? formData.decorStyle : null,

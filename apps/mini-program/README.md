@@ -37,10 +37,11 @@ This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 ```
 src/
 ├── pages/               # Mini-program pages (one folder per route)
-│   ├── discover/        # Tab 0: Event pool discovery feed
+│   ├── discover/        # Tab 0: "发现" — event pool discovery feed
 │   ├── events/          # Tab 1: "足迹" — user's event history
 │   ├── connections/     # Tab 2: "连接" — matched group & social connections
 │   ├── profile/         # Tab 3: "我的" — user profile & settings
+│   ├── center-hub/      # Tab 4 (center): "进行中" — dynamic hub for active events, pending registrations, and empty state
 │   ├── index/           # Landing / splash page (cold entry)
 │   ├── login/           # WeChat login entry for returning users
 │   ├── onboarding/      # Subpackage: onboarding flow
@@ -56,8 +57,7 @@ src/
 │   ├── edit-profile/
 │   ├── rewards/
 │   ├── invite/
-│   ├── terms/
-│   └── center-tab-empty/
+│   └── terms/
 ├── components/          # Shared UI components & primitives
 │   ├── ui/              # BrandLogo, Button, Card, StatusCard, JoyJoinIcon, etc.
 │   ├── landing/         # Landing-page-specific components (BondingCloud)
@@ -94,11 +94,35 @@ npm run typecheck --workspace=mini-program
 
 # Testing (Vitest)
 npm run test --workspace=mini-program
-
-# Asset optimization (Xiaoyue personality assets)
-npm run optimize:xiaoyue --workspace=mini-program
-npm run check:xiaoyue-assets --workspace=mini-program
 ```
+
+### Asset pipeline scripts
+
+Static assets are copied to `dist/` via `copy.patterns` in `config/index.ts` and consumed at runtime via `cdnAsset()` (local path when `TARO_APP_CDN_BASE_URL` is unset).
+
+| Script | Purpose |
+|--------|---------|
+| `npm run optimize:xiaoyue` | Generate Xiaoyue expression WebPs and intro animated/static fallbacks into `src/assets/personality/xiaoyue/` |
+| `npm run check:xiaoyue-assets` | Validate Xiaoyue asset sizes and dimensions |
+| `npm run generate:xiaoyue-spritesheet` | Generate Xiaoyue sprite animation sheets into `src/assets/mascot/` |
+| `npm run extract:xiaoyue-frames` | Extract raw frames from Xiaoyue source strips |
+| `npm run contact-sheet:xiaoyue` | Generate contact-sheet preview of Xiaoyue frames |
+| `npm run repair:xiaoyue` | Queue Xiaoyue asset repair jobs |
+| `npm run optimize:archetypes` | Generate archetype WebP/PNG assets into `src/pages/onboarding/assets/archetypes/` |
+| `npm run check:archetype-assets` | Validate archetype asset sizes |
+| `npm run generate:spritesheet` | Generate archetype spritesheet + manifest for share-poster canvas |
+| `npm run optimize:promo` | Generate promotional image assets |
+| `npm run optimize:lovart` | Generate Lovart-designed image assets |
+| `npm run check:lovart-assets` | Validate Lovart asset sizes |
+| `npm run upload:cdn-assets` | Upload built assets to CDN (`--dry-run` for preview) |
+| `npm run check:package-size` | Audit mini-program bundle size against budget |
+
+**Active copy patterns** (`config/index.ts`):
+- `src/assets/tab-icons` → `dist/assets/tab-icons`
+- `src/native-custom-tab-bar/` → `dist/custom-tab-bar/`
+- `src/assets/personality/xiaoyue` → `dist/assets/personality/xiaoyue`
+- `src/assets/mascot` → `dist/assets/mascot`
+- `src/pages/onboarding/assets/archetypes` → `dist/pages/onboarding/assets/archetypes`
 
 ---
 
@@ -112,7 +136,9 @@ The shipped mini-program tab bar is the **native WeChat component** copied from 
 | **Inactive Taro JSX** | `src/custom-tab-bar/index.tsx` (kept for reference; not compiled into dist) |
 | **Copy rule** | `config/index.ts` `copy.patterns` handles the native → dist copy |
 | **WXML root** | `<cover-view class="joy-custom-tab-bar">` with nested `<cover-view>` and `<cover-image>` only |
-| **Center CTA** | Floating circular button ("去发现") with gradient, shadow, and negative offset geometry |
+| **Center CTA** | Floating circular button ("进行中") with gradient, shadow, and negative offset geometry |
+| **Center hub page** | `/pages/center-hub/index` — dynamic content: active event card, pending registration status, or empty-state CTA |
+| **Routing model** | Center button always `switchTab` to hub; hub CTAs `navigateTo` detail pages or `switchTab` to discover |
 | **State sync** | `useCustomTabBarSync.ts` calls `Taro.getTabBar(page).syncState(...)` on every `useDidShow` |
 | **Badges** | Notification counts mapped to `discover`, `activities`, `chat` categories |
 
@@ -127,7 +153,7 @@ The shipped mini-program tab bar is the **native WeChat component** copied from 
 
 ## Package Loading Strategy
 
-1. **Tab pages** (`discover`, `events`, `connections`, `profile`) live in the **main package**.
+1. **Tab pages** (`discover`, `events`, `connections`, `profile`, `center-hub`) live in the **main package**.
 2. **Heavy non-tab flows** (onboarding: personality test, profile forms, review) are in the **`pages/onboarding` subpackage**.
 3. **Preload rules** are declared from likely entry pages (`index`, `login`) before reaching for independent subpackages.
 4. Any proposal for independent subpackages must include a self-contained bootstrap plan because `app.ts` and `AuthProvider` centralize app-level providers and auth setup.
@@ -145,7 +171,7 @@ The shipped mini-program tab bar is the **native WeChat component** copied from 
 | UI constants (timing, colors, intervals) | `apps/mini-program/src/lib/utils/uiConstants.ts` — **centralized source of truth** |
 | App-level config / registration | `apps/mini-program/src/app.ts`, `src/app.config.ts` |
 | Shared types, schemas, constants | `packages/shared/src/` (import via `@shared/*` or `@joyjoin/shared`) |
-| New tab bar item | `src/lib/navigation/tabBarConfig.ts` + `src/native-custom-tab-bar/index.js` + `src/app.config.ts` |
+| New tab bar item | `src/lib/navigation/tabBarConfig.ts` + `src/native-custom-tab-bar/index.js` + `src/lib/onboarding/onboardingRoutes.ts` + `src/app.config.ts` |
 
 ---
 

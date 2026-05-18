@@ -34,6 +34,7 @@ Frontend work should **optimize for the Primary tier** and maintain a **graceful
 - Hero images: WebP at higher quality (Q80–85 vs previous Q60–70)
 - Animation assets: Lottie JSON up to 120KB gzip acceptable if gated to Primary tier
 - Archetype assets: full-resolution PNG/WebP on Primary; downscaled on Degradation
+- Mascot animation assets: animated WebP (~450–500 KB) on Primary; static WebP fallback (~10 KB) shown when `prefers-reduced-motion: reduce` is active
 
 ## 优化策略
 
@@ -70,10 +71,36 @@ const MatchingStatusPage = lazy(() => import("@/pages/MatchingStatusPage"));
 
 ### 3. 数据预取
 
-使用 TanStack Query 的 `prefetchQuery` 预取下一步数据：
+#### Predictive Shell 预取（composite endpoint，2026-05-17）
+
+The mini-program uses **composite shell endpoints** to prefetch tab data before the user switches tabs. The landing page stages prefetches via `PrefetchEngine` after entry animation:
 
 ```typescript
-// 在当前步骤空闲时预取下一步数据
+// apps/mini-program/src/pages/index/index.tsx
+const engine = getPrefetchEngine(queryClient);
+engine.stage('discover', async () => {
+  const shell = await fetchDiscoverShell();
+  injectDiscoverShellIntoCache(queryClient, shell);
+});
+engine.stage('events', async () => {
+  const shell = await fetchEventsShell();
+  injectEventsShellIntoCache(queryClient, shell);
+}, 3000);
+```
+
+**Key properties:**
+- **Auth injection is gated** for Discover/Events/Connections shells — only injects if the auth cache is empty, to avoid overwriting a full `AuthUserResponse` with a pruned one.
+- **Profile shell injects unconditionally** — it returns the full `AuthUserResponse`, so it is safe to overwrite.
+- **Server-side cache:** `ShellCache` (NodeCache, 30s TTL) reduces DB round-trips. Invalidated on mutations via `shellCache.invalidateUser(userId)`.
+- **Fallback:** Events and Connections pages gracefully fall back to legacy endpoints if composite 500s.
+
+See `docs/mini-program/mini-program-data-fetching.md` for query key mapping and `apps/mini-program/src/lib/prefetchEngine.ts` for the engine implementation.
+
+#### Legacy per-query prefetch
+
+For non-shell data, use TanStack Query's `prefetchQuery`:
+
+```typescript
 queryClient.prefetchQuery({
   queryKey: ['/api/next-step-data'],
   staleTime: 5 * 60 * 1000,
@@ -209,6 +236,7 @@ When implementing features that push Primary-tier hardware, always provide a fal
 |---------|-------------|----------------------|
 | Staggered entrance animations | Full stagger, 120Hz smooth | Reduced stagger or instant reveal |
 | Particle / shader effects | Full fidelity | Disabled or static image replacement |
+| Mascot intro animation | Animated WebP (~450–500 KB) | Static WebP fallback (~10 KB) via `prefers-reduced-motion` |
 | High-res images | WebP Q85, full size | WebP Q60, downscaled |
 | Real-time WebSocket features | Enabled | Polling fallback or deferred sync |
 | Preload aggressive | Preload next 2–3 screens | Preload only next screen |

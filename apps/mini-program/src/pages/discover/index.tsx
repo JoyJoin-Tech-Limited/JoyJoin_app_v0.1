@@ -1,6 +1,6 @@
-import { View, Text, Image, ScrollView } from '@tarojs/components'
+import { View, Text, Image } from '@tarojs/components'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
-import Taro, { useReady, usePullDownRefresh } from '@tarojs/taro'
+import Taro, { usePullDownRefresh } from '@tarojs/taro'
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -10,10 +10,12 @@ import {
 } from '@shared/api'
 import {
   shenzhenClusters,
+  getDistrictById,
+  getClusterById,
   type District,
-  heatConfig,
 } from '@shared/districts'
-import { apiRequest } from '../../lib/api/api'
+import { apiRequest, fetchDiscoverShell } from '../../lib/api/api'
+import { injectDiscoverShellIntoCache } from '../../lib/prefetchEngine'
 import { useAuth } from '../../hooks/useAuth'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
@@ -25,6 +27,7 @@ import AiMatchPromoCarousel from '../../components/AiMatchPromoCarousel'
 import VirtualList from '../../components/VirtualList'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import OracleCard from '../../components/discover/OracleCard'
+import LocationFilterDrawer from '../../components/discover/LocationFilterDrawer'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
 import { getTimeGreeting } from '../../lib/utils/timeGreeting'
 import {
@@ -39,9 +42,36 @@ import './index.scss'
 // ─── Constants ────────────────────────────────────────────────────
 const ALL_CLUSTER_ID = '__all__'
 const ALL_DISTRICT_ID = '__all__'
+const LOCATION_STORAGE_KEY = 'discover_last_location'
+const LOCATION_TTL_DAYS = 30
 
 // Measured OracleCard height in rpx. Keep in sync with `.oracle-card` height.
 const DISCOVER_CARD_HEIGHT_RPX = 464
+
+// ─── Smart default helpers ────────────────────────────────────────
+function readSavedLocation(): { clusterId: string; districtId: string } | null {
+  try {
+    const raw = Taro.getStorageSync(LOCATION_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    const ageMs = Date.now() - (parsed.timestamp || 0)
+    if (ageMs > LOCATION_TTL_DAYS * 24 * 60 * 60 * 1000) return null
+    return { clusterId: parsed.clusterId, districtId: parsed.districtId }
+  } catch {
+    return null
+  }
+}
+
+function saveLocation(clusterId: string, districtId: string) {
+  Taro.setStorageSync(
+    LOCATION_STORAGE_KEY,
+    JSON.stringify({ clusterId, districtId, timestamp: Date.now() })
+  )
+}
+
+function clearLocation() {
+  Taro.removeStorageSync(LOCATION_STORAGE_KEY)
+}
 
 // ─── Skeleton placeholder (initial loading) ───────────────────────
 function PoolCardSkeleton() {
@@ -65,24 +95,14 @@ function AuthenticatedDiscover() {
   const displayName = (user as any)?.displayName || (user as any)?.nickname || '悦聚用户'
 
   // ── Filter state ──
-  const [selectedCluster, setSelectedCluster] = useState<string>(ALL_CLUSTER_ID)
-  const [selectedDistrict, setSelectedDistrict] = useState<string>(ALL_DISTRICT_ID)
-
-  // ── Sticky header height ──
-  const [stickyHeaderHeight, setStickyHeaderHeight] = useState(0)
-  useReady(() => {
-    try {
-      Taro.createSelectorQuery()
-        .select('.discover-auth__sticky-header')
-        .boundingClientRect((rect) => {
-          const r = Array.isArray(rect) ? rect[0] : rect
-          if (r) setStickyHeaderHeight(r.height)
-        })
-        .exec()
-    } catch {
-      // ignore measurement errors — VirtualList has fallback gates
-    }
-  })
+  const saved = useMemo(() => readSavedLocation(), [])
+  const [selectedCluster, setSelectedCluster] = useState<string>(
+    saved?.clusterId ?? ALL_CLUSTER_ID
+  )
+  const [selectedDistrict, setSelectedDistrict] = useState<string>(
+    saved?.districtId ?? ALL_DISTRICT_ID
+  )
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   // ── Data fetching ──
   const {
@@ -91,15 +111,23 @@ function AuthenticatedDiscover() {
     isError: poolsError,
   } = useQuery({
     queryKey: ['mini-program', 'event-pools'],
-    queryFn: async () => {
+    queryFn: async (): Promise<EventPoolSummary[]> => {
+      // Primary: composite endpoint — 1 request for all Discover data.
+      // Why: cuts TTFB and request overhead vs 3 parallel calls.
+      try {
+        const shell = await fetchDiscoverShell()
+        injectDiscoverShellIntoCache(queryClient, shell)
+        return shell.pools.items as EventPoolSummary[]
+      } catch {
+        // Composite unavailable — fall back to legacy 3-request pattern.
+      }
+
       try {
         return await getEventPools(apiRequest)
       } catch (e) {
-        // Fallback: render mock pools when backend is unreachable (dev / preview)
-        // NOTE: Set to `true` for WeChat DevTools UI testing without backend.
-        // Gate this behind an explicit flag before shipping.
-        const MOCK_POOLS_FOR_PREVIEW = true
-        if (MOCK_POOLS_FOR_PREVIEW) {
+        // Dev-only mock fallback for UI testing without backend.
+        // Gated to development so production never serves fake data (AC-12).
+        if (process.env.NODE_ENV === 'development') {
           const now = new Date()
           const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000)
           const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
@@ -230,6 +258,8 @@ function AuthenticatedDiscover() {
     return cluster?.districts ?? []
   }, [selectedCluster])
 
+  // No sticky header with drawer-based filter — hero scrolls away naturally
+
   // ── Derived: filtered pool list ──
   const filteredPools = useMemo<EventPoolSummary[]>(() => {
     return pools.filter((pool) => {
@@ -277,22 +307,43 @@ function AuthenticatedDiscover() {
   )
 
   // ── Handlers ──
-  const handleClusterTap = useCallback((clusterId: string) => {
-    setSelectedCluster(clusterId)
-    setSelectedDistrict(ALL_DISTRICT_ID)
-  }, [])
+  const handleFilterSelect = useCallback(
+    (clusterId: string, districtId: string) => {
+      setSelectedCluster(clusterId)
+      setSelectedDistrict(districtId)
+      if (clusterId === ALL_CLUSTER_ID && districtId === ALL_DISTRICT_ID) {
+        clearLocation()
+      } else {
+        saveLocation(clusterId, districtId)
+      }
+    },
+    []
+  )
 
-  const handleDistrictTap = useCallback((districtId: string) => {
-    setSelectedDistrict(districtId)
-  }, [])
+  const handleOpenDrawer = useCallback(() => setDrawerOpen(true), [])
+  const handleCloseDrawer = useCallback(() => setDrawerOpen(false), [])
 
   const handlePoolTap = useCallback((pool: EventPoolSummary) => {
     Taro.navigateTo({ url: `/pages/pool-registration/index?id=${pool.id}` })
   }, [])
 
+  // ── Location pill label ──
+  const locationPillLabel = useMemo(() => {
+    if (selectedDistrict !== ALL_DISTRICT_ID) {
+      const district = getDistrictById(selectedDistrict)
+      if (district) return district.name
+    }
+    if (selectedCluster !== ALL_CLUSTER_ID) {
+      const cluster = getClusterById(selectedCluster)
+      if (cluster) return cluster.displayName
+    }
+    return '探索全部'
+  }, [selectedCluster, selectedDistrict])
+
   const handleRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['mini-program', 'event-pools'] })
     queryClient.invalidateQueries({ queryKey: ['mini-program', 'my-pool-registrations'] })
+    queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/discover'] })
   }, [queryClient])
 
   // ── Pull-to-refresh ──
@@ -333,10 +384,10 @@ function AuthenticatedDiscover() {
 
   // ── Render ──
   return (
-    <View className='discover-auth'>
-      {/* Sticky header: hero + actions + promo + filters */}
-      <View className='discover-auth__sticky-header'>
-        <View className='discover-auth__hero'>
+    <View className='discover-auth tab-page-enter'>
+      {/* Hero + actions + promo — scroll away naturally */}
+      <View className='discover-auth__hero'>
+        <View className='discover-auth__hero-left'>
           <View className='discover-auth__hero-mascot'>
             <Image
               className='discover-auth__hero-mascot-img'
@@ -351,79 +402,51 @@ function AuthenticatedDiscover() {
           </View>
         </View>
 
-        {primaryAction && (
-          <View className='discover-auth__primary-action'>
-            <Card
-              className='discover-auth__action-card'
-              onClick={() => Taro.navigateTo({ url: primaryAction.path })}
-            >
-              <JoyJoinIcon
-                emoji={primaryAction.emoji}
-                size={40}
-                className='discover-auth__action-emoji'
-              />
-              <Text className='discover-auth__action-label'>{primaryAction.label}</Text>
-            </Card>
-          </View>
-        )}
-
-        <AiMatchPromoCarousel className='discover-auth__promo' />
-
-        {/* City / District filter chips */}
-        <View className='discover-auth__filter-section'>
-          <ScrollView className='discover-auth__chips-row' scrollX enhanced showScrollbar={false}>
-            <View className='discover-auth__chips-inner'>
-              <View
-                className={`discover-auth__chip ${selectedCluster === ALL_CLUSTER_ID ? 'discover-auth__chip--active' : ''}`}
-                hoverClass='discover-auth__chip--hover'
-                onClick={() => handleClusterTap(ALL_CLUSTER_ID)}
-              >
-                <Text className='discover-auth__chip-text'>全部</Text>
-              </View>
-              {shenzhenClusters.map((cluster) => (
-                <View
-                  key={cluster.id}
-                  className={`discover-auth__chip ${selectedCluster === cluster.id ? 'discover-auth__chip--active' : ''}`}
-                  hoverClass='discover-auth__chip--hover'
-                  onClick={() => handleClusterTap(cluster.id)}
-                >
-                  <Text className='discover-auth__chip-text'>{cluster.displayName}</Text>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
-
-          {visibleDistricts.length > 0 && (
-            <ScrollView className='discover-auth__chips-row discover-auth__chips-row--districts' scrollX enhanced showScrollbar={false}>
-              <View className='discover-auth__chips-inner'>
-                <View
-                  className={`discover-auth__chip discover-auth__chip--sm ${selectedDistrict === ALL_DISTRICT_ID ? 'discover-auth__chip--active' : ''}`}
-                  hoverClass='discover-auth__chip--hover'
-                  onClick={() => handleDistrictTap(ALL_DISTRICT_ID)}
-                >
-                  <Text className='discover-auth__chip-text'>全部</Text>
-                </View>
-                {visibleDistricts.map((district) => {
-                  const heat = heatConfig[district.heat]
-                  return (
-                    <View
-                      key={district.id}
-                      className={`discover-auth__chip discover-auth__chip--sm ${selectedDistrict === district.id ? 'discover-auth__chip--active' : ''}`}
-                      hoverClass='discover-auth__chip--hover'
-                      onClick={() => handleDistrictTap(district.id)}
-                    >
-                      <Text className='discover-auth__chip-text'>
-                        {district.name}
-                        {heat.label ? ` ${heat.label}` : ''}
-                      </Text>
-                    </View>
-                  )
-                })}
-              </View>
-            </ScrollView>
-          )}
+        {/* Location Pill */}
+        <View
+          className={`discover-auth__location-pill ${selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID ? 'discover-auth__location-pill--active' : ''}`}
+          onClick={handleOpenDrawer}
+          hoverClass='discover-auth__location-pill--hover'
+          aria-role='button'
+          aria-label={`当前区域: 深圳 · ${locationPillLabel}, 点击切换`}
+        >
+          <JoyJoinIcon
+            emoji='📍'
+            size={24}
+            className='discover-auth__location-pill-icon'
+          />
+          <Text className='discover-auth__location-pill-text'>
+            在 深圳 · {locationPillLabel} ▼
+          </Text>
         </View>
       </View>
+
+      {primaryAction && (
+        <View className='discover-auth__primary-action'>
+          <Card
+            className='discover-auth__action-card'
+            onClick={() => Taro.navigateTo({ url: primaryAction.path })}
+          >
+            <JoyJoinIcon
+              emoji={primaryAction.emoji}
+              size={40}
+              className='discover-auth__action-emoji'
+            />
+            <Text className='discover-auth__action-label'>{primaryAction.label}</Text>
+          </Card>
+        </View>
+      )}
+
+      <AiMatchPromoCarousel className='discover-auth__promo' />
+
+      {/* Location Filter Drawer */}
+      <LocationFilterDrawer
+        open={drawerOpen}
+        selectedCluster={selectedCluster}
+        selectedDistrict={selectedDistrict}
+        onSelect={handleFilterSelect}
+        onClose={handleCloseDrawer}
+      />
 
       {/* Pool listing */}
       <View className='discover-auth__section'>
@@ -443,7 +466,7 @@ function AuthenticatedDiscover() {
             tone='error'
             heroSrc={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             title='获取列表遇到小状况'
-            description='下拉刷新一下就好~'
+            description='下拉刷新一下就好'
           />
         ) : filteredPools.length > 0 ? (
           <VirtualList
@@ -453,7 +476,6 @@ function AuthenticatedDiscover() {
             itemHeight={DISCOVER_CARD_HEIGHT_RPX}
             keyExtractor={poolKeyExtractor}
             renderItem={renderPoolCard}
-            headerHeight={stickyHeaderHeight}
           />
         ) : (
           <StatusCard

@@ -9,6 +9,7 @@ import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { useJoyJoinNavigation } from '../../hooks/navigation/useJoyJoinNavigation'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 import JoyJoinLoadingScreen from '../../components/loading/JoyJoinLoadingScreen'
 import './index.scss'
 
@@ -45,7 +46,7 @@ export default function EventDetailPage() {
             mode='aspectFit'
             lazyLoad
           />
-          <Text className='event-detail__error-text'>加载活动详情失败</Text>
+          <Text className='event-detail__error-text'>加载活动详情没成功</Text>
           <Button className='event-detail__retry-btn' onClick={() => navigateBack()}>
             返回
           </Button>

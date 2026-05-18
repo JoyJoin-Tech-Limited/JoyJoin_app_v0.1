@@ -19,7 +19,7 @@ export default function EmptyStage({ onRestart }: EmptyStageProps) {
       />
       <Text className='personality-results__state-title'>这份结果还没准备好</Text>
       <Text className='personality-results__state-copy'>
-        当前设备里没有找到完整的匿名测试结果。重新完成一次测试，系统会重新生成并保存这次揭晓流程。
+        悦仔在这台设备上没找到完整的测试结果，重新测一次就好~
       </Text>
       <View className='personality-results__stack-actions'>
         <Button onClick={onRestart}>返回重新测试</Button>

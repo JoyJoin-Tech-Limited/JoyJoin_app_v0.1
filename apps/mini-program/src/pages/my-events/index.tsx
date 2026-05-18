@@ -26,7 +26,7 @@ export default function MyEventsLegacyPage() {
         })
 
         if (isActive) {
-          setStatusText('跳转失败，请返回后重试')
+          setStatusText('跳转没成功，返回再试试')
         }
       }
     })

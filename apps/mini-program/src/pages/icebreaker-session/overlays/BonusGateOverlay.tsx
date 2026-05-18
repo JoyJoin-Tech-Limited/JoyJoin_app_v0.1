@@ -5,6 +5,7 @@ import Button from '../../../components/ui/Button'
 import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
 import { apiRequest } from '../../../lib/api/api'
 import { logError } from '../../../lib/utils/logger'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 
 interface BonusGateOverlayProps {
   socialSessionId: string
@@ -38,7 +39,7 @@ export default function BonusGateOverlay({
       onResponded()
     } catch (err) {
       logError('bonus-gate-respond', { error: String(err) })
-      Taro.showToast({ title: '操作失败，请重试', icon: 'none' })
+      Taro.showToast({ title: getErrorMessage('operation-failed'), icon: 'none' })
     } finally {
       setLoading(false)
     }
@@ -55,7 +56,7 @@ export default function BonusGateOverlay({
       onResponded()
     } catch (err) {
       logError('bonus-gate-sentiment', { error: String(err) })
-      Taro.showToast({ title: '操作失败，请重试', icon: 'none' })
+      Taro.showToast({ title: getErrorMessage('operation-failed'), icon: 'none' })
     } finally {
       setLoading(false)
     }

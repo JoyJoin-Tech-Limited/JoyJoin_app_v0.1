@@ -97,7 +97,7 @@ export default function PoolGroupDetailPage() {
       await Taro.showShareImageMenu({ path })
     } catch (err) {
       console.error('[PoolGroupDetail] poster generation failed:', err)
-      Taro.showToast({ title: '海报生成失败，请重试', icon: 'none', duration: TOAST_SHORT_MS })
+      Taro.showToast({ title: '海报没生成成功，再试试', icon: 'none', duration: TOAST_SHORT_MS })
     } finally {
       setIsGeneratingPoster(false)
     }
@@ -116,7 +116,7 @@ export default function PoolGroupDetailPage() {
           mode='aspectFit'
           lazyLoad
         />
-        <Text className='pool-group-detail__error-text'>加载小队详情失败</Text>
+        <Text className='pool-group-detail__error-text'>加载小队详情没成功</Text>
         <Button variant='secondary' onClick={() => Taro.switchTab({ url: '/pages/events/index' })}>
           返回活动
         </Button>
@@ -168,11 +168,11 @@ export default function PoolGroupDetailPage() {
           {group.matchExplanation || pool.description || '见面信息已经为你准备好，出发前再确认一次时间和地点。'}
         </Text>
         {isAnalysisLoading ? (
-          <Text className='pool-group-detail__analysis-hint'>正在加载 AI 解析…</Text>
+          <Text className='pool-group-detail__analysis-hint'>正在加载悦仔解析…</Text>
         ) : null}
         {groupAnalysis?.groupDynamics ? (
           <Card className='pool-group-detail__analysis-card'>
-            <Text className='pool-group-detail__analysis-label'>AI · 这桌氛围</Text>
+            <Text className='pool-group-detail__analysis-label'>悦仔 · 这桌氛围</Text>
             <Text className='pool-group-detail__analysis-body'>{groupAnalysis.groupDynamics}</Text>
             {groupAnalysis.iceBreakers && groupAnalysis.iceBreakers.length > 0 ? (
               <Text className='pool-group-detail__analysis-ice'>
@@ -212,7 +212,7 @@ export default function PoolGroupDetailPage() {
         </View>
         <View className='pool-group-detail__info-row'>
           <Text className='pool-group-detail__info-label'>👥 人数</Text>
-          <Text className='pool-group-detail__info-value'>{group.memberCount || members.length}人小组</Text>
+          <Text className='pool-group-detail__info-value'>{group.memberCount || members.length}人桌</Text>
         </View>
       </Card>
 

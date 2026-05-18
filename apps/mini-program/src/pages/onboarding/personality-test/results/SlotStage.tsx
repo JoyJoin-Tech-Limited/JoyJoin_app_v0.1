@@ -242,7 +242,7 @@ export default function SlotStage({
           <View className='personality-results__network-copy'>
             <Text className='personality-results__network-title'>{`${DEFAULT_MASCOT_DISPLAY_NAME}还在等最后一条同步`}</Text>
             <Text className='personality-results__network-text'>
-              网络有点慢也没关系，动画会继续转到结果真正到位为止。
+              网络慢一点没关系，动画会一直播到结果出来~
             </Text>
           </View>
         </Card>

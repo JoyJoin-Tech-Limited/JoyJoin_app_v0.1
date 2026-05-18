@@ -28,52 +28,19 @@ export interface CustomTabBarSyncState {
   center: MiniProgramCenterState
 }
 
+/**
+ * All center button taps now route to the center hub page via switchTab.
+ * The hub page renders the appropriate content based on user state.
+ * This gives users predictable tab-like behavior (always switchTab).
+ */
 export function mapCenterDestinationToMiniProgramAction(
   destination: CenterTabDestination
 ): MiniProgramCenterAction {
-  switch (destination.kind) {
-    case 'discover':
-      return {
-        kind: destination.kind,
-        navigation: 'switchTab',
-        url: MINI_PROGRAM_ROUTES.discover,
-      }
-    case 'empty':
-      return {
-        kind: destination.kind,
-        navigation: 'navigateTo',
-        url: MINI_PROGRAM_CENTER_TAB_EMPTY_ROUTE,
-      }
-    case 'matched-event':
-      return {
-        kind: destination.kind,
-        navigation: 'navigateTo',
-        url: `/pages/event-detail/index?id=${encodeURIComponent(destination.eventId)}`,
-      }
-    case 'matched-pool-unlocked':
-      return {
-        kind: destination.kind,
-        navigation: 'navigateTo',
-        url: `${MINI_PROGRAM_POOL_GROUP_DETAIL_ROUTE}?groupId=${encodeURIComponent(destination.groupId)}`,
-      }
-    case 'pending-registration':
-      return {
-        kind: destination.kind,
-        navigation: 'navigateTo',
-        url: `/pages/matching-status/index?registrationId=${encodeURIComponent(destination.registrationId)}`,
-      }
-    case 'matched-pool-future':
-      return {
-        kind: destination.kind,
-        navigation: 'navigateTo',
-        url: `/pages/squad-unboxing/index?groupId=${encodeURIComponent(destination.groupId)}`,
-      }
-    default:
-      return {
-        kind: 'discover',
-        navigation: 'switchTab',
-        url: MINI_PROGRAM_ROUTES.discover,
-      }
+  // Always route to the center hub page via switchTab for predictable tab behavior.
+  return {
+    kind: destination.kind,
+    navigation: 'switchTab',
+    url: MINI_PROGRAM_ROUTES.centerHub,
   }
 }
 

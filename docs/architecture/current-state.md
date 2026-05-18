@@ -147,7 +147,14 @@ Boundary:
 
 **Routes**
 - `apps/server/src/routes.ts` is the composition root that mounts domain routers from `apps/server/src/routes/domains/`
-- Domain modules currently include auth, onboarding, assessment, analytics, admin, payments, and icebreaker routing
+- Domain modules currently include auth, onboarding, assessment, analytics, admin, payments, icebreaker, and shell routing
+
+**Predictive Shell**
+- `apps/server/src/routes/domains/shell.ts` mounts `/api/shell/discover`, `/api/shell/profile`, `/api/shell/events`, `/api/shell/connections`
+- `apps/server/src/repositories/shellRepository.ts` assembles composite responses from `buildAuthUserResponse()`, domain repositories, and notification counts
+- `apps/server/src/lib/shellCache.ts` provides a shared NodeCache singleton (30s TTL) with `invalidateUser(userId)` for cross-shell cache clearing
+- `apps/server/src/lib/buildAuthUserResponse.ts` is the shared auth response builder used by both `/api/auth/user` and all shells
+- Prerequisite repositories: `joinedEventsRepo.ts` (N+1-free joined events) and `connectionsRepo.ts` (N+1-free mutual connections)
 
 **Data access**
 - `apps/server/src/storage.ts` is now a compatibility facade composed from `apps/server/src/repositories/*`

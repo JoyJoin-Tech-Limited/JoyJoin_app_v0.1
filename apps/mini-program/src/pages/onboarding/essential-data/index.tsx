@@ -18,6 +18,7 @@ import {
   OCCUPATIONS,
 } from '@shared/occupations'
 import { searchOccupation, submitEssentialData } from '@shared/api'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import { TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../../lib/utils/uiConstants'
 import { useInvalidateAuth } from '../../../hooks/useAuth'
@@ -303,7 +304,7 @@ export default function EssentialDataPage() {
         transition: { beforeNavigate: () => setIsPageExiting(true) },
       })
     } catch (err) {
-      const message = err instanceof Error ? err.message : '提交失败，请重试'
+      const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
       setError(message)
       analytics.errorOccurred('submit_failed', message)
       logError('[EssentialData] Submit failed', { message })

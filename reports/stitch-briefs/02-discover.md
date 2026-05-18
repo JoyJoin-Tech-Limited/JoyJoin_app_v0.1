@@ -10,11 +10,11 @@
 ## Current Problems
 
 1. Background gradient was ad-hoc (FIXED in quick wins — now uses brand token)
-2. Pool cards are functional but generic — no visual punch
-3. No Xiaoyue presence on the main discovery surface
-4. Filter chips are plain text buttons
+2. Pool cards are functional but generic — no visual punch (OracleCard redesign shipped 2026-05-13)
+3. No Xiaoyue presence on the main discovery surface (Xiaoyue mascot added to hero)
+4. ~~Filter chips are plain text buttons~~ → **FIXED 2026-05-15:** Replaced with `LocationFilterDrawer` (bottom-sheet district selector). See implementation in `apps/mini-program/src/components/discover/LocationFilterDrawer.tsx`.
 5. Quick action row lacks visual hierarchy
-6. VirtualList is good for performance but cards need redesign
+6. VirtualList is good for performance but cards need redesign (OracleCard shipped)
 
 ---
 
@@ -31,13 +31,25 @@ Same as 01-landing-page.md.
 - Sticky header with greeting + filter chips
 - Background: subtle warm gradient (`$color-bg-gradient`)
 
-### Sticky Header
+### Hero + Location Filter
 - Greeting: "[Name]，今晚想怎么玩？" — 40rpx, `$font-brand`
-- Weather/mood pill: "深圳 · 🌤 26°C · 适合户外" (optional)
-- Horizontal scroll filter chips:
-  - "全部" · "饭局" · "酒局" · "户外" · "桌游"
-  - Active chip: purple background + white text + shadow
-  - Inactive chip: white background + border + gray text
+- Xiaoyue mascot avatar (148rpx circle) beside greeting text
+- **Location pill** (right-aligned in hero row):
+  - Default: `📍 在 深圳 · 探索全部 ▼` — frosted glass surface, subtle border
+  - Active (has saved filter): `📍 在 深圳 · {district} ▼` — brand gradient background, white text
+  - Tap opens `LocationFilterDrawer` bottom sheet
+
+### LocationFilterDrawer (bottom sheet)
+- **Trigger:** Tap location pill in hero row
+- **Surface:** White card, 32rpx top radius, max-height 70vh, spring open animation
+- **All Regions tile:** Full-width gradient button (`🌐 全部区域`)
+- **Cluster sections:** Grouped by district cluster (南山区 / 福田区)
+- **District grid:** 3-column grid of rounded tiles (20rpx radius, 88rpx min-height)
+  - Heat indicator: colored dot + label (热门 = pink, 活跃 = gold)
+  - Active tile: `$color-primary-light` background + `$color-primary` border
+- **Smart default:** Remembers last selection in local storage (30-day TTL). First visit defaults to "全部区域".
+- **Accessibility:** `aria-role="button"`, `aria-label` on all interactive elements, reduced-motion support
+- **Analytics:** Tracks `filter_open`, `filter_select`, `filter_close` events
 
 ### Quick Actions Row
 - 2 cards side by side:

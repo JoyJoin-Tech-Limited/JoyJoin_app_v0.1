@@ -1,0 +1,108 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.center-hub {
+  @include viewport-min-height;
+  background: $color-bg;
+  padding-bottom: calc(128rpx + env(safe-area-inset-bottom));
+
+  &__header {
+    padding: $spacing-lg $container-padding;
+    padding-top: calc(#{$spacing-lg} + env(safe-area-inset-top));
+  }
+
+  &__title {
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__state {
+    padding: 0 $container-padding;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  &__state-title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin-top: $spacing-xl;
+  }
+
+  &__state-subtitle {
+    font-size: $font-size-base;
+    color: $color-text-muted;
+    margin-top: $spacing-sm;
+  }
+
+  &__event-card,
+  &__status-card {
+    width: 100%;
+    margin-top: $spacing-xl;
+    text-align: left;
+  }
+
+  &__event-title {
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__event-meta,
+  &__event-location {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    margin-top: $spacing-xs;
+  }
+
+  &__status-pool {
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__status-text {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    margin-top: $spacing-xs;
+  }
+
+  &__empty-art {
+    margin-top: $spacing-xl;
+    width: 400rpx;
+    height: 400rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__empty-img {
+    width: 100%;
+    height: 100%;
+  }
+
+  &__cta {
+    margin-top: $spacing-xl;
+    width: 80%;
+  }
+
+  &__skeleton {
+    padding: 0 $container-padding;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  &__loading {
+    padding: $spacing-xl;
+    text-align: center;
+  }
+
+  &__loading-text {
+    font-size: $font-size-base;
+    color: $color-text-muted;
+  }
+}

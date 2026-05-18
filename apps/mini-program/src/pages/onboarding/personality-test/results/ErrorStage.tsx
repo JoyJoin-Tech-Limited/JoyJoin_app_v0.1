@@ -22,11 +22,11 @@ export default function ErrorStage({ errorMessage, isFetchingResult, onRetry, on
       />
       <Text className='personality-results__state-title'>揭晓过程被打断了</Text>
       <Text className='personality-results__state-copy'>
-        {errorMessage || '结果同步出了点问题，重新试一次通常就能恢复。'}
+        {errorMessage || '同步遇到小状况，再试一次就好~'}
       </Text>
       <View className='personality-results__stack-actions'>
         <Button onClick={onRetry} disabled={isFetchingResult} loading={isFetchingResult}>
-          {isFetchingResult ? '正在重新同步…' : '重试揭晓'}
+          {isFetchingResult ? '正在同步…' : '再试试'}
         </Button>
         <Button variant='secondary' onClick={onRestart}>重新测试一次</Button>
       </View>

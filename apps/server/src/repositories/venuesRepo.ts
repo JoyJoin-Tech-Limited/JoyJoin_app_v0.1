@@ -106,7 +106,7 @@ export const venuesRepo: VenuesRepository = {
         name, venue_type, address, city, area,
         district_id, cluster_id,
         contact_person, contact_phone, commission_rate, tags, cuisines, 
-        price_range, decor_style, taste_intensity, capacity, 
+        price_range, budget_categories, decor_style, taste_intensity, capacity, seating_capacity,
         is_active, notes, bar_themes, alcohol_options, vibe_descriptor,
         latitude, longitude, partner_status
       )
@@ -115,7 +115,7 @@ export const venuesRepo: VenuesRepository = {
         ${data.districtId || null}, ${data.clusterId || null},
         ${data.contactName || null}, ${data.contactPhone || null}, ${data.commissionRate || 20},
         ${data.tags || []}, ${data.cuisines || []}, ${data.priceRange || null},
-        ${data.decorStyle || []}, ${data.tasteIntensity || []}, ${data.maxConcurrentEvents || 1},
+        ${data.budgetCategories || []}, ${data.decorStyle || []}, ${data.tasteIntensity || []}, ${data.maxConcurrentEvents || 1}, ${data.seatingCapacity || 1},
         ${data.isActive !== false}, ${data.notes || null},
         ${data.barThemes || []}, ${data.alcoholOptions || []}, ${data.vibeDescriptor || null},
         ${data.latitude || null}, ${data.longitude || null}, ${data.partnerStatus || 'active'}
@@ -173,9 +173,17 @@ export const venuesRepo: VenuesRepository = {
       setClauses.push(`price_range = $${values.length + 1}`);
       values.push(updates.priceRange);
     }
+    if (updates.budgetCategories !== undefined) {
+      setClauses.push(`budget_categories = $${values.length + 1}`);
+      values.push(updates.budgetCategories);
+    }
     if (updates.maxConcurrentEvents !== undefined) {
       setClauses.push(`capacity = $${values.length + 1}`);
       values.push(updates.maxConcurrentEvents);
+    }
+    if (updates.seatingCapacity !== undefined) {
+      setClauses.push(`seating_capacity = $${values.length + 1}`);
+      values.push(updates.seatingCapacity);
     }
     if (updates.isActive !== undefined) {
       setClauses.push(`is_active = $${values.length + 1}`);

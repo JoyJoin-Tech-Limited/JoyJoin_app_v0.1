@@ -51,6 +51,7 @@ const MANIFEST_PATH = path.join(__dirname, 'cdn-asset-manifest.json')
 const BACKEND = process.env.CDN_BACKEND ?? 'rsync'
 const CDN_BASE_URL = (process.env.CDN_BASE_URL ?? '').replace(/\/$/, '')
 const DRY_RUN = process.argv.includes('--dry-run')
+const SOURCE_DIR = process.env.CDN_SOURCE_DIR  // full directory upload mode
 
 function formatSize(bytes) {
   if (bytes > 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
@@ -122,13 +123,24 @@ async function uploadRsync(files) {
   const sshArgsQuoted = sshArgs.map((a) => (a.includes(' ') ? `'${a}'` : a))
 
   // Ensure remote directory exists
-  const mkdirCmd = ['ssh', ...sshArgs, `${user}@${host}`, `mkdir -p ${remotePath}`]
-  if (DRY_RUN) {
-    console.log(`   [dry-run] Would run: ${mkdirCmd.join(' ')}`)
-  } else {
+  if (!DRY_RUN) {
     await runCommand('ssh', [...sshArgs, `${user}@${host}`, `mkdir -p ${remotePath}`])
   }
 
+  // Full directory mode — rsync whole source dir
+  if (SOURCE_DIR) {
+    const src = SOURCE_DIR.replace(/\/$/, '') + '/'
+    const dest = `${user}@${host}:${remotePath}/`
+    const rsyncCmd = ['rsync', '-avz', '--delete', '--checksum', '-e', `ssh ${sshArgsQuoted.join(' ')}`, src, dest]
+    if (DRY_RUN) {
+      console.log(`   [dry-run] Would rsync: ${src} → ${dest}`)
+    } else {
+      await runCommand('rsync', ['-avz', '--delete', '--checksum', '-e', `ssh ${sshArgsQuoted.join(' ')}`, src, dest])
+    }
+    return
+  }
+
+  // Manifest mode — upload individual files
   for (const { localPath, cdnPath } of files) {
     const src = path.join(DIST_DIR, localPath)
     if (!fs.existsSync(src)) {
@@ -138,16 +150,8 @@ async function uploadRsync(files) {
     const dest = `${user}@${host}:${path.posix.join(remotePath, cdnPath)}`
     const destDir = path.posix.join(remotePath, path.posix.dirname(cdnPath))
 
-    const mkdirDirCmd = ['ssh', ...sshArgs, `${user}@${host}`, `mkdir -p ${destDir}`]
-    const rsyncCmd = [
-      'rsync', '-avz', '--checksum',
-      '-e', `ssh ${sshArgsQuoted.join(' ')}`,
-      src, dest,
-    ]
-
     if (DRY_RUN) {
-      console.log(`   [dry-run] Would run: ${mkdirDirCmd.join(' ')}`)
-      console.log(`   [dry-run] Would run: ${rsyncCmd.join(' ')}`)
+      console.log(`   [dry-run] Would rsync: ${src} → ${dest}`)
       continue
     }
 
@@ -265,35 +269,56 @@ async function main() {
     console.log('\n🏷️  DRY-RUN MODE — no files will actually be uploaded\n')
   }
 
-  const manifest = readManifest()
-  const files = manifest.assets
-
   if (!CDN_BASE_URL) {
     console.warn('⚠️  CDN_BASE_URL not set. Assets will upload but mini-program code')
     console.warn('   will fall back to local paths. Set TARO_APP_CDN_BASE_URL in .env.local')
   }
 
-  // Check source files exist
+  let files
   let totalSize = 0
-  let missingCount = 0
-  for (const { localPath } of files) {
-    const src = path.join(DIST_DIR, localPath)
-    if (fs.existsSync(src)) {
-      totalSize += fs.statSync(src).size
-    } else {
-      missingCount++
+
+  if (SOURCE_DIR) {
+    // Full directory mode
+    if (!fs.existsSync(SOURCE_DIR)) {
+      console.error(`❌ Source directory not found: ${SOURCE_DIR}`)
+      process.exit(1)
     }
-  }
+    function countFiles(dir) {
+      let size = 0
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name)
+        if (entry.isDirectory()) size += countFiles(full)
+        else if (entry.isFile()) size += fs.statSync(full).size
+      }
+      return size
+    }
+    totalSize = countFiles(SOURCE_DIR)
+    logStep(`Backend: ${BACKEND}  |  Mode: full-directory  |  Source: ${SOURCE_DIR}  |  Size: ${formatSize(totalSize)}`)
+  } else {
+    // Manifest mode
+    const manifest = readManifest()
+    files = manifest.assets
 
-  logStep(`Backend: ${BACKEND}  |  Files: ${files.length}  |  Total size: ${formatSize(totalSize)}`)
-  if (missingCount > 0) {
-    console.warn(`   ⚠️ ${missingCount} source files are missing (run npm run build:weapp first)`)
-  }
+    let missingCount = 0
+    for (const { localPath } of files) {
+      const src = path.join(DIST_DIR, localPath)
+      if (fs.existsSync(src)) {
+        totalSize += fs.statSync(src).size
+      } else {
+        missingCount++
+      }
+    }
 
-  if (!fs.existsSync(DIST_DIR)) {
-    console.error(`❌ dist/ directory not found: ${DIST_DIR}`)
-    console.error('   Run npm run build:weapp first.')
-    process.exit(1)
+    logStep(`Backend: ${BACKEND}  |  Files: ${files.length}  |  Total size: ${formatSize(totalSize)}`)
+    if (missingCount > 0) {
+      console.warn(`   ⚠️ ${missingCount} source files are missing (run npm run build:weapp first)`)
+    }
+
+    if (!fs.existsSync(DIST_DIR)) {
+      console.error(`❌ dist/ directory not found: ${DIST_DIR}`)
+      console.error('   Run npm run build:weapp first.')
+      process.exit(1)
+    }
   }
 
   const startTime = Date.now()

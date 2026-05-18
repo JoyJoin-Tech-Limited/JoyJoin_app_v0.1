@@ -13,6 +13,7 @@ import {
   MatchingStatusPendingSection,
 } from './MatchingStatusSections'
 import { getStatusLabel } from '@shared/features/matching-status'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
 import {
   MATCHING_NO_MATCH_HERO_SRC,
@@ -89,7 +90,7 @@ export default function MatchingStatusPage() {
           <View className='matching-status__error'>
             <StatusCard
               tone='error'
-              title='加载匹配信息失败'
+              title={getErrorMessage('load-failed')}
               action={{
                 label: '返回',
                 onClick: navigateBackOrEventsTab,
@@ -106,7 +107,7 @@ export default function MatchingStatusPage() {
             <StatusCard
               tone='info'
               icon='😕'
-              title='未找到报名记录'
+              title='没有找到报名记录'
               action={{
                 label: '返回',
                 onClick: navigateBackOrEventsTab,

@@ -164,7 +164,7 @@ export default function QuipBattlePhaseView({
       });
       onRefresh?.();
     } catch {
-      setError('提交遇到小状况');
+      setError('提交没成功，再试一次');
     } finally {
       setSubmitting(false);
     }
@@ -191,7 +191,7 @@ export default function QuipBattlePhaseView({
       });
       onRefresh?.();
     } catch {
-      setError('投票没成功');
+      setError('投票没成功，再试试');
     } finally {
       setVoting(false);
     }

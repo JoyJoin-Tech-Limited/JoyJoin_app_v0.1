@@ -147,7 +147,7 @@ export default function UndercoverWordPhaseView({
       });
       setDescription('');
     } catch (e) {
-      setError('提交没成功');
+      setError('提交没成功，再试一次');
     } finally {
       setSubmitting(false);
     }
@@ -164,7 +164,7 @@ export default function UndercoverWordPhaseView({
         data: { targetUserId: selectedTarget },
       });
     } catch (e) {
-      setError('投票没成功');
+      setError('投票没成功，再试试');
     } finally {
       setVoting(false);
     }

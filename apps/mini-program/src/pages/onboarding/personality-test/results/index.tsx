@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
 import { getArchetypeSkills } from '@shared/personality/archetypeSkills'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { useAuth } from '../../../../hooks/useAuth'
 import { useOnboardingAnalytics } from '../../../../hooks/onboarding/useOnboardingAnalytics'
 import { apiRequest, authenticateMiniProgramUserWithTest, getUserState, type ApiError } from '../../../../lib/api/api'
@@ -581,7 +582,7 @@ export default function PersonalityTestResultsPage() {
           runIdRef.current += 1
           setIsFetchingResult(false)
           setFlowStage('error')
-          setErrorMessage('网络有点慢，结果还没完全同步，请重试一次。')
+          setErrorMessage('网络有点慢，结果还没完全同步，重试一次吧')
           analytics.errorOccurred('result_flow_timeout', 'personality result flow timed out')
           return
         }
@@ -597,7 +598,7 @@ export default function PersonalityTestResultsPage() {
 
       if (!resolvedResult) {
         setFlowStage('error')
-        setErrorMessage((previousMessage) => previousMessage || '结果同步失败，请重试一次。')
+        setErrorMessage((previousMessage) => previousMessage || getErrorMessage('sync-failed'))
         return
       }
 
@@ -817,10 +818,10 @@ export default function PersonalityTestResultsPage() {
         typedError?.statusCode === 401
           ? '微信授权已失效，请重新尝试'
           : typedError?.statusCode === 500
-            ? '服务器暂时忙，请稍后再试'
+            ? '服务器有点忙，稍后再试'
             : error instanceof Error && error.message
               ? error.message
-              : '登录失败，请检查网络连接后重试'
+              : '登录没成功，检查下网络再试试'
       analytics.errorOccurred('login_handoff_failed', message)
       logError('[PersonalityResults] Login failed', { message })
       Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
@@ -994,14 +995,14 @@ export default function PersonalityTestResultsPage() {
       // Present frictionless sharing options
       await presentShareOptions(nextPosterPath)
     } catch (error) {
-      const message = error instanceof Error && error.message ? error.message : '海报生成失败，请稍后重试。'
+      const message = error instanceof Error && error.message ? error.message : '海报没生成成功，稍后再试'
       haptics('warning')
       analytics.errorOccurred('poster_generation_failed', message)
       logError('[PersonalityResults] Failed to generate poster', {
         message,
         primaryArchetype: displayArchetypeName,
       })
-      void Taro.showToast({ title: '卡片生成遇到小状况，请重试一下~', icon: 'none', duration: 2500 })
+      void Taro.showToast({ title: '卡片生成遇到小状况，再试试~', icon: 'none', duration: 2500 })
     } finally {
       setIsGeneratingPoster(false)
       setGenerationPhase('')
@@ -1068,7 +1069,7 @@ export default function PersonalityTestResultsPage() {
     } catch (err) {
       const message = err instanceof Error && err.message ? err.message : 'square poster generation failed'
       logError('[PersonalityResults] square poster generation failed', { message, primaryArchetype: displayArchetypeName })
-      void Taro.showToast({ title: '海报生成失败，请重试', icon: 'none', duration: 2500 })
+      void Taro.showToast({ title: '海报没生成成功，再试试', icon: 'none', duration: 2500 })
     } finally {
       setIsGeneratingSquarePoster(false)
     }

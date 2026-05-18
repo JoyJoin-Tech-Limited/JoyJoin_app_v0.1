@@ -65,7 +65,7 @@ export function getEmptyStateMessage(
 ): string {
   const template = EMPTY_STATE_TEMPLATES[surface];
   if (!template) {
-    return '暂无内容';
+    return '暂无内容，逛逛发现页吧';
   }
 
   const mascotName = context?.mascotName ?? '悦仔';

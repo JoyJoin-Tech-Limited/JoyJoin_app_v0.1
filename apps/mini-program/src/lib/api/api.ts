@@ -1,5 +1,5 @@
 import Taro from '@tarojs/taro'
-import type { AuthUserResponse } from '@shared/api'
+import type { AuthUserResponse, DiscoverShellResponse, ProfileShellResponse, EventsShellResponse, ConnectionsShellResponse } from '@shared/api'
 import { handleMiniProgramUnauthorized } from './authSession'
 
 const DEFAULT_MINI_PROGRAM_API_BASE_URL = 'http://localhost:5001'
@@ -293,7 +293,7 @@ export async function getUserState(): Promise<AuthUserResponse> {
 async function getMiniProgramLoginCode(): Promise<string> {
   const loginResult = await Taro.login()
   if (!loginResult.code) {
-    throw createApiError('微信登录失败，请稍后重试')
+    throw createApiError('微信登录没成功，稍后再试')
   }
 
   return loginResult.code
@@ -317,4 +317,41 @@ async function postMiniProgramWeChatLogin(
   if (!data.success) {
     throw createApiError(data.error || fallbackErrorMessage)
   }
+}
+
+/**
+ * Fetch the composite Discover shell endpoint.
+ * Returns all data needed for Discover (user, pools, registrations) in a single
+ * request, cutting TTFB and request overhead vs the previous 3 parallel calls.
+ * This is the primary data source for the Discover Predictive Shell pilot.
+ */
+export async function fetchDiscoverShell(): Promise<DiscoverShellResponse> {
+  return apiRequest<DiscoverShellResponse>({ path: '/api/shell/discover' })
+}
+
+/**
+ * Fetch the composite Profile shell endpoint.
+ * Returns all data needed for Profile (user, coupons, stats) in a single
+ * request, eliminating the duplicate auth fetch.
+ */
+export async function fetchProfileShell(): Promise<ProfileShellResponse> {
+  return apiRequest<ProfileShellResponse>({ path: '/api/shell/profile' })
+}
+
+/**
+ * Fetch the composite Events shell endpoint.
+ * Returns all data needed for Events (user, joined events, notifications) in a single
+ * request, cutting TTFB vs the previous multiple parallel calls.
+ */
+export async function fetchEventsShell(): Promise<EventsShellResponse> {
+  return apiRequest<EventsShellResponse>({ path: '/api/shell/events' })
+}
+
+/**
+ * Fetch the composite Connections shell endpoint.
+ * Returns all data needed for Connections (user, connections, pending requests, notifications)
+ * in a single request.
+ */
+export async function fetchConnectionsShell(): Promise<ConnectionsShellResponse> {
+  return apiRequest<ConnectionsShellResponse>({ path: '/api/shell/connections' })
 }

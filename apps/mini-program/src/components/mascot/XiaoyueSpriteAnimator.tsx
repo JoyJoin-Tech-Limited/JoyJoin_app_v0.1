@@ -1,9 +1,10 @@
 import { View } from '@tarojs/components'
 import { useEffect, useMemo, useState } from 'react'
 import spritesheetManifest from '../../assets/mascot/xiaoyue-spritesheet-manifest.json'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import './XiaoyueSpriteAnimator.scss'
 
-const BASE_PATH = '/assets/mascot'
+const BASE_PATH = cdnAsset('/assets/mascot')
 
 export type XiaoyueSpriteState =
   | 'idle'

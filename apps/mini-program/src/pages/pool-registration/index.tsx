@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -28,6 +29,7 @@ import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscri
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import StatusCard from '../../components/ui/StatusCard'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import {
   ALCOHOL_COMFORT_OPTIONS,
   BAR_THEME_OPTIONS,
@@ -352,7 +354,7 @@ export default function PoolRegistrationPage() {
     return [
       { label: '预算', value: selectedBudget || '未选择' },
       { label: '这次想收获', value: intents.length > 0 ? intents.join('、') : '未选择' },
-      { label: '沟通语言', value: languages.length > 0 ? languages.join('、') : '交给系统判断' },
+      { label: '沟通语言', value: languages.length > 0 ? languages.join('、') : '交给悦仔判断' },
       ...(dietary.length > 0 ? [{ label: '饮食要求', value: dietary.join('、') }] : []),
     ]
   }, [formState.eventIntent, formState.preferredLanguages, formState.dietaryRestrictions, selectedBudget])
@@ -501,6 +503,7 @@ export default function PoolRegistrationPage() {
         queryClient.invalidateQueries({ queryKey: ['mini-program', 'event-pool', poolId] }),
         queryClient.invalidateQueries({ queryKey: ['mini-program', 'event-pools'] }),
         queryClient.invalidateQueries({ queryKey: ['mini-program', 'my-pool-registrations'] }),
+        queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/discover'] }),
       ])
       clearPaymentReturnContextStorage()
       setResumeContext(null)
@@ -549,7 +552,7 @@ export default function PoolRegistrationPage() {
           } catch (navigationError) {
             const navigationMessage = resolveMessage(
               navigationError,
-              '打开支付页失败，请稍后重试',
+              '支付页没打开，稍后再试',
             )
             setError(navigationMessage)
             Taro.showToast({ title: navigationMessage, icon: 'none', duration: TOAST_FATAL_MS })
@@ -559,7 +562,7 @@ export default function PoolRegistrationPage() {
         return
       }
 
-      const message = resolveMessage(err, '报名失败，请重试')
+      const message = resolveMessage(err, '报名没成功，再试试')
       setError(message)
       logError('[PoolRegistration] Failed', {
         poolId,
@@ -615,13 +618,17 @@ export default function PoolRegistrationPage() {
     return (
       <View className='pool-reg'>
         <Card className='pool-reg__success'>
-          <View className='pool-reg__success-celebration' />
+          <Image
+            className='pool-reg__success-mascot'
+            mode='aspectFit'
+            src={getXiaoyueExpressionAsset('matchSuccess')}
+          />
           <Text className='pool-reg__success-title'>已加入这场{eventType}</Text>
           <Text className='pool-reg__success-text'>
             我们会按照你刚刚填写的预算、社交期待和偏好完成匹配，有结果会第一时间通知你。
           </Text>
           <Text className='pool-reg__success-notify-hint'>
-            {`想在${DEFAULT_MASCOT_DISPLAY_NAME}帮你匹配成功时收到微信提醒？点一下授权（可在系统弹窗中选择）。`}
+            {`想在${DEFAULT_MASCOT_DISPLAY_NAME}帮你匹配成功时收到微信提醒？点一下授权（可在微信授权弹窗中选择）。`}
           </Text>
           <Button
             variant='secondary'
@@ -666,24 +673,36 @@ export default function PoolRegistrationPage() {
 
       <Card className='pool-reg__card'>
         <View className='pool-reg__info-row'>
-          <Text className='pool-reg__info-label'>🎯 类型</Text>
+          <View className='pool-reg__info-label'>
+            <JoyJoinIcon emoji='🎯' size={24} />
+            <Text>类型</Text>
+          </View>
           <Text className='pool-reg__info-value'>{eventType}</Text>
         </View>
         {pool.dateTime ? (
           <View className='pool-reg__info-row'>
-            <Text className='pool-reg__info-label'>📅 时间</Text>
+            <View className='pool-reg__info-label'>
+              <JoyJoinIcon emoji='📅' size={24} />
+              <Text>时间</Text>
+            </View>
             <Text className='pool-reg__info-value'>{poolDateTimeLabel}</Text>
           </View>
         ) : null}
         {poolArea ? (
           <View className='pool-reg__info-row'>
-            <Text className='pool-reg__info-label'>📍 地区</Text>
+            <View className='pool-reg__info-label'>
+              <JoyJoinIcon emoji='📍' size={24} />
+              <Text>地区</Text>
+            </View>
             <Text className='pool-reg__info-value'>{poolArea}</Text>
           </View>
         ) : null}
         {pool.maxParticipants ? (
           <View className='pool-reg__info-row'>
-            <Text className='pool-reg__info-label'>👥 已报名</Text>
+            <View className='pool-reg__info-label'>
+              <JoyJoinIcon emoji='👥' size={24} />
+              <Text>已报名</Text>
+            </View>
             <Text className='pool-reg__info-value'>
               {pool.currentParticipants ?? 0} / {pool.maxParticipants}
             </Text>
@@ -733,13 +752,6 @@ export default function PoolRegistrationPage() {
       {step === 0 ? (
         <Card className='pool-reg__brief-card'>
           <Text className='pool-reg__section-kicker'>加入前的一封小信</Text>
-          {briefLoading ? (
-            <View className='pool-reg__brief-skeleton'>
-              <View className='pool-reg__brief-skeleton-line pool-reg__brief-skeleton-line--long' />
-              <View className='pool-reg__brief-skeleton-line pool-reg__brief-skeleton-line--medium' />
-              <View className='pool-reg__brief-skeleton-line pool-reg__brief-skeleton-line--short' />
-            </View>
-          ) : null}
           <Text className='pool-reg__brief-insight'>{brief.insight}</Text>
           <Text className='pool-reg__brief-promise'>{brief.matchingPromise}</Text>
 
@@ -754,7 +766,6 @@ export default function PoolRegistrationPage() {
 
           <View className='pool-reg__trust-row'>
             <Text className='pool-reg__trust-pill'>匹配后再揭晓桌友</Text>
-            <Text className='pool-reg__trust-pill'>预算和偏好都会参与匹配</Text>
           </View>
         </Card>
       ) : null}
@@ -765,8 +776,8 @@ export default function PoolRegistrationPage() {
           <Text className='pool-reg__section-title'>先定一个你更舒服的预算区间</Text>
           <Text className='pool-reg__section-copy'>
             {eventType === '酒局'
-              ? '这是报名时最重要的节奏信号之一，系统会优先帮你避开预算预期完全不一样的组合。'
-              : '这是报名时最重要的节奏信号之一，系统会优先帮你避开预算预期完全不一样的组合。'}
+              ? '这是报名时最重要的节奏信号之一，悦仔会优先帮你避开预算预期完全不一样的组合。'
+              : '这是报名时最重要的节奏信号之一，悦仔会优先帮你避开预算预期完全不一样的组合。'}
           </Text>
 
           <View className='pool-reg__choice-list'>
@@ -789,7 +800,7 @@ export default function PoolRegistrationPage() {
           <Text className='pool-reg__section-kicker'>Step 2</Text>
           <Text className='pool-reg__section-title'>这次你更想收获什么</Text>
           <Text className='pool-reg__section-copy'>
-            这里可以多选。系统会把你的社交期待和预算一起考虑，不会只按一个标签硬配。
+            这里可以多选。悦仔会把你的社交期待和预算一起考虑，不会只按一个标签硬配。
           </Text>
 
           <View className='pool-reg__choice-grid'>
@@ -826,7 +837,7 @@ export default function PoolRegistrationPage() {
             <Text className='pool-reg__section-kicker'>Step 3</Text>
             <Text className='pool-reg__section-title'>再补几项细节，让匹配更顺</Text>
             <Text className='pool-reg__section-copy'>
-              语言和具体偏好都可以留空。你填得越清楚，系统越容易帮你把这一桌的节奏调顺。
+              语言和具体偏好都可以留空。你填得越清楚，悦仔越容易帮你把这一桌的节奏调顺。
             </Text>
 
             <View className='pool-reg__field'>
@@ -899,7 +910,7 @@ export default function PoolRegistrationPage() {
       {error ? (
         <StatusCard
           tone='error'
-          title='提交失败'
+          title='提交没成功'
           description={error}
           className='pool-reg__error-card'
         />

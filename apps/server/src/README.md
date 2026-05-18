@@ -82,6 +82,23 @@ Primary files:
 Boundary:
 - All `/api/admin/*` routes must enforce admin middleware.
 
+### Predictive Shell (composite tab data)
+
+Owns composite endpoints that bundle tab-specific data to reduce client round-trips.
+
+Primary files:
+- `apps/server/src/routes/domains/shell.ts` — mounts `/api/shell/discover`, `/api/shell/profile`, `/api/shell/events`, `/api/shell/connections`
+- `apps/server/src/repositories/shellRepository.ts` — composite data assembly for all 4 shells
+- `apps/server/src/lib/shellCache.ts` — shared NodeCache singleton (30s TTL) with cross-shell invalidation
+- `apps/server/src/lib/buildAuthUserResponse.ts` — shared auth response builder used by `/api/auth/user` and all shells
+- `apps/server/src/repositories/joinedEventsRepo.ts` — N+1-free user joined events (used by events shell)
+- `apps/server/src/repositories/connectionsRepo.ts` — N+1-free mutual connections (used by connections shell)
+
+Boundary:
+- Shells return pruned or full `AuthUserResponse` depending on the tab's needs.
+- Cache invalidation is triggered on mutations: payment/coupon use, pool registration, connection creation.
+- Legacy endpoints (`/api/events/joined`, `/api/my-connections`) remain for client fallback.
+
 ### Repository and facade boundaries
 
 - Add new persistence logic to the nearest file in `apps/server/src/repositories/`.

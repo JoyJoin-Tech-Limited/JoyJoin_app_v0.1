@@ -162,7 +162,7 @@ export default function GroupMirrorPhaseView({
         data: { answers: answersToSubmit },
       });
     } catch (e) {
-      setError('提交没成功');
+      setError('提交没成功，再试一次');
     } finally {
       setSubmitting(false);
     }

@@ -1,11 +1,19 @@
 <cover-view class="joy-custom-tab-bar">
   <cover-view class="joy-custom-tab-bar__surface">
-    <cover-view class="joy-custom-tab-bar__border"></cover-view>
-
-      <cover-view class="joy-custom-tab-bar__center-seat"></cover-view>
+    <!-- Background with semi-circular notch -->
+    <cover-image
+      class="joy-custom-tab-bar__bg"
+      src="../assets/tab-bar-notch-bg.png"
+      mode="scaleToFill"
+    />
 
       <!-- Semi-raised center CTA -->
-    <cover-view class="joy-custom-tab-bar__center" bindtap="handleCenterTap">
+    <cover-view
+      class="joy-custom-tab-bar__center {{selected === 4 ? 'joy-custom-tab-bar__center--selected' : ''}}"
+      bindtap="handleCenterTap"
+      hover-class="joy-custom-tab-bar__center--pressed"
+      hover-stay-time="100"
+    >
       <cover-view class="joy-custom-tab-bar__center-outer-ring">
         <cover-view class="joy-custom-tab-bar__center-button">
           <cover-image
@@ -28,7 +36,10 @@
           class="joy-custom-tab-bar__item"
           data-index="{{item.index}}"
           data-url="{{item.url}}"
+          data-tab="{{item.key}}"
           bindtap="handleTabTap"
+          hover-class="joy-custom-tab-bar__item--pressed"
+          hover-stay-time="100"
         >
           <cover-view class="joy-custom-tab-bar__item-icon-wrap">
             <cover-image
@@ -62,7 +73,10 @@
           class="joy-custom-tab-bar__item"
           data-index="{{item.index}}"
           data-url="{{item.url}}"
+          data-tab="{{item.key}}"
           bindtap="handleTabTap"
+          hover-class="joy-custom-tab-bar__item--pressed"
+          hover-stay-time="100"
         >
           <cover-view class="joy-custom-tab-bar__item-icon-wrap">
             <cover-image

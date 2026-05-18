@@ -4,6 +4,7 @@ import {
   type AnonymousAssessmentSessionSnapshot,
   type AnonymousAssessmentTopMatch,
 } from '../../../../lib/auth/anonymousOnboarding'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 
 export type FlowStage = 'loading' | 'slot' | 'reveal' | 'bridge' | 'result' | 'error' | 'empty'
 export type SlotPhase = 'anticipation' | 'spinning' | 'holding' | 'slowing' | 'nearMiss' | 'landed'
@@ -158,7 +159,7 @@ export function resolveResultErrorMessage(error: unknown): string {
     return error.message
   }
 
-  return '结果同步失败，请稍后重试。'
+  return getErrorMessage('sync-failed')
 }
 
 export function getTraitEntries(

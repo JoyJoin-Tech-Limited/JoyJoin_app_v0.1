@@ -6,12 +6,12 @@ Component({
   data: {
     selected: 0,
     center: {
-      label: '去发现',
+      label: '进行中',
       showBadge: false,
       action: {
         kind: 'discover',
         navigation: 'switchTab',
-        url: '/pages/discover/index',
+        url: '/pages/center-hub/index',
       },
     },
     leftTabs: [
@@ -109,6 +109,14 @@ Component({
     handleTabTap: function (e) {
       var index = e.currentTarget.dataset.index
       var url = e.currentTarget.dataset.url
+      var tabKey = e.currentTarget.dataset.tab
+      var tapStart = Date.now()
+
+      this.trackTabBarEvent('mini_program_tab_bar_tap', {
+        tab: tabKey || 'unknown',
+        index: index,
+        tapStart: tapStart,
+      })
 
       this.setData({ selected: index })
       wx.switchTab({ url: url })
@@ -116,13 +124,31 @@ Component({
 
     handleCenterTap: function () {
       var action = this.data.center.action
+      var tapStart = Date.now()
 
-      if (action.navigation === 'switchTab') {
-        wx.switchTab({ url: action.url })
-        return
+      this.trackTabBarEvent('mini_program_center_button_tap', {
+        action_kind: action.kind || 'unknown',
+        navigation: action.navigation || 'unknown',
+        tapStart: tapStart,
+      })
+
+      this.setData({ selected: 4 })
+      wx.switchTab({ url: action.url })
+
+      // Haptic feedback on supported devices
+      if (wx.vibrateShort) {
+        wx.vibrateShort({ type: 'light' })
       }
-
-      wx.navigateTo({ url: action.url })
     },
+
+    trackTabBarEvent: function (eventType, data) {
+      try {
+        wx.reportAnalytics(eventType, data)
+      } catch (err) {
+        console.log('[TabBarAnalytics]', eventType, data)
+      }
+    },
+
+
   },
 })

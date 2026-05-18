@@ -8,6 +8,7 @@ import { insertEventFeedbackSchema } from "@shared/schema";
 import { requireAuth } from "../../middleware/auth";
 import { logger } from "../../lib/logger";
 import { storage } from "../../storage";
+import { shellCache } from "../../lib/shellCache";
 
 function firstNonEmptyString(...values: Array<string | null | undefined>): string | undefined {
   for (const value of values) {
@@ -154,6 +155,8 @@ export function registerSocialRoutes(app: Express): void {
           }
           try {
             await storage.upsertConnection(eventId, userId, selectedUserId);
+            shellCache.invalidateUser(userId);
+            shellCache.invalidateUser(selectedUserId);
           } catch (connError) {
             logger.error(`[Connections] Error upserting connection`, { from: userId, to: selectedUserId, error: String(connError) });
           }

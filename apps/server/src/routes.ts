@@ -34,6 +34,9 @@ import { registerUserEventPoolRoutes } from "./routes/domains/userEventPools";
 import { registerVenueRoutes } from "./routes/domains/venues";
 import { registerOccupationSearchRoutes } from "./routes/domains/occupationSearch";
 import { registerXiaoyueRoutes } from "./routes/domains/xiaoyue";
+import { registerShellRoutes } from "./routes/domains/shell";
+import { registerEventRoutes } from "./routes/domains/events";
+import { registerConnectionRoutes } from "./routes/domains/connections";
 import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
 import session from "express-session";
@@ -99,6 +102,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   registerAuthRoutes(app);
+  registerShellRoutes(app);
+  registerEventRoutes(app);
+  registerConnectionRoutes(app);
   registerOnboardingRoutes(app);
   registerPaymentRoutes(app);
   registerAssessmentRoutes(app);

@@ -7,6 +7,7 @@ import { isNotNull } from "drizzle-orm";
 import { registerUserSchema, users } from "@shared/schema";
 import type { ArchetypeName } from "../../archetypeConfig";
 import { logger } from "../../lib/logger";
+import { shellCache } from "../../lib/shellCache";
 
 type Traits = {
   affinity: number;
@@ -422,6 +423,7 @@ export function registerAssessmentRoutes(app: Express): void {
               couponId: welcomeCoupon.id,
               source: 'registration_complete',
             });
+            shellCache.invalidateUser(userId);
             logger.info(`[Registration] Awarded welcome coupon to user ${userId}`);
           }
         }
@@ -587,6 +589,7 @@ export function registerAssessmentRoutes(app: Express): void {
             couponId,
             source: 'joy_coins_redemption',
           });
+          shellCache.invalidateUser(userId);
         } catch (couponError) {
           logger.error("Coupon creation failed, initiating refund:", { error: couponError instanceof Error ? couponError.message : String(couponError) });
 

@@ -41,7 +41,9 @@ export interface Venue {
   cuisines: string[] | null;
   decorStyle: string[] | null;
   priceRange: string | null;
+  budgetCategories: string[] | null;
   maxConcurrentEvents: number;
+  seatingCapacity: number;
   isActive: boolean;
   notes: string | null;
   createdAt: string;
@@ -159,7 +161,9 @@ export interface VenueFormData {
   contactPhone: string;
   commissionRate: string;
   priceRange: string;
+  budgetCategories: string[];
   maxConcurrentEvents: string;
+  seatingCapacity: string;
   tags: string[];
   cuisines: string[];
   decorStyle: string[];

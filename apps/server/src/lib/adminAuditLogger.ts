@@ -50,6 +50,7 @@ export const ADMIN_AUDIT_ACTIONS = [
   'VENUE_CREATED',
   'VENUE_UPDATED',
   'VENUE_DELETED',
+  'VENUE_MIGRATED',
   // Event management
   'EVENT_STATUS_CHANGED',
   // Event pool management

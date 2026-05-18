@@ -27,7 +27,7 @@ export function useOnboardingCheckpoint() {
 
       await Promise.allSettled([
         queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY }),
-        queryClient.invalidateQueries({ queryKey: ['mini-program', 'auth-user-profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/profile'] }),
       ])
 
       return true

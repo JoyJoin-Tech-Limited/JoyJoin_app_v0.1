@@ -61,15 +61,6 @@ export function MatchingStatusPendingSection({
 }: MatchingStatusPendingSectionProps) {
   return (
     <>
-      {newMemberJoined ? (
-        <View className='matching-status__arrival-toast'>
-          <JoyJoinIcon emoji='✨' size={32} className='matching-status__arrival-emoji' />
-          <Text className='matching-status__arrival-text'>
-            {newMemberArchetype ? `${newMemberArchetype} 刚刚入座了` : '刚有新朋友加入这桌'}
-          </Text>
-        </View>
-      ) : null}
-
       <Card className='matching-status__waiting-card'>
         <View className='matching-status__waiting-top'>
           <Image
@@ -138,35 +129,11 @@ export function MatchingStatusPendingSection({
           ) : null}
         </View>
 
-        <View className='matching-status__waiting-metrics'>
-          <View className='matching-status__waiting-metric'>
-            <Text className='matching-status__waiting-metric-label'>已入座</Text>
-            <Text className='matching-status__waiting-metric-value'>{currentFill} 位</Text>
-          </View>
-          <View className='matching-status__waiting-metric'>
-            <Text className='matching-status__waiting-metric-label'>成桌门槛</Text>
-            <Text className='matching-status__waiting-metric-value'>{minGroupSize} 位</Text>
-          </View>
-          <View className='matching-status__waiting-metric'>
-            <Text className='matching-status__waiting-metric-label'>满员上限</Text>
-            <Text className='matching-status__waiting-metric-value'>{maxGroupSize} 位</Text>
-          </View>
-        </View>
-
         <Text className='matching-status__waiting-progress-status'>{fillStatusText}</Text>
 
-        <View className='matching-status__waiting-refresh'>
-          <Text className='matching-status__waiting-refresh-copy'>
-            自动刷新中，约 {refreshCountdown}s 后同步最新进度
-          </Text>
-          <Button
-            variant='secondary'
-            className='matching-status__waiting-refresh-btn'
-            onClick={onRefreshWaitingState}
-          >
-            立即刷新
-          </Button>
-        </View>
+        <Text className='matching-status__waiting-refresh-copy'>
+          自动刷新中，约 {refreshCountdown}s 后同步最新进度
+        </Text>
 
         <Text className='matching-status__waiting-hint'>{waitingCopy.nextStepHint}</Text>
       </Card>

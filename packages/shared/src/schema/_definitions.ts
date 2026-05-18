@@ -405,7 +405,12 @@ export const eventPools = pgTable("event_pools", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   matchedAt: timestamp("matched_at"), // 匹配完成时间
-});
+}, (table) => [
+  // Composite index for Discover shell query: status + deadline filter, dateTime sort, id pagination
+  index("idx_event_pools_status_deadline_datetime").on(
+    table.status, table.registrationDeadline, table.dateTime, table.id
+  ),
+]);
 
 // Event Pool Registrations table - 用户报名记录 + 个性化偏好（软约束）
 export const eventPoolRegistrations = pgTable("event_pool_registrations", {
@@ -451,6 +456,10 @@ export const eventPoolRegistrations = pgTable("event_pool_registrations", {
   // Any rows returned by the query above should be deduplicated (delete/merge) in a
   // one-off manual migration before deploying this constraint to production.
   unique("event_pool_registrations_pool_user_unique").on(table.poolId, table.userId),
+  // Indexes for Discover shell composite query
+  index("idx_event_pool_registrations_pool_id").on(table.poolId),
+  index("idx_event_pool_registrations_user_id").on(table.userId),
+  index("idx_event_pool_registrations_pool_registered_at").on(table.poolId, table.registeredAt),
 ]);
 
 // Event Pool Groups table - 匹配成功的小组
@@ -490,6 +499,10 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   venueName: varchar("venue_name"),
   venueAddress: text("venue_address"),
   finalDateTime: timestamp("final_date_time"),
+  
+  // Venue assignment tracking
+  venueAssignmentStatus: varchar("venue_assignment_status").default("pending"), // pending | assigned | unassigned | manual_override
+  venueAssignmentReason: text("venue_assignment_reason"), // Why unassigned (e.g., "no_budget_overlap", "no_available_slots", "capacity_insufficient")
   
   // 状态
   status: varchar("status").default("confirmed"), // confirmed | completed | cancelled
@@ -1170,7 +1183,8 @@ export const venues = pgTable("venues", {
   vibeDescriptor: text("vibe_descriptor"), // 氛围描述（编辑性文字，非结构化标签）
   
   // Capacity management
-  capacity: integer("capacity").default(1), // How many events can run at same time
+  capacity: integer("capacity").default(1), // How many events can run at same time (concurrent events)
+  seatingCapacity: integer("seating_capacity").default(1), // Max people the venue can seat per event
   operatingHours: text("operating_hours"), // e.g., "11:00-22:00"
   
   // ============ 新增字段：合作场地优惠系统 ============

@@ -478,6 +478,279 @@ export function registerAssessmentV4Routes(app: Express): void {
       res.status(500).json({ message: 'Failed to submit answer', error: error.message });
     }
   });
+  // ── Lightweight in-memory rate limiter for PUT /answer replacements ──
+  const putRateLimitStore = new Map<string, { count: number; resetTime: number }>();
+  const PUT_RATE_LIMIT_MAX = 5;
+  const PUT_RATE_LIMIT_WINDOW_MS = 60000;
+
+  function checkPutRateLimit(sessionId: string): boolean {
+    const now = Date.now();
+    const entry = putRateLimitStore.get(sessionId);
+    if (!entry || now > entry.resetTime) {
+      putRateLimitStore.set(sessionId, { count: 1, resetTime: now + PUT_RATE_LIMIT_WINDOW_MS });
+      return true;
+    }
+    if (entry.count >= PUT_RATE_LIMIT_MAX) {
+      return false;
+    }
+    entry.count++;
+    putRateLimitStore.set(sessionId, entry);
+    return true;
+  }
+
+  app.put('/api/assessment/v4/:sessionId/answer', async (req: any, res) => {
+    try {
+      const { sessionId } = req.params;
+      const { questionId, selectedOption } = req.body;
+      const userId = req.session?.userId || null;
+
+      logger.info('[Assessment V4 PutAnswer] Called with', {
+        sessionId,
+        questionId,
+        selectedOption,
+        userId,
+      });
+
+      if (!questionId || !selectedOption) {
+        logger.warn('[Assessment V4 PutAnswer] Missing fields', { sessionId, questionId, selectedOption, userId, code: 400 });
+        return res.status(400).json({ message: 'questionId and selectedOption are required' });
+      }
+
+      const session = await storage.getAssessmentSession(sessionId);
+      if (!session) {
+        logger.warn('[Assessment V4 PutAnswer] Session not found', { sessionId, questionId, userId, code: 404 });
+        return res.status(404).json({ message: 'Session not found' });
+      }
+
+      // Session ownership check (SEC-01)
+      if (session.userId) {
+        if (!userId) {
+          logger.warn('[Assessment V4 PutAnswer] Unauthenticated access to owned session', { sessionId, questionId, userId, code: 401 });
+          return res.status(401).json({ message: 'Unauthorized' });
+        }
+        if (userId !== session.userId) {
+          logger.warn('[Assessment V4 PutAnswer] Forbidden access to another user session', { sessionId, questionId, userId, sessionUserId: session.userId, code: 403 });
+          return res.status(403).json({ message: 'Forbidden' });
+        }
+      }
+
+      if (session.phase === 'completed' || session.completedAt) {
+        logger.warn('[Assessment V4 PutAnswer] Session already completed', { sessionId, questionId, userId, code: 409 });
+        return res.status(409).json({ message: 'Assessment session already completed' });
+      }
+
+      // Rate limit check (SEC-04)
+      if (!checkPutRateLimit(sessionId)) {
+        logger.warn('[Assessment V4 PutAnswer] Rate limit exceeded', { sessionId, questionId, userId, code: 429 });
+        return res.status(429).json({ message: 'Too many replacements, please try again later' });
+      }
+
+      const {
+        questionsV4,
+        initializeEngineState,
+        processAnswer,
+        selectNextQuestion,
+        shouldTerminate,
+        isAssessmentComplete,
+        getClosingQuestionsRemaining,
+        getFinalResult,
+        getOptionFeedback,
+        DEFAULT_ASSESSMENT_CONFIG,
+        V2_ASSESSMENT_CONFIG,
+        SECONDARY_QUESTION_MAP,
+      } = await import('@shared/personality');
+
+      const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
+      const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
+
+      const question = questionsV4.find(q => q.id === questionId);
+      if (!question) {
+        logger.warn('[Assessment V4 PutAnswer] Invalid question ID', { sessionId, questionId, userId, code: 400 });
+        return res.status(400).json({ message: 'Invalid question ID' });
+      }
+
+      const option = question.options.find(o => o.value === selectedOption);
+      if (!option) {
+        logger.warn('[Assessment V4 PutAnswer] Invalid option selected', { sessionId, questionId, selectedOption, userId, code: 400 });
+        return res.status(400).json({ message: 'Invalid option selected' });
+      }
+
+      // Detect playful secondary questions and persist the decoded value
+      if (SECONDARY_QUESTION_MAP[questionId]) {
+        const { field, valueMap } = SECONDARY_QUESTION_MAP[questionId];
+        const secondaryValue = valueMap[selectedOption];
+        if (secondaryValue) {
+          const currentPreSignup = session.preSignupData as any;
+          const existingSecondary =
+            currentPreSignup && !Array.isArray(currentPreSignup)
+              ? currentPreSignup.secondaryData ?? {}
+              : {};
+          const newPreSignupData = Array.isArray(currentPreSignup)
+            ? currentPreSignup
+            : {
+                ...(currentPreSignup ?? {}),
+                secondaryData: { ...existingSecondary, [field]: secondaryValue },
+              };
+          await storage.updateAssessmentSession(sessionId, {
+            preSignupAnswers: newPreSignupData,
+          });
+        }
+      }
+
+      // Upsert answer (onConflictDoUpdate is handled by createAssessmentAnswer in legacyStorageRepo)
+      await storage.createAssessmentAnswer({
+        sessionId,
+        questionId,
+        questionLevel: question.level,
+        selectedOption,
+        traitScores: option.traitScores,
+      });
+
+      // Rebuild engine state by replaying all answers
+      const answers = await storage.getAssessmentAnswers(sessionId);
+      let engineState = initializeEngineState(assessmentConfig);
+
+      for (const answer of answers) {
+        const q = questionsV4.find(quest => quest.id === answer.questionId);
+        if (q) {
+          engineState = processAnswer(engineState, q, answer.selectedOption);
+        }
+      }
+
+      const isComplete = isAssessmentComplete(engineState);
+
+      if (isComplete) {
+        const freshSession = await storage.getAssessmentSession(sessionId);
+        const userSecondaryData = (freshSession?.preSignupData as any)?.secondaryData ?? {};
+        const finalResult = getFinalResult(engineState, userSecondaryData);
+
+        await storage.updateAssessmentSession(sessionId, {
+          phase: 'completed',
+          currentQuestionIndex: answers.length,
+          traitConfidences: engineState.traitConfidences,
+          topArchetypes: engineState.currentMatches,
+          finalResult,
+          primaryArchetype: finalResult.primaryArchetype,
+          isDecisive: finalResult.isDecisive,
+          completedAt: new Date(),
+        });
+
+        if (session.userId) {
+          const primaryArchetype = finalResult.primaryArchetype;
+          const secondaryArchetype = finalResult.secondaryArchetype || null;
+          const roleSubtype = determineSubtype(primaryArchetype, {});
+          const insights = generateInsights(primaryArchetype, secondaryArchetype);
+          const primaryMatchScore = engineState.currentMatches[0]?.score || 80;
+          const secondaryMatchScore = engineState.currentMatches[1]?.score || 70;
+
+          await storage.saveRoleResult(session.userId, {
+            userId: session.userId,
+            primaryArchetype: primaryArchetype as any,
+            primaryArchetypeScore: Math.round(primaryMatchScore),
+            secondaryArchetype: secondaryArchetype as any,
+            secondaryArchetypeScore: secondaryArchetype ? Math.round(secondaryMatchScore) : 0,
+            roleSubtype,
+            roleScores: {},
+            affinityScore: finalResult.traitScores?.A || 50,
+            opennessScore: finalResult.traitScores?.O || 50,
+            conscientiousnessScore: finalResult.traitScores?.C || 50,
+            emotionalStabilityScore: finalResult.traitScores?.E || 50,
+            extraversionScore: finalResult.traitScores?.X || 50,
+            positivityScore: finalResult.traitScores?.P || 50,
+            ...insights,
+            testVersion: 4,
+          });
+
+          await storage.markPersonalityTestComplete(session.userId);
+
+          const confidenceValues = Object.values(finalResult.confidences ?? {}) as number[];
+          const avgConfidence = confidenceValues.length > 0
+            ? confidenceValues.reduce((a, b) => a + b, 0) / confidenceValues.length
+            : 0.85;
+          prefetchAnalysisIfReady(
+            {
+              archetype: primaryArchetype as string,
+              secondaryArchetype: secondaryArchetype as string | null | undefined,
+              traitScores: {
+                affinity: finalResult.traitScores?.A || 50,
+                openness: finalResult.traitScores?.O || 50,
+                conscientiousness: finalResult.traitScores?.C || 50,
+                emotionalStability: finalResult.traitScores?.E || 50,
+                extraversion: finalResult.traitScores?.X || 50,
+                positivity: finalResult.traitScores?.P || 50,
+              },
+            },
+            avgConfidence
+          );
+
+          const algorithmVersion = finalResult.algorithmVersion || 'v1.0';
+          const isDecisive = finalResult.isDecisive ?? true;
+          logger.info('[Assessment V4 PutAnswer] Algorithm result', { algorithmVersion, primaryArchetype, primaryMatchScore, isDecisive, userId: session.userId });
+        }
+
+        const commentary = getOptionFeedback(questionId, selectedOption);
+        logger.info('[Assessment V4 PutAnswer] Completed', { sessionId, questionId, userId, answered: answers.length });
+        res.json({
+          isComplete: true,
+          result: finalResult,
+          progress: {
+            answered: answers.length,
+            minQuestions: engineState.config.minQuestions,
+            softMaxQuestions: engineState.config.softMaxQuestions,
+            hardMaxQuestions: engineState.config.hardMaxQuestions,
+          },
+          commentary,
+        });
+      } else {
+        const nextQuestion = selectNextQuestion(engineState);
+
+        let encouragement = null;
+        const { getMilestoneMessage } = await import('@shared/personality');
+        const milestoneMsg = getMilestoneMessage(answers.length);
+        if (milestoneMsg) {
+          encouragement = milestoneMsg.message;
+        }
+
+        await storage.updateAssessmentSession(sessionId, {
+          currentQuestionIndex: answers.length,
+          traitConfidences: engineState.traitConfidences,
+          topArchetypes: engineState.currentMatches,
+        });
+
+        const commentary = getOptionFeedback(questionId, selectedOption);
+        logger.info('[Assessment V4 PutAnswer] Success', { sessionId, questionId, userId, answered: answers.length, nextQuestionId: nextQuestion?.id });
+        res.json({
+          isComplete: false,
+          nextQuestion: nextQuestion ? {
+            id: nextQuestion.id,
+            level: nextQuestion.level,
+            category: nextQuestion.category,
+            scenarioText: nextQuestion.scenarioText,
+            questionText: nextQuestion.questionText,
+            options: shuffleOptions(nextQuestion.options),
+            questionType: nextQuestion.questionType,
+            sliderConfig: nextQuestion.sliderConfig,
+          } : null,
+          progress: {
+            answered: answers.length,
+            minQuestions: engineState.config.minQuestions,
+            softMaxQuestions: engineState.config.softMaxQuestions,
+            hardMaxQuestions: engineState.config.hardMaxQuestions,
+            estimatedRemaining: shouldTerminate(engineState)
+              ? getClosingQuestionsRemaining(engineState)
+              : Math.max(0, engineState.config.minQuestions - answers.length) + getClosingQuestionsRemaining(engineState),
+          },
+          currentMatches: engineState.currentMatches.slice(0, 3),
+          encouragement,
+          commentary,
+        });
+      }
+    } catch (error: any) {
+      logger.error('[Assessment V4 PutAnswer] Error', { error: String(error) });
+      res.status(500).json({ message: 'Failed to replace answer', error: error.message });
+    }
+  });
+
   app.post('/api/assessment/v4/:sessionId/skip', async (req: any, res) => {
     try {
       const { sessionId } = req.params;

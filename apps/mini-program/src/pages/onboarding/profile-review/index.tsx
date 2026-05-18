@@ -17,6 +17,7 @@ import { GENERIC_PROFILE_TAGLINE_FALLBACK } from '@shared/ai/onboarding'
 import { getIntentLabel } from '@shared/constants'
 import { MACRO_CATEGORY_LABELS, type MacroCategory } from '@shared/interests'
 import { getIndustryDisplayLabel, getOccupationDisplayLabel } from '@shared/occupations'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import { useInvalidateAuth } from '../../../hooks/useAuth'
 import { apiRequest, getUserState } from '../../../lib/api/api'
@@ -249,7 +250,7 @@ export default function ProfileReviewPage() {
       })
     } catch (err) {
       setIsPageExiting(false)
-      const message = err instanceof Error ? err.message : '操作失败，请重试'
+      const message = err instanceof Error ? err.message : getErrorMessage('operation-failed')
       setError(message)
       analytics.errorOccurred('complete_failed', message)
       logError('[ProfileReview] Complete failed', { message })

@@ -10,6 +10,7 @@ import { seedMiniProgramAuthSession } from '../../lib/api/authSession'
 import { navigateToMiniProgramNextStep } from '../../lib/onboarding/onboardingNavigation'
 import { logInfo, logError } from '../../lib/utils/logger'
 import { TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 
 /**
  * useWeChatLogin – Taro WeChat Mini Program login hook.
@@ -46,12 +47,12 @@ export function useWeChatLogin() {
       await navigateToMiniProgramNextStep(userState.nextStep, { mode: 'root' })
     } catch (error) {
       const typedError = error as ApiError | undefined
-      let message = error instanceof Error ? error.message : '微信登录失败，请检查网络连接后重试'
+      let message = error instanceof Error ? error.message : '微信登录没成功，检查下网络再试试'
 
       if (typedError?.statusCode === 401) {
         message = '登录状态已失效，请重新使用微信登录'
       } else if (typedError?.statusCode === 500) {
-        message = '服务器开小差了，请稍后重试'
+        message = '服务器开小差了，稍后再试'
       } else if (
         typedError?.statusCode &&
         typedError.statusCode >= 400 &&
@@ -59,7 +60,7 @@ export function useWeChatLogin() {
         typedError.statusCode !== 500 &&
         typedError.isGenericMessage
       ) {
-        message = '微信登录失败，请检查网络连接后重试'
+        message = '微信登录没成功，检查下网络再试试'
       }
 
       logError('[useWeChatLogin] Login failed', { message, statusCode: typedError?.statusCode })

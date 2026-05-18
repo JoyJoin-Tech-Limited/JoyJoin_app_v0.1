@@ -2,6 +2,7 @@ import type { OnboardingStep } from '../api/api'
 
 export const MINI_PROGRAM_PAGE_PATHS = {
   discover: 'pages/discover/index',
+  centerHub: 'pages/center-hub/index',
   onboarding: 'pages/onboarding/onboarding/index',
   personalityTest: 'pages/onboarding/personality-test/index',
   personalityTestResults: 'pages/onboarding/personality-test/results/index',
@@ -34,6 +35,7 @@ export const MINI_PROGRAM_PAGE_PATHS = {
 
 export const MINI_PROGRAM_ROUTES = {
   discover: `/${MINI_PROGRAM_PAGE_PATHS.discover}`,
+  centerHub: `/${MINI_PROGRAM_PAGE_PATHS.centerHub}`,
   onboarding: `/${MINI_PROGRAM_PAGE_PATHS.onboarding}`,
   personalityTest: `/${MINI_PROGRAM_PAGE_PATHS.personalityTest}`,
   personalityTestResults: `/${MINI_PROGRAM_PAGE_PATHS.personalityTestResults}`,
@@ -84,6 +86,7 @@ export const MINI_PROGRAM_ONBOARDING_PACKAGE_PAGE_PATHS = [
 export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.index,
   MINI_PROGRAM_PAGE_PATHS.discover,
+  MINI_PROGRAM_PAGE_PATHS.centerHub,
   MINI_PROGRAM_PAGE_PATHS.paymentVerification,
   MINI_PROGRAM_PAGE_PATHS.events,
   MINI_PROGRAM_PAGE_PATHS.connections,

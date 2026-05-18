@@ -3,7 +3,9 @@ import Taro from '@tarojs/taro'
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getJoinedEvents, type JoinedEventSummary } from '@shared/api'
-import { apiRequest } from '../../lib/api/api'
+import { apiRequest, fetchEventsShell } from '../../lib/api/api'
+import { injectEventsShellIntoCache } from '../../lib/prefetchEngine'
+import { queryClient } from '../../lib/api/queryClient'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
@@ -43,9 +45,19 @@ export default function EventsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('upcoming')
   const [hasManualTabSelection, setHasManualTabSelection] = useState(false)
 
-  const { data: events = [], isLoading } = useQuery({
+  const { data: events = [], isLoading } = useQuery<JoinedEventSummary[]>({
     queryKey: ['mini-program', 'joined-events'],
-    queryFn: () => getJoinedEvents(apiRequest),
+    queryFn: async (): Promise<JoinedEventSummary[]> => {
+      // Primary: composite endpoint — 1 request for all Events data.
+      try {
+        const shell = await fetchEventsShell()
+        injectEventsShellIntoCache(queryClient, shell)
+        return shell.joinedEvents
+      } catch {
+        // Composite unavailable — fall back to legacy endpoint.
+      }
+      return getJoinedEvents(apiRequest)
+    },
     enabled: !authLoading,
   })
 
@@ -90,7 +102,7 @@ export default function EventsPage() {
   }
 
   return renderGate(
-    <View className='events-page'>
+    <View className='events-page tab-page-enter'>
       <View className='events-page__header'>
         <Text className='events-page__title'>我的足迹</Text>
       </View>
@@ -135,7 +147,7 @@ export default function EventsPage() {
           <Card className='events-page__empty-state'>
             <Text className='events-page__empty-emoji'>✨</Text>
             <Text className='events-page__empty-text'>
-              {resolvedActiveTab === 'upcoming' ? '暂无待参加的活动' : '暂无已完成的活动'}
+              {resolvedActiveTab === 'upcoming' ? '还没有待参加的活动' : '还没有已完成的活动'}
             </Text>
             <Text className='events-page__empty-hint'>去「发现」页面看看有什么好玩的</Text>
           </Card>

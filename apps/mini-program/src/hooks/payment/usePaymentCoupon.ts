@@ -61,7 +61,7 @@ export function usePaymentCoupon(selectedPlan: MiniProgramPaymentPlanKey): UsePa
       setFinalAmount(typeof response.finalAmount === 'number' ? response.finalAmount / CENTS_PER_YUAN : null)
       setCouponMessage(response.message || '优惠券已应用')
     } catch (error) {
-      const message = error instanceof Error ? error.message : '优惠券校验失败'
+      const message = error instanceof Error ? error.message : '优惠券核验没成功'
       setIsCouponValid(false)
       setDiscountAmount(0)
       setFinalAmount(null)

@@ -29,11 +29,28 @@
   }
 }
 
+// ─── Tab page enter transition ────────────────────────────────────
+// Applied to tab page root containers for smooth page-switch feel.
+
+.tab-page-enter {
+  opacity: 0;
+  transform: translate3d(0, 16rpx, 0);
+  animation: tab-page-enter 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes tab-page-enter {
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 // Reduced-motion fallback: show content instantly, skip motion
 @media (prefers-reduced-motion: reduce) {
   .stagger-in-hidden,
   .stagger-in,
-  [class^="stagger-in--"] {
+  [class^="stagger-in--"],
+  .tab-page-enter {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

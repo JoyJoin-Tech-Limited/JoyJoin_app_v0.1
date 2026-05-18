@@ -93,7 +93,7 @@ function formatSourceLabel(source?: string | null): string {
     case 'admin_grant':
       return '官方发放'
     default:
-      return '系统奖励'
+      return '悦聚奖励'
   }
 }
 
@@ -170,7 +170,7 @@ export default function RewardsPage() {
       })
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : '兑换失败，请稍后重试'
+      const message = error instanceof Error ? error.message : '兑换没成功，稍后再试'
       Taro.showToast({ title: message, icon: 'none', duration: TOAST_ERROR_MS })
     },
   })
@@ -216,8 +216,8 @@ export default function RewardsPage() {
           <StatusCard
             tone='error'
             heroSrc={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
-            title='奖励加载失败'
-            description='请稍后重试，或返回个人主页继续浏览。'
+            title='奖励加载没成功'
+            description='稍后重试，或返回个人主页继续浏览。'
             action={{ label: '重新加载', onClick: handleRefresh }}
             footer={
               <Button
@@ -240,13 +240,13 @@ export default function RewardsPage() {
   const redeemableItems = redeemableItemsQuery.data ?? []
   const isRefreshing = couponsQuery.isRefetching || gamificationQuery.isRefetching || historyQuery.isRefetching || redeemableItemsQuery.isRefetching
   const gamificationErrorText = gamificationQuery.isError
-    ? getErrorText(gamificationQuery.error, '成长数据加载失败')
+    ? getErrorText(gamificationQuery.error, '成长进度加载没成功')
     : null
   const historyErrorText = historyQuery.isError
-    ? getErrorText(historyQuery.error, '奖励记录加载失败')
+    ? getErrorText(historyQuery.error, '奖励记录加载没成功')
     : null
   const redeemableErrorText = redeemableItemsQuery.isError
-    ? getErrorText(redeemableItemsQuery.error, '兑换商城加载失败')
+    ? getErrorText(redeemableItemsQuery.error, '兑换商城加载没成功')
     : null
 
   const couponCounts = useMemo(() => {
@@ -314,7 +314,7 @@ export default function RewardsPage() {
         <Card className='rewards-page__level-card'>
           <View className='rewards-page__level-header'>
             <View>
-              <Text className='rewards-page__level-title'>成长数据暂时不可用</Text>
+              <Text className='rewards-page__level-title'>成长进度暂时不可用</Text>
               <Text className='rewards-page__level-name'>{gamificationErrorText}</Text>
             </View>
           </View>
@@ -325,7 +325,7 @@ export default function RewardsPage() {
           </View>
 
           <Button className='rewards-page__invite-btn' onClick={() => void gamificationQuery.refetch()}>
-            重新加载成长数据
+            重新加载成长进度
           </Button>
         </Card>
       ) : (
@@ -333,10 +333,10 @@ export default function RewardsPage() {
           <View className='rewards-page__level-header'>
             <View>
               <Text className='rewards-page__level-title'>
-                {gamificationQuery.isLoading ? '成长数据加载中…' : `Lv.${gamification?.currentLevel ?? 1}`}
+                {gamificationQuery.isLoading ? '成长进度加载中…' : `Lv.${gamification?.currentLevel ?? 1}`}
               </Text>
               <Text className='rewards-page__level-name'>
-                {gamificationQuery.isLoading ? '请稍候' : (gamification?.levelConfig?.nameCn ?? '新芽')}
+                {gamificationQuery.isLoading ? '加载中' : (gamification?.levelConfig?.nameCn ?? '新芽')}
               </Text>
             </View>
             <View className='rewards-page__level-summary'>

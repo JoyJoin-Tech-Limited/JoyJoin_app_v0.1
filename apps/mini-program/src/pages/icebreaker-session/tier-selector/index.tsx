@@ -4,6 +4,7 @@ import Taro, { useRouter } from '@tarojs/taro'
 import { useAuth } from '../../../hooks/useAuth'
 import { apiRequest } from '../../../lib/api/api'
 import { TOAST_MEDIUM_MS } from '../../../lib/utils/uiConstants'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { getUserDisplayName } from '../icebreakerSessionModel'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import { resolveTierDisplay, type TierMachineId } from '@shared/socialIcebreakerTierManifest'
@@ -146,7 +147,7 @@ export default function TierSelectorPage() {
       })
     } catch {
       Taro.showToast({
-        title: '创建失败，请重试',
+        title: getErrorMessage('create-failed'),
         icon: 'none',
         duration: TOAST_MEDIUM_MS,
       })

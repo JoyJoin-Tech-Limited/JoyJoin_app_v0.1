@@ -11,38 +11,6 @@
   flex-direction: column;
   gap: 24rpx;
 
-  &__backdrop {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
-  }
-
-  &__orb {
-    position: absolute;
-    border-radius: 50%;
-    opacity: 0.42;
-    filter: blur(8rpx);
-    animation: payment-orb-drift 8s ease-in-out infinite;
-
-    &--left {
-      top: 60rpx;
-      left: -40rpx;
-      width: 240rpx;
-      height: 240rpx;
-      background: rgba($color-secondary, 0.16);
-    }
-
-    &--right {
-      top: 180rpx;
-      right: -64rpx;
-      width: 300rpx;
-      height: 300rpx;
-      background: rgba($color-primary, 0.14);
-      animation-delay: 1.6s;
-    }
-  }
-
   &__header {
     position: relative;
     z-index: 1;
@@ -219,15 +187,16 @@
 
   &__plan {
     min-height: 184rpx;
-    padding: 0 28rpx;
+    padding: 28rpx;
     border-radius: 32rpx;
     background: rgba($color-surface, 0.94);
     border: 2rpx solid rgba($color-border, 0.72);
     text-align: left;
     box-shadow: 0 12rpx 36rpx rgba(45, 49, 66, 0.06);
 
-    &::after {
-      border: none;
+    &:active {
+      opacity: 0.92;
+      transform: scale(0.98);
     }
   }
 
@@ -378,25 +347,6 @@
     color: $color-text-secondary;
     text-align: center;
     line-height: 1.55;
-  }
-}
-
-@keyframes payment-orb-drift {
-  0%,
-  100% {
-    opacity: 0.38;
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-
-  50% {
-    opacity: 0.56;
-    transform: translate3d(0, -18rpx, 0) scale(1.04);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .payment-page__orb {
-    animation: none !important;
   }
 }
 

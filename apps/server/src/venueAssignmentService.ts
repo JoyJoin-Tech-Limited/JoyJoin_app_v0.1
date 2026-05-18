@@ -6,14 +6,21 @@
  */
 
 import { db } from "./db";
-import { venues, venueTimeSlots, eventPoolGroups } from "@shared/schema";
+import { venues, venueTimeSlots, venueTimeSlotBookings, eventPoolGroups } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
+import { logger } from "./lib/logger";
 import type { UserWithProfile, MatchGroup } from "./poolMatchingService";
 
 interface VenueScore {
   venue: any;
   score: number;
   reasons: string[];
+  timeSlotId: string;
+}
+
+interface VenueWithSlot {
+  venue: typeof venues.$inferSelect;
+  timeSlot: typeof venueTimeSlots.$inferSelect;
 }
 
 /**
@@ -84,12 +91,14 @@ function calculateCuisineMatch(
 }
 
 /**
- * Check if venue has available time slot at event time
+ * Check if venue has available time slot at event time,
+ * respecting maxConcurrentEvents and existing bookings.
+ * Returns the available time slot record, or null if fully booked.
  */
 async function checkTimeSlotAvailability(
   venueId: string,
   eventDateTime: Date
-): Promise<boolean> {
+): Promise<typeof venueTimeSlots.$inferSelect | null> {
   const dayOfWeek = eventDateTime.getDay();
   const timeStr = eventDateTime.toTimeString().substring(0, 5); // "HH:MM" in local time
   
@@ -111,8 +120,6 @@ async function checkTimeSlotAvailability(
       sql`${venueTimeSlots.endTime} >= ${timeStr}`
     ));
   
-  if (weeklySlots.length > 0) return true;
-  
   // Check for specific date slots - compare as date type
   const specificSlots = await db
     .select()
@@ -125,19 +132,51 @@ async function checkTimeSlotAvailability(
       sql`${venueTimeSlots.endTime} >= ${timeStr}`
     ));
   
-  return specificSlots.length > 0;
+  const allSlots = [...weeklySlots, ...specificSlots];
+  
+  if (allSlots.length === 0) {
+    return null;
+  }
+  
+  // Batch query booking counts for all matching slots to avoid N+1
+  const slotIds = allSlots.map(s => s.id);
+  const bookingCounts = await db
+    .select({
+      timeSlotId: venueTimeSlotBookings.timeSlotId,
+      count: sql<number>`count(*)`,
+    })
+    .from(venueTimeSlotBookings)
+    .where(and(
+      sql`${venueTimeSlotBookings.timeSlotId} = ANY(${slotIds})`,
+      sql`${venueTimeSlotBookings.bookingDate} = ${dateStr}::date`,
+      eq(venueTimeSlotBookings.status, 'confirmed')
+    ))
+    .groupBy(venueTimeSlotBookings.timeSlotId);
+  
+  const countMap = new Map(bookingCounts.map(b => [b.timeSlotId, b.count]));
+  
+  for (const slot of allSlots) {
+    const bookingCount = countMap.get(slot.id) ?? 0;
+    const maxConcurrent = slot.maxConcurrentEvents ?? 1;
+    
+    if (bookingCount < maxConcurrent) {
+      return slot; // This slot has capacity
+    }
+  }
+  
+  return null; // All matching slots are fully booked
 }
 
 /**
  * Score venue suitability for group (0-100)
  */
 async function scoreVenueForGroup(
-  venue: any,
+  venue: typeof venues.$inferSelect,
   group: MatchGroup,
   eventDateTime: Date,
   eventType: string,
   groupBudget: string[]
-): Promise<VenueScore> {
+): Promise<Omit<VenueScore, 'timeSlotId'>> {
   let score = 0;
   const reasons: string[] = [];
   
@@ -172,19 +211,18 @@ async function scoreVenueForGroup(
   }
   
   // 3. Capacity Match (20 points)
-  // NOTE: Current schema's 'capacity' field represents concurrent events, not seating capacity.
-  // This is a known limitation. Future: add dedicated 'seating_capacity' or 'max_group_size' field.
-  // For now, we use 'capacity' as a proxy - if it's set and >= group size, venue likely can handle the group.
+  // Uses seatingCapacity (max people per event) for group size fit.
   const groupSize = group.members.length;
-  if (venue.capacity && venue.capacity >= groupSize) {
+  const seatingCapacity = venue.seatingCapacity ?? venue.capacity ?? 0;
+  if (seatingCapacity >= groupSize) {
     score += 20;
-    reasons.push(`容量充足 (可容纳${venue.capacity}人)`);
-  } else if (venue.capacity) {
-    reasons.push(`容量不足 (仅可容纳${venue.capacity}人，需要${groupSize}人)`);
+    reasons.push(`容量充足 (可容纳${seatingCapacity}人)`);
+  } else if (seatingCapacity > 0) {
+    reasons.push(`容量不足 (仅可容纳${seatingCapacity}人，需要${groupSize}人)`);
   }
   
   // 4. Location (10 points) - same district as group members
-  // TODO: Calculate based on member locations if needed
+  // NOTE: Location scoring uses default 10pts; district-level matching is future work.
   score += 10; // Default for now
   
   return { venue, score: Math.round(score), reasons };
@@ -193,6 +231,11 @@ async function scoreVenueForGroup(
 /**
  * Main function: Assign venues to all groups in a pool
  */
+export interface VenueAssignmentResult {
+  assignments: Map<number, { venue: any; score: number; reasons: string[]; timeSlotId: string }>;
+  unassigned: Map<number, string>; // groupNumber -> reason code
+}
+
 export async function assignVenuesToGroups(
   groups: MatchGroup[],
   poolId: string,
@@ -200,11 +243,12 @@ export async function assignVenuesToGroups(
   poolCity: string,
   poolDistrict: string | null,
   eventType: string
-): Promise<Map<number, { venue: any; score: number; reasons: string[] }>> {
+): Promise<VenueAssignmentResult> {
   
-  console.log(`[VenueAssignment] Starting assignment for ${groups.length} groups in pool ${poolId}`);
+  logger.info(`[VenueAssignment] Starting assignment for ${groups.length} groups in pool ${poolId}`);
   
-  const assignments = new Map<number, { venue: any; score: number; reasons: string[] }>();
+  const assignments = new Map<number, { venue: any; score: number; reasons: string[]; timeSlotId: string }>();
+  const unassigned = new Map<number, string>();
   
   // 1. Get all active venues in city/district with appropriate venue type
   const allowedVenueTypes = eventType === "酒局" 
@@ -229,35 +273,53 @@ export async function assignVenuesToGroups(
     .from(venues)
     .where(venueQuery);
   
-  console.log(`[VenueAssignment] Found ${availableVenues.length} active venues in ${poolCity} ${poolDistrict || ''}`);
+  logger.info(`[VenueAssignment] Found ${availableVenues.length} active venues in ${poolCity} ${poolDistrict || ''}`);
   
-  // 2. Filter by time slot availability - parallelized for performance
-  const slotAvailabilityResults = await Promise.all(
+  // 2. Filter by time slot availability (respects maxConcurrentEvents + existing bookings)
+  const slotResults = await Promise.all(
     availableVenues.map((venue: typeof venues.$inferSelect) => checkTimeSlotAvailability(venue.id, poolDateTime))
   );
 
-  const venuesWithSlots = availableVenues.filter((venue: typeof venues.$inferSelect, index: number) => slotAvailabilityResults[index]);
+  const venuesWithSlots: VenueWithSlot[] = [];
+  for (let i = 0; i < availableVenues.length; i++) {
+    if (slotResults[i]) {
+      venuesWithSlots.push({ venue: availableVenues[i], timeSlot: slotResults[i]! });
+    }
+  }
   
-  console.log(`[VenueAssignment] ${venuesWithSlots.length} venues have available time slots`);
+  logger.info(`[VenueAssignment] ${venuesWithSlots.length} venues have available time slots with capacity`);
   
   if (venuesWithSlots.length === 0) {
-    console.warn(`[VenueAssignment] No venues available at ${poolDateTime}. Groups will remain unassigned.`);
-    return assignments;
+    logger.warn(`[VenueAssignment] No venues available at ${poolDateTime}. Groups will remain unassigned.`);
+    for (let i = 0; i < groups.length; i++) {
+      unassigned.set(i + 1, "no_available_slots");
+    }
+    return { assignments, unassigned };
   }
+  
+  // Track in-memory slot usage to prevent overbooking multiple groups in the same pool
+  const slotUsageTracker = new Map<string, number>(); // timeSlotId -> count
   
   // 3. Assign venue to each group
   for (let i = 0; i < groups.length; i++) {
     const group = groups[i];
     const groupBudget = calculateGroupBudget(group.members, eventType);
     
-    console.log(`[VenueAssignment] Group ${i + 1}: ${group.members.length} members, budget: ${groupBudget.join(', ')}`);
+    logger.info(`[VenueAssignment] Group ${i + 1}: ${group.members.length} members, budget: ${groupBudget.join(', ')}`);
     
     // Score all available venues
     const scoredVenues: VenueScore[] = [];
-    for (const venue of venuesWithSlots) {
+    for (const { venue, timeSlot } of venuesWithSlots) {
+      // In-memory concurrency guard: skip if this pool has already consumed all capacity
+      const currentUsage = slotUsageTracker.get(timeSlot.id) ?? 0;
+      const maxConcurrent = timeSlot.maxConcurrentEvents ?? 1;
+      if (currentUsage >= maxConcurrent) {
+        continue;
+      }
+      
       const scored = await scoreVenueForGroup(venue, group, poolDateTime, eventType, groupBudget);
       if (scored.score > 0) { // Only consider venues with non-zero score
-        scoredVenues.push(scored);
+        scoredVenues.push({ ...scored, timeSlotId: timeSlot.id });
       }
     }
     
@@ -268,45 +330,189 @@ export async function assignVenuesToGroups(
       const bestMatch = scoredVenues[0];
       // Use 1-based group index to align with group.groupNumber in saveVenueAssignments
       assignments.set(i + 1, bestMatch);
-      console.log(`[VenueAssignment] Group ${i + 1} → ${bestMatch.venue.name} (score: ${bestMatch.score})`);
-      console.log(`[VenueAssignment] Reasons: ${bestMatch.reasons.join(', ')}`);
+      slotUsageTracker.set(bestMatch.timeSlotId, (slotUsageTracker.get(bestMatch.timeSlotId) ?? 0) + 1);
+      logger.info(`[VenueAssignment] Group ${i + 1} → ${bestMatch.venue.name} (score: ${bestMatch.score})`);
+      logger.info(`[VenueAssignment] Reasons: ${bestMatch.reasons.join(', ')}`);
     } else {
-      console.warn(`[VenueAssignment] No suitable venue found for group ${i + 1}`);
+      // Determine why no venue was found
+      const groupBudget = calculateGroupBudget(group.members, eventType);
+      let reason = "no_suitable_venue";
+      
+      // Check if budget was the blocker (most common)
+      if (groupBudget.length > 0) {
+        const anyBudgetOverlap = venuesWithSlots.some(({ venue }) => {
+          const venueBudgets = venue.budgetCategories || [];
+          return venueBudgets.some((vb: string) => groupBudget.includes(vb));
+        });
+        if (!anyBudgetOverlap) {
+          reason = "budget_mismatch";
+        }
+      }
+      
+      // Check if capacity was the blocker
+      const groupSize = group.members.length;
+      const anyCapacityFit = venuesWithSlots.some(({ venue }) => {
+        const seatingCapacity = venue.seatingCapacity ?? venue.capacity ?? 0;
+        return seatingCapacity >= groupSize;
+      });
+      if (!anyCapacityFit && reason === "no_suitable_venue") {
+        reason = "capacity_insufficient";
+      }
+      
+      unassigned.set(i + 1, reason);
+      logger.warn(`[VenueAssignment] No suitable venue found for group ${i + 1}: ${reason}`);
     }
   }
   
-  return assignments;
+  return { assignments, unassigned };
 }
 
 /**
- * Update database with venue assignments
+ * Update database with venue assignments and persist time-slot bookings
  */
 export async function saveVenueAssignments(
   poolId: string,
-  assignments: Map<number, { venue: any; score: number; reasons: string[] }>
+  eventDateTime: Date,
+  assignments: Map<number, { venue: any; score: number; reasons: string[]; timeSlotId: string }>,
+  unassigned: Map<number, string> = new Map()
 ): Promise<void> {
-  
+
+  // Format booking date
+  const year = eventDateTime.getFullYear();
+  const month = String(eventDateTime.getMonth() + 1).padStart(2, '0');
+  const day = String(eventDateTime.getDate()).padStart(2, '0');
+  const bookingDate = `${year}-${month}-${day}`; // "YYYY-MM-DD"
+
   // Get all groups for this pool
   const groups = await db
     .select()
     .from(eventPoolGroups)
     .where(eq(eventPoolGroups.poolId, poolId));
-  
+
+  if (groups.length === 0) {
+    logger.info(`[VenueAssignment] No groups found for pool ${poolId}. Skipping.`);
+    return;
+  }
+
+  const groupIds: string[] = groups.map((g: typeof eventPoolGroups.$inferSelect) => g.id);
+  const assignedSlotIds: string[] = [...new Set(
+    groups
+      .map((g: typeof eventPoolGroups.$inferSelect) => assignments.get(g.groupNumber)?.timeSlotId)
+      .filter((id): id is string => !!id)
+  )];
+
+  // Batch query 1: existing bookings for all groups (idempotency guard)
+  const existingBookings = assignedSlotIds.length > 0
+    ? await db
+        .select({ eventGroupId: venueTimeSlotBookings.eventGroupId, id: venueTimeSlotBookings.id })
+        .from(venueTimeSlotBookings)
+        .where(sql`${venueTimeSlotBookings.eventGroupId} = ANY(${groupIds})`)
+    : [];
+  const existingBookingMap = new Map<string, string>(existingBookings.map((b: { eventGroupId: string; id: string }) => [b.eventGroupId, b.id]));
+
+  // Batch query 2: time slot info for all assigned slots
+  const timeSlots = assignedSlotIds.length > 0
+    ? await db
+        .select()
+        .from(venueTimeSlots)
+        .where(sql`${venueTimeSlots.id} = ANY(${assignedSlotIds})`)
+    : [];
+  const timeSlotMap = new Map<string, typeof venueTimeSlots.$inferSelect>(timeSlots.map((s: typeof venueTimeSlots.$inferSelect) => [s.id, s]));
+
+  // Batch query 3: current booking counts for all assigned slots (concurrency guard)
+  const bookingCounts = assignedSlotIds.length > 0
+    ? await db
+        .select({
+          timeSlotId: venueTimeSlotBookings.timeSlotId,
+          count: sql<number>`count(*)`,
+        })
+        .from(venueTimeSlotBookings)
+        .where(and(
+          sql`${venueTimeSlotBookings.timeSlotId} = ANY(${assignedSlotIds})`,
+          sql`${venueTimeSlotBookings.bookingDate} = ${bookingDate}::date`,
+          eq(venueTimeSlotBookings.status, 'confirmed')
+        ))
+        .groupBy(venueTimeSlotBookings.timeSlotId)
+    : [];
+  const bookingCountMap = new Map<string, number>(bookingCounts.map((b: { timeSlotId: string; count: number }) => [b.timeSlotId, b.count]));
+
+  // Execute all writes atomically
+  await db.transaction(async (tx: typeof db) => {
+    const inTransactionSlotUsage = new Map<string, number>();
+
+    for (const group of groups) {
+      const assignment = assignments.get(group.groupNumber);
+      const unassignedReason = unassigned.get(group.groupNumber);
+
+      if (assignment) {
+        // Idempotency guard
+        if (existingBookingMap.has(group.id)) {
+          logger.info(`[VenueAssignment] Group ${group.groupNumber} already has a booking. Skipping.`);
+          continue;
+        }
+
+        // Save-time concurrency guard
+        const slot = timeSlotMap.get(assignment.timeSlotId);
+        const maxConcurrent = slot?.maxConcurrentEvents ?? 1;
+        const preTxCount = bookingCountMap.get(assignment.timeSlotId) ?? 0;
+        const txCount = inTransactionSlotUsage.get(assignment.timeSlotId) ?? 0;
+        const totalCount = preTxCount + txCount;
+
+        if (totalCount >= maxConcurrent) {
+          logger.warn(`[VenueAssignment] Slot ${assignment.timeSlotId} fully booked at save time. Skipping group ${group.groupNumber}.`);
+          await tx
+            .update(eventPoolGroups)
+            .set({
+              venueAssignmentStatus: 'unassigned',
+              venueAssignmentReason: 'slot_fully_booked_at_save',
+            })
+            .where(eq(eventPoolGroups.id, group.id));
+          continue;
+        }
+
+        // Persist booking record
+        await tx.insert(venueTimeSlotBookings).values({
+          venueId: assignment.venue.id,
+          timeSlotId: assignment.timeSlotId,
+          eventPoolId: poolId,
+          eventGroupId: group.id,
+          bookingDate,
+          status: 'confirmed',
+        });
+        inTransactionSlotUsage.set(assignment.timeSlotId, txCount + 1);
+
+        // Update group with venue assignment
+        await tx
+          .update(eventPoolGroups)
+          .set({
+            venueName: assignment.venue.name,
+            venueAddress: assignment.venue.address,
+            venueId: assignment.venue.id,
+            venueAssignmentStatus: 'assigned',
+            venueAssignmentReason: null,
+          })
+          .where(eq(eventPoolGroups.id, group.id));
+      } else if (unassignedReason) {
+        // Mark as unassigned with reason
+        await tx
+          .update(eventPoolGroups)
+          .set({
+            venueAssignmentStatus: 'unassigned',
+            venueAssignmentReason: unassignedReason,
+          })
+          .where(eq(eventPoolGroups.id, group.id));
+      }
+    }
+  });
+
+  // Side-effect: structured logging outside the transaction
   for (const group of groups) {
     const assignment = assignments.get(group.groupNumber);
-    
-    if (assignment) {
-      // Update group with venue assignment
-      await db
-        .update(eventPoolGroups)
-        .set({
-          venueName: assignment.venue.name,
-          venueAddress: assignment.venue.address,
-          venueId: assignment.venue.id,
-        })
-        .where(eq(eventPoolGroups.id, group.id));
-      
-      console.log(`[VenueAssignment] Saved: Group ${group.groupNumber} → ${assignment.venue.name}`);
+    const unassignedReason = unassigned.get(group.groupNumber);
+    if (assignment && !existingBookingMap.has(group.id)) {
+      logger.info(`[VenueAssignment] Saved: Group ${group.groupNumber} → ${assignment.venue.name} (slot: ${assignment.timeSlotId})`);
+    } else if (unassignedReason) {
+      logger.info(`[VenueAssignment] Marked group ${group.groupNumber} as unassigned: ${unassignedReason}`);
     }
   }
 }

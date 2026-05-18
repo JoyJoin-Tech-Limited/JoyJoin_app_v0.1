@@ -1,4 +1,4 @@
-export type MiniProgramTabKey = 'discover' | 'events' | 'connections' | 'profile'
+export type MiniProgramTabKey = 'discover' | 'events' | 'connections' | 'profile' | 'centerHub'
 
 export interface MiniProgramTabItem {
   key: MiniProgramTabKey
@@ -54,16 +54,37 @@ export const MINI_PROGRAM_TAB_ITEMS: MiniProgramTabItem[] = [
   },
 ] as const
 
+/** Center hub is not rendered as a regular tab — it is accessed via the center button. */
+export const MINI_PROGRAM_CENTER_HUB_TAB_ITEM: MiniProgramTabItem = {
+  key: 'centerHub',
+  pagePath: 'pages/center-hub/index',
+  url: '/pages/center-hub/index',
+  text: '进行中',
+  appIconPath: '',
+  appSelectedIconPath: '',
+  componentIconPath: '',
+  componentSelectedIconPath: '',
+}
+
 export const MINI_PROGRAM_TAB_INDEX: Record<MiniProgramTabKey, number> = {
   discover: 0,
   events: 1,
   connections: 2,
   profile: 3,
+  centerHub: 4,
 }
 
-export const MINI_PROGRAM_TAB_BAR_CONFIG_ITEMS = MINI_PROGRAM_TAB_ITEMS.map((item) => ({
-  pagePath: item.pagePath,
-  text: item.text,
-  iconPath: item.appIconPath,
-  selectedIconPath: item.appSelectedIconPath,
-}))
+export const MINI_PROGRAM_TAB_BAR_CONFIG_ITEMS = [
+  ...MINI_PROGRAM_TAB_ITEMS.map((item) => ({
+    pagePath: item.pagePath,
+    text: item.text,
+    iconPath: item.appIconPath,
+    selectedIconPath: item.appSelectedIconPath,
+  })),
+  {
+    pagePath: MINI_PROGRAM_CENTER_HUB_TAB_ITEM.pagePath,
+    text: MINI_PROGRAM_CENTER_HUB_TAB_ITEM.text,
+    iconPath: MINI_PROGRAM_CENTER_HUB_TAB_ITEM.appIconPath,
+    selectedIconPath: MINI_PROGRAM_CENTER_HUB_TAB_ITEM.appSelectedIconPath,
+  },
+]

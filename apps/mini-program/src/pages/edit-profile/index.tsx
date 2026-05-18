@@ -8,6 +8,7 @@ import {
   type InterestSelectionLevel,
 } from '@shared/api'
 import { getActiveInterests, MACRO_CATEGORY_LABELS, type MacroCategory } from '@shared/interests'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { apiRequest } from '../../lib/api/api'
 import { useAuth, useInvalidateAuth } from '../../hooks/useAuth'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
@@ -210,7 +211,7 @@ export default function EditProfilePage() {
         Taro.navigateBack({ fail: () => Taro.switchTab({ url: '/pages/profile/index' }) })
       }, 1000)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '保存失败'
+      const msg = err instanceof Error ? err.message : getErrorMessage('save-failed')
       logError('[EditProfile] Save failed', { message: msg })
       Taro.showToast({ title: msg, icon: 'none', duration: 3000 })
     } finally {

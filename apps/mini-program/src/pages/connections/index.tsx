@@ -2,8 +2,11 @@ import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { apiRequest } from '../../lib/api/api'
+import { apiRequest, fetchConnectionsShell } from '../../lib/api/api'
+import { injectConnectionsShellIntoCache } from '../../lib/prefetchEngine'
+import { queryClient } from '../../lib/api/queryClient'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { getEmptyStateMessage } from '@shared/copy/emptyStates'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
@@ -37,12 +40,22 @@ export default function ConnectionsPage() {
 
   const { data: connections = [], isLoading } = useQuery<Connection[]>({
     queryKey: ['mini-program', 'connections'],
-    queryFn: () => apiRequest<Connection[]>({ path: '/api/my-connections' }),
+    queryFn: async (): Promise<Connection[]> => {
+      // Primary: composite endpoint — 1 request for all Connections data.
+      try {
+        const shell = await fetchConnectionsShell()
+        injectConnectionsShellIntoCache(queryClient, shell)
+        return shell.connections
+      } catch {
+        // Composite unavailable — fall back to legacy endpoint.
+      }
+      return apiRequest<Connection[]>({ path: '/api/my-connections' })
+    },
     enabled: !authLoading,
   })
 
   return renderGate(
-    <View className='connections-page'>
+    <View className='connections-page tab-page-enter'>
       <View className='connections-page__header'>
         <Text className='connections-page__title'>我的连接</Text>
         <Text className='connections-page__subtitle'>活动后建立的联系</Text>
@@ -104,7 +117,7 @@ export default function ConnectionsPage() {
               src={getXiaoyueExpressionAsset('connectionsEmpty')}
               mode='aspectFit'
             />
-            <Text className='connections-page__empty-text'>还没有建立连接</Text>
+            <Text className='connections-page__empty-text'>{getEmptyStateMessage('connections', { includeAction: false })}</Text>
             <Text className='connections-page__empty-hint'>参加活动后即可与活动伙伴建立连接</Text>
           </Card>
         )}

@@ -78,7 +78,7 @@ vi.mock('drizzle-orm', () => ({
 // Stub services that would make network / DB calls on import.
 vi.mock('../wsService', () => ({ wsService: { sendToUser: vi.fn() } }));
 vi.mock('../venueAssignmentService', () => ({
-  assignVenuesToGroups: vi.fn(),
+  assignVenuesToGroups: vi.fn().mockResolvedValue({ assignments: new Map(), unassigned: new Map() }),
   saveVenueAssignments: vi.fn(),
 }));
 vi.mock('../eventThemeGeneratorService', () => ({ generateAndSaveEventTheme: vi.fn() }));

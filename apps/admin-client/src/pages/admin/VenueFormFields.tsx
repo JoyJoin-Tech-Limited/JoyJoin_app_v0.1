@@ -35,7 +35,9 @@ export interface VenueFormData {
   contactPhone: string;
   commissionRate: string;
   priceRange: string;
+  budgetCategories: string[];
   maxConcurrentEvents: string;
+  seatingCapacity: string;
   tags: string[];
   cuisines: string[];
   decorStyle: string[];
@@ -111,6 +113,15 @@ export default function VenueFormFields({ formData, setFormData, mode, setShowMa
       alcoholOptions: prev.alcoholOptions.includes(option)
         ? prev.alcoholOptions.filter(o => o !== option)
         : [...prev.alcoholOptions, option],
+    }));
+  };
+
+  const toggleBudgetCategory = (category: string) => {
+    setFormData(prev => ({
+      ...prev,
+      budgetCategories: prev.budgetCategories.includes(category)
+        ? prev.budgetCategories.filter(c => c !== category)
+        : [...prev.budgetCategories, category],
     }));
   };
 
@@ -209,6 +220,33 @@ export default function VenueFormFields({ formData, setFormData, mode, setShowMa
         <div className="space-y-2">
           <Label htmlFor={`${prefix}maxConcurrentEvents`}>最大同时活动数</Label>
           <Input id={`${prefix}maxConcurrentEvents`} type="number" min="1" value={formData.maxConcurrentEvents} onChange={(e) => setFormData({ ...formData, maxConcurrentEvents: e.target.value })} data-testid={`input-${testIdPrefix}max-events`} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`${prefix}seatingCapacity`} className="flex items-center gap-1">
+            座位容量
+            <FieldInfoTooltip
+              title="座位容量"
+              description="该场地最多可容纳多少人同时就餐/饮酒。匹配算法用此字段来筛选适合团队人数的场地。"
+            />
+          </Label>
+          <Input id={`${prefix}seatingCapacity`} type="number" min="1" value={formData.seatingCapacity} onChange={(e) => setFormData({ ...formData, seatingCapacity: e.target.value })} data-testid={`input-${testIdPrefix}seating-capacity`} />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="flex items-center gap-1">
+          预算分类（用于匹配算法）
+          <FieldInfoTooltip
+            title="预算分类"
+            description="选择该场地支持的预算范围，必须与用户注册时的预算选项对齐。自动匹配算法会据此筛选合适的场地。"
+          />
+        </Label>
+        <div className="flex flex-wrap gap-2">
+          {(formData.type === "bar" ? BAR_PRICE_RANGES : RESTAURANT_PRICE_RANGES).map(r => (
+            <Badge key={r.value} variant={formData.budgetCategories.includes(r.value) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleBudgetCategory(r.value)} data-testid={`budget-${r.value}`}>
+              {r.label}
+            </Badge>
+          ))}
         </div>
       </div>
 

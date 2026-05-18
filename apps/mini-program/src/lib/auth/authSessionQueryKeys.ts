@@ -2,7 +2,6 @@ import type { QueryKey } from '@tanstack/react-query'
 
 export const MINI_PROGRAM_USER_SCOPED_QUERY_KEY_PREFIXES = [
   ['mini-program', 'auth-user'],
-  ['mini-program', 'auth-user-profile'],
   ['mini-program', 'coupons'],
   ['mini-program', 'gamification'],
   ['mini-program', 'gamification-history'],

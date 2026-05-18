@@ -1,0 +1,228 @@
+/**
+ * Tests for GET /api/shell/connections — Connections Predictive Shell composite endpoint
+ *
+ * Coverage:
+ *   - AC-01: endpoint exists and returns composite payload
+ *   - AC-02: payload shape (user, connections, pendingRequests, notifications, meta)
+ *   - REL-01: 401 auth failure shape
+ *   - REL-02: 500 returns consistent error shape
+ *   - OBS-01: shell.connections metric logged
+ *   - OBS-03: X-Response-Time header present
+ */
+
+import express from "express";
+import session from "express-session";
+import type { AddressInfo } from "net";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// ── Mocks (hoisted by vitest) ──────────────────────────────────────────────
+
+const mockGetConnectionsShellData = vi.fn();
+
+vi.mock("../repositories/shellRepository", () => ({
+  getConnectionsShellData: mockGetConnectionsShellData,
+}));
+
+vi.mock("../middleware/auth", () => ({
+  requireAuth: (req: any, _res: any, next: any) => {
+    if (req.session?.userId) {
+      return next();
+    }
+    return _res.status(401).json({ message: "Unauthorized" });
+  },
+}));
+
+const mockLoggerInfo = vi.fn();
+const mockLoggerError = vi.fn();
+
+vi.mock("../lib/logger", () => ({
+  logger: {
+    info: mockLoggerInfo,
+    error: mockLoggerError,
+    child: vi.fn(() => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn() })),
+  },
+}));
+
+// ── Imports after mocks ────────────────────────────────────────────────────
+
+const { registerShellRoutes, _clearShellCacheForTest } = await import("../routes/domains/shell");
+
+// ── Test helpers ───────────────────────────────────────────────────────────
+
+function createApp() {
+  const app = express();
+  app.use(express.json());
+  app.use(
+    session({
+      secret: "test-secret",
+      resave: false,
+      saveUninitialized: false,
+    })
+  );
+
+  app.post("/__test__/login", (req, res) => {
+    req.session.userId = "user-123";
+    req.session.save(() => {
+      res.json({ sessionId: req.sessionID });
+    });
+  });
+
+  registerShellRoutes(app);
+  return app;
+}
+
+async function withServer<T>(fn: (baseUrl: string) => Promise<T>) {
+  const app = createApp();
+  const server = await new Promise<ReturnType<typeof app.listen>>((resolve) => {
+    const instance = app.listen(0, () => resolve(instance));
+  });
+
+  try {
+    const { port } = server.address() as AddressInfo;
+    return await fn(`http://127.0.0.1:${port}`);
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((err) => (err ? reject(err) : resolve()));
+    });
+  }
+}
+
+function cookieHeader(response: Response) {
+  const raw = response.headers.get("set-cookie");
+  return raw ? raw.split(";")[0] : "";
+}
+
+function makeConnectionsShellResponse() {
+  return {
+    user: { nextStep: "discover", primaryArchetype: "柯基" },
+    connections: [
+      {
+        id: "conn-1",
+        peerName: "Alice",
+        peerArchetype: "柯基",
+        eventTitle: "周五夜聊",
+        wechatId: "alice_wx",
+      },
+    ],
+    pendingRequests: [
+      {
+        id: "conn-2",
+        peerName: "Bob",
+        peerArchetype: "狐狸",
+        eventTitle: "周三饭局",
+      },
+    ],
+    notifications: {
+      discover: 0,
+      activities: 2,
+      chat: 1,
+      total: 3,
+    },
+    meta: {
+      cacheKey: "shell-connections-user-123",
+      serverTime: new Date().toISOString(),
+    },
+  };
+}
+
+// ── Tests ──────────────────────────────────────────────────────────────────
+
+describe("GET /api/shell/connections", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    _clearShellCacheForTest();
+  });
+
+  it("returns 401 for unauthenticated requests", async () => {
+    await withServer(async (baseUrl) => {
+      const res = await fetch(`${baseUrl}/api/shell/connections`);
+      expect(res.status).toBe(401);
+      const body = await res.json();
+      expect(body).toEqual({ message: "Unauthorized" });
+    });
+  });
+
+  it("returns composite payload for authenticated user", async () => {
+    mockGetConnectionsShellData.mockResolvedValue(makeConnectionsShellResponse());
+
+    await withServer(async (baseUrl) => {
+      const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
+      const cookie = cookieHeader(loginRes);
+
+      const res = await fetch(`${baseUrl}/api/shell/connections`, {
+        headers: { cookie },
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.user.nextStep).toBe("discover");
+      expect(body.user.primaryArchetype).toBe("柯基");
+      expect(body.connections).toHaveLength(1);
+      expect(body.connections[0].peerName).toBe("Alice");
+      expect(body.pendingRequests).toHaveLength(1);
+      expect(body.pendingRequests[0].peerName).toBe("Bob");
+      expect(body.notifications.chat).toBe(1);
+      expect(body.meta.cacheKey).toBe("shell-connections-user-123");
+
+      expect(mockGetConnectionsShellData).toHaveBeenCalledWith({ userId: "user-123" });
+
+      const logCall = mockLoggerInfo.mock.calls.find(
+        (call) => call[0] === "shell.connections"
+      );
+      expect(logCall).toBeDefined();
+      expect(logCall[1].userId).toBe("user-123");
+      expect(logCall[1].cache_hit).toBe(false);
+      expect(logCall[1].connection_count).toBe(1);
+      expect(logCall[1].pending_count).toBe(1);
+
+      expect(res.headers.get("X-Response-Time")).toBeTruthy();
+      expect(res.headers.get("Cache-Control")).toContain("private");
+    });
+  });
+
+  it("uses cache on second request", async () => {
+    mockGetConnectionsShellData.mockResolvedValue(makeConnectionsShellResponse());
+
+    await withServer(async (baseUrl) => {
+      const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
+      const cookie = cookieHeader(loginRes);
+
+      await fetch(`${baseUrl}/api/shell/connections`, { headers: { cookie } });
+      const missCall = mockLoggerInfo.mock.calls.find(
+        (call) => call[0] === "shell.connections" && call[1].cache_hit === false
+      );
+      expect(missCall).toBeDefined();
+
+      await fetch(`${baseUrl}/api/shell/connections`, { headers: { cookie } });
+      const hitCall = mockLoggerInfo.mock.calls.find(
+        (call) => call[0] === "shell.connections" && call[1].cache_hit === true
+      );
+      expect(hitCall).toBeDefined();
+
+      expect(mockGetConnectionsShellData).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("returns 500 with consistent error shape on DB failure", async () => {
+    mockGetConnectionsShellData.mockRejectedValue(new Error("DB connection lost"));
+
+    await withServer(async (baseUrl) => {
+      const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
+      const cookie = cookieHeader(loginRes);
+
+      const res = await fetch(`${baseUrl}/api/shell/connections`, {
+        headers: { cookie },
+      });
+
+      expect(res.status).toBe(500);
+      const body = await res.json();
+      expect(body).toEqual({ message: "Failed to load Connections shell" });
+
+      const errorLog = mockLoggerError.mock.calls.find(
+        (call) => call[0] === "shell.connections failed"
+      );
+      expect(errorLog).toBeDefined();
+      expect(errorLog[1].error).toBe("DB connection lost");
+    });
+  });
+});

@@ -1,5 +1,6 @@
-import { Button, View, Text, Image, ScrollView } from '@tarojs/components'
+import { View, Text, Image, ScrollView } from '@tarojs/components'
 import JoyButton from '../../components/ui/Button'
+import Card from '../../components/ui/Card'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { apiRequest } from '../../lib/api/api'
@@ -100,7 +101,7 @@ function getFriendlyPaymentError(errMsg?: string): string | null {
   }
 
   if (normalized.includes('parameter error')) {
-    return '支付参数有误，重新试试'
+    return '支付参数有误，再试一次即可'
   }
 
   if (normalized.includes('network')) {
@@ -226,7 +227,7 @@ export default function BlindBoxPaymentPage() {
           : []
       )
     } catch (error) {
-      const message = error instanceof Error ? error.message : '加载支付信息失败'
+      const message = error instanceof Error ? error.message : '加载支付信息没成功'
       setPageError(message)
       logError('Failed to bootstrap mini-program payment page', { message })
     } finally {
@@ -338,7 +339,7 @@ export default function BlindBoxPaymentPage() {
       setFinalAmount(typeof response.finalAmount === 'number' ? response.finalAmount / 100 : null)
       setCouponMessage(response.message || '优惠券已应用')
     } catch (error) {
-      const message = error instanceof Error ? error.message : '优惠券校验失败'
+      const message = error instanceof Error ? error.message : '优惠券核验没成功'
       setIsCouponValid(false)
       setDiscountAmount(0)
       setFinalAmount(null)
@@ -369,7 +370,7 @@ export default function BlindBoxPaymentPage() {
 
     if (!didNavigate) {
       await Taro.showToast({
-        title: '无法打开确认页，请稍后重试',
+        title: '确认页没打开，稍后再试',
         icon: 'none',
       })
     }
@@ -471,7 +472,7 @@ export default function BlindBoxPaymentPage() {
     ? '正在拉起微信支付，请勿重复点击'
     : pendingOrderToResume
       ? registrationReturnContext
-        ? '先确认这笔订单，系统会把你带回报名页继续'
+        ? '先确认这笔订单，悦仔会把你带回报名页继续'
         : '你有一笔待确认订单，先继续查看支付结果'
       : registrationReturnContext
         ? '支付确认后会自动回到报名页，你刚才填写的偏好不会丢'
@@ -482,10 +483,6 @@ export default function BlindBoxPaymentPage() {
   if (paymentsDisabled) {
     return (
       <ScrollView className='payment-page' scrollY enhanced showScrollbar={false}>
-        <View className='payment-page__backdrop'>
-          <View className='payment-page__orb payment-page__orb--left' />
-          <View className='payment-page__orb payment-page__orb--right' />
-        </View>
         <View className='payment-page__header'>
           <JoyButton
             variant='secondary'
@@ -531,7 +528,7 @@ export default function BlindBoxPaymentPage() {
         <View className='payment-page__summary-card'>
           <Text className='payment-page__summary-label'>支付状态</Text>
           <Text className='payment-page__summary-value'>支付功能维护中</Text>
-          <Text className='payment-page__summary-note'>我们正在升级支付系统，请稍后再试。</Text>
+          <Text className='payment-page__summary-note'>支付服务正在升级，稍后回来试试～</Text>
           <Text className='payment-page__summary-note'>
             {registrationReturnContext
               ? '若你刚完成支付，继续确认订单后会直接回到报名页。'
@@ -553,11 +550,6 @@ export default function BlindBoxPaymentPage() {
 
   return (
     <ScrollView className='payment-page' scrollY enhanced showScrollbar={false}>
-      <View className='payment-page__backdrop'>
-        <View className='payment-page__orb payment-page__orb--left' />
-        <View className='payment-page__orb payment-page__orb--right' />
-      </View>
-
       <View className='payment-page__header'>
         <JoyButton
           variant='secondary'
@@ -577,11 +569,7 @@ export default function BlindBoxPaymentPage() {
             ? `你刚才在${registrationReturnContext.poolTitle ? `《${registrationReturnContext.poolTitle}》里` : '活动报名里'}填写的预算和偏好已经替你留好，支付确认后会自动回去继续。`
             : '支付成功后将进入结果确认页，避免误判成功。'}
         </Text>
-        <Image
-          className='payment-page__mascot'
-          mode='aspectFit'
-          src={getXiaoyueExpressionAsset('paymentTrust')}
-        />
+
       </View>
 
       {registrationReturnContext ? (
@@ -613,7 +601,7 @@ export default function BlindBoxPaymentPage() {
           <Text className='payment-page__summary-value'>继续查看支付结果</Text>
           <Text className='payment-page__summary-note'>
             {registrationReturnContext
-              ? '你有一笔订单仍在等待确认，先完成确认后系统会把你带回报名页。'
+              ? '你有一笔订单仍在等待确认，先完成确认后悦仔会把你带回报名页。'
               : '你有一笔订单仍在等待确认，先完成结果确认再发起新的支付。'}
           </Text>
           <JoyButton
@@ -646,7 +634,7 @@ export default function BlindBoxPaymentPage() {
           const planMeta = getMiniProgramPaymentPlanMeta(planKey)
 
           return (
-            <Button
+            <Card
               key={planKey}
               className={`payment-page__plan ${isSelected ? 'payment-page__plan--selected' : ''}`}
               onClick={() => setSelectedPlan(planKey)}
@@ -671,16 +659,16 @@ export default function BlindBoxPaymentPage() {
                   </Text>
                 </View>
               </View>
-            </Button>
+            </Card>
           )
         })}
       </View>
 
-      {availableCoupons.length > 0 ? (
+      {couponCount > 0 ? (
         <View className='payment-page__summary-card'>
           <Text className='payment-page__summary-label'>优惠券</Text>
           <View className='payment-page__plans'>
-            <Button
+            <Card
               className={`payment-page__plan ${selectedCouponCode === '' ? 'payment-page__plan--selected' : ''}`}
               onClick={() => setSelectedCouponCode('')}
             >
@@ -690,12 +678,12 @@ export default function BlindBoxPaymentPage() {
                   <Text className='payment-page__plan-desc'>按当前套餐原价支付</Text>
                 </View>
               </View>
-            </Button>
+            </Card>
             {availableCoupons.map((coupon) => {
               const couponModel = buildMiniProgramPaymentCouponDisplayModel(coupon)
 
               return (
-                <Button
+                <Card
                   key={couponModel.id}
                   className={`payment-page__plan ${selectedCouponCode === couponModel.code ? 'payment-page__plan--selected' : ''}`}
                   onClick={() => setSelectedCouponCode(couponModel.code)}
@@ -706,7 +694,7 @@ export default function BlindBoxPaymentPage() {
                       <Text className='payment-page__plan-desc'>{couponModel.description}</Text>
                     </View>
                   </View>
-                </Button>
+                </Card>
               )
             })}
           </View>

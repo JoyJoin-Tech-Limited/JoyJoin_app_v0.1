@@ -24,20 +24,16 @@ const MOCK_AUTH_USER: AuthUser = {
 } as unknown as AuthUser
 
 function getMockAuthUser(): AuthUser | null {
-  // DEVTOOLS TESTING: always return mock user for visual verification
-  return MOCK_AUTH_USER
-  
-  // Production check below — restore after testing:
-  // try {
-  //   const raw = Taro.getStorageSync(MOCK_AUTH_STORAGE_KEY)
-  //   if (raw === '1') return MOCK_AUTH_USER
-  //   if (!raw) return null
-  //   const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
-  //   if (parsed && parsed.id) return parsed as AuthUser
-  // } catch {
-  //   // ignore
-  // }
-  // return null
+  try {
+    const raw = Taro.getStorageSync(MOCK_AUTH_STORAGE_KEY)
+    if (raw === '1') return MOCK_AUTH_USER
+    if (!raw) return null
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+    if (parsed && parsed.id) return parsed as AuthUser
+  } catch {
+    // ignore
+  }
+  return null
 }
 
 export type NextStepType = OnboardingStep

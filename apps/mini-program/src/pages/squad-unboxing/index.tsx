@@ -74,7 +74,7 @@ export default function SquadUnboxingPage() {
             lazyLoad
           />
           <Text className='squad-unboxing__error-text'>
-            {fetchError ? '加载小队信息失败' : '未找到小队信息'}
+            {fetchError ? '加载小队信息没成功' : '没有找到小队信息'}
           </Text>
           <Button variant='secondary' className='squad-unboxing__error-btn' onClick={() => navigateBack()}>
             返回
@@ -88,7 +88,11 @@ export default function SquadUnboxingPage() {
     <View className={pageClassName}>
       <ScrollView className='squad-unboxing__scroll' scrollY enhanced showScrollbar={false}>
         <View className='squad-unboxing__header'>
-          <View className='squad-unboxing__header-celebration' />
+          <Image
+            className='squad-unboxing__header-mascot'
+            mode='aspectFit'
+            src={getXiaoyueExpressionAsset('homeWelcome')}
+          />
           <Text className='squad-unboxing__header-title'>
             你的{pool.eventType === 'bar' ? '酒局' : '饭局'}桌友来了
           </Text>
@@ -494,47 +498,35 @@ export default function SquadUnboxingPage() {
         <View className='squad-unboxing__spacer' />
       </ScrollView>
 
-      {flowState === 'revealed' && actionDockState !== 'hidden' ? (
-        <View className={`squad-unboxing__action-zone squad-unboxing__action-zone--${actionDockState}`}>
+      {flowState === 'revealed' && actionDockState === 'ready' ? (
+        <View className='squad-unboxing__action-zone squad-unboxing__action-zone--ready'>
           <View className='squad-unboxing__action-copy'>
-            <Text className='squad-unboxing__action-eyebrow'>
-              {actionDockState === 'ready' ? '揭晓完成' : '揭晓继续中'}
-            </Text>
+            <Text className='squad-unboxing__action-eyebrow'>揭晓完成</Text>
             <Text className='squad-unboxing__action-title'>
-              {actionDockState === 'ready'
-                ? '如果这桌感觉对味，就把今晚定下来。'
-                : '最后一页马上到，先把这桌最关键的聊天入口看完。'}
+              如果这桌感觉对味，就把今晚定下来。
             </Text>
           </View>
 
-          {actionDockState === 'ready' ? (
-            <>
-              <Button
-                className='squad-unboxing__confirm-btn'
-                onClick={handleConfirmAttendance}
-                disabled={confirmAttendanceMutation.isPending}
-                loading={confirmAttendanceMutation.isPending}
-              >
-                {confirmAttendanceMutation.isPending ? '确认中…' : '确认出席'}
-              </Button>
+          <Button
+            className='squad-unboxing__confirm-btn'
+            onClick={handleConfirmAttendance}
+            disabled={confirmAttendanceMutation.isPending}
+            loading={confirmAttendanceMutation.isPending}
+          >
+            {confirmAttendanceMutation.isPending ? '确认中…' : '确认出席'}
+          </Button>
 
-              <Button
-                variant='secondary'
-                className='squad-unboxing__detail-btn'
-                onClick={handleOpenGroupDetail}
-              >
-                查看活动详情
-              </Button>
+          <Button
+            variant='secondary'
+            className='squad-unboxing__detail-btn'
+            onClick={handleOpenGroupDetail}
+          >
+            查看活动详情
+          </Button>
 
-              <Text className='squad-unboxing__skip-link' onClick={handleSkip}>
-                稍后再看
-              </Text>
-            </>
-          ) : (
-            <Text className='squad-unboxing__action-pending'>
-              确认出席按钮会在完整分析落地后出现。
-            </Text>
-          )}
+          <Text className='squad-unboxing__skip-link' onClick={handleSkip}>
+            稍后再看
+          </Text>
         </View>
       ) : null}
     </View>

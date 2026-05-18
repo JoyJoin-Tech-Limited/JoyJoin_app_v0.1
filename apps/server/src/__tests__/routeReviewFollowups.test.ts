@@ -26,8 +26,10 @@ describe('route review follow-ups', () => {
 
   it('uses the active assessment session storage helper instead of an in-progress phase literal', () => {
     const authSource = readRepoFile('apps/server/src/routes/domains/auth.ts');
+    const buildAuthSource = readRepoFile('apps/server/src/lib/buildAuthUserResponse.ts');
 
-    expect(authSource).toContain('storage.getAssessmentSessionByUser(userId)');
+    // Logic extracted to buildAuthUserResponse.ts; auth.ts delegates to it.
+    expect(buildAuthSource).toContain('storage.getAssessmentSessionByUser(userId)');
     expect(authSource).not.toContain("eq(assessmentSessions.phase, 'in_progress')");
   });
 

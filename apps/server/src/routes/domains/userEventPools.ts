@@ -25,6 +25,7 @@ import { loadInterestSignalsByUserIds } from "./helpers";
 import { recordPoolCardCopyCache } from "../../middleware/metrics";
 import { enrichProfileFromRegistration } from "../../lib/profileEnrichment";
 import { logger } from "../../lib/logger";
+import { shellCache } from "../../lib/shellCache";
 import { computeOracleCardFields } from "../../lib/oracleCardComputation";
 import { broadcastAttendanceStatusUpdated } from "../../eventBroadcast";
 import { aiEndpointLimiter } from "../../rateLimiter";
@@ -557,6 +558,9 @@ export function registerUserEventPoolRoutes(app: Express): void {
 
         return createdRegistration;
       });
+
+      // Invalidate Predictive Shell caches so Discover/Events reflect new state.
+      shellCache.invalidateUser(userId);
 
       // Trigger realtime matching scan after registration (fire and forget with error handling)
       // Import at top: import { scanPoolAndMatch } from "./poolRealtimeMatchingService";

@@ -608,25 +608,25 @@ $__gold-accent:  $color-landed-gold;
       z-index: 1;
     }
 
-    // Per-phase proprietary backgrounds (Lovart)
+    // Per-phase proprietary backgrounds (Lovart) — injected via CSS vars from parent
     &--auction {
-      background: url('../../assets/lovart/icebreaker/backgrounds/bg-auction.jpg') center/cover no-repeat;
+      background: var(--bg-auction) center/cover no-repeat;
     }
 
     &--personality-dice {
-      background: url('../../assets/lovart/icebreaker/backgrounds/bg-personality-dice.jpg') center/cover no-repeat;
+      background: var(--bg-personality-dice) center/cover no-repeat;
     }
 
     &--undercover-word {
-      background: url('../../assets/lovart/icebreaker/backgrounds/bg-undercover-word.jpg') center/cover no-repeat;
+      background: var(--bg-undercover-word) center/cover no-repeat;
     }
 
     &--group-mirror {
-      background: url('../../assets/lovart/icebreaker/backgrounds/bg-group-mirror.jpg') center/cover no-repeat;
+      background: var(--bg-group-mirror) center/cover no-repeat;
     }
 
     &--quip-battle {
-      background: url('../../assets/lovart/icebreaker/backgrounds/bg-quip-battle.jpg') center/cover no-repeat;
+      background: var(--bg-quip-battle) center/cover no-repeat;
     }
 
     // Fallback gradients for phases without proprietary backgrounds yet

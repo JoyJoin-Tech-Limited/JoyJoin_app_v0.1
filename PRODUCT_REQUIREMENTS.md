@@ -77,7 +77,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-05-07)
+## 🆕 Recent Updates (Last updated: 2026-05-17)
 
 ### 2026 Milestones (May 2026)
 
@@ -94,6 +94,14 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Admin refund CSV export:** `GET /api/admin/refund-attempts/export` returns `text/csv` with BOM, optional `?since`/`?until` date filters, and formula-injection escape. Admin UI export button added.
 - **Admin social AI benchmark:** `GET /api/admin/benchmarks/social-ai` exposes `runSocialAIBenchmark()` with iteration cap (max 10), model whitelist validation, and 503 if API keys missing. Returns `{ generatedAt, report, iterations, modelsTested }`.
 - **Shared CSV utility:** `packages/shared/src/csvExport.ts` — `escapeCsv()` and `buildCsvContent()` used by server and admin client.
+
+**31. Predictive Shell Generalization** 🐚 *(2026-05-17)*
+- **Composite tab endpoints:** `GET /api/shell/discover`, `/api/shell/profile`, `/api/shell/events`, `/api/shell/connections` bundle auth user + tab data into single responses, eliminating cold-start round-trips on tab switch.
+- **Shared server infrastructure:** `shellCache.ts` (NodeCache singleton, 30s TTL, cross-shell invalidation), `buildAuthUserResponse.ts` (shared auth builder), `shellRepository.ts` (N+1-free composite assembly). Prerequisite repos: `joinedEventsRepo.ts` and `connectionsRepo.ts`.
+- **Client prefetch engine:** Landing page stages all 4 shells after entry animation via `PrefetchEngine` (`apps/mini-program/src/lib/prefetchEngine.ts`), injecting composite data into existing TanStack Query keys. Auth injection is gated for pruned shells; Profile shell injects unconditionally.
+- **Cache invalidation:** `shellCache.invalidateUser(userId)` triggered on payment/coupon use, pool registration, connection creation, and assessment completion.
+- **Graceful fallback:** Events and Connections pages fall back to legacy endpoints (`/api/events/joined`, `/api/my-connections`) if composite 500s. Discover shell already had fallback from pilot.
+- **Profile page deduplication:** Removed duplicate `auth-user-profile` fetch; Profile page now reads directly from `AUTH_QUERY_KEY`.
 
 ### 2026 Milestones (Mar–Apr 2026)
 

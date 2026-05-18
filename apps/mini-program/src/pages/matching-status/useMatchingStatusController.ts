@@ -18,6 +18,7 @@ import type {
   PoolRegistrationAddedData,
 } from '@shared/wsEvents'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
@@ -454,7 +455,7 @@ export function useMatchingStatusController({
         navigateBackOrEventsTab()
       }, CANCEL_NAVIGATION_DELAY_MS)
     } catch (error) {
-      const message = error instanceof Error ? error.message : '取消失败，请重试'
+      const message = error instanceof Error ? error.message : getErrorMessage('cancel-failed')
       logError('[MatchingStatus] Cancel failed', { message })
       Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
     } finally {

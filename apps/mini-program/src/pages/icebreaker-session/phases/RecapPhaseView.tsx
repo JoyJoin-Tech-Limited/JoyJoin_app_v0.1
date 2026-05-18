@@ -52,7 +52,7 @@ function RecapAiFeedbackBar({
   }
   return (
     <Card className='icebreaker__recap-section icebreaker__recap-section--compact'>
-      <Text className='icebreaker__recap-section-title'>这场 AI 回顾有帮助吗？</Text>
+      <Text className='icebreaker__recap-section-title'>这场悦仔回顾有帮助吗？</Text>
       <View className='icebreaker__feedback-row'>
         <Button variant='secondary' disabled={busy} onClick={() => void submit('helpful')}>
           有帮助
@@ -202,7 +202,7 @@ export function RecapPhaseView({
       )
     }
     if (recapData?.lieDetective) {
-      lines.push(`AI 谎言胜率 ${(recapData.lieDetective.aiWinRate * 100).toFixed(0)}%`)
+      lines.push(`悦仔谎言胜率 ${(recapData.lieDetective.aiWinRate * 100).toFixed(0)}%`)
     }
     return lines
   }, [playerCount, recapData, medals.length])
@@ -311,7 +311,7 @@ export function RecapPhaseView({
                   <Text className='icebreaker__recap-stat-value'>
                     {(recapData.lieDetective.aiWinRate * 100).toFixed(0)}%
                   </Text>
-                  <Text className='icebreaker__recap-stat-label'>AI 胜率</Text>
+                  <Text className='icebreaker__recap-stat-label'>悦仔胜率</Text>
                 </View>
                 <View className='icebreaker__recap-stat-box'>
                   <Text className='icebreaker__recap-stat-value'>

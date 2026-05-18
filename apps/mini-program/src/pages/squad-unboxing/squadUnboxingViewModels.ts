@@ -4,7 +4,7 @@ import type { OverallChemistry, PairExplanation } from '@shared/types/groupAnaly
 
 export type FlowState = 'ready' | 'shaking' | 'revealed'
 export type AnalysisStage = 0 | 1 | 2 | 3 | 4
-export type ActionDockState = 'hidden' | 'tease' | 'ready'
+export type ActionDockState = 'hidden' | 'ready'
 export type BlindBoxVisualState = 'ready' | 'opening' | 'open'
 
 export type ChemistryType = 'fire' | 'warm' | 'cold' | 'mild'
@@ -92,10 +92,6 @@ export function computeActionDockState(
 
   if (analysisStage >= 4) {
     return 'ready'
-  }
-
-  if (analysisStage >= 3) {
-    return 'tease'
   }
 
   return 'hidden'

@@ -22,7 +22,15 @@ export type ErrorCode =
   | 'session-expired'
   | 'not-found'
   | 'forbidden'
-  | 'rate-limited';
+  | 'rate-limited'
+  | 'save-failed'
+  | 'cancel-failed'
+  | 'create-failed'
+  | 'switch-failed'
+  | 'logout-failed'
+  | 'copy-failed'
+  | 'operation-failed'
+  | 'sync-failed';
 
 interface ErrorTemplate {
   /** Surface type — determines tone mode */
@@ -52,12 +60,12 @@ const ERROR_TEMPLATES: Record<ErrorCode, ErrorTemplate> = {
   },
   'load-failed': {
     surface: 'full-page-error',
-    default: '加载失败了',
+    default: '加载没成功',
     mascot: '{{mascotName}}遇到点小麻烦，再试试看~',
   },
   'generate-failed': {
     surface: 'full-page-error',
-    default: '生成失败了',
+    default: '生成没成功',
     mascot: '{{mascotName}}没编出来，重新试试吧~',
   },
   'payment-failed': {
@@ -84,6 +92,39 @@ const ERROR_TEMPLATES: Record<ErrorCode, ErrorTemplate> = {
   'rate-limited': {
     surface: 'toast-error',
     default: '操作太频繁，稍等一会儿',
+  },
+  'save-failed': {
+    surface: 'toast-error',
+    default: '保存没成功，再试试',
+  },
+  'cancel-failed': {
+    surface: 'toast-error',
+    default: '取消失败，再试一次',
+  },
+  'create-failed': {
+    surface: 'toast-error',
+    default: '创建没成功，再试试',
+  },
+  'switch-failed': {
+    surface: 'toast-error',
+    default: '切换没成功，再试试',
+  },
+  'logout-failed': {
+    surface: 'toast-error',
+    default: '退出登录没成功，再试试',
+  },
+  'copy-failed': {
+    surface: 'toast-error',
+    default: '复制没成功，手动试试',
+  },
+  'operation-failed': {
+    surface: 'toast-error',
+    default: '操作没成功，再试试',
+  },
+  'sync-failed': {
+    surface: 'full-page-error',
+    default: '同步没成功',
+    mascot: '{{mascotName}}帮你同步结果时遇到了点小状况，再试一次~',
   },
 };
 

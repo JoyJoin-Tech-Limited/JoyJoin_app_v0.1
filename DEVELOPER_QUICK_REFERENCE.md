@@ -253,6 +253,7 @@ Active domain modules in `routes/domains/`:
 | `adminMatchingShadow.ts` | Admin shadow matching experiments, predictive rerank status and controls |
 | `matchingShadowErrors.ts` | Shadow-matching error inspection endpoints |
 | `occupationSearch.ts` | `POST /api/occupation/search` — free-text occupation search using Granite embedding (exact + semantic hybrid) |
+| `shell.ts` | Composite Predictive Shell endpoints (`/api/shell/*`) — discover, profile, events, connections |
 | `helpers.ts` | Shared route helpers |
 
 ---

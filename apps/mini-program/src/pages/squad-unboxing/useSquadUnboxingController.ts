@@ -90,7 +90,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
       openPoolGroupDetail(groupId)
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : '确认出席失败'
+      const message = error instanceof Error ? error.message : '确认出席没成功'
       logError('[SquadUnboxing] Attendance confirmation failed', {
         groupId,
         message,
@@ -246,7 +246,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
       title: '先离开这桌？',
       content:
         strongConnectionCount > 0
-          ? `系统已经看出这桌至少有 ${strongConnectionCount} 组潜在连接点，真的要先离开吗？`
+          ? `悦仔已经看出这桌至少有 ${strongConnectionCount} 组潜在连接点，真的要先离开吗？`
           : '你稍后仍然可以从活动页回来看这桌的揭晓内容。',
       confirmText: '先离开',
       cancelText: '再看看',

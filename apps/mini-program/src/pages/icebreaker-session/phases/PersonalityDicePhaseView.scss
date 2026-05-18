@@ -56,8 +56,7 @@
     padding: $spacing-xl $spacing-lg;
     min-height: 400rpx;
     text-align: center;
-    background: url('../../../assets/lovart/icebreaker/backgrounds/bg-personality-dice.jpg')
-      center / cover no-repeat;
+    background: var(--bg-personality-dice) center / cover no-repeat;
     border-radius: $card-radius;
     animation: personality-dice-slide-up 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
   }

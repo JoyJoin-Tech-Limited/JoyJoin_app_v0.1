@@ -442,7 +442,7 @@ export default function MomentCardView({ payload, visible, onClose }: MomentCard
               JoyJoin
             </Text>
             <Text style={{ color: CARD_TEXT_MUTED, fontSize: '28rpx', textAlign: 'center', marginBottom: '32rpx' }}>
-              生成回忆卡失败，请重试
+              回忆卡没生成成功，再试试
             </Text>
             <View
               onClick={(e) => {
@@ -458,7 +458,7 @@ export default function MomentCardView({ payload, visible, onClose }: MomentCard
                 fontWeight: 'bold',
               }}
             >
-              重试
+              再试试
             </View>
           </View>
         ) : canvasUrl ? (

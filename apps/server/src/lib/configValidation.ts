@@ -68,6 +68,16 @@ const CONFIG_SPECS: ConfigSpec[] = [
     required: false,
     description: "DeepSeek AI API key (AI features will be degraded without it)",
   },
+  {
+    key: "AMAP_API_KEY",
+    required: false,
+    description: "AMap/Gaode Maps API key (admin venue map picker will fail without it)",
+  },
+  {
+    key: "AMAP_SECURITY_KEY",
+    required: false,
+    description: "AMap/Gaode Maps JS API security config key (admin venue map picker will fail without it)",
+  },
 ];
 
 function isPaymentsEnabled(env: NodeJS.ProcessEnv): boolean {

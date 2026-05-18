@@ -8,6 +8,9 @@ export type DiscoverAnalyticsEventType =
   | 'registration_start'
   | 'registration_complete'
   | 'registration_abandoned'
+  | 'filter_open'
+  | 'filter_select'
+  | 'filter_close'
 
 export interface DiscoverAnalyticsEvent {
   eventType: DiscoverAnalyticsEventType

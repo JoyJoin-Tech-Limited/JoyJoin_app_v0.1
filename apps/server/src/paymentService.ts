@@ -1,5 +1,6 @@
 import { createDecipheriv, createSign, createVerify, randomBytes } from "node:crypto";
 import { logger } from "./lib/logger";
+import { shellCache } from "./lib/shellCache";
 import { getDirectMiniProgramAppIdConsistencyIssue } from "./lib/configValidation";
 import { eventCreditsRepo } from "./repositories/eventCreditsRepo";
 import { paymentFulfillmentRepo } from "./repositories/paymentFulfillmentRepo";
@@ -291,6 +292,9 @@ export class PaymentService {
       });
       return;
     }
+
+    // Invalidate Predictive Shell caches so Profile/Discover reflect new state.
+    shellCache.invalidateUser(result.payment.userId);
   }
 
   /**

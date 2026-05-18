@@ -1,4 +1,4 @@
-import { Button, View, Text, Image } from '@tarojs/components'
+import { View, Text, Image } from '@tarojs/components'
 import Taro, { useDidShow, useLoad } from '@tarojs/taro'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
@@ -18,6 +18,7 @@ import { type MiniProgramPaymentVerificationState } from '../../lib/payment/paym
 import type { XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
+import JoyButton from '../../components/ui/Button'
 import './index.scss'
 
 function getVerificationMascotExpression(status: MiniProgramPaymentVerificationState): XiaoyueExpressionId {
@@ -43,12 +44,13 @@ export default function PaymentVerificationPage() {
   const invalidatePaidCaches = useCallback(async () => {
     await Promise.allSettled([
       queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY }),
-      queryClient.invalidateQueries({ queryKey: ['mini-program', 'auth-user-profile'] }),
       queryClient.invalidateQueries({ queryKey: ['mini-program', 'coupons'] }),
       queryClient.invalidateQueries({ queryKey: ['mini-program', 'my-pool-registrations'] }),
       queryClient.invalidateQueries({ queryKey: ['mini-program', 'my-blind-box-events'] }),
       queryClient.invalidateQueries({ queryKey: ['mini-program', 'joined-events'] }),
       queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-registration'] }),
+      queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/discover'] }),
+      queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/profile'] }),
     ])
   }, [queryClient])
 
@@ -163,34 +165,37 @@ export default function PaymentVerificationPage() {
         ) : null}
 
         {status === 'paid' ? (
-          <Button className='verification-page__button' onClick={() => void navigateAfterPaid()}>
+          <JoyButton variant='primary' className='verification-page__button' onClick={() => void navigateAfterPaid()}>
             {registrationReturnContext ? '回到报名页完成报名' : '进入我的权益'}
-          </Button>
+          </JoyButton>
         ) : null}
 
         {status === 'pending' ? (
           <View className='verification-page__actions'>
-            <Button className='verification-page__button' onClick={handleLeavePendingOrder}>
+            <JoyButton variant='primary' className='verification-page__button' onClick={handleLeavePendingOrder}>
               {registrationReturnContext ? '先回报名页' : '先回我的页'}
-            </Button>
-            <Button
+            </JoyButton>
+            <JoyButton
+              variant='secondary'
               className='verification-page__button verification-page__button--secondary'
               onClick={() => bootstrap(orderId)}
             >
               继续查询
-            </Button>
+            </JoyButton>
           </View>
         ) : null}
 
         {status === 'failed' ? (
           <View className='verification-page__actions'>
-            <Button
+            <JoyButton
+              variant='primary'
               className='verification-page__button'
               onClick={() => Taro.navigateBack({ fail: () => Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.blindBoxPayment }) })}
             >
               {registrationReturnContext ? '重新支付并继续报名' : '重新支付'}
-            </Button>
-            <Button
+            </JoyButton>
+            <JoyButton
+              variant='secondary'
               className='verification-page__button verification-page__button--secondary'
               onClick={() => {
                 if (registrationReturnContext) {
@@ -202,7 +207,7 @@ export default function PaymentVerificationPage() {
               }}
             >
               {registrationReturnContext ? '返回报名页' : '返回我的页'}
-            </Button>
+            </JoyButton>
           </View>
         ) : null}
       </View>

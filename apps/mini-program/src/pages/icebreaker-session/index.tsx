@@ -8,6 +8,7 @@ import { POLL_SOCIAL_SESSION_MS, TOAST_MEDIUM_MS, TOAST_DEFAULT_MS } from '../..
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useAuth } from '../../hooks/useAuth'
 import { logInfo, logError } from '../../lib/utils/logger'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { getMascotDisplayName } from '../../lib/mascot/mascotDisplay'
 import OnboardingLoadingShell from '../../components/loading/OnboardingLoadingShell'
 import XiaoyueSessionShell from '../../components/mascot/XiaoyueSessionShell'
@@ -258,14 +259,14 @@ export default function IcebreakerSessionPage() {
         await socialSessionQuery.refetch()
         return response
       } catch (error) {
-        const message = getErrorText(error, '操作失败，请稍后重试')
+        const message = getErrorText(error, '操作没成功，再试试')
         logError('[IcebreakerSession] Social action failed', {
           socialSessionId,
           actionKey,
           message,
         })
         Taro.showToast({
-          title: message.length > 12 ? '操作失败，请稍后重试' : message,
+          title: message.length > 12 ? '操作没成功' : message,
           icon: 'none',
           duration: TOAST_MEDIUM_MS,
         })
@@ -354,7 +355,7 @@ export default function IcebreakerSessionPage() {
         .catch((err: unknown) => {
           logError('[IcebreakerSession] Set tier failed', { error: err })
           void Taro.showToast({
-            title: '切换失败，请重试',
+            title: '切换没成功，再试试',
             icon: 'none',
             duration: 2000,
           })
@@ -474,10 +475,10 @@ export default function IcebreakerSessionPage() {
         setMiniScriptModalOpen(false)
         Taro.showToast({ title: '剧本已生成', icon: 'success', duration: TOAST_DEFAULT_MS })
       } catch (error) {
-        const message = getErrorText(error, '生成失败，请稍后重试')
+        const message = getErrorText(error, '生成没成功')
         logError('[IcebreakerSession] MiniScript generate failed', { socialSessionId, message })
         Taro.showToast({
-          title: message.length > 14 ? '生成失败' : message,
+          title: message.length > 14 ? '生成没成功' : message,
           icon: 'none',
           duration: TOAST_MEDIUM_MS,
         })
@@ -491,8 +492,8 @@ export default function IcebreakerSessionPage() {
   const pageError =
     bootstrapError ??
     (eventSessionError ? getErrorText(eventSessionError, '无法创建破冰会话') : null) ??
-    (sessionError ? getErrorText(sessionError, '加载破冰信息失败') : null) ??
-    (socialSessionQuery.error ? getErrorText(socialSessionQuery.error, '同步破冰状态失败') : null)
+    (sessionError ? getErrorText(sessionError, getErrorMessage('load-failed')) : null) ??
+    (socialSessionQuery.error ? getErrorText(socialSessionQuery.error, getErrorMessage('sync-failed')) : null)
 
   const isBootstrapping = !!resolvedSessionId && !socialSessionId && pendingAction === 'start' && !session
 
@@ -605,8 +606,19 @@ export default function IcebreakerSessionPage() {
     !!session.currentLieDetectiveReveal &&
     (session.currentLieDetectivePlayerIndex ?? 0) < (session.lieDetectivePlayers?.length ?? 0) - 1
 
+  const bgStyles = useMemo(() => {
+    const p = (path: string) => `url(${cdnAsset(path)})`
+    return {
+      '--bg-auction': p('/assets/lovart/icebreaker/backgrounds/bg-auction.jpg'),
+      '--bg-personality-dice': p('/assets/lovart/icebreaker/backgrounds/bg-personality-dice.jpg'),
+      '--bg-undercover-word': p('/assets/lovart/icebreaker/backgrounds/bg-undercover-word.jpg'),
+      '--bg-group-mirror': p('/assets/lovart/icebreaker/backgrounds/bg-group-mirror.jpg'),
+      '--bg-quip-battle': p('/assets/lovart/icebreaker/backgrounds/bg-quip-battle.jpg'),
+    } as React.CSSProperties
+  }, [])
+
   return (
-    <ScrollView className='icebreaker' scrollY enhanced showScrollbar={false}>
+    <ScrollView className='icebreaker' scrollY enhanced showScrollbar={false} style={bgStyles}>
       {phaseHeader}
 
       <PhaseIntroOverlay phase={phase} visible={showPhaseIntro} />

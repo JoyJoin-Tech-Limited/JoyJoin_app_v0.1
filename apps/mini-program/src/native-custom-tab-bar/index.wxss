@@ -17,28 +17,24 @@
   bottom: env(safe-area-inset-bottom);
   height: 128rpx;
   box-sizing: border-box;
-  border: 2rpx solid rgba(139, 92, 246, 0.06);
-  border-radius: 42rpx;
   background: rgba(255, 255, 255, 0.985);
   box-shadow: 0 10rpx 28rpx rgba(45, 49, 66, 0.08);
 }
 
-.joy-custom-tab-bar__border {
+.joy-custom-tab-bar__bg {
   position: absolute;
-  left: 24rpx;
-  right: 24rpx;
+  left: 0;
   top: 0;
-  height: 2rpx;
-  background: rgba(139, 92, 246, 0.12);
-  border-top-left-radius: 9999rpx;
-  border-top-right-radius: 9999rpx;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
 }
 
 /* ── Tab row ───────────────────────────────────────────────── */
 
 .joy-custom-tab-bar__row {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   display: flex;
   align-items: stretch;
   height: 100%;
@@ -56,20 +52,6 @@
 .joy-custom-tab-bar__center-gap {
   width: 192rpx;
   flex-shrink: 0;
-}
-
-.joy-custom-tab-bar__center-seat {
-  position: absolute;
-  left: 50%;
-  top: 20rpx;
-  z-index: 0;
-  width: 184rpx;
-  height: 88rpx;
-  box-sizing: border-box;
-  transform: translateX(-50%);
-  border-radius: 42rpx;
-  background: rgba(247, 243, 255, 0.88);
-  border: 2rpx solid rgba(139, 92, 246, 0.08);
 }
 
 /* ── Tab item ──────────────────────────────────────────────── */
@@ -120,6 +102,13 @@
   font-weight: 600;
 }
 
+/* Pressed / hover state for tab items */
+.joy-custom-tab-bar__item--pressed {
+  transform: scale(0.95);
+  opacity: 0.8;
+  transition: transform 100ms ease-out, opacity 100ms ease-out;
+}
+
 /* ── Side tab notification badge ───────────────────────────── */
 
 .joy-custom-tab-bar__item-badge {
@@ -153,7 +142,7 @@
   position: absolute;
   left: 50%;
   top: -42rpx;
-  z-index: 2;
+  z-index: 3;
   display: flex;
   width: 192rpx;
   flex-direction: column;
@@ -214,4 +203,20 @@
   font-weight: 600;
   color: #374151;
   text-align: center;
+}
+
+/* Pressed / hover state for center button */
+.joy-custom-tab-bar__center--pressed {
+  transform: translateX(-50%) scale(0.95);
+  opacity: 0.9;
+  transition: transform 100ms ease-out, opacity 100ms ease-out;
+}
+
+.joy-custom-tab-bar__center--selected .joy-custom-tab-bar__center-outer-ring {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+.joy-custom-tab-bar__center--selected .joy-custom-tab-bar__center-label {
+  color: #8B5CF6;
 }

@@ -163,7 +163,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     narrative: {
       nickname: "咯咯小太阳",
       tagline: "稳定输出的暖意基线",
-      epicDescription: "他们像是社交里的温暖底色，不争不抢，但有他们在的氛围就是松快的。不用刻意活跃，光是那张稳稳的笑脸，就够让人安心。和他们待一会儿，好像烦恼也跟着淡了一点。",
+      epicDescription: "他们是一桌人里不说话也能让人安心的存在，不争不抢，但场子因为他们而松快很多。不用刻意活跃，光是那张稳稳的笑脸，就够让人放心。和他们待一会儿，好像烦恼也跟着淡了一点。",
       styleQuote: "人间小暖气，咯咯咯一笑，负面情绪全蒸发",
       coreContributions: "散发温暖能量，提升整体幸福感",
       description: "人间小暖气，咯咯小太阳，散发稳定温暖的正能量",
@@ -334,7 +334,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     narrative: {
       nickname: "气氛冲浪手",
       tagline: "在情绪波动时的气氛调频手",
-      epicDescription: "他们像是有第六感，总能察觉到场子里谁不太自在、气氛哪里紧了。然后不动声色地用一个话题或一句玩笑，把紧张轻轻拨开。最厉害的是，大家根本没发现他们在控场——只觉得这场聚特别舒服。",
+      epicDescription: "他们对气氛的感知比多数人早一拍，谁不太自在、哪里突然收紧了，他们总是先察觉到。然后不动声色地用一个话题或一句玩笑，把紧张轻轻拨开。最厉害的是，大家根本没发现有人在控场——只觉得这场局特别舒服。",
       styleQuote: "气氛冲浪手，微笑露一露，尴尬紧张全冲走",
       coreContributions: "平衡群体氛围，化解潜在冲突",
       description: "气氛调频手，气氛冲浪手，情商高、应变力强",
@@ -391,7 +391,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     narrative: {
       nickname: "关系织网师",
       tagline: "发现共同点并撮合交流的连接器",
-      epicDescription: "他们有一种特别的眼光，总能把两个看似不相干的人连到一起。「你们都喜欢这个？」——这句话一出口，一段新关系就开始了。他们不一定是聚会上最显眼的，但往往是那个让所有人都不落单的关键角色。",
+      epicDescription: "他们有一种特别的眼光，总能把两个看似不相干的人连到一起。「你们都喜欢这个？」——这句话一出口，一段新关系就开始了。他们不一定是聚会上最显眼的，但往往是那个让所有人都被看见的人。",
       styleQuote: "社交黏合剂，网络织一织，陌生朋友变知己",
       coreContributions: "连接不同人群，构建社交网络",
       description: "社交黏合剂，关系织网师，善于建立连接和构建网络",
@@ -505,7 +505,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     narrative: {
       nickname: "脑洞喷墨章",
       tagline: "多线发散的创意喷射口",
-      epicDescription: "他们的脑子里好像装了一台想象力放大器，最普通的话题到了他们嘴里都能拐出意想不到的方向。全场安静的时候，他们抛出一句奇奇怪怪的比喻，大家一愣，然后全笑了。这种让对话跳出框框的本事，是他们的独家天赋。",
+      epicDescription: "他们的脑子里好像装了一台想象力放大器，最普通的话题到了他们嘴里都能拐出意想不到的方向。全场安静的时候，他们抛出一句让人愣一下的比喻，大家一呆，然后全笑了。这种把对话带到没人去过的地方的本事，是他们的独家天赋。",
       styleQuote: "创意喷射器，触手伸一伸，奇妙点子八方来",
       coreContributions: "多线程发散思维，激发集体脑暴",
       description: "创意喷射器，脑洞喷墨章，思维跳跃、联想丰富",
@@ -619,7 +619,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     narrative: {
       nickname: "象鼻定心锚",
       tagline: "让人安心的稳定后盾与守望者",
-      epicDescription: "他们不一定是聚会上说话最多的那个人，但你在就会觉得安心。遇上突发状况，别人还在慌，他们已经冷静地开始想办法了。这种不用声张的可靠感，是他们给人最深的印象——有他们在，什么都不怕。",
+      epicDescription: "他们不一定是聚会上说话最多的那个人，但有他们在，整桌人就踏实了。遇上突发状况，别人还在慌，他们已经冷静地开始想办法了。这种不用声张的可靠感，是他们给人最深的印象——有他们在，什么都不怕。",
       styleQuote: "团队定盘星，象鼻卷一卷，安全感立马拉满",
       coreContributions: "提供稳定支持，奠定安心基调",
       description: "团队定盘星，象鼻定心锚，稳重可靠、包容豁达",
@@ -676,7 +676,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     narrative: {
       nickname: "慢语真知龟",
       tagline: "低频高质的洞察投放者",
-      epicDescription: "他们话不多，但每一句都有分量。当全场还在绕着圈子聊，他们会安静地听完，然后给出一个让所有人都点头的总结。他们不是不想说，而是在等到值得说的时刻。这种耐心，本身就是一种智慧。",
+      epicDescription: "他们话不多，但每一句都有分量。当全场还在兜圈子聊，他们会安静地听完，然后一句话把话题收住。他们不是不想说，而是在等那个真正值得开口的时刻。这种耐心，本身就是一种智慧。",
       styleQuote: "人间观察家，脖子伸一伸，一语道破万事皆",
       coreContributions: "提供深度洞察，贡献独到见解",
       description: "人间观察家，慢语真知龟，思考深入、言简意赅",
@@ -733,7 +733,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     narrative: {
       nickname: "安静伴伴猫",
       tagline: "低压陪伴的静默同在者",
-      epicDescription: "在大群体里，他们可能是最安静的那一个。但如果你走近一对一聊天，会发现他们是完全不同的人——有料、有趣、有深度。他们不需要抢着说话来证明存在感，一个舒服的陪伴就足够让整场局变得没有压力。",
+      epicDescription: "吵吵闹闹的局里，他们可能是最安静的那一个。但如果你走近一对一聊天，会发现他们是完全不同的人——有料、有趣、有深度。他们不需要抢着说话来证明存在感，静静坐在那儿，整场局就会跟着松下来。",
       styleQuote: "安静陪伴者，角落窝一窝，你在身边就快乐",
       coreContributions: "提供安静陪伴，营造轻松氛围",
       description: "安静陪伴者，安静伴伴猫，存在感低但不施加压力",

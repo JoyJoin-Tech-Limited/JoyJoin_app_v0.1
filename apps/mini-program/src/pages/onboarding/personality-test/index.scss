@@ -220,7 +220,8 @@
     justify-content: center;
     will-change: transform;
     transform: translateZ(0);
-    animation: mascot-float 3.2s ease-in-out infinite;
+    // Single-source animation: the intro WebP handles its own motion;
+    // no CSS float overlay to avoid competing rhythms.
   }
 
   &__intro-hero-halo {
@@ -308,6 +309,20 @@
     border-radius: 50%;
     overflow: hidden;
     background: rgba($color-primary, 0.04);
+
+    &--intro {
+      width: 320rpx;
+      height: 320rpx;
+    }
+
+    &--testing {
+      width: 152rpx;
+      height: 152rpx;
+    }
+
+    &--reduced-motion {
+      display: none;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -315,6 +330,15 @@
     &__mascot--animated,
     &__start-btn {
       animation: none;
+    }
+
+    &__mascot-static--intro,
+    &__mascot-static--testing {
+      display: none;
+    }
+
+    &__mascot-static--reduced-motion {
+      display: block;
     }
   }
 
@@ -484,6 +508,18 @@
     background: rgba($color-surface, 0.96);
     box-shadow: 0 10rpx 28rpx rgba(0, 0, 0, 0.05);
     animation: personality-intro-tease-card-enter 0.42s ease-out both;
+
+    &:nth-child(1) {
+      animation-delay: 80ms;
+    }
+
+    &:nth-child(2) {
+      animation-delay: 180ms;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 280ms;
+    }
   }
 
   &__intro-tease-avatar-wrap {

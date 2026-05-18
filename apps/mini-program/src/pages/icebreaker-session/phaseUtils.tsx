@@ -1,6 +1,7 @@
 import { Image, View } from '@tarojs/components'
 import { useState } from 'react'
 import type { AtmosphereMood, SocialIcebreakerPhase } from '@shared/socialIcebreaker'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 
 export type SessionPhase = 'waiting' | SocialIcebreakerPhase | 'ended'
 
@@ -15,10 +16,10 @@ export interface SessionParticipant {
 
 /** Root-relative paths — work from any JS chunk (e.g. `dist/common.js`); avoid `require('../../assets/…')` which resolves wrong when hoisted. */
 export const MOOD_OPTIONS: Array<{ mood: AtmosphereMood; label: string; asset: string }> = [
-  { mood: 'funny', label: '搞笑', asset: '/assets/icons/mood-icons/mood-funny.png' },
-  { mood: 'life', label: '生活', asset: '/assets/icons/mood-icons/mood-life.png' },
-  { mood: 'relaxed', label: '轻松', asset: '/assets/icons/mood-icons/mood-relaxed.png' },
-  { mood: 'emotional', label: '情感', asset: '/assets/icons/mood-icons/mood-emotional.png' },
+  { mood: 'funny', label: '搞笑', asset: cdnAsset('/assets/icons/mood-icons/mood-funny.png') },
+  { mood: 'life', label: '生活', asset: cdnAsset('/assets/icons/mood-icons/mood-life.png') },
+  { mood: 'relaxed', label: '轻松', asset: cdnAsset('/assets/icons/mood-icons/mood-relaxed.png') },
+  { mood: 'emotional', label: '情感', asset: cdnAsset('/assets/icons/mood-icons/mood-emotional.png') },
 ]
 
 export function getPhaseLabel(phase: SessionPhase): string {

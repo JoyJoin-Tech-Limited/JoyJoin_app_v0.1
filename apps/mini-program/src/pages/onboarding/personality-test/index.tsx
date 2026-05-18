@@ -1,9 +1,19 @@
-import { View, Text, ScrollView, Image } from '@tarojs/components'
-import { cdnAsset } from '../../../lib/utils/cdnAssets'
-import Button from '../../../components/ui/Button'
-import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
-import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { View, Text, ScrollView, Image } from '@tarojs/components'
+import Taro from '@tarojs/taro'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
+import {
+  initializeEngineState,
+  processAnswer,
+  selectNextQuestion,
+  questionsV4,
+  MAX_SKIP_COUNT,
+} from '@shared/personality/adaptiveEngine'
+import Button from '../../../components/ui/Button'
+import SegmentedProgress from '../../../components/ui/SegmentedProgress'
+import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
 import { useAuth, useInvalidateAuth } from '../../../hooks/useAuth'
 import { apiRequest, getUserState } from '../../../lib/api/api'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
@@ -13,6 +23,7 @@ import {
   hasAnonymousAssessmentResult,
   isAnonymousAssessmentSessionCompleted,
   readAnonymousAssessmentSession,
+  readAnonymousAssessmentAnswers,
   saveAnonymousAssessmentSession,
   upsertAnonymousAssessmentAnswer,
   type AnonymousAssessmentSessionSnapshot,
@@ -23,26 +34,25 @@ import {
   navigateToMiniProgramNextStep,
   runMiniProgramRouteTransition,
 } from '../../../lib/onboarding/onboardingNavigation'
-import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { logInfo, logError } from '../../../lib/utils/logger'
+import { haptics } from '../../../lib/utils/haptics'
+import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
+import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
+import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
+import MascotQuestionHeader from './MascotQuestionHeader'
+import PersonalityTestAnswerArea, { getNearestSliderOption } from './PersonalityTestAnswerArea'
+import { isMilestoneQuestion } from './personalityTestLogic'
+import QuestionTransition from './QuestionTransition'
+import { useBackReview } from './useBackReview'
 import {
   getArchetypeVisual,
   getIntroStaticAsset,
+  getIntroStaticFallbackAsset,
   getTestCuriousStaticAsset,
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
   PERSONALITY_TEST_QUESTION_EXPRESSION,
 } from './visuals'
-import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
-import { haptics } from '../../../lib/utils/haptics'
-import MascotQuestionHeader from './MascotQuestionHeader'
-import PersonalityTestAnswerArea, { getNearestSliderOption } from './PersonalityTestAnswerArea'
-import { isMilestoneQuestion } from './personalityTestLogic'
-
-import QuestionTransition from './QuestionTransition'
-import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
-import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
 import './index.scss'
 
 type Phase = 'intro' | 'testing' | 'completing'
@@ -160,12 +170,22 @@ export default function PersonalityTestPage() {
   const [postAnswerCommentary, setPostAnswerCommentary] = useState<string | null>(null)
   const [milestonePulse, setMilestonePulse] = useState(false)
   const [spriteLocked, setSpriteLocked] = useState(false)
+  const [introImgSrc, setIntroImgSrc] = useState(getIntroStaticAsset)
+  const [skipsRemaining, setSkipsRemaining] = useState(MAX_SKIP_COUNT)
+  const [isSkipping, setIsSkipping] = useState(false)
   // Guard against stale async closures hijacking navigation after session change
   const activeSessionRef = useRef<string>('')
   // Defensive timeout for sprite unlock if WeChat drops animationend
   const spriteUnlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Remember the last attempted option so we can retry on network failure
   const lastAttemptedOptionRef = useRef<AssessmentOption | null>(null)
+  // Track previous question + answer for one-step back
+  const previousQuestionRef = useRef<AssessmentQuestion | null>(null)
+  const previousAnswerRef = useRef<string | null>(null)
+  // Anonymous engine state for client-side back + re-answer
+  const anonymousEngineStateRef = useRef<ReturnType<typeof initializeEngineState> | null>(null)
+
+  const backReview = useBackReview()
 
   const isAuthenticated = auth.isAuthenticated
   const hasStoredIncompleteSession = useMemo(() => {
@@ -174,7 +194,7 @@ export default function PersonalityTestPage() {
     }
     const snapshot = readAnonymousAssessmentSession()
     return Boolean(snapshot?.sessionId && !isAnonymousAssessmentSessionCompleted(snapshot))
-  }, [isAuthenticated, phase])
+  }, [isAuthenticated])
 
   const analytics = useOnboardingAnalytics('personality-test', {
     enabled:
@@ -344,7 +364,7 @@ export default function PersonalityTestPage() {
       setPhase('testing')
     } catch (err) {
       setIsPageExiting(false)
-      const message = err instanceof Error ? err.message : '启动测试失败，请重试'
+      const message = err instanceof Error ? err.message : '启动测试没成功，再试试'
       setError(message)
       analytics.errorOccurred('start_failed', message)
       logError('[PersonalityTest] Failed to start', { message })
@@ -354,6 +374,7 @@ export default function PersonalityTestPage() {
   }, [
     analytics,
     completeAnonymousAssessment,
+    currentMatches,
     invalidateAuth,
     isAuthenticated,
     saveCheckpoint,
@@ -468,7 +489,7 @@ export default function PersonalityTestPage() {
       setSliderValue(50)
     } catch (err) {
       setIsPageExiting(false)
-      const message = err instanceof Error ? err.message : '提交答案失败，请重试'
+      const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
       setError(message)
       analytics.errorOccurred('answer_failed', message)
       logError('[PersonalityTest] Failed to submit answer', { message })
@@ -479,10 +500,11 @@ export default function PersonalityTestPage() {
   }, [
     analytics,
     completeAnonymousAssessment,
+    currentMatches,
     invalidateAuth,
     isAuthenticated,
     isSubmitting,
-    progress?.answered,
+    progress,
     question,
     saveCheckpoint,
     sessionId,
@@ -518,13 +540,6 @@ export default function PersonalityTestPage() {
       setSpriteState('thinking')
     }
   }, [isSubmitting])
-
-  const preloadExpressions: XiaoyueExpressionId[] = [
-    PERSONALITY_TEST_QUESTION_EXPRESSION.choice,
-    PERSONALITY_TEST_QUESTION_EXPRESSION.slider,
-    PERSONALITY_TEST_QUESTION_EXPRESSION.emoji_tap,
-    PERSONALITY_TEST_QUESTION_EXPRESSION.loading,
-  ]
 
   const showLoadingShell = auth.isLoading && (auth.isAuthenticated || hasStoredIncompleteSession)
   if (showLoadingShell) {
@@ -562,9 +577,18 @@ export default function PersonalityTestPage() {
             <View className='personality-test__intro-hero-visual'>
               <View className='personality-test__intro-hero-halo' />
               <Image
-                className='personality-test__mascot-static'
-                src={getIntroStaticAsset()}
-                style={{ width: '320rpx', height: '320rpx' }}
+                className='personality-test__mascot-static personality-test__mascot-static--intro'
+                src={introImgSrc}
+                mode='aspectFit'
+                lazyLoad={false}
+                onError={() => {
+                  // Graceful fallback to home-welcome expression if intro animated WebP fails
+                  setIntroImgSrc(getXiaoyueExpressionAsset('homeWelcome'))
+                }}
+              />
+              <Image
+                className='personality-test__mascot-static personality-test__mascot-static--intro personality-test__mascot-static--reduced-motion'
+                src={getIntroStaticFallbackAsset()}
                 mode='aspectFit'
                 lazyLoad={false}
               />
@@ -622,9 +646,6 @@ export default function PersonalityTestPage() {
                   <View
                     key={item.archetype}
                     className='personality-test__intro-tease-card'
-                    style={{
-                      animationDelay: `${80 + teaserIndex * 100}ms`,
-                    }}
                   >
                     <View className='personality-test__intro-tease-avatar-wrap'>
                       <Image
@@ -681,7 +702,7 @@ export default function PersonalityTestPage() {
   return (
     <>
       {/* Asset preloading for mascot expressions */}
-      <View className='personality-test__preload-layer'>
+      <View className='personality-test__preload-layer' aria-hidden='true'>
         {PRELOAD_EXPRESSIONS.map((expr) => (
           <Image
             key={expr}
@@ -689,6 +710,7 @@ export default function PersonalityTestPage() {
             src={getXiaoyueExpressionAsset(expr)}
             mode='aspectFit'
             lazyLoad={false}
+            aria-hidden='true'
           />
         ))}
       </View>
@@ -733,9 +755,8 @@ export default function PersonalityTestPage() {
                   />
                 ) : (
                   <Image
-                    className='personality-test__mascot-static'
+                    className='personality-test__mascot-static personality-test__mascot-static--testing'
                     src={getTestCuriousStaticAsset()}
-                    style={{ width: '152rpx', height: '152rpx' }}
                     mode='aspectFit'
                     lazyLoad={false}
                   />

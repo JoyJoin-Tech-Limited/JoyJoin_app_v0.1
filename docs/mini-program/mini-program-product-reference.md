@@ -75,15 +75,15 @@ This inventory is derived from the registered paths in [`../apps/mini-program/sr
 
 | Page path | Role | Purpose | Notes |
 | --- | --- | --- | --- |
-| `pages/discover/index` | Primary destination | Shows discoverable event pools with filters, fill state, and the main join entry path. | Launch-primary discovery surface. |
-| `pages/events/index` | Primary destination | Shows joined events split into upcoming and completed tabs. | User-facing label is `足迹`; page title is `我的足迹`. |
-| `pages/connections/index` | Primary destination | Shows post-event connections with peer identity and event context. | Reads `/api/my-connections`. |
+| `pages/discover/index` | Primary destination | Shows discoverable event pools with filters, fill state, and the main join entry path. | Launch-primary discovery surface. Location filter uses `LocationFilterDrawer` (bottom-sheet district selector) with smart default persistence. See `apps/mini-program/src/components/discover/LocationFilterDrawer.tsx`.
+| `pages/events/index` | Primary destination | Shows joined events split into upcoming and completed tabs. | User-facing label is `足迹`; page title is `我的足迹`. Primary data source is `GET /api/shell/events` (composite) with fallback to legacy `/api/events/joined`. |
+| `pages/connections/index` | Primary destination | Shows post-event connections with peer identity and event context. | Primary data source is `GET /api/shell/connections` (composite) with fallback to legacy `/api/my-connections`. |
 | `pages/profile/index` | Primary destination | Serves as the account hub for identity, current state, edit profile, rewards, invite, terms, and payment entry. | Tab anchor for `我的`. |
 | `pages/edit-profile/index` | Auxiliary destination | Lets the user edit core profile fields and interest selections after onboarding. | Reuses shared profile and interest contracts. |
 | `pages/rewards/index` | Auxiliary destination | Shows coupons, gamification state, recent history, and redeemable items. | Reads shared rewards and coupon APIs. |
 | `pages/invite/index` | Auxiliary destination | Shows referral code, invite link, reward tiers, and copy actions for friend invites. | Uses shared referral stats contract. |
 | `pages/terms/index` | Auxiliary destination | Renders the current legal terms or privacy content with section focus support. | Backed by shared legal copy. |
-| `pages/center-tab-empty/index` | Auxiliary destination | Provides the empty-state path when the center action has no active event context yet. | Offers a direct return to discover. |
+| `pages/center-hub/index` | Tab destination (center) | Dynamic hub for active events, pending registrations, and empty state. All center button taps route here via `switchTab`; internal CTAs then `navigateTo` detail pages. | Replaces `pages/center-tab-empty/index`. |
 
 ### Event, payment, matching, and in-event surfaces
 

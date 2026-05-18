@@ -20,20 +20,21 @@
   min-height: 100dvh;
   background: $color-bg-gradient;
 
-  // ── Sticky header ─────────────────────────────────────────────
-  &__sticky-header {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: inherit;
-  }
-
   // ── Hero ──────────────────────────────────────────────────────
   &__hero {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: $spacing-md;
     padding: $spacing-lg $container-padding $spacing-md;
+  }
+
+  &__hero-left {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    flex: 1;
+    min-width: 0;
   }
 
   &__hero-mascot {
@@ -57,6 +58,49 @@
   &__hero-text {
     flex: 1;
     min-width: 0;
+  }
+
+  // ── Location Pill ─────────────────────────────────────────────
+  &__location-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6rpx;
+    height: 48rpx;
+    padding: 0 20rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.7);
+    border: 1rpx solid rgba($color-primary, 0.15);
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+    transition: background 200ms ease, box-shadow 200ms ease, transform 150ms ease-out;
+    flex-shrink: 0;
+
+    &--active {
+      background: $brand-gradient;
+      border-color: transparent;
+      box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.25);
+
+      .discover-auth__location-pill-icon,
+      .discover-auth__location-pill-text {
+        color: $color-text-white;
+      }
+    }
+
+    &--hover {
+      transform: scale(0.96);
+    }
+  }
+
+  &__location-pill-icon {
+    font-size: 24rpx;
+    line-height: 1;
+  }
+
+  &__location-pill-text {
+    font-size: 22rpx;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    line-height: 1;
+    white-space: nowrap;
   }
 
   &__greeting {
@@ -111,67 +155,8 @@
     color: $color-text-primary;
   }
 
-  // ── Filter chips ──────────────────────────────────────────────
-  &__filter-section {
-    padding: 0 0 $spacing-sm 0;
-  }
-
-  &__chips-row {
-    width: 100%;
-    white-space: nowrap;
-    padding: 0 $container-padding;
-    box-sizing: border-box;
-
-    &--districts {
-      margin-top: $spacing-xs;
-    }
-  }
-
-  &__chips-inner {
-    display: inline-flex;
-    gap: $spacing-sm;
-    padding: $spacing-xs 0;
-  }
-
-  &__chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: $spacing-xs $spacing-md;
-    border-radius: 999rpx;
-    background: $color-surface;
-    box-shadow: $shadow-sm;
-    white-space: nowrap;
-    transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
-
-    &--sm {
-      padding: 6rpx $spacing-sm;
-    }
-
-    &--active {
-      background: $brand-gradient;
-      box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.3);
-
-      .discover-auth__chip-text {
-        color: $color-text-white;
-      }
-    }
-
-    &--hover {
-      transform: scale(0.95);
-    }
-  }
-
-  &__chip-text {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
-    color: $color-text-secondary;
-    line-height: 1;
-  }
-
-  &__chip--sm .discover-auth__chip-text {
-    font-size: $font-size-xs;
-  }
+  // ── Filter chips (legacy — replaced by LocationFilterDrawer) ──
+  // Removed. See LocationFilterDrawer component for new filter UX.
 
   // ── Section header ────────────────────────────────────────────
   &__section {

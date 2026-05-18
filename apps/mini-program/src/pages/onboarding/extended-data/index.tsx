@@ -13,6 +13,7 @@ import {
   type InterestDefinition,
   type MacroCategory,
 } from '@shared/interests'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import { useInvalidateAuth } from '../../../hooks/useAuth'
 import { apiRequest, getUserState } from '../../../lib/api/api'
@@ -224,7 +225,7 @@ export default function ExtendedDataPage() {
       })
     } catch (err) {
       setIsPageExiting(false)
-      const message = err instanceof Error ? err.message : '提交失败，请重试'
+      const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
       setError(message)
       analytics.errorOccurred('submit_failed', message)
       logError('[ExtendedData] Submit failed', { message })
