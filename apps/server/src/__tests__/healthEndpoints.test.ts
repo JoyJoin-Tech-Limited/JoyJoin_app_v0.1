@@ -49,8 +49,7 @@ describe("GET /api/health", () => {
       const body: any = await res.json();
       expect(res.status).toBe(200);
       expect(body.status).toBe("ok");
-      expect(typeof body.uptime).toBe("number");
-      expect(body.timestamp).toMatch(/^\d{4}-/);
+      expect(body).toEqual({ status: "ok" });
     });
   });
 });
