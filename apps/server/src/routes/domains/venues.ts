@@ -857,7 +857,7 @@ export function registerVenueRoutes(app: Express): void {
       }
 
       // Execute migration atomically
-      const result = await db.transaction(async (tx) => {
+      const result = await db.transaction(async (tx: typeof db) => {
         // Cancel existing booking
         if (existingBooking.length > 0) {
           await tx

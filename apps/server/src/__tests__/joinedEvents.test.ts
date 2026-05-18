@@ -134,13 +134,14 @@ describe("GET /api/events/joined", () => {
       });
 
       expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(Array.isArray(body)).toBe(true);
-      expect(body).toHaveLength(2);
-      expect(body[0].id).toBe("event-1");
-      expect(body[0].title).toBe("周五夜聊");
-      expect(body[1].id).toBe("pool-1");
-      expect(body[1].status).toBe("pending");
+      const body: any = await res.json();
+      const result: any[] = body;
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe("event-1");
+      expect(result[0].title).toBe("周五夜聊");
+      expect(result[1].id).toBe("pool-1");
+      expect(result[1].status).toBe("pending");
 
       expect(mockGetUserJoinedEventsSummary).toHaveBeenCalledWith("user-123");
 
@@ -148,8 +149,8 @@ describe("GET /api/events/joined", () => {
         (call) => call[0] === "events.joined"
       );
       expect(logCall).toBeDefined();
-      expect(logCall[1].userId).toBe("user-123");
-      expect(logCall[1].count).toBe(2);
+      expect(logCall![1].userId).toBe("user-123");
+      expect(logCall![1].count).toBe(2);
 
       expect(res.headers.get("X-Response-Time")).toBeTruthy();
     });
@@ -191,7 +192,7 @@ describe("GET /api/events/joined", () => {
         (call) => call[0] === "events.joined failed"
       );
       expect(errorLog).toBeDefined();
-      expect(errorLog[1].error).toBe("DB connection lost");
+      expect(errorLog![1].error).toBe("DB connection lost");
     });
   });
 });

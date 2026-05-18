@@ -214,7 +214,7 @@ describe("PUT /api/assessment/v4/:sessionId/answer", () => {
       );
 
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body: any = await response.json();
       expect(body.isComplete).toBe(false);
       expect(body.nextQuestion).not.toBeNull();
       expect(body.progress.answered).toBe(1);
@@ -254,7 +254,7 @@ describe("PUT /api/assessment/v4/:sessionId/answer", () => {
         }
       );
       expect(res1.status).toBe(200);
-      const body1 = await res1.json();
+      const body1: any = await res1.json();
 
       const res2 = await fetch(
         `${baseUrl}/api/assessment/v4/${session.id}/answer`,
@@ -265,7 +265,7 @@ describe("PUT /api/assessment/v4/:sessionId/answer", () => {
         }
       );
       expect(res2.status).toBe(200);
-      const body2 = await res2.json();
+      const body2: any = await res2.json();
 
       expect(body2.isComplete).toBe(body1.isComplete);
       expect(body2.nextQuestion?.id).toBe(body1.nextQuestion?.id);
@@ -294,7 +294,7 @@ describe("PUT /api/assessment/v4/:sessionId/answer", () => {
       );
 
       expect(response.status).toBe(401);
-      const body = await response.json();
+      const body: any = await response.json();
       expect(body.message).toMatch(/Unauthorized/i);
     });
   });
@@ -322,7 +322,7 @@ describe("PUT /api/assessment/v4/:sessionId/answer", () => {
       );
 
       expect(response.status).toBe(403);
-      const body = await response.json();
+      const body: any = await response.json();
       expect(body.message).toMatch(/Forbidden/i);
     });
   });
@@ -345,7 +345,7 @@ describe("PUT /api/assessment/v4/:sessionId/answer", () => {
       );
 
       expect(response.status).toBe(400);
-      const body = await response.json();
+      const body: any = await response.json();
       expect(body.message).toMatch(/Invalid question ID/i);
     });
   });
@@ -367,7 +367,7 @@ describe("PUT /api/assessment/v4/:sessionId/answer", () => {
       );
 
       expect(response.status).toBe(400);
-      const body = await response.json();
+      const body: any = await response.json();
       expect(body.message).toMatch(/Invalid option selected/i);
     });
   });
@@ -385,7 +385,7 @@ describe("PUT /api/assessment/v4/:sessionId/answer", () => {
       );
 
       expect(response.status).toBe(404);
-      const body = await response.json();
+      const body: any = await response.json();
       expect(body.message).toMatch(/Session not found/i);
     });
   });
@@ -409,7 +409,7 @@ describe("PUT /api/assessment/v4/:sessionId/answer", () => {
       );
 
       expect(response.status).toBe(409);
-      const body = await response.json();
+      const body: any = await response.json();
       expect(body.message).toMatch(/already completed/i);
     });
   });
@@ -445,7 +445,7 @@ describe("PUT /api/assessment/v4/:sessionId/answer", () => {
         }
       );
       expect(res6.status).toBe(429);
-      const body = await res6.json();
+      const body: any = await res6.json();
       expect(body.message).toMatch(/Too many replacements/i);
     });
   });
@@ -484,7 +484,7 @@ describe("PUT /api/assessment/v4/:sessionId/answer", () => {
         }
       );
       expect(putRes.status).toBe(200);
-      const putBody = await putRes.json();
+      const putBody: any = await putRes.json();
 
       // Rebuild state locally with the corrected sequence
       let localState = initializeEngineState(DEFAULT_ASSESSMENT_CONFIG);
@@ -583,7 +583,7 @@ describe("PUT /api/assessment/v4/:sessionId/answer", () => {
           body: JSON.stringify({ questionId: "Q1", selectedOption: "B" }),
         }
       );
-      const putBody = await putRes.json();
+      const putBody: any = await putRes.json();
 
       // Shape assertions
       expect(putBody).toHaveProperty("isComplete");

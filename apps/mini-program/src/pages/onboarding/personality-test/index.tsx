@@ -4,11 +4,11 @@ import Taro from '@tarojs/taro'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
+import { questionsV4 } from '@shared/personality/questionsV4'
 import {
   initializeEngineState,
   processAnswer,
   selectNextQuestion,
-  questionsV4,
   MAX_SKIP_COUNT,
 } from '@shared/personality/adaptiveEngine'
 import Button from '../../../components/ui/Button'
@@ -72,7 +72,7 @@ interface AssessmentSliderConfig {
   rightEmoji: string
 }
 
-interface AssessmentQuestion {
+export interface AssessmentQuestion {
   id: string
   scenarioText: string
   questionText: string

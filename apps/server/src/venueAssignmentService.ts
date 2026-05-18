@@ -153,7 +153,7 @@ async function checkTimeSlotAvailability(
     ))
     .groupBy(venueTimeSlotBookings.timeSlotId);
   
-  const countMap = new Map(bookingCounts.map(b => [b.timeSlotId, b.count]));
+  const countMap = new Map(bookingCounts.map((b: { timeSlotId: string; count: number }) => [b.timeSlotId, b.count]));
   
   for (const slot of allSlots) {
     const bookingCount = countMap.get(slot.id) ?? 0;
@@ -384,8 +384,8 @@ export async function saveVenueAssignments(
   const bookingDate = `${year}-${month}-${day}`; // "YYYY-MM-DD"
 
   // Get all groups for this pool
-  const groups = await db
-    .select()
+  const groups: Array<{ id: string; groupNumber: number }> = await db
+    .select({ id: eventPoolGroups.id, groupNumber: eventPoolGroups.groupNumber })
     .from(eventPoolGroups)
     .where(eq(eventPoolGroups.poolId, poolId));
 
@@ -394,10 +394,10 @@ export async function saveVenueAssignments(
     return;
   }
 
-  const groupIds: string[] = groups.map((g: typeof eventPoolGroups.$inferSelect) => g.id);
-  const assignedSlotIds: string[] = [...new Set(
+  const groupIds = groups.map(g => g.id);
+  const assignedSlotIds = [...new Set(
     groups
-      .map((g: typeof eventPoolGroups.$inferSelect) => assignments.get(g.groupNumber)?.timeSlotId)
+      .map(g => assignments.get(g.groupNumber)?.timeSlotId)
       .filter((id): id is string => !!id)
   )];
 

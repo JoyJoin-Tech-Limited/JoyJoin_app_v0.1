@@ -133,7 +133,7 @@ describe("GET /api/my-connections", () => {
       });
 
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body: any = await res.json();
       expect(Array.isArray(body)).toBe(true);
       expect(body).toHaveLength(2);
       expect(body[0].id).toBe("conn-1");
@@ -149,8 +149,8 @@ describe("GET /api/my-connections", () => {
         (call) => call[0] === "connections.my"
       );
       expect(logCall).toBeDefined();
-      expect(logCall[1].userId).toBe("user-123");
-      expect(logCall[1].count).toBe(2);
+      expect(logCall![1].userId).toBe("user-123");
+      expect(logCall![1].count).toBe(2);
 
       expect(res.headers.get("X-Response-Time")).toBeTruthy();
     });
@@ -192,7 +192,7 @@ describe("GET /api/my-connections", () => {
         (call) => call[0] === "connections.my failed"
       );
       expect(errorLog).toBeDefined();
-      expect(errorLog[1].error).toBe("DB connection lost");
+      expect(errorLog![1].error).toBe("DB connection lost");
     });
   });
 });

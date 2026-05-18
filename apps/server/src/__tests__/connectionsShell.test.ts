@@ -154,7 +154,7 @@ describe("GET /api/shell/connections", () => {
       });
 
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body: any = await res.json();
       expect(body.user.nextStep).toBe("discover");
       expect(body.user.primaryArchetype).toBe("柯基");
       expect(body.connections).toHaveLength(1);
@@ -170,10 +170,10 @@ describe("GET /api/shell/connections", () => {
         (call) => call[0] === "shell.connections"
       );
       expect(logCall).toBeDefined();
-      expect(logCall[1].userId).toBe("user-123");
-      expect(logCall[1].cache_hit).toBe(false);
-      expect(logCall[1].connection_count).toBe(1);
-      expect(logCall[1].pending_count).toBe(1);
+      expect(logCall![1].userId).toBe("user-123");
+      expect(logCall![1].cache_hit).toBe(false);
+      expect(logCall![1].connection_count).toBe(1);
+      expect(logCall![1].pending_count).toBe(1);
 
       expect(res.headers.get("X-Response-Time")).toBeTruthy();
       expect(res.headers.get("Cache-Control")).toContain("private");
@@ -222,7 +222,7 @@ describe("GET /api/shell/connections", () => {
         (call) => call[0] === "shell.connections failed"
       );
       expect(errorLog).toBeDefined();
-      expect(errorLog[1].error).toBe("DB connection lost");
+      expect(errorLog![1].error).toBe("DB connection lost");
     });
   });
 });

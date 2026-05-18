@@ -68,7 +68,7 @@ function createApp() {
   );
 
   app.post("/__setAdmin", (req, res) => {
-    req.session.adminId = req.body.adminId || "admin-1";
+    (req.session as any).adminId = req.body.adminId || "admin-1";
     req.session.save(() => res.json({ ok: true }));
   });
 
@@ -142,7 +142,7 @@ describe("GET /api/admin/benchmarks/social-ai", () => {
       });
 
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body: any = await res.json();
       expect(body.report.iterationsPerFixture).toBe(3);
       expect(body.report.summary).toHaveLength(1);
       expect(body.report.formatted).toContain("2026-05-13T10:00:00.000Z");
@@ -218,7 +218,7 @@ describe("GET /api/admin/benchmarks/social-ai", () => {
       });
 
       expect(res.status).toBe(400);
-      const body = await res.json();
+      const body: any = await res.json();
       expect(body.message).toContain("No valid models");
     });
   });

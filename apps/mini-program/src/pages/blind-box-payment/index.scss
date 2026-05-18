@@ -25,7 +25,7 @@
     min-height: 88rpx;
     padding: 0 24rpx;
     margin-left: 0;
-    border-radius: 44rpx;
+    border-radius: $button-radius;
     background: rgba($color-surface, 0.94);
     color: $color-text-secondary;
     font-size: 28rpx;
@@ -148,7 +148,7 @@
     @include type-brand-cta-label;
     margin-top: 12rpx;
     min-height: max(88rpx, $cta-min-tap);
-    border-radius: 44rpx;
+    border-radius: $button-radius;
     background: rgba($color-primary-light, 0.94);
     color: $color-primary-dark;
     font-size: $font-size-base;
@@ -192,7 +192,7 @@
     background: rgba($color-surface, 0.94);
     border: 2rpx solid rgba($color-border, 0.72);
     text-align: left;
-    box-shadow: 0 12rpx 36rpx rgba(45, 49, 66, 0.06);
+    box-shadow: 0 12rpx 36rpx rgba(0, 0, 0, 0.06);
 
     &:active {
       opacity: 0.92;
@@ -287,7 +287,7 @@
     padding: 32rpx;
     border-radius: 32rpx;
     background: rgba($color-surface, 0.98);
-    box-shadow: 0 20rpx 80rpx rgba(15, 23, 42, 0.08);
+    box-shadow: 0 20rpx 80rpx rgba(0, 0, 0, 0.08);
     display: flex;
     flex-direction: column;
     gap: 20rpx;
@@ -331,10 +331,10 @@
     @include type-brand-cta-label;
     min-height: max(96rpx, $cta-min-tap);
     border-radius: $button-radius;
-    background: linear-gradient(135deg, $color-success 0%, #15D16F 100%);
+    background: $color-success;
     color: $color-text-white;
     font-size: $font-size-md;
-    box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.35);
+    box-shadow: 0 8rpx 24rpx rgba($color-success, 0.35);
 
     &:active {
       opacity: 0.92;

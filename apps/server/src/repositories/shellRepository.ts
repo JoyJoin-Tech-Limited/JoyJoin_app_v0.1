@@ -212,7 +212,7 @@ export async function getDiscoverShellData(params: {
 
   const hasMore = poolsRaw.length > limit;
   const pagePools = poolsRaw.slice(0, limit);
-  const poolIds = pagePools.map((p) => p.id);
+  const poolIds = pagePools.map((p: any) => p.id);
 
   // ── 3. Parallel bulk queries (only 2 round-trips) ────────────────────────
   const [allRegistrationRows, aiCopyRows] = await Promise.all([
@@ -229,7 +229,7 @@ export async function getDiscoverShellData(params: {
           .innerJoin(users, eq(eventPoolRegistrations.userId, users.id))
           .where(
             and(
-              sql`${eventPoolRegistrations.poolId} IN (${sql.join(poolIds.map((id) => sql`${id}`), sql`, `)})`,
+              sql`${eventPoolRegistrations.poolId} IN (${sql.join(poolIds.map((id: any) => sql`${id}`), sql`, `)})`,
               eq(eventPoolRegistrations.matchStatus, "pending")
             )
           )
@@ -280,7 +280,7 @@ export async function getDiscoverShellData(params: {
   }
 
   // ── 5. Assemble pruned pool items ────────────────────────────────────────
-  const items: DiscoverShellPoolItem[] = pagePools.map((pool) => {
+  const items: DiscoverShellPoolItem[] = pagePools.map((pool: any) => {
     const regs = registrationsByPool.get(pool.id) ?? [];
     const registrationCount = regs.length;
     const capacity = resolvePoolCapacity(pool);
