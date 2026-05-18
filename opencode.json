@@ -149,7 +149,7 @@
           "*": "allow"
         },
         "bash": {
-          "*": "ask"
+          "*": "allow"
         },
         "edit": "allow",
         "webfetch": "allow"

@@ -73,10 +73,10 @@ describe('xiaoyueAnalysisService', () => {
 
     expect(fallback.stateLabel).toBe('慢热深聊型');
     expect(fallback.analysis).toContain('交界');
-    expect(fallback.shareLine).toContain('owl');
+    expect(fallback.shareLine).toContain('猫头鹰');
     expect(fallback.expressionTags.length).toBeGreaterThanOrEqual(3);
-    expect(fallback.blendLine).toContain('octopus');
-    expect(fallback.shareVariants.friendCallout).toContain('octopus');
+    expect(fallback.blendLine).toContain('章鱼');
+    expect(fallback.shareVariants.friendCallout).toContain('章鱼');
   });
 
   it('falls back when structured output violates prompt length constraints', () => {

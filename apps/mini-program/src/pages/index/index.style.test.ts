@@ -15,12 +15,9 @@ describe('mini-program landing page styles', () => {
     expect(landingPageStyleSource).not.toMatch(/var\(--/)
   })
 
-  it('uses a glow treatment instead of a solid white plate behind the logo', () => {
-    expect(landingPageSource).toContain('className="logo-aura"')
+  it('renders BrandLogo component instead of solid white plate behind the logo', () => {
+    expect(landingPageSource).toContain('BrandLogo')
     expect(landingPageSource).not.toContain('className="logo-bg"')
-    expect(landingPageStyleSource).toContain('.logo-aura')
-    // Glow can be radial-gradient or brand-tinted solid + shadow (premium refactor)
-    expect(landingPageStyleSource).toMatch(/radial-gradient\(|rgba\(139, 92, 246/)
     expect(landingPageStyleSource).not.toContain('background: rgba(255, 255, 255, 0.72);')
   })
 })

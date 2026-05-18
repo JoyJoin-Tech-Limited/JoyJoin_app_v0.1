@@ -8,10 +8,10 @@ const sourceRoot = path.resolve(currentDir, '../..')
 const componentPath = path.join(currentDir, 'ArchetypeGlyph.tsx')
 
 describe('ArchetypeGlyph asset references', () => {
-  it('points to packaged glyph files that exist', () => {
+  it('points to packaged archetype glyph files that exist', () => {
     const source = fs.readFileSync(componentPath, 'utf8')
     const assetRefs = Array.from(
-      source.matchAll(/['"](?<asset>\/assets\/icons\/archetype-glyphs\/[^'"]+)['"]/g),
+      source.matchAll(/['"](?<asset>\/assets\/personality\/archetypes\/[^'"]+)['"]/g),
       (match) => match.groups?.asset,
     ).filter((asset): asset is string => Boolean(asset))
 

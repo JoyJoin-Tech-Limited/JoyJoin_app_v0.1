@@ -8,8 +8,8 @@ import React from 'react'
  * derived from the existing full-body illustrations. Each glyph is a
  * monochrome filled shape at 16×16 viewBox, recognizable at ~16rpx scale.
  *
- * Assets live in: assets/icons/archetype-glyphs/
- * Naming: archetype-{key}-glyph{@2x|@3x}.png
+ * Assets live in: assets/personality/archetypes/
+ * Naming: archetype-{key}.webp
  *
  * Taro/WeChat safe: uses <Image> with local asset paths.
  */
@@ -25,21 +25,21 @@ interface ArchetypeGlyphProps {
 }
 
 const GLYPH_PATHS: Record<string, string> = {
-  'corgi': '/assets/icons/archetype-glyphs/archetype-corgi-glyph@3x.png',
-  'rooster': '/assets/icons/archetype-glyphs/archetype-rooster-glyph@3x.png',
-  'hamster_praise': '/assets/icons/archetype-glyphs/archetype-hamster_praise-glyph@3x.png',
-  'fox': '/assets/icons/archetype-glyphs/archetype-fox-glyph@3x.png',
-  'dolphin_calm': '/assets/icons/archetype-glyphs/archetype-dolphin_calm-glyph@3x.png',
-  'spider': '/assets/icons/archetype-glyphs/archetype-spider-glyph@3x.png',
-  'koala': '/assets/icons/archetype-glyphs/archetype-koala-glyph@3x.png',
-  'octopus': '/assets/icons/archetype-glyphs/archetype-octopus-glyph@3x.png',
-  'owl': '/assets/icons/archetype-glyphs/archetype-owl-glyph@3x.png',
-  'elephant': '/assets/icons/archetype-glyphs/archetype-elephant-glyph@3x.png',
-  'turtle': '/assets/icons/archetype-glyphs/archetype-turtle-glyph@3x.png',
-  'cat': '/assets/icons/archetype-glyphs/archetype-cat-glyph@3x.png',
+  'corgi': '/assets/personality/archetypes/archetype-corgi.webp',
+  'rooster': '/assets/personality/archetypes/archetype-rooster.webp',
+  'hamster_praise': '/assets/personality/archetypes/archetype-hamster_praise.webp',
+  'fox': '/assets/personality/archetypes/archetype-fox.webp',
+  'dolphin_calm': '/assets/personality/archetypes/archetype-dolphin_calm.webp',
+  'spider': '/assets/personality/archetypes/archetype-spider.webp',
+  'koala': '/assets/personality/archetypes/archetype-koala.webp',
+  'octopus': '/assets/personality/archetypes/archetype-octopus.webp',
+  'owl': '/assets/personality/archetypes/archetype-owl.webp',
+  'elephant': '/assets/personality/archetypes/archetype-elephant.webp',
+  'turtle': '/assets/personality/archetypes/archetype-turtle.webp',
+  'cat': '/assets/personality/archetypes/archetype-cat.webp',
 }
 
-const FALLBACK_PATH = '/assets/icons/archetype-glyphs/archetype-corgi-glyph@3x.png'
+const FALLBACK_PATH = '/assets/personality/archetypes/archetype-corgi.webp'
 
 export default function ArchetypeGlyph({
   archetype,
