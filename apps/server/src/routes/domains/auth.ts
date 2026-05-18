@@ -245,6 +245,10 @@ export function registerAuthRoutes(app: Express): void {
       });
     }
 
+    if (!req.session?.adminAccountId && !req.session?.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     if (req.session?.adminAccountId) {
       try {
         const adminAccount = await storage.getAdminAccountById(req.session.adminAccountId);
@@ -257,6 +261,8 @@ export function registerAuthRoutes(app: Express): void {
             nextStep: 'discover',
           });
         }
+        req.session.adminAccountId = undefined;
+        req.session.adminRole = undefined;
         return res.status(401).json({ message: "Unauthorized" });
       } catch (err) {
         return res.status(500).json({ message: "Internal server error" });
@@ -270,7 +276,10 @@ export function registerAuthRoutes(app: Express): void {
     try {
       const userId = req.session.userId;
       const user = await storage.getUser(userId);
-      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user) {
+        req.session.userId = undefined;
+        return res.status(401).json({ message: "Unauthorized" });
+      }
 
       const profileEssentialComplete = !!(
         user.displayName &&

@@ -181,6 +181,18 @@ function renderCounter(
   return lines.join('\n');
 }
 
+function renderCounterWithDefaultZero(
+  name: string,
+  help: string,
+  store: Map<string, CounterEntry>,
+): string {
+  const rendered = renderCounter(name, help, store);
+  if (store.size > 0) {
+    return rendered;
+  }
+  return `${rendered}\n${name} 0`;
+}
+
 function renderHistogram(
   name: string,
   help: string,
@@ -383,7 +395,7 @@ export async function getMetricsText(): Promise<string> {
   await measureEventLoopDelay();
 
   const sections: string[] = [
-    renderCounter(
+    renderCounterWithDefaultZero(
       'http_requests_total',
       'Total number of HTTP requests.',
       requestCounters,
