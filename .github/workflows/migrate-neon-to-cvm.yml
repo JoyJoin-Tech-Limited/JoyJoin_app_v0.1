@@ -108,30 +108,28 @@ jobs:
           script: |
             set -euo pipefail
 
-            LOCAL_DB="postgres://joyjoin:${POSTGRES_PASSWORD}@localhost:5432/joyjoin"
-
-            echo "📥 Exporting from Neon..."
-            PGSSLMODE=require PGCHANNELBINDING=disable \
-              pg_dump "${DATABASE_URL}" --no-owner --no-acl -Fc -f /tmp/neon-backup.dump
+            echo "📥 Exporting from Neon via Docker pg_dump (Postgres 16)..."
+            docker exec joyjoin-postgres \
+              pg_dump "${DATABASE_URL}" --no-owner --no-acl -Fc > /tmp/neon-backup.dump
             echo "   Backup: $(du -h /tmp/neon-backup.dump | cut -f1)"
 
             echo "📤 Importing to CVM Postgres..."
-            PGPASSWORD="${POSTGRES_PASSWORD}" \
-              pg_restore -h localhost -U joyjoin -d joyjoin --no-owner --no-acl /tmp/neon-backup.dump
+            docker exec -i joyjoin-postgres \
+              pg_restore -d "postgres://joyjoin:${POSTGRES_PASSWORD}@localhost:5432/joyjoin" --no-owner --no-acl < /tmp/neon-backup.dump
 
             echo "🗄️ Applying migration SQLs..."
             cd ~/JoyJoin
             for f in apps/server/migrations/*.sql; do
               echo "   $(basename "$f")"
-              PGPASSWORD="${POSTGRES_PASSWORD}" \
-                psql -h localhost -U joyjoin -d joyjoin -f "$f" 2>&1 || echo "   ⚠️ Non-fatal"
+              docker exec -i joyjoin-postgres \
+                psql -U joyjoin -d joyjoin -f - < "$f" 2>&1 || echo "   ⚠️ Non-fatal"
             done
 
             echo "🔍 Verifying..."
-            NEON_USERS=$(PGSSLMODE=require PGCHANNELBINDING=disable \
+            NEON_USERS=$(docker exec joyjoin-postgres \
               psql "${DATABASE_URL}" -tAc "SELECT count(*) FROM users" 2>/dev/null || echo "N/A")
-            CVM_USERS=$(PGPASSWORD="${POSTGRES_PASSWORD}" \
-              psql -h localhost -U joyjoin -d joyjoin -tAc "SELECT count(*) FROM users" 2>/dev/null || echo "N/A")
+            CVM_USERS=$(docker exec joyjoin-postgres \
+              psql -U joyjoin -d joyjoin -tAc "SELECT count(*) FROM users" 2>/dev/null || echo "N/A")
             echo "   Neon: ${NEON_USERS} users"
             echo "   CVM:  ${CVM_USERS} users"
 
