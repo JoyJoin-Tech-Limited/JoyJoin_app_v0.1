@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create Postgres docker-compose override + start container
+      - name: Ensure Postgres container is running
         uses: appleboy/ssh-action@v1.0.3
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
@@ -26,16 +26,26 @@ jobs:
           envs: POSTGRES_PASSWORD
           script: |
             set -euo pipefail
-
             cd ~/JoyJoin/deployment
 
-            if docker ps --format '{{.Names}}' | grep -q joyjoin-postgres; then
-              echo "✅ Postgres container already running — skipping setup"
-              exit 0
+            # Check if container exists at all (running or stopped)
+            if docker ps -a --format '{{.Names}}' | grep -q joyjoin-postgres; then
+              if docker ps --format '{{.Names}}' | grep -q joyjoin-postgres; then
+                echo "✅ Postgres already running"
+                exit 0
+              fi
+              echo "⚠️ Postgres container exists but stopped — restarting..."
+              docker start joyjoin-postgres
+              sleep 3
+              if docker exec joyjoin-postgres pg_isready -U joyjoin -d joyjoin; then
+                echo "✅ Postgres restarted and healthy"
+                exit 0
+              fi
+              echo "❌ Postgres restart failed, removing and recreating..."
+              docker rm -f joyjoin-postgres
             fi
 
-            echo "🐘 Creating Postgres docker-compose override..."
-
+            echo "🐘 Creating override + starting Postgres..."
             cat > docker-compose.postgres.yml << YAML
             services:
               postgres:
@@ -59,7 +69,6 @@ jobs:
               pgdata:
             YAML
 
-            echo "🐳 Starting Postgres..."
             docker compose -f docker-compose.nginx.yml -f docker-compose.postgres.yml up -d postgres
 
             echo "⏳ Waiting for Postgres to be healthy..."
@@ -70,8 +79,10 @@ jobs:
               fi
               sleep 2
             done
+
             echo "❌ Postgres failed to start"
-            docker logs joyjoin-postgres --tail 50
+            docker ps -a | grep postgres || true
+            docker logs joyjoin-postgres --tail 80
             exit 1
 
   migrate-data:
@@ -97,33 +108,32 @@ jobs:
           script: |
             set -euo pipefail
 
-            export PGPASSWORD="${POSTGRES_PASSWORD}"
             LOCAL_DB="postgres://joyjoin:${POSTGRES_PASSWORD}@localhost:5432/joyjoin"
 
-            echo "📥 Exporting from Neon (may take several minutes)..."
-            export PGSSLMODE=require
-            export PGCHANNELBINDING=disable
-            pg_dump "${DATABASE_URL}" --no-owner --no-acl -Fc -f /tmp/neon-backup.dump 2>&1
-            BACKUP_SIZE=$(du -h /tmp/neon-backup.dump | cut -f1)
-            echo "   Backup size: ${BACKUP_SIZE}"
+            echo "📥 Exporting from Neon..."
+            PGSSLMODE=require PGCHANNELBINDING=disable \
+              pg_dump "${DATABASE_URL}" --no-owner --no-acl -Fc -f /tmp/neon-backup.dump
+            echo "   Backup: $(du -h /tmp/neon-backup.dump | cut -f1)"
 
             echo "📤 Importing to CVM Postgres..."
-            pg_restore -d "${LOCAL_DB}" --no-owner --no-acl /tmp/neon-backup.dump 2>&1
+            PGPASSWORD="${POSTGRES_PASSWORD}" \
+              pg_restore -h localhost -U joyjoin -d joyjoin --no-owner --no-acl /tmp/neon-backup.dump
 
             echo "🗄️ Applying migration SQLs..."
             cd ~/JoyJoin
             for f in apps/server/migrations/*.sql; do
-              echo "   Running: $(basename "$f")"
-              psql "${LOCAL_DB}" -f "$f" 2>&1 || echo "   ⚠️ Non-fatal"
+              echo "   $(basename "$f")"
+              PGPASSWORD="${POSTGRES_PASSWORD}" \
+                psql -h localhost -U joyjoin -d joyjoin -f "$f" 2>&1 || echo "   ⚠️ Non-fatal"
             done
 
             echo "🔍 Verifying..."
-            export PGSSLMODE=require
-            export PGCHANNELBINDING=disable
-            NEON_USERS=$(psql "${DATABASE_URL}" -tAc "SELECT count(*) FROM users" 2>/dev/null || echo "N/A")
-            CVM_USERS=$(psql "${LOCAL_DB}" -tAc "SELECT count(*) FROM users" 2>/dev/null || echo "N/A")
-            echo "   Neon users: ${NEON_USERS}"
-            echo "   CVM  users: ${CVM_USERS}"
+            NEON_USERS=$(PGSSLMODE=require PGCHANNELBINDING=disable \
+              psql "${DATABASE_URL}" -tAc "SELECT count(*) FROM users" 2>/dev/null || echo "N/A")
+            CVM_USERS=$(PGPASSWORD="${POSTGRES_PASSWORD}" \
+              psql -h localhost -U joyjoin -d joyjoin -tAc "SELECT count(*) FROM users" 2>/dev/null || echo "N/A")
+            echo "   Neon: ${NEON_USERS} users"
+            echo "   CVM:  ${CVM_USERS} users"
 
             rm -f /tmp/neon-backup.dump
 
