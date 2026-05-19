@@ -8,7 +8,7 @@ import {
 } from "@shared/schema";
 import { db } from "../db";
 import { desc, eq, sql } from "drizzle-orm";
-import type { NeonDatabase } from "drizzle-orm/neon-serverless";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "@shared/schema";
 
 export interface AssessmentRepository {
@@ -30,7 +30,7 @@ export const assessmentRepo: AssessmentRepository = {
   },
 
   async saveRoleResult(userId: string, result: InsertRoleResult): Promise<RoleResult> {
-    return db.transaction(async (tx: NeonDatabase<typeof schema>) => {
+    return db.transaction(async (tx: NodePgDatabase<typeof schema>) => {
       await tx
         .update(users)
         .set({
@@ -127,7 +127,7 @@ export const assessmentRepo: AssessmentRepository = {
   },
 
   async recordTagSelection(userId: string, data: { selectedIndex: number; selectedTag: string; selectedAt: Date }): Promise<void> {
-    await db.transaction(async (tx: NeonDatabase<typeof schema>) => {
+    await db.transaction(async (tx: NodePgDatabase<typeof schema>) => {
       await tx
         .update(users)
         .set({

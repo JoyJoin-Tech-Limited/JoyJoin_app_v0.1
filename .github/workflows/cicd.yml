@@ -670,20 +670,17 @@ jobs:
 
             # ───────────────────────────────────────────────────────────
             # Schema management strategy:
-            #   drizzle-kit v0.31.10 migrate + push --force are both
-            #   broken on Neon (introspection regex fails to parse tables).
-            #   See AGENTS.md §3 for details.
+            #   Schema changes are applied manually via psql from .sql files
+            #   committed under apps/server/migrations/.
             #
-            #   New DB schema changes are applied by:
             #   1. `npx drizzle-kit generate` on dev machine → creates .sql
             #   2. `.sql` files committed + applied manually via psql
             #   3. `npm run db:rebuild-journal` to register in _journal.json
             #
-            #   The DB already has 81 tables matching the current schema.
-            #   Skip DDL here until drizzle-kit fixes Neon introspection.
+            #   New tables created on initial CVM Postgres setup (see §3).
             # ───────────────────────────────────────────────────────────
-            echo "   ⏭️ Skipping drizzle-kit DDL (broken on Neon — see AGENTS.md §3)"
-            echo "   ✓ Schema already in sync (81 tables verified during setup)"
+            echo "   ⏭️ Skipping automated DDL (migrations applied manually via psql)"
+            echo "   ✓ Schema synced via migration SQL files"
 
             # --- 3) Sync and reload Nginx BEFORE restarting containers ---
             # This prevents 502s: Nginx stops routing to joyjoin-user BEFORE

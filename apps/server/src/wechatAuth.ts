@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { usersRepo } from "./repositories/usersRepo";
 import { assessmentSessions, assessmentAnswers, users } from "@shared/schema";
 import { db } from "./db";
-import type { NeonDatabase } from "drizzle-orm/neon-serverless";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { findBestMatchingArchetypesV2, type UserSecondaryData } from "@shared/personality/matcherV2";
@@ -488,7 +488,7 @@ export async function processTestAnswers(
 
   // Wrap assessment_sessions insert + per-question assessment_answers inserts + user update
   // in a single transaction so a partial failure cannot leave the DB inconsistent.
-  await db.transaction(async (tx: NeonDatabase<typeof schema>) => {
+  await db.transaction(async (tx: NodePgDatabase<typeof schema>) => {
     const [session] = await tx.insert(assessmentSessions).values({
       userId,
       phase: "completed",

@@ -32,10 +32,10 @@ import { aiEndpointLimiter } from "../../rateLimiter";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import * as schema from "@shared/schema";
-import type { NeonDatabase } from "drizzle-orm/neon-serverless";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 const SAMPLE_ARCHETYPE_COUNT = 5;
-type DbTransaction = NeonDatabase<typeof schema>;
+type DbTransaction = NodePgDatabase<typeof schema>;
 
 function resolvePoolCapacity(pool: {
   minGroupSize?: number | null;

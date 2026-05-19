@@ -1,10 +1,7 @@
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { neonConfig, Pool } from "@neondatabase/serverless";
-import ws from "ws";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 import * as schema from "@shared/schema";
 import { wrapDb } from "./db_proxy";
-
-neonConfig.webSocketConstructor = ws;
 
 const DATABASE_URL_MISSING_MESSAGE =
   "DATABASE_URL must be set. Please check your environment variables.";

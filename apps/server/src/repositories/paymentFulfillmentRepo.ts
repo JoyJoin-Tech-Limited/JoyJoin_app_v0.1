@@ -10,7 +10,7 @@ import {
 } from "@shared/schema";
 import * as schema from "@shared/schema";
 import { and, desc, eq, ne, sql } from "drizzle-orm";
-import type { NeonDatabase } from "drizzle-orm/neon-serverless";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "../db";
 import { eventCreditsRepo } from "./eventCreditsRepo";
 
@@ -110,7 +110,7 @@ export const paymentFulfillmentRepo = {
   async finalizeConfirmedPayment(
     params: FinalizeConfirmedPaymentParams
   ): Promise<FinalizeConfirmedPaymentResult> {
-    return db.transaction(async (tx: NeonDatabase<typeof schema>) => {
+    return db.transaction(async (tx: NodePgDatabase<typeof schema>) => {
       const [payment] = await tx
         .select()
         .from(payments)
@@ -290,7 +290,7 @@ export const paymentFulfillmentRepo = {
   async finalizeRefundedPayment(
     params: FinalizeRefundedPaymentParams,
   ): Promise<FinalizeRefundedPaymentResult> {
-    return db.transaction(async (tx: NeonDatabase<typeof schema>) => {
+    return db.transaction(async (tx: NodePgDatabase<typeof schema>) => {
       const [payment] = await tx
         .select()
         .from(payments)

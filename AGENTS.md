@@ -117,23 +117,17 @@ npm run check:full                    # guardrails + lint + tests + build
 npm run harness:gate                  # 5-pillar quality gate
 ```
 
-**Migration discipline (Neon PostgreSQL):**
-- Local dev → `npm run db:push` (say No to destructive prompts). Note: schema
-  introspection against remote Neon can take 2–3 min; this is normal.
+**Migration discipline (CVM PostgreSQL):**
+- Local dev → `npm run db:push` (say No to destructive prompts).
 - Before commit → `npm run db:generate -- --custom` then `npm run db:rebuild-journal`
 - Production DDL → **manual** via generated `.sql` files + `psql`
-  > ⚠️ `drizzle-kit migrate` (v0.31.10) exits code 1 silently on Neon.
-  > ⚠️ `drizzle-kit generate` (auto-diff) fails in non-interactive shells because
-    `0000_snapshot.json` is outdated (66 tables) vs the live schema (86 tables).
-    Use `--custom` to create an empty migration skeleton, then write SQL by hand.
   > ✅ `db:generate --custom` works: it creates `migrations/####_name.sql` and
     registers it in `_journal.json`. Fill the file with your DDL.
   > ✅ Apply with `psql "$DATABASE_URL" -f apps/server/migrations/<file>.sql`
-  > ✅ The CI/CD deploy script **skips drizzle-kit DDL** entirely.
+  > ✅ The CI/CD deploy script **skips automated DDL** entirely.
     Schema changes must be applied separately before deploy.
-  > ⚠️ `DATABASE_URL` for DDL must use the **direct** Neon endpoint
-    (not `-pooler`): `ep-<project>.us-east-1.aws.neon.tech`.
-    The pooler rejects `CREATE TABLE` / `ALTER TABLE`.
+  > ℹ️ Database is a PostgreSQL 16 Docker container on the CVM (`postgres` service).
+    DATABASE_URL format: `postgres://joyjoin:<password>@postgres:5432/joyjoin`
 
 ---
 

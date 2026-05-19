@@ -23,7 +23,7 @@ import {
 } from "@shared/schema";
 import { db } from "../db";
 import { eq, and, desc, sql, or, gte, lte } from "drizzle-orm";
-import type { NeonDatabase } from "drizzle-orm/neon-serverless";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "@shared/schema";
 import { logAdminAudit } from "../lib/adminAuditLogger";
 

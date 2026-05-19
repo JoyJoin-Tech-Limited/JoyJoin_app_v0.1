@@ -5,16 +5,14 @@ describe("db fallback", () => {
 
   beforeEach(() => {
     vi.resetModules();
-    vi.doMock("@neondatabase/serverless", () => ({
-      neonConfig: {},
+    vi.doMock("pg", () => ({
       Pool: class Pool {
         constructor() {
           throw new Error("Pool should not be instantiated without DATABASE_URL");
         }
       },
     }));
-    vi.doMock("ws", () => ({ default: class WebSocket {} }));
-    vi.doMock("drizzle-orm/neon-serverless", () => ({
+    vi.doMock("drizzle-orm/node-postgres", () => ({
       drizzle: () => ({}),
     }));
   });

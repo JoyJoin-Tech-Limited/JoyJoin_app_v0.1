@@ -6,7 +6,7 @@ import { db } from "../../db";
 import { userInterests, connections, eventAttendance, events, users, interestsTopicsSchema } from "@shared/schema";
 import * as schema from "@shared/schema";
 import { eq, and, or, sql } from "drizzle-orm";
-import type { NeonDatabase } from "drizzle-orm/neon-serverless";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { queueSemanticProfileRecompute } from "../../userSemanticProfileService";
 import { normalizeProfileInterests, getInterestById, validateTelemetry } from "@shared/interests";
 import { updateProfileSchema, updatePersonalitySchema, updateFullProfileSchema } from "@shared/schema";
@@ -199,7 +199,7 @@ export function registerProfileRoutes(app: Express): void {
       }
 
       // Use transaction to ensure atomicity - both operations succeed or both fail
-      const result = await db.transaction(async (tx: NeonDatabase<typeof schema>) => {
+      const result = await db.transaction(async (tx: NodePgDatabase<typeof schema>) => {
         // Check if user already has interests
         const existing = await tx
           .select()

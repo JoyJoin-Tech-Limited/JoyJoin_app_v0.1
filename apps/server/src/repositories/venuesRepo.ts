@@ -1,7 +1,7 @@
 import { type Venue, type VenueTimeSlot, type InsertVenueTimeSlot, type VenueTimeSlotBooking, type InsertVenueTimeSlotBooking, venues, venueDeals, venueTimeSlots, venueTimeSlotBookings, events, venueBookings } from "@shared/schema";
 import { db } from "../db";
 import { eq, and, desc, sql, or, gte, inArray } from "drizzle-orm";
-import type { NeonDatabase } from "drizzle-orm/neon-serverless";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "@shared/schema";
 import { logger } from "../lib/logger";
 
@@ -493,7 +493,7 @@ export const venuesRepo: VenuesRepository = {
       throw new Error('New venue is not available at the requested time');
     }
     
-    const result = await db.transaction(async (tx: NeonDatabase<typeof schema>) => {
+    const result = await db.transaction(async (tx: NodePgDatabase<typeof schema>) => {
       await tx.update(venueBookings)
         .set({ status: 'migrated', updatedAt: new Date() })
         .where(eq(venueBookings.id, bookingId));

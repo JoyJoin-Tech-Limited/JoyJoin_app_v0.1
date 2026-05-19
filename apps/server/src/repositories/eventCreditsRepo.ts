@@ -6,7 +6,7 @@ import {
 } from "@shared/schema";
 import * as schema from "@shared/schema";
 import { and, asc, eq, gt, isNull, or, sql } from "drizzle-orm";
-import type { NeonDatabase } from "drizzle-orm/neon-serverless";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "../db";
 
 const DEFAULT_PACK_EXPIRY_DAYS = 90;
@@ -15,7 +15,7 @@ const PACK_CREDIT_BY_PLAN: Record<string, number> = {
   pack_6: 6,
 };
 
-type DatabaseLike = NeonDatabase<typeof schema>;
+type DatabaseLike = NodePgDatabase<typeof schema>;
 
 type ActiveGrantRow = {
   id: string;
