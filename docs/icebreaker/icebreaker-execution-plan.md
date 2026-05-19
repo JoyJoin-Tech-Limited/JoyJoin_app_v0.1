@@ -107,7 +107,7 @@ The original Sprint 0 (Field Clearing) was partially executed out of order. `com
 | **SA.2** | Wire undercover_word into session flow | Backend Engineer | Add `SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD` to `getServerEnabledPhases()`; verify advance guard at line ~563 works; ensure cleanup fires. | Phase playable behind flag; word secrecy preserved | — | Required |
 | **SA.3** | Wire group_mirror into session flow | Backend Engineer | Add `SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR` to `getServerEnabledPhases()`; verify advance guard at line ~572 works; ensure anonymous voting works; add cleanup. | Phase playable behind flag; anonymous voting functional | — | Required |
 | **SA.4** | Deprecate socialIcebreakerRunPlans.ts | Backend Engineer | Add `@deprecated` JSDoc to file. Add migration comment: "Use `compileAgentRunPlan()` from `@shared/runPlanCompiler` for new code." Keep exports as compiler fallback — do NOT delete. | File marked deprecated; no import breakage; compiler remains fallback | — | Required |
-| **SA.5** | DB migration: lie_truths columns | Database Schema & Migration Auditor | Run `npm run db:generate` → review SQL → `npm run db:rebuild-journal` → apply with `psql` (Neon direct endpoint). Verify with `npm run db:verify` | Migration in journal; columns exist in live DB; CI gate passes | — | Required |
+| **SA.5** | DB migration: lie_truths columns | Database Schema & Migration Auditor | Run `npm run db:generate` → review SQL → `npm run db:rebuild-journal` → apply with `psql`. Verify with `npm run db:verify` | Migration in journal; columns exist in live DB; CI gate passes | — | Required |
 | **SA.6** | Add 3 env vars to `.env.example` | Backend Engineer | Document `SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE`, `SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD`, `SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR` with descriptions and default OFF | `.env.example` has all 3 flags | — | Required |
 | **SA.7** | Integration tests for 3 newly-wired phases | QA Agent + Backend Engineer | One test per phase: session creation → phase entry → core interaction → advance. All behind feature flags (default OFF in test env). | ≥ 3 integration tests pass | SA.1–SA.3 | Required |
 
@@ -135,7 +135,7 @@ npm run test -w @joyjoin/server  # Must pass: all existing tests + new integrati
 |------|-------------------|---------------|
 | SA.1–SA.3 (phase wiring) | DeepSeek V4 Pro | Bounded, well-defined integration points. No new architecture. |
 | SA.4 (deprecation) | DeepSeek V4 Flash | Single-file comment + JSDoc. |
-| SA.5 (DB migration) | DeepSeek V4 Pro | Data integrity. Must verify Neon DDL. |
+| SA.5 (DB migration) | DeepSeek V4 Pro | Data integrity. Must verify DDL. |
 | SA.6 (env docs) | DeepSeek V4 Flash | Documentation only. |
 | SA.7 (tests) | DeepSeek V4 Pro | Test wiring based on existing patterns. |
 

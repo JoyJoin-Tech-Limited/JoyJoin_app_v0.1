@@ -81,7 +81,7 @@ for (const row of interests) {
 
 ## Transaction Scope
 
-- Pass `tx: DatabaseLike` (from `drizzle-orm/neon-serverless`) into repository helpers that must run inside a transaction.
+- Pass `tx: DatabaseLike` (from `drizzle-orm/node-postgres`) into repository helpers that must run inside a transaction.
 - Do not mix `db` and `tx` in the same logical unit of work.
 - `eventCreditsRepo.ts` is the canonical example: `grantCreditsForPayment`, `consumeCreditForPoolRegistration`, and `reverseCreditsForPayment` all accept `tx`.
 

@@ -5,7 +5,7 @@ Repository pattern for database persistence in JoyJoin server.
 ## Design
 
 - Each repository wraps Drizzle ORM queries for a domain
-- Queries use `import { db } from '../db'` — a wrapped Neon Serverless Drizzle instance
+- Queries use `import { db } from '../db'` — a wrapped PostgreSQL Drizzle instance
 - New persistence logic goes in `repositories/`, not `storage.ts`
 
 ## Repository list

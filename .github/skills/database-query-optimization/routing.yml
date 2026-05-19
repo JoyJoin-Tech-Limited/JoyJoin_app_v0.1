@@ -62,7 +62,7 @@ owned_symbols:
   - preloadUserInterests
   - inArray
   - DatabaseLike
-  - NeonDatabase
+  - NodePgDatabase
   - eventPoolRegistrations
   - eventAttendance
   - eventPools

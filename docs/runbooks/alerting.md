@@ -81,7 +81,7 @@
    ```
 3. Look for stack traces, database errors, or external service failures (AI provider, WeChat API, etc.).
 4. If a specific endpoint is failing, check recent deployments that affected that endpoint.
-5. If a database error: check Neon serverless connection limits and query performance.
+5. If a database error: check CVM PostgreSQL container status and connection limits.
 6. If an AI provider error: check `DEEPSEEK_API_KEY` / `MINIMAX_API_KEY` validity; the service has deterministic fallbacks so errors should be transient.
 
 **Resolution:** Alert resolves when 5xx rate drops below 1% for 5 minutes.
@@ -119,7 +119,7 @@
 **Immediate response:**
 1. In the **Request Latency Percentiles** panel, identify which endpoint(s) are slow.
 2. Common causes:
-   - Slow database queries (check Neon query logs)
+   - Slow database queries (check pg_stat_statements and query logs)
    - AI service timeouts (check raw `[AITrace]` lines in Loki with `{service="joyjoin-server"} |= "[AITrace]"`; the suffix after the prefix is a JSON payload)
    - Event matching algorithm running on large pools (check `poolMatchingService` logs)
 3. If AI calls are slow, verify the provider is healthy; fallback paths should activate automatically.

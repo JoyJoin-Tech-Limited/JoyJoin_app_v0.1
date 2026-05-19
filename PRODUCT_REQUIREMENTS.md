@@ -3274,7 +3274,7 @@ export function useWebSocket() {
 **Backend:**
 - Node.js + Express.js
 - TypeScript
-- PostgreSQL (Neon serverless)
+- PostgreSQL (Dockerized on CVM)
 - Drizzle ORM
 - WebSocket (ws library)
 - Express Session (authentication)
@@ -3895,7 +3895,7 @@ CREATE TABLE event_pool_groups (
 ## 🚀 Deployment & Environment
 
 **Production Environment:**
-- Database: PostgreSQL (Neon serverless)
+- Database: PostgreSQL (Dockerized on CVM)
 - Session Store: PostgreSQL
 - File Storage: Not yet implemented as an app-managed subsystem; current profile images come from external identity providers (`wechatAvatarUrl`, legacy `profileImageUrl` via Replit auth), and there is no user-initiated upload pipeline in the active runtime
 - Real-time: WebSocket over WSS
