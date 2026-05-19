@@ -743,9 +743,18 @@ jobs:
             # --- 4) Restart containers ---
             echo "🐳 Removing stale joyjoin-api container if present..."
             docker rm -f joyjoin-api || true
-            echo "🐳 Restarting core containers (api, admin)..."
+            # ── Ensure Postgres override exists (created by init-cvm-postgres workflow) ──
+            if [ -f docker-compose.postgres.yml ]; then
+              POSTGRES_OVERRIDE="-f docker-compose.postgres.yml"
+              POSTGRES_SERVICE="postgres"
+            else
+              POSTGRES_OVERRIDE=""
+              POSTGRES_SERVICE=""
+            fi
+
+            echo "🐳 Restarting core containers (api, admin, postgres)..."
             cd ~/JoyJoin/deployment
-            retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build joyjoin-api joyjoin-admin
+            retry_command 3 15 docker compose -f docker-compose.nginx.yml $POSTGRES_OVERRIDE up -d --build joyjoin-api joyjoin-admin $POSTGRES_SERVICE
 
             echo "🐳 Starting granite-embedding (non-blocking)..."
             echo "$GITHUB_TOKEN" | docker login ghcr.io -u x-access-token --password-stdin 2>/dev/null
