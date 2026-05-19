@@ -74,17 +74,17 @@ export const MINI_PROGRAM_TAB_INDEX: Record<MiniProgramTabKey, number> = {
   centerHub: 4,
 }
 
-export const MINI_PROGRAM_TAB_BAR_CONFIG_ITEMS = [
-  ...MINI_PROGRAM_TAB_ITEMS.map((item) => ({
-    pagePath: item.pagePath,
-    text: item.text,
-    iconPath: item.appIconPath,
-    selectedIconPath: item.appSelectedIconPath,
-  })),
-  {
-    pagePath: MINI_PROGRAM_CENTER_HUB_TAB_ITEM.pagePath,
-    text: MINI_PROGRAM_CENTER_HUB_TAB_ITEM.text,
-    iconPath: MINI_PROGRAM_CENTER_HUB_TAB_ITEM.appIconPath,
-    selectedIconPath: MINI_PROGRAM_CENTER_HUB_TAB_ITEM.appSelectedIconPath,
-  },
-]
+/**
+ * Tab bar list for WeChat native tab bar config.
+ *
+ * NOTE: Center hub ("进行中") is intentionally EXCLUDED from this list.
+ * It is rendered as a floating center button by the custom tab bar component
+ * (`custom-tab-bar/`), not as a standard tab. Including it with empty icon
+ * paths causes WeChat 800059 preview/build errors.
+ */
+export const MINI_PROGRAM_TAB_BAR_CONFIG_ITEMS = MINI_PROGRAM_TAB_ITEMS.map((item) => ({
+  pagePath: item.pagePath,
+  text: item.text,
+  iconPath: item.appIconPath,
+  selectedIconPath: item.appSelectedIconPath,
+}))
