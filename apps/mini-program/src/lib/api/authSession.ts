@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query'
 import Taro from '@tarojs/taro'
 import type { UserState } from './api'
+import { clearSessionToken } from './api'
 import { logError, logInfo, logWarn } from '../utils/logger'
 import { MINI_PROGRAM_PAGE_PATHS, MINI_PROGRAM_ROUTES } from '../onboarding/onboardingRoutes'
 import { queryClient } from './queryClient'
@@ -121,6 +122,8 @@ export function handleMiniProgramUnauthorized(options?: {
     queryClient: options?.queryClient,
     mode: shouldRedirect ? 'hard' : 'soft',
   })
+
+  clearSessionToken()
 
   if (!shouldRedirect) {
     return

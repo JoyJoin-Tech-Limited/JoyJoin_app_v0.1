@@ -216,15 +216,6 @@ export function registerAuthRoutes(app: Express): void {
 
   // Auth routes
   app.get('/api/auth/user', async (req: Request, res) => {
-    // TEMPORARY DEBUG: diagnose real-device 401 - log cookie & session state
-    logger.info("[AUTH-DEBUG] GET /api/auth/user", {
-      requestId: req.requestId,
-      reqCookies: req.headers.cookie ?? "(none)",
-      sessionID: req.sessionID ?? "(none)",
-      hasUserIdInSession: Boolean(req.session?.userId),
-      hasAdminSession: Boolean(req.session?.adminAccountId),
-    });
-
     if (process.env.DEBUG_AUTH === "1") {
       logger.debug("Auth user lookup", {
         request_id: req.requestId,

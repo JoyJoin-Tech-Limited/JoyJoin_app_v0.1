@@ -20,6 +20,32 @@ export interface ApiError extends Error {
 
 export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
 
+const SESSION_TOKEN_STORAGE_KEY = 'mj_session_token'
+
+function getSessionToken(): string | null {
+  try {
+    return Taro.getStorageSync(SESSION_TOKEN_STORAGE_KEY) ?? null
+  } catch {
+    return null
+  }
+}
+
+function setSessionToken(token: string): void {
+  try {
+    Taro.setStorageSync(SESSION_TOKEN_STORAGE_KEY, token)
+  } catch {
+    // Non-fatal: next request will get a 401 and re-login
+  }
+}
+
+export function clearSessionToken(): void {
+  try {
+    Taro.removeStorageSync(SESSION_TOKEN_STORAGE_KEY)
+  } catch {
+    // Best-effort cleanup
+  }
+}
+
 export interface ImportedMiniProgramAssessmentAnswer {
   questionId: string
   selectedOption: string
@@ -96,6 +122,8 @@ async function executeMiniProgramRequest(options: {
   method: HttpMethod
   data?: unknown
 }): Promise<Taro.request.SuccessCallbackResult<MiniProgramRequestResponse>> {
+  const sessionToken = getSessionToken()
+
   return Taro.request<MiniProgramRequestResponse>({
     url: options.requestUrl,
     method: options.method,
@@ -106,6 +134,7 @@ async function executeMiniProgramRequest(options: {
       'content-type': 'application/json',
       'Cache-Control': 'no-cache',
       Pragma: 'no-cache',
+      ...(sessionToken ? { 'X-Session-Token': sessionToken } : {}),
     },
   })
 }
@@ -305,7 +334,11 @@ async function postMiniProgramWeChatLogin(
   fallbackErrorMessage: string,
 ): Promise<void> {
   const code = await getMiniProgramLoginCode()
-  const data = await apiRequest<{ success?: boolean; error?: string }>({
+  const data = await apiRequest<{
+    success?: boolean
+    error?: string
+    sessionToken?: string
+  }>({
     path,
     method: 'POST',
     data: {
@@ -316,6 +349,10 @@ async function postMiniProgramWeChatLogin(
 
   if (!data.success) {
     throw createApiError(data.error || fallbackErrorMessage)
+  }
+
+  if (typeof data.sessionToken === 'string' && data.sessionToken.length > 0) {
+    setSessionToken(data.sessionToken)
   }
 }
 

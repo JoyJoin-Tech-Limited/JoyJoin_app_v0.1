@@ -750,19 +750,11 @@ export function setupWechatAuth(app: Express) {
 
       logger.info("[WeChat Auth] Session regenerated successfully", { userId: fullUser.id });
 
-      // TEMPORARY DEBUG: diagnose real-device 401 - log session & cookie details
-      logger.info("[AUTH-DEBUG] login-with-test response", {
-        userId: fullUser.id,
-        sessionId: req.sessionID,
-        hasUserIdInSession: Boolean(req.session?.userId),
-        reqCookies: req.headers.cookie ?? "(none)",
-        resSetCookie: res.getHeader("set-cookie") ?? "(not yet set - will be set by express-session on write)",
-      });
-
       res.json({
         success: true,
         isNewUser,
         user: sanitizeAuthUser(fullUser),
+        sessionToken: req.sessionID,
       });
     } catch (error) {
       const err = error as Error & { code?: string; status?: number };
@@ -825,6 +817,7 @@ export function setupWechatAuth(app: Express) {
         success: true,
         isNewUser,
         user: sanitizeAuthUser(fullUser),
+        sessionToken: req.sessionID,
       });
     } catch (error) {
       const err = error as Error & { code?: string; status?: number };

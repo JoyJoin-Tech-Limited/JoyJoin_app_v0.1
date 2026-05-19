@@ -75,6 +75,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   registerAnalyticsRoutes(app);
 
+  // Session token middleware: WeChat Mini Program on real devices does not
+  // persist Set-Cookie from HTTPS responses. The client stores the session ID
+  // from the login response body and sends it as X-Session-Token header on
+  // subsequent requests. This middleware injects it as a cookie so express-session
+  // can load the session from the store transparently.
+  app.use((req, _res, next) => {
+    const sessionToken = req.headers['x-session-token'];
+    if (sessionToken && !req.headers.cookie) {
+      const token = Array.isArray(sessionToken) ? sessionToken[0] : sessionToken;
+      req.headers.cookie = `connect.sid=${token}`;
+    }
+    next();
+  });
+
   // Session middleware
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
