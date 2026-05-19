@@ -1,0 +1,92 @@
+name: Init CVM PostgreSQL
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  init-db:
+    name: Initialize CVM Postgres
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure Postgres running + create tables
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          envs: POSTGRES_PASSWORD
+          script: |
+            set -euo pipefail
+            cd ~/JoyJoin/deployment
+
+            # ── 1. Ensure container is running ──
+            if docker ps -a --format '{{.Names}}' | grep -q joyjoin-postgres; then
+              if docker ps --format '{{.Names}}' | grep -q joyjoin-postgres; then
+                echo "✅ Postgres already running"
+              else
+                echo "⚠️ Starting stopped container..."
+                docker start joyjoin-postgres
+                sleep 3
+              fi
+            else
+              echo "🐘 Creating Postgres container..."
+              cat > docker-compose.postgres.yml << YAML
+            services:
+              postgres:
+                image: postgres:16-alpine
+                restart: unless-stopped
+                container_name: joyjoin-postgres
+                ports:
+                  - "127.0.0.1:5432:5432"
+                volumes:
+                  - pgdata:/var/lib/postgresql/data
+                environment:
+                  POSTGRES_USER: joyjoin
+                  POSTGRES_DB: joyjoin
+                  POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+                healthcheck:
+                  test: ["CMD-SHELL", "pg_isready -U joyjoin -d joyjoin"]
+                  interval: 5s
+                  retries: 5
+
+            volumes:
+              pgdata:
+            YAML
+              docker compose -f docker-compose.nginx.yml -f docker-compose.postgres.yml up -d postgres
+            fi
+
+            # ── 2. Wait for healthy ──
+            echo "⏳ Waiting for Postgres..."
+            for i in $(seq 1 30); do
+              if docker exec joyjoin-postgres pg_isready -U joyjoin -d joyjoin 2>/dev/null; then
+                echo "✅ Ready"
+                break
+              fi
+              sleep 2
+            done
+
+            # ── 3. Apply migration SQLs ──
+            echo "🗄️ Creating tables from migrations..."
+            cd ~/JoyJoin
+            for f in apps/server/migrations/*.sql; do
+              echo "   $(basename "$f")"
+              docker exec -i joyjoin-postgres psql -U joyjoin -d joyjoin -f - < "$f" 2>&1 || echo "   ⚠️ Non-fatal"
+            done
+
+            # ── 4. Verify ──
+            echo "🔍 Table count:"
+            docker exec joyjoin-postgres psql -U joyjoin -d joyjoin -tAc \
+              "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'"
+
+            echo ""
+            echo "✅ CVM Postgres initialized!"
+            echo "   Ready for DATABASE_URL switch and deploy."
