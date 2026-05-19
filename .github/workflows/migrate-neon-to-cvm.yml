@@ -101,6 +101,8 @@ jobs:
             LOCAL_DB="postgres://joyjoin:${POSTGRES_PASSWORD}@localhost:5432/joyjoin"
 
             echo "📥 Exporting from Neon (may take several minutes)..."
+            export PGSSLMODE=require
+            export PGCHANNELBINDING=disable
             pg_dump "${DATABASE_URL}" --no-owner --no-acl -Fc -f /tmp/neon-backup.dump 2>&1
             BACKUP_SIZE=$(du -h /tmp/neon-backup.dump | cut -f1)
             echo "   Backup size: ${BACKUP_SIZE}"
@@ -116,6 +118,8 @@ jobs:
             done
 
             echo "🔍 Verifying..."
+            export PGSSLMODE=require
+            export PGCHANNELBINDING=disable
             NEON_USERS=$(psql "${DATABASE_URL}" -tAc "SELECT count(*) FROM users" 2>/dev/null || echo "N/A")
             CVM_USERS=$(psql "${LOCAL_DB}" -tAc "SELECT count(*) FROM users" 2>/dev/null || echo "N/A")
             echo "   Neon users: ${NEON_USERS}"
