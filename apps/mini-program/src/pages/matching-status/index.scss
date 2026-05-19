@@ -10,6 +10,7 @@
 @use 'styles/theme-and-special';
 @use 'styles/overlay';
 @use 'styles/actions';
+@use 'styles/match-compass';
 
 .matching-status {
   @include base.matching-status-base;
@@ -56,9 +57,37 @@
 
 @media (prefers-reduced-motion: reduce) {
   .matching-status__overlay-card,
-  .matching-status__loading-shake {
-    animation: none;
-    opacity: 1;
-    transform: none;
+  .matching-status__loading-shake,
+  .matching-status__dot,
+  .matching-status__waiting-seat--new,
+  .matching-status__waiting-seat-burst,
+  .matching-status__overlay-member-card,
+  .matching-status__waiting-orbit,
+  .match-compass__chip,
+  .match-compass__pref-card--collapsed,
+  .match-compass__pref-chip,
+  .match-compass__gauge-fill,
+  .match-compass__modal-card {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .match-compass--skeleton {
+    .match-compass__skeleton-title,
+    .match-compass__skeleton-subtitle,
+    .match-compass__skeleton-gauge,
+    .match-compass__skeleton-chip,
+    .match-compass__skeleton-pill,
+    .match-compass__skeleton-toggle,
+    .match-compass__skeleton-line--short,
+    .match-compass__skeleton-line--tiny,
+    .match-compass__pref-card--skeleton,
+    .match-compass__section-label--skeleton,
+    .match-compass__skeleton-pill--small {
+      animation: none !important;
+      opacity: 0.55 !important;
+    }
   }
 }

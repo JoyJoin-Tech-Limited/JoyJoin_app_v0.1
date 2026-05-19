@@ -153,6 +153,7 @@ export default function PaymentVerificationPage() {
           className='verification-page__mascot'
           mode='aspectFit'
           src={getXiaoyueExpressionAsset(getVerificationMascotExpression(status))}
+          ariaLabel='支付状态'
         />
 
         <Text className='verification-page__message'>{message}</Text>

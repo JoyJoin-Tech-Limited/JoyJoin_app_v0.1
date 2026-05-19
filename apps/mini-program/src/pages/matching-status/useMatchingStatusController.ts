@@ -4,12 +4,16 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   type AuthUserResponse,
   cancelPoolRegistration,
+  getMatchCompass,
   getMyPoolRegistrations,
   getPoolGroupAnalysis,
   getPoolGroupDetails,
+  type MatchCompassResponse,
   type PoolGroupDetailsResponse,
   type PoolRegistrationSummary,
   type SimilarPoolSummary,
+  updateMatchCompassPreferences,
+  type UpdateMatchCompassPreferencesRequest,
 } from '@shared/api'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
 import type {
@@ -71,6 +75,7 @@ const LIVE_STAGE_DELAY_MS = 950
 const LIVE_STAGE_DELAY_REDUCED_MS = 140
 const MAX_SIMILAR_POOLS = 3
 const DANGER_COLOR = COLOR_DANGER
+const MATCH_COMPASS_REFETCH_INTERVAL_MS = 15_000
 
 function triggerLightHaptic() {
   if (typeof Taro.vibrateShort === 'function') {
@@ -141,6 +146,23 @@ export function useMatchingStatusController({
 
   const matchStatus = registration?.matchStatus ?? 'pending'
 
+  const matchCompassEnabled = Boolean(effectiveAuthUser?.matchCompassEnabled)
+
+  const {
+    data: matchCompass,
+    isFetching: isMatchCompassFetching,
+  } = useQuery<MatchCompassResponse>({
+    queryKey: ['mini-program', 'match-compass', registration?.poolId],
+    queryFn: () =>
+      getMatchCompass(apiRequest, registration?.poolId ?? ''),
+    enabled:
+      hasResolvedAuthBootstrap &&
+      matchCompassEnabled &&
+      matchStatus === 'pending' &&
+      Boolean(registration?.poolId),
+    refetchInterval: MATCH_COMPASS_REFETCH_INTERVAL_MS,
+    staleTime: 0,
+  })
 
   const {
     data: poolFillStats,
@@ -711,6 +733,28 @@ export function useMatchingStatusController({
 
   const stageTemperature = getTemperatureCopy(matchedData?.temperatureLevel)
 
+  const handleUpdateMatchCompass = useCallback(
+    async (patch: UpdateMatchCompassPreferencesRequest) => {
+      if (!registration?.poolId || !matchCompass || matchCompass.isLocked) {
+        Taro.showToast({ title: '偏好已锁定，无法修改', icon: 'none', duration: TOAST_DEFAULT_MS })
+        return
+      }
+
+      try {
+        const updated = await updateMatchCompassPreferences(apiRequest, registration.poolId, patch)
+        queryClient.setQueryData(
+          ['mini-program', 'match-compass', registration.poolId],
+          updated
+        )
+        triggerLightHaptic()
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '保存失败'
+        logError('[MatchCompass] Update failed', { message, patch })
+        Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
+      }
+    },
+    [matchCompass, queryClient, registration?.poolId]
+  )
 
   return {
     screenState,
@@ -759,5 +803,9 @@ export function useMatchingStatusController({
     switchToEventsTab,
     navigateBackOrEventsTab,
     stageTemperature,
+    matchCompassEnabled,
+    matchCompass,
+    isMatchCompassFetching,
+    handleUpdateMatchCompass,
   }
 }

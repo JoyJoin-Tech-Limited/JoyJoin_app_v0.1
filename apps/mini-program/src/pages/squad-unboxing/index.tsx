@@ -72,6 +72,7 @@ export default function SquadUnboxingPage() {
             src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             mode='aspectFit'
             lazyLoad
+            ariaLabel='加载失败'
           />
           <Text className='squad-unboxing__error-text'>
             {fetchError ? '加载小队信息没成功' : '没有找到小队信息'}
@@ -92,6 +93,7 @@ export default function SquadUnboxingPage() {
             className='squad-unboxing__header-mascot'
             mode='aspectFit'
             src={getXiaoyueExpressionAsset('homeWelcome')}
+            ariaLabel='欢迎'
           />
           <Text className='squad-unboxing__header-title'>
             你的{pool.eventType === 'bar' ? '酒局' : '饭局'}桌友来了
@@ -136,6 +138,7 @@ export default function SquadUnboxingPage() {
               className='squad-unboxing__reveal-mascot'
               mode='aspectFit'
               src={getXiaoyueExpressionAsset('loadingReveal')}
+              ariaLabel='正在揭晓'
             />
             <BlindBoxVisual state='opening' shouldReduceMotion={shouldReduceMotion} />
             <Text className='squad-unboxing__blind-box-title'>盒子正在打开…</Text>

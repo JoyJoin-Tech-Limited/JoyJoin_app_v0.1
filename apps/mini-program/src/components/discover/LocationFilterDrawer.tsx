@@ -115,7 +115,7 @@ export default function LocationFilterDrawer({
 
         {/* Header */}
         <View className='location-drawer__header'>
-          <Text className='location-drawer__title'>选择区域</Text>
+          <Text className='location-drawer__title'>偏好区域</Text>
           <View
             className='location-drawer__close'
             onClick={() => {

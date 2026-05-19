@@ -5,7 +5,7 @@ describe('squadUnboxingViewModels', () => {
   it('computeActionDockState follows reveal + stage ladder', () => {
     expect(computeActionDockState('ready', 0)).toBe('hidden')
     expect(computeActionDockState('revealed', 2)).toBe('hidden')
-    expect(computeActionDockState('revealed', 3)).toBe('hidden')
+    expect(computeActionDockState('revealed', 3)).toBe('ready')
     expect(computeActionDockState('revealed', 4)).toBe('ready')
   })
 

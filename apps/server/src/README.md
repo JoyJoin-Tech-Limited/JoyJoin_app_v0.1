@@ -82,6 +82,20 @@ Primary files:
 Boundary:
 - All `/api/admin/*` routes must enforce admin middleware.
 
+### Match Compass (preference tuning)
+
+Post-registration preference dashboard on matching-status pending page. Users tune dealbreakers and nice-to-haves until `preference_lock_at` (24h before event). Strictness scalar affects group formation only; pair scores remain sacred.
+
+Primary files:
+- `apps/server/src/routes/domains/matchCompass.ts` — mounts `GET /api/event-pools/:id/match-compass`, `PATCH /api/event-pool-registrations/:id/preferences`, `POST /api/event-pool-registrations/:id/preferences/reset`, `POST /api/users/me/preference-dna`
+- `apps/server/src/lib/matchCompass.ts` — `buildDefaultPreferencesFromArchetype`, `coerceStrictness`, `resolveTemperatureBand`
+- `apps/server/src/poolMatchingService.ts` — `pairMeetsDealbreakers`, `resolveStrictnessWeights`
+
+Boundary:
+- Kill switch: `MATCH_COMPASS_STRICTNESS_ENABLED=false` hides UI and forces legacy matching path.
+- `preference_strictness` null is coerced to 50 server-side; no mandatory backfill migration.
+- Eligibility count uses batched `inArray` loads (no N+1).
+
 ### Predictive Shell (composite tab data)
 
 Owns composite endpoints that bundle tab-specific data to reduce client round-trips.

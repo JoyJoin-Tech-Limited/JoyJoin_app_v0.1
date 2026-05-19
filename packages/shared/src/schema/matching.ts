@@ -22,8 +22,11 @@ export type {
   MatchingConfig,
   InsertMatchingConfig,
   MatchingResult,
-  InsertMatchingResult,
 } from './_definitions.js';
+
+export type {
+  InsertMatchingResult,
+} from './_definitions_extended.js';
 
 export type {
   MatchingShadowExperiment,

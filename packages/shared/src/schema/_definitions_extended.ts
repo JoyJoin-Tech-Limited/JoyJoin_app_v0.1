@@ -1447,6 +1447,65 @@ export const insertUserInterestSignalSchema = createInsertSchema(userInterestSig
 export type UserInterestSignal = typeof userInterestSignals.$inferSelect;
 export type InsertUserInterestSignal = z.infer<typeof insertUserInterestSignalSchema>;
 
+// ============ City Unlock System ============
+
+/**
+ * User-expressed interest in launching JoyJoin in a specific city.
+ *
+ * One row per user per city. Upsert semantics: repeated expressions of
+ * interest for the same city update the `updatedAt` timestamp but do not
+ * duplicate the count.
+ */
+export const userCityInterests = pgTable("user_city_interests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  city: varchar("city", { length: 50 }).notNull(),
+  source: varchar("source", { length: 30 }).notNull().default("floating_banner"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+}, (table) => [
+  uniqueIndex("idx_user_city_interests_unique").on(table.userId, table.city),
+  index("idx_user_city_interests_city").on(table.city),
+  index("idx_user_city_interests_user").on(table.userId),
+]);
+
+export const insertUserCityInterestSchema = createInsertSchema(userCityInterests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type UserCityInterest = typeof userCityInterests.$inferSelect;
+export type InsertUserCityInterest = z.infer<typeof insertUserCityInterestSchema>;
+
+/**
+ * Per-city unlock progress and status.
+ *
+ * `interestedCount` is maintained by a trigger or application-level
+ * increment/decrement. `targetThreshold` defaults to 50 (configurable).
+ * `status` drives the UI state machine: collecting → researching → launching → live.
+ */
+export const cityUnlockProgress = pgTable("city_unlock_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  city: varchar("city", { length: 50 }).notNull().unique(),
+  interestedCount: integer("interested_count").notNull().default(0),
+  targetThreshold: integer("target_threshold").notNull().default(50),
+  status: varchar("status", { length: 20 }).notNull().default("collecting"),
+  notifiedAt: timestamp("notified_at", { withTimezone: true }),
+  launchedAt: timestamp("launched_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+export const insertCityUnlockProgressSchema = createInsertSchema(cityUnlockProgress).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type CityUnlockProgress = typeof cityUnlockProgress.$inferSelect;
+export type InsertCityUnlockProgress = z.infer<typeof insertCityUnlockProgressSchema>;
+
 // ============ Social Icebreaker Persistence ============
 
 /**

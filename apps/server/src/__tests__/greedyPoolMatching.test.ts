@@ -64,6 +64,11 @@ function makeUser(id: string, archetype: string): UserWithProfile {
     ageMatchPreference: null,
     tableVibePreference: null,
     vibeVector: null,
+    preferenceStrictness: null,
+    preferredDistricts: null,
+    genderCompositionPreference: null,
+    acceptPairs: null,
+    kolComfortLevel: null,
   };
 }
 

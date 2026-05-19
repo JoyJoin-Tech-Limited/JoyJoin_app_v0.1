@@ -32,7 +32,7 @@
   &__info-label {
     display: flex;
     align-items: center;
-    gap: 8rpx;
+    gap: $spacing-xs;
     font-size: $font-size-base;
     color: $color-text-secondary;
     flex-shrink: 0;

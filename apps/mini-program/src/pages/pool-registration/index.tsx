@@ -622,6 +622,7 @@ export default function PoolRegistrationPage() {
             className='pool-reg__success-mascot'
             mode='aspectFit'
             src={getXiaoyueExpressionAsset('matchSuccess')}
+            ariaLabel='匹配成功'
           />
           <Text className='pool-reg__success-title'>已加入这场{eventType}</Text>
           <Text className='pool-reg__success-text'>

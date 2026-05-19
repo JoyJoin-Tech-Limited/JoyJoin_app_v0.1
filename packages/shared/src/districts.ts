@@ -104,3 +104,105 @@ export function getClusterIdByDistrictId(districtId: string): string | undefined
   const district = getDistrictById(districtId);
   return district?.clusterId;
 }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 区域发现策略 — Discovery Geo Mode
+// ═════════════════════════════════════════════════════════════════════════════
+
+export type GeoDiscoveryMode = 'strict' | 'relaxed';
+
+export const DEFAULT_DISCOVERY_MODE: GeoDiscoveryMode = 'relaxed';
+
+/** 当场地数量 >= 此阈值时，建议切换到 strict 模式 */
+export const STRICT_MODE_VENUE_THRESHOLD = 10;
+
+/** 行政区名称 → JoyJoin clusterId（用于 pool.district 区级别映射） */
+export const districtNameToClusterId: Record<string, string> = {
+  '南山区': 'nanshan',
+  '福田区': 'futian',
+};
+
+/** 深圳外部行政区 → 最近的 JoyJoin clusterId（用于 GPS 反查外部区映射） */
+export const externalDistrictToClusterId: Record<string, string> = {
+  '罗湖区': 'futian',
+  '宝安区': 'nanshan',
+  '龙岗区': 'futian',
+  '盐田区': 'futian',
+  '龙华区': 'futian',
+  '坪山区': 'futian',
+  '光明区': 'nanshan',
+  '大鹏新区': 'nanshan',
+};
+
+/**
+ * Cluster 级别通勤邻近度（分钟）
+ * 基于深圳地铁/地理常识，用于发现页活动排序
+ * 当数据模型升级到包含 venue district_id 后，可替换为 district-level proximity
+ */
+export const clusterProximityMap: Record<string, Record<string, number>> = {
+  nanshan: { nanshan: 0, futian: 20 },
+  futian: { nanshan: 20, futian: 0 },
+};
+
+/**
+ * 标准化行政区名称（去除首尾空格、统一为简体中文格式）
+ * 处理 GPS 反查或数据库中可能出现的格式差异
+ */
+function normalizeDistrictName(name: string): string {
+  return name.trim().replace(/\s+/g, '');
+}
+
+/** 根据行政区名称获取 clusterId（支持 JoyJoin 内部区 + 外部区） */
+export function getClusterIdByDistrictName(districtName: string): string | undefined {
+  const normalized = normalizeDistrictName(districtName);
+  return districtNameToClusterId[normalized] ?? externalDistrictToClusterId[normalized];
+}
+
+/** 计算两个 cluster 之间的通勤分钟数 */
+export function getClusterProximity(fromClusterId: string, toClusterId: string): number {
+  return clusterProximityMap[fromClusterId]?.[toClusterId] ?? 999;
+}
+
+/**
+ * 根据用户参考 cluster 对活动池进行 proximity 排序
+ * 优先级：同 cluster > 邻近 cluster > 其他
+ * 同 proximity 内按时间紧迫度（dateTime 近者优先）
+ *
+ * 性能优化：预计算排序键，避免在比较器内重复解析 Date 和查询映射表
+ */
+export function sortPoolsByProximity<T extends { district?: string | null; dateTime?: string | Date | null }>(
+  pools: T[],
+  referenceClusterId: string | null | undefined
+): T[] {
+  if (!referenceClusterId || pools.length <= 1) {
+    // 无参考位置或单元素：按时间排序（即将开始的活动优先）
+    if (pools.length <= 1) return [...pools];
+    return [...pools].sort((a, b) => {
+      const tA = a.dateTime ? new Date(a.dateTime).getTime() : Infinity;
+      const tB = b.dateTime ? new Date(b.dateTime).getTime() : Infinity;
+      return tA - tB;
+    });
+  }
+
+  // 预计算排序键：避免在 comparator 内重复调用 getClusterIdByDistrictName / new Date / getClusterProximity
+  const keys = pools.map((pool) => {
+    const clusterId = pool.district ? getClusterIdByDistrictName(pool.district) : null;
+    const proximity = clusterId ? getClusterProximity(referenceClusterId, clusterId) : 999;
+    const timeMs = pool.dateTime ? new Date(pool.dateTime).getTime() : Infinity;
+    return { pool, proximity, timeMs };
+  });
+
+  keys.sort((a, b) => {
+    if (a.proximity !== b.proximity) {
+      return a.proximity - b.proximity;
+    }
+    return a.timeMs - b.timeMs;
+  });
+
+  return keys.map((k) => k.pool);
+}
+
+/** 检测当前发现策略模式（基于场地数量） */
+export function resolveGeoDiscoveryMode(activeVenueCount: number): GeoDiscoveryMode {
+  return activeVenueCount >= STRICT_MODE_VENUE_THRESHOLD ? 'strict' : 'relaxed';
+}

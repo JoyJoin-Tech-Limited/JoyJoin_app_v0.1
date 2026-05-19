@@ -1,0 +1,531 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+@mixin match-compass {
+  // ── Shell (crossfade wrapper) ───────────────────────────────────
+  &__shell {
+    position: relative;
+    width: 100%;
+  }
+
+  &__shell-layer {
+    will-change: opacity, transform;
+  }
+
+  // ── Skeleton ────────────────────────────────────────────────────
+  &--skeleton {
+    .match-compass__skeleton-title,
+    .match-compass__skeleton-subtitle,
+    .match-compass__skeleton-gauge,
+    .match-compass__skeleton-chip,
+    .match-compass__skeleton-pill,
+    .match-compass__skeleton-toggle,
+    .match-compass__skeleton-line--short,
+    .match-compass__skeleton-line--tiny,
+    .match-compass__pref-card--skeleton {
+      background: rgba($color-primary, 0.08);
+      animation: match-compass-skeleton-pulse 1.5s ease-in-out infinite;
+    }
+
+    .match-compass__skeleton-title {
+      width: 140rpx;
+      height: 36rpx;
+      border-radius: 8rpx;
+      margin-bottom: $spacing-xs;
+    }
+
+    .match-compass__skeleton-subtitle {
+      width: 320rpx;
+      height: 28rpx;
+      border-radius: 6rpx;
+    }
+
+    .match-compass__skeleton-gauge {
+      width: 120rpx;
+      height: 120rpx;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .match-compass__skeleton-chip {
+      flex: 1;
+      min-width: 0;
+      height: 140rpx;
+      border-radius: $card-radius-sm;
+    }
+
+    .match-compass__skeleton-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: $spacing-xs;
+    }
+
+    .match-compass__skeleton-pill {
+      width: 96rpx;
+      height: 40rpx;
+      border-radius: 999rpx;
+
+      &--small {
+        width: 72rpx;
+        height: 32rpx;
+        border-radius: 999rpx;
+        background: rgba($color-primary, 0.08);
+        animation: match-compass-skeleton-pulse 1.5s ease-in-out infinite;
+      }
+    }
+
+    .match-compass__skeleton-toggle {
+      width: 96rpx;
+      height: 52rpx;
+      border-radius: 26rpx;
+    }
+
+    .match-compass__skeleton-line--short {
+      width: 120rpx;
+      height: 28rpx;
+      border-radius: 6rpx;
+    }
+
+    .match-compass__skeleton-line--tiny {
+      width: 160rpx;
+      height: 24rpx;
+      border-radius: 6rpx;
+    }
+
+    .match-compass__pref-card--skeleton {
+      border: none;
+      background: rgba($color-primary, 0.04);
+    }
+
+    .match-compass__section-label--skeleton {
+      width: 96rpx;
+      height: 22rpx;
+      border-radius: 4rpx;
+      color: transparent;
+    }
+
+    .match-compass__temp-strip--skeleton {
+      border-top: none;
+      padding-top: 0;
+    }
+  }
+
+  @keyframes match-compass-skeleton-pulse {
+    0%,
+    100% {
+      opacity: 0.45;
+    }
+
+    50% {
+      opacity: 0.75;
+    }
+  }
+
+  // ── Dashboard Container ─────────────────────────────────────────
+  &__preload-layer {
+    position: absolute;
+    left: -9999rpx;
+    top: -9999rpx;
+    width: 2rpx;
+    height: 2rpx;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  &__preload-image {
+    width: 2rpx;
+    height: 2rpx;
+  }
+
+  &__card {
+    @include card;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+    background: linear-gradient(145deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.84) 100%);
+    border: 2rpx solid rgba($color-primary, 0.12);
+    box-shadow: 0 18rpx 44rpx rgba($color-primary, 0.12);
+  }
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $spacing-md;
+    margin-bottom: $spacing-md;
+  }
+
+  &__header-left {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    @include type-display-section-title;
+    font-size: $font-size-lg;
+    color: $color-text-primary;
+  }
+
+  &__subtitle {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.5;
+  }
+
+  // ── Strictness Chips ────────────────────────────────────────────
+  &__chips-row {
+    display: flex;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__chip {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-sm;
+    border-radius: $card-radius-sm;
+    background: rgba($color-surface, 0.88);
+    border: 2rpx solid rgba($color-primary, 0.08);
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+
+    &:active {
+      transform: scale(0.96);
+    }
+
+    &--active {
+      background: rgba($color-primary, 0.08);
+      border-color: rgba($color-primary, 0.32);
+      box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.1);
+    }
+  }
+
+  &__chip-mascot {
+    width: 88rpx;
+    height: 88rpx;
+    transition: opacity 0.2s ease;
+  }
+
+  &__chip-label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    text-align: center;
+  }
+
+  // ── Gauge ───────────────────────────────────────────────────────
+  &__gauge {
+    position: relative;
+    width: 120rpx;
+    height: 120rpx;
+    flex-shrink: 0;
+  }
+
+  &__gauge-svg {
+    width: 120rpx;
+    height: 120rpx;
+    display: block;
+  }
+
+  &__gauge-track,
+  &__gauge-fill {
+    will-change: stroke-dashoffset;
+  }
+
+  &__gauge-track {
+    stroke: rgba($color-primary, 0.12);
+  }
+
+  &__gauge-fill--cold {
+    stroke: $color-archetype-cool;
+  }
+
+  &__gauge-fill--mild {
+    stroke: $color-archetype-calm;
+  }
+
+  &__gauge-fill--warm {
+    stroke: $color-archetype-warm;
+  }
+
+  &__gauge-fill--fire {
+    stroke: $color-secondary;
+  }
+
+  &__gauge-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__gauge-band {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  // ── Section Labels ──────────────────────────────────────────────
+  &__section-label {
+    display: block;
+    margin: $spacing-md 0 $spacing-sm;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-text-tertiary;
+    letter-spacing: 1rpx;
+    text-transform: uppercase;
+  }
+
+  // ── Preference Cards ────────────────────────────────────────────
+  &__dealbreakers,
+  &__nice-to-haves {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__pref-card {
+    padding: $spacing-sm $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba($color-surface, 0.88);
+    border: 1rpx solid rgba($color-primary, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+
+    &--inline {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    &--collapsed {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      padding: $spacing-md;
+      transition: transform 0.15s ease, background 0.15s ease;
+
+      &:active {
+        transform: scale(0.98);
+        background: rgba($color-primary, 0.04);
+      }
+    }
+  }
+
+  &__pref-card-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__pref-title {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__pref-value {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+  }
+
+  &__pref-chevron {
+    font-size: $font-size-md;
+    color: $color-text-tertiary;
+    font-weight: $font-weight-bold;
+    flex-shrink: 0;
+    margin-left: $spacing-sm;
+  }
+
+  &__pref-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-xs;
+  }
+
+  &__pref-chip {
+    padding: 10rpx 20rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.06);
+    border: 1rpx solid transparent;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+
+    &:active {
+      transform: scale(0.95);
+    }
+
+    &--active {
+      background: rgba($color-primary, 0.14);
+      border-color: rgba($color-primary, 0.24);
+    }
+  }
+
+  &__pref-chip-text {
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  // ── Toggle Switch ───────────────────────────────────────────────
+  &__toggle {
+    width: 96rpx;
+    height: 52rpx;
+    border-radius: 26rpx;
+    background: rgba($color-text-tertiary, 0.3);
+    position: relative;
+    transition: background 0.2s ease;
+    flex-shrink: 0;
+
+    &--on {
+      background: $color-primary;
+    }
+  }
+
+  &__toggle-knob {
+    position: absolute;
+    top: 4rpx;
+    left: 4rpx;
+    width: 44rpx;
+    height: 44rpx;
+    border-radius: 50%;
+    background: $color-surface;
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.12);
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__toggle--on &__toggle-knob {
+    transform: translateX(44rpx);
+  }
+
+  // ── Temperature Strip ───────────────────────────────────────────
+  &__temp-strip {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-top: $spacing-md;
+    padding-top: $spacing-md;
+    border-top: 1rpx solid rgba($color-primary, 0.08);
+  }
+
+  &__temp-pill {
+    padding: 6rpx 16rpx;
+    border-radius: 999rpx;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    flex-shrink: 0;
+
+    &--cold {
+      background: rgba($color-archetype-cool, 0.18);
+      color: $color-archetype-cool;
+    }
+
+    &--mild {
+      background: rgba($color-archetype-calm, 0.18);
+      color: $color-archetype-calm;
+    }
+
+    &--warm {
+      background: rgba($color-archetype-warm, 0.12);
+      color: $color-archetype-warm;
+    }
+
+    &--fire {
+      background: rgba($color-secondary, 0.12);
+      color: $color-secondary;
+    }
+  }
+
+  &__temp-label {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+  }
+
+  &__temp-count {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+
+  // ── Updating Hint ───────────────────────────────────────────────
+  &__updating-hint {
+    display: block;
+    margin-top: $spacing-sm;
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+    text-align: center;
+  }
+
+  // ── Modal (reuse overlay base) ──────────────────────────────────
+  &__modal {
+    z-index: 50;
+  }
+
+  &__modal-card {
+    align-items: stretch !important;
+    text-align: left !important;
+  }
+
+  &__modal-title {
+    @include type-display-section-title;
+    font-size: $font-size-lg;
+    color: $color-text-primary;
+    margin-bottom: $spacing-md;
+  }
+
+  &__modal-options {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__modal-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba($color-surface, 0.88);
+    border: 1rpx solid rgba($color-primary, 0.06);
+    transition: background 0.15s ease, border-color 0.15s ease;
+
+    &--active {
+      background: rgba($color-primary, 0.08);
+      border-color: rgba($color-primary, 0.2);
+    }
+  }
+
+  &__modal-option-text {
+    font-size: $font-size-base;
+    color: $color-text-primary;
+  }
+
+  &__modal-check {
+    width: 32rpx;
+    height: 32rpx;
+    border-radius: 50%;
+    background: $color-primary;
+    flex-shrink: 0;
+  }
+
+  &__modal-save {
+    @include button-primary;
+    width: 100%;
+    border: 0;
+  }
+}
+
+// Apply within matching-status namespace
+.matching-status {
+  @include match-compass;
+}

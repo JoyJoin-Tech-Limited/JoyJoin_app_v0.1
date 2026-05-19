@@ -1,7 +1,7 @@
-# Lovart Brief: JoyJoin Blind Box Reveal Asset
+# Lovart Brief: JoyJoin Blind Box Reveal Asset — Option C (Layered Hybrid)
 
 **Date:** 2026-05-18  
-**Asset type:** Mascot illustration / UI element  
+**Asset type:** Mascot illustration / UI element — **layered transparent assets**  
 **Target platform:** WeChat Mini Program (Taro)  
 **Usage context:** Squad unboxing page — the "blind box" visual that users tap to reveal their matched group
 
@@ -14,18 +14,39 @@ The user has been matched into a group for a social event (饭局 or 酒局). Be
 - **Premium** — not a cheap game loot box; this is a curated social experience
 - **On-brand** — unmistakably JoyJoin, not generic
 
-The box is shown in three states:
-1. **Ready** — closed, gently floating/pulsing, inviting the user to tap
-2. **Opening** — lid lifts, warm glow emanates from inside, sparks
-3. **Open** — lid fully open, revealing warm light from within, ready to show the member cards below
+We use a **layered hybrid architecture**: Lovart delivers illustrated transparent layers, and CSS drives the animation (floating, lid lift, glow, sparks). This gives us the richness of illustration with the smoothness of procedural motion.
 
-## Composition
+---
 
-- **Subject:** A stylized gift box with ribbon, centered in frame
-- **Pose:** Front-facing, symmetrical, lid slightly ajar in opening state
-- **Expression:** The box itself doesn't have a face, but the overall feeling should be "inviting" and "full of pleasant surprises"
-- **Background:** Transparent PNG (for overlay on gradient backgrounds) OR atmospheric warm wash
-- **Framing:** Centered subject with generous negative space on all sides
+## Architecture
+
+```
+Container (360×292rpx, CSS-animated float)
+├── Aura — CSS procedural glow (kept)
+├── Body Image — Lovart illustrated box body (static layer)
+├── Interior Image — Lovart illustrated inner glow (fades in when opening)
+├── Sparks — CSS procedural particles (kept)
+├── Lid Image — Lovart illustrated lid (CSS-animated lift + rotate)
+└── Shadow — CSS procedural ground shadow (kept)
+```
+
+**Why layered?** The lid lifts, tilts, and floats above the body during the reveal. If baked into a single image, we lose that physical motion. Separating lid from body lets us animate them independently with CSS transforms.
+
+---
+
+## Composition (per layer)
+
+All layers share the same **600×600px canvas** with the box centered. Elements must align perfectly when overlaid.
+
+| Layer | Subject | Position in 600×600 canvas |
+|-------|---------|---------------------------|
+| Body | Closed box body, front-facing | Centered, ~lower half |
+| Lid | Lid with ribbon, matching body width | Centered, sitting flush on body top edge |
+| Interior | Warm glow emanating from inside | Centered, filling the body cavity |
+
+**Background:** Transparent PNG for all layers (for overlay on gradient backgrounds).
+
+---
 
 ## Color System (exact hex codes)
 
@@ -39,58 +60,99 @@ The box is shown in three states:
 
 **Prompt instruction:** Use Vibrant Purple #8B5CF6 for the ribbon and primary accents, Warm Coral #FF9B85 for the warm inner glow, Warm Beige #F5F1E8 for the box body.
 
+---
+
 ## Style Lock (画风统一) — MANDATORY
 
 - **Construction:** 2D digital illustration with low-poly / geometric faceted aesthetic
 - **Textures:** Painterly, soft brushed feel within each polygonal facet — NOT flat vector or 3D render
 - **Outlines:** Minimal or none — let facet edges define form
 - **Gradients:** Soft color variation within individual facets, not global gradients
-- **Backgrounds:** Transparent PNG (no background) OR atmospheric textured wash with subtle grain/noise
+- **Backgrounds:** Transparent PNG (no background)
 - **Characters/Objects:** Geometric polygonal construction, simplified features, warm expressions
 - **Composition:** Centered subject, generous negative space
 - **Color treatment:** Natural warm palette; brand purple #8B5CF6 for key elements only
 
+---
+
 ## Anti-Generic Test
 
 Before approving, ask: *"Could this exact illustration appear in a generic dating app or mobile game loot box without modification?"* If yes → iterate. The box must feel uniquely JoyJoin — warm, social, premium, not gambling-adjacent.
+
+---
 
 ## Technical Specs
 
 | Property | Value |
 |----------|-------|
 | Format | WebP (primary), PNG fallback |
-| Dimensions | 600×600px (square, for scaling to ~360rpx display) |
-| Transparency | Yes — transparent background for overlay on page gradients |
-| DPR targets | 1×, 2×, 3× (ship 2× and 3×, let 1× fall back to 2×) |
-| Max file size | 80KB per resolution |
-| Naming | `lovart-blind-box-{state}-20260518.webp` where `{state}` = `ready`, `opening`, `open` |
+| Canvas per layer | 600×600px |
+| Transparency | Yes — all layers transparent PNG |
+| DPR targets | 2× (600×600), 3× (900×900) |
+| Max file size | 80KB per layer per resolution |
+| Naming | `lovart-blind-box-{layer}-20260518.webp` where `{layer}` = `body`, `lid`, `interior` |
 
-## States Needed
+---
 
-### State 1: Ready (closed)
-Closed gift box, ribbon tied neatly, gentle floating feel. Soft aura/glow around it. Inviting.
+## Layers Needed
 
-### State 2: Opening (lid lifting)
-Lid is lifting off, rotating slightly, warm light spilling from the gap. Sparks/particles floating up. Energy building.
+### Layer 1: Body
+The closed box body — what you see when looking at the box from the front. Includes the box walls, bottom, and the ribbon wrapping around the body. The top opening should be visible (where the lid sits).
 
-### State 3: Open (lid off)
-Lid fully removed and floating above, bright warm light emanating from inside the box. The interior is a soft glowing void — the "reveal" is about to happen.
+- No lid — the lid is a separate layer
+- The top edge should be clean where the lid will overlay
+- Warm beige body with purple ribbon accents
+
+### Layer 2: Lid
+The box lid, separate and self-contained. Should include the full lid surface, ribbon knot/bow on top, and the ribbon edges that drape over the sides. When placed over the body layer, it should look like a closed gift box.
+
+- Must align with the body's top opening when both are centered in their 600×600 canvas
+- Slightly wider than the body (overhangs like a real box lid)
+
+### Layer 3: Interior
+The glowing interior of the box — what you see when the lid lifts off. Soft warm light emanating upward, with subtle sparkles or light rays. This fades in beneath the lid during the opening animation.
+
+- Fills the body cavity area
+- Warm coral glow with soft gradients
+- Should feel inviting and full of pleasant surprises
+
+---
+
+## Animation Reference (for alignment)
+
+The CSS animation drives the motion. Your layers must work with these transforms:
+
+| Animation | Target layer | Motion |
+|-----------|-------------|--------|
+| `squad-unboxing-float` | Container | Entire box floats up/down 10rpx, 3.2s loop |
+| `squad-unboxing-lid-lift` | Lid image | Lid lifts 80rpx up, rotates -8deg, 0.92s loop |
+| `squad-unboxing-box-bounce` | Body image | Body scales 1.02x and drops 6rpx, 0.92s loop |
+| `squad-unboxing-aura` | CSS aura | Glow pulses opacity 0.26→0.52, scale 0.94→1.05 |
+| `squad-unboxing-spark` | CSS particles | 3 sparks float up and fade |
+
+**Important:** The lid and body images must be sized and positioned so that when the lid is at rest (no transform), it sits perfectly on the body. The CSS will handle the lift motion.
+
+---
 
 ## Deliverables
 
-1. **Ready state** — `lovart-blind-box-ready-20260518.webp`
-2. **Opening state** — `lovart-blind-box-opening-20260518.webp`
-3. **Open state** — `lovart-blind-box-open-20260518.webp`
+1. **Body layer** — `lovart-blind-box-body-20260518.webp`
+2. **Lid layer** — `lovart-blind-box-lid-20260518.webp`
+3. **Interior layer** — `lovart-blind-box-interior-20260518.webp`
 
 Each in 2× (600×600) and 3× (900×900) resolutions.
+
+---
 
 ## Downstream Handoff
 
 After asset approval:
 - Place in `apps/mini-program/src/assets/illustrations/`
-- Update `BlindBoxVisual.tsx` to use `<Image>` with state-based src switching
-- Remove CSS-drawn blind box elements from `squad-unboxing/index.scss`
-- Run `npm run optimize:xiaoyue` equivalent for illustration assets
+- `BlindBoxVisual.tsx` already wired — layers are referenced via `blindBoxAssets.ts`
+- CSS animations already configured — verify lid/body alignment in WeChat DevTools
+- Run `npm run build:weapp` and visually QA all 3 states
+
+---
 
 ## Related Skills
 - `mini-program-frontend-excellence` — pixel discipline, Taro-native Image component

@@ -9,3 +9,15 @@ export * from './personality.js';
 export * from './socialIcebreaker.js';
 export * from './users.js';
 export * from './venues.js';
+export {
+  userCityInterests,
+  cityUnlockProgress,
+  insertUserCityInterestSchema,
+  insertCityUnlockProgressSchema,
+} from './_definitions_extended.js';
+export type {
+  UserCityInterest,
+  InsertUserCityInterest,
+  CityUnlockProgress,
+  InsertCityUnlockProgress,
+} from './_definitions_extended.js';

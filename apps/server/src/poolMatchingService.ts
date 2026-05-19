@@ -115,6 +115,13 @@ export interface UserWithProfile {
   ageMatchPreference: string | null;
   tableVibePreference: string | null;
   vibeVector: Record<string, number> | null;
+  
+  // Match Compass preferences
+  preferenceStrictness: number | null;
+  preferredDistricts: string[] | null;
+  genderCompositionPreference: string | null;
+  acceptPairs: boolean | null;
+  kolComfortLevel: string | null;
 }
 
 export interface MatchGroup {
@@ -151,10 +158,12 @@ export interface SaveMatchResultsOptions {
 /**
  * 硬约束检查：验证用户是否符合活动池的所有限制
  * ✅ UPDATED: Added budget as L1 hard constraint
+ * ✅ Match Compass: accepts optional strictness parameter for future dealbreaker expansion
  */
 function meetsHardConstraints(
   user: UserWithProfile, 
-  pool: typeof eventPools.$inferSelect
+  pool: typeof eventPools.$inferSelect,
+  _strictness?: number,
 ): boolean {
   // 性别限制
   if (pool.genderRestriction && user.gender !== pool.genderRestriction) {
@@ -218,6 +227,29 @@ function meetsHardConstraints(
     }
   }
   
+  return true;
+}
+
+/**
+ * Match Compass dealbreaker check: evaluates whether two users are compatible
+ * based on explicit user-level dealbreakers when strictness < 50.
+ * At strictness >= 50, all pairs pass (dealbreakers are ignored).
+ */
+export function pairMeetsDealbreakers(
+  user1: UserWithProfile,
+  user2: UserWithProfile,
+  strictness: number,
+): boolean {
+  if (strictness >= 50) return true;
+
+  // Gender composition dealbreaker
+  if (user1.genderCompositionPreference === "female_only" && user2.gender === "男性") {
+    return false;
+  }
+  if (user2.genderCompositionPreference === "female_only" && user1.gender === "男性") {
+    return false;
+  }
+
   return true;
 }
 
@@ -759,7 +791,7 @@ function calculateBackgroundDiversityScore(user1: UserWithProfile, user2: UserWi
  * Note — Language (4%): 普通话覆盖率高，语言维度区分力有限，保留为轻量兼容信号。
  * Note — Preference (5%): 目前酒吧/饭店活动场景分化有限，保留为轻量场景适配信号。
  */
-async function calculatePairScore(
+export async function calculatePairScore(
   user1: UserWithProfile,
   user2: UserWithProfile,
   interestsCache?: UserInterestsCache,
@@ -981,6 +1013,51 @@ function generateGroupExplanation(group: MatchGroup): string {
   return `${tempEmoji} 这个小组有${group.members.length}位成员，包含${archetypes.length}种人格类型（${archetypes.join("、")}），来自${industries.length}个行业。配对兼容性${group.avgPairScore}分，多样性${group.diversityScore}分，能量平衡${group.communicationBalance}分，综合匹配度${group.overallScore}分。`;
 }
 
+/**
+ * Match Compass group-formation weights by strictness tier.
+ * At strictness=50, returns undefined (use default/adaptive weights).
+ * At strictness=0, diversityWeight +4%.
+ * At strictness=100, chemistryWeight +4%.
+ * Weights are normalized to sum to 100%.
+ */
+function resolveStrictnessWeights(strictness: number): MatchingWeights | undefined {
+  const isEnabled = process.env.MATCH_COMPASS_STRICTNESS_ENABLED !== "false";
+  if (!isEnabled) return undefined;
+
+  if (strictness === 50) return undefined;
+
+  const base = {
+    chemistryWeight: 28,
+    interestWeight: 28,
+    socialAffinityWeight: 20,
+    backgroundDiversityWeight: 15,
+    preferenceWeight: 5,
+    languageWeight: 4,
+  };
+
+  if (strictness <= 0) {
+    base.backgroundDiversityWeight += 4;
+  } else if (strictness >= 100) {
+    base.chemistryWeight += 4;
+  } else {
+    return undefined;
+  }
+
+  const total = Object.values(base).reduce((a, b) => a + b, 0);
+  const keys = Object.keys(base) as Array<keyof typeof base>;
+  const normalized = {} as MatchingWeights;
+  let running = 0;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    const value = Math.round((base[key] / total) * 100);
+    normalized[key] = value;
+    running += value;
+  }
+  const lastKey = keys[keys.length - 1];
+  normalized[lastKey] = 100 - running;
+  return normalized;
+}
+
 export type GreedyPoolMatchingConfig = {
   minGroupSize?: number | null;
   maxGroupSize?: number | null;
@@ -1002,6 +1079,7 @@ export async function runGreedyPoolMatchingCore(
   invitationPairs: Array<{ inviterId: string; inviteeId: string }>,
   customWeights?: MatchingWeights,
   matchHistoryLookup?: Map<string, { wouldMeetAgain: boolean | null }>,
+  strictness: number = 50,
 ): Promise<MatchGroup[]> {
   // 4. 贪婪分组算法（优先处理邀请关系）
   const groups: MatchGroup[] = [];
@@ -1010,12 +1088,34 @@ export async function runGreedyPoolMatchingCore(
   const minGroupSize = pool.minGroupSize || 4;
   const maxGroupSize = pool.maxGroupSize || 6;
 
+  const isStrictnessEnabled = process.env.MATCH_COMPASS_STRICTNESS_ENABLED !== "false";
+  const effectiveStrictness = isStrictnessEnabled ? strictness : 50;
+  const hasExplicitCustomWeights = !!customWeights;
+  const formationWeights = resolveStrictnessWeights(effectiveStrictness) ?? customWeights;
+
+  // minPairScore threshold by strictness tier
+  let minPairScore = 60;
+  if (effectiveStrictness <= 0) minPairScore = 52;
+  else if (effectiveStrictness >= 100) minPairScore = 70;
+
+  // allowOverflow: relaxed mode permits soft overflow during redistribution
+  const allowOverflow = effectiveStrictness <= 0 && isStrictnessEnabled;
+
   // 计算所有可能的配对分数，并为邀请关系加权
   const pairScores: { user1: UserWithProfile; user2: UserWithProfile; score: number; isInvited: boolean }[] = [];
   for (let i = 0; i < eligibleUsers.length; i++) {
     for (let j = i + 1; j < eligibleUsers.length; j++) {
       const user1 = eligibleUsers[i] as UserWithProfile;
       const user2 = eligibleUsers[j] as UserWithProfile;
+
+      // Match Compass L1 dealbreaker filter (strictness < 50 only)
+      if (isStrictnessEnabled && effectiveStrictness < 50) {
+        if (!pairMeetsDealbreakers(user1, user2, effectiveStrictness)) {
+          pairScores.push({ user1, user2, score: -1, isInvited: false });
+          continue;
+        }
+      }
+
       let score = await calculatePairScore(
         user1,
         user2,
@@ -1024,7 +1124,7 @@ export async function runGreedyPoolMatchingCore(
         semanticProfileCache,
         semanticSimilarityEnabled,
         chemistryCalibrationMap,
-        customWeights,
+        formationWeights,
         matchHistoryLookup,
       );
 
@@ -1068,6 +1168,18 @@ export async function runGreedyPoolMatchingCore(
       for (const candidate of eligibleUsers as UserWithProfile[]) {
         if (used.has(candidate.userId)) continue;
 
+        // Match Compass: apply dealbreakers during group expansion too (strictness < 50)
+        if (isStrictnessEnabled && effectiveStrictness < 50) {
+          let passesDealbreakers = true;
+          for (const member of groupMembers) {
+            if (!pairMeetsDealbreakers(candidate, member, effectiveStrictness)) {
+              passesDealbreakers = false;
+              break;
+            }
+          }
+          if (!passesDealbreakers) continue;
+        }
+
         // 计算候选人与当前小组成员的平均分数 (uses cached pair scores)
         let totalScore = 0;
         for (const member of groupMembers) {
@@ -1079,7 +1191,7 @@ export async function runGreedyPoolMatchingCore(
             semanticProfileCache,
             semanticSimilarityEnabled,
             chemistryCalibrationMap,
-            customWeights,
+            formationWeights,
           matchHistoryLookup,
           );
         }
@@ -1091,7 +1203,7 @@ export async function runGreedyPoolMatchingCore(
         }
       }
 
-      if (bestCandidate && bestScore >= 60) { // 最低质量门槛
+      if (bestCandidate && bestScore >= minPairScore) { // 最低质量门槛（Match Compass可调节）
         groupMembers.push(bestCandidate);
         used.add(bestCandidate.userId);
       } else {
@@ -1108,7 +1220,7 @@ export async function runGreedyPoolMatchingCore(
         semanticProfileCache,
         semanticSimilarityEnabled,
         chemistryCalibrationMap,
-        customWeights,
+        formationWeights,
         matchHistoryLookup,
       );
       // E: Compute true chemistry-only average (distinct from avgPairScore)
@@ -1142,10 +1254,12 @@ export async function runGreedyPoolMatchingCore(
     }
   }
 
-  // H4: Redistribution pass for stranded users (behind adaptive-weights flag)
-  // Only run when adaptive weights are enabled — this is an experimental
+  // H4: Redistribution pass for stranded users (behind adaptive-weights or Match Compass relaxed flag)
+  // Only run when adaptive weights are explicitly enabled or allowOverflow is true — this is an experimental
   // quality-of-life improvement that needs real-world calibration.
-  if (customWeights) {
+  // Match Compass formation weights (strictness != 50) do NOT trigger redistribution,
+  // because strict mode should not force-form low-quality groups.
+  if (hasExplicitCustomWeights || allowOverflow) {
     const strandedUsers = eligibleUsers.filter(u => !used.has(u.userId));
 
     if (strandedUsers.length > 0) {
@@ -1158,7 +1272,7 @@ export async function runGreedyPoolMatchingCore(
         let bestScore = -1;
 
         for (const group of groups) {
-          if (group.members.length >= maxGroupSize) continue;
+          if (group.members.length >= maxGroupSize && !allowOverflow) continue;
 
           let totalScore = 0;
           for (const member of group.members) {
@@ -1170,7 +1284,7 @@ export async function runGreedyPoolMatchingCore(
               semanticProfileCache,
               semanticSimilarityEnabled,
               chemistryCalibrationMap,
-              customWeights,
+              formationWeights,
             matchHistoryLookup,
             );
           }
@@ -1193,7 +1307,7 @@ export async function runGreedyPoolMatchingCore(
             semanticProfileCache,
             semanticSimilarityEnabled,
             chemistryCalibrationMap,
-            customWeights,
+            formationWeights,
           matchHistoryLookup,
           );
           bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap);
@@ -1220,7 +1334,7 @@ export async function runGreedyPoolMatchingCore(
           semanticProfileCache,
           semanticSimilarityEnabled,
           chemistryCalibrationMap,
-          customWeights,
+          formationWeights,
         matchHistoryLookup,
         );
         const avgChemistryScore = calculateGroupChemistryScore(stillStranded, chemistryCalibrationMap);
@@ -1250,7 +1364,7 @@ export async function runGreedyPoolMatchingCore(
       // so long as the candidate scores ≥ 50 with the group. Each group may
       // absorb at most one extra member because the skip condition becomes
       // active once length > maxGroupSize. This is gated by adaptive weights
-      // for safe calibration.
+      // or Match Compass relaxed mode for safe calibration.
       stillStranded = eligibleUsers.filter(u => !used.has(u.userId));
       if (stillStranded.length > 0 && stillStranded.length < minGroupSize) {
         for (const stranded of stillStranded) {
@@ -1258,7 +1372,7 @@ export async function runGreedyPoolMatchingCore(
           let bestScore = -1;
 
           for (const group of groups) {
-            if (group.members.length > maxGroupSize) continue;
+            if (group.members.length > maxGroupSize && !allowOverflow) continue;
 
             let totalScore = 0;
             for (const member of group.members) {
@@ -1270,7 +1384,7 @@ export async function runGreedyPoolMatchingCore(
                 semanticProfileCache,
                 semanticSimilarityEnabled,
                 chemistryCalibrationMap,
-                customWeights,
+                formationWeights,
               matchHistoryLookup,
               );
             }
@@ -1292,7 +1406,7 @@ export async function runGreedyPoolMatchingCore(
               semanticProfileCache,
               semanticSimilarityEnabled,
               chemistryCalibrationMap,
-              customWeights,
+              formationWeights,
             matchHistoryLookup,
             );
             bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap);
@@ -1366,6 +1480,11 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       ageMatchPreference: users.ageMatchPreference,
       tableVibePreference: users.tableVibePreference,
       vibeVector: users.vibeVector,
+      preferenceStrictness: eventPoolRegistrations.preferenceStrictness,
+      preferredDistricts: eventPoolRegistrations.preferredDistricts,
+      genderCompositionPreference: eventPoolRegistrations.genderCompositionPreference,
+      acceptPairs: eventPoolRegistrations.acceptPairs,
+      kolComfortLevel: eventPoolRegistrations.kolComfortLevel,
     })
     .from(eventPoolRegistrations)
     .innerJoin(users, eq(eventPoolRegistrations.userId, users.id))
@@ -1379,8 +1498,18 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
   
   // 3. 硬约束过滤
   const eligibleUsers = registrations.filter((reg) => 
-    meetsHardConstraints(reg, pool)
+    meetsHardConstraints(reg, pool, reg.preferenceStrictness ?? 50)
   );
+  
+  // Match Compass: compute effective strictness for this pool
+  const isStrictnessEnabled = process.env.MATCH_COMPASS_STRICTNESS_ENABLED !== "false";
+  let effectiveStrictness = 50;
+  if (isStrictnessEnabled && eligibleUsers.length > 0) {
+    const strictnessValues = eligibleUsers.map((u) => u.preferenceStrictness ?? 50);
+    effectiveStrictness = Math.round(
+      strictnessValues.reduce((a, b) => a + b, 0) / strictnessValues.length
+    );
+  }
   
   if (eligibleUsers.length < (pool.minGroupSize || 4)) {
     throw new Error(`报名人数不足，至少需要${pool.minGroupSize}人`);
@@ -1478,7 +1607,8 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     chemistryCalibrationMap,
     invitationPairs,
     customWeights,
-  matchHistoryLookup,
+    matchHistoryLookup,
+    effectiveStrictness,
   );
 }
 

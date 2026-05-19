@@ -34,6 +34,8 @@ export interface AnswerAreaProps {
   onOptionTouchEnd?: () => void
   /** Committed (pre-filled) answer value for back-review mode */
   committedValue?: string | null
+  /** Hide the slider's own submit button (used in back-review mode) */
+  hideSliderSubmit?: boolean
 }
 
 function splitEmojiLabel(text: string): { emoji: string; label: string } {
@@ -72,6 +74,7 @@ export default memo(function PersonalityTestAnswerArea({
   onOptionTouchStart,
   onOptionTouchEnd,
   committedValue,
+  hideSliderSubmit = false,
 }: AnswerAreaProps) {
   const [selectedValue, setSelectedValue] = useState<string | null>(null)
   const [fragmentLabel, setFragmentLabel] = useState<string>('')
@@ -185,20 +188,22 @@ export default memo(function PersonalityTestAnswerArea({
           disabled={isSubmitting}
         />
 
-        <Button
-          variant='brand'
-          className='answer-area__slider-submit'
-          onTouchStart={() => { onOptionTouchStart?.({ value: 'slider', text: '确认这个感觉' }) }}
-          onTouchEnd={() => { onOptionTouchEnd?.() }}
-          onClick={() => {
-            haptics('light')
-            onSliderSubmit()
-          }}
-          disabled={isSubmitting}
-          loading={isSubmitting}
-        >
-          {isSubmitting ? '提交中…' : '确认这个感觉'}
-        </Button>
+        {!hideSliderSubmit && (
+          <Button
+            variant='brand'
+            className='answer-area__slider-submit'
+            onTouchStart={() => { onOptionTouchStart?.({ value: 'slider', text: '确认这个感觉' }) }}
+            onTouchEnd={() => { onOptionTouchEnd?.() }}
+            onClick={() => {
+              haptics('light')
+              onSliderSubmit()
+            }}
+            disabled={isSubmitting}
+            loading={isSubmitting}
+          >
+            {isSubmitting ? '提交中…' : '确认这个感觉'}
+          </Button>
+        )}
       </View>
     )
   }

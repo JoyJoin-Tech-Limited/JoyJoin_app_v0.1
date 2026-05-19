@@ -90,7 +90,7 @@ export function computeActionDockState(
     return 'hidden'
   }
 
-  if (analysisStage >= 4) {
+  if (analysisStage >= 3) {
     return 'ready'
   }
 

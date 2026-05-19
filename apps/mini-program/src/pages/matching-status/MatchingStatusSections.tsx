@@ -43,7 +43,6 @@ interface MatchingStatusPendingSectionProps {
   waitingSeats: WaitingSeatViewModel[]
   fillStatusText: string
   refreshCountdown: number
-  onRefreshWaitingState: () => void
 }
 
 export function MatchingStatusPendingSection({
@@ -57,7 +56,6 @@ export function MatchingStatusPendingSection({
   waitingSeats,
   fillStatusText,
   refreshCountdown,
-  onRefreshWaitingState,
 }: MatchingStatusPendingSectionProps) {
   return (
     <>
@@ -67,6 +65,7 @@ export function MatchingStatusPendingSection({
             className='matching-status__waiting-mascot'
             mode='aspectFit'
             src={getXiaoyueExpressionAsset('matchWaiting')}
+            ariaLabel='等待匹配'
           />
           {waitingCopy.badge ? (
             <Text className='matching-status__waiting-badge'>{waitingCopy.badge}</Text>

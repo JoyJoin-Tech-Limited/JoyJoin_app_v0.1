@@ -32,7 +32,7 @@
       content: '';
       position: absolute;
       inset: 22rpx;
-      border-radius: 28rpx;
+      border-radius: $card-radius-sm;
       border: 2rpx solid rgba($color-surface, 0.54);
       z-index: 2;
       pointer-events: none;
@@ -89,18 +89,18 @@
     margin-bottom: $spacing-sm;
 
     &--matched {
-      background: #07C160;
-      box-shadow: 0 0 12rpx rgba(7, 193, 96, 0.4);
+      background: $color-success;
+      box-shadow: 0 0 12rpx rgba($color-success, 0.4);
     }
 
     &--completed {
-      background: #2563EB;
-      box-shadow: 0 0 12rpx rgba(37, 99, 235, 0.4);
+      background: $color-info;
+      box-shadow: 0 0 12rpx rgba($color-info, 0.4);
     }
 
     &--pending {
-      background: #F59E0B;
-      box-shadow: 0 0 12rpx rgba(245, 158, 11, 0.4);
+      background: $color-warning;
+      box-shadow: 0 0 12rpx rgba($color-warning, 0.4);
       animation: matching-status-pulse 2s ease-in-out infinite;
     }
   }

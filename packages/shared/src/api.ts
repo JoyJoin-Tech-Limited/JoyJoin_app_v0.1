@@ -382,6 +382,8 @@ export interface AuthUserResponse extends SanitizedAuthUser {
   tierDisplayFlags?: TierDisplayFlags
   /** Cached Xiaoyue AI analysis (null when not yet computed). */
   xiaoyueAnalysis?: XiaoyueAnalysisPublicResult | null
+  /** Match Compass v1 kill-switch — false hides the dashboard entirely. */
+  matchCompassEnabled?: boolean
 }
 
 export interface CreateMiniProgramPaymentIntentRequest {
@@ -1225,6 +1227,25 @@ export function normalizeEventPoolRegistrationPayload(
   return normalized
 }
 
+export interface ReverseGeocodeResponse {
+  success: boolean
+  city?: string
+  district?: string
+  source?: string
+}
+
+export function reverseGeocode(
+  api: ApiTransport,
+  latitude: number,
+  longitude: number
+): Promise<ReverseGeocodeResponse> {
+  return api<ReverseGeocodeResponse>({
+    path: '/api/geo/reverse-geocode',
+    method: 'POST',
+    data: { latitude, longitude },
+  })
+}
+
 export function getEventPools(api: ApiTransport): Promise<EventPoolSummary[]> {
   return api<EventPoolSummary[]>({ path: '/api/event-pools' })
 }
@@ -1286,6 +1307,55 @@ export function cancelPoolRegistration(
   return api<void>({
     path: `/api/pool-registrations/${encodeURIComponent(registrationId)}`,
     method: 'DELETE',
+  })
+}
+
+// ── Match Compass ──
+
+export type MatchCompassTemperatureBand = 'cold' | 'mild' | 'warm' | 'fire'
+export type MatchCompassGenderComposition = 'mixed' | 'female_only' | 'no_pref'
+
+export interface MatchCompassResponse {
+  strictness: number
+  preferredDistricts: string[] | null
+  genderComposition: MatchCompassGenderComposition | null
+  acceptPairs: boolean | null
+  ageMatchPreference: string | null
+  tableVibePreference: string | null
+  temperatureBand: MatchCompassTemperatureBand
+  temperatureScore: number
+  eligibleUserCount: number
+  isLocked: boolean
+  primaryArchetype: string | null
+}
+
+export interface UpdateMatchCompassPreferencesRequest {
+  strictness?: number
+  preferredDistricts?: string[] | null
+  genderComposition?: MatchCompassGenderComposition | null
+  acceptPairs?: boolean | null
+  ageMatchPreference?: string | null
+  tableVibePreference?: string | null
+}
+
+export function getMatchCompass(
+  api: ApiTransport,
+  poolId: string
+): Promise<MatchCompassResponse> {
+  return api<MatchCompassResponse>({
+    path: `/api/match-compass/${encodeURIComponent(poolId)}`,
+  })
+}
+
+export function updateMatchCompassPreferences(
+  api: ApiTransport,
+  poolId: string,
+  payload: UpdateMatchCompassPreferencesRequest
+): Promise<MatchCompassResponse> {
+  return api<MatchCompassResponse>({
+    path: `/api/match-compass/${encodeURIComponent(poolId)}/preferences`,
+    method: 'PATCH',
+    data: payload,
   })
 }
 

@@ -7,11 +7,14 @@ import {
   getEventPools,
   getMyPoolRegistrations,
   type EventPoolSummary,
+  reverseGeocode,
 } from '@shared/api'
 import {
   shenzhenClusters,
   getDistrictById,
   getClusterById,
+  getClusterIdByDistrictName,
+  sortPoolsByProximity,
   type District,
 } from '@shared/districts'
 import { apiRequest, fetchDiscoverShell } from '../../lib/api/api'
@@ -28,6 +31,9 @@ import VirtualList from '../../components/VirtualList'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import OracleCard from '../../components/discover/OracleCard'
 import LocationFilterDrawer from '../../components/discover/LocationFilterDrawer'
+import CityUnlockBanner from '../../components/discover/CityUnlockBanner'
+import CityUnlockFeedCard from '../../components/discover/CityUnlockFeedCard'
+import CityPickerSheet from '../../components/discover/CityPickerSheet'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
 import { getTimeGreeting } from '../../lib/utils/timeGreeting'
 import {
@@ -43,7 +49,7 @@ import './index.scss'
 const ALL_CLUSTER_ID = '__all__'
 const ALL_DISTRICT_ID = '__all__'
 const LOCATION_STORAGE_KEY = 'discover_last_location'
-const LOCATION_TTL_DAYS = 30
+const LOCATION_TTL_DAYS = 7
 
 // Measured OracleCard height in rpx. Keep in sync with `.oracle-card` height.
 const DISCOVER_CARD_HEIGHT_RPX = 464
@@ -104,7 +110,31 @@ function AuthenticatedDiscover() {
   )
   const [drawerOpen, setDrawerOpen] = useState(false)
 
+  // ── City unlock state ──
+  const [showCityPicker, setShowCityPicker] = useState(false)
+
+  // ── Geo detection state ──
+  const [detectedClusterId, setDetectedClusterId] = useState<string | null>(null)
+  const [geoStatus, setGeoStatus] = useState<'idle' | 'locating' | 'success' | 'denied' | 'error'>('idle')
+
   // ── Data fetching ──
+  const {
+    data: myCityInterests = [],
+  } = useQuery({
+    queryKey: ['my-city-interests'],
+    queryFn: async () => {
+      const res = await apiRequest<{ interests: { city: string }[] }>({
+        method: 'GET',
+        path: '/api/cities/my-interests',
+      })
+      return res.interests ?? []
+    },
+    enabled: typeof window !== 'undefined',
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const hasCityInterest = myCityInterests.length > 0
+
   const {
     data: pools = [],
     isLoading: poolsLoading,
@@ -249,6 +279,73 @@ function AuthenticatedDiscover() {
     queryFn: () => getMyPoolRegistrations(apiRequest),
   })
 
+  // ── Geo detection effect ──
+  // Asynchronously detect user location for proximity sorting.
+  // Does not block rendering — pools are shown immediately, then re-sorted.
+  useEffect(() => {
+    // Skip if user has an active manual selection
+    if (selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID) {
+      return
+    }
+
+    let cancelled = false
+
+    async function detectLocation() {
+      try {
+        setGeoStatus('locating')
+        const res = await Taro.getLocation({ type: 'gcj02' })
+        if (cancelled) return
+
+        const geo = await reverseGeocode(apiRequest, res.latitude, res.longitude)
+        if (cancelled) return
+
+        if (geo.success && geo.district) {
+          const clusterId = getClusterIdByDistrictName(geo.district)
+          if (clusterId) {
+            setDetectedClusterId(clusterId)
+            setGeoStatus('success')
+            discoverAnalytics.track('geo_detected', undefined, {
+              clusterId,
+              district: geo.district,
+              source: geo.source,
+            })
+            return
+          }
+        }
+        // District not recognized or API failed — fall through to error state
+        setGeoStatus('error')
+      } catch (err: any) {
+        if (cancelled) return
+        // User denied permission or location unavailable
+        // WeChat error messages vary by platform/version:
+        //   "getLocation:fail auth deny"
+        //   "getLocation:fail system permission denied"
+        //   "getLocation:fail no permission"
+        //   "getLocation:fail timeout"
+        const errMsg = String(err?.errMsg ?? err?.message ?? '').toLowerCase()
+        const isTimeout = errMsg.includes('timeout')
+        const isDenial = !isTimeout && (
+          errMsg.includes('deny') ||
+          errMsg.includes('auth') ||
+          errMsg.includes('permission') ||
+          errMsg.includes('no permission')
+        )
+        setGeoStatus(isDenial ? 'denied' : 'error')
+        discoverAnalytics.track('geo_failed', undefined, {
+          reason: isDenial ? 'denied' : isTimeout ? 'timeout' : 'error',
+          errMsg: err?.errMsg,
+        })
+      }
+    }
+
+    detectLocation()
+    return () => {
+      cancelled = true
+    }
+    // apiRequest and discoverAnalytics are stable singletons; selected states drive re-run
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCluster, selectedDistrict])
+
   // ── Derived: districts for selected cluster ──
   const visibleDistricts = useMemo<District[]>(() => {
     if (selectedCluster === ALL_CLUSTER_ID) {
@@ -260,26 +357,62 @@ function AuthenticatedDiscover() {
 
   // No sticky header with drawer-based filter — hero scrolls away naturally
 
-  // ── Derived: filtered pool list ──
-  const filteredPools = useMemo<EventPoolSummary[]>(() => {
-    return pools.filter((pool) => {
-      if (selectedCluster !== ALL_CLUSTER_ID) {
-        const clusterDistricts = shenzhenClusters
-          .find((c) => c.id === selectedCluster)
-          ?.districts.map((d) => d.name) ?? []
-        if (pool.district && !clusterDistricts.includes(pool.district)) {
-          return false
+  // ── Derived: display pool list ──
+  // Strategy:
+  //   - Manual selection active → strict filter (respect user intent)
+  //   - No manual selection → show all pools sorted by proximity to detected cluster
+  //   - No GPS / detection failed → show all pools in server order (time-based)
+  const hasManualFilter = selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID
+
+  const displayPools = useMemo<EventPoolSummary[]>(() => {
+    if (hasManualFilter) {
+      // Strict filtering mode
+      return pools.filter((pool) => {
+        if (selectedCluster !== ALL_CLUSTER_ID) {
+          const clusterDistricts = shenzhenClusters
+            .find((c) => c.id === selectedCluster)
+            ?.districts.map((d) => d.name) ?? []
+          if (pool.district && !clusterDistricts.includes(pool.district)) {
+            return false
+          }
         }
-      }
-      if (selectedDistrict !== ALL_DISTRICT_ID) {
-        const district = visibleDistricts.find((d) => d.id === selectedDistrict)
-        if (district && pool.district !== district.name) {
-          return false
+        if (selectedDistrict !== ALL_DISTRICT_ID) {
+          const district = visibleDistricts.find((d) => d.id === selectedDistrict)
+          if (district && pool.district !== district.name) {
+            return false
+          }
         }
-      }
-      return true
-    })
-  }, [pools, selectedCluster, selectedDistrict, visibleDistricts])
+        return true
+      })
+    }
+
+    // Relaxed mode: show all pools sorted by proximity
+    return sortPoolsByProximity(pools, detectedClusterId)
+  }, [pools, selectedCluster, selectedDistrict, visibleDistricts, detectedClusterId, hasManualFilter])
+
+  // ── Empty-state auto-relaxation ──
+  // When manual filter returns nothing, automatically fall back to all pools
+  // sorted by proximity, with a banner explaining the relaxation.
+  const isAutoRelaxed = hasManualFilter && displayPools.length === 0 && pools.length > 0
+  const visiblePools = isAutoRelaxed
+    ? sortPoolsByProximity(pools, detectedClusterId)
+    : displayPools
+
+  // Track auto-relaxation once per occurrence
+  const hasTrackedRelaxRef = useRef(false)
+  useEffect(() => {
+    if (isAutoRelaxed && !hasTrackedRelaxRef.current) {
+      hasTrackedRelaxRef.current = true
+      discoverAnalytics.track('filter_auto_relax', undefined, {
+        selectedCluster,
+        selectedDistrict,
+        relaxedPoolCount: visiblePools.length,
+      })
+    } else if (!isAutoRelaxed) {
+      hasTrackedRelaxRef.current = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAutoRelaxed])
 
   // ── Header copy (computed after data fetch) ──
   const archetype = (user as any)?.archetype || (user as any)?.primaryArchetype || null
@@ -419,6 +552,15 @@ function AuthenticatedDiscover() {
             在 深圳 · {locationPillLabel} ▼
           </Text>
         </View>
+
+        {/* Geo status hint — shown when GPS-sorted and not manually filtered */}
+        {!hasManualFilter && detectedClusterId && geoStatus === 'success' && (
+          <View className='discover-auth__geo-hint'>
+            <Text className='discover-auth__geo-hint-text'>
+              为你优先展示{getClusterById(detectedClusterId)?.displayName ?? '附近'}的聚会
+            </Text>
+          </View>
+        )}
       </View>
 
       {primaryAction && (
@@ -448,10 +590,15 @@ function AuthenticatedDiscover() {
         onClose={handleCloseDrawer}
       />
 
+      {/* City unlock banner — shown when user hasn't expressed city interest */}
+      {!hasCityInterest && (
+        <CityUnlockBanner onSelectCity={() => setShowCityPicker(true)} />
+      )}
+
       {/* Pool listing */}
       <View className='discover-auth__section'>
         <Text className='discover-auth__section-title'>
-          活动池 {!poolsLoading && `(${filteredPools.length})`}
+          活动池 {!poolsLoading && `(${visiblePools.length})`}
         </Text>
 
         {poolsLoading ? (
@@ -468,15 +615,28 @@ function AuthenticatedDiscover() {
             title='获取列表遇到小状况'
             description='下拉刷新一下就好'
           />
-        ) : filteredPools.length > 0 ? (
-          <VirtualList
-            className='discover-auth__pool-list-wrapper'
-            listClassName='discover-auth__pool-list'
-            items={filteredPools}
-            itemHeight={DISCOVER_CARD_HEIGHT_RPX}
-            keyExtractor={poolKeyExtractor}
-            renderItem={renderPoolCard}
-          />
+        ) : visiblePools.length > 0 ? (
+          <>
+            {isAutoRelaxed && (
+              <View className='discover-auth__relaxed-banner'>
+                <Text className='discover-auth__relaxed-banner-text'>
+                  这个区域暂时没活动，先看看附近的聚会吧 ✨
+                </Text>
+              </View>
+            )}
+            <VirtualList
+              className='discover-auth__pool-list-wrapper'
+              listClassName='discover-auth__pool-list'
+              items={visiblePools}
+              itemHeight={DISCOVER_CARD_HEIGHT_RPX}
+              keyExtractor={poolKeyExtractor}
+              renderItem={renderPoolCard}
+            />
+            {/* City unlock feed card — shown at bottom of pool list */}
+            {!hasCityInterest && (
+              <CityUnlockFeedCard onSelectCity={() => setShowCityPicker(true)} />
+            )}
+          </>
         ) : (
           <StatusCard
             className='discover-auth__empty-state'
@@ -493,6 +653,16 @@ function AuthenticatedDiscover() {
       </View>
 
       <View className='discover-auth__spacer' />
+
+      {/* City picker bottom sheet */}
+      <CityPickerSheet
+        visible={showCityPicker}
+        onClose={() => setShowCityPicker(false)}
+        onSuccess={(city) => {
+          setShowCityPicker(false)
+          Taro.navigateTo({ url: '/pages/city-unlock/index' })
+        }}
+      />
     </View>
   )
 }

@@ -672,72 +672,97 @@
     height: 2rpx;
   }
 
-  // Thin progress bar at very top
-  &__progress-track {
-    position: relative;
-    width: 100%;
-    height: 4rpx;
-    background: rgba($color-primary, 0.1);
-    overflow: visible;
+  // Segmented progress bar at very top
+  &__progress-bar-shell {
+    padding: 16rpx $container-padding 0;
+    @include safe-area-inline($container-padding);
   }
 
-  &__progress-fill {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    background: $brand-gradient;
-    border-radius: 0 2rpx 2rpx 0;
-    transform-origin: left center;
-    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-
-    // Compositor-safe glow pulse — uses transform + opacity instead of box-shadow
-    &::after {
-      content: '';
-      position: absolute;
-      left: -2rpx;
-      top: -4rpx;
-      right: -2rpx;
-      bottom: -4rpx;
-      border-radius: 0 4rpx 4rpx 0;
-      background: rgba($color-primary, 0.35);
-      opacity: 0;
-      transform: scale(1);
-      transform-origin: left center;
-      pointer-events: none;
-    }
-
-    &--milestone-pulse {
-      &::after {
-        animation: milestone-progress-pulse 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
-      }
-    }
-  }
-
-  @keyframes milestone-progress-pulse {
-    0% {
-      opacity: 0.35;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 0.2;
-      transform: scale(1.06);
-    }
-    100% {
-      opacity: 0;
-      transform: scale(1);
-    }
+  &__progress-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 $container-padding 8rpx;
+    @include safe-area-inline($container-padding);
   }
 
   &__progress-label {
-    text-align: center;
-    padding: 8rpx 0;
+    flex: 1;
+    text-align: left;
   }
 
   &__progress-text {
     font-size: $font-size-xs;
     color: $color-text-muted;
     font-weight: $font-weight-medium;
+  }
+
+  &__back-btn {
+    flex-shrink: 0;
+    padding: 4rpx 16rpx;
+    margin-left: 8rpx;
+  }
+
+  &__back-btn-text {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+
+  &__back-btn--hover {
+    opacity: 0.7;
+  }
+
+  // Back-review action buttons
+  &__back-review-actions {
+    display: flex;
+    gap: $spacing-md;
+    padding: 0 $container-padding 24rpx;
+    @include safe-area-inline($container-padding);
+    @include safe-area-bottom-padding(padding-bottom, 24rpx);
+  }
+
+  &__back-review-btn {
+    flex: 1;
+
+    &--cancel {
+      flex: 0 0 auto;
+      min-width: 120rpx;
+    }
+  }
+
+  &__back-review-btn--hover {
+    opacity: 0.85;
+  }
+
+  // Skip button
+  &__skip-row {
+    display: flex;
+    justify-content: center;
+    padding: 0 $container-padding 24rpx;
+    @include safe-area-inline($container-padding);
+    @include safe-area-bottom-padding(padding-bottom, 24rpx);
+  }
+
+  &__skip-btn {
+    display: flex;
+    align-items: center;
+    gap: 4rpx;
+    padding: 8rpx 16rpx;
+  }
+
+  &__skip-btn-text {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+  }
+
+  &__skip-btn-count {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    opacity: 0.7;
+  }
+
+  &__skip-btn--hover {
+    opacity: 0.7;
   }
 
   // ── Zone B: Full-width glassmium question banner ─────────────────
@@ -912,6 +937,12 @@
 
     &__speech-bubble--milestone {
       animation: none;
+    }
+
+    &__back-review-actions,
+    &__skip-row {
+      opacity: 1;
+      transform: none;
     }
 
     &__skeleton-scenario,

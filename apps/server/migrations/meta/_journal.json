@@ -313,6 +313,13 @@
     {
       "idx": 44,
       "version": "7",
+      "when": 1779123358540,
+      "tag": "20260518_match_compass_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
       "when": 1778141820001,
       "tag": "add_attendance_status",
       "breakpoints": true

@@ -30,6 +30,12 @@ export type XiaoyueExpressionId =
   | 'testListening'
   | 'testNod'
   | 'testSurprised'
+  // Match Compass expressions (mapped to existing assets until commissioned)
+  | 'compassScan'
+  | 'compassInsight'
+  | 'compassCelebrate'
+  // City unlock expression
+  | 'cityUnlock'
 
 /** Legacy three-state API (maps into {@link XiaoyueExpressionId}). */
 export type LegacyXiaoyueMood = 'normal' | 'excited' | 'pointing'
@@ -56,6 +62,12 @@ const ART = {
   optOutReassure: `${BASE}/xiaoyue-opt-out-reassure.webp`,
   paymentTrust: `${BASE}/xiaoyue-payment-trust.webp`,
   connectionsEmpty: `${BASE}/xiaoyue-connections-empty.webp`,
+  // City unlock — city explorer with paper airplane
+  cityUnlock: `${BASE}/xiaoyue-city-unlock.webp`,
+  // Match Compass — mapped to existing assets until dedicated ones are commissioned
+  compassScan: `${BASE}/xiaoyue-test-curious.webp`,
+  compassInsight: `${BASE}/xiaoyue-coach-guide.webp`,
+  compassCelebrate: `${BASE}/xiaoyue-match-success.webp`,
 } as const
 
 export const XIAOYUE_ASSET_BY_EXPRESSION: Record<XiaoyueExpressionId, string> = {
@@ -76,6 +88,10 @@ export const XIAOYUE_ASSET_BY_EXPRESSION: Record<XiaoyueExpressionId, string> = 
   optOutReassure: ART.optOutReassure,
   paymentTrust: ART.paymentTrust,
   connectionsEmpty: ART.connectionsEmpty,
+  cityUnlock: ART.cityUnlock,
+  compassScan: ART.compassScan,
+  compassInsight: ART.compassInsight,
+  compassCelebrate: ART.compassCelebrate,
 }
 
 export const LEGACY_MOOD_TO_EXPRESSION: Record<LegacyXiaoyueMood, XiaoyueExpressionId> = {
@@ -144,6 +160,10 @@ export const XIAOYUE_EXPRESSION_TO_SPRITE_STATE: Record<XiaoyueExpressionId, imp
   optOutReassure: 'reassure',
   paymentTrust: 'trust',
   connectionsEmpty: 'empty',
+  cityUnlock: 'coach',
+  compassScan: 'curious',
+  compassInsight: 'coach',
+  compassCelebrate: 'celebrate',
 }
 
 export function getXiaoyueExpressionAsset(id: XiaoyueExpressionId): string {

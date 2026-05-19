@@ -15,7 +15,6 @@ import {
 } from '@shared/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { logError, logWarn } from '../../lib/utils/logger'
-import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import {
   buildPaymentVerificationUrl,
@@ -638,6 +637,7 @@ export default function BlindBoxPaymentPage() {
               key={planKey}
               className={`payment-page__plan ${isSelected ? 'payment-page__plan--selected' : ''}`}
               onClick={() => setSelectedPlan(planKey)}
+              hoverClass='payment-page__plan--hover'
             >
               <View className='payment-page__plan-content'>
                 <View className='payment-page__plan-copy'>
@@ -671,6 +671,7 @@ export default function BlindBoxPaymentPage() {
             <Card
               className={`payment-page__plan ${selectedCouponCode === '' ? 'payment-page__plan--selected' : ''}`}
               onClick={() => setSelectedCouponCode('')}
+              hoverClass='payment-page__plan--hover'
             >
               <View className='payment-page__plan-content'>
                 <View>
@@ -687,6 +688,7 @@ export default function BlindBoxPaymentPage() {
                   key={couponModel.id}
                   className={`payment-page__plan ${selectedCouponCode === couponModel.code ? 'payment-page__plan--selected' : ''}`}
                   onClick={() => setSelectedCouponCode(couponModel.code)}
+                  hoverClass='payment-page__plan--hover'
                 >
                   <View className='payment-page__plan-content'>
                     <View>

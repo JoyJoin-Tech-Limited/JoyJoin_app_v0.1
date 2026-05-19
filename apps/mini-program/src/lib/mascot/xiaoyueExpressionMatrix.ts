@@ -173,4 +173,26 @@ export const XIAOYUE_EXPRESSION_MATRIX: XiaoyueExpressionMatrixRow[] = [
     secondaryTag: 'legal.neutral',
     expressionId: 'neutralInformation',
   },
+  // Match Compass v1 expressions
+  {
+    flow: '匹配',
+    surface: 'matching-status match-compass strictness=100',
+    primaryTier: 'supplement',
+    secondaryTag: 'compass.scan',
+    expressionId: 'compassScan',
+  },
+  {
+    flow: '匹配',
+    surface: 'matching-status match-compass strictness=50',
+    primaryTier: 'supplement',
+    secondaryTag: 'compass.insight',
+    expressionId: 'compassInsight',
+  },
+  {
+    flow: '匹配',
+    surface: 'matching-status match-compass strictness=0 / save success',
+    primaryTier: 'actionSuccess',
+    secondaryTag: 'compass.celebrate',
+    expressionId: 'compassCelebrate',
+  },
 ]

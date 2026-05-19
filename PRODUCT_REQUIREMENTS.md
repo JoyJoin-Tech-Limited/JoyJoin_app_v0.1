@@ -598,6 +598,10 @@ User Sees:
   - Pool threshold progress ("活动池即可触发匹配")
   - PoolForecastStrip atmosphere copy
   - CTA uses pool-join language, not formed-table language
+  - Smart Regional Discovery: silent GPS detection → cluster-level proximity sorting
+    (same cluster first, adjacent cluster next, then chronology). Manual filter
+    override via LocationFilterDrawer with 7-day TTL. Auto-relaxation to all-Shenzhen
+    view with banner when manual filter is empty. Geo-hint chip shows detected cluster.
 ```
 
 **Phase 2: Pre-Entry Gating**
@@ -788,6 +792,48 @@ UnifiedRevealCard renders fused narrative
 #### Center-Tab Empty-State Page *(PRs #359, #362, #363)*
 
 `CenterTabEmptyStatePage` — dedicated page for users with no active activity, accessed via the centre nav tab. Background asset prefetch is gated on activity state to avoid unnecessary loading.
+
+#### City Unlock System *(City Unlock v0.1, 2026-05-19)*
+
+**Purpose:** Enable organic, data-driven city expansion by letting users express interest in cities where JoyJoin is not yet live. When a city reaches a threshold of interested users, operations receives a notification to begin venue research.
+
+**User Flow:**
+```
+Discover page (no city interest) → gentle banner (2s delay, dismissable, 7-day TTL)
+                              ↓
+                         feed-card CTA (bottom of pool list)
+                              ↓
+                         CityPickerSheet (search + hot-city grid + confirm)
+                              ↓
+                         POST /api/cities/interest → Toast success
+                              ↓
+                         pages/city-unlock/index (progress + share + other cities)
+```
+
+**Threshold & State Machine:**
+| Status | Meaning | Transition |
+|---|---|---|
+| `collecting` | Gathering interest | Default; auto-transition at threshold |
+| `researching` | Venue research triggered | At 50 interested users → WeCom ops notification |
+| `launching` | Event planning in progress | Manual ops decision |
+| `live` | Events available in city | Manual ops decision |
+
+**Key Pages/Components:**
+- `pages/city-unlock/index` — Progress page with Xiaoyue mascot, threshold bar, share CTA, activity feed, other-city tease
+- `components/discover/CityUnlockBanner` — Gentle delayed banner with dismiss persistence
+- `components/discover/CityUnlockFeedCard` — Bottom-of-feed CTA card
+- `components/discover/CityPickerSheet` — Bottom sheet with search + hot-city grid
+
+**API Endpoints:**
+- `POST /api/cities/interest` — Register interest (atomic increment)
+- `GET /api/cities/progress` — Per-city progress list
+- `GET /api/cities/my-interests` — Current user's city interests
+- `DELETE /api/cities/interest/:city` — Remove interest (atomic decrement)
+- `GET /api/admin/cities/unlock-report` — Admin ops report with 7-day signup stats
+
+**Ops Integration:** WeCom group bot notification (`notifyCityUnlockThreshold`) fires when `collecting` → `researching` transition occurs. Silent degradation if `WECOM_BOT_KEY` is unset.
+
+**Data Model:** `user_city_interests` (user+city unique, source-tracked) + `city_unlock_progress` (per-city counters + status machine).
 
 ---
 
@@ -1762,175 +1808,122 @@ Process:
 
 ### 2.4 Venue Management
 
-**File:** `apps/admin-client/src/pages/admin/AdminVenuesPage.tsx`
+**Admin UI:** `apps/admin-client/src/pages/admin/AdminVenuesPage.tsx`  
+**Assignment Service:** `apps/server/src/venueAssignmentService.ts`  
+**Matching Service:** `apps/server/src/venueMatchingService.ts`  
+**Repository:** `apps/server/src/repositories/venuesRepo.ts`
 
 #### Venue Database
 
-**Purpose:** Maintain partnerships with local restaurants, cafes, bars for hosting events
+**Purpose:** Admin-curated catalog of restaurants, bars, cafes, and homebars for automatic group-to-venue assignment after pool matching.
 
-**Venue Schema:**
+**Venue Types:** `restaurant`, `bar`, `homebar`, `cafe`
+
+**Key Schema Fields:**
 ```sql
-CREATE TABLE venues (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  name_en VARCHAR(255),
-  category VARCHAR(50), -- restaurant/cafe/bar/coworking/outdoor
-  address TEXT NOT NULL,
-  district VARCHAR(50), -- 尖沙咀, 中环, 南山, 福田
-  city VARCHAR(50), -- Hong Kong/Shenzhen
-  google_maps_url TEXT,
+venues
+  id UUID PRIMARY KEY
+  name TEXT NOT NULL
+  venue_type TEXT NOT NULL          -- restaurant | bar | homebar | cafe
+  address TEXT NOT NULL
+  city TEXT NOT NULL                -- 深圳, 香港
+  area TEXT NOT NULL                -- district: 南山区, 中环, etc.
+  
+  -- Matching fields
+  tags TEXT[]                       -- atmosphere: cozy, lively, upscale
+  cuisines TEXT[]                   -- 中餐, 川菜, 粤菜, 火锅, 西餐, 日料
+  price_range TEXT                  -- "150以下", "150-200", "200-300"
+  budget_categories TEXT[]          -- standardized ranges for matching
+  decor_style TEXT[]                -- 轻奢现代风, 绿植花园风, etc.
+  taste_intensity TEXT[]            -- 爱吃辣, 不辣/清淡为主
+  bar_themes TEXT[]                 -- 精酿, 清吧, 私密调酒·Homebar
+  alcohol_options TEXT[]            -- 可以喝酒, 微醺就好, 无酒精饮品
+  vibe_descriptor TEXT              -- editorial atmosphere description
   
   -- Capacity
-  min_capacity INTEGER DEFAULT 5,
-  max_capacity INTEGER DEFAULT 15,
-  
-  -- Availability
-  available_days TEXT[], -- ['monday', 'tuesday', ...]
-  available_time_slots JSONB, -- {"18:00-20:00": true, ...}
-  
-  -- Pricing
-  price_per_person INTEGER, -- in cents
-  minimum_spend INTEGER,
-  
-  -- Ratings
-  ambiance_score INTEGER, -- 1-10
-  noise_level VARCHAR(20), -- quiet/moderate/lively
-  
-  -- Features
-  has_wifi BOOLEAN DEFAULT false,
-  has_projector BOOLEAN DEFAULT false,
-  accessibility_friendly BOOLEAN DEFAULT false,
+  capacity INTEGER DEFAULT 1        -- max concurrent events at same time
+  seating_capacity INTEGER DEFAULT 1 -- max people per event
   
   -- Partnership
-  partnership_status VARCHAR(20), -- active/inactive/pending
-  commission_rate DECIMAL(5,2), -- 15% = 15.00
-  contact_person VARCHAR(100),
-  contact_phone VARCHAR(20),
-  contact_email VARCHAR(100),
-  
-  notes TEXT,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
+  partner_status TEXT DEFAULT 'active'  -- active | paused | ended
+  commission_rate INTEGER DEFAULT 20    -- percentage
+  contact_person TEXT
+  contact_phone TEXT
+  is_active BOOLEAN DEFAULT true
 ```
 
-**Admin Interface:**
+**Related Tables:**
+- `venue_time_slots` — weekly recurring or specific-date availability windows
+- `venue_time_slot_bookings` — confirmed/cancelled bookings per slot per date
+- `venue_deals` — partner discount offers (percentage, fixed, gift)
+
+#### Admin Interface
 
 **List View:**
-- Cards with venue photo, name, district, capacity
-- Filter by city, category, availability
+- Cards with venue name, city/district, type, partner status
+- Filter by city, type, partner status
 - Search by name or address
-- Status badges (active/inactive)
+- Data quality summary (missing fields, duplicates)
 
-**Detail View:**
-```typescript
-Tabs:
-  1. 基本信息 (Basic Info)
-     - Edit all venue details
-     - Upload photos
-     - Set availability schedule
-  
-  2. 活动历史 (Event History)
-     - All events hosted at this venue
-     - Average attendance
-     - Average satisfaction score
-     - Revenue generated
-  
-  3. 可用时段 (Availability)
-     - Calendar view
-     - Block specific dates
-     - Recurring availability patterns
+**Create / Edit:**
+- Basic info: name, type, address, city, district, coordinates (AMap picker)
+- Matching tags: cuisines, atmosphere tags, decor style, taste intensity
+- Budget categories: multi-select price ranges per venue type
+- Capacity: `seatingCapacity` (people per event) + `maxConcurrentEvents` (simultaneous events)
+- Partner info: contact, commission rate, status
+- Bar-specific fields: themes, alcohol options, vibe descriptor
+
+**Time Slot Management:**
+- Weekly recurring slots (dayOfWeek + startTime/endTime)
+- Specific date overrides
+- `maxConcurrentEvents` per slot
+- Active/inactive toggle per slot
+
+#### Automatic Venue Assignment
+
+After pool matching completes, venues are assigned to matched groups automatically (unless kill-switched).
+
+**Kill Switch:**
+```bash
+VENUE_ASSIGNMENT_ENABLED=false   # skips assignment, all groups stay "pending"
 ```
 
-**Venue Matching Algorithm:**
+**Assignment Flow:**
+1. Filter active venues by city + district + venue type (restaurant/cafe for 饭局, bar/homebar for 酒局)
+2. Check time-slot availability at event datetime (respects `maxConcurrentEvents` + existing bookings)
+3. Score each venue for each group (0-100):
+   - **Budget Match (40 pts)** — hard fail if no overlap with group consensus budgets
+   - **Cuisine Match (30 pts)** — overlap between group preferences and venue cuisines
+   - **Capacity Match (20 pts)** — `seatingCapacity >= groupSize`
+   - **Location (10 pts)** — same city/district
+4. Pick highest-scoring venue per group
+5. Persist booking + update `eventPoolGroups` atomically in a transaction
 
-**File:** `server/venueMatchingService.ts`
+**Idempotency & Safety:**
+- Groups with existing bookings are skipped
+- Save-time concurrency re-check prevents race conditions
+- In-memory slot usage tracker prevents same-pool overbooking
+- Unassignment reasons: `no_available_slots`, `budget_mismatch`, `capacity_insufficient`, `no_suitable_venue`, `slot_fully_booked_at_save`
 
+**Operational Endpoints:**
 ```typescript
-function scoreVenue(venue, event, attendees) {
-  let score = 0;
-  
-  // Capacity match
-  if (attendees.length >= venue.minCapacity && 
-      attendees.length <= venue.maxCapacity) {
-    score += 30;
-  }
-  
-  // Location preference
-  const attendeeDistricts = attendees.map(a => a.district);
-  const mostCommonDistrict = mode(attendeeDistricts);
-  if (venue.district === mostCommonDistrict) {
-    score += 20;
-  }
-  
-  // Ambiance match (based on event theme + attendee personalities)
-  const avgExtroversion = mean(attendees.map(a => a.extraversionScore));
-  if (avgExtroversion > 7 && venue.noiseLevel === 'lively') {
-    score += 15;
-  } else if (avgExtroversion < 5 && venue.noiseLevel === 'quiet') {
-    score += 15;
-  }
-  
-  // Historical performance
-  if (venue.averageSatisfaction > 4.0) {
-    score += 10;
-  }
-  
-  // Availability
-  if (isAvailable(venue, event.datetime)) {
-    score += 25;
-  } else {
-    score = 0; // Hard constraint
-  }
-  
-  return score;
-}
-
-// Return top 3 venue recommendations
-function matchVenue(event, attendees) {
-  const venues = await db.select().from(venues)
-    .where(eq(venues.partnershipStatus, 'active'));
-  
-  const scored = venues.map(v => ({
-    venue: v,
-    score: scoreVenue(v, event, attendees)
-  }));
-  
-  return scored.sort((a, b) => b.score - a.score).slice(0, 3);
-}
+GET  /api/admin/venue-assignment/unassigned          -- list unassigned groups
+POST /api/admin/venue-assignment/groups/:id/migrate  -- atomic venue migration
 ```
 
-**Booking System:**
+**Emergency Migration:**
+- Cancels existing `venueTimeSlotBooking` → creates new booking → updates group
+- Wrapped in DB transaction
+- Emits `VENUE_MIGRATED` admin audit log
 
-```typescript
-// When admin confirms event with venue
-POST /api/admin/events/book-venue
-{
-  eventId: 123,
-  venueId: 456,
-  confirmedDateTime: "2025-11-20T19:00:00Z",
-  expectedAttendees: 8,
-  specialRequests: "需要投影仪"
-}
-
-Process:
-1. Check venue availability (with transaction lock)
-   BEGIN TRANSACTION;
-   SELECT * FROM venue_bookings 
-   WHERE venue_id = 456 
-   AND datetime = '2025-11-20 19:00:00'
-   FOR UPDATE; -- Row-level lock
-   
-2. If available, create booking:
-   INSERT INTO venue_bookings (
-     venue_id, event_id, datetime, status
-   ) VALUES (456, 123, '2025-11-20 19:00:00', 'confirmed');
-   
-3. Update event with venue details
-   COMMIT;
-   
-4. Send confirmation to venue contact
-5. Broadcast to attendees via WebSocket
+**Group Status Tracking:**
+```sql
+event_pool_groups
+  venue_assignment_status   -- pending | assigned | unassigned | manual_override
+  venue_assignment_reason   -- null or reason code
+  venue_id                  -- assigned venue
+  venue_name                -- denormalized for display
+  venue_address             -- denormalized for display
 ```
 
 ---
@@ -3392,10 +3385,11 @@ For full details: `apps/server/src/README.md` and `docs/architecture/current-sta
 
 **User Routes** (requires authentication):
 - `GET /api/auth/user` - Get current user (including `nextStep` for onboarding routing)
-- `POST /api/personality-test/submit` - Submit test answers
-- `GET /api/personality-test/results` - Get test results
-- `GET /api/personality-test/stats` - Get archetype distribution
-- `POST /api/auth/complete-personality-test` - Mark personality test complete
+- `POST /api/assessment/v4/start` - Start or resume adaptive personality assessment
+- `POST /api/assessment/v4/{sessionId}/answer` - Submit test answer (idempotent, auto-completes when done)
+- `PUT /api/assessment/v4/{sessionId}/answer` - Re-answer a previous question (back-review)
+- `POST /api/assessment/v4/{sessionId}/skip` - Skip current question (max 3 per session)
+- `GET /api/personality-test/stats` - Get archetype distribution (legacy path, active)
 - `GET /api/onboarding/profile-tagline` - Get AI-generated profile tagline
 - `POST /api/profile-review/complete` - Mark profile review as seen
 - `GET /api/events` - List events

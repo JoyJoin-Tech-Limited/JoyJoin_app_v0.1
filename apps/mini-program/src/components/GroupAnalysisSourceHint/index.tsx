@@ -29,6 +29,10 @@ function formatShortGeneratedAt(iso: string): string {
  * Renders only when {@link shouldShowGroupAnalysisDebugMeta} is true (dev or explicit beta flag).
  */
 export function GroupAnalysisSourceHint({ analysis, className = '' }: GroupAnalysisSourceHintProps) {
+  if (process.env.NODE_ENV === 'production') {
+    return null
+  }
+
   if (!shouldShowGroupAnalysisDebugMeta() || !analysis) {
     return null
   }

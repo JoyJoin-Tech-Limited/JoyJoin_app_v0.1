@@ -57,7 +57,7 @@
   }
 
   &__success-pill {
-    padding: 8rpx 24rpx;
+    padding: $spacing-xs $spacing-md;
     border-radius: 999rpx;
     background: rgba($color-primary, 0.1);
     color: $color-primary-dark;
@@ -114,7 +114,7 @@
   &__info-label {
     display: flex;
     align-items: center;
-    gap: 8rpx;
+    gap: $spacing-xs;
     @include type-body;
     color: $color-text-secondary;
   }
@@ -189,7 +189,7 @@
     display: flex;
     align-items: center;
     gap: 10rpx;
-    padding: 16rpx 16rpx;
+    padding: $spacing-sm $spacing-sm;
     border-radius: 999rpx;
     background: rgba($color-surface, 0.72);
     border: 2rpx solid rgba($color-border, 0.92);
@@ -293,6 +293,14 @@
     &--long { width: 100%; }
     &--medium { width: 70%; }
     &--short { width: 40%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__brief-skeleton-line::after {
+      animation: none;
+      transform: none;
+      background: none;
+    }
   }
 
   &__brief-insight {
@@ -430,7 +438,7 @@
     display: flex;
     align-items: center;
     gap: 10rpx;
-    padding: 16rpx 24rpx;
+    padding: $spacing-sm $spacing-md;
     border-radius: 999rpx;
     border: 2rpx solid rgba($color-border, 0.92);
     background: rgba($color-surface, 0.96);

@@ -31,6 +31,7 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   editProfile: 'pages/edit-profile/index',
   rewards: 'pages/rewards/index',
   invite: 'pages/invite/index',
+  cityUnlock: 'pages/city-unlock/index',
 } as const
 
 export const MINI_PROGRAM_ROUTES = {
@@ -59,6 +60,7 @@ export const MINI_PROGRAM_ROUTES = {
   editProfile: `/${MINI_PROGRAM_PAGE_PATHS.editProfile}`,
   rewards: `/${MINI_PROGRAM_PAGE_PATHS.rewards}`,
   invite: `/${MINI_PROGRAM_PAGE_PATHS.invite}`,
+  cityUnlock: `/${MINI_PROGRAM_PAGE_PATHS.cityUnlock}`,
 } as const
 
 export const MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT = 'pages/onboarding' as const
@@ -103,6 +105,7 @@ export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.editProfile,
   MINI_PROGRAM_PAGE_PATHS.rewards,
   MINI_PROGRAM_PAGE_PATHS.invite,
+  MINI_PROGRAM_PAGE_PATHS.cityUnlock,
 ] as const
 
 export const MINI_PROGRAM_PAGES = [

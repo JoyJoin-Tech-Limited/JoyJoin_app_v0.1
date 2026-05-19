@@ -19,7 +19,7 @@
   &__waiting-top {
     display: flex;
     flex-direction: column;
-    gap: 8rpx;
+    gap: $spacing-xs;
   }
 
   &__waiting-mascot {
@@ -138,7 +138,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8rpx;
+    gap: $spacing-xs;
   }
 
   &__waiting-seat-core {
@@ -290,7 +290,7 @@
     right: 22rpx;
     display: inline-flex;
     align-items: center;
-    gap: 8rpx;
+    gap: $spacing-xs;
     padding: 10rpx 18rpx;
     border-radius: 999rpx;
     background: rgba($color-surface, 0.94);
@@ -348,17 +348,6 @@
 
   &__waiting-progress-status {
     margin-top: $spacing-sm;
-  }
-
-  &__waiting-refresh {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $spacing-md;
-    margin-top: $spacing-lg;
-    padding: $spacing-sm $spacing-md;
-    border-radius: 26rpx;
-    background: rgba($color-surface, 0.88);
   }
 
   &__waiting-refresh-copy {
@@ -445,7 +434,7 @@
     padding: $spacing-md;
     display: flex;
     flex-direction: column;
-    gap: 8rpx;
+    gap: $spacing-xs;
     background: linear-gradient(160deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.88) 100%);
   }
 

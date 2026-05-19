@@ -4,13 +4,14 @@ import Taro from '@tarojs/taro'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
-import { questionsV4 } from '@shared/personality/questionsV4'
 import {
   initializeEngineState,
   processAnswer,
   selectNextQuestion,
+  skipQuestion,
   MAX_SKIP_COUNT,
 } from '@shared/personality/adaptiveEngine'
+import { questionsV4 } from '@shared/personality/questionsV4'
 import Button from '../../../components/ui/Button'
 import SegmentedProgress from '../../../components/ui/SegmentedProgress'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
@@ -72,7 +73,7 @@ interface AssessmentSliderConfig {
   rightEmoji: string
 }
 
-export interface AssessmentQuestion {
+interface AssessmentQuestion {
   id: string
   scenarioText: string
   questionText: string
@@ -80,6 +81,8 @@ export interface AssessmentQuestion {
   questionType?: AssessmentQuestionType
   sliderConfig?: AssessmentSliderConfig
 }
+
+export type { AssessmentQuestion, AssessmentOption, AssessmentSliderConfig, AssessmentQuestionType }
 
 interface AssessmentProgress {
   answered: number
@@ -150,6 +153,14 @@ function getQuestionType(question: AssessmentQuestion | null): AssessmentQuestio
     return 'choice'
   }
   return question.questionType
+}
+
+function getSliderValueFromPreviousAnswer(previousAnswer: string | null, options: AssessmentOption[]): number {
+  if (!previousAnswer) return 50
+  const match = previousAnswer.match(/(\d+)/)
+  const numericValue = match ? Number(match[1]) : 50
+  const option = getNearestSliderOption(options, numericValue)
+  return option ? numericValue : 50
 }
 
 export default function PersonalityTestPage() {
@@ -329,6 +340,18 @@ export default function PersonalityTestPage() {
           topArchetypes: snapshot?.topArchetypes,
         }
         saveAnonymousAssessmentSession(nextSnapshot)
+
+        // Initialize anonymous engine state from stored answers for back + skip support
+        const storedAnswers = readAnonymousAssessmentAnswers()
+        let engineState = initializeEngineState()
+        for (const ans of storedAnswers) {
+          const q = questionsV4.find((quest) => quest.id === ans.questionId)
+          if (q) {
+            engineState = processAnswer(engineState, q, ans.selectedOption)
+          }
+        }
+        anonymousEngineStateRef.current = engineState
+        setSkipsRemaining(MAX_SKIP_COUNT - engineState.skipCount)
       }
 
       if (result.isComplete || !result.nextQuestion) {
@@ -357,6 +380,7 @@ export default function PersonalityTestPage() {
           answerCount: completedAnswerCount,
           destination: MINI_PROGRAM_ROUTES.personalityTestResults,
         })
+        anonymousEngineStateRef.current = null
         await completeAnonymousAssessment(result.sessionId, result.currentMatches ?? currentMatches)
         return
       }
@@ -476,9 +500,14 @@ export default function PersonalityTestPage() {
           answerCount: completedAnswerCount,
           destination: MINI_PROGRAM_ROUTES.personalityTestResults,
         })
+        anonymousEngineStateRef.current = null
         await completeAnonymousAssessment(thisSessionId, result.currentMatches ?? currentMatches)
         return
       }
+
+      // Save previous question + answer for one-step back
+      previousQuestionRef.current = question
+      previousAnswerRef.current = option.value
 
       // Clear commentary before showing the next question so the speech bubble
       // transitions from feedback back to the new question text
@@ -520,6 +549,23 @@ export default function PersonalityTestPage() {
     analytics.validationFailed('slider', 'no-option-mapped')
   }, [question, sliderValue, handleAnswer, analytics])
 
+  const handleBackReviewSliderChange = useCallback((value: number) => {
+    setSliderValue(value)
+    if (!backReview.isBackReviewMode || !backReview.backReviewQuestion) return
+    const option = getNearestSliderOption(backReview.backReviewQuestion.options, value)
+    if (option) {
+      backReview.selectOption(option.value)
+    }
+  }, [backReview])
+
+  const handleBackReviewSliderSubmit = useCallback(() => {
+    if (!backReview.isBackReviewMode || !backReview.backReviewQuestion) return
+    const option = getNearestSliderOption(backReview.backReviewQuestion.options, sliderValue)
+    if (option) {
+      backReview.selectOption(option.value)
+    }
+  }, [backReview, sliderValue])
+
   const handleRetry = useCallback(() => {
     const option = lastAttemptedOptionRef.current
     if (option) {
@@ -540,6 +586,224 @@ export default function PersonalityTestPage() {
       setSpriteState('thinking')
     }
   }, [isSubmitting])
+
+  const handleBack = useCallback(() => {
+    if (!previousQuestionRef.current || !previousAnswerRef.current) return
+    haptics('light')
+    analytics.interaction('personality_test_back_used', {
+      questionIndex: progress?.answered ?? 0,
+      sessionId: sessionId || 'anonymous',
+    })
+    backReview.enterBackReview(previousQuestionRef.current, previousAnswerRef.current)
+  }, [analytics, backReview, progress, sessionId])
+
+  const handleBackReviewSelect = useCallback((option: AssessmentOption) => {
+    backReview.selectOption(option.value)
+  }, [backReview])
+
+  const handleConfirmBackReview = useCallback(async () => {
+    const payload = backReview.getConfirmPayload()
+    if (!payload.changed || !payload.question || !payload.selectedOption) {
+      backReview.cancelBackReview()
+      return
+    }
+
+    setIsSubmitting(true)
+    setError('')
+    try {
+      if (isAuthenticated) {
+        const result = await apiRequest<AssessmentAnswerResponse>({
+          path: `/api/assessment/v4/${encodeURIComponent(sessionId)}/answer`,
+          method: 'PUT',
+          data: {
+            questionId: payload.question.id,
+            selectedOption: payload.selectedOption,
+          },
+        })
+
+        // If engine re-branched to a different next question, discard stale current
+        if (result.nextQuestion && result.nextQuestion.id !== question?.id) {
+          setQuestion(result.nextQuestion)
+        }
+        setProgress(result.progress ?? null)
+        setCurrentMatches(result.currentMatches ?? [])
+        setSliderValue(50)
+        setPostAnswerCommentary(null)
+
+        backReview.exitBackReview()
+        return
+      }
+
+      // Anonymous flow: mutate localStorage and rebuild engine state client-side
+      const answers = readAnonymousAssessmentAnswers()
+      const nextAnswers = answers.filter((a) => a.questionId !== payload.question!.id)
+      nextAnswers.push({
+        questionId: payload.question!.id,
+        selectedOption: payload.selectedOption,
+        traitScores: payload.question!.options.find((o) => o.value === payload.selectedOption)?.traitScores,
+        answeredAt: new Date().toISOString(),
+      })
+
+      // Rebuild engine state
+      let engineState = initializeEngineState()
+      for (const ans of nextAnswers) {
+        const q = questionsV4.find((quest) => quest.id === ans.questionId)
+        if (q) {
+          engineState = processAnswer(engineState, q, ans.selectedOption)
+        }
+      }
+      anonymousEngineStateRef.current = engineState
+
+      const nextQuestion = selectNextQuestion(engineState)
+      if (!nextQuestion) {
+        clearAnonymousAssessmentStorage()
+        anonymousEngineStateRef.current = null
+        setPhase('completing')
+        analytics.stepCompleted({
+          isAuthenticated: false,
+          answerCount: engineState.answeredQuestionIds.size,
+          destination: MINI_PROGRAM_ROUTES.personalityTestResults,
+        })
+        await completeAnonymousAssessment(sessionId || 'anonymous-client', engineState.currentMatches.slice(0, 3))
+        return
+      }
+
+      // If re-branched to a different question, use the new one
+      const mappedNextQuestion: AssessmentQuestion = {
+        id: nextQuestion.id,
+        scenarioText: nextQuestion.scenarioText,
+        questionText: nextQuestion.questionText,
+        options: nextQuestion.options.map((o) => ({
+          value: o.value,
+          text: o.text,
+          traitScores: o.traitScores as Record<string, number>,
+        })),
+        questionType: nextQuestion.questionType ?? 'choice',
+        sliderConfig: nextQuestion.sliderConfig
+          ? {
+              leftLabel: nextQuestion.sliderConfig.leftLabel,
+              rightLabel: nextQuestion.sliderConfig.rightLabel,
+              leftEmoji: nextQuestion.sliderConfig.leftEmoji,
+              rightEmoji: nextQuestion.sliderConfig.rightEmoji,
+            }
+          : undefined,
+      }
+
+      // Save updated answers
+      saveAnonymousAssessmentSession({
+        sessionId: sessionId || readAnonymousAssessmentSession()?.sessionId || 'anonymous-client',
+        phase: 'pre_signup',
+        timestamp: Date.now(),
+      })
+      // Upsert via localStorage
+      for (const ans of nextAnswers) {
+        upsertAnonymousAssessmentAnswer(ans)
+      }
+
+      setQuestion(mappedNextQuestion)
+      setProgress({
+        answered: engineState.answeredQuestionIds.size,
+        estimatedRemaining: Math.max(0, engineState.config.minQuestions - engineState.answeredQuestionIds.size),
+        minQuestions: engineState.config.minQuestions,
+        softMaxQuestions: engineState.config.softMaxQuestions,
+        hardMaxQuestions: engineState.config.hardMaxQuestions,
+      })
+      setCurrentMatches(engineState.currentMatches.slice(0, 3).map((m) => ({
+        archetype: m.archetype,
+        score: m.score,
+        confidence: m.confidence,
+      })))
+      setSliderValue(50)
+      setPostAnswerCommentary(null)
+      previousQuestionRef.current = null
+      previousAnswerRef.current = null
+      backReview.exitBackReview()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
+      setError(message)
+      analytics.errorOccurred('back_review_confirm_failed', message)
+      logError('[PersonalityTest] Failed to confirm back review', { message })
+      // Stay in back-review mode for retry (REL-02)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [analytics, backReview, completeAnonymousAssessment, isAuthenticated, question, sessionId])
+
+  const handleCancelBackReview = useCallback(() => {
+    backReview.cancelBackReview()
+    setError('')
+  }, [backReview])
+
+  const handleSkip = useCallback(async () => {
+    if (!sessionId || !question || isSkipping || skipsRemaining <= 0) return
+    haptics('light')
+    analytics.interaction('personality_test_change_question_used', {
+      questionIndex: progress?.answered ?? 0,
+      sessionId: sessionId || 'anonymous',
+    })
+
+    setIsSkipping(true)
+    setError('')
+    try {
+      if (isAuthenticated) {
+        const result = await apiRequest<{
+          success: boolean
+          newQuestion?: AssessmentQuestion | null
+          skipCount: number
+          canSkip: boolean
+          remainingSkips: number
+        }>({
+          path: `/api/assessment/v4/${encodeURIComponent(sessionId)}/skip`,
+          method: 'POST',
+          data: { questionId: question.id },
+        })
+        setSkipsRemaining(result.remainingSkips)
+        if (result.newQuestion) {
+          setQuestion(result.newQuestion)
+        }
+        return
+      }
+
+      // Anonymous skip (client-side)
+      let engineState = anonymousEngineStateRef.current || initializeEngineState()
+      const skipResult = skipQuestion(engineState, question.id)
+      if (!skipResult) {
+        Taro.showToast({ title: '已达换题上限', icon: 'none' })
+        return
+      }
+      anonymousEngineStateRef.current = skipResult.newState
+      setSkipsRemaining(MAX_SKIP_COUNT - skipResult.newState.skipCount)
+
+      if (skipResult.newQuestion) {
+        const mapped: AssessmentQuestion = {
+          id: skipResult.newQuestion.id,
+          scenarioText: skipResult.newQuestion.scenarioText,
+          questionText: skipResult.newQuestion.questionText,
+          options: skipResult.newQuestion.options.map((o) => ({
+            value: o.value,
+            text: o.text,
+            traitScores: o.traitScores as Record<string, number>,
+          })),
+          questionType: skipResult.newQuestion.questionType ?? 'choice',
+          sliderConfig: skipResult.newQuestion.sliderConfig
+            ? {
+                leftLabel: skipResult.newQuestion.sliderConfig.leftLabel,
+                rightLabel: skipResult.newQuestion.sliderConfig.rightLabel,
+                leftEmoji: skipResult.newQuestion.sliderConfig.leftEmoji,
+                rightEmoji: skipResult.newQuestion.sliderConfig.rightEmoji,
+              }
+            : undefined,
+        }
+        setQuestion(mapped)
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '换题失败，请重试'
+      setError(message)
+      analytics.errorOccurred('skip_failed', message)
+    } finally {
+      setIsSkipping(false)
+    }
+  }, [analytics, isAuthenticated, isSkipping, progress, question, sessionId, skipsRemaining])
 
   const showLoadingShell = auth.isLoading && (auth.isAuthenticated || hasStoredIncompleteSession)
   if (showLoadingShell) {
@@ -717,25 +981,43 @@ export default function PersonalityTestPage() {
 
       {/* ─── Glassmium Question + Mascot Layout ─── */}
       <View className={getPageClassName('personality-test--mascot-layout')}>
-        {/* Zone A: Thin progress bar */}
-        <View className='personality-test__progress-track'>
-          <View
-            className={`personality-test__progress-fill${milestonePulse ? ' personality-test__progress-fill--milestone-pulse' : ''}`}
-            style={{ transform: `scaleX(${Math.min(progressPercent / 100, 1)})` }}
+        {/* Zone A: Segmented progress bar */}
+        <View className='personality-test__progress-bar-shell'>
+          <SegmentedProgress
+            progress={progressPercent}
+            totalSegments={10}
+            variant='duolingo'
           />
         </View>
-        <View className='personality-test__progress-label'>
-          <Text className='personality-test__progress-text'>
-            已答 {progress?.answered ?? 0} 题 · 还剩约 {progress?.estimatedRemaining ?? 0} 题
-          </Text>
+        <View className='personality-test__progress-meta-row'>
+          <View className='personality-test__progress-label'>
+            <Text className='personality-test__progress-text'>
+              已答 {progress?.answered ?? 0} 题 · 还剩约 {progress?.estimatedRemaining ?? 0} 题
+            </Text>
+          </View>
+          {progress && progress.answered >= 1 && (
+            <Button
+              variant='secondary'
+              onClick={handleBack}
+              disabled={isSubmitting || isSkipping || backReview.isBackReviewMode}
+              hoverClass='personality-test__back-btn--hover'
+            >
+              <Text className='personality-test__back-btn-text'>返回上一题</Text>
+            </Button>
+          )}
         </View>
 
         {/* Zone B: Full-width glassmium question banner */}
         <View className='personality-test__question-zone'>
-          {question ? (
-            <QuestionTransition questionId={question.id}>
+          {(backReview.isBackReviewMode ? backReview.backReviewQuestion : question) ? (
+            <QuestionTransition questionId={(backReview.isBackReviewMode ? backReview.backReviewQuestion! : question!).id}>
               <MascotQuestionHeader
-                question={questionStub}
+                question={backReview.isBackReviewMode
+                  ? {
+                      scenarioText: backReview.backReviewQuestion?.scenarioText,
+                      questionText: backReview.backReviewQuestion?.questionText ?? '',
+                    }
+                  : questionStub}
                 isLoading={isSubmitting}
               />
             </QuestionTransition>
@@ -744,7 +1026,7 @@ export default function PersonalityTestPage() {
 
         {/* Zone C: Mascot + speech bubble row */}
         <View className='personality-test__mascot-zone'>
-          {question ? (
+          {(backReview.isBackReviewMode ? backReview.backReviewQuestion : question) ? (
             <View className='personality-test__mascot-row'>
               <View className='personality-test__mascot-avatar'>
                 {spriteLocked ? (
@@ -763,23 +1045,25 @@ export default function PersonalityTestPage() {
                 )}
               </View>
               <View
-                className={`personality-test__speech-bubble${progress && (progress.answered === 4 || progress.answered === 8) ? ' personality-test__speech-bubble--milestone' : ''}`}
+                className={`personality-test__speech-bubble${!backReview.isBackReviewMode && progress && (progress.answered === 4 || progress.answered === 8) ? ' personality-test__speech-bubble--milestone' : ''}`}
               >
                 <Text
                   className='personality-test__speech-bubble-text'
-                  key={`speech-${progress?.answered ?? 0}-${question.id}-${postAnswerCommentary ?? 'default'}`}
+                  key={`speech-${progress?.answered ?? 0}-${(backReview.isBackReviewMode ? backReview.backReviewQuestion! : question!).id}-${postAnswerCommentary ?? 'default'}`}
                 >
-                  {isSubmitting && spriteState === 'thinking'
-                    ? '悦仔正在分析你的选择…'
-                    : postAnswerCommentary
-                      ? postAnswerCommentary
-                      : isSubmitting
-                        ? '收到～'
-                        : progress && progress.answered === 4
-                          ? '已经一半了！你的命格轮廓越来越清晰，继续凭直觉选。'
-                          : progress && progress.answered === 8
-                            ? '太棒了！进入精准阶段，接下来的题目会更聚焦，帮你锁定最像自己的氛围命格。'
-                            : question.questionText}
+                  {backReview.isBackReviewMode
+                    ? '这是你之前选的答案，可以修改后再确认。'
+                    : isSubmitting && spriteState === 'thinking'
+                      ? '悦仔正在分析你的选择…'
+                      : postAnswerCommentary
+                        ? postAnswerCommentary
+                        : isSubmitting
+                          ? '收到～'
+                          : progress && progress.answered === 4
+                            ? '已经一半了！你的命格轮廓越来越清晰，继续凭直觉选。'
+                            : progress && progress.answered === 8
+                              ? '太棒了！进入精准阶段，接下来的题目会更聚焦，帮你锁定最像自己的氛围命格。'
+                              : question!.questionText}
                 </Text>
               </View>
             </View>
@@ -798,22 +1082,70 @@ export default function PersonalityTestPage() {
                 <View className='personality-test__skeleton-option' />
               </View>
             </View>
-          ) : question ? (
-            <QuestionTransition questionId={question.id}>
+          ) : (backReview.isBackReviewMode ? backReview.backReviewQuestion : question) ? (
+            <QuestionTransition questionId={(backReview.isBackReviewMode ? backReview.backReviewQuestion! : question!).id}>
               <PersonalityTestAnswerArea
-                questionType={questionType}
-                options={question.options}
-                sliderConfig={question.sliderConfig}
-                sliderValue={sliderValue}
+                questionType={backReview.isBackReviewMode
+                  ? getQuestionType(backReview.backReviewQuestion)
+                  : questionType}
+                options={(backReview.isBackReviewMode ? backReview.backReviewQuestion! : question!).options}
+                sliderConfig={(backReview.isBackReviewMode ? backReview.backReviewQuestion! : question!).sliderConfig}
+                sliderValue={backReview.isBackReviewMode
+                  ? getSliderValueFromPreviousAnswer(
+                      backReview.backReviewPreviousAnswer,
+                      backReview.backReviewQuestion!.options,
+                    )
+                  : sliderValue}
                 isSubmitting={isSubmitting}
-                onAnswer={handleAnswer}
-                onSliderChange={setSliderValue}
-                onSliderSubmit={handleSliderSubmit}
-
+                onAnswer={backReview.isBackReviewMode ? handleBackReviewSelect : handleAnswer}
+                onSliderChange={backReview.isBackReviewMode ? handleBackReviewSliderChange : setSliderValue}
+                onSliderSubmit={backReview.isBackReviewMode ? handleBackReviewSliderSubmit : handleSliderSubmit}
+                committedValue={backReview.isBackReviewMode ? backReview.backReviewPreviousAnswer : null}
+                hideSliderSubmit={backReview.isBackReviewMode}
               />
             </QuestionTransition>
           ) : null}
         </View>
+
+        {/* Back-review actions */}
+        {backReview.isBackReviewMode && (
+          <View className='personality-test__back-review-actions'>
+            <Button
+              variant='secondary'
+              className='personality-test__back-review-btn personality-test__back-review-btn--cancel'
+              onClick={handleCancelBackReview}
+              disabled={isSubmitting}
+              hoverClass='personality-test__back-review-btn--hover'
+            >
+              取消
+            </Button>
+            <Button
+              variant='brand'
+              className='personality-test__back-review-btn personality-test__back-review-btn--confirm'
+              onClick={handleConfirmBackReview}
+              disabled={isSubmitting}
+              loading={isSubmitting}
+              hoverClass='personality-test__back-review-btn--hover'
+            >
+              {isSubmitting ? '提交中…' : '确认修改'}
+            </Button>
+          </View>
+        )}
+
+        {/* Skip button (normal mode only) */}
+        {!backReview.isBackReviewMode && skipsRemaining > 0 && (
+          <View className='personality-test__skip-row'>
+            <Button
+              variant='secondary'
+              onClick={handleSkip}
+              disabled={isSubmitting || isSkipping}
+              hoverClass='personality-test__skip-btn--hover'
+            >
+              <Text className='personality-test__skip-btn-text'>换一题</Text>
+              <Text className='personality-test__skip-btn-count'>（还剩 {skipsRemaining} 次）</Text>
+            </Button>
+          </View>
+        )}
 
         {error ? (
           <View className='personality-test__error-row'>

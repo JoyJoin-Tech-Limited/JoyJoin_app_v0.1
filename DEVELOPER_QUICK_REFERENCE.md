@@ -179,7 +179,7 @@ joyjoin-monorepo/
 │           ├── schema.ts             # Drizzle ORM database schema
 │           ├── wsEvents.ts           # WebSocket event interfaces
 │           ├── constants.ts          # Shared constants
-│           ├── districts.ts          # Location data (南山区, 福田区)
+│           ├── districts.ts          # Shenzhen district taxonomy, cluster proximity maps, external-district mapping, and GPS-aware pool sorting
 │           ├── gamification.ts       # XP/Level system
 │           ├── hongKongTime.ts       # Shared Hong Kong time helpers
 │           └── personality/          # Personality assessment system
@@ -204,7 +204,7 @@ joyjoin-monorepo/
 | Concern | Location |
 |---------|----------|
 | Register pages / main vs onboarding subpackage / `preloadRule` | `apps/mini-program/src/lib/onboarding/onboardingRoutes.ts` → consumed by `app.config.ts` |
-| Personality test (V4) | `apps/mini-program/src/pages/onboarding/personality-test/` (test, results, auth-gate); anonymous keys in `lib/anonymousOnboarding.ts` |
+| Personality test (V4) | `apps/mini-program/src/pages/onboarding/personality-test/` (test, results); anonymous keys in `lib/anonymousOnboarding.ts` |
 | WeChat login | Returning: `pages/login/index.tsx` + `hooks/useWeChatLogin.ts` → `POST /api/auth/wechat/login`. With assessment import: `authenticateMiniProgramUserWithTest` in `lib/api.ts` → `POST /api/auth/wechat/login-with-test` |
 | Blind-box payment + verification | `pages/blind-box-payment/`, `pages/payment-verification/`; `lib/paymentEntry.ts`, `lib/paymentPendingOrder.ts`, `lib/paymentPendingOrderStorage.ts`; shared intent helper `createMiniProgramPaymentIntent` in `packages/shared/src/api.ts` |
 | Auth + API bootstrap | `apps/mini-program/src/lib/api/api.ts` |
@@ -316,7 +316,6 @@ interface UseAuthResult {
 │  /                   → LandingPage (redirects to /personality-test) │
 │  /personality-test   → PersonalityTestPage (Anonymous)              │
 │  /personality-test/results → PersonalityTestResultPage              │
-│  /personality-test/auth-gate → WeChatAuthGatePage                   │
 │  /login              → LoginPage (fallback for non-WeChat)          │
 │  /invite/:code       → InviteLandingRouter (public)                 │
 │  /dev/icebreaker-demo → IcebreakerDemoPage (dev sandbox only)       │
@@ -374,7 +373,7 @@ The client **never** computes its own onboarding position. `nextStep` is always 
 | `profile-review` | `/onboarding/review` | `hasSeenProfileReview` (users table) |
 | `discover` | `/discover` | `onboardingCheckpoint === 'discover'` |
 
-Pre-auth value-first entry remains `/personality-test` → `/personality-test/results` → `/personality-test/auth-gate`; once the user is authenticated, routing authority switches to server-returned `nextStep`.
+Pre-auth value-first entry remains `/personality-test` → `/personality-test/results` (inline WeChat login); once the user is authenticated, routing authority switches to server-returned `nextStep`.
 
 Active onboarding pages: `apps/mini-program/src/pages/onboarding/`  
 Legacy surfaces: `archived/workspaces/user-client/src/legacy/onboarding/` — do not add new routes or CTAs there
@@ -1131,6 +1130,7 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | `ENABLE_EVENT_THEME_TITLE_GENERATION` | `true`/`false` to toggle AI event theme generation |
 | `DEEPSEEK_TIMEOUT_MS` | AI request timeout in ms (default: 5000) |
 | `ENABLE_SEMANTIC_SIMILARITY` | `true` enables the 7th pair-scoring dimension (6% weight, semantic similarity); default `false` — 6D scoring. See `docs/product/LAUNCH_CONFIG.md` and `apps/server/src/matchingSemantic.ts`. |
+| `MATCH_COMPASS_STRICTNESS_ENABLED` | `true` shows the Match Compass preference dashboard; `false` hides UI and forces legacy matching path |
 | `EMBEDDING_BASE_URL` | Required for self-hosted embedding server (e.g. `http://localhost:8000/v1`). DeepSeek has no embedding API — this must be set for any embedding feature to work |
 | `EMBEDDING_API_KEY` | Optional API key for self-hosted embedding endpoint (default empty) |
 | `EMBEDDING_MODEL` | Model ID passed to embedding API (default `granite-embedding-97m-multilingual-r2`) |

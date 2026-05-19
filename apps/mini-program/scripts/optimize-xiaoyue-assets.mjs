@@ -49,6 +49,7 @@ const MANIFEST = [
   'xiaoyue-opt-out-reassure',
   'xiaoyue-payment-trust',
   'xiaoyue-connections-empty',
+  'xiaoyue-city-unlock',
 ]
 
 async function main() {

@@ -19,9 +19,9 @@
       animation: none !important;
     }
 
-    .squad-unboxing__blind-box-lid,
-    .squad-unboxing__blind-box-body,
-    .squad-unboxing__blind-box-inner-glow,
+    .squad-unboxing__blind-box-lid-img,
+    .squad-unboxing__blind-box-body-img,
+    .squad-unboxing__blind-box-interior-img,
     .squad-unboxing__member-card,
     .squad-unboxing__pair-card,
     .squad-unboxing__topic-chip {
@@ -145,7 +145,7 @@
     text-align: center;
     border: 2rpx solid rgba($color-primary, 0.14);
     background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.86) 100%);
-    box-shadow: 0 22rpx 56rpx rgba(45, 49, 66, 0.12);
+    box-shadow: 0 22rpx 56rpx rgba(0, 0, 0, 0.12);
   }
 
   &__blind-box-card--shaking {
@@ -217,83 +217,31 @@
     top: 102rpx;
   }
 
-  &__blind-box-lid,
-  &__blind-box-body {
+  &__blind-box-lid-img,
+  &__blind-box-body-img,
+  &__blind-box-interior-img {
     position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    background: linear-gradient(160deg, rgba($color-primary, 0.96) 0%, rgba($color-secondary, 0.9) 100%);
-    box-shadow: 0 18rpx 40rpx rgba(45, 49, 66, 0.16);
-    transition: transform 0.28s ease, opacity 0.28s ease;
-  }
-
-  &__blind-box-lid {
-    top: 56rpx;
-    width: 220rpx;
-    height: 92rpx;
-    border-radius: 32rpx;
-  }
-
-  &__blind-box-body {
-    top: 120rpx;
-    width: 236rpx;
-    height: 138rpx;
-    border-radius: 0 0 36rpx 36rpx;
-    overflow: hidden;
-  }
-
-  &__blind-box-inner-glow {
-    position: absolute;
-    left: 50%;
-    top: -12rpx;
-    width: 180rpx;
-    height: 120rpx;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba($color-surface, 0.86) 0%, rgba($color-surface, 0) 72%);
-    opacity: 0;
-    transform: translate(-50%, 8rpx) scale(0.88);
-    transition: transform 0.28s ease, opacity 0.28s ease;
-  }
-
-  &__blind-box-ribbon {
-    position: absolute;
-    background: rgba($color-surface, 0.88);
-  }
-
-  &__blind-box-ribbon--lid-vertical,
-  &__blind-box-ribbon--body-vertical {
     left: 50%;
     top: 0;
-    bottom: 0;
-    width: 30rpx;
+    width: 360rpx;
+    height: 292rpx;
     transform: translateX(-50%);
+    pointer-events: none;
   }
 
-  &__blind-box-ribbon--lid-horizontal {
-    left: 18rpx;
-    right: 18rpx;
-    top: 50%;
-    height: 26rpx;
-    transform: translateY(-50%);
+  &__blind-box-body-img {
+    z-index: 1;
   }
 
-  &__blind-box-ribbon--body-horizontal {
-    left: 18rpx;
-    right: 18rpx;
-    top: 24rpx;
-    height: 26rpx;
+  &__blind-box-interior-img {
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.28s ease;
   }
 
-  &__blind-box-knot {
-    position: absolute;
-    left: 50%;
-    top: 18rpx;
-    width: 48rpx;
-    height: 48rpx;
-    border-radius: 18rpx;
-    background: rgba($color-surface, 0.94);
-    transform: translateX(-50%);
-    box-shadow: 0 10rpx 18rpx rgba(45, 49, 66, 0.12);
+  &__blind-box-lid-img {
+    z-index: 3;
+    transition: transform 0.28s ease, opacity 0.28s ease;
   }
 
   &__blind-box-shadow {
@@ -303,7 +251,7 @@
     width: 228rpx;
     height: 30rpx;
     border-radius: 999rpx;
-    background: rgba(45, 49, 66, 0.12);
+    background: rgba(0, 0, 0, 0.12);
     transform: translateX(-50%);
     filter: blur(10rpx);
     pointer-events: none;
@@ -314,17 +262,16 @@
       animation: squad-unboxing-aura 0.92s ease-in-out infinite;
     }
 
-    .squad-unboxing__blind-box-lid {
+    .squad-unboxing__blind-box-lid-img {
       animation: squad-unboxing-lid-lift 0.92s ease-in-out infinite;
     }
 
-    .squad-unboxing__blind-box-body {
+    .squad-unboxing__blind-box-body-img {
       animation: squad-unboxing-box-bounce 0.92s ease-in-out infinite;
     }
 
-    .squad-unboxing__blind-box-inner-glow {
+    .squad-unboxing__blind-box-interior-img {
       opacity: 1;
-      transform: translate(-50%, -8rpx) scale(1);
     }
 
     .squad-unboxing__blind-box-spark {
@@ -337,24 +284,22 @@
       opacity: 0.42;
     }
 
-    .squad-unboxing__blind-box-lid {
+    .squad-unboxing__blind-box-lid-img {
       transform: translate3d(-50%, -82rpx, 0) rotate(-8deg);
     }
 
-    .squad-unboxing__blind-box-inner-glow {
+    .squad-unboxing__blind-box-interior-img {
       opacity: 1;
-      transform: translate(-50%, -10rpx) scale(1);
     }
   }
 
   &__blind-box-visual--reduced.squad-unboxing__blind-box-visual--opening {
-    .squad-unboxing__blind-box-lid {
+    .squad-unboxing__blind-box-lid-img {
       transform: translate3d(-50%, -48rpx, 0) rotate(-4deg);
     }
 
-    .squad-unboxing__blind-box-inner-glow {
+    .squad-unboxing__blind-box-interior-img {
       opacity: 1;
-      transform: translate(-50%, -6rpx) scale(1);
     }
   }
 
@@ -429,7 +374,7 @@
   &__viewer-spotlight {
     margin-top: $spacing-lg;
     padding: $spacing-md;
-    border-radius: 28rpx;
+    border-radius: $card-radius-sm;
     background: rgba($color-surface, 0.86);
     box-shadow: inset 0 0 0 1rpx rgba($color-primary, 0.08);
   }
@@ -465,7 +410,7 @@
 
   &__viewer-spotlight-copy {
     display: block;
-    margin-top: 8rpx;
+    margin-top: $spacing-xs;
     font-size: $font-size-sm;
     color: $color-text-secondary;
     line-height: 1.7;
@@ -510,7 +455,7 @@
   &__member-card {
     @include card;
     padding: $spacing-md $spacing-lg;
-    box-shadow: 0 12rpx 28rpx rgba(45, 49, 66, 0.07);
+    box-shadow: 0 12rpx 28rpx rgba(0, 0, 0, 0.07);
     animation: squad-unboxing-card-rise 0.34s ease both;
   }
 
@@ -656,7 +601,7 @@
   &__info-label {
     display: flex;
     align-items: center;
-    gap: 8rpx;
+    gap: $spacing-xs;
     font-size: $font-size-sm;
     color: $color-text-secondary;
     flex-shrink: 0;
@@ -803,7 +748,7 @@
   }
 
   &__skeleton {
-    border-radius: 24rpx;
+    border-radius: $card-radius-sm;
     background: linear-gradient(90deg, rgba($color-divider, 0.9) 0%, rgba($color-surface, 0.94) 50%, rgba($color-divider, 0.9) 100%);
     background-size: 220% 100%;
     animation: squad-unboxing-shimmer 1.2s linear infinite;
@@ -860,7 +805,7 @@
 
   &__pair-pill {
     background: rgba($color-surface, 0.96);
-    box-shadow: 0 8rpx 18rpx rgba(45, 49, 66, 0.08);
+    box-shadow: 0 8rpx 18rpx rgba(0, 0, 0, 0.08);
   }
 
   &__tag-chip-text,
@@ -879,9 +824,9 @@
 
   &__pair-card {
     padding: $spacing-md;
-    border-radius: 26rpx;
+    border-radius: $card-radius;
     background: linear-gradient(145deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.78) 100%);
-    box-shadow: 0 12rpx 28rpx rgba(45, 49, 66, 0.07);
+    box-shadow: 0 12rpx 28rpx rgba(0, 0, 0, 0.07);
     animation: squad-unboxing-card-rise 0.34s ease both;
   }
 
@@ -936,15 +881,11 @@
     @include safe-area-inline($container-padding);
     @include safe-area-bottom-padding(padding-bottom, $spacing-md);
     background: rgba($color-surface, 0.96);
-    box-shadow: 0 -18rpx 42rpx rgba(45, 49, 66, 0.12);
+    box-shadow: 0 -18rpx 42rpx rgba(0, 0, 0, 0.12);
     border-top: 2rpx solid rgba($color-border, 0.8);
     display: flex;
     flex-direction: column;
     gap: $spacing-sm;
-  }
-
-  &__action-zone--tease {
-    gap: 8rpx;
   }
 
   &__action-copy {

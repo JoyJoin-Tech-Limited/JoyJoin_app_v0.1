@@ -1,6 +1,6 @@
 # Personality Test System - V4 Adaptive Assessment
 
-**Last Updated:** 2026-04-19  
+**Last Updated:** 2026-05-19  
 **Version:** V4 Adaptive Engine + V2 Matcher  
 **Status:** Production
 
@@ -38,7 +38,7 @@ The JoyJoin Personality Test System uses a scientifically calibrated adaptive as
 - Confusion pair disambiguation
 - Two interactive closing questions for richer secondary signals
 - Decisive match detection (confidence ≥ 70%)
-- **Back button available** in the active test UI — on web, `PersonalityTestPage` in `apps/user-client`; on the **WeChat Mini Program**, `apps/mini-program/src/pages/onboarding/personality-test/index.tsx` — it rewinds through local answered-question history and only exits to the landing page when there is no earlier answer to review
+- **One-step back button** is implemented in the mini-program (`apps/mini-program/src/pages/onboarding/personality-test/index.tsx`). Users can tap "返回上一题" after answering ≥2 questions to review and re-answer only their most recent question. The back button is not available on Q1 and is disabled while any submission is in-flight.
 
 ### Client surfaces (web vs WeChat Mini Program)
 
@@ -403,7 +403,7 @@ This overlay uses a glass-morphism dark backdrop with a subtle purple ambient gl
 
 ### Back Button
 
-The active `PersonalityTestPage` keeps the back button visible. Back navigation first moves through the local answered-question history for read-only review; only when no earlier answer exists does it exit back to `/`.
+The mini-program `PersonalityTestPage` supports a **one-step back** button ("返回上一题"). After answering ≥2 questions, users can tap back to review and re-answer **only their most recent question**. The previous answer is pre-filled. The user can either confirm the modification (which calls `PUT /api/assessment/v4/{sessionId}/answer`) or cancel to return to the current question. The back button is hidden on Q1 and disabled while any submission is in-flight.
 
 ---
 
@@ -636,32 +636,35 @@ User opens the test (unauthenticated) — web: `/personality-test` · mini-progr
 
 ```typescript
 // 1. Start assessment
-POST /api/personality-test/start
-→ Creates session, returns sessionId
+POST /api/assessment/v4/start
+→ Creates session, returns sessionId + first question + progress
 
-// 2. Get next question
-GET /api/personality-test/next-question?sessionId={id}
-→ Returns question object or null (if done)
-
-// 3. Submit answer
-POST /api/personality-test/submit-answer
+// 2. Submit answer (idempotent)
+POST /api/assessment/v4/{sessionId}/answer
 {
-  sessionId: string,
   questionId: string,
-  selectedOption: 'A' | 'B' | 'C' | 'D'
+  selectedOption: string  // 'A' | 'B' | 'C' | 'D' | 'slider_NN' | 'direct' | 'dove' | etc.
 }
-→ Returns updated state (traitScores, confidences, nextQuestion)
+→ Returns updated state (traitScores, progress, nextQuestion, commentary, isComplete)
 
-// 4. Complete assessment
-POST /api/personality-test/complete
+// 3. Re-answer (back-review, idempotent)
+PUT /api/assessment/v4/{sessionId}/answer
 {
-  sessionId: string
+  questionId: string,
+  selectedOption: string
 }
-→ Runs V2 Matcher, returns final archetype result
+→ Returns updated state; engine may re-branch to a different next question
 
-// 5. Get results
-GET /api/personality-test/results?sessionId={id}
-→ Returns full results (archetype, traits, confidence, etc.)
+// 4. Skip question
+POST /api/assessment/v4/{sessionId}/skip
+{
+  questionId: string
+}
+→ Returns newQuestion, skipCount, remainingSkips
+
+// 5. Assessment auto-completes via /answer (isComplete: true)
+→ Server runs V2 Matcher on last answer when confidence thresholds met
+→ Returns final archetype result in the answer response
 ```
 
 ### Pre-Auth Anonymous Flow
@@ -764,129 +767,98 @@ positivity_score INTEGER
 
 ## API Endpoints
 
-### POST /api/personality-test/start
+The V4 assessment uses a streamlined REST surface under `/api/assessment/v4/`. All endpoints require authentication (except initial start, which may be anonymous with client-side state).
 
-**Description:** Create new assessment session
+### POST /api/assessment/v4/start
+
+**Description:** Create a new assessment session or resume an existing one.
 
 **Request Body:**
 ```typescript
 {
-  userId: string;
-  phase: 'pre_signup' | 'post_signup';
+  sessionId?: string; // Optional: pass to resume a prior anonymous session
 }
 ```
 
-**Response:**
+**Response (200):**
 ```typescript
 {
   sessionId: string;
-  firstQuestion: Question;
+  phase: string;
+  nextQuestion: AssessmentQuestion | null;
+  progress: AssessmentProgress;
+  currentMatches: AssessmentMatch[];
+  isComplete: boolean;
 }
 ```
 
 ---
 
-### GET /api/personality-test/next-question
+### POST /api/assessment/v4/{sessionId}/answer
 
-**Description:** Get next adaptive question based on current state
-
-**Query Parameters:**
-- `sessionId`: string
-
-**Response:**
-```typescript
-{
-  question: Question | null; // null if assessment complete
-  progress: {
-    current: number;
-    total: number; // estimated from the active assessment config
-    phase: 'anchor' | 'adaptive' | 'disambiguation';
-  };
-}
-```
-
----
-
-### POST /api/personality-test/submit-answer
-
-**Description:** Submit answer and update session state
+**Description:** Submit an answer for the current question. Idempotent (same questionId + answer yields same result). Rate-limited to ≤5/min per session.
 
 **Request Body:**
 ```typescript
 {
-  sessionId: string;
-  questionId: string; // 'Q1', 'Q2', etc. — or 'Q_PLAYFUL_SLIDER' / 'Q_PLAYFUL_EMOJI' for closing questions
+  questionId: string;
   selectedOption: string;
   // For standard choice questions: 'A' | 'B' | 'C' | 'D'
-  // For slider questions (Q_PLAYFUL_SLIDER): 'slider_0' | 'slider_25' | 'slider_50' | 'slider_75' | 'slider_100'
-  // For emoji tap questions (Q_PLAYFUL_EMOJI): 'direct' | 'dove' | 'dm' | 'leave' | 'popcorn'
+  // For slider questions: 'slider_0' | 'slider_25' | 'slider_50' | 'slider_75' | 'slider_100'
+  // For emoji tap questions: 'direct' | 'dove' | 'dm' | 'leave' | 'popcorn'
 }
 ```
 
-**Response:**
+**Response (200):**
 ```typescript
 {
-  traitScores: { A: number, C: number, E: number, O: number, X: number, P: number };
-  traitConfidences: { [trait: string]: { score: number, confidence: number, sampleCount: number } };
-  nextQuestion: Question | null;
-  topArchetypes: Array<{ archetype: string, score: number }>;
+  isComplete: boolean;
+  nextQuestion?: AssessmentQuestion | null; // null when assessment is complete
+  progress?: AssessmentProgress;
+  currentMatches?: AssessmentMatch[];
+  commentary?: string; // Xiaoyue feedback text
 }
 ```
+
+**Error codes:** 400 (invalid input), 401 (unauthenticated), 403 (session ownership), 404 (session not found), 409 (session already completed)
 
 ---
 
-### POST /api/personality-test/complete
+### PUT /api/assessment/v4/{sessionId}/answer
 
-**Description:** Run V2 Matcher and finalize assessment
+**Description:** Re-answer a previously answered question (back-review flow). Idempotent. May cause the engine to re-branch to a different next question.
+
+**Request Body:** Same as POST /answer above.
+
+**Response (200):** Same shape as POST /answer. The `nextQuestion` may differ from the current question if the engine re-branched.
+
+---
+
+### POST /api/assessment/v4/{sessionId}/skip
+
+**Description:** Skip the current question and receive a replacement. Max 3 skips per session.
 
 **Request Body:**
 ```typescript
 {
-  sessionId: string;
+  questionId: string;
 }
 ```
 
-**Response:**
+**Response (200):**
 ```typescript
 {
-  primaryArchetype: string; // '气氛组柯基', '情绪稳定鸡', etc.
-  secondaryArchetype: string;
-  confidence: number; // 0-1
-  isDecisive: boolean;
-  traitScores: { A: number, C: number, E: number, O: number, X: number, P: number };
-  matchDetails: {
-    traitDeltas: { [trait: string]: number };
-    decisiveReason: string;
-    score: number;
-  };
+  success: boolean;
+  newQuestion?: AssessmentQuestion | null;
+  skipCount: number;
+  canSkip: boolean;
+  remainingSkips: number;
 }
 ```
 
 ---
 
-### GET /api/personality-test/results
-
-**Description:** Get full assessment results for display
-
-**Query Parameters:**
-- `sessionId`: string
-
-**Response:**
-```typescript
-{
-  archetype: {
-    name: string;
-    icon: string;
-    energyLevel: number;
-    description: string;
-  };
-  traitScores: { A: number, C: number, E: number, O: number, X: number, P: number };
-  isDecisive: boolean;
-  confidence: number;
-  compatibleArchetypes: string[]; // Top 3 from chemistry matrix
-  distribution: { [archetype: string]: number }; // % of users with each archetype
-}
-```
+The assessment session **auto-completes** via the `/answer` endpoint when confidence thresholds are met or the hard question limit is reached — there is no separate `/complete` endpoint. Results are returned inline in the last answer response (`isComplete: true`, `currentMatches` contains final archetype rankings).
 
 ---
 
@@ -957,40 +929,35 @@ positivity_score INTEGER
 ```typescript
 describe('Full Assessment Flow', () => {
   let sessionId: string;
-  
+
   test('Start assessment', async () => {
     const response = await request(app)
-      .post('/api/personality-test/start')
-      .send({ userId: 'test-user', phase: 'post_signup' });
-    
+      .post('/api/assessment/v4/start')
+      .send({});
+
     expect(response.status).toBe(200);
     expect(response.body.sessionId).toBeDefined();
+    expect(response.body.nextQuestion).toBeDefined();
     sessionId = response.body.sessionId;
   });
-  
-  test('Answer 8 anchor questions', async () => {
-    for (let i = 0; i < 8; i++) {
-      const nextQ = await request(app)
-        .get(`/api/personality-test/next-question?sessionId=${sessionId}`);
-      
-      await request(app)
-        .post('/api/personality-test/submit-answer')
+
+  test('Answer questions adaptively until complete', async () => {
+    for (let i = 0; i < 18; i++) {
+      const answerRes = await request(app)
+        .post(`/api/assessment/v4/${sessionId}/answer`)
         .send({
-          sessionId,
-          questionId: nextQ.body.question.id,
+          questionId: `Q${i + 1}`,
           selectedOption: 'A'
         });
+
+      if (answerRes.body.isComplete) {
+        expect(answerRes.body.currentMatches).toBeDefined();
+        expect(answerRes.body.currentMatches.length).toBeGreaterThan(0);
+        return;
+      }
     }
-  });
-  
-  test('Complete assessment', async () => {
-    const response = await request(app)
-      .post('/api/personality-test/complete')
-      .send({ sessionId });
-    
-    expect(response.status).toBe(200);
-    expect(response.body.primaryArchetype).toBeDefined();
-    expect(ARCHETYPE_CANONICAL_ORDER).toContain(response.body.primaryArchetype);
+    // Should have completed before the loop exhausted
+    expect.unreachable('Assessment did not complete within max questions');
   });
 });
 ```
@@ -1029,7 +996,7 @@ for (const pair of confusionPairs) {
 - [ ] Slider question renders with draggable dial (not radio buttons)
 - [ ] Emoji tap question renders with tap-selectable emoji reactions
 - [ ] Premium calibration overlay (`TransitionOverlay`) shows at adaptive phase transition
-- [ ] Back button rewinds through answered-question history and only exits to landing at the start
+- [ ] Back button allows one-step back to re-answer the most recent question only; cancel returns to current question
 - [ ] Radar chart displays all 6 traits (ACOEXP)
 - [ ] Archetype icons match canonical list (🐕, 🐓, etc.)
 - [ ] Results show correct archetype name (气氛组柯基, not 火花塞)
@@ -1091,7 +1058,7 @@ for (const pair of confusionPairs) {
 - Asymmetric penalties and VETO filters
 - Secondary data (`conflictPosture`) captured via `Q_PLAYFUL_EMOJI` and fed to tiebreaker
 - Three question types: `choice`, `slider`, `emoji_tap`
-- Back button rewinds through local answered-question history before exiting to landing
+- One-step back button to re-answer the most recent question; "换一题" skip button (max 3 per session)
 - Premium calibration overlay at adaptive phase transition
 
 ---

@@ -12,6 +12,7 @@ import {
   MatchingStatusLiveOverlay,
   MatchingStatusPendingSection,
 } from './MatchingStatusSections'
+import { MatchCompassShell } from './MatchCompassSections'
 import { getStatusLabel } from '@shared/features/matching-status'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
@@ -75,6 +76,10 @@ export default function MatchingStatusPage() {
     viewerSpotlight,
     waitingCopy,
     waitingSeats,
+    matchCompassEnabled,
+    matchCompass,
+    isMatchCompassFetching,
+    handleUpdateMatchCompass,
   } = controller
 
   switch (screenState.kind) {
@@ -250,6 +255,15 @@ export default function MatchingStatusPage() {
         </Text>
       </View>
 
+      {matchStatus === 'pending' && matchCompassEnabled ? (
+        <MatchCompassShell
+          data={matchCompass}
+          onUpdate={handleUpdateMatchCompass}
+          shouldReduceMotion={shouldReduceMotion}
+          isUpdating={isMatchCompassFetching}
+        />
+      ) : null}
+
       {matchStatus === 'pending' ? (
         <MatchingStatusPendingSection
           newMemberJoined={newMemberJoined}
@@ -262,7 +276,6 @@ export default function MatchingStatusPage() {
           waitingSeats={waitingSeats}
           fillStatusText={fillStatusText}
           refreshCountdown={refreshCountdown}
-          onRefreshWaitingState={handleRefreshWaitingState}
         />
       ) : null}
 

@@ -1,7 +1,7 @@
 # Mini-Program Product Reference
 
 > **Status:** Active launch-primary mini-program reference for `apps/mini-program`.
-> **Last verified:** 2026-05-13.
+> **Last verified:** 2026-05-19.
 > **Non-replacement note:** This document does **not** replace [`../PRODUCT_REQUIREMENTS.md`](../PRODUCT_REQUIREMENTS.md) or [`../apps/mini-program/README.md`](../apps/mini-program/README.md). It is a compact product-to-code bridge for the live WeChat mini-program surface.
 > **Authority chain:** 1. [`../PRODUCT_REQUIREMENTS.md`](../PRODUCT_REQUIREMENTS.md) for product canon and terminology. 2. [`../apps/mini-program/README.md`](../apps/mini-program/README.md), [`./architecture/current-state.md`](./architecture/current-state.md), [`./systems/onboarding-flow.md`](./systems/onboarding-flow.md), and [`./reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md) for runtime ownership and flow rules. 3. [`../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts), [`../apps/mini-program/src/app.config.ts`](../apps/mini-program/src/app.config.ts), [`../apps/mini-program/src/lib/api/api.ts`](../apps/mini-program/src/lib/api/api.ts), [`../packages/shared/src/README.md`](../packages/shared/src/README.md), [`../packages/shared/src/schema.ts`](../packages/shared/src/schema.ts), and [`../apps/server/src/README.md`](../apps/server/src/README.md) for active route, contract, and backend truth.
 
@@ -75,7 +75,7 @@ This inventory is derived from the registered paths in [`../apps/mini-program/sr
 
 | Page path | Role | Purpose | Notes |
 | --- | --- | --- | --- |
-| `pages/discover/index` | Primary destination | Shows discoverable event pools with filters, fill state, and the main join entry path. | Launch-primary discovery surface. Location filter uses `LocationFilterDrawer` (bottom-sheet district selector) with smart default persistence. See `apps/mini-program/src/components/discover/LocationFilterDrawer.tsx`.
+| `pages/discover/index` | Primary destination | Shows discoverable event pools with filters, fill state, and the main join entry path. | Launch-primary discovery surface. **Smart Regional Discovery** (2026-05-18): silent GPS detection → cluster-level proximity sorting (same cluster first, adjacent next, then time). Manual filter override via `LocationFilterDrawer` (bottom-sheet district selector) with 7-day TTL persistence. Auto-relaxation banner when manual filter yields empty results. Geo-hint shows detected cluster. Analytics: `geo_detected`, `geo_failed`, `filter_auto_relax`. See `apps/mini-program/src/components/discover/LocationFilterDrawer.tsx`.
 | `pages/events/index` | Primary destination | Shows joined events split into upcoming and completed tabs. | User-facing label is `足迹`; page title is `我的足迹`. Primary data source is `GET /api/shell/events` (composite) with fallback to legacy `/api/events/joined`. |
 | `pages/connections/index` | Primary destination | Shows post-event connections with peer identity and event context. | Primary data source is `GET /api/shell/connections` (composite) with fallback to legacy `/api/my-connections`. |
 | `pages/profile/index` | Primary destination | Serves as the account hub for identity, current state, edit profile, rewards, invite, terms, and payment entry. | Tab anchor for `我的`. |
@@ -83,6 +83,7 @@ This inventory is derived from the registered paths in [`../apps/mini-program/sr
 | `pages/rewards/index` | Auxiliary destination | Shows coupons, gamification state, recent history, and redeemable items. | Reads shared rewards and coupon APIs. |
 | `pages/invite/index` | Auxiliary destination | Shows referral code, invite link, reward tiers, and copy actions for friend invites. | Uses shared referral stats contract. |
 | `pages/terms/index` | Auxiliary destination | Renders the current legal terms or privacy content with section focus support. | Backed by shared legal copy. |
+| `pages/city-unlock/index` | Auxiliary destination | City unlock progress screen showing interested-city progress, share CTA, and activity feed. Entry from discover banner/feed-card or profile. | **City Unlock v0.1** (2026-05-19). Uses `xiaoyue-city-unlock` mascot asset. Share via `useShareAppMessage` with city-specific title. |
 | `pages/center-hub/index` | Tab destination (center) | Dynamic hub for active events, pending registrations, and empty state. All center button taps route here via `switchTab`; internal CTAs then `navigateTo` detail pages. | Replaces `pages/center-tab-empty/index`. |
 
 ### Event, payment, matching, and in-event surfaces
@@ -114,6 +115,7 @@ This inventory is derived from the registered paths in [`../apps/mini-program/sr
 | New user onboarding | `pages/index/index` -> `pages/onboarding/personality-test/index` -> `results` (inline login) -> `essential-data` -> `extended-data` -> `profile-review` -> `pages/discover/index` | Product and step ownership live in [`./systems/onboarding-flow.md`](./systems/onboarding-flow.md). |
 | Returning login | `pages/index/index` or `pages/login/index` -> WeChat login -> `/api/auth/user` -> server-owned `nextStep` | Mini-program-native login only; no browser OAuth redirect. |
 | Discovery and pool registration | `pages/discover/index` -> optional `pages/event-detail/index` -> `pages/pool-registration/index` | Pool registration owns soft-preference capture before matching. |
+| City unlock (no city interest) | `pages/discover/index` -> `CityUnlockBanner` / `CityUnlockFeedCard` -> `CityPickerSheet` -> `POST /api/cities/interest` -> `pages/city-unlock/index` | **City Unlock v0.1** (2026-05-19). Three trigger layers: gentle banner (dismissable, 7-day TTL), feed-card CTA, profile entry. City picker supports search + hot-city grid. Progress page shows threshold countdown, share to invite, and other-city interest. |
 | Payment and verification | `pages/pool-registration/index` -> `pages/blind-box-payment/index` -> `pages/payment-verification/index` -> back to pool registration or onward to profile/events | Cross-platform coordination rules live in [`./reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md). |
 | Matching and reveal | `pages/matching-status/index` -> `pages/squad-unboxing/index` -> `pages/pool-group-detail/index` -> `pages/event-coordination/index` or `pages/events/index` | Query keys and invalidation rules live in [`./mini-program-data-fetching.md`](./mini-program-data-fetching.md). Matching-status now runs the **Unified Connection Reveal** — `composeUnifiedReveal()` fuses group chemistry with pair connection points into a single `UnifiedRevealCard`. |
 | In-event icebreaker | `pages/icebreaker-session/index` | Active in-event social flow; server-owned session state is described in [`./ai/AI_FEATURE_INVENTORY.md`](./ai/AI_FEATURE_INVENTORY.md) and [`./architecture/current-state.md`](./architecture/current-state.md). |
@@ -165,7 +167,7 @@ This section names the core entities the mini-program relies on without duplicat
 | Post-match event records | `blind_box_events` | Represents the user-facing blind-box event state after matching, including progress and matched attendee data. |
 | Pre-event attendance state | `blind_box_pre_attendance` | Stores user attendance responses and admin attendance overrides before the event happens. |
 | Entitlements and payment records | `subscriptions`, `payments` | Back the payment, entitlement, verification, and refund state shown in payment and profile flows. |
-| Social graph and notifications | `connections`, `notifications` | Power the connections tab and category-based notification counts or reminders. |
+| City unlock tracking | `user_city_interests`, `city_unlock_progress` | **City Unlock v0.1** (2026-05-19). `user_city_interests` stores per-user city selections (source-tracked). `city_unlock_progress` tracks per-city interested count, threshold, and status machine (`collecting` → `researching` → `launching` → `live`). |
 
 ## 9. Admin flows affecting the mini-program
 
@@ -177,6 +179,7 @@ Endpoint and role coverage live canonically in [`./admin/admin-rbac-matrix.md`](
 | Run matching for a pool | [`../apps/server/src/routes.ts`](../apps/server/src/routes.ts) (`POST /api/admin/event-pools/:id/match`) | Creates matched groups and unlocks or changes what registered users see in matching status, reveal, and group-detail flows. |
 | Override blind-box attendance | [`../apps/server/src/routes.ts`](../apps/server/src/routes.ts) (`PATCH /api/admin/blind-box-events/:eventId/attendees/:userId/attendance`) | Changes the stored pre-event attendance state that matched-event flows read later. |
 | Send or broadcast admin notifications | [`../apps/server/src/routes.ts`](../apps/server/src/routes.ts) (`POST /api/admin/notifications/broadcast`, `POST /api/admin/notifications/send`) | Changes the notification counts and user-facing reminder or announcement traffic that mini-program tabs mark as read. |
+| View city unlock report | [`../apps/server/src/routes/domains/cityUnlock.ts`](../apps/server/src/routes/domains/cityUnlock.ts) (`GET /api/admin/cities/unlock-report`) | **City Unlock v0.1** (2026-05-19). Admin view of per-city interested counts, status, and recent signups. Ops receives WeCom notification when a city crosses threshold (50) and transitions to `researching`. |
 | Ban or unban a user | [`../apps/server/src/routes.ts`](../apps/server/src/routes.ts) (`PATCH /api/admin/users/:id/ban`, `PATCH /api/admin/users/:id/unban`) | Banned users lose normal authenticated access until restored; unban restores that path. |
 | Initiate a refund | [`../apps/server/src/routes/domains/payments.ts`](../apps/server/src/routes/domains/payments.ts) (`POST /api/admin/payments/:paymentId/refund`) | Can reverse a payment-backed entitlement or pack outcome that later appears in profile and payment recovery flows. |
 

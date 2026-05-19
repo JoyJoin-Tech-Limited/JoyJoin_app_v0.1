@@ -34,9 +34,11 @@ import { registerUserEventPoolRoutes } from "./routes/domains/userEventPools";
 import { registerVenueRoutes } from "./routes/domains/venues";
 import { registerOccupationSearchRoutes } from "./routes/domains/occupationSearch";
 import { registerXiaoyueRoutes } from "./routes/domains/xiaoyue";
+import { registerCityUnlockRoutes } from "./routes/domains/cityUnlock";
 import { registerShellRoutes } from "./routes/domains/shell";
 import { registerEventRoutes } from "./routes/domains/events";
 import { registerConnectionRoutes } from "./routes/domains/connections";
+import { registerMatchCompassRoutes } from "./routes/domains/matchCompass";
 import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
 import session from "express-session";
@@ -134,9 +136,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerMatchingConfigRoutes(app);
   registerMatchingAdminRoutes(app);
   registerMatchExplanationRoutes(app);
+  registerMatchCompassRoutes(app);
   registerAIServiceRoutes(app);
   registerTelemetryRoutes(app);
   registerXiaoyueRoutes(app);
+  registerCityUnlockRoutes(app);
 
   return httpServer;
 }

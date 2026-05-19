@@ -94,6 +94,11 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/pages/onboarding/assets/archetypes',
           to: 'dist/pages/onboarding/assets/archetypes',
         },
+        // Lovart illustrated blind box layers (squad unboxing reveal)
+        {
+          from: 'src/assets/illustrations',
+          to: 'dist/assets/illustrations',
+        },
       ],
       options: {
       }

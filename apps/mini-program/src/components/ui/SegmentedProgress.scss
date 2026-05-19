@@ -37,7 +37,7 @@
     border-radius: 6rpx;
     overflow: hidden;
     position: relative;
-    transition: background 0.3s ease, box-shadow 0.3s ease;
+    transition: background 0.3s ease, box-shadow 0.3s ease, width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
     &--filled {
       background: $brand-gradient;

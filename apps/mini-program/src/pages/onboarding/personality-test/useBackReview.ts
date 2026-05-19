@@ -31,6 +31,13 @@ export function useBackReview(): BackReviewState & BackReviewActions {
   const [backReviewPreviousAnswer, setBackReviewPreviousAnswer] = useState<string | null>(null)
   const [backReviewSelectedOption, setBackReviewSelectedOption] = useState<string | null>(null)
 
+  const resetBackReviewState = useCallback(() => {
+    setIsBackReviewMode(false)
+    setBackReviewQuestion(null)
+    setBackReviewPreviousAnswer(null)
+    setBackReviewSelectedOption(null)
+  }, [])
+
   const enterBackReview = useCallback((question: AssessmentQuestion, previousAnswer: string) => {
     setBackReviewQuestion(question)
     setBackReviewPreviousAnswer(previousAnswer)
@@ -42,26 +49,16 @@ export function useBackReview(): BackReviewState & BackReviewActions {
     setBackReviewSelectedOption(optionValue)
   }, [])
 
-  const cancelBackReview = useCallback(() => {
-    setIsBackReviewMode(false)
-    setBackReviewQuestion(null)
-    setBackReviewPreviousAnswer(null)
-    setBackReviewSelectedOption(null)
-  }, [])
+  const cancelBackReview = resetBackReviewState
 
-  const getConfirmPayload = useCallback(() => ({
+  const getConfirmPayload = () => ({
     changed: backReviewSelectedOption !== backReviewPreviousAnswer,
     question: backReviewQuestion,
     selectedOption: backReviewSelectedOption,
     previousAnswer: backReviewPreviousAnswer,
-  }), [backReviewQuestion, backReviewPreviousAnswer, backReviewSelectedOption])
+  })
 
-  const exitBackReview = useCallback(() => {
-    setIsBackReviewMode(false)
-    setBackReviewQuestion(null)
-    setBackReviewPreviousAnswer(null)
-    setBackReviewSelectedOption(null)
-  }, [])
+  const exitBackReview = resetBackReviewState
 
   return {
     isBackReviewMode,
