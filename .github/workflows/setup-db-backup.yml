@@ -1,0 +1,55 @@
+name: Setup Daily DB Backup
+
+on:
+  workflow_dispatch:
+
+jobs:
+  install-backup-cron:
+    name: Install daily backup cron on CVM
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create backup directory + install cron job
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          script: |
+            set -euo pipefail
+
+            BACKUP_DIR="$HOME/backups"
+            mkdir -p "$BACKUP_DIR"
+
+            echo "📋 Current crontab:"
+            crontab -l 2>/dev/null || echo "   (empty)"
+
+            # Check if backup cron already exists
+            if crontab -l 2>/dev/null | grep -q "pg_dump.*joyjoin"; then
+              echo "✅ Backup cron already installed — running first backup now"
+              docker exec joyjoin-postgres pg_dump -U joyjoin joyjoin | gzip > "$BACKUP_DIR/joyjoin-$(date +%Y%m%d-%H%M).sql.gz"
+              echo "   Size: $(du -h "$BACKUP_DIR"/joyjoin-*.sql.gz | tail -1 | cut -f1)"
+              exit 0
+            fi
+
+            echo "⚙️  Installing daily backup cron (4 AM UTC = noon Beijing time)..."
+            (crontab -l 2>/dev/null; echo "0 4 * * * docker exec joyjoin-postgres pg_dump -U joyjoin joyjoin | gzip > $BACKUP_DIR/joyjoin-\$(date +\%Y\%m\%d).sql.gz 2>&1") | crontab -
+
+            echo "📋 New crontab:"
+            crontab -l
+
+            echo ""
+            echo "🧪 Running first backup now..."
+            docker exec joyjoin-postgres pg_dump -U joyjoin joyjoin | gzip > "$BACKUP_DIR/joyjoin-$(date +%Y%m%d-%H%M).sql.gz"
+            echo "   Size: $(du -h "$BACKUP_DIR"/joyjoin-*.sql.gz | tail -1 | cut -f1)"
+
+            # Keep only last 7 backups
+            find "$BACKUP_DIR" -name "joyjoin-*.sql.gz" -mtime +7 -delete 2>/dev/null || true
+
+            echo ""
+            echo "✅ Daily backup installed! Runs at 4 AM UTC every day."
+            echo "   Backups stored at: $BACKUP_DIR"
+            echo "   Currently: $(ls "$BACKUP_DIR"/joyjoin-*.sql.gz 2>/dev/null | wc -l) file(s)"
