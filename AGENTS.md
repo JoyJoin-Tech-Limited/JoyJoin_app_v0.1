@@ -1,6 +1,6 @@
 # JoyJoin — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents. Last updated: 2026-05-17
+> Compact instructions for AI coding agents. Last updated: 2026-05-19
 
 ---
 
@@ -69,6 +69,7 @@ Always base implementation on the **current active codebase**, not legacy flows 
 - `LEGACY_TIER_MAP` + `resolveLegacyTier()` removed from `socialIcebreakerTierManifest.ts` (2026-05-07)
 - `/api/registration/chat/start`, `/api/registration/chat/message`, `/api/registration/chat/message/stream` handlers removed from `routes.ts` (2026-05-07)
 - `/api/guide/mark-seen`, `/api/guide/complete` routes removed (2026-05-07)
+- **PNG spritesheets in `src/assets/mascot/` are orphaned** — `XiaoyueSpriteAnimator` loads `.webp` via `cdnAsset()`. Only `.webp` + manifest should be in `src/assets/mascot/`. Source PNGs go in `assets-source/mascot/xiaoyue-strips/` (2026-05-19)
 
 **Canonical references:** `DEVELOPER_QUICK_REFERENCE.md` and `PRODUCT_REQUIREMENTS.md`
 
