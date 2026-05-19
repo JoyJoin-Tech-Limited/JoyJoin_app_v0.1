@@ -27,7 +27,7 @@ const CONFIG_SPECS: ConfigSpec[] = [
   {
     key: "DATABASE_URL",
     required: true,
-    description: "PostgreSQL connection string (Neon serverless)",
+    description: "PostgreSQL connection string",
     validate: (v) => {
       if (!v.startsWith("postgresql://") && !v.startsWith("postgres://")) {
         return "Must be a valid postgresql:// or postgres:// URL";

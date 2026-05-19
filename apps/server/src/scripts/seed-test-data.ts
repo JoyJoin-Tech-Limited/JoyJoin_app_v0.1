@@ -166,7 +166,7 @@ async function main() {
   console.log(`  Test pool:    ${testPool.id}`);
   console.log("\n[seed] Done.");
 
-  // Graceful exit for Neon pool
+  // Graceful exit for pg pool
   process.exit(0);
 }
 
