@@ -3,14 +3,15 @@ name: Setup Self-Hosted Runner on CVM
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  administration: write
+
 jobs:
   install-runner:
     name: Install GitHub Actions runner on CVM
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    permissions:
-      contents: read
-      administration: write
     steps:
       - name: Get runner registration token
         id: token
