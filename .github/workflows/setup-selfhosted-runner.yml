@@ -2,28 +2,22 @@ name: Setup Self-Hosted Runner on CVM
 
 on:
   workflow_dispatch:
+    inputs:
+      runner_token:
+        description: 'GitHub Actions runner registration token'
+        required: true
+        type: string
 
 permissions:
   contents: read
-  administration: write
 
 jobs:
   install-runner:
-    name: Install GitHub Actions runner on CVM
+    name: Install runner on CVM
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Get runner registration token
-        id: token
-        run: |
-          TOKEN=$(curl -s -X POST \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ github.repository }}/actions/runners/registration-token \
-            | jq -r '.token')
-          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
-
-      - name: Install runner on CVM
+      - name: Install runner via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -34,37 +28,40 @@ jobs:
             set -euo pipefail
 
             RUNNER_DIR="$HOME/actions-runner"
-            if [ -d "$RUNNER_DIR" ]; then
-              echo "✅ Runner already installed at $RUNNER_DIR"
-              echo "   If re-registration needed, remove $RUNNER_DIR and re-run this workflow"
-              exit 0
+
+            if [ -d "$RUNNER_DIR" ] && [ -f "$RUNNER_DIR/.runner" ]; then
+              echo "✅ Runner already installed — removing and reinstalling..."
+              cd "$RUNNER_DIR"
+              sudo ./svc.sh stop 2>/dev/null || true
+              sudo ./svc.sh uninstall 2>/dev/null || true
+              cd "$HOME"
+              rm -rf "$RUNNER_DIR"
             fi
 
             echo "📦 Downloading GitHub Actions runner..."
             mkdir -p "$RUNNER_DIR"
             cd "$RUNNER_DIR"
-            curl -sSL -o actions-runner.tar.gz \
+            curl -sSL -o runner.tar.gz \
               https://github.com/actions/runner/releases/download/v2.323.0/actions-runner-linux-x64-2.323.0.tar.gz
-            echo "Extracting..."
-            tar xzf actions-runner.tar.gz
-            rm actions-runner.tar.gz
+            tar xzf runner.tar.gz
+            rm runner.tar.gz
 
             echo "🔗 Configuring runner..."
             ./config.sh \
               --url https://github.com/${{ github.repository }} \
-              --token ${{ steps.token.outputs.token }} \
+              --token ${{ inputs.runner_token }} \
               --name joyjoin-cvm-runner \
               --labels weapp-upload \
               --unattended \
               --replace
 
-            echo "⚙️ Installing runner as user service..."
+            echo "⚙️ Installing runner as service..."
             sudo ./svc.sh install
             sudo ./svc.sh start
 
             echo ""
-            echo "✅ Self-hosted runner installed and started!"
-            echo "   Label: weapp-upload"
-            echo "   IP for WeChat whitelist: $(curl -s ifconfig.me)"
+            echo "✅ Self-hosted runner installed!"
+            echo "   Labels: weapp-upload"
+            echo "   IP for WeChat whitelist: 1.12.243.104"
             RUNNER_STATUS=$(sudo ./svc.sh status 2>&1)
             echo "   Status: $RUNNER_STATUS"
