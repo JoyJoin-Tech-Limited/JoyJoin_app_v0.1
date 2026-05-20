@@ -56,8 +56,8 @@
 4. If the process is crashed, restart it and investigate the error in logs.
 5. Check liveness and readiness directly:
    ```bash
-   curl https://api.joyjoin.com/api/health
-   curl https://api.joyjoin.com/api/readyz
+    curl https://api.joyjoinapp.com/api/health
+    curl https://api.joyjoinapp.com/api/readyz
    ```
 6. If `/api/health` passes but `/api/readyz` fails, treat the incident as a dependency/config outage rather than a full process outage.
 
@@ -184,7 +184,7 @@
 5. If `/api/auth/user` fails with non-401: check the auth middleware stack.
 
 **Maintenance:**
-The workflow defaults to `https://api.joyjoin.com`; update the `PRODUCTION_BASE_URL` secret whenever the probe should target a different production URL.
+The workflow defaults to `https://api.joyjoinapp.com`; update the `PRODUCTION_BASE_URL` secret whenever the probe should target a different production URL.
 Update `scripts/synthetic/happy-path-probe.mjs` if the probed endpoints change.
 
 **Resolution:** Alert resolves when the probe exits 0 and a fresh `joyjoin_synthetic_probe_success 1` sample is scraped.

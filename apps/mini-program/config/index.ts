@@ -14,7 +14,7 @@ if (MINI_PROGRAM_API_BASE_URL.includes('joyjoinapp.com')) {
   // eslint-disable-next-line no-console
   console.warn(
     `\n[mini-program] API base URL is ${MINI_PROGRAM_API_BASE_URL}. That domain often times out in production.\n` +
-      '  Set TARO_APP_API_BASE_URL=https://api.joyjoin.com in repo-root .env, or clear/update API_URL / APP_URL\n' +
+      '  Set TARO_APP_API_BASE_URL=https://api.joyjoinapp.com in repo-root .env, or clear/update API_URL / APP_URL\n' +
       '  (see resolveMiniProgramApiBaseUrl in config/apiBaseUrl.ts), then rebuild: npm run build:weapp --workspace=mini-program\n',
   )
 }

@@ -170,7 +170,7 @@ Boundary:
 
 **Active production path**
 - `.github/workflows/cicd.yml` deploys by SSHing into the remote server (`SERVER_IP` secret), resetting the checked-out repo, changing into `~/JoyJoin/deployment`, and then running `docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans`.
-- `deployment/nginx/joyjoin.conf` is the public edge configuration for host Nginx serving `joyjoinapp.com`, `www.joyjoinapp.com`, `admin.joyjoinapp.com`, and `api.joyjoin.com`.
+- `deployment/nginx/joyjoin.conf` is the public edge configuration for host Nginx serving `joyjoinapp.com`, `www.joyjoinapp.com`, `admin.joyjoinapp.com`, and `api.joyjoinapp.com`.
 - `deployment/docker-compose.nginx.yml` runs the active runtime containers: `joyjoin-api`, `joyjoin-user`, and `joyjoin-admin`.
 
 **Database boundary**

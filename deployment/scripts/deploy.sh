@@ -64,8 +64,8 @@ echo "🗄️  Database target: external PostgreSQL from $ENV_FILE"
         "/etc/letsencrypt/live/joyjoinapp.com/privkey.pem"
         "/etc/letsencrypt/live/admin.joyjoinapp.com/fullchain.pem"
         "/etc/letsencrypt/live/admin.joyjoinapp.com/privkey.pem"
-        "/etc/letsencrypt/live/api.joyjoin.com/fullchain.pem"
-        "/etc/letsencrypt/live/api.joyjoin.com/privkey.pem"
+        "/etc/letsencrypt/live/api.joyjoinapp.com/fullchain.pem"
+        "/etc/letsencrypt/live/api.joyjoinapp.com/privkey.pem"
     )
 
 echo "🔐 Step 0: Verify host TLS certificate files..."
@@ -80,12 +80,12 @@ if [[ ${#MISSING_TLS_FILES[@]} -gt 0 ]]; then
     echo "❌ Missing required TLS certificate files for host Nginx:"
     printf '   - %s\n' "${MISSING_TLS_FILES[@]}"
     echo "   Provision the Let's Encrypt certificates on the deployment host before re-running deploy."
-    echo "   Expected domains: joyjoinapp.com, admin.joyjoinapp.com, api.joyjoin.com"
+    echo "   Expected domains: joyjoinapp.com, admin.joyjoinapp.com, api.joyjoinapp.com"
     echo "   Cert renewal example:"
     echo "     sudo certbot certonly --nginx"
     echo "       -d joyjoinapp.com -d www.joyjoinapp.com"
     echo "     sudo certbot certonly --nginx -d admin.joyjoinapp.com"
-    echo "     sudo certbot certonly --nginx -d api.joyjoin.com"
+    echo "     sudo certbot certonly --nginx -d api.joyjoinapp.com"
     exit 1
 fi
 
@@ -185,7 +185,7 @@ echo "✅ Deployment completed"
 if [[ "$ENVIRONMENT" == "production" ]]; then
     echo "  User Portal:  https://joyjoinapp.com (maintenance mode — mini-program launch focus)"
     echo "  Admin Portal: https://admin.joyjoinapp.com"
-    echo "  API Server:   https://api.joyjoin.com"
+    echo "  API Server:   https://api.joyjoinapp.com"
 else
     echo "  Staging uses the same self-managed flow, but requires staging-specific env and routing to be prepared first."
 fi

@@ -8,7 +8,7 @@
 #   PUSHGATEWAY_URL     — (optional) Prometheus Pushgateway URL
 #
 # By default, the scheduled probe targets the active production API base URL
-# declared by the deployment config: https://api.joyjoin.com
+# declared by the deployment config: https://api.joyjoinapp.com
 #
 # For ad-hoc testing, use workflow_dispatch and provide the `base_url` input
 # explicitly (including localhost targets).
@@ -44,7 +44,7 @@ jobs:
 
       - name: Run synthetic probe
         env:
-          BASE_URL: ${{ inputs.base_url || secrets.PRODUCTION_BASE_URL || 'https://api.joyjoin.com' }}
+          BASE_URL: ${{ inputs.base_url || secrets.PRODUCTION_BASE_URL || 'https://api.joyjoinapp.com' }}
           PROBE_TIMEOUT_MS: "5000"
           PUSHGATEWAY_URL: ${{ secrets.PUSHGATEWAY_URL }}
         run: node scripts/synthetic/happy-path-probe.mjs

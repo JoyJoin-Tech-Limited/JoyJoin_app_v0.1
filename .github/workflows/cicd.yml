@@ -693,7 +693,7 @@ jobs:
               /etc/letsencrypt/live/admin.joyjoinapp.com/fullchain.pem
               /etc/letsencrypt/live/admin.joyjoinapp.com/privkey.pem
             )
-            OPTIONAL_TLS_DOMAINS=(api.joyjoin.com)
+            OPTIONAL_TLS_DOMAINS=(api.joyjoinapp.com)
             missing_tls=0
             for tls_file in "${REQUIRED_TLS_FILES[@]}"; do
               if ! sudo test -r "$tls_file"; then

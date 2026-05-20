@@ -289,7 +289,7 @@ instead of the filesystem to avoid disk pressure.
 
 ### Synthetic probe fails in GitHub Actions but server is healthy
 
-- Check whether the workflow is using the default target (`https://api.joyjoin.com`) or a `PRODUCTION_BASE_URL` override, and confirm that URL is the reachable API base.
+- Check whether the workflow is using the default target (`https://api.joyjoinapp.com`) or a `PRODUCTION_BASE_URL` override, and confirm that URL is the reachable API base.
 - Check network connectivity from GitHub Actions runner to the production endpoint.
 - Trailing slashes are trimmed automatically by the probe script, so focus on host/path correctness.
 - Verify the probe timeout (`PROBE_TIMEOUT_MS`) is large enough for production latency.

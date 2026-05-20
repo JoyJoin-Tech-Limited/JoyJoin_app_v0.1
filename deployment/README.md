@@ -28,7 +28,7 @@ GitHub Actions
 公网域名 (多域名 SAN 证书)
   ├─ joyjoinapp.com / www.joyjoinapp.com  -> Nginx -> joyjoin-user
   ├─ admin.joyjoinapp.com                 -> Nginx -> joyjoin-admin
-  └─ api.joyjoin.com                      -> Nginx -> joyjoin-api
+  └─ api.joyjoinapp.com                      -> Nginx -> joyjoin-api
 
 数据库
   └─ DATABASE_URL -> 外部 PostgreSQL
@@ -116,7 +116,7 @@ DATABASE_URL=postgresql://<db-user>:<db-password>@<db-host>/<db-name>?sslmode=re
 joyjoinapp.com
 www.joyjoinapp.com
 admin.joyjoinapp.com
-api.joyjoin.com
+api.joyjoinapp.com
 ```
 
 `deployment/nginx/joyjoin.conf` 负责：
@@ -135,8 +135,8 @@ api.joyjoin.com
 /etc/letsencrypt/live/joyjoinapp.com/privkey.pem
 /etc/letsencrypt/live/admin.joyjoinapp.com/fullchain.pem
 /etc/letsencrypt/live/admin.joyjoinapp.com/privkey.pem
-/etc/letsencrypt/live/api.joyjoin.com/fullchain.pem
-/etc/letsencrypt/live/api.joyjoin.com/privkey.pem
+/etc/letsencrypt/live/api.joyjoinapp.com/fullchain.pem
+/etc/letsencrypt/live/api.joyjoinapp.com/privkey.pem
 ```
 
 如果证书尚未签发，先在服务器上通过 Certbot 或等效方式为这些域名签发证书，再执行部署。
@@ -197,7 +197,7 @@ docker ps
 https://joyjoinapp.com
 https://admin.joyjoinapp.com
 https://joyjoinapp.com/api/health
-https://api.joyjoin.com/api/health
+https://api.joyjoinapp.com/api/health
 ```
 
 ---

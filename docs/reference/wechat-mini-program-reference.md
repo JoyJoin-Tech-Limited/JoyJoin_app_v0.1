@@ -658,7 +658,7 @@ wx.showModal({
 
 ```javascript
 wx.request({
-  url: 'https://api.joyjoin.com/user/profile',
+  url: 'https://api.joyjoinapp.com/user/profile',
   method: 'GET',
   header: {
     'Authorization': 'Bearer ' + token
@@ -802,7 +802,7 @@ this.setData({ field2: value2 });
 
 ```javascript
 wx.request({
-  url: 'https://api.joyjoin.com/data',
+  url: 'https://api.joyjoinapp.com/data',
   success(res) {
     if (res.statusCode === 200) {
       // Success
