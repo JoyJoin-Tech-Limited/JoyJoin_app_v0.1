@@ -12,12 +12,29 @@ permissions:
   contents: read
 
 jobs:
-  install-runner:
-    name: Install runner on CVM
+  download-runner:
+    name: Download + upload runner to CVM
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
-      - name: Install runner via SSH
+      - name: Download runner package
+        run: |
+          curl -sSL -o /tmp/actions-runner.tar.gz \
+            https://github.com/actions/runner/releases/download/v2.323.0/actions-runner-linux-x64-2.323.0.tar.gz
+          echo "Downloaded: $(du -h /tmp/actions-runner.tar.gz | cut -f1)"
+
+      - name: Upload runner to CVM
+        uses: burnett01/rsync-deployments@7.1.0
+        with:
+          switches: -az
+          path: /tmp/actions-runner.tar.gz
+          remote_path: /tmp/actions-runner.tar.gz
+          remote_host: ${{ secrets.SERVER_IP }}
+          remote_user: ${{ secrets.SERVER_USER }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          remote_key_pass: ${{ secrets.SSH_KEY_PASSPHRASE }}
+
+      - name: Install and configure runner
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -30,7 +47,7 @@ jobs:
             RUNNER_DIR="$HOME/actions-runner"
 
             if [ -d "$RUNNER_DIR" ] && [ -f "$RUNNER_DIR/.runner" ]; then
-              echo "✅ Runner already installed — removing and reinstalling..."
+              echo "✅ Runner already installed — reinstalling..."
               cd "$RUNNER_DIR"
               sudo ./svc.sh stop 2>/dev/null || true
               sudo ./svc.sh uninstall 2>/dev/null || true
@@ -38,15 +55,11 @@ jobs:
               rm -rf "$RUNNER_DIR"
             fi
 
-            echo "📦 Downloading GitHub Actions runner (via ghproxy)..."
             mkdir -p "$RUNNER_DIR"
             cd "$RUNNER_DIR"
-            curl -sSL -o runner.tar.gz \
-              https://ghproxy.com/https://github.com/actions/runner/releases/download/v2.323.0/actions-runner-linux-x64-2.323.0.tar.gz
-            tar xzf runner.tar.gz
-            rm runner.tar.gz
+            tar xzf /tmp/actions-runner.tar.gz
+            rm -f /tmp/actions-runner.tar.gz
 
-            echo "🔗 Configuring runner..."
             ./config.sh \
               --url https://github.com/${{ github.repository }} \
               --token ${{ inputs.runner_token }} \
@@ -55,13 +68,11 @@ jobs:
               --unattended \
               --replace
 
-            echo "⚙️ Installing runner as service..."
             sudo ./svc.sh install
             sudo ./svc.sh start
 
             echo ""
             echo "✅ Self-hosted runner installed!"
             echo "   Labels: weapp-upload"
-            echo "   IP for WeChat whitelist: 1.12.243.104"
-            RUNNER_STATUS=$(sudo ./svc.sh status 2>&1)
-            echo "   Status: $RUNNER_STATUS"
+            echo "   Now whitelist CVM IP in WeChat admin: 1.12.243.104"
+            sudo ./svc.sh status
