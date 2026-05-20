@@ -1,5 +1,6 @@
 import { View, Text, Input, Image } from '@tarojs/components'
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
 import { PhaseHeaderIcon } from '../phaseUtils'
@@ -353,7 +354,7 @@ export function AuctionPhaseView({
       <View className='icebreaker__auction-stats'>
         <View className='icebreaker__auction-stat'>
           <Image
-            src='/assets/lovart/icebreaker/icons/icon-coin-single.png'
+            src={cdnAsset('/assets/lovart/icebreaker/icons/icon-coin-single.png')}
             mode='aspectFit'
             className='icebreaker__auction-stat-icon'
             style={{ width: '28rpx', height: '28rpx' }}
@@ -363,7 +364,7 @@ export function AuctionPhaseView({
         </View>
         <View className='icebreaker__auction-stat'>
           <Image
-            src='/assets/lovart/icebreaker/icons/icon-coin-stack.png'
+            src={cdnAsset('/assets/lovart/icebreaker/icons/icon-coin-stack.png')}
             mode='aspectFit'
             className='icebreaker__auction-stat-icon'
             style={{ width: '28rpx', height: '28rpx' }}
@@ -444,7 +445,7 @@ export function AuctionPhaseView({
               {bidError ? (
                 <View className='icebreaker__auction-error-row'>
                   <Image
-                    src='/assets/lovart/icebreaker/icons/icon-coin-empty.png'
+                    src={cdnAsset('/assets/lovart/icebreaker/icons/icon-coin-empty.png')}
                     mode='aspectFit'
                     style={{ width: '32rpx', height: '32rpx' }}
                   />

@@ -1,6 +1,7 @@
 import { View, Text, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useMemo } from 'react'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { useQuery } from '@tanstack/react-query'
 import {
   getMyBlindBoxEvents,
@@ -194,7 +195,7 @@ function CenterHubContent({
       <View className='center-hub__empty-art' aria-label='空状态插画'>
         <Image
           className='center-hub__empty-img'
-          src='/assets/empty-state/center-empty-illustration.webp'
+          src={cdnAsset('/assets/empty-state/center-empty-illustration.webp')}
           mode='aspectFit'
           lazyLoad
         />
