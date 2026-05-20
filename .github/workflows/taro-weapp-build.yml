@@ -84,12 +84,17 @@ jobs:
           echo "   Version: $VERSION"
           echo "   Robot: 1"
           
-          npx miniprogram-ci upload \
+          if npx miniprogram-ci upload \
             --pp apps/mini-program \
             --pkp "$PRIVATE_KEY_FILE" \
             --uv "$VERSION" \
             --ud "$DESCRIPTION" \
-            --rp 1
+            --rp 1; then
+            echo "✅ WeChat upload complete!"
+          else
+            echo "⚠️ WeChat upload failed (likely runner IP not whitelisted)"
+            echo "   Build artifact available at: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "   Upload manually via: npx miniprogram-ci upload ..."
+          fi
           
           rm -f "$PRIVATE_KEY_FILE"
-          echo "✅ WeChat upload complete!"
