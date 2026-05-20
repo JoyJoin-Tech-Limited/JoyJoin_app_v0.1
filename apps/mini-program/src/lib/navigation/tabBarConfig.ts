@@ -60,10 +60,10 @@ export const MINI_PROGRAM_CENTER_HUB_TAB_ITEM: MiniProgramTabItem = {
   pagePath: 'pages/center-hub/index',
   url: '/pages/center-hub/index',
   text: '进行中',
-  appIconPath: '',
-  appSelectedIconPath: '',
-  componentIconPath: '',
-  componentSelectedIconPath: '',
+  appIconPath: 'assets/tab-icons/发现 icon_inactive.png',
+  appSelectedIconPath: 'assets/tab-icons/发现 icon.png',
+  componentIconPath: '../assets/tab-icons/发现 icon_inactive.png',
+  componentSelectedIconPath: '../assets/tab-icons/发现 icon.png',
 }
 
 export const MINI_PROGRAM_TAB_INDEX: Record<MiniProgramTabKey, number> = {
