@@ -1,6 +1,6 @@
 # JoyJoin — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents. Last updated: 2026-05-19
+> Compact instructions for AI coding agents. Last updated: 2026-05-20
 
 ---
 
@@ -115,6 +115,14 @@ npm run guardrails                    # env, secrets, legacy identifiers, import
 npm run dep-check                     # verify root has no deps
 npm run check:full                    # guardrails + lint + tests + build
 npm run harness:gate                  # 5-pillar quality gate
+
+# WeChat Mini-Program upload (开发版)
+# Set WECHAT_PRIVATE_KEY in GitHub Secrets → every main push auto-uploads.
+# IP must be whitelisted at mp.weixin.qq.com → 开发管理 → 开发设置 → IP白名单
+# Manual upload:
+#   npx miniprogram-ci upload --appid <appid> --pp apps/mini-program \
+#     --pkp <private-key-file> --uv "1.0.$(date +%Y%m%d).$(date +%H%M)" \
+#     --ud "dev build" --rp 1
 ```
 
 **Migration discipline (CVM PostgreSQL):**
@@ -201,6 +209,8 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 **Mini-program is launch-primary:** `apps/mini-program` is the primary and only shipping user-facing client. The web sandbox (`archived/workspaces/user-client/`) exists for historical reference. Cross-surface rules: `docs/reference/PLATFORM_COORDINATION.md`.
 
 **City Unlock v0.1 (2026-05-19):** Server-owned city expansion tracking via `user_city_interests` + `city_unlock_progress`. Threshold: 50 interested users triggers `collecting` → `researching` status transition + WeCom ops notification. Atomic count updates via Drizzle `sql` expressions (race-safe). Frontend shows gentle banner/feed-card/picker on discover when user has no city interest; progress page at `pages/city-unlock/index`. Admin report: `GET /api/admin/cities/unlock-report`.
+
+**Tab bar icon gotcha:** `centerHub` tab in `tabBarConfig.ts` must have a non-empty `iconPath`. The `miniprogram-ci` upload rejects empty icon paths with `800059`. The custom tab bar component renders the center button independently (`box-logo.webp` + `tab-bar-notch-bg.png`), so any placeholder icon works for validation. This was fixed 2026-05-19.
 
 ---
 
