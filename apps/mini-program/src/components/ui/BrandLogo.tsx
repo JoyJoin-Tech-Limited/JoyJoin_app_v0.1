@@ -1,4 +1,5 @@
 import { Image } from '@tarojs/components'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 
 export type BrandLogoSize = 'sm' | 'md' | 'lg' | 'xl'
 
@@ -66,7 +67,7 @@ export default function BrandLogo({
   return (
     <Image
       className={`brand-logo ${className}`}
-      src='/assets/box-logo.webp'
+      src={cdnAsset('/assets/box-logo.webp')}
       style={style}
       mode={mode}
       lazyLoad={lazyLoad}
