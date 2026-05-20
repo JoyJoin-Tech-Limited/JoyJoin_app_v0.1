@@ -19,15 +19,15 @@ jobs:
     steps:
       - name: Download runner package
         run: |
-          curl -sSL -o /tmp/actions-runner.tar.gz \
+          curl -sSL -o ./actions-runner.tar.gz \
             https://github.com/actions/runner/releases/download/v2.323.0/actions-runner-linux-x64-2.323.0.tar.gz
-          echo "Downloaded: $(du -h /tmp/actions-runner.tar.gz | cut -f1)"
+          echo "Downloaded: $(du -h ./actions-runner.tar.gz | cut -f1)"
 
       - name: Upload runner to CVM
         uses: burnett01/rsync-deployments@7.1.0
         with:
           switches: -az
-          path: /tmp/actions-runner.tar.gz
+          path: actions-runner.tar.gz
           remote_path: /tmp/actions-runner.tar.gz
           remote_host: ${{ secrets.SERVER_IP }}
           remote_user: ${{ secrets.SERVER_USER }}
