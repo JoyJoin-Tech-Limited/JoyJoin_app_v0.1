@@ -50,13 +50,3 @@ export function serveStatic(app: Express): boolean {
 
   return fs.existsSync(distPath);
 }
-
-  app.use(express.static(distPath));
-
-  app.use("*", (req, res, next) => {
-    if (String(req.path).startsWith("/api")) return next();
-    res.sendFile(path.resolve(distPath, "index.html"));
-  });
-  
-  return true;
-}
