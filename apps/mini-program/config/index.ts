@@ -79,25 +79,11 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/native-custom-tab-bar/',
           to: 'dist/custom-tab-bar/',
         },
-        // Xiaoyue mascot personality assets (intro, test-phase, loading)
-        {
-          from: 'src/assets/personality/xiaoyue',
-          to: 'dist/assets/personality/xiaoyue',
-        },
-        // Xiaoyue mascot sprite animation sheets
-        {
-          from: 'src/assets/mascot',
-          to: 'dist/assets/mascot',
-        },
         // Archetype result images (personality test slot animation + share poster)
+        // Kept in onboarding subpackage (not main package, 20MB limit)
         {
           from: 'src/pages/onboarding/assets/archetypes',
           to: 'dist/pages/onboarding/assets/archetypes',
-        },
-        // Lovart illustrated blind box layers (squad unboxing reveal)
-        {
-          from: 'src/assets/illustrations',
-          to: 'dist/assets/illustrations',
         },
       ],
       options: {
