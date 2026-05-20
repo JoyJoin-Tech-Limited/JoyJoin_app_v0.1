@@ -1,4 +1,19 @@
 services:
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      POSTGRES_USER: joyjoin
+      POSTGRES_PASSWORD: vSmunyGPdmgfM59B+i6b+Y5HIFLhvLat
+      POSTGRES_DB: joyjoin
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+
   granite-embedding:
     image: ghcr.io/joyjoin-tech-limited/granite-embedding:latest
     container_name: joyjoin-granite-embedding
@@ -12,6 +27,9 @@ services:
       dockerfile: apps/server/Dockerfile
     container_name: joyjoin-api
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_started
     env_file:
       - .env.production
     environment:
@@ -28,3 +46,6 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:3001:80"
+
+volumes:
+  pgdata:
