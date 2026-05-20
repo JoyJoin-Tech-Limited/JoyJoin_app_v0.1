@@ -1,0 +1,58 @@
+name: Setup CDN + Upload Assets
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upload-cdn:
+    name: Upload CDN assets to CVM
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Build mini-program (generate dist/assets)
+        run: |
+          npm ci
+          npm run build:weapp -w mini-program
+
+      - name: Create /static/ dir on CVM
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          script: |
+            sudo mkdir -p /static/assets
+            sudo chmod 755 /static /static/assets
+
+      - name: Upload assets to CVM
+        uses: burnett01/rsync-deployments@7.1.0
+        with:
+          switches: -az --delete
+          path: apps/mini-program/dist/assets/
+          remote_path: /static/assets/
+          remote_host: ${{ secrets.SERVER_IP }}
+          remote_user: ${{ secrets.SERVER_USER }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          remote_key_pass: ${{ secrets.SSH_KEY_PASSPHRASE }}
+
+      - name: Verify
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          script: |
+            echo "📋 Assets uploaded: $(find /static/assets/ -type f | wc -l) files"
+            echo "   Size: $(du -sh /static/assets/ | cut -f1)"

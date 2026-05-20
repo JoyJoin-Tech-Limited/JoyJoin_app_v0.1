@@ -19,8 +19,37 @@ export function serveStatic(app: Express): boolean {
 
   if (!fs.existsSync(distPath)) {
     console.warn("Static build directory not found. Running as pure API server.");
-    return false;
+  } else {
+    app.use(express.static(distPath));
+
+    app.use("*", (req, res, next) => {
+      if (String(req.path).startsWith("/api")) return next();
+      res.sendFile(path.resolve(distPath, "index.html"));
+    });
   }
+
+  // CDN static assets (mascot, xiaoyue, illustrations) — served at /static/
+  const cdnPath = "/static";
+  if (fs.existsSync(cdnPath)) {
+    app.use("/static", express.static(cdnPath, {
+      maxAge: "30d",
+      immutable: true,
+    }));
+    console.log(`CDN static assets served from ${cdnPath}`);
+  } else {
+    // Fallback: try deployment directory
+    const deployCdn = path.resolve(__dirname, "..", "static");
+    if (fs.existsSync(deployCdn)) {
+      app.use("/static", express.static(deployCdn, {
+        maxAge: "30d",
+        immutable: true,
+      }));
+      console.log(`CDN static assets served from ${deployCdn}`);
+    }
+  }
+
+  return fs.existsSync(distPath);
+}
 
   app.use(express.static(distPath));
 
