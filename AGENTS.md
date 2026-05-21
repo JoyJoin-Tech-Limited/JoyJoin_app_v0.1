@@ -117,12 +117,17 @@ npm run check:full                    # guardrails + lint + tests + build
 npm run harness:gate                  # 5-pillar quality gate
 
 # WeChat Mini-Program upload (开发版)
-# Set WECHAT_PRIVATE_KEY in GitHub Secrets → every main push auto-uploads.
-# IP must be whitelisted at mp.weixin.qq.com → 开发管理 → 开发设置 → IP白名单
-# Manual upload:
-#   npx miniprogram-ci upload --appid <appid> --pp apps/mini-program \
+# CI: every push to main triggers taro-weapp-build.yml → auto-uploads 开发版.
+# Manual upload (--appid is required; won't auto-read from project.config.json):
+#   npx miniprogram-ci upload --appid wx5a038ee6dee12032 --pp apps/mini-program \
 #     --pkp <private-key-file> --uv "1.0.$(date +%Y%m%d).$(date +%H%M)" \
 #     --ud "dev build" --rp 1
+#
+# CDN asset upload (mascot, phase icons, illustrations → joyjoinapp.com/static)
+# Trigger: gh workflow run "Upload CDN Assets"
+# Serves from /static/ on CVM (Express static route in vite.ts). Do NOT change
+# CDN_RSYNC_PATH away from /static — Express only looks at /static/ and
+# ../server/static/, not /var/www/cdn/static.
 ```
 
 **Migration discipline (CVM PostgreSQL):**

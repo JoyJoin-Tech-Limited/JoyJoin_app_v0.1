@@ -96,6 +96,9 @@ npm run check:full       # Run guardrails, lint, tests, and the full build
 npm run lint             # Alias of the repo TypeScript checks
 npm run test             # Run workspace tests (server tests + no-op placeholders elsewhere)
 npm run build:weapp --workspace=mini-program  # Build the WeChat Mini Program workspace
+gh workflow run "Upload CDN Assets"            # Upload static assets to joyjoinapp.com/static
+npm run upload:cdn-assets -w mini-program       # Upload CDN assets locally (rsync to CVM)
+npm run upload:cdn-assets:dry-run -w mini-program  # Preview what would upload
 npm run orchestration:validate      # Validate .github/orchestration.yaml and related runtime files
 npm run orchestration:tooling-report # Print the agent tooling sufficiency audit
 npm run db:push          # Sync Drizzle schema to database

@@ -122,7 +122,7 @@ Assets are **CDN-first** in production. The build inlines `TARO_APP_CDN_BASE_URL
 | `npm run optimize:promo` | Generate promotional image assets |
 | `npm run optimize:lovart` | Generate Lovart-designed image assets |
 | `npm run check:lovart-assets` | Validate Lovart asset sizes |
-| `npm run upload:cdn-assets` | Upload manifest assets to CDN (`--dry-run` for preview) |
+| `npm run upload:cdn-assets` | Upload manifest assets to CDN (`--dry-run` for preview). For production, trigger `gh workflow run "Upload CDN Assets"` which builds + uploads via GitHub Actions. |
 | `npm run check:package-size` | Audit mini-program bundle size against budget |
 
 **Active copy patterns** (`config/index.ts`) — only critical bundled assets:
