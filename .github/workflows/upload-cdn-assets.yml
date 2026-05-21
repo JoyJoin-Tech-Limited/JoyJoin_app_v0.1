@@ -29,7 +29,7 @@ jobs:
           CDN_BASE_URL: https://joyjoinapp.com/static
           CDN_RSYNC_HOST: ${{ secrets.SERVER_IP }}
           CDN_RSYNC_USER: ${{ secrets.SERVER_USER }}
-          CDN_RSYNC_PATH: /var/www/cdn/static
+          CDN_RSYNC_PATH: /static
         run: |
           printf '%s\n' '${{ secrets.SSH_PRIVATE_KEY }}' > /tmp/deploy_key
           chmod 600 /tmp/deploy_key
