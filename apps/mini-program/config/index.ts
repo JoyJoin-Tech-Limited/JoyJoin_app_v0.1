@@ -88,6 +88,11 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/native-custom-tab-bar/',
           to: 'dist/custom-tab-bar/',
         },
+        // Tab bar notch background image for native custom tab bar (~3KB, critical)
+        {
+          from: 'src/assets/tab-bar-notch-bg.png',
+          to: 'dist/assets/tab-bar-notch-bg.png',
+        },
         // Box logo for native custom tab bar center button (~60KB, critical)
         {
           from: 'src/assets/box-logo.webp',
