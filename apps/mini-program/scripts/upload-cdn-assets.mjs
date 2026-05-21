@@ -120,10 +120,9 @@ async function uploadRsync(files) {
   const sshArgs = ['-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null']
   if (key) sshArgs.push('-i', key)
 
-  // Quote args with spaces for shell command strings used by rsync -e
   const sshArgsQuoted = sshArgs.map((a) => (a.includes(' ') ? `'${a}'` : a))
 
-  // Ensure remote directory exists
+  // Ensure remote base directory exists
   if (!DRY_RUN) {
     await runCommand('ssh', [...sshArgs, `${user}@${host}`, `mkdir -p ${remotePath}`])
   }
@@ -132,7 +131,6 @@ async function uploadRsync(files) {
   if (SOURCE_DIR) {
     const src = SOURCE_DIR.replace(/\/$/, '') + '/'
     const dest = `${user}@${host}:${remotePath}/`
-    const rsyncCmd = ['rsync', '-avz', '--delete', '--checksum', '-e', `ssh ${sshArgsQuoted.join(' ')}`, src, dest]
     if (DRY_RUN) {
       console.log(`   [dry-run] Would rsync: ${src} → ${dest}`)
     } else {
@@ -141,25 +139,44 @@ async function uploadRsync(files) {
     return
   }
 
-  // Manifest mode — upload individual files
-  for (const { localPath, cdnPath } of files) {
-    const srcInDist = path.join(DIST_DIR, localPath)
-    const srcInSrc = path.join(SRC_DIR, localPath)
-    const src = fs.existsSync(srcInDist) ? srcInDist : fs.existsSync(srcInSrc) ? srcInSrc : null
-    if (!src) {
-      console.warn(`   ⚠️ Source file missing in both dist/ and src/, skipping: ${localPath}`)
-      continue
-    }
-    const dest = `${user}@${host}:${path.posix.join(remotePath, cdnPath)}`
-    const destDir = path.posix.join(remotePath, path.posix.dirname(cdnPath))
+  // Manifest mode — stage all files in a temp dir, then rsync once
+  const stagingDir = fs.mkdtempSync('/tmp/cdn-upload-')
+  try {
+    let stagedCount = 0
 
+    for (const { localPath, cdnPath } of files) {
+      const srcInDist = path.join(DIST_DIR, localPath)
+      const srcInSrc = path.join(SRC_DIR, localPath)
+      const src = fs.existsSync(srcInDist) ? srcInDist : fs.existsSync(srcInSrc) ? srcInSrc : null
+      if (!src) {
+        console.warn(`   ⚠️ Source file missing in both dist/ and src/, skipping: ${localPath}`)
+        continue
+      }
+
+      const stagingDest = path.join(stagingDir, cdnPath)
+      fs.mkdirSync(path.dirname(stagingDest), { recursive: true })
+      fs.cpSync(src, stagingDest)
+      stagedCount++
+
+      logFile(cdnPath, fs.statSync(src).size)
+    }
+
+    if (stagedCount === 0) {
+      console.log('   No files to upload.')
+      return
+    }
+
+    // Single rsync of the entire staging directory
+    const src = stagingDir + '/'
+    const dest = `${user}@${host}:${remotePath}/`
     if (DRY_RUN) {
-      console.log(`   [dry-run] Would rsync: ${src} → ${dest}`)
-      continue
+      console.log(`   [dry-run] Would rsync: ${stagedCount} staged files → ${dest}`)
+    } else {
+      console.log(`   🚀 Syncing ${stagedCount} files in one batch...`)
+      await runCommand('rsync', ['-avz', '--checksum', '-e', `ssh ${sshArgsQuoted.join(' ')}`, src, dest])
     }
-
-    await runCommand('ssh', [...sshArgs, `${user}@${host}`, `mkdir -p ${destDir}`])
-    await runCommand('rsync', ['-avz', '--checksum', '-e', `ssh ${sshArgsQuoted.join(' ')}`, src, dest])
+  } finally {
+    fs.rmSync(stagingDir, { recursive: true, force: true })
   }
 }
 
