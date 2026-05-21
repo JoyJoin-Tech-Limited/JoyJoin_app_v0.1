@@ -1,6 +1,6 @@
 # Personality Test System - V4 Adaptive Assessment
 
-**Last Updated:** 2026-05-20  
+**Last Updated:** 2026-05-21  
 **Version:** V4 Adaptive Engine + V2 Matcher  
 **Status:** Production
 
@@ -48,6 +48,15 @@ The V4 engine and question bank live in **`packages/shared/src/personality/`**; 
 |--------|--------|---------------------|------------------------|
 | **Web** (`apps/user-client`) | `features/onboarding/active/pages/` — personality test, results; routes `/personality-test`, `/personality-test/results` | Browser `localStorage` key `joyjoin_v4_presignup_answers` (and related keys per onboarding docs) | `POST /api/auth/wechat/login-with-test` with code + session + answers |
 | **Mini Program** (`apps/mini-program`, launch-primary) | `pages/onboarding/personality-test/` — `index` (test), `results`; registered in the **onboarding subpackage** via [`onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts) | Same logical keys through Taro storage — see [`anonymousOnboarding.ts`](../apps/mini-program/src/lib/auth/anonymousOnboarding.ts) (`joyjoin_v4_presignup_answers`, `joyjoin_v4_assessment_session`) | [`authenticateMiniProgramUserWithTest()`](../apps/mini-program/src/lib/api/api.ts) → `POST /api/auth/wechat/login-with-test` inline from the results page |
+
+**Result Page UI (Mini Program):**
+The results page (`pages/onboarding/personality-test/results/`) renders a multi-stage reveal flow:
+1. **Slot machine animation** — 12 archetypes spin and land on the user's match
+2. **Reveal sequence** — silhouette → fill → sparkle with haptic feedback
+3. **Result card** — Hero card with archetype name, three-tier badge system (nickname gradient trophy, rarity amber dot, chemistry soft tint), Xiaoyue avatar + speech-bubble analysis, and trait summary
+4. **Collectible card** — Pokémon-style holographic card with touch-drag tilt, energy bar, skill badges, and match chemistry chips
+5. **Detail modal** — Progressive disclosure via "看看悦仔怎么说" CTA; opens a bottom sheet with full AI analysis, trait radar, and best partner matches
+6. **Share poster** — Canvas-generated shareable card with archetype art, rarity label, and skill set
 
 **Returning users only (no in-flight test import):** Mini Program [`pages/login/index`](../apps/mini-program/src/pages/login/index.tsx) uses [`useWeChatLogin`](../apps/mini-program/src/hooks/auth/useWeChatLogin.ts) → [`authenticateMiniProgramUser()`](../apps/mini-program/src/lib/api/api.ts) → `POST /api/auth/wechat/login` (not `login-with-test`). Coordination detail: [`docs/reference/PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md).
 

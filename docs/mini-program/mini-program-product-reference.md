@@ -1,7 +1,7 @@
 # Mini-Program Product Reference
 
 > **Status:** Active launch-primary mini-program reference for `apps/mini-program`.
-> **Last verified:** 2026-05-19.
+> **Last verified:** 2026-05-21.
 > **Non-replacement note:** This document does **not** replace [`../PRODUCT_REQUIREMENTS.md`](../PRODUCT_REQUIREMENTS.md) or [`../apps/mini-program/README.md`](../apps/mini-program/README.md). It is a compact product-to-code bridge for the live WeChat mini-program surface.
 > **Authority chain:** 1. [`../PRODUCT_REQUIREMENTS.md`](../PRODUCT_REQUIREMENTS.md) for product canon and terminology. 2. [`../apps/mini-program/README.md`](../apps/mini-program/README.md), [`./architecture/current-state.md`](./architecture/current-state.md), [`./systems/onboarding-flow.md`](./systems/onboarding-flow.md), and [`./reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md) for runtime ownership and flow rules. 3. [`../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts), [`../apps/mini-program/src/app.config.ts`](../apps/mini-program/src/app.config.ts), [`../apps/mini-program/src/lib/api/api.ts`](../apps/mini-program/src/lib/api/api.ts), [`../packages/shared/src/README.md`](../packages/shared/src/README.md), [`../packages/shared/src/schema.ts`](../packages/shared/src/schema.ts), and [`../apps/server/src/README.md`](../apps/server/src/README.md) for active route, contract, and backend truth.
 
@@ -65,7 +65,7 @@ This inventory is derived from the registered paths in [`../apps/mini-program/sr
 | --- | --- | --- | --- |
 | `pages/onboarding/onboarding/index` | Redirect hub | Receives `nextStep=onboarding` and forwards immediately to the actual server-owned onboarding step. | Compatibility shell, not a standalone form step. |
 | `pages/onboarding/personality-test/index` | Onboarding step | Runs the adaptive personality assessment with anonymous pre-auth support. | Value-first entry surface. |
-| `pages/onboarding/personality-test/results/index` | Onboarding step | Reveals the archetype result, summary, and share/poster experience after the test completes. | Includes replayable reveal and native share hooks. |
+| `pages/onboarding/personality-test/results/index` | Onboarding step | Reveals the archetype result via slot-machine + silhouette-sparkle animation, then shows a hero card with three-tier badges (nickname/rarity/chemistry), Xiaoyue speech-bubble analysis, collectible holographic card with touch-drag tilt, and share/poster generation. | Includes progressive disclosure ("看看悦仔怎么说" CTA → detail modal with full AI analysis + trait radar + partner matches), skeleton loading for Xiaoyue analysis, graceful fallback indicator, replayable reveal, and native share hooks. |
 | `pages/onboarding/personality-test/results/index` (inline login) | Onboarding step | Results page triggers inline WeChat login and imports anonymous answers after successful auth. | Uses `/api/auth/wechat/login-with-test`. The standalone auth-gate page was removed in 2026-05. |
 | `pages/onboarding/essential-data/index` | Onboarding step | Collects the essential profile fields required before users can continue deeper into onboarding. | Post-auth step owned by `nextStep`. |
 | `pages/onboarding/extended-data/index` | Onboarding step | Collects interest selections and heat/depth signals used by later matching and personalization flows. | Canonical extended-data step. |

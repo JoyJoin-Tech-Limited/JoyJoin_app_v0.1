@@ -42,7 +42,7 @@ Mixed requests: Brainstorm first + compact Execute handoff for ideation+ship; De
 ## Shared output contract
 Every response must include, in this order: Mode, Sin mapping, Recommendation, Deliverables, Code params, Pseudocode. Always start Sin mapping with this table:
 | Sin | Severity (Low/Med/High) | Evidence | UX impact | Correction |
-If evidence is weak or incomplete, label it as an assumption. See [`references/sin-mapping.md`](./references/sin-mapping.md) for detailed sin definitions, CTA hierarchy audit steps, screen audit worksheet, and mode-specific deliverable specs.
+If evidence is weak or incomplete, label it as an assumption. See [`references/sin-mapping.md`](./references/sin-mapping.md) for detailed sin definitions, CTA hierarchy audit steps, screen audit worksheet, mode-specific deliverable specs, and the **Virtuous Sins** framework (when apparent sin serves the product: Clutter→Density, Vanity→Signature, Myopia→Graceful Degradation).
 ## Working rules
 - Start from the user task, not the visual trick.
 - Prefer clear hierarchy over decorative density.
