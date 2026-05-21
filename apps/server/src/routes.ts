@@ -43,6 +43,7 @@ import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import { sign as signCookie } from 'cookie-signature';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -78,13 +79,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Session token middleware: WeChat Mini Program on real devices does not
   // persist Set-Cookie from HTTPS responses. The client stores the session ID
   // from the login response body and sends it as X-Session-Token header on
-  // subsequent requests. This middleware injects it as a cookie so express-session
-  // can load the session from the store transparently.
+  // subsequent requests. This middleware injects it as a signed cookie so
+  // express-session can load the session from the store transparently.
   app.use((req, _res, next) => {
     const sessionToken = req.headers['x-session-token'];
     if (sessionToken && !req.headers.cookie) {
       const token = Array.isArray(sessionToken) ? sessionToken[0] : sessionToken;
-      req.headers.cookie = `connect.sid=${token}`;
+      // express-session requires the cookie value to be signed (s:<sid>.<hmac>).
+      // Unsigned cookies are ignored when a secret is configured.
+      const signed = 's:' + signCookie(token, process.env.SESSION_SECRET!);
+      req.headers.cookie = `connect.sid=${signed}`;
+      logger.info('[X-Session-Token] Restored session from header', {
+        sessionId: token.substring(0, 12) + '...',
+      });
     }
     next();
   });
