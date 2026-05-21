@@ -148,25 +148,28 @@ export default function EventsPage() {
             <EventCardSkeleton />
           </>
         ) : displayEvents.length > 0 ? (
-          displayEvents.map((event, index) => (
-            <View key={String(event.id)} className='events-page__card'>
-              <RichListCard
-                title={event.title ?? '悦聚活动'}
-                subtitle={event.dateTime ?? '时间待定'}
-                gradient='premium'
-                onClick={() => handleEventTap(event)}
-                index={index}
-              >
-                {event.startTime && resolvedActiveTab === 'upcoming' && (
-                  <View className='events-page__countdown'>
-                    <Text className='events-page__countdown-text'>
-                      ⏰ {getCountdownText(event.startTime)}
-                    </Text>
-                  </View>
-                )}
-              </RichListCard>
-            </View>
-          ))
+          displayEvents.map((event, index) => {
+            const startTime = typeof event.startTime === 'string' ? event.startTime : ''
+            return (
+              <View key={String(event.id)} className='events-page__card'>
+                <RichListCard
+                  title={event.title ?? '悦聚活动'}
+                  subtitle={event.dateTime ?? '时间待定'}
+                  gradient='premium'
+                  onClick={() => handleEventTap(event)}
+                  index={index}
+                >
+                  {startTime && resolvedActiveTab === 'upcoming' && (
+                    <View className='events-page__countdown'>
+                      <Text className='events-page__countdown-text'>
+                        ⏰ {String(getCountdownText(startTime))}
+                      </Text>
+                    </View>
+                  )}
+                </RichListCard>
+              </View>
+            )
+          })
         ) : (
           <XiaoyueEmptyState
             emotion='curious'
