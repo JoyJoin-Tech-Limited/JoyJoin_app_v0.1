@@ -18,7 +18,7 @@ const BADGE_HEIGHT = 42
 const BADGE_RADIUS = 21
 const HERO_IMAGE_SIZE = 224
 const HERO_IMAGE_RADIUS = 112
-const SKILL_CARD_HEIGHT = 158
+const SKILL_CARD_HEIGHT = 148
 const SKILL_CARD_RADIUS = 28
 
 export const PERSONALITY_SHARE_POSTER_CANVAS_ID = 'personality-share-poster-canvas'

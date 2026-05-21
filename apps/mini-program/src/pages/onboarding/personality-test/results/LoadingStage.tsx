@@ -20,9 +20,9 @@ export default function LoadingStage({ phaseText }: LoadingStageProps) {
         <Text className='personality-results__network-copy'>{phaseText}</Text>
       ) : (
         <View className='personality-results__skeleton'>
-          <View className='personality-results__skeleton-progress' />
-          <View className='personality-results__skeleton-frame' />
-          <View className='personality-results__skeleton-text' />
+          <View className='personality-results__skeleton-avatar' />
+          <View className='personality-results__skeleton-title' />
+          <View className='personality-results__skeleton-line personality-results__skeleton-line--short' />
         </View>
       )}
     </View>

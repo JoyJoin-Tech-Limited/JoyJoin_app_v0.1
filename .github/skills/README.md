@@ -48,6 +48,7 @@ Start here when reviewing a pull request or auditing code changes.
 | Skill | What it covers |
 |-------|---------------|
 | [`code-review`](./code-review/SKILL.md) | Structured PR review using the Harness Engineering Framework — correctness, reliability, scalability, security, observability, and architecture fit. **Start here for all PR reviews.** Load domain-specific skills below for deeper review in affected areas. |
+| [`ui-layout-audit`](./ui-layout-audit/SKILL.md) | Pixel-level UI/UX audit: spacing hierarchy, typography comfort, emoji discipline, visual coherence (孤字 guard), and emotional craft. Use before shipping UI-heavy PRs or when a screen feels cheap / crowded / unbalanced. |
 
 ---
 

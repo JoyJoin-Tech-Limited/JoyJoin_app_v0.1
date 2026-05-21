@@ -172,7 +172,7 @@ export default memo(function PersonalityTestAnswerArea({
           activeColor={COLOR_PRIMARY}
           backgroundColor={COLOR_PRIMARY_LIGHT}
           blockColor={COLOR_PRIMARY}
-          blockSize={28}
+          blockSize={44}
           showValue={false}
           onChanging={(event) => {
             const val = Number(event.detail.value)
@@ -209,6 +209,7 @@ export default memo(function PersonalityTestAnswerArea({
   }
 
   if (questionType === 'emoji_tap') {
+    // UX guard: labels should be ≤8 CJK characters to avoid 孤字 wrapping in 2-col grid
     return (
       <View className='answer-area__emoji-grid'>
         {options.map((option, index) => {

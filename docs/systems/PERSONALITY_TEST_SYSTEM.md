@@ -164,7 +164,7 @@ The system measures 6 core personality traits, each scored on a 0-100 scale:
 
 **Example Anchor Question (Q1):**
 ```
-🎉 工作日傍晚，同事群里突然有人发起：今晚有人想一起去新开的居酒屋吗？
+工作日傍晚，同事群里突然有人发起：今晚有人想一起去新开的居酒屋吗？
 
 你的第一反应和接下来的行动会是？
 
@@ -199,7 +199,7 @@ D. 今天有点累...你们玩得开心！
 
 **Example Adaptive Question (Q18):**
 ```
-😌 一个你期待已久的周末个人计划，突然被朋友的热闹聚会邀请打断。
+一个你期待已久的周末个人计划，突然被朋友的热闹聚会邀请打断。
 
 你内心更强烈的倾向是？
 
@@ -234,7 +234,7 @@ D. 纠结但最终参加聚会
 
 **Example Disambiguation Question (Q48):**
 ```
-🤔 在一个深度讨论中，话题变得抽象和哲学化
+在一个深度讨论中，话题变得抽象和哲学化
 
 你更可能的反应是？
 
@@ -274,7 +274,7 @@ After the adaptive engine reaches its stopping criteria (confidence ≥ 0.7 on a
 #### Q_PLAYFUL_EMOJI — Conflict Instinct Tap (`emoji_tap` type)
 
 ```
-💬 群里两个朋友突然争了起来……你的第一反应是？
+群里两个朋友突然争了起来……你的第一反应是？
 (快速点一个 emoji，相信直觉)
 ```
 

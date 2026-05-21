@@ -2,6 +2,10 @@
 @use '../../styles/mixins' as *;
 
 .joy-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
   min-height: max($button-height, $cta-min-tap);
   border-radius: $button-radius;
   font-size: $font-size-base;
@@ -30,6 +34,7 @@
 
   &--secondary {
     min-height: max($button-height, $cta-min-tap);
+    padding: 0 $spacing-md;
     background: $color-surface;
     border: 2rpx solid $color-border;
     color: $color-text-primary;
@@ -41,10 +46,15 @@
     }
   }
 
+  &--sm {
+    min-height: max($button-height-sm, $cta-min-tap);
+    height: $button-height-sm;
+    padding: 0 $spacing-sm;
+    border-radius: $card-radius-sm;
+    font-size: $font-size-sm;
+  }
+
   &--wechat {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     min-height: max($button-height, $cta-min-tap);
     height: $button-height;
     border-radius: 16rpx;

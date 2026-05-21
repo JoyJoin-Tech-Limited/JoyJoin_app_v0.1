@@ -25,21 +25,21 @@ interface ArchetypeGlyphProps {
 }
 
 const GLYPH_PATHS: Record<string, string> = {
-  'corgi': '/assets/personality/archetypes/archetype-corgi.webp',
-  'rooster': '/assets/personality/archetypes/archetype-rooster.webp',
-  'hamster_praise': '/assets/personality/archetypes/archetype-hamster_praise.webp',
-  'fox': '/assets/personality/archetypes/archetype-fox.webp',
-  'dolphin_calm': '/assets/personality/archetypes/archetype-dolphin_calm.webp',
-  'spider': '/assets/personality/archetypes/archetype-spider.webp',
-  'koala': '/assets/personality/archetypes/archetype-koala.webp',
-  'octopus': '/assets/personality/archetypes/archetype-octopus.webp',
-  'owl': '/assets/personality/archetypes/archetype-owl.webp',
-  'elephant': '/assets/personality/archetypes/archetype-elephant.webp',
-  'turtle': '/assets/personality/archetypes/archetype-turtle.webp',
-  'cat': '/assets/personality/archetypes/archetype-cat.webp',
+  'corgi': '/assets/archetypes/archetype-corgi.webp',
+  'rooster': '/assets/archetypes/archetype-rooster.webp',
+  'hamster_praise': '/assets/archetypes/archetype-hamster_praise.webp',
+  'fox': '/assets/archetypes/archetype-fox.webp',
+  'dolphin_calm': '/assets/archetypes/archetype-dolphin_calm.webp',
+  'spider': '/assets/archetypes/archetype-spider.webp',
+  'koala': '/assets/archetypes/archetype-koala.webp',
+  'octopus': '/assets/archetypes/archetype-octopus.webp',
+  'owl': '/assets/archetypes/archetype-owl.webp',
+  'elephant': '/assets/archetypes/archetype-elephant.webp',
+  'turtle': '/assets/archetypes/archetype-turtle.webp',
+  'cat': '/assets/archetypes/archetype-cat.webp',
 }
 
-const FALLBACK_PATH = '/assets/personality/archetypes/archetype-corgi.webp'
+const FALLBACK_PATH = '/assets/archetypes/archetype-corgi.webp'
 
 export default function ArchetypeGlyph({
   archetype,

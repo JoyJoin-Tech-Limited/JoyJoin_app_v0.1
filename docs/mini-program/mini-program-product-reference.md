@@ -205,6 +205,7 @@ Default rule: if a mini-program task touches auth, payment, pricing, or another 
 | Launch-critical server env | [`./product/LAUNCH_CONFIG.md`](./product/LAUNCH_CONFIG.md) | `DATABASE_URL`, `SESSION_SECRET`, `WECHAT_APPID`, and `WECHAT_SECRET` are required; `PAYMENTS_ENABLED` gates live payment availability. |
 | WeChat Pay enablement | [`./product/LAUNCH_CONFIG.md`](./product/LAUNCH_CONFIG.md) | When payments are enabled, the WeChat Pay variables must also be configured and stay consistent with the mini-program app identity. |
 | Tab bar and shell runtime | [`../apps/mini-program/README.md`](../apps/mini-program/README.md), [`../apps/mini-program/src/app.config.ts`](../apps/mini-program/src/app.config.ts) | The active runtime uses a native custom tab bar with `tabBar.custom: true`. |
+| Asset delivery | [`../apps/mini-program/README.md`](../apps/mini-program/README.md), [`../apps/mini-program/scripts/cdn-asset-manifest.json`](../apps/mini-program/scripts/cdn-asset-manifest.json) | CDN-first via `cdnAsset()`. Production builds require `TARO_APP_CDN_BASE_URL` in `.env.local`. Validator: `npm run validate:assets`. |
 
 ## 12. QA and maintenance
 

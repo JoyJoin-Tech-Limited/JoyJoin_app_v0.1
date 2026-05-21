@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import path from 'path'
 
 export const REPO_ENV_PATH = path.resolve(__dirname, '..', '..', '..', '.env')
+export const MINI_PROGRAM_ENV_PATH = path.resolve(__dirname, '..', '.env.local')
 export const DEFAULT_MINI_PROGRAM_API_BASE_URL = 'http://localhost:5001'
 
 export function parseEnvFile(envFileContent: string): Record<string, string> {
@@ -56,6 +57,28 @@ export function loadRepoRootEnvFile(
   const envEntries = parseEnvFile(envFileContent)
   for (const [key, value] of Object.entries(envEntries)) {
     if (env[key] === undefined) {
+      env[key] = value
+    }
+  }
+}
+
+export function loadMiniProgramEnvFile(
+  envPath = MINI_PROGRAM_ENV_PATH,
+  env: NodeJS.ProcessEnv = process.env,
+): void {
+  let envFileContent: string
+
+  try {
+    envFileContent = readFileSync(envPath, 'utf8')
+  } catch {
+    return
+  }
+
+  const envEntries = parseEnvFile(envFileContent)
+  for (const [key, value] of Object.entries(envEntries)) {
+    // .env.local is authoritative for mini-program builds:
+    // overwrite empty strings as well as undefined values.
+    if (env[key] === undefined || env[key] === '') {
       env[key] = value
     }
   }

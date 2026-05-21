@@ -262,6 +262,7 @@ fi
 
 | Phase | Status | Date | Notes |
 |-------|--------|------|-------|
+| Question bank data cleanup | **COMPLETE** | 2026-05-20 | 137 leading emojis removed from `scenarioText` across L1/L2/Extended/Advanced/Attractor question files in `packages/shared/src/personality/` |
 | Phase 1: Personality Results | Pending | — | Original highest-impact surface; not yet started |
 | Phase 2: Chemistry + Matching | **COMPLETE** | 2026-04-29 | Unified reveal shipped; all emojis removed from matching-status/ and squad-unboxing/; JoyJoinIcon + emojiToIconMap.ts in place; regression tests + bundle gate + guardrails added |
 | Phase 3: Events + Icebreaker | Pending | — | Original plan retained below |

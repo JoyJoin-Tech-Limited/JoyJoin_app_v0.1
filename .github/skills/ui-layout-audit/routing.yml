@@ -1,0 +1,62 @@
+skill: ui-layout-audit
+category: internal
+
+primary_ownership: >
+  Pixel-level UI/UX audit for JoyJoin screens: spacing hierarchy, typography comfort,
+  emoji discipline, visual coherence (孤字 guard), and emotional craft. Ensures
+  premium "treat to the eyes" standard across mini-program and web surfaces.
+
+use_when:
+  - a screen feels cheap, crowded, or unbalanced
+  - before shipping UI-heavy PRs (onboarding, icebreaker, personality test)
+  - reviewing spacing, typography, or emoji usage on any screen
+  - checking for orphan words (孤字) or broken Chinese line breaking
+  - auditing reading experience (line-height, measure, paragraph spacing)
+
+do_not_use_when:
+  - task is purely backend with no UI surface
+  - task is about writing new product requirements
+  - task is about generating design assets (use lovart-design-workflow)
+  - task is about component architecture or placement (use frontend-component-architecture)
+
+strong_triggers:
+  - audit this screen
+  - check layout
+  - spacing review
+  - pixel perfect check
+  - polish this UI
+  - layout feels off
+  - why does this look cheap
+  - read like a treat
+  - overflow-wrap
+  - word-break
+  - line-height
+  - orphan word
+  - 孤字
+  - emoji discipline
+  - spacing hierarchy
+  - typography comfort
+  - visual coherence
+  - emotional craft
+  - treat test
+  - 排版合理性
+
+owned_files:
+  - apps/mini-program/src/pages/**
+  - apps/mini-program/src/components/**
+
+owned_paths: []
+
+owned_symbols: []
+
+related_skills:
+  - skill: mini-program-frontend-excellence
+    when: the audit findings need Taro-native implementation guidance
+  - skill: frontend-design-audit
+    when: a broader 5-dimension design-quality audit is needed beyond layout/typography
+  - skill: joyjoin-brand-guidelines
+    when: evaluating brand fidelity, color palette, or mascot usage
+  - skill: wow-elements
+    when: the screen needs crafted motion or micro-interactions
+  - skill: harness-completion-gate
+    when: running the final pre-ship quality gate

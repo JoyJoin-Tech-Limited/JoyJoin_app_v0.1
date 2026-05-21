@@ -20,19 +20,24 @@ export interface ArchetypeAssetPaths {
   png: string
 }
 
+// WebP lives in main package so login page + other main-package screens can load them.
+// PNG stays in onboarding subpackage for share-poster canvas (canvas getImageInfo).
+const ASSET_BASE_WEBP = '/assets/archetypes'
+const ASSET_BASE_PNG  = '/pages/onboarding/assets/archetypes'
+
 const ARCHETYPE_ASSET_MAP: Record<string, ArchetypeAssetPaths> = {
-  corgi: { webp: '/pages/onboarding/assets/archetypes/archetype-corgi.webp', png: '/pages/onboarding/assets/archetypes/archetype-corgi.png' },
-  rooster: { webp: '/pages/onboarding/assets/archetypes/archetype-rooster.webp', png: '/pages/onboarding/assets/archetypes/archetype-rooster.png' },
-  hamster_praise: { webp: '/pages/onboarding/assets/archetypes/archetype-hamster_praise.webp', png: '/pages/onboarding/assets/archetypes/archetype-hamster_praise.png' },
-  fox: { webp: '/pages/onboarding/assets/archetypes/archetype-fox.webp', png: '/pages/onboarding/assets/archetypes/archetype-fox.png' },
-  dolphin_calm: { webp: '/pages/onboarding/assets/archetypes/archetype-dolphin_calm.webp', png: '/pages/onboarding/assets/archetypes/archetype-dolphin_calm.png' },
-  spider: { webp: '/pages/onboarding/assets/archetypes/archetype-spider.webp', png: '/pages/onboarding/assets/archetypes/archetype-spider.png' },
-  koala: { webp: '/pages/onboarding/assets/archetypes/archetype-koala.webp', png: '/pages/onboarding/assets/archetypes/archetype-koala.png' },
-  octopus: { webp: '/pages/onboarding/assets/archetypes/archetype-octopus.webp', png: '/pages/onboarding/assets/archetypes/archetype-octopus.png' },
-  owl: { webp: '/pages/onboarding/assets/archetypes/archetype-owl.webp', png: '/pages/onboarding/assets/archetypes/archetype-owl.png' },
-  elephant: { webp: '/pages/onboarding/assets/archetypes/archetype-elephant.webp', png: '/pages/onboarding/assets/archetypes/archetype-elephant.png' },
-  turtle: { webp: '/pages/onboarding/assets/archetypes/archetype-turtle.webp', png: '/pages/onboarding/assets/archetypes/archetype-turtle.png' },
-  cat: { webp: '/pages/onboarding/assets/archetypes/archetype-cat.webp', png: '/pages/onboarding/assets/archetypes/archetype-cat.png' },
+  corgi:        { webp: `${ASSET_BASE_WEBP}/archetype-corgi.webp`,        png: `${ASSET_BASE_PNG}/archetype-corgi.png` },
+  rooster:      { webp: `${ASSET_BASE_WEBP}/archetype-rooster.webp`,      png: `${ASSET_BASE_PNG}/archetype-rooster.png` },
+  hamster_praise:{ webp: `${ASSET_BASE_WEBP}/archetype-hamster_praise.webp`,png: `${ASSET_BASE_PNG}/archetype-hamster_praise.png` },
+  fox:          { webp: `${ASSET_BASE_WEBP}/archetype-fox.webp`,          png: `${ASSET_BASE_PNG}/archetype-fox.png` },
+  dolphin_calm: { webp: `${ASSET_BASE_WEBP}/archetype-dolphin_calm.webp`, png: `${ASSET_BASE_PNG}/archetype-dolphin_calm.png` },
+  spider:       { webp: `${ASSET_BASE_WEBP}/archetype-spider.webp`,       png: `${ASSET_BASE_PNG}/archetype-spider.png` },
+  koala:        { webp: `${ASSET_BASE_WEBP}/archetype-koala.webp`,        png: `${ASSET_BASE_PNG}/archetype-koala.png` },
+  octopus:      { webp: `${ASSET_BASE_WEBP}/archetype-octopus.webp`,      png: `${ASSET_BASE_PNG}/archetype-octopus.png` },
+  owl:          { webp: `${ASSET_BASE_WEBP}/archetype-owl.webp`,          png: `${ASSET_BASE_PNG}/archetype-owl.png` },
+  elephant:     { webp: `${ASSET_BASE_WEBP}/archetype-elephant.webp`,     png: `${ASSET_BASE_PNG}/archetype-elephant.png` },
+  turtle:       { webp: `${ASSET_BASE_WEBP}/archetype-turtle.webp`,       png: `${ASSET_BASE_PNG}/archetype-turtle.png` },
+  cat:          { webp: `${ASSET_BASE_WEBP}/archetype-cat.webp`,          png: `${ASSET_BASE_PNG}/archetype-cat.png` },
 }
 
 const ARCHETYPE_SUMMARIES: Record<string, string> = {
@@ -79,8 +84,10 @@ export interface ArchetypeVisual {
   record?: ArchetypeRecord
 }
 
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
+
 /** High-resolution static mascot images (480×480px) for non-animated display. */
-const STATIC_MASCOT_BASE = '/assets/personality/xiaoyue'
+const STATIC_MASCOT_BASE = cdnAsset('/assets/personality/xiaoyue')
 
 export function getIntroStaticAsset(): string {
   return `${STATIC_MASCOT_BASE}/xiaoyue-intro-animated.webp`

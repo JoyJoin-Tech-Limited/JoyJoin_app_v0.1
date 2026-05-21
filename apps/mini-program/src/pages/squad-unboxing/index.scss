@@ -257,6 +257,38 @@
     pointer-events: none;
   }
 
+  /* Fallback box — shown when CDN images fail to load */
+  &__blind-box-fallback {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 360rpx;
+    height: 292rpx;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+  }
+
+  &__blind-box-fallback-body {
+    width: 200rpx;
+    height: 160rpx;
+    border-radius: 24rpx;
+    background: linear-gradient(145deg, $color-primary-light 0%, #a78bfa 100%);
+    box-shadow: 0 8rpx 32rpx rgba(139, 92, 246, 0.3);
+  }
+
+  &__blind-box-fallback-lid {
+    width: 220rpx;
+    height: 60rpx;
+    border-radius: 24rpx 24rpx 0 0;
+    background: linear-gradient(145deg, #ddd6fe 0%, $color-primary-light 100%);
+    margin-bottom: -20rpx;
+    box-shadow: 0 4rpx 16rpx rgba(139, 92, 246, 0.2);
+  }
+
   &__blind-box-visual--opening {
     .squad-unboxing__blind-box-aura {
       animation: squad-unboxing-aura 0.92s ease-in-out infinite;

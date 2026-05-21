@@ -89,7 +89,12 @@
     text-align: left;
     line-height: 1.5;
     transition: transform 0.1s ease;
-    animation: answer-stagger-enter 0.28s ease-out both;
+    animation: answer-stagger-enter 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &:nth-child(1) { animation-delay: 0ms; }
+    &:nth-child(2) { animation-delay: 50ms; }
+    &:nth-child(3) { animation-delay: 100ms; }
+    &:nth-child(4) { animation-delay: 150ms; }
 
     &::after {
       border: none;
@@ -123,8 +128,6 @@
     font-size: 32rpx;
     color: $color-text-primary;
     line-height: 1.5;
-    overflow-wrap: anywhere;
-    word-break: break-word;
   }
 
   &__emoji-grid {
@@ -139,7 +142,7 @@
     box-sizing: border-box;
     min-width: 0;
     width: calc((100% - #{$spacing-md}) / 2);
-    min-height: 200rpx;
+    min-height: 144rpx;
     height: auto;
     padding: 18rpx;
     display: flex;
@@ -151,7 +154,13 @@
     border-radius: $radius-pill;
     background: $color-surface;
     transition: transform 0.1s ease;
-    animation: answer-stagger-enter 0.28s ease-out both;
+    animation: answer-stagger-enter 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &:nth-child(1) { animation-delay: 0ms; }
+    &:nth-child(2) { animation-delay: 50ms; }
+    &:nth-child(3) { animation-delay: 100ms; }
+    &:nth-child(4) { animation-delay: 150ms; }
+
     overflow: visible;
 
     &:active {
@@ -186,7 +195,7 @@
   }
 
   &__emoji-option-emoji {
-    font-size: $font-size-4xl;
+    font-size: 40rpx;
     line-height: 1;
     flex-shrink: 0;
 
@@ -203,8 +212,6 @@
     color: $color-text-primary;
     text-align: center;
     line-height: 1.5;
-    overflow-wrap: anywhere;
-    word-break: break-word;
   }
 
   &__slider-shell {

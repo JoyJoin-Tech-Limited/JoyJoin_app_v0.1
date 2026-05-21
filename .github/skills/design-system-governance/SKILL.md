@@ -25,8 +25,9 @@ and CVA variants defined in `packages/shared`. New components extend the token s
 
 | Concern | Location |
 |---------|----------|
-| Button variant logic | `packages/shared/src/ui/buttonVariants.ts` |
-| Button design rationale | `docs/button-design.md` |
+| Button variant logic (web) | `packages/shared/src/ui/buttonVariants.ts` |
+| Button design rationale (web) | `docs/design/button-design.md` |
+| Button primitive (mini-program) | `apps/mini-program/src/components/ui/Button.tsx` + `Button.scss` — separate from shared CVA; uses `variant` ('primary' \| 'secondary' \| 'brand' \| 'wechat') and `size` ('default' \| 'sm') |
 | CSS tokens (light + dark) | `apps/*/src/index.css` — `:root` and `.dark` |
 | Brand colour system | `joyjoin-brand-guidelines` skill |
 | Tailwind config | `apps/*/tailwind.config.ts` |

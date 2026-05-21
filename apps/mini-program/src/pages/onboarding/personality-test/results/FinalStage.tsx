@@ -109,6 +109,9 @@ export default function FinalStage({
   const cardMeasuredRef = useRef(false)
 
   // Gyroscope-driven tilt (suppressed while touch is active)
+  // Note: CSS `prefers-reduced-motion: reduce` disables the visual tilt transform.
+  // JS-level gating is limited in WeChat Mini Program (no matchMedia API),
+  // so the accelerometer may still fire but the visual effect is suppressed via CSS.
   useEffect(() => {
     let mounted = true
     const canUseAccelerometer = Taro.canIUse('startAccelerometer') && Taro.canIUse('onAccelerometerChange')
@@ -261,7 +264,7 @@ export default function FinalStage({
           }}
         >
           <View className='personality-results__hero-copy'>
-            <Text className='personality-results__hero-eyebrow'>解锁成功 🎉</Text>
+            <Text className='personality-results__hero-eyebrow'>解锁成功</Text>
             <Text className='personality-results__hero-title'>你的氛围命格是</Text>
             <Text className='personality-results__hero-name'>{displayArchetypeName}</Text>
             <Text className='personality-results__hero-summary'>{summary}</Text>

@@ -98,10 +98,17 @@ npm run test --workspace=mini-program
 
 ### Asset pipeline scripts
 
-Static assets are copied to `dist/` via `copy.patterns` in `config/index.ts` and consumed at runtime via `cdnAsset()` (local path when `TARO_APP_CDN_BASE_URL` is unset).
+Assets are **CDN-first** in production. The build inlines `TARO_APP_CDN_BASE_URL` from `apps/mini-program/.env.local` and all runtime references go through `cdnAsset('/assets/...')`.
+
+**Critical rules:**
+1. Always use `cdnAsset('/assets/...')` — never hardcode `/assets/` paths.
+2. Production builds **fail** if `TARO_APP_CDN_BASE_URL` is missing.
+3. Run `npm run validate:assets` before committing to catch orphan references.
+4. Add new assets to `src/assets/` **and** `scripts/cdn-asset-manifest.json` so the CDN uploader discovers them.
 
 | Script | Purpose |
 |--------|---------|
+| `npm run validate:assets` | Build-time validator: every asset reference must resolve to `src/assets/` or `cdn-asset-manifest.json` |
 | `npm run optimize:xiaoyue` | Generate Xiaoyue expression WebPs and intro animated/static fallbacks into `src/assets/personality/xiaoyue/` |
 | `npm run check:xiaoyue-assets` | Validate Xiaoyue asset sizes and dimensions |
 | `npm run generate:xiaoyue-spritesheet` | Generate Xiaoyue sprite animation sheets into `src/assets/mascot/` |
@@ -114,15 +121,14 @@ Static assets are copied to `dist/` via `copy.patterns` in `config/index.ts` and
 | `npm run optimize:promo` | Generate promotional image assets |
 | `npm run optimize:lovart` | Generate Lovart-designed image assets |
 | `npm run check:lovart-assets` | Validate Lovart asset sizes |
-| `npm run upload:cdn-assets` | Upload built assets to CDN (`--dry-run` for preview) |
+| `npm run upload:cdn-assets` | Upload manifest assets to CDN (`--dry-run` for preview) |
 | `npm run check:package-size` | Audit mini-program bundle size against budget |
 
-**Active copy patterns** (`config/index.ts`):
-- `src/assets/tab-icons` → `dist/assets/tab-icons`
+**Active copy patterns** (`config/index.ts`) — only critical bundled assets:
+- `src/assets/tab-icons` → `dist/assets/tab-icons` (tab bar icons, must be local)
+- `src/assets/box-logo.webp` → `dist/assets/box-logo.webp` (native tab bar center button)
 - `src/native-custom-tab-bar/` → `dist/custom-tab-bar/`
-- `src/assets/personality/xiaoyue` → `dist/assets/personality/xiaoyue`
-- `src/assets/mascot` → `dist/assets/mascot`
-- `src/pages/onboarding/assets/archetypes` → `dist/pages/onboarding/assets/archetypes`
+- `src/pages/onboarding/assets/archetypes` → `dist/pages/onboarding/assets/archetypes` (subpackage assets)
 
 ---
 

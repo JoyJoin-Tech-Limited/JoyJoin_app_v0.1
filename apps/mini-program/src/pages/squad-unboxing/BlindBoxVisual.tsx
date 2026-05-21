@@ -1,4 +1,5 @@
 import { View, Image } from '@tarojs/components'
+import { useState, useCallback } from 'react'
 import type { BlindBoxVisualState } from './squadUnboxingViewModels'
 import {
   BLIND_BOX_BODY_ASSET,
@@ -14,6 +15,9 @@ export function BlindBoxVisual({
   state: BlindBoxVisualState
   shouldReduceMotion: boolean
 }) {
+  const [hasError, setHasError] = useState(false)
+  const handleError = useCallback(() => setHasError(true), [])
+
   const isOpening = state === 'opening'
   const isOpen = state === 'open'
   const showInterior = isOpening || isOpen
@@ -29,6 +33,14 @@ export function BlindBoxVisual({
         .filter(Boolean)
         .join(' ')}
     >
+      {/* CSS fallback box — shown when CDN images fail to load */}
+      {hasError && (
+        <View className='squad-unboxing__blind-box-fallback'>
+          <View className='squad-unboxing__blind-box-fallback-lid' />
+          <View className='squad-unboxing__blind-box-fallback-body' />
+        </View>
+      )}
+
       {/* Aura — CSS procedural glow, always present */}
       <View className='squad-unboxing__blind-box-aura squad-unboxing__blind-box-aura--left' />
       <View className='squad-unboxing__blind-box-aura squad-unboxing__blind-box-aura--right' />
@@ -49,16 +61,18 @@ export function BlindBoxVisual({
         src={BLIND_BOX_BODY_ASSET}
         ariaLabel={BLIND_BOX_ALT.body}
         lazyLoad={false}
+        onError={handleError}
       />
 
       {/* Interior glow — Lovart illustrated glow, shown when opening/open */}
-      {showInterior ? (
+      {showInterior && !hasError ? (
         <Image
           className='squad-unboxing__blind-box-interior-img'
           mode='aspectFit'
           src={BLIND_BOX_INTERIOR_ASSET}
           ariaLabel={BLIND_BOX_ALT.interior}
           lazyLoad={false}
+          onError={handleError}
         />
       ) : null}
 
@@ -69,6 +83,7 @@ export function BlindBoxVisual({
         src={BLIND_BOX_LID_ASSET}
         ariaLabel={BLIND_BOX_ALT.lid}
         lazyLoad={false}
+        onError={handleError}
       />
 
       {/* Shadow — CSS procedural ground shadow */}

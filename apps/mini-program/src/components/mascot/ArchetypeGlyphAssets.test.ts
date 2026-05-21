@@ -11,7 +11,7 @@ describe('ArchetypeGlyph asset references', () => {
   it('points to packaged archetype glyph files that exist', () => {
     const source = fs.readFileSync(componentPath, 'utf8')
     const assetRefs = Array.from(
-      source.matchAll(/['"](?<asset>\/assets\/personality\/archetypes\/[^'"]+)['"]/g),
+      source.matchAll(/['"](?<asset>\/assets\/archetypes\/[^'"]+)['"]/g),
       (match) => match.groups?.asset,
     ).filter((asset): asset is string => Boolean(asset))
 

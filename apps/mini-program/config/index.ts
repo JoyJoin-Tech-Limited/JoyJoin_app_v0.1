@@ -1,13 +1,14 @@
 import path from 'path'
 import { defineConfig, type UserConfigExport } from '@tarojs/cli'
 
-import { loadRepoRootEnvFile, resolveMiniProgramApiBaseUrl } from './apiBaseUrl'
+import { loadRepoRootEnvFile, loadMiniProgramEnvFile, resolveMiniProgramApiBaseUrl } from './apiBaseUrl'
 import devConfig from './dev'
 import prodConfig from './prod'
 
 type MergeConfig = (...configs: UserConfigExport<'vite'>[]) => UserConfigExport<'vite'>
 
 loadRepoRootEnvFile()
+loadMiniProgramEnvFile()
 
 const MINI_PROGRAM_API_BASE_URL = resolveMiniProgramApiBaseUrl()
 if (MINI_PROGRAM_API_BASE_URL.includes('joyjoinapp.com')) {
@@ -33,6 +34,14 @@ const MINI_PROGRAM_XIAOYUE_CONNECTION_REACTIONS_ENABLED =
 const MINI_PROGRAM_CDN_BASE_URL = process.env.TARO_APP_CDN_BASE_URL ?? ''
 const MINI_PROGRAM_TARO_ENV = process.env.TARO_ENV ?? 'weapp'
 const MINI_PROGRAM_NODE_ENV = process.env.NODE_ENV ?? 'production'
+
+if (MINI_PROGRAM_NODE_ENV === 'production' && !MINI_PROGRAM_CDN_BASE_URL) {
+  throw new Error(
+    '[mini-program build] TARO_APP_CDN_BASE_URL is required in production builds.\n' +
+      '  Set it in apps/mini-program/.env.local or as an environment variable, then rebuild.\n' +
+      '  Example: TARO_APP_CDN_BASE_URL=https://joyjoinapp.com/static',
+  )
+}
 
 // https://taro-docs.jd.com/docs/next/config#defineconfig-辅助函数
 export default defineConfig<'vite'>(async (merge: MergeConfig) => {
@@ -79,11 +88,37 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/native-custom-tab-bar/',
           to: 'dist/custom-tab-bar/',
         },
-        // Archetype result images (personality test slot animation + share poster)
-        // Kept in onboarding subpackage (not main package, 20MB limit)
+        // Box logo for native custom tab bar center button (~60KB, critical)
+        {
+          from: 'src/assets/box-logo.webp',
+          to: 'dist/assets/box-logo.webp',
+        },
+        // Brand fonts (subsetted woff2 loaded via Taro.loadFontFace from CDN)
+        {
+          from: 'src/assets/fonts',
+          to: 'dist/assets/fonts',
+        },
+        // Archetype result images — WEBP in main package (login page + all screens).
+        // PNG stays in onboarding subpackage for share-poster canvas (~641KB).
+        // src/assets/archetypes/ contains symlinks to src/pages/onboarding/assets/archetypes/*.webp
         {
           from: 'src/pages/onboarding/assets/archetypes',
           to: 'dist/pages/onboarding/assets/archetypes',
+        },
+        {
+          from: 'src/assets/archetypes',
+          to: 'dist/assets/archetypes',
+        },
+        // Phase icons — bundled locally for reliability (no CDN whitelist dependency).
+        // Each icon is ~2KB; 12 icons = ~24KB total.
+        {
+          from: 'src/assets/icons/phase-icons',
+          to: 'dist/assets/icons/phase-icons',
+        },
+        // Mood icons — bundled locally for the same reason (~8KB total).
+        {
+          from: 'src/assets/icons/mood-icons',
+          to: 'dist/assets/icons/mood-icons',
         },
       ],
       options: {

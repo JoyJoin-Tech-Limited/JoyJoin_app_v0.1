@@ -46,6 +46,7 @@ import { spawn } from 'node:child_process'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const DIST_DIR = path.join(ROOT, 'dist')
+const SRC_DIR = path.join(ROOT, 'src')
 const MANIFEST_PATH = path.join(__dirname, 'cdn-asset-manifest.json')
 
 const BACKEND = process.env.CDN_BACKEND ?? 'rsync'
@@ -142,9 +143,11 @@ async function uploadRsync(files) {
 
   // Manifest mode — upload individual files
   for (const { localPath, cdnPath } of files) {
-    const src = path.join(DIST_DIR, localPath)
-    if (!fs.existsSync(src)) {
-      console.warn(`   ⚠️ Source file missing, skipping: ${src}`)
+    const srcInDist = path.join(DIST_DIR, localPath)
+    const srcInSrc = path.join(SRC_DIR, localPath)
+    const src = fs.existsSync(srcInDist) ? srcInDist : fs.existsSync(srcInSrc) ? srcInSrc : null
+    if (!src) {
+      console.warn(`   ⚠️ Source file missing in both dist/ and src/, skipping: ${localPath}`)
       continue
     }
     const dest = `${user}@${host}:${path.posix.join(remotePath, cdnPath)}`
@@ -181,9 +184,11 @@ async function uploadS3(files) {
   }
 
   for (const { localPath, cdnPath } of files) {
-    const src = path.join(DIST_DIR, localPath)
-    if (!fs.existsSync(src)) {
-      console.warn(`   ⚠️ Source file missing, skipping: ${src}`)
+    const srcInDist = path.join(DIST_DIR, localPath)
+    const srcInSrc = path.join(SRC_DIR, localPath)
+    const src = fs.existsSync(srcInDist) ? srcInDist : fs.existsSync(srcInSrc) ? srcInSrc : null
+    if (!src) {
+      console.warn(`   ⚠️ Source file missing in both dist/ and src/, skipping: ${localPath}`)
       continue
     }
     const key = cdnPath
@@ -212,9 +217,11 @@ async function uploadOss(files) {
   }
 
   for (const { localPath, cdnPath } of files) {
-    const src = path.join(DIST_DIR, localPath)
-    if (!fs.existsSync(src)) {
-      console.warn(`   ⚠️ Source file missing, skipping: ${src}`)
+    const srcInDist = path.join(DIST_DIR, localPath)
+    const srcInSrc = path.join(SRC_DIR, localPath)
+    const src = fs.existsSync(srcInDist) ? srcInDist : fs.existsSync(srcInSrc) ? srcInSrc : null
+    if (!src) {
+      console.warn(`   ⚠️ Source file missing in both dist/ and src/, skipping: ${localPath}`)
       continue
     }
     const args = ['cp', src, `oss://${bucket}/${cdnPath}`]
@@ -243,9 +250,11 @@ async function uploadCos(files) {
   }
 
   for (const { localPath, cdnPath } of files) {
-    const src = path.join(DIST_DIR, localPath)
-    if (!fs.existsSync(src)) {
-      console.warn(`   ⚠️ Source file missing, skipping: ${src}`)
+    const srcInDist = path.join(DIST_DIR, localPath)
+    const srcInSrc = path.join(SRC_DIR, localPath)
+    const src = fs.existsSync(srcInDist) ? srcInDist : fs.existsSync(srcInSrc) ? srcInSrc : null
+    if (!src) {
+      console.warn(`   ⚠️ Source file missing in both dist/ and src/, skipping: ${localPath}`)
       continue
     }
     const args = ['cp', src, `cos://${bucket}-${region}/${cdnPath}`]

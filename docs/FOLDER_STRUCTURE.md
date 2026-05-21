@@ -300,18 +300,15 @@ apps/mini-program/
 │   ├── providers/                 # React context providers
 │   ├── styles/                    # Global styles, SCSS
 │   ├── native-custom-tab-bar/     # WeChat native tab bar
-│   └── assets/                    # Static assets
-│       ├── fonts/                 # Alimama, Quicksand
-│       ├── icons/                 # Archetype, mood, status, phase icons
-│       ├── lovart/                # AI-generated illustrations
-│       ├── matching/              # Match reveal assets
-│       ├── miniscript/            # Mini-script game assets
-│       ├── personality/           # Personality test visuals
+│   └── assets/                    # Static assets (CDN-first in production)
+│       ├── illustrations/         # Blind box Lovart illustrations
+│       ├── lovart/                # Lovart manifest only (CDN assets)
+│       ├── mascot/                # Xiaoyue sprite WebPs + manifest
+│       ├── personality/           # Archetype + Xiaoyue expression WebPs
+│       │   ├── archetypes/        # 12 archetype illustrations + spritesheet
 │       │   └── xiaoyue/           # Mascot character assets
-│       ├── promo/                 # Promotional graphics
-│       ├── qr/                    # QR codes
-│       ├── tab-icons/             # Bottom tab icons
-│       └── empty-state/           # Empty state illustrations
+│       ├── tab-icons/             # Bottom tab icons (bundled, not CDN)
+│       └── box-logo.webp          # Brand logo (bundled for native tab bar)
 ├── config/                        # Taro build config
 └── package.json
 ```

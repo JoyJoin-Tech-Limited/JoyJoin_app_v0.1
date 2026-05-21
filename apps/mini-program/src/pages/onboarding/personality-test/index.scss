@@ -42,37 +42,12 @@
   }
 }
 
-@keyframes milestone-flash-pulse {
-  0% {
-    opacity: 0;
-    transform: scale(0.8);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.2);
-  }
-}
-
 @keyframes skeleton-shimmer {
   0% {
     transform: translateX(-150%);
   }
   100% {
     transform: translateX(150%);
-  }
-
-}
-
-@keyframes thin-progress-grow {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
   }
 }
 
@@ -136,7 +111,7 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: $spacing-md;
+    gap: $spacing-lg;
     overflow-x: hidden;
     overflow-y: visible;
   }
@@ -166,6 +141,7 @@
     display: inline-flex;
     align-items: center;
     padding: 8rpx 16rpx;
+    margin-bottom: 12rpx;
     border-radius: 999rpx;
     background: rgba($color-primary-light, 0.94);
     color: $color-primary;
@@ -203,7 +179,6 @@
     @include type-body;
     color: $color-text-secondary;
     line-height: 1.68;
-    overflow-wrap: anywhere;
   }
 
   &__intro-hero {
@@ -260,7 +235,6 @@
     font-size: $font-size-sm;
     color: $color-text-secondary;
     line-height: 1.62;
-    overflow-wrap: anywhere;
   }
 
   &__intro-meta-row {
@@ -399,7 +373,6 @@
     font-size: $font-size-xs;
     color: $color-text-secondary;
     line-height: 1.56;
-    overflow-wrap: anywhere;
   }
 
   &__intro-value-grid,
@@ -472,7 +445,6 @@
     font-size: $font-size-md;
     color: $color-text-primary;
     max-width: 100%;
-    overflow-wrap: anywhere;
   }
 
   &__intro-tease-subtitle {
@@ -482,7 +454,6 @@
     color: $color-text-secondary;
     line-height: 1.6;
     max-width: 100%;
-    overflow-wrap: anywhere;
   }
 
   &__intro-tease-scroll {
@@ -546,8 +517,6 @@
     color: $color-text-primary;
     text-align: center;
     line-height: 1.35;
-    overflow-wrap: anywhere;
-    word-break: break-word;
   }
 
   &__intro-tease-vibe {
@@ -560,8 +529,6 @@
     color: $color-text-secondary;
     line-height: 1.56;
     text-align: center;
-    overflow-wrap: anywhere;
-    word-break: break-word;
   }
 
   &__intro-footer {
@@ -682,6 +649,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    margin-top: 8rpx;
     padding: 0 $container-padding 8rpx;
     @include safe-area-inline($container-padding);
   }
@@ -743,11 +711,10 @@
     @include safe-area-bottom-padding(padding-bottom, 24rpx);
   }
 
+  // Skip button sizing is handled by Button primitive (size='sm').
+  // Keep this class for page-specific overrides if needed.
   &__skip-btn {
-    display: flex;
-    align-items: center;
-    gap: 4rpx;
-    padding: 8rpx 16rpx;
+    /* intentionally empty — flex centering + padding live in Button.scss */
   }
 
   &__skip-btn-text {
@@ -768,14 +735,14 @@
   // ── Zone B: Full-width glassmium question banner ─────────────────
   &__question-zone {
     flex: 0 0 auto;
-    padding: 8rpx $container-padding 8rpx;
+    padding: 16rpx $container-padding 16rpx;
     @include safe-area-inline($container-padding);
   }
 
   // ── Zone C: Mascot row (mascot left + speech bubble right) ───────
   &__mascot-zone {
     flex: 0 0 auto;
-    padding: 0 $container-padding 8rpx;
+    padding: 0 $container-padding 16rpx;
     @include safe-area-inline($container-padding);
   }
 
@@ -800,7 +767,7 @@
     min-width: 0;
     padding: 16rpx 24rpx;
     border-radius: 24rpx 24rpx 24rpx 6rpx;
-    max-width: 520rpx;
+    max-width: 600rpx;
     background: rgba($color-primary-light, 0.78);
     border: 1rpx solid rgba($color-primary, 0.1);
 
@@ -818,11 +785,10 @@
 
   &__speech-bubble-text {
     font-family: $font-ui;
-    font-size: 36rpx;
+    font-size: 32rpx;
     color: $color-primary-dark;
-    line-height: 1.4;
+    line-height: 1.5;
     font-weight: $font-weight-medium;
-    overflow-wrap: anywhere;
     animation: speech-text-enter 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 

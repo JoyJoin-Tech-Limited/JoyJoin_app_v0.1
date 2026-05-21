@@ -9,7 +9,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q16",
     level: 2,
     category: "情感回应",
-    scenarioText: "😔 一个朋友在聚会上显得情绪低落，向你倾诉最近的烦恼。",
+    scenarioText: "一个朋友在聚会上显得情绪低落，向你倾诉最近的烦恼。",
     questionText: "你最自然的回应方式是？",
     primaryTraits: ["A", "C", "P"],
     options: [
@@ -44,7 +44,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q17",
     level: 2,
     category: "新奇发现",
-    scenarioText: "🗺️ 你在城市某个角落偶然发现一家隐藏在小巷里、风格极其独特的咖啡店。",
+    scenarioText: "你在城市某个角落偶然发现一家隐藏在小巷里、风格极其独特的咖啡店。",
     questionText: "接下来你最可能做什么？",
     primaryTraits: ["O", "X", "A"],
     options: [
@@ -74,7 +74,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q18",
     level: 2,
     category: "能量恢复",
-    scenarioText: "🔋 参加了一场持续4小时、需要高度社交投入的活动后，你感觉电量耗尽。",
+    scenarioText: "参加了一场持续4小时、需要高度社交投入的活动后，你感觉电量耗尽。",
     questionText: "结束后，你通常最需要什么样的恢复方式？",
     primaryTraits: ["E", "X"],
     options: [
@@ -104,7 +104,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q19",
     level: 2,
     category: "助人行为",
-    scenarioText: "❓ 活动群里，有人问一个你恰好知道答案的问题。",
+    scenarioText: "活动群里，有人问一个你恰好知道答案的问题。",
     questionText: "你通常会？",
     primaryTraits: ["A", "C", "X"],
     options: [
@@ -134,7 +134,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q20",
     level: 2,
     category: "纠错倾向",
-    scenarioText: "💬 大家在热烈讨论一部电影，但其中一个人反复提到一个明显的事实错误。",
+    scenarioText: "大家在热烈讨论一部电影，但其中一个人反复提到一个明显的事实错误。",
     questionText: "你更可能？",
     primaryTraits: ["C", "E", "A"],
     options: [
@@ -169,7 +169,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q21",
     level: 2,
     category: "规则利用",
-    scenarioText: "🎲 玩桌游时，你发现有一条未被充分利用但完全合理的规则，可以让你的局面逆转。",
+    scenarioText: "玩桌游时，你发现有一条未被充分利用但完全合理的规则，可以让你的局面逆转。",
     questionText: "你会？",
     primaryTraits: ["O", "C", "A"],
     options: [
@@ -199,7 +199,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q21_v1",
     level: 2,
     category: "规则利用",
-    scenarioText: "📱 抢群红包或积分活动时，你发现了一个提高成功率的合法小技巧。",
+    scenarioText: "抢群红包或积分活动时，你发现了一个提高成功率的合法小技巧。",
     questionText: "你会？",
     primaryTraits: ["O", "C", "A"],
     variantOf: "Q21",
@@ -230,7 +230,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q22",
     level: 2,
     category: "意见保留",
-    scenarioText: "🗣️ 朋友推荐了一部ta极度喜爱的电影/音乐，但你看完后完全无感。",
+    scenarioText: "朋友推荐了一部ta极度喜爱的电影/音乐，但你看完后完全无感。",
     questionText: "下次聊起时，你会？",
     primaryTraits: ["A", "O", "E"],
     options: [
@@ -260,7 +260,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q22_v1",
     level: 2,
     category: "意见保留",
-    scenarioText: "🍽️ 朋友带你去吃ta心目中全市最好吃的餐厅，但你觉得口味很平庸。",
+    scenarioText: "朋友带你去吃ta心目中全市最好吃的餐厅，但你觉得口味很平庸。",
     questionText: "当ta满怀期待问你怎么样时，你会？",
     primaryTraits: ["A", "O", "E"],
     variantOf: "Q22",
@@ -291,7 +291,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q23",
     level: 2,
     category: "账单处理",
-    scenarioText: "💰 AA结账时，发现金额有些零头，不太好平分。",
+    scenarioText: "AA结账时，发现金额有些零头，不太好平分。",
     questionText: "你通常的处理方式是？",
     primaryTraits: ["C", "A", "X"],
     options: [
@@ -321,7 +321,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q23_v1",
     level: 2,
     category: "账单处理",
-    scenarioText: "🧺 几个朋友一起租车出游，加油费产生了一些零头 and 尾数。",
+    scenarioText: "几个朋友一起租车出游，加油费产生了一些零头 and 尾数。",
     questionText: "你会？",
     primaryTraits: ["A", "C", "E"],
     variantOf: "Q23",
@@ -352,7 +352,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q24",
     level: 2,
     category: "信息来源",
-    scenarioText: "📱 组织聚会前，你需要确定一家餐厅。",
+    scenarioText: "组织聚会前，你需要确定一家餐厅。",
     questionText: "你获取信息的主要方式是？",
     primaryTraits: ["O", "C", "X"],
     options: [
@@ -382,7 +382,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q25",
     level: 2,
     category: "技能教授",
-    scenarioText: "🎓 别人请你教一个你擅长的技能。",
+    scenarioText: "别人请你教一个你擅长的技能。",
     questionText: "你的教学风格是？",
     primaryTraits: ["C", "A", "O"],
     options: [
@@ -412,7 +412,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q26",
     level: 2,
     category: "圈子定位",
-    scenarioText: "👥 如果把你放在一个10人的社交圈子里，",
+    scenarioText: "如果把你放在一个10人的社交圈子里，",
     questionText: "你觉得自己最常扮演的角色是？",
     primaryTraits: ["X", "A", "O", "C"],
     options: [
@@ -447,7 +447,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q27",
     level: 2,
     category: "创意产出",
-    scenarioText: "💡 团队 brainstorming 时，领导说任何天马行空的想法都可以。",
+    scenarioText: "团队 brainstorming 时，领导说任何天马行空的想法都可以。",
     questionText: "你的典型产出是？",
     primaryTraits: ["O", "C", "X"],
     options: [
@@ -477,7 +477,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q28",
     level: 2,
     category: "社交焦虑",
-    scenarioText: "📱 在一个热闹的微信群中，你发了一条消息，但一段时间内无人回应。",
+    scenarioText: "在一个热闹的微信群中，你发了一条消息，但一段时间内无人回应。",
     questionText: "你内心更可能？",
     primaryTraits: ["E", "X"],
     options: [
@@ -507,7 +507,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q29",
     level: 2,
     category: "惊喜反应",
-    scenarioText: "🎉 朋友为你准备了一个惊喜生日派对。当你推开门，所有人齐声欢呼时，",
+    scenarioText: "朋友为你准备了一个惊喜生日派对。当你推开门，所有人齐声欢呼时，",
     questionText: "你的第一反应是？",
     primaryTraits: ["A", "X", "E"],
     options: [
@@ -537,7 +537,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q30",
     level: 2,
     category: "反馈行为",
-    scenarioText: "📝 活动结束后，组织者在群里发起匿名反馈问卷。",
+    scenarioText: "活动结束后，组织者在群里发起匿名反馈问卷。",
     questionText: "你通常会？",
     primaryTraits: ["C", "P", "E", "A"],
     options: [
@@ -567,7 +567,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q31",
     level: 2,
     category: "集体决策",
-    scenarioText: "👥 你和一群朋友计划一次旅行，有几种不同的风格选择。",
+    scenarioText: "你和一群朋友计划一次旅行，有几种不同的风格选择。",
     questionText: "在讨论中，你更可能扮演什么角色？",
     primaryTraits: ["X", "A", "C", "E"],
     options: [
@@ -597,7 +597,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q32",
     level: 2,
     category: "游戏偏好",
-    scenarioText: "🎭 聚会上，大家玩真心话大冒险。轮到你选择时，",
+    scenarioText: "聚会上，大家玩真心话大冒险。轮到你选择时，",
     questionText: "你更倾向于？",
     primaryTraits: ["X", "A", "E"],
     options: [
@@ -627,7 +627,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q33",
     level: 2,
     category: "意外冲突",
-    scenarioText: "🚶 在狭窄的过道，你不小心和迎面走来的人撞了一下，对方看起来心情不好并咕哝了一句不客气的话。",
+    scenarioText: "在狭窄的过道，你不小心和迎面走来的人撞了一下，对方看起来心情不好并咕哝了一句不客气的话。",
     questionText: "你的第一反应是？",
     primaryTraits: ["E", "A", "C"],
     options: [
@@ -657,7 +657,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q34",
     level: 2,
     category: "信息分享",
-    scenarioText: "📰 看到一条关于你某个朋友感兴趣领域的深度干货，但内容很长且有一定的门槛。",
+    scenarioText: "看到一条关于你某个朋友感兴趣领域的深度干货，但内容很长且有一定的门槛。",
     questionText: "你会？",
     primaryTraits: ["A", "O", "C", "X"],
     options: [
@@ -692,7 +692,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q35",
     level: 2,
     category: "计划变动",
-    scenarioText: "📅 期待已久的周末出游计划因为天气原因临时取消，改为室内聚会。",
+    scenarioText: "期待已久的周末出游计划因为天气原因临时取消，改为室内聚会。",
     questionText: "你的心态转变是？",
     primaryTraits: ["E", "O", "P"],
     options: [
@@ -722,7 +722,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q36",
     level: 2,
     category: "接受新事物",
-    scenarioText: "🔄 朋友向你推荐一个TA非常喜欢、但你之前从未接触过的活动。",
+    scenarioText: "朋友向你推荐一个TA非常喜欢、但你之前从未接触过的活动。",
     questionText: "你的第一反应是？",
     primaryTraits: ["O", "C", "A"],
     options: [
@@ -752,7 +752,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q37",
     level: 2,
     category: "重大建议",
-    scenarioText: "🤔 当朋友问你我该不该换工作/结束一段关系？这类重大人生抉择时，",
+    scenarioText: "当朋友问你我该不该换工作/结束一段关系？这类重大人生抉择时，",
     questionText: "你通常如何回应？",
     primaryTraits: ["C", "A", "P"],
     options: [
@@ -787,7 +787,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q38",
     level: 2,
     category: "高强度社交",
-    scenarioText: "🎉 在一个大型庆祝派对上，音乐很响，人非常多。",
+    scenarioText: "在一个大型庆祝派对上，音乐很响，人非常多。",
     questionText: "一小时后，你感觉如何？",
     primaryTraits: ["X", "E"],
     options: [
@@ -817,7 +817,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q39",
     level: 2,
     category: "展示偏好",
-    scenarioText: "📊 你们小组完成了一个项目，被要求派代表做总结展示。",
+    scenarioText: "你们小组完成了一个项目，被要求派代表做总结展示。",
     questionText: "你更希望？",
     primaryTraits: ["X", "C", "E"],
     options: [
@@ -847,7 +847,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q40",
     level: 2,
     category: "关系深度",
-    scenarioText: "🌱 你加入了一个每周活动的社团，已经三个月。",
+    scenarioText: "你加入了一个每周活动的社团，已经三个月。",
     questionText: "现在你对社团里其他成员的了解程度通常是？",
     primaryTraits: ["A", "E", "X"],
     options: [
@@ -877,7 +877,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q41",
     level: 2,
     category: "事后讨论",
-    scenarioText: "🎬 和朋友看完一场电影，走出影院时，",
+    scenarioText: "和朋友看完一场电影，走出影院时，",
     questionText: "你通常会？",
     primaryTraits: ["O", "A", "E", "X"],
     options: [
@@ -907,7 +907,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q42",
     level: 2,
     category: "介绍朋友",
-    scenarioText: "🔄 你介绍两个原本不认识的朋友互相认识，但他们似乎没什么共同话题，对话冷场。",
+    scenarioText: "你介绍两个原本不认识的朋友互相认识，但他们似乎没什么共同话题，对话冷场。",
     questionText: "你会？",
     primaryTraits: ["A", "E", "X"],
     options: [
@@ -937,7 +937,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q43",
     level: 2,
     category: "日程风格",
-    scenarioText: "📅 你的周末时间安排，更符合以下哪种模式？",
+    scenarioText: "你的周末时间安排，更符合以下哪种模式？",
     questionText: "",
     primaryTraits: ["X", "E", "A", "C"],
     options: [
@@ -967,7 +967,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q44",
     level: 2,
     category: "求助方式",
-    scenarioText: "🤝 你需要找一个朋友帮你一个不大不小的忙。",
+    scenarioText: "你需要找一个朋友帮你一个不大不小的忙。",
     questionText: "你通常会如何开口？",
     primaryTraits: ["A", "C", "X"],
     options: [
@@ -997,7 +997,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q45",
     level: 2,
     category: "创造力表达",
-    scenarioText: "🎨 参加一个手工DIY工作坊，老师讲解了基本步骤后让大家自由发挥。",
+    scenarioText: "参加一个手工DIY工作坊，老师讲解了基本步骤后让大家自由发挥。",
     questionText: "你会？",
     primaryTraits: ["C", "O", "A"],
     options: [
@@ -1027,7 +1027,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q46",
     level: 2,
     category: "观点冲突",
-    scenarioText: "🗣️ 在讨论中，你提出了一个观点，但被另一个人强烈反对。",
+    scenarioText: "在讨论中，你提出了一个观点，但被另一个人强烈反对。",
     questionText: "你的第一反应是？",
     primaryTraits: ["X", "E", "O"],
     options: [
@@ -1057,7 +1057,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q47",
     level: 2,
     category: "祝贺方式",
-    scenarioText: "🌟 朋友取得了一个很棒的成就，在朋友圈公布。",
+    scenarioText: "朋友取得了一个很棒的成就，在朋友圈公布。",
     questionText: "你通常会如何表示祝贺？",
     primaryTraits: ["P", "A", "E", "X"],
     options: [
@@ -1087,7 +1087,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q48",
     level: 2,
     category: "知识探索",
-    scenarioText: "🕵️ 你对一个历史/科学/文化话题产生了浓厚兴趣。",
+    scenarioText: "你对一个历史/科学/文化话题产生了浓厚兴趣。",
     questionText: "你通常会如何满足这份好奇心？",
     primaryTraits: ["O", "C", "A"],
     options: [
@@ -1117,7 +1117,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q49",
     level: 2,
     category: "探索行为",
-    scenarioText: "🎪 一个大型节日市集，有各种小吃、手作和表演。",
+    scenarioText: "一个大型节日市集，有各种小吃、手作和表演。",
     questionText: "你怎么逛？",
     primaryTraits: ["X", "C", "E", "O"],
     options: [
@@ -1147,7 +1147,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q50",
     level: 2,
     category: "秘密处理",
-    scenarioText: "🤫 你无意中得知了一个关于某位朋友的、并非恶意的秘密。",
+    scenarioText: "你无意中得知了一个关于某位朋友的、并非恶意的秘密。",
     questionText: "你会如何处理这个信息？",
     primaryTraits: ["A", "C", "E"],
     options: [

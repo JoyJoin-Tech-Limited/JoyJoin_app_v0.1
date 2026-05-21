@@ -125,17 +125,17 @@ const INTRO_META_PILLS = ['约 3-5 分钟', '题目跟着你变', '可先完成�
 
 const INTRO_TRUST_POINTS = [
   {
-    icon: '⏱️',
+    prefix: '1.',
     title: '约 3-5 分钟完成',
     description: '轻量做完，不会把你困在一串冗长题目里。',
   },
   {
-    icon: '🎯',
+    prefix: '2.',
     title: '题目会跟着你变',
     description: '越答越准，帮你找到最像自己的氛围命格。',
   },
   {
-    icon: '💾',
+    prefix: '3.',
     title: '未登录也能先完成',
     description: '结果会先保存在这台设备里，准备好时再继续登录。',
   },
@@ -835,7 +835,7 @@ export default function PersonalityTestPage() {
             </Text>
           </View>
 
-          <ResponsiveSpacer heightRpx={16} collapseBelow={700} />
+          <ResponsiveSpacer heightRpx={24} collapseBelow={700} />
 
           <View className='personality-test__intro-hero personality-test__stage personality-test__stage--2'>
             <View className='personality-test__intro-hero-visual'>
@@ -872,7 +872,7 @@ export default function PersonalityTestPage() {
             </View>
           </View>
 
-          <ResponsiveSpacer heightRpx={16} collapseBelow={720} />
+          <ResponsiveSpacer heightRpx={24} collapseBelow={720} />
 
           <View className='personality-test__intro-trust personality-test__stage personality-test__stage--3'>
             <Text className='personality-test__intro-trust-title'>开始前，三件事</Text>
@@ -880,7 +880,7 @@ export default function PersonalityTestPage() {
               {INTRO_TRUST_POINTS.map((item) => (
                 <View key={item.title} className='personality-test__intro-trust-item'>
                   <View className='personality-test__intro-trust-icon'>
-                    <Text>{item.icon}</Text>
+                    <Text>{item.prefix}</Text>
                   </View>
                   <View className='personality-test__intro-trust-copy'>
                     <Text className='personality-test__intro-trust-item-title'>{item.title}</Text>
@@ -891,7 +891,7 @@ export default function PersonalityTestPage() {
             </View>
           </View>
 
-          <ResponsiveSpacer heightRpx={16} collapseBelow={780} />
+          <ResponsiveSpacer heightRpx={24} collapseBelow={780} />
 
           <View className='personality-test__intro-tease personality-test__stage personality-test__stage--4'>
             <Text className='personality-test__intro-tease-title'>完成后，你会看到自己的氛围命格</Text>
@@ -1137,6 +1137,8 @@ export default function PersonalityTestPage() {
           <View className='personality-test__skip-row'>
             <Button
               variant='secondary'
+              size='sm'
+              className='personality-test__skip-btn'
               onClick={handleSkip}
               disabled={isSubmitting || isSkipping}
               hoverClass='personality-test__skip-btn--hover'

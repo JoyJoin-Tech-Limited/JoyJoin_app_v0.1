@@ -61,6 +61,8 @@ See [`references/implementation-guide.md`](references/implementation-guide.md) f
 - **A polished interaction janks on device** — cut layout-triggering animation, compress assets, and simplify the effect to `transform` and `opacity` only.
 - **The spec asks for something off-brand** — name the exact conflict (colour, font, motion, mascot use, density) and flag it before implementation.
 - **The team wants to add CSS-in-JS for dynamic styling** — default to the repo's existing Taro styling patterns unless there is an explicit approved shift in architecture.
+- **Chinese text breaks awkwardly** — never use `overflow-wrap: anywhere` on CJK display text; it produces orphan characters (孤字). Default Chinese breaking (`overflow-wrap: normal`) is correct. Avoid `word-break: keep-all` on narrow containers with unpredictable content.
+- **Entrance animations feel generic** — use `cubic-bezier(0.22, 1, 0.36, 1)` for all entrance animations. Reserve `ease-out` and `ease-in-out` for continuous loops only.
 
 ## Review checklist
 
@@ -78,4 +80,14 @@ See [`references/implementation-guide.md`](references/implementation-guide.md) f
 - [ ] Assets are crisp and package/performance costs are reasonable
 - [ ] New or changed rasters/icons were checked against size budgets; oversized files flagged and addressed
 - [ ] Motion is restrained, `transform`/`opacity`-based, and safe for mini-program performance
+- [ ] Entrance animations use `cubic-bezier(0.22, 1, 0.36, 1)`; loops only use `ease-out`/`ease-in-out`
+- [ ] No `overflow-wrap: anywhere` on CJK display text; default breaking preserved
 - [ ] A screen that still feels cheap but functional has not been signed off as complete
+
+## Related skills
+
+- [`ui-layout-audit`](./ui-layout-audit/SKILL.md) — verify spacing hierarchy, typography comfort, emoji discipline, and visual coherence before shipping
+- [`frontend-design-audit`](./frontend-design-audit/SKILL.md) — broader 5-dimension design-quality audit beyond layout/typography
+- [`joyjoin-brand-guidelines`](./joyjoin-brand-guidelines/SKILL.md) — brand colour, typography, and mascot usage rules
+- [`wow-elements`](./wow-elements/SKILL.md) — crafted motion and emotional polish
+- [`design-system-governance`](./design-system-governance/SKILL.md) — token and variant discipline when changing shared baselines
