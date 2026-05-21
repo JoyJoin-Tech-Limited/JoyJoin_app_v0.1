@@ -36,6 +36,53 @@ Use this when auditing a specific screen:
 | No decorative motion that delays interaction | | Vanity |
 | Copy explains the benefit, not just the feature | | Blindness |
 
+## Virtuous Sins: When Apparent Sin Serves the Product
+
+The Seven Deadly Sins are a **diagnostic heuristic**, not a moral framework. A "sin" in the audit is only a sin if it harms the user task. Some interfaces deliberately embrace patterns that *look* like sins because they serve the product's core value. Learn to distinguish sin from virtue.
+
+### Clutter → Density (Information-Rich Moments)
+
+**When it's virtuous:** Result pages, dashboards, and reveal screens where the user came to see "everything at once." The sin is not density — it's *lack of hierarchy within that density*.
+
+**Evidence of virtue:**
+- Users scroll back up to re-read details (they value the density)
+- Share rate is high (people want to show off the rich result)
+- Every element has a clear visual weight; the primary CTA still dominates
+
+**Audit rule:** If removing an element makes the screen feel *empty* rather than *clear*, the density was virtuous. Fix the hierarchy, not the density.
+
+### Vanity → Signature (Brand-Differentiating Visuals)
+
+**When it's virtuous:** The visual flourish **IS** the product hook. Collectible card holography, rarity glow, achievement sparkles — these are not decorative; they are the *reason users share*.
+
+**Evidence of virtue:**
+- Users screenshot and share the "vanity" element
+- The element communicates value that text cannot (rarity, exclusivity, craftsmanship)
+- Removing it would make the product interchangeable with competitors
+
+**Audit rule:** If the flourish obscures information or delays the primary action, it's sin. If the flourish **is** the information (holographic sheen = "this is special"), it's virtue.
+
+### Myopia → Graceful Degradation (Intentional Simplification)
+
+**When it's virtuous:** The non-happy path is deliberately simple because the user is unlikely to encounter it, and explicit complexity would add confusion. A silent fallback with a subtle indicator can be better than a full error state.
+
+**Evidence of virtue:**
+- Error rate is <1% for that path
+- The fallback is genuinely useful (not just "try again")
+- The user can still complete their task without noticing the degradation
+
+**Audit rule:** If the user is stuck or confused when the edge case hits, it's sin. If the user barely notices and continues smoothly, it's virtue.
+
+### How to apply in audit reports
+
+When a sin maps to virtue:
+1. **Name it explicitly:** "This reads as Clutter in the heuristic, but functions as virtuous Density."
+2. **State the evidence:** What user behavior or product metric justifies the pattern?
+3. **Redirect the fix:** Don't say "remove elements." Say "strengthen hierarchy within the density."
+4. **Score accordingly:** A screen with virtuous density scores high on Brand Fidelity and user task fit, even if it looks "busy" at first glance.
+
+---
+
 ## Mode-specific deliverables
 
 ### Brainstorm mode

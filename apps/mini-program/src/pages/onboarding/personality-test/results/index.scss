@@ -778,27 +778,35 @@ $color-skill-cool: #7c3aed;
     line-height: 1.4;
     border-radius: 999rpx;
     font-weight: $font-weight-semibold;
-    transition: transform 0.2s ease;
+    opacity: 0;
+    transform: translateY(12rpx) scale(0.96);
+    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+                transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 
-    &:active {
-      transform: scale(0.96);
+    &:nth-child(1) { transition-delay: 80ms; }
+    &:nth-child(2) { transition-delay: 160ms; }
+    &:nth-child(3) { transition-delay: 240ms; }
+
+    &--visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
     }
 
     // --- Chemistry: soft brand tint ---
     &--chemistry {
       padding: 10rpx 20rpx;
-      background: rgba(139, 92, 246, 0.07);
-      border: 1rpx solid rgba(139, 92, 246, 0.16);
-      color: #7C3AED;
+      background: rgba($color-primary, 0.07);
+      border: 1rpx solid rgba($color-primary, 0.16);
+      color: $color-primary-dark;
     }
 
     // --- Rarity: warm exclusive amber ---
     &--rarity {
       padding: 10rpx 20rpx;
-      background: rgba(245, 158, 11, 0.08);
-      border: 1rpx solid rgba(245, 158, 11, 0.22);
-      color: #92400E;
-      box-shadow: 0 2rpx 10rpx rgba(245, 158, 11, 0.06);
+      background: rgba($color-amber, 0.08);
+      border: 1rpx solid rgba($color-amber, 0.22);
+      color: $color-amber-700;
+      box-shadow: 0 2rpx 10rpx rgba($color-amber, 0.06);
 
       &::before {
         content: '';
@@ -806,21 +814,21 @@ $color-skill-cool: #7c3aed;
         width: 8rpx;
         height: 8rpx;
         border-radius: 50%;
-        background: #F59E0B;
+        background: $color-amber;
         margin-right: 10rpx;
-        box-shadow: 0 0 6rpx rgba(245, 158, 11, 0.4);
+        box-shadow: 0 0 6rpx rgba($color-amber, 0.4);
       }
     }
 
     // --- Nickname: hero gradient trophy ---
     &--nickname {
-      background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 100%);
-      color: #FFFFFF;
+      background: linear-gradient(135deg, $color-primary-dark 0%, $color-primary 100%);
+      color: $color-text-white;
       font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
       font-size: 28rpx;
       font-weight: 600;
       padding: 14rpx 28rpx;
-      box-shadow: 0 6rpx 24rpx rgba(124, 58, 237, 0.22);
+      box-shadow: 0 6rpx 24rpx rgba($color-primary-dark, 0.22);
       text-shadow: 0 1rpx 2rpx rgba(0, 0, 0, 0.08);
       border: none;
       letter-spacing: 1rpx;
@@ -853,6 +861,156 @@ $color-skill-cool: #7c3aed;
     margin-top: $spacing-sm;
     padding-top: $spacing-md;
     border-top: 2rpx solid rgba($color-primary, 0.08);
+  }
+
+  // ── Xiaoyue speech bubble layout ──
+  &__xiaoyue-bubble-row {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+  }
+
+  &__xiaoyue-avatar {
+    width: 64rpx;
+    height: 64rpx;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 2rpx solid rgba($color-primary, 0.12);
+    background: $color-surface;
+  }
+
+  &__xiaoyue-bubble {
+    flex: 1;
+    min-width: 0;
+    padding: $spacing-sm $spacing-md;
+    border-radius: 20rpx;
+    background: rgba($color-primary, 0.04);
+    border: 1rpx solid rgba($color-primary, 0.08);
+    position: relative;
+
+    // Speech bubble tail pointing to avatar
+    &::before {
+      content: '';
+      position: absolute;
+      left: -10rpx;
+      top: 20rpx;
+      width: 0;
+      height: 0;
+      border-top: 8rpx solid transparent;
+      border-bottom: 8rpx solid transparent;
+      border-right: 10rpx solid rgba($color-primary, 0.08);
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: -8rpx;
+      top: 21rpx;
+      width: 0;
+      height: 0;
+      border-top: 7rpx solid transparent;
+      border-bottom: 7rpx solid transparent;
+      border-right: 8rpx solid rgba($color-primary, 0.04);
+    }
+  }
+
+  &__xiaoyue-bubble-headline {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: 1.5;
+    margin-bottom: 8rpx;
+  }
+
+  &__xiaoyue-bubble-analysis {
+    display: block;
+    font-size: $font-size-sm;
+    line-height: 1.75;
+    color: $color-text-secondary;
+  }
+
+  // ── Xiaoyue skeleton loading ──
+  &__xiaoyue-skeleton {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+  }
+
+  &__xiaoyue-skeleton-avatar {
+    width: 64rpx;
+    height: 64rpx;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: $color-divider;
+    overflow: hidden;
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0; bottom: 0; left: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba($color-primary, 0.06) 50%, transparent 100%);
+      transform: translateX(-150%);
+      animation: xiaoyue-skeleton-shimmer 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+  }
+
+  &__xiaoyue-skeleton-bubble {
+    flex: 1;
+    min-width: 0;
+    padding: $spacing-sm $spacing-md;
+    border-radius: 20rpx;
+    background: rgba($color-primary, 0.04);
+    border: 1rpx solid rgba($color-primary, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 10rpx;
+  }
+
+  &__xiaoyue-skeleton-line {
+    height: 20rpx;
+    border-radius: 999rpx;
+    background: $color-divider;
+    overflow: hidden;
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0; bottom: 0; left: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba($color-primary, 0.06) 50%, transparent 100%);
+      transform: translateX(-150%);
+      animation: xiaoyue-skeleton-shimmer 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    &--short {
+      width: 60%;
+    }
+  }
+
+  @keyframes xiaoyue-skeleton-shimmer {
+    0% { transform: translateX(-150%); }
+    100% { transform: translateX(150%); }
+  }
+
+  // ── Xiaoyue fallback indicator ──
+  &__xiaoyue-fallback-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+    margin-top: 10rpx;
+    padding: 8rpx 14rpx;
+    border-radius: 999rpx;
+    background: rgba($color-warning, 0.08);
+    border: 1rpx solid rgba($color-warning, 0.12);
+    align-self: flex-start;
+  }
+
+  &__xiaoyue-fallback-indicator-text {
+    font-size: $font-size-xs;
+    color: $color-warning;
+    line-height: 1.4;
   }
 
   &__hero-xiaoyue-loading {
@@ -912,8 +1070,7 @@ $color-skill-cool: #7c3aed;
     justify-content: center;
     padding: 12rpx 0;
     margin-top: 4rpx;
-    min-height: 44rpx;
-    cursor: pointer;
+    min-height: $cta-min-tap;
     -webkit-tap-highlight-color: transparent;
 
     &:active {
@@ -1660,6 +1817,10 @@ $color-skill-cool: #7c3aed;
     opacity: 0;
     animation: personality-results-holo-shimmer 4s ease-in-out infinite;
 
+    .personality-results__pokemon-card--pressed & {
+      animation-duration: 1.5s;
+    }
+
     &::before {
       content: '';
       position: absolute;
@@ -1717,6 +1878,22 @@ $color-skill-cool: #7c3aed;
     border-radius: 999rpx;
     background: linear-gradient(90deg, $color-holo-gold 0%, $color-holo-cream 25%, $color-holo-dark 50%, $color-holo-pale 75%, $color-holo-brown 100%);
     box-shadow: 0 2rpx 8rpx rgba(180, 140, 40, 0.25);
+    animation: personality-results-stamp-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.6s both;
+  }
+
+  @keyframes personality-results-stamp-pop {
+    0% {
+      opacity: 0;
+      transform: scale(0.85);
+    }
+    60% {
+      opacity: 1;
+      transform: scale(1.04);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 
   &__pokemon-energy-hint {
@@ -1847,6 +2024,10 @@ $color-skill-cool: #7c3aed;
     max-height: 80%;
     display: flex;
     flex-direction: column;
+
+    &--closing {
+      animation: personality-results-detail-slide-down 0.25s cubic-bezier(0.36, 0, 0.22, 1) both;
+    }
   }
 
   @keyframes personality-results-detail-slide-up {
@@ -1857,6 +2038,17 @@ $color-skill-cool: #7c3aed;
     100% {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  @keyframes personality-results-detail-slide-down {
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(60rpx);
     }
   }
 
@@ -1958,6 +2150,10 @@ $color-skill-cool: #7c3aed;
   &__detail-close {
     text-align: center;
     padding: $spacing-sm 0;
+    min-height: $cta-min-tap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   &__detail-close-text {
@@ -2084,6 +2280,18 @@ $color-skill-cool: #7c3aed;
 
     &__detail-overlay,
     &__detail-sheet {
+      animation: none !important;
+      opacity: 1;
+      transform: none;
+    }
+
+    &__hero-badge {
+      transition: none !important;
+      opacity: 1;
+      transform: none;
+    }
+
+    &__pokemon-holo-stamp {
       animation: none !important;
       opacity: 1;
       transform: none;

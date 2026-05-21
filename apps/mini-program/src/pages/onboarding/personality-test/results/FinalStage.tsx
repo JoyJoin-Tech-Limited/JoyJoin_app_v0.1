@@ -88,11 +88,18 @@ export default function FinalStage({
   const [isTiltActive, setIsTiltActive] = useState(false)
   const [touchTilt, setTouchTilt] = useState({ rotateX: 0, rotateY: 0 })
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isDetailClosing, setIsDetailClosing] = useState(false)
   const [isCardPressed, setIsCardPressed] = useState(false)
+  const [badgesVisible, setBadgesVisible] = useState(false)
   const touchActiveRef = useRef(false)
   const touchStartRef = useRef({ x: 0, y: 0 })
   const cardRef = useRef<{ left: number; top: number; width: number; height: number } | null>(null)
-  const cardMeasuredRef = useRef(false)
+
+  // Stagger badge entrance after mount
+  useEffect(() => {
+    const timer = setTimeout(() => setBadgesVisible(true), 300)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Measure card position once on mount (and on window resize)
   useEffect(() => {
@@ -102,7 +109,6 @@ export default function FinalStage({
       query.exec((res) => {
         if (res?.[0]) {
           cardRef.current = res[0]
-          cardMeasuredRef.current = true
         }
       })
     }
@@ -110,6 +116,15 @@ export default function FinalStage({
     const timer = setTimeout(measure, 300)
     return () => clearTimeout(timer)
   }, [displayArchetypeName, selectedVariantIndex])
+
+  const handleCloseDetail = useCallback(() => {
+    setIsDetailClosing(true)
+    // Wait for close animation to finish before unmounting
+    setTimeout(() => {
+      setIsDetailOpen(false)
+      setIsDetailClosing(false)
+    }, 280)
+  }, [])
 
   // Touch-driven tilt with gyro suppression
   const handleTouchStart = useCallback((e: any) => {
@@ -168,9 +183,7 @@ export default function FinalStage({
     setIsDetailOpen(true)
   }, [])
 
-  const handleCloseDetail = useCallback(() => {
-    setIsDetailOpen(false)
-  }, [])
+
 
   const handleSharePress = useCallback(() => {
     haptics('medium')
@@ -220,13 +233,13 @@ export default function FinalStage({
 
             <View className='personality-results__hero-badges'>
               {confidenceLabel ? (
-                <Text className='personality-results__hero-badge personality-results__hero-badge--chemistry'>{confidenceLabel}</Text>
+                <Text className={`personality-results__hero-badge personality-results__hero-badge--chemistry ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}>{confidenceLabel}</Text>
               ) : null}
               {typeof visual.rarityPercentage === 'number' ? (
-                <Text className='personality-results__hero-badge personality-results__hero-badge--rarity'>稀有度 {Math.round(visual.rarityPercentage)}%</Text>
+                <Text className={`personality-results__hero-badge personality-results__hero-badge--rarity ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}>稀有度 {Math.round(visual.rarityPercentage)}%</Text>
               ) : null}
               {visual.nickname ? (
-                <Text className='personality-results__hero-badge personality-results__hero-badge--nickname'>{visual.nickname}</Text>
+                <Text className={`personality-results__hero-badge personality-results__hero-badge--nickname ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}>{visual.nickname}</Text>
               ) : null}
             </View>
           </View>
@@ -239,10 +252,13 @@ export default function FinalStage({
           {/* Xiaoyue short analysis — integrated into hero card */}
           <View className='personality-results__hero-xiaoyue'>
             {isLoadingAnalysis && !xiaoyueAnalysis ? (
-              <View className='personality-results__hero-xiaoyue-loading'>
-                <Text className='personality-results__hero-xiaoyue-loading-text'>
-                  {DEFAULT_MASCOT_DISPLAY_NAME}正在为你写专属解读…
-                </Text>
+              <View className='personality-results__xiaoyue-skeleton'>
+                <View className='personality-results__xiaoyue-skeleton-avatar' />
+                <View className='personality-results__xiaoyue-skeleton-bubble'>
+                  <View className='personality-results__xiaoyue-skeleton-line personality-results__xiaoyue-skeleton-line--short' />
+                  <View className='personality-results__xiaoyue-skeleton-line' />
+                  <View className='personality-results__xiaoyue-skeleton-line' />
+                </View>
               </View>
             ) : xiaoyueAnalysis ? (
               <>
@@ -275,7 +291,7 @@ export default function FinalStage({
                   onClick={handleCardTap}
                 >
                   <Text className='personality-results__hero-xiaoyue-cta-text'>
-                    查看完整解读 ▼
+                    看看悦仔怎么说 ▼
                   </Text>
                 </View>
               </>
@@ -294,6 +310,11 @@ export default function FinalStage({
                       {visual.hiddenStrength || '你的氛围感不是靠用力营业，而是靠稳定地把气氛带到对的位置。'}
                     </Text>
                   </View>
+                </View>
+                <View className='personality-results__xiaoyue-fallback-indicator'>
+                  <Text className='personality-results__xiaoyue-fallback-indicator-text'>
+                    💡 悦仔的解读暂时不可用，先看看你的氛围卡吧
+                  </Text>
                 </View>
               </>
             )}
@@ -473,7 +494,7 @@ export default function FinalStage({
       {isDetailOpen && (
         <View className='personality-results__detail-overlay' onClick={handleCloseDetail}>
           <View
-            className='personality-results__detail-sheet'
+            className={`personality-results__detail-sheet ${isDetailClosing ? 'personality-results__detail-sheet--closing' : ''}`}
             onClick={(e) => { e.stopPropagation() }}
           >
             {/* Sheet handle */}
