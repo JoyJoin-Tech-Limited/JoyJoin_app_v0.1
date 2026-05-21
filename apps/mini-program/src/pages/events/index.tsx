@@ -169,7 +169,7 @@ export default function EventsPage() {
           ))
         ) : (
           <XiaoyueEmptyState
-            emotion='curious'
+            emotion='events'
             title='还没有活动'
             subtitle='去发现感兴趣的活动吧'
             actionLabel='去发现'

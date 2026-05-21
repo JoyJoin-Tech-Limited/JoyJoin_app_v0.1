@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { cdnAsset } from '@/lib/utils/cdnAssets'
 
 interface XiaoyueEmptyStateProps {
-  emotion: 'coaching' | 'celebration' | 'waiting' | 'sad' | 'curious'
+  emotion: 'coaching' | 'celebration' | 'waiting' | 'sad' | 'curious' | 'events'
   title: string
   subtitle?: string
   actionLabel?: string
@@ -19,6 +19,7 @@ const EMOTION_MAP: Record<string, string> = {
   waiting:     'xiaoyue-match-waiting',
   sad:         'xiaoyue-neutral-information',
   curious:     'xiaoyue-connections-empty',
+  events:      'xiaoyue-events-empty',
 }
 
 export default function XiaoyueEmptyState({

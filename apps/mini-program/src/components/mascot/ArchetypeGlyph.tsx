@@ -1,5 +1,6 @@
 import { View, Image } from '@tarojs/components'
 import React from 'react'
+import { cdnAsset } from '@/lib/utils/cdnAssets'
 
 /**
  * ArchetypeGlyph — proprietary micro glyph icons for the 12 JoyJoin archetypes.
@@ -8,10 +9,10 @@ import React from 'react'
  * derived from the existing full-body illustrations. Each glyph is a
  * monochrome filled shape at 16×16 viewBox, recognizable at ~16rpx scale.
  *
- * Assets live in: assets/personality/archetypes/
+ * Assets live in: assets/archetypes/
  * Naming: archetype-{key}.webp
  *
- * Taro/WeChat safe: uses <Image> with local asset paths.
+ * CDN-safe: uses cdnAsset() so assets survive bundle offloads.
  */
 
 export type ArchetypeFamily = 'warm' | 'cool' | 'fire' | 'calm'
@@ -25,21 +26,21 @@ interface ArchetypeGlyphProps {
 }
 
 const GLYPH_PATHS: Record<string, string> = {
-  'corgi': '/assets/archetypes/archetype-corgi.webp',
-  'rooster': '/assets/archetypes/archetype-rooster.webp',
-  'hamster_praise': '/assets/archetypes/archetype-hamster_praise.webp',
-  'fox': '/assets/archetypes/archetype-fox.webp',
-  'dolphin_calm': '/assets/archetypes/archetype-dolphin_calm.webp',
-  'spider': '/assets/archetypes/archetype-spider.webp',
-  'koala': '/assets/archetypes/archetype-koala.webp',
-  'octopus': '/assets/archetypes/archetype-octopus.webp',
-  'owl': '/assets/archetypes/archetype-owl.webp',
-  'elephant': '/assets/archetypes/archetype-elephant.webp',
-  'turtle': '/assets/archetypes/archetype-turtle.webp',
-  'cat': '/assets/archetypes/archetype-cat.webp',
+  'corgi': cdnAsset('/assets/archetypes/archetype-corgi.webp'),
+  'rooster': cdnAsset('/assets/archetypes/archetype-rooster.webp'),
+  'hamster_praise': cdnAsset('/assets/archetypes/archetype-hamster_praise.webp'),
+  'fox': cdnAsset('/assets/archetypes/archetype-fox.webp'),
+  'dolphin_calm': cdnAsset('/assets/archetypes/archetype-dolphin_calm.webp'),
+  'spider': cdnAsset('/assets/archetypes/archetype-spider.webp'),
+  'koala': cdnAsset('/assets/archetypes/archetype-koala.webp'),
+  'octopus': cdnAsset('/assets/archetypes/archetype-octopus.webp'),
+  'owl': cdnAsset('/assets/archetypes/archetype-owl.webp'),
+  'elephant': cdnAsset('/assets/archetypes/archetype-elephant.webp'),
+  'turtle': cdnAsset('/assets/archetypes/archetype-turtle.webp'),
+  'cat': cdnAsset('/assets/archetypes/archetype-cat.webp'),
 }
 
-const FALLBACK_PATH = '/assets/archetypes/archetype-corgi.webp'
+const FALLBACK_PATH = cdnAsset('/assets/archetypes/archetype-corgi.webp')
 
 export default function ArchetypeGlyph({
   archetype,

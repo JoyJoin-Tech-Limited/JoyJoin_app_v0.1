@@ -116,7 +116,7 @@ export default function EventDetailPage() {
           <View className='event-detail__tip'>
             <Image
               className='event-detail__tip-mascot'
-              src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-neutral-information.webp')}
+              src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-event-detail-tip.webp')}
               mode='aspectFit'
               lazyLoad
             />
