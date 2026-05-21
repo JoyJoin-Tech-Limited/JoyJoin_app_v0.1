@@ -53,14 +53,15 @@ $color-burst-pink:     #FF6B9D;
 $font-ui:   -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', sans-serif;
 $font-body: $font-ui;
 
-// Chinese display: Alimama (loaded via `loadBrandFonts` in app launch). Falls back if load fails.
+// Chinese display: Alimama (loaded on first screen via `loadBrandDisplayFont`, deferred in app.ts).
+// Falls back to system stack if load fails.
 $font-cn-display: 'AlimamaFangYuanTiVF', 'PingFang SC', 'Noto Sans SC', 'Helvetica Neue', system-ui,
   sans-serif;
 
 // Legacy alias: same as `$font-cn-display` for existing `font-family: $font-brand` title styles.
 $font-brand: $font-cn-display;
 
-// English brand: Quicksand (loaded via `loadBrandFonts` → `loadEnglishBrandFont`). Short English wordmarks, hero numerals.
+// English brand: Quicksand (loaded on-demand via `loadEnglishBrandFont`). Short English wordmarks, hero numerals.
 // Aligns with web `--font-en-brand`; Outfit omitted in mini-program to avoid an extra load.
 $font-en-brand: 'Quicksand', system-ui, sans-serif;
 
@@ -157,3 +158,42 @@ $color-category-entertainment: #8FB8E8;
 $color-category-lifestyle:     #8FBFA3;
 $color-category-culture:       #B8A8D8;
 $color-category-social:        #E8A8A8;
+
+// ─── WeChat Brand Green ────────────────────────────────────────────
+$color-wechat-green:        #07c160;
+$color-wechat-green-hover:  #06ad56;
+
+// ─── Card Gradient Presets ─────────────────────────────────────────
+$card-gradient-warm:        linear-gradient(135deg, #FFF8F1 0%, #FFF0F5 50%, #F5F0FF 100%);
+$card-gradient-cool:        linear-gradient(135deg, #F0F9FF 0%, #EFF6FF 50%, #F5F3FF 100%);
+$card-gradient-fire:        linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 50%, #FED7AA 100%);
+$card-gradient-premium:     linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.86) 100%);
+
+// ─── Mascot Sizing Scale ───────────────────────────────────────────
+$mascot-size-xs:   80rpx;
+$mascot-size-sm:  120rpx;
+$mascot-size-md:  160rpx;
+$mascot-size-lg:  200rpx;
+$mascot-size-xl:  240rpx;
+
+// ─── Icon Slot Sizes ───────────────────────────────────────────────
+$icon-slot-sm:    40rpx;
+$icon-slot-md:    48rpx;
+$icon-slot-lg:    56rpx;
+
+// ─── Line-height Token Overrides ───────────────────────────────────
+$line-height-tight:   1.2;
+$line-height-snug:    1.3;
+$line-height-normal:  1.5;
+$line-height-relaxed: 1.6;
+$line-height-loose:   1.75;
+
+// ─── Chemistry Indicator Tokens ────────────────────────────────────
+$chemistry-fire-bg:    rgba($color-error, 0.12);
+$chemistry-fire-text:  #DC2626;
+$chemistry-warm-bg:    rgba($color-secondary, 0.14);
+$chemistry-warm-text:  #BE185D;
+$chemistry-calm-bg:    rgba($color-success, 0.12);
+$chemistry-calm-text:  #059669;
+$chemistry-mild-bg:    rgba($color-primary-light, 0.96);
+$chemistry-mild-text:  $color-primary-dark;

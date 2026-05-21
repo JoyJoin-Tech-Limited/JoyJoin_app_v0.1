@@ -321,7 +321,7 @@ export function MiniScriptPhaseView({
                     <Text className='icebreaker__ms-role-back-line'>钩子：{myRole.sinHook}</Text>
                     <Text className='icebreaker__ms-role-back-line'>表面：{myRole.alibi}</Text>
                     {myRole.secretAgenda ? (
-                      <Text className='icebreaker__ms-role-back-line' style={{ color: '#f87171', marginTop: '8rpx' }}>
+                      <Text className='icebreaker__ms-role-back-line icebreaker__text--danger' style={{ marginTop: '8rpx' }}>
                         秘密：{myRole.secretAgenda}
                       </Text>
                     ) : null}

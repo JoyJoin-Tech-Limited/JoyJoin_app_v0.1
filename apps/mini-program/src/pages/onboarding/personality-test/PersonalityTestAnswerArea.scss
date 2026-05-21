@@ -212,23 +212,26 @@
     color: $color-text-primary;
     text-align: center;
     line-height: 1.5;
+    word-break: keep-all;
   }
 
   &__slider-shell {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: $spacing-md;
     padding: $spacing-sm 0;
+    min-height: 100%;
   }
 
-  &__slider-dynamic-emoji {
+  &__slider-live-badge {
     display: flex;
     align-items: center;
     justify-content: center;
     height: 120rpx;
   }
 
-  &__slider-dynamic-emoji-inner {
+  &__slider-live-badge-inner {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -276,7 +279,7 @@
     }
   }
 
-  &__slider-dynamic-label {
+  &__slider-live-badge-label {
     font-family: $font-ui;
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
@@ -285,7 +288,7 @@
     text-align: center;
   }
 
-  &__slider-dynamic-value {
+  &__slider-live-badge-value {
     font-family: $font-ui;
     font-size: $font-size-xs;
     color: $color-text-secondary;

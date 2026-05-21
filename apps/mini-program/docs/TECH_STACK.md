@@ -373,14 +373,15 @@ npm run test --workspace=mini-program
 
 ### Fonts
 
-Two brand fonts are loaded at app launch (`loadBrandFonts()` in `src/app.ts` via `src/lib/brandFont.ts`):
+Brand fonts are loaded on-demand via `src/lib/utils/brandFont.ts`:
 
-| Font | Family | File | Usage |
-|------|--------|------|-------|
-| AlimamaFangYuanTiVF | `AlimamaFangYuanTiVF` | `assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.ttf` | Chinese display / emotional surfaces |
-| Quicksand | `Quicksand` | `assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf` | English wordmarks, hero numerals |
+| Font | Family | File | Usage | Load trigger |
+|------|--------|------|-------|--------------|
+| AlimamaFangYuanTiVF | `AlimamaFangYuanTiVF` | `assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2` | Chinese display / emotional surfaces | Deferred in `app.ts` `useLaunch` (100ms) + eagerly on `LandingPage.tsx` mount |
+| Quicksand | `Quicksand` | `assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf` | English wordmarks, hero numerals | On-demand when first English brand surface appears (not yet wired) |
 
 Both use `Taro.loadFontFace({ global: true, source: "url(...)" })` with system-stack fallbacks.
+A module-level guard in `brandFont.ts` prevents redundant `loadFontFace` calls.
 
 ### Tab bar icons
 

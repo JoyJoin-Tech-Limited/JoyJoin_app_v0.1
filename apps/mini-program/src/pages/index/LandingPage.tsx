@@ -1,7 +1,8 @@
 import { View, Text, Image, Navigator } from "@tarojs/components"
 import { PhaseHeaderIcon } from "../icebreaker-session/phaseUtils"
 import Taro from "@tarojs/taro"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { loadBrandDisplayFont } from "../../lib/utils/brandFont"
 import Button from "../../components/ui/Button"
 import BrandLogo from "../../components/ui/BrandLogo"
 import BondingCloud from "../../components/landing/BondingCloud"
@@ -15,6 +16,10 @@ export default function MiniProgramLandingPage() {
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [mascotSrc, setMascotSrc] = useState(getXiaoyueExpressionAsset("homeWelcome"))
   const isMounted = useStaggerMount()
+
+  useEffect(() => {
+    loadBrandDisplayFont()
+  }, [])
 
   const ctaDisabledClass = hasAcceptedLegal ? "" : " landing-page__cta--disabled"
   const ctaHoverClass = hasAcceptedLegal ? "landing-page__cta-hover" : ""

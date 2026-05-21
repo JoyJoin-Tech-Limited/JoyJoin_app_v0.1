@@ -1,5 +1,5 @@
 import { View } from '@tarojs/components'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import spritesheetManifest from '../../assets/mascot/xiaoyue-spritesheet-manifest.json'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import './XiaoyueSpriteAnimator.scss'
@@ -43,6 +43,8 @@ export interface XiaoyueSpriteAnimatorProps {
   showGlow?: boolean
   /** Loading state override (forces thinking animation) */
   isLoading?: boolean
+  /** Crossfade duration in ms when switching states. Default 180. */
+  transitionMs?: number
 }
 
 interface SpriteStateMeta {
@@ -83,9 +85,41 @@ export default function XiaoyueSpriteAnimator({
   onComplete,
   showGlow = false,
   isLoading = false,
+  transitionMs = 180,
 }: XiaoyueSpriteAnimatorProps) {
   const resolvedState: XiaoyueSpriteState = isLoading ? 'thinking' : state
   const meta = getStateMeta(resolvedState)
+
+  // ── Crossfade transition state ──
+  // When state changes, we keep the old sprite frame visible and fade it out
+  // while the new frame fades in underneath. This eliminates the jarring
+  // background-image swap that made static↔sprite transitions feel disconnected.
+  const [exitMeta, setExitMeta] = useState<SpriteStateMeta | null>(null)
+  const [isFading, setIsFading] = useState(false)
+  const prevStateRef = useRef(resolvedState)
+  const prevMetaRef = useRef<SpriteStateMeta | null>(meta)
+
+  useEffect(() => {
+    if (resolvedState !== prevStateRef.current) {
+      const oldMeta = prevMetaRef.current
+      if (oldMeta) {
+        // State changed — begin crossfade using the PREVIOUS meta as exit
+        setExitMeta(oldMeta)
+        setIsFading(true)
+        const timer = setTimeout(() => {
+          setExitMeta(null)
+          setIsFading(false)
+        }, transitionMs)
+        // Update refs AFTER capturing exit meta so the next transition uses the correct source
+        prevStateRef.current = resolvedState
+        prevMetaRef.current = meta
+        return () => clearTimeout(timer)
+      }
+      // No previous meta to crossfade from — just update refs
+      prevStateRef.current = resolvedState
+      prevMetaRef.current = meta
+    }
+  }, [resolvedState, meta, transitionMs])
 
   // Increment playKey on state change to force remount and restart animation
   const [playKey, setPlayKey] = useState(0)
@@ -93,8 +127,8 @@ export default function XiaoyueSpriteAnimator({
     setPlayKey((k) => k + 1)
   }, [resolvedState])
 
-  const style = useMemo(() => {
-    if (!meta) {
+  const makeStyle = useCallback((m: SpriteStateMeta | null): Record<string, string | number> => {
+    if (!m) {
       return {
         width: size,
         height: size,
@@ -103,7 +137,7 @@ export default function XiaoyueSpriteAnimator({
       }
     }
 
-    const { sheet, frameCount, duration, loop } = meta
+    const { sheet, frameCount, duration, loop } = m
     const baseStyle: Record<string, string | number> = {
       width: size,
       height: size,
@@ -122,13 +156,16 @@ export default function XiaoyueSpriteAnimator({
     }
 
     return baseStyle
-  }, [meta, size, autoPlay, resolvedState])
+  }, [size, autoPlay])
+
+  const currentStyle = useMemo(() => makeStyle(meta), [makeStyle, meta])
+  const exitStyle = useMemo(() => makeStyle(exitMeta), [makeStyle, exitMeta])
 
   if (!meta) {
     return (
       <View
         className={`xiaoyue-sprite xiaoyue-sprite--fallback ${className}`}
-        style={style}
+        style={{ width: size, height: size }}
       />
     )
   }
@@ -136,13 +173,25 @@ export default function XiaoyueSpriteAnimator({
   return (
     <View
       className={`xiaoyue-sprite ${showGlow ? 'xiaoyue-sprite--glow' : ''} ${className}`}
+      style={{ width: size, height: size }}
     >
+      {/* Current state — opacity wrapper handles enter fade, inner handles sprite play */}
       <View
-        key={playKey}
-        className='xiaoyue-sprite__frame'
-        style={style}
-        onAnimationEnd={onComplete}
-      />
+        className={`xiaoyue-sprite__frame ${isFading ? 'xiaoyue-sprite__frame--enter' : ''}`}
+      >
+        <View
+          key={playKey}
+          className='xiaoyue-sprite__frame-inner'
+          style={currentStyle}
+          onAnimationEnd={onComplete}
+        />
+      </View>
+      {/* Exiting state — opacity wrapper handles exit fade, inner handles sprite play */}
+      {exitMeta && (
+        <View className='xiaoyue-sprite__frame xiaoyue-sprite__frame--exit'>
+          <View className='xiaoyue-sprite__frame-inner' style={exitStyle} />
+        </View>
+      )}
     </View>
   )
 }

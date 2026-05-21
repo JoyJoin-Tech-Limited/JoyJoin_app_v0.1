@@ -22,6 +22,7 @@ import { useOnboardingCheckpoint } from '../../../hooks/onboarding/useOnboarding
 import { CATEGORY_COLORS } from '@shared/ui/categoryColors'
 import { TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../../lib/utils/uiConstants'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
+import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { logError, logInfo } from '../../../lib/utils/logger'
 import Button from '../../../components/ui/Button'
@@ -74,6 +75,8 @@ export default function ExtendedDataPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [error, setError] = useState('')
+
+  useResetOnShow(setIsPageExiting, setIsSubmitting)
   const [showFirstSelectionHint, setShowFirstSelectionHint] = useState(false)
   const [hasShownFirstSelectionHint, setHasShownFirstSelectionHint] = useState(false)
   const { isLoading } = useAuthGuard({

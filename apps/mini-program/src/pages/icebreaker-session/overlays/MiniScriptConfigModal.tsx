@@ -212,9 +212,9 @@ export function MiniScriptConfigModal({
                   </View>
                 </>
               )}
-              <Text className='ms-modal__back-btn' onClick={handleBackToStyle}>
-                重选
-              </Text>
+              <View className='ms-modal__back-btn' onClick={handleBackToStyle}>
+                <Text>重选</Text>
+              </View>
             </View>
           )}
         </View>

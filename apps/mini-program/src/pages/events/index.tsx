@@ -10,6 +10,8 @@ import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import Card from '../../components/ui/Card'
+import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
+import RichListCard from '../../components/RichListCard'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
 import { isLongListRowCount } from '../../lib/utils/longListThreshold'
 import { logWarn } from '../../lib/utils/logger'
@@ -17,6 +19,17 @@ import { partitionJoinedEventsByDateTime } from './eventPartition'
 import './index.scss'
 
 type TabKey = 'upcoming' | 'completed'
+
+function getCountdownText(startTime: string): string {
+  const now = new Date()
+  const start = new Date(startTime)
+  const diff = start.getTime() - now.getTime()
+  if (diff < 0) return '进行中'
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  if (hours < 24) return `${hours}小时后开始`
+  const days = Math.floor(hours / 24)
+  return `${days}天后开始`
+}
 
 function EventCardSkeleton() {
   return (
@@ -101,6 +114,10 @@ export default function EventsPage() {
     Taro.navigateTo({ url: `/pages/event-detail/index?id=${event.id}` })
   }
 
+  const navigateToDiscover = () => {
+    Taro.switchTab({ url: '/pages/discover/index' })
+  }
+
   return renderGate(
     <View className='events-page tab-page-enter'>
       <View className='events-page__header'>
@@ -131,26 +148,33 @@ export default function EventsPage() {
             <EventCardSkeleton />
           </>
         ) : displayEvents.length > 0 ? (
-          displayEvents.map((event) => (
-            <Card
-              key={String(event.id)}
-              className='events-page__card'
-              onClick={() => handleEventTap(event)}
-            >
-              <View className='events-page__card-header'>
-                <Text className='events-page__card-title'>{event.title ?? '悦聚活动'}</Text>
-              </View>
-              <Text className='events-page__card-date'>{event.dateTime ?? '时间待定'}</Text>
-            </Card>
+          displayEvents.map((event, index) => (
+            <View key={String(event.id)} className='events-page__card'>
+              <RichListCard
+                title={event.title ?? '悦聚活动'}
+                subtitle={event.dateTime ?? '时间待定'}
+                gradient='premium'
+                onClick={() => handleEventTap(event)}
+                index={index}
+              >
+                {event.startTime && resolvedActiveTab === 'upcoming' && (
+                  <View className='events-page__countdown'>
+                    <Text className='events-page__countdown-text'>
+                      ⏰ {getCountdownText(event.startTime)}
+                    </Text>
+                  </View>
+                )}
+              </RichListCard>
+            </View>
           ))
         ) : (
-          <Card className='events-page__empty-state'>
-            <Text className='events-page__empty-emoji'>✨</Text>
-            <Text className='events-page__empty-text'>
-              {resolvedActiveTab === 'upcoming' ? '还没有待参加的活动' : '还没有已完成的活动'}
-            </Text>
-            <Text className='events-page__empty-hint'>去「发现」页面看看有什么好玩的</Text>
-          </Card>
+          <XiaoyueEmptyState
+            emotion='curious'
+            title='还没有活动'
+            subtitle='去发现感兴趣的活动吧'
+            actionLabel='去发现'
+            onAction={navigateToDiscover}
+          />
         )}
         <View className='events-page__spacer' />
       </ScrollView>

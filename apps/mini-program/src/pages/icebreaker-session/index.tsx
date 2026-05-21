@@ -52,6 +52,19 @@ import {
 } from './icebreakerSessionModel'
 import './index.scss'
 
+function getPhaseToastText(phase: string): string {
+  const texts: Record<string, string> = {
+    lie_detective: '真相只有一个！🕵️',
+    auction: '竞拍开始，准备好你的虚拟币！💰',
+    personality_dice: '人格骰子，看看今天的运势！🎲',
+    quip_battle: '接梗大战，接得住吗？😏',
+    undercover_word: '谁是卧底？小心别暴露！🕵️',
+    group_mirror: '团队镜像，看看大家的默契！🪞',
+    recap: '精彩回顾，今天真开心！🎉',
+  }
+  return texts[phase] || '新阶段开始啦！'
+}
+
 // ─── Component ────────────────────────────────────────────────────
 
 export default function IcebreakerSessionPage() {
@@ -74,6 +87,7 @@ export default function IcebreakerSessionPage() {
   const [dismissedSuggestionAt, setDismissedSuggestionAt] = useState<string | null>(null)
   const [showPhaseIntro, setShowPhaseIntro] = useState(false)
   const [showTierSelector, setShowTierSelector] = useState(false)
+  const [phaseToast, setPhaseToast] = useState<{ visible: boolean; text: string }>({ visible: false, text: '' })
   const startAttemptRef = useRef<string | null>(null)
   const prevPhaseRef = useRef<SessionPhase>('waiting')
 
@@ -209,6 +223,16 @@ export default function IcebreakerSessionPage() {
       setShowPhaseIntro(true)
     }
     prevPhaseRef.current = phase
+  }, [phase])
+
+  // Xiaoyue phase-transition toast
+  useEffect(() => {
+    if (phase && phase !== 'warmup' && prevPhaseRef.current !== 'waiting') {
+      const toastText = getPhaseToastText(phase)
+      setPhaseToast({ visible: true, text: toastText })
+      const timer = setTimeout(() => setPhaseToast({ visible: false, text: '' }), 3000)
+      return () => clearTimeout(timer)
+    }
   }, [phase])
   const hostUserId = session?.hostUserId ?? ''
   const isHost = !!currentUserId && currentUserId === hostUserId
@@ -566,8 +590,8 @@ export default function IcebreakerSessionPage() {
       <View className='icebreaker__host-badge'>
         <View className='icebreaker__host-badge-text'>
           <Image
+            className='icebreaker__host-badge-icon'
             src={cdnAsset('/assets/icons/status-icons/status-crown.png')}
-            style={{ width: '24rpx', height: '24rpx' }}
             lazyLoad
           />
           <Text>你是主持人</Text>
@@ -608,20 +632,32 @@ export default function IcebreakerSessionPage() {
 
   const bgStyles = useMemo(() => {
     const p = (path: string) => `url(${cdnAsset(path)})`
-    return {
-      '--bg-auction': p('/assets/lovart/icebreaker/backgrounds/bg-auction.jpg'),
-      '--bg-personality-dice': p('/assets/lovart/icebreaker/backgrounds/bg-personality-dice.jpg'),
-      '--bg-undercover-word': p('/assets/lovart/icebreaker/backgrounds/bg-undercover-word.jpg'),
-      '--bg-group-mirror': p('/assets/lovart/icebreaker/backgrounds/bg-group-mirror.jpg'),
-      '--bg-quip-battle': p('/assets/lovart/icebreaker/backgrounds/bg-quip-battle.jpg'),
-    } as React.CSSProperties
-  }, [])
+    const phaseBgMap: Record<string, React.CSSProperties> = {
+      auction: { '--bg-auction': p('/assets/lovart/icebreaker/backgrounds/bg-auction.jpg') } as React.CSSProperties,
+      personality_dice: { '--bg-personality-dice': p('/assets/lovart/icebreaker/backgrounds/bg-personality-dice.jpg') } as React.CSSProperties,
+      undercover_word: { '--bg-undercover-word': p('/assets/lovart/icebreaker/backgrounds/bg-undercover-word.jpg') } as React.CSSProperties,
+      group_mirror: { '--bg-group-mirror': p('/assets/lovart/icebreaker/backgrounds/bg-group-mirror.jpg') } as React.CSSProperties,
+      quip_battle: { '--bg-quip-battle': p('/assets/lovart/icebreaker/backgrounds/bg-quip-battle.jpg') } as React.CSSProperties,
+    }
+    return phaseBgMap[phase]
+  }, [phase])
 
   return (
     <ScrollView className='icebreaker' scrollY enhanced showScrollbar={false} style={bgStyles}>
       {phaseHeader}
 
       <PhaseIntroOverlay phase={phase} visible={showPhaseIntro} />
+
+      {phaseToast.visible && (
+        <View className='icebreaker__phase-toast'>
+          <Image
+            className='icebreaker__phase-toast-mascot'
+            src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+            mode='aspectFit'
+          />
+          <Text className='icebreaker__phase-toast-text'>{phaseToast.text}</Text>
+        </View>
+      )}
 
       {session?.bonusGateOffered && !session?.bonusGateAccepted && !session?.bonusGateDeclined && socialSessionId && (
         <BonusGateOverlay

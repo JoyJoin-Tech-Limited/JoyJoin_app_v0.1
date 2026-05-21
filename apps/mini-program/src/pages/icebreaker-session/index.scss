@@ -132,6 +132,35 @@ $__gold-accent:  $color-landed-gold;
     font-weight: $font-weight-medium;
   }
 
+  // ── Phase Transition Toast ────────────────────────────────────
+  &__phase-toast {
+    position: fixed;
+    top: calc(120rpx + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-lg;
+    background: $color-surface;
+    border-radius: 100rpx;
+    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
+    z-index: 100;
+    animation: fade-slide-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__phase-toast-mascot {
+    width: 48rpx;
+    height: 48rpx;
+  }
+
+  &__phase-toast-text {
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+    white-space: nowrap;
+  }
+
   // ── Host Controls ─────────────────────────────────────────────
   &__host-controls {
     display: flex;
@@ -149,6 +178,12 @@ $__gold-accent:  $color-landed-gold;
     padding: $spacing-xs $spacing-md;
     background: rgba(251, 191, 36, 0.15);
     border-radius: 100rpx;
+  }
+
+  &__host-badge-icon {
+    width: 24rpx;
+    height: 24rpx;
+    display: block;
   }
 
   &__host-badge-text {
@@ -882,7 +917,6 @@ $__gold-accent:  $color-landed-gold;
     inset: 0;
     z-index: 900;
     background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(6rpx);
     @include flex-center;
     animation: fade-in 0.2s ease both;
   }
@@ -1909,6 +1943,10 @@ $__gold-accent:  $color-landed-gold;
   }
 
   &__back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
     font-size: $font-size-sm;
     color: $color-primary;
     font-weight: $font-weight-medium;
@@ -2284,6 +2322,17 @@ $__gold-accent:  $color-landed-gold;
   }
 }
 
+@keyframes fade-slide-up {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 .icebreaker__ms-role--animate {
   opacity: 0;
   animation: ms-fade-slide-in 0.4s ease forwards;
@@ -2306,6 +2355,12 @@ $__gold-accent:  $color-landed-gold;
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  .icebreaker__phase-toast {
+    animation: none;
+    opacity: 1;
+    transform: translateX(-50%);
   }
 }
 
@@ -2370,7 +2425,6 @@ $__gold-accent:  $color-landed-gold;
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(6rpx);
   animation: phase-intro-fade-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 
   &--out {
@@ -2388,7 +2442,7 @@ $__gold-accent:  $color-landed-gold;
   &__label {
     font-size: 40rpx;
     font-weight: 700;
-    color: #FFFFFF;
+    color: $color-bg-tint-cream;
     text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.3);
     letter-spacing: 4rpx;
   }
@@ -2442,7 +2496,6 @@ $__gold-accent:  $color-landed-gold;
     position: absolute;
     inset: 0;
     background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(6rpx);
     animation: celebration-fade-in 0.3s ease both;
   }
 
@@ -2459,8 +2512,7 @@ $__gold-accent:  $color-landed-gold;
     z-index: 2;
     width: 460rpx;
     padding: 32rpx;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(12rpx);
+    background: rgba(0, 0, 0, 0.55);
     border-radius: 24rpx;
     border: 1rpx solid rgba(255, 255, 255, 0.15);
     text-align: center;
@@ -2470,7 +2522,7 @@ $__gold-accent:  $color-landed-gold;
   &__title {
     font-size: 48rpx;
     font-weight: 700;
-    color: #FFFFFF;
+    color: $color-bg-tint-cream;
     text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.4);
     margin-bottom: 16rpx;
     line-height: 1.3;
@@ -2528,12 +2580,41 @@ $__gold-accent:  $color-landed-gold;
   }
 }
 
+// ─── Text utility tokens (guardrails-compliant) ───────────────────
+.icebreaker__text--light {
+  color: $color-bg-tint-cream;
+}
+
+.icebreaker__text--danger {
+  color: $color-error;
+}
+
 // ─── Reduced Motion Overrides for V2 Phases ─────────────────────
 
 @media (prefers-reduced-motion: reduce) {
   .icebreaker__best-of-card,
   .icebreaker__recap-medal {
     animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .icebreaker__auction-timer--urgent,
+  .icebreaker__modal-backdrop,
+  .icebreaker__modal-card,
+  .icebreaker__challenge-stagger,
+  .icebreaker__challenge-progress-fill,
+  .icebreaker__tier-option,
+  .phase-intro-overlay,
+  .phase-intro-overlay--out,
+  .phase-intro-overlay__content,
+  .celebration-overlay,
+  .celebration-overlay--out,
+  .celebration-overlay__backdrop,
+  .celebration-overlay__hero,
+  .celebration-overlay__card {
+    animation: none !important;
+    transition: none !important;
     opacity: 1 !important;
     transform: none !important;
   }

@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -7,11 +7,11 @@ import { injectConnectionsShellIntoCache } from '../../lib/prefetchEngine'
 import { queryClient } from '../../lib/api/queryClient'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { getEmptyStateMessage } from '@shared/copy/emptyStates'
-import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
+import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import Card from '../../components/ui/Card'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
 import './index.scss'
@@ -21,6 +21,8 @@ interface Connection {
   peerName?: string
   peerArchetype?: string
   eventTitle?: string
+  sharedEventTitle?: string
+  chemistryScore?: number | string
   wechatId?: string
   [key: string]: unknown
 }
@@ -104,6 +106,24 @@ export default function ConnectionsPage() {
                     {ARCHETYPE_BY_ID[conn.peerArchetype]?.nameCn || conn.peerArchetype}
                   </Text>
                 ) : null}
+                {conn.chemistryScore ? (
+                  <View className='connections-page__chemistry-badge'>
+                    <Text className='connections-page__chemistry-text'>
+                      默契值 {conn.chemistryScore}
+                    </Text>
+                  </View>
+                ) : (
+                  <View className='connections-page__chemistry-badge connections-page__chemistry-badge--new'>
+                    <Text className='connections-page__chemistry-text'>新连接</Text>
+                  </View>
+                )}
+                {conn.sharedEventTitle ? (
+                  <View className='connections-page__shared-event'>
+                    <Text className='connections-page__shared-event-text'>
+                      📅 {conn.sharedEventTitle}
+                    </Text>
+                  </View>
+                ) : null}
                 {conn.eventTitle ? (
                   <Text className='connections-page__card-event'>来自：{conn.eventTitle}</Text>
                 ) : null}
@@ -111,15 +131,11 @@ export default function ConnectionsPage() {
             </Card>
           ))
         ) : (
-          <Card className='connections-page__empty-state'>
-            <Image
-              className='connections-page__empty-mascot'
-              src={getXiaoyueExpressionAsset('connectionsEmpty')}
-              mode='aspectFit'
-            />
-            <Text className='connections-page__empty-text'>{getEmptyStateMessage('connections', { includeAction: false })}</Text>
-            <Text className='connections-page__empty-hint'>参加活动后即可与活动伙伴建立连接</Text>
-          </Card>
+          <XiaoyueEmptyState
+            emotion='sad'
+            title={getEmptyStateMessage('connections', { includeAction: false })}
+            subtitle='参加活动后即可与活动伙伴建立连接'
+          />
         )}
         <View className='connections-page__spacer' />
       </ScrollView>

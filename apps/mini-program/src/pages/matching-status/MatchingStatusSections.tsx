@@ -8,7 +8,7 @@ import Card from '../../components/ui/Card'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import ChemistryBadge from '../../components/mascot/ChemistryBadge'
 import UnifiedRevealCard from './UnifiedRevealCard'
-import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import {
   type ChemistryTokens,
   type LiveRevealStage,
@@ -61,12 +61,14 @@ export function MatchingStatusPendingSection({
     <>
       <Card className='matching-status__waiting-card'>
         <View className='matching-status__waiting-top'>
-          <Image
-            className='matching-status__waiting-mascot'
-            mode='aspectFit'
-            src={getXiaoyueExpressionAsset('matchWaiting')}
-            ariaLabel='等待匹配'
-          />
+          <View className='matching-status__waiting-mascot'>
+            <Image
+              className='matching-status__waiting-mascot-img'
+              src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-match-waiting.webp')}
+              mode='aspectFit'
+              lazyLoad
+            />
+          </View>
           {waitingCopy.badge ? (
             <Text className='matching-status__waiting-badge'>{waitingCopy.badge}</Text>
           ) : null}

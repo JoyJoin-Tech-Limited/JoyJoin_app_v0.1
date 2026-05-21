@@ -64,25 +64,42 @@ export default function EventDetailPage() {
 
   return (
     <ScrollView className={pageClass} scrollY enhanced showScrollbar={false}>
-      <View className='event-detail__header'>
-        <Text className='event-detail__title'>{event.title ?? '悦聚活动'}</Text>
-        {event.type ? <Text className='event-detail__type-badge'>{event.type}</Text> : null}
+      <View className='event-detail__hero event-detail__hero--animated'>
+        <View className='event-detail__hero-content'>
+          <Text className='event-detail__title'>{event.title ?? '悦聚活动'}</Text>
+          {event.type ? <Text className='event-detail__type-badge'>{event.type}</Text> : null}
+        </View>
       </View>
 
       <View className='event-detail__card'>
         <View className='event-detail__info-row'>
-          <View className='event-detail__info-label'><JoyJoinIcon emoji='📅' size={24} /><Text>时间</Text></View>
+          <View className='event-detail__info-label'>
+            <View className='event-detail__icon-slot'>
+              <JoyJoinIcon emoji='📅' size={24} />
+            </View>
+            <Text>时间</Text>
+          </View>
           <Text className='event-detail__info-value'>{event.dateTime ?? '时间待定'}</Text>
         </View>
         {event.location ? (
           <View className='event-detail__info-row'>
-            <View className='event-detail__info-label'><JoyJoinIcon emoji='📍' size={24} /><Text>地点</Text></View>
+            <View className='event-detail__info-label'>
+              <View className='event-detail__icon-slot'>
+                <JoyJoinIcon emoji='📍' size={24} />
+              </View>
+              <Text>地点</Text>
+            </View>
             <Text className='event-detail__info-value'>{event.location}</Text>
           </View>
         ) : null}
         {event.attendeeCount ? (
           <View className='event-detail__info-row'>
-            <View className='event-detail__info-label'><JoyJoinIcon emoji='👥' size={24} /><Text>人数</Text></View>
+            <View className='event-detail__info-label'>
+              <View className='event-detail__icon-slot'>
+                <JoyJoinIcon emoji='👥' size={24} />
+              </View>
+              <Text>人数</Text>
+            </View>
             <Text className='event-detail__info-value'>{event.attendeeCount} 人</Text>
           </View>
         ) : null}
@@ -96,6 +113,15 @@ export default function EventDetailPage() {
 
       {event.description ? (
         <View className='event-detail__card'>
+          <View className='event-detail__tip'>
+            <Image
+              className='event-detail__tip-mascot'
+              src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-neutral-information.webp')}
+              mode='aspectFit'
+              lazyLoad
+            />
+            <Text className='event-detail__tip-text'>活动现场氛围超棒，记得提前15分钟到哦～</Text>
+          </View>
           <Text className='event-detail__description-title'>活动介绍</Text>
           <Text className='event-detail__description'>{event.description}</Text>
         </View>

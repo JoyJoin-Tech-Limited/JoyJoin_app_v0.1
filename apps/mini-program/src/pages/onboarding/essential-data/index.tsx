@@ -26,6 +26,7 @@ import { apiRequest, getUserState } from '../../../lib/api/api'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
 import { useOnboardingCheckpoint } from '../../../hooks/onboarding/useOnboardingCheckpoint'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
+import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
 import { logError, logInfo } from '../../../lib/utils/logger'
 import Button from '../../../components/ui/Button'
@@ -163,6 +164,8 @@ export default function EssentialDataPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [error, setError] = useState('')
+
+  useResetOnShow(setIsPageExiting, setIsSubmitting)
   const [occupationQuery, setOccupationQuery] = useState('')
   const [occupationSuggestions, setOccupationSuggestions] = useState<Array<{ occupationId: string; displayName: string; industryId: string }>>([])
   const [isSearching, setIsSearching] = useState(false)

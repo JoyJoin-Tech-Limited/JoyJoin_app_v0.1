@@ -4,7 +4,7 @@ import Button from '../../../components/ui/Button'
 import { COLOR_PRIMARY, COLOR_PRIMARY_LIGHT } from '../../../lib/utils/uiConstants'
 import { haptics } from '../../../lib/utils/haptics'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
-import { resolvePersonalityEmoji } from './emojiAssets'
+import { resolvePersonalityEmoji, resolvePersonalityIcon } from './emojiAssets'
 import { resolveFragmentLabel, getNearestSliderOption, type AnswerOption } from './personalityTestLogic'
 import './PersonalityTestAnswerArea.scss'
 
@@ -15,8 +15,8 @@ export type QuestionType = 'choice' | 'slider' | 'emoji_tap'
 export interface SliderConfig {
   leftLabel: string
   rightLabel: string
-  leftEmoji: string
-  rightEmoji: string
+  leftEmoji?: string
+  rightEmoji?: string
 }
 
 export interface AnswerAreaProps {
@@ -216,6 +216,10 @@ export default memo(function PersonalityTestAnswerArea({
           const parts = splitEmojiLabel(option.text)
           const isSelected = selectedValue === option.value
           const isCommitted = committedValue === option.value
+          // Prefer explicit semantic icon key; fall back to legacy emoji parsing
+          const iconPath = option.iconAssetKey
+            ? resolvePersonalityIcon(option.iconAssetKey)
+            : resolvePersonalityEmoji(parts.emoji)
           return (
             <Button
               key={option.value}
@@ -230,16 +234,16 @@ export default memo(function PersonalityTestAnswerArea({
               disabled={isSubmitting || selectedValue !== null}
               hoverClass='answer-area__emoji-option--active'
             >
-              {resolvePersonalityEmoji(parts.emoji) ? (
+              {iconPath ? (
                 <Image
                   className='answer-area__emoji-option-emoji answer-area__emoji-option-emoji--image'
-                  src={cdnAsset(resolvePersonalityEmoji(parts.emoji)!)}
+                  src={iconPath}
                   mode='aspectFit'
                 />
               ) : (
                 <Text className='answer-area__emoji-option-emoji'>{parts.emoji}</Text>
               )}
-              <Text className='answer-area__emoji-option-text'>{parts.label}</Text>
+              <Text className='answer-area__emoji-option-text'>{parts.label || option.text}</Text>
             </Button>
           )
         })}

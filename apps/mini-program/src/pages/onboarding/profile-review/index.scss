@@ -46,7 +46,7 @@
     margin-top: 10rpx;
     font-size: $font-size-sm;
     color: $color-text-secondary;
-    line-height: 1.55;
+    line-height: $line-height-normal;
   }
 
   &__stage {
@@ -136,7 +136,7 @@
     margin-top: $spacing-sm;
     font-size: $font-size-base;
     color: $color-text-secondary;
-    line-height: 1.55;
+    line-height: $line-height-normal;
   }
 
   &__coach {
@@ -170,7 +170,7 @@
     margin-top: 10rpx;
     font-size: $font-size-base;
     color: $color-text-primary;
-    line-height: 1.5;
+    line-height: $line-height-normal;
   }
 
   &__hero-card {
@@ -238,7 +238,7 @@
     margin-top: 12rpx;
     font-size: $font-size-sm;
     color: $color-text-secondary;
-    line-height: 1.55;
+    line-height: $line-height-normal;
     overflow-wrap: anywhere;
   }
 
@@ -265,7 +265,7 @@
   &__ai-tagline {
     font-size: $font-size-xs;
     color: rgba($color-text-secondary, 0.92);
-    line-height: 1.55;
+    line-height: $line-height-normal;
     overflow-wrap: anywhere;
   }
 

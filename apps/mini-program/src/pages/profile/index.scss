@@ -67,6 +67,39 @@
     margin-bottom: $spacing-lg;
   }
 
+  // Archetype Celebration Card
+  &__archetype-card {
+    margin: 0 $container-padding $spacing-lg;
+    padding: $spacing-lg;
+    border-radius: 32rpx;
+    border: 2rpx solid rgba($color-primary, 0.08);
+  }
+
+  &__archetype-card-inner {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+  }
+
+  &__archetype-card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
+  }
+
+  &__archetype-card-label {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+  }
+
+  &__archetype-card-name {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: $line-height-tight;
+  }
+
   // Stats
   &__stats {
     display: flex;
@@ -105,6 +138,7 @@
     align-items: center;
     gap: $spacing-md;
     padding: $spacing-lg;
+    min-height: 96rpx;
     border-bottom: 1rpx solid $color-divider;
 
     &:last-child {
@@ -131,6 +165,23 @@
   &__action-arrow {
     font-size: $font-size-lg;
     color: $color-text-muted;
+  }
+
+  &__action-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40rpx;
+    height: 40rpx;
+    padding: 0 $spacing-xs;
+    background: $color-primary;
+    border-radius: 100rpx;
+  }
+
+  &__action-count {
+    font-size: $font-size-xs;
+    color: $color-surface;
+    font-weight: $font-weight-bold;
   }
 
   // Logout

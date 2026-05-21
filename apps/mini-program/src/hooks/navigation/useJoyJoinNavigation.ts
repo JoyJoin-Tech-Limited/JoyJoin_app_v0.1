@@ -1,4 +1,4 @@
-import Taro from '@tarojs/taro'
+import Taro, { useDidShow } from '@tarojs/taro'
 import { useCallback, useState } from 'react'
 
 const DEFAULT_EXIT_DELAY_MS = 220
@@ -28,6 +28,8 @@ export function useJoyJoinNavigation(
   delayMs: number = DEFAULT_EXIT_DELAY_MS,
 ): UseJoyJoinNavigationResult {
   const [isExiting, setIsExiting] = useState(false)
+
+  useDidShow(() => setIsExiting(false))
 
   const runWithExit = useCallback(
     async (action: () => unknown | Promise<unknown>) => {

@@ -253,7 +253,7 @@
     border-radius: 999rpx;
     background: rgba(0, 0, 0, 0.12);
     transform: translateX(-50%);
-    filter: blur(10rpx);
+    opacity: 0.6;
     pointer-events: none;
   }
 
@@ -960,7 +960,10 @@
   }
 
   &__skip-link {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
     margin-top: $spacing-sm;
     text-align: center;
     font-size: $font-size-xs;
@@ -1068,5 +1071,22 @@
 
   75% {
     transform: rotate(2deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .squad-unboxing__blind-box-visual,
+  .squad-unboxing__blind-box-aura,
+  .squad-unboxing__blind-box-spark,
+  .squad-unboxing__member-card,
+  .squad-unboxing__analysis-card,
+  .squad-unboxing__pair-card,
+  .squad-unboxing__topic-chip,
+  .squad-unboxing__skeleton,
+  .squad-unboxing__blind-box-card--shaking {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
   }
 }

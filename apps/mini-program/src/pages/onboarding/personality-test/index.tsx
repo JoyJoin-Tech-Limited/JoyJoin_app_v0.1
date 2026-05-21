@@ -37,6 +37,7 @@ import {
 } from '../../../lib/onboarding/onboardingNavigation'
 import { logInfo, logError } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
+import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
 import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
@@ -49,7 +50,6 @@ import {
   getArchetypeVisual,
   getIntroStaticAsset,
   getIntroStaticFallbackAsset,
-  getTestCuriousStaticAsset,
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
   PERSONALITY_TEST_QUESTION_EXPRESSION,
@@ -64,13 +64,14 @@ interface AssessmentOption {
   value: string
   text: string
   traitScores?: Record<string, number>
+  iconAssetKey?: string
 }
 
 interface AssessmentSliderConfig {
   leftLabel: string
   rightLabel: string
-  leftEmoji: string
-  rightEmoji: string
+  leftEmoji?: string
+  rightEmoji?: string
 }
 
 interface AssessmentQuestion {
@@ -180,14 +181,24 @@ export default function PersonalityTestPage() {
   const [spriteState, setSpriteState] = useState<XiaoyueSpriteState>('idle')
   const [postAnswerCommentary, setPostAnswerCommentary] = useState<string | null>(null)
   const [milestonePulse, setMilestonePulse] = useState(false)
-  const [spriteLocked, setSpriteLocked] = useState(false)
   const [introImgSrc, setIntroImgSrc] = useState(getIntroStaticAsset)
   const [skipsRemaining, setSkipsRemaining] = useState(MAX_SKIP_COUNT)
   const [isSkipping, setIsSkipping] = useState(false)
+
+  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsSkipping)
+
   // Guard against stale async closures hijacking navigation after session change
   const activeSessionRef = useRef<string>('')
-  // Defensive timeout for sprite unlock if WeChat drops animationend
-  const spriteUnlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Defensive timeout for sprite state recovery if WeChat drops animationend
+  const spriteStateRecoveryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Clean up recovery timeout on unmount to avoid state updates after unmount
+  useEffect(() => {
+    return () => {
+      if (spriteStateRecoveryTimeoutRef.current) {
+        clearTimeout(spriteStateRecoveryTimeoutRef.current)
+      }
+    }
+  }, [])
   // Remember the last attempted option so we can retry on network failure
   const lastAttemptedOptionRef = useRef<AssessmentOption | null>(null)
   // Track previous question + answer for one-step back
@@ -424,20 +435,20 @@ export default function PersonalityTestPage() {
       setMilestonePulse(true)
     }
 
-    setSpriteLocked(true)
     setSpriteState(reactionState)
 
-    // Defensive unlock: if WeChat never fires animationend, unlock after max duration
-    if (spriteUnlockTimeoutRef.current) {
-      clearTimeout(spriteUnlockTimeoutRef.current)
+    // Defensive recovery: if WeChat never fires animationend, recover after max duration
+    if (spriteStateRecoveryTimeoutRef.current) {
+      clearTimeout(spriteStateRecoveryTimeoutRef.current)
     }
-    spriteUnlockTimeoutRef.current = setTimeout(() => {
-      setSpriteLocked(false)
+    spriteStateRecoveryTimeoutRef.current = setTimeout(() => {
       // Keep postAnswerCommentary visible — it's the feedback the user just received
       setMilestonePulse(false)
       // If server response hasn't arrived yet, transition to thinking state
       if (isSubmitting) {
         setSpriteState('thinking')
+      } else {
+        setSpriteState('idle')
       }
     }, 1500)
 
@@ -522,7 +533,7 @@ export default function PersonalityTestPage() {
       setError(message)
       analytics.errorOccurred('answer_failed', message)
       logError('[PersonalityTest] Failed to submit answer', { message })
-      setSpriteLocked(false)
+      setSpriteState('idle')
     } finally {
       setIsSubmitting(false)
     }
@@ -574,16 +585,24 @@ export default function PersonalityTestPage() {
     }
   }, [handleAnswer])
 
-  /** Release sprite lock after one-shot animation completes */
-  const handleSpriteAnimationComplete = useCallback(() => {
-    if (spriteUnlockTimeoutRef.current) {
-      clearTimeout(spriteUnlockTimeoutRef.current)
-      spriteUnlockTimeoutRef.current = null
+  // When submitting ends while sprite is in 'thinking', return to idle
+  useEffect(() => {
+    if (!isSubmitting) {
+      setSpriteState((prev) => (prev === 'thinking' ? 'idle' : prev))
     }
-    setSpriteLocked(false)
+  }, [isSubmitting])
+
+  /** Recover sprite state after one-shot animation completes */
+  const handleSpriteAnimationComplete = useCallback(() => {
+    if (spriteStateRecoveryTimeoutRef.current) {
+      clearTimeout(spriteStateRecoveryTimeoutRef.current)
+      spriteStateRecoveryTimeoutRef.current = null
+    }
     // If server response hasn't arrived yet, transition to thinking state
     if (isSubmitting) {
       setSpriteState('thinking')
+    } else {
+      setSpriteState('idle')
     }
   }, [isSubmitting])
 
@@ -677,6 +696,7 @@ export default function PersonalityTestPage() {
           value: o.value,
           text: o.text,
           traitScores: o.traitScores as Record<string, number>,
+          iconAssetKey: o.iconAssetKey,
         })),
         questionType: nextQuestion.questionType ?? 'choice',
         sliderConfig: nextQuestion.sliderConfig
@@ -783,6 +803,7 @@ export default function PersonalityTestPage() {
             value: o.value,
             text: o.text,
             traitScores: o.traitScores as Record<string, number>,
+            iconAssetKey: o.iconAssetKey,
           })),
           questionType: skipResult.newQuestion.questionType ?? 'choice',
           sliderConfig: skipResult.newQuestion.sliderConfig
@@ -1029,20 +1050,11 @@ export default function PersonalityTestPage() {
           {(backReview.isBackReviewMode ? backReview.backReviewQuestion : question) ? (
             <View className='personality-test__mascot-row'>
               <View className='personality-test__mascot-avatar'>
-                {spriteLocked ? (
-                  <XiaoyueSpriteAnimator
-                    state={spriteState}
-                    size='152rpx'
-                    onComplete={handleSpriteAnimationComplete}
-                  />
-                ) : (
-                  <Image
-                    className='personality-test__mascot-static personality-test__mascot-static--testing'
-                    src={getTestCuriousStaticAsset()}
-                    mode='aspectFit'
-                    lazyLoad={false}
-                  />
-                )}
+                <XiaoyueSpriteAnimator
+                  state={spriteState}
+                  size='152rpx'
+                  onComplete={handleSpriteAnimationComplete}
+                />
               </View>
               <View
                 className={`personality-test__speech-bubble${!backReview.isBackReviewMode && progress && (progress.answered === 4 || progress.answered === 8) ? ' personality-test__speech-bubble--milestone' : ''}`}

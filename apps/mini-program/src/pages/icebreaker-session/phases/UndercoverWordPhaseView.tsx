@@ -301,7 +301,7 @@ export default function UndercoverWordPhaseView({
                   borderRadius: '12rpx',
                 }}
               >
-                <Text style={{ fontSize: '28rpx', color: '#fff' }}>{p.displayName}</Text>
+                <Text style={{ fontSize: '28rpx' }} className='icebreaker__text--light'>{p.displayName}</Text>
                 <Text style={{ fontSize: '28rpx', color: '#FBBF24', fontWeight: 'bold' }}>
                   {results.voteCounts[p.userId] || 0} 票
                 </Text>
@@ -349,7 +349,7 @@ export default function UndercoverWordPhaseView({
                 }}
               >
                 <Text style={{ fontSize: '48rpx' }}>🕵️</Text>
-                <Text style={{ fontSize: '28rpx', fontWeight: 'bold', color: '#fff' }}>你的身份是？</Text>
+                <Text style={{ fontSize: '28rpx', fontWeight: 'bold' }} className='icebreaker__text--light'>你的身份是？</Text>
               </View>
             }
             back={
@@ -366,7 +366,7 @@ export default function UndercoverWordPhaseView({
                   gap: '8rpx',
                 }}
               >
-                <Text style={{ fontSize: '40rpx', fontWeight: 'bold', color: '#fff' }}>{myWord}</Text>
+                <Text style={{ fontSize: '40rpx', fontWeight: 'bold' }} className='icebreaker__text--light'>{myWord}</Text>
                 <View
                   style={{
                     padding: '4rpx 16rpx',
@@ -449,8 +449,8 @@ export default function UndercoverWordPhaseView({
                               style={{
                                 fontSize: '30rpx',
                                 fontWeight: 'bold',
-                                color: '#fff',
                               }}
+                              className='icebreaker__text--light'
                             >
                               {(p.displayName || '?')[0]}
                             </Text>
@@ -462,8 +462,8 @@ export default function UndercoverWordPhaseView({
                               style={{
                                 fontSize: '30rpx',
                                 fontWeight: 'bold',
-                                color: '#fff',
                               }}
+                              className='icebreaker__text--light'
                             >
                               {p.displayName}
                             </Text>
@@ -495,7 +495,7 @@ export default function UndercoverWordPhaseView({
                                 flexShrink: 0,
                               }}
                             >
-                              <Text style={{ fontSize: '24rpx', color: '#fff' }}>✓</Text>
+                              <Text style={{ fontSize: '24rpx' }} className='icebreaker__text--light'>✓</Text>
                             </View>
                           )}
                         </View>
@@ -543,7 +543,7 @@ export default function UndercoverWordPhaseView({
               }}
             >
               <Text style={{ fontSize: '72rpx' }}>🕵️</Text>
-              <Text style={{ fontSize: '36rpx', fontWeight: 'bold', color: '#fff' }}>
+              <Text style={{ fontSize: '36rpx', fontWeight: 'bold' }} className='icebreaker__text--light'>
                 你的身份是？
               </Text>
               <Text style={{ fontSize: '24rpx', color: 'rgba(255,255,255,0.6)' }}>
@@ -570,8 +570,8 @@ export default function UndercoverWordPhaseView({
                 style={{
                   fontSize: '48rpx',
                   fontWeight: 'bold',
-                  color: '#fff',
                 }}
+                className='icebreaker__text--light'
               >
                 {myWord || '?'}
               </Text>
@@ -630,11 +630,11 @@ export default function UndercoverWordPhaseView({
             <Text
               style={{
                 fontSize: '24rpx',
-                color: '#fff',
                 fontWeight: '600',
                 transform: descPulse ? 'scale(1.15)' : 'scale(1)',
                 transition: 'transform 300ms cubic-bezier(0.22, 1, 0.36, 1)',
               }}
+              className='icebreaker__text--light'
             >
               {describedCount}/{playerCount} 人已描述
             </Text>
@@ -687,7 +687,7 @@ export default function UndercoverWordPhaseView({
                 <Text style={{ fontSize: '24rpx', color: 'rgba(255,255,255,0.6)', marginBottom: '2rpx' }}>
                   {d.displayName}
                 </Text>
-                <Text style={{ fontSize: '28rpx', color: '#fff', lineHeight: 1.5 }}>
+                <Text style={{ fontSize: '28rpx', lineHeight: 1.5 }} className='icebreaker__text--light'>
                   “{d.text}”
                 </Text>
               </View>
@@ -726,12 +726,12 @@ export default function UndercoverWordPhaseView({
                 border: '1rpx solid rgba(255,255,255,0.2)',
                 backgroundColor: 'rgba(0,0,0,0.2)',
                 fontSize: '28rpx',
-                color: '#fff',
                 boxShadow: inputFocused
                   ? '0 0 20rpx rgba(139, 92, 246, 0.35)'
                   : '0 0 0rpx transparent',
                 transition: 'box-shadow 200ms ease',
               }}
+              className='icebreaker__text--light'
               placeholderStyle='color: rgba(255,255,255,0.4)'
             />
             <Button onClick={handleDescribe} disabled={!description.trim() || submitting}>

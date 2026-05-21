@@ -527,9 +527,9 @@ export default function SquadUnboxingPage() {
             查看活动详情
           </Button>
 
-          <Text className='squad-unboxing__skip-link' onClick={handleSkip}>
-            稍后再看
-          </Text>
+          <View className='squad-unboxing__skip-link' onClick={handleSkip}>
+            <Text>稍后再看</Text>
+          </View>
         </View>
       ) : null}
     </View>

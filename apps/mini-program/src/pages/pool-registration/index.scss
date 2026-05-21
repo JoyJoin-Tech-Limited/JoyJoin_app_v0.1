@@ -33,14 +33,14 @@
     display: block;
     @include type-body;
     color: $color-text-secondary;
-    line-height: 1.7;
+    line-height: $line-height-relaxed;
   }
 
   &__success-notify-hint {
     display: block;
     @include type-label;
     color: $color-text-muted;
-    line-height: 1.6;
+    line-height: $line-height-relaxed;
     max-width: 600rpx;
   }
 
@@ -89,7 +89,7 @@
     display: block;
     @include type-body;
     color: $color-text-secondary;
-    line-height: 1.7;
+    line-height: $line-height-relaxed;
   }
 
   &__card {
@@ -163,7 +163,7 @@
     margin-top: $spacing-xs;
     @include type-label;
     color: $color-text-secondary;
-    line-height: 1.7;
+    line-height: $line-height-relaxed;
   }
 
   &__resume-pills {
@@ -264,7 +264,7 @@
     display: block;
     @include type-body;
     color: $color-text-secondary;
-    line-height: 1.7;
+    line-height: $line-height-relaxed;
   }
 
   &__brief-skeleton {
@@ -332,7 +332,7 @@
   &__reason-text {
     flex: 1;
     @include type-body;
-    line-height: 1.7;
+    line-height: $line-height-relaxed;
   }
 
   &__trust-row {
@@ -504,7 +504,7 @@
     margin-top: $spacing-md;
     @include type-caption;
     color: $color-text-muted;
-    line-height: 1.7;
+    line-height: $line-height-relaxed;
   }
 
   &__error {
@@ -557,6 +557,13 @@
     width: 320rpx;
     height: 240rpx;
     margin-bottom: $spacing-sm;
+  }
+
+  &__tier-mascot {
+    width: 120rpx;
+    height: 120rpx;
+    align-self: center;
+    margin-bottom: $spacing-md;
   }
 
   &__empty-title {

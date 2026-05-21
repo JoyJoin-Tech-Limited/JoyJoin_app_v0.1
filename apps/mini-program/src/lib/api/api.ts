@@ -341,6 +341,7 @@ async function postMiniProgramWeChatLogin(
   }>({
     path,
     method: 'POST',
+    handleUnauthorized: false,
     data: {
       code,
       ...payload,

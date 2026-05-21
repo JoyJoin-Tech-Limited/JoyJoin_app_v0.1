@@ -1,6 +1,7 @@
 import { Image, View } from '@tarojs/components'
 import { useState } from 'react'
 import type { AtmosphereMood, SocialIcebreakerPhase } from '@shared/socialIcebreaker'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 
 export type SessionPhase = 'waiting' | SocialIcebreakerPhase | 'ended'
 
@@ -20,6 +21,22 @@ export const MOOD_OPTIONS: Array<{ mood: AtmosphereMood; label: string; asset: s
   { mood: 'relaxed', label: '轻松', asset: '/assets/icons/mood-icons/mood-relaxed.png' },
   { mood: 'emotional', label: '情感', asset: '/assets/icons/mood-icons/mood-emotional.png' },
 ]
+
+// CDN-backed phase icons — eliminates domain-whitelist dependency and keeps the
+// mini-program package small. Assets uploaded via `npm run upload:cdn-assets`.
+const PHASE_ICON_SRC_MAP: Record<string, string> = {
+  warmup: cdnAsset('/assets/icons/phase-icons/phase-warmup.webp'),
+  'topic-card': cdnAsset('/assets/icons/phase-icons/phase-topic-card.webp'),
+  micro_challenge: cdnAsset('/assets/icons/phase-icons/phase-micro-challenge.webp'),
+  lie_detective: cdnAsset('/assets/icons/phase-icons/phase-lie-detective.webp'),
+  personality_dice: cdnAsset('/assets/icons/phase-icons/phase-personality-dice.webp'),
+  auction: cdnAsset('/assets/icons/phase-icons/phase-auction.webp'),
+  quip_battle: cdnAsset('/assets/icons/phase-icons/phase-quip-battle.webp'),
+  undercover_word: cdnAsset('/assets/icons/phase-icons/phase-undercover-word.webp'),
+  group_mirror: cdnAsset('/assets/icons/phase-icons/phase-group-mirror.webp'),
+  mini_script: cdnAsset('/assets/icons/phase-icons/phase-mini-script.webp'),
+  recap: cdnAsset('/assets/icons/phase-icons/phase-recap.webp'),
+}
 
 export function getPhaseLabel(phase: SessionPhase): string {
   switch (phase) {
@@ -87,22 +104,7 @@ export function PhaseHeaderIcon({
 }) {
   const [hasError, setHasError] = useState(false)
   const sizeStr = `${size}rpx`
-  // Local bundle paths — eliminates CDN domain-whitelist dependency.
-  // Assets copied via config/index.ts copy.patterns.
-  const srcMap: Record<string, string> = {
-    warmup: '/assets/icons/phase-icons/phase-warmup.webp',
-    'topic-card': '/assets/icons/phase-icons/phase-topic-card.webp',
-    micro_challenge: '/assets/icons/phase-icons/phase-micro-challenge.webp',
-    lie_detective: '/assets/icons/phase-icons/phase-lie-detective.webp',
-    personality_dice: '/assets/icons/phase-icons/phase-personality-dice.webp',
-    auction: '/assets/icons/phase-icons/phase-auction.webp',
-    quip_battle: '/assets/icons/phase-icons/phase-quip-battle.webp',
-    undercover_word: '/assets/icons/phase-icons/phase-undercover-word.webp',
-    group_mirror: '/assets/icons/phase-icons/phase-group-mirror.webp',
-    mini_script: '/assets/icons/phase-icons/phase-mini-script.webp',
-    recap: '/assets/icons/phase-icons/phase-recap.webp',
-  }
-  const src = srcMap[phase]
+  const src = PHASE_ICON_SRC_MAP[phase]
 
   if (!src || hasError) {
     return (

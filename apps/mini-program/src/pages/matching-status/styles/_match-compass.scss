@@ -189,7 +189,8 @@
     flex-direction: column;
     align-items: center;
     gap: $spacing-xs;
-    padding: $spacing-sm;
+    min-height: 88rpx;
+    padding: $spacing-sm $spacing-md;
     border-radius: $card-radius-sm;
     background: rgba($color-surface, 0.88);
     border: 2rpx solid rgba($color-primary, 0.08);

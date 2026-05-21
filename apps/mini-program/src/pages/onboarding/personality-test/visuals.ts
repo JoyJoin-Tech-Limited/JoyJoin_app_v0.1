@@ -1,5 +1,6 @@
 import { formatHSL, getArchetypeHSL } from '@shared/archetypeColors'
 import { archetypeRegistry, type ArchetypeRecord } from '@shared/personality/archetypeRegistry'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 
 export type {
   LegacyXiaoyueMood,
@@ -20,9 +21,10 @@ export interface ArchetypeAssetPaths {
   png: string
 }
 
-// WebP lives in main package so login page + other main-package screens can load them.
-// PNG stays in onboarding subpackage for share-poster canvas (canvas getImageInfo).
-const ASSET_BASE_WEBP = '/assets/archetypes'
+// WebP is served from CDN so all pages (including main-package screens) can load them.
+// PNG stays in the onboarding subpackage bundle for share-poster canvas
+// (canvas getImageInfo requires a local path).
+const ASSET_BASE_WEBP = cdnAsset('/assets/personality/archetypes')
 const ASSET_BASE_PNG  = '/pages/onboarding/assets/archetypes'
 
 const ARCHETYPE_ASSET_MAP: Record<string, ArchetypeAssetPaths> = {
@@ -84,8 +86,6 @@ export interface ArchetypeVisual {
   record?: ArchetypeRecord
 }
 
-import { cdnAsset } from '../../../lib/utils/cdnAssets'
-
 /** High-resolution static mascot images (480×480px) for non-animated display. */
 const STATIC_MASCOT_BASE = cdnAsset('/assets/personality/xiaoyue')
 
@@ -95,10 +95,6 @@ export function getIntroStaticAsset(): string {
 
 export function getIntroStaticFallbackAsset(): string {
   return `${STATIC_MASCOT_BASE}/xiaoyue-intro-static.webp`
-}
-
-export function getTestCuriousStaticAsset(): string {
-  return `${STATIC_MASCOT_BASE}/xiaoyue-test-curious.webp`
 }
 
 export function getArchetypeVisual(archetype: string | null | undefined): ArchetypeVisual {

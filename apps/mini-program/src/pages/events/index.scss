@@ -63,15 +63,16 @@
   }
 
   &__card {
-    @include card;
-    padding: $spacing-lg;
     margin-bottom: $spacing-md;
+    min-height: 140rpx;
 
     &:active {
       transform: scale(0.98);
     }
 
     &--skeleton {
+      @include card;
+      padding: $spacing-lg;
       pointer-events: none;
       min-height: 120rpx;
 
@@ -122,11 +123,13 @@
     font-size: $font-size-md;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
+    line-height: $line-height-relaxed;
   }
 
   &__card-date {
     font-size: $font-size-sm;
     color: $color-text-secondary;
+    line-height: $line-height-relaxed;
   }
 
   &__empty-state {
@@ -164,7 +167,29 @@
     font-weight: $font-weight-semibold;
   }
 
+  &__countdown {
+    display: inline-flex;
+    align-items: center;
+    padding: $spacing-xs $spacing-sm;
+    background: rgba($color-error, 0.08);
+    border-radius: 100rpx;
+    margin-top: $spacing-xs;
+  }
+
+  &__countdown-text {
+    font-size: $font-size-xs;
+    color: $color-error;
+    font-weight: $font-weight-semibold;
+  }
+
   &__spacer {
     height: 160rpx;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .events-page__skeleton-line {
+    animation: none;
+    background: $color-divider;
   }
 }

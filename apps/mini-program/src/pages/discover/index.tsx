@@ -518,6 +518,24 @@ function AuthenticatedDiscover() {
   // ── Render ──
   return (
     <View className='discover-auth tab-page-enter'>
+      {/* Xiaoyue greeting header */}
+      <View className='discover-auth__greeting'>
+        <Image
+          className='discover-auth__greeting-mascot'
+          src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-home-welcome.webp')}
+          mode='aspectFit'
+          lazyLoad
+        />
+        <View className='discover-auth__greeting-text'>
+          <Text className='discover-auth__greeting-title'>
+            {(user as any)?.nickname || (user as any)?.displayName || '朋友'}，今晚想怎么玩？
+          </Text>
+          <Text className='discover-auth__greeting-subtitle'>
+            发现与你契合的社交活动
+          </Text>
+        </View>
+      </View>
+
       {/* Hero + actions + promo — scroll away naturally */}
       <View className='discover-auth__hero'>
         <View className='discover-auth__hero-left'>

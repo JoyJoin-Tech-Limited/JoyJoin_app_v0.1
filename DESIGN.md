@@ -59,7 +59,7 @@ Use these exact HEX values. Do not approximate.
 ### Platform notes
 
 - **Web (user-client):** Self-hosts AlimamaFangYuanTiVF-Thin via `@font-face` in `apps/user-client/src/assets/fonts/fonts.css`
-- **Mini-program:** Loads AlimamaFangYuanTiVF-Thin via `Taro.loadFontFace()` in `apps/mini-program/src/lib/brandFont.ts`
+- **Mini-program:** Loads AlimamaFangYuanTiVF-Thin via `Taro.loadFontFace()` in `apps/mini-program/src/lib/utils/brandFont.ts`
 - **Admin client:** Uses system fonts only (no custom font loading)
 
 ---

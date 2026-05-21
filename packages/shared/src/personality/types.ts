@@ -18,6 +18,8 @@ export interface QuestionOption {
   value: string;
   text: string;
   traitScores: TraitScores;
+  /** Semantic key for a custom icon asset (e.g. Lovart illustration). Consumed by clients; not scored. */
+  iconAssetKey?: string;
 }
 
 export type QuestionLevel = 1 | 2 | 3;
@@ -33,8 +35,8 @@ export type CohortType =
 export interface SliderConfig {
   leftLabel: string;
   rightLabel: string;
-  leftEmoji: string;
-  rightEmoji: string;
+  leftEmoji?: string;
+  rightEmoji?: string;
   traitMappings: Array<{
     traitKey: TraitKey;
     /** slider 0→100 maps linearly to scoreAtZero→scoreAt100 */

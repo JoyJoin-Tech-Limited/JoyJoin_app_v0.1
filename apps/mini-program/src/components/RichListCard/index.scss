@@ -1,0 +1,56 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.rich-list-card {
+  width: 100%;
+  padding: $spacing-lg;
+  border-radius: 32rpx;
+  border: 2rpx solid rgba($color-primary, 0.1);
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+  animation: card-slide-in 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+  min-height: 140rpx;
+
+  &--warm    { background: $card-gradient-warm; }
+  &--cool    { background: $card-gradient-cool; }
+  &--fire    { background: $card-gradient-fire; }
+  &--premium { background: $card-gradient-premium; }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &__ecosystem {
+    @include ecosystem-bar;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__title {
+    @include type-subheading;
+    display: block;
+  }
+
+  &__subtitle {
+    @include type-body;
+    color: $color-text-secondary;
+    margin-top: $spacing-xs;
+    display: block;
+    line-height: $line-height-normal;
+  }
+
+  &__meta {
+    @include type-caption;
+    color: $color-text-muted;
+    margin-top: 4rpx;
+    display: block;
+    line-height: $line-height-normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rich-list-card {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}

@@ -70,7 +70,6 @@
     height: 124rpx;
     border-radius: 999rpx;
     background: rgba($color-primary, 0.16);
-    filter: blur(28rpx);
     z-index: 1;
   }
 
@@ -130,5 +129,6 @@
     font-size: $font-size-base;
     color: $color-text-secondary;
     text-align: center;
+    line-height: $line-height-relaxed;
   }
 }

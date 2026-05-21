@@ -487,3 +487,92 @@ $onboarding-stage-shift-ids: (
 @mixin celebrate-on-tap {
   @include tap-feedback-strong;
 }
+
+// ─── Mascot Container ──────────────────────────────────────────────
+@mixin mascot-container($size: $mascot-size-md) {
+  width: $size;
+  height: $size;
+  border-radius: 50%;
+  background: rgba($color-primary, 0.08);
+  @include flex-center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+// ─── Staggered Entrance ────────────────────────────────────────────
+@mixin staggered-enter($index, $base-delay: 0ms, $stagger: 60ms) {
+  opacity: 0;
+  transform: translateY(16rpx);
+  animation: staggered-rise 0.34s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(#{$base-delay} + #{$index} * #{$stagger});
+}
+
+// ─── Action Row ────────────────────────────────────────────────────
+@mixin action-row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-lg;
+  min-height: max(96rpx, $cta-min-tap);
+  border-bottom: 1rpx solid $color-divider;
+  &:last-child { border-bottom: none; }
+  &:active { background: rgba(0, 0, 0, 0.02); }
+}
+
+// ─── Ecosystem Bar Container ───────────────────────────────────────
+@mixin ecosystem-bar {
+  display: flex;
+  align-items: center;
+  height: 48rpx;
+  gap: 8rpx;
+}
+
+// ─── Validation Error Text ─────────────────────────────────────────
+@mixin validation-error {
+  display: block;
+  font-size: $font-size-xs;
+  color: $color-error;
+  line-height: $line-height-normal;
+  margin-top: $spacing-xs;
+}
+
+// ─── Empty State Shell ─────────────────────────────────────────────
+@mixin empty-state-shell {
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-2xl;
+  text-align: center;
+}
+
+// ─── Keyframes ─────────────────────────────────────────────────────
+@keyframes staggered-rise {
+  from { opacity: 0; transform: translateY(16rpx); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes card-slide-in {
+  from { opacity: 0; transform: translateY(20rpx) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes mascot-bounce-in {
+  0%   { opacity: 0; transform: translateY(24rpx) scale(0.85); }
+  60%  { transform: translateY(-4rpx) scale(1.04); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes pending-dot-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50%      { opacity: 1; transform: scale(1.1); }
+}
+
+@keyframes fade-slide-up {
+  from { opacity: 0; transform: translateY(12rpx); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer-slide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}

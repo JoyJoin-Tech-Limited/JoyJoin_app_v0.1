@@ -5,6 +5,7 @@ import { useRef } from 'react'
 import { getUserCoupons } from '@shared/api'
 import { getOnboardingStepLabel, nextStepToOnboardingStep } from '@shared/onboarding'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { getArchetypeFamily, ARCHETYPE_FAMILY_GRADIENTS } from '@shared/archetypeColors'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { apiRequest } from '../../lib/api/api'
 import {
@@ -105,6 +106,24 @@ export default function ProfilePage() {
           ) : null}
         </View>
 
+        {/* Archetype Celebration Card */}
+        {archetype && (
+          <View
+            className='profile-page__archetype-card'
+            style={{ background: ARCHETYPE_FAMILY_GRADIENTS[getArchetypeFamily(archetype)] }}
+          >
+            <View className='profile-page__archetype-card-inner'>
+              <ArchetypeHead archetype={archetype} size={64} />
+              <View className='profile-page__archetype-card-text'>
+                <Text className='profile-page__archetype-card-label'>你的社交原型</Text>
+                <Text className='profile-page__archetype-card-name'>
+                  {ARCHETYPE_BY_ID[archetype]?.nameCn || archetype}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Quick stats */}
         <View className='profile-page__stats'>
           <Card className='profile-page__stat'>
@@ -115,7 +134,7 @@ export default function ProfilePage() {
             <Text className='profile-page__stat-value'>
               {getOnboardingStepLabel(nextStepToOnboardingStep(nextStep))}
             </Text>
-            <Text className='profile-page__stat-label'>当前状态</Text>
+            <Text className='profile-page__stat-label'>匹配进度</Text>
           </Card>
         </View>
 
@@ -136,6 +155,9 @@ export default function ProfilePage() {
           >
             <Text className='profile-page__action-icon'>🏆</Text>
             <Text className='profile-page__action-text'>奖励福利</Text>
+            <View className='profile-page__action-badge'>
+              <Text className='profile-page__action-count'>{coupons.count ?? 0}</Text>
+            </View>
             <Text className='profile-page__action-arrow'>›</Text>
           </View>
 
@@ -163,6 +185,9 @@ export default function ProfilePage() {
           >
             <Text className='profile-page__action-icon'>🗺️</Text>
             <Text className='profile-page__action-text'>我的足迹</Text>
+            <View className='profile-page__action-badge'>
+              <Text className='profile-page__action-count'>3</Text>
+            </View>
             <Text className='profile-page__action-arrow'>›</Text>
           </View>
 

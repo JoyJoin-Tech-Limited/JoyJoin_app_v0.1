@@ -20,6 +20,38 @@
   min-height: 100dvh;
   background: $color-bg-gradient;
 
+  // ── Greeting header ───────────────────────────────────────────
+  &__greeting {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-lg $container-padding;
+  }
+
+  &__greeting-mascot {
+    width: 80rpx;
+    height: 80rpx;
+    flex-shrink: 0;
+  }
+
+  &__greeting-text {
+    flex: 1;
+  }
+
+  &__greeting-title {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: $line-height-tight;
+  }
+
+  &__greeting-subtitle {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+    margin-top: $spacing-xs;
+  }
+
   // ── Hero ──────────────────────────────────────────────────────
   &__hero {
     display: flex;
@@ -159,6 +191,9 @@
 
   // ── Primary action (contextual single CTA) ────────────────────
   &__primary-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     padding: 0 $container-padding;
     margin-bottom: $spacing-lg;
   }
@@ -185,7 +220,6 @@
     width: 40rpx;
     height: 40rpx;
     display: block;
-    margin-bottom: 8rpx;
   }
 
   &__action-label {

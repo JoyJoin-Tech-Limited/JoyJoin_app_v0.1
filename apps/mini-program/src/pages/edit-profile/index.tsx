@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { View, Text, Input, ScrollView, Picker } from '@tarojs/components'
+import { View, Text, Input, ScrollView, Picker, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import {
   getUserInterests,
@@ -13,8 +13,11 @@ import { apiRequest } from '../../lib/api/api'
 import { useAuth, useInvalidateAuth } from '../../hooks/useAuth'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { logInfo, logError } from '../../lib/utils/logger'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
+import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import './index.scss'
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -231,8 +234,39 @@ export default function EditProfilePage() {
 
   const birthYearIndex = birthYear ? BIRTH_YEAR_RANGE.indexOf(String(birthYear)) : -1
 
+  const previewName = displayName || user?.nickname || user?.displayName || '悦聚用户'
+  const previewArchetype = user?.archetype
+
   return renderGate(
     <ScrollView className='edit-profile' scrollY enhanced showScrollbar={false}>
+      {/* ── Xiaoyue Coach ── */}
+      <View className='edit-profile__coach'>
+        <Image
+          className='edit-profile__coach-mascot'
+          src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+          mode='aspectFit'
+          lazyLoad
+        />
+        <View className='edit-profile__coach-bubble'>
+          <Text className='edit-profile__coach-text'>完善资料可以让匹配更精准哦～</Text>
+        </View>
+      </View>
+
+      {/* ── Live Preview ── */}
+      <Card className='edit-profile__preview'>
+        <View className='edit-profile__preview-inner'>
+          <ArchetypeHead archetype={previewArchetype} size={80} fallbackText={previewName} />
+          <View className='edit-profile__preview-text'>
+            <Text className='edit-profile__preview-name'>{previewName}</Text>
+            {previewArchetype && (
+              <Text className='edit-profile__preview-archetype'>
+                {ARCHETYPE_BY_ID[previewArchetype]?.nameCn || previewArchetype}
+              </Text>
+            )}
+          </View>
+        </View>
+      </Card>
+
       {/* ── 基本信息 ── */}
       <View className='edit-profile__section'>
         <Text className='edit-profile__section-title'>基本信息</Text>
@@ -254,13 +288,13 @@ export default function EditProfilePage() {
             <Text className='edit-profile__label'>性别</Text>
             <View className='edit-profile__radio-group'>
               {GENDER_OPTIONS.map((opt) => (
-                <Text
+                <View
                   key={opt.value}
                   className={`edit-profile__radio ${gender === opt.value ? 'edit-profile__radio--active' : ''}`}
                   onClick={() => setGender(opt.value)}
                 >
-                  {opt.label}
-                </Text>
+                  <Text>{opt.label}</Text>
+                </View>
               ))}
             </View>
           </View>
@@ -323,7 +357,7 @@ export default function EditProfilePage() {
               </Text>
               <View className='edit-profile__interest-tags'>
                 {interests.map((interest) => (
-                  <Text
+                  <View
                     key={interest.id}
                     className={`edit-profile__interest-tag ${
                       selectedInterests.includes(interest.id)
@@ -332,8 +366,8 @@ export default function EditProfilePage() {
                     }`}
                     onClick={() => toggleInterest(interest.id)}
                   >
-                    {interest.label}
-                  </Text>
+                    <Text>{interest.label}</Text>
+                  </View>
                 ))}
               </View>
             </View>

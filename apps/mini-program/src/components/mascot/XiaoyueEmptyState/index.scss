@@ -1,0 +1,49 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.xiaoyue-empty-state {
+  @include empty-state-shell;
+
+  &__mascot {
+    animation: mascot-bounce-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__title {
+    @include type-subheading;
+    margin-top: $spacing-md;
+  }
+
+  &__subtitle {
+    @include type-body;
+    color: $color-text-secondary;
+    margin-top: $spacing-xs;
+    line-height: $line-height-relaxed;
+  }
+
+  &__action {
+    margin-top: $spacing-lg;
+    padding: $spacing-sm $spacing-xl;
+    background: $color-primary;
+    border-radius: 100rpx;
+    min-height: $cta-min-tap;
+    @include flex-center;
+
+    &:active {
+      transform: scale(0.98);
+      opacity: 0.92;
+    }
+  }
+
+  &__action-text {
+    @include type-brand-cta-label;
+    color: $color-surface;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xiaoyue-empty-state__mascot {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

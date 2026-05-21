@@ -26,6 +26,7 @@ export interface AnswerOption {
   value: string
   text: string
   traitScores?: Record<string, number>
+  iconAssetKey?: string
 }
 
 /** Map an option to a trait fragment label based on its text content. */

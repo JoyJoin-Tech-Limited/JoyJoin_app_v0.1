@@ -66,6 +66,10 @@ const STEP_BUDGET = 1
 const STEP_INTENT = 2
 const STEP_DETAILS = 3
 
+const TIER_COPY = {
+  budgetStepHelper: '这是报名时最重要的节奏信号之一，悦仔会优先帮你避开预算预期完全不一样的组合。',
+}
+
 interface ChoiceCardProps {
   option: FlowOption
   selected: boolean
@@ -773,13 +777,15 @@ export default function PoolRegistrationPage() {
 
       {step === 1 ? (
         <Card className='pool-reg__panel'>
+          <Image
+            className='pool-reg__tier-mascot'
+            src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+            mode='aspectFit'
+            lazyLoad
+          />
           <Text className='pool-reg__section-kicker'>Step 1</Text>
           <Text className='pool-reg__section-title'>先定一个你更舒服的预算区间</Text>
-          <Text className='pool-reg__section-copy'>
-            {eventType === '酒局'
-              ? '这是报名时最重要的节奏信号之一，悦仔会优先帮你避开预算预期完全不一样的组合。'
-              : '这是报名时最重要的节奏信号之一，悦仔会优先帮你避开预算预期完全不一样的组合。'}
-          </Text>
+          <Text className='pool-reg__section-copy'>{TIER_COPY.budgetStepHelper}</Text>
 
           <View className='pool-reg__choice-list'>
             {budgetOptions.map((option) => (

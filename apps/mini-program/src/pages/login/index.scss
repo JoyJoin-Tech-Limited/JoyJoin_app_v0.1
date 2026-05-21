@@ -21,7 +21,7 @@
     left: 50%;
     transform: translateX(-50%);
     border-radius: 999rpx;
-    background: radial-gradient(circle 300rpx at center, rgba(139, 92, 246, 0.08), transparent);
+    background: radial-gradient(circle 300rpx at center, rgba($color-primary, 0.08), transparent);
     pointer-events: none;
   }
 
@@ -64,7 +64,7 @@
     position: absolute;
     inset: 0;
     border-radius: 999rpx;
-    background: rgba(139, 92, 246, 0.06);
+    background: rgba($color-primary, 0.06);
     animation: login-ring-pulse 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   }
 
@@ -74,7 +74,7 @@
     width: 200rpx;
     height: 200rpx;
     display: block;
-    filter: drop-shadow(0 12rpx 24rpx rgba(139, 92, 246, 0.12));
+    filter: drop-shadow(0 12rpx 24rpx rgba($color-primary, 0.12));
   }
 
   &__float-orb {
@@ -151,13 +151,13 @@
     min-height: max($button-height, $cta-min-tap);
     height: $button-height;
     border-radius: $button-radius;
-    background: #07c160;
+    background: $color-wechat-green;
     color: $color-text-white;
     font-size: $font-size-md;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 6rpx 20rpx rgba(7, 193, 96, 0.28);
+    box-shadow: 0 6rpx 20rpx rgba($color-wechat-green, 0.28);
     transition: transform 0.12s ease, opacity 0.12s ease, box-shadow 0.12s ease;
 
     &:active {

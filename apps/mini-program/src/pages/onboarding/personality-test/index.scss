@@ -178,7 +178,7 @@
     margin-top: $spacing-md;
     @include type-body;
     color: $color-text-secondary;
-    line-height: 1.68;
+    line-height: $line-height-relaxed;
   }
 
   &__intro-hero {
@@ -234,7 +234,7 @@
     margin-top: 8rpx;
     font-size: $font-size-sm;
     color: $color-text-secondary;
-    line-height: 1.62;
+    line-height: $line-height-relaxed;
   }
 
   &__intro-meta-row {
@@ -287,11 +287,6 @@
     &--intro {
       width: 320rpx;
       height: 320rpx;
-    }
-
-    &--testing {
-      width: 152rpx;
-      height: 152rpx;
     }
 
     &--reduced-motion {
@@ -372,7 +367,7 @@
     margin-top: 8rpx;
     font-size: $font-size-xs;
     color: $color-text-secondary;
-    line-height: 1.56;
+    line-height: $line-height-normal;
   }
 
   &__intro-value-grid,
@@ -742,7 +737,7 @@
   // ── Zone C: Mascot row (mascot left + speech bubble right) ───────
   &__mascot-zone {
     flex: 0 0 auto;
-    padding: 0 $container-padding 16rpx;
+    padding: 0 $container-padding 24rpx;
     @include safe-area-inline($container-padding);
   }
 
@@ -796,7 +791,7 @@
   &__answer-zone {
     flex: 1 1 auto;
     min-height: 0;
-    padding: 0 $container-padding 24rpx;
+    padding: 8rpx $container-padding 24rpx;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     @include safe-area-inline($container-padding);

@@ -1,6 +1,6 @@
 # Personality Test System - V4 Adaptive Assessment
 
-**Last Updated:** 2026-05-19  
+**Last Updated:** 2026-05-20  
 **Version:** V4 Adaptive Engine + V2 Matcher  
 **Status:** Production
 
@@ -57,7 +57,7 @@ The V4 engine and question bank live in **`packages/shared/src/personality/`**; 
 |------|-------|-------------|
 | Multiple choice | `choice` (default) | 4 labelled options (A–D), each with `traitScores` |
 | Continuous slider | `slider` | 0–100 dial; frontend maps position to nearest bucket (`slider_0` / `slider_25` / `slider_50` / `slider_75` / `slider_100`) and submits as `selectedOption: "slider_<value>"` |
-| Emoji tap | `emoji_tap` | Quick-tap emoji reaction; options use `value` keys like `direct`, `dove`, `dm`, `leave`, `popcorn` |
+| Emoji tap | `emoji_tap` | Quick-tap icon reaction; options use `value` keys like `direct`, `dove`, `dm`, `leave`, `popcorn`. Each option may declare an `iconAssetKey` that resolves to a custom Lovart illustration via `PERSONALITY_ICON_ASSETS` — Unicode emojis are no longer embedded in option text. |
 
 ---
 
@@ -258,10 +258,10 @@ After the adaptive engine reaches its stopping criteria (confidence ≥ 0.7 on a
 #### Q_PLAYFUL_SLIDER — Energy Dial (`slider` type)
 
 ```
-🌙 周五下班，终于自由了——
+周五下班，终于自由了——
 拖动滑条，找到最符合你此刻感受的位置
 
-                ← 😮‍💨 想一个人待着 ──────── 快叫上朋友！🥳 →
+                ← 想一个人待着 ──────── 快叫上朋友！→
 ```
 
 - **Question type:** `slider`
@@ -275,12 +275,12 @@ After the adaptive engine reaches its stopping criteria (confidence ≥ 0.7 on a
 
 ```
 群里两个朋友突然争了起来……你的第一反应是？
-(快速点一个 emoji，相信直觉)
+（别想，直接按）
 ```
 
-Emoji options and their `conflictPosture` mappings:
+Icon options and their `conflictPosture` mappings:
 
-| Value | Emoji / Label | `conflictPosture` |
+| Value | Icon / Label | `conflictPosture` |
 |-------|---------------|-------------------|
 | `direct` | 直接说：好了好了，你们都有道理 | `approach` |
 | `dove` | 发条轻松消息转移话题 | `mediate` |
@@ -994,7 +994,7 @@ for (const pair of confusionPairs) {
 **UI/UX Validation:**
 - [ ] Progress bar updates correctly across the config-driven range, then shows the 2 closing questions
 - [ ] Slider question renders with draggable dial (not radio buttons)
-- [ ] Emoji tap question renders with tap-selectable emoji reactions
+- [ ] Emoji tap question renders with tap-selectable custom icon reactions (via `iconAssetKey` → `PERSONALITY_ICON_ASSETS`)
 - [ ] Premium calibration overlay (`TransitionOverlay`) shows at adaptive phase transition
 - [ ] Back button allows one-step back to re-answer the most recent question only; cancel returns to current question
 - [ ] Radar chart displays all 6 traits (ACOEXP)

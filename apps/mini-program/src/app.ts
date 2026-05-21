@@ -9,8 +9,8 @@ import AuthProvider from './providers/AuthProvider'
 import { DynamicAccentProvider } from './providers/DynamicAccentProvider'
 import { AchievementProvider } from './providers/AchievementProvider'
 import AchievementPopup from './components/AchievementPopup'
-import { loadBrandFonts } from './lib/utils/brandFont'
 import './app.scss'
+import { loadBrandDisplayFont } from './lib/utils/brandFont'
 
 function PendingOrderResumeBridge() {
   const { isAuthenticated, isLoading, user } = useAuth()
@@ -85,7 +85,10 @@ function PendingOrderResumeBridge() {
 function App({ children }: PropsWithChildren<any>) {
   useLaunch(() => {
     logInfo('JoyJoin Mini Program launched')
-    loadBrandFonts()
+    // Defer font load so it does not compete with first paint.
+    // The guard in brandFont.ts prevents double-load when LandingPage
+    // (or any other screen) also calls it eagerly.
+    setTimeout(() => loadBrandDisplayFont(), 100)
   })
 
   return createElement(

@@ -12,7 +12,12 @@ import { logInfo, logWarn } from './logger'
  */
 export const BRAND_DISPLAY_FONT_FAMILY = 'AlimamaFangYuanTiVF'
 
-const BRAND_FONT_SOURCE_PATH = cdnAsset('/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2')
+// ?v=full forces cache bust after uploading the complete glyph set (2026-05-21).
+// Remove or increment if the font file is regenerated.
+const BRAND_FONT_SOURCE_PATH = cdnAsset('/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2') + '?v=full'
+
+let displayFontLoaded = false
+let englishFontLoaded = false
 
 /**
  * Must match `$font-en-brand` first family name in `styles/_variables.scss`.
@@ -27,10 +32,11 @@ const EN_BRAND_FONT_SOURCE_PATH = cdnAsset('/assets/fonts/Quicksand/Quicksand-Va
  * (`PingFang SC`, etc.) still apply via `$font-cn-display`.
  */
 export function loadBrandDisplayFont(): void {
-  if (process.env.TARO_ENV === 'rn') {
+  if (process.env.TARO_ENV === 'rn' || displayFontLoaded) {
     return
   }
 
+  displayFontLoaded = true
   const source = `url("${BRAND_FONT_SOURCE_PATH}")`
 
   void Taro.loadFontFace({
@@ -42,6 +48,7 @@ export function loadBrandDisplayFont(): void {
       logInfo('Brand display font loaded', { family: BRAND_DISPLAY_FONT_FAMILY })
     })
     .catch((err: unknown) => {
+      displayFontLoaded = false
       logWarn('Brand display font failed to load; falling back to system stack', {
         family: BRAND_DISPLAY_FONT_FAMILY,
         err,
@@ -53,10 +60,11 @@ export function loadBrandDisplayFont(): void {
  * Loads Quicksand for English wordmarks and branded numerals. Falls back via `$font-en-brand`.
  */
 export function loadEnglishBrandFont(): void {
-  if (process.env.TARO_ENV === 'rn') {
+  if (process.env.TARO_ENV === 'rn' || englishFontLoaded) {
     return
   }
 
+  englishFontLoaded = true
   const source = `url("${EN_BRAND_FONT_SOURCE_PATH}")`
 
   void Taro.loadFontFace({
@@ -68,6 +76,7 @@ export function loadEnglishBrandFont(): void {
       logInfo('English brand font loaded', { family: EN_BRAND_FONT_FAMILY })
     })
     .catch((err: unknown) => {
+      englishFontLoaded = false
       logWarn('English brand font failed to load; falling back to system stack', {
         family: EN_BRAND_FONT_FAMILY,
         err,
@@ -75,7 +84,12 @@ export function loadEnglishBrandFont(): void {
     })
 }
 
-/** Loads Alimama (Chinese display) and Quicksand (English brand). Call once at app launch. */
+/**
+ * Loads Alimama (Chinese display) and Quicksand (English brand).
+ * Previously called at app launch; now each font is loaded on-demand by the
+ * first screen that needs it (display → LandingPage, English → future screen).
+ * The module-level guards prevent redundant `loadFontFace` calls.
+ */
 export function loadBrandFonts(): void {
   loadBrandDisplayFont()
   loadEnglishBrandFont()

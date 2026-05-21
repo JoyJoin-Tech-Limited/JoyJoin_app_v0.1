@@ -6,7 +6,73 @@
   background: $color-bg;
 
   &__coach {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
     padding: $spacing-lg $container-padding 0;
+  }
+
+  &__coach-mascot {
+    width: 80rpx;
+    height: 80rpx;
+    flex-shrink: 0;
+  }
+
+  &__coach-bubble {
+    flex: 1;
+    background: rgba($color-primary, 0.06);
+    border-radius: 24rpx;
+    padding: $spacing-sm $spacing-md;
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: -8rpx;
+      top: 24rpx;
+      width: 0;
+      height: 0;
+      border-top: 8rpx solid transparent;
+      border-bottom: 8rpx solid transparent;
+      border-right: 8rpx solid rgba($color-primary, 0.06);
+    }
+  }
+
+  &__coach-text {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+  }
+
+  // ── Live Preview ──────────────────────────────────────────────
+  &__preview {
+    margin: $spacing-lg $container-padding 0;
+    padding: $spacing-lg;
+  }
+
+  &__preview-inner {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+  }
+
+  &__preview-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
+  }
+
+  &__preview-name {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: $line-height-tight;
+  }
+
+  &__preview-archetype {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
   }
 
   // ── Section ───────────────────────────────────────────────────
@@ -77,6 +143,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    min-height: 56rpx;
     padding: $spacing-xs $spacing-lg;
     border-radius: 999rpx;
     font-size: $font-size-sm;
@@ -135,7 +202,10 @@
   }
 
   &__interest-tag {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 56rpx;
     padding: $spacing-xs $spacing-md;
     border-radius: 999rpx;
     font-size: $font-size-sm;
@@ -168,5 +238,12 @@
   // ── Spacer (safe area) ────────────────────────────────────────
   &__spacer {
     height: 120rpx;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edit-profile__radio,
+  .edit-profile__interest-tag {
+    transition: none;
   }
 }
