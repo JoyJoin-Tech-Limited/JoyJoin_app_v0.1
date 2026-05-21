@@ -89,6 +89,7 @@ $color-skill-cool: #7c3aed;
     font-size: $font-size-xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
+    font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
   }
 
   &__state-copy {
@@ -141,6 +142,7 @@ $color-skill-cool: #7c3aed;
     max-width: 100%;
     padding: 0 $container-padding;
     box-sizing: border-box;
+    font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
   }
 
   &__immersive-copy {
@@ -610,6 +612,7 @@ $color-skill-cool: #7c3aed;
     padding: 0 $container-padding;
     box-sizing: border-box;
     word-break: break-word;
+    font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
   }
 
   &__reveal-copy {
@@ -750,6 +753,7 @@ $color-skill-cool: #7c3aed;
     line-height: 1.35;
     margin-bottom: $spacing-sm;
     word-break: break-word;
+    font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
   }
 
   &__hero-summary {
@@ -762,17 +766,65 @@ $color-skill-cool: #7c3aed;
   &__hero-badges {
     display: flex;
     flex-wrap: wrap;
-    gap: 12rpx;
+    align-items: center;
+    gap: 16rpx;
     margin-top: $spacing-md;
   }
 
   &__hero-badge {
-    padding: 10rpx 18rpx;
+    display: inline-flex;
+    align-items: center;
+    font-size: 24rpx;
+    line-height: 1.4;
     border-radius: 999rpx;
-    background: rgba(255, 255, 255, 0.9);
-    font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
-    color: $color-text-primary;
+    transition: transform 0.2s ease;
+
+    &:active {
+      transform: scale(0.96);
+    }
+
+    // --- Chemistry: soft brand tint ---
+    &--chemistry {
+      padding: 10rpx 20rpx;
+      background: rgba(139, 92, 246, 0.07);
+      border: 1rpx solid rgba(139, 92, 246, 0.16);
+      color: #7C3AED;
+    }
+
+    // --- Rarity: warm exclusive amber ---
+    &--rarity {
+      padding: 10rpx 20rpx;
+      background: rgba(245, 158, 11, 0.08);
+      border: 1rpx solid rgba(245, 158, 11, 0.22);
+      color: #92400E;
+      box-shadow: 0 2rpx 10rpx rgba(245, 158, 11, 0.06);
+
+      &::before {
+        content: '';
+        display: block;
+        width: 8rpx;
+        height: 8rpx;
+        border-radius: 50%;
+        background: #F59E0B;
+        margin-right: 10rpx;
+        box-shadow: 0 0 6rpx rgba(245, 158, 11, 0.4);
+      }
+    }
+
+    // --- Nickname: hero gradient trophy ---
+    &--nickname {
+      background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 100%);
+      color: #FFFFFF;
+      font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
+      font-size: 28rpx;
+      font-weight: 600;
+      padding: 14rpx 28rpx;
+      box-shadow: 0 6rpx 24rpx rgba(124, 58, 237, 0.22);
+      text-shadow: 0 1rpx 2rpx rgba(0, 0, 0, 0.08);
+      border: none;
+      letter-spacing: 1rpx;
+    }
   }
 
   &__hero-art-shell {
@@ -1002,6 +1054,7 @@ $color-skill-cool: #7c3aed;
     font-weight: $font-weight-black;
     color: $color-text-primary;
     margin-bottom: 8rpx;
+    font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
   }
 
   &__pokemon-tagline {
@@ -1826,6 +1879,7 @@ $color-skill-cool: #7c3aed;
     font-weight: $font-weight-black;
     color: $color-text-primary;
     margin-bottom: 6rpx;
+    font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
   }
 
   &__detail-subtitle {

@@ -10,7 +10,7 @@ import type { AnonymousAssessmentTopMatch } from '../../../../lib/auth/anonymous
 import type { ArchetypeSkillSet } from '@shared/personality/archetypeSkills'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { haptics } from '../../../../lib/utils/haptics'
-import { logWarn } from '../../../../lib/utils/logger'
+import { cdnAsset } from '../../../../lib/utils/cdnAssets'
 import type { ArchetypeCardVariant } from '../archetypeVariants'
 
 interface FinalStageProps {
@@ -56,19 +56,6 @@ interface FinalStageProps {
   isLoadingAnalysis?: boolean
 }
 
-/**
- * Convert accelerometer data to card tilt angles.
- * Returns stable values clamped to a pleasant range.
- */
-function computeTiltFromAccelerometer(x: number, y: number): { rotateX: number; rotateY: number } {
-  // x: left(-) / right(+), y: front(-) / back(+)
-  // We map these to rotateX (front-back tilt) and rotateY (left-right tilt)
-  const maxTilt = 10
-  const rotateX = Math.max(-maxTilt, Math.min(maxTilt, y * 12))
-  const rotateY = Math.max(-maxTilt, Math.min(maxTilt, -x * 12))
-  return { rotateX, rotateY }
-}
-
 export default function FinalStage({
   displayArchetypeName,
   displayArchetypeId,
@@ -98,7 +85,6 @@ export default function FinalStage({
   xiaoyueAnalysis,
   isLoadingAnalysis,
 }: FinalStageProps) {
-  const [tilt, setTilt] = useState({ rotateX: 0, rotateY: 0 })
   const [isTiltActive, setIsTiltActive] = useState(false)
   const [touchTilt, setTouchTilt] = useState({ rotateX: 0, rotateY: 0 })
   const [isDetailOpen, setIsDetailOpen] = useState(false)
@@ -107,42 +93,6 @@ export default function FinalStage({
   const touchStartRef = useRef({ x: 0, y: 0 })
   const cardRef = useRef<{ left: number; top: number; width: number; height: number } | null>(null)
   const cardMeasuredRef = useRef(false)
-
-  // Gyroscope-driven tilt (suppressed while touch is active)
-  // Note: CSS `prefers-reduced-motion: reduce` disables the visual tilt transform.
-  // JS-level gating is limited in WeChat Mini Program (no matchMedia API),
-  // so the accelerometer may still fire but the visual effect is suppressed via CSS.
-  useEffect(() => {
-    let mounted = true
-    const canUseAccelerometer = Taro.canIUse('startAccelerometer') && Taro.canIUse('onAccelerometerChange')
-    if (!canUseAccelerometer) return
-
-    try {
-      Taro.startAccelerometer({ interval: 'game' })
-      Taro.onAccelerometerChange((res) => {
-        if (!mounted || touchActiveRef.current) return
-        const next = computeTiltFromAccelerometer(res.x, res.y)
-        setTilt(next)
-        setIsTiltActive(true)
-      })
-    } catch {
-      // Silently fail if accelerometer is unavailable
-    }
-
-    return () => {
-      mounted = false
-      try {
-        Taro.stopAccelerometer()
-      } catch (err) {
-        logWarn('[Accelerometer] stopAccelerometer failed', { error: String(err) })
-      }
-      try {
-        Taro.offAccelerometerChange()
-      } catch (err) {
-        logWarn('[Accelerometer] offAccelerometerChange failed', { error: String(err) })
-      }
-    }
-  }, [])
 
   // Measure card position once on mount (and on window resize)
   useEffect(() => {
@@ -208,11 +158,10 @@ export default function FinalStage({
     touchActiveRef.current = false
     setTouchTilt({ rotateX: 0, rotateY: 0 })
     setIsCardPressed(false)
-    // Gyroscope will naturally resume on next accelerometer event
   }, [])
 
-  const effectiveRotateX = touchTilt.rotateX !== 0 ? touchTilt.rotateX : tilt.rotateX
-  const effectiveRotateY = touchTilt.rotateY !== 0 ? touchTilt.rotateY : tilt.rotateY
+  const effectiveRotateX = touchTilt.rotateX
+  const effectiveRotateY = touchTilt.rotateY
 
   const handleCardTap = useCallback(() => {
     haptics('light')
@@ -271,13 +220,13 @@ export default function FinalStage({
 
             <View className='personality-results__hero-badges'>
               {confidenceLabel ? (
-                <Text className='personality-results__hero-badge'>{confidenceLabel}</Text>
+                <Text className='personality-results__hero-badge personality-results__hero-badge--chemistry'>{confidenceLabel}</Text>
               ) : null}
               {typeof visual.rarityPercentage === 'number' ? (
-                <Text className='personality-results__hero-badge'>稀有度 {Math.round(visual.rarityPercentage)}%</Text>
+                <Text className='personality-results__hero-badge personality-results__hero-badge--rarity'>稀有度 {Math.round(visual.rarityPercentage)}%</Text>
               ) : null}
               {visual.nickname ? (
-                <Text className='personality-results__hero-badge'>{visual.nickname}</Text>
+                <Text className='personality-results__hero-badge personality-results__hero-badge--nickname'>{visual.nickname}</Text>
               ) : null}
             </View>
           </View>
@@ -297,12 +246,21 @@ export default function FinalStage({
               </View>
             ) : xiaoyueAnalysis ? (
               <>
-                <Text className='personality-results__hero-xiaoyue-headline'>
-                  「{xiaoyueAnalysis.headline}」
-                </Text>
-                <Text className='personality-results__hero-xiaoyue-analysis'>
-                  {xiaoyueAnalysis.analysis}
-                </Text>
+                <View className='personality-results__xiaoyue-bubble-row'>
+                  <Image
+                    className='personality-results__xiaoyue-avatar'
+                    mode='aspectFit'
+                    src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+                  />
+                  <View className='personality-results__xiaoyue-bubble'>
+                    <Text className='personality-results__xiaoyue-bubble-headline'>
+                      「{xiaoyueAnalysis.headline}」
+                    </Text>
+                    <Text className='personality-results__xiaoyue-bubble-analysis'>
+                      {xiaoyueAnalysis.analysis}
+                    </Text>
+                  </View>
+                </View>
                 {xiaoyueAnalysis.expressionTags?.length > 0 && (
                   <View className='personality-results__hero-xiaoyue-tags'>
                     {xiaoyueAnalysis.expressionTags.map((tag) => (
@@ -323,11 +281,20 @@ export default function FinalStage({
               </>
             ) : (
               <>
-                <Text className='personality-results__hero-xiaoyue-fallback-title'>这个命格为什么像你</Text>
-                <Text className='personality-results__hero-xiaoyue-fallback-text'>{summary}</Text>
-                <Text className='personality-results__hero-xiaoyue-fallback-text'>
-                  {visual.hiddenStrength || '你的氛围感不是靠用力营业，而是靠稳定地把气氛带到对的位置。'}
-                </Text>
+                <View className='personality-results__xiaoyue-bubble-row'>
+                  <Image
+                    className='personality-results__xiaoyue-avatar'
+                    mode='aspectFit'
+                    src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+                  />
+                  <View className='personality-results__xiaoyue-bubble'>
+                    <Text className='personality-results__xiaoyue-bubble-headline'>这个命格为什么像你</Text>
+                    <Text className='personality-results__xiaoyue-bubble-analysis'>{summary}</Text>
+                    <Text className='personality-results__xiaoyue-bubble-analysis'>
+                      {visual.hiddenStrength || '你的氛围感不是靠用力营业，而是靠稳定地把气氛带到对的位置。'}
+                    </Text>
+                  </View>
+                </View>
               </>
             )}
           </View>
@@ -350,18 +317,12 @@ export default function FinalStage({
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            onClick={handleCardTap}
           >
             {/* Holographic shimmer overlay */}
             <View className='personality-results__pokemon-holo-shimmer' />
             {/* Corner shine */}
             <View className='personality-results__pokemon-corner-shine personality-results__pokemon-corner-shine--top-right' />
             <View className='personality-results__pokemon-corner-shine personality-results__pokemon-corner-shine--bottom-left' />
-
-            {/* Tap hint */}
-            <View className='personality-results__pokemon-tap-hint'>
-              <Text className='personality-results__pokemon-tap-hint-text'>点击查看详情</Text>
-            </View>
 
             <View className='personality-results__pokemon-card-top'>
               <Text className='personality-results__pokemon-chip personality-results__pokemon-chip--dark'>{confidenceLabel || '悦聚氛围卡'}</Text>
