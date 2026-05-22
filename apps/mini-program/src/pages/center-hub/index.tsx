@@ -132,6 +132,8 @@ function CenterHubContent({
   if (destination.kind === 'matched-event' && events && events.length > 0) {
     const event = events[0]
     const eventDate = useMemo(() => formatEventDate(event.dateTime), [event.dateTime])
+    const startTime = typeof event.startTime === 'string' ? event.startTime : ''
+    const eventType = typeof event.type === 'string' && event.type.trim() ? event.type : '活动'
     return (
       <View className='center-hub__state'>
         <Text className='center-hub__state-title'>匹配成功</Text>
@@ -144,15 +146,15 @@ function CenterHubContent({
             gradient='premium'
             onClick={handleNavigate}
           >
-            {event.startTime && (
+            {startTime && (
               <View className='center-hub__countdown-pill'>
                 <Text className='center-hub__countdown-text'>
-                  ⏰ {getCountdownText(event.startTime)}
+                  ⏰ {String(getCountdownText(startTime))}
                 </Text>
               </View>
             )}
             <View className='center-hub__type-badge'>
-              <Text className='center-hub__type-text'>{event.type || '活动'}</Text>
+              <Text className='center-hub__type-text'>{eventType}</Text>
             </View>
           </RichListCard>
         </View>
