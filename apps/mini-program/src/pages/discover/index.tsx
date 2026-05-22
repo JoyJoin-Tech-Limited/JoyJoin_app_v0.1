@@ -24,7 +24,6 @@ import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import PageMorphWrapper from '../../components/ui/PageMorphWrapper'
-import Card from '../../components/ui/Card'
 import StatusCard from '../../components/ui/StatusCard'
 import AiMatchPromoCarousel from '../../components/AiMatchPromoCarousel'
 import VirtualList from '../../components/VirtualList'
@@ -38,7 +37,6 @@ import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
 import { getTimeGreeting } from '../../lib/utils/timeGreeting'
 import {
   getDiscoverSubtitle,
-  getDiscoverActionLabel,
 } from '../../lib/utils/discoverHeaderCopy'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
@@ -428,16 +426,6 @@ function AuthenticatedDiscover() {
       }),
     [displayName, archetype, registrations.length, pools],
   )
-  const primaryAction = useMemo(
-    () =>
-      getDiscoverActionLabel({
-        displayName,
-        archetype,
-        registrationCount: registrations.length,
-        openPoolCount: pools.filter((p) => p.status !== 'closed').length,
-      }),
-    [displayName, archetype, registrations.length, pools],
-  )
 
   // ── Handlers ──
   const handleFilterSelect = useCallback(
@@ -470,7 +458,7 @@ function AuthenticatedDiscover() {
       const cluster = getClusterById(selectedCluster)
       if (cluster) return cluster.displayName
     }
-    return '探索全部'
+    return '切换区域'
   }, [selectedCluster, selectedDistrict])
 
   const handleRefresh = useCallback(() => {
@@ -489,6 +477,7 @@ function AuthenticatedDiscover() {
 
   // ── Render helpers ──
   const userArchetype = (user as any)?.archetype || (user as any)?.primaryArchetype || null
+  const avatarUrl = (user as any)?.profileImageUrl || (user as any)?.wechatAvatarUrl || xiaoyueAsset
 
   const renderPoolCard = useCallback(
     (pool: EventPoolSummary, index: number, hasBeenRendered: boolean) => {
@@ -518,42 +507,29 @@ function AuthenticatedDiscover() {
   // ── Render ──
   return (
     <View className='discover-auth tab-page-enter'>
-      {/* Xiaoyue greeting header */}
-      <View className='discover-auth__greeting'>
-        <Image
-          className='discover-auth__greeting-mascot'
-          src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-home-welcome.webp')}
-          mode='aspectFit'
-          lazyLoad
-        />
-        <View className='discover-auth__greeting-text'>
-          <Text className='discover-auth__greeting-title'>
-            {(user as any)?.nickname || (user as any)?.displayName || '朋友'}，今晚想怎么玩？
-          </Text>
-          <Text className='discover-auth__greeting-subtitle'>
-            发现与你契合的社交活动
-          </Text>
+      {/* Banner carousel — top of page */}
+      <AiMatchPromoCarousel className='discover-auth__promo' />
+
+      {/* Greeting section: avatar + personalized message */}
+      <View className='discover-auth__hero'>
+        <View className='discover-auth__hero-avatar'>
+          <Image
+            className='discover-auth__hero-avatar-img'
+            src={avatarUrl}
+            mode='aspectFill'
+            ariaLabel='头像'
+          />
+        </View>
+        <View className='discover-auth__hero-text'>
+          <Text className='discover-auth__greeting'>{timeGreeting}！</Text>
+          <Text className='discover-auth__greeting-prompt'>今晚想怎么玩？</Text>
+          <Text className='discover-auth__subtitle'>{dynamicSubtitle}</Text>
         </View>
       </View>
 
-      {/* Hero + actions + promo — scroll away naturally */}
-      <View className='discover-auth__hero'>
-        <View className='discover-auth__hero-left'>
-          <View className='discover-auth__hero-mascot'>
-            <Image
-              className='discover-auth__hero-mascot-img'
-              src={xiaoyueAsset}
-              mode='aspectFit'
-              ariaLabel='悦仔'
-            />
-          </View>
-          <View className='discover-auth__hero-text'>
-            <Text className='discover-auth__greeting'>{timeGreeting}</Text>
-            <Text className='discover-auth__subtitle'>{dynamicSubtitle}</Text>
-          </View>
-        </View>
-
-        {/* Location Pill */}
+      {/* Explore header: section title + location pill */}
+      <View className='discover-auth__explore-header'>
+        <Text className='discover-auth__explore-title'>探索体验</Text>
         <View
           className={`discover-auth__location-pill ${selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID ? 'discover-auth__location-pill--active' : ''}`}
           onClick={handleOpenDrawer}
@@ -567,37 +543,19 @@ function AuthenticatedDiscover() {
             className='discover-auth__location-pill-icon'
           />
           <Text className='discover-auth__location-pill-text'>
-            在 深圳 · {locationPillLabel} ▼
+            在 深圳 • {locationPillLabel} ▼
           </Text>
         </View>
-
-        {/* Geo status hint — shown when GPS-sorted and not manually filtered */}
-        {!hasManualFilter && detectedClusterId && geoStatus === 'success' && (
-          <View className='discover-auth__geo-hint'>
-            <Text className='discover-auth__geo-hint-text'>
-              为你优先展示{getClusterById(detectedClusterId)?.displayName ?? '附近'}的聚会
-            </Text>
-          </View>
-        )}
       </View>
 
-      {primaryAction && (
-        <View className='discover-auth__primary-action'>
-          <Card
-            className='discover-auth__action-card'
-            onClick={() => Taro.navigateTo({ url: primaryAction.path })}
-          >
-            <JoyJoinIcon
-              emoji={primaryAction.emoji}
-              size={40}
-              className='discover-auth__action-emoji'
-            />
-            <Text className='discover-auth__action-label'>{primaryAction.label}</Text>
-          </Card>
+      {/* Geo status hint — shown when GPS-sorted and not manually filtered */}
+      {!hasManualFilter && detectedClusterId && geoStatus === 'success' && (
+        <View className='discover-auth__geo-hint'>
+          <Text className='discover-auth__geo-hint-text'>
+            为你优先展示{getClusterById(detectedClusterId)?.displayName ?? '附近'}的聚会
+          </Text>
         </View>
       )}
-
-      <AiMatchPromoCarousel className='discover-auth__promo' />
 
       {/* Location Filter Drawer */}
       <LocationFilterDrawer
@@ -615,10 +573,6 @@ function AuthenticatedDiscover() {
 
       {/* Pool listing */}
       <View className='discover-auth__section'>
-        <Text className='discover-auth__section-title'>
-          活动池 {!poolsLoading && `(${visiblePools.length})`}
-        </Text>
-
         {poolsLoading ? (
           <View className='discover-auth__pool-list'>
             <PoolCardSkeleton />

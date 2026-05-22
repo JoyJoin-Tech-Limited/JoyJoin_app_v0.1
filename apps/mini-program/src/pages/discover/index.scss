@@ -20,76 +20,37 @@
   min-height: 100dvh;
   background: $color-bg-gradient;
 
-  // ── Greeting header ───────────────────────────────────────────
-  &__greeting {
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
-    padding: $spacing-lg $container-padding;
-  }
-
-  &__greeting-mascot {
-    width: 80rpx;
-    height: 80rpx;
-    flex-shrink: 0;
-  }
-
-  &__greeting-text {
-    flex: 1;
-  }
-
-  &__greeting-title {
-    font-size: $font-size-xl;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    line-height: $line-height-tight;
-  }
-
-  &__greeting-subtitle {
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: $line-height-normal;
-    margin-top: $spacing-xs;
-  }
-
   // ── Hero ──────────────────────────────────────────────────────
   &__hero {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: $spacing-md;
     padding: $spacing-lg $container-padding $spacing-md;
   }
 
-  &__hero-left {
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__hero-mascot {
+  &__hero-avatar {
     flex-shrink: 0;
-    width: 148rpx;
-    height: 148rpx;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 120rpx;
+    height: 120rpx;
+    border-radius: 50%;
     overflow: hidden;
+    border: 4rpx solid rgba($color-primary, 0.12);
+    background: rgba($color-primary, 0.06);
+    box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.1);
   }
 
-  &__hero-mascot-img {
-    width: 140rpx;
-    height: 140rpx;
+  &__hero-avatar-img {
+    width: 100%;
+    height: 100%;
     display: block;
   }
 
   &__hero-text {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
   }
 
   // ── Location Pill ─────────────────────────────────────────────
@@ -138,9 +99,19 @@
   &__greeting {
     display: block;
     font-family: $font-cn-display;
-    font-size: $font-size-2xl;
+    font-size: $font-size-xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
+    line-height: 1.3;
+  }
+
+  &__greeting-prompt {
+    display: block;
+    font-family: $font-cn-display;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: 1.35;
     margin-bottom: $spacing-xs;
   }
 
@@ -149,6 +120,23 @@
     font-size: $font-size-sm;
     color: $color-text-secondary;
     line-height: 1.5;
+  }
+
+  // ── Explore header ────────────────────────────────────────────
+  &__explore-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-md;
+  }
+
+  &__explore-title {
+    font-family: $font-cn-display;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+    line-height: 1.3;
   }
 
   // ── Geo hint (subtle GPS-sorted indicator) ────────────────────
@@ -199,8 +187,7 @@
   }
 
   &__promo {
-    padding: 0 $container-padding;
-    margin-bottom: $spacing-lg;
+    padding: $spacing-lg $container-padding $spacing-md;
   }
 
   &__action-card {
