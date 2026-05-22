@@ -38,6 +38,7 @@ import {
 import { logInfo, logError } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
 import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
@@ -1050,10 +1051,10 @@ export default function PersonalityTestPage() {
           {(backReview.isBackReviewMode ? backReview.backReviewQuestion : question) ? (
             <View className='personality-test__mascot-row'>
               <View className='personality-test__mascot-avatar'>
-                <XiaoyueSpriteAnimator
-                  state={spriteState}
-                  size='152rpx'
-                  onComplete={handleSpriteAnimationComplete}
+                <Image
+                  className='personality-test__mascot-static personality-test__mascot-static--testing'
+                  src={cdnAsset('/assets/mascot/xiaoyue-welcome.webp')}
+                  mode='aspectFit'
                 />
               </View>
               <View

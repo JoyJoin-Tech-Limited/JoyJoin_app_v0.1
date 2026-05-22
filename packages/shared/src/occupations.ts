@@ -724,38 +724,38 @@ export function getOccupationGuidance(intent: string): { title: string; subtitle
     case "networking":
       return {
         title: "你是做什么的？",
-        subtitle: "小悦会帮你匹配同行或互补技能的职场搭子",
-        matchPreview: "小悦会优先帮你匹配：同行伙伴、互补技能搭子"
+        subtitle: "悦仔会帮你匹配同行或互补技能的职场搭子",
+        matchPreview: "悦仔会优先帮你匹配：同行伙伴、互补技能搭子"
       };
     case "friends":
       return {
         title: "你是做什么的？",
-        subtitle: "小悦会根据兴趣和性格匹配，职业只是参考",
-        matchPreview: "小悦会根据你们的共同兴趣来匹配，职业只是加分项"
+        subtitle: "悦仔会根据你的职业背景，找到同频的社交搭子",
+        matchPreview: "悦仔会根据你的背景和性格，匹配聊得来的人"
       };
     case "romance":
       return {
         title: "你是做什么的？",
-        subtitle: "小悦会综合考虑职业背景和生活方式",
-        matchPreview: "小悦会综合考虑，帮你找到聊得来的人"
+        subtitle: "悦仔会综合考虑职业背景和生活方式",
+        matchPreview: "悦仔会综合考虑，帮你找到聊得来的人"
       };
     case "fun":
       return {
         title: "你是做什么的？",
-        subtitle: "小悦会匹配聊得来的人，不聊工作也很开心",
-        matchPreview: "放心，小悦不会只给你匹配同事类型的人"
+        subtitle: "悦仔会匹配聊得来的人，不聊工作也很开心",
+        matchPreview: "放心，悦仔不会只给你匹配同事类型的人"
       };
     case "discussion":
       return {
         title: "你是做什么的？",
-        subtitle: "小悦会匹配有深度见解的人，一起碰撞想法",
-        matchPreview: "小悦会帮你找到有独特视角的交流对象"
+        subtitle: "悦仔会匹配有深度见解的人，一起碰撞想法",
+        matchPreview: "悦仔会帮你找到有独特视角的交流对象"
       };
     default:
       return {
         title: "你是做什么的？",
-        subtitle: "小悦会根据你的职业，帮你找到合适的社交搭子",
-        matchPreview: "小悦会根据你的背景智能匹配"
+        subtitle: "悦仔会根据你的职业，帮你找到合适的社交搭子",
+        matchPreview: "悦仔会根据你的背景智能匹配"
       };
   }
 }

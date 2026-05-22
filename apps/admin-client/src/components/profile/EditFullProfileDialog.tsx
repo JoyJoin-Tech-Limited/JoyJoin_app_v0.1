@@ -242,7 +242,7 @@ export default function EditFullProfileDialog({
                         <SelectItem value="Bachelor's">本科</SelectItem>
                         <SelectItem value="Master's">硕士</SelectItem>
                         <SelectItem value="Doctorate">博士</SelectItem>
-                        <SelectItem value="Trade/Vocational">职业培训</SelectItem>
+                        <SelectItem value="Trade/Vocational">中专</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

@@ -214,54 +214,7 @@
     }
   }
 
-  &__interest-tag {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 56rpx;
-    padding: $spacing-xs $spacing-md;
-    border-radius: 999rpx;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    background: $color-surface;
-    border: 2rpx solid $color-border;
-    transition: all 0.2s ease;
-    gap: 8rpx;
-
-    &--selected {
-      color: $color-primary;
-      background: $color-primary-light;
-      border-color: $color-primary;
-      font-weight: $font-weight-medium;
-    }
-
-    &--level-2 {
-      background: rgba($color-secondary, 0.10);
-      border-color: rgba($color-secondary, 0.35);
-      color: $color-secondary;
-    }
-
-    &--level-3 {
-      background: rgba($color-secondary, 0.16);
-      border-color: rgba($color-secondary, 0.50);
-      color: $color-secondary;
-      box-shadow: 0 2rpx 8rpx rgba($color-secondary, 0.10);
-    }
-
-    &:active {
-      transform: scale(0.95);
-    }
-  }
-
-  &__interest-tag-label {
-    line-height: 1.3;
-  }
-
-  &__interest-tag-meta {
-    font-size: $font-size-2xs;
-    opacity: 0.75;
-    line-height: 1;
-  }
+  // Chip component handles all tag styling; container only needs layout
 
   // ── Footer ────────────────────────────────────────────────────
   &__footer {
@@ -279,8 +232,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .edit-profile__radio,
-  .edit-profile__interest-tag {
+  .edit-profile__radio {
     transition: none;
   }
 }

@@ -93,12 +93,12 @@ export default function EditEducationPage() {
           <Label>教育水平</Label>
           <div className="space-y-3 mt-2">
             {[
-              { value: "High school/below", label: "高中及以下" },
-              { value: "Some college/Associate", label: "大专/副学士" },
-              { value: "Bachelor's", label: "本科" },
-              { value: "Master's", label: "硕士" },
               { value: "PhD", label: "博士" },
-              { value: "Trade/Vocational", label: "职业培训" },
+              { value: "Master's", label: "硕士" },
+              { value: "Bachelor's", label: "本科" },
+              { value: "Some college/Associate", label: "大专/副学士" },
+              { value: "Trade/Vocational", label: "中专" },
+              { value: "High school/below", label: "高中及以下" },
             ].map((option) => (
               <button
                 key={option.value}

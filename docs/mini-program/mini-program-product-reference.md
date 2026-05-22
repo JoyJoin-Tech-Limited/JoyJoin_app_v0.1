@@ -1,7 +1,7 @@
 # Mini-Program Product Reference
 
 > **Status:** Active launch-primary mini-program reference for `apps/mini-program`.
-> **Last verified:** 2026-05-21.
+> **Last verified:** 2026-05-22.
 > **Non-replacement note:** This document does **not** replace [`../PRODUCT_REQUIREMENTS.md`](../PRODUCT_REQUIREMENTS.md) or [`../apps/mini-program/README.md`](../apps/mini-program/README.md). It is a compact product-to-code bridge for the live WeChat mini-program surface.
 > **Authority chain:** 1. [`../PRODUCT_REQUIREMENTS.md`](../PRODUCT_REQUIREMENTS.md) for product canon and terminology. 2. [`../apps/mini-program/README.md`](../apps/mini-program/README.md), [`./architecture/current-state.md`](./architecture/current-state.md), [`./systems/onboarding-flow.md`](./systems/onboarding-flow.md), and [`./reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md) for runtime ownership and flow rules. 3. [`../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts), [`../apps/mini-program/src/app.config.ts`](../apps/mini-program/src/app.config.ts), [`../apps/mini-program/src/lib/api/api.ts`](../apps/mini-program/src/lib/api/api.ts), [`../packages/shared/src/README.md`](../packages/shared/src/README.md), [`../packages/shared/src/schema.ts`](../packages/shared/src/schema.ts), and [`../apps/server/src/README.md`](../apps/server/src/README.md) for active route, contract, and backend truth.
 
@@ -79,7 +79,7 @@ This inventory is derived from the registered paths in [`../apps/mini-program/sr
 | `pages/events/index` | Primary destination | Shows joined events split into upcoming and completed tabs. | User-facing label is `足迹`; page title is `我的足迹`. Primary data source is `GET /api/shell/events` (composite) with fallback to legacy `/api/events/joined`. |
 | `pages/connections/index` | Primary destination | Shows post-event connections with peer identity and event context. | Primary data source is `GET /api/shell/connections` (composite) with fallback to legacy `/api/my-connections`. |
 | `pages/profile/index` | Primary destination | Serves as the account hub for identity, current state, edit profile, rewards, invite, terms, and payment entry. | Tab anchor for `我的`. |
-| `pages/edit-profile/index` | Auxiliary destination | Lets the user edit core profile fields and interest selections after onboarding. | Reuses shared profile and interest contracts. |
+| `pages/edit-profile/index` | Auxiliary destination | Lets the user edit core profile fields and interest selections after onboarding. | Interest tags use the shared `Chip` component with 3-tier tap-to-cycle intensity (1→2→3→off). Industry selection uses local `searchOccupations` with pinyin/English/keyword support. Reuses shared profile and interest contracts. |
 | `pages/rewards/index` | Auxiliary destination | Shows coupons, gamification state, recent history, and redeemable items. | Reads shared rewards and coupon APIs. |
 | `pages/invite/index` | Auxiliary destination | Shows referral code, invite link, reward tiers, and copy actions for friend invites. | Uses shared referral stats contract. |
 | `pages/terms/index` | Auxiliary destination | Renders the current legal terms or privacy content with section focus support. | Backed by shared legal copy. |
@@ -141,7 +141,7 @@ The mini-program does not own the entire feature stack. It owns the Taro runtime
 
 | Ownership layer | Primary files | What it should own |
 | --- | --- | --- |
-| Mini-program runtime | [`../apps/mini-program/src/lib/api/api.ts`](../apps/mini-program/src/lib/api/api.ts), [`../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts), [`../apps/mini-program/src/app.config.ts`](../apps/mini-program/src/app.config.ts), [`../apps/mini-program/src/pages/`](../apps/mini-program/src/pages/) | Taro page structure, route registration, local storage and pending-order recovery, WeChat runtime wiring, mini-program query keys, and custom tab bar behavior. |
+| Mini-program runtime | [`../apps/mini-program/src/lib/api/api.ts`](../apps/mini-program/src/lib/api/api.ts), [`../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts), [`../apps/mini-program/src/app.config.ts`](../apps/mini-program/src/app.config.ts), [`../apps/mini-program/src/pages/`](../apps/mini-program/src/pages/) | Taro page structure, route registration, local storage and pending-order recovery, WeChat runtime wiring, mini-program query keys, and custom tab bar behavior. Includes `AutoLoginBridge` (returning-user silent auth) in `app.ts`. |
 | Shared contracts | [`../packages/shared/src/README.md`](../packages/shared/src/README.md), [`../packages/shared/src/api.ts`](../packages/shared/src/api.ts), [`../packages/shared/src/schema.ts`](../packages/shared/src/schema.ts) | DTOs, onboarding mapping helpers, payment and group-analysis response shapes, legal copy, and canonical schema names that multiple runtimes must share. |
 | Server domains | [`../apps/server/src/README.md`](../apps/server/src/README.md) | `nextStep` calculation, event-pool registration and matching, group analysis generation, payment creation and verification, notifications, connections, and Social Icebreaker session authority. |
 

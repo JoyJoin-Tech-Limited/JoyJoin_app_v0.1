@@ -1,7 +1,7 @@
 # JoyJoin (悦聚·Joy) - Product Requirements Document
 
 **Version:** 1.6  
-**Last Updated:** 2026-05-13  
+**Last Updated:** 2026-05-22  
 **Platform:** WeChat Mini Program (Taro) — launch-primary  
 **Reference Surface:** Web (React + Vite) — development sandbox / parity reference only, not shipping  
 **Target Market:** Hong Kong & Shenzhen  
@@ -77,7 +77,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-05-17)
+## 🆕 Recent Updates (Last updated: 2026-05-22)
 
 ### 2026 Milestones (May 2026)
 
@@ -102,6 +102,28 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Cache invalidation:** `shellCache.invalidateUser(userId)` triggered on payment/coupon use, pool registration, connection creation, and assessment completion.
 - **Graceful fallback:** Events and Connections pages fall back to legacy endpoints (`/api/events/joined`, `/api/my-connections`) if composite 500s. Discover shell already had fallback from pilot.
 - **Profile page deduplication:** Removed duplicate `auth-user-profile` fetch; Profile page now reads directly from `AUTH_QUERY_KEY`.
+
+**32. Bug & Polish Sprint — Mini-Program UX Hardening** 🐛 *(2026-05-22)*
+- **Auto-login for returning users:** `AutoLoginBridge` in `app.ts` silently authenticates returning users on cold start, eliminating the manual login tap for already-authorized sessions.
+- **Personality test archetype mismatch fixed:** `processTestAnswers` now reuses the anonymous session's pre-computed `finalResult` instead of re-computing after auth import, preventing archetype drift between anonymous and authenticated states.
+- **WeChat login prompt on results:** Results page now shows a native `Taro.showModal` prompt before triggering the inline WeChat login sheet, reducing accidental auth triggers.
+- **Support email corrected:** Legal terms copy updated from `hello@joyjoin.cn` to `support@joyjoinapp.com`.
+- **Dynamic event count:** Profile page replaced hardcoded "3" with live `joinedEvents.length` from the composite shell.
+- **Birth year range fix:** Edit-profile birth year picker now starts from `currentYear - 18` descending to 1950, and correctly reads from `birthdate` fallback.
+- **Industry English input:** Switched from server embedding search to local `searchOccupations` with pinyin/English/keyword support for instant, offline-friendly industry selection.
+- **Intent multi-select + 随缘:** 随缘 ("go with the flow") now coexists with other intent selections; unselected options auto-dim with `opacity: 0.7` for clear visual hierarchy.
+- **我的足迹 back button + alignment:** Conditional back button via `getCurrentPages().length > 1`; title centered.
+- **Android logo fix:** `BrandLogo.tsx` uses local `/assets/box-logo.webp`; native tab bar uses optimized `box-logo-tab.png` (29KB vs 693KB) to stay within the 2MB package budget.
+- **Interest intensity in settings:** Edit-profile now shows 3-tier level badges (已加入/升温中/高热) with tap-to-cycle `1→2→3→off` intensity control, protected behind a loading guard.
+- **Text overflow + icon resilience:** Shortened coach copy texts, added `numberOfLines={2}`, changed `word-break: keep-all` to `overflow-wrap: break-word`, and added `onError` fallback to `Image` components.
+- **Export image fixed:** Poster canvas CSS resized to 1080×1920 matching drawing coordinates; image centering corrected with `+20` Y offset. Canvas DPR capped at 2 universally to prevent ~74MB OOM on mid-range devices.
+- **Interest heat hierarchy unified:** Monotonic purple opacity ramp (0.35→0.55→0.80 background) with unified copy across onboarding and edit-profile.
+- **Bubble standardization:** `XiaoyueChatBubble` gained a `tail` prop; Edit Profile, Extended Data, and Profile Review refactored to use the shared component.
+- **Tag/Chip revamp:** New shared `Chip` component with checkmark animation, shimmer wow-effect, and 3-tier level modifiers. Replaces ad-hoc tag styling in edit-profile.
+- **Navbar floating polish:** Tab bar uses `border-radius: 40rpx`, `bottom: calc(12rpx + env(safe-area-inset-bottom))`, and stronger shadow for a premium floating feel.
+- **Essential Data onboarding UI revamp:** `FormStepper` mechanical segmented progress bar (back-left, centered status, brand-gradient fill with active glow). Purple CTA pickers for birthday (`必填` badge) and relationship status with contextual mascot reactions (e.g., "单身贵族！悦仔记住了~"). Selection pills with GPU-safe `chip-glow-burst` tap effect and morph-on-select checkmark pop.
+- **Education options reorder/rename:** `职业培训` → `中专`; canonical order now 博士→硕士→本科→大专→中专→高中及以下 in `EDUCATION_LEVEL_OPTIONS`. Matching algorithm `EDUCATION_ORDINAL` updated (中专/大专 share tier 1). Inference synonym bug fixed (`研究生` → `硕士`).
+- **Matching algorithm docs synced:** `PRODUCT_REQUIREMENTS.md` §3.4 stale 5D/4D pseudocode replaced with canonical 6D/7D reference table; `docs/systems/MATCHING_ALGORITHM_REFERENCE.md` education scoring corrected to piecewise formula.
 
 ### 2026 Milestones (Mar–Apr 2026)
 
@@ -3446,232 +3468,39 @@ For full details: `apps/server/src/README.md` and `docs/architecture/current-sta
 
 ### 3.4 Matching Algorithm Deep Dive
 
-#### Traditional Event Matching (1-on-1 Compatibility)
+> **Canonical reference:** `DEVELOPER_QUICK_REFERENCE.md` § *Event Pool Matching System* and `docs/systems/MATCHING_ALGORITHM_REFERENCE.md`.  
+> **Implementation authority:** `apps/server/src/poolMatchingService.ts`.
 
-**File:** `apps/server/src/userMatchingService.ts`
+The active matching system uses a **6-dimensional pair score** (7D when `ENABLE_SEMANTIC_SIMILARITY=true`):
 
-**5-Dimensional Scoring System:**
+| Dimension | Weight | Reads from |
+|-----------|--------|-----------|
+| Chemistry | 28% | 12×12 archetype chemistry matrix (`archetypeChemistry.ts`) |
+| Interest | 28% | Heat-weighted Jaccard over `user_interests` |
+| Social Affinity | 20% | `workMode` (life stage) + `educationLevel` + `hometownRegionCity` (opt-in) |
+| Background Diversity | 15% | Industry niche + gender diversity |
+| Preference | 5% | Event intent / venue preferences |
+| Language | 4% | `preferredLanguages` |
 
-```typescript
-function calculateUserMatchScore(user1, user2, weights) {
-  // 1. Personality Compatibility (40% default)
-  const personalityScore = chemistryMatrix[user1.primaryArchetype][user2.primaryArchetype];
-  
-  // 2. Interest Overlap (25% default)
-  const sharedInterests = intersection(user1.interests, user2.interests);
-  const interestScore = (sharedInterests.length / 
-    union(user1.interests, user2.interests).length) * 100;
-  
-  // 3. Background Alignment (15% default)
-  const educationMatch = user1.educationLevel === user2.educationLevel ? 80 : 50;
-  const industryMatch = user1.industry === user2.industry ? 90 : 60;
-  const backgroundScore = (educationMatch + industryMatch) / 2;
-  
-  // 4. Conversation Compatibility (10% default)
-  const opennessGap = Math.abs(user1.opennessScore - user2.opennessScore);
-  const extraversionGap = Math.abs(user1.extraversionScore - user2.extraversionScore);
-  const conversationScore = 100 - ((opennessGap + extraversionGap) / 20 * 100);
-  
-  // 5. Intent Alignment (10% default)
-  const intentMatch = user1.intent === user2.intent ? 100 : 70;
-  
-  // Weighted sum
-  return (
-    personalityScore * weights.personality +
-    interestScore * weights.interests +
-    backgroundScore * weights.background +
-    conversationScore * weights.conversation +
-    intentMatch * weights.intent
-  );
-}
-```
+**Education affinity** is an ordinal-distance signal (same/nearby levels score higher — **not** a diversity reward). The matching ordinals are:
 
-**Group Formation Algorithm:**
+| Level | Ordinal |
+|-------|---------|
+| 高中及以下 | 0 |
+| 中专 / 大专 | 1 (same tier) |
+| 本科 | 2 |
+| 硕士 | 3 |
+| 博士 | 4 |
 
-```typescript
-function matchUsersToGroups(users, eventMaxAttendees, weights) {
-  // 1. Calculate all pairwise match scores
-  const scores = {};
-  for (const u1 of users) {
-    for (const u2 of users) {
-      if (u1.id < u2.id) {
-        scores[`${u1.id}-${u2.id}`] = calculateUserMatchScore(u1, u2, weights);
-      }
-    }
-  }
-  
-  // 2. Greedy clustering algorithm
-  const groups = [];
-  const assigned = new Set();
-  
-  while (assigned.size < users.length) {
-    const group = [];
-    
-    // Start with highest-scoring unassigned user
-    const seed = users
-      .filter(u => !assigned.has(u.id))
-      .sort((a, b) => b.totalConnectionScore - a.totalConnectionScore)[0];
-    
-    group.push(seed);
-    assigned.add(seed.id);
-    
-    // Add users with best average match to group
-    while (group.length < eventMaxAttendees) {
-      const candidates = users.filter(u => !assigned.has(u.id));
-      if (candidates.length === 0) break;
-      
-      const bestCandidate = candidates.map(candidate => {
-        const avgScore = mean(group.map(member => 
-          scores[`${Math.min(member.id, candidate.id)}-${Math.max(member.id, candidate.id)}`]
-        ));
-        return { user: candidate, score: avgScore };
-      }).sort((a, b) => b.score - a.score)[0];
-      
-      group.push(bestCandidate.user);
-      assigned.add(bestCandidate.user.id);
-    }
-    
-    groups.push(group);
-  }
-  
-  return groups;
-}
-```
+Distance → score: same = 100, adjacent = 75, two steps = 50, ≥3 steps = 25.
 
-**Chemistry Matrix (12×12):**
+**Group overall score:** `avgPairScore × 0.60 + groupDiversity × 0.25 + energyBalance × 0.15`
 
-> **Note:** Production matrix uses current 12 archetypes.
-> See `apps/server/src/archetypeChemistry.ts` for actual implementation.
+Hard constraints (budget, gender, industry, education, age) are applied as L1 filters **before** scoring.
 
-Stored in: `apps/server/src/archetypeChemistry.ts`
+> **Interest Signal Boundary (PR #379):** `user_interest_signals` are **not** part of deterministic pair scoring. They feed AI enrichment only (match explanations, icebreaker topics). This boundary is enforced by `apps/server/src/__tests__/interestSignalBoundary.test.ts`.
 
-Sample structure:
-```typescript
-const chemistryMatrix = {
-  "社牛柯基": {
-    "社牛柯基": 70, "小太阳鸡": 88, "夸夸仓鼠": 90, "寻宝狐": 85,
-    "机灵海豚": 82, "人脉蛛": 83, "树洞考拉": 92, "脑洞章鱼": 86, ...
-  },
-  "小太阳鸡": {
-    "社牛柯基": 88, "小太阳鸡": 75, "夸夸仓鼠": 85, "寻宝狐": 80,
-    "机灵海豚": 88, "人脉蛛": 82, "树洞考拉": 87, "脑洞章鱼": 83, ...
-  },
-  // ... 12×12 = 144 unique compatibility scores (0-100 range)
-};
-```
-
----
-
-#### Event Pool Matching (Blind Box Group Formation)
-
-**Files:** `apps/server/src/poolMatchingService.ts`, `apps/server/src/archetypeChemistry.ts`
-
-> **Interest Signal Boundary (PR #379):** `user_interest_signals` are **not** part of deterministic pair scoring. The pair score below uses `user_interests` (onboarding heat-weighted selections) for interest overlap, but `user_interest_signals` (the post-onboarding calibration tool) feed AI enrichment only (match explanation connection points, icebreaker topics). This boundary is enforced by `apps/server/src/__tests__/interestSignalBoundary.test.ts`.
-
-**Two-Stage Matching Model:**
-
-**Stage 1:** Admin creates event pools with hard constraints
-- Time, location, gender/industry/seniority restrictions
-- Pool capacity (e.g., 50 users → 5 groups of 10)
-
-**Stage 2:** Users register with soft preferences, AI matches within pool
-- Combines permanent user profiles with temporary event preferences
-- Forms optimal groups balancing compatibility, diversity, and energy
-
-**Corrected Scoring Formula (Nov 20, 2025):**
-
-**CRITICAL FIX:** Removed diversity double-counting bug
-
-```typescript
-// Pair Compatibility Score (配对兼容性) - 100%
-function calculatePairScore(user1, user2, reg1, reg2) {
-  // 1. Chemistry (37.5%) - Personality archetype compatibility
-  const chemistry = CHEMISTRY_MATRIX[user1.primaryArchetype][user2.primaryArchetype];
-  
-  // 2. Interest Overlap (31.25%) - Shared topics
-  const sharedInterests = intersection(user1.interests, user2.interests);
-  const interest = (sharedInterests.length / 
-    union(user1.interests, user2.interests).length) * 100;
-  
-  // 3. Event Preferences (25%) - Budget, cuisine, goals alignment
-  const budgetMatch = budgetsOverlap(reg1.budgetRange, reg2.budgetRange) ? 90 : 50;
-  const cuisineMatch = overlap(reg1.cuisinePreferences, reg2.cuisinePreferences);
-  const goalMatch = overlap(reg1.socialGoals, reg2.socialGoals);
-  const preference = (budgetMatch + cuisineMatch + goalMatch) / 3;
-  
-  // 4. Language Compatibility (18.75%) - Communication ability
-  const language = overlap(reg1.languages, reg2.languages);
-  
-  // Pure compatibility score (NO diversity counted here)
-  return chemistry * 0.375 + interest * 0.3125 + preference * 0.25 + language * 0.1875;
-}
-
-// Group Diversity Score (群体多样性) — 4 equal dimensions
-function calculateGroupDiversity(group) {
-  // All 4 dimensions contribute equally (25% each)
-  const uniqueIndustries = new Set(group.map(u => u.industryNiche)).size;
-  const uniqueGenders    = new Set(group.map(u => u.gender)).size;
-  const uniqueArchetypes = new Set(group.map(u => u.archetype)).size;
-  const uniqueLifeStages = new Set(group.map(u => u.workMode)).size; // 人生阶段 (PR #312)
-
-  return (
-    (uniqueIndustries / group.length) * 25 +
-    (uniqueGenders    / group.length) * 25 +
-    (uniqueArchetypes / group.length) * 25 +
-    (uniqueLifeStages / group.length) * 25
-  );
-}
-
-// Communication Balance Score (沟通平衡度) — replaces former energy balance
-function calculateCommunicationBalance(group) {
-  // Average pairwise language score across all member pairs
-  let total = 0, pairs = 0;
-  for (let i = 0; i < group.length; i++) {
-    for (let j = i + 1; j < group.length; j++) {
-      total += calculateLanguageScore(group[i], group[j]);
-      pairs++;
-    }
-  }
-  return pairs > 0 ? total / pairs : 50;
-}
-
-// Overall Group Score (综合分数) — latest formula
-function formOptimalGroups(pool) {
-  // For each candidate group:
-  const avgPairScore         = mean(allPairScores);              // Average compatibility
-  const groupDiversity       = calculateGroupDiversity(group);   // Background richness
-  const communicationBalance = calculateCommunicationBalance(group); // Language compatibility
-
-  const overallScore =
-    avgPairScore         * 0.60 +  // Pair compatibility (similarity)
-    groupDiversity       * 0.25 +  // Group diversity (richness)
-    communicationBalance * 0.15;   // Communication balance (harmony)
-
-  return overallScore;
-}
-```
-
-**Conceptual Clarity:**
-- **Pair Compatibility** (60%): Do members get along? (similarity)
-- **Group Diversity** (25%): Is the group interesting? (richness — industry / gender / archetype / life stage)
-- **Communication Balance** (15%): Can the group communicate? (language harmony)
-
-**Anti-Repetition System:**
-
-```typescript
-// Prevent users from being matched together repeatedly
-const matchHistory = await db
-  .select()
-  .from(matchHistory)
-  .where(and(
-    eq(matchHistory.userId1, user1.id),
-    eq(matchHistory.userId2, user2.id)
-  ));
-
-if (matchHistory.length > 0) {
-  pairScore *= 0.7; // 30% penalty for repeat matching
-}
-```
+For full formulas, weight tables, MatcherV2 specifics, semantic-similarity details, and debug guidance — see `docs/systems/MATCHING_ALGORITHM_REFERENCE.md`.
 
 ---
 

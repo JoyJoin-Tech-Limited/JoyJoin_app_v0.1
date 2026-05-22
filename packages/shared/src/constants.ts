@@ -7,23 +7,25 @@
 export const GENDER_OPTIONS = ["女性", "男性", "不透露"] as const;
 export type Gender = typeof GENDER_OPTIONS[number];
 
-// Education level options
-export const EDUCATION_LEVEL_OPTIONS = ["高中及以下", "大专", "本科", "硕士", "博士", "职业培训"] as const;
+// Education level options — ordered highest to lowest
+export const EDUCATION_LEVEL_OPTIONS = ["博士", "硕士", "本科", "大专", "中专", "高中及以下"] as const;
 export type EducationLevel = typeof EDUCATION_LEVEL_OPTIONS[number];
 
 /**
- * Ordinal proximity mapping for education affinity scoring (同频度).
- * Used by calculateEducationAffinityScore() to measure same-frequency closeness.
- * 职业培训 is treated as ordinal 2 (same tier as 大专) as it is a non-linear vocational track.
- * Labels not in this map are treated as unknown → factor skipped in background score average.
+ * Ordinal proximity mapping for education levels.
+ * Used by display/sorting logic that needs a linear academic progression scale.
+ * NOTE: The matching algorithm's affinity scoring uses its own local mapping
+ * (poolMatchingService.ts EDUCATION_ORDINAL) which treats 中专 and 大专 as the
+ * same tier for social-frequency scoring purposes.
+ * Labels not in this map are treated as unknown.
  */
 export const EDU_ORDINAL: Partial<Record<EducationLevel, number>> = {
+  "博士": 6,
+  "硕士": 5,
+  "本科": 4,
+  "大专": 3,
+  "中专": 2,
   "高中及以下": 1,
-  "大专": 2,
-  "职业培训": 2,  // vocational track, same tier as 大专
-  "本科": 3,
-  "硕士": 4,
-  "博士": 5,
 };
 
 // Seniority options (deprecated - use WORK_MODE_OPTIONS)
@@ -168,7 +170,7 @@ export const INTENT_OPTIONS = [
 export const INTENT_FLEXIBLE_OPTION = {
   value: "flexible",
   label: "随缘",
-  subtitle: "交给小悦推荐",
+  subtitle: "交给悦仔推荐",
   emoji: "🎲",
   iconHint: "Shuffle",
   description: "我都感兴趣，帮我安排"
@@ -227,9 +229,9 @@ export const CONNECTION_POINT_TIER_CONFIG = {
 // Rarity tiers for education levels (common → epic, higher degree = rarer)
 export const EDUCATION_LEVEL_RARITY: Record<string, ConnectionPointTier> = {
   "高中及以下": "common",
+  "中专": "common",
   "大专": "common",
   "本科": "common",
-  "职业培训": "common",
   "硕士": "rare",
   "博士": "epic",
 };

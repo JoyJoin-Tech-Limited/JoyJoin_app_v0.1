@@ -20,13 +20,11 @@ export interface FormStepperProps {
 /**
  * FormStepper — viewport-locked step header for onboarding wizards.
  *
- * Pixel specs (8rpx rhythm):
- * - Header height: 112rpx
- * - Progress bar height: 6rpx
- * - Progress bar radius: 3rpx
- * - Step label: 24rpx, medium weight, muted color
- * - Title: 40rpx, bold, Alimama display face
- * - Back button: 48rpx tap target
+ * Mechanical segmented progress bar design:
+ * - Thick segmented blocks (12rpx) that fill with brand gradient
+ * - Step label integrated above the bar, centered
+ * - Back button anchored to the far left
+ * - Each segment represents one step for tangible progress feel
  */
 export default function FormStepper({
   currentStep,
@@ -36,21 +34,13 @@ export default function FormStepper({
   showBack = true,
   headerContent,
 }: FormStepperProps) {
-  const progress = Math.min(100, Math.max(0, ((currentStep + 1) / totalSteps) * 100))
   const label = stepLabels[currentStep] ?? `步骤 ${currentStep + 1}`
 
   return (
     <View className='form-stepper'>
-      {/* Progress bar */}
-      <View className='form-stepper__progress-track'>
-        <View
-          className='form-stepper__progress-fill'
-          style={{ width: `${progress}%` }}
-        />
-      </View>
-
-      {/* Header row */}
+      {/* Header row: back button + step status unit */}
       <View className='form-stepper__header'>
+        {/* Back button — far left */}
         {showBack && onBack && currentStep > 0 ? (
           <Button
             variant='secondary'
@@ -63,12 +53,26 @@ export default function FormStepper({
           <View className='form-stepper__back-placeholder' />
         )}
 
-        <View className='form-stepper__meta'>
+        {/* Step status unit: label + segmented bar, centered */}
+        <View className='form-stepper__status-unit'>
           <Text className='form-stepper__step-label'>
             {`步骤 ${currentStep + 1} / ${totalSteps}`}
           </Text>
+          <View className='form-stepper__segments'>
+            {Array.from({ length: totalSteps }, (_, i) => (
+              <View
+                key={i}
+                className={[
+                  'form-stepper__segment',
+                  i <= currentStep ? 'form-stepper__segment--filled' : '',
+                  i === currentStep ? 'form-stepper__segment--active' : '',
+                ].filter(Boolean).join(' ')}
+              />
+            ))}
+          </View>
         </View>
 
+        {/* Spacer to balance the back button width and keep status centered */}
         <View className='form-stepper__back-placeholder' />
       </View>
 

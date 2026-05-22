@@ -978,12 +978,12 @@ export async function generatePersonalitySharePoster(
   drawAttributionWatermark(ctx, CARD_X, footerY + 56, CARD_WIDTH)
 
   // Determine export resolution based on device capability
-  // Cap DPR at 2 for low-RAM devices to prevent OOM
+  // Cap DPR at 2 universally — 1080×1920 at DPR 3 = ~74MB backing store,
+  // which crashes on mid-range devices. DPR 2 (~33MB) is safe and
+  // visually indistinguishable for social-media sharing.
   const systemInfo = Taro.getSystemInfoSync()
   const dpr = systemInfo.pixelRatio || 2
-  const ram = (systemInfo as { deviceMemory?: number }).deviceMemory || 4
-  const dprCap = ram < 3 ? 2 : 3
-  const exportMultiplier = Math.min(Math.max(dpr, 2), dprCap)
+  const exportMultiplier = Math.min(Math.max(dpr, 1), 2)
 
   return await new Promise<string>((resolve, reject) => {
     ctx.draw(false, async () => {

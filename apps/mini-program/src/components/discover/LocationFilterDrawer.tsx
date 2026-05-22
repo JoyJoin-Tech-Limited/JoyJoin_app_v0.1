@@ -97,7 +97,7 @@ export default function LocationFilterDrawer({
   }
 
   return (
-    <View className={`location-drawer ${open ? 'location-drawer--open' : ''}`}>
+    <View className={`location-drawer ${open ? 'location-drawer--open' : ''}`} catchMove>
       {/* Backdrop */}
       <View
         className={`location-drawer__backdrop ${open ? 'location-drawer__backdrop--open' : ''}`}

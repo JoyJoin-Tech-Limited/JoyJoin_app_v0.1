@@ -507,29 +507,24 @@ function AuthenticatedDiscover() {
   // ── Render ──
   return (
     <View className='discover-auth tab-page-enter'>
-      {/* Banner carousel — top of page */}
-      <AiMatchPromoCarousel className='discover-auth__promo' />
-
-      {/* Greeting section: avatar + personalized message */}
+      {/* Hero + actions + promo — scroll away naturally */}
       <View className='discover-auth__hero'>
-        <View className='discover-auth__hero-avatar'>
-          <Image
-            className='discover-auth__hero-avatar-img'
-            src={avatarUrl}
-            mode='aspectFill'
-            ariaLabel='头像'
-          />
+        <View className='discover-auth__hero-left'>
+          <View className='discover-auth__hero-mascot'>
+            <Image
+              className='discover-auth__hero-mascot-img'
+              src={xiaoyueAsset}
+              mode='aspectFit'
+              ariaLabel='悦仔'
+            />
+          </View>
+          <View className='discover-auth__hero-text'>
+            <Text className='discover-auth__greeting'>{timeGreeting}</Text>
+            <Text className='discover-auth__subtitle'>{dynamicSubtitle}</Text>
+          </View>
         </View>
-        <View className='discover-auth__hero-text'>
-          <Text className='discover-auth__greeting'>{timeGreeting}！</Text>
-          <Text className='discover-auth__greeting-prompt'>今晚想怎么玩？</Text>
-          <Text className='discover-auth__subtitle'>{dynamicSubtitle}</Text>
-        </View>
-      </View>
 
-      {/* Explore header: section title + location pill */}
-      <View className='discover-auth__explore-header'>
-        <Text className='discover-auth__explore-title'>探索体验</Text>
+        {/* Location Pill */}
         <View
           className={`discover-auth__location-pill ${selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID ? 'discover-auth__location-pill--active' : ''}`}
           onClick={handleOpenDrawer}
@@ -572,7 +567,11 @@ function AuthenticatedDiscover() {
       )}
 
       {/* Pool listing */}
-      <View className='discover-auth__section'>
+      <View className={`discover-auth__section${!poolsLoading && (poolsError || visiblePools.length === 0) ? ' discover-auth__section--empty' : ''}`}>
+        <Text className='discover-auth__section-title'>
+          活动池 {!poolsLoading && `(${visiblePools.length})`}
+        </Text>
+
         {poolsLoading ? (
           <View className='discover-auth__pool-list'>
             <PoolCardSkeleton />

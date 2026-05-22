@@ -1,6 +1,6 @@
 # JoyJoin — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents. Last updated: 2026-05-20
+> Compact instructions for AI coding agents. Last updated: 2026-05-22
 
 ---
 
@@ -215,7 +215,12 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 
 **City Unlock v0.1 (2026-05-19):** Server-owned city expansion tracking via `user_city_interests` + `city_unlock_progress`. Threshold: 50 interested users triggers `collecting` → `researching` status transition + WeCom ops notification. Atomic count updates via Drizzle `sql` expressions (race-safe). Frontend shows gentle banner/feed-card/picker on discover when user has no city interest; progress page at `pages/city-unlock/index`. Admin report: `GET /api/admin/cities/unlock-report`.
 
-**Tab bar icon gotcha:** `centerHub` tab in `tabBarConfig.ts` must have a non-empty `iconPath`. The `miniprogram-ci` upload rejects empty icon paths with `800059`. The custom tab bar component renders the center button independently (`box-logo.webp` + `tab-bar-notch-bg.png`), so any placeholder icon works for validation. This was fixed 2026-05-19.
+**Tab bar icon gotcha:** `centerHub` tab in `tabBarConfig.ts` must have a non-empty `iconPath`. The `miniprogram-ci` upload rejects empty icon paths with `800059`. The custom tab bar component renders the center button independently (`box-logo-tab.png` + `tab-bar-notch-bg.png`), so any placeholder icon works for validation. The tab bar logo uses a dedicated 128×128 `box-logo-tab.png` (29KB) instead of the full-resolution `box-logo.png` (693KB) to stay within the 2MB package budget. This was fixed 2026-05-19.
+
+**Mini-program shared UI primitives (2026-05-22):**
+- **`Chip`** (`apps/mini-program/src/components/ui/Chip.tsx`) — unified tag/pill component for interest tags, filters, and selections. Props: `label`, `selected`, `level` (1–3), `compact`, `onClick`. Level hierarchy is monotonic: L1 subtle (`$color-primary-light`) → L2 medium (`rgba(primary, 0.14)`) → L3 strong (`rgba(primary, 0.26)`). Includes checkmark pop-in animation and shimmer pseudo-element.
+- **`BrandLogo`** (`apps/mini-program/src/components/ui/BrandLogo.tsx`) — single-source-of-truth logo renderer. Uses local `/assets/box-logo.webp`. Preset sizes: `sm` (74rpx), `md` (152rpx), `lg` (240rpx), `xl` (520rpx). Prefer this over hardcoding `<Image src="/assets/box-logo.webp">`.
+- **`XiaoyueChatBubble`** (`apps/mini-program/src/components/mascot/XiaoyueChatBubble.tsx`) — shared mascot coaching bubble with `tail` prop (auto-disabled for vertical/wide layouts), glow ring, and sentence stagger animation. Refactored across edit-profile, extended-data, and profile-review.
 
 **Mini-program page-stack lifecycle (swipe-back safety):** WeChat keeps pages in the navigation stack alive (hidden, not unmounted). If a page sets `isExiting`/`isPageExiting`/`isSubmitting` before navigating away, those flags survive. When the user swipes back, the page is re-shown but the CTA remains stuck. **Always reset transient exit/submit flags in `useDidShow`** — use `useResetOnShow(setIsPageExiting, setIsSubmitting)` from `apps/mini-program/src/hooks/useResetOnShow.ts`. The navigation hook `useJoyJoinNavigation` already carries an internal reset.
 

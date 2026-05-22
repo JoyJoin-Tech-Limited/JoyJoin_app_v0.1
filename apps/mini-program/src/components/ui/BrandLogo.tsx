@@ -1,5 +1,4 @@
 import { Image } from '@tarojs/components'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
 
 const LOCAL_LOGO_PATH = '/assets/box-logo.webp'
 

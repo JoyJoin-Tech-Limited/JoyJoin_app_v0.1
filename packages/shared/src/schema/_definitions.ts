@@ -64,7 +64,7 @@ export const users = pgTable("users", {
   ageMatchPreference: varchar("age_match_preference"), // 同龄人, 偏年轻, 偏成熟, 都可以
   
   // Registration fields - Education
-  educationLevel: varchar("education_level"), // 高中及以下, 大专, 本科, 硕士, 博士, 职业培训
+  educationLevel: varchar("education_level"), // 博士, 硕士, 本科, 大专, 中专, 高中及以下
   educationVisibility: varchar("education_visibility").default("hide_all"), // hide_all, show_level_only, show_level_and_field
   
   // Registration fields - Work (New standardized occupation system)

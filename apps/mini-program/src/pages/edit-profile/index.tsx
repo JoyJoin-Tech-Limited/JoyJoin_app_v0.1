@@ -27,8 +27,10 @@ import { apiRequest } from '../../lib/api/api'
 import { useAuth, useInvalidateAuth } from '../../hooks/useAuth'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { logInfo, logError } from '../../lib/utils/logger'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
+import XiaoyueChatBubble from '../../components/mascot/XiaoyueChatBubble'
+import Chip from '../../components/ui/Chip'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
@@ -275,17 +277,14 @@ export default function EditProfilePage() {
   return renderGate(
     <ScrollView className='edit-profile' scrollY enhanced showScrollbar={false}>
       {/* ── Xiaoyue Coach ── */}
-      <View className='edit-profile__coach'>
-        <Image
-          className='edit-profile__coach-mascot'
-          src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
-          mode='aspectFit'
-          lazyLoad
-        />
-        <View className='edit-profile__coach-bubble'>
-          <Text className='edit-profile__coach-text'>完善资料可以让匹配更精准哦～</Text>
-        </View>
-      </View>
+      <XiaoyueChatBubble
+        content='完善资料可以让匹配更精准哦～'
+        pose='casual'
+        horizontal
+        showGlow
+        tail
+        className='edit-profile__coach'
+      />
 
       {/* ── Live Preview ── */}
       <Card className='edit-profile__preview'>
@@ -401,22 +400,15 @@ export default function EditProfilePage() {
                   const isSelected = selectedInterests.includes(interest.id)
                   const meta = getInterestLevelMeta(level)
                   return (
-                    <View
+                    <Chip
                       key={interest.id}
-                      className={[
-                        'edit-profile__interest-tag',
-                        isSelected ? 'edit-profile__interest-tag--selected' : '',
-                        isSelected && level ? `edit-profile__interest-tag--level-${level}` : '',
-                      ].filter(Boolean).join(' ')}
-                      onClick={() => {
-                        if (!isLoadingInterests) toggleInterest(interest.id)
-                      }}
-                    >
-                      <Text className='edit-profile__interest-tag-label'>{interest.label}</Text>
-                      {isSelected && meta && (
-                        <Text className='edit-profile__interest-tag-meta'>{meta.shortLabel}</Text>
-                      )}
-                    </View>
+                      label={interest.label}
+                      meta={isSelected ? meta?.shortLabel : undefined}
+                      selected={isSelected}
+                      level={level}
+                      disabled={isLoadingInterests}
+                      onClick={() => toggleInterest(interest.id)}
+                    />
                   )
                 })}
               </View>

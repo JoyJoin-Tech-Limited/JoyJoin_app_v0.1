@@ -505,7 +505,7 @@ export const QUICK_INFERENCE_RULES: InferenceRule[] = [
       keywords: ['读研', '研究生', '硕士', '在读研', '读硕', '硕士生', 'master', 'Masters']
     },
     infers: [
-      { field: 'educationLevel', value: '研究生', confidence: 0.92 },
+      { field: 'educationLevel', value: '硕士', confidence: 0.92 },
       { field: 'education', value: '研究生', confidence: 0.92 },
       { field: 'lifeStage', value: '学生党', confidence: 0.85 }
     ],

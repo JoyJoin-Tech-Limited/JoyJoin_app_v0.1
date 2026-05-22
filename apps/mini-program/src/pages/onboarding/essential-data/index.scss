@@ -131,10 +131,29 @@
     border-radius: 24rpx;
     display: flex;
     align-items: center;
-    transition: border-color 0.2s ease;
+    justify-content: space-between;
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 
     &:active {
       border-color: rgba($color-primary, 0.4);
+    }
+
+    /* CTA-style purple picker trigger */
+    &--cta {
+      background: $brand-gradient;
+      border: none;
+      box-shadow: 0 8rpx 32rpx rgba(168, 107, 255, 0.35);
+
+      &:active {
+        transform: scale(0.98);
+        opacity: 0.92;
+      }
+    }
+
+    &--cta-selected {
+      background: rgba($color-primary, 0.08);
+      border: 2rpx solid $color-primary;
+      box-shadow: 0 2rpx 8rpx rgba($color-primary, 0.10);
     }
   }
 
@@ -145,6 +164,42 @@
     &--filled {
       color: $color-text-primary;
     }
+
+    /* White text on purple CTA */
+    &--cta {
+      color: $color-text-white;
+      font-weight: $font-weight-semibold;
+    }
+
+    &--cta-selected {
+      color: $color-primary;
+      font-weight: $font-weight-semibold;
+    }
+  }
+
+  &__picker-check {
+    width: 36rpx;
+    height: 36rpx;
+    border-radius: 50%;
+    background: $color-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: picker-check-pop 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__picker-check-icon {
+    font-size: $font-size-2xs;
+    color: $color-text-white;
+    font-weight: $font-weight-bold;
+    line-height: 1;
+  }
+
+  &__picker-badge {
+    @include type-micro;
+    color: $color-error;
+    margin-left: 8rpx;
+    font-weight: $font-weight-medium;
   }
 
   &__hint {
@@ -172,7 +227,32 @@
     background: $color-surface;
     border: 2rpx solid $color-border;
     border-radius: 48rpx;
-    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+    position: relative;
+    overflow: hidden;
+
+    &:active {
+      transform: scale(0.96);
+    }
+
+    /* Glow burst effect on tap — GPU-safe transform + opacity only */
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba($color-primary, 0.35) 0%, transparent 70%);
+      transform: translate(-50%, -50%) scale(0);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    &:active::after {
+      animation: chip-glow-burst 0.35s ease-out forwards;
+    }
 
     &--selected {
       background: rgba($color-primary, 0.08);
@@ -213,15 +293,20 @@
     position: relative;
 
     &--selected {
-      background: rgba($color-primary, 0.06);
+      background: rgba($color-primary, 0.10);
       border-color: $color-primary;
-      box-shadow: 0 2rpx 8rpx rgba($color-primary, 0.12);
+      box-shadow: 0 2rpx 12rpx rgba($color-primary, 0.16);
     }
 
     &--dimmed {
-      background: rgba($color-primary, 0.02);
-      border-color: rgba($color-primary, 0.35);
-      opacity: 0.7;
+      background: rgba($color-primary, 0.06);
+      border-color: rgba($color-primary, 0.30);
+      opacity: 0.65;
+    }
+
+    &:active {
+      transform: scale(0.97);
+      transition: transform 0.1s ease;
     }
   }
 
@@ -282,6 +367,36 @@
   }
 }
 
+@keyframes chip-glow-burst {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3);
+    opacity: 0;
+  }
+}
+
+@keyframes picker-check-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .essential-data {
     animation: none;
@@ -298,5 +413,9 @@
   .essential-data__choice-chip,
   .essential-data__intent-card {
     transition: none;
+  }
+
+  .essential-data__choice-chip::after {
+    display: none;
   }
 }

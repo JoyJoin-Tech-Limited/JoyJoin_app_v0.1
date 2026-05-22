@@ -29,6 +29,7 @@ import { logError, logInfo } from '../../../lib/utils/logger'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
+import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
 import { getArchetypeVisual, getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
@@ -321,13 +322,14 @@ export default function ProfileReviewPage() {
           <Text className='profile-review__subtitle'>确认这张入场卡后，就去发现第一场适合你的局。</Text>
         </View>
 
-        <View className={`profile-review__coach ${getStageClassName(2)}`}>
-          <Image className='profile-review__coach-avatar' src={getXiaoyueAsset('pointing')} mode='aspectFit' />
-          <View className='profile-review__coach-copy'>
-            <Text className='profile-review__coach-title'>{`${getMascotDisplayName(user)}提示`}</Text>
-            <Text className='profile-review__coach-text'>{coachCopy}</Text>
-          </View>
-        </View>
+        <XiaoyueChatBubble
+          content={coachCopy}
+          pose='pointing'
+          horizontal
+          showGlow
+          tail
+          className={getStageClassName(2)}
+        />
 
         <Card className={`profile-review__hero-card ${getStageClassName(3)}`}>
           <View className='profile-review__hero-main'>

@@ -73,7 +73,7 @@
 .joy-custom-tab-bar__item-icon-wrap {
   position: relative;
   display: flex;
-  width: 56rpx;
+  width: 48rpx;
   height: 48rpx;
   align-items: center;
   justify-content: center;
@@ -161,7 +161,7 @@
   border-radius: 9999rpx;
   box-sizing: border-box;
   background: rgba(255, 255, 255, 0.96);
-  border: 2rpx solid rgba(139, 92, 246, 0.08);
+  border: 2rpx solid rgba(139, 92, 246, 0.14);
 }
 
 .joy-custom-tab-bar__center-button {

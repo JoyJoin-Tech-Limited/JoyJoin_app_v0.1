@@ -171,6 +171,8 @@ export default function EssentialDataPage() {
   const [occupationSuggestions, setOccupationSuggestions] = useState<Array<{ occupationId: string; displayName: string; industryId: string }>>([])
   const [isSearching, setIsSearching] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [mascotReaction, setMascotReaction] = useState('')
+  const mascotTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { user, isLoading } = useAuthGuard({
     suspendOnboardingRedirect: isSubmitting || isPageExiting,
@@ -238,6 +240,27 @@ export default function EssentialDataPage() {
 
   const stepConfig = STEP_CONFIG[currentStep]
 
+  /** Set a temporary mascot reaction message; clears on step change. */
+  const triggerMascotReaction = useCallback((message: string) => {
+    if (mascotTimeoutRef.current) {
+      clearTimeout(mascotTimeoutRef.current)
+    }
+    setMascotReaction(message)
+    mascotTimeoutRef.current = setTimeout(() => {
+      setMascotReaction('')
+      mascotTimeoutRef.current = null
+    }, 3000)
+  }, [])
+
+  // Cleanup mascot reaction timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (mascotTimeoutRef.current) {
+        clearTimeout(mascotTimeoutRef.current)
+      }
+    }
+  }, [])
+
   const isStepValid = useMemo(() => {
     switch (currentStep) {
       case 0:
@@ -264,12 +287,14 @@ export default function EssentialDataPage() {
     if (currentStep < TOTAL_STEPS - 1) {
       analytics.stepCompleted({ stepId: stepConfig.id, stepNumber: currentStep + 1 })
       setCurrentStep((s) => s + 1)
+      setMascotReaction('')
     }
   }, [isStepValid, currentStep, analytics, stepConfig.id])
 
   const handleBack = useCallback(() => {
     if (currentStep > 0) {
       setCurrentStep((s) => s - 1)
+      setMascotReaction('')
     }
   }, [currentStep])
 
@@ -407,7 +432,7 @@ export default function EssentialDataPage() {
           {/* Xiaoyue coaching bubble */}
           <View className='essential-data__stage essential-data__stage--1'>
             <XiaoyueChatBubble
-              content={stepConfig.mascotMessage}
+              content={mascotReaction || stepConfig.mascotMessage}
               pose={stepConfig.mascotPose}
               horizontal
               showGlow
@@ -462,18 +487,27 @@ export default function EssentialDataPage() {
 
               <View className='essential-data__field'>
                 <Text className='essential-data__label'>
-                  出生年份<Text className='essential-data__required'>*</Text>
+                  出生年份<Text className='essential-data__picker-badge'>必填</Text>
                 </Text>
                 <Picker
                   mode='selector'
                   range={BIRTH_YEAR_RANGE}
                   value={birthYearIndex >= 0 ? birthYearIndex : 0}
-                  onChange={(e) => setBirthYear(BIRTH_YEAR_RANGE[Number(e.detail.value)] ?? 0)}
+                  onChange={(e) => {
+                    const year = BIRTH_YEAR_RANGE[Number(e.detail.value)] ?? 0
+                    setBirthYear(year)
+                    triggerMascotReaction(` ${year}年，正是好年纪！✨`)
+                  }}
                 >
-                  <View className='essential-data__picker'>
-                    <Text className={['essential-data__picker-text', birthYear > 0 ? 'essential-data__picker-text--filled' : ''].filter(Boolean).join(' ')}>
-                      {birthYear > 0 ? `${birthYear} 年` : '请选择'}
+                  <View className={['essential-data__picker', birthYear > 0 ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}>
+                    <Text className={['essential-data__picker-text', birthYear > 0 ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta'].filter(Boolean).join(' ')}>
+                      {birthYear > 0 ? `${birthYear} 年` : '请选择出生年份'}
                     </Text>
+                    {birthYear > 0 && (
+                      <View className='essential-data__picker-check'>
+                        <Text className='essential-data__picker-check-icon'>✓</Text>
+                      </View>
+                    )}
                   </View>
                 </Picker>
               </View>
@@ -547,12 +581,29 @@ export default function EssentialDataPage() {
                   mode='selector'
                   range={relationshipOptions}
                   value={relationshipIndex >= 0 ? relationshipIndex : 0}
-                  onChange={(e) => setRelationshipStatus(relationshipOptions[Number(e.detail.value)] ?? '')}
+                  onChange={(e) => {
+                    const status = relationshipOptions[Number(e.detail.value)] ?? ''
+                    setRelationshipStatus(status)
+                    const reactions: Record<string, string> = {
+                      '单身': '单身贵族！悦仔记住了~ 💫',
+                      '恋爱中': '甜甜蜜蜜！祝你们幸福~ 💕',
+                      '已婚/伴侣': '稳定的幸福，很踏实~ 🏠',
+                      '离异': '新的篇章，新的开始~ ✨',
+                      '丧偶': '感谢你愿意信任我们~ 🤝',
+                      '不透露': '保持神秘感也是一种魅力~ 😉',
+                    }
+                    triggerMascotReaction(reactions[status] || '了解！')
+                  }}
                 >
-                  <View className='essential-data__picker'>
-                    <Text className={['essential-data__picker-text', relationshipStatus !== '' ? 'essential-data__picker-text--filled' : ''].filter(Boolean).join(' ')}>
-                      {relationshipStatus || '选填'}
+                  <View className={['essential-data__picker', relationshipStatus !== '' ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}>
+                    <Text className={['essential-data__picker-text', relationshipStatus !== '' ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta'].filter(Boolean).join(' ')}>
+                      {relationshipStatus || '选填（点击选择）'}
                     </Text>
+                    {relationshipStatus !== '' && (
+                      <View className='essential-data__picker-check'>
+                        <Text className='essential-data__picker-check-icon'>✓</Text>
+                      </View>
+                    )}
                   </View>
                 </Picker>
               </View>

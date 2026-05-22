@@ -1,7 +1,7 @@
 # JoyJoin Developer Quick Reference Guide
 
 **Version:** 2.2  
-**Last Updated:** 2026-05-13  
+**Last Updated:** 2026-05-22  
 **For:** Tech Team Onboarding & Codebase Navigation
 
 ---

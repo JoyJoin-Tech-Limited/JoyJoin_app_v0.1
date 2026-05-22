@@ -649,12 +649,12 @@ function calculateLifeStageAffinity(user1: UserWithProfile, user2: UserWithProfi
 /**
  * Education level ordinal mapping for proximity-based affinity scoring.
  * Closer ordinal values → higher affinity score (同频).
- * 职业培训 and 大专 share ordinal 1 as parallel vocational/associate tracks at the same level.
+ * 中专 and 大专 share ordinal 1 as parallel vocational/associate tracks at the same level.
  */
 const EDUCATION_ORDINAL: Record<string, number> = {
   "高中及以下": 0,
-  "职业培训": 1,
-  "大专": 1,   // parallel vocational track — same level as 职业培训
+  "中专": 1,
+  "大专": 1,   // parallel vocational track — same level as 中专
   "本科": 2,
   "硕士": 3,
   "博士": 4,

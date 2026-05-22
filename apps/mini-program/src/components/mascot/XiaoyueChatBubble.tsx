@@ -33,6 +33,8 @@ export interface XiaoyueChatBubbleProps {
   animate?: boolean
   /** Direct sprite state override (takes precedence over expressionId mapping) */
   spriteState?: XiaoyueSpriteState
+  /** Show speech tail pointing to the mascot avatar */
+  tail?: boolean
 }
 
 /**
@@ -57,6 +59,7 @@ export default function XiaoyueChatBubble({
   className = '',
   animate = false,
   spriteState,
+  tail = false,
 }: XiaoyueChatBubbleProps) {
   const resolvedExpressionId = isLoading
     ? 'loadingSystem'
@@ -95,7 +98,7 @@ export default function XiaoyueChatBubble({
       </View>
 
       {/* Bubble */}
-      <View className={`xiaoyue-chat-bubble__bubble ${isLoading ? 'xiaoyue-chat-bubble__bubble--loading' : ''}`}>
+      <View className={`xiaoyue-chat-bubble__bubble ${isLoading ? 'xiaoyue-chat-bubble__bubble--loading' : ''} ${tail && horizontal && !wide ? 'xiaoyue-chat-bubble__bubble--tail' : ''}`}>
         {sentences.map((sentence, i) => (
           <Text
             key={i}

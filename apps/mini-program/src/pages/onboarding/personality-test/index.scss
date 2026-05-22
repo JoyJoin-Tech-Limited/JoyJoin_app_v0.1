@@ -292,6 +292,11 @@
     &--reduced-motion {
       display: none;
     }
+
+    &--testing {
+      width: 152rpx;
+      height: 152rpx;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

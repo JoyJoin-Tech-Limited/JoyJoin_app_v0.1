@@ -317,14 +317,23 @@ Average of up to 3 sub-signals (equal weight per present factor):
 **Education Ordinal:**
 ```
 高中及以下 = 0
-职业培训 = 1 (same tier as 大专)
+中专 = 1 (same tier as 大专)
 大专 = 1
 本科 = 2
 硕士 = 3
 博士 = 4
 ```
 
-**Note:** Education is an *affinity* signal (same/nearby = better) — it is explicitly **not** a diversity signal.
+**Scoring formula (piecewise, not linear −20 per step):**
+```
+distance = |ord1 − ord2|
+distance = 0 → 100 (same level)
+distance = 1 → 75
+distance = 2 → 50
+distance ≥ 3 → 25
+```
+
+**Note:** Education is an *affinity* signal (same/nearby = better) — it is explicitly **not** a diversity signal. 中专 and 大专 are treated as the same tier (distance = 0) because they represent parallel vocational/associate tracks at a comparable academic level.
 
 #### 3.2.4 Background Diversity Score (背景多样性) — 15%
 

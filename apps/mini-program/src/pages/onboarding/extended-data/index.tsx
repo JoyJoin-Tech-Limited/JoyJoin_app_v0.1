@@ -28,7 +28,7 @@ import { logError, logInfo } from '../../../lib/utils/logger'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
-import { getXiaoyueAsset } from '../personality-test/visuals'
+import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
 import './index.scss'
 
 const MIN_INTERESTS = 3
@@ -268,17 +268,14 @@ export default function ExtendedDataPage() {
         </Text>
       </View>
 
-      <View className='extended-data__coach extended-data__stage extended-data__stage--2'>
-        <Image
-          className='extended-data__coach-avatar'
-          src={getXiaoyueAsset('pointing')}
-          mode='aspectFit'
-        />
-        <View className='extended-data__coach-copy'>
-          <Text className='extended-data__coach-title'>{`${DEFAULT_MASCOT_DISPLAY_NAME}提示`}</Text>
-          <Text className='extended-data__coach-text'>{coachCopy}</Text>
-        </View>
-      </View>
+      <XiaoyueChatBubble
+        content={coachCopy}
+        pose='pointing'
+        horizontal
+        showGlow
+        tail
+        className='extended-data__stage extended-data__stage--2'
+      />
 
       <Card className='extended-data__summary extended-data__stage extended-data__stage--3'>
         <View className='extended-data__summary-stats'>
