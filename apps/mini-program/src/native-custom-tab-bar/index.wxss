@@ -14,11 +14,12 @@
   position: absolute;
   left: 24rpx;
   right: 24rpx;
-  bottom: env(safe-area-inset-bottom);
+  bottom: calc(12rpx + env(safe-area-inset-bottom));
   height: 128rpx;
   box-sizing: border-box;
   background: rgba(255, 255, 255, 0.985);
-  box-shadow: 0 10rpx 28rpx rgba(45, 49, 66, 0.08);
+  box-shadow: 0 16rpx 40rpx rgba(45, 49, 66, 0.12);
+  border-radius: 40rpx;
 }
 
 .joy-custom-tab-bar__bg {

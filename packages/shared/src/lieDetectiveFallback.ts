@@ -25,7 +25,7 @@ export interface LieDetectiveV2FallbackSet {
 
 export const LIE_DETECTIVE_V2_FALLBACK_SETS: LieDetectiveV2FallbackSet[] = [
   // ═══════════════════════════════════════════════════════════════
-  //  气氛组柯基 (corgi) — outgoing, energetic, humorous ×2
+  //  社牛柯基 (corgi) — outgoing, energetic, humorous ×2
   // ═══════════════════════════════════════════════════════════════
   {
     archetype: 'corgi',
@@ -45,7 +45,7 @@ export const LIE_DETECTIVE_V2_FALLBACK_SETS: LieDetectiveV2FallbackSet[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  //  情绪稳定鸡 (rooster) — warm, positive, stable ×2
+  //  小太阳鸡 (rooster) — warm, positive, stable ×2
   // ═══════════════════════════════════════════════════════════════
   {
     archetype: 'rooster',
@@ -65,7 +65,7 @@ export const LIE_DETECTIVE_V2_FALLBACK_SETS: LieDetectiveV2FallbackSet[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  //  捧场王仓鼠 (hamster_praise) — encouraging, warm ×2
+  //  夸夸仓鼠 (hamster_praise) — encouraging, warm ×2
   // ═══════════════════════════════════════════════════════════════
   {
     archetype: 'hamster_praise',
@@ -85,7 +85,7 @@ export const LIE_DETECTIVE_V2_FALLBACK_SETS: LieDetectiveV2FallbackSet[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  //  探宝雷达狐 (fox) — curious, adventurous, discovers ×2
+  //  寻宝狐 (fox) — curious, adventurous, discovers ×2
   // ═══════════════════════════════════════════════════════════════
   {
     archetype: 'fox',
@@ -105,7 +105,7 @@ export const LIE_DETECTIVE_V2_FALLBACK_SETS: LieDetectiveV2FallbackSet[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  //  读空气海豚 (dolphin_calm) — empathetic, reads room ×2
+  //  机灵海豚 (dolphin_calm) — empathetic, reads room ×2
   // ═══════════════════════════════════════════════════════════════
   {
     archetype: 'dolphin_calm',
@@ -125,7 +125,7 @@ export const LIE_DETECTIVE_V2_FALLBACK_SETS: LieDetectiveV2FallbackSet[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  //  社交裁缝蛛 (spider) — connector, weaves relationships ×2
+  //  人脉蛛 (spider) — connector, weaves relationships ×2
   // ═══════════════════════════════════════════════════════════════
   {
     archetype: 'spider',
@@ -145,7 +145,7 @@ export const LIE_DETECTIVE_V2_FALLBACK_SETS: LieDetectiveV2FallbackSet[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  //  情绪树洞考拉 (koala) — gentle, listener, storyteller ×2
+  //  树洞考拉 (koala) — gentle, listener, storyteller ×2
   // ═══════════════════════════════════════════════════════════════
   {
     archetype: 'koala',
@@ -165,7 +165,7 @@ export const LIE_DETECTIVE_V2_FALLBACK_SETS: LieDetectiveV2FallbackSet[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  //  脑洞喷泉章鱼 (octopus) — creative, quirky,发散思维 ×2
+  //  脑洞章鱼 (octopus) — creative, quirky,发散思维 ×2
   // ═══════════════════════════════════════════════════════════════
   {
     archetype: 'octopus',
@@ -185,7 +185,7 @@ export const LIE_DETECTIVE_V2_FALLBACK_SETS: LieDetectiveV2FallbackSet[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  //  追问猫头鹰 (owl) — analytical, deep thinker ×1
+  //  好奇猫头鹰 (owl) — analytical, deep thinker ×1
   // ═══════════════════════════════════════════════════════════════
   {
     archetype: 'owl',
@@ -197,7 +197,7 @@ export const LIE_DETECTIVE_V2_FALLBACK_SETS: LieDetectiveV2FallbackSet[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  //  定海神针大象 (elephant) — reliable, stable anchor ×1
+  //  靠谱大象 (elephant) — reliable, stable anchor ×1
   // ═══════════════════════════════════════════════════════════════
   {
     archetype: 'elephant',
@@ -209,7 +209,7 @@ export const LIE_DETECTIVE_V2_FALLBACK_SETS: LieDetectiveV2FallbackSet[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  //  慢半拍龟 (turtle) — observant, slow but deep ×1
+  //  慢热龟 (turtle) — observant, slow but deep ×1
   // ═══════════════════════════════════════════════════════════════
   {
     archetype: 'turtle',
@@ -221,7 +221,7 @@ export const LIE_DETECTIVE_V2_FALLBACK_SETS: LieDetectiveV2FallbackSet[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  //  静音模式猫 (cat) — quiet, independent, observer ×1
+  //  小透明猫 (cat) — quiet, independent, observer ×1
   // ═══════════════════════════════════════════════════════════════
   {
     archetype: 'cat',

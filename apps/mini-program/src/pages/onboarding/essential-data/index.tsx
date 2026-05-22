@@ -16,8 +16,9 @@ import {
   getOccupationById,
   getOccupationGuidance,
   OCCUPATIONS,
+  searchOccupations,
 } from '@shared/occupations'
-import { searchOccupation, submitEssentialData } from '@shared/api'
+import { submitEssentialData } from '@shared/api'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import { TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../../lib/utils/uiConstants'
@@ -329,17 +330,16 @@ export default function EssentialDataPage() {
       return
     }
     setIsSearching(true)
-    searchTimerRef.current = setTimeout(async () => {
-      try {
-        const result = await searchOccupation(apiRequest, value.trim())
-        setOccupationSuggestions(result.matches ?? [])
-        setShowSuggestions(result.matches?.length > 0)
-      } catch {
-        setOccupationSuggestions([])
-      } finally {
-        setIsSearching(false)
-      }
-    }, 300)
+    searchTimerRef.current = setTimeout(() => {
+      const matches = searchOccupations(value.trim())
+      setOccupationSuggestions(matches.map((occ) => ({
+        occupationId: occ.id,
+        displayName: occ.displayName,
+        industryId: occ.industryId,
+      })))
+      setShowSuggestions(matches.length > 0)
+      setIsSearching(false)
+    }, 150)
   }, [])
 
   const handleSelectOccupation = useCallback((id: string) => {
@@ -354,20 +354,28 @@ export default function EssentialDataPage() {
   const toggleIntent = useCallback(
     (value: string) => {
       if (value === INTENT_FLEXIBLE_OPTION.value) {
-        setIntent(intent.includes(value) ? [] : [value])
+        // Toggle flexible independently; when turned off, keep other explicit selections
+        if (intent.includes(value)) {
+          setIntent(intent.filter((item) => item !== value))
+        } else {
+          setIntent([...intent, value])
+        }
         return
       }
-      const next = intent.filter((item) => item !== INTENT_FLEXIBLE_OPTION.value)
-      if (next.includes(value)) {
-        setIntent(next.filter((item) => item !== value))
+
+      // Regular option toggle
+      if (intent.includes(value)) {
+        setIntent(intent.filter((item) => item !== value))
         return
       }
-      if (next.length >= MAX_INTENTS) {
+
+      const explicitCount = intent.filter((item) => item !== INTENT_FLEXIBLE_OPTION.value).length
+      if (explicitCount >= MAX_INTENTS) {
         analytics.validationFailed('intent', 'max-selection-reached')
         Taro.showToast({ title: `最多选择 ${MAX_INTENTS} 个意图`, icon: 'none', duration: TOAST_DEFAULT_MS })
         return
       }
-      setIntent([...next, value])
+      setIntent([...intent, value])
     },
     [analytics, intent],
   )
@@ -592,16 +600,23 @@ export default function EssentialDataPage() {
                 <Text className='essential-data__label'>这次更想收获什么</Text>
                 <View className='essential-data__intent-grid'>
                   {intentOptions.map((option) => {
-                    const selected = intent.includes(option.value)
+                    const isFlexibleActive = intent.includes(INTENT_FLEXIBLE_OPTION.value)
+                    const isExplicitlySelected = intent.includes(option.value)
+                    const isDimmed = isFlexibleActive && option.value !== INTENT_FLEXIBLE_OPTION.value && !isExplicitlySelected
+                    const visuallySelected = isExplicitlySelected || isDimmed
                     return (
                       <View
                         key={option.value}
-                        className={['essential-data__intent-card', selected ? 'essential-data__intent-card--selected' : ''].filter(Boolean).join(' ')}
+                        className={[
+                          'essential-data__intent-card',
+                          visuallySelected ? 'essential-data__intent-card--selected' : '',
+                          isDimmed ? 'essential-data__intent-card--dimmed' : '',
+                        ].filter(Boolean).join(' ')}
                         onClick={() => toggleIntent(option.value)}
                       >
                         <Text className='essential-data__intent-label'>{option.label}</Text>
                         <Text className='essential-data__intent-subtitle'>{option.subtitle}</Text>
-                        {selected && (
+                        {visuallySelected && (
                           <View className='essential-data__intent-check'>
                             <Text className='essential-data__intent-check-icon'>✓</Text>
                           </View>

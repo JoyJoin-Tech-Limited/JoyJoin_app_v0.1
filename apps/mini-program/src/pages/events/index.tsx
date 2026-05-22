@@ -48,12 +48,19 @@ export default function EventsPage() {
     enabled: !authLoading,
   })
 
+  const [canGoBack, setCanGoBack] = useState(false)
+
   useEffect(() => {
     const timer = setTimeout(() => {
       markAsRead.mutate('activities')
     }, 100)
     return () => clearTimeout(timer)
   }, [markAsRead])
+
+  useEffect(() => {
+    const pages = Taro.getCurrentPages()
+    setCanGoBack(pages.length > 1)
+  }, [])
 
   const [activeTab, setActiveTab] = useState<TabKey>('upcoming')
   const [hasManualTabSelection, setHasManualTabSelection] = useState(false)
@@ -118,10 +125,20 @@ export default function EventsPage() {
     Taro.switchTab({ url: '/pages/discover/index' })
   }
 
+  const handleBack = () => {
+    Taro.navigateBack({ fail: () => Taro.switchTab({ url: '/pages/profile/index' }) })
+  }
+
   return renderGate(
     <View className='events-page tab-page-enter'>
       <View className='events-page__header'>
+        {canGoBack && (
+          <View className='events-page__back' onClick={handleBack}>
+            <Text className='events-page__back-arrow'>‹</Text>
+          </View>
+        )}
         <Text className='events-page__title'>我的足迹</Text>
+        {canGoBack && <View className='events-page__back-spacer' />}
       </View>
 
       {/* Tabs */}

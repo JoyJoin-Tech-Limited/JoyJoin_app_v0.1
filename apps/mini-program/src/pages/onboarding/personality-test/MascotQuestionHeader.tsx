@@ -32,6 +32,7 @@ export default memo(function MascotQuestionHeader({
       <View className='mascot-question-header__banner'>
         <Text
           className={`mascot-question-header__scenario${isLoading ? ' mascot-question-header__scenario--loading' : ''}`}
+          numberOfLines={2}
         >
           {question.scenarioText ?? question.questionText}
         </Text>

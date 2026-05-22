@@ -1221,31 +1221,31 @@ export const questionsV4Attractor: AdaptiveQuestion[] = [
     options: [
       {
         value: "popcorn",
-        text: "吃瓜围观，看看怎么发展",
+        text: "吃瓜围观",
         traitScores: { O: 2, A: -2 },
         iconAssetKey: "popcorn",
       },
       {
         value: "dm",
-        text: "私信其中一个：你还好吗？",
+        text: "私聊关心",
         traitScores: { A: 4, X: -1 },
         iconAssetKey: "dm",
       },
       {
         value: "leave",
-        text: "默默退出群聊一小会儿",
+        text: "暂退群聊",
         traitScores: { E: 2, X: -3 },
         iconAssetKey: "leave",
       },
       {
         value: "dove",
-        text: "发条轻松消息转移话题",
+        text: "转移话题",
         traitScores: { A: 2, P: 2, C: 1 },
         iconAssetKey: "dove",
       },
       {
         value: "direct",
-        text: "直接说：好了好了，你们都有道理",
+        text: "直接调解",
         traitScores: { X: 2, C: 2, A: 1 },
         iconAssetKey: "direct",
       },

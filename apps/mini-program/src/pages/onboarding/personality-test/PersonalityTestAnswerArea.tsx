@@ -1,11 +1,12 @@
 import { View, Text, Slider, Image } from '@tarojs/components'
 import { memo, useState, useCallback, useEffect, useRef } from 'react'
+import type { AnswerOption } from './personalityTestLogic'
 import Button from '../../../components/ui/Button'
 import { COLOR_PRIMARY, COLOR_PRIMARY_LIGHT } from '../../../lib/utils/uiConstants'
 import { haptics } from '../../../lib/utils/haptics'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import { resolvePersonalityEmoji, resolvePersonalityIcon } from './emojiAssets'
-import { resolveFragmentLabel, getNearestSliderOption, type AnswerOption } from './personalityTestLogic'
+import { resolveFragmentLabel, getNearestSliderOption } from './personalityTestLogic'
 import './PersonalityTestAnswerArea.scss'
 
 export { resolveFragmentLabel, getNearestSliderOption, type AnswerOption } from './personalityTestLogic'
@@ -44,6 +45,61 @@ function splitEmojiLabel(text: string): { emoji: string; label: string } {
     return { emoji: '', label: text }
   }
   return { emoji: match[1], label: match[2] }
+}
+
+interface EmojiTapOptionProps {
+  option: AnswerOption
+  parts: { emoji: string; label: string }
+  iconPath: string | null
+  index: number
+  isSelected: boolean
+  isCommitted: boolean
+  isSubmitting: boolean
+  selectedValue: string | null
+  onTouchStart: () => void
+  onTouchEnd: () => void
+  onClick: () => void
+}
+
+function EmojiTapOption({
+  option,
+  parts,
+  iconPath,
+  index,
+  isSelected,
+  isCommitted,
+  isSubmitting,
+  selectedValue,
+  onTouchStart,
+  onTouchEnd,
+  onClick,
+}: EmojiTapOptionProps) {
+  const [hasError, setHasError] = useState(false)
+  const showImage = iconPath && !hasError
+
+  return (
+    <Button
+      className={`answer-area__emoji-option${isSelected ? ' answer-area__emoji-option--selected' : ''}${isCommitted ? ' answer-area__emoji-option--committed' : ''}`}
+      style={{ animationDelay: `${index * 0.05}s` }}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      onClick={onClick}
+      disabled={isSubmitting || selectedValue !== null}
+      hoverClass='answer-area__emoji-option--active'
+    >
+      {showImage ? (
+        <Image
+          className='answer-area__emoji-option-emoji answer-area__emoji-option-emoji--image'
+          src={iconPath}
+          mode='aspectFit'
+          onError={() => setHasError(true)}
+        />
+      ) : (
+        <Text className='answer-area__emoji-option-emoji'>{parts.emoji || '🎯'}</Text>
+      )}
+      <Text className='answer-area__emoji-option-text'>{parts.label || option.text}</Text>
+    </Button>
+  )
 }
 
 /** Resolve the slider lean direction based on current value (0-100). */
@@ -221,30 +277,23 @@ export default memo(function PersonalityTestAnswerArea({
             ? resolvePersonalityIcon(option.iconAssetKey)
             : resolvePersonalityEmoji(parts.emoji)
           return (
-            <Button
+            <EmojiTapOption
               key={option.value}
-              className={`answer-area__emoji-option${isSelected ? ' answer-area__emoji-option--selected' : ''}${isCommitted ? ' answer-area__emoji-option--committed' : ''}`}
-              style={{ animationDelay: `${index * 0.05}s` }}
+              option={option}
+              parts={parts}
+              iconPath={iconPath ?? null}
+              index={index}
+              isSelected={isSelected}
+              isCommitted={isCommitted}
+              isSubmitting={isSubmitting}
+              selectedValue={selectedValue}
               onTouchStart={() => { onOptionTouchStart?.(option) }}
               onTouchEnd={() => { onOptionTouchEnd?.() }}
               onClick={() => {
                 haptics('light')
                 handleAnswer(option)
               }}
-              disabled={isSubmitting || selectedValue !== null}
-              hoverClass='answer-area__emoji-option--active'
-            >
-              {iconPath ? (
-                <Image
-                  className='answer-area__emoji-option-emoji answer-area__emoji-option-emoji--image'
-                  src={iconPath}
-                  mode='aspectFit'
-                />
-              ) : (
-                <Text className='answer-area__emoji-option-emoji'>{parts.emoji}</Text>
-              )}
-              <Text className='answer-area__emoji-option-text'>{parts.label || option.text}</Text>
-            </Button>
+            />
           )
         })}
       </View>

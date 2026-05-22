@@ -2,6 +2,7 @@ import type { Express, Request } from "express";
 import { db } from "../../db";
 import { eq, and, sql } from "drizzle-orm";
 import { users, industryAiLogs, industrySeedCandidates } from "@shared/schema";
+import { resolveArchetype } from "@shared/personality/archetypeNames";
 import { matchIndustryFromText } from "../../inference/industryOntology";
 import { INDUSTRY_OPTIONS } from "@shared/constants";
 import { aiEndpointLimiter } from "../../rateLimiter";
@@ -70,18 +71,18 @@ export function registerAIServiceRoutes(app: Express): void {
 
   // Archetype-keyed insight copy (12 archetypes)
   const ARCHETYPE_INSIGHTS: Record<string, string> = {
-    '开心柯基': '你天生自带暖场能量，最容易让整桌气氛活跃起来',
-    '太阳鸡': '你的热情感染力强，适合引领话题的群体节奏',
-    '捧场王仓鼠': '你善于欣赏他人，最容易在轻松氛围里建立连接',
-    '机智狐': '你对话题的洞察快，适合那种先破冰、再深聊的群体',
-    '淡定海豚': '你不需要刻意表现，真实感反而是你最强的社交优势',
-    '织网蛛': '你擅长把不同背景的人串联在一起，天然的社交节点',
-    '情绪树洞考拉': '你给人安全感，最容易在小群体里慢慢成为大家信任的人',
-    '灵感章鱼': '你的跨界联想力强，适合多元背景交汇的小组',
-    '沉思猫头鹰': '你更适合先观察、再发言的节奏，深聊比破冰更适合你',
-    '定心大象': '你的稳定感让整个群体更有安全感，适合偏深度的小聚',
-    '稳如龟': '你不求一夜深交，但会让别人记住你的踏实感',
-    '隐身猫': '你慢热但有质感，在对的氛围里往往是最让人印象深刻的那个',
+    '社牛柯基': '你天生自带暖场能量，最容易让整桌气氛活跃起来',
+    '小太阳鸡': '你的热情感染力强，适合引领话题的群体节奏',
+    '夸夸仓鼠': '你善于欣赏他人，最容易在轻松氛围里建立连接',
+    '寻宝狐': '你对话题的洞察快，适合那种先破冰、再深聊的群体',
+    '机灵海豚': '你不需要刻意表现，真实感反而是你最强的社交优势',
+    '人脉蛛': '你擅长把不同背景的人串联在一起，天然的社交节点',
+    '树洞考拉': '你给人安全感，最容易在小群体里慢慢成为大家信任的人',
+    '脑洞章鱼': '你的跨界联想力强，适合多元背景交汇的小组',
+    '好奇猫头鹰': '你更适合先观察、再发言的节奏，深聊比破冰更适合你',
+    '靠谱大象': '你的稳定感让整个群体更有安全感，适合偏深度的小聚',
+    '慢热龟': '你不求一夜深交，但会让别人记住你的踏实感',
+    '小透明猫': '你慢热但有质感，在对的氛围里往往是最让人印象深刻的那个',
   };
 
   // WorkMode-keyed matching promise variants
@@ -94,18 +95,18 @@ export function registerAIServiceRoutes(app: Express): void {
 
   // Archetype-keyed fit reasons per event type (饭局 / 酒局)
   const ARCHETYPE_FIT_REASONS: Record<string, { 饭局: string; 酒局: string }> = {
-    '开心柯基':    { 饭局: '你的暖场感很适合围桌聊天', 酒局: '你的活力能自然带热气氛' },
-    '太阳鸡':     { 饭局: '你的感染力很适合带动全桌', 酒局: '你的热情能帮陌生人快些破冰' },
-    '捧场王仓鼠':     { 饭局: '轻松饭局最能发挥你的共情力', 酒局: '你的温柔让酒局不只热闹' },
-    '机智狐':     { 饭局: '话题型饭局很适合你的机智', 酒局: '自由节奏给你更多即兴空间' },
-    '淡定海豚':   { 饭局: '你的真实感很适合轻松饭局', 酒局: '你的松弛感在酒局里很加分' },
-    '织网蛛':     { 饭局: '你擅长把一桌人自然串联', 酒局: '多元背景更容易被你聊开' },
-    '情绪树洞考拉':     { 饭局: '你的安全感适合慢慢熟络', 酒局: '你的体贴会让酒局更有温度' },
-    '灵感章鱼':   { 饭局: '跨界话题里你更容易发光', 酒局: '松弛酒局最能放大你的灵感' },
-    '沉思猫头鹰': { 饭局: '饭局的慢节奏适合你深入聊', 酒局: '你偶尔的深刻观点会很出彩' },
-    '定心大象':   { 饭局: '你的稳定感适合有温度的小聚', 酒局: '你的沉稳会让热闹更舒服' },
-    '稳如龟':     { 饭局: '你的踏实感适合慢慢熟悉彼此', 酒局: '热闹过后别人更容易记住你' },
-    '隐身猫':     { 饭局: '饭局给你更自然的展开空间', 酒局: '松弛环境适合你慢慢打开自己' },
+    '社牛柯基':    { 饭局: '你的暖场感很适合围桌聊天', 酒局: '你的活力能自然带热气氛' },
+    '小太阳鸡':     { 饭局: '你的感染力很适合带动全桌', 酒局: '你的热情能帮陌生人快些破冰' },
+    '夸夸仓鼠':     { 饭局: '轻松饭局最能发挥你的共情力', 酒局: '你的温柔让酒局不只热闹' },
+    '寻宝狐':     { 饭局: '话题型饭局很适合你的机智', 酒局: '自由节奏给你更多即兴空间' },
+    '机灵海豚':   { 饭局: '你的真实感很适合轻松饭局', 酒局: '你的松弛感在酒局里很加分' },
+    '人脉蛛':     { 饭局: '你擅长把一桌人自然串联', 酒局: '多元背景更容易被你聊开' },
+    '树洞考拉':     { 饭局: '你的安全感适合慢慢熟络', 酒局: '你的体贴会让酒局更有温度' },
+    '脑洞章鱼':   { 饭局: '跨界话题里你更容易发光', 酒局: '松弛酒局最能放大你的灵感' },
+    '好奇猫头鹰': { 饭局: '饭局的慢节奏适合你深入聊', 酒局: '你偶尔的深刻观点会很出彩' },
+    '靠谱大象':   { 饭局: '你的稳定感适合有温度的小聚', 酒局: '你的沉稳会让热闹更舒服' },
+    '慢热龟':     { 饭局: '你的踏实感适合慢慢熟悉彼此', 酒局: '热闹过后别人更容易记住你' },
+    '小透明猫':     { 饭局: '饭局给你更自然的展开空间', 酒局: '松弛环境适合你慢慢打开自己' },
   };
 
   // WorkMode-keyed social goal reasons
@@ -141,9 +142,13 @@ export function registerAIServiceRoutes(app: Express): void {
     eventType?: string | null,
     area?: string | null,
   ): { insight: string; matchingPromise: string; reasons: string[] } {
+    // Resolve archetype identifier (machine ID, current name, or legacy name) to canonical nameCn
+    const resolved = archetype ? resolveArchetype(archetype) : null;
+    const archetypeName = resolved?.nameCn ?? archetype;
+
     let insight: string;
-    if (archetype && ARCHETYPE_INSIGHTS[archetype]) {
-      insight = ARCHETYPE_INSIGHTS[archetype];
+    if (archetypeName && ARCHETYPE_INSIGHTS[archetypeName]) {
+      insight = ARCHETYPE_INSIGHTS[archetypeName];
     } else if (industry) {
       insight = `我们已读懂你在${industry}领域的社交画像`;
     } else {
@@ -159,8 +164,8 @@ export function registerAIServiceRoutes(app: Express): void {
     const normalizedEventType = isValidEventType(eventType) ? eventType : null;
 
     // Reason 1: archetype × event type
-    if (archetype && ARCHETYPE_FIT_REASONS[archetype] && normalizedEventType) {
-      reasons.push(ARCHETYPE_FIT_REASONS[archetype][normalizedEventType]);
+    if (archetypeName && ARCHETYPE_FIT_REASONS[archetypeName] && normalizedEventType) {
+      reasons.push(ARCHETYPE_FIT_REASONS[archetypeName][normalizedEventType]);
     } else if (normalizedEventType === '饭局') {
       reasons.push('轻松饭局更适合自然拉近距离');
     } else if (normalizedEventType === '酒局') {

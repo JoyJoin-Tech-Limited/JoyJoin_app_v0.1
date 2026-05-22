@@ -2,7 +2,7 @@ import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { useRef } from 'react'
-import { getUserCoupons } from '@shared/api'
+import { getUserCoupons, getJoinedEvents } from '@shared/api'
 import { getOnboardingStepLabel, nextStepToOnboardingStep } from '@shared/onboarding'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { getArchetypeFamily, ARCHETYPE_FAMILY_GRADIENTS } from '@shared/archetypeColors'
@@ -39,6 +39,14 @@ export default function ProfilePage() {
     queryFn: () => getUserCoupons(apiRequest),
     enabled: !authLoading && !!authUser,
   })
+
+  const { data: joinedEvents = [] } = useQuery({
+    queryKey: ['mini-program', 'joined-events'],
+    queryFn: () => getJoinedEvents(apiRequest),
+    enabled: !authLoading && !!authUser,
+  })
+
+  const joinedEventsCount = joinedEvents.length
 
   const handleOpenPayment = () => {
     void openMiniProgramPaymentPage({
@@ -185,9 +193,11 @@ export default function ProfilePage() {
           >
             <Text className='profile-page__action-icon'>🗺️</Text>
             <Text className='profile-page__action-text'>我的足迹</Text>
-            <View className='profile-page__action-badge'>
-              <Text className='profile-page__action-count'>3</Text>
-            </View>
+            {joinedEventsCount > 0 && (
+              <View className='profile-page__action-badge'>
+                <Text className='profile-page__action-count'>{joinedEventsCount}</Text>
+              </View>
+            )}
             <Text className='profile-page__action-arrow'>›</Text>
           </View>
 

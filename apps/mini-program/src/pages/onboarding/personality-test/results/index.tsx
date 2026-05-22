@@ -789,6 +789,18 @@ export default function PersonalityTestResultsPage() {
     const answers = readAnonymousAssessmentAnswers()
     const sessionSnapshot = readAnonymousAssessmentSession()
 
+    // Show explicit confirmation before silent WeChat login so users know auth is happening.
+    const { confirm } = await Taro.showModal({
+      title: '微信登录',
+      content: '使用微信账号登录以保存你的氛围原型测试结果，并开启匹配。',
+      confirmText: '确认登录',
+      cancelText: '取消',
+    })
+    if (!confirm) {
+      analytics.interaction('login_prompt_dismissed', { primaryArchetype: displayArchetypeName })
+      return
+    }
+
     setIsLoggingIn(true)
     try {
       logInfo('[PersonalityResults] Importing anonymous assessment before login', {

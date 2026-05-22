@@ -11,7 +11,7 @@
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames';
 
 export interface SessionArchetypeContext {
-  /** e.g. "气氛组柯基×2、情绪稳定鸡×1" */
+  /** e.g. "社牛柯基×2、小太阳鸡×1" */
   mixText: string;
   /** The archetype with highest count; undefined if tie */
   dominantArchetype?: string;

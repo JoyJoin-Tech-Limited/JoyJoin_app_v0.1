@@ -89,7 +89,7 @@ export interface ArchetypeRecord {
 export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
   "corgi": {
     id: "corgi",
-    name: "气氛组柯基",
+    name: "社牛柯基",
     assetKey: "corgi",
     profile: {
       traitProfile: { A: 60, C: 50, E: 60, O: 65, X: 95, P: 85 },
@@ -130,15 +130,15 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
       ],
       xiaoyueFallback: {
         headline: "你不是硬撑热闹，你是自然带热的人",
-        shareLine: "我是气氛组柯基型，属于一进场就会慢慢把气氛带起来的那种。",
+        shareLine: "我是社牛柯基型，属于一进场就会慢慢把气氛带起来的那种。",
         stateLabel: "快热带动型",
-        analysis: "你是气氛组柯基型：热场快，接梗快，给人安全感也快。很多局有你在，气氛会自然松下来。只是别总顾着让大家开心，自己的电量也得留一点。",
+        analysis: "你是社牛柯基型：热场快，接梗快，给人安全感也快。很多局有你在，气氛会自然松下来。只是别总顾着让大家开心，自己的电量也得留一点。",
         socialRole: "你更像开场加速器，能让陌生局更快松下来。",
         bestScene: "更适合6到8人的轻松热场局，有接梗空间会更舒服。",
         microAction: "下次进新局先抛一个轻松问题，再接住第一个回应你的人。",
       },
       shareVariants: {
-        selfIntro: "我是气氛组柯基型，属于一进场就会慢慢把气氛带起来的那种。",
+        selfIntro: "我是社牛柯基型，属于一进场就会慢慢把气氛带起来的那种。",
         friendCallout: "认识我的人应该会懂，你不是硬撑热闹，你是自然带热的人。",
         socialInvite: "如果一起组局，我更适合6到8人的轻松热场局，会比较容易进入状态。",
       },
@@ -146,7 +146,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
   },
   "rooster": {
     id: "rooster",
-    name: "情绪稳定鸡",
+    name: "小太阳鸡",
     assetKey: "rooster",
     profile: {
       traitProfile: { A: 70, C: 78, E: 88, O: 55, X: 78, P: 92 },
@@ -187,15 +187,15 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
       ],
       xiaoyueFallback: {
         headline: "你不抢镜，但全场会跟着你稳下来",
-        shareLine: "我是情绪稳定鸡型，不吵，但会把场子慢慢稳住。",
+        shareLine: "我是小太阳鸡型，不吵，但会把场子慢慢稳住。",
         stateLabel: "稳场推进型",
-        analysis: "你是情绪稳定鸡型：情绪稳，正能量真，出了状况也不慌。别人焦虑的时候你那份稳，让整个场子缓下来。这种底气不是表演出来的，是刻在里头的。",
+        analysis: "你是小太阳鸡型：情绪稳，正能量真，出了状况也不慌。别人焦虑的时候你那份稳，让整个场子缓下来。这种底气不是表演出来的，是刻在里头的。",
         socialRole: "你更像节奏稳定器，能把场子从散乱拉回舒服的推进感。",
         bestScene: "更适合有主题、能边聊边推进的饭局或桌游局。",
         microAction: "下次参加活动，先认领一个能稳节奏的小动作。",
       },
       shareVariants: {
-        selfIntro: "我是情绪稳定鸡型，不吵，但会把场子慢慢稳住。",
+        selfIntro: "我是小太阳鸡型，不吵，但会把场子慢慢稳住。",
         friendCallout: "认识我的人应该会懂，你不抢镜，但全场会跟着你稳下来。",
         socialInvite: "如果一起组局，我更适合有主题、能边聊边推进的饭局或桌游局，会比较容易进入状态。",
       },
@@ -203,7 +203,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
   },
   "hamster_praise": {
     id: "hamster_praise",
-    name: "捧场王仓鼠",
+    name: "夸夸仓鼠",
     assetKey: "hamster_praise",
     profile: {
       traitProfile: { A: 95, C: 50, E: 65, O: 62, X: 82, P: 88 },
@@ -244,15 +244,15 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
       ],
       xiaoyueFallback: {
         headline: "你不是场面话选手，你是真的会看见人",
-        shareLine: "我是捧场王仓鼠型，看着温和，其实很会把关系聊热。",
+        shareLine: "我是夸夸仓鼠型，看着温和，其实很会把关系聊热。",
         stateLabel: "熟了更有火花型",
-        analysis: "你是捧场王仓鼠型：发现别人的好，然后真心说出来，不是客套。被你夸到的人，会记很久。这种看见人的能力，比多数社交技巧都稀缺。",
+        analysis: "你是夸夸仓鼠型：发现别人的好，然后真心说出来，不是客套。被你夸到的人，会记很久。这种看见人的能力，比多数社交技巧都稀缺。",
         socialRole: "你更像关系升温器，能把陌生感聊成舒服感。",
         bestScene: "更适合2到6人的局，能给彼此一点真实交流空间。",
         microAction: "下次遇到顺眼的人，先给一个具体的真诚反馈。",
       },
       shareVariants: {
-        selfIntro: "我是捧场王仓鼠型，看着温和，其实很会把关系聊热。",
+        selfIntro: "我是夸夸仓鼠型，看着温和，其实很会把关系聊热。",
         friendCallout: "认识我的人应该会懂，你不是场面话选手，你是真的会看见人。",
         socialInvite: "如果一起组局，我更适合2到6人的局，会比较容易进入状态。",
       },
@@ -260,7 +260,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
   },
   "fox": {
     id: "fox",
-    name: "探宝雷达狐",
+    name: "寻宝狐",
     assetKey: "fox",
     profile: {
       traitProfile: { A: 40, C: 50, E: 60, O: 92, X: 78, P: 58 },
@@ -301,15 +301,15 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
       ],
       xiaoyueFallback: {
         headline: "你不靠硬聊破冰，你靠灵感把场子聊活",
-        shareLine: "我是探宝雷达狐型，属于会把普通聊天聊出新鲜感的那种。",
+        shareLine: "我是寻宝狐型，属于会把普通聊天聊出新鲜感的那种。",
         stateLabel: "灵感破冰型",
-        analysis: "你是探宝雷达狐型：反应快，点子多，能在谈话里找到最有意思的角度。饭桌上那个率先提新方向的，通常是你。有时候话说快了，记得等一等慢半拍的人。",
+        analysis: "你是寻宝狐型：反应快，点子多，能在谈话里找到最有意思的角度。饭桌上那个率先提新方向的，通常是你。有时候话说快了，记得等一等慢半拍的人。",
         socialRole: "你更像话题点火器，能把普通聊天拐到更有意思的方向。",
         bestScene: "更适合有探索感的新局、主题活动或能交换想法的场子。",
         microAction: "下次开场先准备一个最近看到的有趣东西。",
       },
       shareVariants: {
-        selfIntro: "我是探宝雷达狐型，属于会把普通聊天聊出新鲜感的那种。",
+        selfIntro: "我是寻宝狐型，属于会把普通聊天聊出新鲜感的那种。",
         friendCallout: "认识我的人应该会懂，你不靠硬聊破冰，你靠灵感把场子聊活。",
         socialInvite: "如果一起组局，我更适合有探索感的新局、主题活动或能交换想法的场子，会比较容易进入状态。",
       },
@@ -317,7 +317,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
   },
   "dolphin_calm": {
     id: "dolphin_calm",
-    name: "读空气海豚",
+    name: "机灵海豚",
     assetKey: "dolphin_calm",
     profile: {
       traitProfile: { A: 70, C: 70, E: 85, O: 65, X: 65, P: 68 },
@@ -358,15 +358,15 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
       ],
       xiaoyueFallback: {
         headline: "你不是掉线型，你是先看气场再发力",
-        shareLine: "我是读空气海豚型，习惯先看气场，再决定什么时候出手。",
+        shareLine: "我是机灵海豚型，习惯先看气场，再决定什么时候出手。",
         stateLabel: "低耗观察型",
-        analysis: "你是读空气海豚型：情绪稳，读人准，在任何人群里都能找到自己的节奏。你那种淡定不是疏离，是心里有底。局里最让人放心的，往往是你这种人。",
+        analysis: "你是机灵海豚型：情绪稳，读人准，在任何人群里都能找到自己的节奏。你那种淡定不是疏离，是心里有底。局里最让人放心的，往往是你这种人。",
         socialRole: "你更像安静观察者，关键时刻往往说到点上。",
         bestScene: "更适合3到6人的轻松聚会，或者先有共同话题的场景。",
         microAction: "下次别逼自己立刻热起来，先记住一个想继续聊的人。",
       },
       shareVariants: {
-        selfIntro: "我是读空气海豚型，习惯先看气场，再决定什么时候出手。",
+        selfIntro: "我是机灵海豚型，习惯先看气场，再决定什么时候出手。",
         friendCallout: "认识我的人应该会懂，你不是掉线型，你是先看气场再发力。",
         socialInvite: "如果一起组局，我更适合3到6人的轻松聚会，会比较容易进入状态。",
       },
@@ -374,7 +374,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
   },
   "spider": {
     id: "spider",
-    name: "社交裁缝蛛",
+    name: "人脉蛛",
     assetKey: "spider",
     profile: {
       traitProfile: { A: 70, C: 85, E: 65, O: 70, X: 60, P: 60 },
@@ -415,15 +415,15 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
       ],
       xiaoyueFallback: {
         headline: "你不是社交用力派，你是把关系慢慢织起来",
-        shareLine: "我是社交裁缝蛛型，更擅长让关系慢慢连起来，不是硬撑热闹。",
+        shareLine: "我是人脉蛛型，更擅长让关系慢慢连起来，不是硬撑热闹。",
         stateLabel: "局内升温型",
-        analysis: "你是社交裁缝蛛型：发现两个人应该认识，然后悄悄搭一座桥。撮合成功了你是最高兴的那个，也是最不显眼的那个。这种连接的眼光，不是所有人都有。",
+        analysis: "你是人脉蛛型：发现两个人应该认识，然后悄悄搭一座桥。撮合成功了你是最高兴的那个，也是最不显眼的那个。这种连接的眼光，不是所有人都有。",
         socialRole: "你更像连接器，擅长让对的人自然搭上线。",
         bestScene: "更适合有轮流交流空间的小局，而不是只顾抢话的大场子。",
         microAction: "下次进局先记下两个可能聊得来的人，再顺手搭一座桥。",
       },
       shareVariants: {
-        selfIntro: "我是社交裁缝蛛型，更擅长让关系慢慢连起来，不是硬撑热闹。",
+        selfIntro: "我是人脉蛛型，更擅长让关系慢慢连起来，不是硬撑热闹。",
         friendCallout: "认识我的人应该会懂，你不是社交用力派，你是把关系慢慢织起来。",
         socialInvite: "如果一起组局，我更适合有轮流交流空间的小局，会比较容易进入状态。",
       },
@@ -431,7 +431,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
   },
   "koala": {
     id: "koala",
-    name: "情绪树洞考拉",
+    name: "树洞考拉",
     assetKey: "koala",
     profile: {
       traitProfile: { A: 90, C: 65, E: 80, O: 60, X: 48, P: 70 },
@@ -472,15 +472,15 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
       ],
       xiaoyueFallback: {
         headline: "你不是慢，你只是只对对的人升温",
-        shareLine: "我是情绪树洞考拉型，看着慢热，其实聊到点上就很能聊。",
+        shareLine: "我是树洞考拉型，看着慢热，其实聊到点上就很能聊。",
         stateLabel: "慢热深聊型",
-        analysis: "你是情绪树洞考拉型：别人说话你真的在听，不是在等自己开口。这种陪伴让人觉得被接住了，在社交里很稀缺。只是别忘了，你自己也需要被接住的时候。",
+        analysis: "你是树洞考拉型：别人说话你真的在听，不是在等自己开口。这种陪伴让人觉得被接住了，在社交里很稀缺。只是别忘了，你自己也需要被接住的时候。",
         socialRole: "你更像深聊引线，能让对方很快觉得被接住。",
         bestScene: "更适合2到4人的小局、饭后散步局或咖啡局。",
         microAction: "下次先和一个顺眼的人聊深两轮，不用急着全场营业。",
       },
       shareVariants: {
-        selfIntro: "我是情绪树洞考拉型，看着慢热，其实聊到点上就很能聊。",
+        selfIntro: "我是树洞考拉型，看着慢热，其实聊到点上就很能聊。",
         friendCallout: "认识我的人应该会懂，你不是慢，你只是只对对的人升温。",
         socialInvite: "如果一起组局，我更适合2到4人的小局、饭后散步局或咖啡局，会比较容易进入状态。",
       },
@@ -488,7 +488,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
   },
   "octopus": {
     id: "octopus",
-    name: "脑洞喷泉章鱼",
+    name: "脑洞章鱼",
     assetKey: "octopus",
     profile: {
       traitProfile: { A: 50, C: 28, E: 55, O: 95, X: 52, P: 70 },
@@ -529,15 +529,15 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
       ],
       xiaoyueFallback: {
         headline: "你不靠热闹存在，你靠脑洞让人记住",
-        shareLine: "我是脑洞喷泉章鱼型，属于会把聊天聊出新方向的那种。",
+        shareLine: "我是脑洞章鱼型，属于会把聊天聊出新方向的那种。",
         stateLabel: "灵感破冰型",
-        analysis: "你是脑洞喷泉章鱼型：脑洞停不下来，能把八竿子打不着的东西串在一起，然后说一句让大家愣一下的话。这种跳跃性思维是创意的核心。如果有时候能把想法落地一下就更完整了。",
+        analysis: "你是脑洞章鱼型：脑洞停不下来，能把八竿子打不着的东西串在一起，然后说一句让大家愣一下的话。这种跳跃性思维是创意的核心。如果有时候能把想法落地一下就更完整了。",
         socialRole: "你更像灵感点火器，总能把聊天拐到别人没想到的地方。",
         bestScene: "更适合主题活动、创意局，或能交换观点的小范围聚会。",
         microAction: "下次开场先抛一个你最近觉得有意思的问题。",
       },
       shareVariants: {
-        selfIntro: "我是脑洞喷泉章鱼型，属于会把聊天聊出新方向的那种。",
+        selfIntro: "我是脑洞章鱼型，属于会把聊天聊出新方向的那种。",
         friendCallout: "认识我的人应该会懂，你不靠热闹存在，你靠脑洞让人记住。",
         socialInvite: "如果一起组局，我更适合主题活动、创意局，或能交换观点的小范围聚会，会比较容易进入状态。",
       },
@@ -545,7 +545,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
   },
   "owl": {
     id: "owl",
-    name: "追问猫头鹰",
+    name: "好奇猫头鹰",
     assetKey: "owl",
     profile: {
       traitProfile: { A: 45, C: 80, E: 75, O: 88, X: 40, P: 50 },
@@ -586,15 +586,15 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
       ],
       xiaoyueFallback: {
         headline: "你不是社交慢，你只是更擅长聊到点上",
-        shareLine: "我是追问猫头鹰型，看着安静，其实聊到点上会很能聊。",
+        shareLine: "我是好奇猫头鹰型，看着安静，其实聊到点上会很能聊。",
         stateLabel: "慢热深聊型",
-        analysis: "你是追问猫头鹰型：大群体里你不一定最活跃，但你说出来的话往往比热闹了半天的人更准。观察、消化、再开口，这个节奏是你的强项，不是弱点。",
+        analysis: "你是好奇猫头鹰型：大群体里你不一定最活跃，但你说出来的话往往比热闹了半天的人更准。观察、消化、再开口，这个节奏是你的强项，不是弱点。",
         socialRole: "你更像深聊引线，话不一定多，但往往最有记忆点。",
         bestScene: "更适合2到4人的小局、一对一深聊，或有明确主题的场景。",
         microAction: "下次只要提前准备一个你真想聊的问题就够了。",
       },
       shareVariants: {
-        selfIntro: "我是追问猫头鹰型，看着安静，其实聊到点上会很能聊。",
+        selfIntro: "我是好奇猫头鹰型，看着安静，其实聊到点上会很能聊。",
         friendCallout: "认识我的人应该会懂，你不是社交慢，你只是更擅长聊到点上。",
         socialInvite: "如果一起组局，我更适合2到4人的小局、一对一深聊，或有明确主题的场景，会比较容易进入状态。",
       },
@@ -602,7 +602,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
   },
   "elephant": {
     id: "elephant",
-    name: "定海神针大象",
+    name: "靠谱大象",
     assetKey: "elephant",
     profile: {
       traitProfile: { A: 70, C: 90, E: 86, O: 50, X: 40, P: 60 },
@@ -643,15 +643,15 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
       ],
       xiaoyueFallback: {
         headline: "你不抢戏，但大家会因为你在而更安心",
-        shareLine: "我是定海神针大象型，不吵，但会让场子先稳下来。",
+        shareLine: "我是靠谱大象型，不吵，但会让场子先稳下来。",
         stateLabel: "稳场推进型",
-        analysis: "你是定海神针大象型：出了状况你不乱，身边的人看见你在就先稳了三分。这种靠谱是从内到外的，不是刻意维持的。只是别把别人的事全扛到自己身上。",
+        analysis: "你是靠谱大象型：出了状况你不乱，身边的人看见你在就先稳了三分。这种靠谱是从内到外的，不是刻意维持的。只是别把别人的事全扛到自己身上。",
         socialRole: "你更像局里的稳定器，能让大家更快进入舒服节奏。",
         bestScene: "更适合有一点主题、需要人稳住节奏的小局。",
         microAction: "下次参加活动，先认领一个能帮大家进入状态的小动作。",
       },
       shareVariants: {
-        selfIntro: "我是定海神针大象型，不吵，但会让场子先稳下来。",
+        selfIntro: "我是靠谱大象型，不吵，但会让场子先稳下来。",
         friendCallout: "认识我的人应该会懂，你不抢戏，但大家会因为你在而更安心。",
         socialInvite: "如果一起组局，我更适合有一点主题、需要人稳住节奏的小局，会比较容易进入状态。",
       },
@@ -659,7 +659,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
   },
   "turtle": {
     id: "turtle",
-    name: "慢半拍龟",
+    name: "慢热龟",
     assetKey: "turtle",
     profile: {
       traitProfile: { A: 55, C: 90, E: 82, O: 58, X: 28, P: 45 },
@@ -700,15 +700,15 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
       ],
       xiaoyueFallback: {
         headline: "你不是慢半拍，你是先判断再投入",
-        shareLine: "我是慢半拍龟型，习惯先判断气场，再决定什么时候发力。",
+        shareLine: "我是慢热龟型，习惯先判断气场，再决定什么时候发力。",
         stateLabel: "低耗观察型",
-        analysis: "你是慢半拍龟型：慢热，但认准了就是真的认准了。你那双看人的眼睛很准，不容易看走眼。这种判断力在人多的场合里其实是优势。",
+        analysis: "你是慢热龟型：慢热，但认准了就是真的认准了。你那双看人的眼睛很准，不容易看走眼。这种判断力在人多的场合里其实是优势。",
         socialRole: "你更像安静观察者，一旦决定靠近就会很靠谱。",
         bestScene: "更适合允许留白的3到6人局，而不是一上来就很吵的场子。",
         microAction: "下次别要求自己立刻融入，先锁定一个值得继续聊的人。",
       },
       shareVariants: {
-        selfIntro: "我是慢半拍龟型，习惯先判断气场，再决定什么时候发力。",
+        selfIntro: "我是慢热龟型，习惯先判断气场，再决定什么时候发力。",
         friendCallout: "认识我的人应该会懂，你不是慢半拍，你是先判断再投入。",
         socialInvite: "如果一起组局，我更适合允许留白的3到6人局，会比较容易进入状态。",
       },
@@ -716,7 +716,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
   },
   "cat": {
     id: "cat",
-    name: "静音模式猫",
+    name: "小透明猫",
     assetKey: "cat",
     profile: {
       traitProfile: { A: 40, C: 55, E: 65, O: 72, X: 22, P: 42 },
@@ -757,15 +757,15 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
       ],
       xiaoyueFallback: {
         headline: "你不是掉线型，你是先观察再发力",
-        shareLine: "我是静音模式猫型，习惯先看气场，再决定什么时候出手。",
+        shareLine: "我是小透明猫型，习惯先看气场，再决定什么时候出手。",
         stateLabel: "低耗观察型",
-        analysis: "你是静音模式猫型：坐在那里不怎么说话，但其实全场最清楚谁是真有趣、谁在表演。人群让你耗电，但一对一你完全是另一个人。这种深度，多数人一辈子才遇到一两次。",
+        analysis: "你是小透明猫型：坐在那里不怎么说话，但其实全场最清楚谁是真有趣、谁在表演。人群让你耗电，但一对一你完全是另一个人。这种深度，多数人一辈子才遇到一两次。",
         socialRole: "你更像安静观察者，关键时刻往往能说到点上。",
         bestScene: "更适合一对一深聊，或节奏不吵、允许留白的小局。",
         microAction: "下次先记住一个你真正想继续聊的人，再顺着靠近。",
       },
       shareVariants: {
-        selfIntro: "我是静音模式猫型，习惯先看气场，再决定什么时候出手。",
+        selfIntro: "我是小透明猫型，习惯先看气场，再决定什么时候出手。",
         friendCallout: "认识我的人应该会懂，你不是掉线型，你是先观察再发力。",
         socialInvite: "如果一起组局，我更适合一对一深聊，或节奏不吵、允许留白的小局，会比较容易进入状态。",
       },

@@ -48,9 +48,9 @@ const INTEREST_LEVEL_META: Array<{
   shortLabel: string
   description: string
 }> = [
-  { level: 1, label: '想试试', shortLabel: '已加入', description: '先放进画像里。' },
-  { level: 2, label: '很喜欢', shortLabel: '偏爱', description: '代表你更容易聊开。' },
-  { level: 3, label: '本命', shortLabel: '重点', description: '会在预览页里重点展示。' },
+  { level: 1, label: '感兴趣', shortLabel: '已标记', description: '加入你的兴趣画像' },
+  { level: 2, label: '很热衷', shortLabel: '升温中', description: '更容易聊到停不下来' },
+  { level: 3, label: '必聊项', shortLabel: '高热', description: '优先匹配同好，预览重点展示' },
 ]
 
 const activeInterests = INTEREST_TAXONOMY.filter((item) => item.active)
@@ -264,7 +264,7 @@ export default function ExtendedDataPage() {
         <Text className='extended-data__eyebrow'>Onboarding 3 / 4</Text>
         <Text className='extended-data__title'>把兴趣热度标出来</Text>
         <Text className='extended-data__subtitle'>
-          轻点一次加入，再点就升温。选得越准，后面看到的推荐越像你。
+          轻点加入 → 再点升温 → 三档高热。越热的兴趣，匹配越精准。
         </Text>
       </View>
 

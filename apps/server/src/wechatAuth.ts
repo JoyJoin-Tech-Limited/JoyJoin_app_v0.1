@@ -337,7 +337,8 @@ export async function findOrCreateWechatUser(
  */
 export async function processTestAnswers(
   userId: string,
-  testAnswers: unknown[]
+  testAnswers: unknown[],
+  anonymousSessionId?: string | null
 ): Promise<void> {
   if (!Array.isArray(testAnswers) || testAnswers.length === 0) return;
 
@@ -388,6 +389,30 @@ export async function processTestAnswers(
     "[WeChat Auth] Processing test answers",
     { count: testAnswers.length, userId }
   );
+
+  // D: Prefer the anonymous session's already-computed final result so the
+  // archetype shown on the result screen matches what is persisted to the user
+  // profile. Re-computing from raw answers can drift because the login-handoff
+  // path uses findBestMatchingArchetypesV2 while the anonymous session used
+  // the full adaptive engine (getFinalResult).
+  let anonSession: typeof assessmentSessions.$inferSelect | undefined;
+  let useCachedResult = false;
+  if (anonymousSessionId) {
+    [anonSession] = await db
+      .select()
+      .from(assessmentSessions)
+      .where(eq(assessmentSessions.id, anonymousSessionId))
+      .limit(1);
+    const finalized = anonSession?.finalResult as any;
+    if (finalized?.primaryArchetype) {
+      useCachedResult = true;
+      logger.info("[WeChat Auth] Using anonymous session final result", {
+        userId,
+        anonymousSessionId,
+        primaryArchetype: finalized.primaryArchetype,
+      });
+    }
+  }
 
   const traitScores: Record<string, number> = {
     A: 0, C: 0, E: 0, O: 0, X: 0, P: 0,
@@ -442,49 +467,114 @@ export async function processTestAnswers(
     }
   }
 
-  const matchResults = findBestMatchingArchetypesV2(
-    traitScores as any,
-    Object.keys(userSecondaryData).length > 0 ? userSecondaryData : undefined,
-    3
-  );
+  let primaryArchetype: string;
+  let secondaryArchetype: string;
+  let matchResults: Array<{ archetype: string; score: number; confidence: number }>;
+  let traitConfidences: Record<string, { score: number; confidence: number; sampleCount: number }>;
+  let matchDetailsJson: any;
+  let isDecisive: boolean;
 
-  const primaryArchetype = matchResults[0]?.archetype ?? "corgi";
-  const secondaryArchetype = matchResults[1]?.archetype ?? "rooster";
+  if (useCachedResult && anonSession) {
+    const finalized = anonSession.finalResult as any;
+    primaryArchetype = finalized.primaryArchetype;
+    secondaryArchetype = finalized.secondaryArchetype ?? "rooster";
 
-  const HIGH_CONFIDENCE_THRESHOLD = 0.8;
-  const DECISIVE_SCORE_DIFFERENCE_THRESHOLD = 10;
-  const DEFAULT_TRAIT_CONFIDENCE = Math.min(
-    0.85,
-    0.5 + testAnswers.length / 100
-  );
+    matchResults = ((anonSession.topArchetypes as any[]) ?? []).map((r: any) => ({
+      archetype: String(r.archetype),
+      score: Number(r.score ?? 0),
+      confidence: Number(r.confidence ?? 0),
+    }));
+    if (matchResults.length === 0) {
+      matchResults = [{ archetype: primaryArchetype, score: 0, confidence: 0 }];
+    }
 
-  const traitConfidences: Record<
-    string,
-    { score: number; confidence: number; sampleCount: number }
-  > = {};
-  Object.keys(traitScores).forEach((trait) => {
-    traitConfidences[trait] = {
-      score: traitScores[trait],
-      confidence: DEFAULT_TRAIT_CONFIDENCE,
-      sampleCount: testAnswers.length,
+    // Prefer normalized trait scores from the adaptive engine; fall back to computed sums
+    const cachedTraitScores = finalized.traitScores as Record<string, number> | undefined;
+    if (cachedTraitScores) {
+      Object.keys(traitScores).forEach((trait) => {
+        if (typeof cachedTraitScores[trait] === "number") {
+          traitScores[trait] = cachedTraitScores[trait];
+        }
+      });
+    }
+
+    // Prefer trait confidences from the session; fall back to defaults
+    const cachedTraitConfidences = anonSession.traitConfidences as Record<string, { score: number; confidence: number; sampleCount: number }> | undefined;
+    if (cachedTraitConfidences) {
+      traitConfidences = cachedTraitConfidences;
+    } else {
+      const DEFAULT_TRAIT_CONFIDENCE = Math.min(0.85, 0.5 + testAnswers.length / 100);
+      traitConfidences = {};
+      Object.keys(traitScores).forEach((trait) => {
+        traitConfidences[trait] = {
+          score: traitScores[trait],
+          confidence: DEFAULT_TRAIT_CONFIDENCE,
+          sampleCount: testAnswers.length,
+        };
+      });
+    }
+
+    matchDetailsJson = {
+      primaryArchetype,
+      secondaryArchetype,
+      traitDeltas: traitScores,
+      decisiveReason: finalized.decisiveReason ?? (finalized.isDecisive ? "high_confidence" : "normal"),
+      score: matchResults[0]?.score ?? 0,
     };
-  });
 
-  const matchDetailsJson = {
-    primaryArchetype,
-    secondaryArchetype,
-    traitDeltas: traitScores,
-    decisiveReason:
-      (matchResults[0]?.confidence ?? 0) > HIGH_CONFIDENCE_THRESHOLD
-        ? "high_confidence"
-        : "normal",
-    score: matchResults[0]?.score ?? 0,
-  };
+    isDecisive = Boolean(finalized.isDecisive ?? anonSession.isDecisive);
+  } else {
+    if (anonymousSessionId) {
+      logger.warn("[WeChat Auth] Anonymous session missing finalized result; falling back to re-computation", {
+        userId,
+        anonymousSessionId,
+        anonSessionFound: Boolean(anonSession),
+        anonSessionPhase: anonSession?.phase ?? null,
+        hasFinalResult: Boolean((anonSession?.finalResult as any)?.primaryArchetype),
+      });
+    }
 
-  const isDecisive =
-    (matchResults[0]?.confidence ?? 0) > HIGH_CONFIDENCE_THRESHOLD &&
-    ((matchResults[0]?.score ?? 0) - (matchResults[1]?.score ?? 0)) >
-      DECISIVE_SCORE_DIFFERENCE_THRESHOLD;
+    matchResults = findBestMatchingArchetypesV2(
+      traitScores as any,
+      Object.keys(userSecondaryData).length > 0 ? userSecondaryData : undefined,
+      3
+    );
+
+    primaryArchetype = matchResults[0]?.archetype ?? "corgi";
+    secondaryArchetype = matchResults[1]?.archetype ?? "rooster";
+
+    const HIGH_CONFIDENCE_THRESHOLD = 0.8;
+    const DECISIVE_SCORE_DIFFERENCE_THRESHOLD = 10;
+    const DEFAULT_TRAIT_CONFIDENCE = Math.min(
+      0.85,
+      0.5 + testAnswers.length / 100
+    );
+
+    traitConfidences = {};
+    Object.keys(traitScores).forEach((trait) => {
+      traitConfidences[trait] = {
+        score: traitScores[trait],
+        confidence: DEFAULT_TRAIT_CONFIDENCE,
+        sampleCount: testAnswers.length,
+      };
+    });
+
+    matchDetailsJson = {
+      primaryArchetype,
+      secondaryArchetype,
+      traitDeltas: traitScores,
+      decisiveReason:
+        (matchResults[0]?.confidence ?? 0) > HIGH_CONFIDENCE_THRESHOLD
+          ? "high_confidence"
+          : "normal",
+      score: matchResults[0]?.score ?? 0,
+    };
+
+    isDecisive =
+      (matchResults[0]?.confidence ?? 0) > HIGH_CONFIDENCE_THRESHOLD &&
+      ((matchResults[0]?.score ?? 0) - (matchResults[1]?.score ?? 0)) >
+        DECISIVE_SCORE_DIFFERENCE_THRESHOLD;
+  }
 
   // Wrap assessment_sessions insert + per-question assessment_answers inserts + user update
   // in a single transaction so a partial failure cannot leave the DB inconsistent.
@@ -716,7 +806,7 @@ export function setupWechatAuth(app: Express) {
       const alreadyImported = Boolean(user.hasCompletedPersonalityTest);
 
       if (!alreadyImported && testAnswers && Array.isArray(testAnswers) && testAnswers.length > 0) {
-        await processTestAnswers(user.id, testAnswers);
+        await processTestAnswers(user.id, testAnswers, safeAnonSessionId);
 
         // B: Consume the server-side presignup cache so the same answers cannot be
         // re-imported and resume prompts based on this session don't reappear.

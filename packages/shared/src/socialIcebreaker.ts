@@ -87,7 +87,7 @@ export interface PersonalityDiceChallenge {
 
 /** Lightweight profile for AI prompt context. Server-only — stripped before client delivery. */
 export interface SocialSessionParticipantProfile {
-  /** 12-archetype ID (e.g. '气氛组柯基') */
+  /** 12-archetype ID (e.g. '社牛柯基') */
   archetype?: string | null;
   /** Industry niche label (e.g. '医疗AI', '社交产品') */
   industryLabel?: string | null;

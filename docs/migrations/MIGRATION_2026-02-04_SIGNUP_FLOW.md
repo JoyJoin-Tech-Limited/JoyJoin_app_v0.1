@@ -88,7 +88,7 @@ WECHAT_SECRET=your_wechat_mini_program_secret
   "user": {
     "id": "string",
     "hasCompletedPersonalityTest": true,
-    "archetype": "气氛组柯基"
+    "archetype": "社牛柯基"
   }
 }
 ```

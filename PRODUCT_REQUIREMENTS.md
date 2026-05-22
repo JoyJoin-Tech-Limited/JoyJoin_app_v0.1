@@ -281,17 +281,17 @@ Foster meaningful local connections through AI-powered matching that understands
 
 > **Note:** Persona archetypes updated to V4 system (2026-02-04)
 
-1. **追问猫头鹰 Lisa (Contemplative Owl)** - 28, Marketing Manager
+1. **好奇猫头鹰 Lisa (Contemplative Owl)** - 28, Marketing Manager
    - Moved to Shenzhen 6 months ago
    - Wants to meet like-minded professionals
    - Values deep conversations over small talk
 
-2. **气氛组柯基 David (Happy Corgi)** - 26, Startup Founder
+2. **社牛柯基 David (Happy Corgi)** - 26, Startup Founder
    - Naturally outgoing, energizes groups
    - Looking to expand professional network
    - Enjoys facilitating connections
 
-3. **情绪树洞考拉 Amy (Koala)** - 30, HR Director
+3. **树洞考拉 Amy (Koala)** - 30, HR Director
    - Observant and empathetic
    - Enjoys helping others meet
    - Values harmony and inclusion
@@ -385,18 +385,18 @@ LandingPage → /personality-test (anonymous V4 test)
 
 **12 Personality Archetypes** (Production):
 
-1. 🐕 **气氛组柯基 (Happy Corgi)** - High energy socializer (X=95, P=85)
-2. 🐓 **情绪稳定鸡 (Rooster)** - Optimistic motivator (P=92, X=78)
-3. 🐬 **捧场王仓鼠 (Hamster)** - Warmhearted encourager (A=95, X=82)
-4. 🦊 **探宝雷达狐 (Clever Fox)** - Creative problem-solver (O=92, X=78)
-5. 🐬 **读空气海豚 (Dolphin)** - Balanced mediator (E=85, C=70)
-6. 🕷️ **社交裁缝蛛 (Weaver Spider)** - Detail-oriented planner (C=85, E=65)
-7. 🐻 **情绪树洞考拉 (Koala)** - Empathetic supporter (A=90, E=80)
-8. 🐙 **脑洞喷泉章鱼 (Inspiration Octopus)** - Innovative ideator (O=95, P=70)
-9. 🦉 **追问猫头鹰 (Contemplative Owl)** - Analytical thinker (O=88, C=80)
-10. 🐘 **定海神针大象 (Grounded Elephant)** - Stable anchor (C=90, E=86)
-11. 🐢 **慢半拍龟 (Steady Turtle)** - Reliable introvert (E=85, C=80)
-12. 🐱 **静音模式猫 (Invisible Cat)** - Reserved observer (E=80, X=20)
+1. 🐕 **社牛柯基 (Happy Corgi)** - High energy socializer (X=95, P=85)
+2. 🐓 **小太阳鸡 (Rooster)** - Optimistic motivator (P=92, X=78)
+3. 🐬 **夸夸仓鼠 (Hamster)** - Warmhearted encourager (A=95, X=82)
+4. 🦊 **寻宝狐 (Clever Fox)** - Creative problem-solver (O=92, X=78)
+5. 🐬 **机灵海豚 (Dolphin)** - Balanced mediator (E=85, C=70)
+6. 🕷️ **人脉蛛 (Weaver Spider)** - Detail-oriented planner (C=85, E=65)
+7. 🐻 **树洞考拉 (Koala)** - Empathetic supporter (A=90, E=80)
+8. 🐙 **脑洞章鱼 (Inspiration Octopus)** - Innovative ideator (O=95, P=70)
+9. 🦉 **好奇猫头鹰 (Contemplative Owl)** - Analytical thinker (O=88, C=80)
+10. 🐘 **靠谱大象 (Grounded Elephant)** - Stable anchor (C=90, E=86)
+11. 🐢 **慢热龟 (Steady Turtle)** - Reliable introvert (E=85, C=80)
+12. 🐱 **小透明猫 (Invisible Cat)** - Reserved observer (E=80, X=20)
 
 *See `packages/shared/src/personality/archetypeNames.ts` for canonical source*
 
@@ -464,18 +464,18 @@ Current archetype trait profiles (0-100 scale):
 
 | Archetype | A | C | E | O | X | P |
 |-----------|---|---|---|---|---|---|
-| 气氛组柯基 | 60 | 50 | 60 | 65 | 95 | 85 |
-| 情绪稳定鸡 | 70 | 78 | 88 | 55 | 78 | 92 |
-| 捧场王仓鼠 | 95 | 50 | 65 | 62 | 82 | 88 |
-| 探宝雷达狐 | 40 | 50 | 60 | 92 | 78 | 58 |
-| 读空气海豚 | 70 | 70 | 85 | 65 | 65 | 68 |
-| 社交裁缝蛛 | 70 | 85 | 65 | 70 | 60 | 60 |
-| 情绪树洞考拉 | 90 | 65 | 80 | 60 | 48 | 70 |
-| 脑洞喷泉章鱼 | 50 | 28 | 55 | 95 | 52 | 70 |
-| 追问猫头鹰 | 45 | 80 | 75 | 88 | 40 | 50 |
-| 定海神针大象 | 70 | 90 | 86 | 50 | 40 | 60 |
-| 慢半拍龟 | 45 | 80 | 85 | 65 | 30 | 45 |
-| 静音模式猫 | 50 | 50 | 80 | 45 | 20 | 45 |
+| 社牛柯基 | 60 | 50 | 60 | 65 | 95 | 85 |
+| 小太阳鸡 | 70 | 78 | 88 | 55 | 78 | 92 |
+| 夸夸仓鼠 | 95 | 50 | 65 | 62 | 82 | 88 |
+| 寻宝狐 | 40 | 50 | 60 | 92 | 78 | 58 |
+| 机灵海豚 | 70 | 70 | 85 | 65 | 65 | 68 |
+| 人脉蛛 | 70 | 85 | 65 | 70 | 60 | 60 |
+| 树洞考拉 | 90 | 65 | 80 | 60 | 48 | 70 |
+| 脑洞章鱼 | 50 | 28 | 55 | 95 | 52 | 70 |
+| 好奇猫头鹰 | 45 | 80 | 75 | 88 | 40 | 50 |
+| 靠谱大象 | 70 | 90 | 86 | 50 | 40 | 60 |
+| 慢热龟 | 45 | 80 | 85 | 65 | 30 | 45 |
+| 小透明猫 | 50 | 50 | 80 | 45 | 20 | 45 |
 
 **Step 4: Generate Personalized Insights**
 
@@ -501,7 +501,7 @@ For each archetype, system provides:
 
 1. **Hero Section (70vh)**
    - Gradient background (archetype-specific color)
-   - Large emoji avatar (🐕 for 气氛组柯基, 🐓 for 情绪稳定鸡, etc.)
+   - Large emoji avatar (🐕 for 社牛柯基, 🐓 for 小太阳鸡, etc.)
    - Primary archetype name + description
    - Secondary archetype avatar (if match is not decisive)
    - Confidence indicator (🎯 Decisive Match if confidence ≥ 70%)
@@ -531,7 +531,7 @@ For each archetype, system provides:
    - Compatibility percentage (60-100 range)
    - Animated progress bars
    - V2 Matcher algorithm explanation
-   - Match reason display (e.g., "High X+P synergy" for 气氛组柯基×情绪稳定鸡)
+   - Match reason display (e.g., "High X+P synergy" for 社牛柯基×小太阳鸡)
 
 5. **Action Buttons**
    - 📤 Share Results (Native Web Share API)
@@ -547,17 +547,17 @@ INSERT INTO assessment_sessions (
   current_question_index,
   trait_scores,  -- { A: 60, C: 50, E: 60, O: 65, X: 95, P: 85 }
   trait_confidences,  -- { A: { score: 60, confidence: 0.85, sampleCount: 8 }, ... }
-  top_archetypes,  -- [{ archetype: '气氛组柯基', score: 85, confidence: 0.82 }, ...]
+  top_archetypes,  -- [{ archetype: '社牛柯基', score: 85, confidence: 0.82 }, ...]
   algorithm_version,  -- 'v2'
   match_details_json,  -- V2 Matcher results with trait deltas
-  primary_archetype,  -- '气氛组柯基'
+  primary_archetype,  -- '社牛柯基'
   is_decisive,  -- true if confidence ≥ 0.7
   completed_at
 ) VALUES (...);
 
 -- User profile update
 UPDATE users SET
-  primary_archetype = '气氛组柯基',
+  primary_archetype = '社牛柯基',
   has_completed_personality_test = true,
   -- Trait scores stored in assessment_sessions, not users table
   -- Old fields (primary_role, secondary_role) deprecated
@@ -1668,7 +1668,7 @@ Buttons:
 **Filters:**
 ```typescript
 - Subscription Status: All | Active | Expired | Never
-- Archetype: All | 气氛组柯基 | 情绪稳定鸡 | 捧场王仓鼠 | ... (12 total)
+- Archetype: All | 社牛柯基 | 小太阳鸡 | 夸夸仓鼠 | ... (12 total)
 - Registration Date Range
 - Search: Name, phone, email
 ```
@@ -2324,9 +2324,9 @@ Decision:
 ```typescript
 // Example structure (using current archetypes)
 const chemistryMatrix = {
-  "气氛组柯基": {
-    "气氛组柯基": 70, "情绪稳定鸡": 88, "捧场王仓鼠": 90, "探宝雷达狐": 85,
-    "读空气海豚": 82, "社交裁缝蛛": 83, "情绪树洞考拉": 92, "脑洞喷泉章鱼": 86,
+  "社牛柯基": {
+    "社牛柯基": 70, "小太阳鸡": 88, "夸夸仓鼠": 90, "寻宝狐": 85,
+    "机灵海豚": 82, "人脉蛛": 83, "树洞考拉": 92, "脑洞章鱼": 86,
     ...
   },
   ...
@@ -2965,18 +2965,18 @@ Optimization Opportunities:
 **Archetype Analytics:**
 
 > **Note:** Example data below uses legacy archetype names from V1/V2 system.
-> Production system uses current 12 archetypes (气氛组柯基, 情绪稳定鸡, 捧场王仓鼠, etc.)
+> Production system uses current 12 archetypes (社牛柯基, 小太阳鸡, 夸夸仓鼠, etc.)
 
 ```typescript
 1. Overall Distribution
    Pie Chart (example data — production system uses current 12 archetypes):
-   - 情绪树洞考拉: 18.5%
-   - 追问猫头鹰: 16.2%
-   - 捧场王仓鼠: 14.8%
-   - 气氛组柯基: 13.1%
-   - 情绪稳定鸡: 12.3%
-   - 探宝雷达狐: 10.7%
-   - 读空气海豚: 9.4%
+   - 树洞考拉: 18.5%
+   - 好奇猫头鹰: 16.2%
+   - 夸夸仓鼠: 14.8%
+   - 社牛柯基: 13.1%
+   - 小太阳鸡: 12.3%
+   - 寻宝狐: 10.7%
+   - 机灵海豚: 9.4%
    - 其他 (4 archetypes): 5.0%
    
 2. Archetype Engagement
@@ -3548,13 +3548,13 @@ Stored in: `apps/server/src/archetypeChemistry.ts`
 Sample structure:
 ```typescript
 const chemistryMatrix = {
-  "气氛组柯基": {
-    "气氛组柯基": 70, "情绪稳定鸡": 88, "捧场王仓鼠": 90, "探宝雷达狐": 85,
-    "读空气海豚": 82, "社交裁缝蛛": 83, "情绪树洞考拉": 92, "脑洞喷泉章鱼": 86, ...
+  "社牛柯基": {
+    "社牛柯基": 70, "小太阳鸡": 88, "夸夸仓鼠": 90, "寻宝狐": 85,
+    "机灵海豚": 82, "人脉蛛": 83, "树洞考拉": 92, "脑洞章鱼": 86, ...
   },
-  "情绪稳定鸡": {
-    "气氛组柯基": 88, "情绪稳定鸡": 75, "捧场王仓鼠": 85, "探宝雷达狐": 80,
-    "读空气海豚": 88, "社交裁缝蛛": 82, "情绪树洞考拉": 87, "脑洞喷泉章鱼": 83, ...
+  "小太阳鸡": {
+    "社牛柯基": 88, "小太阳鸡": 75, "夸夸仓鼠": 85, "寻宝狐": 80,
+    "机灵海豚": 88, "人脉蛛": 82, "树洞考拉": 87, "脑洞章鱼": 83, ...
   },
   // ... 12×12 = 144 unique compatibility scores (0-100 range)
 };
@@ -3689,14 +3689,14 @@ if (matchHistory.length > 0) {
 
 Maps the 12 V4 personality archetypes to energy levels (0-100 scale) to prevent unbalanced groups.
 
-> ⚠️ The example `ARCHETYPE_ENERGY` values below use illustrative names for readability. The actual implementation in `apps/server/src/archetypeChemistry.ts` uses the current 12 canonical V4 archetypes (气氛组柯基, 情绪稳定鸡, 捧场王仓鼠, 探宝雷达狐, 读空气海豚, 社交裁缝蛛, 情绪树洞考拉, 脑洞喷泉章鱼, 追问猫头鹰, 定海神针大象, 慢半拍龟, 静音模式猫).
+> ⚠️ The example `ARCHETYPE_ENERGY` values below use illustrative names for readability. The actual implementation in `apps/server/src/archetypeChemistry.ts` uses the current 12 canonical V4 archetypes (社牛柯基, 小太阳鸡, 夸夸仓鼠, 寻宝狐, 机灵海豚, 人脉蛛, 树洞考拉, 脑洞章鱼, 好奇猫头鹰, 靠谱大象, 慢热龟, 小透明猫).
 
 ```typescript
 // Energy levels for current 12 V4 archetypes (from archetypeChemistry.ts)
-// High Energy (78-95): 气氛组柯基 (95), 情绪稳定鸡 (88), 捧场王仓鼠 (82)
-// Medium Energy (48-78): 探宝雷达狐 (78), 读空气海豚 (65), 社交裁缝蛛 (60)
-// Low-Medium (40-52): 情绪树洞考拉 (48), 脑洞喷泉章鱼 (52), 追问猫头鹰 (40)
-// Low (20-40): 定海神针大象 (40), 慢半拍龟 (30), 静音模式猫 (20)
+// High Energy (78-95): 社牛柯基 (95), 小太阳鸡 (88), 夸夸仓鼠 (82)
+// Medium Energy (48-78): 寻宝狐 (78), 机灵海豚 (65), 人脉蛛 (60)
+// Low-Medium (40-52): 树洞考拉 (48), 脑洞章鱼 (52), 好奇猫头鹰 (40)
+// Low (20-40): 靠谱大象 (40), 慢热龟 (30), 小透明猫 (20)
 ```
 
 **Communication Balance Calculation** (replaced former energy balance):

@@ -77,7 +77,7 @@ export const JOYJOIN_TERMS_SECTIONS_ZH: TermsSectionZh[] = [
     heading: "七、联系我们",
     paragraphs: [
       "如您对本政策或用户协议有任何疑问，或需要行使个人信息相关权利（查阅、复制、更正、删除、撤回同意、投诉举报等），欢迎通过以下方式联系我们：",
-      "邮箱：hello@joyjoin.cn\n我们将在 15 个工作日内答复您的请求（复杂情形可能依法适当延长并告知原因）。",
+      "邮箱：support@joyjoinapp.com\n我们将在 15 个工作日内答复您的请求（复杂情形可能依法适当延长并告知原因）。",
     ],
   },
   {
@@ -123,7 +123,7 @@ export const JOYJOIN_PRIVACY_SECTIONS_ZH: TermsSectionZh[] = [
       "关于你的个人信息，你可以通过以下路径要求删除：小程序主页右上角「…」→「设置」→「小程序已获取的信息」→点击特定信息→点击「通知开发者删除」，开发者承诺收到通知后将删除信息。法律法规另有规定的，开发者承诺将停止除存储和采取必要的安全保护措施之外的处理。",
       "关于你的个人信息，你可以通过以下方式与开发者联系，行使查阅、复制、更正、删除等法定权利。",
       "若你在小程序中注册了账号，你可以通过以下方式与开发者联系，申请注销你在小程序中使用的账号。在受理你的申请后，开发者承诺在十五个工作日内完成核查和处理，并按照法律法规要求处理你的相关信息。",
-      "邮箱：hello@joyjoin.cn",
+      "邮箱：support@joyjoinapp.com",
     ],
   },
   {
@@ -162,7 +162,7 @@ export const JOYJOIN_PRIVACY_SECTIONS_ZH: TermsSectionZh[] = [
     heading: "八、联系我们",
     paragraphs: [
       "若你认为开发者未遵守上述约定，或有其他的投诉建议、或未成年人个人信息保护相关问题，可通过以下方式与开发者联系：",
-      "邮箱：hello@joyjoin.cn",
+      "邮箱：support@joyjoinapp.com",
     ],
   },
 ];

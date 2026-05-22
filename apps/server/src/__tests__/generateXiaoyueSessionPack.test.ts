@@ -53,8 +53,8 @@ describe('generateXiaoyueSessionPack', () => {
     process.env.SOCIAL_XIAOYUE_SESSION_PACK_ENABLED = 'false';
     const result = await generateXiaoyueSessionPack({
       participants: [
-        { userId: 'u1', displayName: 'Alice', archetype: '气氛组柯基' },
-        { userId: 'u2', displayName: 'Bob', archetype: '情绪稳定鸡' },
+        { userId: 'u1', displayName: 'Alice', archetype: '社牛柯基' },
+        { userId: 'u2', displayName: 'Bob', archetype: '小太阳鸡' },
       ],
       playerCount: 2,
       eventType: '聚餐',

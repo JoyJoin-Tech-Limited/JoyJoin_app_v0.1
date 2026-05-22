@@ -34,18 +34,18 @@ export interface ArchetypeDefinition {
  * DO NOT modify the order or IDs without careful consideration of all dependent systems
  */
 export const ARCHETYPE_DEFINITIONS = [
-  { id: 'corgi', nameCn: '气氛组柯基', assetKey: 'corgi', order: 1 },      // #01  High X+P, energy 95
-  { id: 'rooster', nameCn: '情绪稳定鸡', assetKey: 'rooster', order: 2 },     // #02  High E+P+C, energy 90
-  { id: 'hamster_praise', nameCn: '捧场王仓鼠', assetKey: 'hamster_praise', order: 3 }, // #03  High A+P, was dolphin_praise
-  { id: 'fox', nameCn: '探宝雷达狐', assetKey: 'fox', order: 4 },         // #04  High O+X, low A, energy 82
-  { id: 'dolphin_calm', nameCn: '读空气海豚', assetKey: 'dolphin_calm', order: 5 },   // #05  Balanced E+A, energy 75
-  { id: 'spider', nameCn: '社交裁缝蛛', assetKey: 'spider', order: 6 },      // #06  High C+A, energy 72
-  { id: 'koala', nameCn: '情绪树洞考拉', assetKey: 'koala', order: 7 },      // #07  High A+E, low X, was bear
-  { id: 'octopus', nameCn: '脑洞喷泉章鱼', assetKey: 'octopus', order: 8 },    // #08  High O, low C, energy 68
-  { id: 'owl', nameCn: '追问猫头鹰', assetKey: 'owl', order: 9 },       // #09  High O+C, low X+P, energy 55
-  { id: 'elephant', nameCn: '定海神针大象', assetKey: 'elephant', order: 10 },  // #10  High C+E, low X+O, energy 52
-  { id: 'turtle', nameCn: '慢半拍龟', assetKey: 'turtle', order: 11 },      // #11  High C+E, very low X, energy 38
-  { id: 'cat', nameCn: '静音模式猫', assetKey: 'cat', order: 12 },        // #12  Low X+A+P, energy 30
+  { id: 'corgi', nameCn: '社牛柯基', assetKey: 'corgi', order: 1 },      // #01  High X+P, energy 95
+  { id: 'rooster', nameCn: '小太阳鸡', assetKey: 'rooster', order: 2 },     // #02  High E+P+C, energy 90
+  { id: 'hamster_praise', nameCn: '夸夸仓鼠', assetKey: 'hamster_praise', order: 3 }, // #03  High A+P, was dolphin_praise
+  { id: 'fox', nameCn: '寻宝狐', assetKey: 'fox', order: 4 },         // #04  High O+X, low A, energy 82
+  { id: 'dolphin_calm', nameCn: '机灵海豚', assetKey: 'dolphin_calm', order: 5 },   // #05  Balanced E+A, energy 75
+  { id: 'spider', nameCn: '人脉蛛', assetKey: 'spider', order: 6 },      // #06  High C+A, energy 72
+  { id: 'koala', nameCn: '树洞考拉', assetKey: 'koala', order: 7 },      // #07  High A+E, low X, was bear
+  { id: 'octopus', nameCn: '脑洞章鱼', assetKey: 'octopus', order: 8 },    // #08  High O, low C, energy 68
+  { id: 'owl', nameCn: '好奇猫头鹰', assetKey: 'owl', order: 9 },       // #09  High O+C, low X+P, energy 55
+  { id: 'elephant', nameCn: '靠谱大象', assetKey: 'elephant', order: 10 },  // #10  High C+E, low X+O, energy 52
+  { id: 'turtle', nameCn: '慢热龟', assetKey: 'turtle', order: 11 },      // #11  High C+E, very low X, energy 38
+  { id: 'cat', nameCn: '小透明猫', assetKey: 'cat', order: 12 },        // #12  Low X+A+P, energy 30
 ] satisfies ArchetypeDefinition[]
 
 /**
@@ -88,6 +88,7 @@ export const ARCHETYPE_BY_NAME_CN: Record<string, ArchetypeDefinition> = Object.
  * Used for one-time data migration and external API compatibility
  */
 export const ARCHETYPE_LEGACY_NAME_MAP: Record<string, string> = {
+  // v1 legacy names
   开心柯基: 'corgi',
   太阳鸡: 'rooster',
   夸夸豚: 'hamster_praise',
@@ -100,6 +101,19 @@ export const ARCHETYPE_LEGACY_NAME_MAP: Record<string, string> = {
   定心大象: 'elephant',
   稳如龟: 'turtle',
   隐身猫: 'cat',
+  // v2 names (2026-05) — added to legacy map for backward compatibility
+  气氛组柯基: 'corgi',
+  情绪稳定鸡: 'rooster',
+  捧场王仓鼠: 'hamster_praise',
+  探宝雷达狐: 'fox',
+  读空气海豚: 'dolphin_calm',
+  社交裁缝蛛: 'spider',
+  情绪树洞考拉: 'koala',
+  脑洞喷泉章鱼: 'octopus',
+  追问猫头鹰: 'owl',
+  定海神针大象: 'elephant',
+  慢半拍龟: 'turtle',
+  静音模式猫: 'cat',
 }
 
 /**

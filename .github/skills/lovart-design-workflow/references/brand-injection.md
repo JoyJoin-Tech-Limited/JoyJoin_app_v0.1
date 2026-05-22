@@ -31,18 +31,18 @@ These map to `packages/shared/src/personality/prototypes.ts`.
 
 | Archetype | Animal | Personality | Best used for |
 |-----------|--------|-------------|---------------|
-| 气氛组柯基 | **Corgi** | Playful, energetic, optimistic | Celebration, onboarding welcome, action moments |
-| 情绪稳定鸡 | **Rooster** | Bright, confident, energetic | Morning events, leadership themes |
-| 捧场王仓鼠 | **Hamster** | Supportive, complimentary, warm | Social bonding, affirmation moments |
-| 探宝雷达狐 | **Fox** | Clever, adaptable, strategic | Problem-solving, game nights |
-| 读空气海豚 | **Dolphin** | Steady, perceptive, balanced | Relaxation, mindfulness events |
-| 社交裁缝蛛 | **Spider** | Intricate, connected, detailed | Networking, craft workshops |
-| 情绪树洞考拉 | **Koala** | Warm, empathetic, protective | Trust moments, deep listening, emotional safety |
-| 脑洞喷泉章鱼 | **Octopus** | Creative, multi-faceted, curious | Arts, brainstorming, multi-activity |
-| 追问猫头鹰 | **Owl** | Wise, contemplative, observant | Knowledge sharing, book clubs |
-| 定海神针大象 | **Elephant** | Steady, reliable, grounding | Team building, reassurance |
-| 慢半拍龟 | **Turtle** | Patient, persistent, thoughtful | Step-by-step progress, loading states |
-| 静音模式猫 | **Cat** | Independent, curious, adaptable | Solo activities, creative exploration |
+| 社牛柯基 | **Corgi** | Playful, energetic, optimistic | Celebration, onboarding welcome, action moments |
+| 小太阳鸡 | **Rooster** | Bright, confident, energetic | Morning events, leadership themes |
+| 夸夸仓鼠 | **Hamster** | Supportive, complimentary, warm | Social bonding, affirmation moments |
+| 寻宝狐 | **Fox** | Clever, adaptable, strategic | Problem-solving, game nights |
+| 机灵海豚 | **Dolphin** | Steady, perceptive, balanced | Relaxation, mindfulness events |
+| 人脉蛛 | **Spider** | Intricate, connected, detailed | Networking, craft workshops |
+| 树洞考拉 | **Koala** | Warm, empathetic, protective | Trust moments, deep listening, emotional safety |
+| 脑洞章鱼 | **Octopus** | Creative, multi-faceted, curious | Arts, brainstorming, multi-activity |
+| 好奇猫头鹰 | **Owl** | Wise, contemplative, observant | Knowledge sharing, book clubs |
+| 靠谱大象 | **Elephant** | Steady, reliable, grounding | Team building, reassurance |
+| 慢热龟 | **Turtle** | Patient, persistent, thoughtful | Step-by-step progress, loading states |
+| 小透明猫 | **Cat** | Independent, curious, adaptable | Solo activities, creative exploration |
 
 > **Legacy name map:** `packages/shared/src/personality/archetypeNames.ts` contains `ARCHETYPE_LEGACY_NAME_MAP` for resolving old names (e.g., 暖心熊 → koala, 夸夸豚 → hamster_praise).
 

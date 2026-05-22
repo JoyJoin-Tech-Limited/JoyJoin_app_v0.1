@@ -16,8 +16,8 @@ describe('buildArchetypeContext', () => {
       { archetype: 'corgi' },
     ];
     const result = buildArchetypeContext(roster);
-    expect(result.mixText).toBe('气氛组柯基×3');
-    expect(result.dominantArchetype).toBe('气氛组柯基');
+    expect(result.mixText).toBe('社牛柯基×3');
+    expect(result.dominantArchetype).toBe('社牛柯基');
     expect(result.diversityScore).toBeCloseTo(1 / 3, 5);
   });
 
@@ -29,7 +29,7 @@ describe('buildArchetypeContext', () => {
       { archetype: 'cat' },
     ];
     const result = buildArchetypeContext(roster);
-    expect(result.mixText).toBe('气氛组柯基、情绪稳定鸡、探宝雷达狐、静音模式猫');
+    expect(result.mixText).toBe('社牛柯基、小太阳鸡、寻宝狐、小透明猫');
     expect(result.dominantArchetype).toBeUndefined(); // 4-way tie
     expect(result.diversityScore).toBe(1.0);
   });
@@ -42,8 +42,8 @@ describe('buildArchetypeContext', () => {
       { archetype: 'fox' },
     ];
     const result = buildArchetypeContext(roster);
-    expect(result.mixText).toBe('气氛组柯基×2、情绪稳定鸡、探宝雷达狐');
-    expect(result.dominantArchetype).toBe('气氛组柯基');
+    expect(result.mixText).toBe('社牛柯基×2、小太阳鸡、寻宝狐');
+    expect(result.dominantArchetype).toBe('社牛柯基');
     expect(result.diversityScore).toBeCloseTo(3 / 4, 5);
   });
 
@@ -55,7 +55,7 @@ describe('buildArchetypeContext', () => {
       { archetype: 'rooster' },
     ];
     const result = buildArchetypeContext(roster);
-    expect(result.mixText).toBe('气氛组柯基×2、情绪稳定鸡×2');
+    expect(result.mixText).toBe('社牛柯基×2、小太阳鸡×2');
     expect(result.dominantArchetype).toBeUndefined();
     expect(result.diversityScore).toBeCloseTo(2 / 4, 5);
   });
@@ -67,8 +67,8 @@ describe('buildArchetypeContext', () => {
       { archetype: 'corgi' },
     ];
     const result = buildArchetypeContext(roster);
-    expect(result.mixText).toBe('气氛组柯基×2');
-    expect(result.dominantArchetype).toBe('气氛组柯基');
+    expect(result.mixText).toBe('社牛柯基×2');
+    expect(result.dominantArchetype).toBe('社牛柯基');
     expect(result.diversityScore).toBeCloseTo(1 / 3, 5);
   });
 
@@ -98,7 +98,7 @@ describe('buildArchetypeContext', () => {
     ];
     const result = buildArchetypeContext(roster);
     const expected =
-      '气氛组柯基、情绪稳定鸡、捧场王仓鼠、探宝雷达狐、读空气海豚、社交裁缝蛛、情绪树洞考拉、脑洞喷泉章鱼、追问猫头鹰、定海神针大象、慢半拍龟、静音模式猫';
+      '社牛柯基、小太阳鸡、夸夸仓鼠、寻宝狐、机灵海豚、人脉蛛、树洞考拉、脑洞章鱼、好奇猫头鹰、靠谱大象、慢热龟、小透明猫';
     expect(result.mixText).toBe(expected);
     expect(result.dominantArchetype).toBeUndefined();
     expect(result.diversityScore).toBe(1.0);

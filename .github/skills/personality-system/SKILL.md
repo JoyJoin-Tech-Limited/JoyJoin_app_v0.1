@@ -37,11 +37,11 @@ Canonical order is **load-bearing**: used for TYPE numbering, slot-machine seque
 |---|------|-----|-----------|
 | 01 | 开心柯基 | corgi | X↑ P↑ |
 | 02 | 太阳鸡 | rooster | P↑ C↑ |
-| 03 | 捧场王仓鼠 | hamster_praise | A↑ P↑ |
+| 03 | 夸夸仓鼠 | hamster_praise | A↑ P↑ |
 | 04 | 机智狐 | fox | O↑ X↑ |
 | 05 | 淡定海豚 | dolphin_calm | E↑ C↑ |
 | 06 | 织网蛛 | spider | C↑ A↑ |
-| 07 | 情绪树洞考拉 | koala | A↑ E↑ |
+| 07 | 树洞考拉 | koala | A↑ E↑ |
 | 08 | 灵感章鱼 | octopus | O↑ C↓ |
 | 09 | 沉思猫头鹰 | owl | O↑ C↑ |
 | 10 | 定心大象 | elephant | E↑ C↑ |

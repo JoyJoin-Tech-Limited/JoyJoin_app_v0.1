@@ -784,7 +784,7 @@ export async function generatePersonalitySharePoster(
   if (archetypeImagePath) {
     ctx.save()
     clipRoundedRect(ctx, imageShellX, imageShellY, HERO_IMAGE_SIZE, HERO_IMAGE_SIZE, HERO_IMAGE_RADIUS)
-    ctx.drawImage(archetypeImagePath, imageShellX + 20, imageShellY + 18, 184, 184)
+    ctx.drawImage(archetypeImagePath, imageShellX + 20, imageShellY + 20, 184, 184)
     ctx.restore()
   } else {
     // Fallback: accent circle with archetype initial

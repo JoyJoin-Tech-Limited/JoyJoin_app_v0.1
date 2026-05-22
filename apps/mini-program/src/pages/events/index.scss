@@ -9,6 +9,10 @@
 
   &__header {
     padding: $spacing-xl $container-padding $spacing-md;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
   }
 
   &__title {
@@ -16,6 +20,30 @@
     font-size: $font-size-2xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
+    text-align: center;
+  }
+
+  &__back {
+    position: absolute;
+    left: $container-padding;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 64rpx;
+    height: 64rpx;
+    margin-top: $spacing-xs;
+  }
+
+  &__back-arrow {
+    font-size: 48rpx;
+    color: $color-text-primary;
+    line-height: 1;
+  }
+
+  &__back-spacer {
+    width: 64rpx;
   }
 
   &__tabs {

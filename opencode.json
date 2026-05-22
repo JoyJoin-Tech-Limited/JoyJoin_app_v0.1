@@ -125,8 +125,7 @@
   },
   "plugin": [
     "@tarquinen/opencode-dcp@latest",
-    "opencode-mem",
-    "oh-my-openagent"
+    "opencode-mem"
   ],
   "command": {
     "mentor": {

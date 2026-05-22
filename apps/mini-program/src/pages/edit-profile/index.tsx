@@ -7,6 +7,20 @@ import {
   submitInterests,
   type InterestSelectionLevel,
 } from '@shared/api'
+
+const INTEREST_LEVEL_META: Array<{
+  level: InterestSelectionLevel
+  label: string
+  shortLabel: string
+}> = [
+  { level: 1, label: '想试试', shortLabel: '已加入' },
+  { level: 2, label: '很喜欢', shortLabel: '偏爱' },
+  { level: 3, label: '本命', shortLabel: '重点' },
+]
+
+function getInterestLevelMeta(level: InterestSelectionLevel | undefined) {
+  return INTEREST_LEVEL_META.find((item) => item.level === level)
+}
 import { getActiveInterests, MACRO_CATEGORY_LABELS, type MacroCategory } from '@shared/interests'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { apiRequest } from '../../lib/api/api'
@@ -30,8 +44,8 @@ const GENDER_OPTIONS = [
 
 const CURRENT_YEAR = new Date().getFullYear()
 const BIRTH_YEAR_RANGE = Array.from(
-  { length: CURRENT_YEAR - 1950 + 1 },
-  (_, i) => String(1950 + i),
+  { length: CURRENT_YEAR - 1950 - 17 },
+  (_, i) => String(CURRENT_YEAR - 18 - i),
 )
 
 // ─── Interest helpers ─────────────────────────────────────────────
@@ -80,6 +94,7 @@ export default function EditProfilePage() {
   const [hometownRegionCity, setHometownRegionCity] = useState('')
   const [selectedInterests, setSelectedInterests] = useState<string[]>([])
   const [interestLevels, setInterestLevels] = useState<Record<string, InterestSelectionLevel>>({})
+  const [isLoadingInterests, setIsLoadingInterests] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
   // Initialize form from user data
@@ -88,7 +103,17 @@ export default function EditProfilePage() {
     const u = user as Record<string, any>
     setDisplayName(u.displayName || u.nickname || '')
     setGender(normalizeGenderValue(u.gender))
-    setBirthYear(u.birthYear || 0)
+
+    // birthYear may come directly or be derived from birthdate
+    let resolvedBirthYear = 0
+    if (typeof u.birthYear === 'number' && u.birthYear > 0) {
+      resolvedBirthYear = u.birthYear
+    } else if (typeof u.birthdate === 'string' && u.birthdate.trim() !== '') {
+      const parsed = new Date(u.birthdate).getFullYear()
+      if (Number.isFinite(parsed)) resolvedBirthYear = parsed
+    }
+    setBirthYear(resolvedBirthYear)
+
     setCurrentCity(u.currentCity || '')
     setHometownRegionCity(u.hometownRegionCity || '')
 
@@ -97,15 +122,8 @@ export default function EditProfilePage() {
       ? u.interests.map((i: any) => (typeof i === 'string' ? i : i.id || i.interestId || ''))
       : []
     setSelectedInterests((current) => (current.length > 0 ? current : interests.filter(Boolean)))
-    setInterestLevels((current) => {
-      if (Object.keys(current).length > 0) {
-        return current
-      }
-
-      return Object.fromEntries(
-        interests.filter(Boolean).map((interestId) => [interestId, 1 as InterestSelectionLevel]),
-      )
-    })
+    // Do NOT initialize interestLevels from flat user.interests — wait for getUserInterests
+    // to return the real structured levels. This prevents overwriting saved levels with 1.
   }, [user])
 
   useEffect(() => {
@@ -117,6 +135,7 @@ export default function EditProfilePage() {
       }
     }
 
+    setIsLoadingInterests(true)
     void getUserInterests(apiRequest)
       .then((interestProfile) => {
         if (cancelled || !Array.isArray(interestProfile?.selections)) {
@@ -152,6 +171,9 @@ export default function EditProfilePage() {
           })
         }
       })
+      .finally(() => {
+        if (!cancelled) setIsLoadingInterests(false)
+      })
 
     return () => {
       cancelled = true
@@ -159,19 +181,32 @@ export default function EditProfilePage() {
   }, [authLoading, user?.hasCompletedInterestsCarousel])
 
   const toggleInterest = useCallback((interestId: string) => {
-    if (selectedInterests.includes(interestId)) {
-      setSelectedInterests(selectedInterests.filter((id) => id !== interestId))
-      const nextLevels = { ...interestLevels }
-      delete nextLevels[interestId]
-      setInterestLevels(nextLevels)
+    const currentLevel = interestLevels[interestId]
+
+    if (!currentLevel) {
+      // Not selected → select at level 1
+      setSelectedInterests([...selectedInterests, interestId])
+      setInterestLevels({ ...interestLevels, [interestId]: 1 })
       return
     }
 
-    setSelectedInterests([...selectedInterests, interestId])
-    setInterestLevels({
-      ...interestLevels,
-      [interestId]: interestLevels[interestId] ?? 1,
-    })
+    if (currentLevel === 1) {
+      // Level 1 → Level 2
+      setInterestLevels({ ...interestLevels, [interestId]: 2 })
+      return
+    }
+
+    if (currentLevel === 2) {
+      // Level 2 → Level 3
+      setInterestLevels({ ...interestLevels, [interestId]: 3 })
+      return
+    }
+
+    // Level 3 → deselect
+    setSelectedInterests(selectedInterests.filter((id) => id !== interestId))
+    const nextLevels = { ...interestLevels }
+    delete nextLevels[interestId]
+    setInterestLevels(nextLevels)
   }, [interestLevels, selectedInterests])
 
   const handleBirthYearChange = useCallback((e: any) => {
@@ -349,26 +384,41 @@ export default function EditProfilePage() {
           </Text>
         </Text>
 
+        {isLoadingInterests ? (
+          <Text className='edit-profile__interest-hint'>加载兴趣数据中…</Text>
+        ) : (
+          <Text className='edit-profile__interest-hint'>轻点标签选择，再点一次提升热度</Text>
+        )}
         {(Object.entries(interestsByCategory) as [MacroCategory, typeof activeInterests][]).map(
           ([category, interests]) => (
             <View key={category} className='edit-profile__interest-group'>
               <Text className='edit-profile__interest-category'>
                 {MACRO_CATEGORY_LABELS[category] || category}
               </Text>
-              <View className='edit-profile__interest-tags'>
-                {interests.map((interest) => (
-                  <View
-                    key={interest.id}
-                    className={`edit-profile__interest-tag ${
-                      selectedInterests.includes(interest.id)
-                        ? 'edit-profile__interest-tag--selected'
-                        : ''
-                    }`}
-                    onClick={() => toggleInterest(interest.id)}
-                  >
-                    <Text>{interest.label}</Text>
-                  </View>
-                ))}
+              <View className={`edit-profile__interest-tags ${isLoadingInterests ? 'edit-profile__interest-tags--loading' : ''}`}>
+                {interests.map((interest) => {
+                  const level = interestLevels[interest.id]
+                  const isSelected = selectedInterests.includes(interest.id)
+                  const meta = getInterestLevelMeta(level)
+                  return (
+                    <View
+                      key={interest.id}
+                      className={[
+                        'edit-profile__interest-tag',
+                        isSelected ? 'edit-profile__interest-tag--selected' : '',
+                        isSelected && level ? `edit-profile__interest-tag--level-${level}` : '',
+                      ].filter(Boolean).join(' ')}
+                      onClick={() => {
+                        if (!isLoadingInterests) toggleInterest(interest.id)
+                      }}
+                    >
+                      <Text className='edit-profile__interest-tag-label'>{interest.label}</Text>
+                      {isSelected && meta && (
+                        <Text className='edit-profile__interest-tag-meta'>{meta.shortLabel}</Text>
+                      )}
+                    </View>
+                  )
+                })}
               </View>
             </View>
           ),

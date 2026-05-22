@@ -5,12 +5,44 @@ import { useAuth } from './hooks/useAuth'
 import { logInfo, logWarn } from './lib/utils/logger'
 import { buildPaymentVerificationUrl, decidePendingOrderAutoResume } from './lib/payment/paymentPendingOrder'
 import { clearPendingOrderStorage, getPendingOrderStorageSnapshot } from './lib/payment/paymentPendingOrderStorage'
+import { authenticateMiniProgramUser, getUserState } from './lib/api/api'
+import { seedMiniProgramAuthSession } from './lib/api/authSession'
+import { useQueryClient } from '@tanstack/react-query'
 import AuthProvider from './providers/AuthProvider'
 import { DynamicAccentProvider } from './providers/DynamicAccentProvider'
 import { AchievementProvider } from './providers/AchievementProvider'
 import AchievementPopup from './components/AchievementPopup'
 import './app.scss'
 import { loadBrandDisplayFont } from './lib/utils/brandFont'
+
+function AutoLoginBridge() {
+  const { isAuthenticated, isLoading } = useAuth()
+  const queryClient = useQueryClient()
+  const attemptedRef = useRef(false)
+
+  useEffect(() => {
+    if (isLoading || attemptedRef.current) return
+    if (isAuthenticated) return
+
+    attemptedRef.current = true
+
+    logInfo('[AutoLogin] Attempting silent auto-login for returning user')
+
+    void authenticateMiniProgramUser()
+      .then(() => getUserState())
+      .then((userState) => {
+        seedMiniProgramAuthSession(userState, queryClient)
+        logInfo('[AutoLogin] Silent auto-login successful', { nextStep: userState.nextStep })
+      })
+      .catch((error) => {
+        logInfo('[AutoLogin] Silent auto-login failed (expected for new users)', {
+          message: error instanceof Error ? error.message : String(error),
+        })
+      })
+  }, [isAuthenticated, isLoading, queryClient])
+
+  return null
+}
 
 function PendingOrderResumeBridge() {
   const { isAuthenticated, isLoading, user } = useAuth()

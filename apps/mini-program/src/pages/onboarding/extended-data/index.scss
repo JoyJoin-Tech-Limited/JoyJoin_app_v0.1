@@ -137,15 +137,18 @@
     gap: 8rpx;
     padding: 16rpx 16rpx;
     border-radius: 999rpx;
-    background: rgba($color-primary-light, 0.6);
+    background: rgba($color-primary-light, 0.40);
+    border: 2rpx solid rgba($color-primary, 0.12);
 
     &--level-2 {
-      background: rgba($color-secondary, 0.12);
+      background: rgba($color-primary-light, 0.60);
+      border-color: rgba($color-primary, 0.28);
     }
 
     &--level-3 {
-      background: rgba($color-secondary, 0.14);
-      border: 2rpx solid rgba($color-secondary, 0.25);
+      background: rgba($color-primary-light, 0.85);
+      border-color: rgba($color-primary, 0.45);
+      box-shadow: 0 4rpx 12rpx rgba($color-primary, 0.10);
     }
   }
 
@@ -311,22 +314,21 @@
     }
 
     &--level-1 {
-      border-color: rgba($color-primary, 0.18);
-      background: rgba($color-primary-light, 0.5);
-      box-shadow: 0 6rpx 16rpx rgba($color-primary, 0.06);
+      border-color: rgba($color-primary, 0.15);
+      background: rgba($color-primary-light, 0.35);
+      box-shadow: 0 4rpx 10rpx rgba($color-primary, 0.04);
     }
 
     &--level-2 {
-      border-color: rgba($color-secondary, 0.22);
-      background: rgba($color-secondary, 0.08);
-      box-shadow: 0 8rpx 18rpx rgba($color-secondary, 0.08);
-      transform: translateY(-4rpx);
+      border-color: rgba($color-primary, 0.30);
+      background: rgba($color-primary-light, 0.55);
+      box-shadow: 0 6rpx 16rpx rgba($color-primary, 0.08);
     }
 
     &--level-3 {
-      border-color: rgba($color-primary, 0.25);
-      background: rgba($color-primary-light, 0.7);
-      box-shadow: 0 10rpx 22rpx rgba($color-primary, 0.12);
+      border-color: rgba($color-primary, 0.50);
+      background: rgba($color-primary-light, 0.80);
+      box-shadow: 0 10rpx 24rpx rgba($color-primary, 0.14);
       transform: translateY(-4rpx);
     }
   }

@@ -8,18 +8,18 @@ JoyJoin's visual identity is built around **12 archetype animals** that map to t
 
 | ID | Current name | Animal | Primary use |
 |-----------|-------------|--------|-------------|
-| corgi | **气氛组柯基** | Corgi | Celebration, onboarding welcome, action moments |
-| rooster | **情绪稳定鸡** | Rooster | Steady positive energy, mood stabilizer |
-| hamster_praise | **捧场王仓鼠** | Hamster | Social bonding, affirmation, warmth |
-| fox | **探宝雷达狐** | Fox | Problem-solving, fresh ideas, game nights |
-| dolphin_calm | **读空气海豚** | Dolphin | Relaxation, mindfulness, reading the room |
-| spider | **社交裁缝蛛** | Spider | Networking, connecting people, craft workshops |
-| koala | **情绪树洞考拉** | Koala | Trust moments, deep listening, emotional safety |
-| octopus | **脑洞喷泉章鱼** | Octopus | Arts, brainstorming, creative multi-activity |
-| owl | **追问猫头鹰** | Owl | Knowledge sharing, deep questions, book clubs |
-| elephant | **定海神针大象** | Elephant | Team building, reassurance, grounding |
-| turtle | **慢半拍龟** | Turtle | Step-by-step progress, loading states, observation |
-| cat | **静音模式猫** | Cat | Solo activities, quiet companionship, creative exploration |
+| corgi | **社牛柯基** | Corgi | Celebration, onboarding welcome, action moments |
+| rooster | **小太阳鸡** | Rooster | Steady positive energy, mood stabilizer |
+| hamster_praise | **夸夸仓鼠** | Hamster | Social bonding, affirmation, warmth |
+| fox | **寻宝狐** | Fox | Problem-solving, fresh ideas, game nights |
+| dolphin_calm | **机灵海豚** | Dolphin | Relaxation, mindfulness, reading the room |
+| spider | **人脉蛛** | Spider | Networking, connecting people, craft workshops |
+| koala | **树洞考拉** | Koala | Trust moments, deep listening, emotional safety |
+| octopus | **脑洞章鱼** | Octopus | Arts, brainstorming, creative multi-activity |
+| owl | **好奇猫头鹰** | Owl | Knowledge sharing, deep questions, book clubs |
+| elephant | **靠谱大象** | Elephant | Team building, reassurance, grounding |
+| turtle | **慢热龟** | Turtle | Step-by-step progress, loading states, observation |
+| cat | **小透明猫** | Cat | Solo activities, quiet companionship, creative exploration |
 
 ### Legacy names (for migration reference only)
 

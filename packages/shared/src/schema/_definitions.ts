@@ -158,7 +158,7 @@ export const users = pgTable("users", {
   
   // Personality data (Step 3 - Vibe Vector)
   vibeVector: jsonb("vibe_vector"), // {energy, conversation_style, initiative, novelty, humor} scored 0-1
-  archetype: varchar("archetype"), // 12个社交氛围原型: 气氛组柯基, 情绪稳定鸡, 捧场王仓鼠, 探宝雷达狐, 读空气海豚, 社交裁缝蛛, 情绪树洞考拉, 脑洞喷泉章鱼, 追问猫头鹰, 定海神针大象, 慢半拍龟, 静音模式猫
+  archetype: varchar("archetype"), // 12个社交氛围原型: 社牛柯基, 小太阳鸡, 夸夸仓鼠, 寻宝狐, 机灵海豚, 人脉蛛, 树洞考拉, 脑洞章鱼, 好奇猫头鹰, 靠谱大象, 慢热龟, 小透明猫
   debateComfort: integer("debate_comfort"), // DEPRECATED: 1-7 scale - not collected in onboarding, kept for legacy data
   needsPersonalityRetake: boolean("needs_personality_retake").default(false), // 是否需要重新测评（系统升级后）
   
@@ -1059,7 +1059,7 @@ export const roleResults = pgTable("role_results", {
   roleSubtype: varchar("role_subtype"), // Subtype based on answer patterns
   
   // Role score breakdown
-  roleScores: jsonb("role_scores").notNull(), // {气氛组柯基: 18, 情绪稳定鸡: 15, 情绪树洞考拉: 12, ...}
+  roleScores: jsonb("role_scores").notNull(), // {社牛柯基: 18, 小太阳鸡: 15, 树洞考拉: 12, ...}
   
   // Six-dimensional trait scores (0-10 scale)
   affinityScore: integer("affinity_score").notNull(), // 亲和力

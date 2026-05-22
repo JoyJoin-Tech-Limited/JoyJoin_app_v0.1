@@ -239,7 +239,7 @@ Ambient curiosity → Intentional activation (hold gesture) → Social immersion
 1. Open app → see the social constellation for this week's events
 2. Stars pulse with different colors (archetype-based) and sizes (intent intensity)
 3. Swipe through 2-3 preference cards → your star appears and drifts into position
-4. See anonymized nearby stars — "A 气氛组柯基 who loves 川菜 is 3 seats away"
+4. See anonymized nearby stars — "A 社牛柯基 who loves 川菜 is 3 seats away"
 5. Tap to anchor in this region of the constellation
 6. Watch more stars gather → constellation lines begin connecting compatible pairs
 7. Threshold reached → constellation crystallizes with name and theme
@@ -293,7 +293,7 @@ Wonder (constellation view) → Self-expression (swipe positioning) → Discover
 7. Transition to "Your spark is in the mix" — a warm, ambient waiting state with micro-reveals every few hours (anonymous archetype hints about forming groups)
 8. Full group reveal with the existing unboxing flow
 
-**What replaces the queue:** The wait period becomes "Your spark is in the mix" — a named, story-driven state where the system periodically drops micro-reveals: "A 情绪稳定鸡 just joined your potential group," "Your compatibility wave is at 78%." The user receives these as gentle push moments, not a progress bar to stare at.
+**What replaces the queue:** The wait period becomes "Your spark is in the mix" — a named, story-driven state where the system periodically drops micro-reveals: "A 小太阳鸡 just joined your potential group," "Your compatibility wave is at 78%." The user receives these as gentle push moments, not a progress bar to stare at.
 
 **Why differentiated:** No competitor treats the act of joining as a ritual. The three-beat structure creates memorable muscle memory — users come to identify the "Intention → Attunement → Ignition" pattern with JoyJoin specifically. It becomes the brand's participation language.
 
@@ -337,7 +337,7 @@ Aspiration (intent selection) → Self-discovery (attunement) → Commitment (ig
 **End-to-end user flow:**
 1. Once per week: set your "drift mode" — available this weekend? Prefer 饭局 or 酒局? (2 taps)
 2. Go about your life
-3. Thursday evening: receive a Drift notification — "A 🔥 warm dinner is forming near 南山. A 脑洞喷泉章鱼 who shares 3 interests with you is already in. Join? (expires in 2 hours)"
+3. Thursday evening: receive a Drift notification — "A 🔥 warm dinner is forming near 南山. A 脑洞章鱼 who shares 3 interests with you is already in. Join? (expires in 2 hours)"
 4. Tap to accept → instant group formation → proceed to existing reveal + icebreaker flow
 5. Or pass → another Drift may come if conditions allow
 
@@ -385,7 +385,7 @@ Low-effort intent setting → Normal life → Surprise delight (Drift arrives) �
 1. Express intent for this week's event (similar to existing registration)
 2. 2-3 hours later: receive Round 1 notification — "Choose someone to start your table with"
 3. View 3 anonymized profiles (archetype, top interests, compatibility %) → tap to choose
-4. If mutual: "You and a 探宝雷达狐 chose each other! Your table seed is planted 🌱"
+4. If mutual: "You and a 寻宝狐 chose each other! Your table seed is planted 🌱"
 5. 6 hours later: Round 2 — "Pick someone to grow your table"
 6. Seed partner also picks → shared choice adds a member
 7. System completes the group → full reveal with enhanced meaning ("You helped build this table")
@@ -515,7 +515,7 @@ Each card:
 | `SparkEntrySheet` | Replaces `JoinEventPoolSheet` — simplified to intent + ignition | Medium |
 | `IgnitionGesture` | Tap-and-hold → charge → release interaction | Medium |
 | `SparkWaitingScreen` | Replaces `MatchingWaitingScreen` — story-driven with micro-reveals | Medium |
-| `MicroRevealNotification` | Anonymous hint card for waiting state ("A 情绪稳定鸡 joined your mix") | Low |
+| `MicroRevealNotification` | Anonymous hint card for waiting state ("A 小太阳鸡 joined your mix") | Low |
 
 ### 6.3 Route / Screen Changes
 
@@ -647,7 +647,7 @@ interface SparkWaitingState {
 
 interface MicroReveal {
   type: 'archetype_hint' | 'interest_overlap' | 'compatibility_wave';
-  content: string;      // "A 情绪稳定鸡 joined your mix"
+  content: string;      // "A 小太阳鸡 joined your mix"
   emoji: string;
   timestamp: string;
 }

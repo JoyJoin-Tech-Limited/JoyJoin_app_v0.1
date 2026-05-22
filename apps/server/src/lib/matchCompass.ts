@@ -48,52 +48,52 @@ export function buildDefaultPreferencesFromArchetype(
       base.genderComposition = "mixed";
       base.strictness = 50;
       break;
-    case "hamster_praise": // 捧场王仓鼠
+    case "hamster_praise": // 夸夸仓鼠
       base.acceptPairs = true;
       base.genderComposition = "no_pref";
       base.strictness = 45;
       break;
-    case "fox": // 探宝雷达狐
+    case "fox": // 寻宝狐
       base.acceptPairs = true;
       base.genderComposition = "mixed";
       base.strictness = 55;
       break;
-    case "dolphin_calm": // 读空气海豚
+    case "dolphin_calm": // 机灵海豚
       base.acceptPairs = true;
       base.genderComposition = "mixed";
       base.strictness = 50;
       break;
-    case "spider": // 社交裁缝蛛
+    case "spider": // 人脉蛛
       base.acceptPairs = true;
       base.genderComposition = "mixed";
       base.strictness = 35;
       break;
-    case "koala": // 情绪树洞考拉
+    case "koala": // 树洞考拉
       base.acceptPairs = true;
       base.genderComposition = "mixed";
       base.strictness = 55;
       break;
-    case "octopus": // 脑洞喷泉章鱼
+    case "octopus": // 脑洞章鱼
       base.acceptPairs = true;
       base.genderComposition = "mixed";
       base.strictness = 40;
       break;
-    case "owl": // 追问猫头鹰
+    case "owl": // 好奇猫头鹰
       base.acceptPairs = false;
       base.genderComposition = "no_pref";
       base.strictness = 65;
       break;
-    case "elephant": // 定海神针大象
+    case "elephant": // 靠谱大象
       base.acceptPairs = true;
       base.genderComposition = "mixed";
       base.strictness = 50;
       break;
-    case "turtle": // 慢半拍龟
+    case "turtle": // 慢热龟
       base.acceptPairs = true;
       base.genderComposition = "mixed";
       base.strictness = 45;
       break;
-    case "cat": // 静音模式猫
+    case "cat": // 小透明猫
       base.acceptPairs = false;
       base.genderComposition = "no_pref";
       base.strictness = 60;

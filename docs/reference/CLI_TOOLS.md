@@ -88,7 +88,7 @@ Creates an admin account with full access to the admin panel. If the phone numbe
 - Bypasses personality test automatically
 - Hashes password with bcrypt
 - Updates existing users to admin
-- Sets default archetype (气氛组柯基)
+- Sets default archetype (社牛柯基)
 
 **Example:**
 ```bash
@@ -160,18 +160,18 @@ $ npm run user:create
 👤 Enter display name: 测试用户
 
 🎭 Select archetype:
-  1. 气氛组柯基
-  2. 情绪稳定鸡
-  3. 捧场王仓鼠
-  4. 探宝雷达狐
-  5. 读空气海豚
-  6. 社交裁缝蛛
-  7. 情绪树洞考拉
-  8. 脑洞喷泉章鱼
-  9. 追问猫头鹰
-  10. 定海神针大象
-  11. 慢半拍龟
-  12. 静音模式猫
+  1. 社牛柯基
+  2. 小太阳鸡
+  3. 夸夸仓鼠
+  4. 寻宝狐
+  5. 机灵海豚
+  6. 人脉蛛
+  7. 树洞考拉
+  8. 脑洞章鱼
+  9. 好奇猫头鹰
+  10. 靠谱大象
+  11. 慢热龟
+  12. 小透明猫
 
 Enter number: 1
 
@@ -203,7 +203,7 @@ Enter number: 2
    User ID: clm9876543210
    Phone: +8613900139000
    Display Name: 测试用户
-   Archetype: 气氛组柯基
+   Archetype: 社牛柯基
    Gender: 男性
    City: 深圳
    Age: 28
@@ -234,7 +234,7 @@ Bypasses the personality test requirement for an existing user. Sets a default a
 
 **Features:**
 - Works on existing users only
-- Sets default archetype (气氛组柯基) if needed
+- Sets default archetype (社牛柯基) if needed
 - Marks personality test as complete
 
 **Example:**
@@ -251,7 +251,7 @@ npm run user:bypass +8613900139000 $ADMIN_CREATE_SECRET_KEY
    User ID: clm9876543210
    Phone: +8613900139000
    Display Name: 测试用户
-   Archetype: 气氛组柯基
+   Archetype: 社牛柯基
 
    User can now access the app without completing the personality test
 ```
@@ -321,18 +321,18 @@ window.dev.archetypes()
 🎭 JoyJoin 12 Archetypes:
 ========================
 
-1. 气氛组柯基
-2. 情绪稳定鸡
-3. 捧场王仓鼠
-4. 探宝雷达狐
-5. 读空气海豚
-6. 社交裁缝蛛
-7. 情绪树洞考拉
-8. 脑洞喷泉章鱼
-9. 追问猫头鹰
-10. 定海神针大象
-11. 慢半拍龟
-12. 静音模式猫
+1. 社牛柯基
+2. 小太阳鸡
+3. 夸夸仓鼠
+4. 寻宝狐
+5. 机灵海豚
+6. 人脉蛛
+7. 树洞考拉
+8. 脑洞章鱼
+9. 好奇猫头鹰
+10. 靠谱大象
+11. 慢热龟
+12. 小透明猫
 
 Use these names when creating accounts or selecting archetypes.
 ```
@@ -434,18 +434,18 @@ window.dev.createUser()
 > 测试用户
 
 🎭 Select archetype:
-  1. 气氛组柯基
-  2. 情绪稳定鸡
-  3. 捧场王仓鼠
-  4. 探宝雷达狐
-  5. 读空气海豚
-  6. 社交裁缝蛛
-  7. 情绪树洞考拉
-  8. 脑洞喷泉章鱼
-  9. 追问猫头鹰
-  10. 定海神针大象
-  11. 慢半拍龟
-  12. 静音模式猫
+  1. 社牛柯基
+  2. 小太阳鸡
+  3. 夸夸仓鼠
+  4. 寻宝狐
+  5. 机灵海豚
+  6. 人脉蛛
+  7. 树洞考拉
+  8. 脑洞章鱼
+  9. 好奇猫头鹰
+  10. 靠谱大象
+  11. 慢热龟
+  12. 小透明猫
 
 [Prompt] Enter number:
 > 1
@@ -483,7 +483,7 @@ window.dev.createUser()
    User ID: clm9876543210
    Phone: +8613900139000
    Display Name: 测试用户
-   Archetype: 气氛组柯基
+   Archetype: 社牛柯基
 
    Login at: /login
    Use phone + verification code (demo: 666666)
@@ -523,7 +523,7 @@ window.dev.bypassTest()
 ⏳ Bypassing personality test...
 
 ✅ Success! Personality test bypassed
-   Archetype: 气氛组柯基
+   Archetype: 社牛柯基
 
    Redirecting to discover page...
 ```
@@ -594,7 +594,7 @@ curl -X POST http://localhost:5001/api/dev/admin/create \
   "password": "user123",
   "secretKey": "$ADMIN_CREATE_SECRET_KEY",
   "displayName": "测试用户",
-  "archetype": "气氛组柯基",
+  "archetype": "社牛柯基",
   "gender": "男性",
   "city": "深圳",
   "age": "28",
@@ -611,7 +611,7 @@ curl -X POST http://localhost:5001/api/dev/admin/create \
   "userId": "clm9876543210",
   "phoneNumber": "+8613900139000",
   "displayName": "测试用户",
-  "archetype": "气氛组柯基"
+  "archetype": "社牛柯基"
 }
 ```
 
@@ -624,7 +624,7 @@ curl -X POST http://localhost:5001/api/dev/user/create \
     "password": "user123",
     "secretKey": "$ADMIN_CREATE_SECRET_KEY",
     "displayName": "测试用户",
-    "archetype": "气氛组柯基",
+    "archetype": "社牛柯基",
     "gender": "男性",
     "city": "深圳"
   }'
@@ -650,7 +650,7 @@ curl -X POST http://localhost:5001/api/dev/user/create \
 {
   "success": true,
   "message": "Personality test bypassed successfully",
-  "archetype": "气氛组柯基"
+  "archetype": "社牛柯基"
 }
 ```
 
