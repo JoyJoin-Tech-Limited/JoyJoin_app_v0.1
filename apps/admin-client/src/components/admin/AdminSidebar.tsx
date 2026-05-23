@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useId } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -114,24 +114,133 @@ interface NavGroup {
   items: NavItem[];
 }
 
+/* ───────────────────────────────────────────────────────────
+   DailyOpsDock — pinned primary section above the fold
+   ─────────────────────────────────────────────────────────── */
+function DailyOpsDock({
+  items,
+  location,
+}: {
+  items: NavItem[];
+  location: string;
+}) {
+  if (items.length === 0) return null;
+
+  return (
+    <div className="mx-3 mt-3 rounded-lg bg-muted/60 p-2">
+      <div className="px-2 py-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+        日常运营
+      </div>
+      <SidebarMenu>
+        {items.map((item) => (
+          <SidebarMenuItem key={item.url}>
+            <SidebarMenuButton
+              asChild
+              isActive={location === item.url}
+              data-testid={`nav-${item.title}`}
+              tooltip={item.title}
+            >
+              <Link href={item.url}>
+                <item.icon className="h-4 w-4" />
+                <span>{item.title}</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        ))}
+      </SidebarMenu>
+    </div>
+  );
+}
+
+/* ───────────────────────────────────────────────────────────
+   CollapsibleNavGroup — accordion section with persisted state
+   ─────────────────────────────────────────────────────────── */
+function CollapsibleNavGroup({
+  group,
+  expanded,
+  onToggle,
+  location,
+}: {
+  group: NavGroup;
+  expanded: boolean;
+  onToggle: (label: string) => void;
+  location: string;
+}) {
+  const contentId = useId();
+
+  return (
+    <SidebarGroup className="px-3 py-2">
+      <button
+        type="button"
+        onClick={() => onToggle(group.label)}
+        className={cn(
+          "flex w-full items-center justify-between rounded-sm px-2 py-1.5",
+          "text-xs font-bold text-muted-foreground uppercase tracking-wider",
+          "transition-colors hover:bg-accent hover:text-accent-foreground",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+        )}
+        aria-expanded={expanded}
+        aria-controls={contentId}
+        data-testid={`nav-group-${group.label}`}
+      >
+        <span>{group.label}</span>
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 shrink-0 transition-transform duration-200 motion-reduce:transition-none",
+            expanded && "rotate-180"
+          )}
+          aria-hidden="true"
+        />
+      </button>
+
+      {expanded && (
+        <SidebarGroupContent id={contentId} className="mt-1">
+          <SidebarMenu>
+            {group.items.map((item) => (
+              <SidebarMenuItem key={item.url}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location === item.url}
+                  data-testid={`nav-${item.title}`}
+                  tooltip={item.title}
+                >
+                  <Link href={item.url}>
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      )}
+    </SidebarGroup>
+  );
+}
+
+/* ───────────────────────────────────────────────────────────
+   AdminSidebar — tiered navigation with role-aware filtering
+   ─────────────────────────────────────────────────────────── */
 export function AdminSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
   const role = user?.adminRole || "viewer";
 
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch {
-      // localStorage unavailable or corrupt — fall back to defaults
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
+    () => {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch {
+        // localStorage unavailable or corrupt — fall back to defaults
+      }
+      return {
+        "审核与调优": false,
+        "配置与系统": false,
+        "实验室": false,
+      };
     }
-    return {
-      "审核与调优": false,
-      "配置与系统": false,
-      "实验室": false,
-    };
-  });
+  );
 
   useEffect(() => {
     try {
@@ -141,9 +250,9 @@ export function AdminSidebar() {
     }
   }, [expandedGroups]);
 
-  const toggleGroup = (label: string) => {
+  const toggleGroup = useCallback((label: string) => {
     setExpandedGroups((prev) => ({ ...prev, [label]: !prev[label] }));
-  };
+  }, []);
 
   const filteredDailyOps = filterByRole(dailyOpsItems, role);
 
@@ -168,76 +277,16 @@ export function AdminSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="gap-0">
-        {/* ═══════════════════════════════════════════════════════════
-            PINNED DAILY OPS DOCK
-            ═══════════════════════════════════════════════════════════ */}
-        {filteredDailyOps.length > 0 && (
-          <div className="mx-3 mt-3 rounded-lg bg-muted/60 p-2">
-            <div className="px-2 py-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-              日常运营
-            </div>
-            <SidebarMenu>
-              {filteredDailyOps.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location === item.url}
-                    data-testid={`nav-${item.title}`}
-                    tooltip={item.title}
-                  >
-                    <Link href={item.url}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </div>
-        )}
+        <DailyOpsDock items={filteredDailyOps} location={location} />
 
-        {/* ═══════════════════════════════════════════════════════════
-            COLLAPSIBLE GROUPS
-            ═══════════════════════════════════════════════════════════ */}
         {groups.map((group) => (
-          <SidebarGroup key={group.label} className="px-3 py-2">
-            <button
-              onClick={() => toggleGroup(group.label)}
-              className="flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider transition-colors hover:bg-muted hover:text-foreground"
-              aria-expanded={expandedGroups[group.label]}
-              data-testid={`nav-group-${group.label}`}
-            >
-              <span>{group.label}</span>
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 shrink-0 transition-transform duration-200",
-                  expandedGroups[group.label] && "rotate-180"
-                )}
-              />
-            </button>
-
-            {expandedGroups[group.label] && (
-              <SidebarGroupContent className="mt-1">
-                <SidebarMenu>
-                  {group.items.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location === item.url}
-                        data-testid={`nav-${item.title}`}
-                        tooltip={item.title}
-                      >
-                        <Link href={item.url}>
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            )}
-          </SidebarGroup>
+          <CollapsibleNavGroup
+            key={group.label}
+            group={group}
+            expanded={!!expandedGroups[group.label]}
+            onToggle={toggleGroup}
+            location={location}
+          />
         ))}
       </SidebarContent>
     </Sidebar>

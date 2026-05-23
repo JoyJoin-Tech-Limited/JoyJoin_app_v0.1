@@ -78,12 +78,31 @@ main.tsx                          # Vite bootstrap → renders AdminApp
   └── AdminApp.tsx                # Providers (QueryClient, Tooltip, Toaster) + AdminRouter
         └── AdminRouter           # Auth gate (isAuthenticated + isAdmin) → AdminLayout
               └── AdminLayout     # Sidebar + content area (wouter routes)
-                    ├── /dashboard
-                    ├── /pools
-                    ├── /users
-                    ├── /venues
-                    ├── /payments
-                    ├── /analytics
+                    ├── /dashboard           (数据看板)
+                    ├── /event-pools         (活动池管理)
+                    ├── /users               (用户管理)
+                    ├── /venues              (场地管理)
+                    ├── /feedback            (反馈管理)
+                    ├── /moderation          (用户举报)
+                    ├── /reports             (聊天举报)
+                    ├── /matching            (匹配实验室)
+                    ├── /matching-config     (匹配配置)
+                    ├── /insights            (数据洞察)
+                    ├── /templates           (活动模板)
+                    ├── /events              (活动管理)
+                    ├── /notifications       (通知推送)
+                    ├── /content             (内容管理)
+                    ├── /subscriptions       (订阅管理)
+                    ├── /pricing             (定价管理)
+                    ├── /coupons             (优惠券)
+                    ├── /finance             (财务管理)
+                    ├── /matching-logs       (匹配日志)
+                    ├── /evolution           (悦仔进化)
+                    ├── /outcome-analytics   (Outcome 分析)
+                    ├── /interaction-logs    (连接日志)
+                    ├── /icebreaker-ai-feedback (破冰 AI 反馈)
+                    ├── /accounts            (管理员账号)
+                    ├── /audit-logs          (审计日志)
                     └── ...
 ```
 
@@ -101,7 +120,7 @@ main.tsx                          # Vite bootstrap → renders AdminApp
 src/
   components/
     ui/                  # shadcn/ui primitives (33 active, Button, Dialog, Table, Card, etc.)
-    admin/               # Admin-specific reusable components (sidebars, data tables, filters)
+    admin/               # Admin-specific reusable components (sidebar, data tables, filters, guards)
     discover/            # Event discovery components (EventCard, BlindBoxEventCard, etc.)
     event/               # Event-related components (CompletedEventCard, PostMatchEventCard, etc.)
     profile/             # Profile & personality components (PersonalityRadarChart, QuizIntro, etc.)
@@ -114,7 +133,8 @@ src/
     _archive/            # Unused legacy components (preserved for reference)
   pages/
     admin/               # Route-level page components
-      AdminLayout.tsx    # Shell: sidebar + header + <Switch> routes
+      AdminLayout.tsx    # Shell: sidebar (tiered nav) + header + breadcrumb + <Switch> routes
+      AdminSidebar.tsx   # Tiered sidebar: daily-ops dock + collapsible groups (审核与调优 / 配置与系统 / 实验室)
       AdminDashboardPage.tsx
       AdminPoolsPage.tsx
       ...

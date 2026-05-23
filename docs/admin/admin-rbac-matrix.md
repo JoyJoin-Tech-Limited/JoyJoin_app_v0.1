@@ -116,13 +116,15 @@ Reference for which admin portal pages map to which API endpoints and which role
 
 | Admin Page | Action | Method | Endpoint | Required Middleware |
 |------------|--------|--------|----------|---------------------|
-| `/admin/data-insights` | Insights | GET | `/api/admin/insights*` | `requireAdmin` |
+| `/admin/insights` | Insights | GET | `/api/admin/insights*` | `requireAdmin` |
 | `/admin/feedback` | Feedback list/stats | GET | `/api/admin/feedback*` | `requireAdmin` |
-| `/admin/matching-lab` | Thresholds | GET/PUT | `/api/admin/matching-thresholds` | `requireAdmin` |
-| `/admin/matching-lab` | Matching logs | GET | `/api/admin/matching-logs` | `requireAdmin` |
-| `/admin/matching-lab` | Manual pool scan | POST | `/api/admin/pools/:id/scan` | `requireAdmin` |
-| `/admin/kpi` | KPI dashboard | GET | `/api/admin/kpi/dashboard` | `requireAdmin` |
+| `/admin/matching` | Thresholds | GET/PUT | `/api/admin/matching-thresholds` | `requireAdmin` |
+| `/admin/matching` | Manual pool scan | POST | `/api/admin/pools/:id/scan` | `requireAdmin` |
+| `/admin/matching-logs` | Matching logs | GET | `/api/admin/matching-logs` | `requireAdmin` |
 | `/admin/interaction-logs` | Interaction logs | GET | `/api/admin/interaction-logs*` | `requireAdmin` |
+| `/admin/outcome-analytics` | Outcome analytics | GET | `/api/admin/outcome-analytics*` | `requireAdmin` |
+| `/admin/icebreaker-ai-feedback` | Icebreaker AI feedback | GET | `/api/admin/icebreaker-ai-feedback*` | `requireAdmin` |
+| `/admin/evolution` | Mascot evolution | GET/POST | `/api/admin/evolution*` | `requireAdmin` |
 
 ---
 

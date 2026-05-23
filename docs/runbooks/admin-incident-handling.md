@@ -234,8 +234,8 @@ Run this checklist each day during internal beta.
 - [ ] Verify server is running: `GET /api/health` returns `200`
 - [ ] Check error logs for any `500` responses or unhandled exceptions
 - [ ] Confirm `[AdminAudit]` entries are appearing for any actions taken the previous day
-- [ ] Review any new user reports in `/admin/moderation`
-- [ ] Check scheduled events for the day in `/admin/events`
+- [ ] Review any new user reports in `/admin/moderation` (用户举报)
+- [ ] Check scheduled events for the day in `/admin/events` (活动管理)
 
 ### Before Events
 
@@ -247,13 +247,13 @@ Run this checklist each day during internal beta.
 ### After Events
 
 - [ ] Override any missing attendance statuses (users who attended but did not self-report)
-- [ ] Review event feedback in `/admin/feedback`
-- [ ] Check for any moderation reports from the event chat
+- [ ] Review event feedback in `/admin/feedback` (反馈管理)
+- [ ] Check for any chat reports from the event in `/admin/reports` (聊天举报)
 
 ### Weekly
 
 - [ ] Review admin account list for any accounts that should be disabled
-- [ ] Review KPI dashboard: `/admin/kpi`
+- [ ] Review data insights: `/admin/insights` (数据洞察)
 - [ ] Check abuse detection state (currently in-memory; resets on server restart — see `docs/product/product/launch-risks.md`)
 
 ---
