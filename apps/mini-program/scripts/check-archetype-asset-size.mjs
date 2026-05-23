@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const WEBP_DIR = path.join(ROOT, 'src/assets/personality/archetypes')
-const PNG_DIR = path.join(ROOT, 'src/pages/onboarding/assets/archetypes')
+const PNG_DIR = path.join(ROOT, 'src/assets/personality/archetypes')
 
 const MAX_WEBP_BYTES = 100 * 1024
 const MAX_PNG_BYTES = 250 * 1024

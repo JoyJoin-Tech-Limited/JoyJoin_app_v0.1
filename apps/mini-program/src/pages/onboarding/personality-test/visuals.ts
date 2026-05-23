@@ -22,12 +22,15 @@ export interface ArchetypeAssetPaths {
 }
 
 // WebP is served from CDN so all pages (including main-package screens) can load them.
-// PNG stays in the onboarding subpackage bundle for share-poster canvas
-// (canvas getImageInfo requires a local path).
-const ASSET_BASE_WEBP = cdnAsset('/assets/personality/archetypes')
-const ASSET_BASE_PNG  = '/pages/onboarding/assets/archetypes'
+// PNG fallback for canvas drawImage is also on CDN (migrated 2026-05-22).
+// Local PNGs in /pages/onboarding/assets/archetypes/ have been removed to save
+// ~672KB subpackage space; canvas now draws WebP primary with CDN PNG fallback.
+export const ASSET_BASE_WEBP = cdnAsset('/assets/personality/archetypes')
+export const ASSET_BASE_PNG = cdnAsset('/assets/personality/archetypes')
+/** @deprecated local PNG path; use ASSET_BASE_PNG (CDN) instead */
+export const ASSET_BASE_PNG_LOCAL = '/pages/onboarding/assets/archetypes'
 
-const ARCHETYPE_ASSET_MAP: Record<string, ArchetypeAssetPaths> = {
+export const ARCHETYPE_ASSET_MAP: Record<string, ArchetypeAssetPaths> = {
   corgi:        { webp: `${ASSET_BASE_WEBP}/archetype-corgi.webp`,        png: `${ASSET_BASE_PNG}/archetype-corgi.png` },
   rooster:      { webp: `${ASSET_BASE_WEBP}/archetype-rooster.webp`,      png: `${ASSET_BASE_PNG}/archetype-rooster.png` },
   hamster_praise:{ webp: `${ASSET_BASE_WEBP}/archetype-hamster_praise.webp`,png: `${ASSET_BASE_PNG}/archetype-hamster_praise.png` },
@@ -84,6 +87,26 @@ export interface ArchetypeVisual {
   counterIntuitive: string
   rarityPercentage: number | null
   record?: ArchetypeRecord
+}
+
+/** All archetype WebP asset URLs for bulk preloading. */
+export function getAllArchetypeAssetUrls(): string[] {
+  return Object.values(ARCHETYPE_ASSET_MAP).map((a) => a.webp)
+}
+
+/** Spritesheet CDN URL for cache priming via getImageInfo. */
+export function getArchetypeSpritesheetUrl(): string {
+  return `${ASSET_BASE_WEBP}/archetype-spritesheet.webp`
+}
+
+/** Local spritesheet path for direct rendering (bundled in onboarding subpackage). */
+export function getArchetypeSpritesheetLocalPath(): string {
+  return `${ASSET_BASE_PNG}/archetype-spritesheet.webp`
+}
+
+/** CDN fallback path used by CSS background-image fallback chain. */
+export function getArchetypeSpritesheetCdnPath(): string {
+  return `${ASSET_BASE_WEBP}/archetype-spritesheet.webp`
 }
 
 /** High-resolution static mascot images (480×480px) for non-animated display. */

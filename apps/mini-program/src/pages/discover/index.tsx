@@ -97,6 +97,9 @@ function AuthenticatedDiscover() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const displayName = (user as any)?.displayName || (user as any)?.nickname || '悦聚用户'
+  const userArchetype = (user as any)?.archetype || (user as any)?.primaryArchetype || null
+  const xiaoyueAsset = useMemo(() => getXiaoyueExpressionAsset('homeWelcome'), [])
+  const avatarUrl = (user as any)?.profileImageUrl || (user as any)?.wechatAvatarUrl || xiaoyueAsset
 
   // ── Filter state ──
   const saved = useMemo(() => readSavedLocation(), [])
@@ -110,6 +113,7 @@ function AuthenticatedDiscover() {
 
   // ── City unlock state ──
   const [showCityPicker, setShowCityPicker] = useState(false)
+  const [avatarError, setAvatarError] = useState(false)
 
   // ── Geo detection state ──
   const [detectedClusterId, setDetectedClusterId] = useState<string | null>(null)
@@ -413,20 +417,17 @@ function AuthenticatedDiscover() {
   }, [isAutoRelaxed])
 
   // ── Header copy (computed after data fetch) ──
-  const archetype = (user as any)?.archetype || (user as any)?.primaryArchetype || null
   const timeGreeting = useMemo(() => getTimeGreeting(displayName), [displayName])
-  const xiaoyueAsset = useMemo(() => getXiaoyueExpressionAsset('homeWelcome'), [])
   const dynamicSubtitle = useMemo(
     () =>
       getDiscoverSubtitle({
         displayName,
-        archetype,
+        archetype: userArchetype,
         registrationCount: registrations.length,
         openPoolCount: pools.filter((p) => p.status !== 'closed').length,
       }),
-    [displayName, archetype, registrations.length, pools],
+    [displayName, userArchetype, registrations.length, pools],
   )
-
   // ── Handlers ──
   const handleFilterSelect = useCallback(
     (clusterId: string, districtId: string) => {
@@ -475,10 +476,6 @@ function AuthenticatedDiscover() {
     }, 800)
   })
 
-  // ── Render helpers ──
-  const userArchetype = (user as any)?.archetype || (user as any)?.primaryArchetype || null
-  const avatarUrl = (user as any)?.profileImageUrl || (user as any)?.wechatAvatarUrl || xiaoyueAsset
-
   const renderPoolCard = useCallback(
     (pool: EventPoolSummary, index: number, hasBeenRendered: boolean) => {
       if (!hasBeenRendered) {
@@ -507,29 +504,35 @@ function AuthenticatedDiscover() {
   // ── Render ──
   return (
     <View className='discover-auth tab-page-enter'>
-      {/* Hero + actions + promo — scroll away naturally */}
-      <View className='discover-auth__hero'>
-        <View className='discover-auth__hero-left'>
-          <View className='discover-auth__hero-mascot'>
-            <Image
-              className='discover-auth__hero-mascot-img'
-              src={xiaoyueAsset}
-              mode='aspectFit'
-              ariaLabel='悦仔'
-            />
-          </View>
-          <View className='discover-auth__hero-text'>
-            <Text className='discover-auth__greeting'>{timeGreeting}</Text>
-            <Text className='discover-auth__subtitle'>{dynamicSubtitle}</Text>
-          </View>
-        </View>
+      {/* Promo carousel — top of page */}
+      <AiMatchPromoCarousel className='discover-auth__promo' compact />
 
-        {/* Location Pill */}
+      {/* Greeting hero */}
+      <View className='discover-auth__hero'>
+        <View className='discover-auth__hero-avatar'>
+          <Image
+            className='discover-auth__hero-avatar-img'
+            src={avatarError ? xiaoyueAsset : avatarUrl}
+            mode='aspectFill'
+            aria-label={(avatarError || (!(user as any)?.profileImageUrl && !(user as any)?.wechatAvatarUrl)) ? '悦仔' : '用户头像'}
+            onError={() => setAvatarError(true)}
+          />
+        </View>
+        <View className='discover-auth__hero-text'>
+          <Text className='discover-auth__greeting'>{timeGreeting}！</Text>
+          <Text className='discover-auth__greeting-prompt'>今晚想怎么玩？</Text>
+          <Text className='discover-auth__subtitle'>{dynamicSubtitle}</Text>
+        </View>
+      </View>
+
+      {/* Explore header */}
+      <View className='discover-auth__explore-header'>
+        <Text className='discover-auth__explore-title'>探索体验</Text>
         <View
           className={`discover-auth__location-pill ${selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID ? 'discover-auth__location-pill--active' : ''}`}
           onClick={handleOpenDrawer}
           hoverClass='discover-auth__location-pill--hover'
-          aria-role='button'
+          role='button'
           aria-label={`当前区域: 深圳 · ${locationPillLabel}, 点击切换`}
         >
           <JoyJoinIcon
@@ -568,10 +571,6 @@ function AuthenticatedDiscover() {
 
       {/* Pool listing */}
       <View className={`discover-auth__section${!poolsLoading && (poolsError || visiblePools.length === 0) ? ' discover-auth__section--empty' : ''}`}>
-        <Text className='discover-auth__section-title'>
-          活动池 {!poolsLoading && `(${visiblePools.length})`}
-        </Text>
-
         {poolsLoading ? (
           <View className='discover-auth__pool-list'>
             <PoolCardSkeleton />

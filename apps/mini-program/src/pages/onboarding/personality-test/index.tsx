@@ -40,7 +40,7 @@ import { haptics } from '../../../lib/utils/haptics'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
-import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
+import type { XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
 import MascotQuestionHeader from './MascotQuestionHeader'
 import PersonalityTestAnswerArea, { getNearestSliderOption } from './PersonalityTestAnswerArea'
@@ -190,16 +190,6 @@ export default function PersonalityTestPage() {
 
   // Guard against stale async closures hijacking navigation after session change
   const activeSessionRef = useRef<string>('')
-  // Defensive timeout for sprite state recovery if WeChat drops animationend
-  const spriteStateRecoveryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Clean up recovery timeout on unmount to avoid state updates after unmount
-  useEffect(() => {
-    return () => {
-      if (spriteStateRecoveryTimeoutRef.current) {
-        clearTimeout(spriteStateRecoveryTimeoutRef.current)
-      }
-    }
-  }, [])
   // Remember the last attempted option so we can retry on network failure
   const lastAttemptedOptionRef = useRef<AssessmentOption | null>(null)
   // Track previous question + answer for one-step back
@@ -438,21 +428,6 @@ export default function PersonalityTestPage() {
 
     setSpriteState(reactionState)
 
-    // Defensive recovery: if WeChat never fires animationend, recover after max duration
-    if (spriteStateRecoveryTimeoutRef.current) {
-      clearTimeout(spriteStateRecoveryTimeoutRef.current)
-    }
-    spriteStateRecoveryTimeoutRef.current = setTimeout(() => {
-      // Keep postAnswerCommentary visible — it's the feedback the user just received
-      setMilestonePulse(false)
-      // If server response hasn't arrived yet, transition to thinking state
-      if (isSubmitting) {
-        setSpriteState('thinking')
-      } else {
-        setSpriteState('idle')
-      }
-    }, 1500)
-
     lastAttemptedOptionRef.current = option
 
     setIsSubmitting(true)
@@ -590,20 +565,6 @@ export default function PersonalityTestPage() {
   useEffect(() => {
     if (!isSubmitting) {
       setSpriteState((prev) => (prev === 'thinking' ? 'idle' : prev))
-    }
-  }, [isSubmitting])
-
-  /** Recover sprite state after one-shot animation completes */
-  const handleSpriteAnimationComplete = useCallback(() => {
-    if (spriteStateRecoveryTimeoutRef.current) {
-      clearTimeout(spriteStateRecoveryTimeoutRef.current)
-      spriteStateRecoveryTimeoutRef.current = null
-    }
-    // If server response hasn't arrived yet, transition to thinking state
-    if (isSubmitting) {
-      setSpriteState('thinking')
-    } else {
-      setSpriteState('idle')
     }
   }, [isSubmitting])
 
@@ -1053,6 +1014,11 @@ export default function PersonalityTestPage() {
               <View className='personality-test__mascot-avatar'>
                 <Image
                   className='personality-test__mascot-static personality-test__mascot-static--testing'
+                  src={cdnAsset('/assets/mascot/xiaoyue-welcome.webp')}
+                  mode='aspectFit'
+                />
+                <Image
+                  className='personality-test__mascot-static personality-test__mascot-static--testing personality-test__mascot-static--reduced-motion'
                   src={cdnAsset('/assets/mascot/xiaoyue-welcome.webp')}
                   mode='aspectFit'
                 />

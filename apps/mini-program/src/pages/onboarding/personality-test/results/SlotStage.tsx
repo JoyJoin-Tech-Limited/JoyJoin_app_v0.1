@@ -70,6 +70,7 @@ const SlotCard = memo(function SlotCard({
       <ArchetypeSpritesheet
         archetype={archetype}
         className='personality-results__slot-image'
+        fallbackColor={itemVisual.accentSoft}
       />
       <Text className='personality-results__slot-name'>
         {ARCHETYPE_BY_ID[archetype]?.nameCn ?? archetype}

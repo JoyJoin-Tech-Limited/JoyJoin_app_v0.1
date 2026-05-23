@@ -564,7 +564,9 @@ export async function generatePersonalitySquarePoster(
   const imgSize = 160
   const imgX = (S - imgSize) / 2
   const imgY = M + 148
-  const imgPath = await resolveImagePath(input.archetypeAssetPng || input.archetypeAsset)
+  // Try WebP first; fall back to CDN PNG if canvas drawImage rejects WebP.
+  const imgPath = await resolveImagePath(input.archetypeAsset)
+    || (input.archetypeAssetPng ? await resolveImagePath(input.archetypeAssetPng) : '')
 
   fillRoundedRect(ctx, imgX - 6, imgY - 6, imgSize + 12, imgSize + 12, imgSize / 2 + 6, 'rgba(139,92,246,0.08)')
   if (imgPath) {

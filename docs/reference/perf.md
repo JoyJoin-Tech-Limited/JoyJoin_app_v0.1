@@ -1,6 +1,7 @@
 # JoyJoin 性能优化指南
 
 > **Last updated:** 2026-05-13 (device baseline tiering: tier-1 Gen Z 8GB+/120Hz/5G primary, degradation path secondary)
+> **Previous:** 2026-05-22 (archetype asset optimization: local spritesheet, WebP-first canvas, PNG moved to CDN, onboarding subpackage 1.4M → 788K)
 > **Previous:** 2026-04-19 (mini-program launch-primary wiring: `onboardingRoutes.ts`, `preloadRule`, cold-entry probe)
 
 ## Device Baseline Tiers
@@ -136,7 +137,11 @@ queryClient.prefetchQuery({
 
 #### Archetype assets
 
-The 12 archetype PNG files are large (~120–300 KB each). `DiscoverPage.tsx` defers archetype image loads until they are needed (PR #386). Do not eagerly preload all archetype assets in the critical path.
+The 12 archetype full-size WebP files (~18–25 KB each, ~250 KB total) are served from CDN and **preloaded during idle time** (intro screen) so the slot machine animation and result reveal are instant. The slot machine spritesheet (20 KB) is bundled locally in the preloaded onboarding subpackage — zero network on animation start.
+
+**Canvas poster generation** draws WebP primary with CDN PNG fallback (PNG moved off-subpackage to CDN in 2026-05-22, saving ~672 KB). The colored-circle fallback (archetype initial + accent color) renders if both formats fail.
+
+**Historical:** PNGs were previously bundled locally (~120–300 KB each, ~641 KB total) for canvas `drawImage` compatibility. WebP canvas support is now primary.
 
 #### Matching-state assets (centralized, PR #390)
 
@@ -249,7 +254,7 @@ When implementing features that push Primary-tier hardware, always provide a fal
 | Admin code | Must not be imported into `apps/user-client` |
 | Matching background | Reuse `matching/shared/matching-bg.svg` via `MatchingStateLayout` — never duplicate |
 | Hero images | Use WebP + `decoding="async"`; avoid large PNG |
-| Archetype assets | Defer / gate — do not preload all 12 in the critical path |
+| Archetype assets | Preload during idle time (intro screen); spritesheet bundled locally; canvas draws WebP primary with CDN PNG fallback |
 | Asset prefetching | Gate on real activity state — do not prefetch for no-activity users. Primary tier may prefetch more aggressively. |
 | Mini Program package loading | Keep tabBar pages in the main package; onboarding subpackage + `preloadRule` from `onboardingRoutes.ts` first; justify independent subpackages with measured wins and a self-contained bootstrap plan |
 | Device capability gate | Use `getSystemInfo` / `benchmarkLevel` to detect tier at runtime; never assume uniform low-end |

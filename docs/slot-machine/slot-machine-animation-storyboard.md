@@ -10,6 +10,8 @@
 
 This document provides a comprehensive storyboard and technical specification for the archetype slot machine reveal animation journey. The design ensures precise landing mechanics, smooth transitions, and a cohesive Pokémon-inspired reveal experience optimized for mobile devices.
 
+> **Asset optimization note (2026-05-22):** The slot machine uses a **locally bundled spritesheet** (`/pages/onboarding/assets/archetypes/archetype-spritesheet.webp`, 20 KB) rather than loading 12 individual full-size images from CDN. The spritesheet is preloaded via the onboarding subpackage `preloadRule` at landing page, eliminating network latency during animation. A `useSpriteReadiness` hook gates animation start until decode is confirmed (≤500ms). See `AGENTS.md` §6 for full archetype asset loading rules.
+
 ---
 
 ## Animation Journey Overview

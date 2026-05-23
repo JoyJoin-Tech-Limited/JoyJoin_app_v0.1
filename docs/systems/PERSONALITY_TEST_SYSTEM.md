@@ -51,12 +51,12 @@ The V4 engine and question bank live in **`packages/shared/src/personality/`**; 
 
 **Result Page UI (Mini Program):**
 The results page (`pages/onboarding/personality-test/results/`) renders a multi-stage reveal flow:
-1. **Slot machine animation** — 12 archetypes spin and land on the user's match
+1. **Slot machine animation** — 12 archetypes spin and land on the user's match. The spritesheet is loaded from the **local bundled subpackage** (no CDN round-trip). A `backgroundColor` fallback (archetype accent soft) ensures no blank circles during decode. A `useSpriteReadiness` hook gates the animation start until the spritesheet is confirmed decoded (500ms timeout — never blocks indefinitely).
 2. **Reveal sequence** — silhouette → fill → sparkle with haptic feedback
 3. **Result card** — Hero card with archetype name, three-tier badge system (nickname gradient trophy, rarity amber dot, chemistry soft tint), Xiaoyue avatar + speech-bubble analysis, and trait summary
 4. **Collectible card** — Pokémon-style holographic card with touch-drag tilt, energy bar, skill badges, and match chemistry chips
 5. **Detail modal** — Progressive disclosure via "看看悦仔怎么说" CTA; opens a bottom sheet with full AI analysis, trait radar, and best partner matches
-6. **Share poster** — Canvas-generated shareable card with archetype art, rarity label, and skill set
+6. **Share poster** — Canvas-generated shareable card with archetype art, rarity label, and skill set. Canvas draws **WebP primary** with **CDN PNG fallback** (PNG moved off-subpackage to CDN in 2026-05-22). If both fail, a colored circle with the archetype's first character renders.
 
 **Returning users only (no in-flight test import):** Mini Program [`pages/login/index`](../apps/mini-program/src/pages/login/index.tsx) uses [`useWeChatLogin`](../apps/mini-program/src/hooks/auth/useWeChatLogin.ts) → [`authenticateMiniProgramUser()`](../apps/mini-program/src/lib/api/api.ts) → `POST /api/auth/wechat/login` (not `login-with-test`). Coordination detail: [`docs/reference/PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md).
 

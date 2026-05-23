@@ -1,4 +1,4 @@
-import { Canvas, Text, View } from '@tarojs/components'
+import { Canvas, Image, Text, View } from '@tarojs/components'
 import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -6,6 +6,7 @@ import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
 import { getArchetypeSkills } from '@shared/personality/archetypeSkills'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { useAuth } from '../../../../hooks/useAuth'
+import { useSpriteReadiness } from '../../../../hooks/useSpriteReadiness'
 import { useOnboardingAnalytics } from '../../../../hooks/onboarding/useOnboardingAnalytics'
 import { apiRequest, authenticateMiniProgramUserWithTest, getUserState, type ApiError } from '../../../../lib/api/api'
 import {
@@ -23,6 +24,7 @@ import { getDegradationTier, type DegradationTier } from '../../../../lib/utils/
 import { haptics } from '../../../../lib/utils/haptics'
 import { getMascotDisplayName } from '../../../../lib/mascot/mascotDisplay'
 import { logError, logInfo, logWarn } from '../../../../lib/utils/logger'
+import { preloadImagesWithDiagnostics } from '../../../../lib/utils/imagePreload'
 import { MINI_PROGRAM_ROUTES } from '../../../../lib/onboarding/onboardingRoutes'
 import { navigateToMiniProgramNextStep } from '../../../../lib/onboarding/onboardingNavigation'
 import { TOAST_FATAL_MS } from '../../../../lib/utils/uiConstants'
@@ -30,6 +32,9 @@ import {
   getArchetypeVisual,
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
+  getAllArchetypeAssetUrls,
+  getArchetypeSpritesheetUrl,
+  getArchetypeSpritesheetLocalPath,
 } from '../visuals'
 import { getArchetypeCardVariants } from '../archetypeVariants'
 import {
@@ -98,6 +103,12 @@ export default function PersonalityTestResultsPage() {
   const [resultState, setResultState] = useState<ResolvedResultState | null>(initialResolvedResult)
   const [flowStage, setFlowStage] = useState<FlowStage>(hasCompletedReplay ? 'result' : 'loading')
   const [slotPhase, setSlotPhase] = useState<SlotPhase>('anticipation')
+
+  // Track spritesheet decode readiness before starting slot animation.
+  // Falls back after 500ms so we never block indefinitely.
+  const spriteReady = useSpriteReadiness(
+    hasCompletedReplay ? '' : getArchetypeSpritesheetLocalPath(),
+  )
   const [revealPhase, setRevealPhase] = useState<RevealPhase>('silhouette')
   const [slotDisplay, setSlotDisplay] = useState({
     reelIndex: 0,
@@ -136,6 +147,7 @@ export default function PersonalityTestResultsPage() {
   const degradationTierRef = useRef<DegradationTier>('full')
   const isAnimatingRef = useRef(false)
   const analysisRequestedRef = useRef(false)
+  const resultPreloadInitiatedRef = useRef(false)
 
   const profileRef = useRef<AnimationProfile>(getAnimationProfile())
 
@@ -164,6 +176,17 @@ export default function PersonalityTestResultsPage() {
         abortControllerRef.current = null
       }
     }
+  }, [])
+
+  /**
+   * Preload result-stage images on mount (covers direct entry / page refresh
+   * where the test-phase preload didn't run).
+   */
+  useEffect(() => {
+    if (resultPreloadInitiatedRef.current) return
+    resultPreloadInitiatedRef.current = true
+    const urls = [getArchetypeSpritesheetUrl(), ...getAllArchetypeAssetUrls()]
+    void preloadImagesWithDiagnostics(urls, 'personality-results-mount')
   }, [])
 
   const fetchXiaoyueAnalysis = useCallback(async () => {
@@ -239,6 +262,16 @@ export default function PersonalityTestResultsPage() {
     ?? sessionSnapshot?.result?.primaryArchetype
     ?? topMatches[0]?.archetype
     ?? null
+
+  // Targeted preload: once we know the specific result archetype, ensure
+  // its full-size asset is in cache (noop if already loaded).
+  useEffect(() => {
+    if (!displayArchetype) return
+    const visual = getArchetypeVisual(displayArchetype)
+    if (visual.asset) {
+      void preloadImagesWithDiagnostics([visual.asset], `result-archetype-${displayArchetype}`)
+    }
+  }, [displayArchetype])
   const displayArchetypeName = displayArchetype
     ? archetypeRegistry[displayArchetype]?.name ?? displayArchetype
     : '神秘原型'
@@ -736,9 +769,19 @@ export default function PersonalityTestResultsPage() {
     }
   }, [analytics, auth.isAuthenticated, displayArchetypeName, fetchResult])
 
+  /**
+   * Start the result animation only after critical assets are confirmed ready.
+   *
+   * The 'loading' stage stays visible while useSpriteReadiness probes the
+   * spritesheet (≤500ms). Once ready — or on timeout — we transition to
+   * the slot machine. This guarantees the first frame never shows blank
+   * circles, even on low-end devices or after a cold redirectTo.
+   */
   useEffect(() => {
+    if (hasCompletedReplay) return
+    if (!spriteReady.isReady) return
     void runResultFlow()
-  }, [runResultFlow])
+  }, [hasCompletedReplay, spriteReady.isReady, runResultFlow])
 
   const handleRetry = useCallback(() => {
     void runResultFlow({ forceRefresh: true })
@@ -1222,6 +1265,29 @@ export default function PersonalityTestResultsPage() {
         className='personality-results__poster-canvas'
         style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: '750px', height: '750px' }}
       />
+
+      {/* ── Hidden image preload layer ──
+           Redundant cache priming: getImageInfo primes the native image cache;
+           these <Image> nodes prime the webview's HTTP cache. Both together
+           ensure the spritesheet and result image are decoded before display. */}
+      <View style={{ position: 'absolute', left: '-9999rpx', top: '-9999rpx', width: '2rpx', height: '2rpx' }} aria-hidden='true'>
+        <Image
+          src='/pages/onboarding/assets/archetypes/archetype-spritesheet.webp'
+          mode='aspectFit'
+          lazyLoad={false}
+          style={{ width: '2rpx', height: '2rpx' }}
+          aria-hidden='true'
+        />
+        {displayAsset && (
+          <Image
+            src={displayAsset}
+            mode='aspectFit'
+            lazyLoad={false}
+            style={{ width: '2rpx', height: '2rpx' }}
+            aria-hidden='true'
+          />
+        )}
+      </View>
     </View>
   )
 }

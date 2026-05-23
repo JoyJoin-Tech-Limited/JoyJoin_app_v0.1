@@ -104,7 +104,7 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           to: 'dist/assets/fonts',
         },
         // Archetype result images — WEBP in main package (login page + all screens).
-        // PNG stays in onboarding subpackage for share-poster canvas (~641KB).
+        // PNG moved to CDN (2026-05-22); canvas draws WebP primary with CDN PNG fallback.
         // src/assets/archetypes/ contains symlinks to src/pages/onboarding/assets/archetypes/*.webp
         {
           from: 'src/pages/onboarding/assets/archetypes',

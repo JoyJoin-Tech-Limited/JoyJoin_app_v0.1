@@ -215,6 +215,13 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 
 **City Unlock v0.1 (2026-05-19):** Server-owned city expansion tracking via `user_city_interests` + `city_unlock_progress`. Threshold: 50 interested users triggers `collecting` → `researching` status transition + WeCom ops notification. Atomic count updates via Drizzle `sql` expressions (race-safe). Frontend shows gentle banner/feed-card/picker on discover when user has no city interest; progress page at `pages/city-unlock/index`. Admin report: `GET /api/admin/cities/unlock-report`.
 
+**Archetype asset loading (2026-05-22):**
+- **Slot machine spritesheet** (`archetype-spritesheet.webp`): loaded from **local bundled path** (`/pages/onboarding/assets/archetypes/`), not CDN. The onboarding subpackage is preloaded at landing page, so the file is on-device before animation starts.
+- **Full-size archetype images**: served from CDN as WebP. Preloaded during idle time (intro screen) via `Taro.getImageInfo` + hidden `<Image>` nodes.
+- **Canvas poster generation**: draws **WebP primary** with **CDN PNG fallback**. Local PNGs removed from subpackage (saved ~672 KB). If canvas rejects WebP, CDN PNG is fetched on-demand.
+- **Decode readiness**: `useSpriteReadiness` hook gates slot animation start until the spritesheet is confirmed decoded (500ms timeout). `backgroundColor` fallback (archetype accent soft) prevents blank circles.
+- **Do not** reintroduce local PNG bundling for archetypes. Canvas PNG fallback must use CDN path (`ASSET_BASE_PNG = cdnAsset('/assets/personality/archetypes')`).
+
 **Tab bar icon gotcha:** `centerHub` tab in `tabBarConfig.ts` must have a non-empty `iconPath`. The `miniprogram-ci` upload rejects empty icon paths with `800059`. The custom tab bar component renders the center button independently (`box-logo-tab.png` + `tab-bar-notch-bg.png`), so any placeholder icon works for validation. The tab bar logo uses a dedicated 128×128 `box-logo-tab.png` (29KB) instead of the full-resolution `box-logo.png` (693KB) to stay within the 2MB package budget. This was fixed 2026-05-19.
 
 **Mini-program shared UI primitives (2026-05-22):**

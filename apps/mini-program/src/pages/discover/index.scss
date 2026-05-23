@@ -6,7 +6,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  display: flex;
   flex-direction: column;
   min-height: 100dvh;
   background: $color-bg-gradient;
@@ -47,6 +46,7 @@
     width: 100%;
     height: 100%;
     display: block;
+    transition: opacity 0.3s ease;
   }
 
   &__hero-text {
@@ -54,7 +54,7 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 4rpx;
+    gap: $spacing-xs;
   }
 
   // ── Location Pill ─────────────────────────────────────────────
@@ -76,7 +76,10 @@
       border-color: transparent;
       box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.25);
 
-      .discover-auth__location-pill-icon,
+      .discover-auth__location-pill-icon {
+        filter: brightness(0) invert(1);
+      }
+
       .discover-auth__location-pill-text {
         color: $color-text-white;
       }
@@ -107,6 +110,7 @@
     font-weight: $font-weight-black;
     color: $color-text-primary;
     line-height: 1.3;
+    @include text-truncate;
   }
 
   &__greeting-prompt {
@@ -116,7 +120,6 @@
     font-weight: $font-weight-bold;
     color: $color-text-primary;
     line-height: 1.35;
-    margin-bottom: $spacing-xs;
   }
 
   &__subtitle {
@@ -136,11 +139,14 @@
   }
 
   &__explore-title {
+    flex: 1;
+    min-width: 0;
     font-family: $font-cn-display;
     font-size: $font-size-lg;
     font-weight: $font-weight-black;
     color: $color-text-primary;
     line-height: 1.3;
+    @include text-truncate;
   }
 
   // ── Geo hint (subtle GPS-sorted indicator) ────────────────────
@@ -181,41 +187,9 @@
     text-align: center;
   }
 
-  // ── Primary action (contextual single CTA) ────────────────────
-  &__primary-action {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 0 $container-padding;
-    margin-bottom: $spacing-lg;
-  }
-
+  // ── Promo carousel ────────────────────────────────────────────
   &__promo {
     padding: $spacing-lg $container-padding $spacing-md;
-  }
-
-  &__action-card {
-    @include card;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    gap: $spacing-sm;
-    padding: $spacing-md $spacing-lg;
-    &:active {
-      transform: scale(0.97);
-    }
-  }
-
-  &__action-emoji {
-    width: 40rpx;
-    height: 40rpx;
-    display: block;
-  }
-
-  &__action-label {
-    @include type-label;
-    color: $color-text-primary;
   }
 
   // ── Filter chips (legacy — replaced by LocationFilterDrawer) ──
@@ -234,10 +208,11 @@
     }
   }
 
-  &__section-title {
-    display: block;
-    @include type-body-emphasis;
-    margin-bottom: $spacing-md;
+  &__empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
   // ── Pool list ─────────────────────────────────────────────────
@@ -245,6 +220,7 @@
     display: flex;
     flex-direction: column;
     gap: $spacing-md;
+    margin-top: $spacing-sm;
   }
 
   // ── Bottom safe-area reserve ──────────────────────────────────
@@ -527,10 +503,9 @@
   }
 
   &__empty-state {
-    flex: 1;
     display: flex;
-    flex-direction: column;
-    justify-content: center;
+    align-items: center;
+    gap: 10rpx;
   }
 
   &__empty-glyph {

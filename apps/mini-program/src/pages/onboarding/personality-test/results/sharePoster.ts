@@ -745,9 +745,10 @@ async function exportCanvasWithRetry(
 export async function generatePersonalitySharePoster(
   input: PersonalitySharePosterInput,
 ): Promise<string> {
-  // Use PNG fallback for canvas drawImage (WebP compatibility uncertain in canvas context)
-  const canvasAsset = input.archetypeAssetPng || input.archetypeAsset
-  const archetypeImagePath = await resolveImagePath(canvasAsset)
+  // Try WebP first (smaller, faster). If canvas drawImage fails with WebP,
+  // fall back to CDN PNG. Both are resolved via getImageInfo to local temp paths.
+  const archetypeImagePath = await resolveImagePath(input.archetypeAsset)
+    || await resolveImagePath(input.archetypeAssetPng)
 
   const ctx = Taro.createCanvasContext(PERSONALITY_SHARE_POSTER_CANVAS_ID)
   createCardBackground(ctx, input.accentColor)

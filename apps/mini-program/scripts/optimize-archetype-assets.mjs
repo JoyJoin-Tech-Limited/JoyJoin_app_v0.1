@@ -5,7 +5,7 @@
  * Export spec (keep in sync with visuals.ts):
  * - Max width 480px (height proportional, no upscale)
  * - WebP lossy, quality ~85, effort 6
- * - PNG fallback: quality 80, effort 10 — for canvas drawImage compatibility
+ * - PNG fallback: quality 80, effort 10 — for canvas drawImage fallback (now on CDN)
  *
  * Usage (from apps/mini-program):
  *   npm run optimize:archetypes
@@ -25,7 +25,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const INPUT_DIR = path.join(ROOT, 'assets-source/personality/archetypes')
 const WEBP_OUTPUT_DIR = path.join(ROOT, 'src/assets/personality/archetypes')
-const PNG_OUTPUT_DIR = path.join(ROOT, 'src/pages/onboarding/assets/archetypes')
+const PNG_OUTPUT_DIR = path.join(ROOT, 'src/assets/personality/archetypes')
 
 const MAX_WIDTH = 480
 const WEBP_QUALITY = 85
