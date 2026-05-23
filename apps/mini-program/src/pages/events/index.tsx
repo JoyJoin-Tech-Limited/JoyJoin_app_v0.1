@@ -174,7 +174,7 @@ export default function EventsPage() {
                 onClick={() => handleEventTap(event)}
                 index={index}
               >
-                {event.startTime && resolvedActiveTab === 'upcoming' && (
+                {typeof event.startTime === 'string' && resolvedActiveTab === 'upcoming' && (
                   <View className='events-page__countdown'>
                     <Text className='events-page__countdown-text'>
                       ⏰ {getCountdownText(event.startTime)}
