@@ -144,7 +144,7 @@ function CenterHubContent({
             gradient='premium'
             onClick={handleNavigate}
           >
-            {event.startTime && (
+            {typeof event.startTime === 'string' && (
               <View className='center-hub__countdown-pill'>
                 <Text className='center-hub__countdown-text'>
                   ⏰ {getCountdownText(event.startTime)}
@@ -152,7 +152,7 @@ function CenterHubContent({
               </View>
             )}
             <View className='center-hub__type-badge'>
-              <Text className='center-hub__type-text'>{event.type || '活动'}</Text>
+              <Text className='center-hub__type-text'>{typeof event.type === 'string' ? event.type : '活动'}</Text>
             </View>
           </RichListCard>
         </View>

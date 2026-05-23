@@ -29,6 +29,7 @@ import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
+import { getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
 const MIN_INTERESTS = 3
@@ -275,6 +276,17 @@ export default function ExtendedDataPage() {
         showGlow
         tail
         className='extended-data__stage extended-data__stage--2'
+      />
+      <Image
+        src={getXiaoyueAsset('pointing')}
+        mode='aspectFit'
+        style={{
+          width: 0,
+          height: 0,
+          opacity: 0,
+          position: 'absolute',
+          pointerEvents: 'none',
+        }}
       />
 
       <Card className='extended-data__summary extended-data__stage extended-data__stage--3'>
