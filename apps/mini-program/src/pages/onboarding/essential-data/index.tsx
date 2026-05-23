@@ -17,6 +17,7 @@ import {
   getOccupationGuidance,
   OCCUPATIONS,
   searchOccupations,
+  WORK_MODES,
 } from '@shared/occupations'
 import { submitEssentialData } from '@shared/api'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
@@ -107,6 +108,7 @@ interface CachedProgress {
   relationshipStatus: string
   educationLevel: string
   occupationId: string
+  workMode: string
   intent: string[]
   timestamp: number
 }
@@ -161,6 +163,7 @@ export default function EssentialDataPage() {
   const [relationshipStatus, setRelationshipStatus] = useState('')
   const [educationLevel, setEducationLevel] = useState('')
   const [occupationId, setOccupationId] = useState('')
+  const [workMode, setWorkMode] = useState('')
   const [intent, setIntent] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
@@ -196,6 +199,7 @@ export default function EssentialDataPage() {
     setRelationshipStatus((c) => c || cached?.relationshipStatus || (typeof source.relationshipStatus === 'string' ? source.relationshipStatus : '') || '')
     setEducationLevel((c) => c || cached?.educationLevel || (typeof source.educationLevel === 'string' ? source.educationLevel : '') || '')
     setOccupationId((c) => c || cached?.occupationId || (typeof source.occupationId === 'string' ? source.occupationId : '') || '')
+    setWorkMode((c) => c || cached?.workMode || (typeof source.workMode === 'string' ? source.workMode : '') || '')
     setIntent((c) => (c.length > 0 ? c : cached?.intent || (Array.isArray(source.intent) ? source.intent.filter((item): item is string => typeof item === 'string') : [])))
     setCurrentStep((c) => (c === 0 && cached?.currentStep ? Math.min(cached.currentStep, TOTAL_STEPS - 1) : c))
   }, [user, isLoading])
@@ -212,10 +216,11 @@ export default function EssentialDataPage() {
       relationshipStatus,
       educationLevel,
       occupationId,
+      workMode,
       intent,
       timestamp: Date.now(),
     })
-  }, [currentStep, displayName, gender, birthYear, currentCity, hometownRegionCity, relationshipStatus, educationLevel, occupationId, intent])
+  }, [currentStep, displayName, gender, birthYear, currentCity, hometownRegionCity, relationshipStatus, educationLevel, occupationId, workMode, intent])
 
   const cityOptions = useMemo(() => [...CURRENT_CITY_OPTIONS], [])
   const relationshipOptions = useMemo(() => [...RELATIONSHIP_STATUS_OPTIONS], [])
@@ -268,7 +273,8 @@ export default function EssentialDataPage() {
       case 1:
         return gender !== '' && birthYear > 0
       case 2:
-        return true // all optional
+        if (occupationQuery.trim() !== '' && occupationId === '') return false
+        return true
       case 3:
         return currentCity !== ''
       case 4:
@@ -276,7 +282,7 @@ export default function EssentialDataPage() {
       default:
         return false
     }
-  }, [currentStep, displayName, gender, birthYear, currentCity, intent.length])
+  }, [currentStep, displayName, gender, birthYear, currentCity, intent.length, occupationId, occupationQuery])
 
   const handleNext = useCallback(() => {
     if (!isStepValid) {
@@ -312,7 +318,7 @@ export default function EssentialDataPage() {
         ...(hometownRegionCity.trim() !== '' ? { hometownRegionCity: hometownRegionCity.trim() } : {}),
         ...(relationshipStatus ? { relationshipStatus } : {}),
         ...(educationLevel ? { educationLevel } : {}),
-        ...(occupationId ? { occupationId, ...(industryId ? { industryCategory: industryId } : {}), ...(industryLabel ? { industryCategoryLabel: industryLabel } : {}) } : {}),
+        ...(occupationId ? { occupationId, ...(workMode ? { workMode } : {}), ...(industryId ? { industryCategory: industryId } : {}), ...(industryLabel ? { industryCategoryLabel: industryLabel } : {}) } : {}),
         ...(intent.length > 0 ? { intent } : {}),
       }
 
@@ -341,7 +347,7 @@ export default function EssentialDataPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, industryId, industryLabel, intent, invalidateAuth, isSubmitting, occupationId, relationshipStatus, saveCheckpoint])
+  }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, industryId, industryLabel, intent, invalidateAuth, isSubmitting, occupationId, relationshipStatus, saveCheckpoint, workMode])
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -533,6 +539,31 @@ export default function EssentialDataPage() {
                     )
                   })}
                 </View>
+              </View>
+
+              <View className='essential-data__field'>
+                <Text className='essential-data__label'>人生阶段</Text>
+                <Picker
+                  mode='selector'
+                  range={WORK_MODES.map((m) => m.label)}
+                  value={workMode ? WORK_MODES.findIndex((m) => m.value === workMode) : -1}
+                  onChange={(e) => {
+                    const mode = WORK_MODES[Number(e.detail.value)]
+                    if (mode) setWorkMode(mode.value)
+                  }}
+                >
+                  <View className={['essential-data__picker', workMode !== '' ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}>
+                    <Text className={['essential-data__picker-text', workMode !== '' ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta'].filter(Boolean).join(' ')}>
+                      {workMode !== '' ? (WORK_MODES.find((m) => m.value === workMode)?.label ?? '选填（点击选择）') : '选填（点击选择）'}
+                    </Text>
+                    {workMode !== '' && (
+                      <View className='essential-data__picker-check'>
+                        <Text className='essential-data__picker-check-icon'>✓</Text>
+                      </View>
+                    )}
+                  </View>
+                </Picker>
+                <Text className='essential-data__hint'>帮助我们更了解你的状态，匹配更合拍的朋友</Text>
               </View>
 
               <View className='essential-data__field'>

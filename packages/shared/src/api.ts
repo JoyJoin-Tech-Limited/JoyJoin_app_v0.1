@@ -784,6 +784,7 @@ export interface EssentialDataPayload {
   relationshipStatus?: string
   educationLevel?: string
   occupationId?: string
+  workMode?: string
   intent?: string[]
   [key: string]: unknown
 }

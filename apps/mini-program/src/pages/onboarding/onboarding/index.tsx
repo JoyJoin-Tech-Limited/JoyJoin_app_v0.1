@@ -23,8 +23,11 @@ export default function OnboardingEntryPage() {
       return
     }
 
-    // Redirect to the actual step the server says the user should be at
-    const step = nextStep ?? 'personality-test'
+    // Redirect to the actual step the server says the user should be at.
+    // 'onboarding' means we're already on the entry page — skip to the
+    // first proper step (personality-test) to avoid an infinite redirect loop.
+    const effectiveStep = nextStep === 'onboarding' ? 'personality-test' : nextStep
+    const step = effectiveStep ?? 'personality-test'
     void navigateToMiniProgramNextStep(step, { mode: 'replace' })
   }, [isLoading, isAuthenticated, nextStep])
 
