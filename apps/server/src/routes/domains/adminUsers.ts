@@ -754,6 +754,7 @@ export function registerAdminUserRoutes(app: Express): void {
         await tx.execute(sql`DELETE FROM notifications WHERE user_id = ${userId}`);
         await tx.execute(sql`DELETE FROM xp_transactions WHERE user_id = ${userId}`);
         await tx.execute(sql`DELETE FROM user_engagement_metrics WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM assessment_answers WHERE session_id IN (SELECT id FROM assessment_sessions WHERE user_id = ${userId})`);
         await tx.execute(sql`DELETE FROM assessment_sessions WHERE user_id = ${userId}`);
         await tx.execute(sql`DELETE FROM blind_box_pre_attendance WHERE user_id = ${userId}`);
         await tx.execute(sql`DELETE FROM referral_codes WHERE user_id = ${userId}`);
