@@ -40,6 +40,7 @@ export const ADMIN_AUDIT_ACTIONS = [
   // User moderation
   'USER_BANNED',
   'USER_UNBANNED',
+  'USER_DATA_DELETED',
   // Points / coins
   'ADMIN_POINTS_ADJUSTED',
   // Attendance

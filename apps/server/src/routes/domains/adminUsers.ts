@@ -726,4 +726,98 @@ export function registerAdminUserRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to unban user" });
     }
   });
+
+  // User Management - Delete all user data
+  app.delete("/api/admin/users/:id/data", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      await db.transaction(async (tx) => {
+        // Delete user's own data from all child tables
+        await tx.execute(sql`DELETE FROM event_attendance WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM event_pool_registrations WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM chat_messages WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM event_feedback WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM blind_box_events WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM test_responses WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM role_results WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM subscriptions WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM payments WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM coupon_usage WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM user_coupons WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM event_credit_grants WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM event_credit_redemptions WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM notifications WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM xp_transactions WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM user_engagement_metrics WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM assessment_sessions WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM blind_box_pre_attendance WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM referral_codes WHERE user_id = ${userId}`);
+
+        // Tables with multi-column user references
+        await tx.execute(sql`DELETE FROM match_history WHERE user1_id = ${userId} OR user2_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM connections WHERE user_a_id = ${userId} OR user_b_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM invitations WHERE inviter_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM invitation_uses WHERE invitee_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM referral_conversions WHERE invited_user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM reunion_responses WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM reunion_requests WHERE initiator_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM reports WHERE reporter_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM chat_reports WHERE reported_by = ${userId}`);
+
+        // Social icebreaker tables (no FK but store user_id)
+        await tx.execute(sql`DELETE FROM social_icebreaker_participants WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM social_icebreaker_lie_truths WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM social_icebreaker_ai_feedback WHERE submitted_by = ${userId}`);
+        await tx.execute(sql`DELETE FROM social_icebreaker_sessions WHERE host_user_id = ${userId}`);
+
+        // Phase-level social tables
+        await tx.execute(sql`DELETE FROM social_icebreaker_phase_pulse_checks WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM moment_card_interactions WHERE user_id = ${userId}`);
+
+        // Dialogue / AI tables
+        await tx.execute(sql`DELETE FROM golden_dialogues WHERE source_user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM dialogue_embeddings WHERE source_user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM industry_ai_logs WHERE user_id = ${userId}`);
+
+        // Nullify admin / reviewer / host references where this user was acting in a staff role
+        await tx.execute(sql`UPDATE events SET host_id = NULL WHERE host_id = ${userId}`);
+        await tx.execute(sql`UPDATE reports SET reviewed_by = NULL WHERE reviewed_by = ${userId}`);
+        await tx.execute(sql`UPDATE reports SET reported_user_id = NULL WHERE reported_user_id = ${userId}`);
+        await tx.execute(sql`UPDATE moderation_logs SET admin_id = NULL WHERE admin_id = ${userId}`);
+        await tx.execute(sql`UPDATE moderation_logs SET target_user_id = NULL WHERE target_user_id = ${userId}`);
+        await tx.execute(sql`UPDATE chat_reports SET reviewed_by = NULL WHERE reviewed_by = ${userId}`);
+        await tx.execute(sql`UPDATE chat_reports SET reported_user_id = NULL WHERE reported_user_id = ${userId}`);
+        await tx.execute(sql`UPDATE notifications SET sent_by = NULL WHERE sent_by = ${userId}`);
+        await tx.execute(sql`UPDATE golden_dialogues SET tagged_by_admin_id = NULL WHERE tagged_by_admin_id = ${userId}`);
+
+        // SET NULL tables
+        await tx.execute(sql`UPDATE participation_experiment_events SET user_id = NULL WHERE user_id = ${userId}`);
+        await tx.execute(sql`UPDATE discover_analytics_events SET user_id = NULL WHERE user_id = ${userId}`);
+
+        // Finally delete the user (CASCADE handles user_interests, user_semantic_profiles, etc.)
+        await tx.execute(sql`DELETE FROM users WHERE id = ${userId}`);
+      });
+
+      logAdminAudit({
+        action: 'USER_DATA_DELETED',
+        adminId: getActingAdminId(req),
+        adminRole: (req as any).adminRole,
+        targetEntityType: 'user',
+        targetEntityId: userId,
+        before: { displayName: user.displayName, phoneNumber: user.phoneNumber },
+        after: null,
+        context: { action: 'delete_all_user_data' as string },
+      });
+
+      res.json({ message: "User data deleted successfully" });
+    } catch (error) {
+      logger.error("Error deleting user data", { error: String(error) });
+      res.status(500).json({ message: "Failed to delete user data. See server logs for details." });
+    }
+  });
 }

@@ -35,6 +35,7 @@ import {
   Search,
   UserX,
   UserCheck,
+  Trash2,
   Calendar,
   Crown,
   AlertCircle,
@@ -85,6 +86,7 @@ export default function AdminUsersPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [showBanDialog, setShowBanDialog] = useState(false);
   const [banReason, setBanReason] = useState("");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
@@ -160,6 +162,36 @@ export default function AdminUsersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       setSelectedUser(null);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (userId: string) =>
+      fetch(`/api/admin/users/${userId}/data`, {
+        method: "DELETE",
+        credentials: "include",
+      }).then(async (res) => {
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
+          throw new Error(err.message || `Failed to delete user data: ${res.status}`);
+        }
+        return res.json();
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setShowDeleteDialog(false);
+      setSelectedUser(null);
+      toast({
+        title: "用户数据已删除",
+        description: "该用户的所有数据已从数据库清除",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "删除失败",
+        description: error.message || "无法删除用户数据，请重试",
+        variant: "destructive",
+      });
     },
   });
 
@@ -635,15 +667,27 @@ export default function AdminUsersPage() {
 
                   {/* Ban action */}
                   {!userDetail.user.isAdmin && (
-                    <Button
-                      variant={userDetail.user.isBanned ? "default" : "destructive"}
-                      className="w-full"
-                      onClick={() => userDetail.user.isBanned ? unbanMutation.mutate(userDetail.user.id) : setShowBanDialog(true)}
-                      disabled={banMutation.isPending || unbanMutation.isPending}
-                      data-testid={userDetail.user.isBanned ? "button-unban-user" : "button-ban-user"}
-                    >
-                      {userDetail.user.isBanned ? <><UserCheck className="h-4 w-4 mr-2" />解除封禁</> : <><UserX className="h-4 w-4 mr-2" />封禁用户</>}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={userDetail.user.isBanned ? "default" : "destructive"}
+                        className="flex-1"
+                        onClick={() => userDetail.user.isBanned ? unbanMutation.mutate(userDetail.user.id) : setShowBanDialog(true)}
+                        disabled={banMutation.isPending || unbanMutation.isPending}
+                        data-testid={userDetail.user.isBanned ? "button-unban-user" : "button-ban-user"}
+                      >
+                        {userDetail.user.isBanned ? <><UserCheck className="h-4 w-4 mr-2" />解除封禁</> : <><UserX className="h-4 w-4 mr-2" />封禁用户</>}
+                      </Button>
+                      <Button
+                        variant="default"
+                        className="flex-1 bg-black hover:bg-black/80 text-white"
+                        onClick={() => setShowDeleteDialog(true)}
+                        disabled={deleteMutation.isPending}
+                        data-testid="button-delete-user-data"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        删除用户数据
+                      </Button>
+                    </div>
                   )}
                 </TabsContent>
 
@@ -1053,6 +1097,53 @@ export default function AdminUsersPage() {
               data-testid="button-confirm-ban"
             >
               {banMutation.isPending ? "封禁中..." : "确认封禁"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete User Data Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-black" />
+              确认删除用户数据
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              {userDetail && (
+                <>
+                  <p>
+                    你即将永久删除用户 <strong>{userDetail.user.displayName || userDetail.user.phoneNumber}</strong> 的<strong>所有数据</strong>。
+                  </p>
+                  <p className="text-destructive font-medium">
+                    此操作不可撤销！以下数据将被永久清除：
+                  </p>
+                  <ul className="text-sm list-disc pl-4 space-y-1">
+                    <li>个人资料、职业信息、兴趣偏好</li>
+                    <li>人格测试结果与性格原型</li>
+                    <li>活动报名、参与记录、匹配历史</li>
+                    <li>支付记录、订阅、优惠券</li>
+                    <li>通知消息、聊天记录、连接关系</li>
+                    <li>经验值、Joy币、等级数据</li>
+                  </ul>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (userDetail) {
+                  deleteMutation.mutate(userDetail.user.id);
+                }
+              }}
+              disabled={deleteMutation.isPending}
+              className="bg-black text-white hover:bg-black/80"
+              data-testid="button-confirm-delete-user-data"
+            >
+              {deleteMutation.isPending ? "删除中..." : "确认永久删除"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
