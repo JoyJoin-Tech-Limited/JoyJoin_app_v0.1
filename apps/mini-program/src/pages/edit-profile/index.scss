@@ -2,105 +2,79 @@
 @use '../../styles/mixins' as *;
 
 .edit-profile {
+  display: flex;
+  flex-direction: column;
   min-height: 100dvh;
-  background: $color-bg;
+  background: $color-bg-gradient;
+  position: relative;
+
+  &__scroll {
+    flex: 1;
+    overflow: hidden;
+  }
 
   &__coach {
-    display: flex;
-    align-items: flex-start;
-    gap: $spacing-sm;
-    padding: $spacing-lg $container-padding 0;
+    padding: $spacing-lg $container-padding $spacing-md;
   }
 
-  &__coach-mascot {
-    width: 80rpx;
-    height: 80rpx;
-    flex-shrink: 0;
-  }
-
-  &__coach-bubble {
-    flex: 1;
-    background: rgba($color-primary, 0.06);
-    border-radius: 24rpx;
-    padding: $spacing-sm $spacing-md;
-    position: relative;
-
-    &::before {
-      content: '';
-      position: absolute;
-      left: -8rpx;
-      top: 24rpx;
-      width: 0;
-      height: 0;
-      border-top: 8rpx solid transparent;
-      border-bottom: 8rpx solid transparent;
-      border-right: 8rpx solid rgba($color-primary, 0.06);
-    }
-  }
-
-  &__coach-text {
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: $line-height-normal;
-  }
-
-  // ── Live Preview ──────────────────────────────────────────────
   &__preview {
-    margin: $spacing-lg $container-padding 0;
-    padding: $spacing-lg;
+    margin: 0 $container-padding $spacing-lg;
   }
 
-  &__preview-inner {
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
-  }
-
-  &__preview-text {
-    display: flex;
-    flex-direction: column;
-    gap: 4rpx;
-  }
-
-  &__preview-name {
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    line-height: $line-height-tight;
-  }
-
-  &__preview-archetype {
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: $line-height-normal;
-  }
-
-  // ── Section ───────────────────────────────────────────────────
+  // Section header with progress bar
   &__section {
-    padding: $spacing-lg $container-padding 0;
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__section-header {
+    margin-bottom: $spacing-md;
+  }
+
+  &__progress-bar {
+    width: 100%;
+    height: 6rpx;
+    background: rgba($color-primary, 0.08);
+    border-radius: 3rpx;
+    margin-bottom: $spacing-sm;
+    overflow: hidden;
+  }
+
+  &__progress-fill {
+    height: 100%;
+    width: 50%;
+    background: $color-primary;
+    border-radius: 3rpx;
+    transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+
+    &--complete {
+      width: 100%;
+    }
   }
 
   &__section-title {
     display: block;
-    font-size: $font-size-md;
+    font-size: $font-size-xl;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
-    margin-bottom: $spacing-md;
+    line-height: $line-height-tight;
+    margin-bottom: 4rpx;
   }
 
-  &__interest-count {
+  &__section-subtitle {
+    display: block;
     font-size: $font-size-sm;
-    font-weight: $font-weight-normal;
     color: $color-text-secondary;
+    line-height: $line-height-normal;
   }
 
-  // ── Card container ────────────────────────────────────────────
+  // Cards
   &__card {
     @include card;
     padding: $spacing-lg;
+    margin-bottom: $spacing-lg;
   }
 
-  // ── Form field ────────────────────────────────────────────────
   &__field {
     margin-bottom: $spacing-lg;
 
@@ -114,50 +88,116 @@
     font-size: $font-size-sm;
     font-weight: $font-weight-medium;
     color: $color-text-secondary;
-    margin-bottom: $spacing-xs;
+    margin-bottom: $spacing-sm;
+    line-height: $line-height-normal;
   }
 
   &__input {
     width: 100%;
-    height: $input-height;
+    min-height: 88rpx;
     padding: 0 $spacing-md;
+    border-radius: 16rpx;
+    background: $color-surface;
     border: 2rpx solid $color-border;
-    border-radius: $card-radius-sm;
     font-size: $font-size-base;
     color: $color-text-primary;
-    background: $color-surface;
-    box-sizing: border-box;
+    line-height: $line-height-normal;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
     &:focus {
       border-color: $color-primary;
+      box-shadow: 0 0 0 3rpx rgba($color-primary, 0.08);
+    }
+
+    &--error {
+      border-color: $color-error;
+      background: rgba($color-error, 0.03);
+
+      &:focus {
+        border-color: $color-error;
+        box-shadow: 0 0 0 3rpx rgba($color-error, 0.08);
+      }
     }
   }
 
-  // ── Radio group ───────────────────────────────────────────────
+  &__picker-value {
+    display: block;
+    width: 100%;
+    min-height: 88rpx;
+    padding: 0 $spacing-md;
+    border-radius: 16rpx;
+    background: $color-surface;
+    border: 2rpx solid $color-border;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    line-height: 88rpx;
+    transition: border-color 0.2s ease;
+
+    &--error {
+      border-color: $color-error;
+      background: rgba($color-error, 0.03);
+    }
+  }
+
+  // Radio group (gender)
   &__radio-group {
     display: flex;
     gap: $spacing-sm;
   }
 
   &__radio {
-    display: inline-flex;
+    flex: 1;
+    display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 56rpx;
-    padding: $spacing-xs $spacing-lg;
-    border-radius: 999rpx;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
-    color: $color-text-secondary;
-    background: $color-bg;
+    min-height: 88rpx;
+    border-radius: 16rpx;
+    background: $color-surface;
     border: 2rpx solid $color-border;
-    transition: all 0.2s ease;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 
     &--active {
-      color: $color-text-white;
-      background: $brand-gradient;
-      border-color: transparent;
-      box-shadow: 0 4rpx 16rpx rgba(168, 107, 255, 0.3);
+      color: $color-primary;
+      background: $color-primary-light;
+      border-color: $color-primary;
+      font-weight: $font-weight-medium;
+    }
+
+    &:active {
+      transform: scale(0.97);
+    }
+  }
+
+  // Choice chips (education)
+  &__choice-row {
+    display: flex;
+    gap: $spacing-sm;
+
+    &--wrap {
+      flex-wrap: wrap;
+    }
+  }
+
+  &__choice-chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 72rpx;
+    padding: 8rpx 24rpx;
+    border-radius: 16rpx;
+    background: $color-surface;
+    border: 2rpx solid $color-border;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+
+    &--selected {
+      color: $color-primary;
+      background: $color-primary-light;
+      border-color: $color-primary;
+      font-weight: $font-weight-medium;
     }
 
     &:active {
@@ -165,40 +205,100 @@
     }
   }
 
-  // ── Picker ────────────────────────────────────────────────────
-  &__picker-value {
-    display: flex;
-    align-items: center;
-    height: $input-height;
-    padding: 0 $spacing-md;
-    border: 2rpx solid $color-border;
-    border-radius: $card-radius-sm;
-    font-size: $font-size-base;
-    color: $color-text-primary;
-    background: $color-surface;
+  &__choice-chip-text {
+    line-height: 1.3;
   }
 
-  // ── Interest groups ───────────────────────────────────────────
-  &__interest-group {
-    margin-bottom: $spacing-lg;
+  // Intent grid
+  &__intent-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: $spacing-sm;
+  }
 
-    &:last-child {
-      margin-bottom: 0;
+  &__intent-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4rpx;
+    min-height: 88rpx;
+    padding: $spacing-md;
+    border-radius: 20rpx;
+    background: $color-surface;
+    border: 2rpx solid $color-border;
+    transition: background 0.2s ease, border-color 0.2s ease;
+
+    &--selected {
+      border-color: $color-primary;
+      background: $color-primary-light;
     }
+
+    &:active {
+      transform: scale(0.97);
+    }
+  }
+
+  &__intent-label {
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    line-height: $line-height-normal;
+  }
+
+  &__intent-subtitle {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+  }
+
+  &__intent-check {
+    position: absolute;
+    top: 12rpx;
+    right: 12rpx;
+    width: 32rpx;
+    height: 32rpx;
+    border-radius: 50%;
+    background: $color-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__intent-check-icon {
+    font-size: $font-size-2xs;
+    color: $color-text-white;
+    line-height: 1;
+  }
+
+  &__intent-count {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    font-weight: $font-weight-normal;
+    margin-left: 8rpx;
+  }
+
+  // Interest section
+  &__interest-section {
+    padding: 0 0 $spacing-lg;
   }
 
   &__interest-hint {
     display: block;
     font-size: $font-size-xs;
     color: $color-text-muted;
+    margin-bottom: $spacing-sm;
+    line-height: $line-height-normal;
+  }
+
+  &__interest-group {
     margin-bottom: $spacing-md;
-    line-height: 1.4;
   }
 
   &__interest-category {
     display: block;
     font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
+    font-weight: $font-weight-medium;
     color: $color-text-secondary;
     margin-bottom: $spacing-sm;
   }
@@ -206,7 +306,7 @@
   &__interest-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: $spacing-sm;
+    gap: 12rpx;
 
     &--loading {
       opacity: 0.5;
@@ -214,25 +314,123 @@
     }
   }
 
-  // Chip component handles all tag styling; container only needs layout
+  &__interest-count {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    font-weight: $font-weight-normal;
+    margin-left: 8rpx;
+  }
 
-  // ── Footer ────────────────────────────────────────────────────
-  &__footer {
-    padding: $spacing-xl $container-padding;
+  // Floating action bar
+  &__action-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: $spacing-md $container-padding calc(env(safe-area-inset-bottom) + $spacing-md);
+    background: $color-surface;
+    border-top: 1rpx solid rgba($color-text-primary, 0.04);
+    box-shadow: 0 -4rpx 24rpx rgba($color-text-primary, 0.04);
+    z-index: 10;
   }
 
   &__save-btn {
     width: 100%;
+    height: $button-height;
+    border-radius: $button-radius;
+    background: $color-primary;
+    color: $color-text-white;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+
+    &::after {
+      border: none;
+    }
   }
 
-  // ── Spacer (safe area) ────────────────────────────────────────
+  &__field-error {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-xs;
+    color: $color-error;
+    line-height: $line-height-normal;
+  }
+
+  // Skeleton loading
+  &__skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-lg;
+    padding: $spacing-lg $container-padding;
+    animation: edit-profile-skeleton-pulse 1.5s ease-in-out infinite;
+  }
+
+  &__skeleton-block {
+    border-radius: 16rpx;
+    background: linear-gradient(90deg, $color-divider 25%, rgba($color-divider, 0.5) 50%, $color-divider 75%);
+    background-size: 200% 100%;
+    animation: edit-profile-skeleton-shimmer 1.5s ease-in-out infinite;
+
+    &--hero {
+      height: 160rpx;
+    }
+
+    &--title {
+      height: 48rpx;
+      width: 60%;
+    }
+
+    &--card {
+      height: 320rpx;
+    }
+  }
+
   &__spacer {
-    height: 120rpx;
+    height: calc($button-height + $spacing-lg * 2 + env(safe-area-inset-bottom));
+  }
+}
+
+@keyframes edit-profile-skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes edit-profile-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .edit-profile__radio {
-    transition: none;
+  .edit-profile {
+    &__progress-fill {
+      transition: none;
+    }
+
+    &__radio,
+    &__choice-chip,
+    &__intent-card,
+    &__input {
+      transition: none;
+
+      &:active {
+        transform: none;
+      }
+    }
+
+    &__skeleton {
+      animation: none;
+    }
+
+    &__skeleton-block {
+      animation: none;
+    }
   }
 }

@@ -28,6 +28,16 @@
   opacity: 0;
   transition: opacity 0.18s ease-in;
 }
+.landing-page--exiting .game-preview {
+  opacity: 0;
+  transform: translateY(10rpx);
+  transition: all 0.18s ease-in;
+}
+.landing-page--exiting .bottom-zone {
+  opacity: 0;
+  transform: translateY(10rpx);
+  transition: all 0.18s ease-in;
+}
 
 /* ── Content Zone ──────────────────────────────────────────────────── */
 .content-zone {
@@ -59,6 +69,7 @@
   width: 256rpx;
   height: 256rpx;
   image-rendering: -webkit-optimize-contrast;
+  animation: mascot-bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 .hero-mascot-fallback {
@@ -74,7 +85,7 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  margin-top: 24rpx;
+  margin-top: 40rpx;
 }
 
 .headline {
@@ -82,9 +93,13 @@
   font-size: 56rpx; // mobile headline
   font-weight: 700;
   color: $color-text-primary-warm;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   text-wrap: balance;
+}
+
+.headline--accent {
+  color: $color-primary;
 }
 
 .subtitle {
@@ -92,8 +107,8 @@
   font-size: 28rpx;
   font-weight: 400;
   color: rgba($color-text-primary-warm, 0.62);
-  line-height: 1.45;
-  max-width: none;
+  line-height: 1.5;
+  max-width: 520rpx;
 }
 
 /* ── Bonding Cloud ─────────────────────────────────────────────────── */
@@ -101,7 +116,8 @@
   width: 100%;
   display: flex;
   justify-content: center;
-  margin-top: 32rpx;
+  margin-top: 44rpx;
+  margin-bottom: 12rpx;
   padding: 0 32rpx;
 }
 
@@ -110,22 +126,34 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 32rpx;
-  padding: 0 32rpx;
+  margin-top: 48rpx;
+  padding: 0 40rpx;
   width: 100%;
 }
 
 .game-preview__title {
-  font-size: 24rpx;
-  font-weight: 500;
-  color: rgba($color-text-primary-warm, 0.45);
-  margin-bottom: 20rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: $color-text-primary-warm;
+  margin-bottom: 28rpx;
+  align-self: flex-start;
+
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 8rpx;
+    height: 8rpx;
+    border-radius: 50%;
+    background: $color-primary;
+    margin-right: 12rpx;
+    vertical-align: middle;
+  }
 }
 
 .game-preview__grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12rpx;
+  gap: 32rpx 16rpx;
   width: 100%;
 }
 
@@ -133,18 +161,20 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16rpx;
-  padding: 28rpx 8rpx;
-  border-radius: 28rpx;
-  background: $color-surface;
-  border: 1rpx solid rgba($color-text-primary-warm, 0.06);
-  box-shadow: $shadow-card;
+  gap: 12rpx;
+  padding: 8rpx 0;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+
+  &:active {
+    transform: scale(0.94);
+    opacity: 0.8;
+  }
 }
 
 .game-preview__cell-label {
-  font-size: 26rpx;
-  font-weight: 600;
-  color: rgba($color-text-primary-warm, 0.8);
+  font-size: 24rpx;
+  font-weight: 500;
+  color: $color-text-secondary;
   text-align: center;
 }
 
@@ -188,8 +218,8 @@
 
 .landing-page__cta--primary {
   background: $color-primary;
-  color: #FFFFFF;
-  box-shadow: 0 4rpx 24rpx rgba($color-primary, 0.32);
+  color: $color-text-white;
+  box-shadow: 0 2rpx 12rpx rgba($color-primary, 0.2);
 }
 
 .landing-page__cta:focus-visible {
@@ -198,26 +228,38 @@
 }
 
 .landing-page__cta--primary.landing-page__cta-hover {
-  transform: scale(1.02);
-  box-shadow: 0 6rpx 36rpx rgba($color-primary, 0.42);
+  transform: scale(1.01);
+  box-shadow: 0 4rpx 20rpx rgba($color-primary, 0.28);
 }
 
 .landing-page__cta--disabled {
   opacity: 0.38;
   transform: none !important;
+
+  &:active {
+    opacity: 0.38 !important;
+    transform: none !important;
+  }
 }
 
 .landing-page__legal-row {
   display: flex;
   align-items: center;
-  gap: 12rpx;
+  gap: 16rpx;
+  min-height: 88rpx;
+  padding: 8rpx 0;
+  position: relative;
+
+  &.shake {
+    animation: shake 0.4s ease;
+  }
 }
 
 .landing-page__legal-checkbox {
-  width: 44rpx;
-  height: 44rpx;
+  width: 48rpx;
+  height: 48rpx;
   border: 2rpx solid rgba($color-text-primary-warm, 0.28);
-  border-radius: 8rpx;
+  border-radius: 10rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -235,8 +277,8 @@
 }
 
 .landing-page__legal-checkbox-icon {
-  font-size: 22rpx;
-  color: #FFFFFF;
+  font-size: 24rpx;
+  color: $color-text-white;
   font-weight: 600;
 }
 
@@ -254,10 +296,50 @@
   margin: 0 6rpx;
 }
 
-.landing-page__legal-helper {
-  font-size: 22rpx;
-  color: rgba($color-text-primary-warm, 0.38);
-  margin-top: 4rpx;
+
+
+.landing-page__login-row {
+  width: 100%;
+  margin-top: 16rpx;
+}
+
+.landing-page .landing-page__login-btn {
+  width: 100%;
+  height: 100rpx;
+  border-radius: 50rpx;
+  background: #111111;
+  color: $color-text-white;
+  box-shadow: $shadow-sm;
+  font-size: 30rpx;
+
+  &:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+
+  &.joy-button--disabled,
+  &.joy-button--loading {
+    opacity: 0.4;
+    background: #111111;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6rpx); }
+  75% { transform: translateX(6rpx); }
+}
+
+.landing-page__sr-only {
+  position: absolute;
+  width: 1rpx;
+  height: 1rpx;
+  padding: 0;
+  margin: -1rpx;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 // Reduced-motion fallback for game-preview cells
@@ -267,5 +349,13 @@
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+  }
+
+  .landing-page__legal-row.shake {
+    animation: none !important;
+  }
+
+  .hero-mascot {
+    animation: none !important;
   }
 }
