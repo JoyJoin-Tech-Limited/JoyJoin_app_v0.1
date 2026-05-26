@@ -80,26 +80,6 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     reasoning: "识别为全职家庭照护者"
   },
   
-  // ========== Freelance & Self-Employed ==========
-  {
-    patterns: [/自由职业|freelance|自由|独立工作|soho/i],
-    classification: {
-      category: "professional_services",
-      segment: "consulting",
-    },
-    confidence: 0.70,
-    reasoning: "识别为自由职业者，归类为专业服务"
-  },
-  {
-    patterns: [/创业|entrepreneur|创始人|founder|老板|自己当老板/i],
-    classification: {
-      category: "professional_services",
-      segment: "consulting",
-    },
-    confidence: 0.75,
-    reasoning: "识别为创业者或企业创始人"
-  },
-  
   // ========== Retirement & Career Transition ==========
   {
     patterns: [/退休|retired|退休人员|养老/i],
@@ -171,7 +151,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
   {
     patterns: [/建筑工|construction|工地|施工/i],
     classification: {
-      category: "real_estate",
+      category: "construction",
       segment: "construction",
     },
     confidence: 0.85,
@@ -260,7 +240,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     reasoning: "识别为运动员或体育从业者"
   },
   {
-    patterns: [/教练|coach|健身教练|fitness/i],
+    patterns: [/教练|健身教练|fitness|(?<!agile\s|scrum\s|tech\s|life\s|executive\s|career\s)coach/i],
     classification: {
       category: "culture_sports",
       segment: "sports",
@@ -361,9 +341,9 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
   
   // ========== Architecture & Design ==========
   {
-    patterns: [/建筑设计|architect|建筑师/i],
+    patterns: [/(?<!software\s|solution\s|system\s|cloud\s)architect|建筑师/i],
     classification: {
-      category: "real_estate",
+      category: "construction",
       segment: "construction",
     },
     confidence: 0.85,
@@ -379,6 +359,138 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     },
     confidence: 0.82,
     reasoning: "识别为环保或环境工程从业者"
+  },
+
+  // ========== Tech Support & Admin ==========
+  {
+    patterns: [/技术支持|IT\s*[Ss]upport|helpdesk|桌面支持/i],
+    classification: { category: "tech", segment: "software_dev" },
+    confidence: 0.85,
+    reasoning: "识别为技术支持人员"
+  },
+  {
+    patterns: [/HR|人力|人事|HRBP|人力资源/i],
+    classification: { category: "professional_services", segment: "human_resources" },
+    confidence: 0.88,
+    reasoning: "识别为人力资源从业者"
+  },
+  {
+    patterns: [/行政|Admin|行政专员|办公室文员/i],
+    classification: { category: "professional_services", segment: "admin" },
+    confidence: 0.85,
+    reasoning: "识别为行政人员"
+  },
+  {
+    patterns: [/销售代表|Sales(\s|$)|业务代表|商务拓展/i],
+    classification: { category: "consumer_retail", segment: "retail" },
+    confidence: 0.85,
+    reasoning: "识别为销售或业务拓展人员"
+  },
+  {
+    patterns: [/运营专员|运营经理|Operations/i],
+    classification: { category: "tech", segment: "product" },
+    confidence: 0.80,
+    reasoning: "识别为运营人员，默认归为科技领域"
+  },
+  {
+    patterns: [/客服|Customer\s*Service|客户支持|售后/i],
+    classification: { category: "consumer_retail", segment: "retail" },
+    confidence: 0.85,
+    reasoning: "识别为客户服务人员"
+  },
+  {
+    patterns: [/老师|教师|Teacher|讲师/i],
+    classification: { category: "education", segment: "k12" },
+    confidence: 0.88,
+    reasoning: "识别为教师从业者"
+  },
+  {
+    patterns: [/项目经理|Project\s*Manager|项目负责人/i],
+    classification: { category: "professional_services", segment: "consulting" },
+    confidence: 0.80,
+    reasoning: "识别为项目经理，归类为专业服务"
+  },
+  {
+    patterns: [/翻译|Translator|Interpreter|口译|笔译/i],
+    classification: { category: "professional_services", segment: "translation" },
+    confidence: 0.88,
+    reasoning: "识别为翻译从业者"
+  },
+  {
+    patterns: [/采购专员|Procurement|Buyer|采购/i],
+    classification: { category: "logistics", segment: "express_delivery" },
+    confidence: 0.82,
+    reasoning: "识别为采购或供应链人员"
+  },
+  {
+    patterns: [/质量管理|品控|质检|Quality\s*(Assurance|Control)/i],
+    classification: { category: "manufacturing", segment: "machinery" },
+    confidence: 0.82,
+    reasoning: "识别为质量管理或品控人员"
+  },
+  {
+    patterns: [/理发师|造型师|发型师|Barber|Hairdresser/i],
+    classification: { category: "life_services", segment: "hospitality" },
+    confidence: 0.85,
+    reasoning: "识别为美容美发从业者"
+  },
+  {
+    patterns: [/跨境电商|cross.?border.?ecom/i],
+    classification: { category: "consumer_retail", segment: "ecommerce" },
+    confidence: 0.85,
+    reasoning: "识别为跨境电商从业者"
+  },
+  {
+    patterns: [/健身教练|Fitness\s*Trainer|私教|Personal\s*Trainer/i],
+    classification: { category: "culture_sports", segment: "sports" },
+    confidence: 0.88,
+    reasoning: "识别为健身教练"
+  },
+  {
+    patterns: [/心理咨询师|心理医生|Therapist|心理/i],
+    classification: { category: "healthcare", segment: "mental_health" },
+    confidence: 0.85,
+    reasoning: "识别为心理健康从业者"
+  },
+
+  // ========== Remaining Edge Cases (before catch-alls) ==========
+  {
+    patterns: [/full.?stack|fullstack|全栈/i],
+    classification: { category: "tech", segment: "software_dev" },
+    confidence: 0.88,
+    reasoning: "识别为全栈开发工程师"
+  },
+  {
+    patterns: [/construction|建筑工|施工|civil.?engineer/i],
+    classification: { category: "construction", segment: "construction" },
+    confidence: 0.85,
+    reasoning: "识别为建筑工程从业者"
+  },
+  {
+    patterns: [/devops|DevOps/i],
+    classification: { category: "tech", segment: "devops_sre" },
+    confidence: 0.88,
+    reasoning: "识别为DevOps/SRE工程师"
+  },
+
+  // ========== General Catch-alls (lowest priority — must come after specific occupation rules) ==========
+  {
+    patterns: [/自由职业|freelance|独立工作|soho/i],
+    classification: {
+      category: "professional_services",
+      segment: "consulting",
+    },
+    confidence: 0.70,
+    reasoning: "识别为自由职业者，归类为专业服务"
+  },
+  {
+    patterns: [/创业|entrepreneur|创始人|founder|老板|自己当老板/i],
+    classification: {
+      category: "professional_services",
+      segment: "consulting",
+    },
+    confidence: 0.75,
+    reasoning: "识别为创业者或企业创始人"
   },
 ];
 

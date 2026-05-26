@@ -10,16 +10,10 @@ import {
   RELATIONSHIP_STATUS_OPTIONS,
 } from '@shared/constants'
 import {
-  getHotOccupations,
-  getIndustryDisplayLabel,
-  getIndustryId,
-  getOccupationById,
   getOccupationGuidance,
-  OCCUPATIONS,
-  searchOccupations,
   WORK_MODES,
 } from '@shared/occupations'
-import { submitEssentialData } from '@shared/api'
+import { submitEssentialData, type AuthUserResponse } from '@shared/api'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import { TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../../lib/utils/uiConstants'
@@ -31,16 +25,18 @@ import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardin
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
 import { logError, logInfo } from '../../../lib/utils/logger'
+import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
 import FormStepper from '../../../components/ui/FormStepper'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
-import { getXiaoyueAsset } from '../personality-test/visuals'
+import ProfessionChatOverlay from '../../../components/ProfessionChatOverlay'
+import type { ProfessionClassificationData } from '../../../components/ProfessionChatOverlay'
+import { getArchetypeVisual, getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
-const HOT_OCCUPATIONS = getHotOccupations(18)
 const MAX_INTENTS = 3
 const currentYear = new Date().getFullYear()
 const BIRTH_YEAR_RANGE = Array.from(
@@ -154,6 +150,7 @@ function saveCachedProgress(data: CachedProgress) {
 }
 
 export default function EssentialDataPage() {
+  const { shouldReduceMotion } = useMiniRevealMotion()
   const [currentStep, setCurrentStep] = useState(0)
   const [displayName, setDisplayName] = useState('')
   const [gender, setGender] = useState('')
@@ -162,24 +159,26 @@ export default function EssentialDataPage() {
   const [hometownRegionCity, setHometownRegionCity] = useState('')
   const [relationshipStatus, setRelationshipStatus] = useState('')
   const [educationLevel, setEducationLevel] = useState('')
-  const [occupationId, setOccupationId] = useState('')
+  const [professionText, setProfessionText] = useState('')
+  const [isProfessionOverlayClosing, setIsProfessionOverlayClosing] = useState(false)
   const [workMode, setWorkMode] = useState('')
   const [intent, setIntent] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [error, setError] = useState('')
+  const [showProfessionOverlay, setShowProfessionOverlay] = useState(false)
+  const [professionClassification, setProfessionClassification] = useState<ProfessionClassificationData | null>(null)
 
   useResetOnShow(setIsPageExiting, setIsSubmitting)
-  const [occupationQuery, setOccupationQuery] = useState('')
-  const [occupationSuggestions, setOccupationSuggestions] = useState<Array<{ occupationId: string; displayName: string; industryId: string }>>([])
-  const [isSearching, setIsSearching] = useState(false)
-  const [showSuggestions, setShowSuggestions] = useState(false)
   const [mascotReaction, setMascotReaction] = useState('')
   const mascotTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { user, isLoading } = useAuthGuard({
     suspendOnboardingRedirect: isSubmitting || isPageExiting,
   })
+  const userArchetype = (user?.primaryArchetype as string | undefined) || (user?.archetype as string | undefined) || ''
+  const archetypeVisual = userArchetype ? getArchetypeVisual(userArchetype) : null
+  const accentColor = archetypeVisual?.accent || ''
   const invalidateAuth = useInvalidateAuth()
   const analytics = useOnboardingAnalytics('essential-data', { enabled: !isLoading })
   const { saveCheckpoint } = useOnboardingCheckpoint()
@@ -198,7 +197,14 @@ export default function EssentialDataPage() {
     setHometownRegionCity((c) => c || cached?.hometownRegionCity || (typeof source.hometownRegionCity === 'string' ? source.hometownRegionCity : '') || '')
     setRelationshipStatus((c) => c || cached?.relationshipStatus || (typeof source.relationshipStatus === 'string' ? source.relationshipStatus : '') || '')
     setEducationLevel((c) => c || cached?.educationLevel || (typeof source.educationLevel === 'string' ? source.educationLevel : '') || '')
-    setOccupationId((c) => c || cached?.occupationId || (typeof source.occupationId === 'string' ? source.occupationId : '') || '')
+    setProfessionText((c) => {
+      if (c) return c
+      if (cached?.occupationId) return cached.occupationId
+      if (typeof source.occupationId === 'string') {
+        return source.occupationId
+      }
+      return ''
+    })
     setWorkMode((c) => c || cached?.workMode || (typeof source.workMode === 'string' ? source.workMode : '') || '')
     setIntent((c) => (c.length > 0 ? c : cached?.intent || (Array.isArray(source.intent) ? source.intent.filter((item): item is string => typeof item === 'string') : [])))
     setCurrentStep((c) => (c === 0 && cached?.currentStep ? Math.min(cached.currentStep, TOTAL_STEPS - 1) : c))
@@ -215,32 +221,20 @@ export default function EssentialDataPage() {
       hometownRegionCity,
       relationshipStatus,
       educationLevel,
-      occupationId,
+      occupationId: professionText,
       workMode,
       intent,
       timestamp: Date.now(),
     })
-  }, [currentStep, displayName, gender, birthYear, currentCity, hometownRegionCity, relationshipStatus, educationLevel, occupationId, workMode, intent])
+  }, [currentStep, displayName, gender, birthYear, currentCity, hometownRegionCity, relationshipStatus, educationLevel, professionText, workMode, intent])
 
   const cityOptions = useMemo(() => [...CURRENT_CITY_OPTIONS], [])
   const relationshipOptions = useMemo(() => [...RELATIONSHIP_STATUS_OPTIONS], [])
-  const occupationOptions = useMemo(() => {
-    const selected = occupationId ? getOccupationById(occupationId) : undefined
-    if (selected && !HOT_OCCUPATIONS.some((item) => item.id === selected.id)) {
-      return [selected, ...HOT_OCCUPATIONS]
-    }
-    return HOT_OCCUPATIONS
-  }, [occupationId])
-  const occupationLabels = useMemo(() => occupationOptions.map((item) => item.displayName), [occupationOptions])
-  const selectedOccupation = occupationId ? getOccupationById(occupationId) : undefined
-  const industryId = occupationId ? getIndustryId(occupationId) : null
-  const industryLabel = occupationId ? getIndustryDisplayLabel(occupationId, '') : ''
   const occupationGuidance = useMemo(() => getOccupationGuidance(intent[0] ?? INTENT_OPTIONS[0].value), [intent])
 
   const birthYearIndex = birthYear > 0 ? BIRTH_YEAR_RANGE.indexOf(birthYear) : -1
   const currentCityIndex = currentCity ? cityOptions.findIndex((option) => option === currentCity) : -1
   const relationshipIndex = relationshipStatus ? relationshipOptions.findIndex((option) => option === relationshipStatus) : -1
-  const occupationIndex = occupationId ? occupationOptions.findIndex((item) => item.id === occupationId) : -1
   const intentOptions = useMemo(() => [...INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION], [])
 
   const stepConfig = STEP_CONFIG[currentStep]
@@ -273,7 +267,6 @@ export default function EssentialDataPage() {
       case 1:
         return gender !== '' && birthYear > 0
       case 2:
-        if (occupationQuery.trim() !== '' && occupationId === '') return false
         return true
       case 3:
         return currentCity !== ''
@@ -282,7 +275,7 @@ export default function EssentialDataPage() {
       default:
         return false
     }
-  }, [currentStep, displayName, gender, birthYear, currentCity, intent.length, occupationId, occupationQuery])
+  }, [currentStep, displayName, gender, birthYear, currentCity, intent.length])
 
   const handleNext = useCallback(() => {
     if (!isStepValid) {
@@ -304,6 +297,28 @@ export default function EssentialDataPage() {
     }
   }, [currentStep])
 
+  const handleForceSkip = useCallback(async () => {
+    try {
+      const { confirm } = await Taro.showModal({
+        title: '跳过当前步骤',
+        content: '确定要跳过这一步吗？悦仔建议尽量完成，匹配会更精准。',
+        confirmText: '确认跳过',
+        cancelText: '继续填写',
+      })
+      if (!confirm) return
+      setIsSubmitting(true)
+      const response = await apiRequest<AuthUserResponse>({ path: '/api/auth/onboarding/force-skip', method: 'POST' })
+      await invalidateAuth()
+      const nextStep = response.nextStep ?? 'discover'
+      await navigateToMiniProgramNextStep(nextStep, { mode: 'replace' })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '跳过失败，请重试'
+      Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [invalidateAuth])
+
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return
     setIsSubmitting(true)
@@ -318,7 +333,20 @@ export default function EssentialDataPage() {
         ...(hometownRegionCity.trim() !== '' ? { hometownRegionCity: hometownRegionCity.trim() } : {}),
         ...(relationshipStatus ? { relationshipStatus } : {}),
         ...(educationLevel ? { educationLevel } : {}),
-        ...(occupationId ? { occupationId, ...(workMode ? { workMode } : {}), ...(industryId ? { industryCategory: industryId } : {}), ...(industryLabel ? { industryCategoryLabel: industryLabel } : {}) } : {}),
+        ...(professionText.trim() !== '' ? {
+          occupationId: professionText.trim(),
+          industryRawInput: professionText.trim(),
+          ...(workMode ? { workMode } : {}),
+          ...(professionClassification?.standardizedOccupationId ? { standardizedOccupationId: professionClassification.standardizedOccupationId } : {}),
+          ...(professionClassification?.industryCategoryLabel ? { industryCategoryLabel: professionClassification.industryCategoryLabel } : {}),
+          ...(professionClassification?.industrySegmentLabel ? { industrySegmentLabel: professionClassification.industrySegmentLabel } : {}),
+          ...(professionClassification?.industryNicheLabel ? { industryNicheLabel: professionClassification.industryNicheLabel } : {}),
+          ...(professionClassification?.industryCategory ? { industryCategory: professionClassification.industryCategory } : {}),
+          ...(professionClassification?.industrySegmentNew ? { industrySegmentNew: professionClassification.industrySegmentNew } : {}),
+          ...(professionClassification?.industryNiche ? { industryNiche: professionClassification.industryNiche } : {}),
+          ...(professionClassification?.industrySource ? { industrySource: professionClassification.industrySource } : {}),
+          ...(professionClassification?.industryConfidence !== undefined ? { industryConfidence: professionClassification.industryConfidence } : {}),
+        } : {}),
         ...(intent.length > 0 ? { intent } : {}),
       }
 
@@ -334,6 +362,7 @@ export default function EssentialDataPage() {
         nextStep: userState.nextStep ?? 'extended-data',
       })
 
+      Taro.showToast({ title: '入场名片已保存', icon: 'success', duration: TOAST_DEFAULT_MS })
       await navigateToMiniProgramNextStep(userState.nextStep, {
         mode: 'replace',
         transition: { beforeNavigate: () => setIsPageExiting(true) },
@@ -347,40 +376,27 @@ export default function EssentialDataPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, industryId, industryLabel, intent, invalidateAuth, isSubmitting, occupationId, relationshipStatus, saveCheckpoint, workMode])
+  }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, intent, invalidateAuth, isSubmitting, professionText, professionClassification, relationshipStatus, saveCheckpoint, workMode])
 
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const handleOccupationInput = useCallback((value: string) => {
-    setOccupationQuery(value)
-    setOccupationId('')
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
-    if (value.trim().length < 1) {
-      setOccupationSuggestions([])
-      setShowSuggestions(false)
-      return
+  const handleProfessionSubmit = useCallback((value: string, classification?: ProfessionClassificationData) => {
+    setProfessionText(value)
+    if (classification) {
+      setProfessionClassification(classification)
     }
-    setIsSearching(true)
-    searchTimerRef.current = setTimeout(() => {
-      const matches = searchOccupations(value.trim())
-      setOccupationSuggestions(matches.map((occ) => ({
-        occupationId: occ.id,
-        displayName: occ.displayName,
-        industryId: occ.industryId,
-      })))
-      setShowSuggestions(matches.length > 0)
-      setIsSearching(false)
-    }, 150)
-  }, [])
+    setIsProfessionOverlayClosing(true)
+    setTimeout(() => {
+      setShowProfessionOverlay(false)
+      setIsProfessionOverlayClosing(false)
+    }, shouldReduceMotion ? 0 : 350)
+  }, [shouldReduceMotion])
 
-  const handleSelectOccupation = useCallback((id: string) => {
-    const occ = OCCUPATIONS.find((o) => o.id === id)
-    if (occ) {
-      setOccupationId(id)
-      setOccupationQuery(occ.displayName)
-      setShowSuggestions(false)
-    }
-  }, [])
+  const handleProfessionSkip = useCallback(() => {
+    setIsProfessionOverlayClosing(true)
+    setTimeout(() => {
+      setShowProfessionOverlay(false)
+      setIsProfessionOverlayClosing(false)
+    }, shouldReduceMotion ? 0 : 350)
+  }, [shouldReduceMotion])
 
   const toggleIntent = useCallback(
     (value: string) => {
@@ -505,12 +521,15 @@ export default function EssentialDataPage() {
                     triggerMascotReaction(` ${year}年，正是好年纪！✨`)
                   }}
                 >
-                  <View className={['essential-data__picker', birthYear > 0 ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}>
+                  <View
+                    className={['essential-data__picker', birthYear > 0 ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}
+                    style={birthYear > 0 && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${accentColor}20` } : undefined}
+                  >
                     <Text className={['essential-data__picker-text', birthYear > 0 ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta'].filter(Boolean).join(' ')}>
                       {birthYear > 0 ? `${birthYear} 年` : '请选择出生年份'}
                     </Text>
                     {birthYear > 0 && (
-                      <View className='essential-data__picker-check'>
+                      <View className='essential-data__picker-check' style={accentColor ? { background: accentColor } : undefined}>
                         <Text className='essential-data__picker-check-icon'>✓</Text>
                       </View>
                     )}
@@ -552,12 +571,15 @@ export default function EssentialDataPage() {
                     if (mode) setWorkMode(mode.value)
                   }}
                 >
-                  <View className={['essential-data__picker', workMode !== '' ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}>
+                  <View
+                    className={['essential-data__picker', workMode !== '' ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}
+                    style={workMode !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${accentColor}20` } : undefined}
+                  >
                     <Text className={['essential-data__picker-text', workMode !== '' ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta'].filter(Boolean).join(' ')}>
                       {workMode !== '' ? (WORK_MODES.find((m) => m.value === workMode)?.label ?? '选填（点击选择）') : '选填（点击选择）'}
                     </Text>
                     {workMode !== '' && (
-                      <View className='essential-data__picker-check'>
+                      <View className='essential-data__picker-check' style={accentColor ? { background: accentColor } : undefined}>
                         <Text className='essential-data__picker-check-icon'>✓</Text>
                       </View>
                     )}
@@ -568,41 +590,30 @@ export default function EssentialDataPage() {
 
               <View className='essential-data__field'>
                 <Text className='essential-data__label'>{occupationGuidance.title}</Text>
-                <View className='essential-data__search-wrap'>
-                  <Input
-                    className={['essential-data__input', occupationId !== '' ? 'essential-data__input--filled' : ''].filter(Boolean).join(' ')}
-                    placeholder='搜索你的职业，如：产品经理、程序员、设计师'
-                    value={occupationQuery}
-                    onInput={(e) => handleOccupationInput(e.detail.value)}
-                    onConfirm={() => {}}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                    maxlength={30}
-                  />
-                  {isSearching && (
-                    <View className='essential-data__search-spinner'>
-                      <Text className='essential-data__spinner-text'>搜索中…</Text>
-                    </View>
-                  )}
-                  {showSuggestions && occupationSuggestions.length > 0 && (
-                    <View className='essential-data__suggestions'>
-                      {occupationSuggestions.map((s) => (
-                        <View
-                          key={s.occupationId}
-                          className='essential-data__suggestion-item'
-                          onClick={() => handleSelectOccupation(s.occupationId)}
-                        >
-                          <Text className='essential-data__suggestion-name'>{s.displayName}</Text>
-                        </View>
-                      ))}
+                <View
+                  className={[
+                    'essential-data__picker',
+                    professionText !== '' ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta',
+                  ].filter(Boolean).join(' ')}
+                  style={professionText !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${accentColor}20` } : undefined}
+                  onClick={() => setShowProfessionOverlay(true)}
+                >
+                  <Text
+                    className={[
+                      'essential-data__picker-text',
+                      professionText !== '' ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta',
+                    ].filter(Boolean).join(' ')}
+                  >
+                    {professionText !== '' ? professionText : '选填（点击告诉悦仔）'}
+                  </Text>
+                  {professionText !== '' && (
+                    <View className='essential-data__picker-check' style={accentColor ? { background: accentColor } : undefined}>
+                      <Text className='essential-data__picker-check-icon'>✓</Text>
                     </View>
                   )}
                 </View>
                 <Text className='essential-data__hint'>
-                  {selectedOccupation
-                    ? (industryLabel ? `${selectedOccupation.displayName} · ${industryLabel}` : selectedOccupation.displayName)
-                    : occupationQuery && !isSearching && occupationSuggestions.length === 0
-                      ? '未找到匹配的职业，试试其他关键词'
-                      : occupationGuidance.matchPreview}
+                  {professionText !== '' ? '已记录，我会用它来优化匹配~' : occupationGuidance.matchPreview}
                 </Text>
               </View>
 
@@ -626,12 +637,15 @@ export default function EssentialDataPage() {
                     triggerMascotReaction(reactions[status] || '了解！')
                   }}
                 >
-                  <View className={['essential-data__picker', relationshipStatus !== '' ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}>
+                  <View
+                    className={['essential-data__picker', relationshipStatus !== '' ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}
+                    style={relationshipStatus !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${accentColor}20` } : undefined}
+                  >
                     <Text className={['essential-data__picker-text', relationshipStatus !== '' ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta'].filter(Boolean).join(' ')}>
                       {relationshipStatus || '选填（点击选择）'}
                     </Text>
                     {relationshipStatus !== '' && (
-                      <View className='essential-data__picker-check'>
+                      <View className='essential-data__picker-check' style={accentColor ? { background: accentColor } : undefined}>
                         <Text className='essential-data__picker-check-icon'>✓</Text>
                       </View>
                     )}
@@ -654,10 +668,18 @@ export default function EssentialDataPage() {
                   value={currentCityIndex >= 0 ? currentCityIndex : 0}
                   onChange={(e) => setCurrentCity(cityOptions[Number(e.detail.value)] ?? '')}
                 >
-                  <View className='essential-data__picker'>
+                  <View
+                    className='essential-data__picker'
+                    style={currentCity !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${accentColor}20` } : undefined}
+                  >
                     <Text className={['essential-data__picker-text', currentCity !== '' ? 'essential-data__picker-text--filled' : ''].filter(Boolean).join(' ')}>
                       {currentCity || '请选择'}
                     </Text>
+                    {currentCity !== '' && (
+                      <View className='essential-data__picker-check' style={accentColor ? { background: accentColor } : undefined}>
+                        <Text className='essential-data__picker-check-icon'>✓</Text>
+                      </View>
+                    )}
                   </View>
                 </Picker>
               </View>
@@ -719,6 +741,16 @@ export default function EssentialDataPage() {
       {/* Fixed bottom CTA tray */}
       <View className='essential-data__tray'>
         {error ? <Text className='essential-data__error'>{error}</Text> : null}
+        {user?.features?.onboardingForceSkip && (
+          <Button
+            variant='secondary'
+            className='essential-data__skip-btn'
+            onClick={handleForceSkip}
+            disabled={isSubmitting}
+          >
+            跳过
+          </Button>
+        )}
         {currentStep < TOTAL_STEPS - 1 ? (
           <Button
             variant='brand'
@@ -740,6 +772,15 @@ export default function EssentialDataPage() {
           </Button>
         )}
       </View>
+
+      <ProfessionChatOverlay
+        visible={showProfessionOverlay}
+        isClosing={isProfessionOverlayClosing}
+        initialValue={professionText}
+        smartProfession={user?.features?.smartProfession ?? false}
+        onSubmit={handleProfessionSubmit}
+        onSkip={handleProfessionSkip}
+      />
     </View>
   )
 }

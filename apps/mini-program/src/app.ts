@@ -14,6 +14,7 @@ import { AchievementProvider } from './providers/AchievementProvider'
 import AchievementPopup from './components/AchievementPopup'
 import './app.scss'
 import { loadBrandDisplayFont } from './lib/utils/brandFont'
+import { useProfessionRetry } from './hooks/useProfessionRetry'
 
 function AutoLoginBridge() {
   const { isAuthenticated, isLoading } = useAuth()
@@ -41,6 +42,12 @@ function AutoLoginBridge() {
       })
   }, [isAuthenticated, isLoading, queryClient])
 
+  return null
+}
+
+function ProfessionRetryBridge() {
+  const { user } = useAuth()
+  useProfessionRetry(user)
   return null
 }
 
@@ -133,6 +140,7 @@ function App({ children }: PropsWithChildren<any>) {
         AchievementProvider,
         null,
         createElement(PendingOrderResumeBridge),
+        createElement(ProfessionRetryBridge),
         createElement(AchievementPopup),
         children,
       ),

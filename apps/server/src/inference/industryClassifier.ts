@@ -23,7 +23,7 @@ const CONFIDENCE_THRESHOLDS = {
   FUZZY_HIGH: 0.85,      // High confidence fuzzy match (use immediately)
   FUZZY_DECENT: 0.70,    // Decent fuzzy match (use if seed fails)
   SEED_MIN: 0.90,        // Minimum seed match confidence
-  TAXONOMY_MIN: 0.80,    // Minimum taxonomy match confidence
+  TAXONOMY_MIN: 0.85,    // Minimum taxonomy match confidence (raised from 0.80 to let AI correct weak keyword matches)
   NICHE_INFERENCE_SEED: 0.85,    // Niche inference for seed/taxonomy
   NICHE_INFERENCE_AI: 0.80,      // Niche inference for AI results
 };
@@ -330,12 +330,39 @@ ${categoryList}
     const content = response.choices[0]?.message?.content;
     if (!content) return null;
     
-    const aiResult = JSON.parse(content);
+    let aiResult: any;
+    try {
+      aiResult = JSON.parse(content);
+    } catch {
+      logger.warn("Failed to parse AI classification JSON", { input: userInput.substring(0, 30) });
+      return null;
+    }
     
-    const category = findCategoryById(aiResult.category);
-    const segment = category ? findSegmentById(aiResult.category, aiResult.segment) : null;
+    let category = findCategoryById(aiResult.category);
+    if (!category) {
+      const aiCatLab = (aiResult.categoryLabel || '').replace(/\s+/g, '');
+      category = INDUSTRY_TAXONOMY.find(
+        c => c.id === aiResult.category || c.label.replace(/\s+/g, '') === aiCatLab
+      );
+    }
+    let segment = category ? findSegmentById(category.id, aiResult.segment) : null;
+    if (category && !segment && aiResult.segmentLabel) {
+      // Dynamic segment: use AI's label as the segment name, auto-registered
+      segment = { id: aiResult.segment || `ai_${aiResult.segmentLabel}`, label: aiResult.segmentLabel, niches: [] };
+    } else if (!segment && category) {
+      segment = category.segments[0];
+    }
     
-    if (!category || !segment) return null;
+    if (!category || !segment) {
+      logger.warn("AI returned non-matching taxonomy IDs", {
+        input: userInput.substring(0, 30),
+        aiCategory: aiResult.category,
+        aiCategoryLabel: aiResult.categoryLabel,
+        aiSegment: aiResult.segment,
+        aiSegmentLabel: aiResult.segmentLabel,
+      });
+      return null;
+    }
     
     let niche = undefined;
     if (aiResult.niche) {
@@ -875,7 +902,12 @@ export async function classifyIndustryUnified(
 }
 
 /**
- * 主分类函数
+ * 主分类函数 (serial waterfall: fuzzy → seed → semantic → taxonomy → AI)
+ * @deprecated Prefer {@link classifyIndustryUnified} for all new callers.
+ *   classifyIndustryUnified includes context-aware occupation seed matching
+ *   and internal caching. This function remains for backward compatibility
+ *   and as the AI-only path used by the understand-profession endpoint's
+ *   parallel classification strategy.
  */
 export async function classifyIndustry(
   userInput: string
@@ -912,36 +944,36 @@ export async function classifyIndustry(
     return { ...fuzzyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
+  // Tier 2: Taxonomy直接匹配
+  const taxonomyResult = matchViaTaxonomy(cleanInput);
+  if (taxonomyResult && taxonomyResult.confidence >= CONFIDENCE_THRESHOLDS.TAXONOMY_MIN) {
+    const normalizedInput = await resolveNormalizedInput(taxonomyResult);
+    return { ...taxonomyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
+  }
+  
   // Semantic fallback for well-known edge cases (farmer, student, etc.)
-  // Applied after fuzzy/seed to preserve occupation-specific matching (e.g. typo correction)
-  const earlySemanticMatch = applySemanticFallback(cleanInput);
-  if (earlySemanticMatch) {
-    const category = findCategoryById(earlySemanticMatch.category);
-    const segment = category ? findSegmentById(earlySemanticMatch.category, earlySemanticMatch.segment) : null;
+  // Runs AFTER taxonomy so that taxonomy's stronger matches take priority over regex catch-alls
+  const semanticMatch = applySemanticFallback(cleanInput);
+  if (semanticMatch) {
+    const category = findCategoryById(semanticMatch.category);
+    const segment = category ? findSegmentById(semanticMatch.category, semanticMatch.segment) : null;
     if (category && segment) {
       const result: IndustryClassificationResult = {
         category: { id: category.id, label: category.label },
         segment: { id: segment.id, label: segment.label },
-        niche: earlySemanticMatch.niche ? (() => {
-          const nicheFound = findNicheById(earlySemanticMatch.category, earlySemanticMatch.segment, earlySemanticMatch.niche!);
-          return nicheFound ? { id: earlySemanticMatch.niche!, label: nicheFound.label } : undefined;
+        niche: semanticMatch.niche ? (() => {
+          const nicheFound = findNicheById(semanticMatch.category, semanticMatch.segment, semanticMatch.niche!);
+          return nicheFound ? { id: semanticMatch.niche!, label: nicheFound.label } : undefined;
         })() : undefined,
-        confidence: earlySemanticMatch.confidence,
+        confidence: semanticMatch.confidence,
         source: "fallback",
-        reasoning: earlySemanticMatch.reasoning,
+        reasoning: semanticMatch.reasoning,
         processingTimeMs: Date.now() - startTime,
         rawInput: cleanInput,
         normalizedInput: cleanInput,
       };
       return ensureReasoning(result, cleanInput);
     }
-  }
-  
-  // Tier 2: Taxonomy直接匹配
-  const taxonomyResult = matchViaTaxonomy(cleanInput);
-  if (taxonomyResult && taxonomyResult.confidence >= CONFIDENCE_THRESHOLDS.TAXONOMY_MIN) {
-    const normalizedInput = await resolveNormalizedInput(taxonomyResult);
-    return { ...taxonomyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
   // Tier 3: AI深度分析

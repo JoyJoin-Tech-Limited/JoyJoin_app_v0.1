@@ -39,6 +39,7 @@ import { registerShellRoutes } from "./routes/domains/shell";
 import { registerEventRoutes } from "./routes/domains/events";
 import { registerConnectionRoutes } from "./routes/domains/connections";
 import { registerMatchCompassRoutes } from "./routes/domains/matchCompass";
+import { registerProfessionUnderstandingRoutes } from "./routes/domains/professionUnderstanding";
 import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
 import session from "express-session";
@@ -162,6 +163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerTelemetryRoutes(app);
   registerXiaoyueRoutes(app);
   registerCityUnlockRoutes(app);
+  registerProfessionUnderstandingRoutes(app);
 
   return httpServer;
 }

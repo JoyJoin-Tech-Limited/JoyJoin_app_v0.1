@@ -1,0 +1,413 @@
+@use '../styles/variables' as *;
+@use '../styles/mixins' as *;
+
+.profession-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: $z-modal;
+  display: flex;
+  flex-direction: column;
+  background: $color-surface;
+  animation: profession-overlay-enter 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+
+  &--closing {
+    animation: profession-overlay-exit 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  &__header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 96rpx;
+    padding: 0 $container-padding;
+    @include safe-area-inline($container-padding);
+    @include safe-area-top(padding-top, 0rpx);
+  }
+
+  &__step-badge {
+    padding: 8rpx 20rpx;
+    background: rgba($color-primary, 0.08);
+    border-radius: 24rpx;
+  }
+
+  &__step-badge-text {
+    font-size: $font-size-xs;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  &__skip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
+    min-width: 96rpx;
+    padding: 0 $spacing-sm;
+    border-radius: 32rpx;
+    background: rgba($color-text-primary, 0.04);
+
+    &:active {
+      background: rgba($color-text-primary, 0.08);
+    }
+  }
+
+  &__skip-text {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    font-weight: $font-weight-medium;
+  }
+
+  &__chat {
+    flex: 1;
+    min-height: 0;
+    box-sizing: border-box;
+    padding: 0 $container-padding;
+    @include safe-area-inline($container-padding);
+  }
+
+  &__chat-inner {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+    padding-top: $spacing-md;
+    padding-bottom: $spacing-lg;
+  }
+
+  &__message {
+    display: flex;
+    align-items: flex-end;
+    gap: $spacing-sm;
+    animation: profession-message-enter 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+
+    &--xiaoyue {
+      align-self: flex-start;
+    }
+
+    &--user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+  }
+
+  &__avatar {
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    flex-shrink: 0;
+    background-color: rgba($color-primary, 0.08);
+  }
+
+  &__bubble {
+    max-width: 70%;
+    padding: $spacing-sm $spacing-md;
+    border-radius: 24rpx;
+
+    &--xiaoyue {
+      background: $color-bg;
+      border-bottom-left-radius: 4rpx;
+    }
+
+    &--user {
+      background: $color-primary;
+      border-bottom-right-radius: 4rpx;
+    }
+  }
+
+  &__bubble-text {
+    font-size: $font-size-base;
+    line-height: 1.6;
+
+    .profession-overlay__bubble--xiaoyue & {
+      color: $color-text-primary;
+    }
+
+    .profession-overlay__bubble--user & {
+      color: $color-text-white;
+    }
+  }
+
+  &__typing {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+    padding: 8rpx 4rpx;
+  }
+
+  &__typing-dot {
+    width: 12rpx;
+    height: 12rpx;
+    border-radius: 50%;
+    background: rgba($color-text-muted, 0.5);
+    animation: profession-typing-bounce 1.2s ease-in-out infinite;
+
+    &:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+  }
+
+  &__input-bar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $container-padding;
+    padding-bottom: max($spacing-sm, constant(safe-area-inset-bottom));
+    padding-bottom: max($spacing-sm, env(safe-area-inset-bottom));
+    background: $color-surface;
+    border-top: 2rpx solid $color-divider;
+    @include safe-area-inline($container-padding);
+  }
+
+  &__input {
+    flex: 1;
+    min-height: max(88rpx, $cta-min-tap);
+    max-height: 160rpx;
+    padding: 0 $spacing-md;
+    background: $color-bg;
+    border: 2rpx solid $color-border;
+    border-radius: $button-radius;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+  }
+
+  &__send {
+    width: max(88rpx, $cta-min-tap);
+    height: max(88rpx, $cta-min-tap);
+    min-height: max(88rpx, $cta-min-tap);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: $color-primary;
+    flex-shrink: 0;
+
+    &:active {
+      opacity: 0.92;
+      transform: scale(0.96);
+    }
+  }
+
+  &__send-arrow {
+    width: 0;
+    height: 0;
+    border-top: 10rpx solid transparent;
+    border-bottom: 10rpx solid transparent;
+    border-left: 16rpx solid $color-text-white;
+    margin-left: 4rpx;
+  }
+
+  &__cta {
+    flex-shrink: 0;
+    padding: $spacing-sm $container-padding $spacing-md;
+    padding-bottom: max($spacing-md, constant(safe-area-inset-bottom));
+    padding-bottom: max($spacing-md, env(safe-area-inset-bottom));
+    background: $color-surface;
+    @include safe-area-inline($container-padding);
+  }
+
+  &__cta-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: max($button-height, $cta-min-tap);
+    height: $button-height;
+    border-radius: $button-radius;
+    background: $color-primary;
+    color: $color-text-white;
+    box-shadow: 0 8rpx 32rpx rgba($color-primary, 0.35);
+
+    &:active {
+      opacity: 0.92;
+      transform: scale(0.98);
+    }
+  }
+
+  &__cta-text {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-white;
+  }
+
+  &__reveal-card {
+    flex-shrink: 0;
+    margin: 0 $container-padding $spacing-md;
+    padding: $spacing-lg;
+    background: linear-gradient(135deg, rgba($color-primary, 0.06), rgba($color-primary, 0.12));
+    border-radius: 24rpx;
+    border: 2rpx solid rgba($color-primary, 0.12);
+    animation: profession-reveal-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    @include safe-area-inline($container-padding);
+  }
+
+  &__reveal-title {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    font-weight: $font-weight-medium;
+    margin-bottom: $spacing-md;
+    display: block;
+  }
+
+  &__reveal-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__reveal-tag {
+    padding: $spacing-xs $spacing-md;
+    background: $color-surface;
+    border: 2rpx solid rgba($color-primary, 0.2);
+    border-radius: 32rpx;
+    opacity: 0;
+    transform: scale(0.6);
+    animation: profession-tag-pop-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+
+    &:nth-child(1) { animation-delay: 0.05s; }
+    &:nth-child(2) { animation-delay: 0.12s; }
+    &:nth-child(3) { animation-delay: 0.19s; }
+    &:nth-child(4) { animation-delay: 0.26s; }
+    &:nth-child(5) { animation-delay: 0.33s; }
+  }
+
+  &__reveal-tag-text {
+    font-size: $font-size-xs;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  &__reveal-confirm {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: max($button-height, $cta-min-tap);
+    height: $button-height;
+    border-radius: $button-radius;
+    background: $color-primary;
+    color: $color-text-white;
+    box-shadow: 0 8rpx 32rpx rgba($color-primary, 0.35);
+
+    &:active {
+      opacity: 0.92;
+      transform: scale(0.98);
+    }
+  }
+
+  &__reveal-confirm-text {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-white;
+  }
+}
+
+@keyframes profession-reveal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes profession-tag-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes profession-overlay-enter {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes profession-overlay-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+
+@keyframes profession-message-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12rpx) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes profession-typing-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+
+  30% {
+    transform: translateY(-6rpx);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profession-overlay {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .profession-overlay__message {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .profession-overlay__typing-dot {
+    animation: none;
+    opacity: 0.5;
+  }
+
+  .profession-overlay__reveal-card {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .profession-overlay__reveal-tag {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

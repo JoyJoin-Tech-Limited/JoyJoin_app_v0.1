@@ -9,6 +9,8 @@ export * from './prototypes';
 export * from './feedback';
 export * from './adaptiveEngine';
 export * from './matcherV2';
+export { archetypeRegistry } from './archetypeRegistry';
+export type { ArchetypeRecord, ArchetypeProfile, ArchetypeNarrative, ArchetypeInsights, ArchetypeDisplayTokens, ArchetypeDisplay } from './archetypeRegistry';
 export type { ArchetypeName as CompatibilityArchetypeName } from './archetypeCompatibility';
 export * from './archetypeNames';
 export * from './archetypeSkills';

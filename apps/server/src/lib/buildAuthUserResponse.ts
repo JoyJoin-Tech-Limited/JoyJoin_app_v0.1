@@ -14,6 +14,8 @@ import { peekCachedAnalysis } from "../xiaoyueAnalysisService";
 import type { ArchetypeAnalysisInput } from "../xiaoyueAnalysisService";
 import { storage } from "../storage";
 import { logger } from "./logger";
+import { computeOnboardingNextStep } from "./computeOnboardingNextStep";
+import { getFeatureFlag } from "./featureFlags";
 
 // Module-level cached mascot config (env vars are immutable after startup)
 const mascotConfig = buildMascotConfigFromEnv({
@@ -28,23 +30,6 @@ const resolvedGlowVariant = VALID_GLOW_VARIANTS.includes(
 )
   ? (process.env.SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT as TierDisplayFlags['glowVariant'])
   : 'default';
-
-type OnboardingStep =
-  | 'onboarding'
-  | 'personality-test'
-  | 'essential-data'
-  | 'extended-data'
-  | 'profile-review'
-  | 'discover';
-
-const stepOrder: OnboardingStep[] = [
-  'onboarding',
-  'personality-test',
-  'essential-data',
-  'extended-data',
-  'profile-review',
-  'discover',
-];
 
 /**
  * Build a complete AuthUserResponse for a given userId.
@@ -78,35 +63,7 @@ export async function buildAuthUserResponse(userId: string): Promise<AuthUserRes
     // Ignore errors — session lookup is optional
   }
 
-  let nextStep: OnboardingStep;
-  if (!user.hasCompletedPersonalityTest && !user.hasCompletedRegistration) {
-    nextStep = 'onboarding';
-  } else if (!user.hasCompletedPersonalityTest) {
-    nextStep = 'personality-test';
-  } else if (!profileEssentialComplete) {
-    nextStep = 'essential-data';
-  } else if (!user.hasCompletedInterestsCarousel) {
-    nextStep = 'extended-data';
-  } else if (!user.hasSeenProfileReview) {
-    nextStep = 'profile-review';
-  } else {
-    nextStep = 'discover';
-  }
-
-  const baseIndex = stepOrder.indexOf(nextStep);
-  const checkpointValue = user.onboardingCheckpoint as OnboardingStep | null;
-  const checkpointIndex = checkpointValue ? stepOrder.indexOf(checkpointValue) : -1;
-
-  if (
-    checkpointValue &&
-    checkpointIndex !== -1 &&
-    baseIndex !== -1 &&
-    checkpointIndex > baseIndex &&
-    checkpointIndex < stepOrder.indexOf('discover')
-  ) {
-    const nextStepIndex = Math.min(checkpointIndex + 1, stepOrder.indexOf('discover'));
-    nextStep = stepOrder[nextStepIndex];
-  }
+  const nextStep = computeOnboardingNextStep(user);
 
   const tierDisplayFlags: TierDisplayFlags = {
     glowVariant: resolvedGlowVariant,
@@ -151,6 +108,29 @@ export async function buildAuthUserResponse(userId: string): Promise<AuthUserRes
     mascotBackstory: mascotConfig.backstory,
     tierDisplayFlags,
     xiaoyueAnalysis,
+    restartsRemaining: Math.max(0, 5 - (user.onboardingRestartCount ?? 0)),
+    features: await (async () => {
+      const [
+        restartOnboarding,
+        smartProfession,
+        onboardingForceSkip,
+        matchingLiveReveal,
+        socialIcebreakerClientForceEnd,
+      ] = await Promise.all([
+        getFeatureFlag('restartOnboarding', false),
+        getFeatureFlag('smartProfession', true),
+        getFeatureFlag('onboardingForceSkip', false),
+        getFeatureFlag('matchingLiveReveal', true),
+        getFeatureFlag('socialIcebreakerClientForceEnd', false),
+      ]);
+      return {
+        restartOnboarding,
+        smartProfession,
+        onboardingForceSkip,
+        matchingLiveReveal,
+        socialIcebreakerClientForceEnd,
+      };
+    })(),
   };
 
   return authUserResponse;

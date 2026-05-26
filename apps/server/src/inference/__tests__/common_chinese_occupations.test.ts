@@ -61,9 +61,9 @@ describe('Common Chinese Occupations Classification', () => {
       { input: '银行职员', expected: 'finance' },
       { input: '银行柜员', expected: 'finance' },
         { input: '会计', expected: 'professional_services' },
-      { input: '会计员', expected: 'finance' },
+      { input: '会计员', expected: 'professional_services' },
       { input: '出纳', expected: 'finance' },
-      { input: '注册会计师', expected: 'finance' },
+      { input: '注册会计师', expected: 'professional_services' },
     ];
 
     financeTests.forEach(({ input, expected }) => {

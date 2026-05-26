@@ -384,6 +384,16 @@ export interface AuthUserResponse extends SanitizedAuthUser {
   xiaoyueAnalysis?: XiaoyueAnalysisPublicResult | null
   /** Match Compass v1 kill-switch — false hides the dashboard entirely. */
   matchCompassEnabled?: boolean
+  /** Number of onboarding restarts remaining (capped at 5). */
+  restartsRemaining?: number
+  /** Feature flags exposed to the client. */
+  features?: {
+    restartOnboarding?: boolean
+    smartProfession?: boolean
+    onboardingForceSkip?: boolean
+    matchingLiveReveal?: boolean
+    socialIcebreakerClientForceEnd?: boolean
+  }
 }
 
 export interface CreateMiniProgramPaymentIntentRequest {

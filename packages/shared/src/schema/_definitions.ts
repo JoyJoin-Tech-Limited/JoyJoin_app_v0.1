@@ -69,6 +69,7 @@ export const users = pgTable("users", {
   
   // Registration fields - Work (New standardized occupation system)
   occupationId: varchar("occupation_id"), // Standardized occupation ID from occupations.ts
+  standardizedOccupationId: varchar("standardized_occupation_id"), // Canonical ID matched from catalog/AI (e.g., "diving_instructor")
   workMode: varchar("work_mode"), // founder, self_employed, employed, student
   workVisibility: varchar("work_visibility").default("show_industry_only"), // hide_all, show_industry_only
   
@@ -206,6 +207,9 @@ export const users = pgTable("users", {
   // A/B Testing tracking
   registrationMethod: varchar("registration_method"), // 'form' or 'chat' for A/B testing
   registrationCompletedAt: timestamp("registration_completed_at"), // When registration was completed
+
+  // Onboarding restart counter (welcome-back feature)
+  onboardingRestartCount: integer("onboarding_restart_count").notNull().default(0),
   
   // ============ AI对话签名 (Conversation Signature) ============
   // 用于增强匹配算法的第6维度
@@ -808,6 +812,7 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   industryClassifiedAt: true,
   industryLastVerifiedAt: true,
   occupationId: true,
+  standardizedOccupationId: true,
   workMode: true,
   hometownRegionCity: true,
   intent: true,
@@ -1100,7 +1105,7 @@ export const registerUserSchema = z.object({
   }),
   
   // Work - New standardized occupation system
-  occupationId: z.string().min(1, "请选择职业"),
+  occupationId: z.string().optional(),
   workMode: z.enum(WORK_MODE_OPTIONS, {
     errorMap: () => ({ message: "请选择身份" }),
   }),

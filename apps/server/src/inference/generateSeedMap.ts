@@ -43,7 +43,9 @@ export function generateSeedMap(): Map<string, SeedMatch> {
       
       // Exclude overly generic terms
       const genericTerms = ['工程师', '经理', '师', '员', '人', '工作', 
-                           'engineer', 'manager', '大厂', '互联网'];
+                            'engineer', 'manager', '大厂', '互联网',
+                            '管理', '分析', '研究', '服务', '策划',
+                            '测试', '安全', '表演', '开发', '质量'];
       if (genericTerms.some(term => keyword === term)) continue;
       
       // Avoid conflicts: only add if not exists

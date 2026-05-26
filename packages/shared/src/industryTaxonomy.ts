@@ -1,6 +1,6 @@
 /**
  * JoyJoin 三层行业分类体系 (Three-Tier Industry Taxonomy)
- * 覆盖率目标：从35% → 94%+
+ * 21个行业大类，覆盖率目标：94%+
  */
 
 export interface IndustryNiche {
@@ -77,19 +77,20 @@ export const INDUSTRY_TAXONOMY: IndustryCategory[] = [
         id: "ai_ml",
         label: "人工智能",
         niches: [
-          { id: "llm_research", label: "大模型研发", synonyms: ["LLM", "大语言模型", "GPT"], keywords: ["大模型", "LLM", "GPT"] },
+          { id: "llm_research", label: "大模型研发", synonyms: ["LLM", "大语言模型", "GPT"], keywords: ["大模型", "LLM", "GPT", "fine-tuning", "DeepSeek", "文心一言"] },
           { id: "medical_ai", label: "医疗AI", synonyms: ["AI医疗", "医学影像"], keywords: ["医疗", "AI", "影像"] },
           { id: "cv", label: "计算机视觉", synonyms: ["CV", "图像识别"], keywords: ["视觉", "CV", "图像"] },
           { id: "nlp", label: "自然语言处理", synonyms: ["NLP", "文本分析"], keywords: ["NLP", "语言", "文本"] },
+          { id: "ml_engineer", label: "机器学习工程师", synonyms: ["ML工程师"], keywords: ["PyTorch", "TensorFlow", "scikit-learn", "ML"] },
         ]
       },
       {
         id: "software_dev",
         label: "软件开发",
         niches: [
-          { id: "frontend", label: "前端工程师", synonyms: ["前端开发", "web开发"], keywords: ["前端", "React", "Vue"] },
-          { id: "backend", label: "后端工程师", synonyms: ["后端开发", "服务端"], keywords: ["后端", "Java", "Python"] },
-          { id: "fullstack", label: "全栈工程师", synonyms: ["全栈开发"], keywords: ["全栈", "开发"] },
+          { id: "frontend", label: "前端工程师", synonyms: ["前端开发", "web开发"], keywords: ["前端", "React", "Vue", "前端工程师", "H5", "小程序", "TypeScript"] },
+          { id: "backend", label: "后端工程师", synonyms: ["后端开发", "服务端"], keywords: ["后端", "Java", "Python", "程序员", "码农", "开发工程师", "软件工程师", "Go", "Node.js", "Spring"] },
+          { id: "fullstack", label: "全栈工程师", synonyms: ["全栈开发", "full stack", "fullstack"], keywords: ["全栈", "全栈工程师"] },
         ]
       },
       {
@@ -103,8 +104,63 @@ export const INDUSTRY_TAXONOMY: IndustryCategory[] = [
         id: "design",
         label: "设计",
         niches: [
-          { id: "ui_designer", label: "UI设计师", synonyms: ["界面设计"], keywords: ["UI", "视觉", "界面"] },
-          { id: "ux_designer", label: "UX设计师", synonyms: ["用户体验"], keywords: ["UX", "交互", "体验"] },
+          { id: "ui_designer", label: "UI设计师", synonyms: ["界面设计"], keywords: ["UI", "视觉", "界面", "Figma", "PS", "视觉设计"] },
+          { id: "ux_designer", label: "UX设计师", synonyms: ["用户体验"], keywords: ["UX", "交互", "体验", "交互设计", "用户研究", "可用性"] },
+        ]
+      },
+      {
+        id: "cybersecurity",
+        label: "网络安全",
+        niches: [
+          { id: "sec_engineer", label: "安全工程师", synonyms: ["信息安全"], keywords: ["安全", "渗透", "攻防", "Security"] },
+          { id: "sec_analyst", label: "安全分析师", synonyms: ["SOC", "安全运营"], keywords: ["监控", "响应", "应急"] },
+        ]
+      },
+      {
+        id: "data_analytics",
+        label: "数据分析",
+        niches: [
+          { id: "data_analyst", label: "数据分析师", synonyms: ["数据分析"], keywords: ["分析", "BI", "SQL", "Tableau"] },
+          { id: "data_engineer", label: "数据工程师", synonyms: ["数据开发"], keywords: ["ETL", "数仓", "Spark", "Flink"] },
+          { id: "data_scientist", label: "数据科学家", synonyms: ["DS"], keywords: ["Python", "ML", "模型", "统计"] },
+        ]
+      },
+      {
+        id: "qa_testing",
+        label: "测试/QA",
+        niches: [
+          { id: "qa_engineer", label: "测试工程师", synonyms: ["QA", "质量保证"], keywords: ["测试", "自动化", "Selenium"] },
+        ]
+      },
+      {
+        id: "devops_sre",
+        label: "运维/SRE",
+        niches: [
+          { id: "devops_eng", label: "DevOps工程师", synonyms: ["运维开发"], keywords: ["DevOps", "CI/CD", "K8s", "Docker"] },
+          { id: "sre", label: "SRE工程师", synonyms: ["站点可靠性"], keywords: ["SRE", "监控", "告警", "运维"] },
+        ]
+      },
+    ]
+  },
+  {
+    id: "telecom",
+    label: "通信/电信",
+    icon: "📡",
+    priority: 18,
+    segments: [
+      {
+        id: "telecom_equipment",
+        label: "通信设备",
+        niches: [
+          { id: "network_engineer", label: "网络工程师", synonyms: ["通信工程师"], keywords: ["通信", "网络", "5G", "基站"] },
+          { id: "telecom_hardware", label: "硬件工程师", synonyms: ["射频", "天线"], keywords: ["射频", "微波", "天线"] },
+        ]
+      },
+      {
+        id: "telecom_operator",
+        label: "运营商",
+        niches: [
+          { id: "operator_staff", label: "运营商员工", synonyms: ["移动", "电信", "联通"], keywords: ["运营商", "移动", "联通", "电信"] },
         ]
       },
     ]
@@ -127,8 +183,32 @@ export const INDUSTRY_TAXONOMY: IndustryCategory[] = [
         id: "automotive",
         label: "汽车制造",
         niches: [
-          { id: "new_energy", label: "新能源汽车", synonyms: ["电动车", "EV"], keywords: ["新能源", "电动", "汽车"] },
+          { id: "ev_manufacturing", label: "新能源汽车制造", synonyms: ["电动车", "EV"], keywords: ["新能源车", "电动", "汽车制造"] },
           { id: "auto_parts", label: "汽车零部件", synonyms: ["零配件"], keywords: ["零部件", "配件"] },
+        ]
+      },
+      {
+        id: "machinery",
+        label: "机械制造",
+        niches: [
+          { id: "mech_engineer", label: "机械工程师", synonyms: ["机械设计"], keywords: ["机械", "制造", "CNC"] },
+          { id: "electrical_eng", label: "电气工程师", synonyms: ["电气"], keywords: ["电气", "电路", "PLC"] },
+        ]
+      },
+    ]
+  },
+  {
+    id: "semiconductor",
+    label: "半导体/芯片",
+    icon: "💾",
+    priority: 17,
+    segments: [
+      {
+        id: "semiconductor",
+        label: "半导体/芯片",
+        niches: [
+          { id: "chip_design", label: "芯片设计", synonyms: ["IC设计"], keywords: ["芯片", "IC", "EDA"] },
+          { id: "fab_engineer", label: "制造工程师", synonyms: ["工艺"], keywords: ["晶圆", "光刻", "封装"] },
         ]
       },
     ]
@@ -154,11 +234,20 @@ export const INDUSTRY_TAXONOMY: IndustryCategory[] = [
           { id: "sales", label: "销售", synonyms: ["店员", "导购"], keywords: ["销售", "店员", "导购"] },
         ]
       },
+      {
+        id: "ecommerce",
+        label: "电商",
+        niches: [
+          { id: "ecom_operations", label: "电商运营", synonyms: ["电商"], keywords: ["电商", "运营", "天猫", "京东"] },
+          { id: "ecom_marketing", label: "电商营销", synonyms: ["推广"], keywords: ["直通车", "推广", "投流"] },
+          { id: "cross_border_ecom", label: "跨境电商", synonyms: ["跨境"], keywords: ["跨境", "亚马逊", "独立站"] },
+        ]
+      },
     ]
   },
   {
     id: "real_estate",
-    label: "房地产/建筑",
+    label: "房地产",
     icon: "🏗️",
     priority: 5,
     segments: [
@@ -169,11 +258,19 @@ export const INDUSTRY_TAXONOMY: IndustryCategory[] = [
           { id: "agent", label: "房产中介", synonyms: ["地产经纪", "房产顾问"], keywords: ["中介", "经纪", "房产"] },
         ]
       },
+    ]
+  },
+  {
+    id: "construction",
+    label: "建筑工程",
+    icon: "🏗️",
+    priority: 16,
+    segments: [
       {
         id: "construction",
         label: "建筑工程",
         niches: [
-          { id: "construction_worker", label: "建筑工人", synonyms: ["工地", "施工员"], keywords: ["工人", "工地", "施工"] },
+          { id: "construction_worker", label: "建筑工人", synonyms: ["工地", "施工员", "construction"], keywords: ["工人", "工地", "施工", "construction"] },
         ]
       },
     ]
@@ -193,6 +290,20 @@ export const INDUSTRY_TAXONOMY: IndustryCategory[] = [
           { id: "pharmacist", label: "药剂师", synonyms: ["药师"], keywords: ["药剂", "药师", "配药"] },
         ]
       },
+      {
+        id: "mental_health",
+        label: "心理健康",
+        niches: [
+          { id: "psychologist", label: "心理咨询师", synonyms: ["心理医生"], keywords: ["心理", "咨询", "治疗"] },
+        ]
+      },
+      {
+        id: "pharmaceutical",
+        label: "制药",
+        niches: [
+          { id: "pharma_research", label: "药物研发", synonyms: ["新药"], keywords: ["制药", "药物", "临床"] },
+        ]
+      },
     ]
   },
   {
@@ -206,6 +317,45 @@ export const INDUSTRY_TAXONOMY: IndustryCategory[] = [
         label: "K12教育",
         niches: [
           { id: "teacher", label: "教师", synonyms: ["老师", "教书"], keywords: ["教师", "老师", "教学"] },
+        ]
+      },
+      {
+        id: "higher_education",
+        label: "高等教育",
+        niches: [
+          { id: "professor", label: "教授", synonyms: ["大学教师"], keywords: ["教授", "大学", "讲师", "学术"] },
+          { id: "researcher", label: "研究员", synonyms: ["科研人员"], keywords: ["研究", "科研", "实验室"] },
+          { id: "phd_student", label: "博士生", synonyms: ["博士", "PhD"], keywords: ["博士", "PhD", "博后"] },
+        ]
+      },
+      {
+        id: "vocational_training",
+        label: "职业培训",
+        niches: [
+          { id: "trainer", label: "培训师", synonyms: ["讲师"], keywords: ["培训", "技能", "考证"] },
+        ]
+      },
+    ]
+  },
+  {
+    id: "research",
+    label: "学术/科研",
+    icon: "🔬",
+    priority: 20,
+    segments: [
+      {
+        id: "research_institute",
+        label: "科研院所",
+        niches: [
+          { id: "researcher", label: "研究员", synonyms: ["科研", "实验室"], keywords: ["科研", "实验室", "研究院", "中科院"] },
+          { id: "lab_technician", label: "实验员", synonyms: ["检测"], keywords: ["测试", "化验", "检测"] },
+        ]
+      },
+      {
+        id: "think_tank",
+        label: "智库/咨询研究",
+        niches: [
+          { id: "analyst_research", label: "研究分析师", synonyms: ["智库"], keywords: ["智库", "研究", "分析"] },
         ]
       },
     ]
@@ -230,6 +380,36 @@ export const INDUSTRY_TAXONOMY: IndustryCategory[] = [
           { id: "lawyer", label: "律师", synonyms: ["律师事务所"], keywords: ["律师", "法务"] },
         ]
       },
+      {
+        id: "accounting",
+        label: "会计/审计",
+        niches: [
+          { id: "cpa", label: "注册会计师", synonyms: ["CPA", "审计师"], keywords: ["审计", "会计", "税务"] },
+          { id: "bookkeeper", label: "会计员", synonyms: ["记账"], keywords: ["账务", "出纳"] },
+        ]
+      },
+      {
+        id: "human_resources",
+        label: "人力资源",
+        niches: [
+          { id: "hrbp", label: "HRBP", synonyms: ["人事"], keywords: ["HR", "招聘", "薪酬", "员工"] },
+          { id: "recruiter", label: "招聘专员", synonyms: ["猎头"], keywords: ["招聘", "面试", "人才"] },
+        ]
+      },
+      {
+        id: "admin",
+        label: "行政/后勤",
+        niches: [
+          { id: "admin_staff", label: "行政专员", synonyms: ["行政", "办公室"], keywords: ["行政", "后勤", "前台"] },
+        ]
+      },
+      {
+        id: "translation",
+        label: "翻译/本地化",
+        niches: [
+          { id: "translator", label: "翻译", synonyms: ["笔译", "口译"], keywords: ["翻译", "本地化"] },
+        ]
+      },
     ]
   },
   {
@@ -240,9 +420,61 @@ export const INDUSTRY_TAXONOMY: IndustryCategory[] = [
     segments: [
       {
         id: "marketing",
-        label: "市场营销",
+        label: "广告/公关/营销",
         niches: [
-          { id: "marketer", label: "营销", synonyms: ["市场", "推广"], keywords: ["营销", "市场", "推广"] },
+          { id: "marketing_specialist", label: "营销专员", synonyms: ["市场", "品牌营销"], keywords: ["营销", "市场", "推广", "品牌"] },
+          { id: "advertising", label: "广告", synonyms: ["广告投放", "4A"], keywords: ["广告", "投放", "信息流"] },
+          { id: "public_relations", label: "公关", synonyms: ["PR", "品牌公关", "政府关系"], keywords: ["公关", "PR", "GR", "媒体关系"] },
+        ]
+      },
+      {
+        id: "journalism",
+        label: "新闻媒体",
+        niches: [
+          { id: "journalist", label: "记者", synonyms: ["新闻工作者"], keywords: ["记者", "新闻", "采访"] },
+          { id: "editor", label: "编辑", synonyms: ["文字编辑"], keywords: ["编辑", "校对", "出版"] },
+        ]
+      },
+      {
+        id: "film_tv",
+        label: "影视制作",
+        niches: [
+          { id: "director", label: "导演", synonyms: ["电影导演"], keywords: ["导演", "拍摄"] },
+          { id: "screenwriter", label: "编剧", synonyms: ["剧本"], keywords: ["编剧", "剧本", "故事"] },
+          { id: "producer", label: "制片人", synonyms: ["制片"], keywords: ["制片", "监制"] },
+        ]
+      },
+      {
+        id: "content_creation",
+        label: "内容创作",
+        niches: [
+          { id: "content_creator", label: "内容创作者", synonyms: ["自媒体"], keywords: ["自媒体", "博主", "UP主", "KOL"] },
+          { id: "streamer", label: "主播", synonyms: ["直播"], keywords: ["主播", "直播", "带货"] },
+        ]
+      },
+    ]
+  },
+  {
+    id: "gaming",
+    label: "游戏/电竞",
+    icon: "🎮",
+    priority: 19,
+    segments: [
+      {
+        id: "game_development",
+        label: "游戏开发",
+        niches: [
+          { id: "game_engineer", label: "游戏开发工程师", synonyms: ["Unity", "Unreal", "Cocos"], keywords: ["游戏", "Unity", "Unreal", "Cocos", "引擎"] },
+          { id: "game_designer", label: "游戏策划", synonyms: ["游戏策划"], keywords: ["游戏策划", "玩法", "系统策划", "数值策划"] },
+          { id: "game_artist", label: "游戏美术", synonyms: ["原画", "模型"], keywords: ["游戏美术", "原画", "3D", "特效"] },
+        ]
+      },
+      {
+        id: "esports",
+        label: "电竞",
+        niches: [
+          { id: "esports_player", label: "电竞选手", synonyms: ["职业选手"], keywords: ["电竞", "选手", "比赛"] },
+          { id: "esports_operations", label: "电竞运营", synonyms: ["赛事"], keywords: ["赛事", "电竞运营", "解说"] },
         ]
       },
     ]
@@ -273,6 +505,28 @@ export const INDUSTRY_TAXONOMY: IndustryCategory[] = [
         label: "公务员",
         niches: [
           { id: "government", label: "公务员", synonyms: ["政府", "机关"], keywords: ["公务员", "政府", "机关"] },
+        ]
+      },
+    ]
+  },
+  {
+    id: "nonprofit",
+    label: "非营利/公益",
+    icon: "🤝",
+    priority: 21,
+    segments: [
+      {
+        id: "ngo",
+        label: "公益组织",
+        niches: [
+          { id: "ngo_staff", label: "公益从业者", synonyms: ["NGO", "NPO", "公益"], keywords: ["公益", "NGO", "NPO", "慈善", "基金会"] },
+        ]
+      },
+      {
+        id: "social_enterprise",
+        label: "社会企业",
+        niches: [
+          { id: "social_ent_staff", label: "社会企业员工", synonyms: ["社企"], keywords: ["社会企业", "社企"] },
         ]
       },
     ]

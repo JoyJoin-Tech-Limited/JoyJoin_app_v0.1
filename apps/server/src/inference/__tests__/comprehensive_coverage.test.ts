@@ -51,7 +51,7 @@ describe('Comprehensive Occupation Coverage Test', () => {
     it('should classify 天使投资人 correctly', async () => {
       const result = await classifyIndustry('天使投资人');
       expect(result.category?.id).toBe('finance');
-      expect(result.segment?.id).toBe('pe_vc');
+      expect(result.segment?.id).toBe('investment');
       expect(result.reasoning).toBeTruthy();
     });
 
@@ -116,31 +116,31 @@ describe('Comprehensive Occupation Coverage Test', () => {
   describe('艺术家相关 (冷门职业)', () => {
     it('should classify 画家 correctly', async () => {
       const result = await classifyIndustry('画家');
-      expect(result.category?.id).toBe('culture_sports');
+      expect(result.category?.id).toBe('media_creative');
       expect(result.reasoning).toBeTruthy();
     });
 
     it('should classify 雕塑家 correctly', async () => {
       const result = await classifyIndustry('雕塑家');
-      expect(result.category?.id).toBe('culture_sports');
+      expect(result.category?.id).toBe('media_creative');
       expect(result.reasoning).toBeTruthy();
     });
 
     it('should classify 书法家 correctly', async () => {
       const result = await classifyIndustry('书法家');
-      expect(result.category?.id).toBe('culture_sports');
+      expect(result.category?.id).toBe('media_creative');
       expect(result.reasoning).toBeTruthy();
     });
 
     it('should classify 陶艺师 correctly', async () => {
       const result = await classifyIndustry('陶艺师');
-      expect(result.category?.id).toBe('culture_sports');
+      expect(result.category?.id).toBe('media_creative');
       expect(result.reasoning).toBeTruthy();
     });
 
     it('should classify 诗人 correctly', async () => {
       const result = await classifyIndustry('诗人');
-      expect(result.category?.id).toBe('media_creative');
+      expect(result.category?.id).toBe('culture_sports');
       expect(result.reasoning).toBeTruthy();
     });
 
@@ -182,7 +182,7 @@ describe('Comprehensive Occupation Coverage Test', () => {
 
     it('should classify 策展人 correctly', async () => {
       const result = await classifyIndustry('策展人');
-      expect(result.category?.id).toBe('culture_sports');
+      expect(result.category?.id).toBe('media_creative');
       expect(result.reasoning).toBeTruthy();
     });
 

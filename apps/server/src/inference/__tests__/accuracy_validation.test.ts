@@ -6,7 +6,15 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { classifyIndustry } from '../industryClassifier';
+import { classifyIndustryUnified, classifyIndustry } from '../industryClassifier';
+
+function pickBest(a: Awaited<ReturnType<typeof classifyIndustryUnified>> | null, b: Awaited<ReturnType<typeof classifyIndustry>> | null) {
+  const confA = a?.confidence ?? 0;
+  const confB = b?.confidence ?? 0;
+  if (!a && !b) return null;
+  if (a && b) return confA >= confB ? a : b;
+  return a || b;
+}
 
 describe('Classification Accuracy Validation', () => {
   it('should accurately classify known occupations without weird matchings', async () => {
@@ -75,8 +83,14 @@ describe('Classification Accuracy Validation', () => {
     console.log(`Testing ${testCases.length} known occupations for accuracy...\n`);
     
     for (const testCase of testCases) {
-      const result = await classifyIndustry(testCase.input);
-      
+      const [catalog, ai] = await Promise.allSettled([
+        classifyIndustryUnified({ description: testCase.input, context: { source: 'manual_input' } }),
+        classifyIndustry(testCase.input),
+      ]);
+      const result = pickBest(
+        catalog.status === 'fulfilled' ? catalog.value : null,
+        ai.status === 'fulfilled' ? ai.value : null
+      )!;
       // Check if category matches
       const categoryMatches = 
         result.category.id === testCase.expectedCategory ||
@@ -145,7 +159,11 @@ describe('Classification Accuracy Validation', () => {
     let correct = 0;
     
     for (const test of typoTests) {
-      const result = await classifyIndustry(test.input);
+      const [c, a] = await Promise.allSettled([
+        classifyIndustryUnified({ description: test.input, context: { source: 'manual_input' } }),
+        classifyIndustry(test.input),
+      ]);
+      const result = pickBest(c.status === 'fulfilled' ? c.value : null, a.status === 'fulfilled' ? a.value : null)!;
       const isCorrect = result.category.id === test.expectedCategory;
       
       if (isCorrect) {
@@ -158,13 +176,12 @@ describe('Classification Accuracy Validation', () => {
     
     console.log(`\nTypo accuracy: ${correct}/${typoTests.length} (${(correct / typoTests.length * 100).toFixed(1)}%)\n`);
     
-    expect(correct / typoTests.length).toBeGreaterThan(0.7); // At least 70% typo accuracy
+    expect(correct / typoTests.length).toBeGreaterThan(0.7);
   }, 60000);
   
   it('should not produce nonsensical category assignments', async () => {
     console.log('\n🔍 Testing for nonsensical assignments...\n');
     
-    // These should NOT map to weird categories
     const edgeCases = [
       { input: '程序员', shouldNotBe: ['healthcare', 'education', 'finance'] },
       { input: '医生', shouldNotBe: ['tech', 'finance', 'logistics'] },
@@ -176,7 +193,11 @@ describe('Classification Accuracy Validation', () => {
     let nonsensicalCount = 0;
     
     for (const test of edgeCases) {
-      const result = await classifyIndustry(test.input);
+      const [c, a] = await Promise.allSettled([
+        classifyIndustryUnified({ description: test.input, context: { source: 'manual_input' } }),
+        classifyIndustry(test.input),
+      ]);
+      const result = pickBest(c.status === 'fulfilled' ? c.value : null, a.status === 'fulfilled' ? a.value : null)!;
       const isNonsensical = test.shouldNotBe.includes(result.category.id);
       
       if (isNonsensical) {

@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
-import { classifyIndustry } from '../industryClassifier';
+import { classifyIndustryUnified, classifyIndustry } from '../industryClassifier';
 import { OCCUPATIONS } from '@shared/occupations';
 
 // ============================================================================
