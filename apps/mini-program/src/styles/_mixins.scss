@@ -174,11 +174,27 @@
   min-height: max($button-height, $cta-min-tap);
   height: $button-height;
   border-radius: $button-radius;
-  background: $brand-gradient;
+  background: $color-primary;
   color: $color-text-white;
   font-size: $font-size-md;
   font-weight: $font-weight-semibold;
-  box-shadow: 0 8rpx 32rpx rgba(168, 107, 255, 0.35);
+  box-shadow: 0 8rpx 32rpx rgba($color-primary, 0.35);
+  @include cta-pressed-active;
+}
+
+// ─── Secondary button (outlined) ─────────────────────────────────
+@mixin button-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: max($button-height, $cta-min-tap);
+  height: $button-height;
+  border-radius: $button-radius;
+  background: transparent;
+  border: 2rpx solid $color-border;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
   @include cta-pressed-active;
 }
 
