@@ -1,0 +1,30 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.profile-archetype-hero {
+  &__inner {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+  }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
+  }
+
+  &__name {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: $line-height-tight;
+  }
+
+  &__archetype {
+    font-size: $font-size-sm;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+    line-height: $line-height-normal;
+  }
+}

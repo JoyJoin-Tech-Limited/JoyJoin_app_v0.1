@@ -1,0 +1,202 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.welcome-back {
+  display: flex;
+  flex-direction: column;
+  @include page-warm-bg;
+  @include onboarding-page-exit-transition;
+  @include onboarding-page-enter-transition;
+
+  &__content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-lg $container-padding;
+    @include safe-area-inline($container-padding);
+  }
+
+  &__mascot-wrap {
+    @include flex-center;
+    margin-bottom: $spacing-lg;
+    @include staggered-enter(0, 80ms, 70ms);
+  }
+
+  &__mascot {
+    width: 240rpx;
+    height: 240rpx;
+    image-rendering: -webkit-optimize-contrast;
+  }
+
+  &__mascot-fallback {
+    @include mascot-container($mascot-size-xl);
+  }
+
+  &__text {
+    text-align: center;
+    margin-bottom: $spacing-xl;
+    @include staggered-enter(1, 80ms, 70ms);
+  }
+
+  &__headline {
+    @include type-headline;
+    display: block;
+  }
+
+  &__subtitle {
+    display: block;
+    margin-top: $spacing-sm;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+  }
+
+  &__step-card {
+    @include card-premium;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-lg $spacing-xl;
+    width: 100%;
+    max-width: 480rpx;
+    animation: card-slide-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: 220ms;
+    opacity: 0;
+    position: relative;
+    overflow: hidden;
+
+    // Subtle shimmer draw-attention effect
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        105deg,
+        transparent 40%,
+        rgba($color-primary, 0.06) 50%,
+        transparent 60%
+      );
+      transform: translateX(-100%);
+      animation: step-card-shimmer 2.4s ease-in-out 0.8s;
+    }
+  }
+
+  &__step-label {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+
+  &__step-name {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+  }
+
+  @keyframes step-card-shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+    padding: $spacing-xl $container-padding $spacing-md;
+    @include safe-area-inline($container-padding);
+    @include safe-area-bottom-padding(padding-bottom, $spacing-md);
+    @include staggered-enter(2, 80ms, 70ms);
+  }
+
+  &__cta {
+    width: 100%;
+
+    &--primary {
+      &.joy-button--brand {
+        @include type-brand-cta-label;
+      }
+    }
+
+    &--secondary {
+      font-size: $font-size-sm;
+      color: $color-text-secondary;
+    }
+  }
+
+  &__cta-hover {
+    transform: scale(1.02);
+    box-shadow: 0 6rpx 36rpx rgba($color-primary, 0.42);
+  }
+
+  // Skeleton loading state
+  &__skeleton {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-lg;
+    flex: 1;
+    padding: $spacing-xl $container-padding;
+  }
+
+  &__skeleton-line {
+    height: 22rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.9);
+    animation: welcome-back-pulse 1.2s ease-in-out infinite;
+
+    &--title {
+      width: 200rpx;
+      height: 40rpx;
+    }
+
+    &--subtitle {
+      width: 320rpx;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    transition: none;
+
+    &--exiting {
+      transition: none;
+    }
+
+    &__skeleton-line {
+      animation: none;
+      opacity: 0.88;
+    }
+
+    &__mascot-wrap,
+    &__text,
+    &__actions {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+
+    &__step-card {
+      animation: none;
+      opacity: 1;
+      transform: none;
+
+      &::after {
+        display: none;
+      }
+    }
+  }
+}
+
+@keyframes welcome-back-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}

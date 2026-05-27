@@ -1,0 +1,86 @@
+skill: completeness-audit
+category: internal
+
+primary_ownership: >
+  Multi-dimensional completeness audit (完成度审计) for mini-program implementations.
+  Scores 11 user-outcome dimensions (0–44), identifies functional and experiential gaps,
+  and produces ROI-ranked strategic recommendations via 2-axis scatter.
+  Consumes ui-layout-audit and frontend-design-audit scores as input.
+  Supports Pipeline Mode: single trigger chains all three audits in sequence.
+
+use_when:
+  - post-build quality pass on a new mini-program page, component, or flow
+  - pre-launch readiness check before shipping to users
+  - PR review when the change touches user-facing mini-program surfaces
+  - quality uplift sprint targeting existing screens
+  - after ui-layout-audit and frontend-design-audit as the synthesizing final pass
+  - administrator/operator needs to verify admin portal wiring is complete
+
+do_not_use_when:
+  - task is purely backend with no user-facing surface
+  - performing a visual-only audit (use ui-layout-audit instead)
+  - performing a design-quality-only audit (use frontend-design-audit instead)
+  - adding micro-interactions or animation (use wow-elements instead)
+  - task is writing new product requirements
+
+strong_triggers:
+  - 完成度 audit
+  - completeness audit
+  - gap analysis
+  - polish gaps
+  - quality gaps
+  - is this ready to ship
+  - ship readiness
+  - what should we fix before launch
+  - pre-launch audit
+  - how complete is this
+  - does this feel done
+  - what's missing
+  - 完成度全流程
+  - full audit pipeline
+  - completeness pipeline
+  - run full pipeline
+
+pipeline_triggers:
+  - trigger: "完成度全流程"
+    sequence:
+      - skill: ui-layout-audit
+        description: "Pixel-level layout, spacing, typography audit"
+        feeds: "completeness-audit dimension 9"
+      - skill: frontend-design-audit
+        description: "5-dimension design quality audit"
+        feeds: "completeness-audit dimension 10"
+      - skill: completeness-audit
+        description: "11-dimension 完成度 audit with ROI recommendations"
+        consumes: "scores from ui-layout-audit + frontend-design-audit"
+  - trigger: "full audit pipeline"
+    same_as: "完成度全流程"
+  - trigger: "completeness pipeline"
+    same_as: "完成度全流程"
+  - trigger: "run full pipeline"
+    same_as: "完成度全流程"
+
+owned_files:
+  - apps/mini-program/src/**
+
+owned_paths: []
+
+owned_symbols: []
+
+related_skills:
+  - skill: ui-layout-audit
+    when: prerequisite — provides baseline score for visual finish dimension (dim 9); first step in pipeline
+  - skill: frontend-design-audit
+    when: prerequisite — provides baseline score for brand soul dimension (dim 10); second step in pipeline
+  - skill: mini-program-frontend-excellence
+    when: referencing implementation patterns to fix flagged gaps
+  - skill: wow-elements
+    when: flagged gap involves missing micro-interactions or emotional polish
+  - skill: joyjoin-brand-guidelines
+    when: brand soul dimension flags voice, mascot, or copy tone issues
+  - skill: admin-audit-and-rbac-governance
+    when: operational completeness dimension flags admin wiring or RBAC gaps
+  - skill: harness-completion-gate
+    when: running the final pre-ship quality gate after fixes applied
+  - skill: skill-authoring-governance
+    when: updating or auditing this skill itself

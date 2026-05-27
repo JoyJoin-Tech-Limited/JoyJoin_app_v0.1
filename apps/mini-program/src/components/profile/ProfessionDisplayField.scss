@@ -1,0 +1,60 @@
+@use '../../styles/variables' as *;
+
+.profession-display-field {
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    min-height: 72rpx;
+  }
+
+  &__value {
+    flex: 1;
+    font-size: $font-size-base;
+    color: $color-text-muted;
+    line-height: $line-height-normal;
+
+    &--filled {
+      color: $color-text-primary;
+      font-weight: $font-weight-medium;
+    }
+  }
+
+  &__edit {
+    font-size: $font-size-sm;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+    flex-shrink: 0;
+  }
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8rpx;
+    margin-top: $spacing-xs;
+  }
+
+  &__tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40rpx;
+    padding: 4rpx 12rpx;
+    border-radius: 8rpx;
+    font-size: $font-size-xs;
+    color: $color-primary;
+    background: $color-primary-light;
+  }
+
+  &__tag-text {
+    line-height: 1.3;
+  }
+
+  &__hint {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    line-height: $line-height-normal;
+  }
+}
