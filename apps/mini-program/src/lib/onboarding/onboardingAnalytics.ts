@@ -7,6 +7,10 @@ export type MiniProgramOnboardingAnalyticsStep =
   | 'onboarding'
   | 'personality-test'
   | 'personality-test-results'
+  | 'essential-data'
+  | 'extended-data'
+  | 'profile-review'
+  | 'welcome-back'
 
   | 'essential-data'
   | 'extended-data'

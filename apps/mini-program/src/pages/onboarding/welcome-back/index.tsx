@@ -42,7 +42,7 @@ export default function WelcomeBackPage() {
     if (auth.isLoading) return
 
     if (!auth.isAuthenticated) {
-      void Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.index })
+      void Taro.reLaunch({ url: '/pages/discover/index' })
       return
     }
 

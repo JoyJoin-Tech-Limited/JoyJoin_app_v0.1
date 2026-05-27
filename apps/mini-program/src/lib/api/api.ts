@@ -393,3 +393,14 @@ export async function fetchEventsShell(): Promise<EventsShellResponse> {
 export async function fetchConnectionsShell(): Promise<ConnectionsShellResponse> {
   return apiRequest<ConnectionsShellResponse>({ path: '/api/shell/connections' })
 }
+
+/**
+ * Restart onboarding — clears all onboarding-derived data and resets to step 1.
+ * POST /api/auth/onboarding/restart
+ */
+export async function restartOnboarding(): Promise<AuthUserResponse> {
+  return apiRequest<AuthUserResponse>({
+    path: '/api/auth/onboarding/restart',
+    method: 'POST',
+  })
+}

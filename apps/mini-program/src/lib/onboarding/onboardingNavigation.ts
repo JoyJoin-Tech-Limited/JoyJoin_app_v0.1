@@ -91,3 +91,15 @@ export function navigateToMiniProgramNextStep(
 ): Promise<void> {
   return navigateToMiniProgramRoute(nextStepToMiniProgramRoute(step), options)
 }
+
+/**
+ * Mark the welcome-back screen as seen so returning users don't show it again.
+ * Persists via Taro storage; server-side tracking is handled by the auth endpoint.
+ */
+export function markWelcomeBackScreenSeen(): void {
+  try {
+    Taro.setStorageSync('joyjoin_welcome_back_seen', Date.now())
+  } catch {
+    // Storage write failure is non-critical
+  }
+}
