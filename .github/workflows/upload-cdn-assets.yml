@@ -16,12 +16,12 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Build mini-program (without clean, so assets remain in dist)
+      - name: Build mini-program (to validate asset references)
         env:
           TARO_APP_CDN_BASE_URL: https://joyjoinapp.com/static
         run: |
           npm ci
-          npx taro build --type weapp --project-root apps/mini-program
+          npm run build:weapp -w mini-program
 
       - name: Upload manifest assets to CVM /static/
         env:
@@ -31,10 +31,24 @@ jobs:
           CDN_RSYNC_USER: ${{ secrets.SERVER_USER }}
           CDN_RSYNC_PATH: /static
         run: |
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > /tmp/deploy_key
+          # Write deploy key with proper newline handling
+          printf '%s\n' '${{ secrets.SSH_PRIVATE_KEY }}' > /tmp/deploy_key
           chmod 600 /tmp/deploy_key
           export CDN_RSYNC_KEY=/tmp/deploy_key
-          # Debug SSH connectivity
-          echo "Testing SSH to ${{ secrets.SERVER_IP }} as ${{ secrets.SERVER_USER }}..."
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o BatchMode=yes -i /tmp/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "echo 'SSH OK'" || echo 'SSH test failed, continuing...'
+
+          # Debug: verify key looks valid (show first/last line only)
+          echo "=== SSH Key Check ==="
+          head -1 /tmp/deploy_key
+          tail -1 /tmp/deploy_key
+          echo "Key file size: $(wc -c < /tmp/deploy_key) bytes"
+
+          # Debug: test TCP connectivity first
+          echo "=== TCP connectivity test ==="
+          timeout 5 bash -c "cat < /dev/null > /dev/tcp/${{ secrets.SERVER_IP }}/22" && echo "Port 22 reachable" || echo "Port 22 NOT reachable (firewall?)"
+
+          # Debug: test SSH handshake (without executing commands)
+          echo "=== SSH handshake test ==="
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o BatchMode=yes -o PasswordAuthentication=no -i /tmp/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "echo 'SSH OK'" || echo "SSH handshake failed"
+
+          echo "=== Starting upload ==="
           node apps/mini-program/scripts/upload-cdn-assets.mjs
