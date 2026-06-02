@@ -49,9 +49,10 @@ function promoteArchetypeMatch(matches: ArchetypeMatch[], archetype: string): Ar
 export function applyMeasurementDriftCorrections(normalizedTraits: Record<TraitKey, number>, matches: ArchetypeMatch[], answeredQuestionCount: number): ArchetypeMatch[] {
   if (answeredQuestionCount < MEASUREMENT_DRIFT_CORRECTION_MIN_QUESTIONS || matches.length < 2) return matches;
   const top = matches[0]?.archetype;
-  const { A, C, E, O } = normalizedTraits;
+  const { A, C, E, O, X, P } = normalizedTraits;
   if (top === 'corgi' && C >= 60 && O <= 60) return promoteArchetypeMatch(matches, 'rooster');
   if (top === 'dolphin_calm' && A >= 85 && E >= 75 && O >= 70) return promoteArchetypeMatch(matches, 'koala');
+  if (top === 'fox' && O >= 80 && X >= 80 && A >= 50 && C < 55) return promoteArchetypeMatch(matches, 'octopus');
   return matches;
 }
 
