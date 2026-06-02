@@ -1,4 +1,5 @@
 import { View, Text } from '@tarojs/components'
+import JoyJoinIcon from '../ui/JoyJoinIcon'
 import './CityUnlockFeedCard.scss'
 
 interface CityUnlockFeedCardProps {
@@ -14,7 +15,7 @@ export default function CityUnlockFeedCard({ onSelectCity }: CityUnlockFeedCardP
     <View className='city-unlock-feed-card' onClick={onSelectCity}>
       <View className='city-unlock-feed-card__border' />
       <View className='city-unlock-feed-card__content'>
-        <Text className='city-unlock-feed-card__emoji'>🌟</Text>
+        <JoyJoinIcon emoji='🌟' size={40} className='city-unlock-feed-card__emoji' />
         <View className='city-unlock-feed-card__text'>
           <Text className='city-unlock-feed-card__title'>想在你的城市玩？</Text>
           <Text className='city-unlock-feed-card__subtitle'>

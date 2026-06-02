@@ -33,8 +33,8 @@ import {
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
   getAllArchetypeAssetUrls,
-  getArchetypeSpritesheetUrl,
   getArchetypeSpritesheetLocalPath,
+  ASSET_BASE_WEBP_LOCAL,
 } from '../visuals'
 import { getArchetypeCardVariants } from '../archetypeVariants'
 import {
@@ -43,9 +43,7 @@ import {
   type PersonalitySharePosterInput,
 } from './sharePoster'
 import {
-  generatePersonalitySquarePoster,
   PERSONALITY_SQUARE_CANVAS_ID,
-  type PersonalitySquarePosterInput,
 } from '../../../../lib/utils/momentsPosterFactory'
 import {
   ARCHETYPE_SEQUENCE,
@@ -104,6 +102,16 @@ export default function PersonalityTestResultsPage() {
   const [flowStage, setFlowStage] = useState<FlowStage>(hasCompletedReplay ? 'result' : 'loading')
   const [slotPhase, setSlotPhase] = useState<SlotPhase>('anticipation')
 
+  /** Accessibility: respect system reduced-motion preference. */
+  const prefersReducedMotion = useMemo(() => {
+    try {
+      const info = Taro.getSystemInfoSync()
+      return (info as any).reduceMotion === true
+    } catch {
+      return false
+    }
+  }, [])
+
   // Track spritesheet decode readiness before starting slot animation.
   // Falls back after 500ms so we never block indefinitely.
   const spriteReady = useSpriteReadiness(
@@ -120,20 +128,17 @@ export default function PersonalityTestResultsPage() {
   const [isSlowNetwork, setIsSlowNetwork] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [sharePosterPath, setSharePosterPath] = useState('')
-  const [squarePosterPath, setSquarePosterPath] = useState('')
   const [isGeneratingPoster, setIsGeneratingPoster] = useState(false)
-  const [isGeneratingSquarePoster, setIsGeneratingSquarePoster] = useState(false)
   const [generationPhase, setGenerationPhase] = useState('')
   const [completionMode, setCompletionMode] = useState<'replay' | 'animated' | null>(hasCompletedReplay ? 'replay' : null)
-  const [cardNickname, setCardNickname] = useState('')
-  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
+  const [cardNickname] = useState('')
+  const [selectedVariantIndex] = useState(0)
   const [showSkipAnimation, setShowSkipAnimation] = useState(false)
 
   // Invalidate stale poster when user changes card personalization
   useEffect(() => {
     if (sharePosterPath) {
       setSharePosterPath('')
-      setSquarePosterPath('')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVariantIndex, cardNickname])
@@ -185,7 +190,9 @@ export default function PersonalityTestResultsPage() {
   useEffect(() => {
     if (resultPreloadInitiatedRef.current) return
     resultPreloadInitiatedRef.current = true
-    const urls = [getArchetypeSpritesheetUrl(), ...getAllArchetypeAssetUrls()]
+    // Preload the local bundled spritesheet (same path the slot animation uses)
+    // so decode readiness is guaranteed before spin starts.
+    const urls = [getArchetypeSpritesheetLocalPath(), ...getAllArchetypeAssetUrls()]
     void preloadImagesWithDiagnostics(urls, 'personality-results-mount')
   }, [])
 
@@ -268,8 +275,10 @@ export default function PersonalityTestResultsPage() {
   useEffect(() => {
     if (!displayArchetype) return
     const visual = getArchetypeVisual(displayArchetype)
-    if (visual.asset) {
-      void preloadImagesWithDiagnostics([visual.asset], `result-archetype-${displayArchetype}`)
+    const localAsset = displayArchetype ? `${ASSET_BASE_WEBP_LOCAL}/archetype-${displayArchetype}.webp` : ''
+    const preloadTarget = localAsset || visual.asset
+    if (preloadTarget) {
+      void preloadImagesWithDiagnostics([preloadTarget], `result-archetype-${displayArchetype}`)
     }
   }, [displayArchetype])
   const displayArchetypeName = displayArchetype
@@ -315,8 +324,11 @@ export default function PersonalityTestResultsPage() {
     [displayArchetypeName, visual.description, visual.tagline],
   )
   const displayAsset = useMemo(
-    () => visual.asset || getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCelebrate),
-    [visual.asset],
+    () =>
+      (displayArchetype ? `${ASSET_BASE_WEBP_LOCAL}/archetype-${displayArchetype}.webp` : '') ||
+      visual.asset ||
+      getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCelebrate),
+    [displayArchetype, visual.asset],
   )
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [xiaoyueAnalysis, setXiaoyueAnalysis] = useState<XiaoyueAnalysisResult | null>(null)
@@ -513,6 +525,27 @@ export default function PersonalityTestResultsPage() {
         return
       }
 
+      // Accessibility: skip slot animation for users with reduced-motion enabled
+      if (prefersReducedMotion) {
+        const fetchPromise = fetchResult(nextRunId, Boolean(options?.forceRefresh))
+        const resolved = await fetchPromise
+        if (resolved && mountedRef.current && nextRunId === runIdRef.current) {
+          resultStateRef.current = resolved
+          setResultState(resolved)
+          setFlowStage('result')
+          setSlotDisplay(prev => ({ ...prev, progress: 100 }))
+          setPhaseText('')
+          setCompletionMode('animated')
+          analytics.stepCompleted({
+            completionMode: 'animated',
+            isAuthenticated: auth.isAuthenticated,
+            primaryArchetype: displayArchetypeName,
+            degradationTier: 'reduced-motion',
+          })
+        }
+        return
+      }
+
       resultStateRef.current = options?.forceRefresh ? null : resultStateRef.current
       if (options?.forceRefresh) {
         setResultState(null)
@@ -536,12 +569,12 @@ export default function PersonalityTestResultsPage() {
       setFlowStage('slot')
       setPhaseText('即将揭晓...')
 
-      // Show skip button for returning users after 1s
+      // Show skip button for all users after 1.5s (accessibility + impatient users)
       const skipTimeout = setTimeout(() => {
-        if (hasCompletedReplay && mountedRef.current) {
+        if (mountedRef.current) {
           setShowSkipAnimation(true)
         }
-      }, 1000)
+      }, 1500)
       timeoutHandlesRef.current.push(skipTimeout)
 
       await waitFor(profile.slotAnticipationMs)
@@ -635,7 +668,29 @@ export default function PersonalityTestResultsPage() {
         return
       }
 
-      const targetName = resolvedResult.result.primaryArchetype ?? 'corgi'
+      // Unified fallback chain: both slot and result display use identical resolution.
+      // With server-side validation this should always resolve to resolvedResult.result.primaryArchetype.
+      const targetName = resolvedResult.result.primaryArchetype
+        ?? sessionSnapshot?.result?.primaryArchetype
+        ?? topMatches[0]?.archetype
+        ?? 'corgi'
+
+      // Split-brain detection: log if slot target diverges from display fallback chain.
+      // This gives us definitive telemetry on whether the mismatch is data-flow or visual.
+      if (displayArchetype && displayArchetype !== targetName) {
+        logError('[PersonalityResults] SPLIT_BRAIN_DETECTED', {
+          slotTarget: targetName,
+          displayArchetype,
+          displaySource: resultState?.result?.primaryArchetype
+            ? 'resultState'
+            : sessionSnapshot?.result?.primaryArchetype
+              ? 'sessionSnapshot'
+              : 'topMatches',
+          snapshotResultNull: sessionSnapshot?.result === null,
+          sessionId: latestSnapshot.sessionId,
+        })
+      }
+
       const targetIndex = ARCHETYPE_SEQUENCE.indexOf(targetName)
       const safeTargetIndex = targetIndex >= 0 ? targetIndex : 0
       const approachPositions = profile.slotSlowStepDelays.map((_, index) => (
@@ -966,32 +1021,6 @@ export default function PersonalityTestResultsPage() {
     }
   }, [analytics, displayArchetypeName])
 
-  const handleInviteFriend = useCallback(async () => {
-    if (sharePosterPath) {
-      // Poster exists — share it directly via native image menu
-      haptics('light')
-      const taroWithShareImageMenu = Taro as typeof Taro & {
-        showShareImageMenu?: (options: { path: string }) => Promise<unknown>
-      }
-      if (typeof taroWithShareImageMenu.showShareImageMenu === 'function') {
-        await taroWithShareImageMenu.showShareImageMenu({ path: sharePosterPath })
-        analytics.interaction('share_invite_with_poster', { primaryArchetype: displayArchetypeName })
-      } else {
-        await Taro.previewImage({ current: sharePosterPath, urls: [sharePosterPath] })
-      }
-      return
-    }
-
-    // No poster yet — trigger native page share (uses useShareAppMessage)
-    // WeChat requires openType='share' to trigger this programmatically,
-    // so we guide the user to use the top-right menu instead.
-    void Taro.showToast({
-      title: '先点「生成并分享卡片」生成海报，再分享给朋友~',
-      icon: 'none',
-      duration: 2500,
-    })
-  }, [analytics, displayArchetypeName, sharePosterPath])
-
   const handleGeneratePoster = useCallback(async () => {
     if (isGeneratingPoster || !displayArchetype) {
       return
@@ -1083,53 +1112,6 @@ export default function PersonalityTestResultsPage() {
     visual,
   ])
 
-  const handleGenerateSquarePoster = useCallback(async () => {
-    if (isGeneratingSquarePoster || !displayArchetype) return
-    setIsGeneratingSquarePoster(true)
-    try {
-      const input: PersonalitySquarePosterInput = {
-        archetype: displayArchetypeName,
-        subtitle: visual.nickname || displayArchetypeName,
-        tagline: visual.tagline || visual.description || summary,
-        shareLine,
-        rarityPercentage: typeof visual.rarityPercentage === 'number' ? visual.rarityPercentage : 50,
-        archetypeAsset: displayAsset,
-        archetypeAssetPng: visual.assetPng,
-        traitEntries: traitEntries
-          .slice()
-          .sort((a, b) => b.value - a.value)
-          .slice(0, 3)
-          .map(({ label, value }) => ({ label, value })),
-        energyLevel,
-        skillSet: skillSet
-          ? {
-              activeSkill: { name: skillSet.activeSkill.name },
-              passiveSkill: { name: skillSet.passiveSkill.name },
-            }
-          : undefined,
-        archetypeRank,
-        serialNumber,
-      }
-      const path = await generatePersonalitySquarePoster(input)
-      setSquarePosterPath(path)
-      const taroWithShareImageMenu = Taro as typeof Taro & {
-        showShareImageMenu?: (options: { path: string }) => Promise<unknown>
-      }
-      if (typeof taroWithShareImageMenu.showShareImageMenu === 'function') {
-        await taroWithShareImageMenu.showShareImageMenu({ path })
-      } else {
-        await Taro.previewImage({ current: path, urls: [path] })
-      }
-      analytics.interaction('share_square_poster', { primaryArchetype: displayArchetypeName })
-    } catch (err) {
-      const message = err instanceof Error && err.message ? err.message : 'square poster generation failed'
-      logError('[PersonalityResults] square poster generation failed', { message, primaryArchetype: displayArchetypeName })
-      void Taro.showToast({ title: '海报没生成成功，再试试', icon: 'none', duration: 2500 })
-    } finally {
-      setIsGeneratingSquarePoster(false)
-    }
-  }, [analytics, archetypeRank, displayArchetype, displayArchetypeName, displayAsset, energyLevel, isGeneratingSquarePoster, serialNumber, shareLine, skillSet, summary, traitEntries, visual])
-
   const content = useMemo(() => {
     switch (flowStage) {
       case 'empty':
@@ -1192,12 +1174,7 @@ export default function PersonalityTestResultsPage() {
             serialNumber={serialNumber}
             variants={variants}
             selectedVariantIndex={selectedVariantIndex}
-            nickname={cardNickname}
             onGeneratePoster={handleGeneratePoster}
-            onGenerateSquarePoster={handleGenerateSquarePoster}
-            onInviteFriend={handleInviteFriend}
-            onNicknameChange={setCardNickname}
-            onVariantSelect={setSelectedVariantIndex}
             continueButtonLabel={continueButtonLabel}
             onContinue={handleContinue}
             onRestart={handleRestart}
@@ -1242,8 +1219,6 @@ export default function PersonalityTestResultsPage() {
     selectedVariantIndex,
     cardNickname,
     handleGeneratePoster,
-    handleGenerateSquarePoster,
-    handleInviteFriend,
     continueButtonLabel,
     handleContinue,
     auth.isLoading,
@@ -1252,7 +1227,7 @@ export default function PersonalityTestResultsPage() {
   ])
 
   return (
-    <View className={`personality-results personality-results--${flowStage}`}>
+    <View className={`personality-results personality-results--${flowStage}${prefersReducedMotion ? ' personality-results--reduce-motion' : ''}`}>
       {content}
       {showSkipAnimation && (
         <View className='personality-results__skip-button' onClick={handleSkipAnimation}>
@@ -1263,7 +1238,6 @@ export default function PersonalityTestResultsPage() {
       <Canvas
         canvasId={PERSONALITY_SQUARE_CANVAS_ID}
         className='personality-results__poster-canvas'
-        style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: '750px', height: '750px' }}
       />
 
       {/* ── Hidden image preload layer ──

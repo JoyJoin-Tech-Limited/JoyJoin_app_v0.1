@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, Input } from '@tarojs/components';
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
 import { apiRequest } from '../../../lib/api/api';
@@ -462,7 +463,7 @@ export default function QuipBattlePhaseView({
         {bestOfAnswers.length > 0 && (
           <View className='icebreaker__best-of-reel'>
             <Text className='icebreaker__phase-title' style={{ fontSize: '32rpx' }}>
-              🏆 最佳回复 TOP 3
+              <JoyJoinIcon emoji='🏆' size={28} /> 最佳回复 TOP 3
             </Text>
             {bestOfAnswers.map((item, idx) => (
               <View

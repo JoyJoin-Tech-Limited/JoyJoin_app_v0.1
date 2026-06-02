@@ -2,7 +2,7 @@
 @use '../../../styles/mixins' as *;
 
 // ═══════════════════════════════════════════════════════════════════════════
-// WarmupPhaseView — Sprint C Boost Styles
+// WarmupPhaseView — Sprint 3 Vibe Reframe Styles
 // ═══════════════════════════════════════════════════════════════════════════
 
 .icebreaker__warmup {
@@ -83,6 +83,7 @@
   &__label {
     @include type-heading;
     color: $color-text-secondary;
+    line-height: 1.4;
   }
 
   &__sub {
@@ -95,9 +96,10 @@
 .warmup-card-back {
   @include flex-center;
   flex-direction: column;
-  gap: $spacing-md;
+  gap: $spacing-sm;
   min-height: 320rpx;
   text-align: center;
+  position: relative;
 
   &__emoji {
     margin-bottom: $spacing-xs;
@@ -107,7 +109,8 @@
     @include type-subheading;
     color: $color-text-primary;
     line-height: 1.5;
-    word-break: break-word;
+    overflow-wrap: break-word;
+    padding: 0 $spacing-sm;
   }
 
   &__meta {
@@ -142,6 +145,122 @@
   }
 }
 
+// ── Depth badge ──────────────────────────────────────────────────
+.warmup-depth-badge {
+  position: absolute;
+  top: 16rpx;
+  right: 16rpx;
+  padding: 6rpx 16rpx;
+  border-radius: $radius-pill;
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-semibold;
+  line-height: 1.4;
+  animation: depth-badge-enter 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  z-index: 2;
+
+  &--deep {
+    color: $color-amber-700;
+    background: rgba($color-amber, 0.16);
+    border: 2rpx solid rgba($color-amber, 0.35);
+  }
+
+  &--fast {
+    color: $color-success;
+    background: rgba($color-success, 0.14);
+    border: 2rpx solid rgba($color-success, 0.3);
+  }
+
+  &__text {
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    line-height: 1.4;
+  }
+}
+
+@keyframes depth-badge-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8rpx) scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// ── Tier prompts (深聊 only) ─────────────────────────────────────
+.warmup-tier-prompts {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  width: 100%;
+  max-width: 480rpx;
+  margin-top: $spacing-xs;
+
+  &--static {
+    gap: $spacing-sm;
+  }
+}
+
+.warmup-tier-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4rpx;
+  padding: $spacing-xs $spacing-sm;
+  background: rgba($color-primary, 0.04);
+  border-radius: 12rpx;
+  border: 2rpx solid rgba($color-primary, 0.1);
+  opacity: 0;
+  transform: translateY(8rpx);
+  transition: opacity 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  &--visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  &__label {
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+    line-height: 1.4;
+  }
+
+  &__text {
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    line-height: 1.4;
+    text-align: left;
+  }
+}
+
+.warmup-tier-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  margin-top: 4rpx;
+}
+
+.warmup-tier-dot {
+  font-size: $font-size-xs;
+  line-height: 1;
+  color: $color-text-muted;
+  transition: color 300ms ease, transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  &--filled {
+    color: $color-primary;
+  }
+
+  &--active {
+    color: $color-primary;
+    transform: scale(1.25);
+  }
+}
+
 // ── Ready status bar ─────────────────────────────────────────────
 .icebreaker__warmup-status {
   display: flex;
@@ -165,6 +284,12 @@
   @include type-caption;
   color: $color-text-secondary;
   font-weight: $font-weight-medium;
+}
+
+.icebreaker__warmup-ready-all-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4rpx;
 }
 
 .icebreaker__warmup-ready-all {
@@ -207,7 +332,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6rpx;
+  gap: $spacing-xs;
   padding: $spacing-xs $spacing-sm;
   min-width: 100rpx;
   border-radius: $card-radius-sm;
@@ -244,6 +369,8 @@
   position: absolute;
   top: -6rpx;
   right: -10rpx;
+  width: 20rpx;
+  height: 20rpx;
 }
 
 .icebreaker__participant-name {
@@ -311,6 +438,28 @@
   height: 56rpx;
 }
 
+.icebreaker__error-retry {
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: $spacing-md;
+  background: rgba($color-error, 0.06);
+  border: 2rpx solid rgba($color-error, 0.2);
+  border-radius: $card-radius-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.icebreaker__error-retry-text {
+  @include type-body;
+  color: $color-error;
+  text-align: center;
+}
+
+.icebreaker__error-retry-btn {
+  min-width: 160rpx;
+}
+
 .icebreaker__mood-option-label {
   @include type-label;
   color: $color-text-primary;
@@ -340,10 +489,12 @@
     transform: scale(0);
     opacity: 0;
   }
+
   60% {
     transform: scale(1.15);
     opacity: 1;
   }
+
   100% {
     transform: scale(1);
     opacity: 1;
@@ -372,4 +523,44 @@
   text-align: center;
   margin-top: $spacing-xs;
   padding: 0 $spacing-md;
+}
+
+// ── Reduced motion ───────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .warmup-depth-badge {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .warmup-tier-prompt {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .warmup-tier-dot {
+    transition: none;
+    transform: none;
+  }
+
+  .icebreaker__mood-option {
+    transition: none;
+
+    &--active {
+      transform: none;
+    }
+  }
+
+  .icebreaker__participant {
+    transition: none;
+
+    &--ready {
+      .icebreaker__participant-check {
+        transition: none;
+        opacity: 1;
+        transform: none;
+      }
+    }
+  }
 }

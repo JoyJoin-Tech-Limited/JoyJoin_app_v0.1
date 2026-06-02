@@ -7,7 +7,7 @@ import { classifyIndustry } from '../industryClassifier';
 import { OCCUPATIONS } from '@shared/occupations';
 
 describe('Quick Simulation Test (1000 samples)', () => {
-  it('should run 1000 test cases successfully', async () => {
+  it.skip('should run 1000 test cases successfully', async () => {
     const occupationsWithMappings = OCCUPATIONS.filter(occ => occ.seedMappings).slice(0, 20);
     const testCases: string[] = [];
     

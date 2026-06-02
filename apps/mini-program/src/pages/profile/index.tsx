@@ -1,4 +1,5 @@
 import { View, Text, ScrollView } from '@tarojs/components'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import Taro from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { useRef } from 'react'
@@ -152,7 +153,7 @@ export default function ProfilePage() {
             className='profile-page__action-row'
             onClick={() => Taro.navigateTo({ url: '/pages/edit-profile/index' })}
           >
-            <Text className='profile-page__action-icon'>✏️</Text>
+            <JoyJoinIcon emoji='✏️' size={24} className='profile-page__action-icon' />
             <Text className='profile-page__action-text'>编辑资料</Text>
             <Text className='profile-page__action-arrow'>›</Text>
           </View>
@@ -161,7 +162,7 @@ export default function ProfilePage() {
             className='profile-page__action-row'
             onClick={() => Taro.navigateTo({ url: '/pages/rewards/index' })}
           >
-            <Text className='profile-page__action-icon'>🏆</Text>
+            <JoyJoinIcon emoji='🏆' size={24} className='profile-page__action-icon' />
             <Text className='profile-page__action-text'>奖励福利</Text>
             <View className='profile-page__action-badge'>
               <Text className='profile-page__action-count'>{coupons.count ?? 0}</Text>
@@ -173,7 +174,7 @@ export default function ProfilePage() {
             className='profile-page__action-row'
             onClick={() => Taro.navigateTo({ url: '/pages/invite/index' })}
           >
-            <Text className='profile-page__action-icon'>🤝</Text>
+            <JoyJoinIcon emoji='🤝' tier='semantic' size={24} className='profile-page__action-icon' />
             <Text className='profile-page__action-text'>邀请好友</Text>
             <Text className='profile-page__action-arrow'>›</Text>
           </View>
@@ -182,7 +183,7 @@ export default function ProfilePage() {
             className='profile-page__action-row'
             onClick={handleOpenPayment}
           >
-            <Text className='profile-page__action-icon'>🎁</Text>
+            <JoyJoinIcon emoji='🎁' size={24} className='profile-page__action-icon' />
             <Text className='profile-page__action-text'>我的权益</Text>
             <Text className='profile-page__action-arrow'>›</Text>
           </View>
@@ -191,7 +192,7 @@ export default function ProfilePage() {
             className='profile-page__action-row'
             onClick={() => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events })}
           >
-            <Text className='profile-page__action-icon'>🗺️</Text>
+            <JoyJoinIcon emoji='🗺️' size={24} className='profile-page__action-icon' />
             <Text className='profile-page__action-text'>我的足迹</Text>
             {joinedEventsCount > 0 && (
               <View className='profile-page__action-badge'>
@@ -205,7 +206,7 @@ export default function ProfilePage() {
             className='profile-page__action-row'
             onClick={() => Taro.navigateTo({ url: '/pages/terms/index' })}
           >
-            <Text className='profile-page__action-icon'>📄</Text>
+            <JoyJoinIcon emoji='📄' size={24} className='profile-page__action-icon' />
             <Text className='profile-page__action-text'>服务条款</Text>
             <Text className='profile-page__action-arrow'>›</Text>
           </View>

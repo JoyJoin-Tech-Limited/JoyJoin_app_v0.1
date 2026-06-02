@@ -2,7 +2,6 @@
 @use '../../styles/mixins' as *;
 
 .rewards-page {
-  min-height: 100dvh;
   @include page-gradient-bg;
 
   &--error {
@@ -20,9 +19,14 @@
     padding: $spacing-2xl $container-padding $spacing-lg;
   }
 
+  &__coach {
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-lg;
+  }
+
   &__hero-emoji {
     display: block;
-    font-size: 96rpx;
+    font-size: 96rpx; // Decorative — hero emoji
     margin-bottom: $spacing-md;
   }
 
@@ -72,8 +76,8 @@
     @include card;
     margin: 0 $container-padding $spacing-lg;
     padding: $spacing-xl;
-    background: linear-gradient(135deg, rgba(255, 107, 157, 0.08), rgba(168, 107, 255, 0.12));
-    border: 2rpx solid rgba(168, 107, 255, 0.12);
+    background: linear-gradient(135deg, rgba($color-secondary, 0.08), rgba($color-primary, 0.12));
+    border: 2rpx solid rgba($color-primary, 0.12);
   }
 
   &__level-header {
@@ -127,7 +131,7 @@
     justify-content: center;
     padding: 10rpx 20rpx;
     border-radius: 999rpx;
-    background: rgba(255, 255, 255, 0.85);
+    background: rgba($color-surface, 0.85);
     color: $color-text-secondary;
     font-size: $font-size-xs;
     font-weight: $font-weight-medium;
@@ -390,8 +394,19 @@
 
   &__empty-emoji {
     display: block;
-    font-size: 72rpx;
+    font-size: 72rpx; // Decorative — empty-state emoji
     margin-bottom: $spacing-sm;
+  }
+
+  &__empty-hero {
+    width: 320rpx;
+    height: 240rpx;
+    margin-bottom: $spacing-sm;
+
+    &--compact {
+      width: 240rpx;
+      height: 180rpx;
+    }
   }
 
   &__empty-title {
@@ -409,42 +424,13 @@
     line-height: 1.6;
   }
 
-  &__error {
-    @include card;
-    margin: 200rpx $container-padding 0;
-    padding: $spacing-xl;
-    text-align: center;
-  }
-
-  &__error-emoji {
-    display: block;
-    font-size: 84rpx;
-    margin-bottom: $spacing-sm;
-  }
-
-  &__error-title {
-    display: block;
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    margin-bottom: $spacing-xs;
-  }
-
-  &__error-text {
-    display: block;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: 1.6;
-    margin-bottom: $spacing-lg;
-  }
-
-  &__error-btn,
   &__back-btn {
     width: 100%;
     margin-top: $spacing-sm;
   }
 
   &__spacer {
-    height: 120rpx;
+    @include safe-area-bottom-padding(padding-bottom, $tab-bar-height + $spacing-lg);
+    height: 0;
   }
 }

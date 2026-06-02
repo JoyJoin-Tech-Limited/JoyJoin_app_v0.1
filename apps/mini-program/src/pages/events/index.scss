@@ -4,6 +4,7 @@
 .events-page {
   display: flex;
   flex-direction: column;
+  height: 100dvh;
   min-height: 100dvh;
   background: $color-bg-gradient;
 
@@ -37,7 +38,7 @@
   }
 
   &__back-arrow {
-    font-size: 48rpx;
+    font-size: 48rpx; // Decorative — back arrow glyph
     color: $color-text-primary;
     line-height: 1;
   }
@@ -78,16 +79,6 @@
   &__list {
     flex: 1;
     padding: 0 $container-padding;
-  }
-
-  &__loading {
-    @include flex-center;
-    padding: $spacing-2xl;
-  }
-
-  &__loading-text {
-    font-size: $font-size-base;
-    color: $color-text-secondary;
   }
 
   &__card {
@@ -161,38 +152,8 @@
   }
 
   &__empty-state {
-    @include flex-center;
-    flex-direction: column;
+    @include scroll-view-centered-state;
     gap: $spacing-sm;
-    padding: $spacing-2xl;
-    text-align: center;
-  }
-
-  &__empty-hero {
-    width: 320rpx;
-    height: 240rpx;
-  }
-
-  &__empty-text {
-    font-size: $font-size-base;
-    color: $color-text-secondary;
-  }
-
-  &__empty-hint {
-    font-size: $font-size-sm;
-    color: $color-text-muted;
-  }
-
-  &__login-btn {
-    @include button-primary;
-    padding: 0 $spacing-xl;
-    margin-top: $spacing-md;
-  }
-
-  &__login-btn-text {
-    color: $color-text-white;
-    font-size: $font-size-base;
-    font-weight: $font-weight-semibold;
   }
 
   &__countdown {

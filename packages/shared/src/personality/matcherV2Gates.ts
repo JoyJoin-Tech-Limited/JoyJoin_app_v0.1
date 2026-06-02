@@ -62,12 +62,27 @@ export const CONFUSION_PAIR_GATES: Array<{
     }
   },
   {
-    // cat vs turtle: 实际X分布 cat28 vs 龟32
+    // cat vs turtle: 实际X分布 cat22 vs 龟28
+    // Key differentiator: C (turtle=90, cat=55) and E (turtle=82, cat=65)
+    // High C/E is strong turtle signal — don't penalize turtle in that region
     trueArchetype: "cat",
     rivalArchetype: "turtle",
     gate: (t) => {
+      if (t.C >= 75 || t.E >= 78) return 1.0; // High C/E → likely turtle, don't suppress
       if (t.X < 30 && t.A < 60) return 0.3;
       if (t.X < 35) return 0.6;
+      return 1.0;
+    }
+  },
+  {
+    // turtle vs cat: high C or high E strongly favors turtle
+    trueArchetype: "turtle",
+    rivalArchetype: "cat",
+    gate: (t) => {
+      if (t.C >= 80) return 0.25;
+      if (t.C >= 75) return 0.35;
+      if (t.E >= 78 && t.C >= 70) return 0.4;
+      if (t.E >= 75 && t.C >= 65) return 0.5;
       return 1.0;
     }
   },
@@ -102,22 +117,23 @@ export const CONFUSION_PAIR_GATES: Array<{
     }
   },
   {
-    // elephant vs turtle: 大象A更高(74 vs 60)
+    // elephant vs turtle: 大象A更高(70 vs 55), P更高(60 vs 45)
     trueArchetype: "elephant",
     rivalArchetype: "turtle",
     gate: (t) => {
-      if (t.A >= 72 && t.P >= 38) return 0.4;
-      if (t.A >= 68) return 0.6;
+      // Threshold must be <= elephant's actual A (70) to catch genuine elephant users
+      if (t.A >= 68 && t.P >= 42) return 0.4;
+      if (t.A >= 64) return 0.6;
       return 1.0;
     }
   },
   {
-    // hamster_praise vs corgi: hamster_praiseX更高(83 vs 74)
+    // hamster_praise vs corgi: hamster_praise A更高(90 vs 56)
     trueArchetype: "hamster_praise",
     rivalArchetype: "corgi",
     gate: (t) => {
-      if (t.A >= 85) return 0.5;
-      if (t.A >= 80) return 0.7;
+      if (t.A >= 82) return 0.5;
+      if (t.A >= 75) return 0.7;
       return 1.0;
     }
   },

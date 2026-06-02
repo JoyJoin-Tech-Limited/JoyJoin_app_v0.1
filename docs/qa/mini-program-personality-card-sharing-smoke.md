@@ -2,7 +2,7 @@
 
 > Test surface: `apps/mini-program/src/pages/onboarding/personality-test/results/`  
 > Primary client: WeChat Mini Program (iOS + Android)  
-> Last updated: 2026-04-22
+> Last updated: 2026-05-27
 
 ---
 
@@ -92,8 +92,7 @@
 |---|------|----------|-----------|
 | 7.1 | Tap "生成并分享卡片" | Medium haptic | |
 | 7.2 | Generation completes | Success haptic | |
-| 7.3 | Tap "邀请朋友也测一下" | Light haptic | |
-| 7.4 | Slot machine landing (if re-running test) | Short vibration | |
+| 7.3 | Slot machine landing (if re-running test) | Short vibration | |
 
 ---
 

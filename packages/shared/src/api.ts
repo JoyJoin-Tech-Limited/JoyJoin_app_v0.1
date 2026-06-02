@@ -393,6 +393,10 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     onboardingForceSkip?: boolean
     matchingLiveReveal?: boolean
     socialIcebreakerClientForceEnd?: boolean
+    personalityDiceChooseMode?: boolean
+    /** When true, the server uses template-driven run plan compilation (3×3 vibe×tier grid +
+     *  deep_chat/play_fun/balanced vibes). When false, legacy compileAgentRunPlan() runs unchanged. */
+    runPlanTemplatesEnabled?: boolean
   }
 }
 
@@ -862,7 +866,7 @@ const INTEREST_HEAT_BY_LEVEL: Record<InterestSelectionLevel, 3 | 10 | 25> = {
   3: 25,
 }
 
-const INTEREST_CATEGORY_EMOJIS: Record<MacroCategory, string> = {
+export const INTEREST_CATEGORY_EMOJIS: Record<MacroCategory, string> = {
   food: '🍜',
   entertainment: '🎮',
   lifestyle: '🌿',

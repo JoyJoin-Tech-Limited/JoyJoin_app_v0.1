@@ -305,7 +305,7 @@ export default function SquadUnboxingPage() {
               <Card className='squad-unboxing__theme-card'>
                 <View className='squad-unboxing__theme-header'>
                   {group.themeEmoji ? (
-                    <Text className='squad-unboxing__theme-emoji'>{group.themeEmoji}</Text>
+                    <JoyJoinIcon emoji={group.themeEmoji} size={32} className='squad-unboxing__theme-emoji' />
                   ) : null}
                   <Text className='squad-unboxing__theme-title'>{group.theme || '今晚的主题'}</Text>
                 </View>

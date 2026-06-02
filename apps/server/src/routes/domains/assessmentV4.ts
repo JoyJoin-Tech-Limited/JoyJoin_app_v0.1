@@ -4,7 +4,23 @@ import { requireAuth } from "../../middleware/auth";
 import { storage } from "../../storage";
 import { determineSubtype, generateInsights } from "./assessment";
 import type { ArchetypeName } from "../../archetypeConfig";
+import { ARCHETYPE_NAMES } from "../../archetypeConfig";
 import { prefetchAnalysisIfReady } from "../../xiaoyueAnalysisService";
+
+/** Validates that the matcher produced a sane final result before we persist it. */
+function validateFinalResult(finalResult: any): { valid: boolean; primaryArchetype: string; error?: string } {
+  if (!finalResult || typeof finalResult !== 'object') {
+    return { valid: false, primaryArchetype: 'corgi', error: 'finalResult is null or not an object' };
+  }
+  const primary = finalResult.primaryArchetype;
+  if (!primary || typeof primary !== 'string') {
+    return { valid: false, primaryArchetype: 'corgi', error: `primaryArchetype is missing or not a string: ${primary}` };
+  }
+  if (!ARCHETYPE_NAMES.includes(primary)) {
+    return { valid: false, primaryArchetype: 'corgi', error: `primaryArchetype '${primary}' is not a valid archetype` };
+  }
+  return { valid: true, primaryArchetype: primary };
+}
 
 function shuffleOptions(options: any[]): any[] {
   const shuffled = [...options];
@@ -333,6 +349,28 @@ export function registerAssessmentV4Routes(app: Express): void {
 
         // Generate final result
         const finalResult = getFinalResult(engineState, userSecondaryData);
+        const validation = validateFinalResult(finalResult);
+        if (!validation.valid) {
+          logger.error('[Assessment V4] finalResult validation failed', {
+            sessionId,
+            error: validation.error,
+            finalResult: JSON.stringify(finalResult),
+          });
+          // Fall back to live top match so the user still gets a result
+          finalResult.primaryArchetype = validation.primaryArchetype;
+        }
+
+        // Analytics: measure expectation mismatch between live top match and final result
+        const liveTopArchetype = engineState.currentMatches[0]?.archetype;
+        if (liveTopArchetype && liveTopArchetype !== finalResult.primaryArchetype) {
+          logger.warn('[Assessment V4] currentMatches[0] diverges from finalResult', {
+            sessionId,
+            liveTopArchetype,
+            finalArchetype: finalResult.primaryArchetype,
+            topScores: engineState.currentMatches.slice(0, 3).map(m => ({ archetype: m.archetype, score: m.score })),
+            algorithmVersion: finalResult.algorithmVersion,
+          });
+        }
         
         // Update session
         await storage.updateAssessmentSession(sessionId, {
@@ -623,6 +661,27 @@ export function registerAssessmentV4Routes(app: Express): void {
         const freshSession = await storage.getAssessmentSession(sessionId);
         const userSecondaryData = (freshSession?.preSignupData as any)?.secondaryData ?? {};
         const finalResult = getFinalResult(engineState, userSecondaryData);
+        const validation = validateFinalResult(finalResult);
+        if (!validation.valid) {
+          logger.error('[Assessment V4] finalResult validation failed', {
+            sessionId,
+            error: validation.error,
+            finalResult: JSON.stringify(finalResult),
+          });
+          finalResult.primaryArchetype = validation.primaryArchetype;
+        }
+
+        // Analytics: measure expectation mismatch between live top match and final result
+        const liveTopArchetype = engineState.currentMatches[0]?.archetype;
+        if (liveTopArchetype && liveTopArchetype !== finalResult.primaryArchetype) {
+          logger.warn('[Assessment V4] currentMatches[0] diverges from finalResult', {
+            sessionId,
+            liveTopArchetype,
+            finalArchetype: finalResult.primaryArchetype,
+            topScores: engineState.currentMatches.slice(0, 3).map(m => ({ archetype: m.archetype, score: m.score })),
+            algorithmVersion: finalResult.algorithmVersion,
+          });
+        }
 
         await storage.updateAssessmentSession(sessionId, {
           phase: 'completed',
@@ -871,6 +930,15 @@ export function registerAssessmentV4Routes(app: Express): void {
       
       if (session.phase !== 'completed') {
         return res.status(400).json({ message: 'Assessment not yet completed' });
+      }
+
+      const validation = validateFinalResult(session.finalResult);
+      if (!validation.valid) {
+        logger.error('[Assessment V4 Result] Session has invalid finalResult', {
+          sessionId,
+          error: validation.error,
+        });
+        return res.status(500).json({ message: 'Result data is incomplete. Please retake the assessment.' });
       }
       
       res.json({

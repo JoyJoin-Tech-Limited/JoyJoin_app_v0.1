@@ -1,0 +1,28 @@
+{
+  "id": "repo.personality.split-brain-prevention",
+  "title": "Personality Test Split-Brain Prevention Pattern",
+  "owner": "mini-program-platform",
+  "tags": ["personality-test", "archetype", "split-brain", "validation", "results"],
+  "triggerTerms": [
+    "personality test mismatch",
+    "slot animation wrong archetype",
+    "split brain",
+    "finalResult validation",
+    "archetype drift",
+    "displayArchetype mismatch"
+  ],
+  "relatedPaths": [
+    "apps/mini-program/src/pages/onboarding/personality-test/results/index.tsx",
+    "apps/mini-program/src/pages/onboarding/personality-test/index.tsx",
+    "apps/server/src/routes/domains/assessmentV4.ts",
+    "apps/mini-program/src/pages/onboarding/personality-test/visuals.ts"
+  ],
+  "sources": [
+    "docs/systems/PERSONALITY_TEST_SYSTEM.md",
+    "apps/mini-program/src/pages/onboarding/personality-test/results/index.tsx"
+  ],
+  "confidence": "high",
+  "body": "## Summary\n\nThe personality test results flow has a split-brain prevention pattern that ensures the slot animation and the result page always show the same archetype.\n\n### Root causes of historical mismatches\n1. **CDN spritesheet staleness** — The slot machine loaded a CDN spritesheet that could be cached/stale, causing the animation grid to differ from the result page's expectation.\n2. **`finalResult` discarded** — `completeAnonymousAssessment` was saving `result: null` instead of the server's `finalResult`, causing the client to compute divergent fallbacks.\n\n### Prevention measures (2026-05-27)\n- **Local spritesheet only**: `getArchetypeSpritesheetLocalPath()` returns `/pages/onboarding/assets/archetypes/archetype-spritesheet.webp` (onboarding subpackage). CDN path exists only as emergency fallback.\n- **Server validation**: `validateFinalResult()` in `assessmentV4.ts` checks that `primaryArchetype` is a valid string in `ARCHETYPE_NAMES` before persisting. Invalid results fall back to `'corgi'` and log an error.\n- **Client hard validation**: `isValidFinalResult()` blocks transition to results with an error toast if `primaryArchetype` is missing or invalid.\n- **Unified fallback chain**: Both slot target and display archetype use identical resolution:\n  ```\n  resolvedResult.result.primaryArchetype\n    → sessionSnapshot.result.primaryArchetype\n    → topMatches[0].archetype\n    → 'corgi'\n  ```\n- **Telemetry**: Client logs `[PersonalityResults] SPLIT_BRAIN_DETECTED` when slot target ≠ display archetype. Server logs divergence between `currentMatches[0]` and `finalResult.primaryArchetype` with top-3 scores.\n- **GET /result guard**: Returns `500` \"Result data is incomplete\" if `session.finalResult` is null/malformed, rather than violating the client's `NonNullable` assumption.\n",
+  "filename": "split-brain-prevention",
+  "lastValidatedAt": "2026-05-27"
+}

@@ -1,4 +1,5 @@
 import { View, Text, Slider, Image } from '@tarojs/components'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import { memo, useState, useCallback, useEffect, useRef } from 'react'
 import type { AnswerOption } from './personalityTestLogic'
 import Button from '../../../components/ui/Button'
@@ -95,7 +96,7 @@ function EmojiTapOption({
           onError={() => setHasError(true)}
         />
       ) : (
-        <Text className='answer-area__emoji-option-emoji'>{parts.emoji || '🎯'}</Text>
+        <JoyJoinIcon emoji={parts.emoji || '🎯'} size={32} className='answer-area__emoji-option-emoji' />
       )}
       <Text className='answer-area__emoji-option-text'>{parts.label || option.text}</Text>
     </Button>

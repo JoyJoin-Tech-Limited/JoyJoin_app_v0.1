@@ -267,6 +267,10 @@
     flex-shrink: 0;
   }
 
+  &__category-icon {
+    flex-shrink: 0;
+  }
+
   &__category-title {
     display: block;
     font-size: $font-size-md;

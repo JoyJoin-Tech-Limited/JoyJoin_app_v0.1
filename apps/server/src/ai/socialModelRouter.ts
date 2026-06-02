@@ -58,6 +58,7 @@ type SocialFunction =
   | 'generateLieDetectiveStatements'
   | 'generateMicroChallenges'
   | 'generatePersonalityDiceChallenges'
+  | 'generatePersonalityDiceChallengeGroups'
   | 'generateAuctionLots'
   | 'generateXiaoyueSessionPack'
   | 'generateProfileTagline'
@@ -115,6 +116,7 @@ const SOCIAL_FUNCTION_ROUTING: Record<SocialFunction, SocialFunctionRoutingPolic
   generateMicroChallenges: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
   generateLieDetectiveStatements: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
   generatePersonalityDiceChallenges: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
+  generatePersonalityDiceChallengeGroups: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
   generateAuctionLots: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
   generateXiaoyueSessionPack: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
   generateIceBreakers: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },

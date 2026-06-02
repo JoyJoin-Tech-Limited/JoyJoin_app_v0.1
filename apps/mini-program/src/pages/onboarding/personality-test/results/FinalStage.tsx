@@ -8,7 +8,6 @@ import Card from '../../../../components/ui/Card'
 import type { ArchetypeVisual } from '../visuals'
 import type { AnonymousAssessmentTopMatch } from '../../../../lib/auth/anonymousOnboarding'
 import type { ArchetypeSkillSet } from '@shared/personality/archetypeSkills'
-import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { haptics } from '../../../../lib/utils/haptics'
 import { cdnAsset } from '../../../../lib/utils/cdnAssets'
 import type { ArchetypeCardVariant } from '../archetypeVariants'
@@ -32,12 +31,7 @@ interface FinalStageProps {
   serialNumber?: string
   variants?: ArchetypeCardVariant[]
   selectedVariantIndex?: number
-  nickname?: string
   onGeneratePoster: () => void
-  onGenerateSquarePoster?: () => void
-  onInviteFriend: () => void
-  onNicknameChange?: (nickname: string) => void
-  onVariantSelect?: (index: number) => void
   continueButtonLabel: string
   onContinue: () => void
   onRestart: () => void
@@ -76,7 +70,6 @@ export default function FinalStage({
   variants,
   selectedVariantIndex,
   onGeneratePoster,
-  onInviteFriend,
   continueButtonLabel,
   onContinue,
   onRestart,
@@ -291,7 +284,7 @@ export default function FinalStage({
                   onClick={handleCardTap}
                 >
                   <Text className='personality-results__hero-xiaoyue-cta-text'>
-                    看看悦仔怎么说 ▼
+                    看看悦仔怎么说
                   </Text>
                 </View>
               </>
@@ -313,7 +306,7 @@ export default function FinalStage({
                 </View>
                 <View className='personality-results__xiaoyue-fallback-indicator'>
                   <Text className='personality-results__xiaoyue-fallback-indicator-text'>
-                    💡 悦仔的解读暂时不可用，先看看你的氛围卡吧
+                    悦仔的解读暂时不可用，先看看你的氛围卡吧
                   </Text>
                 </View>
               </>
@@ -367,16 +360,6 @@ export default function FinalStage({
               </View>
             ) : null}
 
-            {topMatches.length > 0 ? (
-              <View className='personality-results__pokemon-match-row'>
-                {topMatches.slice(0, 3).map((match) => (
-                  <Text key={match.archetype} className='personality-results__pokemon-match-chip'>
-                    {ARCHETYPE_BY_ID[match.archetype]?.nameCn ?? match.archetype} 默契度{Math.round(match.score)}%
-                  </Text>
-                ))}
-              </View>
-            ) : null}
-
             {/* Energy bar */}
             {typeof energyLevel === 'number' ? (
               <View className='personality-results__pokemon-energy'>
@@ -391,18 +374,6 @@ export default function FinalStage({
                   />
                 </View>
                 <Text className='personality-results__pokemon-energy-hint'>你在社交场合的持久活力</Text>
-              </View>
-            ) : null}
-
-            {/* Compact skill badges — quick preview before full cards */}
-            {skillSet ? (
-              <View className='personality-results__pokemon-skill-badges'>
-                <View className='personality-results__pokemon-skill-badge personality-results__pokemon-skill-badge--warm'>
-                  <Text className='personality-results__pokemon-skill-badge-text'>{skillSet.activeSkill.name}</Text>
-                </View>
-                <View className='personality-results__pokemon-skill-badge personality-results__pokemon-skill-badge--cool'>
-                  <Text className='personality-results__pokemon-skill-badge-text'>{skillSet.passiveSkill.name}</Text>
-                </View>
               </View>
             ) : null}
 
@@ -568,13 +539,6 @@ export default function FinalStage({
                 </View>
               )}
             </ScrollView>
-
-            {/* Sticky bottom actions — outside ScrollView so always reachable */}
-            <View className='personality-results__detail-actions'>
-              <Button variant='secondary' onClick={() => { handleCloseDetail(); onInviteFriend(); }}>
-                邀请朋友来测
-              </Button>
-            </View>
 
             {/* Close button */}
             <View className='personality-results__detail-close' onClick={handleCloseDetail}>

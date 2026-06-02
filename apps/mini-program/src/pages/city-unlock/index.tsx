@@ -6,6 +6,7 @@ import { apiRequest } from '../../lib/api/api'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import XiaoyueSpriteAnimator from '../../components/mascot/XiaoyueSpriteAnimator'
 import LoadingScreen from '../../components/loading/LoadingScreen'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import './index.scss'
 
 interface CityProgress {
@@ -151,7 +152,7 @@ export default function CityUnlockPage() {
             mode='aspectFit'
             style={{ width: '240rpx', height: '240rpx' }}
           />
-          <Text className='city-unlock-page__title'>我们正在朝{cityName}飞来 ✈️</Text>
+          <Text className='city-unlock-page__title'>我们正在朝{cityName}飞来 <JoyJoinIcon emoji='✈️' size={24} /></Text>
         </View>
 
         {/* Progress Bar */}
@@ -167,7 +168,7 @@ export default function CityUnlockPage() {
             <Text className='city-unlock-page__progress-label'>位小伙伴在等待</Text>
           </View>
           <Text className='city-unlock-page__progress-remaining'>
-            还差 {remaining} 人即可解锁{cityName} 🔓
+            还差 {remaining} 人即可解锁{cityName} <JoyJoinIcon emoji='🔓' size={24} />
           </Text>
         </View>
 
@@ -177,14 +178,14 @@ export default function CityUnlockPage() {
             className={`city-unlock-page__btn city-unlock-page__btn--primary ${shareAnimation ? 'city-unlock-page__btn--pulse' : ''}`}
             onClick={handleShare}
           >
-            <Text className='city-unlock-page__btn-icon'>📣</Text>
+            <JoyJoinIcon emoji='📣' size={24} className='city-unlock-page__btn-icon' />
             <Text className='city-unlock-page__btn-text'>邀请好友助力解锁</Text>
           </View>
           <View
             className='city-unlock-page__btn city-unlock-page__btn--secondary'
             onClick={handleBrowseShenzhen}
           >
-            <Text className='city-unlock-page__btn-icon'>🎯</Text>
+            <JoyJoinIcon emoji='🎯' size={24} className='city-unlock-page__btn-icon' />
             <Text className='city-unlock-page__btn-text'>先逛逛深圳的活动</Text>
           </View>
         </View>
@@ -194,19 +195,19 @@ export default function CityUnlockPage() {
           <Text className='city-unlock-page__activity-title'>最新动态</Text>
           <View className='city-unlock-page__activity-list'>
             <View className='city-unlock-page__activity-item'>
-              <Text className='city-unlock-page__activity-dot'>🎉</Text>
+              <JoyJoinIcon emoji='🎉' tier='reaction' size={24} className='city-unlock-page__activity-dot' />
               <Text className='city-unlock-page__activity-text'>你 选择了{cityName}</Text>
             </View>
             {currentCityProgress && (
               <View className='city-unlock-page__activity-item'>
-                <Text className='city-unlock-page__activity-dot'>📊</Text>
+                <JoyJoinIcon emoji='📊' size={24} className='city-unlock-page__activity-dot' />
                 <Text className='city-unlock-page__activity-text'>
                   {currentCityProgress.city.replace('市', '')}已有 {currentCityProgress.interestedCount} 人关注
                 </Text>
               </View>
             )}
             <View className='city-unlock-page__activity-item'>
-              <Text className='city-unlock-page__activity-dot'>✨</Text>
+              <JoyJoinIcon emoji='✨' tier='reveal' size={24} className='city-unlock-page__activity-dot' />
               <Text className='city-unlock-page__activity-text'>目标：{targetThreshold} 人解锁</Text>
             </View>
           </View>

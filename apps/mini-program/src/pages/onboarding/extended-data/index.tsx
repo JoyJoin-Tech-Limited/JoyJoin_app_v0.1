@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   buildStructuredInterestsPayload,
   submitInterests,
+  INTEREST_CATEGORY_EMOJIS,
   type InterestSelectionDraft,
   type InterestSelectionLevel,
 } from '@shared/api'
@@ -27,6 +28,7 @@ import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { logError, logInfo } from '../../../lib/utils/logger'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
 import { getXiaoyueAsset } from '../personality-test/visuals'
@@ -368,9 +370,11 @@ export default function ExtendedDataPage() {
                 <Card key={category} className='extended-data__category'>
                   <View className='extended-data__category-header'>
                     <View className='extended-data__category-title-wrap'>
-                      <View
-                        className='extended-data__category-dot'
-                        style={{ backgroundColor: CATEGORY_META[category]?.dotColor || CATEGORY_COLORS.food }}
+                      <JoyJoinIcon
+                        emoji={INTEREST_CATEGORY_EMOJIS[category]}
+                        tier='category'
+                        size={32}
+                        className='extended-data__category-icon'
                       />
                       <Text className='extended-data__category-title'>
                         {MACRO_CATEGORY_LABELS[category]}

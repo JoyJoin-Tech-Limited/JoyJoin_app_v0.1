@@ -14,7 +14,7 @@ interface ErrorStageProps {
 
 export default function ErrorStage({ errorMessage, isFetchingResult, onRetry, onRestart }: ErrorStageProps) {
   return (
-    <View className='personality-results__centered-state'>
+    <View className='personality-results__centered-state' role='alert' aria-live='polite'>
       <Image
         className='personality-results__network-xiaoyue'
         mode='aspectFit'
@@ -24,10 +24,18 @@ export default function ErrorStage({ errorMessage, isFetchingResult, onRetry, on
       <Text className='personality-results__state-copy'>
         {errorMessage || '同步遇到小状况，再试一次就好~'}
       </Text>
+      <Text className='personality-results__state-hint'>
+        点「再试试」会重新获取结果，不会重复答题。
+      </Text>
       <View className='personality-results__stack-actions'>
-        <Button onClick={onRetry} disabled={isFetchingResult} loading={isFetchingResult}>
-          {isFetchingResult ? '正在同步…' : '再试试'}
-        </Button>
+        <View className='personality-results__retry-with-tooltip'>
+          <Button onClick={onRetry} disabled={isFetchingResult} loading={isFetchingResult}>
+            {isFetchingResult ? '正在同步…' : '再试试'}
+          </Button>
+          <Text className='personality-results__retry-tooltip'>
+            网络波动时可能需要多试一次
+          </Text>
+        </View>
         <Button variant='secondary' onClick={onRestart}>重新测试一次</Button>
       </View>
     </View>

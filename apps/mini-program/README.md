@@ -130,6 +130,36 @@ Assets are **CDN-first** in production. The build inlines `TARO_APP_CDN_BASE_URL
 - `src/assets/box-logo.webp` → `dist/assets/box-logo.webp` (native tab bar center button)
 - `src/native-custom-tab-bar/` → `dist/custom-tab-bar/`
 - `src/pages/onboarding/assets/archetypes` → `dist/pages/onboarding/assets/archetypes` (subpackage assets)
+- `src/assets/icons/*` → `dist/assets/icons/*` (proprietary icon system — reaction, category, intent, reveal, achievement, chemistry, status, info-label, rating-face, mood, phase tiers; see **Proprietary Icon System** below)
+
+### Proprietary Icon System
+
+The mini-program replaces raw Unicode emoji with brand-aligned proprietary icons on all primary UI surfaces. The system lives in two places:
+
+1. **Shared registry** — `packages/shared/src/iconSystem/emojiToIconMap.ts`
+   - Maps Unicode emoji → `assetKey` + `tier` + `fallbackEmoji`
+   - Supports **composite lookup** (same emoji resolves to different assets per tier)
+   - `getIconMapping(emoji, tier?)` → tier-specific match first, then global fallback
+   - `getIconAssetPath(assetKey, tier, density)` → builds `require()` path for Taro
+
+2. **Renderer** — `apps/mini-program/src/components/ui/JoyJoinIcon.tsx`
+   - Props: `emoji`, `size?`, `tier?`, `className?`, `style?`
+   - 4-tier fallback: no mapping → `require()` fail → image load fail → native emoji
+   - Load animation: fade-in + spring-bounce scale (`cubic-bezier(0.34, 1.56, 0.64, 1)`)
+   - Reduced-motion support via `Taro.getSystemInfoSync().reduceMotion`
+   - Shimmer placeholder while loading; `alt={fallbackEmoji}` for accessibility
+
+3. **Utility classes** — `apps/mini-program/src/styles/_utilities.scss`
+   - `.jj-icon-text` — flex row for icon + label (8rpx gap; `--tight` / `--loose` modifiers)
+   - `.jj-icon-loading` — shimmer placeholder animation
+
+**Tier inventory** (`IconTier`): `expression`, `semantic`, `mood`, `chemistry`, `phase`, `status`, `reaction`, `category`, `intent`, `reveal`, `achievement`
+
+**When to use raw emoji intentionally** (do not wire through `JoyJoinIcon`):
+- Dynamic conversational copy (`ProfessionChatOverlay`, Xiaoyue bubbles)
+- Transient particle effects (`ParticleBurst`)
+- Functional symbols (`✓`, `✕`, `✅`) where native rendering is preferred
+- Text-heavy inline content where asset count would explode
 
 ---
 

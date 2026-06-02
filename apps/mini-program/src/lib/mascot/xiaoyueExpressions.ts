@@ -130,6 +130,7 @@ export const ICEBREAKER_XIAOYUE_EXPRESSION = {
   lie_detective: 'testCurious',
   auction: 'matchSuccess',
   personality_dice: 'testSurprised',
+  speed_friending: 'coachGuide',
   mini_script: 'coachGuide',
   quip_battle: 'testSurprised',
   undercover_word: 'testCurious',

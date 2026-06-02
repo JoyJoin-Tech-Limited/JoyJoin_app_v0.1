@@ -66,7 +66,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
       {
         value: "D",
         text: "自己一个人先去体验一次，再决定是否告诉别人",
-        traitScores: { A: 0, C: 0, E: 2, O: 0, X: -1, P: 0 }
+        traitScores: { A: -1, C: 0, E: 2, O: 0, X: -2, P: -1 }
       }
     ]
   },
@@ -804,7 +804,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
       {
         value: "C",
         text: "找到了小圈子深入聊天，感觉还不错",
-        traitScores: { A: 2, C: 0, E: 1, O: 0, X: 1, P: 0 }
+        traitScores: { A: 2, C: -1, E: 1, O: -1, X: 1, P: 0 }
       },
       {
         value: "D",
@@ -1124,12 +1124,12 @@ export const questionsV4L2: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "每个摊位都看看，尝各种小吃，看热闹的表演",
-        traitScores: { A: 0, C: 0, E: 0, O: 2, X: 3, P: 1 }
+        traitScores: { A: 0, C: -1, E: -1, O: 2, X: 3, P: 1 }
       },
       {
         value: "B",
         text: "先绕场一周了解全貌，再有选择地重点逛",
-        traitScores: { A: 0, C: 3, E: 1, O: 0, X: 0, P: 0 }
+        traitScores: { A: 0, C: 3, E: 1, O: 0, X: 0, P: -1 }
       },
       {
         value: "C",

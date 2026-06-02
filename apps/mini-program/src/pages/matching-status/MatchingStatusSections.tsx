@@ -224,7 +224,7 @@ export function MatchingStatusDetailSections({
         <Card className='matching-status__theme-card'>
           <View className='matching-status__theme-header'>
             {persistedThemeSummary.emoji ? (
-              <Text className='matching-status__theme-emoji'>{persistedThemeSummary.emoji}</Text>
+              <JoyJoinIcon emoji={persistedThemeSummary.emoji} size={32} className='matching-status__theme-emoji' />
             ) : null}
             <Text className='matching-status__theme-title'>{persistedThemeSummary.title}</Text>
           </View>
@@ -371,7 +371,7 @@ export function MatchingStatusLiveOverlay({
         <View className='matching-status__overlay-card matching-status__overlay-card--theme' key='theme'>
           <Text className='matching-status__overlay-eyebrow'>今晚的桌面主题</Text>
           {persistedThemeSummary.emoji ? (
-            <Text className='matching-status__overlay-emoji'>{persistedThemeSummary.emoji}</Text>
+            <JoyJoinIcon emoji={persistedThemeSummary.emoji} size={32} className='matching-status__overlay-emoji' />
           ) : null}
           <Text className='matching-status__overlay-title'>{persistedThemeSummary.title}</Text>
           {persistedThemeSummary.subtitle ? (

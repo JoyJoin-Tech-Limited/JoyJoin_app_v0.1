@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon';
 import { View, Text, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import Button from '../../../components/ui/Button';
@@ -276,7 +277,7 @@ export default function UndercoverWordPhaseView({
               marginBottom: '12rpx',
             }}
           >
-            <Text style={{ fontSize: '48rpx' }}>{results.caught ? '🎉' : '😈'}</Text>
+            <JoyJoinIcon emoji={results.caught ? '🎉' : '😈'} size={48} />
             <Text className='icebreaker__challenge-title'>
               卧底是：{results.undercoverDisplayName}
             </Text>
@@ -348,7 +349,7 @@ export default function UndercoverWordPhaseView({
                   gap: '8rpx',
                 }}
               >
-                <Text style={{ fontSize: '48rpx' }}>🕵️</Text>
+                <JoyJoinIcon emoji='🕵️' size={48} />
                 <Text style={{ fontSize: '28rpx', fontWeight: 'bold' }} className='icebreaker__text--light'>你的身份是？</Text>
               </View>
             }
@@ -542,7 +543,7 @@ export default function UndercoverWordPhaseView({
                 gap: '12rpx',
               }}
             >
-              <Text style={{ fontSize: '72rpx' }}>🕵️</Text>
+              <JoyJoinIcon emoji='🕵️' size={72} />
               <Text style={{ fontSize: '36rpx', fontWeight: 'bold' }} className='icebreaker__text--light'>
                 你的身份是？
               </Text>
@@ -565,7 +566,7 @@ export default function UndercoverWordPhaseView({
                 gap: '16rpx',
               }}
             >
-              <Text style={{ fontSize: '64rpx' }}>{isUndercover ? '🕵️' : '🙂'}</Text>
+              <JoyJoinIcon emoji={isUndercover ? '🕵️' : '🙂'} size={64} />
               <Text
                 style={{
                   fontSize: '48rpx',

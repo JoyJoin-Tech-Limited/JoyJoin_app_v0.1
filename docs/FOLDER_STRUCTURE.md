@@ -307,6 +307,18 @@ apps/mini-program/
 │       ├── personality/           # Archetype + Xiaoyue expression WebPs
 │       │   ├── archetypes/        # 12 archetype illustrations + spritesheet
 │       │   └── xiaoyue/           # Mascot character assets
+│       ├── icons/                 # Proprietary icon assets (bundled, not CDN)
+│       │   ├── reaction-icons/    # Icebreaker reaction buttons
+│       │   ├── category-icons/    # Interest category selectors
+│       │   ├── intent-icons/      # Onboarding intent selectors
+│       │   ├── reveal-icons/      # Squad-unboxing reveal emblems
+│       │   ├── achievement-badges/ # Gamification achievement toasts
+│       │   ├── chemistry-badges/  # Match chemistry indicators
+│       │   ├── status-icons/      # Matching / event status badges
+│       │   ├── info-labels/       # Semantic info pills (calendar, location, target, people)
+│       │   ├── rating-faces/      # Rating / evaluation faces
+│       │   ├── mood-icons/        # Mood / atmosphere indicators
+│       │   └── phase-icons/       # Icebreaker phase emblems
 │       ├── tab-icons/             # Bottom tab icons (bundled, not CDN)
 │       └── box-logo.webp          # Brand logo (bundled for native tab bar)
 ├── config/                        # Taro build config
@@ -368,8 +380,8 @@ packages/shared/
 │   │   ├── buttonVariants.ts
 │   │   ├── categoryColors.ts
 │   │   └── connectionPointCompat.ts
-│   ├── iconSystem/                # Icon mapping system
-│   │   └── emojiToIconMap.ts
+│   ├── iconSystem/                # Proprietary icon mapping system (emoji → tiered asset)
+│   │   └── emojiToIconMap.ts      # Composite lookup: same Unicode emoji resolves to different assets per context tier (reaction, category, intent, reveal, achievement, etc.)
 │   ├── legal/                     # Legal copy
 │   │   └── joyjoinTermsZh.ts
 │   ├── ai/                        # Shared AI prompts & types

@@ -3,6 +3,7 @@
 
 .center-hub {
   @include viewport-min-height;
+  box-sizing: border-box;
   background: $color-bg;
   padding-bottom: calc(128rpx + env(safe-area-inset-bottom));
 
@@ -93,14 +94,6 @@
     height: 100%;
   }
 
-@media (prefers-reduced-motion: reduce) {
-  .center-hub__header-mascot {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-}
-
   &__countdown-pill {
     display: inline-flex;
     align-items: center;
@@ -145,12 +138,20 @@
   }
 
   &__loading {
-    padding: $spacing-xl;
-    text-align: center;
+    @include scroll-view-centered-state;
+    gap: $spacing-sm;
   }
 
   &__loading-text {
     font-size: $font-size-base;
     color: $color-text-muted;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .center-hub__header-mascot {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

@@ -291,8 +291,8 @@ Notes:
 2. Start the user-facing app with `npm run dev:user`.
 3. Open `http://localhost:5001`.
 4. Sign in with the normal user flow.
-   - In local non-production development, phone login uses the demo verification code `666666`.
-   - If you need a fully prepared test user, run `npm run user:create` first.
+- Mini-program uses WeChat auth (`微信一键登录`). For local server API testing, use `POST /api/auth/dev-login` (development-only).
+- If you need a fully prepared test user, run `npm run user:create` first.
 5. Expected result: you can log in and use non-admin features such as discovery, onboarding, and the profile pages.
 
 #### 5.2 Running as an admin

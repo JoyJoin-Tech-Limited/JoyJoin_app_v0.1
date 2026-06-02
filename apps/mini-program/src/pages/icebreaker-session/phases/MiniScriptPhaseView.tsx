@@ -1,4 +1,5 @@
 import { View, Text, Input } from '@tarojs/components'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Taro from '@tarojs/taro'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
@@ -308,7 +309,7 @@ export function MiniScriptPhaseView({
             onFlip={() => setRoleFlipped((f) => !f)}
             front={
               <View className='icebreaker__ms-role-front'>
-                <Text className='icebreaker__ms-role-front-emoji'>🎭</Text>
+                <JoyJoinIcon emoji='🎭' size={64} className='icebreaker__ms-role-front-emoji' />
                 <Text className='icebreaker__ms-role-front-label'>你的角色是？</Text>
                 <Text className='icebreaker__ms-role-front-hint'>轻触卡片揭晓</Text>
               </View>

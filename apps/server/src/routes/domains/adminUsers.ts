@@ -736,7 +736,7 @@ export function registerAdminUserRoutes(app: Express): void {
         return res.status(404).json({ message: "User not found" });
       }
 
-      await db.transaction(async (tx) => {
+      await db.transaction(async (tx: any) => {
         // Delete user's own data from all child tables
         await tx.execute(sql`DELETE FROM event_attendance WHERE user_id = ${userId}`);
         await tx.execute(sql`DELETE FROM event_pool_registrations WHERE user_id = ${userId}`);
@@ -811,7 +811,7 @@ export function registerAdminUserRoutes(app: Express): void {
         targetEntityType: 'user',
         targetEntityId: userId,
         before: { displayName: user.displayName, phoneNumber: user.phoneNumber },
-        after: null,
+        after: null as any,
         context: { action: 'delete_all_user_data' as string },
       });
 

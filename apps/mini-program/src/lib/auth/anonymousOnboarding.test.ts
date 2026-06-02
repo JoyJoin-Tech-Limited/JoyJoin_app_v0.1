@@ -99,4 +99,31 @@ describe('anonymous onboarding auth-gate and reset boundaries', () => {
     expect(removeStorageSyncMock).toHaveBeenCalledWith(ANONYMOUS_ASSESSMENT_SESSION_STORAGE_KEY)
     expect(removeStorageSyncMock).toHaveBeenCalledWith(ANONYMOUS_ASSESSMENT_ANSWERS_STORAGE_KEY)
   })
+
+  // Regression guard: completeAnonymousAssessment must preserve the server
+  // finalResult so the results page does not need to re-fetch.
+  it('preserves server finalResult in anonymous session snapshot', () => {
+    const serverResult = {
+      primaryArchetype: 'fox',
+      secondaryArchetype: 'owl',
+      traitScores: { A: 55, C: 60, E: 70, O: 45, X: 80, P: 65 },
+    }
+
+    saveAnonymousAssessmentSession({
+      sessionId: 'anon-session-2',
+      phase: 'completed',
+      timestamp: Date.now(),
+      completedAt: new Date().toISOString(),
+      result: serverResult,
+      topArchetypes: [{ archetype: 'fox', score: 92, confidence: 0.88 }],
+    })
+
+    const snapshot = readAnonymousAssessmentSession()
+    expect(snapshot).toMatchObject({
+      sessionId: 'anon-session-2',
+      phase: 'completed',
+      result: serverResult,
+    })
+    expect(snapshot?.result?.primaryArchetype).toBe('fox')
+  })
 })

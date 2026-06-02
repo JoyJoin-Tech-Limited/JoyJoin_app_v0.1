@@ -1,0 +1,938 @@
+{
+  "summary": {
+    "totalQuestions": 140,
+    "questionsWithNetPositiveBias": 136,
+    "questionsWithNetNegativeBias": 2,
+    "questionsBalanced": 2,
+    "avgNetBiasPerTrait": {
+      "A": 2.036,
+      "C": 2.129,
+      "E": 2.743,
+      "O": 1.8,
+      "X": 0.35,
+      "P": 1.271
+    }
+  },
+  "topCandidates": [
+    {
+      "id": "Q99",
+      "text": "新搬到一个社区，邻居们组织了一个欢迎聚会。 — 你会？",
+      "level": 3,
+      "inflationScore": 10.9375,
+      "netTraitSums": {
+        "A": 3,
+        "C": 7,
+        "E": 3,
+        "O": 1,
+        "X": -3,
+        "P": 1
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "C": {
+          "positive": 3,
+          "negative": 0,
+          "zero": 1
+        },
+        "E": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "O": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        },
+        "X": {
+          "positive": 1,
+          "negative": 2,
+          "zero": 1
+        },
+        "P": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        }
+      },
+      "recommendedAction": "Add reversed options across 5 traits"
+    },
+    {
+      "id": "Q43",
+      "text": "你的周末时间安排，更符合以下哪种模式？",
+      "level": 2,
+      "inflationScore": 10.9286,
+      "netTraitSums": {
+        "A": 4,
+        "C": 4,
+        "E": 3,
+        "O": 1,
+        "X": 3,
+        "P": 2
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 3,
+          "negative": 0,
+          "zero": 1
+        },
+        "C": {
+          "positive": 3,
+          "negative": 0,
+          "zero": 1
+        },
+        "E": {
+          "positive": 2,
+          "negative": 1,
+          "zero": 1
+        },
+        "O": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        },
+        "X": {
+          "positive": 2,
+          "negative": 1,
+          "zero": 1
+        },
+        "P": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        }
+      },
+      "recommendedAction": "Add reversed options across 4 traits"
+    },
+    {
+      "id": "Q133",
+      "text": "需要想一个创意方案，没有时间限制。 — 你更喜欢？",
+      "level": 3,
+      "inflationScore": 10.8889,
+      "netTraitSums": {
+        "A": 1,
+        "C": 3,
+        "E": 6,
+        "O": 10,
+        "X": 4,
+        "P": 4
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 1,
+          "negative": 1,
+          "zero": 2
+        },
+        "C": {
+          "positive": 2,
+          "negative": 1,
+          "zero": 1
+        },
+        "E": {
+          "positive": 4,
+          "negative": 0,
+          "zero": 0
+        },
+        "O": {
+          "positive": 3,
+          "negative": 1,
+          "zero": 0
+        },
+        "X": {
+          "positive": 2,
+          "negative": 1,
+          "zero": 1
+        },
+        "P": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        }
+      },
+      "recommendedAction": "Rebalance E/P"
+    },
+    {
+      "id": "Q129",
+      "text": "周末晚上独自在家，有一整个晚上的时间。 — 你的状态更接近哪个？",
+      "level": 3,
+      "inflationScore": 10.3125,
+      "netTraitSums": {
+        "A": 6,
+        "C": 4,
+        "E": 9,
+        "O": 0,
+        "X": -3,
+        "P": 2
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 2,
+          "negative": 1,
+          "zero": 1
+        },
+        "C": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "E": {
+          "positive": 4,
+          "negative": 0,
+          "zero": 0
+        },
+        "O": {
+          "positive": 0,
+          "negative": 0,
+          "zero": 4
+        },
+        "X": {
+          "positive": 1,
+          "negative": 2,
+          "zero": 1
+        },
+        "P": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        }
+      },
+      "recommendedAction": "Rebalance C/E/P"
+    },
+    {
+      "id": "Q22_v1",
+      "text": "朋友带你去吃ta心目中全市最好吃的餐厅，但你觉得口味很平庸。 — 当ta满怀期待问你怎么样时，你会？",
+      "level": 2,
+      "inflationScore": 10.2857,
+      "netTraitSums": {
+        "A": 6,
+        "C": 1,
+        "E": 3,
+        "O": 2,
+        "X": 1,
+        "P": 3
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 3,
+          "negative": 0,
+          "zero": 1
+        },
+        "C": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        },
+        "E": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "O": {
+          "positive": 2,
+          "negative": 1,
+          "zero": 1
+        },
+        "X": {
+          "positive": 2,
+          "negative": 1,
+          "zero": 1
+        },
+        "P": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        }
+      },
+      "recommendedAction": "Add reversed options across 4 traits"
+    },
+    {
+      "id": "Q25",
+      "text": "别人请你教一个你擅长的技能。 — 你的教学风格是？",
+      "level": 2,
+      "inflationScore": 10.2273,
+      "netTraitSums": {
+        "A": 4,
+        "C": 6,
+        "E": 2,
+        "O": 3,
+        "X": 0,
+        "P": 0
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "C": {
+          "positive": 4,
+          "negative": 0,
+          "zero": 0
+        },
+        "E": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        },
+        "O": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "X": {
+          "positive": 1,
+          "negative": 1,
+          "zero": 2
+        },
+        "P": {
+          "positive": 0,
+          "negative": 0,
+          "zero": 4
+        }
+      },
+      "recommendedAction": "Add reversed options across 4 traits"
+    },
+    {
+      "id": "Q90",
+      "text": "朋友聚会上，气氛有点冷场。 — 你的第一反应是？",
+      "level": 2,
+      "inflationScore": 10.2,
+      "netTraitSums": {
+        "A": 4,
+        "C": 3,
+        "E": 5,
+        "O": 1,
+        "X": 1,
+        "P": 3
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "C": {
+          "positive": 2,
+          "negative": 1,
+          "zero": 1
+        },
+        "E": {
+          "positive": 3,
+          "negative": 0,
+          "zero": 1
+        },
+        "O": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        },
+        "X": {
+          "positive": 2,
+          "negative": 2,
+          "zero": 0
+        },
+        "P": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        }
+      },
+      "recommendedAction": "Add reversed options across 4 traits"
+    },
+    {
+      "id": "Q31",
+      "text": "你和一群朋友计划一次旅行，有几种不同的风格选择。 — 在讨论中，你更可能扮演什么角色？",
+      "level": 2,
+      "inflationScore": 9.8182,
+      "netTraitSums": {
+        "A": 2,
+        "C": 4,
+        "E": 4,
+        "O": 3,
+        "X": 2,
+        "P": 1
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 1,
+          "negative": 1,
+          "zero": 2
+        },
+        "C": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "E": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "O": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "X": {
+          "positive": 1,
+          "negative": 1,
+          "zero": 2
+        },
+        "P": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        }
+      },
+      "recommendedAction": "Add reversed options across 4 traits"
+    },
+    {
+      "id": "Q70",
+      "text": "朋友说发现了一个很刺激但略有风险的新活动。 — 你的第一反应是？",
+      "level": 2,
+      "inflationScore": 9.5192,
+      "netTraitSums": {
+        "A": 1,
+        "C": 3,
+        "E": 5,
+        "O": 3,
+        "X": 0,
+        "P": 3
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        },
+        "C": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "E": {
+          "positive": 3,
+          "negative": 0,
+          "zero": 1
+        },
+        "O": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "X": {
+          "positive": 1,
+          "negative": 1,
+          "zero": 2
+        },
+        "P": {
+          "positive": 2,
+          "negative": 1,
+          "zero": 1
+        }
+      },
+      "recommendedAction": "Add reversed options across 4 traits"
+    },
+    {
+      "id": "Q122",
+      "text": "朋友分享了一个好消息。 — 你的反应更接近哪个？",
+      "level": 3,
+      "inflationScore": 9.5192,
+      "netTraitSums": {
+        "A": 8,
+        "C": 1,
+        "E": 5,
+        "O": 0,
+        "X": 1,
+        "P": 3
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 3,
+          "negative": 1,
+          "zero": 0
+        },
+        "C": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        },
+        "E": {
+          "positive": 4,
+          "negative": 0,
+          "zero": 0
+        },
+        "O": {
+          "positive": 0,
+          "negative": 0,
+          "zero": 4
+        },
+        "X": {
+          "positive": 1,
+          "negative": 1,
+          "zero": 2
+        },
+        "P": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        }
+      },
+      "recommendedAction": "Rebalance C/E/P"
+    },
+    {
+      "id": "Q40",
+      "text": "你加入了一个每周活动的社团，已经三个月。 — 现在你对社团里其他成员的了解程度通常是？",
+      "level": 2,
+      "inflationScore": 9.45,
+      "netTraitSums": {
+        "A": 6,
+        "C": 1,
+        "E": 4,
+        "O": 0,
+        "X": 2,
+        "P": 1
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 3,
+          "negative": 0,
+          "zero": 1
+        },
+        "C": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        },
+        "E": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "O": {
+          "positive": 0,
+          "negative": 0,
+          "zero": 4
+        },
+        "X": {
+          "positive": 2,
+          "negative": 1,
+          "zero": 1
+        },
+        "P": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        }
+      },
+      "recommendedAction": "Add reversed options across 4 traits"
+    },
+    {
+      "id": "Q36",
+      "text": "朋友向你推荐一个TA非常喜欢、但你之前从未接触过的活动。 — 你的第一反应是？",
+      "level": 2,
+      "inflationScore": 9.4286,
+      "netTraitSums": {
+        "A": 4,
+        "C": 4,
+        "E": 3,
+        "O": 4,
+        "X": -1,
+        "P": 1
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "C": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "E": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "O": {
+          "positive": 3,
+          "negative": 1,
+          "zero": 0
+        },
+        "X": {
+          "positive": 1,
+          "negative": 2,
+          "zero": 1
+        },
+        "P": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        }
+      },
+      "recommendedAction": "Add reversed options across 4 traits"
+    },
+    {
+      "id": "Q111",
+      "text": "回顾一次让你特别满足的社交经历。 — 是什么让你觉得这次经历特别好？",
+      "level": 3,
+      "inflationScore": 9.2308,
+      "netTraitSums": {
+        "A": 3,
+        "C": 1,
+        "E": 1,
+        "O": 4,
+        "X": 3,
+        "P": 4
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "C": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        },
+        "E": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        },
+        "O": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "X": {
+          "positive": 2,
+          "negative": 2,
+          "zero": 0
+        },
+        "P": {
+          "positive": 2,
+          "negative": 1,
+          "zero": 1
+        }
+      },
+      "recommendedAction": "Add reversed options across 4 traits"
+    },
+    {
+      "id": "Q20",
+      "text": "大家在热烈讨论一部电影，但其中一个人反复提到一个明显的事实错误。 — 你更可能？",
+      "level": 2,
+      "inflationScore": 8.2286,
+      "netTraitSums": {
+        "A": 2,
+        "C": 5,
+        "E": 4,
+        "O": 1,
+        "X": 3,
+        "P": 1
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 3,
+          "negative": 1,
+          "zero": 1
+        },
+        "C": {
+          "positive": 3,
+          "negative": 0,
+          "zero": 2
+        },
+        "E": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 3
+        },
+        "O": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 4
+        },
+        "X": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 3
+        },
+        "P": {
+          "positive": 1,
+          "negative": 1,
+          "zero": 3
+        }
+      },
+      "recommendedAction": "Add reversed options across 4 traits"
+    },
+    {
+      "id": "Q59",
+      "text": "请评估以下陈述与你的符合程度：我通常能敏锐地察觉到社交场合中微妙的氛围变化和他人未说出口的情绪。",
+      "level": 3,
+      "inflationScore": 8.1442,
+      "netTraitSums": {
+        "A": 1,
+        "C": 2,
+        "E": 4,
+        "O": 1,
+        "X": 2,
+        "P": 1
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 2,
+          "negative": 2,
+          "zero": 0
+        },
+        "C": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "E": {
+          "positive": 3,
+          "negative": 0,
+          "zero": 1
+        },
+        "O": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        },
+        "X": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "P": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        }
+      },
+      "recommendedAction": "Add reversed options across 5 traits"
+    },
+    {
+      "id": "Q37",
+      "text": "当朋友问你我该不该换工作/结束一段关系？这类重大人生抉择时， — 你通常如何回应？",
+      "level": 2,
+      "inflationScore": 8.1231,
+      "netTraitSums": {
+        "A": 4,
+        "C": 4,
+        "E": 1,
+        "O": 1,
+        "X": 3,
+        "P": 3
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 3,
+          "negative": 1,
+          "zero": 1
+        },
+        "C": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 3
+        },
+        "E": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 4
+        },
+        "O": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 4
+        },
+        "X": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 3
+        },
+        "P": {
+          "positive": 2,
+          "negative": 1,
+          "zero": 2
+        }
+      },
+      "recommendedAction": "Add reversed options across 4 traits"
+    },
+    {
+      "id": "Q104",
+      "text": "参加一个话题讨论活动，气氛开始变得热闹。 — 你内心更期待的是？",
+      "level": 3,
+      "inflationScore": 8.0357,
+      "netTraitSums": {
+        "A": 3,
+        "C": 1,
+        "E": 1,
+        "O": 4,
+        "X": 5,
+        "P": 4
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "C": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        },
+        "E": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        },
+        "O": {
+          "positive": 2,
+          "negative": 2,
+          "zero": 0
+        },
+        "X": {
+          "positive": 2,
+          "negative": 1,
+          "zero": 1
+        },
+        "P": {
+          "positive": 2,
+          "negative": 1,
+          "zero": 1
+        }
+      },
+      "recommendedAction": "Rebalance A/C/E"
+    },
+    {
+      "id": "Q113",
+      "text": "聚会上气氛开始变得热烈起来。 — 你更倾向于怎么做？",
+      "level": 3,
+      "inflationScore": 8.0357,
+      "netTraitSums": {
+        "A": 6,
+        "C": 2,
+        "E": 5,
+        "O": 1,
+        "X": 1,
+        "P": 3
+      },
+      "polarityCounts": {
+        "A": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "C": {
+          "positive": 2,
+          "negative": 0,
+          "zero": 2
+        },
+        "E": {
+          "positive": 2,
+          "negative": 1,
+          "zero": 1
+        },
+        "O": {
+          "positive": 1,
+          "negative": 0,
+          "zero": 3
+        },
+        "X": {
+          "positive": 1,
+          "negative": 2,
+          "zero": 1
+        },
+        "P": {
+          "positive": 2,
+          "negative": 1,
+          "zero": 1
+        }
+      },
+      "recommendedAction": "Rebalance A/C/O"
+    }
+  ],
+  "perTraitAnalysis": {
+    "A": {
+      "mostBiasedQuestions": [
+        "Q122",
+        "Q121",
+        "Q123",
+        "Q22_v1",
+        "Q40"
+      ],
+      "avgOptionScore": 0.4974,
+      "positiveOptionCount": 211,
+      "negativeOptionCount": 91
+    },
+    "C": {
+      "mostBiasedQuestions": [
+        "Q99",
+        "Q25",
+        "Q26",
+        "Q27",
+        "Q87"
+      ],
+      "avgOptionScore": 0.5201,
+      "positiveOptionCount": 222,
+      "negativeOptionCount": 67
+    },
+    "E": {
+      "mostBiasedQuestions": [
+        "Q129",
+        "Q119",
+        "Q126",
+        "Q120",
+        "Q23_v1"
+      ],
+      "avgOptionScore": 0.6702,
+      "positiveOptionCount": 290,
+      "negativeOptionCount": 64
+    },
+    "O": {
+      "mostBiasedQuestions": [
+        "Q118",
+        "Q133",
+        "Q117",
+        "Q101",
+        "Q94"
+      ],
+      "avgOptionScore": 0.4398,
+      "positiveOptionCount": 171,
+      "negativeOptionCount": 74
+    },
+    "X": {
+      "mostBiasedQuestions": [
+        "Q97",
+        "Q127",
+        "Q103",
+        "Q104",
+        "Q85"
+      ],
+      "avgOptionScore": 0.0855,
+      "positiveOptionCount": 181,
+      "negativeOptionCount": 210
+    },
+    "P": {
+      "mostBiasedQuestions": [
+        "Q97",
+        "Q109",
+        "Q11",
+        "Q126",
+        "Q29"
+      ],
+      "avgOptionScore": 0.3106,
+      "positiveOptionCount": 174,
+      "negativeOptionCount": 110
+    }
+  }
+}

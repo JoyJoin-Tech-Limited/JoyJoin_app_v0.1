@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import JoyJoinIcon from '../ui/JoyJoinIcon'
 import './TapReaction.scss'
 
 function prefersReducedMotion(): boolean {
@@ -79,7 +80,12 @@ export default function TapReaction({
             className={`gesture-tap-reaction__item${isSelected ? ' gesture-tap-reaction__item--selected' : ''}${isPulsing ? ' gesture-tap-reaction__item--pulse' : ''}`}
             onClick={() => handleTap(index)}
           >
-            <Text className='gesture-tap-reaction__emoji'>{item.emoji}</Text>
+            <JoyJoinIcon
+              emoji={item.emoji}
+              tier='reaction'
+              size={56}
+              className='gesture-tap-reaction__emoji'
+            />
             <Text className='gesture-tap-reaction__label'>{item.label}</Text>
             {typeof item.count === 'number' && (
               <Text className='gesture-tap-reaction__count'>{item.count}</Text>

@@ -7,6 +7,8 @@ import type {
   LieDetectiveVote,
   PulseCheckResult,
   LieDetectiveReveal,
+  PersonalityDiceChallenge,
+  PersonalityDiceChallengeGroup,
 } from '@shared/socialIcebreaker';
 import {
   getNextEligiblePhase,
@@ -21,6 +23,7 @@ import {
   generateXiaoYueComment,
   generateRecapSummary,
   generatePersonalityDiceChallenges,
+  generatePersonalityDiceChallengeGroups,
   generateAuctionLots,
   generateXiaoyueSessionPack,
   generateQuipBattlePrompts,
@@ -156,6 +159,7 @@ router.post('/start', async (req: any, res) => {
       hostUserId: state.hostUserId,
       hostDisplayName: state.hostDisplayName,
       currentPhase: state.currentPhase,
+      tierDisplayName: resolveTierDisplay(state.eventTier ?? 'breeze', { glowVariant: 'default' }),
       state: await buildClientState(state, userId),
     });
   }
@@ -165,6 +169,19 @@ router.post('/start', async (req: any, res) => {
   const now = Date.now();
   const mappedTier = LEGACY_TIER_MAP[eventTier] ?? eventTier;
   const resolvedTier: TierMachineId = (['breeze', 'glow', 'blaze'] as string[]).includes(mappedTier) ? mappedTier as TierMachineId : 'breeze';
+  const resolvedVibe = vibe && ['chat', 'balanced', 'game'].includes(vibe) ? vibe : 'balanced';
+
+  if (!eventTier || !vibe) {
+    logger.warn('Social icebreaker /start received missing tier/vibe, using defaults', {
+      sessionId,
+      userId,
+      receivedEventTier: eventTier,
+      receivedVibe: vibe,
+      resolvedTier,
+      resolvedVibe,
+    });
+  }
+
   const newState: SocialSessionState = {
     socialSessionId,
     icebreakerSessionId: sessionId,
@@ -178,7 +195,7 @@ router.post('/start', async (req: any, res) => {
     completedPhases: [],
     eventType,
     eventTier: resolvedTier,
-    vibe: vibe && ['chat', 'balanced', 'game'].includes(vibe) ? vibe : 'balanced',
+    vibe: resolvedVibe,
     enabledPhases: getServerEnabledPhases(),
     commonGroundCount: 0,
     warmupReadyUserIds: [],
@@ -192,8 +209,34 @@ router.post('/start', async (req: any, res) => {
     await createSession(newState);
     await upsertParticipant(socialSessionId, userId, displayName || '主持人');
 
-    // Pre-generate AI content for phases in the run plan (best-effort)
+    // Pre-compile warmup topics at session creation (best-effort, 3s timeout)
     const roster = await listParticipants(socialSessionId);
+    try {
+      const vibeMoodMap: Record<string, AtmosphereMood> = { chat: 'life', balanced: 'relaxed', game: 'funny' };
+      const topicResult = await generateWarmupTopics({
+        mood: vibeMoodMap[newState.vibe ?? 'balanced'] ?? 'relaxed',
+        eventType: newState.eventType || '活动',
+        participantCount: roster.length || 1,
+        roster: roster.map((p) => ({ archetype: p.archetype })),
+        vibe: newState.vibe,
+      });
+      newState.warmupTopics = topicResult.data;
+      newState.warmupTopicsMeta = topicResult.meta;
+      await updateSession(socialSessionId, newState);
+      logger.info('Warmup topics pre-compiled at session creation', {
+        socialSessionId,
+        source: topicResult.meta.fallbackUsed ? 'curated' : 'ai',
+        topicCount: topicResult.data.length,
+        vibe: newState.vibe,
+      });
+    } catch (warmupErr) {
+      logger.warn('Warmup pre-compilation failed, session starts without cached topics', {
+        socialSessionId,
+        error: warmupErr instanceof Error ? warmupErr.message : String(warmupErr),
+      });
+    }
+
+    // Pre-generate AI content for phases in the run plan (best-effort)
     try {
       await enqueueRunPlanPreGeneration(
         socialSessionId,
@@ -248,7 +291,8 @@ router.post('/start', async (req: any, res) => {
       hostUserId: concurrent.state.hostUserId,
       hostDisplayName: concurrent.state.hostDisplayName,
       currentPhase: concurrent.state.currentPhase,
-      state: await buildClientState(concurrent.state),
+      tierDisplayName: resolveTierDisplay(concurrent.state.eventTier ?? 'breeze', { glowVariant: 'default' }),
+      state: await buildClientState(concurrent.state, userId),
     });
   }
 
@@ -432,6 +476,7 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
       participantCount: state.playerCount || participantCount,
       avoidTopics,
       roster: participants || [],
+      vibe: state.vibe,
     });
 
     state.warmupTopics = topicResult.data;
@@ -990,6 +1035,81 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
     return res.status(400).json({ error: 'Not in personality_dice phase' });
   }
 
+  const chooseModeEnabled = (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
+
+  // ── Choose-Mode branch ──
+  if (chooseModeEnabled) {
+    // Idempotent retry: if groups already exist, return them instead of regenerating
+    if ((state.personalityDiceChallengeGroups || []).length > 0) {
+      const cachedMeta = state.personalityDiceChallengesMeta
+        ?? buildCachedAIMeta(new Date(state.phaseStartedAt).toISOString(), null, 'social-personality-dice-v4');
+      const enrichedGroups = state.personalityDiceChallengeGroups!.map((g) => ({
+        ...g,
+        archetypeColor: getArchetypeHSL(g.archetype),
+        options: g.options.map((o) => ({ ...o, archetypeColor: getArchetypeHSL(o.archetype) })),
+      }));
+      return res.json({ groups: enrichedGroups, meta: cachedMeta });
+    }
+
+    // Pre-generation freshness: check if async pre-gen is available or in-flight
+    try {
+      const preGenStatus = await shouldSkipOnDemandGeneration(socialSessionId, 'personality_dice');
+      if (preGenStatus.skip && preGenStatus.reason === 'available') {
+        const result = await getPreGenerationResult(socialSessionId, 'personality_dice');
+        if (result) {
+          const preGenGroups = (result.contentJson as unknown as PersonalityDiceChallengeGroup[]).map((g) => ({
+            ...g,
+            archetypeColor: getArchetypeHSL(g.archetype),
+            options: g.options.map((o) => ({ ...o, archetypeColor: getArchetypeHSL(o.archetype) })),
+          }));
+          state.personalityDiceChallengeGroups = preGenGroups;
+          state.personalityDiceChallengesMeta = (result.aiMeta as unknown as AIResponseMeta | undefined) ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-personality-dice-v4');
+          state.diceSelectedOption = {};
+          state.currentDicePlayerIndex = 0;
+          state.diceCompletedBy = [];
+          state.dicePassedBy = [];
+          await updateSession(socialSessionId, state);
+          logger.info('Personality dice groups served from pre-generation', { socialSessionId });
+          return res.json({ groups: preGenGroups, meta: state.personalityDiceChallengesMeta });
+        }
+      }
+      if (preGenStatus.skip && preGenStatus.reason === 'in_flight') {
+        logger.info('Personality dice pre-generation in-flight, returning 202', { socialSessionId });
+        return res.status(202).json({
+          status: 'generating',
+          message: 'Dares are being prepared, please retry shortly',
+        });
+      }
+    } catch (preGenErr) {
+      logger.warn('Pre-generation check failed for personality dice, falling back to on-demand', {
+        socialSessionId,
+        error: preGenErr instanceof Error ? preGenErr.message : String(preGenErr),
+      });
+    }
+
+    try {
+      const groupResult = await generatePersonalityDiceChallengeGroups({ participants: participants || [] });
+      const enrichedGroups = groupResult.data.map((g) => ({
+        ...g,
+        archetypeColor: getArchetypeHSL(g.archetype),
+        options: g.options.map((o) => ({ ...o, archetypeColor: getArchetypeHSL(o.archetype) })),
+      }));
+      state.personalityDiceChallengeGroups = enrichedGroups;
+      state.personalityDiceChallengesMeta = groupResult.meta;
+      state.diceSelectedOption = {};
+      state.currentDicePlayerIndex = 0;
+      state.diceCompletedBy = [];
+      state.dicePassedBy = [];
+      await updateSession(socialSessionId, state);
+
+      return res.json({ groups: enrichedGroups, meta: groupResult.meta });
+    } catch (error) {
+      logger.error('[SocialIcebreaker] personality-dice/generate (choose-mode) error:', { error });
+      return res.status(500).json({ error: 'Failed to generate dice challenge groups' });
+    }
+  }
+
+  // ── Legacy branch (flag OFF) ──
   // Idempotent retry: if challenges already exist, return them instead of regenerating
   if ((state.personalityDiceChallenges || []).length > 0) {
     const cachedMeta = state.personalityDiceChallengesMeta
@@ -1056,6 +1176,150 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
 });
 
 // ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/personality-dice/choose
+// Choose-Your-Prompt variant: player picks 1 of 3 dares.
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/personality-dice/choose', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+  const { userId: targetUserId, optionIndex, operationId } = req.body as {
+    userId: string;
+    optionIndex: number;
+    operationId?: string;
+  };
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  if (!targetUserId || typeof targetUserId !== 'string') {
+    return res.status(400).json({ error: 'userId is required' });
+  }
+
+  if (typeof optionIndex !== 'number' || optionIndex < 0 || optionIndex > 2) {
+    return res.status(400).json({ error: 'optionIndex must be 0, 1, or 2' });
+  }
+
+  const chooseModeEnabled = (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
+  if (!chooseModeEnabled) {
+    return res.status(400).json({ error: 'Choose-Your-Prompt mode is not enabled' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (state.currentPhase !== 'personality_dice') {
+    return res.status(400).json({ error: 'Not in personality_dice phase' });
+  }
+
+  const groups = state.personalityDiceChallengeGroups;
+  if (!groups || groups.length === 0) {
+    return res.status(400).json({ error: 'No challenge groups generated yet' });
+  }
+
+  // Find the group for this user
+  const group = groups.find((g) => g.userId === targetUserId);
+  if (!group) {
+    return res.status(400).json({ error: 'No challenge group found for this user' });
+  }
+
+  const selectedOption: PersonalityDiceChallenge = group.options[optionIndex];
+  if (!selectedOption) {
+    return res.status(400).json({ error: 'Invalid option index for this group' });
+  }
+
+  const alreadyChosen = state.diceSelectedOption?.[targetUserId] !== undefined;
+  if (alreadyChosen && !operationId) {
+    return res.status(409).json({
+      error: 'Already chosen',
+      chosenOptionIndex: state.diceSelectedOption![targetUserId],
+      selectedOption: { ...group.options[state.diceSelectedOption![targetUserId]], archetypeColor: getArchetypeHSL(group.options[state.diceSelectedOption![targetUserId]].archetype) },
+    });
+  }
+
+  if (operationId) {
+    const result = await recordVoteOptimistically(
+      {
+        operationId,
+        socialSessionId,
+        phase: 'personality_dice_choose',
+        vote: { userId: targetUserId, optionIndex },
+      },
+      async () => {
+        const currentState = await getSession(socialSessionId);
+        if (!currentState) return false;
+        return currentState.diceSelectedOption?.[targetUserId] === undefined;
+      },
+      async () => {
+        const currentState = await getSession(socialSessionId);
+        if (!currentState) throw new Error('Session not found');
+
+        if (currentState.diceSelectedOption?.[targetUserId] !== undefined) return;
+
+        currentState.diceSelectedOption = { ...(currentState.diceSelectedOption || {}), [targetUserId]: optionIndex };
+
+        const diceCompletedBy = currentState.diceCompletedBy || [];
+        if (!diceCompletedBy.includes(targetUserId)) {
+          diceCompletedBy.push(targetUserId);
+          currentState.diceCompletedBy = diceCompletedBy;
+        }
+
+        await updateSession(socialSessionId, currentState);
+      },
+    );
+
+    if (!result.accepted) {
+      return res.status(409).json({ error: result.conflict || 'Operation rejected' });
+    }
+
+    const freshState = await getSession(socialSessionId);
+    const freshSelectedOption: PersonalityDiceChallenge = {
+      ...group.options[optionIndex],
+      archetypeColor: getArchetypeHSL(group.options[optionIndex].archetype),
+    };
+    const freshDiceCompletedBy = freshState?.diceCompletedBy || [];
+    const freshDicePassedBy = freshState?.dicePassedBy || [];
+    const allResponded = (freshDiceCompletedBy.length + freshDicePassedBy.length) >= groups.length;
+    return res.json({
+      selectedOption: freshSelectedOption,
+      meta: freshState?.personalityDiceChallengesMeta ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-personality-dice-v4'),
+      diceCompletedBy: freshDiceCompletedBy,
+      dicePassedBy: freshDicePassedBy,
+      allChosen: freshDiceCompletedBy.length >= groups.length,
+      allCompleted: allResponded,
+      operationId,
+    });
+  }
+
+  // Non-optimistic path
+  state.diceSelectedOption = { ...(state.diceSelectedOption || {}), [targetUserId]: optionIndex };
+
+  const diceCompletedBy = state.diceCompletedBy || [];
+  if (!diceCompletedBy.includes(targetUserId)) {
+    diceCompletedBy.push(targetUserId);
+    state.diceCompletedBy = diceCompletedBy;
+  }
+
+  await updateSession(socialSessionId, state);
+
+  const responseSelectedOption: PersonalityDiceChallenge = {
+    ...group.options[optionIndex],
+    archetypeColor: getArchetypeHSL(group.options[optionIndex].archetype),
+  };
+
+  const allResponded = (diceCompletedBy.length + (state.dicePassedBy?.length ?? 0)) >= groups.length;
+
+  return res.json({
+    selectedOption: responseSelectedOption,
+    meta: state.personalityDiceChallengesMeta ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-personality-dice-v4'),
+    diceCompletedBy,
+    dicePassedBy: state.dicePassedBy || [],
+    allChosen: diceCompletedBy.length >= groups.length,
+    allCompleted: allResponded,
+  });
+});
+
+// ---------------------------------------------------------------------------
 // POST /api/social-icebreaker/:socialSessionId/personality-dice/complete
 // ---------------------------------------------------------------------------
 router.post('/:socialSessionId/personality-dice/complete', async (req: any, res) => {
@@ -1072,6 +1336,27 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
 
   if (state.currentPhase !== 'personality_dice') {
     return res.status(400).json({ error: 'Not in personality_dice phase' });
+  }
+
+  const chooseModeEnabled = (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
+
+  // ── Choose-Mode branch: if user already chose, no-op ──
+  if (chooseModeEnabled && state.personalityDiceChallengeGroups) {
+    const alreadyChosen = state.diceSelectedOption?.[userId] !== undefined;
+    if (alreadyChosen) {
+      const group = state.personalityDiceChallengeGroups.find((g) => g.userId === userId);
+      const optionIdx = state.diceSelectedOption![userId];
+      const chosenOption: PersonalityDiceChallenge | undefined = group?.options?.[optionIdx];
+      return res.json({
+        alreadyChosen: true,
+        diceCompletedBy: state.diceCompletedBy || [],
+        dicePassedBy: state.dicePassedBy || [],
+        selectedOption: chosenOption
+          ? { ...chosenOption, archetypeColor: getArchetypeHSL(chosenOption.archetype) }
+          : null,
+        allCompleted: ((state.diceCompletedBy || []).length + (state.dicePassedBy || []).length) >= (state.personalityDiceChallengeGroups?.length ?? 0),
+      });
+    }
   }
 
   if (operationId) {
@@ -1107,9 +1392,13 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
         }
 
         const challenges = currentState.personalityDiceChallenges || [];
+        const groups = currentState.personalityDiceChallengeGroups || [];
+        const totalPlayers = groups.length > 0 ? groups.length : challenges.length;
         const currentIdx = currentState.currentDicePlayerIndex ?? 0;
-        if (challenges[currentIdx]?.userId === userId) {
-          currentState.currentDicePlayerIndex = Math.min(currentIdx + 1, challenges.length - 1);
+        if (groups.length > 0) {
+          currentState.currentDicePlayerIndex = Math.min(currentIdx + 1, totalPlayers - 1);
+        } else if (challenges[currentIdx]?.userId === userId) {
+          currentState.currentDicePlayerIndex = Math.min(currentIdx + 1, totalPlayers - 1);
         }
 
         await updateSession(socialSessionId, currentState);
@@ -1122,8 +1411,11 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
 
     // Re-fetch fresh state after optimistic mutation
     const freshState = await getSession(socialSessionId);
-    const allResponded = (freshState?.personalityDiceChallenges || []).length > 0 &&
-      ((freshState?.diceCompletedBy || []).length + (freshState?.dicePassedBy || []).length) >= (freshState?.personalityDiceChallenges || []).length;
+    const totalPlayers = (freshState?.personalityDiceChallengeGroups?.length ?? 0) > 0
+      ? freshState!.personalityDiceChallengeGroups!.length
+      : (freshState?.personalityDiceChallenges || []).length;
+    const allResponded = totalPlayers > 0 &&
+      ((freshState?.diceCompletedBy || []).length + (freshState?.dicePassedBy || []).length) >= totalPlayers;
 
     return res.json({
       diceCompletedBy: freshState?.diceCompletedBy || [],
@@ -1151,14 +1443,18 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
   }
 
   const challenges = state.personalityDiceChallenges || [];
+  const groups = state.personalityDiceChallengeGroups || [];
+  const totalPlayers = groups.length > 0 ? groups.length : challenges.length;
   const currentIdx = state.currentDicePlayerIndex ?? 0;
-  if (challenges[currentIdx]?.userId === userId) {
-    state.currentDicePlayerIndex = Math.min(currentIdx + 1, challenges.length - 1);
+  if (groups.length > 0) {
+    state.currentDicePlayerIndex = Math.min(currentIdx + 1, totalPlayers - 1);
+  } else if (challenges[currentIdx]?.userId === userId) {
+    state.currentDicePlayerIndex = Math.min(currentIdx + 1, totalPlayers - 1);
   }
 
   await updateSession(socialSessionId, state);
 
-  const allResponded = challenges.length > 0 && (diceCompletedBy.length + dicePassedBy.length) >= challenges.length;
+  const allResponded = totalPlayers > 0 && (diceCompletedBy.length + dicePassedBy.length) >= totalPlayers;
 
   return res.json({
     diceCompletedBy,
@@ -2176,6 +2472,129 @@ router.post('/:socialSessionId/group-mirror/reveal', async (req: any, res) => {
   await updateSession(socialSessionId, state);
 
   return res.json({ revealed: true, results });
+});
+
+// ---------------------------------------------------------------------------
+// Speed Friending routes
+// ---------------------------------------------------------------------------
+
+router.get('/:socialSessionId/speed-friending', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (state.currentPhase !== 'speed_friending') {
+    return res.status(400).json({ error: 'Not in speed friending phase' });
+  }
+
+  if (state.speedFriendingAllRoundsComplete) {
+    return res.status(400).json({ error: 'Speed friending already completed' });
+  }
+
+  const pairs = state.speedFriendingPairs;
+  if (!pairs || pairs.length === 0) {
+    return res.status(400).json({ error: 'Speed friending has not been started yet' });
+  }
+
+  const totalRounds = state.speedFriendingTotalRounds ?? 0;
+  const currentRound = state.speedFriendingCurrentRound ?? 0;
+
+  return res.json({
+    currentRound,
+    totalRounds,
+    allRoundsComplete: false,
+    roundStartedAt: state.speedFriendingRoundStartedAt,
+    state: await buildClientState(state, userId),
+  });
+});
+
+router.post('/:socialSessionId/speed-friending/next-round', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
+    return res.status(403).json({ error: 'Only the host can advance rounds' });
+  }
+
+  if (state.currentPhase !== 'speed_friending') {
+    return res.status(400).json({ error: 'Not in speed_friending phase' });
+  }
+
+  if (!state.speedFriendingPairs || state.speedFriendingPairs.length === 0) {
+    return res.status(400).json({ error: 'Speed friending has not been started yet' });
+  }
+
+  const totalRounds = state.speedFriendingTotalRounds ?? 0;
+  const currentRound = state.speedFriendingCurrentRound ?? 0;
+
+  if (currentRound >= totalRounds - 1) {
+    return res.status(400).json({ error: 'Already at the final round' });
+  }
+
+  state.speedFriendingCurrentRound = currentRound + 1;
+  state.speedFriendingRoundStartedAt = Date.now();
+  await updateSession(socialSessionId, state);
+
+  logger.info('Speed friending next round', { socialSessionId, currentRound: state.speedFriendingCurrentRound });
+
+  return res.json({
+    currentRound: state.speedFriendingCurrentRound,
+    totalRounds: state.speedFriendingTotalRounds,
+    allRoundsComplete: false,
+    roundStartedAt: state.speedFriendingRoundStartedAt,
+    state: await buildClientState(state, userId),
+  });
+});
+
+router.post('/:socialSessionId/speed-friending/complete', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
+    return res.status(403).json({ error: 'Only the host can complete speed friending' });
+  }
+
+  if (state.currentPhase !== 'speed_friending') {
+    return res.status(400).json({ error: 'Not in speed_friending phase' });
+  }
+
+  if (!state.speedFriendingPairs || state.speedFriendingPairs.length === 0) {
+    return res.status(400).json({ error: 'Speed friending has not been started yet' });
+  }
+
+  state.speedFriendingCurrentRound = state.speedFriendingTotalRounds ?? 0;
+  state.speedFriendingAllRoundsComplete = true;
+  state.speedFriendingRoundStartedAt = undefined;
+  await updateSession(socialSessionId, state);
+
+  logger.info('Speed friending completed', { socialSessionId });
+
+  return res.json({
+    currentRound: state.speedFriendingCurrentRound,
+    totalRounds: state.speedFriendingTotalRounds,
+    allRoundsComplete: true,
+    state: await buildClientState(state, userId),
+  });
 });
 
 registerExtendedRoutes(router);

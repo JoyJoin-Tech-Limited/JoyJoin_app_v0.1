@@ -1,0 +1,24 @@
+@use '../../styles/variables' as *;
+
+.typewriter-cursor {
+  display: inline;
+  color: rgba($color-primary-dark, 0.45);
+  font-weight: $font-weight-normal;
+  animation: typewriter-cursor-blink 1s step-end infinite;
+}
+
+@keyframes typewriter-cursor-blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typewriter-cursor {
+    animation: none;
+    opacity: 0.6;
+  }
+}

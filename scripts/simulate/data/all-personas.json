@@ -1,0 +1,896 @@
+[
+  {
+    "id": "centroid-corgi",
+    "label": "社牛柯基 (centroid)",
+    "traitProfile": {
+      "A": 60,
+      "C": 50,
+      "E": 60,
+      "O": 65,
+      "X": 95,
+      "P": 85
+    },
+    "expectedArchetype": "corgi",
+    "category": "centroid"
+  },
+  {
+    "id": "centroid-rooster",
+    "label": "小太阳鸡 (centroid)",
+    "traitProfile": {
+      "A": 70,
+      "C": 78,
+      "E": 88,
+      "O": 55,
+      "X": 78,
+      "P": 92
+    },
+    "expectedArchetype": "rooster",
+    "category": "centroid"
+  },
+  {
+    "id": "centroid-hamster_praise",
+    "label": "夸夸仓鼠 (centroid)",
+    "traitProfile": {
+      "A": 95,
+      "C": 50,
+      "E": 65,
+      "O": 62,
+      "X": 82,
+      "P": 88
+    },
+    "expectedArchetype": "hamster_praise",
+    "category": "centroid"
+  },
+  {
+    "id": "centroid-fox",
+    "label": "寻宝狐 (centroid)",
+    "traitProfile": {
+      "A": 40,
+      "C": 50,
+      "E": 60,
+      "O": 92,
+      "X": 78,
+      "P": 58
+    },
+    "expectedArchetype": "fox",
+    "category": "centroid"
+  },
+  {
+    "id": "centroid-dolphin_calm",
+    "label": "机灵海豚 (centroid)",
+    "traitProfile": {
+      "A": 70,
+      "C": 70,
+      "E": 85,
+      "O": 65,
+      "X": 65,
+      "P": 68
+    },
+    "expectedArchetype": "dolphin_calm",
+    "category": "centroid"
+  },
+  {
+    "id": "centroid-spider",
+    "label": "人脉蛛 (centroid)",
+    "traitProfile": {
+      "A": 70,
+      "C": 85,
+      "E": 65,
+      "O": 70,
+      "X": 60,
+      "P": 60
+    },
+    "expectedArchetype": "spider",
+    "category": "centroid"
+  },
+  {
+    "id": "centroid-koala",
+    "label": "树洞考拉 (centroid)",
+    "traitProfile": {
+      "A": 90,
+      "C": 65,
+      "E": 80,
+      "O": 60,
+      "X": 48,
+      "P": 70
+    },
+    "expectedArchetype": "koala",
+    "category": "centroid"
+  },
+  {
+    "id": "centroid-octopus",
+    "label": "脑洞章鱼 (centroid)",
+    "traitProfile": {
+      "A": 50,
+      "C": 28,
+      "E": 55,
+      "O": 95,
+      "X": 52,
+      "P": 70
+    },
+    "expectedArchetype": "octopus",
+    "category": "centroid"
+  },
+  {
+    "id": "centroid-owl",
+    "label": "好奇猫头鹰 (centroid)",
+    "traitProfile": {
+      "A": 45,
+      "C": 80,
+      "E": 75,
+      "O": 88,
+      "X": 40,
+      "P": 50
+    },
+    "expectedArchetype": "owl",
+    "category": "centroid"
+  },
+  {
+    "id": "centroid-elephant",
+    "label": "靠谱大象 (centroid)",
+    "traitProfile": {
+      "A": 70,
+      "C": 90,
+      "E": 86,
+      "O": 50,
+      "X": 40,
+      "P": 60
+    },
+    "expectedArchetype": "elephant",
+    "category": "centroid"
+  },
+  {
+    "id": "centroid-turtle",
+    "label": "慢热龟 (centroid)",
+    "traitProfile": {
+      "A": 55,
+      "C": 90,
+      "E": 82,
+      "O": 58,
+      "X": 28,
+      "P": 45
+    },
+    "expectedArchetype": "turtle",
+    "category": "centroid"
+  },
+  {
+    "id": "centroid-cat",
+    "label": "小透明猫 (centroid)",
+    "traitProfile": {
+      "A": 40,
+      "C": 55,
+      "E": 65,
+      "O": 72,
+      "X": 22,
+      "P": 42
+    },
+    "expectedArchetype": "cat",
+    "category": "centroid"
+  },
+  {
+    "id": "boundary-01",
+    "label": "社牛柯基↔小太阳鸡 (60/40)",
+    "traitProfile": {
+      "A": 66.40388012080847,
+      "C": 58.724509672980105,
+      "E": 69.12006176179229,
+      "O": 59.63957175475637,
+      "X": 88.53753327433945,
+      "P": 90.76417671587241
+    },
+    "expectedArchetype": "corgi",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "corgi",
+        "rooster"
+      ],
+      "blendRatio": 0.4,
+      "dominantRatio": 0.6
+    }
+  },
+  {
+    "id": "boundary-02",
+    "label": "小太阳鸡↔社牛柯基 (50/50)",
+    "traitProfile": {
+      "A": 67.68800442391664,
+      "C": 61.02217366461481,
+      "E": 74.72245723540226,
+      "O": 62.1720616292792,
+      "X": 89.29624030979181,
+      "P": 87.03273778019482
+    },
+    "expectedArchetype": "rooster",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "corgi",
+        "rooster"
+      ],
+      "blendRatio": 0.5,
+      "dominantRatio": 0.5
+    }
+  },
+  {
+    "id": "boundary-03",
+    "label": "小太阳鸡↔社牛柯基 (40/60)",
+    "traitProfile": {
+      "A": 68.65107481822608,
+      "C": 64.94253680082205,
+      "E": 77.70121116774017,
+      "O": 61.88194940751591,
+      "X": 83.19631123195704,
+      "P": 89.99162511071168
+    },
+    "expectedArchetype": "rooster",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "corgi",
+        "rooster"
+      ],
+      "blendRatio": 0.6,
+      "dominantRatio": 0.4
+    }
+  },
+  {
+    "id": "boundary-04",
+    "label": "夸夸仓鼠↔小太阳鸡 (60/40)",
+    "traitProfile": {
+      "A": 85.06360204876322,
+      "C": 62.707471281679695,
+      "E": 74.94918218834758,
+      "O": 58.82149441013139,
+      "X": 82.01639677794046,
+      "P": 90.90630915226947
+    },
+    "expectedArchetype": "hamster_praise",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "hamster_praise",
+        "rooster"
+      ],
+      "blendRatio": 0.4,
+      "dominantRatio": 0.6
+    }
+  },
+  {
+    "id": "boundary-05",
+    "label": "小太阳鸡↔夸夸仓鼠 (50/50)",
+    "traitProfile": {
+      "A": 83.41228619554319,
+      "C": 62.75787292859561,
+      "E": 77.69858690169978,
+      "O": 57.65322677868642,
+      "X": 79.69803237268289,
+      "P": 88.53944167186383
+    },
+    "expectedArchetype": "rooster",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "hamster_praise",
+        "rooster"
+      ],
+      "blendRatio": 0.5,
+      "dominantRatio": 0.5
+    }
+  },
+  {
+    "id": "boundary-06",
+    "label": "小太阳鸡↔夸夸仓鼠 (40/60)",
+    "traitProfile": {
+      "A": 77.16255774822946,
+      "C": 67.08449800179605,
+      "E": 78.0510893993905,
+      "O": 58.10799311243678,
+      "X": 81.38558941342067,
+      "P": 89.59429072181186
+    },
+    "expectedArchetype": "rooster",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "hamster_praise",
+        "rooster"
+      ],
+      "blendRatio": 0.6,
+      "dominantRatio": 0.4
+    }
+  },
+  {
+    "id": "boundary-07",
+    "label": "机灵海豚↔夸夸仓鼠 (60/40)",
+    "traitProfile": {
+      "A": 81.87609006551722,
+      "C": 59.30694463375596,
+      "E": 77.24465561487253,
+      "O": 61.66880174320667,
+      "X": 70.16996358820357,
+      "P": 74.76817612557133
+    },
+    "expectedArchetype": "dolphin_calm",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "dolphin_calm",
+        "hamster_praise"
+      ],
+      "blendRatio": 0.4,
+      "dominantRatio": 0.6
+    }
+  },
+  {
+    "id": "boundary-08",
+    "label": "夸夸仓鼠↔机灵海豚 (50/50)",
+    "traitProfile": {
+      "A": 81.88382494536697,
+      "C": 58.13266766237146,
+      "E": 74.01640549552836,
+      "O": 62.78291380299214,
+      "X": 71.28670889361486,
+      "P": 79.36391757268787
+    },
+    "expectedArchetype": "hamster_praise",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "dolphin_calm",
+        "hamster_praise"
+      ],
+      "blendRatio": 0.5,
+      "dominantRatio": 0.5
+    }
+  },
+  {
+    "id": "boundary-09",
+    "label": "夸夸仓鼠↔机灵海豚 (40/60)",
+    "traitProfile": {
+      "A": 82.79443711769156,
+      "C": 60.53856382409244,
+      "E": 73.83649189240231,
+      "O": 63.941744975234094,
+      "X": 75.68182367422972,
+      "P": 80.67776322130423
+    },
+    "expectedArchetype": "hamster_praise",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "dolphin_calm",
+        "hamster_praise"
+      ],
+      "blendRatio": 0.6,
+      "dominantRatio": 0.4
+    }
+  },
+  {
+    "id": "boundary-10",
+    "label": "寻宝狐↔脑洞章鱼 (60/40)",
+    "traitProfile": {
+      "A": 43.3631380047127,
+      "C": 39.60577755251993,
+      "E": 55.73399704417261,
+      "O": 94.8830541694233,
+      "X": 70.93285836877513,
+      "P": 63.176245928571404
+    },
+    "expectedArchetype": "fox",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "fox",
+        "octopus"
+      ],
+      "blendRatio": 0.4,
+      "dominantRatio": 0.6
+    }
+  },
+  {
+    "id": "boundary-11",
+    "label": "脑洞章鱼↔寻宝狐 (50/50)",
+    "traitProfile": {
+      "A": 42.45427638043176,
+      "C": 41.380695421618626,
+      "E": 55.00054213861529,
+      "O": 95,
+      "X": 66.25163393560442,
+      "P": 62.6449322132886
+    },
+    "expectedArchetype": "octopus",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "fox",
+        "octopus"
+      ],
+      "blendRatio": 0.5,
+      "dominantRatio": 0.5
+    }
+  },
+  {
+    "id": "boundary-12",
+    "label": "脑洞章鱼↔寻宝狐 (40/60)",
+    "traitProfile": {
+      "A": 45.245553021863365,
+      "C": 39.8114706969282,
+      "E": 54.52680140246871,
+      "O": 94.70016991063062,
+      "X": 62.97052345462746,
+      "P": 67.1765245732356
+    },
+    "expectedArchetype": "octopus",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "fox",
+        "octopus"
+      ],
+      "blendRatio": 0.6,
+      "dominantRatio": 0.4
+    }
+  },
+  {
+    "id": "boundary-13",
+    "label": "机灵海豚↔树洞考拉 (60/40)",
+    "traitProfile": {
+      "A": 77.62609364206648,
+      "C": 70.76245809638654,
+      "E": 85.29326967538083,
+      "O": 60.47811341394548,
+      "X": 59.42999168692702,
+      "P": 68.53144581635631
+    },
+    "expectedArchetype": "dolphin_calm",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "dolphin_calm",
+        "koala"
+      ],
+      "blendRatio": 0.4,
+      "dominantRatio": 0.6
+    }
+  },
+  {
+    "id": "boundary-14",
+    "label": "树洞考拉↔机灵海豚 (50/50)",
+    "traitProfile": {
+      "A": 81.03433381708655,
+      "C": 69.3805118653094,
+      "E": 82.34028991995704,
+      "O": 65.63066279423978,
+      "X": 58.50746821904115,
+      "P": 69.09793546495244
+    },
+    "expectedArchetype": "koala",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "dolphin_calm",
+        "koala"
+      ],
+      "blendRatio": 0.5,
+      "dominantRatio": 0.5
+    }
+  },
+  {
+    "id": "boundary-15",
+    "label": "树洞考拉↔机灵海豚 (40/60)",
+    "traitProfile": {
+      "A": 84.33929514056197,
+      "C": 67.98244867669,
+      "E": 84.46099088474591,
+      "O": 62.53084695608427,
+      "X": 55.014348027933416,
+      "P": 70.62738978304222
+    },
+    "expectedArchetype": "koala",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "dolphin_calm",
+        "koala"
+      ],
+      "blendRatio": 0.6,
+      "dominantRatio": 0.4
+    }
+  },
+  {
+    "id": "boundary-16",
+    "label": "树洞考拉↔人脉蛛 (60/40)",
+    "traitProfile": {
+      "A": 84.55967616505437,
+      "C": 70.48270266341618,
+      "E": 74.30342397101411,
+      "O": 64.4207799703371,
+      "X": 53.28948085394024,
+      "P": 68.71897238218904
+    },
+    "expectedArchetype": "koala",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "koala",
+        "spider"
+      ],
+      "blendRatio": 0.4,
+      "dominantRatio": 0.6
+    }
+  },
+  {
+    "id": "boundary-17",
+    "label": "人脉蛛↔树洞考拉 (50/50)",
+    "traitProfile": {
+      "A": 78.66794079387091,
+      "C": 73.05173966279447,
+      "E": 71.34506940074172,
+      "O": 65.36178322181352,
+      "X": 52.6152763000793,
+      "P": 63.604115888365875
+    },
+    "expectedArchetype": "spider",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "koala",
+        "spider"
+      ],
+      "blendRatio": 0.5,
+      "dominantRatio": 0.5
+    }
+  },
+  {
+    "id": "boundary-18",
+    "label": "人脉蛛↔树洞考拉 (40/60)",
+    "traitProfile": {
+      "A": 78.77424475990449,
+      "C": 76.28892315779466,
+      "E": 72.68211843648902,
+      "O": 68.05263336553388,
+      "X": 56.37509107677003,
+      "P": 62.29123927510652
+    },
+    "expectedArchetype": "spider",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "koala",
+        "spider"
+      ],
+      "blendRatio": 0.6,
+      "dominantRatio": 0.4
+    }
+  },
+  {
+    "id": "boundary-19",
+    "label": "靠谱大象↔树洞考拉 (60/40)",
+    "traitProfile": {
+      "A": 76.3621778850506,
+      "C": 80.84311391116694,
+      "E": 81.90620165869039,
+      "O": 52.92214096147156,
+      "X": 40.08708486461327,
+      "P": 62.7459314646088
+    },
+    "expectedArchetype": "elephant",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "elephant",
+        "koala"
+      ],
+      "blendRatio": 0.4,
+      "dominantRatio": 0.6
+    }
+  },
+  {
+    "id": "boundary-20",
+    "label": "树洞考拉↔靠谱大象 (50/50)",
+    "traitProfile": {
+      "A": 82.26475548392077,
+      "C": 76.29145904752743,
+      "E": 84.68426422888048,
+      "O": 55.93526506926087,
+      "X": 42.28759646834382,
+      "P": 66.09363406793203
+    },
+    "expectedArchetype": "koala",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "elephant",
+        "koala"
+      ],
+      "blendRatio": 0.5,
+      "dominantRatio": 0.5
+    }
+  },
+  {
+    "id": "boundary-21",
+    "label": "树洞考拉↔靠谱大象 (40/60)",
+    "traitProfile": {
+      "A": 82.9082469302958,
+      "C": 74.42378742716895,
+      "E": 83.1388655488552,
+      "O": 58.669015514059325,
+      "X": 46.32723496623736,
+      "P": 67.59990731537232
+    },
+    "expectedArchetype": "koala",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "elephant",
+        "koala"
+      ],
+      "blendRatio": 0.6,
+      "dominantRatio": 0.4
+    }
+  },
+  {
+    "id": "boundary-22",
+    "label": "脑洞章鱼↔好奇猫头鹰 (60/40)",
+    "traitProfile": {
+      "A": 50.60071389959058,
+      "C": 46.20929322305778,
+      "E": 60.13558632798003,
+      "O": 89.38489828926426,
+      "X": 46.8987959121564,
+      "P": 61.320374036463164
+    },
+    "expectedArchetype": "octopus",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "octopus",
+        "owl"
+      ],
+      "blendRatio": 0.4,
+      "dominantRatio": 0.6
+    }
+  },
+  {
+    "id": "boundary-23",
+    "label": "好奇猫头鹰↔脑洞章鱼 (50/50)",
+    "traitProfile": {
+      "A": 45.770864167168654,
+      "C": 56.74426582910225,
+      "E": 64.08008638734282,
+      "O": 94.12957486987194,
+      "X": 43.34841862904468,
+      "P": 62.74423751539531
+    },
+    "expectedArchetype": "owl",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "octopus",
+        "owl"
+      ],
+      "blendRatio": 0.5,
+      "dominantRatio": 0.5
+    }
+  },
+  {
+    "id": "boundary-24",
+    "label": "好奇猫头鹰↔脑洞章鱼 (40/60)",
+    "traitProfile": {
+      "A": 47.97517561068748,
+      "C": 61.125458615276024,
+      "E": 69.85554805458527,
+      "O": 93.67193781251036,
+      "X": 46.7569511564222,
+      "P": 56.36745525155566
+    },
+    "expectedArchetype": "owl",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "octopus",
+        "owl"
+      ],
+      "blendRatio": 0.6,
+      "dominantRatio": 0.4
+    }
+  },
+  {
+    "id": "boundary-25",
+    "label": "好奇猫头鹰↔慢热龟 (60/40)",
+    "traitProfile": {
+      "A": 49.83033561268358,
+      "C": 84.91076034288493,
+      "E": 75.95875609676362,
+      "O": 73.29156578219217,
+      "X": 34.6415770021578,
+      "P": 45.67842820347583
+    },
+    "expectedArchetype": "owl",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "owl",
+        "turtle"
+      ],
+      "blendRatio": 0.4,
+      "dominantRatio": 0.6
+    }
+  },
+  {
+    "id": "boundary-26",
+    "label": "慢热龟↔好奇猫头鹰 (50/50)",
+    "traitProfile": {
+      "A": 49.32440452115769,
+      "C": 83.87380708802405,
+      "E": 78.57319349352287,
+      "O": 74.14331167267792,
+      "X": 31.418096876233417,
+      "P": 49.59089426042358
+    },
+    "expectedArchetype": "turtle",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "owl",
+        "turtle"
+      ],
+      "blendRatio": 0.5,
+      "dominantRatio": 0.5
+    }
+  },
+  {
+    "id": "boundary-27",
+    "label": "慢热龟↔好奇猫头鹰 (40/60)",
+    "traitProfile": {
+      "A": 52.52762966726554,
+      "C": 86.28039207653975,
+      "E": 78.96042290119988,
+      "O": 67.62735719835855,
+      "X": 34.03018627920626,
+      "P": 47.32344739787427
+    },
+    "expectedArchetype": "turtle",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "owl",
+        "turtle"
+      ],
+      "blendRatio": 0.6,
+      "dominantRatio": 0.4
+    }
+  },
+  {
+    "id": "boundary-28",
+    "label": "靠谱大象↔慢热龟 (60/40)",
+    "traitProfile": {
+      "A": 65.362100560626,
+      "C": 89.43310855330392,
+      "E": 86.48976317783824,
+      "O": 54.34914698958376,
+      "X": 32.73383257416381,
+      "P": 52.87378400148482
+    },
+    "expectedArchetype": "elephant",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "elephant",
+        "turtle"
+      ],
+      "blendRatio": 0.4,
+      "dominantRatio": 0.6
+    }
+  },
+  {
+    "id": "boundary-29",
+    "label": "慢热龟↔靠谱大象 (50/50)",
+    "traitProfile": {
+      "A": 65.51373748850803,
+      "C": 89.41041809995355,
+      "E": 85.50752327719519,
+      "O": 56.52382228470269,
+      "X": 35.09613265065497,
+      "P": 50.58240082217246
+    },
+    "expectedArchetype": "turtle",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "elephant",
+        "turtle"
+      ],
+      "blendRatio": 0.5,
+      "dominantRatio": 0.5
+    }
+  },
+  {
+    "id": "boundary-30",
+    "label": "慢热龟↔靠谱大象 (40/60)",
+    "traitProfile": {
+      "A": 61.08136335032399,
+      "C": 91.74782561101131,
+      "E": 84.99697844141149,
+      "O": 52.37337811279467,
+      "X": 35.79466747405105,
+      "P": 52.8546125067772
+    },
+    "expectedArchetype": "turtle",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "elephant",
+        "turtle"
+      ],
+      "blendRatio": 0.6,
+      "dominantRatio": 0.4
+    }
+  },
+  {
+    "id": "boundary-31",
+    "label": "小透明猫↔慢热龟 (60/40)",
+    "traitProfile": {
+      "A": 44.298579736098,
+      "C": 67.2865840009422,
+      "E": 69.61098940923765,
+      "O": 65.6411900714181,
+      "X": 24.3720359061721,
+      "P": 40.00054287747687
+    },
+    "expectedArchetype": "cat",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "cat",
+        "turtle"
+      ],
+      "blendRatio": 0.4,
+      "dominantRatio": 0.6
+    }
+  },
+  {
+    "id": "boundary-32",
+    "label": "慢热龟↔小透明猫 (50/50)",
+    "traitProfile": {
+      "A": 45.42970105323884,
+      "C": 73.23811692875738,
+      "E": 74.3597078970022,
+      "O": 65.63258764022993,
+      "X": 26.48824095778724,
+      "P": 41.58368247019773
+    },
+    "expectedArchetype": "turtle",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "cat",
+        "turtle"
+      ],
+      "blendRatio": 0.5,
+      "dominantRatio": 0.5
+    }
+  },
+  {
+    "id": "boundary-33",
+    "label": "慢热龟↔小透明猫 (40/60)",
+    "traitProfile": {
+      "A": 46.95255405718068,
+      "C": 74.46093851679865,
+      "E": 75.56342665566409,
+      "O": 62.75146669772658,
+      "X": 28.927898774935095,
+      "P": 44.83136612134234
+    },
+    "expectedArchetype": "turtle",
+    "category": "boundary",
+    "metadata": {
+      "pair": [
+        "cat",
+        "turtle"
+      ],
+      "blendRatio": 0.6,
+      "dominantRatio": 0.4
+    }
+  }
+]

@@ -27,6 +27,7 @@ import {
   readAnonymousAssessmentAnswers,
   saveAnonymousAssessmentSession,
   upsertAnonymousAssessmentAnswer,
+  type AnonymousAssessmentResult,
   type AnonymousAssessmentSessionSnapshot,
   type AnonymousAssessmentTopMatch,
 } from '../../../lib/auth/anonymousOnboarding'
@@ -42,6 +43,7 @@ import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
 import type { XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
+import TypewriterText from '../../../components/ui/TypewriterText'
 import MascotQuestionHeader from './MascotQuestionHeader'
 import PersonalityTestAnswerArea, { getNearestSliderOption } from './PersonalityTestAnswerArea'
 import { isMilestoneQuestion } from './personalityTestLogic'
@@ -115,6 +117,8 @@ interface AssessmentAnswerResponse {
   progress?: AssessmentProgress
   currentMatches?: AssessmentMatch[]
   commentary?: string
+  /** Server-computed final result (present when isComplete === true). */
+  result?: AnonymousAssessmentResult
 }
 
 const INTRO_ARCHETYPE_TEASERS: { archetype: string; vibeLine: string }[] = [
@@ -264,13 +268,14 @@ export default function PersonalityTestPage() {
   const completeAnonymousAssessment = useCallback(async (
     targetSessionId: string,
     nextTopArchetypes?: AnonymousAssessmentTopMatch[] | null,
+    finalResult?: AnonymousAssessmentResult | null,
   ) => {
     saveAnonymousAssessmentSession({
       sessionId: targetSessionId,
       phase: 'completed',
       timestamp: Date.now(),
       completedAt: new Date().toISOString(),
-      result: null,
+      result: finalResult ?? null,
       topArchetypes: nextTopArchetypes ?? currentMatches,
       resultSequenceCompletedAt: undefined,
     })
@@ -280,6 +285,14 @@ export default function PersonalityTestPage() {
     })
     await Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults })
   }, [currentMatches])
+
+  /** Hard guard: refuse to transition if the server returned an incomplete or invalid finalResult. */
+  function isValidFinalResult(result: AnonymousAssessmentResult | undefined): boolean {
+    if (!result) return false
+    const primary = result.primaryArchetype
+    if (!primary || typeof primary !== 'string') return false
+    return !!ARCHETYPE_BY_ID[primary]
+  }
 
   useEffect(() => {
     if (auth.isLoading || isSubmitting || isPageExiting) {
@@ -488,7 +501,17 @@ export default function PersonalityTestPage() {
           destination: MINI_PROGRAM_ROUTES.personalityTestResults,
         })
         anonymousEngineStateRef.current = null
-        await completeAnonymousAssessment(thisSessionId, result.currentMatches ?? currentMatches)
+        if (!isValidFinalResult(result.result)) {
+          setIsPageExiting(false)
+          setError('结果同步出了点小问题，请重试一次')
+          analytics.errorOccurred('invalid_final_result', 'primaryArchetype missing or invalid')
+          logError('[PersonalityTest] Invalid finalResult from server', {
+            sessionId: thisSessionId,
+            result: result.result,
+          })
+          return
+        }
+        await completeAnonymousAssessment(thisSessionId, result.currentMatches ?? currentMatches, result.result)
         return
       }
 
@@ -946,6 +969,30 @@ export default function PersonalityTestPage() {
     )
   }
 
+  const speechText = backReview.isBackReviewMode
+    ? '这是你之前选的答案，可以修改后再确认。'
+    : isSubmitting && spriteState === 'thinking'
+      ? '悦仔正在分析你的选择…'
+      : postAnswerCommentary
+        ? postAnswerCommentary
+        : isSubmitting
+          ? '收到～'
+          : progress && progress.answered === 4
+            ? '已经一半了！你的命格轮廓越来越清晰，继续凭直觉选。'
+            : progress && progress.answered === 8
+              ? '太棒了！进入精准阶段，接下来的题目会更聚焦，帮你锁定最像自己的氛围命格。'
+              : question?.questionText ?? ''
+
+  const isLoadingSpeech = isSubmitting && !postAnswerCommentary
+
+  // Forces a remount (and typing restart) whenever the speech source changes,
+  // even if two consecutive questions happen to have identical text.
+  const speechKey = backReview.isBackReviewMode
+    ? `backreview-${backReview.backReviewQuestion?.id ?? 'none'}`
+    : postAnswerCommentary
+      ? `commentary-${progress?.answered ?? 0}`
+      : `question-${question?.id ?? 'none'}-${progress?.answered ?? 0}`
+
   return (
     <>
       {/* Asset preloading for mascot expressions */}
@@ -1026,24 +1073,18 @@ export default function PersonalityTestPage() {
               <View
                 className={`personality-test__speech-bubble${!backReview.isBackReviewMode && progress && (progress.answered === 4 || progress.answered === 8) ? ' personality-test__speech-bubble--milestone' : ''}`}
               >
-                <Text
-                  className='personality-test__speech-bubble-text'
-                  key={`speech-${progress?.answered ?? 0}-${(backReview.isBackReviewMode ? backReview.backReviewQuestion! : question!).id}-${postAnswerCommentary ?? 'default'}`}
-                >
-                  {backReview.isBackReviewMode
-                    ? '这是你之前选的答案，可以修改后再确认。'
-                    : isSubmitting && spriteState === 'thinking'
-                      ? '悦仔正在分析你的选择…'
-                      : postAnswerCommentary
-                        ? postAnswerCommentary
-                        : isSubmitting
-                          ? '收到～'
-                          : progress && progress.answered === 4
-                            ? '已经一半了！你的命格轮廓越来越清晰，继续凭直觉选。'
-                            : progress && progress.answered === 8
-                              ? '太棒了！进入精准阶段，接下来的题目会更聚焦，帮你锁定最像自己的氛围命格。'
-                              : question!.questionText}
-                </Text>
+                {isLoadingSpeech ? (
+                  <Text className='personality-test__speech-bubble-text'>{speechText}</Text>
+                ) : (
+                  <TypewriterText
+                    key={speechKey}
+                    className='personality-test__speech-bubble-text'
+                    text={speechText}
+                    speed={40}
+                    delay={120}
+                    showCursor
+                  />
+                )}
               </View>
             </View>
           ) : null}

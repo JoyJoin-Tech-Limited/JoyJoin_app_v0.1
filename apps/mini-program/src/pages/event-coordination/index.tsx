@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useMemo } from 'react'
@@ -100,9 +101,15 @@ export default function EventCoordinationPage() {
             <Text className='coordination-help__event-name'>{event.title ?? '悦聚活动'}</Text>
             <Text className='coordination-help__event-status'>{event.status ?? '待开始'}</Text>
           </View>
-          <Text className='coordination-help__event-meta'>📅 {formatEventDate(event.dateTime)}</Text>
+          <View className='jj-icon-text'>
+            <JoyJoinIcon emoji='📅' size={20} />
+            <Text className='coordination-help__event-meta'>{formatEventDate(event.dateTime)}</Text>
+          </View>
           {event.location ? (
-            <Text className='coordination-help__event-meta'>📍 {event.location}</Text>
+            <View className='jj-icon-text'>
+              <JoyJoinIcon emoji='📍' size={20} />
+              <Text className='coordination-help__event-meta'>{event.location}</Text>
+            </View>
           ) : null}
         </Card>
       ) : null}

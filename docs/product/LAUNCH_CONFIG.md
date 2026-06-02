@@ -160,11 +160,13 @@ available at the `/api/metrics` endpoint.
 ## Social Icebreaker Phase Flags
 
 | Variable | Description | Default |
-|---|---|---|
+|---|---|---|---|
+| `SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING` | Enable speed friending phase (round-robin timed 1-on-1 rotations) — backend implemented 2026-05-27 | `false` |
 | `SOCIAL_ICEBREAKER_ENABLE_AUCTION` | Enable auction phase (virtual-coin lots + bidding) | `false` |
 | `SOCIAL_AUCTION_LLM_ENABLED` | When `true`, `generateAuctionLots` calls the model; when unset/false, curated fallback lots only | `false` |
 | `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` | Enable **迷你剧本杀** (`mini_script`) phase | `false` |
 | `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA` | Legacy alias for `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` | `false` |
+| `RUN_PLAN_TEMPLATES_ENABLED` | Enable template-driven run plan compiler **and** the 3×3 vibe grid UX (深聊/均衡/暢玩). When `false`, legacy `compileAgentRunPlan()` runs unchanged and clients should hide the vibe selector. When `true`, the server queries DB templates and falls back to the rule engine; clients show the vibe selector. | `false` |
 
 ---
 

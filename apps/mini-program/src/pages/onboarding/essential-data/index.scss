@@ -310,6 +310,10 @@
     }
   }
 
+  &__intent-icon {
+    margin-bottom: 4rpx;
+  }
+
   &__intent-label {
     @include type-label;
     font-weight: $font-weight-semibold;

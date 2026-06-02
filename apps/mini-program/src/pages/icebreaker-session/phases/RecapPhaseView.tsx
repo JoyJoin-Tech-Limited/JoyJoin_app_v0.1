@@ -1,5 +1,6 @@
 import { View, Text } from '@tarojs/components'
 import { useState, useEffect, useCallback } from 'react'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
 import { PhaseHeaderIcon } from '../phaseUtils'
@@ -27,7 +28,7 @@ function RecapAiFeedbackBar({
   if (done) {
     return (
       <Card className='icebreaker__recap-section icebreaker__recap-section--compact'>
-        <Text className='icebreaker__recap-feedback-done'>感谢你的反馈 💜</Text>
+        <Text className='icebreaker__recap-feedback-done'>感谢你的反馈 <JoyJoinIcon emoji='💜' size={20} /></Text>
       </Card>
     )
   }
@@ -91,7 +92,10 @@ function MomentCardCTA({ socialSessionId }: { socialSessionId: string }) {
       <Card className='icebreaker__recap-moment-cta'>
         <View className='icebreaker__recap-moment-cta-glow' />
         <View className='icebreaker__recap-moment-cta-content'>
-          <Text className='icebreaker__recap-moment-cta-title'>✨ 生成专属回忆卡</Text>
+          <View style={{ display: 'flex', alignItems: 'center', gap: '8rpx' }}>
+            <JoyJoinIcon emoji='✨' tier='reveal' size={28} />
+            <Text className='icebreaker__recap-moment-cta-title'>生成专属回忆卡</Text>
+          </View>
           <Text className='icebreaker__recap-moment-cta-sub'>
             保存今晚的专属记忆，分享给朋友
           </Text>
@@ -249,7 +253,7 @@ export function RecapPhaseView({
       {medals.length > 0 && (
         <View className='icebreaker__recap-medals'>
           <Text className='icebreaker__recap-section-title icebreaker__recap-section-title--center'>
-            🏆 今晚奖项
+            <JoyJoinIcon emoji='🏆' size={28} /> 今晚奖项
           </Text>
           <View className='icebreaker__recap-medals-grid'>
             {medals.map((medal, idx) => (
@@ -275,7 +279,7 @@ export function RecapPhaseView({
           {/* Topics */}
           {recapData?.topicsDiscussed.length ? (
             <Card className='icebreaker__recap-section'>
-              <Text className='icebreaker__recap-section-title'>💬 讨论话题</Text>
+              <Text className='icebreaker__recap-section-title'><JoyJoinIcon emoji='💬' size={28} /> 讨论话题</Text>
               <View className='icebreaker__recap-tags'>
                 {recapData.topicsDiscussed.map((topic, i) => (
                   <View key={i} className='icebreaker__recap-tag'>
@@ -375,8 +379,8 @@ export function RecapPhaseView({
               </View>
               <Text className='icebreaker__recap-stat'>
                 {recapData.undercoverWord.caught
-                  ? `卧底 ${recapData.undercoverWord.undercoverDisplayName} 已被揪出 🎉`
-                  : `卧底 ${recapData.undercoverWord.undercoverDisplayName} 成功隐藏 😎`}
+                  ? <>卧底 {recapData.undercoverWord.undercoverDisplayName} 已被揪出 <JoyJoinIcon emoji='🎉' tier='reaction' size={24} /></>
+                  : <>卧底 {recapData.undercoverWord.undercoverDisplayName} 成功隐藏 <JoyJoinIcon emoji='😎' size={24} /></>}
               </Text>
             </Card>
           ) : null}
@@ -384,7 +388,10 @@ export function RecapPhaseView({
           {/* Fun moments */}
           {recapMoments.length > 0 && (
             <Card className='icebreaker__recap-section'>
-              <Text className='icebreaker__recap-section-title'>✨ 精彩瞬间</Text>
+              <View style={{ display: 'flex', alignItems: 'center', gap: '8rpx', marginBottom: '16rpx' }}>
+                <JoyJoinIcon emoji='✨' tier='reveal' size={28} />
+                <Text className='icebreaker__recap-section-title' style={{ marginBottom: 0 }}>精彩瞬间</Text>
+              </View>
               {recapMoments.map((moment, i) => (
                 <View key={i} className='icebreaker__recap-moment'>
                   <Text className='icebreaker__recap-moment-bullet'>•</Text>
@@ -402,7 +409,7 @@ export function RecapPhaseView({
           <CardFlip
             front={
               <View className='icebreaker__recap-share-front'>
-                <Text className='icebreaker__recap-share-front-emoji'>🎉</Text>
+                <JoyJoinIcon emoji='🎉' tier='reaction' size={56} className='icebreaker__recap-share-front-emoji' />
                 <Text className='icebreaker__recap-share-front-title'>今晚的破冰记忆</Text>
                 <Text className='icebreaker__recap-share-front-hint'>点我查看详情</Text>
               </View>

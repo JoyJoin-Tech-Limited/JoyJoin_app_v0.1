@@ -98,6 +98,7 @@ app.use((req, res, next) => {
         port: PORT,
         environment: process.env.NODE_ENV ?? "development",
         admin_key_configured: Boolean(process.env.ADMIN_CREATE_SECRET_KEY),
+        run_plan_templates_enabled: process.env.RUN_PLAN_TEMPLATES_ENABLED === 'true',
       });
 
       // Warm TTS cache non-blocking (no-op if MINIMAX keys not configured)

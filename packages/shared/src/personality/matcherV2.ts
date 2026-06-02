@@ -222,13 +222,21 @@ export const ARCHETYPE_VETO_RULES: Record<string, (traits: Record<TraitKey, numb
   },
   "elephant": (t) => {
     // 实际E分布: 76-79-81, P分布: 35-35-55 (很低!)
-    // 区分于turtle：大象有更高A和P
+    // 区分于turtle：大象有更高A和P, 且X不能过低
+    if (t.X < 32) return 0.5; // Very low X is turtle territory
+    if (t.P < 38) return 0.6; // Very low P is turtle territory
     if (t.E >= 76 && t.A >= 70 && t.P >= 40) return 1.25;
     if (t.E >= 75) return 1.1;
     if (t.E < 72) return 0.6;
     return 1.0;
   },
-  "spider": (t) => t.C >= 73 ? 1.1 : (t.C < 60 ? 0.6 : 1.0)
+  "spider": (t) => {
+    // 区分于dolphin_calm: spider is higher-C, lower-E
+    if (t.E >= 78) return 0.5; // Very high E is dolphin_calm territory
+    if (t.C >= 73) return 1.1;
+    if (t.C < 60) return 0.6;
+    return 1.0;
+  }
 };
 
 import { CONFUSION_PAIR_GATES, SIGNATURE_THRESHOLDS } from './matcherV2Gates';
@@ -688,6 +696,12 @@ export class PrototypeMatcher {
       case 'koala,dolphin_calm':
         this.classifyBearVsDolphin(userTraits, results, top1, top2);
         break;
+      case 'elephant,turtle':
+        this.classifyElephantVsTurtle(userTraits, results, top1, top2);
+        break;
+      case 'dolphin_calm,spider':
+        this.classifyDolphinVsSpider(userTraits, results, top1, top2);
+        break;
     }
   }
   
@@ -820,6 +834,78 @@ export class PrototypeMatcher {
       dolphin.details.finalScore = Math.max(0, Math.min(100, dolphin.details.finalScore));
     }
     
+    results.sort((a, b) => b.details.finalScore - a.details.finalScore);
+  }
+
+  /**
+   * elephant vs turtle: A and P are the key differentiators
+   * elephant A=70/P=60, turtle A=55/P=45
+   * Both have high E and C, so A and P separate them.
+   */
+  private classifyElephantVsTurtle(
+    t: Record<TraitKey, number>,
+    results: Array<{ archetype: string; details: MatchScoreDetails }>,
+    top1: { archetype: string; details: MatchScoreDetails },
+    top2: { archetype: string; details: MatchScoreDetails }
+  ): void {
+    const elephant = results.find(r => r.archetype === 'elephant');
+    const turtle = results.find(r => r.archetype === 'turtle');
+    if (!elephant || !turtle) return;
+
+    // Primary trait: A (elephant=70, turtle=55)
+    const aBonus = this.calculateGradualBonus(t.A, 70, 55, 5);
+    // Secondary trait: P (elephant=60, turtle=45)
+    const pBonus = this.calculateGradualBonus(t.P, 60, 45, 4);
+    // Tertiary trait: X (elephant=40, turtle=28)
+    const xBonus = this.calculateGradualBonus(t.X, 40, 28, 2);
+
+    // Combined bonus: positive favors elephant, negative favors turtle
+    const totalBonus = aBonus + pBonus * 0.6 + xBonus * 0.3;
+
+    if (totalBonus > 0) {
+      elephant.details.finalScore += totalBonus;
+      elephant.details.finalScore = Math.max(0, Math.min(100, elephant.details.finalScore));
+    } else {
+      turtle.details.finalScore -= totalBonus;
+      turtle.details.finalScore = Math.max(0, Math.min(100, turtle.details.finalScore));
+    }
+
+    results.sort((a, b) => b.details.finalScore - a.details.finalScore);
+  }
+
+  /**
+   * dolphin_calm vs spider: C and E are the key differentiators
+   * dolphin_calm C=70/E=85, spider C=85/E=65
+   * dolphin_calm is higher-E/lower-C; spider is higher-C/lower-E.
+   */
+  private classifyDolphinVsSpider(
+    t: Record<TraitKey, number>,
+    results: Array<{ archetype: string; details: MatchScoreDetails }>,
+    top1: { archetype: string; details: MatchScoreDetails },
+    top2: { archetype: string; details: MatchScoreDetails }
+  ): void {
+    const dolphin = results.find(r => r.archetype === 'dolphin_calm');
+    const spider = results.find(r => r.archetype === 'spider');
+    if (!dolphin || !spider) return;
+
+    // Primary trait: E (dolphin_calm=85, spider=65)
+    const eBonus = this.calculateGradualBonus(t.E, 85, 65, 5);
+    // Secondary trait: C (dolphin_calm=70, spider=85)
+    const cBonus = this.calculateGradualBonus(t.C, 70, 85, 4);
+    // Tertiary trait: X (dolphin_calm=65, spider=60)
+    const xBonus = this.calculateGradualBonus(t.X, 65, 60, 2);
+
+    // Combined bonus: positive favors dolphin, negative favors spider
+    const totalBonus = eBonus + cBonus * 0.6 + xBonus * 0.3;
+
+    if (totalBonus > 0) {
+      dolphin.details.finalScore += totalBonus;
+      dolphin.details.finalScore = Math.max(0, Math.min(100, dolphin.details.finalScore));
+    } else {
+      spider.details.finalScore -= totalBonus;
+      spider.details.finalScore = Math.max(0, Math.min(100, spider.details.finalScore));
+    }
+
     results.sort((a, b) => b.details.finalScore - a.details.finalScore);
   }
 

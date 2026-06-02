@@ -1,6 +1,6 @@
 # JoyJoin — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents. Last updated: 2026-05-22
+> Compact instructions for AI coding agents. Last updated: 2026-05-27
 
 ---
 
@@ -66,7 +66,7 @@ Always base implementation on the **current active codebase**, not legacy flows 
 - `archetypeRegistry.ts.bak` → deleted (stale backup, 2026-05-07)
 - `hasSeenGuide` column removed from `users` table (2026-05-07)
 - `guide` step removed from `OnboardingNextStep` type and onboarding routing (2026-05-07)
-- `LEGACY_TIER_MAP` + `resolveLegacyTier()` removed from `socialIcebreakerTierManifest.ts` (2026-05-07)
+- `LEGACY_TIER_MAP` retained in `socialIcebreakerTierManifest.ts` for backward-compat tier mapping in social icebreaker `/start` route (`apps/server/src/routes/socialIcebreaker.ts`); `resolveLegacyTier()` removed (2026-05-07)
 - `/api/registration/chat/start`, `/api/registration/chat/message`, `/api/registration/chat/message/stream` handlers removed from `routes.ts` (2026-05-07)
 - `/api/guide/mark-seen`, `/api/guide/complete` routes removed (2026-05-07)
 - **PNG spritesheets in `src/assets/mascot/` are orphaned** — `XiaoyueSpriteAnimator` loads `.webp` via `cdnAsset()`. Only `.webp` + manifest should be in `src/assets/mascot/`. Source PNGs go in `assets-source/mascot/xiaoyue-strips/` (2026-05-19)
@@ -116,6 +116,14 @@ npm run dep-check                     # verify root has no deps
 npm run check:full                    # guardrails + lint + tests + build
 npm run harness:gate                  # 5-pillar quality gate
 
+# Personality test simulation (accuracy validation)
+npm run simulate:personas:generate    # generate boundary personas + centroids
+npm run simulate:personas:run:ci      # matcher isolation on centroids (must be 100%)
+npm run simulate:personas:run:all     # full suite: boundaries + centroids
+npm run simulate:personas:retest      # test-retest reliability (5 runs each)
+npm run simulate:expert-packet        # generate human-readable review packet
+npm run simulate:gate                 # CI gate: generate + run centroids
+
 # WeChat Mini-Program upload (开发版)
 # CI: every push to main triggers taro-weapp-build.yml → auto-uploads 开发版.
 # Manual upload (--appid is required; won't auto-read from project.config.json):
@@ -156,7 +164,7 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 
 **Frontend env vars** (e.g., `VITE_ADMIN_PORTAL_URL`, `VITE_API_URL`) go in per-app `.env.local` files, **not** root `.env`. Leave `VITE_API_URL` unset for normal local dev so Vite proxy works.
 
-**Local dev auth:** phone login demo code is `666666`. Bypass: `npm run user:bypass <phone> "$ADMIN_CREATE_SECRET_KEY"`.
+**Local dev auth:** Mini-program uses WeChat auth (`微信一键登录`) exclusively. For local server API testing, use `POST /api/auth/dev-login` (`NODE_ENV=development` only). Bypass: `npm run user:bypass <phone> "$ADMIN_CREATE_SECRET_KEY"`. Create test users: `npm run user:create`.
 
 ---
 
@@ -188,7 +196,7 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 
 **Onboarding is server-driven:** `GET /api/auth/user` returns `nextStep`. Client never computes its own position.
 
-**Personality:** 12 archetypes, V4 adaptive assessment. `packages/shared/src/personality/` owns the engine.
+**Personality:** 12 archetypes, V4 adaptive assessment. `packages/shared/src/personality/` owns the engine. Matcher isolation is 100% accurate on centroids, but end-to-end adaptive accuracy is ~58% due to question-bank positive bias (see `docs/systems/PERSONALITY_TEST_SYSTEM.md` §Testing Guidelines). New config options: `traitScoreMultiplier`, `traitScoreBaselines`, `useFixedQuestions`, `fixedQuestionIds`.
 
 **Matching:** `poolMatchingService.ts` is deterministic authority. 6D scoring (chemistry, interest, socialAffinity, backgroundDiversity, preference, language). Optional 7th semantic dimension behind `ENABLE_SEMANTIC_SIMILARITY`. AI may enrich explanations but **must not** redefine scoring.
 
@@ -197,11 +205,11 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 - **Bonus gate:** when `mini_script` is next eligible, advance pauses at `bonusGateOffered` for host+player vote (`POST .../bonus/respond`, `POST .../bonus/sentiment`)
 - **Phase metrics:** `social_icebreaker_phase_metrics` table tracks `dwellTimeMs` per phase on every advance
 
-**Icebreaker tiers & vibe:** Host selects time budget + vibe. Budgets: `breeze` (破冰局, 40min) / `glow` (畅聊局, 60min) / `blaze` (狂欢局, 105min). Vibe: 聊天为主 / 混合 / 竞技为主. Resolved via `packages/shared/src/socialIcebreakerTierManifest.ts`. See `docs/icebreaker/icebreaker-system.md`.
+**Icebreaker tiers & vibe:** Host selects time budget + vibe. Budgets: `breeze` (破冰局, 40min) / `glow` (畅聊局, 60min) / `blaze` (狂欢局, 90min). Vibe: `深聊` (deep_chat, connection-first) / `均衡` (balanced, standard mix) / `暢玩` (play_fun, energy-first). Template compiler (`resolveTemplateSlots` in `packages/shared/src/runPlanCompiler.ts`) resolves phase selection + durations per vibe×tier combo. Feature-flagged: `RUN_PLAN_TEMPLATES_ENABLED`. See `docs/icebreaker/icebreaker-system.md`.
 
 **Game Design Agent:** Compiles dynamic run plan per session using 70% rule engine + 30% LLM. Reads archetype mix + behavioral signals (mood, commonGround, completion rate, pulse). Rule engine runs on every compilation (deterministic); LLM enhances selection + ordering with 3s timeout fallback. See `docs/icebreaker/icebreaker-system.md` §5.
 
-**Phase pool (8 non-core + 1 bonus):** lie_detective, personality_dice, group_mirror, undercover_word, quip_battle, auction, speed_friending. Mini_script is bonus-only (悦仔 offers after last phase before recap, all tiers eligible). **Bonus gate:** host+player vote gate precedes `mini_script` entry when `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT=true`.
+**Phase pool (8 non-core + 1 bonus):** lie_detective, personality_dice, group_mirror, undercover_word, quip_battle, auction, speed_friending. Mini_script is bonus-only (悦仔 offers after last phase before recap, all tiers eligible). **Bonus gate:** host+player vote gate precedes `mini_script` entry when `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT=true`. **Personality Dice Choose-Your-Prompt:** When `PERSONALITY_DICE_CHOOSE_MODE_ENABLED=true`, each player receives 3 difficulty-tiered dares (easy/medium/hard) and picks one via `POST .../personality-dice/choose`. Fallback: `PERSONALITY_DICE_DARES` bank (36 dares, 3 per archetype).
 
 **Lie Detective V2:** `LIE_DETECTIVE_MODE=v2` enables user-tag-based gameplay (user writes 2 tags, AI expands + inserts 1 fake). V1 remains default. Host-choosable toggle, all tiers. Design: `docs/proposals/spot-the-bot-game-design.md`.
 
@@ -224,10 +232,24 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 
 **Tab bar icon gotcha:** `centerHub` tab in `tabBarConfig.ts` must have a non-empty `iconPath`. The `miniprogram-ci` upload rejects empty icon paths with `800059`. The custom tab bar component renders the center button independently (`box-logo-tab.png` + `tab-bar-notch-bg.png`), so any placeholder icon works for validation. The tab bar logo uses a dedicated 128×128 `box-logo-tab.png` (29KB) instead of the full-resolution `box-logo.png` (693KB) to stay within the 2MB package budget. This was fixed 2026-05-19.
 
-**Mini-program shared UI primitives (2026-05-22):**
+**Mini-program shared UI primitives (2026-05-27):**
 - **`Chip`** (`apps/mini-program/src/components/ui/Chip.tsx`) — unified tag/pill component for interest tags, filters, and selections. Props: `label`, `selected`, `level` (1–3), `compact`, `onClick`. Level hierarchy is monotonic: L1 subtle (`$color-primary-light`) → L2 medium (`rgba(primary, 0.14)`) → L3 strong (`rgba(primary, 0.26)`). Includes checkmark pop-in animation and shimmer pseudo-element.
 - **`BrandLogo`** (`apps/mini-program/src/components/ui/BrandLogo.tsx`) — single-source-of-truth logo renderer. Uses local `/assets/box-logo.webp`. Preset sizes: `sm` (74rpx), `md` (152rpx), `lg` (240rpx), `xl` (520rpx). Prefer this over hardcoding `<Image src="/assets/box-logo.webp">`.
+- **`JoyJoinIcon`** (`apps/mini-program/src/components/ui/JoyJoinIcon.tsx`) — proprietary icon renderer replacing raw emoji on primary UI surfaces. Props: `emoji`, `size?`, `tier?`, `className?`, `style?`. 4-tier fallback chain (no mapping → require fail → load fail → native emoji). Composite tier-aware lookup via `packages/shared/src/iconSystem/emojiToIconMap.ts` (same Unicode emoji can resolve to different assets per context). Includes fade-in + spring-bounce load animation, reduced-motion support, shimmer placeholder, and `alt` accessibility. Use for reactions, categories, intents, achievements, chemistry badges, status icons, phase emblems, and info labels.
 - **`XiaoyueChatBubble`** (`apps/mini-program/src/components/mascot/XiaoyueChatBubble.tsx`) — shared mascot coaching bubble with `tail` prop (auto-disabled for vertical/wide layouts), glow ring, and sentence stagger animation. Refactored across edit-profile, extended-data, and profile-review.
+- **`TypewriterText`** (`apps/mini-program/src/components/ui/TypewriterText.tsx`) — character-by-character text reveal for mascot speech bubbles. Props: `text`, `speed` (ms/char, clamped ≥16), `delay`, `enabled`, `showCursor`, `onComplete`. Includes punctuation-aware pauses (。！？= 2.5×, ，= 1.5×) and a blinking cursor. Used in personality-test speech bubble; suitable for any mascot "talking" moment.
+
+**Accessibility patterns in personality-test results (2026-05-27):**
+- **Reduced motion:** `Taro.getSystemInfoSync().reduceMotion` gates the slot animation; when true, results render immediately without the spinning reel. CSS `@media (prefers-reduced-motion: reduce)` plus a JS-driven `.personality-results--reduce-motion` container class suppresses stagger entrances, holographic shimmer, and card tilt.
+- **Error-state screen-reader support:** `ErrorStage` uses `role="alert"` and `aria-live="polite"` so assistive tech announces sync failures.
+- **Split-brain hardening:** Server `validateFinalResult()` validates `primaryArchetype` before persistence; client `isValidFinalResult()` blocks transition if invalid. Unified fallback chain ensures slot target and display archetype resolve identically.
+
+**Full-screen state centering (2026-05-29):**
+- Loading, empty, and error states must be vertically centered in the viewport. The most common bug is `display: flex; align-items: center` without `min-height` — the content hugs the top.
+- **Stand-alone full-screen loaders** (e.g., `OnboardingLoadingShell`, `JoyJoinLoadingScreen`): use `min-height: 100dvh` + flex centering, or `position: fixed; inset: 0` for overlays.
+- **States inside `ScrollView`**: the `ScrollView` child does not automatically inherit viewport height. Use `@include scroll-view-centered-state` (`_mixins.scss`) which applies `min-height: 60dvh` + flex centering. This mixin was created specifically for `connections`, `events`, and `center-hub` loading/empty states.
+- **Always pair `min-height` with flex centering.** `flex: 1` inside a flex parent with `min-height: 100dvh` also works (see `center-tab-empty`).
+- **Guardrails** now flags `&__loading` / `&__empty` / `&__error` blocks in page SCSS that use flex without `min-height`, `flex: 1`, `@include scroll-view-centered-state`, or `position: fixed`.
 
 **Mini-program page-stack lifecycle (swipe-back safety):** WeChat keeps pages in the navigation stack alive (hidden, not unmounted). If a page sets `isExiting`/`isPageExiting`/`isSubmitting` before navigating away, those flags survive. When the user swipes back, the page is re-shown but the CTA remains stuck. **Always reset transient exit/submit flags in `useDidShow`** — use `useResetOnShow(setIsPageExiting, setIsSubmitting)` from `apps/mini-program/src/hooks/useResetOnShow.ts`. The navigation hook `useJoyJoinNavigation` already carries an internal reset.
 
@@ -241,6 +263,7 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 - No imports from legacy `shared/` root directory
 - No cross-app imports
 - Admin routes must enforce admin middleware
+- Page-level loading/empty/error state blocks must include centering safety (`min-height`, `flex: 1`, or `@include scroll-view-centered-state`)
 
 **Never commit:** `.env`, secrets, or generated build artifacts.
 

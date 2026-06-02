@@ -98,33 +98,31 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/box-logo.webp',
           to: 'dist/assets/box-logo.webp',
         },
-        // Brand fonts (subsetted woff2 loaded via Taro.loadFontFace from CDN)
-        {
-          from: 'src/assets/fonts',
-          to: 'dist/assets/fonts',
-        },
-        // Archetype result images — WEBP in main package (login page + all screens).
+        // Archetype result images — spritesheet used locally in onboarding subpackage.
+        // Individual archetype images loaded via CDN (cdnAsset).
         // PNG moved to CDN (2026-05-22); canvas draws WebP primary with CDN PNG fallback.
-        // src/assets/archetypes/ contains symlinks to src/pages/onboarding/assets/archetypes/*.webp
         {
           from: 'src/pages/onboarding/assets/archetypes',
           to: 'dist/pages/onboarding/assets/archetypes',
         },
-        {
-          from: 'src/assets/archetypes',
-          to: 'dist/assets/archetypes',
-        },
-        // Phase icons — bundled locally for reliability (no CDN whitelist dependency).
-        // Each icon is ~2KB; 12 icons = ~24KB total.
-        {
-          from: 'src/assets/icons/phase-icons',
-          to: 'dist/assets/icons/phase-icons',
-        },
-        // Mood icons — bundled locally for the same reason (~8KB total).
+        // Mood icons — bundled locally (~16KB total).
         {
           from: 'src/assets/icons/mood-icons',
           to: 'dist/assets/icons/mood-icons',
         },
+        // Chemistry badges — matching status indicators (~16KB total).
+        {
+          from: 'src/assets/icons/chemistry-badges',
+          to: 'dist/assets/icons/chemistry-badges',
+        },
+        // Status icons — misc UI states (~8KB total).
+        {
+          from: 'src/assets/icons/status-icons',
+          to: 'dist/assets/icons/status-icons',
+        },
+        // NOTE: Phase, reaction, category, intent, reveal, and achievement icons
+        // are loaded from CDN (cdnAsset) to stay under the 2MB main package limit.
+        // Run `npm run upload:cdn-assets` after adding or updating these.
       ],
       options: {
       }

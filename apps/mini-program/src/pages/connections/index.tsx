@@ -12,6 +12,7 @@ import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import Card from '../../components/ui/Card'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
 import './index.scss'
@@ -119,9 +120,10 @@ export default function ConnectionsPage() {
                 )}
                 {conn.sharedEventTitle ? (
                   <View className='connections-page__shared-event'>
-                    <Text className='connections-page__shared-event-text'>
-                      📅 {conn.sharedEventTitle}
-                    </Text>
+                    <View className='jj-icon-text'>
+                      <JoyJoinIcon emoji='📅' size={20} />
+                      <Text className='connections-page__shared-event-text'>{conn.sharedEventTitle}</Text>
+                    </View>
                   </View>
                 ) : null}
                 {conn.eventTitle ? (
@@ -131,11 +133,13 @@ export default function ConnectionsPage() {
             </Card>
           ))
         ) : (
-          <XiaoyueEmptyState
-            emotion='sad'
-            title={getEmptyStateMessage('connections', { includeAction: false })}
-            subtitle='参加活动后即可与活动伙伴建立连接'
-          />
+          <View className='connections-page__empty-state'>
+            <XiaoyueEmptyState
+              emotion='sad'
+              title={getEmptyStateMessage('connections', { includeAction: false })}
+              subtitle='参加活动后即可与活动伙伴建立连接'
+            />
+          </View>
         )}
         <View className='connections-page__spacer' />
       </ScrollView>

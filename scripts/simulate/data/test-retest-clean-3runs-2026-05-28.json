@@ -1,0 +1,508 @@
+{
+  "meta": {
+    "timestamp": "2026-05-28T22:20:50.668Z",
+    "nRuns": 3,
+    "noise": "clean",
+    "personaFilter": "centroids",
+    "personaCount": 12
+  },
+  "summary": {
+    "avgExactMatchRate": 0.5833333333333334,
+    "avgSimilarOrExactRate": 0.8333333333333334,
+    "avgAssignmentConsistency": 1
+  },
+  "results": [
+    {
+      "personaId": "centroid-corgi",
+      "personaLabel": "社牛柯基 (centroid)",
+      "category": "centroid",
+      "expectedArchetype": "corgi",
+      "runs": [
+        {
+          "seed": 1,
+          "assignedArchetype": "corgi",
+          "secondaryArchetype": "hamster_praise",
+          "confidence": 0.9556111928828377,
+          "confidenceGap": 0.870485838263678,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 2,
+          "assignedArchetype": "corgi",
+          "secondaryArchetype": "hamster_praise",
+          "confidence": 0.9556111928828377,
+          "confidenceGap": 0.870485838263678,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 3,
+          "assignedArchetype": "corgi",
+          "secondaryArchetype": "hamster_praise",
+          "confidence": 0.9556111928828377,
+          "confidenceGap": 0.870485838263678,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        }
+      ]
+    },
+    {
+      "personaId": "centroid-rooster",
+      "personaLabel": "小太阳鸡 (centroid)",
+      "category": "centroid",
+      "expectedArchetype": "rooster",
+      "runs": [
+        {
+          "seed": 1,
+          "assignedArchetype": "corgi",
+          "secondaryArchetype": "rooster",
+          "confidence": 1,
+          "confidenceGap": 0.6799999999999999,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": false,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 2,
+          "assignedArchetype": "corgi",
+          "secondaryArchetype": "rooster",
+          "confidence": 1,
+          "confidenceGap": 0.6799999999999999,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": false,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 3,
+          "assignedArchetype": "corgi",
+          "secondaryArchetype": "rooster",
+          "confidence": 1,
+          "confidenceGap": 0.6799999999999999,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": false,
+          "isSimilarMatch": true
+        }
+      ]
+    },
+    {
+      "personaId": "centroid-hamster_praise",
+      "personaLabel": "夸夸仓鼠 (centroid)",
+      "category": "centroid",
+      "expectedArchetype": "hamster_praise",
+      "runs": [
+        {
+          "seed": 1,
+          "assignedArchetype": "hamster_praise",
+          "secondaryArchetype": "corgi",
+          "confidence": 0.7965994584863452,
+          "confidenceGap": 0.7319623697542577,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 2,
+          "assignedArchetype": "hamster_praise",
+          "secondaryArchetype": "corgi",
+          "confidence": 0.7965994584863452,
+          "confidenceGap": 0.7319623697542577,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 3,
+          "assignedArchetype": "hamster_praise",
+          "secondaryArchetype": "corgi",
+          "confidence": 0.7965994584863452,
+          "confidenceGap": 0.7319623697542577,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        }
+      ]
+    },
+    {
+      "personaId": "centroid-fox",
+      "personaLabel": "寻宝狐 (centroid)",
+      "category": "centroid",
+      "expectedArchetype": "fox",
+      "runs": [
+        {
+          "seed": 1,
+          "assignedArchetype": "fox",
+          "secondaryArchetype": "octopus",
+          "confidence": 1,
+          "confidenceGap": 0.6967687232971687,
+          "questionsAsked": 15,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 2,
+          "assignedArchetype": "fox",
+          "secondaryArchetype": "octopus",
+          "confidence": 1,
+          "confidenceGap": 0.6967687232971687,
+          "questionsAsked": 15,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 3,
+          "assignedArchetype": "fox",
+          "secondaryArchetype": "octopus",
+          "confidence": 1,
+          "confidenceGap": 0.6967687232971687,
+          "questionsAsked": 15,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        }
+      ]
+    },
+    {
+      "personaId": "centroid-dolphin_calm",
+      "personaLabel": "机灵海豚 (centroid)",
+      "category": "centroid",
+      "expectedArchetype": "dolphin_calm",
+      "runs": [
+        {
+          "seed": 1,
+          "assignedArchetype": "rooster",
+          "secondaryArchetype": "hamster_praise",
+          "confidence": 1,
+          "confidenceGap": 0.7421058614167204,
+          "questionsAsked": 13,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": false,
+          "isSimilarMatch": false
+        },
+        {
+          "seed": 2,
+          "assignedArchetype": "rooster",
+          "secondaryArchetype": "hamster_praise",
+          "confidence": 1,
+          "confidenceGap": 0.7421058614167204,
+          "questionsAsked": 13,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": false,
+          "isSimilarMatch": false
+        },
+        {
+          "seed": 3,
+          "assignedArchetype": "rooster",
+          "secondaryArchetype": "hamster_praise",
+          "confidence": 1,
+          "confidenceGap": 0.7421058614167204,
+          "questionsAsked": 13,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": false,
+          "isSimilarMatch": false
+        }
+      ]
+    },
+    {
+      "personaId": "centroid-spider",
+      "personaLabel": "人脉蛛 (centroid)",
+      "category": "centroid",
+      "expectedArchetype": "spider",
+      "runs": [
+        {
+          "seed": 1,
+          "assignedArchetype": "rooster",
+          "secondaryArchetype": "hamster_praise",
+          "confidence": 0.7311366214759216,
+          "confidenceGap": 0.6301356097812653,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": false,
+          "isSimilarMatch": false
+        },
+        {
+          "seed": 2,
+          "assignedArchetype": "rooster",
+          "secondaryArchetype": "hamster_praise",
+          "confidence": 0.7311366214759216,
+          "confidenceGap": 0.6301356097812653,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": false,
+          "isSimilarMatch": false
+        },
+        {
+          "seed": 3,
+          "assignedArchetype": "rooster",
+          "secondaryArchetype": "hamster_praise",
+          "confidence": 0.7311366214759216,
+          "confidenceGap": 0.6301356097812653,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": false,
+          "isSimilarMatch": false
+        }
+      ]
+    },
+    {
+      "personaId": "centroid-koala",
+      "personaLabel": "树洞考拉 (centroid)",
+      "category": "centroid",
+      "expectedArchetype": "koala",
+      "runs": [
+        {
+          "seed": 1,
+          "assignedArchetype": "koala",
+          "secondaryArchetype": "hamster_praise",
+          "confidence": 1,
+          "confidenceGap": 0.7905815931499233,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 2,
+          "assignedArchetype": "koala",
+          "secondaryArchetype": "hamster_praise",
+          "confidence": 1,
+          "confidenceGap": 0.7905815931499233,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 3,
+          "assignedArchetype": "koala",
+          "secondaryArchetype": "hamster_praise",
+          "confidence": 1,
+          "confidenceGap": 0.7905815931499233,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        }
+      ]
+    },
+    {
+      "personaId": "centroid-octopus",
+      "personaLabel": "脑洞章鱼 (centroid)",
+      "category": "centroid",
+      "expectedArchetype": "octopus",
+      "runs": [
+        {
+          "seed": 1,
+          "assignedArchetype": "fox",
+          "secondaryArchetype": "dolphin_calm",
+          "confidence": 1,
+          "confidenceGap": 0.8028253227003812,
+          "questionsAsked": 16,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": false,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 2,
+          "assignedArchetype": "fox",
+          "secondaryArchetype": "dolphin_calm",
+          "confidence": 1,
+          "confidenceGap": 0.8028253227003812,
+          "questionsAsked": 16,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": false,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 3,
+          "assignedArchetype": "fox",
+          "secondaryArchetype": "dolphin_calm",
+          "confidence": 1,
+          "confidenceGap": 0.8028253227003812,
+          "questionsAsked": 16,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": false,
+          "isSimilarMatch": true
+        }
+      ]
+    },
+    {
+      "personaId": "centroid-owl",
+      "personaLabel": "好奇猫头鹰 (centroid)",
+      "category": "centroid",
+      "expectedArchetype": "owl",
+      "runs": [
+        {
+          "seed": 1,
+          "assignedArchetype": "owl",
+          "secondaryArchetype": "cat",
+          "confidence": 1,
+          "confidenceGap": 0.855947496029289,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 2,
+          "assignedArchetype": "owl",
+          "secondaryArchetype": "cat",
+          "confidence": 1,
+          "confidenceGap": 0.855947496029289,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 3,
+          "assignedArchetype": "owl",
+          "secondaryArchetype": "cat",
+          "confidence": 1,
+          "confidenceGap": 0.855947496029289,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        }
+      ]
+    },
+    {
+      "personaId": "centroid-elephant",
+      "personaLabel": "靠谱大象 (centroid)",
+      "category": "centroid",
+      "expectedArchetype": "elephant",
+      "runs": [
+        {
+          "seed": 1,
+          "assignedArchetype": "elephant",
+          "secondaryArchetype": "turtle",
+          "confidence": 0.7657933361076981,
+          "confidenceGap": 0.7639504836708425,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 2,
+          "assignedArchetype": "elephant",
+          "secondaryArchetype": "turtle",
+          "confidence": 0.7657933361076981,
+          "confidenceGap": 0.7639504836708425,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 3,
+          "assignedArchetype": "elephant",
+          "secondaryArchetype": "turtle",
+          "confidence": 0.7657933361076981,
+          "confidenceGap": 0.7639504836708425,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        }
+      ]
+    },
+    {
+      "personaId": "centroid-turtle",
+      "personaLabel": "慢热龟 (centroid)",
+      "category": "centroid",
+      "expectedArchetype": "turtle",
+      "runs": [
+        {
+          "seed": 1,
+          "assignedArchetype": "cat",
+          "secondaryArchetype": "turtle",
+          "confidence": 0.6485656316291091,
+          "confidenceGap": 0.6423459522423486,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": false,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 2,
+          "assignedArchetype": "cat",
+          "secondaryArchetype": "turtle",
+          "confidence": 0.6485656316291091,
+          "confidenceGap": 0.6423459522423486,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": false,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 3,
+          "assignedArchetype": "cat",
+          "secondaryArchetype": "turtle",
+          "confidence": 0.6485656316291091,
+          "confidenceGap": 0.6423459522423486,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": false,
+          "isSimilarMatch": true
+        }
+      ]
+    },
+    {
+      "personaId": "centroid-cat",
+      "personaLabel": "小透明猫 (centroid)",
+      "category": "centroid",
+      "expectedArchetype": "cat",
+      "runs": [
+        {
+          "seed": 1,
+          "assignedArchetype": "cat",
+          "secondaryArchetype": "owl",
+          "confidence": 1,
+          "confidenceGap": 0.7130963552319292,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 2,
+          "assignedArchetype": "cat",
+          "secondaryArchetype": "owl",
+          "confidence": 1,
+          "confidenceGap": 0.7130963552319292,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        },
+        {
+          "seed": 3,
+          "assignedArchetype": "cat",
+          "secondaryArchetype": "owl",
+          "confidence": 1,
+          "confidenceGap": 0.7130963552319292,
+          "questionsAsked": 12,
+          "l3DisambiguationTriggered": true,
+          "isExactMatch": true,
+          "isSimilarMatch": true
+        }
+      ]
+    }
+  ]
+}

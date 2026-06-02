@@ -2,6 +2,7 @@
 @use './styles/mixins' as *;
 @use './styles/reset';
 @use './styles/stagger';
+@use './styles/utilities';
 
 page {
   font-family: $font-body;

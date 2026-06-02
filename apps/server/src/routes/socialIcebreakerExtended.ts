@@ -29,6 +29,7 @@ import {
   resolveSession,
   isHostAuthorized,
   recapDisplayNameByUserId,
+  generateSpeedFriendingPairs,
 } from './socialIcebreakerHelpers';
 import { filterContent } from '../contentFilter';
 import { buildArchetypeContext } from '../lib/contextInjector';
@@ -249,6 +250,14 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     }
   }
 
+  if (currentPhase === 'speed_friending') {
+    if (!state.speedFriendingAllRoundsComplete) {
+      return res.status(400).json({
+        error: 'All speed friending rounds must be completed before advancing',
+      });
+    }
+  }
+
   let effectiveNextPhase = getNextEligiblePhase(currentPhase, state);
 
   // Close out the current phase bookkeeping before any transition logic
@@ -287,6 +296,17 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   state.pulseChecks = [];
   if (effectiveNextPhase === 'warmup') {
     state.warmupReadyUserIds = [];
+  }
+  if (effectiveNextPhase === 'speed_friending') {
+    const roster = await listParticipants(socialSessionId);
+    const playerIds = roster.map((p) => p.userId);
+    const displayNames = new Map(roster.map((p) => [p.userId, p.displayName]));
+    const rounds = generateSpeedFriendingPairs(playerIds, displayNames);
+    state.speedFriendingPairs = rounds.flat();
+    state.speedFriendingTotalRounds = rounds.length;
+    state.speedFriendingCurrentRound = 0;
+    state.speedFriendingAllRoundsComplete = false;
+    state.speedFriendingRoundStartedAt = Date.now();
   }
   await updateSession(socialSessionId, state);
 

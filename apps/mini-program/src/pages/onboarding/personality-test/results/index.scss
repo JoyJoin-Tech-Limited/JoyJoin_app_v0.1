@@ -20,23 +20,7 @@ $color-slot-warm: #7a5a09;
 $color-skill-warm: #d97706;
 $color-skill-cool: #7c3aed;
 
-@keyframes personality-results-sparkle-rise {
-  0% {
-    opacity: 0;
-    transform: translateY(24rpx) scale(0.6);
-  }
-
-  30% {
-    opacity: 1;
-  }
-
-  100% {
-    opacity: 0;
-    transform: translateY(-36rpx) scale(1.16);
-  }
-}
-
-@keyframes personality-results-orb-pulse {
+  @keyframes personality-results-orb-pulse {
   0%,
   100% {
     transform: scale(1);
@@ -67,10 +51,10 @@ $color-skill-cool: #7c3aed;
 
   &__poster-canvas {
     position: fixed;
-    left: -2400px;
-    top: -2400px;
-    width: 1080px;
-    height: 1920px;
+    left: 0;
+    top: 0;
+    width: 1px;
+    height: 1px;
     opacity: 0;
     pointer-events: none;
   }
@@ -99,6 +83,14 @@ $color-skill-cool: #7c3aed;
     color: $color-text-secondary;
   }
 
+  &__state-hint {
+    max-width: 560rpx;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    color: $color-text-tertiary;
+    margin-top: -$spacing-xs;
+  }
+
   &__stack-actions {
     display: flex;
     flex-direction: column;
@@ -106,12 +98,28 @@ $color-skill-cool: #7c3aed;
 
     .joy-button {
       width: 100%;
+      min-height: $cta-min-tap;
     }
 
     &--spacious {
       margin: $spacing-lg $container-padding $spacing-lg;
       @include safe-area-bottom-padding(margin-bottom, $spacing-md);
     }
+  }
+
+  &__retry-with-tooltip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    width: 100%;
+  }
+
+  &__retry-tooltip {
+    font-size: $font-size-xs;
+    line-height: 1.5;
+    color: $color-text-tertiary;
+    text-align: center;
   }
 
   &__immersive-shell {
@@ -434,7 +442,7 @@ $color-skill-cool: #7c3aed;
 
   &__network-title {
     display: block;
-    font-size: $font-size-base;
+    font-size: $font-size-md;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
     margin-bottom: 8rpx;
@@ -524,29 +532,7 @@ $color-skill-cool: #7c3aed;
     }
   }
 
-  &__sparkle-field {
-    position: absolute;
-    top: 0; right: 0; bottom: 0; left: 0;
-    opacity: 0;
-    transition: opacity 0.25s ease;
-
-    &--sparkle {
-      opacity: 1;
-    }
-  }
-
-  &__sparkle {
-    position: absolute;
-    color: $color-slot-gold;
-    font-size: 34rpx;
-    opacity: 0;
-  }
-
-  &__sparkle-field--sparkle &__sparkle {
-    animation: personality-results-sparkle-rise 0.8s ease-out forwards;
-  }
-
-  &__reveal-glow-overlay {
+    &__reveal-glow-overlay {
     position: absolute;
     top: 0; right: 0; bottom: 0; left: 0;
     border-radius: inherit;
@@ -560,49 +546,7 @@ $color-skill-cool: #7c3aed;
     }
   }
 
-  &__sparkle--1 {
-    left: 72rpx;
-    top: 112rpx;
-  }
-
-  &__sparkle--2 {
-    left: 128rpx;
-    top: 70rpx;
-    animation-delay: 0.08s;
-  }
-
-  &__sparkle--3 {
-    right: 98rpx;
-    top: 96rpx;
-    animation-delay: 0.16s;
-  }
-
-  &__sparkle--4 {
-    right: 64rpx;
-    top: 162rpx;
-    animation-delay: 0.24s;
-  }
-
-  &__sparkle--5 {
-    left: 84rpx;
-    bottom: 104rpx;
-    animation-delay: 0.3s;
-  }
-
-  &__sparkle--6 {
-    right: 124rpx;
-    bottom: 82rpx;
-    animation-delay: 0.4s;
-  }
-
-  &__sparkle--7 {
-    left: 50%;
-    bottom: 54rpx;
-    transform: translateX(-50%);
-    animation-delay: 0.48s;
-  }
-
-  &__reveal-label {
+    &__reveal-label {
     font-size: $font-size-3xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
@@ -740,9 +684,9 @@ $color-skill-cool: #7c3aed;
 
   &__hero-title {
     display: block;
-    font-size: $font-size-base;
+    font-size: $font-size-md;
     color: $color-text-secondary;
-    margin-bottom: 6rpx;
+    margin-bottom: 8rpx;
   }
 
   &__hero-name {
@@ -750,9 +694,9 @@ $color-skill-cool: #7c3aed;
     font-size: $font-size-3xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
-    line-height: 1.35;
+    line-height: 1.4;
     margin-bottom: $spacing-sm;
-    word-break: break-word;
+    word-break: keep-all;
     font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
   }
 
@@ -1013,38 +957,6 @@ $color-skill-cool: #7c3aed;
     line-height: 1.4;
   }
 
-  &__hero-xiaoyue-loading {
-    display: flex;
-    align-items: center;
-    gap: 6rpx;
-  }
-
-  &__hero-xiaoyue-loading-text {
-    font-size: $font-size-sm;
-    color: $color-text-tertiary;
-  }
-
-  &__hero-xiaoyue-headline {
-    display: block;
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    line-height: 1.5;
-    margin-bottom: 14rpx;
-  }
-
-  &__hero-xiaoyue-analysis {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: $font-size-sm;
-    line-height: 1.75;
-    color: $color-text-secondary;
-    margin-bottom: 16rpx;
-  }
-
   &__hero-xiaoyue-tags {
     display: flex;
     flex-wrap: wrap;
@@ -1069,7 +981,7 @@ $color-skill-cool: #7c3aed;
     align-items: center;
     justify-content: center;
     padding: 12rpx 0;
-    margin-top: 4rpx;
+    margin-top: 8rpx;
     min-height: $cta-min-tap;
     -webkit-tap-highlight-color: transparent;
 
@@ -1084,25 +996,6 @@ $color-skill-cool: #7c3aed;
     font-weight: $font-weight-semibold;
     color: $color-primary;
     letter-spacing: 1rpx;
-  }
-
-  &__hero-xiaoyue-fallback-title {
-    display: block;
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    margin-bottom: 10rpx;
-  }
-
-  &__hero-xiaoyue-fallback-text {
-    display: block;
-    font-size: $font-size-sm;
-    line-height: 1.7;
-    color: $color-text-secondary;
-
-    & + & {
-      margin-top: 10rpx;
-    }
   }
 
   &__bridge {
@@ -1223,29 +1116,6 @@ $color-skill-cool: #7c3aed;
     margin-bottom: 10rpx;
   }
 
-  &__pokemon-share-line {
-    display: block;
-    font-size: $font-size-sm;
-    line-height: 1.7;
-    color: $color-text-secondary;
-  }
-
-  &__pokemon-match-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12rpx;
-    margin-bottom: $spacing-md;
-  }
-
-  &__pokemon-match-chip {
-    padding: 10rpx 18rpx;
-    border-radius: 999rpx;
-    background: rgba(255, 248, 214, 0.94);
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    color: $color-slot-warm;
-  }
-
   &__pokemon-skill-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1282,7 +1152,7 @@ $color-skill-cool: #7c3aed;
 
   &__pokemon-skill-name {
     display: block;
-    font-size: $font-size-base;
+    font-size: $font-size-md;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
     margin-bottom: 8rpx;
@@ -1295,25 +1165,6 @@ $color-skill-cool: #7c3aed;
     color: $color-text-secondary;
   }
 
-  &__pokemon-detail-trigger {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: $spacing-sm 0;
-    padding: 10rpx 0;
-
-    &:active {
-      opacity: 0.7;
-    }
-  }
-
-  &__pokemon-detail-trigger-text {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-primary;
-    letter-spacing: 1rpx;
-  }
-
   &__pokemon-actions {
     display: flex;
     flex-direction: column;
@@ -1322,6 +1173,7 @@ $color-skill-cool: #7c3aed;
 
     .joy-button {
       width: 100%;
+      min-height: $cta-min-tap;
     }
   }
 
@@ -1347,88 +1199,6 @@ $color-skill-cool: #7c3aed;
       border-color: rgba(180, 140, 40, 0.15);
       color: $color-slot-warm;
     }
-  }
-
-  // ── Compact trait bars on visible card (Pokémon stats feel) ──
-  &__pokemon-compact-traits {
-    display: flex;
-    flex-direction: column;
-    gap: 10rpx;
-    margin-bottom: $spacing-sm;
-  }
-
-  &__pokemon-compact-trait {
-    display: flex;
-    align-items: center;
-    gap: 12rpx;
-  }
-
-  &__pokemon-compact-trait-label {
-    width: 80rpx;
-    font-size: 22rpx;
-    font-weight: $font-weight-bold;
-    color: $color-text-secondary;
-    text-align: right;
-    flex-shrink: 0;
-  }
-
-  &__pokemon-compact-trait-track {
-    flex: 1;
-    height: 12rpx;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.08);
-    overflow: hidden;
-  }
-
-  &__pokemon-compact-trait-fill {
-    height: 100%;
-    border-radius: inherit;
-    width: 100%;
-    transform-origin: left center;
-    will-change: transform;
-  }
-
-  &__pokemon-compact-trait-value {
-    width: 48rpx;
-    font-size: 22rpx;
-    font-weight: $font-weight-black;
-    color: $color-primary-dark;
-    text-align: right;
-    flex-shrink: 0;
-  }
-
-  // ── Compact skill badges on visible card ──
-  &__pokemon-skill-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12rpx;
-    margin-bottom: $spacing-sm;
-  }
-
-  &__pokemon-skill-badge {
-    padding: 10rpx 18rpx;
-    border-radius: 999rpx;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-bold;
-    border: 2rpx solid transparent;
-
-    &--warm {
-      background: rgba(255, 241, 233, 0.96);
-      border-color: rgba(255, 153, 105, 0.2);
-      color: $color-skill-warm;
-    }
-
-    &--cool {
-      background: rgba(244, 240, 255, 0.96);
-      border-color: rgba(139, 92, 246, 0.2);
-      color: $color-skill-cool;
-    }
-  }
-
-  &__pokemon-skill-badge-text {
-    font-size: inherit;
-    font-weight: inherit;
-    color: inherit;
   }
 
   &__pokemon-energy {
@@ -1469,270 +1239,6 @@ $color-skill-cool: #7c3aed;
     width: 100%;
     transform-origin: left center;
     will-change: transform;
-  }
-
-  &__pokemon-nickname {
-    margin-bottom: $spacing-sm;
-  }
-
-  &__pokemon-nickname-label {
-    display: block;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-bold;
-    color: rgba($color-primary-dark, 0.78);
-    letter-spacing: 2rpx;
-    margin-bottom: 8rpx;
-  }
-
-  &__pokemon-nickname-input {
-    width: 100%;
-    height: 72rpx;
-    padding: 0 $spacing-md;
-    border-radius: 18rpx;
-    background: rgba(255, 255, 255, 0.9);
-    border: 2rpx solid rgba($color-primary, 0.12);
-    font-size: $font-size-base;
-    color: $color-text-primary;
-    box-sizing: border-box;
-
-    &::placeholder {
-      color: $color-text-muted;
-    }
-  }
-
-  &__pokemon-variants {
-    margin-bottom: $spacing-sm;
-  }
-
-  &__pokemon-variants-label {
-    display: block;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-bold;
-    color: rgba($color-primary-dark, 0.78);
-    letter-spacing: 2rpx;
-    margin-bottom: 8rpx;
-  }
-
-  &__pokemon-variants-row {
-    display: flex;
-    gap: 12rpx;
-  }
-
-  &__pokemon-variant-swatch {
-    position: relative;
-    width: 96rpx;
-    height: 96rpx;
-    border-radius: 20rpx;
-    border: 4rpx solid transparent;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    padding-bottom: 8rpx;
-    box-sizing: border-box;
-    transition: transform 0.15s ease, border-color 0.15s ease;
-
-    &--active {
-      border-color: $color-primary;
-      transform: scale(1.06);
-    }
-  }
-
-  &__pokemon-variant-swatch-label {
-    font-size: 20rpx;
-    font-weight: $font-weight-bold;
-    color: $color-text-white;
-    text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.4);
-    background: rgba(0, 0, 0, 0.25);
-    padding: 4rpx 10rpx;
-    border-radius: 999rpx;
-  }
-
-  &__coach-card {
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
-  }
-
-  &__coach-image {
-    width: 150rpx;
-    height: 150rpx;
-    flex: 0 0 auto;
-  }
-
-  &__coach-copy {
-    flex: 1;
-  }
-
-  &__coach-title {
-    display: block;
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    margin-bottom: 10rpx;
-  }
-
-  &__coach-text {
-    display: block;
-    font-size: $font-size-sm;
-    line-height: 1.7;
-    color: $color-text-secondary;
-
-    & + & {
-      margin-top: 10rpx;
-    }
-  }
-
-  &__coach-loading {
-    display: flex;
-    align-items: center;
-    gap: 6rpx;
-    margin-top: 12rpx;
-  }
-
-  &__coach-loading-dot {
-    font-size: $font-size-xl;
-    color: $color-primary;
-    animation: personality-results-orb-pulse 1.2s ease-in-out infinite;
-
-    &:nth-child(2) {
-      animation-delay: 0.2s;
-    }
-
-    &:nth-child(3) {
-      animation-delay: 0.4s;
-    }
-  }
-
-  &__coach-loading-text {
-    font-size: $font-size-sm;
-    color: $color-text-tertiary;
-    margin-left: 8rpx;
-  }
-
-  &__coach-headline {
-    display: block;
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    line-height: 1.5;
-    margin-bottom: 14rpx;
-  }
-
-  &__coach-analysis {
-    display: block;
-    font-size: $font-size-sm;
-    line-height: 1.75;
-    color: $color-text-secondary;
-    margin-bottom: 16rpx;
-  }
-
-  &__coach-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10rpx;
-    margin-bottom: 18rpx;
-  }
-
-  &__coach-tag {
-    padding: 6rpx 16rpx;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.08);
-  }
-
-  &__coach-tag-text {
-    font-size: $font-size-xs;
-    font-weight: $font-weight-bold;
-    color: $color-primary;
-  }
-
-  &__coach-insight-cards {
-    display: flex;
-    flex-direction: column;
-    gap: 12rpx;
-    margin-bottom: 14rpx;
-  }
-
-  &__coach-insight-card {
-    padding: 14rpx 18rpx;
-    border-radius: 20rpx;
-    background: linear-gradient(135deg, rgba($color-primary, 0.04) 0%, rgba($color-secondary, 0.04) 100%);
-    border: 1rpx solid rgba($color-primary, 0.06);
-  }
-
-  &__coach-insight-label {
-    display: block;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-bold;
-    color: $color-text-tertiary;
-    margin-bottom: 6rpx;
-  }
-
-  &__coach-insight-value {
-    display: block;
-    font-size: $font-size-sm;
-    line-height: 1.65;
-    color: $color-text-secondary;
-  }
-
-  &__coach-blend {
-    display: block;
-    font-size: $font-size-xs;
-    line-height: 1.65;
-    color: $color-text-tertiary;
-    margin-top: 10rpx;
-    padding-top: 10rpx;
-    border-top: 1rpx solid rgba($color-border, 0.5);
-  }
-
-  &__coach-insight-row {
-    display: flex;
-    gap: 12rpx;
-    margin-bottom: 12rpx;
-  }
-
-  &__coach-insight-pill {
-    flex: 1;
-    padding: 14rpx 16rpx;
-    border-radius: 20rpx;
-    background: linear-gradient(135deg, rgba($color-primary, 0.04) 0%, rgba($color-secondary, 0.04) 100%);
-    border: 1rpx solid rgba($color-primary, 0.06);
-    min-width: 0;
-  }
-
-  &__coach-insight-pill-label {
-    display: block;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-bold;
-    color: $color-text-tertiary;
-    margin-bottom: 6rpx;
-  }
-
-  &__coach-insight-pill-value {
-    display: block;
-    font-size: $font-size-sm;
-    line-height: 1.55;
-    color: $color-text-secondary;
-  }
-
-  &__coach-insight-card--highlight {
-    background: linear-gradient(135deg, rgba($color-primary, 0.08) 0%, rgba($color-secondary, 0.06) 100%);
-    border: 1rpx solid rgba($color-primary, 0.12);
-    box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.06);
-  }
-
-  &__coach-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 16rpx 0;
-    margin-top: 6rpx;
-    min-height: 44rpx;
-  }
-
-  &__coach-toggle-text {
-    font-size: $font-size-xs;
-    font-weight: $font-weight-bold;
-    color: $color-primary;
   }
 
   &__detail-analysis {
@@ -1971,33 +1477,6 @@ $color-skill-cool: #7c3aed;
     }
   }
 
-  // ── Tap hint on card ──
-  &__pokemon-tap-hint {
-    position: absolute;
-    top: 12rpx;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 3;
-    padding: 6rpx 16rpx;
-    border-radius: 999rpx;
-    background: rgba(0, 0, 0, 0.45);
-    opacity: 0;
-    transition: opacity 0.25s ease;
-    pointer-events: none;
-  }
-
-  &__pokemon-card:hover &__pokemon-tap-hint,
-  &__pokemon-card--pressed &__pokemon-tap-hint {
-    opacity: 1;
-  }
-
-  &__pokemon-tap-hint-text {
-    font-size: 22rpx;
-    font-weight: $font-weight-semibold;
-    color: $color-text-white;
-    white-space: nowrap;
-  }
-
   // ── Detail sheet overlay ──
   &__detail-overlay {
     position: fixed;
@@ -2078,6 +1557,7 @@ $color-skill-cool: #7c3aed;
     display: block;
     font-size: $font-size-sm;
     color: $color-text-secondary;
+    word-break: keep-all;
   }
 
   &__detail-section {
@@ -2135,19 +1615,7 @@ $color-skill-cool: #7c3aed;
     color: $color-text-secondary;
   }
 
-  &__detail-actions {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-sm;
-    margin-top: $spacing-sm;
-    margin-bottom: $spacing-sm;
-
-    .joy-button {
-      width: 100%;
-    }
-  }
-
-  &__detail-close {
+    &__detail-close {
     text-align: center;
     padding: $spacing-sm 0;
     min-height: $cta-min-tap;
@@ -2217,7 +1685,7 @@ $color-skill-cool: #7c3aed;
     font-size: 20rpx;
     font-weight: $font-weight-bold;
     color: $color-text-muted;
-    margin-bottom: 4rpx;
+    margin-bottom: 8rpx;
   }
 
   &__collect-cell--unlocked &__collect-number {
@@ -2245,12 +1713,7 @@ $color-skill-cool: #7c3aed;
       animation: none;
     }
 
-    &__sparkle-field--sparkle &__sparkle {
-      animation: none !important;
-      opacity: 0.5;
-    }
-
-    &__pokemon-holo-shimmer,
+      &__pokemon-holo-shimmer,
     &__pokemon-holo-shimmer::before,
     &__pokemon-corner-shine {
       animation: none !important;
@@ -2292,6 +1755,60 @@ $color-skill-cool: #7c3aed;
     }
 
     &__pokemon-holo-stamp {
+      animation: none !important;
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  // JS-driven reduced-motion fallback for webviews that don't honour the media query
+  &--reduce-motion {
+    .personality-results__reveal-orb {
+      animation: none;
+    }
+
+    .personality-results__pokemon-holo-shimmer,
+    .personality-results__pokemon-holo-shimmer::before,
+    .personality-results__pokemon-corner-shine {
+      animation: none !important;
+      opacity: 0.3;
+    }
+
+    .personality-results__pokemon-card {
+      transform: none !important;
+    }
+
+    .personality-results__stagger--1,
+    .personality-results__stagger--2,
+    .personality-results__stagger--3,
+    .personality-results__stagger--4,
+    .personality-results__stagger--5,
+    .personality-results__stagger--6 {
+      animation: none !important;
+      opacity: 1;
+      transform: none;
+    }
+
+    .personality-results__hero-art {
+      animation: none !important;
+      opacity: 1;
+      transform: none;
+    }
+
+    .personality-results__detail-overlay,
+    .personality-results__detail-sheet {
+      animation: none !important;
+      opacity: 1;
+      transform: none;
+    }
+
+    .personality-results__hero-badge {
+      transition: none !important;
+      opacity: 1;
+      transform: none;
+    }
+
+    .personality-results__pokemon-holo-stamp {
       animation: none !important;
       opacity: 1;
       transform: none;

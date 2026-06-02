@@ -1,6 +1,6 @@
-# Mini-Program Styles — Typography Hierarchy
+# Mini-Program Styles — Typography Hierarchy & Utilities
 
-> One source of truth for font sizing across the JoyJoin mini-program.
+> One source of truth for font sizing, icon utilities, and shared SCSS helpers across the JoyJoin mini-program.
 > Every piece of text should map to a semantic tier. If it doesn't fit, add a token — don't hardcode.
 
 ---
@@ -137,6 +137,48 @@ If you genuinely need a size not in the scale:
 2. If no, add a new token to `_variables.scss` with a clear semantic name.
 3. Add a corresponding mixin to `_mixins.scss` if the pattern repeats.
 4. Update this README.
+
+---
+
+## Utilities (`_utilities.scss`)
+
+Imported via `app.scss`. These are layout and motion helpers that complement the typography system.
+
+### Icon + text row (`.jj-icon-text`)
+
+Standard flex row for proprietary-icon + label pairs used throughout the mini-program:
+
+```scss
+.jj-icon-text {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+
+  &--tight { gap: 4rpx; }
+  &--loose { gap: 12rpx; }
+}
+```
+
+Usage:
+```tsx
+<View className='jj-icon-text'>
+  <JoyJoinIcon emoji='🎯' tier='semantic' size={24} />
+  <Text className='type-label'>目标城市</Text>
+</View>
+```
+
+### Loading shimmer (`.jj-icon-loading`)
+
+Placeholder animation for icon load states:
+```scss
+.jj-icon-loading {
+  animation: jj-icon-shimmer 1.4s ease-in-out infinite;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+  background-size: 200% 100%;
+}
+```
+
+Applied automatically by `JoyJoinIcon` while the image is loading. Can be used manually for skeleton placeholders.
 
 ---
 

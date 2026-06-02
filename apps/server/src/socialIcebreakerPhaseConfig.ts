@@ -49,6 +49,12 @@ export function getServerEnabledPhases(env: NodeJS.ProcessEnv = process.env): So
     enabledPhases.splice(insertAt, 0, 'quip_battle');
   }
 
+  if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING, false)) {
+    const quipBattleIndex = enabledPhases.indexOf('quip_battle');
+    const insertAt = quipBattleIndex >= 0 ? quipBattleIndex + 1 : enabledPhases.length;
+    enabledPhases.splice(insertAt, 0, 'speed_friending');
+  }
+
   if (personalityDiceEnabled === false) {
     const filteredPhases = enabledPhases.filter((phase) => phase !== 'personality_dice');
     if (isMiniScriptPhaseEnabled(env)) {
@@ -158,6 +164,8 @@ export function cleanupPhaseStateForNextPhase(
       return;
     case 'personality_dice':
       state.personalityDiceChallenges = undefined;
+      state.personalityDiceChallengeGroups = undefined;
+      state.diceSelectedOption = undefined;
       state.currentDicePlayerIndex = undefined;
       state.diceCompletedBy = undefined;
       state.dicePassedBy = undefined;
@@ -205,6 +213,13 @@ export function cleanupPhaseStateForNextPhase(
       state.quipBattleVotedUserIds = undefined;
       state.quipBattleRevealed = undefined;
       state.quipBattleResults = undefined;
+      return;
+    case 'speed_friending':
+      state.speedFriendingPairs = undefined;
+      state.speedFriendingCurrentRound = undefined;
+      state.speedFriendingTotalRounds = undefined;
+      state.speedFriendingRoundStartedAt = undefined;
+      state.speedFriendingAllRoundsComplete = undefined;
       return;
     default:
       return;

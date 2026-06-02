@@ -28,6 +28,7 @@ import { logError, logInfo } from '../../../lib/utils/logger'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
 import FormStepper from '../../../components/ui/FormStepper'
@@ -718,6 +719,12 @@ export default function EssentialDataPage() {
                         ].filter(Boolean).join(' ')}
                         onClick={() => toggleIntent(option.value)}
                       >
+                        <JoyJoinIcon
+                          emoji={option.emoji}
+                          tier='intent'
+                          size={48}
+                          className='essential-data__intent-icon'
+                        />
                         <Text className='essential-data__intent-label'>{option.label}</Text>
                         <Text className='essential-data__intent-subtitle'>{option.subtitle}</Text>
                         {visuallySelected && (

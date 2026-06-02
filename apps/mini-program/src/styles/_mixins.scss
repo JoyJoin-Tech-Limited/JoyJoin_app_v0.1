@@ -561,6 +561,19 @@ $onboarding-stage-shift-ids: (
   text-align: center;
 }
 
+// ─── Scroll-View Centered State ────────────────────────────────────
+/// Centers content within a ScrollView's visible area.
+/// Use for loading and empty states inside ScrollView containers
+/// where the parent does not provide flex-based centering.
+@mixin scroll-view-centered-state {
+  min-height: 60dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
 // ─── Keyframes ─────────────────────────────────────────────────────
 @keyframes staggered-rise {
   from { opacity: 0; transform: translateY(16rpx); }

@@ -19,16 +19,27 @@ import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFr
 
 export const XIAOYUE_COMMENT_PROMPT_VERSION = 'social-xiaoyue-comment-v2';
 export const WARMUP_TOPICS_PROMPT_VERSION = 'social-warmup-topics-v2';
+export const WARMUP_TOPICS_V3_PROMPT_VERSION = 'social-warmup-topics-v3';
 export const MICRO_CHALLENGES_PROMPT_VERSION = 'social-micro-challenges-v2';
 export const LIE_DETECTIVE_PROMPT_VERSION = 'social-lie-detective-v1';
 export const LIE_DETECTIVE_V2_PROMPT_VERSION = 'social-lie-detective-v2';
 export const RECAP_SUMMARY_PROMPT_VERSION = 'social-recap-summary-v3';
 export const PERSONALITY_DICE_PROMPT_VERSION = 'social-personality-dice-v3';
+export const PERSONALITY_DICE_CHOOSE_PROMPT_VERSION = 'social-personality-dice-v4';
 export const AUCTION_LOTS_PROMPT_VERSION = 'social-auction-lots-v2';
 export const MINI_SCRIPT_FRAMEWORK_PROMPT_VERSION = 'social-miniscript-framework-v1';
 export const SESSION_PACK_PROMPT_VERSION = 'social-session-pack-v2';
 
 // ─── Warmup Topics ───────────────────────────────────────────────────────────
+
+function mapVibeToDisplayVibe(vibe: 'chat' | 'balanced' | 'game' | undefined): string {
+  switch (vibe) {
+    case 'chat': return '深聊';
+    case 'game': return '暢玩';
+    case 'balanced':
+    default: return '均衡';
+  }
+}
 
 export function buildWarmupTopicsPrompt(params: {
   eventType: string;
@@ -37,6 +48,8 @@ export function buildWarmupTopicsPrompt(params: {
   avoidTopics?: string[];
   _refinementHint?: string;
   sessionContext?: SessionArchetypeContext;
+  /** Vibe drives card count, depth curve, and tier generation. */
+  vibe?: 'chat' | 'balanced' | 'game';
 }): string {
   const moodMap: Record<AtmosphereMood, string> = {
     relaxed: '轻松',
@@ -45,7 +58,32 @@ export function buildWarmupTopicsPrompt(params: {
     emotional: '情感',
   };
 
-  return `你是JoyJoin的社交破冰专家。请为一个${params.eventType}活动（${params.participantCount}人）生成5个${moodMap[params.mood]}类型的破冰话题。
+  const resolvedVibe = params.vibe ?? 'balanced';
+  const vibeDisplay = mapVibeToDisplayVibe(resolvedVibe);
+
+  // Per-vibe config
+  const vibeConfig = {
+    chat: {
+      cardCount: '6-7',
+      depthCurve: '1个 Level 1 轻松开场、3-4个 Level 2 体验分享、2个 Level 3 温和反思',
+      styleNote: '每个话题必须包含三级提示（promptTiers）：\n  * opener：30秒 warm entry 引导语（≤15字）\n  * followUp：60秒 deeper probe 追问（≤20字）\n  * reflection：90秒 meaningful closure 反思引导（≤25字）',
+      jsonShape: '{"id":"ai1","question":"话题文本","mood":"life","emoji":"相关emoji","category":"话题类别","depthLevel":2,"promptStyle":"experiential","safety":"gentle","promptTiers":{"opener":"...","followUp":"...","reflection":"..."}}',
+    },
+    balanced: {
+      cardCount: '5',
+      depthCurve: '至少2个 Level 1 轻松开场、2个 Level 2 体验分享、1个 Level 3 温和反思',
+      styleNote: '每个话题一个简短引导即可',
+      jsonShape: '{"id":"ai1","question":"话题文本","mood":"relaxed","emoji":"相关emoji","category":"话题类别","depthLevel":1,"promptStyle":"binary","safety":"gentle"}',
+    },
+    game: {
+      cardCount: '4',
+      depthCurve: '2个 Level 1 轻松开场、2个 Level 2 体验分享',
+      styleNote: '快速暖场风格，每个话题一个简短引导，节奏轻快',
+      jsonShape: '{"id":"ai1","question":"话题文本","mood":"funny","emoji":"相关emoji","category":"话题类别","depthLevel":1,"promptStyle":"binary","safety":"gentle"}',
+    },
+  }[resolvedVibe];
+
+  return `你是JoyJoin的社交破冰专家。请为一个${params.eventType}活动（${params.participantCount}人，氛围：${vibeDisplay}）生成${vibeConfig.cardCount}个${moodMap[params.mood]}类型的破冰话题。
 
 语气要求（活人感）：
 - 像朋友间随口一问，不要像面试题或问卷调查
@@ -56,13 +94,14 @@ export function buildWarmupTopicsPrompt(params: {
 - 禁止：客服腔、过度热情（"哇！""嘻嘻"）、AI味开场（"让我们一起..."）
 
 内容要求：
-- 话题深度形成曲线：至少2个 Level 1 轻松开场、2个 Level 2 体验分享、1个 Level 3 温和反思
+- 话题深度形成曲线：${vibeConfig.depthCurve}
 - 适合初次见面，不查户口、不逼问隐私
 - 每个话题一句话，不超过30字
+${vibeConfig.styleNote ? `- ${vibeConfig.styleNote}` : ''}
 ${params.avoidTopics?.length ? `- 避免以下话题：${params.avoidTopics.join('、')}` : ''}
 
 请以JSON格式返回：
-[{"id":"ai1","question":"话题文本","mood":"${params.mood}","emoji":"相关emoji","category":"话题类别","depthLevel":1,"promptStyle":"binary","safety":"gentle"}]
+[${vibeConfig.jsonShape}]
 
 ${params.sessionContext?.mixText ? `
 
@@ -416,6 +455,77 @@ ${JSON.stringify(participantList, null, 2)}
 [{"challengeTitle":"挑战名称","challengeBody":"挑战说明（30字内）","challengeEmoji":"1个emoji","difficulty":"easy|medium|hard","passLine":"认怂台词","passConsequence":"认怂后果"}]
 
 直接返回JSON数组，不要其他内容。${params._refinementHint ? `
+
+【改进建议】${params._refinementHint}` : ''}`;
+}
+
+// ─── Personality Dice V4 (Choose-Your-Prompt) ─────────────────────────────
+
+export function buildPersonalityDicePromptV4(params: {
+  participants: Array<{
+    displayName: string;
+    archetype?: string;
+    dominantTrait: string;
+  }>;
+  _refinementHint?: string;
+  sessionContext?: SessionArchetypeContext;
+}): string {
+  const participantList = params.participants.map((p) => ({
+    displayName: p.displayName,
+    archetype: p.archetype || '未知',
+    dominantTrait: p.dominantTrait,
+  }));
+
+  return `你是JoyJoin的社交破冰专家。请为以下每位参与者各生成3个不同难度的个性化挑战：
+
+${JSON.stringify(participantList, null, 2)}
+
+核心规则（Choose-Your-Prompt V4）：
+- 每人3个挑战：easy（轻松入门）、medium（中等难度）、hard（高能挑战）
+- 每个人的挑战必须结合ta的archetype（原型）特征，让ta感到"这说的就是我"
+- 三个难度要有明显的递进关系：easy让人轻松上手，medium需要一点勇气，hard需要真正投入
+- 参考原型风格：
+  * 社牛柯基 → 热场、破冰、带动气氛类挑战
+  * 小太阳鸡 → 温暖、鼓励、正面能量类挑战
+  * 夸夸仓鼠 → 夸奖、鼓励、发现别人优点类挑战
+  * 寻宝狐 → 观察、推理、发现细节类挑战
+  * 机灵海豚 → 感知气氛、调节节奏、平衡类挑战
+  * 人脉蛛 → 连接他人、发现关系、织网类挑战
+  * 树洞考拉 → 倾听、分享、温柔互动类挑战
+  * 脑洞章鱼 → 创意、无厘头、脑洞类挑战
+  * 好奇猫头鹰 → 深度提问、观察、思考类挑战
+  * 靠谱大象 → 稳定、记忆、可靠类挑战
+  * 慢热龟 → 慢节奏、深度、反思类挑战
+  * 小透明猫 → 优雅、观察、低调互动类挑战
+
+语气要求（活人感）：
+- challengeTitle像朋友起的绰号或玩笑，不要太正经
+- challengeBody像当面提出来的小捉弄，带语气词（"来，给大家表演一下...""敢不敢试试..."）
+- 可以结合该人特质和原型调侃，但要善意不冒犯
+- 当代网络用语每人最多用1个（如：拿捏、整活、绝了、真香）
+- 禁止："请该同学完成以下任务"等课堂/团建腔
+
+内容要求：
+- 基于该人的人格原型(archetype)和主导特质(dominantTrait)
+- 适合当场执行（1-2分钟内）
+- 有趣但不尴尬，不搞惩罚
+- 每个人3个选项不能重复主题
+- 每个挑战必须包含一个「认怂选项」(passLine)和一个「认怂后果」(passConsequence)：
+  * passLine：一句轻松的opt-out台词，比如"我选择认怂"、"这题我不会"（≤15字）
+  * passConsequence：一个搞笑但无害的小后果，比如"请用三种语气说'我真棒'"、"模仿一种动物叫三声"（≤20字）
+
+输出格式（二维JSON数组 — 外层每人一个子数组，内层3个难度选项，共N个人×3个挑战）：
+[
+  [
+    {"challengeTitle":"挑战名称","challengeBody":"挑战说明（30字内）","challengeEmoji":"1个emoji","difficulty":"easy","passLine":"认怂台词","passConsequence":"认怂后果"},
+    {"challengeTitle":"挑战名称","challengeBody":"挑战说明（30字内）","challengeEmoji":"1个emoji","difficulty":"medium","passLine":"认怂台词","passConsequence":"认怂后果"},
+    {"challengeTitle":"挑战名称","challengeBody":"挑战说明（30字内）","challengeEmoji":"1个emoji","difficulty":"hard","passLine":"认怂台词","passConsequence":"认怂后果"}
+  ],
+  ...
+]
+
+难度标记顺序必须为 easy / medium / hard，不得颠倒。
+直接返回JSON二维数组，不要其他内容。${params._refinementHint ? `
 
 【改进建议】${params._refinementHint}` : ''}`;
 }

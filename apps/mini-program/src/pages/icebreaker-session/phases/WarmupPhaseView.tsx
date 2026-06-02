@@ -1,37 +1,36 @@
 import { useMemo, useEffect, useRef, useState, useCallback } from 'react'
 import { View, Text, Image } from '@tarojs/components'
+import Taro from '@tarojs/taro'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import ArchetypeGlyph from '../../../components/mascot/ArchetypeGlyph'
-import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
 import ParticleBurst from '../../../components/reveal/ParticleBurst'
 import CardFlip from '../../../components/reveal/CardFlip'
-import type { AtmosphereMood } from '@shared/socialIcebreaker'
+import { useTierReveal } from '../../../hooks/useTierReveal'
+import type { AtmosphereMood, SocialTopic, SocialTopicPromptTiers } from '@shared/socialIcebreaker'
 import {
   PhaseHeaderIcon,
   getMoodLabel,
   MOOD_OPTIONS,
   type SessionParticipant,
 } from '../phaseUtils'
+import type { VibeId } from '../../../lib/vibeMapping'
 import './WarmupPhaseView.scss'
 
-interface WarmupTopic {
-  question: string
-  emoji?: string
-  mood?: string
-}
-
 interface WarmupPhaseViewProps {
-  topics: WarmupTopic[]
+  topics: SocialTopic[]
   currentIndex: number
   readyUserIds: string[]
   participants: SessionParticipant[]
   currentUserId: string
   selectedMood?: AtmosphereMood
   isHost: boolean
+  vibe?: VibeId
+  /** Server-computed archetype mix text; falls back to client-side computation if absent. */
+  archetypeMixText?: string
   onGenerateTopics: (mood: AtmosphereMood) => void
   onToggleReady: () => void
   onNextTopic: () => void
@@ -40,6 +39,7 @@ interface WarmupPhaseViewProps {
   isUpdatingReady: boolean
   isAdvancingTopic: boolean
   isAdvancing: boolean
+  topicsError?: boolean
 }
 
 /**
@@ -64,6 +64,67 @@ function buildArchetypeMixText(participants: SessionParticipant[]): string {
   return segments.join('、')
 }
 
+/**
+ * Tier prompt reveal component for 深聊 vibe.
+ *
+ * Uses useTierReveal for staggered block-level reveals rather than TypewriterText,
+ * because this UX requires labeled tier blocks (开场/深入/反思) with reading-time
+ * delays between whole sections — a pattern TypewriterText's single-string
+ * character typing does not natively support.
+ */
+function TierPromptReveal({
+  promptTiers,
+  reduceMotion,
+}: {
+  promptTiers: SocialTopicPromptTiers
+  reduceMotion: boolean
+}) {
+  const { revealedCount, tiers } = useTierReveal(promptTiers, reduceMotion)
+
+  if (reduceMotion) {
+    return (
+      <View className='warmup-tier-prompts warmup-tier-prompts--static'>
+        {tiers.map((tier) => (
+          <View key={tier.key} className='warmup-tier-prompt warmup-tier-prompt--visible'>
+            <Text className='warmup-tier-prompt__label'>{tier.label}</Text>
+            <Text className='warmup-tier-prompt__text'>{tier.text}</Text>
+          </View>
+        ))}
+      </View>
+    )
+  }
+
+  return (
+    <View className='warmup-tier-prompts'>
+      {tiers.map((tier, index) => (
+        <View
+          key={tier.key}
+          className={`warmup-tier-prompt ${index < revealedCount ? 'warmup-tier-prompt--visible' : ''}`}
+        >
+          <Text className='warmup-tier-prompt__label'>{tier.label}</Text>
+          <Text className='warmup-tier-prompt__text'>{tier.text}</Text>
+        </View>
+      ))}
+      <View className='warmup-tier-dots'>
+        {tiers.map((_, index) => (
+          <Text
+            key={index}
+            className={`warmup-tier-dot ${
+              index === revealedCount - 1
+                ? 'warmup-tier-dot--active'
+                : index < revealedCount
+                  ? 'warmup-tier-dot--filled'
+                  : ''
+            }`}
+          >
+            {index < revealedCount ? '●' : '○'}
+          </Text>
+        ))}
+      </View>
+    </View>
+  )
+}
+
 export function WarmupPhaseView({
   topics,
   currentIndex,
@@ -72,6 +133,8 @@ export function WarmupPhaseView({
   currentUserId,
   selectedMood,
   isHost,
+  vibe,
+  archetypeMixText: propArchetypeMixText,
   onGenerateTopics,
   onToggleReady,
   onNextTopic,
@@ -80,34 +143,46 @@ export function WarmupPhaseView({
   isUpdatingReady,
   isAdvancingTopic,
   isAdvancing,
+  topicsError,
 }: WarmupPhaseViewProps) {
   const currentTopic = topics[currentIndex]
   const isReady = readyUserIds.includes(currentUserId)
   const everyoneReady = participants.length > 0 && readyUserIds.length >= participants.length
   const moodLabel = getMoodLabel(selectedMood)
 
+  // ── Reduced motion detection ─────────────────────────────────
+  const reduceMotion = useMemo(() => {
+    try {
+      return !!(Taro.getSystemInfoSync() as any).reduceMotion
+    } catch {
+      return false
+    }
+  }, [])
+
   // ── Archetype mix badge ──────────────────────────────────────
-  const archetypeMixText = useMemo(
+  const fallbackMixText = useMemo(
     () => buildArchetypeMixText(participants),
     [participants],
   )
+  const archetypeMixText = propArchetypeMixText ?? fallbackMixText
 
   // ── Topic card flip animation ────────────────────────────────
   const [topicFlipped, setTopicFlipped] = useState(false)
   const prevIndexRef = useRef(currentIndex)
-  const topicTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const indexChangeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const autoFlipTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
     if (currentIndex !== prevIndexRef.current) {
       prevIndexRef.current = currentIndex
       setTopicFlipped(false)
-      if (topicTimerRef.current) clearTimeout(topicTimerRef.current)
-      topicTimerRef.current = setTimeout(() => setTopicFlipped(true), 180)
+      if (indexChangeTimerRef.current) clearTimeout(indexChangeTimerRef.current)
+      indexChangeTimerRef.current = setTimeout(() => setTopicFlipped(true), 180)
     }
     return () => {
-      if (topicTimerRef.current) {
-        clearTimeout(topicTimerRef.current)
-        topicTimerRef.current = undefined
+      if (indexChangeTimerRef.current) {
+        clearTimeout(indexChangeTimerRef.current)
+        indexChangeTimerRef.current = undefined
       }
     }
   }, [currentIndex])
@@ -115,13 +190,13 @@ export function WarmupPhaseView({
   // Auto-flip on first topic load
   useEffect(() => {
     if (currentTopic && !topicFlipped) {
-      if (topicTimerRef.current) clearTimeout(topicTimerRef.current)
-      topicTimerRef.current = setTimeout(() => setTopicFlipped(true), 320)
+      if (autoFlipTimerRef.current) clearTimeout(autoFlipTimerRef.current)
+      autoFlipTimerRef.current = setTimeout(() => setTopicFlipped(true), 320)
     }
     return () => {
-      if (topicTimerRef.current) {
-        clearTimeout(topicTimerRef.current)
-        topicTimerRef.current = undefined
+      if (autoFlipTimerRef.current) {
+        clearTimeout(autoFlipTimerRef.current)
+        autoFlipTimerRef.current = undefined
       }
     }
   }, [currentTopic]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -146,6 +221,24 @@ export function WarmupPhaseView({
     }
   }, [everyoneReady])
 
+  // ── Depth badge config ───────────────────────────────────────
+  const depthBadge = useMemo(() => {
+    if (!vibe || !currentTopic) return null
+    if (vibe === 'deep_chat' && currentTopic.depthLevel) {
+      return {
+        type: 'deep' as const,
+        text: `深度话题 · L${currentTopic.depthLevel}`,
+      }
+    }
+    if (vibe === 'play_fun') {
+      return {
+        type: 'fast' as const,
+        text: '快速暖场',
+      }
+    }
+    return null
+  }, [vibe, currentTopic])
+
   // ── Topic card render helpers ────────────────────────────────
   const TopicFront = useCallback(
     () => (
@@ -164,10 +257,22 @@ export function WarmupPhaseView({
     () =>
       currentTopic ? (
         <View className='warmup-card-back'>
+          {depthBadge && (
+            <View
+              className={`warmup-depth-badge warmup-depth-badge--${depthBadge.type}`}
+            >
+              <Text className='warmup-depth-badge__text'>{depthBadge.text}</Text>
+            </View>
+          )}
           <View className='warmup-card-back__emoji'>
             <JoyJoinIcon emoji={currentTopic.emoji ?? ''} size={56} />
           </View>
           <Text className='warmup-card-back__question'>{currentTopic.question}</Text>
+
+          {vibe === 'deep_chat' && currentTopic.promptTiers ? (
+            <TierPromptReveal promptTiers={currentTopic.promptTiers} reduceMotion={reduceMotion} />
+          ) : null}
+
           <View className='warmup-card-back__meta'>
             <Text className='warmup-card-back__index'>
               {currentIndex + 1} / {topics.length}
@@ -185,7 +290,7 @@ export function WarmupPhaseView({
           <Text className='warmup-card-back__question'>话题卡准备中…</Text>
         </View>
       ),
-    [currentTopic, currentIndex, topics.length, selectedMood, moodLabel],
+    [currentTopic, currentIndex, topics.length, selectedMood, moodLabel, depthBadge, vibe, reduceMotion],
   )
 
   return (
@@ -193,7 +298,7 @@ export function WarmupPhaseView({
       {/* ── Celebration overlay ────────────────────────────── */}
       {showCelebration && (
         <View className='icebreaker__warmup-celebration'>
-          <ParticleBurst trigger={showCelebration} type='confetti' count={50} />
+          <ParticleBurst trigger={showCelebration} type='confetti' count={50} reducedMotion={reduceMotion} />
         </View>
       )}
 
@@ -212,6 +317,7 @@ export function WarmupPhaseView({
           back={<TopicBack />}
           flipped={topicFlipped}
           duration={500}
+          reducedMotion={reduceMotion}
         />
       </View>
 
@@ -222,7 +328,10 @@ export function WarmupPhaseView({
             {readyUserIds.length} / {participants.length} 人已准备
           </Text>
           {everyoneReady && (
-            <Text className='icebreaker__warmup-ready-all'>🎉 全员到齐</Text>
+            <View className='icebreaker__warmup-ready-all-wrap'>
+              <JoyJoinIcon emoji='🎉' tier='reaction' size={24} />
+              <Text className='icebreaker__warmup-ready-all'>全员到齐</Text>
+            </View>
           )}
         </View>
         {isReady && !everyoneReady && (
@@ -254,7 +363,6 @@ export function WarmupPhaseView({
                       <Image
                         src={cdnAsset('/assets/icons/status-icons/status-crown.png')}
                         className='icebreaker__participant-host'
-                        style={{ width: '20rpx', height: '20rpx' }}
                         lazyLoad
                       />
                     )}
@@ -277,6 +385,23 @@ export function WarmupPhaseView({
         {!currentTopic ? (
           isHost ? (
             <>
+              {topicsError && (
+                <View className='icebreaker__error-retry'>
+                  <Text className='icebreaker__error-retry-text'>出题失败了，再试一次吧</Text>
+                  <Button
+                    variant='secondary'
+                    className='icebreaker__error-retry-btn'
+                    onClick={() => {
+                      if (selectedMood) {
+                        onGenerateTopics(selectedMood)
+                      }
+                    }}
+                    disabled={!selectedMood || isGeneratingTopics}
+                  >
+                    重试
+                  </Button>
+                </View>
+              )}
               <View className='icebreaker__mood-grid'>
                 {MOOD_OPTIONS.map((option) => {
                   const isActive = selectedMood === option.mood
@@ -298,7 +423,6 @@ export function WarmupPhaseView({
                       <Image
                         src={option.asset}
                         className='icebreaker__mood-option-emoji'
-                        style={{ width: '56rpx', height: '56rpx' }}
                         lazyLoad
                       />
                       <Text className='icebreaker__mood-option-label'>{option.label}</Text>
@@ -314,7 +438,9 @@ export function WarmupPhaseView({
               <Text className='icebreaker__helper-text'>
                 {isGeneratingTopics
                   ? `${DEFAULT_MASCOT_DISPLAY_NAME}正在根据你选的氛围出题…`
-                  : `先选一个氛围，${DEFAULT_MASCOT_DISPLAY_NAME}会生成这一轮的话题卡。`}
+                  : topicsError
+                    ? '选择氛围后点击重试，或者换一个氛围试试。'
+                    : `先选一个氛围，${DEFAULT_MASCOT_DISPLAY_NAME}会生成这一轮的话题卡。`}
               </Text>
             </>
           ) : (

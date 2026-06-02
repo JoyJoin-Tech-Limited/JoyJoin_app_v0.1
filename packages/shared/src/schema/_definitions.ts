@@ -1834,3 +1834,27 @@ export const insertMatchingResultSchema = createInsertSchema(matchingResults).om
 });
 
 export type MatchingResult = typeof matchingResults.$inferSelect;
+
+export const runPlanTemplates = pgTable("run_plan_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vibe: varchar("vibe").notNull(),
+  tier: varchar("tier").notNull(),
+  playerCountMin: integer("player_count_min").notNull().default(2),
+  playerCountMax: integer("player_count_max").notNull().default(12),
+  slots: jsonb("slots").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_run_plan_templates_vibe_tier").on(table.vibe, table.tier),
+]);
+
+export type RunPlanTemplateRow = typeof runPlanTemplates.$inferSelect;
+
+export const featureFlags = pgTable("feature_flags", {
+  key: varchar("key").primaryKey(),
+  value: text("value").notNull().default("false"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: varchar("updated_by"),
+});
+
+export type FeatureFlag = typeof featureFlags.$inferSelect;

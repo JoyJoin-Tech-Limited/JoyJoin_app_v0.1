@@ -10,6 +10,7 @@ import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import Card from '../../components/ui/Card'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import RichListCard from '../../components/RichListCard'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
@@ -176,22 +177,27 @@ export default function EventsPage() {
               >
                 {typeof event.startTime === 'string' && resolvedActiveTab === 'upcoming' && (
                   <View className='events-page__countdown'>
-                    <Text className='events-page__countdown-text'>
-                      ⏰ {getCountdownText(event.startTime)}
-                    </Text>
+                    <View className='jj-icon-text'>
+                      <JoyJoinIcon emoji='⏰' size={20} />
+                      <Text className='events-page__countdown-text'>
+                        {getCountdownText(event.startTime)}
+                      </Text>
+                    </View>
                   </View>
                 )}
               </RichListCard>
             </View>
           ))
         ) : (
-          <XiaoyueEmptyState
-            emotion='events'
-            title='还没有活动'
-            subtitle='去发现感兴趣的活动吧'
-            actionLabel='去发现'
-            onAction={navigateToDiscover}
-          />
+          <View className='events-page__empty-state'>
+            <XiaoyueEmptyState
+              emotion='events'
+              title='还没有活动'
+              subtitle='去发现感兴趣的活动吧'
+              actionLabel='去发现'
+              onAction={navigateToDiscover}
+            />
+          </View>
         )}
         <View className='events-page__spacer' />
       </ScrollView>

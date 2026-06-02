@@ -1,0 +1,38 @@
+// ═══════════════════════════════════════════════════════════════════
+// Utility classes — icon + text inline row, loading shimmer, etc.
+// ═══════════════════════════════════════════════════════════════════
+
+.jj-icon-text {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.jj-icon-text--tight {
+  gap: 4rpx;
+}
+
+.jj-icon-text--loose {
+  gap: 12rpx;
+}
+
+// Shimmer placeholder for loading proprietary icons
+@keyframes jj-icon-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.jj-icon-loading {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.03) 25%,
+    rgba(0, 0, 0, 0.07) 50%,
+    rgba(0, 0, 0, 0.03) 75%
+  );
+  background-size: 200% 100%;
+  animation: jj-icon-shimmer 1.4s ease-in-out infinite;
+}

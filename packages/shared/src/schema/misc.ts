@@ -20,6 +20,8 @@ export {
   insertReferralConversionSchema,
   insertEventTemplateSchema,
   insertContentSchema,
+  featureFlags,
+  runPlanTemplates,
 } from './_definitions.js';
 
 export {
@@ -78,6 +80,8 @@ export type {
   Content,
   InsertEventTemplate,
   InsertContent,
+  FeatureFlag,
+  RunPlanTemplateRow,
 } from './_definitions.js';
 
 export type {

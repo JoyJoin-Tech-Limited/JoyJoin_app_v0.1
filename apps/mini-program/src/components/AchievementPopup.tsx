@@ -2,6 +2,7 @@ import { View, Text } from '@tarojs/components'
 import { useEffect, useCallback, useState } from 'react'
 import { useAchievements } from '../providers/AchievementProvider'
 import { getRarityClassName } from '@shared/achievements'
+import JoyJoinIcon from './ui/JoyJoinIcon'
 import './AchievementPopup.scss'
 
 const AUTO_DISMISS_MS = 3500
@@ -49,7 +50,12 @@ export default function AchievementPopup() {
   return (
     <View className={`achievement-popup achievement-popup--${rarityClass} ${motionClass}`}>
       <View className='achievement-popup__content'>
-        <Text className='achievement-popup__emoji'>{currentAchievement.emoji}</Text>
+        <JoyJoinIcon
+          emoji={currentAchievement.emoji}
+          tier='achievement'
+          size={72}
+          className='achievement-popup__emoji'
+        />
         <View className='achievement-popup__text'>
           <Text className='achievement-popup__rarity'>
             {currentAchievement.rarity === 'legendary'

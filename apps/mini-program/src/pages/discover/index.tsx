@@ -97,7 +97,7 @@ function AuthenticatedDiscover() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const displayName = (user as any)?.displayName || (user as any)?.nickname || '悦聚用户'
-  const userArchetype = (user as any)?.archetype || (user as any)?.primaryArchetype || null
+  const userArchetype = (user as any)?.primaryArchetype || (user as any)?.archetype || null
   const xiaoyueAsset = useMemo(() => getXiaoyueExpressionAsset('homeWelcome'), [])
   const avatarUrl = (user as any)?.profileImageUrl || (user as any)?.wechatAvatarUrl || xiaoyueAsset
 
@@ -589,9 +589,10 @@ function AuthenticatedDiscover() {
           <>
             {isAutoRelaxed && (
               <View className='discover-auth__relaxed-banner'>
-                <Text className='discover-auth__relaxed-banner-text'>
-                  这个区域暂时没活动，先看看附近的聚会吧 ✨
-                </Text>
+                <View className='jj-icon-text'>
+                  <Text className='discover-auth__relaxed-banner-text'>这个区域暂时没活动，先看看附近的聚会吧</Text>
+                  <JoyJoinIcon emoji='✨' tier='reveal' size={24} />
+                </View>
               </View>
             )}
             <VirtualList

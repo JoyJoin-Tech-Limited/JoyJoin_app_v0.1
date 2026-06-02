@@ -1,0 +1,26 @@
+{
+  "id": "repo.personality.matcherv2-confusion-classifiers",
+  "title": "MatcherV2 Confusion-Aware Classifiers",
+  "owner": "personality-engine",
+  "tags": ["personality-test", "matcherV2", "confusion-pair", "archetype", "classification"],
+  "triggerTerms": [
+    "matcherV2 confusion",
+    "elephant turtle",
+    "dolphin spider",
+    "confusion aware classifier",
+    "archetype misclassification",
+    "matcher veto"
+  ],
+  "relatedPaths": [
+    "packages/shared/src/personality/matcherV2.ts",
+    "packages/shared/src/personality/matcherV2Gates.ts"
+  ],
+  "sources": [
+    "docs/systems/PERSONALITY_TEST_SYSTEM.md",
+    "packages/shared/src/personality/matcherV2.ts"
+  ],
+  "confidence": "high",
+  "body": "## Summary\n\nMatcherV2 uses dedicated confusion-aware classifiers for historically misclassified archetype pairs. As of 2026-05-27, five pairs are handled in `applyConfusionAwareClassifier` with trait-specific differentiators and veto hardening.\n\n### Handled confusion pairs\n1. **小太阳鸡 vs 机灵海豚** (`rooster,dolphin_calm`) — P-gap differentiator\n2. **好奇猫头鹰 vs 慢热龟** (`owl,turtle`) — O-gap differentiator\n3. **树洞考拉 vs 机灵海豚** (`koala,dolphin_calm`) — A-gap differentiator\n4. **靠谱大象 vs 慢热龟** (`elephant,turtle`) — A/P/X differentiators (2026-05-27)\n5. **机灵海豚 vs 人脉蛛** (`dolphin_calm,spider`) — E/C/X differentiators (2026-05-27)\n\n### Veto hardening (2026-05-27)\n- **慢热龟**: penalizes high-A (`≥70 → 0.5×`) and high-P (`≥58 → 0.6×`)\n- **靠谱大象**: penalizes very-low-X (`<32 → 0.5×`) and very-low-P (`<38 → 0.6×`)\n- **人脉蛛**: penalizes high-E (`≥78 → 0.5×`)\n\n### Gate threshold fix\n- `elephant` gate threshold lowered from `A≥72` (above elephant's actual A=70, never triggered) to `A≥68` (2026-05-27).\n\n### Historical context\n- Pre-fix simulation showed ~80% direct accuracy vs V1's 100%. Known misclassifications `turtle→elephant` and `dolphin_calm→spider` are now addressed with dedicated classifiers.\n",
+  "filename": "matcherv2-confusion-classifiers",
+  "lastValidatedAt": "2026-05-27"
+}

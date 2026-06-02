@@ -155,7 +155,8 @@ function pickTemplate(type: XiaoyueAdaptiveSuggestionType, seed: number, playerC
  */
 function selectSuggestionType(
   signals: XiaoyuePulseSignals,
-  phase: SocialIcebreakerPhase
+  phase: SocialIcebreakerPhase,
+  state?: SocialSessionState,
 ): XiaoyueAdaptiveSuggestionType {
   const isTightGroup = signals.playerCount <= 4; // 4人：每个人占比25%，沉默更明显
 
@@ -196,7 +197,7 @@ function selectSuggestionType(
   }
 
   // 7. Phase dragging too long → speed up
-  const timeoutMinutes = getPhaseTimeoutMinutes(phase);
+  const timeoutMinutes = getPhaseTimeoutMinutes(phase, state);
   if (signals.phaseElapsedMinutes >= timeoutMinutes * 0.75) {
     return 'speed_up';
   }
@@ -210,7 +211,13 @@ function selectSuggestionType(
   return 'keep_going';
 }
 
-function getPhaseTimeoutMinutes(phase: SocialIcebreakerPhase): number {
+export function getPhaseTimeoutMinutes(phase: SocialIcebreakerPhase, state?: SocialSessionState): number {
+  if (state?.runPlan?.segments?.length) {
+    const segment = state.runPlan.segments.find((s) => s.phase === phase);
+    if (segment && typeof segment.allocatedMinutes === 'number') {
+      return segment.allocatedMinutes;
+    }
+  }
   return PHASE_CONFIG[phase]?.timeoutMinutes ?? 15;
 }
 
@@ -224,7 +231,7 @@ export function generateXiaoyueAdaptiveSuggestion(
   state: SocialSessionState
 ): XiaoyueAdaptiveSuggestion {
   const signals = computePulseSignals(state);
-  const type = selectSuggestionType(signals, state.currentPhase);
+  const type = selectSuggestionType(signals, state.currentPhase, state);
 
   // Use a simple hash of signals as a deterministic seed for template selection.
   // Bucket elapsed time to the nearest minute so the template doesn't oscillate

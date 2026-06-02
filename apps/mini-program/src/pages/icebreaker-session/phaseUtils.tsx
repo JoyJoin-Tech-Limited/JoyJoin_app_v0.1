@@ -34,6 +34,7 @@ const PHASE_ICON_SRC_MAP: Record<string, string> = {
   quip_battle: cdnAsset('/assets/icons/phase-icons/phase-quip-battle.webp'),
   undercover_word: cdnAsset('/assets/icons/phase-icons/phase-undercover-word.webp'),
   group_mirror: cdnAsset('/assets/icons/phase-icons/phase-group-mirror.webp'),
+  speed_friending: cdnAsset('/assets/icons/phase-icons/phase-speed-friending.webp'),
   mini_script: cdnAsset('/assets/icons/phase-icons/phase-mini-script.webp'),
   recap: cdnAsset('/assets/icons/phase-icons/phase-recap.webp'),
 }
@@ -52,6 +53,8 @@ export function getPhaseLabel(phase: SessionPhase): string {
       return '人格骰子'
     case 'auction':
       return '拍卖'
+    case 'speed_friending':
+      return '快速交友'
     case 'quip_battle':
       return '机智对决'
     case 'undercover_word':
@@ -76,6 +79,7 @@ const PHASE_EMOJI_MAP: Record<SessionPhase, string> = {
   lie_detective: '',
   personality_dice: '',
   auction: '',
+  speed_friending: '',
   mini_script: '',
   quip_battle: '',
   undercover_word: '',

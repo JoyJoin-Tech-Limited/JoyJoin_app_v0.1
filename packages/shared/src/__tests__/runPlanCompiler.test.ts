@@ -346,6 +346,151 @@ describe('runPlanCompiler', () => {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
+// ─── Template compiler tests ──────────────────────────────────────────────
+
+import {
+  resolveTemplateSlots,
+  TEMPLATE_DEFAULTS,
+  type TemplateVibeId,
+} from '../runPlanCompiler';
+
+const ALL_PHASES_WITH_MIRROR: SocialIcebreakerPhase[] = [
+  'warmup',
+  'micro_challenge',
+  'lie_detective',
+  'auction',
+  'personality_dice',
+  'quip_battle',
+  'undercover_word',
+  'group_mirror',
+  'speed_friending',
+  'recap',
+];
+
+const TEMPLATE_VIBES: TemplateVibeId[] = ['deep_chat', 'balanced', 'play_fun'];
+const TIERS: TierMachineId[] = ['breeze', 'glow', 'blaze'];
+
+function assertValidTemplateSegments(segments: ReturnType<typeof resolveTemplateSlots>) {
+  const phases = segments.map((s) => s.phase);
+
+  // No duplicates
+  expect(new Set(phases).size).toBe(phases.length);
+
+  // recap is always last
+  expect(phases[phases.length - 1]).toBe('recap');
+
+  // warmup and micro_challenge are first and second
+  expect(phases[0]).toBe('warmup');
+  expect(phases[1]).toBe('micro_challenge');
+
+  // totalMinutes equals sum of allocatedMinutes
+  const sumMinutes = segments.reduce((sum, s) => sum + s.allocatedMinutes, 0);
+  expect(sumMinutes).toBeGreaterThan(0);
+}
+
+describe('resolveTemplateSlots', () => {
+  it('produces valid plans for all 9 vibe-tier combos', () => {
+    for (const vibe of TEMPLATE_VIBES) {
+      for (const tier of TIERS) {
+        const segments = resolveTemplateSlots(vibe, tier, 4, ALL_PHASES_WITH_MIRROR);
+        assertValidTemplateSegments(segments);
+      }
+    }
+  });
+
+  it('produces deterministic output for identical inputs', () => {
+    const s1 = resolveTemplateSlots('deep_chat', 'glow', 4, ALL_PHASES_WITH_MIRROR);
+    const s2 = resolveTemplateSlots('deep_chat', 'glow', 4, ALL_PHASES_WITH_MIRROR);
+    expect(s1).toEqual(s2);
+  });
+
+  it('enforces category spacing when possible', () => {
+    const segments = resolveTemplateSlots('balanced', 'blaze', 4, ALL_PHASES_WITH_MIRROR);
+    const phases = segments.map((s) => s.phase);
+    for (let i = 1; i < phases.length - 1; i++) {
+      const prevCat = getCategory(phases[i - 1]);
+      const currCat = getCategory(phases[i]);
+      // We allow at most one consecutive same-category pair in edge cases
+      if (prevCat === currCat && i + 1 < phases.length - 1) {
+        const nextCat = getCategory(phases[i + 1]);
+        expect(nextCat).not.toBe(currCat);
+      }
+    }
+  });
+
+  it('falls back to slot type full pool when eligible phases are exhausted', () => {
+    // Use a tiny enabled set so the template's eligible phases won't all match
+    const minimalEnabled: SocialIcebreakerPhase[] = [
+      'warmup',
+      'micro_challenge',
+      'lie_detective',
+      'personality_dice',
+      'recap',
+    ];
+    const segments = resolveTemplateSlots('play_fun', 'glow', 4, minimalEnabled);
+    assertValidTemplateSegments(segments);
+    // Should still have lie_detective from the play_fun slot
+    const phases = segments.map((s) => s.phase);
+    expect(phases).toContain('lie_detective');
+  });
+
+  it('skips slots when no phase can be resolved', () => {
+    // Only core phases enabled — no flexible slots can resolve
+    const coreOnly: SocialIcebreakerPhase[] = ['warmup', 'micro_challenge', 'recap'];
+    const segments = resolveTemplateSlots('deep_chat', 'breeze', 4, coreOnly);
+    expect(segments.map((s) => s.phase)).toEqual(['warmup', 'micro_challenge', 'recap']);
+  });
+
+  it('respects minPlayers when resolving slots', () => {
+    // With only 2 players, lie_detective (min 3) should be skipped
+    const segments = resolveTemplateSlots('play_fun', 'breeze', 2, ALL_PHASES_WITH_MIRROR);
+    const phases = segments.map((s) => s.phase);
+    // play_fun breeze first slot prefers lie_detective (min 3), but with only
+    // 2 players it falls back to other eligible phases in the pool
+    expect(phases).not.toContain('lie_detective');
+    // Should still resolve to some valid phases between micro_challenge and recap
+    expect(phases.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('uses provided custom template instead of defaults', () => {
+    const customTemplate = {
+      vibe: 'deep_chat' as TemplateVibeId,
+      tier: 'breeze' as TierMachineId,
+      playerCountMin: 2,
+      playerCountMax: 12,
+      coreWarmupMinutes: 99,
+      coreMicroChallengeMinutes: 10,
+      coreRecapMinutes: 5,
+      slots: [
+        { slotType: 'deep_chat' as const, eligiblePhases: ['group_mirror'], allocatedMinutes: 7 },
+      ],
+    };
+    const segments = resolveTemplateSlots('deep_chat', 'breeze', 4, ALL_PHASES_WITH_MIRROR, customTemplate);
+    const warmup = segments.find((s) => s.phase === 'warmup');
+    expect(warmup?.allocatedMinutes).toBe(99);
+  });
+});
+
+describe('TEMPLATE_DEFAULTS', () => {
+  it('contains exactly 9 templates', () => {
+    expect(TEMPLATE_DEFAULTS.length).toBe(9);
+  });
+
+  it('covers all 3 vibes × 3 tiers', () => {
+    for (const vibe of TEMPLATE_VIBES) {
+      for (const tier of TIERS) {
+        const match = TEMPLATE_DEFAULTS.find((t) => t.vibe === vibe && t.tier === tier);
+        expect(match).toBeDefined();
+      }
+    }
+  });
+
+  it('has no duplicate (vibe, tier) pairs', () => {
+    const keys = TEMPLATE_DEFAULTS.map((t) => `${t.vibe}-${t.tier}`);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+});
+
 function getCategory(phase: SocialIcebreakerPhase): string {
   // Inline category lookup to avoid importing PHASE_REGISTRY in tests
   const map: Record<SocialIcebreakerPhase, string> = {

@@ -17,6 +17,7 @@ export type SocialIcebreakerPhase =
   | 'quip_battle'
   | 'undercover_word'
   | 'group_mirror'
+  | 'speed_friending'
   | 'mini_script'
   | 'recap';
 
@@ -25,6 +26,12 @@ export type AtmosphereMood = 'relaxed' | 'funny' | 'life' | 'emotional';
 export type SocialTopicDepthLevel = 1 | 2 | 3;
 export type SocialTopicPromptStyle = 'binary' | 'experiential' | 'reflective';
 export type SocialTopicSafety = 'gentle' | 'open' | 'reflective';
+
+export interface SocialTopicPromptTiers {
+  opener: string;
+  followUp: string;
+  reflection: string;
+}
 
 export interface SocialTopic {
   id: string;
@@ -35,6 +42,8 @@ export interface SocialTopic {
   depthLevel?: SocialTopicDepthLevel;
   promptStyle?: SocialTopicPromptStyle;
   safety?: SocialTopicSafety;
+  /** 3-tier prompts for 深聊 vibe (opener → follow-up → reflection). */
+  promptTiers?: SocialTopicPromptTiers;
 }
 
 export interface MicroChallenge {
@@ -85,6 +94,19 @@ export interface PersonalityDiceChallenge {
   passConsequence?: string;
 }
 
+/** Choose-Your-Prompt variant: groups 3 difficulty-tiered dares per player.
+ *  Behind PERSONALITY_DICE_CHOOSE_MODE_ENABLED. */
+export interface PersonalityDiceChallengeGroup {
+  userId: string;
+  displayName: string;
+  archetype?: string;
+  /** Archetype accent color for ParticleBurst / UI theming */
+  archetypeColor?: ArchetypeHSL;
+  dominantTrait: 'A' | 'C' | 'E' | 'O' | 'X' | 'P';
+  /** Exactly 3 options: difficulty easy, medium, hard */
+  options: PersonalityDiceChallenge[];
+}
+
 /** Lightweight profile for AI prompt context. Server-only — stripped before client delivery. */
 export interface SocialSessionParticipantProfile {
   /** 12-archetype ID (e.g. '社牛柯基') */
@@ -114,17 +136,6 @@ export interface SocialSessionParticipantSummary {
   displayName: string;
   archetype?: string;
   /** Server-only: AI prompt context. Must be stripped before sending to clients. */
-  profile?: SocialSessionParticipantProfile | null;
-  joinedAt?: string;
-  lastSeenAt?: string;
-  isActive?: boolean;
-}
-
-export interface SocialSessionParticipantSummary {
-  userId: string;
-  displayName: string;
-  archetype?: string;
-  /** Rich profile data for AI personalisation */
   profile?: SocialSessionParticipantProfile | null;
   joinedAt?: string;
   lastSeenAt?: string;
@@ -221,6 +232,18 @@ export interface GroupMirrorResult {
   voteCount: number;
   totalVotes: number;
 }
+
+// ─── Speed Friending (快速配对) ─────────────────────────────────────────────
+
+export interface SpeedFriendingPair {
+  userIdA: string;
+  userIdB: string;
+  displayNameA: string;
+  displayNameB: string;
+  roundIndex: number;
+}
+
+export type SpeedFriendingRound = SpeedFriendingPair[];
 
 /** Temporary in-session skill-role label assigned by Xiaoyue Session Pack. */
 export interface XiaoyuePlayerSkillRole {
@@ -322,7 +345,7 @@ export const xiaoyueSessionPackSchema = z.object({
   generatedAt: z.string(),
   opener: z.string().min(1).max(200),
   phaseCoaching: z.record(
-    z.enum(['warmup', 'micro_challenge', 'lie_detective', 'auction', 'personality_dice', 'mini_script', 'recap']),
+    z.enum(['warmup', 'micro_challenge', 'lie_detective', 'auction', 'personality_dice', 'speed_friending', 'mini_script', 'recap', 'quip_battle', 'undercover_word', 'group_mirror']),
     z.object({
       toneLine: z.string().min(1).max(120),
       hostHint: z.string().max(200).optional(),
@@ -429,6 +452,10 @@ export interface SocialSessionState {
   currentDicePlayerIndex?: number;
   diceCompletedBy?: string[];
   dicePassedBy?: string[];
+  // Choose-Your-Prompt variant (PERSONALITY_DICE_CHOOSE_MODE_ENABLED)
+  personalityDiceChallengeGroups?: PersonalityDiceChallengeGroup[];
+  /** userId → chosen optionIndex (0|1|2) */
+  diceSelectedOption?: Record<string, number>;
   // Auction phase (virtual coins; see payment-entitlement-authority if real value ever touches this)
   auctionLots?: AuctionLot[];
   auctionLotsMeta?: AIResponseMeta;
@@ -479,6 +506,12 @@ export interface SocialSessionState {
   groupMirrorSubmittedUserIds?: string[];
   groupMirrorRevealed?: boolean;
   groupMirrorResults?: GroupMirrorResult[];
+  // Speed Friending phase data
+  speedFriendingPairs?: SpeedFriendingPair[];
+  speedFriendingCurrentRound?: number;
+  speedFriendingTotalRounds?: number;
+  speedFriendingRoundStartedAt?: number;
+  speedFriendingAllRoundsComplete?: boolean;
   // Recap data
   recapData?: {
     topicsDiscussed: string[];
@@ -560,6 +593,9 @@ export interface SocialSessionState {
   lieDetectiveRevealHistory?: Array<{ round: number; correctRate: number }>;
   /** V2: current dynamic difficulty (easy / medium / hard). Defaults to medium. */
   lieDetectiveDynamicDifficulty?: 'easy' | 'medium' | 'hard';
+  /** Pre-formatted archetype mix text for the current roster (e.g. "社牛柯基×2、小太阳鸡×1").
+   *  Computed server-side so the client does not need to rebuild it. */
+  archetypeMixText?: string;
 }
 
 // Phase config
@@ -663,6 +699,17 @@ export const PHASE_CONFIG = {
     timeoutMinutes: 12,
     minPlayersRequired: 2,
   },
+  speed_friending: {
+    emoji: '',
+    name: '快速交友',
+    nameEn: 'Speed Friending',
+    gradient: 'from-green-400 to-emerald-500',
+    bgGradient: 'from-green-50 via-emerald-50 to-teal-50',
+    darkBgGradient: 'from-green-950 via-emerald-950 to-zinc-900',
+    pillColor: 'bg-green-100/80 text-green-700',
+    timeoutMinutes: 30,
+    minPlayersRequired: 2,
+  },
   recap: {
     emoji: '',
     name: '回顾',
@@ -682,6 +729,10 @@ export const PHASE_ORDER: SocialIcebreakerPhase[] = [
   'lie_detective',
   'auction',
   'personality_dice',
+  'speed_friending',
+  'quip_battle',
+  'undercover_word',
+  'group_mirror',
   'mini_script',
   'recap',
 ];

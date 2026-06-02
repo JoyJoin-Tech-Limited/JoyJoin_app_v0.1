@@ -37,73 +37,143 @@
     font-weight: $font-weight-semibold;
   }
 
-  // ── Tier Cards ──────────────────────────────────────────────────
-  &__tier-list {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-sm;
-  }
-
-  &__tier-card {
-    position: relative;
+  // ── Tier × Vibe Grid ────────────────────────────────────────────
+  &__grid {
     display: flex;
     flex-direction: column;
     gap: $spacing-xs;
-    padding: $spacing-md;
     background: $color-surface;
     border-radius: 16rpx;
     border: 2rpx solid $color-border;
+    padding: $spacing-xs;
     box-shadow: $shadow-sm;
-    @include chip-press;
+  }
 
-    &--active {
-      border-color: $color-primary;
-      background: rgba($color-primary, 0.06);
-      box-shadow: 0 2rpx 16rpx rgba($color-primary, 0.12);
+  &__grid-row {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr 1fr;
+    gap: $spacing-xs;
+
+    &--no-vibe {
+      grid-template-columns: auto 1fr;
     }
 
-    &--pressed {
-      transform: scale(0.97);
+    &:not(.tier-selector__grid-row--header) {
+      animation: tier-row-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+      &:nth-child(2) {
+        animation-delay: 0.08s;
+      }
+
+      &:nth-child(3) {
+        animation-delay: 0.16s;
+      }
+
+      &:nth-child(4) {
+        animation-delay: 0.24s;
+      }
     }
   }
 
-  &__tier-card-top {
+  &__grid-corner {
+    min-width: 144rpx;
+    min-height: 88rpx;
+  }
+
+  &__grid-col-header {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-xs; /* hairline: 4rpx was too tight for some webviews */
+    min-height: 88rpx;
+    padding: $spacing-xs;
+    text-align: center;
+  }
+
+  &__grid-col-name {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    line-height: 1.4;
+  }
+
+  &__grid-col-hint {
+    font-size: $font-size-2xs;
+    color: $color-text-secondary;
+    line-height: 1.4;
+  }
+
+  &__grid-row-header {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    justify-content: center;
+    gap: $spacing-xs; /* hairline: 4rpx was too tight for some webviews */
+    padding: $spacing-xs $spacing-sm;
+    min-height: 88rpx;
   }
 
-  &__tier-emoji {
-    font-size: 40rpx;
-    line-height: 1;
+  &__grid-row-name {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    line-height: 1.4;
   }
 
-  &__tier-tag {
+  &__grid-row-meta {
+    font-size: $font-size-2xs;
+    color: $color-text-secondary;
+    line-height: 1.4;
+  }
+
+  &__grid-row-tag {
     font-size: $font-size-2xs;
     font-weight: $font-weight-bold;
     color: $color-text-white;
     background: $color-secondary;
-    padding: 4rpx 12rpx;
+    padding: 4rpx 12rpx; /* hairline vertical padding */
     border-radius: 100rpx;
     line-height: 1;
+    align-self: flex-start;
+    margin-top: 4rpx; /* hairline: single pixel equivalent at 2× */
   }
 
-  &__tier-name {
-    @include type-subheading;
-    display: block;
+  &__grid-cell {
+    @include flex-center;
+    position: relative;
+    min-height: 88rpx;
+    border-radius: 12rpx;
+    border: 2rpx solid $color-divider;
+    background: rgba($color-primary, 0.02);
+    transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 200ms ease,
+      background-color 200ms ease,
+      box-shadow 200ms ease;
+
+    &--active {
+      border-color: $color-primary;
+      background: rgba($color-primary, 0.08);
+      box-shadow: 0 2rpx 16rpx rgba($color-primary, 0.12);
+      transform: scale(1.02);
+    }
+
+    &--pressed {
+      transform: scale(0.96);
+    }
   }
 
-  &__tier-meta {
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    font-weight: $font-weight-medium;
-    display: block;
+  &__grid-cell-check {
+    @include flex-center;
+    width: 36rpx;
+    height: 36rpx;
+    background: $color-primary;
+    border-radius: 50%;
+    animation: grid-check-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  &__tier-desc {
-    @include type-caption;
-    display: block;
-    margin-top: 4rpx;
+  &__grid-cell-check-icon {
+    font-size: $font-size-xs;
+    color: $color-text-white;
+    font-weight: $font-weight-bold;
+    line-height: 1;
   }
 
   // ── Mascot Line ─────────────────────────────────────────────────
@@ -115,7 +185,7 @@
     padding: $spacing-sm $spacing-md;
     background: rgba($color-primary, 0.05);
     border-radius: 16rpx;
-    animation: tier-selector-fade-in 0.8s ease both;
+    animation: tier-selector-fade-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   &__mascot-avatar {
@@ -129,57 +199,6 @@
     @include type-body;
     color: $color-text-secondary;
     flex: 1;
-  }
-
-  // ── Vibe Chips ──────────────────────────────────────────────────
-  &__vibe-row {
-    display: flex;
-    flex-direction: row;
-    gap: $spacing-sm;
-  }
-
-  &__vibe-chip {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4rpx;
-    padding: $spacing-sm $spacing-xs;
-    background: $color-surface;
-    border-radius: 16rpx;
-    border: 2rpx solid $color-border;
-    text-align: center;
-    @include chip-press;
-
-    &--active {
-      background: $color-primary;
-      border-color: $color-primary;
-      box-shadow: 0 2rpx 12rpx rgba($color-primary, 0.2);
-    }
-
-    &--pressed {
-      transform: scale(0.96);
-    }
-  }
-
-  &__vchip-label {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-
-    .tier-selector__vibe-chip--active & {
-      color: $color-text-white;
-    }
-  }
-
-  &__vchip-desc {
-    font-size: $font-size-2xs;
-    color: $color-text-secondary;
-    line-height: 1.3;
-
-    .tier-selector__vibe-chip--active & {
-      color: rgba($color-text-white, 0.85);
-    }
   }
 
   // ── Footer / CTA ────────────────────────────────────────────────
@@ -214,6 +233,35 @@
   }
 }
 
+@keyframes grid-check-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes tier-row-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tier-selector__mascot {
     animation: none;
@@ -221,8 +269,17 @@
     transform: none;
   }
 
-  .tier-selector__tier-card,
-  .tier-selector__vibe-chip {
+  .tier-selector__grid-cell {
     transition: none;
+  }
+
+  .tier-selector__grid-cell-check {
+    animation: none;
+  }
+
+  .tier-selector__grid-row {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 }

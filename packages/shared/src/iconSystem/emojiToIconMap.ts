@@ -9,7 +9,18 @@
  * @see JoyJoinIcon (mini-program component) for the renderer
  */
 
-export type IconTier = 'expression' | 'semantic' | 'mood' | 'chemistry' | 'phase' | 'status'
+export type IconTier =
+  | 'expression'
+  | 'semantic'
+  | 'mood'
+  | 'chemistry'
+  | 'phase'
+  | 'status'
+  | 'reaction'
+  | 'category'
+  | 'intent'
+  | 'reveal'
+  | 'achievement'
 
 export interface IconMapping {
   /** Asset base name (without .png or @2x/@3x suffix) */
@@ -93,6 +104,71 @@ export const PHASE_EMBLEM_MAP: Record<string, IconMapping> = {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// CATEGORY ICONS — Category tier (interest category labels)
+// ═══════════════════════════════════════════════════════════════════
+
+export const CATEGORY_MAP: Record<string, IconMapping> = {
+  '🍜': { assetKey: 'category-food', tier: 'category', size: 32, fallbackEmoji: '🍜' },
+  '🎮': { assetKey: 'category-entertainment', tier: 'category', size: 32, fallbackEmoji: '🎮' },
+  '🌿': { assetKey: 'category-lifestyle', tier: 'category', size: 32, fallbackEmoji: '🌿' },
+  '🎭': { assetKey: 'category-culture', tier: 'category', size: 32, fallbackEmoji: '🎭' },
+  '👥': { assetKey: 'category-social', tier: 'category', size: 32, fallbackEmoji: '👥' },
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INTENT ICONS — Intent tier (social intent selectors)
+// ═══════════════════════════════════════════════════════════════════
+
+export const INTENT_MAP: Record<string, IconMapping> = {
+  '👋': { assetKey: 'intent-friends', tier: 'intent', size: 48, fallbackEmoji: '👋' },
+  '🤝': { assetKey: 'intent-networking', tier: 'intent', size: 48, fallbackEmoji: '🤝' },
+  '💬': { assetKey: 'intent-discussion', tier: 'intent', size: 48, fallbackEmoji: '💬' },
+  '🎉': { assetKey: 'intent-fun', tier: 'intent', size: 48, fallbackEmoji: '🎉' },
+  '💕': { assetKey: 'intent-romance', tier: 'intent', size: 48, fallbackEmoji: '💕' },
+  '🎲': { assetKey: 'intent-flexible', tier: 'intent', size: 48, fallbackEmoji: '🎲' },
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// REACTION ICONS — Reaction tier (icebreaker phase reactions)
+// ═══════════════════════════════════════════════════════════════════
+
+export const REACTION_MAP: Record<string, IconMapping> = {
+  '😂': { assetKey: 'reaction-funny', tier: 'reaction', size: 56, fallbackEmoji: '😂' },
+  '🔥': { assetKey: 'reaction-fire', tier: 'reaction', size: 56, fallbackEmoji: '🔥' },
+  '👏': { assetKey: 'reaction-clap', tier: 'reaction', size: 56, fallbackEmoji: '👏' },
+  '🎉': { assetKey: 'reaction-celebrate', tier: 'reaction', size: 56, fallbackEmoji: '🎉' },
+  '🌹': { assetKey: 'reaction-rose', tier: 'reaction', size: 56, fallbackEmoji: '🌹' },
+  '🤔': { assetKey: 'reaction-think', tier: 'reaction', size: 56, fallbackEmoji: '🤔' },
+  '😮': { assetKey: 'reaction-wow', tier: 'reaction', size: 56, fallbackEmoji: '😮' },
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// REVEAL ICONS — Reveal tier (matching common ground reveals)
+// ═══════════════════════════════════════════════════════════════════
+
+export const REVEAL_MAP: Record<string, IconMapping> = {
+  '💫': { assetKey: 'reveal-same-relationship', tier: 'reveal', size: 96, fallbackEmoji: '💫' },
+  '🎵': { assetKey: 'reveal-same-archetype-band', tier: 'reveal', size: 96, fallbackEmoji: '🎵' },
+  '🤝': { assetKey: 'reveal-same-work-industry', tier: 'reveal', size: 96, fallbackEmoji: '🤝' },
+  '✨': { assetKey: 'reveal-exact-archetype', tier: 'reveal', size: 96, fallbackEmoji: '✨' },
+  '🔥': { assetKey: 'reveal-hometown-industry', tier: 'reveal', size: 96, fallbackEmoji: '🔥' },
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ACHIEVEMENT BADGES — Achievement tier (personality test badges)
+// ═══════════════════════════════════════════════════════════════════
+
+export const ACHIEVEMENT_MAP: Record<string, IconMapping> = {
+  '🎯': { assetKey: 'achievement-first-answer', tier: 'achievement', size: 72, fallbackEmoji: '🎯' },
+  '⚡': { assetKey: 'achievement-quick-thinker', tier: 'achievement', size: 72, fallbackEmoji: '⚡' },
+  '🏃': { assetKey: 'achievement-halfway-hero', tier: 'achievement', size: 72, fallbackEmoji: '🏃' },
+  '🔍': { assetKey: 'achievement-explorer', tier: 'achievement', size: 72, fallbackEmoji: '🔍' },
+  '✨': { assetKey: 'achievement-destined-match', tier: 'achievement', size: 72, fallbackEmoji: '✨' },
+  '🦉': { assetKey: 'achievement-night-owl', tier: 'achievement', size: 72, fallbackEmoji: '🦉' },
+  '💎': { assetKey: 'achievement-perfectionist', tier: 'achievement', size: 72, fallbackEmoji: '💎' },
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // STATUS ICONS — Status tier (misc UI states)
 // ═══════════════════════════════════════════════════════════════════
 
@@ -115,12 +191,34 @@ export const EMOJI_TO_ICON_MAP: Record<string, IconMapping> = {
   ...STATUS_ICON_MAP,
 }
 
+/** Tier-specific maps for composite (emoji + tier) lookups. */
+const TIER_MAPS: Record<IconTier, Record<string, IconMapping>> = {
+  expression: RATING_FACE_MAP,
+  semantic: INFO_LABEL_MAP,
+  mood: MOOD_ICON_MAP,
+  chemistry: CHEMISTRY_BADGE_MAP,
+  phase: PHASE_EMBLEM_MAP,
+  status: STATUS_ICON_MAP,
+  reaction: REACTION_MAP,
+  category: CATEGORY_MAP,
+  intent: INTENT_MAP,
+  reveal: REVEAL_MAP,
+  achievement: ACHIEVEMENT_MAP,
+}
+
 /**
- * Look up an icon mapping by emoji character.
- * Returns undefined if no proprietary icon exists — caller should
- * fall back to native emoji rendering.
+ * Look up an icon mapping by emoji character, with an optional tier override.
+ *
+ * When `tier` is provided, the lookup checks the tier-specific map first.
+ * If no tier-specific match is found, it falls back to the global flat map.
+ * This allows the same emoji to resolve to different assets depending on
+ * context (e.g. 🔥 as a chemistry badge vs. an icebreaker reaction).
  */
-export function getIconMapping(emoji: string): IconMapping | undefined {
+export function getIconMapping(emoji: string, tier?: IconTier): IconMapping | undefined {
+  if (tier) {
+    const tierMatch = TIER_MAPS[tier][emoji]
+    if (tierMatch) return tierMatch
+  }
   return EMOJI_TO_ICON_MAP[emoji]
 }
 
@@ -132,7 +230,23 @@ export function hasIconMapping(emoji: string): boolean {
 }
 
 /**
- * Build a Taro/WeChat require() path for an icon asset.
+ * Tiers that load from CDN instead of local bundle.
+ * These asset sets are too large for the 2MB main package limit.
+ */
+export const CDN_ICON_TIERS: ReadonlySet<IconTier> = new Set([
+  'reaction',
+  'category',
+  'intent',
+  'reveal',
+  'achievement',
+])
+
+/**
+ * Build a Taro/WeChat asset path for an icon asset.
+ *
+ * For CDN tiers, returns an absolute path like `/assets/icons/...` that
+ * should be wrapped with `cdnAsset()` at the call site.
+ * For local tiers, returns a relative require() path like `../../assets/icons/...`.
  *
  * @param assetKey — e.g. 'rating-1-disappointed'
  * @param tier — determines the asset folder
@@ -150,8 +264,16 @@ export function getIconAssetPath(
     chemistry: 'chemistry-badges',
     phase: 'phase-icons',
     status: 'status-icons',
+    reaction: 'reaction-icons',
+    category: 'category-icons',
+    intent: 'intent-icons',
+    reveal: 'reveal-icons',
+    achievement: 'achievement-badges',
   }
   const folder = folderMap[tier]
   const suffix = density === 1 ? '' : `@${density}x`
-  return `../../assets/icons/${folder}/${assetKey}${suffix}.png`
+  if (CDN_ICON_TIERS.has(tier)) {
+    return `/assets/icons/${folder}/${assetKey}${suffix}.webp`
+  }
+  return `../../assets/icons/${folder}/${assetKey}${suffix}.webp`
 }

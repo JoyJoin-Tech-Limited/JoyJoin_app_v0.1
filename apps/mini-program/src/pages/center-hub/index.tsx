@@ -131,7 +131,7 @@ function CenterHubContent({
   // State A: Active matched event
   if (destination.kind === 'matched-event' && events && events.length > 0) {
     const event = events[0]
-    const eventDate = useMemo(() => formatEventDate(event.dateTime), [event.dateTime])
+    const eventDate = formatEventDate(event.dateTime)
     return (
       <View className='center-hub__state'>
         <Text className='center-hub__state-title'>匹配成功</Text>

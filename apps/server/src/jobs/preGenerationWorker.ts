@@ -24,6 +24,7 @@ import {
   generateMicroChallenges,
   generateLieDetectiveStatements,
   generatePersonalityDiceChallenges,
+  generatePersonalityDiceChallengeGroups,
   generateAuctionLots,
   generateQuipBattlePrompts,
   generateUndercoverWordPair,
@@ -36,7 +37,7 @@ import { selectMicroChallenges } from '@shared/microChallengeTemplates';
 import { getDaresForArchetype } from '@shared/personalityDiceDares';
 import { getFallbackUndercoverPair } from '@shared/undercoverWord';
 import { getFallbackGroupMirrorQuestions } from '@shared/groupMirror';
-import type { SocialTopic, AtmosphereMood, LieDetectiveStatement, AuctionLot, MicroChallenge, GroupMirrorQuestion } from '@shared/socialIcebreaker';
+import type { SocialTopic, AtmosphereMood, LieDetectiveStatement, AuctionLot, MicroChallenge, GroupMirrorQuestion, PersonalityDiceChallengeGroup } from '@shared/socialIcebreaker';
 import { logger } from '../lib/logger';
 
 // ---------------------------------------------------------------------------
@@ -137,6 +138,32 @@ function getFallbackForPhase(
     }
     case 'personality_dice': {
       const participants = (payload.participants as Array<{ userId: string; displayName: string; archetype?: string }>) || [];
+      const chooseModeEnabled = (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
+      if (chooseModeEnabled) {
+        const groups: PersonalityDiceChallengeGroup[] = participants.map((p) => {
+          const dares = getDaresForArchetype(p.archetype || 'corgi');
+          const options = dares.map((dare) => ({
+            userId: p.userId,
+            displayName: p.displayName,
+            archetype: p.archetype,
+            dominantTrait: 'P' as const,
+            challengeTitle: dare.title,
+            challengeBody: dare.body,
+            challengeEmoji: dare.emoji,
+            difficulty: (dare.difficulty === 'easy' ? 'easy' : dare.difficulty === 'medium' ? 'medium' : 'hard') as 'easy' | 'medium' | 'hard',
+            passLine: dare.passLine,
+            passConsequence: dare.passConsequence,
+          }));
+          return {
+            userId: p.userId,
+            displayName: p.displayName,
+            archetype: p.archetype,
+            dominantTrait: 'P' as const,
+            options,
+          };
+        });
+        return { data: groups, meta: { provider: null, fallbackUsed: true, promptVersion: 'dare-bank-v2', generatedAt: new Date().toISOString() } };
+      }
       const challenges = participants.map((p) => {
         const dares = getDaresForArchetype(p.archetype || 'corgi');
         const dare = dares[Math.floor(Math.random() * dares.length)];
@@ -235,6 +262,11 @@ const PHASE_GENERATORS: Record<string, GeneratorFn> = {
 
   personality_dice: async (_sessionId, payload) => {
     const participants = (payload.participants as Array<{ userId: string; displayName: string; archetype?: string; traitScores?: Record<string, number> }>) || [];
+    const chooseModeEnabled = (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
+    if (chooseModeEnabled) {
+      const result = await generatePersonalityDiceChallengeGroups({ participants, _refinementHint: payload._refinementHint as string | undefined });
+      return { data: result.data, meta: result.meta as unknown as Record<string, unknown> };
+    }
     const result = await generatePersonalityDiceChallenges({ participants, _refinementHint: payload._refinementHint as string | undefined });
     return { data: result.data, meta: result.meta as unknown as Record<string, unknown> };
   },

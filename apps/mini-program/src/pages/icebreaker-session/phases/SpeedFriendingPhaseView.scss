@@ -1,0 +1,338 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SpeedFriendingPhaseView — Speed Friending / 快速交友
+// ═══════════════════════════════════════════════════════════════════════════
+
+.speed-friending {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+  width: 100%;
+  padding: $spacing-sm 0 $spacing-lg;
+  position: relative;
+}
+
+// ── Particle burst ───────────────────────────────────────────────
+.speed-friending__burst-container {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  pointer-events: none;
+
+  &--summary {
+    top: 30%;
+  }
+}
+
+// ── Round badge ──────────────────────────────────────────────────
+.speed-friending__round-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  width: 100%;
+  padding: 0 $container-padding;
+}
+
+.speed-friending__round-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: $spacing-xs $spacing-md;
+  background: rgba($color-success, 0.1);
+  border: 2rpx solid rgba($color-success, 0.25);
+  border-radius: $radius-pill;
+}
+
+.speed-friending__round-text {
+  @include type-label;
+  color: $color-success;
+  font-weight: $font-weight-semibold;
+}
+
+.speed-friending__elapsed {
+  @include type-caption;
+  color: $color-text-muted;
+}
+
+// ── My pair highlight card ───────────────────────────────────────
+.speed-friending__my-pair-card {
+  width: 100%;
+  max-width: 640rpx;
+  margin: 0 $container-padding;
+  padding: $spacing-md;
+  background: linear-gradient(135deg, rgba($color-success, 0.06) 0%, rgba($color-success, 0.02) 100%);
+  border: 2rpx solid rgba($color-success, 0.15);
+
+  &--bye {
+    background: linear-gradient(135deg, rgba($color-warning, 0.06) 0%, rgba($color-warning, 0.02) 100%);
+    border-color: rgba($color-warning, 0.15);
+  }
+}
+
+.speed-friending__my-pair-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-sm;
+}
+
+.speed-friending__my-pair-label {
+  @include type-label;
+  color: $color-text-secondary;
+  font-weight: $font-weight-semibold;
+}
+
+.speed-friending__my-pair-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-md;
+}
+
+.speed-friending__my-pair-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rpx;
+  min-width: 120rpx;
+}
+
+.speed-friending__my-pair-name {
+  @include type-body;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+  text-align: center;
+  max-width: 140rpx;
+  @include text-truncate;
+}
+
+.speed-friending__my-pair-vs {
+  @include flex-center;
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: rgba($color-success, 0.1);
+}
+
+.speed-friending__my-pair-vs-text {
+  @include type-subheading;
+  color: $color-success;
+  font-weight: $font-weight-bold;
+}
+
+// ── Bye state ────────────────────────────────────────────────────
+.speed-friending__bye-text {
+  @include type-body;
+  color: $color-text-secondary;
+  text-align: center;
+  margin-top: $spacing-xs;
+}
+
+.speed-friending__bye-sub {
+  @include type-caption;
+  color: $color-text-muted;
+  text-align: center;
+  margin-top: 4rpx;
+}
+
+// ── Avatar fallback ──────────────────────────────────────────────
+.speed-friending__avatar-fallback {
+  @include flex-center;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba($color-success, 0.12), rgba($color-success, 0.06));
+  border: 2rpx solid rgba($color-success, 0.2);
+
+  &--sm {
+    width: 64rpx;
+    height: 64rpx;
+  }
+}
+
+.speed-friending__avatar-fallback-text {
+  @include type-subheading;
+  color: $color-success;
+  font-weight: $font-weight-bold;
+}
+
+// ── All pairs grid ───────────────────────────────────────────────
+.speed-friending__all-pairs {
+  width: 100%;
+  padding: 0 $container-padding;
+}
+
+.speed-friending__section-title {
+  @include type-label;
+  color: $color-text-secondary;
+  font-weight: $font-weight-semibold;
+  margin-bottom: $spacing-sm;
+}
+
+.speed-friending__pairs-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  justify-content: center;
+}
+
+.speed-friending__pair-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+  padding: $spacing-sm;
+  min-width: 200rpx;
+  max-width: 280rpx;
+  flex: 1 1 200rpx;
+  background: $color-surface;
+  border-radius: $card-radius-sm;
+  border: 2rpx solid $color-divider;
+  box-shadow: $shadow-sm;
+  position: relative;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+
+  &--mine {
+    border-color: rgba($color-success, 0.35);
+    background: linear-gradient(135deg, rgba($color-success, 0.04), rgba($color-success, 0.01));
+    transform: scale(1.02);
+  }
+}
+
+.speed-friending__pair-tile-avatars {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.speed-friending__pair-tile-avatar {
+  @include flex-center;
+}
+
+.speed-friending__pair-tile-vs {
+  @include type-caption;
+  color: $color-text-muted;
+  font-weight: $font-weight-bold;
+}
+
+.speed-friending__pair-tile-names {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rpx;
+}
+
+.speed-friending__pair-tile-name {
+  @include type-caption;
+  color: $color-text-secondary;
+  max-width: 120rpx;
+  @include text-truncate;
+}
+
+.speed-friending__pair-tile-badge {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  padding: 2rpx 10rpx;
+  background: $color-success;
+  border-radius: $radius-pill;
+}
+
+.speed-friending__pair-tile-badge-text {
+  @include type-caption;
+  color: $color-text-white;
+  font-weight: $font-weight-bold;
+  font-size: $font-size-2xs;
+}
+
+// ── Empty / loading state ────────────────────────────────────────
+.speed-friending__empty-card {
+  width: 100%;
+  max-width: 640rpx;
+  margin: 0 $container-padding;
+  padding: $spacing-lg;
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-sm;
+  text-align: center;
+}
+
+.speed-friending__empty-title {
+  @include type-subheading;
+  color: $color-text-secondary;
+}
+
+.speed-friending__empty-sub {
+  @include type-caption;
+  color: $color-text-muted;
+}
+
+// ── Host actions ─────────────────────────────────────────────────
+.speed-friending__host-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: 0 $container-padding;
+  margin-top: $spacing-md;
+}
+
+.speed-friending__action-btn {
+  width: 100%;
+  max-width: 560rpx;
+}
+
+// ── Player hint ──────────────────────────────────────────────────
+.speed-friending__player-hint {
+  @include type-caption;
+  color: $color-text-muted;
+  text-align: center;
+  padding: 0 $spacing-md;
+}
+
+// ── Summary card (all complete) ──────────────────────────────────
+.speed-friending__summary-card {
+  width: 100%;
+  max-width: 640rpx;
+  margin: $spacing-lg $container-padding 0;
+  padding: $spacing-lg;
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-sm;
+  text-align: center;
+}
+
+// ── Reduced-motion overrides ─────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .speed-friending__pair-tile {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+.speed-friending__summary-emoji {
+  margin-bottom: $spacing-xs;
+}
+
+.speed-friending__summary-title {
+  @include type-heading;
+  color: $color-text-primary;
+}
+
+.speed-friending__summary-subtitle {
+  @include type-body;
+  color: $color-text-secondary;
+}
+
+.speed-friending__summary-hint {
+  @include type-caption;
+  color: $color-text-muted;
+  margin-top: $spacing-xs;
+}

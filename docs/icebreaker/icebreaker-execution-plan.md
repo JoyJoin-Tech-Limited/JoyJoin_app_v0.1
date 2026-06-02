@@ -33,9 +33,9 @@
 ### What Must Be True When We Stop
 
 1. Host selects tier (`breeze`/`glow`/`blaze`) + vibe (`chat`/`balanced`/`game`) → `compileAgentRunPlan()` produces a valid `IcebreakerRunPlan` dynamically ✅ *partial — compilation works, vibe ignored*
-2. All 8 non-core phases are playable in the mini-program session flow (behind feature flags) ❌ *3 phases not wired*
+2. All 8 non-core phases are playable in the mini-program session flow (behind feature flags) ⚠️ *speed_friending fully wired (2026-05-27); 2 remaining (quip_battle, undercover_word)*
 3. Lie Detective V2 (`LIE_DETECTIVE_MODE=v2`) is operational with user-tag input + AI fake injection + V1 degrade ❌
-4. Speed-Friending phase exists as a 15min Aron's 36 Questions + archetype-pairing experience ❌
+4. Speed-Friending phase exists as a round-robin 1-on-1 rotation experience ✅ *Backend + mini-program UI + phase icon asset implemented 2026-05-27*
 5. 7 of 10 phases score ≥ 8.0 on the boost rubric; no phase regresses ❌
 6. 4 shared infra systems (Reveal Engine, Gesture Kit, Context Injector, Optimistic Sync) are integrated into ≥ 5 phases ❌
 7. `npm run guardrails` + `npm run test -w @joyjoin/server` pass; all wiring behind feature flags (default OFF) ⚠️ *passes today; must continue passing*
@@ -68,7 +68,7 @@ Sprint F: QA + Launch               (Week 10)
 | eventTier type | ❌ String | `SocialSessionState.eventTier?: 'standard' \| 'premium' \| 'bar'` — needs `'breeze' \| 'glow' \| 'blaze'` union |
 | compileAgentRunPlan() | ✅ **COMPLETE** | Deterministic rule engine with tier budgets, energy-arc sorting, category spacing, proportional time allocation. 159 tests passing. |
 | mini_script bonus splice | ❌ Missing | Phase module exists but no post-phase 悦仔 prompt, no splice logic, no recap time shift |
-| speed_friending | ❌ Missing | Zero code, zero schema, zero prompts — full implementation needed |
+| speed_friending | ✅ **IMPLEMENTED (2026-05-27)** | Full backend: routes (GET/next-round/complete), auto-init on advance, round-robin circle-method pairing, advance guard, feature flag `SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING` (default OFF), 13 tests. Mini-program: `SpeedFriendingPhaseView` with my-pair highlight, bye state, stagger animations, reduced-motion support, haptics. Phase icon asset (`phase-speed-friending.webp`) generated and placed. `.env.example` documented. |
 | socialIcebreakerRunPlans.ts | ⚠️ Active fallback | Contains BREEZE/GLOW/BLAZE constants. Used as compiler fallback. Needs `@deprecated` + migration guide |
 
 ### Reference Documents (Canonical Specs)
@@ -122,10 +122,11 @@ npm run test -w @joyjoin/server  # Must pass: all existing tests + new integrati
 ### SA Success Criteria
 
 - [ ] `quip_battle`, `undercover_word`, `group_mirror` playable in mini-program behind feature flags (all OFF by default)
+- [x] `speed_friending` backend implemented with feature flag `SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING` (default OFF) — 2026-05-27
 - [ ] Each newly-wired phase has ≥ 1 integration test
 - [ ] `lie_truths` has `is_ai` + `source_tag` columns in migration journal and live DB
 - [ ] `socialIcebreakerRunPlans.ts` is marked `@deprecated` with migration guide comment
-- [ ] `.env.example` documents all 3 new feature flags
+- [x] `.env.example` documents all 4 new feature flags (quip_battle, undercover_word, group_mirror, speed_friending) — 2026-05-28
 - [ ] All guardrails pass
 - [ ] `compileAgentRunPlan()` still returns valid plans (no regression)
 
@@ -152,7 +153,7 @@ npm run test -w @joyjoin/server  # Must pass: all existing tests + new integrati
 
 | ID | Task | Agent | Description | Expected Output | Depends On | Approval |
 |:--:|------|-------|-------------|-----------------|:----------:|:--------:|
-| **SB.1** | Build polished tier+vibe selection UI | Taro Mini-Program Frontend Engineer | Implement tier+vibe selector page per `docs/mini-program-icebreaker-prd.md` §1 spec tokens. Three tier cards (破冰局/畅聊局/狂欢局) with emoji, duration, game count. Three vibe chips (聊天感/混合感/竞技感). Default selection: 畅聊局 + 混合感. 悦仔 personalized line fade-in. All states: no selection, selected, submitting, error. CTA disabled until tier selected. `localStorage` persistence | Page renders in WeChat DevTools; matches spec tokens exactly; all states handled | SA | Required |
+| **SB.1** | Build polished tier+vibe selection UI | Taro Mini-Program Frontend Engineer | Implement tier+vibe selector page per `docs/mini-program-icebreaker-prd.md` §1 spec tokens. Three tier cards (破冰局/畅聊局/狂欢局) with emoji, duration, game count. Three vibe columns (深聊/均衡/暢玩). Default selection: 畅聊局 + 均衡. 悦仔 personalized line fade-in. All states: no selection, selected, submitting, error. CTA disabled until tier selected. `localStorage` persistence | Page renders in WeChat DevTools; matches spec tokens exactly; all states handled | SA | Required |
 | **SB.2** | Wire vibe to run plan compilation | Backend Engineer | Vibe (`chat`/`balanced`/`game`) influences game selection weights in `compileAgentRunPlan()`: `chat` → prefer personality_dice, group_mirror; `balanced` → even distribution; `game` → prefer undercover_word, quip_battle, auction. | vibe parameter changes run plan composition measurably | SA | Required |
 | **SB.3** | LLM game selection enhancement | AI Engineer | When `SOCIAL_ICEBREAKER_LLM_GAME_SELECTION=true`, call DeepSeek to rank game suitability per archetype mix + warmup mood. 3s timeout → fallback to rule engine baseline. Prompt version: `social-game-selection-v1`. AITrace logging. | LLM selection enriches rule engine output; 3s timeout not exceeded; fallback works | SB.2 | Optional |
 | **SB.4** | Backward compat: LEGACY_TIER_MAP | Backend Engineer | Implement `LEGACY_TIER_MAP: { standard→glow, premium→blaze, bar→breeze }`. Old sessions (frozen JSONB): replay as-is, no migration. `resolveTierDisplay()` accepts legacy aliases → maps to correct display. `getRunPlanForTier()`: old key → frozen run plan, new key → agent-compiled | Old sessions replay without error; display names correct; no data migration | SA | Required |

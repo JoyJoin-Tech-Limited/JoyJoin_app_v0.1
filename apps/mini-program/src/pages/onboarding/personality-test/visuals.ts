@@ -21,14 +21,20 @@ export interface ArchetypeAssetPaths {
   png: string
 }
 
-// WebP is served from CDN so all pages (including main-package screens) can load them.
-// PNG fallback for canvas drawImage is also on CDN (migrated 2026-05-22).
-// Local PNGs in /pages/onboarding/assets/archetypes/ have been removed to save
-// ~672KB subpackage space; canvas now draws WebP primary with CDN PNG fallback.
+// CDN base for cross-package consumers (login page, discover, icebreaker session).
 export const ASSET_BASE_WEBP = cdnAsset('/assets/personality/archetypes')
 export const ASSET_BASE_PNG = cdnAsset('/assets/personality/archetypes')
-/** @deprecated local PNG path; use ASSET_BASE_PNG (CDN) instead */
+
+// Local base for onboarding-subpackage pages (personality-test results).
+// Archetype WebPs are bundled in the onboarding subpackage to avoid CDN latency
+// during the result reveal flow.
+export const ASSET_BASE_WEBP_LOCAL = '/pages/onboarding/assets/archetypes'
 export const ASSET_BASE_PNG_LOCAL = '/pages/onboarding/assets/archetypes'
+
+/** Local spritesheet path — bundled in the preloaded onboarding subpackage.
+ *  Use this for the slot animation so the spritesheet is guaranteed to match
+ *  the local manifest (eliminates CDN staleness as a source of split-brain). */
+export const ASSET_BASE_SPRITESHEET_LOCAL = '/pages/onboarding/assets/archetypes'
 
 export const ARCHETYPE_ASSET_MAP: Record<string, ArchetypeAssetPaths> = {
   corgi:        { webp: `${ASSET_BASE_WEBP}/archetype-corgi.webp`,        png: `${ASSET_BASE_PNG}/archetype-corgi.png` },
@@ -99,9 +105,11 @@ export function getArchetypeSpritesheetUrl(): string {
   return `${ASSET_BASE_WEBP}/archetype-spritesheet.webp`
 }
 
-/** Local spritesheet path for direct rendering (bundled in onboarding subpackage). */
+/** Local spritesheet path for direct rendering (bundled in onboarding subpackage).
+ *  Returns the on-device path so the slot animation is immune to CDN staleness.
+ *  The CDN path is still available via {@link getArchetypeSpritesheetCdnPath} as a fallback. */
 export function getArchetypeSpritesheetLocalPath(): string {
-  return `${ASSET_BASE_PNG}/archetype-spritesheet.webp`
+  return `${ASSET_BASE_SPRITESHEET_LOCAL}/archetype-spritesheet.webp`
 }
 
 /** CDN fallback path used by CSS background-image fallback chain. */

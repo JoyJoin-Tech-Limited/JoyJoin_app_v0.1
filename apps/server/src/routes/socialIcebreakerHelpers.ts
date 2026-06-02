@@ -12,6 +12,18 @@ import {
 } from '../lib/socialIcebreakerStore';
 import { shouldAutoAdvance } from '../xiaoyueAdaptiveEngine';
 import { logger } from '../lib/logger';
+import { buildArchetypeContext } from '../lib/contextInjector';
+
+function isEnabled(value: string | undefined, defaultValue: boolean): boolean {
+  if (value === undefined) return defaultValue;
+  return value.toLowerCase() === 'true';
+}
+
+const DIFFICULTY_LABELS: Record<string, string> = {
+  easy: '简单',
+  medium: '中等',
+  hard: '困难',
+};
 
 export function isUniqueConstraintError(error: unknown): boolean {
   return (
@@ -75,15 +87,55 @@ export function sanitizeStateForClient(
   return sanitized;
 }
 
+import type { SpeedFriendingPair, SpeedFriendingRound } from '@shared/socialIcebreaker';
+
+export function generateSpeedFriendingPairs(
+  playerIds: string[],
+  displayNames: Map<string, string>,
+): SpeedFriendingRound[] {
+  const n = playerIds.length;
+  if (n < 2) return [];
+
+  const hasBye = n % 2 === 1;
+  const ids = hasBye ? [...playerIds, '__BYE__'] : [...playerIds];
+  const m = ids.length;
+  const totalRounds = m - 1;
+  const allRounds: SpeedFriendingRound[] = [];
+
+  for (let r = 0; r < totalRounds; r++) {
+    const roundPairs: SpeedFriendingPair[] = [];
+    for (let i = 0; i < m / 2; i++) {
+      const left = ids[i];
+      const right = ids[m - 1 - i];
+      if (left !== '__BYE__' && right !== '__BYE__') {
+        roundPairs.push({
+          userIdA: left,
+          userIdB: right,
+          displayNameA: displayNames.get(left) || left,
+          displayNameB: displayNames.get(right) || right,
+          roundIndex: r,
+        });
+      }
+    }
+    allRounds.push(roundPairs);
+    // Circle method rotation: keep ids[0] fixed, rotate the rest right
+    ids.splice(1, 0, ids.pop()!);
+  }
+
+  return allRounds;
+}
+
 export async function buildClientState(
   state: SocialSessionState,
   requestingUserId?: string,
 ): Promise<SocialSessionState> {
   const joinedParticipants = await listParticipants(state.socialSessionId);
+  const archetypeCtx = buildArchetypeContext(joinedParticipants.map((p) => ({ archetype: p.archetype })));
   return sanitizeStateForClient(
     {
       ...state,
       joinedParticipants,
+      archetypeMixText: archetypeCtx.mixText || undefined,
     },
     requestingUserId,
   );
@@ -146,6 +198,23 @@ export function buildLieDetectiveRecapHighlights(
 }
 
 export function buildPersonalityDiceRecapLines(state: SocialSessionState): string[] {
+  if (isEnabled(process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED, true) &&
+      state.personalityDiceChallengeGroups && state.diceSelectedOption) {
+    return state.personalityDiceChallengeGroups.slice(0, 6).map((group) => {
+      const chosenIdx = state.diceSelectedOption![group.userId];
+      if (chosenIdx === undefined) {
+        return `${group.displayName}：未选择挑战`;
+      }
+      const chosen = group.options[chosenIdx];
+      if (!chosen) {
+        return `${group.displayName}：未选择挑战`;
+      }
+      const title = chosen.challengeTitle.length > 48 ? `${chosen.challengeTitle.slice(0, 47)}…` : chosen.challengeTitle;
+      const diffLabel = DIFFICULTY_LABELS[chosen.difficulty] || chosen.difficulty;
+      return `${group.displayName} 选择了${diffLabel}挑战：${title}`;
+    });
+  }
+
   const challenges = state.personalityDiceChallenges || [];
   return challenges.slice(0, 6).map((c) => {
     const title = c.challengeTitle.length > 48 ? `${c.challengeTitle.slice(0, 47)}…` : c.challengeTitle;

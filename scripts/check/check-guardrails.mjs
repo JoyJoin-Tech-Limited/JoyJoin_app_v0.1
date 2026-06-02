@@ -93,8 +93,9 @@ for (const [scriptName, expectedCommand] of Object.entries(requiredRootScripts))
 }
 
 // 3. Flag ad-hoc font-size literals in mini-program SCSS (must use $font-size-* tokens or type-* mixins).
-// Only checks files modified or untracked in the current working tree to avoid
+// Only checks staged changes to avoid
 // blocking CI on legacy code. Existing hardcoded literals should be migrated over time.
+// Note: this checks git staged changes only (--cached).
 let modifiedFiles = [];
 try {
   modifiedFiles = execFileSync('git', ['diff', '--name-only', '--cached', '--diff-filter=ACMRTUB', '-z'], { encoding: 'utf8' })
@@ -120,7 +121,7 @@ for (const file of modifiedFiles) {
 // 4. Emoji commit blocker for mini-program TS/TSX.
 // Inline emoji in UI text must be replaced with JoyJoinIcon proprietary icons or CSS/text.
 // Lines that intentionally pass emoji to the icon system (emoji=, icon=, fallbackEmoji) are allowed.
-const emojiPattern = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
+const emojiPattern = /[\u{1F300}-\u{1F9FF}\u{2300}-\u{23FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
 const allowedEmojiContextPattern = /emoji\s*=\s*['"]|icon\s*=\s*['"]|fallbackEmoji/;
 const allowedEmojiFiles = new Set([
   'packages/shared/src/iconSystem/emojiToIconMap.ts',
@@ -136,6 +137,30 @@ for (const file of modifiedFiles) {
       violations.push(`Inline emoji found (use JoyJoinIcon or CSS/text instead): ${file}:${index + 1}`);
     }
   });
+}
+
+// 5. Flag page-level loading/empty/error state blocks that use flex
+//    but lack height-based centering safety (min-height, flex:1, fixed, etc.).
+//    Prevents mascot/empty-state images from hugging the top of ScrollViews.
+const stateBlockPattern = /&__(loading|empty|error)(?:-[\w-]+)?\s*\{[^{}]*\}/g;
+const flexIndicatorPattern = /display:\s*flex|@include\s+flex-center/;
+const centeringSafetyPattern = /min-height:\s*(?:[1-9]|\d{2,})|flex:\s*1|flex-grow:\s*1|@include\s+scroll-view-centered-state|@include\s+viewport-min-height|position:\s*fixed/;
+
+for (const file of modifiedFiles) {
+  if (!file.startsWith('apps/mini-program/src/pages/') || !file.endsWith('.scss')) continue;
+  const content = fs.readFileSync(file, 'utf8');
+  let match;
+  // Reset lastIndex to avoid stale state from prior exec() calls on the global regex
+  stateBlockPattern.lastIndex = 0;
+  while ((match = stateBlockPattern.exec(content)) !== null) {
+    const block = match[0];
+    if (flexIndicatorPattern.test(block) && !centeringSafetyPattern.test(block)) {
+      const linesBefore = content.slice(0, match.index).split(/\r?\n/);
+      const lineNum = linesBefore.length;
+      const selector = block.split('{')[0].trim();
+      violations.push(`State block "${selector}" uses flex but lacks centering safety (add min-height, flex:1, or @include scroll-view-centered-state): ${file}:${lineNum}`);
+    }
+  }
 }
 
 const secretKeyPattern = /^\s*(?:export\s+)?(DATABASE_URL|JWT_SECRET|SESSION_SECRET|WECHAT_SECRET|DEEPSEEK_API_KEY|ADMIN_CREATE_SECRET_KEY)\s*[:=]\s*["']?([^"'\s#]+)/i;
@@ -194,4 +219,4 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log('Guardrails passed: no tracked env files, obvious secrets, banned legacy onboarding identifiers, legacy shared/ imports, cross-app source imports, or inline emojis were found.');
+console.log('Guardrails passed: no tracked env files, obvious secrets, banned legacy onboarding identifiers, legacy shared/ imports, cross-app source imports, inline emojis, or unsafe flex-centered state blocks were found.');

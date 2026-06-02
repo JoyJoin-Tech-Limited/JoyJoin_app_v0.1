@@ -211,7 +211,7 @@ Enter number: 2
    Interests: 编程,旅游,美食
 
    Login at: /login
-   Use phone + verification code (demo: 666666)
+   Login via mini-program WeChat auth (微信一键登录). For API testing, use POST /api/auth/dev-login.
 ```
 
 **Use Cases:**
@@ -486,7 +486,7 @@ window.dev.createUser()
    Archetype: 社牛柯基
 
    Login at: /login
-   Use phone + verification code (demo: 666666)
+   Login via mini-program WeChat auth (微信一键登录). For API testing, use POST /api/auth/dev-login.
 ```
 
 **Use Cases:**
@@ -944,7 +944,8 @@ $ADMIN_CREATE_SECRET_KEY
 
 ### Demo Login Credentials
 ```
-Phone verification code: 666666
+Mini-program: WeChat auth (微信一键登录) — no demo code needed.
+Server API testing: POST /api/auth/dev-login (NODE_ENV=development only).
 ```
 
 ---

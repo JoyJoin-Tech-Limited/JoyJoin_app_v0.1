@@ -115,7 +115,7 @@ export const questionsV4Extended: AdaptiveQuestion[] = [
       {
         value: "B",
         text: "简单安慰几句，约明天再细聊",
-        traitScores: { A: 1, C: 2, E: 2, O: 0, X: 0, P: 0 }
+        traitScores: { A: 1, C: 2, E: 1, O: 0, X: 0, P: 0 }
       },
       {
         value: "C",
@@ -299,12 +299,12 @@ export const questionsV4Extended: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "做真实的自己更重要。我不需要为了迎合他人而改变",
-        traitScores: { A: -1, C: 0, E: 1, O: 1, X: 2, P: 0 }
+        traitScores: { A: -2, C: 0, E: 1, O: 1, X: 2, P: -1 }
       },
       {
         value: "B",
         text: "让周围的人感到舒服更重要。和谐的关系需要适当的调整",
-        traitScores: { A: 3, C: 1, E: 0, O: -1, X: 0, P: 1 }
+        traitScores: { A: 3, C: 1, E: -1, O: -1, X: -1, P: 1 }
       },
       {
         value: "C",
@@ -314,7 +314,7 @@ export const questionsV4Extended: AdaptiveQuestion[] = [
       {
         value: "D",
         text: "两者不冲突。我真实的自己就是能让别人舒服的",
-        traitScores: { A: 2, C: 0, E: 1, O: 0, X: 1, P: 2 }
+        traitScores: { A: 1, C: -1, E: 1, O: 0, X: 1, P: 1 }
       }
     ]
   },
@@ -329,22 +329,22 @@ export const questionsV4Extended: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "我经常是活动的发起者或核心组织者",
-        traitScores: { A: 1, C: 2, E: -1, O: 0, X: 3, P: 1 }
+        traitScores: { A: 0, C: 1, E: -1, O: 0, X: 3, P: 1 }
       },
       {
         value: "B",
         text: "我更多是活动的积极参与者和支持者",
-        traitScores: { A: 2, C: 1, E: 1, O: 0, X: 1, P: 2 }
+        traitScores: { A: 1, C: 1, E: 1, O: 0, X: 1, P: 1 }
       },
       {
         value: "C",
         text: "我倾向于参与小型、深度的交流",
-        traitScores: { A: 2, C: 0, E: 1, O: 1, X: 0, P: 0 }
+        traitScores: { A: 1, C: 0, E: 1, O: 1, X: -1, P: -1 }
       },
       {
         value: "D",
         text: "我经常以观察者或偶尔参与者的身份加入",
-        traitScores: { A: 0, C: 1, E: 3, O: 1, X: -1, P: 0 }
+        traitScores: { A: -1, C: 0, E: 2, O: 1, X: -2, P: -1 }
       }
     ]
   },
@@ -885,22 +885,22 @@ export const questionsV4Extended: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "超开心！继续抖包袱",
-        traitScores: { A: 0, C: 0, E: 0, O: 0, X: 3, P: 3 }
+        traitScores: { A: -1, C: 0, E: -1, O: 0, X: 3, P: 3 }
       },
       {
         value: "B",
         text: "有点小得意，自然流露就好",
-        traitScores: { A: 0, C: 1, E: 1, O: 0, X: 1, P: 2 }
+        traitScores: { A: 0, C: 1, E: 1, O: 0, X: 1, P: 1 }
       },
       {
         value: "C",
         text: "有点意外，无心插柳",
-        traitScores: { A: 0, C: 0, E: 2, O: 1, X: 0, P: 1 }
+        traitScores: { A: 0, C: 0, E: 2, O: 1, X: -1, P: 0 }
       },
       {
         value: "D",
         text: "笑完就过了，不太在意",
-        traitScores: { A: 0, C: 1, E: 2, O: 0, X: -1, P: 0 }
+        traitScores: { A: 0, C: 1, E: 2, O: 0, X: -2, P: -2 }
       }
     ]
   },

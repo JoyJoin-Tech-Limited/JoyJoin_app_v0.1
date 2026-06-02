@@ -1,4 +1,5 @@
 import { View, Text, Button, Textarea, Image } from '@tarojs/components'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useState, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -121,9 +122,14 @@ export default function EventFeedbackPage() {
             mode='aspectFit'
             src={getXiaoyueExpressionAsset(hasMatches ? 'matchSuccess' : 'thanksFeedback')}
           />
-          <Text className='event-feedback__success-title'>
-            {hasMatches ? '🎉 缘分双向奔赴！' : '感谢你的反馈！'}
-          </Text>
+          {hasMatches ? (
+            <View style={{ display: 'flex', alignItems: 'center', gap: '8rpx' }}>
+              <JoyJoinIcon emoji='🎉' tier='reaction' size={32} />
+              <Text className='event-feedback__success-title'>缘分双向奔赴！</Text>
+            </View>
+          ) : (
+            <Text className='event-feedback__success-title'>感谢你的反馈！</Text>
+          )}
           <Text className='event-feedback__success-text'>
             {hasMatches
               ? `你和 ${mutualMatches.length} 位参与者互相选择了对方`

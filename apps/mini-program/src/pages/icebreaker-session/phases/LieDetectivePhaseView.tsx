@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { View, Text, Input } from '@tarojs/components'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Taro from '@tarojs/taro'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
@@ -271,12 +272,18 @@ export function LieDetectivePhaseView({
       {/* V2 edge messages */}
       {showZeroMessage && (
         <View className={`icebreaker__detective-edge-msg icebreaker__detective-edge-msg--zero ${REDUCED_MOTION ? '' : 'icebreaker__detective-edge-msg--animate'}`}>
-          <Text className='icebreaker__detective-edge-text'>🎭 大家都被悦仔骗了！</Text>
+          <View className='jj-icon-text'>
+            <JoyJoinIcon emoji='🎭' size={28} />
+            <Text className='icebreaker__detective-edge-text'>大家都被悦仔骗了！</Text>
+          </View>
         </View>
       )}
       {showHundredMessage && (
         <View className={`icebreaker__detective-edge-msg icebreaker__detective-edge-msg--hundred ${REDUCED_MOTION ? '' : 'icebreaker__detective-edge-msg--animate'}`}>
-          <Text className='icebreaker__detective-edge-text'>🔥 火眼金睛！全对！</Text>
+          <View className='jj-icon-text'>
+            <JoyJoinIcon emoji='🔥' tier='reaction' size={28} />
+            <Text className='icebreaker__detective-edge-text'>火眼金睛！全对！</Text>
+          </View>
         </View>
       )}
 

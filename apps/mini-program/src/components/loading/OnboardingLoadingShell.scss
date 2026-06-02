@@ -5,10 +5,17 @@
   @include page-gradient-bg;
   @include page-shell-padding($spacing-xl, $container-padding, $spacing-xl);
   display: flex;
-  align-items: center;
+  flex-direction: column;
 
   &__content {
     width: 100%;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
   }
 
   &__eyebrow {
@@ -39,6 +46,7 @@
   }
 
   &__card {
+    width: 100%;
     padding: $spacing-lg;
     margin-top: $spacing-lg;
     border: 2rpx solid rgba($color-primary, 0.14);
@@ -59,7 +67,7 @@
   &__orbit {
     display: flex;
     justify-content: center;
-    gap: 14rpx;
+    gap: $spacing-sm;
     margin-bottom: $spacing-md;
   }
 
@@ -69,6 +77,7 @@
     border-radius: 999rpx;
     background: $brand-gradient;
     animation: onboarding-loading-breathe 1.2s ease-in-out infinite;
+    will-change: transform, opacity;
 
     &--2 {
       animation-delay: 0.12s;
@@ -90,15 +99,16 @@
   &__skeleton {
     display: flex;
     flex-direction: column;
-    gap: 14rpx;
+    gap: $spacing-sm;
     margin-top: $spacing-md;
   }
 
   &__line {
     height: 24rpx;
     border-radius: 999rpx;
-    background: rgba($color-surface, 0.86);
+    background: rgba($color-divider, 0.8);
     animation: onboarding-loading-breathe 1.2s ease-in-out infinite;
+    will-change: transform, opacity;
 
     &--wide {
       width: 100%;
@@ -118,6 +128,15 @@
 
 .onboarding-loading-shell--settled {
   .onboarding-loading-shell__mascot,
+  .onboarding-loading-shell__dot,
+  .onboarding-loading-shell__line {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
   .onboarding-loading-shell__dot,
   .onboarding-loading-shell__line {
     animation: none !important;

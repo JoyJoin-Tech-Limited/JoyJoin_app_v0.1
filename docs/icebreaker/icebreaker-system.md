@@ -1,6 +1,6 @@
 # Icebreaker System — Complete Reference
 
-**Last Updated:** 2026-05-13
+**Last Updated:** 2026-05-27
 
 > ⭐ **CANONICAL FLOW:** The Social Icebreaker is the **primary and default in-event icebreaking experience** for JoyJoin matched groups. When building any feature that relates to icebreaking or in-event social facilitation, you MUST integrate with or extend the Social Icebreaker. Do NOT build new standalone icebreaking UIs.
 
@@ -91,10 +91,16 @@ type SocialIcebreakerPhase =
   | 'personality_dice' // 🎲 Personality Dice
   | 'group_mirror'     // 🪞 Group Mirror — peer reflection voting
   | 'quip_battle'      // ⚔️ Quip Battle — witty prompt responses
+  | 'speed_friending'  // 🔄 Speed Friending — round-robin 1-on-1 rotations
   | 'mini_script'       // 🎭 迷你剧本杀 (feature-flagged)
   | 'recap';           // ✨ Session summary
 
 type AtmosphereMood = 'relaxed' | 'funny' | 'life' | 'emotional';
+
+// Vibe controls phase selection, duration, and warmup depth
+// Machine IDs: 'deep_chat' | 'balanced' | 'play_fun'
+// Display names: 深聊 | 均衡 | 暢玩
+type VibeId = 'deep_chat' | 'balanced' | 'play_fun';
 
 // MVP active phases (currently deployed):
 const MVP_PHASES = ['warmup', 'micro_challenge', 'lie_detective'];
@@ -105,16 +111,19 @@ const DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES = [...MVP_PHASES, 'personality_di
 
 | Phase | Emoji | CN Name | Timeout | Min Players | Key Mechanic |
 |-------|-------|---------|---------|-------------|--------------|
-| `warmup` | 🌅 | 话题卡 | 20 min | 2 | Mood-filtered topics, host navigates, all see same topic. Archetype mix badge, mood selection animations, CardFlip topic entrance, ParticleBurst all-ready celebration. |
-| `micro_challenge` | ⚡ | 挑战 | 15 min | 2 | Timed group task, each player taps "done" |
-| `lie_detective` | 🕵️ | 侦探 | 25 min | 3 | Per-player AI statements, group votes on which is the lie |
-| `undercover_word` | 🕵️‍♂️ | 谁是卧底 | 15 min | 3 | Hidden-role word deduction; AI generates word pairs, players describe and vote |
-| `auction` | 🎪 | 拍卖 | 30 min | 3 | Virtual-coin lots + English auction (AI lots when `SOCIAL_AUCTION_LLM_ENABLED=true`, else curated fallbacks). Server-synced timer, bid history, outbid notifications, archetype-aware lot generation. |
-| `personality_dice` | 🎲 | 骰子 | 15 min | 2 | AI-generated archetype dares |
-| `group_mirror` | 🪞 | 群像镜像 | 15 min | 2 | Peer reflection voting; players nominate who best fits each question |
-| `quip_battle` | ⚔️ | 机智对决 | 15 min | 2 | Witty prompt responses; SwipeCard voting, best-of reel |
+| `warmup` | 🌅 | 话题卡 | 6–20 min | 2 | Mood-filtered topics, host navigates, all see same topic. **Vibe-aware duration:** 深聊 = 18–20 min with 6–7 cards + 3-tier prompts; 均衡 = 10–12 min with 5 cards; 暢玩 = 6–8 min with 4 cards. Archetype mix badge, mood selection animations, CardFlip topic entrance, ParticleBurst all-ready celebration. |
+| `micro_challenge` | ⚡ | 挑战 | 8–10 min | 2 | Timed group task, each player taps "done". Duration varies by vibe. |
+| `lie_detective` | 🕵️ | 侦探 | 12–25 min | 3 | Per-player AI statements, group votes on which is the lie. Duration varies by vibe. |
+| `undercover_word` | 🕵️‍♂️ | 谁是卧底 | 12–15 min | 3 | Hidden-role word deduction; AI generates word pairs, players describe and vote |
+| `auction` | 🎪 | 拍卖 | 16–30 min | 3 | Virtual-coin lots + English auction (AI lots when `SOCIAL_AUCTION_LLM_ENABLED=true`, else curated fallbacks). Server-synced timer, bid history, outbid notifications, archetype-aware lot generation. |
+| `personality_dice` | 🎲 | 骰子 | 10–15 min | 2 | AI-generated archetype dares. When `PERSONALITY_DICE_CHOOSE_MODE_ENABLED=true`, each player receives 3 difficulty-tiered options (simple/medium/hard) and picks one. |
+| `group_mirror` | 🪞 | 群像镜像 | 14–15 min | 2 | Peer reflection voting; players nominate who best fits each question |
+| `quip_battle` | ⚔️ | 机智对决 | 10–15 min | 2 | Witty prompt responses; SwipeCard voting, best-of reel |
+| `speed_friending` | 🔄 | 速聊 | 14–18 min | 2 | Round-robin timed 1-on-1 rotations. Glow+blaze only. |
 | `mini_script` | 🎭 | 迷你剧本杀 | 45 min | 4 | **Full Social Icebreaker phase.** Host-picked style/genre, multi-act collaborative mystery with role assignments, clue reveals, and group voting. Feature-flagged (`SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT`). Not a side game — executes within the phase-ordered session flow. |
-| `recap` | ✨ | 回顾 | 5 min | 1 | AI-generated session summary with V2 stats (lieDetective aiWinRate, personalityDice highlights, undercoverWord result, etc.). IdentityReveal hero headline, CardFlip share card, staggered medal grid, ParticleBurst celebration. |
+| `recap` | ✨ | 回顾 | 5–6 min | 1 | AI-generated session summary with V2 stats (lieDetective aiWinRate, personalityDice highlights, undercoverWord result, etc.). IdentityReveal hero headline, CardFlip share card, staggered medal grid, ParticleBurst celebration. |
+
+> **Phase durations are vibe-aware.** When `RUN_PLAN_TEMPLATES_ENABLED=true`, the template compiler (`resolveTemplateSlots` in `packages/shared/src/runPlanCompiler.ts`) allocates `allocatedMinutes` per segment from 9 default templates (3 vibes × 3 tiers). When `false`, legacy hardcoded plans apply uniform durations regardless of vibe.
 
 ### Session Lifecycle
 
@@ -123,7 +132,7 @@ User opens event/group page
         │
         ▼
 POST /api/social-icebreaker/start
-  { sessionId, displayName }
+  { sessionId, displayName, tier?, vibe? }
         │
         ├── First caller → becomes HOST
         └── Subsequent callers → join existing session
@@ -131,6 +140,14 @@ POST /api/social-icebreaker/start
         ▼
 GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
   returns SocialSessionState + joinedParticipants roster summary
+        │
+        ▼
+[TIER + VIBE SELECTION] (host only, before or during warmup)
+  Host selects tier (`breeze`/`glow`/`blaze`) + vibe (`deep_chat`/`balanced`/`play_fun`)
+  → POST /api/social-icebreaker/:socialSessionId/set-tier { tier, vibe }
+  Server recompiles run plan via template compiler (when `RUN_PLAN_TEMPLATES_ENABLED=true`)
+  or legacy `compileAgentRunPlan()` (when `false`).
+  Tier can only be changed during `waiting` or `warmup` phase.
         │
         ▼
 [WARMUP PHASE]
@@ -215,6 +232,12 @@ interface SocialSessionState {
   eventType?: string;
   enabledPhases?: SocialIcebreakerPhase[];
 
+  // Tier + vibe (template-driven when RUN_PLAN_TEMPLATES_ENABLED=true)
+  eventTier?: TierMachineId;       // 'breeze' | 'glow' | 'blaze'
+  vibe?: VibeId;                   // 'deep_chat' | 'balanced' | 'play_fun'
+  tierDisplayName?: string;        // e.g. '破冰局' | '畅聊局' | '狂欢局'
+  archetypeMixText?: string;       // Pre-computed archetype composition summary for AI prompts
+
   // Topic card phase
   warmupTopics?: SocialTopic[];
   currentTopicIndex?: number;
@@ -255,6 +278,9 @@ interface SocialSessionState {
     funMoments: string[];
   };
 
+  // Run plan (template-driven compilation)
+  runPlan?: IcebreakerRunPlan;     // Compiled phase segments with allocatedMinutes per phase
+
   // Bonus gate (mini_script offer)
   bonusGateOffered?: boolean;
   bonusGateAccepted?: boolean;
@@ -292,12 +318,13 @@ Sessions expire after 6 hours and expired rows are swept periodically. Missing v
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/social-icebreaker/start` | any | Join or create session; first caller = host; participant roster is persisted |
+| `POST` | `/api/social-icebreaker/start` | any | Join or create session; first caller = host; participant roster is persisted. Accepts optional `{ tier, vibe }` |
 | `GET` | `/api/social-icebreaker/:socialSessionId` | any | Poll state (every 3s); registers presence and returns `joinedParticipants` roster summary |
-| `POST` | `/api/social-icebreaker/:socialSessionId/topics` | host | Generate mood-filtered warmup topics |
+| `POST` | `/api/social-icebreaker/:socialSessionId/topics` | host | Generate mood-filtered warmup topics (vibe-aware depth when `RUN_PLAN_TEMPLATES_ENABLED=true`) |
 | `POST` | `/api/social-icebreaker/:socialSessionId/warmup/ready` | any | Mark whether the current player is ready to move on |
 | `POST` | `/api/social-icebreaker/:socialSessionId/warmup/next-topic` | host | Advance to the next shared warmup topic after mutual readiness |
 | `POST` | `/api/social-icebreaker/:socialSessionId/advance` | host | Advance to next phase; auto-skips `lie_detective` if <3 players |
+| `POST` | `/api/social-icebreaker/:socialSessionId/set-tier` | host | Change tier + vibe during `waiting` or `warmup` phase; server recompiles run plan |
 | `POST` | `/api/social-icebreaker/:socialSessionId/pulse-check` | any | Submit vibe (1=cold, 2=warm, 3=fire) |
 | `POST` | `/api/social-icebreaker/:socialSessionId/micro-challenge/complete` | any | Mark self as challenge done |
 | `POST` | `/api/social-icebreaker/:socialSessionId/lie-detective/generate` | any | AI generates 3 statements (2 true, 1 lie) per user |
@@ -313,6 +340,9 @@ Sessions expire after 6 hours and expired rows are swept periodically. Missing v
 **Files (mini-program first):**
 - `apps/mini-program/src/pages/icebreaker-session/index.tsx` — Taro session page (primary in-field client)
 - `apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx` — phase UI modules for mini-program
+- `apps/mini-program/src/pages/icebreaker-session/tier-selector/index.tsx` — 3×3 tier+vibe selector grid (`深聊`/`均衡`/`暢玩` × `破冰局`/`畅聊局`/`狂欢局`); feature-flagged via `features.runPlanTemplatesEnabled`
+- `apps/mini-program/src/pages/icebreaker-session/phases/WarmupPhaseView.tsx` — Warmup phase with vibe-aware depth badges (golden "深度话题" for 深聊, green "快速暖场" for 暢玩) and 3-tier `TierPromptReveal` for 深聊
+- `apps/mini-program/src/hooks/useTierReveal.ts` — Staggered tier-prompt reveal hook with punctuation-aware delays
 - `apps/user-client/src/pages/IcebreakerSessionPage.tsx` — web session page (parity)
 - `apps/user-client/src/hooks/useSocialIcebreaker.ts` — web hook (parity)
 
@@ -401,6 +431,29 @@ Together, Design writes **data**; Dev ensures **code paths exist** for every ref
 
 If no valid plan exists at session start, the server falls back to **today’s defaults** (`enabledPhases` / `PHASE_ORDER` from `packages/shared/src/socialIcebreaker.ts` and `apps/server/src/socialIcebreakerPhaseConfig.ts`). Missing plans should log a structured warning for operations.
 
+#### Template Compiler (`resolveTemplateSlots`)
+
+When `RUN_PLAN_TEMPLATES_ENABLED=true`, the server uses a template-driven compiler instead of legacy hardcoded plans:
+
+**4-tier fallback chain:**
+1. **DB template** — query `run_plan_templates` table for matching `vibe` + `tier` + `playerCount` range
+2. **`TEMPLATE_DEFAULTS`** — 9 seeded defaults (3 vibes × 3 tiers) in `packages/shared/src/runPlanCompiler.ts`
+3. **Legacy `compileAgentRunPlan()`** — rule engine with archetype-weighted selection
+4. **`BREEZE_RUN_PLAN`** — absolute fallback
+
+**Slot resolution rules:**
+- Each template defines `slots[]` with `slotType` (`deep_chat` | `play_fun` | `flexible`) and `eligiblePhases[]`
+- Category spacing enforced: no two consecutive phases share the same `category`
+- 4-tier fallback for each slot: eligible + spacing → full pool + spacing → eligible ignoring spacing → full pool ignoring spacing
+- `allocatedMinutes` populated on each `PhaseSegment` from template slots
+
+**Runtime validation:** `dbRowToTemplate()` validates `slotType` ∈ `['deep_chat','play_fun','flexible']` and `eligiblePhases` against `PHASE_ORDER`; invalid data triggers `TEMPLATE_DEFAULTS` fallback.
+
+**Files:**
+- `packages/shared/src/runPlanCompiler.ts` — `resolveTemplateSlots()`, `TEMPLATE_DEFAULTS`
+- `apps/server/src/services/runPlanService.ts` — `compileForSession()`, `dbRowToTemplate()`, feature-flag gating
+- `apps/server/src/repositories/runPlanTemplateRepo.ts` — DB queries for `run_plan_templates`
+
 ---
 
 ## §2 — IcebreakerToolkit (Legacy Host-Prep Tool — NOT the Primary Flow)
@@ -445,6 +498,7 @@ Social Icebreaker v2 phase availability is now owned by the server. Each `Social
 Current server flags:
 - `SOCIAL_ICEBREAKER_ENABLE_AUCTION=true` → inserts `auction` before `personality_dice`
 - `SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE=false` → removes `personality_dice`
+- `PERSONALITY_DICE_CHOOSE_MODE_ENABLED=true` → enables the Choose-Your-Prompt variant (3 difficulty-tiered dares per player, player picks one); `false` retains original single-dare flow
 - `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT=true` → appends `mini_script` before recap (legacy alias: `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA`)
 
 If a configured phase does not meet `PHASE_CONFIG[phase].minPlayersRequired`, the server skips only that phase and advances to the next enabled phase instead of jumping straight to recap.
@@ -521,12 +575,41 @@ This widget **fetches and displays a random question** (`GET /api/icebreakers/ra
 
 | Function | Input | Output | Fallback |
 |----------|-------|--------|---------|
-| `generateWarmupTopics` | `{ mood, eventType, participantCount, avoidTopics? }` | 5 `SocialTopic[]` | 25 curated topics (mood-filtered) |
+| `generateWarmupTopics` | `{ mood, eventType, participantCount, vibe?, avoidTopics? }` | 5 `SocialTopic[]` | 25 curated topics (mood-filtered). When `vibe='deep_chat'`, generates 3-tier prompts (`opener`/`followUp`/`reflection`) on each `SocialTopic`. When `vibe='play_fun'`, generates lighter, faster prompts. 3s LLM timeout with curated fallback. |
 | `generateMicroChallenges` | `{ eventType, participantCount, completedChallengeIds? }` | 3 `MicroChallenge[]` | 8 curated challenges |
 | `generateLieDetectiveStatements` | `{ userId, displayName, archetype?, interests? }` | 3 statements (2T+1F) | 3 curated fallback sets |
 | `generateAuctionLots` | `{ eventType, participantCount, sessionContext? { mixText } }` | `AuctionLot[]` (with optional `emoji`) | Curated fallback lots; archetype mix injected when `sessionContext` provided |
 | `generateXiaoYueComment` | `{ phase, event, context? }` | commentary string | hardcoded phase/event map |
 | `generateRecapSummary` | `{ participants, topicsDiscussed, challengesCompleted, durationMinutes }` | `{ headline, moments[], closingLine }` | template-based default |
+
+**Vibe-aware warmup prompt structure (`SocialTopicPromptTiers`):**
+
+```typescript
+interface SocialTopicPromptTiers {
+  opener: string;      // Surface-level entry point
+  followUp: string;    // Deeper elaboration
+  reflection: string;  // Self-disclosure or insight
+}
+
+// Added to SocialTopic when vibe = 'deep_chat'
+interface SocialTopic {
+  id: string;
+  text: string;
+  mood: AtmosphereMood;
+  depthLevel: number;           // 1 (light) → 3 (deep)
+  promptTiers?: SocialTopicPromptTiers;  // 3-tier prompts for 深聊 vibe
+}
+```
+
+**Client → API vibe mapping:**
+```typescript
+// apps/mini-program/src/lib/vibeMapping.ts
+const CLIENT_TO_API_VIBE = {
+  deep_chat: 'chat',   // 深聊
+  balanced: 'balanced', // 均衡
+  play_fun: 'game',    // 暢玩
+};
+```
 
 **Fallback strategy:** All functions gracefully fall back to curated content on AI error or empty response. `isLie` is only stored server-side and never exposed via the polling endpoint.
 
@@ -538,11 +621,19 @@ This widget **fetches and displays a random question** (`GET /api/icebreakers/ra
 
 | File | Purpose |
 |------|---------|
-| `shared/socialIcebreaker.ts` | Core types: phases, state, configs (`PHASE_CONFIG`, `PHASE_ORDER`, `MVP_PHASES`) |
+| `shared/socialIcebreaker.ts` | Core types: phases, state, configs (`PHASE_CONFIG`, `PHASE_ORDER` — 11 phases, `MVP_PHASES`) |
 | `packages/shared/src/socialIcebreaker.ts` | Package alias of above |
-| `apps/server/src/routes/socialIcebreaker.ts` | Core Social Icebreaker API routes + client-state assembly over the PostgreSQL-backed session store |
-| `apps/server/src/routes/socialIcebreakerExtended.ts` | Extended phase routes: auction (generate-lots, bid, close-lot) with server-synced timer, bid history, and archetype context injection |
+| `apps/server/src/routes/socialIcebreaker.ts` | Core Social Icebreaker API routes + client-state assembly over the PostgreSQL-backed session store. Includes speed_friending: GET state, next-round, and complete endpoints with round-robin circle-method pairing. |
+| `apps/server/src/routes/socialIcebreakerExtended.ts` | Extended phase routes: auction (generate-lots, bid, close-lot), speed_friending auto-init (pair generation on phase advance) + advance guard |
 | `apps/server/src/socialIcebreakerAIService.ts` | AI generation functions (DeepSeek) with curated fallbacks |
+| `apps/server/src/services/runPlanService.ts` | Template-driven run plan compiler with 4-tier fallback chain; feature-flag gated by `RUN_PLAN_TEMPLATES_ENABLED` |
+| `apps/server/src/repositories/runPlanTemplateRepo.ts` | DB queries for `run_plan_templates` table |
+| `packages/shared/src/runPlanCompiler.ts` | `resolveTemplateSlots()` — 9 default templates (3 vibes × 3 tiers), category-spacing enforcement, slot resolution |
+| `packages/shared/src/socialIcebreakerTierManifest.ts` | Tier machine IDs (`breeze`/`glow`/`blaze`) + `resolveTierDisplay()` + `LEGACY_TIER_MAP` |
+| `apps/mini-program/src/pages/icebreaker-session/tier-selector/index.tsx` | 3×3 tier+vibe selector grid (feature-flagged) |
+| `apps/mini-program/src/pages/icebreaker-session/phases/WarmupPhaseView.tsx` | Warmup phase with vibe-aware depth badges + 3-tier prompt reveal |
+| `apps/mini-program/src/hooks/useTierReveal.ts` | Staggered tier-prompt reveal hook |
+| `apps/mini-program/src/lib/vibeMapping.ts` | Client ↔ API bidirectional vibe mapping |
 | `apps/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx` | Phase id → shipped UI template registry (`renderSocialIcebreakerPhasePanel`) |
 | `apps/user-client/src/hooks/useSocialIcebreaker.ts` | React hook: session management, polling, all actions |
 | `.github/skills/game-design-icebreaker-compilation/SKILL.md` | Game Design compile skill + modular safety/mechanics/handoff references |

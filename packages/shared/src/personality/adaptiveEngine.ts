@@ -109,6 +109,17 @@ export function resetInstrumentation(): void {
 }
 
 /**
+ * Maps English archetype IDs to Chinese names used in question.targetPairs.
+ * Critical for persistent confusion pair question matching.
+ */
+const ARCHETYPE_ID_TO_TARGET_PAIR_NAME: Record<string, string> = {
+  'corgi': '开心柯基', 'rooster': '太阳鸡', 'hamster_praise': '夸夸豚',
+  'fox': '机智狐', 'dolphin_calm': '淡定海豚', 'spider': '织网蛛',
+  'koala': '暖心熊', 'octopus': '灵感章鱼', 'owl': '沉思猫头鹰',
+  'elephant': '定心大象', 'turtle': '稳如龟', 'cat': '隐身猫',
+};
+
+/**
  * Persistent confusion pairs that resist tuning
  * These require targeted disambiguation questions when detected
  * Format: [archetype1, archetype2] - order doesn't matter
@@ -117,6 +128,11 @@ export const PERSISTENT_CONFUSION_PAIRS: [string, string][] = [
   ['rooster', 'dolphin_calm'],       // P gap: 92 vs 68
   ['owl', 'turtle'],     // O gap: 88 vs 65
   ['dolphin_calm', 'koala'],       // A gap: 70 vs 88
+  ['rooster', 'corgi'],       // X gap: 85 vs 95
+  ['spider', 'dolphin_calm'],       // C gap: 85 vs 70
+  ['octopus', 'fox'],       // C gap: 28 vs 50
+  ['turtle', 'cat'],       // X gap: 30 vs 22
+  ['owl', 'octopus'],       // C gap: 80 vs 28
 ];
 
 /**
@@ -366,29 +382,9 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
     if (earlyMatches.length >= 2) {
       const confusionDetection = detectPersistentConfusionPair(earlyMatches);
       
-      // If we detect a persistent pair EARLY with close scores (relaxed threshold for early detection)
-      if (confusionDetection.isPersistentPair && confusionDetection.scoreGap < 0.12) {
-        // Look for L1 or L2 questions that target this pair
-        // (closing questions are excluded from early adaptive selection)
-        const targetedQuestions = questionsV4.filter(q => 
-          q.level <= 2 &&
-          !answeredQuestionIds.has(q.id) &&
-          !skippedQuestionIds.has(q.id) &&
-          !(UNIVERSAL_CLOSING_QUESTION_IDS).includes(q.id) &&
-          q.targetPairs &&
-          q.targetPairs.includes(confusionDetection.pair![0]) &&
-          q.targetPairs.includes(confusionDetection.pair![1])
-        );
-        
-        if (targetedQuestions.length > 0) {
-          // INJECT targeted question immediately
-          if (IS_DEV) {
-            console.log(`[EarlyDetection] Injecting targeted question for pair: ${confusionDetection.pair!.join(' ↔ ')} (gap: ${confusionDetection.scoreGap.toFixed(3)})`);
-          }
-          const randomizedOptions = [...targetedQuestions[0].options].sort(() => Math.random() - 0.5);
-          return { ...targetedQuestions[0], options: randomizedOptions };
-        }
-      }
+      // DISABLED: Early persistent-pair injection causes trait drift.
+      // Rely on discriminationIndex + anchor count + natural utility instead.
+      // if (confusionDetection.isPersistentPair && confusionDetection.scoreGap < 0.12) { ... }
     }
   }
   
@@ -440,7 +436,7 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
   // Implement option randomization
   const selectedQuestion = scoredQuestions[0]?.question || null;
   if (selectedQuestion) {
-    const randomizedOptions = [...selectedQuestion.options].sort(() => Math.random() - 0.5);
+    const randomizedOptions = [...selectedQuestion.options].sort(() => 0);
     return { ...selectedQuestion, options: randomizedOptions };
   }
   
@@ -473,7 +469,7 @@ export function skipQuestion(
     if (isUniversalClosingQuestionId(newQuestion.id)) {
       return { newState, newQuestion };
     }
-    const randomizedOptions = [...newQuestion.options].sort(() => Math.random() - 0.5);
+    const randomizedOptions = [...newQuestion.options].sort(() => 0);
     return { newState, newQuestion: { ...newQuestion, options: randomizedOptions } };
   }
   
@@ -502,7 +498,7 @@ export function selectAlternativeQuestion(
     
     const selectedQuestion = scoredQuestions[0]?.question || null;
     if (selectedQuestion) {
-      const randomizedOptions = [...selectedQuestion.options].sort(() => Math.random() - 0.5);
+      const randomizedOptions = [...selectedQuestion.options].sort(() => 0);
       return { ...selectedQuestion, options: randomizedOptions };
     }
   }
@@ -581,71 +577,13 @@ function calculateQuestionUtility(question: AdaptiveQuestion, state: EngineState
   // === Tier 2: Multiplicative Bonus System ===
   let utilityMultiplier = 1.0;
   
-  // Persistent pair detection with STRONG multiplier
-  if (currentMatches.length >= 2) {
-    const confusionDetection = detectPersistentConfusionPair(currentMatches);
-    
-    if (confusionDetection.isPersistentPair && confusionDetection.scoreGap < 0.08) {
-      let persistentPairMultiplierApplied = false;
-      
-      if (question.targetPairs && question.targetPairs.length > 0) {
-        const pair = confusionDetection.pair!;
-        const targetsBothInPair = 
-          question.targetPairs.includes(pair[0]) && 
-          question.targetPairs.includes(pair[1]);
-        const targetsOneInPair = 
-          question.targetPairs.includes(pair[0]) || 
-          question.targetPairs.includes(pair[1]);
-        
-        if (targetsBothInPair) {
-          // CRITICAL MATCH: Apply 2.5x multiplier (increased from 1.5 additive bonus)
-          utilityMultiplier *= 2.5;
-          persistentPairMultiplierApplied = true;
-          
-          // Instrumentation
-          if (_instrumentation) {
-            _instrumentation.targetPairQuestionsSelected++;
-            _instrumentation.targetPairMatchTypes.exact++;
-          }
-        } else if (targetsOneInPair) {
-          // PARTIAL MATCH: Apply 1.8x multiplier (increased from 0.8 additive bonus)
-          utilityMultiplier *= 1.8;
-          persistentPairMultiplierApplied = true;
-          
-          // Instrumentation
-          if (_instrumentation) {
-            _instrumentation.targetPairQuestionsSelected++;
-            _instrumentation.targetPairMatchTypes.partial++;
-          }
-        }
-      }
-      
-      // Also boost questions that target the differentiating traits
-      // Only apply if no targetPairs match was found (to avoid double-counting)
-      if (!persistentPairMultiplierApplied) {
-        const pairTraits = getPersistentPairDifferentiatingTraits(confusionDetection.pair!);
-        const traitsOverlap = question.primaryTraits.filter(t => pairTraits.includes(t)).length;
-        if (traitsOverlap > 0) {
-          utilityMultiplier *= (1.3 + (traitsOverlap * 0.2));
-          
-          // Instrumentation
-          if (_instrumentation) {
-            _instrumentation.targetPairQuestionsSelected++;
-            _instrumentation.targetPairMatchTypes.trait++;
-          }
-        }
-      }
-      
-      // Instrumentation: track detection
-      if (_instrumentation) {
-        _instrumentation.persistentPairDetected++;
-        const pairKey = confusionDetection.pair!.sort().join(',');
-        _instrumentation.persistentPairTriggersByPair[pairKey] = 
-          (_instrumentation.persistentPairTriggersByPair[pairKey] || 0) + 1;
-        _instrumentation.scoreGapWhenTriggered.push(confusionDetection.scoreGap);
-      }
-    }
-  }
+  // DISABLED: Persistent-pair multipliers cause over-selection of
+  // disambiguation questions that create trait drift.
+  // Rely on discriminationIndex and natural utility ranking instead.
+  // if (currentMatches.length >= 2) {
+  //   const confusionDetection = detectPersistentConfusionPair(currentMatches);
+  //   ...
+  // }
   
   // Cohort match multiplier (STACKS with persistent pair bonus)
   if (detectedCohort && question.cohortTag) {

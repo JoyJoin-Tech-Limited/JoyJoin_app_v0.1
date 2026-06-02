@@ -129,14 +129,23 @@ All phases are defined in `packages/shared/src/phaseRegistry.ts` as self-contain
 
 ---
 
-## §5 — Agent Compilation Rules (`compileAgentRunPlan()`)
+## §5 — Agent Compilation Rules (`resolveTemplateSlots()` + `compileAgentRunPlan()`)
 
-> ⚠️ **Not yet implemented.** Current production uses hardcoded `BREEZE_RUN_PLAN`, `GLOW_RUN_PLAN`, `BLAZE_RUN_PLAN`.
+> ✅ **Implemented 2026-05-27.** When `RUN_PLAN_TEMPLATES_ENABLED=true`, production uses the template-driven compiler (`resolveTemplateSlots`). When `false`, legacy `compileAgentRunPlan()` runs unchanged.
 
 ### 5.1 — Function Signature
 
 ```ts
-// packages/shared/src/runPlanCompiler.ts (planned)
+// packages/shared/src/runPlanCompiler.ts
+export function resolveTemplateSlots(
+  vibe: 'deep_chat' | 'balanced' | 'play_fun',
+  tier: TierMachineId,
+  playerCount: number,
+  enabledPhases: SocialIcebreakerPhase[],
+  options?: { useLLM?: boolean }
+): PhaseSegment[];
+
+// Legacy rule engine (still active when templates disabled)
 export function compileAgentRunPlan(
   tier: TierMachineId,
   vibe: 'chat' | 'balanced' | 'game',
@@ -225,13 +234,17 @@ Triggered when `SOCIAL_ICEBREAKER_LLM_GAME_SELECTION=true`.
 
 **Observability:** `logAITrace` with `domain: 'social-icebreaker', promptVersion: 'social-game-selection-v1'`.
 
-### 5.4 — Vibe Override
+### 5.4 — Vibe Override (Legacy `compileAgentRunPlan()` only)
 
-| Vibe | Effect on selection |
-|------|---------------------|
-| `chat` | Increase weight of `conversation` and `creative` categories; reduce `competition` and `deduction` by 20% |
-| `balanced` | No override — use archetype-weighted baseline |
-| `game` | Increase weight of `game`, `competition`, `deduction`; reduce `conversation` by 20% |
+When `RUN_PLAN_TEMPLATES_ENABLED=false`, the legacy rule engine applies these vibe weights:
+
+| Machine ID | Display | Effect on selection |
+|------------|---------|---------------------|
+| `deep_chat` / `chat` | 深聊 | Increase weight of `conversation` and `creative` categories; reduce `competition` and `deduction` by 20% |
+| `balanced` | 均衡 | No override — use archetype-weighted baseline |
+| `play_fun` / `game` | 暢玩 | Increase weight of `game`, `competition`, `deduction`; reduce `conversation` by 20% |
+
+When `RUN_PLAN_TEMPLATES_ENABLED=true`, phase selection is driven by the template's `slotType` (`deep_chat` / `play_fun` / `flexible`) and `eligiblePhases[]` instead of runtime weights.
 
 ---
 
@@ -315,7 +328,7 @@ export const GLOW_RUN_PLAN: IcebreakerRunPlan = { ... };
 export const BLAZE_RUN_PLAN: IcebreakerRunPlan = { ... };
 ```
 
-These hardcoded plans remain as **frozen fallbacks** until `compileAgentRunPlan()` is fully validated.
+These hardcoded plans remain as **absolute fallbacks** (tier 4 in the fallback chain) when both DB templates and `compileAgentRunPlan()` fail.
 
 ---
 
@@ -328,10 +341,12 @@ These hardcoded plans remain as **frozen fallbacks** until `compileAgentRunPlan(
 | `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` | Enable `mini_script` phase | `false` |
 | `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA` | Legacy alias for above | `false` |
 | `SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE` | Enable `personality_dice` | `true` |
+| `PERSONALITY_DICE_CHOOSE_MODE_ENABLED` | Enable Choose-Your-Prompt variant (3 dares per player) | `true` |
 | `SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE` | Enable `quip_battle` phase | `false` |
 | `SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD` | Enable `undercover_word` phase | `false` |
 | `SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR` | Enable `group_mirror` phase | `false` |
 | `SOCIAL_ICEBREAKER_LLM_GAME_SELECTION` | Enable LLM enhancement in `compileAgentRunPlan()` | `false` |
+| `RUN_PLAN_TEMPLATES_ENABLED` | Enable template-driven compiler + 3×3 vibe grid UX (`深聊`/`均衡`/`暢玩`) | `false` |
 | `LIE_DETECTIVE_MODE` | `v1` (AI-fabricated) or `v2` (user-tag + AI fake) | `v1` |
 
 ---
@@ -371,9 +386,10 @@ These hardcoded plans remain as **frozen fallbacks** until `compileAgentRunPlan(
 
 ## §12 — Success Criteria for `compileAgentRunPlan()`
 
-- [ ] Returns valid `IcebreakerRunPlan` for all 3 tiers × 3 vibes = 9 permutations
-- [ ] 100 test permutations pass (random archetype mixes, edge player counts)
-- [ ] No phase regresses below current score in any dimension
-- [ ] LLM layer timeout (3s) + fallback to rule engine works
-- [ ] `npm run guardrails` + `npm run test -w @joyjoin/server` pass
-- [ ] Old sessions with hardcoded plans still load correctly
+- [x] Returns valid `IcebreakerRunPlan` for all 3 tiers × 3 vibes = 9 permutations (template-driven when `RUN_PLAN_TEMPLATES_ENABLED=true`)
+- [x] 100 test permutations pass (random archetype mixes, edge player counts)
+- [x] No phase regresses below current score in any dimension
+- [x] LLM layer timeout (3s) + fallback to rule engine works
+- [x] `npm run guardrails` + `npm run test -w @joyjoin/server` pass
+- [x] Old sessions with hardcoded plans still load correctly
+- [x] `RUN_PLAN_TEMPLATES_ENABLED` feature flag gates template compiler vs legacy path

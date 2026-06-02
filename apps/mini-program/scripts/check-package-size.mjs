@@ -3,7 +3,8 @@
  * Measure mini-program package sizes after build and fail if main package exceeds limit.
  *
  * WeChat Mini Program enforces a 2MB hard limit per package (main + subpackages).
- * We target 1.8MB to leave 200KB headroom.
+ * We target 1.8MB to leave 200KB headroom for last-minute changes.
+ * Source: https://developers.weixin.qq.com/miniprogram/dev/framework/subpackages.html
  *
  * Note: This script measures the local dist/ directory. In WeChat, the actual
  * package sizes may differ slightly due to compression and packaging logic.
@@ -22,8 +23,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const DIST_DIR = path.join(ROOT, 'dist')
 
-const MAIN_PACKAGE_MAX_BYTES = 4 * 1024 * 1024  // Immediate target; 2MB requires CDN migration (see docs/asset-delivery.md)
-const MAIN_PACKAGE_WARN_BYTES = 2 * 1024 * 1024  // WeChat hard limit; warn if approaching
+const MAIN_PACKAGE_MAX_BYTES = 2 * 1024 * 1024  // WeChat hard limit — upload fails above this
+const MAIN_PACKAGE_WARN_BYTES = 1.8 * 1024 * 1024 // Yellow-zone: time to optimize before hitting wall
 const SUBPACKAGE_MAX_BYTES = 1.8 * 1024 * 1024
 const TOTAL_MAX_BYTES = 20 * 1024 * 1024
 

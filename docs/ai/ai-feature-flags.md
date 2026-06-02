@@ -33,6 +33,7 @@
 | Variable | Effect |
 |----------|--------|
 | `SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE` | Disable personality-dice AI phase when false. |
+| `PERSONALITY_DICE_CHOOSE_MODE_ENABLED` | Enable Choose-Your-Prompt variant: 3 difficulty-tiered dares per player, player picks one. Generates via `generatePersonalityDiceChallengeGroups` (prompt v4). Falls back to curated `PERSONALITY_DICE_DARES` bank. |
 | `SOCIAL_ICEBREAKER_ENABLE_AUCTION` | Insert auction phase. |
 | `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` | Enables **迷你剧本杀** (`mini_script`) in social icebreaker. |
 | `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA` | Legacy alias for `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT`. |

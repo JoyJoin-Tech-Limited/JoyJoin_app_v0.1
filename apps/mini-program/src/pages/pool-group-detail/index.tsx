@@ -15,6 +15,7 @@ import LoadingScreen from '../../components/loading/LoadingScreen'
 import Card from '../../components/ui/Card'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import Button from '../../components/ui/Button'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/utils/uiConstants'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
@@ -160,7 +161,10 @@ export default function PoolGroupDetailPage() {
       <View className='pool-group-detail__header'>
         {group.groupNumber ? (
           <View className='pool-group-detail__group-badge'>
-            <Text className='pool-group-detail__group-badge-text'>✨ #{group.groupNumber}组</Text>
+            <View className='jj-icon-text'>
+              <JoyJoinIcon emoji='✨' tier='reveal' size={20} />
+              <Text className='pool-group-detail__group-badge-text'>#{group.groupNumber}组</Text>
+            </View>
           </View>
         ) : null}
         <Text className='pool-group-detail__title'>{pool.title || '你的小队详情已解锁'}</Text>
@@ -195,23 +199,35 @@ export default function PoolGroupDetailPage() {
       <Card className='pool-group-detail__card'>
         <Text className='pool-group-detail__card-title'>活动信息</Text>
         <View className='pool-group-detail__info-row'>
-          <Text className='pool-group-detail__info-label'>📅 时间</Text>
+          <View className='jj-icon-text'>
+            <JoyJoinIcon emoji='📅' size={24} />
+            <Text className='pool-group-detail__info-label'>时间</Text>
+          </View>
           <Text className='pool-group-detail__info-value'>
             {formatDateTime(group.finalDateTime ?? pool.dateTime)}
           </Text>
         </View>
         <View className='pool-group-detail__info-row'>
-          <Text className='pool-group-detail__info-label'>📍 地点</Text>
+          <View className='jj-icon-text'>
+            <JoyJoinIcon emoji='📍' size={24} />
+            <Text className='pool-group-detail__info-label'>地点</Text>
+          </View>
           <Text className='pool-group-detail__info-value'>
             {group.venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '待公布'}
           </Text>
         </View>
         <View className='pool-group-detail__info-row'>
-          <Text className='pool-group-detail__info-label'>🎯 类型</Text>
+          <View className='jj-icon-text'>
+            <JoyJoinIcon emoji='🎯' size={24} />
+            <Text className='pool-group-detail__info-label'>类型</Text>
+          </View>
           <Text className='pool-group-detail__info-value'>{pool.eventType || '悦聚活动'}</Text>
         </View>
         <View className='pool-group-detail__info-row'>
-          <Text className='pool-group-detail__info-label'>👥 人数</Text>
+          <View className='jj-icon-text'>
+            <JoyJoinIcon emoji='👥' size={24} />
+            <Text className='pool-group-detail__info-label'>人数</Text>
+          </View>
           <Text className='pool-group-detail__info-value'>{group.memberCount || members.length}人桌</Text>
         </View>
       </Card>
@@ -227,7 +243,7 @@ export default function PoolGroupDetailPage() {
         <Card className='pool-group-detail__card'>
           <Text className='pool-group-detail__card-title'>地点信息</Text>
           <View className='pool-group-detail__info-row'>
-            <Text className='pool-group-detail__info-label'>🏠 地址</Text>
+            <Text className='pool-group-detail__info-label'><JoyJoinIcon emoji='🏠' size={24} /> 地址</Text>
             <Text className='pool-group-detail__info-value'>
               {group.venueName}
               {group.venueAddress ? `\n${group.venueAddress}` : ''}
@@ -235,14 +251,14 @@ export default function PoolGroupDetailPage() {
           </View>
           {pool.city ? (
             <View className='pool-group-detail__info-row'>
-              <Text className='pool-group-detail__info-label'>🌆 地区</Text>
+              <Text className='pool-group-detail__info-label'><JoyJoinIcon emoji='🌆' size={24} /> 地区</Text>
               <Text className='pool-group-detail__info-value'>
                 {pool.city}{pool.district ? ` · ${pool.district}` : ''}
               </Text>
             </View>
           ) : null}
           <View className='pool-group-detail__map-actions'>
-            <Button onClick={handleOpenMap}>🗺️ 到这去</Button>
+            <Button onClick={handleOpenMap}><JoyJoinIcon emoji='🗺️' size={24} /> 到这去</Button>
             <Button variant='secondary' onClick={handleCopyLocation}>复制地址</Button>
           </View>
         </Card>
@@ -313,19 +329,19 @@ export default function PoolGroupDetailPage() {
         <Text className='pool-group-detail__card-title'>规则与到场指南</Text>
         <View className='pool-group-detail__rules'>
           <View className='pool-group-detail__rule-item'>
-            <Text className='pool-group-detail__rule-icon'>⏰</Text>
+            <JoyJoinIcon emoji='⏰' size={24} className='pool-group-detail__rule-icon' />
             <Text className='pool-group-detail__rule'>请提前 10 分钟到场</Text>
           </View>
           <View className='pool-group-detail__rule-item'>
-            <Text className='pool-group-detail__rule-icon'>🚫</Text>
+            <JoyJoinIcon emoji='🚫' size={24} className='pool-group-detail__rule-icon' />
             <Text className='pool-group-detail__rule'>开局前 24 小时内不可退</Text>
           </View>
           <View className='pool-group-detail__rule-item'>
-            <Text className='pool-group-detail__rule-icon'>⚠️</Text>
+            <JoyJoinIcon emoji='⚠️' size={24} className='pool-group-detail__rule-icon' />
             <Text className='pool-group-detail__rule'>迟到/缺席将影响信用分</Text>
           </View>
           <View className='pool-group-detail__rule-item'>
-            <Text className='pool-group-detail__rule-icon'>💬</Text>
+            <JoyJoinIcon emoji='💬' tier='chemistry' size={24} className='pool-group-detail__rule-icon' />
             <Text className='pool-group-detail__rule'>活动开始后可从活动页进入聊天或破冰入口</Text>
           </View>
         </View>

@@ -122,6 +122,14 @@ export interface AssessmentConfig {
     maxExtraQuestions: number;
   };
   useV2Matcher?: boolean;
+  /** Override normalizeTraitScore multiplier (default: 15) */
+  traitScoreMultiplier?: number;
+  /** Per-trait baseline offset subtracted before normalization (default: all 0) */
+  traitScoreBaselines?: Partial<Record<TraitKey, number>>;
+  /** Use fixed question sequence instead of adaptive selection */
+  useFixedQuestions?: boolean;
+  /** Ordered list of question IDs for fixed-question mode */
+  fixedQuestionIds?: string[];
 }
 
 export const DEFAULT_ASSESSMENT_CONFIG: AssessmentConfig = {
@@ -130,7 +138,7 @@ export const DEFAULT_ASSESSMENT_CONFIG: AssessmentConfig = {
   hardMaxQuestions: 16,
   defaultConfidenceThreshold: 0.65,
   confusablePairThreshold: 0.70,
-  anchorQuestionCount: 8,
+  anchorQuestionCount: 9,
   validityCheckPositions: [8, 12],
   milestonePositions: [4, 8, 12],
   enableTieredThreshold: false,
@@ -148,7 +156,7 @@ export const V2_ASSESSMENT_CONFIG: AssessmentConfig = {
   hardMaxQuestions: 20,
   defaultConfidenceThreshold: 0.70,
   confusablePairThreshold: 0.80,
-  anchorQuestionCount: 8,
+  anchorQuestionCount: 9,
   validityCheckPositions: [8, 12, 16],
   milestonePositions: [4, 8, 14],
   enableTieredThreshold: true,

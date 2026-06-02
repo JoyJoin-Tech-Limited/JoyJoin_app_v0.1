@@ -83,6 +83,14 @@
     "user:create": "npm run user:create -w @joyjoin/server",
     "user:bypass": "npm run user:bypass -w @joyjoin/server",
     "seed:test-data": "npm run seed:test-data -w @joyjoin/server",
-    "wecom:notify": "node scripts/wecom-notify.mjs"
+    "wecom:notify": "node scripts/wecom-notify.mjs",
+    "simulate:personas:generate": "tsx scripts/simulate/generate-boundary-personas.ts",
+    "simulate:personas:run": "tsx scripts/simulate/run-persona-suite.ts --personas=boundaries --noise=clean",
+    "simulate:personas:run:all": "tsx scripts/simulate/run-persona-suite.ts --personas=all --noise=clean",
+    "simulate:personas:run:ci": "tsx scripts/simulate/run-persona-suite.ts --personas=centroids --noise=clean --isolation-only",
+    "simulate:personas:retest": "tsx scripts/simulate/run-test-retest.ts --n=5 --personas=all",
+    "simulate:expert-packet": "tsx scripts/simulate/generate-expert-packet.ts",
+    "simulate:full": "npm run simulate:personas:generate && npm run simulate:personas:run:all && npm run simulate:personas:retest",
+    "simulate:gate": "npm run simulate:personas:generate && npm run simulate:personas:run:ci"
   }
 }

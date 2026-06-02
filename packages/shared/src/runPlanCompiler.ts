@@ -383,3 +383,340 @@ export function getNonCorePoolForTier(
 ): SocialIcebreakerPhase[] {
   return TIER_NON_CORE_POOLS[tier].filter((phase) => isEnabled(phase, enabledPhases));
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template-driven compiler (Sprint 1 — Icebreaker Vibe Reframe)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type TemplateVibeId = 'deep_chat' | 'balanced' | 'play_fun';
+
+export interface RunPlanTemplateSlot {
+  /** Slot type determines the fallback pool when eligible_phases are exhausted. */
+  slotType: 'deep_chat' | 'play_fun' | 'flexible';
+  /** Ordered list of preferred phases for this slot. */
+  eligiblePhases: SocialIcebreakerPhase[];
+  /** Target duration in minutes (actual may be AI-tuned ±3min in Sprint 2). */
+  allocatedMinutes: number;
+}
+
+export interface RunPlanTemplate {
+  vibe: TemplateVibeId;
+  tier: TierMachineId;
+  playerCountMin: number;
+  playerCountMax: number;
+  coreWarmupMinutes: number;
+  coreMicroChallengeMinutes: number;
+  coreRecapMinutes: number;
+  slots: RunPlanTemplateSlot[];
+}
+
+/** Full fallback pools per slot type (ordered by priority). */
+const SLOT_TYPE_FULL_POOLS: Record<RunPlanTemplateSlot['slotType'], SocialIcebreakerPhase[]> = {
+  deep_chat: ['lie_detective', 'personality_dice', 'group_mirror', 'speed_friending'],
+  play_fun: ['lie_detective', 'undercover_word', 'quip_battle', 'auction'],
+  flexible: ['lie_detective', 'personality_dice', 'group_mirror', 'undercover_word', 'quip_battle', 'speed_friending'],
+};
+
+function getFullPoolForSlotType(slotType: RunPlanTemplateSlot['slotType']): SocialIcebreakerPhase[] {
+  return SLOT_TYPE_FULL_POOLS[slotType];
+}
+
+function buildCoreSegment(phase: SocialIcebreakerPhase, minutes: number): PhaseSegment {
+  const module = getPhaseModule(phase);
+  return {
+    phase,
+    allocatedMinutes: minutes,
+    energyWeight: energyArcToWeight(module.energyArc),
+    participation: module.participation,
+    tone: module.tone,
+  };
+}
+
+function canUsePhase(
+  phase: SocialIcebreakerPhase,
+  usedPhases: Set<SocialIcebreakerPhase>,
+  playerCount: number,
+  enabledPhases: SocialIcebreakerPhase[],
+  lastCategory: string | null,
+): boolean {
+  if (usedPhases.has(phase)) return false;
+  if (!enabledPhases.includes(phase)) return false;
+  const module = getPhaseModule(phase);
+  if (playerCount < module.minPlayers) return false;
+  if (lastCategory !== null && module.category === lastCategory) return false;
+  return true;
+}
+
+function canUsePhaseIgnoreCategory(
+  phase: SocialIcebreakerPhase,
+  usedPhases: Set<SocialIcebreakerPhase>,
+  playerCount: number,
+  enabledPhases: SocialIcebreakerPhase[],
+): boolean {
+  if (usedPhases.has(phase)) return false;
+  if (!enabledPhases.includes(phase)) return false;
+  const module = getPhaseModule(phase);
+  if (playerCount < module.minPlayers) return false;
+  return true;
+}
+
+function resolveSlot(
+  slot: RunPlanTemplateSlot,
+  lastCategory: string | null,
+  usedPhases: Set<SocialIcebreakerPhase>,
+  playerCount: number,
+  enabledPhases: SocialIcebreakerPhase[],
+): { phase: SocialIcebreakerPhase; segment: PhaseSegment } | null {
+  // 1. Try slot's eligible phases with category spacing
+  for (const phase of slot.eligiblePhases) {
+    if (canUsePhase(phase, usedPhases, playerCount, enabledPhases, lastCategory)) {
+      const module = getPhaseModule(phase);
+      return {
+        phase,
+        segment: {
+          phase,
+          allocatedMinutes: slot.allocatedMinutes,
+          energyWeight: energyArcToWeight(module.energyArc),
+          participation: module.participation,
+          tone: module.tone,
+        },
+      };
+    }
+  }
+
+  // 2. Fallback to full pool for slot type with category spacing
+  for (const phase of getFullPoolForSlotType(slot.slotType)) {
+    if (canUsePhase(phase, usedPhases, playerCount, enabledPhases, lastCategory)) {
+      const module = getPhaseModule(phase);
+      return {
+        phase,
+        segment: {
+          phase,
+          allocatedMinutes: slot.allocatedMinutes,
+          energyWeight: energyArcToWeight(module.energyArc),
+          participation: module.participation,
+          tone: module.tone,
+        },
+      };
+    }
+  }
+
+  // 3. Try slot's eligible phases ignoring category spacing
+  for (const phase of slot.eligiblePhases) {
+    if (canUsePhaseIgnoreCategory(phase, usedPhases, playerCount, enabledPhases)) {
+      const module = getPhaseModule(phase);
+      return {
+        phase,
+        segment: {
+          phase,
+          allocatedMinutes: slot.allocatedMinutes,
+          energyWeight: energyArcToWeight(module.energyArc),
+          participation: module.participation,
+          tone: module.tone,
+        },
+      };
+    }
+  }
+
+  // 4. Fallback to full pool ignoring category spacing
+  for (const phase of getFullPoolForSlotType(slot.slotType)) {
+    if (canUsePhaseIgnoreCategory(phase, usedPhases, playerCount, enabledPhases)) {
+      const module = getPhaseModule(phase);
+      return {
+        phase,
+        segment: {
+          phase,
+          allocatedMinutes: slot.allocatedMinutes,
+          energyWeight: energyArcToWeight(module.energyArc),
+          participation: module.participation,
+          tone: module.tone,
+        },
+      };
+    }
+  }
+
+  // 5. Cannot resolve — skip this slot
+  return null;
+}
+
+/**
+ * Resolve a template's slots into a concrete `PhaseSegment[]`.
+ *
+ * Rules:
+ * - Core phases (warmup, micro_challenge, recap) are always present.
+ * - Each flexible slot resolves to the first eligible phase that passes
+ *   `minPlayers` and category-spacing checks.
+ * - If a slot's eligible phases are exhausted, falls back to the slot type's
+ *   full pool.
+ * - Phases never repeat within a plan.
+ */
+export function resolveTemplateSlots(
+  vibe: TemplateVibeId,
+  tier: TierMachineId,
+  playerCount: number,
+  enabledPhases: SocialIcebreakerPhase[],
+  template?: RunPlanTemplate | null,
+): PhaseSegment[] {
+  const resolvedTemplate = template ?? findDefaultTemplate(vibe, tier);
+  if (!resolvedTemplate) {
+    throw new Error(`No template found for vibe=${vibe} tier=${tier}`);
+  }
+
+  const segments: PhaseSegment[] = [
+    buildCoreSegment('warmup', resolvedTemplate.coreWarmupMinutes),
+    buildCoreSegment('micro_challenge', resolvedTemplate.coreMicroChallengeMinutes),
+  ];
+
+  const usedPhases = new Set<SocialIcebreakerPhase>(['warmup', 'micro_challenge']);
+  let lastCategory = getPhaseModule('micro_challenge').category;
+
+  for (const slot of resolvedTemplate.slots) {
+    const resolved = resolveSlot(slot, lastCategory, usedPhases, playerCount, enabledPhases);
+    if (resolved) {
+      segments.push(resolved.segment);
+      usedPhases.add(resolved.phase);
+      lastCategory = getPhaseModule(resolved.phase).category;
+    }
+  }
+
+  segments.push(buildCoreSegment('recap', resolvedTemplate.coreRecapMinutes));
+
+  return segments;
+}
+
+function findDefaultTemplate(vibe: TemplateVibeId, tier: TierMachineId): RunPlanTemplate | undefined {
+  return TEMPLATE_DEFAULTS.find((t) => t.vibe === vibe && t.tier === tier);
+}
+
+/** 9 default templates covering the 3×3 vibe × tier matrix. */
+export const TEMPLATE_DEFAULTS: RunPlanTemplate[] = [
+  // ─── 深聊 (Deep Chat) ─────────────────────────────────────────────────────
+  {
+    vibe: 'deep_chat',
+    tier: 'breeze',
+    playerCountMin: 2,
+    playerCountMax: 12,
+    coreWarmupMinutes: 18,
+    coreMicroChallengeMinutes: 10,
+    coreRecapMinutes: 5,
+    slots: [
+      { slotType: 'deep_chat', eligiblePhases: ['group_mirror', 'personality_dice'], allocatedMinutes: 7 },
+    ],
+  },
+  {
+    vibe: 'deep_chat',
+    tier: 'glow',
+    playerCountMin: 2,
+    playerCountMax: 12,
+    coreWarmupMinutes: 18,
+    coreMicroChallengeMinutes: 10,
+    coreRecapMinutes: 6,
+    slots: [
+      { slotType: 'flexible', eligiblePhases: ['lie_detective', 'personality_dice'], allocatedMinutes: 12 },
+      { slotType: 'deep_chat', eligiblePhases: ['group_mirror', 'speed_friending'], allocatedMinutes: 14 },
+    ],
+  },
+  {
+    vibe: 'deep_chat',
+    tier: 'blaze',
+    playerCountMin: 2,
+    playerCountMax: 12,
+    coreWarmupMinutes: 20,
+    coreMicroChallengeMinutes: 10,
+    coreRecapMinutes: 6,
+    slots: [
+      { slotType: 'flexible', eligiblePhases: ['lie_detective', 'personality_dice'], allocatedMinutes: 14 },
+      { slotType: 'deep_chat', eligiblePhases: ['group_mirror'], allocatedMinutes: 14 },
+      { slotType: 'flexible', eligiblePhases: ['speed_friending', 'personality_dice'], allocatedMinutes: 18 },
+    ],
+  },
+
+  // ─── 暢玩 (Play Fun) ──────────────────────────────────────────────────────
+  {
+    vibe: 'play_fun',
+    tier: 'breeze',
+    playerCountMin: 2,
+    playerCountMax: 12,
+    coreWarmupMinutes: 6,
+    coreMicroChallengeMinutes: 10,
+    coreRecapMinutes: 5,
+    slots: [
+      { slotType: 'play_fun', eligiblePhases: ['lie_detective'], allocatedMinutes: 12 },
+      { slotType: 'flexible', eligiblePhases: ['quip_battle', 'personality_dice'], allocatedMinutes: 7 },
+    ],
+  },
+  {
+    vibe: 'play_fun',
+    tier: 'glow',
+    playerCountMin: 2,
+    playerCountMax: 12,
+    coreWarmupMinutes: 6,
+    coreMicroChallengeMinutes: 10,
+    coreRecapMinutes: 5,
+    slots: [
+      { slotType: 'play_fun', eligiblePhases: ['lie_detective'], allocatedMinutes: 12 },
+      { slotType: 'play_fun', eligiblePhases: ['undercover_word', 'quip_battle'], allocatedMinutes: 12 },
+      { slotType: 'flexible', eligiblePhases: ['personality_dice', 'lie_detective', 'quip_battle'], allocatedMinutes: 10 },
+    ],
+  },
+  {
+    vibe: 'play_fun',
+    tier: 'blaze',
+    playerCountMin: 2,
+    playerCountMax: 12,
+    coreWarmupMinutes: 8,
+    coreMicroChallengeMinutes: 10,
+    coreRecapMinutes: 5,
+    slots: [
+      { slotType: 'play_fun', eligiblePhases: ['lie_detective'], allocatedMinutes: 12 },
+      { slotType: 'play_fun', eligiblePhases: ['undercover_word'], allocatedMinutes: 12 },
+      { slotType: 'play_fun', eligiblePhases: ['auction'], allocatedMinutes: 16 },
+      { slotType: 'flexible', eligiblePhases: ['quip_battle', 'personality_dice'], allocatedMinutes: 10 },
+      { slotType: 'flexible', eligiblePhases: ['lie_detective', 'quip_battle'], allocatedMinutes: 10 },
+    ],
+  },
+
+  // ─── 均衡 (Balanced) ──────────────────────────────────────────────────────
+  {
+    vibe: 'balanced',
+    tier: 'breeze',
+    playerCountMin: 2,
+    playerCountMax: 12,
+    coreWarmupMinutes: 10,
+    coreMicroChallengeMinutes: 8,
+    coreRecapMinutes: 5,
+    slots: [
+      { slotType: 'flexible', eligiblePhases: ['lie_detective', 'personality_dice'], allocatedMinutes: 12 },
+    ],
+  },
+  {
+    vibe: 'balanced',
+    tier: 'glow',
+    playerCountMin: 2,
+    playerCountMax: 12,
+    coreWarmupMinutes: 10,
+    coreMicroChallengeMinutes: 8,
+    coreRecapMinutes: 5,
+    slots: [
+      { slotType: 'flexible', eligiblePhases: ['lie_detective', 'personality_dice'], allocatedMinutes: 12 },
+      { slotType: 'flexible', eligiblePhases: ['quip_battle', 'group_mirror'], allocatedMinutes: 10 },
+      { slotType: 'flexible', eligiblePhases: ['undercover_word', 'personality_dice'], allocatedMinutes: 10 },
+    ],
+  },
+  {
+    vibe: 'balanced',
+    tier: 'blaze',
+    playerCountMin: 2,
+    playerCountMax: 12,
+    coreWarmupMinutes: 12,
+    coreMicroChallengeMinutes: 8,
+    coreRecapMinutes: 5,
+    slots: [
+      { slotType: 'flexible', eligiblePhases: ['lie_detective'], allocatedMinutes: 12 },
+      { slotType: 'flexible', eligiblePhases: ['personality_dice', 'group_mirror'], allocatedMinutes: 12 },
+      { slotType: 'flexible', eligiblePhases: ['undercover_word', 'quip_battle'], allocatedMinutes: 12 },
+      { slotType: 'flexible', eligiblePhases: ['auction', 'quip_battle'], allocatedMinutes: 14 },
+      { slotType: 'flexible', eligiblePhases: ['speed_friending', 'group_mirror'], allocatedMinutes: 14 },
+    ],
+  },
+];

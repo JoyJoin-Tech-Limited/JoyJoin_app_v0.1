@@ -1,4 +1,5 @@
 import { View, Text } from '@tarojs/components'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import Taro from '@tarojs/taro'
 import { useState, useEffect } from 'react'
 import './CityUnlockBanner.scss'
@@ -69,7 +70,7 @@ export default function CityUnlockBanner({ onSelectCity }: CityUnlockBannerProps
       onClick={handleTap}
     >
       <View className='city-unlock-banner__content'>
-        <Text className='city-unlock-banner__icon'>🌏</Text>
+        <JoyJoinIcon emoji='🌏' size={40} className='city-unlock-banner__icon' />
         <View className='city-unlock-banner__text'>
           <Text className='city-unlock-banner__title'>你看起来不在深圳？</Text>
           <Text className='city-unlock-banner__subtitle'>告诉我们你想在哪个城市遇到有趣的人 👉</Text>

@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
+import { useMemo, useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
@@ -8,6 +8,12 @@ import { POLL_SOCIAL_SESSION_MS, TOAST_MEDIUM_MS, TOAST_DEFAULT_MS } from '../..
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useAuth } from '../../hooks/useAuth'
 import { logInfo, logError } from '../../lib/utils/logger'
+import {
+  usePreloadCdnIcons,
+  ICEBREAKER_REACTION_ASSETS,
+  ICEBREAKER_REVEAL_ASSETS,
+  COMMON_ACHIEVEMENT_ASSETS,
+} from '../../hooks/usePreloadCdnIcons'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { getMascotDisplayName } from '../../lib/mascot/mascotDisplay'
 import OnboardingLoadingShell from '../../components/loading/OnboardingLoadingShell'
@@ -25,9 +31,11 @@ import {
   UndercoverWordPhaseView,
   GroupMirrorPhaseView,
   RecapPhaseView,
+  SpeedFriendingPhaseView,
   type SessionPhase,
   WarmupPhaseView,
 } from './phaseViews'
+import { apiVibeToClient, VibeId } from '../../lib/vibeMapping'
 import { PhaseIntroOverlay } from './overlays/PhaseIntroOverlay'
 import { MiniScriptPhaseView } from './phases/MiniScriptPhaseView'
 import { IcebreakerToolSelector } from './overlays/IcebreakerToolSelector'
@@ -52,15 +60,16 @@ import {
 } from './icebreakerSessionModel'
 import './index.scss'
 
-function getPhaseToastText(phase: string): string {
-  const texts: Record<string, string> = {
-    lie_detective: '真相只有一个！🕵️',
-    auction: '竞拍开始，准备好你的虚拟币！💰',
-    personality_dice: '人格骰子，看看今天的运势！🎲',
-    quip_battle: '接梗大战，接得住吗？😏',
-    undercover_word: '谁是卧底？小心别暴露！🕵️',
-    group_mirror: '团队镜像，看看大家的默契！🪞',
-    recap: '精彩回顾，今天真开心！🎉',
+function getPhaseToastText(phase: string): ReactNode {
+  const texts: Record<string, ReactNode> = {
+    lie_detective: <>真相只有一个！<JoyJoinIcon emoji='🕵️' tier='phase' size={24} /></>,
+    auction: <>竞拍开始，准备好你的虚拟币！<JoyJoinIcon emoji='💰' size={24} /></>,
+    personality_dice: <>人格骰子，看看今天的运势！<JoyJoinIcon emoji='🎲' tier='phase' size={24} /></>,
+    quip_battle: <>接梗大战，接得住吗？<JoyJoinIcon emoji='😏' size={24} /></>,
+    undercover_word: <>谁是卧底？小心别暴露！<JoyJoinIcon emoji='🕵️' tier='phase' size={24} /></>,
+    speed_friending: <>快速交友，认识新朋友！<JoyJoinIcon emoji='🤝' size={24} /></>,
+    group_mirror: <>团队镜像，看看大家的默契！<JoyJoinIcon emoji='🪞' size={24} /></>,
+    recap: <>精彩回顾，今天真开心！<JoyJoinIcon emoji='🎉' tier='reaction' size={24} /></>,
   }
   return texts[phase] || '新阶段开始啦！'
 }
@@ -78,6 +87,7 @@ export default function IcebreakerSessionPage() {
   const currentUserDisplayName = getUserDisplayName(currentUser)
   const currentUserArchetype = getUserArchetype(currentUser)
   const currentUserInterests = getUserInterests(currentUser)
+  const features = user?.features
   const [socialSessionId, setSocialSessionId] = useState<string | null>(null)
   const [bootstrapState, setBootstrapState] = useState<SocialSessionState | null>(null)
   const [bootstrapError, setBootstrapError] = useState<string | null>(null)
@@ -87,9 +97,16 @@ export default function IcebreakerSessionPage() {
   const [dismissedSuggestionAt, setDismissedSuggestionAt] = useState<string | null>(null)
   const [showPhaseIntro, setShowPhaseIntro] = useState(false)
   const [showTierSelector, setShowTierSelector] = useState(false)
-  const [phaseToast, setPhaseToast] = useState<{ visible: boolean; text: string }>({ visible: false, text: '' })
+  const [phaseToast, setPhaseToast] = useState<{ visible: boolean; text: ReactNode }>({ visible: false, text: '' })
   const startAttemptRef = useRef<string | null>(null)
   const prevPhaseRef = useRef<SessionPhase>('waiting')
+
+  // Preload CDN icon assets in parallel with session bootstrap
+  usePreloadCdnIcons([
+    ...ICEBREAKER_REACTION_ASSETS,
+    ...ICEBREAKER_REVEAL_ASSETS,
+    ...COMMON_ACHIEVEMENT_ASSETS,
+  ])
 
   const {
     data: eventSession,
@@ -303,11 +320,16 @@ export default function IcebreakerSessionPage() {
   )
 
   const handleGenerateTopics = useCallback((mood: AtmosphereMood) => {
+    setTopicsError(false)
     void performSocialAction('topics', '/topics', {
       mood,
       eventType: '活动',
       participantCount: Math.max(playerCount, 2),
       avoidTopics: [],
+    }).then((result) => {
+      if (result === null) {
+        setTopicsError(true)
+      }
     })
   }, [performSocialAction, playerCount])
 
@@ -355,9 +377,11 @@ export default function IcebreakerSessionPage() {
     })
   }, [performSocialAction, session, socialSessionId])
 
+  const [topicsError, setTopicsError] = useState(false)
+
   const handleSetTier = useCallback(
     (tier: TierMachineId) => {
-      if (!socialSessionId || pendingAction !== null) {
+      if (!socialSessionId || !session || pendingAction !== null) {
         return
       }
 
@@ -371,7 +395,7 @@ export default function IcebreakerSessionPage() {
       void apiRequest({
         path: `/api/social-icebreaker/${socialSessionId}/set-tier`,
         method: 'POST',
-        data: { tier },
+        data: { tier, vibe: session.vibe },
       })
         .then(() => {
           void socialSessionQuery.refetch()
@@ -388,11 +412,19 @@ export default function IcebreakerSessionPage() {
           setPendingAction(null)
         })
     },
-    [socialSessionId, socialSessionQuery, pendingAction],
+    [socialSessionId, session, socialSessionQuery, pendingAction],
   )
 
   const handleCompleteChallenge = useCallback(() => {
     void performSocialAction('micro-complete', '/micro-challenge/complete', {})
+  }, [performSocialAction])
+
+  const handleNextSpeedFriendingRound = useCallback(() => {
+    void performSocialAction('speed-next', '/speed-friending/next-round', {})
+  }, [performSocialAction])
+
+  const handleCompleteSpeedFriending = useCallback(() => {
+    void performSocialAction('speed-complete', '/speed-friending/complete', {})
   }, [performSocialAction])
 
   const handleGenerateStatements = useCallback(() => {
@@ -442,6 +474,14 @@ export default function IcebreakerSessionPage() {
   const handleCompleteDiceChallenge = useCallback((pass?: boolean) => {
     void performSocialAction('dice-complete', '/personality-dice/complete', { pass: pass === true })
   }, [performSocialAction])
+
+  const handleChooseDiceOption = useCallback((optionIndex: number) => {
+    void performSocialAction('dice-choose', '/personality-dice/choose', {
+      userId: currentUserId,
+      optionIndex,
+      operationId: `${currentUserId}-choose-${Date.now()}`,
+    })
+  }, [performSocialAction, currentUserId])
 
   const handleGenerateAuctionLots = useCallback(() => {
     void performSocialAction('auction-gen', '/auction/generate-lots', {})
@@ -585,7 +625,8 @@ export default function IcebreakerSessionPage() {
     phase !== 'lie_detective' &&
     phase !== 'quip_battle' &&
     phase !== 'undercover_word' &&
-    phase !== 'group_mirror' && (
+    phase !== 'group_mirror' &&
+    phase !== 'speed_friending' && (
     <View className='icebreaker__host-controls'>
       <View className='icebreaker__host-badge'>
         <View className='icebreaker__host-badge-text'>
@@ -619,6 +660,7 @@ export default function IcebreakerSessionPage() {
     'mini_script',
     'recap',
     'ended',
+    'speed_friending',
   ]
 
   const currentPlayer = session.lieDetectivePlayers?.[session.currentLieDetectivePlayerIndex ?? 0]
@@ -655,7 +697,7 @@ export default function IcebreakerSessionPage() {
             src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
             mode='aspectFit'
           />
-          <Text className='icebreaker__phase-toast-text'>{phaseToast.text}</Text>
+          <View className='icebreaker__phase-toast-text'>{phaseToast.text}</View>
         </View>
       )}
 
@@ -679,46 +721,6 @@ export default function IcebreakerSessionPage() {
               isHost={isHost}
               onAdvance={handleAdvancePhase}
             />
-            {isHost && session && (
-              <View className='icebreaker__tier-selector'>
-                <Text className='icebreaker__tier-selector-label'>
-                  选择破冰模式
-                  {pendingAction === 'set-tier' && (
-                    <Text className='icebreaker__tier-selector-label--loading'> 切换中…</Text>
-                  )}
-                </Text>
-                <View className='icebreaker__tier-options'>
-                  {([
-                    { tier: 'breeze' as const, title: '破冰局', desc: '40分钟 · 轻松暖场', tag: null },
-                    { tier: 'glow' as const, title: '畅聊局', desc: '60分钟 · 深度互动', tag: '推荐' },
-                    { tier: 'blaze' as const, title: '狂欢局', desc: '105分钟 · 全阶段体验', tag: null },
-                  ]).map((option) => {
-                    const isActive = session.eventTier === option.tier
-                    const isBusy = pendingAction === 'set-tier'
-                    return (
-                      <View
-                        key={option.tier}
-                        onClick={isBusy ? undefined : () => handleSetTier(option.tier)}
-                        hoverClass='icebreaker__tier-option--pressed'
-                        hoverStartTime={0}
-                        hoverStayTime={100}
-                        className={`icebreaker__tier-option ${isActive ? 'icebreaker__tier-option--active' : ''} ${isBusy ? 'icebreaker__tier-option--busy' : ''}`}
-                      >
-                        {option.tag && (
-                          <Text className='icebreaker__tier-option-tag'>{option.tag}</Text>
-                        )}
-                        <Text className='icebreaker__tier-option-title'>
-                          {option.title}
-                        </Text>
-                        <Text className='icebreaker__tier-option-desc'>
-                          {option.desc}
-                        </Text>
-                      </View>
-                    )
-                  })}
-                </View>
-              </View>
-            )}
             {isHost && !session?.xiaoyueSessionPack && (
               <Button
                 variant='secondary'
@@ -733,6 +735,47 @@ export default function IcebreakerSessionPage() {
           </>
         )}
 
+        {(phase === 'waiting' || phase === 'warmup') && isHost && session && (
+          <View className='icebreaker__tier-selector'>
+            <Text className='icebreaker__tier-selector-label'>
+              选择破冰模式
+              {pendingAction === 'set-tier' && (
+                <Text className='icebreaker__tier-selector-label--loading'> 切换中…</Text>
+              )}
+            </Text>
+            <View className='icebreaker__tier-options'>
+              {([
+                { tier: 'breeze' as const, title: '破冰局', desc: '40分钟 · 轻松暖场', tag: null },
+                { tier: 'glow' as const, title: '畅聊局', desc: '60分钟 · 深度互动', tag: '推荐' },
+                { tier: 'blaze' as const, title: '狂欢局', desc: '90分钟 · 全阶段体验', tag: null },
+              ]).map((option) => {
+                const isActive = session.eventTier === option.tier
+                const isBusy = pendingAction === 'set-tier'
+                return (
+                  <View
+                    key={option.tier}
+                    onClick={isBusy ? undefined : () => handleSetTier(option.tier)}
+                    hoverClass='icebreaker__tier-option--pressed'
+                    hoverStartTime={0}
+                    hoverStayTime={100}
+                    className={`icebreaker__tier-option ${isActive ? 'icebreaker__tier-option--active' : ''} ${isBusy ? 'icebreaker__tier-option--busy' : ''}`}
+                  >
+                    {option.tag && (
+                      <Text className='icebreaker__tier-option-tag'>{option.tag}</Text>
+                    )}
+                    <Text className='icebreaker__tier-option-title'>
+                      {option.title}
+                    </Text>
+                    <Text className='icebreaker__tier-option-desc'>
+                      {option.desc}
+                    </Text>
+                  </View>
+                )
+              })}
+            </View>
+          </View>
+        )}
+
         {phase === 'warmup' && session && (
           <WarmupPhaseView
             topics={session.warmupTopics ?? []}
@@ -742,6 +785,8 @@ export default function IcebreakerSessionPage() {
             currentUserId={currentUserId}
             selectedMood={session.selectedMood}
             isHost={isHost}
+            vibe={apiVibeToClient(session.vibe)}
+            archetypeMixText={session.archetypeMixText}
             onGenerateTopics={handleGenerateTopics}
             onToggleReady={handleToggleWarmupReady}
             onNextTopic={handleNextWarmupTopic}
@@ -750,6 +795,7 @@ export default function IcebreakerSessionPage() {
             isUpdatingReady={pendingAction === 'warmup-ready'}
             isAdvancingTopic={pendingAction === 'warmup-next-topic'}
             isAdvancing={pendingAction === 'advance'}
+            topicsError={topicsError}
           />
         )}
 
@@ -851,6 +897,11 @@ export default function IcebreakerSessionPage() {
             onComplete={handleCompleteDiceChallenge}
             isGenerating={pendingAction === 'dice-generate'}
             isCompleting={pendingAction === 'dice-complete'}
+            chooseModeEnabled={features?.personalityDiceChooseMode ?? false}
+            challengeGroups={session.personalityDiceChallengeGroups ?? []}
+            selectedOption={session.diceSelectedOption ?? {}}
+            onChoose={handleChooseDiceOption}
+            isChoosing={pendingAction === 'dice-choose'}
           />
         )}
 
@@ -906,6 +957,22 @@ export default function IcebreakerSessionPage() {
             participants={participants}
             onAdvance={handleAdvancePhase}
             isAdvancing={pendingAction === 'advance'}
+          />
+        )}
+
+        {phase === 'speed_friending' && session && (
+          <SpeedFriendingPhaseView
+            pairs={session.speedFriendingPairs ?? []}
+            currentRound={session.speedFriendingCurrentRound ?? 0}
+            totalRounds={session.speedFriendingTotalRounds ?? 0}
+            roundStartedAt={session.speedFriendingRoundStartedAt}
+            allRoundsComplete={session.speedFriendingAllRoundsComplete ?? false}
+            participants={participants}
+            currentUserId={currentUserId}
+            isHost={isHost}
+            onNextRound={handleNextSpeedFriendingRound}
+            onComplete={handleCompleteSpeedFriending}
+            isLoading={pendingAction === 'speed-next' || pendingAction === 'speed-complete'}
           />
         )}
 

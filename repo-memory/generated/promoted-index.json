@@ -6,7 +6,7 @@
       "active"
     ]
   },
-  "noteCount": 5,
+  "noteCount": 6,
   "notes": [
     {
       "id": "repo.frontend.design-audit-integration",
@@ -213,31 +213,107 @@
       ]
     },
     {
-      "id": "test.orchestration.memory-stage-promote-flow",
-      "title": "Memory Stage Promote Flow Test",
+      "id": "repo.personality.matcherv2-confusion-classifiers",
+      "title": "MatcherV2 Confusion-Aware Classifiers",
       "status": "active",
-      "owner": "workflow-platform",
-      "lastValidatedAt": "2026-04-14",
+      "owner": "personality-engine",
+      "lastValidatedAt": "2026-05-27",
       "tags": [
-        "orchestration",
-        "tests"
+        "personality-test",
+        "matcherV2",
+        "confusion-pair",
+        "archetype",
+        "classification"
       ],
       "triggerTerms": [
-        "candidate promote flow test",
-        "stage candidate promote memory"
+        "matcherV2 confusion",
+        "elephant turtle",
+        "dolphin spider",
+        "confusion aware classifier",
+        "archetype misclassification",
+        "matcher veto"
       ],
       "relatedPaths": [
-        ".github/ORCHESTRATION.md",
-        "scripts/orchestration/orchestration-supervisor.mjs"
+        "packages/shared/src/personality/matcherV2.ts",
+        "packages/shared/src/personality/matcherV2Gates.ts"
       ],
       "sources": [
-        ".github/ORCHESTRATION.md",
-        "scripts/orchestration/orchestration-supervisor.mjs"
+        "docs/systems/PERSONALITY_TEST_SYSTEM.md",
+        "packages/shared/src/personality/matcherV2.ts"
       ],
-      "confidence": "medium",
-      "path": "repo-memory/promoted/__tests__/memory-stage-promote-flow.md",
+      "confidence": "high",
+      "path": "repo-memory/promoted/matcherv2-confusion-classifiers.md",
       "statements": [
-        "Test-only candidate note used to verify deterministic candidate staging and promotion."
+        "## Summary",
+        "MatcherV2 uses dedicated confusion-aware classifiers for historically misclassified archetype pairs. As of 2026-05-27, five pairs are handled in `applyConfusionAwareClassifier` with trait-specific differentiators and veto hardening.",
+        "### Handled confusion pairs",
+        "1. **小太阳鸡 vs 机灵海豚** (`rooster,dolphin_calm`) — P-gap differentiator",
+        "2. **好奇猫头鹰 vs 慢热龟** (`owl,turtle`) — O-gap differentiator",
+        "3. **树洞考拉 vs 机灵海豚** (`koala,dolphin_calm`) — A-gap differentiator",
+        "4. **靠谱大象 vs 慢热龟** (`elephant,turtle`) — A/P/X differentiators (2026-05-27)",
+        "5. **机灵海豚 vs 人脉蛛** (`dolphin_calm,spider`) — E/C/X differentiators (2026-05-27)",
+        "### Veto hardening (2026-05-27)",
+        "**慢热龟**: penalizes high-A (`≥70 → 0.5×`) and high-P (`≥58 → 0.6×`)",
+        "**靠谱大象**: penalizes very-low-X (`<32 → 0.5×`) and very-low-P (`<38 → 0.6×`)",
+        "**人脉蛛**: penalizes high-E (`≥78 → 0.5×`)",
+        "### Gate threshold fix",
+        "`elephant` gate threshold lowered from `A≥72` (above elephant's actual A=70, never triggered) to `A≥68` (2026-05-27).",
+        "### Historical context",
+        "Pre-fix simulation showed ~80% direct accuracy vs V1's 100%. Known misclassifications `turtle→elephant` and `dolphin_calm→spider` are now addressed with dedicated classifiers."
+      ]
+    },
+    {
+      "id": "repo.personality.split-brain-prevention",
+      "title": "Personality Test Split-Brain Prevention Pattern",
+      "status": "active",
+      "owner": "mini-program-platform",
+      "lastValidatedAt": "2026-05-27",
+      "tags": [
+        "personality-test",
+        "archetype",
+        "split-brain",
+        "validation",
+        "results"
+      ],
+      "triggerTerms": [
+        "personality test mismatch",
+        "slot animation wrong archetype",
+        "split brain",
+        "finalResult validation",
+        "archetype drift",
+        "displayArchetype mismatch"
+      ],
+      "relatedPaths": [
+        "apps/mini-program/src/pages/onboarding/personality-test/results/index.tsx",
+        "apps/mini-program/src/pages/onboarding/personality-test/index.tsx",
+        "apps/server/src/routes/domains/assessmentV4.ts",
+        "apps/mini-program/src/pages/onboarding/personality-test/visuals.ts"
+      ],
+      "sources": [
+        "docs/systems/PERSONALITY_TEST_SYSTEM.md",
+        "apps/mini-program/src/pages/onboarding/personality-test/results/index.tsx"
+      ],
+      "confidence": "high",
+      "path": "repo-memory/promoted/split-brain-prevention.md",
+      "statements": [
+        "## Summary",
+        "The personality test results flow has a split-brain prevention pattern that ensures the slot animation and the result page always show the same archetype.",
+        "### Root causes of historical mismatches",
+        "1. **CDN spritesheet staleness** — The slot machine loaded a CDN spritesheet that could be cached/stale, causing the animation grid to differ from the result page's expectation.",
+        "2. **`finalResult` discarded** — `completeAnonymousAssessment` was saving `result: null` instead of the server's `finalResult`, causing the client to compute divergent fallbacks.",
+        "### Prevention measures (2026-05-27)",
+        "**Local spritesheet only**: `getArchetypeSpritesheetLocalPath()` returns `/pages/onboarding/assets/archetypes/archetype-spritesheet.webp` (onboarding subpackage). CDN path exists only as emergency fallback.",
+        "**Server validation**: `validateFinalResult()` in `assessmentV4.ts` checks that `primaryArchetype` is a valid string in `ARCHETYPE_NAMES` before persisting. Invalid results fall back to `'corgi'` and log an error.",
+        "**Client hard validation**: `isValidFinalResult()` blocks transition to results with an error toast if `primaryArchetype` is missing or invalid.",
+        "**Unified fallback chain**: Both slot target and display archetype use identical resolution:",
+        "```",
+        "resolvedResult.result.primaryArchetype",
+        "→ sessionSnapshot.result.primaryArchetype",
+        "→ topMatches[0].archetype",
+        "→ 'corgi'",
+        "```",
+        "**Telemetry**: Client logs `[PersonalityResults] SPLIT_BRAIN_DETECTED` when slot target ≠ display archetype. Server logs divergence between `currentMatches[0]` and `finalResult.primaryArchetype` with top-3 scores.",
+        "**GET /result guard**: Returns `500` \"Result data is incomplete\" if `session.finalResult` is null/malformed, rather than violating the client's `NonNullable` assumption."
       ]
     }
   ]

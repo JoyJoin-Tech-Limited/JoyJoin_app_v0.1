@@ -125,6 +125,17 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Education options reorder/rename:** `职业培训` → `中专`; canonical order now 博士→硕士→本科→大专→中专→高中及以下 in `EDUCATION_LEVEL_OPTIONS`. Matching algorithm `EDUCATION_ORDINAL` updated (中专/大专 share tier 1). Inference synonym bug fixed (`研究生` → `硕士`).
 - **Matching algorithm docs synced:** `PRODUCT_REQUIREMENTS.md` §3.4 stale 5D/4D pseudocode replaced with canonical 6D/7D reference table; `docs/systems/MATCHING_ALGORITHM_REFERENCE.md` education scoring corrected to piecewise formula.
 
+**33. Personality Test Split-Brain Fix & Accessibility Sprint** 🧠 *(2026-05-27)*
+- **Split-brain root cause fixed:** The slot machine animation and result page were showing different archetypes due to (1) CDN spritesheet loading instead of the local bundle, and (2) `completeAnonymousAssessment` discarding the server's `finalResult`. Both paths now use identical resolution logic (`resolvedResult.result.primaryArchetype → sessionSnapshot.result.primaryArchetype → topMatches[0].archetype → 'corgi'`).
+- **Local spritesheet enforcement:** `getArchetypeSpritesheetLocalPath()` returns the local onboarding-subpackage path (`/pages/onboarding/assets/archetypes/archetype-spritesheet.webp`) instead of a CDN URL, eliminating CDN staleness as a mismatch source.
+- **Server result validation:** `validateFinalResult()` in `assessmentV4.ts` validates `primaryArchetype` exists and is a known archetype ID before persisting; falls back to `'corgi'` and logs an error if invalid. GET `/api/assessment/v4/result` returns `500` with "Result data is incomplete" when `finalResult` is null/malformed.
+- **Client hard validation:** `isValidFinalResult()` blocks transition to results with an error toast if the server result is missing or contains an invalid `primaryArchetype`.
+- **Telemetry:** Both client (`SPLIT_BRAIN_DETECTED` log) and server (divergence log with top-3 scores) emit telemetry when `currentMatches[0]` diverges from `finalResult.primaryArchetype`.
+- **MatcherV2 confusion classifiers added:** Dedicated `classifyElephantVsTurtle` (A/P/X differentiators) and `classifyDolphinVsSpider` (E/C/X differentiators) methods added to `applyConfusionAwareClassifier`. Veto rules hardened: turtle penalizes high-A (≥70 → 0.5×) and high-P (≥58 → 0.6×); elephant penalizes very-low-X (<32 → 0.5×) and very-low-P (<38 → 0.6×); spider penalizes high-E (≥78 → 0.5×). Elephant gate threshold corrected from `A≥72` (above elephant's actual A=70) to `A≥68`.
+- **Accessibility — reduced motion:** The results page reads `Taro.getSystemInfoSync().reduceMotion` and skips the slot animation entirely when enabled. CSS `@media (prefers-reduced-motion: reduce)` and a JS-driven `.personality-results--reduce-motion` class suppress shimmer, stagger, and tilt animations.
+- **Accessibility — error announcement:** `ErrorStage` adds `aria-live="polite"` and `role="alert"` so screen readers announce sync failures.
+- **UX — retry tooltip:** Error-state retry button shows helper text "网络波动时可能需要多试一次" to reduce user uncertainty.
+
 ### 2026 Milestones (Mar–Apr 2026)
 
 **14. Matching-State UI System** 🎨 *(PRs #387–#391, 2026-03-27 to 2026-04-01)*

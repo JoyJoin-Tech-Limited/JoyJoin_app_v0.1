@@ -1,7 +1,7 @@
 # JoyJoin Developer Quick Reference Guide
 
-**Version:** 2.2  
-**Last Updated:** 2026-05-22  
+**Version:** 2.3  
+**Last Updated:** 2026-05-27  
 **For:** Tech Team Onboarding & Codebase Navigation
 
 ---
@@ -26,7 +26,7 @@
 - **`会员 / VIP会员`** user-facing copy — replaced by `权益`
 - Any reference to the **`shared/` root folder** as the import source — use `packages/shared/src/` instead
 - The **`/guide` page** as a core onboarding step — **removed**; the active onboarding steps after WeChat login are `/onboarding/setup`, `/onboarding/extended`, and `/onboarding/review`, then directly to `/discover`
-- **Demo code `666666`** and `createDemoDataForUser` in production — gated on `NODE_ENV !== 'production'`
+- **Demo code `666666`** — legacy phone-based login. Mini-program uses WeChat auth (`微信一键登录`) exclusively. Dev API testing uses `POST /api/auth/dev-login` (development-only). `createDemoDataForUser` in production — gated on `NODE_ENV !== 'production'`
 
 ### If you are unsure whether something is active or legacy:
 1. Check whether the file/route/component is imported and used in an active entry point (`AdminApp.tsx` for admin, `app.ts` for mini-program) or an active page.
@@ -332,7 +332,7 @@ interface UseAuthResult {
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    Authenticated - Needs Essential Data             │
 ├─────────────────────────────────────────────────────────────────────┤
-│  /onboarding/setup   → EssentialDataPage (7 steps)                  │
+│  /onboarding/setup   → EssentialDataPage (5 FormStepper steps)      │
 │  *                   → Redirects to /onboarding/setup               │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
@@ -377,6 +377,17 @@ The client **never** computes its own onboarding position. `nextStep` is always 
 | `extended-data` | `/onboarding/extended` | `hasCompletedInterestsCarousel` (users table) |
 | `profile-review` | `/onboarding/review` | `hasSeenProfileReview` (users table) |
 | `discover` | `/discover` | `onboardingCheckpoint === 'discover'` |
+
+#### Onboarding Step Field Map (single source of truth)
+
+| Step (`nextStep`) | Page | Route | Collects |
+|---|---|---|---|
+| `personality-test` | 氛围测试 | `/personality-test` | V4 adaptive questions (8–16) → archetype assigned |
+| `essential-data` | 基本资料 | `/onboarding/setup` | displayName, gender, birthYear, currentCity, hometown, education, occupation (chat overlay), workMode, relationshipStatus, intent (up to 3) |
+| `extended-data` | 兴趣偏好 | `/onboarding/extended` | 3-tier interest selections (min 3, max 10) across 5 categories |
+| `profile-review` | 资料预览 | `/onboarding/review` | Read-only summary — collects nothing new |
+
+Note: Voice quiz is not part of the onboarding flow. Archetype is assigned during `personality-test` results, not re-collected on `essential-data`.
 
 Pre-auth value-first entry remains `/personality-test` → `/personality-test/results` (inline WeChat login); once the user is authenticated, routing authority switches to server-returned `nextStep`.
 
@@ -490,7 +501,7 @@ The PRIMARY icebreaking experience for matched groups is the **Social Icebreaker
 - API: `/api/social-icebreaker/*` (mounted in `routes/domains/icebreaker.ts`)
 - Component: `IcebreakerSessionPage` (web); `apps/mini-program/src/pages/icebreaker-session/` (mini-program)
 - Hook: `useSocialIcebreaker`
-- Phases: governed by tier-based run plans — `breeze` (破冰局, 40min casual), `glow` (畅聊局, 60min standard), `blaze` (狂欢局, 90min full). Default enabled set is MVP (`warmup`, `micro_challenge`, `lie_detective`) **plus** `personality_dice` unless tier selection adds fan-out phases. Tier machine ID (`breeze`/`glow`/`blaze`) is decoupled from display name via `packages/shared/src/socialIcebreakerTierManifest.ts`. See `docs/deliberations/2026-04-29-tier-naming-mascot-rebrand-consensus.md`.
+- Phases: governed by tier-based run plans — `breeze` (破冰局, 40min casual), `glow` (畅聊局, 60min standard), `blaze` (狂欢局, 90min full). Host also selects vibe: `深聊` (deep_chat, connection-first, longer warmup with 3-tier prompts), `均衡` (balanced, standard mix), `暢玩` (play_fun, energy-first, shorter warmup). Default enabled set is MVP (`warmup`, `micro_challenge`, `lie_detective`) **plus** `personality_dice` unless tier selection adds fan-out phases. Tier machine ID (`breeze`/`glow`/`blaze`) is decoupled from display name via `packages/shared/src/socialIcebreakerTierManifest.ts`. Vibe resolved via `packages/shared/src/runPlanCompiler.ts`. Feature-flagged: `RUN_PLAN_TEMPLATES_ENABLED`. See `docs/deliberations/2026-04-29-tier-naming-mascot-rebrand-consensus.md` and `docs/icebreaker/icebreaker-system.md`.
 - **Lie Detective V2:** `LIE_DETECTIVE_MODE=v2` switches to user-tag-based gameplay (2 tags + AI fake). V1 (AI-fabricated statements) remains default. Design spec: `docs/icebreaker/icebreaker-system.md`.
 - **Moment Card server render:** `GET /api/social-icebreaker/:id/moment-card.png` returns a 640×1040 PNG via `@napi-rs/canvas` when `SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER=true`.
 - **Bonus gate:** when `mini_script` would be next, phase advance pauses at a host+player vote gate (`bonusGateOffered`) if `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT=true`. Routes: `POST .../bonus/respond` (host), `POST .../bonus/sentiment` (player).
@@ -1141,6 +1152,8 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | `EMBEDDING_MODEL` | Model ID passed to embedding API (default `granite-embedding-97m-multilingual-r2`) |
 | `EMBEDDING_TIMEOUT_MS` | Embedding API call timeout (default: 10000) |
 | `EMBEDDING_MAX_RETRIES` | Embedding API retry count (default: 2) |
+| `RUN_PLAN_TEMPLATES_ENABLED` | `true` enables template-driven run plan compiler **and** the 3×3 vibe grid UX (`深聊`/`均衡`/`暢玩`). When `false`, legacy `compileAgentRunPlan()` runs unchanged and clients hide the vibe selector. Server queries DB `run_plan_templates` with `TEMPLATE_DEFAULTS` fallback | `false` |
+| `PERSONALITY_DICE_CHOOSE_MODE_ENABLED` | `true` enables Choose-Your-Prompt variant: 3 difficulty-tiered dares per player, player picks one. `false` retains original single-dare flow |
 
 ### Auto-Populated (via Replit)
 

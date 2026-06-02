@@ -4,6 +4,7 @@ import type {
   LieDetectiveStatement,
   AtmosphereMood,
   PersonalityDiceChallenge,
+  PersonalityDiceChallengeGroup,
   SocialTopicDepthLevel,
   SocialTopicPromptStyle,
   SocialTopicSafety,
@@ -29,6 +30,7 @@ import {
   buildXiaoYueCommentPrompt,
   buildRecapSummaryPrompt,
   buildPersonalityDicePrompt,
+  buildPersonalityDicePromptV4,
   buildAuctionLotsPrompt,
   buildMiniScriptFrameworkUserMessage,
   buildXiaoyueSessionPackPrompt,
@@ -37,11 +39,13 @@ import {
   buildGroupMirrorPrompt,
   MINISCRIPT_FRAMEWORK_SYSTEM,
   WARMUP_TOPICS_PROMPT_VERSION,
+  WARMUP_TOPICS_V3_PROMPT_VERSION,
   MICRO_CHALLENGES_PROMPT_VERSION,
   LIE_DETECTIVE_PROMPT_VERSION,
   LIE_DETECTIVE_V2_PROMPT_VERSION,
   RECAP_SUMMARY_PROMPT_VERSION,
   PERSONALITY_DICE_PROMPT_VERSION,
+  PERSONALITY_DICE_CHOOSE_PROMPT_VERSION,
   AUCTION_LOTS_PROMPT_VERSION,
   MINI_SCRIPT_FRAMEWORK_PROMPT_VERSION,
   SESSION_PACK_PROMPT_VERSION,
@@ -126,7 +130,7 @@ function normalizeTopicSafety(value: unknown): SocialTopicSafety {
 }
 
 function normalizeSocialTopic(topic: Partial<SocialTopic>, fallbackMood: AtmosphereMood, index: number): SocialTopic {
-  return {
+  const base: SocialTopic = {
     id: topic.id || `topic_${index + 1}`,
     question: topic.question || '分享一件让你会心一笑的小事',
     mood: topic.mood || fallbackMood,
@@ -136,6 +140,14 @@ function normalizeSocialTopic(topic: Partial<SocialTopic>, fallbackMood: Atmosph
     promptStyle: normalizeTopicPromptStyle(topic.promptStyle),
     safety: normalizeTopicSafety(topic.safety),
   };
+  if (topic.promptTiers?.opener && topic.promptTiers?.followUp && topic.promptTiers?.reflection) {
+    base.promptTiers = {
+      opener: String(topic.promptTiers.opener).slice(0, 30),
+      followUp: String(topic.promptTiers.followUp).slice(0, 40),
+      reflection: String(topic.promptTiers.reflection).slice(0, 50),
+    };
+  }
+  return base;
 }
 
 // ============ CURATED FALLBACK CONTENT ============
@@ -255,6 +267,19 @@ const FALLBACK_LIE_DETECTIVE_STATEMENTS: LieDetectiveStatement[][] = [
 
 // ============ AI GENERATORS ============
 
+function getTargetTopicCount(vibe?: 'chat' | 'balanced' | 'game'): number {
+  switch (vibe) {
+    case 'chat': return 6;
+    case 'game': return 4;
+    case 'balanced':
+    default: return 5;
+  }
+}
+
+function getPromptVersionForVibe(vibe?: 'chat' | 'balanced' | 'game'): string {
+  return vibe === 'chat' ? WARMUP_TOPICS_V3_PROMPT_VERSION : WARMUP_TOPICS_PROMPT_VERSION;
+}
+
 export async function generateWarmupTopics(params: {
   mood: AtmosphereMood;
   eventType: string;
@@ -262,10 +287,18 @@ export async function generateWarmupTopics(params: {
   avoidTopics?: string[];
   _refinementHint?: string;
   roster?: Array<{ archetype?: string }>;
+  /** Vibe drives card count, depth curve, and tier generation. */
+  vibe?: 'chat' | 'balanced' | 'game';
 }): Promise<AIServiceResult<SocialTopic[]>> {
   const aiCorrelationId = createAiCorrelationId();
   const { client, model, provider } = getClientForFunction('generateWarmupTopics');
   const t0 = Date.now();
+  const promptVersion = getPromptVersionForVibe(params.vibe);
+
+  // 3s timeout for warmup generation (LLM safety)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3000);
+
   try {
     const sessionContext = params.roster ? buildArchetypeContext(params.roster) : undefined;
     if (sessionContext?.mixText) {
@@ -277,53 +310,58 @@ export async function generateWarmupTopics(params: {
       model,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.9,
-      max_tokens: 500,
-    });
+      max_tokens: params.vibe === 'chat' ? 1200 : 500,
+    }, { signal: controller.signal });
 
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {
-      const meta = buildFallbackAIMeta('empty_response', WARMUP_TOPICS_PROMPT_VERSION, aiCorrelationId);
+      const meta = buildFallbackAIMeta('empty_response', promptVersion, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return { data: getFallbackTopics(params.mood), meta };
+      return { data: getFallbackTopics(params.mood, params.vibe), meta };
     }
 
     const parsed = JSON.parse(content);
     if (Array.isArray(parsed) && parsed.length > 0) {
       const latencyMs = Date.now() - t0;
-      logger.info(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${latencyMs}ms`);
-      const meta = buildLiveAIMeta(provider, WARMUP_TOPICS_PROMPT_VERSION, aiCorrelationId);
+      logger.info(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${latencyMs}ms vibe=${params.vibe ?? 'balanced'}`);
+      const meta = buildLiveAIMeta(provider, promptVersion, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
       fireAndForgetQualityGate(content, 'icebreaker_warmup', aiCorrelationId, 'warmup', params.eventType);
+      const targetCount = getTargetTopicCount(params.vibe);
       return {
-        data: parsed.slice(0, 5).map((topic, index) => normalizeSocialTopic(topic, params.mood, index)),
+        data: parsed.slice(0, targetCount + 1).map((topic, index) => normalizeSocialTopic(topic, params.mood, index)),
         meta,
       };
     }
     const latencyMs = Date.now() - t0;
     logger.warn(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${latencyMs}ms: invalid response shape, using fallback`);
-    const meta = buildFallbackAIMeta('parse_error', WARMUP_TOPICS_PROMPT_VERSION, aiCorrelationId);
+    const meta = buildFallbackAIMeta('parse_error', promptVersion, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: getFallbackTopics(params.mood), meta };
+    return { data: getFallbackTopics(params.mood, params.vibe), meta };
   } catch (error) {
     const latencyMs = Date.now() - t0;
-    logger.error(`[SocialIcebreakerAI] generateWarmupTopics error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
-    const meta = buildFallbackAIMeta('llm_error', WARMUP_TOPICS_PROMPT_VERSION, aiCorrelationId);
+    const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message?.includes('abort'));
+    logger.error(`[SocialIcebreakerAI] generateWarmupTopics error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error), isTimeout });
+    const meta = buildFallbackAIMeta(isTimeout ? 'timeout' : 'llm_error', promptVersion, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: getFallbackTopics(params.mood), meta };
+    return { data: getFallbackTopics(params.mood, params.vibe), meta };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
-function getFallbackTopics(mood: AtmosphereMood): SocialTopic[] {
+function getFallbackTopics(mood: AtmosphereMood, vibe?: 'chat' | 'balanced' | 'game'): SocialTopic[] {
+  const targetCount = getTargetTopicCount(vibe);
   const filtered = FALLBACK_WARMUP_TOPICS.filter(t => t.mood === mood);
   const shuffled = [...filtered].sort(() => Math.random() - 0.5);
   // If not enough for this mood, supplement with others
-  if (shuffled.length < 5) {
+  if (shuffled.length < targetCount) {
     const others = FALLBACK_WARMUP_TOPICS.filter(t => t.mood !== mood)
       .sort(() => Math.random() - 0.5)
-      .slice(0, 5 - shuffled.length);
+      .slice(0, targetCount - shuffled.length);
     return [...shuffled, ...others].map((topic, index) => normalizeSocialTopic(topic, mood, index));
   }
-  return shuffled.slice(0, 5).map((topic, index) => normalizeSocialTopic(topic, mood, index));
+  return shuffled.slice(0, targetCount).map((topic, index) => normalizeSocialTopic(topic, mood, index));
 }
 
 function isMicroChallengeLlmEnabled(): boolean {
@@ -954,6 +992,7 @@ const FALLBACK_SESSION_PACK: XiaoyueSessionPack = {
     quip_battle: { toneLine: '填空造句，秀出你的脑洞', hostHint: '越无厘头越好，没有标准答案' },
     undercover_word: { toneLine: '谁是卧底，仔细观察', hostHint: '描述别太明显，也别太模糊' },
     group_mirror: { toneLine: '匿名投票，看看大家眼中的你', hostHint: '轻松投，没有对错' },
+    speed_friending: { toneLine: '快速轮转，每人三分钟', hostHint: '铃响就换人，别恋战' },
     recap: { toneLine: '差不多了，回顾一下今晚' },
   },
   backupPrompts: [
@@ -1236,6 +1275,257 @@ export async function generatePersonalityDiceChallenges(params: {
     logger.error(`[SocialIcebreakerAI] generatePersonalityDiceChallenges error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
     const meta = buildFallbackAIMeta('llm_error', PERSONALITY_DICE_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generatePersonalityDiceChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    return { data: fallbacks, meta };
+  }
+}
+
+// ─── Personality Dice V4 (Choose-Your-Prompt) ─────────────────────────────────
+
+/** Build group fallback using the v2 curated dare bank — all 3 dares per archetype. */
+function buildArchetypeFallbackGroup(
+  p: { userId: string; displayName: string; archetype?: string; traitScores?: Record<string, number> },
+): PersonalityDiceChallengeGroup {
+  const trait = getDominantTrait(p.traitScores);
+  const dares = getDaresForArchetype(p.archetype || 'corgi');
+  const options: PersonalityDiceChallenge[] = dares.map((dare) => ({
+    userId: p.userId,
+    displayName: p.displayName,
+    archetype: p.archetype,
+    dominantTrait: trait,
+    challengeTitle: dare.title,
+    challengeBody: dare.body,
+    challengeEmoji: dare.emoji,
+    difficulty: dare.difficulty === 'easy' ? 'easy' : dare.difficulty === 'medium' ? 'medium' : 'hard',
+    passLine: dare.passLine,
+    passConsequence: dare.passConsequence,
+  }));
+  return {
+    userId: p.userId,
+    displayName: p.displayName,
+    archetype: p.archetype,
+    dominantTrait: trait,
+    options,
+  };
+}
+
+const EXPECTED_DIFFICULTIES: ['easy', 'medium', 'hard'] = ['easy', 'medium', 'hard'];
+
+function validateDiceV4Groups(
+  parsed: unknown,
+  participantCount: number,
+): parsed is Array<Array<Record<string, unknown>>> {
+  if (!Array.isArray(parsed)) return false;
+  if (parsed.length !== participantCount) return false;
+  for (const group of parsed) {
+    if (!Array.isArray(group)) return false;
+    if (group.length !== 3) return false;
+    const difficulties = group.map((item: any) => item?.difficulty);
+    if (
+      difficulties[0] !== EXPECTED_DIFFICULTIES[0] ||
+      difficulties[1] !== EXPECTED_DIFFICULTIES[1] ||
+      difficulties[2] !== EXPECTED_DIFFICULTIES[2]
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export async function generatePersonalityDiceChallengeGroups(params: {
+  participants: Array<{
+    userId: string;
+    displayName: string;
+    archetype?: string;
+    traitScores?: Record<string, number>;
+  }>;
+  _refinementHint?: string;
+}): Promise<AIServiceResult<PersonalityDiceChallengeGroup[]>> {
+  const aiCorrelationId = createAiCorrelationId();
+  const { participants } = params;
+
+  // Build archetype-aware fallbacks first (3 dares per player from curated bank)
+  const fallbacks: PersonalityDiceChallengeGroup[] = participants.map((p) =>
+    buildArchetypeFallbackGroup(p),
+  );
+
+  const sessionContext = buildArchetypeContext(participants);
+  if (sessionContext?.mixText) {
+    logAITrace({
+      traceId: aiCorrelationId,
+      domain: 'icebreaker',
+      feature: 'contextInjector',
+      provider: null,
+      model: 'n/a',
+      latencyMs: 0,
+      success: true,
+      fallbackUsed: false,
+      fromCache: false,
+      promptVersion: 'context-injector-v1',
+      extra: {
+        mixText: sessionContext.mixText,
+        diversityScore: sessionContext.diversityScore,
+      },
+    });
+  }
+
+  const { client, model, provider } = getClientForFunction('generatePersonalityDiceChallengeGroups');
+  const t0 = Date.now();
+  try {
+    const participantList = participants.map((p) => ({
+      displayName: p.displayName,
+      archetype: p.archetype || '未知',
+      dominantTrait: getDominantTrait(p.traitScores),
+    }));
+
+    const prompt = buildPersonalityDicePromptV4({
+      participants: participantList,
+      _refinementHint: params._refinementHint,
+      sessionContext,
+    });
+
+    const response = await client.chat.completions.create({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.85,
+      max_tokens: 800,
+    });
+
+    const content = response.choices[0]?.message?.content?.trim();
+    if (!content) {
+      const meta = buildFallbackAIMeta('empty_response', PERSONALITY_DICE_CHOOSE_PROMPT_VERSION);
+      logAITrace({
+        domain: 'icebreaker',
+        feature: 'generatePersonalityDiceChallengeGroups',
+        provider,
+        model,
+        latencyMs: Date.now() - t0,
+        success: false,
+        fallbackUsed: true,
+        fromCache: false,
+        promptVersion: meta.promptVersion,
+        errorCode: meta.evaluatorRejectionReason,
+      });
+      return { data: fallbacks, meta };
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(extractJsonPayloadForParse(content));
+    } catch {
+      const latencyMs = Date.now() - t0;
+      logger.warn(
+        `[SocialIcebreakerAI] generatePersonalityDiceChallengeGroups provider=${provider} latency=${latencyMs}ms: JSON parse failed, using fallback`,
+      );
+      const meta = buildFallbackAIMeta('parse_error', PERSONALITY_DICE_CHOOSE_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({
+        traceId: aiCorrelationId,
+        domain: 'icebreaker',
+        feature: 'generatePersonalityDiceChallengeGroups',
+        provider,
+        model,
+        latencyMs,
+        success: false,
+        fallbackUsed: true,
+        fromCache: false,
+        promptVersion: meta.promptVersion,
+        errorCode: meta.evaluatorRejectionReason,
+      });
+      return { data: fallbacks, meta };
+    }
+
+    // Validate: correct number of groups, each with exactly 3 diff-ordered options
+    if (validateDiceV4Groups(parsed, participants.length)) {
+      const latencyMs = Date.now() - t0;
+      logger.info(
+        `[SocialIcebreakerAI] generatePersonalityDiceChallengeGroups provider=${provider} latency=${latencyMs}ms`,
+      );
+      const meta = buildLiveAIMeta(provider, PERSONALITY_DICE_CHOOSE_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({
+        traceId: aiCorrelationId,
+        domain: 'icebreaker',
+        feature: 'generatePersonalityDiceChallengeGroups',
+        provider,
+        model,
+        latencyMs,
+        success: true,
+        fallbackUsed: false,
+        fromCache: false,
+        promptVersion: meta.promptVersion,
+      });
+      fireAndForgetQualityGate(
+        content,
+        'icebreaker_personality_dice',
+        aiCorrelationId,
+        'personality_dice',
+      );
+
+      const result: PersonalityDiceChallengeGroup[] = participants.map((p, i) => {
+        const group = (parsed as Array<Array<Record<string, unknown>>>)[i];
+        const fallbackGroup = fallbacks[i];
+        return {
+          userId: p.userId,
+          displayName: p.displayName,
+          archetype: p.archetype,
+          dominantTrait: getDominantTrait(p.traitScores),
+          options: group.map((item: Record<string, unknown>, j: number) => ({
+            userId: p.userId,
+            displayName: p.displayName,
+            archetype: p.archetype,
+            dominantTrait: getDominantTrait(p.traitScores),
+            challengeTitle: String(item.challengeTitle ?? fallbackGroup.options[j].challengeTitle),
+            challengeBody: String(item.challengeBody ?? fallbackGroup.options[j].challengeBody),
+            challengeEmoji: String(item.challengeEmoji ?? fallbackGroup.options[j].challengeEmoji),
+            difficulty: (['easy', 'medium', 'hard'] as const)[j],
+            passLine: item.passLine != null ? String(item.passLine) : fallbackGroup.options[j].passLine,
+            passConsequence:
+              item.passConsequence != null
+                ? String(item.passConsequence)
+                : fallbackGroup.options[j].passConsequence,
+          })),
+        };
+      });
+      return { data: result, meta };
+    }
+
+    const latencyMs = Date.now() - t0;
+    logger.warn(
+      `[SocialIcebreakerAI] generatePersonalityDiceChallengeGroups provider=${provider} latency=${latencyMs}ms: invalid response shape (expected ${participants.length} groups × 3), using fallback`,
+    );
+    const meta = buildFallbackAIMeta('parse_error', PERSONALITY_DICE_CHOOSE_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({
+      traceId: aiCorrelationId,
+      domain: 'icebreaker',
+      feature: 'generatePersonalityDiceChallengeGroups',
+      provider,
+      model,
+      latencyMs,
+      success: false,
+      fallbackUsed: true,
+      fromCache: false,
+      promptVersion: meta.promptVersion,
+      errorCode: meta.evaluatorRejectionReason,
+    });
+    return { data: fallbacks, meta };
+  } catch (error) {
+    const latencyMs = Date.now() - t0;
+    logger.error(
+      `[SocialIcebreakerAI] generatePersonalityDiceChallengeGroups error provider=${provider} latency=${latencyMs}ms:`,
+      { error: error instanceof Error ? error.message : String(error) },
+    );
+    const meta = buildFallbackAIMeta('llm_error', PERSONALITY_DICE_CHOOSE_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({
+      traceId: aiCorrelationId,
+      domain: 'icebreaker',
+      feature: 'generatePersonalityDiceChallengeGroups',
+      provider,
+      model,
+      latencyMs,
+      success: false,
+      fallbackUsed: true,
+      fromCache: false,
+      promptVersion: meta.promptVersion,
+      errorCode: meta.evaluatorRejectionReason,
+    });
     return { data: fallbacks, meta };
   }
 }

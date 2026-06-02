@@ -18,6 +18,7 @@ import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { COLOR_ACCENT_PINK, TOAST_MEDIUM_MS, TOAST_ERROR_MS } from '../../lib/utils/uiConstants'
 import LoadingScreen from '../../components/loading/LoadingScreen'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import StatusCard from '../../components/ui/StatusCard'
@@ -283,7 +284,7 @@ export default function RewardsPage() {
       onRefresherRefresh={handleRefresh}
     >
       <View className='rewards-page__hero'>
-        <Text className='rewards-page__hero-emoji'>🎁</Text>
+        <JoyJoinIcon emoji='🎁' size={64} className='rewards-page__hero-emoji' />
         <Text className='rewards-page__hero-title'>我的奖励</Text>
         <Text className='rewards-page__hero-subtitle'>查看当前优惠券、成长值和近期奖励记录</Text>
       </View>

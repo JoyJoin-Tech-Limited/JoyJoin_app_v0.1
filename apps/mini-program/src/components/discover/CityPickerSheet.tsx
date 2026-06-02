@@ -1,4 +1,5 @@
 import { View, Text, Input, ScrollView } from '@tarojs/components'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import Taro from '@tarojs/taro'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { apiRequest } from '../../lib/api/api'
@@ -102,7 +103,7 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
 
         {/* Search */}
         <View className='city-picker-sheet__search'>
-          <Text className='city-picker-sheet__search-icon'>🔍</Text>
+          <JoyJoinIcon emoji='🔍' size={28} className='city-picker-sheet__search-icon' />
           <Input
             className='city-picker-sheet__search-input'
             placeholder='搜索城市'
@@ -114,7 +115,10 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
         {/* Hot cities */}
         {!searchQuery.trim() && (
           <>
-            <Text className='city-picker-sheet__section-title'>🔥 热门城市</Text>
+            <View style={{ display: 'flex', alignItems: 'center', gap: '8rpx' }}>
+              <JoyJoinIcon emoji='🔥' size={28} />
+              <Text className='city-picker-sheet__section-title'>热门城市</Text>
+            </View>
             <View className='city-picker-sheet__hot-grid'>
               {HOT_CITIES.map((city) => (
                 <View

@@ -9,6 +9,7 @@ import { useAuth } from '../../hooks/useAuth'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import './index.scss'
 
 const REWARD_TIERS = [
@@ -76,7 +77,7 @@ export default function InvitePage() {
   return (
     <ScrollView className='invite-page' scrollY enhanced showScrollbar={false}>
       <View className='invite-page__hero'>
-        <Text className='invite-page__hero-emoji'>🎉</Text>
+        <JoyJoinIcon emoji='🎉' size={64} className='invite-page__hero-emoji' />
         <Text className='invite-page__hero-title'>邀请好友，一起悦聚</Text>
         <Text className='invite-page__hero-subtitle'>邀请越多，奖励越丰厚</Text>
       </View>
@@ -136,13 +137,13 @@ export default function InvitePage() {
             key={tier.count}
             className={`invite-page__tier ${invitedCount >= tier.count ? 'invite-page__tier--unlocked' : ''}`}
           >
-            <Text className='invite-page__tier-emoji'>{tier.emoji}</Text>
+            <JoyJoinIcon emoji={tier.emoji} size={40} className='invite-page__tier-emoji' />
             <View className='invite-page__tier-info'>
               <Text className='invite-page__tier-target'>邀请 {tier.count} 人</Text>
               <Text className='invite-page__tier-reward'>{tier.reward}</Text>
             </View>
             <Text className='invite-page__tier-status'>
-              {invitedCount >= tier.count ? '✅ 已达成' : `还差 ${tier.count - invitedCount} 人`}
+              {invitedCount >= tier.count ? <><JoyJoinIcon emoji='✅' size={20} /> 已达成</> : `还差 ${tier.count - invitedCount} 人`}
             </Text>
           </Card>
         ))}

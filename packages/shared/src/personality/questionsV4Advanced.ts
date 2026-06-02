@@ -333,6 +333,7 @@ export const questionsV4Advanced: AdaptiveQuestion[] = [
     isForcedChoice: true,
     targetPairs: ["开心柯基", "太阳鸡"],
     cohortTag: 'social_catalyst',
+    discriminationIndex: 0.80,
     options: [
       {
         value: "A",
@@ -366,6 +367,7 @@ export const questionsV4Advanced: AdaptiveQuestion[] = [
     isForcedChoice: true,
     targetPairs: ["机智狐", "灵感章鱼"],
     cohortTag: 'creative_explorer',
+    discriminationIndex: 0.75,
     options: [
       {
         value: "A",
@@ -436,22 +438,22 @@ export const questionsV4Advanced: AdaptiveQuestion[] = [
       {
         value: "A",
         text: "第一时间放下手头的事去帮忙，朋友有难义不容辞",
-        traitScores: { A: 3, C: 0, E: 0, O: 0, X: 1, P: 1 }
+        traitScores: { A: 3, C: -1, E: 1, O: -1, X: 1, P: 1 }
       },
       {
         value: "B",
         text: "先了解清楚情况，制定合理的帮助计划再行动",
-        traitScores: { A: 1, C: 3, E: 2, O: 0, X: 0, P: 0 }
+        traitScores: { A: -1, C: 3, E: 2, O: 0, X: 0, P: -1 }
       },
       {
         value: "C",
         text: "帮忙的同时也会协调其他资源，让帮助更有效率",
-        traitScores: { A: 2, C: 2, E: 1, O: 1, X: 1, P: 0 }
+        traitScores: { A: 1, C: 2, E: 1, O: 1, X: 1, P: -1 }
       },
       {
         value: "D",
         text: "想帮但不太确定怎么帮最好，先观察再说",
-        traitScores: { A: 1, C: 1, E: 1, O: 0, X: -1, P: 0 }
+        traitScores: { A: -1, C: 0, E: 1, O: 0, X: -2, P: -1 }
       }
     ]
   },

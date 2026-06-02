@@ -116,12 +116,14 @@ export async function buildAuthUserResponse(userId: string): Promise<AuthUserRes
         onboardingForceSkip,
         matchingLiveReveal,
         socialIcebreakerClientForceEnd,
+        runPlanTemplatesEnabled,
       ] = await Promise.all([
         getFeatureFlag('restartOnboarding', false),
         getFeatureFlag('smartProfession', true),
         getFeatureFlag('onboardingForceSkip', false),
         getFeatureFlag('matchingLiveReveal', true),
         getFeatureFlag('socialIcebreakerClientForceEnd', false),
+        getFeatureFlag('runPlanTemplatesEnabled', false),
       ]);
       return {
         restartOnboarding,
@@ -129,6 +131,7 @@ export async function buildAuthUserResponse(userId: string): Promise<AuthUserRes
         onboardingForceSkip,
         matchingLiveReveal,
         socialIcebreakerClientForceEnd,
+        runPlanTemplatesEnabled,
       };
     })(),
   };

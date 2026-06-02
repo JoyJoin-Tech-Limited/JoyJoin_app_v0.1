@@ -1,9 +1,11 @@
 import { View, Text } from '@tarojs/components'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Card from '../../../components/ui/Card'
+import Chip from '../../../components/ui/Chip'
 import Button from '../../../components/ui/Button'
 import { PhaseHeaderIcon } from '../phaseUtils'
-import type { PersonalityDiceChallenge } from '@shared/socialIcebreaker'
+import type { PersonalityDiceChallenge, PersonalityDiceChallengeGroup } from '@shared/socialIcebreaker'
 import { getArchetypeHSL } from '@shared/archetypeColors'
 import { CelebrationOverlay } from '../overlays/CelebrationOverlay'
 import { CardFlip, ParticleBurst } from '../../../components/reveal'
@@ -54,6 +56,12 @@ export interface PersonalityDicePhaseViewProps {
   currentPlayerArchetype?: string
   /** Optional: host CTA to advance phase (e.g. into recap) */
   onAdvance?: () => void
+  /** Choose-Your-Prompt variant (behind PERSONALITY_DICE_CHOOSE_MODE_ENABLED) */
+  chooseModeEnabled?: boolean
+  challengeGroups?: PersonalityDiceChallengeGroup[]
+  selectedOption?: Record<string, number>
+  onChoose?: (optionIndex: number) => void
+  isChoosing?: boolean
 }
 
 // ─── Component ────────────────────────────────────────────────────
@@ -74,8 +82,17 @@ export function PersonalityDicePhaseView({
   reactions,
   currentPlayerArchetype,
   onAdvance,
+  chooseModeEnabled = false,
+  challengeGroups = [],
+  selectedOption = {},
+  onChoose,
+  isChoosing = false,
 }: PersonalityDicePhaseViewProps) {
   const currentChallenge = challenges[currentPlayerIndex] ?? null
+  const currentDisplayName =
+    currentChallenge?.displayName ??
+    participants[currentPlayerIndex]?.displayName ??
+    '当前玩家'
   const archetype = currentPlayerArchetype ?? currentChallenge?.archetype
   const hsl = getArchetypeHSL(archetype)
   const spotlightColor = hslToHex(hsl.h, hsl.s, hsl.l)
@@ -89,6 +106,7 @@ export function PersonalityDicePhaseView({
   const [showReveal, setShowReveal] = useState(false)
   const [flipped, setFlipped] = useState(() => challenges.length > 0)
   const prevChallengesLenRef = useRef(0)
+  const prevGroupsLenRef = useRef(0)
   const prevIsCompletingRef = useRef(false)
 
   const effectiveCompletedBy =
@@ -101,23 +119,31 @@ export function PersonalityDicePhaseView({
       ? [...passedBy, pendingUserId]
       : passedBy
 
-  const isMyChallenge = currentChallenge?.userId === currentUserId
+  const isMyChallenge =
+    chooseModeEnabled && challengeGroups.length > 0
+      ? participants[currentPlayerIndex]?.userId === currentUserId
+      : currentChallenge?.userId === currentUserId
   const hasCompleted = effectiveCompletedBy.includes(currentUserId)
   const hasPassed = effectivePassedBy.includes(currentUserId)
   const hasResponded = hasCompleted || hasPassed
-  const allCompleted =
-    challenges.length > 0 &&
-    (effectiveCompletedBy.length + effectivePassedBy.length) >= challenges.length
+  const allCompleted = chooseModeEnabled && challengeGroups.length > 0
+    ? challengeGroups.length > 0 &&
+      (effectiveCompletedBy.length + effectivePassedBy.length) >= challengeGroups.length
+    : challenges.length > 0 &&
+      (effectiveCompletedBy.length + effectivePassedBy.length) >= challenges.length
 
   // ── Effects ─────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (challenges.length > 0 && prevChallengesLenRef.current === 0) {
+    const hasContent = challenges.length > 0 || challengeGroups.length > 0
+    const prevHadContent = prevChallengesLenRef.current > 0 || prevGroupsLenRef.current > 0
+    if (hasContent && !prevHadContent) {
       setShowReveal(true)
       setFlipped(true)
     }
     prevChallengesLenRef.current = challenges.length
-  }, [challenges.length])
+    prevGroupsLenRef.current = challengeGroups.length
+  }, [challenges.length, challengeGroups.length])
 
   // Clear pending when server confirms
   useEffect(() => {
@@ -174,7 +200,7 @@ export function PersonalityDicePhaseView({
 
   const diceFace = (
     <View className='personality-dice__dice-face'>
-      <Text className='personality-dice__dice-emoji'>🎲</Text>
+      <JoyJoinIcon emoji='🎲' size={56} className='personality-dice__dice-emoji' />
       <Text className='personality-dice__dice-title'>人格骰子</Text>
       <Text className='personality-dice__dice-desc'>
         掷出命运骰子，为每位玩家生成一个专属挑战。
@@ -187,9 +213,7 @@ export function PersonalityDicePhaseView({
       key={currentPlayerIndex}
       className='personality-dice__challenge-face'
     >
-      <Text className='personality-dice__challenge-emoji'>
-        {currentChallenge?.challengeEmoji ?? '🎲'}
-      </Text>
+      <JoyJoinIcon emoji={currentChallenge?.challengeEmoji ?? '🎲'} size={48} className='personality-dice__challenge-emoji' />
       <Text className='personality-dice__challenge-player'>
         {currentChallenge?.displayName ?? '玩家'} 的挑战
       </Text>
@@ -220,12 +244,12 @@ export function PersonalityDicePhaseView({
   // ── All-completed summary ───────────────────────────────────────
 
   if (allCompleted) {
-    const completedPlayers = challenges
-      .filter((c) => effectiveCompletedBy.includes(c.userId))
-      .map((c) => ({ name: c.displayName, passed: false }))
-    const passedPlayers = challenges
-      .filter((c) => effectivePassedBy.includes(c.userId))
-      .map((c) => ({ name: c.displayName, passed: true }))
+    const completedPlayers = (chooseModeEnabled && challengeGroups.length > 0 ? challengeGroups : challenges)
+      .filter((c: any) => effectiveCompletedBy.includes(c.userId))
+      .map((c: any) => ({ name: c.displayName, passed: false }))
+    const passedPlayers = (chooseModeEnabled && challengeGroups.length > 0 ? challengeGroups : challenges)
+      .filter((c: any) => effectivePassedBy.includes(c.userId))
+      .map((c: any) => ({ name: c.displayName, passed: true }))
 
     return (
       <View className='personality-dice'>
@@ -267,7 +291,7 @@ export function PersonalityDicePhaseView({
                   animationDelay: `${(completedPlayers.length + i) * 80}ms`,
                 }}
               >
-                <Text className='personality-dice__summary-check'>😅</Text>
+                <JoyJoinIcon emoji='😅' size={24} className='personality-dice__summary-check' />
                 <Text className='personality-dice__summary-name'>
                   {p.name}
                 </Text>
@@ -303,7 +327,9 @@ export function PersonalityDicePhaseView({
         subtitle={
           currentChallenge
             ? `${currentChallenge.displayName} 的挑战已揭晓`
-            : '看看命运为你准备了什么挑战'
+            : challengeGroups.length > 0
+              ? '看看有哪些挑战可以选择'
+              : '看看命运为你准备了什么挑战'
         }
         autoDismissMs={1500}
         onDismiss={() => setShowReveal(false)}
@@ -315,7 +341,7 @@ export function PersonalityDicePhaseView({
         <CardFlip
           front={diceFace}
           back={challengeFace}
-          flipped={challenges.length > 0 && flipped}
+          flipped={challenges.length > 0 && flipped && !chooseModeEnabled && challengeGroups.length === 0}
           duration={400}
         />
       </View>
@@ -329,8 +355,20 @@ export function PersonalityDicePhaseView({
         />
       </View>
 
+      {chooseModeEnabled && challengeGroups.length > 0 && (
+        <View className='personality-dice__card'>
+          <View className='personality-dice__dice-face personality-dice__dice-face--choose'>
+            <JoyJoinIcon emoji='🎲' size={56} className='personality-dice__dice-emoji' />
+            <Text className='personality-dice__dice-title'>人格骰子</Text>
+            <Text className='personality-dice__dice-desc'>
+              选择你的挑战难度，命运在你手中。
+            </Text>
+          </View>
+        </View>
+      )}
+
       <View className='personality-dice__action-area'>
-        {challenges.length === 0 ? (
+        {challenges.length === 0 && challengeGroups.length === 0 ? (
           <View className='personality-dice__action-stack'>
             {isHost ? (
               <Button
@@ -352,31 +390,195 @@ export function PersonalityDicePhaseView({
           <>
             {isMyChallenge && !hasResponded && (
               <>
-                <SwipeCard
-                  onSwipeRight={handleAccept}
-                  onSwipeLeft={handlePass}
-                  threshold={0.4}
-                >
-                  <View className='personality-dice__swipe-area'>
-                    <Text className='personality-dice__swipe-hint'>
-                      👈 认怂 ｜ 接受挑战 👉
-                    </Text>
-                    <Text className='personality-dice__swipe-subhint'>
-                      左右滑动卡片做出选择
-                    </Text>
+                {chooseModeEnabled && challengeGroups.length > 0 ? (
+                  <View className='personality-dice__choose-area'>
+                    {(() => {
+                      const currentPlayer = participants[currentPlayerIndex]
+                      const currentGroup = challengeGroups.find(
+                        (g) => g.userId === currentPlayer?.userId,
+                      )
+                      if (!currentGroup) {
+                        return (
+                          <Text className='personality-dice__helper-text'>
+                            等待你的挑战卡片…
+                          </Text>
+                        )
+                      }
+                      const mySelectedIdx = selectedOption[currentUserId]
+                      const hasChosen = mySelectedIdx !== undefined
+                      return (
+                        <>
+                          <Text className='personality-dice__choose-header'>
+                            选择一个挑战难度
+                          </Text>
+                          <View className='personality-dice__choose-cards'>
+                            {currentGroup.options.map((option, idx) => {
+                              const difficultyLabel =
+                                option.difficulty === 'easy'
+                                  ? '简单'
+                                  : option.difficulty === 'medium'
+                                    ? '中等'
+                                    : '困难'
+                              const chipLevel =
+                                option.difficulty === 'easy'
+                                  ? 1
+                                  : option.difficulty === 'medium'
+                                    ? 2
+                                    : 3
+                              const isSelected = hasChosen && mySelectedIdx === idx
+                              const isDimmed = hasChosen && mySelectedIdx !== idx
+                              const isLoading = isChoosing && !hasChosen
+                              return (
+                                <View
+                                  key={idx}
+                                  className={`personality-dice__choose-card${isSelected ? ' personality-dice__choose-card--selected' : ''}${isDimmed ? ' personality-dice__choose-card--dimmed' : ''}${isLoading ? ' personality-dice__choose-card--loading' : ''}`}
+                                  onClick={() => {
+                                    if (!hasChosen && onChoose) onChoose(idx)
+                                  }}
+                                >
+                                  <View className='personality-dice__choose-card-top'>
+                                    <Chip
+                                      label={difficultyLabel}
+                                      level={chipLevel as 1 | 2 | 3}
+                                      compact
+                                    />
+                                    {isSelected && (
+                                      <Text className='personality-dice__choose-card-check'>
+                                        ✅
+                                      </Text>
+                                    )}
+                                  </View>
+                                  <View className='personality-dice__choose-card-emoji'>
+                                    <JoyJoinIcon
+                                      emoji={option.challengeEmoji}
+                                      size={40}
+                                    />
+                                  </View>
+                                  <Text className='personality-dice__choose-card-title'>
+                                    {option.challengeTitle}
+                                  </Text>
+                                  <Text className='personality-dice__choose-card-body'>
+                                    {option.challengeBody}
+                                  </Text>
+                                  {option.passLine && (
+                                    <Text className='personality-dice__choose-card-pass'>
+                                      认怂: {option.passLine}
+                                    </Text>
+                                  )}
+                                  {isLoading && (
+                                    <View className='personality-dice__choose-card-spinner' />
+                                  )}
+                                </View>
+                              )
+                            })}
+                          </View>
+                        </>
+                      )
+                    })()}
                   </View>
-                </SwipeCard>
-                <View className='personality-dice__tap-fallback'>
-                  <Text className='personality-dice__tap-fallback-text'>
-                    我再想想
-                  </Text>
-                </View>
+                ) : (
+                  <>
+                    <SwipeCard
+                      onSwipeRight={handleAccept}
+                      onSwipeLeft={handlePass}
+                      threshold={0.4}
+                    >
+                      <View className='personality-dice__swipe-area'>
+                        <Text className='personality-dice__swipe-hint'>
+                          👈 认怂 ｜ 接受挑战 👉
+                        </Text>
+                        <Text className='personality-dice__swipe-subhint'>
+                          左右滑动卡片做出选择
+                        </Text>
+                      </View>
+                    </SwipeCard>
+                    <View className='personality-dice__tap-fallback'>
+                      <Text className='personality-dice__tap-fallback-text'>
+                        我再想想
+                      </Text>
+                    </View>
+                  </>
+                )}
               </>
             )}
 
-            {isMyChallenge && hasCompleted && (
+            {isMyChallenge && hasCompleted && chooseModeEnabled && challengeGroups.length > 0 && (
+              <View className='personality-dice__choose-area'>
+                {(() => {
+                  const currentPlayer = participants[currentPlayerIndex]
+                  const currentGroup = challengeGroups.find(
+                    (g) => g.userId === currentPlayer?.userId,
+                  )
+                  if (!currentGroup) return null
+                  const mySelectedIdx = selectedOption[currentUserId]
+                  return (
+                    <>
+                      <Text className='personality-dice__choose-header personality-dice__choose-header--chosen'>
+                        已选择挑战
+                      </Text>
+                      <View className='personality-dice__choose-cards'>
+                        {currentGroup.options.map((option, idx) => {
+                          const difficultyLabel =
+                            option.difficulty === 'easy'
+                              ? '简单'
+                              : option.difficulty === 'medium'
+                                ? '中等'
+                                : '困难'
+                          const chipLevel =
+                            option.difficulty === 'easy'
+                              ? 1
+                              : option.difficulty === 'medium'
+                                ? 2
+                                : 3
+                          const isSelected = mySelectedIdx === idx
+                          const isDimmed = mySelectedIdx !== idx
+                          return (
+                            <View
+                              key={idx}
+                              className={`personality-dice__choose-card${isSelected ? ' personality-dice__choose-card--selected' : ''}${isDimmed ? ' personality-dice__choose-card--dimmed' : ''}`}
+                            >
+                              <View className='personality-dice__choose-card-top'>
+                                <Chip
+                                  label={difficultyLabel}
+                                  level={chipLevel as 1 | 2 | 3}
+                                  compact
+                                />
+                                {isSelected && (
+                                  <Text className='personality-dice__choose-card-check'>
+                                    ✅
+                                  </Text>
+                                )}
+                              </View>
+                              <View className='personality-dice__choose-card-emoji'>
+                                <JoyJoinIcon
+                                  emoji={option.challengeEmoji}
+                                  size={40}
+                                />
+                              </View>
+                              <Text className='personality-dice__choose-card-title'>
+                                {option.challengeTitle}
+                              </Text>
+                              <Text className='personality-dice__choose-card-body'>
+                                {option.challengeBody}
+                              </Text>
+                              {option.passLine && (
+                                <Text className='personality-dice__choose-card-pass'>
+                                  认怂: {option.passLine}
+                                </Text>
+                              )}
+                            </View>
+                          )
+                        })}
+                      </View>
+                    </>
+                  )
+                })()}
+              </View>
+            )}
+
+            {isMyChallenge && hasCompleted && !chooseModeEnabled && (
               <View className='personality-dice__status-badge personality-dice__status-badge--accept'>
-                <Text className='personality-dice__status-emoji'>✨</Text>
+                <JoyJoinIcon emoji='✨' tier='reveal' size={24} className='personality-dice__status-emoji' />
                 <Text className='personality-dice__status-text'>
                   已完成挑战
                 </Text>
@@ -385,7 +587,7 @@ export function PersonalityDicePhaseView({
 
             {isMyChallenge && hasPassed && (
               <View className='personality-dice__status-badge personality-dice__status-badge--pass'>
-                <Text className='personality-dice__status-emoji'>😅</Text>
+                <JoyJoinIcon emoji='😅' size={24} className='personality-dice__status-emoji' />
                 <Text className='personality-dice__status-text'>
                   已认怂
                 </Text>
@@ -397,9 +599,9 @@ export function PersonalityDicePhaseView({
                 <Text className='personality-dice__spectator-hint'>
                   {hasResponded
                     ? hasPassed
-                      ? `${currentChallenge?.displayName ?? 'TA'} 认怂了：${currentChallenge?.passConsequence ?? ''}`
-                      : `${currentChallenge?.displayName ?? 'TA'} 接受了挑战，正在执行中…`
-                    : `等待 ${currentChallenge?.displayName ?? '当前玩家'} 完成挑战…`}
+                      ? `${currentDisplayName} 认怂了`
+                      : `${currentDisplayName} 已选择了挑战`
+                    : `等待 ${currentDisplayName} 做出选择…`}
                 </Text>
                 {!hasResponded && onReact && (
                   <View className='personality-dice__reaction-row'>

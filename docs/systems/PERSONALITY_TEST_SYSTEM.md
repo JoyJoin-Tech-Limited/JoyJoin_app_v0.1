@@ -1,6 +1,6 @@
 # Personality Test System - V4 Adaptive Assessment
 
-**Last Updated:** 2026-05-21  
+**Last Updated:** 2026-05-27  
 **Version:** V4 Adaptive Engine + V2 Matcher  
 **Status:** Production
 
@@ -57,6 +57,12 @@ The results page (`pages/onboarding/personality-test/results/`) renders a multi-
 4. **Collectible card** — Pokémon-style holographic card with touch-drag tilt, energy bar, skill badges, and match chemistry chips
 5. **Detail modal** — Progressive disclosure via "看看悦仔怎么说" CTA; opens a bottom sheet with full AI analysis, trait radar, and best partner matches
 6. **Share poster** — Canvas-generated shareable card with archetype art, rarity label, and skill set. Canvas draws **WebP primary** with **CDN PNG fallback** (PNG moved off-subpackage to CDN in 2026-05-22). If both fail, a colored circle with the archetype's first character renders.
+
+**Accessibility & Error Resilience (2026-05-27):**
+- **Reduced-motion support:** When the system reports `reduceMotion === true`, the slot animation is skipped entirely and the result page renders immediately. CSS `@media (prefers-reduced-motion: reduce)` plus a JS-driven `.personality-results--reduce-motion` class suppresses stagger entrances, holographic shimmer, and card tilt for webviews that do not honour the media query.
+- **Error state accessibility:** `ErrorStage` uses `role="alert"` and `aria-live="polite"` so screen readers announce sync failures.
+- **Split-brain prevention:** The server validates `finalResult.primaryArchetype` before persisting (falls back to `'corgi'` if invalid). The client hard-validates the result before transitioning to the results page. Divergence between `currentMatches[0]` and `finalResult.primaryArchetype` is logged server-side for telemetry. GET `/api/assessment/v4/result` returns `500` with "Result data is incomplete" if `finalResult` is missing or malformed, rather than violating the client's `NonNullable` assumption.
+- **Retry UX:** The error state shows a tooltip "网络波动时可能需要多试一次" under the retry button to reduce user uncertainty.
 
 **Returning users only (no in-flight test import):** Mini Program [`pages/login/index`](../apps/mini-program/src/pages/login/index.tsx) uses [`useWeChatLogin`](../apps/mini-program/src/hooks/auth/useWeChatLogin.ts) → [`authenticateMiniProgramUser()`](../apps/mini-program/src/lib/api/api.ts) → `POST /api/auth/wechat/login` (not `login-with-test`). Coordination detail: [`docs/reference/PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md).
 
@@ -240,6 +246,8 @@ D. 纠结但最终参加聚会
 3. **机灵海豚 vs 树洞考拉**: A gap (70 vs 90) - differentiate on warmth/nurturing
 4. **社牛柯基 vs 小太阳鸡**: Similar high X+P, differentiate on structure vs spontaneity
 5. **寻宝狐 vs 脑洞章鱼**: Both high O, differentiate on social energy (X: 78 vs 52)
+6. **靠谱大象 vs 慢热龟**: A/P/X differentiators — turtle penalizes high-A (≥70 → 0.5×) and high-P (≥58 → 0.6×); elephant penalizes very-low-X (<32 → 0.5×) and very-low-P (<38 → 0.6×)
+7. **机灵海豚 vs 人脉蛛**: E/C/X differentiators — spider penalizes high-E (≥78 → 0.5×)
 
 **Example Disambiguation Question (Q48):**
 ```
@@ -972,6 +980,67 @@ describe('Full Assessment Flow', () => {
 ```
 
 ### Simulation Testing
+
+**Accuracy Simulation Suite (2026-05-29):**
+
+A curated simulation harness validates matcher and adaptive engine accuracy using archetype centroids and boundary personas.
+
+```bash
+# Generate boundary personas + centroids
+npm run simulate:personas:generate
+
+# Run matcher isolation on centroids (CI gate — must be 100%)
+npm run simulate:personas:run:ci
+
+# Run full boundary persona suite
+npm run simulate:personas:run:all
+
+# Generate expert review packet
+npm run simulate:expert-packet
+```
+
+**Files:**
+- `scripts/simulate/generate-boundary-personas.ts` — Generates 33 boundary personas (11 confusion pairs × 3 blend ratios) + 12 centroids
+- `scripts/simulate/run-persona-suite.ts` — Unified runner supporting matcher isolation and end-to-end adaptive modes
+- `scripts/simulate/run-test-retest.ts` — Test-retest reliability harness (5 runs per persona)
+- `scripts/simulate/generate-expert-packet.ts` — Produces human-readable markdown review packet
+- `scripts/simulate/lib/persona-utils.ts` — Shared answer deriver, noise model, report formatting
+
+**Current Baseline (2026-05-29):**
+
+| Mode | Persona Set | Exact Match | Notes |
+|------|------------|-------------|-------|
+| Matcher isolation | 12 centroids | **100%** | Hard CI gate |
+| Matcher isolation | 33 boundaries | 64.4% | Many 50/50 blends are inherently ambiguous |
+| End-to-end adaptive | 12 centroids | 58.3% | **Known issue:** adaptive engine trait estimation systematically diverges from target for some archetypes (dolphin_calm, spider, rooster) |
+| End-to-end adaptive | 33 boundaries | 42.2% | Combined effect of ambiguous blends + trait estimation drift |
+
+**Known Issues:**
+1. **Adaptive engine trait estimation inaccuracy** — The biggest blocker to end-to-end accuracy. Estimated traits diverge by 10–28 points from target profiles for centroids, causing misclassification even when the matcher itself is correct. **Root cause identified (2026-05-29):** The question bank has systemic positive bias — 136/138 questions have net positive trait score sums, and traits A, C, E, O, P have far more positive-loading options than negative-loading ones. This creates an upward drift that the `normalizeTraitScore` formula amplifies. Cohort detection then reinforces this by serving more positively-biased questions. **Fix attempted:** Baseline subtraction (`traitScoreBaselines`) and multiplier adjustment (`traitScoreMultiplier`) in `AssessmentConfig`. Result: marginal improvement (7/12 → 8/12 exact). The only path to 85%+ is question-bank revision or a direct archetype-scoring model.
+2. **Boundary persona 50/50 blends** — Literal midpoint profiles are inherently ambiguous. The simulation marks these as "miss" when assigned to either confusable archetype, but this is often psychologically reasonable.
+3. **owl↔octopus boundary misrouting to fox** — When C is medium (~53), opposite-pole conflict gate demolishes both octopus (low-C) and owl (high-C), allowing fox to win. This is a matcher edge case for medium-C, high-O profiles.
+
+**New Config Options (2026-05-29):**
+
+```typescript
+// In AssessmentConfig:
+traitScoreMultiplier?: number;      // Override normalizeTraitScore multiplier (default: 15)
+traitScoreBaselines?: Partial<Record<TraitKey, number>>; // Per-trait baseline subtracted before normalization
+useFixedQuestions?: boolean;         // Use fixed question sequence instead of adaptive
+fixedQuestionIds?: string[];         // Ordered question IDs for fixed mode
+```
+
+Example: Apply baseline correction to counteract question-bank positive bias:
+```typescript
+const config = {
+  ...DEFAULT_ASSESSMENT_CONFIG,
+  traitScoreMultiplier: 12,
+  traitScoreBaselines: { A: 0.5, C: 0.5, E: 0.5, O: 0.5, X: 0.5, P: 0.5 },
+};
+```
+
+**Fixed-Question Mode:**
+When `useFixedQuestions: true` with `fixedQuestionIds`, the engine bypasses adaptive selection and asks questions in the specified order, followed by the universal closing questions. Tested with 16 curated questions — accuracy is comparable to adaptive (5-7/12 exact) but not superior. Adaptive selection still performs best among tested modes.
 
 **10k User Simulation:**
 
