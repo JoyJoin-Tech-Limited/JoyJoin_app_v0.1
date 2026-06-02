@@ -37,6 +37,8 @@ export const ADMIN_AUDIT_ACTIONS = [
   'ADMIN_ACCOUNT_CREATED',
   'ADMIN_ACCOUNT_UPDATED',
   'ADMIN_PASSWORD_RESET',
+  // Feature flags / runtime config
+  'FEATURE_FLAG_UPDATED',
   // User moderation
   'USER_BANNED',
   'USER_UNBANNED',
@@ -52,6 +54,7 @@ export const ADMIN_AUDIT_ACTIONS = [
   'VENUE_UPDATED',
   'VENUE_DELETED',
   'VENUE_MIGRATED',
+  'VENUE_ONBOARDING_STATUS_CHANGED',
   // Event management
   'EVENT_STATUS_CHANGED',
   // Event pool management
@@ -60,6 +63,8 @@ export const ADMIN_AUDIT_ACTIONS = [
   'MATCHING_WEIGHTS_ACTIVATED',
   'MATCHING_WEIGHTS_DISABLED',
   'MATCHING_WEIGHTS_ROLLED_BACK',
+  // Onboarding support (testing-only, not admin-gated; logged via application logger)
+  // 'ONBOARDING_FORCE_SKIPPED',
   // Runtime fallback for malformed / untyped callers
   'OTHER',
 ] as const;

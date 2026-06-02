@@ -43,6 +43,7 @@ interface MatchingStatusPendingSectionProps {
   waitingSeats: WaitingSeatViewModel[]
   fillStatusText: string
   refreshCountdown: number
+  shouldReduceMotion: boolean
 }
 
 export function MatchingStatusPendingSection({
@@ -56,6 +57,7 @@ export function MatchingStatusPendingSection({
   waitingSeats,
   fillStatusText,
   refreshCountdown,
+  shouldReduceMotion,
 }: MatchingStatusPendingSectionProps) {
   return (
     <>
@@ -84,8 +86,12 @@ export function MatchingStatusPendingSection({
         </View>
 
         <View className='matching-status__waiting-scene'>
-          <View className='matching-status__waiting-orbit matching-status__waiting-orbit--outer' />
-          <View className='matching-status__waiting-orbit matching-status__waiting-orbit--inner' />
+          {!shouldReduceMotion && (
+            <>
+              <View className='matching-status__waiting-orbit matching-status__waiting-orbit--outer' />
+              <View className='matching-status__waiting-orbit matching-status__waiting-orbit--inner' />
+            </>
+          )}
 
           <View className='matching-status__waiting-table'>
             <Text className='matching-status__waiting-table-eyebrow'>正在聚齐</Text>
@@ -106,7 +112,7 @@ export function MatchingStatusPendingSection({
                 seat.isFilled ? 'matching-status__waiting-seat--filled' : '',
                 seat.isThreshold ? 'matching-status__waiting-seat--threshold' : '',
                 seat.isBonusSeat ? 'matching-status__waiting-seat--bonus' : '',
-                seat.isNewest ? 'matching-status__waiting-seat--new' : '',
+                seat.isNewest && !shouldReduceMotion ? 'matching-status__waiting-seat--new' : '',
               ]
                 .filter(Boolean)
                 .join(' ')}

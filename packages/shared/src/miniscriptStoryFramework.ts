@@ -94,6 +94,8 @@ const miniScriptActSchema = z.object({
   actNumber: z.number().int().min(1).max(5),
   title: z.string().min(1).max(120),
   beats: z.array(z.string().min(1).max(400)).min(1).max(12),
+  /** Suspense hook that ends this act — players must want to continue. ≤80 chars. */
+  cliffhanger: z.string().min(1).max(80).optional(),
 });
 
 // ─── v2 Story Framework ───────────────────────────────────────────────────────
@@ -160,6 +162,7 @@ const miniScriptActSchemaV1 = z.object({
   actNumber: z.number().int().min(1).max(5),
   title: z.string().min(1).max(120),
   beats: z.array(z.string().min(1).max(400)).min(1).max(12),
+  cliffhanger: z.string().min(1).max(80).optional(),
 });
 
 const miniScriptStoryFrameworkSchemaV1 = z.object({

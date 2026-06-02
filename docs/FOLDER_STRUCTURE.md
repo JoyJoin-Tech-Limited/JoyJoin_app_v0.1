@@ -320,7 +320,7 @@ apps/mini-program/
 │       │   ├── mood-icons/        # Mood / atmosphere indicators
 │       │   └── phase-icons/       # Icebreaker phase emblems
 │       ├── tab-icons/             # Bottom tab icons (bundled, not CDN)
-│       └── box-logo.webp          # Brand logo (bundled for native tab bar)
+│       └── joyjoin-logo.webp          # Brand logo (bundled for native tab bar)
 ├── config/                        # Taro build config
 └── package.json
 ```

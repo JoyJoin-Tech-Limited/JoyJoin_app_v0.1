@@ -46,6 +46,14 @@ $__gold-accent:  $color-landed-gold;
     margin-top: $spacing-sm;
   }
 
+  &__error-actions {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    width: 100%;
+    padding: 0 $spacing-lg;
+  }
+
   // ── Phase Progress ────────────────────────────────────────────
   &__phase-rail {
     margin-bottom: $spacing-md;
@@ -480,6 +488,12 @@ $__gold-accent:  $color-landed-gold;
     display: block;
   }
 
+  &__waiting-hero {
+    width: 140rpx;
+    height: 140rpx;
+    display: block;
+  }
+
   &__waiting-title {
     font-size: $font-size-lg;
     font-weight: $font-weight-bold;
@@ -491,6 +505,13 @@ $__gold-accent:  $color-landed-gold;
     color: $color-text-secondary;
   }
 
+  &__waiting-host-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-top: $spacing-xs;
+  }
+
   &__waiting-host {
     font-size: $font-size-sm;
     color: $color-text-muted;
@@ -500,6 +521,73 @@ $__gold-accent:  $color-landed-gold;
     @include button-primary;
     width: 100%;
     border: 0;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Phase Transition Bridge (D4)
+  // ═══════════════════════════════════════════════════════════════
+  &__phase-transition {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-md;
+    background: rgba($color-bg-tint-cream, 0.92);
+    animation: phase-transition-fade 0.4s ease both;
+    pointer-events: none;
+  }
+
+  &__phase-transition-mascot {
+    width: 200rpx;
+    height: 200rpx;
+  }
+
+  &__phase-transition-text {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+  }
+
+  @keyframes phase-transition-fade {
+    0% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Force-end kill-switch (D8)
+  // ═══════════════════════════════════════════════════════════════
+  &__force-end-wrap {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: $spacing-sm 0;
+  }
+
+  &__force-end-btn {
+    @include button-secondary;
+    border-color: $color-error;
+    color: $color-error;
+    width: auto;
+    min-width: 240rpx;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Fallback Phase
+  // ═══════════════════════════════════════════════════════════════
+  &__fallback-hero {
+    width: 160rpx;
+    height: 160rpx;
+    display: block;
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -2587,6 +2675,57 @@ $__gold-accent:  $color-landed-gold;
 
 .icebreaker__text--danger {
   color: $color-error;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Inline Skeleton Blocks (D3)
+// ═══════════════════════════════════════════════════════════════
+.icebreaker__skeleton-card {
+  @include card;
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding: $spacing-xl $spacing-lg;
+  width: 100%;
+  min-height: 240rpx;
+  background: rgba($color-surface, 0.7);
+}
+
+.icebreaker__skeleton-line {
+  height: 22rpx;
+  border-radius: 999rpx;
+  background: rgba($color-primary, 0.08);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+
+  &--short {
+    width: 40%;
+  }
+
+  &--medium {
+    width: 65%;
+  }
+
+  &--long {
+    width: 85%;
+  }
+}
+
+.icebreaker__skeleton-circle {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background: rgba($color-primary, 0.08);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.85;
+  }
 }
 
 // ─── Reduced Motion Overrides for V2 Phases ─────────────────────

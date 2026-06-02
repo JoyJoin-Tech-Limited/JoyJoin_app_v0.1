@@ -108,7 +108,9 @@ export const venuesRepo: VenuesRepository = {
         contact_person, contact_phone, commission_rate, tags, cuisines, 
         price_range, budget_categories, decor_style, taste_intensity, capacity, seating_capacity,
         is_active, notes, bar_themes, alcohol_options, vibe_descriptor,
-        latitude, longitude, partner_status
+        latitude, longitude, partner_status,
+        onboarding_status, partner_company_name, business_license_no, partner_email,
+        bank_account_info, contract_start_date, contract_end_date
       )
       VALUES (
         ${data.name}, ${data.type}, ${data.address}, ${data.city}, ${data.district},
@@ -118,7 +120,10 @@ export const venuesRepo: VenuesRepository = {
         ${data.budgetCategories || []}, ${data.decorStyle || []}, ${data.tasteIntensity || []}, ${data.maxConcurrentEvents || 1}, ${data.seatingCapacity || 1},
         ${data.isActive !== false}, ${data.notes || null},
         ${data.barThemes || []}, ${data.alcoholOptions || []}, ${data.vibeDescriptor || null},
-        ${data.latitude || null}, ${data.longitude || null}, ${data.partnerStatus || 'active'}
+        ${data.latitude || null}, ${data.longitude || null}, ${data.partnerStatus || 'active'},
+        ${data.onboardingStatus || 'draft'}, ${data.partnerCompanyName || null}, ${data.businessLicenseNo || null},
+        ${data.partnerEmail || null}, ${data.bankAccountInfo || null},
+        ${data.contractStartDate || null}, ${data.contractEndDate || null}
       )
       RETURNING *
     `);
@@ -245,6 +250,34 @@ export const venuesRepo: VenuesRepository = {
     if (updates.partnerSince !== undefined) {
       setClauses.push(`partner_since = $${values.length + 1}`);
       values.push(updates.partnerSince);
+    }
+    if (updates.onboardingStatus !== undefined) {
+      setClauses.push(`onboarding_status = $${values.length + 1}`);
+      values.push(updates.onboardingStatus);
+    }
+    if (updates.partnerCompanyName !== undefined) {
+      setClauses.push(`partner_company_name = $${values.length + 1}`);
+      values.push(updates.partnerCompanyName);
+    }
+    if (updates.businessLicenseNo !== undefined) {
+      setClauses.push(`business_license_no = $${values.length + 1}`);
+      values.push(updates.businessLicenseNo);
+    }
+    if (updates.partnerEmail !== undefined) {
+      setClauses.push(`partner_email = $${values.length + 1}`);
+      values.push(updates.partnerEmail);
+    }
+    if (updates.bankAccountInfo !== undefined) {
+      setClauses.push(`bank_account_info = $${values.length + 1}`);
+      values.push(updates.bankAccountInfo);
+    }
+    if (updates.contractStartDate !== undefined) {
+      setClauses.push(`contract_start_date = $${values.length + 1}`);
+      values.push(updates.contractStartDate);
+    }
+    if (updates.contractEndDate !== undefined) {
+      setClauses.push(`contract_end_date = $${values.length + 1}`);
+      values.push(updates.contractEndDate);
     }
     if (updates.latitude !== undefined) {
       setClauses.push(`latitude = $${values.length + 1}`);

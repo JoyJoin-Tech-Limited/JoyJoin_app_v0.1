@@ -1020,6 +1020,8 @@ export function registerUserEventPoolRoutes(app: Express): void {
             highlights: Array.isArray(group.themeHighlights) ? group.themeHighlights : [],
             venueName: group.venueName,
             venueAddress: group.venueAddress,
+            venueAssignmentStatus: group.venueAssignmentStatus,
+            venueAssignmentReason: group.venueAssignmentReason,
             finalDateTime: group.finalDateTime,
             status: group.status,
           },

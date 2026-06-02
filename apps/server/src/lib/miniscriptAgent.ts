@@ -34,6 +34,7 @@ import { validateMiniScriptFramework } from './miniscriptValidator';
 import { findCatalogEntry, getRandomCatalogEntry } from './miniscriptCatalog';
 import { logger } from "./logger";
 import { buildArchetypeContext } from './contextInjector';
+import { validateCraft } from './writingCraftValidator';
 
 /** Total timeout for both passes + overhead. */
 const PIPELINE_TIMEOUT_MS = 32_000;
@@ -135,11 +136,13 @@ function generateV2Stub(params: {
       actNumber: 1,
       title: '开场：各自落座',
       beats: ['交代场景', '每人一句立场', '埋下第一个小误会'],
+      cliffhanger: '可是，谁都不愿意第一个开口。',
     },
     {
       actNumber: 2,
       title: '升温：线索交汇',
       beats: ['交换信息', '发现矛盾点', '集体做一次轻推理投票'],
+      cliffhanger: '他说的话，和之前对不上了。',
     },
     {
       actNumber: 3,
@@ -550,6 +553,21 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
       recordAIProviderRecoveryMetric({ domain: 'miniscript', feature: 'generateMiniScriptFramework' });
     }
 
+    // Craft quality diagnostic (non-blocking — logs for monitoring)
+    const narrativeText = [
+      withAuthority.premise,
+      ...withAuthority.characters.flatMap(c => [c.roleLabel, c.sinHook, c.alibi]),
+      withAuthority.ending.resolutionSummary,
+      withAuthority.ending.confessionMechanic,
+    ].join('\n');
+    const craftDiag = validateCraft(narrativeText, 'narrative');
+    if (craftDiag.craftScore < 70) {
+      logger.info('[MiniScriptAgent] Craft score below threshold', {
+        craftScore: craftDiag.craftScore,
+        issues: craftDiag.fixableIssues.length,
+      });
+    }
+
     const live = buildLiveAIMeta(pass1.provider as LiveAIProvider, promptVersion, aiCorrelationId);
     emitTrace({
       provider: pass1.provider!,
@@ -578,6 +596,21 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
 
   if (pass1.deepSeekRecoveryUsed) {
     recordAIProviderRecoveryMetric({ domain: 'miniscript', feature: 'generateMiniScriptFramework' });
+  }
+
+  // Craft quality diagnostic (non-blocking)
+  const narrativeTextSkipped = [
+    withAuthority.premise,
+    ...withAuthority.characters.flatMap(c => [c.roleLabel, c.sinHook, c.alibi]),
+    withAuthority.ending.resolutionSummary,
+    withAuthority.ending.confessionMechanic,
+  ].join('\n');
+  const craftDiagSkipped = validateCraft(narrativeTextSkipped, 'narrative');
+  if (craftDiagSkipped.craftScore < 70) {
+    logger.info('[MiniScriptAgent] Craft score below threshold (no-validation path)', {
+      craftScore: craftDiagSkipped.craftScore,
+      issues: craftDiagSkipped.fixableIssues.length,
+    });
   }
 
   const live = buildLiveAIMeta(pass1.provider as LiveAIProvider, promptVersion, aiCorrelationId);

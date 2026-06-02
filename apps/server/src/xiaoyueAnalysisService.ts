@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames';
-import { XIAOYUE_PERSONA, GENDER_NEUTRAL, XIAOYUE_PERSONA_PROMPT_VERSION } from './prompts';
+import { XIAOYUE_PERSONA, GENDER_NEUTRAL, XIAOYUE_PERSONA_PROMPT_VERSION, XIAOYUE_CRAFT_PROMPT_VERSION } from './prompts';
 import { getDeepseekClient, getDeepseekModel } from './ai/deepseekClient';
+import { generateWithCraftQuality } from './lib/craftQualityGate';
 import { logger } from './lib/logger';
 
 export interface ArchetypeAnalysisInput {
@@ -386,7 +387,7 @@ function getCacheKey(input: ArchetypeAnalysisInput): string {
     .slice(0, 2)
     .map((item) => `${item.archetype}:${Math.round(item.score)}`)
     .join('|');
-  return `${input.archetype}_${input.secondaryArchetype ?? 'none'}_${confidenceBand}_${topArchetypesKey}_${Object.values(input.traitScores).map((value) => normalizeTraitScore(value)).join('_')}_v${XIAOYUE_PERSONA_PROMPT_VERSION}`;
+  return `${input.archetype}_${input.secondaryArchetype ?? 'none'}_${confidenceBand}_${topArchetypesKey}_${Object.values(input.traitScores).map((value) => normalizeTraitScore(value)).join('_')}_v${XIAOYUE_PERSONA_PROMPT_VERSION}_${XIAOYUE_CRAFT_PROMPT_VERSION}`;
 }
 
 function buildAnalysisPrompt(input: ArchetypeAnalysisInput): string {
@@ -549,36 +550,60 @@ export async function generateXiaoyueAnalysis(
     return { ...cached.result, cached: true };
   }
 
-  const systemPrompt = `${XIAOYUE_PERSONA}\n\n${GENDER_NEUTRAL}`;
-  const userPrompt = buildAnalysisPrompt(input);
+  const systemBase = `${XIAOYUE_PERSONA}\n\n${GENDER_NEUTRAL}`;
+  const fallback = buildFallbackAnalysisPayload(input);
 
   try {
-    const response = await getDeepseekClient().chat.completions.create({
-      model: getDeepseekModel('flash'),
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      temperature: 0.7,
-      max_tokens: 500,
-      response_format: { type: 'json_object' },
+    const result = await generateWithCraftQuality({
+      buildPrompt: () => ({
+        system: systemBase,
+        user: buildAnalysisPrompt(input),
+      }),
+      callLLM: async (systemPrompt, userPrompt) => {
+        const response = await getDeepseekClient().chat.completions.create({
+          model: getDeepseekModel('flash'),
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.7,
+          max_tokens: 500,
+          response_format: { type: 'json_object' },
+        });
+        return response.choices[0]?.message?.content?.trim() || '';
+      },
+      parseResult: (rawText: string) => {
+        if (!rawText) return null;
+        return parseAnalysisResponse(rawText, input);
+      },
+      context: 'analysis',
+      extractText: (r: Omit<XiaoyueAnalysisResult, 'cached'>) => r.analysis,
+      fallback,
     });
 
-    const parsedResult = parseAnalysisResponse(
-      response.choices[0]?.message?.content?.trim() || '',
-      input
-    );
+    if (result.passed) {
+      analysisCache.set(cacheKey, { result: result.result, timestamp: Date.now() });
+      logger.info('[XiaoyueAnalysis] Generated + craft passed', {
+        archetype: input.archetype,
+        craftScore: result.craftScore,
+        retries: result.retries,
+      });
+    } else if (result.exhausted) {
+      logger.warn('[XiaoyueAnalysis] Craft max retries exhausted, using best effort', {
+        archetype: input.archetype,
+        craftScore: result.craftScore,
+        issues: result.unresolvedIssues,
+      });
+      analysisCache.set(cacheKey, { result: result.result, timestamp: Date.now() });
+    }
 
-    analysisCache.set(cacheKey, { result: parsedResult, timestamp: Date.now() });
-    logger.info('[XiaoyueAnalysis] Generated', { archetype: input.archetype });
-
-    return { ...parsedResult, cached: false };
+    return { ...result.result, cached: false };
   } catch (error) {
     if (error instanceof Error && error.message.includes('DEEPSEEK_API_KEY')) {
       logger.warn('[XiaoyueAnalysis] DeepSeek disabled, using fallback copy because API key is missing');
     }
     logger.error('[XiaoyueAnalysis] API error', { error: error instanceof Error ? error.message : String(error) });
-    return { ...buildFallbackAnalysisPayload(input), cached: false };
+    return { ...fallback, cached: false };
   }
 }
 

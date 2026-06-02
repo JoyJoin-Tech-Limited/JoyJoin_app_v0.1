@@ -1137,6 +1137,8 @@ export interface PoolGroupSummary {
   highlights?: string[] | null
   venueName?: string | null
   venueAddress?: string | null
+  venueAssignmentStatus?: string | null
+  venueAssignmentReason?: string | null
   finalDateTime?: string | null
   status?: PoolGroupStatus | null
 }

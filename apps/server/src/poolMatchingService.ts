@@ -1860,9 +1860,59 @@ export async function saveMatchResults(
       );
       
       // Save venue assignments to database
-      await saveVenueAssignments(poolId, pool?.dateTime || new Date(), assignments, unassigned);
+      await saveVenueAssignments(
+        poolId,
+        pool?.dateTime || new Date(),
+        assignments,
+        unassigned,
+        pool ? { title: pool.title, city: pool.city, district: pool.district } : undefined
+      );
       
       logger.info(`[Pool Matching] ✅ Venue assignment complete: ${assignments.size}/${groups.length} groups assigned, ${unassigned.size} unassigned`);
+
+      // Send venue-assignment notifications to group members
+      void (async () => {
+        try {
+          const { notificationsRepo } = await import('./repositories/notificationsRepo');
+          for (let i = 0; i < groups.length; i++) {
+            const group = groups[i];
+            const groupNum = i + 1;
+            const assignment = assignments.get(groupNum);
+            const unassignedReason = unassigned.get(groupNum);
+            const memberUserIds = group.members.map(m => m.userId);
+
+            if (assignment) {
+              await Promise.all(
+                memberUserIds.map(userId =>
+                  notificationsRepo.createNotification({
+                    userId,
+                    category: 'activities',
+                    type: 'venue_assigned',
+                    title: '场地已确定',
+                    message: `活动场地：${assignment.venue.name}，地址：${assignment.venue.address || '详见活动页'}`,
+                    relatedResourceId: poolId,
+                  })
+                )
+              );
+            } else if (unassignedReason) {
+              await Promise.all(
+                memberUserIds.map(userId =>
+                  notificationsRepo.createNotification({
+                    userId,
+                    category: 'activities',
+                    type: 'venue_tbd',
+                    title: '地点待定',
+                    message: '我们正在为您协调最佳场地，活动前会通知您具体地点',
+                    relatedResourceId: poolId,
+                  })
+                )
+              );
+            }
+          }
+        } catch (notifyErr) {
+          logger.warn('[Pool Matching] Venue assignment notification failed', { error: notifyErr instanceof Error ? notifyErr.message : String(notifyErr) });
+        }
+      })();
     } catch (error) {
       logger.error(`[Pool Matching] ⚠️ Venue assignment failed:`, { error: error instanceof Error ? error.message : String(error) });
       // Don't throw - matching already succeeded, venue assignment is best-effort

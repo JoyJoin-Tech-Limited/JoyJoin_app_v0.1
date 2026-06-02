@@ -1,6 +1,6 @@
 # JoyJoin — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents. Last updated: 2026-05-27
+> Compact instructions for AI coding agents. Last updated: 2026-06-02
 
 ---
 
@@ -16,6 +16,7 @@ Use the `skill` tool to load the skill that owns the boundary you're touching. T
 |----------------------|--------------------------|
 | Server routes, endpoints, middleware | `server-domain-architecture` |
 | Matching scores, pair weighting, group formation | `matching-domain` |
+| Venue assignment, venue CRUD, time slots, deals | `venue-location-services` |
 | Payment creation, verification, refunds, webhooks | `payment-entitlement-authority` |
 | Onboarding flow, `nextStep` logic, completion signals | `onboarding-state-architecture` |
 | Social Icebreaker phases, sessions, state machine | `social-icebreaker-domain` |
@@ -23,8 +24,10 @@ Use the `skill` tool to load the skill that owns the boundary you're touching. T
 | Admin routes, RBAC, audit logging | `admin-audit-and-rbac-governance` |
 | Changes touching both mini-program and web | `platform-coordination-protocol` |
 | Any user-facing UI (web or mini-program) | `joyjoin-brand-guidelines` |
+| Mini-program implementation quality / completeness audit | `completeness-audit` (pipeline: ui-layout-audit → frontend-design-audit → completeness-audit) |
 | Database schema changes, migrations | `database-migration-safety` |
 | New feature flag, kill switch, rollout config | `feature-flags-launch-config` |
+| Xiaoyue text quality, craft validation, AI-generated Chinese copy | `xiaoyue-writing-craft` |
 
 > Other skills are available. If your task doesn't match this table, describe the task and ask which skill applies.
 
@@ -42,6 +45,7 @@ Each skill's body or `Related docs` section links to the authoritative documenta
 ### Step 4: After implementation
 
 - ☐ Run `harness-completion-gate` skill to verify 5-pillar compliance
+- ☐ For mini-program UI changes: run `completeness-audit` (pipeline: ui-layout-audit → frontend-design-audit → completeness-audit) for a full 完成度 audit with ROI-ranked gap recommendations
 - ☐ Run `docs-sync` skill if docs need updating for the changes
 
 ---
@@ -196,9 +200,23 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 
 **Onboarding is server-driven:** `GET /api/auth/user` returns `nextStep`. Client never computes its own position.
 
-**Personality:** 12 archetypes, V4 adaptive assessment. `packages/shared/src/personality/` owns the engine. Matcher isolation is 100% accurate on centroids, but end-to-end adaptive accuracy is ~58% due to question-bank positive bias (see `docs/systems/PERSONALITY_TEST_SYSTEM.md` §Testing Guidelines). New config options: `traitScoreMultiplier`, `traitScoreBaselines`, `useFixedQuestions`, `fixedQuestionIds`.
+**Onboarding restart v0.1 (2026-05-23):** Returning users with partial onboarding may see a welcome-back screen (`/pages/onboarding/welcome-back`) offering to continue or restart. Restart clears all onboarding-derived data including V4 assessment sessions/answers (preserves WeChat identity + phone), resets to `personality-test`, and burns one of 5 lifetime restarts. Gated by `features.restartOnboarding` (DB-backed feature flag) in auth response. Endpoint: `POST /api/auth/onboarding/restart`. Idempotent — double-tap does not consume quota.
+
+**Personality:** 12 archetypes, V4 adaptive assessment. `packages/shared/src/personality/` owns the engine. **2026-06-02 status:**
+- 12 centroids: **100% exact match**
+- 33 boundaries: **66.7%** (30/45). Anchor option conflation is the bottleneck — 8 anchors with 3-5 trait scores per option create measurement drift of 10-26 pts on traits like X. Attempted fixes (all regressed or net-zero): purity weighting, surgical option edits, ±3 calibration Qs, per-trait multipliers.
+- **`applyMeasurementDriftCorrections`** in `adaptiveEngine.ts`: post-hoc promotion for rooster→corgi and koala→dolphin drift patterns. Proven to fix centroid regressions.
+- **`classifyFoxVsOctopus`** activated in matcherV2.ts confusion classifier (method existed, wasn't in switch case).
+- **Persona audit:** 13/33 boundary personas had wrong `expectedArchetype` — matcher isolation revealed the true labels. Fixed `scripts/simulate/data/all-personas.json`.
+- **Calibration Qs (Q51-Q54):** 4 pure single-trait questions (±2 magnitude), feature-flagged via `enableCalibrationQuestions`. Default `true` in V2 config. Performance impact: +2 avg Q, neutral to slightly negative exact-match. Needs shadow-mode data before production enablement.
+- **Results page:** Non-decisive matches show subtle "隐约有[secondary]的影子" blend indicator on hero card, prefers `xiaoyueAnalysis.blendLine`.
+- New config options: `traitScoreMultiplier`, `traitScoreBaselines`, `useFixedQuestions`, `fixedQuestionIds`, `enableCalibrationQuestions`, `maxCalibrationQuestions`.
 
 **Matching:** `poolMatchingService.ts` is deterministic authority. 6D scoring (chemistry, interest, socialAffinity, backgroundDiversity, preference, language). Optional 7th semantic dimension behind `ENABLE_SEMANTIC_SIMILARITY`. AI may enrich explanations but **must not** redefine scoring.
+
+**Venue Assignment:** Automatically assigns optimal venues to matched groups via `venueAssignmentService.ts`. Scoring dimensions: budget overlap (30% threshold), cuisine preference overlap, time slot availability (`bookingCount < maxConcurrentEvents`), capacity hard constraint (`seatingCapacity < groupSize` → score=0), and city/district/type/contract-expiry filters. Uses `FOR UPDATE` row locks on slot + booking rows during atomic save to prevent race conditions. Unassigned groups trigger WeCom ops alert (`notifyVenueUnassigned`) and in-app `venue_tbd` notifications. Degraded UX: mini-program shows amber "地点待定" card when unassigned. Canonical doc: `docs/systems/VENUE_ASSIGNMENT_SERVICE.md`.
+
+**Feature Flags (DB-backed, 2026-05-24):** `apps/server/src/lib/featureFlags.ts` is the canonical resolver. DB row is source of truth; env var is fallback. 5s LRU cache (disabled in test env). Five kill switches exposed in auth response `features`: `restartOnboarding`, `smartProfession`, `onboardingForceSkip`, `matchingLiveReveal`, `socialIcebreakerClientForceEnd`. Auth resolution is parallel (`Promise.all`). Admin portal `/admin/feature-flags` (super_admin only) provides toggle UI with source badges, per-flag saving state, empty state, confirmation dialog for dangerous flags (`onboardingForceSkip`, `socialIcebreakerClientForceEnd`), and `updatedAt`/`updatedBy` audit display. Admin mutation is logged to `admin_audit_logs` with action `FEATURE_FLAG_UPDATED`. PUT endpoint validates key against `FLAG_ENV_MAP` whitelist and `value` against `z.enum(["true", "false"])`.
 
 **Social Icebreaker:** Primary in-event flow is `/icebreaker/:sessionId` → Social Icebreaker. `/icebreaker-game` (AI Card Game) is optional deep-dive, not default.
 - **Moment Card server render:** `GET /api/social-icebreaker/:id/moment-card.png` (feature-flagged: `SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER`)
@@ -230,13 +248,12 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 - **Decode readiness**: `useSpriteReadiness` hook gates slot animation start until the spritesheet is confirmed decoded (500ms timeout). `backgroundColor` fallback (archetype accent soft) prevents blank circles.
 - **Do not** reintroduce local PNG bundling for archetypes. Canvas PNG fallback must use CDN path (`ASSET_BASE_PNG = cdnAsset('/assets/personality/archetypes')`).
 
-**Tab bar icon gotcha:** `centerHub` tab in `tabBarConfig.ts` must have a non-empty `iconPath`. The `miniprogram-ci` upload rejects empty icon paths with `800059`. The custom tab bar component renders the center button independently (`box-logo-tab.png` + `tab-bar-notch-bg.png`), so any placeholder icon works for validation. The tab bar logo uses a dedicated 128×128 `box-logo-tab.png` (29KB) instead of the full-resolution `box-logo.png` (693KB) to stay within the 2MB package budget. This was fixed 2026-05-19.
+**Tab bar icon gotcha:** `centerHub` tab in `tabBarConfig.ts` must have a non-empty `iconPath`. The `miniprogram-ci` upload rejects empty icon paths with `800059`. The custom tab bar component renders the center button independently (`joyjoin-logo-tab.png` + `tab-bar-notch-bg.png`), so any placeholder icon works for validation. The tab bar logo uses a dedicated 128×128 `joyjoin-logo-tab.png` (19KB) instead of the full-resolution `joyjoin-logo.png` (596KB) to stay within the 2MB package budget. This was fixed 2026-05-19.
 
 **Mini-program shared UI primitives (2026-05-27):**
 - **`Chip`** (`apps/mini-program/src/components/ui/Chip.tsx`) — unified tag/pill component for interest tags, filters, and selections. Props: `label`, `selected`, `level` (1–3), `compact`, `onClick`. Level hierarchy is monotonic: L1 subtle (`$color-primary-light`) → L2 medium (`rgba(primary, 0.14)`) → L3 strong (`rgba(primary, 0.26)`). Includes checkmark pop-in animation and shimmer pseudo-element.
-- **`BrandLogo`** (`apps/mini-program/src/components/ui/BrandLogo.tsx`) — single-source-of-truth logo renderer. Uses local `/assets/box-logo.webp`. Preset sizes: `sm` (74rpx), `md` (152rpx), `lg` (240rpx), `xl` (520rpx). Prefer this over hardcoding `<Image src="/assets/box-logo.webp">`.
-- **`JoyJoinIcon`** (`apps/mini-program/src/components/ui/JoyJoinIcon.tsx`) — proprietary icon renderer replacing raw emoji on primary UI surfaces. Props: `emoji`, `size?`, `tier?`, `className?`, `style?`. 4-tier fallback chain (no mapping → require fail → load fail → native emoji). Composite tier-aware lookup via `packages/shared/src/iconSystem/emojiToIconMap.ts` (same Unicode emoji can resolve to different assets per context). Includes fade-in + spring-bounce load animation, reduced-motion support, shimmer placeholder, and `alt` accessibility. Use for reactions, categories, intents, achievements, chemistry badges, status icons, phase emblems, and info labels.
-- **`XiaoyueChatBubble`** (`apps/mini-program/src/components/mascot/XiaoyueChatBubble.tsx`) — shared mascot coaching bubble with `tail` prop (auto-disabled for vertical/wide layouts), glow ring, and sentence stagger animation. Refactored across edit-profile, extended-data, and profile-review.
+- **`BrandLogo`** (`apps/mini-program/src/components/ui/BrandLogo.tsx`) — single-source-of-truth logo renderer. Uses local `/assets/joyjoin-logo.webp`. Preset sizes: `sm` (74rpx), `md` (152rpx), `lg` (240rpx), `xl` (520rpx`). Prefer this over hardcoding `<Image src="/assets/joyjoin-logo.webp">`.
+- **`JoyJoinIcon`** (`apps/mini-program/src/components/ui/JoyJoinIcon.tsx`) — proprietary icon renderer replacing raw emoji on primary UI surfaces. Props: `emoji`, `size?`, `tier?`, `className?`, `style?`. 4-tier fallback chain (no mapping → require fail → load fail → native emoji). Composite tier-aware lookup via `packages/shared/src/iconSystem/emojiToIconMap.ts` (same Unicode emoji can resolve to different assets per context). Includes fade-in + spring-bounce load animation, reduced-motion support, shimmer placeholder, and `alt` accessibility. Use for reactions, categories, intents, achievements, chemistry badges, status icons, phase emblems, and info labels.- **`XiaoyueChatBubble`** (`apps/mini-program/src/components/mascot/XiaoyueChatBubble.tsx`) — shared mascot coaching bubble with `tail` prop (auto-disabled for vertical/wide layouts), glow ring, and sentence stagger animation. Refactored across edit-profile, extended-data, and profile-review.
 - **`TypewriterText`** (`apps/mini-program/src/components/ui/TypewriterText.tsx`) — character-by-character text reveal for mascot speech bubbles. Props: `text`, `speed` (ms/char, clamped ≥16), `delay`, `enabled`, `showCursor`, `onComplete`. Includes punctuation-aware pauses (。！？= 2.5×, ，= 1.5×) and a blinking cursor. Used in personality-test speech bubble; suitable for any mascot "talking" moment.
 
 **Accessibility patterns in personality-test results (2026-05-27):**
@@ -251,7 +268,33 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 - **Always pair `min-height` with flex centering.** `flex: 1` inside a flex parent with `min-height: 100dvh` also works (see `center-tab-empty`).
 - **Guardrails** now flags `&__loading` / `&__empty` / `&__error` blocks in page SCSS that use flex without `min-height`, `flex: 1`, `@include scroll-view-centered-state`, or `position: fixed`.
 
+**Mini-program profile components (2026-05-24):**
+- **`ProfileArchetypeHero`** (`apps/mini-program/src/components/profile/ProfileArchetypeHero.tsx`) — celebratory archetype card with gradient background. Props: `archetype?`, `displayName`, `size` (`sm`/`md`/`lg`), `showLabel?`. Uses `ARCHETYPE_FAMILY_GRADIENTS` from `@shared/archetypeColors`. Used in profile tab, edit-profile preview, and onboarding profile-review for visual continuity.
+- **`InterestChipCloud`** (`apps/mini-program/src/components/profile/InterestChipCloud.tsx`) — read-only interest chip display with optional L1/L2/L3 level visualization. Props: `labels`, `levels?`, `accent?`, `compact?`, `emptyText?`, `onEmptyClick?`. Used in profile tab, onboarding profile-review, and anywhere interests are displayed read-only.
+- **`ProfessionDisplayField`** (`apps/mini-program/src/components/profile/ProfessionDisplayField.tsx`) — displays profession raw text + AI-classified category/segment/niche chips with edit trigger. Used in edit-profile and anywhere profession is displayed read-only.
+
+**Mini-program button styling (2026-05-23):**
+- **CTA buttons use solid brand purple (`$color-primary`, `#8B5CF6`) — no gradient.** Gradient was purged from all mini-program CTAs to avoid "AI-generated" aesthetic. The web client's `docs/design/button-design.md` retains gradient specs for archived user-client; mini-program (launch-primary) uses solid fill exclusively.
+- **Bottom action bar pattern:** Solid white background (`$color-surface`) + subtle top shadow (`rgba($color-text-primary, 0.04)`) creates floating CTA effect. Used across all onboarding steps.
+
+**Profession input overlay (2026-05-24):**
+- **`ProfessionChatOverlay`** (`apps/mini-program/src/components/ProfessionChatOverlay.tsx`) — full-screen conversational overlay for free-text profession input during onboarding step 2 (`essential-data`).
+- **Dual-mode:** Feature-flagged via `SMART_PROFESSION_V1_ENABLED` (default `true`). When enabled, calls `POST /api/inference/understand-profession` (server-side `routes/domains/professionUnderstanding.ts`) which runs parallel catalog + AI classification, generates archetype-aware AI reactions with 2-bubble stagger + reveal card with animated tags. When disabled, falls back to the legacy 184-keyword matched reaction system.
+- **Background retry:** `useProfessionRetry` hook in `app.ts` silently classifies users with `industryRawInput` but no `industryNiche` on next app open.
+- **Keyboard-safe:** Uses `onKeyboardHeightChange` + manual padding; `adjustPosition={false}` on input to prevent native scroll fighting.
+- **Optional field:** `occupationId` schema relaxed to `.optional()`; free text stored in both `occupationId` and `industryRawInput`; classification populates `industryCategoryLabel`, `industrySegmentLabel`, `industryNicheLabel`, and new `standardizedOccupationId`.
+- **Accessibility:** Includes `@media (prefers-reduced-motion: reduce)` override for all animations (overlay, messages, reveal card, tags), 88rpx touch targets, and `env(safe-area-inset-bottom)` support.
+
 **Mini-program page-stack lifecycle (swipe-back safety):** WeChat keeps pages in the navigation stack alive (hidden, not unmounted). If a page sets `isExiting`/`isPageExiting`/`isSubmitting` before navigating away, those flags survive. When the user swipes back, the page is re-shown but the CTA remains stuck. **Always reset transient exit/submit flags in `useDidShow`** — use `useResetOnShow(setIsPageExiting, setIsSubmitting)` from `apps/mini-program/src/hooks/useResetOnShow.ts`. The navigation hook `useJoyJoinNavigation` already carries an internal reset.
+
+**Mini-program ScrollView trap:** `Taro.pageScrollTo` only works on page-level scroll, **not inside `<ScrollView>`**. For scroll-to-error inside a `ScrollView`, use the `scrollIntoView` prop on `ScrollView` with the target element's `id` (no `#` prefix): `<ScrollView scrollIntoView={scrollToErrorId}>…<View id='field-displayName'>…</View>…</ScrollView>`. Clear the id after ~500ms to prevent re-scrolling on re-render.
+
+**Edit-profile design patterns (2026-05-24):**
+- **2-step grouping:** Step 1 "基础档案" = static facts (name, gender, birth, city, hometown, education). Step 2 "社交画像" = expressive choices (profession via AI overlay, intent grid, interests). Maintains cognitive continuity with onboarding.
+- **Validation + scroll-to-error:** Inline field validation with `fieldErrors` state. First error field id passed to `ScrollView scrollIntoView`.
+- **Unsaved changes guard:** `Taro.enableAlertBeforeUnload({ message: '…' })` when `hasChanges` is true; `Taro.disableAlertBeforeUnload()` on cleanup.
+- **Skeleton loading:** `isInitializing` gates a skeleton block with shimmer animation; disabled under `prefers-reduced-motion`.
+- **Floating CTA bar:** Fixed bottom white bar with subtle top shadow (`rgba($color-text-primary, 0.04)`).
 
 ---
 

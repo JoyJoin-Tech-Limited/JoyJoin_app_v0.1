@@ -38,7 +38,7 @@ Primary purpose is to **configure, orchestrate, or document AI-powered runtime f
 
 ---
 
-### `internal` — 67 skills
+### `internal` — 69 skills
 
 Primary work product is consumed by **developers**, **AI agents**, **CI systems**, or **designers**. This includes skills that guide building user-facing features but do **not** themselves invoke AI services at runtime.
 
@@ -56,7 +56,7 @@ Primary work product is consumed by **developers**, **AI agents**, **CI systems*
 | Sub-group | Skills |
 |-----------|--------|
 | **Code & review** | `code-review`, `skill-authoring-governance`, `security-scan`, `backend-models-standards` |
-| **Frontend guidance** | `frontend-component-architecture`, `frontend-design-audit`, `frontend-hook-engine`, `frontend-performance-and-loading`, `mini-program-frontend-excellence`, `viewport-zero-scroll`, `wow-elements`, `design-system-governance`, `joyjoin-brand-guidelines` |
+| **Frontend guidance** | `frontend-component-architecture`, `frontend-design-audit`, `frontend-hook-engine`, `frontend-performance-and-loading`, `mini-program-frontend-excellence`, `viewport-zero-scroll`, `wow-elements`, `design-system-governance`, `joyjoin-brand-guidelines`, `ui-layout-audit`, `completeness-audit` |
 | **Backend / infra** | `server-domain-architecture`, `database-query-optimization`, `database-migration-safety`, `caching-strategy`, `reliability-and-state-integrity`, `platform-observability-and-ops`, `error-handling-patterns`, `auth-session-and-safety-boundaries`, `websocket-realtime`, `monorepo-workspace-governance` |
 | **Testing & QA** | `e2e-test-runner`, `testing-and-regression-guardrails`, `performance-benchmark`, `harness-completion-gate` |
 | **Harness & process** | `harness-engineering-deliberation`, `harness-session-guard`, `harness-verification-gate`, `lane-selection-governance`, `process-brainstorming`, `process-docs`, `process-parity`, `process-refactoring`, `process-systematic-debugging`, `process-test-first`, `process-verification-gate`, `sprint-contract` |

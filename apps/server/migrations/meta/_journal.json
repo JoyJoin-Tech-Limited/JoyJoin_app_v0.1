@@ -334,7 +334,7 @@
     {
       "idx": 47,
       "version": "7",
-      "when": 1779888928667,
+      "when": 1750702200000,
       "tag": "20260523_add_onboarding_restart_count",
       "breakpoints": true
     },
@@ -343,6 +343,20 @@
       "version": "7",
       "when": 1778141820001,
       "tag": "add_attendance_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1758850603000,
+      "tag": "20260602_add_venue_onboarding_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1780386908214,
+      "tag": "0050_first_sue_storm",
       "breakpoints": true
     }
   ]

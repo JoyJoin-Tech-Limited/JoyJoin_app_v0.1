@@ -15,6 +15,7 @@ export type MiniProgramOnboardingAnalyticsStep =
   | 'essential-data'
   | 'extended-data'
   | 'profile-review'
+  | 'welcome-back'
   | 'discover'
 
 export type OnboardingAnalyticsEventType =

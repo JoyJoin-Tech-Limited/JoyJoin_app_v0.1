@@ -75,6 +75,108 @@ Blind-box **payment** after onboarding is **not** part of this table; see [`docs
 
 ### Step 2: Personality Test Results → WeChat Login
 
+**Route:** `/personality-test/results` → inline WeChat login
+
+**User State:** Still unauthenticated, but has test results
+
+**CTA:** "微信登录，查看匹配活动"
+
+**Why This Works:**
+- User has seen their archetype (value delivered)
+- Curiosity triggered: "Who am I compatible with?"
+- Clear value exchange: Login = See Matches
+- Expected conversion: 60-65% (Soul benchmark)
+
+**Implementation:**
+- Show archetype reveal animation (slot machine)
+- After 3 seconds, show WeChat login CTA
+- On login: Send test results to backend, create user, link results
+- Uses endpoint: `POST /api/auth/wechat/login-with-test`
+
+**Mini-program results experience (current behaviour):**
+- The Taro results page preserves a replayable reveal state so users can rewatch the card reveal locally without regenerating backend results.
+- Native sharing is enabled on the page (`ShareAppMessage` and `ShareTimeline`), and the visible share CTA can generate a local poster before invoking the platform share sheet.
+- These share affordances sit alongside the same primary claim flow; they do not replace the auth gate or the backend result-linking step.
+
+**Inline login flow (current behaviour):**
+- The unauthenticated claim CTA on the results page triggers **inline WeChat login** (`authenticateMiniProgramUserWithTest`) directly on the results page. Anonymous answers are imported automatically after successful auth. No separate auth-gate page exists.
+- On the results page there is a **DEV-only WeChat bypass button** labeled **`⚡ 测试账号登录`** with `data-testid="button-dev-wechat-bypass"`. It logs in using a mock WeChat code for local testing, is hidden in production, and is not a user-facing CTA.
+- The floating **`你的专属匹配已生成！` login card** (a redundant secondary login prompt that appeared over the results page) has been **removed**. The primary WeChat login CTA is sufficient.
+- The standalone **`/personality-test/auth-gate`** page was removed in 2026-05. All post-result login logic lives inline on the results page.
+
+**WeChat Authentication Flow:**
+```typescript
+// Frontend
+const { code } = await wx.login(); // WeChat SDK
+await fetch('/api/auth/wechat/login-with-test', {
+  method: 'POST',
+  body: JSON.stringify({
+    code,
+    anonymousSessionId,
+    testAnswers
+  })
+});
+
+// Backend
+// 1. Exchange code for openid with WeChat API
+// 2. Find or create user with WeChat OpenID
+// 3. Save personality test results to assessment_sessions
+// 4. Mark hasCompletedPersonalityTest = true
+// 5. Create session and return user data
+```
+
+---
+
+### Step 2b: Welcome Back Screen (Returning Users with Partial Onboarding)
+
+**Route:** `/onboarding/welcome-back`
+
+**User State:** Authenticated, `nextStep !== 'discover'`, `restartsRemaining > 0`, feature flag enabled
+
+**When Shown:**
+- After successful WeChat login (returning users) or auto-login redirect
+- Only when `RESTART_ONBOARDING_ENABLED=true` and `nextStep !== 'discover'`
+- Only when `restartsRemaining > 0` (capped at 5 restarts per user)
+- Only once per reinstall (`jj_welcome_back_seen` in Taro storage)
+- **Not shown** for brand-new users who have never completed personality test
+
+**Content:**
+- Friendly greeting: "欢迎回来！"
+- Current onboarding step name (e.g., "基础资料填写", "兴趣选择", "个人资料预览")
+- Two CTAs:
+  - **"继续当前进度"** — proceeds to `nextStep` (default, primary)
+  - **"重新开始"** — opens confirmation modal, then calls restart endpoint
+- Restart button displays remaining count: "重新开始 (还剩 3 次)"
+
+**Confirmation Modal:**
+- Title: "确定要重新开始吗？"
+- Content explains that restart will clear all onboarding data and return to personality test
+- Destructive red confirm button (`confirmColor: '#EF4444'`)
+- Cancel dismisses modal
+
+**Data Boundaries on Restart:**
+- **Preserved:** WeChat openid, phone number, `hasCompletedRegistration`, identity columns, `createdAt`
+- **Cleared:** All onboarding-derived fields (display name, gender, birthday, city, education, work, interests, archetype results, social tags, semantic profile)
+- **Related table deletions:** `testResponses`, `roleResults`, `userInterests`, `userSocialTagGenerations`, `userSemanticProfiles`, `assessmentSessions` (+ `assessmentAnswers` batched via `inArray`)
+- **Always returns to:** `personality-test` step (re-test required)
+
+**Client-Side Storage Gate:**
+```typescript
+const WELCOME_BACK_SEEN_KEY = 'jj_welcome_back_seen';
+// Set after user sees the screen once; survives until Taro storage cleared (reinstall)
+```
+
+**Analytics Events:**
+- `welcome_back_screen_shown` — screen viewed
+- `welcome_back_continue_clicked` — user taps continue
+- `welcome_back_restart_clicked` — user taps restart
+- `welcome_back_restart_confirmed` — user confirms restart in modal
+- `welcome_back_restart_cancelled` — user cancels restart in modal
+
+---
+
+### Step 3: Essential Data Collection
+
 **Route:** `/personality-test/results`
 
 **User State:** Still unauthenticated, but has test results
@@ -183,6 +285,7 @@ await fetch('/api/auth/wechat/login-with-test', {
 **Content:**
 - Animated "analyzing" phase (minimum **1200 ms** for standard motion; **500 ms** for reduced-motion users). After 600 ms a tap/click anywhere skips straight to the reveal — preventing artificial waiting when data is already ready. (Prior to PR #383 this was a fixed 2500 ms wait with no skip path.)
 - Profile portrait card reveal with archetype, interests, and stats
+- **Interest chips** — top interests rendered via `InterestChipCloud` (shared profile component) with dominant category chips below
 - **AI insight tagline** — a short personalised `insightLine` fetched from `GET /api/onboarding/profile-tagline` (service: `apps/server/src/profileTaglineService.ts`; contract: `ProfileTaglineResponse` in `packages/shared/src/ai/onboarding.ts`). Displayed inside `ProfilePortraitCard`. Rendered as a presentation-only enhancement; does not block navigation.
 - **Match Power preview** — displays the user's computed match score before they enter the Discover pool
 - **Archetype-personalized CTA** — the call-to-action copy is tailored to the user's archetype result (e.g., different messaging for each archetype type)
@@ -246,12 +349,15 @@ The enrichment card is shown via the `ProfileEnrichmentCard` component on the Di
 | `activeAssessmentSessionId` | `string \| null` | Active V4 session ID |
 | `hasCompletedInterestsCarousel` | `boolean` | Set to `true` when the user completes or skips the interests carousel step (`/onboarding/extended`). This is the canonical completion gate for the extended-data onboarding step. |
 | `tableVibePreference` | `string \| null` | Post-onboarding dining/social vibe preference collected via the Discover-page enrichment card. `null` until the user completes the enrichment step. |
+| `restartsRemaining` | `number` | Onboarding restart quota remaining (0–5). Decrements on each successful restart. |
+| `features` | `object` | DB-backed feature flags from server. `restartOnboarding` gates the welcome-back screen + restart flow. See `apps/server/src/lib/featureFlags.ts`. |
 
 ### API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/auth/user` | GET | Get current user and nextStep |
+| `/api/auth/onboarding/restart` | POST | Restart onboarding (clears derived data, returns to personality-test). Returns `400` with `code: 'ONBOARDING_ALREADY_COMPLETE'` if user is already at `discover`. Idempotent. |
 | `/api/profile-review/complete` | POST | Mark profile review as seen |
 | (removed) | – | `/api/guide/mark-seen` and `/api/guide/complete` removed (2026-05-07) |
 

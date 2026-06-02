@@ -59,7 +59,8 @@ src/
 │   ├── invite/
 │   └── terms/
 ├── components/          # Shared UI components & primitives
-│   ├── ui/              # BrandLogo, Button, Card, StatusCard, JoyJoinIcon, etc.
+│   ├── ui/              # BrandLogo, Button, Card, StatusCard, JoyJoinIcon, Chip, SegmentedProgress, TraitRadarChart, etc.
+│   ├── profile/         # Profile-specific components (ProfileArchetypeHero, InterestChipCloud, ProfessionDisplayField)
 │   ├── landing/         # Landing-page-specific components (BondingCloud)
 │   └── discover/        # Discover feed components (OracleCard, CompatibilityIndicator, EcosystemBar)
 ├── hooks/               # Custom React hooks
@@ -127,7 +128,7 @@ Assets are **CDN-first** in production. The build inlines `TARO_APP_CDN_BASE_URL
 
 **Active copy patterns** (`config/index.ts`) — only critical bundled assets:
 - `src/assets/tab-icons` → `dist/assets/tab-icons` (tab bar icons, must be local)
-- `src/assets/box-logo.webp` → `dist/assets/box-logo.webp` (native tab bar center button)
+- `src/assets/joyjoin-logo.webp` → `dist/assets/joyjoin-logo.webp` (native tab bar center button)
 - `src/native-custom-tab-bar/` → `dist/custom-tab-bar/`
 - `src/pages/onboarding/assets/archetypes` → `dist/pages/onboarding/assets/archetypes` (subpackage assets)
 - `src/assets/icons/*` → `dist/assets/icons/*` (proprietary icon system — reaction, category, intent, reveal, achievement, chemistry, status, info-label, rating-face, mood, phase tiers; see **Proprietary Icon System** below)

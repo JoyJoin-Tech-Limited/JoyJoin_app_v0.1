@@ -21,9 +21,9 @@ export interface FormStepperProps {
  * FormStepper — viewport-locked step header for onboarding wizards.
  *
  * Mechanical segmented progress bar design:
- * - Thick segmented blocks (12rpx) that fill with brand gradient
- * - Step label integrated above the bar, centered
- * - Back button anchored to the far left
+ * - Thick segmented blocks (12rpx) that fill with solid brand color
+ * - Step label integrated above the bar, centered absolutely
+ * - Back button anchored to the left at 32rpx
  * - Each segment represents one step for tangible progress feel
  */
 export default function FormStepper({
@@ -40,7 +40,7 @@ export default function FormStepper({
     <View className='form-stepper'>
       {/* Header row: back button + step status unit */}
       <View className='form-stepper__header'>
-        {/* Back button — far left */}
+        {/* Back button — anchored left at 32rpx */}
         {showBack && onBack && currentStep > 0 ? (
           <Button
             variant='secondary'
@@ -49,11 +49,9 @@ export default function FormStepper({
           >
             <Text className='form-stepper__back-icon'>‹</Text>
           </Button>
-        ) : (
-          <View className='form-stepper__back-placeholder' />
-        )}
+        ) : null}
 
-        {/* Step status unit: label + segmented bar, centered */}
+        {/* Step status unit: label + segmented bar, absolutely centered */}
         <View className='form-stepper__status-unit'>
           <Text className='form-stepper__step-label'>
             {`步骤 ${currentStep + 1} / ${totalSteps}`}
@@ -71,9 +69,6 @@ export default function FormStepper({
             ))}
           </View>
         </View>
-
-        {/* Spacer to balance the back button width and keep status centered */}
-        <View className='form-stepper__back-placeholder' />
       </View>
 
       {/* Step title */}

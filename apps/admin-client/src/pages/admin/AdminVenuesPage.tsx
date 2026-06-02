@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Store, Plus, Edit, Trash2, Building, TrendingUp, Calendar, DollarSign, Clock, X, CalendarDays, LayoutGrid, AlertTriangle, ArrowRightLeft, Gift, Percent, Tag, CircleDollarSign, Eye, EyeOff, MapPin, Map } from "lucide-react";
+import { Store, Plus, Edit, Trash2, Building, TrendingUp, Calendar, DollarSign, Clock, X, CalendarDays, LayoutGrid, AlertTriangle, ArrowRightLeft, Gift, Percent, Tag, CircleDollarSign, Eye, EyeOff, MapPin, Map, Check, Loader2 } from "lucide-react";
 import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
 import { shenzhenClusters, getDistrictsByCluster, getDistrictById, getClusterById } from "@shared/districts";
 import { queryClient } from "@/lib/queryClient";
@@ -44,6 +44,7 @@ import AmapPicker from "@/components/discover/AmapPicker";
 import VenueCreateDialog from "./VenueCreateDialog";
 import VenueEditDialog from "./VenueEditDialog";
 import VenueDealsManager from "./VenueDealsManager";
+import VenueTimeSlotsManager from "./VenueTimeSlotsManager";
 
 interface VenueTimeSlot {
   id: string;
@@ -59,13 +60,13 @@ interface VenueTimeSlot {
 }
 
 const DAYS_OF_WEEK = [
-  { value: 0, label: "周日" },
-  { value: 1, label: "周一" },
-  { value: 2, label: "周二" },
-  { value: 3, label: "周三" },
-  { value: 4, label: "周四" },
-  { value: 5, label: "周五" },
-  { value: 6, label: "周六" },
+  { value: 0, label: "周日", short: "日" },
+  { value: 1, label: "周一", short: "一" },
+  { value: 2, label: "周二", short: "二" },
+  { value: 3, label: "周三", short: "三" },
+  { value: 4, label: "周四", short: "四" },
+  { value: 5, label: "周五", short: "五" },
+  { value: 6, label: "周六", short: "六" },
 ];
 
 interface Venue {
@@ -210,7 +211,10 @@ export default function AdminVenuesPage() {
   const [showDealsDialog, setShowDealsDialog] = useState(false);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [filterType, setFilterType] = useState<"all" | "restaurant" | "bar">("all");
+  const [filterOnboardingStatus, setFilterOnboardingStatus] = useState<"all" | "draft" | "pending_review" | "active" | "suspended">("all");
   const [viewMode, setViewMode] = useState<"venues" | "calendar">("venues");
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
   
   // Time slot form state
   
@@ -261,11 +265,10 @@ export default function AdminVenuesPage() {
     queryKey: ["/api/admin/venues"],
   });
 
-  // Query for all time slots (for calendar view)
+  // Query for all time slots (always fetch for card summaries + calendar view)
   const { data: allTimeSlots = [], isLoading: allTimeSlotsLoading } = useQuery<AllTimeSlot[]>({
     queryKey: ["/api/admin/time-slots/all"],
     queryFn: () => fetch("/api/admin/time-slots/all", { credentials: "include" }).then(r => r.json()),
-    enabled: viewMode === "calendar",
   });
 
   // Group time slots by day of week for calendar display
@@ -275,6 +278,16 @@ export default function AdminVenuesPage() {
       if (slot.dayOfWeek !== null) {
         grouped[slot.dayOfWeek].push(slot);
       }
+    });
+    return grouped;
+  }, [allTimeSlots]);
+
+  // Group time slots by venue ID for card summaries
+  const slotsByVenueId = useMemo(() => {
+    const grouped: Record<string, AllTimeSlot[]> = {};
+    allTimeSlots.forEach(slot => {
+      if (!grouped[slot.venueId]) grouped[slot.venueId] = [];
+      grouped[slot.venueId].push(slot);
     });
     return grouped;
   }, [allTimeSlots]);
@@ -529,13 +542,13 @@ export default function AdminVenuesPage() {
       barThemes: venue.barThemes || [],
       alcoholOptions: venue.alcoholOptions || [],
       vibeDescriptor: venue.vibeDescriptor || "",
-      partnerCompanyName: venue.partnerCompanyName || "",
-      businessLicenseNo: venue.businessLicenseNo || "",
-      partnerEmail: venue.partnerEmail || "",
-      bankAccountInfo: venue.bankAccountInfo || "",
-      contractStartDate: venue.contractStartDate || "",
-      contractEndDate: venue.contractEndDate || "",
-      onboardingStatus: venue.onboardingStatus || "draft",
+      partnerCompanyName: (venue as any).partnerCompanyName || (venue as any).partner_company_name || "",
+      businessLicenseNo: (venue as any).businessLicenseNo || (venue as any).business_license_no || "",
+      partnerEmail: (venue as any).partnerEmail || (venue as any).partner_email || "",
+      bankAccountInfo: (venue as any).bankAccountInfo || (venue as any).bank_account_info || "",
+      contractStartDate: (venue as any).contractStartDate || (venue as any).contract_start_date || "",
+      contractEndDate: (venue as any).contractEndDate || (venue as any).contract_end_date || "",
+      onboardingStatus: (venue as any).onboardingStatus || (venue as any).onboarding_status || "draft",
     });
     setShowEditDialog(true);
   };
@@ -587,7 +600,6 @@ export default function AdminVenuesPage() {
         bankAccountInfo: formData.bankAccountInfo || null,
         contractStartDate: formData.contractStartDate || null,
         contractEndDate: formData.contractEndDate || null,
-        onboardingStatus: formData.onboardingStatus || null,
       },
     });
   };
@@ -608,6 +620,51 @@ export default function AdminVenuesPage() {
       id: venue.id,
       data: { isActive: !venue.isActive },
     });
+  };
+
+  const transitionMutation = useMutation({
+    mutationFn: ({ id, action, reason }: { id: string; action: string; reason?: string }) =>
+      fetch(`/api/admin/venues/${id}/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: reason ? JSON.stringify({ reason }) : undefined,
+      }).then(async (r) => {
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({ message: `HTTP ${r.status}` }));
+          throw new Error(err.message || `Failed to ${action} venue`);
+        }
+        return r.json();
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/venues"] });
+      setShowRejectDialog(false);
+      setRejectReason("");
+      setSelectedVenue(null);
+      toast({ title: "操作成功", description: "场地状态已更新" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "操作失败",
+        description: error.message || "无法更新场地状态",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleTransition = (venue: Venue, action: string) => {
+    if (action === "reject") {
+      setSelectedVenue(venue);
+      setShowRejectDialog(true);
+      return;
+    }
+    transitionMutation.mutate({ id: venue.id, action });
+  };
+
+  const confirmReject = () => {
+    if (selectedVenue && rejectReason.trim()) {
+      transitionMutation.mutate({ id: selectedVenue.id, action: "reject", reason: rejectReason.trim() });
+    }
   };
 
   const toggleTag = (tag: string) => {
@@ -676,11 +733,53 @@ export default function AdminVenuesPage() {
     return VENUE_TYPES.find(t => t.value === type)?.label || type;
   };
 
-  const filteredVenues = filterType === "all" 
-    ? venues 
-    : venues.filter(v => v.type === filterType);
+  const getVenueTimeSlotSummary = (venueId: string): { text: string; hasSlots: boolean; isLimited: boolean } => {
+    const slots = (slotsByVenueId[venueId] || []).filter(s => s.isActive && s.dayOfWeek !== null);
+    if (slots.length === 0) return { text: "未设置可用时段", hasSlots: false, isLimited: false };
+
+    const days = slots.map(s => s.dayOfWeek!).sort((a, b) => a - b);
+    const uniqueDays = [...new Set(days)];
+    const timeRange = slots[0].startTime && slots[0].endTime ? `${slots[0].startTime}-${slots[0].endTime}` : "";
+
+    // Check if all days have same time range
+    const allSameTime = slots.every(s => s.startTime === slots[0].startTime && s.endTime === slots[0].endTime);
+    const timeStr = allSameTime ? timeRange : "多时段";
+
+    // Format day range
+    let dayText: string;
+    if (uniqueDays.length === 7) {
+      dayText = "每日";
+    } else if (uniqueDays.length <= 3) {
+      dayText = uniqueDays.map(d => DAYS_OF_WEEK.find(dd => dd.value === d)?.label || "").filter(Boolean).join("、");
+    } else {
+      // Check if consecutive
+      const isConsecutive = uniqueDays.every((d, i) => i === 0 || d === uniqueDays[i - 1] + 1);
+      if (isConsecutive && uniqueDays.length >= 5) {
+        const first = DAYS_OF_WEEK.find(dd => dd.value === uniqueDays[0])?.label || "";
+        const last = DAYS_OF_WEEK.find(dd => dd.value === uniqueDays[uniqueDays.length - 1])?.label || "";
+        dayText = `${first}~${last}`;
+      } else {
+        dayText = uniqueDays.map(d => DAYS_OF_WEEK.find(dd => dd.value === d)?.short || "").filter(Boolean).join("、");
+      }
+    }
+
+    return {
+      text: `${dayText} ${timeStr}`,
+      hasSlots: true,
+      isLimited: uniqueDays.length < 7,
+    };
+  };
+
+  const filteredVenues = useMemo(() => {
+    let result = filterType === "all" ? venues : venues.filter(v => v.type === filterType);
+    if (filterOnboardingStatus !== "all") {
+      result = result.filter(v => v.onboardingStatus === filterOnboardingStatus);
+    }
+    return result;
+  }, [venues, filterType, filterOnboardingStatus]);
 
   const activeVenues = venues.filter(v => v.isActive).length;
+  const pendingReviewCount = venues.filter(v => v.onboardingStatus === "pending_review").length;
   const totalBookings = venues.reduce((sum, v) => sum + (v.bookingCount || 0), 0);
   const totalCommission = venues.reduce((sum, v) => sum + (v.totalCommission || 0), 0);
 
@@ -722,6 +821,17 @@ export default function AdminVenuesPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">待审核</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="metric-pending-review">{pendingReviewCount}</div>
+            <p className="text-xs text-muted-foreground">等待审批的场地</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">总预订数</CardTitle>
             <Calendar className="h-4 w-4 text-blue-500" />
           </CardHeader>
@@ -730,27 +840,34 @@ export default function AdminVenuesPage() {
             <p className="text-xs text-muted-foreground">累计预订次数</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">佣金收入</CardTitle>
-            <DollarSign className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="metric-commission-earned">¥{totalCommission.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">累计佣金</p>
-          </CardContent>
-        </Card>
       </div>
 
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <Tabs value={filterType} onValueChange={(v) => setFilterType(v as any)}>
-          <TabsList>
-            <TabsTrigger value="all" data-testid="filter-all">全部</TabsTrigger>
-            <TabsTrigger value="restaurant" data-testid="filter-restaurant">餐厅</TabsTrigger>
-            <TabsTrigger value="bar" data-testid="filter-bar">酒吧</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex gap-2 flex-wrap">
+          <Tabs value={filterType} onValueChange={(v) => setFilterType(v as any)}>
+            <TabsList>
+              <TabsTrigger value="all" data-testid="filter-all">全部</TabsTrigger>
+              <TabsTrigger value="restaurant" data-testid="filter-restaurant">餐厅</TabsTrigger>
+              <TabsTrigger value="bar" data-testid="filter-bar">酒吧</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Tabs value={filterOnboardingStatus} onValueChange={(v) => setFilterOnboardingStatus(v as any)}>
+            <TabsList>
+              <TabsTrigger value="all">全部状态</TabsTrigger>
+              <TabsTrigger value="draft">草稿</TabsTrigger>
+              <TabsTrigger value="pending_review" className="relative">
+                待审核
+                {pendingReviewCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] text-white">
+                    {pendingReviewCount}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="active">正式合作</TabsTrigger>
+              <TabsTrigger value="suspended">已暂停</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
         
         <div className="flex gap-2">
           <Button
@@ -852,7 +969,7 @@ export default function AdminVenuesPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredVenues.map((venue) => {
-            const onboardingStatus = venue.onboardingStatus;
+            const onboardingStatus = (venue as any).onboardingStatus || (venue as any).onboarding_status;
             const onboardingStatusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className: string }> = {
               draft: { label: "草稿", variant: "secondary", className: "text-muted-foreground" },
               pending_review: { label: "待审核", variant: "outline", className: "border-amber-400 text-amber-700" },
@@ -916,11 +1033,28 @@ export default function AdminVenuesPage() {
                   </div>
                 </div>
 
+                {/* Time slot summary */}
+                {(() => {
+                  const summary = getVenueTimeSlotSummary(venue.id);
+                  return (
+                    <div className="flex items-center gap-1.5 text-xs py-1.5 border-t">
+                      <Clock className="h-3 w-3 flex-shrink-0" />
+                      <span className={summary.hasSlots ? (summary.isLimited ? "text-amber-600 font-medium" : "text-muted-foreground") : "text-red-500"}>
+                        {summary.hasSlots ? `可用: ${summary.text}` : summary.text}
+                      </span>
+                    </div>
+                  );
+                })()}
+
                 {/* Partner info if available */}
-                {(venue.partnerCompanyName || venue.contractEndDate) && (
+                {((venue as any).partnerCompanyName || (venue as any).partner_company_name || (venue as any).contractEndDate || (venue as any).contract_end_date) && (
                   <div className="text-xs text-muted-foreground mt-1 pt-1 border-t">
-                    {venue.partnerCompanyName && <div>🏢 {venue.partnerCompanyName}</div>}
-                    {venue.contractEndDate && <div>合同到期: {venue.contractEndDate}</div>}
+                    {((venue as any).partnerCompanyName || (venue as any).partner_company_name) && (
+                      <div>🏢 {(venue as any).partnerCompanyName || (venue as any).partner_company_name}</div>
+                    )}
+                    {((venue as any).contractEndDate || (venue as any).contract_end_date) && (
+                      <div>合同到期: {(venue as any).contractEndDate || (venue as any).contract_end_date}</div>
+                    )}
                   </div>
                 )}
 
@@ -937,6 +1071,69 @@ export default function AdminVenuesPage() {
                     {venue.cuisines.map(cuisine => (
                       <Badge key={cuisine} variant="outline" className="text-xs">{cuisine}</Badge>
                     ))}
+                  </div>
+                )}
+
+                {/* Onboarding action buttons */}
+                {onboardingStatus && (
+                  <div className="flex flex-wrap gap-1 pt-2">
+                    {onboardingStatus === 'draft' && (
+                      <Button size="sm" variant="outline" className="text-amber-600 border-amber-300 hover:bg-amber-50 text-xs h-7" onClick={() => handleTransition(venue, 'submit-for-review')} disabled={transitionMutation.isPending} data-testid={`button-submit-review-${venue.id}`}>
+                        {transitionMutation.isPending && transitionMutation.variables?.action === 'submit-for-review' ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                        提交审核
+                      </Button>
+                    )}
+                    {onboardingStatus === 'pending_review' && (
+                      <>
+                        <Button size="sm" variant="outline" className="text-green-600 border-green-300 hover:bg-green-50 text-xs h-7" onClick={() => handleTransition(venue, 'approve')} disabled={transitionMutation.isPending} data-testid={`button-approve-${venue.id}`}>
+                          {transitionMutation.isPending && transitionMutation.variables?.action === 'approve' ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                          通过
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50 text-xs h-7" onClick={() => handleTransition(venue, 'reject')} disabled={transitionMutation.isPending} data-testid={`button-reject-${venue.id}`}>
+                          {transitionMutation.isPending && transitionMutation.variables?.action === 'reject' ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                          驳回
+                        </Button>
+                      </>
+                    )}
+                    {onboardingStatus === 'active' && (
+                      <Button size="sm" variant="outline" className="text-orange-600 border-orange-300 hover:bg-orange-50 text-xs h-7" onClick={() => handleTransition(venue, 'suspend')} disabled={transitionMutation.isPending} data-testid={`button-suspend-${venue.id}`}>
+                        {transitionMutation.isPending && transitionMutation.variables?.action === 'suspend' ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                        暂停
+                      </Button>
+                    )}
+                    {onboardingStatus === 'suspended' && (
+                      <Button size="sm" variant="outline" className="text-green-600 border-green-300 hover:bg-green-50 text-xs h-7" onClick={() => handleTransition(venue, 're-activate')} disabled={transitionMutation.isPending} data-testid={`button-reactivate-${venue.id}`}>
+                        {transitionMutation.isPending && transitionMutation.variables?.action === 're-activate' ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                        重新激活
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {/* Validation checklist for pending_review */}
+                {onboardingStatus === 'pending_review' && (
+                  <div className="text-xs space-y-1 pt-1 border-t border-dashed">
+                    <p className="text-muted-foreground font-medium">审核清单：</p>
+                    <div className="grid grid-cols-2 gap-x-2">
+                      {[
+                        { label: '公司名称', ok: !!(venue as any).partnerCompanyName || !!(venue as any).partner_company_name },
+                        { label: '营业执照', ok: !!(venue as any).businessLicenseNo || !!(venue as any).business_license_no },
+                        { label: '联系邮箱', ok: !!(venue as any).partnerEmail || !!(venue as any).partner_email },
+                        { label: '合同开始', ok: !!(venue as any).contractStartDate || !!(venue as any).contract_start_date },
+                        { label: '合同结束', ok: !!(venue as any).contractEndDate || !!(venue as any).contract_end_date },
+                        { label: '联系人', ok: !!venue.contactName },
+                        { label: '联系电话', ok: !!venue.contactPhone },
+                      ].map(item => (
+                        <div key={item.label} className="flex items-center gap-1">
+                          {item.ok ? (
+                            <Check className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <X className="h-3 w-3 text-red-500" />
+                          )}
+                          <span className={item.ok ? 'text-muted-foreground' : 'text-red-500'}>{item.label}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -1035,6 +1232,12 @@ export default function AdminVenuesPage() {
         onOpenChange={setShowDealsDialog}
       />
 
+      <VenueTimeSlotsManager
+        venue={selectedVenue}
+        open={showTimeSlotsDialog}
+        onOpenChange={setShowTimeSlotsDialog}
+      />
+
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1056,6 +1259,36 @@ export default function AdminVenuesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Reject reason dialog */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>驳回场地审核</DialogTitle>
+            <DialogDescription>
+              请输入驳回原因，提交人将收到通知并补充材料后重新提交。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reject-reason">驳回原因 *</Label>
+              <Textarea
+                id="reject-reason"
+                placeholder="例：营业执照信息不完整，请补充上传"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>取消</Button>
+            <Button onClick={confirmReject} disabled={!rejectReason.trim() || transitionMutation.isPending}>
+              {transitionMutation.isPending ? "提交中..." : "确认驳回"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
 
 

@@ -445,7 +445,10 @@ export const venueTimeSlots = pgTable("venue_time_slots", {
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_venue_time_slots_lookup").on(table.venueId, table.dayOfWeek, table.isActive, table.startTime, table.endTime),
+  index("idx_venue_time_slots_specific").on(table.venueId, table.specificDate, table.isActive, table.startTime, table.endTime),
+]);
 
 // Venue Time Slot Bookings table - 时间段预订记录（用于追踪已占用容量）
 export const venueTimeSlotBookings = pgTable("venue_time_slot_bookings", {
@@ -465,7 +468,11 @@ export const venueTimeSlotBookings = pgTable("venue_time_slot_bookings", {
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_vtsb_slot_date_status").on(table.timeSlotId, table.bookingDate, table.status),
+  index("idx_vtsb_group_status").on(table.eventGroupId, table.status),
+  index("idx_vtsb_venue_date").on(table.venueId, table.bookingDate, table.status),
+]);
 
 // Insert schemas for venue time slots
 export const insertVenueTimeSlotSchema = createInsertSchema(venueTimeSlots).omit({
@@ -1396,6 +1403,33 @@ export const insertAdminAuditLogSchema = createInsertSchema(adminAuditLogs).omit
 
 export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
 export type InsertAdminAuditLog = z.infer<typeof insertAdminAuditLogSchema>;
+
+// ============ Feature Flags ============
+
+/**
+ * Runtime feature flags / kill switches.
+ *
+ * Overrides env vars when present. Falls back to env var value if row missing.
+ * Enables ops to toggle features without redeploying.
+ */
+export const featureFlags = pgTable("feature_flags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: varchar("key", { length: 64 }).notNull().unique(),
+  value: varchar("value", { length: 255 }).notNull().default("false"),
+  description: text("description"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  updatedBy: varchar("updated_by", { length: 64 }),
+}, (table) => [
+  index("idx_feature_flags_key").on(table.key),
+]);
+
+export const insertFeatureFlagSchema = createInsertSchema(featureFlags).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type FeatureFlag = typeof featureFlags.$inferSelect;
+export type InsertFeatureFlag = z.infer<typeof insertFeatureFlagSchema>;
 
 // ============ Interest Signal Boost ============
 

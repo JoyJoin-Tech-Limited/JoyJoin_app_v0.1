@@ -10,6 +10,7 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   essentialData: 'pages/onboarding/essential-data/index',
   extendedData: 'pages/onboarding/extended-data/index',
   profileReview: 'pages/onboarding/profile-review/index',
+  welcomeBack: 'pages/onboarding/welcome-back/index',
   blindBoxPayment: 'pages/blind-box-payment/index',
   paymentVerification: 'pages/payment-verification/index',
   events: 'pages/events/index',
@@ -44,6 +45,7 @@ export const MINI_PROGRAM_ROUTES = {
   essentialData: `/${MINI_PROGRAM_PAGE_PATHS.essentialData}`,
   extendedData: `/${MINI_PROGRAM_PAGE_PATHS.extendedData}`,
   profileReview: `/${MINI_PROGRAM_PAGE_PATHS.profileReview}`,
+  welcomeBack: `/${MINI_PROGRAM_PAGE_PATHS.welcomeBack}`,
   blindBoxPayment: `/${MINI_PROGRAM_PAGE_PATHS.blindBoxPayment}`,
   paymentVerification: `/${MINI_PROGRAM_PAGE_PATHS.paymentVerification}`,
   events: `/${MINI_PROGRAM_PAGE_PATHS.events}`,
@@ -61,6 +63,7 @@ export const MINI_PROGRAM_ROUTES = {
   rewards: `/${MINI_PROGRAM_PAGE_PATHS.rewards}`,
   invite: `/${MINI_PROGRAM_PAGE_PATHS.invite}`,
   cityUnlock: `/${MINI_PROGRAM_PAGE_PATHS.cityUnlock}`,
+  index: `/${MINI_PROGRAM_PAGE_PATHS.index}`,
 } as const
 
 export const MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT = 'pages/onboarding' as const
@@ -73,6 +76,7 @@ export const MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES = [
   'essential-data/index',
   'extended-data/index',
   'profile-review/index',
+  'welcome-back/index',
 ] as const
 
 export const MINI_PROGRAM_ONBOARDING_PACKAGE_PAGE_PATHS = [
@@ -83,6 +87,7 @@ export const MINI_PROGRAM_ONBOARDING_PACKAGE_PAGE_PATHS = [
   MINI_PROGRAM_PAGE_PATHS.essentialData,
   MINI_PROGRAM_PAGE_PATHS.extendedData,
   MINI_PROGRAM_PAGE_PATHS.profileReview,
+  MINI_PROGRAM_PAGE_PATHS.welcomeBack,
 ] as const
 
 export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
@@ -90,6 +95,7 @@ export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.discover,
   MINI_PROGRAM_PAGE_PATHS.centerHub,
   MINI_PROGRAM_PAGE_PATHS.paymentVerification,
+  MINI_PROGRAM_PAGE_PATHS.blindBoxPayment,
   MINI_PROGRAM_PAGE_PATHS.events,
   MINI_PROGRAM_PAGE_PATHS.connections,
   MINI_PROGRAM_PAGE_PATHS.profile,

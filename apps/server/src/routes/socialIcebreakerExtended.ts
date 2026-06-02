@@ -45,6 +45,7 @@ import {
 } from '../lib/socialIcebreakerStore';
 import { curateMedals } from '../lib/medalCuration';
 import { logger } from '../lib/logger';
+import { getFeatureFlag } from '../lib/featureFlags';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
 
 function buildRecapHighlights(state: SocialSessionState, roster?: Array<{ userId: string; displayName: string }>) {
@@ -1059,5 +1060,36 @@ router.get('/:socialSessionId/recap', async (req: any, res) => {
     logger.error('[SocialIcebreaker] Failed to generate recap:', { error: String(error) });
     return res.status(500).json({ error: 'Failed to generate recap' });
   }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/force-end
+// Admin / kill-switch only: immediately end the session regardless of phase.
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/force-end', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
+    return res.status(403).json({ error: 'Only the host can force-end a session' });
+  }
+
+  const flagEnabled = await getFeatureFlag('socialIcebreakerClientForceEnd', false);
+  if (!flagEnabled) {
+    return res.status(503).json({ error: 'Force-end is not enabled', code: 'FORCE_END_DISABLED' });
+  }
+
+  state.currentPhase = 'ended' as SocialIcebreakerPhase;
+  await updateSession(socialSessionId, state);
+
+  logger.info('[SocialIcebreaker] Session force-ended by host', { socialSessionId, userId });
+  return res.json({ ended: true, phase: 'ended' });
 });
 }

@@ -23,107 +23,98 @@
     color: $color-text-secondary;
   }
 
-  // Hero
-  &__hero {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  // Archetype hero
+  &__hero-wrap {
     padding: $spacing-2xl $container-padding $spacing-lg;
-    text-align: center;
   }
 
-  &__avatar {
-    width: 120rpx;
-    height: 120rpx;
-    border-radius: 60rpx;
-    background: rgba($color-primary, 0.08);
-    @include flex-center;
-    margin-bottom: $spacing-md;
-    overflow: hidden;
+  &__archetype-hero {
+    border: 2rpx solid rgba($color-primary, 0.08);
+    box-shadow: 0 4rpx 24rpx rgba($color-primary, 0.08);
   }
 
-  &__name {
-    display: block;
-    @include type-heading;
-    margin-bottom: $spacing-xs;
-  }
-
-  &__archetype {
-    display: block;
-    @include type-body;
-    color: $color-primary;
-    font-weight: $font-weight-medium;
-  }
-
-  &__archetype-row {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    margin-top: $spacing-xs;
-  }
-
+  // Xiaoyue coach
   &__coach {
     padding: 0 $container-padding;
     margin-bottom: $spacing-lg;
   }
 
-  // Archetype Celebration Card
-  &__archetype-card {
+  // Identity preview card
+  &__identity-card {
+    @include card;
     margin: 0 $container-padding $spacing-lg;
     padding: $spacing-lg;
-    border-radius: 32rpx;
-    border: 2rpx solid rgba($color-primary, 0.08);
+    opacity: 0;
+    transform: translateY(12rpx);
+    transition:
+      opacity 0.5s ease,
+      transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+
+    &--visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
-  &__archetype-card-inner {
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
+  @media (prefers-reduced-motion: reduce) {
+    &__identity-card {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
   }
 
-  &__archetype-card-text {
-    display: flex;
-    flex-direction: column;
-    gap: 4rpx;
+  &__identity-header {
+    margin-bottom: $spacing-md;
   }
 
-  &__archetype-card-label {
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    line-height: $line-height-normal;
-  }
-
-  &__archetype-card-name {
+  &__identity-title {
     font-size: $font-size-lg;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
     line-height: $line-height-tight;
   }
 
-  // Stats
-  &__stats {
+  &__intent-wrap {
+    margin-top: $spacing-sm;
+  }
+
+  &__intent-chips {
+    opacity: 0.85;
+  }
+
+  &__tagline-wrap {
     display: flex;
-    gap: $spacing-md;
-    padding: 0 $container-padding;
-    margin-bottom: $spacing-lg;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    margin-top: $spacing-md;
+    padding-top: $spacing-md;
+    border-top: 1rpx solid $color-divider;
   }
 
-  &__stat {
+  &__tagline-accent {
+    width: 6rpx;
+    height: 32rpx;
+    border-radius: 3rpx;
+    background: $color-primary;
+    flex-shrink: 0;
+    margin-top: 4rpx;
+  }
+
+  &__tagline {
     flex: 1;
-    @include card;
-    padding: $spacing-lg;
-    text-align: center;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+    font-style: italic;
   }
 
-  &__stat-value {
+  &__error-hint {
     display: block;
-    @include type-subheading;
-    margin-bottom: $spacing-xs;
-  }
-
-  &__stat-label {
-    display: block;
-    @include type-caption;
+    font-size: $font-size-sm;
+    color: $color-error;
+    line-height: $line-height-normal;
+    padding: $spacing-sm 0;
   }
 
   // Action rows
@@ -214,7 +205,7 @@
   }
 
   &__empty-emoji {
-    font-size: 64rpx; // Decorative — not part of hierarchy
+    font-size: 64rpx;
   }
 
   &__empty-text {

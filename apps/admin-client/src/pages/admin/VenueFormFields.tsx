@@ -352,22 +352,9 @@ export default function VenueFormFields({ formData, setFormData, mode, setShowMa
           </div>
         </div>
         <div className="space-y-2 pt-2">
-          <Label className="text-xs flex items-center gap-1">
-            合作状态
-            <FieldInfoTooltip
-              title="场地合作状态"
-              description="草稿 = 初步接洽；待审核 = 材料已提交，等待运营审核；正式合作 = 可接受活动预订；已暂停 = 暂时不接受新预订。"
-            />
-          </Label>
-          <Select value={formData.onboardingStatus} onValueChange={(v) => setFormData(prev => ({ ...prev, onboardingStatus: v as NonNullable<Venue['onboardingStatus']> }))}>
-            <SelectTrigger className="w-full" data-testid={`select-${testIdPrefix}onboarding-status`}><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="draft">草稿 (初步接洽)</SelectItem>
-              <SelectItem value="pending_review">待审核 (材料提交中)</SelectItem>
-              <SelectItem value="active">正式合作</SelectItem>
-              <SelectItem value="suspended">已暂停</SelectItem>
-            </SelectContent>
-          </Select>
+          <p className="text-xs text-muted-foreground">
+            合作状态通过场地卡片上的操作按钮管理，不可在此直接修改。
+          </p>
         </div>
       </div>
     </div>

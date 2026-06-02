@@ -20,6 +20,7 @@ const SUPER_ADMIN_ROUTES: string[] = [
   "/admin/coupons",
   "/admin/evolution",
   "/admin/accounts",
+  "/admin/feature-flags",
 ];
 
 function isRouteAllowed(path: string, role?: string): boolean {

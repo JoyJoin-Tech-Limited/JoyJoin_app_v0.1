@@ -166,6 +166,23 @@
     color: $color-text-primary;
     font-size: $font-size-sm;
     line-height: 1.6;
+
+    &--tbd {
+      color: $color-amber-700;
+      font-weight: $font-weight-semibold;
+    }
+
+    &--tbd-hint {
+      text-align: left;
+      color: $color-text-secondary;
+      font-size: $font-size-xs;
+      line-height: 1.5;
+    }
+  }
+
+  &__card--tbd {
+    background: rgba($color-amber, 0.08);
+    border: 2rpx solid rgba($color-amber, 0.18);
   }
 
   &__map-actions {

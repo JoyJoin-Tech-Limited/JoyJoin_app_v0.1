@@ -130,6 +130,10 @@ export interface AssessmentConfig {
   useFixedQuestions?: boolean;
   /** Ordered list of question IDs for fixed-question mode */
   fixedQuestionIds?: string[];
+  /** Inject pure single-trait calibration questions after anchors (default: true) */
+  enableCalibrationQuestions?: boolean;
+  /** Max calibration questions per session (default: 2) */
+  maxCalibrationQuestions?: number;
 }
 
 export const DEFAULT_ASSESSMENT_CONFIG: AssessmentConfig = {
@@ -148,6 +152,8 @@ export const DEFAULT_ASSESSMENT_CONFIG: AssessmentConfig = {
     maxExtraQuestions: 1,
   },
   useV2Matcher: true, // V2 matcher is now the standard algorithm
+  enableCalibrationQuestions: true,
+  maxCalibrationQuestions: 2,
 };
 
 export const V2_ASSESSMENT_CONFIG: AssessmentConfig = {
@@ -166,6 +172,8 @@ export const V2_ASSESSMENT_CONFIG: AssessmentConfig = {
     maxExtraQuestions: 2,
   },
   useV2Matcher: true,
+  enableCalibrationQuestions: true,
+  maxCalibrationQuestions: 2,
 };
 
 export interface ConfusableArchetypePair {

@@ -1,6 +1,6 @@
 # Admin Client — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents. Last updated: 2026-05-08
+> Compact instructions for AI coding agents. Last updated: 2026-05-24
 
 ---
 
@@ -101,6 +101,7 @@ main.tsx                          # Vite bootstrap → renders AdminApp
                     ├── /outcome-analytics   (Outcome 分析)
                     ├── /interaction-logs    (连接日志)
                     ├── /icebreaker-ai-feedback (破冰 AI 反馈)
+                    ├── /feature-flags       (功能开关)
                     ├── /accounts            (管理员账号)
                     ├── /audit-logs          (审计日志)
                     └── ...

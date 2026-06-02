@@ -49,6 +49,7 @@ Start here when reviewing a pull request or auditing code changes.
 |-------|---------------|
 | [`code-review`](./code-review/SKILL.md) | Structured PR review using the Harness Engineering Framework — correctness, reliability, scalability, security, observability, and architecture fit. **Start here for all PR reviews.** Load domain-specific skills below for deeper review in affected areas. |
 | [`ui-layout-audit`](./ui-layout-audit/SKILL.md) | Pixel-level UI/UX audit: spacing hierarchy, typography comfort, emoji discipline, visual coherence (孤字 guard), and emotional craft. Use before shipping UI-heavy PRs or when a screen feels cheap / crowded / unbalanced. |
+| [`completeness-audit`](./completeness-audit/SKILL.md) | 11-dimension 完成度 audit (0–44) for mini-program implementations: functional, state, copy, interaction, delight, flow, accessibility, Taro discipline, visual finish, brand soul, and operational completeness. Produces ROI-ranked gap register via 2-axis scatter (User Impact × Engineering Hours). Pipeline Mode auto-sequences `ui-layout-audit → frontend-design-audit → completeness-audit`. |
 
 ---
 
@@ -93,6 +94,7 @@ Deep expertise for the two core product engines.
 | [`venue-location-services`](./venue-location-services/SKILL.md) | Venue catalog, assignment, matching, time slots, deals, AMap geocoding, and data quality |
 | [`wechat-ecosystem-integration`](./wechat-ecosystem-integration/SKILL.md) | WeChat auth (Mini Program / OA OAuth), WeChat Pay v3, Taro patterns, JSAPI/H5 payments, webhooks, and cross-platform WeChat coordination |
 | [`semantic-matching-embeddings`](./semantic-matching-embeddings/SKILL.md) | Semantic similarity 7th scoring dimension, feature-hash vectors, DeepSeek embedding client, async semantic profile pipeline, and dialogue insight storage |
+| [`xiaoyue-writing-craft`](./xiaoyue-writing-craft/SKILL.md) | Canonical Chinese writing craft system — 8 verifiable axioms (rhythm, imagery, concreteness, anti-AI aesthetics), deterministic post-generation scoring (0-100), retry loop integration for all Xiaoyue LLM output |
 
 ---
 
@@ -230,6 +232,9 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | How do I define a new database model? | `backend-models-standards` |
 | What colours can I use for a new UI element? | `joyjoin-brand-guidelines` + `design-system-governance` |
 | How do I keep a mini-program screen premium, on-brand, and Taro-native? | `mini-program-frontend-excellence` |
+| How do I audit a screen for pixel-level layout and spacing? | `ui-layout-audit` |
+| How do I run a complete design-quality audit on a frontend surface? | `frontend-design-audit` |
+| How do I run a 完成度 audit with ROI-ranked gap recommendations? | `completeness-audit` (pipeline: `ui-layout-audit → frontend-design-audit → completeness-audit`) |
 | How do I enforce zero-scroll viewport lock or `100dvh` shell? | `viewport-zero-scroll` |
 | How do I add caching or rate limiting? | `caching-strategy` |
 | How do I add or debug WebSocket real-time notifications? | `websocket-realtime` |

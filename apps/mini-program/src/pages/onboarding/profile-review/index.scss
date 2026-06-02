@@ -2,9 +2,16 @@
 @use '../../../styles/mixins' as *;
 
 .profile-review {
+  display: flex;
+  flex-direction: column;
   @include page-gradient-bg;
   @include onboarding-page-exit-transition;
   @include onboarding-page-enter-transition;
+
+  &__scroll {
+    flex: 1;
+    min-height: 0;
+  }
 
   &__shell {
     box-sizing: border-box;
@@ -483,10 +490,11 @@
   }
 
   &__cta {
-    @include card-premium;
-    padding: $spacing-lg;
-    margin-top: $spacing-sm;
-    text-align: center;
+    padding: $spacing-md $container-padding;
+    @include safe-area-inline($container-padding);
+    @include safe-area-bottom-padding(padding-bottom, $spacing-md);
+    background: #FFFFFF;
+    box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.04);
   }
 
   &__cta-title {
@@ -506,7 +514,6 @@
 
   &__submit {
     width: 100%;
-    margin-top: $spacing-md;
     border: 0;
 
     &.joy-button--brand {

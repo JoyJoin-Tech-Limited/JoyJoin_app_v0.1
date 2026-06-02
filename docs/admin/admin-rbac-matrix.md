@@ -128,6 +128,16 @@ Reference for which admin portal pages map to which API endpoints and which role
 
 ---
 
+## Feature Flags *(super_admin only)*
+
+| Admin Page | Action | Method | Endpoint | Required Middleware |
+|------------|--------|--------|----------|---------------------|
+| `/admin/feature-flags` | List all flags | GET | `/api/admin/feature-flags` | `requireAdmin` + `requireSuperAdmin` |
+| `/admin/feature-flags` | Update flag value | PUT | `/api/admin/feature-flags/:key` | `requireAdmin` + `requireSuperAdmin` |
+
+> Values are persisted in the `feature_flags` DB table with `updatedBy` audit. Env vars serve as fallback when no DB row exists.  
+> PUT validates that `key` is one of the known flags in `FLAG_ENV_MAP` and that `value` is `"true"` or `"false"` (Zod `enum`). Only `super_admin` may mutate flags; all changes are logged to `admin_audit_logs` with action `FEATURE_FLAG_UPDATED`.
+
 ## Documented Exceptions
 
 | Route | Exception Rationale |

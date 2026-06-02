@@ -93,10 +93,10 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/tab-bar-notch-bg.png',
           to: 'dist/assets/tab-bar-notch-bg.png',
         },
-        // Box logo for native custom tab bar center button (~60KB, critical)
+        // JoyJoin logo for native custom tab bar center button (~94KB, critical)
         {
-          from: 'src/assets/box-logo.webp',
-          to: 'dist/assets/box-logo.webp',
+          from: 'src/assets/joyjoin-logo.webp',
+          to: 'dist/assets/joyjoin-logo.webp',
         },
         // Archetype result images — spritesheet used locally in onboarding subpackage.
         // Individual archetype images loaded via CDN (cdnAsset).

@@ -77,7 +77,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-05-22)
+## 🆕 Recent Updates (Last updated: 2026-05-24)
 
 ### 2026 Milestones (May 2026)
 
@@ -103,6 +103,21 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Graceful fallback:** Events and Connections pages fall back to legacy endpoints (`/api/events/joined`, `/api/my-connections`) if composite 500s. Discover shell already had fallback from pilot.
 - **Profile page deduplication:** Removed duplicate `auth-user-profile` fetch; Profile page now reads directly from `AUTH_QUERY_KEY`.
 
+**33. Admin Feature Flags + Mini-Program Perfect-Level Polish** 🎯 *(2026-05-24)*
+- **DB-backed feature flags:** New `feature_flags` table with migration `0047_special_jackal.sql`. `apps/server/src/lib/featureFlags.ts` resolves flags from DB with 5s LRU cache, falling back to env vars. Five kill switches migrated: `restartOnboarding`, `smartProfession`, `onboardingForceSkip`, `matchingLiveReveal`, `socialIcebreakerClientForceEnd`.
+- **Admin feature flags UI:** New `/admin/feature-flags` page (super_admin only) with toggle switches, source badges (`db` vs `env_fallback`), batch save, and `updatedBy` audit trail. Endpoints: `GET /api/admin/feature-flags`, `PUT /api/admin/feature-flags/:key`.
+- **Personality test polish:** Success toast after poster generation ("氛围卡已生成") and after inline WeChat login ("登录成功，正在为你准备匹配…").
+- **Verifier quick wins:** Safe-area padding on Matching Reveal bottom actions; force-end confirmation dialog in Icebreaker; success toasts on onboarding submit; retry buttons on icebreaker/pool-reg error states.
+- **Harness Completion Gate:** All 5 mini-program journeys scored 完美 (40–44/44): Onboarding, Pool Registration, Matching Reveal, Icebreaker, Personality Test.
+
+**34. Profile Tab + Edit-Profile Identity-First Redesign** 🪪 *(2026-05-24)*
+- **Cognitive continuity:** Profile tab and edit-profile redesigned so users recognize edit-profile as "tuning up" existing data, not starting from zero. Uses same visual language as onboarding (archetype hero, Xiaoyue greeting, interest chips).
+- **New shared profile components:** `ProfileArchetypeHero` (gradient archetype card), `InterestChipCloud` (read-only interest chips with L1/L2/L3 levels), `ProfessionDisplayField` (raw text + AI-classified tags).
+- **Profile tab:** Identity-first hierarchy — archetype hero → Xiaoyue greeting → social identity preview (interest chips with level visualization, intent labels, AI tagline) → action rows → logout. Fade-in animation, error states, reduced-motion support.
+- **Edit-profile:** 2-step continuous scroll (Step 1 "基础档案" + Step 2 "社交画像"). Field-level validation, scroll-to-error via `ScrollView scrollIntoView`, unsaved-changes guard, skeleton loading, haptics, floating CTA bar. Completeness audit: 44/44.
+- **Profile-review backport:** Adopted `InterestChipCloud` for interest + category chips.
+- **Analytics:** Lightweight `logInfo` events for `edit_profile_enter`, `edit_profile_save` (with `fieldsChanged`), `edit_profile_abandon` (with `secondsOnPage`).
+
 **32. Bug & Polish Sprint — Mini-Program UX Hardening** 🐛 *(2026-05-22)*
 - **Auto-login for returning users:** `AutoLoginBridge` in `app.ts` silently authenticates returning users on cold start, eliminating the manual login tap for already-authorized sessions.
 - **Personality test archetype mismatch fixed:** `processTestAnswers` now reuses the anonymous session's pre-computed `finalResult` instead of re-computing after auth import, preventing archetype drift between anonymous and authenticated states.
@@ -113,7 +128,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Industry English input:** Switched from server embedding search to local `searchOccupations` with pinyin/English/keyword support for instant, offline-friendly industry selection.
 - **Intent multi-select + 随缘:** 随缘 ("go with the flow") now coexists with other intent selections; unselected options auto-dim with `opacity: 0.7` for clear visual hierarchy.
 - **我的足迹 back button + alignment:** Conditional back button via `getCurrentPages().length > 1`; title centered.
-- **Android logo fix:** `BrandLogo.tsx` uses local `/assets/box-logo.webp`; native tab bar uses optimized `box-logo-tab.png` (29KB vs 693KB) to stay within the 2MB package budget.
+- **Android logo fix:** `BrandLogo.tsx` uses local `/assets/joyjoin-logo.webp`; native tab bar uses optimized `joyjoin-logo-tab.png` (19KB vs 596KB) to stay within the 2MB package budget.
 - **Interest intensity in settings:** Edit-profile now shows 3-tier level badges (已加入/升温中/高热) with tap-to-cycle `1→2→3→off` intensity control, protected behind a loading guard.
 - **Text overflow + icon resilience:** Shortened coach copy texts, added `numberOfLines={2}`, changed `word-break: keep-all` to `overflow-wrap: break-word`, and added `onError` fallback to `Image` components.
 - **Export image fixed:** Poster canvas CSS resized to 1080×1920 matching drawing coordinates; image centering corrected with `+20` Y offset. Canvas DPR capped at 2 universally to prevent ~74MB OOM on mid-range devices.
@@ -517,7 +532,7 @@ For each archetype, system provides:
 - **Growth Areas:** Potential challenges and blind spots  
 - **Compatible Archetypes:** Top 3 from chemistry matrix (see `archetypeChemistry.ts`)
 
-*Note: Blending formula and subtypes removed in V4 - single decisive archetype match*
+*Note: Blending formula and subtypes removed in V4. Archetype assignment produces a single primary match. For non-decisive matches (confidence gap < 15%), the hero card surfaces the runner-up as a subtle personality note using Xiaoyue's blend-aware copy ("隐约有[secondary]的影子") — this is a display concern, not a blending formula. The matching system uses continuous 6D trait vectors, not archetype labels.*
 
 #### UI/UX Features
 

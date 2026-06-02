@@ -36,7 +36,7 @@ Primary purpose is to **configure, orchestrate, or document AI-powered runtime f
 
 ---
 
-### `internal` — 53 skills
+### `internal` — 55 skills
 
 Primary work product is consumed by **developers**, **AI agents**, **CI systems**, or **designers**. This includes skills that guide building user-facing features but do **not** themselves invoke AI services at runtime.
 
@@ -54,7 +54,7 @@ Primary work product is consumed by **developers**, **AI agents**, **CI systems*
 | Sub-group | Skills |
 |-----------|--------|
 | **Code & review** | `code-review`, `skill-authoring-governance`, `security-scan`, `backend-models-standards` |
-| **Frontend guidance** | `frontend-component-architecture`, `frontend-performance-and-loading`, `frontend-design-audit`, `mini-program-frontend-excellence`, `viewport-zero-scroll`, `wow-elements`, `design-system-governance`, `joyjoin-brand-guidelines` |
+| **Frontend guidance** | `frontend-component-architecture`, `frontend-performance-and-loading`, `frontend-design-audit`, `ui-layout-audit`, `completeness-audit`, `mini-program-frontend-excellence`, `viewport-zero-scroll`, `wow-elements`, `design-system-governance`, `joyjoin-brand-guidelines` |
 | **Backend / infra** | `server-domain-architecture`, `database-query-optimization`, `database-migration-safety`, `caching-strategy`, `reliability-and-state-integrity`, `platform-observability-and-ops`, `error-handling-patterns`, `auth-session-and-safety-boundaries`, `websocket-realtime`, `monorepo-workspace-governance` |
 | **Testing & QA** | `e2e-test-runner`, `testing-and-regression-guardrails`, `performance-benchmark`, `harness-completion-gate` |
 | **Docs & process** | `docs-sync`, `draft-prd`, `first-principles-velocity`, `task-creator`, `pm-sin-mapper`, `agent-coordination-patterns`, `multi-agent-deliberation`, `subagent-context-delegation`, `orchestration-turn-reporting` |

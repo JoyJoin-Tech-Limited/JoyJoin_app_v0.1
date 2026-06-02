@@ -13,6 +13,7 @@ import {
   FlaskConical,
   MessageSquare,
   Settings,
+  ToggleLeft,
   ScrollText,
   Brain,
   CalendarDays,
@@ -87,6 +88,7 @@ const configSystemItems: NavItem[] = [
   { title: "匹配日志", url: "/admin/matching-logs", icon: ScrollText, roles: SUPER_ONLY },
   { title: "管理员账号", url: "/admin/accounts", icon: ShieldCheck, roles: SUPER_ONLY },
   { title: "审计日志", url: "/admin/audit-logs", icon: ScrollText, roles: SUPER_ONLY },
+  { title: "功能开关", url: "/admin/feature-flags", icon: ToggleLeft, roles: SUPER_ONLY },
 ];
 
 /** ═══════════════════════════════════════════════════════════

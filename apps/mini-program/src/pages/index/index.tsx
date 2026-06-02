@@ -14,15 +14,15 @@ export default function Index() {
 
   // Redirect authenticated users to their next onboarding/app step.
   useEffect(() => {
-    if (auth.isLoading || !auth.isAuthenticated || hasRedirectedRef.current) {
+    if (auth.isLoading || !auth.isAuthenticated || hasRedirectedRef.current || !auth.user) {
       return
     }
 
     hasRedirectedRef.current = true
-    void navigateToMiniProgramNextStep(auth.nextStep, { mode: 'root' }).catch(() => {
+    void navigateToMiniProgramNextStep(auth.user.nextStep, { mode: 'root' }).catch(() => {
       hasRedirectedRef.current = false
     })
-  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep])
+  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, auth.user])
 
   // Stage Discover prefetch 1.5 s after entry animation completes (AC-06).
   // The composite endpoint warms cache for all 3 Discover query keys so the

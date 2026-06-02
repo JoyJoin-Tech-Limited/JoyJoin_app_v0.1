@@ -438,6 +438,7 @@
     display: flex;
     align-items: center;
     gap: 10rpx;
+    min-height: 88rpx;
     padding: $spacing-sm $spacing-md;
     border-radius: 999rpx;
     border: 2rpx solid rgba($color-border, 0.92);
@@ -564,6 +565,31 @@
     height: 120rpx;
     align-self: center;
     margin-bottom: $spacing-md;
+  }
+
+  &__step-content {
+    animation: pool-reg-step-in 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__step-coach {
+    margin-bottom: $spacing-md;
+  }
+
+  @keyframes pool-reg-step-in {
+    from {
+      opacity: 0;
+      transform: translateX(24rpx);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__step-content {
+      animation: none;
+    }
   }
 
   &__empty-title {

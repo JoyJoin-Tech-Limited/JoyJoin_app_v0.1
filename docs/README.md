@@ -78,6 +78,10 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 - [`icebreaker-system.md`](./icebreaker-system.md)
 - [`matching-reveal-implementation-summary.md`](./matching-reveal-implementation-summary.md)
 
+### Venue and location services
+
+- [`systems/VENUE_ASSIGNMENT_SERVICE.md`](./systems/VENUE_ASSIGNMENT_SERVICE.md) — venue auto-assignment algorithm, scoring, DB schema, and operational runbooks
+
 ### AI systems
 
 - [`ai/AI_FEATURE_INVENTORY.md`](./ai/AI_FEATURE_INVENTORY.md) — mini-program-visible AI features and fallbacks (keep in sync with `apps/mini-program` + server)

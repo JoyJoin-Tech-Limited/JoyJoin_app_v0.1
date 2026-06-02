@@ -8,6 +8,7 @@ interface CreateSubscriptionData {
   planType: string;
   startDate: Date | string;
   endDate: Date | string;
+  amount: number;
   status?: string;
   isActive?: boolean;
   autoRenew?: boolean;
@@ -89,8 +90,8 @@ export const paymentsRepo: PaymentsRepository = {
 
   async createSubscription(data: CreateSubscriptionData): Promise<any> {
     const result = await db.execute(sql`
-      INSERT INTO subscriptions (user_id, plan_type, start_date, end_date, is_active, auto_renew, payment_id)
-      VALUES (${data.userId}, ${data.planType}, ${data.startDate}, ${data.endDate}, ${data.isActive ?? true}, ${data.autoRenew ?? false}, ${data.paymentId ?? null})
+      INSERT INTO subscriptions (user_id, plan_type, start_date, end_date, amount, status, is_active, auto_renew, payment_id)
+      VALUES (${data.userId}, ${data.planType}, ${data.startDate}, ${data.endDate}, ${data.amount}, ${data.status ?? "pending"}, ${data.isActive ?? true}, ${data.autoRenew ?? false}, ${data.paymentId ?? null})
       RETURNING *
     `);
     return result.rows[0];

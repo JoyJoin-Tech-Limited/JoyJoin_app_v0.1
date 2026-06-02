@@ -1,0 +1,65 @@
+skill: xiaoyue-writing-craft
+category: ai-runtime
+
+primary_ownership: >
+  Canonical Chinese writing craft quality system for all Xiaoyue-generated user-facing
+  text. Owns 8 craft axioms (rhythm, imagery, negative space, concreteness, sentence
+  variety, temperature, actionable landing, anti-AI aesthetics), the deterministic
+  craft validator, and the retry loop integration pattern across all LLM call sites
+  producing mascot-facing Chinese prose.
+
+use_when:
+  - Xiaoyue output reads flat, generic, or AI-feeling
+  - Adding or modifying any LLM prompt that produces Chinese text
+  - Copy quality is functionally correct but not "a treat to read"
+  - Tuning craft axiom thresholds or banned word lists
+  - Reviewing AI-generated Chinese copy for craft quality
+  - Adding a new Xiaoyue text generation surface
+
+do_not_use_when:
+  - task is about English copy or non-Xiaoyue text surfaces
+  - task is about generic UI layout or component styling
+  - task is about LLM provider routing or trace logging (use llm-runtime-safety-and-integration)
+  - task is about brand tone / terminology (use joyjoin-brand-guidelines)
+
+strong_triggers:
+  - 文字功底
+  - writing craft
+  - craft quality
+  - AI aesthetics
+  - AI feel
+  - AI味
+  - premium copy
+  - reads like a treat
+  - reads flat
+  - reads like AI
+  - polish writing
+  - human-sounding
+  - make it sound human
+  - XIAOYUE_CRAFT_PRINCIPLES
+  - writingCraftValidator
+  - validateCraft
+  - copy not premium
+
+owned_files:
+  - apps/server/src/prompts/craft.ts
+  - apps/server/src/lib/writingCraftValidator.ts
+  - apps/server/src/lib/craftQualityGate.ts
+  - apps/server/src/xiaoyueAnalysisService.ts
+  - apps/server/src/matchExplanationService.ts
+  - apps/server/src/ai/socialIcebreakerPrompts.ts
+  - apps/server/src/ai/miniscriptPrompts.ts
+  - apps/server/src/lib/miniscriptAgent.ts
+  - apps/server/src/lib/miniscriptValidator.ts
+
+related_skills:
+  - skill: llm-runtime-safety-and-integration
+    when: changes to LLM provider routing, prompt metadata, fallback behavior, or AI trace logging
+  - skill: joyjoin-brand-guidelines
+    when: task involves brand copy strategy, tone modes, or the terminology table
+  - skill: miniscript-story-framework
+    when: craft axioms need to be applied to mini_script narrative generation
+  - skill: mini-program-frontend-excellence
+    when: craft-improved copy needs UX polish on text-heavy mini-program screens
+  - skill: server-domain-architecture
+    when: adding craft injection points in new route handlers or services

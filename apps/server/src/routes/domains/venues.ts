@@ -14,6 +14,7 @@ import {
 } from "../../lib/venueDataQuality";
 import { venueMatchingService } from "../../venueMatchingService";
 import { requireAuth } from "../../middleware/auth";
+import { notifyVenueOnboardingStatusChange } from "../../lib/wecomNotifier";
 
 function buildVenueAuditAfter(body: Record<string, unknown> | undefined): Record<string, unknown> {
   if (!body) return {};
@@ -21,6 +22,8 @@ function buildVenueAuditAfter(body: Record<string, unknown> | undefined): Record
     "name", "type", "city", "district", "clusterId", "districtId",
     "commissionRate", "tags", "cuisines", "priceRange", "budgetCategories", "maxConcurrentEvents", "seatingCapacity",
     "decorStyle", "tasteIntensity", "barThemes", "alcoholOptions", "vibeDescriptor", "isActive",
+    "onboardingStatus", "partnerStatus", "partnerCompanyName", "businessLicenseNo", "partnerEmail",
+    "bankAccountInfo", "contractStartDate", "contractEndDate",
   ] as const;
   return Object.fromEntries(
     allowedKeys.filter((key) => body[key] !== undefined).map((key) => [key, body[key]]),
@@ -53,6 +56,15 @@ const venueSchema = z.object({
   latitude: z.number().nullable().optional(),
   longitude: z.number().nullable().optional(),
   isActive: z.boolean().optional(),
+  // Partner onboarding fields
+  onboardingStatus: z.enum(["draft", "pending_review", "active", "suspended"]).optional(),
+  partnerStatus: z.enum(["active", "paused", "ended"]).optional(),
+  partnerCompanyName: z.string().optional(),
+  businessLicenseNo: z.string().optional(),
+  partnerEmail: z.string().optional(),
+  bankAccountInfo: z.string().optional(),
+  contractStartDate: z.string().optional(),
+  contractEndDate: z.string().optional(),
   // Legacy backward-compat fields
   capacity: z.number().int().min(1).optional(),
   cuisineType: z.string().optional(),
@@ -133,7 +145,9 @@ export function registerVenueRoutes(app: Express): void {
         contactName, contactPhone, commissionRate, tags, cuisines, 
         priceRange, budgetCategories, maxConcurrentEvents, seatingCapacity, notes, decorStyle, tasteIntensity,
         barThemes, alcoholOptions, vibeDescriptor,
-        latitude, longitude
+        latitude, longitude,
+        onboardingStatus, partnerCompanyName, businessLicenseNo, partnerEmail,
+        bankAccountInfo, contractStartDate, contractEndDate,
       } = req.body;
       
       if (!name || !type || !address || !city || !district) {
@@ -166,6 +180,13 @@ export function registerVenueRoutes(app: Express): void {
         vibeDescriptor: vibeDescriptor || null,
         latitude,
         longitude,
+        onboardingStatus: onboardingStatus || 'draft',
+        partnerCompanyName: partnerCompanyName || null,
+        businessLicenseNo: businessLicenseNo || null,
+        partnerEmail: partnerEmail || null,
+        bankAccountInfo: bankAccountInfo || null,
+        contractStartDate: contractStartDate || null,
+        contractEndDate: contractEndDate || null,
       });
 
       logAdminAudit({
@@ -191,14 +212,27 @@ export function registerVenueRoutes(app: Express): void {
       if (!parsed.success) {
         return res.status(400).json({ message: "Invalid venue data", errors: parsed.error.issues });
       }
-      const venue = await storage.updateVenue(req.params.id, parsed.data);
+      // Reject direct onboardingStatus changes — use transition endpoints instead
+      if (parsed.data.onboardingStatus !== undefined) {
+        return res.status(400).json({ message: "Use transition endpoints for onboarding status changes" });
+      }
+      // Auto-suspend if contractEndDate is in the past
+      let updates = { ...parsed.data };
+      if (updates.contractEndDate) {
+        const endDate = new Date(updates.contractEndDate);
+        if (endDate < new Date()) {
+          updates.onboardingStatus = 'suspended';
+          updates.partnerStatus = 'paused';
+        }
+      }
+      const venue = await storage.updateVenue(req.params.id, updates);
       logAdminAudit({
         action: 'VENUE_UPDATED',
         adminId: getActingAdminId(req),
         adminRole: (req as any).adminRole,
         targetEntityType: 'venue',
         targetEntityId: req.params.id,
-        after: buildVenueAuditAfter(parsed.data),
+        after: buildVenueAuditAfter(updates),
       });
       res.json(venue);
     } catch (error) {
@@ -222,6 +256,178 @@ export function registerVenueRoutes(app: Express): void {
     } catch (error) {
       logger.error("Error deleting venue", { venueId: req.params.id, error: String(error) });
       res.status(500).json({ message: "Failed to delete venue" });
+    }
+  });
+
+  // ============ VENUE ONBOARDING TRANSITIONS ============
+
+  const ONBOARDING_REQUIRED_FIELDS = [
+    'partnerCompanyName',
+    'businessLicenseNo',
+    'partnerEmail',
+    'contractStartDate',
+    'contractEndDate',
+  ];
+
+  function validateOnboardingTransition(
+    venue: any,
+    fromStatus: string,
+    toStatus: string,
+  ): { valid: boolean; error?: string; missingFields?: string[] } {
+    const allowedTransitions: Record<string, string[]> = {
+      draft: ['pending_review'],
+      pending_review: ['active', 'draft'],
+      active: ['suspended'],
+      suspended: ['active'],
+    };
+    const currentStatus = venue.onboarding_status || venue.onboardingStatus || 'draft';
+    if (currentStatus !== fromStatus) {
+      return { valid: false, error: `Venue is in '${currentStatus}' state, cannot transition from '${fromStatus}'` };
+    }
+    if (!allowedTransitions[fromStatus]?.includes(toStatus)) {
+      return { valid: false, error: `Transition from '${fromStatus}' to '${toStatus}' is not allowed` };
+    }
+    if (toStatus === 'active') {
+      const missing: string[] = [];
+      for (const field of ONBOARDING_REQUIRED_FIELDS) {
+        if (!venue[field] && !venue[field.replace(/[A-Z]/g, (m: string) => '_' + m.toLowerCase())]) {
+          missing.push(field);
+        }
+      }
+      // Also check core venue fields
+      if (!venue.contact_person && !venue.contactName) missing.push('contactName');
+      if (!venue.contact_phone && !venue.contactPhone) missing.push('contactPhone');
+      if (!venue.address) missing.push('address');
+      if (!venue.capacity && !venue.maxConcurrentEvents) missing.push('maxConcurrentEvents');
+      if (!venue.city) missing.push('city');
+      if (!venue.area && !venue.district) missing.push('district');
+      if (!venue.venue_type && !venue.type) missing.push('type');
+      if (missing.length > 0) {
+        return { valid: false, error: `Missing required fields: ${missing.join(', ')}`, missingFields: missing };
+      }
+    }
+    return { valid: true };
+  }
+
+  async function executeOnboardingTransition(
+    req: any,
+    res: any,
+    fromStatus: string,
+    toStatus: string,
+    options: { reason?: string; notify?: boolean } = {},
+  ) {
+    const venue = await storage.getVenue(req.params.id);
+    if (!venue) {
+      return res.status(404).json({ message: "Venue not found" });
+    }
+    const validation = validateOnboardingTransition(venue, fromStatus, toStatus);
+    if (!validation.valid) {
+      return res.status(400).json({ message: validation.error, missingFields: validation.missingFields });
+    }
+
+    const updates: Record<string, any> = { onboardingStatus: toStatus };
+    if (toStatus === 'active') {
+      updates.partnerStatus = 'active';
+      if (!venue.partner_since && !venue.partnerSince) {
+        updates.partnerSince = new Date().toISOString().split('T')[0];
+      }
+    }
+    if (toStatus === 'suspended') {
+      updates.partnerStatus = 'paused';
+    }
+
+    const updatedVenue = await storage.updateVenue(req.params.id, updates);
+
+    logAdminAudit({
+      action: 'VENUE_ONBOARDING_STATUS_CHANGED',
+      adminId: getActingAdminId(req),
+      adminRole: (req as any).adminRole,
+      targetEntityType: 'venue',
+      targetEntityId: req.params.id,
+      before: { onboardingStatus: fromStatus, partnerStatus: venue.partner_status || venue.partnerStatus },
+      after: { onboardingStatus: toStatus, partnerStatus: updates.partnerStatus || venue.partner_status || venue.partnerStatus },
+      context: { transition: `${fromStatus}_to_${toStatus}`, reason: options.reason || undefined },
+    });
+
+    // Send notification before response so errors can be caught gracefully
+    if (options.notify) {
+      try {
+        await notifyVenueOnboardingStatusChange({
+          venueName: venue.name,
+          venueCity: venue.city,
+          venueArea: venue.area || venue.district,
+          oldStatus: fromStatus,
+          newStatus: toStatus,
+          adminName: (req as any).adminAccount?.name || getActingAdminId(req),
+          reason: options.reason,
+        });
+      } catch (notifyErr) {
+        logger.warn("WeCom notification failed for venue onboarding transition", {
+          venueId: req.params.id,
+          transition: `${fromStatus}_to_${toStatus}`,
+          error: String(notifyErr),
+        });
+      }
+    }
+
+    res.json(updatedVenue);
+  }
+
+  // Submit for review (draft → pending_review)
+  app.post("/api/admin/venues/:id/submit-for-review", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    try {
+      await executeOnboardingTransition(req, res, 'draft', 'pending_review', { notify: true });
+    } catch (error) {
+      logger.error("Error submitting venue for review", { venueId: req.params.id, error: String(error) });
+      res.status(500).json({ message: "Failed to submit venue for review" });
+    }
+  });
+
+  // Approve (pending_review → active)
+  app.post("/api/admin/venues/:id/approve", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    try {
+      await executeOnboardingTransition(req, res, 'pending_review', 'active');
+    } catch (error) {
+      logger.error("Error approving venue", { venueId: req.params.id, error: String(error) });
+      res.status(500).json({ message: "Failed to approve venue" });
+    }
+  });
+
+  // Reject (pending_review → draft)
+  const rejectSchema = z.object({ reason: z.string().min(1) });
+  app.post("/api/admin/venues/:id/reject", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    try {
+      const parsed = rejectSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Rejection reason is required", errors: parsed.error.issues });
+      }
+      await executeOnboardingTransition(req, res, 'pending_review', 'draft', { reason: parsed.data.reason, notify: true });
+    } catch (error) {
+      logger.error("Error rejecting venue", { venueId: req.params.id, error: String(error) });
+      res.status(500).json({ message: "Failed to reject venue" });
+    }
+  });
+
+  // Suspend (active → suspended)
+  const suspendSchema = z.object({ reason: z.string().optional() });
+  app.post("/api/admin/venues/:id/suspend", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    try {
+      const parsed = suspendSchema.safeParse(req.body);
+      const reason = parsed.success ? parsed.data.reason : undefined;
+      await executeOnboardingTransition(req, res, 'active', 'suspended', { reason });
+    } catch (error) {
+      logger.error("Error suspending venue", { venueId: req.params.id, error: String(error) });
+      res.status(500).json({ message: "Failed to suspend venue" });
+    }
+  });
+
+  // Re-activate (suspended → active)
+  app.post("/api/admin/venues/:id/re-activate", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    try {
+      await executeOnboardingTransition(req, res, 'suspended', 'active');
+    } catch (error) {
+      logger.error("Error re-activating venue", { venueId: req.params.id, error: String(error) });
+      res.status(500).json({ message: "Failed to re-activate venue" });
     }
   });
 

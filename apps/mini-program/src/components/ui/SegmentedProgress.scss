@@ -40,8 +40,8 @@
     transition: background 0.3s ease, box-shadow 0.3s ease, width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
     &--filled {
-      background: $brand-gradient;
-      box-shadow: 0 2rpx 8rpx rgba($brand-gradient-to, 0.3);
+      background: $color-primary;
+      box-shadow: 0 2rpx 8rpx rgba($color-primary, 0.3);
 
       // Traveling shimmer highlight across filled portion
       &::after {
@@ -73,7 +73,7 @@
     top: 0;
     left: 0;
     height: 100%;
-    background: $brand-gradient;
+    background: $color-primary;
     border-radius: 6rpx;
     transition: width 0.3s ease;
   }

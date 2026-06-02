@@ -11,6 +11,8 @@ import MomentCardView from '../overlays/MomentCardView'
 import ParticleBurst from '../../../components/reveal/ParticleBurst'
 import IdentityReveal from '../../../components/reveal/IdentityReveal'
 import CardFlip from '../../../components/reveal/CardFlip'
+import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
+import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import './RecapPhaseView.scss'
 
 function RecapAiFeedbackBar({
@@ -162,6 +164,7 @@ export function RecapPhaseView({
   socialSessionId,
   recapMeta,
 }: RecapPhaseViewProps) {
+  const { shouldReduceMotion } = useMiniRevealMotion()
   const recapMoments = summary?.moments ?? recapData?.funMoments ?? []
   const [showBurst, setShowBurst] = useState(false)
   const [headlineRevealed, setHeadlineRevealed] = useState(false)
@@ -216,7 +219,7 @@ export function RecapPhaseView({
       {/* Celebration burst */}
       {showBurst && (
         <View className='icebreaker__recap-burst'>
-          <ParticleBurst trigger={showBurst} type='confetti' count={50} />
+          <ParticleBurst trigger={showBurst} type='confetti' count={50} reducedMotion={shouldReduceMotion} />
         </View>
       )}
 
@@ -431,6 +434,7 @@ export function RecapPhaseView({
             flipped={shareFlipped}
             onFlip={handleShareFlip}
             duration={500}
+            reducedMotion={shouldReduceMotion}
           />
         </View>
       )}
@@ -447,6 +451,15 @@ export function RecapPhaseView({
 
       {/* Moment card CTA */}
       {socialSessionId && <MomentCardCTA socialSessionId={socialSessionId} />}
+
+      {/* Xiaoyue farewell */}
+      <View className='icebreaker__recap-farewell'>
+        <XiaoyueChatBubble
+          content='今晚很开心！期待下次和你再见面~'
+          pose='casual'
+          tail
+        />
+      </View>
 
       {/* Leave button */}
       <Button variant='primary' className='icebreaker__recap-leave-btn' onClick={onLeave}>

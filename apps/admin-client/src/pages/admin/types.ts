@@ -153,6 +153,8 @@ export interface PoolGroup {
   venueName?: string | null;
   venueAddress?: string | null;
   venueId?: string | null;
+  venueAssignmentStatus?: string | null;
+  venueAssignmentReason?: string | null;
   createdAt: string;
   updatedAt?: string;
   members: PoolGroupMember[];

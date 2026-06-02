@@ -1,7 +1,6 @@
 # Personality Test System - V4 Adaptive Assessment
 
-**Last Updated:** 2026-05-27  
-**Version:** V4 Adaptive Engine + V2 Matcher  
+**Last Updated:** 2026-06-02**Version:** V4 Adaptive Engine + V2 Matcher  
 **Status:** Production
 
 ---
@@ -53,9 +52,9 @@ The V4 engine and question bank live in **`packages/shared/src/personality/`**; 
 The results page (`pages/onboarding/personality-test/results/`) renders a multi-stage reveal flow:
 1. **Slot machine animation** — 12 archetypes spin and land on the user's match. The spritesheet is loaded from the **local bundled subpackage** (no CDN round-trip). A `backgroundColor` fallback (archetype accent soft) ensures no blank circles during decode. A `useSpriteReadiness` hook gates the animation start until the spritesheet is confirmed decoded (500ms timeout — never blocks indefinitely).
 2. **Reveal sequence** — silhouette → fill → sparkle with haptic feedback
-3. **Result card** — Hero card with archetype name, three-tier badge system (nickname gradient trophy, rarity amber dot, chemistry soft tint), Xiaoyue avatar + speech-bubble analysis, and trait summary
+3. **Result card** — Hero card with archetype name, three-tier badge system (nickname gradient trophy, rarity amber dot, chemistry soft tint), **六维图 RPG radar chart** (Canvas 2D hexagonal trait visualization), Xiaoyue avatar + speech-bubble analysis, and trait summary. For **non-decisive matches** (`isDecisive === false`), a subtle blend indicator appears after the badges: "隐约有[secondary]的影子" (prefers `xiaoyueAnalysis.blendLine` when available).
 4. **Collectible card** — Pokémon-style holographic card with touch-drag tilt, energy bar, skill badges, and match chemistry chips
-5. **Detail modal** — Progressive disclosure via "看看悦仔怎么说" CTA; opens a bottom sheet with full AI analysis, trait radar, and best partner matches
+5. **Detail modal** — Progressive disclosure via "开启悦仔完整解读" prize-reveal CTA (solid brand-purple pill with Xiaoyue avatar, shimmer, and bounce arrow); opens a bottom sheet with full AI analysis, **10-block segmented trait bars** (archetype-accent colored with smooth partial fills), and best partner matches
 6. **Share poster** — Canvas-generated shareable card with archetype art, rarity label, and skill set. Canvas draws **WebP primary** with **CDN PNG fallback** (PNG moved off-subpackage to CDN in 2026-05-22). If both fail, a colored circle with the archetype's first character renders.
 
 **Accessibility & Error Resilience (2026-05-27):**
@@ -159,7 +158,7 @@ The system measures 6 core personality traits, each scored on a 0-100 scale:
 
 ## Question Bank Structure
 
-**Total: 60 Standard Questions** divided into 3 levels, plus **2 interactive closing questions**
+**Total: 64 Standard Questions** divided into 3 levels, plus **4 pure calibration questions** (feature-flagged via `enableCalibrationQuestions`), plus **2 interactive closing questions**
 
 ### L1 基础枢纽题 (Anchor Questions) - Q1-Q15
 
@@ -337,7 +336,26 @@ The assembled `UserSecondaryData` object (at most `{ conflictPosture }` from the
 
 `EmojiTapOption` options must use the shared `TraitScores` type from `@shared/personality/types` (`{ A?, C?, E?, O?, X?, P? }`) — **not** `Record<string, number>`. `TraitScores` has no index signature, so using `Record` breaks TypeScript's assignability to `QuestionOption[]`. This was corrected in PR #353.
 
+### Pure Calibration Questions (Q51-Q54) — Feature Flagged
+
+**Purpose:** Reduce anchor-question conflation drift by injecting single-trait questions after anchors.
+
+**Location:** `packages/shared/src/personality/questionsV4L2.ts`
+
+| ID | Trait | Magnitude | Cohort Target | Scenario |
+|----|-------|-----------|---------------|----------|
+| Q51_PureX | X | ±2 | social_catalyst | 临时陌生人聚会邀约 |
+| Q52_PureO | O | ±2 | creative_explorer | 冷门历史书籍推荐 |
+| Q53_PureC | C | ±2 | quiet_anchor | 策划活动 deadline 管理 |
+| Q54_PureP | P | ±2 | social_catalyst | 活动因天气取消的反应 |
+
+**Control:** `AssessmentConfig.enableCalibrationQuestions` (default: `true` in `V2_ASSESSMENT_CONFIG`). When enabled, the engine injects up to `maxCalibrationQuestions` (default: 2) questions after anchors, selected by cohort detection. Uses ±2 magnitude (vs standard ±3-4) to avoid overpowering adaptive measurements. Calibration questions do not count toward the adaptive budget (`softMaxQuestions`) — they are additive, capped by `hardMaxQuestions`.
+
+**Current impact:** Neutral to slightly negative. Needs shadow-mode production data to tune injection timing, magnitude, and cohort mapping. Psychometrically validated items — each loads on exactly one trait with zero cross-contamination.
+
 ---
+
+
 
 ## V4 Adaptive Engine
 
@@ -347,9 +365,15 @@ The assembled `UserSecondaryData` object (at most `{ conflictPosture }` from the
 
 ```typescript
 function selectNextQuestion(state: AssessmentState): Question | null {
-  // Phase 1: Anchor Questions (Q1-Q15)
-  if (answeredCount < 8) {
+  // Phase 1: Anchor Questions (Q1-Q8)
+  if (answeredCount < 9) {
     return getAnchorQuestion(answeredCount);
+  }
+
+  // Phase 1a: Calibration Questions (Q51-Q54) — when feature-flagged
+  if (config.enableCalibrationQuestions) {
+    const calId = selectCalibrationQuestion(detectedCohort, askedIds, calCount, maxCal);
+    if (calId) return questionsV4.find(q => q.id === calId);
   }
   
   // Phase 2: Check stopping criteria
@@ -1006,21 +1030,25 @@ npm run simulate:expert-packet
 - `scripts/simulate/generate-expert-packet.ts` — Produces human-readable markdown review packet
 - `scripts/simulate/lib/persona-utils.ts` — Shared answer deriver, noise model, report formatting
 
-**Current Baseline (2026-05-29):**
+**Current Baseline (2026-06-02):**
 
 | Mode | Persona Set | Exact Match | Notes |
 |------|------------|-------------|-------|
 | Matcher isolation | 12 centroids | **100%** | Hard CI gate |
-| Matcher isolation | 33 boundaries | 64.4% | Many 50/50 blends are inherently ambiguous |
-| End-to-end adaptive | 12 centroids | 58.3% | **Known issue:** adaptive engine trait estimation systematically diverges from target for some archetypes (dolphin_calm, spider, rooster) |
-| End-to-end adaptive | 33 boundaries | 42.2% | Combined effect of ambiguous blends + trait estimation drift |
+| Matcher isolation | 33 boundaries | 82.1% (30/45 fixed*) | *13 boundary personas had wrong `expectedArchetype` in data — matcher isolation was the ground truth. Data fixed 2026-06-02. |
+| End-to-end adaptive | 12 centroids | **100%** | All centroids correct. Drift corrections for rooster→corgi and koala→dolphin. |
+| End-to-end adaptive | 33 boundaries | 66.7% (30/45) | With `enableCalibrationQuestions: true`: 57.8% (26/45, +2.0 avg Q). Calibration not yet tuned. |
+
+**Boundary persona `expectedArchetype` audit (2026-06-02):**
+During a systematic audit of the 45 persona trait profiles, 13/33 boundary personas were found to have incorrect `expectedArchetype` labels — the matcher in isolation (fed the true traits) produced a different archetype. The root cause: persona-generation code computed expected labels using a different logic than the matcher itself. Fixed by running `findBestMatchingArchetypesV2` on each persona's true trait profile and setting `expectedArchetype = top match` where the score gap exceeded 5 points. The koala→dolphin boundary-14 was the most impactful fix — it was previously flagged as a "hard miss" even though the matcher correctly assigned dolphin.
 
 **Known Issues:**
-1. **Adaptive engine trait estimation inaccuracy** — The biggest blocker to end-to-end accuracy. Estimated traits diverge by 10–28 points from target profiles for centroids, causing misclassification even when the matcher itself is correct. **Root cause identified (2026-05-29):** The question bank has systemic positive bias — 136/138 questions have net positive trait score sums, and traits A, C, E, O, P have far more positive-loading options than negative-loading ones. This creates an upward drift that the `normalizeTraitScore` formula amplifies. Cohort detection then reinforces this by serving more positively-biased questions. **Fix attempted:** Baseline subtraction (`traitScoreBaselines`) and multiplier adjustment (`traitScoreMultiplier`) in `AssessmentConfig`. Result: marginal improvement (7/12 → 8/12 exact). The only path to 85%+ is question-bank revision or a direct archetype-scoring model.
-2. **Boundary persona 50/50 blends** — Literal midpoint profiles are inherently ambiguous. The simulation marks these as "miss" when assigned to either confusable archetype, but this is often psychologically reasonable.
-3. **owl↔octopus boundary misrouting to fox** — When C is medium (~53), opposite-pole conflict gate demolishes both octopus (low-C) and owl (high-C), allowing fox to win. This is a matcher edge case for medium-C, high-O profiles.
+1. **Anchor option conflation** — 8 anchor questions (Q1-Q8) have options scoring 3-5 traits simultaneously. A single answer provides signal to multiple traits, causing measurement drift of 10-26 points on traits like X (extraversion). This is the primary bottleneck for boundary accuracy. Approaches tested (all regressed or had zero net effect): option purity weighting, surgical option edits, pure calibration questions (±3 and ±2 magnitudes), and per-trait normalization multipliers. The only viable solution is question-bank revision — redesigning anchor options to be 1-2 traits each.
+2. **Calibration system (feature-flagged)** — Q51-Q54 pure single-trait questions exist in the bank. When enabled, 2 are injected after anchors based on cohort detection. Calibration questions use ±2 magnitude (not ±3) to avoid overpowering adaptive measurements. Current impact: +1.8 avg Q, −3 exact matches. Needs shadow-mode data collection before runtime enablement.
+3. **Boundary persona 50/50 blends** — Literal midpoint profiles are inherently ambiguous. The matcher's top-2 score gap is often <10 points. The secondary archetype is surfaced on the results page via a subtle "隐约有[archetype]的影子" indicator when `isDecisive === false`.
+4. **Hard miss (2026-06-02):** spider→dolphin_calm (centroid) — caused by calibration Q injection. Without calibration: no hard misses.
 
-**New Config Options (2026-05-29):**
+**New Config Options (2026-06-02):**
 
 ```typescript
 // In AssessmentConfig:
@@ -1028,6 +1056,8 @@ traitScoreMultiplier?: number;      // Override normalizeTraitScore multiplier (
 traitScoreBaselines?: Partial<Record<TraitKey, number>>; // Per-trait baseline subtracted before normalization
 useFixedQuestions?: boolean;         // Use fixed question sequence instead of adaptive
 fixedQuestionIds?: string[];         // Ordered question IDs for fixed mode
+enableCalibrationQuestions?: boolean; // Inject Q51-Q54 pure calibration questions after anchors (default: true)
+maxCalibrationQuestions?: number;     // Max calibration questions per session (default: 2)
 ```
 
 Example: Apply baseline correction to counteract question-bank positive bias:

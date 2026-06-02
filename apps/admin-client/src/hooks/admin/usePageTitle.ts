@@ -27,6 +27,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/admin/evolution": "悦仔进化",
   "/admin/accounts": "管理员账号",
   "/admin/audit-logs": "审计日志",
+  "/admin/feature-flags": "功能开关",
   "/admin/templates": "活动模板",
 };
 

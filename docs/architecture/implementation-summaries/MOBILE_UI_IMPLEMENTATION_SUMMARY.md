@@ -288,7 +288,7 @@ npm run dev
    - [ ] Feature cards display in 2×2 grid
    - [ ] Cards have subtle tilt effect
    - [ ] Tap feedback on cards (scale + opacity)
-   - [ ] Primary button has gradient background
+   - [ ] Primary button has solid brand purple background
    - [ ] Primary button tilt effect
    - [ ] Haptic feedback on button tap (mobile only)
    - [ ] Gradient text renders correctly

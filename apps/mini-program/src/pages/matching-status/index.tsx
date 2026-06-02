@@ -80,6 +80,7 @@ export default function MatchingStatusPage() {
     matchCompass,
     isMatchCompassFetching,
     handleUpdateMatchCompass,
+    matchingLiveRevealEnabled,
   } = controller
 
   switch (screenState.kind) {
@@ -276,6 +277,7 @@ export default function MatchingStatusPage() {
           waitingSeats={waitingSeats}
           fillStatusText={fillStatusText}
           refreshCountdown={refreshCountdown}
+          shouldReduceMotion={shouldReduceMotion}
         />
       ) : null}
 
@@ -339,6 +341,13 @@ export default function MatchingStatusPage() {
       {liveRevealError ? (
         <Card className='matching-status__notice-card'>
           <Text className='matching-status__notice-text'>{liveRevealError}</Text>
+          <Button
+            variant='secondary'
+            className='matching-status__notice-btn'
+            onClick={invalidateRegistrationQuery}
+          >
+            刷新
+          </Button>
         </Card>
       ) : null}
 
@@ -418,22 +427,24 @@ export default function MatchingStatusPage() {
 
       <View className='matching-status__spacer' />
 
-      <MatchingStatusLiveOverlay
-        liveStage={liveStage}
-        stageTemperature={stageTemperature}
-        isLoadingLiveGroupDetails={isLoadingLiveGroupDetails}
-        effectiveGroupDetails={effectiveGroupDetails}
-        viewerPairSummaryByMemberId={viewerPairSummaryByMemberId}
-        viewerSpotlight={viewerSpotlight}
-        unifiedReveal={unifiedReveal}
-        matchedGroupNumber={matchedData?.groupNumber}
-        shouldReduceMotion={shouldReduceMotion}
-        hasRevealed={hasRevealed}
-        persistedThemeSummary={persistedThemeSummary}
-        resolvedGroupId={resolvedGroupId}
-        onContinueFromMembers={handleContinueFromMembers}
-        onFinishLiveJourney={finishLiveJourney}
-      />
+      {matchingLiveRevealEnabled && (
+        <MatchingStatusLiveOverlay
+          liveStage={liveStage}
+          stageTemperature={stageTemperature}
+          isLoadingLiveGroupDetails={isLoadingLiveGroupDetails}
+          effectiveGroupDetails={effectiveGroupDetails}
+          viewerPairSummaryByMemberId={viewerPairSummaryByMemberId}
+          viewerSpotlight={viewerSpotlight}
+          unifiedReveal={unifiedReveal}
+          matchedGroupNumber={matchedData?.groupNumber}
+          shouldReduceMotion={shouldReduceMotion}
+          hasRevealed={hasRevealed}
+          persistedThemeSummary={persistedThemeSummary}
+          resolvedGroupId={resolvedGroupId}
+          onContinueFromMembers={handleContinueFromMembers}
+          onFinishLiveJourney={finishLiveJourney}
+        />
+      )}
     </ScrollView>
   )
 }

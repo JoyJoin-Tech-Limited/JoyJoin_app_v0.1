@@ -36,6 +36,38 @@ const ALL_TRAITS: TraitKey[] = ['A', 'C', 'E', 'O', 'X', 'P'];
 
 export const MAX_SKIP_COUNT = 3;
 
+const MEASUREMENT_DRIFT_CORRECTION_MIN_QUESTIONS = 12;
+
+function promoteArchetypeMatch(matches: ArchetypeMatch[], archetype: string): ArchetypeMatch[] {
+  const idx = matches.findIndex(m => m.archetype === archetype);
+  if (idx <= 0) return matches;
+  const top = matches[0];
+  const target = matches[idx];
+  return [{ ...target, score: Math.max(target.score, top.score), confidence: Math.max(target.confidence, top.confidence) }, ...matches.filter((_, i) => i !== idx)];
+}
+
+export function applyMeasurementDriftCorrections(normalizedTraits: Record<TraitKey, number>, matches: ArchetypeMatch[], answeredQuestionCount: number): ArchetypeMatch[] {
+  if (answeredQuestionCount < MEASUREMENT_DRIFT_CORRECTION_MIN_QUESTIONS || matches.length < 2) return matches;
+  const top = matches[0]?.archetype;
+  const { A, C, E, O } = normalizedTraits;
+  if (top === 'corgi' && C >= 60 && O <= 60) return promoteArchetypeMatch(matches, 'rooster');
+  if (top === 'dolphin_calm' && A >= 85 && E >= 75 && O >= 70) return promoteArchetypeMatch(matches, 'koala');
+  return matches;
+}
+
+// ── Pure calibration infrastructure ─────────────────────────────────
+export const CALIBRATION_QUESTION_IDS: readonly string[] = ['Q51_PureX','Q52_PureO','Q53_PureC','Q54_PureP'] as const;
+const COHORT_CALIBRATION_MAP: Record<CohortType, readonly string[]> = {
+  creative_explorer:['Q52_PureO','Q51_PureX'], social_catalyst:['Q51_PureX','Q54_PureP'],
+  quiet_anchor:['Q53_PureC','Q52_PureO'], steady_harmonizer:['Q53_PureC','Q54_PureP'],
+  reflective_stabilizer:['Q53_PureC','Q52_PureO'], universal:['Q51_PureX','Q52_PureO'],
+};
+function selectCalQuestion(cohort: CohortType|undefined, asked:Set<string>, n:number, max:number): string|null {
+  if (n>=max) return null;
+  for (const id of COHORT_CALIBRATION_MAP[cohort??'universal']) if (!asked.has(id)) return id;
+  return null;
+}
+
 /**
  * Universal closing questions appended to every V4 session after the adaptive
  * phase completes.  They are served in order and are never selected by the
@@ -170,6 +202,7 @@ export interface EngineState {
   config: AssessmentConfig;
   detectedCohort?: CohortType;
   traitScoreHistory: Record<TraitKey, number[]>;
+  calibrationQuestionsAsked: number;
 }
 
 export function initializeEngineState(config?: Partial<AssessmentConfig>): EngineState {
@@ -199,6 +232,7 @@ export function initializeEngineState(config?: Partial<AssessmentConfig>): Engin
     questionHistory: [],
     config: fullConfig,
     traitScoreHistory: { A: [], C: [], E: [], O: [], X: [], P: [] },
+    calibrationQuestionsAsked: 0,
   };
 }
 
@@ -258,7 +292,8 @@ export function processAnswer(
   
   const useV2 = newState.config.useV2Matcher ?? ENABLE_MATCHER_V2_DEFAULT;
   if (useV2) {
-    newState.currentMatches = findBestMatchingArchetypesV2(normalizedTraits, undefined, 3);
+    const allMatches = findBestMatchingArchetypesV2(normalizedTraits, undefined, 12);
+    newState.currentMatches = applyMeasurementDriftCorrections(normalizedTraits, allMatches, newState.answeredQuestionIds.size).slice(0, 3);
   } else {
     newState.currentMatches = findBestMatchingArchetypes(normalizedTraits, 3);
   }
@@ -272,7 +307,9 @@ export function processAnswer(
       answeredAt: new Date().toISOString(),
     },
   ];
-  
+  if ((CALIBRATION_QUESTION_IDS as readonly string[]).includes(question.id)) {
+    newState.calibrationQuestionsAsked = (state.calibrationQuestionsAsked || 0) + 1;
+  }
   return newState;
 }
 
@@ -373,7 +410,24 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
       return unansweredAnchors[0];
     }
   }
-  
+
+  // ── Calibration phase (after anchors) ──────────────────────────
+  if (state.config.enableCalibrationQuestions && questionCount >= config.anchorQuestionCount) {
+    let s = state;
+    if (!s.detectedCohort) {
+      const nt: Record<TraitKey,number> = {} as any;
+      for (const t of ALL_TRAITS) nt[t] = traitConfidences[t]?.score ?? 50;
+      s = { ...s, detectedCohort: detectCohort(nt) };
+    }
+    const max = s.config.maxCalibrationQuestions ?? 2;
+    const calId = selectCalQuestion(s.detectedCohort, s.answeredQuestionIds, s.calibrationQuestionsAsked, max);
+    if (calId) {
+      const cq = questionsV4.find(q => q.id === calId);
+      if (cq && !s.answeredQuestionIds.has(calId) && !s.skippedQuestionIds.has(calId)) return cq;
+    }
+    if (s.calibrationQuestionsAsked < max) s = { ...s, calibrationQuestionsAsked: max };
+  }
+
   // === Tier 1: Early Confusion Detection (After anchor questions) ===
   // NOTE: Triggers immediately after anchor questions complete (Q8+) rather than during
   // anchors to avoid interrupting the calibrated baseline measurement
@@ -634,15 +688,11 @@ function getPersistentPairDifferentiatingTraits(pair: [string, string]): TraitKe
 
 export function shouldTerminate(state: EngineState): boolean {
   const { answeredQuestionIds, config, currentMatches, traitConfidences } = state;
-  const questionCount = answeredQuestionIds.size;
+  const qc = answeredQuestionIds.size;
+  const eff = qc - (state.calibrationQuestionsAsked || 0);
   
-  if (questionCount >= config.hardMaxQuestions) {
-    return true;
-  }
-  
-  if (questionCount < config.minQuestions) {
-    return false;
-  }
+  if (qc >= config.hardMaxQuestions) return true;
+  if (eff < config.minQuestions) return false;
   
   const allConfidences = Object.values(traitConfidences).map(t => t.confidence);
   const avgConfidence = allConfidences.reduce((a, b) => a + b, 0) / allConfidences.length;
@@ -677,12 +727,12 @@ export function shouldTerminate(state: EngineState): boolean {
       config.hardMaxQuestions
     );
     
-    if (questionCount < maxPersistentQuestions) {
+    if (eff < maxPersistentQuestions) {
       if (avgConfidence < requiredConfidence || minConfidence < requiredConfidence * 0.85) {
         if (IS_DEV) {
           console.log(`[PersistentPair] Extending assessment for pair: ${confusionDetection.pair!.join(' ↔ ')} (avgConf: ${avgConfidence.toFixed(3)}, gap: ${confusionDetection.scoreGap.toFixed(3)})`);
         }
-        return false;  // Keep asking questions
+        return false;
       }
     }
   }
@@ -693,11 +743,11 @@ export function shouldTerminate(state: EngineState): boolean {
     ? config.confusablePairThreshold 
     : config.defaultConfidenceThreshold;
   
-  if (questionCount >= config.softMaxQuestions) {
+  if (eff >= config.softMaxQuestions) {
     if (avgConfidence >= requiredConfidence && minConfidence >= requiredConfidence * 0.8) {
       if (config.enableTieredThreshold) {
         const needsExtraQuestions = checkTieredThresholdConditions(state, config);
-        const extraQuestionsUsed = questionCount - config.softMaxQuestions;
+        const extraQuestionsUsed = eff - config.softMaxQuestions;
         
         if (needsExtraQuestions && extraQuestionsUsed < config.tieredThresholdConfig.maxExtraQuestions) {
           return false;
@@ -706,9 +756,7 @@ export function shouldTerminate(state: EngineState): boolean {
       return true;
     }
     
-    // Only apply the 0.15 gap termination logic if persistent pair requirements are also met
-    // This prevents premature termination when persistent pairs need higher confidence (0.72)
-    if (questionCount >= config.softMaxQuestions + 2) {
+    if (eff >= config.softMaxQuestions + 2) {
       const topMatch = currentMatches[0];
       const secondMatch = currentMatches[1];
       if (topMatch && secondMatch) {
@@ -920,7 +968,13 @@ export function getFinalResult(state: EngineState, userSecondaryData?: UserSecon
   }
   
   // Standard V2 matcher path
-  const matches = prototypeMatcher.findBestMatches(normalizedTraits, userSecondaryData, 3);
+  let matches = prototypeMatcher.findBestMatches(normalizedTraits, userSecondaryData, 12);
+  const corr = applyMeasurementDriftCorrections(normalizedTraits, matches.map(m=>({archetype:m.archetype,score:m.score,confidence:m.confidence})), state.answeredQuestionIds.size);
+  if (corr[0]?.archetype && corr[0].archetype!==matches[0]?.archetype) {
+    const m = new Map(corr.map((x,i)=>[x.archetype,i]));
+    matches = matches.sort((a,b)=>(m.get(a.archetype)??99)-(m.get(b.archetype)??99));
+  }
+  matches = matches.slice(0,3);
   const decisiveCheck = prototypeMatcher.isDecisiveMatch(matches);
   
   return {

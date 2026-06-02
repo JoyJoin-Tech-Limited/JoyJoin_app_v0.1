@@ -702,6 +702,9 @@ export class PrototypeMatcher {
       case 'dolphin_calm,spider':
         this.classifyDolphinVsSpider(userTraits, results, top1, top2);
         break;
+      case 'fox,octopus':
+        this.classifyFoxVsOctopus(userTraits, results, top1, top2);
+        break;
     }
   }
   
@@ -904,6 +907,37 @@ export class PrototypeMatcher {
     } else {
       spider.details.finalScore -= totalBonus;
       spider.details.finalScore = Math.max(0, Math.min(100, spider.details.finalScore));
+    }
+
+    results.sort((a, b) => b.details.finalScore - a.details.finalScore);
+  }
+
+  /**
+   * fox vs octopus: X and C are the key differentiators
+   * fox O=92/X=78/C=50, octopus O=95/X=52/C=28
+   */
+  private classifyFoxVsOctopus(
+    t: Record<TraitKey, number>,
+    results: Array<{ archetype: string; details: MatchScoreDetails }>,
+    _top1: { archetype: string; details: MatchScoreDetails },
+    _top2: { archetype: string; details: MatchScoreDetails }
+  ): void {
+    const fox = results.find(r => r.archetype === 'fox');
+    const octopus = results.find(r => r.archetype === 'octopus');
+    if (!fox || !octopus) return;
+
+    const xBonus = this.calculateGradualBonus(t.X, 78, 52, 6);
+    const cBonus = this.calculateGradualBonus(t.C, 50, 28, 4);
+    const pBonus = this.calculateGradualBonus(t.P, 58, 70, 3);
+
+    const totalBonus = xBonus + cBonus * 0.5 + pBonus * 0.3;
+
+    if (totalBonus > 0) {
+      fox.details.finalScore += totalBonus;
+      fox.details.finalScore = Math.max(0, Math.min(100, fox.details.finalScore));
+    } else {
+      octopus.details.finalScore -= totalBonus;
+      octopus.details.finalScore = Math.max(0, Math.min(100, octopus.details.finalScore));
     }
 
     results.sort((a, b) => b.details.finalScore - a.details.finalScore);

@@ -8,6 +8,8 @@ import { sanitizeAuthUser } from "../../auth/sanitizeAuthUser";
 import type { AuthUserResponse } from "@shared/api";
 import type { User } from "@shared/schema";
 import { buildAuthUserResponse } from "../../lib/buildAuthUserResponse";
+import { computeOnboardingNextStep } from "../../lib/computeOnboardingNextStep";
+import { getFeatureFlag } from "../../lib/featureFlags";
 
 export function registerAuthRoutes(app: Express): void {
   // Apply rate limiting to auth endpoints before registering auth routes
@@ -265,6 +267,96 @@ export function registerAuthRoutes(app: Express): void {
     } catch (error) {
       logger.error("Error fetching user:", { error });
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  app.post('/api/auth/onboarding/restart', requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const result = await storage.restartOnboarding(userId);
+
+      if (result.action === 'already_complete') {
+        logger.info("[ONBOARDING-RESTART] rejected already_complete", { userId });
+        return res.status(400).json({ code: 'ONBOARDING_ALREADY_COMPLETE', message: "Onboarding already complete" });
+      }
+
+      if (result.action === 'idempotent') {
+        logger.info("[ONBOARDING-RESTART] idempotent", { userId });
+        const authResponse = await buildAuthUserResponse(userId);
+        return res.json(authResponse);
+      }
+
+      logger.info("[ONBOARDING-RESTART] success", {
+        userId,
+        oldCount: (result.user.onboardingRestartCount ?? 0) - 1,
+        newCount: result.user.onboardingRestartCount ?? 0,
+      });
+
+      const authResponse = await buildAuthUserResponse(userId);
+      return res.json(authResponse);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'USER_NOT_FOUND') {
+        return res.status(404).json({ message: "User not found" });
+      }
+      logger.error("Error during onboarding restart", { error: String(error) });
+      res.status(500).json({ message: "Failed to restart onboarding" });
+    }
+  });
+
+  app.post('/api/auth/onboarding/force-skip', requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      if (!(await getFeatureFlag('onboardingForceSkip', false))) {
+        return res.status(403).json({ code: 'FORCE_SKIP_DISABLED', message: "Force skip is not enabled" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const currentStep = computeOnboardingNextStep(user);
+      const skipFlags: Partial<User> = { updatedAt: new Date() };
+
+      switch (currentStep) {
+        case 'onboarding':
+          skipFlags.hasCompletedRegistration = true;
+          break;
+        case 'personality-test':
+          skipFlags.hasCompletedPersonalityTest = true;
+          break;
+        case 'extended-data':
+          skipFlags.hasCompletedInterestsCarousel = true;
+          break;
+        case 'profile-review':
+          skipFlags.hasSeenProfileReview = true;
+          break;
+        case 'essential-data':
+          // Essential data has no dedicated skip flag; set registration complete
+          // and rely on client to fill required fields later.
+          skipFlags.hasCompletedRegistration = true;
+          break;
+        default:
+          return res.status(400).json({ code: 'NOT_SKIPPABLE', message: "Current step cannot be skipped" });
+      }
+
+      await storage.updateUser(userId, skipFlags);
+
+      logger.info("[ONBOARDING-FORCE-SKIP] success", {
+        userId,
+        skippedStep: currentStep,
+        action: 'ONBOARDING_FORCE_SKIPPED',
+      });
+
+      const authResponse = await buildAuthUserResponse(userId);
+      return res.json(authResponse);
+    } catch (error) {
+      logger.error("Error during onboarding force skip", { error: String(error) });
+      res.status(500).json({ message: "Failed to skip onboarding step" });
     }
   });
 

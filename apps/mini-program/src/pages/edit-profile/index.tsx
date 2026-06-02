@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { View, Text, Input, ScrollView, Picker, Image } from '@tarojs/components'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { View, Text, Input, ScrollView, Picker } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import {
   getUserInterests,
@@ -7,33 +7,33 @@ import {
   submitInterests,
   type InterestSelectionLevel,
 } from '@shared/api'
-
-const INTEREST_LEVEL_META: Array<{
-  level: InterestSelectionLevel
-  label: string
-  shortLabel: string
-}> = [
-  { level: 1, label: '想试试', shortLabel: '已加入' },
-  { level: 2, label: '很喜欢', shortLabel: '偏爱' },
-  { level: 3, label: '本命', shortLabel: '重点' },
-]
-
-function getInterestLevelMeta(level: InterestSelectionLevel | undefined) {
-  return INTEREST_LEVEL_META.find((item) => item.level === level)
-}
-import { getActiveInterests, MACRO_CATEGORY_LABELS, type MacroCategory } from '@shared/interests'
+import {
+  EDUCATION_LEVEL_OPTIONS,
+  INTENT_OPTIONS,
+  INTENT_FLEXIBLE_OPTION,
+} from '@shared/constants'
+import {
+  getActiveInterests,
+  MACRO_CATEGORY_LABELS,
+  type MacroCategory,
+} from '@shared/interests'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { apiRequest } from '../../lib/api/api'
 import { useAuth, useInvalidateAuth } from '../../hooks/useAuth'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { logInfo, logError } from '../../lib/utils/logger'
+import { haptics } from '../../lib/utils/haptics'
+import { useResetOnShow } from '../../hooks/useResetOnShow'
+import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 
-import ArchetypeHead from '../../components/mascot/ArchetypeHead'
+import ProfileArchetypeHero from '../../components/profile/ProfileArchetypeHero'
+import InterestChipCloud from '../../components/profile/InterestChipCloud'
+import ProfessionDisplayField from '../../components/profile/ProfessionDisplayField'
+import ProfessionChatOverlay from '../../components/ProfessionChatOverlay'
 import XiaoyueChatBubble from '../../components/mascot/XiaoyueChatBubble'
 import Chip from '../../components/ui/Chip'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import './index.scss'
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -50,7 +50,16 @@ const BIRTH_YEAR_RANGE = Array.from(
   (_, i) => String(CURRENT_YEAR - 18 - i),
 )
 
-// ─── Interest helpers ─────────────────────────────────────────────
+const MAX_INTENTS = 3
+const INTEREST_LEVEL_META: Array<{
+  level: InterestSelectionLevel
+  label: string
+  shortLabel: string
+}> = [
+  { level: 1, label: '想试试', shortLabel: '已加入' },
+  { level: 2, label: '很喜欢', shortLabel: '偏爱' },
+  { level: 3, label: '本命', shortLabel: '重点' },
+]
 
 const activeInterests = getActiveInterests()
 
@@ -65,6 +74,10 @@ function getInterestsByCategory(): Record<MacroCategory, typeof activeInterests>
 }
 
 const interestsByCategory = getInterestsByCategory()
+
+function getInterestLevelMeta(level: InterestSelectionLevel | undefined) {
+  return INTEREST_LEVEL_META.find((item) => item.level === level)
+}
 
 function normalizeGenderValue(value: unknown): string {
   switch (value) {
@@ -85,19 +98,75 @@ function normalizeGenderValue(value: unknown): string {
 // ─── Component ────────────────────────────────────────────────────
 
 export default function EditProfilePage() {
+  const { shouldReduceMotion } = useMiniRevealMotion()
   const { authLoading, renderGate } = useMiniPageGate()
   const { user } = useAuth()
   const invalidateAuth = useInvalidateAuth()
+  const didSaveRef = useRef(false)
+  const enterTimeRef = useRef(Date.now())
 
+  // Basic info
   const [displayName, setDisplayName] = useState('')
   const [gender, setGender] = useState('')
   const [birthYear, setBirthYear] = useState(0)
   const [currentCity, setCurrentCity] = useState('')
   const [hometownRegionCity, setHometownRegionCity] = useState('')
+  const [educationLevel, setEducationLevel] = useState('')
+
+  // Social profile
+  const [professionText, setProfessionText] = useState('')
+  const [professionClassification, setProfessionClassification] = useState<import('../../components/ProfessionChatOverlay').ProfessionClassificationData | null>(null)
+  const [showProfessionOverlay, setShowProfessionOverlay] = useState(false)
+  const [isProfessionOverlayClosing, setIsProfessionOverlayClosing] = useState(false)
+  const [intent, setIntent] = useState<string[]>([])
+
+  // Interests
   const [selectedInterests, setSelectedInterests] = useState<string[]>([])
   const [interestLevels, setInterestLevels] = useState<Record<string, InterestSelectionLevel>>({})
   const [isLoadingInterests, setIsLoadingInterests] = useState(false)
+
+  // UI state
   const [isSaving, setIsSaving] = useState(false)
+  const [isPageExiting, setIsPageExiting] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [hasChanges, setHasChanges] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
+  const [scrollIntoViewId, setScrollIntoViewId] = useState('')
+
+  useResetOnShow(setIsPageExiting, setIsSaving)
+
+  // Mark initializing complete once user data is hydrated
+  useEffect(() => {
+    if (user && !authLoading) {
+      const timer = setTimeout(() => setIsInitializing(false), 200)
+      return () => clearTimeout(timer)
+    }
+  }, [user, authLoading])
+
+  // Analytics: enter
+  useEffect(() => {
+    enterTimeRef.current = Date.now()
+    logInfo('[EditProfile] Enter', { userId: user?.id })
+  }, [user?.id])
+
+  // Analytics: abandon
+  useEffect(() => {
+    return () => {
+      if (!didSaveRef.current) {
+        const secondsOnPage = Math.round((Date.now() - enterTimeRef.current) / 1000)
+        logInfo('[EditProfile] Abandon', { secondsOnPage })
+      }
+    }
+  }, [])
+
+  // Unsaved changes guard
+  useEffect(() => {
+    if (!hasChanges) return
+    Taro.enableAlertBeforeUnload({ message: '资料尚未保存，确定要退出吗？' })
+    return () => {
+      Taro.disableAlertBeforeUnload()
+    }
+  }, [hasChanges])
 
   // Initialize form from user data
   useEffect(() => {
@@ -106,7 +175,6 @@ export default function EditProfilePage() {
     setDisplayName(u.displayName || u.nickname || '')
     setGender(normalizeGenderValue(u.gender))
 
-    // birthYear may come directly or be derived from birthdate
     let resolvedBirthYear = 0
     if (typeof u.birthYear === 'number' && u.birthYear > 0) {
       resolvedBirthYear = u.birthYear
@@ -118,122 +186,231 @@ export default function EditProfilePage() {
 
     setCurrentCity(u.currentCity || '')
     setHometownRegionCity(u.hometownRegionCity || '')
+    setEducationLevel(typeof u.educationLevel === 'string' ? u.educationLevel : '')
+    setProfessionText(typeof u.occupationId === 'string' ? u.occupationId : '')
+    setProfessionClassification({
+      occupationId: typeof u.occupationId === 'string' ? u.occupationId : '',
+      standardizedOccupationId: typeof u.standardizedOccupationId === 'string' ? u.standardizedOccupationId : null,
+      industryCategoryLabel: typeof u.industryCategoryLabel === 'string' ? u.industryCategoryLabel : null,
+      industrySegmentLabel: typeof u.industrySegmentLabel === 'string' ? u.industrySegmentLabel : null,
+      industryNicheLabel: typeof u.industryNicheLabel === 'string' ? u.industryNicheLabel : null,
+      industryCategory: typeof u.industryCategory === 'string' ? u.industryCategory : null,
+      industrySegmentNew: typeof u.industrySegmentNew === 'string' ? u.industrySegmentNew : null,
+      industryNiche: typeof u.industryNiche === 'string' ? u.industryNiche : null,
+      industrySource: typeof u.industrySource === 'string' ? u.industrySource : 'user',
+      industryConfidence: typeof u.industryConfidence === 'number' ? u.industryConfidence : 0,
+    })
+    setIntent(Array.isArray(u.intent) ? u.intent.filter((item: unknown): item is string => typeof item === 'string') : [])
 
-    // Interests may be an array of IDs or objects when the richer payload has not been loaded yet.
     const interests: string[] = Array.isArray(u.interests)
       ? u.interests.map((i: any) => (typeof i === 'string' ? i : i.id || i.interestId || ''))
       : []
     setSelectedInterests((current) => (current.length > 0 ? current : interests.filter(Boolean)))
-    // Do NOT initialize interestLevels from flat user.interests — wait for getUserInterests
-    // to return the real structured levels. This prevents overwriting saved levels with 1.
   }, [user])
 
+  // Load structured interests
   useEffect(() => {
     let cancelled = false
-
     if (authLoading || !user?.hasCompletedInterestsCarousel) {
-      return () => {
-        cancelled = true
-      }
+      return () => { cancelled = true }
     }
 
     setIsLoadingInterests(true)
     void getUserInterests(apiRequest)
       .then((interestProfile) => {
-        if (cancelled || !Array.isArray(interestProfile?.selections)) {
-          return
-        }
-
+        if (cancelled || !Array.isArray(interestProfile?.selections)) return
         const levels = interestProfile.selections.reduce<Record<string, InterestSelectionLevel>>(
           (acc, selection) => {
-            if (typeof selection?.topicId !== 'string' || selection.topicId.trim() === '') {
-              return acc
-            }
-
-            acc[selection.topicId] =
-              selection.level === 2 || selection.level === 3 ? selection.level : 1
+            if (typeof selection?.topicId !== 'string' || selection.topicId.trim() === '') return acc
+            acc[selection.topicId] = selection.level === 2 || selection.level === 3 ? selection.level : 1
             return acc
           },
           {},
         )
-
         setSelectedInterests(Object.keys(levels))
         setInterestLevels(levels)
       })
       .catch((error) => {
-        const statusCode =
-          typeof error === 'object' && error !== null && 'statusCode' in error
-            ? Number((error as { statusCode?: unknown }).statusCode)
-            : undefined
-
+        const statusCode = typeof error === 'object' && error !== null && 'statusCode' in error
+          ? Number((error as { statusCode?: unknown }).statusCode)
+          : undefined
         if (statusCode !== 404) {
-          logError('[EditProfile] Failed to load structured interests', {
-            statusCode,
-            message: error instanceof Error ? error.message : 'Unknown error',
-          })
+          logError('[EditProfile] Failed to load structured interests', { statusCode, message: error instanceof Error ? error.message : 'Unknown' })
         }
       })
       .finally(() => {
         if (!cancelled) setIsLoadingInterests(false)
       })
 
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [authLoading, user?.hasCompletedInterestsCarousel])
 
-  const toggleInterest = useCallback((interestId: string) => {
-    const currentLevel = interestLevels[interestId]
+  // ─── Handlers ─────────────────────────────────────────────────────
 
+  const toggleInterest = useCallback((interestId: string) => {
+    haptics('light')
+    const currentLevel = interestLevels[interestId]
     if (!currentLevel) {
-      // Not selected → select at level 1
       setSelectedInterests([...selectedInterests, interestId])
       setInterestLevels({ ...interestLevels, [interestId]: 1 })
+      setHasChanges(true)
       return
     }
-
     if (currentLevel === 1) {
-      // Level 1 → Level 2
       setInterestLevels({ ...interestLevels, [interestId]: 2 })
+      setHasChanges(true)
       return
     }
-
     if (currentLevel === 2) {
-      // Level 2 → Level 3
       setInterestLevels({ ...interestLevels, [interestId]: 3 })
+      setHasChanges(true)
       return
     }
-
-    // Level 3 → deselect
     setSelectedInterests(selectedInterests.filter((id) => id !== interestId))
     const nextLevels = { ...interestLevels }
     delete nextLevels[interestId]
     setInterestLevels(nextLevels)
+    setHasChanges(true)
   }, [interestLevels, selectedInterests])
+
+  const toggleIntent = useCallback((value: string) => {
+    haptics('light')
+    if (value === INTENT_FLEXIBLE_OPTION.value) {
+      if (intent.includes(value)) {
+        setIntent(intent.filter((item) => item !== value))
+      } else {
+        setIntent([...intent, value])
+      }
+      setHasChanges(true)
+      return
+    }
+    if (intent.includes(value)) {
+      setIntent(intent.filter((item) => item !== value))
+      setHasChanges(true)
+      return
+    }
+    const explicitCount = intent.filter((item) => item !== INTENT_FLEXIBLE_OPTION.value).length
+    if (explicitCount >= MAX_INTENTS) {
+      haptics('warning')
+      Taro.showToast({ title: `最多选择 ${MAX_INTENTS} 个意图`, icon: 'none', duration: 2000 })
+      return
+    }
+    setIntent([...intent, value])
+    setHasChanges(true)
+  }, [intent])
 
   const handleBirthYearChange = useCallback((e: any) => {
     const idx = e.detail.value as number
     const year = parseInt(BIRTH_YEAR_RANGE[idx], 10)
-    if (!isNaN(year)) setBirthYear(year)
+    if (!isNaN(year)) {
+      setBirthYear(year)
+      setHasChanges(true)
+      setFieldErrors((prev) => ({ ...prev, birthYear: '' }))
+    }
   }, [])
+
+  const handleProfessionSubmit = useCallback((value: string, classification?: import('../../components/ProfessionChatOverlay').ProfessionClassificationData) => {
+    haptics('success')
+    setProfessionText(value)
+    if (classification) setProfessionClassification(classification)
+    setIsProfessionOverlayClosing(true)
+    setHasChanges(true)
+    setTimeout(() => {
+      setShowProfessionOverlay(false)
+      setIsProfessionOverlayClosing(false)
+    }, shouldReduceMotion ? 0 : 350)
+  }, [shouldReduceMotion])
+
+  const handleProfessionSkip = useCallback(() => {
+    setIsProfessionOverlayClosing(true)
+    setTimeout(() => {
+      setShowProfessionOverlay(false)
+      setIsProfessionOverlayClosing(false)
+    }, shouldReduceMotion ? 0 : 350)
+  }, [shouldReduceMotion])
 
   const handleSave = useCallback(async () => {
     if (isSaving) return
     setIsSaving(true)
+    setIsPageExiting(true)
 
     try {
       logInfo('[EditProfile] Saving profile changes')
 
-      // Submit essential data
-      await submitEssentialData(apiRequest, {
-        displayName: displayName || undefined,
-        gender: gender || undefined,
-        birthYear: birthYear || undefined,
-        currentCity: currentCity || undefined,
-        hometownRegionCity: hometownRegionCity || undefined,
-      })
+      // Validation with field errors + scroll-to-error
+      const errors: Record<string, string> = {}
+      if (!displayName.trim() || displayName.trim().length < 2) {
+        errors.displayName = '昵称至少需要 2 个字符'
+      }
+      if (!gender) {
+        errors.gender = '请选择性别'
+      }
+      if (!birthYear) {
+        errors.birthYear = '请选择出生年份'
+      }
+      if (!currentCity.trim()) {
+        errors.currentCity = '请填写所在城市'
+      }
 
-      // Submit interests if changed
+      if (Object.keys(errors).length > 0) {
+        haptics('warning')
+        setFieldErrors(errors)
+        setIsPageExiting(false)
+        setIsSaving(false)
+        // Scroll to first error via scrollIntoView
+        const firstErrorField = Object.keys(errors)[0]
+        setScrollIntoViewId(`field-${firstErrorField}`)
+        setTimeout(() => setScrollIntoViewId(''), 500)
+        return
+      }
+
+      setFieldErrors({})
+
+      const payload: Record<string, unknown> = {
+        displayName: displayName.trim(),
+        gender,
+        birthYear,
+        currentCity: currentCity.trim(),
+        ...(hometownRegionCity.trim() ? { hometownRegionCity: hometownRegionCity.trim() } : {}),
+        ...(educationLevel ? { educationLevel } : {}),
+        ...(intent.length > 0 ? { intent } : {}),
+      }
+
+      if (professionText.trim() !== '') {
+        payload.occupationId = professionText.trim()
+        payload.industryRawInput = professionText.trim()
+        if (professionClassification?.standardizedOccupationId) {
+          payload.standardizedOccupationId = professionClassification.standardizedOccupationId
+        }
+        if (professionClassification?.industryCategoryLabel) {
+          payload.industryCategoryLabel = professionClassification.industryCategoryLabel
+        }
+        if (professionClassification?.industrySegmentLabel) {
+          payload.industrySegmentLabel = professionClassification.industrySegmentLabel
+        }
+        if (professionClassification?.industryNicheLabel) {
+          payload.industryNicheLabel = professionClassification.industryNicheLabel
+        }
+        if (professionClassification?.industryCategory) {
+          payload.industryCategory = professionClassification.industryCategory
+        }
+        if (professionClassification?.industrySegmentNew) {
+          payload.industrySegmentNew = professionClassification.industrySegmentNew
+        }
+        if (professionClassification?.industryNiche) {
+          payload.industryNiche = professionClassification.industryNiche
+        }
+        if (professionClassification?.industrySource) {
+          payload.industrySource = professionClassification.industrySource
+        }
+        if (professionClassification?.industryConfidence !== undefined) {
+          payload.industryConfidence = professionClassification.industryConfidence
+        }
+      }
+
+      const fieldsChanged = Object.entries(payload).filter(([, v]) => v !== undefined && v !== '').length
+      await submitEssentialData(apiRequest, payload as Parameters<typeof submitEssentialData>[1])
+
       if (selectedInterests.length > 0) {
         await submitInterests(apiRequest, {
           interests: selectedInterests.map((topicId) => ({
@@ -243,14 +420,18 @@ export default function EditProfilePage() {
         })
       }
 
-      // Invalidate auth cache so profile page refreshes
       invalidateAuth()
+      didSaveRef.current = true
+      setHasChanges(false)
+      haptics('success')
+      logInfo('[EditProfile] Save success', { fieldsChanged })
 
       Taro.showToast({ title: '保存成功', icon: 'success', duration: 2000 })
       setTimeout(() => {
         Taro.navigateBack({ fail: () => Taro.switchTab({ url: '/pages/profile/index' }) })
       }, 1000)
     } catch (err) {
+      setIsPageExiting(false)
       const msg = err instanceof Error ? err.message : getErrorMessage('save-failed')
       logError('[EditProfile] Save failed', { message: msg })
       Taro.showToast({ title: msg, icon: 'none', duration: 3000 })
@@ -264,161 +445,288 @@ export default function EditProfilePage() {
     birthYear,
     currentCity,
     hometownRegionCity,
+    educationLevel,
+    professionText,
+    professionClassification,
+    intent,
     selectedInterests,
     interestLevels,
     invalidateAuth,
   ])
 
   const birthYearIndex = birthYear ? BIRTH_YEAR_RANGE.indexOf(String(birthYear)) : -1
-
   const previewName = displayName || user?.nickname || user?.displayName || '悦聚用户'
   const previewArchetype = user?.archetype
 
+  const intentOptions = useMemo(() => [...INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION], [])
+
+  // ─── Render ───────────────────────────────────────────────────────
+
   return renderGate(
-    <ScrollView className='edit-profile' scrollY enhanced showScrollbar={false}>
-      {/* ── Xiaoyue Coach ── */}
-      <XiaoyueChatBubble
-        content='完善资料可以让匹配更精准哦～'
-        pose='casual'
-        horizontal
-        showGlow
-        tail
-        className='edit-profile__coach'
-      />
-
-      {/* ── Live Preview ── */}
-      <Card className='edit-profile__preview'>
-        <View className='edit-profile__preview-inner'>
-          <ArchetypeHead archetype={previewArchetype} size={80} fallbackText={previewName} />
-          <View className='edit-profile__preview-text'>
-            <Text className='edit-profile__preview-name'>{previewName}</Text>
-            {previewArchetype && (
-              <Text className='edit-profile__preview-archetype'>
-                {ARCHETYPE_BY_ID[previewArchetype]?.nameCn || previewArchetype}
-              </Text>
-            )}
-          </View>
+    <View className='edit-profile'>
+      {isInitializing ? (
+        <View className='edit-profile__skeleton'>
+          <View className='edit-profile__skeleton-block edit-profile__skeleton-block--hero' />
+          <View className='edit-profile__skeleton-block edit-profile__skeleton-block--title' />
+          <View className='edit-profile__skeleton-block edit-profile__skeleton-block--card' />
+          <View className='edit-profile__skeleton-block edit-profile__skeleton-block--card' />
+          <View className='edit-profile__skeleton-block edit-profile__skeleton-block--card' />
         </View>
-      </Card>
+      ) : (
+        <>
+      <ScrollView className='edit-profile__scroll' scrollY enhanced showScrollbar={false} scrollIntoView={scrollIntoViewId || undefined}>
+        {/* Xiaoyue Coach */}
+        <XiaoyueChatBubble
+          content='来看看你的资料吧，随时更新让匹配更准哦～'
+          pose='casual'
+          horizontal
+          showGlow
+          tail
+          className='edit-profile__coach'
+        />
 
-      {/* ── 基本信息 ── */}
-      <View className='edit-profile__section'>
-        <Text className='edit-profile__section-title'>基本信息</Text>
-        <Card className='edit-profile__card'>
-          {/* Display name */}
-          <View className='edit-profile__field'>
-            <Text className='edit-profile__label'>昵称</Text>
-            <Input
-              className='edit-profile__input'
-              value={displayName}
-              onInput={(e) => setDisplayName(e.detail.value)}
-              placeholder='输入你的昵称'
-              maxlength={20}
-            />
-          </View>
+        {/* Live Preview */}
+        <ProfileArchetypeHero
+          archetype={previewArchetype}
+          displayName={previewName}
+          size='sm'
+          className='edit-profile__preview'
+        />
 
-          {/* Gender */}
-          <View className='edit-profile__field'>
-            <Text className='edit-profile__label'>性别</Text>
-            <View className='edit-profile__radio-group'>
-              {GENDER_OPTIONS.map((opt) => (
-                <View
-                  key={opt.value}
-                  className={`edit-profile__radio ${gender === opt.value ? 'edit-profile__radio--active' : ''}`}
-                  onClick={() => setGender(opt.value)}
-                >
-                  <Text>{opt.label}</Text>
-                </View>
-              ))}
+        {/* ── Step 1: 基础档案 ── */}
+        <View className='edit-profile__section'>
+          <View className='edit-profile__section-header'>
+            <View className='edit-profile__progress-bar'>
+              <View className='edit-profile__progress-fill' style={{ width: '50%' }} />
             </View>
+            <Text className='edit-profile__section-title'>基础档案</Text>
+            <Text className='edit-profile__section-subtitle'>确认你的基本信息</Text>
           </View>
 
-          {/* Birth year */}
-          <View className='edit-profile__field'>
-            <Text className='edit-profile__label'>出生年份</Text>
-            <Picker
-              mode='selector'
-              range={BIRTH_YEAR_RANGE}
-              value={birthYearIndex >= 0 ? birthYearIndex : 0}
-              onChange={handleBirthYearChange}
-            >
-              <Text className='edit-profile__picker-value'>
-                {birthYear ? `${birthYear} 年` : '选择年份'}
-              </Text>
-            </Picker>
-          </View>
+          <Card className='edit-profile__card'>
+            {/* Display name */}
+            <View className='edit-profile__field' id='field-displayName' data-field='displayName'>
+              <Text className='edit-profile__label'>昵称</Text>
+              <Input
+                className={`edit-profile__input ${fieldErrors.displayName ? 'edit-profile__input--error' : ''}`}
+                value={displayName}
+                onInput={(e) => {
+                  setDisplayName(e.detail.value)
+                  setHasChanges(true)
+                  setFieldErrors((prev) => ({ ...prev, displayName: '' }))
+                }}
+                placeholder='输入你的昵称'
+                maxlength={20}
+              />
+              {fieldErrors.displayName && (
+                <Text className='edit-profile__field-error'>{fieldErrors.displayName}</Text>
+              )}
+            </View>
 
-          {/* Current city */}
-          <View className='edit-profile__field'>
-            <Text className='edit-profile__label'>所在城市</Text>
-            <Input
-              className='edit-profile__input'
-              value={currentCity}
-              onInput={(e) => setCurrentCity(e.detail.value)}
-              placeholder='如：深圳'
-              maxlength={30}
-            />
-          </View>
+            {/* Gender */}
+            <View className='edit-profile__field' id='field-gender' data-field='gender'>
+              <Text className='edit-profile__label'>性别</Text>
+              <View className='edit-profile__radio-group'>
+                {GENDER_OPTIONS.map((opt) => (
+                  <View
+                    key={opt.value}
+                    className={`edit-profile__radio ${gender === opt.value ? 'edit-profile__radio--active' : ''}`}
+                    onClick={() => {
+                      setGender(opt.value)
+                      setHasChanges(true)
+                      setFieldErrors((prev) => ({ ...prev, gender: '' }))
+                    }}
+                  >
+                    <Text>{opt.label}</Text>
+                  </View>
+                ))}
+              </View>
+              {fieldErrors.gender && (
+                <Text className='edit-profile__field-error'>{fieldErrors.gender}</Text>
+              )}
+            </View>
 
-          {/* Hometown */}
-          <View className='edit-profile__field'>
-            <Text className='edit-profile__label'>家乡</Text>
-            <Input
-              className='edit-profile__input'
-              value={hometownRegionCity}
-              onInput={(e) => setHometownRegionCity(e.detail.value)}
-              placeholder='如：广州'
-              maxlength={30}
-            />
-          </View>
-        </Card>
-      </View>
+            {/* Birth year */}
+            <View className='edit-profile__field' id='field-birthYear' data-field='birthYear'>
+              <Text className='edit-profile__label'>出生年份</Text>
+              <Picker
+                mode='selector'
+                range={BIRTH_YEAR_RANGE}
+                value={birthYearIndex >= 0 ? birthYearIndex : 0}
+                onChange={handleBirthYearChange}
+              >
+                <Text className={`edit-profile__picker-value ${fieldErrors.birthYear ? 'edit-profile__picker-value--error' : ''}`}>
+                  {birthYear ? `${birthYear} 年` : '选择年份'}
+                </Text>
+              </Picker>
+              {fieldErrors.birthYear && (
+                <Text className='edit-profile__field-error'>{fieldErrors.birthYear}</Text>
+              )}
+            </View>
 
-      {/* ── 兴趣爱好 ── */}
-      <View className='edit-profile__section'>
-        <Text className='edit-profile__section-title'>
-          兴趣爱好
-          <Text className='edit-profile__interest-count'>
-            {' '}({selectedInterests.length} 已选)
-          </Text>
-        </Text>
+            {/* Current city */}
+            <View className='edit-profile__field' id='field-currentCity' data-field='currentCity'>
+              <Text className='edit-profile__label'>所在城市</Text>
+              <Input
+                className={`edit-profile__input ${fieldErrors.currentCity ? 'edit-profile__input--error' : ''}`}
+                value={currentCity}
+                onInput={(e) => {
+                  setCurrentCity(e.detail.value)
+                  setHasChanges(true)
+                  setFieldErrors((prev) => ({ ...prev, currentCity: '' }))
+                }}
+                placeholder='如：深圳'
+                maxlength={30}
+              />
+              {fieldErrors.currentCity && (
+                <Text className='edit-profile__field-error'>{fieldErrors.currentCity}</Text>
+              )}
+            </View>
 
-        {isLoadingInterests ? (
-          <Text className='edit-profile__interest-hint'>加载兴趣数据中…</Text>
-        ) : (
-          <Text className='edit-profile__interest-hint'>轻点标签选择，再点一次提升热度</Text>
-        )}
-        {(Object.entries(interestsByCategory) as [MacroCategory, typeof activeInterests][]).map(
-          ([category, interests]) => (
-            <View key={category} className='edit-profile__interest-group'>
-              <Text className='edit-profile__interest-category'>
-                {MACRO_CATEGORY_LABELS[category] || category}
-              </Text>
-              <View className={`edit-profile__interest-tags ${isLoadingInterests ? 'edit-profile__interest-tags--loading' : ''}`}>
-                {interests.map((interest) => {
-                  const level = interestLevels[interest.id]
-                  const isSelected = selectedInterests.includes(interest.id)
-                  const meta = getInterestLevelMeta(level)
+            {/* Hometown */}
+            <View className='edit-profile__field'>
+              <Text className='edit-profile__label'>家乡</Text>
+              <Input
+                className='edit-profile__input'
+                value={hometownRegionCity}
+                onInput={(e) => {
+                  setHometownRegionCity(e.detail.value)
+                  setHasChanges(true)
+                }}
+                placeholder='如：广州'
+                maxlength={30}
+              />
+            </View>
+
+            {/* Education */}
+            <View className='edit-profile__field'>
+              <Text className='edit-profile__label'>学历</Text>
+              <View className='edit-profile__choice-row edit-profile__choice-row--wrap'>
+                {EDUCATION_LEVEL_OPTIONS.map((option) => {
+                  const selected = educationLevel === option
                   return (
-                    <Chip
-                      key={interest.id}
-                      label={interest.label}
-                      meta={isSelected ? meta?.shortLabel : undefined}
-                      selected={isSelected}
-                      level={level}
-                      disabled={isLoadingInterests}
-                      onClick={() => toggleInterest(interest.id)}
-                    />
+                    <View
+                      key={option}
+                      className={[
+                        'edit-profile__choice-chip',
+                        selected ? 'edit-profile__choice-chip--selected' : '',
+                      ].filter(Boolean).join(' ')}
+                      onClick={() => {
+                        setEducationLevel(selected ? '' : option)
+                        setHasChanges(true)
+                      }}
+                    >
+                      <Text className='edit-profile__choice-chip-text'>{option}</Text>
+                    </View>
                   )
                 })}
               </View>
             </View>
-          ),
-        )}
-      </View>
+          </Card>
+        </View>
 
-      {/* ── Save button ── */}
-      <View className='edit-profile__footer'>
+        {/* ── Step 2: 社交画像 ── */}
+        <View className='edit-profile__section'>
+          <View className='edit-profile__section-header'>
+            <View className='edit-profile__progress-bar'>
+              <View className='edit-profile__progress-fill edit-profile__progress-fill--complete' />
+            </View>
+            <Text className='edit-profile__section-title'>社交画像</Text>
+            <Text className='edit-profile__section-subtitle'>定义你的社交身份</Text>
+          </View>
+
+          <Card className='edit-profile__card'>
+            {/* Profession */}
+            <View className='edit-profile__field'>
+              <Text className='edit-profile__label'>职业身份</Text>
+              <ProfessionDisplayField
+                rawValue={professionText}
+                classification={professionClassification}
+                onEdit={() => setShowProfessionOverlay(true)}
+              />
+            </View>
+
+            {/* Intent */}
+            <View className='edit-profile__field'>
+              <Text className='edit-profile__label'>
+                社交意图
+                <Text className='edit-profile__intent-count'>（{intent.length} 已选，最多 {MAX_INTENTS}）</Text>
+              </Text>
+              <View className='edit-profile__intent-grid'>
+                {intentOptions.map((option: typeof intentOptions[number]) => {
+                  const isSelected = intent.includes(option.value)
+                  return (
+                    <View
+                      key={option.value}
+                      className={[
+                        'edit-profile__intent-card',
+                        isSelected ? 'edit-profile__intent-card--selected' : '',
+                      ].filter(Boolean).join(' ')}
+                      onClick={() => toggleIntent(option.value)}
+                    >
+                      <Text className='edit-profile__intent-label'>{option.label}</Text>
+                      <Text className='edit-profile__intent-subtitle'>{option.subtitle}</Text>
+                      {isSelected && (
+                        <View className='edit-profile__intent-check'>
+                          <Text className='edit-profile__intent-check-icon'>✓</Text>
+                        </View>
+                      )}
+                    </View>
+                  )
+                })}
+              </View>
+            </View>
+          </Card>
+
+          {/* Interests */}
+          <View className='edit-profile__interest-section'>
+            <Text className='edit-profile__section-title'>
+              兴趣爱好
+              <Text className='edit-profile__interest-count'>（{selectedInterests.length} 已选）</Text>
+            </Text>
+
+            {isLoadingInterests ? (
+              <Text className='edit-profile__interest-hint'>加载兴趣数据中…</Text>
+            ) : (
+              <Text className='edit-profile__interest-hint'>轻点标签选择，再点一次提升热度</Text>
+            )}
+
+            {(Object.entries(interestsByCategory) as [MacroCategory, typeof activeInterests][]).map(
+              ([category, interests]) => (
+                <View key={category} className='edit-profile__interest-group'>
+                  <Text className='edit-profile__interest-category'>
+                    {MACRO_CATEGORY_LABELS[category] || category}
+                  </Text>
+                  <View className={`edit-profile__interest-tags ${isLoadingInterests ? 'edit-profile__interest-tags--loading' : ''}`}>
+                    {interests.map((interest) => {
+                      const level = interestLevels[interest.id]
+                      const isSelected = selectedInterests.includes(interest.id)
+                      const meta = getInterestLevelMeta(level)
+                      return (
+                        <Chip
+                          key={interest.id}
+                          label={interest.label}
+                          meta={isSelected ? meta?.shortLabel : undefined}
+                          selected={isSelected}
+                          level={level}
+                          disabled={isLoadingInterests}
+                          onClick={() => toggleInterest(interest.id)}
+                        />
+                      )
+                    })}
+                  </View>
+                </View>
+              ),
+            )}
+          </View>
+        </View>
+
+        {/* Spacer for floating action bar */}
+        <View className='edit-profile__spacer' />
+      </ScrollView>
+
+      {/* Floating bottom action bar */}
+      <View className='edit-profile__action-bar'>
         <Button
           variant='primary'
           className='edit-profile__save-btn'
@@ -430,7 +738,18 @@ export default function EditProfilePage() {
         </Button>
       </View>
 
-      <View className='edit-profile__spacer' />
-    </ScrollView>
+      {/* Profession overlay */}
+      {showProfessionOverlay && (
+        <ProfessionChatOverlay
+          visible={showProfessionOverlay}
+          isClosing={isProfessionOverlayClosing}
+          initialValue={professionText}
+          onSubmit={handleProfessionSubmit}
+          onSkip={handleProfessionSkip}
+        />
+      )}
+        </>
+      )}
+    </View>,
   )
 }

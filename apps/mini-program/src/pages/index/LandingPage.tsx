@@ -1,7 +1,7 @@
 import { View, Text, Image, Navigator } from "@tarojs/components"
 import { PhaseHeaderIcon } from "../icebreaker-session/phaseUtils"
 import Taro from "@tarojs/taro"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { loadBrandDisplayFont } from "../../lib/utils/brandFont"
 import Button from "../../components/ui/Button"
 import BrandLogo from "../../components/ui/BrandLogo"
@@ -9,17 +9,38 @@ import BondingCloud from "../../components/landing/BondingCloud"
 import { useStaggerMount } from "../../hooks/useStaggerMount"
 import { getXiaoyueExpressionAsset } from "../../lib/mascot/xiaoyueExpressions"
 import { runMiniProgramRouteTransition } from "../../lib/onboarding/onboardingNavigation"
+import { useWeChatLogin } from "../../hooks/auth/useWeChatLogin"
+import { onboardingAnalytics } from "../../lib/onboarding/onboardingAnalytics"
 import "./index.scss"
 
 export default function MiniProgramLandingPage() {
   const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
+  const [shakeLegal, setShakeLegal] = useState(false)
   const [mascotSrc, setMascotSrc] = useState(getXiaoyueExpressionAsset("homeWelcome"))
   const isMounted = useStaggerMount()
+  const { handleWeChatLogin, isLoggingIn } = useWeChatLogin()
+  const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     loadBrandDisplayFont()
   }, [])
+
+  useEffect(() => {
+    return () => {
+      if (shakeTimerRef.current) {
+        clearTimeout(shakeTimerRef.current)
+      }
+    }
+  }, [])
+
+  const hapticLight = () => {
+    try {
+      Taro.vibrateShort({ type: 'light' })
+    } catch {
+      /* ignore unsupported devices */
+    }
+  }
 
   const ctaDisabledClass = hasAcceptedLegal ? "" : " landing-page__cta--disabled"
   const ctaHoverClass = hasAcceptedLegal ? "landing-page__cta-hover" : ""
@@ -27,11 +48,14 @@ export default function MiniProgramLandingPage() {
     .filter(Boolean)
     .join(" ")
 
-  const navigateWithLegalGate = (url: string) => {
-    if (!hasAcceptedLegal) {
-      return
-    }
+  const triggerLegalShake = () => {
+    setShakeLegal(true)
+    hapticLight()
+    if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current)
+    shakeTimerRef.current = setTimeout(() => setShakeLegal(false), 400)
+  }
 
+  const navigateWithLegalGate = (url: string) => {
     void (async () => {
       try {
         await runMiniProgramRouteTransition({
@@ -73,7 +97,7 @@ export default function MiniProgramLandingPage() {
             </View>
           )}
           <View className="hero-text">
-            <Text className="headline">你的命格里，藏着谁</Text>
+            <Text className="headline">你的<Text className="headline--accent">命格</Text>里，藏着谁</Text>
             <Text className="subtitle">测出你的氛围命格，找到最聊得来的 4-6 人小局</Text>
           </View>
         </View>
@@ -90,7 +114,7 @@ export default function MiniProgramLandingPage() {
           className={`game-preview ${isMounted ? "stagger-in stagger-in--3" : "stagger-in-hidden"}`}
         >
           {/* @ts-expect-error Taro TextProps lacks ARIA role typings; WeChat WXML supports it */}
-          <Text className="game-preview__title" role="heading" aria-level={3}>局里可能玩到</Text>
+          <Text className="game-preview__title" role="heading" aria-level={3}>6 种破冰玩法，一局解锁</Text>
           <View className="game-preview__grid">
             {[
               { phase: 'topic-card' as const, label: '话题卡' },
@@ -122,20 +146,32 @@ export default function MiniProgramLandingPage() {
           variant="brand"
           className={"landing-page__cta landing-page__cta--primary" + ctaDisabledClass}
           hoverClass={ctaHoverClass}
-          disabled={!hasAcceptedLegal}
           loading={isPageExiting}
-          onClick={() => navigateWithLegalGate("/pages/onboarding/personality-test/index")}
+          onClick={() => {
+            if (!hasAcceptedLegal) {
+              triggerLegalShake()
+              return
+            }
+            hapticLight()
+            navigateWithLegalGate("/pages/onboarding/personality-test/index")
+          }}
         >
-          测测我的社交 vibe →
+          测测我的社交氛围
         </Button>
 
-        <View className="landing-page__legal-row">
+        <View className={`landing-page__legal-row ${shakeLegal ? 'shake' : ''}`}>
           <View
             className={
               "landing-page__legal-checkbox" +
               (hasAcceptedLegal ? " landing-page__legal-checkbox--checked" : "")
             }
-            onClick={() => setHasAcceptedLegal((current) => !current)}
+            role="checkbox"
+            aria-checked={hasAcceptedLegal}
+            aria-label="同意用户协议和隐私政策"
+            onClick={() => {
+              hapticLight()
+              setHasAcceptedLegal((current) => !current)
+            }}
           >
             {hasAcceptedLegal && <Text className="landing-page__legal-checkbox-icon">✓</Text>}
           </View>
@@ -146,11 +182,30 @@ export default function MiniProgramLandingPage() {
             <Text>和</Text>
             <Navigator url="/pages/terms/index?section=privacy" className="landing-page__legal-link">《隐私政策》</Navigator>
           </View>
+
+          <Text aria-live="polite" className="landing-page__sr-only">
+            {shakeLegal ? '请先阅读并同意用户协议和隐私政策' : ''}
+          </Text>
         </View>
 
-        {!hasAcceptedLegal ? (
-          <Text className="landing-page__legal-helper">请先勾选协议后继续测试或登录</Text>
-        ) : null}
+        {/* Inline login for returning users */}
+        <View
+          className={`landing-page__login-row ${isMounted ? "stagger-in stagger-in--5" : "stagger-in-hidden"}`}
+        >
+          <Button
+            variant="brand"
+            className="landing-page__login-btn"
+            disabled={isLoggingIn || isPageExiting}
+            loading={isLoggingIn}
+            onClick={() => {
+              hapticLight()
+              onboardingAnalytics.interaction('login', 'landing_login_clicked')
+              void handleWeChatLogin()
+            }}
+          >
+            已有账号？立即登录
+          </Button>
+        </View>
       </View>
     </View>
   )

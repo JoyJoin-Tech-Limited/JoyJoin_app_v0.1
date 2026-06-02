@@ -319,6 +319,17 @@ export async function getUserState(): Promise<AuthUserResponse> {
   return apiRequest<AuthUserResponse>({ path: '/api/auth/user' })
 }
 
+/**
+ * Restart onboarding for the current authenticated user.
+ * Returns the updated user state with nextStep reset to the beginning.
+ */
+export async function restartOnboarding(): Promise<AuthUserResponse> {
+  return apiRequest<AuthUserResponse>({
+    path: '/api/auth/onboarding/restart',
+    method: 'POST',
+  })
+}
+
 async function getMiniProgramLoginCode(): Promise<string> {
   const loginResult = await Taro.login()
   if (!loginResult.code) {
@@ -394,13 +405,4 @@ export async function fetchConnectionsShell(): Promise<ConnectionsShellResponse>
   return apiRequest<ConnectionsShellResponse>({ path: '/api/shell/connections' })
 }
 
-/**
- * Restart onboarding — clears all onboarding-derived data and resets to step 1.
- * POST /api/auth/onboarding/restart
- */
-export async function restartOnboarding(): Promise<AuthUserResponse> {
-  return apiRequest<AuthUserResponse>({
-    path: '/api/auth/onboarding/restart',
-    method: 'POST',
-  })
-}
+

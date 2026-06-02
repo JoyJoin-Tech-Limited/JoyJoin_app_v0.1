@@ -67,7 +67,7 @@ export function registerAdminBillingRoutes(app: Express): void {
   // Subscription Management - Create subscription
   app.post("/api/admin/subscriptions", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
-      const { userId, planType, durationMonths } = req.body;
+      const { userId, planType, durationMonths, amount } = req.body;
       
       if (!userId || !planType || !durationMonths) {
         return res.status(400).json({ message: "Missing required fields" });
@@ -82,6 +82,8 @@ export function registerAdminBillingRoutes(app: Express): void {
         planType,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
+        amount: amount ?? 0,
+        status: "active",
         isActive: true,
         autoRenew: false,
       });

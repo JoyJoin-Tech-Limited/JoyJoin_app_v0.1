@@ -122,6 +122,19 @@ const FILL_THRESHOLD_AMBER = 50;   // >= 50% fill is moderate (amber), < 50% is 
 const MATCH_SCORE_GREEN = 80;
 const MATCH_SCORE_AMBER = 60;
 
+const REASON_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  budget_mismatch: { label: "预算不匹配", variant: "destructive" },
+  capacity_insufficient: { label: "容量不足", variant: "destructive" },
+  no_available_slots: { label: "无可用时段", variant: "outline" },
+  slot_fully_booked_at_save: { label: "时段已满", variant: "outline" },
+  no_suitable_venue: { label: "无合适场地", variant: "outline" },
+};
+
+function ReasonBadge({ reason }: { reason: string }) {
+  const config = REASON_LABELS[reason] || { label: reason, variant: "outline" as const };
+  return <Badge variant={config.variant} className="text-xs">{config.label}</Badge>;
+}
+
 export default function AdminEventPoolsPage() {
   // ====== 过滤状态 ======
   const [cityFilter, setCityFilter] = useState<CityFilter>("all");
@@ -901,9 +914,14 @@ export default function AdminEventPoolsPage() {
                             </div>
                           ) : (
                             <div className="mt-2 pt-2 border-t">
-                              <Badge variant="secondary" className="text-xs">
-                                未分配场地
-                              </Badge>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge variant="secondary" className="text-xs">
+                                  未分配场地
+                                </Badge>
+                                {group.venueAssignmentReason && (
+                                  <ReasonBadge reason={group.venueAssignmentReason} />
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>

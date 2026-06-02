@@ -1,4 +1,4 @@
-import logoImage from "@/assets/box-logo.webp";
+import logoImage from "@/assets/joyjoin-logo.webp";
 
 interface JoyJoinLogoProps {
   size?: "sm" | "md" | "lg";

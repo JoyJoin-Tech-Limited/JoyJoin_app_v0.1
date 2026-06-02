@@ -5,6 +5,7 @@ import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getEventPool, registerForPool, type EventPoolSummary } from '@shared/api'
+import { getErrorMessage, type ErrorCode } from '@shared/copy/errorBaselines'
 import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
 import { apiRequest, type ApiError } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
@@ -30,6 +31,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import StatusCard from '../../components/ui/StatusCard'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import XiaoyueChatBubble from '../../components/mascot/XiaoyueChatBubble'
 import {
   ALCOHOL_COMFORT_OPTIONS,
   BAR_THEME_OPTIONS,
@@ -144,12 +146,21 @@ function StepPill({ index, label, active, complete }: StepPillProps) {
   )
 }
 
-function resolveMessage(error: unknown, fallbackMessage: string): string {
-  if (error instanceof Error && error.message) {
-    return error.message
+function resolveMessage(error: unknown, fallbackCode: ErrorCode): string {
+  const apiError = error as ApiError | undefined
+  if (apiError?.data && typeof apiError.data === 'object' && !Array.isArray(apiError.data)) {
+    const code = (apiError.data as { code?: unknown }).code
+    if (typeof code === 'string') {
+      return getErrorMessage(code as ErrorCode) ?? getErrorMessage(fallbackCode)
+    }
   }
-
-  return fallbackMessage
+  if (error instanceof Error && error.message) {
+    const mapped = getErrorMessage(error.message as ErrorCode)
+    if (mapped !== error.message) {
+      return mapped
+    }
+  }
+  return getErrorMessage(fallbackCode)
 }
 
 function getEntitlementCode(error: unknown): MiniProgramPaymentEntitlementCode | null {
@@ -194,11 +205,13 @@ export default function PoolRegistrationPage() {
   const appliedReturnContextRef = useRef(0)
 
   const [step, setStep] = useState<RegistrationStep>(0)
+  const [prevStep, setPrevStep] = useState<RegistrationStep>(0)
   const [formState, setFormState] = useState<RegistrationFormState>(INITIAL_FORM_STATE)
   const [isRegistering, setIsRegistering] = useState(false)
   const [registered, setRegistered] = useState(false)
   const [error, setError] = useState('')
   const [resumeContext, setResumeContext] = useState<MiniProgramPoolRegistrationReturnContext | null>(null)
+  const [showBudgetReaction, setShowBudgetReaction] = useState(false)
 
   const {
     data: pool,
@@ -237,7 +250,7 @@ export default function PoolRegistrationPage() {
     [eventType, poolArea],
   )
 
-  const { data: briefData, isLoading: briefLoading } = useQuery<PreJoinVibeBrief | null>({
+  const { data: briefData, isLoading: briefLoading, refetch: refetchBrief } = useQuery<PreJoinVibeBrief | null>({
     queryKey: ['mini-program', 'pre-join-vibe-brief', poolId, eventType, poolArea],
     enabled: !!poolId && !!pool && !authLoading,
     staleTime: 5 * 60 * 1000,
@@ -252,7 +265,7 @@ export default function PoolRegistrationPage() {
           poolId,
           eventType,
           area: poolArea,
-          message: resolveMessage(briefError, 'Failed to load brief'),
+          message: resolveMessage(briefError, 'load-failed'),
         })
 
         return null
@@ -383,6 +396,8 @@ export default function PoolRegistrationPage() {
               barBudgetRange: undefined,
             },
       )
+      setShowBudgetReaction(true)
+      setTimeout(() => setShowBudgetReaction(false), 2200)
     },
     [eventType],
   )
@@ -438,6 +453,7 @@ export default function PoolRegistrationPage() {
 
   const handleAdvance = useCallback(() => {
     if (step === STEP_BRIEF) {
+      setPrevStep(step)
       setStep(STEP_BUDGET)
       return
     }
@@ -455,6 +471,7 @@ export default function PoolRegistrationPage() {
       return
     }
 
+    setPrevStep(step)
     setStep((currentStep) => ((currentStep + 1) as RegistrationStep))
   }, [hasBudgetSelection, hasIntentSelection, step])
 
@@ -468,6 +485,7 @@ export default function PoolRegistrationPage() {
       return
     }
 
+    setPrevStep(step)
     setStep((currentStep) => (currentStep > STEP_BRIEF ? ((currentStep - 1) as RegistrationStep) : STEP_BRIEF))
   }, [step])
 
@@ -556,7 +574,7 @@ export default function PoolRegistrationPage() {
           } catch (navigationError) {
             const navigationMessage = resolveMessage(
               navigationError,
-              '支付页没打开，稍后再试',
+              'payment-failed',
             )
             setError(navigationMessage)
             Taro.showToast({ title: navigationMessage, icon: 'none', duration: TOAST_FATAL_MS })
@@ -566,7 +584,7 @@ export default function PoolRegistrationPage() {
         return
       }
 
-      const message = resolveMessage(err, '报名没成功，再试试')
+      const message = resolveMessage(err, 'submit-failed')
       setError(message)
       logError('[PoolRegistration] Failed', {
         poolId,
@@ -608,9 +626,12 @@ export default function PoolRegistrationPage() {
           />
           <Text className='pool-reg__empty-title'>这场活动暂时打不开</Text>
           <Text className='pool-reg__empty-text'>
-            {resolveMessage(poolError, '活动池可能已下线，或者网络刚刚抖了一下。')}
+            {resolveMessage(poolError, 'load-failed')}
           </Text>
-          <Button variant='primary' className='pool-reg__single-action' onClick={() => Taro.navigateBack()}>
+          <Button variant='primary' className='pool-reg__single-action' onClick={() => refetchBrief()}>
+            重试
+          </Button>
+          <Button variant='secondary' className='pool-reg__single-action' onClick={() => Taro.navigateBack()}>
             返回上一页
           </Button>
         </Card>
@@ -756,78 +777,118 @@ export default function PoolRegistrationPage() {
 
       {step === 0 ? (
         <Card className='pool-reg__brief-card'>
-          <Text className='pool-reg__section-kicker'>加入前的一封小信</Text>
-          <Text className='pool-reg__brief-insight'>{brief.insight}</Text>
-          <Text className='pool-reg__brief-promise'>{brief.matchingPromise}</Text>
+          {briefLoading && !briefData ? (
+            <View className='pool-reg__brief-skeleton'>
+              <View className='pool-reg__brief-skeleton-line pool-reg__brief-skeleton-line--long' />
+              <View className='pool-reg__brief-skeleton-line pool-reg__brief-skeleton-line--medium' />
+              <View className='pool-reg__brief-skeleton-line pool-reg__brief-skeleton-line--short' />
+              <View className='pool-reg__brief-skeleton-line pool-reg__brief-skeleton-line--long' />
+              <View className='pool-reg__brief-skeleton-line pool-reg__brief-skeleton-line--medium' />
+            </View>
+          ) : (
+            <>
+              <Text className='pool-reg__section-kicker'>加入前的一封小信</Text>
+              <Text className='pool-reg__brief-insight'>{brief.insight}</Text>
+              <Text className='pool-reg__brief-promise'>{brief.matchingPromise}</Text>
 
-          <View className='pool-reg__reason-list'>
-            {brief.reasons.slice(0, 3).map((reason) => (
-              <View key={reason} className='pool-reg__reason-item'>
-                <Text className='pool-reg__reason-bullet'>✦</Text>
-                <Text className='pool-reg__reason-text'>{reason}</Text>
+              <View className='pool-reg__reason-list'>
+                {brief.reasons.slice(0, 3).map((reason) => (
+                  <View key={reason} className='pool-reg__reason-item'>
+                    <Text className='pool-reg__reason-bullet'>✦</Text>
+                    <Text className='pool-reg__reason-text'>{reason}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
 
-          <View className='pool-reg__trust-row'>
-            <Text className='pool-reg__trust-pill'>匹配后再揭晓桌友</Text>
-          </View>
+              <View className='pool-reg__trust-row'>
+                <Text className='pool-reg__trust-pill'>匹配后再揭晓桌友</Text>
+              </View>
+            </>
+          )}
         </Card>
+      ) : null}
+
+      {showBudgetReaction && step === 1 ? (
+        <XiaoyueChatBubble
+          content='收到！悦仔会按这个预算帮你配对~'
+          pose='casual'
+          horizontal
+          showGlow
+          className='pool-reg__step-coach'
+        />
       ) : null}
 
       {step === 1 ? (
-        <Card className='pool-reg__panel'>
-          <Image
-            className='pool-reg__tier-mascot'
-            src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
-            mode='aspectFit'
-            lazyLoad
-          />
-          <Text className='pool-reg__section-kicker'>Step 1</Text>
-          <Text className='pool-reg__section-title'>先定一个你更舒服的预算区间</Text>
-          <Text className='pool-reg__section-copy'>{TIER_COPY.budgetStepHelper}</Text>
+        <View className={`pool-reg__step-content pool-reg__step-content--${step > prevStep ? 'forward' : 'back'}`}>
+          <Card className='pool-reg__panel'>
+            <Image
+              className='pool-reg__tier-mascot'
+              src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+              mode='aspectFit'
+              lazyLoad
+            />
+            <Text className='pool-reg__section-kicker'>Step 1</Text>
+            <Text className='pool-reg__section-title'>先定一个你更舒服的预算区间</Text>
+            <Text className='pool-reg__section-copy'>{TIER_COPY.budgetStepHelper}</Text>
 
-          <View className='pool-reg__choice-list'>
-            {budgetOptions.map((option) => (
-              <ChoiceCard
-                key={option.value}
-                option={option}
-                selected={selectedBudget === option.value}
-                onClick={() => handleBudgetSelect(option.value)}
-              />
-            ))}
-          </View>
+            <View className='pool-reg__choice-list'>
+              {budgetOptions.map((option) => (
+                <ChoiceCard
+                  key={option.value}
+                  option={option}
+                  selected={selectedBudget === option.value}
+                  onClick={() => handleBudgetSelect(option.value)}
+                />
+              ))}
+            </View>
 
-          <Text className='pool-reg__helper'>至少选择 1 个预算区间后，才能继续填写偏好。</Text>
-        </Card>
+            <Text className='pool-reg__helper'>至少选择 1 个预算区间后，才能继续填写偏好。</Text>
+          </Card>
+        </View>
       ) : null}
 
       {step === 2 ? (
-        <Card className='pool-reg__panel'>
-          <Text className='pool-reg__section-kicker'>Step 2</Text>
-          <Text className='pool-reg__section-title'>这次你更想收获什么</Text>
-          <Text className='pool-reg__section-copy'>
-            这里可以多选。悦仔会把你的社交期待和预算一起考虑，不会只按一个标签硬配。
-          </Text>
+        <View className={`pool-reg__step-content pool-reg__step-content--${step > prevStep ? 'forward' : 'back'}`}>
+          <XiaoyueChatBubble
+            content='预算选好了，接下来告诉悦仔你想收获什么'
+            pose='pointing'
+            horizontal
+            showGlow
+            className='pool-reg__step-coach'
+          />
+          <Card className='pool-reg__panel'>
+            <Text className='pool-reg__section-kicker'>Step 2</Text>
+            <Text className='pool-reg__section-title'>这次你更想收获什么</Text>
+            <Text className='pool-reg__section-copy'>
+              这里可以多选。悦仔会把你的社交期待和预算一起考虑，不会只按一个标签硬配。
+            </Text>
 
-          <View className='pool-reg__choice-grid'>
-            {INTENT_FLOW_OPTIONS.map((option) => (
-              <ChoiceCard
-                key={option.value}
-                option={option}
-                selected={formState.eventIntent.includes(option.value)}
-                onClick={() => handleIntentToggle(option.value)}
-                compact
-              />
-            ))}
-          </View>
+            <View className='pool-reg__choice-grid'>
+              {INTENT_FLOW_OPTIONS.map((option) => (
+                <ChoiceCard
+                  key={option.value}
+                  option={option}
+                  selected={formState.eventIntent.includes(option.value)}
+                  onClick={() => handleIntentToggle(option.value)}
+                  compact
+                />
+              ))}
+            </View>
 
-          <Text className='pool-reg__helper'>至少选择 1 个这次想收获的方向后，才能进入最后一步。</Text>
-        </Card>
+            <Text className='pool-reg__helper'>至少选择 1 个这次想收获的方向后，才能进入最后一步。</Text>
+          </Card>
+        </View>
       ) : null}
 
       {step === 3 ? (
-        <>
+        <View className={`pool-reg__step-content pool-reg__step-content--${step > prevStep ? 'forward' : 'back'}`}>
+          <XiaoyueChatBubble
+            content='期待已收到，最后补几项细节让匹配更顺'
+            pose='pointing'
+            horizontal
+            showGlow
+            className='pool-reg__step-coach'
+          />
           <Card className='pool-reg__summary-card'>
             <Text className='pool-reg__section-kicker'>匹配会重点参考</Text>
             <View className='pool-reg__summary-grid'>
@@ -911,7 +972,7 @@ export default function PoolRegistrationPage() {
               </>
             )}
           </Card>
-        </>
+        </View>
       ) : null}
 
       {error ? (

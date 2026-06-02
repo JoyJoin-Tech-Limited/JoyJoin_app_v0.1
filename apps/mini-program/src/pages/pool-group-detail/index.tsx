@@ -213,7 +213,7 @@ export default function PoolGroupDetailPage() {
             <Text className='pool-group-detail__info-label'>地点</Text>
           </View>
           <Text className='pool-group-detail__info-value'>
-            {group.venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '待公布'}
+            {group.venueName || (group.venueAssignmentStatus === 'unassigned' ? '地点待定' : [pool.city, pool.district].filter(Boolean).join(' · ') || '待公布')}
           </Text>
         </View>
         <View className='pool-group-detail__info-row'>
@@ -260,6 +260,22 @@ export default function PoolGroupDetailPage() {
           <View className='pool-group-detail__map-actions'>
             <Button onClick={handleOpenMap}><JoyJoinIcon emoji='🗺️' size={24} /> 到这去</Button>
             <Button variant='secondary' onClick={handleCopyLocation}>复制地址</Button>
+          </View>
+        </Card>
+      ) : group.venueAssignmentStatus === 'unassigned' ? (
+        <Card className='pool-group-detail__card pool-group-detail__card--tbd'>
+          <Text className='pool-group-detail__card-title'>地点信息</Text>
+          <View className='pool-group-detail__info-row'>
+            <Text className='pool-group-detail__info-label'><JoyJoinIcon emoji='⏳' size={24} /> 状态</Text>
+            <Text className='pool-group-detail__info-value pool-group-detail__info-value--tbd'>
+              地点待定
+            </Text>
+          </View>
+          <View className='pool-group-detail__info-row'>
+            <Text className='pool-group-detail__info-label'>&nbsp;</Text>
+            <Text className='pool-group-detail__info-value pool-group-detail__info-value--tbd-hint'>
+              我们正在为您协调最佳场地，活动前会通知您具体地点
+            </Text>
           </View>
         </Card>
       ) : null}

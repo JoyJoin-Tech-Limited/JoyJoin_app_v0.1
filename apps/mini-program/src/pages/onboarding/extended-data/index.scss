@@ -317,6 +317,10 @@
       transform: scale(0.98);
     }
 
+    &--pressed {
+      transform: scale(0.96) !important;
+    }
+
     &--level-1 {
       border-color: rgba($color-primary, 0.15);
       background: rgba($color-primary-light, 0.35);
@@ -384,9 +388,8 @@
     padding: $spacing-md $container-padding;
     @include safe-area-inline($container-padding);
     @include safe-area-bottom-padding(padding-bottom, $spacing-md);
-    border-top: 2rpx solid $color-divider;
-    background: rgba($color-surface, 0.98);
-    box-shadow: 0 -8rpx 24rpx rgba(0, 0, 0, 0.04);
+    background: $color-surface;
+    box-shadow: 0 -4rpx 16rpx rgba($color-text-primary, 0.04);
   }
 
   &__footer-meter {
@@ -407,8 +410,58 @@
   &__footer-meter-fill {
     height: 100%;
     border-radius: 999rpx;
-    background: $brand-gradient;
+    background: $color-primary;
     transition: width 0.2s ease;
+  }
+
+  &__category-skeleton {
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  &__skeleton-header {
+    display: flex;
+    align-items: center;
+    gap: 16rpx;
+  }
+
+  &__skeleton-dot {
+    width: 14rpx;
+    height: 14rpx;
+    border-radius: 999rpx;
+    background: $color-divider;
+  }
+
+  &__skeleton-title {
+    width: 120rpx;
+    height: 28rpx;
+    border-radius: 8rpx;
+    background: $color-divider;
+  }
+
+  &__skeleton-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+  }
+
+  &__skeleton-card {
+    width: calc((100% - #{$spacing-sm}) / 2);
+    min-height: 128rpx;
+    border-radius: 24rpx;
+    background: rgba($color-divider, 0.6);
+  }
+
+  &__celebration {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: $z-modal;
+    pointer-events: none;
   }
 
   &__footer-meter-meta {
@@ -451,6 +504,19 @@
 
     &[disabled] {
       opacity: 0.55;
+    }
+  }
+
+  &__skip-btn {
+    width: 100%;
+    margin-bottom: $spacing-sm;
+    opacity: 0.7;
+
+    &.joy-button--secondary {
+      background: transparent;
+      border: 2rpx solid rgba($color-border, 0.96);
+      color: $color-text-muted;
+      box-shadow: none;
     }
   }
 

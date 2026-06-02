@@ -136,6 +136,15 @@ export function LieDetectivePhaseView({
           </Text>
         </Card>
 
+        {isGeneratingStatements && (
+          <View className='icebreaker__skeleton-card' style={{ marginTop: '16rpx' }}>
+            <View className='icebreaker__skeleton-circle' />
+            <View className='icebreaker__skeleton-line icebreaker__skeleton-line--medium' />
+            <View className='icebreaker__skeleton-line icebreaker__skeleton-line--long' />
+            <View className='icebreaker__skeleton-line icebreaker__skeleton-line--short' />
+          </View>
+        )}
+
         {showTagInput && (
           <View className='icebreaker__tag-form'>
             <View className='icebreaker__tag-field'>
@@ -214,6 +223,15 @@ export function LieDetectivePhaseView({
             当前已提交 {players.length} / {playerCount} 人
           </Text>
         </Card>
+
+        {isGeneratingStatements && (
+          <View className='icebreaker__skeleton-card' style={{ marginTop: '16rpx' }}>
+            <View className='icebreaker__skeleton-circle' />
+            <View className='icebreaker__skeleton-line icebreaker__skeleton-line--medium' />
+            <View className='icebreaker__skeleton-line icebreaker__skeleton-line--long' />
+            <View className='icebreaker__skeleton-line icebreaker__skeleton-line--short' />
+          </View>
+        )}
 
         <View className='icebreaker__action-stack'>
           {!hasGeneratedStatements ? (

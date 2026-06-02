@@ -200,7 +200,7 @@
       "X": 89.29624030979181,
       "P": 87.03273778019482
     },
-    "expectedArchetype": "rooster",
+    "expectedArchetype": "corgi",
     "category": "boundary",
     "metadata": {
       "pair": [
@@ -222,7 +222,7 @@
       "X": 83.19631123195704,
       "P": 89.99162511071168
     },
-    "expectedArchetype": "rooster",
+    "expectedArchetype": "corgi",
     "category": "boundary",
     "metadata": {
       "pair": [
@@ -310,7 +310,7 @@
       "X": 70.16996358820357,
       "P": 74.76817612557133
     },
-    "expectedArchetype": "dolphin_calm",
+    "expectedArchetype": "hamster_praise",
     "category": "boundary",
     "metadata": {
       "pair": [
@@ -332,7 +332,7 @@
       "X": 71.28670889361486,
       "P": 79.36391757268787
     },
-    "expectedArchetype": "hamster_praise",
+    "expectedArchetype": "rooster",
     "category": "boundary",
     "metadata": {
       "pair": [
@@ -354,7 +354,7 @@
       "X": 75.68182367422972,
       "P": 80.67776322130423
     },
-    "expectedArchetype": "hamster_praise",
+    "expectedArchetype": "rooster",
     "category": "boundary",
     "metadata": {
       "pair": [
@@ -398,7 +398,7 @@
       "X": 66.25163393560442,
       "P": 62.6449322132886
     },
-    "expectedArchetype": "octopus",
+    "expectedArchetype": "fox",
     "category": "boundary",
     "metadata": {
       "pair": [
@@ -464,7 +464,7 @@
       "X": 58.50746821904115,
       "P": 69.09793546495244
     },
-    "expectedArchetype": "koala",
+    "expectedArchetype": "dolphin_calm",
     "category": "boundary",
     "metadata": {
       "pair": [
@@ -530,7 +530,7 @@
       "X": 52.6152763000793,
       "P": 63.604115888365875
     },
-    "expectedArchetype": "spider",
+    "expectedArchetype": "koala",
     "category": "boundary",
     "metadata": {
       "pair": [
@@ -640,7 +640,7 @@
       "X": 46.8987959121564,
       "P": 61.320374036463164
     },
-    "expectedArchetype": "octopus",
+    "expectedArchetype": "fox",
     "category": "boundary",
     "metadata": {
       "pair": [
@@ -728,7 +728,7 @@
       "X": 31.418096876233417,
       "P": 49.59089426042358
     },
-    "expectedArchetype": "turtle",
+    "expectedArchetype": "owl",
     "category": "boundary",
     "metadata": {
       "pair": [
@@ -794,7 +794,7 @@
       "X": 35.09613265065497,
       "P": 50.58240082217246
     },
-    "expectedArchetype": "turtle",
+    "expectedArchetype": "elephant",
     "category": "boundary",
     "metadata": {
       "pair": [
@@ -860,7 +860,7 @@
       "X": 26.48824095778724,
       "P": 41.58368247019773
     },
-    "expectedArchetype": "turtle",
+    "expectedArchetype": "cat",
     "category": "boundary",
     "metadata": {
       "pair": [
@@ -882,7 +882,7 @@
       "X": 28.927898774935095,
       "P": 44.83136612134234
     },
-    "expectedArchetype": "turtle",
+    "expectedArchetype": "cat",
     "category": "boundary",
     "metadata": {
       "pair": [

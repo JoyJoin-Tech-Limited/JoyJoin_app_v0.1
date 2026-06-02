@@ -197,6 +197,7 @@ export class SubscriptionService {
       planType,
       startDate,
       endDate,
+      amount: originalAmount,
       status: "pending", // Will be activated when payment completes
       paymentId: null, // Will be set by payment webhook
     });

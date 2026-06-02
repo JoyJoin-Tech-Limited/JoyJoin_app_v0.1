@@ -67,6 +67,11 @@
   }
 }
 
+.matching-status__notice-btn {
+  margin-top: $spacing-sm;
+  width: 100%;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .matching-status__overlay-card,
   .matching-status__loading-shake,

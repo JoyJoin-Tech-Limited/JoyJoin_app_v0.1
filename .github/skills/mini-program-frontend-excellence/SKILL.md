@@ -4,90 +4,96 @@ description: >
   Deliver premium, JoyJoin-native UI in apps/mini-program using Taro-native primitives,
   brand-aligned hierarchy, complete state design, and mini-program-safe performance discipline.
   Enforces pixel-precision when specs exist (match exactly; ≤1px effective deviation only with
-  documented exception) and strict 8rpx spacing rhythm when they do not; WeChat DevTools
-  inspection is mandatory before merge for UI changes. Use when implementing or refining Taro
-  pages/components, raising a screen above generic "cheap mini-program" quality, or reviewing
-  whether a mini-program UI feels native-quality and unmistakably JoyJoin. Trigger phrases:
-  "mini-program UI", "Taro page", "make this feel premium", "native-quality mini-program",
-  "cheap mini-program feel", "improve mini-program empty state", "pixel perfect", "match Figma",
-  "rpx spacing", "WeChat DevTools".
+  documented exception) and strict 8rpx spacing rhythm when they do not. Two-tier: Routine changes
+  use a 5-point quick check; Full changes require WeChat DevTools inspection before merge.
+  Use when implementing or refining Taro pages/components, raising a screen above generic
+  "cheap mini-program" quality, or reviewing whether a mini-program UI feels native-quality
+  and unmistakably JoyJoin. Trigger phrases: "mini-program UI", "Taro page", "make this feel
+  premium", "native-quality mini-program", "cheap mini-program feel", "improve mini-program
+  empty state", "pixel perfect", "match Figma", "rpx spacing", "WeChat DevTools".
 ---
 
 # Mini-Program Frontend Excellence
 
-**Core rule:** JoyJoin mini-program UI must feel unmistakably JoyJoin and operationally native. Do not ship browser ideas squeezed into Taro, and do not ship low-effort mini-program UI that merely "works".
+**Core rule:** JoyJoin mini-program UI must feel unmistakably JoyJoin and operationally native. Do not ship browser ideas squeezed into Taro, and do not ship low-effort UI that merely "works".
 
+## Speed tiering — which rules apply?
+
+| Tier | Scope | Checklist | DevTools |
+|---|---|---|---|
+| **Routine** | Typos, copy, color tweaks, padding nudges, icon swaps | Quick check (5 items) | Recommended |
+| **Full** | New screens, components, layout changes, visual redesign | Full checklist (17 items) | **Mandatory** |
+
+When in doubt, treat as Full. A padding change that affects visual hierarchy = Full.
+## Routine dev quick check (60 seconds)
+
+Before push on Routine changes:
+1. [ ] Spacing consistent with sibling screens? (eyeball check)
+2. [ ] Color from token, not hex literal?
+3. [ ] No browser-only APIs (`window.*`, `vh` units)?
+4. [ ] Press/hover feedback visible on interactive elements?
+5. [ ] Change doesn't break layout on the smallest target device?
 ## When to use this skill
 
 - Implementing or refining UI in `apps/mini-program`
 - Translating web product intent into Taro-native UI
-- Raising the quality bar on a mini-program screen that feels generic, cheap, or off-brand
+- Raising the quality bar on a screen that feels generic, cheap, or off-brand
 - Reviewing whether a mini-program interaction feels premium, tactile, and complete
-- Deciding how to preserve JoyJoin brand feel without browser-only effects
+## Pixel precision
 
-## Pixel precision (non-negotiable)
+**Read [`references/pixel-precision.md`](references/pixel-precision.md) before shipping or approving Full-tier UI changes.**
 
-**Read [`references/pixel-precision.md`](references/pixel-precision.md) before shipping or approving UI.**
+- **Spec present** — Match measurements **exactly** (≤1px effective error only with documented exception + design sign-off).
+- **No spec** — Primary spacing on **multiples of 8rpx**; 4rpx only for hairlines/optical tweaks (comment why).
+- **DevTools** — Mandatory for Full tier: verify computed layout/typography on changed screens. CI cannot replace DevTools.
+## Taro framework
 
-- **Design spec present** — Match measurements **exactly** (zero tolerance for avoidable drift; ≤1px effective error only with documented platform exception + design sign-off).
-- **No spec** — Enforce **internal consistency**: primary spacing on **multiples of 8rpx**, align to existing container padding and section rhythm; **4rpx** only for hairlines/optical tweaks (comment if unusual).
-- **Pre-merge** — Authors run **WeChat DevTools** (Wxml + computed styles) on touched screens; reviewers **block** visual PRs without this evidence when the diff affects layout or typography. CI cannot replace DevTools.
+Top rules. Deep reference: [`references/taro-ui-framework.md`](references/taro-ui-framework.md). Full workflow: [`references/implementation-guide.md`](references/implementation-guide.md).
 
-## Taro framework (read first for structural UI work)
-
-For layout constraints, `setData` / list performance, cross-end files, `RichText` vs HTML, WeChat tooling, and **asset size budgets**, follow **[`references/taro-ui-framework.md`](references/taro-ui-framework.md)**.
-
-- Prefer **Flex** layout and repo Sass/class patterns; avoid browser-only selectors and unsafe HTML (`dangerouslySetInnerHTML`); use **`RichText`** or structured nodes for rich content.
-- Treat **VirtualList**, **CustomWrapper**, and subpackage strategy as product decisions when lists or update hot spots are large.
-- Use **`process.env.TARO_ENV`** and **multi-suffix files** (`*.weapp.*`, etc.) for real platform splits.
-- **Flag** new or changed assets that exceed the reference thresholds; propose compression, SVG optimization, vector substitution, or route/subpackage moves before merging heavy binaries.
-
-See [`references/implementation-guide.md`](references/implementation-guide.md) for the full delivery workflow, premium quality bar, Taro execution rules, common mistakes, and DevTools inspection checklist.
-
+- **Components:** `View`, `Text`, `Image`, `ScrollView` from `@tarojs/components`; `RichText` for rich content. Never `dangerouslySetInnerHTML`.
+- **Styling:** Sass/SCSS, BEM class names, `rpx` units. No `vh`/`vw`, no browser-only selectors, no inline `px`.
+- **Performance:** `VirtualList` for 50+ items; `CustomWrapper` for hot subtrees; animate only `transform` + `opacity`.
+- **Cross-platform:** `process.env.TARO_ENV`, `*.weapp.*` file suffixes. No hardcoded platform assumptions.
 ## Quick examples
 
-**User says:** "Polish this mini-program onboarding step - it feels cheap."
-**Apply this skill by:** Choosing one emotional focal moment, tightening hierarchy and spacing, using brand-backed colour and copy, adding pressed and loading states, and keeping the interaction Taro-native.
-**Result:** The step feels premium without pretending to be a browser screen.
-
-**User says:** "Make this Taro page feel more like a top consumer app."
-**Apply this skill by:** Upgrading the focal hierarchy, asset sharpness, state completeness, and tactile feedback first; only then add restrained motion that survives WeChat constraints.
-**Result:** The page feels native-quality instead of generically decorated.
-
+- **New screen:** classify scope → design direction → Taro-native structure → full state matrix → polish → Full checklist.
+- **Loading skeleton:** Match shape to content layout via `View` nodes. Wrap content: `{loading ? <Skeleton /> : <Content />}`.
+- **Empty state:** Branded illustration (Xiaoyue) + warm copy + CTA. Don't just add text.
+- **Routine tweak:** Verify token → eyeball screen → quick check → push.
 ## Troubleshooting
 
-- **The screen feels like a cheap template** — reduce repetitive card patterns, create one focal hierarchy, and remove decorative gradients that do not support the flow.
-- **The design looks on-brand on web but flat in mini-program** — rework spacing, copy rhythm, and pressed-state feedback using native Taro primitives instead of trying to mimic browser-only effects.
-- **A polished interaction janks on device** — cut layout-triggering animation, compress assets, and simplify the effect to `transform` and `opacity` only.
-- **The spec asks for something off-brand** — name the exact conflict (colour, font, motion, mascot use, density) and flag it before implementation.
-- **The team wants to add CSS-in-JS for dynamic styling** — default to the repo's existing Taro styling patterns unless there is an explicit approved shift in architecture.
-- **Chinese text breaks awkwardly** — never use `overflow-wrap: anywhere` on CJK display text; it produces orphan characters (孤字). Default Chinese breaking (`overflow-wrap: normal`) is correct. Avoid `word-break: keep-all` on narrow containers with unpredictable content.
-- **Entrance animations feel generic** — use `cubic-bezier(0.22, 1, 0.36, 1)` for all entrance animations. Reserve `ease-out` and `ease-in-out` for continuous loops only.
+- **Screen feels like a cheap template** — reduce repetitive card patterns, create one focal hierarchy, remove decorative gradients that don't support the flow.
+- **Looks on-brand on web but flat in mini-program** — rework spacing, copy rhythm, and pressed-state feedback using native Taro primitives instead of mimicking browser-only effects.
+- **Polished interaction janks on device** — cut layout-triggering animation, compress assets, simplify to `transform` and `opacity` only.
+- **Spec asks for something off-brand** — name the exact conflict (colour, font, motion, mascot use, density) and flag before implementation.
+- **CSS-in-JS proposed** — default to existing repo Taro styling patterns unless the architecture explicitly shifts.
+- **Chinese text breaks awkwardly** — never use `overflow-wrap: anywhere` on CJK display text (produces 孤字). Default `overflow-wrap: normal` is correct.
+- **Entrance animations feel generic** — use `cubic-bezier(0.22, 1, 0.36, 1)` for all entrances. Reserve `ease-out`/`ease-in-out` for continuous loops only.
+## Full review checklist (17 items)
 
-## Review checklist
+For Full-tier changes. Routine changes use the quick check above.
 
-- [ ] Scope was classified as `MINI_PROGRAM_ONLY` or `BOTH_REQUIRED`
-- [ ] **Pixel discipline:** Spec-backed values match within the tolerance in [`references/pixel-precision.md`](references/pixel-precision.md); no-spec work uses **8rpx rhythm** and aligns with sibling screens; any exception is documented with design approval
-- [ ] **WeChat DevTools:** Author verified computed layout/typography on changed screens (and noted in PR when reviewers cannot reproduce)
-- [ ] The screen has a clear JoyJoin visual direction and avoids generic AI aesthetics
+- [ ] Scope classified as `MINI_PROGRAM_ONLY` or `BOTH_REQUIRED`
+- [ ] **Pixel discipline:** spec values match within tolerance; no-spec work uses **8rpx rhythm**; exceptions documented
+- [ ] **WeChat DevTools:** computed layout/typography verified on changed screens (attach screenshots or selector notes in PR)
+- [ ] Clear JoyJoin visual direction; no generic AI aesthetics
 - [ ] Brand colours, typography, spacing, and mascot usage follow `joyjoin-brand-guidelines`
-- [ ] Taro-native primitives and WXSS-safe patterns are used instead of browser-first assumptions
-- [ ] Rich content uses `RichText` or structured Taro nodes—not `dangerouslySetInnerHTML` for cross-end HTML
-- [ ] Layout follows Flex-first discipline; cross-end or RN portability considered where selectors matter
-- [ ] Hot re-renders or large lists addressed with `CustomWrapper` / `VirtualList` or other profiled approach when thresholds suggest it (`references/taro-ui-framework.md`)
+- [ ] Taro-native primitives and WXSS-safe patterns used (no browser-first assumptions)
+- [ ] Rich content uses `RichText` or structured Taro nodes — not `dangerouslySetInnerHTML`
+- [ ] Flex-first layout; cross-end portability considered where selectors matter
+- [ ] Large lists use `CustomWrapper` / `VirtualList` or profiled approach
 - [ ] Loading, empty, error, disabled, busy, success, and pressed states are explicit
-- [ ] Touch targets are at least `44 pt` and active-state feedback is visible
-- [ ] Assets are crisp and package/performance costs are reasonable
-- [ ] New or changed rasters/icons were checked against size budgets; oversized files flagged and addressed
-- [ ] Motion is restrained, `transform`/`opacity`-based, and safe for mini-program performance
-- [ ] Entrance animations use `cubic-bezier(0.22, 1, 0.36, 1)`; loops only use `ease-out`/`ease-in-out`
+- [ ] Touch targets ≥ `44 pt` with visible active-state feedback
+- [ ] Assets crisp; package/performance costs reasonable; oversized rasters flagged
+- [ ] Motion restrained, `transform`/`opacity`-based, safe for mini-program
+- [ ] Entrance animations use `cubic-bezier(0.22, 1, 0.36, 1)`; loops use `ease-out`/`ease-in-out`
 - [ ] No `overflow-wrap: anywhere` on CJK display text; default breaking preserved
-- [ ] A screen that still feels cheap but functional has not been signed off as complete
-
+- [ ] Screen is unmistakably JoyJoin, not generic — don't sign off on "functional but cheap"
 ## Related skills
 
-- [`ui-layout-audit`](./ui-layout-audit/SKILL.md) — verify spacing hierarchy, typography comfort, emoji discipline, and visual coherence before shipping
-- [`frontend-design-audit`](./frontend-design-audit/SKILL.md) — broader 5-dimension design-quality audit beyond layout/typography
-- [`joyjoin-brand-guidelines`](./joyjoin-brand-guidelines/SKILL.md) — brand colour, typography, and mascot usage rules
+- [`ui-layout-audit`](./ui-layout-audit/SKILL.md) — pixel-level layout, spacing, typography audit
+- [`frontend-design-audit`](./frontend-design-audit/SKILL.md) — 5-dimension design quality audit (0–20)
+- [`completeness-audit`](../completeness-audit/SKILL.md) — 11-dimension 完成度 audit with ROI recommendations; run after Full-tier changes
+- [`joyjoin-brand-guidelines`](./joyjoin-brand-guidelines/SKILL.md) — brand colour, typography, mascot usage
 - [`wow-elements`](./wow-elements/SKILL.md) — crafted motion and emotional polish
-- [`design-system-governance`](./design-system-governance/SKILL.md) — token and variant discipline when changing shared baselines
+- [`design-system-governance`](./design-system-governance/SKILL.md) — token and variant discipline

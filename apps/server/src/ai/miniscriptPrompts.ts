@@ -9,16 +9,39 @@
 
 import type { MiniScriptGameModeConfig } from '@shared/miniscriptGameModes';
 import type { MiniScriptStyle, MiniScriptGenre } from '@shared/miniscriptStoryFramework';
+import { XIAOYUE_CRAFT_LITE } from '../prompts/craft';
 
-export const MINISCRIPT_GENERATION_PROMPT_VERSION = 'miniscript-generate-v2.0';
+export const MINISCRIPT_GENERATION_PROMPT_VERSION = 'miniscript-generate-v3.0';
 
 // ─── Base System Prompt (all modes share) ─────────────────────────────────────
+
+const NARRATIVE_GOLDEN_RULES = `
+【叙事黄金法则 — 每幕必须遵守】
+
+法则一：展示而非讲述
+- 角色性格通过行动展现，不要直接描述"XX是一个聪明的人"。
+- 用"他把线索纸片翻过来看了三遍，然后轻轻放下"取代"他观察很仔细"。
+- sinHook是角色的行为缺陷，不是性格标签。写"嘴上逞强接了一个明知完不成的任务"而不是"他是一个逞强的人"。
+- alibi要像一段能拍出来的闪回场景，不要写成时间线报告。
+
+法则二：冲突驱动剧情
+- 每幕必须有至少一个冲突点或转折：新线索打破旧推断 / 角色之间出现张力 / 某人做的事情改变了其他人的判断。
+- 冲突不等于吵架。可以是：一个人说了不该说的话、一条线索让之前合理的解释崩塌、两个人发现对方都在隐瞒同一件事。
+- 绝对禁止：所有人友好地坐在一起，按顺序交换信息。
+
+法则三：悬念承上启下
+- 每幕结束必须留一个悬念钩子（cliffhanger）——让玩家迫不及待想进下一幕。
+- cliffhanger要具体：可以是一个新问题（"那把钥匙在哪"）、一个矛盾（"两个人说的都对，但不可能同时成立"）、一个意外（"第三个人突然承认了之前没说过的事"）。
+- 最差的cliffhanger：空泛的"事情并没有那么简单..."
+- cliffhanger不超过80字，一句致命的短句最好。`;
 
 const BASE_SYSTEM =
   'You are JoyJoin MiniScript story framework writer. Reply with one JSON object only (no markdown). ' +
   'Rules: light social mystery, low conflict, no graphic violence, no death, no hate, no real-person names. ' +
   'All narrative strings in Chinese. ' +
-  'The mystery must be solvable by players combining clues — this is a game, not just a story.';
+  'The mystery must be solvable by players combining clues — this is a game, not just a story.\n\n' +
+  NARRATIVE_GOLDEN_RULES + '\n\n' +
+  XIAOYUE_CRAFT_LITE;
 
 // ─── Genre-Specific Generation Instructions ───────────────────────────────────
 
@@ -101,7 +124,8 @@ JSON shape:
     {
       "actNumber": 1..4,
       "title": "幕标题",
-      "beats": ["流程节拍1", "流程节拍2"]
+      "beats": ["流程节拍1", "流程节拍2"],
+      "cliffhanger": "悬念钩子（最后一幕不需要，其他幕必须）——一句让玩家迫不及待想进下一幕的短句"
     }
   ],
   "ending": {
@@ -148,6 +172,9 @@ Strict rules:
 - Output exactly ${playerCount} characters and exactly ${playerCount} playerKnowledge entries
 - clueIds must be unique (c1, c2, ...)
 - implies[] references must be valid clueIds
+- Every act EXCEPT the last one must have a cliffhanger (≤80 chars, one hooking sentence). Last act has no cliffhanger — ending does its job.
+- Each act must show at least one character acting on their sinHook (展示不是讲述)
+- Each act must contain at least one moment of conflict or a plot turn (not just info exchange)
 - All strings in Chinese
 - No markdown fences, no commentary before or after JSON`;
 }

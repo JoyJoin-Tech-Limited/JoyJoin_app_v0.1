@@ -165,6 +165,7 @@ Boundary:
 - `apps/server/src/phoneAuth.ts`
 - `apps/server/src/adminAuth.ts`
 - `apps/server/src/lib/adminAuditLogger.ts`
+- `apps/server/src/lib/featureFlags.ts` — DB-backed feature flag resolver (DB row → env fallback → 5s cache). Five kill switches exposed in auth response and toggleable from `/admin/feature-flags` (super_admin only).
 
 ### 6. Runtime deployment topology
 

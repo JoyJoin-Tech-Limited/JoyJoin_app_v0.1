@@ -29,7 +29,7 @@ See [`skill-taxonomy.md`](./skill-taxonomy.md) for full definitions and edge-cas
 
 ---
 
-## Internal Skills (53)
+## Internal Skills (55)
 
 ### Architecture & Backend
 
@@ -61,6 +61,7 @@ See [`skill-taxonomy.md`](./skill-taxonomy.md) for full definitions and edge-cas
 | Skill | Description |
 |-------|-------------|
 | [`admin-client-frontend`](./admin-client-frontend/SKILL.md) | Admin portal UI with Recharts, shadcn/ui, RBAC |
+| [`completeness-audit`](./completeness-audit/SKILL.md) | 11-dimension 完成度 audit (0–44) with ROI-ranked gap recommendations; consumes ui-layout-audit + frontend-design-audit |
 | [`design-system-governance`](./design-system-governance/SKILL.md) | Tokens, variants, accessibility, migration |
 | [`frontend-component-architecture`](./frontend-component-architecture/SKILL.md) | Shared primitives, app wrappers, composition |
 | [`frontend-design-audit`](./frontend-design-audit/SKILL.md) | Systematic UI quality audits, AI slop detection |
@@ -69,6 +70,7 @@ See [`skill-taxonomy.md`](./skill-taxonomy.md) for full definitions and edge-cas
 | [`joyjoin-brand-guidelines`](./joyjoin-brand-guidelines/SKILL.md) | Brand identity, color, typography, motion |
 | [`mini-program-frontend-excellence`](./mini-program-frontend-excellence/SKILL.md) | Taro-native premium UI, pixel precision, 8rpx rhythm |
 | [`mini-program-screenshot-workflow`](./mini-program-screenshot-workflow/SKILL.md) | Screenshot capture and visual verification |
+| [`ui-layout-audit`](./ui-layout-audit/SKILL.md) | Pixel-perfect layout, spacing hierarchy, typography comfort, emoji discipline |
 | [`viewport-zero-scroll`](./viewport-zero-scroll/SKILL.md) | Zero-scroll viewport policy, 100dvh, ResponsiveSpacer |
 | [`wow-elements`](./wow-elements/SKILL.md) | Micro-interactions and emotional polish |
 

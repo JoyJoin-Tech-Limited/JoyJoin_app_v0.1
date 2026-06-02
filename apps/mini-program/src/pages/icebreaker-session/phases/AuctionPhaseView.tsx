@@ -254,6 +254,16 @@ export function AuctionPhaseView({
             虚拟币竞拍，仅供娱乐。主持人生成竞拍条目后，大家按轮出价。
           </Text>
         </Card>
+
+        {isGeneratingLots && (
+          <View className='icebreaker__skeleton-card' style={{ marginTop: '16rpx' }}>
+            <View className='icebreaker__skeleton-circle' />
+            <View className='icebreaker__skeleton-line icebreaker__skeleton-line--medium' />
+            <View className='icebreaker__skeleton-line icebreaker__skeleton-line--long' />
+            <View className='icebreaker__skeleton-line icebreaker__skeleton-line--short' />
+          </View>
+        )}
+
         {isHost ? (
           <Button
             variant='primary'

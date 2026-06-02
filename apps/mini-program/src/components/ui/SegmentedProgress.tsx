@@ -14,6 +14,8 @@ export interface SegmentedProgressProps {
   smooth?: boolean
   /** Optional milestone highlight at specific percentages */
   milestone?: number | null
+  /** Optional accent color override for filled segments (hex/rgba) */
+  accentColor?: string
 }
 
 /**
@@ -31,6 +33,7 @@ export default function SegmentedProgress({
   variant = 'duolingo',
   smooth = false,
   milestone = null,
+  accentColor,
 }: SegmentedProgressProps) {
   const segments = Array.from({ length: totalSegments }, (_, i) => {
     const segmentProgress = ((i + 1) / totalSegments) * 100
@@ -60,11 +63,12 @@ export default function SegmentedProgress({
             ${seg.isFilled ? 'segmented-progress__segment--filled' : ''}
             ${seg.isMilestone ? 'segmented-progress__segment--milestone' : ''}
           `}
+          style={seg.isFilled && accentColor ? { background: accentColor } : {}}
         >
           {seg.isPartial && smooth && (
             <View
               className='segmented-progress__partial'
-              style={{ width: `${seg.partialWidth}%` }}
+              style={{ width: `${seg.partialWidth}%`, ...(accentColor ? { background: accentColor } : {}) }}
             />
           )}
         </View>

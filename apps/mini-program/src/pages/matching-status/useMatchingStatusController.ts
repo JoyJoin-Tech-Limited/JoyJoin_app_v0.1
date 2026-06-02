@@ -104,6 +104,7 @@ export function useMatchingStatusController({
 }: UseMatchingStatusControllerArgs) {
   const queryClient = useQueryClient()
   const { user, isLoading: authLoading } = useAuthGuard()
+  const matchingLiveRevealEnabled = user?.features?.matchingLiveReveal ?? true
   const { shouldReduceMotion } = useMiniRevealMotion(routerParams)
   const cachedAuthUser = queryClient.getQueryData<AuthUserResponse | null>(AUTH_QUERY_KEY)
   const { effectiveAuthUser, isAuthBootstrapPending } = resolveMatchingStatusAuthBootstrap({
@@ -415,7 +416,7 @@ export function useMatchingStatusController({
           message: error instanceof Error ? error.message : 'Unknown error',
         })
         setLiveGroupDetails(null)
-        setLiveRevealError('匹配已经完成，但桌友卡片还在路上。你可以稍后继续查看。')
+        setLiveRevealError('桌友卡片还在路上，点击刷新或稍后再来')
         return null
       } finally {
         setIsLoadingLiveGroupDetails(false)
@@ -807,5 +808,6 @@ export function useMatchingStatusController({
     matchCompass,
     isMatchCompassFetching,
     handleUpdateMatchCompass,
+    matchingLiveRevealEnabled,
   }
 }

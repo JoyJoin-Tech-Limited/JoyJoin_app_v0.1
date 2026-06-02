@@ -16,6 +16,7 @@ import { z } from 'zod';
 import type { AtmosphereMood } from '@shared/socialIcebreaker';
 import type { SessionArchetypeContext } from '../lib/contextInjector';
 import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework';
+import { XIAOYUE_CRAFT_LITE } from '../prompts/craft';
 
 export const XIAOYUE_COMMENT_PROMPT_VERSION = 'social-xiaoyue-comment-v2';
 export const WARMUP_TOPICS_PROMPT_VERSION = 'social-warmup-topics-v2';
@@ -332,6 +333,8 @@ export function buildXiaoYueCommentPrompt(params: {
 ${params.context ? `- 上下文：${params.context}` : ''}
 ${sizeHint}${participantHint}
 
+${XIAOYUE_CRAFT_LITE}
+
 语气要求（活人感）：
 - 像最会把聊天节奏带舒服的那个声音，不是官方主持人
 - 短句为主，偶尔抛个梗或调侃
@@ -377,6 +380,8 @@ ${params.lieDetectiveHighlights?.length ? `谎言侦探亮点：${params.lieDete
 ${diceBlock}
 ${miniBlock}
 ${auctionBlock}
+
+${XIAOYUE_CRAFT_LITE}
 
 语气要求（活人感）：
 - headline像朋友发朋友圈的文案，不是新闻标题
@@ -607,6 +612,7 @@ export function buildXiaoyueSessionPackPrompt(params: {
     `你是社交破冰主持人悦仔。为一场${eventLabel}（约${params.participantCount}人）生成一份开场会话包。\n\n` +
     `（你是纯数字助手，不身处现场——不要承诺任何物理世界的行动。）\n\n` +
     `参与者：\n${participantList}\n\n` +
+    `${XIAOYUE_CRAFT_LITE}\n\n` +
     '要求：\n' +
     '- 语气松弛、有故事感，像一位靠谱的街头老狐狸，不要客服腔\n' +
     '- 短句为主，偶尔调侃，温暖但不油腻\n' +

@@ -31,6 +31,20 @@ description: >-
 
 ## Active feature flags (overview)
 
+### DB-backed kill switches (admin-toggleable, 2026-05-24)
+
+These 5 flags are resolved via `apps/server/src/lib/featureFlags.ts` (DB source of truth → env fallback → 5s cache). Admin portal `/admin/feature-flags` (super_admin only) exposes toggle UI with `updatedBy` audit.
+
+| Flag key | Env fallback | Purpose |
+|----------|-------------|---------|
+| `restartOnboarding` | `RESTART_ONBOARDING_ENABLED` | Onboarding restart v0.1 welcome-back screen |
+| `smartProfession` | `SMART_PROFESSION_V1_ENABLED` | AI profession classification overlay |
+| `onboardingForceSkip` | `ONBOARDING_FORCE_SKIP_ENABLED` | Admin force-skip button on onboarding steps |
+| `matchingLiveReveal` | `MATCHING_LIVE_REVEAL_ENABLED` | Live reveal overlay on matching status |
+| `socialIcebreakerClientForceEnd` | `SOCIAL_ICEBREAKER_CLIENT_FORCE_END` | Host emergency end button in icebreaker |
+
+### Env-only feature gates
+
 | Category | Key flags |
 |----------|-----------|
 | Payments | `PAYMENTS_ENABLED` |
@@ -45,7 +59,8 @@ For rollout patterns, startup validation details, client exposure specifics, and
 
 ## Quick examples
 
-- **Add a new feature flag:** Add env read → gate logic → document in `docs/LAUNCH_CONFIG.md` → add to `.env.example` → expose via `/api/auth/user` if client needs it → add tests for both paths.
+- **Add a new DB-backed kill switch:** Add key+env mapping to `lib/featureFlags.ts` `FLAG_ENV_MAP` → add default env var to `.env.example` → gate logic via `await getFeatureFlag(key)` → add admin route entry if toggleable → expose via `buildAuthUserResponse.ts` if client needs it → add tests for both paths.
+- **Add a new env-only feature flag:** Add env read → gate logic → document in `docs/LAUNCH_CONFIG.md` → add to `.env.example` → expose via `/api/auth/user` if client needs it → add tests for both paths.
 - **Kill-switch a payment incident:** Set `PAYMENTS_ENABLED=false` → verify `/api/readyz` returns `200` → confirm `POST /api/payments/create` returns `503` with `code: "PAYMENTS_DISABLED"` → confirm client shows maintenance message.
 - **Safely roll out `ENABLE_SEMANTIC_SIMILARITY`:** Enable in staging → run matching stress simulation → monitor `joyjoin_matching_semantic_similarity_score` and `joyjoin_matching_semantic_pair_score_delta` in `/api/metrics` → enable in production during a low-traffic window.
 - **Expose a flag to the client:** Add the boolean to `AuthUserResponse` in `apps/server/src/routes/domains/auth.ts` and to `packages/shared/src/api.ts`. Client hooks should read from the server response, never from a local env var.

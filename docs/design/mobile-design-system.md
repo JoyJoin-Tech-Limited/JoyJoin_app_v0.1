@@ -89,7 +89,7 @@ interface TiltedFeatureCardProps {
 
 ### MobilePrimaryButton
 
-Touch-optimized primary action button with gradient.
+Touch-optimized primary action button with solid brand purple fill.
 
 **Props**:
 ```typescript

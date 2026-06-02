@@ -1,8 +1,7 @@
 # JoyJoin Developer Quick Reference Guide
 
-**Version:** 2.3  
-**Last Updated:** 2026-05-27  
-**For:** Tech Team Onboarding & Codebase Navigation
+**Version:** 2.3
+**Last Updated:** 2026-06-02**For:** Tech Team Onboarding & Codebase Navigation
 
 ---
 
@@ -217,6 +216,7 @@ joyjoin-monorepo/
 | Navigation / exit-transition hook | `apps/mini-program/src/hooks/navigation/useJoyJoinNavigation.ts` |
 | Swipe-back flag-reset hook | `apps/mini-program/src/hooks/useResetOnShow.ts` |
 | Quality bar (pixel precision, DevTools) | `.github/skills/mini-program-frontend-excellence/SKILL.md` |
+| 完成度 audit (completeness + ROI recommendations) | `.github/skills/completeness-audit/SKILL.md` (pipeline: ui-layout-audit → frontend-design-audit → completeness-audit) |
 
 ```bash
 npm run dev:weapp --workspace=mini-program
@@ -237,7 +237,7 @@ npm run build:weapp --workspace=mini-program
 | Domain route modules | `routes/domains/*.ts` | Own handlers, validation, service calls for their domain |
 | Persistence layer | `repositories/*.ts` | All new database queries go here — not in `storage.ts` |
 | Compatibility facade | `storage.ts` | Delegates to repositories; do not add new methods |
-| Cross-cutting helpers | `lib/` | `logger.ts`, `adminAuditLogger.ts`, `aiTraceLogger.ts`, `socialIcebreakerStore.ts` |
+| Cross-cutting helpers | `lib/` | `logger.ts`, `adminAuditLogger.ts`, `aiTraceLogger.ts`, `socialIcebreakerStore.ts`, `featureFlags.ts` |
 | Express middleware | `middleware/` | `requestId.ts` (correlation IDs), `metrics.ts` (Prometheus) |
 | Auth policy | `auth/policy.ts` | `isDevAuthToolsEnabled()`, `canUseMockWechatAuth()` — single source of truth |
 
@@ -292,7 +292,7 @@ logger.error('Payment webhook failed', { orderId, error: err.message });
 
 ## User Journey & Authentication Flow
 
-**Updated:** 2026-04-07 (auth-gate onboarding handoff, active blind-pool entry flow)
+**Updated:** 2026-05-23 (welcome-back screen + onboarding restart v0.1)
 
 ### Authentication States
 
@@ -309,7 +309,16 @@ interface UseAuthResult {
   profileExtendedComplete: boolean | undefined;
   activeAssessmentSessionId: string | null | undefined;
   paymentsEnabled: boolean;                 // Feature flag: payment kill switch
+  restartsRemaining?: number;              // Onboarding restart quota remaining (0–5)
+  features?: {
+    restartOnboarding?: boolean;       // Onboarding restart kill switch
+    smartProfession?: boolean;         // AI profession classification overlay
+    onboardingForceSkip?: boolean;     // Admin force-skip button on onboarding
+    matchingLiveReveal?: boolean;      // Live reveal overlay on matching status
+    socialIcebreakerClientForceEnd?: boolean; // Host emergency end button
+  }; // Feature flags from server (DB-backed, resolved in parallel, see lib/featureFlags.ts)
 }
+```
 ```
 
 ### Complete User Flow Diagram (Option B: Post-Test Signup)
@@ -329,6 +338,21 @@ interface UseAuthResult {
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                     ▼ (After WeChat Login with test results)
+┌─────────────────────────────────────────────────────────────────────┐
+│              Authenticated - Welcome Back (conditional)             │
+├─────────────────────────────────────────────────────────────────────┤
+│  /onboarding/welcome-back → WelcomeBackPage                         │
+│     Shown once per reinstall when:                                  │
+│     • restartOnboarding feature flag = true                         │
+│     • nextStep ≠ 'discover'                                         │
+│     • restartsRemaining > 0                                         │
+│     • User has not seen welcome-back before (client storage)        │
+│  User chooses "Continue" → proceed to nextStep                      │
+│  User chooses "Restart"  → POST /api/auth/onboarding/restart        │
+│     → returns to personality-test, wipes onboarding-derived data    │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                    ▼ (After Welcome Back / Continue or Restart)
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    Authenticated - Needs Essential Data             │
 ├─────────────────────────────────────────────────────────────────────┤
@@ -372,6 +396,7 @@ The client **never** computes its own onboarding position. `nextStep` is always 
 
 | `nextStep` value | Route | Completion signal |
 |----------------|-------|-------------------|
+| `onboarding` | `/onboarding/onboarding` | Pre-personality-test landing (legacy alias) |
 | `personality-test` | `/personality-test` | `hasCompletedPersonalityTest` (users table) |
 | `essential-data` | `/onboarding/setup` | `profileEssentialComplete` (server-computed) |
 | `extended-data` | `/onboarding/extended` | `hasCompletedInterestsCarousel` (users table) |
@@ -390,6 +415,8 @@ The client **never** computes its own onboarding position. `nextStep` is always 
 Note: Voice quiz is not part of the onboarding flow. Archetype is assigned during `personality-test` results, not re-collected on `essential-data`.
 
 Pre-auth value-first entry remains `/personality-test` → `/personality-test/results` (inline WeChat login); once the user is authenticated, routing authority switches to server-returned `nextStep`.
+
+**Onboarding restart:** `POST /api/auth/onboarding/restart` clears all onboarding-derived data (preserves WeChat identity + phone), resets the user to `personality-test`, and increments `onboardingRestartCount` (capped at 5). Idempotent — double-tap does not burn quota. Gated by `RESTART_ONBOARDING_ENABLED` env var.
 
 Active onboarding pages: `apps/mini-program/src/pages/onboarding/`  
 Legacy surfaces: `archived/workspaces/user-client/src/legacy/onboarding/` — do not add new routes or CTAs there
@@ -437,6 +464,10 @@ These are commented out in schema but kept for backward compatibility.
 
 ### Profile Edit Routes
 
+**Mini-program (launch-primary):** `pages/edit-profile/index` — single consolidated 2-step editor.
+
+**Web (archived):** The following granular edit routes were part of the archived `user-client` and are not active in the mini-program:
+
 | Route | Component | Description |
 |-------|-----------|-------------|
 | `/profile/edit` | EditProfilePage | Profile edit hub |
@@ -465,6 +496,7 @@ These are commented out in schema but kept for backward compatibility.
 | `/admin/venues` | AdminVenuesPage | Venue partners |
 | `/admin/evolution` | AdminEvolutionPage | AI evolution dashboard |
 | `/admin/outcome-analytics` | AdminOutcomeAnalyticsPage | Outcome & readiness coverage analytics |
+| `/admin/feature-flags` | AdminFeatureFlagsPage | Toggle kill switches (super_admin only) |
 | `/admin/accounts` | AdminAccountsPage | Admin account management (super_admin only) |
 
 ### Admin Authentication
@@ -1147,6 +1179,7 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | `DEEPSEEK_TIMEOUT_MS` | AI request timeout in ms (default: 5000) |
 | `ENABLE_SEMANTIC_SIMILARITY` | `true` enables the 7th pair-scoring dimension (6% weight, semantic similarity); default `false` — 6D scoring. See `docs/product/LAUNCH_CONFIG.md` and `apps/server/src/matchingSemantic.ts`. |
 | `MATCH_COMPASS_STRICTNESS_ENABLED` | `true` shows the Match Compass preference dashboard; `false` hides UI and forces legacy matching path |
+| `RESTART_ONBOARDING_ENABLED` | `true` enables the welcome-back screen + onboarding restart flow; default `false` |
 | `EMBEDDING_BASE_URL` | Required for self-hosted embedding server (e.g. `http://localhost:8000/v1`). DeepSeek has no embedding API — this must be set for any embedding feature to work |
 | `EMBEDDING_API_KEY` | Optional API key for self-hosted embedding endpoint (default empty) |
 | `EMBEDDING_MODEL` | Model ID passed to embedding API (default `granite-embedding-97m-multilingual-r2`) |

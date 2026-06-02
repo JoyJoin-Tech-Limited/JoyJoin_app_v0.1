@@ -2,6 +2,7 @@ import { STALE_TIME_PROFILE_TAGLINE_MS, TOAST_FATAL_MS } from '../../../lib/util
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import ArchetypeHead from '../../../components/mascot/ArchetypeHead'
 import AnalyzingAnimation from '../../../components/loading/AnalyzingAnimation'
+import InterestChipCloud from '../../../components/profile/InterestChipCloud'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { haptics } from '../../../lib/utils/haptics'
 import Taro from '@tarojs/taro'
@@ -284,262 +285,257 @@ export default function ProfileReviewPage() {
   }
 
   return (
-    <ScrollView className={pageClassName} scrollY enhanced showScrollbar={false}>
-      <View className='profile-review__shell'>
-        {!isRevealReady ? (
-          <AnalyzingAnimation
-            label='正在生成你的专属画像'
-            subtitle={`${getMascotDisplayName(user)}正在分析你的性格密码...`}
-            minDuration={1200}
-            onComplete={() => setIsRevealReady(true)}
-            shouldReduceMotion={shouldReduceMotion}
+    <View className={pageClassName}>
+      <ScrollView className='profile-review__scroll' scrollY enhanced showScrollbar={false}>
+        <View className='profile-review__shell'>
+          {!isRevealReady ? (
+            <AnalyzingAnimation
+              label='正在生成你的专属画像'
+              subtitle={`${getMascotDisplayName(user)}正在分析你的性格密码...`}
+              minDuration={1200}
+              onComplete={() => setIsRevealReady(true)}
+              shouldReduceMotion={shouldReduceMotion}
+            />
+          ) : null}
+
+          <View className={`profile-review__welcome-illustration ${getStageClassName(0)}`}>
+            {visual?.asset ? (
+              <Image
+                className='profile-review__welcome-image'
+                src={visual.asset}
+                mode='aspectFit'
+                lazyLoad
+              />
+            ) : (
+              <Image
+                className='profile-review__welcome-image'
+                src={getXiaoyueAsset('homeWelcome')}
+                mode='aspectFit'
+                lazyLoad
+              />
+            )}
+          </View>
+
+          <View className={`profile-review__hero ${getStageClassName(1)}`}>
+            <Text className='profile-review__eyebrow'>Onboarding 4 / 4</Text>
+            <Text className='profile-review__title'>
+              你的 <Text className='profile-review__title-en'>JoyJoin</Text> 入场卡已就绪
+            </Text>
+            <Text className='profile-review__subtitle'>确认这张入场卡后，就去发现第一场适合你的局。</Text>
+          </View>
+
+          <XiaoyueChatBubble
+            content={coachCopy}
+            pose='pointing'
+            horizontal
+            showGlow
+            tail
+            className={getStageClassName(2)}
           />
-        ) : null}
 
-        <View className={`profile-review__welcome-illustration ${getStageClassName(0)}`}>
-          {visual?.asset ? (
-            <Image
-              className='profile-review__welcome-image'
-              src={visual.asset}
-              mode='aspectFit'
-              lazyLoad
-            />
-          ) : (
-            <Image
-              className='profile-review__welcome-image'
-              src={getXiaoyueAsset('homeWelcome')}
-              mode='aspectFit'
-              lazyLoad
-            />
-          )}
-        </View>
-
-        <View className={`profile-review__hero ${getStageClassName(1)}`}>
-          <Text className='profile-review__eyebrow'>Onboarding 4 / 4</Text>
-          <Text className='profile-review__title'>
-            你的 <Text className='profile-review__title-en'>JoyJoin</Text> 入场卡已就绪
-          </Text>
-          <Text className='profile-review__subtitle'>确认这张入场卡后，就去发现第一场适合你的局。</Text>
-        </View>
-
-        <XiaoyueChatBubble
-          content={coachCopy}
-          pose='pointing'
-          horizontal
-          showGlow
-          tail
-          className={getStageClassName(2)}
-        />
-
-        <Card className={`profile-review__hero-card ${getStageClassName(3)}`}>
-          <View className='profile-review__hero-main'>
-            <View className='profile-review__avatar-wrap'>
-              {visual?.asset ? (
-                <Image className='profile-review__avatar-image' src={visual.asset} mode='aspectFit' />
-              ) : (
-                <ArchetypeHead archetype={archetype} size={100} fallbackText={displayName} />
-              )}
-            </View>
-            <View className='profile-review__hero-copy'>
-              <Text className='profile-review__hero-name'>{displayName}</Text>
-              {archetype && visual ? (
-                <View
-                  className='profile-review__hero-archetype-badge'
-                  style={{
-                    background: visual.accentSoft,
-                    borderColor: visual.accentBorder,
-                  }}
-                >
-                  <Text
-                    className='profile-review__hero-archetype-badge-text'
-                    style={{ color: visual.accent }}
+          <Card className={`profile-review__hero-card ${getStageClassName(3)}`}>
+            <View className='profile-review__hero-main'>
+              <View className='profile-review__avatar-wrap'>
+                {visual?.asset ? (
+                  <Image className='profile-review__avatar-image' src={visual.asset} mode='aspectFit' />
+                ) : (
+                  <ArchetypeHead archetype={archetype} size={100} fallbackText={displayName} />
+                )}
+              </View>
+              <View className='profile-review__hero-copy'>
+                <Text className='profile-review__hero-name'>{displayName}</Text>
+                {archetype && visual ? (
+                  <View
+                    className='profile-review__hero-archetype-badge'
+                    style={{
+                      background: visual.accentSoft,
+                      borderColor: visual.accentBorder,
+                    }}
                   >
-                    {archetype}
-                  </Text>
-                </View>
-              ) : null}
-              {visual?.summary ? (
-                <Text className='profile-review__hero-summary'>{visual.summary}</Text>
-              ) : (
-                <Text className='profile-review__hero-summary'>你的基础资料和兴趣画像已经准备好被看见了。</Text>
-              )}
-              {aiInsightLine ? (
-                <View className='profile-review__ai-tagline-wrap'>
-                  <View className='profile-review__ai-tagline-accent' />
-                  <Text className='profile-review__ai-tagline'>{aiInsightLine}</Text>
-                </View>
-              ) : null}
+                    <Text
+                      className='profile-review__hero-archetype-badge-text'
+                      style={{ color: visual.accent }}
+                    >
+                      {archetype}
+                    </Text>
+                  </View>
+                ) : null}
+                {visual?.summary ? (
+                  <Text className='profile-review__hero-summary'>{visual.summary}</Text>
+                ) : (
+                  <Text className='profile-review__hero-summary'>你的基础资料和兴趣画像已经准备好被看见了。</Text>
+                )}
+                {aiInsightLine ? (
+                  <View className='profile-review__ai-tagline-wrap'>
+                    <View className='profile-review__ai-tagline-accent' />
+                    <Text className='profile-review__ai-tagline'>{aiInsightLine}</Text>
+                  </View>
+                ) : null}
+              </View>
             </View>
-          </View>
 
-          {profileTags.length > 0 ? (
-            <View className='profile-review__hero-tags'>
-              {profileTags.map((item) => (
-                <View key={item} className='profile-review__hero-tag'>
-                  <Text className='profile-review__hero-tag-text'>{item}</Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
-        </Card>
-
-        <Card className={`profile-review__card ${getStageClassName(4)}`}>
-          <Text className='profile-review__card-title'>进入发现前，再确认一次</Text>
-          <View className='profile-review__readiness-row'>
-            {readinessItems.map((item) => (
-              <View
-                key={item.label}
-                className={[
-                  'profile-review__readiness-pill',
-                  item.done ? 'profile-review__readiness-pill--done' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-              >
-                <Text className='profile-review__readiness-pill-icon'>{item.done ? '✓' : '·'}</Text>
-                <Text className='profile-review__readiness-pill-text'>{item.label}</Text>
-              </View>
-            ))}
-          </View>
-        </Card>
-
-        <Card className={`profile-review__card ${getStageClassName(5)}`}>
-          <Text className='profile-review__card-title'>你的资料一眼看完</Text>
-          <View className='profile-review__info-grid'>
-            {hometownRegionCity ? (
-              <View className='profile-review__info-block'>
-                <Text className='profile-review__info-label'>家乡</Text>
-                <Text className='profile-review__info-value'>{hometownRegionCity}</Text>
-              </View>
-            ) : null}
-            {relationshipStatus ? (
-              <View className='profile-review__info-block'>
-                <Text className='profile-review__info-label'>关系状态</Text>
-                <Text className='profile-review__info-value'>{relationshipStatus}</Text>
-              </View>
-            ) : null}
-            {educationLevel ? (
-              <View className='profile-review__info-block'>
-                <Text className='profile-review__info-label'>学历</Text>
-                <Text className='profile-review__info-value'>{educationLevel}</Text>
-              </View>
-            ) : null}
-            {occupationLabel ? (
-              <View className='profile-review__info-block'>
-                <Text className='profile-review__info-label'>职业</Text>
-                <Text className='profile-review__info-value'>{occupationLabel}</Text>
-              </View>
-            ) : null}
-            {industryLabel ? (
-              <View className='profile-review__info-block'>
-                <Text className='profile-review__info-label'>行业</Text>
-                <Text className='profile-review__info-value'>{industryLabel}</Text>
-              </View>
-            ) : null}
-          </View>
-
-          {intentLabels.length > 0 ? (
-            <View className='profile-review__chip-group'>
-              {intentLabels.map((item) => (
-                <View key={item} className='profile-review__chip'>
-                  <Text className='profile-review__chip-text'>{item}</Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
-        </Card>
-
-        <Card className={`profile-review__card ${getStageClassName(6)}`}>
-          <Text className='profile-review__card-title'>兴趣热度摘要</Text>
-
-          {showInterestSkeleton ? (
-            <View className='profile-review__interest-skeleton'>
-              <View className='profile-review__interest-stats'>
-                {[1, 2, 3].map((item) => (
-                  <View key={item} className='profile-review__interest-stat profile-review__interest-stat--skeleton'>
-                    <View className='profile-review__skeleton-line profile-review__skeleton-line--value' />
-                    <View className='profile-review__skeleton-line profile-review__skeleton-line--label' />
+            {profileTags.length > 0 ? (
+              <View className='profile-review__hero-tags'>
+                {profileTags.map((item) => (
+                  <View key={item} className='profile-review__hero-tag'>
+                    <Text className='profile-review__hero-tag-text'>{item}</Text>
                   </View>
                 ))}
               </View>
-              <View className='profile-review__skeleton-chip-row'>
-                {[1, 2, 3].map((item) => (
-                  <View key={item} className='profile-review__skeleton-chip' />
+            ) : null}
+          </Card>
+
+          <Card className={`profile-review__card ${getStageClassName(4)}`}>
+            <Text className='profile-review__card-title'>进入发现前，再确认一次</Text>
+            <View className='profile-review__readiness-row'>
+              {readinessItems.map((item) => (
+                <View
+                  key={item.label}
+                  className={[
+                    'profile-review__readiness-pill',
+                    item.done ? 'profile-review__readiness-pill--done' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  <Text className='profile-review__readiness-pill-icon'>{item.done ? '✓' : '·'}</Text>
+                  <Text className='profile-review__readiness-pill-text'>{item.label}</Text>
+                </View>
+              ))}
+            </View>
+          </Card>
+
+          <Card className={`profile-review__card ${getStageClassName(5)}`}>
+            <Text className='profile-review__card-title'>你的资料一眼看完</Text>
+            <View className='profile-review__info-grid'>
+              {hometownRegionCity ? (
+                <View className='profile-review__info-block'>
+                  <Text className='profile-review__info-label'>家乡</Text>
+                  <Text className='profile-review__info-value'>{hometownRegionCity}</Text>
+                </View>
+              ) : null}
+              {relationshipStatus ? (
+                <View className='profile-review__info-block'>
+                  <Text className='profile-review__info-label'>关系状态</Text>
+                  <Text className='profile-review__info-value'>{relationshipStatus}</Text>
+                </View>
+              ) : null}
+              {educationLevel ? (
+                <View className='profile-review__info-block'>
+                  <Text className='profile-review__info-label'>学历</Text>
+                  <Text className='profile-review__info-value'>{educationLevel}</Text>
+                </View>
+              ) : null}
+              {occupationLabel ? (
+                <View className='profile-review__info-block'>
+                  <Text className='profile-review__info-label'>职业</Text>
+                  <Text className='profile-review__info-value'>{occupationLabel}</Text>
+                </View>
+              ) : null}
+              {industryLabel ? (
+                <View className='profile-review__info-block'>
+                  <Text className='profile-review__info-label'>行业</Text>
+                  <Text className='profile-review__info-value'>{industryLabel}</Text>
+                </View>
+              ) : null}
+            </View>
+
+            {intentLabels.length > 0 ? (
+              <View className='profile-review__chip-group'>
+                {intentLabels.map((item) => (
+                  <View key={item} className='profile-review__chip'>
+                    <Text className='profile-review__chip-text'>{item}</Text>
+                  </View>
                 ))}
               </View>
-            </View>
-          ) : interestsData ? (
-            <>
-              <View className='profile-review__interest-stats'>
-                <View className='profile-review__interest-stat'>
-                  <Text className='profile-review__interest-value'>{interestsData.totalSelections}</Text>
-                  <Text className='profile-review__interest-label'>已选兴趣</Text>
+            ) : null}
+          </Card>
+
+          <Card className={`profile-review__card ${getStageClassName(6)}`}>
+            <Text className='profile-review__card-title'>兴趣热度摘要</Text>
+
+            {showInterestSkeleton ? (
+              <View className='profile-review__interest-skeleton'>
+                <View className='profile-review__interest-stats'>
+                  {[1, 2, 3].map((item) => (
+                    <View key={item} className='profile-review__interest-stat profile-review__interest-stat--skeleton'>
+                      <View className='profile-review__skeleton-line profile-review__skeleton-line--value' />
+                      <View className='profile-review__skeleton-line profile-review__skeleton-line--label' />
+                    </View>
+                  ))}
                 </View>
-                <View className='profile-review__interest-stat'>
-                  <Text className='profile-review__interest-value'>
-                    {interestsData.topPriorities?.length ?? 0}
-                  </Text>
-                  <Text className='profile-review__interest-label'>重点兴趣</Text>
-                </View>
-                <View className='profile-review__interest-stat'>
-                  <Text className='profile-review__interest-value'>{interestsData.totalHeat}</Text>
-                  <Text className='profile-review__interest-label'>热度总值</Text>
+                <View className='profile-review__skeleton-chip-row'>
+                  {[1, 2, 3].map((item) => (
+                    <View key={item} className='profile-review__skeleton-chip' />
+                  ))}
                 </View>
               </View>
-
-              {topInterestLabels.length > 0 ? (
-                <View className='profile-review__chip-group'>
-                  {topInterestLabels.map((item) => (
-                    <View key={item} className='profile-review__chip profile-review__chip--accent'>
-                      <Text className='profile-review__chip-text'>{item}</Text>
-                    </View>
-                  ))}
+            ) : interestsData ? (
+              <>
+                <View className='profile-review__interest-stats'>
+                  <View className='profile-review__interest-stat'>
+                    <Text className='profile-review__interest-value'>{interestsData.totalSelections}</Text>
+                    <Text className='profile-review__interest-label'>已选兴趣</Text>
+                  </View>
+                  <View className='profile-review__interest-stat'>
+                    <Text className='profile-review__interest-value'>
+                      {interestsData.topPriorities?.length ?? 0}
+                    </Text>
+                    <Text className='profile-review__interest-label'>重点兴趣</Text>
+                  </View>
+                  <View className='profile-review__interest-stat'>
+                    <Text className='profile-review__interest-value'>{interestsData.totalHeat}</Text>
+                    <Text className='profile-review__interest-label'>热度总值</Text>
+                  </View>
                 </View>
-              ) : null}
 
-              {dominantCategories.length > 0 ? (
-                <View className='profile-review__chip-group'>
-                  {dominantCategories.map((item) => (
-                    <View key={item} className='profile-review__chip'>
-                      <Text className='profile-review__chip-text'>
-                        {MACRO_CATEGORY_LABELS[item] || item}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-            </>
-          ) : (
-            <View className='profile-review__interest-placeholder'>
-              <Text className='profile-review__interest-placeholder-title'>兴趣摘要马上就位</Text>
-              <Text className='profile-review__interest-placeholder-copy'>
-                你刚选的兴趣正在整理成摘要，先带着这张入场卡出发也完全没问题。
-              </Text>
-            </View>
-          )}
-        </Card>
+                {topInterestLabels.length > 0 ? (
+                  <InterestChipCloud
+                    labels={topInterestLabels}
+                    accent
+                    className='profile-review__chip-group'
+                  />
+                ) : null}
 
-        {error ? <Text className='profile-review__error'>{error}</Text> : null}
+                {dominantCategories.length > 0 ? (
+                  <InterestChipCloud
+                    labels={dominantCategories.map((item) => MACRO_CATEGORY_LABELS[item] || item)}
+                    className='profile-review__chip-group'
+                  />
+                ) : null}
+              </>
+            ) : (
+              <View className='profile-review__interest-placeholder'>
+                <Text className='profile-review__interest-placeholder-title'>兴趣摘要马上就位</Text>
+                <Text className='profile-review__interest-placeholder-copy'>
+                  你刚选的兴趣正在整理成摘要，先带着这张入场卡出发也完全没问题。
+                </Text>
+              </View>
+            )}
+          </Card>
 
-        <View className={`profile-review__cta ${getStageClassName(7)}`}>
-          <Text className='profile-review__cta-title'>确认后去发现你的第一场局</Text>
-          <Text className='profile-review__cta-subtitle'>
-            这里不是终点，后续都可以在「我的」里继续补充或修改资料。
-          </Text>
-          <Button
-            variant='brand'
-            className='profile-review__submit'
-            onClick={() => {
-              haptics('heavy')
-              handleComplete()
-            }}
-            disabled={isSubmitting}
-            loading={isSubmitting}
-          >
-            {isSubmitting ? '正在完成…' : '确认并进入发现'}
-          </Button>
+          {error ? <Text className='profile-review__error'>{error}</Text> : null}
+
+          {/* Reserve space for fixed footer */}
+          <View style={{ height: '200rpx' }} />
         </View>
+      </ScrollView>
+
+      {/* Fixed bottom CTA bar */}
+      <View className={`profile-review__cta ${getStageClassName(7)}`}>
+        <Button
+          variant='brand'
+          className='profile-review__submit'
+          onClick={() => {
+            haptics('heavy')
+            handleComplete()
+          }}
+          disabled={isSubmitting}
+          loading={isSubmitting}
+        >
+          {isSubmitting ? '正在完成…' : '确认并进入发现'}
+        </Button>
       </View>
-    </ScrollView>
+    </View>
   )
 }

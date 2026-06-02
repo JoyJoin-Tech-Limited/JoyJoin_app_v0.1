@@ -1,6 +1,7 @@
 import { logger } from "../../lib/logger";
+import { logAdminAudit } from "../../lib/adminAuditLogger";
 import type { Express } from "express";
-import { registerAdminAuthRoutes, requireAdmin } from "../../adminAuth";
+import { registerAdminAuthRoutes, requireAdmin, requireSuperAdmin } from "../../adminAuth";
 import {
   CHEMISTRY_CALIBRATION_MAX_DELTA,
   CHEMISTRY_CALIBRATION_MIN_SAMPLES,
@@ -12,7 +13,12 @@ import { adminOutcomeAnalyticsRepo } from "../../repositories/adminOutcomeAnalyt
 import { socialIcebreakerAiFeedbackRepo } from "../../repositories/socialIcebreakerAiFeedbackRepo";
 import { queryAdminAuditLogs } from "../../repositories/adminAuditLogsRepo";
 import { getPhaseRatings, getMomentCardStats, getPhaseMetrics } from "../../lib/socialIcebreakerStore";
-import { runSocialAIBenchmark, formatBenchmarkReport, getDefaultModelConfigs } from "../../benchmarks/socialAIBenchmark";  
+import { runSocialAIBenchmark, formatBenchmarkReport, getDefaultModelConfigs } from "../../benchmarks/socialAIBenchmark";
+import { listFeatureFlags, getFeatureFlag, refreshFeatureFlag, FLAG_ENV_MAP } from "../../lib/featureFlags";
+import { db } from "../../db";
+import { featureFlags } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
 
 export function registerAdminRoutes(app: Express): void {
   registerAdminAuthRoutes(app);
@@ -180,6 +186,66 @@ export function registerAdminRoutes(app: Express): void {
     } catch (error) {
       logger.error("[AdminAuditLogs] query failed", { error: String(error) });
       res.status(500).json({ message: "Failed to load audit logs" });
+    }
+  });
+
+  // ── Feature Flags ───────────────────────────────────────────────
+
+  app.get("/api/admin/feature-flags", requireAdmin, requireSuperAdmin, async (_req, res) => {
+    try {
+      const flags = await listFeatureFlags();
+      res.json({ flags });
+    } catch (error) {
+      logger.error("[AdminFeatureFlags] list failed", { error: String(error) });
+      res.status(500).json({ message: "Failed to load feature flags" });
+    }
+  });
+
+  const VALID_FLAG_KEYS = Object.keys(FLAG_ENV_MAP);
+  const updateFlagSchema = z.object({
+    value: z.enum(["true", "false"]),
+    description: z.string().max(500).optional(),
+  });
+
+  app.put("/api/admin/feature-flags/:key", requireAdmin, requireSuperAdmin, async (req, res) => {
+    try {
+      const { key } = req.params;
+      if (!VALID_FLAG_KEYS.includes(key)) {
+        return res.status(400).json({ message: "Unknown feature flag key", validKeys: VALID_FLAG_KEYS });
+      }
+
+      const parsed = updateFlagSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid request body", errors: parsed.error.format() });
+      }
+      const { value, description } = parsed.data;
+
+      const adminId = req.adminAccount?.id ?? req.session?.adminAccountId ?? "unknown";
+
+      await db
+        .insert(featureFlags)
+        .values({ key, value, description, updatedBy: adminId })
+        .onConflictDoUpdate({
+          target: featureFlags.key,
+          set: { value, description, updatedAt: new Date(), updatedBy: adminId },
+        });
+
+      await refreshFeatureFlag(key);
+
+      logAdminAudit({
+        action: "FEATURE_FLAG_UPDATED",
+        adminId,
+        adminRole: req.adminRole ?? "unknown",
+        targetEntityType: "feature_flag",
+        targetEntityId: key,
+        context: { value, description },
+      });
+
+      logger.info("[AdminFeatureFlags] updated", { key, value, adminId });
+      res.json({ key, value, updated: true });
+    } catch (error) {
+      logger.error("[AdminFeatureFlags] update failed", { error: String(error) });
+      res.status(500).json({ message: "Failed to update feature flag" });
     }
   });
 }

@@ -4,12 +4,23 @@ import {
   SMART_INFERENCE_PROMPT,
   CHAIN_OF_THOUGHT_HIDDEN,
 } from './reasoning';
+import {
+  XIAOYUE_CRAFT_PRINCIPLES,
+  XIAOYUE_CRAFT_LITE,
+  XIAOYUE_CRAFT_PROMPT_VERSION,
+  getCraftInstructions,
+} from './craft';
 
 export {
   XIAOYUE_PERSONA,
   GENDER_NEUTRAL,
   XIAOYUE_PERSONA_PROMPT_VERSION,
+  XIAOYUE_CRAFT_PRINCIPLES,
+  XIAOYUE_CRAFT_LITE,
+  XIAOYUE_CRAFT_PROMPT_VERSION,
 };
+
+export { getCraftInstructions };
 
 export function getReasoningModules(): string {
   return [

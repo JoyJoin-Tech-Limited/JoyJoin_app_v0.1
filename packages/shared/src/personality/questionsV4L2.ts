@@ -1173,4 +1173,75 @@ export const questionsV4L2: AdaptiveQuestion[] = [
       }
     ]
   },
+
+  // ── Pure calibration questions (Q51-Q54) ──────────────────────────
+  // Deterministic single-trait items injected after anchors based on
+  // cohort detection.  Each option loads on exactly ONE trait at ±2
+  // magnitude (gentler than standard ±3 to avoid overpowering adaptive
+  // measurements).  Control: config.enableCalibrationQuestions.
+
+  {
+    id: "Q51_PureX",
+    level: 2,
+    category: "纯X矩阵",
+    scenarioText: "周末你没有任何计划，朋友临时约你参加一个全是陌生人的聚会。",
+    questionText: "你的真实感受是？",
+    primaryTraits: ["X"],
+    isForcedChoice: true,
+    cohortTag: "social_catalyst",
+    options: [
+      { value: "A", text: "太好了，认识新朋友是最开心的事！", traitScores: { A: 0, C: 0, E: 0, O: 0, X: 2, P: 0 } },
+      { value: "B", text: "有点兴趣，正好周末没事可以去看看", traitScores: { A: 0, C: 0, E: 0, O: 0, X: 1, P: 0 } },
+      { value: "C", text: "犹豫，不太确定能不能融入全是陌生人的场合", traitScores: { A: 0, C: 0, E: 0, O: 0, X: 0, P: 0 } },
+      { value: "D", text: "完全不想去，和一群陌生人社交很消耗能量", traitScores: { A: 0, C: 0, E: 0, O: 0, X: -2, P: 0 } }
+    ]
+  },
+  {
+    id: "Q52_PureO",
+    level: 2,
+    category: "纯O矩阵",
+    scenarioText: "朋友推荐了一本关于冷门历史事件的非虚构书籍。",
+    questionText: "你会？",
+    primaryTraits: ["O"],
+    isForcedChoice: true,
+    cohortTag: "creative_explorer",
+    options: [
+      { value: "A", text: "立刻下单，这种冷门知识最吸引我了", traitScores: { A: 0, C: 0, E: 0, O: 2, X: 0, P: 0 } },
+      { value: "B", text: "加入书单，等有空的时候翻翻看", traitScores: { A: 0, C: 0, E: 0, O: 1, X: 0, P: 0 } },
+      { value: "C", text: "除非是特别相关的领域，否则不太想花时间", traitScores: { A: 0, C: 0, E: 0, O: 0, X: 0, P: 0 } },
+      { value: "D", text: "对冷门历史完全没兴趣，还不如看部热门电影", traitScores: { A: 0, C: 0, E: 0, O: -2, X: 0, P: 0 } }
+    ]
+  },
+  {
+    id: "Q53_PureC",
+    level: 2,
+    category: "纯C矩阵",
+    scenarioText: "你答应帮朋友策划一个活动，离截止日期还有两周。",
+    questionText: "你通常会？",
+    primaryTraits: ["C"],
+    isForcedChoice: true,
+    cohortTag: "quiet_anchor",
+    options: [
+      { value: "A", text: "立刻列清单，把任务分解成每日计划并严格执行", traitScores: { A: 0, C: 2, E: 0, O: 0, X: 0, P: 0 } },
+      { value: "B", text: "提前一周左右开始准备，按部就班完成", traitScores: { A: 0, C: 1, E: 0, O: 0, X: 0, P: 0 } },
+      { value: "C", text: "拖延到最后一两天集中突击，每次都是这样", traitScores: { A: 0, C: 0, E: 0, O: 0, X: 0, P: 0 } },
+      { value: "D", text: "经常忘记 deadline，需要别人提醒才能交", traitScores: { A: 0, C: -2, E: 0, O: 0, X: 0, P: 0 } }
+    ]
+  },
+  {
+    id: "Q54_PureP",
+    level: 2,
+    category: "纯P矩阵",
+    scenarioText: "你特别期待的一场户外活动因为天气原因临时取消了。",
+    questionText: "你内心的第一反应更接近？",
+    primaryTraits: ["P"],
+    isForcedChoice: true,
+    cohortTag: "social_catalyst",
+    options: [
+      { value: "A", text: "没关系，好事多磨，改天去说不定更好玩", traitScores: { A: 0, C: 0, E: 0, O: 0, X: 0, P: 2 } },
+      { value: "B", text: "有点失望但很快就能接受，换个室内计划也行", traitScores: { A: 0, C: 0, E: 0, O: 0, X: 0, P: 1 } },
+      { value: "C", text: "挺郁闷的，半天都提不起精神做别的事", traitScores: { A: 0, C: 0, E: 0, O: 0, X: 0, P: 0 } },
+      { value: "D", text: "非常烦躁，整个周末的心情都被毁了", traitScores: { A: 0, C: 0, E: 0, O: 0, X: 0, P: -2 } }
+    ]
+  },
 ];

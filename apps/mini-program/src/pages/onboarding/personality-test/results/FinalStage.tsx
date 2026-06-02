@@ -37,6 +37,8 @@ interface FinalStageProps {
   onRestart: () => void
   authIsLoading: boolean
   isLoggingIn?: boolean
+  isDecisive?: boolean
+  secondaryDisplayName?: string
   xiaoyueAnalysis?: {
     headline: string
     analysis: string
@@ -75,6 +77,8 @@ export default function FinalStage({
   onRestart,
   authIsLoading,
   isLoggingIn,
+  isDecisive,
+  secondaryDisplayName,
   xiaoyueAnalysis,
   isLoadingAnalysis,
 }: FinalStageProps) {
@@ -235,6 +239,12 @@ export default function FinalStage({
                 <Text className={`personality-results__hero-badge personality-results__hero-badge--nickname ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}>{visual.nickname}</Text>
               ) : null}
             </View>
+
+            {isDecisive === false && secondaryDisplayName ? (
+              <Text className='personality-results__hero-blend'>
+                {xiaoyueAnalysis?.blendLine || `隐约有${secondaryDisplayName}的影子`}
+              </Text>
+            ) : null}
           </View>
 
           <View className='personality-results__hero-art-shell'>

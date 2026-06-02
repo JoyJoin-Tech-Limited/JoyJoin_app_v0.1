@@ -3,6 +3,7 @@ import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { getArchetypeSkills } from '@shared/personality/archetypeSkills'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { useAuth } from '../../../../hooks/useAuth'
@@ -24,6 +25,7 @@ import { getDegradationTier, type DegradationTier } from '../../../../lib/utils/
 import { haptics } from '../../../../lib/utils/haptics'
 import { getMascotDisplayName } from '../../../../lib/mascot/mascotDisplay'
 import { logError, logInfo, logWarn } from '../../../../lib/utils/logger'
+import { useMiniRevealMotion } from '../../../../hooks/useMiniRevealMotion'
 import { preloadImagesWithDiagnostics } from '../../../../lib/utils/imagePreload'
 import { MINI_PROGRAM_ROUTES } from '../../../../lib/onboarding/onboardingRoutes'
 import { navigateToMiniProgramNextStep } from '../../../../lib/onboarding/onboardingNavigation'
@@ -92,6 +94,7 @@ interface XiaoyueAnalysisResult {
 }
 
 export default function PersonalityTestResultsPage() {
+  const { shouldReduceMotion } = useMiniRevealMotion()
   const auth = useAuth()
   const initialSnapshot = useMemo(() => readAnonymousAssessmentSession(), [])
   const initialResolvedResult = useMemo(() => buildResolvedResultState(initialSnapshot), [initialSnapshot])
@@ -269,6 +272,12 @@ export default function PersonalityTestResultsPage() {
     ?? sessionSnapshot?.result?.primaryArchetype
     ?? topMatches[0]?.archetype
     ?? null
+
+  const isDecisive = resultState?.result.isDecisive ?? sessionSnapshot?.result?.isDecisive
+  const secondaryArchetypeId = resultState?.result.secondaryArchetype ?? sessionSnapshot?.result?.secondaryArchetype
+  const secondaryDisplayName = secondaryArchetypeId
+    ? (ARCHETYPE_BY_ID[secondaryArchetypeId]?.nameCn ?? '')
+    : undefined
 
   // Targeted preload: once we know the specific result archetype, ensure
   // its full-size asset is in cache (noop if already loaded).
@@ -565,6 +574,32 @@ export default function PersonalityTestResultsPage() {
           didFetchResolve = true
           fetchedResult = null
         })
+
+      // Cognitive accessibility: skip all motion and jump straight to result
+      if (shouldReduceMotion) {
+        const resolved = await fetchPromise
+        if (resolved) {
+          resultStateRef.current = resolved
+          setResultState(resolved)
+          const currentSnapshot = readAnonymousAssessmentSession()
+          const completedSnapshot: AnonymousAssessmentSessionSnapshot = {
+            sessionId: resolved.sessionId,
+            phase: 'completed',
+            timestamp: Date.now(),
+            completedAt: resolved.completedAt ?? currentSnapshot?.completedAt,
+            result: resolved.result,
+            topArchetypes: resolved.topMatches,
+            resultSequenceCompletedAt: new Date().toISOString(),
+          }
+          saveAnonymousAssessmentSession(completedSnapshot)
+          setSessionSnapshot(completedSnapshot)
+        }
+        setFlowStage('result')
+        setSlotDisplay(prev => ({ ...prev, progress: 100 }))
+        setPhaseText('')
+        setCompletionMode('animated')
+        return
+      }
 
       setFlowStage('slot')
       setPhaseText('即将揭晓...')
@@ -921,6 +956,7 @@ export default function PersonalityTestResultsPage() {
         answerCount: answers.length,
         nextStep: userState.nextStep ?? 'essential-data',
       })
+      void Taro.showToast({ title: '登录成功，正在为你准备匹配…', icon: 'success', duration: 2000 })
       await navigateToMiniProgramNextStep(userState.nextStep, { mode: 'root' })
     } catch (error) {
       const typedError = error as ApiError | undefined
@@ -1075,6 +1111,7 @@ export default function PersonalityTestResultsPage() {
         primaryArchetype: displayArchetypeName,
         variant: selectedVariant?.name,
       })
+      void Taro.showToast({ title: '氛围卡已生成', icon: 'success', duration: 1500 })
 
       // Present frictionless sharing options
       await presentShareOptions(nextPosterPath)
@@ -1133,6 +1170,7 @@ export default function PersonalityTestResultsPage() {
             isSlowNetwork={isSlowNetwork}
             progress={progress}
             phaseText={phaseText}
+            shouldReduceMotion={shouldReduceMotion}
           />
         )
       case 'reveal':
@@ -1180,6 +1218,8 @@ export default function PersonalityTestResultsPage() {
             onRestart={handleRestart}
             authIsLoading={auth.isLoading}
             isLoggingIn={isLoggingIn}
+            isDecisive={isDecisive}
+            secondaryDisplayName={secondaryDisplayName}
             xiaoyueAnalysis={xiaoyueAnalysis}
             isLoadingAnalysis={isLoadingAnalysis}
           />

@@ -7,8 +7,9 @@
 
 import { db } from "./db";
 import { venues, venueTimeSlots, venueTimeSlotBookings, eventPoolGroups } from "@shared/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { logger } from "./lib/logger";
+import { notifyVenueUnassigned } from "./lib/wecomNotifier";
 import type { UserWithProfile, MatchGroup } from "./poolMatchingService";
 
 interface VenueScore {
@@ -21,6 +22,21 @@ interface VenueScore {
 interface VenueWithSlot {
   venue: typeof venues.$inferSelect;
   timeSlot: typeof venueTimeSlots.$inferSelect;
+}
+
+/**
+ * Parse event Date into consistent local date components.
+ * PostgreSQL timestamps are stored without timezone; we treat the raw
+ * wall-clock time as the intended local time. Parsing from the ISO string
+ * avoids local timezone shift on Date methods.
+ */
+function parseEventDate(eventDateTime: Date): { dateStr: string; timeStr: string; dayOfWeek: number } {
+  const iso = eventDateTime.toISOString(); // e.g. "2026-06-05T19:30:00.000Z"
+  const [datePart, timePart] = iso.split('T');
+  const timeStr = timePart.substring(0, 5); // "HH:MM"
+  const [y, m, d] = datePart.split('-').map(Number);
+  const dayOfWeek = new Date(y, m - 1, d).getDay();
+  return { dateStr: datePart, timeStr, dayOfWeek };
 }
 
 /**
@@ -99,14 +115,7 @@ async function checkTimeSlotAvailability(
   venueId: string,
   eventDateTime: Date
 ): Promise<typeof venueTimeSlots.$inferSelect | null> {
-  const dayOfWeek = eventDateTime.getDay();
-  const timeStr = eventDateTime.toTimeString().substring(0, 5); // "HH:MM" in local time
-  
-  // Format date in local timezone to avoid UTC shift
-  const year = eventDateTime.getFullYear();
-  const month = String(eventDateTime.getMonth() + 1).padStart(2, '0');
-  const day = String(eventDateTime.getDate()).padStart(2, '0');
-  const dateStr = `${year}-${month}-${day}`; // "YYYY-MM-DD"
+  const { dateStr, timeStr, dayOfWeek } = parseEventDate(eventDateTime);
   
   // Check for weekly recurring slots
   const weeklySlots = await db
@@ -140,18 +149,20 @@ async function checkTimeSlotAvailability(
   
   // Batch query booking counts for all matching slots to avoid N+1
   const slotIds = allSlots.map(s => s.id);
-  const bookingCounts = await db
-    .select({
-      timeSlotId: venueTimeSlotBookings.timeSlotId,
-      count: sql<number>`count(*)`,
-    })
-    .from(venueTimeSlotBookings)
-    .where(and(
-      sql`${venueTimeSlotBookings.timeSlotId} = ANY(${slotIds})`,
-      sql`${venueTimeSlotBookings.bookingDate} = ${dateStr}::date`,
-      eq(venueTimeSlotBookings.status, 'confirmed')
-    ))
-    .groupBy(venueTimeSlotBookings.timeSlotId);
+  const bookingCounts = slotIds.length > 0
+    ? await db
+        .select({
+          timeSlotId: venueTimeSlotBookings.timeSlotId,
+          count: sql<number>`count(*)`,
+        })
+        .from(venueTimeSlotBookings)
+        .where(and(
+          inArray(venueTimeSlotBookings.timeSlotId, slotIds),
+          sql`${venueTimeSlotBookings.bookingDate} = ${dateStr}::date`,
+          eq(venueTimeSlotBookings.status, 'confirmed')
+        ))
+        .groupBy(venueTimeSlotBookings.timeSlotId)
+    : [];
   
   const countMap = new Map(bookingCounts.map((b: { timeSlotId: string; count: number }) => [b.timeSlotId, b.count]));
   
@@ -179,6 +190,13 @@ async function scoreVenueForGroup(
 ): Promise<Omit<VenueScore, 'timeSlotId'>> {
   let score = 0;
   const reasons: string[] = [];
+
+  // 0. Capacity Hard Constraint — reject venues that cannot physically fit the group
+  const groupSize = group.members.length;
+  const seatingCapacity = venue.seatingCapacity ?? venue.capacity ?? 0;
+  if (seatingCapacity > 0 && seatingCapacity < groupSize) {
+    return { venue, score: 0, reasons: [`容量不足 (仅可容纳${seatingCapacity}人，需要${groupSize}人)`] };
+  }
   
   // 1. Budget Match (40 points)
   const venueBudgets = venue.budgetCategories || [];
@@ -212,13 +230,10 @@ async function scoreVenueForGroup(
   
   // 3. Capacity Match (20 points)
   // Uses seatingCapacity (max people per event) for group size fit.
-  const groupSize = group.members.length;
-  const seatingCapacity = venue.seatingCapacity ?? venue.capacity ?? 0;
+  // Hard constraint already enforced above; this only awards bonus points.
   if (seatingCapacity >= groupSize) {
     score += 20;
     reasons.push(`容量充足 (可容纳${seatingCapacity}人)`);
-  } else if (seatingCapacity > 0) {
-    reasons.push(`容量不足 (仅可容纳${seatingCapacity}人，需要${groupSize}人)`);
   }
   
   // 4. Location (10 points) - same district as group members
@@ -260,12 +275,18 @@ export async function assignVenuesToGroups(
         eq(venues.city, poolCity),
         eq(venues.area, poolDistrict),
         eq(venues.isActive, true),
-        sql`${venues.venueType} = ANY(${allowedVenueTypes})`
+        eq(venues.onboardingStatus, 'active'),
+        eq(venues.partnerStatus, 'active'),
+        sql`${venues.contractEndDate} IS NULL OR ${venues.contractEndDate} >= CURRENT_DATE`,
+        inArray(venues.venueType, allowedVenueTypes)
       )
     : and(
         eq(venues.city, poolCity),
         eq(venues.isActive, true),
-        sql`${venues.venueType} = ANY(${allowedVenueTypes})`
+        eq(venues.onboardingStatus, 'active'),
+        eq(venues.partnerStatus, 'active'),
+        sql`${venues.contractEndDate} IS NULL OR ${venues.contractEndDate} >= CURRENT_DATE`,
+        inArray(venues.venueType, allowedVenueTypes)
       );
   
   const availableVenues = await db
@@ -370,18 +391,21 @@ export async function assignVenuesToGroups(
 /**
  * Update database with venue assignments and persist time-slot bookings
  */
+export interface PoolInfoForAlert {
+  title?: string;
+  city?: string;
+  district?: string | null;
+}
+
 export async function saveVenueAssignments(
   poolId: string,
   eventDateTime: Date,
   assignments: Map<number, { venue: any; score: number; reasons: string[]; timeSlotId: string }>,
-  unassigned: Map<number, string> = new Map()
+  unassigned: Map<number, string> = new Map(),
+  poolInfo?: PoolInfoForAlert
 ): Promise<void> {
 
-  // Format booking date
-  const year = eventDateTime.getFullYear();
-  const month = String(eventDateTime.getMonth() + 1).padStart(2, '0');
-  const day = String(eventDateTime.getDate()).padStart(2, '0');
-  const bookingDate = `${year}-${month}-${day}`; // "YYYY-MM-DD"
+  const { dateStr: bookingDate } = parseEventDate(eventDateTime);
 
   // Get all groups for this pool
   const groups: Array<{ id: string; groupNumber: number }> = await db
@@ -402,11 +426,11 @@ export async function saveVenueAssignments(
   )];
 
   // Batch query 1: existing bookings for all groups (idempotency guard)
-  const existingBookings = assignedSlotIds.length > 0
+  const existingBookings = groupIds.length > 0
     ? await db
         .select({ eventGroupId: venueTimeSlotBookings.eventGroupId, id: venueTimeSlotBookings.id })
         .from(venueTimeSlotBookings)
-        .where(sql`${venueTimeSlotBookings.eventGroupId} = ANY(${groupIds})`)
+        .where(inArray(venueTimeSlotBookings.eventGroupId, groupIds))
     : [];
   const existingBookingMap = new Map<string, string>(existingBookings.map((b: { eventGroupId: string; id: string }) => [b.eventGroupId, b.id]));
 
@@ -415,30 +439,52 @@ export async function saveVenueAssignments(
     ? await db
         .select()
         .from(venueTimeSlots)
-        .where(sql`${venueTimeSlots.id} = ANY(${assignedSlotIds})`)
+        .where(inArray(venueTimeSlots.id, assignedSlotIds))
     : [];
   const timeSlotMap = new Map<string, typeof venueTimeSlots.$inferSelect>(timeSlots.map((s: typeof venueTimeSlots.$inferSelect) => [s.id, s]));
-
-  // Batch query 3: current booking counts for all assigned slots (concurrency guard)
-  const bookingCounts = assignedSlotIds.length > 0
-    ? await db
-        .select({
-          timeSlotId: venueTimeSlotBookings.timeSlotId,
-          count: sql<number>`count(*)`,
-        })
-        .from(venueTimeSlotBookings)
-        .where(and(
-          sql`${venueTimeSlotBookings.timeSlotId} = ANY(${assignedSlotIds})`,
-          sql`${venueTimeSlotBookings.bookingDate} = ${bookingDate}::date`,
-          eq(venueTimeSlotBookings.status, 'confirmed')
-        ))
-        .groupBy(venueTimeSlotBookings.timeSlotId)
-    : [];
-  const bookingCountMap = new Map<string, number>(bookingCounts.map((b: { timeSlotId: string; count: number }) => [b.timeSlotId, b.count]));
 
   // Execute all writes atomically
   await db.transaction(async (tx: typeof db) => {
     const inTransactionSlotUsage = new Map<string, number>();
+
+    // Cross-pool race-condition guard:
+    // 1. Lock the slot rows themselves so concurrent assignments for the same slot
+    //    serialize even when there are zero existing bookings.
+    // 2. Lock existing booking rows so the count query is consistent.
+    if (assignedSlotIds.length > 0) {
+      await tx
+        .select()
+        .from(venueTimeSlots)
+        .where(inArray(venueTimeSlots.id, assignedSlotIds))
+        .for('update');
+
+      await tx
+        .select()
+        .from(venueTimeSlotBookings)
+        .where(and(
+          inArray(venueTimeSlotBookings.timeSlotId, assignedSlotIds),
+          sql`${venueTimeSlotBookings.bookingDate} = ${bookingDate}::date`,
+          eq(venueTimeSlotBookings.status, 'confirmed')
+        ))
+        .for('update');
+    }
+
+    // Now count is safe — no concurrent tx can insert for these slots until we commit
+    const lockedBookingCounts = assignedSlotIds.length > 0
+      ? await tx
+          .select({
+            timeSlotId: venueTimeSlotBookings.timeSlotId,
+            count: sql<number>`count(*)`,
+          })
+          .from(venueTimeSlotBookings)
+          .where(and(
+            inArray(venueTimeSlotBookings.timeSlotId, assignedSlotIds),
+            sql`${venueTimeSlotBookings.bookingDate} = ${bookingDate}::date`,
+            eq(venueTimeSlotBookings.status, 'confirmed')
+          ))
+          .groupBy(venueTimeSlotBookings.timeSlotId)
+      : [];
+    const bookingCountMap = new Map<string, number>(lockedBookingCounts.map((b: { timeSlotId: string; count: number }) => [b.timeSlotId, b.count]));
 
     for (const group of groups) {
       const assignment = assignments.get(group.groupNumber);
@@ -506,13 +552,31 @@ export async function saveVenueAssignments(
   });
 
   // Side-effect: structured logging outside the transaction
+  let newlyAssigned = 0;
+  const unassignedBreakdown: Record<string, number> = {};
   for (const group of groups) {
     const assignment = assignments.get(group.groupNumber);
     const unassignedReason = unassigned.get(group.groupNumber);
     if (assignment && !existingBookingMap.has(group.id)) {
+      newlyAssigned++;
       logger.info(`[VenueAssignment] Saved: Group ${group.groupNumber} → ${assignment.venue.name} (slot: ${assignment.timeSlotId})`);
     } else if (unassignedReason) {
+      unassignedBreakdown[unassignedReason] = (unassignedBreakdown[unassignedReason] || 0) + 1;
       logger.info(`[VenueAssignment] Marked group ${group.groupNumber} as unassigned: ${unassignedReason}`);
     }
+  }
+
+  // WeCom alert for unassigned groups
+  if (Object.keys(unassignedBreakdown).length > 0) {
+    void notifyVenueUnassigned({
+      poolTitle: poolInfo?.title || poolId,
+      poolCity: poolInfo?.city || "",
+      poolDistrict: poolInfo?.district || undefined,
+      poolDate: bookingDate,
+      unassignedCount: Object.values(unassignedBreakdown).reduce((a, b) => a + b, 0),
+      reasonBreakdown: unassignedBreakdown,
+    }).catch((err) => {
+      logger.warn("[VenueAssignment] Failed to send WeCom alert", { error: String(err) });
+    });
   }
 }

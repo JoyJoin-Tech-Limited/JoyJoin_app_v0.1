@@ -529,7 +529,10 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_event_pool_groups_pool").on(table.poolId),
+  index("idx_event_pool_groups_venue_status").on(table.venueAssignmentStatus),
+]);
 
 export const eventGroupOutcomes = pgTable("event_group_outcomes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1219,6 +1222,15 @@ export const venues = pgTable("venues", {
   // 合作状态
   partnerStatus: text("partner_status").default("active"), // active, paused, ended
   partnerSince: date("partner_since"), // 合作开始日期
+  
+  // 合作伙伴入驻流程
+  onboardingStatus: text("onboarding_status").default("active"), // draft, pending_review, active, suspended
+  partnerCompanyName: text("partner_company_name"),
+  businessLicenseNo: text("business_license_no"),
+  partnerEmail: text("partner_email"),
+  bankAccountInfo: text("bank_account_info"),
+  contractStartDate: date("contract_start_date"),
+  contractEndDate: date("contract_end_date"),
   
   // Status
   isActive: boolean("is_active").default(true),

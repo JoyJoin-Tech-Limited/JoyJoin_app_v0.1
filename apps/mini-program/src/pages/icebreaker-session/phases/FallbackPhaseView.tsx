@@ -1,4 +1,5 @@
-import { View, Text } from '@tarojs/components'
+import { View, Text, Image } from '@tarojs/components'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
 import { PhaseHeaderIcon, getPhaseLabel, type SessionPhase } from '../phaseUtils'
@@ -7,18 +8,39 @@ export function FallbackPhaseView({
   phase,
   isHost,
   onAdvance,
+  onReturnToWarmup,
 }: {
   phase: SessionPhase
   isHost: boolean
   onAdvance: () => void
+  onReturnToWarmup?: () => void
 }) {
   return (
     <View className='icebreaker__challenge'>
       <Card className={`icebreaker__challenge-card icebreaker__challenge-card--${phase}`}>
-        <PhaseHeaderIcon phase={phase} size={48} />
-        <Text className='icebreaker__challenge-title' style={{ marginTop: '12rpx' }}>{getPhaseLabel(phase)}</Text>
-        <Text className='icebreaker__challenge-desc'>这个阶段暂时使用精简版展示。</Text>
+        <Image
+          className='icebreaker__fallback-hero'
+          src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+          mode='aspectFit'
+          style={{ width: '160rpx', height: '160rpx' }}
+        />
+        <Text className='icebreaker__challenge-title' style={{ marginTop: '16rpx' }}>
+          这个环节还在筹备中
+        </Text>
+        <Text className='icebreaker__challenge-desc'>
+          悦仔先带你回暖场，或者主持人可以直接推进到下一阶段
+        </Text>
       </Card>
+
+      {onReturnToWarmup ? (
+        <Button
+          variant='secondary'
+          className='icebreaker__action-btn'
+          onClick={onReturnToWarmup}
+        >
+          返回暖场
+        </Button>
+      ) : null}
 
       {isHost ? (
         <Button variant='primary' className='icebreaker__action-btn' onClick={onAdvance}>

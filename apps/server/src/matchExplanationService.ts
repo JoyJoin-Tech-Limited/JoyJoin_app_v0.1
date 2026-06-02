@@ -29,6 +29,9 @@ import type { AIProvider } from '@shared/types/aiMeta';
 import { getInterestById } from '@shared/interests';
 import { logAITrace } from './lib/aiTraceLogger';
 import { logger } from './lib/logger';
+import { generateWithCraftQuality } from './lib/craftQualityGate';
+import { XIAOYUE_CRAFT_LITE } from './prompts/craft';
+import { validateCraft } from './lib/writingCraftValidator';
 
 // ============ 配置常量 ============
 
@@ -721,6 +724,8 @@ ${member2.socialStyle ? `- 社交风格: ${member2.socialStyle}` : ''}
 ${sharedInterests.length > 0 ? `共同兴趣: ${sharedInterests.join('、')}` : ''}
 ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : ''}
 
+${XIAOYUE_CRAFT_LITE}
+
 请用中文，语气温暖友好，突出互补或共鸣点；不要使用「用户A/B」称呼。
 
 输出要求：只输出**一行**合法 JSON（不要 markdown 代码块），格式如下：
@@ -761,6 +766,16 @@ explanation 为正文；introAngle 为两人见面时如何开口的一句提示
 
     const rawContent = response.choices[0]?.message?.content?.trim() || '';
     const parsed = parsePairExplanationContent(rawContent || DEFAULT_PAIR_EXPLANATION);
+
+    // Craft quality diagnostic (non-blocking — prompt injection handles quality)
+    const craftDiag = validateCraft(parsed.explanation, 'comment');
+    if (craftDiag.craftScore < 55) {
+      logger.info('[MatchExplanation] Craft score below threshold', {
+        pairKey: getPairKey(member1.userId, member2.userId),
+        craftScore: craftDiag.craftScore,
+        issues: craftDiag.fixableIssues.length,
+      });
+    }
 
     return {
       explanation: {
@@ -810,6 +825,14 @@ explanation 为正文；introAngle 为两人见面时如何开口的一句提示
         });
         const fbRaw = fbResponse.choices[0]?.message?.content?.trim() || '';
         const fbParsed = parsePairExplanationContent(fbRaw || DEFAULT_PAIR_EXPLANATION);
+        // Craft quality diagnostic
+        const fbCraftDiag = validateCraft(fbParsed.explanation, 'comment');
+        if (fbCraftDiag.craftScore < 55) {
+          logger.info('[MatchExplanation] Craft score below threshold (fallback path)', {
+            pairKey: getPairKey(member1.userId, member2.userId),
+            craftScore: fbCraftDiag.craftScore,
+          });
+        }
         return {
           explanation: {
             pairKey: getPairKey(member1.userId, member2.userId),

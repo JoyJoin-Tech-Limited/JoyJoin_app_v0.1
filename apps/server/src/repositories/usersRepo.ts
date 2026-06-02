@@ -7,9 +7,17 @@ import {
   type RegisterUser,
   type InterestsTopics,
   users,
+  testResponses,
+  roleResults,
+  userInterests,
+  userSocialTagGenerations,
+  userSemanticProfiles,
+  assessmentSessions,
+  assessmentAnswers,
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, inArray } from "drizzle-orm";
+import { computeOnboardingNextStep } from "../lib/computeOnboardingNextStep";
 
 export interface UsersRepository {
   getUser(id: string): Promise<User | undefined>;
@@ -31,6 +39,7 @@ export interface UsersRepository {
   markPersonalityTestComplete(id: string): Promise<void>;
   updateUserProfile(id: string, profileData: Partial<User>): Promise<User>;
   updateInterestsTopics(id: string, data: InterestsTopics): Promise<User>;
+  restartOnboarding(id: string): Promise<{ user: User; action: 'restarted' | 'idempotent' | 'already_complete' }>;
 }
 
 export const usersRepo: UsersRepository = {
@@ -263,5 +272,112 @@ export const usersRepo: UsersRepository = {
       .where(eq(users.id, id))
       .returning();
     return user;
+  },
+
+  async restartOnboarding(id: string): Promise<{ user: User; action: 'restarted' | 'idempotent' | 'already_complete' }> {
+    return db.transaction(async (tx: typeof db) => {
+      const [user] = await tx.select().from(users).where(eq(users.id, id));
+      if (!user) {
+        throw new Error('USER_NOT_FOUND');
+      }
+
+      // Idempotency: already in fresh state
+      if (user.hasCompletedPersonalityTest === false && user.onboardingCheckpoint === null) {
+        return { user, action: 'idempotent' };
+      }
+
+      const nextStep = computeOnboardingNextStep(user);
+
+      if (nextStep === 'discover') {
+        return { user, action: 'already_complete' };
+      }
+
+      const currentCount = user.onboardingRestartCount ?? 0;
+      const newCount = Math.min(currentCount + 1, 5);
+
+      const updateData: Partial<User> = {
+        displayName: null,
+        gender: null,
+        currentCity: null,
+        birthdate: null,
+        relationshipStatus: null,
+        educationLevel: null,
+        occupationId: null,
+        workMode: null,
+        hometownRegionCity: null,
+        intent: null,
+        bio: null,
+        preferredLanguages: null,
+        dietaryRestrictions: null,
+        tableVibePreference: null,
+        hasCompletedProfileSetup: false,
+        hasCompletedInterestsTopics: false,
+        hasCompletedPersonalityTest: false,
+        hasCompletedInterestsCarousel: false,
+        hasSeenProfileReview: false,
+        onboardingCheckpoint: null,
+        onboardingCheckpointTimestamp: null,
+        primaryArchetype: null,
+        secondaryArchetype: null,
+        archetype: null,
+        vibeVector: null,
+        roleSubtype: null,
+        personalityTraits: null,
+        interestsDeep: null,
+        interestsTelemetry: null,
+        socialTag: null,
+        wechatContactId: null,
+        industryCategory: null,
+        industryCategoryLabel: null,
+        industrySegmentNew: null,
+        industrySegmentLabel: null,
+        industryNiche: null,
+        industryNicheLabel: null,
+        industryRawInput: null,
+        industryNormalized: null,
+        industrySource: null,
+        industryConfidence: null,
+        industryClassifiedAt: null,
+        industryLastVerifiedAt: null,
+        conversationMode: null,
+        primaryLinguisticStyle: null,
+        conversationEnergy: null,
+        negationReliability: null,
+        inferredTraits: null,
+        inferenceConfidence: null,
+        insightLedger: null,
+        structuredOccupation: null,
+        industrySegment: null,
+        profileImageUrl: null,
+        hasCompletedRegistration: true,
+        onboardingRestartCount: newCount,
+        updatedAt: new Date(),
+      };
+
+      const [updatedUser] = await tx
+        .update(users)
+        .set(updateData)
+        .where(eq(users.id, id))
+        .returning();
+
+      await tx.delete(testResponses).where(eq(testResponses.userId, id));
+      await tx.delete(roleResults).where(eq(roleResults.userId, id));
+      await tx.delete(userInterests).where(eq(userInterests.userId, id));
+      await tx.delete(userSocialTagGenerations).where(eq(userSocialTagGenerations.userId, id));
+      await tx.delete(userSemanticProfiles).where(eq(userSemanticProfiles.userId, id));
+
+      // Clear V4 assessment data so the user gets a completely fresh test
+      const sessionsToClear = await tx
+        .select({ id: assessmentSessions.id })
+        .from(assessmentSessions)
+        .where(eq(assessmentSessions.userId, id));
+      if (sessionsToClear.length > 0) {
+        const sessionIds = sessionsToClear.map((s: { id: string }) => s.id);
+        await tx.delete(assessmentAnswers).where(inArray(assessmentAnswers.sessionId, sessionIds));
+        await tx.delete(assessmentSessions).where(inArray(assessmentSessions.id, sessionIds));
+      }
+
+      return { user: updatedUser, action: 'restarted' };
+    });
   },
 };

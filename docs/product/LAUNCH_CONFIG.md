@@ -95,6 +95,7 @@ For the **wider open beta** cohort, product requires **`PAYMENTS_ENABLED=true`**
 | `WECHAT_PAY_PRIVATE_KEY` | WeChat Pay API v3 private key (PEM) |
 | `WECHAT_PAY_APIV3_KEY` | WeChat Pay API v3 key (exactly 32 bytes). Used for AES-256-GCM webhook decryption. |
 | `WECHAT_PAY_PLATFORM_CERT` | WeChat Pay platform certificate/public key PEM. Required for spec-compliant RSA-SHA256 webhook signature verification outside development. |
+| `WECHAT_PAY_NOTIFY_URL` | Optional override for WeChat Pay webhook notify URL. Defaults to `APP_URL/api/webhooks/wechat-pay` if unset. |
 
 When `PAYMENTS_ENABLED=true`, startup validation fails in production if `WECHAT_PAY_APP_ID`
 and `WECHAT_APPID` differ. JoyJoin's current mini-program JSAPI flow assumes a direct-merchant
@@ -167,6 +168,18 @@ available at the `/api/metrics` endpoint.
 | `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` | Enable **迷你剧本杀** (`mini_script`) phase | `false` |
 | `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA` | Legacy alias for `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` | `false` |
 | `RUN_PLAN_TEMPLATES_ENABLED` | Enable template-driven run plan compiler **and** the 3×3 vibe grid UX (深聊/均衡/暢玩). When `false`, legacy `compileAgentRunPlan()` runs unchanged and clients should hide the vibe selector. When `true`, the server queries DB templates and falls back to the rule engine; clients show the vibe selector. | `false` |
+
+---
+
+## Onboarding & Matching Feature Flags
+
+| Variable | Description | Default |
+|---|---|---|
+| `RESTART_ONBOARDING_ENABLED` | Allow returning users to reset onboarding data via `POST /api/auth/onboarding/restart`. Burns one of 5 lifetime restarts. | `false` |
+| `SMART_PROFESSION_V1_ENABLED` | AI-driven profession understanding with reveal card and auto-classification. When `false`, uses legacy 184-keyword reaction system. | `true` |
+| `ONBOARDING_FORCE_SKIP_ENABLED` | Show a "跳过" force-skip button on onboarding steps for stuck users (admin kill-switch). | `false` |
+| `MATCHING_LIVE_REVEAL_ENABLED` | Show live reveal overlay in matching status before group detail. When `false`, skips overlay. | `true` |
+| `VENUE_ASSIGNMENT_ENABLED` | Auto-assign venues to groups after pool matching. When `false`, manual assignment required. | `true` |
 
 ---
 

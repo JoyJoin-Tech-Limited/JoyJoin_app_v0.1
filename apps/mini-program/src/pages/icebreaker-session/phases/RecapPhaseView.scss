@@ -411,6 +411,13 @@
   width: 100%;
 }
 
+// ── Farewell bubble ──────────────────────────────────────────────
+.icebreaker__recap-farewell {
+  width: 100%;
+  max-width: 640rpx;
+  margin-top: $spacing-sm;
+}
+
 // ── Leave button ─────────────────────────────────────────────────
 .icebreaker__recap-leave-btn {
   width: 100%;

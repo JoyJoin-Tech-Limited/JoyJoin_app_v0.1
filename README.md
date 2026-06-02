@@ -7,7 +7,7 @@ This is the JoyJoin application monorepo, managed with **npm workspaces**.
 ```
 /
 ├── apps/
-│   ├── user-client/     # React 18 + Vite PWA (user-facing, port 5001)
+│   ├── user-client/     # Archived — moved to `archived/workspaces/user-client/` (was React 18 + Vite PWA, port 5001)
 │   ├── admin-client/    # React 18 + Vite admin portal (port 5002, deployed to admin.joyjoinapp.com)
 │   └── server/          # Node.js + Express API server (recommended local port 5000 via PORT env)
 ├── packages/
@@ -23,7 +23,7 @@ This is the JoyJoin application monorepo, managed with **npm workspaces**.
 
 | Workspace | Package name | Purpose |
 |-----------|-------------|---------|
-| `apps/user-client` | `@joyjoin/user-client` | User-facing React PWA |
+| `apps/user-client` | `@joyjoin/user-client` | Archived (moved to `archived/workspaces/user-client/`) |
 | `apps/admin-client` | `@joyjoin/admin-client` | Internal admin portal |
 | `apps/server` | `@joyjoin/server` | Express API, WebSocket, DB |
 | `packages/shared` | `@joyjoin/shared` | Types, schemas, constants, domain logic shared across apps |
@@ -37,7 +37,7 @@ This is the JoyJoin application monorepo, managed with **npm workspaces**.
 | Personality / archetype engine | `packages/shared/src/personality/` |
 | Shared constants and vocabularies | `packages/shared/src/constants.ts`, `districts.ts`, `occupations.ts`, etc. |
 | UI primitives used by both clients | `packages/shared/src/ui/` |
-| User-client-only components/hooks | `apps/user-client/src/` |
+| Mini-program-only components/hooks | `apps/mini-program/src/` |
 | Admin-client-only components/hooks | `apps/admin-client/src/` |
 | API routes, services, DB queries | `apps/server/src/` |
 
@@ -163,14 +163,7 @@ COOKIE_DOMAIN=
 
 Frontend Vite variables are different:
 
-- `VITE_ADMIN_PORTAL_URL` should be set in `apps/user-client/.env.local` (or exported in the shell before `npm run dev:user`)
-- `VITE_API_URL` is optional/advanced and should only be set in `apps/admin-client/.env.local`, `apps/user-client/.env.local`, or the shell for the app you are starting if you intentionally want a non-default API target
-
-Example user-client override file:
-
-```bash
-echo 'VITE_ADMIN_PORTAL_URL=http://localhost:5002/admin' >> apps/user-client/.env.local
-```
+- `VITE_API_URL` is optional/advanced and should only be set in `apps/admin-client/.env.local` or the shell for the app you are starting if you intentionally want a non-default API target
 
 Generate secure secrets with:
 
@@ -192,7 +185,7 @@ The repo uses the following environment variables in active local and optional f
 | `ADMIN_CREATE_SECRET_KEY` | Secret required by the admin/user bootstrap CLIs and local dev tools | Dev bootstrap tooling (admin + user seed/bypass) |
 | `VITE_API_URL` | Optional: custom API base URL for frontend builds. See note below for usage guidance. | Both (optional advanced config) |
 | `COOKIE_DOMAIN` | Cookie domain override; leave blank for localhost | Both (optional) |
-| `VITE_ADMIN_PORTAL_URL` | Where the user app redirects admin links; set `http://localhost:5002/admin` locally in `apps/user-client/.env.local` or via shell export before starting Vite | User app only |
+| `VITE_ADMIN_PORTAL_URL` | Where the user app redirects admin links; set `http://localhost:5002/admin` locally in the relevant client `.env.local` or via shell export before starting Vite | User app only |
 | `ENABLE_DEV_AUTH_TOOLS` | Enables non-production auth/debug helper routes | Both (optional local debugging) |
 | `DEBUG_AUTH` | Enables extra auth logging in non-production | Both (optional local debugging) |
 | `VITE_ENABLE_DEV_TOOLS` | Enables client-side dev tools in the user app when `import.meta.env.DEV` is true | User app only (optional) |
@@ -275,7 +268,6 @@ Start each process in its own terminal from the repo root:
 
 ```bash
 npm run dev:server
-npm run dev:user
 npm run dev:admin
 ```
 
@@ -288,11 +280,9 @@ Notes:
 #### 5.1 Running as a regular user
 
 1. Start the API server with `npm run dev:server`.
-2. Start the user-facing app with `npm run dev:user`.
-3. Open `http://localhost:5001`.
-4. Sign in with the normal user flow.
-- Mini-program uses WeChat auth (`微信一键登录`). For local server API testing, use `POST /api/auth/dev-login` (development-only).
-- If you need a fully prepared test user, run `npm run user:create` first.
+2. The primary user-facing client is the WeChat Mini Program (`apps/mini-program`). Build it with `npm run dev:weapp --workspace=mini-program` and preview in WeChat DevTools.
+3. For local server API testing, use `POST /api/auth/dev-login` (development-only).
+4. If you need a fully prepared test user, run `npm run user:create` first.
 5. Expected result: you can log in and use non-admin features such as discovery, onboarding, and the profile pages.
 
 #### 5.2 Running as an admin
@@ -301,7 +291,7 @@ JoyJoin runs the admin experience as a **separate frontend app** plus the shared
 
 1. Start the API server with `npm run dev:server`.
 2. Start the admin portal with `npm run dev:admin`.
-3. If you also want admin links from the user app to stay local, set `VITE_ADMIN_PORTAL_URL=http://localhost:5002/admin` in `apps/user-client/.env.local` (or export it before running `npm run dev:user`).
+3. If you also want admin links from a local web build to stay local, set `VITE_ADMIN_PORTAL_URL=http://localhost:5002/admin` in the relevant client `.env.local` (or export it before starting Vite).
 4. Create an admin account if you have not done so already:
 
 ```bash
@@ -316,10 +306,10 @@ npm run admin:create -- <username> <password> "$ADMIN_CREATE_SECRET_KEY"
 
 Verify the local setup for both roles:
 
-- **Regular user**
-  1. Visit `http://localhost:5001`.
-  2. Log in.
-  3. Open `http://localhost:5001/profile`.
+- **Regular user (mini-program)**
+  1. Build the mini-program with `npm run dev:weapp --workspace=mini-program`.
+  2. Preview in WeChat DevTools and complete WeChat login.
+  3. Open the profile page.
   4. Confirm your profile loads without a 401/500 error.
 
 - **Admin**
@@ -349,9 +339,9 @@ Verify the local setup for both roles:
   - Symptom: login succeeds, but `/api/admin/stats` returns 500.
   - Fix: this usually means DB schema drift (missing columns in `users` table). Run non-destructive migration steps first and avoid destructive `db:push` options on existing data.
 
-- **User app redirects admin links to production**
-  - Symptom: clicking an admin link from the user app sends you to `https://admin.joyjoinapp.com`.
-  - Fix: set `VITE_ADMIN_PORTAL_URL=http://localhost:5002/admin` in `apps/user-client/.env.local` (or export it in the shell before `npm run dev:user`), then restart the user app.
+- **Web client redirects admin links to production**
+  - Symptom: clicking an admin link from a local web build sends you to `https://admin.joyjoinapp.com`.
+  - Fix: set `VITE_ADMIN_PORTAL_URL=http://localhost:5002/admin` in the relevant client `.env.local` (or export it in the shell before starting Vite), then restart the client.
 
 ## Validation commands
 
@@ -391,7 +381,7 @@ Run `npm run dep-check` to verify ownership is correct.
 The GitHub Actions pipeline (`.github/workflows/cicd.yml`) runs on push to `main`:
 
 1. **Guardrails** — env files, secrets, legacy identifiers, import boundaries
-2. **Typecheck** — TypeScript for user-client, admin-client, and server
+2. **Typecheck** — TypeScript for mini-program, admin-client, and server
 3. **AI simulation test** — runs 100 AI simulation iterations
 4. **Deploy** — SSH deployment with Docker Compose + schema push
 

@@ -34,7 +34,7 @@ interface JoyJoinLoadingScreenProps {
  * - Safe area padding
  * - prefers-reduced-motion support
  * - 6s settle timeout (A4)
- * - CDN fallback to local box-logo (A3)
+ * - CDN fallback to local joyjoin-logo (A3)
  * - Archetype-aware whisper copy (B2)
  */
 export default function JoyJoinLoadingScreen({

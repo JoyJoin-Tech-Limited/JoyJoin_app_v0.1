@@ -14,10 +14,22 @@ export {
   cityUnlockProgress,
   insertUserCityInterestSchema,
   insertCityUnlockProgressSchema,
+  assessmentSessions,
+  assessmentAnswers,
+  insertAssessmentSessionSchema,
+  insertAssessmentAnswerSchema,
+  featureFlags,
+  insertFeatureFlagSchema,
 } from './_definitions_extended.js';
 export type {
   UserCityInterest,
   InsertUserCityInterest,
   CityUnlockProgress,
   InsertCityUnlockProgress,
+  AssessmentSession,
+  InsertAssessmentSession,
+  AssessmentAnswer,
+  InsertAssessmentAnswer,
+  FeatureFlag,
+  InsertFeatureFlag,
 } from './_definitions_extended.js';

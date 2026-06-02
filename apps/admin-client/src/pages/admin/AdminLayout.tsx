@@ -39,6 +39,7 @@ const AdminPricingPage = lazy(() => import("@/pages/admin/AdminPricingPage"));
 const AdminEvolutionPage = lazy(() => import("@/pages/admin/AdminEvolutionPage"));
 const AdminAccountsPage = lazy(() => import("@/pages/admin/AdminAccountsPage"));
 const AdminAuditLogsPage = lazy(() => import("@/pages/admin/AdminAuditLogsPage"));
+const AdminFeatureFlagsPage = lazy(() => import("@/pages/admin/AdminFeatureFlagsPage"));
 
 export default function AdminLayout() {
   const { user } = useAuth();
@@ -112,6 +113,7 @@ export default function AdminLayout() {
                 <Route path="/admin/evolution" component={AdminEvolutionPage} />
                 <Route path="/admin/accounts" component={AdminAccountsPage} />
                 <Route path="/admin/audit-logs" component={AdminAuditLogsPage} />
+                <Route path="/admin/feature-flags" component={AdminFeatureFlagsPage} />
               </Switch>
             </Suspense>
           </main>
