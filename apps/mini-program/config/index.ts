@@ -158,10 +158,51 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/icons/phase-icons/phase-quip-battle.webp',
           to: 'dist/assets/landing-phase-icons/phase-quip-battle.webp',
         },
-        // NOTE: All other phase icons, archetype heads, empty states, QR, lovart,
-        // matching, promo, and mascot images remain on CDN to stay under the 2MB
-        // main package limit. Use routePreloadAssets.ts for smart background loading.
-        // Run `npm run upload:cdn-assets` after adding or updating CDN assets.
+        // Archetype head icons — tiny (~45KB total), used everywhere for avatars.
+        {
+          from: 'src/assets/icons/archetype',
+          to: 'dist/assets/icons/archetype',
+        },
+        // Empty state illustrations — shown when center-hub is empty (~12KB).
+        {
+          from: 'src/assets/empty-state',
+          to: 'dist/assets/empty-state',
+        },
+        // Auction phase coin icons — tiny game UI elements (~23KB).
+        // Copied to a dedicated directory so the clean step doesn't remove them
+        // (the clean step wipes the entire lovart/ tree for CDN assets).
+        {
+          from: 'src/assets/lovart/icebreaker/icons/icon-coin-single.png',
+          to: 'dist/assets/auction-icons/icon-coin-single.png',
+        },
+        {
+          from: 'src/assets/lovart/icebreaker/icons/icon-coin-stack.png',
+          to: 'dist/assets/auction-icons/icon-coin-stack.png',
+        },
+        {
+          from: 'src/assets/lovart/icebreaker/icons/icon-coin-empty.png',
+          to: 'dist/assets/auction-icons/icon-coin-empty.png',
+        },
+        // Customer service QR code — critical for support (~11KB).
+        {
+          from: 'src/assets/qr',
+          to: 'dist/assets/qr',
+        },
+        // Xiaoyue expressions — loading + welcome are critical first-impression assets.
+        // Copied to a dedicated directory so the clean step doesn't remove them
+        // (the clean step wipes the entire personality/ tree for CDN assets).
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-loading-system.webp',
+          to: 'dist/assets/xiaoyue-expressions/xiaoyue-loading-system.webp',
+        },
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-home-welcome.webp',
+          to: 'dist/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp',
+        },
+        // NOTE: All other phase icons, lovart backgrounds, celebration images,
+        // matching heroes, promo banners, and remaining mascot images stay on CDN
+        // to keep the main package under 2MB. Use routePreloadAssets.ts for smart
+        // background loading. Run `npm run upload:cdn-assets` after updating CDN assets.
       ],
       options: {
       }

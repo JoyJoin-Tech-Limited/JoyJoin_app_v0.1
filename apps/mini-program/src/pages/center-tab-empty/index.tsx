@@ -1,6 +1,6 @@
 import { Image, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { localAsset } from '../../lib/utils/cdnAssets'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import Button from '../../components/ui/Button'
 import BottomNav from '../../components/BottomNav'
@@ -17,12 +17,12 @@ export default function CenterTabEmptyPage() {
         <View className='center-tab-empty__art'>
           <Image
             className='center-tab-empty__art-bg'
-            src={cdnAsset('/assets/empty-state/center-empty-bg.webp')}
+            src={localAsset('/assets/empty-state/center-empty-bg.webp')}
             mode='aspectFill'
           />
           <Image
             className='center-tab-empty__art-illustration'
-            src={cdnAsset('/assets/empty-state/center-empty-illustration.webp')}
+            src={localAsset('/assets/empty-state/center-empty-illustration.webp')}
             mode='aspectFit'
           />
         </View>

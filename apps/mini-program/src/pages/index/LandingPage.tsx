@@ -25,7 +25,7 @@ const LANDING_PHASE_ICONS: Record<string, string> = {
 }
 
 /** Mascot — loaded from CDN. Preloaded via routePreloadAssets. */
-const MASCOT_SRC = cdnAsset('/assets/personality/xiaoyue/xiaoyue-home-welcome.webp')
+const MASCOT_SRC = localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')
 
 export default function MiniProgramLandingPage() {
   const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false)

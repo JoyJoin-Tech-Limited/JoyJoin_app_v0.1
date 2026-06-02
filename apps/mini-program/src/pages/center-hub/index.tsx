@@ -1,7 +1,7 @@
 import { View, Text, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useMemo } from 'react'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { useQuery } from '@tanstack/react-query'
 import {
   getMyBlindBoxEvents,
@@ -271,7 +271,7 @@ export default function CenterHubPage() {
           <View className='center-hub__header'>
             <Image
               className='center-hub__header-mascot'
-              src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-home-welcome.webp')}
+              src={localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')}
               mode='aspectFit'
               lazyLoad
             />

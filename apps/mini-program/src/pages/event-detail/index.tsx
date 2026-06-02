@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, Button, Image } from '@tarojs/components'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { type BlindBoxEventDetail } from '@shared/api'
@@ -18,7 +18,7 @@ export default function EventDetailPage() {
   const eventId = router.params.id ?? ''
   const { isLoading: authLoading } = useAuthGuard()
   const { isExiting, navigateBack } = useJoyJoinNavigation()
-  const supportQrSrc = cdnAsset('/assets/qr/customer-service-support.png')
+  const supportQrSrc = localAsset('/assets/qr/customer-service-support.png')
   const pageClass = `event-detail ${isExiting ? 'event-detail--exiting' : ''}`
 
   const { data: event, isLoading, error } = useQuery<BlindBoxEventDetail>({
