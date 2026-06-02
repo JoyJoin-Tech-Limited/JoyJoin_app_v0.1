@@ -125,6 +125,31 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/icons/status-icons',
           to: 'dist/assets/icons/status-icons',
         },
+        // Category icons — interest category labels in onboarding (~13KB @1x / ~38KB all).
+        {
+          from: 'src/assets/icons/category-icons',
+          to: 'dist/assets/icons/category-icons',
+        },
+        // Intent icons — social intent selectors in onboarding (~17KB @1x / ~48KB all).
+        {
+          from: 'src/assets/icons/intent-icons',
+          to: 'dist/assets/icons/intent-icons',
+        },
+        // Reaction icons — icebreaker phase reactions (~11KB @1x / ~38KB all).
+        {
+          from: 'src/assets/icons/reaction-icons',
+          to: 'dist/assets/icons/reaction-icons',
+        },
+        // Reveal icons — matching common ground reveals (~17KB @1x / ~62KB all).
+        {
+          from: 'src/assets/icons/reveal-icons',
+          to: 'dist/assets/icons/reveal-icons',
+        },
+        // Achievement badges — personality test milestones (~14KB @1x / ~51KB all).
+        {
+          from: 'src/assets/icons/achievement-badges',
+          to: 'dist/assets/icons/achievement-badges',
+        },
         // Quicksand English brand font (~124KB).
         {
           from: 'src/assets/fonts/Quicksand',

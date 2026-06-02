@@ -74,7 +74,8 @@ export const SPRITE_SHEET_ASSETS = [
 ]
 
 /** Common icebreaker reaction icon CDN paths.
- *  ⚠️ Now locally bundled — kept for backward compat but preloading is optional. */
+ *  ⚠️ Now locally bundled — these are copied to dist/assets/ by the build.
+ *  Preloading from CDN is no longer necessary. */
 export const ICEBREAKER_REACTION_ASSETS = [
   '/assets/icons/reaction-icons/reaction-funny.webp',
   '/assets/icons/reaction-icons/reaction-fire.webp',
@@ -86,7 +87,8 @@ export const ICEBREAKER_REACTION_ASSETS = [
 ]
 
 /** Common icebreaker reveal icon CDN paths.
- *  ⚠️ Now locally bundled — kept for backward compat but preloading is optional. */
+ *  ⚠️ Now locally bundled — these are copied to dist/assets/ by the build.
+ *  Preloading from CDN is no longer necessary. */
 export const ICEBREAKER_REVEAL_ASSETS = [
   '/assets/icons/reveal-icons/reveal-same-relationship.webp',
   '/assets/icons/reveal-icons/reveal-same-archetype-band.webp',
@@ -96,7 +98,8 @@ export const ICEBREAKER_REVEAL_ASSETS = [
 ]
 
 /** Common achievement badge CDN paths (top 5 most likely).
- *  ⚠️ Now locally bundled — kept for backward compat but preloading is optional. */
+ *  ⚠️ Now locally bundled — these are copied to dist/assets/ by the build.
+ *  Preloading from CDN is no longer necessary. */
 export const COMMON_ACHIEVEMENT_ASSETS = [
   '/assets/icons/achievement-badges/achievement-first-answer.webp',
   '/assets/icons/achievement-badges/achievement-quick-thinker.webp',

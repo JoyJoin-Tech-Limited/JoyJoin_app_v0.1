@@ -49,6 +49,23 @@ function getReducedMotion(): boolean {
 
 const REDUCED_MOTION = getReducedMotion()
 
+/** Detect device pixel ratio for retina icon selection.
+ *  WeChat base library typically reports 2 (iPhone) or 3 (Android flagship / iPhone Pro).
+ *  Clamp to 1–3 since we only ship those densities. */
+function getDevicePixelRatio(): 1 | 2 | 3 {
+  try {
+    const info = Taro.getSystemInfoSync()
+    const ratio = Math.round((info as any).pixelRatio ?? 1)
+    if (ratio >= 3) return 3
+    if (ratio >= 2) return 2
+    return 1
+  } catch {
+    return 1
+  }
+}
+
+const DEVICE_PIXEL_RATIO = getDevicePixelRatio()
+
 export default function JoyJoinIcon({
   emoji,
   size,
@@ -100,7 +117,7 @@ export default function JoyJoinIcon({
   // Resolve asset path — all tiers now use root-relative local paths
   let src: string
   try {
-    const assetPath = getIconAssetPath(mapping.assetKey, mapping.tier, 1)
+    const assetPath = getIconAssetPath(mapping.assetKey, mapping.tier, DEVICE_PIXEL_RATIO)
     if (CDN_ICON_TIERS.has(mapping.tier)) {
       src = assetPath
     } else {
