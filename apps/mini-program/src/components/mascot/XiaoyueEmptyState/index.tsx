@@ -1,6 +1,6 @@
 import { View, Image, Text } from '@tarojs/components'
 import { useState } from 'react'
-import { localAsset } from '@/lib/utils/cdnAssets'
+import { cdnAsset } from '@/lib/utils/cdnAssets'
 
 interface XiaoyueEmptyStateProps {
   emotion: 'coaching' | 'celebration' | 'waiting' | 'sad' | 'curious' | 'events'
@@ -29,15 +29,30 @@ export default function XiaoyueEmptyState({
   const dim = SIZE_MAP[size]
   return (
     <View className='xiaoyue-empty-state'>
-      {!imgError && (
+      {!imgError ? (
         <Image
           className='xiaoyue-empty-state__mascot'
-          src={localAsset(`/assets/personality/xiaoyue/${EMOTION_MAP[emotion]}.webp`)}
+          src={cdnAsset(`/assets/personality/xiaoyue/${EMOTION_MAP[emotion]}.webp`)}
           style={{ width: `${dim}rpx`, height: `${dim}rpx` }}
           mode='aspectFit'
           lazyLoad
           onError={() => setImgError(true)}
         />
+      ) : (
+        <View
+          className='xiaoyue-empty-state__mascot-fallback'
+          style={{
+            width: `${dim}rpx`,
+            height: `${dim}rpx`,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={{ fontSize: `${dim * 0.4}rpx` }}>✨</Text>
+        </View>
       )}
       <Text className='xiaoyue-empty-state__title'>{title}</Text>
       {subtitle && <Text className='xiaoyue-empty-state__subtitle'>{subtitle}</Text>}

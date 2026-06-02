@@ -127,11 +127,18 @@ Assets are **CDN-first** in production. The build inlines `TARO_APP_CDN_BASE_URL
 | `npm run check:package-size` | Audit mini-program bundle size against budget |
 
 **Active copy patterns** (`config/index.ts`) — only critical bundled assets:
-- `src/assets/tab-icons` → `dist/assets/tab-icons` (tab bar icons, must be local)
-- `src/assets/joyjoin-logo.webp` → `dist/assets/joyjoin-logo.webp` (native tab bar center button)
+- `src/assets/tab-icons` → `dist/assets/tab-icons` (~52KB, tab bar icons — must be local)
+- `src/assets/joyjoin-logo.webp` → `dist/assets/joyjoin-logo.webp` (~94KB, native tab bar center button)
+- `src/assets/tab-bar-notch-bg.png` → `dist/assets/tab-bar-notch-bg.png` (~3KB, custom tab bar notch)
 - `src/native-custom-tab-bar/` → `dist/custom-tab-bar/`
 - `src/pages/onboarding/assets/archetypes` → `dist/pages/onboarding/assets/archetypes` (subpackage assets)
-- `src/assets/icons/*` → `dist/assets/icons/*` (proprietary icon system — reaction, category, intent, reveal, achievement, chemistry, status, info-label, rating-face, mood, phase tiers; see **Proprietary Icon System** below)
+- `src/assets/icons/mood-icons` → `dist/assets/icons/mood-icons` (~3KB, bundled)
+- `src/assets/icons/chemistry-badges` → `dist/assets/icons/chemistry-badges` (~8KB, bundled)
+- `src/assets/icons/status-icons` → `dist/assets/icons/status-icons` (~3KB, bundled)
+- `src/assets/fonts/Quicksand` → `dist/assets/fonts/Quicksand` (~124KB, English brand font)
+- `src/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2` → `dist/assets/fonts/Alimama/...` (~66KB, minimal Chinese display font; full 621KB font loads from CDN)
+
+> Other icon tiers (reaction, category, intent, reveal, achievement, info-label, rating-face, phase) and all illustration assets are loaded from CDN via `cdnAsset()`. See `routePreloadAssets.ts` for per-route preload configuration.
 
 ### Proprietary Icon System
 

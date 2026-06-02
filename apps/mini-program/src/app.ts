@@ -13,7 +13,7 @@ import { DynamicAccentProvider } from './providers/DynamicAccentProvider'
 import { AchievementProvider } from './providers/AchievementProvider'
 import AchievementPopup from './components/AchievementPopup'
 import './app.scss'
-import { loadBrandDisplayFont } from './lib/utils/brandFont'
+import { loadBrandFonts } from './lib/utils/brandFont'
 import { useProfessionRetry } from './hooks/useProfessionRetry'
 import { preloadCdnAssets, ARCHETYPE_GLYPH_ASSETS } from './hooks/usePreloadCdnIcons'
 
@@ -125,10 +125,10 @@ function PendingOrderResumeBridge() {
 function App({ children }: PropsWithChildren<any>) {
   useLaunch(() => {
     logInfo('JoyJoin Mini Program launched')
-    // Defer font load so it does not compete with first paint.
-    // The guard in brandFont.ts prevents double-load when LandingPage
-    // (or any other screen) also calls it eagerly.
-    setTimeout(() => loadBrandDisplayFont(), 100)
+    // Load brand font immediately — no delay. The guard in brandFont.ts
+    // prevents double-load when individual screens also trigger it.
+    // WeChat caches loaded fonts, so repeat opens are instant.
+    loadBrandFonts()
 
     // Preload CDN-only archetype glyphs in the background so they are
     // warm when the user reaches profile / matching / results screens.

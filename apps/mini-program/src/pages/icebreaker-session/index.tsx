@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
-import { localAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
@@ -574,7 +574,7 @@ export default function IcebreakerSessionPage() {
         <View className='icebreaker__error'>
           <Image
             className='icebreaker__error-hero'
-            src={localAsset('/assets/lovart/lovart-generic-error.webp')}
+            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             mode='aspectFit'
             lazyLoad
           />
@@ -667,11 +667,12 @@ export default function IcebreakerSessionPage() {
     !!session.currentLieDetectiveReveal &&
     (session.currentLieDetectivePlayerIndex ?? 0) < (session.lieDetectivePlayers?.length ?? 0) - 1
 
+  // CSS custom properties for challenge-card backgrounds.
+  // Primary rendering is via <ChallengeCardBgImage> inside each card.
+  // These vars act as a secondary fallback if the Image component fails.
   const bgStyles = useMemo(() => {
-    const p = (path: string) => `url(${localAsset(path)})`
+    const p = (path: string) => `url(${cdnAsset(path)})`
     const phaseBgMap: Record<string, React.CSSProperties> = {
-      auction: { '--bg-auction': p('/assets/lovart/icebreaker/backgrounds/bg-auction.jpg') } as React.CSSProperties,
-      personality_dice: { '--bg-personality-dice': p('/assets/lovart/icebreaker/backgrounds/bg-personality-dice.jpg') } as React.CSSProperties,
       undercover_word: { '--bg-undercover-word': p('/assets/lovart/icebreaker/backgrounds/bg-undercover-word.jpg') } as React.CSSProperties,
       group_mirror: { '--bg-group-mirror': p('/assets/lovart/icebreaker/backgrounds/bg-group-mirror.jpg') } as React.CSSProperties,
       quip_battle: { '--bg-quip-battle': p('/assets/lovart/icebreaker/backgrounds/bg-quip-battle.jpg') } as React.CSSProperties,
@@ -689,7 +690,7 @@ export default function IcebreakerSessionPage() {
         <View className='icebreaker__phase-toast'>
           <Image
             className='icebreaker__phase-toast-mascot'
-            src={localAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+            src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
             mode='aspectFit'
           />
           <View className='icebreaker__phase-toast-text'>{phaseToast.text}</View>

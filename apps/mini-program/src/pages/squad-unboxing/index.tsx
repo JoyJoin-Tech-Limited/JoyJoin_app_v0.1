@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
-import { localAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { useRouter } from '@tarojs/taro'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
@@ -69,7 +69,7 @@ export default function SquadUnboxingPage() {
         <View className='squad-unboxing__error'>
           <Image
             className='squad-unboxing__error-hero'
-            src={localAsset('/assets/lovart/lovart-generic-error.webp')}
+            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             mode='aspectFit'
             lazyLoad
             ariaLabel='加载失败'

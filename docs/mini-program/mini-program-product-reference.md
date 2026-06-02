@@ -1,7 +1,7 @@
 # Mini-Program Product Reference
 
 > **Status:** Active launch-primary mini-program reference for `apps/mini-program`.
-> **Last verified:** 2026-05-26.
+> **Last verified:** 2026-06-02.
 > **Non-replacement note:** This document does **not** replace [`../PRODUCT_REQUIREMENTS.md`](../PRODUCT_REQUIREMENTS.md) or [`../apps/mini-program/README.md`](../apps/mini-program/README.md). It is a compact product-to-code bridge for the live WeChat mini-program surface.
 > **Authority chain:** 1. [`../PRODUCT_REQUIREMENTS.md`](../PRODUCT_REQUIREMENTS.md) for product canon and terminology. 2. [`../apps/mini-program/README.md`](../apps/mini-program/README.md), [`./architecture/current-state.md`](./architecture/current-state.md), [`./systems/onboarding-flow.md`](./systems/onboarding-flow.md), and [`./reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md) for runtime ownership and flow rules. 3. [`../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts), [`../apps/mini-program/src/app.config.ts`](../apps/mini-program/src/app.config.ts), [`../apps/mini-program/src/lib/api/api.ts`](../apps/mini-program/src/lib/api/api.ts), [`../packages/shared/src/README.md`](../packages/shared/src/README.md), [`../packages/shared/src/schema.ts`](../packages/shared/src/schema.ts), and [`../apps/server/src/README.md`](../apps/server/src/README.md) for active route, contract, and backend truth.
 
@@ -205,7 +205,7 @@ Default rule: if a mini-program task touches auth, payment, pricing, or another 
 | Launch-critical server env | [`./product/LAUNCH_CONFIG.md`](./product/LAUNCH_CONFIG.md) | `DATABASE_URL`, `SESSION_SECRET`, `WECHAT_APPID`, and `WECHAT_SECRET` are required; `PAYMENTS_ENABLED` gates live payment availability. |
 | WeChat Pay enablement | [`./product/LAUNCH_CONFIG.md`](./product/LAUNCH_CONFIG.md) | When payments are enabled, the WeChat Pay variables must also be configured and stay consistent with the mini-program app identity. |
 | Tab bar and shell runtime | [`../apps/mini-program/README.md`](../apps/mini-program/README.md), [`../apps/mini-program/src/app.config.ts`](../apps/mini-program/src/app.config.ts) | The active runtime uses a native custom tab bar with `tabBar.custom: true`. |
-| Asset delivery | [`../apps/mini-program/README.md`](../apps/mini-program/README.md), [`../apps/mini-program/scripts/cdn-asset-manifest.json`](../apps/mini-program/scripts/cdn-asset-manifest.json) | CDN-first via `cdnAsset()`. Production builds require `TARO_APP_CDN_BASE_URL` in `.env.local`. Validator: `npm run validate:assets`. |
+| Asset delivery | [`../apps/mini-program/README.md`](../apps/mini-program/README.md), [`../apps/mini-program/scripts/cdn-asset-manifest.json`](../apps/mini-program/scripts/cdn-asset-manifest.json) | CDN-first via `cdnAsset()`. Production builds require `TARO_APP_CDN_BASE_URL` in `.env.local`. Two-tier font loading: minimal Alimama subset (66KB) bundled + full font (621KB) from CDN. Route-based preloading via `routePreloadAssets.ts`. Icebreaker card backgrounds use `<ChallengeCardBgImage>` (WeChat-safe `<Image>` component) instead of CSS `background-image`. Validator: `npm run validate:assets`. |
 
 ## 12. QA and maintenance
 

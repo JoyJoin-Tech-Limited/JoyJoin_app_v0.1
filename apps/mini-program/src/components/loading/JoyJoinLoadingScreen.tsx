@@ -2,7 +2,7 @@ import { View, Text, Image } from '@tarojs/components'
 import { useState, useEffect, useMemo } from 'react'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
-import { localAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { getRandomWhisper } from '../../lib/utils/loadingWhispers'
 import { logInfo } from '../../lib/utils/logger'
 import './JoyJoinLoadingScreen.scss'
@@ -74,7 +74,7 @@ export default function JoyJoinLoadingScreen({
           mode='aspectFit'
           onError={() => {
             logInfo('[JoyJoinLoadingScreen] CDN fallback triggered', { original: imgSrc })
-            setImgSrc(localAsset('/assets/personality/xiaoyue/xiaoyue-loading-system.webp'))
+            setImgSrc(cdnAsset('/assets/personality/xiaoyue/xiaoyue-loading-system.webp'))
           }}
         />
 

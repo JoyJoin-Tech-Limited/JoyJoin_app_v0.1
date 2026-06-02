@@ -1,5 +1,7 @@
 import { View, Text, Image } from '@tarojs/components'
-import { localAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { loadBrandDisplayFont } from '../../lib/utils/brandFont'
+import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
 import Taro, { usePullDownRefresh } from '@tarojs/taro'
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -280,6 +282,15 @@ function AuthenticatedDiscover() {
     queryKey: ['mini-program', 'my-pool-registrations'],
     queryFn: () => getMyPoolRegistrations(apiRequest),
   })
+
+  // ── Eager font + asset preload ──
+  // Load brand font immediately (guard prevents double-load from app.ts).
+  // Preload promo banners + predictive assets in background.
+  useEffect(() => {
+    loadBrandDisplayFont()
+    preloadRouteAssets('pages/discover/index')
+    preloadPredictiveAssets('pages/discover/index')
+  }, [])
 
   // ── Geo detection effect ──
   // Asynchronously detect user location for proximity sorting.
@@ -581,7 +592,7 @@ function AuthenticatedDiscover() {
           <StatusCard
             className='discover-auth__empty-state'
             tone='error'
-            heroSrc={localAsset('/assets/lovart/lovart-generic-error.webp')}
+            heroSrc={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             title='获取列表遇到小状况'
             description='下拉刷新一下就好'
           />
@@ -612,7 +623,7 @@ function AuthenticatedDiscover() {
           <StatusCard
             className='discover-auth__empty-state'
             tone='empty'
-            heroSrc={localAsset('/assets/lovart/lovart-generic-empty.webp')}
+            heroSrc={cdnAsset('/assets/lovart/lovart-generic-empty.webp')}
             title='还没有适合你的活动'
             description={
               selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID

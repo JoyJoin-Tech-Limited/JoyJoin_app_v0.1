@@ -7,6 +7,7 @@ import { buildSocialPath } from '../icebreakerSessionModel';
 import { CelebrationOverlay } from '../overlays/CelebrationOverlay';
 import { CardFlip, IdentityReveal, ParticleBurst } from '../../../components/reveal';
 import { TapReaction } from '../../../components/gesture';
+import ChallengeCardBgImage from '../components/ChallengeCardBgImage';
 
 interface GroupMirrorPhaseViewProps {
   socialSessionId: string;
@@ -193,6 +194,7 @@ export default function GroupMirrorPhaseView({
     return (
       <View className='icebreaker__phase'>
         <Card className='icebreaker__challenge-card icebreaker__challenge-card--group-mirror icebreaker__challenge-card--has-bg'>
+          <ChallengeCardBgImage phase='group-mirror' />
           <Text className='icebreaker__phase-title'>群像镜像</Text>
           <Text className='icebreaker__phase-subtitle'>匿名投票，看看大家眼中的彼此</Text>
           {isHost ? (
@@ -221,6 +223,7 @@ export default function GroupMirrorPhaseView({
           onDismiss={() => setShowResult(false)}
         />
         <Card className='icebreaker__challenge-card icebreaker__challenge-card--group-mirror icebreaker__challenge-card--has-bg'>
+          <ChallengeCardBgImage phase='group-mirror' />
           <Text className='icebreaker__phase-title'>群像镜像 · 揭晓</Text>
 
           {/* V2: IdentityReveal spotlight on overall winner */}
@@ -294,8 +297,9 @@ export default function GroupMirrorPhaseView({
   return (
     <View className='icebreaker__phase'>
       <Card className='icebreaker__challenge-card icebreaker__challenge-card--group-mirror icebreaker__challenge-card--has-bg'>
-        <Text className='icebreaker__phase-title'>群像镜像</Text>
-        <Text className='icebreaker__phase-subtitle'>为每个问题选择最符合的人</Text>
+          <ChallengeCardBgImage phase='group-mirror' />
+          <Text className='icebreaker__phase-title'>群像镜像</Text>
+          <Text className='icebreaker__phase-subtitle'>为每个问题选择最符合的人</Text>
 
         {/* V2: TapReaction for spectator throws */}
         {!hasSubmitted && !revealed && (

@@ -710,6 +710,15 @@ $__gold-accent:  $color-landed-gold;
     position: relative;
     overflow: hidden;
 
+    // Background image layer (WeChat-safe <Image> component)
+    .icebreaker__challenge-card-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
     // Text readability overlay for image backgrounds
     &--has-bg::before {
       content: '';
@@ -723,32 +732,29 @@ $__gold-accent:  $color-landed-gold;
       );
       border-radius: inherit;
       pointer-events: none;
-      z-index: 0;
-    }
-
-    &--has-bg > * {
-      position: relative;
       z-index: 1;
     }
 
-    // Per-phase proprietary backgrounds (Lovart) — injected via CSS vars from parent
-    &--auction {
-      background: var(--bg-auction) center/cover no-repeat;
+    &--has-bg > *:not(.icebreaker__challenge-card-bg) {
+      position: relative;
+      z-index: 2;
     }
 
-    &--personality-dice {
-      background: var(--bg-personality-dice) center/cover no-repeat;
-    }
-
+    // Per-phase proprietary backgrounds (Lovart) — primary via <Image> component,
+    // secondary via CSS var from parent, tertiary fallback gradient below.
+    // auction & personality-dice removed: no challenge cards use these classes.
     &--undercover-word {
+      background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #b91c1c 100%);
       background: var(--bg-undercover-word) center/cover no-repeat;
     }
 
     &--group-mirror {
+      background: linear-gradient(135deg, #0f766e 0%, #115e59 50%, #134e4a 100%);
       background: var(--bg-group-mirror) center/cover no-repeat;
     }
 
     &--quip-battle {
+      background: linear-gradient(135deg, #c2410c 0%, #ea580c 50%, #f97316 100%);
       background: var(--bg-quip-battle) center/cover no-repeat;
     }
 

@@ -307,20 +307,23 @@ apps/mini-program/
 │       ├── personality/           # Archetype + Xiaoyue expression WebPs
 │       │   ├── archetypes/        # 12 archetype illustrations + spritesheet
 │       │   └── xiaoyue/           # Mascot character assets
-│       ├── icons/                 # Proprietary icon assets (bundled, not CDN)
-│       │   ├── reaction-icons/    # Icebreaker reaction buttons
-│       │   ├── category-icons/    # Interest category selectors
-│       │   ├── intent-icons/      # Onboarding intent selectors
-│       │   ├── reveal-icons/      # Squad-unboxing reveal emblems
-│       │   ├── achievement-badges/ # Gamification achievement toasts
-│       │   ├── chemistry-badges/  # Match chemistry indicators
-│       │   ├── status-icons/      # Matching / event status badges
-│       │   ├── info-labels/       # Semantic info pills (calendar, location, target, people)
-│       │   ├── rating-faces/      # Rating / evaluation faces
-│       │   ├── mood-icons/        # Mood / atmosphere indicators
-│       │   └── phase-icons/       # Icebreaker phase emblems
-│       ├── tab-icons/             # Bottom tab icons (bundled, not CDN)
-│       └── joyjoin-logo.webp          # Brand logo (bundled for native tab bar)
+│       ├── icons/                 # Proprietary icon assets
+│       │   ├── mood-icons/        # Mood / atmosphere indicators (bundled)
+│       │   ├── chemistry-badges/  # Match chemistry indicators (bundled)
+│       │   ├── status-icons/      # Matching / event status badges (bundled)
+│       │   ├── reaction-icons/    # Icebreaker reaction buttons (CDN)
+│       │   ├── category-icons/    # Interest category selectors (CDN)
+│       │   ├── intent-icons/      # Onboarding intent selectors (CDN)
+│       │   ├── reveal-icons/      # Squad-unboxing reveal emblems (CDN)
+│       │   ├── achievement-badges/ # Gamification achievement toasts (CDN)
+│       │   ├── info-labels/       # Semantic info pills (CDN)
+│       │   ├── rating-faces/      # Rating / evaluation faces (CDN)
+│       │   └── phase-icons/       # Icebreaker phase emblems (CDN)
+│       ├── fonts/                 # Brand fonts (partially bundled, partially CDN)
+│       │   ├── Quicksand/         # English brand font (~124KB, bundled)
+│       │   └── Alimama/           # Chinese display font — minimal subset bundled, full from CDN
+│       ├── tab-icons/             # Bottom tab icons (bundled)
+│       └── joyjoin-logo.webp      # Brand logo (bundled for native tab bar)
 ├── config/                        # Taro build config
 └── package.json
 ```

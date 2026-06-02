@@ -248,6 +248,12 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 - **Decode readiness**: `useSpriteReadiness` hook gates slot animation start until the spritesheet is confirmed decoded (500ms timeout). `backgroundColor` fallback (archetype accent soft) prevents blank circles.
 - **Do not** reintroduce local PNG bundling for archetypes. Canvas PNG fallback must use CDN path (`ASSET_BASE_PNG = cdnAsset('/assets/personality/archetypes')`).
 
+**Asset loading strategy (2026-06-02):**
+- Two-tier brand font: minimal Alimama subset (66KB) bundled for instant display; full font (621KB) loads from CDN with 500ms defer. Quicksand English font (124KB) bundled and loaded on app launch.
+- Route-based CDN preloading: `routePreloadAssets.ts` maps page paths → CDN assets to preload on entry; predictive preloading for likely next screens.
+- Only 10 copy patterns in `config/index.ts`: tab-icons, tab-bar-notch-bg, joyjoin-logo, archetype spritesheet (subpackage), mood-icons, chemistry-badges, status-icons, Quicksand font, Alimama minimal font. Everything else is CDN via `cdnAsset()`.
+- Icebreaker challenge-card backgrounds use `<ChallengeCardBgImage>` (WeChat-safe `<Image>` component) instead of CSS `background-image` with CDN URLs, which is historically flaky in WeChat runtime.
+
 **Tab bar icon gotcha:** `centerHub` tab in `tabBarConfig.ts` must have a non-empty `iconPath`. The `miniprogram-ci` upload rejects empty icon paths with `800059`. The custom tab bar component renders the center button independently (`joyjoin-logo-tab.png` + `tab-bar-notch-bg.png`), so any placeholder icon works for validation. The tab bar logo uses a dedicated 128×128 `joyjoin-logo-tab.png` (19KB) instead of the full-resolution `joyjoin-logo.png` (596KB) to stay within the 2MB package budget. This was fixed 2026-05-19.
 
 **Mini-program shared UI primitives (2026-05-27):**

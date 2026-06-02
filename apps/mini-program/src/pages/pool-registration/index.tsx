@@ -1,6 +1,7 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
-import { localAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
 import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -620,7 +621,7 @@ export default function PoolRegistrationPage() {
         <Card className='pool-reg__empty'>
           <Image
             className='pool-reg__empty-hero'
-            src={localAsset('/assets/lovart/lovart-generic-error.webp')}
+            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             mode='aspectFit'
             lazyLoad
           />
@@ -823,7 +824,7 @@ export default function PoolRegistrationPage() {
           <Card className='pool-reg__panel'>
             <Image
               className='pool-reg__tier-mascot'
-              src={localAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+              src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
               mode='aspectFit'
               lazyLoad
             />

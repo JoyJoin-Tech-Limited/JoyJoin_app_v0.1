@@ -1,5 +1,5 @@
 import { View, Text, Image } from '@tarojs/components'
-import { localAsset } from '../../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
 import { PhaseHeaderIcon, getPhaseLabel, type SessionPhase } from '../phaseUtils'
@@ -20,7 +20,7 @@ export function FallbackPhaseView({
       <Card className={`icebreaker__challenge-card icebreaker__challenge-card--${phase}`}>
         <Image
           className='icebreaker__fallback-hero'
-          src={localAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+          src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
           mode='aspectFit'
           style={{ width: '160rpx', height: '160rpx' }}
         />

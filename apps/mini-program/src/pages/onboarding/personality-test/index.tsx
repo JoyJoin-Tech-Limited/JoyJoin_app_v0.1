@@ -39,7 +39,7 @@ import {
 import { logInfo, logError } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
-import { localAsset } from '../../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
 import type { XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
@@ -1061,12 +1061,12 @@ export default function PersonalityTestPage() {
               <View className='personality-test__mascot-avatar'>
                 <Image
                   className='personality-test__mascot-static personality-test__mascot-static--testing'
-                  src={localAsset('/assets/mascot/xiaoyue-welcome.webp')}
+                  src={cdnAsset('/assets/mascot/xiaoyue-welcome.webp')}
                   mode='aspectFit'
                 />
                 <Image
                   className='personality-test__mascot-static personality-test__mascot-static--testing personality-test__mascot-static--reduced-motion'
-                  src={localAsset('/assets/mascot/xiaoyue-welcome.webp')}
+                  src={cdnAsset('/assets/mascot/xiaoyue-welcome.webp')}
                   mode='aspectFit'
                 />
               </View>

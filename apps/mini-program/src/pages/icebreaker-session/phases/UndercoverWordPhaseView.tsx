@@ -8,6 +8,7 @@ import { apiRequest } from '../../../lib/api/api';
 import { buildSocialPath } from '../icebreakerSessionModel';
 import { CardFlip, IdentityReveal, ParticleBurst } from '../../../components/reveal';
 import { SwipeCard, TapReaction } from '../../../components/gesture';
+import ChallengeCardBgImage from '../components/ChallengeCardBgImage';
 
 interface UndercoverWordPhaseViewProps {
   socialSessionId: string;
@@ -227,6 +228,7 @@ export default function UndercoverWordPhaseView({
     return (
       <View className='icebreaker__phase'>
         <Card className='icebreaker__challenge-card icebreaker__challenge-card--undercover-word icebreaker__challenge-card--has-bg'>
+          <ChallengeCardBgImage phase='undercover-word' />
           <Text className='icebreaker__phase-title'>谁是卧底</Text>
           <Text className='icebreaker__phase-subtitle'>描述你的词，找出卧底</Text>
           {isHost ? (
@@ -266,6 +268,7 @@ export default function UndercoverWordPhaseView({
         )}
 
         <Card className='icebreaker__challenge-card icebreaker__challenge-card--undercover-word icebreaker__challenge-card--has-bg'>
+          <ChallengeCardBgImage phase='undercover-word' />
           <Text className='icebreaker__phase-title'>揭晓时刻</Text>
 
           <View
@@ -396,6 +399,7 @@ export default function UndercoverWordPhaseView({
         </View>
 
         <Card className='icebreaker__challenge-card icebreaker__challenge-card--undercover-word icebreaker__challenge-card--has-bg'>
+          <ChallengeCardBgImage phase='undercover-word' />
           <Text className='icebreaker__phase-title'>投票环节</Text>
           <Text className='icebreaker__phase-subtitle'>谁最有可能是卧底？</Text>
 
@@ -613,7 +617,8 @@ export default function UndercoverWordPhaseView({
       </View>
 
       <Card className='icebreaker__challenge-card icebreaker__challenge-card--undercover-word icebreaker__challenge-card--has-bg'>
-        <Text className='icebreaker__phase-title'>谁是卧底 · 第{currentRound + 1}轮</Text>
+          <ChallengeCardBgImage phase='undercover-word' />
+          <Text className='icebreaker__phase-title'>谁是卧底 · 第{currentRound + 1}轮</Text>
 
         {/* Tension progress bar */}
         <View style={{ width: '100%', marginBottom: '16rpx' }}>

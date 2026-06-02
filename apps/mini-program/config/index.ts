@@ -120,9 +120,48 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/icons/status-icons',
           to: 'dist/assets/icons/status-icons',
         },
-        // NOTE: Phase, reaction, category, intent, reveal, and achievement icons
-        // are loaded from CDN (cdnAsset) to stay under the 2MB main package limit.
-        // Run `npm run upload:cdn-assets` after adding or updating these.
+        // Quicksand English brand font (~124KB).
+        {
+          from: 'src/assets/fonts/Quicksand',
+          to: 'dist/assets/fonts/Quicksand',
+        },
+        // Alimama minimal subset — landing + onboarding instant display (~66KB).
+        // Full font (621KB) loads from CDN in background.
+        {
+          from: 'src/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2',
+          to: 'dist/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2',
+        },
+        // Landing page phase icons — bundled locally (bypasses CDN reliability
+        // issues on some WeChat clients). Only the 6 icons shown on landing;
+        // all other phase icons remain on CDN.
+        {
+          from: 'src/assets/icons/phase-icons/phase-topic-card.webp',
+          to: 'dist/assets/landing-phase-icons/phase-topic-card.webp',
+        },
+        {
+          from: 'src/assets/icons/phase-icons/phase-lie-detective.webp',
+          to: 'dist/assets/landing-phase-icons/phase-lie-detective.webp',
+        },
+        {
+          from: 'src/assets/icons/phase-icons/phase-personality-dice.webp',
+          to: 'dist/assets/landing-phase-icons/phase-personality-dice.webp',
+        },
+        {
+          from: 'src/assets/icons/phase-icons/phase-auction.webp',
+          to: 'dist/assets/landing-phase-icons/phase-auction.webp',
+        },
+        {
+          from: 'src/assets/icons/phase-icons/phase-mini-script.webp',
+          to: 'dist/assets/landing-phase-icons/phase-mini-script.webp',
+        },
+        {
+          from: 'src/assets/icons/phase-icons/phase-quip-battle.webp',
+          to: 'dist/assets/landing-phase-icons/phase-quip-battle.webp',
+        },
+        // NOTE: All other phase icons, archetype heads, empty states, QR, lovart,
+        // matching, promo, and mascot images remain on CDN to stay under the 2MB
+        // main package limit. Use routePreloadAssets.ts for smart background loading.
+        // Run `npm run upload:cdn-assets` after adding or updating CDN assets.
       ],
       options: {
       }

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import type { XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
-import { localAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Card from '../ui/Card'
 import './OnboardingLoadingShell.scss'
 
@@ -44,7 +44,7 @@ export default function OnboardingLoadingShell({
             className='onboarding-loading-shell__mascot'
             mode='aspectFit'
             src={imgSrc}
-            onError={() => setImgSrc(localAsset('/assets/personality/xiaoyue/xiaoyue-loading-system.webp'))}
+            onError={() => setImgSrc(cdnAsset('/assets/personality/xiaoyue/xiaoyue-loading-system.webp'))}
           />
           <View className='onboarding-loading-shell__orbit'>
             {[1, 2, 3].map((item) => (

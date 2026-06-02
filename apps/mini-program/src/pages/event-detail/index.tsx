@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, Button, Image } from '@tarojs/components'
-import { localAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { type BlindBoxEventDetail } from '@shared/api'
@@ -18,7 +18,7 @@ export default function EventDetailPage() {
   const eventId = router.params.id ?? ''
   const { isLoading: authLoading } = useAuthGuard()
   const { isExiting, navigateBack } = useJoyJoinNavigation()
-  const supportQrSrc = localAsset('/assets/qr/customer-service-support.png')
+  const supportQrSrc = cdnAsset('/assets/qr/customer-service-support.png')
   const pageClass = `event-detail ${isExiting ? 'event-detail--exiting' : ''}`
 
   const { data: event, isLoading, error } = useQuery<BlindBoxEventDetail>({
@@ -42,7 +42,7 @@ export default function EventDetailPage() {
         <View className='event-detail__error'>
           <Image
             className='event-detail__error-hero'
-            src={localAsset('/assets/lovart/lovart-generic-error.webp')}
+            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             mode='aspectFit'
             lazyLoad
           />
@@ -116,7 +116,7 @@ export default function EventDetailPage() {
           <View className='event-detail__tip'>
             <Image
               className='event-detail__tip-mascot'
-              src={localAsset('/assets/personality/xiaoyue/xiaoyue-event-detail-tip.webp')}
+              src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-event-detail-tip.webp')}
               mode='aspectFit'
               lazyLoad
             />

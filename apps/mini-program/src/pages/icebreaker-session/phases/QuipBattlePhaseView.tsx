@@ -9,6 +9,7 @@ import { CelebrationOverlay } from '../overlays/CelebrationOverlay';
 import { SwipeCard } from '../../../components/gesture';
 import { TapReaction } from '../../../components/gesture';
 import { ParticleBurst } from '../../../components/reveal';
+import ChallengeCardBgImage from '../components/ChallengeCardBgImage';
 
 interface QuipBattlePrompt {
   id: string;
@@ -299,6 +300,7 @@ export default function QuipBattlePhaseView({
 
         {prompts.map((prompt, i) => (
           <Card key={prompt.id} className='icebreaker__challenge-card icebreaker__challenge-card--quip-battle icebreaker__challenge-card--has-bg'>
+            <ChallengeCardBgImage phase='quip-battle' />
             <Text className='icebreaker__challenge-label'>题目 {i + 1}</Text>
             <Text className='icebreaker__challenge-text'>{prompt.promptText}</Text>
             <Input
@@ -433,6 +435,7 @@ export default function QuipBattlePhaseView({
 
         {results.map((result, i) => (
           <Card key={result.promptId} className='icebreaker__challenge-card icebreaker__challenge-card--quip-battle icebreaker__challenge-card--has-bg'>
+            <ChallengeCardBgImage phase='quip-battle' />
             <Text className='icebreaker__challenge-label'>题目 {i + 1}</Text>
             <Text className='icebreaker__challenge-text'>{result.promptText}</Text>
 

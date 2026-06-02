@@ -1,6 +1,7 @@
 import { View, Text, Image, Navigator } from "@tarojs/components"
 import Taro from "@tarojs/taro"
 import { useState, useEffect, useRef } from "react"
+import { cdnAsset, localAsset } from "../../lib/utils/cdnAssets"
 import { loadBrandDisplayFont } from "../../lib/utils/brandFont"
 import Button from "../../components/ui/Button"
 import BrandLogo from "../../components/ui/BrandLogo"
@@ -11,27 +12,28 @@ import { useWeChatLogin } from "../../hooks/auth/useWeChatLogin"
 import { onboardingAnalytics } from "../../lib/onboarding/onboardingAnalytics"
 import "./index.scss"
 
-/** Local bundled phase icons for the landing page — bypasses CDN so icons are
- *  guaranteed to render instantly even when the CDN base URL is misconfigured
- *  or the user is on a slow network. */
+/** Phase icons — bundled locally for guaranteed display on landing screen.
+ *  (CDN fallback remains for other surfaces; these 6 are critical for first impression.)
+ */
 const LANDING_PHASE_ICONS: Record<string, string> = {
-  'topic-card': '/assets/icons/phase-icons/phase-topic-card.webp',
-  'lie_detective': '/assets/icons/phase-icons/phase-lie-detective.webp',
-  'personality_dice': '/assets/icons/phase-icons/phase-personality-dice.webp',
-  'auction': '/assets/icons/phase-icons/phase-auction.webp',
-  'mini_script': '/assets/icons/phase-icons/phase-mini-script.webp',
-  'quip_battle': '/assets/icons/phase-icons/phase-quip-battle.webp',
+  'topic-card': localAsset('/assets/landing-phase-icons/phase-topic-card.webp'),
+  'lie_detective': localAsset('/assets/landing-phase-icons/phase-lie-detective.webp'),
+  'personality_dice': localAsset('/assets/landing-phase-icons/phase-personality-dice.webp'),
+  'auction': localAsset('/assets/landing-phase-icons/phase-auction.webp'),
+  'mini_script': localAsset('/assets/landing-phase-icons/phase-mini-script.webp'),
+  'quip_battle': localAsset('/assets/landing-phase-icons/phase-quip-battle.webp'),
 }
 
-/** Local bundled mascot — eliminates the ~5s CDN cold-start on first open. */
-const LOCAL_MASCOT_SRC = '/assets/personality/xiaoyue/xiaoyue-home-welcome.webp'
+/** Mascot — loaded from CDN. Preloaded via routePreloadAssets. */
+const MASCOT_SRC = cdnAsset('/assets/personality/xiaoyue/xiaoyue-home-welcome.webp')
 
 export default function MiniProgramLandingPage() {
   const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [shakeLegal, setShakeLegal] = useState(false)
-  const [mascotSrc, setMascotSrc] = useState(LOCAL_MASCOT_SRC)
+  const [mascotSrc, setMascotSrc] = useState(MASCOT_SRC)
   const [mascotError, setMascotError] = useState(false)
+  const [phaseIconErrors, setPhaseIconErrors] = useState<Record<string, boolean>>({})
   const isMounted = useStaggerMount()
   const { handleWeChatLogin, isLoggingIn } = useWeChatLogin()
   const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -145,13 +147,31 @@ export default function MiniProgramLandingPage() {
                 style={{ animationDelay: `${index * 60}ms` }}
                 aria-label={game.label}
               >
-                <Image
-                  className="game-preview__cell-icon"
-                  src={LANDING_PHASE_ICONS[game.phase]}
-                  mode="aspectFit"
-                  style={{ width: '112rpx', height: '112rpx', verticalAlign: 'middle' }}
-                  lazyLoad={false}
-                />
+                {!phaseIconErrors[game.phase] ? (
+                  <Image
+                    className="game-preview__cell-icon"
+                    src={LANDING_PHASE_ICONS[game.phase]}
+                    mode="aspectFit"
+                    style={{ width: '112rpx', height: '112rpx', verticalAlign: 'middle' }}
+                    lazyLoad={false}
+                    onError={() => setPhaseIconErrors(prev => ({ ...prev, [game.phase]: true }))}
+                  />
+                ) : (
+                  <View
+                    className="game-preview__cell-icon"
+                    style={{
+                      width: '112rpx',
+                      height: '112rpx',
+                      borderRadius: '24rpx',
+                      background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text style={{ fontSize: '48rpx' }}>🎲</Text>
+                  </View>
+                )}
                 <Text className="game-preview__cell-label">{game.label}</Text>
               </View>
             ))}
