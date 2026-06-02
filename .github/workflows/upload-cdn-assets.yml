@@ -16,12 +16,12 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Build mini-program (to validate asset references)
+      - name: Build mini-program (without clean, so assets remain in dist)
         env:
           TARO_APP_CDN_BASE_URL: https://joyjoinapp.com/static
         run: |
           npm ci
-          npm run build:weapp -w mini-program
+          npx taro build --type weapp --project-root apps/mini-program
 
       - name: Upload manifest assets to CVM /static/
         env:
@@ -31,7 +31,10 @@ jobs:
           CDN_RSYNC_USER: ${{ secrets.SERVER_USER }}
           CDN_RSYNC_PATH: /static
         run: |
-          printf '%s\n' '${{ secrets.SSH_PRIVATE_KEY }}' > /tmp/deploy_key
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > /tmp/deploy_key
           chmod 600 /tmp/deploy_key
           export CDN_RSYNC_KEY=/tmp/deploy_key
+          # Debug SSH connectivity
+          echo "Testing SSH to ${{ secrets.SERVER_IP }} as ${{ secrets.SERVER_USER }}..."
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o BatchMode=yes -i /tmp/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "echo 'SSH OK'" || echo 'SSH test failed, continuing...'
           node apps/mini-program/scripts/upload-cdn-assets.mjs

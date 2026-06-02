@@ -327,8 +327,10 @@ async function main() {
 
     let missingCount = 0
     for (const { localPath } of files) {
-      const src = path.join(DIST_DIR, localPath)
-      if (fs.existsSync(src)) {
+      const srcInDist = path.join(DIST_DIR, localPath)
+      const srcInSrc = path.join(SRC_DIR, localPath)
+      const src = fs.existsSync(srcInDist) ? srcInDist : fs.existsSync(srcInSrc) ? srcInSrc : null
+      if (src) {
         totalSize += fs.statSync(src).size
       } else {
         missingCount++
@@ -337,13 +339,7 @@ async function main() {
 
     logStep(`Backend: ${BACKEND}  |  Files: ${files.length}  |  Total size: ${formatSize(totalSize)}`)
     if (missingCount > 0) {
-      console.warn(`   ⚠️ ${missingCount} source files are missing (run npm run build:weapp first)`)
-    }
-
-    if (!fs.existsSync(DIST_DIR)) {
-      console.error(`❌ dist/ directory not found: ${DIST_DIR}`)
-      console.error('   Run npm run build:weapp first.')
-      process.exit(1)
+      console.warn(`   ⚠️ ${missingCount} source files are missing in both dist/ and src/`)
     }
   }
 
