@@ -98,6 +98,11 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/joyjoin-logo.webp',
           to: 'dist/assets/joyjoin-logo.webp',
         },
+        // Tab bar center logo — smaller 128×128 variant for custom tab bar (~18KB).
+        {
+          from: 'src/assets/joyjoin-logo-tab.png',
+          to: 'dist/assets/joyjoin-logo-tab.png',
+        },
         // Archetype result images — spritesheet used locally in onboarding subpackage.
         // Individual archetype images loaded via CDN (cdnAsset).
         // PNG moved to CDN (2026-05-22); canvas draws WebP primary with CDN PNG fallback.
