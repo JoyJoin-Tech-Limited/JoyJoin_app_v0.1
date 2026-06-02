@@ -1,4 +1,4 @@
-import { localAsset } from '../../../lib/utils/localAssets'
+import { localAsset } from '../../../lib/utils/cdnAssets'
 
 /** Legacy Unicode-emoji → CDN asset mapping (kept for backward compatibility). */
 export const PERSONALITY_EMOJI_ASSETS: Record<string, string> = {
