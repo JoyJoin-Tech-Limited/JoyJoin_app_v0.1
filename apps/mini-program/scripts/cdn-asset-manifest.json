@@ -673,10 +673,38 @@
     {
       "localPath": "assets/tab-icons/连接 icon.png",
       "cdnPath": "assets/tab-icons/连接 icon.png"
+    },
+    {
+      "localPath": "assets/miniscript/ancient-chinese-thumb.webp",
+      "cdnPath": "assets/miniscript/ancient-chinese-thumb.webp"
+    },
+    {
+      "localPath": "assets/miniscript/future-tech-thumb.webp",
+      "cdnPath": "assets/miniscript/future-tech-thumb.webp"
+    },
+    {
+      "localPath": "assets/miniscript/medieval-thumb.webp",
+      "cdnPath": "assets/miniscript/medieval-thumb.webp"
+    },
+    {
+      "localPath": "assets/miniscript/modern-urban-thumb.webp",
+      "cdnPath": "assets/miniscript/modern-urban-thumb.webp"
+    },
+    {
+      "localPath": "assets/miniscript/republican-era-thumb.webp",
+      "cdnPath": "assets/miniscript/republican-era-thumb.webp"
+    },
+    {
+      "localPath": "assets/miniscript/western-court-thumb.webp",
+      "cdnPath": "assets/miniscript/western-court-thumb.webp"
+    },
+    {
+      "localPath": "assets/miniscript/xianxia-thumb.webp",
+      "cdnPath": "assets/miniscript/xianxia-thumb.webp"
+    },
+    {
+      "localPath": "assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf",
+      "cdnPath": "assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf"
     }
-  ],
-  "pendingAssets": [
-    "assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf"
-  ],
-  "_pendingComment": "pendingAssets: referenced in code but not yet available in src/assets/. Upload will skip. Design team should create these and remove from pendingAssets."
+  ]
 }

@@ -1,6 +1,6 @@
 import { Image, Text, View } from '@tarojs/components'
 import { useState, useCallback } from 'react'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { localAsset } from '../../lib/utils/cdnAssets'
 
 interface ChemistryBadgeProps {
   chemistry: 'fire' | 'warm' | 'cold' | 'mild'
@@ -53,7 +53,7 @@ export default function ChemistryBadge({
     )
   }
 
-  const src = cdnAsset(`/assets/icons/chemistry-badges/${assetKey}.webp`)
+  const src = localAsset(`/assets/icons/chemistry-badges/${assetKey}.webp`)
 
   return (
     <Image

@@ -1,6 +1,6 @@
 import { View, Image, Text } from '@tarojs/components'
 import { useState, useCallback } from 'react'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { localAsset } from '../../lib/utils/cdnAssets'
 
 /**
  * ArchetypeHead — proprietary head icon for the 12 JoyJoin archetypes.
@@ -19,18 +19,18 @@ interface ArchetypeHeadProps {
 }
 
 const HEAD_PATHS: Record<string, string> = {
-  corgi: cdnAsset('/assets/icons/archetype/archetype-corgi-head@3x.webp'),
-  rooster: cdnAsset('/assets/icons/archetype/archetype-rooster-head@3x.webp'),
-  hamster_praise: cdnAsset('/assets/icons/archetype/archetype-hamster_praise-head@3x.webp'),
-  fox: cdnAsset('/assets/icons/archetype/archetype-fox-head@3x.webp'),
-  dolphin_calm: cdnAsset('/assets/icons/archetype/archetype-dolphin_calm-head@3x.webp'),
-  spider: cdnAsset('/assets/icons/archetype/archetype-spider-head@3x.webp'),
-  koala: cdnAsset('/assets/icons/archetype/archetype-koala-head@3x.webp'),
-  octopus: cdnAsset('/assets/icons/archetype/archetype-octopus-head@3x.webp'),
-  owl: cdnAsset('/assets/icons/archetype/archetype-owl-head@3x.webp'),
-  elephant: cdnAsset('/assets/icons/archetype/archetype-elephant-head@3x.webp'),
-  turtle: cdnAsset('/assets/icons/archetype/archetype-turtle-head@3x.webp'),
-  cat: cdnAsset('/assets/icons/archetype/archetype-cat-head@3x.webp'),
+  corgi: localAsset('/assets/icons/archetype/archetype-corgi-head@3x.webp'),
+  rooster: localAsset('/assets/icons/archetype/archetype-rooster-head@3x.webp'),
+  hamster_praise: localAsset('/assets/icons/archetype/archetype-hamster_praise-head@3x.webp'),
+  fox: localAsset('/assets/icons/archetype/archetype-fox-head@3x.webp'),
+  dolphin_calm: localAsset('/assets/icons/archetype/archetype-dolphin_calm-head@3x.webp'),
+  spider: localAsset('/assets/icons/archetype/archetype-spider-head@3x.webp'),
+  koala: localAsset('/assets/icons/archetype/archetype-koala-head@3x.webp'),
+  octopus: localAsset('/assets/icons/archetype/archetype-octopus-head@3x.webp'),
+  owl: localAsset('/assets/icons/archetype/archetype-owl-head@3x.webp'),
+  elephant: localAsset('/assets/icons/archetype/archetype-elephant-head@3x.webp'),
+  turtle: localAsset('/assets/icons/archetype/archetype-turtle-head@3x.webp'),
+  cat: localAsset('/assets/icons/archetype/archetype-cat-head@3x.webp'),
 }
 
 function getFallbackInitial(text?: string): string {

@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useRef, useState, useCallback } from 'react'
 import { View, Text, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { cdnAsset } from '../../../lib/utils/cdnAssets'
+import { localAsset } from '../../../lib/utils/cdnAssets'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
@@ -361,7 +361,7 @@ export function WarmupPhaseView({
                     )}
                     {p.isHost && (
                       <Image
-                        src={cdnAsset('/assets/icons/status-icons/status-crown.png')}
+                        src={localAsset('/assets/icons/status-icons/status-crown.png')}
                         className='icebreaker__participant-host'
                         lazyLoad
                       />

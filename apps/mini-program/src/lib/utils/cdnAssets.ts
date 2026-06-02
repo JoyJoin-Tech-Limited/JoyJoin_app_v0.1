@@ -39,3 +39,25 @@ export function cdnAsset(localPath: string): string {
   // localPath always starts with /
   return `${CDN_BASE_URL}${localPath}`
 }
+
+/**
+ * Returns a root-relative local asset path for bundled mini-program assets.
+ *
+ * Use this when the asset is shipped inside the WeChat package (under
+ * `src/assets/...`) and you want to bypass the CDN entirely. This eliminates
+ * network latency and guarantees the asset is available even when the user
+ * is offline or the CDN is misconfigured.
+ *
+ * The path must start with `/assets/` and the file must exist in
+ * `apps/mini-program/src/assets/`.
+ */
+export function localAsset(localPath: string): string {
+  if (!localPath.startsWith('/assets/')) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[localAsset] Path "${localPath}" does not start with /assets/. ` +
+        `Only assets under src/assets/ should use localAsset().`
+    )
+  }
+  return localPath
+}

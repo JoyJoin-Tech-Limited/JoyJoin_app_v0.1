@@ -1,5 +1,4 @@
 import { View, Text, Image, Navigator } from "@tarojs/components"
-import { PhaseHeaderIcon } from "../icebreaker-session/phaseUtils"
 import Taro from "@tarojs/taro"
 import { useState, useEffect, useRef } from "react"
 import { loadBrandDisplayFont } from "../../lib/utils/brandFont"
@@ -7,17 +6,32 @@ import Button from "../../components/ui/Button"
 import BrandLogo from "../../components/ui/BrandLogo"
 import BondingCloud from "../../components/landing/BondingCloud"
 import { useStaggerMount } from "../../hooks/useStaggerMount"
-import { getXiaoyueExpressionAsset } from "../../lib/mascot/xiaoyueExpressions"
 import { runMiniProgramRouteTransition } from "../../lib/onboarding/onboardingNavigation"
 import { useWeChatLogin } from "../../hooks/auth/useWeChatLogin"
 import { onboardingAnalytics } from "../../lib/onboarding/onboardingAnalytics"
 import "./index.scss"
 
+/** Local bundled phase icons for the landing page — bypasses CDN so icons are
+ *  guaranteed to render instantly even when the CDN base URL is misconfigured
+ *  or the user is on a slow network. */
+const LANDING_PHASE_ICONS: Record<string, string> = {
+  'topic-card': '/assets/icons/phase-icons/phase-topic-card.webp',
+  'lie_detective': '/assets/icons/phase-icons/phase-lie-detective.webp',
+  'personality_dice': '/assets/icons/phase-icons/phase-personality-dice.webp',
+  'auction': '/assets/icons/phase-icons/phase-auction.webp',
+  'mini_script': '/assets/icons/phase-icons/phase-mini-script.webp',
+  'quip_battle': '/assets/icons/phase-icons/phase-quip-battle.webp',
+}
+
+/** Local bundled mascot — eliminates the ~5s CDN cold-start on first open. */
+const LOCAL_MASCOT_SRC = '/assets/personality/xiaoyue/xiaoyue-home-welcome.webp'
+
 export default function MiniProgramLandingPage() {
   const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [shakeLegal, setShakeLegal] = useState(false)
-  const [mascotSrc, setMascotSrc] = useState(getXiaoyueExpressionAsset("homeWelcome"))
+  const [mascotSrc, setMascotSrc] = useState(LOCAL_MASCOT_SRC)
+  const [mascotError, setMascotError] = useState(false)
   const isMounted = useStaggerMount()
   const { handleWeChatLogin, isLoggingIn } = useWeChatLogin()
   const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -83,13 +97,14 @@ export default function MiniProgramLandingPage() {
         <View
           className={`hero-zone ${isMounted ? "stagger-in stagger-in--1" : "stagger-in-hidden"}`}
         >
-          {mascotSrc !== '' ? (
+          {!mascotError ? (
             <Image
               className="hero-mascot"
               src={mascotSrc}
               mode="aspectFit"
               ariaLabel="悦仔"
-              onError={() => setMascotSrc('')}
+              lazyLoad={false}
+              onError={() => setMascotError(true)}
             />
           ) : (
             <View className="hero-mascot-fallback">
@@ -130,7 +145,13 @@ export default function MiniProgramLandingPage() {
                 style={{ animationDelay: `${index * 60}ms` }}
                 aria-label={game.label}
               >
-                <PhaseHeaderIcon phase={game.phase} size={112} />
+                <Image
+                  className="game-preview__cell-icon"
+                  src={LANDING_PHASE_ICONS[game.phase]}
+                  mode="aspectFit"
+                  style={{ width: '112rpx', height: '112rpx', verticalAlign: 'middle' }}
+                  lazyLoad={false}
+                />
                 <Text className="game-preview__cell-label">{game.label}</Text>
               </View>
             ))}

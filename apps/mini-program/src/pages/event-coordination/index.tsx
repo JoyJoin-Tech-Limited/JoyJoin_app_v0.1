@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { localAsset } from '../../lib/utils/cdnAssets'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -13,7 +13,7 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import './index.scss'
 
-const supportQrSrc = cdnAsset('/assets/qr/customer-service-support.png')
+const supportQrSrc = localAsset('/assets/qr/customer-service-support.png')
 
 function formatEventDate(dateTime?: string): string {
   if (!dateTime) {

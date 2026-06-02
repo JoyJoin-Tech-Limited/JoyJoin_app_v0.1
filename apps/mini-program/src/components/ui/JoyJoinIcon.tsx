@@ -8,7 +8,6 @@ import {
   type IconMapping,
   type IconTier,
 } from '@joyjoin/shared/iconSystem'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
 
 interface JoyJoinIconProps {
   /** The original emoji character — used for lookup and fallback */
@@ -98,12 +97,12 @@ export default function JoyJoinIcon({
     )
   }
 
-  // Resolve asset path — CDN tiers use cdnAsset(), local tiers use require()
+  // Resolve asset path — all tiers now use root-relative local paths
   let src: string
   try {
     const assetPath = getIconAssetPath(mapping.assetKey, mapping.tier, 1)
     if (CDN_ICON_TIERS.has(mapping.tier)) {
-      src = cdnAsset(assetPath)
+      src = assetPath
     } else {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       src = require(assetPath) as string

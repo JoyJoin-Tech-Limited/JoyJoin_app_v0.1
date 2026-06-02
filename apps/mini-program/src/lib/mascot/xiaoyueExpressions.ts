@@ -9,7 +9,7 @@
  * All 16 expression ids now have unique assets. Previously some shared assets (e.g. match-waiting + reveal).
  */
 
-import { cdnAsset } from '../utils/cdnAssets'
+import { localAsset } from '../utils/cdnAssets'
 
 export type XiaoyueExpressionId =
   | 'homeWelcome'
@@ -40,7 +40,7 @@ export type XiaoyueExpressionId =
 /** Legacy three-state API (maps into {@link XiaoyueExpressionId}). */
 export type LegacyXiaoyueMood = 'normal' | 'excited' | 'pointing'
 
-const BASE = cdnAsset('/assets/personality/xiaoyue')
+const BASE = localAsset('/assets/personality/xiaoyue')
 
 /** Semantic basenames — all 16 expressions, unique assets. */
 const ART = {

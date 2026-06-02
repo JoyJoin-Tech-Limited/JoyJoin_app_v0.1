@@ -15,6 +15,7 @@ import AchievementPopup from './components/AchievementPopup'
 import './app.scss'
 import { loadBrandDisplayFont } from './lib/utils/brandFont'
 import { useProfessionRetry } from './hooks/useProfessionRetry'
+import { preloadCdnAssets, ARCHETYPE_GLYPH_ASSETS } from './hooks/usePreloadCdnIcons'
 
 function AutoLoginBridge() {
   const { isAuthenticated, isLoading } = useAuth()
@@ -128,6 +129,10 @@ function App({ children }: PropsWithChildren<any>) {
     // The guard in brandFont.ts prevents double-load when LandingPage
     // (or any other screen) also calls it eagerly.
     setTimeout(() => loadBrandDisplayFont(), 100)
+
+    // Preload CDN-only archetype glyphs in the background so they are
+    // warm when the user reaches profile / matching / results screens.
+    void preloadCdnAssets(ARCHETYPE_GLYPH_ASSETS)
   })
 
   return createElement(

@@ -1,5 +1,5 @@
 import { View, Text, Image } from '@tarojs/components'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { localAsset } from '../../lib/utils/cdnAssets'
 import Taro, { usePullDownRefresh } from '@tarojs/taro'
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -581,7 +581,7 @@ function AuthenticatedDiscover() {
           <StatusCard
             className='discover-auth__empty-state'
             tone='error'
-            heroSrc={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
+            heroSrc={localAsset('/assets/lovart/lovart-generic-error.webp')}
             title='获取列表遇到小状况'
             description='下拉刷新一下就好'
           />
@@ -612,7 +612,7 @@ function AuthenticatedDiscover() {
           <StatusCard
             className='discover-auth__empty-state'
             tone='empty'
-            heroSrc={cdnAsset('/assets/lovart/lovart-generic-empty.webp')}
+            heroSrc={localAsset('/assets/lovart/lovart-generic-empty.webp')}
             title='还没有适合你的活动'
             description={
               selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID

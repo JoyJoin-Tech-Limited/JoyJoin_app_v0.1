@@ -1,6 +1,6 @@
 import Taro from '@tarojs/taro'
 
-import { cdnAsset } from './cdnAssets'
+import { localAsset } from './cdnAssets'
 import { logInfo, logWarn } from './logger'
 
 /**
@@ -14,7 +14,7 @@ export const BRAND_DISPLAY_FONT_FAMILY = 'AlimamaFangYuanTiVF'
 
 // ?v=full forces cache bust after uploading the complete glyph set (2026-05-21).
 // Remove or increment if the font file is regenerated.
-const BRAND_FONT_SOURCE_PATH = cdnAsset('/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2') + '?v=full'
+const BRAND_FONT_SOURCE_PATH = localAsset('/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2') + '?v=full'
 
 let displayFontLoaded = false
 let englishFontLoaded = false
@@ -25,7 +25,7 @@ let englishFontLoaded = false
  */
 export const EN_BRAND_FONT_FAMILY = 'Quicksand'
 
-const EN_BRAND_FONT_SOURCE_PATH = cdnAsset('/assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf')
+const EN_BRAND_FONT_SOURCE_PATH = localAsset('/assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf')
 
 /**
  * Loads the brand display face for mini-program and H5. On failure, CSS fallbacks

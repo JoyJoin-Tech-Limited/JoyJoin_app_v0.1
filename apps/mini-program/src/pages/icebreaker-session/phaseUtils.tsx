@@ -1,7 +1,7 @@
 import { Image, View } from '@tarojs/components'
 import { useState } from 'react'
 import type { AtmosphereMood, SocialIcebreakerPhase } from '@shared/socialIcebreaker'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { localAsset } from '../../lib/utils/cdnAssets'
 
 export type SessionPhase = 'waiting' | SocialIcebreakerPhase | 'ended'
 
@@ -25,18 +25,18 @@ export const MOOD_OPTIONS: Array<{ mood: AtmosphereMood; label: string; asset: s
 // CDN-backed phase icons — eliminates domain-whitelist dependency and keeps the
 // mini-program package small. Assets uploaded via `npm run upload:cdn-assets`.
 const PHASE_ICON_SRC_MAP: Record<string, string> = {
-  warmup: cdnAsset('/assets/icons/phase-icons/phase-warmup.webp'),
-  'topic-card': cdnAsset('/assets/icons/phase-icons/phase-topic-card.webp'),
-  micro_challenge: cdnAsset('/assets/icons/phase-icons/phase-micro-challenge.webp'),
-  lie_detective: cdnAsset('/assets/icons/phase-icons/phase-lie-detective.webp'),
-  personality_dice: cdnAsset('/assets/icons/phase-icons/phase-personality-dice.webp'),
-  auction: cdnAsset('/assets/icons/phase-icons/phase-auction.webp'),
-  quip_battle: cdnAsset('/assets/icons/phase-icons/phase-quip-battle.webp'),
-  undercover_word: cdnAsset('/assets/icons/phase-icons/phase-undercover-word.webp'),
-  group_mirror: cdnAsset('/assets/icons/phase-icons/phase-group-mirror.webp'),
-  speed_friending: cdnAsset('/assets/icons/phase-icons/phase-speed-friending.webp'),
-  mini_script: cdnAsset('/assets/icons/phase-icons/phase-mini-script.webp'),
-  recap: cdnAsset('/assets/icons/phase-icons/phase-recap.webp'),
+  warmup: localAsset('/assets/icons/phase-icons/phase-warmup.webp'),
+  'topic-card': localAsset('/assets/icons/phase-icons/phase-topic-card.webp'),
+  micro_challenge: localAsset('/assets/icons/phase-icons/phase-micro-challenge.webp'),
+  lie_detective: localAsset('/assets/icons/phase-icons/phase-lie-detective.webp'),
+  personality_dice: localAsset('/assets/icons/phase-icons/phase-personality-dice.webp'),
+  auction: localAsset('/assets/icons/phase-icons/phase-auction.webp'),
+  quip_battle: localAsset('/assets/icons/phase-icons/phase-quip-battle.webp'),
+  undercover_word: localAsset('/assets/icons/phase-icons/phase-undercover-word.webp'),
+  group_mirror: localAsset('/assets/icons/phase-icons/phase-group-mirror.webp'),
+  speed_friending: localAsset('/assets/icons/phase-icons/phase-speed-friending.webp'),
+  mini_script: localAsset('/assets/icons/phase-icons/phase-mini-script.webp'),
+  recap: localAsset('/assets/icons/phase-icons/phase-recap.webp'),
 }
 
 export function getPhaseLabel(phase: SessionPhase): string {

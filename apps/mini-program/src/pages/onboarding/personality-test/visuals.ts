@@ -1,6 +1,6 @@
 import { formatHSL, getArchetypeHSL } from '@shared/archetypeColors'
 import { archetypeRegistry, type ArchetypeRecord } from '@shared/personality/archetypeRegistry'
-import { cdnAsset } from '../../../lib/utils/cdnAssets'
+import { localAsset } from '../../../lib/utils/cdnAssets'
 
 export type {
   LegacyXiaoyueMood,
@@ -22,8 +22,8 @@ export interface ArchetypeAssetPaths {
 }
 
 // CDN base for cross-package consumers (login page, discover, icebreaker session).
-export const ASSET_BASE_WEBP = cdnAsset('/assets/personality/archetypes')
-export const ASSET_BASE_PNG = cdnAsset('/assets/personality/archetypes')
+export const ASSET_BASE_WEBP = localAsset('/assets/personality/archetypes')
+export const ASSET_BASE_PNG = localAsset('/assets/personality/archetypes')
 
 // Local base for onboarding-subpackage pages (personality-test results).
 // Archetype WebPs are bundled in the onboarding subpackage to avoid CDN latency
@@ -118,7 +118,7 @@ export function getArchetypeSpritesheetCdnPath(): string {
 }
 
 /** High-resolution static mascot images (480×480px) for non-animated display. */
-const STATIC_MASCOT_BASE = cdnAsset('/assets/personality/xiaoyue')
+const STATIC_MASCOT_BASE = localAsset('/assets/personality/xiaoyue')
 
 export function getIntroStaticAsset(): string {
   return `${STATIC_MASCOT_BASE}/xiaoyue-intro-animated.webp`

@@ -9,9 +9,9 @@
  * Reduced motion: animations disabled, static layers still visible.
  */
 
-import { cdnAsset } from '../utils/cdnAssets'
+import { localAsset } from '../utils/cdnAssets'
 
-const BASE = cdnAsset('/assets/illustrations')
+const BASE = localAsset('/assets/illustrations')
 
 export const BLIND_BOX_BODY_ASSET = `${BASE}/lovart-blind-box-body.webp`
 export const BLIND_BOX_LID_ASSET = `${BASE}/lovart-blind-box-lid.webp`

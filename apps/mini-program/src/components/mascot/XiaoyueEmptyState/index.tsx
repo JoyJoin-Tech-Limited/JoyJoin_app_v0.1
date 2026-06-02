@@ -1,6 +1,6 @@
 import { View, Image, Text } from '@tarojs/components'
 import { useState } from 'react'
-import { cdnAsset } from '@/lib/utils/cdnAssets'
+import { localAsset } from '@/lib/utils/cdnAssets'
 
 interface XiaoyueEmptyStateProps {
   emotion: 'coaching' | 'celebration' | 'waiting' | 'sad' | 'curious' | 'events'
@@ -32,7 +32,7 @@ export default function XiaoyueEmptyState({
       {!imgError && (
         <Image
           className='xiaoyue-empty-state__mascot'
-          src={cdnAsset(`/assets/personality/xiaoyue/${EMOTION_MAP[emotion]}.webp`)}
+          src={localAsset(`/assets/personality/xiaoyue/${EMOTION_MAP[emotion]}.webp`)}
           style={{ width: `${dim}rpx`, height: `${dim}rpx` }}
           mode='aspectFit'
           lazyLoad

@@ -1,5 +1,5 @@
 import { Image, ScrollView, Text, View } from '@tarojs/components'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { localAsset } from '../../lib/utils/cdnAssets'
 import Taro from '@tarojs/taro'
 import { useCallback, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -216,7 +216,7 @@ export default function RewardsPage() {
         <View className='rewards-page__error'>
           <StatusCard
             tone='error'
-            heroSrc={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
+            heroSrc={localAsset('/assets/lovart/lovart-generic-error.webp')}
             title='奖励加载没成功'
             description='稍后重试，或返回个人主页继续浏览。'
             action={{ label: '重新加载', onClick: handleRefresh }}
@@ -386,7 +386,7 @@ export default function RewardsPage() {
           <Card className='rewards-page__empty-card'>
             <Image
               className='rewards-page__empty-hero'
-              src={cdnAsset('/assets/lovart/lovart-rewards-empty-20260423-v1.webp')}
+              src={localAsset('/assets/lovart/lovart-rewards-empty-20260423-v1.webp')}
               mode='aspectFit'
               lazyLoad
             />
@@ -446,7 +446,7 @@ export default function RewardsPage() {
           <Card className='rewards-page__empty-card rewards-page__empty-card--compact'>
             <Image
               className='rewards-page__empty-hero rewards-page__empty-hero--compact'
-              src={cdnAsset('/assets/lovart/lovart-rewards-shop-20260423-v1.webp')}
+              src={localAsset('/assets/lovart/lovart-rewards-shop-20260423-v1.webp')}
               mode='aspectFit'
               lazyLoad
             />
@@ -490,7 +490,7 @@ export default function RewardsPage() {
           <Card className='rewards-page__empty-card rewards-page__empty-card--compact'>
             <Image
               className='rewards-page__empty-hero rewards-page__empty-hero--compact'
-              src={cdnAsset('/assets/lovart/lovart-rewards-history-20260423-v1.webp')}
+              src={localAsset('/assets/lovart/lovart-rewards-history-20260423-v1.webp')}
               mode='aspectFit'
               lazyLoad
             />

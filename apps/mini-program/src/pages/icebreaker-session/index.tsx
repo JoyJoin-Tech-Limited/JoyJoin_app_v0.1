@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { localAsset } from '../../lib/utils/cdnAssets'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
@@ -10,9 +10,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { logInfo, logError } from '../../lib/utils/logger'
 import {
   usePreloadCdnIcons,
-  ICEBREAKER_REACTION_ASSETS,
-  ICEBREAKER_REVEAL_ASSETS,
-  COMMON_ACHIEVEMENT_ASSETS,
+  SPRITE_SHEET_ASSETS,
 } from '../../hooks/usePreloadCdnIcons'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { getMascotDisplayName } from '../../lib/mascot/mascotDisplay'
@@ -101,12 +99,9 @@ export default function IcebreakerSessionPage() {
   const startAttemptRef = useRef<string | null>(null)
   const prevPhaseRef = useRef<SessionPhase>('waiting')
 
-  // Preload CDN icon assets in parallel with session bootstrap
-  usePreloadCdnIcons([
-    ...ICEBREAKER_REACTION_ASSETS,
-    ...ICEBREAKER_REVEAL_ASSETS,
-    ...COMMON_ACHIEVEMENT_ASSETS,
-  ])
+  // Preload CDN-only sprite sheets in parallel with session bootstrap.
+  // Reaction/reveal/achievement icons are now locally bundled.
+  usePreloadCdnIcons(SPRITE_SHEET_ASSETS)
 
   const {
     data: eventSession,
@@ -579,7 +574,7 @@ export default function IcebreakerSessionPage() {
         <View className='icebreaker__error'>
           <Image
             className='icebreaker__error-hero'
-            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
+            src={localAsset('/assets/lovart/lovart-generic-error.webp')}
             mode='aspectFit'
             lazyLoad
           />
@@ -632,7 +627,7 @@ export default function IcebreakerSessionPage() {
         <View className='icebreaker__host-badge-text'>
           <Image
             className='icebreaker__host-badge-icon'
-            src={cdnAsset('/assets/icons/status-icons/status-crown.png')}
+            src={localAsset('/assets/icons/status-icons/status-crown.png')}
             lazyLoad
           />
           <Text>你是主持人</Text>
@@ -673,7 +668,7 @@ export default function IcebreakerSessionPage() {
     (session.currentLieDetectivePlayerIndex ?? 0) < (session.lieDetectivePlayers?.length ?? 0) - 1
 
   const bgStyles = useMemo(() => {
-    const p = (path: string) => `url(${cdnAsset(path)})`
+    const p = (path: string) => `url(${localAsset(path)})`
     const phaseBgMap: Record<string, React.CSSProperties> = {
       auction: { '--bg-auction': p('/assets/lovart/icebreaker/backgrounds/bg-auction.jpg') } as React.CSSProperties,
       personality_dice: { '--bg-personality-dice': p('/assets/lovart/icebreaker/backgrounds/bg-personality-dice.jpg') } as React.CSSProperties,
@@ -694,7 +689,7 @@ export default function IcebreakerSessionPage() {
         <View className='icebreaker__phase-toast'>
           <Image
             className='icebreaker__phase-toast-mascot'
-            src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+            src={localAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
             mode='aspectFit'
           />
           <View className='icebreaker__phase-toast-text'>{phaseToast.text}</View>
@@ -1015,7 +1010,7 @@ function WaitingPhase({
     <View className='icebreaker__waiting'>
       <Card className='icebreaker__waiting-card'>
         <Image
-          src={cdnAsset('/assets/icons/status-icons/status-waiting.png')}
+          src={localAsset('/assets/icons/status-icons/status-waiting.png')}
           style={{ width: '80rpx', height: '80rpx' }}
           lazyLoad
           className='icebreaker__waiting-emoji'
