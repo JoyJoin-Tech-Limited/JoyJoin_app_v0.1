@@ -397,6 +397,10 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     /** When true, the server uses template-driven run plan compilation (3×3 vibe×tier grid +
      *  deep_chat/play_fun/balanced vibes). When false, legacy compileAgentRunPlan() runs unchanged. */
     runPlanTemplatesEnabled?: boolean
+    /** When false, disables the personality test share poster generation. */
+    personalityShareEnabled?: boolean
+    /** When false, skips the slot machine reveal animation and shows static result. */
+    personalitySlotAnimationEnabled?: boolean
   }
 }
 
@@ -708,7 +712,7 @@ export function markNotificationsAsRead(
 export interface AssessmentQuestion {
   id: string
   text: string
-  options: { id: string; text: string; traitScores?: Record<string, number> }[]
+  options: { id: string; text: string; traitScores?: Record<string, number>; commentary?: string }[]
   traitKey?: string
   phaseLabel?: string
 }

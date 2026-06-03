@@ -50,6 +50,8 @@ interface FinalStageProps {
     blendLine: string
   } | null
   isLoadingAnalysis?: boolean
+  personalityShareEnabled?: boolean
+  posterError?: boolean
 }
 
 export default function FinalStage({
@@ -81,7 +83,19 @@ export default function FinalStage({
   secondaryDisplayName,
   xiaoyueAnalysis,
   isLoadingAnalysis,
+  personalityShareEnabled = true,
+  posterError = false,
 }: FinalStageProps) {
+  const [heroImgError, setHeroImgError] = useState(false)
+  const [pokemonImgError, setPokemonImgError] = useState(false)
+
+  // Fallback chain: local bundle → CDN WebP → CDN PNG → mascot celebrate
+  const heroSrc = heroImgError
+    ? (visual.asset || displayAsset)
+    : displayAsset
+  const pokemonSrc = pokemonImgError
+    ? (visual.asset || displayAsset)
+    : displayAsset
   const [isTiltActive, setIsTiltActive] = useState(false)
   const [touchTilt, setTouchTilt] = useState({ rotateX: 0, rotateY: 0 })
   const [isDetailOpen, setIsDetailOpen] = useState(false)
@@ -187,6 +201,11 @@ export default function FinalStage({
     onGeneratePoster()
   }, [onGeneratePoster])
 
+  const handleRetryPoster = useCallback(() => {
+    haptics('medium')
+    onGeneratePoster()
+  }, [onGeneratePoster])
+
   const activeVariant = variants?.[selectedVariantIndex ?? 0]
   const cardBackground = activeVariant
     ? `linear-gradient(160deg, ${activeVariant.accentSoft} 0%, #fff8ee 50%, rgba(255, 255, 255, 0.98) 100%)`
@@ -249,7 +268,13 @@ export default function FinalStage({
 
           <View className='personality-results__hero-art-shell'>
             <View className='personality-results__hero-art-bg' style={{ background: visual.accentSoft }} />
-            <Image className='personality-results__hero-art' mode='aspectFit' src={displayAsset} />
+            <Image
+              className='personality-results__hero-art'
+              mode='aspectFit'
+              src={heroSrc}
+              onError={() => setHeroImgError(true)}
+            />
+            {/* No text overlay on archetype image — clean art only */}
           </View>
 
           {/* Xiaoyue short analysis — integrated into hero card */}
@@ -291,10 +316,14 @@ export default function FinalStage({
                 )}
                 <View
                   className='personality-results__hero-xiaoyue-cta'
+                  style={{
+                    background: visual.accentStrong,
+                    '--cta-shadow': visual.accentGlow,
+                  } as React.CSSProperties}
                   onClick={handleCardTap}
                 >
                   <Text className='personality-results__hero-xiaoyue-cta-text'>
-                    看看悦仔怎么说
+                    查看悦仔完整解读
                   </Text>
                 </View>
               </>
@@ -354,7 +383,12 @@ export default function FinalStage({
 
             <View className='personality-results__pokemon-card-hero'>
               <View className='personality-results__pokemon-art-shell'>
-                <Image className='personality-results__pokemon-art' mode='aspectFit' src={displayAsset} />
+                <Image
+                  className='personality-results__pokemon-art'
+                  mode='aspectFit'
+                  src={pokemonSrc}
+                  onError={() => setPokemonImgError(true)}
+                />
               </View>
               <View className='personality-results__pokemon-copy'>
                 <Text className='personality-results__pokemon-name'>{displayArchetypeName}</Text>
@@ -414,13 +448,33 @@ export default function FinalStage({
             </View>
 
             <View className='personality-results__pokemon-actions'>
-              <Button onClick={handleSharePress} disabled={isGeneratingPoster} loading={isGeneratingPoster}>
-                {isGeneratingPoster
-                  ? (generationPhase || '正在渲染卡面…')
-                  : sharePosterPath
-                    ? '分享卡片'
-                    : '保存我的氛围卡'}
-              </Button>
+              {posterError && (
+                <View className='personality-results__poster-error'>
+                  <Text className='personality-results__poster-error-text'>卡片生成失败了，再试一次？</Text>
+                  <Button
+                    variant='secondary'
+                    size='sm'
+                    onClick={handleRetryPoster}
+                    hoverClass='joy-button--active'
+                  >
+                    重试生成
+                  </Button>
+                </View>
+              )}
+              {personalityShareEnabled && !posterError && (
+                <Button
+                  onClick={handleSharePress}
+                  disabled={isGeneratingPoster}
+                  loading={isGeneratingPoster}
+                  hoverClass='joy-button--active'
+                >
+                  {isGeneratingPoster
+                    ? (generationPhase || '正在渲染卡面…')
+                    : sharePosterPath
+                      ? '分享卡片'
+                      : '保存我的氛围卡'}
+                </Button>
+              )}
             </View>
           </View>
         </Card>
@@ -516,8 +570,13 @@ export default function FinalStage({
                         <Text className='personality-results__trait-label'>{trait.label}</Text>
                         <Text className='personality-results__trait-value'>{trait.value}</Text>
                       </View>
-                      <View className='personality-results__trait-track'>
-                        <View className='personality-results__trait-fill' style={{ transform: `scaleX(${trait.value / 100})`, transformOrigin: 'left center', background: visual.accent }} />
+                      <View className='personality-results__trait-track' style={{ color: visual.accent }}>
+                        {Array.from({ length: 10 }, (_, i) => (
+                          <View
+                            key={i}
+                            className={`personality-results__trait-segment ${(i + 1) * 10 <= trait.value ? 'personality-results__trait-segment--filled' : 'personality-results__trait-segment--dim'}`}
+                          />
+                        ))}
                       </View>
                     </View>
                   ))}
@@ -551,7 +610,11 @@ export default function FinalStage({
             </ScrollView>
 
             {/* Close button */}
-            <View className='personality-results__detail-close' onClick={handleCloseDetail}>
+            <View
+              className='personality-results__detail-close'
+              onClick={handleCloseDetail}
+              hoverClass='personality-results__detail-close--active'
+            >
               <Text className='personality-results__detail-close-text'>收起</Text>
             </View>
           </View>

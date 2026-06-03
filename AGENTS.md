@@ -139,9 +139,9 @@ npm run simulate:gate                 # CI gate: generate + run centroids
 #
 # CDN asset upload (mascot, phase icons, illustrations → joyjoinapp.com/static)
 # Trigger: gh workflow run "Upload CDN Assets"
-# Serves from /static/ on CVM (Express static route in vite.ts). Do NOT change
-# CDN_RSYNC_PATH away from /static — Express only looks at /static/ and
-# ../server/static/, not /var/www/cdn/static.
+# Production: nginx serves /static/ from /var/www/cdn/ (alias directive).
+# Set CDN_RSYNC_PATH=/var/www/cdn for production uploads. The Express dev
+# server fallback (vite.ts: /static/ → ../server/static/) is local-dev only.
 ```
 
 **Migration discipline (CVM PostgreSQL):**

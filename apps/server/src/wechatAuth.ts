@@ -864,9 +864,9 @@ export function setupWechatAuth(app: Express) {
         errorCode = "WECHAT_AUTH_FAILED";
         clientMessage = "WeChat authentication failed";
       } else if (err?.code === "WECHAT_CONFIG_ERROR") {
-        status = 500;
+        status = 401;
         errorCode = "WECHAT_CONFIG_ERROR";
-        clientMessage = "Server configuration error";
+        clientMessage = "WeChat authentication failed";
       } else if (err?.code === "INVALID_TEST_RESULTS") {
         status = 400;
         errorCode = "INVALID_TEST_RESULTS";

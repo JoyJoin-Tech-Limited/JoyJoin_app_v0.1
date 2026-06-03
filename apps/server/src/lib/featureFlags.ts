@@ -22,6 +22,8 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  When true: compileForSession() queries DB templates + falls back to compileAgentRunPlan();
    *            client shows the deep_chat / balanced / play_fun vibe selector. */
   runPlanTemplatesEnabled: "RUN_PLAN_TEMPLATES_ENABLED",
+  personalityShareEnabled: "PERSONALITY_SHARE_ENABLED",
+  personalitySlotAnimationEnabled: "PERSONALITY_SLOT_ANIMATION_ENABLED",
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

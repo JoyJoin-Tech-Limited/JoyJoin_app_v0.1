@@ -20,6 +20,8 @@ export interface QuestionOption {
   traitScores: TraitScores;
   /** Semantic key for a custom icon asset (e.g. Lovart illustration). Consumed by clients; not scored. */
   iconAssetKey?: string;
+  /** Xiaoyue commentary pre-attached by the server so the client can show it immediately without waiting for the answer API call. */
+  commentary?: string;
 }
 
 export type QuestionLevel = 1 | 2 | 3;

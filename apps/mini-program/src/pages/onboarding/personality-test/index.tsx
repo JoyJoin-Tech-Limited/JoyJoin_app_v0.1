@@ -68,6 +68,7 @@ interface AssessmentOption {
   text: string
   traitScores?: Record<string, number>
   iconAssetKey?: string
+  commentary?: string
 }
 
 interface AssessmentSliderConfig {
@@ -120,6 +121,10 @@ interface AssessmentAnswerResponse {
   /** Server-computed final result (present when isComplete === true). */
   result?: AnonymousAssessmentResult
 }
+
+// Minimum time Xiaoyue's post-answer commentary stays visible before the
+// next question appears. Prevents the feedback from flashing by too fast.
+const COMMENTARY_MIN_DISPLAY_MS = 1400
 
 const INTRO_ARCHETYPE_TEASERS: { archetype: string; vibeLine: string }[] = [
   { archetype: 'corgi', vibeLine: '一进场，就把气氛带热。' },
@@ -185,6 +190,7 @@ export default function PersonalityTestPage() {
   const [error, setError] = useState('')
   const [spriteState, setSpriteState] = useState<XiaoyueSpriteState>('idle')
   const [postAnswerCommentary, setPostAnswerCommentary] = useState<string | null>(null)
+  const commentaryReceivedAtRef = useRef<number>(0)
   const [milestonePulse, setMilestonePulse] = useState(false)
   const [introImgSrc, setIntroImgSrc] = useState(getIntroStaticAsset())
   const [skipsRemaining, setSkipsRemaining] = useState(MAX_SKIP_COUNT)
@@ -425,8 +431,6 @@ export default function PersonalityTestPage() {
     // Clear previous commentary so the speech bubble doesn't show stale feedback
     setPostAnswerCommentary(null)
 
-    // Post-answer commentary will be set from server response below
-
     // Stale-session guard: remember which session this answer belongs to
     const thisSessionId = sessionId
     activeSessionRef.current = thisSessionId
@@ -443,10 +447,21 @@ export default function PersonalityTestPage() {
 
     lastAttemptedOptionRef.current = option
 
+    // Show pre-attached per-option commentary immediately so Xiaoyue's feedback
+    // is always tailored to the exact option the user chose — no more generic
+    // rotating "收到～" messages that pretend to know the user.
+    const immediateCommentary = option.commentary ?? null
+    const commentaryStartTime = Date.now()
+    setPostAnswerCommentary(immediateCommentary)
+    if (immediateCommentary) {
+      commentaryReceivedAtRef.current = commentaryStartTime
+    }
+
     setIsSubmitting(true)
     setError('')
     try {
-      const result = await apiRequest<AssessmentAnswerResponse>({
+      // Fire the answer API call in parallel with the commentary display timer
+      const apiPromise = apiRequest<AssessmentAnswerResponse>({
         path: `/api/assessment/v4/${encodeURIComponent(thisSessionId)}/answer`,
         method: 'POST',
         data: {
@@ -455,11 +470,30 @@ export default function PersonalityTestPage() {
         },
       })
 
+      // Ensure commentary is visible for at least COMMENTARY_MIN_DISPLAY_MS so
+      // the user has time to read Xiaoyue's feedback before the next question
+      // appears. The API call runs concurrently with this delay.
+      if (immediateCommentary) {
+        const minDisplayRemaining = Math.max(
+          0,
+          COMMENTARY_MIN_DISPLAY_MS - (Date.now() - commentaryStartTime),
+        )
+        if (minDisplayRemaining > 0) {
+          await new Promise((resolve) => setTimeout(resolve, minDisplayRemaining))
+        }
+      }
+
+      const result = await apiPromise
+
       // Abandon stale async work if session has changed
       if (activeSessionRef.current !== thisSessionId) return
 
-      // Set server-delivered Xiaoyue commentary for the speech bubble
-      setPostAnswerCommentary(result.commentary ?? null)
+      // Fallback: use server commentary if the option didn't have pre-attached
+      // commentary (shouldn't happen, but ensures robustness)
+      if (!immediateCommentary && result.commentary) {
+        setPostAnswerCommentary(result.commentary)
+        commentaryReceivedAtRef.current = Date.now()
+      }
 
       if (!isAuthenticated) {
         upsertAnonymousAssessmentAnswer({
@@ -518,6 +552,9 @@ export default function PersonalityTestPage() {
       // Save previous question + answer for one-step back
       previousQuestionRef.current = question
       previousAnswerRef.current = option.value
+
+      // Abandon if session changed during the async work
+      if (activeSessionRef.current !== thisSessionId) return
 
       // Clear commentary before showing the next question so the speech bubble
       // transitions from feedback back to the new question text
@@ -969,19 +1006,17 @@ export default function PersonalityTestPage() {
     )
   }
 
+  // Xiaoyue speech bubble text. Commentary is set immediately from pre-attached
+  // per-option data so the user sees tailored feedback without a network round-trip.
   const speechText = backReview.isBackReviewMode
     ? '这是你之前选的答案，可以修改后再确认。'
-    : isSubmitting && spriteState === 'thinking'
-      ? '悦仔正在分析你的选择…'
-      : postAnswerCommentary
-        ? postAnswerCommentary
-        : isSubmitting
-          ? '收到～'
-          : progress && progress.answered === 4
-            ? '已经一半了！你的命格轮廓越来越清晰，继续凭直觉选。'
-            : progress && progress.answered === 8
-              ? '太棒了！进入精准阶段，接下来的题目会更聚焦，帮你锁定最像自己的氛围命格。'
-              : question?.questionText ?? ''
+    : postAnswerCommentary
+      ? postAnswerCommentary
+      : progress && progress.answered === 4
+        ? '已经一半了！你的命格轮廓越来越清晰，继续凭直觉选。'
+        : progress && progress.answered === 8
+          ? '太棒了！进入精准阶段，接下来的题目会更聚焦，帮你锁定最像自己的氛围命格。'
+          : question?.questionText ?? ''
 
   const isLoadingSpeech = isSubmitting && !postAnswerCommentary
 

@@ -709,6 +709,18 @@
         {
             "localPath": "assets/promo/banner-hero-lovart-v1.webp",
             "cdnPath": "assets/promo/banner-hero-lovart-v1.webp"
+        },
+        {
+            "localPath": "assets/matching/matching-bg.webp",
+            "cdnPath": "assets/matching-heroes/matching-bg.webp"
+        },
+        {
+            "localPath": "assets/matching/matching-waiting-hero.webp",
+            "cdnPath": "assets/matching-heroes/matching-waiting-hero.webp"
+        },
+        {
+            "localPath": "assets/matching/matching-no-match-hero.webp",
+            "cdnPath": "assets/matching-heroes/matching-no-match-hero.webp"
         }
     ]
 }

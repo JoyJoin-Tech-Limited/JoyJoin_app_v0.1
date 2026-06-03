@@ -251,8 +251,8 @@ export default function PhaseIconCarousel({ isVisible }: PhaseIconCarouselProps)
       <View className="phase-carousel phase-carousel--fallback">
         <View className="phase-carousel__fallback-inner">
           <Text className="phase-carousel__fallback-icon">玩法一览</Text>
-          <Text className="phase-carousel__fallback-label">6 种破冰玩法</Text>
-          <Text className="phase-carousel__fallback-sublabel">话题卡 · 谎言侦探 · 人格骰子 · 拍卖 · 迷你剧本杀 · 机智对决</Text>
+          <Text className="phase-carousel__fallback-label">氛围引擎 · 10+ 种玩法随局定制</Text>
+          <Text className="phase-carousel__fallback-sublabel">话题卡 · 谎言侦探 · 人格骰子 · 拍卖 · 迷你剧本杀 · 机智对决 等 11 种玩法</Text>
         </View>
       </View>
     )

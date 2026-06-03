@@ -1,6 +1,7 @@
 import { Image, Text, View } from '@tarojs/components'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import Card from '../../../../components/ui/Card'
+import Button from '../../../../components/ui/Button'
 import {
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
@@ -10,9 +11,10 @@ interface BridgeStageProps {
   displayArchetypeName: string
   confidenceLabel?: string
   phaseText?: string
+  onSkip?: () => void
 }
 
-export default function BridgeStage({ displayArchetypeName, confidenceLabel, phaseText }: BridgeStageProps) {
+export default function BridgeStage({ displayArchetypeName, confidenceLabel, phaseText, onSkip }: BridgeStageProps) {
   return (
     <View className='personality-results__immersive-shell personality-results__immersive-shell--bridge'>
       <Text className='personality-results__immersive-eyebrow'>结果已锁定</Text>
@@ -43,6 +45,19 @@ export default function BridgeStage({ displayArchetypeName, confidenceLabel, pha
             </Text>
             <Text className='personality-results__bridge-badge'>{confidenceLabel || '结果已锁定'}</Text>
           </View>
+
+          {onSkip && (
+            <View className='personality-results__bridge-skip-row'>
+              <Button
+                variant='secondary'
+                size='sm'
+                onClick={onSkip}
+                hoverClass='joy-button--active'
+              >
+                跳过，直接看结果
+              </Button>
+            </View>
+          )}
         </View>
       </Card>
     </View>

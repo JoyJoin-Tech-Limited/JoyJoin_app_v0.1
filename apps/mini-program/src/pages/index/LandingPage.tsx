@@ -144,8 +144,14 @@ export default function MiniProgramLandingPage() {
         <View
           className={`game-preview ${isMounted ? "stagger-in stagger-in--3" : "stagger-in-hidden"}`}
         >
-          {/* @ts-expect-error Taro TextProps lacks ARIA role typings; WeChat WXML supports it */}
-          <Text className="game-preview__title" role="heading" aria-level={3}>6 种破冰玩法，一局解锁</Text>
+          <View className="game-preview__title" role="heading" aria-level={3}>
+            <View className="game-preview__title-sheen" />
+            <View className="game-preview__title-star game-preview__title-star--tl">✦</View>
+            <View className="game-preview__title-star game-preview__title-star--tr">✦</View>
+            <View className="game-preview__title-star game-preview__title-star--bl">✦</View>
+            <View className="game-preview__title-star game-preview__title-star--br">✦</View>
+            <Text>氛围引擎 · 10+ 种玩法随局定制</Text>
+          </View>
           {reduceMotion ? (
             <View className="game-preview__grid">
               {[

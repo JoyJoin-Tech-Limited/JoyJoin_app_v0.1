@@ -1,5 +1,5 @@
 import { Canvas, Image, Text, View } from '@tarojs/components'
-import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro'
+import Taro, { useDidShow, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
@@ -26,6 +26,8 @@ import { haptics } from '../../../../lib/utils/haptics'
 import { getMascotDisplayName } from '../../../../lib/mascot/mascotDisplay'
 import { logError, logInfo, logWarn } from '../../../../lib/utils/logger'
 import { useMiniRevealMotion } from '../../../../hooks/useMiniRevealMotion'
+import { useUnload } from '../../../../hooks/useUnload'
+import { useDeviceTier } from '../../../../hooks/useDeviceTier'
 import { preloadImagesWithDiagnostics } from '../../../../lib/utils/imagePreload'
 import { MINI_PROGRAM_ROUTES } from '../../../../lib/onboarding/onboardingRoutes'
 import { navigateToMiniProgramNextStep } from '../../../../lib/onboarding/onboardingNavigation'
@@ -34,7 +36,6 @@ import {
   getArchetypeVisual,
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
-  getAllArchetypeAssetUrls,
   getArchetypeSpritesheetLocalPath,
   ASSET_BASE_WEBP_LOCAL,
 } from '../visuals'
@@ -96,6 +97,17 @@ interface XiaoyueAnalysisResult {
 export default function PersonalityTestResultsPage() {
   const { shouldReduceMotion } = useMiniRevealMotion()
   const auth = useAuth()
+  const deviceTier = useDeviceTier()
+
+  const personalityShareEnabled = auth.user?.features?.personalityShareEnabled ?? true
+  const personalitySlotAnimationEnabled = auth.user?.features?.personalitySlotAnimationEnabled ?? true
+
+  // Cleanup on page unload to prevent timer leaks and stale state updates
+  useUnload(() => {
+    timeoutHandlesRef.current.forEach((handle) => clearTimeout(handle))
+    timeoutHandlesRef.current = []
+    mountedRef.current = false
+  })
   const initialSnapshot = useMemo(() => readAnonymousAssessmentSession(), [])
   const initialResolvedResult = useMemo(() => buildResolvedResultState(initialSnapshot), [initialSnapshot])
   const hasCompletedReplay = Boolean(initialSnapshot?.resultSequenceCompletedAt && initialResolvedResult)
@@ -132,6 +144,7 @@ export default function PersonalityTestResultsPage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [sharePosterPath, setSharePosterPath] = useState('')
   const [isGeneratingPoster, setIsGeneratingPoster] = useState(false)
+  const [posterError, setPosterError] = useState(false)
   const [generationPhase, setGenerationPhase] = useState('')
   const [completionMode, setCompletionMode] = useState<'replay' | 'animated' | null>(hasCompletedReplay ? 'replay' : null)
   const [cardNickname] = useState('')
@@ -187,15 +200,26 @@ export default function PersonalityTestResultsPage() {
   }, [])
 
   /**
+   * WeChat keeps pages in the navigation stack alive (hidden, not unmounted).
+   * If the user swipes back and returns, or the page is reused, transient
+   * guards like isAnimatingRef may survive. Reset them on every show.
+   */
+  useDidShow(() => {
+    isAnimatingRef.current = false
+  })
+
+  /**
    * Preload result-stage images on mount (covers direct entry / page refresh
    * where the test-phase preload didn't run).
    */
   useEffect(() => {
     if (resultPreloadInitiatedRef.current) return
     resultPreloadInitiatedRef.current = true
-    // Preload the local bundled spritesheet (same path the slot animation uses)
-    // so decode readiness is guaranteed before spin starts.
-    const urls = [getArchetypeSpritesheetLocalPath(), ...getAllArchetypeAssetUrls()]
+    // Preload only the local bundled spritesheet. Full-size archetype images
+    // are loaded on-demand via <Image> and are bundled locally, so priming
+    // them with getImageInfo is unnecessary and can trigger console noise
+    // when CDN domains aren't whitelisted for downloadFile.
+    const urls = [getArchetypeSpritesheetLocalPath()]
     void preloadImagesWithDiagnostics(urls, 'personality-results-mount')
   }, [])
 
@@ -268,7 +292,11 @@ export default function PersonalityTestResultsPage() {
     return getTopMatches(sessionSnapshot?.result, sessionSnapshot?.topArchetypes)
   }, [resultState, sessionSnapshot])
 
+  // Use resultStateRef as a synchronous fallback so the slot target and the
+  // result page never diverge during the animation flow. React state updates
+  // are batched; the ref is updated immediately in runResultFlow.
   const displayArchetype = resultState?.result.primaryArchetype
+    ?? resultStateRef.current?.result.primaryArchetype
     ?? sessionSnapshot?.result?.primaryArchetype
     ?? topMatches[0]?.archetype
     ?? null
@@ -279,17 +307,6 @@ export default function PersonalityTestResultsPage() {
     ? (ARCHETYPE_BY_ID[secondaryArchetypeId]?.nameCn ?? '')
     : undefined
 
-  // Targeted preload: once we know the specific result archetype, ensure
-  // its full-size asset is in cache (noop if already loaded).
-  useEffect(() => {
-    if (!displayArchetype) return
-    const visual = getArchetypeVisual(displayArchetype)
-    const localAsset = displayArchetype ? `${ASSET_BASE_WEBP_LOCAL}/archetype-${displayArchetype}.webp` : ''
-    const preloadTarget = localAsset || visual.asset
-    if (preloadTarget) {
-      void preloadImagesWithDiagnostics([preloadTarget], `result-archetype-${displayArchetype}`)
-    }
-  }, [displayArchetype])
   const displayArchetypeName = displayArchetype
     ? archetypeRegistry[displayArchetype]?.name ?? displayArchetype
     : '神秘原型'
@@ -334,8 +351,12 @@ export default function PersonalityTestResultsPage() {
   )
   const displayAsset = useMemo(
     () =>
+      // Primary: local bundled WebP — always available, immune to CDN
+      // whitelist / network issues that plague getImageInfo in subpackages.
       (displayArchetype ? `${ASSET_BASE_WEBP_LOCAL}/archetype-${displayArchetype}.webp` : '') ||
+      // Fallback: CDN WebP (for environments where local assets were stripped)
       visual.asset ||
+      // Fallback 2: Xiaoyue mascot (never blank)
       getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCelebrate),
     [displayArchetype, visual.asset],
   )
@@ -352,16 +373,20 @@ export default function PersonalityTestResultsPage() {
         ? '开启匹配'
         : '微信登录，查看谁和你最搭'
 
+  // WeChat share requires a network URL or temp file path. Local bundled
+  // paths don't work for share preview images. Fall back to CDN URL.
+  const shareImageUrl = sharePosterPath || visual.asset || displayAsset
+
   useShareAppMessage(() => ({
     title: shareTitle,
     path: MINI_PROGRAM_ROUTES.personalityTest,
-    imageUrl: sharePosterPath || displayAsset,
+    imageUrl: shareImageUrl,
   }))
 
   useShareTimeline(() => ({
     title: shareTitle,
     query: 'source=personality-result',
-    imageUrl: sharePosterPath || displayAsset,
+    imageUrl: shareImageUrl,
   }))
 
   useEffect(() => {
@@ -478,7 +503,6 @@ export default function PersonalityTestResultsPage() {
   }, [analytics])
 
   const runResultFlow = useCallback(async (options?: { forceRefresh?: boolean }) => {
-    if (isAnimatingRef.current) return
     isAnimatingRef.current = true
 
     try {
@@ -534,8 +558,8 @@ export default function PersonalityTestResultsPage() {
         return
       }
 
-      // Accessibility: skip slot animation for users with reduced-motion enabled
-      if (prefersReducedMotion) {
+      // Accessibility + Performance: skip slot animation for reduced-motion or degradation-tier devices
+      if (prefersReducedMotion || deviceTier.isDegradation || !personalitySlotAnimationEnabled) {
         const fetchPromise = fetchResult(nextRunId, Boolean(options?.forceRefresh))
         const resolved = await fetchPromise
         if (resolved && mountedRef.current && nextRunId === runIdRef.current) {
@@ -703,6 +727,14 @@ export default function PersonalityTestResultsPage() {
         return
       }
 
+      // CRITICAL: Sync resultState BEFORE slot animation so displayArchetype
+      // matches the slot target. Without this, the slot can land on one
+      // archetype while the final result page shows a different one.
+      if (resolvedResult !== resultStateRef.current) {
+        resultStateRef.current = resolvedResult
+        setResultState(resolvedResult)
+      }
+
       // Unified fallback chain: both slot and result display use identical resolution.
       // With server-side validation this should always resolve to resolvedResult.result.primaryArchetype.
       const targetName = resolvedResult.result.primaryArchetype
@@ -710,14 +742,19 @@ export default function PersonalityTestResultsPage() {
         ?? topMatches[0]?.archetype
         ?? 'corgi'
 
-      // Split-brain detection: log if slot target diverges from display fallback chain.
-      // This gives us definitive telemetry on whether the mismatch is data-flow or visual.
-      if (displayArchetype && displayArchetype !== targetName) {
+      // Split-brain detection: compare slot target against the synchronous ref
+      // (displayArchetype from the render closure may be stale because React state
+      // updates are batched). The ref was just synced at line 724-726.
+      const syncDisplayArchetype = resultStateRef.current?.result.primaryArchetype
+        ?? sessionSnapshot?.result?.primaryArchetype
+        ?? topMatches[0]?.archetype
+        ?? null
+      if (syncDisplayArchetype && syncDisplayArchetype !== targetName) {
         logError('[PersonalityResults] SPLIT_BRAIN_DETECTED', {
           slotTarget: targetName,
-          displayArchetype,
-          displaySource: resultState?.result?.primaryArchetype
-            ? 'resultState'
+          displayArchetype: syncDisplayArchetype,
+          displaySource: resultStateRef.current?.result?.primaryArchetype
+            ? 'resultStateRef'
             : sessionSnapshot?.result?.primaryArchetype
               ? 'sessionSnapshot'
               : 'topMatches',
@@ -854,31 +891,103 @@ export default function PersonalityTestResultsPage() {
       setFlowStage('result')
       setPhaseText('')
       setCompletionMode('animated')
+    } catch (flowError) {
+      const message = flowError instanceof Error ? flowError.message : '结果展示流程出错'
+      logError('[PersonalityResults] runResultFlow unhandled error', { message })
+      if (mountedRef.current) {
+        setErrorMessage(message)
+        setFlowStage('error')
+        analytics.errorOccurred('result_flow_unhandled', message)
+      }
     } finally {
       isAnimatingRef.current = false
     }
   }, [analytics, auth.isAuthenticated, displayArchetypeName, fetchResult])
 
   /**
-   * Start the result animation only after critical assets are confirmed ready.
+   * Start the result animation after critical assets are confirmed ready.
    *
-   * The 'loading' stage stays visible while useSpriteReadiness probes the
-   * spritesheet (≤500ms). Once ready — or on timeout — we transition to
-   * the slot machine. This guarantees the first frame never shows blank
-   * circles, even on low-end devices or after a cold redirectTo.
+   * Primary trigger: spriteReady.isReady (fires once the spritesheet decodes
+   * or the 500ms probe timeout elapses).
+   *
+   * Fallback trigger: a 1-second hard timeout guarantees the flow starts even
+   * if the Image() probe silently fails in the WeChat webview, or if the
+   * page was reused from the stack with a stale isAnimatingRef guard.
+   *
+   * A flowInitiatedRef prevents double-start when both triggers fire.
    */
+  const flowInitiatedRef = useRef(false)
+
   useEffect(() => {
     if (hasCompletedReplay) return
-    if (!spriteReady.isReady) return
-    void runResultFlow()
-  }, [hasCompletedReplay, spriteReady.isReady, runResultFlow])
+    if (flowInitiatedRef.current) return
+
+    const startFlow = () => {
+      if (flowInitiatedRef.current) return
+      flowInitiatedRef.current = true
+      void runResultFlow().catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : '结果动画启动失败'
+        logError('[PersonalityResults] runResultFlow rejected', { message })
+        setErrorMessage(message)
+        setFlowStage('error')
+        analytics.errorOccurred('result_flow_rejected', message)
+      })
+    }
+
+    if (spriteReady.isReady) {
+      startFlow()
+      return
+    }
+
+    const fallbackTimer = setTimeout(() => {
+      if (mountedRef.current) {
+        logWarn('[PersonalityResults] Sprite readiness fallback triggered — starting flow anyway', {
+          spriteReady: spriteReady.isReady,
+          loaded: spriteReady.loaded,
+          hasError: spriteReady.hasError,
+        })
+        startFlow()
+      }
+    }, 1200)
+
+    return () => clearTimeout(fallbackTimer)
+  }, [hasCompletedReplay, spriteReady.isReady, spriteReady.loaded, spriteReady.hasError, runResultFlow, analytics])
+
+  /**
+   * Last-resort stuck detection: if the page remains on 'loading' for longer
+   * than 15s, something fundamental is broken (runResultFlow never started,
+   * or an async operation inside it hung without hitting its own timeout).
+   * Force an error state so the user sees a retry button instead of a
+   * perpetual spinner.
+   */
+  useEffect(() => {
+    if (flowStage !== 'loading') return
+    if (hasCompletedReplay) return
+
+    const stuckTimer = setTimeout(() => {
+      if (mountedRef.current && flowStage === 'loading') {
+        logError('[PersonalityResults] Stuck on loading stage — forcing error state', {
+          spriteReady: spriteReady.isReady,
+          isAnimating: isAnimatingRef.current,
+          flowInitiated: flowInitiatedRef.current,
+        })
+        setErrorMessage('页面加载超时，请重试')
+        setFlowStage('error')
+        analytics.errorOccurred('results_loading_stuck', 'loading stage timeout')
+      }
+    }, 15000)
+
+    return () => clearTimeout(stuckTimer)
+  }, [flowStage, hasCompletedReplay, spriteReady.isReady, analytics])
 
   const handleRetry = useCallback(() => {
+    flowInitiatedRef.current = false
     void runResultFlow({ forceRefresh: true })
   }, [runResultFlow])
 
   const handleRestart = useCallback(() => {
     runIdRef.current += 1
+    flowInitiatedRef.current = false
     analytics.stepAbandoned('restart')
     clearAnonymousAssessmentStorage()
     setSharePosterPath('')
@@ -1063,6 +1172,7 @@ export default function PersonalityTestResultsPage() {
     }
 
     setIsGeneratingPoster(true)
+    setPosterError(false)
     setGenerationPhase('准备素材中…')
 
     try {
@@ -1070,6 +1180,9 @@ export default function PersonalityTestResultsPage() {
       const accentColor = selectedVariant?.accentColor ?? (visual.accent || '#8B5CF6')
       const accentSoft = selectedVariant?.accentSoft ?? visual.accentSoft
 
+      // Canvas drawImage needs a network URL or temp file path. Local bundled
+      // paths (e.g. /pages/onboarding/assets/...) fail in getImageInfo on
+      // some WeChat base library versions. Use CDN webp primary, CDN png fallback.
       const posterInput: PersonalitySharePosterInput = {
         archetype: displayArchetypeName,
         nickname: cardNickname || visual.nickname || displayArchetypeName,
@@ -1078,7 +1191,7 @@ export default function PersonalityTestResultsPage() {
         shareLine,
         accentColor,
         accentSoft,
-        archetypeAsset: displayAsset,
+        archetypeAsset: visual.asset || displayAsset,
         archetypeAssetPng: visual.assetPng,
         confidenceLabel,
         rarityLabel:
@@ -1124,6 +1237,7 @@ export default function PersonalityTestResultsPage() {
         primaryArchetype: displayArchetypeName,
       })
       void Taro.showToast({ title: '卡片生成遇到小状况，再试试~', icon: 'none', duration: 2500 })
+      setPosterError(true)
     } finally {
       setIsGeneratingPoster(false)
       setGenerationPhase('')
@@ -1189,6 +1303,10 @@ export default function PersonalityTestResultsPage() {
             displayArchetypeName={displayArchetypeName}
             confidenceLabel={confidenceLabel}
             phaseText={phaseText}
+            onSkip={() => {
+              haptics('light')
+              setFlowStage('result')
+            }}
           />
         )
       case 'result':
@@ -1222,6 +1340,8 @@ export default function PersonalityTestResultsPage() {
             secondaryDisplayName={secondaryDisplayName}
             xiaoyueAnalysis={xiaoyueAnalysis}
             isLoadingAnalysis={isLoadingAnalysis}
+            personalityShareEnabled={personalityShareEnabled}
+            posterError={posterError}
           />
         )
       case 'loading':

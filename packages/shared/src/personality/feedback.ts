@@ -955,6 +955,24 @@ export function getOptionFeedback(questionId: string, optionValue: string): stri
   return xiaoyueFeedback[questionId]?.[optionValue];
 }
 
+export interface AnnotatableOption {
+  value: string;
+  text: string;
+  traitScores?: Record<string, number>;
+  iconAssetKey?: string;
+  commentary?: string;
+}
+
+export function annotateOptionsWithCommentary<T extends AnnotatableOption>(
+  questionId: string,
+  options: T[]
+): T[] {
+  return options.map((opt) => ({
+    ...opt,
+    commentary: getOptionFeedback(questionId, opt.value),
+  }));
+}
+
 export function getMilestoneMessage(questionNumber: number): MilestoneConfig | undefined {
   return milestoneConfigs.find(m => m.position === questionNumber);
 }

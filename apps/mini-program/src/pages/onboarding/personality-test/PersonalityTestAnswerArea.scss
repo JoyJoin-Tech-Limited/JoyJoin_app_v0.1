@@ -88,7 +88,10 @@
     color: $color-text-primary;
     text-align: left;
     line-height: 1.5;
-    transition: transform 0.1s ease;
+    transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+                background 0.12s ease,
+                border-color 0.12s ease,
+                box-shadow 0.12s ease;
     animation: answer-stagger-enter 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
 
     &:nth-child(1) { animation-delay: 0ms; }
@@ -101,13 +104,13 @@
     }
 
     &:active {
-      transform: scale(0.97);
-      opacity: 0.92;
+      transform: scale(0.98);
     }
 
     &--active {
       border-color: $color-primary;
       background: $color-primary-light;
+      box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.08);
     }
 
     &--selected {
@@ -153,7 +156,10 @@
     border: 2rpx solid transparent;
     border-radius: $radius-pill;
     background: $color-surface;
-    transition: transform 0.1s ease;
+    transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+                background 0.12s ease,
+                border-color 0.12s ease,
+                box-shadow 0.12s ease;
     animation: answer-stagger-enter 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
 
     &:nth-child(1) { animation-delay: 0ms; }
@@ -164,7 +170,7 @@
     overflow: visible;
 
     &:active {
-      transform: scale(0.96);
+      transform: scale(0.97);
     }
 
     &::after {
@@ -237,33 +243,39 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-width: 160rpx;
+    min-width: 180rpx;
     max-width: 480rpx;
-    padding: 16rpx 32rpx;
-    border-radius: 48rpx;
-    background: rgba($color-primary, 0.06);
-    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+    padding: 14rpx 36rpx;
+    border-radius: 999rpx;
+    background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 
-    /* Tint overlay — animated via opacity to stay compositor-only */
+    /* Shadow is on a child pseudo-element to avoid repaint during transform */
     &::before {
       content: '';
       position: absolute;
-      top: 0;
-      right: 0;
-      bottom: 0;
-      left: 0;
-      border-radius: 48rpx;
-      background: rgba($color-primary, 0.04);
-      opacity: 0;
-      transition: opacity 0.18s ease;
+      inset: 0;
+      border-radius: 999rpx;
+      box-shadow: 0 6rpx 20rpx rgba($color-primary, 0.28), inset 0 1rpx 0 rgba(255, 255, 255, 0.15);
+      pointer-events: none;
+    }
+
+    /* Downward arrow connecting badge to slider thumb — matches gradient start color */
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: -10rpx;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 10rpx solid transparent;
+      border-right: 10rpx solid transparent;
+      border-top: 10rpx solid $color-primary;
     }
 
     &--left {
-      transform: translateX(-20rpx) scale(1.02);
-
-      &::before {
-        opacity: 1;
-      }
+      transform: translateX(-28rpx) scale(1.03);
     }
 
     &--center {
@@ -271,29 +283,27 @@
     }
 
     &--right {
-      transform: translateX(20rpx) scale(1.02);
-
-      &::before {
-        opacity: 1;
-      }
+      transform: translateX(28rpx) scale(1.03);
     }
   }
 
   &__slider-live-badge-label {
-    font-family: $font-ui;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-    line-height: 1.4;
+    font-family: $font-cn-display;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: #FFFFFF;
+    line-height: 1.3;
     text-align: center;
+    letter-spacing: 0.02em;
   }
 
   &__slider-live-badge-value {
-    font-family: $font-ui;
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    line-height: 1.4;
-    margin-top: 4rpx;
+    font-family: $font-en-brand;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: rgba(255, 255, 255, 0.82);
+    line-height: 1.3;
+    margin-top: 6rpx;
   }
 
   &__slider-labels {

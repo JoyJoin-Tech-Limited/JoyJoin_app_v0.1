@@ -6,6 +6,7 @@ import { determineSubtype, generateInsights } from "./assessment";
 import type { ArchetypeName } from "../../archetypeConfig";
 import { ARCHETYPE_NAMES } from "../../archetypeConfig";
 import { prefetchAnalysisIfReady } from "../../xiaoyueAnalysisService";
+import { annotateOptionsWithCommentary } from "@shared/personality";
 
 /** Validates that the matcher produced a sane final result before we persist it. */
 function validateFinalResult(finalResult: any): { valid: boolean; primaryArchetype: string; error?: string } {
@@ -29,6 +30,11 @@ function shuffleOptions(options: any[]): any[] {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
+}
+
+function annotatedShuffleOptions(questionId: string, options: any[]): any[] {
+  const annotated = annotateOptionsWithCommentary(questionId, options);
+  return shuffleOptions(annotated);
 }
 
 export function registerAssessmentV4Routes(app: Express): void {
@@ -213,7 +219,7 @@ export function registerAssessmentV4Routes(app: Express): void {
           category: nextQuestion.category,
           scenarioText: nextQuestion.scenarioText,
           questionText: nextQuestion.questionText,
-          options: shuffleOptions(nextQuestion.options),
+          options: annotatedShuffleOptions(nextQuestion.id, nextQuestion.options),
           questionType: nextQuestion.questionType,
           sliderConfig: nextQuestion.sliderConfig,
         } : null,
@@ -483,7 +489,7 @@ export function registerAssessmentV4Routes(app: Express): void {
             category: nextQuestion.category,
             scenarioText: nextQuestion.scenarioText,
             questionText: nextQuestion.questionText,
-            options: shuffleOptions(nextQuestion.options),
+            options: annotatedShuffleOptions(nextQuestion.id, nextQuestion.options),
             questionType: nextQuestion.questionType,
             sliderConfig: nextQuestion.sliderConfig,
           } : null,
@@ -786,7 +792,7 @@ export function registerAssessmentV4Routes(app: Express): void {
             category: nextQuestion.category,
             scenarioText: nextQuestion.scenarioText,
             questionText: nextQuestion.questionText,
-            options: shuffleOptions(nextQuestion.options),
+            options: annotatedShuffleOptions(nextQuestion.id, nextQuestion.options),
             questionType: nextQuestion.questionType,
             sliderConfig: nextQuestion.sliderConfig,
           } : null,
@@ -906,7 +912,7 @@ export function registerAssessmentV4Routes(app: Express): void {
           category: newQuestion.category,
           scenarioText: newQuestion.scenarioText,
           questionText: newQuestion.questionText,
-          options: shuffleOptions(newQuestion.options),
+          options: annotatedShuffleOptions(newQuestion.id, newQuestion.options),
           questionType: newQuestion.questionType,
           sliderConfig: newQuestion.sliderConfig,
         } : null,
@@ -1017,7 +1023,7 @@ export function registerAssessmentV4Routes(app: Express): void {
           category: nextQuestion.category,
           scenarioText: nextQuestion.scenarioText,
           questionText: nextQuestion.questionText,
-          options: shuffleOptions(nextQuestion.options),
+          options: annotatedShuffleOptions(nextQuestion.id, nextQuestion.options),
           questionType: nextQuestion.questionType,
           sliderConfig: nextQuestion.sliderConfig,
         } : null,
@@ -1058,7 +1064,7 @@ export function registerAssessmentV4Routes(app: Express): void {
           category: q.category,
           scenarioText: q.scenarioText,
           questionText: q.questionText,
-          options: shuffleOptions(q.options),
+          options: annotatedShuffleOptions(q.id, q.options),
         })),
         count: anchors.length,
       });

@@ -679,14 +679,14 @@ $color-skill-cool: #7c3aed;
     font-weight: $font-weight-bold;
     color: rgba($color-primary-dark, 0.84);
     letter-spacing: 2rpx;
-    margin-bottom: 10rpx;
+    margin-bottom: 12rpx;
   }
 
   &__hero-title {
     display: block;
     font-size: $font-size-md;
     color: $color-text-secondary;
-    margin-bottom: 8rpx;
+    margin-bottom: 12rpx;
   }
 
   &__hero-name {
@@ -711,7 +711,7 @@ $color-skill-cool: #7c3aed;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 16rpx;
+    gap: 12rpx;
     margin-top: $spacing-sm;
   }
 
@@ -781,7 +781,7 @@ $color-skill-cool: #7c3aed;
 
   &__hero-blend {
     display: block;
-    margin-top: $spacing-sm;
+    margin-top: 10rpx;
     font-size: $font-size-xs;
     line-height: 1.6;
     color: $color-text-tertiary;
@@ -790,9 +790,12 @@ $color-skill-cool: #7c3aed;
 
   &__hero-art-shell {
     position: relative;
-    width: 220rpx;
-    height: 220rpx;
+    width: 240rpx;
+    height: 240rpx;
     flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   &__hero-art-bg {
@@ -807,6 +810,15 @@ $color-skill-cool: #7c3aed;
     width: 100%;
     height: 100%;
     animation: hero-art-settle 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
+  }
+
+  &__hero-art-fallback {
+    position: absolute;
+    z-index: 2;
+    font-size: 80rpx;
+    font-weight: $font-weight-black;
+    color: rgba($color-primary, 0.25);
+    font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
   }
 
   &__hero-xiaoyue {
@@ -970,13 +982,20 @@ $color-skill-cool: #7c3aed;
     display: flex;
     flex-wrap: wrap;
     gap: 10rpx;
+    margin-top: $spacing-sm;
     margin-bottom: $spacing-md;
+    max-width: 100%;
+    overflow: hidden;
   }
 
   &__hero-xiaoyue-tag {
     padding: 6rpx 16rpx;
     border-radius: 999rpx;
     background: rgba($color-primary, 0.08);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__hero-xiaoyue-tag-text {
@@ -989,22 +1008,28 @@ $color-skill-cool: #7c3aed;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 12rpx 0;
-    margin-top: 8rpx;
+    gap: 8rpx;
+    padding: 18rpx 32rpx;
+    margin-top: $spacing-md;
+    border-radius: 999rpx;
     min-height: $cta-min-tap;
     -webkit-tap-highlight-color: transparent;
+    transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.15s ease;
+    box-shadow: 0 4rpx 16rpx var(--cta-shadow, rgba($color-primary, 0.2));
 
-    &:active {
-      opacity: 0.7;
+    &:active,
+    &--active {
       transform: scale(0.97);
+      box-shadow: 0 2rpx 8rpx var(--cta-shadow, rgba($color-primary, 0.15));
     }
   }
 
   &__hero-xiaoyue-cta-text {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-primary;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
     letter-spacing: 1rpx;
+    font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
   }
 
   &__bridge {
@@ -1309,14 +1334,28 @@ $color-skill-cool: #7c3aed;
   &__trait-track {
     width: 100%;
     height: 16rpx;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.08);
-    overflow: hidden;
+    border-radius: 4rpx;
+    background: rgba($color-primary, 0.06);
+    display: flex;
+    gap: 3rpx;
+    padding: 2rpx;
   }
 
-  &__trait-fill {
+  &__trait-segment {
+    flex: 1;
     height: 100%;
-    border-radius: inherit;
+    border-radius: 2rpx;
+    background: transparent;
+    transition: background 0.3s ease;
+
+    &--filled {
+      background: currentColor;
+      opacity: 0.85;
+    }
+
+    &--dim {
+      background: rgba($color-primary, 0.08);
+    }
   }
 
   &__pokemon-card--tilt {
@@ -1509,13 +1548,20 @@ $color-skill-cool: #7c3aed;
     padding: $spacing-md $container-padding $spacing-xl;
     @include safe-area-bottom-padding(padding-bottom, $spacing-xl);
     animation: personality-results-detail-slide-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
-    max-height: 80%;
+    max-height: 72%;
+    margin-bottom: 40rpx;
     display: flex;
     flex-direction: column;
 
     &--closing {
       animation: personality-results-detail-slide-down 0.25s cubic-bezier(0.36, 0, 0.22, 1) both;
     }
+  }
+
+  &__detail-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
   }
 
   @keyframes personality-results-detail-slide-up {
@@ -1970,6 +2016,141 @@ $color-skill-cool: #7c3aed;
 @keyframes burst-ring-expand {
   0% { transform: scale(0.3); opacity: 0.8; }
   100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* ── hero skeleton (matches actual hero card layout) ───────────────── */
+.personality-results__hero-skeleton {
+  display: flex;
+  gap: $spacing-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-xl;
+  width: 100%;
+  max-width: 680rpx;
+}
+
+.personality-results__hero-skeleton-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.personality-results__hero-skeleton-eyebrow {
+  width: 120rpx;
+  height: 24rpx;
+  border-radius: $radius-pill;
+  background: $color-divider;
+}
+
+.personality-results__hero-skeleton-title {
+  width: 240rpx;
+  height: 32rpx;
+  border-radius: $radius-pill;
+  background: $color-divider;
+}
+
+.personality-results__hero-skeleton-name {
+  width: 160rpx;
+  height: 56rpx;
+  border-radius: $radius-pill;
+  background: $color-divider;
+}
+
+.personality-results__hero-skeleton-summary {
+  width: 100%;
+  height: 72rpx;
+  border-radius: $card-radius;
+  background: $color-divider;
+}
+
+.personality-results__hero-skeleton-badge-row {
+  display: flex;
+  gap: $spacing-sm;
+  margin-top: $spacing-xs;
+}
+
+.personality-results__hero-skeleton-badge {
+  width: 140rpx;
+  height: 40rpx;
+  border-radius: $radius-pill;
+  background: $color-divider;
+}
+
+.personality-results__hero-skeleton-cta {
+  width: 200rpx;
+  height: 48rpx;
+  border-radius: $radius-pill;
+  background: $color-divider;
+  margin-top: $spacing-xs;
+}
+
+.personality-results__hero-skeleton-art {
+  width: 240rpx;
+  height: 240rpx;
+  border-radius: 50%;
+  background: $color-divider;
+  flex-shrink: 0;
+}
+
+/* ── detail close press feedback ────────────────────────────────────── */
+.personality-results__detail-close {
+  &--active {
+    opacity: 0.7;
+    transform: scale(0.96);
+  }
+}
+
+/* ── poster inline retry ────────────────────────────────────────────── */
+.personality-results__poster-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  background: rgba($color-error, 0.06);
+  border-radius: $card-radius;
+  border: 2rpx solid rgba($color-error, 0.12);
+}
+
+.personality-results__poster-error-text {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  text-align: center;
+}
+
+/* ── bridge skip affordance ─────────────────────────────────────────── */
+.personality-results__bridge-skip-row {
+  margin-top: $spacing-md;
+  display: flex;
+  justify-content: center;
+}
+
+/* ── delight: badge pop-in ──────────────────────────────────────────── */
+@keyframes badge-pop-in {
+  0% { opacity: 0; transform: scale(0.6); }
+  60% { transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.personality-results__hero-badge {
+  animation: badge-pop-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  &:nth-child(1) { animation-delay: 0.1s; }
+  &:nth-child(2) { animation-delay: 0.2s; }
+}
+
+/* ── delight: card entrance stagger enhancement ─────────────────────── */
+.personality-results__section-card {
+  animation: section-card-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  &:nth-of-type(1) { animation-delay: 0.05s; }
+  &:nth-of-type(2) { animation-delay: 0.15s; }
+  &:nth-of-type(3) { animation-delay: 0.25s; }
+}
+
+@keyframes section-card-enter {
+  0% { opacity: 0; transform: translateY(20rpx) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* ── reduced motion ────────────────────────────────────────────────── */
