@@ -339,6 +339,10 @@
       box-shadow: 0 10rpx 24rpx rgba($color-primary, 0.14);
       transform: translateY(-4rpx);
     }
+
+    &--popping {
+      animation: interest-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
   }
 
   &__interest-label {
@@ -412,6 +416,10 @@
     border-radius: 999rpx;
     background: $color-primary;
     transition: width 0.2s ease;
+
+    &--celebrating {
+      animation: meter-glow-pulse 0.6s ease-out;
+    }
   }
 
   &__category-skeleton {
@@ -549,6 +557,18 @@
 
     &__footer-meter-fill {
       transition: none;
+
+      &--celebrating {
+        animation: none;
+      }
+    }
+
+    &__selection-chip {
+      animation: none;
+    }
+
+    &__interest-card--popping {
+      animation: none;
     }
   }
 }
@@ -562,5 +582,45 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes interest-pop {
+  0% {
+    transform: scale(1);
+  }
+
+  40% {
+    transform: scale(1.06);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes chip-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12rpx) scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes meter-glow-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba($color-primary, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 16rpx 4rpx rgba($color-primary, 0.2);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba($color-primary, 0);
   }
 }

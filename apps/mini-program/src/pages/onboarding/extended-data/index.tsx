@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   buildStructuredInterestsPayload,
   submitInterests,
@@ -26,6 +26,7 @@ import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardin
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { logError, logInfo } from '../../../lib/utils/logger'
+import { haptics } from '../../../lib/utils/haptics'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
@@ -82,6 +83,8 @@ export default function ExtendedDataPage() {
   useResetOnShow(setIsPageExiting, setIsSubmitting)
   const [showFirstSelectionHint, setShowFirstSelectionHint] = useState(false)
   const [hasShownFirstSelectionHint, setHasShownFirstSelectionHint] = useState(false)
+  const [poppingCardId, setPoppingCardId] = useState<string | null>(null)
+  const [meterCelebration, setMeterCelebration] = useState(false)
   const { isLoading } = useAuthGuard({
     suspendOnboardingRedirect: isSubmitting || isPageExiting,
   })
@@ -100,6 +103,20 @@ export default function ExtendedDataPage() {
 
     return () => clearTimeout(timer)
   }, [showFirstSelectionHint])
+
+  // Meter celebration when threshold first reached
+  const prevSelectedCountRef = useRef(selectedCount)
+  useEffect(() => {
+    const prev = prevSelectedCountRef.current
+    prevSelectedCountRef.current = selectedCount
+    if (prev < MIN_INTERESTS && selectedCount >= MIN_INTERESTS) {
+      setMeterCelebration(true)
+      haptics('success')
+      const timer = setTimeout(() => setMeterCelebration(false), 800)
+      return () => clearTimeout(timer)
+    }
+    return undefined
+  }, [selectedCount])
 
   const selectionDrafts = useMemo<InterestSelectionDraft[]>(
     () =>
@@ -136,6 +153,10 @@ export default function ExtendedDataPage() {
   const footerProgressPercent = Math.min(100, Math.round((selectedCount / MIN_INTERESTS) * 100))
 
   const coachCopy = useMemo(() => {
+    if (selectedCount >= MAX_INTERESTS) {
+      return '兴趣库已经装得满满当当了～如果想换，可以先取消一项再选新的。'
+    }
+
     if (selectedCount === 0) {
       return '先轻点选中，再点同一项就会升级热度。第三档会成为预览页重点兴趣。'
     }
@@ -148,7 +169,7 @@ export default function ExtendedDataPage() {
   }, [selectedCount, topPriorityCount])
 
   const footerTitle = canSubmit
-    ? '兴趣画像已经准备好了'
+    ? '热度达标，可以生成预览了 ✨'
     : `还差 ${Math.max(MIN_INTERESTS - selectedCount, 0)} 项，就能继续预览`
   const footerSubtitle =
     selectedCount === 0
@@ -191,6 +212,9 @@ export default function ExtendedDataPage() {
       }
 
       setLevelsById(nextLevels)
+      haptics('light')
+      setPoppingCardId(topicId)
+      setTimeout(() => setPoppingCardId((current) => (current === topicId ? null : current)), 200)
     },
     [analytics, hasShownFirstSelectionHint, levelsById, selectedCount],
   )
@@ -394,6 +418,7 @@ export default function ExtendedDataPage() {
                           className={[
                             'extended-data__interest-card',
                             level ? `extended-data__interest-card--level-${level}` : '',
+                            poppingCardId === item.id ? 'extended-data__interest-card--popping' : '',
                           ]
                             .filter(Boolean)
                             .join(' ')}
@@ -424,7 +449,10 @@ export default function ExtendedDataPage() {
         <View className='extended-data__footer-meter'>
           <View className='extended-data__footer-meter-track'>
             <View
-              className='extended-data__footer-meter-fill'
+              className={[
+                'extended-data__footer-meter-fill',
+                meterCelebration ? 'extended-data__footer-meter-fill--celebrating' : '',
+              ].filter(Boolean).join(' ')}
               style={{ width: `${footerProgressPercent}%` }}
             />
           </View>
