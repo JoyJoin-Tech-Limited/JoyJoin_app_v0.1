@@ -457,7 +457,7 @@
     transform: translate(0, 48rpx) scale(1.1);
     opacity: 1;
     z-index: 10;
-    /* box-shadow is composited cheaper than filter: drop-shadow() on WKWebView */
+    /* box-shadow preferred over drop-shadow for WKWebView performance */
     box-shadow: 0 8rpx 20rpx rgba($color-primary, 0.18);
 
     &::before {
