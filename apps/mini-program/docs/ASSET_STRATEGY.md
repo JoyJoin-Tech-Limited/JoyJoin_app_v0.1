@@ -1,7 +1,7 @@
 # JoyJoin Mini-Program Asset Strategy
 
 > Canonical reference for how static assets are managed in the mini-program build.
-> Last updated: 2026-06-02
+> Last updated: 2026-06-03
 
 ---
 
@@ -18,11 +18,14 @@ This split keeps the main package under WeChat's 2MB compressed limit while ensu
 
 ## Package Budget
 
-| Limit | Current (v1.1.4) | Headroom |
-|-------|-----------------|----------|
-| 2.0 MB compressed | ~1.48 MB | ~520 KB |
+| Limit | Current (v1.1.4+20260603) | Headroom |
+|-------|---------------------------|----------|
+| 2.0 MB source (WeChat hard limit) | ~1.84 MB | ~160 KB |
+| 1.8 MB source (guideline) | ~1.84 MB | ⚠️ slightly over |
 
 **Budget rule of thumb:** every 100KB of raw assets ≈ 25-35KB compressed.
+
+**Critical:** WeChat measures **source size** (uncompressed), not zip size. Our `check-package-size.mjs` measures zip; actual upload may be ~300-500KB larger. Stay well under 1.8MB zip to guarantee upload success.
 
 ---
 
@@ -35,7 +38,7 @@ Assets copied by `vite-plugin-static-copy` in `config/index.ts`.
 |-------|------|------|-----|
 | Tab icons | `assets/tab-icons/` | ~52KB | Native tab bar — must exist before first paint |
 | Tab bar notch | `assets/tab-bar-notch-bg.png` | ~3KB | Custom tab bar background |
-| Brand logos | `assets/joyjoin-logo.webp`, `assets/joyjoin-logo-tab.png` | ~112KB | Loading screens, tab bar |
+| Brand logos | `assets/joyjoin-logo.png`, `assets/joyjoin-logo-tab.png` | ~58KB | Loading screens, tab bar |
 
 ### Icon System (all tiers bundled with @1x/@2x/@3x)
 | Tier | Path | @1x | All densities | Used in |
@@ -73,9 +76,9 @@ Assets copied by `vite-plugin-static-copy` in `config/index.ts`.
 ### Landing Page (critical first impression)
 | Asset | Path | Size | Used in |
 |-------|------|------|---------|
-| Phase icons (6) | `assets/landing-phase-icons/` | ~69KB | Landing page game preview grid |
-| Xiaoyue welcome | `assets/xiaoyue-expressions/xiaoyue-home-welcome.webp` | ~49KB | Landing + center-hub header |
-| Xiaoyue loading | `assets/xiaoyue-expressions/xiaoyue-loading-system.webp` | ~39KB | Loading screen fallback |
+| Phase icons (6) | `assets/landing-phase-icons/` | ~139KB | Landing page game preview grid |
+| Xiaoyue welcome | `assets/xiaoyue-expressions/xiaoyue-home-welcome.png` | ~63KB | Landing + center-hub header |
+| Xiaoyue loading | `assets/xiaoyue-expressions/xiaoyue-loading-system.png` | ~47KB | Loading screen fallback |
 
 ### Support
 | Asset | Path | Size | Used in |
@@ -92,6 +95,7 @@ These are **NOT** copied to `dist/assets/` by the build. They must exist on the 
 |----------|-------------|--------------|---------|
 | **Archetype full-body images** | `assets/archetypes/archetype-*.webp` | ~260KB | ArchetypeGlyph, profile |
 | **Xiaoyue expressions** (other 18) | `assets/personality/xiaoyue/xiaoyue-*.webp` | ~1.1MB | Mascot across all screens |
+| **Lovart generic** | `assets/lovart/lovart-generic-*.webp` | ~97KB | Empty/error states |
 | **Xiaoyue sprites** | `assets/mascot/xiaoyue-*.webp` | ~746KB | Sprite animator |
 | **Icebreaker backgrounds** | `assets/lovart/icebreaker/backgrounds/*.jpg` | ~450KB | Challenge card backgrounds |
 | **Celebration images** | `assets/lovart/icebreaker/celebrations/*.png` | ~770KB | Post-phase celebration overlays |
@@ -177,6 +181,70 @@ Fallback chain: if `@3x` fails → `@2x` → `@1x` → native emoji.
 
 ---
 
+## Image Conversion Quality Rules (CRITICAL)
+
+**The 2026-06-03 incident:** We converted locally-bundled WebP files to PNG8 using Pillow's `quantize(colors=64)` and the **already-compressed WebP files as source**. This created massive quality degradation (banding, posterization, dithering artifacts) that was visible on real devices. The root cause was a **double-compression penalty**: lossy WebP → 64-color PNG8.
+
+### The Golden Rules
+
+1. **Always use the ORIGINAL source**
+   - Original high-quality PNGs live in `apps/mini-program/assets-source/`
+   - **NEVER** convert from `src/assets/*.webp` — those are already lossy-compressed
+   - If no source PNG exists, use the highest-quality file available (usually the `.webp` original, but expect some loss)
+
+2. **Use the RIGHT tool**
+   - ✅ **ImageMagick** with 256 colors: `convert source.png -resize 360x360 -colors 256 -quality 95 output.png`
+   - ❌ **Pillow `quantize()`** with 64 colors — creates visible banding on gradients
+   - ✅ **oxipng** for lossless compression after generation: `oxipng -o 4 --strip all output.png`
+   - ❌ `cwebp` → PNG conversion chain — introduces artifacts
+
+3. **Resolution vs. quality tradeoff**
+   - If package size is tight, **reduce resolution** before reducing colors
+   - 360×360 @ 256 colors looks better than 480×480 @ 128 colors
+   - Loading screen images can use 128 colors (less noticeable during brief display)
+
+4. **Visual verification is mandatory**
+   - Always open the generated file and compare side-by-side with the source
+   - Check for: banding on gradients, dithering noise, color shifts, lost detail
+   - Test on a real device, not just DevTools simulator
+
+5. **Package size check BEFORE commit**
+   ```bash
+   npm run build:weapp
+   node apps/mini-program/scripts/check-package-size.mjs
+   ```
+   If over 1.8MB, move non-critical assets to CDN rather than degrading quality.
+
+### What went wrong (2026-06-03)
+
+| Wrong approach | Result | Size | Quality |
+|----------------|--------|------|---------|
+| `PIL.Image.quantize(colors=64)` from `.webp` | Mascot had visible posterization | 38KB | ❌ Terrible |
+| `convert source.png -colors 256` from `assets-source/` | Smooth gradients, crisp detail | 104KB | ✅ Good |
+| `convert source.png -resize 360x360 -colors 256` | Good quality, smaller size | 63KB | ✅ Good |
+| `convert source.png -resize 360x360 -colors 128` | Slightly softer, acceptable for loading | 47KB | ⚠️ Acceptable |
+
+### Correct workflow for converting source → bundled PNG
+
+```bash
+# 1. Identify the source (must be from assets-source/)
+SOURCE="apps/mini-program/assets-source/personality/xiaoyue/xiaoyue-home-welcome.png"
+
+# 2. Convert with ImageMagick (resize first, then quantize)
+convert "$SOURCE" -resize 360x360 -colors 256 -quality 95 \
+  apps/mini-program/src/assets/personality/xiaoyue/xiaoyue-home-welcome.png
+
+# 3. Optional: losslessly compress with oxipng
+oxipng -o 4 --strip all \
+  apps/mini-program/src/assets/personality/xiaoyue/xiaoyue-home-welcome.png
+
+# 4. VISUALLY VERIFY — open both files and compare
+
+# 5. Check package size
+npm run build:weapp --workspace=mini-program
+node apps/mini-program/scripts/check-package-size.mjs
+```
+
 ## Common Mistakes
 
 | Mistake | Symptom | Fix |
@@ -186,6 +254,9 @@ Fallback chain: if `@3x` fails → `@2x` → `@1x` → native emoji.
 | Clean step removes bundled dir | Icons show as emojis instead of proprietary assets | Remove directory from clean script |
 | `@2x`/`@3x` not bundled | Icons look blurry on retina devices | Add icon dir to copy config |
 | CDN path mismatch | 404 in WeDevTools Network tab | Verify `cdnAsset()` path matches CDN server |
+| Converting from `.webp` instead of source PNG | Visible banding, posterization, dithering noise | Use `assets-source/` originals |
+| Using Pillow `quantize(64)` | Massive quality degradation on gradients | Use ImageMagick with 256 colors |
+| Not checking package size before push | Upload fails with "main package source size exceed max limit" | Run `check-package-size.mjs` before every upload |
 
 ---
 
