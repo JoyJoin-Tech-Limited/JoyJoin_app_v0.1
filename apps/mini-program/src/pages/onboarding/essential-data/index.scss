@@ -36,6 +36,7 @@
     display: flex;
     flex-direction: column;
     gap: $spacing-md;
+    animation: step-fade-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   &__field {
@@ -368,6 +369,7 @@
 
   &__submit {
     width: 100%;
+    animation: btn-spring-enter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
 
   &__skip-btn {
@@ -434,5 +436,38 @@
 
   .essential-data__choice-chip::after {
     display: none;
+  }
+
+  .essential-data__card {
+    animation: none;
+    opacity: 1;
+  }
+
+  .essential-data__submit {
+    animation: none;
+  }
+}
+
+@keyframes step-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes btn-spring-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

@@ -25,6 +25,7 @@ import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardin
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
 import { logError, logInfo } from '../../../lib/utils/logger'
+import { haptics } from '../../../lib/utils/haptics'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
@@ -286,6 +287,7 @@ export default function EssentialDataPage() {
     }
     if (currentStep < TOTAL_STEPS - 1) {
       analytics.stepCompleted({ stepId: stepConfig.id, stepNumber: currentStep + 1 })
+      haptics('medium')
       setCurrentStep((s) => s + 1)
       setMascotReaction('')
     }
@@ -293,6 +295,7 @@ export default function EssentialDataPage() {
 
   const handleBack = useCallback(() => {
     if (currentStep > 0) {
+      haptics('light')
       setCurrentStep((s) => s - 1)
       setMascotReaction('')
     }
