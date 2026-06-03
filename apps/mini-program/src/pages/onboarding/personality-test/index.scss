@@ -643,17 +643,29 @@
 
   &__back-btn {
     flex-shrink: 0;
-    padding: 4rpx 16rpx;
+    display: flex;
+    align-items: center;
+    gap: 4rpx;
+    padding: 8rpx 16rpx;
     margin-left: 8rpx;
+    border-radius: $button-radius;
+    transition: background 0.12s ease;
+
+    &:active {
+      background: rgba($color-primary, 0.08);
+    }
+  }
+
+  &__back-btn-icon {
+    font-size: $font-size-sm;
+    color: rgba($color-primary, 0.7);
+    line-height: 1;
   }
 
   &__back-btn-text {
-    font-size: $font-size-xs;
-    color: $color-text-muted;
-  }
-
-  &__back-btn--hover {
-    opacity: 0.7;
+    font-size: $font-size-sm;
+    color: rgba($color-primary, 0.7);
+    font-weight: $font-weight-medium;
   }
 
   // Back-review action buttons
@@ -687,25 +699,37 @@
     @include safe-area-bottom-padding(padding-bottom, 24rpx);
   }
 
-  // Skip button sizing is handled by Button primitive (size='sm').
-  // Keep this class for page-specific overrides if needed.
   &__skip-btn {
-    /* intentionally empty — flex centering + padding live in Button.scss */
+    display: inline-flex;
+    align-items: center;
+    gap: 8rpx;
+    padding: 16rpx 32rpx;
+    border-radius: $button-radius;
+    background: rgba($color-text-primary, 0.04);
+    transition: background 0.15s ease, transform 0.12s ease;
+
+    &:active {
+      background: rgba($color-primary, 0.1);
+      transform: scale(0.98);
+    }
+  }
+
+  &__skip-btn-icon {
+    font-size: $font-size-sm;
+    color: rgba($color-primary, 0.65);
+    line-height: 1;
   }
 
   &__skip-btn-text {
     font-size: $font-size-sm;
-    color: $color-text-muted;
+    color: $color-text-secondary;
+    font-weight: $font-weight-medium;
   }
 
   &__skip-btn-count {
     font-size: $font-size-xs;
     color: $color-text-muted;
-    opacity: 0.7;
-  }
-
-  &__skip-btn--hover {
-    opacity: 0.7;
+    font-weight: $font-weight-normal;
   }
 
   // ── Zone B: Full-width glassmium question banner ─────────────────

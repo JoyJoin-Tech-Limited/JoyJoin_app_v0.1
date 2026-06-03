@@ -21,11 +21,14 @@ import { logInfo } from './logger'
 
 /** Personality test intro animation — must be warm before user reaches intro.
  *  Animated WebP cannot be bundled locally (iOS limitation), so we preload
- *  at app launch to eliminate CDN latency on first paint. */
+ *  at app launch to eliminate CDN latency on first paint.
+ *
+ *  ⚠️ These are RAW paths (not cdnAsset-wrapped). Consumers must pass them
+ *  to preloadImagesWithDiagnostics or wrap with cdnAsset() themselves. */
 export const ONBOARDING_CRITICAL_CDN_ASSETS: string[] = [
-  cdnAsset('/assets/personality/xiaoyue/xiaoyue-intro-animated.webp'),
-  cdnAsset('/assets/personality/xiaoyue/xiaoyue-intro-static.webp'),
-  cdnAsset('/assets/mascot/xiaoyue-welcome.webp'),
+  '/assets/personality/xiaoyue/xiaoyue-intro-animated.webp',
+  '/assets/personality/xiaoyue/xiaoyue-intro-static.webp',
+  '/assets/mascot/xiaoyue-welcome.webp',
 ]
 
 /** Archetype full-body images — now bundled locally, no CDN preload needed. */

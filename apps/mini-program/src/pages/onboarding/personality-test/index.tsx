@@ -1026,14 +1026,14 @@ export default function PersonalityTestPage() {
             </Text>
           </View>
           {progress && progress.answered >= 1 && (
-            <Button
-              variant='secondary'
+            <View
+              className='personality-test__back-btn'
               onClick={handleBack}
-              disabled={isSubmitting || isSkipping || backReview.isBackReviewMode}
-              hoverClass='personality-test__back-btn--hover'
+              style={{ opacity: isSubmitting || isSkipping || backReview.isBackReviewMode ? 0.4 : 1 }}
             >
-              <Text className='personality-test__back-btn-text'>返回上一题</Text>
-            </Button>
+              <Text className='personality-test__back-btn-icon'>←</Text>
+              <Text className='personality-test__back-btn-text'>返回</Text>
+            </View>
           )}
         </View>
 
@@ -1155,17 +1155,15 @@ export default function PersonalityTestPage() {
         {/* Skip button (normal mode only) */}
         {!backReview.isBackReviewMode && skipsRemaining > 0 && (
           <View className='personality-test__skip-row'>
-            <Button
-              variant='secondary'
-              size='sm'
+            <View
               className='personality-test__skip-btn'
               onClick={handleSkip}
-              disabled={isSubmitting || isSkipping}
-              hoverClass='personality-test__skip-btn--hover'
+              style={{ opacity: isSubmitting || isSkipping ? 0.4 : 1 }}
             >
+              <Text className='personality-test__skip-btn-icon'>↻</Text>
               <Text className='personality-test__skip-btn-text'>换一题</Text>
-              <Text className='personality-test__skip-btn-count'>（还剩 {skipsRemaining} 次）</Text>
-            </Button>
+              <Text className='personality-test__skip-btn-count'>还剩 {skipsRemaining} 次</Text>
+            </View>
           </View>
         )}
 
