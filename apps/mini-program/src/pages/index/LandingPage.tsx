@@ -200,6 +200,25 @@ export default function MiniProgramLandingPage() {
           测测我的社交氛围
         </Button>
 
+        {/* Inline login for returning users */}
+        <View
+          className={`landing-page__login-row ${isMounted ? "stagger-in stagger-in--5" : "stagger-in-hidden"}`}
+        >
+          <Button
+            variant="brand"
+            className="landing-page__login-btn"
+            disabled={isLoggingIn || isPageExiting}
+            loading={isLoggingIn}
+            onClick={() => {
+              hapticLight()
+              onboardingAnalytics.interaction('login', 'landing_login_clicked')
+              void handleWeChatLogin()
+            }}
+          >
+            已有账号？立即登录
+          </Button>
+        </View>
+
         <View className={`landing-page__legal-row ${shakeLegal ? 'shake' : ''}`}>
           <View
             className={
@@ -227,25 +246,6 @@ export default function MiniProgramLandingPage() {
           <Text aria-live="polite" className="landing-page__sr-only">
             {shakeLegal ? '请先阅读并同意用户协议和隐私政策' : ''}
           </Text>
-        </View>
-
-        {/* Inline login for returning users */}
-        <View
-          className={`landing-page__login-row ${isMounted ? "stagger-in stagger-in--5" : "stagger-in-hidden"}`}
-        >
-          <Button
-            variant="brand"
-            className="landing-page__login-btn"
-            disabled={isLoggingIn || isPageExiting}
-            loading={isLoggingIn}
-            onClick={() => {
-              hapticLight()
-              onboardingAnalytics.interaction('login', 'landing_login_clicked')
-              void handleWeChatLogin()
-            }}
-          >
-            已有账号？立即登录
-          </Button>
         </View>
       </View>
     </View>
