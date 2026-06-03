@@ -36,6 +36,10 @@ GET /api/auth/user
 
 **Mini-program:** parallel pages under `apps/mini-program/src/pages/onboarding/` must obey the same server `nextStep`.
 
+## Grill-me stress-test
+
+After modifying onboarding flow, run [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — a one-question-per-turn interview that stress-tests nextStep computation, completion flags, restart idempotency, swipe-back recovery, and routing-loop prevention. Routing loops are the #1 support burden.
+
 ## Active onboarding steps
 
 | nextStep value | Route | Completion signal |
@@ -77,3 +81,4 @@ For checkpoint recovery specifics, web + mini-program mapping details, legacy qu
 - [ ] New web pages are placed under `features/onboarding/active/pages/`; mini-program steps stay under `apps/mini-program/src/pages/onboarding/`
 - [ ] `flow.ts` and `packages/shared/src/onboarding.ts` stay aligned for any new `nextStep` value
 - [ ] No legacy identifiers (`hasCompletedRegistration`, `registration_sessions`, etc.) in **new** code
+- [ ] Grill-me interview completed for any step addition, reorder, or restart change (see `references/grill-me-checklist.md`)

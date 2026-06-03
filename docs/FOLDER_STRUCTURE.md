@@ -287,7 +287,7 @@ apps/mini-program/
 │   │   ├── navigation/            # useJoyJoinNavigation, useMiniPageGate
 │   │   └── onboarding/            # useOnboardingCheckpoint, useOnboardingAnalytics
 │   ├── lib/                       # API client, utilities
-│   │   ├── api/                   # api.ts, authSession, websocket, queryClient
+│   │   ├── api/                   # api.ts, authSession, websocket, queryClient, persistentCache
 │   │   ├── auth/                  # anonymousOnboarding, authSessionQueryKeys, authSessionRules
 │   │   ├── payment/               # Payment flow, pending orders, verification
 │   │   ├── onboarding/            # onboardingNavigation, onboardingRoutes, onboardingAnalytics

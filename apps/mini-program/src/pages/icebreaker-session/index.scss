@@ -744,17 +744,14 @@ $__gold-accent:  $color-landed-gold;
     // secondary via CSS var from parent, tertiary fallback gradient below.
     // auction & personality-dice removed: no challenge cards use these classes.
     &--undercover-word {
-      background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #b91c1c 100%);
       background: var(--bg-undercover-word) center/cover no-repeat;
     }
 
     &--group-mirror {
-      background: linear-gradient(135deg, #0f766e 0%, #115e59 50%, #134e4a 100%);
       background: var(--bg-group-mirror) center/cover no-repeat;
     }
 
     &--quip-battle {
-      background: linear-gradient(135deg, #c2410c 0%, #ea580c 50%, #f97316 100%);
       background: var(--bg-quip-battle) center/cover no-repeat;
     }
 

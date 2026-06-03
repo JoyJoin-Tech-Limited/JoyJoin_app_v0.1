@@ -12,6 +12,31 @@
 @use 'styles/actions';
 @use 'styles/match-compass';
 
+// Spring entrance for special states (error, cancelled, no-match)
+.matching-status__special-state--enter {
+  animation: special-state-spring-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes special-state-spring-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// Xiaoyue mascot in no-match state
+.matching-status__special-mascot {
+  width: 120rpx;
+  height: 120rpx;
+  margin: 0 auto $spacing-md;
+  display: block;
+  animation: mascot-bounce-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+
 .matching-status {
   @include base.matching-status-base;
   @include error-state.matching-status-error-state;
@@ -86,7 +111,9 @@
   .match-compass__pref-chip,
   .match-compass__gauge-fill,
   .match-compass__modal-card,
-  .matching-status__waiting-mascot-img {
+  .matching-status__waiting-mascot-img,
+  .matching-status__special-state--enter,
+  .matching-status__special-mascot {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

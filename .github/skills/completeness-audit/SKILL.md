@@ -21,6 +21,10 @@ description: >
 
 Trigger `"完成度全流程"` / `"full audit pipeline"` / `"completeness pipeline"` to auto-sequence: `ui-layout-audit → frontend-design-audit → completeness-audit`. Each step feeds the next — do not skip.
 
+## Grill-me stress-test
+
+After scoring all 11 dimensions, run [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — a one-question-per-turn interview that defends every score ≤ 2 with concrete evidence and challenges every score of 4 to prove it. Converts "feels complete" into verifiable completeness.
+
 ## When to use this skill
 
 - Post-build quality pass on a new page, component, or flow
@@ -34,6 +38,7 @@ Run these first (or Pipeline Mode auto-sequences them):
 |---|---|---|
 | `ui-layout-audit` | #9 Visual finish | Checklist score ÷ 17 × 4 → 0–4 |
 | `frontend-design-audit` | #10 Brand soul | Dim 1 (Brand Fidelity) score → 0–4 |
+| [`docs/reference/emotional-value-rubric.md`](../../../docs/reference/emotional-value-rubric.md) | #5 Delight completeness | 情绪价值 composite ÷ 6 → 0–4. A screen with polished animations but low 归属感 or 身份认同 scores is decorated, not delightful. |
 
 If not run, score manually via `references/dimension-rubric.md`.
 
@@ -91,9 +96,11 @@ Use [`references/report-card-template.md`](references/report-card-template.md). 
 ## Review checklist
 
 - [ ] `ui-layout-audit` and `frontend-design-audit` scores collected (or manual fallback noted)
+- [ ] 情绪价值 scored via `docs/reference/emotional-value-rubric.md` (feeds dim 5 Delight)
 - [ ] All 11 dimensions scored with specific evidence per gap
 - [ ] Gaps linked to file paths or component names
 - [ ] Each gap has User Impact + Engineering Hours assigned
 - [ ] Gap register ranked by quadrant (Do first → Schedule → Low-hanging → Skip)
 - [ ] Rating band stated
 - [ ] Verdict includes explicit ship/no-ship recommendation
+- [ ] Grill-me interview completed for all dimensions scoring ≤ 2 (see `references/grill-me-checklist.md`)

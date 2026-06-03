@@ -28,6 +28,8 @@ import LoadingScreen from '../../components/loading/LoadingScreen'
 import ChemistryMiniGrid from '../../components/discover/ChemistryMiniGrid'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscribeMessage'
+import { evictPersistedQuery } from '../../lib/api/persistentCache'
+import { POOLS_QUERY_KEY, JOINED_EVENTS_QUERY_KEY } from '../../lib/prefetchEngine'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import StatusCard from '../../components/ui/StatusCard'
@@ -528,6 +530,8 @@ export default function PoolRegistrationPage() {
         queryClient.invalidateQueries({ queryKey: ['mini-program', 'my-pool-registrations'] }),
         queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/discover'] }),
       ])
+      evictPersistedQuery(POOLS_QUERY_KEY)
+      evictPersistedQuery(JOINED_EVENTS_QUERY_KEY)
       clearPaymentReturnContextStorage()
       setResumeContext(null)
       setRegistered(true)

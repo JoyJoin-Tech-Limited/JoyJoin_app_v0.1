@@ -17,11 +17,9 @@ export function preloadCdnAssets(assetPaths: string[]): Promise<PromiseSettledRe
 
   return Promise.allSettled(
     assetPaths.map((path) =>
-      Taro.getImageInfo({ src: cdnAsset(path) }).catch(() => {
-        // Silently ignore preload failures
-      }),
+      Taro.getImageInfo({ src: cdnAsset(path) }).catch(() => undefined),
     ),
-  )
+  ) as Promise<PromiseSettledResult<Taro.getImageInfo.SuccessCallbackResult>[]>
 }
 
 /**

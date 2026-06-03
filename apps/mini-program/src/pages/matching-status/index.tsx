@@ -1,4 +1,5 @@
-import { Image, ScrollView, Text, View } from '@tarojs/components'
+import { CustomWrapper, Image, ScrollView, Text, View } from '@tarojs/components'
+import { useEffect, useRef } from 'react'
 import { useRouter } from '@tarojs/taro'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import Button from '../../components/ui/Button'
@@ -15,12 +16,14 @@ import {
 import { MatchCompassShell } from './MatchCompassSections'
 import { getStatusLabel } from '@shared/features/matching-status'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
+import { haptics } from '../../lib/utils/haptics'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
 import {
   MATCHING_NO_MATCH_HERO_SRC,
   MATCHING_WAITING_HERO_SRC,
 } from './constants'
 import { useMatchingStatusController } from './useMatchingStatusController'
+import { useDeviceTier } from '../../hooks/useDeviceTier'
 import './index.scss'
 
 export default function MatchingStatusPage() {
@@ -42,13 +45,13 @@ export default function MatchingStatusPage() {
     finishLiveJourney,
     groupAnalysis,
     hasRevealed,
-    handleBrowsePools,
-    handleCancel,
+    handleBrowsePools: _handleBrowsePools,
+    handleCancel: _handleCancel,
     handleContinueFromMembers,
-    handleOpenMatchedJourney,
-    handleRefreshWaitingState,
-    handleRejoinPool,
-    invalidateRegistrationQuery,
+    handleOpenMatchedJourney: _handleOpenMatchedJourney,
+    handleRefreshWaitingState: _handleRefreshWaitingState,
+    handleRejoinPool: _handleRejoinPool,
+    invalidateRegistrationQuery: _invalidateRegistrationQuery,
     isCancelling,
     isLoadingLiveGroupDetails,
     leadIceBreaker,
@@ -69,8 +72,8 @@ export default function MatchingStatusPage() {
     shouldReduceMotion,
     similarPools,
     stageTemperature,
-    switchToEventsTab,
-    navigateBackOrEventsTab,
+    switchToEventsTab: _switchToEventsTab,
+    navigateBackOrEventsTab: _navigateBackOrEventsTab,
     venueUnlocked,
     viewerPairSummaryByMemberId,
     viewerSpotlight,
@@ -83,6 +86,30 @@ export default function MatchingStatusPage() {
     matchingLiveRevealEnabled,
   } = controller
 
+  const handleBrowsePools = () => { haptics('light'); _handleBrowsePools() }
+  const handleCancel = () => { haptics('light'); _handleCancel() }
+  const handleOpenMatchedJourney = () => { haptics('medium'); _handleOpenMatchedJourney() }
+  const handleRefreshWaitingState = () => { haptics('light'); _handleRefreshWaitingState() }
+  const handleRejoinPool = (poolId: string) => { haptics('light'); _handleRejoinPool(poolId) }
+  const invalidateRegistrationQuery = () => { haptics('light'); _invalidateRegistrationQuery() }
+  const switchToEventsTab = () => { haptics('light'); _switchToEventsTab() }
+  const navigateBackOrEventsTab = () => { haptics('light'); _navigateBackOrEventsTab() }
+
+  const { isPrimary } = useDeviceTier()
+  const enableAnimations = isPrimary && !shouldReduceMotion
+
+  // Celebration haptic when user gets matched — fire only on transition to matched,
+  // not on every re-mount (e.g., swipe-back), to avoid repetitive haptic noise.
+  const prevMatchStatusRef = useRef(matchStatus)
+  useEffect(() => {
+    const prev = prevMatchStatusRef.current
+    const now = matchStatus
+    prevMatchStatusRef.current = now
+    if (now === 'matched' && prev !== 'matched' && !shouldReduceMotion) {
+      haptics('success')
+    }
+  }, [matchStatus, shouldReduceMotion])
+
   switch (screenState.kind) {
     case 'loading':
       return (
@@ -93,7 +120,7 @@ export default function MatchingStatusPage() {
     case 'error':
       return (
         <View className={rootClassName}>
-          <View className='matching-status__error'>
+          <View className={`matching-status__error ${enableAnimations ? 'matching-status__special-state--enter' : ''}`}>
             <StatusCard
               tone='error'
               title={getErrorMessage('load-failed')}
@@ -109,7 +136,7 @@ export default function MatchingStatusPage() {
     case 'not-found':
       return (
         <View className={rootClassName}>
-          <View className='matching-status__error'>
+          <View className={`matching-status__error ${enableAnimations ? 'matching-status__special-state--enter' : ''}`}>
             <StatusCard
               tone='info'
               icon='😕'
@@ -126,7 +153,7 @@ export default function MatchingStatusPage() {
     case 'cancelled':
       return (
         <View className={rootClassName}>
-          <Card className='matching-status__special-card'>
+          <Card className={`matching-status__special-card ${enableAnimations ? 'matching-status__special-state--enter' : ''}`}>
             <JoyJoinIcon emoji='😕' size={88} className='matching-status__special-icon' />
             <Text className='matching-status__special-title'>这场活动已取消</Text>
             <Text className='matching-status__special-text'>
@@ -157,7 +184,12 @@ export default function MatchingStatusPage() {
             className='matching-status__hero--no-match'
           />
 
-          <Card className='matching-status__special-card matching-status__special-card--stacked'>
+          <Card className={`matching-status__special-card matching-status__special-card--stacked ${enableAnimations ? 'matching-status__special-state--enter' : ''}`}>
+            <Image
+              className='matching-status__special-mascot'
+              mode='aspectFit'
+              src={getXiaoyueExpressionAsset('optOutReassure')}
+            />
             <Text className='matching-status__special-title'>这次还没等到合适的一桌</Text>
             <Text className='matching-status__special-text'>
               {countdown.label}。与其勉强凑桌，我们更想把你留给更对味的人。
@@ -428,22 +460,24 @@ export default function MatchingStatusPage() {
       <View className='matching-status__spacer' />
 
       {matchingLiveRevealEnabled && (
-        <MatchingStatusLiveOverlay
-          liveStage={liveStage}
-          stageTemperature={stageTemperature}
-          isLoadingLiveGroupDetails={isLoadingLiveGroupDetails}
-          effectiveGroupDetails={effectiveGroupDetails}
-          viewerPairSummaryByMemberId={viewerPairSummaryByMemberId}
-          viewerSpotlight={viewerSpotlight}
-          unifiedReveal={unifiedReveal}
-          matchedGroupNumber={matchedData?.groupNumber}
-          shouldReduceMotion={shouldReduceMotion}
-          hasRevealed={hasRevealed}
-          persistedThemeSummary={persistedThemeSummary}
-          resolvedGroupId={resolvedGroupId}
-          onContinueFromMembers={handleContinueFromMembers}
-          onFinishLiveJourney={finishLiveJourney}
-        />
+        <CustomWrapper>
+          <MatchingStatusLiveOverlay
+            liveStage={liveStage}
+            stageTemperature={stageTemperature}
+            isLoadingLiveGroupDetails={isLoadingLiveGroupDetails}
+            effectiveGroupDetails={effectiveGroupDetails}
+            viewerPairSummaryByMemberId={viewerPairSummaryByMemberId}
+            viewerSpotlight={viewerSpotlight}
+            unifiedReveal={unifiedReveal}
+            matchedGroupNumber={matchedData?.groupNumber}
+            shouldReduceMotion={shouldReduceMotion}
+            hasRevealed={hasRevealed}
+            persistedThemeSummary={persistedThemeSummary}
+            resolvedGroupId={resolvedGroupId}
+            onContinueFromMembers={handleContinueFromMembers}
+            onFinishLiveJourney={finishLiveJourney}
+          />
+        </CustomWrapper>
       )}
     </ScrollView>
   )

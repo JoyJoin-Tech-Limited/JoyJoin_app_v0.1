@@ -36,6 +36,10 @@ await sendMatchNotification(matchedGroup);
 - Side effects must happen outside the transaction body
 - Never nest transactions — flatten the critical write and move side effects out
 
+## Grill-me stress-test
+
+After implementing stateful operations, run [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — a one-question-per-turn interview that stress-tests transactions, idempotency, execution guards, expiry enforcement, and side-effect ordering. Silent data corruption starts with an unexamined retry assumption.
+
 ## Idempotency principles
 
 Operations that can be retried or replayed must be idempotent:
@@ -74,3 +78,4 @@ See [`references/patterns.md`](references/patterns.md) for execution guard examp
 - [ ] Execution guards are released in a `finally` block
 - [ ] Expiry is checked with a server-side timestamp, not client-provided data
 - [ ] Response is sent only after the critical write succeeds — not before
+- [ ] Grill-me interview completed for any multi-step operation (see `references/grill-me-checklist.md`)

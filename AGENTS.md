@@ -25,6 +25,7 @@ Use the `skill` tool to load the skill that owns the boundary you're touching. T
 | Changes touching both mini-program and web | `platform-coordination-protocol` |
 | Any user-facing UI (web or mini-program) | `joyjoin-brand-guidelines` |
 | Mini-program implementation quality / completeness audit | `completeness-audit` (pipeline: ui-layout-audit → frontend-design-audit → completeness-audit) |
+| Post-implementation mini-program performance (流畅度, 速度, 设备适配) | `performance-audit` |
 | Database schema changes, migrations | `database-migration-safety` |
 | New feature flag, kill switch, rollout config | `feature-flags-launch-config` |
 | Xiaoyue text quality, craft validation, AI-generated Chinese copy | `xiaoyue-writing-craft` |
@@ -46,6 +47,7 @@ Each skill's body or `Related docs` section links to the authoritative documenta
 
 - ☐ Run `harness-completion-gate` skill to verify 5-pillar compliance
 - ☐ For mini-program UI changes: run `completeness-audit` (pipeline: ui-layout-audit → frontend-design-audit → completeness-audit) for a full 完成度 audit with ROI-ranked gap recommendations
+- ☐ For mini-program changes: run `performance-audit` for 流畅度, 速度, and 设备适配 gate check (PASS/WARN/BLOCK)
 - ☐ Run `docs-sync` skill if docs need updating for the changes
 
 ---
@@ -252,6 +254,7 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 - Two-tier brand font: minimal Alimama subset (66KB) bundled for instant display; full font (621KB) loads from CDN with 500ms defer. Quicksand English font (256KB) bundled and loaded on app launch.
 - Route-based CDN preloading: `routePreloadAssets.ts` maps page paths → CDN assets to preload on entry; predictive preloading for likely next screens.
 - Bundled assets: tab-icons, joyjoin-logo, joyjoin-logo-tab, tab-bar-notch-bg, custom-tab-bar, archetype spritesheet (subpackage), all icon tiers with retina (@1x/@2x/@3x via `JoyJoinIcon`): mood, chemistry, status, category, intent, reaction, reveal, achievement, archetype heads; landing phase icons (6), empty states, QR code, auction coin icons, Xiaoyue loading + welcome expressions, Quicksand + Alimama minimal fonts. CDN-only: archetype full-body images, matching heroes, promo banners, Lovart illustrations, icebreaker backgrounds, celebration images, extra Xiaoyue expressions, mini-script heroes, UI info-label icons.
+- **Promo banner (2026-06-03):** Redesigned from 3-slide auto-rotating carousel to single hero banner with CTA. Uses Lovart-generated low-poly illustration (`banner-hero-lovart-v1.webp`) as full-bleed visual with clean `$color-surface` fallback — no CSS gradient competition. Three copy variants (A/B/C) rotate deterministically by user state (no archetype → C; has archetype → A/B hash). Analytics events: `promo_banner_impression` + `promo_banner_cta_tap` tracked via `discoverAnalytics`. Component: `apps/mini-program/src/components/AiMatchPromoCarousel.tsx`.
 - `npm run check:package-size` measures actual zip-compressed size (not raw directory size) against the 2MB WeChat limit.
 - Icebreaker challenge-card backgrounds use `<ChallengeCardBgImage>` (WeChat-safe `<Image>` component) instead of CSS `background-image` with CDN URLs, which is historically flaky in WeChat runtime.
 
@@ -295,6 +298,28 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 **Mini-program page-stack lifecycle (swipe-back safety):** WeChat keeps pages in the navigation stack alive (hidden, not unmounted). If a page sets `isExiting`/`isPageExiting`/`isSubmitting` before navigating away, those flags survive. When the user swipes back, the page is re-shown but the CTA remains stuck. **Always reset transient exit/submit flags in `useDidShow`** — use `useResetOnShow(setIsPageExiting, setIsSubmitting)` from `apps/mini-program/src/hooks/useResetOnShow.ts`. The navigation hook `useJoyJoinNavigation` already carries an internal reset.
 
 **Mini-program ScrollView trap:** `Taro.pageScrollTo` only works on page-level scroll, **not inside `<ScrollView>`**. For scroll-to-error inside a `ScrollView`, use the `scrollIntoView` prop on `ScrollView` with the target element's `id` (no `#` prefix): `<ScrollView scrollIntoView={scrollToErrorId}>…<View id='field-displayName'>…</View>…</ScrollView>`. Clear the id after ~500ms to prevent re-scrolling on re-render.
+
+**Mini-program haptics and interaction patterns (2026-06-02):**
+- **Haptics are mandatory on all interactive surfaces** across non-onboarding pages: `discover` (pool card tap, location pill, refresh), `matching-status` (all 10+ buttons, celebration on match), `profile` (action rows, logout), `events` (tab switch), `center-hub` (CTAs).
+- **Intensity mapping:** `light` for secondary actions (refresh, back, tab switch, card tap), `medium` for primary CTAs ("查看活动详情", logout), `success` for emotional peaks (match revealed).
+- **hoverClass on View-based interactive elements:** Action rows (`profile-page__action-row--active`), tabs (`events-page__tab--pressed`), and any custom `View` with `onClick` must have visible `hoverClass` feedback. Use `transition: background 0.12s ease` + `rgba($color-primary, 0.06–0.08)` tint.
+- **Spring entrance animations for special states:** Error, cancelled, no-match, and not-found states on `matching-status` use `matching-status__special-state--enter` (`0.5s cubic-bezier(0.22, 1, 0.36, 1)`). Cards spring in with `translateY(16rpx) scale(0.98) → translateY(0) scale(1)`.
+- **Xiaoyue in sad/loading states:** No-match uses `optOutReassure` mascot (bounce-in). Center-hub loading uses `homeWelcome`. Center-hub error uses `actionFailure`. Always pair mascot with warm copy — never dead text alone.
+- **Reduced-motion suppression:** All new animations (spring entrances, mascot bounce-in, hover transitions) must be suppressed under `@media (prefers-reduced-motion: reduce)`.
+
+**Persistent Query Cache (Tier 2 offline) — 2026-06-02:**
+- **Location:** `apps/mini-program/src/lib/api/persistentCache.ts` owns all persistence logic. **Never** inline `Taro.setStorageSync` calls in page components.
+- **Whitelisted keys only:** Only `['mini-program', 'event-pools']` (`POOLS_QUERY_KEY`) and `['mini-program', 'joined-events']` (`JOINED_EVENTS_QUERY_KEY`) are persisted. Matching status, auth user, shell composites, and notification counts are explicitly excluded.
+- **Schema version:** `CACHE_SCHEMA_VERSION = 1` inside the persisted wrapper. Hydration discards mismatched versions with `logInfo('[CacheHydrate] version mismatch, skipping')`. Bump when response shape changes.
+- **TTL:** 4 hours (`MAX_CACHE_AGE_MS`). Entries older than 4h are silently discarded at hydration.
+- **Size cap:** 75KB total (UTF-8 byte count, not JS string length). Exceeding the cap skips the write with a `logWarn`.
+- **False-freshness guard:** Hydration passes `{ updatedAt: entry.timestamp }` to `queryClient.setQueryData` so TanStack Query knows the true data age and triggers immediate background refetch if stale.
+- **Mutation-triggered eviction:** After any mutation that changes persisted data (pool registration, payment verification, pull-to-refresh), call `evictPersistedQuery(key)` to remove the affected key from storage. This prevents the "did my payment fail?" stale-data bug.
+- **Eviction race safety:** `evictPersistedQuery` adds the key to `evictedKeysPendingFlush` and cancels the pending debounce timer. The next `flushCacheToStorage` skips evicted keys.
+- **Multi-user safety:** `clearPersistentCache()` is called inside `clearMiniProgramAuthSession({ mode: 'hard' })` (logout). Prevents User B from seeing User A's cached pools/events.
+- **Subscribe only successes:** The cache subscriber filters `event.query.state.status !== 'success'` — loading and error states are never persisted.
+- **Background-fetch indicator pattern:** When `isFetching && !isLoading`, render a subtle shimmer line (`discover-auth__refresh-indicator`, `events-page__refresh-indicator`) to signal background refresh. Respects `prefers-reduced-motion`.
+- **Performance:** Pre-serialized whitelist (`Set<string>`) gives O(1) lookup. Serialization is reused between size-check and `setStorageSync` write. 2s debounce prevents storage churn.
 
 **Edit-profile design patterns (2026-05-24):**
 - **2-step grouping:** Step 1 "基础档案" = static facts (name, gender, birth, city, hometown, education). Step 2 "社交画像" = expressive choices (profession via AI overlay, intent grid, interests). Maintains cognitive continuity with onboarding.

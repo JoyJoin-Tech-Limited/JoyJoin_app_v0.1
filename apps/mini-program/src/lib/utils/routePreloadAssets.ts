@@ -38,15 +38,15 @@ export const ARCHETYPE_GLYPH_CDN_ASSETS: string[] = [
 
 // ─── Per-route asset lists ───
 
-const DISCOVER_PRELOADS = [
+const DISCOVER_PRELOADS: string[] = [
   // Promo banners now bundled locally
 ]
 
-const MATCHING_PRELOADS = [
+const MATCHING_PRELOADS: string[] = [
   // Matching heroes now bundled locally
 ]
 
-const EVENT_DETAIL_PRELOADS = [
+const EVENT_DETAIL_PRELOADS: string[] = [
   // Xiaoyue event-detail-tip now bundled locally
 ]
 

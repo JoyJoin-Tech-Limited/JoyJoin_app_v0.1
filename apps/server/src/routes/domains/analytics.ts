@@ -63,6 +63,8 @@ const DISCOVER_EVENT_TYPES = [
   "registration_start",
   "registration_complete",
   "registration_abandoned",
+  "promo_banner_impression",
+  "promo_banner_cta_tap",
 ] as const;
 
 type DiscoverEventType = (typeof DISCOVER_EVENT_TYPES)[number];
@@ -213,8 +215,10 @@ export function registerAnalyticsRoutes(app: Express): void {
   /**
    * POST /api/analytics/discover
    *
-   * Discover page Oracle Card conversion funnel instrumentation.
-   * Tracks: pool_card_tap, registration_start, registration_complete.
+   * Discover page conversion funnel instrumentation.
+   * Tracks: pool_card_tap, pool_card_impression, registration_start,
+   * registration_complete, registration_abandoned, promo_banner_impression,
+   * promo_banner_cta_tap.
    *
    * Fire-and-forget. Always returns 200. Silent fail.
    */

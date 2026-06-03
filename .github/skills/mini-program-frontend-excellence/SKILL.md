@@ -26,13 +26,12 @@ description: >
 
 When in doubt, treat as Full. A padding change that affects visual hierarchy = Full.
 ## Routine dev quick check (60 seconds)
-
 Before push on Routine changes:
-1. [ ] Spacing consistent with sibling screens? (eyeball check)
+1. [ ] Spacing consistent with sibling screens? (eyeball)
 2. [ ] Color from token, not hex literal?
-3. [ ] No browser-only APIs (`window.*`, `vh` units)?
-4. [ ] Press/hover feedback visible on interactive elements?
-5. [ ] Change doesn't break layout on the smallest target device?
+3. [ ] No browser-only APIs (`window.*`, `vh`)?
+4. [ ] Press/hover feedback on interactive elements?
+5. [ ] Layout on smallest target device?
 ## When to use this skill
 
 - Implementing or refining UI in `apps/mini-program`
@@ -68,7 +67,9 @@ Top rules. Deep reference: [`references/taro-ui-framework.md`](references/taro-u
 - **Spec asks for something off-brand** — name the exact conflict (colour, font, motion, mascot use, density) and flag before implementation.
 - **CSS-in-JS proposed** — default to existing repo Taro styling patterns unless the architecture explicitly shifts.
 - **Chinese text breaks awkwardly** — never use `overflow-wrap: anywhere` on CJK display text (produces 孤字). Default `overflow-wrap: normal` is correct.
-- **Entrance animations feel generic** — use `cubic-bezier(0.22, 1, 0.36, 1)` for all entrances. Reserve `ease-out`/`ease-in-out` for continuous loops only.
+- **Entrance animations feel generic** — use `cubic-bezier(0.22, 1, 0.36, 1)`. Reserve `ease-out`/`ease-in-out` for loops only.
+## Grill-me stress-test
+After completing Full-tier changes, run [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — a one-question-per-turn interview that stress-tests pixel precision, Taro discipline, state completeness, cross-device behavior, and brand feel.
 ## Full review checklist (17 items)
 
 For Full-tier changes. Routine changes use the quick check above.
@@ -89,6 +90,7 @@ For Full-tier changes. Routine changes use the quick check above.
 - [ ] Entrance animations use `cubic-bezier(0.22, 1, 0.36, 1)`; loops use `ease-out`/`ease-in-out`
 - [ ] No `overflow-wrap: anywhere` on CJK display text; default breaking preserved
 - [ ] Screen is unmistakably JoyJoin, not generic — don't sign off on "functional but cheap"
+- [ ] 情绪价值 scored via `docs/reference/emotional-value-rubric.md` for user-facing screens (0–24). A technically perfect screen with 0 情绪价值 is a failure.
 ## Related skills
 
 - [`ui-layout-audit`](./ui-layout-audit/SKILL.md) — pixel-level layout, spacing, typography audit
@@ -97,3 +99,4 @@ For Full-tier changes. Routine changes use the quick check above.
 - [`joyjoin-brand-guidelines`](./joyjoin-brand-guidelines/SKILL.md) — brand colour, typography, mascot usage
 - [`wow-elements`](./wow-elements/SKILL.md) — crafted motion and emotional polish
 - [`design-system-governance`](./design-system-governance/SKILL.md) — token and variant discipline
+- [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — stress-test interview for Full-tier changes

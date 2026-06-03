@@ -47,6 +47,10 @@ See [`references/payment-ops.md`](references/payment-ops.md) for webhook handlin
 3. Webhook or status query confirms → `paymentFulfillmentRepo.ts` updates state transactionally
 4. Entitlement read in `routes.ts` grants access based on subscription or available credits
 
+## Grill-me stress-test
+
+After implementing payment changes, run [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — a one-question-per-turn interview that stress-tests idempotency, webhook replay, refund atomicity, entitlement gating order, and cross-platform parity. Every assumption is a potential chargeback.
+
 ## Quick examples
 
 - **Add a new payment status rule**: update the pure decision helper in `packages/shared/src/api.ts` when the change is only about client-visible verification state. Leave storage, retries, and platform navigation local.
@@ -78,3 +82,4 @@ Check `PAYMENTS_ENABLED`, the launch-config guidance in `docs/LAUNCH_CONFIG.md`,
 - [ ] Shared contract or platform-boundary changes update `docs/PLATFORM_COORDINATION.md` and the affected platform builds
 - [ ] Payment feature-flag or environment assumptions still match `docs/LAUNCH_CONFIG.md`
 - [ ] Relevant payment tests were updated when the authority boundary or behavior changed
+- [ ] Grill-me interview completed for any payment path change (see `references/grill-me-checklist.md`)

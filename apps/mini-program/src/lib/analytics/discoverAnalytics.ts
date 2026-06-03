@@ -8,6 +8,8 @@ export type DiscoverAnalyticsEventType =
   | 'registration_start'
   | 'registration_complete'
   | 'registration_abandoned'
+  | 'promo_banner_impression'
+  | 'promo_banner_cta_tap'
   | 'filter_open'
   | 'filter_select'
   | 'filter_close'

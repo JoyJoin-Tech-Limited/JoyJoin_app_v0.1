@@ -50,6 +50,7 @@ Start here when reviewing a pull request or auditing code changes.
 | [`code-review`](./code-review/SKILL.md) | Structured PR review using the Harness Engineering Framework — correctness, reliability, scalability, security, observability, and architecture fit. **Start here for all PR reviews.** Load domain-specific skills below for deeper review in affected areas. |
 | [`ui-layout-audit`](./ui-layout-audit/SKILL.md) | Pixel-level UI/UX audit: spacing hierarchy, typography comfort, emoji discipline, visual coherence (孤字 guard), and emotional craft. Use before shipping UI-heavy PRs or when a screen feels cheap / crowded / unbalanced. |
 | [`completeness-audit`](./completeness-audit/SKILL.md) | 11-dimension 完成度 audit (0–44) for mini-program implementations: functional, state, copy, interaction, delight, flow, accessibility, Taro discipline, visual finish, brand soul, and operational completeness. Produces ROI-ranked gap register via 2-axis scatter (User Impact × Engineering Hours). Pipeline Mode auto-sequences `ui-layout-audit → frontend-design-audit → completeness-audit`. |
+| [`performance-audit`](./performance-audit/SKILL.md) | Post-implementation performance audit — 6 dimensions (流畅度, 速度, 设备适配, 内存安全, 网络韧性, 包体积) scored on Gen Z device baselines (8GB+/120Hz/5G primary tier). Incorporates grill-me stress-test interview. Produces PASS/WARN/BLOCK gate. |
 
 ---
 
@@ -235,6 +236,7 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | How do I audit a screen for pixel-level layout and spacing? | `ui-layout-audit` |
 | How do I run a complete design-quality audit on a frontend surface? | `frontend-design-audit` |
 | How do I run a 完成度 audit with ROI-ranked gap recommendations? | `completeness-audit` (pipeline: `ui-layout-audit → frontend-design-audit → completeness-audit`) |
+| How do I audit post-implementation performance (流畅度, 速度, 设备适配)? | `performance-audit` |
 | How do I enforce zero-scroll viewport lock or `100dvh` shell? | `viewport-zero-scroll` |
 | How do I add caching or rate limiting? | `caching-strategy` |
 | How do I add or debug WebSocket real-time notifications? | `websocket-realtime` |
@@ -244,6 +246,7 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | How do I work with WeChat auth, Taro, or Mini Program APIs? | `wechat-ecosystem-integration` |
 | How does semantic similarity matching work? | `semantic-matching-embeddings` |
 | How do I plan a cross-cutting refresh of product docs, skills, and agents? | [`docs/ai-workflow-documentation-refresh.md`](../../docs/ai-workflow-documentation-refresh.md) + `docs-sync` where applicable |
+| How do I stress-test a plan or design with relentless questioning? | `grill-me` |
 | How do I run a structured multi-agent review or architecture consensus? | `multi-agent-deliberation` |
 | How do I get a mentor-style breakdown of what we just built? | `cto-mentor` |
 

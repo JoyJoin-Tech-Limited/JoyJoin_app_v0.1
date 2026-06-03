@@ -131,6 +131,7 @@
     padding: $spacing-lg;
     min-height: 96rpx;
     border-bottom: 1rpx solid $color-divider;
+    transition: background 0.12s ease;
 
     &:last-child {
       border-bottom: none;
@@ -138,6 +139,10 @@
 
     &:active {
       background: rgba(0, 0, 0, 0.02);
+    }
+
+    &--active {
+      background: rgba($color-primary, 0.06);
     }
   }
 

@@ -1,710 +1,714 @@
 {
-  "_comment": "Assets to upload to CDN for JoyJoin Mini Program. Run this after each build that changes assets.",
-  "cdnBaseUrl": "https://joyjoinapp.com/static",
-  "assets": [
-    {
-      "localPath": "assets/archetypes/archetype-cat.webp",
-      "cdnPath": "assets/archetypes/archetype-cat.webp"
-    },
-    {
-      "localPath": "assets/archetypes/archetype-corgi.webp",
-      "cdnPath": "assets/archetypes/archetype-corgi.webp"
-    },
-    {
-      "localPath": "assets/archetypes/archetype-dolphin_calm.webp",
-      "cdnPath": "assets/archetypes/archetype-dolphin_calm.webp"
-    },
-    {
-      "localPath": "assets/archetypes/archetype-elephant.webp",
-      "cdnPath": "assets/archetypes/archetype-elephant.webp"
-    },
-    {
-      "localPath": "assets/archetypes/archetype-fox.webp",
-      "cdnPath": "assets/archetypes/archetype-fox.webp"
-    },
-    {
-      "localPath": "assets/archetypes/archetype-hamster_praise.webp",
-      "cdnPath": "assets/archetypes/archetype-hamster_praise.webp"
-    },
-    {
-      "localPath": "assets/archetypes/archetype-koala.webp",
-      "cdnPath": "assets/archetypes/archetype-koala.webp"
-    },
-    {
-      "localPath": "assets/archetypes/archetype-octopus.webp",
-      "cdnPath": "assets/archetypes/archetype-octopus.webp"
-    },
-    {
-      "localPath": "assets/archetypes/archetype-owl.webp",
-      "cdnPath": "assets/archetypes/archetype-owl.webp"
-    },
-    {
-      "localPath": "assets/archetypes/archetype-rooster.webp",
-      "cdnPath": "assets/archetypes/archetype-rooster.webp"
-    },
-    {
-      "localPath": "assets/archetypes/archetype-spider.webp",
-      "cdnPath": "assets/archetypes/archetype-spider.webp"
-    },
-    {
-      "localPath": "assets/archetypes/archetype-spritesheet.webp",
-      "cdnPath": "assets/archetypes/archetype-spritesheet.webp"
-    },
-    {
-      "localPath": "assets/archetypes/archetype-turtle.webp",
-      "cdnPath": "assets/archetypes/archetype-turtle.webp"
-    },
-    {
-      "localPath": "assets/joyjoin-logo.webp",
-      "cdnPath": "assets/joyjoin-logo.webp"
-    },
-    {
-      "localPath": "assets/empty-state/center-empty-bg.webp",
-      "cdnPath": "assets/empty-state/center-empty-bg.webp"
-    },
-    {
-      "localPath": "assets/empty-state/center-empty-illustration.webp",
-      "cdnPath": "assets/empty-state/center-empty-illustration.webp"
-    },
-    {
-      "localPath": "assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2",
-      "cdnPath": "assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2"
-    },
-    {
-      "localPath": "assets/icons/archetype/archetype-cat-head@3x.webp",
-      "cdnPath": "assets/icons/archetype/archetype-cat-head@3x.webp"
-    },
-    {
-      "localPath": "assets/icons/archetype/archetype-corgi-head@3x.webp",
-      "cdnPath": "assets/icons/archetype/archetype-corgi-head@3x.webp"
-    },
-    {
-      "localPath": "assets/icons/archetype/archetype-dolphin_calm-head@3x.webp",
-      "cdnPath": "assets/icons/archetype/archetype-dolphin_calm-head@3x.webp"
-    },
-    {
-      "localPath": "assets/icons/archetype/archetype-elephant-head@3x.webp",
-      "cdnPath": "assets/icons/archetype/archetype-elephant-head@3x.webp"
-    },
-    {
-      "localPath": "assets/icons/archetype/archetype-fox-head@3x.webp",
-      "cdnPath": "assets/icons/archetype/archetype-fox-head@3x.webp"
-    },
-    {
-      "localPath": "assets/icons/archetype/archetype-hamster_praise-head@3x.webp",
-      "cdnPath": "assets/icons/archetype/archetype-hamster_praise-head@3x.webp"
-    },
-    {
-      "localPath": "assets/icons/archetype/archetype-koala-head@3x.webp",
-      "cdnPath": "assets/icons/archetype/archetype-koala-head@3x.webp"
-    },
-    {
-      "localPath": "assets/icons/archetype/archetype-octopus-head@3x.webp",
-      "cdnPath": "assets/icons/archetype/archetype-octopus-head@3x.webp"
-    },
-    {
-      "localPath": "assets/icons/archetype/archetype-owl-head@3x.webp",
-      "cdnPath": "assets/icons/archetype/archetype-owl-head@3x.webp"
-    },
-    {
-      "localPath": "assets/icons/archetype/archetype-rooster-head@3x.webp",
-      "cdnPath": "assets/icons/archetype/archetype-rooster-head@3x.webp"
-    },
-    {
-      "localPath": "assets/icons/archetype/archetype-spider-head@3x.webp",
-      "cdnPath": "assets/icons/archetype/archetype-spider-head@3x.webp"
-    },
-    {
-      "localPath": "assets/icons/archetype/archetype-turtle-head@3x.webp",
-      "cdnPath": "assets/icons/archetype/archetype-turtle-head@3x.webp"
-    },
-    {
-      "localPath": "assets/icons/chemistry-badges/chem-chat.webp",
-      "cdnPath": "assets/icons/chemistry-badges/chem-chat.webp"
-    },
-    {
-      "localPath": "assets/icons/chemistry-badges/chem-fire.webp",
-      "cdnPath": "assets/icons/chemistry-badges/chem-fire.webp"
-    },
-    {
-      "localPath": "assets/icons/chemistry-badges/chem-sprout.webp",
-      "cdnPath": "assets/icons/chemistry-badges/chem-sprout.webp"
-    },
-    {
-      "localPath": "assets/icons/chemistry-badges/chem-warm.webp",
-      "cdnPath": "assets/icons/chemistry-badges/chem-warm.webp"
-    },
-    {
-      "localPath": "assets/icons/mood-icons/mood-emotional.png",
-      "cdnPath": "assets/icons/mood-icons/mood-emotional.png"
-    },
-    {
-      "localPath": "assets/icons/mood-icons/mood-funny.png",
-      "cdnPath": "assets/icons/mood-icons/mood-funny.png"
-    },
-    {
-      "localPath": "assets/icons/mood-icons/mood-life.png",
-      "cdnPath": "assets/icons/mood-icons/mood-life.png"
-    },
-    {
-      "localPath": "assets/icons/mood-icons/mood-relaxed.png",
-      "cdnPath": "assets/icons/mood-icons/mood-relaxed.png"
-    },
-    {
-      "localPath": "assets/icons/phase-icons/phase-auction.webp",
-      "cdnPath": "assets/icons/phase-icons/phase-auction.webp"
-    },
-    {
-      "localPath": "assets/icons/phase-icons/phase-group-mirror.webp",
-      "cdnPath": "assets/icons/phase-icons/phase-group-mirror.webp"
-    },
-    {
-      "localPath": "assets/icons/phase-icons/phase-lie-detective.webp",
-      "cdnPath": "assets/icons/phase-icons/phase-lie-detective.webp"
-    },
-    {
-      "localPath": "assets/icons/phase-icons/phase-micro-challenge.webp",
-      "cdnPath": "assets/icons/phase-icons/phase-micro-challenge.webp"
-    },
-    {
-      "localPath": "assets/icons/phase-icons/phase-mini-script.webp",
-      "cdnPath": "assets/icons/phase-icons/phase-mini-script.webp"
-    },
-    {
-      "localPath": "assets/icons/phase-icons/phase-personality-dice.webp",
-      "cdnPath": "assets/icons/phase-icons/phase-personality-dice.webp"
-    },
-    {
-      "localPath": "assets/icons/phase-icons/phase-quip-battle.webp",
-      "cdnPath": "assets/icons/phase-icons/phase-quip-battle.webp"
-    },
-    {
-      "localPath": "assets/icons/phase-icons/phase-recap.webp",
-      "cdnPath": "assets/icons/phase-icons/phase-recap.webp"
-    },
-    {
-      "localPath": "assets/icons/phase-icons/phase-topic-card.webp",
-      "cdnPath": "assets/icons/phase-icons/phase-topic-card.webp"
-    },
-    {
-      "localPath": "assets/icons/phase-icons/phase-undercover-word.webp",
-      "cdnPath": "assets/icons/phase-icons/phase-undercover-word.webp"
-    },
-    {
-      "localPath": "assets/icons/phase-icons/phase-warmup.webp",
-      "cdnPath": "assets/icons/phase-icons/phase-warmup.webp"
-    },
-    {
-      "localPath": "assets/icons/status-icons/status-crown.png",
-      "cdnPath": "assets/icons/status-icons/status-crown.png"
-    },
-    {
-      "localPath": "assets/icons/status-icons/status-waiting.png",
-      "cdnPath": "assets/icons/status-icons/status-waiting.png"
-    },
-    {
-      "localPath": "assets/icons/ui/icon-calendar.webp",
-      "cdnPath": "assets/icons/ui/icon-calendar.webp"
-    },
-    {
-      "localPath": "assets/icons/ui/icon-chemistry.webp",
-      "cdnPath": "assets/icons/ui/icon-chemistry.webp"
-    },
-    {
-      "localPath": "assets/icons/ui/icon-coupon.webp",
-      "cdnPath": "assets/icons/ui/icon-coupon.webp"
-    },
-    {
-      "localPath": "assets/icons/ui/icon-edit.webp",
-      "cdnPath": "assets/icons/ui/icon-edit.webp"
-    },
-    {
-      "localPath": "assets/icons/ui/icon-filter.webp",
-      "cdnPath": "assets/icons/ui/icon-filter.webp"
-    },
-    {
-      "localPath": "assets/icons/ui/icon-footprint.webp",
-      "cdnPath": "assets/icons/ui/icon-footprint.webp"
-    },
-    {
-      "localPath": "assets/icons/ui/icon-link.webp",
-      "cdnPath": "assets/icons/ui/icon-link.webp"
-    },
-    {
-      "localPath": "assets/icons/ui/icon-location.webp",
-      "cdnPath": "assets/icons/ui/icon-location.webp"
-    },
-    {
-      "localPath": "assets/icons/ui/icon-people.webp",
-      "cdnPath": "assets/icons/ui/icon-people.webp"
-    },
-    {
-      "localPath": "assets/icons/ui/icon-price.webp",
-      "cdnPath": "assets/icons/ui/icon-price.webp"
-    },
-    {
-      "localPath": "assets/icons/ui/icon-status.webp",
-      "cdnPath": "assets/icons/ui/icon-status.webp"
-    },
-    {
-      "localPath": "assets/illustrations/lovart-blind-box-body.webp",
-      "cdnPath": "assets/illustrations/lovart-blind-box-body.webp"
-    },
-    {
-      "localPath": "assets/illustrations/lovart-blind-box-interior.webp",
-      "cdnPath": "assets/illustrations/lovart-blind-box-interior.webp"
-    },
-    {
-      "localPath": "assets/illustrations/lovart-blind-box-lid.webp",
-      "cdnPath": "assets/illustrations/lovart-blind-box-lid.webp"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/backgrounds/bg-auction.jpg",
-      "cdnPath": "assets/lovart/icebreaker/backgrounds/bg-auction.jpg"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/backgrounds/bg-group-mirror.jpg",
-      "cdnPath": "assets/lovart/icebreaker/backgrounds/bg-group-mirror.jpg"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/backgrounds/bg-personality-dice.jpg",
-      "cdnPath": "assets/lovart/icebreaker/backgrounds/bg-personality-dice.jpg"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/backgrounds/bg-quip-battle.jpg",
-      "cdnPath": "assets/lovart/icebreaker/backgrounds/bg-quip-battle.jpg"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/backgrounds/bg-undercover-word.jpg",
-      "cdnPath": "assets/lovart/icebreaker/backgrounds/bg-undercover-word.jpg"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/celebrations/celebration-auction-sold.png",
-      "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-auction-sold.png"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/celebrations/celebration-dice-reveal.png",
-      "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-dice-reveal.png"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/celebrations/celebration-mirror-result.png",
-      "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-mirror-result.png"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/celebrations/celebration-quip-champion.png",
-      "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-quip-champion.png"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.png",
-      "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.png"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/icons/icon-coin-empty.png",
-      "cdnPath": "assets/lovart/icebreaker/icons/icon-coin-empty.png"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/icons/icon-coin-single.png",
-      "cdnPath": "assets/lovart/icebreaker/icons/icon-coin-single.png"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/icons/icon-coin-stack.png",
-      "cdnPath": "assets/lovart/icebreaker/icons/icon-coin-stack.png"
-    },
-    {
-      "localPath": "assets/lovart/lovart-generic-empty.webp",
-      "cdnPath": "assets/lovart/lovart-generic-empty.webp"
-    },
-    {
-      "localPath": "assets/lovart/lovart-generic-error.webp",
-      "cdnPath": "assets/lovart/lovart-generic-error.webp"
-    },
-    {
-      "localPath": "assets/lovart/lovart-rewards-empty-20260423-v1.webp",
-      "cdnPath": "assets/lovart/lovart-rewards-empty-20260423-v1.webp"
-    },
-    {
-      "localPath": "assets/lovart/lovart-rewards-history-20260423-v1.webp",
-      "cdnPath": "assets/lovart/lovart-rewards-history-20260423-v1.webp"
-    },
-    {
-      "localPath": "assets/lovart/lovart-rewards-shop-20260423-v1.webp",
-      "cdnPath": "assets/lovart/lovart-rewards-shop-20260423-v1.webp"
-    },
-    {
-      "localPath": "assets/lovart/personality-emojis/lovart-icon-personality-direct-speak-20260507-v1.png",
-      "cdnPath": "assets/lovart/personality-emojis/lovart-icon-personality-direct-speak-20260507-v1.png"
-    },
-    {
-      "localPath": "assets/lovart/personality-emojis/lovart-icon-personality-leave-quietly-20260507-v1.png",
-      "cdnPath": "assets/lovart/personality-emojis/lovart-icon-personality-leave-quietly-20260507-v1.png"
-    },
-    {
-      "localPath": "assets/lovart/personality-emojis/lovart-icon-personality-party-ready-20260507-v1.png",
-      "cdnPath": "assets/lovart/personality-emojis/lovart-icon-personality-party-ready-20260507-v1.png"
-    },
-    {
-      "localPath": "assets/lovart/personality-emojis/lovart-icon-personality-peacemaker-20260507-v1.png",
-      "cdnPath": "assets/lovart/personality-emojis/lovart-icon-personality-peacemaker-20260507-v1.png"
-    },
-    {
-      "localPath": "assets/lovart/personality-emojis/lovart-icon-personality-popcorn-observe-20260507-v1.png",
-      "cdnPath": "assets/lovart/personality-emojis/lovart-icon-personality-popcorn-observe-20260507-v1.png"
-    },
-    {
-      "localPath": "assets/lovart/personality-emojis/lovart-icon-personality-private-dm-20260507-v1.png",
-      "cdnPath": "assets/lovart/personality-emojis/lovart-icon-personality-private-dm-20260507-v1.png"
-    },
-    {
-      "localPath": "assets/lovart/personality-emojis/lovart-icon-personality-solo-rest-20260507-v1.png",
-      "cdnPath": "assets/lovart/personality-emojis/lovart-icon-personality-solo-rest-20260507-v1.png"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-celebrate.webp",
-      "cdnPath": "assets/mascot/xiaoyue-celebrate.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-coach.webp",
-      "cdnPath": "assets/mascot/xiaoyue-coach.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-curious.webp",
-      "cdnPath": "assets/mascot/xiaoyue-curious.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-empty.webp",
-      "cdnPath": "assets/mascot/xiaoyue-empty.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-error.webp",
-      "cdnPath": "assets/mascot/xiaoyue-error.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-idle.webp",
-      "cdnPath": "assets/mascot/xiaoyue-idle.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-intro.webp",
-      "cdnPath": "assets/mascot/xiaoyue-intro.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-listening.webp",
-      "cdnPath": "assets/mascot/xiaoyue-listening.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-loading.webp",
-      "cdnPath": "assets/mascot/xiaoyue-loading.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-neutral.webp",
-      "cdnPath": "assets/mascot/xiaoyue-neutral.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-nod.webp",
-      "cdnPath": "assets/mascot/xiaoyue-nod.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-reassure.webp",
-      "cdnPath": "assets/mascot/xiaoyue-reassure.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-reveal.webp",
-      "cdnPath": "assets/mascot/xiaoyue-reveal.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-success.webp",
-      "cdnPath": "assets/mascot/xiaoyue-success.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-surprised.webp",
-      "cdnPath": "assets/mascot/xiaoyue-surprised.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-thanks.webp",
-      "cdnPath": "assets/mascot/xiaoyue-thanks.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-thinking.webp",
-      "cdnPath": "assets/mascot/xiaoyue-thinking.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-trust.webp",
-      "cdnPath": "assets/mascot/xiaoyue-trust.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-waiting.webp",
-      "cdnPath": "assets/mascot/xiaoyue-waiting.webp"
-    },
-    {
-      "localPath": "assets/mascot/xiaoyue-welcome.webp",
-      "cdnPath": "assets/mascot/xiaoyue-welcome.webp"
-    },
-    {
-      "localPath": "assets/matching/matching-bg.webp",
-      "cdnPath": "assets/matching/matching-bg.webp"
-    },
-    {
-      "localPath": "assets/matching/matching-no-match-hero.webp",
-      "cdnPath": "assets/matching/matching-no-match-hero.webp"
-    },
-    {
-      "localPath": "assets/matching/matching-waiting-hero.webp",
-      "cdnPath": "assets/matching/matching-waiting-hero.webp"
-    },
-    {
-      "localPath": "assets/miniscript/ancient-chinese-hero.webp",
-      "cdnPath": "assets/miniscript/ancient-chinese-hero.webp"
-    },
-    {
-      "localPath": "assets/miniscript/future-tech-hero.webp",
-      "cdnPath": "assets/miniscript/future-tech-hero.webp"
-    },
-    {
-      "localPath": "assets/miniscript/medieval-hero.webp",
-      "cdnPath": "assets/miniscript/medieval-hero.webp"
-    },
-    {
-      "localPath": "assets/miniscript/modern-urban-hero.webp",
-      "cdnPath": "assets/miniscript/modern-urban-hero.webp"
-    },
-    {
-      "localPath": "assets/miniscript/republican-era-hero.webp",
-      "cdnPath": "assets/miniscript/republican-era-hero.webp"
-    },
-    {
-      "localPath": "assets/miniscript/western-court-hero.webp",
-      "cdnPath": "assets/miniscript/western-court-hero.webp"
-    },
-    {
-      "localPath": "assets/miniscript/xianxia-hero.webp",
-      "cdnPath": "assets/miniscript/xianxia-hero.webp"
-    },
-    {
-      "localPath": "assets/personality/archetypes/archetype-cat.webp",
-      "cdnPath": "assets/personality/archetypes/archetype-cat.webp"
-    },
-    {
-      "localPath": "assets/personality/archetypes/archetype-corgi.webp",
-      "cdnPath": "assets/personality/archetypes/archetype-corgi.webp"
-    },
-    {
-      "localPath": "assets/personality/archetypes/archetype-dolphin_calm.webp",
-      "cdnPath": "assets/personality/archetypes/archetype-dolphin_calm.webp"
-    },
-    {
-      "localPath": "assets/personality/archetypes/archetype-elephant.webp",
-      "cdnPath": "assets/personality/archetypes/archetype-elephant.webp"
-    },
-    {
-      "localPath": "assets/personality/archetypes/archetype-fox.webp",
-      "cdnPath": "assets/personality/archetypes/archetype-fox.webp"
-    },
-    {
-      "localPath": "assets/personality/archetypes/archetype-hamster_praise.webp",
-      "cdnPath": "assets/personality/archetypes/archetype-hamster_praise.webp"
-    },
-    {
-      "localPath": "assets/personality/archetypes/archetype-koala.webp",
-      "cdnPath": "assets/personality/archetypes/archetype-koala.webp"
-    },
-    {
-      "localPath": "assets/personality/archetypes/archetype-octopus.webp",
-      "cdnPath": "assets/personality/archetypes/archetype-octopus.webp"
-    },
-    {
-      "localPath": "assets/personality/archetypes/archetype-owl.webp",
-      "cdnPath": "assets/personality/archetypes/archetype-owl.webp"
-    },
-    {
-      "localPath": "assets/personality/archetypes/archetype-rooster.webp",
-      "cdnPath": "assets/personality/archetypes/archetype-rooster.webp"
-    },
-    {
-      "localPath": "assets/personality/archetypes/archetype-spider.webp",
-      "cdnPath": "assets/personality/archetypes/archetype-spider.webp"
-    },
-    {
-      "localPath": "assets/personality/archetypes/archetype-spritesheet.png",
-      "cdnPath": "assets/personality/archetypes/archetype-spritesheet.png"
-    },
-    {
-      "localPath": "assets/personality/archetypes/archetype-spritesheet.webp",
-      "cdnPath": "assets/personality/archetypes/archetype-spritesheet.webp"
-    },
-    {
-      "localPath": "assets/personality/archetypes/archetype-turtle.webp",
-      "cdnPath": "assets/personality/archetypes/archetype-turtle.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-action-failure.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-action-failure.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-action-success.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-action-success.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-city-unlock.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-city-unlock.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-coach-guide.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-coach-guide.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-connections-empty.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-connections-empty.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-event-detail-tip.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-event-detail-tip.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-events-empty.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-events-empty.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-home-welcome.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-home-welcome.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-intro-animated.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-intro-animated.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-intro-static.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-intro-static.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-loading-reveal.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-loading-reveal.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-loading-system.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-loading-system.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-match-success.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-match-success.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-match-waiting.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-match-waiting.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-neutral-information.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-neutral-information.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-opt-out-reassure.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-opt-out-reassure.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-payment-trust.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-payment-trust.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-test-curious.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-test-curious.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-test-listening.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-test-listening.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-test-nod.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-test-nod.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-test-surprised.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-test-surprised.webp"
-    },
-    {
-      "localPath": "assets/personality/xiaoyue/xiaoyue-thanks-feedback.webp",
-      "cdnPath": "assets/personality/xiaoyue/xiaoyue-thanks-feedback.webp"
-    },
-    {
-      "localPath": "assets/promo/banner-ai-match-calculated.webp",
-      "cdnPath": "assets/promo/banner-ai-match-calculated.webp"
-    },
-    {
-      "localPath": "assets/promo/banner-ai-match-same-frequency.webp",
-      "cdnPath": "assets/promo/banner-ai-match-same-frequency.webp"
-    },
-    {
-      "localPath": "assets/promo/banner-ai-match-understands-you.webp",
-      "cdnPath": "assets/promo/banner-ai-match-understands-you.webp"
-    },
-    {
-      "localPath": "assets/qr/customer-service-support.png",
-      "cdnPath": "assets/qr/customer-service-support.png"
-    },
-    {
-      "localPath": "assets/tab-bar-notch-bg.png",
-      "cdnPath": "assets/tab-bar-notch-bg.png"
-    },
-    {
-      "localPath": "assets/tab-icons/发现 icon_inactive.png",
-      "cdnPath": "assets/tab-icons/发现 icon_inactive.png"
-    },
-    {
-      "localPath": "assets/tab-icons/发现 icon.png",
-      "cdnPath": "assets/tab-icons/发现 icon.png"
-    },
-    {
-      "localPath": "assets/tab-icons/我的 icon_inactive.png",
-      "cdnPath": "assets/tab-icons/我的 icon_inactive.png"
-    },
-    {
-      "localPath": "assets/tab-icons/我的 icon.png",
-      "cdnPath": "assets/tab-icons/我的 icon.png"
-    },
-    {
-      "localPath": "assets/tab-icons/足迹 icon_inactive.png",
-      "cdnPath": "assets/tab-icons/足迹 icon_inactive.png"
-    },
-    {
-      "localPath": "assets/tab-icons/足迹 icon.png",
-      "cdnPath": "assets/tab-icons/足迹 icon.png"
-    },
-    {
-      "localPath": "assets/tab-icons/连接 icon_inactive.png",
-      "cdnPath": "assets/tab-icons/连接 icon_inactive.png"
-    },
-    {
-      "localPath": "assets/tab-icons/连接 icon.png",
-      "cdnPath": "assets/tab-icons/连接 icon.png"
-    },
-    {
-      "localPath": "assets/miniscript/ancient-chinese-thumb.webp",
-      "cdnPath": "assets/miniscript/ancient-chinese-thumb.webp"
-    },
-    {
-      "localPath": "assets/miniscript/future-tech-thumb.webp",
-      "cdnPath": "assets/miniscript/future-tech-thumb.webp"
-    },
-    {
-      "localPath": "assets/miniscript/medieval-thumb.webp",
-      "cdnPath": "assets/miniscript/medieval-thumb.webp"
-    },
-    {
-      "localPath": "assets/miniscript/modern-urban-thumb.webp",
-      "cdnPath": "assets/miniscript/modern-urban-thumb.webp"
-    },
-    {
-      "localPath": "assets/miniscript/republican-era-thumb.webp",
-      "cdnPath": "assets/miniscript/republican-era-thumb.webp"
-    },
-    {
-      "localPath": "assets/miniscript/western-court-thumb.webp",
-      "cdnPath": "assets/miniscript/western-court-thumb.webp"
-    },
-    {
-      "localPath": "assets/miniscript/xianxia-thumb.webp",
-      "cdnPath": "assets/miniscript/xianxia-thumb.webp"
-    },
-    {
-      "localPath": "assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf",
-      "cdnPath": "assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf"
-    }
-  ]
+    "_comment": "Assets to upload to CDN for JoyJoin Mini Program. Run this after each build that changes assets.",
+    "cdnBaseUrl": "https://joyjoinapp.com/static",
+    "assets": [
+        {
+            "localPath": "assets/archetypes/archetype-cat.webp",
+            "cdnPath": "assets/archetypes/archetype-cat.webp"
+        },
+        {
+            "localPath": "assets/archetypes/archetype-corgi.webp",
+            "cdnPath": "assets/archetypes/archetype-corgi.webp"
+        },
+        {
+            "localPath": "assets/archetypes/archetype-dolphin_calm.webp",
+            "cdnPath": "assets/archetypes/archetype-dolphin_calm.webp"
+        },
+        {
+            "localPath": "assets/archetypes/archetype-elephant.webp",
+            "cdnPath": "assets/archetypes/archetype-elephant.webp"
+        },
+        {
+            "localPath": "assets/archetypes/archetype-fox.webp",
+            "cdnPath": "assets/archetypes/archetype-fox.webp"
+        },
+        {
+            "localPath": "assets/archetypes/archetype-hamster_praise.webp",
+            "cdnPath": "assets/archetypes/archetype-hamster_praise.webp"
+        },
+        {
+            "localPath": "assets/archetypes/archetype-koala.webp",
+            "cdnPath": "assets/archetypes/archetype-koala.webp"
+        },
+        {
+            "localPath": "assets/archetypes/archetype-octopus.webp",
+            "cdnPath": "assets/archetypes/archetype-octopus.webp"
+        },
+        {
+            "localPath": "assets/archetypes/archetype-owl.webp",
+            "cdnPath": "assets/archetypes/archetype-owl.webp"
+        },
+        {
+            "localPath": "assets/archetypes/archetype-rooster.webp",
+            "cdnPath": "assets/archetypes/archetype-rooster.webp"
+        },
+        {
+            "localPath": "assets/archetypes/archetype-spider.webp",
+            "cdnPath": "assets/archetypes/archetype-spider.webp"
+        },
+        {
+            "localPath": "assets/archetypes/archetype-spritesheet.webp",
+            "cdnPath": "assets/archetypes/archetype-spritesheet.webp"
+        },
+        {
+            "localPath": "assets/archetypes/archetype-turtle.webp",
+            "cdnPath": "assets/archetypes/archetype-turtle.webp"
+        },
+        {
+            "localPath": "assets/joyjoin-logo.webp",
+            "cdnPath": "assets/joyjoin-logo.webp"
+        },
+        {
+            "localPath": "assets/empty-state/center-empty-bg.webp",
+            "cdnPath": "assets/empty-state/center-empty-bg.webp"
+        },
+        {
+            "localPath": "assets/empty-state/center-empty-illustration.webp",
+            "cdnPath": "assets/empty-state/center-empty-illustration.webp"
+        },
+        {
+            "localPath": "assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2",
+            "cdnPath": "assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-cat-head@3x.webp",
+            "cdnPath": "assets/icons/archetype/archetype-cat-head@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-corgi-head@3x.webp",
+            "cdnPath": "assets/icons/archetype/archetype-corgi-head@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-dolphin_calm-head@3x.webp",
+            "cdnPath": "assets/icons/archetype/archetype-dolphin_calm-head@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-elephant-head@3x.webp",
+            "cdnPath": "assets/icons/archetype/archetype-elephant-head@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-fox-head@3x.webp",
+            "cdnPath": "assets/icons/archetype/archetype-fox-head@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-hamster_praise-head@3x.webp",
+            "cdnPath": "assets/icons/archetype/archetype-hamster_praise-head@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-koala-head@3x.webp",
+            "cdnPath": "assets/icons/archetype/archetype-koala-head@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-octopus-head@3x.webp",
+            "cdnPath": "assets/icons/archetype/archetype-octopus-head@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-owl-head@3x.webp",
+            "cdnPath": "assets/icons/archetype/archetype-owl-head@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-rooster-head@3x.webp",
+            "cdnPath": "assets/icons/archetype/archetype-rooster-head@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-spider-head@3x.webp",
+            "cdnPath": "assets/icons/archetype/archetype-spider-head@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-turtle-head@3x.webp",
+            "cdnPath": "assets/icons/archetype/archetype-turtle-head@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/chemistry-badges/chem-chat.webp",
+            "cdnPath": "assets/icons/chemistry-badges/chem-chat.webp"
+        },
+        {
+            "localPath": "assets/icons/chemistry-badges/chem-fire.webp",
+            "cdnPath": "assets/icons/chemistry-badges/chem-fire.webp"
+        },
+        {
+            "localPath": "assets/icons/chemistry-badges/chem-sprout.webp",
+            "cdnPath": "assets/icons/chemistry-badges/chem-sprout.webp"
+        },
+        {
+            "localPath": "assets/icons/chemistry-badges/chem-warm.webp",
+            "cdnPath": "assets/icons/chemistry-badges/chem-warm.webp"
+        },
+        {
+            "localPath": "assets/icons/mood-icons/mood-emotional.png",
+            "cdnPath": "assets/icons/mood-icons/mood-emotional.png"
+        },
+        {
+            "localPath": "assets/icons/mood-icons/mood-funny.png",
+            "cdnPath": "assets/icons/mood-icons/mood-funny.png"
+        },
+        {
+            "localPath": "assets/icons/mood-icons/mood-life.png",
+            "cdnPath": "assets/icons/mood-icons/mood-life.png"
+        },
+        {
+            "localPath": "assets/icons/mood-icons/mood-relaxed.png",
+            "cdnPath": "assets/icons/mood-icons/mood-relaxed.png"
+        },
+        {
+            "localPath": "assets/icons/phase-icons/phase-auction.webp",
+            "cdnPath": "assets/icons/phase-icons/phase-auction.webp"
+        },
+        {
+            "localPath": "assets/icons/phase-icons/phase-group-mirror.webp",
+            "cdnPath": "assets/icons/phase-icons/phase-group-mirror.webp"
+        },
+        {
+            "localPath": "assets/icons/phase-icons/phase-lie-detective.webp",
+            "cdnPath": "assets/icons/phase-icons/phase-lie-detective.webp"
+        },
+        {
+            "localPath": "assets/icons/phase-icons/phase-micro-challenge.webp",
+            "cdnPath": "assets/icons/phase-icons/phase-micro-challenge.webp"
+        },
+        {
+            "localPath": "assets/icons/phase-icons/phase-mini-script.webp",
+            "cdnPath": "assets/icons/phase-icons/phase-mini-script.webp"
+        },
+        {
+            "localPath": "assets/icons/phase-icons/phase-personality-dice.webp",
+            "cdnPath": "assets/icons/phase-icons/phase-personality-dice.webp"
+        },
+        {
+            "localPath": "assets/icons/phase-icons/phase-quip-battle.webp",
+            "cdnPath": "assets/icons/phase-icons/phase-quip-battle.webp"
+        },
+        {
+            "localPath": "assets/icons/phase-icons/phase-recap.webp",
+            "cdnPath": "assets/icons/phase-icons/phase-recap.webp"
+        },
+        {
+            "localPath": "assets/icons/phase-icons/phase-topic-card.webp",
+            "cdnPath": "assets/icons/phase-icons/phase-topic-card.webp"
+        },
+        {
+            "localPath": "assets/icons/phase-icons/phase-undercover-word.webp",
+            "cdnPath": "assets/icons/phase-icons/phase-undercover-word.webp"
+        },
+        {
+            "localPath": "assets/icons/phase-icons/phase-warmup.webp",
+            "cdnPath": "assets/icons/phase-icons/phase-warmup.webp"
+        },
+        {
+            "localPath": "assets/icons/status-icons/status-crown.png",
+            "cdnPath": "assets/icons/status-icons/status-crown.png"
+        },
+        {
+            "localPath": "assets/icons/status-icons/status-waiting.png",
+            "cdnPath": "assets/icons/status-icons/status-waiting.png"
+        },
+        {
+            "localPath": "assets/icons/ui/icon-calendar.webp",
+            "cdnPath": "assets/icons/ui/icon-calendar.webp"
+        },
+        {
+            "localPath": "assets/icons/ui/icon-chemistry.webp",
+            "cdnPath": "assets/icons/ui/icon-chemistry.webp"
+        },
+        {
+            "localPath": "assets/icons/ui/icon-coupon.webp",
+            "cdnPath": "assets/icons/ui/icon-coupon.webp"
+        },
+        {
+            "localPath": "assets/icons/ui/icon-edit.webp",
+            "cdnPath": "assets/icons/ui/icon-edit.webp"
+        },
+        {
+            "localPath": "assets/icons/ui/icon-filter.webp",
+            "cdnPath": "assets/icons/ui/icon-filter.webp"
+        },
+        {
+            "localPath": "assets/icons/ui/icon-footprint.webp",
+            "cdnPath": "assets/icons/ui/icon-footprint.webp"
+        },
+        {
+            "localPath": "assets/icons/ui/icon-link.webp",
+            "cdnPath": "assets/icons/ui/icon-link.webp"
+        },
+        {
+            "localPath": "assets/icons/ui/icon-location.webp",
+            "cdnPath": "assets/icons/ui/icon-location.webp"
+        },
+        {
+            "localPath": "assets/icons/ui/icon-people.webp",
+            "cdnPath": "assets/icons/ui/icon-people.webp"
+        },
+        {
+            "localPath": "assets/icons/ui/icon-price.webp",
+            "cdnPath": "assets/icons/ui/icon-price.webp"
+        },
+        {
+            "localPath": "assets/icons/ui/icon-status.webp",
+            "cdnPath": "assets/icons/ui/icon-status.webp"
+        },
+        {
+            "localPath": "assets/illustrations/lovart-blind-box-body.webp",
+            "cdnPath": "assets/illustrations/lovart-blind-box-body.webp"
+        },
+        {
+            "localPath": "assets/illustrations/lovart-blind-box-interior.webp",
+            "cdnPath": "assets/illustrations/lovart-blind-box-interior.webp"
+        },
+        {
+            "localPath": "assets/illustrations/lovart-blind-box-lid.webp",
+            "cdnPath": "assets/illustrations/lovart-blind-box-lid.webp"
+        },
+        {
+            "localPath": "assets/lovart/icebreaker/backgrounds/bg-auction.jpg",
+            "cdnPath": "assets/lovart/icebreaker/backgrounds/bg-auction.jpg"
+        },
+        {
+            "localPath": "assets/lovart/icebreaker/backgrounds/bg-group-mirror.jpg",
+            "cdnPath": "assets/lovart/icebreaker/backgrounds/bg-group-mirror.jpg"
+        },
+        {
+            "localPath": "assets/lovart/icebreaker/backgrounds/bg-personality-dice.jpg",
+            "cdnPath": "assets/lovart/icebreaker/backgrounds/bg-personality-dice.jpg"
+        },
+        {
+            "localPath": "assets/lovart/icebreaker/backgrounds/bg-quip-battle.jpg",
+            "cdnPath": "assets/lovart/icebreaker/backgrounds/bg-quip-battle.jpg"
+        },
+        {
+            "localPath": "assets/lovart/icebreaker/backgrounds/bg-undercover-word.jpg",
+            "cdnPath": "assets/lovart/icebreaker/backgrounds/bg-undercover-word.jpg"
+        },
+        {
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-auction-sold.png",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-auction-sold.png"
+        },
+        {
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-dice-reveal.png",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-dice-reveal.png"
+        },
+        {
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-mirror-result.png",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-mirror-result.png"
+        },
+        {
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-quip-champion.png",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-quip-champion.png"
+        },
+        {
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.png",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.png"
+        },
+        {
+            "localPath": "assets/lovart/icebreaker/icons/icon-coin-empty.png",
+            "cdnPath": "assets/lovart/icebreaker/icons/icon-coin-empty.png"
+        },
+        {
+            "localPath": "assets/lovart/icebreaker/icons/icon-coin-single.png",
+            "cdnPath": "assets/lovart/icebreaker/icons/icon-coin-single.png"
+        },
+        {
+            "localPath": "assets/lovart/icebreaker/icons/icon-coin-stack.png",
+            "cdnPath": "assets/lovart/icebreaker/icons/icon-coin-stack.png"
+        },
+        {
+            "localPath": "assets/lovart/lovart-generic-empty.webp",
+            "cdnPath": "assets/lovart/lovart-generic-empty.webp"
+        },
+        {
+            "localPath": "assets/lovart/lovart-generic-error.webp",
+            "cdnPath": "assets/lovart/lovart-generic-error.webp"
+        },
+        {
+            "localPath": "assets/lovart/lovart-rewards-empty-20260423-v1.webp",
+            "cdnPath": "assets/lovart/lovart-rewards-empty-20260423-v1.webp"
+        },
+        {
+            "localPath": "assets/lovart/lovart-rewards-history-20260423-v1.webp",
+            "cdnPath": "assets/lovart/lovart-rewards-history-20260423-v1.webp"
+        },
+        {
+            "localPath": "assets/lovart/lovart-rewards-shop-20260423-v1.webp",
+            "cdnPath": "assets/lovart/lovart-rewards-shop-20260423-v1.webp"
+        },
+        {
+            "localPath": "assets/lovart/personality-emojis/lovart-icon-personality-direct-speak-20260507-v1.png",
+            "cdnPath": "assets/lovart/personality-emojis/lovart-icon-personality-direct-speak-20260507-v1.png"
+        },
+        {
+            "localPath": "assets/lovart/personality-emojis/lovart-icon-personality-leave-quietly-20260507-v1.png",
+            "cdnPath": "assets/lovart/personality-emojis/lovart-icon-personality-leave-quietly-20260507-v1.png"
+        },
+        {
+            "localPath": "assets/lovart/personality-emojis/lovart-icon-personality-party-ready-20260507-v1.png",
+            "cdnPath": "assets/lovart/personality-emojis/lovart-icon-personality-party-ready-20260507-v1.png"
+        },
+        {
+            "localPath": "assets/lovart/personality-emojis/lovart-icon-personality-peacemaker-20260507-v1.png",
+            "cdnPath": "assets/lovart/personality-emojis/lovart-icon-personality-peacemaker-20260507-v1.png"
+        },
+        {
+            "localPath": "assets/lovart/personality-emojis/lovart-icon-personality-popcorn-observe-20260507-v1.png",
+            "cdnPath": "assets/lovart/personality-emojis/lovart-icon-personality-popcorn-observe-20260507-v1.png"
+        },
+        {
+            "localPath": "assets/lovart/personality-emojis/lovart-icon-personality-private-dm-20260507-v1.png",
+            "cdnPath": "assets/lovart/personality-emojis/lovart-icon-personality-private-dm-20260507-v1.png"
+        },
+        {
+            "localPath": "assets/lovart/personality-emojis/lovart-icon-personality-solo-rest-20260507-v1.png",
+            "cdnPath": "assets/lovart/personality-emojis/lovart-icon-personality-solo-rest-20260507-v1.png"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-celebrate.webp",
+            "cdnPath": "assets/mascot/xiaoyue-celebrate.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-coach.webp",
+            "cdnPath": "assets/mascot/xiaoyue-coach.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-curious.webp",
+            "cdnPath": "assets/mascot/xiaoyue-curious.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-empty.webp",
+            "cdnPath": "assets/mascot/xiaoyue-empty.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-error.webp",
+            "cdnPath": "assets/mascot/xiaoyue-error.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-idle.webp",
+            "cdnPath": "assets/mascot/xiaoyue-idle.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-intro.webp",
+            "cdnPath": "assets/mascot/xiaoyue-intro.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-listening.webp",
+            "cdnPath": "assets/mascot/xiaoyue-listening.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-loading.webp",
+            "cdnPath": "assets/mascot/xiaoyue-loading.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-neutral.webp",
+            "cdnPath": "assets/mascot/xiaoyue-neutral.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-nod.webp",
+            "cdnPath": "assets/mascot/xiaoyue-nod.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-reassure.webp",
+            "cdnPath": "assets/mascot/xiaoyue-reassure.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-reveal.webp",
+            "cdnPath": "assets/mascot/xiaoyue-reveal.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-success.webp",
+            "cdnPath": "assets/mascot/xiaoyue-success.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-surprised.webp",
+            "cdnPath": "assets/mascot/xiaoyue-surprised.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-thanks.webp",
+            "cdnPath": "assets/mascot/xiaoyue-thanks.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-thinking.webp",
+            "cdnPath": "assets/mascot/xiaoyue-thinking.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-trust.webp",
+            "cdnPath": "assets/mascot/xiaoyue-trust.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-waiting.webp",
+            "cdnPath": "assets/mascot/xiaoyue-waiting.webp"
+        },
+        {
+            "localPath": "assets/mascot/xiaoyue-welcome.webp",
+            "cdnPath": "assets/mascot/xiaoyue-welcome.webp"
+        },
+        {
+            "localPath": "assets/matching/matching-bg.webp",
+            "cdnPath": "assets/matching/matching-bg.webp"
+        },
+        {
+            "localPath": "assets/matching/matching-no-match-hero.webp",
+            "cdnPath": "assets/matching/matching-no-match-hero.webp"
+        },
+        {
+            "localPath": "assets/matching/matching-waiting-hero.webp",
+            "cdnPath": "assets/matching/matching-waiting-hero.webp"
+        },
+        {
+            "localPath": "assets/miniscript/ancient-chinese-hero.webp",
+            "cdnPath": "assets/miniscript/ancient-chinese-hero.webp"
+        },
+        {
+            "localPath": "assets/miniscript/future-tech-hero.webp",
+            "cdnPath": "assets/miniscript/future-tech-hero.webp"
+        },
+        {
+            "localPath": "assets/miniscript/medieval-hero.webp",
+            "cdnPath": "assets/miniscript/medieval-hero.webp"
+        },
+        {
+            "localPath": "assets/miniscript/modern-urban-hero.webp",
+            "cdnPath": "assets/miniscript/modern-urban-hero.webp"
+        },
+        {
+            "localPath": "assets/miniscript/republican-era-hero.webp",
+            "cdnPath": "assets/miniscript/republican-era-hero.webp"
+        },
+        {
+            "localPath": "assets/miniscript/western-court-hero.webp",
+            "cdnPath": "assets/miniscript/western-court-hero.webp"
+        },
+        {
+            "localPath": "assets/miniscript/xianxia-hero.webp",
+            "cdnPath": "assets/miniscript/xianxia-hero.webp"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-cat.webp",
+            "cdnPath": "assets/personality/archetypes/archetype-cat.webp"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-corgi.webp",
+            "cdnPath": "assets/personality/archetypes/archetype-corgi.webp"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-dolphin_calm.webp",
+            "cdnPath": "assets/personality/archetypes/archetype-dolphin_calm.webp"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-elephant.webp",
+            "cdnPath": "assets/personality/archetypes/archetype-elephant.webp"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-fox.webp",
+            "cdnPath": "assets/personality/archetypes/archetype-fox.webp"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-hamster_praise.webp",
+            "cdnPath": "assets/personality/archetypes/archetype-hamster_praise.webp"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-koala.webp",
+            "cdnPath": "assets/personality/archetypes/archetype-koala.webp"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-octopus.webp",
+            "cdnPath": "assets/personality/archetypes/archetype-octopus.webp"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-owl.webp",
+            "cdnPath": "assets/personality/archetypes/archetype-owl.webp"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-rooster.webp",
+            "cdnPath": "assets/personality/archetypes/archetype-rooster.webp"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-spider.webp",
+            "cdnPath": "assets/personality/archetypes/archetype-spider.webp"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-spritesheet.png",
+            "cdnPath": "assets/personality/archetypes/archetype-spritesheet.png"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-spritesheet.webp",
+            "cdnPath": "assets/personality/archetypes/archetype-spritesheet.webp"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-turtle.webp",
+            "cdnPath": "assets/personality/archetypes/archetype-turtle.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-action-failure.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-action-failure.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-action-success.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-action-success.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-city-unlock.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-city-unlock.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-coach-guide.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-coach-guide.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-connections-empty.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-connections-empty.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-event-detail-tip.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-event-detail-tip.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-events-empty.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-events-empty.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-home-welcome.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-home-welcome.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-intro-animated.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-intro-animated.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-intro-static.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-intro-static.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-loading-reveal.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-loading-reveal.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-loading-system.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-loading-system.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-match-success.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-match-success.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-match-waiting.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-match-waiting.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-neutral-information.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-neutral-information.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-opt-out-reassure.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-opt-out-reassure.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-payment-trust.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-payment-trust.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-test-curious.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-test-curious.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-test-listening.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-test-listening.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-test-nod.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-test-nod.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-test-surprised.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-test-surprised.webp"
+        },
+        {
+            "localPath": "assets/personality/xiaoyue/xiaoyue-thanks-feedback.webp",
+            "cdnPath": "assets/personality/xiaoyue/xiaoyue-thanks-feedback.webp"
+        },
+        {
+            "localPath": "assets/promo/banner-ai-match-calculated.webp",
+            "cdnPath": "assets/promo/banner-ai-match-calculated.webp"
+        },
+        {
+            "localPath": "assets/promo/banner-ai-match-same-frequency.webp",
+            "cdnPath": "assets/promo/banner-ai-match-same-frequency.webp"
+        },
+        {
+            "localPath": "assets/promo/banner-ai-match-understands-you.webp",
+            "cdnPath": "assets/promo/banner-ai-match-understands-you.webp"
+        },
+        {
+            "localPath": "assets/qr/customer-service-support.png",
+            "cdnPath": "assets/qr/customer-service-support.png"
+        },
+        {
+            "localPath": "assets/tab-bar-notch-bg.png",
+            "cdnPath": "assets/tab-bar-notch-bg.png"
+        },
+        {
+            "localPath": "assets/tab-icons/发现 icon_inactive.png",
+            "cdnPath": "assets/tab-icons/发现 icon_inactive.png"
+        },
+        {
+            "localPath": "assets/tab-icons/发现 icon.png",
+            "cdnPath": "assets/tab-icons/发现 icon.png"
+        },
+        {
+            "localPath": "assets/tab-icons/我的 icon_inactive.png",
+            "cdnPath": "assets/tab-icons/我的 icon_inactive.png"
+        },
+        {
+            "localPath": "assets/tab-icons/我的 icon.png",
+            "cdnPath": "assets/tab-icons/我的 icon.png"
+        },
+        {
+            "localPath": "assets/tab-icons/足迹 icon_inactive.png",
+            "cdnPath": "assets/tab-icons/足迹 icon_inactive.png"
+        },
+        {
+            "localPath": "assets/tab-icons/足迹 icon.png",
+            "cdnPath": "assets/tab-icons/足迹 icon.png"
+        },
+        {
+            "localPath": "assets/tab-icons/连接 icon_inactive.png",
+            "cdnPath": "assets/tab-icons/连接 icon_inactive.png"
+        },
+        {
+            "localPath": "assets/tab-icons/连接 icon.png",
+            "cdnPath": "assets/tab-icons/连接 icon.png"
+        },
+        {
+            "localPath": "assets/miniscript/ancient-chinese-thumb.webp",
+            "cdnPath": "assets/miniscript/ancient-chinese-thumb.webp"
+        },
+        {
+            "localPath": "assets/miniscript/future-tech-thumb.webp",
+            "cdnPath": "assets/miniscript/future-tech-thumb.webp"
+        },
+        {
+            "localPath": "assets/miniscript/medieval-thumb.webp",
+            "cdnPath": "assets/miniscript/medieval-thumb.webp"
+        },
+        {
+            "localPath": "assets/miniscript/modern-urban-thumb.webp",
+            "cdnPath": "assets/miniscript/modern-urban-thumb.webp"
+        },
+        {
+            "localPath": "assets/miniscript/republican-era-thumb.webp",
+            "cdnPath": "assets/miniscript/republican-era-thumb.webp"
+        },
+        {
+            "localPath": "assets/miniscript/western-court-thumb.webp",
+            "cdnPath": "assets/miniscript/western-court-thumb.webp"
+        },
+        {
+            "localPath": "assets/miniscript/xianxia-thumb.webp",
+            "cdnPath": "assets/miniscript/xianxia-thumb.webp"
+        },
+        {
+            "localPath": "assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf",
+            "cdnPath": "assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf"
+        },
+        {
+            "localPath": "assets/promo/banner-hero-lovart-v1.webp",
+            "cdnPath": "assets/promo/banner-hero-lovart-v1.webp"
+        }
+    ]
 }

@@ -79,8 +79,10 @@ jobs:
       - name: Run Auto-Debug analysis
         id: debug
         env:
-          GITHUB_TOKEN: ${{ secrets.AUTO_DEBUG_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.AUTO_DEBUG_TOKEN || github.token }}
+          GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
         run: |
           ARGS=""

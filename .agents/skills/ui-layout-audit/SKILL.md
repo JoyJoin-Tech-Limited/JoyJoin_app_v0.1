@@ -45,6 +45,10 @@ Use these defaults for consistency across all JoyJoin screens. Deviations are al
 - `gap: $spacing-lg` (40rpx) — only when the page has <4 sections and needs breathing room
 - Never mix `gap` and `ResponsiveSpacer` redundantly — pick one per section pair
 
+## Grill-me stress-test
+
+After scoring a screen, run [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — a one-question-per-turn interview that defends every spacing, typography, and visual-coherence decision. Every finding must be tied to a concrete measurement, not a vibe.
+
 ## Audit workflow
 
 1. **Layer inventory**: List every visual layer from top to bottom
@@ -55,7 +59,7 @@ Use these defaults for consistency across all JoyJoin screens. Deviations are al
 6. **Safe area & compression**: On 375×667 (iPhone SE), no interactive element should be <88rpx tall or <200rpx from bottom without scroll
 7. **Reading experience** (the treat test): Chinese body text line-height ≥1.6, display text ≥1.4. No paragraph >10 lines without visual relief. Text should invite the eye, not exhaust it
 8. **Visual coherence (孤字 guard)**: No headline or button text should produce a lone word/character on its own row. Use `word-break: keep-all` for short display text; ensure container width ≥ font-size × 8. English words in Chinese copy must never break mid-word
-9. **Emotional craft**: Every element should feel intentional, not assembled. Flag placeholder-like spacing, default-looking borders, or "that'll do" visual decisions
+9. **Emotional craft**: Every element should feel intentional, not assembled. Flag placeholder-like spacing, default-looking borders, or "that'll do" visual decisions. Cross-reference with `docs/reference/emotional-value-rubric.md`: does this layout feel generous (归属感) or cramped (transactional)?
 
 ## Reading experience rules
 
@@ -95,3 +99,4 @@ Use these defaults for consistency across all JoyJoin screens. Deviations are al
 - [ ] No orphan elements <8rpx from screen edge or sibling
 - [ ] Interactive hit areas ≥88rpx tall (mini-program) or ≥44px (web)
 - [ ] Reduced-motion fallback is considered for animation-heavy layouts
+- [ ] Grill-me interview completed for any score < 80% (see `references/grill-me-checklist.md`)

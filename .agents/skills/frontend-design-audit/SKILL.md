@@ -19,10 +19,20 @@ description: >
 - Onboarding a new screen: audit the first implementation
 - Retroactively auditing existing screens for a quality uplift sprint
 
+## Prerequisites
+
+| Prerequisite | Feeds | Mapping |
+|---|---|---|
+| [`docs/reference/emotional-value-rubric.md`](../../../docs/reference/emotional-value-rubric.md) | Dim 1 (Brand Fidelity) emotional depth | Score 6 sub-dimensions → 0–24. A screen can be token-correct and emotionally vacant. Low 归属感 or 身份认同 scores override any Brand Fidelity score. |
+
 ## Do not use when
 
 - Task is purely backend with no UI surface
 - Generating designs from scratch (use `stitch-design-workflow` or `lovart-design-workflow`)
+
+## Grill-me stress-test
+
+After scoring all 5 dimensions, run [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — a one-question-per-turn interview that defends every score. If you scored Brand Fidelity 3, prove it. If you scored Motion Hygiene 4, show the evidence. Converts vibe-based scoring into defendable audit results.
 
 ## How to run an audit
 
@@ -74,6 +84,8 @@ See [`references/audit-framework.md`](./references/audit-framework.md) for full 
 - [ ] Health score and rating band stated
 - [ ] Mini-program screens checked against Taro-specific constraints
 - [ ] Web screens checked against token and accessibility constraints
+- [ ] 情绪价值 scored via `docs/reference/emotional-value-rubric.md` if screen is user-facing (not admin/ops)
+- [ ] Grill-me interview completed for any dimension scoring < 4 (see `references/grill-me-checklist.md`)
 
 ## Quick examples
 

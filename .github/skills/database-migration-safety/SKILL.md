@@ -37,14 +37,18 @@ Use this skill when you are:
 3. Prefer expand, verify, then contract.
    For non-trivial live-data changes, design the rollout so the app can survive intermediate states instead of assuming a one-shot cutover.
 
-3. Make migration scripts idempotent and environment-aware.
+4. Make migration scripts idempotent and environment-aware.
    Require `DATABASE_URL`, check that the target tables or columns actually exist, and make re-runs safe whenever practical.
 
-4. Verify before and after state explicitly.
+5. Verify before and after state explicitly.
    Count duplicates before cleanup, confirm the constraint or new column exists afterward, and fail loudly when postconditions are not met.
 
-5. Keep rollback thinking attached to the plan.
+6. Keep rollback thinking attached to the plan.
    Even when the script itself is one-way, document the abort condition, the compatibility window, and what must be checked before contracting old fields away.
+
+## Grill-me stress-test
+
+Run [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — a one-question-per-turn interview that stress-tests classification, idempotency, compatibility windows, verification queries, and rollback plans.
 
 ## Current repo patterns
 
@@ -86,6 +90,7 @@ Treat that as a migration bug. Idempotent scripts should converge on the same va
 - [ ] Preconditions and postconditions are verified explicitly
 - [ ] The rollout order keeps application code compatible with intermediate schema states
 - [ ] Rollback or abort conditions are documented for non-trivial changes
+- [ ] Grill-me interview completed for any rename, constraint, backfill, or destructive change (see `references/grill-me-checklist.md`)
 
 ## Related files
 

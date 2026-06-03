@@ -142,14 +142,37 @@
     gap: $spacing-sm;
   }
 
+  &__loading-mascot {
+    width: 120rpx;
+    height: 120rpx;
+    animation: mascot-bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+
+    &--no-animation {
+      animation: none;
+    }
+  }
+
   &__loading-text {
     font-size: $font-size-base;
     color: $color-text-muted;
   }
+
+  &__error-mascot {
+    width: 120rpx;
+    height: 120rpx;
+    margin-top: $spacing-xl;
+    animation: mascot-bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+
+    &--no-animation {
+      animation: none;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .center-hub__header-mascot {
+  .center-hub__header-mascot,
+  .center-hub__loading-mascot,
+  .center-hub__error-mascot {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

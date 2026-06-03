@@ -1,10 +1,12 @@
-import { View, Text, ScrollView } from '@tarojs/components'
-import Taro from '@tarojs/taro'
-import { useState, useEffect } from 'react'
+import { CustomWrapper, View, Text, ScrollView } from '@tarojs/components'
+import Taro, { usePullDownRefresh } from '@tarojs/taro'
+import { haptics } from '../../lib/utils/haptics'
+import { useState, useEffect, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getJoinedEvents, type JoinedEventSummary } from '@shared/api'
 import { apiRequest, fetchEventsShell } from '../../lib/api/api'
-import { injectEventsShellIntoCache } from '../../lib/prefetchEngine'
+import { injectEventsShellIntoCache, JOINED_EVENTS_QUERY_KEY } from '../../lib/prefetchEngine'
+import { evictPersistedQuery } from '../../lib/api/persistentCache'
 import { queryClient } from '../../lib/api/queryClient'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
@@ -66,7 +68,7 @@ export default function EventsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('upcoming')
   const [hasManualTabSelection, setHasManualTabSelection] = useState(false)
 
-  const { data: events = [], isLoading } = useQuery<JoinedEventSummary[]>({
+  const { data: events = [], isLoading, isFetching } = useQuery<JoinedEventSummary[]>({
     queryKey: ['mini-program', 'joined-events'],
     queryFn: async (): Promise<JoinedEventSummary[]> => {
       // Primary: composite endpoint — 1 request for all Events data.
@@ -80,6 +82,20 @@ export default function EventsPage() {
       return getJoinedEvents(apiRequest)
     },
     enabled: !authLoading,
+  })
+
+  const handleRefresh = useCallback(() => {
+    haptics('light')
+    queryClient.invalidateQueries({ queryKey: ['mini-program', 'joined-events'] })
+    queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/events'] })
+    evictPersistedQuery(JOINED_EVENTS_QUERY_KEY)
+  }, [])
+
+  usePullDownRefresh(() => {
+    handleRefresh()
+    setTimeout(() => {
+      Taro.stopPullDownRefresh()
+    }, 800)
   })
 
   useEffect(() => {
@@ -114,6 +130,7 @@ export default function EventsPage() {
     : partitionedEvents.completed
 
   const handleTabChange = (tab: TabKey) => {
+    haptics('light')
     setHasManualTabSelection(true)
     setActiveTab(tab)
   }
@@ -146,12 +163,14 @@ export default function EventsPage() {
       <View className='events-page__tabs'>
         <View
           className={`events-page__tab ${resolvedActiveTab === 'upcoming' ? 'events-page__tab--active' : ''}`}
+          hoverClass='events-page__tab--pressed'
           onClick={() => handleTabChange('upcoming')}
         >
           <Text className='events-page__tab-text'>待参加</Text>
         </View>
         <View
           className={`events-page__tab ${resolvedActiveTab === 'completed' ? 'events-page__tab--active' : ''}`}
+          hoverClass='events-page__tab--pressed'
           onClick={() => handleTabChange('completed')}
         >
           <Text className='events-page__tab-text'>已完成</Text>
@@ -159,6 +178,9 @@ export default function EventsPage() {
       </View>
 
       <ScrollView className='events-page__list' scrollY enhanced showScrollbar={false}>
+        {isFetching && !isLoading && (
+          <View className='events-page__refresh-indicator' />
+        )}
         {isLoading ? (
           <>
             <EventCardSkeleton />
@@ -166,28 +188,30 @@ export default function EventsPage() {
             <EventCardSkeleton />
           </>
         ) : displayEvents.length > 0 ? (
-          displayEvents.map((event, index) => (
-            <View key={String(event.id)} className='events-page__card'>
-              <RichListCard
-                title={event.title ?? '悦聚活动'}
-                subtitle={event.dateTime ?? '时间待定'}
-                gradient='premium'
-                onClick={() => handleEventTap(event)}
-                index={index}
-              >
-                {typeof event.startTime === 'string' && resolvedActiveTab === 'upcoming' && (
-                  <View className='events-page__countdown'>
-                    <View className='jj-icon-text'>
-                      <JoyJoinIcon emoji='⏰' size={20} />
-                      <Text className='events-page__countdown-text'>
-                        {getCountdownText(event.startTime)}
-                      </Text>
+          <CustomWrapper>
+            {displayEvents.map((event, index) => (
+              <View key={String(event.id)} className='events-page__card'>
+                <RichListCard
+                  title={event.title ?? '悦聚活动'}
+                  subtitle={event.dateTime ?? '时间待定'}
+                  gradient='premium'
+                  onClick={() => handleEventTap(event)}
+                  index={index}
+                >
+                  {typeof event.startTime === 'string' && resolvedActiveTab === 'upcoming' && (
+                    <View className='events-page__countdown'>
+                      <View className='jj-icon-text'>
+                        <JoyJoinIcon emoji='⏰' size={20} />
+                        <Text className='events-page__countdown-text'>
+                          {getCountdownText(event.startTime)}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                )}
-              </RichListCard>
-            </View>
-          ))
+                  )}
+                </RichListCard>
+              </View>
+            ))}
+          </CustomWrapper>
         ) : (
           <View className='events-page__empty-state'>
             <XiaoyueEmptyState

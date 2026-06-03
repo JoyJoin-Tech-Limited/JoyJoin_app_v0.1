@@ -35,6 +35,7 @@ Do **not** use this skill to:
 | **Performance-conscious** | No animation that causes layout shift, jank, or meaningful TTI regression |
 | **Accessible** | Every animation must respect `prefers-reduced-motion`; copy and visual state must be readable without motion |
 | **Brand-aligned** | Warm, sleek, restrained; no bouncy, corporate, cold, or over-designed treatments |
+| **情绪价值-driven** | Before adding polish, score the target moment against [`docs/reference/emotional-value-rubric.md`](../../../docs/reference/emotional-value-rubric.md). The dimension with the lowest score is the highest-ROI polish target. Polish without 情绪价值 measurement is decoration. |
 
 ## Working pattern — iterative refinement
 
@@ -43,6 +44,8 @@ Do **not** use this skill to:
 **Pass 2 — Polish the key emotional moment:** Identify the single most emotionally significant moment in the flow. Add a targeted, minimal wow element to that moment only.
 
 **Pass 3 — Systemize if repeated:** If the same pattern appears in 3+ unrelated places, extract it into a shared component, utility, or hook. Do not create an abstraction for a one-off.
+
+**Pass 4 — Grill-me:** Before shipping, run [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — a one-question-per-turn interview that stress-tests intent, performance, accessibility, and reusability. Every wow element must justify its existence: why here, why now, why this.
 
 ## Quick examples
 
@@ -68,8 +71,10 @@ Do **not** use this skill to:
 - [ ] Copy and visual state remain fully understandable without animation
 - [ ] Pattern is either reused from shared primitives or justifies a new abstraction
 - [ ] Verified on a mid-range device, not just a fast dev machine
+- [ ] Grill-me interview completed (see `references/grill-me-checklist.md`)
 
 ## References
 
 - [`references/element-catalog.md`](references/element-catalog.md) — Detailed element list (pulse, shimmer, stagger, etc.), Taro-specific implementation notes, easing tables, spring physics params, reduced-motion details, scroll-trigger details
 - [`references/examples.md`](references/examples.md) — 3–4 concrete wow element examples with TypeScript/React snippets
+- [`../../../docs/reference/emotional-value-rubric.md`](../../../docs/reference/emotional-value-rubric.md) — 6-dimension 情绪价值 scoring rubric (0–24). Score before implementing polish.

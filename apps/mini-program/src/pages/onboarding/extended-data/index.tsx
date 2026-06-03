@@ -104,20 +104,6 @@ export default function ExtendedDataPage() {
     return () => clearTimeout(timer)
   }, [showFirstSelectionHint])
 
-  // Meter celebration when threshold first reached
-  const prevSelectedCountRef = useRef(selectedCount)
-  useEffect(() => {
-    const prev = prevSelectedCountRef.current
-    prevSelectedCountRef.current = selectedCount
-    if (prev < MIN_INTERESTS && selectedCount >= MIN_INTERESTS) {
-      setMeterCelebration(true)
-      haptics('success')
-      const timer = setTimeout(() => setMeterCelebration(false), 800)
-      return () => clearTimeout(timer)
-    }
-    return undefined
-  }, [selectedCount])
-
   const selectionDrafts = useMemo<InterestSelectionDraft[]>(
     () =>
       Object.entries(levelsById).map(([topicId, level]) => ({
@@ -134,6 +120,20 @@ export default function ExtendedDataPage() {
 
   const selectedCount = selectionPreview.totalSelections
   const topPriorityCount = selectionPreview.topPriorities?.length ?? 0
+
+  // Meter celebration when threshold first reached
+  const prevSelectedCountRef = useRef(selectedCount)
+  useEffect(() => {
+    const prev = prevSelectedCountRef.current
+    prevSelectedCountRef.current = selectedCount
+    if (prev < MIN_INTERESTS && selectedCount >= MIN_INTERESTS) {
+      setMeterCelebration(true)
+      haptics('success')
+      const timer = setTimeout(() => setMeterCelebration(false), 800)
+      return () => clearTimeout(timer)
+    }
+    return undefined
+  }, [selectedCount])
   const dominantCategories = useMemo(
     () =>
       Object.entries(selectionPreview.categoryHeat)

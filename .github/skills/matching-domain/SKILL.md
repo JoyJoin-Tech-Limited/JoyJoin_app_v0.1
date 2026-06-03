@@ -44,6 +44,10 @@ See [`references/scoring-details.md`](references/scoring-details.md) for full we
 - This invariant is tested in `apps/server/src/__tests__/interestSignalBoundary.test.ts`
 - Do not add `user_interest_signals` reads to scoring code
 
+## Grill-me stress-test
+
+After modifying matching logic, run [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — a one-question-per-turn interview that stress-tests scoring weights, signal boundaries, L1 filters, concurrent execution guards, and group formation edge cases. "It works for 10 users" ≠ "it works for 1000."
+
 ## Layer separation
 
 | Layer | Purpose | May read |
@@ -93,3 +97,4 @@ Only users passing all hard constraints are scored.
 - [ ] Matching execution is guarded against concurrent runs with a `finally` release
 - [ ] Match result is persisted before notifications fire
 - [ ] New or changed scoring logic is covered by `poolMatchingService.test.ts`
+- [ ] Grill-me interview completed for any scoring dimension change or group formation change (see `references/grill-me-checklist.md`)

@@ -2,6 +2,7 @@ import { QueryClient } from '@tanstack/react-query'
 import Taro from '@tarojs/taro'
 import { STALE_TIME_DEFAULT_MS } from '../utils/uiConstants'
 import { logWarn } from '../utils/logger'
+import { tryHydratePersistentCache, subscribeToPersistentCache } from './persistentCache'
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,3 +34,6 @@ function tryHydrateAuth(): void {
 }
 
 tryHydrateAuth()
+tryHydratePersistentCache(queryClient)
+const unsubscribePersistentCache = subscribeToPersistentCache(queryClient)
+// unsubscribePersistentCache is available for app-lifecycle cleanup if needed

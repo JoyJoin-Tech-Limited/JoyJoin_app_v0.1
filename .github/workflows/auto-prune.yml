@@ -75,7 +75,8 @@ jobs:
       - name: Run auto-prune
         id: prune
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
         run: |

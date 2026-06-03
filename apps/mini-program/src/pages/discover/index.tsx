@@ -4,6 +4,7 @@ import { loadBrandDisplayFont } from '../../lib/utils/brandFont'
 import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
 import Taro, { usePullDownRefresh } from '@tarojs/taro'
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { haptics } from '../../lib/utils/haptics'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getEventPools,
@@ -20,14 +21,15 @@ import {
   type District,
 } from '@shared/districts'
 import { apiRequest, fetchDiscoverShell } from '../../lib/api/api'
-import { injectDiscoverShellIntoCache } from '../../lib/prefetchEngine'
+import { injectDiscoverShellIntoCache, POOLS_QUERY_KEY } from '../../lib/prefetchEngine'
+import { evictPersistedQuery } from '../../lib/api/persistentCache'
 import { useAuth } from '../../hooks/useAuth'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import PageMorphWrapper from '../../components/ui/PageMorphWrapper'
 import StatusCard from '../../components/ui/StatusCard'
-import AiMatchPromoCarousel from '../../components/AiMatchPromoCarousel'
+import AiMatchPromoCarousel, { type PromoBannerVariant } from '../../components/AiMatchPromoCarousel'
 import VirtualList from '../../components/VirtualList'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import OracleCard from '../../components/discover/OracleCard'
@@ -53,6 +55,14 @@ const LOCATION_TTL_DAYS = 7
 
 // Measured OracleCard height in rpx. Keep in sync with `.oracle-card` height.
 const DISCOVER_CARD_HEIGHT_RPX = 464
+
+// ─── Promo banner variant assignment ──────────────────────────────
+function resolveVariant(userId: string | undefined, hasArchetype: boolean): PromoBannerVariant {
+  if (!hasArchetype) return 'C'
+  if (!userId) return 'A'
+  const hash = userId.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+  return hash % 2 === 0 ? 'A' : 'B'
+}
 
 // ─── Smart default helpers ────────────────────────────────────────
 function readSavedLocation(): { clusterId: string; districtId: string } | null {
@@ -143,6 +153,7 @@ function AuthenticatedDiscover() {
     data: pools = [],
     isLoading: poolsLoading,
     isError: poolsError,
+    isFetching: poolsFetching,
   } = useQuery({
     queryKey: ['mini-program', 'event-pools'],
     queryFn: async (): Promise<EventPoolSummary[]> => {
@@ -453,12 +464,35 @@ function AuthenticatedDiscover() {
     []
   )
 
-  const handleOpenDrawer = useCallback(() => setDrawerOpen(true), [])
+  const handleOpenDrawer = useCallback(() => { haptics('light'); setDrawerOpen(true) }, [])
   const handleCloseDrawer = useCallback(() => setDrawerOpen(false), [])
 
+  const openPools = useMemo(
+    () => pools.filter((p) => p.status !== 'closed'),
+    [pools],
+  )
+
+  const bannerVariant = useMemo(
+    () => resolveVariant((user as any)?.id, !!userArchetype),
+    [(user as any)?.id, userArchetype],
+  )
+
   const handlePoolTap = useCallback((pool: EventPoolSummary) => {
+    haptics('light')
     Taro.navigateTo({ url: `/pages/pool-registration/index?id=${pool.id}` })
   }, [])
+
+  const handleBannerCtaTap = useCallback(() => {
+    if (!userArchetype) {
+      Taro.navigateTo({ url: '/pages/onboarding/personality-test/index' })
+      return
+    }
+    const firstOpenPool = openPools[0]
+    if (firstOpenPool) {
+      Taro.navigateTo({ url: `/pages/pool-registration/index?id=${firstOpenPool.id}` })
+    }
+    // If no open pools and user has archetype, stay on discover page
+  }, [userArchetype, openPools])
 
   // ── Location pill label ──
   const locationPillLabel = useMemo(() => {
@@ -474,18 +508,30 @@ function AuthenticatedDiscover() {
   }, [selectedCluster, selectedDistrict])
 
   const handleRefresh = useCallback(() => {
+    haptics('light')
     queryClient.invalidateQueries({ queryKey: ['mini-program', 'event-pools'] })
     queryClient.invalidateQueries({ queryKey: ['mini-program', 'my-pool-registrations'] })
     queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/discover'] })
+    evictPersistedQuery(POOLS_QUERY_KEY)
   }, [queryClient])
 
   // ── Pull-to-refresh ──
+  const pullDownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   usePullDownRefresh(() => {
     handleRefresh()
-    setTimeout(() => {
+    pullDownTimerRef.current = setTimeout(() => {
       Taro.stopPullDownRefresh()
+      pullDownTimerRef.current = null
     }, 800)
   })
+  useEffect(() => {
+    return () => {
+      if (pullDownTimerRef.current) {
+        clearTimeout(pullDownTimerRef.current)
+        pullDownTimerRef.current = null
+      }
+    }
+  }, [])
 
   const renderPoolCard = useCallback(
     (pool: EventPoolSummary, index: number, hasBeenRendered: boolean) => {
@@ -515,8 +561,14 @@ function AuthenticatedDiscover() {
   // ── Render ──
   return (
     <View className='discover-auth tab-page-enter'>
-      {/* Promo carousel — top of page */}
-      <AiMatchPromoCarousel className='discover-auth__promo' compact />
+      {/* Promo banner — top of page */}
+      <AiMatchPromoCarousel
+        className='discover-auth__promo'
+        compact
+        variant={bannerVariant}
+        hasArchetype={!!userArchetype}
+        onCtaTap={handleBannerCtaTap}
+      />
 
       {/* Greeting hero */}
       <View className='discover-auth__hero'>
@@ -582,6 +634,9 @@ function AuthenticatedDiscover() {
 
       {/* Pool listing */}
       <View className={`discover-auth__section${!poolsLoading && (poolsError || visiblePools.length === 0) ? ' discover-auth__section--empty' : ''}`}>
+        {poolsFetching && !poolsLoading && (
+          <View className='discover-auth__refresh-indicator' />
+        )}
         {poolsLoading ? (
           <View className='discover-auth__pool-list'>
             <PoolCardSkeleton />

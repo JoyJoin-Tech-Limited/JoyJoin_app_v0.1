@@ -18,6 +18,7 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 - [`mini-program-product-reference.md`](./mini-program-product-reference.md) — compact product-to-code bridge for page inventory, active journeys, admin impact, and docs-sync triggers
 - [`reference/PLATFORM_COORDINATION.md`](./reference/PLATFORM_COORDINATION.md) — web vs mini-program auth, API, and payment coordination
 - [`reference/perf.md`](./reference/perf.md) — web Vitals + **mini-program** subpackage / preload strategy
+- [`reference/emotional-value-rubric.md`](./reference/emotional-value-rubric.md) — 6-dimension 情绪价值 scoring (0–24) — measures emotional value as predictor of premium willingness-to-pay
 - [`reference/wechat-mini-program-reference.md`](./reference/wechat-mini-program-reference.md) — supplemental WeChat primitives (rpx, APIs); **not** the Taro source of truth
 - [`mini-program-data-fetching.md`](./mini-program-data-fetching.md) — mini-program React Query key conventions for pool/matching data
 - [`.github/skills/mini-program-frontend-excellence/SKILL.md`](../.github/skills/mini-program-frontend-excellence/SKILL.md) — quality bar (pixel precision, DevTools gate)

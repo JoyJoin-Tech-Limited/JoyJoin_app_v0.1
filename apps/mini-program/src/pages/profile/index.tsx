@@ -1,6 +1,7 @@
 import { View, Text, ScrollView } from '@tarojs/components'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import Taro from '@tarojs/taro'
+import { haptics } from '../../lib/utils/haptics'
 import { useQuery } from '@tanstack/react-query'
 import { useRef } from 'react'
 import { getUserCoupons, getJoinedEvents } from '@shared/api'
@@ -50,6 +51,7 @@ export default function ProfilePage() {
   const joinedEventsCount = joinedEvents.length
 
   const handleOpenPayment = () => {
+    haptics('light')
     void openMiniProgramPaymentPage({
       paymentsEnabled: authUser?.paymentsEnabled,
       currentUserId: authUser?.id,
@@ -61,6 +63,7 @@ export default function ProfilePage() {
       return
     }
 
+    haptics('medium')
     logoutLockRef.current = true
     logInfo('[Profile] User initiated logout')
 
@@ -151,7 +154,8 @@ export default function ProfilePage() {
         <View className='profile-page__section'>
           <View
             className='profile-page__action-row'
-            onClick={() => Taro.navigateTo({ url: '/pages/edit-profile/index' })}
+            hoverClass='profile-page__action-row--active'
+            onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/edit-profile/index' }) }}
           >
             <JoyJoinIcon emoji='✏️' size={24} className='profile-page__action-icon' />
             <Text className='profile-page__action-text'>编辑资料</Text>
@@ -160,7 +164,8 @@ export default function ProfilePage() {
 
           <View
             className='profile-page__action-row'
-            onClick={() => Taro.navigateTo({ url: '/pages/rewards/index' })}
+            hoverClass='profile-page__action-row--active'
+            onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/rewards/index' }) }}
           >
             <JoyJoinIcon emoji='🏆' size={24} className='profile-page__action-icon' />
             <Text className='profile-page__action-text'>奖励福利</Text>
@@ -172,7 +177,8 @@ export default function ProfilePage() {
 
           <View
             className='profile-page__action-row'
-            onClick={() => Taro.navigateTo({ url: '/pages/invite/index' })}
+            hoverClass='profile-page__action-row--active'
+            onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/invite/index' }) }}
           >
             <JoyJoinIcon emoji='🤝' tier='semantic' size={24} className='profile-page__action-icon' />
             <Text className='profile-page__action-text'>邀请好友</Text>
@@ -181,6 +187,7 @@ export default function ProfilePage() {
 
           <View
             className='profile-page__action-row'
+            hoverClass='profile-page__action-row--active'
             onClick={handleOpenPayment}
           >
             <JoyJoinIcon emoji='🎁' size={24} className='profile-page__action-icon' />
@@ -190,7 +197,8 @@ export default function ProfilePage() {
 
           <View
             className='profile-page__action-row'
-            onClick={() => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events })}
+            hoverClass='profile-page__action-row--active'
+            onClick={() => { haptics('light'); Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
           >
             <JoyJoinIcon emoji='🗺️' size={24} className='profile-page__action-icon' />
             <Text className='profile-page__action-text'>我的足迹</Text>
@@ -204,7 +212,8 @@ export default function ProfilePage() {
 
           <View
             className='profile-page__action-row'
-            onClick={() => Taro.navigateTo({ url: '/pages/terms/index' })}
+            hoverClass='profile-page__action-row--active'
+            onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/terms/index' }) }}
           >
             <JoyJoinIcon emoji='📄' size={24} className='profile-page__action-icon' />
             <Text className='profile-page__action-text'>服务条款</Text>
@@ -214,7 +223,7 @@ export default function ProfilePage() {
 
         {/* Logout */}
         <View className='profile-page__logout-section'>
-          <Button variant='secondary' className='profile-page__logout-btn' onClick={handleLogout}>
+          <Button variant='secondary' className='profile-page__logout-btn' hoverClass='profile-page__logout-btn--active' onClick={handleLogout}>
             退出登录
           </Button>
         </View>

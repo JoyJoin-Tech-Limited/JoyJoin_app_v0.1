@@ -1,3 +1,4 @@
+import React from 'react'
 import { View, Text } from '@tarojs/components'
 
 interface RichListCardProps {
@@ -11,7 +12,7 @@ interface RichListCardProps {
   index?: number
 }
 
-export default function RichListCard({
+export default React.memo(function RichListCard({
   title, subtitle, meta, ecosystem, gradient = 'premium', children, onClick, index = 0
 }: RichListCardProps) {
   return (
@@ -27,4 +28,4 @@ export default function RichListCard({
       {children}
     </View>
   )
-}
+})

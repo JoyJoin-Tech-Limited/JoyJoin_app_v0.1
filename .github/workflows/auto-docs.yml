@@ -85,6 +85,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.AUTO_DEBUG_TOKEN || github.token }}
           GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
         run: |
           ARGS=""
@@ -127,7 +128,7 @@ jobs:
           if [ "${{ steps.docs.outputs.exit_code }}" = "0" ]; then
             echo "✅ Auto-Docs: No documentation gaps found."
           elif [ "${{ steps.docs.outputs.exit_code }}" = "1" ]; then
-            echo "📚 Auto-Docs: Documentation gaps found and PR created."
+            echo "📚 Auto-Docs: Documentation gaps found and PR attempted."
           else
             echo "❌ Auto-Docs: Analysis error."
           fi

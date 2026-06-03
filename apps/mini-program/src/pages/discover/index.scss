@@ -208,6 +208,24 @@
     }
   }
 
+  &__refresh-indicator {
+    height: 4rpx;
+    background: linear-gradient(90deg, transparent, $color-primary, transparent);
+    background-size: 200% 100%;
+    animation: discover-refresh-shimmer 1.2s ease-in-out infinite;
+    margin-top: $spacing-sm;
+    border-radius: 2rpx;
+  }
+
+  @keyframes discover-refresh-shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
   &__empty-state {
     flex: 1;
     display: flex;
@@ -607,5 +625,10 @@
 
   .oracle-card__cta--pulse {
     animation: none;
+  }
+
+  .discover-auth__refresh-indicator {
+    animation: none;
+    background: $color-divider;
   }
 }

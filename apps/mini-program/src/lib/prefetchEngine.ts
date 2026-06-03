@@ -20,7 +20,7 @@ type PrefetchOutcome = 'hit' | 'miss' | 'skip'
 export const DISCOVER_SHELL_QUERY_KEY = ['mini-program', 'shell/discover'] as const
 
 /** Query keys that existing Discover hooks read from. */
-const POOLS_QUERY_KEY = ['mini-program', 'event-pools'] as const
+export const POOLS_QUERY_KEY = ['mini-program', 'event-pools'] as const
 const REGISTRATIONS_QUERY_KEY = ['mini-program', 'my-pool-registrations'] as const
 
 /** Cache key for the raw Profile composite response. */
@@ -33,7 +33,7 @@ const COUPONS_QUERY_KEY = ['mini-program', 'coupons'] as const
 export const EVENTS_SHELL_QUERY_KEY = ['mini-program', 'shell/events'] as const
 
 /** Query keys that existing Events hooks read from. */
-const JOINED_EVENTS_QUERY_KEY = ['mini-program', 'joined-events'] as const
+export const JOINED_EVENTS_QUERY_KEY = ['mini-program', 'joined-events'] as const
 const NOTIFICATION_COUNTS_QUERY_KEY = ['mini-program', 'notification-counts'] as const
 
 /** Cache key for the raw Connections composite response. */

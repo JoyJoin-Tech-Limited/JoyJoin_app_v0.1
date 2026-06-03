@@ -76,7 +76,7 @@ Assets copied by `vite-plugin-static-copy` in `config/index.ts`.
 ### Landing Page (critical first impression)
 | Asset | Path | Size | Used in |
 |-------|------|------|---------|
-| Phase icons (6) | `assets/landing-phase-icons/` | ~139KB | Landing page `PhaseIconCarousel` — 3D turntable with auto-rotate, swipe gesture, organic random intervals, direction randomization, and cycle shuffle. Reduced-motion and low-end fallback to static grid. |
+| Phase icons (6) | `assets/landing-phase-icons/` | ~139KB | Landing page `PhaseIconCarousel` — 3D turntable with auto-rotate, swipe gesture, organic random intervals, direction randomization, and cycle shuffle. Reduced-motion and low-end fallback to static grid. **Performance:** `box-shadow` (not `drop-shadow`) for GPU-composited depth; `backface-visibility: hidden` + `translateZ(0)` forced compositing; `will-change` gated to active playback only. |
 | Xiaoyue welcome | `assets/xiaoyue-expressions/xiaoyue-home-welcome.png` | ~63KB | Landing + center-hub header |
 | Xiaoyue loading | `assets/xiaoyue-expressions/xiaoyue-loading-system.png` | ~47KB | Loading screen fallback |
 
@@ -101,7 +101,7 @@ These are **NOT** copied to `dist/assets/` by the build. They must exist on the 
 | **Celebration images** | `assets/lovart/icebreaker/celebrations/*.png` | ~770KB | Post-phase celebration overlays |
 | **Lovart illustrations** | `assets/lovart/lovart-*.webp` | ~130KB | Empty/error states |
 | **Matching heroes** | `assets/matching/matching-*.webp` | ~157KB | Matching status page |
-| **Promo banners** | `assets/promo/banner-*.webp` | ~110KB | Discover carousel |
+| **Promo banners** | `assets/promo/banner-*.webp` | ~175KB | Discover hero banner (single CTA-driven illustration + legacy carousel backups) |
 | **Personality emojis** | `assets/lovart/personality-emojis/*.png` | ~170KB | Personality test emoji choices |
 | **UI icons** | `assets/icons/ui/*.webp` | ~81KB | Various UI surfaces |
 | **Miniscript heroes** | `assets/miniscript/*-hero.webp` | ~590KB | Mini-script phase selection |

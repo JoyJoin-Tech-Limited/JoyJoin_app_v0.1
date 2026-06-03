@@ -53,6 +53,9 @@ jobs:
         env:
           TARO_APP_CDN_BASE_URL: ${{ vars.TARO_APP_CDN_BASE_URL }}
 
+      - name: Check package size
+        run: npm run check:package-size -w mini-program
+
       - name: Upload mini-program artifact
         uses: actions/upload-artifact@v4.6.2
         with:

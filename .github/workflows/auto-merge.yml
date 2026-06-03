@@ -4,7 +4,7 @@
 # auto-merges them when CI passes, applying blast-radius cooldown windows.
 #
 # Triggered by:
-#   - Schedule: every 30 minutes during active hours (00:00-14:00 UTC)
+#   - Schedule: every 4 hours during active hours (reduced from 30 min)
 #   - workflow_run: when auto-* workflows complete successfully
 #   - workflow_dispatch: manual trigger
 #
@@ -82,7 +82,8 @@ jobs:
       - name: Run Auto-Merge
         id: merge
         env:
-          GITHUB_TOKEN: ${{ secrets.AUTO_MERGE_TOKEN || secrets.AUTO_DEBUG_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.AUTO_MERGE_TOKEN || secrets.AUTO_DEBUG_TOKEN || github.token }}
+          GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
         run: |

@@ -5,6 +5,7 @@ import { clearSessionToken } from './api'
 import { logError, logInfo, logWarn } from '../utils/logger'
 import { MINI_PROGRAM_PAGE_PATHS, MINI_PROGRAM_ROUTES } from '../onboarding/onboardingRoutes'
 import { queryClient } from './queryClient'
+import { clearPersistentCache } from './persistentCache'
 import { MINI_PROGRAM_USER_SCOPED_QUERY_KEY_PREFIXES } from '../auth/authSessionQueryKeys'
 import {
   normalizeMiniProgramRoute,
@@ -79,6 +80,9 @@ export function clearMiniProgramAuthSession(options?: {
 }): void {
   clearAuthStorage()
   writeAuthSession(null, options?.queryClient, options?.mode ?? 'soft')
+  if ((options?.mode ?? 'soft') === 'hard') {
+    clearPersistentCache()
+  }
 }
 
 export function getCurrentMiniProgramRoute(): string {

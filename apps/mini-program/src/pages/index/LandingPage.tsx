@@ -1,11 +1,12 @@
 import { View, Text, Image, Navigator } from "@tarojs/components"
 import Taro from "@tarojs/taro"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { cdnAsset, localAsset } from "../../lib/utils/cdnAssets"
 import { loadBrandDisplayFont } from "../../lib/utils/brandFont"
 import Button from "../../components/ui/Button"
 import BrandLogo from "../../components/ui/BrandLogo"
 import BondingCloud from "../../components/landing/BondingCloud"
+import PhaseIconCarousel from "../../components/landing/PhaseIconCarousel"
 import { useStaggerMount } from "../../hooks/useStaggerMount"
 import { runMiniProgramRouteTransition } from "../../lib/onboarding/onboardingNavigation"
 import { useWeChatLogin } from "../../hooks/auth/useWeChatLogin"
@@ -35,6 +36,19 @@ export default function MiniProgramLandingPage() {
   const [mascotError, setMascotError] = useState(false)
   const [phaseIconErrors, setPhaseIconErrors] = useState<Record<string, boolean>>({})
   const isMounted = useStaggerMount()
+
+  const reduceMotion = useMemo(() => {
+    try {
+      const mq = (Taro.getApp() as any).config?.window?.prefersReducedMotion
+      if (mq != null) return !!mq
+    } catch { /* ignore */ }
+    try {
+      const info = Taro.getSystemInfoSync()
+      return !!(info as any).reduceMotion
+    } catch {
+      return false
+    }
+  }, [])
   const { handleWeChatLogin, isLoggingIn } = useWeChatLogin()
   const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -132,50 +146,54 @@ export default function MiniProgramLandingPage() {
         >
           {/* @ts-expect-error Taro TextProps lacks ARIA role typings; WeChat WXML supports it */}
           <Text className="game-preview__title" role="heading" aria-level={3}>6 种破冰玩法，一局解锁</Text>
-          <View className="game-preview__grid">
-            {[
-              { phase: 'topic-card' as const, label: '话题卡' },
-              { phase: 'lie_detective' as const, label: '谎言侦探' },
-              { phase: 'personality_dice' as const, label: '人格骰子' },
-              { phase: 'auction' as const, label: '拍卖' },
-              { phase: 'mini_script' as const, label: '迷你剧本杀' },
-              { phase: 'quip_battle' as const, label: '机智对决' },
-            ].map((game, index) => (
-              <View
-                key={game.phase}
-                className={`game-preview__cell ${isMounted ? "game-preview__cell--in" : "game-preview__cell--hidden"}`}
-                style={{ animationDelay: `${index * 60}ms` }}
-                aria-label={game.label}
-              >
-                {!phaseIconErrors[game.phase] ? (
-                  <Image
-                    className="game-preview__cell-icon"
-                    src={LANDING_PHASE_ICONS[game.phase]}
-                    mode="aspectFit"
-                    style={{ width: '112rpx', height: '112rpx', verticalAlign: 'middle' }}
-                    lazyLoad={false}
-                    onError={() => setPhaseIconErrors(prev => ({ ...prev, [game.phase]: true }))}
-                  />
-                ) : (
-                  <View
-                    className="game-preview__cell-icon"
-                    style={{
-                      width: '112rpx',
-                      height: '112rpx',
-                      borderRadius: '24rpx',
-                      background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Text style={{ fontSize: '48rpx' }}>🎲</Text>
-                  </View>
-                )}
-                <Text className="game-preview__cell-label">{game.label}</Text>
-              </View>
-            ))}
-          </View>
+          {reduceMotion ? (
+            <View className="game-preview__grid">
+              {[
+                { phase: 'topic-card' as const, label: '话题卡' },
+                { phase: 'lie_detective' as const, label: '谎言侦探' },
+                { phase: 'personality_dice' as const, label: '人格骰子' },
+                { phase: 'auction' as const, label: '拍卖' },
+                { phase: 'mini_script' as const, label: '迷你剧本杀' },
+                { phase: 'quip_battle' as const, label: '机智对决' },
+              ].map((game, index) => (
+                <View
+                  key={game.phase}
+                  className={`game-preview__cell ${isMounted ? "game-preview__cell--in" : "game-preview__cell--hidden"}`}
+                  style={{ animationDelay: `${index * 60}ms` }}
+                  aria-label={game.label}
+                >
+                  {!phaseIconErrors[game.phase] ? (
+                    <Image
+                      className="game-preview__cell-icon"
+                      src={LANDING_PHASE_ICONS[game.phase]}
+                      mode="aspectFit"
+                      style={{ width: '112rpx', height: '112rpx', verticalAlign: 'middle' }}
+                      lazyLoad={false}
+                      onError={() => setPhaseIconErrors(prev => ({ ...prev, [game.phase]: true }))}
+                    />
+                  ) : (
+                    <View
+                      className="game-preview__cell-icon"
+                      style={{
+                        width: '112rpx',
+                        height: '112rpx',
+                        borderRadius: '24rpx',
+                        background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ fontSize: '48rpx' }}>🎲</Text>
+                    </View>
+                  )}
+                  <Text className="game-preview__cell-label">{game.label}</Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <PhaseIconCarousel isVisible={isMounted} />
+          )}
         </View>
       </View>
 

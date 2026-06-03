@@ -3,29 +3,19 @@
 .ai-match-promo-carousel {
   width: 100%;
 
-  // Default: tall “hero” band so artwork is not squeezed — image first, copy below.
-  &__swiper {
-    width: 100%;
-    height: 456rpx;
-  }
-
   &__slide {
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: stretch;
     width: 100%;
-    height: 100%;
     box-sizing: border-box;
-    padding: 26rpx 28rpx 28rpx;
-    gap: 22rpx;
+    padding: $spacing-md $spacing-md $spacing-lg;
+    gap: $spacing-md;
     border-radius: $card-radius;
     overflow: hidden;
-    background:
-      radial-gradient(circle at 50% 18%, rgba($color-secondary, 0.2), transparent 42%),
-      radial-gradient(circle at 88% 78%, rgba($color-primary, 0.14), transparent 36%),
-      linear-gradient(165deg, rgba($color-surface, 0.99) 0%, rgba($color-primary-light, 0.94) 48%, rgba($color-secondary, 0.1) 100%);
-    box-shadow: 0 22rpx 52rpx rgba($color-primary, 0.15);
+    background: $color-surface;
+    box-shadow: 0 8rpx 24rpx rgba($color-primary, 0.08);
   }
 
   &__content {
@@ -47,7 +37,7 @@
     font-weight: $font-weight-bold;
     line-height: 1.2;
     color: $color-primary-dark;
-    background: rgba($color-surface, 0.82);
+    background: rgba($color-surface, 0.92);
     margin-bottom: $spacing-sm;
     overflow-wrap: anywhere;
   }
@@ -56,7 +46,7 @@
   &__subtitle {
     display: block;
     overflow-wrap: anywhere;
-    word-break: break-word;
+    word-break: keep-all;
   }
 
   &__title {
@@ -73,6 +63,35 @@
     color: $color-text-secondary;
   }
 
+  &__cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 22rpx;
+    min-height: 88rpx;
+    padding: 18rpx 36rpx;
+    border-radius: 999rpx;
+    background: $color-primary;
+    transition: transform 0.12s ease, background 0.12s ease, opacity 0.12s ease;
+
+    &--active {
+      transform: scale(0.97);
+      background: rgba($color-primary, 0.88);
+    }
+
+    &--disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+  }
+
+  &__cta-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    line-height: 1;
+    color: $color-surface;
+  }
+
   &__image-wrap {
     position: relative;
     z-index: 1;
@@ -82,25 +101,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 28rpx;
-    background: linear-gradient(
-      180deg,
-      rgba($color-surface, 0.55) 0%,
-      rgba($color-primary-light, 0.35) 100%
-    );
-  }
-
-  &__glow {
-    position: absolute;
-    inset: 16rpx 12rpx;
-    border-radius: 24rpx;
-    background: radial-gradient(
-      ellipse 90% 70% at 50% 45%,
-      rgba($color-primary, 0.28) 0%,
-      rgba($color-secondary, 0.12) 55%,
-      transparent 100%
-    );
-    opacity: 0.95;
+    border-radius: 0;
+    background: transparent;
+    overflow: hidden;
   }
 
   &__image {
@@ -112,39 +115,36 @@
     height: 100%;
   }
 
-  &__indicators {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10rpx;
-    margin-top: $spacing-sm;
+  &__image-skeleton {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: linear-gradient(
+      90deg,
+      rgba($color-primary-light, 0.3) 0%,
+      rgba($color-primary-light, 0.5) 50%,
+      rgba($color-primary-light, 0.3) 100%
+    );
+    background-size: 200% 100%;
+    animation: ai-match-promo-carousel__shimmer 1.2s ease-in-out infinite;
   }
 
-  &__indicator {
-    width: 20rpx;
-    height: 8rpx;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.16);
-    transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1), background 0.3s ease;
-
-    &--active {
-      width: 48rpx;
-      background: $color-primary;
-      box-shadow: 0 4rpx 12rpx rgba($color-primary, 0.22);
+  @keyframes ai-match-promo-carousel__shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
     }
   }
 
-  // Login / tight surfaces: row layout with a larger illustration than before.
+  // Login / tight surfaces: row layout
   &--compact {
-    .ai-match-promo-carousel__swiper {
-      height: 296rpx;
-    }
-
     .ai-match-promo-carousel__slide {
       flex-direction: row;
-      align-items: center;
-      gap: 20rpx;
-      padding: 22rpx 24rpx;
+      align-items: stretch;
+      gap: $spacing-md;
+      padding: $spacing-sm $spacing-md;
       border-radius: $card-radius-sm;
     }
 
@@ -153,6 +153,9 @@
       min-width: 0;
       max-width: 340rpx;
       padding-right: $spacing-sm;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
     .ai-match-promo-carousel__eyebrow {
@@ -171,22 +174,48 @@
       line-height: 1.55;
     }
 
-    .ai-match-promo-carousel__image-wrap {
-      width: 216rpx;
-      height: 216rpx;
-      flex-shrink: 0;
-      border-radius: 24rpx;
+    .ai-match-promo-carousel__cta {
+      margin-top: 16rpx;
+      min-height: 88rpx;
+      padding: 14rpx 28rpx;
     }
 
-    .ai-match-promo-carousel__glow {
-      inset: 14rpx 10rpx;
-      border-radius: 20rpx;
+    .ai-match-promo-carousel__cta-text {
+      font-size: $font-size-xs;
+    }
+
+    .ai-match-promo-carousel__image-wrap {
+      width: 216rpx;
+      height: auto;
+      align-self: stretch;
+      flex-shrink: 0;
+      border-radius: 0;
+    }
+
+    .ai-match-promo-carousel__image-skeleton {
+      border-radius: 0;
+    }
+  }
+
+  &--reduce-motion {
+    .ai-match-promo-carousel__cta {
+      transition: none;
+    }
+
+    .ai-match-promo-carousel__image-skeleton {
+      animation: none;
+      background: rgba($color-primary-light, 0.3);
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ai-match-promo-carousel__indicator--active {
-      box-shadow: none;
+    .ai-match-promo-carousel__cta {
+      transition: none;
+    }
+
+    .ai-match-promo-carousel__image-skeleton {
+      animation: none;
+      background: rgba($color-primary-light, 0.3);
     }
   }
 }

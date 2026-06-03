@@ -52,30 +52,31 @@ TTL sweep (5m)  → deletes expired sessions (6h lifetime)
 
 **Pattern:** Host owns **phase transitions** and **generative triggers**; players own **self-state mutations**. See [references/session-spec.md](references/session-spec.md) for routes, schema, parity, AI boundaries, and advance guards.
 
+## Grill-me stress-test
+
+Run [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — a one-question-per-turn interview that stress-tests session lifecycle, host authority, phase state machine, bonus gate, AI fallback, and cross-platform parity.
+
 ## Quick examples
 
-**User:** "Add a new phase between warmup and micro_challenge"
-→ Use this skill. Check `PHASE_ORDER`, add the phase to `socialIcebreakerPhaseConfig.ts`, update advance guards, register in both client registries, and add env flag if feature-gated.
+**"Add a new phase between warmup and micro_challenge"** → Check `PHASE_ORDER`, add to `socialIcebreakerPhaseConfig.ts`, update advance guards, register in both client registries, add env flag if feature-gated.
 
-**User:** "Why can't the host advance from lie_detective?"
-→ Use this skill. Check advance guard (all statements generated, all turns revealed) and `getNextEligiblePhase` (roster < 3 skips the phase).
+**"Why can't the host advance from lie_detective?"** → Check advance guard (all statements generated, all turns revealed) and `getNextEligiblePhase` (roster < 3 skips the phase).
 
-**User:** "Fix the lie-detective vote reveal logic"
-→ Do **not** use this skill alone. Start with `lie-detective-icebreaker` (owns vote/reveal state machine and `isLie` secrecy). Use this skill only for session lifecycle context (when to call `cleanupPhaseStateForNextPhase`).
+**"Fix vote reveal logic"** → Start with `lie-detective-icebreaker` (owns vote/reveal state machine). Use this skill only for session lifecycle context.
 
 ## Troubleshooting
 
 | Symptom | Likely Cause | Fix |
 |---------|-------------|-----|
-| Session returns 404 after refresh | `socialSessionId` not cached / expired | Check `sessionStorage` on web; verify `expires_at` on server |
-| Host can't advance | Guard not met | Check `currentPhase` matches request body; verify guard conditions in reference |
-| Duplicate participants | Concurrent start race | Handled by unique-constraint catch; check client is not calling `start` twice |
-| AI content is empty / generic | Fallback triggered | Check `logAITrace` for `fallbackUsed: true`; verify env vars and provider health |
-| Mini-program phase missing | Not in `phaseViews.tsx` `supportedPhases` | Add view function and register in the session page switch statement |
-| Lie truth leaked to client | `isLie` in `state_json` | Remove immediately; `isLie` lives only in `social_icebreaker_lie_truths` table |
-| Sweep not running | `startSocialIcebreakerSweep` threw | Check logs; sweep is fail-open (disables itself on error) |
-| Bonus gate not appearing | `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` is false or `mini_script` not in enabled phases | Verify env flag and tier run plan; check `bonusGateOffered` is set on advance |
-| Moment Card PNG 404 | `SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER` is false | Enable env flag; verify `@napi-rs/canvas` binary loads for the target platform |
+| 404 after refresh | `socialSessionId` not cached / expired | Check `sessionStorage`; verify `expires_at` |
+| Host can't advance | Guard not met | Check `currentPhase`; verify guard conditions |
+| Duplicate participants | Concurrent start race | Unique-constraint catch; check client not calling `start` twice |
+| AI content empty/generic | Fallback triggered | Check `logAITrace` for `fallbackUsed: true` |
+| Mini-program phase missing | Not in `phaseViews.tsx` | Add view function to session page switch |
+| Lie truth leaked | `isLie` in `state_json` | Remove; `isLie` lives only in `lie_truths` table |
+| Sweep not running | `startSocialIcebreakerSweep` threw | Sweep is fail-open (disables itself on error) |
+| Bonus gate missing | Flag off or phase excluded | Verify `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT`; check `bonusGateOffered` |
+| Moment Card PNG 404 | Server render flag off | Enable `SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER` |
 
 ## Review checklist
 
@@ -89,17 +90,15 @@ TTL sweep (5m)  → deletes expired sessions (6h lifetime)
 - [ ] AI generator has curated fallback and emits `logAITrace`
 - [ ] Mini-program `phaseViews.tsx` updated before or alongside web registry
 - [ ] Unique constraints and race-handling preserved on `POST /start`
+- [ ] Grill-me interview completed for any session lifecycle, phase, or authority change (see `references/grill-me-checklist.md`)
 
 ## Related Skills
 
-| Skill | When to hand off |
-|-------|-----------------|
-| `lie-detective-icebreaker` | Vote/reveal logic, `isLie` secrecy |
-| `personality-dice-icebreaker` | Challenge copy, roster-sized generation |
-| `icebreaker-auction-phase` | Bid/close-lot mechanics, virtual-coin economy |
-| `miniscript-story-framework` | JSON schema, genre/style enums |
-| `game-design-icebreaker-compilation` | Run-plan compilation, energy arc |
-| `llm-runtime-safety-and-integration` | Provider routing, prompt versioning |
-| `platform-coordination-protocol` | Sibling-platform review |
-| `reliability-and-state-integrity` | Transaction boundaries, retry safety |
-| `multi-agent-deliberation` | Cross-domain changes needing multi-perspective review |
+- `lie-detective-icebreaker` — Vote/reveal, `isLie` secrecy
+- `personality-dice-icebreaker` — Challenge copy, roster-sized generation
+- `icebreaker-auction-phase` — Bid/close-lot, virtual-coin economy
+- `miniscript-story-framework` — JSON schema, genre/style enums
+- `game-design-icebreaker-compilation` — Run-plan compilation, energy arc
+- `llm-runtime-safety-and-integration` — Provider routing, prompt versioning
+- `platform-coordination-protocol` — Sibling-platform review
+- `reliability-and-state-integrity` — Transaction boundaries, retry safety

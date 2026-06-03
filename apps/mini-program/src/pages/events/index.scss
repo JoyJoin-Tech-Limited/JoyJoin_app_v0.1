@@ -59,6 +59,7 @@
     border-radius: 40rpx;
     background: $color-surface;
     border: 2rpx solid $color-border;
+    transition: background 0.12s ease, border-color 0.12s ease;
 
     &--active {
       background: $color-primary;
@@ -67,6 +68,12 @@
       .events-page__tab-text {
         color: $color-text-white;
       }
+    }
+
+    &--pressed {
+      transform: scale(0.96);
+      background: rgba($color-primary, 0.08);
+      border-color: rgba($color-primary, 0.3);
     }
   }
 
@@ -79,6 +86,24 @@
   &__list {
     flex: 1;
     padding: 0 $container-padding;
+  }
+
+  &__refresh-indicator {
+    height: 4rpx;
+    background: linear-gradient(90deg, transparent, $color-primary, transparent);
+    background-size: 200% 100%;
+    animation: events-refresh-shimmer 1.2s ease-in-out infinite;
+    margin-bottom: $spacing-sm;
+    border-radius: 2rpx;
+  }
+
+  @keyframes events-refresh-shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   &__card {
@@ -177,7 +202,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .events-page__skeleton-line {
+  .events-page__skeleton-line,
+  .events-page__refresh-indicator {
     animation: none;
     background: $color-divider;
   }

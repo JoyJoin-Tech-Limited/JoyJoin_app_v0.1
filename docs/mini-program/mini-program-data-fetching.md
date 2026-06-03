@@ -22,6 +22,30 @@ React Query keys for MP-specific fetches use a **`mini-program` prefix** as the 
 | My registrations list | `['mini-program', 'my-pool-registrations']` | After theme reveal / registration changes |
 | Similar pools (no-match) | `['mini-program', 'similar-pools', poolCity, poolEventType]` | Rare |
 
+## Persistent Query Cache (Tier 2 offline) — 2026-06-02
+
+Selected low-volatility query data is persisted to `Taro.setStorageSync` for instant cold-start rendering after WeChat kills the mini-program.
+
+**Persisted keys:**
+| Query key | Source | TTL | Max size |
+|-----------|--------|-----|----------|
+| `['mini-program', 'event-pools']` | Discover page | 4h | 75KB total across all keys |
+| `['mini-program', 'joined-events']` | Events page | 4h | 75KB total across all keys |
+
+**Excluded keys (never persisted):** `auth-user`, matching status, shell composites, notification counts.
+
+**Architecture:**
+- `apps/mini-program/src/lib/api/persistentCache.ts` — core hydrate/persist/evict logic with debounce, schema version, and size guards.
+- Hydration runs at module level in `queryClient.ts` before first render.
+- Subscription to `queryCache` events persists successful queries after a 2s debounce.
+- Mutations that change persisted data must call `evictPersistedQuery(key)` to prevent stale data on next cold start (pool registration, payment verification, pull-to-refresh).
+- `clearPersistentCache()` is invoked on hard logout (`clearMiniProgramAuthSession({ mode: 'hard' })`) to prevent cross-user data leakage.
+
+**UX patterns:**
+- `isFetching && !isLoading` renders a subtle brand-colored shimmer line above list content during background refetch.
+- Pull-to-refresh on Discover and Events invalidates in-memory queries **and** evicts the persistent cache entry.
+- Hydration passes `{ updatedAt: entry.timestamp }` to `setQueryData` so TanStack Query knows true data age and triggers immediate background refetch when stale.
+
 ## Predictive Shell prefetch pattern (2026-05-17)
 
 The mini-program uses **composite shell endpoints** to reduce tab-switch latency. Instead of fetching tab data on first mount, the landing page prefetches composite responses and injects them into the target query keys.

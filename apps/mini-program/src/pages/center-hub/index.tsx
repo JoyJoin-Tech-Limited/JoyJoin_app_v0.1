@@ -1,5 +1,6 @@
-import { View, Text, Image } from '@tarojs/components'
+import { CustomWrapper, View, Text, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { haptics } from '../../lib/utils/haptics'
 import { useMemo } from 'react'
 import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { useQuery } from '@tanstack/react-query'
@@ -24,6 +25,8 @@ import LoadingScreen from '../../components/loading/LoadingScreen'
 import PageMorphWrapper from '../../components/ui/PageMorphWrapper'
 import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import RichListCard from '../../components/RichListCard'
+import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
+import { useDeviceTier } from '../../hooks/useDeviceTier'
 import './index.scss'
 
 /**
@@ -90,6 +93,8 @@ function CenterHubContent({
   isLoading: boolean
   isError: boolean
 }) {
+  const { isPrimary } = useDeviceTier()
+
   const destination = useMemo(
     () => resolveCenterTabDestination(registrations, events),
     [registrations, events]
@@ -101,6 +106,7 @@ function CenterHubContent({
   )
 
   const handleNavigate = () => {
+    haptics('light')
     if (navAction.method === 'switchTab') {
       Taro.switchTab({ url: navAction.url })
     } else {
@@ -111,7 +117,12 @@ function CenterHubContent({
   if (isLoading) {
     return (
       <View className='center-hub__loading'>
-        <Text className='center-hub__loading-text'>正在加载…</Text>
+        <Image
+          className={`center-hub__loading-mascot${isPrimary ? '' : ' center-hub__loading-mascot--no-animation'}`}
+          mode='aspectFit'
+          src={getXiaoyueExpressionAsset('homeWelcome')}
+        />
+        <Text className='center-hub__loading-text'>正在加载你的活动…</Text>
       </View>
     )
   }
@@ -119,9 +130,14 @@ function CenterHubContent({
   if (isError) {
     return (
       <View className='center-hub__state'>
+        <Image
+          className={`center-hub__error-mascot${isPrimary ? '' : ' center-hub__error-mascot--no-animation'}`}
+          mode='aspectFit'
+          src={getXiaoyueExpressionAsset('actionFailure')}
+        />
         <Text className='center-hub__state-title'>加载没成功</Text>
         <Text className='center-hub__state-subtitle'>网络不太稳定，下拉刷新试试</Text>
-        <Button className='center-hub__cta' onClick={() => Taro.reLaunch({ url: '/pages/center-hub/index' })}>
+        <Button className='center-hub__cta' onClick={() => { haptics('light'); Taro.reLaunch({ url: '/pages/center-hub/index' }) }}>
           重新加载
         </Button>
       </View>
