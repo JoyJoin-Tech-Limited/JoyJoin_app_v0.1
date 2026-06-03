@@ -40,12 +40,14 @@ export default function MiniProgramLandingPage() {
   // Accessibility: detect reduced-motion preference
   const reduceMotion = useMemo(() => {
     try {
-      const mq =
-        (Taro.getApp() as any).config?.window?.prefersReducedMotion ??
-        (typeof window !== "undefined" && window.matchMedia
-          ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-          : false)
-      return !!mq
+      const mq = (Taro.getApp() as any).config?.window?.prefersReducedMotion
+      if (mq != null) return !!mq
+    } catch {
+      /* ignore */
+    }
+    try {
+      const info = Taro.getSystemInfoSync()
+      return !!(info as any).reduceMotion
     } catch {
       return false
     }

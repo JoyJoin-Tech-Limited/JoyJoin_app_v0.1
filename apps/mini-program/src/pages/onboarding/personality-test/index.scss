@@ -238,7 +238,7 @@
     font-size: $font-size-xs;
     color: $color-text-secondary;
     font-weight: $font-weight-semibold;
-    line-height: 1.35;
+    line-height: 1.4;
   }
 
   &__mascot {
@@ -496,7 +496,7 @@
     font-weight: $font-weight-bold;
     color: $color-text-primary;
     text-align: center;
-    line-height: 1.35;
+    line-height: 1.4;
   }
 
   &__intro-tease-vibe {
@@ -518,7 +518,7 @@
     right: 0;
     bottom: 0;
     z-index: 8;
-    background: #FFFFFF;
+    background: $color-surface;
     box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.04);
   }
 
@@ -864,7 +864,7 @@
 
   &__speech-bubble-text {
     font-family: $font-ui;
-    font-size: 32rpx;
+    font-size: $font-size-md;
     color: $color-primary-dark;
     line-height: 1.5;
     font-weight: $font-weight-medium;

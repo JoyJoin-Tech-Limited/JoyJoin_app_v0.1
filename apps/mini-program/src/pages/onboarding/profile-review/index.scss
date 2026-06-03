@@ -216,7 +216,6 @@
     font-size: $font-size-xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
-    overflow-wrap: anywhere;
     word-break: break-word;
   }
 
@@ -230,7 +229,6 @@
     border: 2rpx solid transparent;
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
-    overflow-wrap: anywhere;
     word-break: break-word;
     box-sizing: border-box;
   }
@@ -246,7 +244,7 @@
     font-size: $font-size-sm;
     color: $color-text-secondary;
     line-height: $line-height-normal;
-    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   &__ai-tagline-wrap {
@@ -291,7 +289,7 @@
     font-size: $font-size-xs;
     color: rgba($color-text-secondary, 0.92);
     line-height: $line-height-normal;
-    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   &__hero-tags {
@@ -535,7 +533,7 @@
     padding: $spacing-md $container-padding;
     @include safe-area-inline($container-padding);
     @include safe-area-bottom-padding(padding-bottom, $spacing-md);
-    background: #FFFFFF;
+    background: $color-surface;
     box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.04);
   }
 

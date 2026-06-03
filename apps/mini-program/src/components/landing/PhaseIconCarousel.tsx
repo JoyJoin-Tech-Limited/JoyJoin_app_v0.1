@@ -2,6 +2,7 @@ import { View, Text, Image } from "@tarojs/components"
 import Taro from "@tarojs/taro"
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { localAsset } from "../../lib/utils/cdnAssets"
+import { onboardingAnalytics } from "../../lib/onboarding/onboardingAnalytics"
 
 export interface PhaseIconCarouselProps {
   isVisible: boolean
@@ -58,9 +59,7 @@ function checkReducedMotion(): boolean {
   try {
     const mq =
       (Taro.getApp() as any).config?.window?.prefersReducedMotion ??
-      (typeof window !== "undefined" && window.matchMedia
-        ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        : false)
+      false
     return !!mq
   } catch {
     return false
@@ -77,13 +76,30 @@ function checkIsLowEnd(): boolean {
   }
 }
 
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
 /* ─── Component ────────────────────────────────────────────────────── */
 export default function PhaseIconCarousel({ isVisible }: PhaseIconCarouselProps) {
+  const [phases, setPhases] = useState<PhaseDef[]>(PHASES)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(true)
   const [hasBorn, setHasBorn] = useState(false)
   const [iconErrors, setIconErrors] = useState<Record<string, boolean>>({})
+  const [direction, setDirection] = useState<1 | -1>(1)
+  const [showHint, setShowHint] = useState(true)
+  const [isDragging, setIsDragging] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
+  const cycleCountRef = useRef(0)
 
   // Accessibility + performance tier detection
   const { reducedMotion, isLowEnd } = useMemo(() => {
@@ -94,8 +110,9 @@ export default function PhaseIconCarousel({ isVisible }: PhaseIconCarouselProps)
   }, [])
 
   // Don't render for reduced-motion or low-end users
-  // (LandingPage falls back to static grid)
   if (reducedMotion || isLowEnd) return null
+
+  const allIconsFailed = Object.keys(iconErrors).length >= phases.length
 
   // Birth animation: icons spread from center
   useEffect(() => {
@@ -105,6 +122,16 @@ export default function PhaseIconCarousel({ isVisible }: PhaseIconCarouselProps)
     }
     setHasBorn(false)
   }, [isVisible])
+
+  // Hint auto-dismiss
+  useEffect(() => {
+    if (hasBorn && showHint) {
+      hintTimerRef.current = setTimeout(() => setShowHint(false), 4500)
+      return () => {
+        if (hintTimerRef.current) clearTimeout(hintTimerRef.current)
+      }
+    }
+  }, [hasBorn, showHint])
 
   // Auto-play with organic, unpredictable intervals
   useEffect(() => {
@@ -117,10 +144,9 @@ export default function PhaseIconCarousel({ isVisible }: PhaseIconCarouselProps)
     }
 
     const scheduleNext = () => {
-      // Organic rhythm: 1.3–2.6s, weighted toward shorter pauses
       const delay = 1300 + Math.random() * 1300
       timeoutRef.current = setTimeout(() => {
-        setCurrentIndex(prev => (prev + 1) % PHASES.length)
+        advanceBy(direction)
         scheduleNext()
       }, delay)
     }
@@ -133,33 +159,150 @@ export default function PhaseIconCarousel({ isVisible }: PhaseIconCarouselProps)
         timeoutRef.current = null
       }
     }
-  }, [isPlaying, hasBorn])
+  }, [isPlaying, hasBorn, direction, phases.length])
+
+  const advanceBy = useCallback(
+    (dir: 1 | -1) => {
+      setCurrentIndex(prev => {
+        const next = (prev + dir + phases.length) % phases.length
+        // Track cycle completion for shuffle
+        if (next === 0) {
+          cycleCountRef.current += 1
+          // Shuffle every 2 complete cycles for fresh surprise
+          if (cycleCountRef.current >= 2) {
+            cycleCountRef.current = 0
+            setPhases(prevPhases => {
+              const currentItem = prevPhases[prev]
+              const others = prevPhases.filter((_, i) => i !== prev)
+              const shuffled = shuffleArray(others)
+              const nextPhases = [...shuffled]
+              nextPhases.splice(prev, 0, currentItem)
+              return nextPhases
+            })
+          }
+        }
+        // 20% chance to flip direction
+        if (Math.random() < 0.2) {
+          setDirection(d => (d === 1 ? -1 : 1))
+        }
+        // Light haptic
+        try {
+          Taro.vibrateShort({ type: "light" })
+        } catch {
+          /* ignore */
+        }
+        return next
+      })
+    },
+    [phases.length]
+  )
 
   const togglePlay = useCallback(() => {
     try {
       Taro.vibrateShort({ type: "light" })
     } catch {
-      /* ignore unsupported devices */
+      /* ignore */
     }
-    setIsPlaying(prev => !prev)
+    setIsPlaying(prev => {
+      const next = !prev
+      onboardingAnalytics.interaction(
+        "login",
+        next ? "carousel_resumed" : "carousel_paused",
+        { phase: phases[currentIndex].key }
+      )
+      return next
+    })
+  }, [currentIndex, phases])
+
+  // Swipe handlers
+  const onTouchStart = useCallback((e: any) => {
+    const touch = e.touches[0]
+    touchStartX.current = touch.clientX
+    touchStartY.current = touch.clientY
+    setIsDragging(true)
   }, [])
+
+  const onTouchEnd = useCallback(
+    (e: any) => {
+      setIsDragging(false)
+      const touch = e.changedTouches[0]
+      const deltaX = touch.clientX - touchStartX.current
+      const deltaY = touch.clientY - touchStartY.current
+
+      // Ignore vertical scrolls
+      if (Math.abs(deltaY) > Math.abs(deltaX)) return
+
+      const SWIPE_THRESHOLD = 40
+      if (deltaX < -SWIPE_THRESHOLD) {
+        // Swipe left → advance forward
+        advanceBy(1)
+        onboardingAnalytics.interaction("login", "carousel_swipe_left", {
+          phase: phases[currentIndex].key,
+        })
+      } else if (deltaX > SWIPE_THRESHOLD) {
+        // Swipe right → go back
+        advanceBy(-1)
+        onboardingAnalytics.interaction("login", "carousel_swipe_right", {
+          phase: phases[currentIndex].key,
+        })
+      }
+    },
+    [advanceBy, currentIndex, phases]
+  )
 
   const getPosIndex = (itemIndex: number) => {
     if (!hasBorn) return -1
-    return (itemIndex - currentIndex + PHASES.length) % PHASES.length
+    const rawPos = (itemIndex - currentIndex + phases.length) % phases.length
+    if (direction === -1) {
+      if (rawPos === 0) return 0
+      if (rawPos === 1) return 5
+      if (rawPos === 2) return 4
+      if (rawPos === 3) return 3
+      if (rawPos === 4) return 2
+      if (rawPos === 5) return 1
+    }
+    return rawPos
   }
 
-  const currentPhase = PHASES[currentIndex]
+  const currentPhase = phases[currentIndex]
+
+  // Unified fallback when every icon fails to load
+  if (allIconsFailed) {
+    return (
+      <View className="phase-carousel phase-carousel--fallback">
+        <View className="phase-carousel__fallback-inner">
+          <Text className="phase-carousel__fallback-emoji">🎲</Text>
+          <Text className="phase-carousel__fallback-label">6 种破冰玩法</Text>
+          <Text className="phase-carousel__fallback-sublabel">话题卡 · 谎言侦探 · 人格骰子 · 拍卖 · 迷你剧本杀 · 机智对决</Text>
+        </View>
+      </View>
+    )
+  }
 
   return (
     <View
-      className={`phase-carousel ${!isPlaying ? "phase-carousel--paused" : ""}`}
+      className={[
+        "phase-carousel",
+        !isPlaying ? "phase-carousel--paused" : "",
+        isDragging ? "phase-carousel--dragging" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       onClick={togglePlay}
-      aria-label="破冰玩法轮盘，点击暂停或继续"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      aria-label="破冰玩法轮盘，点击暂停，左右滑动切换"
     >
+      {/* First-use hint */}
+      {showHint && hasBorn && (
+        <View className="phase-carousel__hint">
+          <Text className="phase-carousel__hint-text">点击暂停 · 左右滑动切换</Text>
+        </View>
+      )}
+
       {/* Turntable track */}
       <View className="phase-carousel__track">
-        {PHASES.map((phase, i) => {
+        {phases.map((phase, i) => {
           const pos = getPosIndex(i)
           const posClass =
             pos === -1
@@ -184,7 +327,7 @@ export default function PhaseIconCarousel({ isVisible }: PhaseIconCarouselProps)
                 />
               ) : (
                 <View className="phase-carousel__item-fallback">
-                  <Text className="phase-carousel__item-fallback-emoji">🎲</Text>
+                  <Text className="phase-carousel__item-fallback-icon">?</Text>
                 </View>
               )}
             </View>
@@ -200,7 +343,7 @@ export default function PhaseIconCarousel({ isVisible }: PhaseIconCarouselProps)
 
       {/* Dot indicators */}
       <View className="phase-carousel__dots">
-        {PHASES.map((_, i) => (
+        {phases.map((_, i) => (
           <View
             key={i}
             className={`phase-carousel__dot ${i === currentIndex ? "phase-carousel__dot--active" : ""}`}
