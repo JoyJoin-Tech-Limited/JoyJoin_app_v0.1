@@ -646,15 +646,19 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 4rpx;
+    gap: 4rpx; // optical: arrow sits tight against label
     min-height: $cta-min-tap;
     padding: 8rpx 16rpx;
-    margin-left: 8rpx;
+    margin-left: $spacing-xs;
     border-radius: $button-radius;
     transition: background 0.12s ease;
 
     &--active {
       background: rgba($color-primary, 0.08);
+    }
+
+    &--enter {
+      animation: btn-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
   }
 
@@ -706,7 +710,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8rpx;
+    gap: $spacing-xs;
     min-height: $cta-min-tap;
     padding: 16rpx 32rpx;
     border-radius: $button-radius;
@@ -716,6 +720,41 @@
     &--active {
       background: rgba($color-primary, 0.1);
       transform: scale(0.98);
+    }
+
+    &--enter {
+      animation: btn-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+  }
+
+  &__skip-hint {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: $cta-min-tap;
+    padding: 16rpx 32rpx;
+    border-radius: $button-radius;
+
+    &--enter {
+      animation: btn-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+  }
+
+  &__skip-hint-text {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    font-weight: $font-weight-medium;
+    line-height: 1.2;
+  }
+
+  @keyframes btn-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8rpx) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
     }
   }
 
@@ -943,8 +982,12 @@
     }
 
     &__back-btn,
-    &__skip-btn {
+    &__skip-btn,
+    &__skip-hint {
       transition: none;
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
 
       &--active {
         transform: none;

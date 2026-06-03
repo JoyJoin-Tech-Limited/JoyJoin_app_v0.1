@@ -1027,7 +1027,7 @@ export default function PersonalityTestPage() {
           </View>
           {progress && progress.answered >= 1 && (
             <View
-              className='personality-test__back-btn'
+              className='personality-test__back-btn personality-test__back-btn--enter'
               hoverClass='personality-test__back-btn--active'
               hoverStartTime={0}
               hoverStayTime={100}
@@ -1159,33 +1159,39 @@ export default function PersonalityTestPage() {
         )}
 
         {/* Skip button (normal mode only) */}
-        {!backReview.isBackReviewMode && skipsRemaining > 0 && (
+        {!backReview.isBackReviewMode && (
           <View className='personality-test__skip-row'>
-            <View
-              className='personality-test__skip-btn'
-              hoverClass='personality-test__skip-btn--active'
-              hoverStartTime={0}
-              hoverStayTime={100}
-              onClick={() => {
-                if (isSubmitting || isSkipping) return
-                handleSkip()
-              }}
-              style={{ opacity: isSubmitting || isSkipping ? 0.4 : 1 }}
-            >
-              {isSkipping ? (
-                <View className='personality-test__skip-btn-dots'>
-                  <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--1' />
-                  <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--2' />
-                  <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--3' />
-                </View>
-              ) : (
-                <>
-                  <Text className='personality-test__skip-btn-icon'>↻</Text>
-                  <Text className='personality-test__skip-btn-text'>换一题</Text>
-                  <Text className='personality-test__skip-btn-count'>还剩 {skipsRemaining} 次</Text>
-                </>
-              )}
-            </View>
+            {skipsRemaining > 0 ? (
+              <View
+                className='personality-test__skip-btn personality-test__skip-btn--enter'
+                hoverClass='personality-test__skip-btn--active'
+                hoverStartTime={0}
+                hoverStayTime={100}
+                onClick={() => {
+                  if (isSubmitting || isSkipping) return
+                  handleSkip()
+                }}
+                style={{ opacity: isSubmitting || isSkipping ? 0.4 : 1 }}
+              >
+                {isSkipping ? (
+                  <View className='personality-test__skip-btn-dots'>
+                    <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--1' />
+                    <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--2' />
+                    <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--3' />
+                  </View>
+                ) : (
+                  <>
+                    <Text className='personality-test__skip-btn-icon'>↻</Text>
+                    <Text className='personality-test__skip-btn-text'>换一题</Text>
+                    <Text className='personality-test__skip-btn-count'>还剩 {skipsRemaining} 次</Text>
+                  </>
+                )}
+              </View>
+            ) : (
+              <View className='personality-test__skip-hint personality-test__skip-hint--enter'>
+                <Text className='personality-test__skip-hint-text'>这些题目都是为你挑选的，试试看～</Text>
+              </View>
+            )}
           </View>
         )}
 
