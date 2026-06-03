@@ -19,6 +19,15 @@ import { logInfo } from './logger'
 
 // ─── Critical (app launch) ───
 
+/** Personality test intro animation — must be warm before user reaches intro.
+ *  Animated WebP cannot be bundled locally (iOS limitation), so we preload
+ *  at app launch to eliminate CDN latency on first paint. */
+export const ONBOARDING_CRITICAL_CDN_ASSETS: string[] = [
+  cdnAsset('/assets/personality/xiaoyue/xiaoyue-intro-animated.webp'),
+  cdnAsset('/assets/personality/xiaoyue/xiaoyue-intro-static.webp'),
+  cdnAsset('/assets/mascot/xiaoyue-welcome.webp'),
+]
+
 /** Archetype full-body images — now bundled locally, no CDN preload needed. */
 export const ARCHETYPE_GLYPH_CDN_ASSETS: string[] = [
   // Bundled locally via copy config (config/index.ts)
@@ -36,6 +45,14 @@ const MATCHING_PRELOADS = [
 
 const EVENT_DETAIL_PRELOADS = [
   // Xiaoyue event-detail-tip now bundled locally
+]
+
+const PERSONALITY_TEST_PRELOADS = [
+  // Intro animation assets (already preloaded at app launch, but include
+  // here for route-level redundancy + future additions)
+  cdnAsset('/assets/personality/xiaoyue/xiaoyue-intro-animated.webp'),
+  cdnAsset('/assets/personality/xiaoyue/xiaoyue-intro-static.webp'),
+  cdnAsset('/assets/mascot/xiaoyue-welcome.webp'),
 ]
 
 const ICEBREAKER_PRELOADS = [
@@ -72,6 +89,7 @@ export const ROUTE_PRELOAD_MAP: Record<string, string[]> = {
   'pages/event-detail/index': EVENT_DETAIL_PRELOADS,
   'pages/icebreaker-session/index': ICEBREAKER_PRELOADS,
   'pages/rewards/index': REWARDS_PRELOADS,
+  'pages/onboarding/personality-test/index': PERSONALITY_TEST_PRELOADS,
 }
 
 // ─── Predictive (preload next likely page) ───

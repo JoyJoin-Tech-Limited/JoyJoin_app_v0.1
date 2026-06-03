@@ -186,7 +186,7 @@ export default function PersonalityTestPage() {
   const [spriteState, setSpriteState] = useState<XiaoyueSpriteState>('idle')
   const [postAnswerCommentary, setPostAnswerCommentary] = useState<string | null>(null)
   const [milestonePulse, setMilestonePulse] = useState(false)
-  const [introImgSrc, setIntroImgSrc] = useState(getXiaoyueExpressionAsset('homeWelcome'))
+  const [introImgSrc, setIntroImgSrc] = useState(getIntroStaticAsset())
   const [skipsRemaining, setSkipsRemaining] = useState(MAX_SKIP_COUNT)
   const [isSkipping, setIsSkipping] = useState(false)
 

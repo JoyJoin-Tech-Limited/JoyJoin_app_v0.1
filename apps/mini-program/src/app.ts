@@ -16,6 +16,7 @@ import './app.scss'
 import { loadBrandFonts } from './lib/utils/brandFont'
 import { useProfessionRetry } from './hooks/useProfessionRetry'
 import { preloadCdnAssets, ARCHETYPE_GLYPH_ASSETS } from './hooks/usePreloadCdnIcons'
+import { ONBOARDING_CRITICAL_CDN_ASSETS } from './lib/utils/routePreloadAssets'
 
 function AutoLoginBridge() {
   const { isAuthenticated, isLoading } = useAuth()
@@ -133,6 +134,12 @@ function App({ children }: PropsWithChildren<any>) {
     // Preload CDN-only archetype glyphs in the background so they are
     // warm when the user reaches profile / matching / results screens.
     void preloadCdnAssets(ARCHETYPE_GLYPH_ASSETS)
+
+    // Preload critical onboarding assets (intro animation, mascot expressions)
+    // at app launch so they're cached before the user enters the personality test.
+    // Animated WebP cannot be bundled locally on iOS, so preloading is the only
+    // way to achieve instant first paint. Fire-and-forget — failures are silent.
+    void preloadCdnAssets(ONBOARDING_CRITICAL_CDN_ASSETS)
   })
 
   return createElement(

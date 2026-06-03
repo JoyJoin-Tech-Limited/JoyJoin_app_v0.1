@@ -16,10 +16,39 @@ Expert UI/UX reviewer with pixel-level eyesight. Read every screen as a user, no
 - Typography lacks clear hierarchy (heading vs body vs meta)
 - Reading a block of text feels tiring or rushed
 
+## Standard spacing values
+
+Use these defaults for consistency across all JoyJoin screens. Deviations are allowed with documented justification.
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `$spacing-xs` | 8rpx | Tight internal padding (chip gutters, icon-text pairs) |
+| `$spacing-sm` | 16rpx | Minimal gap (list item internal padding, tight card groups) |
+| `$spacing-md` | 24rpx | **Default inter-section gap** — gap between sibling white cards, shell column gap |
+| `$spacing-lg` | 40rpx | Generous internal padding (card body padding, hero inset) |
+| `$spacing-xl` | 64rpx | Major section breaks (page top padding, footer reserves) |
+| `$spacing-2xl` | 96rpx | Page bottom safe-area reserve |
+
+**ResponsiveSpacer defaults:**
+- Tight spacing between related elements: `heightRpx={16}`
+- **Default spacing between white card sections: `heightRpx={16}`** (was 24rpx — tightened 2026-06-03)
+- Generous spacing between major sections: `heightRpx={32}`
+- Never use `heightRpx < 12` (feels accidental) or `> 48` without structural purpose
+
+**Card internal padding:**
+- Standard white card (`card-premium`): `padding: $spacing-lg` (40rpx)
+- Compact card (dense lists, small screens): `padding: $spacing-md` (24rpx)
+- Hero card (celebratory, visual-heavy): `padding: $spacing-lg` (40rpx) — never less
+
+**Shell gap hierarchy:**
+- `gap: $spacing-md` (24rpx) — default for `page-shell-padding` flex columns
+- `gap: $spacing-lg` (40rpx) — only when the page has <4 sections and needs breathing room
+- Never mix `gap` and `ResponsiveSpacer` redundantly — pick one per section pair
+
 ## Audit workflow
 
 1. **Layer inventory**: List every visual layer from top to bottom
-2. **Spacing map**: Measure vertical gaps between layers. Flag gaps <16rpx (too tight) or >80rpx without structural purpose (too loose)
+2. **Spacing map**: Measure vertical gaps between layers. Flag gaps <16rpx (too tight) or >80rpx without structural purpose (too loose). Compare against **Standard spacing values** above.
 3. **Typography hierarchy**: Verify heading/body/meta have at least 8rpx size difference and distinct weight/color
 4. **Emoji scan**: Primary questions, headings, and CTA labels must be emoji-free. Emojis allowed only in: mascot speech, decorative badges, result celebration states
 5. **Alignment check**: Left edges of text blocks must share a 4rpx grid
