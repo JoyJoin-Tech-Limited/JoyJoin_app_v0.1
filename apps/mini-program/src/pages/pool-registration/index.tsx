@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
 import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -621,7 +621,7 @@ export default function PoolRegistrationPage() {
         <Card className='pool-reg__empty'>
           <Image
             className='pool-reg__empty-hero'
-            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
+            src={localAsset('/assets/lovart-generic/lovart-generic-error.png')}
             mode='aspectFit'
             lazyLoad
           />
@@ -824,7 +824,7 @@ export default function PoolRegistrationPage() {
           <Card className='pool-reg__panel'>
             <Image
               className='pool-reg__tier-mascot'
-              src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+              src={localAsset('/assets/xiaoyue-expressions/xiaoyue-coach-guide.png')}
               mode='aspectFit'
               lazyLoad
             />

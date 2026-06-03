@@ -41,12 +41,13 @@ export function cdnAsset(localPath: string): string {
 }
 
 /**
- * Returns a root-relative local asset path for bundled mini-program assets.
+ * Returns a local asset path for bundled mini-program assets.
+ *
+ * WeChat Mini Program `<image>` resolves absolute paths `/assets/...` from
+ * the project root. Relative paths do not work inside Taro-compiled `<Image>`.
  *
  * Use this when the asset is shipped inside the WeChat package (under
- * `src/assets/...`) and you want to bypass the CDN entirely. This eliminates
- * network latency and guarantees the asset is available even when the user
- * is offline or the CDN is misconfigured.
+ * `src/assets/...`) and you want to bypass the CDN entirely.
  *
  * The path must start with `/assets/` and the file must exist in
  * `apps/mini-program/src/assets/`.

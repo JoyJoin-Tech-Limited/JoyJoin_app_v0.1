@@ -6,48 +6,36 @@ import { logInfo } from './logger'
  * Smart route-based CDN asset preloading.
  *
  * Strategy:
- *  - Critical: preload on app launch (archetype glyphs, fonts)
+ *  - Critical: preload on app launch (CDN-only assets)
  *  - Route:    preload when entering a page (assets for current + likely next screens)
  *  - Idle:     preload during downtime (low-priority decorative assets)
  *
  * All preloads are fire-and-forget. Failed preloads are silently ignored —
  * the consumer will retry on render with its own onError fallback.
+ *
+ * NOTE: Many assets that were previously CDN-only are now bundled locally.
+ *  See ASSET_STRATEGY.md for the full local vs CDN map.
  */
 
 // ─── Critical (app launch) ───
 
-/** Archetype glyph CDN paths (used across profile, matching, results). */
-export const ARCHETYPE_GLYPH_CDN_ASSETS = [
-  cdnAsset('/assets/archetypes/archetype-corgi.webp'),
-  cdnAsset('/assets/archetypes/archetype-rooster.webp'),
-  cdnAsset('/assets/archetypes/archetype-hamster_praise.webp'),
-  cdnAsset('/assets/archetypes/archetype-fox.webp'),
-  cdnAsset('/assets/archetypes/archetype-dolphin_calm.webp'),
-  cdnAsset('/assets/archetypes/archetype-spider.webp'),
-  cdnAsset('/assets/archetypes/archetype-koala.webp'),
-  cdnAsset('/assets/archetypes/archetype-octopus.webp'),
-  cdnAsset('/assets/archetypes/archetype-owl.webp'),
-  cdnAsset('/assets/archetypes/archetype-elephant.webp'),
-  cdnAsset('/assets/archetypes/archetype-turtle.webp'),
-  cdnAsset('/assets/archetypes/archetype-cat.webp'),
+/** Archetype full-body images — now bundled locally, no CDN preload needed. */
+export const ARCHETYPE_GLYPH_CDN_ASSETS: string[] = [
+  // Bundled locally via copy config (config/index.ts)
 ]
 
 // ─── Per-route asset lists ───
 
 const DISCOVER_PRELOADS = [
-  cdnAsset('/assets/promo/banner-ai-match-calculated.webp'),
-  cdnAsset('/assets/promo/banner-ai-match-same-frequency.webp'),
-  cdnAsset('/assets/promo/banner-ai-match-understands-you.webp'),
+  // Promo banners now bundled locally
 ]
 
 const MATCHING_PRELOADS = [
-  cdnAsset('/assets/matching/matching-bg.webp'),
-  cdnAsset('/assets/matching/matching-waiting-hero.webp'),
-  cdnAsset('/assets/matching/matching-no-match-hero.webp'),
+  // Matching heroes now bundled locally
 ]
 
 const EVENT_DETAIL_PRELOADS = [
-  cdnAsset('/assets/personality/xiaoyue/xiaoyue-event-detail-tip.webp'),
+  // Xiaoyue event-detail-tip now bundled locally
 ]
 
 const ICEBREAKER_PRELOADS = [

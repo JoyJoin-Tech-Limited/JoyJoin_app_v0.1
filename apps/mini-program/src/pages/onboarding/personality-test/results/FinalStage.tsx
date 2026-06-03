@@ -9,7 +9,7 @@ import type { ArchetypeVisual } from '../visuals'
 import type { AnonymousAssessmentTopMatch } from '../../../../lib/auth/anonymousOnboarding'
 import type { ArchetypeSkillSet } from '@shared/personality/archetypeSkills'
 import { haptics } from '../../../../lib/utils/haptics'
-import { cdnAsset } from '../../../../lib/utils/cdnAssets'
+import { cdnAsset, localAsset } from '../../../../lib/utils/cdnAssets'
 import type { ArchetypeCardVariant } from '../archetypeVariants'
 
 interface FinalStageProps {
@@ -269,7 +269,7 @@ export default function FinalStage({
                   <Image
                     className='personality-results__xiaoyue-avatar'
                     mode='aspectFit'
-                    src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+                    src={localAsset('/assets/xiaoyue-expressions/xiaoyue-coach-guide.png')}
                   />
                   <View className='personality-results__xiaoyue-bubble'>
                     <Text className='personality-results__xiaoyue-bubble-headline'>
@@ -304,7 +304,7 @@ export default function FinalStage({
                   <Image
                     className='personality-results__xiaoyue-avatar'
                     mode='aspectFit'
-                    src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+                    src={localAsset('/assets/xiaoyue-expressions/xiaoyue-coach-guide.png')}
                   />
                   <View className='personality-results__xiaoyue-bubble'>
                     <Text className='personality-results__xiaoyue-bubble-headline'>这个命格为什么像你</Text>

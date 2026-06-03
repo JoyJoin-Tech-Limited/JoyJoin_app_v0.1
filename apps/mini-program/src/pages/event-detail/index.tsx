@@ -42,7 +42,7 @@ export default function EventDetailPage() {
         <View className='event-detail__error'>
           <Image
             className='event-detail__error-hero'
-            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
+            src={localAsset('/assets/lovart-generic/lovart-generic-error.png')}
             mode='aspectFit'
             lazyLoad
           />
@@ -116,7 +116,7 @@ export default function EventDetailPage() {
           <View className='event-detail__tip'>
             <Image
               className='event-detail__tip-mascot'
-              src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-event-detail-tip.webp')}
+              src={localAsset('/assets/xiaoyue-expressions/xiaoyue-event-detail-tip.webp')}
               mode='aspectFit'
               lazyLoad
             />

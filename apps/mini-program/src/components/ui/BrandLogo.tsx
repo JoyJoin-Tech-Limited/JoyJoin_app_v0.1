@@ -1,6 +1,6 @@
 import { Image } from '@tarojs/components'
 
-const LOCAL_LOGO_PATH = '/assets/joyjoin-logo.webp'
+const LOCAL_LOGO_PATH = '/assets/joyjoin-logo.png'
 
 export type BrandLogoSize = 'sm' | 'md' | 'lg' | 'xl'
 
@@ -36,7 +36,7 @@ const SIZE_MAP: Record<BrandLogoSize, { width: string; height: string }> = {
 /**
  * BrandLogo — single-source-of-truth JoyJoin logo renderer.
  *
- * Use this instead of hardcoding `<Image src="/assets/joyjoin-logo.webp">`
+ * Use this instead of hardcoding `<Image src="/assets/joyjoin-logo.png">`
  * so asset path changes only require one edit.
  *
  * Usage:

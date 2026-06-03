@@ -93,10 +93,10 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/tab-bar-notch-bg.png',
           to: 'dist/assets/tab-bar-notch-bg.png',
         },
-        // JoyJoin logo for native custom tab bar center button (~94KB, critical)
+        // JoyJoin logo for native custom tab bar center button (~76KB PNG8, critical)
         {
-          from: 'src/assets/joyjoin-logo.webp',
-          to: 'dist/assets/joyjoin-logo.webp',
+          from: 'src/assets/joyjoin-logo.png',
+          to: 'dist/assets/joyjoin-logo.png',
         },
         // Tab bar center logo — smaller 128×128 variant for custom tab bar (~18KB).
         {
@@ -165,28 +165,28 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         // issues on some WeChat clients). Only the 6 icons shown on landing;
         // all other phase icons remain on CDN.
         {
-          from: 'src/assets/icons/phase-icons/phase-topic-card.webp',
-          to: 'dist/assets/landing-phase-icons/phase-topic-card.webp',
+          from: 'src/assets/icons/phase-icons/phase-topic-card.png',
+          to: 'dist/assets/landing-phase-icons/phase-topic-card.png',
         },
         {
-          from: 'src/assets/icons/phase-icons/phase-lie-detective.webp',
-          to: 'dist/assets/landing-phase-icons/phase-lie-detective.webp',
+          from: 'src/assets/icons/phase-icons/phase-lie-detective.png',
+          to: 'dist/assets/landing-phase-icons/phase-lie-detective.png',
         },
         {
-          from: 'src/assets/icons/phase-icons/phase-personality-dice.webp',
-          to: 'dist/assets/landing-phase-icons/phase-personality-dice.webp',
+          from: 'src/assets/icons/phase-icons/phase-personality-dice.png',
+          to: 'dist/assets/landing-phase-icons/phase-personality-dice.png',
         },
         {
-          from: 'src/assets/icons/phase-icons/phase-auction.webp',
-          to: 'dist/assets/landing-phase-icons/phase-auction.webp',
+          from: 'src/assets/icons/phase-icons/phase-auction.png',
+          to: 'dist/assets/landing-phase-icons/phase-auction.png',
         },
         {
-          from: 'src/assets/icons/phase-icons/phase-mini-script.webp',
-          to: 'dist/assets/landing-phase-icons/phase-mini-script.webp',
+          from: 'src/assets/icons/phase-icons/phase-mini-script.png',
+          to: 'dist/assets/landing-phase-icons/phase-mini-script.png',
         },
         {
-          from: 'src/assets/icons/phase-icons/phase-quip-battle.webp',
-          to: 'dist/assets/landing-phase-icons/phase-quip-battle.webp',
+          from: 'src/assets/icons/phase-icons/phase-quip-battle.png',
+          to: 'dist/assets/landing-phase-icons/phase-quip-battle.png',
         },
         // Archetype head icons — tiny (~45KB total), used everywhere for avatars.
         {
@@ -219,20 +219,53 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           to: 'dist/assets/qr',
         },
         // Xiaoyue expressions — loading + welcome are critical first-impression assets.
-        // Copied to a dedicated directory so the clean step doesn't remove them
-        // (the clean step wipes the entire personality/ tree for CDN assets).
+        // Others remain on CDN to stay within package size limits.
         {
-          from: 'src/assets/personality/xiaoyue/xiaoyue-loading-system.webp',
-          to: 'dist/assets/xiaoyue-expressions/xiaoyue-loading-system.webp',
+          from: 'src/assets/personality/xiaoyue/xiaoyue-loading-system.png',
+          to: 'dist/assets/xiaoyue-expressions/xiaoyue-loading-system.png',
         },
         {
-          from: 'src/assets/personality/xiaoyue/xiaoyue-home-welcome.webp',
-          to: 'dist/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp',
+          from: 'src/assets/personality/xiaoyue/xiaoyue-home-welcome.png',
+          to: 'dist/assets/xiaoyue-expressions/xiaoyue-home-welcome.png',
         },
-        // NOTE: All other phase icons, lovart backgrounds, celebration images,
-        // matching heroes, promo banners, and remaining mascot images stay on CDN
-        // to keep the main package under 2MB. Use routePreloadAssets.ts for smart
-        // background loading. Run `npm run upload:cdn-assets` after updating CDN assets.
+        // Lovart generic empty/error illustrations — fallback states (~97KB).
+        {
+          from: 'src/assets/lovart/lovart-generic-empty.png',
+          to: 'dist/assets/lovart-generic/lovart-generic-empty.png',
+        },
+        {
+          from: 'src/assets/lovart/lovart-generic-error.png',
+          to: 'dist/assets/lovart-generic/lovart-generic-error.png',
+        },
+        // UI icons — info labels across the app (~81KB).
+        {
+          from: 'src/assets/icons/ui',
+          to: 'dist/assets/icons/ui',
+        },
+        // Xiaoyue expressions — coach-guide, match-waiting, event-detail-tip (~164KB).
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-coach-guide.png',
+          to: 'dist/assets/xiaoyue-expressions/xiaoyue-coach-guide.png',
+        },
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-match-waiting.png',
+          to: 'dist/assets/xiaoyue-expressions/xiaoyue-match-waiting.png',
+        },
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-event-detail-tip.webp',
+          to: 'dist/assets/xiaoyue-expressions/xiaoyue-event-detail-tip.webp',
+        },
+        // NOTE: Large assets remaining on CDN to stay under 2MB:
+        //  - Archetype full-body images (~285KB)
+        // NOTE: Large CDN-only assets remaining:
+        //  - Icebreaker backgrounds (~450KB)
+        //  - Celebration images (~770KB)
+        //  - Xiaoyue expressions (other 18, ~1.1MB)
+        //  - Miniscript heroes (~590KB)
+        //  - Lovart rewards/rewards-shop/history (~114KB)
+        //  - Personality emoji PNGs (already bundled above)
+        // Keep the main package under 2MB by leaving these on CDN.
+        // Run `npm run upload:cdn-assets` after updating CDN assets.
       ],
       options: {
       }

@@ -1,5 +1,5 @@
 import { Image, ScrollView, Text, View } from '@tarojs/components'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import Taro from '@tarojs/taro'
 import { useCallback, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -216,7 +216,7 @@ export default function RewardsPage() {
         <View className='rewards-page__error'>
           <StatusCard
             tone='error'
-            heroSrc={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
+            heroSrc={localAsset('/assets/lovart-generic/lovart-generic-error.png')}
             title='奖励加载没成功'
             description='稍后重试，或返回个人主页继续浏览。'
             action={{ label: '重新加载', onClick: handleRefresh }}

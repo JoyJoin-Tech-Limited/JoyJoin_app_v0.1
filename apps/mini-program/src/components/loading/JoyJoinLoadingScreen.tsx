@@ -74,7 +74,7 @@ export default function JoyJoinLoadingScreen({
           mode='aspectFit'
           onError={() => {
             logInfo('[JoyJoinLoadingScreen] CDN fallback triggered', { original: imgSrc })
-            setImgSrc(localAsset('/assets/xiaoyue-expressions/xiaoyue-loading-system.webp'))
+            setImgSrc(localAsset('/assets/xiaoyue-expressions/xiaoyue-loading-system.png'))
           }}
         />
 

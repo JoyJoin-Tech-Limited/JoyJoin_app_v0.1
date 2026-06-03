@@ -1,5 +1,5 @@
 import { Canvas, Image, ScrollView, Text, View } from '@tarojs/components'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { useState, useCallback } from 'react'
@@ -113,7 +113,7 @@ export default function PoolGroupDetailPage() {
       <View className='pool-group-detail__error'>
         <Image
           className='pool-group-detail__error-hero'
-          src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
+          src={localAsset('/assets/lovart-generic/lovart-generic-error.png')}
           mode='aspectFit'
           lazyLoad
         />

@@ -100,13 +100,14 @@ npm run test --workspace=mini-program
 
 ### Asset pipeline scripts
 
-Assets are **CDN-first** in production. The build inlines `TARO_APP_CDN_BASE_URL` from `apps/mini-program/.env.local` and all runtime references go through `cdnAsset('/assets/...')`.
+Assets are **CDN-first** in production, with a curated set of critical assets bundled locally for instant display and offline resilience. The build inlines `TARO_APP_CDN_BASE_URL` from `apps/mini-program/.env.local`.
 
 **Critical rules:**
-1. Always use `cdnAsset('/assets/...')` — never hardcode `/assets/` paths.
+1. Use `cdnAsset('/assets/...')` for CDN assets and `localAsset('/assets/...')` for bundled assets — never hardcode `/assets/` paths.
 2. Production builds **fail** if `TARO_APP_CDN_BASE_URL` is missing.
 3. Run `npm run validate:assets` before committing to catch orphan references.
-4. Add new assets to `src/assets/` **and** `scripts/cdn-asset-manifest.json` so the CDN uploader discovers them.
+4. Add new CDN assets to `src/assets/` **and** `scripts/cdn-asset-manifest.json` so the CDN uploader discovers them.
+5. Run `npm run check:package-size` after build to verify the compressed main package stays under the 2MB WeChat limit.
 
 | Script | Purpose |
 |--------|---------|
@@ -124,21 +125,49 @@ Assets are **CDN-first** in production. The build inlines `TARO_APP_CDN_BASE_URL
 | `npm run optimize:lovart` | Generate Lovart-designed image assets |
 | `npm run check:lovart-assets` | Validate Lovart asset sizes |
 | `npm run upload:cdn-assets` | Upload manifest assets to CDN (`--dry-run` for preview). For production, trigger `gh workflow run "Upload CDN Assets"` which builds + uploads via GitHub Actions. |
-| `npm run check:package-size` | Audit mini-program bundle size against budget |
+| `npm run check:package-size` | Audit mini-program bundle size against 2MB WeChat limit (measures actual zip-compressed size) |
 
-**Active copy patterns** (`config/index.ts`) — only critical bundled assets:
-- `src/assets/tab-icons` → `dist/assets/tab-icons` (~52KB, tab bar icons — must be local)
-- `src/assets/joyjoin-logo.webp` → `dist/assets/joyjoin-logo.webp` (~94KB, native tab bar center button)
-- `src/assets/tab-bar-notch-bg.png` → `dist/assets/tab-bar-notch-bg.png` (~3KB, custom tab bar notch)
+**Active copy patterns** (`config/index.ts`) — bundled assets:
+
+*Tab bar & shell (critical — must be local):*
+- `src/assets/tab-icons` → `dist/assets/tab-icons` (~80KB)
+- `src/assets/joyjoin-logo.webp` → `dist/assets/joyjoin-logo.webp` (~128KB)
+- `src/assets/joyjoin-logo-tab.png` → `dist/assets/joyjoin-logo-tab.png` (~20KB)
+- `src/assets/tab-bar-notch-bg.png` → `dist/assets/tab-bar-notch-bg.png` (~4KB)
 - `src/native-custom-tab-bar/` → `dist/custom-tab-bar/`
-- `src/pages/onboarding/assets/archetypes` → `dist/pages/onboarding/assets/archetypes` (subpackage assets)
-- `src/assets/icons/mood-icons` → `dist/assets/icons/mood-icons` (~3KB, bundled)
-- `src/assets/icons/chemistry-badges` → `dist/assets/icons/chemistry-badges` (~8KB, bundled)
-- `src/assets/icons/status-icons` → `dist/assets/icons/status-icons` (~3KB, bundled)
-- `src/assets/fonts/Quicksand` → `dist/assets/fonts/Quicksand` (~124KB, English brand font)
-- `src/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2` → `dist/assets/fonts/Alimama/...` (~66KB, minimal Chinese display font; full 621KB font loads from CDN)
 
-> Other icon tiers (reaction, category, intent, reveal, achievement, info-label, rating-face, phase) and all illustration assets are loaded from CDN via `cdnAsset()`. See `routePreloadAssets.ts` for per-route preload configuration.
+*Onboarding subpackage:*
+- `src/pages/onboarding/assets/archetypes` → `dist/pages/onboarding/assets/archetypes`
+
+*Icon tiers (bundled with @1x/@2x/@3x retina support via `JoyJoinIcon`):*
+- `src/assets/icons/mood-icons` (~16KB)
+- `src/assets/icons/chemistry-badges` (~16KB)
+- `src/assets/icons/status-icons` (~8KB)
+- `src/assets/icons/category-icons` (~60KB)
+- `src/assets/icons/intent-icons` (~60KB)
+- `src/assets/icons/reaction-icons` (~120KB)
+- `src/assets/icons/reveal-icons` (~156KB)
+- `src/assets/icons/achievement-badges` (~144KB)
+- `src/assets/icons/archetype` (~72KB, head icons for avatars)
+
+*Fonts:*
+- `src/assets/fonts/Quicksand` (~256KB, English brand font)
+- `src/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2` (~66KB, minimal Chinese display font; full 621KB font loads from CDN)
+
+*First-impression & empty states:*
+- `src/assets/icons/phase-icons/phase-*.webp` → `dist/assets/landing-phase-icons/` (~80KB, 6 landing page icons)
+- `src/assets/empty-state` (~16KB)
+- `src/assets/qr` (~12KB)
+
+*Mascot expressions (critical first impression):*
+- `src/assets/personality/xiaoyue/xiaoyue-loading-system.webp` (~49KB)
+- `src/assets/personality/xiaoyue/xiaoyue-home-welcome.webp` (~39KB)
+
+*Game UI:*
+- `src/assets/lovart/icebreaker/icons/icon-coin-*.png` → `dist/assets/auction-icons/` (~28KB)
+
+*CDN-only assets (too large for bundle or non-critical):*
+Archetype full-body images, matching heroes, promo banners, Lovart illustrations, icebreaker backgrounds, celebration images, extra Xiaoyue expressions, mini-script heroes, UI info-label icons. Loaded via `cdnAsset()` with route-based preloading via `routePreloadAssets.ts`.
 
 ### Proprietary Icon System
 

@@ -26,16 +26,16 @@ export const MOOD_OPTIONS: Array<{ mood: AtmosphereMood; label: string; asset: s
 // mini-program package small. Assets uploaded via `npm run upload:cdn-assets`.
 const PHASE_ICON_SRC_MAP: Record<string, string> = {
   warmup: cdnAsset('/assets/icons/phase-icons/phase-warmup.webp'),
-  'topic-card': cdnAsset('/assets/icons/phase-icons/phase-topic-card.webp'),
+  'topic-card': cdnAsset('/assets/icons/phase-icons/phase-topic-card.png'),
   micro_challenge: cdnAsset('/assets/icons/phase-icons/phase-micro-challenge.webp'),
-  lie_detective: cdnAsset('/assets/icons/phase-icons/phase-lie-detective.webp'),
-  personality_dice: cdnAsset('/assets/icons/phase-icons/phase-personality-dice.webp'),
-  auction: cdnAsset('/assets/icons/phase-icons/phase-auction.webp'),
-  quip_battle: cdnAsset('/assets/icons/phase-icons/phase-quip-battle.webp'),
+  lie_detective: cdnAsset('/assets/icons/phase-icons/phase-lie-detective.png'),
+  personality_dice: cdnAsset('/assets/icons/phase-icons/phase-personality-dice.png'),
+  auction: cdnAsset('/assets/icons/phase-icons/phase-auction.png'),
+  quip_battle: cdnAsset('/assets/icons/phase-icons/phase-quip-battle.png'),
   undercover_word: cdnAsset('/assets/icons/phase-icons/phase-undercover-word.webp'),
   group_mirror: cdnAsset('/assets/icons/phase-icons/phase-group-mirror.webp'),
   speed_friending: cdnAsset('/assets/icons/phase-icons/phase-speed-friending.webp'),
-  mini_script: cdnAsset('/assets/icons/phase-icons/phase-mini-script.webp'),
+  mini_script: cdnAsset('/assets/icons/phase-icons/phase-mini-script.png'),
   recap: cdnAsset('/assets/icons/phase-icons/phase-recap.webp'),
 }
 

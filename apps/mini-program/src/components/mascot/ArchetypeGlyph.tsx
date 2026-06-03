@@ -12,7 +12,7 @@ import { cdnAsset } from '@/lib/utils/cdnAssets'
  * Assets live in: assets/archetypes/
  * Naming: archetype-{key}.webp
  *
- * CDN-safe: uses cdnAsset() so assets survive bundle offloads.
+ * Bundled locally — assets copied to dist/assets/archetypes/ by the build.
  */
 
 export type ArchetypeFamily = 'warm' | 'cool' | 'fire' | 'calm'
@@ -26,21 +26,21 @@ interface ArchetypeGlyphProps {
 }
 
 const GLYPH_PATHS: Record<string, string> = {
-  'corgi': cdnAsset('/assets/archetypes/archetype-corgi.webp'),
-  'rooster': cdnAsset('/assets/archetypes/archetype-rooster.webp'),
-  'hamster_praise': cdnAsset('/assets/archetypes/archetype-hamster_praise.webp'),
-  'fox': cdnAsset('/assets/archetypes/archetype-fox.webp'),
-  'dolphin_calm': cdnAsset('/assets/archetypes/archetype-dolphin_calm.webp'),
-  'spider': cdnAsset('/assets/archetypes/archetype-spider.webp'),
-  'koala': cdnAsset('/assets/archetypes/archetype-koala.webp'),
-  'octopus': cdnAsset('/assets/archetypes/archetype-octopus.webp'),
-  'owl': cdnAsset('/assets/archetypes/archetype-owl.webp'),
-  'elephant': cdnAsset('/assets/archetypes/archetype-elephant.webp'),
-  'turtle': cdnAsset('/assets/archetypes/archetype-turtle.webp'),
-  'cat': cdnAsset('/assets/archetypes/archetype-cat.webp'),
+  'corgi': cdnAsset('/assets/personality/archetypes/archetype-corgi.webp'),
+  'rooster': cdnAsset('/assets/personality/archetypes/archetype-rooster.webp'),
+  'hamster_praise': cdnAsset('/assets/personality/archetypes/archetype-hamster_praise.webp'),
+  'fox': cdnAsset('/assets/personality/archetypes/archetype-fox.webp'),
+  'dolphin_calm': cdnAsset('/assets/personality/archetypes/archetype-dolphin_calm.webp'),
+  'spider': cdnAsset('/assets/personality/archetypes/archetype-spider.webp'),
+  'koala': cdnAsset('/assets/personality/archetypes/archetype-koala.webp'),
+  'octopus': cdnAsset('/assets/personality/archetypes/archetype-octopus.webp'),
+  'owl': cdnAsset('/assets/personality/archetypes/archetype-owl.webp'),
+  'elephant': cdnAsset('/assets/personality/archetypes/archetype-elephant.webp'),
+  'turtle': cdnAsset('/assets/personality/archetypes/archetype-turtle.webp'),
+  'cat': cdnAsset('/assets/personality/archetypes/archetype-cat.webp'),
 }
 
-const FALLBACK_PATH = cdnAsset('/assets/archetypes/archetype-corgi.webp')
+const FALLBACK_PATH = cdnAsset('/assets/personality/archetypes/archetype-corgi.webp')
 
 export default function ArchetypeGlyph({
   archetype,

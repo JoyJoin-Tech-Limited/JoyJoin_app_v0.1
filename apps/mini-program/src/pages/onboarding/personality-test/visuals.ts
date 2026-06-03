@@ -1,6 +1,6 @@
 import { formatHSL, getArchetypeHSL } from '@shared/archetypeColors'
 import { archetypeRegistry, type ArchetypeRecord } from '@shared/personality/archetypeRegistry'
-import { cdnAsset } from '../../../lib/utils/cdnAssets'
+import { cdnAsset, localAsset } from '../../../lib/utils/cdnAssets'
 
 export type {
   LegacyXiaoyueMood,
@@ -21,13 +21,12 @@ export interface ArchetypeAssetPaths {
   png: string
 }
 
-// CDN base for cross-package consumers (login page, discover, icebreaker session).
+// Local base for all archetype images — now bundled in the main package.
+// Previously CDN-hosted; moved locally for instant loading across all surfaces.
 export const ASSET_BASE_WEBP = cdnAsset('/assets/personality/archetypes')
 export const ASSET_BASE_PNG = cdnAsset('/assets/personality/archetypes')
 
-// Local base for onboarding-subpackage pages (personality-test results).
-// Archetype WebPs are bundled in the onboarding subpackage to avoid CDN latency
-// during the result reveal flow.
+// Onboarding subpackage local paths (kept for backward compat with subpackage pages).
 export const ASSET_BASE_WEBP_LOCAL = '/pages/onboarding/assets/archetypes'
 export const ASSET_BASE_PNG_LOCAL = '/pages/onboarding/assets/archetypes'
 

@@ -44,11 +44,11 @@ const BASE = cdnAsset('/assets/personality/xiaoyue')
 
 /** Semantic basenames — all 16 expressions, unique assets. */
 const ART = {
-  homeWelcome: `${BASE}/xiaoyue-home-welcome.webp`,
-  coachGuide: `${BASE}/xiaoyue-coach-guide.webp`,
-  loadingSystem: `${BASE}/xiaoyue-loading-system.webp`,
-  loadingReveal: `${BASE}/xiaoyue-loading-reveal.webp`,
-  matchWaiting: `${BASE}/xiaoyue-match-waiting.webp`,
+  homeWelcome: `${BASE}/xiaoyue-home-welcome.png`,
+  coachGuide: `${BASE}/xiaoyue-coach-guide.png`,
+  loadingSystem: `${BASE}/xiaoyue-loading-system.png`,
+  loadingReveal: `${BASE}/xiaoyue-loading-reveal.png`,
+  matchWaiting: `${BASE}/xiaoyue-match-waiting.png`,
   matchSuccess: `${BASE}/xiaoyue-match-success.webp`,
   actionSuccess: `${BASE}/xiaoyue-action-success.webp`,
   actionFailure: `${BASE}/xiaoyue-action-failure.webp`,
@@ -66,7 +66,7 @@ const ART = {
   cityUnlock: `${BASE}/xiaoyue-city-unlock.webp`,
   // Match Compass — mapped to existing assets until dedicated ones are commissioned
   compassScan: `${BASE}/xiaoyue-test-curious.webp`,
-  compassInsight: `${BASE}/xiaoyue-coach-guide.webp`,
+  compassInsight: `${BASE}/xiaoyue-coach-guide.png`,
   compassCelebrate: `${BASE}/xiaoyue-match-success.webp`,
 } as const
 

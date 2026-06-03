@@ -44,7 +44,7 @@ export default function OnboardingLoadingShell({
             className='onboarding-loading-shell__mascot'
             mode='aspectFit'
             src={imgSrc}
-            onError={() => setImgSrc(localAsset('/assets/xiaoyue-expressions/xiaoyue-loading-system.webp'))}
+            onError={() => setImgSrc(localAsset('/assets/xiaoyue-expressions/xiaoyue-loading-system.png'))}
           />
           <View className='onboarding-loading-shell__orbit'>
             {[1, 2, 3].map((item) => (

@@ -33,20 +33,10 @@ export function usePreloadCdnIcons(assetPaths: string[]) {
   }, [assetPaths])
 }
 
-/** Archetype glyph CDN paths (used across profile, matching, results). */
-export const ARCHETYPE_GLYPH_ASSETS = [
-  '/assets/archetypes/archetype-corgi.webp',
-  '/assets/archetypes/archetype-rooster.webp',
-  '/assets/archetypes/archetype-hamster_praise.webp',
-  '/assets/archetypes/archetype-fox.webp',
-  '/assets/archetypes/archetype-dolphin_calm.webp',
-  '/assets/archetypes/archetype-spider.webp',
-  '/assets/archetypes/archetype-koala.webp',
-  '/assets/archetypes/archetype-octopus.webp',
-  '/assets/archetypes/archetype-owl.webp',
-  '/assets/archetypes/archetype-elephant.webp',
-  '/assets/archetypes/archetype-turtle.webp',
-  '/assets/archetypes/archetype-cat.webp',
+/** Archetype full-body images — now bundled locally.
+ *  Preloading from CDN is no longer necessary. */
+export const ARCHETYPE_GLYPH_ASSETS: string[] = [
+  // Bundled locally via copy config (config/index.ts)
 ]
 
 /** Xiaoyue sprite sheet CDN paths (used in icebreaker sessions). */
