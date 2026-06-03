@@ -93,7 +93,7 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/tab-bar-notch-bg.png',
           to: 'dist/assets/tab-bar-notch-bg.png',
         },
-        // JoyJoin logo for native custom tab bar center button (~76KB PNG8, critical)
+        // JoyJoin logo for native custom tab bar center button (critical)
         {
           from: 'src/assets/joyjoin-logo.png',
           to: 'dist/assets/joyjoin-logo.png',
@@ -163,29 +163,29 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         },
         // Landing page phase icons — bundled locally (bypasses CDN reliability
         // issues on some WeChat clients). Only the 6 icons shown on landing;
-        // all other phase icons remain on CDN.
+        // all other phase icons remain on CDN. WebP saves ~70KB vs PNG.
         {
-          from: 'src/assets/icons/phase-icons/phase-topic-card.png',
+          from: 'src/assets/icons/phase-icons/phase-topic-card.webp',
           to: 'dist/assets/landing-phase-icons/phase-topic-card.png',
         },
         {
-          from: 'src/assets/icons/phase-icons/phase-lie-detective.png',
+          from: 'src/assets/icons/phase-icons/phase-lie-detective.webp',
           to: 'dist/assets/landing-phase-icons/phase-lie-detective.png',
         },
         {
-          from: 'src/assets/icons/phase-icons/phase-personality-dice.png',
+          from: 'src/assets/icons/phase-icons/phase-personality-dice.webp',
           to: 'dist/assets/landing-phase-icons/phase-personality-dice.png',
         },
         {
-          from: 'src/assets/icons/phase-icons/phase-auction.png',
+          from: 'src/assets/icons/phase-icons/phase-auction.webp',
           to: 'dist/assets/landing-phase-icons/phase-auction.png',
         },
         {
-          from: 'src/assets/icons/phase-icons/phase-mini-script.png',
+          from: 'src/assets/icons/phase-icons/phase-mini-script.webp',
           to: 'dist/assets/landing-phase-icons/phase-mini-script.png',
         },
         {
-          from: 'src/assets/icons/phase-icons/phase-quip-battle.png',
+          from: 'src/assets/icons/phase-icons/phase-quip-battle.webp',
           to: 'dist/assets/landing-phase-icons/phase-quip-battle.png',
         },
         // Archetype head icons — tiny (~45KB total), used everywhere for avatars.
