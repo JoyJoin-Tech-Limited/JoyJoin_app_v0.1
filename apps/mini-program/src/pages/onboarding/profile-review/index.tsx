@@ -365,7 +365,12 @@ export default function ProfileReviewPage() {
                 ) : (
                   <Text className='profile-review__hero-summary'>你的基础资料和兴趣画像已经准备好被看见了。</Text>
                 )}
-                {aiInsightLine ? (
+                {isTaglineLoading ? (
+                  <View className='profile-review__ai-tagline-wrap profile-review__ai-tagline-wrap--loading'>
+                    <View className='profile-review__ai-tagline-accent' />
+                    <View className='profile-review__ai-tagline-shimmer' />
+                  </View>
+                ) : aiInsightLine ? (
                   <View className='profile-review__ai-tagline-wrap'>
                     <View className='profile-review__ai-tagline-accent' />
                     <Text className='profile-review__ai-tagline'>{aiInsightLine}</Text>
@@ -506,6 +511,11 @@ export default function ProfileReviewPage() {
               </>
             ) : (
               <View className='profile-review__interest-placeholder'>
+                <View className='profile-review__interest-placeholder-pulse'>
+                  <View className='profile-review__interest-placeholder-dot' />
+                  <View className='profile-review__interest-placeholder-dot' style={{ animationDelay: '0.2s' }} />
+                  <View className='profile-review__interest-placeholder-dot' style={{ animationDelay: '0.4s' }} />
+                </View>
                 <Text className='profile-review__interest-placeholder-title'>兴趣摘要马上就位</Text>
                 <Text className='profile-review__interest-placeholder-copy'>
                   你刚选的兴趣正在整理成摘要，先带着这张入场卡出发也完全没问题。
