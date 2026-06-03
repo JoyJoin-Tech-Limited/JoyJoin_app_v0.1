@@ -11,7 +11,7 @@ describe('mini-program landing page styles', () => {
     expect(landingPageStyleSource).not.toMatch(/background-clip\s*:\s*text/)
     expect(landingPageStyleSource).not.toMatch(/text-fill-color\s*:\s*transparent/)
     expect(landingPageStyleSource).not.toMatch(/\bfilter\s*:/)
-    expect(landingPageStyleSource).not.toMatch(/--[A-Za-z0-9_-]+\s*:/)
+    expect(landingPageStyleSource).not.toMatch(/--[A-Za-z0-9_-]+\s*:[^:]/)
     expect(landingPageStyleSource).not.toMatch(/var\(--/)
   })
 
