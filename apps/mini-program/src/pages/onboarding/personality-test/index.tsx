@@ -186,7 +186,7 @@ export default function PersonalityTestPage() {
   const [spriteState, setSpriteState] = useState<XiaoyueSpriteState>('idle')
   const [postAnswerCommentary, setPostAnswerCommentary] = useState<string | null>(null)
   const [milestonePulse, setMilestonePulse] = useState(false)
-  const [introImgSrc, setIntroImgSrc] = useState(getIntroStaticAsset)
+  const [introImgSrc, setIntroImgSrc] = useState(getXiaoyueExpressionAsset('homeWelcome'))
   const [skipsRemaining, setSkipsRemaining] = useState(MAX_SKIP_COUNT)
   const [isSkipping, setIsSkipping] = useState(false)
 
@@ -841,7 +841,7 @@ export default function PersonalityTestPage() {
             </Text>
           </View>
 
-          <ResponsiveSpacer heightRpx={24} collapseBelow={700} />
+          <ResponsiveSpacer heightRpx={16} collapseBelow={700} />
 
           <View className='personality-test__intro-hero personality-test__stage personality-test__stage--2'>
             <View className='personality-test__intro-hero-visual'>
@@ -852,8 +852,8 @@ export default function PersonalityTestPage() {
                 mode='aspectFit'
                 lazyLoad={false}
                 onError={() => {
-                  // Graceful fallback to home-welcome expression if intro animated WebP fails
-                  setIntroImgSrc(getXiaoyueExpressionAsset('homeWelcome'))
+                  // Fallback already loaded locally; this shouldn't trigger
+                  console.warn('[PersonalityTest] Intro mascot failed to load')
                 }}
               />
               <Image
@@ -878,7 +878,7 @@ export default function PersonalityTestPage() {
             </View>
           </View>
 
-          <ResponsiveSpacer heightRpx={24} collapseBelow={720} />
+          <ResponsiveSpacer heightRpx={16} collapseBelow={720} />
 
           <View className='personality-test__intro-trust personality-test__stage personality-test__stage--3'>
             <Text className='personality-test__intro-trust-title'>开始前，三件事</Text>
@@ -897,7 +897,7 @@ export default function PersonalityTestPage() {
             </View>
           </View>
 
-          <ResponsiveSpacer heightRpx={24} collapseBelow={780} />
+          <ResponsiveSpacer heightRpx={16} collapseBelow={780} />
 
           <View className='personality-test__intro-tease personality-test__stage personality-test__stage--4'>
             <Text className='personality-test__intro-tease-title'>完成后，你会看到自己的氛围命格</Text>
