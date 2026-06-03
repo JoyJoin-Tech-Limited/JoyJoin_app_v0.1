@@ -1,0 +1,46 @@
+skill: performance-audit
+category: internal
+
+primary_ownership: >
+  Post-implementation mini-program performance audit — 流畅度, 速度, 设备适配.
+  Evaluates runtime performance, animation smoothness, load times, and device
+  compatibility across WeChat Mini Program surfaces.
+
+use_when:
+  - evaluating mini-program UI performance (流畅度, frame rate, jank)
+  - measuring page load speed and time-to-interactive
+  - checking device adaptation across screen sizes and WeChat versions
+  - reviewing animation performance and reduced-motion compliance
+  - benchmarking performance before/after changes
+
+do_not_use_when:
+  - task is purely backend with no user-facing surface
+  - performing a visual or layout audit (use ui-layout-audit instead)
+  - adding new features (use feature-specific skills instead)
+  - doing a completeness audit (use completeness-audit instead)
+
+strong_triggers:
+  - performance audit
+  - 流畅度
+  - frame rate
+  - jank
+  - load time
+  - bundle size
+  - device adaptation
+  - performance regression
+  - slow page
+
+owned_files:
+  - apps/mini-program/src/**
+
+owned_paths: []
+
+owned_symbols: []
+
+related_skills:
+  - skill: ui-layout-audit
+    when: visual polish audit needed alongside performance
+  - skill: completeness-audit
+    when: full 完成度 audit including performance dimension
+  - skill: frontend-performance-and-loading
+    when: implementing performance fixes
