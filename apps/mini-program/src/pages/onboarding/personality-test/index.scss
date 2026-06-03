@@ -645,13 +645,15 @@
     flex-shrink: 0;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 4rpx;
+    min-height: $cta-min-tap;
     padding: 8rpx 16rpx;
     margin-left: 8rpx;
     border-radius: $button-radius;
     transition: background 0.12s ease;
 
-    &:active {
+    &--active {
       background: rgba($color-primary, 0.08);
     }
   }
@@ -659,13 +661,14 @@
   &__back-btn-icon {
     font-size: $font-size-sm;
     color: rgba($color-primary, 0.7);
-    line-height: 1;
+    line-height: 1.2;
   }
 
   &__back-btn-text {
     font-size: $font-size-sm;
     color: rgba($color-primary, 0.7);
     font-weight: $font-weight-medium;
+    line-height: 1.2;
   }
 
   // Back-review action buttons
@@ -702,13 +705,15 @@
   &__skip-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8rpx;
+    min-height: $cta-min-tap;
     padding: 16rpx 32rpx;
     border-radius: $button-radius;
     background: rgba($color-text-primary, 0.04);
     transition: background 0.15s ease, transform 0.12s ease;
 
-    &:active {
+    &--active {
       background: rgba($color-primary, 0.1);
       transform: scale(0.98);
     }
@@ -717,19 +722,56 @@
   &__skip-btn-icon {
     font-size: $font-size-sm;
     color: rgba($color-primary, 0.65);
-    line-height: 1;
+    line-height: 1.2;
   }
 
   &__skip-btn-text {
     font-size: $font-size-sm;
     color: $color-text-secondary;
     font-weight: $font-weight-medium;
+    line-height: 1.2;
   }
 
   &__skip-btn-count {
     font-size: $font-size-xs;
     color: $color-text-muted;
     font-weight: $font-weight-normal;
+    line-height: 1.2;
+  }
+
+  &__skip-btn-dots {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8rpx;
+  }
+
+  &__skip-btn-dot {
+    width: 8rpx;
+    height: 8rpx;
+    border-radius: 50%;
+    background: currentColor;
+    color: $color-text-secondary;
+    animation: skip-btn-dot-bounce 1s ease-in-out infinite;
+
+    &--2 {
+      animation-delay: 0.15s;
+    }
+
+    &--3 {
+      animation-delay: 0.3s;
+    }
+  }
+
+  @keyframes skip-btn-dot-bounce {
+    0%, 80%, 100% {
+      transform: scale(0.6);
+      opacity: 0.5;
+    }
+    40% {
+      transform: scale(1);
+      opacity: 1;
+    }
   }
 
   // ── Zone B: Full-width glassmium question banner ─────────────────
@@ -898,6 +940,22 @@
     &__skip-row {
       opacity: 1;
       transform: none;
+    }
+
+    &__back-btn,
+    &__skip-btn {
+      transition: none;
+
+      &--active {
+        transform: none;
+        background: transparent;
+      }
+    }
+
+    &__skip-btn-dot {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: scale(1) !important;
     }
 
     &__skeleton-scenario,

@@ -1028,7 +1028,13 @@ export default function PersonalityTestPage() {
           {progress && progress.answered >= 1 && (
             <View
               className='personality-test__back-btn'
-              onClick={handleBack}
+              hoverClass='personality-test__back-btn--active'
+              hoverStartTime={0}
+              hoverStayTime={100}
+              onClick={() => {
+                if (isSubmitting || isSkipping || backReview.isBackReviewMode) return
+                handleBack()
+              }}
               style={{ opacity: isSubmitting || isSkipping || backReview.isBackReviewMode ? 0.4 : 1 }}
             >
               <Text className='personality-test__back-btn-icon'>←</Text>
@@ -1157,12 +1163,28 @@ export default function PersonalityTestPage() {
           <View className='personality-test__skip-row'>
             <View
               className='personality-test__skip-btn'
-              onClick={handleSkip}
+              hoverClass='personality-test__skip-btn--active'
+              hoverStartTime={0}
+              hoverStayTime={100}
+              onClick={() => {
+                if (isSubmitting || isSkipping) return
+                handleSkip()
+              }}
               style={{ opacity: isSubmitting || isSkipping ? 0.4 : 1 }}
             >
-              <Text className='personality-test__skip-btn-icon'>↻</Text>
-              <Text className='personality-test__skip-btn-text'>换一题</Text>
-              <Text className='personality-test__skip-btn-count'>还剩 {skipsRemaining} 次</Text>
+              {isSkipping ? (
+                <View className='personality-test__skip-btn-dots'>
+                  <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--1' />
+                  <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--2' />
+                  <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--3' />
+                </View>
+              ) : (
+                <>
+                  <Text className='personality-test__skip-btn-icon'>↻</Text>
+                  <Text className='personality-test__skip-btn-text'>换一题</Text>
+                  <Text className='personality-test__skip-btn-count'>还剩 {skipsRemaining} 次</Text>
+                </>
+              )}
             </View>
           </View>
         )}
