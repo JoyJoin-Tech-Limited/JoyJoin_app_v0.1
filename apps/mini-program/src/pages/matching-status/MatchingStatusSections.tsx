@@ -66,7 +66,7 @@ export function MatchingStatusPendingSection({
           <View className='matching-status__waiting-mascot'>
             <Image
               className='matching-status__waiting-mascot-img'
-              src={localAsset('/assets/xiaoyue-expressions/xiaoyue-match-waiting.png')}
+              src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-match-waiting.webp')}
               mode='aspectFit'
               lazyLoad
             />

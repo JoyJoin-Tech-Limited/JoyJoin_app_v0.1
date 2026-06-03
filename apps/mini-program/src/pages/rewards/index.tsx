@@ -216,7 +216,7 @@ export default function RewardsPage() {
         <View className='rewards-page__error'>
           <StatusCard
             tone='error'
-            heroSrc={localAsset('/assets/lovart-generic/lovart-generic-error.png')}
+            heroSrc={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             title='奖励加载没成功'
             description='稍后重试，或返回个人主页继续浏览。'
             action={{ label: '重新加载', onClick: handleRefresh }}

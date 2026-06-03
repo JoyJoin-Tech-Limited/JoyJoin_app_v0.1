@@ -574,7 +574,7 @@ export default function IcebreakerSessionPage() {
         <View className='icebreaker__error'>
           <Image
             className='icebreaker__error-hero'
-            src={localAsset('/assets/lovart-generic/lovart-generic-error.png')}
+            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             mode='aspectFit'
             lazyLoad
           />
@@ -690,7 +690,7 @@ export default function IcebreakerSessionPage() {
         <View className='icebreaker__phase-toast'>
           <Image
             className='icebreaker__phase-toast-mascot'
-            src={localAsset('/assets/xiaoyue-expressions/xiaoyue-coach-guide.png')}
+            src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
             mode='aspectFit'
           />
           <View className='icebreaker__phase-toast-text'>{phaseToast.text}</View>

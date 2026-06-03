@@ -228,33 +228,19 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/personality/xiaoyue/xiaoyue-home-welcome.png',
           to: 'dist/assets/xiaoyue-expressions/xiaoyue-home-welcome.png',
         },
-        // Lovart generic empty/error illustrations — fallback states (~97KB).
-        {
-          from: 'src/assets/lovart/lovart-generic-empty.png',
-          to: 'dist/assets/lovart-generic/lovart-generic-empty.png',
-        },
-        {
-          from: 'src/assets/lovart/lovart-generic-error.png',
-          to: 'dist/assets/lovart-generic/lovart-generic-error.png',
-        },
+        // Lovart generic empty/error illustrations — CDN only to save package size.
+        // Previously bundled locally but moved back to CDN to stay under 2MB.
+        // Kept as WebP; CDN delivery handles iOS compatibility via webp={true}.
+
         // UI icons — info labels across the app (~81KB).
         {
           from: 'src/assets/icons/ui',
           to: 'dist/assets/icons/ui',
         },
-        // Xiaoyue expressions — coach-guide, match-waiting, event-detail-tip (~164KB).
-        {
-          from: 'src/assets/personality/xiaoyue/xiaoyue-coach-guide.png',
-          to: 'dist/assets/xiaoyue-expressions/xiaoyue-coach-guide.png',
-        },
-        {
-          from: 'src/assets/personality/xiaoyue/xiaoyue-match-waiting.png',
-          to: 'dist/assets/xiaoyue-expressions/xiaoyue-match-waiting.png',
-        },
-        {
-          from: 'src/assets/personality/xiaoyue/xiaoyue-event-detail-tip.webp',
-          to: 'dist/assets/xiaoyue-expressions/xiaoyue-event-detail-tip.webp',
-        },
+        // NOTE: coach-guide, match-waiting, event-detail-tip moved to CDN
+        // to stay under 2MB package limit. Only home-welcome + loading-system
+        // remain bundled locally as critical first-impression assets.
+
         // NOTE: Large assets remaining on CDN to stay under 2MB:
         //  - Archetype full-body images (~285KB)
         // NOTE: Large CDN-only assets remaining:

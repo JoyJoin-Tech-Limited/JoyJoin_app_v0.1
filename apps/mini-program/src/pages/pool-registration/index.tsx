@@ -621,7 +621,7 @@ export default function PoolRegistrationPage() {
         <Card className='pool-reg__empty'>
           <Image
             className='pool-reg__empty-hero'
-            src={localAsset('/assets/lovart-generic/lovart-generic-error.png')}
+            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             mode='aspectFit'
             lazyLoad
           />
@@ -824,7 +824,7 @@ export default function PoolRegistrationPage() {
           <Card className='pool-reg__panel'>
             <Image
               className='pool-reg__tier-mascot'
-              src={localAsset('/assets/xiaoyue-expressions/xiaoyue-coach-guide.png')}
+              src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
               mode='aspectFit'
               lazyLoad
             />

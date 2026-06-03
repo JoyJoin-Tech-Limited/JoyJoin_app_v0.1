@@ -592,7 +592,7 @@ function AuthenticatedDiscover() {
           <StatusCard
             className='discover-auth__empty-state'
             tone='error'
-            heroSrc={localAsset('/assets/lovart-generic/lovart-generic-error.png')}
+            heroSrc={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             title='获取列表遇到小状况'
             description='下拉刷新一下就好'
           />
@@ -623,7 +623,7 @@ function AuthenticatedDiscover() {
           <StatusCard
             className='discover-auth__empty-state'
             tone='empty'
-            heroSrc={localAsset('/assets/lovart-generic/lovart-generic-empty.png')}
+            heroSrc={cdnAsset('/assets/lovart/lovart-generic-empty.webp')}
             title='还没有适合你的活动'
             description={
               selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID

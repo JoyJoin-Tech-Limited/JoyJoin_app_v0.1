@@ -20,7 +20,7 @@ export function FallbackPhaseView({
       <Card className={`icebreaker__challenge-card icebreaker__challenge-card--${phase}`}>
         <Image
           className='icebreaker__fallback-hero'
-          src={localAsset('/assets/xiaoyue-expressions/xiaoyue-coach-guide.png')}
+          src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
           mode='aspectFit'
           style={{ width: '160rpx', height: '160rpx' }}
         />

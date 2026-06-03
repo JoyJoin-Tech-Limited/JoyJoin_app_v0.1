@@ -69,7 +69,7 @@ export default function SquadUnboxingPage() {
         <View className='squad-unboxing__error'>
           <Image
             className='squad-unboxing__error-hero'
-            src={localAsset('/assets/lovart-generic/lovart-generic-error.png')}
+            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             mode='aspectFit'
             lazyLoad
             ariaLabel='加载失败'

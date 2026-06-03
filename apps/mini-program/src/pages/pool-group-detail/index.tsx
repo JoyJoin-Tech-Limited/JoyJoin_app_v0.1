@@ -113,7 +113,7 @@ export default function PoolGroupDetailPage() {
       <View className='pool-group-detail__error'>
         <Image
           className='pool-group-detail__error-hero'
-          src={localAsset('/assets/lovart-generic/lovart-generic-error.png')}
+          src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
           mode='aspectFit'
           lazyLoad
         />

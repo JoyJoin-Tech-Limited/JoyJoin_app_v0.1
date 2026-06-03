@@ -269,7 +269,7 @@ export default function FinalStage({
                   <Image
                     className='personality-results__xiaoyue-avatar'
                     mode='aspectFit'
-                    src={localAsset('/assets/xiaoyue-expressions/xiaoyue-coach-guide.png')}
+                    src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
                   />
                   <View className='personality-results__xiaoyue-bubble'>
                     <Text className='personality-results__xiaoyue-bubble-headline'>
@@ -304,7 +304,7 @@ export default function FinalStage({
                   <Image
                     className='personality-results__xiaoyue-avatar'
                     mode='aspectFit'
-                    src={localAsset('/assets/xiaoyue-expressions/xiaoyue-coach-guide.png')}
+                    src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
                   />
                   <View className='personality-results__xiaoyue-bubble'>
                     <Text className='personality-results__xiaoyue-bubble-headline'>这个命格为什么像你</Text>
