@@ -56,7 +56,7 @@ This inventory is derived from the registered paths in [`../apps/mini-program/sr
 
 | Page path | Role | Purpose | Notes |
 | --- | --- | --- | --- |
-| `pages/index/index` | Root entry | Mascot-led landing page (Xiaoyue hero, staggered entrance, BondingCloud particle animation, icebreaker game preview) for signed-out users; redirects signed-in users to the server-owned `nextStep`. | Uses `useStaggerMount` + `_stagger.scss` for entrance animation. `BondingCloud` with benchmark-aware particle count and reduced-motion support. Legal-gated primary CTA with shake feedback; secondary returning-user login CTA. Haptics on all tap surfaces. Full exit animation coverage. |
+| `pages/index/index` | Root entry | Mascot-led landing page (Xiaoyue hero, staggered entrance, BondingCloud particle animation, **icebreaker phase carousel**) for signed-out users; redirects signed-in users to the server-owned `nextStep`. | Uses `useStaggerMount` + `_stagger.scss` for entrance animation. `BondingCloud` with benchmark-aware particle count and reduced-motion support. **`PhaseIconCarousel`** renders 6 phase icons in a 3D turntable with auto-rotate (1.3–2.6s organic intervals), swipe gesture, direction randomization, cycle shuffle, birth rotation, glow pulse, and drop-shadow depth. Reduced-motion / low-end fallback to static grid. Legal-gated primary CTA with shake feedback; secondary returning-user login CTA. Haptics on all tap surfaces. Full exit animation coverage. |
 | `pages/login/index` | Returning-user auth | Runs mini-program-native WeChat login and resumes the authenticated journey. | Uses `Taro.login()` via [`../apps/mini-program/src/lib/api/api.ts`](../apps/mini-program/src/lib/api/api.ts). |
 
 ### Onboarding subpackage (`pages/onboarding/*`)

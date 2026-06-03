@@ -25,8 +25,8 @@ name: Auto-Merge PRs
 
 on:
   schedule:
-    # Every 30 min during active hours (approx 08:00-22:00 CST)
-    - cron: '0,30 0-14 * * *'
+    # Every 4 hours during active hours (reduced from 30 min since no auto-PRs exist)
+    - cron: '0 0-14/4 * * *'
   workflow_dispatch:
     inputs:
       live:

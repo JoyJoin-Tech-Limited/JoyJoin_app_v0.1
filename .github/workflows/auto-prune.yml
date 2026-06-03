@@ -81,7 +81,8 @@ jobs:
         run: |
           ARGS=""
 
-          if [ "${{ inputs.live }}" = "true" ]; then
+          # Scheduled runs execute live; manual dispatch defaults to dry-run
+          if [ "${{ inputs.live }}" = "true" ] || [ "${{ github.event_name }}" = "schedule" ]; then
             ARGS="$ARGS --live"
           fi
 

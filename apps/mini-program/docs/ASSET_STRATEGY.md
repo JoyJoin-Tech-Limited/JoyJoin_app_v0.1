@@ -76,7 +76,7 @@ Assets copied by `vite-plugin-static-copy` in `config/index.ts`.
 ### Landing Page (critical first impression)
 | Asset | Path | Size | Used in |
 |-------|------|------|---------|
-| Phase icons (6) | `assets/landing-phase-icons/` | ~139KB | Landing page game preview grid |
+| Phase icons (6) | `assets/landing-phase-icons/` | ~139KB | Landing page `PhaseIconCarousel` — 3D turntable with auto-rotate, swipe gesture, organic random intervals, direction randomization, and cycle shuffle. Reduced-motion and low-end fallback to static grid. |
 | Xiaoyue welcome | `assets/xiaoyue-expressions/xiaoyue-home-welcome.png` | ~63KB | Landing + center-hub header |
 | Xiaoyue loading | `assets/xiaoyue-expressions/xiaoyue-loading-system.png` | ~47KB | Loading screen fallback |
 

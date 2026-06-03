@@ -91,7 +91,8 @@ jobs:
       - name: Run Auto-Fix analysis
         id: fix
         env:
-          GITHUB_TOKEN: ${{ secrets.AUTO_DEBUG_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.AUTO_DEBUG_TOKEN || github.token }}
+          GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
         run: |
@@ -118,7 +119,7 @@ jobs:
           if [ "${{ steps.fix.outputs.exit_code }}" = "0" ]; then
             echo "✅ Auto-Fix: No auto-fixable bugs found."
           elif [ "${{ steps.fix.outputs.exit_code }}" = "1" ]; then
-            echo "🔧 Auto-Fix: Bugs found and fix PR created."
+            echo "🔧 Auto-Fix: Bugs found and fix PR attempted."
           else
             echo "❌ Auto-Fix: Error (exit code ${{ steps.fix.outputs.exit_code }})."
           fi

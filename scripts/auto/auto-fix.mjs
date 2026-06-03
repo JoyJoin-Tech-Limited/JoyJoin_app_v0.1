@@ -139,9 +139,6 @@ const BUG_PATTERNS = [
     },
     /** @returns {string} */
     getFix(lineText, lineNum) {
-      catch (e) {
-        console.error('Operation failed:', e);
-      }
       const match = lineText.match(/catch\s*(\([^)]*\))\s*\{\s*\}/);
       if (match) {
         const indent = lineText.match(/^(\s*)/)?.[1] || '';
@@ -262,8 +259,7 @@ const BUG_PATTERNS = [
             !line.includes('= 0') && !line.includes('= false') && !line.includes('= true') &&
             !line.includes('= null') && !line.includes('= undefined') && !line.includes('= ""') &&
             !line.includes("= ''") && !line.includes('= {}') && !line.includes('= []')) {
-          const hasAsync = lines.some(l => l.includes('async ') || l.includes('Promise') || l.includes('.then('))
-            .catch(err => console.error('Promise error:', err));
+          const hasAsync = lines.some(l => l.includes('async ') || l.includes('Promise') || l.includes('.then('));
           if (hasAsync) {
             findings.push({ file, line: i + 1, snippet: line.trim(), context: 'Module-level mutable state in async context' });
           }

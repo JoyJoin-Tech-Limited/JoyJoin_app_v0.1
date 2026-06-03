@@ -657,8 +657,26 @@ async function createDocPR(analysis) {
       return true;
     } else {
       console.error(`❌ PR creation failed: ${JSON.stringify(prData)}`);
-      git(['checkout', baseBranch]);
-      return false;
+      // Fallback: try gh CLI (bypasses GITHUB_TOKEN restrictions in scheduled workflows)
+      console.log('   Retrying via gh CLI...');
+      const ghProc = spawnSync('gh', [
+        'pr', 'create',
+        '--title', `[auto-docs] Documentation update - ${new Date().toISOString().split('T')[0]}`,
+        '--body', bodyLines.join('\n'),
+        '--head', branchName,
+        '--base', baseBranch,
+        '--label', 'auto-docs',
+      ], { encoding: 'utf8', timeout: 30000 });
+      if (ghProc.status === 0) {
+        const prUrl = ghProc.stdout.trim();
+        console.log(`✅ Created PR via gh CLI: ${prUrl}`);
+        git(['checkout', baseBranch]);
+        return true;
+      } else {
+        console.error(`❌ gh CLI also failed: ${ghProc.stderr || ghProc.stdout}`);
+        git(['checkout', baseBranch]);
+        return false;
+      }
     }
   } catch (err) {
     console.error(`❌ PR creation error: ${err}`);
