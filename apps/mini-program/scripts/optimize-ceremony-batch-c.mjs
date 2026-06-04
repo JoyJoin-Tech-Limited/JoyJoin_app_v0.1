@@ -16,8 +16,8 @@ import path from 'node:path'
 
 const SRC_DIR = 'apps/mini-program/assets-source/lovart/batch-c'
 const OUT_DIR = 'apps/mini-program/src/assets/ceremony'
-const MAX_WIDTH = 600
-const WEBP_QUALITY = 55
+const MAX_WIDTH = 500
+const WEBP_QUALITY = 30
 const WEBP_EFFORT = 6
 
 const files = (await readdir(SRC_DIR)).filter((f) => f.endsWith('.png')).sort()

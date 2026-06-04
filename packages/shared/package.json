@@ -2,6 +2,7 @@
   "name": "@joyjoin/shared",
   "version": "1.0.0",
   "private": true,
+  "sideEffects": false,
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

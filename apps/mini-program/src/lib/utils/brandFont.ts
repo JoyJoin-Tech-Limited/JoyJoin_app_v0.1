@@ -27,11 +27,11 @@ let englishFontLoaded = false
 
 /**
  * Must match `$font-en-brand` first family name in `styles/_variables.scss`.
- * Quicksand is 124KB — bundled locally for instant load.
+ * Quicksand is 14KB (Latin-subset WOFF2) — bundled locally for instant load.
  */
 export const EN_BRAND_FONT_FAMILY = 'Quicksand'
 
-const EN_BRAND_FONT_SOURCE_PATH = localAsset('/assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf')
+const EN_BRAND_FONT_SOURCE_PATH = localAsset('/assets/fonts/Quicksand/Quicksand-VariableFont_wght.woff2')
 
 /**
  * Load the minimal Alimama subset (66KB, local bundle).

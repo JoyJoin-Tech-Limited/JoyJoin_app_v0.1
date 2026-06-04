@@ -273,7 +273,18 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
     framework: 'react',
     compiler: {
       type: 'vite',
-      vitePlugins: []
+      vitePlugins: [{
+        name: 'joyjoin-build',
+        config() {
+          return {
+            build: {
+              esbuild: {
+                drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+              },
+            },
+          }
+        },
+      }],
     },
     build: {
       target: 'es2020'
@@ -290,7 +301,18 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
       },
       compiler: {
         type: 'vite',
-        vitePlugins: []
+        vitePlugins: [{
+          name: 'joyjoin-mini-build',
+          config() {
+            return {
+              build: {
+                esbuild: {
+                  drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+                },
+              },
+            }
+          },
+        }],
       },
       postcss: {
         pxtransform: {
