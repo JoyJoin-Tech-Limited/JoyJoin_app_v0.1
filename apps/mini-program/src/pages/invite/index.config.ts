@@ -1,1 +1,5 @@
-export default definePageConfig({ navigationBarTitleText: '邀请好友' })
+export default definePageConfig({
+  navigationBarTitleText: '邀请好友',
+  enableShareAppMessage: true,
+  enableShareTimeline: true,
+})

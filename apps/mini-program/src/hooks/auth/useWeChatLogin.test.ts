@@ -19,7 +19,7 @@ describe('useWeChatLogin navigation handoff', () => {
   })
 
   it('preserves auth bootstrap order before the navigation handoff', () => {
-    const authenticateCall = 'await authenticateMiniProgramUser()'
+    const authenticateCall = 'await authenticateMiniProgramUser('
     const getUserStateCall = 'const userState = await getUserState()'
     const seedSessionCall = 'seedMiniProgramAuthSession(userState, queryClient)'
     const navigateCall = "await navigateToMiniProgramNextStep(userState.nextStep, { mode: 'root' })"

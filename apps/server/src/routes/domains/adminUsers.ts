@@ -9,7 +9,7 @@ import { logAdminAudit } from "../../lib/adminAuditLogger";
 import { storage } from "../../storage";
 import { getMatchingMetricsSnapshot } from "../../matchingMetrics";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
-import { assessmentSessions, eventPoolRegistrations, eventPoolGroups, connections, matchHistory, userInterests, poolMatchingLogs, users, events } from "@shared/schema";
+import { assessmentSessions, eventPoolRegistrations, eventPoolGroups, connections, matchHistory, userInterests, poolMatchingLogs, users, events, payments, subscriptions } from "@shared/schema";
 
 function calculateProfileCompletenessSimple(user: any): { score: number; starRating: number; missingFields: string[] } {
   const fields = [
@@ -77,11 +77,16 @@ export function registerAdminUserRoutes(app: Express): void {
     try {
       const allUsers = await storage.getAllUsers();
       
-      // Calculate stats
       const totalUsers = allUsers.length;
-      const subscribedUsers = 0; // TODO: Count from subscriptions table
-      const newUsersThisWeek = 0; // TODO: Count users created in last 7 days
-      const userGrowth = 0; // TODO: Calculate growth percentage
+      const [subscribedUsersResult, newUsersThisWeekResult, monthlyRevenueResult] = await Promise.all([
+        db.execute(sql`SELECT COUNT(*)::int as count FROM ${subscriptions} WHERE status = 'active'`),
+        db.execute(sql`SELECT COUNT(*)::int as count FROM ${users} WHERE created_at >= NOW() - INTERVAL '7 days'`),
+        db.execute(sql`SELECT COALESCE(SUM(final_amount), 0)::int as total FROM ${payments} WHERE status = 'completed' AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM NOW()) AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM NOW())`),
+      ]);
+      const subscribedUsers = Number((subscribedUsersResult.rows[0] as any).count) || 0;
+      const newUsersThisWeek = Number((newUsersThisWeekResult.rows[0] as any).count) || 0;
+      const monthlyRevenue = Number((monthlyRevenueResult.rows[0] as any).total) || 0;
+      const userGrowth = totalUsers > 0 ? Math.round((newUsersThisWeek / totalUsers) * 100) : 0;
       
       // Count events (for now using blindBoxEvents)
       const allBlindBoxEvents = await storage.getAllBlindBoxEvents();
@@ -91,9 +96,6 @@ export function registerAdminUserRoutes(app: Express): void {
         const eventDate = new Date(event.createdAt || '');
         return eventDate >= thisMonth;
       }).length;
-      
-      // Revenue stats (placeholder)
-      const monthlyRevenue = 0; // TODO: Calculate from payments table
       
       // Personality distribution (archetypes)
       const personalityDistribution = allUsers.reduce((acc: Record<string, number>, user: any) => {

@@ -418,9 +418,113 @@
   margin-top: $spacing-sm;
 }
 
+// ── D5 — Recap stamp seal (Batch D) ──────────────────────────────
+.icebreaker__recap-stamp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-top: $spacing-lg;
+  padding: 0 $container-padding;
+}
+
+.icebreaker__recap-stamp-img {
+  width: 280rpx;
+  height: 280rpx;
+  display: block;
+  opacity: 0;
+  transform: scale(1.4) rotate(-8deg);
+  transform-origin: center center;
+  animation: recap-stamp-press 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s forwards;
+}
+
+.icebreaker__recap-stamp-caption {
+  @include type-caption;
+  color: $color-primary;
+  font-weight: $font-weight-bold;
+  margin-top: $spacing-xs;
+  opacity: 0;
+  animation: recap-stamp-caption-in 0.4s ease-out 0.55s forwards;
+}
+
+// ── C6 — "See you next time" ceremony end overlay (Batch C) ──────
+.icebreaker__recap-ceremony-end {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: $spacing-xl $container-padding $spacing-md;
+  padding: $spacing-xl $spacing-md;
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    rgba($color-primary, 0.06) 0%,
+    rgba($color-primary, 0.14) 100%
+  );
+  border-radius: $card-radius;
+  overflow: hidden;
+}
+
+.icebreaker__recap-ceremony-end-img {
+  width: 480rpx;
+  height: 320rpx;
+  display: block;
+  opacity: 0;
+  transform: translateY(16rpx);
+  animation: recap-ceremony-end-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
+}
+
 // ── Leave button ─────────────────────────────────────────────────
 .icebreaker__recap-leave-btn {
   width: 100%;
   max-width: 560rpx;
-  margin-top: $spacing-xs;
+  margin-top: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+// ── D5/C6 Keyframes ──────────────────────────────────────────────
+@keyframes recap-stamp-press {
+  0% {
+    opacity: 0;
+    transform: scale(1.4) rotate(-8deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.92) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-3deg);
+  }
+}
+
+@keyframes recap-stamp-caption-in {
+  from {
+    opacity: 0;
+    transform: translateY(6rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes recap-ceremony-end-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icebreaker__recap-stamp-img,
+  .icebreaker__recap-stamp-caption,
+  .icebreaker__recap-ceremony-end-img {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }

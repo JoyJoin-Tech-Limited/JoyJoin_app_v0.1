@@ -1,4 +1,4 @@
-<cover-view class="joy-custom-tab-bar">
+<cover-view class="joy-custom-tab-bar {{lowEnd ? 'joy-custom-tab-bar--low-end' : ''}}">
   <cover-view class="joy-custom-tab-bar__surface">
     <!-- Background with semi-circular notch -->
     <cover-image
@@ -7,39 +7,20 @@
       mode="scaleToFill"
     />
 
-      <!-- Semi-raised center CTA -->
-    <cover-view
-      class="joy-custom-tab-bar__center {{selected === 4 ? 'joy-custom-tab-bar__center--selected' : ''}}"
-      bindtap="handleCenterTap"
-      hover-class="joy-custom-tab-bar__center--pressed"
-      hover-stay-time="100"
-    >
-      <cover-view class="joy-custom-tab-bar__center-outer-ring">
-        <cover-view class="joy-custom-tab-bar__center-button">
-          <cover-image
-            class="joy-custom-tab-bar__center-logo"
-            src="../assets/joyjoin-logo-tab.png"
-          />
-          <cover-view wx:if="{{center.showBadge}}" class="joy-custom-tab-bar__center-badge"></cover-view>
-        </cover-view>
-      </cover-view>
-      <cover-view class="joy-custom-tab-bar__center-label">{{center.label}}</cover-view>
-    </cover-view>
-
-    <!-- Tab row: left 2 + gap + right 2 -->
+      <!-- Tab row: left 2 + gap + right 2 -->
     <cover-view class="joy-custom-tab-bar__row">
       <!-- Left side tabs -->
       <cover-view class="joy-custom-tab-bar__side">
         <cover-view
           wx:for="{{leftTabs}}"
           wx:key="key"
-          class="joy-custom-tab-bar__item"
+          class="joy-custom-tab-bar__item {{selected === item.index ? 'joy-custom-tab-bar__item--active' : ''}}"
           data-index="{{item.index}}"
           data-url="{{item.url}}"
           data-tab="{{item.key}}"
           bindtap="handleTabTap"
           hover-class="joy-custom-tab-bar__item--pressed"
-          hover-stay-time="100"
+          hover-stay-time="150"
         >
           <cover-view class="joy-custom-tab-bar__item-icon-wrap">
             <cover-image
@@ -70,13 +51,13 @@
         <cover-view
           wx:for="{{rightTabs}}"
           wx:key="key"
-          class="joy-custom-tab-bar__item"
+          class="joy-custom-tab-bar__item {{selected === item.index ? 'joy-custom-tab-bar__item--active' : ''}}"
           data-index="{{item.index}}"
           data-url="{{item.url}}"
           data-tab="{{item.key}}"
           bindtap="handleTabTap"
           hover-class="joy-custom-tab-bar__item--pressed"
-          hover-stay-time="100"
+          hover-stay-time="150"
         >
           <cover-view class="joy-custom-tab-bar__item-icon-wrap">
             <cover-image
@@ -100,5 +81,26 @@
         </cover-view>
       </cover-view>
     </cover-view>
+  </cover-view>
+
+  <!-- Semi-raised center CTA -->
+  <cover-view
+    class="joy-custom-tab-bar__center {{selected === 4 ? 'joy-custom-tab-bar__center--selected' : ''}}"
+    bindtap="handleCenterTap"
+    hover-class="joy-custom-tab-bar__center--pressed"
+    hover-stay-time="150"
+    role="button"
+    aria-label="{{center.label || 'JoyJoin 中心入口'}}"
+  >
+    <cover-view class="joy-custom-tab-bar__center-outer-ring">
+      <cover-view class="joy-custom-tab-bar__center-button">
+        <cover-image
+          class="joy-custom-tab-bar__center-logo"
+          src="../assets/joyjoin-logo-tab.png"
+        />
+        <cover-view wx:if="{{center.showBadge}}" class="joy-custom-tab-bar__center-badge"></cover-view>
+      </cover-view>
+    </cover-view>
+    <cover-view class="joy-custom-tab-bar__center-label">{{center.label}}</cover-view>
   </cover-view>
 </cover-view>

@@ -1,5 +1,5 @@
-import { View, Text } from '@tarojs/components'
-import { useState, useEffect, useCallback } from 'react'
+import { View, Text, Image } from '@tarojs/components'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
@@ -13,6 +13,9 @@ import IdentityReveal from '../../../components/reveal/IdentityReveal'
 import CardFlip from '../../../components/reveal/CardFlip'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
+import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
+import { MILESTONE_BADGES } from '../../../lib/milestoneBadges'
+import { haptics } from '../../../lib/utils/haptics'
 import './RecapPhaseView.scss'
 
 function RecapAiFeedbackBar({
@@ -169,6 +172,14 @@ export function RecapPhaseView({
   const [showBurst, setShowBurst] = useState(false)
   const [headlineRevealed, setHeadlineRevealed] = useState(false)
   const [shareFlipped, setShareFlipped] = useState(false)
+  // D5 — Fires success haptic only once per recap-render when the stamp seals
+  const stampHapticFiredRef = useRef(false)
+  const handleStampSealed = useCallback(() => {
+    if (!stampHapticFiredRef.current) {
+      stampHapticFiredRef.current = true
+      if (!shouldReduceMotion) haptics('success')
+    }
+  }, [shouldReduceMotion])
 
   // Celebration burst on mount
   useEffect(() => {
@@ -458,6 +469,30 @@ export function RecapPhaseView({
           content='今晚很开心！期待下次和你再见面~'
           pose='casual'
           tail
+        />
+      </View>
+
+      {/* D5 — "Stamp of you" seal at the end of the recap (Batch D) */}
+      <View className='icebreaker__recap-stamp'>
+        <Image
+          className='icebreaker__recap-stamp-img'
+          mode='aspectFit'
+          src={MILESTONE_BADGES.recapStamp}
+          ariaLabel=""
+          lazyLoad
+          onLoad={handleStampSealed}
+        />
+        <Text className='icebreaker__recap-stamp-caption'>今晚的破冰纪念章</Text>
+      </View>
+
+      {/* C6 — "See you next time" ceremony end overlay (Batch C) */}
+      <View className='icebreaker__recap-ceremony-end'>
+        <Image
+          className='icebreaker__recap-ceremony-end-img'
+          mode='aspectFit'
+          src={CEREMONY_HEROES.seeYouNextTime}
+          ariaLabel=""
+          lazyLoad
         />
       </View>
 

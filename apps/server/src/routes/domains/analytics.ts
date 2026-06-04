@@ -65,11 +65,26 @@ const DISCOVER_EVENT_TYPES = [
   "registration_abandoned",
   "promo_banner_impression",
   "promo_banner_cta_tap",
+  "promo_banner_image_error",
+  "promo_banner_image_retry",
 ] as const;
 
 type DiscoverEventType = (typeof DISCOVER_EVENT_TYPES)[number];
 
 const ALLOWED_DISCOVER_EVENT_TYPES = new Set<DiscoverEventType>(DISCOVER_EVENT_TYPES);
+
+const AUTH_EVENT_TYPES = [
+  "auth_revalidation_started",
+  "auth_revalidation_succeeded",
+  "auth_revalidation_failed",
+  "gate_timeout",
+  "gate_retry",
+  "gate_dismiss",
+] as const;
+
+type AuthEventType = (typeof AUTH_EVENT_TYPES)[number];
+
+const ALLOWED_AUTH_EVENT_TYPES = new Set<AuthEventType>(AUTH_EVENT_TYPES);
 
 const MAX_METADATA_BYTES = 4_096;
 const MAX_POOL_ID_LENGTH = 120;
@@ -218,7 +233,7 @@ export function registerAnalyticsRoutes(app: Express): void {
    * Discover page conversion funnel instrumentation.
    * Tracks: pool_card_tap, pool_card_impression, registration_start,
    * registration_complete, registration_abandoned, promo_banner_impression,
-   * promo_banner_cta_tap.
+   * promo_banner_cta_tap, promo_banner_image_error, promo_banner_image_retry.
    *
    * Fire-and-forget. Always returns 200. Silent fail.
    */
@@ -258,6 +273,54 @@ export function registerAnalyticsRoutes(app: Express): void {
       return res.status(200).json({ success: true });
     } catch (error) {
       logger.warn("discover analytics write failed (non-fatal)", {
+        request_id: req.requestId,
+        error: String(error),
+      });
+      return res.status(200).json({ success: false, error: "analytics write failed" });
+    }
+  });
+
+  /**
+   * POST /api/analytics/auth
+   *
+   * Auth revalidation and index-gate event instrumentation.
+   * Tracks: auth_revalidation_started, auth_revalidation_succeeded,
+   * auth_revalidation_failed, gate_timeout, gate_retry, gate_dismiss.
+   *
+   * Fire-and-forget. Always returns 200. Silent fail.
+   * Reuses discoverAnalyticsLimiter (120 req/min).
+   */
+  app.post("/api/analytics/auth", discoverAnalyticsLimiter, async (req: Request, res) => {
+    try {
+      const { eventType, metadata, timestamp } = req.body as {
+        eventType?: unknown;
+        metadata?: unknown;
+        timestamp?: unknown;
+      };
+
+      if (
+        typeof eventType !== "string" ||
+        !ALLOWED_AUTH_EVENT_TYPES.has(eventType as AuthEventType)
+      ) {
+        return res.status(200).json({ success: false, error: "invalid eventType" });
+      }
+
+      const normalizedMetadata = sanitizeMetadata(metadata);
+      const userId = req.session.userId ?? null;
+      const sessionId = req.sessionID ?? null;
+
+      await db.insert(discoverAnalyticsEvents).values({
+        userId,
+        sessionId,
+        eventType,
+        poolId: null,
+        metadata: normalizedMetadata,
+        timestamp: parseTimestamp(timestamp),
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      logger.warn("auth analytics write failed (non-fatal)", {
         request_id: req.requestId,
         error: String(error),
       });

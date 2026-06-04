@@ -315,3 +315,14 @@ Connections Tab → [Load] → GET /api/my-connections
 
 ### 4.8 ~~Pool Group Detail — No Icebreaker CTA~~ ✅ RESOLVED
 - See 4.5 above. Both Event Detail and Pool Group Detail now have explicit icebreaker entry points.
+
+---
+
+## 5. Development Conventions
+
+### 5.1 Dev-Only Mock Pool Data
+- **Location:** `apps/mini-program/src/lib/dev/devPoolMocks.ts`
+- **Export:** `getDevMockPools(): EventPoolSummary[]`
+- **Purpose:** Last-resort fallback for the discover feed when both the composite `/api/shell/discover` endpoint and the legacy `getEventPools` request fail in development. Lets local dev iterate on UI without a live backend.
+- **Guard:** Consumer in `pages/discover/index.tsx` is wrapped in a `NODE_ENV === 'development'` check. Production builds never reach this code path.
+- **Pattern:** When a page needs dev-mode fallback data, extract the mock into `apps/mini-program/src/lib/dev/<page>Mocks.ts` (one file per surface) so the page file stays focused on composition and the mock surface is easy to audit/expand.

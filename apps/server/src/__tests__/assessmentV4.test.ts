@@ -182,6 +182,117 @@ function cookieHeader(response: Response) {
   return raw ? raw.split(";")[0] : "";
 }
 
+describe("POST /api/assessment/v4/start", () => {
+  beforeEach(() => {
+    mockStorage = createMockStorage();
+    vi.clearAllMocks();
+  });
+
+  it("creates a new session for a logged-in user with no existing session", async () => {
+    await withServer(async (baseUrl) => {
+      const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
+      const cookie = cookieHeader(loginRes);
+
+      const response = await fetch(`${baseUrl}/api/assessment/v4/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", cookie },
+        body: JSON.stringify({}),
+      });
+
+      expect(response.status).toBe(200);
+      const body: any = await response.json();
+      expect(body.isComplete).toBe(false);
+      expect(body.nextQuestion).not.toBeNull();
+      expect(body.phase).toBe("post_signup");
+      expect(mockStorage.createAssessmentSession).toHaveBeenCalled();
+    });
+  });
+
+  it("resumes an existing incomplete session for a logged-in user", async () => {
+    await withServer(async (baseUrl) => {
+      const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
+      const cookie = cookieHeader(loginRes);
+
+      // Create an existing session for user-123 with one answer
+      const existingSession = await mockStorage.createAssessmentSession({
+        phase: "post_signup",
+        userId: "user-123",
+      });
+      await mockStorage.createAssessmentAnswer({
+        sessionId: existingSession.id,
+        questionId: "Q1",
+        questionLevel: 1,
+        selectedOption: "A",
+        traitScores: Q1.options.find((o) => o.value === "A")!.traitScores,
+      });
+
+      // Clear mock calls from setup so we can assert on API behavior only
+      mockStorage.createAssessmentSession.mockClear();
+
+      const response = await fetch(`${baseUrl}/api/assessment/v4/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", cookie },
+        body: JSON.stringify({}),
+      });
+
+      expect(response.status).toBe(200);
+      const body: any = await response.json();
+      expect(body.sessionId).toBe(existingSession.id);
+      expect(body.isComplete).toBe(false);
+      expect(body.nextQuestion).not.toBeNull();
+      expect(body.progress.answered).toBe(1);
+      expect(mockStorage.createAssessmentSession).not.toHaveBeenCalled();
+    });
+  });
+
+  it("starts fresh when a logged-in user has a stale session (all answered but not marked complete)", async () => {
+    await withServer(async (baseUrl) => {
+      const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
+      const cookie = cookieHeader(loginRes);
+
+      // Create a stale session for user-123: incomplete row but with all questions answered
+      const staleSession = await mockStorage.createAssessmentSession({
+        phase: "post_signup",
+        userId: "user-123",
+      });
+
+      // Seed every question so the engine has no next question
+      for (const q of questionsV4) {
+        await mockStorage.createAssessmentAnswer({
+          sessionId: staleSession.id,
+          questionId: q.id,
+          questionLevel: q.level,
+          selectedOption: q.options[0].value,
+          traitScores: {},
+        });
+      }
+
+      const response = await fetch(`${baseUrl}/api/assessment/v4/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", cookie },
+        body: JSON.stringify({}),
+      });
+
+      expect(response.status).toBe(200);
+      const body: any = await response.json();
+      // Should NOT return the stale session as complete
+      expect(body.isComplete).toBe(false);
+      expect(body.nextQuestion).not.toBeNull();
+      // Should be a brand-new session
+      expect(body.sessionId).not.toBe(staleSession.id);
+
+      // Stale session should have been marked completed
+      expect(mockStorage.updateAssessmentSession).toHaveBeenCalledWith(
+        staleSession.id,
+        expect.objectContaining({ phase: "completed", completedAt: expect.any(Date) })
+      );
+
+      // User flag should have been synced so nextStep doesn't loop
+      expect(mockStorage.markPersonalityTestComplete).toHaveBeenCalledWith("user-123");
+    });
+  });
+});
+
 describe("PUT /api/assessment/v4/:sessionId/answer", () => {
   beforeEach(() => {
     mockStorage = createMockStorage();

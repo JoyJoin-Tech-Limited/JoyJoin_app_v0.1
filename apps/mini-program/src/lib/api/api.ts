@@ -293,8 +293,14 @@ export type UserState = AuthUserResponse
  * Establishes the authenticated session cookie for the follow-up auth bootstrap.
  * No web OAuth redirect is involved — this is mini-program-only.
  */
-export async function authenticateMiniProgramUser(): Promise<void> {
-  await postMiniProgramWeChatLogin('/api/auth/wechat/login', {}, '无法建立微信登录会话')
+export async function authenticateMiniProgramUser(input?: {
+  referralCode?: string
+}): Promise<void> {
+  const payload: Record<string, unknown> = {}
+  if (input?.referralCode) {
+    payload.referralCode = input.referralCode
+  }
+  await postMiniProgramWeChatLogin('/api/auth/wechat/login', payload, '无法建立微信登录会话')
 }
 
 export async function authenticateMiniProgramUserWithTest(input: {

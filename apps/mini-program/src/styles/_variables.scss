@@ -130,9 +130,10 @@ $card-radius:      32rpx;
 $card-radius-sm:   24rpx;
 $radius-pill:      56rpx;
 $input-height:     88rpx;
-$tab-bar-height:   120rpx;
-$center-tab-button-size: 140rpx;
-$center-tab-button-lift: 64rpx;
+$tab-bar-height:        128rpx;  // Surface height
+$tab-bar-root-height:   182rpx;  // Full footprint including center protrusion
+$center-tab-button-size: 136rpx;
+$center-tab-button-lift: 42rpx;
 
 // ─── Shadows ──────────────────────────────────────────────────────
 $shadow-sm:   0 2rpx 12rpx rgba(0, 0, 0, 0.07);

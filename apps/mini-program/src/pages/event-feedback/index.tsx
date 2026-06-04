@@ -1,12 +1,14 @@
-import { View, Text, Button, Textarea, Image } from '@tarojs/components'
+import { View, Text, Button, Textarea, Image, ScrollView } from '@tarojs/components'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import Taro, { useRouter } from '@tarojs/taro'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { getMascotDisplayName } from '../../lib/mascot/mascotDisplay'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
+import { CEREMONY_HEROES } from '../../lib/ceremonyHeroes'
+import { haptics } from '../../lib/utils/haptics'
 import { logInfo, logError } from '../../lib/utils/logger'
 import { TOAST_DEFAULT_MS } from '../../lib/utils/uiConstants'
 import RatingFace from '../../components/ui/RatingFace'
@@ -45,6 +47,16 @@ export default function EventFeedbackPage() {
   const [mutualMatches, setMutualMatches] = useState<MutualMatch[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
+  // C5 — Fires success haptic only once per revealed-entry (ref guard prevents re-fire on re-render)
+  const revealedHapticFiredRef = useRef(false)
+
+  // C5 — Fire success haptic when entering the revealed step (effect, not render)
+  useEffect(() => {
+    if (step === 'revealed' && !revealedHapticFiredRef.current) {
+      revealedHapticFiredRef.current = true
+      haptics('success')
+    }
+  }, [step])
 
   const { data: participants = [], isLoading: participantsLoading } = useQuery<Participant[]>({
     queryKey: ['mini-program', 'event-participants', eventId],
@@ -115,8 +127,22 @@ export default function EventFeedbackPage() {
   if (step === 'revealed') {
     const hasMatches = mutualMatches.length > 0
     return (
-      <View className='event-feedback'>
+      <View className='event-feedback event-feedback--revealed'>
+        <ScrollView
+          className='event-feedback__success-scroll'
+          scrollY
+          enhanced
+          showScrollbar={false}
+        >
         <View className='event-feedback__success'>
+          {/* C5 — Ceremony hero backdrop for the thanks moment (Batch C) */}
+          <Image
+            className='event-feedback__success-hero'
+            mode='aspectFit'
+            src={CEREMONY_HEROES.eventFeedbackThanks}
+            ariaLabel=""
+            lazyLoad
+          />
           <Image
             className='event-feedback__success-mascot'
             mode='aspectFit'
@@ -167,6 +193,7 @@ export default function EventFeedbackPage() {
             返回
           </Button>
         </View>
+        </ScrollView>
       </View>
     )
   }

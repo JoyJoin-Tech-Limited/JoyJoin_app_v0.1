@@ -62,7 +62,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6rpx;
-    height: 48rpx;
+    min-height: 88rpx;
     padding: 0 20rpx;
     border-radius: 999rpx;
     background: rgba($color-surface, 0.7);
@@ -103,23 +103,28 @@
     white-space: nowrap;
   }
 
-  &__greeting {
+  &__greeting-line {
     display: block;
     font-family: $font-cn-display;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__greeting {
+    display: inline;
     font-size: $font-size-xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
-    line-height: 1.3;
-    @include text-truncate;
   }
 
   &__greeting-prompt {
-    display: block;
-    font-family: $font-cn-display;
-    font-size: $font-size-lg;
+    display: inline;
+    font-size: $font-size-md;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
-    line-height: 1.35;
+    margin-left: 8rpx;
   }
 
   &__subtitle {
@@ -243,7 +248,7 @@
 
   // ── Bottom safe-area reserve ──────────────────────────────────
   &__spacer {
-    @include safe-area-bottom-padding(padding-bottom, $tab-bar-height + $spacing-lg);
+    @include safe-area-bottom-padding(padding-bottom, $tab-bar-root-height + $spacing-lg);
     height: 0;
   }
 }
@@ -463,7 +468,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 68rpx;
+    min-height: 88rpx;
     border-radius: 20rpx;
     padding: 0 $spacing-md;
 
@@ -563,9 +568,11 @@
   }
 
   &__fill {
+    width: 100%;
     height: 100%;
     border-radius: 3rpx;
-    transition: width 0.4s ease-out;
+    transform-origin: left center;
+    transition: transform 0.4s ease-out;
   }
 
   &__score {

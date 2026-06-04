@@ -634,6 +634,19 @@ WHERE id = user_id;
 - Visible attendee list
 - First-come-first-served
 
+#### Discover Hero Promo Banner (top-of-page)
+
+- **Component:** `HeroPromoBanner` (`apps/mini-program/src/components/HeroPromoBanner.tsx`) — single hero surface, not a carousel
+- **Visual:** Full-bleed Lovart illustration (`banner-hero-lovart-v1.webp` + `.png` fallback) with copy-side purple/pink wash, glass copy panel (eyebrow + title + subtitle + CTA), breathing CTA pill with circular arrow, 5 sparkles drifting on negative-delay loop
+- **Variant selection:**
+  - No archetype → variant C ("先测再玩" — nudges personality test)
+  - Has archetype → variant A ("本周推荐" — this weekend) by default
+  - `?promo=A|B|C` URL param forces a specific variant (staff / QA)
+- **Accessibility:** `role="region"` + `aria-label` + `aria-roledescription="活动推荐横幅"` + `aria-live="polite"`; CTA 88rpx tap target; `env(safe-area-inset-bottom)` for iPhone home indicator; `@supports` fallback for `backdrop-filter`
+- **Performance:** Animations gated by `useDeviceTier` (degradation tier kills idle loops) and `IntersectionObserver` (pauses off-screen); sparkles use `transform`/`opacity` only with `will-change` for GPU promotion
+- **Kill switch:** `user.features.promoBannerEnabled` (server-driven, DB-backed via `featureFlags.FLAG_ENV_MAP`; admin-toggleable at `/admin/feature-flags`; env fallback `PROMO_BANNER_ENABLED`, default `true`)
+- **Analytics:** `promo_banner_impression` (mount), `promo_banner_cta_tap` (CTA), `promo_banner_image_error` (CDN failure), `promo_banner_image_retry` (manual recovery, bounded at 2 attempts)
+
 #### Blind Box Event Lifecycle
 
 **Phase 1: Discovery (Pool Layer)**
@@ -3407,9 +3420,11 @@ For full details: `apps/server/src/README.md` and `docs/architecture/current-sta
 20. **event_pool_groups** - Matched groups (v1.1: added `communicationBalance` stored as `energy_balance`, `temperatureLevel`)
 21. **matching_thresholds** - Configurable matching parameters (NEW v1.1)
 22. **pool_matching_logs** - Matching decision history (NEW v1.1)
-23. **invitations** - User invitation records
-24. **invitation_uses** - Invitation reward tracking (NEW v1.1)
-25. **user_coupons** - User coupon assignments (NEW v1.1)
+23. **invitations** - Event-specific invitation records (expiresAt, invitationType — linked to pool registrations)
+24. **invitation_uses** - Invitation reward tracking (dedup-guarded, linked to invitations by UUID)
+25. **referral_codes** - Permanent user-level referral codes (one per user, no expiry)
+26. **referral_conversions** - Referral conversion tracking (who was referred by whom, dedup-guarded)
+27. **user_coupons** - User coupon assignments (NEW v1.1)
 
 **Full schema:** See `packages/shared/src/schema.ts` (Drizzle ORM — canonical source of truth for all tables)
 

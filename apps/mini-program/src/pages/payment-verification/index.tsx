@@ -20,6 +20,8 @@ import { type MiniProgramPaymentVerificationState } from '../../lib/payment/paym
 import type { XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
+import { CEREMONY_HEROES } from '../../lib/ceremonyHeroes'
+import { haptics } from '../../lib/utils/haptics'
 import JoyButton from '../../components/ui/Button'
 import './index.scss'
 
@@ -150,6 +152,18 @@ export default function PaymentVerificationPage() {
               支付确认后会回到报名页，你刚才填写的偏好也会一起带回去。
             </Text>
           </View>
+        ) : null}
+
+        {status === 'paid' ? (
+          // C2 — Ceremony hero for the paid confirmation moment (Batch C)
+          <Image
+            className='verification-page__hero'
+            mode='aspectFit'
+            src={CEREMONY_HEROES.eventPaidConfirmed}
+            ariaLabel=""
+            lazyLoad
+            onLoad={() => haptics('success')}
+          />
         ) : null}
 
         <Image

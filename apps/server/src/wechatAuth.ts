@@ -775,13 +775,14 @@ export function setupWechatAuth(app: Express) {
    *   presignupSessionId – Server-side pre-signup cache session ID to claim/delete
    *                        after successful answer import (optional, B)
    */
-  app.post("/api/auth/wechat/login-with-test", async (req: Request, res) => {
-    try {
-      const { code, testAnswers, anonymousSessionId } = req.body as {
-        code?: string;
-        testAnswers?: unknown[];
-        anonymousSessionId?: unknown;
-      };
+   app.post("/api/auth/wechat/login-with-test", async (req: Request, res) => {
+     try {
+       const { code, testAnswers, anonymousSessionId, referralCode } = req.body as {
+         code?: string;
+         testAnswers?: unknown[];
+         anonymousSessionId?: unknown;
+         referralCode?: string;
+       };
 
       if (!code) {
         return res.status(400).json({ error: "WeChat code is required" });
@@ -832,8 +833,53 @@ export function setupWechatAuth(app: Express) {
 
       await regenerateAuthenticatedWechatSession(req, fullUser.id);
 
+      // Persist referral code in session so it can be applied during pool registration
+      if (referralCode && typeof referralCode === 'string' && referralCode.trim()) {
+        req.session.pendingReferralCode = referralCode.trim();
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((saveErr: Error | null) => saveErr ? reject(saveErr) : resolve());
+        });
+
+        // Record conversion for new users
+        if (isNewUser) {
+          const trimmedCode = referralCode.trim();
+          try {
+            const { referralCodes, referralConversions } = await import("@shared/schema");
+            const [referral] = await db
+              .select({ id: referralCodes.id, userId: referralCodes.userId })
+              .from(referralCodes)
+              .where(eq(referralCodes.code, trimmedCode))
+              .limit(1);
+
+            if (referral && referral.userId !== user.id) {
+              const [existing] = await db
+                .select({ id: referralConversions.id })
+                .from(referralConversions)
+                .where(eq(referralConversions.invitedUserId, user.id))
+                .limit(1);
+
+              if (!existing) {
+                await db.insert(referralConversions).values({
+                  referralCodeId: referral.id,
+                  invitedUserId: user.id,
+                });
+
+                const { sql } = await import("drizzle-orm");
+                await db.update(referralCodes)
+                  .set({ totalConversions: sql`COALESCE(total_conversions, 0) + 1` })
+                  .where(eq(referralCodes.id, referral.id));
+              }
+            }
+          } catch (conversionErr) {
+            logger.error("[WeChat Auth] Failed to record referral conversion (login-with-test)", {
+              error: conversionErr instanceof Error ? conversionErr.message : String(conversionErr),
+            });
+          }
+        }
+      }
+
       if (isDebugAuthLoggingEnabled()) {
-        logger.info("[WeChat Auth] after session regeneration", {
+        logger.info("[WeChat Auth] before session regeneration", {
           userId: fullUser.id,
         });
       }
@@ -887,7 +933,7 @@ export function setupWechatAuth(app: Express) {
    */
   app.post("/api/auth/wechat/login", async (req: Request, res) => {
     try {
-      const { code } = req.body as { code?: string };
+      const { code, referralCode } = req.body as { code?: string; referralCode?: string };
 
       if (!code) {
         return res.status(400).json({ error: "WeChat code is required" });
@@ -902,6 +948,51 @@ export function setupWechatAuth(app: Express) {
       const fullUser = (await usersRepo.getUserById(user.id)) ?? user;
 
       await regenerateAuthenticatedWechatSession(req, fullUser.id);
+
+      // Persist referral code in session so it can be applied during pool registration
+      if (referralCode && typeof referralCode === 'string' && referralCode.trim()) {
+        req.session.pendingReferralCode = referralCode.trim();
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((saveErr: Error | null) => saveErr ? reject(saveErr) : resolve());
+        });
+      }
+
+      // If this is a new user with a referral code, record the conversion immediately
+      if (isNewUser && referralCode && typeof referralCode === 'string' && referralCode.trim()) {
+        const trimmedCode = referralCode.trim();
+        try {
+          const { referralCodes, referralConversions } = await import("@shared/schema");
+          const [referral] = await db
+            .select({ id: referralCodes.id, userId: referralCodes.userId })
+            .from(referralCodes)
+            .where(eq(referralCodes.code, trimmedCode))
+            .limit(1);
+
+          if (referral && referral.userId !== user.id) {
+            const [existing] = await db
+              .select({ id: referralConversions.id })
+              .from(referralConversions)
+              .where(eq(referralConversions.invitedUserId, user.id))
+              .limit(1);
+
+            if (!existing) {
+              await db.insert(referralConversions).values({
+                referralCodeId: referral.id,
+                invitedUserId: user.id,
+              });
+
+              const { sql } = await import("drizzle-orm");
+              await db.update(referralCodes)
+                .set({ totalConversions: sql`COALESCE(total_conversions, 0) + 1` })
+                .where(eq(referralCodes.id, referral.id));
+            }
+          }
+        } catch (conversionErr) {
+          logger.error("[WeChat Auth] Failed to record referral conversion", {
+            error: conversionErr instanceof Error ? conversionErr.message : String(conversionErr),
+          });
+        }
+      }
 
       res.json({
         success: true,

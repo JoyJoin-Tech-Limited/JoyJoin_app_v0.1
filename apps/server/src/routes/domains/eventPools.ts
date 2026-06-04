@@ -29,7 +29,7 @@ export interface EventPoolStatsResponse {
    * separate `poolSignals` and `groupOutcomes` sections to avoid mixing pool-layer
    * data with historical 成桌 outcomes on the same response object.
    */
-  estimatedGroups: number;
+  projectedGroups: number;
   /**
    * [成桌 layer] — average match score across already-formed groups in this pool.
    * This is a historical outcome metric, not a current pool-state signal.
@@ -61,7 +61,7 @@ export function buildEventPoolStatsResponse(input: {
       input.archetypeRows.map((row) => [row.archetype, row.count]),
     ),
     // Conservative floor-based calculation capped by the pool's configured group limit.
-    estimatedGroups: Math.min(formableGroups, configuredGroupLimit),
+    projectedGroups: Math.min(formableGroups, configuredGroupLimit),
     avgMatchScore: input.avgMatchScore,
     recentThemeTitles: input.recentThemeTitles,
   };

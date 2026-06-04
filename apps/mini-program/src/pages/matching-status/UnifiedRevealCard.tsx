@@ -1,9 +1,10 @@
-import { Text, View } from '@tarojs/components'
+import { Text, View, Image } from '@tarojs/components'
 import type { GroupAnalysisResponse } from '@shared/types/groupAnalysis'
 import ChemistryBadge from '../../components/mascot/ChemistryBadge'
 import ConnectionPointPill from '../../components/ConnectionPointPill'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
-import type { ChemistryTokens, UnifiedRevealTokens } from '@shared/features/matching-status'
+import { MILESTONE_BADGES, type MilestoneBadgeKey } from '../../lib/milestoneBadges'
+import type { ChemistryTokens, ChemistryType, UnifiedRevealTokens } from '@shared/features/matching-status'
 
 export interface UnifiedRevealCardProps {
   chemistryTokens: ChemistryTokens
@@ -11,6 +12,27 @@ export interface UnifiedRevealCardProps {
   leadIceBreaker: string | null
   introAngle?: string | null
   groupAnalysisDebugMeta?: Pick<GroupAnalysisResponse, 'fromCache' | 'generatedAt'> | null
+}
+
+// D4 — Map the 4 ChemistryType buckets to the 5 Batch D match-reason heroes.
+// Without a per-pair reason, we celebrate the strongest bucket of chemistry.
+const CHEMISTRY_TYPE_TO_MATCH_BADGE: Record<ChemistryType, MilestoneBadgeKey> = {
+  fire: 'matchReasonExactArchetype',
+  warm: 'matchReasonSameArchetypeBand',
+  mild: 'matchReasonSameRelationship',
+  cold: 'matchReasonSameWorkIndustry',
+}
+
+const MATCH_BADGE_LABELS: Record<MilestoneBadgeKey, string> = {
+  matchReasonSameRelationship: '关系同步',
+  matchReasonSameArchetypeBand: '同频共振',
+  matchReasonSameWorkIndustry: '同行相遇',
+  matchReasonExactArchetype: '灵魂默契',
+  matchReasonHometownIndustry: '故乡同行',
+  firstEvent: '初次见面',
+  streak3: '三场连击',
+  quizHalfway: '已经一半了',
+  recapStamp: '纪念章',
 }
 
 export default function UnifiedRevealCard({
@@ -26,8 +48,25 @@ export default function UnifiedRevealCard({
 
   const { headline, body, subtitle, groupTags, spotlight } = unifiedReveal
 
+  // D4 — Pick the Batch D match-reason hero that matches the overall chemistry bucket
+  const matchBadgeKey = CHEMISTRY_TYPE_TO_MATCH_BADGE[chemistryTokens.iconRef]
+  const matchBadgeSrc = MILESTONE_BADGES[matchBadgeKey]
+  const matchBadgeLabel = MATCH_BADGE_LABELS[matchBadgeKey]
+
   return (
     <View className='unified-reveal'>
+      {/* D4 — Batch D match-chemistry celebratory hero, paired with the existing 32rpx ChemistryBadge */}
+      <View className='unified-reveal__d4-hero-wrap' aria-hidden>
+        <Image
+          className='unified-reveal__d4-hero'
+          mode='aspectFit'
+          src={matchBadgeSrc}
+          ariaLabel=""
+          lazyLoad
+        />
+        <Text className='unified-reveal__d4-hero-label'>{matchBadgeLabel}</Text>
+      </View>
+
       <View className='unified-reveal__top'>
         <View className='unified-reveal__badge-row'>
           <ChemistryBadge

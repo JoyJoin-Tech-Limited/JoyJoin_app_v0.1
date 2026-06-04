@@ -14,6 +14,7 @@ export interface RegistrationFormState {
   barThemes: string[]
   alcoholComfort?: string
   barBudgetRange?: string[]
+  invitationCode?: string
 }
 
 export const INITIAL_FORM_STATE: RegistrationFormState = {
@@ -38,6 +39,7 @@ export function buildRegistrationPayload(
   return {
     eventIntent: formState.eventIntent,
     preferredLanguages: formState.preferredLanguages,
+    invitationCode: formState.invitationCode || undefined,
     ...(eventType === '酒局'
       ? {
           barBudgetRange: formState.barBudgetRange,
@@ -66,6 +68,7 @@ export function buildFormStateFromDraft(
     barThemes: draft.barThemes ?? [],
     alcoholComfort,
     barBudgetRange: draft.barBudgetRange?.slice(0, 1),
+    invitationCode: draft.invitationCode,
   }
 }
 

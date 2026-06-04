@@ -65,7 +65,13 @@ export default function JoyJoinLoadingScreen({
   )
 
   return (
-    <View className={`joyjoin-loading-screen ${settled ? 'joyjoin-loading-screen--settled' : ''} ${className}`}>
+    <View
+      className={`joyjoin-loading-screen ${settled ? 'joyjoin-loading-screen--settled' : ''} ${className}`}
+      role='status'
+      aria-live='polite'
+      aria-busy='true'
+      aria-label={title}
+    >
       <View className='joyjoin-loading-screen__content'>
         {/* Xiaoyue mascot */}
         <Image

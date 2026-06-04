@@ -1,4 +1,5 @@
 import { View, Text, Button, Image } from '@tarojs/components'
+import { useRouter } from '@tarojs/taro'
 import { useWeChatLogin } from '../../hooks/auth/useWeChatLogin'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { getArchetypeVisual } from '../onboarding/personality-test/visuals'
@@ -13,11 +14,14 @@ const FLOATING_ARCHETYPES = ['corgi', 'fox', 'koala']
  * Auth flow: Taro.login() → POST /api/auth/wechat/login (code2Session) →
  * GET /api/auth/user (nextStep) → navigate.  No web OAuth redirect is used.
  *
- * Design: "One screen. One truth. One tap. Premium is restraint."
- * Archetype-colour radial glow, blurred mascot teaser, shimmer sweep.
+ * Accepts optional `invitationCode` URL param to attribute signup to a referrer.
  */
 export default function LoginPage() {
-  const { handleWeChatLogin, isLoggingIn } = useWeChatLogin()
+  const router = useRouter()
+  const invitationCode = router.params.invitationCode ?? ''
+  const { handleWeChatLogin, isLoggingIn } = useWeChatLogin({
+    referralCode: invitationCode || undefined,
+  })
 
   return (
     <View className='login-page'>

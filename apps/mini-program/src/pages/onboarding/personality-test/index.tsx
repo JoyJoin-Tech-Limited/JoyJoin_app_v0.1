@@ -15,6 +15,9 @@ import { questionsV4 } from '@shared/personality/questionsV4'
 import Button from '../../../components/ui/Button'
 import SegmentedProgress from '../../../components/ui/SegmentedProgress'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
+import XiaoyueSpriteAnimator, {
+  type XiaoyueSpriteState,
+} from '../../../components/mascot/XiaoyueSpriteAnimator'
 import { useAuth, useInvalidateAuth } from '../../../hooks/useAuth'
 import { apiRequest, getUserState } from '../../../lib/api/api'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
@@ -41,12 +44,12 @@ import { haptics } from '../../../lib/utils/haptics'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
-import type { XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
+import { MILESTONE_BADGES } from '../../../lib/milestoneBadges'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
 import TypewriterText from '../../../components/ui/TypewriterText'
 import MascotQuestionHeader from './MascotQuestionHeader'
 import PersonalityTestAnswerArea, { getNearestSliderOption } from './PersonalityTestAnswerArea'
-import { isMilestoneQuestion } from './personalityTestLogic'
+import { isMilestoneQuestion, resolveOptionPreviewSpriteState } from './personalityTestLogic'
 import QuestionTransition from './QuestionTransition'
 import { useBackReview } from './useBackReview'
 import {
@@ -126,6 +129,81 @@ interface AssessmentAnswerResponse {
 // next question appears. Prevents the feedback from flashing by too fast.
 const COMMENTARY_MIN_DISPLAY_MS = 1400
 
+/**
+ * Map the testing-phase state to a Xiaoyue sprite state. Read by the
+ * mascot avatar in the testing zone; the result is rendered via
+ * `<XiaoyueSpriteAnimator state={spriteState} ... />`.
+ */
+function resolveMascotState(args: {
+  isLoading: boolean
+  isSubmitting: boolean
+  questionType: AssessmentQuestionType
+  isMilestone: boolean
+  isPostAnswerCommentary: boolean
+  isCelebration: boolean
+}): XiaoyueSpriteState {
+  if (args.isCelebration) return 'celebrate'
+  if (args.isPostAnswerCommentary) return 'nod'
+  if (args.isLoading || args.isSubmitting) return 'listening'
+  if (args.isMilestone) return 'surprised'
+  if (args.questionType === 'emoji_tap') return 'curious'
+  return 'idle'
+}
+
+/**
+ * Fire-and-forget prefetch of the Xiaoyue AI analysis. Triggered when
+ * the test completes — the slot animation's 3-5s duration gives the
+ * LLM enough time to populate the cache so the result page lands
+ * on a populated analysis instead of a 400ms skeleton.
+ *
+ * The server endpoint at /api/xiaoyue/prefetch short-circuits with
+ * `{ prefetched: false, reason: 'Not ready yet' }` when `confidence < 0.7`.
+ * It is safe to call speculatively; failure is logged and swallowed.
+ */
+function triggerXiaoyueAnalysisPrefetch(
+  result: import('../../../lib/auth/anonymousOnboarding').AnonymousAssessmentResult,
+  topMatches: AnonymousAssessmentTopMatch[],
+): void {
+  const archetype = result.primaryArchetype
+  if (!archetype) return
+
+  const traitScores = result.traitScores ?? {}
+  const confidence =
+    result.archetypeConfidence ??
+    topMatches[0]?.confidence ??
+    0
+
+  void apiRequest<{ prefetched: boolean; reason?: string }>({
+    path: '/api/xiaoyue/prefetch',
+    method: 'POST',
+    data: {
+      archetype,
+      secondaryArchetype: result.secondaryArchetype ?? null,
+      topArchetypes: topMatches,
+      traitScores: {
+        affinity: traitScores.A ?? traitScores.affinity ?? 0.5,
+        openness: traitScores.O ?? traitScores.openness ?? 0.5,
+        conscientiousness: traitScores.C ?? traitScores.conscientness ?? 0.5,
+        emotionalStability: traitScores.E ?? traitScores.emotionalStability ?? 0.5,
+        extraversion: traitScores.X ?? traitScores.extraversion ?? 0.5,
+        positivity: traitScores.P ?? traitScores.positivity ?? 0.5,
+      },
+      confidence,
+    },
+  })
+    .then((res) => {
+      logInfo('[PersonalityTest] Xiaoyue prefetch', {
+        archetype,
+        prefetched: res.prefetched,
+        reason: res.reason,
+      })
+    })
+    .catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err)
+      logError('[PersonalityTest] Xiaoyue prefetch failed', { message })
+    })
+}
+
 const INTRO_ARCHETYPE_TEASERS: { archetype: string; vibeLine: string }[] = [
   { archetype: 'corgi', vibeLine: '一进场，就把气氛带热。' },
   { archetype: 'fox', vibeLine: '普通话题，也能聊出火花。' },
@@ -195,6 +273,8 @@ export default function PersonalityTestPage() {
   const [introImgSrc, setIntroImgSrc] = useState(getIntroStaticAsset())
   const [skipsRemaining, setSkipsRemaining] = useState(MAX_SKIP_COUNT)
   const [isSkipping, setIsSkipping] = useState(false)
+  // D3 — Fires light haptic only once per session when crossing 50% progress
+  const halfwayHapticFiredRef = useRef(false)
 
   useResetOnShow(setIsPageExiting, setIsSubmitting, setIsSkipping)
 
@@ -207,6 +287,15 @@ export default function PersonalityTestPage() {
   const previousAnswerRef = useRef<string | null>(null)
   // Anonymous engine state for client-side back + re-answer
   const anonymousEngineStateRef = useRef<ReturnType<typeof initializeEngineState> | null>(null)
+  // Option-hover preview (P1-2): 200ms touch debounce, cancel on move or early release.
+  // Stores the option whose 200ms timer is pending so we can cancel cleanly.
+  const hoverPreviewRef = useRef<{
+    option: AssessmentOption
+    timer: ReturnType<typeof setTimeout>
+  } | null>(null)
+  // Captures the sprite state that was active before the hover preview so we
+  // can restore it on early release (e.g. tap-then-cancel before 200ms).
+  const prePreviewSpriteRef = useRef<XiaoyueSpriteState | null>(null)
 
   const backReview = useBackReview()
 
@@ -239,6 +328,14 @@ export default function PersonalityTestPage() {
   const progressPercent = progress
     ? Math.round((progress.answered / Math.max(estimatedTotal, 1)) * 100)
     : 0
+
+  // D3 — Fire light haptic once when user crosses 50% progress
+  useEffect(() => {
+    if (progressPercent >= 50 && !halfwayHapticFiredRef.current && phase === 'testing') {
+      halfwayHapticFiredRef.current = true
+      haptics('light')
+    }
+  }, [progressPercent, phase])
 
   const introTeasers = useMemo(
     () =>
@@ -302,6 +399,12 @@ export default function PersonalityTestPage() {
 
   useEffect(() => {
     if (auth.isLoading || isSubmitting || isPageExiting) {
+      return
+    }
+
+    // If user already has an archetype, they should never be on the test page
+    if (auth.user?.primaryArchetype) {
+      Taro.redirectTo({ url: '/pages/discover/index' })
       return
     }
 
@@ -512,6 +615,15 @@ export default function PersonalityTestPage() {
           sessionId: thisSessionId,
         })
 
+        // P0-3: prefetch the Xiaoyue AI analysis so the result page lands
+        // on a populated analysis instead of a 400ms skeleton.
+        if (result.result && result.result.primaryArchetype) {
+          triggerXiaoyueAnalysisPrefetch(
+            result.result,
+            result.currentMatches ?? currentMatches,
+          )
+        }
+
         if (isAuthenticated) {
           clearAnonymousAssessmentStorage()
           await saveCheckpoint('personality-test')
@@ -627,6 +739,65 @@ export default function PersonalityTestPage() {
       setSpriteState((prev) => (prev === 'thinking' ? 'idle' : prev))
     }
   }, [isSubmitting])
+
+  // P1-2: option-hover preview with 200ms debounce.
+  // On touch-start, capture the current sprite state, then schedule a state swap
+  // to a per-option preview state 200ms later. On touch-end before 200ms, restore
+  // the captured state. On commit (handleAnswer runs to completion), the sprite is
+  // set to `nod` by the answer flow and the preview is auto-cleared.
+  const cancelHoverPreview = useCallback(() => {
+    if (hoverPreviewRef.current?.timer) {
+      clearTimeout(hoverPreviewRef.current.timer)
+    }
+    hoverPreviewRef.current = null
+    if (prePreviewSpriteRef.current) {
+      setSpriteState(prePreviewSpriteRef.current)
+      prePreviewSpriteRef.current = null
+    }
+  }, [])
+
+  const handleOptionTouchStart = useCallback(
+    (option: AssessmentOption) => {
+      if (isSubmitting) return
+      if (backReview.isBackReviewMode) return
+      // Cancel any prior pending preview so the latest touch wins
+      if (hoverPreviewRef.current?.timer) {
+        clearTimeout(hoverPreviewRef.current.timer)
+      }
+      if (!prePreviewSpriteRef.current) {
+        prePreviewSpriteRef.current = spriteState
+      }
+      hoverPreviewRef.current = {
+        option,
+        timer: setTimeout(() => {
+          if (hoverPreviewRef.current?.option === option) {
+            setSpriteState(resolveOptionPreviewSpriteState(option))
+          }
+        }, 200),
+      }
+    },
+    [isSubmitting, backReview.isBackReviewMode, spriteState],
+  )
+
+  const handleOptionTouchEnd = useCallback(() => {
+    cancelHoverPreview()
+  }, [cancelHoverPreview])
+
+  // Move-cancel: if the user scrolls or drags before the 200ms debounce fires,
+  // drop the preview so we don't trap the sprite in a stale state.
+  const handleOptionTouchMove = useCallback(
+    (e: any) => {
+      const touch = e?.touches?.[0]
+      if (!touch) return
+      // We don't have the original touch-start position in this scope; using a
+      // conservative "any move cancels" rule. Acceptable because the preview is
+      // an Easter-egg delight, not a critical affordance.
+      if (hoverPreviewRef.current) {
+        cancelHoverPreview()
+      }
+    },
+    [cancelHoverPreview],
+  )
 
   const handleBack = useCallback(() => {
     if (!previousQuestionRef.current || !previousAnswerRef.current) return
@@ -995,6 +1166,39 @@ export default function PersonalityTestPage() {
 
   // Completing phase
   if (phase === 'completing') {
+    if (error) {
+      return (
+        <View className='personality-test personality-test--intro'>
+          <View className='personality-test__intro-shell'>
+            <View className='personality-test__stage personality-test__stage--1'>
+              <View className='personality-test__intro-hero'>
+                <Image
+                  className='personality-test__intro-mascot'
+                  src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.errorState)}
+                  mode='aspectFit'
+                  style={{ width: '160rpx', height: '160rpx', marginBottom: '24rpx' }}
+                />
+                <Text className='personality-test__intro-title'>同步遇到小状况</Text>
+                <Text className='personality-test__intro-subtitle'>
+                  {typeof error === 'string' && error.includes('服务器')
+                    ? '服务器开小差了，稍后再试'
+                    : error || '悦仔马上帮你重试~'}
+                </Text>
+              </View>
+            </View>
+            <View className='personality-test__intro-footer'>
+              <Button
+                variant='brand'
+                className='personality-test__start-btn'
+                onClick={() => { haptics('medium'); setPhase('intro') }}
+              >
+                重新试试
+              </Button>
+            </View>
+          </View>
+        </View>
+      )
+    }
     return (
       <OnboardingLoadingShell
         stepLabel='氛围命格'
@@ -1002,6 +1206,8 @@ export default function PersonalityTestPage() {
         subtitle='把你的回答整理成专属命格卡，马上揭晓。'
         hint='我会把轮廓、关键词和后面的分享卡一起整理好。'
         xiaoyueExpression={PERSONALITY_TEST_XIAOYUE_EXPRESSION.completing}
+        celebrate
+        sparkleCount={6}
       />
     )
   }
@@ -1078,6 +1284,24 @@ export default function PersonalityTestPage() {
           )}
         </View>
 
+        {/* D3 — Quiz halfway cheer badge (Batch D) — appears at >=50% progress */}
+        {progressPercent >= 50 && phase === 'testing' && (
+          <View
+            className='personality-test__halfway-hero'
+            hoverClass='personality-test__halfway-hero--pressed'
+            onClick={() => haptics('light')}
+          >
+            <Image
+              className='personality-test__halfway-hero-img'
+              mode='aspectFit'
+              src={MILESTONE_BADGES.quizHalfway}
+              ariaLabel=""
+              lazyLoad
+            />
+            <Text className='personality-test__halfway-hero-text'>已经完成一半了，加油！</Text>
+          </View>
+        )}
+
         {/* Zone B: Full-width glassmium question banner */}
         <View className='personality-test__question-zone'>
           {(backReview.isBackReviewMode ? backReview.backReviewQuestion : question) ? (
@@ -1098,17 +1322,27 @@ export default function PersonalityTestPage() {
         {/* Zone C: Mascot + speech bubble row */}
         <View className='personality-test__mascot-zone'>
           {(backReview.isBackReviewMode ? backReview.backReviewQuestion : question) ? (
+            (() => {
+              const isMilestoneNow = progress ? isMilestoneQuestion(progress.answered) : false
+              const resolvedMascotState = resolveMascotState({
+                isLoading: isSubmitting,
+                isSubmitting,
+                questionType: getQuestionType(
+                  backReview.isBackReviewMode ? backReview.backReviewQuestion : question,
+                ),
+                isMilestone: isMilestoneNow && !!postAnswerCommentary,
+                isPostAnswerCommentary: !!postAnswerCommentary,
+                isCelebration: false,
+              })
+              return (
             <View className='personality-test__mascot-row'>
               <View className='personality-test__mascot-avatar'>
-                <Image
-                  className='personality-test__mascot-static personality-test__mascot-static--testing'
-                  src={cdnAsset('/assets/mascot/xiaoyue-welcome.webp')}
-                  mode='aspectFit'
-                />
-                <Image
-                  className='personality-test__mascot-static personality-test__mascot-static--testing personality-test__mascot-static--reduced-motion'
-                  src={cdnAsset('/assets/mascot/xiaoyue-welcome.webp')}
-                  mode='aspectFit'
+                <XiaoyueSpriteAnimator
+                  state={resolvedMascotState}
+                  size='152rpx'
+                  isLoading={isSubmitting}
+                  showGlow={false}
+                  className='personality-test__mascot-animator'
                 />
               </View>
               <View
@@ -1128,6 +1362,8 @@ export default function PersonalityTestPage() {
                 )}
               </View>
             </View>
+              )
+            })()
           ) : null}
         </View>
 
@@ -1163,6 +1399,9 @@ export default function PersonalityTestPage() {
                 onSliderSubmit={backReview.isBackReviewMode ? handleBackReviewSliderSubmit : handleSliderSubmit}
                 committedValue={backReview.isBackReviewMode ? backReview.backReviewPreviousAnswer : null}
                 hideSliderSubmit={backReview.isBackReviewMode}
+                onOptionTouchStart={backReview.isBackReviewMode ? undefined : handleOptionTouchStart}
+                onOptionTouchEnd={backReview.isBackReviewMode ? undefined : handleOptionTouchEnd}
+                onOptionTouchMove={backReview.isBackReviewMode ? undefined : handleOptionTouchMove}
               />
             </QuestionTransition>
           ) : null}
@@ -1225,6 +1464,7 @@ export default function PersonalityTestPage() {
             ) : (
               <View className='personality-test__skip-hint personality-test__skip-hint--enter'>
                 <Text className='personality-test__skip-hint-text'>这些题目都是为你挑选的，试试看～</Text>
+                <Text className='personality-test__skip-hint-subtext'>直觉很准，一题都没跳。</Text>
               </View>
             )}
           </View>

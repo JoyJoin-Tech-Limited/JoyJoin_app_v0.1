@@ -33,7 +33,7 @@ description: >-
 
 ### DB-backed kill switches (admin-toggleable, 2026-05-24)
 
-These 5 flags are resolved via `apps/server/src/lib/featureFlags.ts` (DB source of truth → env fallback → 5s cache). Admin portal `/admin/feature-flags` (super_admin only) exposes toggle UI with `updatedBy` audit.
+These flags are resolved via `apps/server/src/lib/featureFlags.ts` (DB source of truth → env fallback → 5s cache). Admin portal `/admin/feature-flags` (super_admin only) exposes toggle UI with `updatedBy` audit.
 
 | Flag key | Env fallback | Purpose |
 |----------|-------------|---------|
@@ -42,6 +42,10 @@ These 5 flags are resolved via `apps/server/src/lib/featureFlags.ts` (DB source 
 | `onboardingForceSkip` | `ONBOARDING_FORCE_SKIP_ENABLED` | Admin force-skip button on onboarding steps |
 | `matchingLiveReveal` | `MATCHING_LIVE_REVEAL_ENABLED` | Live reveal overlay on matching status |
 | `socialIcebreakerClientForceEnd` | `SOCIAL_ICEBREAKER_CLIENT_FORCE_END` | Host emergency end button in icebreaker |
+| `runPlanTemplatesEnabled` | `RUN_PLAN_TEMPLATES_ENABLED` | Template-driven run plan compiler + 3×3 vibe grid UX |
+| `personalityShareEnabled` | `PERSONALITY_SHARE_ENABLED` | Personality test share poster generation |
+| `personalitySlotAnimationEnabled` | `PERSONALITY_SLOT_ANIMATION_ENABLED` | Slot machine reveal animation on personality test results |
+| `promoBannerEnabled` | `PROMO_BANNER_ENABLED` | Discover hero promo banner (full-bleed Lovart illustration + glass copy panel). When `false`, renders a zero-height spacer and stops all `promo_banner_*` analytics |
 
 ### Env-only feature gates
 

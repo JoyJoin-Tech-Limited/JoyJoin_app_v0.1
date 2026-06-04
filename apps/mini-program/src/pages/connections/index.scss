@@ -170,7 +170,7 @@
   }
 
   &__spacer {
-    @include safe-area-bottom-padding(padding-bottom, $tab-bar-height + $spacing-lg);
+    @include safe-area-bottom-padding(padding-bottom, $tab-bar-root-height + $spacing-lg);
     height: 0;
   }
 }

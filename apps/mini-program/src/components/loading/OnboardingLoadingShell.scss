@@ -46,6 +46,7 @@
   }
 
   &__card {
+    position: relative;
     width: 100%;
     padding: $spacing-lg;
     margin-top: $spacing-lg;
@@ -62,6 +63,16 @@
     width: 200rpx;
     height: 200rpx;
     margin: 0 auto $spacing-md;
+
+    &--celebrate {
+      position: relative;
+      width: 100%;
+      height: 240rpx;
+      margin: 0 auto $spacing-md;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   }
 
   &__orbit {

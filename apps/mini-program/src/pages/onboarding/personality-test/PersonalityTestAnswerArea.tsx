@@ -33,6 +33,8 @@ export interface AnswerAreaProps {
   onOptionTouchStart?: (option: AnswerOption) => void
   /** Called when user releases an option touch */
   onOptionTouchEnd?: () => void
+  /** Called when the touch point moves while still pressed (cancel preview on scroll/drag) */
+  onOptionTouchMove?: (e: any) => void
   /** Committed (pre-filled) answer value for back-review mode */
   committedValue?: string | null
   /** Hide the slider's own submit button (used in back-review mode) */
@@ -58,6 +60,7 @@ interface EmojiTapOptionProps {
   selectedValue: string | null
   onTouchStart: () => void
   onTouchEnd: () => void
+  onTouchMove?: (e: any) => void
   onClick: () => void
 }
 
@@ -72,6 +75,7 @@ function EmojiTapOption({
   selectedValue,
   onTouchStart,
   onTouchEnd,
+  onTouchMove,
   onClick,
 }: EmojiTapOptionProps) {
   const [hasError, setHasError] = useState(false)
@@ -83,6 +87,7 @@ function EmojiTapOption({
       style={{ animationDelay: `${index * 0.05}s` }}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
+      onTouchMove={onTouchMove}
       onClick={onClick}
       disabled={isSubmitting || selectedValue !== null}
       hoverClass='answer-area__emoji-option--active'
@@ -129,6 +134,7 @@ export default memo(function PersonalityTestAnswerArea({
   onSliderSubmit,
   onOptionTouchStart,
   onOptionTouchEnd,
+  onOptionTouchMove,
   committedValue,
   hideSliderSubmit = false,
 }: AnswerAreaProps) {
@@ -289,6 +295,7 @@ export default memo(function PersonalityTestAnswerArea({
               selectedValue={selectedValue}
               onTouchStart={() => { onOptionTouchStart?.(option) }}
               onTouchEnd={() => { onOptionTouchEnd?.() }}
+              onTouchMove={onOptionTouchMove ? (e) => onOptionTouchMove(e) : undefined}
               onClick={() => {
                 haptics('light')
                 handleAnswer(option)
@@ -320,6 +327,7 @@ export default memo(function PersonalityTestAnswerArea({
             style={{ animationDelay: `${index * 0.05}s` }}
             onTouchStart={() => { onOptionTouchStart?.(option) }}
             onTouchEnd={() => { onOptionTouchEnd?.() }}
+            onTouchMove={onOptionTouchMove ? (e) => onOptionTouchMove(e) : undefined}
             onClick={() => {
               haptics('light')
               handleAnswer(option)

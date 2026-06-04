@@ -76,3 +76,15 @@
     line-height: 1;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .city-unlock-banner {
+    transform: none;
+    opacity: 1;
+    transition: none;
+
+    &:active {
+      opacity: 1;
+    }
+  }
+}

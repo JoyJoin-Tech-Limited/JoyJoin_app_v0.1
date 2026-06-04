@@ -16,9 +16,14 @@ const invitationSchema = z.object({
 export function registerReferralRoutes(app: Express): void {
   // ============ INVITATION SYSTEM ROUTES ============
 
-  // Helper function to generate unique invitation code
+  const WECHAT_APPID = process.env.WECHAT_APPID ?? '';
+
   function generateInviteCode(): string {
     return Math.random().toString(36).substring(2, 9);
+  }
+
+  function buildInviteLink(code: string): string {
+    return `weixin://dl/business/?appid=${WECHAT_APPID}&path=pages/pool-registration/index&query=invitationCode%3D${encodeURIComponent(code)}`;
   }
 
   // POST /api/events/:id/create-invitation - Generate invitation link
@@ -44,7 +49,7 @@ export function registerReferralRoutes(app: Express): void {
       if (existingInvite) {
         return res.json({
           code: existingInvite.code,
-          inviteLink: `${req.protocol}://${req.get('host')}/invite/${existingInvite.code}`
+          inviteLink: buildInviteLink(existingInvite.code),
         });
       }
 
@@ -71,7 +76,7 @@ export function registerReferralRoutes(app: Express): void {
 
       res.json({
         code: invitation.code,
-        inviteLink: `${req.protocol}://${req.get('host')}/invite/${invitation.code}`
+        inviteLink: buildInviteLink(invitation.code),
       });
     } catch (error: any) {
       logger.error("Error creating invitation", { error: String(error) });
@@ -146,7 +151,7 @@ export function registerReferralRoutes(app: Express): void {
         referralCode: existingCode.code,
         successfulInvites,
         platformTotal,
-        inviteLink: `${req.protocol}://${req.get('host')}/invite/${existingCode.code}`,
+        inviteLink: buildInviteLink(existingCode.code),
       });
     } catch (error: any) {
       logger.error("Error fetching referral stats", { error: String(error) });

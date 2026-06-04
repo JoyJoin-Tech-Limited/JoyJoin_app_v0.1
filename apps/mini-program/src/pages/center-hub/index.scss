@@ -5,7 +5,7 @@
   @include viewport-min-height;
   box-sizing: border-box;
   background: $color-bg;
-  padding-bottom: calc(128rpx + env(safe-area-inset-bottom));
+  padding-bottom: calc($tab-bar-root-height + env(safe-area-inset-bottom));
 
   &__header {
     display: flex;

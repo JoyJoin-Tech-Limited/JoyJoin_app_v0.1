@@ -24,6 +24,10 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   runPlanTemplatesEnabled: "RUN_PLAN_TEMPLATES_ENABLED",
   personalityShareEnabled: "PERSONALITY_SHARE_ENABLED",
   personalitySlotAnimationEnabled: "PERSONALITY_SLOT_ANIMATION_ENABLED",
+  /** When false, hides the Hero Promo Banner on discover entirely.
+   *  Default: true. Use to A/B test banner variants or kill it during
+   *  promo content audits. */
+  promoBannerEnabled: "PROMO_BANNER_ENABLED",
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

@@ -120,6 +120,21 @@ Boundary:
 - `preference_strictness` null is coerced to 50 server-side; no mandatory backfill migration.
 - Eligibility count uses batched `inArray` loads (no N+1).
 
+### Referral & Invitation System
+
+Owns referral codes and event-specific invitations — dual-table system with different lifecycle:
+
+- **`referral_codes`** (permanent, user-level) — each user gets one; used for friend invites with reward tiers
+- **`invitations`** (event-specific, expires at event start) — generated per pool registration with `invitationType` and `expiresAt`
+- Both flow through the same `invitationCode` field on pool registration; server disambiguates by checking `invitations` table first, then `referral_codes`
+- Referral conversions are recorded on pool registration; new-user attribution is recorded at WeChat login
+- Session `pendingReferralCode` carries invite attribution across the login → pool-registration flow
+
+Primary files:
+- `apps/server/src/routes/domains/referrals.ts` — stats, invites received, invite link generation
+- `apps/server/src/wechatAuth.ts` — both login endpoints accept `referralCode` for attribution
+- `apps/server/src/routes/domains/userEventPools.ts` — invitation code lookup, self-referral guard, dedup guard, referral conversion recording
+
 ### Predictive Shell (composite tab data)
 
 Owns composite endpoints that bundle tab-specific data to reduce client round-trips.

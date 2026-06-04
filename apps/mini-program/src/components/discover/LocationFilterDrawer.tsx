@@ -97,11 +97,12 @@ export default function LocationFilterDrawer({
   }
 
   return (
-    <View className={`location-drawer ${open ? 'location-drawer--open' : ''}`} catchMove>
+    <View className={`location-drawer ${open ? 'location-drawer--open' : ''}`}>
       {/* Backdrop */}
       <View
         className={`location-drawer__backdrop ${open ? 'location-drawer__backdrop--open' : ''}`}
         onClick={handleBackdropTap}
+        catchMove
         aria-role='button'
         aria-label='关闭区域选择'
       />
@@ -147,7 +148,7 @@ export default function LocationFilterDrawer({
             onClick={() => handleSelect(ALL_CLUSTER_ID, ALL_DISTRICT_ID)}
             hoverClass='location-drawer__tile--hover'
           >
-            <Text className='location-drawer__all-tile-icon'>🌐</Text>
+            <Text className='location-drawer__all-tile-icon' aria-label='globe'>🌐</Text>
             <Text className='location-drawer__all-tile-text'>全部区域</Text>
           </View>
 
@@ -182,7 +183,6 @@ export default function LocationFilterDrawer({
                       )}
                       <Text
                         className='location-drawer__district-name'
-                        numberOfLines={2}
                       >
                         {district.name}
                       </Text>

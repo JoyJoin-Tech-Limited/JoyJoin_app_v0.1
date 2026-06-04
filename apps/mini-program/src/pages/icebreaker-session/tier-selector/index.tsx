@@ -7,6 +7,7 @@ import { TOAST_MEDIUM_MS } from '../../../lib/utils/uiConstants'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { getUserDisplayName } from '../icebreakerSessionModel'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
+import { TIER_VIBE_BACKDROPS } from '../../../lib/ceremonyHeroes'
 import { resolveTierDisplay, type TierMachineId } from '@shared/socialIcebreakerTierManifest'
 import { VibeId, VIBE_TO_API } from '../../../lib/vibeMapping'
 import Button from '../../../components/ui/Button'
@@ -255,6 +256,19 @@ export default function TierSelectorPage() {
             </View>
           ))}
         </View>
+      </View>
+
+      {/* Tier Vibe Backdrop — Batch C ceremony hero for the selected tier */}
+      <View className='tier-selector__preview' key={`preview-${fadeKey}`} aria-hidden>
+        <Image
+          className='tier-selector__preview-image'
+          src={TIER_VIBE_BACKDROPS[selectedTier]}
+          mode='aspectFit'
+          lazyLoad
+        />
+        <Text className='tier-selector__preview-label'>
+          {resolveTierDisplay(selectedTier, { glowVariant: 'default' })} · 氛围预览
+        </Text>
       </View>
 
       {/* 悦仔 Mascot Line */}

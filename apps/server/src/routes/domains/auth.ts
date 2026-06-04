@@ -263,6 +263,11 @@ export function registerAuthRoutes(app: Express): void {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
+      // Attach pending referral code from session if present
+      if (req.session.pendingReferralCode) {
+        (authUserResponse as any).pendingReferralCode = req.session.pendingReferralCode;
+      }
+
       res.json(authUserResponse);
     } catch (error) {
       logger.error("Error fetching user:", { error });

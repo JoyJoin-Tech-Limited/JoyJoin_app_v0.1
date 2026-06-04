@@ -1,5 +1,5 @@
 import { View, Text, Image } from '@tarojs/components'
-import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { loadBrandDisplayFont } from '../../lib/utils/brandFont'
 import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
 import Taro, { usePullDownRefresh } from '@tarojs/taro'
@@ -29,7 +29,8 @@ import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import PageMorphWrapper from '../../components/ui/PageMorphWrapper'
 import StatusCard from '../../components/ui/StatusCard'
-import AiMatchPromoCarousel, { type PromoBannerVariant } from '../../components/AiMatchPromoCarousel'
+import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
+import HeroPromoBanner, { type PromoBannerVariant } from '../../components/HeroPromoBanner'
 import VirtualList from '../../components/VirtualList'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import OracleCard from '../../components/discover/OracleCard'
@@ -44,6 +45,7 @@ import {
 } from '../../lib/utils/discoverHeaderCopy'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
+import { getDevMockPools } from '../../lib/dev/devPoolMocks'
 import MiniProgramLandingPage from '../index/LandingPage'
 import './index.scss'
 
@@ -173,116 +175,7 @@ function AuthenticatedDiscover() {
         // Dev-only mock fallback for UI testing without backend.
         // Gated to development so production never serves fake data (AC-12).
         if (process.env.NODE_ENV === 'development') {
-          const now = new Date()
-          const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000)
-          const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-          const fmt = (d: Date) => d.toISOString()
-          return [
-            {
-              id: 'mock-pool-1',
-              title: '周五微醺夜 · 破冰局',
-              eventType: 'dinner',
-              city: '深圳',
-              district: '南山区',
-              dateTime: fmt(tomorrow),
-              status: 'open',
-              description: '轻松小酌，认识新朋友',
-              maxParticipants: 8,
-              currentParticipants: 5,
-              registrationCount: 5,
-              spotsLeft: 3,
-              sampleArchetypes: ['corgi', 'rooster', 'fox'],
-              topArchetypes: [{ archetype: 'corgi', count: 2 }, { archetype: 'rooster', count: 2 }, { archetype: 'fox', count: 1 }],
-              accentFamily: 'warm',
-              aiHeadline: '5 人已在局，氛围轻松',
-              hasUserArchetypeMatch: true,
-              price: 168,
-              userTypeCount: 2,
-              userTypeRarity: 'present',
-              highChemistryCount: 3,
-              topComplementaryType: 'rooster',
-              narrativePivot: 'present',
-              hoursUntilDeadline: 18,
-            },
-            {
-              id: 'mock-pool-2',
-              title: '周日户外徒步 · 畅聊局',
-              eventType: 'outdoor',
-              city: '深圳',
-              district: '福田区',
-              dateTime: fmt(nextWeek),
-              status: 'open',
-              description: '梅林山郊野径，新手友好',
-              maxParticipants: 12,
-              currentParticipants: 2,
-              registrationCount: 2,
-              spotsLeft: 10,
-              sampleArchetypes: ['fox', 'dolphin_calm'],
-              topArchetypes: [{ archetype: 'fox', count: 1 }, { archetype: 'dolphin_calm', count: 1 }],
-              accentFamily: 'cool',
-              aiHeadline: '2 人报名，山野清新',
-              hasUserArchetypeMatch: false,
-              price: 0,
-              userTypeCount: 0,
-              userTypeRarity: 'rare',
-              highChemistryCount: 1,
-              topComplementaryType: null,
-              narrativePivot: 'rare',
-              hoursUntilDeadline: 120,
-            },
-            {
-              id: 'mock-pool-3',
-              title: '全新开局 · 等你点亮',
-              eventType: 'coffee',
-              city: '深圳',
-              district: '南山区',
-              dateTime: fmt(tomorrow),
-              status: 'open',
-              description: '首场咖啡局，期待你的加入',
-              maxParticipants: 6,
-              currentParticipants: 0,
-              registrationCount: 0,
-              spotsLeft: 6,
-              sampleArchetypes: [],
-              topArchetypes: [],
-              accentFamily: 'calm',
-              aiHeadline: null,
-              hasUserArchetypeMatch: false,
-              price: 88,
-              userTypeCount: 0,
-              userTypeRarity: 'rare',
-              highChemistryCount: 0,
-              topComplementaryType: null,
-              narrativePivot: 'empty',
-              hoursUntilDeadline: 48,
-            },
-            {
-              id: 'mock-pool-4',
-              title: '桌游狂欢夜 · 狂欢局',
-              eventType: 'boardgame',
-              city: '深圳',
-              district: '宝安区',
-              dateTime: fmt(tomorrow),
-              status: 'filling_fast',
-              description: '狼人杀 + 阿瓦隆，高能烧脑',
-              maxParticipants: 10,
-              currentParticipants: 9,
-              registrationCount: 9,
-              spotsLeft: 1,
-              sampleArchetypes: ['fox', 'spider', 'rooster', 'octopus', 'corgi', 'owl'],
-              topArchetypes: [{ archetype: 'fox', count: 3 }, { archetype: 'spider', count: 2 }, { archetype: 'rooster', count: 2 }, { archetype: 'octopus', count: 1 }, { archetype: 'corgi', count: 1 }],
-              accentFamily: 'fire',
-              aiHeadline: '9 人集结，最后 1 席',
-              hasUserArchetypeMatch: true,
-              price: 128,
-              userTypeCount: 1,
-              userTypeRarity: 'present',
-              highChemistryCount: 7,
-              topComplementaryType: 'fox',
-              narrativePivot: 'present',
-              hoursUntilDeadline: 6,
-            },
-          ] as unknown as EventPoolSummary[]
+          return getDevMockPools()
         }
         throw e
       }
@@ -490,8 +383,9 @@ function AuthenticatedDiscover() {
     const firstOpenPool = openPools[0]
     if (firstOpenPool) {
       Taro.navigateTo({ url: `/pages/pool-registration/index?id=${firstOpenPool.id}` })
+    } else {
+      Taro.showToast({ title: '暂无开放活动', icon: 'none' })
     }
-    // If no open pools and user has archetype, stay on discover page
   }, [userArchetype, openPools])
 
   // ── Location pill label ──
@@ -561,13 +455,17 @@ function AuthenticatedDiscover() {
   // ── Render ──
   return (
     <View className='discover-auth tab-page-enter'>
-      {/* Promo banner — top of page */}
-      <AiMatchPromoCarousel
+      {/* Hero promo banner — top of page */}
+      <HeroPromoBanner
         className='discover-auth__promo'
         compact
         variant={bannerVariant}
         hasArchetype={!!userArchetype}
-        onCtaTap={handleBannerCtaTap}
+        // Server-driven kill switch from auth payload. Defaults to true
+        // (banner shown) when the flag is missing or the user object
+        // hasn't loaded yet.
+        enabled={(user as any)?.features?.promoBannerEnabled ?? true}
+        onCtaTap={openPools.length > 0 ? handleBannerCtaTap : undefined}
       />
 
       {/* Greeting hero */}
@@ -582,8 +480,10 @@ function AuthenticatedDiscover() {
           />
         </View>
         <View className='discover-auth__hero-text'>
-          <Text className='discover-auth__greeting'>{timeGreeting}！</Text>
-          <Text className='discover-auth__greeting-prompt'>今晚想怎么玩？</Text>
+          <View className='discover-auth__greeting-line'>
+            <Text className='discover-auth__greeting'>{timeGreeting}！</Text>
+            <Text className='discover-auth__greeting-prompt'>今晚想怎么玩？</Text>
+          </View>
           <Text className='discover-auth__subtitle'>{dynamicSubtitle}</Text>
         </View>
       </View>
@@ -675,17 +575,17 @@ function AuthenticatedDiscover() {
             )}
           </>
         ) : (
-          <StatusCard
-            className='discover-auth__empty-state'
-            tone='empty'
-            heroSrc={cdnAsset('/assets/lovart/lovart-generic-empty.webp')}
-            title='还没有适合你的活动'
-            description={
-              selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID
-                ? '试试切换其他区域'
-                : '新活动即将上线，敬请期待'
-            }
-          />
+          <View className='discover-auth__empty-state'>
+            <XiaoyueEmptyState
+              emotion='curious'
+              title='还没有适合你的活动'
+              subtitle={
+                selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID
+                  ? '试试切换其他区域'
+                  : '新活动即将上线，敬请期待'
+              }
+            />
+          </View>
         )}
       </View>
 

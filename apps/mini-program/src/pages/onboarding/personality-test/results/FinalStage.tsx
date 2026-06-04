@@ -10,6 +10,8 @@ import type { AnonymousAssessmentTopMatch } from '../../../../lib/auth/anonymous
 import type { ArchetypeSkillSet } from '@shared/personality/archetypeSkills'
 import { haptics } from '../../../../lib/utils/haptics'
 import { cdnAsset, localAsset } from '../../../../lib/utils/cdnAssets'
+import XiaoyueChatBubble from '../../../../components/mascot/XiaoyueChatBubble'
+import { PERSONALITY_TEST_XIAOYUE_EXPRESSION } from '../../../../lib/mascot/xiaoyueExpressions'
 import type { ArchetypeCardVariant } from '../archetypeVariants'
 
 interface FinalStageProps {
@@ -229,6 +231,26 @@ export default function FinalStage({
       }
     })
   }, [topMatches])
+
+  // Identify the dominant trait for the "你最强" highlight in the trait list.
+  const topTraitKey = useMemo(() => {
+    if (!traitEntries.length) return null
+    return traitEntries.reduce((best, t) => (t.value > best.value ? t : best), traitEntries[0]).key
+  }, [traitEntries])
+
+  // Compose the pull-quote body: whyThisFits + blendLine, merged to reduce
+  // visual chunks. blendLine acts as a soft "footer" attribution line.
+  const pullQuote = useMemo(() => {
+    const why = xiaoyueAnalysis?.whyThisFits?.trim() ?? ''
+    const blend = xiaoyueAnalysis?.blendLine?.trim() ?? ''
+    if (why && blend) return `${why}`
+    return why || blend
+  }, [xiaoyueAnalysis])
+  const pullQuoteFooter = useMemo(() => {
+    const why = xiaoyueAnalysis?.whyThisFits?.trim() ?? ''
+    const blend = xiaoyueAnalysis?.blendLine?.trim() ?? ''
+    return why && blend ? blend : ''
+  }, [xiaoyueAnalysis])
 
   return (
     <>
@@ -546,65 +568,153 @@ export default function FinalStage({
                 <Text className='personality-results__detail-subtitle'>{visual.tagline || visual.description}</Text>
               </View>
 
-              {/* Full AI analysis in detail */}
-              {xiaoyueAnalysis && (
-                <View className='personality-results__detail-section'>
-                  <Text className='personality-results__detail-section-label'>悦仔完整解读</Text>
-                  <Text className='personality-results__detail-analysis'>{xiaoyueAnalysis.analysis}</Text>
-                  {xiaoyueAnalysis.whyThisFits && (
-                    <Text className='personality-results__detail-why'>{xiaoyueAnalysis.whyThisFits}</Text>
-                  )}
-                  {xiaoyueAnalysis.blendLine && (
-                    <Text className='personality-results__detail-blend'>{xiaoyueAnalysis.blendLine}</Text>
-                  )}
+              {/* ── 悦仔的完整解读 — mascot reads aloud, sentence-staggered ── */}
+              {xiaoyueAnalysis?.analysis && (
+                <View className='personality-results__detail-section personality-results__detail-section--chat'>
+                  <XiaoyueChatBubble
+                    content={xiaoyueAnalysis.analysis}
+                    pose='casual'
+                    expressionId={PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCoach}
+                    horizontal
+                    showGlow
+                    staggerDelay={70}
+                    className='personality-results__detail-chat'
+                  />
                 </View>
               )}
 
-              {/* Trait radar in detail */}
-              <View className='personality-results__detail-section'>
-                <Text className='personality-results__detail-section-label'>氛围画像</Text>
-                <View className='personality-results__trait-list'>
-                  {traitEntries.map((trait) => (
-                    <View key={trait.key} className='personality-results__trait-row'>
-                      <View className='personality-results__trait-header'>
-                        <Text className='personality-results__trait-label'>{trait.label}</Text>
-                        <Text className='personality-results__trait-value'>{trait.value}</Text>
-                      </View>
-                      <View className='personality-results__trait-track' style={{ color: visual.accent }}>
-                        {Array.from({ length: 10 }, (_, i) => (
-                          <View
-                            key={i}
-                            className={`personality-results__trait-segment ${(i + 1) * 10 <= trait.value ? 'personality-results__trait-segment--filled' : 'personality-results__trait-segment--dim'}`}
-                          />
-                        ))}
-                      </View>
+              {/* ── 悦仔的关键洞察 — quiet pull-quote, no glow, different pose ── */}
+              {pullQuote && (
+                <View className='personality-results__detail-section personality-results__detail-section--chat'>
+                  <View
+                    className='personality-results__detail-quote'
+                    style={{ borderLeftColor: visual.accent }}
+                  >
+                    <View className='personality-results__detail-quote-avatar'>
+                      <Image
+                        className='personality-results__detail-quote-avatar-img'
+                        mode='aspectFit'
+                        src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-thanks-feedback.webp')}
+                      />
                     </View>
-                  ))}
+                    <View className='personality-results__detail-quote-body'>
+                      <Text className='personality-results__detail-quote-text'>{pullQuote}</Text>
+                      {pullQuoteFooter && (
+                        <Text className='personality-results__detail-quote-footer'>{pullQuoteFooter}</Text>
+                      )}
+                    </View>
+                  </View>
                 </View>
-              </View>
+              )}
 
-              {/* Best partners in detail */}
+              {/* ── 氛围画像 — mascot intro + polished trait bars ── */}
+              {traitEntries.length > 0 && (
+                <View className='personality-results__detail-section'>
+                  <View className='personality-results__detail-section-head'>
+                    <View
+                      className='personality-results__detail-section-avatar'
+                      style={{ background: visual.accentSoft }}
+                    >
+                      <Image
+                        className='personality-results__detail-section-avatar-img'
+                        mode='aspectFit'
+                        src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+                      />
+                    </View>
+                    <Text className='personality-results__detail-section-label'>氛围画像</Text>
+                    <Text className='personality-results__detail-section-hint'>分数越高越突出</Text>
+                  </View>
+                  <View className='personality-results__trait-list'>
+                    {traitEntries.map((trait) => {
+                      const isTop = trait.key === topTraitKey
+                      return (
+                        <View
+                          key={trait.key}
+                          className={`personality-results__trait-row ${isTop ? 'personality-results__trait-row--top' : ''}`}
+                        >
+                          <View className='personality-results__trait-header'>
+                            <View className='personality-results__trait-label-wrap'>
+                              <Text className='personality-results__trait-label'>{trait.label}</Text>
+                              {isTop && (
+                                <View
+                                  className='personality-results__trait-top-badge'
+                                  style={{ background: visual.accentSoft, color: visual.accent }}
+                                >
+                                  <Text className='personality-results__trait-top-badge-text'>你最强</Text>
+                                </View>
+                              )}
+                            </View>
+                            <Text
+                              className='personality-results__trait-value'
+                              style={{ color: isTop ? visual.accent : undefined }}
+                            >
+                              {trait.value}
+                            </Text>
+                          </View>
+                          <View
+                            className='personality-results__trait-track'
+                            style={{ color: visual.accent }}
+                          >
+                            {Array.from({ length: 10 }, (_, i) => {
+                              const filled = (i + 1) * 10 <= trait.value
+                              return (
+                                <View
+                                  key={i}
+                                  className={`personality-results__trait-segment ${filled ? 'personality-results__trait-segment--filled' : 'personality-results__trait-segment--dim'}`}
+                                  style={filled && isTop && i === Math.min(9, Math.floor((trait.value - 1) / 10))
+                                    ? { boxShadow: `0 0 8rpx ${visual.accentGlow}` }
+                                    : undefined}
+                                />
+                              )
+                            })}
+                          </View>
+                        </View>
+                      )
+                    })}
+                  </View>
+                </View>
+              )}
+
+              {/* ── 默契搭档 — horizontal scroll of mini partner cards ── */}
               {partnerData.length > 0 && (
                 <View className='personality-results__detail-section'>
-                  <Text className='personality-results__detail-section-label'>默契搭档</Text>
-                  <View className='personality-results__detail-partners'>
-                    {partnerData.map((partner) => (
-                      <View key={partner.archetype} className='personality-results__detail-partner'>
+                  <View className='personality-results__detail-section-head personality-results__detail-section-head--solo'>
+                    <Text className='personality-results__detail-section-label'>默契搭档</Text>
+                    <Text className='personality-results__detail-section-hint'>右滑看更多 →</Text>
+                  </View>
+                  <ScrollView
+                    className='personality-results__detail-partner-scroll'
+                    scrollX
+                    enhanced
+                    showScrollbar={false}
+                  >
+                    <View className='personality-results__detail-partner-row'>
+                      {partnerData.map((partner) => (
                         <View
-                          className='personality-results__detail-partner-dot'
-                          style={{ background: partner.chemistryColor }}
-                        />
-                        <View className='personality-results__detail-partner-info'>
+                          key={partner.archetype}
+                          className='personality-results__detail-partner'
+                          style={{ borderColor: `${partner.chemistryColor}33` }}
+                        >
+                          <View
+                            className='personality-results__detail-partner-dot'
+                            style={{ background: partner.chemistryColor }}
+                          />
                           <Text className='personality-results__detail-partner-name'>
                             {ARCHETYPE_BY_ID[partner.archetype]?.nameCn ?? partner.archetype}
                           </Text>
-                          <Text className='personality-results__detail-partner-meta'>
-                            {partner.chemistryLabel} · 契合度 {Math.round(partner.score)}%
+                          <Text
+                            className='personality-results__detail-partner-tag'
+                            style={{ color: partner.chemistryColor }}
+                          >
+                            {partner.chemistryLabel}
+                          </Text>
+                          <Text className='personality-results__detail-partner-score'>
+                            契合 {Math.round(partner.score)}%
                           </Text>
                         </View>
-                      </View>
-                    ))}
-                  </View>
+                      ))}
+                    </View>
+                  </ScrollView>
                 </View>
               )}
             </ScrollView>

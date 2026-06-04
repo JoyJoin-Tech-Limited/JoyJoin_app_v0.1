@@ -10,6 +10,8 @@ export type DiscoverAnalyticsEventType =
   | 'registration_abandoned'
   | 'promo_banner_impression'
   | 'promo_banner_cta_tap'
+  | 'promo_banner_image_error'
+  | 'promo_banner_image_retry'
   | 'filter_open'
   | 'filter_select'
   | 'filter_close'

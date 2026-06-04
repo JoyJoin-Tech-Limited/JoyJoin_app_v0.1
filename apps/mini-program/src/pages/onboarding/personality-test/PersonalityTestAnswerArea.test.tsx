@@ -10,33 +10,53 @@ import {
 describe('PersonalityTest wow element logic', () => {
   describe('resolveFragmentLabel', () => {
     it('returns a deterministic label for a given option', () => {
-      const option: AnswerOption = { value: 'A', text: '直接冲' }
+      const option: AnswerOption = {
+        value: 'A',
+        text: '直接冲',
+        traitScores: { A: 0.7, O: 0.2, C: 0.3, E: 0.1, X: 0.5, P: 0.4 },
+      }
       const label = resolveFragmentLabel(option)
       expect(label).toBeTruthy()
       expect(typeof label).toBe('string')
       expect(label.length).toBeGreaterThan(0)
     })
 
-    it('returns the same label for the same option text', () => {
-      const option: AnswerOption = { value: 'A', text: '直接冲' }
+    it('returns the same label for the same traitScores', () => {
+      const option: AnswerOption = {
+        value: 'A',
+        text: '直接冲',
+        traitScores: { A: 0.7, O: 0.2 },
+      }
       expect(resolveFragmentLabel(option)).toBe(resolveFragmentLabel(option))
     })
 
-    it('returns different labels for different option texts', () => {
-      const optionA: AnswerOption = { value: 'A', text: '直接冲' }
-      const optionB: AnswerOption = { value: 'B', text: '慢慢来' }
-      // Different first charCode should likely map to different labels
-      expect(resolveFragmentLabel(optionA)).not.toBe(resolveFragmentLabel(optionB))
+    it('selects the trait with the highest score', () => {
+      const option: AnswerOption = {
+        value: 'A',
+        text: '直接冲',
+        traitScores: { A: 0.3, O: 0.9, C: 0.1, E: 0.1, X: 0.2, P: 0.1 },
+      }
+      expect(resolveFragmentLabel(option)).toBe('清风徐来')
+    })
+
+    it('falls back to warm default when no traitScores are present', () => {
+      const option: AnswerOption = { value: 'A', text: '直接冲' }
+      expect(resolveFragmentLabel(option)).toBe('你的光')
+    })
+
+    it('falls back to warm default when traitScores is empty', () => {
+      const option: AnswerOption = { value: 'A', text: '直接冲', traitScores: {} }
+      expect(resolveFragmentLabel(option)).toBe('你的光')
     })
 
     it('never returns gamified "+1" stat language', () => {
       const testOptions: AnswerOption[] = [
-        { value: 'A', text: 'a' },
-        { value: 'B', text: 'b' },
-        { value: 'C', text: 'c' },
-        { value: 'D', text: 'd' },
-        { value: 'E', text: 'e' },
-        { value: 'F', text: 'f' },
+        { value: 'A', text: 'a', traitScores: { A: 0.5, O: 0.5, C: 0.5, E: 0.5, X: 0.5, P: 0.5 } },
+        { value: 'B', text: 'b', traitScores: { A: 0.2, O: 0.8, C: 0.1, E: 0.1, X: 0.1, P: 0.1 } },
+        { value: 'C', text: 'c', traitScores: { A: 0.1, O: 0.1, C: 0.9, E: 0.1, X: 0.1, P: 0.1 } },
+        { value: 'D', text: 'd', traitScores: { A: 0.1, O: 0.1, C: 0.1, E: 0.9, X: 0.1, P: 0.1 } },
+        { value: 'E', text: 'e', traitScores: { A: 0.1, O: 0.1, C: 0.1, E: 0.1, X: 0.9, P: 0.1 } },
+        { value: 'F', text: 'f', traitScores: { A: 0.1, O: 0.1, C: 0.1, E: 0.1, X: 0.1, P: 0.9 } },
       ]
       for (const opt of testOptions) {
         const label = resolveFragmentLabel(opt)
@@ -48,11 +68,23 @@ describe('PersonalityTest wow element logic', () => {
       }
     })
 
-    it('always includes an emoji prefix', () => {
-      const option: AnswerOption = { value: 'A', text: '测试' }
-      const label = resolveFragmentLabel(option)
-      // Emoji regex: match a non-ASCII character at the start
-      expect(label).toMatch(/^[^\x00-\x7F]/)
+    it('never returns an emoji-prefixed label', () => {
+      const traitOptions: AnswerOption[] = [
+        { value: 'A', text: 'a', traitScores: { A: 0.9 } },
+        { value: 'O', text: 'o', traitScores: { O: 0.9 } },
+        { value: 'C', text: 'c', traitScores: { C: 0.9 } },
+        { value: 'E', text: 'e', traitScores: { E: 0.9 } },
+        { value: 'X', text: 'x', traitScores: { X: 0.9 } },
+        { value: 'P', text: 'p', traitScores: { P: 0.9 } },
+      ]
+      for (const opt of traitOptions) {
+        const label = resolveFragmentLabel(opt)
+        // Brand guideline: no emoji in primary copy. Plain ASCII or CJK only.
+        expect(label).not.toMatch(/^[\u{1F300}-\u{1F9FF}\u{2600}-\u{27BF}]/u)
+      }
+      // Also no fallback emoji
+      const fallback = resolveFragmentLabel({ value: 'X', text: 'no scores' })
+      expect(fallback).not.toMatch(/^[\u{1F300}-\u{1F9FF}\u{2600}-\u{27BF}]/u)
     })
   })
 

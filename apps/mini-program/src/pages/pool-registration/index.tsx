@@ -201,7 +201,10 @@ function getResumeNoticeCopy(
 export default function PoolRegistrationPage() {
   const router = useRouter()
   const poolId = router.params.id ?? ''
+  const invitationCode = router.params.invitationCode ?? ''
   const { user, isLoading: authLoading } = useAuthGuard()
+
+  const resolvedInvitationCode = invitationCode || (user as any)?.pendingReferralCode || ''
   const hasTrackedStartRef = useRef(false)
   const registeredRef = useRef(false)
   const queryClient = useQueryClient()
@@ -279,13 +282,13 @@ export default function PoolRegistrationPage() {
   useEffect(() => {
     appliedReturnContextRef.current = 0
     setStep(0)
-    setFormState(INITIAL_FORM_STATE)
+    setFormState({ ...INITIAL_FORM_STATE, invitationCode: resolvedInvitationCode || undefined })
     setRegistered(false)
     registeredRef.current = false
     setError('')
     setIsRegistering(false)
     setResumeContext(null)
-  }, [poolId])
+  }, [poolId, resolvedInvitationCode])
 
   useEffect(() => {
     registeredRef.current = registered
@@ -335,7 +338,10 @@ export default function PoolRegistrationPage() {
     }
 
     appliedReturnContextRef.current = nextContext.updatedAt
-    setFormState(buildFormStateFromDraft(nextContext.draft))
+    setFormState({
+      ...buildFormStateFromDraft(nextContext.draft),
+      invitationCode: resolvedInvitationCode || buildFormStateFromDraft(nextContext.draft).invitationCode,
+    })
     setStep(resolveRegistrationStep(nextContext.resumeStep))
     setResumeContext(nextContext)
     setError('')

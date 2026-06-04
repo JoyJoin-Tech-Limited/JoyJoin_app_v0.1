@@ -1,7 +1,9 @@
 # Tab Bar Notch Implementation — Code Review + Design Audit + Navigation Analysis
 
-> Date: 2026-05-16 | Scope: `apps/mini-program/src/native-custom-tab-bar/`
-> Reviewer: AI Engineering Agent | Status: 🔴 Needs PM Review Before Ship
+> Date: 2026-05-16 | Resolved: 2026-06-04 | Scope: `apps/mini-program/src/native-custom-tab-bar/`
+> Reviewer: AI Engineering Agent | Status: ✅ **Resolved — see §5 for fix summary**
+
+> **This document is retained for historical context. The implementation has been audited, fixed, and polished. Current source of truth is `apps/mini-program/README.md` § Native Custom Tab Bar and `AGENTS.md` § Custom tab bar geometry.**
 
 ---
 
@@ -204,3 +206,74 @@ bar.save('apps/mini-program/src/assets/tab-bar-notch-bg.png')
 ```
 
 > Notch params: center=(702, -78), radius=178, depth≈50rpx, width≈160rpx
+
+
+---
+
+## 5. RESOLUTION SUMMARY (2026-06-04)
+
+All P0/P1 issues identified in this review have been addressed. Below is the audit → fix mapping.
+
+### Structural Fixes
+
+| Issue | Status | Fix |
+|-------|--------|-----|
+| Center button clipped by `cover-view` | ✅ Fixed | Moved center button to **root sibling** of `.joy-custom-tab-bar__surface`; increased root height from `128rpx` → `182rpx` |
+| Page bottom reserve mismatch | ✅ Fixed | Added `$tab-bar-root-height: 182rpx` in `_variables.scss`; updated all 6 tab pages (`discover`, `connections`, `profile`, `rewards`, `events`, `center-hub`) |
+| `__border` cutting through notch | ✅ Fixed | Removed the accent border element entirely; surface uses pure white with shadow only |
+| No CSS fallback background | ✅ Fixed | Surface has solid `#FFFFFF` background; `cover-image` notch sits on top |
+| Center button too wide | ✅ Fixed | Reduced from `192rpx` → `148rpx` to prevent overlapping adjacent tabs |
+
+### Brand & Design Fixes
+
+| Issue | Status | Fix |
+|-------|--------|-----|
+| Gradient CTA (brand violation) | ✅ Fixed | Changed to **solid `#8B5CF6`** — gradient was purged from all mini-program CTAs |
+| No tap feedback | ✅ Fixed | Added `hover-class` + `hover-stay-time="150"` on all tabs; transitions live on base elements |
+| No active tab state | ✅ Fixed | Added `rgba(139, 92, 246, 0.08)` pill background + `border-radius: 20rpx` |
+| 8rpx rhythm violations | ✅ Fixed | Normalized `12rpx→16rpx`, `6rpx→8rpx`, `-2rpx→0`, `-6rpx→-8rpx`, etc. |
+| Hard-coded colors | ✅ Partial | Badge (`#FF6B9D`) and label (`#9CA3AF`) remain hard-coded in WXSS — acceptable for native component (no SCSS import) |
+
+### Reliability Fixes
+
+| Issue | Status | Fix |
+|-------|--------|-----|
+| `syncState` array reconstruction flicker | ✅ Fixed | 50ms debounce + shallow diff; badge updates use WeChat path syntax (`leftTabs[idx].badgeCount`) |
+| Optimistic `selected` race / no rollback | ✅ Fixed | `_confirmedSelected` tracks authoritative selection; rollback uses it (not optimistic `data.selected`). `pageLifetimes.show` safety net resets after 100ms on swipe-back |
+| No analytics | ✅ Fixed | `trackTabBarEvent` calls `wx.reportAnalytics` with `try/catch` for all tab taps |
+| No error logging on switchTab failure | ✅ Fixed | `fail` callbacks log to `console.warn` with tab key and error details |
+
+### Motion & Accessibility Fixes
+
+| Issue | Status | Fix |
+|-------|--------|-----|
+| No haptic feedback | ✅ Fixed | Platform-aware `_triggerHaptic()`: `type: 'light'` on iOS, plain `wx.vibrateShort()` on Android. Silently fails on unsupported devices |
+| No badge animation | ✅ Fixed | Badge pop-in with spring easing (`scale(0→1.15→1)`, 200ms) |
+| No center badge pulse | ✅ Fixed | Continuous `scale` pulse animation on center red dot |
+| No cover-image fade-in | ✅ Fixed | 200ms opacity fade to avoid icon flash |
+| No reduced motion support | ✅ Fixed | `@media (prefers-reduced-motion: reduce)` disables all animations |
+| No low-end device gating | ✅ Fixed | `benchmarkLevel <= 15` detected at attach time; `.joy-custom-tab-bar--low-end` class disables all animations on budget devices |
+
+### Deferred (Not Blockers)
+
+| Issue | Status | Rationale |
+|-------|--------|-----------|
+| Custom tab page transitions | 🟡 Deferred | WeChat `switchTab` uses native slide; custom cross-fade requires page-level orchestration — ROI low |
+| Tokenize hard-coded WXSS colors | 🟡 Deferred | Native tab bar has no SCSS pipeline; tokenization would require build-time CSS variable injection |
+| Tablet-specific responsive design | 🟡 Deferred | `left:24rpx; right:24rpx` margin is acceptable for current device matrix |
+| WebP asset conversion for notch | 🟡 Deferred | `tab-bar-notch-bg.png` is 4KB; WebP savings negligible |
+
+### Audit Scores (Post-Fix)
+
+| Dimension | Before | After |
+|-----------|--------|-------|
+| Frontend Design | 11/20 (D+) | ~B+ |
+| Performance | 7.3/10 (WARN) | ~8.5 (PASS) |
+
+---
+
+> **Canonical references post-fix:**
+> - `apps/mini-program/src/native-custom-tab-bar/` — source files (WXML/WXSS/JS)
+> - `apps/mini-program/README.md` § Native Custom Tab Bar
+> - `AGENTS.md` § Custom tab bar geometry
+> - `apps/mini-program/src/styles/_variables.scss` — `$tab-bar-height`, `$tab-bar-root-height`

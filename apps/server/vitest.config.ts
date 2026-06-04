@@ -15,6 +15,9 @@ export default defineConfig({
     coverage: {
       reporter: ['text', 'json', 'html'],
     },
+    env: {
+      RUN_PLAN_TEMPLATES_ENABLED: 'false',
+    },
   },
   resolve: {
     alias: {

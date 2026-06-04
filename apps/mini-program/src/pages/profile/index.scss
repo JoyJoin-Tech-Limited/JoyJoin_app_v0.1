@@ -10,7 +10,7 @@
 
   &__scroll {
     flex: 1;
-    overflow: hidden;
+    overflow-y: auto;
   }
 
   &__loading {
@@ -23,32 +23,47 @@
     color: $color-text-secondary;
   }
 
-  // Archetype hero
-  &__hero-wrap {
+  // Hero section
+  &__hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     padding: $spacing-2xl $container-padding $spacing-lg;
+    text-align: center;
   }
 
-  &__archetype-hero {
-    border: 2rpx solid rgba($color-primary, 0.08);
-    box-shadow: 0 4rpx 24rpx rgba($color-primary, 0.08);
+  &__avatar {
+    width: 120rpx;
+    height: 120rpx;
+    border-radius: 60rpx;
+    background: rgba($color-primary, 0.08);
+    @include flex-center;
+    margin-bottom: $spacing-md;
+    overflow: hidden;
   }
 
-  // Xiaoyue coach
-  &__coach {
-    padding: 0 $container-padding;
-    margin-bottom: $spacing-lg;
+  &__name {
+    @include type-heading;
+    margin-bottom: $spacing-xs;
+    display: block;
   }
 
-  // Identity preview card
-  &__identity-card {
-    @include card;
+  &__archetype {
+    @include type-body;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+    display: block;
+  }
+
+  // Archetype celebration card
+  &__archetype-card {
     margin: 0 $container-padding $spacing-lg;
     padding: $spacing-lg;
+    border-radius: $card-radius;
+    border: 2rpx solid rgba($color-primary, 0.08);
     opacity: 0;
     transform: translateY(12rpx);
-    transition:
-      opacity 0.5s ease,
-      transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 
     &--visible {
       opacity: 1;
@@ -56,65 +71,102 @@
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    &__identity-card {
-      opacity: 1;
-      transform: none;
-      transition: none;
-    }
+  &__archetype-card-inner {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
   }
 
-  &__identity-header {
-    margin-bottom: $spacing-md;
+  &__archetype-card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
   }
 
-  &__identity-title {
+  &__archetype-card-label {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+  }
+
+  &__archetype-card-name {
     font-size: $font-size-lg;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
     line-height: $line-height-tight;
   }
 
-  &__intent-wrap {
-    margin-top: $spacing-sm;
-  }
-
-  &__intent-chips {
-    opacity: 0.85;
-  }
-
-  &__tagline-wrap {
+  // Quick stats
+  &__stats {
     display: flex;
-    align-items: flex-start;
-    gap: $spacing-sm;
-    margin-top: $spacing-md;
-    padding-top: $spacing-md;
-    border-top: 1rpx solid $color-divider;
+    gap: $spacing-md;
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-lg;
   }
 
-  &__tagline-accent {
-    width: 6rpx;
-    height: 32rpx;
-    border-radius: 3rpx;
-    background: $color-primary;
-    flex-shrink: 0;
-    margin-top: 4rpx;
-  }
-
-  &__tagline {
+  &__stat {
     flex: 1;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: $line-height-normal;
-    font-style: italic;
+    @include card;
+    padding: $spacing-lg;
+    text-align: center;
   }
 
-  &__error-hint {
+  &__stat-value {
+    @include type-subheading;
+    margin-bottom: $spacing-xs;
     display: block;
+  }
+
+  &__stat-label {
+    @include type-caption;
+    display: block;
+  }
+
+  // D1 + D2 — Milestone badges row (Batch D)
+  &__milestones {
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__milestones-title {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__milestones-row {
+    display: flex;
+    gap: $spacing-md;
+  }
+
+  &__milestone {
+    @include card;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-md;
+    flex: 1;
+    transition: transform 0.15s ease, background 0.15s ease;
+
+    &--pressed {
+      transform: scale(0.97);
+      background: rgba($color-primary, 0.06);
+    }
+  }
+
+  &__milestone-img {
+    width: 80rpx;
+    height: 80rpx;
+    display: block;
+  }
+
+  &__milestone-label {
     font-size: $font-size-sm;
-    color: $color-error;
-    line-height: $line-height-normal;
-    padding: $spacing-sm 0;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
   }
 
   // Action rows
@@ -138,7 +190,7 @@
     }
 
     &:active {
-      background: rgba(0, 0, 0, 0.02);
+      background: rgba($color-text-primary, 0.02);
     }
 
     &--active {
@@ -231,7 +283,19 @@
   }
 
   &__spacer {
-    @include safe-area-bottom-padding(padding-bottom, $tab-bar-height + $spacing-lg);
+    @include safe-area-bottom-padding(padding-bottom, $tab-bar-root-height + $spacing-lg);
     height: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-page__archetype-card {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .profile-page__milestone {
+    transition: none;
   }
 }

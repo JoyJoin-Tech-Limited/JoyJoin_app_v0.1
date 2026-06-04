@@ -22,9 +22,11 @@ import { getErrorMessage } from '@shared/copy/errorBaselines'
  *   4. Seed the auth cache so protected routes do not keep stale guest state.
  *   5. Navigate via the shared onboarding helper so tab vs page routing stays correct.
  *
+ * Accepts optional `referralCode` to attribute the signup to a referrer.
+ *
  * Returns { handleWeChatLogin, isLoggingIn }.
  */
-export function useWeChatLogin() {
+export function useWeChatLogin(input?: { referralCode?: string }) {
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const loginLockRef = useRef(false)
   const queryClient = useQueryClient()
@@ -37,7 +39,7 @@ export function useWeChatLogin() {
     try {
       logInfo('[useWeChatLogin] Starting WeChat Mini Program login')
 
-      await authenticateMiniProgramUser()
+      await authenticateMiniProgramUser({ referralCode: input?.referralCode })
 
       const userState = await getUserState()
       seedMiniProgramAuthSession(userState, queryClient)

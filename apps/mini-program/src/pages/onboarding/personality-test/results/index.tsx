@@ -274,10 +274,13 @@ export default function PersonalityTestResultsPage() {
     if (analysisRequestedRef.current) return
     analysisRequestedRef.current = true
 
-    // Small delay so the result page is fully rendered before the API call starts
+    // P0-3: 80ms render buffer (was 400ms). The test page fires a
+    // fire-and-forget prefetch at completion so this call mostly
+    // hits the server cache. 80ms is the minimum to let the result
+    // page settle before the analysis fetch starts.
     const timer = setTimeout(() => {
       void fetchXiaoyueAnalysis()
-    }, 400)
+    }, 80)
     return () => clearTimeout(timer)
   }, [flowStage, fetchXiaoyueAnalysis])
 
@@ -626,7 +629,10 @@ export default function PersonalityTestResultsPage() {
       }
 
       setFlowStage('slot')
-      setPhaseText('即将揭晓...')
+      // P1-3: differentiated from the completing-phase title to avoid
+      // same-line-twice fatigue. The `好——` opener signals continuation
+      // rather than repetition.
+      setPhaseText('好——让我把命格翻到最后一页。')
 
       // Show skip button for all users after 1.5s (accessibility + impatient users)
       const skipTimeout = setTimeout(() => {

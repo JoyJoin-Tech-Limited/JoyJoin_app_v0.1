@@ -25,7 +25,7 @@ describe("event pool stats contract", () => {
         狐狸: 4,
       },
       // floor(7 / 4) = 1 — conservative: only fully-formable groups are counted.
-      estimatedGroups: 1,
+      projectedGroups: 1,
       avgMatchScore: 82,
       recentThemeTitles: [{ themeTitle: "城市夜游", themeEmoji: "🌃" }],
     });
@@ -41,6 +41,6 @@ describe("event pool stats contract", () => {
       recentThemeTitles: [],
     });
 
-    expect(result.estimatedGroups).toBe(2);
+    expect(result.projectedGroups).toBe(2);
   });
 });

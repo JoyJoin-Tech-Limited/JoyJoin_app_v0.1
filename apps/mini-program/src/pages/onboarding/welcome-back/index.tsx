@@ -13,6 +13,7 @@ import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { restartOnboarding } from '../../../lib/api/api'
 import { seedMiniProgramAuthSession } from '../../../lib/api/authSession'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
+import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
 import { logError, logInfo } from '../../../lib/utils/logger'
 import { TOAST_FATAL_MS } from '../../../lib/utils/uiConstants'
 import Button from '../../../components/ui/Button'
@@ -134,6 +135,14 @@ export default function WelcomeBackPage() {
 
   return (
     <View className="welcome-back">
+      {/* C1 — Ceremony hero backdrop behind mascot (Batch C welcome-back-hero) */}
+      <Image
+        className="welcome-back__hero"
+        src={CEREMONY_HEROES.welcomeBack}
+        mode="aspectFit"
+        ariaLabel=""
+        lazyLoad
+      />
       <View className="welcome-back__content">
         {/* Mascot */}
         <View className="welcome-back__mascot-wrap">

@@ -1,0 +1,556 @@
+@use '../styles/variables' as *;
+
+// ─── Hero Promo Banner ──────────────────────────────────────────────────
+// Full-bleed hero illustration with a floating copy panel.
+// One composed surface — copy and image breathe together.
+//
+//   ┌──────────────────────────────────────────────┐
+//   │  ✦                                            │
+//   │   本周推荐                                     │
+//   │   这周末，会遇见谁？                            │
+//   │   已有 12 人报名 · 最后 3 席                    │
+//   │   [ 查看活动详情  → ]                          │
+//   │                                                │
+//   │           [ hero illustration ]                 │
+//   └──────────────────────────────────────────────┘
+
+.hero-promo-banner {
+  width: 100%;
+
+  &__slide {
+    position: relative;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: $card-radius;
+    overflow: hidden;
+    background: $color-bg-tint-purple;
+    // Single soft elevation — two stacked shadows compound GPU cost on
+    // iPhone WKWebView. One shadow tuned to match the brand glow is
+    // enough; the gradient overlay (z=2) provides the visual depth.
+    box-shadow: 0 8rpx 28rpx rgba($color-primary, 0.1);
+    aspect-ratio: 750 / 360;
+    min-height: 320rpx;
+  }
+
+  // ── Hero image (full-bleed background) ─────────────────────────────
+  &__image-wrap {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+    border-radius: $card-radius;
+  }
+
+  &__image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    transform: scale(1.02) translate3d(0, 0, 0);
+    opacity: 0;
+    transition:
+      opacity 0.45s ease,
+      transform 7s cubic-bezier(0.22, 1, 0.36, 1);
+
+    &--revealed {
+      opacity: 1;
+      // Slow drift over 7s — the only "surprise reveal" idle motion.
+      // Restrained: 0px → 8px right + 4px down. Composited.
+      transform: scale(1.05) translate3d(8rpx, 4rpx, 0);
+    }
+  }
+
+  // Soft purple→pink gradient that anchors copy legibility without
+  // killing the illustration. The hero is still clearly visible.
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background:
+      // copy-side: strong left wash so text reads cleanly
+      linear-gradient(
+        100deg,
+        rgba($color-primary-dark, 0.78) 0%,
+        rgba($color-primary-dark, 0.55) 32%,
+        rgba($color-primary-dark, 0.18) 58%,
+        rgba($color-secondary, 0.10) 80%,
+        rgba($color-surface, 0) 100%
+      ),
+      // bottom warmth: subtle pink glow under the hero
+      radial-gradient(
+        120% 80% at 80% 100%,
+        rgba($color-secondary, 0.18) 0%,
+        rgba($color-surface, 0) 60%
+      );
+  }
+
+  // When the CDN image is unrecoverable we don't show a broken icon —
+  // just a flat brand-tinted wash that carries the copy. The overlay
+  // above remains the primary visual; this is purely so the empty
+  // image-wrap doesn't look like a "blank" card.
+  &__image-fallback {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: linear-gradient(
+      135deg,
+      $color-bg-tint-purple 0%,
+      $color-bg-tint-pink 100%
+    );
+  }
+
+  // Sparkles layer (surprise-box breath of life)
+  &__sparkles {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  &__sparkle {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle at 50% 50%,
+      rgba($color-surface, 0.95) 0%,
+      rgba($color-surface, 0.55) 40%,
+      rgba($color-surface, 0) 70%
+    );
+    box-shadow: 0 0 8rpx rgba($color-surface, 0.6);
+    opacity: 0;
+    animation: hero-promo-banner__sparkle-rise 4.2s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+
+  // Drift variants — used by sparkle children
+  &__sparkle-drift-sm {
+    animation-name: hero-promo-banner__sparkle-rise-sm;
+  }
+  &__sparkle-drift-md {
+    animation-name: hero-promo-banner__sparkle-rise-md;
+  }
+  &__sparkle-drift-lg {
+    animation-name: hero-promo-banner__sparkle-rise-lg;
+  }
+
+  // ── Copy panel ───────────────────────────────────────────────────────
+  &__content {
+    position: relative;
+    z-index: 4;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: $spacing-lg $spacing-md $spacing-md;
+    box-sizing: border-box;
+    // Safe-area on iPhone: add bottom inset so the banner doesn't sit
+    // under the home indicator when it appears at the top of a tall page.
+    padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom, 0px));
+  }
+
+  &__copy-panel {
+    position: relative;
+    z-index: 1;
+    flex: 0 1 auto;
+    max-width: 460rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  &__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    padding: 6rpx 16rpx;
+    border-radius: 999rpx;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    line-height: 1.2;
+    color: $color-text-white;
+    background: rgba($color-surface, 0.22);
+    border: 1rpx solid rgba($color-surface, 0.35);
+    margin-bottom: 16rpx;
+    // Opaque background for legibility — avoids WKWebView compositor cost
+    // of backdrop-filter while keeping text readable over the hero image.
+    background: rgba($color-surface, 0.35);
+  }
+
+  &__title {
+    display: block;
+    // CJK display font: the "premium moment" for the brand.
+    // No `overflow-wrap: anywhere` — preserves CJK grouping (no 孤字).
+    font-family: $font-cn-display;
+    font-size: 40rpx;
+    line-height: 1.22;
+    font-weight: $font-weight-black;
+    color: $color-text-white;
+    text-shadow: 0 2rpx 12rpx rgba($color-primary-dark, 0.45);
+    letter-spacing: -0.5rpx;
+  }
+
+  &__subtitle {
+    display: block;
+    margin-top: 16rpx;
+    font-size: 24rpx;
+    line-height: 1.5;
+    font-weight: $font-weight-medium;
+    color: rgba($color-surface, 0.92);
+    text-shadow: 0 1rpx 6rpx rgba($color-primary-dark, 0.35);
+  }
+
+  // ── CTA: breathing pill with arrow ─────────────────────────────────
+  &__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 16rpx;
+    margin-top: 24rpx;
+    // 8rpx-rhythm floor + 88rpx WeChat primary CTA tap target standard.
+    min-height: 88rpx;
+    padding: 16rpx 16rpx 16rpx 32rpx;
+    border-radius: 999rpx;
+    background: $color-surface;
+    box-shadow:
+      0 8rpx 20rpx rgba($color-primary-dark, 0.28),
+      0 2rpx 6rpx rgba($color-primary-dark, 0.18);
+    transition:
+      transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.18s ease,
+      background 0.18s ease;
+    will-change: transform;
+    // Gentle idle breathing — the only "wow element" on idle.
+    // Restrained: 1.0 → 1.025 over 2.4s. Premium, not bouncy.
+    animation: hero-promo-banner__cta-breathe 2.4s ease-in-out infinite;
+    animation-delay: 0.8s;
+
+    &--active {
+      transform: scale(0.96);
+      animation-play-state: paused;
+      box-shadow: 0 4rpx 12rpx rgba($color-primary-dark, 0.2);
+    }
+
+    &--disabled {
+      opacity: 0.45;
+      pointer-events: none;
+    }
+  }
+
+  &__cta-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    line-height: 1;
+    color: $color-primary-dark;
+    letter-spacing: 0.5rpx;
+  }
+
+  &__cta-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40rpx;
+    height: 40rpx;
+    border-radius: 50%;
+    background: $color-primary;
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__cta-arrow-glyph {
+    font-size: 24rpx;
+    line-height: 1;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+  }
+
+  &__cta--active &__cta-arrow {
+    // 4rpx optical nudge — keeps the arrow's leading edge inside the
+    // CTA's hit target while reading as a confident forward shift.
+    transform: translateX(4rpx);
+  }
+
+  // ── Retry pill (image error recovery) ───────────────────────────────
+  &__retry {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 16rpx;
+    min-height: 56rpx;
+    padding: 8rpx 24rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.18);
+    border: 1rpx solid rgba($color-surface, 0.4);
+    transition:
+      transform 0.12s ease,
+      background 0.12s ease;
+    will-change: transform;
+
+    &--active {
+      transform: scale(0.96);
+      background: rgba($color-surface, 0.32);
+    }
+  }
+
+  &__retry-text {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    line-height: 1;
+    color: $color-text-white;
+  }
+
+  // ── Skeleton ────────────────────────────────────────────────────────
+  &__image-skeleton {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: linear-gradient(
+      135deg,
+      $color-bg-tint-purple 0%,
+      $color-bg-tint-pink 50%,
+      $color-bg-tint-purple 100%
+    );
+    background-size: 200% 200%;
+    animation:
+      hero-promo-banner__shimmer 1.4s ease-in-out infinite,
+      hero-promo-banner__shimmer-pan 6s ease-in-out infinite;
+  }
+
+  // ── Compact mode (login / tight surfaces) ──────────────────────────
+  &--compact {
+    .hero-promo-banner__slide {
+      aspect-ratio: 750 / 240;
+      min-height: 240rpx;
+    }
+
+    .hero-promo-banner__content {
+      padding: $spacing-md;
+    }
+
+    .hero-promo-banner__copy-panel {
+      max-width: 380rpx;
+    }
+
+    .hero-promo-banner__eyebrow {
+      margin-bottom: 8rpx;
+      padding: 4rpx 16rpx;
+    }
+
+    .hero-promo-banner__title {
+      font-size: 32rpx;
+      line-height: 1.26;
+    }
+
+    .hero-promo-banner__subtitle {
+      margin-top: 8rpx;
+      font-size: 24rpx;
+      line-height: 1.5;
+    }
+
+    .hero-promo-banner__cta {
+      margin-top: 16rpx;
+      // Compact surfaces can use 72rpx since the surrounding context
+      // (login screen) has larger touch targets; still keeps the
+      // 8rpx-rhythm padding.
+      min-height: 72rpx;
+      padding: 16rpx 16rpx 16rpx 24rpx;
+    }
+
+    .hero-promo-banner__cta-text {
+      font-size: $font-size-xs;
+    }
+
+    .hero-promo-banner__cta-arrow {
+      width: 32rpx;
+      height: 32rpx;
+    }
+
+    .hero-promo-banner__cta-arrow-glyph {
+      font-size: 20rpx;
+    }
+  }
+
+  // ── Kill-switch / disabled: feature flag off, no surface at all ──
+  // The component renders a 0-height spacer so layout doesn't shift.
+  &--disabled {
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  // ── Degradation tier: keep the reveal + entrance, kill idle loops ──
+  // benchmarkLevel ≥ 30 OR iPhone XR-or-older. We still want the user
+  // to see the banner — just without the sparkles, breathing, or
+  // image drift eating frames.
+  &--degradation {
+    .hero-promo-banner__cta {
+      animation: none;
+    }
+
+    .hero-promo-banner__sparkle {
+      display: none;
+    }
+
+    .hero-promo-banner__image {
+      transition: opacity 0.3s ease;
+    }
+
+    .hero-promo-banner__image--revealed {
+      transform: scale(1.02);
+    }
+  }
+
+  // ── Reduce motion: kill breathe, sparkle, drift, stagger ───────────
+  &--reduce-motion {
+    .hero-promo-banner__cta {
+      animation: none;
+    }
+
+    .hero-promo-banner__sparkle {
+      display: none;
+    }
+
+    .hero-promo-banner__image-skeleton {
+      animation: none;
+      background: $color-bg-tint-purple;
+    }
+
+    .hero-promo-banner__image {
+      transition: none;
+      transform: none;
+    }
+
+    .hero-promo-banner__image--revealed {
+      transform: none;
+    }
+
+    .stagger-in {
+      opacity: 1 !important;
+      transform: none !important;
+      animation: none !important;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-promo-banner {
+    .hero-promo-banner__cta {
+      animation: none;
+    }
+
+    .hero-promo-banner__sparkle {
+      display: none;
+    }
+
+    .hero-promo-banner__image-skeleton {
+      animation: none;
+      background: $color-bg-tint-purple;
+    }
+
+    .hero-promo-banner__image {
+      transition: none;
+      transform: none;
+    }
+
+    .hero-promo-banner__image--revealed {
+      transform: none;
+    }
+
+    .stagger-in {
+      opacity: 1 !important;
+      transform: none !important;
+      animation: none !important;
+    }
+  }
+}
+
+// ─── Keyframes ───────────────────────────────────────────────────────
+@keyframes hero-promo-banner__shimmer {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes hero-promo-banner__shimmer-pan {
+  0%,
+  100% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+}
+
+@keyframes hero-promo-banner__cta-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.025);
+  }
+}
+
+@keyframes hero-promo-banner__sparkle-rise-sm {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.6);
+  }
+  18% {
+    opacity: 0.95;
+    transform: translate3d(0, -8rpx, 0) scale(1);
+  }
+  70% {
+    opacity: 0.5;
+    transform: translate3d(0, -16rpx, 0) scale(0.85);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -24rpx, 0) scale(0.5);
+  }
+}
+
+@keyframes hero-promo-banner__sparkle-rise-md {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.6);
+  }
+  18% {
+    opacity: 0.95;
+    transform: translate3d(0, -8rpx, 0) scale(1);
+  }
+  70% {
+    opacity: 0.5;
+    transform: translate3d(0, -24rpx, 0) scale(0.85);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -32rpx, 0) scale(0.5);
+  }
+}
+
+@keyframes hero-promo-banner__sparkle-rise-lg {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.6);
+  }
+  18% {
+    opacity: 0.95;
+    transform: translate3d(0, -8rpx, 0) scale(1);
+  }
+  70% {
+    opacity: 0.5;
+    transform: translate3d(0, -24rpx, 0) scale(0.85);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -40rpx, 0) scale(0.5);
+  }
+}

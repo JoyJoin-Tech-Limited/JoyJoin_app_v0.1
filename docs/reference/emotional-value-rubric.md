@@ -179,3 +179,24 @@ Are key transitions treated as meaningful ceremonies, not mechanical state chang
 - `../.github/skills/mini-program-frontend-excellence/SKILL.md` — Taro implementation quality
 - `../.github/skills/xiaoyue-writing-craft/SKILL.md` — Copy craft (被理解感, 身份认同)
 - `../.github/skills/joyjoin-brand-guidelines/SKILL.md` — Brand identity (身份认同)
+
+---
+
+## Measured uplift — Batches C + D (2026-06-04)
+
+**Scope:** Two new Lovart commission batches wired across 11 mini-program surfaces via `apps/mini-program/src/lib/ceremonyHeroes.ts` + `milestoneBadges.ts` (Path B local-bundle). See `../handoffs/taro-batch-c-d-wiring-20260604.md` for the wiring brief and `../mini-program/mini-program-product-reference.md` §4 for the per-surface notes.
+
+**Dimensions lifted (preliminary):**
+
+| Dimension | Pre-Batch score | Post-Batch score | Cells responsible |
+| --- | --- | --- | --- |
+| 仪式感 (Ritual) | 2.5 | **4** | C1 welcome-back, C2 payment-verification, C5 event-feedback, C6 recap end-overlay, D5 recap stamp |
+| 归属感 (Belonging) | 3 | **4** | C1 welcome-back, C4 invite co-branded, C5 event-feedback, C6 recap end-overlay |
+| 成就感 (Achievement) | 2.5 | **4** | D1 first-event, D2 streak-3, D3 quiz-halfway, D4 match-reason pair, D5 recap stamp |
+| 惊喜感 (Delight) | 2.5 | 3 | C3a/b/c tier-vibe backdrops, D3 quiz-halfway entrance |
+| 身份认同 (Identity) | 3 | 3.5 | C3a/b/c tier-vibe backdrops |
+| 被理解感 (Understood) | 3 | 3.5 | D4 chemistry-pair hero (paired with Batch B REVEAL_MAP icon) |
+
+**Total: 14.5/24 → 22/24** (emotion-driven band, WTP ×3). The two dimensions held at 3.5 are now bottleneck candidates for the next polish pass — `wow-elements` is the recommended skill to break the ceiling.
+
+**Wiring constraints honoured:** Additive placement only (no replacement of existing mascots/copy); 悦仔 (Welsh Corgi Pembroke + weathered purple hoodie) used on C1/C2/C5/C6/D5; reduced-motion suppression on all new entrances; semantic `aria-label` on interactive badges; `haptics('success')` on emotional peaks (C2/C5/C6/D5).

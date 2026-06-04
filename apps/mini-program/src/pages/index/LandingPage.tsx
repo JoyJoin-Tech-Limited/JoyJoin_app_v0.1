@@ -1,5 +1,5 @@
 import { View, Text, Image, Navigator } from "@tarojs/components"
-import Taro from "@tarojs/taro"
+import Taro, { useRouter } from "@tarojs/taro"
 import { useState, useEffect, useRef, useMemo } from "react"
 import { cdnAsset, localAsset } from "../../lib/utils/cdnAssets"
 import { loadBrandDisplayFont } from "../../lib/utils/brandFont"
@@ -29,6 +29,8 @@ const LANDING_PHASE_ICONS: Record<string, string> = {
 const MASCOT_SRC = localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.png')
 
 export default function MiniProgramLandingPage() {
+  const router = useRouter()
+  const invitationCode = router.params.invitationCode ?? ''
   const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [shakeLegal, setShakeLegal] = useState(false)
@@ -49,7 +51,9 @@ export default function MiniProgramLandingPage() {
       return false
     }
   }, [])
-  const { handleWeChatLogin, isLoggingIn } = useWeChatLogin()
+  const { handleWeChatLogin, isLoggingIn } = useWeChatLogin({
+    referralCode: invitationCode || undefined,
+  })
   const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {

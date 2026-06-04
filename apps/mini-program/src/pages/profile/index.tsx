@@ -1,4 +1,4 @@
-import { View, Text, ScrollView } from '@tarojs/components'
+import { View, Text, ScrollView, Image } from '@tarojs/components'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import Taro from '@tarojs/taro'
 import { haptics } from '../../lib/utils/haptics'
@@ -24,6 +24,7 @@ import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
 import './index.scss'
 
@@ -36,19 +37,20 @@ export default function ProfilePage() {
     enabled: !authLoading,
   })
 
-  const { data: coupons = { count: 0, availableCount: 0, coupons: [] } } = useQuery({
+  const { data: coupons = { count: 0, availableCount: 0, coupons: [] }, isLoading: isLoadingCoupons } = useQuery({
     queryKey: ['mini-program', 'coupons'],
     queryFn: () => getUserCoupons(apiRequest),
     enabled: !authLoading && !!authUser,
   })
 
-  const { data: joinedEvents = [] } = useQuery({
+  const { data: joinedEvents = [], isLoading: isLoadingEvents } = useQuery({
     queryKey: ['mini-program', 'joined-events'],
     queryFn: () => getJoinedEvents(apiRequest),
     enabled: !authLoading && !!authUser,
   })
 
   const joinedEventsCount = joinedEvents.length
+  const isLoadingStats = isLoadingCoupons || isLoadingEvents
 
   const handleOpenPayment = () => {
     haptics('light')
@@ -121,7 +123,7 @@ export default function ProfilePage() {
         {/* Archetype Celebration Card */}
         {archetype && (
           <View
-            className='profile-page__archetype-card'
+            className='profile-page__archetype-card profile-page__archetype-card--visible'
             style={{ background: ARCHETYPE_FAMILY_GRADIENTS[getArchetypeFamily(archetype)] }}
           >
             <View className='profile-page__archetype-card-inner'>
@@ -139,16 +141,59 @@ export default function ProfilePage() {
         {/* Quick stats */}
         <View className='profile-page__stats'>
           <Card className='profile-page__stat'>
-            <Text className='profile-page__stat-value'>{coupons.count ?? 0}</Text>
+            <Text className='profile-page__stat-value'>
+              {isLoadingStats ? '—' : (coupons.count ?? 0)}
+            </Text>
             <Text className='profile-page__stat-label'>优惠券</Text>
           </Card>
           <Card className='profile-page__stat'>
             <Text className='profile-page__stat-value'>
-              {getOnboardingStepLabel(nextStepToOnboardingStep(nextStep))}
+              {isLoadingStats ? '—' : getOnboardingStepLabel(nextStepToOnboardingStep(nextStep))}
             </Text>
             <Text className='profile-page__stat-label'>匹配进度</Text>
           </Card>
         </View>
+
+        {/* D1 + D2 — Milestone badges row (Batch D) */}
+        {!isLoadingStats && (joinedEventsCount >= 1 || joinedEventsCount >= 3) && (
+          <View className='profile-page__milestones'>
+            <Text className='profile-page__milestones-title'>我的成就</Text>
+            <View className='profile-page__milestones-row'>
+              {joinedEventsCount >= 1 && (
+                <View
+                  className='profile-page__milestone'
+                  hoverClass='profile-page__milestone--pressed'
+                  onClick={() => { haptics('light'); Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
+                  aria-label="已参加 1 场活动"
+                >
+                  <Image
+                    className='profile-page__milestone-img'
+                    mode='aspectFit'
+                    src={MILESTONE_BADGES.firstEvent}
+                    lazyLoad
+                  />
+                  <Text className='profile-page__milestone-label'>初次见面</Text>
+                </View>
+              )}
+              {joinedEventsCount >= 3 && (
+                <View
+                  className='profile-page__milestone'
+                  hoverClass='profile-page__milestone--pressed'
+                  onClick={() => { haptics('light'); Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
+                  aria-label="已参加 3 场活动"
+                >
+                  <Image
+                    className='profile-page__milestone-img'
+                    mode='aspectFit'
+                    src={MILESTONE_BADGES.streak3}
+                    lazyLoad
+                  />
+                  <Text className='profile-page__milestone-label'>三场连击</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Action cards */}
         <View className='profile-page__section'>

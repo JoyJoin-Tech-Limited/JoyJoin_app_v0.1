@@ -198,6 +198,20 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/empty-state',
           to: 'dist/assets/empty-state',
         },
+        // Batch C ceremony heroes — 8 WebP files (~310KB total, q=70 600px).
+        // Bundled locally (Path B, 2026-06-04) instead of CDN.
+        // PNG masters live in `assets-source/lovart/batch-c/` (not bundled).
+        {
+          from: 'src/assets/ceremony',
+          to: 'dist/assets/ceremony',
+        },
+        // Batch D milestone badges — 9 WebP files (~330KB total, q=70 600px).
+        // Bundled locally (Path B, 2026-06-04) instead of CDN.
+        // PNG masters live in `assets-source/lovart/batch-d/` (not bundled).
+        {
+          from: 'src/assets/badges',
+          to: 'dist/assets/badges',
+        },
         // Auction phase coin icons — tiny game UI elements (~23KB).
         // Copied to a dedicated directory so the clean step doesn't remove them
         // (the clean step wipes the entire lovart/ tree for CDN assets).

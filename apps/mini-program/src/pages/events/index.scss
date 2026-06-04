@@ -197,7 +197,40 @@
   }
 
   &__spacer {
-    height: 160rpx;
+    height: calc($tab-bar-root-height + $spacing-lg);
+  }
+
+  // D1 — First event celebration hero (Batch D)
+  &__first-event-hero {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: $spacing-md $container-padding;
+    margin: 0 $container-padding $spacing-md;
+    background: linear-gradient(
+      135deg,
+      rgba($color-primary, 0.08) 0%,
+      rgba($color-primary, 0.16) 100%
+    );
+    border-radius: $card-radius;
+  }
+
+  &__first-event-hero-img {
+    width: 200rpx;
+    height: 200rpx;
+    display: block;
+    opacity: 0;
+    animation: events-first-event-hero-pop 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.05s forwards;
+  }
+
+  &__first-event-hero-title {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+    text-align: center;
+    opacity: 0;
+    animation: events-first-event-title-in 0.4s ease-out 0.35s forwards;
   }
 }
 
@@ -206,5 +239,33 @@
   .events-page__refresh-indicator {
     animation: none;
     background: $color-divider;
+  }
+
+  .events-page__first-event-hero-img,
+  .events-page__first-event-hero-title {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+@keyframes events-first-event-hero-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(8rpx);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes events-first-event-title-in {
+  from {
+    opacity: 0;
+    transform: translateY(4rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

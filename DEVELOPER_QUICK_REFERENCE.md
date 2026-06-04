@@ -217,6 +217,7 @@ joyjoin-monorepo/
 | Swipe-back flag-reset hook | `apps/mini-program/src/hooks/useResetOnShow.ts` |
 | Quality bar (pixel precision, DevTools) | `.github/skills/mini-program-frontend-excellence/SKILL.md` |
 | 完成度 audit (completeness + ROI recommendations) | `.github/skills/completeness-audit/SKILL.md` (pipeline: ui-layout-audit → frontend-design-audit → completeness-audit) |
+| Hero promo banner (discover top surface) | `apps/mini-program/src/components/HeroPromoBanner.tsx` — full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles. Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`, default `true`) |
 
 ```bash
 npm run dev:weapp --workspace=mini-program
@@ -254,6 +255,7 @@ Active domain modules in `routes/domains/`:
 | `eventPools.ts` | Event pool discovery, registration, and `GET /api/event-pools/:poolId/stats` (`estimatedGroups`, archetype breakdown, historical group themes) |
 | `icebreaker.ts` | Mounts **`/api/social-icebreaker`** (Social Icebreaker router from `routes/socialIcebreaker.ts`) and **`/api/tts`** — not the legacy toolkit; legacy random topics live under monolithic `routes.ts` `/api/icebreakers/*` |
 | `icebreakerSessions.ts` | Icebreaker session discovery and access endpoints |
+| `referrals.ts` | Referral & invitation routes — `GET /api/referral/stats` (referral code + invite stats), `GET /api/referral/invites-received` (incoming invites), invite link generation (mini-program deep link format) |
 | `eventGroupOutcomes.ts` | Protected `POST /api/event-pools/:poolId/group-outcome` outcome submission endpoint |
 | `adminMatchingShadow.ts` | Admin shadow matching experiments, predictive rerank status and controls |
 | `matchingShadowErrors.ts` | Shadow-matching error inspection endpoints |
@@ -316,6 +318,8 @@ interface UseAuthResult {
     onboardingForceSkip?: boolean;     // Admin force-skip button on onboarding
     matchingLiveReveal?: boolean;      // Live reveal overlay on matching status
     socialIcebreakerClientForceEnd?: boolean; // Host emergency end button
+    personalityShareEnabled?: boolean; // Share poster generation on results page
+    personalitySlotAnimationEnabled?: boolean; // Slot machine reveal animation
   }; // Feature flags from server (DB-backed, resolved in parallel, see lib/featureFlags.ts)
 }
 ```
@@ -1083,7 +1087,9 @@ interface PoolMatchedData {
 | `events` | Confirmed events |
 | `eventAttendees` | Event participants |
 | `chatMessages` | Event coordination message records |
-| `invitations` | Referral tracking |
+| `invitations` | Event-specific invitation codes (expires at event start, linked to inviter) |
+| `referral_codes` | Permanent user-level referral codes (linked to user, no expiry) |
+| `invitation_uses` | Tracks which invitees used which invitation code (dedup guarded) |
 | `userCoupons` | Discount coupons |
 | `subscriptions` | Premium subscriptions |
 | `matchingThresholds` | Per-pool matching config (includes predictive rerank controls) |
@@ -1187,6 +1193,7 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | `EMBEDDING_MAX_RETRIES` | Embedding API retry count (default: 2) |
 | `RUN_PLAN_TEMPLATES_ENABLED` | `true` enables template-driven run plan compiler **and** the 3×3 vibe grid UX (`深聊`/`均衡`/`暢玩`). When `false`, legacy `compileAgentRunPlan()` runs unchanged and clients hide the vibe selector. Server queries DB `run_plan_templates` with `TEMPLATE_DEFAULTS` fallback | `false` |
 | `PERSONALITY_DICE_CHOOSE_MODE_ENABLED` | `true` enables Choose-Your-Prompt variant: 3 difficulty-tiered dares per player, player picks one. `false` retains original single-dare flow |
+| `PROMO_BANNER_ENABLED` | `true` shows the discover hero promo banner; `false` kills the entire surface (zero-height spacer) and stops all `promo_banner_*` analytics. DB override via `/admin/feature-flags` (key `promoBannerEnabled`). Default `true` |
 
 ### Auto-Populated (via Replit)
 

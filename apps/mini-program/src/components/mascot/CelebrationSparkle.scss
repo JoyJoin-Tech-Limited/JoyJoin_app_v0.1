@@ -1,0 +1,39 @@
+@use '../../styles/variables' as *;
+
+.celebration-sparkle {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 4;
+}
+
+.celebration-sparkle__particle {
+  position: absolute;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.6);
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: celebration-sparkle-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes celebration-sparkle-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -80rpx) scale(1.08);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -160rpx) scale(0.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .celebration-sparkle {
+    display: none;
+  }
+}

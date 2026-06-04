@@ -386,6 +386,8 @@ export interface AuthUserResponse extends SanitizedAuthUser {
   matchCompassEnabled?: boolean
   /** Number of onboarding restarts remaining (capped at 5). */
   restartsRemaining?: number
+  /** Referral code stored in session during login; used to pre-fill pool registration. */
+  pendingReferralCode?: string
   /** Feature flags exposed to the client. */
   features?: {
     restartOnboarding?: boolean
@@ -401,6 +403,9 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     personalityShareEnabled?: boolean
     /** When false, skips the slot machine reveal animation and shows static result. */
     personalitySlotAnimationEnabled?: boolean
+    /** When false, hides the Hero Promo Banner entirely. Kill switch for the
+     *  discover hero. Default: true. */
+    promoBannerEnabled?: boolean
   }
 }
 

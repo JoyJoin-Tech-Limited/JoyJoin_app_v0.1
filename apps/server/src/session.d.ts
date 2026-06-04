@@ -12,6 +12,7 @@ declare module "express-session" {
     debugTest?: number;
     isAdmin?: boolean;
     oauthState?: string;
+    pendingReferralCode?: string;
   }
 }
 

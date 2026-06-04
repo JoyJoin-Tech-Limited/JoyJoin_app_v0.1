@@ -197,7 +197,7 @@ Boundary:
 - Native WeChat custom tab bar implementation: `apps/mini-program/src/native-custom-tab-bar/`
 - The build copies `apps/mini-program/src/native-custom-tab-bar/` into the runtime `custom-tab-bar/` directory; `apps/mini-program/src/custom-tab-bar/` is not the active runtime path.
 - Tab selection / center CTA sync: `apps/mini-program/src/lib/navigation/tabBarConfig.ts`, `apps/mini-program/src/lib/navigation/centerTabRouting.ts`, `apps/mini-program/src/hooks/navigation/useCustomTabBarSync.ts`
-- Active custom-tab-bar constraints live in `apps/mini-program/README.md`; keep the native tree within `cover-view` nesting rules and treat shadow, gradient, and overflow-driven protrusions as compatibility-sensitive.
+- Active custom-tab-bar constraints live in `apps/mini-program/README.md` and `AGENTS.md` § Custom tab bar geometry; keep the native tree within `cover-view` nesting rules and treat shadow, gradient, and overflow-driven protrusions as compatibility-sensitive. Center button is a root sibling (not nested inside surface) to avoid `cover-view` clipping.
 - App-level config / lifecycle: `apps/mini-program/src/app.ts` (provider setup), `apps/mini-program/src/app.config.ts` (`lazyCodeLoading: 'requiredComponents'`, `tabBar.custom`, window defaults)
 - Cross-platform contract or pure business rule: `packages/shared/src/` (`api.ts`, `centerTabRouting.ts`, `hongKongTime.ts`, `onboarding.ts`)
 

@@ -7,6 +7,21 @@
   @include page-warm-bg;
   @include onboarding-page-exit-transition;
   @include onboarding-page-enter-transition;
+  position: relative;
+
+  &__hero {
+    // C1 Batch C ceremony hero — positioned behind the content, takes the
+    // top 30% of the viewport. Decorative only (aria-label="").
+    position: absolute;
+    top: $spacing-lg;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 360rpx;
+    height: 360rpx;
+    opacity: 0.85;
+    pointer-events: none;
+    z-index: 0;
+  }
 
   &__content {
     flex: 1;
@@ -16,6 +31,8 @@
     justify-content: center;
     padding: $spacing-lg $container-padding;
     @include safe-area-inline($container-padding);
+    position: relative;
+    z-index: 1;
   }
 
   &__mascot-wrap {

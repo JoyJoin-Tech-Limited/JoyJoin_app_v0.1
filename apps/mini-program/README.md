@@ -29,6 +29,7 @@ This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 - `src/pages/onboarding/personality-test/` — V4 personality test, results, and post-result auth gate
 - `src/pages/login/index.tsx` + `src/hooks/auth/useWeChatLogin.ts` — returning-user WeChat login
 - `src/pages/blind-box-payment/`, `src/pages/payment-verification/` — JSAPI payment + post-pay polling
+- `src/components/HeroPromoBanner.tsx` — top-of-discover hero promo banner (full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles). Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`)
 
 ---
 
@@ -66,6 +67,7 @@ src/
 ├── hooks/               # Custom React hooks
 │   ├── useStaggerMount.ts   # Single RAF mount trigger for CSS-staggered entrances
 │   ├── useResetOnShow.ts    # Resets transient navigation/submit flags on page re-show (swipe-back safety)
+│   ├── useUnload.ts         # Page unload lifecycle cleanup (timer leaks, refs, subscriptions)
 ├── lib/                 # Runtime helpers & business logic
 ├── providers/           # App-level React context providers
 ├── assets/              # Static assets (copied to dist/assets)
@@ -166,8 +168,15 @@ Assets are **CDN-first** in production, with a curated set of critical assets bu
 *Game UI:*
 - `src/assets/lovart/icebreaker/icons/icon-coin-*.png` → `dist/assets/auction-icons/` (~28KB)
 
+*Lovart ceremony & milestone heroes (Batch C + D, 2026-06-04, Path B — local-bundle):*
+- `src/assets/ceremony/*.webp` → `dist/assets/ceremony/` (8 files, ~285KB total, q=55, 600px)
+- `src/assets/badges/*.webp` → `dist/assets/badges/` (9 files, ~300KB total, q=55, 600px)
+- Registries in `src/lib/ceremonyHeroes.ts` + `src/lib/milestoneBadges.ts` use `localAsset()` (NOT `cdnAsset()`).
+- PNG masters live in `assets-source/lovart/batch-{c,d}/` and are NOT bundled.
+- Re-encode via `node scripts/optimize-ceremony-batch-c.mjs` / `node scripts/optimize-badges-batch-d.mjs` (q=55, 600px) before committing new tiles.
+
 *CDN-only assets (too large for bundle or non-critical):*
-Archetype full-body images, matching heroes, promo banners, Lovart illustrations, icebreaker backgrounds, celebration images, extra Xiaoyue expressions, mini-script heroes, UI info-label icons. Loaded via `cdnAsset()` with route-based preloading via `routePreloadAssets.ts`.
+Archetype full-body images, matching heroes, promo banners, Lovart illustrations (Batches A + B — pre-Path-B), icebreaker backgrounds, celebration images, extra Xiaoyue expressions, mini-script heroes, UI info-label icons. Loaded via `cdnAsset()` with route-based preloading via `routePreloadAssets.ts`.
 
 ### Proprietary Icon System
 
@@ -210,18 +219,36 @@ The shipped mini-program tab bar is the **native WeChat component** copied from 
 | **Inactive Taro JSX** | `src/custom-tab-bar/index.tsx` (kept for reference; not compiled into dist) |
 | **Copy rule** | `config/index.ts` `copy.patterns` handles the native → dist copy |
 | **WXML root** | `<cover-view class="joy-custom-tab-bar">` with nested `<cover-view>` and `<cover-image>` only |
-| **Center CTA** | Floating circular button ("进行中") with gradient, shadow, and negative offset geometry |
+| **Center CTA** | Floating circular button ("进行中") with **solid purple** (`#8B5CF6`), shadow, and negative offset geometry. **Not gradient** — solid fill is the mini-program CTA standard |
 | **Center hub page** | `/pages/center-hub/index` — dynamic content: active event card, pending registration status, or empty-state CTA |
 | **Routing model** | Center button always `switchTab` to hub; hub CTAs `navigateTo` detail pages or `switchTab` to discover |
-| **State sync** | `useCustomTabBarSync.ts` calls `Taro.getTabBar(page).syncState(...)` on every `useDidShow` |
-| **Badges** | Notification counts mapped to `discover`, `activities`, `chat` categories |
+| **State sync** | `useCustomTabBarSync.ts` calls `Taro.getTabBar(page).syncState(...)` on every `useDidShow`. Native side debounces at 50ms with shallow diff to avoid `cover-image` flicker. `_confirmedSelected` tracks the authoritative selection for rollback |
+| **Badges** | Notification counts mapped to `discover`, `activities`, `chat` categories. Badge updates use WeChat path syntax (`leftTabs[idx].badgeCount`) to avoid array reconstruction and `cover-image` reload flicker |
+| **Device tiering** | `wx.getSystemInfoSync().benchmarkLevel <= 15` gates all animations (badge pop-in, pulse, fade-in, transitions) on low-end devices |
+| **Swipe-back safety** | `pageLifetimes.show` resets `selected` to `_confirmedSelected` after 100ms, correcting any stuck optimistic state after swipe-back |
 
 ### Layering & compatibility rules
 
 - Only `cover-view`, `cover-image`, and `button` are valid children inside the native tab bar tree.
 - Root uses `position: fixed` + `z-index: 120`.
+- The center CTA button is a **root sibling** of the surface container (not nested inside it) to avoid `cover-view` clipping children.
 - `textarea` and `input` near the bottom of the screen require real-device verification.
 - Skyline renderer is **disabled** by default; re-validate `getTabBar` behavior if enabling later.
+
+### Interaction & motion
+
+| Feature | Implementation |
+|---------|----------------|
+| **Tap feedback** | `hover-class` on side tabs + center button with `hover-stay-time="150"`. Transitions live on base elements (not `hover-class`) for WeChat compatibility |
+| **Active tab pill** | `rgba(139, 92, 246, 0.08)` background + `border-radius: 20rpx` |
+| **Haptics** | `wx.vibrateShort({ type: 'light' })` on every side-tab tap |
+| **Badge pop-in** | `scale(0→1.15→1)` spring animation (200ms) |
+| **Center badge pulse** | Continuous `scale` pulse on the center red dot |
+| **Cover-image fade-in** | 200ms opacity fade to avoid icon flash |
+| **Reduced motion** | `@media (prefers-reduced-motion: reduce)` disables all animations; respects system setting |
+| **SwitchTab rollback** | Rollback uses `_confirmedSelected` (authoritative, not optimistic) to handle rapid tab switching. `fail` callback logs to `console.warn` |
+| **Sync debounce** | 50ms debounce + shallow diff in `syncState`; path-syntax badge updates prevent flicker |
+| **Haptics** | Platform-aware: `type: 'light'` on iOS, plain `wx.vibrateShort()` on Android. Silently fails on unsupported devices |
 
 ---
 

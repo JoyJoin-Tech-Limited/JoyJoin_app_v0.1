@@ -12,6 +12,8 @@ import {
   poolAICopy,
   userInterests,
   userInterestSignals,
+  referralCodes,
+  referralConversions,
 } from "@shared/schema";
 import type { User } from "@shared/schema";
 import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
@@ -504,30 +506,53 @@ export function registerUserEventPoolRoutes(app: Express): void {
         });
       }
 
-      // Validate invitation if provided
+      // Validate invitation/referral code if provided
+      let invitationId: string | undefined;
       let inviterId: string | undefined;
+      let referralCodeId: string | undefined;
       if (invitationCode) {
+        // First check if it's an invitation code
         const [invitation] = await db
           .select()
           .from(invitations)
           .where(eq(invitations.code, invitationCode))
           .limit(1);
 
-        if (!invitation) {
-          return res.status(400).json({ message: "Invalid invitation code" });
-        }
+        if (invitation) {
+          // Check if invitation expired
+          if (invitation.expiresAt && new Date(invitation.expiresAt) < new Date()) {
+            return res.status(410).json({ message: "Invitation has expired" });
+          }
 
-        // Check if invitation expired
-        if (invitation.expiresAt && new Date(invitation.expiresAt) < new Date()) {
-          return res.status(410).json({ message: "Invitation has expired" });
-        }
+          // Prevent self-invitation
+          if (invitation.inviterId === userId) {
+            return res.status(400).json({ message: "Cannot use your own invitation code", code: "SELF_INVITE" });
+          }
 
-        // Verify invitation is for a pool, not a specific event
-        if (invitation.invitationType !== 'pre_match') {
-          return res.status(400).json({ message: "This invitation is not valid for pool registration" });
-        }
+          inviterId = invitation.inviterId;
+          invitationId = invitation.id;
+        } else {
+          // Not an invitation code — check if it's a referral code
+          const [referral] = await db
+            .select({ id: referralCodes.id, userId: referralCodes.userId })
+            .from(referralCodes)
+            .where(eq(referralCodes.code, invitationCode))
+            .limit(1);
 
-        inviterId = invitation.inviterId;
+          if (referral) {
+            // Prevent self-referral
+            if (referral.userId === userId) {
+              return res.status(400).json({ message: "Cannot use your own referral code", code: "SELF_INVITE" });
+            }
+
+            referralCodeId = referral.id;
+            inviterId = referral.userId;
+          }
+          // If neither invitation nor referral, the code is invalid
+          if (!referralCodeId) {
+            return res.status(400).json({ message: "Invalid code", code: "INVALID_CODE" });
+          }
+        }
       }
 
       const registration = await db.transaction(async (tx: DbTransaction) => {
@@ -544,16 +569,46 @@ export function registerUserEventPoolRoutes(app: Express): void {
           });
         }
 
-        if (invitationCode && inviterId) {
-          await tx.insert(invitationUses).values({
-            invitationId: invitationCode,
-            inviteeId: userId,
-            poolRegistrationId: createdRegistration.id,
-          });
+        if (invitationId && inviterId) {
+          const [existingUse] = await tx
+            .select({ id: invitationUses.id })
+            .from(invitationUses)
+            .where(and(
+              eq(invitationUses.invitationId, invitationId),
+              eq(invitationUses.inviteeId, userId),
+            ))
+            .limit(1);
 
-          await tx.update(invitations)
-            .set({ totalAcceptances: sql`COALESCE(total_acceptances, 0) + 1` })
-            .where(eq(invitations.code, invitationCode));
+          if (!existingUse) {
+            await tx.insert(invitationUses).values({
+              invitationId,
+              inviteeId: userId,
+              poolRegistrationId: createdRegistration.id,
+            });
+
+            await tx.update(invitations)
+              .set({ totalAcceptances: sql`COALESCE(total_acceptances, 0) + 1` })
+              .where(eq(invitations.id, invitationId));
+          }
+        }
+
+        if (referralCodeId) {
+          const [existingConversion] = await tx
+            .select({ id: referralConversions.id })
+            .from(referralConversions)
+            .where(eq(referralConversions.invitedUserId, userId))
+            .limit(1);
+
+          if (!existingConversion) {
+            await tx.insert(referralConversions).values({
+              referralCodeId,
+              invitedUserId: userId,
+            });
+
+            await tx.update(referralCodes)
+              .set({ totalConversions: sql`COALESCE(total_conversions, 0) + 1` })
+              .where(eq(referralCodes.id, referralCodeId));
+          }
         }
 
         return createdRegistration;
@@ -561,6 +616,12 @@ export function registerUserEventPoolRoutes(app: Express): void {
 
       // Invalidate Predictive Shell caches so Discover/Events reflect new state.
       shellCache.invalidateUser(userId);
+
+      // Clear pending referral code from session after successful use
+      if (req.session?.pendingReferralCode) {
+        req.session.pendingReferralCode = undefined;
+        req.session.save?.(() => {});
+      }
 
       // Trigger realtime matching scan after registration (fire and forget with error handling)
       // Import at top: import { scanPoolAndMatch } from "./poolRealtimeMatchingService";

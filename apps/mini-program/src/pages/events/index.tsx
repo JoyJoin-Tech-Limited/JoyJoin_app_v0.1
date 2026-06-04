@@ -1,4 +1,4 @@
-import { CustomWrapper, View, Text, ScrollView } from '@tarojs/components'
+import { CustomWrapper, View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { usePullDownRefresh } from '@tarojs/taro'
 import { haptics } from '../../lib/utils/haptics'
 import { useState, useEffect, useCallback } from 'react'
@@ -15,6 +15,7 @@ import Card from '../../components/ui/Card'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import RichListCard from '../../components/RichListCard'
+import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
 import { isLongListRowCount } from '../../lib/utils/longListThreshold'
 import { logWarn } from '../../lib/utils/logger'
@@ -176,6 +177,20 @@ export default function EventsPage() {
           <Text className='events-page__tab-text'>已完成</Text>
         </View>
       </View>
+
+      {/* D1 — First event celebration hero (Batch D) */}
+      {events.length === 1 && resolvedActiveTab === 'upcoming' && (
+        <View className='events-page__first-event-hero'>
+          <Image
+            className='events-page__first-event-hero-img'
+            mode='aspectFit'
+            src={MILESTONE_BADGES.firstEvent}
+            ariaLabel="第一次参加活动"
+            lazyLoad
+          />
+          <Text className='events-page__first-event-hero-title'>第一次活动，期待与你相遇！</Text>
+        </View>
+      )}
 
       <ScrollView className='events-page__list' scrollY enhanced showScrollbar={false}>
         {isFetching && !isLoading && (

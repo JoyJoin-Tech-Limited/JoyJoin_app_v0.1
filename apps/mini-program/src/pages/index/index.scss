@@ -708,6 +708,98 @@
   to   { opacity: 0; transform: translateX(-50%) translateY(-8rpx); }
 }
 
+/* ── Auth Gate Timeout UI ──────────────────────────────────────────── */
+.index-gate {
+  position: relative;
+  width: 100%;
+  min-height: 100dvh;
+}
+
+.index-gate__timeout {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 120rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24rpx;
+  padding: 0 48rpx;
+  animation: index-gate-timeout-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes index-gate-timeout-in {
+  from { opacity: 0; transform: translateY(8rpx); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.index-gate__timeout-text {
+  font-size: 26rpx;
+  color: rgba($color-text-primary-warm, 0.62);
+  line-height: 1.4;
+  text-align: center;
+}
+
+.index-gate__timeout-actions {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+}
+
+.index-gate__timeout-btn {
+  min-width: 168rpx;
+  height: 80rpx;
+  padding: 0 32rpx;
+  border-radius: 40rpx;
+  background: rgba($color-primary, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s ease, background 0.12s ease;
+
+  &:active {
+    transform: scale(0.96);
+    background: rgba($color-primary, 0.14);
+  }
+}
+
+.index-gate__timeout-btn--hover {
+  background: rgba($color-primary, 0.14);
+}
+
+.index-gate__timeout-btn--primary {
+  background: $color-primary;
+  box-shadow: 0 4rpx 14rpx rgba($color-primary, 0.22);
+
+  &:active {
+    background: $color-primary-dark;
+  }
+}
+
+.index-gate__timeout-btn--primary.index-gate__timeout-btn--hover {
+  background: $color-primary-dark;
+}
+
+.index-gate__timeout-btn-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $color-text-primary-warm;
+  line-height: 1;
+}
+
+.index-gate__timeout-btn--primary .index-gate__timeout-btn-text {
+  color: $color-text-white;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .index-gate__timeout {
+    animation: none !important;
+  }
+  .index-gate__timeout-btn {
+    transition: none !important;
+  }
+}
+
 // Reduced-motion fallback
 @media (prefers-reduced-motion: reduce) {
   .game-preview__cell--hidden,

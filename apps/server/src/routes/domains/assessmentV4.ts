@@ -146,6 +146,44 @@ export function registerAssessmentV4Routes(app: Express): void {
         logger.info('[V4 Start] Replayed answers for session', { count: answers.length, sessionId: existingSessionId });
       }
       
+      // Stale session guard: if we resumed an incomplete session but all questions are answered,
+      // the session row is stale (complete but not marked). Discard it so a fresh session is created.
+      if (session && !session.completedAt && engineState) {
+        const staleCheckNext = selectNextQuestion(engineState);
+        if (staleCheckNext === null) {
+          logger.warn('[V4 Start] Stale incomplete session detected (all answered, no next question); starting fresh', {
+            sessionId: session.id,
+            userId,
+          });
+          // Mark the stale session as completed to prevent future hits and fix nextStep gap.
+          // NOTE: These two operations are not atomically guarded by a DB transaction
+          // because the storage facade does not yet expose tx support. In practice,
+          // if markPersonalityTestComplete fails, the session is still marked complete
+          // and a fresh session is created, so the user is unblocked. The inconsistency
+          // (session complete but user flag false) is harmless because the stale guard
+          // will fire again on the next /start and retry the flag sync.
+          try {
+            await storage.updateAssessmentSession(session.id, {
+              phase: 'completed',
+              completedAt: new Date(),
+            });
+            // Also sync the user flag so nextStep doesn't loop back to personality-test
+            if (userId) {
+              await storage.markPersonalityTestComplete(userId);
+            }
+          } catch (syncErr) {
+            logger.error('[V4 Start] Stale session cleanup failed', {
+              sessionId: session.id,
+              userId,
+              error: syncErr instanceof Error ? syncErr.message : String(syncErr),
+            });
+            // Continue to create a fresh session — don't block the user
+          }
+          session = undefined;
+          engineState = undefined;
+        }
+      }
+      
       // Create new session if none exists
       if (!session) {
         // Create new session - fresh start

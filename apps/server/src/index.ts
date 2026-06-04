@@ -11,6 +11,7 @@ import { startPoolCardCopyWorker } from "./ai/workers/poolCardCopyWorker";
 import { validateConfig } from "./lib/configValidation";
 import { globalErrorHandler } from "./lib/errorResponse";
 import { logger } from "./lib/logger";
+import { validateDbSchema } from "./db";
 import { requestIdMiddleware } from "./middleware/requestId";
 import { metricsMiddleware } from "./middleware/metrics";
 import compression from "compression";
@@ -78,6 +79,12 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
+    // Validate database schema before accepting traffic.
+    // This is a fail-fast guard: if a migration was skipped and the DB is
+    // missing a column defined in Drizzle schema, we crash immediately with
+    // a clear message instead of serving cryptic 500s to users.
+    await validateDbSchema();
+
     // Register all API routes and get HTTP server
     const server = await registerRoutes(app);
 

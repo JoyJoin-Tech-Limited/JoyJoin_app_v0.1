@@ -101,7 +101,7 @@ These are **NOT** copied to `dist/assets/` by the build. They must exist on the 
 | **Celebration images** | `assets/lovart/icebreaker/celebrations/*.png` | ~770KB | Post-phase celebration overlays |
 | **Lovart illustrations** | `assets/lovart/lovart-*.webp` | ~130KB | Empty/error states |
 | **Matching heroes** | `assets/matching/matching-*.webp` | ~157KB | Matching status page |
-| **Promo banners** | `assets/promo/banner-*.webp` | ~175KB | Discover hero banner (single CTA-driven illustration + legacy carousel backups) |
+| **Promo banners** | `assets/promo/banner-*.webp` | ~175KB | Discover hero banner (`HeroPromoBanner.tsx`); WebP primary with PNG fallback at `banner-hero-lovart-v1.{webp,png}` |
 | **Personality emojis** | `assets/lovart/personality-emojis/*.png` | ~170KB | Personality test emoji choices |
 | **UI icons** | `assets/icons/ui/*.webp` | ~81KB | Various UI surfaces |
 | **Miniscript heroes** | `assets/miniscript/*-hero.webp` | ~590KB | Mini-script phase selection |

@@ -20,7 +20,7 @@ export default function CompatibilityIndicator({
           <View
             className='compatibility-indicator__fill'
             style={{
-              width: `${fillPercent}%`,
+              transform: `scaleX(${fillPercent / 100})`,
               backgroundColor: color,
             }}
           />

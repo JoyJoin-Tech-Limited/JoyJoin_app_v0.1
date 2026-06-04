@@ -675,6 +675,36 @@
     line-height: 1.2;
   }
 
+  // D3 — Quiz halfway cheer (Batch D)
+  &__halfway-hero {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $container-padding;
+    margin: $spacing-sm 0;
+    @include safe-area-inline($container-padding);
+    animation: pt-halfway-hero-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transition: background 0.15s ease;
+
+    &--pressed {
+      background: rgba($color-primary, 0.06);
+    }
+  }
+
+  &__halfway-hero-img {
+    width: 72rpx;
+    height: 72rpx;
+    display: block;
+    flex-shrink: 0;
+  }
+
+  &__halfway-hero-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+    line-height: 1.4;
+  }
+
   // Back-review action buttons
   &__back-review-actions {
     display: flex;
@@ -745,6 +775,16 @@
     color: $color-text-muted;
     font-weight: $font-weight-medium;
     line-height: 1.2;
+  }
+
+  &__skip-hint-subtext {
+    display: block;
+    margin-top: 6rpx;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    font-weight: $font-weight-normal;
+    line-height: 1.4;
+    opacity: 0.78;
   }
 
   @keyframes btn-enter {
@@ -1009,5 +1049,21 @@
         display: none;
       }
     }
+
+    &__halfway-hero {
+      animation: none;
+      transition: none;
+    }
+  }
+}
+
+@keyframes pt-halfway-hero-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8rpx) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

@@ -1,19 +1,35 @@
-import { PropsWithChildren, createElement, useRef } from 'react'
+import { PropsWithChildren, createElement } from 'react'
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { useDidShow } from '@tarojs/taro'
 import { bootstrapMiniProgramAuthSession } from '../lib/api/authSession'
 import { queryClient } from '../lib/api/queryClient'
+import { logInfo, logWarn } from '../lib/utils/logger'
+import { authAnalytics } from '../lib/analytics/authAnalytics'
 
 function AuthRefreshBridge({ children }: PropsWithChildren) {
   const client = useQueryClient()
-  const isFirstShowRef = useRef(true)
 
   useDidShow(() => {
-    if (isFirstShowRef.current) {
-      isFirstShowRef.current = false
-      return
-    }
+    const startedAt = Date.now()
+    logInfo('[Auth] Revalidation started (app foreground)')
+    authAnalytics.track('auth_revalidation_started')
     void bootstrapMiniProgramAuthSession(client)
+      .then(() => {
+        const durationMs = Date.now() - startedAt
+        logInfo('[Auth] Revalidation succeeded', { durationMs })
+        authAnalytics.track('auth_revalidation_succeeded', { durationMs })
+      })
+      .catch((err: unknown) => {
+        const durationMs = Date.now() - startedAt
+        logWarn('[Auth] Revalidation failed', {
+          durationMs,
+          error: err instanceof Error ? err.message : String(err),
+        })
+        authAnalytics.track('auth_revalidation_failed', {
+          durationMs,
+          error: err instanceof Error ? err.message : String(err),
+        })
+      })
   })
 
   return <>{children}</>

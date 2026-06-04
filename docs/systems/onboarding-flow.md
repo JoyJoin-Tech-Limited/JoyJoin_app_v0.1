@@ -66,6 +66,11 @@ Blind-box **payment** after onboarding is **not** part of this table; see [`docs
 - **Back button stays available** — it rewinds through the local answered-question history for read-only review, and only exits to the landing page when the user is at the start with no earlier answers to review
 - The question range is server-configured (`minQuestions`, `softMaxQuestions`, `hardMaxQuestions`) and termination is determined by `shouldTerminate()` in `packages/shared/src/personality/adaptiveEngine.ts`. After the adaptive phase terminates, **`Q_PLAYFUL_SLIDER` and `Q_PLAYFUL_EMOJI` are always presented to every user** as universal closing questions (served by `isAssessmentComplete()` in `adaptiveEngine.ts`). The full assessment is complete — and the final result is generated — only after both questions have been answered.
 
+**Re-entry safety (2026-06-04):**
+- The mini-program personality test page has an **archetype hard guard**: if `auth.user?.primaryArchetype` is already set, the page immediately redirects to `/pages/discover/index`. This prevents users who have already completed the test from accidentally re-entering the assessment flow.
+- The server `/start` endpoint detects **stale incomplete sessions** (sessions where all questions are answered but `completedAt IS NULL`). It marks the stale session completed, calls `markPersonalityTestComplete`, and starts a fresh session. This prevents the client from entering a `completing` phase that would hang on a 500 error.
+- If the final submission API fails while the client is in `completing` phase, the page renders a Xiaoyue `actionFailure` visual with warm copy, `role="alert"` + `aria-live="polite"`, and a retry CTA.
+
 **Why This Works:**
 - Reduce friction: No upfront commitment required
 - Build curiosity: Users want to know their archetype
