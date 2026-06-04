@@ -45,7 +45,7 @@
 @keyframes mascot-commentary-enter {
   from {
     opacity: 0;
-    transform: translateX(-12rpx);
+    transform: translateX(-16rpx);
   }
   to {
     opacity: 1;
@@ -97,7 +97,7 @@
   }
 
   &__stage {
-    @include onboarding-stage(0s, 0.34s, 18rpx);
+    @include onboarding-stage(0s, 0.34s, 16rpx);
 
     &--2 {
       animation-delay: 0.06s;
@@ -121,7 +121,7 @@
     display: inline-flex;
     align-items: center;
     padding: 8rpx 16rpx;
-    margin-bottom: 12rpx;
+    margin-bottom: $spacing-sm;
     border-radius: 999rpx;
     background: rgba($color-primary-light, 0.94);
     color: $color-primary;
@@ -228,7 +228,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 12rpx 16rpx;
+    padding: $spacing-sm $spacing-sm;
     border-radius: 999rpx;
     background: rgba($color-surface, 0.88);
     border: 2rpx solid rgba($color-primary, 0.08);
@@ -320,7 +320,7 @@
     display: flex;
     align-items: flex-start;
     gap: $spacing-sm;
-    padding-top: 4rpx;
+    padding-top: $spacing-xs;
   }
 
   &__intro-trust-icon {
@@ -394,6 +394,7 @@
     position: relative;
     padding: $spacing-lg;
     padding-top: calc(#{$spacing-lg} + 8rpx);
+    margin-bottom: $spacing-xl;
     background: $color-surface;
 
     &::before {
@@ -429,7 +430,7 @@
 
   &__intro-tease-subtitle {
     display: block;
-    margin-top: 10rpx;
+    margin-top: $spacing-xs;
     font-size: $font-size-sm;
     color: $color-text-secondary;
     line-height: 1.6;
@@ -675,36 +676,6 @@
     line-height: 1.2;
   }
 
-  // D3 — Quiz halfway cheer (Batch D)
-  &__halfway-hero {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-sm $container-padding;
-    margin: $spacing-sm 0;
-    @include safe-area-inline($container-padding);
-    animation: pt-halfway-hero-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-    transition: background 0.15s ease;
-
-    &--pressed {
-      background: rgba($color-primary, 0.06);
-    }
-  }
-
-  &__halfway-hero-img {
-    width: 72rpx;
-    height: 72rpx;
-    display: block;
-    flex-shrink: 0;
-  }
-
-  &__halfway-hero-text {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-bold;
-    color: $color-primary;
-    line-height: 1.4;
-  }
-
   // Back-review action buttons
   &__back-review-actions {
     display: flex;
@@ -880,6 +851,12 @@
     height: 152rpx;
   }
 
+  &__mascot-static {
+    width: 152rpx;
+    height: 152rpx;
+    display: block;
+  }
+
   &__speech-bubble {
     position: relative;
     flex: 0 1 auto;
@@ -1049,21 +1026,5 @@
         display: none;
       }
     }
-
-    &__halfway-hero {
-      animation: none;
-      transition: none;
-    }
-  }
-}
-
-@keyframes pt-halfway-hero-enter {
-  from {
-    opacity: 0;
-    transform: translateY(-8rpx) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }

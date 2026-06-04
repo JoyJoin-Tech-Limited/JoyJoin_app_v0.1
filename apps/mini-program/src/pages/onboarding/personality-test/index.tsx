@@ -44,7 +44,6 @@ import { haptics } from '../../../lib/utils/haptics'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
-import { MILESTONE_BADGES } from '../../../lib/milestoneBadges'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
 import TypewriterText from '../../../components/ui/TypewriterText'
 import MascotQuestionHeader from './MascotQuestionHeader'
@@ -61,8 +60,8 @@ import {
   PERSONALITY_TEST_QUESTION_EXPRESSION,
 } from './visuals'
 import './index.scss'
-
-type Phase = 'intro' | 'testing' | 'completing'
+import { HalfwayMilestone } from './HalfwayMilestone'
+import type { Phase } from './types'
 
 type AssessmentQuestionType = 'choice' | 'slider' | 'emoji_tap'
 
@@ -1285,22 +1284,23 @@ export default function PersonalityTestPage() {
         </View>
 
         {/* D3 — Quiz halfway cheer badge (Batch D) — appears at >=50% progress */}
-        {progressPercent >= 50 && phase === 'testing' && (
-          <View
-            className='personality-test__halfway-hero'
-            hoverClass='personality-test__halfway-hero--pressed'
-            onClick={() => haptics('light')}
-          >
-            <Image
-              className='personality-test__halfway-hero-img'
-              mode='aspectFit'
-              src={MILESTONE_BADGES.quizHalfway}
-              ariaLabel=""
-              lazyLoad
-            />
-            <Text className='personality-test__halfway-hero-text'>已经完成一半了，加油！</Text>
-          </View>
-        )}
+        <HalfwayMilestone
+          progressPercent={progressPercent}
+          phase={phase}
+          answered={progress?.answered ?? 0}
+          estimatedTotal={estimatedTotal}
+          onMilestoneReached={({ answered, estimatedTotal }) => {
+            haptics('light')
+            logInfo('[PersonalityTest] halfway milestone reached', {
+              answered,
+              estimatedTotal,
+            })
+            analytics.interaction('personality_test_halfway_milestone_reached', {
+              answered,
+              estimatedTotal,
+            })
+          }}
+        />
 
         {/* Zone B: Full-width glassmium question banner */}
         <View className='personality-test__question-zone'>

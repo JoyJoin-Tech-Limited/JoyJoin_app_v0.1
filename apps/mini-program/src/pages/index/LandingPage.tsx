@@ -28,7 +28,19 @@ const LANDING_PHASE_ICONS: Record<string, string> = {
 /** Mascot — bundled locally for guaranteed display. */
 const MASCOT_SRC = localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.png')
 
-export default function MiniProgramLandingPage() {
+interface MiniProgramLandingPageProps {
+  isAuthLoading?: boolean
+  isAuthTimedOut?: boolean
+  onAuthRetry?: () => void
+  onAuthDismiss?: () => void
+}
+
+export default function MiniProgramLandingPage({
+  isAuthLoading = false,
+  isAuthTimedOut = false,
+  onAuthRetry,
+  onAuthDismiss,
+}: MiniProgramLandingPageProps) {
   const router = useRouter()
   const invitationCode = router.params.invitationCode ?? ''
   const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false)
@@ -209,13 +221,28 @@ export default function MiniProgramLandingPage() {
 
       {/* CTA */}
       <View
-        className={`bottom-zone ${isMounted ? "stagger-in stagger-in--4" : "stagger-in-hidden"}`}
+        className={`bottom-zone ${isAuthLoading && !isAuthTimedOut ? "bottom-zone--gated" : ""} ${isMounted ? "stagger-in stagger-in--4" : "stagger-in-hidden"}`}
+        aria-hidden={isAuthLoading && !isAuthTimedOut ? "true" : undefined}
+        aria-busy={isAuthLoading && !isAuthTimedOut ? "true" : undefined}
       >
+        {/* Warm auth-hint — tells the user WHY CTAs are briefly disabled */}
+        {isAuthLoading && !isAuthTimedOut && (
+          <View className="landing-page__auth-hint">
+            <Text className="landing-page__auth-hint-text">悦仔正在确认你的派对身份</Text>
+            <View className="landing-page__auth-hint-dots">
+              <View className="landing-page__auth-hint-dot" />
+              <View className="landing-page__auth-hint-dot" />
+              <View className="landing-page__auth-hint-dot" />
+            </View>
+          </View>
+        )}
+
         <Button
           variant="brand"
           className={"landing-page__cta landing-page__cta--primary" + ctaDisabledClass}
           hoverClass={ctaHoverClass}
           loading={isPageExiting}
+          disabled={isAuthLoading}
           onClick={() => {
             if (!hasAcceptedLegal) {
               triggerLegalShake()
@@ -235,7 +262,7 @@ export default function MiniProgramLandingPage() {
           <Button
             variant="brand"
             className="landing-page__login-btn"
-            disabled={isLoggingIn || isPageExiting}
+            disabled={isAuthLoading || isLoggingIn || isPageExiting}
             loading={isLoggingIn}
             onClick={() => {
               hapticLight()
@@ -276,6 +303,34 @@ export default function MiniProgramLandingPage() {
           </Text>
         </View>
       </View>
+
+      {/* Auth timeout banner — rendered outside the gated bottom-zone so it
+          remains tappable even when CTAs are locked. */}
+      {isAuthTimedOut && (
+        <View className="landing-page__auth-timeout" role="alert" aria-live="polite">
+          <Text className="landing-page__auth-timeout-text">网络有点慢，悦仔帮你再连一次？</Text>
+          <View className="landing-page__auth-timeout-actions">
+            <View
+              className="landing-page__auth-timeout-btn landing-page__auth-timeout-btn--primary"
+              hoverClass="landing-page__auth-timeout-btn--hover"
+              onClick={() => onAuthRetry?.()}
+              role="button"
+              aria-label="重试验证"
+            >
+              <Text className="landing-page__auth-timeout-btn-text">再试一次</Text>
+            </View>
+            <View
+              className="landing-page__auth-timeout-btn"
+              hoverClass="landing-page__auth-timeout-btn--hover"
+              onClick={() => onAuthDismiss?.()}
+              role="button"
+              aria-label="跳过验证继续"
+            >
+              <Text className="landing-page__auth-timeout-btn-text">先逛逛</Text>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   )
 }

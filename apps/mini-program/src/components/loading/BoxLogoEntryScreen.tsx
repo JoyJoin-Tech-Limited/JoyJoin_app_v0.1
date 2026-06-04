@@ -6,22 +6,26 @@ import './BoxLogoEntryScreen.scss'
 type Phase = 'entering' | 'exiting' | 'done'
 
 interface BoxLogoEntryScreenProps {
-  /** Called after the exit fade completes (~950ms total). */
+  /** Called after the exit fade completes (~1250ms total). */
   onComplete?: () => void
 }
 
-/** Time the entrance animation is allowed to play before starting exit. */
-const ENTRY_MS = 800
+/** Time the entrance animation is allowed to play before starting exit.
+ *  Extended to 1100ms so critical assets (fonts, archetype glyphs,
+ *  onboarding images) have more background preload runway before the
+ *  user reaches the LandingPage.
+ */
+const ENTRY_MS = 1100
 /** Duration of the exit fade transition. */
 const EXIT_MS = 150
 
 /**
  * BoxLogoEntryScreen — branded cold-start splash with smooth exit fade.
  *
- * Warm Landing animation (deliberation consensus):
+ * Warm Landing animation:
  * - Logo rises and settles (translateY + scale + opacity)
  * - Warm radial glow blooms behind it then fades
- * - Total visible time: ~950ms (800ms entrance + 150ms exit fade)
+ * - Total visible time: ~1250ms (1100ms entrance + 150ms exit fade)
  * - Pure transform + opacity for Taro performance
  * - Reduced-motion: static fade-in only
  */

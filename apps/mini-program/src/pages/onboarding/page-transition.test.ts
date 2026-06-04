@@ -70,9 +70,9 @@ describe('mini-program onboarding page transitions', () => {
     const source = readFileSync(MIXINS_PATH, 'utf8')
 
     expect(source).toContain('@keyframes joy-onboarding-stage-in-#{$stage-id}')
-    expect(source).toContain("'18': 18rpx")
-    expect(source).toContain("'20': 20rpx")
+    expect(source).toContain("'16': 16rpx")
     expect(source).toContain("'24': 24rpx")
+    expect(source).toContain("'32': 32rpx")
     expect(source).toContain('$onboarding-stage-shift-ids')
   })
 

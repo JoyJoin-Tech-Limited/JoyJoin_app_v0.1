@@ -307,6 +307,17 @@ export type MilestoneBadgeKey = keyof typeof MILESTONE_BADGES
 - Pair with Xiaoyue `coachGuide` mascot + encouraging copy
 - Disappears after the user taps to continue
 
+> **Shipped variant (2026-06-04) — diverges from this brief:**
+>
+> - **Trigger is `progressPercent >= 50`**, not Q30-specific. The V4 adaptive engine varies total question count (8–16) per user, so a hardcoded Q30 is wrong; the percentage threshold matches the "halfway" user-perception semantically.
+> - **Badge is 112rpx (hero-sized)**, not 160rpx. Paired with a soft halo (`&__halfway-badge-halo` radial gradient) + 9 CSS-only confetti particles (`star`/`sparkle`/`dot`/`ribbon` shapes with hand-tuned positions and 0.04–0.68s staggered delays). Confetti is CSS-only — no new Lovart assets, no JS state.
+> - **Animation**: 0.36s stage entrance + 0.6s halo settle + 0.4s text enter. `cubic-bezier(0.22, 1, 0.36, 1)` for all three.
+> - **Copy**: eyebrow `半程已过` + main `走到一半了，继续走～` (xiaoyue-writing-craft + wow-elements, not a corporate cheerleader).
+> - **No `coachGuide` mascot paired.** The testing-zone mascot (Zone C) was independently re-architected (2026-06-04) to render a high-res 1190×1190 CDN WebP at rest, so the static mascot itself reads as a high-quality image. Adding `coachGuide` on top would crowd the zone.
+> - **Does NOT disappear on tap.** The badge stays for the rest of the testing phase (`phase === 'testing'`) and only unmounts when the user leaves the testing state. The "Halfway there!" feeling should accompany the second-half questions, not vanish on first tap.
+> - **Operational**: `logInfo('[PersonalityTest] halfway milestone reached')` + `analytics.interaction('personality_test_halfway_milestone_reached', { answered, estimatedTotal })` fire once via `halfwayShownRef`. `aria-label='测验已完成一半，半程已过，继续加油'` on the stage. Reduced-motion: confetti freezes at `opacity: 0.85; scale(1)` instead of `display: none` — preserves the celebratory feel for users who opt out of motion.
+> - **Resumed-test safety**: `halfwayShownRef` initializes to `false` and is set to `true` inside the existing useEffect when `progressPercent >= 50` and `phase === 'testing'`. Users who already passed 50% on a prior session get the badge on the next render.
+
 ### 5. Match-reason heroes (D4a–D4e) — `pages/matching-status/UnifiedRevealCard.tsx`
 
 - The 5 D4 tiles pair with the 5 Batch B `REVEAL_MAP` entries

@@ -392,20 +392,20 @@
 // Distances must match a generated @keyframes block below so the initial transform
 // and the animation's first keyframe stay aligned.
 $onboarding-stage-shift-ids: (
-  18rpx: '18',
-  20rpx: '20',
+  16rpx: '16',
   24rpx: '24',
+  32rpx: '32',
 );
 
 @mixin onboarding-stage(
   $delay: 0s,
   $duration: 0.32s,
-  $distance: 18rpx
+  $distance: 16rpx
 ) {
   $stage-id: map-get($onboarding-stage-shift-ids, $distance);
 
   @if $stage-id == null {
-    @error 'onboarding-stage: unsupported $distance #{$distance} (use 18rpx, 20rpx, or 24rpx)';
+    @error 'onboarding-stage: unsupported $distance #{$distance} (use 16rpx, 24rpx, or 32rpx)';
   }
 
   opacity: 0;
@@ -416,7 +416,7 @@ $onboarding-stage-shift-ids: (
 
 @mixin onboarding-prelude(
   $duration: 0.24s,
-  $distance: 12rpx
+  $distance: 16rpx
 ) {
   opacity: 0;
   transform: translate3d(0, $distance, 0);
@@ -424,9 +424,9 @@ $onboarding-stage-shift-ids: (
 }
 
 @each $stage-id, $shift in (
-  '18': 18rpx,
-  '20': 20rpx,
+  '16': 16rpx,
   '24': 24rpx,
+  '32': 32rpx,
 ) {
   @keyframes joy-onboarding-stage-in-#{$stage-id} {
     from {
@@ -444,7 +444,7 @@ $onboarding-stage-shift-ids: (
 @keyframes joy-onboarding-prelude-in {
   from {
     opacity: 0;
-    transform: translate3d(0, 12rpx, 0);
+    transform: translate3d(0, 16rpx, 0);
   }
 
   to {
@@ -581,7 +581,7 @@ $onboarding-stage-shift-ids: (
 }
 
 @keyframes card-slide-in {
-  from { opacity: 0; transform: translateY(20rpx) scale(0.985); }
+  from { opacity: 0; transform: translateY(24rpx) scale(0.985); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
