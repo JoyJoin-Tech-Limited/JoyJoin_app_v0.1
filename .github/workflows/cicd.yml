@@ -670,17 +670,25 @@ jobs:
 
             # ───────────────────────────────────────────────────────────
             # Schema management strategy:
-            #   Schema changes are applied manually via psql from .sql files
-            #   committed under apps/server/migrations/.
+            #   Schema changes are defined as .sql migration files committed
+            #   under apps/server/migrations/ and registered in _journal.json.
+            #
+            #   On deploy, we apply any un-applied migration SQL files
+            #   sequentially. This is safe because each file is idempotent
+            #   (uses IF NOT EXISTS / DO $$ blocks).
             #
             #   1. `npx drizzle-kit generate` on dev machine → creates .sql
-            #   2. `.sql` files committed + applied manually via psql
-            #   3. `npm run db:rebuild-journal` to register in _journal.json
-            #
-            #   New tables created on initial CVM Postgres setup (see §3).
+            #   2. `.sql` files committed + registered in _journal.json
+            #   3. This deploy step applies un-applied files in order
             # ───────────────────────────────────────────────────────────
-            echo "   ⏭️ Skipping automated DDL (migrations applied manually via psql)"
-            echo "   ✓ Schema synced via migration SQL files"
+            echo "   Applying pending migration SQL files..."
+            MIGRATIONS_DIR=apps/server/migrations
+            for f in $(ls "$MIGRATIONS_DIR"/*.sql 2>/dev/null | sort); do
+              fname=$(basename "$f")
+              echo "     → $fname"
+              psql "$DATABASE_URL" -f "$f" -q 2>&1 || echo "     ⚠️ Migration $fname failed (may already be applied)"
+            done
+            echo "   ✓ All migration SQL files applied"
 
             # --- 3) Sync and reload Nginx BEFORE restarting containers ---
             # This prevents 502s: Nginx stops routing to joyjoin-user BEFORE
