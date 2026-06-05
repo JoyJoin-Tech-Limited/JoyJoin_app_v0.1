@@ -11,6 +11,8 @@
 This document provides a comprehensive storyboard and technical specification for the archetype slot machine reveal animation journey. The design ensures precise landing mechanics, smooth transitions, and a cohesive Pokémon-inspired reveal experience optimized for mobile devices.
 
 > **Asset optimization note (2026-05-22):** The slot machine uses a **locally bundled spritesheet** (`/pages/onboarding/assets/archetypes/archetype-spritesheet.webp`, 20 KB) rather than loading 12 individual full-size images from CDN. The spritesheet is preloaded via the onboarding subpackage `preloadRule` at landing page, eliminating network latency during animation. A `useSpriteReadiness` hook gates animation start until decode is confirmed (≤500ms). See `AGENTS.md` §6 for full archetype asset loading rules.
+>
+> **Implementation note (2026-06-05):** The shipped implementation is a **simplified version** of this storyboard. The 6-act structure (anticipation → spinning → slowdown → near-miss → landing → celebration) is collapsed into a tighter flow: idle sprite → rapid spin → direct land → result card. The near-miss overshoot (Act 4) is **not implemented** — the slot always lands precisely on the target without the 70% overshoot mechanic. Particle celebration (Act 6) uses archetype-accent colors resolved via `formatHSLAsRGBA()` instead of hardcoded brand colors. The hero card reveal (Act 7) is split across multiple components (`SlotStage` → `BridgeStage` → `FinalStage`) rather than a single reveal. See `apps/mini-program/src/pages/onboarding/personality-test/results/` for the current implementation.
 
 ---
 

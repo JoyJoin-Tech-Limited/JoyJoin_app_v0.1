@@ -274,9 +274,6 @@ export default function PersonalityTestPage() {
 
   const [skipsRemaining, setSkipsRemaining] = useState(MAX_SKIP_COUNT)
   const [isSkipping, setIsSkipping] = useState(false)
-  // D3 — Fires light haptic only once per session when crossing 50% progress
-  const halfwayHapticFiredRef = useRef(false)
-
   useResetOnShow(setIsPageExiting, setIsSubmitting, setIsSkipping)
 
   // Guard against stale async closures hijacking navigation after session change
@@ -329,14 +326,6 @@ export default function PersonalityTestPage() {
   const progressPercent = progress
     ? Math.round((progress.answered / Math.max(estimatedTotal, 1)) * 100)
     : 0
-
-  // D3 — Fire light haptic once when user crosses 50% progress
-  useEffect(() => {
-    if (progressPercent >= 50 && !halfwayHapticFiredRef.current && phase === 'testing') {
-      halfwayHapticFiredRef.current = true
-      haptics('light')
-    }
-  }, [progressPercent, phase])
 
   const introTeasers = useMemo(
     () =>
@@ -1318,7 +1307,7 @@ export default function PersonalityTestPage() {
           answered={progress?.answered ?? 0}
           estimatedTotal={estimatedTotal}
           onMilestoneReached={({ answered, estimatedTotal }) => {
-            haptics('light')
+            haptics('medium')
             logInfo('[PersonalityTest] halfway milestone reached', {
               answered,
               estimatedTotal,

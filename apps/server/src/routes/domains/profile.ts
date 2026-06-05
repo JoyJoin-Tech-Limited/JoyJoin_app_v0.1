@@ -441,7 +441,9 @@ export function registerProfileRoutes(app: Express): void {
       
       if (!result.success) {
         logger.error('Validation failed', { userId, issues: result.error.issues });
-        return res.status(400).json({ error: result.error });
+        return res.status(400).json({
+          message: result.error.issues.map((i: any) => `${i.path.join('.')}: ${i.message}`).join('; '),
+        });
       }
 
       const profileData: Record<string, any> = { ...result.data };

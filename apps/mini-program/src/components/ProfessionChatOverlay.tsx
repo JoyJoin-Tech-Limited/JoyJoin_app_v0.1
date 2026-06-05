@@ -1,8 +1,11 @@
 import { View, Text, Input, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { haptics } from '../lib/utils/haptics'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getXiaoyueExpressionAsset } from '../lib/mascot/xiaoyueExpressions'
+import { getXiaoyueExpressionAsset, type XiaoyueExpressionId } from '../lib/mascot/xiaoyueExpressions'
 import { apiRequest } from '../lib/api/api'
+import { useOnboardingAnalytics } from '../hooks/onboarding/useOnboardingAnalytics'
+import { useDeviceTier } from '../hooks/useDeviceTier'
 import './ProfessionChatOverlay.scss'
 
 export interface ProfessionClassificationData {
@@ -27,14 +30,15 @@ export interface ProfessionChatOverlayProps {
   onSkip: () => void
 }
 
-const OPENING_MESSAGE = '好奇！你平时是做什么的呀？🕵️ 认真告诉我哦，这样我才能帮你找到真正聊得来的人~'
+const OPENING_MESSAGE = '好奇！你平时是做什么的呀？🕵️\n认真告诉我哦，这样我才能帮你找到真正聊得来的人~'
 
-const SKIP_RESPONSE = '没关系，下次再偷偷告诉我 🤫'
+const SKIP_RESPONSE = '好呀，那我们先跳过这题～等你想说了，随时可以在 profile 里补充 🤫'
 
 interface ChatMessage {
   id: string
   sender: 'xiaoyue' | 'user'
   text: string
+  expressionId?: XiaoyueExpressionId
 }
 
 interface UnderstandProfessionResponse {
@@ -218,7 +222,7 @@ function getReactionForProfession(text: string): string {
     }
   }
 
-  return `收到！「${text.trim()}」这个背景很有趣，我会把它放进你的匹配画像里，帮你找到聊得来的搭子~ 🎯`
+  return `收到～「${text.trim()}」这个背景挺有意思，我已经把它记进你的匹配画像了，帮你找聊得来的搭子 🎯`
 }
 
 function generateId(): string {
@@ -240,6 +244,7 @@ export default function ProfessionChatOverlay({
   const [inputValue, setInputValue] = useState(initialValue)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [keyboardHeight, setKeyboardHeight] = useState(0)
+  const [bottomAnchorKey, setBottomAnchorKey] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hasSent, setHasSent] = useState(false)
   const [showRevealCard, setShowRevealCard] = useState(false)
@@ -251,12 +256,15 @@ export default function ProfessionChatOverlay({
   const skipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bubbleStaggerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const analytics = useOnboardingAnalytics('essential-data', { enabled: true, autoTrackStart: false })
+  const deviceTier = useDeviceTier()
+  const [isOnline, setIsOnline] = useState(true)
 
   useEffect(() => {
     if (visible && !isClosing) {
       setInputValue(initialValue)
       setMessages([
-        { id: generateId(), sender: 'xiaoyue', text: OPENING_MESSAGE },
+        { id: generateId(), sender: 'xiaoyue', text: OPENING_MESSAGE, expressionId: 'coachGuide' },
       ])
       setIsSubmitting(false)
       setHasSent(false)
@@ -265,6 +273,12 @@ export default function ProfessionChatOverlay({
       setClassificationData(null)
       sendCountRef.current = 0
       lastSendTimeRef.current = 0
+
+      // Check network status on open
+      Taro.getNetworkType({
+        success: (res) => setIsOnline(res.networkType !== 'none'),
+        fail: () => setIsOnline(true), // optimistic default
+      })
     }
   }, [visible, isClosing, initialValue])
 
@@ -280,6 +294,10 @@ export default function ProfessionChatOverlay({
   useEffect(() => {
     const handler = (res: { height: number }) => {
       setKeyboardHeight(res.height)
+      if (res.height > 0) {
+        // Force scroll-to-bottom when keyboard opens so input row stays visible
+        setBottomAnchorKey((k) => k + 1)
+      }
     }
     Taro.onKeyboardHeightChange(handler)
     return () => {
@@ -294,6 +312,13 @@ export default function ProfessionChatOverlay({
     const now = Date.now()
     if (now - lastSendTimeRef.current < DEBOUNCE_MS) return
     if (sendCountRef.current >= MAX_SENDS_PER_SESSION) return
+
+    // Offline guard — show graceful message instead of failing silently
+    if (!isOnline) {
+      analytics.interaction('profession_chat_offline_blocked')
+      Taro.showToast({ title: '网络好像断了，请检查连接后再试', icon: 'none', duration: 2000 })
+      return
+    }
 
     sendCountRef.current++
     lastSendTimeRef.current = now
@@ -310,6 +335,7 @@ export default function ProfessionChatOverlay({
 
     const userMsg: ChatMessage = { id: generateId(), sender: 'user', text }
     setMessages((prev) => [...prev, userMsg])
+    setBottomAnchorKey((k) => k + 1)
 
     try {
       const data = await apiRequest<UnderstandProfessionResponse>({
@@ -321,12 +347,27 @@ export default function ProfessionChatOverlay({
 
       if (controller.signal.aborted) return
 
-      const hintMsg: ChatMessage = {
-        id: generateId(),
-        sender: 'xiaoyue',
-        text: data.reactionHint,
+      // Skip low-quality echo hints (e.g., "投资银行！投资银行方向？")
+      const hintText = data.reactionHint.trim()
+      const lowerHint = hintText.toLowerCase()
+      const lowerText = text.toLowerCase()
+      const isEcho = lowerHint.startsWith(lowerText) &&
+        (hintText.length <= text.length + 6 ||
+         hintText.replace(new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '').trim().length < 6)
+      if (isEcho) {
+        analytics.interaction('profession_chat_echo_suppressed', {
+          hintLength: hintText.length,
+          inputLength: text.length,
+        })
+      } else {
+        const hintMsg: ChatMessage = {
+          id: generateId(),
+          sender: 'xiaoyue',
+          text: data.reactionHint,
+          expressionId: 'coachGuide',
+        }
+        setMessages((prev) => [...prev, hintMsg])
       }
-      setMessages((prev) => [...prev, hintMsg])
 
       bubbleStaggerRef.current = setTimeout(() => {
         if (controller.signal.aborted) return
@@ -334,14 +375,22 @@ export default function ProfessionChatOverlay({
           id: generateId(),
           sender: 'xiaoyue',
           text: data.reaction,
+          expressionId: 'coachGuide',
         }
         setMessages((prev) => [...prev, fullMsg])
+        setBottomAnchorKey((k) => k + 1)
         setIsSubmitting(false)
 
         const tags = data.displayTags.filter(Boolean)
         if (tags.length > 0) {
           setRevealTags(tags)
           setShowRevealCard(true)
+          haptics('light')
+          analytics.interaction('profession_chat_classification_success', {
+            tagCount: tags.length,
+            confidence: data.confidence,
+            source: data.source,
+          })
         }
         setClassificationData({
           occupationId: text,
@@ -359,11 +408,16 @@ export default function ProfessionChatOverlay({
     } catch (_err) {
       clearTimeout(timeoutId)
       if (controller.signal.aborted) return
+      analytics.interaction('profession_chat_classification_fallback', {
+        errorType: _err instanceof Error ? _err.name : 'unknown',
+        inputLength: text.length,
+      })
       const reaction = getReactionForProfession(text)
       setMessages((prev) => [
         ...prev,
-        { id: generateId(), sender: 'xiaoyue', text: reaction },
+        { id: generateId(), sender: 'xiaoyue', text: reaction, expressionId: 'coachGuide' },
       ])
+      setBottomAnchorKey((k) => k + 1)
       setIsSubmitting(false)
 
       setClassificationData({
@@ -392,8 +446,9 @@ export default function ProfessionChatOverlay({
 
     timeoutRef.current = setTimeout(() => {
       const reaction = getReactionForProfession(text)
-      setMessages((prev) => [...prev, { id: generateId(), sender: 'xiaoyue', text: reaction }])
+      setMessages((prev) => [...prev, { id: generateId(), sender: 'xiaoyue', text: reaction, expressionId: 'coachGuide' }])
       setIsSubmitting(false)
+      setBottomAnchorKey((k) => k + 1)
     }, 600)
   }, [inputValue, isSubmitting])
 
@@ -402,7 +457,7 @@ export default function ProfessionChatOverlay({
   const handleSkip = useCallback(() => {
     setMessages((prev) => [
       ...prev,
-      { id: generateId(), sender: 'xiaoyue', text: SKIP_RESPONSE },
+      { id: generateId(), sender: 'xiaoyue', text: SKIP_RESPONSE, expressionId: 'coachGuide' },
     ])
     skipTimeoutRef.current = setTimeout(() => {
       onSkip()
@@ -419,17 +474,19 @@ export default function ProfessionChatOverlay({
 
    const canSubmit = inputValue.trim().length > 0 || hasSent
 
-  const avatarExpression = showRevealCard ? 'matchSuccess' as const : 'coachGuide' as const
-
   const scrollIntoView = useMemo(() => {
     if (messages.length === 0) return ''
-    return `msg-${messages[messages.length - 1].id}`
-  }, [messages])
+    return `bottom-anchor-${bottomAnchorKey}`
+  }, [bottomAnchorKey])
 
   if (!visible && !isClosing) return null
 
   return (
-    <View className={`profession-overlay ${isClosing ? 'profession-overlay--closing' : ''}`}>
+    <View className={[
+      'profession-overlay',
+      isClosing ? 'profession-overlay--closing' : '',
+      deviceTier.isDegradation ? 'profession-overlay--low-end' : '',
+    ].filter(Boolean).join(' ')}>
       <View className='profession-overlay__header'>
         <View className='profession-overlay__step-badge'>
           <Text className='profession-overlay__step-badge-text'>2 / 5</Text>
@@ -446,6 +503,8 @@ export default function ProfessionChatOverlay({
         showScrollbar={false}
         scrollIntoView={scrollIntoView}
         style={{ paddingBottom: `${keyboardHeight}px` }}
+        aria-live='polite'
+        aria-atomic='false'
       >
         <View className='profession-overlay__chat-inner'>
           {messages.map((msg) => (
@@ -459,7 +518,7 @@ export default function ProfessionChatOverlay({
                   className='profession-overlay__avatar'
                   aria-label='悦仔'
                   style={{
-                    backgroundImage: `url(${getXiaoyueExpressionAsset(avatarExpression)})`,
+                    backgroundImage: `url(${getXiaoyueExpressionAsset(msg.expressionId ?? 'coachGuide')})`,
                   }}
                 />
               )}
@@ -485,6 +544,7 @@ export default function ProfessionChatOverlay({
               </View>
             </View>
           )}
+          <View id={`bottom-anchor-${bottomAnchorKey}`} style={{ height: 1, width: '100%' }} />
         </View>
       </ScrollView>
 
@@ -503,7 +563,7 @@ export default function ProfessionChatOverlay({
           holdKeyboard
         />
         {canSubmit ? (
-          <View className='profession-overlay__send' onClick={handleSend} aria-label='发送'>
+          <View className='profession-overlay__send' onClick={() => { haptics('medium'); handleSend() }} aria-label='发送'>
             <View className='profession-overlay__send-arrow' />
           </View>
         ) : null}
@@ -530,7 +590,7 @@ export default function ProfessionChatOverlay({
           className='profession-overlay__cta'
         style={keyboardHeight > 0 ? { paddingBottom: `${keyboardHeight}px` } : undefined}
         >
-          <View className='profession-overlay__cta-btn' onClick={handleConfirm} aria-label='确认'>
+          <View className='profession-overlay__cta-btn' onClick={() => { haptics('medium'); handleConfirm() }} aria-label='确认'>
             <Text className='profession-overlay__cta-text'>确认</Text>
           </View>
         </View>

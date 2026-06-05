@@ -839,7 +839,9 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   dietaryRestrictions: true,
   tableVibePreference: true,
   hometownAffinityOptin: true,
-}).partial();
+}).partial().extend({
+  industryConfidence: z.union([z.string(), z.number()]).optional(),
+});
 
 export const updatePersonalitySchema = createInsertSchema(users).pick({
   personalityTraits: true,

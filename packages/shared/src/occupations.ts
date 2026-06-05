@@ -754,8 +754,8 @@ export function getOccupationGuidance(intent: string): { title: string; subtitle
     default:
       return {
         title: "你是做什么的？",
-        subtitle: "悦仔会根据你的职业，帮你找到合适的社交搭子",
-        matchPreview: "悦仔会根据你的背景智能匹配"
+        subtitle: "告诉我你的职业，悦仔会结合性格和背景，帮你找到真正聊得来的人",
+        matchPreview: "悦仔会参考你的职业背景，匹配价值观和节奏相近的搭子"
       };
   }
 }

@@ -1,6 +1,6 @@
 # Personality Test System - V4 Adaptive Assessment
 
-**Last Updated:** 2026-06-02**Version:** V4 Adaptive Engine + V2 Matcher  
+**Last Updated:** 2026-06-05**Version:** V4 Adaptive Engine + V2 Matcher  
 **Status:** Production
 
 ---
@@ -50,16 +50,23 @@ The V4 engine and question bank live in **`packages/shared/src/personality/`**; 
 
 **Result Page UI (Mini Program):**
 The results page (`pages/onboarding/personality-test/results/`) renders a multi-stage reveal flow:
-1. **Slot machine animation** — 12 archetypes spin and land on the user's match. The spritesheet is loaded from the **local bundled subpackage** (no CDN round-trip). A `backgroundColor` fallback (archetype accent soft) ensures no blank circles during decode. A `useSpriteReadiness` hook gates the animation start until the spritesheet is confirmed decoded (500ms timeout — never blocks indefinitely).
+1. **Slot machine animation** — 12 archetypes spin and land on the user's match. A `XiaoyueSpriteAnimator` component displays idle sprite animations (7 frames for standby/waiting states, regenerated from 9 frames in 2026-06-05 to reduce package size). The archetype spritesheet is loaded from the **local bundled subpackage** (no CDN round-trip). A `backgroundColor` fallback (archetype accent soft) ensures no blank circles during decode. A `useSpriteReadiness` hook gates the animation start until the spritesheet is confirmed decoded (500ms timeout — never blocks indefinitely). The slot animation is gated by `personalitySlotAnimationEnabled` feature flag and `shouldReduceMotion` / `prefersReducedMotion` / `deviceTier.isDegradation` — any of these skip straight to the result card. Xiaoyue sprites (idle, thinking, celebrate, surprised, etc.) load from CDN via `cdnAsset()`; if CDN load fails, a hidden `<Image>` probe triggers `spriteError` state and falls back to a purple accent circle.
 2. **Reveal sequence** — silhouette → fill → sparkle with haptic feedback
-3. **Result card** — Hero card with archetype name, three-tier badge system (nickname gradient trophy, rarity amber dot, chemistry soft tint), **六维图 RPG radar chart** (Canvas 2D hexagonal trait visualization), Xiaoyue avatar + speech-bubble analysis, and trait summary. For **non-decisive matches** (`isDecisive === false`), a subtle blend indicator appears after the badges: "隐约有[secondary]的影子" (prefers `xiaoyueAnalysis.blendLine` when available).
+3. **Result card** — Hero card with archetype name, **typicality badge** (`典型[archetype]` / `非典型[archetype]`), rarity indicator, nickname, and chemistry chips. The archetype name in the badge is rendered in `accentText` (computed via `getContrastSafeArchetypeColor()` — darkens/boosts saturation for light or desaturated archetypes) with zero separator space from the prefix. **六维图 RPG radar chart** (Canvas 2D hexagonal trait visualization), Xiaoyue avatar + speech-bubble analysis, and trait summary. The **FinalStage** detail card uses `CARD_GRADIENT_MID` (an archetype-tinted mid-gradient color computed from the primary archetype's accent HSL) for the card background gradient. For **non-decisive matches** (`isDecisive === false`), a subtle blend indicator appears after the badges: "隐约有[secondary]的影子" (prefers `xiaoyueAnalysis.blendLine` when available).
 4. **Collectible card** — Pokémon-style holographic card with touch-drag tilt, energy bar, skill badges, and match chemistry chips
 5. **Detail modal** — Progressive disclosure via "查看悦仔完整解读" premium pill CTA (archetype gradient background, `JoyJoinIcon` sparkle + chevron); opens a bottom sheet with full AI analysis, **10-block segmented trait bars** (archetype-accent colored with smooth partial fills), and best partner matches
-6. **Share poster** — Canvas-generated shareable card with archetype art, rarity label, and skill set. Canvas draws **WebP primary** with **CDN PNG fallback** (PNG moved off-subpackage to CDN in 2026-05-22). Canvas `drawImage` requires a network-resolvable URL — pass `visual.asset` (CDN), not local bundled paths. Inline retry CTA shown if generation fails.
+6. **Share poster** — Canvas-generated shareable card with archetype art, rarity label, and skill set. Canvas draws **WebP primary** with **CDN PNG fallback** (PNG moved off-subpackage to CDN in 2026-05-22). The **`CelebrationSparkle`** component uses `formatHSLAsRGBA()` (not raw hex-alpha) to convert archetype accent colors to valid CSS `rgba()` strings for canvas `addColorStop()` calls. Canvas `drawImage` requires a network-resolvable URL — pass `visual.asset` (CDN), not local bundled paths. Inline retry CTA shown if generation fails.
+7. **Completing phase error UI** — If the final submission API fails, the page renders a Xiaoyue `actionFailure` visual with warm copy and a retry CTA with `haptics('light')`. The **BridgeStage** and **ErrorStage** skip buttons use `haptics('light')` on tap and `hoverClass="opacity-btn--hover"` for press feedback.
+8. **OnboardingLoadingShell** — Stand-alone full-screen loader for the results page uses `min-height: 100dvh` + flex centering (not `position: fixed`) to avoid layout issues with the WeChat navigation bar. A `CELEBRATE_MIN_DISPLAY_MS` minimum display threshold prevents flickering on fast archetype loads.
 
-**Accessibility & Error Resilience (2026-05-27):**
+**Accessibility & Error Resilience (2026-06-05):**
 - **Reduced-motion support:** When the system reports `reduceMotion === true`, the slot animation is skipped entirely and the result page renders immediately. CSS `@media (prefers-reduced-motion: reduce)` plus a JS-driven `.personality-results--reduce-motion` class suppresses stagger entrances, holographic shimmer, and card tilt for webviews that do not honour the media query.
-- **Error state accessibility:** `ErrorStage` uses `role="alert"` and `aria-live="polite"` so screen readers announce sync failures.
+- **Slider accessibility:** The `slider` question's live value badge uses `aria-live="polite"` so screen readers announce value changes without overwhelming the user. The badge transform is gated by JS `reduceMotion` and driven via CSS custom properties (`--jj-slider-tx`, `--jj-slider-scale`) with `will-change: transform` for GPU-composited drag without React style-diff per frame. A first-time hint `"拖动滑块，选择最符合你的程度"` dismisses on first interaction.
+- **Touch-tilt rAF throttling:** The collectible card's touch-drag tilt uses `rafPendingRef` + `pendingTiltRef` to batch `setTouchTilt` calls to a single `requestAnimationFrame`, preventing React state flood during fast swipes.
+- **Offline resilience:** `Taro.getNetworkType()` detects offline state on fetch failure. `ErrorStage` shows offline-aware copy (`'网络好像断开了'` vs `'揭晓过程被打断了'`). Retry uses exponential backoff capped at 4s (`Math.min(4000, 1000 * 2^(retryCount-1))`) with `retryTimerRef` cleanup on unmount.
+- **Predictive prefetch:** Primary archetype image is preloaded via `preloadImagesWithDiagnostics` on test completion (from the final answer response) and again on results page mount, reducing perceived load time.
+- **Timer cleanup:** `FinalStage` tracks its detail-sheet close-animation timeout in `detailCloseTimerRef` and clears it on unmount to prevent setState-after-unmount.
+- **Screen reader support (2026-06-05):** Every stage has a purposeful ARIA live region: `SlotStage` uses `role="status"` with per-phase aria-label; `RevealStage` uses phase-aware labels (silhouette/fill/sparkle); `BridgeStage` uses `role="status"` announcing result preparation; `LoadingStage` uses `role="status"` with `aria-busy="true"`; `EmptyStage` uses `role="alert"` with `aria-live="polite"`; `ErrorStage` already uses `role="alert"`. Skip buttons on BridgeStage and ErrorStage carry `role="button"` and `aria-label`. The hero image carries `aria-label`; the pokemon card carries `role="button"` + `aria-label`; the typicality badge carries a semantic `aria-label={`${prefix}${name}`}`.
 - **Split-brain prevention:** The server validates `finalResult.primaryArchetype` before persisting (falls back to `'corgi'` if invalid). The client hard-validates the result before transitioning to the results page. Divergence between `currentMatches[0]` and `finalResult.primaryArchetype` is logged server-side for telemetry. GET `/api/assessment/v4/result` returns `500` with "Result data is incomplete" if `finalResult` is missing or malformed, rather than violating the client's `NonNullable` assumption.
 - **Retry UX:** The error state shows a tooltip "网络波动时可能需要多试一次" under the retry button to reduce user uncertainty.
 
@@ -1108,7 +1115,7 @@ for (const pair of confusionPairs) {
 - [ ] Radar chart displays all 6 traits (ACOEXP)
 - [ ] Archetype icons match canonical list (🐕, 🐓, etc.)
 - [ ] Results show correct archetype name (社牛柯基, not 火花塞)
-- [ ] Decisive match badge shows when confidence ≥ 70%
+- [ ] Typicality badge shows `典型` (decisive) or `非典型` (non-decisive) prefix in archetype `accentText` color
 - [ ] Question flow adapts according to the active config and confidence thresholds (including the fixed 2-question closing sequence)
 - [ ] No references to deprecated archetypes (火花塞, 探索者, etc.)
 

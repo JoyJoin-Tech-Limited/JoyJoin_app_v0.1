@@ -404,6 +404,7 @@ export default function EssentialDataPage() {
 
   const toggleIntent = useCallback(
     (value: string) => {
+      haptics('light')
       if (value === INTENT_FLEXIBLE_OPTION.value) {
         // Toggle flexible independently; when turned off, keep other explicit selections
         if (intent.includes(value)) {
@@ -430,6 +431,46 @@ export default function EssentialDataPage() {
     },
     [analytics, intent],
   )
+
+  // Memoize intent grid to prevent re-render on unrelated state changes
+  const intentGrid = useMemo(() => (
+    <View className='essential-data__intent-grid'>
+      {intentOptions.map((option) => {
+        const isFlexibleActive = intent.includes(INTENT_FLEXIBLE_OPTION.value)
+        const isExplicitlySelected = intent.includes(option.value)
+        const isDimmed = isFlexibleActive && option.value !== INTENT_FLEXIBLE_OPTION.value && !isExplicitlySelected
+        const visuallySelected = isExplicitlySelected || isDimmed
+        return (
+          <View
+            key={option.value}
+            className={[
+              'essential-data__intent-card',
+              visuallySelected ? 'essential-data__intent-card--selected' : '',
+              isDimmed ? 'essential-data__intent-card--dimmed' : '',
+            ].filter(Boolean).join(' ')}
+            onClick={() => toggleIntent(option.value)}
+            role='button'
+            aria-pressed={isExplicitlySelected}
+            aria-label={`${option.label}：${option.subtitle}`}
+          >
+            <JoyJoinIcon
+              emoji={option.emoji}
+              tier='intent'
+              size={48}
+              className='essential-data__intent-icon'
+            />
+            <Text className='essential-data__intent-label'>{option.label}</Text>
+            <Text className='essential-data__intent-subtitle'>{option.subtitle}</Text>
+            {visuallySelected && (
+              <View className='essential-data__intent-check'>
+                <Text className='essential-data__intent-check-icon'>✓</Text>
+              </View>
+            )}
+          </View>
+        )
+      })}
+    </View>
+  ), [intentOptions, intent, toggleIntent])
 
   if (isLoading) {
     return (
@@ -528,6 +569,7 @@ export default function EssentialDataPage() {
                   <View
                     className={['essential-data__picker', birthYear > 0 ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}
                     style={birthYear > 0 && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${accentColor}20` } : undefined}
+                    aria-label={birthYear > 0 ? `出生年份：${birthYear} 年` : '请选择出生年份'}
                   >
                     <Text className={['essential-data__picker-text', birthYear > 0 ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta'].filter(Boolean).join(' ')}>
                       {birthYear > 0 ? `${birthYear} 年` : '请选择出生年份'}
@@ -578,6 +620,7 @@ export default function EssentialDataPage() {
                   <View
                     className={['essential-data__picker', workMode !== '' ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}
                     style={workMode !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${accentColor}20` } : undefined}
+                    aria-label={workMode !== '' ? `人生阶段：${WORK_MODES.find((m) => m.value === workMode)?.label ?? ''}` : '请选择人生阶段'}
                   >
                     <Text className={['essential-data__picker-text', workMode !== '' ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta'].filter(Boolean).join(' ')}>
                       {workMode !== '' ? (WORK_MODES.find((m) => m.value === workMode)?.label ?? '选填（点击选择）') : '选填（点击选择）'}
@@ -601,6 +644,7 @@ export default function EssentialDataPage() {
                   ].filter(Boolean).join(' ')}
                   style={professionText !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${accentColor}20` } : undefined}
                   onClick={() => setShowProfessionOverlay(true)}
+                  aria-label={professionText !== '' ? `职业：${professionText}` : '选填（点击告诉悦仔你的职业）'}
                 >
                   <Text
                     className={[
@@ -644,6 +688,7 @@ export default function EssentialDataPage() {
                   <View
                     className={['essential-data__picker', relationshipStatus !== '' ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}
                     style={relationshipStatus !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${accentColor}20` } : undefined}
+                    aria-label={relationshipStatus !== '' ? `关系状态：${relationshipStatus}` : '请选择关系状态'}
                   >
                     <Text className={['essential-data__picker-text', relationshipStatus !== '' ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta'].filter(Boolean).join(' ')}>
                       {relationshipStatus || '选填（点击选择）'}
@@ -675,6 +720,7 @@ export default function EssentialDataPage() {
                   <View
                     className='essential-data__picker'
                     style={currentCity !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${accentColor}20` } : undefined}
+                    aria-label={currentCity !== '' ? `现居城市：${currentCity}` : '请选择现居城市'}
                   >
                     <Text className={['essential-data__picker-text', currentCity !== '' ? 'essential-data__picker-text--filled' : ''].filter(Boolean).join(' ')}>
                       {currentCity || '请选择'}
@@ -706,39 +752,7 @@ export default function EssentialDataPage() {
             <Card className='essential-data__card essential-data__stage essential-data__stage--2'>
               <View className='essential-data__field'>
                 <Text className='essential-data__label'>这次更想收获什么</Text>
-                <View className='essential-data__intent-grid'>
-                  {intentOptions.map((option) => {
-                    const isFlexibleActive = intent.includes(INTENT_FLEXIBLE_OPTION.value)
-                    const isExplicitlySelected = intent.includes(option.value)
-                    const isDimmed = isFlexibleActive && option.value !== INTENT_FLEXIBLE_OPTION.value && !isExplicitlySelected
-                    const visuallySelected = isExplicitlySelected || isDimmed
-                    return (
-                      <View
-                        key={option.value}
-                        className={[
-                          'essential-data__intent-card',
-                          visuallySelected ? 'essential-data__intent-card--selected' : '',
-                          isDimmed ? 'essential-data__intent-card--dimmed' : '',
-                        ].filter(Boolean).join(' ')}
-                        onClick={() => toggleIntent(option.value)}
-                      >
-                        <JoyJoinIcon
-                          emoji={option.emoji}
-                          tier='intent'
-                          size={48}
-                          className='essential-data__intent-icon'
-                        />
-                        <Text className='essential-data__intent-label'>{option.label}</Text>
-                        <Text className='essential-data__intent-subtitle'>{option.subtitle}</Text>
-                        {visuallySelected && (
-                          <View className='essential-data__intent-check'>
-                            <Text className='essential-data__intent-check-icon'>✓</Text>
-                          </View>
-                        )}
-                      </View>
-                    )
-                  })}
-                </View>
+                {intentGrid}
                 <Text className='essential-data__hint'>最多可选 {MAX_INTENTS} 个，多选会影响后续活动推荐。</Text>
               </View>
             </Card>

@@ -1,7 +1,7 @@
 # JoyJoin Design System
 
 > **Purpose:** Canonical design system reference for human designers, AI design tools (Stitch, Lovart), and frontend engineers. Keep this file in sync with `joyjoin-brand-guidelines` and `design-system-governance` skills.
-> **Last updated:** 2026-04-22
+> **Last updated:** 2026-06-05
 
 ---
 
@@ -181,6 +181,7 @@ These animals map to the personality system's 12 archetypes.
 - Use `hoverClass` for pressed states
 - Animations: `transform` and `opacity` only
 - Bundle size awareness — subpackage large assets
+- **`hsla()` color values are silently dropped by WXSS** — all archetype color exports from `packages/shared/src/archetypeColors.ts` must use `rgba()` via the `formatHSLAsRGBA()` helper. This affects any component that reads archetype accent colors for WXSS styling (e.g., `CelebrationSparkle`, archetype cards, trait bars). The shared package exports `hslToRgb()` + `formatHSLAsRGBA()` for deterministic conversion. Canvas rendering (e.g., share posters) uses a separate `toCanvasRGBA()` helper for the same reason — hex-alpha concatenations like `${color}88` produce invalid CSS strings in WeChat's WKWebView.
 
 ### Admin client
 - React 18 + Vite + Tailwind CSS

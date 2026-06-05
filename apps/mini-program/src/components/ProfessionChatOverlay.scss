@@ -80,6 +80,7 @@
     align-items: flex-end;
     gap: $spacing-sm;
     animation: profession-message-enter 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    will-change: transform;
 
     &--xiaoyue {
       align-self: flex-start;
@@ -103,6 +104,7 @@
 
   &__bubble {
     max-width: 70%;
+    min-width: 120rpx;
     padding: $spacing-sm $spacing-md;
     border-radius: 24rpx;
 
@@ -120,6 +122,9 @@
   &__bubble-text {
     font-size: $font-size-base;
     line-height: 1.6;
+    word-break: keep-all;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
 
     .profession-overlay__bubble--xiaoyue & {
       color: $color-text-primary;
@@ -274,6 +279,7 @@
     opacity: 0;
     transform: scale(0.6);
     animation: profession-tag-pop-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    will-change: transform, opacity;
 
     &:nth-child(1) { animation-delay: 0.05s; }
     &:nth-child(2) { animation-delay: 0.12s; }
@@ -379,6 +385,36 @@
 
   30% {
     transform: translateY(-6rpx);
+  }
+}
+
+/* Device-tier gating: low-end devices get instant renders, no entrance animations */
+.profession-overlay--low-end {
+  animation: none;
+  opacity: 1;
+  transform: none;
+
+  .profession-overlay__message {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .profession-overlay__reveal-card {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .profession-overlay__reveal-tag {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .profession-overlay__typing-dot {
+    animation: none;
+    opacity: 0.5;
   }
 }
 
