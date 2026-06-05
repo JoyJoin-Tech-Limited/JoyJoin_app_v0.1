@@ -201,7 +201,7 @@ export async function scanPoolAndMatch(
   const eventTime = new Date(pool.dateTime);
   const hoursUntilEvent = Math.max(
     0,
-    Math.floor((eventTime.getTime() - now.getTime()) / (1000 * 60 * 60))
+    (eventTime.getTime() - now.getTime()) / (1000 * 60 * 60)
   );
 
   // 5. 计算当前阈值（考虑时间衰减）
