@@ -1,7 +1,8 @@
-import { View } from '@tarojs/components'
+import { Image, View } from '@tarojs/components'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import spritesheetManifest from '../../assets/mascot/xiaoyue-spritesheet-manifest.json'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { logWarn } from '../../lib/utils/logger'
 import './XiaoyueSpriteAnimator.scss'
 
 const BASE_PATH = cdnAsset('/assets/mascot')
@@ -89,6 +90,12 @@ export default function XiaoyueSpriteAnimator({
 }: XiaoyueSpriteAnimatorProps) {
   const resolvedState: XiaoyueSpriteState = isLoading ? 'thinking' : state
   const meta = getStateMeta(resolvedState)
+  const [spriteError, setSpriteError] = useState(false)
+
+  // Reset error state when state changes (CDN failure for one state shouldn't block others)
+  useEffect(() => {
+    setSpriteError(false)
+  }, [resolvedState])
 
   // ── Crossfade transition state ──
   // When state changes, we keep the old sprite frame visible and fade it out
@@ -161,12 +168,14 @@ export default function XiaoyueSpriteAnimator({
   const currentStyle = useMemo(() => makeStyle(meta), [makeStyle, meta])
   const exitStyle = useMemo(() => makeStyle(exitMeta), [makeStyle, exitMeta])
 
-  if (!meta) {
+  if (!meta || spriteError) {
     return (
       <View
         className={`xiaoyue-sprite xiaoyue-sprite--fallback ${className}`}
         style={{ width: size, height: size }}
-      />
+      >
+        {showGlow && <View className='xiaoyue-sprite--glow-fallback' />}
+      </View>
     )
   }
 
@@ -185,6 +194,25 @@ export default function XiaoyueSpriteAnimator({
           style={currentStyle}
           onAnimationEnd={onComplete}
         />
+        {/* CDN load probe: detects sprite sheet load failure and falls back */}
+        {meta.sheet && (
+          <Image
+            className='xiaoyue-sprite__probe'
+            src={`${BASE_PATH}/${meta.sheet}`}
+            mode='aspectFit'
+            onError={() => {
+              if (!spriteError) {
+                logWarn('[XiaoyueSpriteAnimator] CDN sprite load failed — falling back', {
+                  state: resolvedState,
+                  sheet: meta.sheet,
+                })
+                setSpriteError(true)
+              }
+            }}
+            style={{ width: '1rpx', height: '1rpx', position: 'absolute', opacity: 0 }}
+            aria-hidden
+          />
+        )}
       </View>
       {/* Exiting state — opacity wrapper handles exit fade, inner handles sprite play */}
       {exitMeta && (

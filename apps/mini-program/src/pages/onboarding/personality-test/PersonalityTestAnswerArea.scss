@@ -247,8 +247,10 @@
     max-width: 480rpx;
     padding: 14rpx 36rpx;
     border-radius: 999rpx;
-    background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
+    /* Read transform from CSS custom property for GPU-composited drag updates */
+    transform: translateX(var(--jj-slider-tx, 0rpx)) scale(var(--jj-slider-scale, 1));
     transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
 
     /* Shadow is on a child pseudo-element to avoid repaint during transform */
     &::before {
@@ -259,32 +261,58 @@
       box-shadow: 0 6rpx 20rpx rgba($color-primary, 0.28), inset 0 1rpx 0 rgba(255, 255, 255, 0.15);
       pointer-events: none;
     }
+  }
 
-    /* Downward arrow connecting badge to slider thumb — matches gradient start color */
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: -10rpx;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 0;
-      border-left: 10rpx solid transparent;
-      border-right: 10rpx solid transparent;
-      border-top: 10rpx solid $color-primary;
-    }
+  &__slider-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: $spacing-sm;
+    animation: slider-hint-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
 
-    &--left {
-      transform: translateX(-28rpx) scale(1.03);
-    }
+  &__slider-hint-text {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    line-height: 1.5;
+    padding: 8rpx 20rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary-light, 0.7);
+  }
 
-    &--center {
-      transform: translateX(0) scale(1);
-    }
+  &__slider-hint-arrow {
+    width: 0;
+    height: 0;
+    border-left: 8rpx solid transparent;
+    border-right: 8rpx solid transparent;
+    border-top: 8rpx solid rgba($color-primary-light, 0.7);
+  }
 
-    &--right {
-      transform: translateX(28rpx) scale(1.03);
+  @keyframes slider-hint-enter {
+    from {
+      opacity: 0;
+      transform: translateY(-8rpx);
     }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  &__slider-live-badge-arrow {
+    position: absolute;
+    bottom: -10rpx;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 10rpx solid transparent;
+    border-right: 10rpx solid transparent;
+    border-top: 10rpx solid $color-primary;
+    pointer-events: none;
   }
 
   &__slider-live-badge-label {
@@ -345,7 +373,8 @@
   .answer-area__emoji-option,
   .answer-area__slider-live-badge-inner,
   .answer-area__slider-live-badge-label,
-  .answer-area__slider-live-badge-value {
+  .answer-area__slider-live-badge-value,
+  .answer-area__slider-hint {
     transition: none !important;
     transform: none !important;
     animation: none !important;

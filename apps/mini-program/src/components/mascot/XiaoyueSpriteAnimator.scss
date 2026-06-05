@@ -46,6 +46,12 @@
     border-radius: 50%;
     background: rgba($color-primary, 0.08);
   }
+
+  &__probe {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 @keyframes xiaoyue-sprite-play {

@@ -3,6 +3,7 @@ import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ARCHETYPE_BY_ID, ARCHETYPE_CANONICAL_ORDER, getArchetypeIndex } from '@shared/personality/archetypeNames'
+import { getContrastSafeArchetypeColor } from '@shared/archetypeColors'
 import Button from '../../../../components/ui/Button'
 import Card from '../../../../components/ui/Card'
 import type { ArchetypeVisual } from '../visuals'
@@ -13,6 +14,11 @@ import { cdnAsset, localAsset } from '../../../../lib/utils/cdnAssets'
 import XiaoyueChatBubble from '../../../../components/mascot/XiaoyueChatBubble'
 import { PERSONALITY_TEST_XIAOYUE_EXPRESSION } from '../../../../lib/mascot/xiaoyueExpressions'
 import type { ArchetypeCardVariant } from '../archetypeVariants'
+import { normalizeMatchScore, type TypicalityLabel } from './resultHelpers'
+
+/** Warm cream gradient midpoint — shared between dynamic card backgrounds.
+ *  Extracted from hardcoded hex literals for brand token discipline. */
+const CARD_GRADIENT_MID = '#fff8ee'
 
 interface FinalStageProps {
   displayArchetypeName: string
@@ -24,7 +30,8 @@ interface FinalStageProps {
   traitEntries: Array<{ key: string; label: string; value: number }>
   topMatches: AnonymousAssessmentTopMatch[]
   skillSet?: ArchetypeSkillSet
-  confidenceLabel?: string
+  typicalityLabel?: TypicalityLabel
+  secondaryAccent?: string
   isGeneratingPoster: boolean
   sharePosterPath?: string
   generationPhase?: string
@@ -66,7 +73,8 @@ export default function FinalStage({
   traitEntries,
   topMatches,
   skillSet,
-  confidenceLabel,
+  typicalityLabel,
+  secondaryAccent,
   isGeneratingPoster,
   sharePosterPath,
   generationPhase,
@@ -107,11 +115,24 @@ export default function FinalStage({
   const touchActiveRef = useRef(false)
   const touchStartRef = useRef({ x: 0, y: 0 })
   const cardRef = useRef<{ left: number; top: number; width: number; height: number } | null>(null)
+  const detailCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const rafPendingRef = useRef(false)
+  const pendingTiltRef = useRef({ rotateX: 0, rotateY: 0 })
 
   // Stagger badge entrance after mount
   useEffect(() => {
     const timer = setTimeout(() => setBadgesVisible(true), 300)
     return () => clearTimeout(timer)
+  }, [])
+
+  // Cleanup detail close timer on unmount to avoid setState after unmount
+  useEffect(() => {
+    return () => {
+      if (detailCloseTimerRef.current) {
+        clearTimeout(detailCloseTimerRef.current)
+        detailCloseTimerRef.current = null
+      }
+    }
   }, [])
 
   // Measure card position once on mount (and on window resize)
@@ -133,9 +154,13 @@ export default function FinalStage({
   const handleCloseDetail = useCallback(() => {
     setIsDetailClosing(true)
     // Wait for close animation to finish before unmounting
-    setTimeout(() => {
+    if (detailCloseTimerRef.current) {
+      clearTimeout(detailCloseTimerRef.current)
+    }
+    detailCloseTimerRef.current = setTimeout(() => {
       setIsDetailOpen(false)
       setIsDetailClosing(false)
+      detailCloseTimerRef.current = null
     }, 280)
   }, [])
 
@@ -175,15 +200,30 @@ export default function FinalStage({
     const deltaY = (touch.clientY - centerY) / (rect.height / 2)
 
     const maxTilt = 8
-    setTouchTilt({
+    const next = {
       rotateX: Math.max(-maxTilt, Math.min(maxTilt, deltaY * -6)),
       rotateY: Math.max(-maxTilt, Math.min(maxTilt, deltaX * 6)),
-    })
-    setIsTiltActive(true)
+    }
+
+    // Throttle state updates to the next animation frame to prevent
+    // flooding React re-renders during fast swipes on low-end devices.
+    pendingTiltRef.current = next
+    if (!rafPendingRef.current) {
+      rafPendingRef.current = true
+      requestAnimationFrame(() => {
+        rafPendingRef.current = false
+        if (touchActiveRef.current) {
+          setTouchTilt(pendingTiltRef.current)
+          setIsTiltActive(true)
+        }
+      })
+    }
   }, [])
 
   const handleTouchEnd = useCallback(() => {
     touchActiveRef.current = false
+    pendingTiltRef.current = { rotateX: 0, rotateY: 0 }
+    rafPendingRef.current = false
     setTouchTilt({ rotateX: 0, rotateY: 0 })
     setIsCardPressed(false)
   }, [])
@@ -210,8 +250,8 @@ export default function FinalStage({
 
   const activeVariant = variants?.[selectedVariantIndex ?? 0]
   const cardBackground = activeVariant
-    ? `linear-gradient(160deg, ${activeVariant.accentSoft} 0%, #fff8ee 50%, rgba(255, 255, 255, 0.98) 100%)`
-    : `linear-gradient(160deg, ${visual.accentSoft} 0%, #fff8ee 50%, rgba(255, 255, 255, 0.98) 100%)`
+    ? `linear-gradient(160deg, ${activeVariant.accentSoft} 0%, ${CARD_GRADIENT_MID} 50%, rgba(255, 255, 255, 0.98) 100%)`
+    : `linear-gradient(160deg, ${visual.accentSoft} 0%, ${CARD_GRADIENT_MID} 50%, rgba(255, 255, 255, 0.98) 100%)`
   const cardGlow = activeVariant ? activeVariant.accentGlow : visual.accentGlow
 
   // Collect-them-all: all archetypes with current one unlocked
@@ -221,13 +261,17 @@ export default function FinalStage({
   // Build partner data for detail sheet (memoized)
   const partnerData = useMemo(() => {
     return topMatches.slice(0, 3).map((match) => {
-      const score = Math.round(match.score)
-      const chemistryLabel = score >= 85 ? '灵魂拍档' : score >= 70 ? '默契搭档' : score >= 55 ? '互补组合' : '潜力搭档'
-      const chemistryColor = score >= 85 ? '#ef4444' : score >= 70 ? '#f97316' : score >= 55 ? '#8b5cf6' : '#64748b'
+      const rawScore = Number(match.score)
+      const displayScore = normalizeMatchScore(rawScore)
+      const chemistryLabel = displayScore >= 85 ? '灵魂拍档' : displayScore >= 70 ? '默契搭档' : displayScore >= 55 ? '互补组合' : '潜力搭档'
+      const chemistryColor = displayScore >= 85 ? '#ef4444' : displayScore >= 70 ? '#f97316' : displayScore >= 55 ? '#8b5cf6' : '#64748b'
+      const accent = getContrastSafeArchetypeColor(match.archetype)
       return {
         ...match,
+        score: displayScore,
         chemistryLabel,
         chemistryColor,
+        accent,
       }
     })
   }, [topMatches])
@@ -270,8 +314,14 @@ export default function FinalStage({
             <Text className='personality-results__hero-summary'>{summary}</Text>
 
             <View className='personality-results__hero-badges'>
-              {confidenceLabel ? (
-                <Text className={`personality-results__hero-badge personality-results__hero-badge--chemistry ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}>{confidenceLabel}</Text>
+              {typicalityLabel ? (
+                <Text
+                  className={`personality-results__hero-badge personality-results__hero-badge--typicality ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}
+                  aria-label={`${typicalityLabel.prefix}${typicalityLabel.name}`}
+                >
+                  <Text aria-hidden='true'>{typicalityLabel.prefix}</Text>
+                  <Text style={{ color: typicalityLabel.accent }} aria-hidden='true'>{typicalityLabel.name}</Text>
+                </Text>
               ) : null}
               {typeof visual.rarityPercentage === 'number' ? (
                 <Text className={`personality-results__hero-badge personality-results__hero-badge--rarity ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}>稀有度 {Math.round(visual.rarityPercentage)}%</Text>
@@ -283,7 +333,9 @@ export default function FinalStage({
 
             {isDecisive === false && secondaryDisplayName ? (
               <Text className='personality-results__hero-blend'>
-                {xiaoyueAnalysis?.blendLine || `隐约有${secondaryDisplayName}的影子`}
+                <Text>隐约有</Text>
+                <Text style={{ color: secondaryAccent || visual.accentText }}>{secondaryDisplayName}</Text>
+                <Text>的影子</Text>
               </Text>
             ) : null}
           </View>
@@ -294,6 +346,7 @@ export default function FinalStage({
               className='personality-results__hero-art'
               mode='aspectFit'
               src={heroSrc}
+              ariaLabel={`你的氛围命格形象：${displayArchetypeName}`}
               onError={() => setHeroImgError(true)}
             />
             {/* No text overlay on archetype image — clean art only */}
@@ -343,6 +396,9 @@ export default function FinalStage({
                     '--cta-shadow': visual.accentGlow,
                   } as React.CSSProperties}
                   onClick={handleCardTap}
+                  hoverClass='personality-results__hero-xiaoyue-cta--active'
+                  role='button'
+                  aria-label='查看悦仔完整解读'
                 >
                   <Text className='personality-results__hero-xiaoyue-cta-text'>
                     查看悦仔完整解读
@@ -389,6 +445,8 @@ export default function FinalStage({
               transform: `perspective(1200rpx) rotateX(${effectiveRotateX}deg) rotateY(${effectiveRotateY}deg) scale(${isCardPressed ? 0.97 : 1})`,
               transformStyle: 'preserve-3d',
             }}
+            role='button'
+            aria-label='查看悦仔完整解读'
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -400,7 +458,9 @@ export default function FinalStage({
             <View className='personality-results__pokemon-corner-shine personality-results__pokemon-corner-shine--bottom-left' />
 
             <View className='personality-results__pokemon-card-top'>
-              <Text className='personality-results__pokemon-chip personality-results__pokemon-chip--dark'>{confidenceLabel || '悦聚氛围卡'}</Text>
+              <Text className='personality-results__pokemon-chip personality-results__pokemon-chip--dark'>
+                {typicalityLabel ? `${typicalityLabel.prefix}${typicalityLabel.name}` : '悦聚氛围卡'}
+              </Text>
             </View>
 
             <View className='personality-results__pokemon-card-hero'>
@@ -699,7 +759,10 @@ export default function FinalStage({
                             className='personality-results__detail-partner-dot'
                             style={{ background: partner.chemistryColor }}
                           />
-                          <Text className='personality-results__detail-partner-name'>
+                          <Text
+                            className='personality-results__detail-partner-name'
+                            style={{ color: partner.accent }}
+                          >
                             {ARCHETYPE_BY_ID[partner.archetype]?.nameCn ?? partner.archetype}
                           </Text>
                           <Text
@@ -709,7 +772,7 @@ export default function FinalStage({
                             {partner.chemistryLabel}
                           </Text>
                           <Text className='personality-results__detail-partner-score'>
-                            契合 {Math.round(partner.score)}%
+                            氛围契合{partner.score}%
                           </Text>
                         </View>
                       ))}

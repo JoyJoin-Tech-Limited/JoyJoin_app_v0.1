@@ -8,10 +8,10 @@
   "states": {
     "celebrate": {
       "sheet": "xiaoyue-celebrate.webp",
-      "frameCount": 9,
+      "frameCount": 7,
       "frameWidth": 200,
       "frameHeight": 200,
-      "duration": 1000,
+      "duration": 1500,
       "loop": false,
       "oneShot": true
     },
@@ -53,7 +53,7 @@
     },
     "idle": {
       "sheet": "xiaoyue-idle.webp",
-      "frameCount": 9,
+      "frameCount": 7,
       "frameWidth": 200,
       "frameHeight": 200,
       "duration": 1200,
@@ -134,10 +134,10 @@
     },
     "surprised": {
       "sheet": "xiaoyue-surprised.webp",
-      "frameCount": 9,
+      "frameCount": 7,
       "frameWidth": 200,
       "frameHeight": 200,
-      "duration": 1000,
+      "duration": 1500,
       "loop": false,
       "oneShot": true
     },
@@ -152,10 +152,10 @@
     },
     "thinking": {
       "sheet": "xiaoyue-thinking.webp",
-      "frameCount": 9,
+      "frameCount": 7,
       "frameWidth": 200,
       "frameHeight": 200,
-      "duration": 1000,
+      "duration": 1500,
       "loop": true,
       "oneShot": false
     },

@@ -1,4 +1,4 @@
-import { formatHSL, getArchetypeHSL } from '@shared/archetypeColors'
+import { formatHSLAsRGBA, getArchetypeHSL, getContrastSafeArchetypeColor } from '@shared/archetypeColors'
 import { archetypeRegistry, type ArchetypeRecord } from '@shared/personality/archetypeRegistry'
 import { cdnAsset, localAsset } from '../../../lib/utils/cdnAssets'
 
@@ -67,7 +67,9 @@ const ARCHETYPE_SUMMARIES: Record<string, string> = {
 
 function withAlpha(archetype: string | null | undefined, alpha: number): string {
   const hsl = getArchetypeHSL(archetype)
-  return `hsla(${hsl.h}, ${hsl.s}%, ${hsl.l}%, ${alpha})`
+  // WXSS does not support the `hsla()` functional notation. Emit
+  // `rgba(...)` so alpha surfaces render correctly in WeChat.
+  return formatHSLAsRGBA(hsl, alpha)
 }
 
 export interface ArchetypeVisual {
@@ -75,6 +77,8 @@ export interface ArchetypeVisual {
   asset: string
   assetPng: string
   accent: string
+  /** Contrast-safe variant of `accent` for text on light backgrounds. */
+  accentText: string
   accentSoft: string
   accentBorder: string
   accentGlow: string
@@ -129,7 +133,7 @@ export function getIntroStaticFallbackAsset(): string {
 
 export function getArchetypeVisual(archetype: string | null | undefined): ArchetypeVisual {
   const record = archetype ? archetypeRegistry[archetype] : undefined
-  const accent = formatHSL(getArchetypeHSL(archetype))
+  const accent = formatHSLAsRGBA(getArchetypeHSL(archetype), 1)
   const fallbackSummary = archetype ? ARCHETYPE_SUMMARIES[archetype] : undefined
 
   return {
@@ -137,6 +141,7 @@ export function getArchetypeVisual(archetype: string | null | undefined): Archet
     asset: archetype ? ARCHETYPE_ASSET_MAP[archetype]?.webp ?? '' : '',
     assetPng: archetype ? ARCHETYPE_ASSET_MAP[archetype]?.png ?? '' : '',
     accent,
+    accentText: getContrastSafeArchetypeColor(archetype),
     accentSoft: withAlpha(archetype, 0.12),
     accentBorder: withAlpha(archetype, 0.22),
     accentGlow: withAlpha(archetype, 0.26),

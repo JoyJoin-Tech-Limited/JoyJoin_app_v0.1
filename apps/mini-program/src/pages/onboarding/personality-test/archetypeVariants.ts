@@ -1,9 +1,12 @@
 /**
  * Archetype color variant generator for the mini-program share card.
  * Derives 3 palette variants from the canonical archetype HSL color.
+ *
+ * All output colors use `rgba()` because WeChat WXSS silently drops
+ * `hsla()` / `hsl()` functional notation on many base library versions.
  */
 
-import { getArchetypeHSL } from '@shared/archetypeColors'
+import { formatHSLAsRGBA, getArchetypeHSL, type ArchetypeHSL } from '@shared/archetypeColors'
 
 export interface ArchetypeCardVariant {
   name: string
@@ -16,7 +19,7 @@ export interface ArchetypeCardVariant {
 }
 
 function hslToCss(h: number, s: number, l: number, a = 1): string {
-  return `hsla(${h}, ${s}%, ${l}%, ${a})`
+  return formatHSLAsRGBA({ h, s, l } as ArchetypeHSL, a)
 }
 
 function buildVariant(h: number, s: number, l: number): Omit<ArchetypeCardVariant, 'name'> {

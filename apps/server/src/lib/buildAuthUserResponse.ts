@@ -118,6 +118,8 @@ export async function buildAuthUserResponse(userId: string): Promise<AuthUserRes
         socialIcebreakerClientForceEnd,
         runPlanTemplatesEnabled,
         promoBannerEnabled,
+        personalitySlotAnimationEnabled,
+        personalityShareEnabled,
       ] = await Promise.all([
         getFeatureFlag('restartOnboarding', false),
         getFeatureFlag('smartProfession', true),
@@ -126,6 +128,8 @@ export async function buildAuthUserResponse(userId: string): Promise<AuthUserRes
         getFeatureFlag('socialIcebreakerClientForceEnd', false),
         getFeatureFlag('runPlanTemplatesEnabled', false),
         getFeatureFlag('promoBannerEnabled', true),
+        getFeatureFlag('personalitySlotAnimationEnabled', true),
+        getFeatureFlag('personalityShareEnabled', true),
       ]);
       return {
         restartOnboarding,
@@ -135,6 +139,8 @@ export async function buildAuthUserResponse(userId: string): Promise<AuthUserRes
         socialIcebreakerClientForceEnd,
         runPlanTemplatesEnabled,
         promoBannerEnabled,
+        personalitySlotAnimationEnabled,
+        personalityShareEnabled,
       };
     })(),
   };

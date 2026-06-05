@@ -1,6 +1,49 @@
 import Taro from '@tarojs/taro'
 import { CANVAS_PALETTE as PALETTE } from '@shared/personality/canvasPalette'
+import { formatHSLAsRGBA, type ArchetypeHSL } from '@shared/archetypeColors'
 import { logWarn } from '../../../../lib/utils/logger'
+
+/**
+ * Convert any CSS color string (hsl, hsla, #hex, rgba, rgb) to `rgba()`.
+ *
+ * WeChat canvas addColorStop silently drops hsl/hsla strings on older
+ * base library versions. This normalises every color to rgba so canvas
+ * drawing always works. It also prevents the bug where appending hex
+ * alpha digits (e.g. `${accentColor}88`) to an hsl string produces
+ * invalid `"hsl(25, 48%, 60%)88"`.
+ */
+function toCanvasRGBA(color: string, alpha = 1): string {
+  // Already rgba — override alpha if requested
+  const rgbaMatch = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+  if (rgbaMatch) {
+    const [, r, g, b] = rgbaMatch
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`
+  }
+  // Hex — convert to rgba
+  const hexMatch = color.match(/^#([0-9a-fA-F]{3,8})$/)
+  if (hexMatch) {
+    let hex = hexMatch[1]
+    if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2]
+    const r = parseInt(hex.slice(0, 2), 16)
+    const g = parseInt(hex.slice(2, 4), 16)
+    const b = parseInt(hex.slice(4, 6), 16)
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`
+  }
+  // hsl/hsla — parse and convert
+  const hslaMatch = color.match(/^hsla?\(\s*(\d+\.?\d*)\s*,\s*(\d+\.?\d*)%?\s*,\s*(\d+\.?\d*)%?\s*(?:,\s*([\d.]+))?\s*\)/)
+  if (hslaMatch) {
+    const h = parseFloat(hslaMatch[1])
+    const s = parseFloat(hslaMatch[2])
+    const l = parseFloat(hslaMatch[3])
+    return formatHSLAsRGBA({ h, s, l } as ArchetypeHSL, alpha)
+  }
+  // Fallback — return as-is (named colors like 'white', 'black', etc.)
+  if (alpha < 1) {
+    // Can't apply alpha to unknown format; return with a warning
+    logWarn('[sharePoster] toCanvasRGBA: unknown format, alpha ignored', { color, alpha })
+  }
+  return color
+}
 
 const POSTER_WIDTH = 1080
 const POSTER_HEIGHT = 1920
@@ -505,14 +548,14 @@ function createCardBackground(ctx: Taro.CanvasContext, accentColor: string): voi
       CARD_X + CARD_WIDTH / 2, CARD_Y + 236, 20,
       CARD_X + CARD_WIDTH / 2, CARD_Y + 236, 180,
     )
-    heroGlow.addColorStop(0, accentColor)
-    heroGlow.addColorStop(0.6, `${accentColor}88`) // 53% opacity
+    heroGlow.addColorStop(0, toCanvasRGBA(accentColor, 1))
+    heroGlow.addColorStop(0.6, toCanvasRGBA(accentColor, 0.53))
     heroGlow.addColorStop(1, PALETTE.heroGlowEnd)
   } catch {
     heroGlow = ctx.createLinearGradient(
       CARD_X + 40, CARD_Y + 140, CARD_X + CARD_WIDTH - 40, CARD_Y + 370,
     )
-    heroGlow.addColorStop(0, accentColor)
+    heroGlow.addColorStop(0, toCanvasRGBA(accentColor, 1))
     heroGlow.addColorStop(1, PALETTE.heroGlowEnd)
   }
   fillRoundedRect(ctx, CARD_X + 34, CARD_Y + 114, CARD_WIDTH - 68, 260, 32, heroGlow)
@@ -640,8 +683,8 @@ function drawTraitBars(
     // Fill with accent gradient
     const fillWidth = Math.max(4, barMaxWidth * (clampPercent(entry.value) / 100))
     const fillGradient = ctx.createLinearGradient(barX, rowY, barX + fillWidth, rowY)
-    fillGradient.addColorStop(0, accentColor)
-    fillGradient.addColorStop(1, `${accentColor}99`)
+    fillGradient.addColorStop(0, toCanvasRGBA(accentColor, 1))
+    fillGradient.addColorStop(1, toCanvasRGBA(accentColor, 0.6))
     fillRoundedRect(ctx, barX, rowY, fillWidth, barHeight, barRadius, fillGradient)
   })
 
@@ -789,7 +832,7 @@ export async function generatePersonalitySharePoster(
     ctx.restore()
   } else {
     // Fallback: accent circle with archetype initial
-    fillRoundedRect(ctx, imageShellX, imageShellY, HERO_IMAGE_SIZE, HERO_IMAGE_SIZE, HERO_IMAGE_RADIUS, input.accentColor)
+    fillRoundedRect(ctx, imageShellX, imageShellY, HERO_IMAGE_SIZE, HERO_IMAGE_SIZE, HERO_IMAGE_RADIUS, toCanvasRGBA(input.accentColor, 1))
 
     ctx.save()
     ctx.setFillStyle(PALETTE.white)
@@ -892,7 +935,7 @@ export async function generatePersonalitySharePoster(
     x: CARD_X + CARD_WIDTH - 182,
     y: secondaryBadgesY,
     width: 138,
-    fill: input.accentSoft,
+    fill: toCanvasRGBA(input.accentSoft, 1),
     color: PALETTE.skillAttributeText,
   })
 

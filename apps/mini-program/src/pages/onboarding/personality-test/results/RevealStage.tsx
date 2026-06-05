@@ -13,7 +13,7 @@ interface RevealStageProps {
 
 export default function RevealStage({ displayArchetypeName, displayAsset, visual, revealPhase, phaseText }: RevealStageProps) {
   return (
-    <View className='personality-results__immersive-shell personality-results__immersive-shell--reveal'>
+    <View className='personality-results__immersive-shell personality-results__immersive-shell--reveal' role='status' aria-live='polite' aria-label={`${displayArchetypeName} — 卡面显形中 — ${revealPhase === 'silhouette' ? '轮廓' : revealPhase === 'fill' ? '色彩' : '火花点亮'}`}>
       <Text className='personality-results__immersive-eyebrow'>JoyJoin 原型揭晓</Text>
       <Text className='personality-results__immersive-title'>你的卡面正在显形</Text>
       <Text className='personality-results__immersive-copy'>

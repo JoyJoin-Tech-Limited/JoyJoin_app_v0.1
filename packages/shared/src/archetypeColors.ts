@@ -115,3 +115,58 @@ export const ARCHETYPE_FAMILY_GRADIENTS: Record<string, string> = {
 export function formatHSL(hsl: ArchetypeHSL): string {
   return `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`
 }
+
+/**
+ * Format HSL + alpha as a CSS `rgba(...)` string.
+ *
+ * WeChat Mini Program WXSS does NOT support the `hsla()` functional
+ * notation — it silently drops the style, leaving alpha surfaces
+ * transparent. Use this helper anywhere alpha matters in a mini-program
+ * inline style. The web client can keep using `formatHSL` / `hsla`
+ * because regular CSS supports both.
+ */
+export function formatHSLAsRGBA(hsl: ArchetypeHSL, alpha: number): string {
+  const { r, g, b } = hslToRgb(hsl)
+  const a = Math.max(0, Math.min(1, alpha))
+  return `rgba(${r}, ${g}, ${b}, ${a})`
+}
+
+function hslToRgb(hsl: ArchetypeHSL): { r: number; g: number; b: number } {
+  const h = ((hsl.h % 360) + 360) % 360
+  const s = Math.max(0, Math.min(100, hsl.s)) / 100
+  const l = Math.max(0, Math.min(100, hsl.l)) / 100
+  const c = (1 - Math.abs(2 * l - 1)) * s
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
+  const m = l - c / 2
+  let rPrime = 0
+  let gPrime = 0
+  let bPrime = 0
+  if (h < 60) { rPrime = c; gPrime = x; bPrime = 0 }
+  else if (h < 120) { rPrime = x; gPrime = c; bPrime = 0 }
+  else if (h < 180) { rPrime = 0; gPrime = c; bPrime = x }
+  else if (h < 240) { rPrime = 0; gPrime = x; bPrime = c }
+  else if (h < 300) { rPrime = x; gPrime = 0; bPrime = c }
+  else { rPrime = c; gPrime = 0; bPrime = x }
+  return {
+    r: Math.round((rPrime + m) * 255),
+    g: Math.round((gPrime + m) * 255),
+    b: Math.round((bPrime + m) * 255),
+  }
+}
+
+/**
+ * Return a contrast-safe text variant of an archetype colour.
+ *
+ * Some canonical archetype colours are very light or desaturated (e.g.
+ * hamster_praise beige at l=78, cat grey at s=17). Used as text on light
+ * card backgrounds they fail readability. This helper darkens and boosts
+ * saturation so the hue family is preserved but WCAG-ish contrast is met.
+ *
+ * Returns `rgba()` because WeChat WXSS silently drops `hsl()` notation.
+ */
+export function getContrastSafeArchetypeColor(archetype: string | null | undefined): string {
+  const hsl = getArchetypeHSL(archetype)
+  const s = Math.min(100, Math.max(hsl.s, 55))
+  const l = Math.max(Math.min(hsl.l, 48), 25)
+  return formatHSLAsRGBA({ h: hsl.h, s, l } as ArchetypeHSL, 1)
+}

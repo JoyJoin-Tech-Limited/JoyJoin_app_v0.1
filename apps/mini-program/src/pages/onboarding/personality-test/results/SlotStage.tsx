@@ -20,8 +20,8 @@ const STEP = CARD_HEIGHT + GAP // 200 rpx
 const VIEWPORT_CARDS = 3
 const VIEWPORT_HEIGHT = VIEWPORT_CARDS * STEP // 600 rpx
 const CENTER_OFFSET = (VIEWPORT_HEIGHT - CARD_HEIGHT) / 2 // 208 rpx
-const EXTENDED_COUNT = 48 // 4 full cycles — enough for ~40 steps without snap
-const SNAP_THRESHOLD = EXTENDED_COUNT - 8 // 40
+const EXTENDED_COUNT = 24 // 2 cycles — enough for ~20 steps without snap
+const SNAP_THRESHOLD = EXTENDED_COUNT - 8 // 16
 const SNAP_BACK = ARCHETYPE_SEQUENCE.length // 12
 
 interface SlotStageProps {
@@ -173,13 +173,23 @@ export default function SlotStage({
   const isLanded = slotPhase === 'landed'
   const isAnticipation = slotPhase === 'anticipation'
 
+  const slotAriaLabel = isAnticipation
+    ? '命格卡面即将开始转动'
+    : isLanded
+      ? `命格卡面已锁定：${ARCHETYPE_BY_ID[activeArchetype]?.nameCn ?? activeArchetype}`
+      : slotPhase === 'spinning'
+        ? '命格卡面正在转动中'
+        : slotPhase === 'slowing'
+          ? '命格卡面正在减速，即将锁定'
+          : '命格卡面揭晓中'
+
   // Cognitive accessibility: when reduced motion is active, show a static result card
   // with a simple fade-in instead of the spinning slot machine.
   if (shouldReduceMotion) {
     const targetArchetype = extendedArchetypes[displayIndex] ?? ARCHETYPE_SEQUENCE[0]
     const targetVisual = getArchetypeVisual(targetArchetype)
     return (
-      <View className='personality-results__immersive-shell personality-results__immersive-shell--reduced'>
+      <View className='personality-results__immersive-shell personality-results__immersive-shell--reduced' role='status' aria-live='polite' aria-label={`命格卡面已锁定：${ARCHETYPE_BY_ID[targetArchetype]?.nameCn ?? targetArchetype}`}>
         <Text className='personality-results__immersive-eyebrow'>JoyJoin 原型揭晓</Text>
         <Text className='personality-results__immersive-title'>你的命格卡面已锁定</Text>
         <Card
@@ -204,7 +214,7 @@ export default function SlotStage({
   }
 
   return (
-    <View className='personality-results__immersive-shell'>
+    <View className='personality-results__immersive-shell' role='status' aria-live='polite' aria-label={slotAriaLabel}>
       <Text className='personality-results__immersive-eyebrow'>JoyJoin 原型揭晓</Text>
       <Text className='personality-results__immersive-title'>你的命格卡面正在靠近</Text>
       <Text className='personality-results__immersive-copy'>

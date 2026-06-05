@@ -9,16 +9,21 @@ import {
 
 interface BridgeStageProps {
   displayArchetypeName: string
-  confidenceLabel?: string
+  accentText?: string
+  typicalityText?: string
   phaseText?: string
   onSkip?: () => void
 }
 
-export default function BridgeStage({ displayArchetypeName, confidenceLabel, phaseText, onSkip }: BridgeStageProps) {
+export default function BridgeStage({ displayArchetypeName, accentText, typicalityText, phaseText, onSkip }: BridgeStageProps) {
   return (
-    <View className='personality-results__immersive-shell personality-results__immersive-shell--bridge'>
+    <View className='personality-results__immersive-shell personality-results__immersive-shell--bridge' role='status' aria-live='polite' aria-label={`${displayArchetypeName} 结果准备中`}>
       <Text className='personality-results__immersive-eyebrow'>结果已锁定</Text>
-      <Text className='personality-results__immersive-title'>你的 {displayArchetypeName} 已经准备好了</Text>
+      <Text className='personality-results__immersive-title'>
+        <Text>你的</Text>
+        <Text style={{ color: accentText }}>{displayArchetypeName}</Text>
+        <Text>已经准备好了</Text>
+      </Text>
       <Text className='personality-results__immersive-copy'>
         先把这份气场翻成一张更好分享的 JoyJoin 卡面，再把完整结果交到你手上。
       </Text>
@@ -36,14 +41,20 @@ export default function BridgeStage({ displayArchetypeName, confidenceLabel, pha
         <View className='personality-results__bridge-copy'>
           <Text className='personality-results__bridge-title'>{`${DEFAULT_MASCOT_DISPLAY_NAME}正在替你装裱这张卡`}</Text>
           <Text className='personality-results__bridge-text'>
-            {phaseText || `我已经把 ${displayArchetypeName} 的气场关键词、分享语和后续提示收进同一张卡里，马上展开给你。`}
+            {phaseText || (
+              <>
+                <Text>我已经把</Text>
+                <Text style={{ color: accentText }}>{displayArchetypeName}</Text>
+                <Text>的气场关键词、分享语和后续提示收进同一张卡里，马上展开给你。</Text>
+              </>
+            )}
           </Text>
 
           <View className='personality-results__bridge-badges'>
             <Text className='personality-results__bridge-badge personality-results__bridge-badge--accent'>
-              {displayArchetypeName}
+              <Text style={{ color: accentText }}>{displayArchetypeName}</Text>
             </Text>
-            <Text className='personality-results__bridge-badge'>{confidenceLabel || '结果已锁定'}</Text>
+            <Text className='personality-results__bridge-badge'>{typicalityText || '结果已锁定'}</Text>
           </View>
 
           {onSkip && (

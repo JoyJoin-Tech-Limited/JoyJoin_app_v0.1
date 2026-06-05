@@ -54,7 +54,7 @@ import {
   buildShareLine,
   buildShareTitle,
   getAnimationProfile,
-  getConfidenceLabel,
+  buildTypicalityLabel,
   getTraitEntries,
   getTopMatches,
   resolveResultErrorMessage,
@@ -141,7 +141,10 @@ export default function PersonalityTestResultsPage() {
   const [phaseText, setPhaseText] = useState(hasCompletedReplay ? '' : '准备揭晓...')
   const [isFetchingResult, setIsFetchingResult] = useState(false)
   const [isSlowNetwork, setIsSlowNetwork] = useState(false)
+  const [isOffline, setIsOffline] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const retryCountRef = useRef(0)
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [sharePosterPath, setSharePosterPath] = useState('')
   const [isGeneratingPoster, setIsGeneratingPoster] = useState(false)
   const [posterError, setPosterError] = useState(false)
@@ -215,11 +218,11 @@ export default function PersonalityTestResultsPage() {
   useEffect(() => {
     if (resultPreloadInitiatedRef.current) return
     resultPreloadInitiatedRef.current = true
-    // Preload only the local bundled spritesheet. Full-size archetype images
-    // are loaded on-demand via <Image> and are bundled locally, so priming
-    // them with getImageInfo is unnecessary and can trigger console noise
-    // when CDN domains aren't whitelisted for downloadFile.
     const urls = [getArchetypeSpritesheetLocalPath()]
+    const primary = resultStateRef.current?.result.primaryArchetype
+    if (primary) {
+      urls.push(`${ASSET_BASE_WEBP_LOCAL}/archetype-${primary}.webp`)
+    }
     void preloadImagesWithDiagnostics(urls, 'personality-results-mount')
   }, [])
 
@@ -340,9 +343,14 @@ export default function PersonalityTestResultsPage() {
     return `#${num}`
   }, [sessionSnapshot?.sessionId])
 
-  const confidenceLabel = useMemo(
-    () => getConfidenceLabel(resultState?.result ?? sessionSnapshot?.result, topMatches),
-    [resultState, sessionSnapshot, topMatches],
+  const typicalityLabel = useMemo(
+    () => buildTypicalityLabel(isDecisive, displayArchetypeName, visual.accentText),
+    [isDecisive, displayArchetypeName, visual.accentText],
+  )
+
+  const secondaryVisual = useMemo(
+    () => (secondaryArchetypeId ? getArchetypeVisual(secondaryArchetypeId) : undefined),
+    [secondaryArchetypeId],
   )
   const shareLine = useMemo(
     () => buildShareLine(displayArchetypeName, visual.tagline || visual.description, summary),
@@ -402,7 +410,15 @@ export default function PersonalityTestResultsPage() {
       isAuthenticated: auth.isAuthenticated,
       primaryArchetype: displayArchetypeName,
     })
-  }, [analytics, auth.isAuthenticated, completionMode, displayArchetypeName, flowStage])
+    // Operational visibility: how often do users land on 典型 vs 非典型 results?
+    if (typeof isDecisive === 'boolean') {
+      analytics.interaction('typicality_badge_impression', {
+        primaryArchetype: displayArchetypeName,
+        isDecisive,
+        typicality: isDecisive ? 'typical' : 'atypical',
+      })
+    }
+  }, [analytics, auth.isAuthenticated, completionMode, displayArchetypeName, flowStage, isDecisive])
 
   const fetchResult = useCallback(async (runId: number, forceRefresh = false): Promise<ResolvedResultState | null> => {
     const latestSnapshot = readAnonymousAssessmentSession()
@@ -488,12 +504,36 @@ export default function PersonalityTestResultsPage() {
       clearTimeout(timeoutId)
       const timeoutIdx = timeoutHandlesRef.current.indexOf(timeoutId)
       if (timeoutIdx >= 0) timeoutHandlesRef.current.splice(timeoutIdx, 1)
+
+      // Detect offline/network errors for graceful degradation.
+      let offline = false
+      try {
+        const { networkType } = await Taro.getNetworkType()
+        offline = networkType === 'none'
+      } catch {
+        offline = false
+      }
+      const isNetworkError =
+        offline ||
+        (error instanceof Error &&
+          /network|offline|timeout|abort|failed to fetch/i.test(error.message))
+
       const message = resolveResultErrorMessage(error)
       if (mountedRef.current && runId === runIdRef.current) {
+        setIsOffline(offline)
         setErrorMessage(message)
         analytics.errorOccurred('result_fetch_failed', message)
+        analytics.interaction('result_fetch_failed_context', {
+          isNetworkError,
+          isOffline: offline,
+          retryCount: retryCountRef.current,
+        })
       }
-      logError('[PersonalityResults] Failed to fetch result', { message })
+      logError('[PersonalityResults] Failed to fetch result', {
+        message,
+        isNetworkError,
+        isOffline: offline,
+      })
       return null
     } finally {
       clearTimeout(timeoutId)
@@ -512,6 +552,7 @@ export default function PersonalityTestResultsPage() {
       const nextRunId = runIdRef.current + 1
       runIdRef.current = nextRunId
       didTrackCompletionRef.current = false
+      retryCountRef.current = 0
       setCompletionMode(null)
 
       const flowStartedAt = Date.now()
@@ -519,6 +560,7 @@ export default function PersonalityTestResultsPage() {
 
       setSessionSnapshot(latestSnapshot)
       setIsSlowNetwork(false)
+      setIsOffline(false)
       setErrorMessage('')
       setPhaseText('准备揭晓...')
       setSlotDisplay({ reelIndex: 0, progress: 0 })
@@ -561,8 +603,11 @@ export default function PersonalityTestResultsPage() {
         return
       }
 
-      // Accessibility + Performance: skip slot animation for reduced-motion or degradation-tier devices
-      if (prefersReducedMotion || deviceTier.isDegradation || !personalitySlotAnimationEnabled) {
+      // Accessibility + Performance: skip slot animation for reduced-motion,
+      // degradation-tier devices, or when the feature flag is off.
+      // Includes shouldReduceMotion which covers low-benchmark devices
+      // that Taro.getSystemInfoSync().reduceMotion doesn't catch.
+      if (shouldReduceMotion || prefersReducedMotion || deviceTier.isDegradation || !personalitySlotAnimationEnabled) {
         const fetchPromise = fetchResult(nextRunId, Boolean(options?.forceRefresh))
         const resolved = await fetchPromise
         if (resolved && mountedRef.current && nextRunId === runIdRef.current) {
@@ -576,8 +621,12 @@ export default function PersonalityTestResultsPage() {
             completionMode: 'animated',
             isAuthenticated: auth.isAuthenticated,
             primaryArchetype: displayArchetypeName,
-            degradationTier: 'reduced-motion',
+            degradationTier: deviceTier.isDegradation ? 'degradation' : 'reduced-motion',
           })
+        } else if (mountedRef.current && nextRunId === runIdRef.current) {
+          // Fetch failed — show error instead of stuck loading
+          setFlowStage('error')
+          setErrorMessage((prev) => prev || getErrorMessage('sync-failed'))
         }
         return
       }
@@ -601,32 +650,6 @@ export default function PersonalityTestResultsPage() {
           didFetchResolve = true
           fetchedResult = null
         })
-
-      // Cognitive accessibility: skip all motion and jump straight to result
-      if (shouldReduceMotion) {
-        const resolved = await fetchPromise
-        if (resolved) {
-          resultStateRef.current = resolved
-          setResultState(resolved)
-          const currentSnapshot = readAnonymousAssessmentSession()
-          const completedSnapshot: AnonymousAssessmentSessionSnapshot = {
-            sessionId: resolved.sessionId,
-            phase: 'completed',
-            timestamp: Date.now(),
-            completedAt: resolved.completedAt ?? currentSnapshot?.completedAt,
-            result: resolved.result,
-            topArchetypes: resolved.topMatches,
-            resultSequenceCompletedAt: new Date().toISOString(),
-          }
-          saveAnonymousAssessmentSession(completedSnapshot)
-          setSessionSnapshot(completedSnapshot)
-        }
-        setFlowStage('result')
-        setSlotDisplay(prev => ({ ...prev, progress: 100 }))
-        setPhaseText('')
-        setCompletionMode('animated')
-        return
-      }
 
       setFlowStage('slot')
       // P1-3: differentiated from the completing-phase title to avoid
@@ -986,10 +1009,42 @@ export default function PersonalityTestResultsPage() {
     return () => clearTimeout(stuckTimer)
   }, [flowStage, hasCompletedReplay, spriteReady.isReady, analytics])
 
-  const handleRetry = useCallback(() => {
+  const handleRetry = useCallback(async () => {
+    // If we appear to be offline, verify first so the user gets an accurate message.
+    try {
+      const { networkType } = await Taro.getNetworkType()
+      setIsOffline(networkType === 'none')
+    } catch {
+      setIsOffline(false)
+    }
+
+    retryCountRef.current += 1
     flowInitiatedRef.current = false
+
+    // Exponential backoff for network errors (max 4s) to avoid hammering
+    // a struggling connection while still feeling responsive.
+    if (isOffline) {
+      const delayMs = Math.min(4000, 1000 * Math.pow(2, retryCountRef.current - 1))
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
+      retryTimerRef.current = setTimeout(() => {
+        retryTimerRef.current = null
+        void runResultFlow({ forceRefresh: true })
+      }, delayMs)
+      return
+    }
+
     void runResultFlow({ forceRefresh: true })
-  }, [runResultFlow])
+  }, [runResultFlow, isOffline])
+
+  // Clear any pending retry timer on unmount to avoid state updates after unmount.
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current)
+        retryTimerRef.current = null
+      }
+    }
+  }, [])
 
   const handleRestart = useCallback(() => {
     runIdRef.current += 1
@@ -1007,6 +1062,7 @@ export default function PersonalityTestResultsPage() {
   const handleSkipAnimation = useCallback(() => {
     runIdRef.current += 1
     setShowSkipAnimation(false)
+    haptics('light')
     const cached = resultStateRef.current
     if (cached) {
       setResultState(cached)
@@ -1186,9 +1242,14 @@ export default function PersonalityTestResultsPage() {
       const accentColor = selectedVariant?.accentColor ?? (visual.accent || '#8B5CF6')
       const accentSoft = selectedVariant?.accentSoft ?? visual.accentSoft
 
-      // Canvas drawImage needs a network URL or temp file path. Local bundled
-      // paths (e.g. /pages/onboarding/assets/...) fail in getImageInfo on
-      // some WeChat base library versions. Use CDN webp primary, CDN png fallback.
+      // Canvas drawImage prefers a network URL or temp file path. Order
+      // matters: prefer the bundled subpackage WebP (always on-device),
+      // then the CDN WebP, then the CDN PNG. The subpackage path
+      // (/pages/onboarding/assets/...) is bundled in dist and survives
+      // dev environments where the CDN isn't configured; the canvas can
+      // read it via getImageInfo on current WeChat base library versions.
+      // `displayAsset` is the subpackage local WebP; `visual.asset` is
+      // the CDN/main-package path.
       const posterInput: PersonalitySharePosterInput = {
         archetype: displayArchetypeName,
         nickname: cardNickname || visual.nickname || displayArchetypeName,
@@ -1197,9 +1258,9 @@ export default function PersonalityTestResultsPage() {
         shareLine,
         accentColor,
         accentSoft,
-        archetypeAsset: visual.asset || displayAsset,
+        archetypeAsset: displayAsset || visual.asset,
         archetypeAssetPng: visual.assetPng,
-        confidenceLabel,
+        confidenceLabel: typicalityLabel ? `${typicalityLabel.prefix}${typicalityLabel.name}` : undefined,
         rarityLabel:
           typeof visual.rarityPercentage === 'number'
             ? `稀有度 ${Math.round(visual.rarityPercentage)}%`
@@ -1252,7 +1313,6 @@ export default function PersonalityTestResultsPage() {
     analytics,
     archetypeRank,
     cardNickname,
-    confidenceLabel,
     displayArchetype,
     displayArchetypeName,
     displayAsset,
@@ -1278,6 +1338,7 @@ export default function PersonalityTestResultsPage() {
           <ErrorStage
             errorMessage={errorMessage}
             isFetchingResult={isFetchingResult}
+            isOffline={isOffline}
             onRetry={handleRetry}
             onRestart={handleRestart}
           />
@@ -1307,7 +1368,8 @@ export default function PersonalityTestResultsPage() {
         return (
           <BridgeStage
             displayArchetypeName={displayArchetypeName}
-            confidenceLabel={confidenceLabel}
+            accentText={visual.accentText}
+            typicalityText={typicalityLabel ? `${typicalityLabel.prefix}${typicalityLabel.name}` : undefined}
             phaseText={phaseText}
             onSkip={() => {
               haptics('light')
@@ -1327,7 +1389,8 @@ export default function PersonalityTestResultsPage() {
             traitEntries={traitEntries}
             topMatches={topMatches}
             skillSet={skillSet}
-            confidenceLabel={confidenceLabel}
+            typicalityLabel={typicalityLabel}
+            secondaryAccent={secondaryVisual?.accentText}
             isGeneratingPoster={isGeneratingPoster}
             sharePosterPath={sharePosterPath}
             generationPhase={generationPhase}
@@ -1369,7 +1432,8 @@ export default function PersonalityTestResultsPage() {
     displayAsset,
     visual,
     revealPhase,
-    confidenceLabel,
+    typicalityLabel,
+    secondaryVisual,
     summary,
     shareLine,
     traitEntries,
@@ -1396,14 +1460,20 @@ export default function PersonalityTestResultsPage() {
     <View className={`personality-results personality-results--${flowStage}${prefersReducedMotion ? ' personality-results--reduce-motion' : ''}`}>
       {content}
       {showSkipAnimation && (
-        <View className='personality-results__skip-button' onClick={handleSkipAnimation}>
+        <View
+          className='personality-results__skip-button'
+          onClick={handleSkipAnimation}
+          hoverClass='personality-results__skip-button--pressed'
+          role='button'
+          aria-label='跳过动画'
+        >
           <Text className='personality-results__skip-text'>跳过动画</Text>
         </View>
       )}
       <Canvas canvasId={PERSONALITY_SHARE_POSTER_CANVAS_ID} className='personality-results__poster-canvas' />
       <Canvas
         canvasId={PERSONALITY_SQUARE_CANVAS_ID}
-        className='personality-results__poster-canvas'
+        className='personality-results__poster-canvas personality-results__poster-canvas--square'
       />
 
       {/* ── Hidden image preload layer ──

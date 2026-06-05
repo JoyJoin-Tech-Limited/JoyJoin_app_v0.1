@@ -1,5 +1,5 @@
 import { View, Text, Image } from '@tarojs/components'
-import { useState, useEffect } from 'react'
+import { useCallback, useState, useEffect, useRef } from 'react'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import type { XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
@@ -8,6 +8,10 @@ import Card from '../ui/Card'
 import XiaoyueSpriteAnimator from '../mascot/XiaoyueSpriteAnimator'
 import CelebrationSparkle from '../mascot/CelebrationSparkle'
 import './OnboardingLoadingShell.scss'
+
+/** Celebrate animation duration in ms. Parents should hold navigation for at
+ *  least this long so the user sees the full animation before route transition. */
+export const CELEBRATE_MIN_DISPLAY_MS = 1500
 
 interface OnboardingLoadingShellProps {
   stepLabel: string
@@ -23,11 +27,15 @@ interface OnboardingLoadingShellProps {
    *  - the orbit dots and skeleton lines are hidden
    *  - <CelebrationSparkle count={6} /> is overlaid on the card
    *  - the 6s settled-timer that disables animations is disabled
+   *  - fires onCelebrateReady after CELEBRATE_MIN_DISPLAY_MS
    *  Default false — preserves the 7+ existing call sites.
    */
   celebrate?: boolean
   /** Particle count for the celebration sparkle. Default 6. */
   sparkleCount?: number
+  /** Fires after the celebrate animation's minimum display duration.
+   *  Use this to gate navigation that would cut the celebration short. */
+  onCelebrateReady?: () => void
 }
 
 const CELEBRATE_TITLE = '全部收到啦 — 让我开始翻你的命格'
@@ -41,9 +49,11 @@ export default function OnboardingLoadingShell({
   xiaoyueExpression = 'loadingSystem',
   celebrate = false,
   sparkleCount = 6,
+  onCelebrateReady,
 }: OnboardingLoadingShellProps) {
   const [imgSrc, setImgSrc] = useState(getXiaoyueExpressionAsset(xiaoyueExpression))
   const [settled, setSettled] = useState(false)
+  const celebrateReadyFiredRef = useRef(false)
 
   // A4: settle animations after 6s. Skipped for `celebrate` to preserve the celebrate sprite + sparkle.
   useEffect(() => {
@@ -51,6 +61,15 @@ export default function OnboardingLoadingShell({
     const t = setTimeout(() => setSettled(true), 6000)
     return () => clearTimeout(t)
   }, [celebrate])
+
+  // Fire onCelebrateReady after the celebrate animation's minimum display duration.
+  // This gates navigation so the user sees the full celebration before route transition.
+  useEffect(() => {
+    if (!celebrate || !onCelebrateReady || celebrateReadyFiredRef.current) return
+    celebrateReadyFiredRef.current = true
+    const t = setTimeout(onCelebrateReady, CELEBRATE_MIN_DISPLAY_MS)
+    return () => clearTimeout(t)
+  }, [celebrate, onCelebrateReady])
 
   const resolvedTitle = celebrate ? CELEBRATE_TITLE : title
   const resolvedSubtitle = celebrate ? CELEBRATE_SUBTITLE : subtitle

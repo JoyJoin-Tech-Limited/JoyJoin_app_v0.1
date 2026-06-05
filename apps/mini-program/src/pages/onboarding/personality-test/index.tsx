@@ -53,12 +53,12 @@ import QuestionTransition from './QuestionTransition'
 import { useBackReview } from './useBackReview'
 import {
   getArchetypeVisual,
-  getIntroStaticAsset,
-  getIntroStaticFallbackAsset,
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
   PERSONALITY_TEST_QUESTION_EXPRESSION,
+  ASSET_BASE_WEBP_LOCAL,
 } from './visuals'
+import { preloadImagesWithDiagnostics } from '../../../lib/utils/imagePreload'
 import './index.scss'
 import { HalfwayMilestone } from './HalfwayMilestone'
 import type { Phase } from './types'
@@ -266,10 +266,12 @@ export default function PersonalityTestPage() {
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [error, setError] = useState('')
   const [spriteState, setSpriteState] = useState<XiaoyueSpriteState>('idle')
+  const [mascotAutoPlay, setMascotAutoPlay] = useState(false)
+  const sliderInteractionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [postAnswerCommentary, setPostAnswerCommentary] = useState<string | null>(null)
   const commentaryReceivedAtRef = useRef<number>(0)
   const [milestonePulse, setMilestonePulse] = useState(false)
-  const [introImgSrc, setIntroImgSrc] = useState(getIntroStaticAsset())
+
   const [skipsRemaining, setSkipsRemaining] = useState(MAX_SKIP_COUNT)
   const [isSkipping, setIsSkipping] = useState(false)
   // D3 — Fires light haptic only once per session when crossing 50% progress
@@ -372,6 +374,7 @@ export default function PersonalityTestPage() {
     nextTopArchetypes?: AnonymousAssessmentTopMatch[] | null,
     finalResult?: AnonymousAssessmentResult | null,
   ) => {
+    const primaryArchetype = finalResult?.primaryArchetype ?? nextTopArchetypes?.[0]?.archetype
     saveAnonymousAssessmentSession({
       sessionId: targetSessionId,
       phase: 'completed',
@@ -381,6 +384,15 @@ export default function PersonalityTestPage() {
       topArchetypes: nextTopArchetypes ?? currentMatches,
       resultSequenceCompletedAt: undefined,
     })
+
+    // Warm the result-page image cache while the route transition plays.
+    // This removes the cold-start decode on the result hero and pokemon cards.
+    if (primaryArchetype) {
+      void preloadImagesWithDiagnostics(
+        [`${ASSET_BASE_WEBP_LOCAL}/archetype-${primaryArchetype}.webp`],
+        'personality-test-completion',
+      )
+    }
 
     await runMiniProgramRouteTransition({
       beforeNavigate: () => setIsPageExiting(true),
@@ -707,6 +719,17 @@ export default function PersonalityTestPage() {
     analytics.validationFailed('slider', 'no-option-mapped')
   }, [question, sliderValue, handleAnswer, analytics])
 
+  const handleSliderChange = useCallback((value: number) => {
+    setSliderValue(value)
+    setMascotAutoPlay(true)
+    if (sliderInteractionTimerRef.current) {
+      clearTimeout(sliderInteractionTimerRef.current)
+    }
+    sliderInteractionTimerRef.current = setTimeout(() => {
+      setMascotAutoPlay(false)
+    }, 400)
+  }, [])
+
   const handleBackReviewSliderChange = useCallback((value: number) => {
     setSliderValue(value)
     if (!backReview.isBackReviewMode || !backReview.backReviewQuestion) return
@@ -732,12 +755,25 @@ export default function PersonalityTestPage() {
     }
   }, [handleAnswer])
 
-  // When submitting ends while sprite is in 'thinking', return to idle
+  // When submitting ends while sprite is in 'thinking', return to idle and
+  // deactivate the interaction-driven mascot animation.
   useEffect(() => {
     if (!isSubmitting) {
       setSpriteState((prev) => (prev === 'thinking' ? 'idle' : prev))
+      setMascotAutoPlay(false)
     }
   }, [isSubmitting])
+
+  // Cleanup any pending slider interaction timer when the page unmounts or
+  // the user navigates away, preventing stale setState calls.
+  useEffect(() => {
+    return () => {
+      if (sliderInteractionTimerRef.current) {
+        clearTimeout(sliderInteractionTimerRef.current)
+        sliderInteractionTimerRef.current = null
+      }
+    }
+  }, [])
 
   // P1-2: option-hover preview with 200ms debounce.
   // On touch-start, capture the current sprite state, then schedule a state swap
@@ -759,6 +795,7 @@ export default function PersonalityTestPage() {
     (option: AssessmentOption) => {
       if (isSubmitting) return
       if (backReview.isBackReviewMode) return
+      setMascotAutoPlay(true)
       // Cancel any prior pending preview so the latest touch wins
       if (hoverPreviewRef.current?.timer) {
         clearTimeout(hoverPreviewRef.current.timer)
@@ -779,6 +816,7 @@ export default function PersonalityTestPage() {
   )
 
   const handleOptionTouchEnd = useCallback(() => {
+    setMascotAutoPlay(false)
     cancelHoverPreview()
   }, [cancelHoverPreview])
 
@@ -1053,21 +1091,11 @@ export default function PersonalityTestPage() {
           <View className='personality-test__intro-hero personality-test__stage personality-test__stage--2'>
             <View className='personality-test__intro-hero-visual'>
               <View className='personality-test__intro-hero-halo' />
-              <Image
-                className='personality-test__mascot-static personality-test__mascot-static--intro'
-                src={introImgSrc}
-                mode='aspectFit'
-                lazyLoad={false}
-                onError={() => {
-                  // Fallback already loaded locally; this shouldn't trigger
-                  console.warn('[PersonalityTest] Intro mascot failed to load')
-                }}
-              />
-              <Image
-                className='personality-test__mascot-static personality-test__mascot-static--intro personality-test__mascot-static--reduced-motion'
-                src={getIntroStaticFallbackAsset()}
-                mode='aspectFit'
-                lazyLoad={false}
+              <XiaoyueSpriteAnimator
+                state='intro'
+                size='320rpx'
+                showGlow
+                className='personality-test__intro-mascot'
               />
             </View>
 
@@ -1342,6 +1370,7 @@ export default function PersonalityTestPage() {
                   size='152rpx'
                   isLoading={isSubmitting}
                   showGlow={false}
+                  autoPlay={mascotAutoPlay || resolvedMascotState !== 'idle'}
                   className='personality-test__mascot-animator'
                 />
               </View>
@@ -1395,7 +1424,7 @@ export default function PersonalityTestPage() {
                   : sliderValue}
                 isSubmitting={isSubmitting}
                 onAnswer={backReview.isBackReviewMode ? handleBackReviewSelect : handleAnswer}
-                onSliderChange={backReview.isBackReviewMode ? handleBackReviewSliderChange : setSliderValue}
+                onSliderChange={backReview.isBackReviewMode ? handleBackReviewSliderChange : handleSliderChange}
                 onSliderSubmit={backReview.isBackReviewMode ? handleBackReviewSliderSubmit : handleSliderSubmit}
                 committedValue={backReview.isBackReviewMode ? backReview.backReviewPreviousAnswer : null}
                 hideSliderSubmit={backReview.isBackReviewMode}

@@ -15,7 +15,7 @@ export default function LoadingStage({ phaseText }: LoadingStageProps) {
   const fallbackSrc = getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.networkHolding)
 
   return (
-    <View className='personality-results__centered-state'>
+    <View className='personality-results__centered-state' role='status' aria-live='polite' aria-busy='true'>
       {/* Full hero-card skeleton that matches the actual layout shape */}
       <View className='personality-results__hero-skeleton'>
         <View className='personality-results__hero-skeleton-left'>

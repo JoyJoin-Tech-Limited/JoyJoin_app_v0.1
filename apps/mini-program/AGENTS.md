@@ -1,6 +1,6 @@
 # Mini-Program — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-06-04
+> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-06-05
 
 ---
 
@@ -110,6 +110,8 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 - **`miniprogram-ci` rejects empty `iconPath`** on `tabBarConfig.ts` centerHub with `800059`. Use a placeholder; the custom tab bar component renders the center button independently.
 - **Tab bar geometry**: `$tab-bar-height: 128rpx`; root footprint: `$tab-bar-root-height: 182rpx`; center CTA is a **root sibling** of `.joy-custom-tab-bar__surface`, not nested inside.
 - **`<ChallengeCardBgImage>`** (WeChat-safe `<Image>` component) must be used for challenge-card backgrounds — CSS `background-image` with CDN URLs is flaky in WeChat runtime.
+- **ArchetypeSpritesheet** uses the same `<Image>` + `overflow:hidden` + `transform: translate()` pattern for spritesheet region crops — CSS `backgroundImage: url()` is unreliable in WeChat. See `apps/mini-program/src/pages/onboarding/personality-test/results/ArchetypeSpritesheet.tsx`.
+- **WeChat WXSS silently drops `hsla()`** — all color values emitted from shared `@shared/archetypeColors` must use `rgba()` via `formatHSLAsRGBA()`. Canvas calls use `toCanvasRGBA()` from `sharePoster.ts`.
 - **Page-level loading/empty/error state blocks** must use `min-height: 100dvh` + flex centering. `@include scroll-view-centered-state` from `_mixins.scss` is the canonical helper for states inside `<ScrollView>`.
 
 ---

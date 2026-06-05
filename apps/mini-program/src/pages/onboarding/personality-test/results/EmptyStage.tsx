@@ -11,7 +11,7 @@ interface EmptyStageProps {
 
 export default function EmptyStage({ onRestart }: EmptyStageProps) {
   return (
-    <View className='personality-results__centered-state'>
+    <View className='personality-results__centered-state' role='alert' aria-live='polite'>
       <Image
         className='personality-results__network-xiaoyue'
         mode='aspectFit'

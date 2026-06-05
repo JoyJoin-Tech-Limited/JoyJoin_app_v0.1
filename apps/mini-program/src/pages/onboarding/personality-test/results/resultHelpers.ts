@@ -199,22 +199,46 @@ export function getVisibleReelItems(currentIndex: number): string[] {
   ]
 }
 
-export function getConfidenceLabel(
-  result: AnonymousAssessmentResult | null | undefined,
-  topMatches: AnonymousAssessmentTopMatch[],
-): string | undefined {
-  const topScore = Number(topMatches[0]?.score)
-  if (Number.isFinite(topScore) && topScore > 0) {
-    return `契合度 ${Math.round(topScore)}%`
-  }
+/**
+ * Re-map raw matcher scores (often 0-100, but can cluster low) to a
+ * user-facing 18-100 scale so the metric never reads insultingly low.
+ * Preserves rank order and makes the number feel meaningful rather than
+ * algorithmically raw.
+ */
+export function normalizeMatchScore(raw: number): number {
+  if (!Number.isFinite(raw)) return 0
+  const pct = raw > 1 ? raw : raw * 100
+  return Math.max(18, Math.min(100, Math.round(pct * 0.72 + 28)))
+}
 
-  const rawConfidence = Number(result?.archetypeConfidence)
-  if (!Number.isFinite(rawConfidence) || rawConfidence <= 0) {
-    return undefined
-  }
+export interface TypicalityLabel {
+  /** Semantic prefix (典型 / 非典型 / 混合型). */
+  prefix: string
+  /** Archetype display name rendered in brand/accent colour. */
+  name: string
+  /** Contrast-safe archetype accent colour for text on light backgrounds. */
+  accent: string
+}
 
-  const normalized = rawConfidence <= 1 ? rawConfidence * 100 : rawConfidence
-  return `契合度 ${Math.round(normalized)}%`
+/**
+ * Build a user-facing typicality label that avoids misleading raw scores.
+ * - Decisive match  → "典型[archetype]"
+ * - Non-decisive    → "非典型[archetype]"
+ * - Missing data    → undefined
+ *
+ * The archetype name is returned separately so callers can render it in the
+ * archetype's branded accent colour with no separator space. Use
+ * `accentText` (contrast-safe) rather than the raw `accent` so the label
+ * remains readable on light card backgrounds.
+ */
+export function buildTypicalityLabel(
+  isDecisive: boolean | undefined,
+  archetypeName: string,
+  accentText: string,
+): TypicalityLabel | undefined {
+  if (!archetypeName) return undefined
+  const prefix = isDecisive === false ? '非典型' : '典型'
+  return { prefix, name: archetypeName, accent: accentText }
 }
 
 /**
