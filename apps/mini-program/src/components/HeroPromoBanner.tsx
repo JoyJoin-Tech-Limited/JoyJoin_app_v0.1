@@ -24,16 +24,16 @@ const PROMO_VARIANTS: Record<PromoBannerVariant, PromoVariantConfig> = {
   A: {
     eyebrow: '本周推荐',
     title: '这周末，会遇见谁？',
-    subtitle: '已有 12 人报名 · 最后 3 席',
+    subtitle: '每周精选 · 小聚刚刚好',
     cta: '查看活动详情',
-    accessibilityLabel: '本周推荐活动，已有 12 人报名，剩 3 个名额',
+    accessibilityLabel: '本周推荐，每周精选适合你的小聚',
   },
   B: {
     eyebrow: '专属匹配',
-    title: '3 种社交人格已匹配',
+    title: '看看你的专属匹配',
     subtitle: '你的同类正在附近聚会',
     cta: '看看是谁',
-    accessibilityLabel: '专属匹配，已有 3 种社交人格匹配到你的活动',
+    accessibilityLabel: '专属匹配，发现与你契合的聚会伙伴',
   },
   C: {
     eyebrow: '先测再玩',
@@ -383,6 +383,7 @@ export default function HeroPromoBanner({
         compact ? 'hero-promo-banner--compact' : '',
         shouldReduceMotion ? 'hero-promo-banner--reduce-motion' : '',
         isDegradation ? 'hero-promo-banner--degradation' : '',
+        !isInView ? 'hero-promo-banner--offscreen' : '',
         className,
       ].filter(Boolean).join(' ')}
       role='region'

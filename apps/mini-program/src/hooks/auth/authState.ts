@@ -24,9 +24,10 @@ export function deriveMiniProgramAuthState<TUser extends MiniProgramAuthUser>(
   // `user === null` means GET /api/auth/user settled as unauthenticated — do not treat
   // background refetch (`isFetching`) as a full-app loading gate, or the index / gates
   // stay on "悦仔正在赶来…" until refetch completes (and can hang forever on timeout).
-  // Still "fail closed" while fetching when we have a real session object or no data yet.
+  // Only "fail closed" while fetching when we have no data yet (`undefined`).
+  // Once we have any settled value (object or null), trust the cache.
   const isAuthPending =
-    input.isLoading || (input.isFetching && input.user !== null)
+    input.isLoading || (input.isFetching && input.user === undefined)
 
   if (isAuthPending) {
     return {

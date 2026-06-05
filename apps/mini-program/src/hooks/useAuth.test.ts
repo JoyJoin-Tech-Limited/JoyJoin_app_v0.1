@@ -11,9 +11,9 @@ function createAuthUser(overrides: Partial<AuthUser> = {}): AuthUser {
 }
 
 describe('deriveMiniProgramAuthState', () => {
-  // Guards against regression: foreground auth refresh still fails closed,
-  // but dependent queries can keep using the cached user metadata.
-  it('preserves cached user metadata while auth is being refetched', () => {
+  // Once we have a cached user (object or null), background refetch must NOT
+  // gate the UI — or the page gets stuck on "悦仔正在赶来…" after foreground.
+  it('does not block UI on background refetch when cached user exists', () => {
     expect(
       deriveMiniProgramAuthState({
         user: createAuthUser(),
@@ -22,9 +22,24 @@ describe('deriveMiniProgramAuthState', () => {
       })
     ).toEqual({
       user: createAuthUser(),
+      isLoading: false,
+      isAuthenticated: true,
+      nextStep: 'discover',
+    })
+  })
+
+  it('fails closed while fetching when no data has ever arrived', () => {
+    expect(
+      deriveMiniProgramAuthState({
+        user: undefined,
+        isLoading: false,
+        isFetching: true,
+      })
+    ).toEqual({
+      user: undefined,
       isLoading: true,
       isAuthenticated: false,
-      nextStep: 'discover',
+      nextStep: undefined,
     })
   })
 

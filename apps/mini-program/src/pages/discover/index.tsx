@@ -29,7 +29,6 @@ import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import PageMorphWrapper from '../../components/ui/PageMorphWrapper'
 import StatusCard from '../../components/ui/StatusCard'
-import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import HeroPromoBanner, { type PromoBannerVariant } from '../../components/HeroPromoBanner'
 import VirtualList from '../../components/VirtualList'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
@@ -145,7 +144,7 @@ function AuthenticatedDiscover() {
       })
       return res.interests ?? []
     },
-    enabled: typeof window !== 'undefined',
+    enabled: process.env.TARO_ENV === 'weapp',
     staleTime: 5 * 60 * 1000,
   })
 
@@ -465,7 +464,7 @@ function AuthenticatedDiscover() {
         // (banner shown) when the flag is missing or the user object
         // hasn't loaded yet.
         enabled={(user as any)?.features?.promoBannerEnabled ?? true}
-        onCtaTap={openPools.length > 0 ? handleBannerCtaTap : undefined}
+        onCtaTap={handleBannerCtaTap}
       />
 
       {/* Greeting hero */}
@@ -550,6 +549,11 @@ function AuthenticatedDiscover() {
             heroSrc={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             title='获取列表遇到小状况'
             description='下拉刷新一下就好'
+            action={{
+              label: '重试',
+              onClick: handleRefresh,
+              variant: 'primary',
+            }}
           />
         ) : visiblePools.length > 0 ? (
           <>
@@ -575,17 +579,26 @@ function AuthenticatedDiscover() {
             )}
           </>
         ) : (
-          <View className='discover-auth__empty-state'>
-            <XiaoyueEmptyState
-              emotion='curious'
-              title='还没有适合你的活动'
-              subtitle={
-                selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID
-                  ? '试试切换其他区域'
-                  : '新活动即将上线，敬请期待'
-              }
-            />
-          </View>
+          <StatusCard
+            className='discover-auth__empty-state'
+            tone='empty'
+            heroSrc={cdnAsset('/assets/lovart/lovart-generic-empty.webp')}
+            title='还没有适合你的活动'
+            description={
+              selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID
+                ? '试试切换其他区域'
+                : '新活动即将上线，敬请期待'
+            }
+            action={
+              selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID
+                ? {
+                    label: '清除筛选',
+                    onClick: () => handleFilterSelect(ALL_CLUSTER_ID, ALL_DISTRICT_ID),
+                    variant: 'secondary',
+                  }
+                : undefined
+            }
+          />
         )}
       </View>
 

@@ -1,4 +1,5 @@
 import { Text, View, Image } from '@tarojs/components'
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import Button, { type JoyButtonProps } from './Button'
 import Card from './Card'
@@ -41,6 +42,7 @@ export default function StatusCard({
   heroSrc,
   footer,
 }: StatusCardProps) {
+  const [heroError, setHeroError] = useState(false)
   const resolvedIcon =
     typeof icon === 'string' && icon.trim() !== ''
       ? icon.trim()
@@ -48,8 +50,13 @@ export default function StatusCard({
 
   return (
     <Card className={`status-card status-card--${tone}${className ? ` ${className}` : ''}`}>
-      {heroSrc ? (
-        <Image className='status-card__hero' src={heroSrc} mode='aspectFit' />
+      {heroSrc && !heroError ? (
+        <Image
+          className='status-card__hero'
+          src={heroSrc}
+          mode='aspectFit'
+          onError={() => setHeroError(true)}
+        />
       ) : (
         <JoyJoinIcon emoji={resolvedIcon} size={48} className='status-card__icon' />
       )}

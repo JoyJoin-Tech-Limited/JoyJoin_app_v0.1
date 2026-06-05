@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { View, Text, Image } from '@tarojs/components'
 import { MILESTONE_BADGES } from '../../../lib/milestoneBadges'
 import { logError } from '../../../lib/utils/logger'
@@ -28,6 +28,7 @@ export function HalfwayMilestone({
 }: HalfwayMilestoneProps) {
   const halfwayShownRef = useRef(false)
   const onReachedRef = useRef(onMilestoneReached)
+  const [badgeError, setBadgeError] = useState(false)
   onReachedRef.current = onMilestoneReached
 
   useEffect(() => {
@@ -44,18 +45,24 @@ export function HalfwayMilestone({
   return (
     <View className='halfway-milestone__card' role='region' aria-label='测验已完成一半，继续加油'>
       <View className='halfway-milestone__badge'>
-        <View className='halfway-milestone__badge-halo' aria-hidden='true' />
-        <Image
-          className='halfway-milestone__badge-img'
-          mode='aspectFit'
-          src={MILESTONE_BADGES.quizHalfway}
-          lazyLoad={false}
-          onError={() => {
-            logError('[HalfwayMilestone] Badge asset failed to load', {
-              src: MILESTONE_BADGES.quizHalfway,
-            })
-          }}
-        />
+        {badgeError ? (
+          <View className='halfway-milestone__badge-fallback' aria-hidden='true'>
+            <Text className='halfway-milestone__badge-fallback-icon'>🎯</Text>
+          </View>
+        ) : (
+          <Image
+            className='halfway-milestone__badge-img'
+            mode='aspectFit'
+            src={MILESTONE_BADGES.quizHalfway}
+            lazyLoad={false}
+            onError={() => {
+              setBadgeError(true)
+              logError('[HalfwayMilestone] Badge asset failed to load', {
+                src: MILESTONE_BADGES.quizHalfway,
+              })
+            }}
+          />
+        )}
       </View>
       <View className='halfway-milestone__text'>
         <Text className='halfway-milestone__text-eyebrow'>半程已过</Text>

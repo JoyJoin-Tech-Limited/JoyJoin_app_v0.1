@@ -55,6 +55,12 @@ export default function Index() {
       const shell = await fetchConnectionsShell()
       injectConnectionsShellIntoCache(queryClient, shell)
     }, 5000)
+
+    return () => {
+      // Cancel any pending prefetches if the user is redirected before
+      // the staged delays elapse (e.g., auto-login redirect).
+      engine.clear()
+    }
   }, [entryDone])
 
   if (!entryDone) {

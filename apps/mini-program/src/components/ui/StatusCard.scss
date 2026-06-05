@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: $spacing-sm;
+  gap: $spacing-md;
   width: 100%;
   box-sizing: border-box;
   padding: $spacing-xl $spacing-lg;
@@ -35,13 +35,15 @@
   &__hero {
     width: 200rpx;
     height: 200rpx;
-    margin-bottom: $spacing-sm;
+    animation: status-card-hero-float 4s ease-in-out infinite;
   }
 
   &__title {
     @include type-display-section-title;
     font-size: $font-size-lg;
     color: $color-text-primary;
+    line-height: 1.4;
+    word-break: keep-all;
   }
 
   &__description {
@@ -63,5 +65,20 @@
     display: flex;
     flex-direction: column;
     gap: $spacing-sm;
+  }
+}
+
+@keyframes status-card-hero-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6rpx);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-card__hero {
+    animation: none;
   }
 }

@@ -1,7 +1,7 @@
 import { CustomWrapper, View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { usePullDownRefresh } from '@tarojs/taro'
 import { haptics } from '../../lib/utils/haptics'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getJoinedEvents, type JoinedEventSummary } from '@shared/api'
 import { apiRequest, fetchEventsShell } from '../../lib/api/api'
@@ -11,9 +11,10 @@ import { queryClient } from '../../lib/api/queryClient'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Card from '../../components/ui/Card'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
-import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
+import StatusCard from '../../components/ui/StatusCard'
 import RichListCard from '../../components/RichListCard'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
@@ -69,7 +70,7 @@ export default function EventsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('upcoming')
   const [hasManualTabSelection, setHasManualTabSelection] = useState(false)
 
-  const { data: events = [], isLoading, isFetching } = useQuery<JoinedEventSummary[]>({
+  const { data: events = [], isLoading, isFetching, isError, refetch } = useQuery<JoinedEventSummary[]>({
     queryKey: ['mini-program', 'joined-events'],
     queryFn: async (): Promise<JoinedEventSummary[]> => {
       // Primary: composite endpoint — 1 request for all Events data.
@@ -92,12 +93,22 @@ export default function EventsPage() {
     evictPersistedQuery(JOINED_EVENTS_QUERY_KEY)
   }, [])
 
+  const pullDownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   usePullDownRefresh(() => {
     handleRefresh()
-    setTimeout(() => {
+    pullDownTimerRef.current = setTimeout(() => {
       Taro.stopPullDownRefresh()
+      pullDownTimerRef.current = null
     }, 800)
   })
+  useEffect(() => {
+    return () => {
+      if (pullDownTimerRef.current) {
+        clearTimeout(pullDownTimerRef.current)
+        pullDownTimerRef.current = null
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (authLoading || isLoading) {
@@ -202,6 +213,19 @@ export default function EventsPage() {
             <EventCardSkeleton />
             <EventCardSkeleton />
           </>
+        ) : isError ? (
+          <StatusCard
+            className='events-page__empty-state'
+            tone='error'
+            icon='😕'
+            title='加载失败'
+            description='网络有点调皮，再试一次吧'
+            action={{
+              label: '重试',
+              onClick: () => refetch(),
+              variant: 'primary',
+            }}
+          />
         ) : displayEvents.length > 0 ? (
           <CustomWrapper>
             {displayEvents.map((event, index) => (
@@ -228,15 +252,18 @@ export default function EventsPage() {
             ))}
           </CustomWrapper>
         ) : (
-          <View className='events-page__empty-state'>
-            <XiaoyueEmptyState
-              emotion='events'
-              title='还没有活动'
-              subtitle='去发现感兴趣的活动吧'
-              actionLabel='去发现'
-              onAction={navigateToDiscover}
-            />
-          </View>
+          <StatusCard
+            className='events-page__empty-state'
+            tone='empty'
+            heroSrc={cdnAsset('/assets/lovart/lovart-generic-empty.webp')}
+            title='还没有活动'
+            description='去发现感兴趣的活动吧'
+            action={{
+              label: '去发现',
+              onClick: navigateToDiscover,
+              variant: 'primary',
+            }}
+          />
         )}
         <View className='events-page__spacer' />
       </ScrollView>

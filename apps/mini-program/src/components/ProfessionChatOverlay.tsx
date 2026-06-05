@@ -231,7 +231,7 @@ function generateId(): string {
 
 const DEBOUNCE_MS = 2000
 const MAX_SENDS_PER_SESSION = 5
-const API_TIMEOUT_MS = 10000
+const API_TIMEOUT_MS = 5000
 
 export default function ProfessionChatOverlay({
   visible,
@@ -250,12 +250,19 @@ export default function ProfessionChatOverlay({
   const [showRevealCard, setShowRevealCard] = useState(false)
   const [revealTags, setRevealTags] = useState<string[]>([])
   const [classificationData, setClassificationData] = useState<ProfessionClassificationData | null>(null)
+  const [thinkingLabel, setThinkingLabel] = useState<string | null>(null)
   const sendCountRef = useRef(0)
   const lastSendTimeRef = useRef(0)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const skipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bubbleStaggerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const thinkingTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const abortRef = useRef<AbortController | null>(null)
+
+  const clearThinkingTimers = useCallback(() => {
+    thinkingTimersRef.current.forEach((timer) => clearTimeout(timer))
+    thinkingTimersRef.current = []
+  }, [])
   const analytics = useOnboardingAnalytics('essential-data', { enabled: true, autoTrackStart: false })
   const deviceTier = useDeviceTier()
   const [isOnline, setIsOnline] = useState(true)
@@ -287,6 +294,7 @@ export default function ProfessionChatOverlay({
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
       if (skipTimeoutRef.current) clearTimeout(skipTimeoutRef.current)
       if (bubbleStaggerRef.current) clearTimeout(bubbleStaggerRef.current)
+      clearThinkingTimers()
       if (abortRef.current) abortRef.current.abort()
     }
   }, [])
@@ -327,11 +335,21 @@ export default function ProfessionChatOverlay({
     const controller = new AbortController()
     abortRef.current = controller
 
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS)
+    let didTimeout = false
+    const timeoutId = setTimeout(() => {
+      didTimeout = true
+      controller.abort()
+    }, API_TIMEOUT_MS)
 
     setIsSubmitting(true)
     setHasSent(true)
     setShowRevealCard(false)
+    clearThinkingTimers()
+    setThinkingLabel(null)
+    thinkingTimersRef.current = [
+      setTimeout(() => setThinkingLabel('悦仔正在理解你的职业背景…'), 800),
+      setTimeout(() => setThinkingLabel('还在思考中，马上就好~'), 2800),
+    ]
 
     const userMsg: ChatMessage = { id: generateId(), sender: 'user', text }
     setMessages((prev) => [...prev, userMsg])
@@ -380,6 +398,8 @@ export default function ProfessionChatOverlay({
         setMessages((prev) => [...prev, fullMsg])
         setBottomAnchorKey((k) => k + 1)
         setIsSubmitting(false)
+        clearThinkingTimers()
+        setThinkingLabel(null)
 
         const tags = data.displayTags.filter(Boolean)
         if (tags.length > 0) {
@@ -407,10 +427,17 @@ export default function ProfessionChatOverlay({
       }, 400)
     } catch (_err) {
       clearTimeout(timeoutId)
-      if (controller.signal.aborted) return
+      clearThinkingTimers()
+      // If aborted by a new send (not timeout), skip showing fallback
+      if (controller.signal.aborted && !didTimeout) {
+        setIsSubmitting(false)
+        setThinkingLabel(null)
+        return
+      }
       analytics.interaction('profession_chat_classification_fallback', {
         errorType: _err instanceof Error ? _err.name : 'unknown',
         inputLength: text.length,
+        timedOut: didTimeout,
       })
       const reaction = getReactionForProfession(text)
       setMessages((prev) => [
@@ -419,6 +446,7 @@ export default function ProfessionChatOverlay({
       ])
       setBottomAnchorKey((k) => k + 1)
       setIsSubmitting(false)
+      setThinkingLabel(null)
 
       setClassificationData({
         occupationId: text,
@@ -429,7 +457,7 @@ export default function ProfessionChatOverlay({
         industryCategory: null,
         industrySegmentNew: null,
         industryNiche: null,
-        industrySource: 'fallback',
+        industrySource: didTimeout ? 'timeout_fallback' : 'fallback',
         industryConfidence: 0,
       })
     }
@@ -540,6 +568,9 @@ export default function ProfessionChatOverlay({
                   <View className='profession-overlay__typing-dot' />
                   <View className='profession-overlay__typing-dot' />
                   <View className='profession-overlay__typing-dot' />
+                  {thinkingLabel && (
+                    <Text className='profession-overlay__typing-label'>{thinkingLabel}</Text>
+                  )}
                 </View>
               </View>
             </View>

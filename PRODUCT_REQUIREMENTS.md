@@ -299,12 +299,12 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ## 🎯 Executive Summary
 
-JoyJoin is an AI-powered social networking platform that connects individuals locally through small, curated micro-events (5-10 attendees). The platform uses sophisticated personality-based matching algorithms to create meaningful connections while emphasizing psychological safety and inclusivity.
+JoyJoin is an AI-powered social networking platform that connects individuals locally through small, curated micro-events (4-6 attendees per group). The platform uses sophisticated personality-based matching algorithms to create meaningful connections while emphasizing psychological safety and inclusivity.
 
 ### Key Value Propositions
 
 - **AI-Driven Matching:** 12 personality archetypes (V4 animal system) with 7-dimensional pool compatibility scoring
-- **Micro-Event Format:** Small group sizes (5-10 people) for meaningful interactions
+- **Micro-Event Format:** Small group sizes (4-6 people) for meaningful interactions
 - **Blind Box Experience:** Gamified event discovery with surprise reveals
 - **In-Event Social Experience:** Social Icebreaker multi-phase group facilitation (话题卡 → 挑战 → 侦探 → 回顾) as the core in-event engagement tool
 - **Data-Driven Insights:** Comprehensive feedback system to refine matching algorithms
@@ -2326,7 +2326,7 @@ Workflow:
    - Sample size: 20-50 users
 
 3. Run matching algorithm with current weights
-   - Forms groups of 5-10
+   - Forms groups of 4-6
    - Calculates match scores
 
 4. Display results:

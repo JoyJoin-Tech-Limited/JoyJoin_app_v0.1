@@ -65,9 +65,9 @@
     min-height: 88rpx;
     padding: 0 20rpx;
     border-radius: 999rpx;
-    background: rgba($color-surface, 0.7);
-    border: 1rpx solid rgba($color-primary, 0.15);
-    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+    background: $brand-gradient;
+    border: none;
+    box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.25);
     transition: background 200ms ease, box-shadow 200ms ease, transform 150ms ease-out;
     flex-shrink: 0;
 
@@ -88,6 +88,14 @@
     &--hover {
       transform: scale(0.96);
     }
+
+    .discover-auth__location-pill-icon {
+      filter: brightness(0) invert(1);
+    }
+
+    .discover-auth__location-pill-text {
+      color: $color-text-white;
+    }
   }
 
   &__location-pill-icon {
@@ -98,7 +106,7 @@
   &__location-pill-text {
     font-size: 22rpx;
     font-weight: $font-weight-medium;
-    color: $color-text-secondary;
+    color: $color-text-white;
     line-height: 1;
     white-space: nowrap;
   }
@@ -236,6 +244,7 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+    animation: discover-empty-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   // ── Pool list ─────────────────────────────────────────────────
@@ -617,6 +626,18 @@
   }
 }
 
+// ─── Empty state entrance ────────────────────────────────────────
+@keyframes discover-empty-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 // ─── Reduced motion ──────────────────────────────────────────────
 @media (prefers-reduced-motion: reduce) {
   .oracle-card {
@@ -637,5 +658,11 @@
   .discover-auth__refresh-indicator {
     animation: none;
     background: $color-divider;
+  }
+
+  .discover-auth__empty-state {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 }

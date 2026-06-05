@@ -41,7 +41,7 @@ export default function ConnectionsPage() {
     markAsRead.mutate('chat')
   }, [markAsRead])
 
-  const { data: connections = [], isLoading } = useQuery<Connection[]>({
+  const { data: connections = [], isLoading, isError, refetch } = useQuery<Connection[]>({
     queryKey: ['mini-program', 'connections'],
     queryFn: async (): Promise<Connection[]> => {
       // Primary: composite endpoint — 1 request for all Connections data.
@@ -67,7 +67,23 @@ export default function ConnectionsPage() {
       <ScrollView className='connections-page__list' scrollY enhanced showScrollbar={false}>
         {isLoading ? (
           <View className='connections-page__loading'>
-            <Text className='connections-page__loading-text'>正在加载…</Text>
+            <XiaoyueEmptyState
+              emotion='waiting'
+              title='正在加载…'
+              subtitle='悦仔正在整理你的连接'
+              size='md'
+            />
+          </View>
+        ) : isError ? (
+          <View className='connections-page__empty-state'>
+            <XiaoyueEmptyState
+              emotion='sad'
+              title='加载失败'
+              subtitle='网络有点调皮，再试一次吧'
+              actionLabel='重试'
+              onAction={() => refetch()}
+              size='md'
+            />
           </View>
         ) : connections.length > 0 ? (
           connections.map((conn) => (

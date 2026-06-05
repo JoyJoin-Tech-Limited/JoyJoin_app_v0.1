@@ -148,6 +148,7 @@
     border-radius: 50%;
     background: rgba($color-text-muted, 0.5);
     animation: profession-typing-bounce 1.2s ease-in-out infinite;
+    flex-shrink: 0;
 
     &:nth-child(2) {
       animation-delay: 0.15s;
@@ -156,6 +157,20 @@
     &:nth-child(3) {
       animation-delay: 0.3s;
     }
+  }
+
+  &__typing-label {
+    font-size: 22rpx;
+    color: $color-text-muted;
+    margin-left: 8rpx;
+    line-height: 1;
+    white-space: nowrap;
+    animation: profession-label-fade-in 0.3s ease-out forwards;
+  }
+
+  @keyframes profession-label-fade-in {
+    from { opacity: 0; transform: translateX(4rpx); }
+    to { opacity: 1; transform: translateX(0); }
   }
 
   &__input-bar {

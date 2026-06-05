@@ -739,6 +739,54 @@ Touch devices don't have hover.
 </view>
 ```
 
+### 5. `@3x` retina suffix on `<image>` src (2026-06-05)
+
+If a `<image>` `src` already contains `@3x`, WeChat's runtime may attempt to append another `@3x` suffix, producing a 404 for `...@3x@3x.webp`.
+
+**Workaround**:
+- Ship assets as bare filenames (no `@3x` in `src`) and let WeChat auto-resolve retina variants.
+- Or provide exact copies without the suffix, as done in `apps/mini-program/src/components/mascot/ArchetypeHead.tsx` (`HEAD_PATHS` point to `/assets/icons/archetype/archetype-{key}-head.webp`).
+
+```ts
+// Good
+const src = '/assets/icons/archetype/archetype-corgi-head.webp'
+
+// Risky — may resolve to archetype-corgi-head@3x@3x.webp
+const src = '/assets/icons/archetype/archetype-corgi-head@3x.webp'
+```
+
+### 6. `dvh` / dynamic viewport units (2026-06-05)
+
+`dvh` is not reliably supported in WeChat WKWebView / Taro. Drawers or containers sized with `70dvh` may collapse or ignore the unit on some devices / WeChat versions.
+
+**Workaround**:
+- Use `rpx` with a fixed approximation (e.g., `980rpx` is ~70% of a typical device height).
+- Pair with an explicit `height: 100%` on `<ScrollView>` and `min-height: 0` on the flex parent.
+
+```scss
+/* LocationFilterDrawer pattern */
+.drawer {
+  max-height: 980rpx;
+}
+.drawer__scroll {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+```
+
+```tsx
+<ScrollView style={{ height: '100%' }}>
+```
+
+### 7. CSS `background-image` with remote URLs (2026-06-05)
+
+Setting `background-image: url('https://...')` in WXSS/Taro is historically flaky in WeChat runtime — images may fail to load or disappear after navigation.
+
+**Workaround**:
+- Use the `<Image>` component with an `overflow: hidden` container and `transform: translate()` for region crops.
+- See `apps/mini-program/src/components/icebreaker/ChallengeCardBgImage.tsx` and `apps/mini-program/src/components/mascot/ArchetypeSpritesheet.tsx` for the production pattern.
+
 ## Testing
 
 ### WeChat Developer Tools

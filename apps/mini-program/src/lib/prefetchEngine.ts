@@ -81,7 +81,8 @@ export function injectDiscoverShellIntoCache(
       profileEssentialComplete: true,
       profileExtendedComplete: true,
       activeAssessmentSessionId: null,
-      paymentsEnabled: false,
+      // Intentionally omit paymentsEnabled so the real auth fetch owns it.
+      // Prefetch injection must not block payment entry with a hardcoded false.
     })
   }
 
@@ -144,7 +145,7 @@ export function injectEventsShellIntoCache(
       profileEssentialComplete: true,
       profileExtendedComplete: true,
       activeAssessmentSessionId: null,
-      paymentsEnabled: false,
+      // Intentionally omit paymentsEnabled so the real auth fetch owns it.
     })
   }
 
@@ -176,7 +177,7 @@ export function injectConnectionsShellIntoCache(
       profileEssentialComplete: true,
       profileExtendedComplete: true,
       activeAssessmentSessionId: null,
-      paymentsEnabled: false,
+      // Intentionally omit paymentsEnabled so the real auth fetch owns it.
     })
   }
 

@@ -1,4 +1,5 @@
 import { View, Text, ScrollView } from '@tarojs/components'
+import JoyJoinIcon from '../ui/JoyJoinIcon'
 import React, { useCallback, useRef, useEffect } from 'react'
 import {
   shenzhenClusters,
@@ -84,15 +85,14 @@ export default function LocationFilterDrawer({
 
   const isAllSelected = selectedCluster === ALL_CLUSTER_ID && selectedDistrict === ALL_DISTRICT_ID
 
-  const heatDotColor = (heat: HeatLevel): string => {
-    // NOTE: These map to SCSS tokens $color-secondary and $color-landed-gold
+  const heatDotClass = (heat: HeatLevel): string => {
     switch (heat) {
       case 'hot':
-        return '#FF6B9D'
+        return 'location-drawer__heat-dot--hot'
       case 'active':
-        return '#FBBF24'
+        return 'location-drawer__heat-dot--active'
       default:
-        return 'transparent'
+        return ''
     }
   }
 
@@ -103,7 +103,7 @@ export default function LocationFilterDrawer({
         className={`location-drawer__backdrop ${open ? 'location-drawer__backdrop--open' : ''}`}
         onClick={handleBackdropTap}
         catchMove
-        aria-role='button'
+        role='button'
         aria-label='关闭区域选择'
       />
 
@@ -141,6 +141,7 @@ export default function LocationFilterDrawer({
           scrollY
           enhanced
           showScrollbar={false}
+          enableFlex
         >
           {/* All Regions tile */}
           <View
@@ -148,7 +149,7 @@ export default function LocationFilterDrawer({
             onClick={() => handleSelect(ALL_CLUSTER_ID, ALL_DISTRICT_ID)}
             hoverClass='location-drawer__tile--hover'
           >
-            <Text className='location-drawer__all-tile-icon' aria-label='globe'>🌐</Text>
+            <JoyJoinIcon className='location-drawer__all-tile-icon' emoji='🌐' size={28} />
             <Text className='location-drawer__all-tile-text'>全部区域</Text>
           </View>
 
@@ -160,7 +161,7 @@ export default function LocationFilterDrawer({
                 {cluster.districts.map((district: District) => {
                   const isActive =
                     selectedCluster === cluster.id && selectedDistrict === district.id
-                  const heatColor = heatDotColor(district.heat)
+                  const heatDotModifier = heatDotClass(district.heat)
                   const heatLabel = heatConfig[district.heat].label
 
                   return (
@@ -169,13 +170,13 @@ export default function LocationFilterDrawer({
                       className={`location-drawer__district-tile ${isActive ? 'location-drawer__district-tile--active' : ''}`}
                       onClick={() => handleSelect(cluster.id, district.id)}
                       hoverClass='location-drawer__tile--hover'
+                      role='button'
+                      aria-pressed={isActive}
+                      aria-label={`${district.name}${heatLabel ? '，' + heatLabel : ''}`}
                     >
-                      {heatColor !== 'transparent' && (
+                      {heatDotModifier && (
                         <View className='location-drawer__heat-row'>
-                          <View
-                            className='location-drawer__heat-dot'
-                            style={{ backgroundColor: heatColor }}
-                          />
+                          <View className={`location-drawer__heat-dot ${heatDotModifier}`} />
                           {heatLabel && (
                             <Text className='location-drawer__heat-label'>{heatLabel}</Text>
                           )}

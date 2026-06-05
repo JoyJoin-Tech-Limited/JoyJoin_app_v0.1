@@ -1,8 +1,10 @@
 import { Image, View } from '@tarojs/components'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Taro from '@tarojs/taro'
+import { useEffect, useRef, useState } from 'react'
 import spritesheetManifest from '../../assets/mascot/xiaoyue-spritesheet-manifest.json'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { logWarn } from '../../lib/utils/logger'
+import { useDeviceTier } from '../../hooks/useDeviceTier'
 import './XiaoyueSpriteAnimator.scss'
 
 const BASE_PATH = cdnAsset('/assets/mascot')
@@ -44,7 +46,7 @@ export interface XiaoyueSpriteAnimatorProps {
   showGlow?: boolean
   /** Loading state override (forces thinking animation) */
   isLoading?: boolean
-  /** Crossfade duration in ms when switching states. Default 180. */
+  /** Crossfade duration in ms when switching states. Default 220. */
   transitionMs?: number
 }
 
@@ -63,18 +65,113 @@ function getStateMeta(state: XiaoyueSpriteState): SpriteStateMeta | null {
   return meta ?? null
 }
 
+interface SpriteFrameProps {
+  meta: SpriteStateMeta
+  size: string
+  autoPlay: boolean
+  onComplete?: () => void
+  onError?: () => void
+}
+
+/**
+ * Render a single sprite state using the WeChat-safe <Image> + overflow:hidden
+ * + transform:translate() pattern. Each frame is cropped by translating the
+ * full spritesheet inside a clipped circular container.
+ *
+ * Animation is JS-driven (setInterval) to avoid dynamic-WXSS-keyframe issues
+ * and to give exact per-frame control over timing, looping, and completion.
+ */
+function SpriteFrame({ meta, size, autoPlay, onComplete, onError }: SpriteFrameProps) {
+  const [currentFrame, setCurrentFrame] = useState(0)
+  const onCompleteRef = useRef(onComplete)
+  useEffect(() => {
+    onCompleteRef.current = onComplete
+  }, [onComplete])
+
+  const { sheet, frameCount, frameWidth, frameHeight, duration, loop } = meta
+  const sizeNum = parseInt(size, 10) || 96
+  const scale = sizeNum / frameWidth
+  const padding = spritesheetManifest.frame.padding
+  const stride = frameWidth + padding * 2
+  const sheetWidth = frameCount * stride
+  const sheetHeight = frameHeight + padding * 2
+
+  const imgW = Math.round(sheetWidth * scale)
+  const imgH = Math.round(sheetHeight * scale)
+  const translateX = Math.round(-(currentFrame * stride + padding) * scale)
+  const translateY = Math.round(-padding * scale)
+
+  useEffect(() => {
+    setCurrentFrame(0)
+    if (!autoPlay || frameCount <= 1) return
+
+    const frameDuration = duration / frameCount
+    let frame = 0
+    const isVisibleRef = { current: true }
+
+    const handleAppShow = () => { isVisibleRef.current = true }
+    const handleAppHide = () => { isVisibleRef.current = false }
+    Taro.onAppShow(handleAppShow)
+    Taro.onAppHide(handleAppHide)
+
+    const timer = setInterval(() => {
+      if (!isVisibleRef.current) return
+      frame++
+      if (frame >= frameCount) {
+        if (loop) {
+          frame = 0
+        } else {
+          clearInterval(timer)
+          Taro.offAppShow(handleAppShow)
+          Taro.offAppHide(handleAppHide)
+          onCompleteRef.current?.()
+          return
+        }
+      }
+      setCurrentFrame(frame)
+    }, frameDuration)
+
+    return () => {
+      clearInterval(timer)
+      Taro.offAppShow(handleAppShow)
+      Taro.offAppHide(handleAppHide)
+    }
+  }, [autoPlay, frameCount, duration, loop])
+
+  return (
+    <View className='xiaoyue-sprite__frame-inner'>
+      <Image
+        src={`${BASE_PATH}/${sheet}`}
+        mode='aspectFill'
+        style={{
+          width: `${imgW}rpx`,
+          height: `${imgH}rpx`,
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          transform: `translate(${translateX}rpx, ${translateY}rpx)`,
+          willChange: 'transform',
+        }}
+        onError={onError}
+      />
+    </View>
+  )
+}
+
 /**
  * XiaoyueSpriteAnimator — frame-based sprite animation for the JoyJoin mascot.
  *
  * Each state has its own horizontal-strip spritesheet:
  *   /assets/mascot/xiaoyue-<state>.webp
  *
- * CSS background-position + steps() drives animation for GPU efficiency.
+ * Uses the WeChat-safe <Image> + overflow:hidden + transform:translate()
+ * pattern instead of CSS background-image, which silently fails in many
+ * WeChat runtime versions.
  *
  * Spec:
- * - Frame size: 200×200px source, scaled via CSS to any display size
+ * - Frame size: 200×200px source, scaled via transform to any display size
  * - Manifest: src/assets/mascot/xiaoyue-spritesheet-manifest.json (generated)
- * - One-shot states freeze on last frame via animation-fill-mode: forwards
+ * - One-shot states freeze on last frame after duration elapses
  * - State changes remount the sprite to restart animation from frame 0
  * - Reduced motion: animation disabled, first frame shown statically
  */
@@ -86,11 +183,25 @@ export default function XiaoyueSpriteAnimator({
   onComplete,
   showGlow = false,
   isLoading = false,
-  transitionMs = 180,
+  transitionMs = 220,
 }: XiaoyueSpriteAnimatorProps) {
   const resolvedState: XiaoyueSpriteState = isLoading ? 'thinking' : state
   const meta = getStateMeta(resolvedState)
   const [spriteError, setSpriteError] = useState(false)
+  const { isDegradation } = useDeviceTier()
+
+  // Detect system reduced-motion preference
+  const [reducedMotion, setReducedMotion] = useState(false)
+  useEffect(() => {
+    try {
+      const info = Taro.getSystemInfoSync()
+      setReducedMotion((info as any).reduceMotion === true)
+    } catch {
+      setReducedMotion(false)
+    }
+  }, [])
+
+  const motionEnabled = autoPlay && !reducedMotion && !isDegradation
 
   // Reset error state when state changes (CDN failure for one state shouldn't block others)
   useEffect(() => {
@@ -100,7 +211,7 @@ export default function XiaoyueSpriteAnimator({
   // ── Crossfade transition state ──
   // When state changes, we keep the old sprite frame visible and fade it out
   // while the new frame fades in underneath. This eliminates the jarring
-  // background-image swap that made static↔sprite transitions feel disconnected.
+  // image swap that made static↔sprite transitions feel disconnected.
   const [exitMeta, setExitMeta] = useState<SpriteStateMeta | null>(null)
   const [isFading, setIsFading] = useState(false)
   const prevStateRef = useRef(resolvedState)
@@ -134,40 +245,6 @@ export default function XiaoyueSpriteAnimator({
     setPlayKey((k) => k + 1)
   }, [resolvedState])
 
-  const makeStyle = useCallback((m: SpriteStateMeta | null): Record<string, string | number> => {
-    if (!m) {
-      return {
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: 'rgba(139, 92, 246, 0.08)',
-      }
-    }
-
-    const { sheet, frameCount, duration, loop } = m
-    const baseStyle: Record<string, string | number> = {
-      width: size,
-      height: size,
-      backgroundImage: `url(${BASE_PATH}/${sheet})`,
-      backgroundSize: `${frameCount * 100}% 100%`,
-      backgroundPosition: '0% 0%',
-      backgroundRepeat: 'no-repeat',
-      borderRadius: '50%',
-    }
-
-    if (frameCount > 1 && autoPlay) {
-      const durationSec = (duration / 1000).toFixed(2)
-      const steps = frameCount - 1
-      const loopMode = loop ? 'infinite' : 'forwards'
-      baseStyle.animation = `xiaoyue-sprite-play ${durationSec}s steps(${steps}) ${loopMode}`
-    }
-
-    return baseStyle
-  }, [size, autoPlay])
-
-  const currentStyle = useMemo(() => makeStyle(meta), [makeStyle, meta])
-  const exitStyle = useMemo(() => makeStyle(exitMeta), [makeStyle, exitMeta])
-
   if (!meta || spriteError) {
     return (
       <View
@@ -188,36 +265,31 @@ export default function XiaoyueSpriteAnimator({
       <View
         className={`xiaoyue-sprite__frame ${isFading ? 'xiaoyue-sprite__frame--enter' : ''}`}
       >
-        <View
+        <SpriteFrame
           key={playKey}
-          className='xiaoyue-sprite__frame-inner'
-          style={currentStyle}
-          onAnimationEnd={onComplete}
+          meta={meta}
+          size={size}
+          autoPlay={autoPlay && !reducedMotion}
+          onComplete={onComplete}
+          onError={() => {
+            if (!spriteError) {
+              logWarn('[XiaoyueSpriteAnimator] CDN sprite load failed — falling back', {
+                state: resolvedState,
+                sheet: meta.sheet,
+              })
+              setSpriteError(true)
+            }
+          }}
         />
-        {/* CDN load probe: detects sprite sheet load failure and falls back */}
-        {meta.sheet && (
-          <Image
-            className='xiaoyue-sprite__probe'
-            src={`${BASE_PATH}/${meta.sheet}`}
-            mode='aspectFit'
-            onError={() => {
-              if (!spriteError) {
-                logWarn('[XiaoyueSpriteAnimator] CDN sprite load failed — falling back', {
-                  state: resolvedState,
-                  sheet: meta.sheet,
-                })
-                setSpriteError(true)
-              }
-            }}
-            style={{ width: '1rpx', height: '1rpx', position: 'absolute', opacity: 0 }}
-            aria-hidden
-          />
-        )}
       </View>
-      {/* Exiting state — opacity wrapper handles exit fade, inner handles sprite play */}
+      {/* Exiting state — opacity wrapper handles exit fade, inner keeps animating */}
       {exitMeta && (
         <View className='xiaoyue-sprite__frame xiaoyue-sprite__frame--exit'>
-          <View className='xiaoyue-sprite__frame-inner' style={exitStyle} />
+          <SpriteFrame
+            meta={exitMeta}
+            size={size}
+            autoPlay={motionEnabled}
+          />
         </View>
       )}
     </View>

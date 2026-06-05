@@ -8,7 +8,7 @@
   right: 0;
   bottom: 0;
   left: 0;
-  z-index: 30;
+  z-index: $z-modal;
   pointer-events: none;
 
   &--open {
@@ -40,7 +40,7 @@
     right: 0;
     bottom: 0;
     left: 0;
-    max-height: 70dvh;
+    max-height: 980rpx;
     background: $color-surface;
     border-radius: 32rpx 32rpx 0 0;
     box-shadow: 0 -8rpx 32rpx rgba(0, 0, 0, 0.08);
@@ -174,7 +174,7 @@
     align-items: center;
     justify-content: center;
     min-height: 88rpx;
-    padding: 16rpx 12rpx;
+    padding: 16rpx;
     border-radius: 20rpx;
     background: $color-bg;
     border: 2rpx solid transparent;
@@ -189,24 +189,33 @@
   &__heat-row {
     display: flex;
     align-items: center;
-    gap: 6rpx;
-    margin-bottom: 6rpx;
+    gap: 8rpx;
+    margin-bottom: 8rpx;
   }
 
   &__heat-dot {
     width: 8rpx;
     height: 8rpx;
     border-radius: 50%;
+
+    &--hot {
+      background: $color-secondary;
+    }
+
+    &--active {
+      background: $color-landed-gold;
+    }
   }
 
   &__heat-label {
-    font-size: 18rpx;
+    font-size: $font-size-2xs;
     font-weight: $font-weight-semibold;
     color: $color-text-muted;
   }
 
   &__district-name {
     font-size: 22rpx;
+    line-height: 1.4;
     font-weight: $font-weight-medium;
     color: $color-text-primary;
     text-align: center;

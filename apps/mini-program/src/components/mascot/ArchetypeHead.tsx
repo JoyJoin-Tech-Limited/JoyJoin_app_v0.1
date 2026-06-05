@@ -19,18 +19,18 @@ interface ArchetypeHeadProps {
 }
 
 const HEAD_PATHS: Record<string, string> = {
-  corgi: localAsset('/assets/icons/archetype/archetype-corgi-head@3x.webp'),
-  rooster: localAsset('/assets/icons/archetype/archetype-rooster-head@3x.webp'),
-  hamster_praise: localAsset('/assets/icons/archetype/archetype-hamster_praise-head@3x.webp'),
-  fox: localAsset('/assets/icons/archetype/archetype-fox-head@3x.webp'),
-  dolphin_calm: localAsset('/assets/icons/archetype/archetype-dolphin_calm-head@3x.webp'),
-  spider: localAsset('/assets/icons/archetype/archetype-spider-head@3x.webp'),
-  koala: localAsset('/assets/icons/archetype/archetype-koala-head@3x.webp'),
-  octopus: localAsset('/assets/icons/archetype/archetype-octopus-head@3x.webp'),
-  owl: localAsset('/assets/icons/archetype/archetype-owl-head@3x.webp'),
-  elephant: localAsset('/assets/icons/archetype/archetype-elephant-head@3x.webp'),
-  turtle: localAsset('/assets/icons/archetype/archetype-turtle-head@3x.webp'),
-  cat: localAsset('/assets/icons/archetype/archetype-cat-head@3x.webp'),
+  corgi: localAsset('/assets/icons/archetype/archetype-corgi-head.webp'),
+  rooster: localAsset('/assets/icons/archetype/archetype-rooster-head.webp'),
+  hamster_praise: localAsset('/assets/icons/archetype/archetype-hamster_praise-head.webp'),
+  fox: localAsset('/assets/icons/archetype/archetype-fox-head.webp'),
+  dolphin_calm: localAsset('/assets/icons/archetype/archetype-dolphin_calm-head.webp'),
+  spider: localAsset('/assets/icons/archetype/archetype-spider-head.webp'),
+  koala: localAsset('/assets/icons/archetype/archetype-koala-head.webp'),
+  octopus: localAsset('/assets/icons/archetype/archetype-octopus-head.webp'),
+  owl: localAsset('/assets/icons/archetype/archetype-owl-head.webp'),
+  elephant: localAsset('/assets/icons/archetype/archetype-elephant-head.webp'),
+  turtle: localAsset('/assets/icons/archetype/archetype-turtle-head.webp'),
+  cat: localAsset('/assets/icons/archetype/archetype-cat-head.webp'),
 }
 
 function getFallbackInitial(text?: string): string {

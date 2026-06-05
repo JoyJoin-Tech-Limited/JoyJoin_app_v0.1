@@ -23,13 +23,13 @@
     opacity: 1;
 
     &--enter {
-      // New state fades in over the old state
-      animation: xiaoyue-sprite-enter 180ms ease both;
+      // New state scales in + fades in over the old state
+      animation: xiaoyue-sprite-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
     &--exit {
-      // Old state fades out while its sprite animation keeps running
-      animation: xiaoyue-sprite-exit 180ms ease both;
+      // Old state subtly expands + fades out while its sprite animation keeps running
+      animation: xiaoyue-sprite-exit 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
       pointer-events: none;
     }
   }
@@ -38,46 +38,35 @@
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    background-color: transparent;
-    will-change: background-position;
+    overflow: hidden;
+    position: relative;
   }
 
   &--fallback {
     border-radius: 50%;
     background: rgba($color-primary, 0.08);
   }
-
-  &__probe {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-  }
-}
-
-@keyframes xiaoyue-sprite-play {
-  from {
-    background-position: 0% 0;
-  }
-  to {
-    background-position: 100% 0;
-  }
 }
 
 @keyframes xiaoyue-sprite-enter {
   from {
     opacity: 0;
+    transform: scale(0.94);
   }
   to {
     opacity: 1;
+    transform: scale(1);
   }
 }
 
 @keyframes xiaoyue-sprite-exit {
   from {
     opacity: 1;
+    transform: scale(1);
   }
   to {
     opacity: 0;
+    transform: scale(1.05);
   }
 }
 
@@ -95,6 +84,15 @@
 @media (prefers-reduced-motion: reduce) {
   .xiaoyue-sprite__frame {
     animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
+  // Under reduced motion the exit frame must vanish instantly,
+  // or users see both old and new mascots overlapped during the
+  // 220 ms crossfade window.
+  .xiaoyue-sprite__frame--exit {
+    opacity: 0 !important;
   }
 
   .xiaoyue-sprite--glow::before {
