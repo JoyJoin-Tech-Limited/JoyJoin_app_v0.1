@@ -103,7 +103,7 @@ function calculateDecayedThreshold(
   }
 
   const daysUntilEvent = hoursUntilEvent / 24;
-  const decay = Math.floor(daysUntilEvent) * (config.timeDecayRate || 5);
+  const decay = Math.floor(daysUntilEvent + 1 / 86400) * (config.timeDecayRate || 5);
   const decayedThreshold = Math.max(
     baseThreshold - decay,
     config.minThresholdAfterDecay || 50
