@@ -230,7 +230,7 @@ describe("GET /api/admin/smart-venues", () => {
         headers: { Cookie: cookie },
       });
       expect(res.status).toBe(400);
-      const body = await res.json();
+      const body = await res.json() as any;
       expect(body.message).toContain("city");
     });
   });
@@ -247,7 +247,7 @@ describe("GET /api/admin/smart-venues", () => {
         headers: { Cookie: cookie },
       });
       expect(res.status).toBe(400);
-      const body = await res.json();
+      const body = await res.json() as any;
       expect(body.message).toContain("eventType");
     });
   });
@@ -294,7 +294,7 @@ describe("GET /api/admin/smart-venues", () => {
         { headers: { Cookie: cookie } },
       );
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = await res.json() as any;
       expect(Array.isArray(body)).toBe(true);
       // Note: the backend does exact string equality on venues.area.
       // If the UI sends "南山" instead of "南山区", no venues match.
@@ -323,7 +323,7 @@ describe("GET /api/admin/smart-venues", () => {
         { headers: { Cookie: cookie } },
       );
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = await res.json() as any;
       expect(body).toHaveLength(2);
       const withSlot = body.find((v: any) => v.id === "v-with-slot");
       const noSlot = body.find((v: any) => v.id === "v-no-slot");
@@ -347,7 +347,7 @@ describe("GET /api/admin/smart-venues", () => {
         { headers: { Cookie: cookie } },
       );
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = await res.json() as any;
       expect(body).toEqual([]);
     });
   });
@@ -387,7 +387,7 @@ describe("GET /api/admin/smart-venues", () => {
         { headers: { Cookie: cookie } },
       );
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = await res.json() as any;
 
       const available = body.find((v: any) => v.id === "v-available");
       const full = body.find((v: any) => v.id === "v-full");
@@ -419,7 +419,7 @@ describe("GET /api/admin/smart-venues", () => {
         { headers: { Cookie: cookie } },
       );
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = await res.json() as any;
       expect(body[0].hasAvailabilityOnDate).toBeNull();
       expect(body[0].availableSlotCount).toBeNull();
     });
@@ -445,7 +445,7 @@ describe("GET /api/admin/smart-venues", () => {
         { headers: { Cookie: cookie } },
       );
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = await res.json() as any;
       expect(body[0].hasAvailabilityOnDate).toBeNull();
       expect(body[0].availableSlotCount).toBeNull();
     });

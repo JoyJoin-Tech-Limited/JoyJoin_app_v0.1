@@ -3498,6 +3498,7 @@ For full details: `apps/server/src/README.md` and `docs/architecture/current-sta
 - `POST /api/admin/payments/refund` - Issue refund
 - `GET /api/admin/venues` - List venues
 - `POST /api/admin/venues` - Create venue
+- `GET /api/admin/smart-venues` - Filter venues with optional date-level availability
 - `GET /api/admin/event-templates` - List templates
 - `POST /api/admin/event-templates` - Create template
 - `GET /api/admin/events` - List all events (admin view)
