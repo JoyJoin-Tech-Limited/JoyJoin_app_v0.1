@@ -61,6 +61,8 @@ The mini-program uses **composite shell endpoints** to reduce tab-switch latency
 
 **Prefetch engine:** `apps/mini-program/src/lib/prefetchEngine.ts` — stages named prefetches with configurable delays, gates on auth/network/device tier, and injects composite responses into existing TanStack Query keys.
 
+**Auth-injection hygiene (2026-06-05):** The pruned auth fragments injected for Discover, Events, and Connections shells intentionally omit kill-switch fields (e.g., `paymentsEnabled`). The live `GET /api/auth/user` fetch must remain the source of truth for feature flags; injecting a hardcoded default (e.g., `paymentsEnabled: false`) caused stale "权益维护中" toasts when the server had payments enabled. Only onboarding completion flags (`profileEssentialComplete`, `profileExtendedComplete`, `activeAssessmentSessionId`) are set in the injected fragment.
+
 **Cache invalidation:** Server-side `shellCache.invalidateUser(userId)` is called on mutations (payment fulfillment, pool registration, connection creation, assessment completion). This clears all cached shells for the user.
 
 **Fallback behavior:** Events and Connections pages fall back to legacy endpoints (`/api/events/joined`, `/api/my-connections`) if the composite endpoint returns 500.

@@ -319,13 +319,18 @@ ${categoryList}
 
 注意：所有label必须使用简体中文，confidence反映确定性。`;
     
-    const response = await (openai.chat.completions.create as any)({
-      model: getDeepseekModel('flash'),
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-      temperature: 0.3,
-      max_tokens: 500,
-    });
+    const aiAbort = new AbortController();
+    const aiTimeout = setTimeout(() => aiAbort.abort(), 5000);
+    const response = await (openai.chat.completions.create as any)(
+      {
+        model: getDeepseekModel('flash'),
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.3,
+        max_tokens: 500,
+      },
+      { signal: aiAbort.signal }
+    ).finally(() => clearTimeout(aiTimeout));
     
     const content = response.choices[0]?.message?.content;
     if (!content) return null;
@@ -420,12 +425,17 @@ async function normalizeUserInput(rawText: string): Promise<string> {
 输入: "${rawText}"
 输出: `;
     
-    const response = await openai.chat.completions.create({
-      model: getDeepseekModel('flash'),
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.1,
-      max_tokens: 50,
-    });
+    const aiAbort = new AbortController();
+    const aiTimeout = setTimeout(() => aiAbort.abort(), 3000);
+    const response = await openai.chat.completions.create(
+      {
+        model: getDeepseekModel('flash'),
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.1,
+        max_tokens: 50,
+      },
+      { signal: aiAbort.signal }
+    ).finally(() => clearTimeout(aiTimeout));
     
     const normalized = response.choices[0]?.message?.content?.trim();
     return normalized || rawText;
@@ -569,12 +579,17 @@ async function generateSemanticDescription(userInput: string): Promise<string> {
 
 输出（仅一句话）：`;
   
-  const response = await openai.chat.completions.create({
-    model: getDeepseekModel('flash'),
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.3,
-    max_tokens: 50,
-  });
+  const aiAbort = new AbortController();
+  const aiTimeout = setTimeout(() => aiAbort.abort(), 3000);
+  const response = await openai.chat.completions.create(
+    {
+      model: getDeepseekModel('flash'),
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.3,
+      max_tokens: 50,
+    },
+    { signal: aiAbort.signal }
+  ).finally(() => clearTimeout(aiTimeout));
   
   const description = response.choices[0]?.message?.content?.trim() || userInput;
   return description;
@@ -751,13 +766,18 @@ ${availableOptions}
 2. 所有label使用简体中文
 3. confidence反映确定性，locked category场景下应+0.1`;
     
-    const response = await (openai.chat.completions.create as any)({
-      model: getDeepseekModel('flash'),
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-      temperature: 0.3,
-      max_tokens: 500,
-    });
+    const aiAbort = new AbortController();
+    const aiTimeout = setTimeout(() => aiAbort.abort(), 5000);
+    const response = await (openai.chat.completions.create as any)(
+      {
+        model: getDeepseekModel('flash'),
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.3,
+        max_tokens: 500,
+      },
+      { signal: aiAbort.signal }
+    ).finally(() => clearTimeout(aiTimeout));
     
     const content = response.choices[0]?.message?.content;
     if (!content) return null;

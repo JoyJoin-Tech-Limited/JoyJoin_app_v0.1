@@ -10,7 +10,34 @@ import { classifyIndustryUnified, classifyIndustry } from "../../inference/indus
 import type { IndustryClassificationResult } from "../../inference/industryClassifier";
 import { archetypeRegistry } from "@shared/personality";
 
-const AI_TIMEOUT_MS = 8000;
+const AI_TIMEOUT_MS = 6000;
+const REACTION_TIMEOUT_MS = 4000;
+const TOTAL_ROUTE_BUDGET_MS = 12000;
+
+// Simple in-memory rate limiter: 10 requests per minute per user
+const professionRateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const PROFESSION_RATE_LIMIT_MAX = 10;
+const PROFESSION_RATE_LIMIT_WINDOW_MS = 60_000;
+
+function checkProfessionRateLimit(userId: string): { allowed: boolean; retryAfterMs?: number } {
+  const now = Date.now();
+  // Periodic cleanup: prune expired entries every ~100 calls to prevent unbounded growth
+  if (professionRateLimitMap.size > 200 && Math.random() < 0.1) {
+    for (const [key, entry] of professionRateLimitMap) {
+      if (now >= entry.resetAt) professionRateLimitMap.delete(key);
+    }
+  }
+  const entry = professionRateLimitMap.get(userId);
+  if (!entry || now >= entry.resetAt) {
+    professionRateLimitMap.set(userId, { count: 1, resetAt: now + PROFESSION_RATE_LIMIT_WINDOW_MS });
+    return { allowed: true };
+  }
+  if (entry.count >= PROFESSION_RATE_LIMIT_MAX) {
+    return { allowed: false, retryAfterMs: entry.resetAt - now };
+  }
+  entry.count++;
+  return { allowed: true };
+}
 
 function requireAuth(req: Request, res: any, next: any) {
   if (!getAuthenticatedUserId(req)) {
@@ -80,7 +107,8 @@ async function getArchetypeContext(userId: string): Promise<ArchetypeTraitContex
 async function generateAIReaction(
   rawText: string,
   classification: IndustryClassificationResult,
-  archetype: ArchetypeTraitContext
+  archetype: ArchetypeTraitContext,
+  signal?: AbortSignal
 ): Promise<{ reaction: string; displayTags: string[] }> {
   const traitContext = archetype.traits.length > 0
     ? `用户的社交人格特质包含：${archetype.traits.join("、")}。请在回复中自然地融入这些特质，但不要直接说出人格类型的名称。`
@@ -118,19 +146,22 @@ ${traitContext}
     const client = getDeepseekClient();
     const model = getDeepseekModel("flash");
 
-    const response = await client.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: "system",
-          content: "你是一个温暖有趣的社交App助手。请严格以JSON格式回复，不要添加额外的解释。",
-        },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.8,
-      max_tokens: 500,
-      response_format: { type: "json_object" },
-    });
+    const response = await client.chat.completions.create(
+      {
+        model,
+        messages: [
+          {
+            role: "system",
+            content: "你是一个温暖有趣的社交App助手。请严格以JSON格式回复，不要添加额外的解释。",
+          },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.8,
+        max_tokens: 500,
+        response_format: { type: "json_object" },
+      },
+      signal ? { signal } : undefined
+    );
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
@@ -154,13 +185,32 @@ ${traitContext}
   }
 }
 
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  context: string,
+  abortController?: AbortController
+): Promise<T> {
+  let timer: NodeJS.Timeout | null = null;
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timer = setTimeout(() => {
+      abortController?.abort();
+      reject(new Error(`${context} timeout after ${ms}ms`));
+    }, ms);
+  });
+  return Promise.race([
+    promise.finally(() => { if (timer) clearTimeout(timer); }),
+    timeoutPromise,
+  ]);
+}
+
 function buildFallbackReaction(rawText: string, classification: IndustryClassificationResult): string {
   const label = classification.niche?.label
     || classification.segment?.label
     || classification.category?.label
     || "你的行业";
 
-  return `收到！「${rawText.trim()}」——${label}这个领域很有趣，我已经把它放进你的匹配画像里了，帮你找到聊得来的搭子~ 🎯`;
+  return `收到！「${rawText.trim()}」——${label}这个领域很有趣，我已经把它放进你的匹配画像里了，帮你找到聊得来的搭子~`;
 }
 
 function buildFallbackTags(classification: IndustryClassificationResult, archetypeTraits?: string[]): string[] {
@@ -269,24 +319,35 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
       const { description } = parseResult.data;
       const userId = getAuthenticatedUserId(req)!;
 
+      const rateLimit = checkProfessionRateLimit(userId);
+      if (!rateLimit.allowed) {
+        logger.warn("[understand-profession] Rate limit exceeded", { userId });
+        return res.status(429).json({
+          error: "Too many requests",
+          retryAfterMs: rateLimit.retryAfterMs,
+        });
+      }
+
       const archetypeContext = await getArchetypeContext(userId);
 
-      const classificationTimeout = new Promise<null>((resolve) =>
-        setTimeout(() => resolve(null), AI_TIMEOUT_MS)
-      );
+      let classificationTimer: NodeJS.Timeout | null = null;
+      const classificationTimeout = new Promise<null>((resolve) => {
+        classificationTimer = setTimeout(() => resolve(null), AI_TIMEOUT_MS);
+      });
 
-      const result = await Promise.race([
-        (async () => {
-          const [cat, ai] = await Promise.all([
-            runCatalogClassification(description).catch(
-              () => ({ result: null, source: "fuzzy" as const })
-            ),
-            runAIClassification(description).catch(() => null),
-          ]);
-          return { catalogResult: cat, aiResult: ai };
-        })(),
-        classificationTimeout.then(() => null),
-      ]);
+      const classificationPromise = (async () => {
+        const [cat, ai] = await Promise.all([
+          runCatalogClassification(description).catch(
+            () => ({ result: null, source: "fuzzy" as const })
+          ),
+          runAIClassification(description).catch(() => null),
+        ]);
+        return { catalogResult: cat, aiResult: ai };
+      })();
+
+      const result = await Promise.race([classificationPromise, classificationTimeout]);
+      if (classificationTimer) clearTimeout(classificationTimer);
+      const classificationTimedOut = result === null;
 
       const catalogResult = result?.catalogResult ?? { result: null, source: "fuzzy" as const };
       const aiResult = result?.aiResult ?? null;
@@ -296,11 +357,48 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
         aiResult
       );
 
-      const { reaction, displayTags } = await generateAIReaction(
-        description,
-        classification,
-        archetypeContext
+      // Budget-aware reaction generation:
+      // - If classification already timed out, skip AI and use deterministic fallback
+      //   so the client receives a fast response instead of cascading delays.
+      // - Otherwise cap reaction LLM latency with REACTION_TIMEOUT_MS to stay inside
+      //   the overall route budget.
+      const elapsedMs = Date.now() - startTime;
+      const reactionBudgetMs = Math.max(
+        2000,
+        Math.min(REACTION_TIMEOUT_MS, TOTAL_ROUTE_BUDGET_MS - elapsedMs - 500)
       );
+
+      let reaction: string;
+      let displayTags: string[];
+      if (classificationTimedOut || reactionBudgetMs <= 2000) {
+        logger.info("[understand-profession] Skipping AI reaction due to budget", {
+          classificationTimedOut,
+          elapsedMs,
+          reactionBudgetMs,
+        });
+        reaction = buildFallbackReaction(description, classification);
+        displayTags = buildFallbackTags(classification, archetypeContext.traits);
+      } else {
+        const reactionAbort = new AbortController();
+        try {
+          const aiReaction = await withTimeout(
+            generateAIReaction(description, classification, archetypeContext, reactionAbort.signal),
+            reactionBudgetMs,
+            "AI reaction",
+            reactionAbort
+          );
+          reaction = aiReaction.reaction;
+          displayTags = aiReaction.displayTags;
+        } catch (timeoutError) {
+          logger.warn("[understand-profession] Reaction generation timed out, using fallback", {
+            elapsedMs,
+            reactionBudgetMs,
+            error: timeoutError instanceof Error ? timeoutError.message : String(timeoutError),
+          });
+          reaction = buildFallbackReaction(description, classification);
+          displayTags = buildFallbackTags(classification, archetypeContext.traits);
+        }
+      }
 
       const reactionHint = buildReactionHint(description, classification);
 

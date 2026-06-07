@@ -1,7 +1,8 @@
 # JoyJoin Developer Quick Reference Guide
 
 **Version:** 2.3
-**Last Updated:** 2026-06-02**For:** Tech Team Onboarding & Codebase Navigation
+**Last Updated:** 2026-06-05
+**For:** Tech Team Onboarding & Codebase Navigation
 
 ---
 
@@ -217,7 +218,8 @@ joyjoin-monorepo/
 | Swipe-back flag-reset hook | `apps/mini-program/src/hooks/useResetOnShow.ts` |
 | Quality bar (pixel precision, DevTools) | `.github/skills/mini-program-frontend-excellence/SKILL.md` |
 | 完成度 audit (completeness + ROI recommendations) | `.github/skills/completeness-audit/SKILL.md` (pipeline: ui-layout-audit → frontend-design-audit → completeness-audit) |
-| Hero promo banner (discover top surface) | `apps/mini-program/src/components/HeroPromoBanner.tsx` — full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles. Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`, default `true`) |
+| Hero promo banner (discover top surface) | `apps/mini-program/src/components/HeroPromoBanner.tsx` — full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles. CTA always wired so it never silently disables; `margin-bottom: 8rpx` prevents boundary clipping. Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`, default `true`). Promo copy must not fabricate social-proof metrics. |
+| Status card (empty/error) | `apps/mini-program/src/components/ui/StatusCard.tsx` — unified status surface with Lovart hero illustration (WebP + PNG fallback), title, description, and optional action. Used on Discover and Events for empty states and on Discover for list-fetch error states. |
 
 ```bash
 npm run dev:weapp --workspace=mini-program
@@ -294,7 +296,7 @@ logger.error('Payment webhook failed', { orderId, error: err.message });
 
 ## User Journey & Authentication Flow
 
-**Updated:** 2026-05-23 (welcome-back screen + onboarding restart v0.1)
+**Updated:** 2026-06-05 (auth loading gate + prefetch kill-switch hygiene)
 
 ### Authentication States
 
@@ -310,7 +312,7 @@ interface UseAuthResult {
   profileEssentialComplete: boolean | undefined;
   profileExtendedComplete: boolean | undefined;
   activeAssessmentSessionId: string | null | undefined;
-  paymentsEnabled: boolean;                 // Feature flag: payment kill switch
+  paymentsEnabled: boolean;                 // Feature flag: payment kill switch — do NOT hardcode in prefetch shells; let the live `/api/auth/user` response own this value
   restartsRemaining?: number;              // Onboarding restart quota remaining (0–5)
   features?: {
     restartOnboarding?: boolean;       // Onboarding restart kill switch
@@ -323,7 +325,31 @@ interface UseAuthResult {
   }; // Feature flags from server (DB-backed, resolved in parallel, see lib/featureFlags.ts)
 }
 ```
+
+### Auth loading gate and prefetch feature-flag hygiene (2026-06-05)
+
+**Auth pending rule:** `apps/mini-program/src/hooks/auth/authState.ts` defines `isAuthPending` as:
+```typescript
+const isAuthPending =
+  input.isLoading || (input.isFetching && input.user === undefined)
 ```
+This prevents background refetches from gating the UI once an initial user object has arrived. Fixes the stuck-loading shell after app resume.
+
+**Page gate timeout:** `apps/mini-program/src/hooks/navigation/useMiniPageGate.ts` adds a 4-second force-release ceiling (`MINI_PAGE_GATE_TIMEOUT_MS = 4000`). If auth is still loading after 4s, the gate releases and the page renders its own fallback instead of hanging indefinitely.
+
+**Prefetch engine:** `apps/mini-program/src/lib/prefetchEngine.ts` injects pruned auth fragments for Discover/Events/Connections shells. It intentionally omits kill-switch fields like `paymentsEnabled` so the live auth fetch remains the single source of truth. Previously a hardcoded `paymentsEnabled: false` caused stale "权益维护中" toasts even when payments were enabled server-side.
+
+### Tab-page state patterns (2026-06-05)
+
+The primary tab pages now follow a consistent loading / empty / error vocabulary:
+
+| Page | Loading | Empty | Error |
+|------|---------|-------|-------|
+| Discover | Skeleton shimmer above list | `StatusCard` with Lovart `lovart-generic-empty.webp` + action CTA | `StatusCard` `tone='error'` with Lovart error illustration + retry |
+| Events | Skeleton shimmer above tabs | `StatusCard` with Lovart `lovart-generic-empty.webp` + action CTA | `XiaoyueEmptyState` `emotion='sad'` + retry |
+| Connections | `XiaoyueEmptyState` `emotion='waiting'` | `XiaoyueEmptyState` (contextual) | `XiaoyueEmptyState` `emotion='sad'` + retry |
+
+Full-screen empty/error states inside `ScrollView` must use `@include scroll-view-centered-state` (`_mixins.scss`) to guarantee vertical centering.
 
 ### Complete User Flow Diagram (Option B: Post-Test Signup)
 

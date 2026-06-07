@@ -5,6 +5,7 @@ Component({
 
   // Internal debounce / diff state (not reactive)
   _syncTimer: null,
+  _showTimer: null,
   _lastBadgesKey: '',
   _lastSelected: -1,
   _lastCenterUrl: '',
@@ -83,6 +84,7 @@ Component({
     },
     detached: function () {
       clearTimeout(this._syncTimer)
+      clearTimeout(this._showTimer)
     },
   },
 
@@ -92,7 +94,8 @@ Component({
     // has had time to fire (syncState debounce = 50ms).
     show: function () {
       var self = this
-      setTimeout(function () {
+      clearTimeout(this._showTimer)
+      this._showTimer = setTimeout(function () {
         if (self.data.selected !== self._confirmedSelected) {
           self.setData({ selected: self._confirmedSelected })
         }
@@ -259,7 +262,7 @@ Component({
       try {
         wx.reportAnalytics(eventType, data)
       } catch (err) {
-        console.log('[TabBarAnalytics]', eventType, data)
+        console.warn('[TabBarAnalytics]', eventType, data)
       }
     },
 

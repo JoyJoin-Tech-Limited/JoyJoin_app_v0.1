@@ -94,7 +94,32 @@ Expected result:
 - The page title reads `我的足迹`.
 - The content area shows the normal Events page, not a redirect placeholder.
 
-### Case 2 - Legacy `my-events` alias
+### Case 2 - Events empty and error states
+
+Goal: confirm the Events tab renders branded empty/error surfaces when appropriate.
+
+Entry:
+
+1. Use a test account with **zero joined events** (or mock the `joined-events` query to return `[]`).
+2. Tap `足迹`.
+
+Expected result:
+
+- The page shows the `StatusCard` empty state with the Lovart `lovart-generic-empty.webp` hero illustration.
+- The title and description use warm copy.
+- A primary action CTA is visible (e.g., `去发现活动`).
+
+Entry (error):
+
+1. Force the `GET /api/shell/events` and fallback `/api/events/joined` calls to fail (e.g., block the request in DevTools Network or temporarily return 500 from a local route).
+2. Tap `足迹` or pull-to-refresh.
+
+Expected result:
+
+- The page shows `XiaoyueEmptyState` with `emotion='sad'`, an error title/subtitle, and a retry CTA.
+- Tapping retry re-fetches the events list.
+
+### Case 3 - Legacy `my-events` alias
 
 Goal: confirm the older my-events entry now funnels into the same Events tab.
 

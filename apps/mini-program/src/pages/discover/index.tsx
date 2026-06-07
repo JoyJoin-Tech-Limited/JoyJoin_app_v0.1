@@ -157,6 +157,7 @@ function AuthenticatedDiscover() {
     isFetching: poolsFetching,
   } = useQuery({
     queryKey: ['mini-program', 'event-pools'],
+    staleTime: 2 * 60 * 1000,
     queryFn: async (): Promise<EventPoolSummary[]> => {
       // Primary: composite endpoint — 1 request for all Discover data.
       // Why: cuts TTFB and request overhead vs 3 parallel calls.
@@ -183,6 +184,7 @@ function AuthenticatedDiscover() {
 
   const { data: registrations = [] } = useQuery({
     queryKey: ['mini-program', 'my-pool-registrations'],
+    staleTime: 2 * 60 * 1000,
     queryFn: () => getMyPoolRegistrations(apiRequest),
   })
 
@@ -310,9 +312,10 @@ function AuthenticatedDiscover() {
   // When manual filter returns nothing, automatically fall back to all pools
   // sorted by proximity, with a banner explaining the relaxation.
   const isAutoRelaxed = hasManualFilter && displayPools.length === 0 && pools.length > 0
-  const visiblePools = isAutoRelaxed
-    ? sortPoolsByProximity(pools, detectedClusterId)
-    : displayPools
+  const visiblePools = useMemo<EventPoolSummary[]>(
+    () => (isAutoRelaxed ? sortPoolsByProximity(pools, detectedClusterId) : displayPools),
+    [isAutoRelaxed, pools, detectedClusterId, displayPools],
+  )
 
   // Track auto-relaxation once per occurrence
   const hasTrackedRelaxRef = useRef(false)
@@ -479,9 +482,8 @@ function AuthenticatedDiscover() {
           />
         </View>
         <View className='discover-auth__hero-text'>
-          <View className='discover-auth__greeting-line'>
-            <Text className='discover-auth__greeting'>{timeGreeting}！</Text>
-            <Text className='discover-auth__greeting-prompt'>今晚想怎么玩？</Text>
+          <View className='discover-auth__greeting-line' aria-label={`${timeGreeting}，今晚想怎么玩？`}>
+            <Text className='discover-auth__greeting'>{timeGreeting}！</Text><Text className='discover-auth__greeting-prompt'>今晚想怎么玩？</Text>
           </View>
           <Text className='discover-auth__subtitle'>{dynamicSubtitle}</Text>
         </View>
@@ -503,8 +505,9 @@ function AuthenticatedDiscover() {
             className='discover-auth__location-pill-icon'
           />
           <Text className='discover-auth__location-pill-text'>
-            在 深圳 • {locationPillLabel} ▼
+            在 深圳 • {locationPillLabel}
           </Text>
+          <Text className='discover-auth__location-pill-chevron'>▼</Text>
         </View>
       </View>
 

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { z } from "zod";
 import { db } from "../../db";
 import { venues, venueTimeSlots, venueTimeSlotBookings, eventPoolGroups, eventPools } from "@shared/schema";
-import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { eq, and, or, desc, sql, inArray } from "drizzle-orm";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { logger } from "../../lib/logger";
 import { getActingAdminId } from "../../lib/getActingAdminId";
@@ -829,44 +829,23 @@ export function registerVenueRoutes(app: Express): void {
     }
   });
 
-  // Get available venues for a specific date/time (for event pool creation)
-  app.get("/api/admin/available-venues", requireAdmin, async (req, res) => {
-    try {
-      const { city, district, date, startTime, endTime } = req.query;
-      
-      if (!city || !date) {
-        return res.status(400).json({ message: "City and date are required" });
-      }
-
-      const availableVenues = await storage.getAvailableVenuesForDateTime(
-        city as string,
-        district as string | undefined,
-        date as string,
-        startTime as string | undefined,
-        endTime as string | undefined
-      );
-
-      res.json(availableVenues);
-    } catch (error) {
-      logger.error("Error fetching available venues", { error: String(error) });
-      res.status(500).json({ message: "Failed to fetch available venues" });
-    }
-  });
-
   // Smart venue filter API - with budget and cuisine filtering
+  // Optional `date` param (YYYY-MM-DD) enables date-level availability checking:
+  // returns venues that have at least one slot with remaining capacity on that date.
   app.get("/api/admin/smart-venues", requireAdmin, async (req, res) => {
     try {
-      const { 
-        city, 
-        district, 
-        eventType, 
-        budgetRestrictions 
+      const {
+        city,
+        district,
+        eventType,
+        budgetRestrictions,
+        date,
       } = req.query;
-      
+
       if (!city || !eventType) {
         return res.status(400).json({ message: "缺少必要参数: city and eventType required" });
       }
-      
+
       // Parse and validate budget restrictions
       let budgets: string[] = [];
       if (budgetRestrictions) {
@@ -880,19 +859,19 @@ export function registerVenueRoutes(app: Express): void {
           return res.status(400).json({ message: "无法解析 budgetRestrictions 参数，必须是有效的 JSON" });
         }
       }
-      
+
       // Determine allowed venue types based on event type
       const allowedVenueTypes = eventType === "酒局"
         ? ["bar", "homebar"]
         : ["restaurant", "cafe"];
-      
+
       // Build base query with venue type filter
       let whereConditions = and(
         eq(venues.city, city as string),
         eq(venues.isActive, true),
         inArray(venues.venueType, allowedVenueTypes)
       );
-      
+
       // Apply district filter if provided
       if (district) {
         whereConditions = and(
@@ -900,7 +879,7 @@ export function registerVenueRoutes(app: Express): void {
           eq(venues.area, district as string)
         );
       }
-      
+
       // Apply budget filter using SQL array overlap if restrictions provided
       if (budgets.length > 0) {
         whereConditions = and(
@@ -908,36 +887,101 @@ export function registerVenueRoutes(app: Express): void {
           sql`${venues.budgetCategories} && ${budgets}::text[]`
         );
       }
-      
+
       const filteredVenues = await db
         .select()
         .from(venues)
         .where(whereConditions)
         .limit(1000);
-      
-      // Batch check which venues have time slots configured
-      let venuesWithSlots;
+
       if (filteredVenues.length === 0) {
-        venuesWithSlots = [];
-      } else {
-        // Single query to fetch all venueIds that have at least one active time slot
-        const activeSlots = await db
-          .select({ venueId: venueTimeSlots.venueId })
+        res.json([]);
+        return;
+      }
+
+      const venueIds = filteredVenues.map((v: typeof filteredVenues[0]) => v.id);
+
+      // ── Base slot check: does the venue have any active slots at all? ──
+      const activeSlots = await db
+        .select({ venueId: venueTimeSlots.venueId })
+        .from(venueTimeSlots)
+        .where(
+          and(
+            inArray(venueTimeSlots.venueId, venueIds),
+            eq(venueTimeSlots.isActive, true)
+          )
+        )
+        .limit(1000);
+
+      const venuesWithActiveSlots = new Set(
+        activeSlots.map((slot: typeof activeSlots[0]) => slot.venueId)
+      );
+
+      // ── Optional date-level availability check ──
+      let venuesWithDateAvailability: Map<string, { hasAvailability: boolean; slotCount: number }> | undefined;
+
+      if (date && typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        const dayOfWeek = new Date(date).getDay();
+
+        // Load slots that match the date (by dayOfWeek or specificDate)
+        const dateSlots = await db
+          .select()
           .from(venueTimeSlots)
-          .where(eq(venueTimeSlots.isActive, true))
-          .limit(1000);
+          .where(
+            and(
+              inArray(venueTimeSlots.venueId, venueIds),
+              eq(venueTimeSlots.isActive, true),
+              or(
+                eq(venueTimeSlots.dayOfWeek, dayOfWeek),
+                eq(venueTimeSlots.specificDate, date)
+              )
+            )
+          );
 
-        const venuesWithActiveSlots = new Set(
-          activeSlots.map((slot: { venueId: string | null }) => slot.venueId)
-        );
+        // Load confirmed bookings for the date
+        const dateBookings = await db
+          .select()
+          .from(venueTimeSlotBookings)
+          .where(
+            and(
+              eq(venueTimeSlotBookings.bookingDate, date),
+              eq(venueTimeSlotBookings.status, "confirmed"),
+              inArray(venueTimeSlotBookings.venueId, venueIds)
+            )
+          );
 
-        venuesWithSlots = filteredVenues.map((venue: typeof venues.$inferSelect) => ({
+        venuesWithDateAvailability = new Map();
+
+        for (const venue of filteredVenues) {
+          const slots = dateSlots.filter((s: typeof dateSlots[0]) => s.venueId === venue.id);
+          const bookings = dateBookings.filter((b: typeof dateBookings[0]) => b.venueId === venue.id);
+
+          let availableCount = 0;
+          for (const slot of slots) {
+            const slotBookings = bookings.filter((b: typeof bookings[0]) => b.timeSlotId === slot.id);
+            if (slotBookings.length < (slot.maxConcurrentEvents || 1)) {
+              availableCount++;
+            }
+          }
+
+          venuesWithDateAvailability.set(venue.id, {
+            hasAvailability: availableCount > 0,
+            slotCount: availableCount,
+          });
+        }
+      }
+
+      const result = filteredVenues.map((venue: typeof filteredVenues[0]) => {
+        const dateInfo = venuesWithDateAvailability?.get(venue.id);
+        return {
           ...venue,
           hasTimeSlots: venuesWithActiveSlots.has(venue.id),
-        }));
-      }
-      
-      res.json(venuesWithSlots);
+          hasAvailabilityOnDate: dateInfo?.hasAvailability ?? null,
+          availableSlotCount: dateInfo?.slotCount ?? null,
+        };
+      });
+
+      res.json(result);
     } catch (error) {
       logger.error("Smart venue filter error", { error: String(error) });
       res.status(500).json({ message: "查询失败" });

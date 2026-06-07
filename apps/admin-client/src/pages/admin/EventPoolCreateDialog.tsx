@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
 import {
   Dialog,
@@ -13,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -20,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Store, MapPin, Clock } from "lucide-react";
+import { Calendar, Store, MapPin, RefreshCw, RotateCcw } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -30,14 +32,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { apiRequest } from "@/lib/queryClient";
+import { CITY_DISTRICTS } from "@/lib/cityDistricts";
+import { useToast } from "@/hooks/ui/use-toast";
 
-interface AvailableVenueSlot {
-  id: string;
-  startTime: string;
-  endTime: string;
-  maxConcurrentEvents: number;
-}
-
+/**
+ * Venue data enriched with date-level availability from the smart-venues API.
+ */
 interface AvailableVenue {
   venue: {
     id: string;
@@ -50,13 +50,11 @@ interface AvailableVenue {
     tags: string[] | null;
     cuisines: string[] | null;
   };
-  availableSlots: AvailableVenueSlot[];
+  /** Whether the venue has at least one slot with capacity remaining on the selected date */
+  hasAvailabilityOnDate: boolean | null;
+  /** Number of slots with remaining capacity on the selected date (null if date not queried) */
+  availableSlotCount: number | null;
 }
-
-const CITY_DISTRICTS: Record<string, string[]> = {
-  深圳: ["南山", "福田", "罗湖", "宝安", "龙岗", "龙华", "盐田", "坪山", "光明"],
-  香港: ["中西区", "湾仔", "东区", "南区", "油尖旺", "深水埗", "九龙城", "黄大仙", "观塘", "荃湾", "屯门", "元朗", "北区", "大埔", "沙田", "西贡", "离岛"],
-};
 
 interface EventPoolCreateDialogProps {
   open: boolean;
@@ -79,39 +77,60 @@ export default function EventPoolCreateDialog({
   createPoolMutation,
   updatePoolMutation,
 }: EventPoolCreateDialogProps) {
+  const { toast } = useToast();
   const currentCity = form.watch("city") as "深圳" | "香港";
   const currentDistrict = form.watch("district");
   const currentDateTime = form.watch("dateTime");
+  const currentEventType = form.watch("eventType");
   const currentCityDistricts = CITY_DISTRICTS[currentCity] ?? [];
 
-  const { data: availableVenues = [], isLoading: isLoadingVenues, isError: isVenuesError } = useQuery<AvailableVenue[]>({
+  // Extract YYYY-MM-DD from the datetime-local input for date-level availability checking
+  const selectedDate = currentDateTime && typeof currentDateTime === "string"
+    ? currentDateTime.split("T")[0]
+    : undefined;
+
+  const {
+    data: availableVenues = [],
+    isLoading: isLoadingVenues,
+    isError: isVenuesError,
+    error: venuesError,
+    refetch,
+  } = useQuery<AvailableVenue[]>({
     queryKey: [
       "/api/admin/smart-venues",
       currentCity,
       currentDistrict,
-      currentDateTime,
-      form.watch("eventType"),
+      selectedDate,
+      currentEventType,
     ],
     queryFn: async () => {
-      if (!currentCity || !currentDateTime) return [];
-      const eventType = form.watch("eventType");
+      if (!currentCity || !selectedDate) return [];
       const params = new URLSearchParams({
         city: currentCity,
-        eventType: eventType || "饭局",
+        eventType: currentEventType || "饭局",
+        date: selectedDate,
       });
       if (currentDistrict) {
         params.append("district", currentDistrict);
       }
-      let res: Response;
-      try {
-        res = await apiRequest("GET", `/api/admin/smart-venues?${params}`);
-      } catch (err) {
-        throw new Error("Failed to load venues");
-      }
-      const venues = await res.json() as any[];
+      const res = await apiRequest("GET", `/api/admin/smart-venues?${params}`);
+      const venues = (await res.json()) as Array<{
+        id: string;
+        name: string;
+        venueType: string;
+        address: string;
+        city: string;
+        area: string;
+        priceRange: string | null;
+        tags: string[] | null;
+        cuisines: string[] | null;
+        hasTimeSlots: boolean;
+        hasAvailabilityOnDate: boolean | null;
+        availableSlotCount: number | null;
+      }>;
       return venues
-        .filter((v: any) => v.hasTimeSlots)
-        .map((v: any) => ({
+        .filter((v) => v.hasTimeSlots)
+        .map((v) => ({
           venue: {
             id: v.id,
             name: v.name,
@@ -123,11 +142,26 @@ export default function EventPoolCreateDialog({
             tags: v.tags,
             cuisines: v.cuisines,
           },
-          availableSlots: [],
+          hasAvailabilityOnDate: v.hasAvailabilityOnDate,
+          availableSlotCount: v.availableSlotCount,
         }));
     },
-    enabled: open && !!currentCity && !!currentDateTime,
+    enabled: open && !!currentCity && !!selectedDate,
   });
+
+  // Show toast once when venue loading fails so the error isn't silent
+  useEffect(() => {
+    if (isVenuesError && venuesError) {
+      const message = venuesError instanceof Error ? venuesError.message : "未知错误";
+      if (!message.includes("401")) {
+        toast({
+          title: "加载可用场地失败",
+          description: message,
+          variant: "destructive",
+        });
+      }
+    }
+  }, [isVenuesError, venuesError, toast]);
 
   const handleCloseDialog = (value: boolean) => {
     if (!value) {
@@ -314,43 +348,102 @@ export default function EventPoolCreateDialog({
             </div>
 
             {/* 可用场地提示 */}
-            {currentCity && currentDateTime && (
-              <div className="border-t pt-4 mt-4">
+            {currentCity && selectedDate && (
+              <div
+                className="border-t pt-4 mt-4"
+                aria-live="polite"
+                aria-label="可用场地"
+                role="region"
+              >
                 <div className="flex items-center gap-2 mb-3">
-                  <Store className="h-4 w-4 text-primary" />
+                  <Store className="h-4 w-4 text-primary" aria-hidden="true" />
                   <h3 className="font-semibold">可用场地</h3>
-                  {isLoadingVenues && <span className="text-xs text-muted-foreground">加载中...</span>}
+                  {!isLoadingVenues && !isVenuesError && (
+                    <Badge variant="secondary" className="text-xs">
+                      {availableVenues.length} 个场地
+                    </Badge>
+                  )}
+                  {!isLoadingVenues && availableVenues.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs ml-auto"
+                      onClick={() => refetch()}
+                      aria-label="刷新场地列表"
+                    >
+                      <RefreshCw className="h-3 w-3 mr-1" aria-hidden="true" />
+                      刷新
+                    </Button>
+                  )}
                 </div>
+
+                {/* Skeleton loading state */}
+                {isLoadingVenues && (
+                  <div className="space-y-2" role="status" aria-label="加载场地中">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="p-3 bg-muted/30 rounded-md space-y-2">
+                        <Skeleton className="h-4 w-3/5" />
+                        <Skeleton className="h-3 w-2/5" />
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {isVenuesError && (
                   <div className="text-sm text-destructive bg-destructive/10 rounded-md p-3">
-                    加载可用场地失败，请检查网络连接后重试
+                    <div className="font-medium">加载可用场地失败</div>
+                    <div className="text-destructive/80 mt-1">
+                      {venuesError instanceof Error && venuesError.message.includes("401")
+                        ? "会话已过期，请重新登录后重试"
+                        : venuesError instanceof Error
+                          ? venuesError.message
+                          : "请检查网络连接后重试"}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 h-7 text-xs"
+                      onClick={() => refetch()}
+                    >
+                      <RotateCcw className="h-3 w-3 mr-1" aria-hidden="true" />
+                      重试
+                    </Button>
                   </div>
                 )}
 
                 {!isLoadingVenues && !isVenuesError && availableVenues.length === 0 && (
-                  <div className="text-sm text-muted-foreground bg-muted/50 rounded-md p-3">
-                    {currentDistrict
-                      ? `${currentCity} ${currentDistrict} 在所选时间暂无可用场地，请调整区域或时间`
-                      : `${currentCity} 在所选时间暂无可用场地，请先选择区域或调整时间`
-                    }
+                  <div className="text-sm text-muted-foreground bg-muted/50 rounded-md p-3 flex items-start gap-2">
+                    <Store className="h-4 w-4 mt-0.5 shrink-0 opacity-50" aria-hidden="true" />
+                    <div>
+                      <div className="font-medium">
+                        {currentDistrict
+                          ? `${currentCity} ${currentDistrict} 暂无可用场地`
+                          : `${currentCity} 暂无可用场地`
+                        }
+                      </div>
+                      <div className="text-muted-foreground/80 mt-0.5">
+                        请调整日期、区域或活动类型后重试
+                      </div>
+                    </div>
                   </div>
                 )}
 
                 {!isLoadingVenues && availableVenues.length > 0 && (
                   <ScrollArea className="h-[160px] rounded-md border p-2">
                     <div className="space-y-2">
-                      {availableVenues.map(({ venue, availableSlots }: { venue: AvailableVenue["venue"]; availableSlots: AvailableVenueSlot[] }) => (
+                      {availableVenues.map(({ venue, hasAvailabilityOnDate, availableSlotCount }) => (
                         <div
                           key={venue.id}
                           className="p-3 bg-muted/30 rounded-md"
                           data-testid={`available-venue-${venue.id}`}
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <div className="font-medium text-sm">{venue.name}</div>
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                                <MapPin className="h-3 w-3" />
+                            <div className="min-w-0">
+                              <div className="font-medium text-sm truncate">{venue.name}</div>
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 flex-wrap">
+                                <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
                                 <span>{venue.area}</span>
                                 {venue.priceRange && (
                                   <>
@@ -358,19 +451,25 @@ export default function EventPoolCreateDialog({
                                     <span>¥{venue.priceRange}/人</span>
                                   </>
                                 )}
+                                {typeof availableSlotCount === "number" && availableSlotCount > 0 && (
+                                  <>
+                                    <span className="mx-1">·</span>
+                                    <span className="text-green-600 font-medium">
+                                      {availableSlotCount} 个时段可预订
+                                    </span>
+                                  </>
+                                )}
+                                {hasAvailabilityOnDate === false && (
+                                  <>
+                                    <span className="mx-1">·</span>
+                                    <span className="text-amber-600">该日已满</span>
+                                  </>
+                                )}
                               </div>
                             </div>
                             <Badge variant="outline" className="text-xs shrink-0">
                               {venue.venueType === "restaurant" ? "餐厅" : "酒吧"}
                             </Badge>
-                          </div>
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {availableSlots.map((slot: AvailableVenueSlot) => (
-                              <Badge key={slot.id} variant="secondary" className="text-xs">
-                                <Clock className="h-3 w-3 mr-1" />
-                                {slot.startTime}-{slot.endTime}
-                              </Badge>
-                            ))}
                           </div>
                         </div>
                       ))}

@@ -21,11 +21,15 @@
           bindtap="handleTabTap"
           hover-class="joy-custom-tab-bar__item--pressed"
           hover-stay-time="150"
+          role="button"
+          aria-label="{{item.text}}"
+          aria-pressed="{{selected === item.index}}"
         >
           <cover-view class="joy-custom-tab-bar__item-icon-wrap">
             <cover-image
               class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--active' : ''}}"
               src="{{selected === item.index ? item.selectedIcon : item.icon}}"
+              mode="aspectFit"
             />
             <cover-view
               wx:if="{{item.badgeCount > 0}}"
@@ -58,11 +62,15 @@
           bindtap="handleTabTap"
           hover-class="joy-custom-tab-bar__item--pressed"
           hover-stay-time="150"
+          role="button"
+          aria-label="{{item.text}}"
+          aria-pressed="{{selected === item.index}}"
         >
           <cover-view class="joy-custom-tab-bar__item-icon-wrap">
             <cover-image
               class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--active' : ''}}"
               src="{{selected === item.index ? item.selectedIcon : item.icon}}"
+              mode="aspectFit"
             />
             <cover-view
               wx:if="{{item.badgeCount > 0}}"
@@ -84,23 +92,28 @@
   </cover-view>
 
   <!-- Semi-raised center CTA -->
-  <cover-view
-    class="joy-custom-tab-bar__center {{selected === 4 ? 'joy-custom-tab-bar__center--selected' : ''}}"
-    bindtap="handleCenterTap"
-    hover-class="joy-custom-tab-bar__center--pressed"
-    hover-stay-time="150"
-    role="button"
-    aria-label="{{center.label || 'JoyJoin 中心入口'}}"
-  >
-    <cover-view class="joy-custom-tab-bar__center-outer-ring">
-      <cover-view class="joy-custom-tab-bar__center-button">
-        <cover-image
-          class="joy-custom-tab-bar__center-logo"
-          src="../assets/joyjoin-logo-tab.png"
-        />
-        <cover-view wx:if="{{center.showBadge}}" class="joy-custom-tab-bar__center-badge"></cover-view>
+  <!-- Wrapper uses flexbox centering instead of left:50% + transform,
+       which is unstable in WeChat cover-view during setData re-renders. -->
+  <cover-view class="joy-custom-tab-bar__center-wrap">
+    <cover-view
+      class="joy-custom-tab-bar__center {{selected === 4 ? 'joy-custom-tab-bar__center--selected' : ''}}"
+      bindtap="handleCenterTap"
+      hover-class="joy-custom-tab-bar__center--pressed"
+      hover-stay-time="150"
+      role="button"
+      aria-label="{{center.label || 'JoyJoin 中心入口'}}"
+    >
+      <cover-view class="joy-custom-tab-bar__center-outer-ring">
+        <cover-view class="joy-custom-tab-bar__center-button">
+          <cover-image
+            class="joy-custom-tab-bar__center-logo"
+            src="../assets/joyjoin-logo-tab.png"
+            mode="aspectFit"
+          />
+          <cover-view wx:if="{{center.showBadge}}" class="joy-custom-tab-bar__center-badge"></cover-view>
+        </cover-view>
       </cover-view>
+      <cover-view class="joy-custom-tab-bar__center-label">{{center.label}}</cover-view>
     </cover-view>
-    <cover-view class="joy-custom-tab-bar__center-label">{{center.label}}</cover-view>
   </cover-view>
 </cover-view>

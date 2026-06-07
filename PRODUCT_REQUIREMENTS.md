@@ -77,7 +77,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-05-24)
+## 🆕 Recent Updates (Last updated: 2026-06-05)
 
 ### 2026 Milestones (May 2026)
 
@@ -98,7 +98,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 **31. Predictive Shell Generalization** 🐚 *(2026-05-17)*
 - **Composite tab endpoints:** `GET /api/shell/discover`, `/api/shell/profile`, `/api/shell/events`, `/api/shell/connections` bundle auth user + tab data into single responses, eliminating cold-start round-trips on tab switch.
 - **Shared server infrastructure:** `shellCache.ts` (NodeCache singleton, 30s TTL, cross-shell invalidation), `buildAuthUserResponse.ts` (shared auth builder), `shellRepository.ts` (N+1-free composite assembly). Prerequisite repos: `joinedEventsRepo.ts` and `connectionsRepo.ts`.
-- **Client prefetch engine:** Landing page stages all 4 shells after entry animation via `PrefetchEngine` (`apps/mini-program/src/lib/prefetchEngine.ts`), injecting composite data into existing TanStack Query keys. Auth injection is gated for pruned shells; Profile shell injects unconditionally.
+- **Client prefetch engine:** Landing page stages all 4 shells after entry animation via `PrefetchEngine` (`apps/mini-program/src/lib/prefetchEngine.ts`), injecting composite data into existing TanStack Query keys. Auth injection is gated for pruned shells; Profile shell injects unconditionally. **2026-06-05 fix:** `PrefetchEngine` intentionally omits `paymentsEnabled` from pruned auth fragments so the live `/api/auth/user` response remains the sole source of truth for kill-switch state.
 - **Cache invalidation:** `shellCache.invalidateUser(userId)` triggered on payment/coupon use, pool registration, connection creation, and assessment completion.
 - **Graceful fallback:** Events and Connections pages fall back to legacy endpoints (`/api/events/joined`, `/api/my-connections`) if composite 500s. Discover shell already had fallback from pilot.
 - **Profile page deduplication:** Removed duplicate `auth-user-profile` fetch; Profile page now reads directly from `AUTH_QUERY_KEY`.
@@ -117,6 +117,16 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Edit-profile:** 2-step continuous scroll (Step 1 "基础档案" + Step 2 "社交画像"). Field-level validation, scroll-to-error via `ScrollView scrollIntoView`, unsaved-changes guard, skeleton loading, haptics, floating CTA bar. Completeness audit: 44/44.
 - **Profile-review backport:** Adopted `InterestChipCloud` for interest + category chips.
 - **Analytics:** Lightweight `logInfo` events for `edit_profile_enter`, `edit_profile_save` (with `fieldsChanged`), `edit_profile_abandon` (with `secondsOnPage`).
+
+**35. Mini-Program Bug-Fix & Polish Sprint** 🐛 *(2026-06-05)*
+- **Discover empty state restored:** Replaced regressed empty state with `StatusCard` using Lovart `lovart-generic-empty.webp` hero illustration, warm title/description, and a primary action CTA (`去发现活动` or `清除筛选` when filters are active).
+- **Events empty/error states:** Empty state now uses the same `StatusCard` + Lovart pattern; fetch failures render `XiaoyueEmptyState` with `emotion='sad'` and a retry CTA.
+- **Connections loading/error states:** Branded loading via `XiaoyueEmptyState` `emotion='waiting'`; fetch failures render `emotion='sad'` with retry. Auth gate uses `useMiniPageGate` with a 4s force-release timeout to prevent stuck loading after app resume.
+- **`HeroPromoBanner` hardening:** CTA always receives `onCtaTap` so it never silently disables; added `margin-bottom: 8rpx` to prevent boundary clipping; static copy stripped of fabricated social-proof metrics.
+- **`LocationFilterDrawer` scroll fix:** Removed conflicting inline `height: 100%`; added WeChat `enableFlex` prop to `<ScrollView>`; drawer sheet now renders at `z-index: $z-modal` (`200`); district tiles have `role='button'`, `aria-pressed`, descriptive `aria-label`, and SCSS-token-driven heat-dot colours.
+- **`XiaoyueSpriteAnimator` crossfade gating:** Exit-frame animation respects `prefers-reduced-motion` and `useDeviceTier` degradation tier to prevent jank on low-end devices.
+- **Auth loading gate fix:** `authState.ts` now only blocks when `user === undefined`, so background refetches no longer flash a full-page loading shell.
+- **`PrefetchEngine` kill-switch hygiene:** Removed hardcoded `paymentsEnabled: false` from all shell injections so the real auth fetch owns the kill-switch state (fixes stale "权益维护中" toasts).
 
 **32. Bug & Polish Sprint — Mini-Program UX Hardening** 🐛 *(2026-05-22)*
 - **Auto-login for returning users:** `AutoLoginBridge` in `app.ts` silently authenticates returning users on cold start, eliminating the manual login tap for already-authorized sessions.
@@ -645,6 +655,7 @@ WHERE id = user_id;
 - **Accessibility:** `role="region"` + `aria-label` + `aria-roledescription="活动推荐横幅"` + `aria-live="polite"`; CTA 88rpx tap target; `env(safe-area-inset-bottom)` for iPhone home indicator; `@supports` fallback for `backdrop-filter`
 - **Performance:** Animations gated by `useDeviceTier` (degradation tier kills idle loops) and `IntersectionObserver` (pauses off-screen); sparkles use `transform`/`opacity` only with `will-change` for GPU promotion
 - **Kill switch:** `user.features.promoBannerEnabled` (server-driven, DB-backed via `featureFlags.FLAG_ENV_MAP`; admin-toggleable at `/admin/feature-flags`; env fallback `PROMO_BANNER_ENABLED`, default `true`)
+- **Copy trust rule (2026-06-05):** Static promo variants must not fabricate social-proof metrics (e.g., fake user counts, popularity percentages, "已有 10,000+ 人加入"). Use real query-backed numbers or omit the metric.
 - **Analytics:** `promo_banner_impression` (mount), `promo_banner_cta_tap` (CTA), `promo_banner_image_error` (CDN failure), `promo_banner_image_retry` (manual recovery, bounded at 2 attempts)
 
 #### Blind Box Event Lifecycle
@@ -663,6 +674,14 @@ User Sees:
     (same cluster first, adjacent cluster next, then chronology). Manual filter
     override via LocationFilterDrawer with 7-day TTL. Auto-relaxation to all-Shenzhen
     view with banner when manual filter is empty. Geo-hint chip shows detected cluster.
+  - Drawer accessibility: role="dialog", district tiles are role="button" with
+    aria-pressed and descriptive aria-label (includes district name + heat level),
+    heat-dot colours driven by SCSS tokens.
+  - Empty state (no matching pools): StatusCard with Lovart illustration,
+    warm title/description, and a primary action CTA ("去发现活动" or "清除筛选"
+    when manual filters are active).
+  - Error state (fetch failure): StatusCard with tone='error', Lovart error
+    illustration, and a retry CTA.
 ```
 
 **Phase 2: Pre-Entry Gating**

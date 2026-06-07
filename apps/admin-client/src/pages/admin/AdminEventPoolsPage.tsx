@@ -53,6 +53,7 @@ import type {
   PairScoreEntry,
 } from "./types";
 import { fmtDateTime, fmtDateTimeLocal, safeFormat } from "@/lib/dateUtils";
+import { CITY_DISTRICTS } from "@/lib/cityDistricts";
 import { zhCN } from "date-fns/locale";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -83,36 +84,6 @@ const RAW_STATUS_LABEL: Record<
   cancelled: { label: "已取消", variant: "destructive" },
   archived: { label: "已关闭", variant: "outline" },
 };
-
-// 城市 -> 区域下拉选项（要和前端发现页保持一致）
-const CITY_DISTRICTS: Record<"深圳" | "香港", string[]> = {
-  深圳: [
-    "南山区",
-    "福田区",
-    "罗湖区",
-    "宝安区",
-    "龙华区",
-    "龙岗区",
-    "盐田区",
-    "光明区",
-    "坪山区",
-    "大鹏新区",
-  ],
-  香港: [
-    "中环",
-    "湾仔",
-    "尖沙咀",
-    "铜锣湾",
-    "观塘",
-    "葵涌",
-    "沙田",
-    "将军澳",
-    "荃湾",
-    "元朗",
-  ],
-};
-
-
 
 // Capacity fill thresholds for visual indicator
 const FILL_THRESHOLD_GREEN = 80;   // >= 80% fill is healthy (green)

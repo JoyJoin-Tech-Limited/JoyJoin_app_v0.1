@@ -22,6 +22,7 @@
               0 16rpx 48rpx rgba(45, 49, 66, 0.14);
   border-radius: 40rpx;
   border: 1rpx solid rgba(139, 92, 246, 0.06);
+  overflow: hidden;
   z-index: 1;
 }
 
@@ -70,7 +71,7 @@
   height: 100%;
   padding: 0 8rpx;
   box-sizing: border-box;
-  transition: transform 100ms ease-out, opacity 100ms ease-out;
+  transition: transform 100ms ease-out, opacity 100ms ease-out, background-color 150ms ease;
 }
 
 .joy-custom-tab-bar__item--active {
@@ -175,16 +176,26 @@
   100% { transform: scale(1.0); }
 }
 
-.joy-custom-tab-bar__center {
+/* Flexbox wrapper replaces the fragile left:50% + translateX(-50%)
+   pattern which shifts right during cover-view re-renders. */
+.joy-custom-tab-bar__center-wrap {
   position: absolute;
-  left: 50%;
+  left: 0;
+  right: 0;
   top: 0;
   z-index: 3;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.joy-custom-tab-bar__center {
   display: flex;
   width: 148rpx;
   flex-direction: column;
   align-items: center;
-  transform: translateX(-50%);
+  pointer-events: auto;
   transition: transform 100ms ease-out, opacity 100ms ease-out;
 }
 
@@ -199,6 +210,7 @@
   box-sizing: border-box;
   background: rgba(255, 255, 255, 0.96);
   border: 2rpx solid rgba(255, 107, 157, 0.18);
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 .joy-custom-tab-bar__center-button {
@@ -241,17 +253,18 @@
 
 .joy-custom-tab-bar__center-label {
   margin-top: 8rpx;
-  max-width: 188rpx;
+  max-width: 148rpx;
   font-size: 22rpx;
   line-height: 24rpx;
   font-weight: 600;
   color: #374151;
   text-align: center;
+  transition: color 150ms ease;
 }
 
 /* Pressed / hover state for center button */
 .joy-custom-tab-bar__center--pressed {
-  transform: translateX(-50%) scale(0.95);
+  transform: scale(0.95);
   opacity: 0.85;
 }
 
@@ -279,15 +292,8 @@
     0 2rpx 8rpx rgba(255, 107, 157, 0.08);
 }
 
-/* Cover-image fade-in on load */
-.joy-custom-tab-bar cover-image {
-  opacity: 0;
-  animation: cover-fade-in 200ms ease forwards;
-}
-
-@keyframes cover-fade-in {
-  to { opacity: 1; }
-}
+/* Cover-image fade-in removed: local assets load instantly and the global
+   animation caused re-render flicker every time setData fired. */
 
 /* Low-end device (benchmarkLevel <= 15): disable all animations */
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__item,

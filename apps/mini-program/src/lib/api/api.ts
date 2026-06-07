@@ -121,6 +121,7 @@ async function executeMiniProgramRequest(options: {
   requestUrl: string
   method: HttpMethod
   data?: unknown
+  timeout?: number
 }): Promise<Taro.request.SuccessCallbackResult<MiniProgramRequestResponse>> {
   const sessionToken = getSessionToken()
 
@@ -129,7 +130,7 @@ async function executeMiniProgramRequest(options: {
     method: options.method,
     data: options.data,
     enableCookie: true,
-    timeout: REQUEST_TIMEOUT_MS,
+    timeout: options.timeout ?? REQUEST_TIMEOUT_MS,
     header: {
       'content-type': 'application/json',
       'Cache-Control': 'no-cache',
@@ -214,6 +215,7 @@ export async function apiRequest<T>(options: {
   method?: HttpMethod
   data?: unknown
   handleUnauthorized?: boolean
+  timeout?: number
 }): Promise<T> {
   const requestUrl = buildApiUrl(options.path)
   const method = options.method ?? 'GET'
@@ -224,6 +226,7 @@ export async function apiRequest<T>(options: {
       requestUrl,
       method,
       data: options.data,
+      timeout: options.timeout,
     })
 
     // WeChat dev/runtime can surface a cached GET as 304 directly to JS.
@@ -233,6 +236,7 @@ export async function apiRequest<T>(options: {
         requestUrl: appendCacheBustParam(requestUrl),
         method,
         data: options.data,
+        timeout: options.timeout,
       })
     }
   } catch (error) {
@@ -249,6 +253,7 @@ export async function apiRequest<T>(options: {
           requestUrl: fallbackUrl,
           method,
           data: options.data,
+          timeout: options.timeout,
         })
 
         if (response.statusCode === 304 && method === 'GET') {
@@ -256,6 +261,7 @@ export async function apiRequest<T>(options: {
             requestUrl: appendCacheBustParam(fallbackUrl),
             method,
             data: options.data,
+            timeout: options.timeout,
           })
         }
       } catch {

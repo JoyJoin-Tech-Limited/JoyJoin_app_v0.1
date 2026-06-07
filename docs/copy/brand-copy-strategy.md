@@ -81,6 +81,13 @@ interface CopyTemplateMeta {
 
 **All copy must have warmth:** Pure machine-style `"失败，请重试"` is never allowed. Every string must inject its tone mode's temperature.
 
+**Social-proof metrics must be real:** Never fabricate popularity numbers, user counts, percentages, or rankings in user-facing copy.
+- ❌ "已有 10,000+ 人加入"
+- ❌ "93% 的用户都说好"
+- ❌ "本周最受欢迎的局"
+- ✅ "已有 128 人感兴趣" (when backed by a live query)
+- ✅ Omit the metric and lead with value instead
+
 ### 🟠 Orange — Permitted with Required Framing
 
 | Word | Allowed in | Banned in |
@@ -135,6 +142,7 @@ These are the moments where tone matters most but warmth must not undermine seri
 | Payment failure | System UI | Result + action | "支付未成功，再试一次即可" |
 | Refund in progress | System UI (+ order ref) | Confirmation + timeline | "退款已提交，预计 3-5 个工作日到账（订单号: XXX）" |
 | Not matched to any group | 悦仔浅口吻 (≤1 particle) | Acknowledge + alternative | "这一局没有匹配到合适的桌友，试试其他局吧" |
+| Fabricated social proof | System UI or 悦仔 Voice (surface-dependent) | Use real data or omit | "已有 128 人感兴趣" (live) / "来发现属于你的活动" (no metric) |
 | Event cancelled | System UI | Reason +补偿 info | "活动因故取消，已为你退款" |
 | Group full / slot taken | System UI | Fact + action | "名额已满，可以看看其他活动" |
 

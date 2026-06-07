@@ -49,6 +49,7 @@ import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import EventCreateDialog from "./EventCreateDialog";
 import EmptyState from "@/components/admin/EmptyState";
+import { CITY_DISTRICTS } from "@/lib/cityDistricts";
 
 // =============== 类型定义 ===============
 
@@ -107,34 +108,6 @@ const STATUS_MAP: Record<
   in_progress: { label: "进行中", variant: "default" },
   completed: { label: "已完成", variant: "outline" },
   canceled: { label: "已取消", variant: "destructive" },
-};
-
-// 城市 -> 区域选项（保持和前台一致）
-const CITY_DISTRICTS: Record<"深圳" | "香港", string[]> = {
-  深圳: [
-    "南山区",
-    "福田区",
-    "罗湖区",
-    "宝安区",
-    "龙华区",
-    "龙岗区",
-    "盐田区",
-    "光明区",
-    "坪山区",
-    "大鹏新区",
-  ],
-  香港: [
-    "中环",
-    "湾仔",
-    "尖沙咀",
-    "铜锣湾",
-    "观塘",
-    "葵涌",
-    "沙田",
-    "将军澳",
-    "荃湾",
-    "元朗",
-  ],
 };
 
 const languageOptions = [
