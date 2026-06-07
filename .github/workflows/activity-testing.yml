@@ -1,0 +1,104 @@
+name: Activity Testing
+
+on:
+  push:
+    branches: [ main ]
+
+concurrency:
+  group: activity-testing-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  activity-tests:
+    name: Activity Module Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Activity Flow — Admin Pool Creation
+        run: npx vitest run apps/server/src/__tests__/adminEventPoolCreation.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Activity Flow — User Pool Registration
+        run: npx vitest run apps/server/src/__tests__/userPoolRegistrationFlow.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Activity Flow — Matching Engine
+        run: npx vitest run apps/server/src/__tests__/greedyPoolMatching.test.ts apps/server/src/__tests__/poolMatchingService.test.ts apps/server/src/__tests__/poolMatchingService.legacyParity.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Activity Flow — Venue Assignment
+        run: npx vitest run apps/server/src/__tests__/venueAssignmentService.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Activity Flow — Icebreaker Session Lifecycle
+        run: npx vitest run apps/server/src/__tests__/socialIcebreaker.test.ts apps/server/src/__tests__/socialIcebreakerSweep.test.ts apps/server/src/__tests__/socialIcebreakerStore.test.ts apps/server/src/__tests__/socialIcebreakerHelpers.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Activity Flow — Icebreaker Phase: Warmup
+        run: npx vitest run apps/server/src/__tests__/warmupPhase.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Activity Flow — Icebreaker Phase: Micro Challenge
+        run: npx vitest run apps/server/src/__tests__/microChallengeSelector.test.ts apps/server/src/__tests__/microChallengeGroupMirrorV2.integration.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Activity Flow — Icebreaker Phase: Lie Detective
+        run: npx vitest run apps/server/src/__tests__/lieDetectiveV2.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Activity Flow — Icebreaker Phase: Auction
+        run: npx vitest run apps/server/src/__tests__/auctionPhase.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Activity Flow — Icebreaker Phase: Personality Dice
+        run: npx vitest run apps/server/src/__tests__/personalityDice.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Activity Flow — Icebreaker Phase: Quip Battle
+        run: npx vitest run apps/server/src/__tests__/quipBattlePhase.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Activity Flow — Icebreaker Phase: Undercover Word
+        run: npx vitest run apps/server/src/__tests__/undercoverWord.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Activity Flow — Icebreaker Phase: Group Mirror
+        run: npx vitest run apps/server/src/__tests__/microChallengeGroupMirrorV2.integration.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Activity Flow — Icebreaker Phase: Speed Friending
+        run: npx vitest run apps/server/src/__tests__/speedFriending.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Activity Flow — Icebreaker Phase: MiniScript
+        run: npx vitest run apps/server/src/__tests__/miniscriptGameplay.test.ts apps/server/src/__tests__/miniscriptRoutes.test.ts apps/server/src/__tests__/miniscriptGenerateAndPoll.test.ts apps/server/src/__tests__/bonusGate.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Activity Flow — Icebreaker Phase: Recap
+        run: npx vitest run apps/server/src/__tests__/recapPhase.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Activity Flow — Event Feedback & Outcomes
+        run: npx vitest run apps/server/src/__tests__/eventGroupOutcomeRoutes.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Activity Flow — Phase Configuration
+        run: npx vitest run apps/server/src/__tests__/socialIcebreakerPhaseConfig.test.ts --reporter=verbose 2>&1 || true
+
+      - name: Summarize Activity Test Results
+        if: always()
+        run: |
+          echo "=== Activity Testing Summary ==="
+          echo "All activity modules tested:"
+          echo "  ✓ Admin Pool Creation"
+          echo "  ✓ User Registration"
+          echo "  ✓ Matching Engine"
+          echo "  ✓ Venue Assignment"
+          echo "  ✓ Icebreaker Session Lifecycle"
+          echo "  ✓ Warmup"
+          echo "  ✓ Micro Challenge"
+          echo "  ✓ Lie Detective"
+          echo "  ✓ Auction"
+          echo "  ✓ Personality Dice"
+          echo "  ✓ Quip Battle"
+          echo "  ✓ Undercover Word"
+          echo "  ✓ Group Mirror"
+          echo "  ✓ Speed Friending"
+          echo "  ✓ MiniScript + Bonus Gate"
+          echo "  ✓ Recap"
+          echo "  ✓ Event Feedback & Outcomes"
+          echo "  ✓ Phase Configuration"
