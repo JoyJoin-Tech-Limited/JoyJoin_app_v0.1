@@ -62,6 +62,10 @@ interface UnderstandProfessionResponse {
   };
   source: "seed" | "ontology" | "ai" | "fallback" | "fuzzy";
   confidence: number;
+  archetypeContext?: {
+    primaryArchetype: string | null;
+    traits: string[];
+  };
 }
 
 function buildReactionHint(
@@ -131,7 +135,7 @@ ${traitContext}
    - 先肯定用户的职业（1句话）
    - 结合TA的特质，预判TA在社交局里的表现（1-2句话）
    - 用鼓励的语气结尾，表示已把信息放入匹配画像（1句话）
-   - 语言自然、温暖、有趣，带1个合适的emoji
+   - 语言自然、温暖、有趣，不要出现emoji，用文字的趣味性替代
    - 不要说出人格类型的具体名称（如"冒险家型""探索者型"等）
 
 2. 生成3-5个"印象标签"（中文，2-6个字），类似小红书上的标签风格。这些标签应反映该职业的核心特质，例如：户外运动、教育培训、冒险精神、逻辑派、好奇心。
@@ -170,7 +174,7 @@ ${traitContext}
 
     const parsed = JSON.parse(content);
     return {
-      reaction: typeof parsed.reaction === "string" ? parsed.reaction : buildFallbackReaction(rawText, classification),
+      reaction: typeof parsed.reaction === "string" ? parsed.reaction : buildFallbackReaction(rawText, classification, archetype.traits),
       displayTags: Array.isArray(parsed.displayTags) ? parsed.displayTags.slice(0, 5) : buildFallbackTags(classification),
     };
   } catch (error) {
@@ -179,7 +183,7 @@ ${traitContext}
       promptVersion: REACTION_PROMPT_VERSION,
     });
       return {
-        reaction: buildFallbackReaction(rawText, classification),
+        reaction: buildFallbackReaction(rawText, classification, archetype.traits),
         displayTags: buildFallbackTags(classification, archetype.traits),
       };
   }
@@ -204,13 +208,21 @@ function withTimeout<T>(
   ]);
 }
 
-function buildFallbackReaction(rawText: string, classification: IndustryClassificationResult): string {
+function buildFallbackReaction(
+  rawText: string,
+  classification: IndustryClassificationResult,
+  archetypeTraits?: string[]
+): string {
   const label = classification.niche?.label
     || classification.segment?.label
     || classification.category?.label
-    || "你的行业";
+    || "你的领域";
 
-  return `收到！「${rawText.trim()}」——${label}这个领域很有趣，我已经把它放进你的匹配画像里了，帮你找到聊得来的搭子~`;
+  const traitBridge = archetypeTraits && archetypeTraits.length > 0
+    ? `你身上${archetypeTraits.slice(0, 2).join("、")}的特质，在${label}圈子里其实很吃香。`
+    : "";
+
+  return `「${rawText.trim()}」收到！${traitBridge}悦仔已经把它收进你的匹配档案，帮你找最对味的人～`;
 }
 
 function buildFallbackTags(classification: IndustryClassificationResult, archetypeTraits?: string[]): string[] {
@@ -376,7 +388,7 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
           elapsedMs,
           reactionBudgetMs,
         });
-        reaction = buildFallbackReaction(description, classification);
+        reaction = buildFallbackReaction(description, classification, archetypeContext.traits);
         displayTags = buildFallbackTags(classification, archetypeContext.traits);
       } else {
         const reactionAbort = new AbortController();
@@ -395,7 +407,7 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
             reactionBudgetMs,
             error: timeoutError instanceof Error ? timeoutError.message : String(timeoutError),
           });
-          reaction = buildFallbackReaction(description, classification);
+          reaction = buildFallbackReaction(description, classification, archetypeContext.traits);
           displayTags = buildFallbackTags(classification, archetypeContext.traits);
         }
       }
