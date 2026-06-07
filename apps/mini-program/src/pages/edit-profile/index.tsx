@@ -744,6 +744,7 @@ export default function EditProfilePage() {
           visible={showProfessionOverlay}
           isClosing={isProfessionOverlayClosing}
           initialValue={professionText}
+          userArchetype={(user?.primaryArchetype ?? user?.archetype) || undefined}
           onSubmit={handleProfessionSubmit}
           onSkip={handleProfessionSkip}
         />

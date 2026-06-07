@@ -75,7 +75,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     level: 2,
     category: "能量恢复",
     scenarioText: "参加了一场持续4小时、需要高度社交投入的活动后，你感觉电量耗尽。",
-    questionText: "结束后，你通常最需要什么样的恢复方式？",
+    questionText: "结束后，你一般最需要什么样的恢复方式？",
     primaryTraits: ["E", "X"],
     options: [
       {
@@ -105,7 +105,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     level: 2,
     category: "助人行为",
     scenarioText: "活动群里，有人问一个你恰好知道答案的问题。",
-    questionText: "你通常会？",
+    questionText: "你一般会？",
     primaryTraits: ["A", "C", "X"],
     options: [
       {
@@ -292,7 +292,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     level: 2,
     category: "账单处理",
     scenarioText: "AA结账时，发现金额有些零头，不太好平分。",
-    questionText: "你通常的处理方式是？",
+    questionText: "你一般的处理方式是？",
     primaryTraits: ["C", "A", "X"],
     options: [
       {
@@ -321,7 +321,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q23_v1",
     level: 2,
     category: "账单处理",
-    scenarioText: "几个朋友一起租车出游，加油费产生了一些零头 and 尾数。",
+    scenarioText: "几个朋友一起租车出游，加油费产生了一些零头和尾数。",
     questionText: "你会？",
     primaryTraits: ["A", "C", "E"],
     variantOf: "Q23",
@@ -447,7 +447,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q27",
     level: 2,
     category: "创意产出",
-    scenarioText: "团队 brainstorming 时，领导说任何天马行空的想法都可以。",
+    scenarioText: "团队头脑风暴时，领导说任何天马行空的想法都可以。",
     questionText: "你的典型产出是？",
     primaryTraits: ["O", "C", "X"],
     options: [
@@ -483,7 +483,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     options: [
       {
         value: "A",
-        text: "有点尴尬，怀疑自己是不是说错了什么或不合时宜",
+        text: "有点尴尬，担心自己刚才是不是说了什么不合时宜的话",
         traitScores: { A: 0, C: 0, E: -2, O: 0, X: -2, P: 0 }
       },
       {
@@ -498,7 +498,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
       },
       {
         value: "D",
-        text: "反思消息的内容 and 形式，看是否可以提高表达清晰度",
+        text: "反思消息的内容和形式，看是否可以提高表达清晰度",
         traitScores: { A: 0, C: 2, E: 0, O: 0, X: 0, P: 0 }
       }
     ]
@@ -538,7 +538,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     level: 2,
     category: "反馈行为",
     scenarioText: "活动结束后，组织者在群里发起匿名反馈问卷。",
-    questionText: "你通常会？",
+    questionText: "你一般会？",
     primaryTraits: ["C", "P", "E", "A"],
     options: [
       {
@@ -613,7 +613,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
       },
       {
         value: "C",
-        text: "根据在场的人的熟悉程度 and 气氛来决定",
+        text: "根据在场的人的熟悉程度和气氛来决定",
         traitScores: { A: 2, C: 1, E: 1, O: 0, X: 0, P: 0 }
       },
       {
@@ -722,7 +722,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     id: "Q36",
     level: 2,
     category: "接受新事物",
-    scenarioText: "朋友向你推荐一个TA非常喜欢、但你之前从未接触过的活动。",
+    scenarioText: "朋友向你推荐一个ta非常喜欢、但你之前从未接触过的活动。",
     questionText: "你的第一反应是？",
     primaryTraits: ["O", "C", "A"],
     options: [
@@ -743,7 +743,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
       },
       {
         value: "D",
-        text: "不太感兴趣，我更倾向于待在自己的舒适区",
+        text: "不太感兴趣，我还是喜欢做自己熟悉的事",
         traitScores: { A: 0, C: 1, E: 2, O: -1, X: -1, P: 0 }
       }
     ]
@@ -753,17 +753,17 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     level: 2,
     category: "重大建议",
     scenarioText: "当朋友问你我该不该换工作/结束一段关系？这类重大人生抉择时，",
-    questionText: "你通常如何回应？",
+    questionText: "你一般如何回应？",
     primaryTraits: ["C", "A", "P"],
     options: [
       {
         value: "A",
-        text: "帮TA列出所有利弊，分析每种选择的可能结果",
+        text: "帮ta列出所有利弊，分析每种选择的可能结果",
         traitScores: { A: 0, C: 3, E: 0, O: 1, X: 0, P: 0 }
       },
       {
         value: "B",
-        text: "先共情，问TA的感受和真实需求，而不是急于给建议",
+        text: "先共情，问ta的感受和真实需求，而不是急于给建议",
         traitScores: { A: 3, C: 0, E: 1, O: 0, X: 0, P: 0 }
       },
       {
@@ -773,12 +773,12 @@ export const questionsV4L2: AdaptiveQuestion[] = [
       },
       {
         value: "D",
-        text: "直接给出我的建议，不绕弯子，就算TA可能不爱听",
+        text: "直接给出我的建议，不绕弯子，就算ta可能不爱听",
         traitScores: { A: -2, C: 1, E: 0, O: 0, X: 1, P: -1 }
       },
       {
         value: "E",
-        text: "鼓励TA跟随内心的直觉，你会支持TA的任何决定",
+        text: "鼓励ta跟随内心的直觉，你会支持ta的任何决定",
         traitScores: { A: 2, C: 0, E: 0, O: 0, X: 0, P: 3 }
       }
     ]
@@ -853,7 +853,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     options: [
       {
         value: "A",
-        text: "知道很多人的名字、职业 and 基本背景，有几个聊得来的",
+        text: "知道很多人的名字、职业和基本背景，有几个聊得来的",
         traitScores: { A: 3, C: 1, E: 0, O: 0, X: 1, P: 0 }
       },
       {
@@ -878,7 +878,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     level: 2,
     category: "事后讨论",
     scenarioText: "和朋友看完一场电影，走出影院时，",
-    questionText: "你通常会？",
+    questionText: "你一般会？",
     primaryTraits: ["O", "A", "E", "X"],
     options: [
       {
@@ -918,7 +918,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
       },
       {
         value: "B",
-        text: "感到有点责任，努力寻找他们之间的连接点",
+        text: "觉得有点责任，努力找些他们之间的共同话题",
         traitScores: { A: 2, C: 2, E: -1, O: 0, X: 0, P: -1 }
       },
       {
@@ -953,7 +953,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
       },
       {
         value: "C",
-        text: "更喜欢留白，最多提前一周安排， and 需要独处时间",
+        text: "更喜欢留白，最多提前一周安排，需要独处时间",
         traitScores: { A: 0, C: 0, E: 3, O: 0, X: -1, P: 0 }
       },
       {
@@ -968,7 +968,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     level: 2,
     category: "求助方式",
     scenarioText: "你需要找一个朋友帮你一个不大不小的忙。",
-    questionText: "你通常会如何开口？",
+    questionText: "你一般会如何开口？",
     primaryTraits: ["A", "C", "X"],
     options: [
       {
@@ -1008,7 +1008,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
       },
       {
         value: "B",
-        text: "在基础框架上加入自己的创意 and 改造",
+        text: "在基础框架上加入自己的创意和改造",
         traitScores: { A: 0, C: 1, E: 0, O: 3, X: -1, P: 0 }
       },
       {
@@ -1058,7 +1058,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     level: 2,
     category: "祝贺方式",
     scenarioText: "朋友取得了一个很棒的成就，在朋友圈公布。",
-    questionText: "你通常会如何表示祝贺？",
+    questionText: "你一般会如何表示祝贺？",
     primaryTraits: ["P", "A", "E", "X"],
     options: [
       {
@@ -1068,7 +1068,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
       },
       {
         value: "B",
-        text: "私聊TA，表达更个人化的祝贺和关心",
+        text: "私聊ta，表达更个人化的祝贺和关心",
         traitScores: { A: 3, C: 0, E: 0, O: 0, X: -1, P: 0 }
       },
       {
@@ -1088,7 +1088,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     level: 2,
     category: "知识探索",
     scenarioText: "你对一个历史/科学/文化话题产生了浓厚兴趣。",
-    questionText: "你通常会如何满足这份好奇心？",
+    questionText: "你一般会如何满足这份好奇心？",
     primaryTraits: ["O", "C", "A"],
     options: [
       {
@@ -1158,7 +1158,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
       },
       {
         value: "B",
-        text: "可能会告诉一两个最信任且与当事人无关的朋友",
+        text: "可能会跟一两个最信任的朋友聊聊，但避开当事人",
         traitScores: { A: 0, C: -1, E: 0, O: 0, X: 1, P: 0 }
       },
       {
@@ -1217,7 +1217,7 @@ export const questionsV4L2: AdaptiveQuestion[] = [
     level: 2,
     category: "纯C矩阵",
     scenarioText: "你答应帮朋友策划一个活动，离截止日期还有两周。",
-    questionText: "你通常会？",
+    questionText: "你一般会？",
     primaryTraits: ["C"],
     isForcedChoice: true,
     cohortTag: "quiet_anchor",

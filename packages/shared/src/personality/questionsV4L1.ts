@@ -42,7 +42,7 @@ export const questionsV4L1: AdaptiveQuestion[] = [
     level: 1,
     category: "决策参与",
     scenarioText: "大家讨论周末活动：剧本杀、Livehouse、清吧聊天、密室逃脱...",
-    questionText: "你更倾向扮演什么角色？",
+    questionText: "你更愿意扮演什么角色？",
     primaryTraits: ["O", "C", "X"],
     isAnchor: true,
     discriminationIndex: 0.45,
@@ -74,7 +74,7 @@ export const questionsV4L1: AdaptiveQuestion[] = [
     level: 1,
     category: "能量优先级",
     scenarioText: "一个你期待已久的周末个人计划，突然被朋友的热闹聚会邀请打断。",
-    questionText: "你内心更强烈的倾向是？",
+    questionText: "你心里更想怎么做？",
     primaryTraits: ["X", "C", "E"],
     isAnchor: true,
     discriminationIndex: 0.48,
@@ -96,7 +96,7 @@ export const questionsV4L1: AdaptiveQuestion[] = [
       },
       {
         value: "D",
-        text: "感到烦躁和纠结，需要时间消化这个冲突。",
+        text: "感到烦躁，需要时间消化这个冲突。",
         traitScores: { A: 0, C: 0, E: -2, O: 0, X: 0, P: -1 }
       }
     ]
@@ -169,7 +169,7 @@ export const questionsV4L1: AdaptiveQuestion[] = [
     id: "Q6",
     level: 1,
     category: "优化倾向",
-    scenarioText: "参加活动，发现组织者指的路线上有个明显更优的选择。",
+    scenarioText: "去探店的路上，你发现有条更近、人更少的路可以走。",
     questionText: "你会怎么做？",
     primaryTraits: ["O", "A", "C"],
     isAnchor: true,
@@ -233,7 +233,7 @@ export const questionsV4L1: AdaptiveQuestion[] = [
     level: 2,
     category: "延迟反应",
     scenarioText: "活动比预定时间晚了半小时才开始，大家都在等待。",
-    questionText: "你逐渐感到？",
+    questionText: "你慢慢觉得？",
     cohortTag: 'quiet_anchor',
     primaryTraits: ["E", "A", "C"],
     options: [
@@ -327,7 +327,7 @@ export const questionsV4L1: AdaptiveQuestion[] = [
     level: 2,
     category: "入群行为",
     scenarioText: "你被拉进一个全是陌生人的活动预备群。",
-    questionText: "入群后，你通常会？",
+    questionText: "入群后，你一般会？",
     cohortTag: 'quiet_anchor',
     primaryTraits: ["X", "C", "E"],
     options: [
@@ -427,7 +427,7 @@ export const questionsV4L1: AdaptiveQuestion[] = [
     level: 2,
     category: "关系推进",
     scenarioText: "通过活动认识的新朋友，第二天在微信上找你闲聊。",
-    questionText: "你的感受和回应倾向是？",
+    questionText: "你的感受是？你会怎么回？",
     cohortTag: 'social_catalyst',
     primaryTraits: ["A", "E", "X"],
     options: [

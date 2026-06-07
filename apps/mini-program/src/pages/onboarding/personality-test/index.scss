@@ -759,6 +759,90 @@
     }
   }
 
+  /* ── Answer Echo (submitting state) ─────────────────────────────── */
+  &__answer-echo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 32rpx;
+    padding: 48rpx 0;
+    animation: answer-echo-enter 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+    will-change: transform;
+    transform: translateZ(0);
+  }
+
+  &__answer-echo-card {
+    padding: 24rpx 48rpx;
+    border-radius: 24rpx;
+    /* Ghost aesthetic: reduced opacity on shell, text stays fully readable */
+    background: rgba($color-primary, 0.018);
+    border: 1rpx solid rgba($color-primary, 0.028);
+    transform: scale(0.98);
+    max-width: 90%;
+  }
+
+  &__answer-echo-text {
+    font-family: $font-ui;
+    font-size: $font-size-md;
+    color: $color-text-secondary;
+    text-align: center;
+    line-height: 1.6;
+    opacity: 0.48;
+  }
+
+  &__answer-echo-whisper {
+    @include flex-center;
+    width: 120rpx;
+    height: 4rpx;
+    overflow: hidden;
+    border-radius: 2rpx;
+    background: rgba($color-primary, 0.06);
+  }
+
+  &__answer-echo-whisper-line {
+    width: 100%;
+    height: 100%;
+    border-radius: 2rpx;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba($color-primary, 0.26) 45%,
+      rgba($color-secondary, 0.30) 55%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: answer-echo-whisper-sweep 2.4s ease-in-out infinite;
+    will-change: transform;
+    transform: translateZ(0);
+  }
+
+  /* Low-end device: suppress continuous shimmer to save compositor budget */
+  &--low-end &__answer-echo-whisper-line {
+    animation: none;
+    background: rgba($color-primary, 0.1);
+  }
+
+  @keyframes answer-echo-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8rpx);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes answer-echo-whisper-sweep {
+    0% {
+      transform: translateX(-100%) translateZ(0);
+    }
+    100% {
+      transform: translateX(100%) translateZ(0);
+    }
+  }
+
   &__skip-btn-icon {
     font-size: $font-size-sm;
     color: rgba($color-primary, 0.65);
@@ -888,68 +972,7 @@
     @include safe-area-bottom-padding(padding-bottom, 24rpx);
   }
 
-  &__skeleton {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-md;
-    width: 100%;
-    padding-top: $spacing-sm;
-
-    &-scenario,
-    &-question,
-    &-option {
-      position: relative;
-      overflow: hidden;
-      background: $color-divider;
-      border-radius: $radius-pill;
-
-      &::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-        background: linear-gradient(
-          90deg,
-          transparent 0%,
-          rgba(255, 255, 255, 0.5) 50%,
-          transparent 100%
-        );
-        transform: translateX(-150%);
-        animation: skeleton-shimmer 1.5s ease-in-out infinite;
-      }
-    }
-
-    &-scenario {
-      width: 60%;
-      height: 24rpx;
-    }
-
-    &-question {
-      width: 90%;
-      height: 32rpx;
-    }
-
-    &-options {
-      display: flex;
-      flex-direction: column;
-      gap: $spacing-md;
-      margin-top: $spacing-sm;
-    }
-
-    &-option {
-      width: 100%;
-      height: 104rpx;
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    animation: none;
-    opacity: 1;
-    transform: none;
-    transition: none;
-
     &--exiting {
       transition: none;
     }
@@ -1008,13 +1031,14 @@
       transform: scale(1) !important;
     }
 
-    &__skeleton-scenario,
-    &__skeleton-question,
-    &__skeleton-option {
-      &::after {
-        animation: none;
-        display: none;
-      }
+    &__answer-echo {
+      animation: none;
+      transform: none;
+    }
+
+    &__answer-echo-whisper-line {
+      animation: none;
+      background: rgba($color-primary, 0.1);
     }
   }
 }

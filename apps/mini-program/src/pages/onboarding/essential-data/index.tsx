@@ -802,6 +802,7 @@ export default function EssentialDataPage() {
         isClosing={isProfessionOverlayClosing}
         initialValue={professionText}
         smartProfession={user?.features?.smartProfession ?? false}
+        userArchetype={userArchetype}
         onSubmit={handleProfessionSubmit}
         onSkip={handleProfessionSkip}
       />

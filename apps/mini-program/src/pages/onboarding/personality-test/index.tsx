@@ -42,6 +42,7 @@ import {
 import { logInfo, logError } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
+import { useDeviceTier } from '../../../hooks/useDeviceTier'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
@@ -353,8 +354,10 @@ export default function PersonalityTestPage() {
         ? '继续测试'
         : '开始测试'
 
+  const { isDegradation } = useDeviceTier()
+
   const getPageClassName = (...extraClasses: string[]) =>
-    ['personality-test', ...extraClasses, isPageExiting ? 'personality-test--exiting' : '']
+    ['personality-test', ...extraClasses, isPageExiting ? 'personality-test--exiting' : '', isDegradation ? 'personality-test--low-end' : '']
       .filter(Boolean)
       .join(' ')
 
@@ -668,6 +671,10 @@ export default function PersonalityTestPage() {
       // Abandon if session changed during the async work
       if (activeSessionRef.current !== thisSessionId) return
 
+      // Clear the attempted-option ref on successful submit so retry and echo
+      // don't leak stale state across questions.
+      lastAttemptedOptionRef.current = null
+
       // Clear commentary before showing the next question so the speech bubble
       // transitions from feedback back to the new question text
       setPostAnswerCommentary(null)
@@ -832,6 +839,7 @@ export default function PersonalityTestPage() {
       questionIndex: progress?.answered ?? 0,
       sessionId: sessionId || 'anonymous',
     })
+    lastAttemptedOptionRef.current = null
     backReview.enterBackReview(previousQuestionRef.current, previousAnswerRef.current)
   }, [analytics, backReview, progress, sessionId])
 
@@ -1387,14 +1395,15 @@ export default function PersonalityTestPage() {
 
         {/* Zone D: Answers */}
         <View className='personality-test__answer-zone'>
-          {isSubmitting ? (
-            <View className='personality-test__skeleton'>
-              <View className='personality-test__skeleton-scenario' />
-              <View className='personality-test__skeleton-question' />
-              <View className='personality-test__skeleton-options'>
-                <View className='personality-test__skeleton-option' />
-                <View className='personality-test__skeleton-option' />
-                <View className='personality-test__skeleton-option' />
+          {isSubmitting && !backReview.isBackReviewMode ? (
+            <View className='personality-test__answer-echo'>
+              <View className='personality-test__answer-echo-card'>
+                <Text className='personality-test__answer-echo-text' numberOfLines={2}>
+                  {lastAttemptedOptionRef.current?.text ?? '处理中…'}
+                </Text>
+              </View>
+              <View className='personality-test__answer-echo-whisper'>
+                <View className='personality-test__answer-echo-whisper-line' />
               </View>
             </View>
           ) : (backReview.isBackReviewMode ? backReview.backReviewQuestion : question) ? (
@@ -1491,7 +1500,7 @@ export default function PersonalityTestPage() {
         {error ? (
           <View className='personality-test__error-row'>
             <Text className='personality-test__error'>{error}</Text>
-            {lastAttemptedOptionRef.current ? (
+            {lastAttemptedOptionRef.current && !backReview.isBackReviewMode ? (
               <Button
                 variant='secondary'
                 className='personality-test__retry-btn'
