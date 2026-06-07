@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type { SocialSessionState, SpeedFriendingRound } from '@shared/socialIcebreaker';
+import type { SocialSessionState } from '@shared/socialIcebreaker';
 
 function sanitizeStateForClient(state: SocialSessionState, _userId?: string): SocialSessionState {
   const sanitized = { ...state };
   delete (sanitized as any).xiaoyueAdaptiveSuggestion;
   delete (sanitized as any).xiaoyueSessionPackMeta;
-  if (sanitized.participants) {
-    sanitized.participants = sanitized.participants.map((p: any) => {
+  if ((sanitized as any).participants) {
+    (sanitized as any).participants = (sanitized as any).participants.map((p: any) => {
       const { profile, ...rest } = p;
       return profile ? rest : p;
     });
@@ -25,11 +25,11 @@ function hasAllRosterParticipantsResponded(userIds: string[] | undefined, player
 function generateSpeedFriendingPairs(
   playerIds: string[],
   displayNames: Map<string, string>,
-): SpeedFriendingRound[] {
+): any[] {
   const n = playerIds.length;
   if (n < 2) return [];
 
-  const rounds: SpeedFriendingRound[] = [];
+  const rounds: any[] = [];
   const ids = [...playerIds];
   if (n % 2 === 1) ids.push('BYE');
 
@@ -120,7 +120,7 @@ describe('socialIcebreakerHelpers', () => {
         xiaoyueAdaptiveSuggestion: { type: 'boost_mood' },
         xiaoyueSessionPackMeta: { version: 1 },
       };
-      const result = sanitizeStateForClient(state as SocialSessionState);
+      const result = sanitizeStateForClient(state as any);
       expect((result as any).xiaoyueAdaptiveSuggestion).toBeUndefined();
       expect((result as any).xiaoyueSessionPackMeta).toBeUndefined();
     });
@@ -134,9 +134,9 @@ describe('socialIcebreakerHelpers', () => {
           { userId: 'u2' },
         ],
       };
-      const result = sanitizeStateForClient(state as SocialSessionState);
-      expect(result.participants?.[0]).not.toHaveProperty('profile');
-      expect(result.participants?.[1]).not.toHaveProperty('profile');
+      const result = sanitizeStateForClient(state as any);
+      expect((result as any).participants?.[0]).not.toHaveProperty('profile');
+      expect((result as any).participants?.[1]).not.toHaveProperty('profile');
     });
 
     it('preserves all other fields', () => {
@@ -146,7 +146,7 @@ describe('socialIcebreakerHelpers', () => {
         warmupTopics: [{ id: 't1', text: 'Hello' }],
         playerCount: 4,
       };
-      const result = sanitizeStateForClient(state as SocialSessionState);
+      const result = sanitizeStateForClient(state as any);
       expect(result.socialSessionId).toBe('social_test');
       expect(result.currentPhase).toBe('warmup');
       expect(result.warmupTopics).toHaveLength(1);
@@ -187,9 +187,9 @@ describe('socialIcebreakerHelpers', () => {
       const rounds = generateSpeedFriendingPairs(['u1', 'u2', 'u3', 'u4'], names);
       expect(rounds).toHaveLength(3);
       for (const round of rounds) {
-        expect(round.pairs).toHaveLength(2);
-        for (const pair of round.pairs) {
-          expect(pair.player1Id).not.toBe(pair.player2Id);
+        expect((round as any).pairs).toHaveLength(2);
+        for (const pair of (round as any).pairs) {
+          expect((pair as any).player1Id).not.toBe((pair as any).player2Id);
         }
       }
     });
@@ -199,7 +199,7 @@ describe('socialIcebreakerHelpers', () => {
       const rounds = generateSpeedFriendingPairs(['u1', 'u2', 'u3'], names);
       expect(rounds).toHaveLength(3);
       for (const round of rounds) {
-        expect(round.pairs.length).toBeGreaterThanOrEqual(1);
+        expect((round as any).pairs.length).toBeGreaterThanOrEqual(1);
       }
     });
 
@@ -216,42 +216,42 @@ describe('socialIcebreakerHelpers', () => {
     ];
 
     it('returns roster display name when found', () => {
-      const state = { hostUserId: 'host' } as SocialSessionState;
+      const state = { hostUserId: 'host' } as any;
       expect(recapDisplayNameByUserId(roster, state, 'u1')).toBe('Alice');
     });
 
     it('falls back to host display name', () => {
-      const state = { hostUserId: 'host', hostDisplayName: 'HostUser' } as SocialSessionState;
+      const state = { hostUserId: 'host', hostDisplayName: 'HostUser' } as any;
       expect(recapDisplayNameByUserId([], state, 'host')).toBe('HostUser');
     });
 
     it('falls back to lie detective player name', () => {
       const state = {
-        lieDetectivePlayers: [{ userId: 'ld1', displayName: 'Detective' }],
-      } as SocialSessionState;
+        lieDetectivePlayers: [{ userId: 'ld1', displayName: 'Detective', statements: [] }],
+      } as any;
       expect(recapDisplayNameByUserId([], state, 'ld1')).toBe('Detective');
     });
 
     it('returns fallback when not found anywhere', () => {
-      expect(recapDisplayNameByUserId([], {} as SocialSessionState, 'unknown')).toBe('某位参与者');
+      expect(recapDisplayNameByUserId([], {} as any, 'unknown')).toBe('某位参与者');
     });
   });
 
   describe('incrementCommonGround', () => {
     it('increments from existing value', () => {
-      const state = { commonGroundCount: 3 } as SocialSessionState;
+      const state = { commonGroundCount: 3 } as any;
       incrementCommonGround(state);
       expect(state.commonGroundCount).toBe(4);
     });
 
     it('handles undefined starting value', () => {
-      const state = {} as SocialSessionState;
+      const state = {} as any;
       incrementCommonGround(state);
       expect(state.commonGroundCount).toBe(1);
     });
 
     it('handles zero starting value', () => {
-      const state = { commonGroundCount: 0 } as SocialSessionState;
+      const state = { commonGroundCount: 0 } as any;
       incrementCommonGround(state);
       expect(state.commonGroundCount).toBe(1);
     });
@@ -260,26 +260,26 @@ describe('socialIcebreakerHelpers', () => {
   describe('buildRecapParticipants', () => {
     it('uses roster when available', () => {
       const roster = [{ userId: 'u1', displayName: 'Alice' }];
-      const result = buildRecapParticipants(roster, {} as SocialSessionState);
+      const result = buildRecapParticipants(roster, {} as any);
       expect(result).toEqual([{ displayName: 'Alice' }]);
     });
 
     it('falls back to host', () => {
-      const state = { hostUserId: 'host', hostDisplayName: 'HostUser' } as SocialSessionState;
+      const state = { hostUserId: 'host', hostDisplayName: 'HostUser' } as any;
       const result = buildRecapParticipants([], state);
       expect(result).toEqual([{ displayName: 'HostUser' }]);
     });
 
     it('falls back to lie detective players', () => {
       const state = {
-        lieDetectivePlayers: [{ userId: 'ld1', displayName: 'Detective' }],
-      } as SocialSessionState;
+        lieDetectivePlayers: [{ userId: 'ld1', displayName: 'Detective', statements: [] }],
+      } as any;
       const result = buildRecapParticipants([], state);
       expect(result).toEqual([{ displayName: 'Detective' }]);
     });
 
     it('returns default when nothing available', () => {
-      const result = buildRecapParticipants([], {} as SocialSessionState);
+      const result = buildRecapParticipants([], {} as any);
       expect(result).toEqual([{ displayName: '参与者' }]);
     });
   });
@@ -292,7 +292,7 @@ describe('socialIcebreakerHelpers', () => {
           { index: 1, text: 'I like coffee', isLie: false },
         ]],
       ]);
-      const highlights = buildLieDetectiveRecapHighlights({} as SocialSessionState, [], lieMap);
+      const highlights = buildLieDetectiveRecapHighlights({} as any, [], lieMap);
       expect(highlights).toContain('"I speak 5 languages"');
       expect(highlights).not.toContain('"I like coffee"');
     });
@@ -302,7 +302,7 @@ describe('socialIcebreakerHelpers', () => {
       for (let i = 0; i < 10; i++) {
         lieMap.set(`u${i}`, [{ index: 0, text: `Lie ${i}`, isLie: true }]);
       }
-      const highlights = buildLieDetectiveRecapHighlights({} as SocialSessionState, [], lieMap);
+      const highlights = buildLieDetectiveRecapHighlights({} as any, [], lieMap);
       expect(highlights.length).toBeLessThanOrEqual(8);
     });
   });
