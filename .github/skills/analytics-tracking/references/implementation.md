@@ -48,6 +48,36 @@ Endpoint: `POST /api/analytics/onboarding`
 - Validates durations are non-negative via `normalizeOptionalDuration`
 - Accepts unauthenticated tracking (userId/sessionId optional)
 
+## Payment ritual analytics (Payment Ritual V2 A/B test)
+
+Endpoint: `POST /api/analytics/payment`
+- Fire-and-forget funnel instrumentation for the Payment Ritual V2 emotional journey
+- 120 req/min rate limit (`paymentRitualAnalyticsLimiter`)
+- Events stored in `paymentRitualEvents` table (schema: `packages/shared/src/schema/_definitions_extended.ts`)
+- Client sends `eventType`, `metadata`, `timestamp`; server extracts `userId` from session
+
+Event taxonomy:
+```
+ritual_enter              — User enters payment page (metadata: variant, hasArchetype)
+ritual_act1_complete      — Act I (Anticipation) completed
+ritual_act2_reveal        — Act II (Revelation) archetype reveal shown
+ritual_archetype_shown    — Archetype hero card displayed
+ritual_plan_hover         — User hovers/long-presses a plan
+ritual_plan_select        — User selects a plan
+ritual_plan_reselect      — User switches from one plan to another
+ritual_cta_tap            — Primary CTA tapped
+ritual_cta_hesitation     — 3s hesitation nudge triggered
+ritual_payment_start      — Payment intent creation started
+ritual_payment_success    — WeChat Pay success
+ritual_payment_error      — Payment failed or cancelled
+ritual_verification_enter — User enters payment verification page
+ritual_achievement_shown  — Achievement milestone card shown
+ritual_emotional_score    — Qualitative emotional score event
+```
+
+Canonical client: `apps/mini-program/src/pages/blind-box-payment/lib/paymentRitualAnalytics.ts`
+Canonical server: `apps/server/src/routes/domains/analytics.ts` (POST /api/analytics/payment)
+
 ## KPI service
 
 | Function | What it computes |

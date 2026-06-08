@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { getMetricsText } from "../../middleware/metrics";
 import { logger } from "../../lib/logger";
 import { db } from "../../db";
-import { participationExperimentEvents, discoverAnalyticsEvents } from "@shared/schema";
+import { participationExperimentEvents, discoverAnalyticsEvents, paymentRitualEvents } from "@shared/schema";
 import { createRateLimiter } from "../../rateLimiter";
 
 const participationAnalyticsLimiter = createRateLimiter({
@@ -21,6 +21,12 @@ const discoverAnalyticsLimiter = createRateLimiter({
   windowMs: 60_000,
   maxRequests: 120,
   keyPrefix: "discover-analytics",
+});
+
+const paymentRitualAnalyticsLimiter = createRateLimiter({
+  windowMs: 60_000,
+  maxRequests: 120,
+  keyPrefix: "payment-ritual-analytics",
 });
 
 const PARTICIPATION_EVENT_TYPES = [
@@ -82,9 +88,45 @@ const AUTH_EVENT_TYPES = [
   "gate_dismiss",
 ] as const;
 
+const PAYMENT_RITUAL_EVENT_TYPES = [
+  "ritual_enter",
+  "ritual_act1_complete",
+  "ritual_act2_reveal",
+  "ritual_archetype_shown",
+  "ritual_plan_hover",
+  "ritual_plan_select",
+  "ritual_plan_reselect",
+  "ritual_cta_tap",
+  "ritual_cta_hesitation",
+  "ritual_payment_start",
+  "ritual_payment_success",
+  "ritual_payment_error",
+  "ritual_verification_enter",
+  "ritual_achievement_shown",
+  "ritual_emotional_score",
+] as const;
+
 type AuthEventType = (typeof AUTH_EVENT_TYPES)[number];
 
 const ALLOWED_AUTH_EVENT_TYPES = new Set<AuthEventType>(AUTH_EVENT_TYPES);
+
+type PaymentRitualEventType = (typeof PAYMENT_RITUAL_EVENT_TYPES)[number];
+
+const ALLOWED_PAYMENT_RITUAL_EVENT_TYPES = new Set<PaymentRitualEventType>(
+  PAYMENT_RITUAL_EVENT_TYPES,
+);
+
+const SQUAD_UNBOXING_EVENT_TYPES = [
+  "squad_unboxing_reveal",
+  "squad_unboxing_reveal_drag",
+  "squad_unboxing_reveal_tap",
+] as const;
+
+type SquadUnboxingEventType = (typeof SQUAD_UNBOXING_EVENT_TYPES)[number];
+
+const ALLOWED_SQUAD_UNBOXING_EVENT_TYPES = new Set<SquadUnboxingEventType>(
+  SQUAD_UNBOXING_EVENT_TYPES,
+);
 
 const MAX_METADATA_BYTES = 4_096;
 const MAX_POOL_ID_LENGTH = 120;
@@ -321,6 +363,98 @@ export function registerAnalyticsRoutes(app: Express): void {
       return res.status(200).json({ success: true });
     } catch (error) {
       logger.warn("auth analytics write failed (non-fatal)", {
+        request_id: req.requestId,
+        error: String(error),
+      });
+      return res.status(200).json({ success: false, error: "analytics write failed" });
+    }
+  });
+
+  /**
+   * POST /api/analytics/payment
+   *
+   * Payment Ritual V2 A/B test funnel instrumentation.
+   * Tracks the full emotional journey for funnel analysis.
+   *
+   * Fire-and-forget. Always returns 200. Silent fail.
+   */
+  app.post("/api/analytics/payment", paymentRitualAnalyticsLimiter, async (req: Request, res) => {
+    try {
+      const { eventType, metadata, timestamp } = req.body as {
+        eventType?: unknown;
+        metadata?: unknown;
+        timestamp?: unknown;
+      };
+
+      if (
+        typeof eventType !== "string" ||
+        !ALLOWED_PAYMENT_RITUAL_EVENT_TYPES.has(eventType as PaymentRitualEventType)
+      ) {
+        return res.status(200).json({ success: false, error: "invalid eventType" });
+      }
+
+      const normalizedMetadata = sanitizeMetadata(metadata);
+      const userId = req.session.userId ?? null;
+      const sessionId = req.sessionID ?? null;
+
+      await db.insert(paymentRitualEvents).values({
+        userId,
+        sessionId,
+        eventType,
+        metadata: normalizedMetadata,
+        timestamp: parseTimestamp(timestamp),
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      logger.warn("payment ritual analytics write failed (non-fatal)", {
+        request_id: req.requestId,
+        error: String(error),
+      });
+      return res.status(200).json({ success: false, error: "analytics write failed" });
+    }
+  });
+
+  /**
+   * POST /api/analytics/squad-unboxing
+   *
+   * Squad unboxing reveal interaction instrumentation.
+   * Tracks: drag vs tap reveal methods, completion rates.
+   *
+   * Fire-and-forget. Always returns 200. Silent fail.
+   * Reuses discoverAnalyticsLimiter (120 req/min).
+   */
+  app.post("/api/analytics/squad-unboxing", discoverAnalyticsLimiter, async (req: Request, res) => {
+    try {
+      const { eventType, metadata, timestamp } = req.body as {
+        eventType?: unknown;
+        metadata?: unknown;
+        timestamp?: unknown;
+      };
+
+      if (
+        typeof eventType !== "string" ||
+        !ALLOWED_SQUAD_UNBOXING_EVENT_TYPES.has(eventType as SquadUnboxingEventType)
+      ) {
+        return res.status(200).json({ success: false, error: "invalid eventType" });
+      }
+
+      const normalizedMetadata = sanitizeMetadata(metadata);
+      const userId = req.session.userId ?? null;
+      const sessionId = req.sessionID ?? null;
+
+      await db.insert(discoverAnalyticsEvents).values({
+        userId,
+        sessionId,
+        eventType,
+        poolId: null,
+        metadata: normalizedMetadata,
+        timestamp: parseTimestamp(timestamp),
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      logger.warn("squad unboxing analytics write failed (non-fatal)", {
         request_id: req.requestId,
         error: String(error),
       });

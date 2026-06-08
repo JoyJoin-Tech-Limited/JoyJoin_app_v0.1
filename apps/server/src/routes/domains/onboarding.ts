@@ -4,6 +4,8 @@ import { db } from "../../db";
 import { eq } from "drizzle-orm";
 import { onboardingAnalytics, userInterests, users } from "@shared/schema";
 import { normalizeOptionalDuration } from "./helpers";
+import { notifyOnboardingComplete } from "../../lib/wecomNotifications/onboarding";
+import { computeOnboardingNextStep } from "../../lib/computeOnboardingNextStep";
 
 async function requireAuth(req: Request, res: any, next: any) {
   const session = req.session as any;
@@ -59,6 +61,26 @@ export function registerOnboardingRoutes(app: Express): void {
         onboardingCheckpoint: 'profile-review',
         onboardingCheckpointTimestamp: new Date(),
       }).where(eq(users.id, userId));
+
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+      });
+
+      if (user) {
+        const nextStep = computeOnboardingNextStep(user);
+        if (nextStep === 'discover') {
+          const signupTime = user.createdAt || new Date();
+          const onboardingDurationMin = Math.round(
+            (Date.now() - new Date(signupTime).getTime()) / 60000,
+          );
+
+          notifyOnboardingComplete({
+            user,
+            onboardingDurationMin,
+            referralSource: (user as any).referralSource || null,
+          });
+        }
+      }
 
       res.json({ success: true, hasSeenProfileReview: true });
     } catch (error) {

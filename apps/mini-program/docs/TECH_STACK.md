@@ -327,6 +327,7 @@ Bar styling: `color: #9CA3AF`, `selectedColor: #8B5CF6`, `backgroundColor: #ffff
 - `src/lib/paymentVerificationStatus.ts` — Polling logic for order status.
 - `src/lib/paymentFlowController.ts` — High-level payment flow state machine.
 - `src/lib/paymentPageModel.ts` — Page-level business model for the payment UI.
+- `src/components/FirstTimeCouponBanner.tsx` — Premium welcome-coupon banner rendered on the payment page. Surfaces `WELCOME50` (preferred) or `WELCOME40` fallback. Solid cream background, archetype-tinted decorative circle, counter animation, confetti burst on tap, "已领取" celebration overlay. Zero external assets. Analytics: `welcome_coupon_banner_impression` + `welcome_coupon_banner_tap`.
 
 ---
 

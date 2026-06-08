@@ -52,6 +52,7 @@ export {
   insertIndustrySeedCandidateSchema,
   participationExperimentEvents,
   discoverAnalyticsEvents,
+  paymentRitualEvents,
   blindBoxPreAttendance,
   insertBlindBoxPreAttendanceSchema,
   userInterestSignals,

@@ -42,9 +42,10 @@ export interface UseAuthGateResult {
  */
 export function useAuthGate(auth: UseAuthResult | undefined): UseAuthGateResult {
   const [gateTimedOut, setGateTimedOut] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
   const gateStartedAtRef = useRef<number | null>(null)
 
-  const isLoading = !auth || auth.isLoading
+  const isLoading = !auth || (!dismissed && auth.isLoading)
 
   // Hard timeout for the visible auth gate. The React Query refetch can take
   // up to ~8s per attempt and retries up to 2x for non-transport errors
@@ -74,6 +75,7 @@ export function useAuthGate(auth: UseAuthResult | undefined): UseAuthGateResult 
     haptics('light')
     logInfo('[IndexGate] User-initiated retry after gate timeout')
     authAnalytics.track('gate_retry')
+    setDismissed(false)
     setGateTimedOut(false)
     // Re-invalidate the auth query to force a fresh fetch. The gate will
     // re-arm and the timeout effect will reset.
@@ -84,6 +86,7 @@ export function useAuthGate(auth: UseAuthResult | undefined): UseAuthGateResult 
     haptics('light')
     logInfo('[IndexGate] User dismissed gate — proceeding with cached auth state')
     authAnalytics.track('gate_dismiss')
+    setDismissed(true)
     setGateTimedOut(false)
     // Force-resolve the gate: clear the isLoading signal by removing the
     // pending refetch. The cached user (if any) will determine whether

@@ -1,49 +1,20 @@
 import Taro from '@tarojs/taro'
 import { CANVAS_PALETTE as PALETTE } from '@shared/personality/canvasPalette'
-import { formatHSLAsRGBA, type ArchetypeHSL } from '@shared/archetypeColors'
-import { logWarn } from '../../../../lib/utils/logger'
-
-/**
- * Convert any CSS color string (hsl, hsla, #hex, rgba, rgb) to `rgba()`.
- *
- * WeChat canvas addColorStop silently drops hsl/hsla strings on older
- * base library versions. This normalises every color to rgba so canvas
- * drawing always works. It also prevents the bug where appending hex
- * alpha digits (e.g. `${accentColor}88`) to an hsl string produces
- * invalid `"hsl(25, 48%, 60%)88"`.
- */
-function toCanvasRGBA(color: string, alpha = 1): string {
-  // Already rgba — override alpha if requested
-  const rgbaMatch = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/)
-  if (rgbaMatch) {
-    const [, r, g, b] = rgbaMatch
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`
-  }
-  // Hex — convert to rgba
-  const hexMatch = color.match(/^#([0-9a-fA-F]{3,8})$/)
-  if (hexMatch) {
-    let hex = hexMatch[1]
-    if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2]
-    const r = parseInt(hex.slice(0, 2), 16)
-    const g = parseInt(hex.slice(2, 4), 16)
-    const b = parseInt(hex.slice(4, 6), 16)
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`
-  }
-  // hsl/hsla — parse and convert
-  const hslaMatch = color.match(/^hsla?\(\s*(\d+\.?\d*)\s*,\s*(\d+\.?\d*)%?\s*,\s*(\d+\.?\d*)%?\s*(?:,\s*([\d.]+))?\s*\)/)
-  if (hslaMatch) {
-    const h = parseFloat(hslaMatch[1])
-    const s = parseFloat(hslaMatch[2])
-    const l = parseFloat(hslaMatch[3])
-    return formatHSLAsRGBA({ h, s, l } as ArchetypeHSL, alpha)
-  }
-  // Fallback — return as-is (named colors like 'white', 'black', etc.)
-  if (alpha < 1) {
-    // Can't apply alpha to unknown format; return with a warning
-    logWarn('[sharePoster] toCanvasRGBA: unknown format, alpha ignored', { color, alpha })
-  }
-  return color
-}
+import { logInfo, logWarn } from '../../../../lib/utils/logger'
+import {
+  toCanvasRGBA,
+  resolveImagePath as resolveImagePathShared,
+  clampPercent,
+  createMetallicGold,
+  drawRoundedRect,
+  fillRoundedRect,
+  strokeRoundedRect,
+  clipRoundedRect,
+  drawBadge,
+  drawTextBlock,
+  splitText,
+  exportCanvasWithRetry,
+} from '../../../../lib/utils/canvasHelpers'
 
 const POSTER_WIDTH = 1080
 const POSTER_HEIGHT = 1920
@@ -100,112 +71,6 @@ export interface PersonalitySharePosterInput {
   energyLevel?: number
   archetypeRank?: number
   serialNumber?: string
-}
-
-function drawRoundedRect(
-  ctx: Taro.CanvasContext,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-): void {
-  const safeRadius = Math.min(radius, width / 2, height / 2)
-  ctx.beginPath()
-  ctx.moveTo(x + safeRadius, y)
-  ctx.arcTo(x + width, y, x + width, y + height, safeRadius)
-  ctx.arcTo(x + width, y + height, x, y + height, safeRadius)
-  ctx.arcTo(x, y + height, x, y, safeRadius)
-  ctx.arcTo(x, y, x + width, y, safeRadius)
-  ctx.closePath()
-}
-
-function fillRoundedRect(
-  ctx: Taro.CanvasContext,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-  fillStyle: string | Taro.CanvasGradient,
-): void {
-  ctx.save()
-  drawRoundedRect(ctx, x, y, width, height, radius)
-  ctx.setFillStyle(fillStyle)
-  ctx.fill()
-  ctx.restore()
-}
-
-function strokeRoundedRect(
-  ctx: Taro.CanvasContext,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-  strokeStyle: string,
-  lineWidth: number,
-): void {
-  ctx.save()
-  drawRoundedRect(ctx, x, y, width, height, radius)
-  ctx.setStrokeStyle(strokeStyle)
-  ctx.setLineWidth(lineWidth)
-  ctx.stroke()
-  ctx.restore()
-}
-
-function clipRoundedRect(
-  ctx: Taro.CanvasContext,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-): void {
-  drawRoundedRect(ctx, x, y, width, height, radius)
-  ctx.clip()
-}
-
-function clampPercent(value: number): number {
-  return Math.max(0, Math.min(Math.round(value), 100))
-}
-
-function splitText(text: string, maxCharsPerLine: number, maxLines = 2): string[] {
-  const normalized = text.trim()
-  if (!normalized) {
-    return []
-  }
-
-  const chars = Array.from(normalized)
-  const lines: string[] = []
-  let currentLine = ''
-  let currentWeight = 0
-
-  chars.forEach((char) => {
-    const weight = /[A-Za-z0-9]/.test(char) ? 0.72 : 1
-    if (currentWeight + weight > maxCharsPerLine && currentLine) {
-      lines.push(currentLine)
-      currentLine = char
-      currentWeight = weight
-      return
-    }
-
-    currentLine += char
-    currentWeight += weight
-  })
-
-  if (currentLine) {
-    lines.push(currentLine)
-  }
-
-  if (lines.length <= maxLines) {
-    return lines
-  }
-
-  const limited = lines.slice(0, maxLines)
-  const lastLine = limited[maxLines - 1] ?? ''
-  limited[maxLines - 1] = `${lastLine.slice(0, Math.max(lastLine.length - 1, 1))}…`
-  return limited
 }
 
 function measureTextSplit(
@@ -273,71 +138,6 @@ function measureTextSplit(
   return limited
 }
 
-function drawTextBlock(ctx: Taro.CanvasContext, options: {
-  text: string
-  x: number
-  y: number
-  maxCharsPerLine: number
-  maxLines?: number
-  lineHeight: number
-  fontSize: number
-  color: string
-}): number {
-  ctx.save()
-  ctx.setFontSize(options.fontSize)
-  const lines = measureTextSplit(ctx, options.text, options.maxCharsPerLine, options.maxLines)
-  ctx.setFillStyle(options.color)
-  ctx.setTextAlign('left')
-  ctx.setTextBaseline('top')
-
-  lines.forEach((line, index) => {
-    ctx.fillText(line, options.x, options.y + index * options.lineHeight)
-  })
-  ctx.restore()
-
-  return lines.length * options.lineHeight
-}
-
-function drawBadge(ctx: Taro.CanvasContext, options: {
-  text: string
-  x: number
-  y: number
-  width: number
-  fill: string
-  color: string
-}): void {
-  fillRoundedRect(ctx, options.x, options.y, options.width, BADGE_HEIGHT, BADGE_RADIUS, options.fill)
-  ctx.save()
-  ctx.setFillStyle(options.color)
-  ctx.setFontSize(20)
-  ctx.setTextAlign('center')
-  ctx.setTextBaseline('middle')
-  ctx.fillText(options.text, options.x + options.width / 2, options.y + BADGE_HEIGHT / 2)
-  ctx.restore()
-}
-
-/**
- * Resolve image path with pre-flight validation.
- * For canvas drawImage, we need a resolved local path.
- * This validates the image can be loaded before attempting to draw.
- */
-async function resolveImagePath(src: string): Promise<string> {
-  if (!src) {
-    return ''
-  }
-
-  try {
-    const imageInfo = await Taro.getImageInfo({ src })
-    if (imageInfo.path) {
-      return imageInfo.path
-    }
-  } catch (err) {
-    // Pre-flight failed — image may not be available locally
-    logWarn('[sharePoster] getImageInfo failed', { src, error: err instanceof Error ? err.message : String(err) })
-  }
-  return ''
-}
-
 /**
  * Create a holographic rainbow sheen gradient overlay.
  * This simulates the light-refraction effect on premium foil cards.
@@ -360,18 +160,7 @@ function createHolographicSheen(
   return gradient
 }
 
-/**
- * Create a metallic gold linear gradient for borders and stamps.
- */
-function createMetallicGold(ctx: Taro.CanvasContext, x1: number, y1: number, x2: number, y2: number): Taro.CanvasGradient {
-  const gradient = ctx.createLinearGradient(x1, y1, x2, y2)
-  gradient.addColorStop(0, '#bf953f')
-  gradient.addColorStop(0.25, '#fcf6ba')
-  gradient.addColorStop(0.5, '#b38728')
-  gradient.addColorStop(0.75, '#fbf5b7')
-  gradient.addColorStop(1, '#aa771c')
-  return gradient
-}
+
 
 /**
  * Draw scattered sparkle dots to simulate foil texture.
@@ -480,7 +269,7 @@ function drawHolographicStamp(
   ctx.setFontSize(18)
   ctx.setTextAlign('center')
   ctx.setTextBaseline('middle')
-  ctx.fillText('HOLOGRAPHIC EDITION', centerX, centerY)
+  ctx.fillText('全息限定版', centerX, centerY)
 
   ctx.restore()
 }
@@ -742,56 +531,13 @@ function drawSkillCard(
   })
 }
 
-async function exportCanvasWithRetry(
-  exportMultiplier: number,
-): Promise<string> {
-  const dprValues = [exportMultiplier, 2, 1]
-
-  for (let attempt = 0; attempt < dprValues.length; attempt++) {
-    const dpr = dprValues[attempt]
-    try {
-      const output = await Taro.canvasToTempFilePath({
-        canvasId: PERSONALITY_SHARE_POSTER_CANVAS_ID,
-        x: 0,
-        y: 0,
-        width: POSTER_WIDTH,
-        height: POSTER_HEIGHT,
-        destWidth: Math.round(POSTER_WIDTH * dpr),
-        destHeight: Math.round(POSTER_HEIGHT * dpr),
-        fileType: 'png',
-        quality: 1,
-      })
-
-      // Clean up temp file after a delay (allow share/save to complete first)
-      setTimeout(() => {
-        try {
-          const fs = Taro.getFileSystemManager()
-          fs.unlinkSync(output.tempFilePath)
-        } catch {
-          // Ignore cleanup errors
-        }
-      }, 60000)
-
-      return output.tempFilePath
-    } catch (error) {
-      if (attempt === dprValues.length - 1) {
-        throw error
-      }
-      // Brief pause before retry
-      await new Promise((resolve) => setTimeout(resolve, 50))
-    }
-  }
-
-  throw new Error('canvasToTempFilePath failed after all DPR fallback attempts')
-}
-
 export async function generatePersonalitySharePoster(
   input: PersonalitySharePosterInput,
 ): Promise<string> {
   // Try WebP first (smaller, faster). If canvas drawImage fails with WebP,
   // fall back to CDN PNG. Both are resolved via getImageInfo to local temp paths.
-  const archetypeImagePath = await resolveImagePath(input.archetypeAsset)
-    || await resolveImagePath(input.archetypeAssetPng)
+  const archetypeImagePath = await resolveImagePathShared(input.archetypeAsset)
+    || await resolveImagePathShared(input.archetypeAssetPng)
 
   const ctx = Taro.createCanvasContext(PERSONALITY_SHARE_POSTER_CANVAS_ID)
   createCardBackground(ctx, input.accentColor)
@@ -1029,12 +775,29 @@ export async function generatePersonalitySharePoster(
   const dpr = systemInfo.pixelRatio || 2
   const exportMultiplier = Math.min(Math.max(dpr, 1), 2)
 
+  // Canvas draw timeout guard — on low-end devices ctx.draw() can hang.
+  // Race with a 15s timeout to prevent infinite hangs.
+  const DRAW_TIMEOUT_MS = 15_000
+
   return await new Promise<string>((resolve, reject) => {
+    let settled = false
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true
+        reject(new Error('Canvas draw timed out'))
+      }
+    }, DRAW_TIMEOUT_MS)
+
     ctx.draw(false, async () => {
+      if (settled) return
       try {
-        const tempFilePath = await exportCanvasWithRetry(exportMultiplier)
+        const tempFilePath = await exportCanvasWithRetry(PERSONALITY_SHARE_POSTER_CANVAS_ID, POSTER_WIDTH, POSTER_HEIGHT)
+        settled = true
+        clearTimeout(timeout)
         resolve(tempFilePath)
       } catch (error) {
+        settled = true
+        clearTimeout(timeout)
         reject(error)
       }
     })

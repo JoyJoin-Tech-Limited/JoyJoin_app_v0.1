@@ -102,7 +102,7 @@ export const questionsV4Extended: AdaptiveQuestion[] = [
     id: "Q81",
     level: 2,
     category: "帮助边界",
-    scenarioText: "🆘 朋友半夜发消息说心情不好想聊聊。",
+    scenarioText: "朋友半夜发消息说心情不好想聊聊。",
     questionText: "你会怎么做？",
     primaryTraits: ["A", "E", "P"],
     discriminationIndex: 0.55,
@@ -165,7 +165,7 @@ export const questionsV4Extended: AdaptiveQuestion[] = [
     level: 2,
     category: "观点态度",
     scenarioText: "朋友分享了一个你觉得有问题的观点。",
-    questionText: "你通常会怎么反应？",
+    questionText: "你一般会怎么反应？",
     primaryTraits: ["A", "O", "E"],
     discriminationIndex: 0.54,
     options: [
@@ -452,7 +452,7 @@ export const questionsV4Extended: AdaptiveQuestion[] = [
     id: "Q59",
     level: 3,
     category: "情绪敏感度",
-    scenarioText: "请评估以下陈述与你的符合程度：我通常能敏锐地察觉到社交场合中微妙的氛围变化和他人未说出口的情绪。",
+    scenarioText: "请评估以下陈述与你的符合程度：我一般能敏锐地察觉到社交场合中微妙的氛围变化和他人未说出口的情绪。",
     questionText: "",
     primaryTraits: ["A", "E", "O"],
     options: [
@@ -593,7 +593,7 @@ export const questionsV4Extended: AdaptiveQuestion[] = [
     level: 2,
     category: "情绪调节",
     scenarioText: "活动中有人无意中说了一句让你不太舒服的话。",
-    questionText: "你通常需要多久才能释怀？",
+    questionText: "你一般需要多久才能释怀？",
     primaryTraits: ["E", "A", "P"],
     options: [
       {
@@ -624,7 +624,7 @@ export const questionsV4Extended: AdaptiveQuestion[] = [
     id: "Q64",
     level: 2,
     category: "压力应对",
-    scenarioText: "⏰ 活动当天出现了意外状况，需要临时调整计划。",
+    scenarioText: "活动当天出现了意外状况，需要临时调整计划。",
     questionText: "你的典型反应是？",
     primaryTraits: ["E", "C", "P"],
     options: [
@@ -721,7 +721,7 @@ export const questionsV4Extended: AdaptiveQuestion[] = [
     level: 2,
     category: "会议表现",
     scenarioText: "在一个重要的工作会议上，主持人请大家分享想法。",
-    questionText: "你通常的表现是？",
+    questionText: "你一般的表现是？",
     primaryTraits: ["X", "C", "E"],
     options: [
       {

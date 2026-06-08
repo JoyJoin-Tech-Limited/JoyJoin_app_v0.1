@@ -1,9 +1,11 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
-import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { useRouter } from '@tarojs/taro'
+import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { useJoyJoinNavigation } from '../../hooks/navigation/useJoyJoinNavigation'
+import { useAuthGuard } from '../../hooks/useAuthGuard'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import ChemistryBadge from '../../components/mascot/ChemistryBadge'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
@@ -13,6 +15,7 @@ import ConnectionPointPill from '../../components/ConnectionPointPill'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import Button from '../../components/ui/Button'
 import { BlindBoxVisual } from './BlindBoxVisual'
+import DragRevealRibbon from './DragRevealRibbon'
 import {
   formatDateTime,
   getMemberName,
@@ -56,6 +59,10 @@ export default function SquadUnboxingPage() {
     handleOpenGroupDetail,
     handleSkip,
   } = useSquadUnboxingController({ groupId, routerParams: router.params })
+
+  const { isDegradation } = useDeviceTier()
+  const { user: currentUser } = useAuthGuard()
+  const dragRevealEnabled = currentUser?.features?.squadUnboxingDragRevealEnabled ?? true
 
   const pageClassName = [rootClassName, isExiting ? 'squad-unboxing--exiting' : ''].filter(Boolean).join(' ')
 
@@ -113,7 +120,12 @@ export default function SquadUnboxingPage() {
 
         {flowState === 'ready' ? (
           <Card className='squad-unboxing__blind-box-card'>
-            <BlindBoxVisual state='ready' shouldReduceMotion={shouldReduceMotion} />
+            <DragRevealRibbon
+              shouldReduceMotion={shouldReduceMotion}
+              isDegradation={isDegradation}
+              enabled={dragRevealEnabled}
+              onReveal={handleOpenBox}
+            />
             <Text className='squad-unboxing__blind-box-title'>你的桌友来了</Text>
             <Text className='squad-unboxing__blind-box-copy'>
               这一桌 {members.length} 位桌友已经就位。先开盒，再看为什么你们会被放在同一桌。
@@ -126,9 +138,6 @@ export default function SquadUnboxingPage() {
                 </Text>
               </View>
             ) : null}
-            <Button className='squad-unboxing__open-btn' onClick={handleOpenBox}>
-              揭晓桌友
-            </Button>
           </Card>
         ) : null}
 

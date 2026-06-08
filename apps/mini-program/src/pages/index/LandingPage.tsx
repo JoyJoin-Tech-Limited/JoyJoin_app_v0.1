@@ -11,6 +11,7 @@ import { useStaggerMount } from "../../hooks/useStaggerMount"
 import { runMiniProgramRouteTransition } from "../../lib/onboarding/onboardingNavigation"
 import { useWeChatLogin } from "../../hooks/auth/useWeChatLogin"
 import { onboardingAnalytics } from "../../lib/onboarding/onboardingAnalytics"
+import { logWarn } from "../../lib/utils/logger"
 import "./index.scss"
 
 /** Phase icons — bundled locally for guaranteed display on landing screen.
@@ -67,6 +68,7 @@ export default function MiniProgramLandingPage({
     referralCode: invitationCode || undefined,
   })
   const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const navSafetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     loadBrandDisplayFont()
@@ -76,6 +78,9 @@ export default function MiniProgramLandingPage({
     return () => {
       if (shakeTimerRef.current) {
         clearTimeout(shakeTimerRef.current)
+      }
+      if (navSafetyTimeoutRef.current) {
+        clearTimeout(navSafetyTimeoutRef.current)
       }
     }
   }, [])
@@ -103,16 +108,39 @@ export default function MiniProgramLandingPage({
 
   const navigateWithLegalGate = (url: string) => {
     void (async () => {
+      // Clear any previous safety timeout before starting a new navigation.
+      if (navSafetyTimeoutRef.current) {
+        clearTimeout(navSafetyTimeoutRef.current)
+        navSafetyTimeoutRef.current = null
+      }
+
       try {
         await runMiniProgramRouteTransition({
           beforeNavigate: () => setIsPageExiting(true),
           delayMs: 180,
         })
         await Taro.navigateTo({ url })
-      } catch {
+      } catch (err) {
         setIsPageExiting(false)
+        logWarn('[LandingPage] Navigation failed', {
+          url,
+          error: err instanceof Error ? err.message : String(err),
+        })
+      } finally {
+        // Always clear the safety timeout once navigation settles (success or failure).
+        if (navSafetyTimeoutRef.current) {
+          clearTimeout(navSafetyTimeoutRef.current)
+          navSafetyTimeoutRef.current = null
+        }
       }
     })()
+
+    // Safety timeout: if Taro.navigateTo hangs silently (e.g. subpackage download
+    // stuck), reset the button state after 5s so the user can retry.
+    navSafetyTimeoutRef.current = setTimeout(() => {
+      logWarn('[LandingPage] Navigation safety timeout fired — resetting button state')
+      setIsPageExiting(false)
+    }, 5000)
   }
 
   return (

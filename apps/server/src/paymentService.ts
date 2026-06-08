@@ -8,6 +8,9 @@ import { paymentsRepo } from "./repositories/paymentsRepo";
 import { refundAttemptsRepo } from "./repositories/refundAttemptsRepo";
 import { usersRepo } from "./repositories/usersRepo";
 import { getLevelDiscount } from "@shared/gamification";
+import { notifyRegistrationPayment, notifyFirstPayment, notifyRefundProcessed, notifyFailedPayment } from "./lib/wecomNotifications/payments";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
 
 /**
  * Payment Service for WeChat Pay Integration
@@ -295,6 +298,61 @@ export class PaymentService {
 
     // Invalidate Predictive Shell caches so Profile/Discover reflect new state.
     shellCache.invalidateUser(result.payment.userId);
+
+    if (result.payment.paymentType === "event") {
+      this.notifyPaymentSuccess(result.payment).catch((err) =>
+        logger.error("WeCom payment notification failed", { error: String(err) }),
+      );
+    }
+  }
+
+  private async notifyPaymentSuccess(payment: any): Promise<void> {
+    try {
+      const { eventPools } = await import("@shared/schema");
+      const [user, pool] = await Promise.all([
+        usersRepo.getUser(payment.userId),
+        payment.relatedId
+          ? db.query.eventPools.findFirst({ where: eq(eventPools.id, payment.relatedId) })
+          : null,
+      ]);
+      if (!user) return;
+
+      const completedCount = await paymentsRepo.getCompletedCount(payment.userId);
+
+      await notifyRegistrationPayment({
+        user,
+        poolTitle: pool?.title || "未知活动",
+        poolDateTime: pool?.dateTime
+          ? new Date(pool.dateTime).toLocaleString("zh-CN")
+          : "待定",
+        poolCity: pool?.city || "待定",
+        poolDistrict: pool?.district || undefined,
+        poolId: payment.relatedId || "",
+        finalAmount: payment.finalAmount,
+        originalAmount: payment.originalAmount,
+        discountAmount: payment.discountAmount || 0,
+        couponCode: payment.couponId || null,
+        isFirstPayment: completedCount === 1,
+        paymentCount: completedCount,
+        paymentId: payment.id,
+      });
+
+      if (completedCount === 1) {
+        const daysSinceSignup = user.createdAt
+          ? Math.round(
+              (Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24),
+            )
+          : 0;
+        await notifyFirstPayment({
+          user,
+          paymentType: payment.paymentType,
+          finalAmount: payment.finalAmount,
+          daysSinceSignup,
+        });
+      }
+    } catch (err) {
+      logger.error("Failed to send payment notification", { error: String(err) });
+    }
   }
 
   /**
@@ -350,6 +408,39 @@ export class PaymentService {
         payment_id: payment.id,
         wechat_order_id: wechatOrderId,
       });
+    }
+
+    this.notifyRefundProcessed(payment).catch((err) =>
+      logger.error("WeCom refund notification failed", { error: String(err) }),
+    );
+  }
+
+  private async notifyRefundProcessed(payment: any): Promise<void> {
+    try {
+      const user = await usersRepo.getUser(payment.userId);
+      if (!user) return;
+
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const recentRefunds = await refundAttemptsRepo.countRecentByPayment(
+        payment.id,
+        thirtyDaysAgo,
+      );
+
+      await notifyRefundProcessed({
+        adminName: payment.initiatedBy || "系统自动",
+        userDisplayName: user.displayName || "未知用户",
+        userId: payment.userId,
+        amount: payment.finalAmount,
+        paymentType: payment.paymentType,
+        reason: payment.refundReason || "未提供原因",
+        originalPaymentDate: payment.paidAt
+          ? new Date(payment.paidAt).toLocaleString("zh-CN")
+          : "未知",
+        paymentId: payment.id,
+        previousRefundCount: recentRefunds,
+      });
+    } catch (err) {
+      logger.error("Failed to send refund notification", { error: String(err) });
     }
   }
 

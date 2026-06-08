@@ -41,6 +41,7 @@ import { registerConnectionRoutes } from "./routes/domains/connections";
 import { registerMatchCompassRoutes } from "./routes/domains/matchCompass";
 import { registerProfessionUnderstandingRoutes } from "./routes/domains/professionUnderstanding";
 import { registerTestAdminRoutes } from "./routes/domains/testAdmin";
+import { registerMonitoringWebhookRoutes } from "./routes/domains/monitoringWebhooks";
 import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
 import { isTestMode } from "./auth/getAuthStrategy";
@@ -169,6 +170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerXiaoyueRoutes(app);
   registerCityUnlockRoutes(app);
   registerProfessionUnderstandingRoutes(app);
+  registerMonitoringWebhookRoutes(app);
 
   //   Test Admin API — only registered in APP_MODE=test
   if (isTestMode()) {

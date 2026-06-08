@@ -1,6 +1,6 @@
 # Platform Coordination Playbook
 
-> **Status:** Active coordination playbook — `apps/mini-program` is the **launch-primary** client; `apps/user-client` has been archived to `archived/workspaces/user-client/` for historical reference only. Verified against `apps/mini-program`, `apps/admin-client`, and `apps/server/src/routes/domains/payments.ts`. **Last reviewed for doc sync:** 2026-06-02.
+> **Status:** Active coordination playbook — `apps/mini-program` is the **launch-primary** client; `apps/user-client` has been archived to `archived/workspaces/user-client/` for historical reference only. Verified against `apps/mini-program`, `apps/admin-client`, and `apps/server/src/routes/domains/payments.ts`. **Last reviewed for doc sync:** 2026-06-08.
 
 ## Executive Summary
 
@@ -15,6 +15,8 @@
 | WeChat login — **returning** users | `apps/mini-program/src/pages/login/index.tsx`, `apps/mini-program/src/hooks/auth/useWeChatLogin.ts` → `authenticateMiniProgramUser()` → `POST /api/auth/wechat/login` (`Taro.login` → code2Session) |
 | WeChat login — **with test import** | `authenticateMiniProgramUserWithTest()` in `apps/mini-program/src/lib/api/api.ts` → `POST /api/auth/wechat/login-with-test` (inline from personality-test results page) |
 | Blind-box payment (JSAPI) | `apps/mini-program/src/pages/blind-box-payment/index.tsx` → `createMiniProgramPaymentIntent()` in `packages/shared/src/api.ts` → `POST /api/payments/miniprogram/create` → `Taro.requestPayment` |
+| Payment Ritual V2 context | `apps/mini-program/src/pages/blind-box-payment/index.tsx` → `fetchRitualCommunityData()` → `GET /api/payments/ritual-context` (real DB-backed community stats, plans, coupons) |
+| Payment Ritual V2 analytics | `apps/mini-program/src/pages/blind-box-payment/lib/paymentRitualAnalytics.ts` → `POST /api/analytics/payment` (A/B test funnel instrumentation) |
 | Post-pay verification + pending order | `apps/mini-program/src/pages/payment-verification/index.tsx`, `lib/payment/paymentPendingOrder.ts`, `lib/payment/paymentPendingOrderStorage.ts`, `lib/payment/paymentVerificationStatus.ts`; app resume: `apps/mini-program/src/app.ts` |
 
 Current platform symmetry is **yellow**, and the previous payment-contract blockers are no longer endpoint-availability issues.

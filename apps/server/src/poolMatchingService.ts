@@ -57,6 +57,7 @@ import {
 } from "./matchingSemantic";
 import { observeSemanticSimilarityMetrics } from "./matchingMetrics";
 import { matchingWeightsService, type MatchingWeights } from "./matchingWeightsService";
+import { notifyPoolMatched, notifyVenueAssignmentResult } from "./lib/wecomNotifications/matching";
 
 
 
@@ -1870,6 +1871,36 @@ export async function saveMatchResults(
       
       logger.info(`[Pool Matching] ✅ Venue assignment complete: ${assignments.size}/${groups.length} groups assigned, ${unassigned.size} unassigned`);
 
+      // Venue assignment result WeCom notification (fire-and-forget)
+      void (async () => {
+        try {
+          const venueEntries = Array.from(assignments.entries());
+          const unassignedEntries = Array.from(unassigned.entries());
+          const topVenue = venueEntries.length > 0 ? venueEntries[0][1].venue.name : undefined;
+          const uniqueVenues = new Set(venueEntries.map(([, a]) => a.venue.name)).size;
+          const reasonBreakdown: Record<string, number> = {};
+          for (const [, reason] of unassignedEntries) {
+            reasonBreakdown[reason] = (reasonBreakdown[reason] || 0) + 1;
+          }
+          const reasonSummary = Object.entries(reasonBreakdown)
+            .map(([r, c]) => `${r}: ${c}组`).join("; ");
+
+          await notifyVenueAssignmentResult({
+            poolTitle: pool?.title || poolId,
+            poolDate: pool?.dateTime ? new Date(pool.dateTime).toLocaleString("zh-CN") : "待定",
+            poolId,
+            venuesAssigned: assignments.size,
+            venuesUnassigned: unassigned.size,
+            totalGroups: groups.length,
+            topVenueName: topVenue,
+            uniqueVenueCount: uniqueVenues > 0 ? uniqueVenues : undefined,
+            unassignedReasonBreakdown: unassigned.size > 0 ? reasonSummary : undefined,
+          });
+        } catch (err) {
+          logger.warn('[Pool Matching] ⚠️ Venue assignment result notification failed', { error: String(err) });
+        }
+      })();
+
       // Send venue-assignment notifications to group members
       void (async () => {
         try {
@@ -1920,6 +1951,39 @@ export async function saveMatchResults(
   } else {
     logger.info(`[Pool Matching] ⏸️ Venue assignment skipped (VENUE_ASSIGNMENT_ENABLED=false)`);
   }
+
+  // Pool matching notification (fire-and-forget)
+  void (async () => {
+    try {
+      const totalMatched = groups.reduce((sum, g) => sum + g.members.length, 0);
+      const totalRegistrations = pool?.totalRegistrations ?? totalMatched;
+      const unmatched = Math.max(0, totalRegistrations - totalMatched);
+      const overallScore = groups.length > 0
+        ? groups.reduce((sum, g) => sum + g.overallScore, 0) / groups.length
+        : 0;
+      const chemScore = groups.length > 0
+        ? groups.reduce((sum, g) => sum + g.avgChemistryScore, 0) / groups.length
+        : 0;
+      const maleC = groups.flatMap(g => g.members).filter((m: any) => m.gender === "男性").length;
+      const femaleC = groups.flatMap(g => g.members).filter((m: any) => m.gender === "女性").length;
+
+      await notifyPoolMatched({
+        poolTitle: pool?.title || "未知活动",
+        poolDate: pool?.dateTime ? new Date(pool.dateTime).toLocaleString("zh-CN") : "待定",
+        totalRegistrations,
+        matchedCount: totalMatched,
+        unmatchedCount: unmatched,
+        groupsFormed: groups.length,
+        avgOverallScore: overallScore,
+        avgChemistryScore: chemScore,
+        genderBalanceSummary: `${maleC}♂ ${femaleC}♀`,
+        matchDurationMin: 0,
+        poolId,
+      });
+    } catch (err: any) {
+      logger.error(`[Pool Matching] ⚠️ Matching notification failed:`, { error: String(err) });
+    }
+  })();
 
   // 8. 异步生成活动主题标题并广播 (Async Event Theme Title Generation & Broadcast)
   setImmediate(() => {

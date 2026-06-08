@@ -19,6 +19,7 @@ import {
 } from "../../lib/stateTransitions";
 import { matchEventPool, saveMatchResults } from "../../poolMatchingService";
 import { broadcastAdminAction } from "../../eventBroadcast";
+import { notifyPoolCancelled } from "../../lib/wecomNotifications";
 
 const updateEventPoolSchema = z.object({
   title: z.string().min(1).optional(),
@@ -254,6 +255,33 @@ export function registerAdminEventPoolRoutes(app: Express): void {
           before: { status: oldStatus },
           after: { status: pool.status },
         });
+
+        // WeCom notification when pool is cancelled
+        if (pool.status === "cancelled") {
+          void (async () => {
+            try {
+              const adminId = getActingAdminId(req);
+              const [adminRecord] = await db.select({ displayName: users.displayName }).from(users).where(eq(users.id, adminId));
+              const totalReg = pool.totalRegistrations || 0;
+              await notifyPoolCancelled({
+                poolTitle: pool.title,
+                poolDate: pool.dateTime ? new Date(pool.dateTime).toLocaleString("zh-CN") : "待定",
+                poolCity: pool.city,
+                poolDistrict: pool.district || undefined,
+                poolId: pool.id,
+                registeredUserCount: totalReg,
+                matchedGroupCount: pool.successfulMatches || 0,
+                revenueImpact: (pool.price || 0) * totalReg * 100,
+                cancellationReason: "管理后台操作",
+                adminName: adminRecord?.displayName || adminId,
+                autoRefund: false,
+                usersNotified: false,
+              });
+            } catch (notifyErr) {
+              logger.warn("Failed to send pool cancellation WeCom notification", { error: String(notifyErr) });
+            }
+          })();
+        }
       }
 
       res.json(pool);

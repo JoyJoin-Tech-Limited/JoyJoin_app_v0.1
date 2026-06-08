@@ -5,9 +5,15 @@ import BoxLogoEntryScreen from '../../components/loading/BoxLogoEntryScreen'
 import { useAuth } from '../../hooks/useAuth'
 import { useAuthGate } from '../../hooks/useAuthGate'
 import { navigateToMiniProgramNextStep } from '../../lib/onboarding/onboardingNavigation'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { queryClient } from '../../lib/api/queryClient'
 import { fetchDiscoverShell, fetchProfileShell, fetchEventsShell, fetchConnectionsShell } from '../../lib/api/api'
 import { getPrefetchEngine, injectDiscoverShellIntoCache, injectProfileShellIntoCache, injectEventsShellIntoCache, injectConnectionsShellIntoCache } from '../../lib/prefetchEngine'
+import {
+  readAnonymousAssessmentSession,
+  isAnonymousAssessmentSessionCompleted,
+} from '../../lib/auth/anonymousOnboarding'
+import { logInfo, logWarn } from '../../lib/utils/logger'
 import MiniProgramLandingPage from './LandingPage'
 import './index.scss'
 
@@ -17,17 +23,51 @@ export default function Index() {
   const [entryDone, setEntryDone] = useState(false)
   const { isTimedOut, retry, dismiss } = useAuthGate(auth)
 
-  // Redirect authenticated users to their next onboarding/app step.
+  // Unified redirect: authenticated users go to nextStep; guests with an
+  // incomplete anonymous assessment go back to the personality test.
+  // A single effect prevents race conditions between the two paths.
   useEffect(() => {
-    if (auth.isLoading || !auth.isAuthenticated || hasRedirectedRef.current || !auth.user) {
+    if (auth.isLoading || hasRedirectedRef.current) {
+      return
+    }
+
+    // Authenticated path takes priority over guest restore.
+    if (auth.isAuthenticated && auth.user) {
+      hasRedirectedRef.current = true
+      logInfo('[Index] Redirecting authenticated user to nextStep', { nextStep: auth.user.nextStep })
+      void navigateToMiniProgramNextStep(auth.user.nextStep, { mode: 'root' }).catch((err) => {
+        hasRedirectedRef.current = false
+        logWarn('[Index] Redirect to nextStep failed', {
+          nextStep: auth.user?.nextStep,
+          error: err instanceof Error ? err.message : String(err),
+        })
+      })
+      return
+    }
+
+    // Guest restore: only if unauthenticated and has an incomplete session.
+    const snapshot = readAnonymousAssessmentSession()
+    if (!snapshot || isAnonymousAssessmentSessionCompleted(snapshot)) {
+      return
+    }
+
+    // Re-verify auth hasn't flipped before committing to navigation.
+    if (auth.isAuthenticated) {
       return
     }
 
     hasRedirectedRef.current = true
-    void navigateToMiniProgramNextStep(auth.user.nextStep, { mode: 'root' }).catch(() => {
-      hasRedirectedRef.current = false
+    logInfo('[Index] Restoring guest to incomplete personality-test session', {
+      sessionId: snapshot.sessionId,
+      answered: snapshot.result?.totalQuestionsAnswered ?? 0,
     })
-  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, auth.user])
+    void Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.personalityTest }).catch((err) => {
+      hasRedirectedRef.current = false
+      logWarn('[Index] Guest restore to personality-test failed', {
+        error: err instanceof Error ? err.message : String(err),
+      })
+    })
+  }, [auth.isAuthenticated, auth.isLoading, auth.user])
 
   // Stage Discover prefetch 1.5 s after entry animation completes (AC-06).
   // The composite endpoint warms cache for all 3 Discover query keys so the

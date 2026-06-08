@@ -12,6 +12,8 @@ export type DiscoverAnalyticsEventType =
   | 'promo_banner_cta_tap'
   | 'promo_banner_image_error'
   | 'promo_banner_image_retry'
+  | 'welcome_coupon_banner_impression'
+  | 'welcome_coupon_banner_tap'
   | 'filter_open'
   | 'filter_select'
   | 'filter_close'

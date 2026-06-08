@@ -7,6 +7,8 @@ import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { requireAuth } from "../../middleware/auth";
 import { storage } from "../../storage";
 import type { User } from "@shared/schema";
+import { notifyAbuseReport } from "../../lib/wecomNotifications";
+import { users } from "@shared/schema";
 
 export function registerMatchingAdminRoutes(app: Express): void {
   // ============ CHAT REPORTS & MODERATION ROUTES ============
@@ -20,6 +22,26 @@ export function registerMatchingAdminRoutes(app: Express): void {
       const validatedData = insertChatReportSchema.parse(req.body);
       
       const report = await storage.createChatReport(validatedData);
+      
+      // WeCom notification for abuse report (fire-and-forget)
+      void (async () => {
+        try {
+          const [reportee] = await db.select({ displayName: users.displayName }).from(users).where(eq(users.id, validatedData.reportedUserId));
+          const [reporter] = await db.select({ displayName: users.displayName }).from(users).where(eq(users.id, validatedData.reportedBy));
+          const severity = validatedData.reportType === "hate_speech" || validatedData.reportType === "harassment" ? "high" as const : "medium" as const;
+          await notifyAbuseReport({
+            severity,
+            reportCategory: validatedData.reportType,
+            reportedUserDisplayName: reportee?.displayName || "未知用户",
+            reporterPseudo: reporter?.displayName || "匿名用户",
+            eventContext: validatedData.eventId || undefined,
+            reportReasonSnippet: validatedData.description || "无描述",
+            reportId: report.id,
+          });
+        } catch (notifyErr) {
+          logger.warn("Failed to send abuse report WeCom notification", { error: String(notifyErr) });
+        }
+      })();
       
       res.json(report);
     } catch (error: any) {

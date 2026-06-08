@@ -52,6 +52,7 @@ export interface PaymentsRepository {
   getPaymentById(id: string): Promise<any | undefined>;
   getPaymentByWechatOrderId(wechatOrderId: string): Promise<any | undefined>;
   getPaymentsByType(paymentType: string): Promise<any[]>;
+  getCompletedCount(userId: string): Promise<number>;
   createPayment(data: any): Promise<any>;
   updatePayment(id: string, updates: any): Promise<any>;
 }
@@ -373,5 +374,13 @@ export const paymentsRepo: PaymentsRepository = {
       ORDER BY p.created_at DESC
     `);
     return result.rows;
+  },
+
+  async getCompletedCount(userId: string): Promise<number> {
+    const result = await db.execute(sql`
+      SELECT count(*) as count FROM payments
+      WHERE user_id = ${userId} AND status = 'completed'
+    `);
+    return Number((result.rows[0] as any)?.count || 0);
   },
 };

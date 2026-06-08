@@ -1302,6 +1302,26 @@ export const discoverAnalyticsEvents = pgTable("discover_analytics_events", {
 export type DiscoverAnalyticsEvent = typeof discoverAnalyticsEvents.$inferSelect;
 
 // ================================
+// Payment Ritual Analytics (A/B test funnel)
+// ================================
+
+export const paymentRitualEvents = pgTable("payment_ritual_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  sessionId: varchar("session_id"),
+  eventType: varchar("event_type", { length: 80 }).notNull(),
+  metadata: jsonb("metadata"),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_pre_user_id").on(table.userId),
+  index("idx_pre_event_type").on(table.eventType),
+  index("idx_pre_timestamp").on(table.timestamp),
+]);
+
+export type PaymentRitualEvent = typeof paymentRitualEvents.$inferSelect;
+
+// ================================
 // Pre-event Attendance (Blind Box)
 // ================================
 

@@ -1,7 +1,28 @@
 #!/usr/bin/env node
+/**
+ * Seed Test Data
+ * 测试数据种子脚本
+ *
+ * Idempotently seeds the database with known test entities for QA and E2E use.
+ * Safe to run multiple times — uses upsert/merge patterns where possible.
+ *
+ * Environment:
+ *   DATABASE_URL  (loaded from ../../.env via --env-file)
+ *
+ * Usage:
+ *   node --env-file=../../.env --import tsx/esm src/scripts/seed-test-data.ts
+ *
+ * Known test identifiers (stable for QA reference):
+ *   - Test User phone:  +8613800000001  (profile complete)
+ *   - Test User phone:  +8613800000002  (profile incomplete)
+ *   - Test Admin:       test_admin_seed / TestAdmin123!
+ *   - Test Event Pool:  "QA 测试饭局 — 周五夜聊"
+ *   - Beta feature flags: personalityShareEnabled, personalitySlotAnimationEnabled,
+ *     matchingLiveReveal, promoBannerEnabled, smartProfession all set to true
+ */
 import { eq } from "drizzle-orm";
 import { db } from "../db";
-import { users, eventPools, adminAccounts } from "@joyjoin/shared";
+import { users, eventPools, adminAccounts, featureFlags } from "@joyjoin/shared";
 import bcrypt from "bcrypt";
 
 const COMMON_PASSWORD = "test123456";
@@ -203,6 +224,47 @@ async function seedTestEventPool(createdByUserId: string) {
   return inserted;
 }
 
+const BETA_FEATURE_FLAGS: Array<{ key: string; value: string; label: string }> = [
+  { key: "personalityShareEnabled", value: "true", label: "Personality share poster" },
+  { key: "personalitySlotAnimationEnabled", value: "true", label: "Personality slot animation" },
+  { key: "matchingLiveReveal", value: "true", label: "Matching live reveal" },
+  { key: "promoBannerEnabled", value: "true", label: "Hero promo banner" },
+  { key: "smartProfession", value: "true", label: "Smart profession AI classification" },
+  { key: "restartOnboarding", value: "false", label: "Onboarding restart (off by default)" },
+  { key: "onboardingForceSkip", value: "false", label: "Onboarding force skip (off by default)" },
+  { key: "socialIcebreakerClientForceEnd", value: "false", label: "Icebreaker force-end kill-switch (off by default)" },
+  { key: "runPlanTemplatesEnabled", value: "false", label: "Run plan templates (off by default)" },
+  { key: "paymentsEnabled", value: "false", label: "Payments (set true + WeChat Pay creds for payment flow)" },
+];
+
+async function seedBetaFeatureFlags() {
+  let created = 0;
+  let existing = 0;
+
+  for (const flag of BETA_FEATURE_FLAGS) {
+    const row = await db
+      .select({ key: featureFlags.key })
+      .from(featureFlags)
+      .where(eq(featureFlags.key, flag.key))
+      .limit(1);
+
+    if (row.length > 0) {
+      existing++;
+      continue;
+    }
+
+    await db.insert(featureFlags).values({
+      key: flag.key,
+      value: flag.value,
+      updatedBy: "seed-script",
+    });
+    console.log(`[seed] Created feature flag: ${flag.key} = ${flag.value} (${flag.label})`);
+    created++;
+  }
+
+  console.log(`[seed] Feature flags: ${created} created, ${existing} already existed`);
+}
+
 async function main() {
   console.log("[seed] Starting test data seed...\n");
 
@@ -214,6 +276,7 @@ async function main() {
 
   console.log("\n[seed] Event Pool:");
   const testPool = await seedTestEventPool(testUsers[0].id);
+  await seedBetaFeatureFlags();
 
   const completedUsers = testUsers.filter((_, i) => TEST_USERS[i]?.hasCompletedProfileSetup).length;
   const incompleteUsers = testUsers.filter((_, i) => !TEST_USERS[i]?.hasCompletedProfileSetup).length;
@@ -225,6 +288,7 @@ async function main() {
   console.log(`  Admin:             ${testAdmin.id} (${TEST_ADMIN.username})`);
   console.log(`  Pool:              ${testPool.id}`);
   console.log(`  Common password:   ${COMMON_PASSWORD}`);
+  console.log(`  Feature flags: ${BETA_FEATURE_FLAGS.length} configured`);
   console.log("\n[seed] Done.");
 
   process.exit(0);

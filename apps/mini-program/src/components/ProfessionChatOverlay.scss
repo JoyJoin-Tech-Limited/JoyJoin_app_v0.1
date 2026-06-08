@@ -80,15 +80,15 @@
     display: flex;
     align-items: flex-end;
     gap: $spacing-sm;
+    width: 100%;
     animation: profession-message-enter 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    will-change: transform;
 
     &--xiaoyue {
-      align-self: flex-start;
+      justify-content: flex-start;
     }
 
     &--user {
-      align-self: flex-end;
+      justify-content: flex-end;
       flex-direction: row-reverse;
     }
   }
@@ -136,6 +136,7 @@
     white-space: pre-wrap;
     overflow-wrap: break-word;
     word-break: keep-all;
+    display: block;
 
     .profession-overlay__bubble--xiaoyue & {
       color: $color-text-primary;
@@ -284,11 +285,14 @@
 
   &__retry-hint {
     margin-top: $spacing-sm;
-    padding: $spacing-xs $spacing-sm;
+    padding: $spacing-sm $spacing-md;
     background: rgba($color-primary, 0.06);
     border-radius: $card-radius;
     align-self: flex-start;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: $cta-min-tap;
 
     &:active,
     &--active {
@@ -379,13 +383,18 @@
     border-radius: 50%;
     background: rgba($color-primary, 0.6);
     animation: profession-sparkle-burst 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    will-change: transform, opacity;
 
     &--1 { top: 20%; left: 15%; animation-delay: 0.1s; }
     &--2 { top: 15%; left: 50%; animation-delay: 0.2s; background: rgba($color-secondary, 0.6); }
     &--3 { top: 25%; left: 80%; animation-delay: 0.15s; }
     &--4 { top: 60%; left: 20%; animation-delay: 0.25s; background: rgba($color-secondary, 0.5); }
     &--5 { top: 55%; left: 75%; animation-delay: 0.3s; }
+
+    // Muted amber sparkles for fallback path — still celebratory, not punitive
+    &--fallback {
+      background: rgba($color-warning, 0.5);
+      animation: profession-sparkle-burst 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
   }
 
   @keyframes profession-sparkle-burst {
@@ -400,6 +409,7 @@
   }
 
   &__reveal-card {
+    position: relative;
     flex-shrink: 0;
     margin-top: $spacing-sm;
     margin-bottom: $spacing-md;
@@ -431,6 +441,22 @@
     animation: profession-checkmark-pop 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
     animation-delay: 0.2s;
     opacity: 0;
+  }
+
+  &__reveal-mascot {
+    width: 40rpx;
+    height: 40rpx;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: rgba($color-primary, 0.08);
+    margin-left: $spacing-xs;
+  }
+
+  &__reveal-mascot-img {
+    width: 100%;
+    height: 100%;
+    display: block;
   }
 
   &__reveal-checkmark-stem {
@@ -465,6 +491,7 @@
     color: $color-text-muted;
     font-weight: $font-weight-medium;
     display: block;
+    word-break: keep-all;
   }
 
   &__reveal-tags {
@@ -474,27 +501,55 @@
     margin-bottom: $spacing-lg;
   }
 
-  &__reveal-tag {
-    padding: $spacing-xs $spacing-md;
-    background: $color-surface;
-    border: 2rpx solid rgba($color-primary, 0.2);
-    border-radius: $card-radius;
+  &__reveal-tag-wrap {
+    position: relative;
+    animation: profession-tag-pop-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
     opacity: 0;
     transform: scale(0.6);
-    animation: profession-tag-pop-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    will-change: transform, opacity;
+    transition: transform 0.15s ease, opacity 0.15s ease;
 
     &:nth-child(1) { animation-delay: 0.05s; }
     &:nth-child(2) { animation-delay: 0.12s; }
     &:nth-child(3) { animation-delay: 0.19s; }
     &:nth-child(4) { animation-delay: 0.26s; }
     &:nth-child(5) { animation-delay: 0.33s; }
+
+    &:active {
+      transform: scale(0.92);
+      opacity: 0.7;
+    }
   }
 
-  &__reveal-tag-text {
+  &__tag-feedback {
     font-size: $font-size-xs;
-    color: $color-primary;
-    font-weight: $font-weight-medium;
+    color: $color-text-muted;
+    line-height: 1.5;
+    margin-bottom: $spacing-md;
+    display: block;
+    animation: profession-hint-fade-in 0.3s ease-out forwards;
+  }
+
+  &__reveal-bridge {
+    margin-bottom: $spacing-lg;
+    padding: $spacing-sm $spacing-md;
+    background: $color-bg-clean;
+    border-radius: $card-radius-sm;
+    border-left: 4rpx solid rgba($color-primary, 0.2);
+  }
+
+  &__reveal-bridge-line {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    line-height: 1.6;
+    display: block;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+
+    &--chemistry {
+      color: $color-primary;
+      font-weight: $font-weight-medium;
+      margin-top: $spacing-xs;
+    }
   }
 
   &__reveal-confirm {
@@ -650,14 +705,22 @@
     transform: none;
   }
 
-  .profession-overlay__reveal-tag {
+  .profession-overlay__reveal-tag-wrap {
     animation: none;
     opacity: 1;
     transform: none;
   }
 
+  .profession-overlay__celebration {
+    display: none;
+  }
+
   .profession-overlay__reveal-checkmark {
     animation: none;
+    opacity: 1;
+  }
+
+  .profession-overlay__reveal-mascot {
     opacity: 1;
   }
 
@@ -701,10 +764,19 @@
     transform: none;
   }
 
-  .profession-overlay__reveal-tag {
+  .profession-overlay__reveal-tag-wrap {
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  .profession-overlay__celebration {
+    display: none;
+  }
+
+  .profession-overlay__reveal-checkmark {
+    animation: none;
+    opacity: 1;
   }
 
   .profession-overlay__sparkle {

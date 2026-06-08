@@ -387,7 +387,7 @@ export const questionsV4Attractor: AdaptiveQuestion[] = [
     level: 3,
     category: "原型区分-太阳鸡vs暖心熊-给予方式",
     scenarioText: "朋友向你倾诉最近的烦恼。",
-    questionText: "你通常会怎么回应？",
+    questionText: "你一般会怎么回应？",
     primaryTraits: ["A", "P", "E", "X"],
     isForcedChoice: true,
     targetPairs: ["太阳鸡", "暖心熊"],
@@ -595,8 +595,8 @@ export const questionsV4Attractor: AdaptiveQuestion[] = [
     id: "Q120",
     level: 3,
     category: "原型区分-太阳鸡vs淡定海豚-耐心程度",
-    scenarioText: "⏰ 等待的事情比预期延迟了很久。",
-    questionText: "你通常会怎么应对？",
+    scenarioText: "等待的事情比预期延迟了很久。",
+    questionText: "你一般会怎么应对？",
     primaryTraits: ["P", "E"],
     isForcedChoice: true,
     targetPairs: ["太阳鸡", "淡定海豚"],
@@ -958,12 +958,12 @@ export const questionsV4Attractor: AdaptiveQuestion[] = [
       },
       {
         value: "B",
-        text: "静静听完，给一个拥抱或者陪着TA",
+        text: "静静听完，给一个拥抱或者陪着ta",
         traitScores: { A: 4, C: -1, E: 1, O: -1, X: -3, P: 1 }
       },
       {
         value: "C",
-        text: "帮TA分析问题，提出解决方案",
+        text: "帮ta分析问题，提出解决方案",
         traitScores: { A: -2, C: 3, E: 1, O: 2, X: -2, P: -2 }
       },
       {
@@ -981,7 +981,7 @@ export const questionsV4Attractor: AdaptiveQuestion[] = [
     id: "Q131",
     level: 3,
     category: "能量表达方式",
-    scenarioText: "团队项目遇到困难,大家情绪有点低落。",
+    scenarioText: "团队项目遇到困难，大家情绪有点低落。",
     questionText: "你会怎么做？",
     primaryTraits: ["P", "X", "A"],
     isForcedChoice: true,
@@ -1158,7 +1158,7 @@ export const questionsV4Attractor: AdaptiveQuestion[] = [
     level: 3,
     category: "能量感知",
     scenarioText: "周五下班，终于自由了——",
-    questionText: "拖动滑条，找到最符合你此刻感受的位置",
+    questionText: "拖动滑条，找到你现在最接近的感觉",
     primaryTraits: ["X", "P"],
     questionType: "slider",
     isAnchor: false,

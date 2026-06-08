@@ -105,6 +105,21 @@ const CONFIG_SPECS: ConfigSpec[] = [
     required: false,
     description: "AMap/Gaode Maps JS API security config key (admin venue map picker will fail without it)",
   },
+  {
+    key: "WECOM_OPS_BOT_KEY",
+    required: false,
+    description: "WeCom Ops bot key (daily operations notifications — pool matching, registration, venue). Falls back to WECOM_BOT_KEY.",
+  },
+  {
+    key: "WECOM_CRITICAL_BOT_KEY",
+    required: false,
+    description: "WeCom Critical bot key (P0 alerts — venue failure, pool cancellation, bans).",
+  },
+  {
+    key: "WECOM_FINANCE_BOT_KEY",
+    required: false,
+    description: "WeCom Finance bot key (revenue events — payments, refunds).",
+  },
 ];
 
 function isPaymentsEnabled(env: NodeJS.ProcessEnv): boolean {

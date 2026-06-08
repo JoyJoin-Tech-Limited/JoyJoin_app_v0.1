@@ -7,6 +7,7 @@ import { getXiaoyueExpressionAsset, type XiaoyueExpressionId } from '../lib/masc
 import { apiRequest } from '../lib/api/api'
 import { useOnboardingAnalytics } from '../hooks/onboarding/useOnboardingAnalytics'
 import { useDeviceTier } from '../hooks/useDeviceTier'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import './ProfessionChatOverlay.scss'
 
 export interface ProfessionClassificationData {
@@ -27,13 +28,26 @@ export interface ProfessionChatOverlayProps {
   isClosing?: boolean
   initialValue?: string
   smartProfession?: boolean
+  userArchetype?: string
   onSubmit: (value: string, classificationData?: ProfessionClassificationData) => void
   onSkip: () => void
 }
 
-const OPENING_MESSAGE = '好奇！你平时是做什么的呀？\n多说说看，悦仔好帮你找到真正聊得来的人～'
+const OPENING_MESSAGE_GENERIC = '好奇！你平时是做什么的呀？\n多说说看，悦仔好帮你找到真正聊得来的人～'
 
-const SKIP_RESPONSE = '好呀，那我们先跳过这题～等你想说了，随时可以在个人主页里补充'
+const OPENING_MESSAGE_ARCHETYPE = (archetypeName: string) =>
+  `像你这样的${archetypeName}，平时是做什么的呀？\n多说说看，悦仔好帮你找到真正聊得来的人～`
+
+const SKIP_RESPONSE_GENERIC = '好呀，那我们先跳过这题～等你想说了，随时可以在个人主页里补充'
+
+const SKIP_RESPONSE_MEMORY = '你刚才说的悦仔也记着呢～等你想完善了，随时可以在个人主页里补充'
+
+// Profession-specific placeholder examples that rotate
+const ROTATING_PLACEHOLDERS = [
+  '告诉我你的职业，比如产品经理、设计师、程序员～',
+  '不知道怎么描述？试试说「我帮人解决什么问题」～',
+  '全职、自由职业、学生都可以说，没有标准答案～',
+]
 
 interface ChatMessage {
   id: string
@@ -244,6 +258,32 @@ function mapSuccessExpression(reaction: string): XiaoyueExpressionId {
   return 'coachGuide'
 }
 
+/** Anticipate expression based on profession keywords before API responds */
+function getAnticipationExpression(text: string): XiaoyueExpressionId {
+  const lower = text.toLowerCase()
+  // Creative / artistic professions → curious face
+  if (['设计', '艺术', '摄影', '音乐', '写作', '导演', '编剧', '画家', '创意', '美术', '画画', '舞蹈', '表演', '模特', '主播', '网红', '博主', '自媒体'].some((k) => lower.includes(k)))
+    return 'testCurious'
+  if (['designer', 'artist', 'photographer', 'musician', 'writer', 'director', 'actor', 'creative', 'model', 'streamer', 'blogger'].some((k) => lower.includes(k)))
+    return 'testCurious'
+  // Technical / analytical professions → listening face
+  if (['程序', '工程', '数据', '开发', '技术', '算法', '科研', '研究', '学术', '博士', '教授', '科学家', '分析', '架构', '运维', '测试', '码农', '人工智能'].some((k) => lower.includes(k)))
+    return 'testListening'
+  if (['engineer', 'programmer', 'developer', 'data scientist', 'scientist', 'researcher', 'analyst', 'architect', 'coder', 'dev', 'phd', 'professor', 'tech'].some((k) => lower.includes(k)))
+    return 'testListening'
+  // Social / people-facing professions → coach guide face
+  if (['销售', '老师', '教师', '人力', 'hr', '培训', '教练', '咨询', '顾问', '主持', '公关', '市场', '运营', '客服', '社工', '志愿者', '导游'].some((k) => lower.includes(k)))
+    return 'coachGuide'
+  if (['sales', 'teacher', 'hr', 'trainer', 'coach', 'consultant', 'host', 'marketing', 'operation', 'customer service', 'social worker', 'volunteer', 'guide'].some((k) => lower.includes(k)))
+    return 'coachGuide'
+  // Business / leadership → success face
+  if (['经理', '总监', '主管', '创业', '创始人', '老板', '合伙', '投资', '金融', '银行', '证券', '保险', '地产', '管理', 'leader', 'executive'].some((k) => lower.includes(k)))
+    return 'matchSuccess'
+  if (['manager', 'director', 'founder', 'entrepreneur', 'partner', 'investor', 'finance', 'banking', 'executive', 'ceo', 'cfo', 'cto'].some((k) => lower.includes(k)))
+    return 'matchSuccess'
+  return 'loadingSystem'
+}
+
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 }
@@ -257,6 +297,7 @@ export default function ProfessionChatOverlay({
   isClosing = false,
   initialValue = '',
   smartProfession = false,
+  userArchetype,
   onSubmit,
   onSkip,
 }: ProfessionChatOverlayProps) {
@@ -281,6 +322,7 @@ export default function ProfessionChatOverlay({
   const bubbleStaggerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const thinkingTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const lastUserTextRef = useRef<string>('')
+  const previousUserTextRef = useRef<string>('') // For retry continuity
   const clearThinkingTimers = useCallback(() => {
     thinkingTimersRef.current.forEach((timer) => clearTimeout(timer))
     thinkingTimersRef.current = []
@@ -288,15 +330,23 @@ export default function ProfessionChatOverlay({
   const analytics = useOnboardingAnalytics('essential-data', { enabled: true, autoTrackStart: false })
   const deviceTier = useDeviceTier()
   const [isOnline, setIsOnline] = useState(true)
-  const inFlightAbortRef = useRef<AbortController | null>(null)
   const isSubmittingRef = useRef(isSubmitting)
-  isSubmittingRef.current = isSubmitting
+  useEffect(() => { isSubmittingRef.current = isSubmitting }, [isSubmitting])
+  const sendGenerationRef = useRef(0)
+  // Rotating placeholder index
+  const [placeholderIndex, setPlaceholderIndex] = useState(0)
+  const placeholderTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Tag removal state
+  const [removedTags, setRemovedTags] = useState<string[]>([])
+  const [tagFeedback, setTagFeedback] = useState<string | null>(null)
 
   useEffect(() => {
     if (visible && !isClosing) {
       setInputValue(initialValue)
+      const archetypeName = userArchetype ? (ARCHETYPE_BY_ID[userArchetype]?.nameCn ?? '') : ''
+      const openingText = archetypeName ? OPENING_MESSAGE_ARCHETYPE(archetypeName) : OPENING_MESSAGE_GENERIC
       setMessages([
-        { id: generateId(), sender: 'xiaoyue', text: OPENING_MESSAGE, expressionId: 'coachGuide' },
+        { id: generateId(), sender: 'xiaoyue', text: openingText, expressionId: 'coachGuide' },
       ])
       setIsSubmitting(false)
       setHasSent(false)
@@ -308,7 +358,10 @@ export default function ProfessionChatOverlay({
       sendCountRef.current = 0
       lastSendTimeRef.current = 0
       lastUserTextRef.current = ''
+      previousUserTextRef.current = ''
       setShowShortHint(false)
+      setRemovedTags([])
+      setTagFeedback(null)
 
       // Check network status on open
       Taro.getNetworkType({
@@ -316,7 +369,7 @@ export default function ProfessionChatOverlay({
         fail: () => setIsOnline(true), // optimistic default
       })
     }
-  }, [visible, isClosing, initialValue])
+  }, [visible, isClosing, initialValue, userArchetype])
 
   // Keep network status fresh during the session — separate effect for stable cleanup
   useEffect(() => {
@@ -336,6 +389,7 @@ export default function ProfessionChatOverlay({
       if (skipTimeoutRef.current) clearTimeout(skipTimeoutRef.current)
       if (bubbleStaggerRef.current) clearTimeout(bubbleStaggerRef.current)
       if (maxSendDismissTimerRef.current) clearTimeout(maxSendDismissTimerRef.current)
+      if (placeholderTimerRef.current) clearInterval(placeholderTimerRef.current)
       clearThinkingTimers()
     }
   }, [])
@@ -355,8 +409,28 @@ export default function ProfessionChatOverlay({
     }
   }, [visible])
 
-  const handleSendNew = useCallback(async () => {
-    const text = inputValue.trim()
+  // Rotating placeholders — cycle every 3.5s when input is empty and not submitting
+  useEffect(() => {
+    if (!visible || isSubmitting || inputValue.trim().length > 0) {
+      if (placeholderTimerRef.current) {
+        clearInterval(placeholderTimerRef.current)
+        placeholderTimerRef.current = null
+      }
+      return
+    }
+    placeholderTimerRef.current = setInterval(() => {
+      setPlaceholderIndex((i) => (i + 1) % ROTATING_PLACEHOLDERS.length)
+    }, 3500)
+    return () => {
+      if (placeholderTimerRef.current) {
+        clearInterval(placeholderTimerRef.current)
+        placeholderTimerRef.current = null
+      }
+    }
+  }, [visible, isSubmitting, inputValue])
+
+  const handleSendNew = useCallback(async (overrideText?: string) => {
+    const text = (overrideText ?? inputValue).trim()
     if (!text || isSubmittingRef.current) return
 
     // Encourage more detail for very short input
@@ -385,7 +459,14 @@ export default function ProfessionChatOverlay({
 
     sendCountRef.current++
     lastSendTimeRef.current = now
+    previousUserTextRef.current = lastUserTextRef.current
     lastUserTextRef.current = text
+
+    // Generation counter for race-safe stale response suppression.
+    // Each new send increments the generation; responses from stale
+    // generations are silently dropped.
+    sendGenerationRef.current++
+    const thisGeneration = sendGenerationRef.current
 
     setIsSubmitting(true)
     setHasSent(true)
@@ -395,15 +476,19 @@ export default function ProfessionChatOverlay({
     clearThinkingTimers()
     setThinkingLabel(null)
     // Warm, Xiaoyue-personality thinking labels — rotate to feel alive
+    // Retry continuity: acknowledge when text changed from previous attempt
+    const isRetry = previousUserTextRef.current.length > 0 && text !== previousUserTextRef.current
     const thinkingLabels = [
       '让我想想…这个职业的小伙伴在局里是什么画风呢',
-      '嗯，有点意思，我再品一品～',
+      isRetry ? '这次说得比上次更清楚，我再品一品～' : '嗯，有点意思，我再品一品～',
       '已经在帮你匹配同频的小伙伴了，稍等片刻～',
+      '让我再确认一下，不想给你贴错标签～',
     ]
     thinkingTimersRef.current = [
       setTimeout(() => setThinkingLabel(thinkingLabels[0]), 800),
       setTimeout(() => setThinkingLabel(thinkingLabels[1]), 2800),
-      setTimeout(() => setThinkingLabel(thinkingLabels[2]), 5200),
+      setTimeout(() => setThinkingLabel(thinkingLabels[2]), 4800),
+      setTimeout(() => setThinkingLabel(thinkingLabels[3]), 6800),
     ]
 
     const userMsg: ChatMessage = { id: generateId(), sender: 'user', text }
@@ -411,12 +496,6 @@ export default function ProfessionChatOverlay({
     setBottomAnchorKey((k) => k + 1)
 
     try {
-      // Cancel any in-flight request before starting a new one
-      if (inFlightAbortRef.current) {
-        inFlightAbortRef.current.abort()
-      }
-      inFlightAbortRef.current = new AbortController()
-
       const data = await apiRequest<UnderstandProfessionResponse>({
         path: '/api/inference/understand-profession',
         method: 'POST',
@@ -424,7 +503,8 @@ export default function ProfessionChatOverlay({
         timeout: API_TIMEOUT_MS,
       })
 
-      inFlightAbortRef.current = null
+      // Drop stale response — a newer send superseded this one
+      if (sendGenerationRef.current !== thisGeneration) return
 
       // Skip low-quality echo hints (e.g., "投资银行！投资银行方向？")
       const hintText = data.reactionHint.trim()
@@ -448,7 +528,10 @@ export default function ProfessionChatOverlay({
         setMessages((prev) => [...prev, hintMsg])
       }
 
+      if (bubbleStaggerRef.current) clearTimeout(bubbleStaggerRef.current)
       bubbleStaggerRef.current = setTimeout(() => {
+        // Re-check generation inside the stagger timeout too
+        if (sendGenerationRef.current !== thisGeneration) return
         const fullMsg: ChatMessage = {
           id: generateId(),
           sender: 'xiaoyue',
@@ -486,7 +569,8 @@ export default function ProfessionChatOverlay({
         })
       }, 400)
     } catch (_err) {
-      inFlightAbortRef.current = null
+      // Drop stale error response — a newer send superseded this one
+      if (sendGenerationRef.current !== thisGeneration) return
       clearThinkingTimers()
       const didTimeout = _err instanceof Error && (
         _err.name === 'AbortError' ||
@@ -523,7 +607,7 @@ export default function ProfessionChatOverlay({
         industryConfidence: 0,
       })
     }
-  }, [inputValue, isSubmitting, isOnline, analytics, clearThinkingTimers])
+  }, [inputValue, isOnline, analytics, clearThinkingTimers])
 
   const handleSendLegacy = useCallback(() => {
     const text = inputValue.trim()
@@ -542,7 +626,13 @@ export default function ProfessionChatOverlay({
     }, 600)
   }, [inputValue, isSubmitting])
 
-  const handleSend = smartProfession ? handleSendNew : handleSendLegacy
+  const handleSend = useCallback(() => {
+    if (smartProfession) {
+      handleSendNew()
+    } else {
+      handleSendLegacy()
+    }
+  }, [smartProfession, handleSendNew, handleSendLegacy])
 
   const handleRetry = useCallback(() => {
     const text = lastUserTextRef.current
@@ -550,14 +640,11 @@ export default function ProfessionChatOverlay({
     analytics.interaction('profession_chat_retry_tapped', {
       inputLength: text.length,
     })
-    // Remove the retry button by clearing retryMessageId
     setRetryMessageId(null)
-    // Re-trigger with the same text
     setInputValue(text)
-    // Use requestAnimationFrame for smoother timing than setTimeout(..., 0)
     requestAnimationFrame(() => {
       if (smartProfession) {
-        handleSendNew()
+        handleSendNew(text)
       } else {
         handleSendLegacy()
       }
@@ -567,14 +654,17 @@ export default function ProfessionChatOverlay({
   const handleSkip = useCallback(() => {
     haptics('light')
     analytics.interaction('profession_chat_skipped')
+    // Warm skip with memory: acknowledge if user already sent something
+    const hasUserMessage = messages.some((m) => m.sender === 'user')
+    const skipText = hasUserMessage ? SKIP_RESPONSE_MEMORY : SKIP_RESPONSE_GENERIC
     setMessages((prev) => [
       ...prev,
-      { id: generateId(), sender: 'xiaoyue', text: SKIP_RESPONSE, expressionId: 'homeWelcome' },
+      { id: generateId(), sender: 'xiaoyue', text: skipText, expressionId: 'homeWelcome' },
     ])
     skipTimeoutRef.current = setTimeout(() => {
       onSkip()
     }, 400)
-  }, [onSkip, analytics])
+  }, [onSkip, analytics, messages])
 
   const handleConfirm = useCallback(() => {
     analytics.interaction('profession_chat_confirmed', {
@@ -601,11 +691,6 @@ export default function ProfessionChatOverlay({
       <View
         id={`msg-${msg.id}`}
         className={`profession-overlay__message profession-overlay__message--${msg.sender}`}
-        onAnimationEnd={(e) => {
-          // Remove will-change after entrance animation completes to free GPU memory
-          const target = e.currentTarget as unknown as HTMLElement
-          if (target) target.style.willChange = 'auto'
-        }}
       >
         {msg.sender === 'xiaoyue' && (
           <View className='profession-overlay__avatar' aria-label='悦仔'>
@@ -667,7 +752,7 @@ export default function ProfessionChatOverlay({
               <View className='profession-overlay__avatar'>
                 <Image
                   className='profession-overlay__avatar-img'
-                  src={getXiaoyueExpressionAsset('loadingSystem')}
+                  src={getXiaoyueExpressionAsset(getAnticipationExpression(lastUserTextRef.current))}
                   mode='aspectFill'
                   lazyLoad
                 />
@@ -694,7 +779,7 @@ export default function ProfessionChatOverlay({
       >
         <Input
           className='profession-overlay__input'
-          placeholder={isSubmitting ? '悦仔正在琢磨中…' : '告诉我你的职业~'}
+          placeholder={isSubmitting ? '悦仔正在琢磨中…' : ROTATING_PLACEHOLDERS[placeholderIndex]}
           value={inputValue}
           onInput={(e) => setInputValue(e.detail.value)}
           onConfirm={handleSend}
@@ -719,15 +804,17 @@ export default function ProfessionChatOverlay({
         ) : null}
       </View>
 
-      {/* Preload common Xiaoyue expressions to eliminate first-render flicker */}
-      <View style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', opacity: 0 }}>
-        <Image src={getXiaoyueExpressionAsset('coachGuide')} mode='aspectFill' />
-        <Image src={getXiaoyueExpressionAsset('loadingSystem')} mode='aspectFill' />
-        <Image src={getXiaoyueExpressionAsset('homeWelcome')} mode='aspectFill' />
-        <Image src={getXiaoyueExpressionAsset('testCurious')} mode='aspectFill' />
-        <Image src={getXiaoyueExpressionAsset('testListening')} mode='aspectFill' />
-        <Image src={getXiaoyueExpressionAsset('matchSuccess')} mode='aspectFill' />
-      </View>
+      {/* Preload common Xiaoyue expressions to eliminate first-render flicker — only while overlay is open */}
+      {visible && !isClosing && !deviceTier.isDegradation && (
+        <View style={{ position: 'absolute', left: '-9999rpx', top: 0, width: '2rpx', height: '2rpx', opacity: 0, pointerEvents: 'none' }}>
+          <Image src={getXiaoyueExpressionAsset('coachGuide')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
+          <Image src={getXiaoyueExpressionAsset('loadingSystem')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
+          <Image src={getXiaoyueExpressionAsset('homeWelcome')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
+          <Image src={getXiaoyueExpressionAsset('testCurious')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
+          <Image src={getXiaoyueExpressionAsset('testListening')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
+          <Image src={getXiaoyueExpressionAsset('matchSuccess')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
+        </View>
+      )}
 
       {showRevealCard && revealTags.length > 0 && (
         <View
@@ -739,20 +826,51 @@ export default function ProfessionChatOverlay({
           aria-label='职业分析结果'
         >
           {/* Success celebration sparkles — CSS-only, GPU-composited */}
-          {!classificationData?.industrySource?.includes('fallback') && (
-            <View className='profession-overlay__celebration' aria-hidden='true'>
-              <View className='profession-overlay__sparkle profession-overlay__sparkle--1' />
-              <View className='profession-overlay__sparkle profession-overlay__sparkle--2' />
-              <View className='profession-overlay__sparkle profession-overlay__sparkle--3' />
-              <View className='profession-overlay__sparkle profession-overlay__sparkle--4' />
-              <View className='profession-overlay__sparkle profession-overlay__sparkle--5' />
-            </View>
-          )}
+          {/* Fallback gets muted amber sparkles; success gets primary sparkles */}
+          <View className='profession-overlay__celebration' aria-hidden='true'>
+            <View className={[
+              'profession-overlay__sparkle',
+              `profession-overlay__sparkle--1${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
+            ].filter(Boolean).join(' ')} />
+            <View className={[
+              'profession-overlay__sparkle',
+              `profession-overlay__sparkle--2${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
+            ].filter(Boolean).join(' ')} />
+            <View className={[
+              'profession-overlay__sparkle',
+              `profession-overlay__sparkle--3${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
+            ].filter(Boolean).join(' ')} />
+            <View className={[
+              'profession-overlay__sparkle',
+              `profession-overlay__sparkle--4${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
+            ].filter(Boolean).join(' ')} />
+            <View className={[
+              'profession-overlay__sparkle',
+              `profession-overlay__sparkle--5${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
+            ].filter(Boolean).join(' ')} />
+          </View>
           <View className='profession-overlay__reveal-title-row'>
-            {!classificationData?.industrySource?.includes('fallback') && (
-              <View className='profession-overlay__reveal-checkmark'>
-                <View className='profession-overlay__reveal-checkmark-stem' />
-                <View className='profession-overlay__reveal-checkmark-kick' />
+            {!classificationData?.industrySource?.includes('fallback') ? (
+              <>
+                <View className='profession-overlay__reveal-checkmark'>
+                  <View className='profession-overlay__reveal-checkmark-stem' />
+                  <View className='profession-overlay__reveal-checkmark-kick' />
+                </View>
+                <View className='profession-overlay__reveal-mascot' aria-hidden='true'>
+                  <Image
+                    className='profession-overlay__reveal-mascot-img'
+                    src={getXiaoyueExpressionAsset('matchSuccess')}
+                    mode='aspectFill'
+                  />
+                </View>
+              </>
+            ) : (
+              <View className='profession-overlay__reveal-mascot' aria-hidden='true'>
+                <Image
+                  className='profession-overlay__reveal-mascot-img'
+                  src={getXiaoyueExpressionAsset('coachGuide')}
+                  mode='aspectFill'
+                />
               </View>
             )}
             <Text className='profession-overlay__reveal-title'>
@@ -760,10 +878,41 @@ export default function ProfessionChatOverlay({
             </Text>
           </View>
           <View className='profession-overlay__reveal-tags'>
-            {revealTags.map((tag) => (
-              <Chip key={tag} label={tag} selected level={1} compact />
+            {revealTags.filter((t) => !removedTags.includes(t)).map((tag) => (
+              <View
+                key={tag}
+                className='profession-overlay__reveal-tag-wrap'
+                onClick={() => {
+                  haptics('light')
+                  setRemovedTags((prev) => [...prev, tag])
+                  setTagFeedback(null)
+                  // Force animation replay by clearing then setting
+                  requestAnimationFrame(() => {
+                    setTagFeedback('好，这个标签不要了～还有想调整的吗？')
+                  })
+                  analytics.interaction('profession_chat_tag_removed', { tag })
+                }}
+              >
+                <Chip label={tag} selected level={1} compact />
+              </View>
             ))}
           </View>
+          {tagFeedback && revealTags.filter((t) => !removedTags.includes(t)).length > 0 && (
+            <Text className='profession-overlay__tag-feedback'>{tagFeedback}</Text>
+          )}
+          {/* Social proof + chemistry bridge lines */}
+          {!classificationData?.industrySource?.includes('fallback') && classificationData?.industryCategoryLabel && (
+            <View className='profession-overlay__reveal-bridge'>
+              <Text className='profession-overlay__reveal-bridge-line'>
+                {`JoyJoin 里还有很多${classificationData.industryCategoryLabel}方向的小伙伴，你们应该很有共鸣～`}
+              </Text>
+              {userArchetype && ARCHETYPE_BY_ID[userArchetype]?.nameCn && (
+                <Text className='profession-overlay__reveal-bridge-line profession-overlay__reveal-bridge-line--chemistry'>
+                  {`你的「${ARCHETYPE_BY_ID[userArchetype].nameCn}」特质 + ${classificationData.industryCategoryLabel}背景，在局里会很吃香`}
+                </Text>
+              )}
+            </View>
+          )}
           {classificationData?.industrySource?.includes('fallback') && (
             <Text className='profession-overlay__reveal-hint'>网络有点慢，悦仔先记下了。等信号好了再帮你细细分析～</Text>
           )}

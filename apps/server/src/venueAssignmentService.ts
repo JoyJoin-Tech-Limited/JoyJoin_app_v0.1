@@ -574,6 +574,8 @@ export async function saveVenueAssignments(
       poolDistrict: poolInfo?.district || undefined,
       poolDate: bookingDate,
       unassignedCount: Object.values(unassignedBreakdown).reduce((a, b) => a + b, 0),
+      totalGroups: groups.length,
+      daysUntilEvent: Math.round((new Date(bookingDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
       reasonBreakdown: unassignedBreakdown,
     }).catch((err) => {
       logger.warn("[VenueAssignment] Failed to send WeCom alert", { error: String(err) });

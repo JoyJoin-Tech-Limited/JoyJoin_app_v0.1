@@ -1,5 +1,4 @@
 import { View } from '@tarojs/components'
-import { useEffect, useState } from 'react'
 import './QuestionTransition.scss'
 
 export interface QuestionTransitionProps {
@@ -7,17 +6,16 @@ export interface QuestionTransitionProps {
   children: React.ReactNode
 }
 
+/**
+ * QuestionTransition — mounts children with a fade-in + slide-up entrance.
+ *
+ * Uses `questionId` as the React key so that every question change forces a
+ * remount. The CSS animation restarts from frame 0 automatically, eliminating
+ * the 17-ms flash that occurred when we toggled a class via setState + setTimeout.
+ */
 export default function QuestionTransition({ questionId, children }: QuestionTransitionProps) {
-  const [animating, setAnimating] = useState(false)
-
-  useEffect(() => {
-    setAnimating(false)
-    const timer = setTimeout(() => setAnimating(true), 17)
-    return () => clearTimeout(timer)
-  }, [questionId])
-
   return (
-    <View className={animating ? 'question-transition question-transition--enter' : 'question-transition'}>
+    <View key={questionId} className='question-transition question-transition--enter'>
       {children}
     </View>
   )

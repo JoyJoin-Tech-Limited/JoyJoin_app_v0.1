@@ -1,15 +1,906 @@
 @use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
 
-.payment-page {
-  min-height: 100dvh;
+// ───────────────────────────────────────────
+// Payment Ritual V2 — Sprint 1: Foundation
+// Acts I-III: Anticipation + Revelation + Choice
+// ───────────────────────────────────────────
+
+.payment-ritual {
+  min-height: 100vh;
   @include page-shell-padding(40rpx, 32rpx, 48rpx);
   position: relative;
-  overflow: hidden; // design-audit:fixed — ScrollView now handles scrolling, but keep for backdrop containment
-  background: linear-gradient(180deg, $color-bg-tint-warm 0%, $color-bg-tint-purple 40%, $color-surface 100%);
+  overflow: hidden;
+  background: $color-bg-tint-warm;
   display: flex;
   flex-direction: column;
   gap: $spacing-md;
+
+  &--celebrating {
+    pointer-events: none;
+  }
+
+  // Reduced motion: instant visibility
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════
+// ACT I: Anticipation
+// ═══════════════════════════════════════════
+
+.ritual-act-anticipation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: $spacing-md;
+  padding: $spacing-xl 0;
+  min-height: 60vh;
+  justify-content: center;
+
+  &__progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: $spacing-sm $spacing-lg;
+    opacity: 0;
+    transition: opacity 300ms ease-out;
+
+    &--visible {
+      opacity: 1;
+    }
+  }
+
+  &__progress-track {
+    width: 100%;
+    height: 4rpx;
+    background: rgba($color-primary, 0.1);
+    border-radius: 2rpx;
+    overflow: hidden;
+  }
+
+  &__progress-fill {
+    height: 100%;
+    background: $color-primary;
+    border-radius: 2rpx;
+    transition: width 500ms ease-out;
+  }
+
+  &__progress-label {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    margin-top: $spacing-xs;
+    text-align: center;
+  }
+
+  &__xiaoyue-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
+    opacity: 0;
+    transform: translateY(16rpx);
+    transition: opacity 400ms ease-out, transform 400ms ease-out;
+
+    &--visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  &__easter-egg {
+    position: absolute;
+    top: -60rpx;
+    right: -20rpx;
+    background: white;
+    padding: 16rpx 24rpx;
+    border-radius: 32rpx;
+    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+    animation: fade-up 300ms ease-out;
+    z-index: 10;
+  }
+
+  &__easter-egg-text {
+    font-size: 24rpx;
+    color: $color-text-secondary;
+    white-space: nowrap;
+  }
+
+  &__spotlight {
+    position: absolute;
+    top: -40rpx;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 280rpx;
+    height: 280rpx;
+    background: rgba($color-primary, 0.12);
+    animation: spotlight-breathe 3s ease-in-out infinite;
+  }
+
+  &__xiaoyue {
+    width: 240rpx;
+    height: 240rpx;
+    position: relative;
+    z-index: 1;
+  }
+
+  &__xiaoyue-line {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: 1.6;
+    max-width: 480rpx;
+    opacity: 0;
+    animation: fade-up 300ms ease-out 200ms forwards;
+  }
+
+  &__title {
+    @include type-display-page-title;
+    font-size: $font-size-3xl;
+    line-height: 1.2;
+    color: $color-text-primary;
+    opacity: 0;
+    animation: fade-up 400ms ease-out 100ms forwards;
+  }
+
+  &__subtitle {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: 1.6;
+    max-width: 520rpx;
+    opacity: 0;
+    animation: fade-up 400ms ease-out 200ms forwards;
+  }
+
+  &__community {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-top: $spacing-sm;
+    opacity: 0;
+    animation: fade-up 400ms ease-out 300ms forwards;
+  }
+
+  &__pulse-dot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: 50%;
+    background: $color-success;
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  &__community-text {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    font-weight: 600;
+  }
+
+  &__community-subline {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    margin-top: $spacing-xs;
+    opacity: 0;
+    animation: fade-up 400ms ease-out 100ms forwards;
+  }
+
+  &__skip {
+    margin-top: $spacing-lg;
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    padding: $spacing-sm $spacing-md;
+    opacity: 0;
+    animation: fade-up 300ms ease-out forwards;
+
+    &:active {
+      color: $color-primary;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════
+// ACT II: Revelation
+// ═══════════════════════════════════════════
+
+.ritual-act-revelation {
+  padding: $spacing-xl $spacing-lg;
+  border-radius: $card-radius;
+  margin: 0 -32rpx;
+  opacity: 0;
+  transform: translateY(16rpx);
+  transition: opacity 500ms cubic-bezier(0.22, 1, 0.36, 1),
+              transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  &--visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  &__hero {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    text-align: center;
+  }
+
+  &__badge {
+    align-self: center;
+    padding: 16rpx 24rpx;
+    border-radius: 999rpx;
+    border: 2rpx solid;
+    font-size: $font-size-sm;
+    font-weight: 700;
+  }
+
+  &__title {
+    @include type-display-page-title;
+    font-size: $font-size-2xl;
+    line-height: 1.25;
+    color: $color-text-primary;
+  }
+
+  &__subline {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: 1.6;
+  }
+
+  &__context {
+    font-size: $font-size-sm;
+    color: $color-primary;
+    font-weight: 600;
+    margin-top: $spacing-xs;
+  }
+
+  &__reveal-badge {
+    align-self: center;
+    padding: 12rpx 24rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.08);
+    border: 2rpx solid rgba($color-primary, 0.2);
+    margin-bottom: $spacing-sm;
+    opacity: 0;
+    transform: translateY(8rpx);
+    transition: opacity 400ms ease-out, transform 400ms ease-out;
+
+    &--visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  &__reveal-text {
+    font-size: $font-size-sm;
+    color: $color-primary;
+    font-weight: 700;
+  }
+
+  &__value-prop {
+    align-self: center;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $card-radius-sm;
+    margin-top: $spacing-sm;
+    font-size: $font-size-base;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  &__invitation {
+    font-size: $font-size-sm;
+    color: $color-secondary;
+    font-weight: 600;
+    margin-top: $spacing-sm;
+    opacity: 0;
+    animation: fade-up 400ms ease-out forwards;
+  }
+}
+
+// ═══════════════════════════════════════════
+// ACT III: Choice
+// ═══════════════════════════════════════════
+
+.ritual-act-choice {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+
+  &__progress {
+    padding: 0 $spacing-lg;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__progress-label {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    font-weight: 600;
+  }
+
+  &__progress-step {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+
+  &__progress-track {
+    width: 100%;
+    height: 8rpx;
+    background: rgba($color-primary, 0.1);
+    border-radius: 4rpx;
+    overflow: hidden;
+  }
+
+  &__progress-fill {
+    height: 100%;
+    background: $color-primary;
+    border-radius: 4rpx;
+    transition: width 500ms ease-out;
+  }
+
+  &__header {
+    text-align: center;
+    padding: $spacing-md 0;
+  }
+
+  &__title {
+    @include type-display-section-title;
+    font-size: $font-size-lg;
+    color: $color-text-primary;
+  }
+
+  &__subline {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: 1.55;
+    margin-top: $spacing-xs;
+  }
+
+  &__plans {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  &__xiaoyue-reaction {
+    padding: $spacing-md $spacing-lg;
+    text-align: center;
+    animation: fade-up 300ms ease-out;
+  }
+
+  &__xiaoyue-reaction-text {
+    font-size: $font-size-base;
+    color: $color-primary;
+    font-weight: 600;
+    font-style: italic;
+  }
+}
+
+// ─── Plan Path Card ───
+
+.plan-path-card {
+  position: relative;
+  padding: $spacing-lg;
+  border-radius: $card-radius;
+  background: rgba($color-surface, 0.96);
+  border: 2rpx solid rgba($color-border, 0.6);
+  transition: transform 200ms ease-out, box-shadow 200ms ease-out, border-color 200ms ease-out;
+  overflow: hidden;
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &--selected {
+    border-color: rgba($color-primary, 0.5);
+    box-shadow: 0 24rpx 64rpx rgba($color-primary, 0.15);
+    transform: translateY(-4rpx);
+  }
+
+  &__content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__accent-bar {
+    position: absolute;
+    left: -$spacing-lg;
+    top: 0;
+    bottom: 0;
+    width: 6rpx;
+    border-radius: 4rpx;
+  }
+
+  &__topline {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    flex-wrap: wrap;
+  }
+
+  &__badge {
+    padding: 8rpx 16rpx;
+    border-radius: 999rpx;
+    font-size: $font-size-xs;
+    font-weight: 700;
+
+    &--recommended {
+      animation: badge-pulse 2s ease-in-out infinite;
+    }
+  }
+
+  &__title {
+    font-size: 34rpx;
+    font-weight: 700;
+    color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  &__description {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: 1.5;
+  }
+
+  &__anchors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-xs;
+    margin-top: $spacing-xs;
+  }
+
+  &__anchor-pill {
+    padding: 8rpx 16rpx;
+    border-radius: 999rpx;
+    font-size: $font-size-xs;
+    font-weight: 600;
+
+    &--savings {
+      font-weight: 700;
+      background: rgba($color-secondary, 0.08);
+    }
+
+    &--savings-text {
+      color: $color-secondary;
+      font-size: $font-size-xs;
+      font-weight: 700;
+    }
+  }
+
+  &__social-proof {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    margin-top: $spacing-xs;
+  }
+
+  &__position {
+    font-size: $font-size-sm;
+    color: $color-success;
+    font-weight: 600;
+    margin-top: $spacing-xs;
+    animation: fade-up 300ms ease-out;
+  }
+
+  &__reason {
+    padding: 16rpx 16rpx;
+    border-radius: $card-radius-sm;
+    margin-top: $spacing-xs;
+    font-size: $font-size-sm;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  &__price-row {
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-sm;
+    margin-top: $spacing-xs;
+  }
+
+  &__original-price {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    text-decoration: line-through;
+  }
+
+  &__price {
+    @include type-en-brand-numeric;
+    font-size: 40rpx;
+    font-weight: $font-weight-black;
+  }
+}
+
+// ═══════════════════════════════════════════
+// Animations
+// ═══════════════════════════════════════════
+
+@keyframes spotlight-breathe {
+  0%, 100% { opacity: 0.6; transform: translateX(-50%) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+@keyframes cta-idle-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.015);
+  }
+}
+
+// ═══════════════════════════════════════════
+// Ritual Commitment (Act IV — Sprint 1: Basic)
+// ═══════════════════════════════════════════
+
+.ritual-commitment {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-xl $spacing-lg;
+  text-align: center;
+
+  &__pledge {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    font-weight: 600;
+    line-height: 1.6;
+  }
+
+  &__milestone {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    border-radius: $card-radius;
+    background: rgba($color-success, 0.08);
+    border: 2rpx solid rgba($color-success, 0.15);
+    width: 100%;
+  }
+
+  &__milestone-icon {
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: 50%;
+    background: rgba($color-success, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__milestone-emoji {
+    font-size: 36rpx;
+  }
+
+  &__milestone-image {
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: 50%;
+  }
+
+  &__milestone-text {
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+    text-align: left;
+  }
+
+  &__milestone-title {
+    font-size: $font-size-base;
+    font-weight: 700;
+    color: $color-text-primary;
+  }
+
+  &__milestone-body {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+
+  &__scarcity {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__scarcity-dot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: 50%;
+    background: $color-secondary;
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  &__scarcity-text {
+    font-size: $font-size-sm;
+    color: $color-secondary;
+    font-weight: 600;
+  }
+
+  &__cta {
+    width: 100%;
+    min-height: 96rpx;
+    border-radius: $button-radius;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    box-shadow: 0 8rpx 24rpx rgba($color-primary, 0.35);
+    transition: transform 100ms ease-out;
+    animation: cta-idle-pulse 3s ease-in-out infinite;
+
+    &:active {
+      transform: scale(0.97);
+      animation: none;
+    }
+  }
+
+  &__cta-label {
+    font-size: $font-size-md;
+    font-weight: 700;
+    color: $color-text-white;
+  }
+
+  &__cta-sublabel {
+    font-size: $font-size-sm;
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  &__promise {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    line-height: 1.5;
+  }
+
+  &__trust {
+    padding-top: $spacing-sm;
+  }
+
+  &__trust-text {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+  }
+}
+
+// ─── Hesitation Nudge ───
+
+.ritual-hesitation {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  border-radius: $card-radius;
+  background: white;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
+  margin-bottom: $spacing-md;
+  animation: fade-up 400ms ease-out;
+  width: 100%;
+
+  &__xiaoyue {
+    width: 80rpx;
+    height: 80rpx;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  &__text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: 1.5;
+    flex: 1;
+  }
+}
+
+// ─── Celebration Overlay ───
+
+.ritual-celebration {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: fade-in 300ms ease-out;
+
+  &--out {
+    animation: fade-out 300ms ease-out forwards;
+  }
+
+  &__backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.55);
+  }
+
+  &__burst {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  &__content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-xl;
+    text-align: center;
+  }
+
+  &__xiaoyue {
+    width: 160rpx;
+    height: 160rpx;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    animation: pop-in 500ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__title {
+    font-size: $font-size-lg;
+    font-weight: 700;
+    color: $color-text-white;
+    animation: fade-up 400ms ease-out 200ms both;
+  }
+
+  &__subtitle {
+    font-size: $font-size-base;
+    color: rgba(255, 255, 255, 0.85);
+    animation: fade-up 400ms ease-out 350ms both;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// ─── Empty State ───
+
+.ritual-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xl $spacing-lg;
+  text-align: center;
+
+  &__title {
+    font-size: $font-size-md;
+    font-weight: 700;
+    color: $color-text-secondary;
+  }
+
+  &__sub {
+    font-size: $font-size-base;
+    color: $color-text-muted;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ritual-celebration {
+    animation: none;
+
+    &--out {
+      animation: none;
+      opacity: 0;
+    }
+
+    &__xiaoyue {
+      animation: none;
+    }
+
+    &__title,
+    &__subtitle {
+      animation: none;
+      opacity: 1;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════
+// Legacy Payment Page (for fallback)
+// ═══════════════════════════════════════════
+
+.payment-page {
+  min-height: 100vh;
+  @include page-shell-padding(40rpx, 32rpx, 48rpx);
+  position: relative;
+  overflow: hidden;
+  background: $color-bg-tint-warm;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+
+  &__backdrop {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  &__orb {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.42;
+    filter: blur(8rpx);
+    animation: payment-orb-drift 8s ease-in-out infinite;
+
+    &--left {
+      top: 60rpx;
+      left: -40rpx;
+      width: 240rpx;
+      height: 240rpx;
+      background: rgba($color-secondary, 0.16);
+    }
+
+    &--right {
+      top: 180rpx;
+      right: -64rpx;
+      width: 300rpx;
+      height: 300rpx;
+      background: rgba($color-primary, 0.14);
+      animation-delay: 1.6s;
+    }
+  }
 
   &__header {
     position: relative;
@@ -19,17 +910,20 @@
     gap: 12rpx;
   }
 
-  .joy-button &__back-button,
-  &__back-button.joy-button {
+  &__back-button {
     width: 176rpx;
     min-height: 88rpx;
     padding: 0 24rpx;
     margin-left: 0;
-    border-radius: $button-radius;
+    border-radius: 44rpx;
     background: rgba($color-surface, 0.94);
     color: $color-text-secondary;
-    font-size: $font-size-base;
+    font-size: 28rpx;
     border: 2rpx solid rgba($color-primary, 0.12);
+
+    &::after {
+      border: none;
+    }
   }
 
   &__eyebrow {
@@ -40,7 +934,7 @@
 
   &__title {
     @include type-display-page-title;
-    font-size: $font-size-3xl;
+    font-size: 56rpx;
     line-height: 1.2;
     color: $color-text-primary;
   }
@@ -49,6 +943,13 @@
     font-size: $font-size-base;
     color: $color-text-secondary;
     line-height: 1.6;
+  }
+
+  &__mascot {
+    width: 200rpx;
+    height: 200rpx;
+    align-self: center;
+    margin-top: 8rpx;
   }
 
   &__context-card,
@@ -60,9 +961,9 @@
   }
 
   &__context-card {
-    padding: $spacing-lg;
-    border-radius: $card-radius;
-    background: linear-gradient(145deg, rgba($color-surface, 0.96) 0%, rgba($color-primary-light, 0.86) 100%);
+    padding: 32rpx;
+    border-radius: 32rpx;
+    background: rgba($color-surface, 0.96);
     border: 2rpx solid rgba($color-primary, 0.14);
     box-shadow: 0 24rpx 80rpx rgba($color-primary, 0.12);
     animation: payment-card-rise 0.3s ease-out both;
@@ -78,7 +979,7 @@
     @include type-display-page-title;
     display: block;
     margin-top: 10rpx;
-    font-size: $font-size-xl;
+    font-size: 40rpx;
     line-height: 1.28;
     color: $color-text-primary;
   }
@@ -108,13 +1009,13 @@
   }
 
   &__summary-card {
-    padding: $spacing-lg;
-    border-radius: $card-radius;
+    padding: 32rpx;
+    border-radius: 32rpx;
     background: rgba($color-surface, 0.92);
     box-shadow: 0 24rpx 80rpx rgba($color-primary, 0.08);
     display: flex;
     flex-direction: column;
-    gap: $spacing-xs;
+    gap: 8rpx;
   }
 
   &__summary-label {
@@ -136,19 +1037,22 @@
     line-height: 1.55;
   }
 
-  .joy-button &__resume-button,
-  &__resume-button.joy-button {
+  &__resume-button {
     @include type-brand-cta-label;
     margin-top: 12rpx;
-    min-height: max(88rpx, $cta-min-tap);
-    border-radius: $button-radius;
+    min-height: 88rpx;
+    border-radius: 44rpx;
     background: rgba($color-primary-light, 0.94);
     color: $color-primary-dark;
     font-size: $font-size-base;
 
     &:active {
-      opacity: 0.96;
+      filter: brightness(0.96);
       transform: scale(0.98);
+    }
+
+    &::after {
+      border: none;
     }
   }
 
@@ -180,21 +1084,16 @@
 
   &__plan {
     min-height: 184rpx;
-    padding: 28rpx;
-    border-radius: $card-radius;
+    padding: 0 28rpx;
+    border-radius: 32rpx;
     background: rgba($color-surface, 0.94);
     border: 2rpx solid rgba($color-border, 0.72);
     text-align: left;
-    box-shadow: 0 12rpx 36rpx rgba(0, 0, 0, 0.06);
+    box-shadow: 0 12rpx 36rpx rgba(45, 49, 66, 0.06);
 
-    &:active {
-      opacity: 0.92;
-      transform: scale(0.98);
+    &::after {
+      border: none;
     }
-  }
-
-  &__plan--hover {
-    opacity: 0.96;
   }
 
   &__plan--selected {
@@ -207,7 +1106,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: $spacing-md;
+    gap: 24rpx;
   }
 
   &__plan-copy {
@@ -220,7 +1119,7 @@
     align-items: center;
     gap: 12rpx;
     flex-wrap: wrap;
-    margin-bottom: $spacing-xs;
+    margin-bottom: 8rpx;
   }
 
   &__plan-title {
@@ -228,6 +1127,9 @@
     font-size: 34rpx;
     font-weight: 700;
     color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__plan-badge {
@@ -281,10 +1183,10 @@
 
   &__footer {
     margin-top: auto;
-    padding: $spacing-lg;
-    border-radius: $card-radius;
+    padding: 32rpx;
+    border-radius: 32rpx;
     background: rgba($color-surface, 0.98);
-    box-shadow: 0 20rpx 80rpx rgba(0, 0, 0, 0.08);
+    box-shadow: 0 20rpx 80rpx rgba(15, 23, 42, 0.08);
     display: flex;
     flex-direction: column;
     gap: 20rpx;
@@ -294,7 +1196,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: $spacing-md;
+    gap: 24rpx;
     font-size: $font-size-base;
     color: $color-text-secondary;
   }
@@ -323,19 +1225,22 @@
     color: $color-text-primary;
   }
 
-  .joy-button &__pay-button,
-  &__pay-button.joy-button {
+  &__pay-button {
     @include type-brand-cta-label;
-    min-height: max(96rpx, $cta-min-tap);
+    min-height: 96rpx;
     border-radius: $button-radius;
-    background: $color-success;
+    background: #07c160;
     color: $color-text-white;
     font-size: $font-size-md;
-    box-shadow: 0 8rpx 24rpx rgba($color-success, 0.35);
+    box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.35);
 
     &:active {
-      opacity: 0.92;
+      filter: brightness(0.92);
       transform: scale(0.98);
+    }
+
+    &::after {
+      border: none;
     }
   }
 
@@ -344,6 +1249,19 @@
     color: $color-text-secondary;
     text-align: center;
     line-height: 1.55;
+  }
+}
+
+@keyframes payment-orb-drift {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    opacity: 0.56;
+    transform: translate3d(0, -18rpx, 0) scale(1.04);
   }
 }
 
@@ -356,15 +1274,5 @@
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .payment-page__context-card,
-  .payment-page__plan,
-  .payment-page__footer {
-    animation: none;
-    opacity: 1;
-    transform: none;
   }
 }

@@ -26,8 +26,20 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   personalitySlotAnimationEnabled: "PERSONALITY_SLOT_ANIMATION_ENABLED",
   /** When false, hides the Hero Promo Banner on discover entirely.
    *  Default: true. Use to A/B test banner variants or kill it during
-   *  promo content audits. */
+   *  prom content audits. */
   promoBannerEnabled: "PROMO_BANNER_ENABLED",
+  /** Master kill-switch for the entire payment system.
+   *  When false, payment creation endpoints return 503 PAYMENTS_DISABLED.
+   *  Also controls the paymentsEnabled flag in auth responses.
+   *  Env fallback: PAYMENTS_ENABLED (default: false). */
+  paymentsEnabled: "PAYMENTS_ENABLED",
+  /** When false, falls back to a simple spinner instead of the answer-echo
+   *  loading state in the personality test. Default: true. */
+  personalityTestEchoEnabled: "PERSONALITY_TEST_ECHO_ENABLED",
+  /** Master toggle for the drag-to-reveal ribbon on squad-unboxing.
+   *  When false: falls back to the legacy "揭晓桌友" button.
+   *  Default: true. */
+  squadUnboxingDragRevealEnabled: "SQUAD_UNBOXING_DRAG_REVEAL_ENABLED",
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

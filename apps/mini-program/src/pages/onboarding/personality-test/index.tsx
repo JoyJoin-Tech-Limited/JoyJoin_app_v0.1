@@ -42,6 +42,7 @@ import {
 import { logInfo, logError } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
+import { useDeviceTier } from '../../../hooks/useDeviceTier'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
@@ -53,6 +54,8 @@ import QuestionTransition from './QuestionTransition'
 import { useBackReview } from './useBackReview'
 import {
   getArchetypeVisual,
+  getIntroStaticAsset,
+  getIntroStaticFallbackAsset,
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
   PERSONALITY_TEST_QUESTION_EXPRESSION,
@@ -274,7 +277,27 @@ export default function PersonalityTestPage() {
 
   const [skipsRemaining, setSkipsRemaining] = useState(MAX_SKIP_COUNT)
   const [isSkipping, setIsSkipping] = useState(false)
+  const [introImgError, setIntroImgError] = useState(false)
+  const [introImgLoaded, setIntroImgLoaded] = useState(false)
+  const [introReducedMotion, setIntroReducedMotion] = useState(false)
   useResetOnShow(setIsPageExiting, setIsSubmitting, setIsSkipping)
+
+  // Detect reduced-motion preference once for the intro mascot
+  useEffect(() => {
+    try {
+      const info = Taro.getSystemInfoSync()
+      setIntroReducedMotion((info as any).reduceMotion === true)
+    } catch {
+      setIntroReducedMotion(false)
+    }
+  }, [])
+
+  // Echo exit animation state: when isSubmitting drops, the echo fades out
+  // over 220ms before unmounting so the handoff to the next question feels
+  // composed rather than abrupt.
+  const [isEchoExiting, setIsEchoExiting] = useState(false)
+  const echoExitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const echoTrackedRef = useRef(false)
 
   // Guard against stale async closures hijacking navigation after session change
   const activeSessionRef = useRef<string>('')
@@ -285,6 +308,13 @@ export default function PersonalityTestPage() {
   const previousAnswerRef = useRef<string | null>(null)
   // Anonymous engine state for client-side back + re-answer
   const anonymousEngineStateRef = useRef<ReturnType<typeof initializeEngineState> | null>(null)
+  // Pending question update: hold next-question data until echo exit completes
+  // so the user never sees new question text + old answer echo simultaneously.
+  const pendingQuestionUpdateRef = useRef<{
+    question: AssessmentQuestion | null
+    progress: AssessmentProgress | null
+    matches: AssessmentMatch[]
+  } | null>(null)
   // Option-hover preview (P1-2): 200ms touch debounce, cancel on move or early release.
   // Stores the option whose 200ms timer is pending so we can cancel cleanly.
   const hoverPreviewRef = useRef<{
@@ -298,6 +328,13 @@ export default function PersonalityTestPage() {
   const backReview = useBackReview()
 
   const isAuthenticated = auth.isAuthenticated
+
+  // Feature flag: echo loading state (kill switch). Authenticated users get
+  // the server-driven flag; anonymous users default to enabled.
+  const echoEnabled = isAuthenticated
+    ? (auth.user?.features?.personalityTestEchoEnabled ?? true)
+    : true
+
   const hasStoredIncompleteSession = useMemo(() => {
     if (isAuthenticated) {
       return false
@@ -353,8 +390,10 @@ export default function PersonalityTestPage() {
         ? '继续测试'
         : '开始测试'
 
+  const { isDegradation } = useDeviceTier()
+
   const getPageClassName = (...extraClasses: string[]) =>
-    ['personality-test', ...extraClasses, isPageExiting ? 'personality-test--exiting' : '']
+    ['personality-test', ...extraClasses, isPageExiting ? 'personality-test--exiting' : '', isDegradation ? 'personality-test--low-end' : '']
       .filter(Boolean)
       .join(' ')
 
@@ -668,13 +707,18 @@ export default function PersonalityTestPage() {
       // Abandon if session changed during the async work
       if (activeSessionRef.current !== thisSessionId) return
 
-      // Clear commentary before showing the next question so the speech bubble
-      // transitions from feedback back to the new question text
-      setPostAnswerCommentary(null)
-      setQuestion(result.nextQuestion)
-      setProgress(result.progress ?? null)
-      setCurrentMatches(result.currentMatches ?? [])
-      setSliderValue(50)
+      // Clear the attempted-option ref on successful submit so retry and echo
+      // don't leak stale state across questions.
+      lastAttemptedOptionRef.current = null
+
+      // Stash the next-question data in a ref instead of applying it immediately.
+      // The echo exit animation (220ms) will apply this atomically so the user
+      // never sees new question text overlaid with the fading old answer echo.
+      pendingQuestionUpdateRef.current = {
+        question: result.nextQuestion ?? null,
+        progress: result.progress ?? null,
+        matches: result.currentMatches ?? [],
+      }
     } catch (err) {
       setIsPageExiting(false)
       const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
@@ -752,6 +796,59 @@ export default function PersonalityTestPage() {
       setMascotAutoPlay(false)
     }
   }, [isSubmitting])
+
+  // Echo lifecycle: fade-out before unmount so the transition to the next
+  // question doesn't feel like a hard cut.
+  const shouldShowEcho = isSubmitting && !backReview.isBackReviewMode
+  useEffect(() => {
+    if (shouldShowEcho) {
+      // Entering: cancel any pending exit and ensure we're not in exiting state
+      if (echoExitTimerRef.current) {
+        clearTimeout(echoExitTimerRef.current)
+        echoExitTimerRef.current = null
+      }
+      setIsEchoExiting(false)
+    } else if (!shouldShowEcho && !isEchoExiting) {
+      // Just stopped submitting — start exit animation, then unmount
+      setIsEchoExiting(true)
+      echoExitTimerRef.current = setTimeout(() => {
+        setIsEchoExiting(false)
+        echoExitTimerRef.current = null
+        // Apply the pending question update atomically after echo exits
+        const pending = pendingQuestionUpdateRef.current
+        if (pending) {
+          setPostAnswerCommentary(null)
+          setQuestion(pending.question)
+          setProgress(pending.progress)
+          setCurrentMatches(pending.matches)
+          setSliderValue(50)
+          pendingQuestionUpdateRef.current = null
+        }
+      }, 220)
+    }
+  }, [shouldShowEcho, isEchoExiting])
+
+  // Cleanup echo exit timer on unmount
+  useEffect(() => {
+    return () => {
+      if (echoExitTimerRef.current) {
+        clearTimeout(echoExitTimerRef.current)
+      }
+    }
+  }, [])
+
+  // Analytics: track echo impression once per submission
+  useEffect(() => {
+    if (shouldShowEcho && !echoTrackedRef.current) {
+      echoTrackedRef.current = true
+      analytics.interaction('personality_test_echo_shown', {
+        optionText: lastAttemptedOptionRef.current?.text ?? 'unknown',
+        hasCommentary: !!postAnswerCommentary,
+      })
+    } else if (!shouldShowEcho) {
+      echoTrackedRef.current = false
+    }
+  }, [shouldShowEcho, analytics, postAnswerCommentary])
 
   // Cleanup any pending slider interaction timer when the page unmounts or
   // the user navigates away, preventing stale setState calls.
@@ -832,6 +929,7 @@ export default function PersonalityTestPage() {
       questionIndex: progress?.answered ?? 0,
       sessionId: sessionId || 'anonymous',
     })
+    lastAttemptedOptionRef.current = null
     backReview.enterBackReview(previousQuestionRef.current, previousAnswerRef.current)
   }, [analytics, backReview, progress, sessionId])
 
@@ -1080,12 +1178,20 @@ export default function PersonalityTestPage() {
           <View className='personality-test__intro-hero personality-test__stage personality-test__stage--2'>
             <View className='personality-test__intro-hero-visual'>
               <View className='personality-test__intro-hero-halo' />
-              <XiaoyueSpriteAnimator
-                state='intro'
-                size='320rpx'
-                showGlow
-                className='personality-test__intro-mascot'
-              />
+              <View className='personality-test__intro-mascot'>
+                {!introImgLoaded && (
+                  <View className='personality-test__intro-mascot-placeholder' />
+                )}
+                <Image
+                  src={introReducedMotion || introImgError ? getIntroStaticFallbackAsset() : getIntroStaticAsset()}
+                  mode='aspectFit'
+                  className={`personality-test__intro-mascot-img${introImgLoaded ? ' personality-test__intro-mascot-img--loaded' : ''}`}
+                  aria-hidden='true'
+                  lazyLoad={false}
+                  onLoad={() => setIntroImgLoaded(true)}
+                  onError={() => setIntroImgError(true)}
+                />
+              </View>
             </View>
 
             <View className='personality-test__intro-bubble'>
@@ -1360,6 +1466,7 @@ export default function PersonalityTestPage() {
                   isLoading={isSubmitting}
                   showGlow={false}
                   autoPlay={mascotAutoPlay || resolvedMascotState !== 'idle'}
+                  transitionMs={0}
                   className='personality-test__mascot-animator'
                 />
               </View>
@@ -1376,6 +1483,7 @@ export default function PersonalityTestPage() {
                     speed={40}
                     delay={120}
                     showCursor
+                    numberOfLines={3}
                   />
                 )}
               </View>
@@ -1387,17 +1495,7 @@ export default function PersonalityTestPage() {
 
         {/* Zone D: Answers */}
         <View className='personality-test__answer-zone'>
-          {isSubmitting ? (
-            <View className='personality-test__skeleton'>
-              <View className='personality-test__skeleton-scenario' />
-              <View className='personality-test__skeleton-question' />
-              <View className='personality-test__skeleton-options'>
-                <View className='personality-test__skeleton-option' />
-                <View className='personality-test__skeleton-option' />
-                <View className='personality-test__skeleton-option' />
-              </View>
-            </View>
-          ) : (backReview.isBackReviewMode ? backReview.backReviewQuestion : question) ? (
+          {(backReview.isBackReviewMode ? backReview.backReviewQuestion : question) ? (
             <QuestionTransition questionId={(backReview.isBackReviewMode ? backReview.backReviewQuestion! : question!).id}>
               <PersonalityTestAnswerArea
                 questionType={backReview.isBackReviewMode
@@ -1423,6 +1521,36 @@ export default function PersonalityTestPage() {
               />
             </QuestionTransition>
           ) : null}
+
+          {/* Echo overlay — renders on top of answer area during submission */}
+          {(shouldShowEcho || isEchoExiting) && echoEnabled && (
+            <View
+              className={`personality-test__answer-echo-overlay${isEchoExiting ? ' personality-test__answer-echo-overlay--exiting' : ''}`}
+              aria-live='polite'
+              role='status'
+              aria-label={`已选择：${lastAttemptedOptionRef.current?.text ?? ''}，正在提交`}
+            >
+              <View className='personality-test__answer-echo-card'>
+                <Text className='personality-test__answer-echo-text' numberOfLines={2}>
+                  {lastAttemptedOptionRef.current?.text ?? '处理中…'}
+                </Text>
+              </View>
+              <View className='personality-test__answer-echo-whisper'>
+                <View className='personality-test__answer-echo-whisper-line' />
+              </View>
+              <View className='personality-test__answer-echo-brand-row'>
+                <Image
+                  className='personality-test__answer-echo-mascot-icon'
+                  src={getXiaoyueExpressionAsset(PERSONALITY_TEST_QUESTION_EXPRESSION.loading)}
+                  mode='aspectFit'
+                  aria-hidden='true'
+                />
+                <Text className='personality-test__answer-echo-caption'>
+                  悦仔收到了，正在分析…
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Back-review actions */}
@@ -1491,7 +1619,7 @@ export default function PersonalityTestPage() {
         {error ? (
           <View className='personality-test__error-row'>
             <Text className='personality-test__error'>{error}</Text>
-            {lastAttemptedOptionRef.current ? (
+            {lastAttemptedOptionRef.current && !backReview.isBackReviewMode ? (
               <Button
                 variant='secondary'
                 className='personality-test__retry-btn'

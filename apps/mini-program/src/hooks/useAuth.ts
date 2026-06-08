@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Taro from '@tarojs/taro'
 import type { AuthUserResponse } from '@shared/api'
-import { apiRequest, type OnboardingStep } from '../lib/api/api'
+import { apiRequest, type OnboardingStep, type ApiError } from '../lib/api/api'
 import {
   AUTH_QUERY_KEY,
   bootstrapMiniProgramAuthSession,
@@ -10,6 +10,7 @@ import {
   isUnauthorizedApiError,
   persistAuthToStorage,
 } from '../lib/api/authSession'
+import { logWarn } from '../lib/utils/logger'
 import { deriveMiniProgramAuthState } from './auth/authState'
 
 const MOCK_AUTH_STORAGE_KEY = '__jj_mock_auth_for_devtools__'
@@ -53,7 +54,14 @@ const AUTH_REQUEST_TIMEOUT_MS = 8000
 async function getAuthUser(): Promise<AuthUser | null> {
   try {
     const authPromise = apiRequest<AuthUser>({ path: '/api/auth/user', handleUnauthorized: false })
-    authPromise.catch(() => { /* swallowed — timeout may have already settled the race */ })
+    authPromise.catch((err) => {
+      // Timeout may have already settled the race, but log the late rejection
+      // so ops can diagnose when the server is both slow AND erroring.
+      logWarn('[useAuth] Auth request settled after timeout', {
+        error: err instanceof Error ? err.message : String(err),
+        statusCode: (err as ApiError)?.statusCode,
+      })
+    })
 
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => {
