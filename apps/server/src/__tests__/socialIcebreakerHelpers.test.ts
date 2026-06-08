@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import type { SocialSessionState, SpeedFriendingRound } from '@shared/socialIcebreaker';
+import type { SocialSessionState, SpeedFriendingRound, SpeedFriendingPair } from '@shared/socialIcebreaker';
 
 function sanitizeStateForClient(state: SocialSessionState, _userId?: string): SocialSessionState {
-  const sanitized = { ...state };
-  delete (sanitized as any).xiaoyueAdaptiveSuggestion;
-  delete (sanitized as any).xiaoyueSessionPackMeta;
-  if (sanitized.participants) {
-    sanitized.participants = sanitized.participants.map((p: any) => {
+  const sanitized: Record<string, any> = { ...state };
+  delete sanitized.xiaoyueAdaptiveSuggestion;
+  delete sanitized.xiaoyueSessionPackMeta;
+  if (sanitized.joinedParticipants) {
+    sanitized.joinedParticipants = sanitized.joinedParticipants.map((p: any) => {
       const { profile, ...rest } = p;
       return profile ? rest : p;
     });
   }
-  return sanitized;
+  return sanitized as SocialSessionState;
 }
 
 function getUniqueUserCount(userIds?: string[]): number {
@@ -36,24 +36,22 @@ function generateSpeedFriendingPairs(
   const totalRounds = ids.length - 1;
   const half = ids.length / 2;
 
-  for (let round = 0; round < totalRounds; round++) {
-    const pairs: Array<[string, string]> = [];
+  for (let roundIndex = 0; roundIndex < totalRounds; roundIndex++) {
+    const pairs: SpeedFriendingPair[] = [];
     for (let i = 0; i < half; i++) {
       const a = ids[i];
       const b = ids[ids.length - 1 - i];
       if (a !== 'BYE' && b !== 'BYE') {
-        pairs.push([a, b]);
+        pairs.push({
+          userIdA: a,
+          userIdB: b,
+          displayNameA: displayNames.get(a) ?? a,
+          displayNameB: displayNames.get(b) ?? b,
+          roundIndex,
+        });
       }
     }
-    rounds.push({
-      round,
-      pairs: pairs.map(([id1, id2]) => ({
-        player1Id: id1,
-        player2Id: id2,
-        player1Name: displayNames.get(id1) ?? id1,
-        player2Name: displayNames.get(id2) ?? id2,
-      })),
-    });
+    rounds.push(pairs);
     ids.splice(1, 0, ids.pop()!);
   }
   return rounds;
@@ -120,7 +118,7 @@ describe('socialIcebreakerHelpers', () => {
         xiaoyueAdaptiveSuggestion: { type: 'boost_mood' },
         xiaoyueSessionPackMeta: { version: 1 },
       };
-      const result = sanitizeStateForClient(state as SocialSessionState);
+      const result = sanitizeStateForClient(state);
       expect((result as any).xiaoyueAdaptiveSuggestion).toBeUndefined();
       expect((result as any).xiaoyueSessionPackMeta).toBeUndefined();
     });
@@ -129,14 +127,14 @@ describe('socialIcebreakerHelpers', () => {
       const state: any = {
         socialSessionId: 'social_test',
         currentPhase: 'warmup',
-        participants: [
+        joinedParticipants: [
           { userId: 'u1', profile: { age: 25 } },
           { userId: 'u2' },
         ],
       };
-      const result = sanitizeStateForClient(state as SocialSessionState);
-      expect(result.participants?.[0]).not.toHaveProperty('profile');
-      expect(result.participants?.[1]).not.toHaveProperty('profile');
+      const result = sanitizeStateForClient(state);
+      expect(result.joinedParticipants?.[0]).not.toHaveProperty('profile');
+      expect(result.joinedParticipants?.[1]).not.toHaveProperty('profile');
     });
 
     it('preserves all other fields', () => {
@@ -187,9 +185,9 @@ describe('socialIcebreakerHelpers', () => {
       const rounds = generateSpeedFriendingPairs(['u1', 'u2', 'u3', 'u4'], names);
       expect(rounds).toHaveLength(3);
       for (const round of rounds) {
-        expect(round.pairs).toHaveLength(2);
-        for (const pair of round.pairs) {
-          expect(pair.player1Id).not.toBe(pair.player2Id);
+        expect(round).toHaveLength(2);
+        for (const pair of round) {
+          expect(pair.userIdA).not.toBe(pair.userIdB);
         }
       }
     });
@@ -199,7 +197,7 @@ describe('socialIcebreakerHelpers', () => {
       const rounds = generateSpeedFriendingPairs(['u1', 'u2', 'u3'], names);
       expect(rounds).toHaveLength(3);
       for (const round of rounds) {
-        expect(round.pairs.length).toBeGreaterThanOrEqual(1);
+        expect(round.length).toBeGreaterThanOrEqual(1);
       }
     });
 

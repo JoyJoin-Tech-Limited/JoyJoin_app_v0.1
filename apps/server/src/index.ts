@@ -104,6 +104,7 @@ app.use((req, res, next) => {
       logger.info("JoyJoin Server started", {
         port: PORT,
         environment: process.env.NODE_ENV ?? "development",
+        app_mode: process.env.APP_MODE ?? "production",
         admin_key_configured: Boolean(process.env.ADMIN_CREATE_SECRET_KEY),
         run_plan_templates_enabled: process.env.RUN_PLAN_TEMPLATES_ENABLED === 'true',
       });

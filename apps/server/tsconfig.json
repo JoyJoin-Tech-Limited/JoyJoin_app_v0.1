@@ -14,7 +14,9 @@
       ]
     },
     "types": [
-      "node"
+      "node",
+      "compression",
+      "qrcode"
     ]
   },
   "include": [

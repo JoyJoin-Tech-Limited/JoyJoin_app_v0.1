@@ -10,14 +10,52 @@ import type { User } from "@shared/schema";
 import { buildAuthUserResponse } from "../../lib/buildAuthUserResponse";
 import { computeOnboardingNextStep } from "../../lib/computeOnboardingNextStep";
 import { getFeatureFlag } from "../../lib/featureFlags";
+import { getAuthStrategy, isTestMode } from "../../auth/getAuthStrategy";
 
 export function registerAuthRoutes(app: Express): void {
+  // Unified login endpoint — delegates to strategy based on APP_MODE
+  app.post('/api/auth/login', async (req: Request, res) => {
+    try {
+      const strategy = getAuthStrategy();
+      const result = await strategy.login(req, req.body);
+      if (result.success) {
+        res.json({ success: true, sessionToken: result.sessionToken, user: result.user });
+      } else {
+        res.status(401).json({ success: false, error: result.error });
+      }
+    } catch (error) {
+      logger.error("[Auth] Unified login error", { error: String(error) });
+      res.status(500).json({ success: false, error: "登录失败，请稍后重试" });
+    }
+  });
+
+  // Test mode register endpoint
+  if (isTestMode()) {
+    app.post('/api/auth/register', async (req: Request, res) => {
+      try {
+        const { LocalAuthStrategy } = await import("../../auth/localAuthStrategy");
+        const strategy = new LocalAuthStrategy();
+        const result = await strategy.register(req, req.body);
+        if (result.success) {
+          res.json({ success: true, sessionToken: result.sessionToken, user: result.user });
+        } else {
+          res.status(400).json({ success: false, error: result.error });
+        }
+      } catch (error) {
+        logger.error("[Auth] Registration error", { error: String(error) });
+        res.status(500).json({ success: false, error: "注册失败，请稍后重试" });
+      }
+    });
+  }
+
   // Apply rate limiting to auth endpoints before registering auth routes
   // This protects against brute-force and abuse of login/token endpoints
   app.use("/api/auth/wechat", authEndpointLimiter);
 
-  // WeChat auth setup
-  setupWechatAuth(app);
+  // WeChat auth setup — only in production mode
+  if (!isTestMode()) {
+    setupWechatAuth(app);
+  }
 
   // Admin password login endpoint (legacy: phone-based; kept for backward compat during transition)
   // New canonical endpoint is POST /api/admin/login (username-based).

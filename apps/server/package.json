@@ -19,6 +19,7 @@
     "user:create": "node --env-file=../../.env --import tsx/esm src/cli/createUserAccount.ts",
     "user:bypass": "node --env-file=../../.env --import tsx/esm src/cli/bypassLogin.ts",
     "seed:test-data": "node --env-file=../../.env --import tsx/esm src/scripts/seed-test-data.ts",
+    "seed:mock-data": "node --env-file=../../.env --import tsx/esm src/scripts/generate-mock-data.ts",
     "benchmark:matching-stress": "tsx src/benchmarks/matchingStressSimulation.cli.ts"
   },
   "dependencies": {

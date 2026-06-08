@@ -168,7 +168,7 @@ describe('recapDisplayNameByUserId', () => {
 
   it('falls back to lie detective player name', () => {
     const state = makeMinimalState({
-      lieDetectivePlayers: [{ userId: 'ld1', displayName: 'Detective' }],
+      lieDetectivePlayers: [{ userId: 'ld1', displayName: 'Detective', statements: [] }],
     });
     expect(recapDisplayNameByUserId([], state, 'ld1')).toBe('Detective');
   });
@@ -461,8 +461,8 @@ describe('buildRecapParticipants', () => {
     const state = makeMinimalState({
       hostDisplayName: 'HostUser',
       lieDetectivePlayers: [
-        { userId: 'host-1', displayName: 'HostUser' },
-        { userId: 'ld1', displayName: 'Detective' },
+        { userId: 'host-1', displayName: 'HostUser', statements: [] },
+        { userId: 'ld1', displayName: 'Detective', statements: [] },
       ],
     });
     const result = buildRecapParticipants([], state);
