@@ -67,6 +67,23 @@ PAYMENTS_ENABLED=false
 ```
 
 The flag is exposed to the client via `/api/auth/user` as `paymentsEnabled`.
+
+---
+
+## Payment Ritual V2 Feature Flag
+
+**`PAYMENT_RITUAL_V2_ENABLED`** — hardcoded client-side gate (in `apps/mini-program/src/pages/blind-box-payment/index.tsx`). Controls whether the Payment Ritual V2 emotional flow (3-act stage machine, real DB-backed community stats, A/B variant assignment) is active.
+
+| Gate | Behaviour |
+|---|---|
+| `PAYMENT_RITUAL_V2_ENABLED = false` (current) | Legacy payment flow — plan selector + CTA, no ritual staging |
+| `PAYMENT_RITUAL_V2_ENABLED = true` + `user.features.paymentRitualV2 !== false` | Ritual V2 flow — Act I (anticipation), Act II (revelation), Act III (choice) with archetype theming, community pulse, hesitation nudge, celebration handoff |
+
+Prerequisites for enabling:
+1. `GET /api/payments/ritual-context` returns real data (city-scoped community stats)
+2. `POST /api/analytics/payment` accepts ritual events (dedicated endpoint, not discover)
+3. `paymentRitualEvents` table exists in production (schema in `packages/shared/src/schema/_definitions_extended.ts`)
+4. No fabricated metrics — all social-proof numbers are DB-backed (verified by brand compliance)
 The `BlindBoxPaymentPage` reads this flag and shows a maintenance message when
 payments are disabled.
 

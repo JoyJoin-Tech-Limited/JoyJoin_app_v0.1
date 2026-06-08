@@ -88,10 +88,15 @@ Skill: `xiaoyue-writing-craft`
 Owns payment initiation, webhook handling, subscription access, and monetization rules.
 
 Primary files:
-- `apps/server/src/routes/domains/payments.ts`
+- `apps/server/src/routes/domains/payments.ts` — includes `GET /api/payments/ritual-context` (Payment Ritual V2 real DB-backed context)
 - `apps/server/src/paymentService.ts`
 - `apps/server/src/subscriptionService.ts`
 - `apps/server/src/repositories/paymentsRepo.ts`
+- `apps/server/src/repositories/pricingRepo.ts`
+
+Payment Ritual V2 endpoints:
+- `GET /api/payments/ritual-context` — Returns user archetype, active pricing plans, user coupons, and real community stats (total members, weekly new, monthly events, recent activity) scoped by user's city. Requires auth. Gated by `checkPaymentsEnabled`.
+- Analytics: `POST /api/analytics/payment` (defined in `routes/domains/analytics.ts`) — Fire-and-forget A/B test funnel instrumentation. Events stored in `paymentRitualEvents` table.
 
 ### Admin APIs and operational controls
 

@@ -77,12 +77,63 @@ const PENDING_ORDER_RESUME_MESSAGE = '支付结果待确认，请继续查询订
 // ─── Feature Flag ───
 const PAYMENT_RITUAL_V2_ENABLED = false // Controlled by auth response in production
 
-// ─── Mock Ritual Context (until API is ready) ───
-function buildMockRitualContext(
+// ─── Ritual Community Context (real DB-backed data) ───
+
+interface RitualCommunityResponse {
+  user: {
+    id: string
+    archetype: string | null
+    city: string
+  }
+  plans: Array<{
+    id: string
+    planType: string
+    displayName: string
+    displayNameEn: string | null
+    description: string | null
+    priceInCents: number
+    originalPriceInCents: number | null
+    durationDays: number | null
+    isFeatured: boolean | null
+  }>
+  coupons: Array<{
+    id: string
+    code: string
+    discountType: string
+    discountValue: number
+    isUsed: boolean
+    validFrom: string | null
+    validUntil: string | null
+  }>
+  community: {
+    totalMembers: number
+    weeklyNewMembers: number
+    monthlyEvents: number
+    recentlyActiveCount: number
+    userCity: string
+  }
+}
+
+async function fetchRitualCommunityData(): Promise<RitualCommunityResponse | null> {
+  try {
+    const response = await apiRequest<RitualCommunityResponse>({
+      path: '/api/payments/ritual-context',
+      method: 'GET',
+    })
+    return response
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown error'
+    logWarn('[PaymentRitual] Failed to fetch ritual community context', { message })
+    return null
+  }
+}
+
+function buildRitualContext(
   plans: Record<MiniProgramPaymentPlanKey, PricingPlan>,
   userArchetype: string | null,
   city: string,
   userId: string,
+  communityData: RitualCommunityResponse | null,
 ): RitualContext {
   const archetypeFamily: ArchetypeFamily = userArchetype
     ? ({
@@ -118,7 +169,7 @@ function buildMockRitualContext(
 
   const planEntries = Object.entries(plans) as [MiniProgramPaymentPlanKey, PricingPlan][]
 
-  const ritualPlans: RitualPlan[] = planEntries.map(([key, plan], index) => {
+  const ritualPlans: RitualPlan[] = planEntries.map(([key, plan]) => {
     const isMonthly = key === 'vip_monthly' || key === 'vip_quarterly'
     const sessions = isMonthly ? (key === 'vip_monthly' ? 6 : 18) : Number(key.split('_')[1] ?? 1)
     const days = key === 'vip_monthly' ? 30 : key === 'vip_quarterly' ? 90 : 90
@@ -144,7 +195,7 @@ function buildMockRitualContext(
         savingsPercent: `${savingsPercent}%`,
       },
       socialProof: {
-        recentChoosers: [86, 42, 31, 55][index] ?? 10,
+        recentChoosers: 0,
         isRecommended: key === 'vip_quarterly',
       },
       badge: getMiniProgramPaymentPlanMeta(key).badge,
@@ -152,20 +203,24 @@ function buildMockRitualContext(
     }
   })
 
+  const community = communityData?.community
+
   return {
     userArchetype,
     archetypeDisplayName: userArchetype ? archetypeNames[userArchetype] || null : null,
     archetypeFamily,
     community: {
-      city,
-      totalMembers: 1247,
-      weeklyNewMembers: 86,
-      monthlyEvents: 24,
+      city: community?.userCity ?? city,
+      totalMembers: community?.totalMembers ?? 0,
+      weeklyNewMembers: community?.weeklyNewMembers ?? 0,
+      monthlyEvents: community?.monthlyEvents ?? 0,
     },
-    contextActivity: null,
+    contextActivity: community?.recentlyActiveCount
+      ? `最近 ${community.recentlyActiveCount} 位伙伴在浏览活动`
+      : null,
     plans: ritualPlans,
     scarcity: {
-      remainingSpots: 12,
+      remainingSpots: 0,
       offerExpiry: null,
     },
     coupons: [],
@@ -275,14 +330,15 @@ export default function BlindBoxPaymentPage() {
   const [isCelebrating, setIsCelebrating] = useState(false)
   const [celebrationOrderId, setCelebrationOrderId] = useState<string | null>(null)
   const [showHesitation, setShowHesitation] = useState(false)
+  const [ritualCommunityData, setRitualCommunityData] = useState<RitualCommunityResponse | null>(null)
   const hesitationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const achievementTrackedRef = useRef(false)
 
   // Derive ritual context from stable data to prevent unnecessary re-renders
   const ritualContext = useMemo(() => {
     if (!user?.id || !Object.keys(plans).length) return null
-    return buildMockRitualContext(plans, userArchetype, userCity, user.id)
-  }, [plans, userArchetype, userCity, user?.id])
+    return buildRitualContext(plans, userArchetype, userCity, user.id, ritualCommunityData)
+  }, [plans, userArchetype, userCity, user?.id, ritualCommunityData])
 
   // Find welcome coupon
   const welcomeCoupon = useMemo(() => {
@@ -382,9 +438,10 @@ export default function BlindBoxPaymentPage() {
     setPageError('')
 
     try {
-      const [pricing, coupons] = await Promise.all([
+      const [pricing, coupons, ritualCommunity] = await Promise.all([
         getPricing(apiRequest).catch(() => []),
         getUserCoupons(apiRequest).catch(() => ({ count: 0, availableCount: 0, coupons: [] })),
+        isRitualEnabled ? fetchRitualCommunityData() : Promise.resolve(null),
       ])
 
       const resolvedPlans = resolveMiniProgramPaymentPlans(pricing)
@@ -395,8 +452,7 @@ export default function BlindBoxPaymentPage() {
           ? coupons.coupons.filter((coupon) => coupon.status === 'available')
           : []
       )
-
-      // Ritual context is derived via useMemo from plans + user state
+      setRitualCommunityData(ritualCommunity)
     } catch (error) {
       const message = error instanceof Error ? error.message : '加载支付信息没成功'
       setPageError(message)
@@ -774,9 +830,11 @@ export default function BlindBoxPaymentPage() {
 
             {/* Commitment Section (Sprint 1: Basic CTA) */}
             <View className='ritual-commitment'>
-              <Text className='ritual-commitment__pledge'>
-                {getPledgeText(ritualContext.community.city, ritualContext.community.totalMembers)}
-              </Text>
+              {ritualContext.community.totalMembers > 0 && (
+                <Text className='ritual-commitment__pledge'>
+                  {getPledgeText(ritualContext.community.city, ritualContext.community.totalMembers)}
+                </Text>
+              )}
 
               {/* Achievement milestone (Achievement + Ritual) */}
               <View className='ritual-commitment__milestone'>
@@ -842,9 +900,11 @@ export default function BlindBoxPaymentPage() {
               </JoyButton>
 
               {/* Community promise (Belonging) */}
-              <Text className='ritual-commitment__promise'>
-                {getCommunityPledgeCopy(ritualContext.community.city, ritualContext.community.totalMembers)}
-              </Text>
+              {ritualContext.community.totalMembers > 0 && (
+                <Text className='ritual-commitment__promise'>
+                  {getCommunityPledgeCopy(ritualContext.community.city, ritualContext.community.totalMembers)}
+                </Text>
+              )}
 
               <View className='ritual-commitment__trust'>
                 <Text className='ritual-commitment__trust-text'>{getTrustLine()}</Text>

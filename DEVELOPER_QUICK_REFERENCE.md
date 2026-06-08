@@ -1,7 +1,7 @@
 # JoyJoin Developer Quick Reference Guide
 
 **Version:** 2.3
-**Last Updated:** 2026-06-05
+**Last Updated:** 2026-06-08
 **For:** Tech Team Onboarding & Codebase Navigation
 
 ---
@@ -209,7 +209,7 @@ joyjoin-monorepo/
 | Register pages / main vs onboarding subpackage / `preloadRule` | `apps/mini-program/src/lib/onboarding/onboardingRoutes.ts` → consumed by `app.config.ts` |
 | Personality test (V4) | `apps/mini-program/src/pages/onboarding/personality-test/` (test, results); anonymous keys in `lib/anonymousOnboarding.ts` |
 | WeChat login | Returning: `pages/login/index.tsx` + `hooks/useWeChatLogin.ts` → `POST /api/auth/wechat/login`. With assessment import: `authenticateMiniProgramUserWithTest` in `lib/api.ts` → `POST /api/auth/wechat/login-with-test` |
-| Blind-box payment + verification | `pages/blind-box-payment/`, `pages/payment-verification/`; `lib/paymentEntry.ts`, `lib/paymentPendingOrder.ts`, `lib/paymentPendingOrderStorage.ts`; shared intent helper `createMiniProgramPaymentIntent` in `packages/shared/src/api.ts` |
+| Blind-box payment + verification | `pages/blind-box-payment/`, `pages/payment-verification/`; `lib/paymentEntry.ts`, `lib/paymentPendingOrder.ts`, `lib/paymentPendingOrderStorage.ts`; shared intent helper `createMiniProgramPaymentIntent` in `packages/shared/src/api.ts`. **Payment Ritual V2:** `GET /api/payments/ritual-context` (real DB-backed community stats), `POST /api/analytics/payment` (dedicated A/B analytics endpoint) |
 | Auth + API bootstrap | `apps/mini-program/src/lib/api/api.ts` |
 | Custom tab bar (native) | `apps/mini-program/src/native-custom-tab-bar/` (see `apps/mini-program/README.md`) |
 | Tab list + `tabBar.custom` | `apps/mini-program/src/lib/navigation/tabBarConfig.ts` + `app.config.ts` |
@@ -253,7 +253,7 @@ Active domain modules in `routes/domains/`:
 | `assessment.ts` | Personality assessment endpoints |
 | `admin.ts` | Admin management API |
 | `analytics.ts` | Analytics and KPI endpoints |
-| `payments.ts` | WeChat Pay v3 JSAPI (primary, mini-program) + H5 (reference, web), coupon validation, and webhook verification |
+| `payments.ts` | WeChat Pay v3 JSAPI (primary, mini-program) + H5 (reference, web), coupon validation, webhook verification, and `GET /api/payments/ritual-context` (Payment Ritual V2 real DB-backed context) |
 | `eventPools.ts` | Event pool discovery, registration, and `GET /api/event-pools/:poolId/stats` (`estimatedGroups`, archetype breakdown, historical group themes) |
 | `icebreaker.ts` | Mounts **`/api/social-icebreaker`** (Social Icebreaker router from `routes/socialIcebreaker.ts`) and **`/api/tts`** — not the legacy toolkit; legacy random topics live under monolithic `routes.ts` `/api/icebreakers/*` |
 | `icebreakerSessions.ts` | Icebreaker session discovery and access endpoints |

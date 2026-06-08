@@ -1,7 +1,7 @@
 # JoyJoin (悦聚·Joy) - Product Requirements Document
 
 **Version:** 1.6  
-**Last Updated:** 2026-05-22  
+**Last Updated:** 2026-06-08  
 **Platform:** WeChat Mini Program (Taro) — launch-primary  
 **Reference Surface:** Web (React + Vite) — development sandbox / parity reference only, not shipping  
 **Target Market:** Hong Kong & Shenzhen  
@@ -77,7 +77,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-06-05)
+## 🆕 Recent Updates (Last updated: 2026-06-08)
 
 ### 2026 Milestones (May 2026)
 
@@ -103,6 +103,12 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Graceful fallback:** Events and Connections pages fall back to legacy endpoints (`/api/events/joined`, `/api/my-connections`) if composite 500s. Discover shell already had fallback from pilot.
 - **Profile page deduplication:** Removed duplicate `auth-user-profile` fetch; Profile page now reads directly from `AUTH_QUERY_KEY`.
 
+**34. Payment Ritual V2 Backend Infrastructure** 💳 *(2026-06-08)*
+- **Real ritual context API:** `GET /api/payments/ritual-context` returns user archetype, active pricing plans, user coupons, and real DB-backed community stats (city-scoped total members, weekly new members, monthly events, recent activity via `discoverAnalyticsEvents` inner join). Parallelized queries for low latency. No fabricated social-proof metrics.
+- **Dedicated analytics endpoint:** `POST /api/analytics/payment` accepts 15 ritual event types (`ritual_enter`, `ritual_act1_complete`, `ritual_act2_reveal`, `ritual_archetype_shown`, `ritual_plan_hover`, `ritual_plan_select`, `ritual_plan_reselect`, `ritual_cta_tap`, `ritual_cta_hesitation`, `ritual_payment_start`, `ritual_payment_success`, `ritual_payment_error`, `ritual_verification_enter`, `ritual_achievement_shown`, `ritual_emotional_score`). Stored in `paymentRitualEvents` table. Rate-limited at 120 req/min.
+- **Client analytics fix:** `paymentRitualAnalytics.ts` now sends directly to `/api/analytics/payment` instead of routing through `discoverAnalytics.track()` (which silently dropped events with `invalid eventType`). A/B variant (`control`/`ritual_v2`) included in `ritual_enter` metadata for segmentation.
+- **Feature flag:** `PAYMENT_RITUAL_V2_ENABLED` (hardcoded client-side, with auth-response `user.features.paymentRitualV2` kill switch). Currently `false`; ready to flip when frontend polish is complete.
+
 **33. Admin Feature Flags + Mini-Program Perfect-Level Polish** 🎯 *(2026-05-24)*
 - **DB-backed feature flags:** New `feature_flags` table with migration `0047_special_jackal.sql`. `apps/server/src/lib/featureFlags.ts` resolves flags from DB with 5s LRU cache, falling back to env vars. Five kill switches migrated: `restartOnboarding`, `smartProfession`, `onboardingForceSkip`, `matchingLiveReveal`, `socialIcebreakerClientForceEnd`.
 - **Admin feature flags UI:** New `/admin/feature-flags` page (super_admin only) with toggle switches, source badges (`db` vs `env_fallback`), batch save, and `updatedBy` audit trail. Endpoints: `GET /api/admin/feature-flags`, `PUT /api/admin/feature-flags/:key`.
@@ -117,6 +123,16 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Edit-profile:** 2-step continuous scroll (Step 1 "基础档案" + Step 2 "社交画像"). Field-level validation, scroll-to-error via `ScrollView scrollIntoView`, unsaved-changes guard, skeleton loading, haptics, floating CTA bar. Completeness audit: 44/44.
 - **Profile-review backport:** Adopted `InterestChipCloud` for interest + category chips.
 - **Analytics:** Lightweight `logInfo` events for `edit_profile_enter`, `edit_profile_save` (with `fieldsChanged`), `edit_profile_abandon` (with `secondsOnPage`).
+
+**37. Squad Unboxing Drag-to-Reveal Ribbon** 🎁 *(2026-06-08)*
+- **Touch-driven blind-box unboxing:** `DragRevealRibbon` component on `pages/squad-unboxing/index` replaces the static "揭晓桌友" button with a draggable slider that physically lifts the blind-box lid in real time. Drag progress (0–1) drives lid translation/rotation, interior fade, body bounce, aura pulse, and shadow shrink via inline `transform`/`opacity` styles for 1:1 finger tracking.
+- **Snap threshold:** At ≥50% progress, the ribbon auto-snaps to full reveal with a 280ms ease-out, haptic feedback (`Taro.vibrateShort`), and analytics fire. Below 50%, it elastic-snaps back to 0.
+- **Fallback hierarchy:** (1) `prefers-reduced-motion: reduce` → tap-only; (2) degradation-tier device (`benchmarkLevel ≥30` or old iOS) → tap-only; (3) server kill switch `squadUnboxingDragRevealEnabled=false` → tap-only. Tap fallback shows "点击拆盒" and triggers the existing `shaking` → `revealed` flow.
+- **Performance:** RAF-throttled progress updates (`requestAnimationFrame` batching) prevent re-render thrashing. `transform` + `opacity` only — no layout-triggering properties. `catchMove` on the track prevents parent `ScrollView` interference during horizontal drag. `+0.23kB` gzipped.
+- **Accessibility:** `role="slider"`, `aria-valuenow` (0–100), `aria-live="polite"`, and dynamic `aria-label` ("向右滑动，拆开惊喜" / "点击拆盒"). Touch target is full track width at 88rpx height.
+- **Feature flag:** `squadUnboxingDragRevealEnabled` is DB-backed (env `SQUAD_UNBOXING_DRAG_REVEAL_ENABLED`, default `true`) wired server→client via `/api/auth/user` `features`. Admin portal exposes toggle. No app-store update needed — falls back on next auth refresh.
+- **Analytics:** `POST /api/analytics/squad-unboxing` endpoint (120 req/min rate limit) tracks `squad_unboxing_reveal_drag` (with `progress` %) and `squad_unboxing_reveal_tap` (with `fallbackReason`). Fire-and-forget, silent fail.
+- **Completeness audit:** 44/44 — perfect score across all 11 dimensions.
 
 **36. Personality Test Answer-Echo Loading State** 🧠 *(2026-06-08)*
 - **"Soft Echo + Whisper Pulse"** replaces the generic skeleton loading state on the personality test page. When a user taps an answer, the UI immediately echoes their exact choice in a ghost card (58% opacity), shows a single thin brand-colored shimmer line (2.4s gradient sweep), and displays a Xiaoyue icon + warm caption ("悦仔收到了，正在分析…").
@@ -3487,9 +3503,12 @@ For full details: `apps/server/src/README.md` and `docs/architecture/current-sta
 - `GET /api/events/:id` - Event details
 - `POST /api/events/:id/register` - Register for event
 - `POST /api/payments/create` - Create payment (subject to `paymentsEnabled` kill switch)
+- `POST /api/payments/miniprogram/create` - Create mini-program JSAPI payment intent
+- `GET /api/payments/ritual-context` - Payment Ritual V2 context (real DB-backed community stats, plans, coupons; requires auth)
 - `POST /api/webhooks/wechat-pay` - WeChat Pay v3 webhook (verified before processing)
 - `POST /api/coupons/validate` - Validate coupon code
 - `GET /api/chats/:eventId` - Get event chat messages
+- `POST /api/analytics/payment` - Payment Ritual V2 A/B test funnel instrumentation (fire-and-forget)
 - `POST /api/chats/:eventId/message` - Send message
 - `POST /api/chat/report` - Report message
 - `POST /api/feedback/submit` - Submit event feedback

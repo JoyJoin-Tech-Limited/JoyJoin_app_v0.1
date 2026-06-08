@@ -2,9 +2,11 @@
  * Payment Ritual V2 — Analytics Events
  *
  * Tracks the full emotional journey for funnel analysis and A/B testing.
+ * Sends to /api/analytics/payment (dedicated endpoint — not discover).
  */
 
-import { discoverAnalytics } from '../../../lib/analytics/discoverAnalytics'
+import { apiRequest } from '../../../lib/api/api'
+import { logWarn } from '../../../lib/utils/logger'
 
 const EVENTS = {
   // Act I
@@ -39,11 +41,32 @@ const EVENTS = {
 
 type EventName = (typeof EVENTS)[keyof typeof EVENTS]
 
-export function trackRitualEvent(
-  event: string,
+function trackRitualEvent(
+  eventType: EventName,
   properties?: Record<string, string | number | boolean | null>,
 ) {
-  discoverAnalytics.track(event as any, undefined, properties)
+  const event = {
+    eventType,
+    metadata: {
+      ...properties,
+      appSurface: 'mini-program',
+      runtime: 'taro',
+    },
+    timestamp: Date.now(),
+  }
+
+  void apiRequest<{ success?: boolean }>({
+    path: '/api/analytics/payment',
+    method: 'POST',
+    data: event,
+    handleUnauthorized: false,
+  }).catch((error) => {
+    const message = error instanceof Error ? error.message : 'unknown error'
+    logWarn('[PaymentRitualAnalytics] Failed to send payment ritual event', {
+      eventType,
+      message,
+    })
+  })
 }
 
 export function trackRitualEnter(variant: 'control' | 'ritual_v2', hasArchetype: boolean) {

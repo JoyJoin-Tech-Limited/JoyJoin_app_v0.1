@@ -1,8 +1,8 @@
 import type { Express, Request } from "express";
 import { isEventPackPlanType, normalizeSubscriptionPlanType } from "@shared/api";
 import { buildCsvContent } from "@joyjoin/shared";
-import { eventPoolRegistrations } from "@shared/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { eventPoolRegistrations, users, eventPools, discoverAnalyticsEvents } from "@shared/schema";
+import { and, eq, sql, gte, lte } from "drizzle-orm";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { paymentEndpointLimiter, webhookEndpointLimiter } from "../../rateLimiter";
 import { logger } from "../../lib/logger";
@@ -11,6 +11,7 @@ import { paymentService } from "../../paymentService";
 import { paymentsRepo } from "../../repositories/paymentsRepo";
 import { refundAttemptsRepo } from "../../repositories/refundAttemptsRepo";
 import { usersRepo } from "../../repositories/usersRepo";
+import { pricingRepo } from "../../repositories/pricingRepo";
 import { subscriptionService } from "../../subscriptionService";
 import { storage } from "../../storage";
 import { requireAuth } from "../../middleware/auth";
@@ -987,6 +988,155 @@ export function registerPaymentRoutes(app: Express): void {
         error: error instanceof Error ? error.message : String(error),
       });
       res.status(500).json({ message: "Failed to export refund attempts" });
+    }
+  });
+
+  // ───────────────────────────────────────────────────────────────
+  // Payment Ritual Context — real DB-backed data for V2 ritual flow
+  // ───────────────────────────────────────────────────────────────
+  app.get("/api/payments/ritual-context", requireAuth, checkPaymentsEnabled, async (req, res) => {
+    const reqLogger = logger.child({ request_id: req.requestId, user_id: req.session?.userId });
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const user = await usersRepo.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const userCity = user.currentCity ?? "深圳";
+      const userArchetype = user.primaryArchetype ?? null;
+
+      // Fetch plans, coupons in parallel
+      const [plans, coupons] = await Promise.all([
+        pricingRepo.getActivePricingSettings(),
+        paymentsRepo.getUserCoupons(userId),
+      ]);
+
+      // ── Community stats (real DB queries — no fabricated numbers) ──
+      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const now = new Date();
+      const thirtyDaysLater = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      // Run all stat queries in parallel for lower latency
+      const [
+        [totalMembersResult],
+        [weeklyNewResult],
+        [upcomingEventsResult],
+        recentActivity,
+      ] = await Promise.all([
+        // Total members in user's city
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(users)
+          .where(eq(users.currentCity, userCity)),
+
+        // Weekly new members in user's city
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(users)
+          .where(
+            and(
+              eq(users.currentCity, userCity),
+              gte(users.createdAt, oneWeekAgo)
+            )
+          ),
+
+        // Upcoming events in user's city (next 30 days)
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(eventPools)
+          .where(
+            and(
+              eq(eventPools.city, userCity),
+              gte(eventPools.dateTime, now),
+              lte(eventPools.dateTime, thirtyDaysLater),
+              eq(eventPools.status, "active")
+            )
+          ),
+
+        // Recent activity: users who viewed pool details for events in this city recently
+        db
+          .select({
+            userId: discoverAnalyticsEvents.userId,
+            timestamp: discoverAnalyticsEvents.timestamp,
+          })
+          .from(discoverAnalyticsEvents)
+          .innerJoin(eventPools, eq(discoverAnalyticsEvents.poolId, eventPools.id))
+          .where(
+            and(
+              eq(discoverAnalyticsEvents.eventType, "pool_detail_view"),
+              eq(eventPools.city, userCity),
+              gte(discoverAnalyticsEvents.timestamp, oneWeekAgo)
+            )
+          )
+          .orderBy(sql`${discoverAnalyticsEvents.timestamp} DESC`)
+          .limit(20),
+      ]);
+
+      // Deduplicate by user for a "recently active" count
+      const uniqueRecentUserIds = new Set(
+        recentActivity.map((r: { userId: string | null }) => r.userId).filter(Boolean)
+      );
+
+      const totalMembers = totalMembersResult?.count ?? 0;
+      const weeklyNewMembers = weeklyNewResult?.count ?? 0;
+      const monthlyEvents = upcomingEventsResult?.count ?? 0;
+      const recentlyActiveCount = uniqueRecentUserIds.size;
+
+      // Build response
+      const response = {
+        user: {
+          id: user.id,
+          archetype: userArchetype,
+          city: userCity,
+        },
+        plans: plans.map((p) => ({
+          id: p.id,
+          planType: p.planType,
+          displayName: p.displayName,
+          displayNameEn: p.displayNameEn,
+          description: p.description,
+          priceInCents: p.priceInCents,
+          originalPriceInCents: p.originalPriceInCents,
+          durationDays: p.durationDays,
+          isFeatured: p.isFeatured,
+        })),
+        coupons: coupons.map((c: any) => ({
+          id: c.id,
+          code: c.code,
+          discountType: c.discount_type,
+          discountValue: c.discount_value,
+          isUsed: c.is_used,
+          validFrom: c.valid_from,
+          validUntil: c.valid_until,
+        })),
+        community: {
+          totalMembers,
+          weeklyNewMembers,
+          monthlyEvents,
+          recentlyActiveCount,
+          userCity,
+        },
+      };
+
+      reqLogger.info("Ritual context served", {
+        city: userCity,
+        archetype: userArchetype,
+        totalMembers,
+        weeklyNewMembers,
+        monthlyEvents,
+      });
+
+      res.json(response);
+    } catch (error) {
+      reqLogger.error("Failed to fetch ritual context", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({ message: "Failed to fetch ritual context" });
     }
   });
 }

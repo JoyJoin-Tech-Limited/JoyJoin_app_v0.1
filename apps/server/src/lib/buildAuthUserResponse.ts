@@ -109,6 +109,7 @@ const [
     personalityShareEnabled,
     paymentsEnabledFlag,
     personalityTestEchoEnabled,
+    squadUnboxingDragRevealEnabled,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
     getFeatureFlag('smartProfession', true),
@@ -121,6 +122,7 @@ const [
     getFeatureFlag('personalityShareEnabled', true),
     getFeatureFlag('paymentsEnabled', false),
     getFeatureFlag('personalityTestEchoEnabled', true),
+    getFeatureFlag('squadUnboxingDragRevealEnabled', true),
   ]);
 
   const authUserResponse: AuthUserResponse = {
@@ -147,6 +149,7 @@ const [
       personalityShareEnabled,
       paymentsEnabled: paymentsEnabledFlag,
       personalityTestEchoEnabled,
+      squadUnboxingDragRevealEnabled,
     },
   };
 

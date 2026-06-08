@@ -112,7 +112,7 @@ function RitualActAnticipation({
       )}
 
       {/* Community Pulse with deep belonging */}
-      {stage >= 6 && (
+      {stage >= 6 && community.totalMembers > 0 && (
         <View className='ritual-act-anticipation__community'>
           <View className='ritual-act-anticipation__pulse-dot' />
           <Text className='ritual-act-anticipation__community-text'>

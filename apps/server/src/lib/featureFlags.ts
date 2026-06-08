@@ -36,6 +36,10 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   /** When false, falls back to a simple spinner instead of the answer-echo
    *  loading state in the personality test. Default: true. */
   personalityTestEchoEnabled: "PERSONALITY_TEST_ECHO_ENABLED",
+  /** Master toggle for the drag-to-reveal ribbon on squad-unboxing.
+   *  When false: falls back to the legacy "揭晓桌友" button.
+   *  Default: true. */
+  squadUnboxingDragRevealEnabled: "SQUAD_UNBOXING_DRAG_REVEAL_ENABLED",
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

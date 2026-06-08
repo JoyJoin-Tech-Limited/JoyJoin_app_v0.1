@@ -412,6 +412,9 @@ promoBannerEnabled?: boolean
     /** Master kill-switch for the payment system. When false, payment endpoints return 503.
      *  Also surfaced as top-level paymentsEnabled on auth response. */
     paymentsEnabled?: boolean
+    /** When false, falls back to the legacy tap button on squad-unboxing.
+     *  Kill switch for the drag-to-reveal ribbon. Default: true. */
+    squadUnboxingDragRevealEnabled?: boolean
   }
 }
 
