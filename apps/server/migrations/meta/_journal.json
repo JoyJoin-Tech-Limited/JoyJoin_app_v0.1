@@ -372,6 +372,13 @@
       "when": 1780395567634,
       "tag": "seed_venue_time_slots_20260602",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1780992000000,
+      "tag": "seed_venue_batch_and_co_20260608",
+      "breakpoints": true
     }
   ]
 }

@@ -18,6 +18,8 @@ import {
 import { eq, and } from "drizzle-orm";
 import { matchEventPool, saveMatchResults } from "./poolMatchingService";
 import type { MatchGroup, SaveMatchResultsOptions } from "./poolMatchingService";
+import { logger } from "./lib/logger";
+import { notifyLowRegistration } from "./lib/wecomNotifications";
 import {
   countMatchingShadowExperimentPools,
   getOutcomeCalibrationSnapshot,
@@ -237,6 +239,31 @@ export async function scanPoolAndMatch(
       avgGroupScore: 0,
       currentThreshold,
     };
+  }
+
+  // Low registration alert for scheduled scans with approaching deadline
+  if (triggeredBy === "cron_job") {
+    const targetRegistrations = (pool.targetGroups || 1) * minGroupSize;
+    const percentFilled = (pendingUsersCount / targetRegistrations) * 100;
+    const daysUntilDeadline = pool.registrationDeadline
+      ? Math.max(0, Math.round((new Date(pool.registrationDeadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+      : 7;
+
+    if (percentFilled < 50 && daysUntilDeadline <= 3) {
+      void notifyLowRegistration({
+        poolTitle: pool.title,
+        poolDate: pool.dateTime ? new Date(pool.dateTime).toLocaleString("zh-CN") : "待定",
+        poolCity: pool.city,
+        poolDistrict: pool.district || undefined,
+        poolId: pool.id,
+        currentRegistrations: pendingUsersCount,
+        targetRegistrations,
+        percentFilled,
+        daysUntilDeadline,
+      }).catch((err) => {
+        logger.warn("[PoolRealtimeMatching] Low registration notification failed", { error: String(err) });
+      });
+    }
   }
 
   // 7. 运行匹配算法（不保存，仅评估）

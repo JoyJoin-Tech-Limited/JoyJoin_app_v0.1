@@ -40,6 +40,7 @@ import { registerEventRoutes } from "./routes/domains/events";
 import { registerConnectionRoutes } from "./routes/domains/connections";
 import { registerMatchCompassRoutes } from "./routes/domains/matchCompass";
 import { registerProfessionUnderstandingRoutes } from "./routes/domains/professionUnderstanding";
+import { registerMonitoringWebhookRoutes } from "./routes/domains/monitoringWebhooks";
 import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
 import session from "express-session";
@@ -164,6 +165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerXiaoyueRoutes(app);
   registerCityUnlockRoutes(app);
   registerProfessionUnderstandingRoutes(app);
+  registerMonitoringWebhookRoutes(app);
 
   return httpServer;
 }

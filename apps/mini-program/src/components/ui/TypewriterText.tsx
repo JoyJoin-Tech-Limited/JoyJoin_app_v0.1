@@ -16,6 +16,8 @@ interface TypewriterTextProps {
   showCursor?: boolean
   /** Fired once when every character is visible */
   onComplete?: () => void
+  /** Max lines before truncation (passed to <Text numberOfLines>) */
+  numberOfLines?: number
 }
 
 /** Punctuation-to-pause multiplier map */
@@ -54,6 +56,7 @@ export default function TypewriterText({
   enabled = true,
   showCursor = false,
   onComplete,
+  numberOfLines,
 }: TypewriterTextProps) {
   const [visibleLength, setVisibleLength] = useState(0)
   const [done, setDone] = useState(false)
@@ -116,11 +119,11 @@ export default function TypewriterText({
   }, [text, enabled, resolvedSpeed, delay, clearTimers])
 
   if (!enabled) {
-    return <Text className={className}>{text}</Text>
+    return <Text className={className} numberOfLines={numberOfLines}>{text}</Text>
   }
 
   return (
-    <Text className={className}>
+    <Text className={className} numberOfLines={numberOfLines}>
       {text.slice(0, visibleLength)}
       {showCursor && !done && (
         <Text className='typewriter-cursor'>|</Text>

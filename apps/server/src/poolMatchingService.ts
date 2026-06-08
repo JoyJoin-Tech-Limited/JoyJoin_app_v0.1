@@ -57,7 +57,7 @@ import {
 } from "./matchingSemantic";
 import { observeSemanticSimilarityMetrics } from "./matchingMetrics";
 import { matchingWeightsService, type MatchingWeights } from "./matchingWeightsService";
-import { notifyPoolMatched } from "./lib/wecomNotifications/matching";
+import { notifyPoolMatched, notifyVenueAssignmentResult } from "./lib/wecomNotifications/matching";
 
 
 
@@ -1870,6 +1870,36 @@ export async function saveMatchResults(
       );
       
       logger.info(`[Pool Matching] ✅ Venue assignment complete: ${assignments.size}/${groups.length} groups assigned, ${unassigned.size} unassigned`);
+
+      // Venue assignment result WeCom notification (fire-and-forget)
+      void (async () => {
+        try {
+          const venueEntries = Array.from(assignments.entries());
+          const unassignedEntries = Array.from(unassigned.entries());
+          const topVenue = venueEntries.length > 0 ? venueEntries[0][1].venue.name : undefined;
+          const uniqueVenues = new Set(venueEntries.map(([, a]) => a.venue.name)).size;
+          const reasonBreakdown: Record<string, number> = {};
+          for (const [, reason] of unassignedEntries) {
+            reasonBreakdown[reason] = (reasonBreakdown[reason] || 0) + 1;
+          }
+          const reasonSummary = Object.entries(reasonBreakdown)
+            .map(([r, c]) => `${r}: ${c}组`).join("; ");
+
+          await notifyVenueAssignmentResult({
+            poolTitle: pool?.title || poolId,
+            poolDate: pool?.dateTime ? new Date(pool.dateTime).toLocaleString("zh-CN") : "待定",
+            poolId,
+            venuesAssigned: assignments.size,
+            venuesUnassigned: unassigned.size,
+            totalGroups: groups.length,
+            topVenueName: topVenue,
+            uniqueVenueCount: uniqueVenues > 0 ? uniqueVenues : undefined,
+            unassignedReasonBreakdown: unassigned.size > 0 ? reasonSummary : undefined,
+          });
+        } catch (err) {
+          logger.warn('[Pool Matching] ⚠️ Venue assignment result notification failed', { error: String(err) });
+        }
+      })();
 
       // Send venue-assignment notifications to group members
       void (async () => {

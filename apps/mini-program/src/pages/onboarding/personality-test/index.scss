@@ -264,6 +264,28 @@
     flex-shrink: 0;
   }
 
+  &__intro-mascot-img {
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+
+    &--loaded {
+      opacity: 1;
+    }
+  }
+
+  &__intro-mascot-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.05);
+    animation: mascot-breathe 2.4s ease-in-out infinite;
+  }
+
   &__mascot-static {
     display: block;
     flex-shrink: 0;
@@ -758,13 +780,21 @@
   }
 
   /* ── Answer Echo (submitting state) ─────────────────────────────── */
-  &__answer-echo {
+  &__answer-echo-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 32rpx;
     padding: 48rpx 0;
+    background: rgba($color-bg-clean, 0.88);
+    z-index: 10;
+    pointer-events: auto;
     animation: answer-echo-enter 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
     will-change: transform;
     transform: translateZ(0);
@@ -841,7 +871,7 @@
   }
 
   /* Exit state: graceful fade-out before unmounting */
-  &__answer-echo--exiting {
+  &__answer-echo-overlay--exiting {
     animation: answer-echo-exit 0.22s ease-out both;
   }
 
@@ -849,6 +879,10 @@
   &--low-end &__answer-echo-whisper-line {
     animation: none;
     background: rgba($color-primary, 0.1);
+  }
+
+  &--low-end &__answer-echo-card {
+    animation: none;
   }
 
   @keyframes answer-echo-enter {
@@ -1007,11 +1041,13 @@
     color: $color-text-primary;
     line-height: 1.5;
     font-weight: $font-weight-medium;
-    word-break: keep-all;
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 
   // Answer zone
   &__answer-zone {
+    position: relative;
     flex: 1 1 auto;
     min-height: 0;
     padding: 8rpx $container-padding 24rpx;
@@ -1080,8 +1116,8 @@
       transform: scale(1) !important;
     }
 
-    &__answer-echo,
-    &__answer-echo--exiting {
+    &__answer-echo-overlay,
+    &__answer-echo-overlay--exiting {
       animation: none;
       transform: none;
     }

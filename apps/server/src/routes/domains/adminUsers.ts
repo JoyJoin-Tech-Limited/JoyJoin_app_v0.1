@@ -9,6 +9,7 @@ import { logAdminAudit } from "../../lib/adminAuditLogger";
 import { storage } from "../../storage";
 import { getMatchingMetricsSnapshot } from "../../matchingMetrics";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
+import { notifyAdminAction } from "../../lib/wecomNotifications";
 import { assessmentSessions, eventPoolRegistrations, eventPoolGroups, connections, matchHistory, userInterests, poolMatchingLogs, users, events, payments, subscriptions } from "@shared/schema";
 
 function calculateProfileCompletenessSimple(user: any): { score: number; starRating: number; missingFields: string[] } {
@@ -694,6 +695,27 @@ export function registerAdminUserRoutes(app: Express): void {
         after: { isBanned: true, reason: reason.trim() },
         context: { reason: reason.trim() },
       });
+
+      // WeCom notification for ban
+      void (async () => {
+        try {
+          const adminId = getActingAdminId(req);
+          const [adminRecord] = await db.select({ displayName: users.displayName }).from(users).where(eq(users.id, adminId));
+          await notifyAdminAction({
+            adminName: adminRecord?.displayName || adminId,
+            adminRole: (req as any).adminRole || "operator",
+            actionType: "ban",
+            actionTypeLabel: "用户封禁",
+            targetUserDisplayName: user.displayName || "未知用户",
+            targetUserId: user.id,
+            reason: reason.trim(),
+            changeSummary: `用户状态: ${user.isBanned ? "已封禁" : "正常"} → 封禁`,
+            auditLogId: req.params.id,
+          });
+        } catch (notifyErr) {
+          logger.warn("Failed to send ban WeCom notification", { error: String(notifyErr) });
+        }
+      })();
 
       res.json(updatedUser);
     } catch (error) {

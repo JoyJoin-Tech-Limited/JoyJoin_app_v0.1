@@ -5,8 +5,8 @@ import { useAuth } from './hooks/useAuth'
 import { logInfo, logWarn } from './lib/utils/logger'
 import { buildPaymentVerificationUrl, decidePendingOrderAutoResume } from './lib/payment/paymentPendingOrder'
 import { clearPendingOrderStorage, getPendingOrderStorageSnapshot } from './lib/payment/paymentPendingOrderStorage'
-import { authenticateMiniProgramUser, getUserState } from './lib/api/api'
-import { seedMiniProgramAuthSession } from './lib/api/authSession'
+import { authenticateMiniProgramUser, getUserState, type ApiError } from './lib/api/api'
+import { seedMiniProgramAuthSession, isTransportApiError } from './lib/api/authSession'
 import { useQueryClient } from '@tanstack/react-query'
 import AuthProvider from './providers/AuthProvider'
 import { DynamicAccentProvider } from './providers/DynamicAccentProvider'
@@ -39,9 +39,21 @@ function AutoLoginBridge() {
         seedMiniProgramAuthSession(userState, queryClient)
         logInfo('[AutoLogin] Silent auto-login successful', { nextStep: userState.nextStep })
       })
-      .catch((error) => {
+      .catch((error: ApiError | unknown) => {
+        const isRetryable = isTransportApiError(error) || (error as ApiError)?.statusCode === 500
+        if (isRetryable) {
+          // Allow retry on next mount / foreground by resetting the guard.
+          attemptedRef.current = false
+          logWarn('[AutoLogin] Silent auto-login failed with retryable error', {
+            message: error instanceof Error ? error.message : String(error),
+            statusCode: (error as ApiError)?.statusCode,
+          })
+          return
+        }
+
         logInfo('[AutoLogin] Silent auto-login failed (expected for new users)', {
           message: error instanceof Error ? error.message : String(error),
+          statusCode: (error as ApiError)?.statusCode,
         })
       })
   }, [isAuthenticated, isLoading, queryClient])
@@ -156,6 +168,7 @@ function App({ children }: PropsWithChildren<any>) {
       createElement(
         AchievementProvider,
         null,
+        createElement(AutoLoginBridge),
         createElement(PendingOrderResumeBridge),
         createElement(ProfessionRetryBridge),
         createElement(AchievementPopup),

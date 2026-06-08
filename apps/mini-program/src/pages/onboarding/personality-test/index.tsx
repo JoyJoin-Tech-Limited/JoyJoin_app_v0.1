@@ -54,6 +54,8 @@ import QuestionTransition from './QuestionTransition'
 import { useBackReview } from './useBackReview'
 import {
   getArchetypeVisual,
+  getIntroStaticAsset,
+  getIntroStaticFallbackAsset,
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
   PERSONALITY_TEST_QUESTION_EXPRESSION,
@@ -275,7 +277,20 @@ export default function PersonalityTestPage() {
 
   const [skipsRemaining, setSkipsRemaining] = useState(MAX_SKIP_COUNT)
   const [isSkipping, setIsSkipping] = useState(false)
+  const [introImgError, setIntroImgError] = useState(false)
+  const [introImgLoaded, setIntroImgLoaded] = useState(false)
+  const [introReducedMotion, setIntroReducedMotion] = useState(false)
   useResetOnShow(setIsPageExiting, setIsSubmitting, setIsSkipping)
+
+  // Detect reduced-motion preference once for the intro mascot
+  useEffect(() => {
+    try {
+      const info = Taro.getSystemInfoSync()
+      setIntroReducedMotion((info as any).reduceMotion === true)
+    } catch {
+      setIntroReducedMotion(false)
+    }
+  }, [])
 
   // Echo exit animation state: when isSubmitting drops, the echo fades out
   // over 220ms before unmounting so the handoff to the next question feels
@@ -1163,12 +1178,20 @@ export default function PersonalityTestPage() {
           <View className='personality-test__intro-hero personality-test__stage personality-test__stage--2'>
             <View className='personality-test__intro-hero-visual'>
               <View className='personality-test__intro-hero-halo' />
-              <XiaoyueSpriteAnimator
-                state='intro'
-                size='320rpx'
-                showGlow
-                className='personality-test__intro-mascot'
-              />
+              <View className='personality-test__intro-mascot'>
+                {!introImgLoaded && (
+                  <View className='personality-test__intro-mascot-placeholder' />
+                )}
+                <Image
+                  src={introReducedMotion || introImgError ? getIntroStaticFallbackAsset() : getIntroStaticAsset()}
+                  mode='aspectFit'
+                  className={`personality-test__intro-mascot-img${introImgLoaded ? ' personality-test__intro-mascot-img--loaded' : ''}`}
+                  aria-hidden='true'
+                  lazyLoad={false}
+                  onLoad={() => setIntroImgLoaded(true)}
+                  onError={() => setIntroImgError(true)}
+                />
+              </View>
             </View>
 
             <View className='personality-test__intro-bubble'>
@@ -1443,6 +1466,7 @@ export default function PersonalityTestPage() {
                   isLoading={isSubmitting}
                   showGlow={false}
                   autoPlay={mascotAutoPlay || resolvedMascotState !== 'idle'}
+                  transitionMs={0}
                   className='personality-test__mascot-animator'
                 />
               </View>
@@ -1459,6 +1483,7 @@ export default function PersonalityTestPage() {
                     speed={40}
                     delay={120}
                     showCursor
+                    numberOfLines={3}
                   />
                 )}
               </View>
@@ -1470,34 +1495,7 @@ export default function PersonalityTestPage() {
 
         {/* Zone D: Answers */}
         <View className='personality-test__answer-zone'>
-          {(shouldShowEcho || isEchoExiting) && echoEnabled ? (
-            <View
-              className={`personality-test__answer-echo${isEchoExiting ? ' personality-test__answer-echo--exiting' : ''}`}
-              aria-live='polite'
-              role='status'
-              aria-label={`已选择：${lastAttemptedOptionRef.current?.text ?? ''}，正在提交`}
-            >
-              <View className='personality-test__answer-echo-card'>
-                <Text className='personality-test__answer-echo-text' numberOfLines={2}>
-                  {lastAttemptedOptionRef.current?.text ?? '处理中…'}
-                </Text>
-              </View>
-              <View className='personality-test__answer-echo-whisper'>
-                <View className='personality-test__answer-echo-whisper-line' />
-              </View>
-              <View className='personality-test__answer-echo-brand-row'>
-                <Image
-                  className='personality-test__answer-echo-mascot-icon'
-                  src={getXiaoyueExpressionAsset(PERSONALITY_TEST_QUESTION_EXPRESSION.loading)}
-                  mode='aspectFit'
-                  aria-hidden='true'
-                />
-                <Text className='personality-test__answer-echo-caption'>
-                  悦仔收到了，正在分析…
-                </Text>
-              </View>
-            </View>
-          ) : (backReview.isBackReviewMode ? backReview.backReviewQuestion : question) ? (
+          {(backReview.isBackReviewMode ? backReview.backReviewQuestion : question) ? (
             <QuestionTransition questionId={(backReview.isBackReviewMode ? backReview.backReviewQuestion! : question!).id}>
               <PersonalityTestAnswerArea
                 questionType={backReview.isBackReviewMode
@@ -1523,6 +1521,36 @@ export default function PersonalityTestPage() {
               />
             </QuestionTransition>
           ) : null}
+
+          {/* Echo overlay — renders on top of answer area during submission */}
+          {(shouldShowEcho || isEchoExiting) && echoEnabled && (
+            <View
+              className={`personality-test__answer-echo-overlay${isEchoExiting ? ' personality-test__answer-echo-overlay--exiting' : ''}`}
+              aria-live='polite'
+              role='status'
+              aria-label={`已选择：${lastAttemptedOptionRef.current?.text ?? ''}，正在提交`}
+            >
+              <View className='personality-test__answer-echo-card'>
+                <Text className='personality-test__answer-echo-text' numberOfLines={2}>
+                  {lastAttemptedOptionRef.current?.text ?? '处理中…'}
+                </Text>
+              </View>
+              <View className='personality-test__answer-echo-whisper'>
+                <View className='personality-test__answer-echo-whisper-line' />
+              </View>
+              <View className='personality-test__answer-echo-brand-row'>
+                <Image
+                  className='personality-test__answer-echo-mascot-icon'
+                  src={getXiaoyueExpressionAsset(PERSONALITY_TEST_QUESTION_EXPRESSION.loading)}
+                  mode='aspectFit'
+                  aria-hidden='true'
+                />
+                <Text className='personality-test__answer-echo-caption'>
+                  悦仔收到了，正在分析…
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Back-review actions */}

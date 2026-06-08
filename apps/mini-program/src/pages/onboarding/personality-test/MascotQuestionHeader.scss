@@ -40,6 +40,7 @@
       0 8rpx 32rpx rgba($color-primary, 0.06),
       inset 0 1rpx 0 rgba(255, 255, 255, 0.7);
     animation: mascot-question-banner-enter 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+    overflow: hidden;
 
     /* WeChat: backdrop-filter unreliable — solid fallback for production */
     background: rgba($color-surface, 0.88);
