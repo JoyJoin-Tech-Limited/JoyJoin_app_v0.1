@@ -118,6 +118,15 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Profile-review backport:** Adopted `InterestChipCloud` for interest + category chips.
 - **Analytics:** Lightweight `logInfo` events for `edit_profile_enter`, `edit_profile_save` (with `fieldsChanged`), `edit_profile_abandon` (with `secondsOnPage`).
 
+**36. Personality Test Answer-Echo Loading State** 🧠 *(2026-06-08)*
+- **"Soft Echo + Whisper Pulse"** replaces the generic skeleton loading state on the personality test page. When a user taps an answer, the UI immediately echoes their exact choice in a ghost card (58% opacity), shows a single thin brand-colored shimmer line (2.4s gradient sweep), and displays a Xiaoyue icon + warm caption ("悦仔收到了，正在分析…").
+- **Flow integrity:** A 220ms exit animation plays before the next question atomically appears, preventing the "new question header + old echo" visual mismatch. The pending question data is held in `pendingQuestionUpdateRef` until echo exit completes.
+- **Performance:** Reduced from 5 concurrent skeleton shimmer animations to 1 thin line. Low-end devices suppress shimmer entirely; `prefers-reduced-motion: reduce` disables all echo animations with readable static fallback.
+- **Accessibility:** `aria-live="polite"` + `role="status"` + dynamic `aria-label` announces the specific selected option (e.g., "已选择：XX，正在提交"). Touch targets maintain ≥88rpx.
+- **Kill switch:** `personalityTestEchoEnabled` is a DB-backed feature flag (env `PERSONALITY_TEST_ECHO_ENABLED`, default `true`) wired server→client via `/api/auth/user` `features`. Admin portal exposes toggle. Graceful degradation: when disabled, echo unmounts and normal answer area renders.
+- **Analytics:** `personality_test_echo_shown` tracks `optionText` and `hasCommentary` once per submission.
+- **Completeness audit:** 44/44 — perfect score across all 11 dimensions.
+
 **35. Mini-Program Bug-Fix & Polish Sprint** 🐛 *(2026-06-05)*
 - **Discover empty state restored:** Replaced regressed empty state with `StatusCard` using Lovart `lovart-generic-empty.webp` hero illustration, warm title/description, and a primary action CTA (`去发现活动` or `清除筛选` when filters are active).
 - **Events empty/error states:** Empty state now uses the same `StatusCard` + Lovart pattern; fetch failures render `XiaoyueEmptyState` with `emotion='sad'` and a retry CTA.

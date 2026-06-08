@@ -1,5 +1,12 @@
 import Taro from '@tarojs/taro'
 import { getArchetypeHSL, ARCHETYPE_LEGACY_NAME_MAP } from '@joyjoin/shared'
+import { CANVAS_PALETTE } from '@shared/personality/canvasPalette'
+import {
+  toCanvasRGBA,
+  fillRoundedRect,
+  strokeRoundedRect,
+  clipRoundedRect,
+} from './canvasHelpers'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -8,99 +15,39 @@ const GROUP_REVEAL_W = 750
 const GROUP_REVEAL_H = 1000
 
 const PALETTE = {
-  bgStart: '#fff8fb',
-  bgMid: '#f5eeff',
-  bgEnd: '#ede4ff',
+  // Aligned with CANVAS_PALETTE from @shared/personality/canvasPalette
+  bgStart: CANVAS_PALETTE.pageBgStart,   // '#fff8fb'
+  bgMid: CANVAS_PALETTE.pageBgMid,       // '#fff3ea' (was '#f5eeff' — drifted from portrait)
+  bgEnd: CANVAS_PALETTE.pageBgEnd,       // '#f6ecff' (was '#ede4ff' — drifted from portrait)
   goldStart: '#fff7db',
   goldMid: '#ffecd2',
   goldEnd: '#f8d7da',
-  cardWhite: '#ffffff',
-  textDark: '#201533',
-  textMuted: '#6f5a8e',
-  textSecondary: '#46355f',
+  cardWhite: CANVAS_PALETTE.cardFill,     // '#fffdfa' (was '#ffffff')
+  textDark: CANVAS_PALETTE.textDark,      // '#201533'
+  textMuted: CANVAS_PALETTE.textMuted,    // '#6f5a8e'
+  textSecondary: CANVAS_PALETTE.textSecondary, // '#46355f'
   textLight: '#8b7fa3',
-  badgeDarkFill: '#23123d',
-  badgeDarkText: '#fff7d6',
+  badgeDarkFill: CANVAS_PALETTE.badgeDarkFill, // '#23123d'
+  badgeDarkText: CANVAS_PALETTE.badgeDarkText, // '#fff7d6'
   badgeGoldFill: '#fff1cc',
   badgeGoldText: '#7a4a00',
-  badgePurpleFill: '#f0e7ff',
-  badgePurpleText: '#5d35b2',
+  badgePurpleFill: CANVAS_PALETTE.badgeRarityFill, // '#f0e7ff'
+  badgePurpleText: CANVAS_PALETTE.badgeRarityText, // '#5d35b2'
   borderGold: '#f5c86b',
   borderLight: 'rgba(139,92,246,0.12)',
   memberBg: 'rgba(255,255,255,0.85)',
-  footerText: '#6d5f80',
-  traitTrack: 'rgba(139,92,246,0.08)',
-  activeSkillBg: '#fff5f1',
+  footerText: CANVAS_PALETTE.footerText,  // '#6d5f80'
+  traitTrack: CANVAS_PALETTE.traitTrack,  // '#f4ebff'
+  activeSkillBg: CANVAS_PALETTE.activeSkillFill, // '#fff5f1'
   activeSkillText: '#c45e2e',
-  passiveSkillBg: '#f4f0ff',
+  passiveSkillBg: CANVAS_PALETTE.passiveSkillFill, // '#f4f0ff'
   passiveSkillText: '#6b3fc7',
 } as const
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function drawRoundedRect(
-  ctx: Taro.CanvasContext,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-): void {
-  const sr = Math.min(r, w / 2, h / 2)
-  ctx.beginPath()
-  ctx.moveTo(x + sr, y)
-  ctx.arcTo(x + w, y, x + w, y + h, sr)
-  ctx.arcTo(x + w, y + h, x, y + h, sr)
-  ctx.arcTo(x, y + h, x, y, sr)
-  ctx.arcTo(x, y, x + w, y, sr)
-  ctx.closePath()
-}
-
-function fillRoundedRect(
-  ctx: Taro.CanvasContext,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-  fill: string | Taro.CanvasGradient,
-): void {
-  ctx.save()
-  drawRoundedRect(ctx, x, y, w, h, r)
-  ctx.setFillStyle(fill)
-  ctx.fill()
-  ctx.restore()
-}
-
-function strokeRoundedRect(
-  ctx: Taro.CanvasContext,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-  stroke: string,
-  lw: number,
-): void {
-  ctx.save()
-  drawRoundedRect(ctx, x, y, w, h, r)
-  ctx.setStrokeStyle(stroke)
-  ctx.setLineWidth(lw)
-  ctx.stroke()
-  ctx.restore()
-}
-
-function clipRoundedRect(
-  ctx: Taro.CanvasContext,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-): void {
-  drawRoundedRect(ctx, x, y, w, h, r)
-  ctx.clip()
-}
+// ─── Canvas helpers imported from @/lib/utils/canvasHelpers.ts ───────────
+// drawRoundedRect, fillRoundedRect, strokeRoundedRect, clipRoundedRect,
+// resolveImagePath, clampPercent, createMetallicGold, splitText,
+// toCanvasRGBA, drawBadge, drawTextBlock are now shared.
 
 function hslToHex(h: number, s: number, l: number): string {
   const sat = s / 100
@@ -124,7 +71,15 @@ function getArchetypeColorHex(archetypeName: string | undefined): string {
   const key = ARCHETYPE_LEGACY_NAME_MAP[archetypeName]
   if (!key) return '#8b5cf6'
   const hsl = getArchetypeHSL(key)
-  return hslToHex(hsl.h, hsl.s, hsl.l)
+  const rgba = toCanvasRGBA(`hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`, 1)
+  const match = rgba.match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*1\)$/)
+  if (match) {
+    const r = Number(match[1]).toString(16).padStart(2, '0')
+    const g = Number(match[2]).toString(16).padStart(2, '0')
+    const b = Number(match[3]).toString(16).padStart(2, '0')
+    return `#${r}${g}${b}`
+  }
+  return '#8b5cf6'
 }
 
 function splitText(text: string, maxChars: number, maxLines = 2): string[] {
@@ -217,32 +172,59 @@ function exportCanvas(
   width: number,
   height: number,
 ): Promise<string> {
+  // Cap DPR at 2 universally for memory safety — matching portrait poster.
+  // 750×750 at DPR 3 ≈ 20MB backing store; DPR 2 ≈ 9MB.
+  // Social media compresses anyway, so DPR 3 is negligible visual improvement.
   const sys = Taro.getSystemInfoSync()
   const dpr = sys.pixelRatio || 2
-  const ram = (sys as { deviceMemory?: number }).deviceMemory || 4
-  const cap = ram < 3 ? 2 : 3
-  const mult = Math.min(Math.max(dpr, 2), cap)
+  const mult = Math.min(Math.max(dpr, 1), 2)
+
+  // Draw timeout guard — prevent infinite hang on low-end devices
+  const DRAW_TIMEOUT_MS = 15_000
 
   return new Promise((resolve, reject) => {
+    let settled = false
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true
+        reject(new Error('Canvas draw timed out'))
+      }
+    }, DRAW_TIMEOUT_MS)
+
     ctx.draw(false, async () => {
-      try {
-        const out = await Taro.canvasToTempFilePath({
-          canvasId,
-          x: 0,
-          y: 0,
-          width,
-          height,
-          destWidth: Math.round(width * mult),
-          destHeight: Math.round(height * mult),
-          fileType: 'png',
-          quality: 1,
-        })
-        setTimeout(() => {
-          try { Taro.getFileSystemManager().unlinkSync(out.tempFilePath) } catch {}
-        }, 60000)
-        resolve(out.tempFilePath)
-      } catch (err) {
-        reject(err)
+      if (settled) return
+      // 2-attempt retry: DPR 2 (primary), then DPR 1 (fallback)
+      const dprValues = [mult, 1]
+      for (let attempt = 0; attempt < dprValues.length; attempt++) {
+        const currentDpr = dprValues[attempt]
+        try {
+          const out = await Taro.canvasToTempFilePath({
+            canvasId,
+            x: 0,
+            y: 0,
+            width,
+            height,
+            destWidth: Math.round(width * currentDpr),
+            destHeight: Math.round(height * currentDpr),
+            fileType: 'png',
+            quality: 1,
+          })
+          settled = true
+          clearTimeout(timeout)
+          setTimeout(() => {
+            try { Taro.getFileSystemManager().unlinkSync(out.tempFilePath) } catch {}
+          }, 60000)
+          resolve(out.tempFilePath)
+          return
+        } catch (error) {
+          if (attempt === dprValues.length - 1) {
+            settled = true
+            clearTimeout(timeout)
+            reject(error)
+            return
+          }
+          await new Promise((r) => setTimeout(r, 50))
+        }
       }
     })
   })
@@ -311,11 +293,11 @@ function drawCompactTraitBars(
     // Track
     fillRoundedRect(ctx, barX, rowY, barMaxWidth, trackHeight, trackRadius, PALETTE.traitTrack)
 
-    // Fill with accent gradient
+    // Fill with accent gradient — use toCanvasRGBA for WeChat safety
     const fillWidth = Math.max(4, barMaxWidth * (clampPercent(entry.value) / 100))
     const fillGradient = ctx.createLinearGradient(barX, rowY, barX + fillWidth, rowY)
     fillGradient.addColorStop(0, accentColor)
-    fillGradient.addColorStop(1, `${accentColor}99`)
+    fillGradient.addColorStop(1, toCanvasRGBA(accentColor, 0.6))
     fillRoundedRect(ctx, barX, rowY, fillWidth, trackHeight, trackRadius, fillGradient)
   })
 
@@ -481,7 +463,7 @@ function drawHoloStamp(
   ctx.setFontSize(14)
   ctx.setTextAlign('center')
   ctx.setTextBaseline('middle')
-  ctx.fillText('★ HOLOGRAPHIC ★', centerX, y + barHeight / 2)
+  ctx.fillText('全息限定版', centerX, y + barHeight / 2)
   ctx.restore()
 
   return barHeight
@@ -538,7 +520,7 @@ export async function generatePersonalitySquarePoster(
   strokeRoundedRect(ctx, M, M, cardW, cardH, 36, PALETTE.borderGold, 4)
 
   // Top badge
-  drawBadge(ctx, '悦聚 · 社交命盘', M + 28, M + 20, 170, 34, 17, PALETTE.badgeDarkFill, PALETTE.badgeDarkText)
+  drawBadge(ctx, '悦聚 · 氛围命盘', M + 28, M + 20, 170, 34, 17, PALETTE.badgeDarkFill, PALETTE.badgeDarkText)
 
   // Archetype name (large, centered)
   ctx.save()
@@ -657,9 +639,9 @@ export async function generatePersonalitySquarePoster(
   const rarityY = Math.min(cursorY, S - M - 100)
   drawBadge(ctx, rarityText, S / 2 - 120, rarityY, 240, 32, 16, PALETTE.badgePurpleFill, PALETTE.badgePurpleText)
 
-  // Bottom CTA
+// Bottom CTA — match portrait poster attribution
   drawTextBlock(ctx, {
-    text: '来 JoyJoin 测测你的社交命格',
+    text: '来悦聚测测你的氛围命格',
     x: S / 2,
     y: S - M - 56,
     maxChars: 20,
@@ -672,11 +654,11 @@ export async function generatePersonalitySquarePoster(
 
   // JoyJoin watermark
   ctx.save()
-  ctx.setFillStyle('rgba(139,92,246,0.08)')
+  ctx.setFillStyle('rgba(139, 92, 246, 0.08)')
   ctx.setFontSize(16)
   ctx.setTextAlign('center')
   ctx.setTextBaseline('top')
-  ctx.fillText('悦聚 · 找到同频的人', S / 2, S - M - 28)
+  ctx.fillText('悦聚 · 测测你的氛围命格 · 找到同频的人', S / 2, S - M - 28)
   ctx.restore()
 
   return exportCanvas(ctx, canvasId, S, S)
@@ -736,8 +718,8 @@ export async function generateGroupRevealPoster(
   fillRoundedRect(ctx, M, M, cardW, cardH, 32, 'rgba(255,255,255,0.92)')
   strokeRoundedRect(ctx, M, M, cardW, cardH, 32, PALETTE.borderGold, 3)
 
-  // Top badge: 盲盒开箱
-  drawBadge(ctx, '🎲 盲盒开箱', M + 28, M + 28, 160, 40, 20, PALETTE.badgeGoldFill, PALETTE.badgeGoldText)
+  // Top badge: 盲盒开箱 (no emoji per brand guidelines)
+  drawBadge(ctx, '盲盒开箱', M + 28, M + 28, 160, 40, 20, PALETTE.badgeGoldFill, PALETTE.badgeGoldText)
 
   // Match score badge (if available)
   if (typeof input.matchScore === 'number') {

@@ -57,6 +57,7 @@ import {
 } from "./matchingSemantic";
 import { observeSemanticSimilarityMetrics } from "./matchingMetrics";
 import { matchingWeightsService, type MatchingWeights } from "./matchingWeightsService";
+import { notifyPoolMatched } from "./lib/wecomNotifications/matching";
 
 
 
@@ -1920,6 +1921,39 @@ export async function saveMatchResults(
   } else {
     logger.info(`[Pool Matching] ⏸️ Venue assignment skipped (VENUE_ASSIGNMENT_ENABLED=false)`);
   }
+
+  // Pool matching notification (fire-and-forget)
+  void (async () => {
+    try {
+      const totalMatched = groups.reduce((sum, g) => sum + g.members.length, 0);
+      const totalRegistrations = pool?.totalRegistrations ?? totalMatched;
+      const unmatched = Math.max(0, totalRegistrations - totalMatched);
+      const overallScore = groups.length > 0
+        ? groups.reduce((sum, g) => sum + g.overallScore, 0) / groups.length
+        : 0;
+      const chemScore = groups.length > 0
+        ? groups.reduce((sum, g) => sum + g.avgChemistryScore, 0) / groups.length
+        : 0;
+      const maleC = groups.flatMap(g => g.members).filter((m: any) => m.gender === "男性").length;
+      const femaleC = groups.flatMap(g => g.members).filter((m: any) => m.gender === "女性").length;
+
+      await notifyPoolMatched({
+        poolTitle: pool?.title || "未知活动",
+        poolDate: pool?.dateTime ? new Date(pool.dateTime).toLocaleString("zh-CN") : "待定",
+        totalRegistrations,
+        matchedCount: totalMatched,
+        unmatchedCount: unmatched,
+        groupsFormed: groups.length,
+        avgOverallScore: overallScore,
+        avgChemistryScore: chemScore,
+        genderBalanceSummary: `${maleC}♂ ${femaleC}♀`,
+        matchDurationMin: 0,
+        poolId,
+      });
+    } catch (err: any) {
+      logger.error(`[Pool Matching] ⚠️ Matching notification failed:`, { error: String(err) });
+    }
+  })();
 
   // 8. 异步生成活动主题标题并广播 (Async Event Theme Title Generation & Broadcast)
   setImmediate(() => {

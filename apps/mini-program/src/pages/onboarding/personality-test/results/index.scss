@@ -45,7 +45,7 @@ $color-skill-cool: #7c3aed;
 
 .personality-results {
   @include page-gradient-bg;
-  min-height: 100dvh;
+  min-height: 100vh;
   position: relative;
   overflow: hidden;
 
@@ -65,8 +65,8 @@ $color-skill-cool: #7c3aed;
     pointer-events: none;
   }
 
-  // 1:1 square poster (1080×1080 export). Unused today but kept available
-  // for the Moments export path; sized to match its export aspect ratio.
+  // 1:1 square poster (750×750 export). Used for WeChat Moments
+  // (朋友圈) share path alongside the portrait poster.
   &__poster-canvas--square {
     position: fixed;
     left: -9999rpx;
@@ -81,7 +81,7 @@ $color-skill-cool: #7c3aed;
     @include flex-center;
     @include overlay-padding($spacing-xl, $container-padding, $spacing-xl);
 
-    min-height: 100dvh;
+    min-height: 100vh;
     flex-direction: column;
     text-align: center;
     gap: $spacing-md;
@@ -143,7 +143,7 @@ $color-skill-cool: #7c3aed;
   &__immersive-shell {
     @include overlay-padding($spacing-lg, $container-padding, $spacing-xl);
 
-    min-height: 100dvh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -165,6 +165,8 @@ $color-skill-cool: #7c3aed;
     color: $color-text-primary;
     line-height: 1.4;
     margin-bottom: $spacing-sm;
+    word-break: keep-all;
+    overflow-wrap: break-word;
     max-width: 100%;
     padding: 0 $container-padding;
     box-sizing: border-box;
@@ -456,6 +458,7 @@ $color-skill-cool: #7c3aed;
 
   &__network-copy {
     flex: 1;
+    min-width: 0;
     text-align: left;
   }
 
@@ -565,7 +568,7 @@ $color-skill-cool: #7c3aed;
     }
   }
 
-    &__reveal-label {
+  &__reveal-label {
     font-size: $font-size-3xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
@@ -574,7 +577,8 @@ $color-skill-cool: #7c3aed;
     max-width: 100%;
     padding: 0 $container-padding;
     box-sizing: border-box;
-    word-break: break-word;
+    word-break: keep-all;
+    overflow-wrap: break-word;
     font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
   }
 
@@ -665,7 +669,7 @@ $color-skill-cool: #7c3aed;
   }
 
   &__scroll {
-    height: 100dvh;
+    height: 100vh;
     box-sizing: border-box;
     padding: $spacing-lg 0 $spacing-2xl;
     @include safe-area-bottom-padding(padding-bottom, $spacing-2xl);
@@ -869,8 +873,10 @@ $color-skill-cool: #7c3aed;
     min-width: 0;
     padding: $spacing-sm $spacing-md;
     border-radius: 20rpx;
-    background: rgba($color-primary, 0.04);
-    border: 1rpx solid rgba($color-primary, 0.08);
+    background: $color-bg-clean;
+    border: 1rpx solid rgba($color-border, 0.5);
+    border-left: 3rpx solid rgba($color-primary, 0.25);
+    box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.035);
     position: relative;
 
     // Speech bubble tail pointing to avatar
@@ -883,7 +889,7 @@ $color-skill-cool: #7c3aed;
       height: 0;
       border-top: 8rpx solid transparent;
       border-bottom: 8rpx solid transparent;
-      border-right: 10rpx solid rgba($color-primary, 0.08);
+      border-right: 10rpx solid rgba($color-border, 0.5);
     }
 
     &::after {
@@ -895,7 +901,7 @@ $color-skill-cool: #7c3aed;
       height: 0;
       border-top: 7rpx solid transparent;
       border-bottom: 7rpx solid transparent;
-      border-right: 8rpx solid rgba($color-primary, 0.04);
+      border-right: 8rpx solid $color-bg-clean;
     }
   }
 
@@ -1158,6 +1164,8 @@ $color-skill-cool: #7c3aed;
     font-weight: $font-weight-black;
     color: $color-text-primary;
     margin-bottom: 8rpx;
+    word-break: keep-all;
+    overflow-wrap: break-word;
     font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
   }
 
@@ -1936,6 +1944,8 @@ $color-skill-cool: #7c3aed;
     color: $color-text-primary;
     text-align: center;
     line-height: 1.5;
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
 
   &__collect-hint {
@@ -2069,7 +2079,7 @@ $color-skill-cool: #7c3aed;
     position: fixed;
     top: 48rpx;
     right: 32rpx;
-    z-index: 100;
+    z-index: 90;
     min-height: $cta-min-tap;
     padding: 16rpx 32rpx;
     padding-top: calc(16rpx + env(safe-area-inset-top));

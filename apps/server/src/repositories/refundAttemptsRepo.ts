@@ -75,6 +75,16 @@ export const refundAttemptsRepo = {
     return result[0];
   },
 
+  async countRecentByPayment(paymentId: string, since: Date): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(refundAttempts)
+      .where(
+        sql`${refundAttempts.paymentId} = ${paymentId} AND ${refundAttempts.initiatedAt} >= ${since.toISOString()}`,
+      );
+    return Number(result[0]?.count || 0);
+  },
+
   async getAllWithPaymentDetails(filters?: { since?: Date; until?: Date }): Promise<any[]> {
     const sinceCondition = filters?.since
       ? sql`AND ra.initiated_at >= ${filters.since.toISOString()}`

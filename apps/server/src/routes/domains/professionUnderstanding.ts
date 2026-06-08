@@ -19,6 +19,8 @@ const professionRateLimitMap = new Map<string, { count: number; resetAt: number 
 const PROFESSION_RATE_LIMIT_MAX = 10;
 const PROFESSION_RATE_LIMIT_WINDOW_MS = 60_000;
 
+const MAX_RATE_LIMIT_ENTRIES = 2000;
+
 function checkProfessionRateLimit(userId: string): { allowed: boolean; retryAfterMs?: number } {
   const now = Date.now();
   // Periodic cleanup: prune expired entries every ~100 calls to prevent unbounded growth
@@ -26,6 +28,11 @@ function checkProfessionRateLimit(userId: string): { allowed: boolean; retryAfte
     for (const [key, entry] of professionRateLimitMap) {
       if (now >= entry.resetAt) professionRateLimitMap.delete(key);
     }
+  }
+  // Hard cap: LRU eviction when map is full and user is new
+  if (professionRateLimitMap.size >= MAX_RATE_LIMIT_ENTRIES && !professionRateLimitMap.has(userId)) {
+    const firstKey = professionRateLimitMap.keys().next().value;
+    if (firstKey) professionRateLimitMap.delete(firstKey);
   }
   const entry = professionRateLimitMap.get(userId);
   if (!entry || now >= entry.resetAt) {

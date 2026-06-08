@@ -46,7 +46,9 @@ import {
   type PersonalitySharePosterInput,
 } from './sharePoster'
 import {
+  generatePersonalitySquarePoster,
   PERSONALITY_SQUARE_CANVAS_ID,
+  type PersonalitySquarePosterInput,
 } from '../../../../lib/utils/momentsPosterFactory'
 import {
   ARCHETYPE_SEQUENCE,
@@ -146,6 +148,7 @@ export default function PersonalityTestResultsPage() {
   const retryCountRef = useRef(0)
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [sharePosterPath, setSharePosterPath] = useState('')
+  const [squarePosterPath, setSquarePosterPath] = useState('')
   const [isGeneratingPoster, setIsGeneratingPoster] = useState(false)
   const [posterError, setPosterError] = useState(false)
   const [generationPhase, setGenerationPhase] = useState('')
@@ -158,6 +161,9 @@ export default function PersonalityTestResultsPage() {
   useEffect(() => {
     if (sharePosterPath) {
       setSharePosterPath('')
+    }
+    if (squarePosterPath) {
+      setSquarePosterPath('')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVariantIndex, cardNickname])
@@ -1151,37 +1157,42 @@ export default function PersonalityTestResultsPage() {
    * Present a frictionless action sheet for sharing the generated poster.
    * Options: save to album, share to friends, or preview.
    */
-  const presentShareOptions = useCallback(async (posterPath: string) => {
+  const presentShareOptions = useCallback(async (posterPath: string, momentsPath?: string) => {
     const taroWithShareImageMenu = Taro as typeof Taro & {
       showShareImageMenu?: (options: { path: string }) => Promise<unknown>
     }
     const hasNativeShareMenu = typeof taroWithShareImageMenu.showShareImageMenu === 'function'
+    const hasMoments = Boolean(momentsPath)
+
+    const itemList = [
+      '保存到相册',
+      ...(hasNativeShareMenu ? ['分享给朋友'] : []),
+      ...(hasMoments ? ['保存朋友圈卡片'] : []),
+      '预览海报',
+    ]
 
     let tapIndex: number
     try {
-      const res = await Taro.showActionSheet({
-        itemList: hasNativeShareMenu
-          ? ['保存到相册', '分享给朋友', '预览海报']
-          : ['保存到相册', '预览海报'],
-      })
+      const res = await Taro.showActionSheet({ itemList })
       tapIndex = res.tapIndex
     } catch {
-      // User cancelled or action sheet failed
       analytics.interaction('share_action_dismissed', { primaryArchetype: displayArchetypeName })
       return
     }
 
-    if (tapIndex === 0) {
-      // Save to album
-      haptics('medium')
-      analytics.interaction('share_action_selected', { option: 'save', primaryArchetype: displayArchetypeName })
+    // Map tapIndex back to action, accounting for dynamic itemList
+    const saveIdx = 0
+    const shareIdx = hasNativeShareMenu ? 1 : -1
+    const momentsIdx = hasMoments ? (hasNativeShareMenu ? 2 : 1) : -1
+    const previewIdx = itemList.length - 1
+
+    const saveToAlbum = async (filePath: string, label: string) => {
       try {
         const settingRes = await Taro.getSetting()
         const authKey = 'scope.writePhotosAlbum' as const
         const hasAuth = settingRes.authSetting[authKey] as boolean | undefined
 
         if (hasAuth === false) {
-          // Previously denied — guide user to settings
           analytics.interaction('share_save_permission_denied', { primaryArchetype: displayArchetypeName })
           const { confirm } = await Taro.showModal({
             title: '需要相册权限',
@@ -1195,42 +1206,55 @@ export default function PersonalityTestResultsPage() {
           return
         }
 
-        await Taro.saveImageToPhotosAlbum({ filePath: posterPath })
+        await Taro.saveImageToPhotosAlbum({ filePath })
         haptics('success')
-        analytics.interaction('share_save_success', { primaryArchetype: displayArchetypeName })
-        void Taro.showToast({ title: '氛围卡已保存', icon: 'success', duration: 2000 })
+        analytics.interaction('share_save_success', { option: label, primaryArchetype: displayArchetypeName })
+        void Taro.showToast({ title: `${label}已保存`, icon: 'success', duration: 2000 })
       } catch (saveErr) {
         const error = String(saveErr)
-        logError('[PersonalityResults] Save to album failed', {
-          error,
-          primaryArchetype: displayArchetypeName,
-        })
-        analytics.interaction('share_save_failed', { error, primaryArchetype: displayArchetypeName })
+        logError('[PersonalityResults] Save to album failed', { error, option: label, primaryArchetype: displayArchetypeName })
+        analytics.interaction('share_save_failed', { error, option: label, primaryArchetype: displayArchetypeName })
         void Taro.showToast({
           title: `${getMascotDisplayName(auth.user)}没能把卡片存进相册，可能需要你授权一下~`,
           icon: 'none',
           duration: 2500,
         })
       }
-    } else if (hasNativeShareMenu && tapIndex === 1) {
-      // Share to friends
+    }
+
+    if (tapIndex === saveIdx) {
+      haptics('medium')
+      await saveToAlbum(posterPath, '氛围卡')
+    } else if (tapIndex === shareIdx) {
       haptics('light')
       analytics.interaction('share_action_selected', { option: 'share', primaryArchetype: displayArchetypeName })
       await taroWithShareImageMenu.showShareImageMenu!({ path: posterPath })
-    } else {
-      // Preview
+    } else if (tapIndex === momentsIdx) {
+      haptics('medium')
+      analytics.interaction('share_action_selected', { option: 'moments', primaryArchetype: displayArchetypeName })
+      await saveToAlbum(momentsPath!, '朋友圈卡片')
+    } else if (tapIndex === previewIdx) {
       haptics('light')
       analytics.interaction('share_action_selected', { option: 'preview', primaryArchetype: displayArchetypeName })
-      await Taro.previewImage({
-        current: posterPath,
-        urls: [posterPath],
-      })
+      const urls = momentsPath ? [posterPath, momentsPath] : [posterPath]
+      await Taro.previewImage({ current: posterPath, urls })
     }
-  }, [analytics, displayArchetypeName])
+  }, [analytics, displayArchetypeName, auth.user])
 
   const handleGeneratePoster = useCallback(async () => {
     if (isGeneratingPoster || !displayArchetype) {
       return
+    }
+
+    // Offline pre-check — poster generation requires CDN images
+    try {
+      const { networkType } = await Taro.getNetworkType()
+      if (networkType === 'none') {
+        void Taro.showToast({ title: '网络好像断了，请检查连接后再试', icon: 'none', duration: 2500 })
+        return
+      }
+    } catch {
+      // getNetworkType may fail on some devices — proceed anyway
     }
 
     setIsGeneratingPoster(true)
@@ -1283,18 +1307,48 @@ export default function PersonalityTestResultsPage() {
 
       setGenerationPhase('正在渲染全息卡面…')
       const nextPosterPath = await generatePersonalitySharePoster(posterInput)
-      setGenerationPhase('正在导出高清图片…')
       setSharePosterPath(nextPosterPath)
+
+      // Generate square Moments poster (best-effort; degrades on low-end devices)
+      let nextSquarePath: string | undefined
+      if (!deviceTier.isDegradation) {
+        try {
+        const squareInput: PersonalitySquarePosterInput = {
+          archetype: displayArchetypeName,
+          subtitle: visual.nickname || displayArchetypeName,
+          tagline: visual.tagline || visual.description || summary,
+          shareLine,
+          rarityPercentage: typeof visual.rarityPercentage === 'number' ? visual.rarityPercentage : 0,
+          archetypeAsset: displayAsset || visual.asset,
+          archetypeAssetPng: visual.assetPng,
+          traitEntries: traitEntries.slice(0, 3).map(({ label, value }) => ({ label, value })),
+          energyLevel,
+          skillSet: skillSet
+            ? { activeSkill: { name: skillSet.activeSkill.name }, passiveSkill: { name: skillSet.passiveSkill.name } }
+            : undefined,
+          archetypeRank,
+          serialNumber,
+        }
+        setGenerationPhase('正在生成朋友圈卡片…')
+        nextSquarePath = await generatePersonalitySquarePoster(squareInput)
+        setSquarePosterPath(nextSquarePath)
+      } catch (squareErr) {
+        logWarn('[PersonalityResults] Square poster generation failed, degrading to portrait-only', {
+          error: squareErr instanceof Error ? squareErr.message : String(squareErr),
+        })
+      }
+      }
 
       haptics('success')
       logInfo('[PersonalityResults] Poster generated', {
         primaryArchetype: displayArchetypeName,
         variant: selectedVariant?.name,
+        hasMoments: Boolean(nextSquarePath),
       })
       void Taro.showToast({ title: '氛围卡已生成', icon: 'success', duration: 1500 })
 
       // Present frictionless sharing options
-      await presentShareOptions(nextPosterPath)
+      await presentShareOptions(nextPosterPath, nextSquarePath)
     } catch (error) {
       const message = error instanceof Error && error.message ? error.message : '海报没生成成功，稍后再试'
       haptics('warning')
@@ -1470,11 +1524,14 @@ export default function PersonalityTestResultsPage() {
           <Text className='personality-results__skip-text'>跳过动画</Text>
         </View>
       )}
-      <Canvas canvasId={PERSONALITY_SHARE_POSTER_CANVAS_ID} className='personality-results__poster-canvas' />
-      <Canvas
-        canvasId={PERSONALITY_SQUARE_CANVAS_ID}
-        className='personality-results__poster-canvas personality-results__poster-canvas--square'
-      />
+      <Canvas canvasId={PERSONALITY_SHARE_POSTER_CANVAS_ID} className='personality-results__poster-canvas' aria-hidden='true' />
+      {!deviceTier.isDegradation && (
+        <Canvas
+          canvasId={PERSONALITY_SQUARE_CANVAS_ID}
+          className='personality-results__poster-canvas personality-results__poster-canvas--square'
+          aria-hidden='true'
+        />
+      )}
 
       {/* ── Hidden image preload layer ──
            Redundant cache priming: getImageInfo primes the native image cache;

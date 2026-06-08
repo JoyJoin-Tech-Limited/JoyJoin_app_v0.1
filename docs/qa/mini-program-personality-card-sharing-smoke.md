@@ -2,7 +2,7 @@
 
 > Test surface: `apps/mini-program/src/pages/onboarding/personality-test/results/`  
 > Primary client: WeChat Mini Program (iOS + Android)  
-> Last updated: 2026-05-27
+> Last updated: 2026-06-08
 
 ---
 
@@ -19,11 +19,24 @@
 
 | # | Step | Expected | Pass/Fail |
 |---|------|----------|-----------|
-| 1.1 | Tap "生成并分享卡片" | Button enters loading state; haptic medium feedback | |
-| 1.2 | Wait for generation (~1-3s) | Action sheet appears with options | |
+| 1.1 | Tap **"保存我的氛围卡"** button | Button enters loading state with phase text ("准备素材中…", "正在渲染全息卡面…", "正在生成朋友圈卡片…"); haptic medium feedback | |
+| 1.2 | Wait for generation (~1-3s) | Toast "氛围卡已生成"; action sheet appears with options | |
 | 1.3 | Observe generated poster (Preview) | Image is sharp (no blurry text or borders) | |
-| 1.4 | Check poster visual elements | Rainbow sheen visible on card surface; metallic gold border; foil sparkle texture; "★ HOLOGRAPHIC EDITION ★" stamp at bottom; JoyJoin watermark footer | |
-| 1.5 | Check poster resolution | File size suggests retina export (1500×2400 to 2250×3600 depending on device DPR) | |
+| 1.4 | Check poster visual elements | Rainbow sheen visible on card surface; metallic gold border; foil sparkle texture; **"全息限定版"** stamp (Chinese) at bottom; JoyJoin watermark footer "悦聚 · 测测你的氛围命格 · 找到同频的人" | |
+| 1.5 | Check poster resolution | DPR capped at 2 for memory safety (portrait: 2160×3840 max; square: 1500×1500 max) | |
+| 1.6 | Offline pre-check: enable airplane mode, tap generate | Toast "网络好像断了，请检查连接后再试"; generation not attempted | |
+
+---
+
+## 1b. Square Moments Poster (朋友圈卡片)
+
+| # | Step | Expected | Pass/Fail |
+|---|------|----------|-----------|
+| 1b.1 | After poster generation, check action sheet includes "保存朋友圈卡片" | Option is present only when square poster generation succeeded | |
+| 1b.2 | On low-end / degradation-tier device | Square poster generation is skipped entirely; square canvas element not rendered; action sheet shows portrait-only options | |
+| 1b.3 | Tap "保存朋友圈卡片" | Square poster (750×750) is saved to album; toast "朋友圈卡片" with success icon | |
+| 1b.4 | Check square poster visual elements | Archetype name + rarity badge; top 3 traits (compact bars); "悦聚 · 氛围命盘" badge; "全息限定版" stamp; group member avatars (if in session); archetype rank + serial number | |
+| 1b.5 | Check square poster resolution | DPR capped at 2 (1500×1500 max) | |
 
 ---
 
@@ -35,7 +48,7 @@
 | 2.2 | Tilt device gently (gyroscope) | Card rotates in 3D (`rotateX`/`rotateY` ≤ 10°) smoothly with 0.15s transition | |
 | 2.3 | Lay device flat on table | Card returns to neutral rotation within ~0.3s | |
 | 2.4 | Touch and drag on card | Touch-driven tilt activates as fallback; feels responsive | |
-| 2.5 | Observe "HOLOGRAPHIC EDITION" stamp | Gold gradient bar visible between skill cards and action buttons | |
+| 2.5 | Observe "全息限定版" stamp | Gold gradient bar visible between skill cards and action buttons | |
 
 ---
 
@@ -43,8 +56,8 @@
 
 | # | Step | Expected | Pass/Fail |
 |---|------|----------|-----------|
-| 3.1 | Tap "生成并分享卡片" → select "保存到相册" | Haptic medium; toast "已保存到相册" with success icon | |
-| 3.2 | Check device Photos app | Poster PNG exists in album | |
+| 3.1 | Tap "保存我的氛围卡" (or "分享卡片" after first gen) → select "保存到相册" | Haptic medium; toast "已保存到相册" with success icon | |
+| 3.2 | Check device Photos app | Portrait poster PNG exists in album | |
 | 3.3 | Verify analytics event | Network tab shows `interaction` event with `action: "share_action_selected"`, `option: "save"` | |
 | 3.4 | Verify success analytics | `interaction` event with `action: "share_save_success"` | |
 
@@ -55,7 +68,7 @@
 | # | Step | Expected | Pass/Fail |
 |---|------|----------|-----------|
 | 4.1 | **Precondition:** Go to WeChat Settings → Privacy → Authorized Services → Revoke JoyJoin's album permission | | |
-| 4.2 | Return to JoyJoin, tap "生成并分享卡片" → "保存到相册" | Modal appears: "需要相册权限" / "保存卡片到相册需要您授权访问相册。" | |
+| 4.2 | Return to JoyJoin, tap "保存我的氛围卡" / "分享卡片" → "保存到相册" | Modal appears: "需要相册权限" / "保存卡片到相册需要您授权访问相册。" | |
 | 4.3 | Tap "取消" on modal | Modal dismisses; no crash; no toast | |
 | 4.4 | Tap "保存到相册" again → tap "去设置" | Opens WeChat mini-program settings page | |
 | 4.5 | In settings, enable "保存到相册" permission | Permission toggles on | |
@@ -69,7 +82,7 @@
 
 | # | Step | Expected | Pass/Fail |
 |---|------|----------|-----------|
-| 5.1 | Tap "生成并分享卡片" → "分享给朋友" | Native WeChat share image menu opens with poster | |
+| 5.1 | Tap "保存我的氛围卡" → "分享给朋友" | Native WeChat share image menu opens with poster | |
 | 5.2 | Select a friend/chat | Share succeeds; poster image sent | |
 | 5.3 | Verify analytics | `interaction` event with `action: "share_action_selected"`, `option: "share"` | |
 
@@ -79,7 +92,7 @@
 
 | # | Step | Expected | Pass/Fail |
 |---|------|----------|-----------|
-| 6.1 | Tap "生成并分享卡片" → "预览海报" | Full-screen image preview opens with poster | |
+| 6.1 | Tap "分享卡片" → "预览海报" | Full-screen image preview opens with both posters (or portrait-only if no square) | |
 | 6.2 | Long-press preview image | Native WeChat context menu appears (save, share, etc.) | |
 | 6.3 | Swipe to dismiss | Preview closes gracefully | |
 | 6.4 | Verify analytics | `interaction` event with `action: "share_action_selected"`, `option: "preview"` | |
@@ -90,7 +103,7 @@
 
 | # | Step | Expected | Pass/Fail |
 |---|------|----------|-----------|
-| 7.1 | Tap "生成并分享卡片" | Medium haptic | |
+| 7.1 | Tap "保存我的氛围卡" / "分享卡片" | Medium haptic | |
 | 7.2 | Generation completes | Success haptic | |
 | 7.3 | Slot machine landing (if re-running test) | Short vibration | |
 
@@ -122,7 +135,7 @@
 |---|------|----------|-----------|
 | 10.1 | Generate poster on low-end Android device | Completes within 3s; no out-of-memory kill | |
 | 10.2 | Generate poster on iPhone with high DPR (e.g., 3×) | Image is sharp; no visible lag | |
-| 10.3 | Rapidly tap "生成并分享卡片" multiple times | Button disabled during generation; no duplicate canvases rendered | |
+| 10.3 | Rapidly tap "保存我的氛围卡" multiple times | Button disabled during generation; no duplicate canvases rendered; generation-dedup via sendGenerationRef | |
 
 ---
 

@@ -97,52 +97,57 @@ export async function buildAuthUserResponse(userId: string): Promise<AuthUserRes
     }
   }
 
+const [
+    restartOnboarding,
+    smartProfession,
+    onboardingForceSkip,
+    matchingLiveReveal,
+    socialIcebreakerClientForceEnd,
+    runPlanTemplatesEnabled,
+    promoBannerEnabled,
+    personalitySlotAnimationEnabled,
+    personalityShareEnabled,
+    paymentsEnabledFlag,
+    personalityTestEchoEnabled,
+  ] = await Promise.all([
+    getFeatureFlag('restartOnboarding', false),
+    getFeatureFlag('smartProfession', true),
+    getFeatureFlag('onboardingForceSkip', false),
+    getFeatureFlag('matchingLiveReveal', true),
+    getFeatureFlag('socialIcebreakerClientForceEnd', false),
+    getFeatureFlag('runPlanTemplatesEnabled', false),
+    getFeatureFlag('promoBannerEnabled', true),
+    getFeatureFlag('personalitySlotAnimationEnabled', true),
+    getFeatureFlag('personalityShareEnabled', true),
+    getFeatureFlag('paymentsEnabled', false),
+    getFeatureFlag('personalityTestEchoEnabled', true),
+  ]);
+
   const authUserResponse: AuthUserResponse = {
     ...sanitizeAuthUser(user),
     nextStep,
     profileEssentialComplete,
     profileExtendedComplete,
     activeAssessmentSessionId,
-    paymentsEnabled: (process.env.PAYMENTS_ENABLED ?? "false").toLowerCase() === "true",
+    paymentsEnabled: paymentsEnabledFlag,
     mascotDisplayName: mascotConfig.displayName,
     mascotBackstory: mascotConfig.backstory,
     tierDisplayFlags,
     xiaoyueAnalysis,
     restartsRemaining: Math.max(0, 5 - (user.onboardingRestartCount ?? 0)),
-    features: await (async () => {
-      const [
-        restartOnboarding,
-        smartProfession,
-        onboardingForceSkip,
-        matchingLiveReveal,
-        socialIcebreakerClientForceEnd,
-        runPlanTemplatesEnabled,
-        promoBannerEnabled,
-        personalitySlotAnimationEnabled,
-        personalityShareEnabled,
-      ] = await Promise.all([
-        getFeatureFlag('restartOnboarding', false),
-        getFeatureFlag('smartProfession', true),
-        getFeatureFlag('onboardingForceSkip', false),
-        getFeatureFlag('matchingLiveReveal', true),
-        getFeatureFlag('socialIcebreakerClientForceEnd', false),
-        getFeatureFlag('runPlanTemplatesEnabled', false),
-        getFeatureFlag('promoBannerEnabled', true),
-        getFeatureFlag('personalitySlotAnimationEnabled', true),
-        getFeatureFlag('personalityShareEnabled', true),
-      ]);
-      return {
-        restartOnboarding,
-        smartProfession,
-        onboardingForceSkip,
-        matchingLiveReveal,
-        socialIcebreakerClientForceEnd,
-        runPlanTemplatesEnabled,
-        promoBannerEnabled,
-        personalitySlotAnimationEnabled,
-        personalityShareEnabled,
-      };
-    })(),
+    features: {
+      restartOnboarding,
+      smartProfession,
+      onboardingForceSkip,
+      matchingLiveReveal,
+      socialIcebreakerClientForceEnd,
+      runPlanTemplatesEnabled,
+      promoBannerEnabled,
+      personalitySlotAnimationEnabled,
+      personalityShareEnabled,
+      paymentsEnabled: paymentsEnabledFlag,
+      personalityTestEchoEnabled,
+    },
   };
 
   return authUserResponse;

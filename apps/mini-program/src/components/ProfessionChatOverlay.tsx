@@ -35,7 +35,7 @@ export interface ProfessionChatOverlayProps {
 
 const OPENING_MESSAGE_GENERIC = '好奇！你平时是做什么的呀？\n多说说看，悦仔好帮你找到真正聊得来的人～'
 
-const OPENING_MESSAGE_ARchetype = (archetypeName: string) =>
+const OPENING_MESSAGE_ARCHETYPE = (archetypeName: string) =>
   `像你这样的${archetypeName}，平时是做什么的呀？\n多说说看，悦仔好帮你找到真正聊得来的人～`
 
 const SKIP_RESPONSE_GENERIC = '好呀，那我们先跳过这题～等你想说了，随时可以在个人主页里补充'
@@ -267,14 +267,14 @@ function getAnticipationExpression(text: string): XiaoyueExpressionId {
   if (['designer', 'artist', 'photographer', 'musician', 'writer', 'director', 'actor', 'creative', 'model', 'streamer', 'blogger'].some((k) => lower.includes(k)))
     return 'testCurious'
   // Technical / analytical professions → listening face
-  if (['程序', '工程', '数据', '开发', '技术', '算法', '科研', '研究', '学术', '博士', '教授', '科学家', '分析', '架构', '运维', '测试', '码农', 'it', '人工智能', 'ai'].some((k) => lower.includes(k)))
+  if (['程序', '工程', '数据', '开发', '技术', '算法', '科研', '研究', '学术', '博士', '教授', '科学家', '分析', '架构', '运维', '测试', '码农', '人工智能'].some((k) => lower.includes(k)))
     return 'testListening'
-  if (['engineer', 'programmer', 'developer', 'data', 'scientist', 'researcher', 'analyst', 'architect', 'coder', 'dev', 'phd', 'professor', 'tech'].some((k) => lower.includes(k)))
+  if (['engineer', 'programmer', 'developer', 'data scientist', 'scientist', 'researcher', 'analyst', 'architect', 'coder', 'dev', 'phd', 'professor', 'tech'].some((k) => lower.includes(k)))
     return 'testListening'
   // Social / people-facing professions → coach guide face
   if (['销售', '老师', '教师', '人力', 'hr', '培训', '教练', '咨询', '顾问', '主持', '公关', '市场', '运营', '客服', '社工', '志愿者', '导游'].some((k) => lower.includes(k)))
     return 'coachGuide'
-  if (['sales', 'teacher', 'hr', 'trainer', 'coach', 'consultant', 'host', 'pr', 'marketing', 'operation', 'customer service', 'social worker', 'volunteer', 'guide'].some((k) => lower.includes(k)))
+  if (['sales', 'teacher', 'hr', 'trainer', 'coach', 'consultant', 'host', 'marketing', 'operation', 'customer service', 'social worker', 'volunteer', 'guide'].some((k) => lower.includes(k)))
     return 'coachGuide'
   // Business / leadership → success face
   if (['经理', '总监', '主管', '创业', '创始人', '老板', '合伙', '投资', '金融', '银行', '证券', '保险', '地产', '管理', 'leader', 'executive'].some((k) => lower.includes(k)))
@@ -330,9 +330,9 @@ export default function ProfessionChatOverlay({
   const analytics = useOnboardingAnalytics('essential-data', { enabled: true, autoTrackStart: false })
   const deviceTier = useDeviceTier()
   const [isOnline, setIsOnline] = useState(true)
-  const sendGenerationRef = useRef(0)
   const isSubmittingRef = useRef(isSubmitting)
-  isSubmittingRef.current = isSubmitting
+  useEffect(() => { isSubmittingRef.current = isSubmitting }, [isSubmitting])
+  const sendGenerationRef = useRef(0)
   // Rotating placeholder index
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const placeholderTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -344,7 +344,7 @@ export default function ProfessionChatOverlay({
     if (visible && !isClosing) {
       setInputValue(initialValue)
       const archetypeName = userArchetype ? (ARCHETYPE_BY_ID[userArchetype]?.nameCn ?? '') : ''
-      const openingText = archetypeName ? OPENING_MESSAGE_ARchetype(archetypeName) : OPENING_MESSAGE_GENERIC
+      const openingText = archetypeName ? OPENING_MESSAGE_ARCHETYPE(archetypeName) : OPENING_MESSAGE_GENERIC
       setMessages([
         { id: generateId(), sender: 'xiaoyue', text: openingText, expressionId: 'coachGuide' },
       ])
@@ -528,6 +528,7 @@ export default function ProfessionChatOverlay({
         setMessages((prev) => [...prev, hintMsg])
       }
 
+      if (bubbleStaggerRef.current) clearTimeout(bubbleStaggerRef.current)
       bubbleStaggerRef.current = setTimeout(() => {
         // Re-check generation inside the stagger timeout too
         if (sendGenerationRef.current !== thisGeneration) return
@@ -804,14 +805,14 @@ export default function ProfessionChatOverlay({
       </View>
 
       {/* Preload common Xiaoyue expressions to eliminate first-render flicker — only while overlay is open */}
-      {visible && !isClosing && (
-        <View style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', opacity: 0 }}>
-          <Image src={getXiaoyueExpressionAsset('coachGuide')} mode='aspectFill' />
-          <Image src={getXiaoyueExpressionAsset('loadingSystem')} mode='aspectFill' />
-          <Image src={getXiaoyueExpressionAsset('homeWelcome')} mode='aspectFill' />
-          <Image src={getXiaoyueExpressionAsset('testCurious')} mode='aspectFill' />
-          <Image src={getXiaoyueExpressionAsset('testListening')} mode='aspectFill' />
-          <Image src={getXiaoyueExpressionAsset('matchSuccess')} mode='aspectFill' />
+      {visible && !isClosing && !deviceTier.isDegradation && (
+        <View style={{ position: 'absolute', left: '-9999rpx', top: 0, width: '2rpx', height: '2rpx', opacity: 0, pointerEvents: 'none' }}>
+          <Image src={getXiaoyueExpressionAsset('coachGuide')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
+          <Image src={getXiaoyueExpressionAsset('loadingSystem')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
+          <Image src={getXiaoyueExpressionAsset('homeWelcome')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
+          <Image src={getXiaoyueExpressionAsset('testCurious')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
+          <Image src={getXiaoyueExpressionAsset('testListening')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
+          <Image src={getXiaoyueExpressionAsset('matchSuccess')} mode='aspectFill' style={{ width: '2rpx', height: '2rpx' }} />
         </View>
       )}
 
@@ -884,7 +885,11 @@ export default function ProfessionChatOverlay({
                 onClick={() => {
                   haptics('light')
                   setRemovedTags((prev) => [...prev, tag])
-                  setTagFeedback('好，这个标签不要了～还有想调整的吗？')
+                  setTagFeedback(null)
+                  // Force animation replay by clearing then setting
+                  requestAnimationFrame(() => {
+                    setTagFeedback('好，这个标签不要了～还有想调整的吗？')
+                  })
                   analytics.interaction('profession_chat_tag_removed', { tag })
                 }}
               >

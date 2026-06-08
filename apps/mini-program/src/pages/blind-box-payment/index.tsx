@@ -1,6 +1,7 @@
 import { View, Text, Image, ScrollView } from '@tarojs/components'
 import JoyButton from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
+import FirstTimeCouponBanner from '../../components/FirstTimeCouponBanner'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { apiRequest } from '../../lib/api/api'
@@ -38,6 +39,30 @@ import {
   resolveMiniProgramPaymentPlans,
   type MiniProgramPaymentPlanKey,
 } from '../../lib/payment/paymentPageModel'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+
+// ─── Payment Ritual V2 Imports (Sprint 1: Foundation + Sprint 2: Polish) ───
+import RitualActAnticipation from './components/RitualActAnticipation'
+import RitualActRevelation from './components/RitualActRevelation'
+import RitualActChoice from './components/RitualActChoice'
+import RitualCelebrationOverlay from './components/RitualCelebrationOverlay'
+import { useArchetypeTheme } from './hooks/useArchetypeTheme'
+import { assignRitualVariant } from './lib/paymentRitualState'
+import type { ArchetypeFamily, RitualContext, RitualPlan } from './lib/paymentRitualState'
+import { getCommunityPledgeCopy, getHesitationCopy, getPledgeText, getScarcityCopy, getTrustLine } from './lib/paymentRitualCopy'
+import {
+  trackRitualEnter,
+  trackCtaTap,
+  trackPaymentStart,
+  trackPaymentSuccess,
+  trackPaymentError,
+  trackCtaHesitation,
+  trackAchievementShown,
+  trackVerificationEnter,
+} from './lib/paymentRitualAnalytics'
+import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
+import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
+
 import './index.scss'
 
 type CouponValidationResponse = {
@@ -48,6 +73,105 @@ type CouponValidationResponse = {
 }
 
 const PENDING_ORDER_RESUME_MESSAGE = '支付结果待确认，请继续查询订单'
+
+// ─── Feature Flag ───
+const PAYMENT_RITUAL_V2_ENABLED = false // Controlled by auth response in production
+
+// ─── Mock Ritual Context (until API is ready) ───
+function buildMockRitualContext(
+  plans: Record<MiniProgramPaymentPlanKey, PricingPlan>,
+  userArchetype: string | null,
+  city: string,
+  userId: string,
+): RitualContext {
+  const archetypeFamily: ArchetypeFamily = userArchetype
+    ? ({
+        corgi: 'warm',
+        rooster: 'warm',
+        hamster_praise: 'warm',
+        fox: 'cool',
+        dolphin_calm: 'cool',
+        octopus: 'cool',
+        koala: 'fire',
+        spider: 'fire',
+        owl: 'calm',
+        elephant: 'calm',
+        turtle: 'calm',
+        cat: 'calm',
+      }[userArchetype] as ArchetypeFamily) || 'calm'
+    : 'calm'
+
+  const archetypeNames: Record<string, string> = {
+    corgi: '开心柯基',
+    rooster: '太阳鸡',
+    hamster_praise: '夸夸仓鼠',
+    fox: '社交狐狸',
+    dolphin_calm: '平静海豚',
+    spider: '深思蜘蛛',
+    koala: '温和考拉',
+    octopus: '灵动章鱼',
+    owl: '智慧猫头鹰',
+    elephant: '稳重大象',
+    turtle: '踏实海龟',
+    cat: '独立猫咪',
+  }
+
+  const planEntries = Object.entries(plans) as [MiniProgramPaymentPlanKey, PricingPlan][]
+
+  const ritualPlans: RitualPlan[] = planEntries.map(([key, plan], index) => {
+    const isMonthly = key === 'vip_monthly' || key === 'vip_quarterly'
+    const sessions = isMonthly ? (key === 'vip_monthly' ? 6 : 18) : Number(key.split('_')[1] ?? 1)
+    const days = key === 'vip_monthly' ? 30 : key === 'vip_quarterly' ? 90 : 90
+
+    const perSession = sessions > 0 ? Math.round(plan.price / sessions) : plan.price
+    const perDay = days > 0 ? (plan.price / days).toFixed(1) : '0'
+
+    const savings = plan.originalPrice ? plan.originalPrice - plan.price : 0
+    const savingsPercent = plan.originalPrice
+      ? Math.round((savings / plan.originalPrice) * 100)
+      : 0
+
+    return {
+      id: key,
+      displayName: plan.displayName,
+      description: plan.description || '悦聚专属权益',
+      price: plan.price,
+      originalPrice: plan.originalPrice ?? undefined,
+      valueAnchor: {
+        perSessionPrice: `¥${perSession}`,
+        dailyPrice: isMonthly ? `¥${perDay}` : undefined,
+        savingsAmount: savings > 0 ? `¥${savings}` : '0',
+        savingsPercent: `${savingsPercent}%`,
+      },
+      socialProof: {
+        recentChoosers: [86, 42, 31, 55][index] ?? 10,
+        isRecommended: key === 'vip_quarterly',
+      },
+      badge: getMiniProgramPaymentPlanMeta(key).badge,
+      supportCopy: getMiniProgramPaymentPlanMeta(key).supportCopy,
+    }
+  })
+
+  return {
+    userArchetype,
+    archetypeDisplayName: userArchetype ? archetypeNames[userArchetype] || null : null,
+    archetypeFamily,
+    community: {
+      city,
+      totalMembers: 1247,
+      weeklyNewMembers: 86,
+      monthlyEvents: 24,
+    },
+    contextActivity: null,
+    plans: ritualPlans,
+    scarcity: {
+      remainingSpots: 12,
+      offerExpiry: null,
+    },
+    coupons: [],
+    variant: assignRitualVariant(userId),
+  }
+}
 
 function isPoolRegistrationReturnContext(
   context: MiniProgramPaymentReturnContext | null | undefined,
@@ -89,8 +213,6 @@ function requestMiniProgramPayment(paymentIntent: PaymentIntentResponse): Promis
   })
 }
 
-// Returning null means the user explicitly cancelled the WeChat sheet, so the
-// caller should exit quietly without showing an error toast.
 function getFriendlyPaymentError(errMsg?: string): string | null {
   if (!errMsg) return '支付未成功，再试一次即可'
 
@@ -114,9 +236,21 @@ function getFriendlyPaymentError(errMsg?: string): string | null {
   return '支付未成功，再试一次即可'
 }
 
+// ═══════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════
+
 export default function BlindBoxPaymentPage() {
   const { user, isLoading: authLoading } = useAuthGuard()
-  const [selectedPlan, setSelectedPlan] = useState<MiniProgramPaymentPlanKey>('vip_monthly')
+
+  // ─── Feature Flag & Ritual State ───
+  const isRitualEnabled = PAYMENT_RITUAL_V2_ENABLED && (user?.features as any)?.paymentRitualV2 !== false
+  const userArchetype = user?.archetype ?? null
+  const userCity = (user as any)?.city ?? '上海'
+  const theme = useArchetypeTheme(userArchetype)
+
+  // ─── Legacy State (preserved) ───
+  const [selectedPlan, setSelectedPlan] = useState<MiniProgramPaymentPlanKey>('vip_quarterly')
   const [plans, setPlans] = useState<Record<MiniProgramPaymentPlanKey, PricingPlan>>(
     DEFAULT_MINI_PROGRAM_PAYMENT_PLANS,
   )
@@ -135,6 +269,41 @@ export default function BlindBoxPaymentPage() {
   const [paymentReturnContext, setPaymentReturnContext] = useState<MiniProgramPaymentReturnContext | null>(null)
   const hasSkippedFirstDidShowRef = useRef(false)
   const paymentsDisabled = user?.paymentsEnabled === false
+
+  // ─── Ritual State ───
+  const [ritualStage, setRitualStage] = useState<'act1' | 'act2' | 'act3' | 'legacy'>('act1')
+  const [isCelebrating, setIsCelebrating] = useState(false)
+  const [celebrationOrderId, setCelebrationOrderId] = useState<string | null>(null)
+  const [showHesitation, setShowHesitation] = useState(false)
+  const hesitationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const achievementTrackedRef = useRef(false)
+
+  // Derive ritual context from stable data to prevent unnecessary re-renders
+  const ritualContext = useMemo(() => {
+    if (!user?.id || !Object.keys(plans).length) return null
+    return buildMockRitualContext(plans, userArchetype, userCity, user.id)
+  }, [plans, userArchetype, userCity, user?.id])
+
+  // Find welcome coupon
+  const welcomeCoupon = useMemo(() => {
+    return availableCoupons.find((c) => {
+      const code = c.code?.toUpperCase?.() ?? ''
+      return code.startsWith('WELCOME') && c.status === 'available'
+    })
+  }, [availableCoupons])
+
+  const welcomeDiscountPercent = useMemo(() => {
+    if (!welcomeCoupon) return 50
+    if (welcomeCoupon.discountType === 'percentage' && welcomeCoupon.discountValue) {
+      return welcomeCoupon.discountValue
+    }
+    return 50
+  }, [welcomeCoupon])
+
+  const handleUseWelcomeCoupon = useCallback((code: string) => {
+    setSelectedCouponCode(code)
+    Taro.showToast({ title: '已选择优惠券', icon: 'none', duration: 1200 })
+  }, [])
 
   const refreshPaymentFlowState = useCallback(() => {
     const pendingOrder = readStoredPendingOrder({ currentUserId: user?.id })
@@ -218,13 +387,16 @@ export default function BlindBoxPaymentPage() {
         getUserCoupons(apiRequest).catch(() => ({ count: 0, availableCount: 0, coupons: [] })),
       ])
 
-      setPlans(resolveMiniProgramPaymentPlans(pricing))
+      const resolvedPlans = resolveMiniProgramPaymentPlans(pricing)
+      setPlans(resolvedPlans)
       setCouponCount(typeof coupons.count === 'number' ? coupons.count : 0)
       setAvailableCoupons(
         Array.isArray(coupons.coupons)
           ? coupons.coupons.filter((coupon) => coupon.status === 'available')
           : []
       )
+
+      // Ritual context is derived via useMemo from plans + user state
     } catch (error) {
       const message = error instanceof Error ? error.message : '加载支付信息没成功'
       setPageError(message)
@@ -232,7 +404,7 @@ export default function BlindBoxPaymentPage() {
     } finally {
       setIsBootstrapping(false)
     }
-  }, [])
+  }, [isRitualEnabled, userArchetype, userCity, user?.id])
 
   useEffect(() => {
     if (authLoading || !user?.id) {
@@ -247,7 +419,12 @@ export default function BlindBoxPaymentPage() {
     }
 
     void loadPageData()
-  }, [authLoading, loadPageData, paymentsDisabled, refreshPaymentFlowState, user?.id])
+
+    // Track ritual entry
+    if (isRitualEnabled) {
+      trackRitualEnter('ritual_v2', !!userArchetype)
+    }
+  }, [authLoading, loadPageData, paymentsDisabled, refreshPaymentFlowState, user?.id, isRitualEnabled, userArchetype])
 
   useDidShow(() => {
     if (authLoading || !user?.id) {
@@ -269,6 +446,73 @@ export default function BlindBoxPaymentPage() {
     void loadPageData()
   })
 
+  // ─── Ritual Stage Handlers ───
+  const handleAct1Complete = useCallback(() => {
+    setRitualStage('act2')
+  }, [])
+
+  const handleAct2Complete = useCallback(() => {
+    setRitualStage('act3')
+  }, [])
+
+  const handleSkipRitual = useCallback(() => {
+    setRitualStage('act3')
+  }, [])
+
+  // ─── Hesitation Timer (Act III) ───
+  // Pre-select hesitation line once per mount to avoid jitter on re-render
+  const hesitationLine = useMemo(() => {
+    if (!ritualContext) return ''
+    return getHesitationCopy(ritualContext.archetypeFamily)
+  }, [ritualContext?.archetypeFamily])
+
+  useEffect(() => {
+    if (ritualStage !== 'act3' || !ritualContext) {
+      setShowHesitation(false)
+      if (hesitationTimerRef.current) {
+        clearTimeout(hesitationTimerRef.current)
+        hesitationTimerRef.current = null
+      }
+      return
+    }
+
+    hesitationTimerRef.current = setTimeout(() => {
+      setShowHesitation(true)
+      trackCtaHesitation(ritualContext.archetypeFamily)
+    }, 3000)
+
+    return () => {
+      if (hesitationTimerRef.current) {
+        clearTimeout(hesitationTimerRef.current)
+        hesitationTimerRef.current = null
+      }
+    }
+  }, [ritualStage, ritualContext])
+
+  const handleSelectPlan = useCallback((planId: string) => {
+    setSelectedPlan(planId as MiniProgramPaymentPlanKey)
+    // Dismiss hesitation on interaction
+    setShowHesitation(false)
+    if (hesitationTimerRef.current) {
+      clearTimeout(hesitationTimerRef.current)
+      hesitationTimerRef.current = null
+    }
+  }, [])
+
+  const handleCelebrationDismiss = useCallback(async () => {
+    setIsCelebrating(false)
+    const orderId = celebrationOrderId
+    setCelebrationOrderId(null)
+    if (orderId) {
+      trackVerificationEnter(selectedPlan, orderId)
+      const didNavigate = await navigateToVerification(orderId)
+      if (!didNavigate) {
+        await showResumeOnlyState(orderId, 'verification-navigation-failed')
+      }
+    }
+  }, [celebrationOrderId, navigateToVerification, selectedPlan, showResumeOnlyState])
+
+  // ─── Legacy Payment Logic (preserved) ───
   const registrationReturnContext = isPoolRegistrationReturnContext(paymentReturnContext)
     ? paymentReturnContext
     : null
@@ -382,6 +626,7 @@ export default function BlindBoxPaymentPage() {
 
     setIsCreatingIntent(true)
     setPageError('')
+    trackPaymentStart(selectedPlan)
 
     let persistedOrderId: string | null = null
 
@@ -402,9 +647,16 @@ export default function BlindBoxPaymentPage() {
 
       await requestMiniProgramPayment(paymentIntent)
 
-      const didNavigate = await navigateToVerification(paymentIntent.outTradeNo)
-      if (!didNavigate) {
-        await showResumeOnlyState(paymentIntent.outTradeNo, 'verification-navigation-failed')
+      // Sprint 2: Celebration handoff for ritual variant
+      if (isRitualEnabled && ritualContext?.variant === 'ritual_v2') {
+        trackPaymentSuccess(selectedPlan, paymentIntent.outTradeNo)
+        setCelebrationOrderId(paymentIntent.outTradeNo)
+        setIsCelebrating(true)
+      } else {
+        const didNavigate = await navigateToVerification(paymentIntent.outTradeNo)
+        if (!didNavigate) {
+          await showResumeOnlyState(paymentIntent.outTradeNo, 'verification-navigation-failed')
+        }
       }
     } catch (error: any) {
       const errMsg = typeof error?.errMsg === 'string' ? error.errMsg : undefined
@@ -437,6 +689,7 @@ export default function BlindBoxPaymentPage() {
       logWarn('Mini-program payment intent creation failed', {
         message: friendlyMessage,
       })
+      trackPaymentError(selectedPlan, friendlyMessage)
       await Taro.showToast({
         title: friendlyMessage,
         icon: 'none',
@@ -456,6 +709,163 @@ export default function BlindBoxPaymentPage() {
     user?.id,
     paymentReturnContext,
   ])
+
+  // ─── Render: Ritual V2 ───
+
+  // A/B variant: control group falls through to legacy
+  const shouldRenderRitual =
+    isRitualEnabled &&
+    ritualContext &&
+    ritualContext.variant === 'ritual_v2' &&
+    !paymentsDisabled &&
+    !pendingOrderToResume
+
+  // Track achievement shown once (in useEffect to avoid render side effects)
+  useEffect(() => {
+    if (shouldRenderRitual && !achievementTrackedRef.current) {
+      achievementTrackedRef.current = true
+      trackAchievementShown('firstEvent')
+    }
+  }, [shouldRenderRitual])
+
+  if (shouldRenderRitual) {
+    return (
+      <>
+        <ScrollView
+          className={`payment-ritual${isCelebrating ? ' payment-ritual--celebrating' : ''}`}
+          scrollY
+          enhanced
+          showScrollbar={false}
+        >
+        {/* Act I: Anticipation */}
+        {ritualStage === 'act1' && (
+          <RitualActAnticipation
+            archetype={ritualContext.userArchetype}
+            theme={theme}
+            community={ritualContext.community}
+            hasContextActivity={!!ritualContext.contextActivity}
+            onComplete={handleAct1Complete}
+            onSkip={handleSkipRitual}
+          />
+        )}
+
+        {/* Act II: Revelation */}
+        {(ritualStage === 'act2' || ritualStage === 'act3') && (
+          <RitualActRevelation
+            archetype={ritualContext.userArchetype}
+            archetypeDisplayName={ritualContext.archetypeDisplayName}
+            theme={theme}
+            contextActivity={ritualContext.contextActivity}
+            onComplete={handleAct2Complete}
+          />
+        )}
+
+        {/* Act III: Choice */}
+        {ritualStage === 'act3' && (
+          <>
+            <RitualActChoice
+              archetype={ritualContext.userArchetype}
+              theme={theme}
+              plans={ritualContext.plans}
+              selectedPlanId={selectedPlan}
+              totalMembers={ritualContext.community.totalMembers}
+              onSelectPlan={handleSelectPlan}
+            />
+
+            {/* Commitment Section (Sprint 1: Basic CTA) */}
+            <View className='ritual-commitment'>
+              <Text className='ritual-commitment__pledge'>
+                {getPledgeText(ritualContext.community.city, ritualContext.community.totalMembers)}
+              </Text>
+
+              {/* Achievement milestone (Achievement + Ritual) */}
+              <View className='ritual-commitment__milestone'>
+                <View className='ritual-commitment__milestone-icon'>
+                  <Image
+                    src={MILESTONE_BADGES.firstEvent}
+                    mode='aspectFit'
+                    className='ritual-commitment__milestone-image'
+                    lazyLoad
+                    style={{ width: '72rpx', height: '72rpx' }}
+                    onError={() => {}}
+                  />
+                </View>
+                <View className='ritual-commitment__milestone-text'>
+                  <Text className='ritual-commitment__milestone-title'>你即将成为社群的一员</Text>
+                  <Text className='ritual-commitment__milestone-body'>完成支付，开启你的 JoyJoin 之旅</Text>
+                </View>
+              </View>
+
+              {ritualContext.scarcity.remainingSpots > 0 && ritualContext.scarcity.remainingSpots < 50 && (
+                <View className='ritual-commitment__scarcity'>
+                  <View className='ritual-commitment__scarcity-dot' />
+                  <Text className='ritual-commitment__scarcity-text'>
+                    {getScarcityCopy(ritualContext.scarcity.remainingSpots)}
+                  </Text>
+                </View>
+              )}
+
+              {/* Hesitation nudge (Sprint 2) */}
+              {showHesitation && (
+                <View className='ritual-hesitation' role='status' aria-live='polite'>
+                  <Image
+                    src={getXiaoyueExpressionAsset('optOutReassure')}
+                    mode='aspectFit'
+                    className='ritual-hesitation__xiaoyue'
+                    lazyLoad
+                    onError={() => {}}
+                  />
+                  <Text className='ritual-hesitation__text'>{hesitationLine}</Text>
+                </View>
+              )}
+
+              <JoyButton
+                variant='primary'
+                className='ritual-commitment__cta'
+                style={{ background: theme.accentBold }}
+                onClick={() => {
+                  setShowHesitation(false)
+                  if (hesitationTimerRef.current) {
+                    clearTimeout(hesitationTimerRef.current)
+                    hesitationTimerRef.current = null
+                  }
+                  trackCtaTap(selectedPlan, payableAmount)
+                  handlePay()
+                }}
+                disabled={isBootstrapping || isCreatingIntent || !user?.id}
+                loading={isCreatingIntent}
+              >
+                <Text className='ritual-commitment__cta-label'>确认加入</Text>
+                <Text className='ritual-commitment__cta-sublabel'>
+                  {selectedPlanData.displayName} · {formatMiniProgramPaymentPrice(payableAmount)}
+                </Text>
+              </JoyButton>
+
+              {/* Community promise (Belonging) */}
+              <Text className='ritual-commitment__promise'>
+                {getCommunityPledgeCopy(ritualContext.community.city, ritualContext.community.totalMembers)}
+              </Text>
+
+              <View className='ritual-commitment__trust'>
+                <Text className='ritual-commitment__trust-text'>{getTrustLine()}</Text>
+              </View>
+            </View>
+          </>
+        )}
+        </ScrollView>
+
+        {/* Celebration Overlay (Sprint 2) */}
+        <RitualCelebrationOverlay
+          visible={isCelebrating}
+          theme={theme}
+          archetypeDisplayName={ritualContext.archetypeDisplayName}
+          onDismiss={handleCelebrationDismiss}
+        />
+      </>
+    )
+  }
+
+  // ─── Render: Legacy (fallback) ───
 
   const payButtonLabel = isBootstrapping
     ? '正在准备支付...'
@@ -663,6 +1073,20 @@ export default function BlindBoxPaymentPage() {
           )
         })}
       </View>
+
+      {welcomeCoupon && welcomeCoupon.code && !selectedCouponCode ? (
+        <FirstTimeCouponBanner
+          className='payment-page__welcome-banner'
+          couponCode={welcomeCoupon.code}
+          discountPercent={welcomeDiscountPercent}
+          onUseCoupon={handleUseWelcomeCoupon}
+          analyticsContext='blind-box-payment'
+          userArchetype={user?.archetype ?? null}
+          archetypeDisplayName={user?.archetype ? ARCHETYPE_BY_ID[user.archetype]?.nameCn ?? null : null}
+          planPrice={selectedPlanData?.price}
+          validUntil={welcomeCoupon.validUntil ?? null}
+        />
+      ) : null}
 
       {couponCount > 0 ? (
         <View className='payment-page__summary-card'>

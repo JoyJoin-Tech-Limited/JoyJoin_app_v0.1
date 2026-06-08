@@ -17,11 +17,13 @@
  *   - Test User phone:  +8613800000002  (profile incomplete)
  *   - Test Admin:       test_admin_seed / TestAdmin123!
  *   - Test Event Pool:  "QA 测试饭局 — 周五夜聊"
+ *   - Beta feature flags: personalityShareEnabled, personalitySlotAnimationEnabled,
+ *     matchingLiveReveal, promoBannerEnabled, smartProfession all set to true
  */
 
 import { eq } from "drizzle-orm";
 import { db } from "../db";
-import { users, eventPools, adminAccounts } from "@joyjoin/shared";
+import { users, eventPools, adminAccounts, featureFlags } from "@joyjoin/shared";
 import bcrypt from "bcrypt";
 
 const TEST_USERS = [
@@ -153,20 +155,62 @@ async function seedTestEventPool(createdByUserId: string) {
   return inserted;
 }
 
+const BETA_FEATURE_FLAGS: Array<{ key: string; value: string; label: string }> = [
+  { key: "personalityShareEnabled", value: "true", label: "Personality share poster" },
+  { key: "personalitySlotAnimationEnabled", value: "true", label: "Personality slot animation" },
+  { key: "matchingLiveReveal", value: "true", label: "Matching live reveal" },
+  { key: "promoBannerEnabled", value: "true", label: "Hero promo banner" },
+  { key: "smartProfession", value: "true", label: "Smart profession AI classification" },
+  { key: "restartOnboarding", value: "false", label: "Onboarding restart (off by default)" },
+  { key: "onboardingForceSkip", value: "false", label: "Onboarding force skip (off by default)" },
+  { key: "socialIcebreakerClientForceEnd", value: "false", label: "Icebreaker force-end kill-switch (off by default)" },
+  { key: "runPlanTemplatesEnabled", value: "false", label: "Run plan templates (off by default)" },
+  { key: "paymentsEnabled", value: "false", label: "Payments (set true + WeChat Pay creds for payment flow)" },
+];
+
+async function seedBetaFeatureFlags() {
+  let created = 0;
+  let existing = 0;
+
+  for (const flag of BETA_FEATURE_FLAGS) {
+    const row = await db
+      .select({ key: featureFlags.key })
+      .from(featureFlags)
+      .where(eq(featureFlags.key, flag.key))
+      .limit(1);
+
+    if (row.length > 0) {
+      existing++;
+      continue;
+    }
+
+    await db.insert(featureFlags).values({
+      key: flag.key,
+      value: flag.value,
+      updatedBy: "seed-script",
+    });
+    console.log(`[seed] Created feature flag: ${flag.key} = ${flag.value} (${flag.label})`);
+    created++;
+  }
+
+  console.log(`[seed] Feature flags: ${created} created, ${existing} already existed`);
+}
+
 async function main() {
   console.log("[seed] Starting test data seed...");
 
   const testUsers = await seedTestUsers();
   const testAdmin = await seedTestAdmin();
   const testPool = await seedTestEventPool(testUsers[0].id);
+  await seedBetaFeatureFlags();
 
   console.log("\n[seed] Summary:");
   console.log(`  Test users:   ${testUsers.length}`);
   console.log(`  Test admin:   ${testAdmin.id} (${TEST_ADMIN.username})`);
   console.log(`  Test pool:    ${testPool.id}`);
+  console.log(`  Feature flags: ${BETA_FEATURE_FLAGS.length} configured`);
   console.log("\n[seed] Done.");
 
-  // Graceful exit for pg pool
   process.exit(0);
 }
 

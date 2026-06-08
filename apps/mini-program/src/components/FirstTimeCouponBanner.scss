@@ -1,0 +1,499 @@
+@use '../styles/variables' as *;
+
+// ─── First-Time Coupon Banner ───────────────────────────────────────────
+// Premium invitation-card aesthetic. Intentionally avoids the purple→pink
+// gradient that reads as "AI-generated." Instead: solid warm cream ground,
+// one bold organic shape as accent, subtle left-side wash for legibility.
+//
+//   ┌──────────────────────────────────────────────┐
+//   │  新人见面礼                                    │
+//   │  首单半价                                      │
+//   │  悦仔为你准备的见面礼                          │
+//   │  [ 领取福利 → ]                               │
+//   │                                   ●           │
+//   └──────────────────────────────────────────────┘
+
+.first-time-coupon-banner {
+  width: 100%;
+
+  &__slide {
+    position: relative;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: $card-radius;
+    overflow: hidden;
+    padding-bottom: 38%;      // ~285/750
+    min-height: 260rpx;
+    background: $color-bg-tint-warm;
+    // Deep, soft card shadow — physical invitation feel
+    box-shadow:
+      0 4rpx 12rpx rgba($color-primary-dark, 0.06),
+      0 16rpx 48rpx rgba($color-primary-dark, 0.08);
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.18s ease;
+    will-change: transform;
+
+    &--hover {
+      transform: scale(0.985);
+      box-shadow:
+        0 2rpx 8rpx rgba($color-primary-dark, 0.04),
+        0 8rpx 24rpx rgba($color-primary-dark, 0.06);
+    }
+
+    &--pressed {
+      transform: scale(0.97);
+    }
+  }
+
+  // ── Decorative organic shape (right side, partially cropped) ───────
+  // One bold shape — intentional, not a smooth gradient wash.
+  // Positioned so it peeks from the right edge like a design element.
+  &__shape {
+    position: absolute;
+    right: -80rpx;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 340rpx;
+    height: 340rpx;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.10);
+    z-index: 0;
+    pointer-events: none;
+
+    // Inner soft ring for depth
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 40rpx;
+      border-radius: 50%;
+      background: rgba($color-secondary, 0.08);
+    }
+  }
+
+  // ── Archetype-aware shape tint ─────────────────────────────────────
+  // When user has an archetype, the shape takes on their accent color
+  // at very low opacity — subtle personalization without garishness.
+  &__shape--archetype {
+    background: rgba($color-primary, 0.08);
+  }
+
+  // ── Decorative watermark percent ───────────────────────────────────
+  &__watermark {
+    position: absolute;
+    right: 32rpx;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.06;
+  }
+
+  &__watermark-text {
+    font-family: $font-en-brand;
+    font-size: 180rpx;
+    font-weight: $font-weight-black;
+    line-height: 1;
+    color: $color-primary-dark;
+    letter-spacing: -6rpx;
+  }
+
+  // ── Subtle left-side wash for text legibility ──────────────────────
+  // Not a full-bleed gradient — just enough to ensure the copy panel
+  // reads cleanly against the cream + shape combo.
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background:
+      linear-gradient(
+        100deg,
+        rgba($color-bg-tint-warm, 0.95) 0%,
+        rgba($color-bg-tint-warm, 0.75) 40%,
+        rgba($color-bg-tint-warm, 0.35) 65%,
+        rgba($color-bg-tint-warm, 0) 85%
+      );
+  }
+
+  // ── Sparkle layer ──────────────────────────────────────────────────
+  &__sparkles {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  &__sparkle {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle at 50% 50%,
+      rgba($color-primary, 0.55) 0%,
+      rgba($color-primary, 0.20) 40%,
+      rgba($color-primary, 0) 70%
+    );
+    opacity: 0;
+    animation: first-time-coupon-banner__sparkle-rise 4.2s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+
+  &__sparkle-drift-sm {
+    animation-name: first-time-coupon-banner__sparkle-rise-sm;
+  }
+
+  &__sparkle-drift-md {
+    animation-name: first-time-coupon-banner__sparkle-rise-md;
+  }
+
+  // ── Confetti burst layer ───────────────────────────────────────────
+  &__confetti {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  &__confetti-particle {
+    position: absolute;
+    border-radius: 2rpx;
+    opacity: 0;
+    animation: first-time-coupon-banner__confetti-burst 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    will-change: transform, opacity;
+  }
+
+  // ── Copy panel ─────────────────────────────────────────────────────
+  &__content {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: $spacing-lg $spacing-md;
+    box-sizing: border-box;
+  }
+
+  &__copy-panel {
+    position: relative;
+    z-index: 1;
+    flex: 0 1 auto;
+    max-width: 480rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  &__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    padding: 8rpx 16rpx;
+    border-radius: 999rpx;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    line-height: 1.2;
+    color: $color-primary-dark;
+    border: 1rpx solid rgba($color-primary, 0.22);
+    margin-bottom: 16rpx;
+    background: rgba($color-surface, 0.72);
+  }
+
+  &__title {
+    display: block;
+    font-family: $font-cn-display;
+    font-size: 44rpx;
+    line-height: 1.4;
+    word-break: keep-all;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+    letter-spacing: -0.5rpx;
+  }
+
+  &__subtitle {
+    display: block;
+    margin-top: 12rpx;
+    font-size: 24rpx;
+    line-height: 1.5;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+  }
+
+  &__savings {
+    display: block;
+    margin-top: 8rpx;
+    font-size: 22rpx;
+    line-height: 1.4;
+    font-weight: $font-weight-bold;
+    color: $color-secondary;
+  }
+
+  // ── CTA: breathing pill with arrow ─────────────────────────────────
+  &__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 16rpx;
+    margin-top: 20rpx;
+    min-height: 88rpx;
+    padding: 16rpx 16rpx 16rpx 32rpx;
+    border-radius: 999rpx;
+    background: $color-primary;
+    box-shadow:
+      0 8rpx 20rpx rgba($color-primary-dark, 0.22),
+      0 2rpx 6rpx rgba($color-primary-dark, 0.12);
+    transition:
+      transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.18s ease,
+      background 0.18s ease;
+    will-change: transform;
+    animation: first-time-coupon-banner__cta-breathe 2.4s ease-in-out infinite;
+    animation-delay: 0.8s;
+    pointer-events: none; // tap is handled by parent __slide
+
+    &--active {
+      transform: scale(0.96);
+      animation-play-state: paused;
+      box-shadow: 0 4rpx 12rpx rgba($color-primary-dark, 0.14);
+    }
+  }
+
+  &__cta-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    line-height: 1;
+    color: $color-text-white;
+    letter-spacing: 0.5rpx;
+  }
+
+  &__cta-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40rpx;
+    height: 40rpx;
+    border-radius: 50%;
+    background: rgba($color-surface, 0.22);
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__cta-arrow-glyph {
+    font-size: 24rpx;
+    line-height: 1;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+  }
+
+  // ── Claimed celebration overlay ────────────────────────────────────
+  &__claimed-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16rpx;
+    background: rgba($color-bg-tint-warm, 0.85);
+    animation: first-time-coupon-banner__claimed-fade-in 0.3s ease forwards;
+    pointer-events: none;
+  }
+
+  &__claimed-ring {
+    width: 80rpx;
+    height: 80rpx;
+    border-radius: 50%;
+    border: 4rpx solid $color-success;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: first-time-coupon-banner__claimed-ring-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+
+    &::after {
+      content: '';
+      width: 28rpx;
+      height: 14rpx;
+      border-left: 4rpx solid $color-success;
+      border-bottom: 4rpx solid $color-success;
+      transform: rotate(-45deg) translateY(-2rpx);
+    }
+  }
+
+  &__claimed-text {
+    font-family: $font-cn-display;
+    font-size: 36rpx;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+    animation: first-time-coupon-banner__claimed-text-in 0.35s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  // ── Claimed state ──────────────────────────────────────────────────
+  &--claimed {
+    .first-time-coupon-banner__slide {
+      transform: scale(0.97);
+    }
+
+    .first-time-coupon-banner__cta {
+      animation: none;
+      background: $color-success;
+    }
+  }
+
+  // ── Degradation tier: kill idle loops, keep entrance ───────────────
+  &--degradation {
+    .first-time-coupon-banner__cta {
+      animation: none;
+    }
+
+    .first-time-coupon-banner__sparkle {
+      display: none;
+    }
+  }
+
+  // ── Reduce motion: kill all animations ─────────────────────────────
+  &--reduce-motion {
+    .first-time-coupon-banner__cta {
+      animation: none;
+    }
+
+    .first-time-coupon-banner__sparkle {
+      display: none;
+    }
+
+    .first-time-coupon-banner__confetti-particle {
+      animation: none;
+      opacity: 0;
+    }
+
+    .stagger-in {
+      opacity: 1 !important;
+      transform: none !important;
+      animation: none !important;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .first-time-coupon-banner {
+    .first-time-coupon-banner__cta {
+      animation: none;
+    }
+
+    .first-time-coupon-banner__sparkle {
+      display: none;
+    }
+
+    .first-time-coupon-banner__confetti-particle {
+      animation: none;
+      opacity: 0;
+    }
+
+    .stagger-in {
+      opacity: 1 !important;
+      transform: none !important;
+      animation: none !important;
+    }
+  }
+}
+
+// ─── Keyframes ───────────────────────────────────────────────────────
+@keyframes first-time-coupon-banner__cta-breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.025);
+  }
+}
+
+@keyframes first-time-coupon-banner__sparkle-rise-sm {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.6);
+  }
+  18% {
+    opacity: 0.95;
+    transform: translate3d(0, -8rpx, 0) scale(1);
+  }
+  70% {
+    opacity: 0.5;
+    transform: translate3d(0, -16rpx, 0) scale(0.85);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -24rpx, 0) scale(0.5);
+  }
+}
+
+@keyframes first-time-coupon-banner__sparkle-rise-md {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.6);
+  }
+  18% {
+    opacity: 0.95;
+    transform: translate3d(0, -8rpx, 0) scale(1);
+  }
+  70% {
+    opacity: 0.5;
+    transform: translate3d(0, -24rpx, 0) scale(0.85);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -32rpx, 0) scale(0.5);
+  }
+}
+
+// ── Confetti burst ───────────────────────────────────────────────────
+@keyframes first-time-coupon-banner__confetti-burst {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  40% {
+    opacity: 0.9;
+    transform: translate3d(var(--tx), var(--ty), 0) scale(1.1) rotate(180deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(calc(var(--tx) * 1.4), calc(var(--ty) * 1.4 + 40rpx), 0) scale(0.2) rotate(360deg);
+  }
+}
+
+// ── Claimed celebration ──────────────────────────────────────────────
+@keyframes first-time-coupon-banner__claimed-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes first-time-coupon-banner__claimed-ring-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes first-time-coupon-banner__claimed-text-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12rpx, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}

@@ -54,6 +54,7 @@
 - Icon renderer: `components/ui/JoyJoinIcon.tsx` (NOT raw emoji on primary UI)
 - Tag/pill: `components/ui/Chip.tsx` (L1/L2/L3 levels)
 - Mascot: `components/mascot/XiaoyueChatBubble.tsx` (chat-based onboarding removed 2026-05)
+- Welcome coupon banner: `components/FirstTimeCouponBanner.tsx` — payment-flow banner for `WELCOME50`/`WELCOME40`; zero external assets, CSS-only (cream bg + decorative circle), counter animation + confetti burst. See root `AGENTS.md` §2 for full spec.
 
 **Legacy — never use:**
 - Chat-based onboarding (Xiaoyue chat UI, registration inline handlers) — only mascot visuals remain
@@ -111,7 +112,7 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 - **Tab bar geometry**: `$tab-bar-height: 128rpx`; root footprint: `$tab-bar-root-height: 182rpx`; center CTA is a **root sibling** of `.joy-custom-tab-bar__surface`, not nested inside.
 - **`<ChallengeCardBgImage>`** (WeChat-safe `<Image>` component) must be used for challenge-card backgrounds — CSS `background-image` with CDN URLs is flaky in WeChat runtime.
 - **ArchetypeSpritesheet** uses the same `<Image>` + `overflow:hidden` + `transform: translate()` pattern for spritesheet region crops — CSS `backgroundImage: url()` is unreliable in WeChat. See `apps/mini-program/src/pages/onboarding/personality-test/results/ArchetypeSpritesheet.tsx`.
-- **WeChat WXSS silently drops `hsla()`** — all color values emitted from shared `@shared/archetypeColors` must use `rgba()` via `formatHSLAsRGBA()`. Canvas calls use `toCanvasRGBA()` from `sharePoster.ts`.
+- **WeChat WXSS silently drops `hsla()`** — all color values emitted from shared `@shared/archetypeColors` must use `rgba()` via `formatHSLAsRGBA()`. Canvas calls use `toCanvasRGBA()` from `canvasHelpers.ts` at `apps/mini-program/src/lib/utils/canvasHelpers.ts` (shared by both portrait and square poster renderers).
 - **Page-level loading/empty/error state blocks** must use `min-height: 100dvh` + flex centering. `@include scroll-view-centered-state` from `_mixins.scss` is the canonical helper for states inside `<ScrollView>`.
 
 ---
@@ -124,6 +125,7 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 - **Full-size archetype images** — served from CDN as WebP. Preload during idle time.
 - **Canvas poster** — WebP primary with **CDN PNG fallback**. Local PNGs are NOT bundled.
 - **Promo banner**: full-bleed Lovart illustration + WebP→PNG fallback. Kill switch: `PROMO_BANNER_ENABLED` (default `true`).
+- **Welcome coupon banner** (`FirstTimeCouponBanner`): zero external assets, zero package weight. Solid cream bg + CSS decorative circle. Archetype-tinted via inline `hsla()`. Analytics: `welcome_coupon_banner_impression` + `welcome_coupon_banner_tap` via `discoverAnalytics`.
 - **Tab bar logo**: dedicated 128×128 `joyjoin-logo-tab.png` (19KB) — NOT the full `joyjoin-logo.png` (596KB).
 - **Never** bundle local PNG archetype art. If canvas needs PNG, use `cdnAsset('/assets/personality/archetypes')`.
 - **Archetype images must not have text overlays** — no archetype-name initials or watermarks on hero art.

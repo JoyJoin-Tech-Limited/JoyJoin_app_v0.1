@@ -405,7 +405,13 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     personalitySlotAnimationEnabled?: boolean
     /** When false, hides the Hero Promo Banner entirely. Kill switch for the
      *  discover hero. Default: true. */
-    promoBannerEnabled?: boolean
+promoBannerEnabled?: boolean
+    /** When false, falls back to a simple spinner instead of the answer-echo
+     *  loading state in the personality test. Default: true. */
+    personalityTestEchoEnabled?: boolean
+    /** Master kill-switch for the payment system. When false, payment endpoints return 503.
+     *  Also surfaced as top-level paymentsEnabled on auth response. */
+    paymentsEnabled?: boolean
   }
 }
 
