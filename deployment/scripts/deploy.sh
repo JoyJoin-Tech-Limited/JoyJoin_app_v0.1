@@ -132,7 +132,25 @@ else
 fi
 
 echo "  Running schema push..."
+echo "  ⚠️  drizzle-kit push can DROP tables if schema snapshots diverge."
+echo "  Verifying admin_accounts before push..."
+ADMIN_COUNT=$(psql "$DATABASE_URL" -t -A -c "SELECT count(*) FROM admin_accounts;" 2>/dev/null || echo "ERROR")
+if [[ "$ADMIN_COUNT" =~ ^[0-9]+$ ]] && [[ "$ADMIN_COUNT" -gt 0 ]]; then
+    echo "  ✅ admin_accounts has $ADMIN_COUNT row(s) — safe to proceed"
+else
+    echo "  ❌ admin_accounts is empty or unreachable — aborting destructive push"
+    echo "  If you need to apply schema changes, do it manually via migration .sql files."
+    exit 1
+fi
 npx drizzle-kit push --config=apps/server/drizzle.config.cjs
+echo "  Re-verifying admin_accounts after push..."
+POST_COUNT=$(psql "$DATABASE_URL" -t -A -c "SELECT count(*) FROM admin_accounts;" 2>/dev/null || echo "ERROR")
+if [[ "$POST_COUNT" =~ ^[0-9]+$ ]] && [[ "$POST_COUNT" -eq "$ADMIN_COUNT" ]]; then
+    echo "  ✅ admin_accounts data preserved ($POST_COUNT rows)"
+else
+    echo "  ⚠️  WARNING: admin_accounts row count changed from $ADMIN_COUNT to $POST_COUNT"
+    echo "  The push may have dropped and recreated the table."
+fi
 
 echo "🏥 Step 4: Verify runtime health..."
 API_HOST="127.0.0.1"

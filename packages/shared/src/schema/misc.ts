@@ -20,9 +20,13 @@ export {
   insertReferralConversionSchema,
   insertEventTemplateSchema,
   insertContentSchema,
-  featureFlags,
   runPlanTemplates,
 } from './_definitions.js';
+
+export {
+  featureFlags,
+  insertFeatureFlagSchema,
+} from './_definitions_extended.js';
 
 export {
   insertInvitationSchema,
@@ -81,9 +85,13 @@ export type {
   Content,
   InsertEventTemplate,
   InsertContent,
-  FeatureFlag,
   RunPlanTemplateRow,
 } from './_definitions.js';
+
+export type {
+  FeatureFlag,
+  InsertFeatureFlag,
+} from './_definitions_extended.js';
 
 export type {
   Invitation,

@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/node-postgres";
+import { sql } from "drizzle-orm";
 import { Pool } from "pg";
 import * as schema from "@shared/schema";
 import { wrapDb } from "./db_proxy";
@@ -65,6 +66,7 @@ export async function validateDbSchema(): Promise<void> {
     { name: "assessment_answers", table: schema.assessmentAnswers },
     { name: "social_icebreaker_sessions", table: schema.socialIcebreakerSessions },
     { name: "event_pools", table: schema.eventPools },
+    { name: "admin_accounts", table: schema.adminAccounts },
   ] as const;
 
   await Promise.all(
@@ -85,4 +87,20 @@ export async function validateDbSchema(): Promise<void> {
       }
     })
   );
+
+  // Warn if admin_accounts table is empty — no admin can log in
+  try {
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(schema.adminAccounts);
+    if (result.count === 0) {
+      logger.warn(
+        "[DB] admin_accounts table is EMPTY — no admin users can log in. " +
+        "Run 'npm run admin:create <username> <password> <secretKey> super_admin' to add one."
+      );
+    }
+  } catch (err) {
+    // Non-fatal: admin_accounts may not exist yet during initial setup
+    logger.warn("[DB] Could not verify admin_accounts count", { error: err instanceof Error ? err.message : String(err) });
+  }
 }

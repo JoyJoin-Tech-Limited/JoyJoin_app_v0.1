@@ -1864,11 +1864,3 @@ export const runPlanTemplates = pgTable("run_plan_templates", {
 
 export type RunPlanTemplateRow = typeof runPlanTemplates.$inferSelect;
 
-export const featureFlags = pgTable("feature_flags", {
-  key: varchar("key").primaryKey(),
-  value: text("value").notNull().default("false"),
-  updatedAt: timestamp("updated_at").defaultNow(),
-  updatedBy: varchar("updated_by"),
-});
-
-export type FeatureFlag = typeof featureFlags.$inferSelect;

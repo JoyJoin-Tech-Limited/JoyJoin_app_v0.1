@@ -18,8 +18,6 @@ export {
   assessmentAnswers,
   insertAssessmentSessionSchema,
   insertAssessmentAnswerSchema,
-  featureFlags,
-  insertFeatureFlagSchema,
 } from './_definitions_extended.js';
 export type {
   UserCityInterest,
@@ -30,6 +28,4 @@ export type {
   InsertAssessmentSession,
   AssessmentAnswer,
   InsertAssessmentAnswer,
-  FeatureFlag,
-  InsertFeatureFlag,
 } from './_definitions_extended.js';
