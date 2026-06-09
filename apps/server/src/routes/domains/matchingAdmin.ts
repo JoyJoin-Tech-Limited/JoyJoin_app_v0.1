@@ -6,7 +6,6 @@ import { matchingThresholds, poolMatchingLogs, eventPools, insertChatReportSchem
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { requireAuth } from "../../middleware/auth";
 import { storage } from "../../storage";
-import type { User } from "@shared/schema";
 import { notifyAbuseReport } from "../../lib/wecomNotifications";
 import { users } from "@shared/schema";
 
@@ -184,12 +183,8 @@ export function registerMatchingAdminRoutes(app: Express): void {
   });
 
   // ============ REALTIME MATCHING CONFIGURATION ROUTES ============
-  const resolveMatchingThresholdCreatorId = (req: any): string | null => {
-    if (req.adminAccount) {
-      return null;
-    }
-
-    return req.session.userId ?? (req.user as User | undefined)?.id ?? null;
+  const resolveMatchingThresholdCreatorId = (req: any): string => {
+    return req.adminAccount?.id ?? req.session?.userId ?? "unknown";
   };
   const clampPercent = (value: unknown, fallback: number) => {
     const parsed = Number(value);

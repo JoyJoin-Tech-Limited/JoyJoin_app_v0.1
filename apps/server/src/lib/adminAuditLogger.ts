@@ -58,6 +58,8 @@ export const ADMIN_AUDIT_ACTIONS = [
   // Event management
   'EVENT_STATUS_CHANGED',
   // Event pool management
+  'EVENT_POOL_CREATED',
+  'EVENT_POOL_MATCHED',
   'EVENT_POOL_STATUS_CHANGED',
   // Matching weights rollout
   'MATCHING_WEIGHTS_ACTIVATED',

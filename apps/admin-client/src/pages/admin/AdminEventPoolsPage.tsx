@@ -61,19 +61,29 @@ import { z } from "zod";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 // ====== Form schema：简化版，只保留我们现在用得到的字段 ======
-const createPoolSchema = z.object({
-  title: z.string().min(1, "活动标题不能为空"),
-  description: z.string().optional(),
-  eventType: z.enum(["饭局", "酒局", "其他"]),
-  city: z.enum(["深圳", "香港"]),
-  district: z.string().min(1, "区域不能为空"),
-  // 先保留时间配置，等以后真要纯常驻再改 schema
-  dateTime: z.string().min(1, "请选择推荐活动时间"),
-  registrationDeadline: z.string().min(1, "请选择报名截止时间"),
-  minGroupSize: z.number().min(2).max(10).default(4),
-  maxGroupSize: z.number().min(2).max(10).default(6),
-  targetGroups: z.number().min(1).default(1),
-});
+const createPoolSchema = z
+  .object({
+    title: z.string().min(1, "活动标题不能为空"),
+    description: z.string().optional(),
+    eventType: z.enum(["饭局", "酒局", "其他"]),
+    city: z.enum(["深圳", "香港"]),
+    district: z.string().min(1, "区域不能为空"),
+    dateTime: z.string().min(1, "请选择推荐活动时间"),
+    registrationDeadline: z.string().min(1, "请选择报名截止时间"),
+    minGroupSize: z.number().min(2).max(10).default(4),
+    maxGroupSize: z.number().min(2).max(10).default(6),
+    targetGroups: z.number().min(1).default(1),
+  })
+  .refine(
+    (data) => {
+      if (!data.dateTime || !data.registrationDeadline) return true;
+      return new Date(data.dateTime) > new Date(data.registrationDeadline);
+    },
+    {
+      message: "活动时间必须晚于报名截止时间",
+      path: ["dateTime"],
+    }
+  );
 
 // 用来做「后端 status + 业务状态」的 badge
 const RAW_STATUS_LABEL: Record<
@@ -231,9 +241,24 @@ export default function AdminEventPoolsPage() {
     },
     onError: (error: any) => {
       console.error("Error creating event pool:", error);
+      let description = "无法创建活动池，请重试";
+      if (error?.message) {
+        // apiRequest throws: "401: {\"message\":\"...\"}"
+        const jsonMatch = error.message.match(/\{.*\}/s);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            description = parsed.message || parsed.error || description;
+          } catch {
+            description = error.message;
+          }
+        } else {
+          description = error.message;
+        }
+      }
       toast({
         title: "创建失败",
-        description: error?.message || "无法创建活动池，请重试",
+        description,
         variant: "destructive",
       });
     },
@@ -255,9 +280,23 @@ export default function AdminEventPoolsPage() {
     },
     onError: (error: any) => {
       console.error("Error updating event pool:", error);
+      let description = "无法更新活动池，请重试";
+      if (error?.message) {
+        const jsonMatch = error.message.match(/\{.*\}/s);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            description = parsed.message || parsed.error || description;
+          } catch {
+            description = error.message;
+          }
+        } else {
+          description = error.message;
+        }
+      }
       toast({
         title: "更新失败",
-        description: error?.message || "无法更新活动池，请重试",
+        description,
         variant: "destructive",
       });
     },

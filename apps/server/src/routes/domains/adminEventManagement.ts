@@ -6,7 +6,6 @@ import { getActingAdminId } from "../../lib/getActingAdminId";
 import { logAdminAudit } from "../../lib/adminAuditLogger";
 import { storage } from "../../storage";
 import { broadcastEventStatusChanged, broadcastAdminAction } from "../../eventBroadcast";
-import type { User } from "@shared/schema";
 
 const eventTemplateSchema = z.object({
   name: z.string().min(1),
@@ -115,7 +114,7 @@ export function registerAdminEventManagementRoutes(app: Express): void {
   app.patch("/api/admin/events/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const eventId = req.params.id;
-      const user = req.user as User;
+      const adminId = getActingAdminId(req);
 
       const parsed = updateEventSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -137,7 +136,7 @@ export function registerAdminEventManagementRoutes(app: Express): void {
           eventId,
           oldEvent.status,
           parsed.data.status,
-          user.id,
+          adminId,
           parsed.data.reason
         );
       }
@@ -146,7 +145,7 @@ export function registerAdminEventManagementRoutes(app: Express): void {
         await broadcastAdminAction(
           eventId,
           "update_event",
-          user.id,
+          adminId,
           parsed.data
         );
       }

@@ -413,7 +413,7 @@ export const eventPools = pgTable("event_pools", {
   price: integer("price"), // null = 免费报名
   
   // 元数据
-  createdBy: varchar("created_by").notNull().references(() => users.id), // Admin用户ID
+  createdBy: varchar("created_by").notNull(), // Admin账户ID或legacy用户ID
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   matchedAt: timestamp("matched_at"), // 匹配完成时间

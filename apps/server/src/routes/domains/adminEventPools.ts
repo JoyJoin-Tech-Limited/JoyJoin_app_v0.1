@@ -5,10 +5,10 @@ import {
   eventPools,
   eventPoolRegistrations,
   users,
+  adminAccounts,
   insertEventPoolSchema,
-  type User,
 } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { logger } from "../../lib/logger";
 import { getActingAdminId } from "../../lib/getActingAdminId";
@@ -84,20 +84,34 @@ export function registerAdminEventPoolRoutes(app: Express): void {
 
       logger.info("[Admin] fetched raw eventPools", { data: { count: pools.length } });
 
-      const poolsWithStats = await Promise.all(
-        pools.map(async (pool: any) => {
-          const registrations = await db.query.eventPoolRegistrations.findMany({
-            where: (regs: any, { eq }: any) => eq(regs.poolId, pool.id),
-          });
+      // Batch-fetch registration stats for all pools in one query
+      const poolIds = pools.map((p: typeof eventPools.$inferSelect) => p.id);
+      let registrationStats: Record<string, { registrationCount: number; matchedCount: number; pendingCount: number }> = {};
 
-          return {
-            ...pool,
-            registrationCount: registrations.length,
-            matchedCount: registrations.filter((r: any) => r.matchStatus === "matched").length,
-            pendingCount: registrations.filter((r: any) => r.matchStatus === "pending").length,
-          };
-        })
-      );
+      if (poolIds.length > 0) {
+        const registrations = await db
+          .select({ poolId: eventPoolRegistrations.poolId, matchStatus: eventPoolRegistrations.matchStatus })
+          .from(eventPoolRegistrations)
+          .where(inArray(eventPoolRegistrations.poolId, poolIds));
+
+        registrationStats = registrations.reduce((acc: typeof registrationStats, reg: typeof registrations[number]) => {
+          const poolId = reg.poolId;
+          if (!acc[poolId]) {
+            acc[poolId] = { registrationCount: 0, matchedCount: 0, pendingCount: 0 };
+          }
+          acc[poolId].registrationCount += 1;
+          if (reg.matchStatus === "matched") acc[poolId].matchedCount += 1;
+          if (reg.matchStatus === "pending") acc[poolId].pendingCount += 1;
+          return acc;
+        }, {} as typeof registrationStats);
+      }
+
+      const poolsWithStats = pools.map((pool: typeof eventPools.$inferSelect) => ({
+        ...pool,
+        registrationCount: registrationStats[pool.id]?.registrationCount ?? 0,
+        matchedCount: registrationStats[pool.id]?.matchedCount ?? 0,
+        pendingCount: registrationStats[pool.id]?.pendingCount ?? 0,
+      }));
 
       res.json(poolsWithStats);
     } catch (error) {
@@ -109,16 +123,7 @@ export function registerAdminEventPoolRoutes(app: Express): void {
   // Event Pools - Create new event pool
   app.post("/api/admin/event-pools", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
-      const anyReq = req as any;
-      const user = anyReq.user as User | undefined;
-      const userIdFromReq = anyReq.userId || anyReq.adminId;
-      const sessionUserId = anyReq.session?.userId;
-
-      const createdBy =
-        (user && user.id) ||
-        userIdFromReq ||
-        sessionUserId ||
-        null;
+      const createdBy = req.adminAccount?.id ?? req.session?.userId ?? null;
 
       if (!createdBy) {
         logger.error(
@@ -137,12 +142,27 @@ export function registerAdminEventPoolRoutes(app: Express): void {
         registrationDeadline: new Date(req.body.registrationDeadline),
       });
 
+      if (validatedData.dateTime <= validatedData.registrationDeadline) {
+        return res.status(400).json({
+          message: "活动时间必须晚于报名截止时间",
+        });
+      }
+
       const [pool] = await db
         .insert(eventPools)
         .values(validatedData)
         .returning();
 
       logger.info("[EventPools] created pool", { data: { poolId: pool.id } });
+
+      logAdminAudit({
+        action: "EVENT_POOL_CREATED",
+        adminId: getActingAdminId(req),
+        adminRole: (req as any).adminRole,
+        targetEntityType: "event_pool",
+        targetEntityId: pool.id,
+        after: { title: pool.title, city: pool.city, dateTime: pool.dateTime },
+      });
 
       const { generateAndSavePoolCardCopy } = await import("../../ai/workers/poolCardCopyWorker");
       generateAndSavePoolCardCopy(pool.id).catch((err: any) => {
@@ -261,7 +281,9 @@ export function registerAdminEventPoolRoutes(app: Express): void {
           void (async () => {
             try {
               const adminId = getActingAdminId(req);
-              const [adminRecord] = await db.select({ displayName: users.displayName }).from(users).where(eq(users.id, adminId));
+              const [adminUserRecord] = await db.select({ displayName: users.displayName }).from(users).where(eq(users.id, adminId));
+              const [adminAccountRecord] = await db.select({ displayName: adminAccounts.displayName }).from(adminAccounts).where(eq(adminAccounts.id, adminId));
+              const adminName = adminUserRecord?.displayName || adminAccountRecord?.displayName || adminId;
               const totalReg = pool.totalRegistrations || 0;
               await notifyPoolCancelled({
                 poolTitle: pool.title,
@@ -273,7 +295,7 @@ export function registerAdminEventPoolRoutes(app: Express): void {
                 matchedGroupCount: pool.successfulMatches || 0,
                 revenueImpact: (pool.price || 0) * totalReg * 100,
                 cancellationReason: "管理后台操作",
-                adminName: adminRecord?.displayName || adminId,
+                adminName: adminName,
                 autoRefund: false,
                 usersNotified: false,
               });
@@ -394,12 +416,22 @@ export function registerAdminEventPoolRoutes(app: Express): void {
       const groups = await matchEventPool(poolId);
       await saveMatchResults(poolId, groups);
 
+      const matchAdminId = getActingAdminId(req);
       await broadcastAdminAction(
         poolId,
         "pool_matched",
-        (req.user as User).id,
+        matchAdminId,
         { groupCount: groups.length, totalMatched: groups.reduce((sum, g) => sum + g.members.length, 0) }
       );
+
+      logAdminAudit({
+        action: "EVENT_POOL_MATCHED",
+        adminId: matchAdminId,
+        adminRole: (req as any).adminRole,
+        targetEntityType: "event_pool",
+        targetEntityId: poolId,
+        after: { groupCount: groups.length, totalMatched: groups.reduce((sum, g) => sum + g.members.length, 0) },
+      });
 
       res.json({
         message: "Matching completed successfully",
