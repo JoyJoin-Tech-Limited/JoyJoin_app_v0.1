@@ -157,24 +157,30 @@ function collectBaseConfigIssues(
     const missing = value === undefined || value.trim() === "";
 
     if (missing) {
-      const msg = `${spec.key} is not set — ${spec.description}`;
+      let msg = `${spec.key} is not set — ${spec.description}`;
+      let isError = false;
       if (spec.required) {
-        if (isProduction) {
-          errors.push(`[FATAL] ${msg}`);
-        } else {
-          warnings.push(`[WARN]  ${msg}`);
+        isError = true;
+      } else if (spec.validate) {
+        const validationError = spec.validate('', env);
+        if (validationError) {
+          msg = `${spec.key} is not set — ${validationError}`;
+          isError = true;
         }
+      }
+      if (isProduction && isError) {
+        errors.push(`[FATAL] ${msg}`);
       } else {
         warnings.push(`[WARN]  ${msg}`);
       }
       continue;
     }
 
-    if (value !== undefined && value !== null && spec.validate) {
+    if (spec.validate) {
       const validationError = spec.validate(value, env);
       if (validationError) {
         const msg = `${spec.key} is invalid: ${validationError}`;
-        if (spec.required && isProduction) {
+        if (isProduction) {
           errors.push(`[FATAL] ${msg}`);
         } else {
           warnings.push(`[WARN]  ${msg}`);
