@@ -50,7 +50,9 @@ Use it together with:
 
 **Mini-program landing page cold-start behavior (2026-06-08):**
 - `AutoLoginBridge` (rendered in `app.ts`) silently re-authenticates returning users via `wx.login` → `seedMiniProgramAuthSession()`. Retryable errors (transport, 500) reset the attempt guard so the next mount/foreground can retry; 401s are treated as expected (new user) and do not retry.
-- The landing page (`pages/index/index`) runs a **unified redirect effect** after auth resolves: authenticated users → `nextStep` via `navigateToMiniProgramNextStep`; guests with an incomplete anonymous assessment session → `reLaunch` to `/pages/onboarding/personality-test/index`. Authenticated path takes priority to prevent race conditions with `AutoLoginBridge` async state flips.
+- The landing page (`pages/index/index`) runs a **unified redirect effect** after auth resolves: guests with an incomplete anonymous assessment session → `reLaunch` to `/pages/onboarding/personality-test/index`. Authenticated path takes priority.
+- **Returning mid-onboarding users are routed to the welcome-back screen** (`pages/onboarding/welcome-back/index`) instead of directly to `nextStep`. The landing page checks `shouldShowWelcomeBack()`: requires `nextStep !== 'discover'`, `features.restartOnboarding === true`, `restartsRemaining > 0`, and `joyjoin_welcome_back_seen` not set. This gives users context and an explicit restart option.
+- The welcome-back `seen` flag is reset after 7 days (`app.ts` `useLaunch` TTL heuristic) because WeChat storage persists across mini-program deletion. Without this, users who delete and re-enter would never see the welcome-back screen again.
 - Primary CTA navigation uses a **5s safety timeout** (`navigateWithLegalGate` in `LandingPage.tsx`) that resets the button loading state if `Taro.navigateTo` to the onboarding subpackage hangs (e.g., subpackage download stuck).
 
 Primary files:

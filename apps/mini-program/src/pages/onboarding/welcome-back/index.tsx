@@ -51,7 +51,7 @@ export default function WelcomeBackPage() {
     onboardingAnalytics.interaction('welcome-back', 'screen_shown', { nextStep: auth.nextStep })
   }, [auth.isLoading, auth.isAuthenticated, auth.nextStep])
 
-  const stepName = auth.nextStep ? STEP_NAME_MAP[auth.nextStep] : 'onboarding'
+  const stepName = (auth.nextStep && STEP_NAME_MAP[auth.nextStep]) ?? '欢迎加入'
   const restartsRemaining = auth.user?.restartsRemaining ?? 0
 
   const handleContinue = async () => {

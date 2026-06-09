@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import Taro from '@tarojs/taro'
-import { View, Text } from '@tarojs/components'
 import BoxLogoEntryScreen from '../../components/loading/BoxLogoEntryScreen'
 import { useAuth } from '../../hooks/useAuth'
 import { useAuthGate } from '../../hooks/useAuthGate'
@@ -17,6 +16,30 @@ import { logInfo, logWarn } from '../../lib/utils/logger'
 import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
 import MiniProgramLandingPage from './LandingPage'
 import './index.scss'
+
+/** Steps that mean the user is still in the onboarding flow. */
+const ONBOARDING_STEPS: readonly string[] = [
+  'onboarding',
+  'personality-test',
+  'essential-data',
+  'extended-data',
+  'profile-review',
+]
+
+function shouldShowWelcomeBack(user: NonNullable<ReturnType<typeof useAuth>['user']>): boolean {
+  const hasRestarts = (user.restartsRemaining ?? 0) > 0
+  const isFeatureEnabled = user.features?.restartOnboarding === true
+  const isMidOnboarding = ONBOARDING_STEPS.includes(user.nextStep ?? '')
+  const alreadySeen = (() => {
+    try {
+      return Taro.getStorageSync('joyjoin_welcome_back_seen') != null
+    } catch {
+      return false
+    }
+  })()
+
+  return isMidOnboarding && isFeatureEnabled && hasRestarts && !alreadySeen
+}
 
 export default function Index() {
   const auth = useAuth()
@@ -43,6 +66,39 @@ export default function Index() {
     // Authenticated path takes priority over guest restore.
     if (auth.isAuthenticated && auth.user) {
       hasRedirectedRef.current = true
+
+      // Show welcome-back screen for returning users mid-onboarding so they
+      // can choose to continue or restart. Prevents dumping users directly
+      // into a form they may not remember starting (e.g., after deletion).
+      if (shouldShowWelcomeBack(auth.user)) {
+        logInfo('[Index] Redirecting returning user to welcome-back screen', {
+          nextStep: auth.user.nextStep,
+          restartsRemaining: auth.user.restartsRemaining,
+        })
+        void Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.welcomeBack }).catch((err) => {
+          logWarn('[Index] Redirect to welcome-back failed; falling back to nextStep', {
+            nextStep: auth.user?.nextStep,
+            error: err instanceof Error ? err.message : String(err),
+          })
+          // Fallback so the user is not stranded on the landing page.
+          void navigateToMiniProgramNextStep(auth.user?.nextStep, { mode: 'root' }).catch(
+            (fallbackErr) => {
+              logWarn('[Index] Fallback redirect to nextStep also failed', {
+                nextStep: auth.user?.nextStep,
+                error: fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr),
+              })
+            },
+          )
+        })
+        return
+      }
+
+      logInfo('[Index] Skipping welcome-back (already seen or not eligible)', {
+        nextStep: auth.user.nextStep,
+        restartsRemaining: auth.user.restartsRemaining,
+        featureEnabled: auth.user.features?.restartOnboarding,
+      })
+
       logInfo('[Index] Redirecting authenticated user to nextStep', { nextStep: auth.user.nextStep })
       void navigateToMiniProgramNextStep(auth.user.nextStep, { mode: 'root' }).catch((err) => {
         hasRedirectedRef.current = false

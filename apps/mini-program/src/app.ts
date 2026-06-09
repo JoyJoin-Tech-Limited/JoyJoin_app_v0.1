@@ -140,6 +140,25 @@ function PendingOrderResumeBridge() {
 function App({ children }: PropsWithChildren<any>) {
   useLaunch(() => {
     logInfo('JoyJoin Mini Program launched')
+
+    // Reset stale welcome-back "seen" flags so returning users (including
+    // those who deleted and re-entered the mini-program) get another chance
+    // to see the welcome-back screen and choose to restart onboarding.
+    // WeChat storage persists across app deletion, so we use a TTL heuristic.
+    try {
+      const raw = Taro.getStorageSync('joyjoin_welcome_back_seen')
+      if (raw != null) {
+        const timestamp = typeof raw === 'number' ? raw : Number(raw)
+        const oneWeek = 7 * 24 * 60 * 60 * 1000
+        if (!Number.isNaN(timestamp) && Date.now() - timestamp > oneWeek) {
+          Taro.removeStorageSync('joyjoin_welcome_back_seen')
+          logInfo('[App] Reset stale welcome-back seen flag (older than 7 days)')
+        }
+      }
+    } catch {
+      // Storage failures are non-critical
+    }
+
     // Load brand font immediately — no delay. The guard in brandFont.ts
     // prevents double-load when individual screens also trigger it.
     // WeChat caches loaded fonts, so repeat opens are instant.
