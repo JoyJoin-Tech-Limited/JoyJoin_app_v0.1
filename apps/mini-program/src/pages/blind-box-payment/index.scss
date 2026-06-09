@@ -7,7 +7,7 @@
 // ───────────────────────────────────────────
 
 .payment-ritual {
-  min-height: 100vh;
+  min-height: 100dvh;
   @include page-shell-padding(40rpx, 32rpx, 48rpx);
   position: relative;
   overflow: hidden;
@@ -861,7 +861,7 @@
 // ═══════════════════════════════════════════
 
 .payment-page {
-  min-height: 100vh;
+  min-height: 100dvh;
   @include page-shell-padding(40rpx, 32rpx, 48rpx);
   position: relative;
   overflow: hidden;

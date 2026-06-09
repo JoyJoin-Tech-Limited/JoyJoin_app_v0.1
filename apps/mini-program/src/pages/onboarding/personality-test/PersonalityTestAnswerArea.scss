@@ -14,16 +14,18 @@
 
 .answer-area {
   position: relative;
-  height: 100%;
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
 
   &__options {
     display: flex;
     flex-direction: column;
     justify-content: center;
     gap: 16rpx;
-    min-height: 100%;
+    flex: 1;
+    min-height: 0;
   }
 
   &__fragment {
@@ -34,6 +36,7 @@
     opacity: 0;
     pointer-events: none;
     z-index: 10;
+    max-width: 90%;
 
     &--visible {
       animation: fragment-float-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -131,6 +134,8 @@
     font-size: 32rpx;
     color: $color-text-primary;
     line-height: 1.5;
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
 
   &__emoji-grid {
@@ -167,7 +172,7 @@
     &:nth-child(3) { animation-delay: 100ms; }
     &:nth-child(4) { animation-delay: 150ms; }
 
-    overflow: visible;
+    overflow: hidden;
 
     &:active {
       transform: scale(0.97);
@@ -219,6 +224,7 @@
     text-align: center;
     line-height: 1.5;
     overflow-wrap: break-word;
+    word-break: keep-all;
   }
 
   &__slider-shell {
@@ -258,7 +264,7 @@
       position: absolute;
       inset: 0;
       border-radius: 999rpx;
-      box-shadow: 0 6rpx 20rpx rgba($color-primary, 0.28), inset 0 1rpx 0 rgba(255, 255, 255, 0.15);
+      box-shadow: 0 6rpx 20rpx rgba($color-primary, 0.28), inset 0 1rpx 0 rgba($color-surface, 0.15);
       pointer-events: none;
     }
   }

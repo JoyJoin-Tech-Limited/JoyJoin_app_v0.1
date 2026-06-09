@@ -43,7 +43,6 @@ import { logInfo, logError } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
-import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
 import TypewriterText from '../../../components/ui/TypewriterText'
@@ -212,8 +211,6 @@ const INTRO_ARCHETYPE_TEASERS: { archetype: string; vibeLine: string }[] = [
   { archetype: 'fox', vibeLine: '普通话题，也能聊出火花。' },
   { archetype: 'koala', vibeLine: '会让人慢慢放松下来。' },
 ]
-
-const INTRO_META_PILLS = ['约 3-5 分钟', '题目跟着你变', '可先完成再登录'] as const
 
 const INTRO_TRUST_POINTS = [
   {
@@ -450,7 +447,9 @@ export default function PersonalityTestPage() {
 
     // If user already has an archetype, they should never be on the test page
     if (auth.user?.primaryArchetype) {
-      Taro.redirectTo({ url: '/pages/discover/index' })
+      Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover }).catch((err: unknown) => {
+        logError('[PersonalityTest] switchTab failed', { err: err instanceof Error ? err.message : String(err) })
+      })
       return
     }
 
@@ -465,7 +464,9 @@ export default function PersonalityTestPage() {
     if (!auth.isAuthenticated && phase === 'intro') {
       const snapshot = readAnonymousAssessmentSession()
       if (isAnonymousAssessmentSessionCompleted(snapshot) || hasAnonymousAssessmentResult(snapshot)) {
-        Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults })
+        Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults }).catch(() => {
+          setPhase('intro')
+        })
       }
     }
   }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, isPageExiting, isSubmitting, phase])
@@ -550,8 +551,8 @@ export default function PersonalityTestPage() {
           answerCount: completedAnswerCount,
           destination: MINI_PROGRAM_ROUTES.personalityTestResults,
         })
-        anonymousEngineStateRef.current = null
         await completeAnonymousAssessment(result.sessionId, result.currentMatches ?? currentMatches)
+        anonymousEngineStateRef.current = null
         return
       }
 
@@ -692,7 +693,6 @@ export default function PersonalityTestPage() {
           answerCount: completedAnswerCount,
           destination: MINI_PROGRAM_ROUTES.personalityTestResults,
         })
-        anonymousEngineStateRef.current = null
         if (!isValidFinalResult(result.result)) {
           setIsPageExiting(false)
           setError('结果同步出了点小问题，请重试一次')
@@ -704,6 +704,7 @@ export default function PersonalityTestPage() {
           return
         }
         await completeAnonymousAssessment(thisSessionId, result.currentMatches ?? currentMatches, result.result)
+        anonymousEngineStateRef.current = null
         return
       }
 
@@ -1206,13 +1207,6 @@ export default function PersonalityTestPage() {
               <Text className='personality-test__intro-bubble-text'>{introCoachLine}</Text>
             </View>
 
-            <View className='personality-test__intro-meta-row'>
-              {INTRO_META_PILLS.map((item) => (
-                <View key={item} className='personality-test__intro-meta-pill'>
-                  <Text className='personality-test__intro-meta-pill-text'>{item}</Text>
-                </View>
-              ))}
-            </View>
           </View>
 
           <ResponsiveSpacer heightRpx={16} collapseBelow={720} />

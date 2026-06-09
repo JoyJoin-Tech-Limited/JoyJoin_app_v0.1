@@ -668,6 +668,8 @@ export default function PersonalityTestResultsPage() {
         if (mountedRef.current) {
           setShowSkipAnimation(true)
         }
+        const idx = timeoutHandlesRef.current.indexOf(skipTimeout)
+        if (idx >= 0) timeoutHandlesRef.current.splice(idx, 1)
       }, 1500)
       timeoutHandlesRef.current.push(skipTimeout)
 
@@ -1383,7 +1385,7 @@ export default function PersonalityTestResultsPage() {
     visual,
   ])
 
-  const content = useMemo(() => {
+  const content = (() => {
     switch (flowStage) {
       case 'empty':
         return <EmptyStage onRestart={handleRestart} />
@@ -1471,47 +1473,10 @@ export default function PersonalityTestResultsPage() {
       default:
         return <LoadingStage phaseText={phaseText} />
     }
-  }, [
-    flowStage,
-    phaseText,
-    errorMessage,
-    isFetchingResult,
-    handleRetry,
-    handleRestart,
-    reelIndex,
-    slotPhase,
-    isSlowNetwork,
-    progress,
-    displayArchetypeName,
-    displayAsset,
-    visual,
-    revealPhase,
-    typicalityLabel,
-    secondaryVisual,
-    summary,
-    shareLine,
-    traitEntries,
-    topMatches,
-    skillSet,
-    isGeneratingPoster,
-    sharePosterPath,
-    generationPhase,
-    energyLevel,
-    archetypeRank,
-    serialNumber,
-    variants,
-    selectedVariantIndex,
-    cardNickname,
-    handleGeneratePoster,
-    continueButtonLabel,
-    handleContinue,
-    auth.isLoading,
-    xiaoyueAnalysis,
-    isLoadingAnalysis,
-  ])
+  })()
 
   return (
-    <View className={`personality-results personality-results--${flowStage}${prefersReducedMotion ? ' personality-results--reduce-motion' : ''}`}>
+    <View className={`personality-results personality-results--${flowStage}${prefersReducedMotion ? ' personality-results--reduce-motion' : ''}${deviceTier.isDegradation ? ' personality-results--low-end' : ''}`}>
       {content}
       {showSkipAnimation && (
         <View

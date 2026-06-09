@@ -45,7 +45,7 @@ $color-skill-cool: #7c3aed;
 
 .personality-results {
   @include page-gradient-bg;
-  min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
   overflow: hidden;
 
@@ -81,7 +81,7 @@ $color-skill-cool: #7c3aed;
     @include flex-center;
     @include overlay-padding($spacing-xl, $container-padding, $spacing-xl);
 
-    min-height: 100vh;
+    min-height: 100dvh;
     flex-direction: column;
     text-align: center;
     gap: $spacing-md;
@@ -143,7 +143,7 @@ $color-skill-cool: #7c3aed;
   &__immersive-shell {
     @include overlay-padding($spacing-lg, $container-padding, $spacing-xl);
 
-    min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -669,7 +669,7 @@ $color-skill-cool: #7c3aed;
   }
 
   &__scroll {
-    height: 100vh;
+    min-height: 100dvh;
     box-sizing: border-box;
     padding: $spacing-lg 0 $spacing-2xl;
     @include safe-area-bottom-padding(padding-bottom, $spacing-2xl);
@@ -2403,6 +2403,10 @@ $color-skill-cool: #7c3aed;
     opacity: 1;
     transform: none;
   }
+
+  .personality-results__reveal-image {
+    transition: none !important;
+  }
 }
 
 /* JS-driven reduce-motion fallback — see FinalStage container class */
@@ -2423,5 +2427,23 @@ $color-skill-cool: #7c3aed;
     animation: none !important;
     opacity: 1;
     transform: none;
+  }
+
+  .personality-results__reveal-image {
+    transition: none !important;
+  }
+}
+
+/* Low-end device: suppress continuous shimmer and filter transitions to save compositor budget */
+.personality-results--low-end {
+  .personality-results__pokemon-holo-shimmer,
+  .personality-results__pokemon-holo-shimmer::before,
+  .personality-results__pokemon-corner-shine {
+    animation: none !important;
+    opacity: 0.3;
+  }
+
+  .personality-results__reveal-image {
+    transition: opacity 0.32s ease, transform 0.32s ease !important;
   }
 }

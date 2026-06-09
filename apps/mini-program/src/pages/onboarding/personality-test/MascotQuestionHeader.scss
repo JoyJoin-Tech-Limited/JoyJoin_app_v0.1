@@ -63,8 +63,8 @@
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgba(255, 255, 255, 0.8) 20%,
-      rgba(255, 255, 255, 0.8) 80%,
+      rgba($color-surface, 0.8) 20%,
+      rgba($color-surface, 0.8) 80%,
       transparent 100%
     );
     border-radius: 1rpx;
@@ -96,6 +96,8 @@
     font-size: 52rpx;
     color: $color-text-primary;
     line-height: 1.45;
+    word-break: keep-all;
+    overflow-wrap: break-word;
 
     &--loading {
       opacity: 0.6;

@@ -1,5 +1,5 @@
 import { Image, View } from '@tarojs/components'
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import spritesheetManifest from '../../assets/archetypes/archetype-spritesheet.json'
 import { getArchetypeVisual, getArchetypeSpritesheetLocalPath, getArchetypeSpritesheetCdnPath } from '../visuals'
 
@@ -45,7 +45,7 @@ interface ArchetypeSpritesheetProps {
  * allocated dimensions. Combined with overflow:hidden on the container
  * and transform:translate, this crops the exact archetype region.
  */
-export default function ArchetypeSpritesheet({
+function ArchetypeSpritesheet({
   archetype,
   size = '132rpx',
   className = '',
@@ -115,3 +115,5 @@ export default function ArchetypeSpritesheet({
     </View>
   )
 }
+
+export default memo(ArchetypeSpritesheet)
