@@ -11,7 +11,7 @@ interface ConfigSpec {
   required: boolean;
   description: string;
   /** Optional validation function. Returns error message on failure, undefined on success. */
-  validate?: (value: string) => string | undefined;
+  validate?: (value: string, env: NodeJS.ProcessEnv) => string | undefined;
 }
 
 interface ConfigIssueBuckets {
@@ -22,14 +22,33 @@ interface ConfigIssueBuckets {
 export const DIRECT_MINI_PROGRAM_APP_ID_MISMATCH_MESSAGE =
   "WECHAT_PAY_APP_ID must match WECHAT_APPID for the direct mini-program JSAPI flow";
 
+function isTestMode(env: NodeJS.ProcessEnv): boolean {
+  return (env.APP_MODE ?? "production") === "test";
+}
+
 const CONFIG_SPECS: ConfigSpec[] = [
   // ── Always required ──────────────────────────────────────────────────────
   {
     key: "DATABASE_URL",
     required: true,
-    description: "PostgreSQL connection string",
-    validate: (v) => {
+    description: "PostgreSQL connection string (main / production)",
+    validate: (v, env) => {
+      // In test mode, DATABASE_URL is still validated but TEST_DATABASE_URL takes precedence
+      if (isTestMode(env)) return undefined;
       if (!v.startsWith("postgresql://") && !v.startsWith("postgres://")) {
+        return "Must be a valid postgresql:// or postgres:// URL";
+      }
+    },
+  },
+  {
+    key: "TEST_DATABASE_URL",
+    required: false,
+    description: "PostgreSQL connection string for test mode",
+    validate: (v, env) => {
+      if (isTestMode(env) && (!v || v.trim() === "")) {
+        return "TEST_DATABASE_URL is required when APP_MODE=test";
+      }
+      if (v && !v.startsWith("postgresql://") && !v.startsWith("postgres://")) {
         return "Must be a valid postgresql:// or postgres:// URL";
       }
     },
@@ -45,21 +64,29 @@ const CONFIG_SPECS: ConfigSpec[] = [
     },
   },
 
-  // ── WeChat auth (Mini Program login) ────────────────────────────────────
+  // ── WeChat auth (Mini Program login) — only required in production mode ─
   {
     key: "WECHAT_APPID",
-    required: true,
-    description: "WeChat Mini Program App ID",
-    validate: (value) => {
-      if (!/^wx[a-zA-Z0-9]{16}$/.test(value) && !/^gh_[a-zA-Z0-9]+$/.test(value)) {
+    required: false,
+    description: "WeChat Mini Program App ID (required in production mode)",
+    validate: (value, env) => {
+      if (!isTestMode(env) && (!value || value.trim() === "")) {
+        return "WECHAT_APPID is required when APP_MODE=production";
+      }
+      if (value && !/^wx[a-zA-Z0-9]{16}$/.test(value) && !/^gh_[a-zA-Z0-9]+$/.test(value)) {
         return "Must look like a valid WeChat Mini Program or Official Account App ID";
       }
     },
   },
   {
     key: "WECHAT_SECRET",
-    required: true,
-    description: "WeChat Mini Program App Secret",
+    required: false,
+    description: "WeChat Mini Program App Secret (required in production mode)",
+    validate: (value, env) => {
+      if (!isTestMode(env) && (!value || value.trim() === "")) {
+        return "WECHAT_SECRET is required when APP_MODE=production";
+      }
+    },
   },
 
   // ── Optional but warn if absent in production ────────────────────────────
@@ -144,7 +171,7 @@ function collectBaseConfigIssues(
     }
 
     if (value !== undefined && value !== null && spec.validate) {
-      const validationError = spec.validate(value);
+      const validationError = spec.validate(value, env);
       if (validationError) {
         const msg = `${spec.key} is invalid: ${validationError}`;
         if (spec.required && isProduction) {

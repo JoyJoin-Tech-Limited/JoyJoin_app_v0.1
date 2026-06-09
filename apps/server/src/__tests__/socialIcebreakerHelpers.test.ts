@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import type { SocialSessionState } from '@shared/socialIcebreaker';
+import type { SocialSessionState, SpeedFriendingRound, SpeedFriendingPair } from '@shared/socialIcebreaker';
 
 function sanitizeStateForClient(state: SocialSessionState, _userId?: string): SocialSessionState {
-  const sanitized = { ...state };
-  delete (sanitized as any).xiaoyueAdaptiveSuggestion;
-  delete (sanitized as any).xiaoyueSessionPackMeta;
-  if ((sanitized as any).participants) {
-    (sanitized as any).participants = (sanitized as any).participants.map((p: any) => {
+  const sanitized: Record<string, any> = { ...state };
+  delete sanitized.xiaoyueAdaptiveSuggestion;
+  delete sanitized.xiaoyueSessionPackMeta;
+  if (sanitized.joinedParticipants) {
+    sanitized.joinedParticipants = sanitized.joinedParticipants.map((p: any) => {
       const { profile, ...rest } = p;
       return profile ? rest : p;
     });
   }
-  return sanitized;
+  return sanitized as SocialSessionState;
 }
 
 function getUniqueUserCount(userIds?: string[]): number {
@@ -25,35 +25,33 @@ function hasAllRosterParticipantsResponded(userIds: string[] | undefined, player
 function generateSpeedFriendingPairs(
   playerIds: string[],
   displayNames: Map<string, string>,
-): any[] {
+): SpeedFriendingRound[] {
   const n = playerIds.length;
   if (n < 2) return [];
 
-  const rounds: any[] = [];
+  const rounds: SpeedFriendingRound[] = [];
   const ids = [...playerIds];
   if (n % 2 === 1) ids.push('BYE');
 
   const totalRounds = ids.length - 1;
   const half = ids.length / 2;
 
-  for (let round = 0; round < totalRounds; round++) {
-    const pairs: Array<[string, string]> = [];
+  for (let roundIndex = 0; roundIndex < totalRounds; roundIndex++) {
+    const pairs: SpeedFriendingPair[] = [];
     for (let i = 0; i < half; i++) {
       const a = ids[i];
       const b = ids[ids.length - 1 - i];
       if (a !== 'BYE' && b !== 'BYE') {
-        pairs.push([a, b]);
+        pairs.push({
+          userIdA: a,
+          userIdB: b,
+          displayNameA: displayNames.get(a) ?? a,
+          displayNameB: displayNames.get(b) ?? b,
+          roundIndex,
+        });
       }
     }
-    rounds.push({
-      round,
-      pairs: pairs.map(([id1, id2]) => ({
-        player1Id: id1,
-        player2Id: id2,
-        player1Name: displayNames.get(id1) ?? id1,
-        player2Name: displayNames.get(id2) ?? id2,
-      })),
-    });
+    rounds.push(pairs);
     ids.splice(1, 0, ids.pop()!);
   }
   return rounds;
@@ -120,7 +118,7 @@ describe('socialIcebreakerHelpers', () => {
         xiaoyueAdaptiveSuggestion: { type: 'boost_mood' },
         xiaoyueSessionPackMeta: { version: 1 },
       };
-      const result = sanitizeStateForClient(state as any);
+      const result = sanitizeStateForClient(state);
       expect((result as any).xiaoyueAdaptiveSuggestion).toBeUndefined();
       expect((result as any).xiaoyueSessionPackMeta).toBeUndefined();
     });
@@ -129,14 +127,14 @@ describe('socialIcebreakerHelpers', () => {
       const state: any = {
         socialSessionId: 'social_test',
         currentPhase: 'warmup',
-        participants: [
+        joinedParticipants: [
           { userId: 'u1', profile: { age: 25 } },
           { userId: 'u2' },
         ],
       };
-      const result = sanitizeStateForClient(state as any);
-      expect((result as any).participants?.[0]).not.toHaveProperty('profile');
-      expect((result as any).participants?.[1]).not.toHaveProperty('profile');
+      const result = sanitizeStateForClient(state);
+      expect(result.joinedParticipants?.[0]).not.toHaveProperty('profile');
+      expect(result.joinedParticipants?.[1]).not.toHaveProperty('profile');
     });
 
     it('preserves all other fields', () => {
@@ -146,7 +144,7 @@ describe('socialIcebreakerHelpers', () => {
         warmupTopics: [{ id: 't1', text: 'Hello' }],
         playerCount: 4,
       };
-      const result = sanitizeStateForClient(state as any);
+      const result = sanitizeStateForClient(state as SocialSessionState);
       expect(result.socialSessionId).toBe('social_test');
       expect(result.currentPhase).toBe('warmup');
       expect(result.warmupTopics).toHaveLength(1);
@@ -187,9 +185,9 @@ describe('socialIcebreakerHelpers', () => {
       const rounds = generateSpeedFriendingPairs(['u1', 'u2', 'u3', 'u4'], names);
       expect(rounds).toHaveLength(3);
       for (const round of rounds) {
-        expect((round as any).pairs).toHaveLength(2);
-        for (const pair of (round as any).pairs) {
-          expect((pair as any).player1Id).not.toBe((pair as any).player2Id);
+        expect(round).toHaveLength(2);
+        for (const pair of round) {
+          expect(pair.userIdA).not.toBe(pair.userIdB);
         }
       }
     });
@@ -199,7 +197,7 @@ describe('socialIcebreakerHelpers', () => {
       const rounds = generateSpeedFriendingPairs(['u1', 'u2', 'u3'], names);
       expect(rounds).toHaveLength(3);
       for (const round of rounds) {
-        expect((round as any).pairs.length).toBeGreaterThanOrEqual(1);
+        expect(round.length).toBeGreaterThanOrEqual(1);
       }
     });
 
@@ -216,42 +214,42 @@ describe('socialIcebreakerHelpers', () => {
     ];
 
     it('returns roster display name when found', () => {
-      const state = { hostUserId: 'host' } as any;
+      const state = { hostUserId: 'host' } as SocialSessionState;
       expect(recapDisplayNameByUserId(roster, state, 'u1')).toBe('Alice');
     });
 
     it('falls back to host display name', () => {
-      const state = { hostUserId: 'host', hostDisplayName: 'HostUser' } as any;
+      const state = { hostUserId: 'host', hostDisplayName: 'HostUser' } as SocialSessionState;
       expect(recapDisplayNameByUserId([], state, 'host')).toBe('HostUser');
     });
 
     it('falls back to lie detective player name', () => {
       const state = {
-        lieDetectivePlayers: [{ userId: 'ld1', displayName: 'Detective', statements: [] }],
-      } as any;
+        lieDetectivePlayers: [{ userId: 'ld1', displayName: 'Detective' }],
+      } as SocialSessionState;
       expect(recapDisplayNameByUserId([], state, 'ld1')).toBe('Detective');
     });
 
     it('returns fallback when not found anywhere', () => {
-      expect(recapDisplayNameByUserId([], {} as any, 'unknown')).toBe('某位参与者');
+      expect(recapDisplayNameByUserId([], {} as SocialSessionState, 'unknown')).toBe('某位参与者');
     });
   });
 
   describe('incrementCommonGround', () => {
     it('increments from existing value', () => {
-      const state = { commonGroundCount: 3 } as any;
+      const state = { commonGroundCount: 3 } as SocialSessionState;
       incrementCommonGround(state);
       expect(state.commonGroundCount).toBe(4);
     });
 
     it('handles undefined starting value', () => {
-      const state = {} as any;
+      const state = {} as SocialSessionState;
       incrementCommonGround(state);
       expect(state.commonGroundCount).toBe(1);
     });
 
     it('handles zero starting value', () => {
-      const state = { commonGroundCount: 0 } as any;
+      const state = { commonGroundCount: 0 } as SocialSessionState;
       incrementCommonGround(state);
       expect(state.commonGroundCount).toBe(1);
     });
@@ -260,26 +258,26 @@ describe('socialIcebreakerHelpers', () => {
   describe('buildRecapParticipants', () => {
     it('uses roster when available', () => {
       const roster = [{ userId: 'u1', displayName: 'Alice' }];
-      const result = buildRecapParticipants(roster, {} as any);
+      const result = buildRecapParticipants(roster, {} as SocialSessionState);
       expect(result).toEqual([{ displayName: 'Alice' }]);
     });
 
     it('falls back to host', () => {
-      const state = { hostUserId: 'host', hostDisplayName: 'HostUser' } as any;
+      const state = { hostUserId: 'host', hostDisplayName: 'HostUser' } as SocialSessionState;
       const result = buildRecapParticipants([], state);
       expect(result).toEqual([{ displayName: 'HostUser' }]);
     });
 
     it('falls back to lie detective players', () => {
       const state = {
-        lieDetectivePlayers: [{ userId: 'ld1', displayName: 'Detective', statements: [] }],
-      } as any;
+        lieDetectivePlayers: [{ userId: 'ld1', displayName: 'Detective' }],
+      } as SocialSessionState;
       const result = buildRecapParticipants([], state);
       expect(result).toEqual([{ displayName: 'Detective' }]);
     });
 
     it('returns default when nothing available', () => {
-      const result = buildRecapParticipants([], {} as any);
+      const result = buildRecapParticipants([], {} as SocialSessionState);
       expect(result).toEqual([{ displayName: '参与者' }]);
     });
   });
@@ -292,7 +290,7 @@ describe('socialIcebreakerHelpers', () => {
           { index: 1, text: 'I like coffee', isLie: false },
         ]],
       ]);
-      const highlights = buildLieDetectiveRecapHighlights({} as any, [], lieMap);
+      const highlights = buildLieDetectiveRecapHighlights({} as SocialSessionState, [], lieMap);
       expect(highlights).toContain('"I speak 5 languages"');
       expect(highlights).not.toContain('"I like coffee"');
     });
@@ -302,7 +300,7 @@ describe('socialIcebreakerHelpers', () => {
       for (let i = 0; i < 10; i++) {
         lieMap.set(`u${i}`, [{ index: 0, text: `Lie ${i}`, isLie: true }]);
       }
-      const highlights = buildLieDetectiveRecapHighlights({} as any, [], lieMap);
+      const highlights = buildLieDetectiveRecapHighlights({} as SocialSessionState, [], lieMap);
       expect(highlights.length).toBeLessThanOrEqual(8);
     });
   });

@@ -16,6 +16,17 @@ declare module "express-session" {
   }
 }
 
+declare module "@napi-rs/canvas" {
+  export function createCanvas(width: number, height: number): any;
+  export function loadImage(src: string | Buffer): Promise<any>;
+  export const GlobalFonts: {
+    register(fontPath: string, name?: string): void;
+    families: string[];
+  };
+  export type SKRSContext2D = any;
+  export function clearAllCache(): void;
+}
+
 declare module "express-serve-static-core" {
   interface Request {
     rawBody?: string;

@@ -112,7 +112,7 @@ function submitVote(
     if (!validAnswer) {
       return { error: `Invalid answerId: ${v.answerId}`, status: 400 };
     }
-    if ((v as any).voterId === voterId && v.answerId.startsWith(voterId)) {
+    if (v.answerId.startsWith(voterId)) {
       return { error: 'Cannot vote for yourself', status: 400 };
     }
   }

@@ -20,11 +20,12 @@
  *   - Beta feature flags: personalityShareEnabled, personalitySlotAnimationEnabled,
  *     matchingLiveReveal, promoBannerEnabled, smartProfession all set to true
  */
-
 import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { users, eventPools, adminAccounts, featureFlags } from "@joyjoin/shared";
 import bcrypt from "bcrypt";
+
+const COMMON_PASSWORD = "test123456";
 
 const TEST_USERS = [
   {
@@ -32,8 +33,9 @@ const TEST_USERS = [
     displayName: "测试用户_完整资料",
     gender: "女性",
     currentCity: "深圳",
+    primaryArchetype: "开心柯基",
     hasCompletedProfileSetup: true,
-    hasCompletedVoiceQuiz: true,
+    hasCompletedPersonalityTest: true,
     wechatOpenId: "test_openid_001",
   },
   {
@@ -41,9 +43,70 @@ const TEST_USERS = [
     displayName: "测试用户_未完成资料",
     gender: "男性",
     currentCity: "香港",
+    primaryArchetype: null,
     hasCompletedProfileSetup: false,
-    hasCompletedVoiceQuiz: false,
+    hasCompletedPersonalityTest: false,
     wechatOpenId: "test_openid_002",
+  },
+  {
+    phoneNumber: "+8613800000003",
+    displayName: "测试用户_太阳鸡",
+    gender: "男性",
+    currentCity: "香港",
+    primaryArchetype: "太阳鸡",
+    hasCompletedProfileSetup: true,
+    hasCompletedPersonalityTest: true,
+    wechatOpenId: "test_openid_003",
+  },
+  {
+    phoneNumber: "+8613800000004",
+    displayName: "测试用户_树洞考拉",
+    gender: "女性",
+    currentCity: "广州",
+    primaryArchetype: "树洞考拉",
+    hasCompletedProfileSetup: true,
+    hasCompletedPersonalityTest: true,
+    wechatOpenId: "test_openid_004",
+  },
+  {
+    phoneNumber: "+8613800000005",
+    displayName: "测试用户_靠谱大象",
+    gender: "男性",
+    currentCity: "深圳",
+    primaryArchetype: "靠谱大象",
+    hasCompletedProfileSetup: true,
+    hasCompletedPersonalityTest: true,
+    wechatOpenId: "test_openid_005",
+  },
+  {
+    phoneNumber: "+8613800000006",
+    displayName: "测试用户_最小资料",
+    gender: "不透露",
+    currentCity: "深圳",
+    primaryArchetype: null,
+    hasCompletedProfileSetup: false,
+    hasCompletedPersonalityTest: false,
+    wechatOpenId: "test_openid_006",
+  },
+  {
+    phoneNumber: "+8613800000007",
+    displayName: "测试用户_机灵海豚",
+    gender: "女性",
+    currentCity: "香港",
+    primaryArchetype: "机灵海豚",
+    hasCompletedProfileSetup: true,
+    hasCompletedPersonalityTest: true,
+    wechatOpenId: "test_openid_007",
+  },
+  {
+    phoneNumber: "+8613800000008",
+    displayName: "测试用户_脑洞章鱼",
+    gender: "男性",
+    currentCity: "深圳",
+    primaryArchetype: "脑洞章鱼",
+    hasCompletedProfileSetup: true,
+    hasCompletedPersonalityTest: true,
+    wechatOpenId: "test_openid_008",
   },
 ];
 
@@ -55,7 +118,9 @@ const TEST_ADMIN = {
 };
 
 async function seedTestUsers() {
+  const passwordHash = await bcrypt.hash(COMMON_PASSWORD, 10);
   const results = [];
+
   for (const userData of TEST_USERS) {
     const existing = await db
       .select({ id: users.id })
@@ -64,7 +129,7 @@ async function seedTestUsers() {
       .limit(1);
 
     if (existing.length > 0) {
-      console.log(`[seed] Test user exists: ${userData.phoneNumber} (${existing[0].id})`);
+      console.log(`  [skip] User exists: ${userData.phoneNumber} (${existing[0].id})`);
       results.push(existing[0]);
       continue;
     }
@@ -76,15 +141,19 @@ async function seedTestUsers() {
         displayName: userData.displayName,
         gender: userData.gender,
         currentCity: userData.currentCity,
+        password: passwordHash,
+        primaryArchetype: userData.primaryArchetype,
         hasCompletedProfileSetup: userData.hasCompletedProfileSetup,
-        hasCompletedVoiceQuiz: userData.hasCompletedVoiceQuiz,
+        hasCompletedPersonalityTest: userData.hasCompletedPersonalityTest,
+        hasCompletedRegistration: true,
         wechatOpenId: userData.wechatOpenId,
       })
-      .returning({ id: users.id });
+      .returning({ id: users.id, displayName: users.displayName });
 
-    console.log(`[seed] Created test user: ${userData.phoneNumber} (${inserted.id})`);
+    console.log(`  [create] User: ${inserted.displayName} (${inserted.id})`);
     results.push(inserted);
   }
+
   return results;
 }
 
@@ -96,7 +165,7 @@ async function seedTestAdmin() {
     .limit(1);
 
   if (existing.length > 0) {
-    console.log(`[seed] Test admin exists: ${TEST_ADMIN.username} (${existing[0].id})`);
+    console.log(`  [skip] Admin exists: ${TEST_ADMIN.username} (${existing[0].id})`);
     return existing[0];
   }
 
@@ -111,7 +180,7 @@ async function seedTestAdmin() {
     })
     .returning({ id: adminAccounts.id });
 
-  console.log(`[seed] Created test admin: ${TEST_ADMIN.username} (${inserted.id})`);
+  console.log(`  [create] Admin: ${TEST_ADMIN.username} (${inserted.id})`);
   return inserted;
 }
 
@@ -125,13 +194,13 @@ async function seedTestEventPool(createdByUserId: string) {
     .limit(1);
 
   if (existing.length > 0) {
-    console.log(`[seed] Test event pool exists: "${poolTitle}" (${existing[0].id})`);
+    console.log(`  [skip] Pool exists: "${poolTitle}" (${existing[0].id})`);
     return existing[0];
   }
 
   const now = new Date();
-  const eventDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
-  const deadline = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000); // 5 days from now
+  const eventDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const deadline = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
 
   const [inserted] = await db
     .insert(eventPools)
@@ -151,7 +220,7 @@ async function seedTestEventPool(createdByUserId: string) {
     })
     .returning({ id: eventPools.id });
 
-  console.log(`[seed] Created test event pool: "${poolTitle}" (${inserted.id})`);
+  console.log(`  [create] Pool: "${poolTitle}" (${inserted.id})`);
   return inserted;
 }
 
@@ -197,17 +266,28 @@ async function seedBetaFeatureFlags() {
 }
 
 async function main() {
-  console.log("[seed] Starting test data seed...");
+  console.log("[seed] Starting test data seed...\n");
 
+  console.log("[seed] Users:");
   const testUsers = await seedTestUsers();
+
+  console.log("\n[seed] Admin:");
   const testAdmin = await seedTestAdmin();
+
+  console.log("\n[seed] Event Pool:");
   const testPool = await seedTestEventPool(testUsers[0].id);
   await seedBetaFeatureFlags();
 
+  const completedUsers = testUsers.filter((_, i) => TEST_USERS[i]?.hasCompletedProfileSetup).length;
+  const incompleteUsers = testUsers.filter((_, i) => !TEST_USERS[i]?.hasCompletedProfileSetup).length;
+
   console.log("\n[seed] Summary:");
-  console.log(`  Test users:   ${testUsers.length}`);
-  console.log(`  Test admin:   ${testAdmin.id} (${TEST_ADMIN.username})`);
-  console.log(`  Test pool:    ${testPool.id}`);
+  console.log(`  Users (total):     ${testUsers.length}`);
+  console.log(`  Users (complete):  ${completedUsers}`);
+  console.log(`  Users (partial):   ${incompleteUsers}`);
+  console.log(`  Admin:             ${testAdmin.id} (${TEST_ADMIN.username})`);
+  console.log(`  Pool:              ${testPool.id}`);
+  console.log(`  Common password:   ${COMMON_PASSWORD}`);
   console.log(`  Feature flags: ${BETA_FEATURE_FLAGS.length} configured`);
   console.log("\n[seed] Done.");
 

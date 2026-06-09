@@ -83,6 +83,7 @@
     "user:create": "npm run user:create -w @joyjoin/server",
     "user:bypass": "npm run user:bypass -w @joyjoin/server",
     "seed:test-data": "npm run seed:test-data -w @joyjoin/server",
+    "seed:mock-data": "npm run seed:mock-data -w @joyjoin/server",
     "wecom:notify": "node scripts/wecom-notify.mjs",
     "simulate:personas:generate": "tsx scripts/simulate/generate-boundary-personas.ts",
     "simulate:personas:run": "tsx scripts/simulate/run-persona-suite.ts --personas=boundaries --noise=clean",

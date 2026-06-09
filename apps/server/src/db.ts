@@ -7,6 +7,14 @@ import { logger } from "./lib/logger";
 const DATABASE_URL_MISSING_MESSAGE =
   "DATABASE_URL must be set. Please check your environment variables.";
 
+function resolveDatabaseUrl(): string | undefined {
+  const isTestMode = (process.env.APP_MODE ?? "production") === "test";
+  if (isTestMode && process.env.TEST_DATABASE_URL?.trim()) {
+    return process.env.TEST_DATABASE_URL.trim();
+  }
+  return process.env.DATABASE_URL?.trim();
+}
+
 type WrappedDb = ReturnType<typeof wrapDb>;
 
 function createUnavailableDb(): WrappedDb {
@@ -25,7 +33,7 @@ function createUnavailableDb(): WrappedDb {
   });
 }
 
-const databaseUrl = process.env.DATABASE_URL?.trim();
+const databaseUrl = resolveDatabaseUrl();
 
 export const pool = databaseUrl
   ? new Pool({ connectionString: databaseUrl })

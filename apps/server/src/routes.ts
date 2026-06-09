@@ -40,9 +40,11 @@ import { registerEventRoutes } from "./routes/domains/events";
 import { registerConnectionRoutes } from "./routes/domains/connections";
 import { registerMatchCompassRoutes } from "./routes/domains/matchCompass";
 import { registerProfessionUnderstandingRoutes } from "./routes/domains/professionUnderstanding";
+import { registerTestAdminRoutes } from "./routes/domains/testAdmin";
 import { registerMonitoringWebhookRoutes } from "./routes/domains/monitoringWebhooks";
 import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
+import { isTestMode } from "./auth/getAuthStrategy";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { sign as signCookie } from 'cookie-signature';
@@ -98,11 +100,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
-  // Session middleware
+  // Session middleware — use correct DB URL based on APP_MODE
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  const sessionDbUrl = isTestMode() && process.env.TEST_DATABASE_URL?.trim()
+    ? process.env.TEST_DATABASE_URL.trim()
+    : process.env.DATABASE_URL;
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
+    conString: sessionDbUrl,
     createTableIfMissing: true,
     ttl: sessionTtl,
     tableName: "sessions",
@@ -166,6 +171,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerCityUnlockRoutes(app);
   registerProfessionUnderstandingRoutes(app);
   registerMonitoringWebhookRoutes(app);
+
+  //   Test Admin API — only registered in APP_MODE=test
+  if (isTestMode()) {
+    registerTestAdminRoutes(app);
+    logger.info("[Routes] Test mode admin API registered");
+  }
 
   return httpServer;
 }
