@@ -86,7 +86,7 @@ const REWARDS_PRELOADS = [
 /** Map of page path → CDN assets to preload when entering that page. */
 export const ROUTE_PRELOAD_MAP: Record<string, string[]> = {
   'pages/discover/index': DISCOVER_PRELOADS,
-  'pages/index/index': DISCOVER_PRELOADS, // landing → same as discover
+  'pages/index/index': PERSONALITY_TEST_PRELOADS, // landing → personality test is the primary CTA
   'pages/pool-registration/index': POOL_REGISTRATION_PRELOADS,
   'pages/matching-status/index': MATCHING_PRELOADS,
   'pages/event-detail/index': EVENT_DETAIL_PRELOADS,
@@ -100,6 +100,7 @@ export const ROUTE_PRELOAD_MAP: Record<string, string[]> = {
 /** Map of page path → routes whose assets should be preloaded when idle. */
 export const PREDICTIVE_PRELOAD_MAP: Record<string, string[]> = {
   'pages/discover/index': ['pages/pool-registration/index', 'pages/event-detail/index'],
+  'pages/index/index': ['pages/onboarding/personality-test/index'],
   'pages/pool-registration/index': ['pages/matching-status/index'],
   'pages/event-detail/index': ['pages/pool-registration/index'],
   'pages/connections/index': ['pages/event-detail/index'],

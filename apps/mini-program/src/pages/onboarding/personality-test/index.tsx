@@ -62,6 +62,7 @@ import {
   ASSET_BASE_WEBP_LOCAL,
 } from './visuals'
 import { preloadImagesWithDiagnostics } from '../../../lib/utils/imagePreload'
+import { preloadRouteAssets } from '../../../lib/utils/routePreloadAssets'
 import './index.scss'
 import { HalfwayMilestone } from './HalfwayMilestone'
 import type { Phase } from './types'
@@ -281,6 +282,12 @@ export default function PersonalityTestPage() {
   const [introImgLoaded, setIntroImgLoaded] = useState(false)
   const [introReducedMotion, setIntroReducedMotion] = useState(false)
   useResetOnShow(setIsPageExiting, setIsSubmitting, setIsSkipping)
+
+  // Preload intro assets when the page mounts — redundant with app-launch and
+  // landing-page preloads, but critical for direct entry (share links, deeplinks).
+  useEffect(() => {
+    preloadRouteAssets('pages/onboarding/personality-test/index')
+  }, [])
 
   // Detect reduced-motion preference once for the intro mascot
   useEffect(() => {

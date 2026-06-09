@@ -14,6 +14,7 @@ import {
   isAnonymousAssessmentSessionCompleted,
 } from '../../lib/auth/anonymousOnboarding'
 import { logInfo, logWarn } from '../../lib/utils/logger'
+import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
 import MiniProgramLandingPage from './LandingPage'
 import './index.scss'
 
@@ -26,6 +27,14 @@ export default function Index() {
   // Unified redirect: authenticated users go to nextStep; guests with an
   // incomplete anonymous assessment go back to the personality test.
   // A single effect prevents race conditions between the two paths.
+  // Preload personality test assets immediately — the landing page's primary
+  // CTA leads directly to the personality test intro, so warming the intro
+  // animated WebP + mascot expressions here eliminates any decode delay.
+  useEffect(() => {
+    preloadRouteAssets('pages/index/index')
+    preloadPredictiveAssets('pages/index/index')
+  }, [])
+
   useEffect(() => {
     if (auth.isLoading || hasRedirectedRef.current) {
       return

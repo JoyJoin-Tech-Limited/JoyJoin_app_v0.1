@@ -48,6 +48,11 @@ Use it together with:
 
 **Mini-program:** `apps/mini-program/src/pages/onboarding/` mirrors the value-first and post-auth steps; shared helpers live in `packages/shared/src/onboarding.ts`. **Personality test** UI: `pages/onboarding/personality-test/` (subpackage). **WeChat login:** returning users `pages/login` + `hooks/useWeChatLogin.ts` (`/api/auth/wechat/login`); first-time handoff from test results uses `authenticateMiniProgramUserWithTest` (`/api/auth/wechat/login-with-test`) inline on the results page. The standalone auth-gate page was removed in 2026-05. **Payments:** `pages/blind-box-payment`, `pages/payment-verification`, plus `lib/paymentPendingOrder*.ts` and `app.ts` pending-order resume — see [`docs/reference/reference/PLATFORM_COORDINATION.md`](../reference/PLATFORM_COORDINATION.md).
 
+**Mini-program landing page cold-start behavior (2026-06-08):**
+- `AutoLoginBridge` (rendered in `app.ts`) silently re-authenticates returning users via `wx.login` → `seedMiniProgramAuthSession()`. Retryable errors (transport, 500) reset the attempt guard so the next mount/foreground can retry; 401s are treated as expected (new user) and do not retry.
+- The landing page (`pages/index/index`) runs a **unified redirect effect** after auth resolves: authenticated users → `nextStep` via `navigateToMiniProgramNextStep`; guests with an incomplete anonymous assessment session → `reLaunch` to `/pages/onboarding/personality-test/index`. Authenticated path takes priority to prevent race conditions with `AutoLoginBridge` async state flips.
+- Primary CTA navigation uses a **5s safety timeout** (`navigateWithLegalGate` in `LandingPage.tsx`) that resets the button loading state if `Taro.navigateTo` to the onboarding subpackage hangs (e.g., subpackage download stuck).
+
 Primary files:
 - `apps/user-client/src/features/onboarding/README.md`
 - `apps/user-client/src/App.tsx`

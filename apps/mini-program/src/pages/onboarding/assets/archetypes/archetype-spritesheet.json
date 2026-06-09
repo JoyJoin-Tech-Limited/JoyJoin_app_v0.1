@@ -1,88 +1,88 @@
 {
-  "version": 1,
+  "version": 2,
   "grid": {
     "cols": 3,
     "rows": 4,
-    "cellSize": 68,
-    "thumbSize": 60,
+    "cellSize": 128,
+    "thumbSize": 120,
     "padding": 4
   },
   "sheet": {
-    "width": 204,
-    "height": 272
+    "width": 384,
+    "height": 512
   },
   "mapping": {
     "corgi": {
       "x": 4,
       "y": 4,
-      "width": 60,
-      "height": 60
+      "width": 120,
+      "height": 120
     },
     "rooster": {
-      "x": 72,
+      "x": 132,
       "y": 4,
-      "width": 60,
-      "height": 60
+      "width": 120,
+      "height": 120
     },
     "hamster_praise": {
-      "x": 140,
+      "x": 260,
       "y": 4,
-      "width": 60,
-      "height": 60
+      "width": 120,
+      "height": 120
     },
     "fox": {
       "x": 4,
-      "y": 72,
-      "width": 60,
-      "height": 60
+      "y": 132,
+      "width": 120,
+      "height": 120
     },
     "dolphin_calm": {
-      "x": 72,
-      "y": 72,
-      "width": 60,
-      "height": 60
+      "x": 132,
+      "y": 132,
+      "width": 120,
+      "height": 120
     },
     "spider": {
-      "x": 140,
-      "y": 72,
-      "width": 60,
-      "height": 60
+      "x": 260,
+      "y": 132,
+      "width": 120,
+      "height": 120
     },
     "koala": {
       "x": 4,
-      "y": 140,
-      "width": 60,
-      "height": 60
+      "y": 260,
+      "width": 120,
+      "height": 120
     },
     "octopus": {
-      "x": 72,
-      "y": 140,
-      "width": 60,
-      "height": 60
+      "x": 132,
+      "y": 260,
+      "width": 120,
+      "height": 120
     },
     "owl": {
-      "x": 140,
-      "y": 140,
-      "width": 60,
-      "height": 60
+      "x": 260,
+      "y": 260,
+      "width": 120,
+      "height": 120
     },
     "elephant": {
       "x": 4,
-      "y": 208,
-      "width": 60,
-      "height": 60
+      "y": 388,
+      "width": 120,
+      "height": 120
     },
     "turtle": {
-      "x": 72,
-      "y": 208,
-      "width": 60,
-      "height": 60
+      "x": 132,
+      "y": 388,
+      "width": 120,
+      "height": 120
     },
     "cat": {
-      "x": 140,
-      "y": 208,
-      "width": 60,
-      "height": 60
+      "x": 260,
+      "y": 388,
+      "width": 120,
+      "height": 120
     }
   }
 }

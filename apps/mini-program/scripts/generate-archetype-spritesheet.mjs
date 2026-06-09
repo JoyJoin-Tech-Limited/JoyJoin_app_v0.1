@@ -2,11 +2,13 @@
 /**
  * Generate a spritesheet of archetype thumbnails for the slot animation.
  *
- * Reduces GPU memory pressure by loading a single ~30KB image instead of
+ * Reduces GPU memory pressure by loading a single image instead of
  * 12 full-size textures cycling during the slot spin.
  *
- * Layout: 3×4 grid, 60×60px per thumbnail with 4px padding
+ * Layout: 3×4 grid, 120×120px per thumbnail with 4px padding
  * Output: WebP primary + PNG fallback
+ *   - CDN path: src/assets/personality/archetypes/ (for canvas fallback, cache priming)
+ *   - Local bundle: src/pages/onboarding/assets/archetypes/ (slot animation, immune to CDN staleness)
  *
  * Usage (from apps/mini-program):
  *   npm run generate:spritesheet
@@ -21,9 +23,10 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const INPUT_DIR = path.join(ROOT, 'assets-source/personality/archetypes')
-const OUTPUT_DIR = path.join(ROOT, 'src/assets/personality/archetypes')
+const CDN_OUTPUT_DIR = path.join(ROOT, 'src/assets/personality/archetypes')
+const LOCAL_OUTPUT_DIR = path.join(ROOT, 'src/pages/onboarding/assets/archetypes')
 
-const THUMB_SIZE = 60
+const THUMB_SIZE = 120
 const PADDING = 4
 const COLS = 3
 const ROWS = 4
@@ -114,34 +117,38 @@ async function main() {
 
   composite = composite.composite(overlays)
 
-  // Generate WebP
-  const webpPath = path.join(OUTPUT_DIR, 'archetype-spritesheet.webp')
-  await composite
+  // Generate WebP — CDN + local bundle
+  const webpPathCdn = path.join(CDN_OUTPUT_DIR, 'archetype-spritesheet.webp')
+  const webpPathLocal = path.join(LOCAL_OUTPUT_DIR, 'archetype-spritesheet.webp')
+  const webpBuf = await composite
     .clone()
     .webp({ quality: 85, effort: 6, alphaQuality: 100 })
-    .toFile(webpPath)
+    .toBuffer()
+  fs.writeFileSync(webpPathCdn, webpBuf)
+  fs.writeFileSync(webpPathLocal, webpBuf)
 
-  // Generate PNG fallback
-  const pngPath = path.join(OUTPUT_DIR, 'archetype-spritesheet.png')
+  // Generate PNG fallback — CDN only (local bundle ships WebP primary)
+  const pngPath = path.join(CDN_OUTPUT_DIR, 'archetype-spritesheet.png')
   await composite
     .clone()
     .png({ compressionLevel: 9 })
     .toFile(pngPath)
 
-  const webpStat = fs.statSync(webpPath)
+  const webpStat = fs.statSync(webpPathCdn)
   const pngStat = fs.statSync(pngPath)
 
   console.log(`Spritesheet: ${sheetWidth}×${sheetHeight}px`)
-  console.log(`  WebP: ${(webpStat.size / 1024).toFixed(1)}KB → ${webpPath}`)
-  console.log(`  PNG:  ${(pngStat.size / 1024).toFixed(1)}KB → ${pngPath}`)
+  console.log(`  WebP CDN:  ${(webpStat.size / 1024).toFixed(1)}KB → ${webpPathCdn}`)
+  console.log(`  WebP Local: ${(webpStat.size / 1024).toFixed(1)}KB → ${webpPathLocal}`)
+  console.log(`  PNG:        ${(pngStat.size / 1024).toFixed(1)}KB → ${pngPath}`)
 
-  // Write manifest JSON for SlotStage consumption
-  const manifestPath = path.join(OUTPUT_DIR, 'archetype-spritesheet.json')
+  // Write manifest JSON — local bundle is the source of truth for the slot animation
+  const manifestPath = path.join(LOCAL_OUTPUT_DIR, 'archetype-spritesheet.json')
   fs.writeFileSync(
     manifestPath,
     JSON.stringify(
       {
-        version: 1,
+        version: 2,
         grid: { cols: COLS, rows: ROWS, cellSize, thumbSize: THUMB_SIZE, padding: PADDING },
         sheet: { width: sheetWidth, height: sheetHeight },
         mapping,

@@ -6,9 +6,13 @@ import { localAsset } from '../../lib/utils/cdnAssets'
  * ArchetypeHead — proprietary head icon for the 12 JoyJoin archetypes.
  *
  * Replaces user initials in avatar contexts. Shows the character's head
- * extracted from the full-body illustration at 40/80/120px (1×/2×/3×).
+ * extracted from the full-body illustration at 240×240px WebP.
  *
- * Assets: assets/icons/archetype/archetype-{key}-head{@2x|@3x}.png
+ * The 240px source gives @2x crispness at 120rpx display size and
+ * acceptable quality at 180rpx (@3x). WeChat downscales automatically;
+ * no @2x/@3x suffixes are used (avoids the @3x@3x double-suffix bug).
+ *
+ * Assets: assets/icons/archetype/archetype-{key}-head.webp
  */
 
 interface ArchetypeHeadProps {

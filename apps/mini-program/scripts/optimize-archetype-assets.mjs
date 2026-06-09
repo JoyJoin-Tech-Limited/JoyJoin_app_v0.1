@@ -3,14 +3,18 @@
  * Resize + WebP encode archetype PNGs for the mini-program.
  *
  * Export spec (keep in sync with visuals.ts):
- * - Max width 480px (height proportional, no upscale)
+ * - Max width 750px (preserves full source resolution, no upscale)
  * - WebP lossy, quality ~85, effort 6
- * - PNG fallback: quality 80, effort 10 — for canvas drawImage fallback (now on CDN)
+ * - PNG fallback: full resolution for canvas drawImage fallback (CDN)
+ *
+ * Output goes to two locations:
+ *   - CDN: src/assets/personality/archetypes/ (canvas drawImage, cache priming)
+ *   - Local bundle: src/pages/onboarding/assets/archetypes/ (instant load during onboarding)
  *
  * Usage (from apps/mini-program):
  *   npm run optimize:archetypes
  *
- * Requires: sharp (devDependency). Place PNG masters next to output (same names as MANIFEST)
+ * Requires: sharp (devDependency). Place PNG masters in assets-source/personality/archetypes/
  * before running; the repo ships `.webp` + `.png` fallback.
  *
  * Manual smoke (WeChat devtools): personality test results page, slot animation,
@@ -24,10 +28,10 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const INPUT_DIR = path.join(ROOT, 'assets-source/personality/archetypes')
-const WEBP_OUTPUT_DIR = path.join(ROOT, 'src/assets/personality/archetypes')
-const PNG_OUTPUT_DIR = path.join(ROOT, 'src/assets/personality/archetypes')
+const CDN_OUTPUT_DIR = path.join(ROOT, 'src/assets/personality/archetypes')
+const LOCAL_OUTPUT_DIR = path.join(ROOT, 'src/pages/onboarding/assets/archetypes')
 
-const MAX_WIDTH = 480
+const MAX_WIDTH = 750
 const WEBP_QUALITY = 85
 const WEBP_EFFORT = 6
 const PNG_QUALITY = 80
@@ -58,8 +62,9 @@ async function main() {
 
   for (const base of MANIFEST) {
     const inputPng = path.join(INPUT_DIR, `${base}.png`)
-    const outputWebp = path.join(WEBP_OUTPUT_DIR, `${base}.webp`)
-    const outputPng = path.join(PNG_OUTPUT_DIR, `${base}.png`)
+    const outputWebpCdn = path.join(CDN_OUTPUT_DIR, `${base}.webp`)
+    const outputWebpLocal = path.join(LOCAL_OUTPUT_DIR, `${base}.webp`)
+    const outputPng = path.join(CDN_OUTPUT_DIR, `${base}.png`)
 
     if (!fs.existsSync(inputPng)) {
       console.error(`Missing input: ${inputPng}`)
@@ -70,19 +75,25 @@ async function main() {
     const inputStat = fs.statSync(inputPng)
     totalIn += inputStat.size
 
-    // 1. Generate optimized WebP (primary format for display)
+    // 1. Generate optimized WebP (primary format for display) — CDN + local bundle
     const pipeline = sharp(inputPng).resize({
       width: MAX_WIDTH,
       withoutEnlargement: true,
       fit: 'inside',
     })
 
-    await pipeline.webp({ quality: WEBP_QUALITY, effort: WEBP_EFFORT, alphaQuality: 100 }).toFile(outputWebp)
+    const webpBuf = await pipeline
+      .clone()
+      .webp({ quality: WEBP_QUALITY, effort: WEBP_EFFORT, alphaQuality: 100 })
+      .toBuffer()
 
-    const webpStat = fs.statSync(outputWebp)
+    fs.writeFileSync(outputWebpCdn, webpBuf)
+    fs.writeFileSync(outputWebpLocal, webpBuf)
+
+    const webpStat = fs.statSync(outputWebpCdn)
     totalWebp += webpStat.size
 
-    // 2. Generate compressed PNG fallback (for canvas drawImage)
+    // 2. Generate compressed PNG fallback (for canvas drawImage) — CDN only
     const pngBuf = await sharp(inputPng)
       .png({ compressionLevel: 9, quality: PNG_QUALITY, effort: PNG_EFFORT })
       .toBuffer()

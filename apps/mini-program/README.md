@@ -22,7 +22,7 @@ This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 
 ## Source-of-Truth Entry Points
 
-- `src/app.ts` — app lifecycle entry (launch, providers, pending-order resume bridge)
+- `src/app.ts` — app lifecycle entry (launch, providers, `AutoLoginBridge` for silent returning-user re-auth, pending-order resume bridge)
 - `src/app.config.ts` — consumes main package pages, subpackages, and `preloadRule` from `lib/onboarding/onboardingRoutes.ts` + tab config from `lib/navigation/tabBarConfig.ts`
 - `src/lib/onboarding/onboardingRoutes.ts` — **register new pages here** (main package list, onboarding subpackage under `pages/onboarding`, preload rules)
 - `src/lib/api/api.ts` — mini-program auth/API bootstrap surface (`authenticateMiniProgramUser`, `authenticateMiniProgramUserWithTest`, `getUserState`)
@@ -43,7 +43,7 @@ src/
 │   ├── connections/     # Tab 2: "连接" — matched group & social connections
 │   ├── profile/         # Tab 3: "我的" — user profile & settings
 │   ├── center-hub/      # Tab 4 (center): "进行中" — dynamic hub for active events, pending registrations, and empty state
-│   ├── index/           # Landing / splash page (cold entry)
+│   ├── index/           # Landing / splash page (cold entry). Renders `AutoLoginBridge` silent re-auth; unified redirect effect routes authenticated users → `nextStep` and guests with incomplete anonymous assessment → personality test. 5s navigation safety timeout prevents stuck CTA on subpackage download hang.
 │   ├── login/           # WeChat login entry for returning users
 │   ├── onboarding/      # Subpackage: onboarding flow
 │   ├── blind-box-payment/
