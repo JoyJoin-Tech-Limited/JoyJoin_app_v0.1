@@ -243,12 +243,13 @@ export default function AdminEventPoolsPage() {
       console.error("Error creating event pool:", error);
       let description = "无法创建活动池，请重试";
       if (error?.message) {
-        // apiRequest throws: "401: {\"message\":\"...\"}"
+        // apiRequest throws: "401: {\"message\":\"...\",\"error\":\"...\"}"
         const jsonMatch = error.message.match(/\{.*\}/s);
         if (jsonMatch) {
           try {
             const parsed = JSON.parse(jsonMatch[0]);
-            description = parsed.message || parsed.error || description;
+            // Prefer detailed error over generic message
+            description = parsed.error || parsed.message || description;
           } catch {
             description = error.message;
           }
@@ -286,7 +287,7 @@ export default function AdminEventPoolsPage() {
         if (jsonMatch) {
           try {
             const parsed = JSON.parse(jsonMatch[0]);
-            description = parsed.message || parsed.error || description;
+            description = parsed.error || parsed.message || description;
           } catch {
             description = error.message;
           }

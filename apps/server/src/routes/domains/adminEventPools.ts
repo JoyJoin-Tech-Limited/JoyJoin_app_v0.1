@@ -161,7 +161,7 @@ export function registerAdminEventPoolRoutes(app: Express): void {
         adminRole: (req as any).adminRole,
         targetEntityType: "event_pool",
         targetEntityId: pool.id,
-        after: { title: pool.title, city: pool.city, dateTime: pool.dateTime },
+        after: { title: pool.title, city: pool.city, dateTime: pool.dateTime?.toISOString?.() ?? pool.dateTime },
       });
 
       const { generateAndSavePoolCardCopy } = await import("../../ai/workers/poolCardCopyWorker");
@@ -171,10 +171,34 @@ export function registerAdminEventPoolRoutes(app: Express): void {
 
       res.json(pool);
     } catch (error: any) {
-      logger.error("Error creating event pool", { error: String(error) });
-      res.status(400).json({
-        message: "Failed to create event pool",
-        error: error?.message,
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      logger.error("Error creating event pool", {
+        error: errorMessage,
+        stack: errorStack,
+        body: req.body,
+        createdBy: req.adminAccount?.id ?? req.session?.userId ?? null,
+      });
+
+      // Distinguish validation errors from DB/runtime errors
+      if (error?.name === "ZodError") {
+        return res.status(400).json({
+          message: "活动池信息格式不正确",
+          error: error.issues?.map((i: any) => `${i.path.join('.')}: ${i.message}`).join("; ") || errorMessage,
+        });
+      }
+
+      // Postgres FK / constraint / type errors
+      if (errorMessage?.includes("violates foreign key constraint")) {
+        return res.status(500).json({
+          message: "数据库外键约束冲突：创建者ID无效。请联系技术团队。",
+          error: errorMessage,
+        });
+      }
+
+      res.status(500).json({
+        message: "创建活动池失败，请稍后重试",
+        error: errorMessage,
       });
     }
   });
