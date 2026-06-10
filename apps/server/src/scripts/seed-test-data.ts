@@ -100,7 +100,6 @@ const TEST_USERS = [
     wechatOpenId: "test_openid_008",
   },
 ];
-];
 
 const TEST_ADMIN = {
   username: "test_admin_seed",
