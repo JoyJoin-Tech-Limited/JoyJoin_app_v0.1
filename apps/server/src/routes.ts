@@ -172,11 +172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerProfessionUnderstandingRoutes(app);
   registerMonitoringWebhookRoutes(app);
 
-  //   Test Admin API — only registered in APP_MODE=test
-  if (isTestMode()) {
-    registerTestAdminRoutes(app);
-    logger.info("[Routes] Test mode admin API registered");
-  }
+  registerTestAdminRoutes(app);
 
   return httpServer;
 }

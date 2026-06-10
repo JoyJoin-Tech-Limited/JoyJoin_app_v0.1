@@ -1,6 +1,10 @@
 // Load environment variables from .env file (MUST be first)
 import "dotenv/config";
 
+process.on('unhandledRejection', (reason) => {
+  console.error('[Server] Unhandled Rejection:', reason);
+});
+
 import express, { type Request } from "express";
 import cors from "cors";
 import helmet from "helmet";

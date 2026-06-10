@@ -5,55 +5,16 @@ import { storage } from "../../storage";
 import { authEndpointLimiter } from "../../rateLimiter";
 import { logger } from "../../lib/logger";
 import { sanitizeAuthUser } from "../../auth/sanitizeAuthUser";
+import { isTestMode } from "../../auth/policy";
 import type { AuthUserResponse } from "@shared/api";
 import type { User } from "@shared/schema";
 import { buildAuthUserResponse } from "../../lib/buildAuthUserResponse";
 import { computeOnboardingNextStep } from "../../lib/computeOnboardingNextStep";
 import { getFeatureFlag } from "../../lib/featureFlags";
-import { getAuthStrategy, isTestMode } from "../../auth/getAuthStrategy";
-
 export function registerAuthRoutes(app: Express): void {
-  // Unified login endpoint — delegates to strategy based on APP_MODE
-  app.post('/api/auth/login', async (req: Request, res) => {
-    try {
-      const strategy = getAuthStrategy();
-      const result = await strategy.login(req, req.body);
-      if (result.success) {
-        res.json({ success: true, sessionToken: result.sessionToken, user: result.user });
-      } else {
-        res.status(401).json({ success: false, error: result.error });
-      }
-    } catch (error) {
-      logger.error("[Auth] Unified login error", { error: String(error) });
-      res.status(500).json({ success: false, error: "登录失败，请稍后重试" });
-    }
-  });
-
-  // Test mode register endpoint
-  if (isTestMode()) {
-    app.post('/api/auth/register', async (req: Request, res) => {
-      try {
-        const { LocalAuthStrategy } = await import("../../auth/localAuthStrategy");
-        const strategy = new LocalAuthStrategy();
-        const result = await strategy.register(req, req.body);
-        if (result.success) {
-          res.json({ success: true, sessionToken: result.sessionToken, user: result.user });
-        } else {
-          res.status(400).json({ success: false, error: result.error });
-        }
-      } catch (error) {
-        logger.error("[Auth] Registration error", { error: String(error) });
-        res.status(500).json({ success: false, error: "注册失败，请稍后重试" });
-      }
-    });
-  }
-
-  // Apply rate limiting to auth endpoints before registering auth routes
-  // This protects against brute-force and abuse of login/token endpoints
-  app.use("/api/auth/wechat", authEndpointLimiter);
-
-  // WeChat auth setup — only in production mode
+  // WeChat auth setup — skipped in test mode (phone+password login instead)
   if (!isTestMode()) {
+    app.use("/api/auth/wechat", authEndpointLimiter);
     setupWechatAuth(app);
   }
 
@@ -181,6 +142,110 @@ export function registerAuthRoutes(app: Express): void {
       res.status(500).json({ message: "Dev login failed" });
     }
   });
+
+  // ── Phone+password auth (dev/test accounts, always available) ───────────
+  app.post('/api/auth/login', async (req: Request, res) => {
+      try {
+        const { phone, password } = req.body;
+        if (!phone || !password) {
+          return res.status(400).json({ message: "手机号和密码不能为空" });
+        }
+
+        const users = await storage.getUserByPhone(phone);
+        if (!users || users.length === 0) {
+          return res.status(401).json({ message: "手机号或密码错误" });
+        }
+
+        const user = users[0];
+        if (!user.password) {
+          return res.status(401).json({ message: "该账号未设置密码，请使用微信登录" });
+        }
+
+        const bcrypt = await import('bcrypt');
+        const isValid = await bcrypt.compare(password, user.password);
+        if (!isValid) {
+          return res.status(401).json({ message: "手机号或密码错误" });
+        }
+
+        await new Promise<void>((resolve, reject) => {
+          req.session.regenerate((err: any) => {
+            if (err) return reject(err);
+            req.session.userId = user.id;
+            req.session.save((saveErr: any) => {
+              if (saveErr) return reject(saveErr);
+              resolve();
+            });
+          });
+        });
+
+        logger.info("[Test Auth] Login success", { userId: user.id });
+        res.json({
+          success: true,
+          isNewUser: false,
+          user: sanitizeAuthUser(user),
+          sessionToken: req.sessionID,
+        });
+      } catch (error: any) {
+        logger.error("[Test Auth] Login error", { error: String(error) });
+        res.status(500).json({ message: "登录失败" });
+      }
+    });
+
+    app.post('/api/auth/register', async (req: Request, res) => {
+      try {
+        const { phone, password, displayName, gender, archetype } = req.body;
+        if (!phone || !password) {
+          return res.status(400).json({ message: "手机号和密码为必填项" });
+        }
+
+        const existing = await storage.getUserByPhone(phone);
+        if (existing && existing.length > 0) {
+          return res.status(409).json({ message: "该手机号已注册" });
+        }
+
+        const bcrypt = await import('bcrypt');
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const user = await storage.createUserWithPhone({
+          phoneNumber: phone,
+          email: `test_${phone}@joyjoin.test`,
+          firstName: displayName || phone,
+          lastName: "",
+        });
+
+        await storage.updateUser(user.id, {
+          password: hashedPassword,
+          displayName: displayName || phone,
+          ...(gender ? { gender } : {}),
+          ...(archetype ? {
+            primaryArchetype: archetype,
+            hasCompletedPersonalityTest: true,
+          } : {}),
+        });
+
+        await new Promise<void>((resolve, reject) => {
+          req.session.regenerate((err: any) => {
+            if (err) return reject(err);
+            req.session.userId = user.id;
+            req.session.save((saveErr: any) => {
+              if (saveErr) return reject(saveErr);
+              resolve();
+            });
+          });
+        });
+
+        const updatedUser = await storage.getUser(user.id) ?? user;
+        logger.info("[Test Auth] Register success", { userId: user.id });
+        res.json({
+          success: true,
+          user: sanitizeAuthUser(updatedUser),
+          sessionToken: req.sessionID,
+        });
+      } catch (error: any) {
+        logger.error("[Test Auth] Register error", { error: String(error) });
+        res.status(500).json({ message: "注册失败" });
+      }
+    });
 
   // Complete onboarding - sets registration flags and user profile data
   app.post('/api/auth/complete-onboarding', requireAuth, async (req: Request, res) => {

@@ -185,6 +185,90 @@
     text-align: center;
     line-height: 1.5;
   }
+
+  // ── Test login toggle ──────────────────────────────────────────────
+  &__test-toggle {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    width: 100%;
+    padding: $spacing-xs 0;
+    cursor: pointer;
+  }
+
+  &__divider-line {
+    flex: 1;
+    height: 1rpx;
+    background: rgba($color-text-secondary, 0.12);
+  }
+
+  &__test-toggle-text {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  // ── Test login form ────────────────────────────────────────────────
+  &__test-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  &__test-field {
+    width: 100%;
+  }
+
+  &__test-input {
+    width: 100%;
+    height: $button-height;
+    border-radius: $button-radius;
+    background: rgba($color-text-primary, 0.04);
+    padding: 0 $spacing-md;
+    font-size: $font-size-md;
+    color: $color-text-primary;
+    caret-color: $color-primary;
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+  }
+
+  &__test-submit {
+    @include type-brand-cta-label;
+    width: 100%;
+    min-height: max($button-height, $cta-min-tap);
+    height: $button-height;
+    border-radius: $button-radius;
+    background: $color-primary;
+    color: $color-text-white;
+    font-size: $font-size-md;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6rpx 20rpx rgba($color-primary, 0.28);
+    transition: transform 0.12s ease, opacity 0.12s ease, box-shadow 0.12s ease;
+
+    &:active {
+      transform: scale(0.98);
+      opacity: 0.92;
+    }
+
+    &[disabled] {
+      opacity: 0.5;
+    }
+
+    &::after {
+      border: none;
+    }
+  }
+
+  &__test-submit-hover {
+    opacity: 0.88;
+    transform: scale(0.98);
+  }
 }
 
 @keyframes login-ring-pulse {

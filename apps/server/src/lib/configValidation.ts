@@ -145,14 +145,20 @@ export function getDirectMiniProgramAppIdConsistencyIssue(
     : DIRECT_MINI_PROGRAM_APP_ID_MISMATCH_MESSAGE;
 }
 
+const WECHAT_CONFIG_KEYS = new Set(["WECHAT_APPID", "WECHAT_SECRET"]);
+
 function collectBaseConfigIssues(
   env: NodeJS.ProcessEnv,
   isProduction: boolean,
+  isTestMode: boolean = false,
 ): ConfigIssueBuckets {
   const errors: string[] = [];
   const warnings: string[] = [];
 
   for (const spec of CONFIG_SPECS) {
+    if (isTestMode && (WECHAT_CONFIG_KEYS.has(spec.key) || spec.key === "DATABASE_URL")) {
+      continue;
+    }
     const value = env[spec.key];
     const missing = value === undefined || value.trim() === "";
 
@@ -249,12 +255,14 @@ function collectPaymentConfigIssues(
 
 export function getConfigValidationIssues(
   env: NodeJS.ProcessEnv = process.env,
-  options?: { productionMode?: boolean },
+  options?: { productionMode?: boolean; testMode?: boolean },
 ): ConfigIssueBuckets {
   const isProduction =
     options?.productionMode ?? (env.NODE_ENV ?? "development") === "production";
+  const isTestMode =
+    options?.testMode ?? (env.APP_MODE ?? "production") === "test";
 
-  const base = collectBaseConfigIssues(env, isProduction);
+  const base = collectBaseConfigIssues(env, isProduction, isTestMode);
   const payment = collectPaymentConfigIssues(env, isProduction);
 
   return {
@@ -287,8 +295,11 @@ export function validateConfig(
   const env = process.env;
   const nodeEnv = env.NODE_ENV ?? "development";
   const isProduction = nodeEnv === "production";
+  const appMode = env.APP_MODE ?? "production";
+  const isTestMode = appMode === "test";
   const { errors, warnings } = getConfigValidationIssues(env, {
     productionMode: isProduction,
+    testMode: isTestMode,
   });
 
   // Emit warnings

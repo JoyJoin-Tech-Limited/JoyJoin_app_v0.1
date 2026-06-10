@@ -220,6 +220,7 @@ export function registerAdminAuthRoutes(app: Express) {
           username: adminAccount.username,
           role: adminAccount.role,
           displayName: adminAccount.displayName,
+          sessionToken: req.sessionID,
         });
       }
 
@@ -237,6 +238,7 @@ export function registerAdminAuthRoutes(app: Express) {
           return res.json({
             message: "登录成功",
             ...legacyAdmin,
+            sessionToken: req.sessionID,
           });
         }
       }

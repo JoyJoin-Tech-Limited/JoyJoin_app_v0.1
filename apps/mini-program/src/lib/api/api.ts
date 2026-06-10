@@ -327,6 +327,36 @@ export async function authenticateMiniProgramUserWithTest(input: {
  * Fetch the current authenticated user's state, including the server-calculated
  * `nextStep` for driving onboarding/post-login navigation.
  */
+/**
+ * Authenticate via phone+password (test accounts, not WeChat).
+ * Calls POST /api/auth/login and stores the returned sessionToken.
+ */
+export async function authenticateMiniProgramUserWithPhone(input: {
+  phone: string
+  password: string
+}): Promise<{ user: AuthUserResponse['user'] }> {
+  const data = await apiRequest<{
+    success: boolean
+    user: AuthUserResponse['user']
+    sessionToken: string
+  }>({
+    path: '/api/auth/login',
+    method: 'POST',
+    handleUnauthorized: false,
+    data: { phone: input.phone, password: input.password },
+  })
+
+  if (!data.success) {
+    throw createApiError('手机号或密码错误')
+  }
+
+  if (typeof data.sessionToken === 'string' && data.sessionToken.length > 0) {
+    setSessionToken(data.sessionToken)
+  }
+
+  return { user: data.user }
+}
+
 export async function getUserState(): Promise<AuthUserResponse> {
   return apiRequest<AuthUserResponse>({ path: '/api/auth/user' })
 }

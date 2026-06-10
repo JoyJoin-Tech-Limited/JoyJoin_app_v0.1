@@ -35,6 +35,10 @@ export function canUseMockWechatAuth(code: string): boolean {
   return isNonProductionEnvironment() && code.startsWith(WECHAT_TEST_CODE_PREFIX);
 }
 
+export function isTestMode(): boolean {
+  return (process.env.APP_MODE ?? "production") === "test";
+}
+
 export function assertProductionAuthDebugSurfaceAllowed(surfaceName: string): void {
   if (isProductionEnvironment() && !readFlag(PROD_AUTH_DEBUG_OVERRIDE_FLAG)) {
     throw new Error(

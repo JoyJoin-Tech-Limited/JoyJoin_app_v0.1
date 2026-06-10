@@ -1,24 +1,16 @@
 #!/usr/bin/env node
 /**
  * Seed Test Data
- * 测试数据种子脚本
  *
  * Idempotently seeds the database with known test entities for QA and E2E use.
- * Safe to run multiple times — uses upsert/merge patterns where possible.
+ * Safe to run multiple times — uses phone-based upsert patterns.
  *
  * Environment:
- *   DATABASE_URL  (loaded from ../../.env via --env-file)
+ *   DATABASE_URL (or TEST_DATABASE_URL when APP_MODE=test)
  *
  * Usage:
  *   node --env-file=../../.env --import tsx/esm src/scripts/seed-test-data.ts
- *
- * Known test identifiers (stable for QA reference):
- *   - Test User phone:  +8613800000001  (profile complete)
- *   - Test User phone:  +8613800000002  (profile incomplete)
- *   - Test Admin:       test_admin_seed / TestAdmin123!
- *   - Test Event Pool:  "QA 测试饭局 — 周五夜聊"
- *   - Beta feature flags: personalityShareEnabled, personalitySlotAnimationEnabled,
- *     matchingLiveReveal, promoBannerEnabled, smartProfession all set to true
+ *   APP_MODE=test node --env-file=../../.env --import tsx/esm src/scripts/seed-test-data.ts
  */
 import { eq } from "drizzle-orm";
 import { db } from "../db";
@@ -26,7 +18,6 @@ import { users, eventPools, adminAccounts, featureFlags } from "@joyjoin/shared"
 import bcrypt from "bcrypt";
 
 const COMMON_PASSWORD = "test123456";
-
 const TEST_USERS = [
   {
     phoneNumber: "+8613800000001",
@@ -109,6 +100,7 @@ const TEST_USERS = [
     wechatOpenId: "test_openid_008",
   },
 ];
+];
 
 const TEST_ADMIN = {
   username: "test_admin_seed",
@@ -117,19 +109,40 @@ const TEST_ADMIN = {
   displayName: "QA Test Admin",
 };
 
+const BETA_FEATURE_FLAGS: Array<{ key: string; value: string; label: string }> = [
+  { key: "personalityShareEnabled", value: "true", label: "Personality share poster" },
+  { key: "personalitySlotAnimationEnabled", value: "true", label: "Personality slot animation" },
+  { key: "matchingLiveReveal", value: "true", label: "Matching live reveal" },
+  { key: "promoBannerEnabled", value: "true", label: "Hero promo banner" },
+  { key: "smartProfession", value: "true", label: "Smart profession AI classification" },
+  { key: "restartOnboarding", value: "false", label: "Onboarding restart (off by default)" },
+  { key: "onboardingForceSkip", value: "false", label: "Onboarding force skip (off by default)" },
+  { key: "socialIcebreakerClientForceEnd", value: "false", label: "Icebreaker force-end kill-switch (off by default)" },
+  { key: "runPlanTemplatesEnabled", value: "false", label: "Run plan templates (off by default)" },
+  { key: "paymentsEnabled", value: "false", label: "Payments (set true + WeChat Pay creds for payment flow)" },
+];
+
 async function seedTestUsers() {
   const passwordHash = await bcrypt.hash(COMMON_PASSWORD, 10);
-  const results = [];
-
+  const results: Array<{ id: string; phoneNumber: string }> = [];
   for (const userData of TEST_USERS) {
     const existing = await db
-      .select({ id: users.id })
+      .select({ id: users.id, phoneNumber: users.phoneNumber })
       .from(users)
       .where(eq(users.phoneNumber, userData.phoneNumber))
       .limit(1);
 
     if (existing.length > 0) {
-      console.log(`  [skip] User exists: ${userData.phoneNumber} (${existing[0].id})`);
+      await db.update(users).set({
+        password: passwordHash,
+        displayName: userData.displayName,
+        gender: userData.gender,
+        currentCity: userData.currentCity,
+        primaryArchetype: userData.primaryArchetype,
+        hasCompletedProfileSetup: userData.hasCompletedProfileSetup,
+        hasCompletedPersonalityTest: userData.hasCompletedPersonalityTest,
+      }).where(eq(users.id, existing[0].id));
+      console.log(`  [update] User: ${userData.phoneNumber} (${existing[0].id})`);
       results.push(existing[0]);
       continue;
     }
@@ -138,10 +151,10 @@ async function seedTestUsers() {
       .insert(users)
       .values({
         phoneNumber: userData.phoneNumber,
+        password: passwordHash,
         displayName: userData.displayName,
         gender: userData.gender,
         currentCity: userData.currentCity,
-        password: passwordHash,
         primaryArchetype: userData.primaryArchetype,
         hasCompletedProfileSetup: userData.hasCompletedProfileSetup,
         hasCompletedPersonalityTest: userData.hasCompletedPersonalityTest,
@@ -186,7 +199,6 @@ async function seedTestAdmin() {
 
 async function seedTestEventPool(createdByUserId: string) {
   const poolTitle = "QA 测试饭局 — 周五夜聊";
-
   const existing = await db
     .select({ id: eventPools.id })
     .from(eventPools)
@@ -223,19 +235,6 @@ async function seedTestEventPool(createdByUserId: string) {
   console.log(`  [create] Pool: "${poolTitle}" (${inserted.id})`);
   return inserted;
 }
-
-const BETA_FEATURE_FLAGS: Array<{ key: string; value: string; label: string }> = [
-  { key: "personalityShareEnabled", value: "true", label: "Personality share poster" },
-  { key: "personalitySlotAnimationEnabled", value: "true", label: "Personality slot animation" },
-  { key: "matchingLiveReveal", value: "true", label: "Matching live reveal" },
-  { key: "promoBannerEnabled", value: "true", label: "Hero promo banner" },
-  { key: "smartProfession", value: "true", label: "Smart profession AI classification" },
-  { key: "restartOnboarding", value: "false", label: "Onboarding restart (off by default)" },
-  { key: "onboardingForceSkip", value: "false", label: "Onboarding force skip (off by default)" },
-  { key: "socialIcebreakerClientForceEnd", value: "false", label: "Icebreaker force-end kill-switch (off by default)" },
-  { key: "runPlanTemplatesEnabled", value: "false", label: "Run plan templates (off by default)" },
-  { key: "paymentsEnabled", value: "false", label: "Payments (set true + WeChat Pay creds for payment flow)" },
-];
 
 async function seedBetaFeatureFlags() {
   let created = 0;

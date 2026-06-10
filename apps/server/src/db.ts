@@ -36,9 +36,7 @@ function createUnavailableDb(): WrappedDb {
 
 const databaseUrl = resolveDatabaseUrl();
 
-export const pool = databaseUrl
-  ? new Pool({ connectionString: databaseUrl })
-  : null;
+export const pool = new Pool({ connectionString: databaseUrl });
 
 const wrappedDb = pool
   ? wrapDb(drizzle(pool, { schema }))

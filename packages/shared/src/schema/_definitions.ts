@@ -10,6 +10,7 @@ import {
   boolean,
   date,
   numeric,
+  real,
   serial,
   unique,
   uniqueIndex,
@@ -1212,6 +1213,13 @@ export const venues = pgTable("venues", {
   capacity: integer("capacity").default(1), // How many events can run at same time (concurrent events)
   seatingCapacity: integer("seating_capacity").default(1), // Max people the venue can seat per event
   operatingHours: text("operating_hours"), // e.g., "11:00-22:00"
+  
+  // Location / geographic fields
+  latitude: real("latitude"),
+  longitude: real("longitude"),
+  districtId: text("district_id"),
+  clusterId: text("cluster_id"),
+  notes: text("notes"),
   
   // ============ 新增字段：合作场地优惠系统 ============
   // 消费信息（使用priceRange预设档次）
