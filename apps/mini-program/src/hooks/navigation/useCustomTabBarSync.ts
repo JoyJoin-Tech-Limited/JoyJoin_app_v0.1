@@ -30,14 +30,20 @@ interface UseCustomTabBarSyncOptions {
   events?: BlindBoxEventSummary[]
 }
 
+function getNativeTabBar(page: Taro.PageInstance | null | undefined): NativeCustomTabBar | undefined {
+  if (!page) return undefined
+  // Bypass Taro.getTabBar: it expects $taroInstances (Taro-managed tab bar only).
+  // JoyJoin ships a native WeChat component, so we call getTabBar() directly.
+  const tabBar = (page as unknown as { getTabBar(): NativeCustomTabBar | undefined }).getTabBar()
+  return tabBar
+}
+
 export function useCustomTabBarSync({
   selectedIndex,
   enabled = true,
   poolRegistrations: providedPoolRegistrations,
   events: providedEvents,
 }: UseCustomTabBarSyncOptions) {
-  const page = useMemo(() => Taro.getCurrentInstance().page, [])
-
   const { data: queriedPoolRegistrations } = useQuery({
     queryKey: ['mini-program', 'my-pool-registrations'],
     queryFn: () => getMyPoolRegistrations(apiRequest),
@@ -76,22 +82,18 @@ export function useCustomTabBarSync({
   )
 
   useDidShow(() => {
-    if (!enabled || !page) {
-      return
-    }
-
-    const tabBar = Taro.getTabBar<NativeCustomTabBar>(page)
+    if (!enabled) return
+    const page = Taro.getCurrentInstance().page
+    const tabBar = getNativeTabBar(page)
     tabBar?.syncState(syncState)
   })
 
   useEffect(() => {
-    if (!enabled || !page) {
-      return
-    }
-
-    const tabBar = Taro.getTabBar<NativeCustomTabBar>(page)
+    if (!enabled) return
+    const page = Taro.getCurrentInstance().page
+    const tabBar = getNativeTabBar(page)
     tabBar?.syncState(syncState)
-  }, [enabled, page, syncState])
+  }, [enabled, syncState])
 
   return {
     centerState: syncState.center,

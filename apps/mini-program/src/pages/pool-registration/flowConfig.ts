@@ -1,5 +1,5 @@
 import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
-import { INTENT_OPTIONS } from '@shared/constants'
+import { INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION } from '@shared/constants'
 
 export type PoolEventType = '饭局' | '酒局'
 
@@ -12,11 +12,20 @@ export interface FlowOption {
 
 export type BriefContent = Pick<PreJoinVibeBrief, 'insight' | 'matchingPromise' | 'reasons'>
 
-export const INTENT_FLOW_OPTIONS: FlowOption[] = INTENT_OPTIONS.map((option) => ({
-  value: option.value,
-  label: option.label,
-  description: option.subtitle,
-}))
+export const INTENT_FLOW_OPTIONS: FlowOption[] = [
+  ...INTENT_OPTIONS.map((option) => ({
+    value: option.value,
+    label: option.label,
+    emoji: option.emoji,
+    description: option.subtitle,
+  })),
+  {
+    value: INTENT_FLEXIBLE_OPTION.value,
+    label: INTENT_FLEXIBLE_OPTION.label,
+    emoji: INTENT_FLEXIBLE_OPTION.emoji,
+    description: INTENT_FLEXIBLE_OPTION.subtitle,
+  },
+]
 
 export const LANGUAGE_OPTIONS: FlowOption[] = [
   { value: '粤语', label: '粤语', description: '更容易拉近距离' },

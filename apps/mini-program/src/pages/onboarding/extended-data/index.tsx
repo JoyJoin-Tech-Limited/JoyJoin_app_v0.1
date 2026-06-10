@@ -51,10 +51,13 @@ const INTEREST_LEVEL_META: Array<{
   label: string
   shortLabel: string
   description: string
+  color: string
+  bgColor: string
+  borderColor: string
 }> = [
-  { level: 1, label: '感兴趣', shortLabel: '已标记', description: '加入你的兴趣画像' },
-  { level: 2, label: '很热衷', shortLabel: '升温中', description: '更容易聊到停不下来' },
-  { level: 3, label: '必聊项', shortLabel: '高热', description: '优先匹配同好，预览重点展示' },
+  { level: 1, label: '感兴趣', shortLabel: '已标记', description: '加入你的兴趣画像', color: '#8B5CF6', bgColor: 'rgba(139,92,246,0.08)', borderColor: 'rgba(139,92,246,0.15)' },
+  { level: 2, label: '很热衷', shortLabel: '升温中', description: '更容易聊到停不下来', color: '#7C3AED', bgColor: 'rgba(124,58,237,0.14)', borderColor: 'rgba(124,58,237,0.35)' },
+  { level: 3, label: '必聊项', shortLabel: '高热', description: '优先匹配同好，预览重点展示', color: '#6D28D9', bgColor: 'rgba(109,40,217,0.22)', borderColor: 'rgba(109,40,217,0.55)' },
 ]
 
 const activeInterests = INTEREST_TAXONOMY.filter((item) => item.active)
@@ -121,7 +124,6 @@ export default function ExtendedDataPage() {
   const selectedCount = selectionPreview.totalSelections
   const topPriorityCount = selectionPreview.topPriorities?.length ?? 0
 
-  // Meter celebration when threshold first reached
   const prevSelectedCountRef = useRef(selectedCount)
   useEffect(() => {
     const prev = prevSelectedCountRef.current
@@ -169,7 +171,7 @@ export default function ExtendedDataPage() {
   }, [selectedCount, topPriorityCount])
 
   const footerTitle = canSubmit
-    ? '热度达标，可以生成预览了 ✨'
+    ? '热度达标，可以生成预览了'
     : `还差 ${Math.max(MIN_INTERESTS - selectedCount, 0)} 项，就能继续预览`
   const footerSubtitle =
     selectedCount === 0
@@ -295,14 +297,15 @@ export default function ExtendedDataPage() {
         </Text>
       </View>
 
-      <XiaoyueChatBubble
-        content={coachCopy}
-        pose='pointing'
-        horizontal
-        showGlow
-        tail
-        className='extended-data__stage extended-data__stage--2'
-      />
+      <View className='extended-data__coach extended-data__stage extended-data__stage--2'>
+        <XiaoyueChatBubble
+          content={coachCopy}
+          pose='pointing'
+          horizontal
+          showGlow
+          tail
+        />
+      </View>
       <Image
         src={getXiaoyueAsset('pointing')}
         mode='aspectFit'
@@ -315,71 +318,25 @@ export default function ExtendedDataPage() {
         }}
       />
 
-      <Card className='extended-data__summary extended-data__stage extended-data__stage--3'>
-        <View className='extended-data__summary-stats'>
-          <View className='extended-data__summary-stat'>
-            <Text className='extended-data__summary-value'>{selectedCount}</Text>
-            <Text className='extended-data__summary-label'>已选兴趣</Text>
-          </View>
-          <View className='extended-data__summary-stat'>
-            <Text className='extended-data__summary-value'>{topPriorityCount}</Text>
-            <Text className='extended-data__summary-label'>重点兴趣</Text>
-          </View>
-          <View className='extended-data__summary-stat'>
-            <Text className='extended-data__summary-value'>{selectionPreview.totalHeat}</Text>
-            <Text className='extended-data__summary-label'>热度总值</Text>
-          </View>
-        </View>
-
-        {highlightedSelections.length > 0 ? (
-          <View className='extended-data__selection-tray'>
-            {highlightedSelections.map((selection) => {
-              const meta = getInterestLevelMeta(selection.level)
-              return (
-                <View
-                  key={selection.topicId}
-                  className={[
-                    'extended-data__selection-chip',
-                    `extended-data__selection-chip--level-${selection.level}`,
-                  ].join(' ')}
-                >
-                  <Text className='extended-data__selection-chip-label'>{selection.label}</Text>
-                  <Text className='extended-data__selection-chip-meta'>{meta?.shortLabel}</Text>
-                </View>
-              )
-            })}
-          </View>
-        ) : (
-          <Text className='extended-data__selection-empty'>
-            还没开始选，先点一项你想在活动里聊起来的话题。
-          </Text>
-        )}
-
-        {dominantCategories.length > 0 ? (
-          <View className='extended-data__dominant-categories'>
-            {dominantCategories.map((categoryId) => {
-              const category = categoryId as MacroCategory
-              return (
-                <View key={categoryId} className='extended-data__dominant-chip'>
-                  <View
-                    className='extended-data__dominant-chip-dot'
-                    style={{ backgroundColor: CATEGORY_META[category]?.dotColor || CATEGORY_COLORS.food }}
-                  />
-                  <Text className='extended-data__dominant-chip-text'>
-                    {MACRO_CATEGORY_LABELS[category]}
-                  </Text>
-                </View>
-              )
-            })}
-          </View>
-        ) : null}
-      </Card>
-
-      <View className='extended-data__legend extended-data__stage extended-data__stage--4'>
-        {INTEREST_LEVEL_META.map((item) => (
-          <View key={item.level} className='extended-data__legend-pill'>
-            <Text className='extended-data__legend-pill-title'>{item.label}</Text>
-            <Text className='extended-data__legend-pill-text'>{item.description}</Text>
+      <View className='extended-data__heat-guide extended-data__stage extended-data__stage--3'>
+        {INTEREST_LEVEL_META.map((item, index) => (
+          <View key={item.level} className='extended-data__heat-guide-step'>
+            <View
+              className='extended-data__heat-guide-dot'
+              style={{
+                backgroundColor: item.bgColor,
+                borderColor: item.borderColor,
+              }}
+            />
+            <View className='extended-data__heat-guide-text'>
+              <Text className='extended-data__heat-guide-label'>{item.label}</Text>
+              <Text className='extended-data__heat-guide-desc'>{item.description}</Text>
+            </View>
+            {index < INTEREST_LEVEL_META.length - 1 && (
+              <View className='extended-data__heat-guide-arrow'>
+                <Text className='extended-data__heat-guide-arrow-text'>&rarr;</Text>
+              </View>
+            )}
           </View>
         ))}
       </View>
@@ -397,14 +354,23 @@ export default function ExtendedDataPage() {
                       <JoyJoinIcon
                         emoji={INTEREST_CATEGORY_EMOJIS[category]}
                         tier='category'
-                        size={32}
+                        size={36}
                         className='extended-data__category-icon'
                       />
-                      <Text className='extended-data__category-title'>
-                        {MACRO_CATEGORY_LABELS[category]}
-                      </Text>
+                      <View className='extended-data__category-title-group'>
+                        <Text className='extended-data__category-title'>
+                          {MACRO_CATEGORY_LABELS[category]}
+                        </Text>
+                        <Text className='extended-data__category-description'>
+                          {CATEGORY_META[category]?.description}
+                        </Text>
+                      </View>
                     </View>
-                    <Text className='extended-data__category-count'>{selectedInCategory} 已选</Text>
+                    {selectedInCategory > 0 ? (
+                      <Text className='extended-data__category-count'>
+                        {selectedInCategory} 已选
+                      </Text>
+                    ) : null}
                   </View>
 
                   <View className='extended-data__interest-grid'>
@@ -423,11 +389,29 @@ export default function ExtendedDataPage() {
                             .filter(Boolean)
                             .join(' ')}
                           onClick={() => toggleInterestLevel(item.id)}
+                          hoverClass='extended-data__interest-card--pressed'
+                          hoverStayTime={100}
                         >
-                          <Text className='extended-data__interest-label'>{item.label}</Text>
+                          <View className='extended-data__interest-card-top'>
+                            <Text className='extended-data__interest-label'>{item.label}</Text>
+                            {level ? (
+                              <View
+                                className='extended-data__interest-heat-dot'
+                                style={{
+                                  backgroundColor: levelMeta?.color,
+                                  boxShadow: `0 0 8rpx ${levelMeta?.bgColor}`,
+                                }}
+                              />
+                            ) : null}
+                          </View>
                           <Text className='extended-data__interest-meta'>
                             {levelMeta?.shortLabel || '轻点选择'}
                           </Text>
+                          {level === 3 && (
+                            <View className='extended-data__interest-heat-badge'>
+                              <Text className='extended-data__interest-heat-badge-text'>高热</Text>
+                            </View>
+                          )}
                         </View>
                       )
                     })}
@@ -446,6 +430,62 @@ export default function ExtendedDataPage() {
       ) : null}
 
       <View className='extended-data__footer'>
+        <View className='extended-data__footer-summary'>
+          <View className='extended-data__footer-summary-stats'>
+            <View className='extended-data__footer-summary-stat'>
+              <Text className='extended-data__footer-summary-value'>{selectedCount}</Text>
+              <Text className='extended-data__footer-summary-label'>已选兴趣</Text>
+            </View>
+            <View className='extended-data__footer-summary-stat'>
+              <Text className='extended-data__footer-summary-value'>{topPriorityCount}</Text>
+              <Text className='extended-data__footer-summary-label'>重点兴趣</Text>
+            </View>
+            <View className='extended-data__footer-summary-stat'>
+              <Text className='extended-data__footer-summary-value'>{selectionPreview.totalHeat}</Text>
+              <Text className='extended-data__footer-summary-label'>热度总值</Text>
+            </View>
+          </View>
+
+          {highlightedSelections.length > 0 ? (
+            <View className='extended-data__footer-summary-chips'>
+              {highlightedSelections.map((selection) => {
+                const meta = getInterestLevelMeta(selection.level)
+                return (
+                  <View
+                    key={selection.topicId}
+                    className={[
+                      'extended-data__footer-summary-chip',
+                      `extended-data__footer-summary-chip--level-${selection.level}`,
+                    ].join(' ')}
+                  >
+                    <Text className='extended-data__footer-summary-chip-label'>{selection.label}</Text>
+                    <Text className='extended-data__footer-summary-chip-meta'>{meta?.shortLabel}</Text>
+                  </View>
+                )
+              })}
+            </View>
+          ) : null}
+
+          {dominantCategories.length > 0 ? (
+            <View className='extended-data__footer-summary-categories'>
+              {dominantCategories.map((categoryId) => {
+                const category = categoryId as MacroCategory
+                return (
+                  <View key={categoryId} className='extended-data__footer-summary-cat'>
+                    <View
+                      className='extended-data__footer-summary-cat-dot'
+                      style={{ backgroundColor: CATEGORY_META[category]?.dotColor || CATEGORY_COLORS.food }}
+                    />
+                    <Text className='extended-data__footer-summary-cat-text'>
+                      {MACRO_CATEGORY_LABELS[category]}
+                    </Text>
+                  </View>
+                )
+              })}
+            </View>
+          ) : null}
+        </View>
+
         <View className='extended-data__footer-meter'>
           <View className='extended-data__footer-meter-track'>
             <View

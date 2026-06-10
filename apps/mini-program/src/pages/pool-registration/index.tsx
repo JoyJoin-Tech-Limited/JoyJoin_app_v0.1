@@ -1,12 +1,17 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
+import ArchetypeHead from '../../components/mascot/ArchetypeHead'
+import { useStaggerMount } from '../../hooks/useStaggerMount'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
 import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getEventPool, registerForPool, type EventPoolSummary } from '@shared/api'
+import { getEventPool, getMyPoolRegistrations, registerForPool, type EventPoolSummary, type PoolRegistrationSummary } from '@shared/api'
 import { getErrorMessage, type ErrorCode } from '@shared/copy/errorBaselines'
+import { ALL_INTENT_VALUES } from '@shared/constants'
+import { ARCHETYPE_BY_ID } from '@shared/personality'
+import { getArchetypeTokens } from '@shared/archetypeColorTokens'
 import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
 import { apiRequest, type ApiError } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
@@ -71,6 +76,8 @@ const STEP_BUDGET = 1
 const STEP_INTENT = 2
 const STEP_DETAILS = 3
 
+const MAX_INTENTS = 3
+
 const TIER_COPY = {
   budgetStepHelper: '这是报名时最重要的节奏信号之一，悦仔会优先帮你避开预算预期完全不一样的组合。',
 }
@@ -83,6 +90,15 @@ interface ChoiceCardProps {
 }
 
 function ChoiceCard({ option, selected, onClick, compact = false }: ChoiceCardProps) {
+  const handleTap = useCallback(() => {
+    try {
+      Taro.vibrateShort({ type: 'light' })
+    } catch {
+      // decorative
+    }
+    onClick()
+  }, [onClick])
+
   return (
     <View
       className={[
@@ -93,10 +109,17 @@ function ChoiceCard({ option, selected, onClick, compact = false }: ChoiceCardPr
         .filter(Boolean)
         .join(' ')}
       hoverClass='pool-reg__choice-card--hover'
-      onClick={onClick}
+      onClick={handleTap}
     >
       <View className='pool-reg__choice-label-row'>
-        {option.emoji ? <Text className='pool-reg__choice-emoji'>{option.emoji}</Text> : null}
+        {option.emoji ? (
+          <JoyJoinIcon
+            emoji={option.emoji}
+            tier='intent'
+            size={compact ? 36 : 40}
+            className='pool-reg__choice-icon'
+          />
+        ) : null}
         <Text className='pool-reg__choice-title'>{option.label}</Text>
       </View>
       {option.description ? <Text className='pool-reg__choice-desc'>{option.description}</Text> : null}
@@ -111,15 +134,24 @@ interface ChoiceChipProps {
 }
 
 function ChoiceChip({ option, selected, onClick }: ChoiceChipProps) {
+  const handleTap = useCallback(() => {
+    try {
+      Taro.vibrateShort({ type: 'light' })
+    } catch {
+      // decorative
+    }
+    onClick()
+  }, [onClick])
+
   return (
     <View
       className={['pool-reg__chip', selected ? 'pool-reg__chip--active' : '']
         .filter(Boolean)
         .join(' ')}
       hoverClass='pool-reg__chip--hover'
-      onClick={onClick}
+      onClick={handleTap}
     >
-      {option.emoji ? <Text className='pool-reg__chip-emoji'>{option.emoji}</Text> : null}
+      {option.emoji ? <JoyJoinIcon emoji={option.emoji} tier='intent' size={28} className='pool-reg__chip-icon' /> : null}
       <Text className='pool-reg__chip-label'>{option.label}</Text>
     </View>
   )
@@ -145,6 +177,132 @@ function StepPill({ index, label, active, complete }: StepPillProps) {
     >
       <Text className='pool-reg__step-index'>{index}</Text>
       <Text className='pool-reg__step-text'>{label}</Text>
+    </View>
+  )
+}
+
+/** Meta-icon image sources — hoisted to module level to avoid recreation on every render. */
+const META_ICON_SRC: Record<string, string> = {
+  calendar: localAsset('/assets/icons/ui/icon-calendar.webp'),
+  location: localAsset('/assets/icons/ui/icon-location.webp'),
+  people: localAsset('/assets/icons/ui/icon-people.webp'),
+}
+
+/** Proprietary meta icon using bundled UI assets.
+ *  Zero emoji fallback — actual crisp WebP icons shipped in the package. */
+interface EventMetaIconProps {
+  kind: 'type' | 'calendar' | 'location' | 'people'
+}
+function EventMetaIcon({ kind }: EventMetaIconProps) {
+  if (kind === 'type') {
+    // CSS-only target icon — clean, scalable, no emoji, zero failure surface
+    return (
+      <View className='pool-reg__type-icon' aria-role='img' aria-label='活动类型'>
+        <View className='pool-reg__type-icon-ring pool-reg__type-icon-ring--outer' />
+        <View className='pool-reg__type-icon-ring pool-reg__type-icon-ring--inner' />
+        <View className='pool-reg__type-icon-dot' />
+      </View>
+    )
+  }
+  return (
+    <Image
+      className='pool-reg__meta-icon-img'
+      src={META_ICON_SRC[kind]}
+      mode='aspectFit'
+      lazyLoad={false}
+      aria-role='img'
+      aria-label={kind === 'calendar' ? '时间' : kind === 'location' ? '地区' : '报名人数'}
+      onError={() => {
+        // Silently degrade to blank if bundled asset is missing —
+        // the adjacent label text carries the semantic meaning.
+      }}
+    />
+  )
+}
+
+const MAX_CLUSTER_CIRCLES = 20
+const MAX_CIRCLES_PER_ARCHETYPE = 3
+
+/** Archetype avatar cluster — overlapping pills showing crowd composition.
+ *  Scales to 20+ circles by deduplicating, sorting by frequency, and
+ *  rendering multiple circles for dominant archetypes. */
+interface ArchetypeClusterProps {
+  archetypes: string[]
+  totalCount: number
+}
+function ArchetypeCluster({ archetypes, totalCount }: ArchetypeClusterProps) {
+  const distribution = useMemo(() => {
+    if (!archetypes.length) return []
+    const counts = new Map<string, number>()
+    for (const a of archetypes) {
+      counts.set(a, (counts.get(a) ?? 0) + 1)
+    }
+    const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])
+
+    const result: string[] = []
+    for (const [key, count] of sorted) {
+      if (result.length >= MAX_CLUSTER_CIRCLES) break
+      const circles = Math.min(
+        MAX_CIRCLES_PER_ARCHETYPE,
+        Math.max(1, Math.ceil(count / 5)),
+        MAX_CLUSTER_CIRCLES - result.length,
+      )
+      for (let i = 0; i < circles; i++) {
+        result.push(key)
+      }
+    }
+    return result
+  }, [archetypes])
+
+  const hasOverflow = distribution.length >= MAX_CLUSTER_CIRCLES && totalCount > distribution.length
+
+  const topNames = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const a of archetypes) {
+      counts.set(a, (counts.get(a) ?? 0) + 1)
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([key]) => ARCHETYPE_BY_ID[key]?.nameCn)
+      .filter(Boolean)
+  }, [archetypes])
+
+  const labelText =
+    topNames.length > 0
+      ? `已有 ${totalCount} 位伙伴报名，包括${topNames.join('、')}${hasOverflow ? '…' : ''}`
+      : `已有 ${totalCount} 位伙伴报名`
+
+  return (
+    <View className='pool-reg__archetype-cluster'>
+      <View className='pool-reg__archetype-heads'>
+        {distribution.map((key, index) => {
+          const tokens = getArchetypeTokens(key)
+          return (
+            <View
+              key={key + index}
+              className='pool-reg__archetype-head-wrap'
+              style={{
+                borderColor: tokens.primary,
+                backgroundColor: tokens.background,
+                zIndex: distribution.length - index,
+              }}
+            >
+              <ArchetypeHead archetype={key} size={40} />
+            </View>
+          )
+        })}
+        {hasOverflow ? (
+          <View
+            className='pool-reg__archetype-overflow-badge'
+            aria-role='img'
+            aria-label={`还有更多人报名`}
+          >
+            <Text className='pool-reg__archetype-overflow-text'>+</Text>
+          </View>
+        ) : null}
+      </View>
+      <Text className='pool-reg__archetype-cluster-label'>{labelText}</Text>
     </View>
   )
 }
@@ -218,6 +376,7 @@ export default function PoolRegistrationPage() {
   const [error, setError] = useState('')
   const [resumeContext, setResumeContext] = useState<MiniProgramPoolRegistrationReturnContext | null>(null)
   const [showBudgetReaction, setShowBudgetReaction] = useState(false)
+  const staggerMounted = useStaggerMount()
 
   const {
     data: pool,
@@ -228,6 +387,19 @@ export default function PoolRegistrationPage() {
     queryFn: () => getEventPool(apiRequest, poolId),
     enabled: !!poolId && !authLoading,
   })
+
+  // Check if the user is already registered for this pool
+  const { data: myRegistrations } = useQuery<PoolRegistrationSummary[]>({
+    queryKey: ['mini-program', 'my-pool-registrations'],
+    queryFn: () => getMyPoolRegistrations(apiRequest),
+    enabled: !!poolId && !authLoading,
+    staleTime: 30_000,
+  })
+
+  const alreadyRegistered = useMemo(() => {
+    if (!myRegistrations || !poolId) return false
+    return myRegistrations.some((reg) => reg.poolId === poolId)
+  }, [myRegistrations, poolId])
 
   const eventType = useMemo<PoolEventType>(
     () => resolvePoolEventType([pool?.eventType, pool?.title].filter(Boolean).join(' ')),
@@ -249,6 +421,11 @@ export default function PoolRegistrationPage() {
   const poolDateTimeLabel = useMemo(
     () => formatDateTime(pool?.dateTime),
     [pool?.dateTime],
+  )
+
+  const registrationTotal = useMemo(
+    () => pool?.registrationCount ?? pool?.currentParticipants ?? 0,
+    [pool?.registrationCount, pool?.currentParticipants],
   )
 
   const fallbackBrief = useMemo(
@@ -282,13 +459,27 @@ export default function PoolRegistrationPage() {
   useEffect(() => {
     appliedReturnContextRef.current = 0
     setStep(0)
-    setFormState({ ...INITIAL_FORM_STATE, invitationCode: resolvedInvitationCode || undefined })
+
+    // Pre-populate intent from user profile if available (only when no return context)
+    const userIntent = user?.intent
+    const initialIntent =
+      Array.isArray(userIntent) && userIntent.length > 0
+        ? userIntent
+            .filter((intent) => ALL_INTENT_VALUES.includes(intent as (typeof ALL_INTENT_VALUES)[number]))
+            .slice(0, MAX_INTENTS)
+        : []
+
+    setFormState({
+      ...INITIAL_FORM_STATE,
+      eventIntent: initialIntent,
+      invitationCode: resolvedInvitationCode || undefined,
+    })
     setRegistered(false)
     registeredRef.current = false
     setError('')
     setIsRegistering(false)
     setResumeContext(null)
-  }, [poolId, resolvedInvitationCode])
+  }, [poolId, resolvedInvitationCode, user?.id])
 
   useEffect(() => {
     registeredRef.current = registered
@@ -412,10 +603,22 @@ export default function PoolRegistrationPage() {
   )
 
   const handleIntentToggle = useCallback((value: string) => {
-    setFormState((currentState) => ({
-      ...currentState,
-      eventIntent: toggleValue(currentState.eventIntent, value),
-    }))
+    setFormState((currentState) => {
+      const nextIntent = toggleValue(currentState.eventIntent, value)
+      // Enforce MAX_INTENTS cap when adding a new intent
+      if (nextIntent.length > MAX_INTENTS && nextIntent.length > currentState.eventIntent.length) {
+        Taro.showToast({
+          title: `最多选择 ${MAX_INTENTS} 个期待`,
+          icon: 'none',
+          duration: TOAST_DEFAULT_MS,
+        })
+        return currentState
+      }
+      return {
+        ...currentState,
+        eventIntent: nextIntent,
+      }
+    })
   }, [])
 
   const handleLanguageToggle = useCallback((value: string) => {
@@ -608,7 +811,6 @@ export default function PoolRegistrationPage() {
       setIsRegistering(false)
     }
   }, [
-    canSubmit,
     eventType,
     formState,
     isRegistering,
@@ -637,13 +839,59 @@ export default function PoolRegistrationPage() {
           />
           <Text className='pool-reg__empty-title'>这场活动暂时打不开</Text>
           <Text className='pool-reg__empty-text'>
-            {resolveMessage(poolError, 'load-failed')}
+            {poolError
+              ? resolveMessage(poolError, 'load-failed')
+              : '悦仔正在努力同步这场活动的最新信息，稍后再试就好。'}
           </Text>
           <Button variant='primary' className='pool-reg__single-action' onClick={() => refetchBrief()}>
             重试
           </Button>
           <Button variant='secondary' className='pool-reg__single-action' onClick={() => Taro.navigateBack()}>
             返回上一页
+          </Button>
+        </Card>
+      </View>
+    )
+  }
+
+  if (alreadyRegistered) {
+    return (
+      <View className='pool-reg'>
+        <Card className='pool-reg__already-joined'>
+          <Image
+            className='pool-reg__already-mascot'
+            mode='aspectFit'
+            src={getXiaoyueExpressionAsset('homeWelcome')}
+            ariaLabel='已报名'
+          />
+          <Text className='pool-reg__already-title'>你已经加入这场{eventType}了</Text>
+          <Text className='pool-reg__already-text'>
+            你的预算和社交期待已经在匹配引擎里跑着了，有结果会第一时间通知你。
+          </Text>
+          <View className='pool-reg__already-meta'>
+            <View className='pool-reg__already-meta-row'>
+              <EventMetaIcon kind='type' />
+              <Text>{eventType}</Text>
+            </View>
+            {pool.dateTime ? (
+              <View className='pool-reg__already-meta-row'>
+                <EventMetaIcon kind='calendar' />
+                <Text>{poolDateTimeLabel}</Text>
+              </View>
+            ) : null}
+            {poolArea ? (
+              <View className='pool-reg__already-meta-row'>
+                <EventMetaIcon kind='location' />
+                <Text>{poolArea}</Text>
+              </View>
+            ) : null}
+          </View>
+          <Button
+            variant='primary'
+            className='pool-reg__already-cta'
+            onClick={() => Taro.switchTab({ url: '/pages/events/index' })}
+          >
+            去我的足迹查看状态
           </Button>
         </Card>
       </View>
@@ -702,50 +950,90 @@ export default function PoolRegistrationPage() {
     <ScrollView className='pool-reg' scrollY enhanced showScrollbar={false}>
       <View className='pool-reg__header'>
         <Text className='pool-reg__eyebrow'>活动池报名</Text>
-        <Text className='pool-reg__title'>{pool?.title ?? '活动报名'}</Text>
+        <Text className='pool-reg__title pool-reg__title--headline'>{pool?.title ?? '活动报名'}</Text>
         {pool?.description ? (
           <Text className='pool-reg__description'>{pool.description}</Text>
+        ) : null}
+        {typeof pool?.price === 'number' && pool.price > 0 ? (
+          <View className='pool-reg__price-pill'>
+            <Text className='pool-reg__price-label'>报名费</Text>
+            <Text className='pool-reg__price-value'>¥{pool.price}</Text>
+          </View>
         ) : null}
       </View>
 
       <Card className='pool-reg__card'>
-        <View className='pool-reg__info-row'>
+        <View
+          className={[
+            'pool-reg__info-row',
+            staggerMounted ? 'stagger-in stagger-in--0' : 'stagger-in-hidden',
+          ].join(' ')}
+        >
           <View className='pool-reg__info-label'>
-            <JoyJoinIcon emoji='🎯' size={24} />
+            <EventMetaIcon kind='type' />
             <Text>类型</Text>
           </View>
           <Text className='pool-reg__info-value'>{eventType}</Text>
         </View>
         {pool.dateTime ? (
-          <View className='pool-reg__info-row'>
+          <View
+            className={[
+              'pool-reg__info-row',
+              staggerMounted ? 'stagger-in stagger-in--1' : 'stagger-in-hidden',
+            ].join(' ')}
+          >
             <View className='pool-reg__info-label'>
-              <JoyJoinIcon emoji='📅' size={24} />
+              <EventMetaIcon kind='calendar' />
               <Text>时间</Text>
             </View>
             <Text className='pool-reg__info-value'>{poolDateTimeLabel}</Text>
           </View>
         ) : null}
         {poolArea ? (
-          <View className='pool-reg__info-row'>
+          <View
+            className={[
+              'pool-reg__info-row',
+              staggerMounted ? 'stagger-in stagger-in--2' : 'stagger-in-hidden',
+            ].join(' ')}
+          >
             <View className='pool-reg__info-label'>
-              <JoyJoinIcon emoji='📍' size={24} />
+              <EventMetaIcon kind='location' />
               <Text>地区</Text>
             </View>
             <Text className='pool-reg__info-value'>{poolArea}</Text>
           </View>
         ) : null}
-        {pool.maxParticipants ? (
-          <View className='pool-reg__info-row'>
-            <View className='pool-reg__info-label'>
-              <JoyJoinIcon emoji='👥' size={24} />
-              <Text>已报名</Text>
-            </View>
-            <Text className='pool-reg__info-value'>
-              {pool.currentParticipants ?? 0} / {pool.maxParticipants}
-            </Text>
+        <View
+          className={[
+            'pool-reg__info-row',
+            staggerMounted ? 'stagger-in stagger-in--3' : 'stagger-in-hidden',
+          ].join(' ')}
+        >
+          <View className='pool-reg__info-label'>
+            <EventMetaIcon kind='people' />
+            <Text>已报名</Text>
           </View>
-        ) : null}
+          <Text
+            className={[
+              'pool-reg__info-value',
+              registrationTotal > 0 ? 'pool-reg__info-value--highlight' : '',
+            ].join(' ')}
+          >
+            {registrationTotal > 0 ? `${registrationTotal} 人` : '等你加入'}
+          </Text>
+        </View>
       </Card>
+
+      {pool?.sampleArchetypes && pool.sampleArchetypes.length > 0 ? (
+        <View
+          className={[
+            'pool-reg__cluster-wrap',
+            staggerMounted ? 'stagger-in stagger-in--4' : 'stagger-in-hidden',
+          ].join(' ')}
+        >
+          <ArchetypeCluster archetypes={pool.sampleArchetypes} totalCount={registrationTotal} />
+        </View>
+      ) : null}
 
       {resumeNotice ? (
         <Card
@@ -798,6 +1086,11 @@ export default function PoolRegistrationPage() {
             </View>
           ) : (
             <>
+              <Image
+                className='pool-reg__brief-mascot'
+                src={getXiaoyueExpressionAsset('coachGuide')}
+                mode='aspectFit'
+              />
               <Text className='pool-reg__section-kicker'>加入前的一封小信</Text>
               <Text className='pool-reg__brief-insight'>{brief.insight}</Text>
               <Text className='pool-reg__brief-promise'>{brief.matchingPromise}</Text>
@@ -853,7 +1146,7 @@ export default function PoolRegistrationPage() {
               ))}
             </View>
 
-            <Text className='pool-reg__helper'>至少选择 1 个预算区间后，才能继续填写偏好。</Text>
+            <Text className='pool-reg__helper'>至少选择 1 个预算区间后，悦仔才能继续帮你匹配合拍的桌友。</Text>
           </Card>
         </View>
       ) : null}
@@ -886,7 +1179,7 @@ export default function PoolRegistrationPage() {
               ))}
             </View>
 
-            <Text className='pool-reg__helper'>至少选择 1 个这次想收获的方向后，才能进入最后一步。</Text>
+            <Text className='pool-reg__helper'>至少选择 1 个期待方向后，悦仔就能把你的社交画像和预算一起跑匹配了。</Text>
           </Card>
         </View>
       ) : null}

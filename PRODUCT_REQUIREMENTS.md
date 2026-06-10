@@ -695,10 +695,11 @@ User Sees:
   - Pool threshold progress ("活动池即可触发匹配")
   - PoolForecastStrip atmosphere copy
   - CTA uses pool-join language, not formed-table language
-  - Smart Regional Discovery: silent GPS detection → cluster-level proximity sorting
-    (same cluster first, adjacent cluster next, then chronology). Manual filter
-    override via LocationFilterDrawer with 7-day TTL. Auto-relaxation to all-Shenzhen
-    view with banner when manual filter is empty. Geo-hint chip shows detected cluster.
+   - Smart Regional Discovery: silent GPS detection → cluster-level proximity sorting
+     (same cluster first, adjacent cluster next, then chronology). On first GPS success,
+     auto-selects the detected district as the active filter silently (one-time per session).
+     Manual filter override via LocationFilterDrawer with 7-day TTL. Auto-relaxation to all-Shenzhen
+     view with banner when manual filter is empty. Geo-hint chip shows detected cluster.
   - Drawer accessibility: role="dialog", district tiles are role="button" with
     aria-pressed and descriptive aria-label (includes district name + heat level),
     heat-dot colours driven by SCSS tokens.
@@ -904,16 +905,15 @@ UnifiedRevealCard renders fused narrative
 
 **User Flow:**
 ```
-Discover page (no city interest) → gentle banner (2s delay, dismissable, 7-day TTL)
-                              ↓
-                         feed-card CTA (bottom of pool list)
-                              ↓
-                         CityPickerSheet (search + hot-city grid + confirm)
-                              ↓
-                         POST /api/cities/interest → Toast success
-                              ↓
-                         pages/city-unlock/index (progress + share + other cities)
+Discover page (no city interest) → feed-card CTA (bottom of pool list, with Xiaoyue mascot)
+                               ↓
+                          CityPickerSheet (search + hot-city grid + confirm)
+                               ↓
+                          POST /api/cities/interest → Toast success
+                               ↓
+                          pages/city-unlock/index (progress + share + other cities)
 ```
+Note: The gentle banner (CityUnlockBanner) was removed in 2026-06-10. GPS auto-filter handles Shenzhen district detection silently, and the feed-card CTA is the sole entry point for city interest.
 
 **Threshold & State Machine:**
 | Status | Meaning | Transition |
@@ -925,9 +925,9 @@ Discover page (no city interest) → gentle banner (2s delay, dismissable, 7-day
 
 **Key Pages/Components:**
 - `pages/city-unlock/index` — Progress page with Xiaoyue mascot, threshold bar, share CTA, activity feed, other-city tease
-- `components/discover/CityUnlockBanner` — Gentle delayed banner with dismiss persistence
-- `components/discover/CityUnlockFeedCard` — Bottom-of-feed CTA card
-- `components/discover/CityPickerSheet` — Bottom sheet with search + hot-city grid
+- `components/discover/CityUnlockFeedCard` — Bottom-of-feed CTA card with Xiaoyue mascot (sole entry point for city interest, 2026-06-10)
+- `components/discover/CityPickerSheet` — Bottom sheet with search + hot-city grid + confirm
+- ~~`components/discover/CityUnlockBanner`~~ — Removed 2026-06-10; replaced by GPS auto-filter for Shenzhen + CityUnlockFeedCard for other cities
 
 **API Endpoints:**
 - `POST /api/cities/interest` — Register interest (atomic increment)

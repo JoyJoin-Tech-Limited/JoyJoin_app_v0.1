@@ -9,6 +9,7 @@ import { logger } from "../../lib/logger";
 import { classifyIndustryUnified, classifyIndustry } from "../../inference/industryClassifier";
 import type { IndustryClassificationResult } from "../../inference/industryClassifier";
 import { archetypeRegistry } from "@shared/personality";
+import { XIAOYUE_CRAFT_PRINCIPLES } from "../../prompts/craft";
 
 const AI_TIMEOUT_MS = 6000;
 const REACTION_TIMEOUT_MS = 4000;
@@ -75,19 +76,140 @@ interface UnderstandProfessionResponse {
   };
 }
 
-function buildReactionHint(
+/**
+ * Determines whether to ask a clarifying question.
+ * - Confidence >= 0.85 or non-AI source → no follow-up, return empty string
+ * - Low confidence AI match → generate ONE warm clarifying question via LLM
+ * - Timeout or LLM failure → return empty string (graceful degradation)
+ */
+async function buildReactionHint(
   rawText: string,
-  classification: IndustryClassificationResult
-): string {
-  const label = classification.niche?.label
-    || classification.segment?.label
-    || classification.category?.label
-    || "";
-  const labelPart = label ? `${label}方向` : "你的行业";
-  return `${rawText}！${labelPart}？`;
+  classification: IndustryClassificationResult,
+  confidence: number,
+  source: string,
+  archetype: ArchetypeTraitContext,
+  signal?: AbortSignal
+): Promise<string> {
+  // High confidence or non-AI source → skip follow-up entirely
+  if (confidence >= 0.85 || source !== "ai") {
+    return "";
+  }
+
+  // Low confidence AI match → generate ONE warm clarifying question
+  try {
+    return await generateClarifyingQuestion(rawText, classification, confidence, archetype, signal);
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Generates a single warm, Xiaoyue-personality clarifying question when
+ * the AI classification confidence is below threshold.
+ * Uses DeepSeek Flash with 1500ms timeout.
+ */
+async function generateClarifyingQuestion(
+  rawText: string,
+  classification: IndustryClassificationResult,
+  confidence: number,
+  archetype: ArchetypeTraitContext,
+  signal?: AbortSignal
+): Promise<string> {
+  const traitContext = archetype.traits.length > 0
+    ? `用户的社交人格特质包含：${archetype.traits.join("、")}。`
+    : "";
+
+  const classificationContext = classification.niche
+    ? `${classification.niche.label}（${classification.segment?.label} → ${classification.category?.label}）`
+    : classification.segment
+      ? `${classification.segment.label}（${classification.category?.label}）`
+      : classification.category?.label ?? "未知行业";
+
+  const prompt = `你是温暖有趣的社交App助手"悦仔"。用户说TA的职业是"${rawText}"。
+
+系统初步判断：${classificationContext}
+${traitContext}
+但系统对这个判断只有 ${Math.round(confidence * 100)}% 的把握，不够确定。
+
+请帮悦仔问用户一个**简短的、温暖的澄清问题**（不超过20字），帮助确认TA的真实职业方向。
+
+要求：
+- 问题要像朋友聊天，不要像面试官
+- 问题必须**从不包含用户的原话**，不能重复"${rawText}"中的任何内容
+- 只能问1个问题，不要多问
+- 不要出现emoji
+- 结尾只用一个问号
+- 语言要有画面感，不要太抽象
+
+${XIAOYUE_CRAFT_PRINCIPLES}
+
+请直接输出问题文本，不要加任何解释或JSON格式。`;
+
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => abortController.abort(), 1500);
+
+  // Link caller's signal to local abort controller for cancellation propagation
+  if (signal) {
+    if (signal.aborted) {
+      clearTimeout(timeoutId);
+      return "";
+    }
+    signal.addEventListener("abort", () => {
+      abortController.abort();
+      clearTimeout(timeoutId);
+    }, { once: true });
+  }
+
+  try {
+    const client = getDeepseekClient();
+    const model = getDeepseekModel("flash");
+
+    const response = await client.chat.completions.create(
+      {
+        model,
+        messages: [
+          {
+            role: "system",
+            content: "你是温暖有趣的小助手悦仔。请直接输出一个简短的澄清问题，不要加引号或额外解释。",
+          },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 100,
+      },
+      abortController.signal ? { signal: abortController.signal } : undefined
+    );
+
+    clearTimeout(timeoutId);
+
+    const content = response.choices[0]?.message?.content?.trim() ?? "";
+    if (!content) return "";
+
+    // Sanitize: remove emoji, strip wrapping quotes, clamp length
+    const sanitized = content
+      .replace(/[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "")
+      .replace(/^["'「『]|["'」』]$/g, "")
+      .trim()
+      .slice(0, 25);
+
+    logger.info("Clarifying question generated", {
+      promptVersion: CLARIFYING_QUESTION_PROMPT_VERSION,
+      questionLength: sanitized.length,
+    });
+
+    return sanitized;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    logger.warn("Clarifying question generation failed, skipping follow-up", {
+      error: error instanceof Error ? error.message : String(error),
+      promptVersion: CLARIFYING_QUESTION_PROMPT_VERSION,
+    });
+    return "";
+  }
 }
 
 const REACTION_PROMPT_VERSION = "profession-reaction-v1";
+const CLARIFYING_QUESTION_PROMPT_VERSION = "profession-clarify-v1";
 
 interface ArchetypeTraitContext {
   primaryArchetype: string | null;
@@ -419,7 +541,13 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
         }
       }
 
-      const reactionHint = buildReactionHint(description, classification);
+      const reactionHint = await buildReactionHint(
+        description,
+        classification,
+        classification.confidence,
+        source,
+        archetypeContext
+      );
 
       const response: UnderstandProfessionResponse = {
         reaction,
@@ -445,6 +573,7 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
         rawInput: description.substring(0, 10) + "...",
         source,
         confidence: classification.confidence,
+        hadFollowUp: reactionHint !== "",
         processingTimeMs: Date.now() - startTime,
         hasArchetype: archetypeContext.primaryArchetype !== null,
       });

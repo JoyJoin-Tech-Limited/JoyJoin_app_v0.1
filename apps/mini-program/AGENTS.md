@@ -1,6 +1,6 @@
 # Mini-Program — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-06-05
+> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-06-10
 
 ---
 
@@ -114,6 +114,7 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 - **ArchetypeSpritesheet** uses the same `<Image>` + `overflow:hidden` + `transform: translate()` pattern for spritesheet region crops — CSS `backgroundImage: url()` is unreliable in WeChat. See `apps/mini-program/src/pages/onboarding/personality-test/results/ArchetypeSpritesheet.tsx`.
 - **WeChat WXSS silently drops `hsla()`** — all color values emitted from shared `@shared/archetypeColors` must use `rgba()` via `formatHSLAsRGBA()`. Canvas calls use `toCanvasRGBA()` from `canvasHelpers.ts` at `apps/mini-program/src/lib/utils/canvasHelpers.ts` (shared by both portrait and square poster renderers).
 - **Page-level loading/empty/error state blocks** must use `min-height: 100dvh` + flex centering. `@include scroll-view-centered-state` from `_mixins.scss` is the canonical helper for states inside `<ScrollView>`.
+- **Shimmer animations should use GPU-safe `opacity` pulse** instead of `background-position` on linear gradients. The `background-position` approach triggers paint on every frame, while opacity pulse only composites. Pattern: `animation: shimmer-pulse 1.5s ease-in-out infinite` with keyframes `0%/100% { opacity: 0.25; } 50% { opacity: 0.65; }`. See `apps/mini-program/src/pages/onboarding/profile-review/index.scss` for a canonical example replacing a `background-position` shimmer with `opacity` pulse (2026-06-10).
 
 ---
 
@@ -141,6 +142,7 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 - **Xiaoyue copy**: subject to `xiaoyue-writing-craft` 9 axioms. Use `getErrorMessage`, `getEmptyStateMessage`, etc. from `packages/shared/src/copy/`.
 - **Error-state ARIA**: `role='alert'` + `aria-live='polite'` for inline error states; `role='status'` + `aria-live='polite'` + `aria-busy='true'` for loading screens (e.g., `JoyJoinLoadingScreen`).
 - **Haptics are mandatory** on non-onboarding interactive surfaces. Intensity: `light` (secondary), `medium` (primary CTA), `success` (emotional peaks).
+- **Completion celebration micro-interaction**: After a final onboarding step API call succeeds, set `isCelebrating` state → `haptics('success')` → wait 500ms → navigate. During the delay, disable the CTA and change text (e.g., "入场卡已确认") for a brief emotional peak before transitioning. Reset `isCelebrating` via `useResetOnShow` for swipe-back safety. See `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` `handleComplete` (2026-06-10).
 - **hoverClass on View-based interactive elements** — `transition: background 0.12s ease` + `rgba($color-primary, 0.06–0.08)` tint.
 
 ---
@@ -204,3 +206,9 @@ npx miniprogram-ci upload \
 - Shared: `packages/shared/AGENTS.md` — `packages/shared` ownership
 - Admin: `apps/admin-client/AGENTS.md` — Recharts + shadcn admin portal patterns
 - Docs index: `docs/README.md`
+
+---
+
+## 11. Shared animation hooks
+
+- **`useMiniRevealMotion.ts`** (`src/hooks/useMiniRevealMotion.ts`) — shared reveal-animation hook consumed by `AnalyzingAnimation` (results page), profile-review stagger entries, personality-test card tilt, and squad-unboxing drag-reveal. Provides `shouldReduceMotion` boolean. Low-end gate threshold: `LOW_MOTION_BENCHMARK_LEVEL = 15` (aligned with `.joy-custom-tab-bar--low-end` at `wx.getSystemInfoSync().benchmarkLevel <= 15`). Also checks `Taro.getSystemInfoSync().reduceMotion` for OS-level accessibility preference. **2026-06-10:** benchmarkLevel raised from 8→15 for consistency; `reduceMotion` JS check added.

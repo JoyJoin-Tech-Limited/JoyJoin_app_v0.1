@@ -89,7 +89,7 @@
 
     &--user {
       justify-content: flex-end;
-      flex-direction: row-reverse;
+      flex-direction: row;
     }
   }
 
@@ -194,10 +194,10 @@
     align-items: center;
     gap: $spacing-sm;
     padding: $spacing-sm $container-padding;
-    padding-bottom: max($spacing-sm, constant(safe-area-inset-bottom));
-    padding-bottom: max($spacing-sm, env(safe-area-inset-bottom));
+    padding-bottom: max($spacing-md, constant(safe-area-inset-bottom));
+    padding-bottom: max($spacing-md, env(safe-area-inset-bottom));
     background: $color-surface;
-    border-top: 2rpx solid $color-divider;
+    border-top: 2rpx solid rgba($color-text-primary, 0.04);
     @include safe-area-inline($container-padding);
   }
 
@@ -268,7 +268,6 @@
     border-radius: $button-radius;
     background: $color-primary;
     color: $color-text-white;
-    box-shadow: 0 8rpx 32rpx rgba($color-primary, 0.35);
 
     &:active,
     &--active {
@@ -561,7 +560,6 @@
     border-radius: $button-radius;
     background: $color-primary;
     color: $color-text-white;
-    box-shadow: 0 8rpx 32rpx rgba($color-primary, 0.35);
 
     &:active,
     &--active {

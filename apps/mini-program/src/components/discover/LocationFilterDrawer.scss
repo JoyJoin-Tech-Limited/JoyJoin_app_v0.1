@@ -38,9 +38,9 @@
   &__surface {
     position: absolute;
     right: 0;
-    bottom: 0;
+    bottom: $tab-bar-root-height;
     left: 0;
-    max-height: 980rpx;
+    max-height: calc(980rpx - $tab-bar-root-height);
     background: $color-surface;
     border-radius: 32rpx 32rpx 0 0;
     box-shadow: 0 -8rpx 32rpx rgba(0, 0, 0, 0.08);
@@ -154,9 +154,9 @@
 
   &__cluster-name {
     @include font-cn-display;
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
     margin-bottom: 16rpx;
     display: block;
   }
@@ -219,7 +219,6 @@
     font-weight: $font-weight-medium;
     color: $color-text-primary;
     text-align: center;
-    line-height: 1.3;
     word-break: normal;
     overflow-wrap: break-word;
     display: -webkit-box;

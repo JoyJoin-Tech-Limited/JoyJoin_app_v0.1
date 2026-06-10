@@ -11,6 +11,7 @@
 | Event Pools | `routes/domains/eventPools.ts` | `repositories/eventPoolRepo.ts` | Matching + groups |
 | Social Icebreaker | `routes/domains/socialIcebreaker.ts` | `lib/socialIcebreakerStore.ts` | Session lifecycle |
 | Admin | `routes/domains/admin.ts` | Various | RBAC + audit log |
+| Admin — Event Pools | `routes/domains/adminEventPools.ts` | `repositories/eventPoolRepo.ts` | CRUD, venue hints, time slot validation, archive |
 | Analytics | `routes/domains/analytics.ts` | `repositories/analyticsRepo.ts` | Reporting only |
 | Venues | `routes/domains/venues.ts` | `repositories/venueRepo.ts` | Catalog + assignment |
 | Notifications | `routes/domains/notifications.ts` | `repositories/notificationsRepo.ts` | In-app + WS |

@@ -6,7 +6,7 @@ import type { EventThemeVibe } from '@shared/api'
  * Consolidated from matching-status, squad-unboxing, and pool-group-detail
  * page-local copies. Behavior is preserved byte-for-byte; pages pass an
  * optional `fallbackLabel` to getVibeLabel when they need a non-empty
- * default (e.g. squad-unboxing previously defaulted to "今晚成桌").
+ * default (e.g., squad-unboxing previously defaulted to "今晚成桌").
  */
 
 export function formatDateTime(dateTime?: string | null): string {
@@ -25,6 +25,29 @@ export function formatDateTime(dateTime?: string | null): string {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+export function formatDateTimeParts(dateTime?: string | null): { date: string; time: string } {
+  if (!dateTime) return { date: '时间待定', time: '' }
+  const parsedDate = new Date(dateTime)
+  if (Number.isNaN(parsedDate.getTime())) return { date: '时间待定', time: '' }
+
+  const now = new Date()
+  const includeYear = parsedDate.getFullYear() !== now.getFullYear()
+
+  const date = parsedDate.toLocaleDateString('zh-CN', {
+    year: includeYear ? 'numeric' : undefined,
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  })
+
+  const time = parsedDate.toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+  return { date, time }
 }
 
 export function getVibeLabel(

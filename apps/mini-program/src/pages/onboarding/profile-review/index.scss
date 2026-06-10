@@ -20,42 +20,6 @@
     @include safe-area-bottom-padding(padding-bottom, $spacing-xl);
   }
 
-  &__prelude {
-    @include onboarding-prelude;
-    padding: $spacing-lg;
-    margin-bottom: $spacing-md;
-    border-radius: $card-radius;
-    border: 2rpx solid rgba($color-primary, 0.12);
-    background: $color-surface;
-  }
-
-  &__prelude-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    padding: 10rpx 18rpx;
-    border-radius: 999rpx;
-    background: rgba($color-surface, 0.92);
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    color: $color-primary;
-  }
-
-  &__prelude-title {
-    @include type-display-page-title;
-    display: block;
-    margin-top: $spacing-sm;
-    font-size: $font-size-xl;
-    color: $color-text-primary;
-  }
-
-  &__prelude-copy {
-    display: block;
-    margin-top: 10rpx;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: $line-height-normal;
-  }
-
   &__stage {
     opacity: 0;
     transform: translateY(18rpx);
@@ -66,6 +30,10 @@
 
     &--0.profile-review__stage--visible {
       animation-delay: 0s;
+    }
+
+    &--1.profile-review__stage--visible {
+      animation-delay: 0.03s;
     }
 
     &--2.profile-review__stage--visible {
@@ -87,10 +55,6 @@
     &--6.profile-review__stage--visible {
       animation-delay: 0.3s;
     }
-
-    &--7.profile-review__stage--visible {
-      animation-delay: 0.36s;
-    }
   }
 
   &__welcome-illustration {
@@ -102,12 +66,6 @@
   &__welcome-image {
     width: 400rpx;
     height: 400rpx;
-
-    /*
-     * Asset optimized via `npm run optimize:lovart`.
-     * WebP 800px @ quality 85 — ~52KB from original ~1179KB PNG.
-     * Master PNG kept in raw-assets/lovart/ for re-generation.
-     */
   }
 
   &__hero {
@@ -117,7 +75,7 @@
   &__eyebrow {
     display: inline-flex;
     align-items: center;
-    padding: 10rpx 20rpx;
+    padding: $spacing-xs $spacing-sm;
     border-radius: 999rpx;
     background: rgba($color-primary-light, 0.92);
     color: $color-primary;
@@ -136,6 +94,7 @@
   &__title-en {
     @include type-en-brand-label;
     display: inline;
+    white-space: nowrap;
   }
 
   &__subtitle {
@@ -143,41 +102,11 @@
     margin-top: $spacing-sm;
     font-size: $font-size-base;
     color: $color-text-secondary;
-    line-height: $line-height-normal;
+    line-height: $line-height-relaxed;
   }
 
-  &__coach {
-    @include card-premium;
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
-    padding: $spacing-md;
+  &__mascot {
     margin-bottom: $spacing-md;
-  }
-
-  &__coach-avatar {
-    width: 112rpx;
-    height: 112rpx;
-    flex-shrink: 0;
-  }
-
-  &__coach-copy {
-    min-width: 0;
-  }
-
-  &__coach-title {
-    display: block;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-primary;
-  }
-
-  &__coach-text {
-    display: block;
-    margin-top: 10rpx;
-    font-size: $font-size-base;
-    color: $color-text-primary;
-    line-height: $line-height-normal;
   }
 
   &__hero-card {
@@ -194,8 +123,8 @@
 
   &__avatar-wrap {
     @include flex-center;
-    width: 156rpx;
-    height: 156rpx;
+    width: 160rpx;
+    height: 160rpx;
     flex-shrink: 0;
     border-radius: 999rpx;
     background: rgba($color-primary-light, 0.6);
@@ -203,8 +132,8 @@
   }
 
   &__avatar-image {
-    width: 126rpx;
-    height: 126rpx;
+    width: 128rpx;
+    height: 128rpx;
   }
 
   &__hero-copy {
@@ -216,20 +145,22 @@
     font-size: $font-size-xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
-    word-break: break-word;
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
 
   &__hero-archetype-badge {
     display: inline-flex;
     align-items: center;
-    margin-top: 10rpx;
+    margin-top: $spacing-sm;
     max-width: 100%;
-    padding: 8rpx 20rpx;
+    padding: $spacing-xs $spacing-sm;
     border-radius: 999rpx;
     border: 2rpx solid transparent;
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
-    word-break: break-word;
+    word-break: keep-all;
+    overflow-wrap: break-word;
     box-sizing: border-box;
   }
 
@@ -240,69 +171,60 @@
 
   &__hero-summary {
     display: block;
-    margin-top: 12rpx;
+    margin-top: $spacing-sm;
     font-size: $font-size-sm;
     color: $color-text-secondary;
-    line-height: $line-height-normal;
-    word-break: break-word;
+    line-height: $line-height-relaxed;
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
 
-  &__ai-tagline-wrap {
+  /* AI-generated social tag — presented prominently as the user's tagline */
+  &__hero-tagline {
     display: flex;
-    align-items: flex-start;
-    gap: 12rpx;
-    margin-top: 10rpx;
-    padding: 10rpx 16rpx;
-    background: rgba($color-primary-light, 0.4);
+    align-items: center;
+    margin-top: $spacing-sm;
+    padding: 16rpx $spacing-sm;
+    background: rgba($color-primary-light, 0.5);
     border-radius: 16rpx;
-    border: 2rpx solid rgba($color-primary, 0.08);
+    border: 2rpx solid rgba($color-primary, 0.1);
+    max-width: 100%;
+    box-sizing: border-box;
 
     &--loading {
       background: rgba($color-primary-light, 0.25);
+      min-height: 48rpx;
     }
   }
 
-  &__ai-tagline-shimmer {
-    flex: 1;
-    height: 36rpx;
-    border-radius: 8rpx;
-    background: linear-gradient(
-      90deg,
-      rgba($color-primary, 0.08) 25%,
-      rgba($color-primary, 0.18) 50%,
-      rgba($color-primary, 0.08) 75%
-    );
-    background-size: 200% 100%;
-    animation: ai-tagline-shimmer 1.4s ease-in-out infinite;
-  }
-
-  &__ai-tagline-accent {
-    width: 6rpx;
-    height: 6rpx;
-    border-radius: 999rpx;
-    background: $color-primary;
-    margin-top: 14rpx;
-    flex-shrink: 0;
-  }
-
-  &__ai-tagline {
-    font-size: $font-size-xs;
-    color: rgba($color-text-secondary, 0.92);
+  &__hero-tagline-text {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
     line-height: $line-height-normal;
-    word-break: break-word;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__hero-tagline-shimmer {
+    flex: 1;
+    height: 40rpx;
+    border-radius: 8rpx;
+    background: rgba($color-primary, 0.12);
+    animation: hero-tagline-pulse 1.5s ease-in-out infinite;
   }
 
   &__hero-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 12rpx;
+    gap: $spacing-sm;
     margin-top: $spacing-md;
   }
 
   &__hero-tag {
     display: inline-flex;
     align-items: center;
-    padding: 10rpx 18rpx;
+    padding: $spacing-xs $spacing-sm;
     border-radius: 999rpx;
     background: rgba($color-surface, 0.94);
     border: 2rpx solid rgba($color-border, 0.88);
@@ -325,37 +247,7 @@
     font-size: $font-size-md;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
-  }
-
-  &__readiness-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12rpx;
-  }
-
-  &__readiness-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8rpx;
-    padding: 12rpx 18rpx;
-    border-radius: 999rpx;
-    background: rgba($color-divider, 0.98);
-    color: $color-text-secondary;
-
-    &--done {
-      background: rgba($color-primary-light, 0.96);
-      color: $color-primary;
-    }
-  }
-
-  &__readiness-pill-icon {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-bold;
-  }
-
-  &__readiness-pill-text {
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
+    line-height: $line-height-normal;
   }
 
   &__info-grid {
@@ -380,24 +272,24 @@
 
   &__info-value {
     display: block;
-    margin-top: 8rpx;
+    margin-top: $spacing-xs;
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
-    line-height: 1.45;
+    line-height: $line-height-normal;
   }
 
   &__chip-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 12rpx;
+    gap: $spacing-sm;
     margin-top: $spacing-md;
   }
 
   &__chip {
     display: inline-flex;
     align-items: center;
-    padding: 10rpx 18rpx;
+    padding: $spacing-xs $spacing-sm;
     border-radius: 999rpx;
     background: rgba($color-primary-light, 0.92);
 
@@ -439,7 +331,7 @@
 
   &__interest-label {
     display: block;
-    margin-top: 8rpx;
+    margin-top: $spacing-xs;
     font-size: $font-size-xs;
     color: $color-text-secondary;
   }
@@ -451,7 +343,7 @@
   }
 
   &__skeleton-line {
-    height: 22rpx;
+    height: 24rpx;
     border-radius: 999rpx;
     background: rgba($color-surface, 0.9);
     animation: profile-review-pulse 1.2s ease-in-out infinite;
@@ -459,24 +351,24 @@
     &--value {
       width: 48%;
       margin: 0 auto;
-      height: 34rpx;
+      height: 32rpx;
     }
 
     &--label {
       width: 72%;
-      margin: 10rpx auto 0;
+      margin: 8rpx auto 0;
     }
   }
 
   &__skeleton-chip-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 12rpx;
+    gap: $spacing-sm;
   }
 
   &__skeleton-chip {
-    width: 164rpx;
-    height: 44rpx;
+    width: 160rpx;
+    height: 40rpx;
     border-radius: 999rpx;
     background: rgba($color-divider, 0.96);
     animation: profile-review-pulse 1.2s ease-in-out infinite;
@@ -492,13 +384,13 @@
   &__interest-placeholder-pulse {
     display: flex;
     align-items: center;
-    gap: 10rpx;
+    gap: $spacing-xs;
     margin-bottom: $spacing-sm;
   }
 
   &__interest-placeholder-dot {
-    width: 10rpx;
-    height: 10rpx;
+    width: 8rpx;
+    height: 8rpx;
     border-radius: 999rpx;
     background: rgba($color-primary, 0.35);
     animation: placeholder-dot-pulse 1.2s ease-in-out infinite;
@@ -514,18 +406,64 @@
 
   &__interest-placeholder-copy {
     display: block;
-    margin-top: 8rpx;
+    margin-top: $spacing-xs;
     font-size: $font-size-sm;
     color: $color-text-secondary;
-    line-height: 1.5;
+    line-height: $line-height-relaxed;
+    text-align: center;
+  }
+
+  &__interest-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: $spacing-lg 0;
+  }
+
+  &__interest-error-title {
+    display: block;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    text-align: center;
+  }
+
+  &__interest-error-copy {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
     text-align: center;
   }
 
   &__error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: $spacing-md;
+    padding: $spacing-sm $spacing-md;
+    min-height: 88rpx;
+    cursor: pointer;
+
+    &--hover {
+      opacity: 0.75;
+    }
+  }
+
+  &__error-text {
     display: block;
-    margin-top: $spacing-sm;
     font-size: $font-size-sm;
     color: $color-error;
+    text-align: center;
+  }
+
+  &__error-retry {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-xs;
+    color: $color-primary;
+    font-weight: $font-weight-semibold;
     text-align: center;
   }
 
@@ -537,19 +475,8 @@
     box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.04);
   }
 
-  &__cta-title {
-    @include type-display-section-title;
-    display: block;
-    font-size: $font-size-md;
-    color: $color-text-primary;
-  }
-
-  &__cta-subtitle {
-    display: block;
-    margin-top: 10rpx;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: 1.5;
+  &__footer-reserve {
+    height: 200rpx;
   }
 
   &__submit {
@@ -593,20 +520,20 @@
       opacity: 0.5;
     }
 
-    &__ai-tagline-shimmer {
+    &__hero-tagline-shimmer {
       animation: none;
       background: rgba($color-primary, 0.1);
     }
   }
 }
 
-@keyframes ai-tagline-shimmer {
-  0% {
-    background-position: 200% 0;
+@keyframes hero-tagline-pulse {
+  0%, 100% {
+    opacity: 0.25;
   }
 
-  100% {
-    background-position: -200% 0;
+  50% {
+    opacity: 0.65;
   }
 }
 

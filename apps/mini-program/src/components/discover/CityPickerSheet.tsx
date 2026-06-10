@@ -1,5 +1,5 @@
 import { View, Text, Input, ScrollView } from '@tarojs/components'
-import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import JoyJoinIcon from '../ui/JoyJoinIcon'
 import Taro from '@tarojs/taro'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { apiRequest } from '../../lib/api/api'
@@ -86,6 +86,9 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
 
   if (!visible) return null
 
+  const showHotCities = !searchQuery.trim()
+  const displayName = (city: string) => city.replace('市', '')
+
   return (
     <View className='city-picker-overlay' onClick={onClose}>
       <View
@@ -97,8 +100,8 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
 
         {/* Title */}
         <View className='city-picker-sheet__header'>
-          <Text className='city-picker-sheet__title'>你想在哪个城市</Text>
-          <Text className='city-picker-sheet__title'>遇到有趣的人？</Text>
+          <Text className='city-picker-sheet__title'>你想在哪个城市遇到有趣的人？</Text>
+          <Text className='city-picker-sheet__subtitle'>告诉我们你的城市，人数够了我们就来</Text>
         </View>
 
         {/* Search */}
@@ -110,13 +113,21 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
             value={searchQuery}
             onInput={(e) => setSearchQuery(e.detail.value)}
           />
+          {searchQuery.trim() && (
+            <View
+              className='city-picker-sheet__search-clear'
+              onClick={() => setSearchQuery('')}
+            >
+              <JoyJoinIcon emoji='✕' size={24} className='city-picker-sheet__search-clear-icon' />
+            </View>
+          )}
         </View>
 
-        {/* Hot cities */}
-        {!searchQuery.trim() && (
-          <>
-            <View style={{ display: 'flex', alignItems: 'center', gap: '8rpx' }}>
-              <JoyJoinIcon emoji='🔥' size={28} />
+        {/* Hot cities — shown when search is empty */}
+        {showHotCities && (
+          <View className='city-picker-sheet__hot-section'>
+            <View className='city-picker-sheet__section-label'>
+              <JoyJoinIcon emoji='🔥' size={24} />
               <Text className='city-picker-sheet__section-title'>热门城市</Text>
             </View>
             <View className='city-picker-sheet__hot-grid'>
@@ -125,12 +136,13 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
                   key={city}
                   className={`city-picker-sheet__hot-item ${selectedCity === city ? 'city-picker-sheet__hot-item--selected' : ''}`}
                   onClick={() => handleSelectCity(city)}
+                  hoverClass='city-picker-sheet__tile--hover'
                 >
-                  <Text className='city-picker-sheet__hot-item-text'>{city.replace('市', '')}</Text>
+                  <Text className='city-picker-sheet__hot-item-text'>{displayName(city)}</Text>
                 </View>
               ))}
             </View>
-          </>
+          </View>
         )}
 
         {/* City list */}
@@ -145,28 +157,31 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
               key={city}
               className={`city-picker-sheet__list-item ${selectedCity === city ? 'city-picker-sheet__list-item--selected' : ''}`}
               onClick={() => handleSelectCity(city)}
+              hoverClass='city-picker-sheet__list-item--hover'
             >
-              <Text className='city-picker-sheet__list-item-text'>{city}</Text>
+              <Text className='city-picker-sheet__list-item-text'>{displayName(city)}</Text>
               {selectedCity === city && (
                 <Text className='city-picker-sheet__list-item-check'>✓</Text>
               )}
             </View>
           ))}
           {filteredCities.length === 0 && (
-            <View className='city-picker-sheet__empty'>
+            <View className='city-picker-sheet__empty city-picker-sheet__empty--enter'>
               <Text className='city-picker-sheet__empty-text'>没有找到相关城市</Text>
             </View>
           )}
+          <View className='city-picker-sheet__list-safe-bottom' />
         </ScrollView>
 
         {/* Confirm button */}
         <View className='city-picker-sheet__footer'>
           <View
-            className={`city-picker-sheet__confirm ${!selectedCity || loading ? 'city-picker-sheet__confirm--disabled' : ''}`}
+            className={`city-picker-sheet__confirm ${!selectedCity || loading ? 'city-picker-sheet__confirm--disabled' : ''} ${loading ? 'city-picker-sheet__confirm--loading' : ''}`}
             onClick={handleConfirm}
+            hoverClass={selectedCity && !loading ? 'city-picker-sheet__confirm--hover' : ''}
           >
             <Text className='city-picker-sheet__confirm-text'>
-              {loading ? '登记中...' : selectedCity ? `确认选择 ${selectedCity.replace('市', '')}` : '请选择城市'}
+              {loading ? '登记中...' : selectedCity ? `确认选择 ${displayName(selectedCity)}` : '请选择城市'}
             </Text>
           </View>
         </View>

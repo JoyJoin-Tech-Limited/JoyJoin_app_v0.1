@@ -34,7 +34,6 @@ import VirtualList from '../../components/VirtualList'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import OracleCard from '../../components/discover/OracleCard'
 import LocationFilterDrawer from '../../components/discover/LocationFilterDrawer'
-import CityUnlockBanner from '../../components/discover/CityUnlockBanner'
 import CityUnlockFeedCard from '../../components/discover/CityUnlockFeedCard'
 import CityPickerSheet from '../../components/discover/CityPickerSheet'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
@@ -55,7 +54,7 @@ const LOCATION_STORAGE_KEY = 'discover_last_location'
 const LOCATION_TTL_DAYS = 7
 
 // Measured OracleCard height in rpx. Keep in sync with `.oracle-card` height.
-const DISCOVER_CARD_HEIGHT_RPX = 464
+const DISCOVER_CARD_HEIGHT_RPX = 556
 
 // ─── Promo banner variant assignment ──────────────────────────────
 function resolveVariant(userId: string | undefined, hasArchetype: boolean): PromoBannerVariant {
@@ -105,8 +104,22 @@ function PoolCardSkeleton() {
 // ─── Pool card (legacy, replaced by OracleCard) ──────────────────
 // Old PoolCard component removed — see OracleCard in components/discover/
 
+interface AuthenticatedDiscoverProps {
+  selectedCluster: string
+  selectedDistrict: string
+  onFilterSelect: (clusterId: string, districtId: string) => void
+  onOpenDrawer: () => void
+  onOpenCityPicker: () => void
+}
+
 // ─── AuthenticatedDiscover ────────────────────────────────────────
-function AuthenticatedDiscover() {
+function AuthenticatedDiscover({
+  selectedCluster,
+  selectedDistrict,
+  onFilterSelect,
+  onOpenDrawer,
+  onOpenCityPicker,
+}: AuthenticatedDiscoverProps) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const displayName = (user as any)?.displayName || (user as any)?.nickname || '悦聚用户'
@@ -114,23 +127,12 @@ function AuthenticatedDiscover() {
   const xiaoyueAsset = useMemo(() => getXiaoyueExpressionAsset('homeWelcome'), [])
   const avatarUrl = (user as any)?.profileImageUrl || (user as any)?.wechatAvatarUrl || xiaoyueAsset
 
-  // ── Filter state ──
-  const saved = useMemo(() => readSavedLocation(), [])
-  const [selectedCluster, setSelectedCluster] = useState<string>(
-    saved?.clusterId ?? ALL_CLUSTER_ID
-  )
-  const [selectedDistrict, setSelectedDistrict] = useState<string>(
-    saved?.districtId ?? ALL_DISTRICT_ID
-  )
-  const [drawerOpen, setDrawerOpen] = useState(false)
-
-  // ── City unlock state ──
-  const [showCityPicker, setShowCityPicker] = useState(false)
   const [avatarError, setAvatarError] = useState(false)
 
   // ── Geo detection state ──
   const [detectedClusterId, setDetectedClusterId] = useState<string | null>(null)
   const [geoStatus, setGeoStatus] = useState<'idle' | 'locating' | 'success' | 'denied' | 'error'>('idle')
+  const hasAutoSetFilterRef = useRef(false)
 
   // ── Data fetching ──
   const {
@@ -264,6 +266,21 @@ function AuthenticatedDiscover() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCluster, selectedDistrict])
 
+  // ── GPS auto-filter on first detection ──
+  // When GPS first succeeds and no manual filter is active, auto-set the
+  // district filter silently. Only runs once per session.
+  useEffect(() => {
+    if (!detectedClusterId || geoStatus !== 'success') return
+    if (hasAutoSetFilterRef.current) return
+    if (selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID) return
+
+    hasAutoSetFilterRef.current = true
+    onFilterSelect(detectedClusterId, ALL_DISTRICT_ID)
+    discoverAnalytics.track('geo_auto_filter', undefined, {
+      clusterId: detectedClusterId,
+    })
+  }, [detectedClusterId, geoStatus, selectedCluster, selectedDistrict, onFilterSelect])
+
   // ── Derived: districts for selected cluster ──
   const visibleDistricts = useMemo<District[]>(() => {
     if (selectedCluster === ALL_CLUSTER_ID) {
@@ -346,22 +363,6 @@ function AuthenticatedDiscover() {
     [displayName, userArchetype, registrations.length, pools],
   )
   // ── Handlers ──
-  const handleFilterSelect = useCallback(
-    (clusterId: string, districtId: string) => {
-      setSelectedCluster(clusterId)
-      setSelectedDistrict(districtId)
-      if (clusterId === ALL_CLUSTER_ID && districtId === ALL_DISTRICT_ID) {
-        clearLocation()
-      } else {
-        saveLocation(clusterId, districtId)
-      }
-    },
-    []
-  )
-
-  const handleOpenDrawer = useCallback(() => { haptics('light'); setDrawerOpen(true) }, [])
-  const handleCloseDrawer = useCallback(() => setDrawerOpen(false), [])
-
   const openPools = useMemo(
     () => pools.filter((p) => p.status !== 'closed'),
     [pools],
@@ -494,7 +495,7 @@ function AuthenticatedDiscover() {
         <Text className='discover-auth__explore-title'>探索体验</Text>
         <View
           className={`discover-auth__location-pill ${selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID ? 'discover-auth__location-pill--active' : ''}`}
-          onClick={handleOpenDrawer}
+          onClick={onOpenDrawer}
           hoverClass='discover-auth__location-pill--hover'
           role='button'
           aria-label={`当前区域: 深圳 · ${locationPillLabel}, 点击切换`}
@@ -518,20 +519,6 @@ function AuthenticatedDiscover() {
             为你优先展示{getClusterById(detectedClusterId)?.displayName ?? '附近'}的聚会
           </Text>
         </View>
-      )}
-
-      {/* Location Filter Drawer */}
-      <LocationFilterDrawer
-        open={drawerOpen}
-        selectedCluster={selectedCluster}
-        selectedDistrict={selectedDistrict}
-        onSelect={handleFilterSelect}
-        onClose={handleCloseDrawer}
-      />
-
-      {/* City unlock banner — shown when user hasn't expressed city interest */}
-      {!hasCityInterest && (
-        <CityUnlockBanner onSelectCity={() => setShowCityPicker(true)} />
       )}
 
       {/* Pool listing */}
@@ -578,7 +565,7 @@ function AuthenticatedDiscover() {
             />
             {/* City unlock feed card — shown at bottom of pool list */}
             {!hasCityInterest && (
-              <CityUnlockFeedCard onSelectCity={() => setShowCityPicker(true)} />
+              <CityUnlockFeedCard onSelectCity={onOpenCityPicker} />
             )}
           </>
         ) : (
@@ -596,7 +583,7 @@ function AuthenticatedDiscover() {
               selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID
                 ? {
                     label: '清除筛选',
-                    onClick: () => handleFilterSelect(ALL_CLUSTER_ID, ALL_DISTRICT_ID),
+                    onClick: () => onFilterSelect(ALL_CLUSTER_ID, ALL_DISTRICT_ID),
                     variant: 'secondary',
                   }
                 : undefined
@@ -606,16 +593,6 @@ function AuthenticatedDiscover() {
       </View>
 
       <View className='discover-auth__spacer' />
-
-      {/* City picker bottom sheet */}
-      <CityPickerSheet
-        visible={showCityPicker}
-        onClose={() => setShowCityPicker(false)}
-        onSuccess={(city) => {
-          setShowCityPicker(false)
-          Taro.navigateTo({ url: '/pages/city-unlock/index' })
-        }}
-      />
     </View>
   )
 }
@@ -624,6 +601,39 @@ export default function DiscoverPage() {
   const { isAuthenticated, isLoading } = useAuth()
   const markAsRead = useMarkNotificationsAsRead()
   const hasMarkedRef = useRef(false)
+
+  // ── Location filter state (lifted from AuthenticatedDiscover to render modals at root level) ──
+  const saved = useMemo(() => readSavedLocation(), [])
+  const [selectedCluster, setSelectedCluster] = useState<string>(
+    saved?.clusterId ?? ALL_CLUSTER_ID
+  )
+  const [selectedDistrict, setSelectedDistrict] = useState<string>(
+    saved?.districtId ?? ALL_DISTRICT_ID
+  )
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [showCityPicker, setShowCityPicker] = useState(false)
+
+  const handleFilterSelect = useCallback(
+    (clusterId: string, districtId: string) => {
+      setSelectedCluster(clusterId)
+      setSelectedDistrict(districtId)
+      if (clusterId === ALL_CLUSTER_ID && districtId === ALL_DISTRICT_ID) {
+        clearLocation()
+      } else {
+        saveLocation(clusterId, districtId)
+      }
+    },
+    []
+  )
+
+  const handleOpenDrawer = useCallback(() => { haptics('light'); setDrawerOpen(true) }, [])
+  const handleCloseDrawer = useCallback(() => setDrawerOpen(false), [])
+  const handleOpenCityPicker = useCallback(() => setShowCityPicker(true), [])
+  const handleCloseCityPicker = useCallback(() => setShowCityPicker(false), [])
+  const handleCityPickerSuccess = useCallback((city: string) => {
+    setShowCityPicker(false)
+    Taro.navigateTo({ url: '/pages/city-unlock/index' })
+  }, [])
 
   useCustomTabBarSync({
     selectedIndex: MINI_PROGRAM_TAB_INDEX.discover,
@@ -640,10 +650,33 @@ export default function DiscoverPage() {
   }, [isAuthenticated, markAsRead])
 
   return (
-    <PageMorphWrapper
-      isLoading={isLoading}
-      loading={<LoadingScreen message='正在探索附近的氛围聚会…' />}
-      content={isAuthenticated ? <AuthenticatedDiscover /> : <MiniProgramLandingPage />}
-    />
+    <>
+      <PageMorphWrapper
+        isLoading={isLoading}
+        loading={<LoadingScreen message='正在探索附近的氛围聚会…' />}
+        content={isAuthenticated ? (
+          <AuthenticatedDiscover
+            selectedCluster={selectedCluster}
+            selectedDistrict={selectedDistrict}
+            onFilterSelect={handleFilterSelect}
+            onOpenDrawer={handleOpenDrawer}
+            onOpenCityPicker={handleOpenCityPicker}
+          />
+        ) : <MiniProgramLandingPage />}
+      />
+      {/* Modals rendered at root level to avoid PageMorphWrapper stacking-context bugs */}
+      <LocationFilterDrawer
+        open={drawerOpen}
+        selectedCluster={selectedCluster}
+        selectedDistrict={selectedDistrict}
+        onSelect={handleFilterSelect}
+        onClose={handleCloseDrawer}
+      />
+      <CityPickerSheet
+        visible={showCityPicker}
+        onClose={handleCloseCityPicker}
+        onSuccess={handleCityPickerSuccess}
+      />
+    </>
   )
 }

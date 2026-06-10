@@ -58,182 +58,79 @@
   }
 
   &__coach {
-    @include card-premium;
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
     margin: 0 $container-padding $spacing-md;
-    padding: $spacing-md;
+    padding: 0;
   }
 
-  &__coach-avatar {
-    width: 112rpx;
-    height: 112rpx;
+  &__heat-guide {
+    display: flex;
+    align-items: stretch;
+    gap: $spacing-xs;
+    margin: 0 $container-padding $spacing-md;
+    padding: $spacing-sm;
+    border-radius: $card-radius-sm;
+    background: $color-surface;
+    border: 1rpx solid rgba($color-border, 0.8);
+  }
+
+  &__heat-guide-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8rpx;
+    min-width: 0;
+    position: relative;
+  }
+
+  &__heat-guide-dot {
+    width: 24rpx;
+    height: 24rpx;
+    border-radius: 50%;
+    border-width: 2rpx;
+    border-style: solid;
     flex-shrink: 0;
   }
 
-  &__coach-copy {
-    min-width: 0;
-  }
-
-  &__coach-title {
-    display: block;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-primary;
-  }
-
-  &__coach-text {
-    display: block;
-    margin-top: 8rpx;
-    font-size: $font-size-base;
-    color: $color-text-primary;
-    line-height: 1.5;
-  }
-
-  &__summary {
-    margin: 0 $container-padding $spacing-md;
-    padding: $spacing-lg;
-  }
-
-  &__summary-stats {
+  &__heat-guide-text {
     display: flex;
-    gap: $spacing-sm;
-  }
-
-  &__summary-stat {
-    flex: 1;
-    min-width: 0;
-    padding: $spacing-sm;
-    border-radius: 24rpx;
-    background: rgba($color-primary-light, 0.5);
+    flex-direction: column;
+    align-items: center;
+    gap: 4rpx;
     text-align: center;
   }
 
-  &__summary-value {
-    display: block;
-    font-size: $font-size-xl;
-    font-weight: $font-weight-black;
-    color: $color-primary;
-  }
-
-  &__summary-label {
-    display: block;
-    margin-top: 8rpx;
+  &__heat-guide-label {
     font-size: $font-size-xs;
-    color: $color-text-secondary;
-  }
-
-  &__selection-tray {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16rpx;
-    margin-top: $spacing-md;
-  }
-
-  &__selection-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 8rpx;
-    padding: 16rpx 16rpx;
-    border-radius: 999rpx;
-    background: rgba($color-primary-light, 0.40);
-    border: 2rpx solid rgba($color-primary, 0.12);
-
-    &--level-2 {
-      background: rgba($color-primary-light, 0.60);
-      border-color: rgba($color-primary, 0.28);
-    }
-
-    &--level-3 {
-      background: rgba($color-primary-light, 0.85);
-      border-color: rgba($color-primary, 0.45);
-      box-shadow: 0 4rpx 12rpx rgba($color-primary, 0.10);
-    }
-  }
-
-  &__selection-chip-label {
-    font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
   }
 
-  &__selection-chip-meta {
-    font-size: $font-size-xs;
+  &__heat-guide-desc {
+    font-size: $font-size-2xs;
     color: $color-text-secondary;
+    line-height: 1.35;
   }
 
-  &__selection-empty {
-    display: block;
-    margin-top: $spacing-md;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: 1.5;
-  }
-
-  &__dominant-categories {
+  &__heat-guide-arrow {
+    position: absolute;
+    right: -12rpx;
+    top: 8rpx;
     display: flex;
-    flex-wrap: wrap;
-    gap: 16rpx;
-    margin-top: $spacing-md;
-  }
-
-  &__dominant-chip {
-    display: inline-flex;
     align-items: center;
-    gap: 8rpx;
-    padding: 8rpx 16rpx;
-    border-radius: 999rpx;
-    background: rgba($color-surface, 0.98);
-    border: 2rpx solid rgba($color-border, 0.92);
+    justify-content: center;
   }
 
-  &__dominant-chip-dot {
-    width: 12rpx;
-    height: 12rpx;
-    border-radius: 999rpx;
-    flex-shrink: 0;
-  }
-
-  &__dominant-chip-text {
+  &__heat-guide-arrow-text {
     font-size: $font-size-xs;
-    color: $color-text-secondary;
-  }
-
-  &__legend {
-    display: flex;
-    gap: $spacing-sm;
-    margin: 0 $container-padding $spacing-md;
-  }
-
-  &__legend-pill {
-    flex: 1;
-    min-width: 0;
-    padding: $spacing-sm;
-    border-radius: 24rpx;
-    background: rgba($color-surface, 0.96);
-    border: 2rpx solid rgba($color-border, 0.92);
-  }
-
-  &__legend-pill-title {
-    display: block;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-  }
-
-  &__legend-pill-text {
-    display: block;
-    margin-top: 8rpx;
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    line-height: 1.45;
+    color: $color-text-tertiary;
+    font-weight: $font-weight-bold;
   }
 
   &__scroll {
     flex: 1;
     box-sizing: border-box;
-    @include fixed-footer-reserve($button-height + 220rpx, $spacing-lg);
+    @include fixed-footer-reserve($button-height + 360rpx, $spacing-lg);
   }
 
   &__content {
@@ -256,19 +153,20 @@
 
   &__category-title-wrap {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 16rpx;
-  }
-
-  &__category-dot {
-    width: 14rpx;
-    height: 14rpx;
-    border-radius: 999rpx;
-    flex-shrink: 0;
   }
 
   &__category-icon {
     flex-shrink: 0;
+    margin-top: 2rpx;
+  }
+
+  &__category-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
+    min-width: 0;
   }
 
   &__category-title {
@@ -280,7 +178,6 @@
 
   &__category-description {
     display: block;
-    margin-top: 8rpx;
     font-size: $font-size-xs;
     color: $color-text-secondary;
     line-height: 1.45;
@@ -291,6 +188,9 @@
     font-size: $font-size-xs;
     color: $color-primary;
     font-weight: $font-weight-semibold;
+    padding: 4rpx 12rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary-light, 0.6);
   }
 
   &__interest-grid {
@@ -302,7 +202,7 @@
   &__interest-card {
     box-sizing: border-box;
     width: calc((100% - #{$spacing-sm}) / 2);
-    min-height: 128rpx;
+    min-height: 136rpx;
     padding: $spacing-md;
     border-radius: 24rpx;
     border: 2rpx solid rgba($color-border, 0.94);
@@ -312,6 +212,7 @@
       box-shadow 0.18s ease,
       background 0.18s ease,
       border-color 0.18s ease;
+    position: relative;
 
     &:active {
       transform: scale(0.98);
@@ -322,21 +223,21 @@
     }
 
     &--level-1 {
-      border-color: rgba($color-primary, 0.15);
-      background: rgba($color-primary-light, 0.35);
-      box-shadow: 0 4rpx 10rpx rgba($color-primary, 0.04);
+      border-color: rgba($color-primary, 0.22);
+      background: rgba($color-primary-light, 0.45);
+      box-shadow: 0 4rpx 12rpx rgba($color-primary, 0.06);
     }
 
     &--level-2 {
-      border-color: rgba($color-primary, 0.30);
-      background: rgba($color-primary-light, 0.55);
-      box-shadow: 0 6rpx 16rpx rgba($color-primary, 0.08);
+      border-color: rgba($color-primary, 0.40);
+      background: rgba($color-primary-light, 0.65);
+      box-shadow: 0 6rpx 18rpx rgba($color-primary, 0.10);
     }
 
     &--level-3 {
-      border-color: rgba($color-primary, 0.50);
-      background: rgba($color-primary-light, 0.80);
-      box-shadow: 0 10rpx 24rpx rgba($color-primary, 0.14);
+      border-color: rgba($color-primary, 0.60);
+      background: rgba($color-primary-light, 0.88);
+      box-shadow: 0 10rpx 28rpx rgba($color-primary, 0.18);
       transform: translateY(-4rpx);
     }
 
@@ -345,27 +246,61 @@
     }
   }
 
+  &__interest-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8rpx;
+  }
+
   &__interest-label {
     display: block;
     font-size: $font-size-base;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
+    flex: 1;
+    min-width: 0;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__interest-heat-dot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 4rpx;
   }
 
   &__interest-meta {
     display: block;
-    margin-top: 8rpx;
+    margin-top: 10rpx;
     font-size: $font-size-xs;
     color: $color-text-secondary;
+  }
+
+  &__interest-heat-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 4rpx 12rpx;
+    border-bottom-left-radius: 16rpx;
+    background: linear-gradient(135deg, rgba($color-primary, 0.85), rgba($color-primary-dark, 0.9));
+  }
+
+  &__interest-heat-badge-text {
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
   }
 
   &__hint-toast {
     position: fixed;
     left: $container-padding;
     right: $container-padding;
-    bottom: 240rpx;
-    bottom: calc(240rpx + constant(safe-area-inset-bottom));
-    bottom: calc(240rpx + env(safe-area-inset-bottom));
+    bottom: 380rpx;
+    bottom: calc(380rpx + constant(safe-area-inset-bottom));
+    bottom: calc(380rpx + env(safe-area-inset-bottom));
     z-index: $z-toast;
     padding: 16rpx $spacing-md;
     border-radius: 28rpx;
@@ -396,6 +331,111 @@
     box-shadow: 0 -4rpx 16rpx rgba($color-text-primary, 0.04);
   }
 
+  &__footer-summary {
+    margin-bottom: $spacing-sm;
+    padding: $spacing-sm;
+    border-radius: $card-radius-sm;
+    background: rgba($color-primary-light, 0.35);
+    border: 1rpx solid rgba($color-primary, 0.12);
+  }
+
+  &__footer-summary-stats {
+    display: flex;
+    gap: $spacing-sm;
+  }
+
+  &__footer-summary-stat {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+  }
+
+  &__footer-summary-value {
+    display: block;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-black;
+    color: $color-primary;
+  }
+
+  &__footer-summary-label {
+    display: block;
+    margin-top: 4rpx;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+  }
+
+  &__footer-summary-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8rpx;
+    margin-top: $spacing-sm;
+    padding-top: $spacing-sm;
+    border-top: 1rpx solid rgba($color-primary, 0.10);
+  }
+
+  &__footer-summary-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8rpx;
+    padding: 8rpx 14rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary-light, 0.40);
+    border: 2rpx solid rgba($color-primary, 0.12);
+
+    &--level-2 {
+      background: rgba($color-primary-light, 0.60);
+      border-color: rgba($color-primary, 0.28);
+    }
+
+    &--level-3 {
+      background: rgba($color-primary-light, 0.85);
+      border-color: rgba($color-primary, 0.45);
+      box-shadow: 0 4rpx 12rpx rgba($color-primary, 0.10);
+    }
+  }
+
+  &__footer-summary-chip-label {
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__footer-summary-chip-meta {
+    font-size: $font-size-2xs;
+    color: $color-text-secondary;
+  }
+
+  &__footer-summary-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8rpx;
+    margin-top: 8rpx;
+    padding-top: 8rpx;
+    border-top: 1rpx solid rgba($color-primary, 0.08);
+  }
+
+  &__footer-summary-cat {
+    display: inline-flex;
+    align-items: center;
+    gap: 8rpx;
+    padding: 4rpx 10rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.96);
+    border: 1rpx solid rgba($color-border, 0.8);
+  }
+
+  &__footer-summary-cat-dot {
+    width: 10rpx;
+    height: 10rpx;
+    border-radius: 999rpx;
+    flex-shrink: 0;
+  }
+
+  &__footer-summary-cat-text {
+    font-size: $font-size-2xs;
+    color: $color-text-secondary;
+  }
+
   &__footer-meter {
     display: flex;
     align-items: center;
@@ -420,56 +460,6 @@
     &--celebrating {
       animation: meter-glow-pulse 0.6s ease-out;
     }
-  }
-
-  &__category-skeleton {
-    padding: $spacing-lg;
-    margin-bottom: $spacing-md;
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-md;
-  }
-
-  &__skeleton-header {
-    display: flex;
-    align-items: center;
-    gap: 16rpx;
-  }
-
-  &__skeleton-dot {
-    width: 14rpx;
-    height: 14rpx;
-    border-radius: 999rpx;
-    background: $color-divider;
-  }
-
-  &__skeleton-title {
-    width: 120rpx;
-    height: 28rpx;
-    border-radius: 8rpx;
-    background: $color-divider;
-  }
-
-  &__skeleton-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $spacing-sm;
-  }
-
-  &__skeleton-card {
-    width: calc((100% - #{$spacing-sm}) / 2);
-    min-height: 128rpx;
-    border-radius: 24rpx;
-    background: rgba($color-divider, 0.6);
-  }
-
-  &__celebration {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: $z-modal;
-    pointer-events: none;
   }
 
   &__footer-meter-meta {
@@ -515,17 +505,13 @@
     }
   }
 
-  &__skip-btn {
-    width: 100%;
-    margin-bottom: $spacing-sm;
-    opacity: 0.7;
-
-    &.joy-button--secondary {
-      background: transparent;
-      border: 2rpx solid rgba($color-border, 0.96);
-      color: $color-text-muted;
-      box-shadow: none;
-    }
+  &__celebration {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: $z-modal;
+    pointer-events: none;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -563,10 +549,6 @@
       }
     }
 
-    &__selection-chip {
-      animation: none;
-    }
-
     &__interest-card--popping {
       animation: none;
     }
@@ -596,18 +578,6 @@
 
   100% {
     transform: scale(1);
-  }
-}
-
-@keyframes chip-slide-in {
-  from {
-    opacity: 0;
-    transform: translateX(-12rpx) scale(0.92);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
   }
 }
 

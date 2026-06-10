@@ -68,6 +68,8 @@
   &__header {
     padding-top: $spacing-xl;
     margin-bottom: $spacing-lg;
+    display: flex;
+    flex-direction: column;
   }
 
   &__eyebrow {
@@ -83,6 +85,13 @@
     display: block;
     @include type-title;
     margin-bottom: $spacing-sm;
+
+    &--headline {
+      @include type-headline;
+      letter-spacing: -0.5rpx;
+      line-height: 1.3;
+      word-break: keep-all;
+    }
   }
 
   &__description {
@@ -93,10 +102,26 @@
   }
 
   &__card {
-    @include card;
+    @include card-premium;
     padding: $spacing-lg;
     margin-bottom: $spacing-md;
-    background: rgba($color-surface, 0.96);
+    background: $card-gradient-premium;
+    border: 2rpx solid rgba($color-primary, 0.06);
+    position: relative;
+    overflow: hidden;
+    contain: layout style;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 16rpx;
+      bottom: 16rpx;
+      width: 4rpx;
+      border-radius: 0 4rpx 4rpx 0;
+      background: $brand-gradient;
+      opacity: 0.55;
+    }
   }
 
   &__info-row {
@@ -120,9 +145,137 @@
   }
 
   &__info-value {
-    @include type-body;
-    font-weight: $font-weight-medium;
+    @include type-body-emphasis;
     text-align: right;
+    color: $color-text-primary;
+
+    &--highlight {
+      color: $color-primary-dark;
+    }
+  }
+
+  // ─── Meta Icons (bundled WebP assets + CSS target) ────────────────
+  &__meta-icon-img {
+    width: 36rpx;
+    height: 36rpx;
+    flex-shrink: 0;
+  }
+
+  &__type-icon {
+    @include flex-center;
+    width: 36rpx;
+    height: 36rpx;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  &__type-icon-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 2.5rpx solid $color-primary;
+
+    &--outer {
+      width: 32rpx;
+      height: 32rpx;
+      opacity: 0.35;
+    }
+
+    &--inner {
+      width: 20rpx;
+      height: 20rpx;
+      opacity: 0.65;
+    }
+  }
+
+  &__type-icon-dot {
+    position: absolute;
+    width: 6rpx;
+    height: 6rpx;
+    border-radius: 50%;
+    background: $color-primary;
+  }
+
+  // ─── Price Pill (premium glass treatment) ─────────────────────────
+  &__price-pill {
+    display: inline-flex;
+    align-items: baseline;
+    gap: $spacing-xs;
+    margin-top: $spacing-sm;
+    padding: $spacing-xs $spacing-md;
+    border-radius: $radius-pill;
+    background: linear-gradient(135deg, rgba($color-primary, 0.08) 0%, rgba($color-secondary, 0.08) 100%);
+    border: 2rpx solid rgba($color-primary, 0.12);
+    box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.08);
+    align-self: flex-start;
+  }
+
+  &__price-label {
+    @include type-caption;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+  }
+
+  &__price-value {
+    @include type-en-brand-numeric;
+    font-size: $font-size-xl;
+    color: $color-primary-dark;
+    @include gradient-text;
+  }
+
+  // ─── Archetype Avatar Cluster ─────────────────────────────────────
+  &__cluster-wrap {
+    margin-bottom: $spacing-md;
+  }
+
+  &__archetype-cluster {
+    @include card;
+    padding: $spacing-md $spacing-lg;
+    background: linear-gradient(180deg, rgba($color-surface, 0.98) 0%, rgba($color-primary, 0.04) 100%);
+    border: 2rpx solid rgba($color-primary, 0.06);
+  }
+
+  &__archetype-heads {
+    display: flex;
+    align-items: center;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__archetype-head-wrap {
+    @include flex-center;
+    width: 48rpx;
+    height: 48rpx;
+    border-radius: 50%;
+    border: 2rpx solid;
+    margin-left: -22rpx;
+    overflow: hidden;
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+
+    &:first-child {
+      margin-left: 0;
+    }
+  }
+
+  &__archetype-overflow-badge {
+    @include flex-center;
+    width: 48rpx;
+    height: 48rpx;
+    border-radius: 50%;
+    background: $brand-gradient;
+    margin-left: -22rpx;
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.12);
+    border: 2rpx solid rgba($color-surface, 0.5);
+  }
+
+  &__archetype-overflow-text {
+    @include type-caption;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+  }
+
+  &__archetype-cluster-label {
+    @include type-label;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
   }
 
   &__stepper {
@@ -174,7 +327,7 @@
   }
 
   &__resume-pill {
-    padding: 10rpx 18rpx;
+    padding: $spacing-xs $spacing-sm;
     border-radius: 999rpx;
     background: rgba($color-surface, 0.94);
     color: $color-primary-dark;
@@ -188,7 +341,7 @@
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 10rpx;
+    gap: $spacing-xs;
     padding: $spacing-sm $spacing-sm;
     border-radius: 999rpx;
     background: rgba($color-surface, 0.72);
@@ -241,6 +394,13 @@
   &__brief-card {
     border: 2rpx solid rgba($color-primary, 0.08);
     background: linear-gradient(180deg, rgba($color-surface, 0.98) 0%, rgba($color-primary, 0.06) 100%);
+  }
+
+  &__brief-mascot {
+    width: 88rpx;
+    height: 88rpx;
+    display: block;
+    margin: 0 auto $spacing-sm;
   }
 
   &__section-kicker {
@@ -401,6 +561,12 @@
     gap: $spacing-xs;
   }
 
+  &__choice-icon {
+    flex-shrink: 0;
+    width: 36rpx;
+    height: 36rpx;
+  }
+
   &__choice-emoji {
     font-size: $font-size-lg; // Emoji icon — decorative
     line-height: 1;
@@ -437,7 +603,7 @@
   &__chip {
     display: flex;
     align-items: center;
-    gap: 10rpx;
+    gap: $spacing-xs;
     min-height: 88rpx;
     padding: $spacing-sm $spacing-md;
     border-radius: 999rpx;
@@ -453,6 +619,12 @@
       transform: scale(0.96);
       opacity: 0.9;
     }
+  }
+
+  &__chip-icon {
+    flex-shrink: 0;
+    width: 28rpx;
+    height: 28rpx;
   }
 
   &__chip-emoji {
@@ -547,6 +719,72 @@
     box-shadow: 0 8rpx 32rpx rgba($color-primary, 0.35);
   }
 
+  // ─── Already Joined Guard State ────────────────────────────────────
+  &__already-joined {
+    @include flex-center;
+    flex-direction: column;
+    min-height: 72dvh;
+    text-align: center;
+    padding: $spacing-lg;
+  }
+
+  &__already-mascot {
+    width: 160rpx;
+    height: 160rpx;
+    margin: 0 auto;
+    display: block;
+    margin-bottom: $spacing-md;
+  }
+
+  &__already-title {
+    display: block;
+    @include type-heading;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__already-text {
+    display: block;
+    @include type-body;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+    max-width: 560rpx;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__already-meta {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-lg;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba($color-primary, 0.06);
+    border: 2rpx solid rgba($color-primary, 0.08);
+    width: 100%;
+    max-width: 480rpx;
+    box-sizing: border-box;
+  }
+
+  &__already-meta-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    @include type-label;
+    color: $color-text-secondary;
+    padding: $spacing-xs 0;
+    border-bottom: 1rpx solid rgba($color-divider, 0.6);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__already-cta {
+    width: 100%;
+    max-width: 520rpx;
+    margin-top: $spacing-sm;
+  }
+
   &__empty {
     @include flex-center;
     flex-direction: column;
@@ -569,6 +807,7 @@
 
   &__step-content {
     animation: pool-reg-step-in 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform, opacity;
   }
 
   &__step-coach {
@@ -596,6 +835,65 @@
     display: block;
     @include type-heading;
     margin-bottom: $spacing-sm;
+  }
+
+  // ─── Already-joined guard state ────────────────────────────────
+  &__already-joined {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-md;
+    min-height: 72dvh;
+    text-align: center;
+    @include card-premium;
+    padding: $spacing-lg;
+    background: linear-gradient(180deg, rgba($color-surface, 0.98) 0%, rgba($color-primary, 0.04) 100%);
+    border: 2rpx solid rgba($color-primary, 0.08);
+  }
+
+  &__already-mascot {
+    width: 160rpx;
+    height: 160rpx;
+    margin: 0 auto;
+    display: block;
+  }
+
+  &__already-title {
+    display: block;
+    @include type-subheading;
+    color: $color-text-primary;
+    line-height: 1.5;
+  }
+
+  &__already-text {
+    display: block;
+    @include type-body;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+    max-width: 560rpx;
+  }
+
+  &__already-meta {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba($color-surface, 0.8);
+    border: 1rpx solid $color-divider;
+    align-self: stretch;
+  }
+
+  &__already-meta-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    @include type-label;
+    color: $color-text-secondary;
+  }
+
+  &__already-cta {
+    width: 100%;
+    max-width: 480rpx;
   }
 
   .joy-button--secondary {

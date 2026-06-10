@@ -118,7 +118,7 @@
     font-size: 16rpx;
     line-height: 1;
     color: $color-text-white;
-    margin-left: 2rpx;
+    margin-left: 8rpx;
   }
 
   &__greeting-line {
@@ -135,6 +135,9 @@
   }
 
   &__greeting-prompt {
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
     animation: discover-greeting-enter 0.4s 0.06s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
@@ -152,26 +155,13 @@
     color: $color-text-primary;
   }
 
-  &__greeting-prompt {
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-  }
-
-  &__subtitle {
-    display: block;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: 1.6;
-  }
-
   // ── Explore header ────────────────────────────────────────────
   &__explore-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 $container-padding;
-    margin-bottom: $spacing-md;
+    margin-bottom: $spacing-sm;
   }
 
   &__explore-title {
@@ -191,7 +181,6 @@
     align-items: center;
     justify-content: center;
     padding: 0 $container-padding;
-    margin-top: -$spacing-xs;
     margin-bottom: $spacing-sm;
   }
 
@@ -299,17 +288,30 @@
 }
 
 // ─── Oracle Card ─────────────────────────────────────────────────
+// Layered text hierarchy (top = most decision-critical):
+//   L1 Hero message     — 28rpx, $font-cn-display, bold  (emotional hook)
+//   L2 Topline          — 24rpx, semibold                (status / urgency)
+//   L3 Decision Facts   — 40rpx date / 32rpx time        (WHEN — #1 factor)
+//                         30rpx type / 26rpx location    (WHAT & WHERE — #2 & #3)
+//   L4 Title            — 26rpx, semibold                (event name)
+//   L5 Teaser           — 28rpx, $font-cn-display, bold  (social proof)
+//   L5 Teaser sub       — 24rpx                          (detail)
+//   L6 Progress         — 24rpx                          (scarcity)
+//   L6 CTA              — 32rpx, $font-cn-display, black (action)
+//   L6 CTA sub          — 22rpx                          (value prop)
 .oracle-card {
   @include card;
   box-sizing: border-box;
-  height: 464rpx;
-  padding: 20rpx $spacing-lg;
+  min-height: 556rpx;
+  padding: 24rpx $spacing-lg;
   border-radius: $card-radius-sm;
   border: 2rpx solid rgba($color-surface, 0.9);
   overflow: hidden;
   opacity: 0;
   transform: translateY(18rpx);
   animation: oracle-card-enter 0.34s ease-out forwards;
+  will-change: transform, opacity;
+  contain: layout style;
 
   &--hover {
     transform: translateY(-2rpx) scale(0.985);
@@ -317,7 +319,7 @@
   }
 
   &--skeleton {
-    height: 464rpx;
+    min-height: 556rpx;
     pointer-events: none;
     opacity: 1;
     transform: none;
@@ -350,25 +352,25 @@
 
     &--hero {
       width: 70%;
-      height: 48rpx;
+      height: 40rpx;
       margin-bottom: $spacing-sm;
     }
 
     &--meta {
       width: 50%;
-      height: 28rpx;
+      height: 56rpx;
       margin-bottom: $spacing-sm;
     }
 
     &--teaser {
       width: 80%;
-      height: 36rpx;
+      height: 44rpx;
       margin-bottom: $spacing-sm;
     }
 
     &--cta {
       width: 100%;
-      height: 72rpx;
+      height: 88rpx;
     }
   }
 
@@ -377,98 +379,149 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8rpx;
+    margin-bottom: $spacing-xs;
   }
 
   &__pulse-pill {
     display: inline-flex;
     align-items: center;
-    gap: 8rpx;
-    padding: 4rpx 16rpx;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
     border-radius: 999rpx;
     background: rgba($color-primary, 0.08);
   }
 
   &__pulse-dot {
-    width: 8rpx;
-    height: 8rpx;
+    width: 10rpx;
+    height: 10rpx;
     border-radius: 50%;
     animation: pulse-dot 2s ease-in-out infinite;
+
+    &--urgent {
+      animation: pulse-dot-urgent 1.2s ease-in-out infinite;
+    }
   }
 
   &__pulse-label {
-    font-size: 20rpx;
+    font-size: 24rpx;
     font-weight: $font-weight-semibold;
   }
 
   &__countdown {
-    font-size: 20rpx;
+    font-size: 24rpx;
     color: $color-text-muted;
+    font-weight: $font-weight-medium;
+
+    &--urgent {
+      font-weight: $font-weight-bold;
+    }
   }
 
   // ── Hero (personalized message) ───────────────────────────────
   &__hero {
-    margin-bottom: 8rpx;
+    margin-bottom: $spacing-xs;
   }
 
   &__hero-message {
     display: block;
-    font-size: 30rpx;
+    font-family: $font-cn-display;
+    font-size: 28rpx;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
     line-height: 1.4;
+    word-break: keep-all;
     @include text-truncate;
   }
 
   // ── Ecosystem bar ─────────────────────────────────────────────
   &__ecosystem {
-    margin-bottom: 8rpx;
+    margin-bottom: $spacing-xs;
   }
 
-  // ── Meta (muted event info) ───────────────────────────────────
+  // ── Decision Facts (the 3 key factors: WHEN / WHAT / WHERE) ───
+  &__facts {
+    margin-bottom: $spacing-xs;
+  }
+
+  &__fact-when-row {
+    display: flex;
+    align-items: baseline;
+    gap: 16rpx;
+    line-height: 1.2;
+  }
+
+  &__fact-when {
+    font-family: $font-cn-display;
+    font-size: 40rpx;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+    word-break: keep-all;
+    white-space: nowrap;
+  }
+
+  &__fact-time {
+    font-family: $font-cn-display;
+    font-size: 32rpx;
+    font-weight: $font-weight-bold;
+    color: $color-text-secondary;
+  }
+
+  &__fact-what-where {
+    display: block;
+    margin-top: $spacing-xs;
+    line-height: 1.4;
+  }
+
+  &__fact-type {
+    font-family: $font-cn-display;
+    font-size: 30rpx;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    word-break: keep-all;
+  }
+
+  &__fact-location {
+    font-size: 26rpx;
+    font-weight: $font-weight-medium;
+    color: $color-text-muted;
+  }
+
+  // ── Title (event name / tagline) ──────────────────────────────
   &__meta {
-    margin-bottom: 8rpx;
+    margin-bottom: $spacing-sm;
   }
 
   &__title {
     display: block;
     font-size: 26rpx;
     font-weight: $font-weight-semibold;
-    color: $color-text-primary;
+    color: $color-text-secondary;
     line-height: 1.4;
-    @include text-truncate;
-    margin-bottom: 8rpx;
-  }
-
-  &__meta-line {
-    display: block;
-    font-size: 22rpx;
-    color: $color-text-muted;
-    line-height: 1.5;
     @include text-truncate;
   }
 
   // ── Type-density teaser ───────────────────────────────────────
   &__teaser {
-    padding: 8rpx 16rpx;
-    border-radius: 16rpx;
+    padding: 10rpx 18rpx;
+    border-radius: 18rpx;
     border: 1rpx solid;
-    margin-bottom: 16rpx;
+    margin-bottom: $spacing-sm;
   }
 
   &__teaser-text {
     display: block;
-    font-size: 23rpx;
-    font-weight: $font-weight-semibold;
+    font-family: $font-cn-display;
+    font-size: 28rpx;
+    font-weight: $font-weight-bold;
     line-height: 1.4;
     @include text-truncate;
   }
 
   &__teaser-subline {
     display: block;
-    font-size: 19rpx;
+    font-size: 24rpx;
     color: $color-text-muted;
-    margin-top: 8rpx;
+    margin-top: $spacing-xs;
     line-height: 1.4;
     @include text-truncate;
   }
@@ -498,11 +551,18 @@
     height: 100%;
     border-radius: 3rpx;
     transform-origin: left;
-    transition: transform 0.4s ease-out;
+    @media (prefers-reduced-motion: no-preference) {
+      transition: transform 0.4s ease-out;
+    }
+
+    &--hot {
+      animation: progress-fill-pulse 1.5s ease-in-out infinite;
+    }
   }
 
   &__progress-text {
-    font-size: 20rpx;
+    font-size: 24rpx;
+    font-weight: $font-weight-medium;
     color: $color-text-muted;
     white-space: nowrap;
     flex-shrink: 0;
@@ -513,11 +573,12 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 88rpx;
+    min-height: 96rpx;
     border-radius: 20rpx;
     padding: 0 $spacing-md;
+    transition: background 0.12s ease;
 
-    &:active {
+    &--hover {
       transform: scale(0.97);
     }
 
@@ -527,17 +588,83 @@
   }
 
   &__cta-text {
-    font-size: 27rpx;
-    font-weight: $font-weight-bold;
-    color: $color-text-white;
-    line-height: 1.2;
+    font-family: $font-cn-display;
+    font-size: 32rpx;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+    line-height: 1.4;
   }
 
   &__cta-subline {
-    font-size: 19rpx;
-    color: rgba($color-text-white, 0.8);
-    line-height: 1.2;
-    margin-top: 0;
+    font-size: 22rpx;
+    color: $color-text-secondary;
+    line-height: 1.4;
+  }
+
+  // ── Full-pool / disabled state ────────────────────────────────
+  &--full &__cta {
+    background: $color-divider !important;
+    pointer-events: none;
+  }
+
+  &--full &__cta-text {
+    color: $color-text-muted;
+  }
+
+  &--full &__cta-subline {
+    color: $color-text-muted;
+  }
+
+  &--full &__progress-fill {
+    opacity: 0.4;
+  }
+
+  // ── High-chemistry celebration badge ──────────────────────────
+  &__celebration-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6rpx;
+    margin-left: $spacing-xs;
+    padding: 4rpx 14rpx;
+    border-radius: 999rpx;
+    font-family: $font-cn-display;
+    font-size: 22rpx;
+    font-weight: $font-weight-semibold;
+    color: $color-text-white;
+    opacity: 0;
+    transform: translateY(4rpx);
+    animation: celebration-badge-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
+  }
+
+  @keyframes celebration-badge-enter {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  // ── Low-end device gating ─────────────────────────────────────
+  &--low-end {
+    will-change: auto;
+    contain: none;
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  &--low-end &__pulse-dot {
+    animation: none;
+    opacity: 1;
+  }
+
+  &--low-end &__progress-fill {
+    transition: none;
+  }
+
+  &--low-end &__celebration-badge {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -617,7 +744,9 @@
     height: 100%;
     border-radius: 3rpx;
     transform-origin: left center;
-    transition: transform 0.4s ease-out;
+    @media (prefers-reduced-motion: no-preference) {
+      transition: transform 0.4s ease-out;
+    }
   }
 
   &__score {
@@ -637,6 +766,16 @@
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+@keyframes pulse-dot-urgent {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(1.4); }
+}
+
+@keyframes progress-fill-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 @keyframes oracle-card-enter {
@@ -717,6 +856,29 @@
   .discover-auth__greeting-line,
   .discover-auth__greeting-prompt,
   .discover-auth__subtitle {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .oracle-card__pulse-dot {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .oracle-card__pulse-dot--urgent {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .oracle-card__progress-fill--hot {
+    animation: none;
+    opacity: 1;
+  }
+
+  .oracle-card__celebration-badge {
     animation: none;
     opacity: 1;
     transform: none;

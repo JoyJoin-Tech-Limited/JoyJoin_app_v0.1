@@ -10,15 +10,10 @@ import {
 } from '@joyjoin/shared/iconSystem'
 
 interface JoyJoinIconProps {
-  /** The original emoji character — used for lookup and fallback */
   emoji: string
-  /** Override display size in rpx (defaults to mapped size) */
   size?: number
-  /** Optional tier override for context-specific assets (e.g. 'reaction') */
   tier?: IconTier
-  /** Additional CSS class */
   className?: string
-  /** Additional inline styles */
   style?: React.CSSProperties
 }
 
@@ -26,17 +21,15 @@ interface JoyJoinIconProps {
  * JoyJoinIcon — Universal proprietary icon renderer.
  *
  * Looks up the emoji in the centralized mapping registry and renders
- * the matching proprietary PNG icon. If no mapping exists or the image
+ * the matching proprietary icon. If no mapping exists or the image
  * fails to load, falls back gracefully to native emoji text rendering.
  *
- * WeChat mini-program automatically picks @2x/@3x variants when files
- * are named with those suffixes in the same folder. We only need to
- * reference the 1x source in the src attribute.
+ * WeChat mini-program automatically picks @2x/@3x variants when the
+ * src does NOT already contain a density suffix. Hardcoding @3x causes
+ * the runtime to try `asset@3x@3x.webp`, a 404. Always request the
+ * bare 1x filename.
  *
- * Usage:
- *   <JoyJoinIcon emoji="📅" size={32} />
- *   <JoyJoinIcon emoji="😂" />
- *   <JoyJoinIcon emoji="🔥" tier="reaction" size={48} />
+ * @see AGENTS.md §4 — "WeChat @3x image pitfall"
  */
 function getReducedMotion(): boolean {
   try {
@@ -48,23 +41,6 @@ function getReducedMotion(): boolean {
 }
 
 const REDUCED_MOTION = getReducedMotion()
-
-/** Detect device pixel ratio for retina icon selection.
- *  WeChat base library typically reports 2 (iPhone) or 3 (Android flagship / iPhone Pro).
- *  Clamp to 1–3 since we only ship those densities. */
-function getDevicePixelRatio(): 1 | 2 | 3 {
-  try {
-    const info = Taro.getSystemInfoSync()
-    const ratio = Math.round((info as any).pixelRatio ?? 1)
-    if (ratio >= 3) return 3
-    if (ratio >= 2) return 2
-    return 1
-  } catch {
-    return 1
-  }
-}
-
-const DEVICE_PIXEL_RATIO = getDevicePixelRatio()
 
 export default function JoyJoinIcon({
   emoji,
@@ -90,7 +66,6 @@ export default function JoyJoinIcon({
     return 'opacity 200ms ease-out, transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1)'
   }, [])
 
-  // No mapping — render native emoji immediately
   if (!mapping) {
     return (
       <Text className={className} style={style}>
@@ -102,7 +77,6 @@ export default function JoyJoinIcon({
   const displaySize = size ?? mapping.size
   const sizeStr = `${displaySize}rpx`
 
-  // Image failed to load — render fallback emoji
   if (hasError) {
     return (
       <Text
@@ -114,10 +88,9 @@ export default function JoyJoinIcon({
     )
   }
 
-  // Resolve asset path — all tiers now use root-relative local paths
   let src: string
   try {
-    const assetPath = getIconAssetPath(mapping.assetKey, mapping.tier, DEVICE_PIXEL_RATIO)
+    const assetPath = getIconAssetPath(mapping.assetKey, mapping.tier, 1)
     if (CDN_ICON_TIERS.has(mapping.tier)) {
       src = assetPath
     } else {
@@ -125,7 +98,6 @@ export default function JoyJoinIcon({
       src = require(assetPath) as string
     }
   } catch {
-    // If resolution fails (asset missing or CDN unreachable), fall back to emoji
     return (
       <Text
         className={`${className} ${!loaded ? 'jj-icon-loading' : ''}`}

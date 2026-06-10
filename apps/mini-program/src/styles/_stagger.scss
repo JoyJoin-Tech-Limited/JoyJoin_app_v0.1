@@ -13,6 +13,7 @@
   opacity: 0;
   transform: translate3d(0, 20rpx, 0);
   animation: stagger-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
 }
 
 @keyframes stagger-in {

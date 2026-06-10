@@ -252,6 +252,7 @@ Active domain modules in `routes/domains/`:
 | `onboarding.ts` | Onboarding completion endpoints |
 | `assessment.ts` | Personality assessment endpoints |
 | `admin.ts` | Admin management API |
+| `adminEventPools.ts` | Admin event pool CRUD, venue hints, time slot validation |
 | `analytics.ts` | Analytics and KPI endpoints |
 | `payments.ts` | WeChat Pay v3 JSAPI (primary, mini-program) + H5 (reference, web), coupon validation, webhook verification, and `GET /api/payments/ritual-context` (Payment Ritual V2 real DB-backed context) |
 | `eventPools.ts` | Event pool discovery, registration, and `GET /api/event-pools/:poolId/stats` (`estimatedGroups`, archetype breakdown, historical group themes) |

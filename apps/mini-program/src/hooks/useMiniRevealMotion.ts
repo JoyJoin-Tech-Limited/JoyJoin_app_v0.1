@@ -11,7 +11,7 @@ export interface MiniRevealMotionPreference {
 }
 
 const MOTION_STORAGE_KEY = 'joyjoin:mini-reveal-motion'
-const LOW_MOTION_BENCHMARK_LEVEL = 8
+const LOW_MOTION_BENCHMARK_LEVEL = 15
 
 function normalizeMotionMode(value?: string): MotionMode | null {
   if (!value) {
@@ -43,6 +43,11 @@ function readStoredMotionMode(): MotionMode | null {
 function shouldUseBenchmarkFallback(): boolean {
   try {
     const systemInfo = Taro.getSystemInfoSync()
+
+    // OS-level reduced-motion preference (iOS / Android accessibility)
+    if ((systemInfo as unknown as Record<string, unknown>).reduceMotion === true) {
+      return true
+    }
 
     return (
       typeof systemInfo.benchmarkLevel === 'number' &&

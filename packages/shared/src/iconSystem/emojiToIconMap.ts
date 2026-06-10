@@ -125,8 +125,9 @@ export const INTENT_MAP: Record<string, IconMapping> = {
   '💬': { assetKey: 'intent-discussion', tier: 'intent', size: 48, fallbackEmoji: '💬' },
   '🎉': { assetKey: 'intent-fun', tier: 'intent', size: 48, fallbackEmoji: '🎉' },
   // Fallback to existing assets while dedicated romance/flexible icons are pending
-  '💕': { assetKey: 'intent-friends', tier: 'intent', size: 48, fallbackEmoji: '💕' },
-  '🎲': { assetKey: 'intent-fun', tier: 'intent', size: 48, fallbackEmoji: '🎲' },
+  // Distinct tints ensure visual differentiation even when reusing base assets
+  '💕': { assetKey: 'intent-friends', tier: 'intent', size: 48, fallbackEmoji: '💕', tint: '#FF6B9D' },
+  '🎲': { assetKey: 'intent-fun', tier: 'intent', size: 48, fallbackEmoji: '🎲', tint: '#8B5CF6' },
 }
 
 // ═══════════════════════════════════════════════════════════════════

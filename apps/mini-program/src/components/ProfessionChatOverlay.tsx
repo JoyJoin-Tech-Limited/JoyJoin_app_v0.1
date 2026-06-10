@@ -304,7 +304,7 @@ export default function ProfessionChatOverlay({
   const [inputValue, setInputValue] = useState(initialValue)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [keyboardHeight, setKeyboardHeight] = useState(0)
-  const [bottomAnchorKey, setBottomAnchorKey] = useState(0)
+  const [scrollTrigger, setScrollTrigger] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hasSent, setHasSent] = useState(false)
   const [showRevealCard, setShowRevealCard] = useState(false)
@@ -339,6 +339,7 @@ export default function ProfessionChatOverlay({
   // Tag removal state
   const [removedTags, setRemovedTags] = useState<string[]>([])
   const [tagFeedback, setTagFeedback] = useState<string | null>(null)
+  const revealCardViewedRef = useRef(false)
 
   useEffect(() => {
     if (visible && !isClosing) {
@@ -399,8 +400,7 @@ export default function ProfessionChatOverlay({
       if (!visible) return
       setKeyboardHeight(res.height)
       if (res.height > 0) {
-        // Force scroll-to-bottom when keyboard opens so input row stays visible
-        setBottomAnchorKey((k) => k + 1)
+        analytics.interaction('profession_chat_keyboard_opened', { height: res.height })
       }
     }
     Taro.onKeyboardHeightChange(handler)
@@ -428,6 +428,14 @@ export default function ProfessionChatOverlay({
       }
     }
   }, [visible, isSubmitting, inputValue])
+
+  useEffect(() => {
+    if (showRevealCard && !revealCardViewedRef.current) {
+      revealCardViewedRef.current = true
+      analytics.interaction('profession_chat_reveal_card_viewed')
+    }
+    if (!visible) revealCardViewedRef.current = false
+  }, [showRevealCard, visible, analytics])
 
   const handleSendNew = useCallback(async (overrideText?: string) => {
     const text = (overrideText ?? inputValue).trim()
@@ -493,7 +501,7 @@ export default function ProfessionChatOverlay({
 
     const userMsg: ChatMessage = { id: generateId(), sender: 'user', text }
     setMessages((prev) => [...prev, userMsg])
-    setBottomAnchorKey((k) => k + 1)
+    setScrollTrigger((c) => c + 1)
 
     try {
       const data = await apiRequest<UnderstandProfessionResponse>({
@@ -507,25 +515,27 @@ export default function ProfessionChatOverlay({
       if (sendGenerationRef.current !== thisGeneration) return
 
       // Skip low-quality echo hints (e.g., "投资银行！投资银行方向？")
-      const hintText = data.reactionHint.trim()
-      const lowerHint = hintText.toLowerCase()
-      const lowerText = text.toLowerCase()
-      const isEcho = lowerHint.startsWith(lowerText) &&
-        (hintText.length <= text.length + 6 ||
-         hintText.replace(new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '').trim().length < 6)
-      if (isEcho) {
-        analytics.interaction('profession_chat_echo_suppressed', {
-          hintLength: hintText.length,
-          inputLength: text.length,
-        })
-      } else {
-        const hintMsg: ChatMessage = {
-          id: generateId(),
-          sender: 'xiaoyue',
-          text: data.reactionHint,
-          expressionId: mapSuccessExpression(data.reactionHint),
+      const hintText = (data.reactionHint ?? '').trim()
+      if (hintText) {
+        const lowerHint = hintText.toLowerCase()
+        const lowerText = text.toLowerCase()
+        const isEcho = lowerHint.startsWith(lowerText) &&
+          (hintText.length <= text.length + 6 ||
+           hintText.replace(new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '').trim().length < 6)
+        if (isEcho) {
+          analytics.interaction('profession_chat_echo_suppressed', {
+            hintLength: hintText.length,
+            inputLength: text.length,
+          })
+        } else {
+          const hintMsg: ChatMessage = {
+            id: generateId(),
+            sender: 'xiaoyue',
+            text: data.reactionHint,
+            expressionId: mapSuccessExpression(data.reactionHint),
+          }
+          setMessages((prev) => [...prev, hintMsg])
         }
-        setMessages((prev) => [...prev, hintMsg])
       }
 
       if (bubbleStaggerRef.current) clearTimeout(bubbleStaggerRef.current)
@@ -539,7 +549,7 @@ export default function ProfessionChatOverlay({
           expressionId: mapSuccessExpression(data.reaction),
         }
         setMessages((prev) => [...prev, fullMsg])
-        setBottomAnchorKey((k) => k + 1)
+        setScrollTrigger((c) => c + 1)
         setIsSubmitting(false)
         clearThinkingTimers()
         setThinkingLabel(null)
@@ -590,7 +600,7 @@ export default function ProfessionChatOverlay({
         { id: fallbackMsgId, sender: 'xiaoyue', text: reaction, expressionId: mapFallbackExpression(reaction), isFallback: true },
       ])
       setRetryMessageId(fallbackMsgId)
-      setBottomAnchorKey((k) => k + 1)
+      setScrollTrigger((c) => c + 1)
       setIsSubmitting(false)
       setThinkingLabel(null)
 
@@ -611,20 +621,50 @@ export default function ProfessionChatOverlay({
 
   const handleSendLegacy = useCallback(() => {
     const text = inputValue.trim()
-    if (!text || isSubmitting) return
+    if (!text || isSubmittingRef.current) return
+
+    // Encourage more detail for very short input
+    if (text.length < 3 && !hasSent) {
+      setShowShortHint(true)
+      return
+    }
+    setShowShortHint(false)
+
+    const now = Date.now()
+    if (now - lastSendTimeRef.current < DEBOUNCE_MS) return
+    if (sendCountRef.current >= MAX_SENDS_PER_SESSION) {
+      setShowMaxSendHint(true)
+      analytics.interaction('profession_chat_max_send_reached')
+      if (maxSendDismissTimerRef.current) clearTimeout(maxSendDismissTimerRef.current)
+      maxSendDismissTimerRef.current = setTimeout(() => setShowMaxSendHint(false), 4000)
+      return
+    }
+
+    // Offline guard
+    if (!isOnline) {
+      analytics.interaction('profession_chat_offline_blocked')
+      Taro.showToast({ title: '网络好像断了，请检查连接后再试', icon: 'none', duration: 2000 })
+      return
+    }
+
+    sendCountRef.current++
+    lastSendTimeRef.current = now
+    previousUserTextRef.current = lastUserTextRef.current
+    lastUserTextRef.current = text
 
     setIsSubmitting(true)
     setHasSent(true)
     const userMsg: ChatMessage = { id: generateId(), sender: 'user', text }
     setMessages((prev) => [...prev, userMsg])
+    setScrollTrigger((c) => c + 1)
 
     timeoutRef.current = setTimeout(() => {
       const reaction = getReactionForProfession(text)
       setMessages((prev) => [...prev, { id: generateId(), sender: 'xiaoyue', text: reaction, expressionId: 'coachGuide' }])
       setIsSubmitting(false)
-      setBottomAnchorKey((k) => k + 1)
+      setScrollTrigger((c) => c + 1)
     }, 600)
-  }, [inputValue, isSubmitting])
+  }, [inputValue, isSubmitting, isOnline, hasSent, analytics])
 
   const handleSend = useCallback(() => {
     if (smartProfession) {
@@ -682,9 +722,8 @@ export default function ProfessionChatOverlay({
   const canSubmit = inputValue.trim().length > 0 || hasSent
 
   const scrollIntoView = useMemo(() => {
-    if (messages.length === 0) return ''
-    return `bottom-anchor-${bottomAnchorKey}`
-  }, [bottomAnchorKey])
+    return scrollTrigger > 0 ? 'bottom-anchor' : ''
+  }, [scrollTrigger])
 
   const messageList = useMemo(() => messages.map((msg) => (
     <CustomWrapper key={msg.id}>
@@ -721,7 +760,11 @@ export default function ProfessionChatOverlay({
   if (!visible && !isClosing) return null
 
   return (
-    <View className={[
+    <View
+      role='dialog'
+      aria-modal='true'
+      aria-label='职业输入'
+      className={[
       'profession-overlay',
       isClosing ? 'profession-overlay--closing' : '',
       deviceTier.isDegradation ? 'profession-overlay--low-end' : '',
@@ -769,13 +812,117 @@ export default function ProfessionChatOverlay({
               </View>
             </View>
           )}
-          <View id={`bottom-anchor-${bottomAnchorKey}`} style={{ height: 1, width: '100%' }} />
+          {showRevealCard && revealTags.length > 0 && (
+            <View
+              className={[
+                'profession-overlay__reveal-card',
+                classificationData?.industrySource?.includes('fallback') ? 'profession-overlay__reveal-card--fallback' : '',
+              ].filter(Boolean).join(' ')}
+              role='region'
+              aria-label='职业分析结果'
+            >
+              {/* Success celebration sparkles — CSS-only, GPU-composited */}
+              {/* Fallback gets muted amber sparkles; success gets primary sparkles */}
+              <View className='profession-overlay__celebration' aria-hidden='true'>
+                <View className={[
+                  'profession-overlay__sparkle',
+                  `profession-overlay__sparkle--1${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
+                ].filter(Boolean).join(' ')} />
+                <View className={[
+                  'profession-overlay__sparkle',
+                  `profession-overlay__sparkle--2${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
+                ].filter(Boolean).join(' ')} />
+                <View className={[
+                  'profession-overlay__sparkle',
+                  `profession-overlay__sparkle--3${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
+                ].filter(Boolean).join(' ')} />
+                <View className={[
+                  'profession-overlay__sparkle',
+                  `profession-overlay__sparkle--4${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
+                ].filter(Boolean).join(' ')} />
+                <View className={[
+                  'profession-overlay__sparkle',
+                  `profession-overlay__sparkle--5${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
+                ].filter(Boolean).join(' ')} />
+              </View>
+              <View className='profession-overlay__reveal-title-row'>
+                {!classificationData?.industrySource?.includes('fallback') ? (
+                  <>
+                    <View className='profession-overlay__reveal-checkmark'>
+                      <View className='profession-overlay__reveal-checkmark-stem' />
+                      <View className='profession-overlay__reveal-checkmark-kick' />
+                    </View>
+                    <View className='profession-overlay__reveal-mascot' aria-hidden='true'>
+                      <Image
+                        className='profession-overlay__reveal-mascot-img'
+                        src={getXiaoyueExpressionAsset('matchSuccess')}
+                        mode='aspectFill'
+                      />
+                    </View>
+                  </>
+                ) : (
+                  <View className='profession-overlay__reveal-mascot' aria-hidden='true'>
+                    <Image
+                      className='profession-overlay__reveal-mascot-img'
+                      src={getXiaoyueExpressionAsset('coachGuide')}
+                      mode='aspectFill'
+                    />
+                  </View>
+                )}
+                <Text className='profession-overlay__reveal-title'>
+                  {classificationData?.industrySource?.includes('fallback') ? '已收进档案，悦仔正在细品' : '你的匹配画像已更新'}
+                </Text>
+              </View>
+              <View className='profession-overlay__reveal-tags'>
+                {revealTags.filter((t) => !removedTags.includes(t)).map((tag) => (
+                  <View
+                    key={tag}
+                    className='profession-overlay__reveal-tag-wrap'
+                    onClick={() => {
+                      haptics('light')
+                      setRemovedTags((prev) => [...prev, tag])
+                      setTagFeedback(null)
+                      // Force animation replay by clearing then setting
+                      requestAnimationFrame(() => {
+                        setTagFeedback('好，这个标签不要了～还有想调整的吗？')
+                      })
+                      analytics.interaction('profession_chat_tag_removed', { tag })
+                    }}
+                  >
+                    <Chip label={tag} selected level={1} compact />
+                  </View>
+                ))}
+              </View>
+              {tagFeedback && revealTags.filter((t) => !removedTags.includes(t)).length > 0 && (
+                <Text className='profession-overlay__tag-feedback'>{tagFeedback}</Text>
+              )}
+              {/* Social proof + chemistry bridge lines */}
+              {!classificationData?.industrySource?.includes('fallback') && classificationData?.industryCategoryLabel && (
+                <View className='profession-overlay__reveal-bridge'>
+                  <Text className='profession-overlay__reveal-bridge-line'>
+                    {`JoyJoin 里还有很多${classificationData.industryCategoryLabel}方向的小伙伴，你们应该很有共鸣～`}
+                  </Text>
+                  {userArchetype && ARCHETYPE_BY_ID[userArchetype]?.nameCn && (
+                    <Text className='profession-overlay__reveal-bridge-line profession-overlay__reveal-bridge-line--chemistry'>
+                      {`你的「${ARCHETYPE_BY_ID[userArchetype].nameCn}」特质 + ${classificationData.industryCategoryLabel}背景，在局里会很吃香`}
+                    </Text>
+                  )}
+                </View>
+              )}
+              {classificationData?.industrySource?.includes('fallback') && (
+                <Text className='profession-overlay__reveal-hint'>网络有点慢，悦仔先记下了。等信号好了再帮你细细分析～</Text>
+              )}
+              <View className='profession-overlay__reveal-confirm' onClick={() => { haptics('success'); handleConfirm() }} aria-label='确认并继续' hoverClass='profession-overlay__reveal-confirm--active' hoverStartTime={0} hoverStayTime={100}>
+                <Text className='profession-overlay__reveal-confirm-text'>确认并继续</Text>
+              </View>
+            </View>
+          )}
+          <View id='bottom-anchor' style={{ height: 1, width: '100%' }} />
         </View>
       </ScrollView>
 
       <View
         className='profession-overlay__input-bar'
-        style={{ paddingBottom: `max(24rpx, ${keyboardHeight}px)` }}
       >
         <Input
           className='profession-overlay__input'
@@ -816,112 +963,6 @@ export default function ProfessionChatOverlay({
         </View>
       )}
 
-      {showRevealCard && revealTags.length > 0 && (
-        <View
-          className={[
-            'profession-overlay__reveal-card',
-            classificationData?.industrySource?.includes('fallback') ? 'profession-overlay__reveal-card--fallback' : '',
-          ].filter(Boolean).join(' ')}
-          role='region'
-          aria-label='职业分析结果'
-        >
-          {/* Success celebration sparkles — CSS-only, GPU-composited */}
-          {/* Fallback gets muted amber sparkles; success gets primary sparkles */}
-          <View className='profession-overlay__celebration' aria-hidden='true'>
-            <View className={[
-              'profession-overlay__sparkle',
-              `profession-overlay__sparkle--1${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
-            ].filter(Boolean).join(' ')} />
-            <View className={[
-              'profession-overlay__sparkle',
-              `profession-overlay__sparkle--2${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
-            ].filter(Boolean).join(' ')} />
-            <View className={[
-              'profession-overlay__sparkle',
-              `profession-overlay__sparkle--3${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
-            ].filter(Boolean).join(' ')} />
-            <View className={[
-              'profession-overlay__sparkle',
-              `profession-overlay__sparkle--4${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
-            ].filter(Boolean).join(' ')} />
-            <View className={[
-              'profession-overlay__sparkle',
-              `profession-overlay__sparkle--5${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
-            ].filter(Boolean).join(' ')} />
-          </View>
-          <View className='profession-overlay__reveal-title-row'>
-            {!classificationData?.industrySource?.includes('fallback') ? (
-              <>
-                <View className='profession-overlay__reveal-checkmark'>
-                  <View className='profession-overlay__reveal-checkmark-stem' />
-                  <View className='profession-overlay__reveal-checkmark-kick' />
-                </View>
-                <View className='profession-overlay__reveal-mascot' aria-hidden='true'>
-                  <Image
-                    className='profession-overlay__reveal-mascot-img'
-                    src={getXiaoyueExpressionAsset('matchSuccess')}
-                    mode='aspectFill'
-                  />
-                </View>
-              </>
-            ) : (
-              <View className='profession-overlay__reveal-mascot' aria-hidden='true'>
-                <Image
-                  className='profession-overlay__reveal-mascot-img'
-                  src={getXiaoyueExpressionAsset('coachGuide')}
-                  mode='aspectFill'
-                />
-              </View>
-            )}
-            <Text className='profession-overlay__reveal-title'>
-              {classificationData?.industrySource?.includes('fallback') ? '已收进档案，悦仔正在细品' : '你的匹配画像已更新'}
-            </Text>
-          </View>
-          <View className='profession-overlay__reveal-tags'>
-            {revealTags.filter((t) => !removedTags.includes(t)).map((tag) => (
-              <View
-                key={tag}
-                className='profession-overlay__reveal-tag-wrap'
-                onClick={() => {
-                  haptics('light')
-                  setRemovedTags((prev) => [...prev, tag])
-                  setTagFeedback(null)
-                  // Force animation replay by clearing then setting
-                  requestAnimationFrame(() => {
-                    setTagFeedback('好，这个标签不要了～还有想调整的吗？')
-                  })
-                  analytics.interaction('profession_chat_tag_removed', { tag })
-                }}
-              >
-                <Chip label={tag} selected level={1} compact />
-              </View>
-            ))}
-          </View>
-          {tagFeedback && revealTags.filter((t) => !removedTags.includes(t)).length > 0 && (
-            <Text className='profession-overlay__tag-feedback'>{tagFeedback}</Text>
-          )}
-          {/* Social proof + chemistry bridge lines */}
-          {!classificationData?.industrySource?.includes('fallback') && classificationData?.industryCategoryLabel && (
-            <View className='profession-overlay__reveal-bridge'>
-              <Text className='profession-overlay__reveal-bridge-line'>
-                {`JoyJoin 里还有很多${classificationData.industryCategoryLabel}方向的小伙伴，你们应该很有共鸣～`}
-              </Text>
-              {userArchetype && ARCHETYPE_BY_ID[userArchetype]?.nameCn && (
-                <Text className='profession-overlay__reveal-bridge-line profession-overlay__reveal-bridge-line--chemistry'>
-                  {`你的「${ARCHETYPE_BY_ID[userArchetype].nameCn}」特质 + ${classificationData.industryCategoryLabel}背景，在局里会很吃香`}
-                </Text>
-              )}
-            </View>
-          )}
-          {classificationData?.industrySource?.includes('fallback') && (
-            <Text className='profession-overlay__reveal-hint'>网络有点慢，悦仔先记下了。等信号好了再帮你细细分析～</Text>
-          )}
-          <View className='profession-overlay__reveal-confirm' onClick={() => { haptics('success'); handleConfirm() }} aria-label='确认并继续' hoverClass='profession-overlay__reveal-confirm--active' hoverStartTime={0} hoverStayTime={100}>
-            <Text className='profession-overlay__reveal-confirm-text'>确认并继续</Text>
-          </View>
-        </View>
-      )}
-
       {!isOnline && (
         <View className='profession-overlay__offline-banner'>
           <Text className='profession-overlay__offline-banner-text'>网络已断开，请检查连接</Text>
@@ -951,7 +992,6 @@ export default function ProfessionChatOverlay({
       {canSubmit && !isSubmitting && !showRevealCard && (
         <View
           className='profession-overlay__cta'
-        style={keyboardHeight > 0 ? { paddingBottom: `${keyboardHeight}px` } : undefined}
         >
           <View className='profession-overlay__cta-btn' onClick={() => { haptics('medium'); handleConfirm() }} aria-label='确认并继续' hoverClass='profession-overlay__cta-btn--active' hoverStartTime={0} hoverStayTime={100}>
             <Text className='profession-overlay__cta-text'>确认并继续</Text>

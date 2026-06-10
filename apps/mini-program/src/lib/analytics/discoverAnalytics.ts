@@ -19,6 +19,7 @@ export type DiscoverAnalyticsEventType =
   | 'filter_close'
   | 'geo_detected'
   | 'geo_failed'
+  | 'geo_auto_filter'
   | 'filter_auto_relax'
 
 export interface DiscoverAnalyticsEvent {

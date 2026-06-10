@@ -25,6 +25,12 @@ const MOCK_AUTH_USER: AuthUser = {
 } as unknown as AuthUser
 
 function getMockAuthUser(): AuthUser | null {
+  // Dev-only: never allow mock auth in production builds.
+  // WeChat storage persists across app deletion, so a developer
+  // who once set this key via devtools could accidentally bypass
+  // login/onboarding on a real device forever.
+  if (process.env.NODE_ENV !== 'development') return null
+
   try {
     const raw = Taro.getStorageSync(MOCK_AUTH_STORAGE_KEY)
     if (raw === '1') return MOCK_AUTH_USER

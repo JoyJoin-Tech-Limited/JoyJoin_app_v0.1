@@ -1,5 +1,8 @@
-import { View, Text } from '@tarojs/components'
+import { View, Text, Image } from '@tarojs/components'
 import JoyJoinIcon from '../ui/JoyJoinIcon'
+import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
+import { haptics } from '../../lib/utils/haptics'
+import { useCallback, useMemo } from 'react'
 import './CityUnlockFeedCard.scss'
 
 interface CityUnlockFeedCardProps {
@@ -9,13 +12,34 @@ interface CityUnlockFeedCardProps {
 /**
  * Contextual card shown at the bottom of the Discover feed.
  * Invites non-Shenzhen users to register interest in their city.
+ * Features a small Xiaoyue mascot for brand warmth.
  */
 export default function CityUnlockFeedCard({ onSelectCity }: CityUnlockFeedCardProps) {
+  const xiaoyueAsset = useMemo(() => getXiaoyueExpressionAsset('coachGuide'), [])
+
+  const handleTap = useCallback(() => {
+    haptics('light')
+    onSelectCity()
+  }, [onSelectCity])
+
   return (
-    <View className='city-unlock-feed-card' onClick={onSelectCity}>
+    <View
+      className='city-unlock-feed-card'
+      onClick={handleTap}
+      hoverClass='city-unlock-feed-card__hover'
+      role='button'
+      aria-label='选择你的城市，告诉我们你在哪里'
+    >
       <View className='city-unlock-feed-card__border' />
       <View className='city-unlock-feed-card__content'>
-        <JoyJoinIcon emoji='🌟' size={40} className='city-unlock-feed-card__emoji' />
+        <View className='city-unlock-feed-card__hero'>
+          <Image
+            className='city-unlock-feed-card__mascot'
+            src={xiaoyueAsset}
+            mode='aspectFit'
+          />
+          <JoyJoinIcon emoji='🌟' size={40} className='city-unlock-feed-card__emoji' />
+        </View>
         <View className='city-unlock-feed-card__text'>
           <Text className='city-unlock-feed-card__title'>想在你的城市玩？</Text>
           <Text className='city-unlock-feed-card__subtitle'>

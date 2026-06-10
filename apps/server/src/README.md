@@ -104,6 +104,7 @@ Owns admin authentication, RBAC, moderation, venue/event operations, and KPI end
 
 Primary files:
 - `apps/server/src/routes/domains/admin.ts`
+- `apps/server/src/routes/domains/adminEventPools.ts` — CRUD, venue hints, time slot validation, archive/deletion for event pools
 - `apps/server/src/adminAuth.ts`
 - `apps/server/src/lib/adminAuditLogger.ts`
 - `apps/server/src/lib/featureFlags.ts` — DB-backed feature flag resolver with env fallback and short-lived cache

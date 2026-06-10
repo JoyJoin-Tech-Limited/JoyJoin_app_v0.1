@@ -128,10 +128,10 @@ export default function LocationFilterDrawer({
               onClose()
             }}
             hoverClass='location-drawer__close--hover'
-            aria-role='button'
+            role='button'
             aria-label='关闭区域选择'
           >
-            <Text className='location-drawer__close-icon'>✕</Text>
+            <JoyJoinIcon emoji='✕' size={24} className='location-drawer__close-icon' />
           </View>
         </View>
 

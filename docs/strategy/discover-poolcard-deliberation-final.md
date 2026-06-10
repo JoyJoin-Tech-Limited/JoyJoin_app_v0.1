@@ -20,7 +20,7 @@ The PoolCard is a **mirror**, not a menu. It answers one question in 1.5 seconds
 
 ### Canvas
 - **Width:** 686rpx (24rpx margins)
-- **Height:** 384rpx (48 x 8rpx — Taro grid-safe)
+- **Height:** 384rpx (Phase 1, 48 × 8rpx) → **556rpx** (v0.2, 2026-06-10) — expanded for L3 Decision Facts block
 - **Border-radius:** 24rpx
 - **Background:** Archetype-family gradient wash at 6% opacity + glass surface
 - **Shadow:** family-color at 10%, 0 8rpx 32rpx
@@ -28,11 +28,26 @@ The PoolCard is a **mirror**, not a menu. It answers one question in 1.5 seconds
 
 ### Layer Structure (Top to Bottom)
 
+**v0.2 (6 layers):**
+| Layer | Element | Size | Font | Role |
+|-------|---------|------|------|------|
+| L1 | Hero message | 28rpx bold | $font-cn-display | Emotional hook |
+| L2 | Topline (pulse + countdown) | 24rpx semibold | UI | Status / urgency |
+| L3 | Date | 40rpx black | $font-cn-display | WHEN — #1 decision factor |
+| L3 | Time | 32rpx bold | $font-cn-display | WHEN — paired with date |
+| L3 | Event Type | 30rpx bold | $font-cn-display | WHAT — #2 decision factor |
+| L3 | Location | 26rpx medium | UI | WHERE — #3 decision factor |
+| L4 | Title | 26rpx semibold | UI | Event name (secondary) |
+| L5 | Teaser | 28rpx bold | $font-cn-display | Social proof |
+| L6 | CTA | 32rpx black | $font-cn-display | Action |
+
+**Phase 1 (5 layers):**
 
 
-Total: 276rpx content + 108rpx padding = 384rpx
 
-### Layer Details
+Total: 276rpx content + 108rpx padding = 384rpx (Phase 1) → 556rpx (v0.2)
+
+### Layer Details (Phase 1 — superseded by v0.2 6-layer structure above)
 
 #### L1: Ecosystem Bar (48rpx)
 - 5 archetype glyphs at 40rpx, overlapping by 10rpx
@@ -76,7 +91,7 @@ Total: 276rpx content + 108rpx padding = 384rpx
 |---|---|---|---|
 | Blindness | Reveal latent desire | Type-density teaser | Framed as type reference not match prediction |
 | Vanity | Identity signaling | User archetype glow ring | Static effect only |
-| Clutter | Abundance signaling | 5-layer density with overlapping glyphs | Strict 384rpx height |
+| Clutter | Abundance signaling | 6-layer density with decision facts block | 556rpx height (v0.2) |
 | Misfit | Productive tension | Your best partner type is here | Only when complementary count > 0 |
 | Isolation | Exclusivity/FOMO | Your type is rare — only 1 other | Only when userTypeCount <= 2 AND total >= 8 |
 | Disrespect | Ethical urgency | Countdown + narrative scarcity | Never false urgency for closed pools |
@@ -111,7 +126,7 @@ Complexity: O(pools x 12) integer lookups — negligible vs existing DB queries.
 - [x] Add price to EventPoolSummary and API response
 - [x] Add countdown pill from registrationDeadline
 - [x] Remove trust pills and inline tap-to-continue from card
-- [x] Implement 5-layer 384rpx card structure
+- [x] Implement 5-layer 384rpx card structure → **evolved to 6-layer 556rpx in v0.2 (2026-06-10)**
 - [x] Update skeleton loading state to match new height
 
 ### Week 2: Personality Social Proof + Type-Density
@@ -134,7 +149,10 @@ Complexity: O(pools x 12) integer lookups — negligible vs existing DB queries.
 
 ## 6. Implementation Status
 
-**Phase 1 implemented:** 2026-05-13
+**Phase 1 shipped:** 2026-05-13 (5-layer, 384rpx)
+**v0.2 redesign shipped:** 2026-06-10 (6-layer, 556rpx — "Decision Facts" redesign)
+
+### Phase 1 (2026-05-13)
 
 | Component | File | Status |
 |-----------|------|--------|
@@ -150,7 +168,28 @@ Complexity: O(pools x 12) integer lookups — negligible vs existing DB queries.
 | Styles | `apps/mini-program/src/pages/discover/index.scss` | ✅ Shipped |
 | Tests | `apps/server/src/__tests__/oracleCardComputation.test.ts` | ✅ 23/23 pass |
 
-**Phase 1 audit score:** 17/20 (Good) — P0 eventType localization and P1 will-change GPU leak fixed during audit.
+**Phase 1 audit score:** 17/20 (Good)
+
+### v0.2 Redesign (2026-06-10) — "Decision Facts"
+
+The 3 most important decision factors — **Event Type, Date, Location** — were elevated to a dedicated L3 visual block between the ecosystem bar and title. Card height expanded from 384rpx → 556rpx to accommodate the larger, scannable facts.
+
+| Change | Detail |
+|--------|--------|
+| L3 Decision Facts block | 40rpx date + 32rpx time (baseline-aligned flex), 30rpx event type + 26rpx location (two-tone line) |
+| CTA text colour | White → black ($color-text-primary) for contrast safety across family colours |
+| Full-pool state | Disabled grey CTA + "已满员" + "下次早点来哦～" when currentParticipants ≥ maxParticipants |
+| Chemistry celebration | Animated badge pill (≥3 high-chemistry matches) appearing in the facts row |
+| Low-end devices | `oracle-card--low-end` class via `useDeviceTier()` disables all entrance animations |
+| Kill switch | `enabled` prop (default true) for future feature-flag wiring |
+| 8rpx grid compliance | All internal margins normalised to $spacing-xs (8rpx) / $spacing-sm (16rpx) |
+| Reduced motion | `oracle-card__pulse-dot`, `__progress-fill` transition, `__celebration-badge` all gated |
+| Accessibility | `role='button'`, `aria-label`, `aria-disabled` on card + CTA; 88rpx tap targets |
+| Line-height comfort | Hero message 1.35→1.4, teaser-text 1.3→1.4 |
+| Copy memoisation | All narrative functions wrapped in single `useMemo` per card |
+| DISCOVER_CARD_HEIGHT_RPX | Updated from 464 → 556 in discover page to match card height |
+
+**v0.2 audit scores:** Frontend Design 20/20, Completeness 42/44, Performance 56/60
 
 ---
 

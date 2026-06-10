@@ -34,6 +34,8 @@ import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
 import { getArchetypeVisual, getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
+const QUERY_TIMEOUT_MS = 12_000
+
 function getAgeLabel(user: Record<string, unknown> | undefined): string {
   if (!user) {
     return ''
@@ -79,11 +81,12 @@ function getAgeLabel(user: Record<string, unknown> | undefined): string {
 
 export default function ProfileReviewPage() {
   const { shouldReduceMotion } = useMiniRevealMotion()
+  const [isCelebrating, setIsCelebrating] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [error, setError] = useState('')
 
-  useResetOnShow(setIsPageExiting, setIsSubmitting)
+  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating)
   const [isRevealReady, setIsRevealReady] = useState(false)
   const { user, isLoading } = useAuthGuard({
     suspendOnboardingRedirect: isSubmitting || isPageExiting,
@@ -117,10 +120,11 @@ export default function ProfileReviewPage() {
     data: interestsData,
     isLoading: isInterestsLoading,
     isFetching: isInterestsFetching,
+    isError: isInterestsError,
   } = useQuery<UserInterestsResponse | null>({
     queryKey: ['mini-program', 'profile-review-interests'],
     enabled: shouldLoadInterests,
-    retry: false,
+    retry: 1,
     queryFn: async () => {
       try {
         return await getUserInterests(apiRequest)
@@ -198,19 +202,6 @@ export default function ProfileReviewPage() {
       .map(([categoryId]) => categoryId as MacroCategory)
   }, [interestsData?.categoryHeat])
 
-  const readinessItems = useMemo(
-    () => [
-      { label: '性格原型', done: archetype !== '' },
-      {
-        label: '基础资料',
-        done: displayName.trim() !== '' && typeof user?.gender === 'string' && currentCity !== '',
-      },
-      { label: '兴趣热度', done: Boolean(interestsData?.totalSelections) },
-      { label: '社交意图', done: intentLabels.length > 0 },
-    ],
-    [archetype, currentCity, displayName, interestsData?.totalSelections, intentLabels.length, user?.gender],
-  )
-
   const coachCopy =
     topInterestLabels.length > 0
       ? `进入发现后，${getMascotDisplayName(user)}会优先参考这些高热兴趣，为你推荐更像你的活动和搭子。`
@@ -218,8 +209,8 @@ export default function ProfileReviewPage() {
 
   const aiInsightLine =
     profileTagline?.insightLine?.trim() ||
-    (isTaglineLoading || isTaglineError ? GENERIC_PROFILE_TAGLINE_FALLBACK : '')
-  const showInterestSkeleton = shouldLoadInterests && !interestsData && (isInterestsLoading || isInterestsFetching)
+    (isTaglineError ? GENERIC_PROFILE_TAGLINE_FALLBACK : '')
+  const showInterestSkeleton = shouldLoadInterests && !interestsData && !isInterestsError && (isInterestsLoading || isInterestsFetching)
   const pageClassName = ['profile-review', isPageExiting ? 'profile-review--exiting' : '']
     .filter(Boolean)
     .join(' ')
@@ -235,6 +226,11 @@ export default function ProfileReviewPage() {
     try {
       logInfo('[ProfileReview] Completing profile review')
       await completeProfileReview(apiRequest)
+
+      setIsCelebrating(true)
+      haptics('success')
+
+      await new Promise((resolve) => setTimeout(resolve, 500))
 
       await invalidateAuth()
       const userState = await getUserState()
@@ -255,6 +251,7 @@ export default function ProfileReviewPage() {
       })
     } catch (err) {
       setIsPageExiting(false)
+      setIsCelebrating(false)
       const message = err instanceof Error ? err.message : getErrorMessage('operation-failed')
       setError(message)
       analytics.errorOccurred('complete_failed', message)
@@ -324,26 +321,39 @@ export default function ProfileReviewPage() {
             <Text className='profile-review__subtitle'>确认这张入场卡后，就去发现第一场适合你的局。</Text>
           </View>
 
-          <XiaoyueChatBubble
-            content={coachCopy}
-            pose='pointing'
-            horizontal
-            showGlow
-            tail
-            className={getStageClassName(2)}
-          />
+          <View className={`profile-review__mascot ${getStageClassName(2)}`}>
+            <XiaoyueChatBubble
+              content={coachCopy}
+              pose='pointing'
+              horizontal
+              showGlow
+              tail
+            />
+          </View>
 
           <Card className={`profile-review__hero-card ${getStageClassName(3)}`}>
             <View className='profile-review__hero-main'>
               <View className='profile-review__avatar-wrap'>
                 {visual?.asset ? (
-                  <Image className='profile-review__avatar-image' src={visual.asset} mode='aspectFit' />
+                  <Image className='profile-review__avatar-image' src={visual.asset} mode='aspectFit' lazyLoad />
                 ) : (
                   <ArchetypeHead archetype={archetype} size={100} fallbackText={displayName} />
                 )}
               </View>
               <View className='profile-review__hero-copy'>
                 <Text className='profile-review__hero-name'>{displayName}</Text>
+
+                {/* AI-generated social tag — presented prominently as the user's tagline */}
+                {isTaglineLoading ? (
+                  <View className='profile-review__hero-tagline profile-review__hero-tagline--loading' aria-busy='true'>
+                    <View className='profile-review__hero-tagline-shimmer' />
+                  </View>
+                ) : aiInsightLine ? (
+                  <View className='profile-review__hero-tagline'>
+                    <Text className='profile-review__hero-tagline-text'>{aiInsightLine}</Text>
+                  </View>
+                ) : null}
+
                 {archetype && visual ? (
                   <View
                     className='profile-review__hero-archetype-badge'
@@ -356,7 +366,7 @@ export default function ProfileReviewPage() {
                       className='profile-review__hero-archetype-badge-text'
                       style={{ color: visual.accent }}
                     >
-                      {archetype}
+                      {visual.name}
                     </Text>
                   </View>
                 ) : null}
@@ -365,17 +375,6 @@ export default function ProfileReviewPage() {
                 ) : (
                   <Text className='profile-review__hero-summary'>你的基础资料和兴趣画像已经准备好被看见了。</Text>
                 )}
-                {isTaglineLoading ? (
-                  <View className='profile-review__ai-tagline-wrap profile-review__ai-tagline-wrap--loading'>
-                    <View className='profile-review__ai-tagline-accent' />
-                    <View className='profile-review__ai-tagline-shimmer' />
-                  </View>
-                ) : aiInsightLine ? (
-                  <View className='profile-review__ai-tagline-wrap'>
-                    <View className='profile-review__ai-tagline-accent' />
-                    <Text className='profile-review__ai-tagline'>{aiInsightLine}</Text>
-                  </View>
-                ) : null}
               </View>
             </View>
 
@@ -391,26 +390,6 @@ export default function ProfileReviewPage() {
           </Card>
 
           <Card className={`profile-review__card ${getStageClassName(4)}`}>
-            <Text className='profile-review__card-title'>进入发现前，再确认一次</Text>
-            <View className='profile-review__readiness-row'>
-              {readinessItems.map((item) => (
-                <View
-                  key={item.label}
-                  className={[
-                    'profile-review__readiness-pill',
-                    item.done ? 'profile-review__readiness-pill--done' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                >
-                  <Text className='profile-review__readiness-pill-icon'>{item.done ? '✓' : '·'}</Text>
-                  <Text className='profile-review__readiness-pill-text'>{item.label}</Text>
-                </View>
-              ))}
-            </View>
-          </Card>
-
-          <Card className={`profile-review__card ${getStageClassName(5)}`}>
             <Text className='profile-review__card-title'>你的资料一眼看完</Text>
             <View className='profile-review__info-grid'>
               {hometownRegionCity ? (
@@ -456,11 +435,18 @@ export default function ProfileReviewPage() {
             ) : null}
           </Card>
 
-          <Card className={`profile-review__card ${getStageClassName(6)}`}>
+          <Card className={`profile-review__card ${getStageClassName(5)}`}>
             <Text className='profile-review__card-title'>兴趣热度摘要</Text>
 
-            {showInterestSkeleton ? (
-              <View className='profile-review__interest-skeleton'>
+            {isInterestsError ? (
+              <View className='profile-review__interest-error' role='status' aria-live='polite'>
+                <Text className='profile-review__interest-error-title'>兴趣数据加载失败</Text>
+                <Text className='profile-review__interest-error-copy'>
+                  网络不太稳定，但你的入场卡已经可以用了。先出发，兴趣数据稍后自动同步。
+                </Text>
+              </View>
+            ) : showInterestSkeleton ? (
+              <View className='profile-review__interest-skeleton' aria-busy='true'>
                 <View className='profile-review__interest-stats'>
                   {[1, 2, 3].map((item) => (
                     <View key={item} className='profile-review__interest-stat profile-review__interest-stat--skeleton'>
@@ -510,7 +496,7 @@ export default function ProfileReviewPage() {
                 ) : null}
               </>
             ) : (
-              <View className='profile-review__interest-placeholder'>
+              <View className='profile-review__interest-placeholder' role='status' aria-live='polite'>
                 <View className='profile-review__interest-placeholder-pulse'>
                   <View className='profile-review__interest-placeholder-dot' />
                   <View className='profile-review__interest-placeholder-dot' style={{ animationDelay: '0.2s' }} />
@@ -524,15 +510,29 @@ export default function ProfileReviewPage() {
             )}
           </Card>
 
-          {error ? <Text className='profile-review__error'>{error}</Text> : null}
+          {error ? (
+            <View
+              className='profile-review__error'
+              role='alert'
+              aria-live='polite'
+              onClick={() => {
+                haptics('light')
+                handleComplete()
+              }}
+              hoverClass='profile-review__error--hover'
+            >
+              <Text className='profile-review__error-text'>{error}</Text>
+              <Text className='profile-review__error-retry'>点击重试</Text>
+            </View>
+          ) : null}
 
           {/* Reserve space for fixed footer */}
-          <View style={{ height: '200rpx' }} />
+          <View className='profile-review__footer-reserve' />
         </View>
       </ScrollView>
 
       {/* Fixed bottom CTA bar */}
-      <View className={`profile-review__cta ${getStageClassName(7)}`}>
+      <View className={`profile-review__cta ${getStageClassName(6)}`}>
         <Button
           variant='brand'
           className='profile-review__submit'
@@ -540,10 +540,10 @@ export default function ProfileReviewPage() {
             haptics('heavy')
             handleComplete()
           }}
-          disabled={isSubmitting}
-          loading={isSubmitting}
+          disabled={isSubmitting || isCelebrating}
+          loading={isSubmitting && !isCelebrating}
         >
-          {isSubmitting ? '正在完成…' : '确认并进入发现'}
+          {isCelebrating ? '入场卡已确认' : isSubmitting ? '正在完成…' : '确认并进入发现'}
         </Button>
       </View>
     </View>
