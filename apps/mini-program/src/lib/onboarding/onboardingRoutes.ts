@@ -163,8 +163,13 @@ export const MINI_PROGRAM_PRELOAD_RULES = {
 
 export function nextStepToMiniProgramRoute(step: OnboardingStep | string | undefined): string {
   switch (step) {
+    // 'onboarding' is a redirect hub (pages/onboarding/onboarding/index) whose
+    // sole purpose is to map 'onboarding' → 'personality-test'. Route directly
+    // to the first real step to prevent an infinite bounce loop: any page that
+    // sees nextStep='onboarding' would redirect to the entry page, which would
+    // redirect back to that same page.
     case 'onboarding':
-      return MINI_PROGRAM_ROUTES.onboarding
+      return MINI_PROGRAM_ROUTES.personalityTest
     case 'personality-test':
       return MINI_PROGRAM_ROUTES.personalityTest
     case 'essential-data':

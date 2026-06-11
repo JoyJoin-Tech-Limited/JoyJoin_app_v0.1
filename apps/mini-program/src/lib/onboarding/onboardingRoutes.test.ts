@@ -72,7 +72,7 @@ describe('mini-program onboarding routes', () => {
   })
 
   it('maps each server nextStep to the canonical mini-program route', () => {
-    expect(nextStepToMiniProgramRoute('onboarding')).toBe(MINI_PROGRAM_ROUTES.onboarding)
+    expect(nextStepToMiniProgramRoute('onboarding')).toBe(MINI_PROGRAM_ROUTES.personalityTest)
     expect(nextStepToMiniProgramRoute('personality-test')).toBe(MINI_PROGRAM_ROUTES.personalityTest)
     expect(nextStepToMiniProgramRoute('essential-data')).toBe(MINI_PROGRAM_ROUTES.essentialData)
     expect(nextStepToMiniProgramRoute('extended-data')).toBe(MINI_PROGRAM_ROUTES.extendedData)

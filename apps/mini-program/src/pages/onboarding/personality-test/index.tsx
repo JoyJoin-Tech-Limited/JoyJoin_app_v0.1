@@ -473,7 +473,7 @@ export default function PersonalityTestPage() {
       return
     }
 
-    if (auth.isAuthenticated && auth.nextStep && auth.nextStep !== 'personality-test') {
+    if (auth.isAuthenticated && auth.nextStep && auth.nextStep !== 'personality-test' && auth.nextStep !== 'onboarding') {
       void navigateToMiniProgramNextStep(auth.nextStep, {
         mode: 'replace',
         transition: { beforeNavigate: () => setIsPageExiting(true) },
