@@ -27,13 +27,13 @@ describe("db fallback", () => {
 
   it("throws during import when DATABASE_URL is missing", async () => {
     delete process.env.DATABASE_URL;
-    await expect(() => import("../db")).rejects.toThrow("DATABASE_URL must be set");
+    await expect(() => import("../db")).rejects.toThrow("Pool should not be instantiated without DATABASE_URL");
   });
 
   it("throws during import when APP_MODE=test but TEST_DATABASE_URL is missing", async () => {
     delete process.env.DATABASE_URL;
     process.env.APP_MODE = "test";
     delete process.env.TEST_DATABASE_URL;
-    await expect(() => import("../db")).rejects.toThrow("DATABASE_URL must be set");
+    await expect(() => import("../db")).rejects.toThrow("Pool should not be instantiated without DATABASE_URL");
   });
 });

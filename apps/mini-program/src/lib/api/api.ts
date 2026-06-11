@@ -334,10 +334,10 @@ export async function authenticateMiniProgramUserWithTest(input: {
 export async function authenticateMiniProgramUserWithPhone(input: {
   phone: string
   password: string
-}): Promise<{ user: AuthUserResponse['user'] }> {
+}): Promise<{ user: AuthUserResponse }> {
   const data = await apiRequest<{
     success: boolean
-    user: AuthUserResponse['user']
+    user: AuthUserResponse
     sessionToken: string
   }>({
     path: '/api/auth/login',
