@@ -1,4 +1,4 @@
-<cover-view class="joy-custom-tab-bar {{lowEnd ? 'joy-custom-tab-bar--low-end' : ''}}">
+<cover-view class="joy-custom-tab-bar {{lowEnd ? 'joy-custom-tab-bar--low-end' : ''}}" catch-move>
   <cover-view class="joy-custom-tab-bar__surface">
     <!-- Background with semi-circular notch -->
     <cover-image
