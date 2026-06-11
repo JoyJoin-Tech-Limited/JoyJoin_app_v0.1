@@ -24,7 +24,7 @@ export interface MiniProgramCenterState {
 }
 
 export interface CustomTabBarSyncState {
-  selected: number
+  selected?: number
   center: MiniProgramCenterState
 }
 

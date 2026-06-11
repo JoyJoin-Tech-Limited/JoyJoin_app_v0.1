@@ -18,7 +18,6 @@ import { apiRequest } from '../../lib/api/api'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { buildPoolGroupDetailUrl } from '../../lib/navigation/matchingNavigation'
-import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import LoadingScreen from '../../components/loading/LoadingScreen'
@@ -254,7 +253,6 @@ export default function CenterHubPage() {
   const { authLoading, renderGate } = useMiniPageGate()
 
   useCustomTabBarSync({
-    selectedIndex: MINI_PROGRAM_TAB_INDEX.centerHub,
     enabled: !authLoading,
   })
 

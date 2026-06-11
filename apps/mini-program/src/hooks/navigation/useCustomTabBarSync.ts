@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from 'react'
-import Taro, { useDidShow } from '@tarojs/taro'
+import { useEffect, useMemo, useRef } from 'react'
+import Taro, { useDidShow, useDidHide } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import {
   getMyBlindBoxEvents,
@@ -24,7 +24,6 @@ interface NativeCustomTabBar {
 }
 
 interface UseCustomTabBarSyncOptions {
-  selectedIndex: number
   enabled?: boolean
   poolRegistrations?: PoolRegistrationSummary[]
   events?: BlindBoxEventSummary[]
@@ -39,7 +38,6 @@ function getNativeTabBar(page: Taro.PageInstance | null | undefined): NativeCust
 }
 
 export function useCustomTabBarSync({
-  selectedIndex,
   enabled = true,
   poolRegistrations: providedPoolRegistrations,
   events: providedEvents,
@@ -72,31 +70,43 @@ export function useCustomTabBarSync({
     [notificationCounts]
   )
 
-  const syncState = useMemo<CustomTabBarSyncState & { badges: TabBadgeCounts }>(
-    () => ({
-      selected: selectedIndex,
-      center: getMiniProgramCenterState(poolRegistrations, events),
-      badges,
-    }),
-    [selectedIndex, poolRegistrations, events, badges]
+  const centerState = useMemo(
+    () => getMiniProgramCenterState(poolRegistrations, events),
+    [poolRegistrations, events]
   )
 
+  // Track whether the current page is visible to avoid hidden pages
+  // from calling syncState at all during data refetches.
+  const isVisibleRef = useRef(false)
+
   useDidShow(() => {
+    isVisibleRef.current = true
     if (!enabled) return
     const page = Taro.getCurrentInstance().page
     const tabBar = getNativeTabBar(page)
-    tabBar?.syncState(syncState)
+    // Only sync center + badges on show — never touch `selected`.
+    // `handleTabTap` in the native component is the sole authority
+    // for the selected highlight, so hidden pages can never race
+    // and overwrite the user's current tab selection.
+    tabBar?.syncState({ center: centerState, badges })
+  })
+
+  useDidHide(() => {
+    isVisibleRef.current = false
   })
 
   useEffect(() => {
     if (!enabled) return
     const page = Taro.getCurrentInstance().page
     const tabBar = getNativeTabBar(page)
-    tabBar?.syncState(syncState)
-  }, [enabled, syncState])
+    if (!isVisibleRef.current) return
+    // Only sync center + badges (NOT selected) to prevent hidden pages
+    // from overwriting the visible page's tab selection on data update.
+    tabBar?.syncState({ center: centerState, badges })
+  }, [enabled, centerState, badges])
 
   return {
-    centerState: syncState.center,
+    centerState,
     poolRegistrations,
     events,
     notificationCounts,

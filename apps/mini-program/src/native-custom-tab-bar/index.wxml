@@ -1,17 +1,17 @@
-<cover-view class="joy-custom-tab-bar {{lowEnd ? 'joy-custom-tab-bar--low-end' : ''}}" catch-move>
-  <cover-view class="joy-custom-tab-bar__surface">
+<view class="joy-custom-tab-bar {{lowEnd ? 'joy-custom-tab-bar--low-end' : ''}}">
+  <view class="joy-custom-tab-bar__surface">
     <!-- Background with semi-circular notch -->
-    <cover-image
+    <image
       class="joy-custom-tab-bar__bg"
       src="../assets/tab-bar-notch-bg.png"
       mode="scaleToFill"
     />
 
-      <!-- Tab row: left 2 + gap + right 2 -->
-    <cover-view class="joy-custom-tab-bar__row">
+    <!-- Tab row: left 2 + gap + right 2 -->
+    <view class="joy-custom-tab-bar__row">
       <!-- Left side tabs -->
-      <cover-view class="joy-custom-tab-bar__side">
-        <cover-view
+      <view class="joy-custom-tab-bar__side">
+        <view
           wx:for="{{leftTabs}}"
           wx:key="key"
           class="joy-custom-tab-bar__item {{selected === item.index ? 'joy-custom-tab-bar__item--active' : ''}}"
@@ -25,34 +25,34 @@
           aria-label="{{item.text}}"
           aria-pressed="{{selected === item.index}}"
         >
-          <cover-view class="joy-custom-tab-bar__item-icon-wrap">
-            <cover-image
+          <view class="joy-custom-tab-bar__item-icon-wrap">
+            <image
               class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--active' : ''}}"
               src="{{selected === item.index ? item.selectedIcon : item.icon}}"
               mode="aspectFit"
             />
-            <cover-view
+            <view
               wx:if="{{item.badgeCount > 0}}"
               class="joy-custom-tab-bar__item-badge"
             >
-              <cover-view class="joy-custom-tab-bar__item-badge-text">
+              <view class="joy-custom-tab-bar__item-badge-text">
                 {{item.badgeCount > 99 ? '99+' : item.badgeCount}}
-              </cover-view>
-            </cover-view>
-          </cover-view>
-          <cover-view
+              </view>
+            </view>
+          </view>
+          <view
             class="joy-custom-tab-bar__item-label {{selected === item.index ? 'joy-custom-tab-bar__item-label--active' : ''}}"
           >
             {{item.text}}
-          </cover-view>
-        </cover-view>
-      </cover-view>
+          </view>
+        </view>
+      </view>
 
-      <cover-view class="joy-custom-tab-bar__center-gap"></cover-view>
+      <view class="joy-custom-tab-bar__center-gap"></view>
 
       <!-- Right side tabs -->
-      <cover-view class="joy-custom-tab-bar__side">
-        <cover-view
+      <view class="joy-custom-tab-bar__side">
+        <view
           wx:for="{{rightTabs}}"
           wx:key="key"
           class="joy-custom-tab-bar__item {{selected === item.index ? 'joy-custom-tab-bar__item--active' : ''}}"
@@ -66,36 +66,34 @@
           aria-label="{{item.text}}"
           aria-pressed="{{selected === item.index}}"
         >
-          <cover-view class="joy-custom-tab-bar__item-icon-wrap">
-            <cover-image
+          <view class="joy-custom-tab-bar__item-icon-wrap">
+            <image
               class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--active' : ''}}"
               src="{{selected === item.index ? item.selectedIcon : item.icon}}"
               mode="aspectFit"
             />
-            <cover-view
+            <view
               wx:if="{{item.badgeCount > 0}}"
               class="joy-custom-tab-bar__item-badge"
             >
-              <cover-view class="joy-custom-tab-bar__item-badge-text">
+              <view class="joy-custom-tab-bar__item-badge-text">
                 {{item.badgeCount > 99 ? '99+' : item.badgeCount}}
-              </cover-view>
-            </cover-view>
-          </cover-view>
-          <cover-view
+              </view>
+            </view>
+          </view>
+          <view
             class="joy-custom-tab-bar__item-label {{selected === item.index ? 'joy-custom-tab-bar__item-label--active' : ''}}"
           >
             {{item.text}}
-          </cover-view>
-        </cover-view>
-      </cover-view>
-    </cover-view>
-  </cover-view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
 
   <!-- Semi-raised center CTA -->
-  <!-- Wrapper uses flexbox centering instead of left:50% + transform,
-       which is unstable in WeChat cover-view during setData re-renders. -->
-  <cover-view class="joy-custom-tab-bar__center-wrap">
-    <cover-view
+  <view class="joy-custom-tab-bar__center-wrap">
+    <view
       class="joy-custom-tab-bar__center {{selected === 4 ? 'joy-custom-tab-bar__center--selected' : ''}}"
       bindtap="handleCenterTap"
       hover-class="joy-custom-tab-bar__center--pressed"
@@ -103,17 +101,17 @@
       role="button"
       aria-label="{{center.label || 'JoyJoin 中心入口'}}"
     >
-      <cover-view class="joy-custom-tab-bar__center-outer-ring">
-        <cover-view class="joy-custom-tab-bar__center-button">
-          <cover-image
+      <view class="joy-custom-tab-bar__center-outer-ring">
+        <view class="joy-custom-tab-bar__center-button">
+          <image
             class="joy-custom-tab-bar__center-logo"
             src="../assets/joyjoin-logo-tab.png"
             mode="aspectFit"
           />
-          <cover-view wx:if="{{center.showBadge}}" class="joy-custom-tab-bar__center-badge"></cover-view>
-        </cover-view>
-      </cover-view>
-      <cover-view class="joy-custom-tab-bar__center-label">{{center.label}}</cover-view>
-    </cover-view>
-  </cover-view>
-</cover-view>
+          <view wx:if="{{center.showBadge}}" class="joy-custom-tab-bar__center-badge"></view>
+        </view>
+      </view>
+      <view class="joy-custom-tab-bar__center-label">{{center.label}}</view>
+    </view>
+  </view>
+</view>

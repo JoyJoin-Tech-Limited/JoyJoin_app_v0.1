@@ -14,7 +14,6 @@ import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import Card from '../../components/ui/Card'
-import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
 import './index.scss'
 
 interface Connection {
@@ -33,7 +32,6 @@ export default function ConnectionsPage() {
   const markAsRead = useMarkNotificationsAsRead()
 
   useCustomTabBarSync({
-    selectedIndex: MINI_PROGRAM_TAB_INDEX.connections,
     enabled: !authLoading,
   })
 

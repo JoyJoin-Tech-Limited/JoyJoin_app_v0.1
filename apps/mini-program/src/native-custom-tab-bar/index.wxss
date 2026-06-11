@@ -319,7 +319,7 @@
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__center-badge {
   animation: none !important;
 }
-.joy-custom-tab-bar--low-end cover-image {
+.joy-custom-tab-bar--low-end image {
   animation: none !important;
   opacity: 1 !important;
 }
@@ -361,7 +361,7 @@
   .joy-custom-tab-bar__center-button {
     transition: none !important;
   }
-  cover-image {
+  image {
     animation: none !important;
     opacity: 1 !important;
   }

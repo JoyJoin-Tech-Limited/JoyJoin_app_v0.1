@@ -120,13 +120,10 @@ Component({
         var update = {}
         var hasChange = false
 
-        // Selected: only update if changed
-        if (state.selected !== undefined && state.selected !== self._lastSelected) {
-          update.selected = state.selected
-          self._lastSelected = state.selected
-          self._confirmedSelected = state.selected
-          hasChange = true
-        }
+        // Note: `selected` is NEVER passed by the hook.
+        // handleTabTap/handleCenterTap are the sole authorities.
+        // If selected ever drifts, pageLifetimes.show safety net
+        // reverts it to _confirmedSelected.
 
         // Center: shallow-compare key fields to avoid re-rendering identical state
         if (state.center) {
@@ -203,12 +200,15 @@ Component({
         index: index,
       })
 
-      // Optimistic update with rollback on failure
+      // Optimistic update: update _confirmedSelected too so the
+      // pageLifetimes.show safety net (100ms) doesn't revert it.
+      this._confirmedSelected = index
       this.setData({ selected: index })
       wx.switchTab({
         url: url,
         fail: function (err) {
           console.warn('[TabBar] switchTab failed for tab ' + tabKey + ':', err)
+          self._confirmedSelected = previousSelected
           self.setData({ selected: previousSelected })
         },
       })
@@ -226,12 +226,15 @@ Component({
         navigation: action.navigation || 'unknown',
       })
 
-      // Optimistic update with rollback on failure
+      // Optimistic update: update _confirmedSelected too so the
+      // pageLifetimes.show safety net (100ms) doesn't revert it.
+      this._confirmedSelected = 4
       this.setData({ selected: 4 })
       wx.switchTab({
         url: action.url,
         fail: function (err) {
           console.warn('[TabBar] switchTab failed for center:', err)
+          self._confirmedSelected = previousSelected
           self.setData({ selected: previousSelected })
         },
       })

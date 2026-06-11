@@ -25,7 +25,6 @@ import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
-import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
 import './index.scss'
 
 export default function ProfilePage() {
@@ -33,7 +32,6 @@ export default function ProfilePage() {
   const logoutLockRef = useRef(false)
 
   useCustomTabBarSync({
-    selectedIndex: MINI_PROGRAM_TAB_INDEX.profile,
     enabled: !authLoading,
   })
 

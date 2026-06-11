@@ -36,7 +36,6 @@ import OracleCard from '../../components/discover/OracleCard'
 import LocationFilterDrawer from '../../components/discover/LocationFilterDrawer'
 import CityUnlockFeedCard from '../../components/discover/CityUnlockFeedCard'
 import CityPickerSheet from '../../components/discover/CityPickerSheet'
-import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
 import { getTimeGreeting } from '../../lib/utils/timeGreeting'
 import {
   getDiscoverSubtitle,
@@ -648,7 +647,6 @@ export default function DiscoverPage() {
   }, [])
 
   useCustomTabBarSync({
-    selectedIndex: MINI_PROGRAM_TAB_INDEX.discover,
     enabled: isAuthenticated,
   })
 

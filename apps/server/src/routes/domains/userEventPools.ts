@@ -442,7 +442,10 @@ export function registerUserEventPoolRoutes(app: Express): void {
   app.post("/api/event-pools/:id/register", requireAuth, async (req, res) => {
     try {
       const poolId = req.params.id;
-      const userId = getAuthenticatedUserId(req) as string;
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
 
       // Feature flag kill-switch for emergency registration disable
       if (!getFeatureFlagSync("registrationEnabled", true)) {
@@ -451,7 +454,6 @@ export function registerUserEventPoolRoutes(app: Express): void {
           code: "REGISTRATION_DISABLED",
         });
       }
-
       const { invitationCode, values: validatedData } = buildEventPoolRegistrationInsert({
         poolId,
         userId,

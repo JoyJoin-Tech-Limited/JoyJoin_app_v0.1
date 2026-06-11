@@ -17,7 +17,6 @@ import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import StatusCard from '../../components/ui/StatusCard'
 import RichListCard from '../../components/RichListCard'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
-import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
 import { isLongListRowCount } from '../../lib/utils/longListThreshold'
 import { logWarn } from '../../lib/utils/logger'
 import { partitionJoinedEventsByDateTime } from './eventPartition'
@@ -49,7 +48,6 @@ export default function EventsPage() {
   const { authLoading, renderGate } = useMiniPageGate()
   const markAsRead = useMarkNotificationsAsRead()
   useCustomTabBarSync({
-    selectedIndex: MINI_PROGRAM_TAB_INDEX.events,
     enabled: !authLoading,
   })
 
