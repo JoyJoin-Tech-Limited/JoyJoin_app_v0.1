@@ -1,9 +1,12 @@
-import { View, Text, Input, ScrollView } from '@tarojs/components'
+import { View, Text, Input, Image, ScrollView } from '@tarojs/components'
 import JoyJoinIcon from '../ui/JoyJoinIcon'
 import Taro from '@tarojs/taro'
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { apiRequest } from '../../lib/api/api'
 import { haptics } from '../../lib/utils/haptics'
+import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
+import { logInfo } from '../../lib/utils/logger'
+import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import './CityPickerSheet.scss'
 
 // Static data — define outside component to avoid re-creation on every render
@@ -34,16 +37,55 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
   const [selectedCity, setSelectedCity] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [celebrated, setCelebrated] = useState(false)
+  const [scrollToCity, setScrollToCity] = useState('')
+  const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scrollClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Reset state when sheet opens
   useEffect(() => {
     if (visible) {
+      if (celebrationTimerRef.current) {
+        clearTimeout(celebrationTimerRef.current)
+        celebrationTimerRef.current = null
+      }
       setSearchQuery('')
       setSelectedCity(null)
       setLoading(false)
       setCelebrated(false)
+      setScrollToCity('')
+      discoverAnalytics.track('city_picker_open')
     }
   }, [visible])
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (celebrationTimerRef.current) {
+        clearTimeout(celebrationTimerRef.current)
+        celebrationTimerRef.current = null
+      }
+      if (scrollClearTimerRef.current) {
+        clearTimeout(scrollClearTimerRef.current)
+        scrollClearTimerRef.current = null
+      }
+    }
+  }, [])
+
+  // Clear scroll target after animation completes to allow re-scroll
+  useEffect(() => {
+    if (scrollToCity) {
+      scrollClearTimerRef.current = setTimeout(() => {
+        setScrollToCity('')
+        scrollClearTimerRef.current = null
+      }, 600)
+      return () => {
+        if (scrollClearTimerRef.current) {
+          clearTimeout(scrollClearTimerRef.current)
+          scrollClearTimerRef.current = null
+        }
+      }
+    }
+  }, [scrollToCity])
 
   const filteredCities = useMemo(() => {
     if (!searchQuery.trim()) return ALL_CITIES
@@ -57,19 +99,42 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
   const handleSelectCity = useCallback((city: string) => {
     haptics('light')
     setSelectedCity(city)
+    discoverAnalytics.track('city_picker_select', undefined, { city })
+    // Scroll to selected city in the list when viewing all cities (not searching)
+    if (!searchQuery.trim()) {
+      setScrollToCity(`city-${city}`)
+    }
+  }, [searchQuery])
+
+  const handleClose = useCallback(() => {
+    discoverAnalytics.track('city_picker_close')
+    onClose()
+  }, [onClose])
+
+  const handleSearch = useCallback((value: string) => {
+    setSearchQuery(value)
+    if (value.trim()) {
+      discoverAnalytics.track('city_picker_search', undefined, { queryLength: value.trim().length })
+    }
+  }, [])
+
+  const handleClearSearch = useCallback(() => {
+    haptics('light')
+    setSearchQuery('')
   }, [])
 
   const handleConfirm = useCallback(async () => {
     if (!selectedCity || loading) return
-    haptics('light')
+    haptics('medium')
 
     setLoading(true)
+    discoverAnalytics.track('city_picker_confirm', undefined, { city: selectedCity })
     try {
-      // Offline guard — prevent misleading timeout toast
       try {
         const networkRes = await Taro.getNetworkType()
         if (networkRes.networkType === 'none') {
           Taro.showToast({ title: '网络好像断开了，请检查连接', icon: 'none', duration: 2000 })
+          discoverAnalytics.track('city_picker_offline_blocked', undefined, { city: selectedCity })
           return
         }
       } catch {
@@ -82,14 +147,19 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
         data: { city: selectedCity, source: 'floating_banner' },
       })
 
-      // Show inline celebration instead of generic toast
+      haptics('success')
       setCelebrated(true)
-      setTimeout(() => {
+      logInfo('[CityPicker] interest registered', { city: selectedCity })
+      discoverAnalytics.track('city_picker_success', undefined, { city: selectedCity })
+      celebrationTimerRef.current = setTimeout(() => {
+        celebrationTimerRef.current = null
         onSuccess(selectedCity)
       }, 600)
     } catch (err) {
+      logInfo('[CityPicker] interest register failed', { city: selectedCity, error: String(err) })
+      discoverAnalytics.track('city_picker_error', undefined, { city: selectedCity, error: String(err) })
       Taro.showToast({
-        title: '网络开小差了',
+        title: '网络开小差了，请重试',
         icon: 'none',
         duration: 2000,
       })
@@ -104,18 +174,28 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
   const displayName = (city: string) => city.replace('市', '')
 
   return (
-    <View className='city-picker-overlay' onClick={onClose}>
+    <View className='city-picker-overlay' onClick={handleClose} catchMove>
       <View
         className='city-picker-sheet'
+        role='dialog'
+        aria-modal='true'
+        aria-label='城市选择'
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle */}
         <View className='city-picker-sheet__handle' />
 
-        {/* Title */}
+        {/* Header with mascot */}
         <View className='city-picker-sheet__header'>
-          <Text className='city-picker-sheet__title'>你想在哪个城市遇到有趣的人？</Text>
-          <Text className='city-picker-sheet__subtitle'>告诉我们你的城市，人数够了我们就来</Text>
+          <View className='city-picker-sheet__header-row'>
+            <Image
+              className='city-picker-sheet__mascot'
+              src={getXiaoyueExpressionAsset('homeWelcome')}
+              mode='aspectFit'
+            />
+            <Text className='city-picker-sheet__title'>你想在哪个城市遇到有趣的人？</Text>
+          </View>
+          <Text className='city-picker-sheet__subtitle'>告诉我们你的城市，人数够了悦仔就来安排</Text>
         </View>
 
         {/* Search */}
@@ -123,9 +203,10 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
           <JoyJoinIcon emoji='🔍' size={28} className='city-picker-sheet__search-icon' />
           <Input
             className='city-picker-sheet__search-input'
+            type='text'
             placeholder='搜索城市'
             value={searchQuery}
-            onInput={(e) => setSearchQuery(e.detail.value)}
+            onInput={(e) => handleSearch(e.detail.value)}
             onConfirm={() => {
               if (filteredCities.length === 1) {
                 handleSelectCity(filteredCities[0])
@@ -135,7 +216,9 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
           {searchQuery.trim() && (
             <View
               className='city-picker-sheet__search-clear'
-              onClick={() => setSearchQuery('')}
+              onClick={handleClearSearch}
+              hoverClass='city-picker-sheet__search-clear--hover'
+              aria-label='清除搜索'
             >
               <JoyJoinIcon emoji='✕' size={24} className='city-picker-sheet__search-clear-icon' />
             </View>
@@ -143,7 +226,7 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
         </View>
 
         {/* Hot cities — shown when search is empty */}
-        {showHotCities && (
+        {showHotCities ? (
           <View className='city-picker-sheet__hot-section'>
             <View className='city-picker-sheet__section-label'>
               <JoyJoinIcon emoji='🔥' size={24} />
@@ -156,12 +239,16 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
                   className={`city-picker-sheet__hot-item ${selectedCity === city ? 'city-picker-sheet__hot-item--selected' : ''}`}
                   onClick={() => handleSelectCity(city)}
                   hoverClass='city-picker-sheet__tile--hover'
+                  aria-label={`选择 ${displayName(city)}`}
                 >
                   <Text className='city-picker-sheet__hot-item-text'>{displayName(city)}</Text>
                 </View>
               ))}
             </View>
           </View>
+        ) : (
+          /* Spacer to prevent layout jump when hot section hides */
+          <View className='city-picker-sheet__hot-section-placeholder' />
         )}
 
         {/* City list */}
@@ -170,13 +257,16 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
           scrollY
           scrollWithAnimation
           enableFlex
+          scrollIntoView={scrollToCity}
         >
           {filteredCities.map((city) => (
             <View
               key={city}
+              id={`city-${city}`}
               className={`city-picker-sheet__list-item ${selectedCity === city ? 'city-picker-sheet__list-item--selected' : ''}`}
               onClick={() => handleSelectCity(city)}
               hoverClass='city-picker-sheet__list-item--hover'
+              aria-label={`选择 ${displayName(city)}`}
             >
               <Text className='city-picker-sheet__list-item-text'>{displayName(city)}</Text>
               {selectedCity === city && (
@@ -186,7 +276,7 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
           ))}
           {filteredCities.length === 0 && (
             <View className='city-picker-sheet__empty city-picker-sheet__empty--enter'>
-              <Text className='city-picker-sheet__empty-text'>没有找到相关城市</Text>
+              <Text className='city-picker-sheet__empty-text'>暂未收录这个城市，试试其他关键词</Text>
             </View>
           )}
           <View className='city-picker-sheet__list-safe-bottom' />
@@ -199,6 +289,7 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
               <JoyJoinIcon emoji='✓' size={48} className='city-picker-sheet__celebration-icon' />
             </View>
             <Text className='city-picker-sheet__celebration-text'>已登记！</Text>
+            <Text className='city-picker-sheet__celebration-sub'>悦仔会第一时间通知你</Text>
           </View>
         )}
 
@@ -219,7 +310,7 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
   )
 }
 
-// Simple pinyin initial helper (limited, covers common cities)
+// Simple pinyin initial helper — covers all cities in ALL_CITIES
 function getPinyinInitial(city: string): string {
   const map: Record<string, string> = {
     '北京市': 'bj', '上海市': 'sh', '广州市': 'gz', '深圳市': 'sz',

@@ -39,7 +39,7 @@ import {
   navigateToMiniProgramNextStep,
   runMiniProgramRouteTransition,
 } from '../../../lib/onboarding/onboardingNavigation'
-import { logInfo, logError } from '../../../lib/utils/logger'
+import { logInfo, logWarn, logError } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
@@ -296,6 +296,26 @@ export default function PersonalityTestPage() {
     }
   }, [])
 
+  // Safety timeout: reset isPageExiting if it stays true for >5s.
+  // Guards against WeChat silently rejecting a navigation (the navigation API
+  // resolves without error but the page transition never happens) which would
+  // otherwise leave isPageExiting permanently true and block auth-gate effects.
+  const isPageExitingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (isPageExiting) {
+      isPageExitingTimerRef.current = setTimeout(() => {
+        setIsPageExiting(false)
+        logWarn('[PersonalityTest] isPageExiting safety reset (timeout)')
+      }, 5000)
+    }
+    return () => {
+      if (isPageExitingTimerRef.current) {
+        clearTimeout(isPageExitingTimerRef.current)
+        isPageExitingTimerRef.current = null
+      }
+    }
+  }, [isPageExiting])
+
   // Echo exit animation state: when isSubmitting drops, the echo fades out
   // over 220ms before unmounting so the handoff to the next question feels
   // composed rather than abrupt.
@@ -543,6 +563,9 @@ export default function PersonalityTestPage() {
             mode: 'replace',
             transition: { beforeNavigate: () => setIsPageExiting(true) },
           })
+          // If we reach this line, the navigation was silently rejected (WeChat
+          // runtime quirk). Reset isPageExiting so the user can interact again.
+          setIsPageExiting(false)
           return
         }
 
@@ -553,6 +576,9 @@ export default function PersonalityTestPage() {
         })
         await completeAnonymousAssessment(result.sessionId, result.currentMatches ?? currentMatches)
         anonymousEngineStateRef.current = null
+        // If we reach this line, the navigation was silently rejected (WeChat
+        // runtime quirk). Reset isPageExiting so the user can interact again.
+        setIsPageExiting(false)
         return
       }
 

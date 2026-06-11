@@ -458,7 +458,7 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
       }
 
       const { description } = parseResult.data;
-      const userId = getAuthenticatedUserId(req)!;
+      const userId = getAuthenticatedUserId(req) as string;
 
       const rateLimit = checkProfessionRateLimit(userId);
       if (!rateLimit.allowed) {

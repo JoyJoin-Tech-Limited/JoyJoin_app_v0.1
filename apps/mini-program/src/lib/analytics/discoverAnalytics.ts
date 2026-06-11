@@ -9,6 +9,7 @@ export type DiscoverAnalyticsEventType =
   | 'registration_complete'
   | 'registration_abandoned'
   | 'registration_intent_toggled'
+  | 'registration_submit_error'
   | 'promo_banner_impression'
   | 'promo_banner_cta_tap'
   | 'promo_banner_image_error'
@@ -22,6 +23,14 @@ export type DiscoverAnalyticsEventType =
   | 'geo_failed'
   | 'geo_auto_filter'
   | 'filter_auto_relax'
+  | 'city_picker_open'
+  | 'city_picker_close'
+  | 'city_picker_select'
+  | 'city_picker_search'
+  | 'city_picker_confirm'
+  | 'city_picker_success'
+  | 'city_picker_offline_blocked'
+  | 'city_picker_error'
 
 export interface DiscoverAnalyticsEvent {
   eventType: DiscoverAnalyticsEventType

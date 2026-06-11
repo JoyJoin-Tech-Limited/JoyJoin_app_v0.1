@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { logger } from "../../lib/logger";
 import { requireAuth } from "../../middleware/auth";
+import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import { storage } from "../../storage";
 import { determineSubtype, generateInsights } from "./assessment";
 import type { ArchetypeName } from "../../archetypeConfig";
@@ -1000,7 +1001,7 @@ export function registerAssessmentV4Routes(app: Express): void {
   app.post('/api/assessment/v4/:sessionId/link-user', requireAuth, async (req: any, res) => {
     try {
       const { sessionId } = req.params;
-      const userId = req.user!.id;
+      const userId = getAuthenticatedUserId(req) as string;
       
       logger.info("[Assessment V4 Link] Called with", {
         sessionId,

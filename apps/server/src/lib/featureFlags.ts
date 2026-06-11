@@ -40,6 +40,10 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  When false: falls back to the legacy "揭晓桌友" button.
    *  Default: true. */
   squadUnboxingDragRevealEnabled: "SQUAD_UNBOXING_DRAG_REVEAL_ENABLED",
+  /** Master kill-switch for event pool registration.
+   *  When false, POST /api/event-pools/:id/register returns 503.
+   *  Env fallback: REGISTRATION_ENABLED (default: true). */
+  registrationEnabled: "REGISTRATION_ENABLED",
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

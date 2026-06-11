@@ -111,6 +111,9 @@ function ChoiceCard({ option, selected, onClick, compact = false }: ChoiceCardPr
         .join(' ')}
       hoverClass='pool-reg__choice-card--hover'
       onClick={handleTap}
+      role='radio'
+      aria-label={`${option.label}${option.description ? '：' + option.description : ''}`}
+      aria-checked={selected}
     >
       <View className='pool-reg__choice-label-row'>
         {option.emoji ? (
@@ -151,6 +154,9 @@ function ChoiceChip({ option, selected, onClick }: ChoiceChipProps) {
         .join(' ')}
       hoverClass='pool-reg__chip--hover'
       onClick={handleTap}
+      role='checkbox'
+      aria-label={option.label}
+      aria-checked={selected}
     >
       {option.emoji ? <JoyJoinIcon emoji={option.emoji} tier='intent' size={28} className='pool-reg__chip-icon' /> : null}
       <Text className='pool-reg__chip-label'>{option.label}</Text>
@@ -375,10 +381,20 @@ export default function PoolRegistrationPage() {
   const [isRegistering, setIsRegistering] = useState(false)
   const [registered, setRegistered] = useState(false)
   const [error, setError] = useState('')
+  // Scroll-to-error anchor — set when error appears, cleared so it doesn't re-scroll on re-render
+  const [scrollErrorId, setScrollErrorId] = useState('')
   const [resumeContext, setResumeContext] = useState<MiniProgramPoolRegistrationReturnContext | null>(null)
   const [showBudgetReaction, setShowBudgetReaction] = useState(false)
   const budgetReactionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const staggerMounted = useStaggerMount()
+
+  const reduceMotion = useMemo(() => {
+    try {
+      return !!(Taro.getSystemInfoSync() as any).reduceMotion
+    } catch {
+      return false
+    }
+  }, [])
 
   const {
     data: pool,
@@ -455,6 +471,11 @@ export default function PoolRegistrationPage() {
         // Silent — CDN preload is best-effort
       })
     }
+
+    // Preload error-state mascot so it doesn't flash-load on error
+    Taro.getImageInfo({ src: getXiaoyueExpressionAsset('actionFailure') }).catch(() => {
+      // Silent — best-effort
+    })
   }, [pool, authLoading])
 
   const { data: briefData, isLoading: briefLoading, refetch: refetchBrief } = useQuery<PreJoinVibeBrief | null>({
@@ -533,6 +554,19 @@ export default function PoolRegistrationPage() {
       }
     }
   }, [])
+
+  // When error appears: trigger haptics + scroll into view
+  useEffect(() => {
+    if (!error) {
+      setScrollErrorId('')
+      return
+    }
+    haptics('medium')
+    // Defer scroll so DOM has painted the error card
+    requestAnimationFrame(() => {
+      setScrollErrorId('pool-reg-error-anchor')
+    })
+  }, [error])
 
   const applyStoredReturnContext = useCallback(() => {
     if (!poolId || !user?.id) {
@@ -920,6 +954,7 @@ export default function PoolRegistrationPage() {
 
       const message = resolveMessage(err, 'submit-failed')
       setError(message)
+      discoverAnalytics.track('registration_submit_error', poolId, { message, step })
       logError('[PoolRegistration] Failed', {
         poolId,
         eventType,
@@ -1066,7 +1101,7 @@ export default function PoolRegistrationPage() {
   const resumeNotice = resumeContext ? getResumeNoticeCopy(resumeContext) : null
 
   return (
-    <ScrollView className='pool-reg' scrollY enhanced showScrollbar={false}>
+    <ScrollView className='pool-reg' scrollY enhanced showScrollbar={false} scrollIntoView={scrollErrorId}>
       <View className='pool-reg__header'>
         <Text className='pool-reg__eyebrow'>活动池报名</Text>
         <Text className='pool-reg__title pool-reg__title--headline'>{pool?.title ?? '活动报名'}</Text>
@@ -1389,12 +1424,30 @@ export default function PoolRegistrationPage() {
       ) : null}
 
       {error ? (
-        <StatusCard
-          tone='error'
-          title='提交没成功'
-          description={error}
-          className='pool-reg__error-card'
-        />
+        <View
+          className={`pool-reg__error-wrap${reduceMotion ? ' pool-reg__error-wrap--reduce-motion' : ''}`}
+          role='alert'
+          aria-live='polite'
+          id='pool-reg-error-anchor'
+        >
+          <StatusCard
+            tone='error'
+            title='提交没成功'
+            description={error}
+            className='pool-reg__error-card'
+            heroSrc={getXiaoyueExpressionAsset('actionFailure')}
+            action={{
+              label: isRegistering ? '提交中…' : '重新提交',
+              onClick: handleRegister,
+              variant: 'primary',
+              disabled: isRegistering,
+              loading: isRegistering,
+            }}
+            footer={
+              <Text className='pool-reg__error-helper'>别担心，悦仔帮你再试一次就好～</Text>
+            }
+          />
+        </View>
       ) : null}
 
       <View className='pool-reg__footer'>

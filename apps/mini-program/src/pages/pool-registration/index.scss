@@ -89,7 +89,7 @@
     &--headline {
       @include type-headline;
       letter-spacing: -0.5rpx;
-      line-height: 1.3;
+      line-height: 1.44;
       word-break: keep-all;
     }
   }
@@ -408,14 +408,14 @@
     @include type-caption;
     font-weight: $font-weight-semibold;
     color: rgba($color-primary-dark, 0.82);
-    margin-bottom: $spacing-xs;
+    margin-bottom: 12rpx;
   }
 
   &__section-title {
     display: block;
     @include type-subheading;
     line-height: 1.5;
-    margin-bottom: $spacing-xs;
+    margin-bottom: $spacing-sm;
   }
 
   &__section-copy,
@@ -646,8 +646,35 @@
     line-height: 1.6;
   }
 
+  &__error-wrap {
+    margin-top: $spacing-md;
+    animation: fade-slide-up 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+
+    // When JS reduceMotion is active (set via inline class), suppress animation
+    &--reduce-motion {
+      animation: none;
+    }
+  }
+
   &__error-card {
-    margin-top: $spacing-sm;
+    &.status-card--error {
+      background: rgba($color-surface, 0.96);
+
+      // Portrait mascot — the actionFailure expression is taller than wide.
+      // Override the StatusCard's 200rpx square to a portrait-friendly aspect.
+      .status-card__hero {
+        width: 160rpx;
+        height: 200rpx;
+      }
+    }
+  }
+
+  &__error-helper {
+    display: block;
+    @include type-label;
+    color: $color-text-muted;
+    text-align: center;
+    line-height: $line-height-relaxed;
   }
 
   &__field-title {
@@ -831,6 +858,9 @@
 
   @media (prefers-reduced-motion: reduce) {
     &__step-content {
+      animation: none;
+    }
+    &__error-wrap {
       animation: none;
     }
     &__intent-card--hover {

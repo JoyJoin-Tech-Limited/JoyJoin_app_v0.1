@@ -926,7 +926,7 @@ Note: The gentle banner (CityUnlockBanner) was removed in 2026-06-10. GPS auto-f
 **Key Pages/Components:**
 - `pages/city-unlock/index` — Progress page with Xiaoyue mascot, threshold bar, share CTA, activity feed, other-city tease
 - `components/discover/CityUnlockFeedCard` — Bottom-of-feed CTA card with Xiaoyue mascot (sole entry point for city interest, 2026-06-10)
-- `components/discover/CityPickerSheet` — Bottom sheet with search + hot-city grid + confirm
+- `components/discover/CityPickerSheet` — Bottom sheet with Xiaoyue mascot header, search + hot-city grid + full city list, scroll-to-selected, analytics-instrumented, confirm
 - ~~`components/discover/CityUnlockBanner`~~ — Removed 2026-06-10; replaced by GPS auto-filter for Shenzhen + CityUnlockFeedCard for other cities
 
 **API Endpoints:**

@@ -19,6 +19,8 @@ interface StatusCardAction {
   onClick: () => void
   variant?: JoyButtonProps['variant']
   className?: string
+  disabled?: boolean
+  loading?: boolean
 }
 
 interface StatusCardProps {
@@ -67,6 +69,8 @@ export default function StatusCard({
           variant={action.variant}
           className={`status-card__action${action.className ? ` ${action.className}` : ''}`}
           onClick={action.onClick}
+          disabled={action.disabled}
+          loading={action.loading}
         >
           {action.label}
         </Button>

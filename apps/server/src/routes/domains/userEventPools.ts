@@ -27,6 +27,7 @@ import { loadInterestSignalsByUserIds } from "./helpers";
 import { recordPoolCardCopyCache } from "../../middleware/metrics";
 import { enrichProfileFromRegistration } from "../../lib/profileEnrichment";
 import { logger } from "../../lib/logger";
+import { getFeatureFlagSync } from "../../lib/featureFlags";
 import { shellCache } from "../../lib/shellCache";
 import { computeOracleCardFields } from "../../lib/oracleCardComputation";
 import { broadcastAttendanceStatusUpdated } from "../../eventBroadcast";
@@ -441,7 +442,16 @@ export function registerUserEventPoolRoutes(app: Express): void {
   app.post("/api/event-pools/:id/register", requireAuth, async (req, res) => {
     try {
       const poolId = req.params.id;
-      const userId = (req.user as User).id;
+      const userId = getAuthenticatedUserId(req) as string;
+
+      // Feature flag kill-switch for emergency registration disable
+      if (!getFeatureFlagSync("registrationEnabled", true)) {
+        return res.status(503).json({
+          message: "Registration is temporarily unavailable",
+          code: "REGISTRATION_DISABLED",
+        });
+      }
+
       const { invitationCode, values: validatedData } = buildEventPoolRegistrationInsert({
         poolId,
         userId,
@@ -645,14 +655,14 @@ export function registerUserEventPoolRoutes(app: Express): void {
       
       // Async trigger (don't block response)
       scanPoolAndMatch(poolId, "realtime", "user_registration").catch((err: any) =>  {
-        console.error(`[Realtime Matching] Scan failed after registration:`, err);
+        logger.error(`[Realtime Matching] Scan failed after registration:`, err);
         // Error logged, operation continues
       });
 
       // Fire-and-forget: regenerate AI card copy when archetype mix changes
       const { generateAndSavePoolCardCopy } = await import("../../ai/workers/poolCardCopyWorker");
       generateAndSavePoolCardCopy(poolId).catch((err: any) => {
-        console.error(`[poolCardCopyWorker] Failed to regenerate copy after registration ${poolId}:`, err);
+        logger.error(`[poolCardCopyWorker] Failed to regenerate copy after registration ${poolId}:`, err);
       });
 
       // Silently backfill empty profile fields from registration data (fire-and-forget)
@@ -663,7 +673,14 @@ export function registerUserEventPoolRoutes(app: Express): void {
         dietaryRestrictions: registration.dietaryRestrictions ?? undefined,
       }).catch((err: any) => {
         // Log but don't fail the registration
-        console.error("[profileEnrichment] Failed to enrich profile:", err);
+        logger.error("[profileEnrichment] Failed to enrich profile:", err);
+      });
+
+      logger.info("Registered for event pool", {
+        poolId,
+        userId,
+        entitlementMode,
+        registrationId: registration.id,
       });
 
       res.json({

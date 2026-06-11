@@ -205,7 +205,7 @@ export function registerAnalyticsRoutes(app: Express): void {
           ? poolId
           : null;
       const normalizedMetadata = sanitizeMetadata(metadata);
-      const userId = req.session.userId ?? null;
+      const userId = req.session?.userId ?? null;
       const sessionId = req.sessionID ?? null;
 
       await db.insert(participationExperimentEvents).values({
@@ -252,7 +252,7 @@ export function registerAnalyticsRoutes(app: Express): void {
 
       logger.info("personality_result analytics", {
         request_id: req.requestId,
-        user_id: req.session.userId ?? null,
+        user_id: req.session?.userId ?? null,
         session_id: req.sessionID ?? null,
         event_type: eventType,
         metadata: sanitizeMetadata(metadata),
@@ -300,7 +300,7 @@ export function registerAnalyticsRoutes(app: Express): void {
           ? poolId
           : null;
       const normalizedMetadata = sanitizeMetadata(metadata);
-      const userId = req.session.userId ?? null;
+      const userId = req.session?.userId ?? null;
       const sessionId = req.sessionID ?? null;
 
       await db.insert(discoverAnalyticsEvents).values({
@@ -348,7 +348,7 @@ export function registerAnalyticsRoutes(app: Express): void {
       }
 
       const normalizedMetadata = sanitizeMetadata(metadata);
-      const userId = req.session.userId ?? null;
+      const userId = req.session?.userId ?? null;
       const sessionId = req.sessionID ?? null;
 
       await db.insert(discoverAnalyticsEvents).values({
@@ -394,7 +394,7 @@ export function registerAnalyticsRoutes(app: Express): void {
       }
 
       const normalizedMetadata = sanitizeMetadata(metadata);
-      const userId = req.session.userId ?? null;
+      const userId = req.session?.userId ?? null;
       const sessionId = req.sessionID ?? null;
 
       await db.insert(paymentRitualEvents).values({
@@ -440,7 +440,7 @@ export function registerAnalyticsRoutes(app: Express): void {
       }
 
       const normalizedMetadata = sanitizeMetadata(metadata);
-      const userId = req.session.userId ?? null;
+      const userId = req.session?.userId ?? null;
       const sessionId = req.sessionID ?? null;
 
       await db.insert(discoverAnalyticsEvents).values({

@@ -8,6 +8,7 @@
  */
 
 import { db } from '../../db';
+import { logger } from '../../lib/logger';
 import { eventPools, poolAICopy } from '@shared/schema';
 import { eq, and, gt, isNull, or } from 'drizzle-orm';
 import { callSocialAI } from '../socialModelRouter';
@@ -162,7 +163,7 @@ export async function generatePoolCardCopy(
     .limit(1);
 
   if (!pool) {
-    console.warn(`[poolCardCopyWorker] Pool not found: ${poolId}`);
+    logger.warn(`[poolCardCopyWorker] Pool not found: ${poolId}`);
     return {
       headline: getFallbackHeadline(),
       fallbackUsed: true,
@@ -175,7 +176,7 @@ export async function generatePoolCardCopy(
     SELECT coalesce(u.primary_archetype, u.archetype, '未设置') AS archetype, count(*)::int AS count
     FROM event_pool_registrations r
     JOIN users u ON r.user_id = u.id
-    WHERE r.pool_id = ${poolId}
+    WHERE r.pool_id = '${poolId}'
     GROUP BY coalesce(u.primary_archetype, u.archetype, '未设置')
     ORDER BY count DESC
     LIMIT 3
@@ -214,7 +215,7 @@ export async function generatePoolCardCopy(
       .trim();
 
     if (!cleaned || cleaned.length < 4 || cleaned.length > 40) {
-      console.warn(`[poolCardCopyWorker] LLM output failed quality check (length=${cleaned.length}), using fallback`);
+      logger.warn(`[poolCardCopyWorker] LLM output failed quality check (length=${cleaned.length}), using fallback`);
       const meta = buildFallbackAIMeta('low_quality_score', PROMPT_VERSION);
       logAITrace({
         domain: 'discover',
@@ -252,7 +253,7 @@ export async function generatePoolCardCopy(
       provider: result.provider,
     };
   } catch (err) {
-    console.error('[poolCardCopyWorker] LLM call failed, using fallback:', err);
+    logger.error('[poolCardCopyWorker] LLM call failed, using fallback', { error: String(err) });
     const meta = buildFallbackAIMeta('provider_error', PROMPT_VERSION);
     logAITrace({
       domain: 'discover',
@@ -309,7 +310,7 @@ export async function savePoolCardCopy(
       },
     });
 
-  console.log(`[poolCardCopyWorker] Saved copy for pool ${poolId} (fallback=${result.fallbackUsed})`);
+  logger.info(`[poolCardCopyWorker] Saved copy for pool ${poolId} (fallback=${result.fallbackUsed})`);
 }
 
 // ─── Orchestrator: generate + save ────────────────────────────────
@@ -328,7 +329,7 @@ export async function backfillStalePoolCardCopy(): Promise<number> {
   try {
     const relationExists = await hasPoolAICopyRelation();
     if (!relationExists) {
-      console.warn(
+      logger.warn(
         `[poolCardCopyWorker] Skipping backfill because relation ${POOL_AI_COPY_RELATION} does not exist`
       );
       recordPoolCardCopyBackfillLatency(Date.now() - startedAt);
@@ -336,7 +337,7 @@ export async function backfillStalePoolCardCopy(): Promise<number> {
     }
   } catch (err) {
     if (isMissingRelationError(err)) {
-      console.warn(
+      logger.warn(
         `[poolCardCopyWorker] Skipping backfill because relation ${POOL_AI_COPY_RELATION} is missing`
       );
       recordPoolCardCopyBackfillLatency(Date.now() - startedAt);
@@ -362,7 +363,7 @@ export async function backfillStalePoolCardCopy(): Promise<number> {
     `);
   } catch (err) {
     if (isMissingRelationError(err)) {
-      console.warn(
+      logger.warn(
         `[poolCardCopyWorker] Skipping backfill because relation ${POOL_AI_COPY_RELATION} is missing`
       );
       recordPoolCardCopyBackfillLatency(Date.now() - startedAt);
@@ -379,12 +380,12 @@ export async function backfillStalePoolCardCopy(): Promise<number> {
       await generateAndSavePoolCardCopy(poolId);
       generated++;
     } catch (err) {
-      console.error(`[poolCardCopyWorker] Backfill failed for pool ${poolId}:`, err);
+      logger.error(`Backfill failed for pool ${poolId}`, { error: String(err) });
     }
   }
 
   if (generated > 0) {
-    console.log(`[poolCardCopyWorker] Backfilled ${generated} pools`);
+    logger.info(`[poolCardCopyWorker] Backfilled ${generated} pools`);
   }
 
   recordPoolCardCopyBackfillLatency(Date.now() - startedAt);
@@ -397,11 +398,11 @@ let _intervalId: NodeJS.Timeout | null = null;
 
 export function startPoolCardCopyWorker(intervalMinutes = 5): void {
   if (_intervalId) {
-    console.warn('[poolCardCopyWorker] Already running; skipping duplicate start');
+    logger.warn('[poolCardCopyWorker] Already running; skipping duplicate start');
     return;
   }
 
-  console.log(`[poolCardCopyWorker] Starting catch-up cron (every ${intervalMinutes} min)`);
+  logger.info(`[poolCardCopyWorker] Starting catch-up cron (every ${intervalMinutes} min)`);
 
   _intervalId = setInterval(() => {
     void backfillStalePoolCardCopy();
