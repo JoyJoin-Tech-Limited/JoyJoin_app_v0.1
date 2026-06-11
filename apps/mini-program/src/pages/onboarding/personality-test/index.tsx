@@ -321,6 +321,7 @@ export default function PersonalityTestPage() {
   // composed rather than abrupt.
   const [isEchoExiting, setIsEchoExiting] = useState(false)
   const echoExitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const echoExitFiredRef = useRef(false)
   const echoTrackedRef = useRef(false)
 
   // Guard against stale async closures hijacking navigation after session change
@@ -711,6 +712,9 @@ export default function PersonalityTestPage() {
             mode: 'replace',
             transition: { beforeNavigate: () => setIsPageExiting(true) },
           })
+          // If we reach this line, the navigation was silently rejected (WeChat
+          // runtime quirk). Reset isPageExiting so the user can interact again.
+          setIsPageExiting(false)
           return
         }
 
@@ -731,6 +735,9 @@ export default function PersonalityTestPage() {
         }
         await completeAnonymousAssessment(thisSessionId, result.currentMatches ?? currentMatches, result.result)
         anonymousEngineStateRef.current = null
+        // If we reach this line, the navigation was silently rejected (WeChat
+        // runtime quirk). Reset isPageExiting so the user can interact again.
+        setIsPageExiting(false)
         return
       }
 
@@ -841,9 +848,14 @@ export default function PersonalityTestPage() {
         clearTimeout(echoExitTimerRef.current)
         echoExitTimerRef.current = null
       }
+      echoExitFiredRef.current = false
       setIsEchoExiting(false)
-    } else if (!shouldShowEcho && !isEchoExiting) {
-      // Just stopped submitting — start exit animation, then unmount
+    } else if (!shouldShowEcho && !isEchoExiting && !echoExitFiredRef.current) {
+      // Just stopped submitting — start exit animation, then apply the pending
+      // question update. echoExitFiredRef prevents re-entering this block after
+      // the timer fires (when isEchoExiting resets to false), which would create
+      // an infinite 220ms echo-show/echo-hide loop.
+      echoExitFiredRef.current = true
       setIsEchoExiting(true)
       echoExitTimerRef.current = setTimeout(() => {
         setIsEchoExiting(false)
@@ -1035,6 +1047,9 @@ export default function PersonalityTestPage() {
           destination: MINI_PROGRAM_ROUTES.personalityTestResults,
         })
         await completeAnonymousAssessment(sessionId || 'anonymous-client', engineState.currentMatches.slice(0, 3))
+        // If we reach this line, the navigation was silently rejected (WeChat
+        // runtime quirk). Reset isPageExiting so the user can interact again.
+        setIsPageExiting(false)
         return
       }
 
