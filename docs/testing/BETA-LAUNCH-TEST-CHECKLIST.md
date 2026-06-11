@@ -51,7 +51,7 @@
 | # | Test Case | Steps | Expected |
 |---|-----------|-------|----------|
 | 2.1 | Open location filter | On Discover page, tap location pill/button | `LocationFilterDrawer` slides up from bottom with backdrop overlay |
-| 2.2 | Drawer layout | Inspect drawer contents | Two cluster sections visible: 南山区 (6 districts) and 福田区 (3 districts). District tiles have heat indicators (热门/active/normal). Top bar has title + close button. |
+| 2.2 | Drawer layout | Inspect drawer contents | Three cluster sections visible: 南山区 (2 districts), 福田区 (1 district), 外区域 (pending, 8 districts). District tiles have heat indicators (热门/active/normal/pending). Pending tiles show "即将开放" label at 0.55 opacity. Top bar has title + close button. |
 | 2.3 | Select a district | Tap a district tile (e.g., 南山中心区) | Tile shows selected state (`aria-pressed=true`). District name shown on discover pill. |
 | 2.4 | Apply filter | Tap "确认" or close drawer | Discover pool list filtered to selected district(s) |
 | 2.5 | Clear selection | Re-open drawer, tap the selected district again to deselect | Selection cleared; discover shows all districts |
@@ -65,7 +65,7 @@
 | 2.8 | Multiple districts selectable? | Try selecting districts from different clusters | Verify current behavior (likely single-select) |
 | 2.9 | No pools in selected district | Select a district with no active pools | Discover shows empty state (StatusCard with "去发现活动" or "清除筛选") |
 | 2.10 | Scroll within drawer | If many districts, scroll the list | `ScrollView` scrolls smoothly with no layout jump at flex bounds |
-| 2.11 | Verify heat indicators | Compare district heat data vs `packages/shared/src/districts.ts` | `hot` districts show orange/red dot + "热门" label; `active` shows blue/teal dot + "活跃" label; `normal` has no label |
+| 2.11 | Verify heat indicators | Compare district heat data vs `packages/shared/src/districts.ts` | `hot` districts show orange/red dot + "热门" label; `active` shows blue/teal dot + "活跃" label; `normal` has no label; `pending` shows "即将开放" at 0.55 opacity with grey dot |
 
 ---
 

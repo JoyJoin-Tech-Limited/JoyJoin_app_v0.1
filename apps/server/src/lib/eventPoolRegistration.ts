@@ -34,7 +34,7 @@ export function buildEventPoolRegistrationInsert(input: {
 } {
   const normalizedPayload = normalizeEventPoolRegistrationPayload(input.payload);
 
-  const values = insertEventPoolRegistrationSchema.parse({
+  const parseResult = insertEventPoolRegistrationSchema.safeParse({
     poolId: input.poolId,
     userId: input.userId,
     budgetRange: normalizedPayload.budgetRange ?? [],
@@ -46,7 +46,15 @@ export function buildEventPoolRegistrationInsert(input: {
     barThemes: normalizedPayload.barThemes ?? [],
     alcoholComfort: normalizedPayload.alcoholComfort ?? [],
     barBudgetRange: normalizedPayload.barBudgetRange ?? [],
-  }) as EventPoolRegistrationInsertValues;
+  });
+
+  if (!parseResult.success) {
+    const error = new Error("Invalid registration payload") as Error & { validationErrors?: unknown };
+    error.validationErrors = parseResult.error.flatten();
+    throw error;
+  }
+
+  const values = parseResult.data as EventPoolRegistrationInsertValues;
 
   return {
     invitationCode: normalizedPayload.invitationCode,

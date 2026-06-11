@@ -30,7 +30,13 @@ export type ErrorCode =
   | 'logout-failed'
   | 'copy-failed'
   | 'operation-failed'
-  | 'sync-failed';
+  | 'sync-failed'
+  | 'POOL_CANCELLED'
+  | 'POOL_CLOSED'
+  | 'REGISTRATION_DEADLINE_PASSED'
+  | 'POOL_FULL'
+  | 'REGISTRATION_FAILED'
+  | 'PAYMENTS_DISABLED';
 
 interface ErrorTemplate {
   /** Surface type — determines tone mode */
@@ -125,6 +131,31 @@ const ERROR_TEMPLATES: Record<ErrorCode, ErrorTemplate> = {
     surface: 'full-page-error',
     default: '同步没成功',
     mascot: '{{mascotName}}帮你同步结果时遇到了点小状况，再试一次~',
+  },
+  POOL_CANCELLED: {
+    surface: 'toast-error',
+    default: '本场活动已取消',
+  },
+  POOL_CLOSED: {
+    surface: 'toast-error',
+    default: '本场活动已结束报名',
+  },
+  REGISTRATION_DEADLINE_PASSED: {
+    surface: 'toast-error',
+    default: '报名时间已截止',
+  },
+  POOL_FULL: {
+    surface: 'toast-error',
+    default: '本场活动报名已满',
+  },
+  REGISTRATION_FAILED: {
+    surface: 'toast-error',
+    default: '提交没成功，再试一次',
+  },
+  PAYMENTS_DISABLED: {
+    surface: 'full-page-error',
+    default: '支付功能维护中',
+    mascot: '{{mascotName}}正在升级支付系统，稍后回来试试~',
   },
 };
 

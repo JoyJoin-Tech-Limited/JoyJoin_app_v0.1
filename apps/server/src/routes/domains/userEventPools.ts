@@ -692,9 +692,16 @@ export function registerUserEventPoolRoutes(app: Express): void {
         });
       }
 
+      if (error instanceof Error && "validationErrors" in error) {
+        return res.status(400).json({
+          message: "Invalid registration payload",
+          code: "REGISTRATION_FAILED",
+        });
+      }
+
       res.status(500).json({ 
         message: "Failed to register for event pool",
-        error: error.message 
+        code: "REGISTRATION_FAILED",
       });
     }
   });

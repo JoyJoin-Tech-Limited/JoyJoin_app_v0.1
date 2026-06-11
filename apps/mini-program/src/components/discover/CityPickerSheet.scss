@@ -6,7 +6,7 @@
   right: 0;
   bottom: 0;
   left: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: $color-overlay;
   z-index: $z-modal;
   display: flex;
   flex-direction: column;
@@ -208,6 +208,43 @@
     }
   }
 
+  // ── Celebration overlay ───────────────────────────────────────
+  &__celebration {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.96);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    border-radius: 32rpx 32rpx 0 0;
+    animation: city-picker-celebration-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__celebration-check {
+    width: 88rpx;
+    height: 88rpx;
+    border-radius: 50%;
+    background: $color-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16rpx;
+  }
+
+  &__celebration-icon {
+    color: $color-surface;
+    font-size: 48rpx;
+    font-weight: $font-weight-bold;
+  }
+
+  &__celebration-text {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary-warm;
+  }
+
   // ── Footer ────────────────────────────────────────────────────
   &__footer {
     padding: 24rpx 32rpx;
@@ -261,6 +298,11 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes city-picker-celebration-enter {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 .city-picker-sheet__empty--enter {
   animation: city-picker-empty-enter 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -276,5 +318,15 @@
   .city-picker-sheet__empty--enter {
     transition: none !important;
     animation: none !important;
+  }
+
+  .city-picker-sheet__search-clear {
+    &:active {
+      background: transparent;
+    }
+  }
+
+  .city-picker-sheet__celebration {
+    animation: none;
   }
 }

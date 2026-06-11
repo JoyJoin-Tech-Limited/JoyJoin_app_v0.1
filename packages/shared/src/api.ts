@@ -433,6 +433,7 @@ export interface PaymentIntentResponse {
   signType: 'RSA'
   paySign: string
   type: string
+  mock?: boolean
 }
 
 export interface PaymentStatusResponse {

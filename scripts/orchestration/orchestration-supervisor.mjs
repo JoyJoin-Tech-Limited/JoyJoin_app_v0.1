@@ -1097,6 +1097,11 @@ export function recordTurnSummary(repoRoot, payload) {
       : { ...summary, turnId: turnId || null },
   });
 
+  // Agent Loop: tick on turn summary recording
+  if (summary.type === 'agent_turn_summary' || summary.turnStatus === 'done' || summary.turnStatus === 'blocked') {
+    tryAgentLoopTick(repoRoot, summary);
+  }
+
   return {
     ok: true,
     persisted: process.env.ORCHESTRATION_DISABLE_RUNTIME_WRITES !== '1',
@@ -1408,6 +1413,69 @@ function runValidate(repoRoot) {
   }
 }
 
+// ── Agent Loop Integration ──────────────────────────────────────────
+
+function tryAgentLoopInit(repoRoot, context) {
+  const changedFiles = (context.changedFiles ?? []).slice(0, 10);
+  if (changedFiles.length === 0) return null;
+
+  const prompt = context.upstreamResult?.prompt || 'Current task from worktree';
+  const filesArg = changedFiles.map(f => `'${f}'`).join(',');
+  const safeGoal = prompt.slice(0, 200).replace(/'/g, "'\\''");
+
+  const result = runCommand('sh', ['-c',
+    `node scripts/orchestration/orchestration-loop.mjs init --goal='${safeGoal}' --files='${filesArg}' 2>/dev/null || true`,
+  ], { cwd: repoRoot, timeoutMs: 15_000 });
+
+  try {
+    const parsed = JSON.parse(result.stdout);
+    if (!parsed || parsed.state === 'done' || parsed.state === 'escalated') return null;
+
+    const icons = { idle: '○', classified: '◇', contracted: '◆', implementing: '◉', evaluating: '◎' };
+    const icon = icons[parsed.state] || '○';
+    const tierLabel = parsed.tier ? `T${parsed.tier}` : '?';
+    return `[Agent Loop ${icon} ${parsed.state}/${tierLabel}] ${(parsed.goal || '').slice(0, 100)}`;
+  } catch {
+    return null; // Loop unavailable — graceful degradation
+  }
+}
+
+function tryAgentLoopTick(repoRoot, summary) {
+  const done = summary.turnStatus === 'done';
+  const failed = summary.turnStatus === 'blocked';
+  if (!done && !failed) return; // Only tick on terminal turn statuses
+
+  const payload = JSON.stringify({
+    done,
+    failed,
+    status: summary.turnStatus,
+    agent: summary.agentName || 'unknown',
+    learned: (summary.keyBullets || []).join('; ').slice(0, 200),
+    nextTurnImprovements: summary.nextSteps || [],
+  }).replace(/'/g, "'\\''");
+
+  runCommand('sh', ['-c',
+    `node scripts/orchestration/orchestration-loop.mjs tick --summary='${payload}' 2>/dev/null || true`,
+  ], { cwd: repoRoot, timeoutMs: 10_000 });
+  // Non-blocking — loop tick failure is silent
+}
+
+function tryAgentLoopStatus(repoRoot) {
+  const result = runCommand('sh', ['-c',
+    'node scripts/orchestration/orchestration-loop.mjs status --format=markdown 2>/dev/null || true',
+  ], { cwd: repoRoot, timeoutMs: 5_000 });
+
+  const stdout = result.stdout || '';
+  if (stdout.includes('No Active Loop') || stdout.trim() === '') return null;
+
+  const stateMatch = stdout.match(/\*\*State:\*\*\s*(.+)/);
+  const turnMatch = stdout.match(/\*\*Turn:\*\*\s*(.+)/);
+  if (stateMatch) {
+    return `[Loop: ${stateMatch[1].trim()}${turnMatch ? ` (t${turnMatch[1].trim()})` : ''}]`;
+  }
+  return null;
+}
+
 function runCopilotHook(repoRoot, eventName) {
   const payload = parseStdinJson();
   const manifest = loadOrchestrationManifest(repoRoot);
@@ -1453,12 +1521,20 @@ function runCopilotHook(repoRoot, eventName) {
       memory: buildMemoryLogMetadata(context.memoryContext),
     });
 
+    // Agent Loop: auto-initialize on session start
+    const loopInitResult = tryAgentLoopInit(repoRoot, context);
+
+    const parts = [
+      `${manifest.copilot_hooks?.orchestration?.session_start_message ?? 'Orchestration runtime ready.'} Kickoff lane: ${(kickoffConfig.entry_agents ?? ['Researcher', 'Planner']).join(' -> ')}. Core graph: ${summarizeOrchestratedAgents(manifest)}.`,
+    ];
+    if (loopInitResult) {
+      parts.push(loopInitResult);
+    }
+    const combinedMessage = parts.filter(Boolean).join('\n\n');
+
     outputJson({
       continue: true,
-      systemMessage: appendMemorySummary(
-        `${manifest.copilot_hooks?.orchestration?.session_start_message ?? 'Orchestration runtime ready.'} Kickoff lane: ${(kickoffConfig.entry_agents ?? ['Researcher', 'Planner']).join(' -> ')}. Core graph: ${summarizeOrchestratedAgents(manifest)}.`,
-        buildChangedFileMemorySummary(context.memoryContext),
-      ),
+      systemMessage: appendMemorySummary(combinedMessage, buildChangedFileMemorySummary(context.memoryContext)),
     });
   }
 
@@ -1534,6 +1610,15 @@ function runCopilotHook(repoRoot, eventName) {
       outputJson({
         continue: true,
         systemMessage: promptMemorySummary,
+      });
+    }
+
+    // Agent Loop: surface loop status on prompt submit
+    const loopStatus = tryAgentLoopStatus(repoRoot);
+    if (loopStatus) {
+      outputJson({
+        continue: true,
+        systemMessage: loopStatus,
       });
     }
 

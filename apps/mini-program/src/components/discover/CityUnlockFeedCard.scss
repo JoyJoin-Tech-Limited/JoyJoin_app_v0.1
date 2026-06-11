@@ -8,10 +8,6 @@
   overflow: hidden;
   box-shadow: $shadow-card;
 
-  &:active {
-    opacity: 0.9;
-  }
-
   &__hover {
     transform: scale(0.98);
   }
@@ -97,6 +93,10 @@
   .city-unlock-feed-card {
     &:active {
       opacity: 1;
+    }
+
+    &__hover {
+      transform: none;
     }
   }
 

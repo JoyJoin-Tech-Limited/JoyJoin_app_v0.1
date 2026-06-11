@@ -11,7 +11,7 @@ export interface District {
   id: string;
   name: string;
   shortName?: string;
-  heat: 'hot' | 'active' | 'normal';
+  heat: HeatLevel;
   clusterId: string; // 所属片区 ID
 }
 
@@ -22,12 +22,13 @@ export interface DistrictCluster {
   districts: District[];
 }
 
-export type HeatLevel = 'hot' | 'active' | 'normal';
+export type HeatLevel = 'hot' | 'active' | 'normal' | 'pending';
 
 export const heatConfig: Record<HeatLevel, { label: string; iconName: 'flame' | 'zap' | 'none'; color: string }> = {
   hot: { label: '热门', iconName: 'flame', color: 'text-orange-500' },
   active: { label: '活跃', iconName: 'zap', color: 'text-yellow-500' },
   normal: { label: '', iconName: 'none', color: '' },
+  pending: { label: '即将开放', iconName: 'none', color: '' },
 };
 
 // 深圳片区数据 - 只有南山和福田两个片区
@@ -53,6 +54,21 @@ export const shenzhenClusters: DistrictCluster[] = [
       { id: 'chegongmiao', name: '车公庙', heat: 'hot', clusterId: 'futian' },
       { id: 'gouwugongyuan', name: '购物公园·会展', heat: 'active', clusterId: 'futian' },
       { id: 'meilin', name: '梅林', heat: 'normal', clusterId: 'futian' },
+    ],
+  },
+  {
+    id: 'external',
+    name: '其他区域',
+    displayName: '即将开放',
+    districts: [
+      { id: 'luohu', name: '罗湖区', heat: 'pending', clusterId: 'external' },
+      { id: 'baoan', name: '宝安区', heat: 'pending', clusterId: 'external' },
+      { id: 'longgang', name: '龙岗区', heat: 'pending', clusterId: 'external' },
+      { id: 'yantian', name: '盐田区', heat: 'pending', clusterId: 'external' },
+      { id: 'longhua', name: '龙华区', heat: 'pending', clusterId: 'external' },
+      { id: 'pingshan', name: '坪山区', heat: 'pending', clusterId: 'external' },
+      { id: 'guangming', name: '光明区', heat: 'pending', clusterId: 'external' },
+      { id: 'dapeng', name: '大鹏新区', heat: 'pending', clusterId: 'external' },
     ],
   },
 ];

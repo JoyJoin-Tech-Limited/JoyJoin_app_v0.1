@@ -9,6 +9,8 @@ import { logger } from "../../lib/logger";
 import { describePoolRegistrationAvailability } from "../../lib/poolRegistrationRules";
 import { paymentService } from "../../paymentService";
 import { paymentsRepo } from "../../repositories/paymentsRepo";
+import { paymentFulfillmentRepo } from "../../repositories/paymentFulfillmentRepo";
+import { shellCache } from "../../lib/shellCache";
 import { refundAttemptsRepo } from "../../repositories/refundAttemptsRepo";
 import { usersRepo } from "../../repositories/usersRepo";
 import { pricingRepo } from "../../repositories/pricingRepo";
@@ -18,6 +20,7 @@ import { requireAuth } from "../../middleware/auth";
 import { logAdminAudit } from "../../lib/adminAuditLogger";
 import { db } from "../../db";
 import { getActingAdminId } from "../../lib/getActingAdminId";
+import { getFeatureFlag } from "../../lib/featureFlags";
 
 const getRequestClientIp = (req: Request): string => {
   const forwardedFor = req.headers["x-forwarded-for"];
@@ -27,8 +30,8 @@ const getRequestClientIp = (req: Request): string => {
     || "127.0.0.1";
 };
 
-function checkPaymentsEnabled(req: any, res: any, next: any) {
-  const enabled = (process.env.PAYMENTS_ENABLED ?? "false").toLowerCase() === "true";
+async function checkPaymentsEnabled(req: any, res: any, next: any) {
+  const enabled = await getFeatureFlag("paymentsEnabled", false);
   if (!enabled) {
     return res.status(503).json({
       error: "Payment system is currently disabled for maintenance",
@@ -698,6 +701,62 @@ export function registerPaymentRoutes(app: Express): void {
         }
 
         const paymentOpenId = requestedOpenId ?? sessionOpenId;
+
+        // ── Mock payment mode: skips WeChat Pay API, creates instantly-paid orders ──
+        const MOCK_PAYMENTS = (process.env.MOCK_PAYMENTS ?? "false").toLowerCase() === "true";
+        if (MOCK_PAYMENTS) {
+          try {
+            const { type, planId, couponCode } = req.body ?? {};
+            const selectedPlanType = getNonEmptyString(planId) ?? getNonEmptyString(type) ?? "subscription";
+            const normalizedPlanType = normalizeSubscriptionPlanType(selectedPlanType) ?? selectedPlanType;
+
+            const mockOrderId = `MOCK_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            const mockTimeStamp = String(Math.floor(Date.now() / 1000));
+            const mockNonceStr = Math.random().toString(36).slice(2, 18);
+
+            await paymentsRepo.createPayment({
+              userId,
+              paymentType: "event_pack",
+              relatedId: normalizedPlanType,
+              originalAmount: 0,
+              discountAmount: 0,
+              finalAmount: 0,
+              couponId: null,
+              wechatOrderId: mockOrderId,
+              wechatPrepayId: `mock_prepay_${mockOrderId}`,
+              status: "completed",
+            });
+
+            // Immediately fulfill the mock payment
+            await paymentFulfillmentRepo.finalizeConfirmedPayment({
+              wechatOrderId: mockOrderId,
+              transactionId: `mock_txn_${mockOrderId}`,
+            }).catch((err) => {
+              reqLogger.warn("Mock payment fulfillment non-critical error", { error: String(err) });
+            });
+
+            // Invalidate shell caches so the profile reflects the new entitlement
+            shellCache.invalidateUser(userId);
+
+            reqLogger.info("Mock payment created", { mockOrderId, userId, planType: normalizedPlanType });
+
+            return res.json({
+              outTradeNo: mockOrderId,
+              timeStamp: mockTimeStamp,
+              nonceStr: mockNonceStr,
+              package: `prepay_id=mock_${mockOrderId}`,
+              signType: "RSA" as const,
+              paySign: "MOCK_SIGN",
+              type: normalizedPlanType,
+              mock: true,
+            });
+          } catch (error) {
+            reqLogger.error("Failed to create mock payment", {
+              error: error instanceof Error ? error.message : String(error),
+            });
+            return res.status(500).json({ error: "Failed to create mock payment" });
+          }
+        }
 
         try {
           paymentService.assertMiniProgramAppIdConsistency();

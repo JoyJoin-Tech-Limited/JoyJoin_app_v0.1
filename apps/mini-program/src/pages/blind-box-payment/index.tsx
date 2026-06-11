@@ -701,6 +701,15 @@ export default function BlindBoxPaymentPage() {
       })
       persistedOrderId = paymentIntent.outTradeNo
 
+      // Mock payments skip the WeChat Pay sheet — go straight to verification
+      if (paymentIntent.mock) {
+        const didNavigate = await navigateToVerification(paymentIntent.outTradeNo)
+        if (!didNavigate) {
+          await showResumeOnlyState(paymentIntent.outTradeNo, 'verification-navigation-failed')
+        }
+        return
+      }
+
       await requestMiniProgramPayment(paymentIntent)
 
       // Sprint 2: Celebration handoff for ritual variant

@@ -404,6 +404,11 @@ function AuthenticatedDiscover({
     return '切换区域'
   }, [selectedCluster, selectedDistrict])
 
+  // GPS denied / unknown → show neutral pill without city assumption
+  const isGeoUnknown = geoStatus === 'denied' || geoStatus === 'error'
+  const pillPrefix = isGeoUnknown ? '' : '在 深圳 • '
+  const showPillCity = !isGeoUnknown
+
   const handleRefresh = useCallback(() => {
     haptics('light')
     queryClient.invalidateQueries({ queryKey: ['mini-program', 'event-pools'] })
@@ -492,13 +497,20 @@ function AuthenticatedDiscover({
 
       {/* Explore header */}
       <View className='discover-auth__explore-header'>
-        <Text className='discover-auth__explore-title'>探索体验</Text>
+        <View className='discover-auth__explore-title-row'>
+          <Image
+            className='discover-auth__explore-mascot'
+            src={getXiaoyueExpressionAsset('coachGuide')}
+            mode='aspectFit'
+          />
+          <Text className='discover-auth__explore-title'>探索体验</Text>
+        </View>
         <View
           className={`discover-auth__location-pill ${selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID ? 'discover-auth__location-pill--active' : ''}`}
           onClick={onOpenDrawer}
           hoverClass='discover-auth__location-pill--hover'
           role='button'
-          aria-label={`当前区域: 深圳 · ${locationPillLabel}, 点击切换`}
+          aria-label={`当前区域: ${isGeoUnknown ? '选择你的区域' : '深圳 · ' + locationPillLabel}, 点击切换`}
         >
           <JoyJoinIcon
             emoji='📍'
@@ -506,9 +518,9 @@ function AuthenticatedDiscover({
             className='discover-auth__location-pill-icon'
           />
           <Text className='discover-auth__location-pill-text'>
-            在 深圳 • {locationPillLabel}
+            {isGeoUnknown ? '选择你的区域' : `在 深圳 • ${locationPillLabel}`}
           </Text>
-          <Text className='discover-auth__location-pill-chevron'>▼</Text>
+          <JoyJoinIcon emoji='▼' size={16} className='discover-auth__location-pill-chevron' />
         </View>
       </View>
 
@@ -563,8 +575,8 @@ function AuthenticatedDiscover({
               keyExtractor={poolKeyExtractor}
               renderItem={renderPoolCard}
             />
-            {/* City unlock feed card — shown at bottom of pool list */}
-            {!hasCityInterest && (
+            {/* City unlock feed card — shown at bottom of pool list for non-Shenzhen users */}
+            {!hasCityInterest && !detectedClusterId && (
               <CityUnlockFeedCard onSelectCity={onOpenCityPicker} />
             )}
           </>

@@ -209,7 +209,7 @@ joyjoin-monorepo/
 | Register pages / main vs onboarding subpackage / `preloadRule` | `apps/mini-program/src/lib/onboarding/onboardingRoutes.ts` → consumed by `app.config.ts` |
 | Personality test (V4) | `apps/mini-program/src/pages/onboarding/personality-test/` (test, results); anonymous keys in `lib/anonymousOnboarding.ts` |
 | WeChat login | Returning: `pages/login/index.tsx` + `hooks/useWeChatLogin.ts` → `POST /api/auth/wechat/login`. With assessment import: `authenticateMiniProgramUserWithTest` in `lib/api.ts` → `POST /api/auth/wechat/login-with-test` |
-| Blind-box payment + verification | `pages/blind-box-payment/`, `pages/payment-verification/`; `lib/paymentEntry.ts`, `lib/paymentPendingOrder.ts`, `lib/paymentPendingOrderStorage.ts`; shared intent helper `createMiniProgramPaymentIntent` in `packages/shared/src/api.ts`. **Payment Ritual V2:** `GET /api/payments/ritual-context` (real DB-backed community stats), `POST /api/analytics/payment` (dedicated A/B analytics endpoint) |
+| Blind-box payment + verification | `pages/blind-box-payment/`, `pages/payment-verification/`; `lib/paymentEntry.ts`, `lib/paymentPendingOrder.ts`, `lib/paymentPendingOrderStorage.ts`; shared intent helper `createMiniProgramPaymentIntent` in `packages/shared/src/api.ts`. **Payment Ritual V2:** `GET /api/payments/ritual-context` (real DB-backed community stats), `POST /api/analytics/payment` (dedicated A/B analytics endpoint). **Mock payment mode:** when `MOCK_PAYMENTS=true`, server creates instantly-paid orders (skips WeChat Pay API); client skips `Taro.requestPayment()` for mock orders. |
 | Auth + API bootstrap | `apps/mini-program/src/lib/api/api.ts` |
 | Custom tab bar (native) | `apps/mini-program/src/native-custom-tab-bar/` (see `apps/mini-program/README.md`) |
 | Tab list + `tabBar.custom` | `apps/mini-program/src/lib/navigation/tabBarConfig.ts` + `app.config.ts` |
@@ -1184,6 +1184,7 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | Variable | Purpose |
 |----------|---------|
 | `PAYMENTS_ENABLED` | `true`/`false` to enable WeChat Pay integration and its config validation |
+| `MOCK_PAYMENTS` | `true`/`false` — when true, payment creation returns instantly-paid mock orders (no real WeChat Pay charges); client skips `Taro.requestPayment` for mock orders. Default: `false` |
 | `WECHAT_PAY_APP_ID` | WeChat Pay app ID |
 | `WECHAT_PAY_MCH_ID` | WeChat Pay v3 merchant ID |
 | `WECHAT_PAY_SERIAL_NO` | WeChat Pay v3 certificate serial |

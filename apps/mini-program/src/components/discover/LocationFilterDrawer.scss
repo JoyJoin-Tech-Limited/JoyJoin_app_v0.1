@@ -22,7 +22,7 @@
     right: 0;
     bottom: 0;
     left: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: $color-overlay;
     opacity: 0;
     pointer-events: none;
     will-change: opacity;
@@ -184,6 +184,10 @@
       background: $color-primary-light;
       border-color: $color-primary;
     }
+
+    &--pending {
+      opacity: 0.55;
+    }
   }
 
   &__heat-row {
@@ -204,6 +208,10 @@
 
     &--active {
       background: $color-landed-gold;
+    }
+
+    &--pending {
+      background: $color-text-muted;
     }
   }
 
@@ -246,5 +254,9 @@
     &__surface {
       transition-duration: 0.01ms !important;
     }
+  }
+
+  .location-drawer__tile--hover {
+    transform: none;
   }
 }

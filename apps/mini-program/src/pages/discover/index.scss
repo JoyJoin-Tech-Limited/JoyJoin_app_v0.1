@@ -63,7 +63,7 @@
     align-items: center;
     gap: 8rpx;
     min-height: 88rpx;
-    padding: 0 20rpx;
+    padding: 0 24rpx;
     border-radius: 999rpx;
     background: $color-primary;
     border: none;
@@ -72,17 +72,7 @@
     flex-shrink: 0;
 
     &--active {
-      background: $color-primary;
       border-color: transparent;
-      box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.25);
-
-      .discover-auth__location-pill-icon {
-        filter: brightness(0) invert(1);
-      }
-
-      .discover-auth__location-pill-text {
-        color: $color-text-white;
-      }
     }
 
     &--hover {
@@ -130,7 +120,7 @@
     font-family: $font-cn-display;
     line-height: 1.5;
     word-break: keep-all;
-    min-height: 60rpx;
+    min-height: 64rpx;
     animation: discover-greeting-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
@@ -162,6 +152,20 @@
     justify-content: space-between;
     padding: 0 $container-padding;
     margin-bottom: $spacing-sm;
+  }
+
+  &__explore-title-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__explore-mascot {
+    width: 40rpx;
+    height: 40rpx;
+    flex-shrink: 0;
   }
 
   &__explore-title {
@@ -836,6 +840,10 @@
   .oracle-card__skeleton-line {
     animation: none;
     background: $color-divider;
+  }
+
+  .oracle-card__skeleton-line::after {
+    animation: none;
   }
 
   .oracle-card__cta--pulse {

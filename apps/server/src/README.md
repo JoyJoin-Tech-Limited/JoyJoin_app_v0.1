@@ -88,7 +88,7 @@ Skill: `xiaoyue-writing-craft`
 Owns payment initiation, webhook handling, subscription access, and monetization rules.
 
 Primary files:
-- `apps/server/src/routes/domains/payments.ts` — includes `GET /api/payments/ritual-context` (Payment Ritual V2 real DB-backed context)
+- `apps/server/src/routes/domains/payments.ts` — includes `GET /api/payments/ritual-context` (Payment Ritual V2 real DB-backed context); mock payment creation when `MOCK_PAYMENTS=true` (instantly-paid orders, skips WeChat Pay API)
 - `apps/server/src/paymentService.ts`
 - `apps/server/src/subscriptionService.ts`
 - `apps/server/src/repositories/paymentsRepo.ts`
@@ -97,6 +97,11 @@ Primary files:
 Payment Ritual V2 endpoints:
 - `GET /api/payments/ritual-context` — Returns user archetype, active pricing plans, user coupons, and real community stats (total members, weekly new, monthly events, recent activity) scoped by user's city. Requires auth. Gated by `checkPaymentsEnabled`.
 - Analytics: `POST /api/analytics/payment` (defined in `routes/domains/analytics.ts`) — Fire-and-forget A/B test funnel instrumentation. Events stored in `paymentRitualEvents` table.
+
+Mock payment mode:
+- When `MOCK_PAYMENTS=true`, `POST /api/payments/miniprogram/create` creates orders with `status: "completed"` and `mock: true` without calling WeChat Pay API.
+- Client receives `mock: true` in the response and skips `Taro.requestPayment()`, navigating directly to verification.
+- Use for dev/staging testing without real charges. Default: `false`.
 
 ### Admin APIs and operational controls
 

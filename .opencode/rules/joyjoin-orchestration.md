@@ -97,6 +97,30 @@ When acting as a repo agent, end turns with the **executive briefing** format:
 
 Full schema: `.github/skills/orchestration-turn-reporting/SKILL.md`
 
+### Agent Loop (Autonomous Execution)
+
+For multi-turn tasks, use the agent loop to manage task lifecycle:
+
+```bash
+# Start a loop for the current task
+node scripts/orchestration/orchestration-loop.mjs init \
+  --goal="<one-sentence mission>" \
+  --files="<comma-separated files>"
+
+# After each agent turn completes, tick the loop
+echo '{"done":true,"agent":"<agent name>","learned":"<what was done>"}' | \
+  node scripts/orchestration/orchestration-loop.mjs tick
+
+# Check current state
+node scripts/orchestration/orchestration-loop.mjs status --format=markdown
+```
+
+The loop automatically runs on session start (via `session-start` hook). Its status appears in the system message. After completing a turn, record a turn summary via `orchestration-supervisor.mjs record-summary` — the loop ticks automatically.
+
+**Loop states:** idle → classified → contracted → implementing → evaluating → done/retrying/escalated
+**Auto-retry:** Up to 3 retries on gate failure before escalation to human
+**Load skill:** `agent-loop` for full loop documentation
+
 ## Model Recommendation
 
 When ready for execution, include a model recommendation:

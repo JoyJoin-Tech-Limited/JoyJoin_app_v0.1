@@ -2,7 +2,7 @@ import { View, Text, Image } from '@tarojs/components'
 import JoyJoinIcon from '../ui/JoyJoinIcon'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { haptics } from '../../lib/utils/haptics'
-import { useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import './CityUnlockFeedCard.scss'
 
 interface CityUnlockFeedCardProps {
@@ -16,6 +16,7 @@ interface CityUnlockFeedCardProps {
  */
 export default function CityUnlockFeedCard({ onSelectCity }: CityUnlockFeedCardProps) {
   const xiaoyueAsset = useMemo(() => getXiaoyueExpressionAsset('coachGuide'), [])
+  const [mascotError, setMascotError] = useState(false)
 
   const handleTap = useCallback(() => {
     haptics('light')
@@ -33,11 +34,14 @@ export default function CityUnlockFeedCard({ onSelectCity }: CityUnlockFeedCardP
       <View className='city-unlock-feed-card__border' />
       <View className='city-unlock-feed-card__content'>
         <View className='city-unlock-feed-card__hero'>
+        {!mascotError && (
           <Image
             className='city-unlock-feed-card__mascot'
             src={xiaoyueAsset}
             mode='aspectFit'
+            onError={() => setMascotError(true)}
           />
+        )}
           <JoyJoinIcon emoji='🌟' size={40} className='city-unlock-feed-card__emoji' />
         </View>
         <View className='city-unlock-feed-card__text'>

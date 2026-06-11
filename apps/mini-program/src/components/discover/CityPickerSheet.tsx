@@ -3,6 +3,7 @@ import JoyJoinIcon from '../ui/JoyJoinIcon'
 import Taro from '@tarojs/taro'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { apiRequest } from '../../lib/api/api'
+import { haptics } from '../../lib/utils/haptics'
 import './CityPickerSheet.scss'
 
 // Static data — define outside component to avoid re-creation on every render
@@ -32,6 +33,7 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCity, setSelectedCity] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [celebrated, setCelebrated] = useState(false)
 
   // Reset state when sheet opens
   useEffect(() => {
@@ -39,6 +41,7 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
       setSearchQuery('')
       setSelectedCity(null)
       setLoading(false)
+      setCelebrated(false)
     }
   }, [visible])
 
@@ -52,27 +55,38 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
   }, [searchQuery])
 
   const handleSelectCity = useCallback((city: string) => {
+    haptics('light')
     setSelectedCity(city)
   }, [])
 
   const handleConfirm = useCallback(async () => {
     if (!selectedCity || loading) return
+    haptics('light')
 
     setLoading(true)
     try {
+      // Offline guard — prevent misleading timeout toast
+      try {
+        const networkRes = await Taro.getNetworkType()
+        if (networkRes.networkType === 'none') {
+          Taro.showToast({ title: '网络好像断开了，请检查连接', icon: 'none', duration: 2000 })
+          return
+        }
+      } catch {
+        // getNetworkType may fail on some devices; proceed optimistically
+      }
+
       await apiRequest({
         method: 'POST',
         path: '/api/cities/interest',
         data: { city: selectedCity, source: 'floating_banner' },
       })
 
-      Taro.showToast({
-        title: '登记成功！',
-        icon: 'success',
-        duration: 1500,
-      })
-
-      onSuccess(selectedCity)
+      // Show inline celebration instead of generic toast
+      setCelebrated(true)
+      setTimeout(() => {
+        onSuccess(selectedCity)
+      }, 600)
     } catch (err) {
       Taro.showToast({
         title: '网络开小差了',
@@ -112,6 +126,11 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
             placeholder='搜索城市'
             value={searchQuery}
             onInput={(e) => setSearchQuery(e.detail.value)}
+            onConfirm={() => {
+              if (filteredCities.length === 1) {
+                handleSelectCity(filteredCities[0])
+              }
+            }}
           />
           {searchQuery.trim() && (
             <View
@@ -161,7 +180,7 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
             >
               <Text className='city-picker-sheet__list-item-text'>{displayName(city)}</Text>
               {selectedCity === city && (
-                <Text className='city-picker-sheet__list-item-check'>✓</Text>
+                <JoyJoinIcon emoji='✓' size={28} className='city-picker-sheet__list-item-check' />
               )}
             </View>
           ))}
@@ -172,6 +191,16 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
           )}
           <View className='city-picker-sheet__list-safe-bottom' />
         </ScrollView>
+
+        {/* Celebration overlay — shown on successful registration */}
+        {celebrated && (
+          <View className='city-picker-sheet__celebration'>
+            <View className='city-picker-sheet__celebration-check'>
+              <JoyJoinIcon emoji='✓' size={48} className='city-picker-sheet__celebration-icon' />
+            </View>
+            <Text className='city-picker-sheet__celebration-text'>已登记！</Text>
+          </View>
+        )}
 
         {/* Confirm button */}
         <View className='city-picker-sheet__footer'>

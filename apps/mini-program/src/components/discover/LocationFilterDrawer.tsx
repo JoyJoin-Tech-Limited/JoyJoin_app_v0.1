@@ -9,6 +9,7 @@ import {
   type HeatLevel,
 } from '@shared/districts'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
+import { haptics } from '../../lib/utils/haptics'
 import './LocationFilterDrawer.scss'
 
 const ALL_CLUSTER_ID = '__all__'
@@ -75,6 +76,7 @@ export default function LocationFilterDrawer({
 
   const handleBackdropTap = useCallback(() => {
     if (transitioningRef.current) return
+    haptics('light')
     discoverAnalytics.track('filter_close', undefined, {
       didSelect: false,
       selectedCluster,
@@ -91,6 +93,8 @@ export default function LocationFilterDrawer({
         return 'location-drawer__heat-dot--hot'
       case 'active':
         return 'location-drawer__heat-dot--active'
+      case 'pending':
+        return 'location-drawer__heat-dot--pending'
       default:
         return ''
     }
@@ -120,6 +124,7 @@ export default function LocationFilterDrawer({
           <View
             className='location-drawer__close'
             onClick={() => {
+              haptics('light')
               discoverAnalytics.track('filter_close', undefined, {
                 didSelect: false,
                 selectedCluster,
@@ -167,7 +172,7 @@ export default function LocationFilterDrawer({
                   return (
                     <View
                       key={district.id}
-                      className={`location-drawer__district-tile ${isActive ? 'location-drawer__district-tile--active' : ''}`}
+                      className={`location-drawer__district-tile ${isActive ? 'location-drawer__district-tile--active' : ''} ${district.heat === 'pending' ? 'location-drawer__district-tile--pending' : ''}`}
                       onClick={() => handleSelect(cluster.id, district.id)}
                       hoverClass='location-drawer__tile--hover'
                       role='button'

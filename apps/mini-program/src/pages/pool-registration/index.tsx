@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getEventPool, getMyPoolRegistrations, registerForPool, type EventPoolSummary, type PoolRegistrationSummary } from '@shared/api'
 import { getErrorMessage, type ErrorCode } from '@shared/copy/errorBaselines'
-import { ALL_INTENT_VALUES } from '@shared/constants'
+import { ALL_INTENT_VALUES, INTENT_FLEXIBLE_OPTION } from '@shared/constants'
 import { ARCHETYPE_BY_ID } from '@shared/personality'
 import { getArchetypeTokens } from '@shared/archetypeColorTokens'
 import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
@@ -17,6 +17,7 @@ import { apiRequest, type ApiError } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { COLOR_PRIMARY, TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
 import { logInfo, logError } from '../../lib/utils/logger'
+import { haptics } from '../../lib/utils/haptics'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
 import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import {
@@ -376,6 +377,7 @@ export default function PoolRegistrationPage() {
   const [error, setError] = useState('')
   const [resumeContext, setResumeContext] = useState<MiniProgramPoolRegistrationReturnContext | null>(null)
   const [showBudgetReaction, setShowBudgetReaction] = useState(false)
+  const budgetReactionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const staggerMounted = useStaggerMount()
 
   const {
@@ -432,6 +434,28 @@ export default function PoolRegistrationPage() {
     () => buildFallbackBrief({ eventType, area: poolArea }),
     [eventType, poolArea],
   )
+
+  // Preload intent icons CDN assets when pool data is ready,
+  // so they're cached before the user reaches the intent step.
+  useEffect(() => {
+    if (!pool || authLoading) return
+
+    const INTENT_ASSET_KEYS = [
+      'intent-friends',
+      'intent-networking',
+      'intent-discussion',
+      'intent-fun',
+      'intent-romance',
+      'intent-flexible',
+    ]
+
+    for (const key of INTENT_ASSET_KEYS) {
+      const url = cdnAsset(`/assets/icons/intent-icons/${key}.webp`)
+      Taro.getImageInfo({ src: url }).catch(() => {
+        // Silent — CDN preload is best-effort
+      })
+    }
+  }, [pool, authLoading])
 
   const { data: briefData, isLoading: briefLoading, refetch: refetchBrief } = useQuery<PreJoinVibeBrief | null>({
     queryKey: ['mini-program', 'pre-join-vibe-brief', poolId, eventType, poolArea],
@@ -500,6 +524,15 @@ export default function PoolRegistrationPage() {
       }
     }
   }, [poolId])
+
+  // Cleanup budget reaction timer on unmount
+  useEffect(() => {
+    return () => {
+      if (budgetReactionTimerRef.current) {
+        clearTimeout(budgetReactionTimerRef.current)
+      }
+    }
+  }, [])
 
   const applyStoredReturnContext = useCallback(() => {
     if (!poolId || !user?.id) {
@@ -597,16 +630,49 @@ export default function PoolRegistrationPage() {
             },
       )
       setShowBudgetReaction(true)
-      setTimeout(() => setShowBudgetReaction(false), 2200)
+      if (budgetReactionTimerRef.current) clearTimeout(budgetReactionTimerRef.current)
+      budgetReactionTimerRef.current = setTimeout(() => setShowBudgetReaction(false), 2200)
     },
     [eventType],
   )
 
   const handleIntentToggle = useCallback((value: string) => {
+    haptics('light')
+
+    if (value === INTENT_FLEXIBLE_OPTION.value) {
+      setFormState((currentState) => {
+        const toggled = !currentState.eventIntent.includes(value)
+        discoverAnalytics.track('registration_intent_toggled', poolId, { value, flexible: true })
+        return {
+          ...currentState,
+          eventIntent: currentState.eventIntent.includes(value)
+            ? currentState.eventIntent.filter((item) => item !== value)
+            : [...currentState.eventIntent, value],
+        }
+      })
+      return
+    }
+
     setFormState((currentState) => {
-      const nextIntent = toggleValue(currentState.eventIntent, value)
-      // Enforce MAX_INTENTS cap when adding a new intent
-      if (nextIntent.length > MAX_INTENTS && nextIntent.length > currentState.eventIntent.length) {
+      // Explicit intents (excluding flexible)
+      const explicitIntents = currentState.eventIntent.filter(
+        (item) => item !== INTENT_FLEXIBLE_OPTION.value,
+      )
+
+      // Deselecting
+      if (currentState.eventIntent.includes(value)) {
+        discoverAnalytics.track('registration_intent_toggled', poolId, {
+          value,
+          action: 'deselect',
+        })
+        return {
+          ...currentState,
+          eventIntent: currentState.eventIntent.filter((item) => item !== value),
+        }
+      }
+
+      // Selecting: enforce MAX_INTENTS cap on explicit intents only
+      if (explicitIntents.length >= MAX_INTENTS) {
         Taro.showToast({
           title: `最多选择 ${MAX_INTENTS} 个期待`,
           icon: 'none',
@@ -614,12 +680,67 @@ export default function PoolRegistrationPage() {
         })
         return currentState
       }
+
+      discoverAnalytics.track('registration_intent_toggled', poolId, {
+        value,
+        action: 'select',
+      })
       return {
         ...currentState,
-        eventIntent: nextIntent,
+        eventIntent: [...currentState.eventIntent, value],
       }
     })
-  }, [])
+  }, [poolId])
+
+  // Memoize intent grid to prevent re-render on unrelated state changes
+  const intentGrid = useMemo(() => {
+    const isFlexibleActive = formState.eventIntent.includes(INTENT_FLEXIBLE_OPTION.value)
+    return (
+      <View className='pool-reg__choice-grid'>
+        {INTENT_FLOW_OPTIONS.map((option) => {
+          const isExplicitlySelected = formState.eventIntent.includes(option.value)
+          const isDimmed =
+            isFlexibleActive &&
+            option.value !== INTENT_FLEXIBLE_OPTION.value &&
+            !isExplicitlySelected
+
+          return (
+            <View
+              key={option.value}
+              className={[
+                'pool-reg__intent-card',
+                isExplicitlySelected || isDimmed ? 'pool-reg__intent-card--selected' : '',
+                isDimmed ? 'pool-reg__intent-card--dimmed' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              hoverClass='pool-reg__intent-card--hover'
+              onClick={() => handleIntentToggle(option.value)}
+              role='button'
+              aria-pressed={isExplicitlySelected}
+              aria-label={`${option.label}：${option.description}`}
+            >
+              {option.emoji != null ? (
+                <JoyJoinIcon
+                  emoji={option.emoji}
+                  tier='intent'
+                  size={48}
+                  className='pool-reg__intent-icon'
+                />
+              ) : null}
+              <Text className='pool-reg__intent-label'>{option.label}</Text>
+              <Text className='pool-reg__intent-subtitle'>{option.description}</Text>
+              {isExplicitlySelected && (
+                <View className='pool-reg__intent-check'>
+                  <Text className='pool-reg__intent-check-icon'>&#x2713;</Text>
+                </View>
+              )}
+            </View>
+          )
+        })}
+      </View>
+    )
+  }, [formState.eventIntent, handleIntentToggle])
 
   const handleLanguageToggle = useCallback((value: string) => {
     setFormState((currentState) => ({
@@ -780,7 +901,6 @@ export default function PoolRegistrationPage() {
         if (modalResult.confirm) {
           try {
             await openMiniProgramPaymentPage({
-              paymentsEnabled: user?.paymentsEnabled,
               currentUserId: user?.id,
               preserveReturnContext: true,
               returnTab: 'events',
@@ -820,7 +940,6 @@ export default function PoolRegistrationPage() {
     queryClient,
     step,
     user?.id,
-    user?.paymentsEnabled,
   ])
 
   if (authLoading || isLoading) {
@@ -1098,7 +1217,7 @@ export default function PoolRegistrationPage() {
               <View className='pool-reg__reason-list'>
                 {brief.reasons.slice(0, 3).map((reason) => (
                   <View key={reason} className='pool-reg__reason-item'>
-                    <Text className='pool-reg__reason-bullet'>✦</Text>
+                    <View className='pool-reg__reason-bullet' />
                     <Text className='pool-reg__reason-text'>{reason}</Text>
                   </View>
                 ))}
@@ -1167,17 +1286,7 @@ export default function PoolRegistrationPage() {
               这里可以多选。悦仔会把你的社交期待和预算一起考虑，不会只按一个标签硬配。
             </Text>
 
-            <View className='pool-reg__choice-grid'>
-              {INTENT_FLOW_OPTIONS.map((option) => (
-                <ChoiceCard
-                  key={option.value}
-                  option={option}
-                  selected={formState.eventIntent.includes(option.value)}
-                  onClick={() => handleIntentToggle(option.value)}
-                  compact
-                />
-              ))}
-            </View>
+            {intentGrid}
 
             <Text className='pool-reg__helper'>至少选择 1 个期待方向后，悦仔就能把你的社交画像和预算一起跑匹配了。</Text>
           </Card>

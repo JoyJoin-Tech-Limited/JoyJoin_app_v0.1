@@ -1,66 +1,59 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const mockNavigateTo = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('@tarojs/taro', () => ({
   default: {
-    getStorageSync: vi.fn(),
+    getStorageSync: vi.fn().mockReturnValue(null),
     removeStorageSync: vi.fn(),
-    showToast: vi.fn(),
-    navigateTo: vi.fn(),
+    navigateTo: (...args: unknown[]) => mockNavigateTo(...args),
   },
 }))
 
-import { decideMiniProgramPaymentEntry } from './paymentEntry'
-import { buildPendingOrderContext } from './paymentPendingOrder'
+import { openMiniProgramPaymentPage } from './paymentEntry'
 
-const NOW = 1_710_000_000_000
-
-describe('mini-program payment entry gating', () => {
-  // Guards against regression: users must still be able to reopen the
-  // payment page and resume their own pending order while new payments are off.
-  it('allows payment-page entry for a resumable pending order even when payments are disabled', () => {
-    expect(
-      decideMiniProgramPaymentEntry({
-        paymentsEnabled: false,
-        pendingOrder: {
-          status: 'ready',
-          orderId: 'order-123',
-          context: buildPendingOrderContext({
-            orderId: 'order-123',
-            type: 'event_bundle',
-            userId: 'user-123',
-            createdAt: NOW,
-          }, NOW),
-        },
-      }),
-    ).toEqual({
-      action: 'open-payment-page',
-    })
+describe('mini-program payment entry — always navigates', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockNavigateTo.mockResolvedValue(undefined)
   })
 
-  it('blocks entry when payments are disabled and no resumable order exists', () => {
-    expect(
-      decideMiniProgramPaymentEntry({
-        paymentsEnabled: false,
-        pendingOrder: { status: 'missing' },
-      }),
-    ).toEqual({
-      action: 'block',
-      reason: 'payments-disabled',
+  it('navigates to payment page when no stored order exists', async () => {
+    await openMiniProgramPaymentPage({
+      currentUserId: 'user-1',
     })
+
+    expect(mockNavigateTo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining('/pages/blind-box-payment/index'),
+      }),
+    )
   })
 
-  it('blocks disabled entry for invalid pending-order state that should be cleared', () => {
-    expect(
-      decideMiniProgramPaymentEntry({
-        paymentsEnabled: false,
-        pendingOrder: {
-          status: 'clear',
-          reason: 'wrong-user',
-        },
-      }),
-    ).toEqual({
-      action: 'block',
-      reason: 'payments-disabled',
+  it('navigates with returnTab query param when specified', async () => {
+    await openMiniProgramPaymentPage({
+      currentUserId: 'user-2',
+      returnTab: 'events',
     })
+
+    expect(mockNavigateTo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining('?returnTab=events'),
+      }),
+    )
+  })
+
+  it('preserves return context when preserveReturnContext is true', async () => {
+    await openMiniProgramPaymentPage({
+      currentUserId: 'user-3',
+      preserveReturnContext: true,
+    })
+
+    // Should still navigate
+    expect(mockNavigateTo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining('/pages/blind-box-payment/index'),
+      }),
+    )
   })
 })
