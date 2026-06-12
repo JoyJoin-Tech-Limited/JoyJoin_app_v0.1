@@ -34,6 +34,7 @@ import XiaoyueChatBubble from '../../components/mascot/XiaoyueChatBubble'
 import Chip from '../../components/ui/Chip'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import ContentBlockedError from '../../components/ContentBlockedError'
 import './index.scss'
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -129,6 +130,7 @@ export default function EditProfilePage() {
   const [isSaving, setIsSaving] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [contentViolations, setContentViolations] = useState<Record<string, string>>({})
   const [hasChanges, setHasChanges] = useState(false)
   const [isInitializing, setIsInitializing] = useState(true)
   const [scrollIntoViewId, setScrollIntoViewId] = useState('')
@@ -432,6 +434,25 @@ export default function EditProfilePage() {
       }, 1000)
     } catch (err) {
       setIsPageExiting(false)
+
+      // Check for content violation (server 敏感词过滤)
+      const errorData = (err as Record<string, unknown>)?.data as Record<string, unknown> | undefined
+      if (errorData?.code === 'CONTENT_VIOLATION') {
+        const violation = errorData?.violation as Record<string, unknown> | undefined
+        const field = (violation?.field as string) || ''
+        const fieldMessage = (violation?.message as string) || (err instanceof Error ? err.message : getErrorMessage('save-failed'))
+
+        if (field) {
+          setContentViolations((prev) => ({ ...prev, [field]: fieldMessage }))
+          setScrollIntoViewId(`field-${field}`)
+          setTimeout(() => setScrollIntoViewId(''), 500)
+        } else {
+          Taro.showToast({ title: fieldMessage, icon: 'none', duration: 3000 })
+        }
+        logError('[EditProfile] Content violation', { field, message: fieldMessage })
+        return
+      }
+
       const msg = err instanceof Error ? err.message : getErrorMessage('save-failed')
       logError('[EditProfile] Save failed', { message: msg })
       Taro.showToast({ title: msg, icon: 'none', duration: 3000 })
@@ -452,6 +473,7 @@ export default function EditProfilePage() {
     selectedInterests,
     interestLevels,
     invalidateAuth,
+    contentViolations,
   ])
 
   const birthYearIndex = birthYear ? BIRTH_YEAR_RANGE.indexOf(String(birthYear)) : -1
@@ -514,6 +536,7 @@ export default function EditProfilePage() {
                   setDisplayName(e.detail.value)
                   setHasChanges(true)
                   setFieldErrors((prev) => ({ ...prev, displayName: '' }))
+                  setContentViolations((prev) => ({ ...prev, displayName: '' }))
                 }}
                 placeholder='输入你的昵称'
                 maxlength={20}
@@ -521,6 +544,16 @@ export default function EditProfilePage() {
               {fieldErrors.displayName && (
                 <Text className='edit-profile__field-error'>{fieldErrors.displayName}</Text>
               )}
+              <ContentBlockedError
+                message={contentViolations.displayName || ''}
+                visible={!!contentViolations.displayName}
+                fieldName='displayName'
+                onDismiss={() => setContentViolations((prev) => {
+                  const next = { ...prev }
+                  delete next.displayName
+                  return next
+                })}
+              />
             </View>
 
             {/* Gender */}
@@ -574,6 +607,7 @@ export default function EditProfilePage() {
                   setCurrentCity(e.detail.value)
                   setHasChanges(true)
                   setFieldErrors((prev) => ({ ...prev, currentCity: '' }))
+                  setContentViolations((prev) => ({ ...prev, currentCity: '' }))
                 }}
                 placeholder='如：深圳'
                 maxlength={30}
@@ -581,6 +615,16 @@ export default function EditProfilePage() {
               {fieldErrors.currentCity && (
                 <Text className='edit-profile__field-error'>{fieldErrors.currentCity}</Text>
               )}
+              <ContentBlockedError
+                message={contentViolations.currentCity || ''}
+                visible={!!contentViolations.currentCity}
+                fieldName='currentCity'
+                onDismiss={() => setContentViolations((prev) => {
+                  const next = { ...prev }
+                  delete next.currentCity
+                  return next
+                })}
+              />
             </View>
 
             {/* Hometown */}

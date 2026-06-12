@@ -80,6 +80,7 @@ export type MiniProgramPendingOrderAutoResumeDecision =
 
 const MINI_PROGRAM_PAYMENT_FLOW_ROUTES = new Set<string>([
   MINI_PROGRAM_PAGE_PATHS.blindBoxPayment,
+  MINI_PROGRAM_PAGE_PATHS.eventTicketPayment,
   MINI_PROGRAM_PAGE_PATHS.paymentVerification,
 ])
 

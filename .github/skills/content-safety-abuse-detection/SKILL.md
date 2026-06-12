@@ -14,6 +14,8 @@ description: >-
 
 **Core rule:** Keep filtering deterministic and server-side. Respect the violation escalation ladder. Always pair moderation mutations with audit logs. Keep reports dual-track.
 
+**2026-06-12 addition — Universal field-level content gate:** For server-side simple field-level validation (displayName, bio, tags, etc.), call `validateContentSafe(fieldName, value)` from `apps/server/src/lib/contentSafety.ts` instead of directly accessing `contentFilter.ts`. This helper calls the exact-substring filter, returns a 400-ready response shape on violation, and writes an auditable row to the `content_filter_logs` table. See Quick examples below.
+
 ## When to use this skill
 
 Use this skill when you are:
@@ -35,7 +37,7 @@ Use this skill when you are:
 
 ## Moderation workflow overview
 
-1. **Filtering** — `contentFilter.ts` is the canonical authority for sensitive-word detection (exact substring matching). Do not move logic to the client or replace it with an LLM call.
+1. **Filtering** — `contentFilter.ts` is the canonical authority for sensitive-word lists (exact substring matching). The recommended entry point for field-level validation is `validateContentSafe()` from `lib/contentSafety.ts` — it wraps the filter, produces a 400-ready response, and logs violations to `content_filter_logs`. Do not move logic to the client or replace it with an LLM call.
 2. **Escalation** — Warning → 1-hour AI freeze → 24-hour AI freeze → permanent ban. Severe violations count as +2; warnings as +1. Change thresholds deliberately in `abuseDetection.ts`.
 3. **Audit** — Ban/unban and report resolution must emit `logAdminAudit(...)` with `USER_BANNED` or `USER_UNBANNED`. Do not silently change `isBanned`.
 4. **Reports** — Dual-track: `reports` table for general content, `chatReports` table for group-chat messages. Do not mix flows.
@@ -47,11 +49,13 @@ See [`references/moderation-ops.md`](references/moderation-ops.md) for detailed 
 - `users.violationCount` accumulates across incidents
 - `users.aiFrozenUntil` sets a time-bounded AI suspension
 - `users.isBanned` is a permanent flag
+- `content_filter_logs` table records every blocked content submission (field, violation type, severity, matched keywords, input preview, source, user) for admin review. Auto-populated by `validateContentSafe` on each violation. Admin query: `GET /api/admin/content-filter/logs`.
 - AI-generated content must pass a post-generation blacklist check (e.g., `tagGenerationService.ts` pattern)
 
 ## Quick examples
 
 - **Add a new sensitive-word category**: extend `sensitiveWordLists` in `contentFilter.ts`, choose `warning` or `severe`, and add the corresponding message. Do not hard-code severity in route handlers.
+- **Gate a new user-input field for content safety**: import `validateContentSafe` from `lib/contentSafety.ts`, call it before persisting: `const violation = validateContentSafe('fieldName', value); if (violation) { return contentViolationResponse(violation); }`. The helper auto-logs to `content_filter_logs`.
 - **Add a rate limiter to a new AI endpoint**: import `createRateLimiter` from `rateLimiter.ts`, instantiate with a descriptive `keyPrefix`, and apply as Express middleware. Add a TODO comment noting the in-memory limitation.
 - **Debug why a user sees "AI功能暂时冻结"**: check `users.aiFrozenUntil`, then trace `abuseDetection.ts` → `recordViolation` to see which threshold was crossed.
 - **Add a user-report API**: create the route behind `requireAuth`, validate with `insertReportSchema`, and insert into the `reports` table. Do not mix with `chatReports`.
@@ -76,3 +80,5 @@ See [`references/moderation-ops.md`](references/moderation-ops.md) for detailed 
 - [ ] AI-generated content is validated against a blacklist or filter before reaching the user
 - [ ] Violation thresholds are changed in `abuseDetection.ts` constants, not inline in routes
 - [ ] In-memory rate-limit state is acknowledged as a horizontal-scaling limitation
+- [ ] Field-level content validation uses `validateContentSafe()` from `lib/contentSafety.ts`, not ad-hoc inline filter calls
+- [ ] New user-input fields with free text are wired through `validateContentSafe()` before DB persistence

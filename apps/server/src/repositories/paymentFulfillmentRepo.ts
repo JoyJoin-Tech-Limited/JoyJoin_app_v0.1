@@ -103,6 +103,9 @@ function normalizeEventRegistrationPayload(payload: unknown) {
     cuisinePreferences: toStringArray(source.cuisinePreferences),
     eventIntent: toStringArray(source.eventIntent),
     dietaryRestrictions: toStringArray(source.dietaryRestrictions),
+    barThemes: toStringArray(source.barThemes),
+    alcoholComfort: toStringArray(source.alcoholComfort),
+    barBudgetRange: toStringArray(source.barBudgetRange),
   };
 }
 
@@ -254,6 +257,9 @@ export const paymentFulfillmentRepo = {
             cuisinePreferences: eventRegistrationPayload?.cuisinePreferences ?? [],
             eventIntent: eventRegistrationPayload?.eventIntent ?? [],
             dietaryRestrictions: eventRegistrationPayload?.dietaryRestrictions ?? [],
+            barThemes: eventRegistrationPayload?.barThemes ?? [],
+            alcoholComfort: eventRegistrationPayload?.alcoholComfort ?? [],
+            barBudgetRange: eventRegistrationPayload?.barBudgetRange ?? [],
             matchStatus: "pending",
           })
           .onConflictDoNothing({

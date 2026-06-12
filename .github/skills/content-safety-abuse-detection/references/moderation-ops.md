@@ -3,10 +3,13 @@
 ## Current repo anchors
 
 - `apps/server/src/contentFilter.ts` — sensitive-word lists, severity mapping, gibberish/repetition detection
+- `apps/server/src/lib/contentSafety.ts` — **preferred entry point for field-level validation.** `validateContentSafe()` wraps the filter, returns a 400-ready JSON shape, auto-logs violations to `content_filter_logs`. Use this for displayName, bio, tags, and other simple text inputs.
 - `apps/server/src/abuseDetection.ts` — `checkUserAbuse`, token quotas, conversation guards, violation escalation, `recordViolation`
 - `apps/server/src/rateLimiter.ts` — `createRateLimiter`, AI/auth/payment/webhook limiters, in-memory store cleanup
 - `apps/server/src/routes.ts` — `/api/admin/users/:id/ban|unban`, `/api/admin/moderation/*`, `/api/registration/chat/message` abuse gate
+- `apps/server/src/routes/domains/adminOperations.ts` — `GET /api/admin/content-filter/logs` (paginated content filter log query, filterable by userId/violationType/severity/field/date range, JOINs users for displayName)
 - `packages/shared/src/schema.ts` — `users.isBanned`, `users.violationCount`, `users.aiFrozenUntil`, `reports`, `moderationLogs`, `chatReports`, `chatLogs`
+- `packages/shared/src/schema/_definitions.ts` — `contentFilterLogs` pgTable, `insertContentFilterLogSchema`
 - `apps/server/src/tagGenerationService.ts` — `BLACKLIST_KEYWORDS`, `validateTag` for AI-generated content moderation
 - `apps/server/src/lib/adminAuditLogger.ts` — `USER_BANNED`, `USER_UNBANNED` action vocabulary
 

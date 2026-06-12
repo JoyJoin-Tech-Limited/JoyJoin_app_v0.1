@@ -1,8 +1,10 @@
 export {
   reports,
   moderationLogs,
+  contentFilterLogs,
   insertReportSchema,
   insertModerationLogSchema,
+  insertContentFilterLogSchema,
 } from './_definitions.js';
 
 export {
@@ -17,6 +19,8 @@ export type {
   InsertReport,
   ModerationLog,
   InsertModerationLog,
+  ContentFilterLog,
+  InsertContentFilterLog,
 } from './_definitions.js';
 
 export type {

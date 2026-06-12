@@ -74,7 +74,7 @@ import { buildMomentCardPayload } from '../lib/momentCardPayload';
 import { renderMomentCardToPng } from '../lib/momentCardRenderer';
 import { curateMedals } from '../lib/medalCuration';
 import { logger } from '../lib/logger';
-import { filterContent } from '../contentFilter';
+import { validateContentSafe, contentViolationResponse } from '../lib/contentSafety';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
 import { startSocialIcebreakerSweep } from '../lib/socialIcebreakerSweep';
 import { momentCardLimiter } from '../rateLimiter';
@@ -1598,9 +1598,9 @@ router.post('/:socialSessionId/quip-battle/submit', async (req: any, res) => {
         const existingAnswers = currentState.quipBattleAnswers || [];
         const newAnswers = answers.map((a) => {
           const text = (a.answerText || '').slice(0, 100);
-          const filtered = filterContent(text);
-          if (filtered.isViolation && filtered.severity === 'severe') {
-            throw new Error(`Content violation: ${filtered.message || 'inappropriate content'}`);
+          const safetyResult = validateContentSafe(text, 'answerText');
+          if (!safetyResult.safe && safetyResult.violation?.severity === 'severe') {
+            throw new Error(`Content violation: ${safetyResult.violation.message || 'inappropriate content'}`);
           }
           return {
             userId,
@@ -1634,9 +1634,9 @@ router.post('/:socialSessionId/quip-battle/submit', async (req: any, res) => {
 
   for (const a of answers) {
     const text = (a.answerText || '').slice(0, 100);
-    const filtered = filterContent(text);
-    if (filtered.isViolation && filtered.severity === 'severe') {
-      return res.status(400).json({ error: filtered.message || 'Content contains inappropriate material' });
+    const safetyResult = validateContentSafe(text, 'answerText');
+    if (!safetyResult.safe && safetyResult.violation?.severity === 'severe') {
+      return res.status(400).json(contentViolationResponse(safetyResult.violation!).body);
     }
   }
 
@@ -2349,9 +2349,9 @@ router.post('/:socialSessionId/group-mirror/submit', async (req: any, res) => {
         const existingAnswers = currentState.groupMirrorAnswers || [];
         const newAnswers = answers.map((a) => {
           const reason = (a.reasonText || '').slice(0, 100);
-          const filtered = filterContent(reason);
-          if (filtered.isViolation && filtered.severity === 'severe') {
-            throw new Error(`Content violation: ${filtered.message || 'inappropriate content'}`);
+          const safetyResult = validateContentSafe(reason, 'reason');
+          if (!safetyResult.safe && safetyResult.violation?.severity === 'severe') {
+            throw new Error(`Content violation: ${safetyResult.violation.message || 'inappropriate content'}`);
           }
           return {
             userId,
@@ -2388,9 +2388,9 @@ router.post('/:socialSessionId/group-mirror/submit', async (req: any, res) => {
 
   for (const a of answers) {
     const reason = (a.reasonText || '').slice(0, 100);
-    const filtered = filterContent(reason);
-    if (filtered.isViolation && filtered.severity === 'severe') {
-      return res.status(400).json({ error: filtered.message || 'Content contains inappropriate material' });
+    const safetyResult = validateContentSafe(reason, 'reason');
+    if (!safetyResult.safe && safetyResult.violation?.severity === 'severe') {
+      return res.status(400).json(contentViolationResponse(safetyResult.violation!).body);
     }
   }
 

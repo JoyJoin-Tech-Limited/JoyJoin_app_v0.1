@@ -1,6 +1,6 @@
 # Mini-Program — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-06-10
+> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-06-11
 
 ---
 
@@ -115,6 +115,9 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 - **WeChat WXSS silently drops `hsla()`** — all color values emitted from shared `@shared/archetypeColors` must use `rgba()` via `formatHSLAsRGBA()`. Canvas calls use `toCanvasRGBA()` from `canvasHelpers.ts` at `apps/mini-program/src/lib/utils/canvasHelpers.ts` (shared by both portrait and square poster renderers).
 - **Page-level loading/empty/error state blocks** must use `min-height: 100dvh` + flex centering. `@include scroll-view-centered-state` from `_mixins.scss` is the canonical helper for states inside `<ScrollView>`.
 - **Shimmer animations should use GPU-safe `opacity` pulse** instead of `background-position` on linear gradients. The `background-position` approach triggers paint on every frame, while opacity pulse only composites. Pattern: `animation: shimmer-pulse 1.5s ease-in-out infinite` with keyframes `0%/100% { opacity: 0.25; } 50% { opacity: 0.65; }`. See `apps/mini-program/src/pages/onboarding/profile-review/index.scss` for a canonical example replacing a `background-position` shimmer with `opacity` pulse (2026-06-10).
+- **Hero-card flex-wrap layout for text overflow prevention**: When a card has avatar + text side-by-side + tags below, use `flex-wrap: wrap` on the row container. Put copy in a `flex: 1` element (left), avatar in a fixed-width element (right), and tags in a `width: 100%` element below. All text-bearing children must have `overflow: hidden; text-overflow: ellipsis` (single-line) or `word-break: break-word; overflow-wrap: break-word` (multi-line). See `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` hero-card section (2026-06-11).
+- **`AnalyzingAnimation` must be the sole owner of reveal timing**: Do not set reveal-ready state (`isRevealReady`) in a separate `useEffect` with a hardcoded timeout — this creates a race where the animation is still running but the content is already shown. `AnalyzingAnimation` exposes `minDuration` (1200ms) and `onComplete` callback; set `isRevealReady = true` only inside `onComplete`. User skip is handled by AnalyzingAnimation's internal skip button (enabled after 600ms). See `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` (2026-06-11).
+- **`useResetOnShow` must include animation-related state for swipe-back safety**: When using a reveal animation (`AnalyzingAnimation.onComplete` sets `isRevealReady`), add `setIsRevealReady` as an argument to `useResetOnShow(setIsSubmitting, setIsPageExiting, setIsCelebrating, setIsRevealReady)`. Without this, a user who swipes back and re-enters will see the content already revealed (no animation replay). See `apps/mini-program/src/hooks/useResetOnShow.ts` and `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` (2026-06-11).
 
 ---
 

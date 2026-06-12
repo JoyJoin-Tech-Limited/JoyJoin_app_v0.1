@@ -9,11 +9,30 @@ import {
 export interface OpenMiniProgramPaymentPageOptions {
   currentUserId?: string | null
   preserveReturnContext?: boolean
-  /** Tab to return to if navigateBack fails (e.g. 'discover', 'events', 'profile') */
   returnTab?: string
 }
 
-/**  Always navigates to the payment page. When payments are disabled,
+export interface OpenEventTicketPaymentPageOptions {
+  poolId: string
+  currentUserId?: string | null
+}
+
+/** Navigate to the event ticket payment page for single-event registration payment. */
+export async function openEventTicketPaymentPage({
+  poolId,
+  currentUserId,
+}: OpenEventTicketPaymentPageOptions): Promise<void> {
+  const pendingOrder = readStoredPendingOrder({ currentUserId })
+  if (pendingOrder.status === 'clear') {
+    clearPendingOrderStorage()
+  }
+
+  await Taro.navigateTo({
+    url: `${MINI_PROGRAM_ROUTES.eventTicketPayment}?poolId=${encodeURIComponent(poolId)}`,
+  })
+}
+
+/** Always navigates to the payment page. When payments are disabled,
   the page handles its own graceful disabled-state UI including
   pending-order resumption and registration return-context cards. */
 export async function openMiniProgramPaymentPage({

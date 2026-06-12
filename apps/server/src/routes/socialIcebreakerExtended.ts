@@ -31,7 +31,6 @@ import {
   recapDisplayNameByUserId,
   generateSpeedFriendingPairs,
 } from './socialIcebreakerHelpers';
-import { filterContent } from '../contentFilter';
 import { buildArchetypeContext } from '../lib/contextInjector';
 import {
   getSessionWithExpiry,

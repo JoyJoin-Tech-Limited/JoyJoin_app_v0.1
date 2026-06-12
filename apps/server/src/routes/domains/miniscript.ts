@@ -18,7 +18,7 @@ import {
   getMiniScriptSecrets,
   listParticipants,
 } from '../../lib/socialIcebreakerStore';
-import { filterContent } from '../../contentFilter';
+import { validateContentSafe, contentViolationResponse } from '../../lib/contentSafety';
 import { requireAuthenticatedUserId } from '../../lib/requestAuth';
 import { generateMiniScriptFrameworkWithMeta } from '../../lib/miniscriptAgent';
 import { MINISCRIPT_GENERATION_PROMPT_VERSION } from '../../ai/miniscriptPrompts';
@@ -374,9 +374,9 @@ router.post('/vote', async (req: any, res) => {
   // Content-filter free-text fields
   for (const field of [vote.who, vote.what, vote.why]) {
     if (field) {
-      const filtered = filterContent(field);
-      if (filtered.isViolation && filtered.severity === 'severe') {
-        return res.status(400).json({ error: filtered.message || 'Content contains inappropriate material' });
+      const safetyResult = validateContentSafe(field, 'vote');
+      if (!safetyResult.safe && safetyResult.violation?.severity === 'severe') {
+        return res.status(400).json(contentViolationResponse(safetyResult.violation!).body);
       }
     }
   }

@@ -6,17 +6,22 @@ Component({
   // Internal debounce / diff state (not reactive)
   _syncTimer: null,
   _showTimer: null,
+  _tapDebounceTimer: null,
   _lastBadgesKey: '',
-  _lastSelected: -1,
+  _lastSelected: 0,
   _lastCenterUrl: '',
   // Last selection confirmed by syncState (authoritative) — used for rollback
   _confirmedSelected: 0,
   _platform: '',
   _isLowEnd: false,
+  _isOffline: false,
+  // Name lookup for accessibility announcements
+  _tabNames: { 0: '发现', 1: '足迹', 2: '连接', 3: '我的', 4: '中心入口' },
 
   data: {
     selected: 0,
     lowEnd: false,
+    announcement: '',
     center: {
       label: '进行中',
       showBadge: false,
@@ -74,17 +79,36 @@ Component({
 
   lifetimes: {
     attached: function () {
-      var info = wx.getSystemInfoSync ? wx.getSystemInfoSync() : {}
-      this._platform = info.platform || 'other'
-      // benchmarkLevel: 1–50. <= 15 is low-end (budget Android / old iOS).
-      this._isLowEnd = (info.benchmarkLevel || 50) <= 15
+      var self = this
+      try {
+        var info = wx.getSystemInfoSync ? wx.getSystemInfoSync() : {}
+        this._platform = info.platform || 'other'
+        this._isLowEnd = (info.benchmarkLevel || 50) <= 15
+      } catch (_e) {
+        this._platform = 'unknown'
+        this._isLowEnd = false
+      }
       if (this._isLowEnd) {
         this.setData({ lowEnd: true })
+      }
+      // Detect initial network state for offline guard
+      if (wx.getNetworkType) {
+        wx.getNetworkType({
+          success: function (res) {
+            self._isOffline = res.networkType === 'none'
+          },
+        })
+      }
+      if (wx.onNetworkStatusChange) {
+        wx.onNetworkStatusChange(function (res) {
+          self._isOffline = !res.isConnected
+        })
       }
     },
     detached: function () {
       clearTimeout(this._syncTimer)
       clearTimeout(this._showTimer)
+      clearTimeout(this._tapDebounceTimer)
     },
   },
 
@@ -114,6 +138,8 @@ Component({
      */
     syncState: function (state) {
       var self = this
+      // Skip state updates while offline — badge counts are stale without network
+      if (this._isOffline) return
       clearTimeout(this._syncTimer)
 
       this._syncTimer = setTimeout(function () {
@@ -189,11 +215,19 @@ Component({
     },
 
     handleTabTap: function (e) {
+      var self = this
+      if (this._tapDebounceTimer) return
+      this._tapDebounceTimer = setTimeout(function () {
+        self._tapDebounceTimer = null
+      }, 300)
+
       var index = e.currentTarget.dataset.index
       var url = e.currentTarget.dataset.url
       var tabKey = e.currentTarget.dataset.tab
       var previousSelected = this._confirmedSelected
-      var self = this
+
+      // No-op if already on this tab
+      if (index === previousSelected) return
 
       this.trackTabBarEvent('mini_program_tab_bar_tap', {
         tab: tabKey || 'unknown',
@@ -206,10 +240,22 @@ Component({
       this.setData({ selected: index })
       wx.switchTab({
         url: url,
+        success: function () {
+          self._announceTab(index)
+          self.trackTabBarEvent('mini_program_tab_bar_switch_success', {
+            tab: tabKey || 'unknown',
+            index: index,
+          })
+        },
         fail: function (err) {
           console.warn('[TabBar] switchTab failed for tab ' + tabKey + ':', err)
           self._confirmedSelected = previousSelected
           self.setData({ selected: previousSelected })
+          self.trackTabBarEvent('mini_program_tab_bar_switch_fail', {
+            tab: tabKey || 'unknown',
+            index: index,
+            error: (err && err.errMsg) || 'unknown',
+          })
         },
       })
 
@@ -217,9 +263,19 @@ Component({
     },
 
     handleCenterTap: function () {
-      var action = this.data.center.action
-      var previousSelected = this._confirmedSelected
       var self = this
+      if (this._tapDebounceTimer) return
+      this._tapDebounceTimer = setTimeout(function () {
+        self._tapDebounceTimer = null
+      }, 300)
+
+      var action = this.data.center && this.data.center.action
+      if (!action || !action.url) return
+
+      var previousSelected = this._confirmedSelected
+
+      // No-op if already on center hub
+      if (previousSelected === 4) return
 
       this.trackTabBarEvent('mini_program_center_button_tap', {
         action_kind: action.kind || 'unknown',
@@ -232,14 +288,38 @@ Component({
       this.setData({ selected: 4 })
       wx.switchTab({
         url: action.url,
+        success: function () {
+          self._announceTab(4)
+          self.trackTabBarEvent('mini_program_center_button_switch_success', {
+            action_kind: action.kind || 'unknown',
+          })
+        },
         fail: function (err) {
           console.warn('[TabBar] switchTab failed for center:', err)
           self._confirmedSelected = previousSelected
           self.setData({ selected: previousSelected })
+          self.trackTabBarEvent('mini_program_center_button_switch_fail', {
+            action_kind: action.kind || 'unknown',
+            error: (err && err.errMsg) || 'unknown',
+          })
         },
       })
 
       this._triggerHaptic()
+    },
+
+    /**
+     * Announce tab switch for screen readers via hidden aria-live region.
+     * Auto-clears after 1s to avoid stale announcements.
+     */
+    _announceTab: function (index) {
+      var name = this._tabNames[index] || ''
+      if (!name) return
+      this.setData({ announcement: '已切换到' + name })
+      var self = this
+      setTimeout(function () {
+        if (self.data.announcement) self.setData({ announcement: '' })
+      }, 1000)
     },
 
     /**

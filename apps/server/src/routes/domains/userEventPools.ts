@@ -16,7 +16,6 @@ import {
   referralConversions,
 } from "@shared/schema";
 import type { User } from "@shared/schema";
-import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import { formatAge } from "@shared/utils";
 import { getArchetypeFamily } from "@shared/archetypeColors";
 import { storage } from "../../storage";
@@ -34,6 +33,9 @@ import { broadcastAttendanceStatusUpdated } from "../../eventBroadcast";
 import { aiEndpointLimiter } from "../../rateLimiter";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
+import { paymentService } from "../../paymentService";
+import { resolveCouponValidation } from "../domains/payments";
+import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import * as schema from "@shared/schema";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
@@ -725,6 +727,168 @@ export function registerUserEventPoolRoutes(app: Express): void {
     }
   });
 
+  // Unified register-with-payment: creates payment + auto-registers on fulfillment.
+  // For users who do NOT have an active subscription or event-pack credits.
+  app.post("/api/event-pools/:poolId/register-with-payment", requireAuth, async (req, res) => {
+    try {
+      const poolId = req.params.poolId;
+      const userId = getAuthenticatedUserId(req) as string;
+
+      if (!getFeatureFlagSync("registrationEnabled", true)) {
+        return res.status(503).json({
+          message: "报名暂不可用，请稍后重试",
+          code: "REGISTRATION_DISABLED",
+        });
+      }
+
+      if (!getFeatureFlagSync("paymentsEnabled", false)) {
+        return res.status(503).json({
+          message: "支付功能暂不可用，请稍后重试",
+          code: "PAYMENTS_DISABLED",
+        });
+      }
+
+      const { invitationCode, values: validatedData } = buildEventPoolRegistrationInsert({
+        poolId,
+        userId,
+        payload: req.body,
+      });
+
+      // Check if pool exists and is active
+      const pool = await db.query.eventPools.findFirst({
+        where: (pools: any, { eq }: any) => eq(pools.id, poolId)
+      });
+
+      if (!pool) {
+        return res.status(404).json({ message: "活动不存在" });
+      }
+
+      // Check duplicates
+      const existingReg = await db.query.eventPoolRegistrations.findFirst({
+        where: (regs: any, { eq, and }: any) => and(
+          eq(regs.poolId, poolId),
+          eq(regs.userId, userId)
+        )
+      });
+
+      if (existingReg) {
+        return res.status(400).json({ message: "你已经报名过这个活动了", code: "ALREADY_REGISTERED" });
+      }
+
+      // Check capacity
+      const [registrationCountRow] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(eventPoolRegistrations)
+        .where(eq(eventPoolRegistrations.poolId, poolId));
+
+      const availability = describePoolRegistrationAvailability(
+        {
+          status: pool.status,
+          registrationDeadline: pool.registrationDeadline,
+          minGroupSize: pool.minGroupSize,
+          maxGroupSize: pool.maxGroupSize,
+          targetGroups: pool.targetGroups,
+        },
+        registrationCountRow?.count ?? 0,
+      );
+
+      if (!availability.allowed) {
+        const messageMap: Record<string, string> = {
+          POOL_CANCELLED: "该活动已取消",
+          POOL_CLOSED: "该活动已停止报名",
+          REGISTRATION_DEADLINE_PASSED: "报名已截止",
+          POOL_FULL: "该活动已满员",
+        };
+        return res.status(availability.status).json({
+          message: messageMap[availability.code] ?? availability.message,
+          code: availability.code,
+        });
+      }
+
+      // Get pricing from admin portal
+      const pricing = await storage.getActivePricingSettings().catch(() => []);
+      const eventSinglePlan = pricing.find((item: any) => item.planType === "event_single");
+      const originalAmount = eventSinglePlan?.priceInCents ?? 8800;
+
+      // Validate optional coupon code
+      let couponId: string | undefined;
+      const couponCode = typeof req.body?.couponCode === "string" ? req.body.couponCode.trim() : "";
+      if (couponCode) {
+        const couponValidation = await resolveCouponValidation(userId, couponCode, originalAmount);
+        if (!couponValidation.valid) {
+          return res.status(400).json({ message: couponValidation.message, code: "INVALID_COUPON" });
+        }
+        couponId = couponValidation.couponId;
+      }
+
+      // Collect the full registration payload to store on the payment row
+      const eventRegistrationPayload = {
+        poolId,
+        budgetRange: validatedData.budgetRange ?? [],
+        preferredLanguages: validatedData.preferredLanguages ?? [],
+        eventIntent: validatedData.eventIntent ?? [],
+        cuisinePreferences: validatedData.cuisinePreferences ?? [],
+        dietaryRestrictions: validatedData.dietaryRestrictions ?? [],
+        tasteIntensity: validatedData.tasteIntensity ?? [],
+        barThemes: validatedData.barThemes ?? [],
+        alcoholComfort: validatedData.alcoholComfort ?? [],
+        barBudgetRange: validatedData.barBudgetRange ?? [],
+      };
+
+      // Create WeChat Pay prepay via payment service
+      const user = await storage.getUser(userId);
+      const paymentOpenId = user?.wechatOpenId?.trim();
+      if (!paymentOpenId) {
+        return res.status(400).json({ message: "微信身份未绑定，请重新登录" });
+      }
+
+      const paymentResult = await paymentService.createMiniProgramPayment({
+        userId,
+        paymentType: "event",
+        relatedId: poolId,
+        originalAmount,
+        couponId,
+        eventRegistrationPayload,
+        clientIp: req.ip || req.socket.remoteAddress || "127.0.0.1",
+        openid: paymentOpenId,
+      });
+
+      logger.info("Register-with-payment payment created", {
+        poolId,
+        userId,
+        paymentId: paymentResult.paymentId,
+        wechatOrderId: paymentResult.wechatOrderId,
+        originalAmount,
+      });
+
+      res.json({
+        paymentId: paymentResult.paymentId,
+        wechatOrderId: paymentResult.wechatOrderId,
+        timeStamp: paymentResult.timeStamp,
+        nonceStr: paymentResult.nonceStr,
+        package: paymentResult.package,
+        signType: paymentResult.signType,
+        paySign: paymentResult.paySign,
+        outTradeNo: paymentResult.wechatOrderId,
+      });
+    } catch (error: any) {
+      logger.error("Failed to create register-with-payment", {
+        route: "/api/event-pools/:poolId/register-with-payment",
+        poolId: req.params.poolId,
+        userId: (req.user as User | undefined)?.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      if (error?.code === "23505" || error?.cause?.code === "23505") {
+        return res.status(400).json({ message: "你已经报名过这个活动了", code: "ALREADY_REGISTERED" });
+      }
+
+      res.status(500).json({
+        message: "支付创建失败，请稍后重试",
+        code: "PAYMENT_CREATION_FAILED",
+      });
+    }
+  });
 
   // Get user's pool registrations
   app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {

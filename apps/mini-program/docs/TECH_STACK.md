@@ -231,6 +231,22 @@ getUserState()                          // GET /api/auth/user (returns nextStep)
 
 All three are mini-program-only; there is no web OAuth redirect involved.
 
+### TanStack Query timeout via `Promise.race`
+
+Since `apiRequest` does not accept `AbortSignal`, per-query timeouts are implemented as `Promise.race` between the query promise and a timeout promise:
+
+```ts
+const QUERY_TIMEOUT_MS = 12000
+const result = await Promise.race([
+  queryFn(),
+  new Promise<null>((_, reject) =>
+    setTimeout(() => reject(new Error('Query timed out')), QUERY_TIMEOUT_MS)
+  )
+])
+```
+
+The timeout rejects, triggering the query's error path. Use `staleTime` (e.g., `30_000`) for queries that refetch on frequent mount/unmount to avoid unnecessary loading states. See `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` for production use (tagline + interests queries, 2026-06-11).
+
 ---
 
 ## Navigation

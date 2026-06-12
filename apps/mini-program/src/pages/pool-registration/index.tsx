@@ -919,35 +919,9 @@ export default function PoolRegistrationPage() {
         persistPaymentReturnContext(nextResumeContext)
         setResumeContext(nextResumeContext)
 
-        const handoffCopy =
-          entitlementCode === 'NO_AVAILABLE_EVENT_PACK_CREDITS'
-            ? '你当前的活动次数已经用完。我们已替你保留刚刚填写的偏好，续充权益后会自动回到这里继续报名。'
-            : '这场活动需要专属权益或活动次数包才能报名。我们已替你保留刚刚填写的偏好，开通后会自动回到这里继续报名。'
-
-        const modalResult = await Taro.showModal({
-          title: '先开通权益，再回来完成报名',
-          content: handoffCopy,
-          confirmText: '去开通',
-          cancelText: '稍后',
-          confirmColor: PRIMARY_BRAND_COLOR,
+        Taro.navigateTo({
+          url: `/pages/event-ticket-payment/index?poolId=${encodeURIComponent(poolId)}`,
         })
-
-        if (modalResult.confirm) {
-          try {
-            await openMiniProgramPaymentPage({
-              currentUserId: user?.id,
-              preserveReturnContext: true,
-              returnTab: 'events',
-            })
-          } catch (navigationError) {
-            const navigationMessage = resolveMessage(
-              navigationError,
-              'payment-failed',
-            )
-            setError(navigationMessage)
-            Taro.showToast({ title: navigationMessage, icon: 'none', duration: TOAST_FATAL_MS })
-          }
-        }
 
         return
       }

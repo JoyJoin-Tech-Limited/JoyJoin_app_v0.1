@@ -1517,6 +1517,19 @@ export const moderationLogs = pgTable("moderation_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Content filter logs — records every blocked content submission for admin ops visibility
+export const contentFilterLogs = pgTable("content_filter_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  field: varchar("field", { length: 64 }).notNull(),
+  violationType: varchar("violation_type", { length: 32 }).notNull(),
+  severity: varchar("severity", { length: 16 }).notNull(),
+  matchedKeywords: jsonb("matched_keywords").$type<string[]>().default([]),
+  inputPreview: varchar("input_preview", { length: 200 }),
+  source: varchar("source", { length: 128 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Content Management table - Unified table for all platform content
 export const contents = pgTable("contents", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1705,6 +1718,11 @@ export const insertModerationLogSchema = createInsertSchema(moderationLogs).omit
   createdAt: true,
 });
 
+export const insertContentFilterLogSchema = createInsertSchema(contentFilterLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertContentSchema = createInsertSchema(contents).omit({
   id: true,
   createdAt: true,
@@ -1760,6 +1778,7 @@ export type UserCoupon = typeof userCoupons.$inferSelect;
 export type VenueBooking = typeof venueBookings.$inferSelect;
 export type Report = typeof reports.$inferSelect;
 export type ModerationLog = typeof moderationLogs.$inferSelect;
+export type ContentFilterLog = typeof contentFilterLogs.$inferSelect;
 export type Content = typeof contents.$inferSelect;
 
 export type InsertVenue = z.infer<typeof insertVenueSchema>;
@@ -1771,6 +1790,7 @@ export type InsertCoupon = z.infer<typeof insertCouponSchema>;
 export type InsertUserCoupon = z.infer<typeof insertUserCouponSchema>;
 export type InsertReport = z.infer<typeof insertReportSchema>;
 export type InsertModerationLog = z.infer<typeof insertModerationLogSchema>;
+export type InsertContentFilterLog = z.infer<typeof insertContentFilterLogSchema>;
 export type InsertContent = z.infer<typeof insertContentSchema>;
 
 // ============ MATCHING ALGORITHM TABLES ============

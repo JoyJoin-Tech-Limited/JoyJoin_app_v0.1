@@ -63,7 +63,7 @@ import { logger } from "./lib/logger";
 import { XIAOYUE_PERSONA } from './prompts';
 import { evaluateContent, formatQualityMetrics } from './ai/aiQualityGate';
 import type { JudgeFeatureType } from './ai/qualityJudgePrompts';
-import { filterContent } from './contentFilter';
+import { validateContentSafe } from './lib/contentSafety';
 
 type AIServiceResult<T> = {
   data: T;
@@ -509,9 +509,9 @@ export function validateLieDetectiveV2Tags(tags: unknown): { valid: false; error
     if (typeof tag !== 'string' || tag.length < 2 || tag.length > 20) {
       return { valid: false, error: 'Each tag must be 2–20 characters' };
     }
-    const filterResult = filterContent(tag);
-    if (filterResult.isViolation) {
-      return { valid: false, error: filterResult.message || 'Tag contains inappropriate content' };
+    const safetyResult = validateContentSafe(tag, 'tag');
+    if (!safetyResult.safe) {
+      return { valid: false, error: safetyResult.violation?.message || 'Tag contains inappropriate content' };
     }
   }
   return { valid: true, tags: [tags[0].trim(), tags[1].trim()] as [string, string] };

@@ -35,6 +35,7 @@ import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
 import FormStepper from '../../../components/ui/FormStepper'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
 import ProfessionChatOverlay from '../../../components/ProfessionChatOverlay'
+import ContentBlockedError from '../../../components/ContentBlockedError'
 import type { ProfessionClassificationData } from '../../../components/ProfessionChatOverlay'
 import { getArchetypeVisual, getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
@@ -168,6 +169,7 @@ export default function EssentialDataPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [error, setError] = useState('')
+  const [contentViolations, setContentViolations] = useState<Record<string, string>>({})
   const [showProfessionOverlay, setShowProfessionOverlay] = useState(false)
   const [professionClassification, setProfessionClassification] = useState<ProfessionClassificationData | null>(null)
 
@@ -372,6 +374,30 @@ export default function EssentialDataPage() {
         transition: { beforeNavigate: () => setIsPageExiting(true) },
       })
     } catch (err) {
+      // Check for content violation (server 敏感词过滤)
+      const errorData = (err as Record<string, unknown>)?.data as Record<string, unknown> | undefined
+      if (errorData?.code === 'CONTENT_VIOLATION') {
+        const violation = errorData?.violation as Record<string, unknown> | undefined
+        const field = (violation?.field as string) || ''
+        const fieldMessage = (violation?.message as string) || (err instanceof Error ? err.message : getErrorMessage('submit-failed'))
+
+        if (field) {
+          setContentViolations((prev) => ({ ...prev, [field]: fieldMessage }))
+          // Navigate to the step containing this field if needed
+          if (field === 'displayName' && currentStep !== 0) {
+            setCurrentStep(0)
+          }
+          setError('')
+        } else {
+          setError(fieldMessage)
+          Taro.showToast({ title: fieldMessage, icon: 'none', duration: TOAST_FATAL_MS })
+        }
+
+        analytics.errorOccurred('content_violation', fieldMessage)
+        logError('[EssentialData] Content violation', { field, message: fieldMessage })
+        return
+      }
+
       const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
       setError(message)
       analytics.errorOccurred('submit_failed', message)
@@ -380,7 +406,7 @@ export default function EssentialDataPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, intent, invalidateAuth, isSubmitting, professionText, professionClassification, relationshipStatus, saveCheckpoint, workMode])
+  }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, intent, invalidateAuth, isSubmitting, professionText, professionClassification, relationshipStatus, saveCheckpoint, workMode, contentViolations, currentStep])
 
   const handleProfessionSubmit = useCallback((value: string, classification?: ProfessionClassificationData) => {
     setProfessionText(value)
@@ -509,15 +535,18 @@ export default function EssentialDataPage() {
           {/* Step 1: Display name */}
           {currentStep === 0 && (
             <Card className='essential-data__card essential-data__stage essential-data__stage--2'>
-              <View className='essential-data__field'>
+              <View className='essential-data__field' id='field-displayName'>
                 <Text className='essential-data__label'>
                   昵称<Text className='essential-data__required'>*</Text>
                 </Text>
                 <Input
-                  className='essential-data__input'
+                  className={`essential-data__input ${contentViolations.displayName ? 'essential-data__input--error' : ''}`}
                   placeholder='大家在活动里会怎么称呼你'
                   value={displayName}
-                  onInput={(e) => setDisplayName(e.detail.value)}
+                  onInput={(e) => {
+                    setDisplayName(e.detail.value)
+                    setContentViolations((prev) => ({ ...prev, displayName: '' }))
+                  }}
                   onBlur={(e) => {
                     const v = e.detail.value.trim()
                     if (v !== '' && v.length < 2) analytics.validationFailed('displayName', 'too-short')
@@ -525,6 +554,16 @@ export default function EssentialDataPage() {
                   maxlength={20}
                 />
                 <Text className='essential-data__hint'>2-20 个字符，会显示在活动和匹配资料里。</Text>
+                <ContentBlockedError
+                  message={contentViolations.displayName || ''}
+                  visible={!!contentViolations.displayName}
+                  fieldName='displayName'
+                  onDismiss={() => setContentViolations((prev) => {
+                    const next = { ...prev }
+                    delete next.displayName
+                    return next
+                  })}
+                />
               </View>
             </Card>
           )}

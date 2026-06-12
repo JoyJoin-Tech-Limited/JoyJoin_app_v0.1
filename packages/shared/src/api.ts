@@ -1336,6 +1336,39 @@ export function registerForPool(
   return api<{ id: string }>(request)
 }
 
+export interface RegisterWithPaymentResponse {
+  paymentId: string
+  wechatOrderId: string
+  timeStamp: string
+  nonceStr: string
+  package: string
+  signType: string
+  paySign: string
+  outTradeNo: string
+}
+
+export interface RegisterWithPaymentRequest extends EventPoolRegistrationPayload {
+  couponCode?: string
+}
+
+export function registerForPoolWithPayment(
+  api: ApiTransport,
+  poolId: string,
+  payload?: RegisterWithPaymentRequest
+): Promise<RegisterWithPaymentResponse> {
+  const normalized = normalizeEventPoolRegistrationPayload(payload)
+  const request: ApiTransportRequest = {
+    path: `/api/event-pools/${encodeURIComponent(poolId)}/register-with-payment`,
+    method: 'POST',
+    data: {
+      ...normalized,
+      couponCode: payload?.couponCode ?? undefined,
+    },
+  }
+
+  return api<RegisterWithPaymentResponse>(request)
+}
+
 export function cancelPoolRegistration(
   api: ApiTransport,
   registrationId: string

@@ -63,7 +63,8 @@ src/
 │   ├── ui/              # BrandLogo, Button, Card, StatusCard, JoyJoinIcon, Chip, SegmentedProgress, TraitRadarChart, etc.
 │   ├── profile/         # Profile-specific components (ProfileArchetypeHero, InterestChipCloud, ProfessionDisplayField)
 │   ├── landing/         # Landing-page-specific components (BondingCloud)
-│   └── discover/        # Discover feed components (OracleCard, CompatibilityIndicator, EcosystemBar)
+│   ├── discover/        # Discover feed components (OracleCard, CompatibilityIndicator, EcosystemBar)
+│   └── ContentBlockedError.tsx  # Inline field error for sensitive-word violations; field-aware hints, tap-to-dismiss, haptics, aria-live, reduced-motion. Used in edit-profile and onboarding essential-data forms.
 ├── hooks/               # Custom React hooks
 │   ├── useStaggerMount.ts   # Single RAF mount trigger for CSS-staggered entrances
 │   ├── useResetOnShow.ts    # Resets transient navigation/submit flags on page re-show (swipe-back safety)
@@ -219,7 +220,7 @@ The shipped mini-program tab bar is the **native WeChat component** copied from 
 | **Inactive Taro JSX** | `src/custom-tab-bar/index.tsx` (kept for reference; not compiled into dist) |
 | **Copy rule** | `config/index.ts` `copy.patterns` handles the native → dist copy |
 | **WXML root** | `<cover-view class="joy-custom-tab-bar">` with nested `<cover-view>` and `<cover-image>` only |
-| **Center CTA** | Floating circular button ("进行中") with **solid `#FFF4F8` fill** (`$color-bg-tint-pink`), outer ring in `$color-secondary` at ~18% opacity, and shadow. Positioned via a flexbox wrapper (`justify-content: center`) instead of `left:50% + transform` to avoid WeChat `cover-view` compositing bugs during `setData` re-renders. **Not gradient** — solid fill is the mini-program CTA standard |
+| **Center CTA** | Floating circular button ("进行中") with **solid `#FFF4F8` fill** (`$color-bg-tint-pink`, via CSS custom property `--jj-bg-tint-pink`), outer ring in `$color-secondary` at ~18% opacity, and shadow. Positioned via a flexbox wrapper (`justify-content: center`) instead of `left:50% + transform` to avoid WeChat `cover-view` compositing bugs during `setData` re-renders. **Not gradient** — solid fill is the mini-program CTA standard |
 | **Center hub page** | `/pages/center-hub/index` — dynamic content: active event card, pending registration status, or empty-state CTA |
 | **Routing model** | Center button always `switchTab` to hub (requires `centerHub` in `tabBar.list` — WeChat validates `switchTab` targets against `tabBar.list` even with `custom: true`); hub CTAs `navigateTo` detail pages or `switchTab` to discover |
 | **State sync** | `useCustomTabBarSync.ts` calls `Taro.getTabBar(page).syncState(...)` on every `useDidShow`. Native side debounces at 50ms with shallow diff to avoid `cover-image` flicker. `_confirmedSelected` tracks the authoritative selection for rollback |
@@ -241,15 +242,19 @@ The shipped mini-program tab bar is the **native WeChat component** copied from 
 | Feature | Implementation |
 |---------|----------------|
 | **Tap feedback** | `hover-class` on side tabs + center button with `hover-stay-time="150"`. Transitions live on base elements (not `hover-class`) for WeChat compatibility |
-| **Active tab pill** | `rgba(139, 92, 246, 0.08)` background + `border-radius: 20rpx` |
+| **Active tab pill** | `rgba(139, 92, 246, 0.08)` background + `border-radius: 24rpx` (8rpx grid). Entrance animation: `active-pill-enter` (200ms micro-bounce, scale 0.94→1) |
 | **Haptics** | `wx.vibrateShort({ type: 'light' })` on every side-tab tap |
 | **Badge pop-in** | `scale(0→1.15→1)` spring animation (200ms) |
 | **Center badge pulse** | Continuous `scale` pulse on the center red dot |
 | **Cover-image fade-in** | Scoped 200ms opacity fade on specific elements only (global selector removed to prevent re-trigger on every `setData`) |
-| **Reduced motion** | `@media (prefers-reduced-motion: reduce)` disables all animations; respects system setting |
-| **SwitchTab rollback** | Rollback uses `_confirmedSelected` (authoritative, not optimistic) to handle rapid tab switching. `fail` callback logs to `console.warn` |
+| **Reduced motion** | `@media (prefers-reduced-motion: reduce)` disables all animations, including `will-change` reset to `auto`; respects system setting |
+| **SwitchTab rollback** | Rollback uses `_confirmedSelected` (authoritative, not optimistic) to handle rapid tab switching. Success/fail tracked via `wx.reportAnalytics` (`mini_program_tab_bar_switch_success` / `_fail`). 300ms double-tap debounce on tap handlers |
 | **Sync debounce** | 50ms debounce + shallow diff in `syncState`; path-syntax badge updates prevent flicker |
 | **Haptics** | Platform-aware: `type: 'light'` on iOS, plain `wx.vibrateShort()` on Android. Silently fails on unsupported devices |
+| **CSS theming** | 8 brand tokens declared as CSS custom properties on root (e.g. `--jj-primary`, `--jj-secondary`, `--jj-bg-tint-pink`). All hardcoded color values reference these tokens |
+| **GPU compositing** | `will-change: transform` / `opacity` / `box-shadow` / `background-color` hints on 7 animated subtrees; reset to `auto` on low-end + reduced-motion |
+| **Accessibility** | Hidden `aria-live="polite"` region announces tab switches ("已切换到发现"). Tab items use `role="button"`, `aria-label`, `aria-pressed` |
+| **Offline resilience** | `wx.getNetworkType` / `wx.onNetworkStatusChange` detection; `syncState` skipped when offline to avoid stale badge counts |
 
 ---
 

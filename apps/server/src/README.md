@@ -105,17 +105,20 @@ Mock payment mode:
 
 ### Admin APIs and operational controls
 
-Owns admin authentication, RBAC, moderation, venue/event operations, and KPI endpoints.
+Owns admin authentication, RBAC, moderation, venue/event operations, KPI endpoints, and content filter log queries.
 
 Primary files:
 - `apps/server/src/routes/domains/admin.ts`
 - `apps/server/src/routes/domains/adminEventPools.ts` — CRUD, venue hints, time slot validation, archive/deletion for event pools
+- `apps/server/src/routes/domains/adminOperations.ts` — content filter log admin endpoint (`GET /api/admin/content-filter/logs`), admin notification broadcast/send with content safety gating
 - `apps/server/src/adminAuth.ts`
 - `apps/server/src/lib/adminAuditLogger.ts`
 - `apps/server/src/lib/featureFlags.ts` — DB-backed feature flag resolver with env fallback and short-lived cache
+- `apps/server/src/lib/contentSafety.ts` — shared validation helper `validateContentSafe()` for field-level content filtering
 
 Boundary:
 - All `/api/admin/*` routes must enforce admin middleware.
+- `GET /api/admin/content-filter/logs` is gated at operator+ level; pagination + filtering by userId/violationType/severity/field/date range.
 
 ### Match Compass (preference tuning)
 
@@ -173,7 +176,7 @@ Boundary:
 
 Use these folders by responsibility:
 - `/middleware` — cross-cutting HTTP concerns
-- `/lib` — focused helpers and invariants used across domains
+- `/lib` — focused helpers and invariants used across domains (includes `contentSafety.ts` — `validateContentSafe()` for field-level content filtering)
 - `/services`, `/ai`, `/analytics`, `/inference`, `/gossip`, `/utils` — domain support modules
 - `/__tests__` — automated tests
 

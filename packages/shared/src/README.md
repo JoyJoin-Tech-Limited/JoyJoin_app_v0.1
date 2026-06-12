@@ -9,6 +9,7 @@ This package holds contracts and logic that are intentionally shared across mult
 - `packages/shared/src/wsEvents.ts` — websocket event contracts
 - `packages/shared/src/eventDetail.ts` — event detail contract surface
 - `packages/shared/src/types/` — stable shared types, including AI metadata
+- `packages/shared/src/schema/_definitions.ts` — Drizzle table definitions, including `contentFilterLogs` (content_filter_logs table for auditable content violation records)
 
 ### Shared product vocabularies and constants
 - `packages/shared/src/constants.ts`

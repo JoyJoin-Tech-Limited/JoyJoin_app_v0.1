@@ -6,7 +6,7 @@ import InterestChipCloud from '../../../components/profile/InterestChipCloud'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { haptics } from '../../../lib/utils/haptics'
 import Taro from '@tarojs/taro'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   completeProfileReview,
@@ -85,32 +85,26 @@ export default function ProfileReviewPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [error, setError] = useState('')
-
-  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating)
   const [isRevealReady, setIsRevealReady] = useState(false)
+
+  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating, setIsRevealReady)
+  const queryClient = useQueryClient()
   const { user, isLoading } = useAuthGuard({
     suspendOnboardingRedirect: isSubmitting || isPageExiting,
   })
   const invalidateAuth = useInvalidateAuth()
   const analytics = useOnboardingAnalytics('profile-review', { enabled: !isLoading })
 
-  useEffect(() => {
-    if (isLoading) {
-      return undefined
-    }
-
-    setIsRevealReady(false)
-    const timer = setTimeout(() => {
-      setIsRevealReady(true)
-    }, 420)
-
-    return () => clearTimeout(timer)
-  }, [isLoading])
-
   const shouldLoadInterests = !isLoading && Boolean(user?.hasCompletedInterestsCarousel)
   const { data: profileTagline, isLoading: isTaglineLoading, isError: isTaglineError } = useQuery({
     queryKey: ['mini-program', 'onboarding-profile-tagline'],
-    queryFn: () => getProfileTagline(apiRequest),
+    queryFn: () =>
+      Promise.race([
+        getProfileTagline(apiRequest),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout')), QUERY_TIMEOUT_MS),
+        ),
+      ]),
     enabled: !isLoading && Boolean(user),
     staleTime: STALE_TIME_PROFILE_TAGLINE_MS,
     retry: 1,
@@ -125,9 +119,15 @@ export default function ProfileReviewPage() {
     queryKey: ['mini-program', 'profile-review-interests'],
     enabled: shouldLoadInterests,
     retry: 1,
+    staleTime: 30_000,
     queryFn: async () => {
       try {
-        return await getUserInterests(apiRequest)
+        return await Promise.race([
+          getUserInterests(apiRequest),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout')), QUERY_TIMEOUT_MS),
+          ),
+        ]) as UserInterestsResponse | null
       } catch (queryError) {
         const statusCode =
           typeof queryError === 'object' && queryError !== null && 'statusCode' in queryError
@@ -147,6 +147,13 @@ export default function ProfileReviewPage() {
   const ageLabel = getAgeLabel(user as Record<string, unknown> | undefined)
   const archetype = (user?.archetype as string) || (user?.primaryArchetype as string) || ''
   const visual = archetype ? getArchetypeVisual(archetype) : null
+
+  // Preload archetype full-body image to prevent flash on cold start
+  useEffect(() => {
+    if (!visual?.asset) return
+    Taro.getImageInfo({ src: visual.asset }).catch(() => { /* fire-and-forget */ })
+  }, [visual?.asset])
+
   const currentCity = typeof user?.currentCity === 'string' ? user.currentCity : ''
   const hometownRegionCity =
     typeof user?.hometownRegionCity === 'string' ? user.hometownRegionCity : ''
@@ -208,8 +215,9 @@ export default function ProfileReviewPage() {
       : '进入发现后，你现在确认好的资料就会先帮你筛出更合适的活动。'
 
   const aiInsightLine =
-    profileTagline?.insightLine?.trim() ||
-    (isTaglineError ? GENERIC_PROFILE_TAGLINE_FALLBACK : '')
+    !isTaglineLoading && isTaglineError
+      ? GENERIC_PROFILE_TAGLINE_FALLBACK
+      : profileTagline?.insightLine?.trim() || ''
   const showInterestSkeleton = shouldLoadInterests && !interestsData && !isInterestsError && (isInterestsLoading || isInterestsFetching)
   const pageClassName = ['profile-review', isPageExiting ? 'profile-review--exiting' : '']
     .filter(Boolean)
@@ -262,19 +270,19 @@ export default function ProfileReviewPage() {
     }
   }, [analytics, archetype, interestsData?.totalSelections, invalidateAuth, isSubmitting])
 
-  const getStageClassName = (step: number) =>
+  const getStageClassName = useCallback((step: number) =>
     [
       'profile-review__stage',
       `profile-review__stage--${step}`,
       isRevealReady ? 'profile-review__stage--visible' : '',
     ]
       .filter(Boolean)
-      .join(' ')
+      .join(' '), [isRevealReady])
 
   if (isLoading) {
     return (
       <OnboardingLoadingShell
-        stepLabel='Onboarding 4 / 4'
+        stepLabel='最后一步 · 入场卡预览'
         title={`${getMascotDisplayName(user)}在翻开你的入场卡`}
         subtitle='最后这一页准备好后，你就可以去发现第一场适合你的局。'
       />
@@ -314,7 +322,7 @@ export default function ProfileReviewPage() {
           </View>
 
           <View className={`profile-review__hero ${getStageClassName(1)}`}>
-            <Text className='profile-review__eyebrow'>Onboarding 4 / 4</Text>
+            <Text className='profile-review__eyebrow'>最后一步 · 入场卡预览</Text>
             <Text className='profile-review__title'>
               你的 <Text className='profile-review__title-en'>JoyJoin</Text> 入场卡已就绪
             </Text>
@@ -332,50 +340,60 @@ export default function ProfileReviewPage() {
           </View>
 
           <Card className={`profile-review__hero-card ${getStageClassName(3)}`}>
-            <View className='profile-review__hero-main'>
-              <View className='profile-review__avatar-wrap'>
-                {visual?.asset ? (
-                  <Image className='profile-review__avatar-image' src={visual.asset} mode='aspectFit' lazyLoad />
-                ) : (
-                  <ArchetypeHead archetype={archetype} size={100} fallbackText={displayName} />
-                )}
-              </View>
-              <View className='profile-review__hero-copy'>
-                <Text className='profile-review__hero-name'>{displayName}</Text>
+            <View className='profile-review__hero-copy'>
+              <Text className='profile-review__hero-name'>{displayName}</Text>
 
-                {/* AI-generated social tag — presented prominently as the user's tagline */}
-                {isTaglineLoading ? (
-                  <View className='profile-review__hero-tagline profile-review__hero-tagline--loading' aria-busy='true'>
-                    <View className='profile-review__hero-tagline-shimmer' />
-                  </View>
-                ) : aiInsightLine ? (
-                  <View className='profile-review__hero-tagline'>
-                    <Text className='profile-review__hero-tagline-text'>{aiInsightLine}</Text>
-                  </View>
-                ) : null}
-
-                {archetype && visual ? (
-                  <View
-                    className='profile-review__hero-archetype-badge'
-                    style={{
-                      background: visual.accentSoft,
-                      borderColor: visual.accentBorder,
-                    }}
-                  >
+              {/* AI-generated social tag — presented prominently as the user's tagline */}
+              {isTaglineLoading ? (
+                <View className='profile-review__hero-tagline profile-review__hero-tagline--loading' aria-busy='true'>
+                  <View className='profile-review__hero-tagline-shimmer' />
+                </View>
+              ) : aiInsightLine ? (
+                <View className={`profile-review__hero-tagline${isTaglineError ? ' profile-review__hero-tagline--error' : ''}`}>
+                  <Text className='profile-review__hero-tagline-text'>{aiInsightLine}</Text>
+                  {isTaglineError ? (
                     <Text
-                      className='profile-review__hero-archetype-badge-text'
-                      style={{ color: visual.accent }}
+                      className='profile-review__hero-tagline-retry'
+                      onClick={() => {
+                        haptics('light')
+                        queryClient.invalidateQueries({ queryKey: ['mini-program', 'onboarding-profile-tagline'] })
+                      }}
                     >
-                      {visual.name}
+                      重试
                     </Text>
-                  </View>
-                ) : null}
-                {visual?.summary ? (
-                  <Text className='profile-review__hero-summary'>{visual.summary}</Text>
-                ) : (
-                  <Text className='profile-review__hero-summary'>你的基础资料和兴趣画像已经准备好被看见了。</Text>
-                )}
-              </View>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {archetype && visual ? (
+                <View
+                  className='profile-review__hero-archetype-badge'
+                  style={{
+                    background: visual.accentSoft,
+                    borderColor: visual.accentBorder,
+                  }}
+                >
+                  <Text
+                    className='profile-review__hero-archetype-badge-text'
+                    style={{ color: visual.accent }}
+                  >
+                    {visual.name}
+                  </Text>
+                </View>
+              ) : null}
+              {visual?.summary ? (
+                <Text className='profile-review__hero-summary'>{visual.summary}</Text>
+              ) : (
+                <Text className='profile-review__hero-summary'>你的基础资料和兴趣画像已经准备好被看见了。</Text>
+              )}
+            </View>
+
+            <View className='profile-review__avatar-wrap'>
+              {visual?.asset ? (
+                <Image className='profile-review__avatar-image' src={visual.asset} mode='aspectFit' lazyLoad />
+              ) : (
+                <ArchetypeHead archetype={archetype} size={100} fallbackText={displayName} />
+              )}
             </View>
 
             {profileTags.length > 0 ? (
@@ -444,6 +462,16 @@ export default function ProfileReviewPage() {
                 <Text className='profile-review__interest-error-copy'>
                   网络不太稳定，但你的入场卡已经可以用了。先出发，兴趣数据稍后自动同步。
                 </Text>
+                <View
+                  className='profile-review__interest-error-retry'
+                  onClick={() => {
+                    haptics('light')
+                    queryClient.invalidateQueries({ queryKey: ['mini-program', 'profile-review-interests'] })
+                  }}
+                  hoverClass='profile-review__interest-error-retry--hover'
+                >
+                  <Text className='profile-review__interest-error-retry-text'>重新加载兴趣数据</Text>
+                </View>
               </View>
             ) : showInterestSkeleton ? (
               <View className='profile-review__interest-skeleton' aria-busy='true'>
@@ -495,6 +523,13 @@ export default function ProfileReviewPage() {
                   />
                 ) : null}
               </>
+            ) : !isInterestsLoading && !isInterestsFetching && interestsData === null && !isInterestsError ? (
+              <View className='profile-review__interest-placeholder' role='status' aria-live='polite'>
+                <Text className='profile-review__interest-placeholder-title'>暂无兴趣标签</Text>
+                <Text className='profile-review__interest-placeholder-copy'>
+                  你还没点选兴趣标签，但入场卡已经可以使用了。先出发，以后还能随时补充。
+                </Text>
+              </View>
             ) : (
               <View className='profile-review__interest-placeholder' role='status' aria-live='polite'>
                 <View className='profile-review__interest-placeholder-pulse'>

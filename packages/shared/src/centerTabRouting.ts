@@ -161,7 +161,7 @@ export function getCenterButtonLabel(
 
   if (todayEvent?.dateTime) {
     const hasStarted = now >= getHongKongDateForComparison(todayEvent.dateTime)
-    return hasStarted ? '🎲 破冰进行中！' : '今日出发！🎉'
+    return hasStarted ? '破冰进行中' : '今日出发'
   }
 
   const upcomingPool = poolRegistrations.find((registration) => {
@@ -179,7 +179,7 @@ export function getCenterButtonLabel(
   })
 
   if (upcomingPool) {
-    return '查看场地 📍'
+    return '查看场地'
   }
 
   const pendingRegistration = poolRegistrations.find(
@@ -195,7 +195,7 @@ export function getCenterButtonLabel(
   )
 
   if (matchedPool) {
-    return '查看桌友 👥'
+    return '查看桌友'
   }
 
   return '去发现'

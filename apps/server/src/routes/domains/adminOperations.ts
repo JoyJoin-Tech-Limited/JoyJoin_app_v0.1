@@ -2,6 +2,10 @@ import { logger } from "../../lib/logger";
 import type { Express } from "express";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { storage } from "../../storage";
+import { validateContentSafe, contentViolationResponse } from "../../lib/contentSafety";
+import { db } from "../../db";
+import { contentFilterLogs, users } from "@shared/schema";
+import { eq, desc, and, sql, gte, lte } from "drizzle-orm";
 
 export function registerAdminOperationsRoutes(app: Express): void {
   // ============ ADMIN FEEDBACK MANAGEMENT ============
@@ -194,7 +198,20 @@ export function registerAdminOperationsRoutes(app: Express): void {
       if (!category || !type || !title || !userIds || !Array.isArray(userIds)) {
         return res.status(400).json({ message: "Missing required fields" });
       }
-      
+
+      // Content safety gate for admin-authored notification text
+      for (const [field, value] of Object.entries({ title, message })) {
+        if (typeof value === 'string' && value.trim().length > 0) {
+          const safetyResult = validateContentSafe(value, field);
+          if (!safetyResult.safe) {
+            return res.status(400).json({
+              ...contentViolationResponse(safetyResult.violation!).body,
+              adminOverride: true,
+            });
+          }
+        }
+      }
+
       const result = await storage.createBroadcastNotification({
         sentBy: adminId,
         category,
@@ -222,7 +239,20 @@ export function registerAdminOperationsRoutes(app: Express): void {
       if (!userId || !category || !type || !title) {
         return res.status(400).json({ message: "Missing required fields" });
       }
-      
+
+      // Content safety gate for admin-authored notification text
+      for (const [field, value] of Object.entries({ title, message })) {
+        if (typeof value === 'string' && value.trim().length > 0) {
+          const safetyResult = validateContentSafe(value, field);
+          if (!safetyResult.safe) {
+            return res.status(400).json({
+              ...contentViolationResponse(safetyResult.violation!).body,
+              adminOverride: true,
+            });
+          }
+        }
+      }
+
       const result = await storage.createBroadcastNotification({
         sentBy: adminId,
         category,
@@ -247,6 +277,68 @@ export function registerAdminOperationsRoutes(app: Express): void {
     } catch (error) {
       logger.error("Error fetching notification stats", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
+  // ─── Content filter logs ───────────────────────────────────────────
+
+  app.get("/api/admin/content-filter/logs", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    try {
+      const {
+        userId,
+        violationType,
+        severity,
+        field,
+        from,
+        to,
+        page = '1',
+        pageSize = '20',
+      } = req.query as Record<string, string | undefined>;
+
+      const conditions = [];
+      if (userId) conditions.push(eq(contentFilterLogs.userId, userId));
+      if (violationType) conditions.push(eq(contentFilterLogs.violationType, violationType));
+      if (severity) conditions.push(eq(contentFilterLogs.severity, severity));
+      if (field) conditions.push(eq(contentFilterLogs.field, field));
+      if (from) conditions.push(gte(contentFilterLogs.createdAt, new Date(from)));
+      if (to) conditions.push(lte(contentFilterLogs.createdAt, new Date(to)));
+
+      const limit = Math.min(Math.max(parseInt(pageSize, 10) || 20, 1), 100);
+      const offset = (Math.max(parseInt(page, 10) || 1, 1) - 1) * limit;
+
+      const [rows, countResult] = await Promise.all([
+        db.select({
+          id: contentFilterLogs.id,
+          userId: contentFilterLogs.userId,
+          displayName: users.displayName,
+          field: contentFilterLogs.field,
+          violationType: contentFilterLogs.violationType,
+          severity: contentFilterLogs.severity,
+          matchedKeywords: contentFilterLogs.matchedKeywords,
+          inputPreview: contentFilterLogs.inputPreview,
+          source: contentFilterLogs.source,
+          createdAt: contentFilterLogs.createdAt,
+        })
+        .from(contentFilterLogs)
+        .leftJoin(users, eq(contentFilterLogs.userId, users.id))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(desc(contentFilterLogs.createdAt))
+        .limit(limit)
+        .offset(offset),
+        db.select({ count: sql<number>`count(*)` })
+        .from(contentFilterLogs)
+        .where(conditions.length > 0 ? and(...conditions) : undefined),
+      ]);
+
+      res.json({
+        rows,
+        total: countResult[0]?.count ?? 0,
+        page: Math.max(parseInt(page, 10) || 1, 1),
+        pageSize: limit,
+      });
+    } catch (error) {
+      logger.error("Error fetching content filter logs", { error: String(error) });
+      res.status(500).json({ message: "Failed to fetch content filter logs" });
     }
   });
 }

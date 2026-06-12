@@ -201,7 +201,7 @@ async function resolveEventPackCheckout(
   };
 }
 
-async function resolveCouponValidation(
+export async function resolveCouponValidation(
   userId: string,
   couponCode: string,
   originalAmount: number,

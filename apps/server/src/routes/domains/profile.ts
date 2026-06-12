@@ -11,6 +11,7 @@ import { queueSemanticProfileRecompute } from "../../userSemanticProfileService"
 import { normalizeProfileInterests, getInterestById, validateTelemetry } from "@shared/interests";
 import { updateProfileSchema, updatePersonalitySchema, updateFullProfileSchema } from "@shared/schema";
 import { logger } from "../../lib/logger";
+import { validateContentSafe, contentViolationResponse } from "../../lib/contentSafety";
 
 const interestSelectionSchema = z.object({
   topicId: z.string(),
@@ -123,6 +124,14 @@ export function registerProfileRoutes(app: Express): void {
       
       if (!result.success) {
         return res.status(400).json({ error: result.error });
+      }
+
+      const displayName = result.data.displayName;
+      if (displayName) {
+        const safetyResult = validateContentSafe(displayName, "displayName");
+        if (!safetyResult.safe) {
+          return res.status(400).json(contentViolationResponse(safetyResult.violation!).body);
+        }
       }
 
       const user = await storage.updateProfile(userId, result.data);
@@ -527,6 +536,21 @@ export function registerProfileRoutes(app: Express): void {
           profileData.interestsTelemetry = telemetryResult.data ?? undefined;
         } else {
           profileData.interestsTelemetry = telemetryResult.data;
+        }
+      }
+
+      // Content safety gate: check all user-visible text fields
+      for (const [field, value] of Object.entries({
+        displayName: profileData.displayName,
+        bio: profileData.bio,
+        industryRawInput: profileData.industryRawInput,
+        occupationId: profileData.occupationId,
+      })) {
+        if (typeof value === 'string' && value.trim().length > 0) {
+          const safetyResult = validateContentSafe(value, field);
+          if (!safetyResult.safe) {
+            return res.status(400).json(contentViolationResponse(safetyResult.violation!).body);
+          }
         }
       }
 

@@ -1,5 +1,9 @@
-<view class="joy-custom-tab-bar {{lowEnd ? 'joy-custom-tab-bar--low-end' : ''}}">
-  <view class="joy-custom-tab-bar__surface">
+<cover-view class="joy-custom-tab-bar {{lowEnd ? 'joy-custom-tab-bar--low-end' : ''}}">
+  <!-- Screen-reader announcement region (visually hidden, aria-live for tab switches) -->
+  <cover-view class="joy-custom-tab-bar__sr-announce" aria-live="polite" aria-atomic="true">
+    {{announcement}}
+  </cover-view>
+  <cover-view class="joy-custom-tab-bar__surface">
     <!-- Background with semi-circular notch -->
     <image
       class="joy-custom-tab-bar__bg"

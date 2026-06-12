@@ -1,0 +1,85 @@
+@use '../../styles/variables' as *;
+
+// ─── Content Blocked Error ──────────────────────────────────────────
+// Inline error display for 敏感词过滤 violations.
+// Used beneath form fields that triggered the server-side content filter.
+// 8rpx spacing rhythm; $color-error red; fade-in entrance.
+// Supports prefers-reduced-motion.
+
+.content-blocked-error {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  padding-bottom: calc(#{$spacing-sm} + env(safe-area-inset-bottom, 0px));
+  margin-top: $spacing-xs;
+  border-left: 2rpx solid $color-error;
+  animation: content-blocked-fade-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  // ── Reduced motion ────────────────────────────────────────────────
+  &--reduce-motion {
+    animation: none;
+  }
+
+  // ── Dismissible (tap to clear) ──────────────────────────────────
+  &--dismissible {
+    transition: background 0.12s ease;
+  }
+
+  &--hover {
+    background: rgba($color-error, 0.04);
+  }
+
+  // ── Exit animation ──────────────────────────────────────────────
+  &--closing {
+    animation: content-blocked-fade-out 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  // ── Server message (primary error text) ───────────────────────────
+  &__message {
+    font-size: $font-size-xs;
+    color: $color-error;
+    line-height: $line-height-normal;
+    font-weight: $font-weight-medium;
+  }
+
+  // ── Actionable hint (secondary, lower opacity) ────────────────────
+  &__hint {
+    font-size: $font-size-2xs;
+    color: rgba($color-error, 0.7);
+    line-height: $line-height-normal;
+  }
+}
+
+// ── Entrance Animation ───────────────────────────────────────────────
+@keyframes content-blocked-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes content-blocked-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(4rpx);
+  }
+}
+
+// ── OS-level reduced motion overrides ────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .content-blocked-error {
+    animation: none;
+  }
+  .content-blocked-error--closing {
+    animation: none;
+  }
+}

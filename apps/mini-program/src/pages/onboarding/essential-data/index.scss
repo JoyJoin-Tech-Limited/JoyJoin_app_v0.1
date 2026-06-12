@@ -73,6 +73,11 @@
     &--filled {
       border-color: $color-primary;
     }
+
+    &--error {
+      border-color: $color-error;
+      background: rgba($color-error, 0.03);
+    }
   }
 
   &__search-wrap {
