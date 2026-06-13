@@ -53,6 +53,7 @@ const SUBSCRIPTION_PRICE_FALLBACKS = {
 } as const;
 
 export function getTestPriceCents(): number | null {
+  if (process.env.APP_MODE !== "test") return null;
   const raw = process.env.TEST_PAYMENT_PRICE_IN_CENTS;
   if (!raw) return null;
   const n = parseInt(raw, 10);
