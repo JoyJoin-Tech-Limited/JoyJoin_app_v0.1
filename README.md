@@ -7,11 +7,13 @@ This is the JoyJoin application monorepo, managed with **npm workspaces**.
 ```
 /
 ├── apps/
-│   ├── user-client/     # Archived — moved to `archived/workspaces/user-client/` (was React 18 + Vite PWA, port 5001)
+│   ├── mini-program/    # Launch-primary WeChat Mini Program — Taro 4 + React 18 (workspace `mini-program`)
 │   ├── admin-client/    # React 18 + Vite admin portal (port 5002, deployed to admin.joyjoinapp.com)
-│   └── server/          # Node.js + Express API server (recommended local port 5000 via PORT env)
+│   ├── server/          # Node.js + Express API server (recommended local port 5000 via PORT env)
+│   └── user-client/     # Archived — moved to `archived/workspaces/user-client/` (was React 18 + Vite PWA, port 5001)
 ├── packages/
-│   └── shared/          # @joyjoin/shared — internal shared library
+│   ├── shared/          # @joyjoin/shared — internal shared library
+│   └── e2e/             # Playwright end-to-end tests
 ├── scripts/             # Repo-wide tooling scripts (guardrails, migration helpers)
 ├── docs/                # Architecture and feature documentation
 ├── deployment/          # Docker / Nginx deployment configs
@@ -23,10 +25,12 @@ This is the JoyJoin application monorepo, managed with **npm workspaces**.
 
 | Workspace | Package name | Purpose |
 |-----------|-------------|---------|
-| `apps/user-client` | `@joyjoin/user-client` | Archived (moved to `archived/workspaces/user-client/`) |
+| `apps/mini-program` | `mini-program` | Launch-primary WeChat Mini Program (Taro 4 + React 18) |
 | `apps/admin-client` | `@joyjoin/admin-client` | Internal admin portal |
 | `apps/server` | `@joyjoin/server` | Express API, WebSocket, DB |
 | `packages/shared` | `@joyjoin/shared` | Types, schemas, constants, domain logic shared across apps |
+| `packages/e2e` | `@joyjoin/e2e` | Playwright end-to-end tests |
+| `apps/user-client` | `@joyjoin/user-client` | Archived (moved to `archived/workspaces/user-client/`) |
 
 ## Where shared code belongs
 

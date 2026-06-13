@@ -384,7 +384,7 @@
   }
 
   // ── Degradation tier: keep the reveal + entrance, kill idle loops ──
-  // benchmarkLevel ≥ 30 OR iPhone XR-or-older. We still want the user
+  // benchmarkLevel ≤ 15 (Android) OR old iPhone/iOS heuristic. We still want the user
   // to see the banner — just without the sparkles, breathing, or
   // image drift eating frames.
   &--degradation {

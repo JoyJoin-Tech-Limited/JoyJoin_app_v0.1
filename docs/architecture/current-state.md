@@ -54,6 +54,7 @@ Use it together with:
 - **Returning mid-onboarding users are routed to the welcome-back screen** (`pages/onboarding/welcome-back/index`) instead of directly to `nextStep`. The landing page checks `shouldShowWelcomeBack()`: requires `nextStep !== 'discover'`, `features.restartOnboarding === true`, `restartsRemaining > 0`, and `joyjoin_welcome_back_seen` not set. This gives users context and an explicit restart option.
 - The welcome-back `seen` flag is reset after 7 days (`app.ts` `useLaunch` TTL heuristic) because WeChat storage persists across mini-program deletion. Without this, users who delete and re-enter would never see the welcome-back screen again.
 - Primary CTA navigation uses a **5s safety timeout** (`navigateWithLegalGate` in `LandingPage.tsx`) that resets the button loading state if `Taro.navigateTo` to the onboarding subpackage hangs (e.g., subpackage download stuck).
+- **Authenticated discover routing (2026-06-13):** Returning authenticated users whose `nextStep === 'discover'` are treated as a valid continue state. The primary CTA label shows `进入发现页` and routes directly to Discover (`Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.discover })`) instead of pushing them through onboarding again.
 
 Primary files:
 - `apps/user-client/src/features/onboarding/README.md`

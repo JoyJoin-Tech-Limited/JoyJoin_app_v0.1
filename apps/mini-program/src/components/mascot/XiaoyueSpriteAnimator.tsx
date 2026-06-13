@@ -88,8 +88,14 @@ interface SpriteFrameProps {
  * Animation is JS-driven (setInterval) to avoid dynamic-WXSS-keyframe issues
  * and to give exact per-frame control over timing, looping, and completion.
  */
+function spriteSrc(sheet: string, local = false) {
+  return local ? `/assets/mascot/${sheet}` : `${BASE_PATH}/${sheet}`
+}
+
 function SpriteFrame({ meta, size, autoPlay, onComplete, onError, staticFrame }: SpriteFrameProps) {
   const [currentFrame, setCurrentFrame] = useState(staticFrame ?? 0)
+  const [src, setSrc] = useState(() => spriteSrc(meta.sheet))
+  const [hasFailed, setHasFailed] = useState(false)
   const onCompleteRef = useRef(onComplete)
   useEffect(() => {
     onCompleteRef.current = onComplete
@@ -107,6 +113,24 @@ function SpriteFrame({ meta, size, autoPlay, onComplete, onError, staticFrame }:
   const imgH = Math.round(sheetHeight * scale)
   const translateX = Math.round(-(currentFrame * stride + padding) * scale)
   const translateY = Math.round(-padding * scale)
+
+  // Reset src when sheet changes (state transitions)
+  useEffect(() => {
+    setSrc(spriteSrc(meta.sheet))
+    setHasFailed(false)
+  }, [meta.sheet])
+
+  const handleImageError = () => {
+    if (!hasFailed) {
+      // CDN failed — try the locally bundled copy before giving up.
+      logWarn('[XiaoyueSpriteAnimator] CDN sprite failed, trying local fallback', { sheet })
+      setHasFailed(true)
+      setSrc(spriteSrc(meta.sheet, true))
+    } else {
+      // Local copy also failed — surface the failure to the parent.
+      onError?.()
+    }
+  }
 
   useEffect(() => {
     const initialFrame = staticFrame ?? 0
@@ -149,7 +173,7 @@ function SpriteFrame({ meta, size, autoPlay, onComplete, onError, staticFrame }:
   return (
     <View className='xiaoyue-sprite__frame-inner'>
       <Image
-        src={`${BASE_PATH}/${sheet}`}
+        src={src}
         mode='aspectFill'
         style={{
           width: `${imgW}rpx`,
@@ -160,7 +184,7 @@ function SpriteFrame({ meta, size, autoPlay, onComplete, onError, staticFrame }:
           transform: `translate(${translateX}rpx, ${translateY}rpx)`,
           willChange: 'transform',
         }}
-        onError={onError}
+        onError={handleImageError}
       />
     </View>
   )
@@ -222,31 +246,39 @@ export default function XiaoyueSpriteAnimator({
   // while the new frame fades in underneath. This eliminates the jarring
   // image swap that made static↔sprite transitions feel disconnected.
   const [exitMeta, setExitMeta] = useState<SpriteStateMeta | null>(null)
+  const [exitStaticFrame, setExitStaticFrame] = useState<number | undefined>(undefined)
   const [isFading, setIsFading] = useState(false)
   const prevStateRef = useRef(resolvedState)
   const prevMetaRef = useRef<SpriteStateMeta | null>(meta)
+  const prevStaticFrameRef = useRef(staticFrame)
 
   useEffect(() => {
     if (resolvedState !== prevStateRef.current) {
       const oldMeta = prevMetaRef.current
       if (oldMeta) {
-        // State changed — begin crossfade using the PREVIOUS meta as exit
+        // State changed — begin crossfade using the PREVIOUS meta and frame as exit.
+        // Capture the previous staticFrame so a per-state frame doesn't leak onto
+        // the old spritesheet during the fade-out.
         setExitMeta(oldMeta)
+        setExitStaticFrame(prevStaticFrameRef.current)
         setIsFading(true)
         const timer = setTimeout(() => {
           setExitMeta(null)
+          setExitStaticFrame(undefined)
           setIsFading(false)
         }, transitionMs)
-        // Update refs AFTER capturing exit meta so the next transition uses the correct source
+        // Update refs AFTER capturing exit state so the next transition uses the correct source
         prevStateRef.current = resolvedState
         prevMetaRef.current = meta
+        prevStaticFrameRef.current = staticFrame
         return () => clearTimeout(timer)
       }
       // No previous meta to crossfade from — just update refs
       prevStateRef.current = resolvedState
       prevMetaRef.current = meta
+      prevStaticFrameRef.current = staticFrame
     }
-  }, [resolvedState, meta, transitionMs])
+  }, [resolvedState, meta, transitionMs, staticFrame])
 
   // Increment playKey on state change to force remount and restart animation
   const [playKey, setPlayKey] = useState(0)
@@ -278,7 +310,7 @@ export default function XiaoyueSpriteAnimator({
           key={playKey}
           meta={meta}
           size={size}
-          autoPlay={autoPlay && !reducedMotion}
+          autoPlay={motionEnabled}
           staticFrame={staticFrame}
           onComplete={onComplete}
           onError={() => {
@@ -299,7 +331,7 @@ export default function XiaoyueSpriteAnimator({
             meta={exitMeta}
             size={size}
             autoPlay={motionEnabled}
-            staticFrame={staticFrame}
+            staticFrame={exitStaticFrame}
           />
         </View>
       )}

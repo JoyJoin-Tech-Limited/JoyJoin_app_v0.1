@@ -43,7 +43,7 @@ src/
 │   ├── connections/     # Tab 2: "连接" — matched group & social connections
 │   ├── profile/         # Tab 3: "我的" — user profile & settings
 │   ├── center-hub/      # Tab 4 (center): "进行中" — dynamic hub for active events, pending registrations, and empty state
-│   ├── index/           # Landing / splash page (cold entry). Renders `AutoLoginBridge` silent re-auth; unified redirect effect routes authenticated users → `nextStep` and guests with incomplete anonymous assessment → personality test. 5s navigation safety timeout prevents stuck CTA on subpackage download hang.
+│   ├── index/           # Landing / splash page (cold entry). Renders `AutoLoginBridge` silent re-auth; unified redirect effect routes authenticated users → `nextStep` and guests with incomplete anonymous assessment → personality test. Continue-mode CTA shows context-aware labels (`进入发现页` / `继续完善档案` / `继续完成测试`). Returning authenticated users with `nextStep='discover'` route to the Discover tab. `useResetOnShow` clears the navigation loading state on swipe-back/foreground so the CTA never stays stuck on the ellipsis spinner. 5s navigation safety timeout prevents stuck CTA on subpackage download hang.
 │   ├── login/           # WeChat login entry for returning users
 │   ├── onboarding/      # Subpackage: onboarding flow
 │   ├── blind-box-payment/
@@ -63,12 +63,14 @@ src/
 │   ├── ui/              # BrandLogo, Button, Card, StatusCard, JoyJoinIcon, Chip, SegmentedProgress, TraitRadarChart, etc.
 │   ├── profile/         # Profile-specific components (ProfileArchetypeHero, InterestChipCloud, ProfessionDisplayField)
 │   ├── landing/         # Landing-page-specific components (BondingCloud)
+│   ├── mascot/          # XiaoyueSpriteAnimator, XiaoyueChatBubble, XiaoyueEmptyState, etc.
 │   ├── discover/        # Discover feed components (OracleCard, CompatibilityIndicator, EcosystemBar)
 │   └── ContentBlockedError.tsx  # Inline field error for sensitive-word violations; field-aware hints, tap-to-dismiss, haptics, aria-live, reduced-motion. Used in edit-profile and onboarding essential-data forms.
 ├── hooks/               # Custom React hooks
 │   ├── useStaggerMount.ts   # Single RAF mount trigger for CSS-staggered entrances
 │   ├── useResetOnShow.ts    # Resets transient navigation/submit flags on page re-show (swipe-back safety)
 │   ├── useUnload.ts         # Page unload lifecycle cleanup (timer leaks, refs, subscriptions)
+│   ├── useDeviceTier.ts     # Runtime device-capability tiering; Android uses benchmarkLevel, iOS falls back to model/system heuristics
 ├── lib/                 # Runtime helpers & business logic
 ├── providers/           # App-level React context providers
 ├── assets/              # Static assets (copied to dist/assets)

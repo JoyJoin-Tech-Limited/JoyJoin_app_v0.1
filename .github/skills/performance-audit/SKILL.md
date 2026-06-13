@@ -61,7 +61,7 @@ Run after every implementation touching `apps/mini-program` to audit six perform
 
 - **"It feels fine on my iPhone 15 Pro"** → That's not an audit. Run on representative Gen Z devices
   (Xiaomi 13/14, OPPO Reno, vivo X series, Huawei Pura 70). If no device available,
-  use benchmarkLevel ≤ 30 in WeChat DevTools.
+  use benchmarkLevel ≤ 15 in WeChat DevTools (or test the iOS model heuristics in `apps/mini-program/src/hooks/useDeviceTier.ts`).
 - **"The dimension score is subjective"** → Tie every score to `references/dimensions.md` rubrics.
   Scores must cite specific evidence (profile trace, bundle size, cold-start measurement).
 - **Grill-me stalls** → If the implementer gives one-word answers, expand with concrete

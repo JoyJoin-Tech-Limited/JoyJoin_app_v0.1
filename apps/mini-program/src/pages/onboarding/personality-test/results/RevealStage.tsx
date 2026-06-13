@@ -20,7 +20,10 @@ export default function RevealStage({ displayArchetypeName, displayAsset, visual
         {phaseText || '最后一点火花亮起之后，就会进入完整的结果页。'}
       </Text>
 
-      <View className='personality-results__reveal-orb' style={{ '--orb-accent': visual.accent } as React.CSSProperties}>
+      <View
+        className='personality-results__reveal-orb'
+        style={{ background: `radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.98) 0%, ${visual.accent} 58%, rgba(255, 255, 255, 0.12) 100%)` }}
+      >
         <View className='personality-results__reveal-glow' style={{ background: visual.accent }} />
         <Image
           className={`personality-results__reveal-image personality-results__reveal-image--${revealPhase}`}

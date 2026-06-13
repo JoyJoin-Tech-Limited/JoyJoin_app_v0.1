@@ -172,7 +172,6 @@ export default function PersonalityTestResultsPage() {
   const runIdRef = useRef(0)
   const resultStateRef = useRef<ResolvedResultState | null>(initialResolvedResult)
   const didTrackCompletionRef = useRef(false)
-  const abortControllerRef = useRef<AbortController | null>(null)
   const timeoutHandlesRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const degradationTierRef = useRef<DegradationTier>('full')
   const isAnimatingRef = useRef(false)
@@ -200,11 +199,8 @@ export default function PersonalityTestResultsPage() {
       // Bulk-clear all pending timeouts
       timeoutHandlesRef.current.forEach((handle) => clearTimeout(handle))
       timeoutHandlesRef.current = []
-      // Abort any in-flight fetch
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-        abortControllerRef.current = null
-      }
+      // Note: in-flight fetches use apiRequest's internal timeout; Taro.request
+      // does not support AbortSignal, so we do not maintain an abort controller.
     }
   }, [])
 
@@ -447,13 +443,13 @@ export default function PersonalityTestResultsPage() {
 
     setIsFetchingResult(true)
 
-    // Create new AbortController for this fetch
-    abortControllerRef.current?.abort()
-    const controller = new AbortController()
-    abortControllerRef.current = controller
-
-    // 8s request-level timeout
-    const timeoutId = setTimeout(() => controller.abort(), 8000)
+    // 8s request-level timeout. apiRequest handles timeout internally;
+    // AbortController is not wired into Taro.request, so we rely on the
+    // explicit timeout option instead of a no-op signal.
+    const timeoutId = setTimeout(() => {
+      // Placeholder: in-flight request will time out via apiRequest/executeMiniProgramRequest.
+      // We do not attempt to abort because Taro.request does not consume AbortSignal.
+    }, 8000)
     timeoutHandlesRef.current.push(timeoutId)
 
     try {
@@ -464,8 +460,7 @@ export default function PersonalityTestResultsPage() {
         topArchetypes?: AnonymousAssessmentTopMatch[]
       }>({
         path: `/api/assessment/v4/${encodeURIComponent(latestSnapshot.sessionId)}/result`,
-        // @ts-expect-error - apiRequest may not expose signal yet; handled gracefully
-        signal: controller.signal,
+        timeout: 8000,
       })
 
       clearTimeout(timeoutId)
@@ -1283,14 +1278,14 @@ export default function PersonalityTestResultsPage() {
       const accentColor = selectedVariant?.accentColor ?? (visual.accent || '#8B5CF6')
       const accentSoft = selectedVariant?.accentSoft ?? visual.accentSoft
 
-      // Canvas drawImage prefers a network URL or temp file path. Order
-      // matters: prefer the bundled subpackage WebP (always on-device),
-      // then the CDN WebP, then the CDN PNG. The subpackage path
-      // (/pages/onboarding/assets/...) is bundled in dist and survives
-      // dev environments where the CDN isn't configured; the canvas can
-      // read it via getImageInfo on current WeChat base library versions.
+      // Canvas drawImage requires a network-resolvable URL. The local
+      // subpackage path (/pages/onboarding/assets/...) works for <Image>
+      // preloading but is not guaranteed to resolve inside canvas. Prefer
+      // the CDN asset for canvas drawing; fall back to the local bundled
+      // path only when the CDN asset is missing.
       // `displayAsset` is the subpackage local WebP; `visual.asset` is
       // the CDN/main-package path.
+      const canvasArchetypeAsset = visual.asset || displayAsset
       const posterInput: PersonalitySharePosterInput = {
         archetype: displayArchetypeName,
         nickname: cardNickname || visual.nickname || displayArchetypeName,
@@ -1299,7 +1294,7 @@ export default function PersonalityTestResultsPage() {
         shareLine,
         accentColor,
         accentSoft,
-        archetypeAsset: displayAsset || visual.asset,
+        archetypeAsset: canvasArchetypeAsset,
         archetypeAssetPng: visual.assetPng,
         confidenceLabel: typicalityLabel ? `${typicalityLabel.prefix}${typicalityLabel.name}` : undefined,
         rarityLabel:
@@ -1336,7 +1331,7 @@ export default function PersonalityTestResultsPage() {
           tagline: visual.tagline || visual.description || summary,
           shareLine,
           rarityPercentage: typeof visual.rarityPercentage === 'number' ? visual.rarityPercentage : 0,
-          archetypeAsset: displayAsset || visual.asset,
+          archetypeAsset: canvasArchetypeAsset,
           archetypeAssetPng: visual.assetPng,
           traitEntries: traitEntries.slice(0, 3).map(({ label, value }) => ({ label, value })),
           energyLevel,

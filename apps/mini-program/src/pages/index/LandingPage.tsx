@@ -8,6 +8,7 @@ import BrandLogo from "../../components/ui/BrandLogo"
 import BondingCloud from "../../components/landing/BondingCloud"
 import PhaseIconCarousel from "../../components/landing/PhaseIconCarousel"
 import { useStaggerMount } from "../../hooks/useStaggerMount"
+import { useDeviceTier } from "../../hooks/useDeviceTier"
 import { runMiniProgramRouteTransition, navigateToMiniProgramNextStep } from "../../lib/onboarding/onboardingNavigation"
 import { MINI_PROGRAM_ROUTES } from "../../lib/onboarding/onboardingRoutes"
 import { useWeChatLogin } from "../../hooks/auth/useWeChatLogin"
@@ -74,6 +75,7 @@ export default function MiniProgramLandingPage({
   const { handleWeChatLogin, isLoggingIn } = useWeChatLogin({
     referralCode: invitationCode || undefined,
   })
+  const deviceTier = useDeviceTier()
   const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const navSafetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -106,8 +108,17 @@ export default function MiniProgramLandingPage({
     }
   }
 
-  const isContinueMode = hasIncompleteSession || (!!userNextStep && userNextStep !== 'discover')
-  const ctaLabel = isContinueMode ? '继续创建账户' : '测测我的社交氛围'
+  // For authenticated returning users, any server-driven nextStep (including
+  // 'discover') means they should continue rather than restart onboarding.
+  // Guests only enter continue mode when they have an incomplete anonymous
+  // session or an unfinished onboarding nextStep before discover.
+  const isContinueMode = hasIncompleteSession || !!userNextStep
+  const ctaLabel = useMemo(() => {
+    if (!isContinueMode) return '测测我的社交氛围'
+    if (userNextStep === 'discover') return '进入发现页'
+    if (userNextStep) return '继续完善档案'
+    return '继续完成测试'
+  }, [isContinueMode, userNextStep])
   const ctaDisabledClass = hasAcceptedLegal ? "" : " landing-page__cta--disabled"
   const ctaHoverClass = hasAcceptedLegal ? "landing-page__cta-hover" : ""
   const pageClassName = ["landing-page", isPageExiting ? "landing-page--exiting" : ""]
@@ -134,7 +145,7 @@ export default function MiniProgramLandingPage({
           beforeNavigate: () => setIsPageExiting(true),
           delayMs: 180,
         })
-        await Taro.navigateTo({ url })
+        await Taro.redirectTo({ url })
       } catch (err) {
         setIsPageExiting(false)
         logWarn('[LandingPage] Navigation failed', {
@@ -211,7 +222,7 @@ export default function MiniProgramLandingPage({
             <View className="game-preview__title-star game-preview__title-star--br">✦</View>
             <Text>氛围引擎 · 10+ 种玩法随局定制</Text>
           </View>
-          {reduceMotion ? (
+          {reduceMotion || deviceTier.isDegradation ? (
             <View className="game-preview__grid">
               {[
                 { phase: 'topic-card' as const, label: '话题卡' },
@@ -238,18 +249,10 @@ export default function MiniProgramLandingPage({
                     />
                   ) : (
                     <View
-                      className="game-preview__cell-icon"
-                      style={{
-                        width: '112rpx',
-                        height: '112rpx',
-                        borderRadius: '24rpx',
-                        background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
+                      className="game-preview__cell-icon game-preview__cell-icon--fallback"
+                      aria-hidden="true"
                     >
-                      <Text style={{ fontSize: '48rpx' }}>🎲</Text>
+                      <Text className="game-preview__cell-fallback-text">{game.label[0]}</Text>
                     </View>
                   )}
                   <Text className="game-preview__cell-label">{game.label}</Text>
@@ -292,23 +295,20 @@ export default function MiniProgramLandingPage({
               return
             }
             hapticLight()
-            if (isContinueMode) {
+            if (isContinueMode && userNextStep) {
               // Returning from onboarding: resume where they left off.
-              // Authenticated users use their server nextStep; guests fall back
-              // to the personality test subpackage.
-              if (userNextStep && userNextStep !== 'discover') {
-                void navigateToMiniProgramNextStep(userNextStep, { mode: 'root' }).catch((err) => {
-                  logWarn('[LandingPage] Continue to nextStep failed', {
+              // Authenticated users use their server nextStep (including discover).
+              setIsPageExiting(true)
+              void navigateToMiniProgramNextStep(userNextStep, { mode: 'root' })
+                .catch((err) => {
+                  logWarn('[LandingPage] Continue to nextStep failed; falling back to personality test', {
                     nextStep: userNextStep,
                     error: err instanceof Error ? err.message : String(err),
                   })
-                  setIsPageExiting(false)
+                  navigateWithLegalGate(MINI_PROGRAM_ROUTES.personalityTest)
                 })
-              } else {
-                navigateWithLegalGate(MINI_PROGRAM_ROUTES.personalityTest)
-              }
             } else {
-              navigateWithLegalGate("/pages/onboarding/personality-test/index")
+              navigateWithLegalGate(MINI_PROGRAM_ROUTES.personalityTest)
             }
           }}
         >

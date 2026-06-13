@@ -34,13 +34,13 @@ export interface ProfessionChatOverlayProps {
 }
 
 const OPENING_MESSAGES_GENERIC: readonly string[] = [
-  '好奇！你现在主要从事哪个行业或岗位呀？',
-  '比如产品经理、设计师、教师、自由职业……说得越具体，悦仔越能帮你找到聊得来的人～',
+  '先好奇一下：你平时做什么工作呀？',
+  '设计师、产品经理、教师、自由职业都可以说。越具体，悦仔越能帮你挑到聊得来的局。',
 ]
 
 const OPENING_MESSAGES_ARCHETYPE = (archetypeName: string): readonly string[] => [
-  `像你这样的${archetypeName}，平时主要从事哪个行业或岗位呀？`,
-  '比如产品经理、设计师、教师、自由职业……说得越具体，悦仔越能帮你找到聊得来的人～',
+  `作为「${archetypeName}」的你，平时做什么工作呀？`,
+  '设计师、产品经理、教师、自由职业都可以说。越具体，悦仔越能帮你挑到聊得来的局。',
 ]
 
 const SKIP_RESPONSE_GENERIC = '好呀，那我们先跳过这题～等你想说了，随时可以在个人主页里补充'
@@ -334,6 +334,18 @@ export default function ProfessionChatOverlay({
   }, [])
   const analytics = useOnboardingAnalytics('essential-data', { enabled: true, autoTrackStart: false })
   const deviceTier = useDeviceTier()
+  const reduceMotion = useMemo(() => {
+    try {
+      const mq = (Taro.getApp() as any).config?.window?.prefersReducedMotion
+      if (mq != null) return !!mq
+    } catch { /* ignore */ }
+    try {
+      const info = Taro.getSystemInfoSync()
+      return !!(info as any).reduceMotion
+    } catch {
+      return false
+    }
+  }, [])
   const [isOnline, setIsOnline] = useState(true)
   const isSubmittingRef = useRef(isSubmitting)
   useEffect(() => { isSubmittingRef.current = isSubmitting }, [isSubmitting])
@@ -678,7 +690,7 @@ export default function ProfessionChatOverlay({
       setIsSubmitting(false)
       setScrollTrigger((c) => c + 1)
     }, 600)
-  }, [inputValue, isSubmitting, isOnline, hasSent, analytics])
+  }, [inputValue, isOnline, hasSent, analytics])
 
   const handleSend = useCallback(() => {
     if (smartProfession) {
@@ -782,6 +794,7 @@ export default function ProfessionChatOverlay({
       'profession-overlay',
       isClosing ? 'profession-overlay--closing' : '',
       deviceTier.isDegradation ? 'profession-overlay--low-end' : '',
+      reduceMotion ? 'profession-overlay--reduce-motion' : '',
     ].filter(Boolean).join(' ')}>
       <View className='profession-overlay__header'>
         <View className='profession-overlay__step-badge'>
@@ -936,7 +949,7 @@ export default function ProfessionChatOverlay({
 
       <View
         className='profession-overlay__input-bar'
-        style={{ bottom: `${keyboardHeight}px` }}
+        style={{ transform: `translateY(-${keyboardHeight}px)` }}
       >
         <Input
           className='profession-overlay__input'

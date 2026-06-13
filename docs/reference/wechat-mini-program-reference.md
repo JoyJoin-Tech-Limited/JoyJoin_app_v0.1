@@ -787,6 +787,15 @@ Setting `background-image: url('https://...')` in WXSS/Taro is historically flak
 - Use the `<Image>` component with an `overflow: hidden` container and `transform: translate()` for region crops.
 - See `apps/mini-program/src/components/icebreaker/ChallengeCardBgImage.tsx` and `apps/mini-program/src/components/mascot/ArchetypeSpritesheet.tsx` for the production pattern.
 
+### 8. CSS custom properties for dynamic values (2026-06-13)
+
+WeChat WKWebView/Taro support for CSS custom properties is inconsistent, especially when updated frequently for animation (e.g. slider badge position, per-frame transforms). Values may fail to apply or cause paint/composite overhead.
+
+**Workaround**:
+- Use inline `style` transforms for per-frame updates (e.g. `transform: translateX(...) scale(...)`).
+- Use SCSS tokens for static theming; compile-time values are safe.
+- If custom properties are required, restrict them to the native `cover-view` layer or to static values that do not change every frame.
+
 ## Testing
 
 ### WeChat Developer Tools

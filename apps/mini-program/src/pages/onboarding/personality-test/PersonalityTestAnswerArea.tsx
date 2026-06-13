@@ -184,12 +184,11 @@ function buildSliderBadgeStyle(
     to = lerpHex(centerTo, rightTo, local)
   }
 
-  // Use CSS custom properties for the transform so the browser can composite
-  // the layer cheaply without re-running React's style diff on every drag frame.
+  // Apply transform directly; avoid CSS custom properties because WeChat's
+  // base library handles them unreliably. The transform is GPU-composited.
   return {
     inner: {
-      ['--jj-slider-tx' as any]: reducedMotion ? undefined : `${drift}rpx`,
-      ['--jj-slider-scale' as any]: reducedMotion ? undefined : `${scale}`,
+      transform: reducedMotion ? undefined : `translateX(${drift}rpx) scale(${scale})`,
       background: `linear-gradient(135deg, ${from} 0%, ${to} 100%)`,
     } as React.CSSProperties,
     arrow: {

@@ -12,7 +12,7 @@
 Ask these when Smoothness < 8:
 
 **Q1 (smoke-test):** Did you profile scroll performance on a 120Hz device with 30+ list items?
-- Recommended: Yes, using WeChat DevTools Performance panel with benchmarkLevel ≤ 30. Frame timing shows ≤ 1 dropped frame per 100 scroll events.
+- Recommended: Yes, using WeChat DevTools Performance panel with benchmarkLevel ≤ 15 (active degradation threshold in `apps/mini-program/src/hooks/useDeviceTier.ts`). Frame timing shows ≤ 1 dropped frame per 100 scroll events.
 
 **Q2:** Are all animations using only `transform` and `opacity`? Any `width`, `height`, `left`, `top`, or `filter: blur()` in animated properties?
 - Recommended: Only compositor-friendly properties. Any `filter: blur()` must be behind a `prefers-reduced-motion` gate.
@@ -57,7 +57,7 @@ Ask these when Device Adaptability < 8:
 - Recommended: Yes. Tested on ≥2 devices: one Android (Snapdragon or MediaTek) + one iPhone (iPhone 15 or 16). Each platform has distinct WebView behavior.
 
 **Q2:** Does the implementation use `getSystemInfoSync().benchmarkLevel` to gate heavy features at runtime? What's the iPhone equivalent since iOS WeChat doesn't expose `benchmarkLevel`?
-- Recommended: Yes, benchmarkLevel on Android. On iPhone, use model name + system version heuristics (e.g., `systemInfo.model` + `systemInfo.system`). Document the fallback tier-detection path.
+- Recommended: Yes, benchmarkLevel on Android (≤ 15 = degradation). On iPhone, use the active model/system heuristic in `apps/mini-program/src/hooks/useDeviceTier.ts` (iPhone XR/XS/XS Max/SE 2/3 primary; old iPhone X/8/7/6/6s/first-gen SE or iOS <15 degradation). Document the fallback tier-detection path.
 
 **Q3:** Is `prefers-reduced-motion` respected for all entrance animations, staggered reveals, and particle effects?
 - Recommended: Yes. All animations check `prefers-reduced-motion` and fall back to instant reveal. CSS `@media (prefers-reduced-motion: reduce)` used alongside JS detection.
@@ -89,8 +89,8 @@ Ask these when Memory Safety < 8:
 **Q3:** Are large image arrays or data structures freed when no longer needed? Any retained references to unmounted component state?
 - Recommended: Yes. Image arrays cleared after draw. No `useRef` holding large objects after the view is unmounted.
 
-**Q4:** Did you profile memory across 5+ navigation cycles (enter → leave → enter → leave) on a Degradation tier device or benchmarkLevel ≥ 30 emulation?
-- Recommended: Yes. Memory returns to baseline after each cycle. No monotonic growth.
+**Q4:** Did you profile memory across 5+ navigation cycles (enter → leave → enter → leave) on a Degradation tier device or benchmarkLevel ≤ 15 emulation?
+- Recommended: Yes, on benchmarkLevel ≤ 15 emulation or an equivalent iOS degradation-tier device. Memory returns to baseline after each cycle. No monotonic growth.
 
 **Q5:** Are there any recursive or unbounded data structures (e.g., accumulating arrays in global state, unpruned query caches)?
 - Recommended: No. All accumulators have explicit size bounds or TTL-based eviction.

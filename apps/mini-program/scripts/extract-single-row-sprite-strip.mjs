@@ -49,9 +49,9 @@ const stateMeta = fs.existsSync(STATE_META_PATH)
   ? JSON.parse(fs.readFileSync(STATE_META_PATH, 'utf-8'))
   : {}
 
-const VERDICT_THRESHOLDS = { passJaccard: 0.85, warnJaccard: 0.70 }
+export const VERDICT_THRESHOLDS = { passJaccard: 0.85, warnJaccard: 0.70 }
 
-function getContentBBox(buffer, w, h) {
+export function getContentBBox(buffer, w, h) {
   let minX = w, minY = h, maxX = 0, maxY = 0
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -68,7 +68,7 @@ function getContentBBox(buffer, w, h) {
   return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 }
 }
 
-function stats(arr) {
+export function stats(arr) {
   const mean = arr.reduce((a, b) => a + b, 0) / arr.length
   const variance = arr.reduce((s, v) => s + (v - mean) ** 2, 0) / arr.length
   return {
@@ -79,7 +79,7 @@ function stats(arr) {
   }
 }
 
-function rectIntersectionArea(a, b) {
+export function rectIntersectionArea(a, b) {
   const ix1 = Math.max(a.x, b.x)
   const iy1 = Math.max(a.y, b.y)
   const ix2 = Math.min(a.x + a.w, b.x + b.w)
@@ -87,7 +87,7 @@ function rectIntersectionArea(a, b) {
   return Math.max(0, ix2 - ix1) * Math.max(0, iy2 - iy1)
 }
 
-function jaccard(a, b) {
+export function jaccard(a, b) {
   const inter = rectIntersectionArea(a, b)
   const union = a.w * a.h + b.w * b.h - inter
   return union > 0 ? inter / union : 0
@@ -351,7 +351,9 @@ async function main() {
   console.log(`\nNext: node scripts/generate-xiaoyue-spritesheet.mjs`)
 }
 
-main().catch(err => {
-  console.error(err)
-  process.exit(1)
-})
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  main().catch(err => {
+    console.error(err)
+    process.exit(1)
+  })
+}

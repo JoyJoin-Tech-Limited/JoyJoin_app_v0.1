@@ -33,8 +33,8 @@ export function resolveDeviceTier(info: SystemInfoLike): DeviceTierResult {
     typeof info.benchmarkLevel === 'number' ? info.benchmarkLevel : null
 
   // Android: benchmarkLevel is available. Scale is 1 (low) → 50 (high).
-  if (benchmarkLevel != null) {
-    const isDegradation = benchmarkLevel > 0 && benchmarkLevel <= LOW_END_BENCHMARK_LEVEL
+  if (benchmarkLevel != null && benchmarkLevel > 0) {
+    const isDegradation = benchmarkLevel <= LOW_END_BENCHMARK_LEVEL
     return {
       tier: isDegradation ? 'degradation' : 'primary',
       benchmarkLevel,
@@ -43,19 +43,35 @@ export function resolveDeviceTier(info: SystemInfoLike): DeviceTierResult {
     }
   }
 
-  // iOS: benchmarkLevel is NOT exposed — use model name + system version heuristics
+  // A value of 0 or missing benchmarkLevel means unsupported/unknown.
+  // Use model heuristics when a model is present; otherwise degrade safely.
+  if (benchmarkLevel === 0 && !info.model && !info.system) {
+    return {
+      tier: 'degradation',
+      benchmarkLevel: 0,
+      isPrimary: false,
+      isDegradation: true,
+    }
+  }
+
+  // iOS / unknown benchmarkLevel: use model name + system version heuristics
   const model = (info.model ?? '').toLowerCase()
   const system = (info.system ?? '').toLowerCase()
 
-  // iPhone XR and older, or iOS < 15
+  // iPhone X/8/7/6/SE (1st gen) and older → degradation.
+  // Exclude modern variants that share a prefix: XR, XS, SE2/SE3/2020/2022.
+  const isModernSE = /iphone\s*se.*(2|3|2020|2022|2nd|3rd)/i.test(model)
   const oldModel =
-    /iphone\s*(x|8|7|6|se)/.test(model) && !/iphone\s*xs|iphone\s*1[1-9]/.test(model)
+    /iphone\s*(x|8|7|6|6s|se)\b/.test(model) &&
+    !/iphone\s*(xr|xs|11|12|13|14|15|16)/.test(model) &&
+    !isModernSE
   const oldOS = system.startsWith('ios ') && parseFloat(system.replace('ios ', '')) < 15
 
   const isDegradation = oldModel || oldOS
   return {
     tier: isDegradation ? 'degradation' : 'primary',
-    benchmarkLevel: null,
+    // Preserve the original value (including 0) so callers can log it.
+    benchmarkLevel,
     isPrimary: !isDegradation,
     isDegradation,
   }

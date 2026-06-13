@@ -586,10 +586,11 @@ export default function PersonalityTestPage() {
       setPhase('testing')
     } catch (err) {
       setIsPageExiting(false)
-      const message = err instanceof Error ? err.message : '启动测试没成功，再试试'
+      const rawMessage = err instanceof Error ? err.message : String(err)
+      const message = getErrorMessage('load-failed')
       setError(message)
-      analytics.errorOccurred('start_failed', message)
-      logError('[PersonalityTest] Failed to start', { message })
+      analytics.errorOccurred('start_failed', rawMessage)
+      logError('[PersonalityTest] Failed to start', { rawMessage, userMessage: message })
     } finally {
       setIsSubmitting(false)
     }
@@ -762,10 +763,11 @@ export default function PersonalityTestPage() {
       }
     } catch (err) {
       setIsPageExiting(false)
-      const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
+      const rawMessage = err instanceof Error ? err.message : String(err)
+      const message = getErrorMessage('submit-failed')
       setError(message)
-      analytics.errorOccurred('answer_failed', message)
-      logError('[PersonalityTest] Failed to submit answer', { message })
+      analytics.errorOccurred('answer_failed', rawMessage)
+      logError('[PersonalityTest] Failed to submit answer', { rawMessage, userMessage: message })
       setSpriteState('idle')
     } finally {
       setIsSubmitting(false)
@@ -1105,10 +1107,11 @@ export default function PersonalityTestPage() {
       previousAnswerRef.current = null
       backReview.exitBackReview()
     } catch (err) {
-      const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
+      const rawMessage = err instanceof Error ? err.message : String(err)
+      const message = getErrorMessage('submit-failed')
       setError(message)
-      analytics.errorOccurred('back_review_confirm_failed', message)
-      logError('[PersonalityTest] Failed to confirm back review', { message })
+      analytics.errorOccurred('back_review_confirm_failed', rawMessage)
+      logError('[PersonalityTest] Failed to confirm back review', { rawMessage, userMessage: message })
       // Stay in back-review mode for retry (REL-02)
     } finally {
       setIsSubmitting(false)
@@ -1354,9 +1357,9 @@ export default function PersonalityTestPage() {
               <Button
                 variant='brand'
                 className='personality-test__start-btn'
-                onClick={() => { haptics('medium'); setPhase('intro') }}
+                onClick={() => { haptics('medium'); setPhase('testing') }}
               >
-                重新试试
+                返回重试
               </Button>
             </View>
           </View>
@@ -1510,7 +1513,9 @@ export default function PersonalityTestPage() {
                   autoPlay={mascotAutoPlay || resolvedMascotState !== 'idle'}
                   transitionMs={0}
                   className='personality-test__mascot-animator'
-                  staticFrame={0}
+                  // Freeze the mascot on passive question states so the user never
+                  // sees an eyes-closed/blink frame. Let reaction states animate.
+                  staticFrame={resolvedMascotState === 'idle' || resolvedMascotState === 'curious' ? 0 : undefined}
                 />
               </View>
               <View

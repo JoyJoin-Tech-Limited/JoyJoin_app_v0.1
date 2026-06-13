@@ -5,6 +5,11 @@ import { config } from 'dotenv';
 config({ path: path.resolve(__dirname, '../../.env') });
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@shared': path.resolve(__dirname, '../../packages/shared/src'),
+    },
+  },
   test: {
     globals: true,
     environment: 'node',
@@ -17,11 +22,6 @@ export default defineConfig({
     },
     env: {
       RUN_PLAN_TEMPLATES_ENABLED: 'false',
-    },
-  },
-  resolve: {
-    alias: {
-      '@shared': path.resolve(__dirname, '../../packages/shared/src'),
     },
   },
 });

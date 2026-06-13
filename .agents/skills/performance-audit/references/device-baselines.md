@@ -50,7 +50,7 @@ iPhone is **not** a secondary platform. ~20–30% of tier-1 city Gen Z use iPhon
 **iPhone-specific gotchas (not found on Android):**
 | Issue | Details |
 |-------|---------|
-| No `benchmarkLevel` | iOS WeChat does not expose `getSystemInfoSync().benchmarkLevel`. Device tier detection must use alternative heuristics (model name, system version, memory class). |
+| No `benchmarkLevel` | iOS WeChat does not expose `getSystemInfoSync().benchmarkLevel`. Active heuristic in `apps/mini-program/src/hooks/useDeviceTier.ts`: iPhone XR/XS/XS Max and iPhone SE 2/3 are primary; old iPhone X/8/7/6/6s/first-gen SE or iOS <15 are degradation. |
 | WKWebView `backdrop-filter` | `backdrop-filter: blur()` is notoriously slow on WKWebView. Prefer opaque backgrounds + separate blur layer. |
 | Safe area quirks | Dynamic Island + home indicator require `env(safe-area-inset-*)`. Test both portrait and landscape. |
 | `position: fixed` + keyboard | WKWebView handles fixed positioning differently when keyboard is open. Use `adjustPosition={false}` + manual padding. |

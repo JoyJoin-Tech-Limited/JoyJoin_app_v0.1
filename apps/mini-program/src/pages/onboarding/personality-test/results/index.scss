@@ -493,7 +493,7 @@ $color-skill-cool: #7c3aed;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.98) 0%, var(--orb-accent, rgba(255, 248, 232, 0.88)) 58%, rgba(255, 255, 255, 0.12) 100%);
+    background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.98) 0%, rgba(255, 248, 232, 0.88) 58%, rgba(255, 255, 255, 0.12) 100%);
     box-shadow: 0 26rpx 100rpx rgba(88, 57, 160, 0.16);
     margin: $spacing-md 0 $spacing-lg;
     animation: personality-results-orb-pulse 2.4s ease-in-out infinite;
@@ -513,7 +513,7 @@ $color-skill-cool: #7c3aed;
     z-index: 2;
     width: 300rpx;
     height: 300rpx;
-    transition: opacity 0.32s ease, transform 0.32s ease, filter 0.32s ease;
+    transition: opacity 0.32s ease, transform 0.32s ease;
 
     &--silhouette {
       opacity: 0.18;
@@ -1041,12 +1041,12 @@ $color-skill-cool: #7c3aed;
     min-height: $cta-min-tap;
     -webkit-tap-highlight-color: transparent;
     transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.15s ease;
-    box-shadow: 0 4rpx 16rpx var(--cta-shadow, rgba($color-primary, 0.2));
+    box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.2);
 
     &:active,
     &--active {
       transform: scale(0.97);
-      box-shadow: 0 2rpx 8rpx var(--cta-shadow, rgba($color-primary, 0.15));
+      box-shadow: 0 2rpx 8rpx rgba($color-primary, 0.15);
     }
   }
 

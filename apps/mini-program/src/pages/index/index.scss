@@ -17,12 +17,12 @@
 .landing-page--exiting .brand-mark {
   opacity: 0;
   transform: translateY(-10rpx) scale(0.92);
-  transition: all 0.18s ease-in;
+  transition: opacity 0.18s ease-in, transform 0.18s ease-in;
 }
 .landing-page--exiting .hero-zone {
   opacity: 0;
   transform: translateY(10rpx);
-  transition: all 0.18s ease-in;
+  transition: opacity 0.18s ease-in, transform 0.18s ease-in;
 }
 .landing-page--exiting .bonding-cloud-wrap {
   opacity: 0;
@@ -31,12 +31,12 @@
 .landing-page--exiting .game-preview {
   opacity: 0;
   transform: translateY(10rpx);
-  transition: all 0.18s ease-in;
+  transition: opacity 0.18s ease-in, transform 0.18s ease-in;
 }
 .landing-page--exiting .bottom-zone {
   opacity: 0;
   transform: translateY(10rpx);
-  transition: all 0.18s ease-in;
+  transition: opacity 0.18s ease-in, transform 0.18s ease-in;
 }
 
 /* ── Content Zone ──────────────────────────────────────────────────── */
@@ -217,6 +217,23 @@
 .game-preview__cell-icon {
   background: transparent;
   border-radius: 50%;
+  width: 112rpx;
+  height: 112rpx;
+
+  &--fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 24rpx;
+    background: linear-gradient(135deg, rgba($color-primary, 0.12), rgba($color-primary, 0.22));
+  }
+}
+
+.game-preview__cell-fallback-text {
+  font-size: 48rpx;
+  color: $color-primary;
+  font-weight: $font-weight-semibold;
+  line-height: 1;
 }
 
 .game-preview__cell-label {
@@ -305,14 +322,28 @@
 }
 
 .landing-page__legal-checkbox {
-  width: 48rpx;
-  height: 48rpx;
-  border: 2rpx solid rgba($color-text-primary-warm, 0.28);
-  border-radius: 10rpx;
+  width: 88rpx;
+  height: 88rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  // Invisible 88rpx hit area; visual checkbox is rendered by the inner pseudo-state.
+
+  &::before {
+    content: '';
+    width: 48rpx;
+    height: 48rpx;
+    border: 2rpx solid rgba($color-text-primary-warm, 0.28);
+    border-radius: 10rpx;
+    box-sizing: border-box;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  &--checked::before {
+    background: $color-primary;
+    border-color: $color-primary;
+  }
 }
 
 .landing-page__legal-checkbox:focus-visible {
@@ -320,15 +351,15 @@
   outline-offset: 2rpx;
 }
 
-.landing-page__legal-checkbox--checked {
-  background: $color-primary;
-  border-color: $color-primary;
-}
-
 .landing-page__legal-checkbox-icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   font-size: 24rpx;
   color: $color-text-white;
   font-weight: 600;
+  pointer-events: none;
 }
 
 .landing-page__legal-text {
@@ -337,6 +368,9 @@
   font-size: 24rpx;
   color: rgba($color-text-primary-warm, 0.55);
   line-height: 1.5;
+  // Ensure the text row is also tappable as part of the legal agreement.
+  min-height: 88rpx;
+  align-items: center;
 }
 
 .landing-page__legal-link {
@@ -573,7 +607,7 @@
   width: 100%;
   height: 100%;
   border-radius: 24rpx;
-  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+  background: linear-gradient(135deg, $color-bg-tint-purple 0%, $color-primary-light 100%);
   display: flex;
   align-items: center;
   justify-content: center;

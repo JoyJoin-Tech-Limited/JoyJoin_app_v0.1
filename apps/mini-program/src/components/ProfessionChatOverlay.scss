@@ -205,8 +205,10 @@
     background: $color-surface;
     border-top: 2rpx solid rgba($color-text-primary, 0.04);
     @include safe-area-inline($container-padding);
-    // Smooth slide when the keyboard height changes.
-    transition: bottom 0.15s ease-out;
+    // Use transform for the keyboard-aware slide so we stay on the compositor
+    // and avoid layout thrashing on every keyboard frame.
+    transform: translateY(0);
+    transition: transform 0.15s ease-out;
   }
 
   &__input {
@@ -744,6 +746,14 @@
     animation: none;
     opacity: 1;
   }
+
+  .profession-overlay__typing-label,
+  .profession-overlay__tag-feedback,
+  .profession-overlay__offline-banner,
+  .profession-overlay__max-send-hint {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -762,6 +772,15 @@
   .profession-overlay__typing-dot {
     animation: none;
     opacity: 0.5;
+  }
+
+  .profession-overlay__typing-label,
+  .profession-overlay__tag-feedback,
+  .profession-overlay__offline-banner,
+  .profession-overlay__max-send-hint,
+  .profession-overlay__short-hint {
+    animation: none;
+    opacity: 1;
   }
 
   .profession-overlay__reveal-card {
@@ -789,9 +808,68 @@
     animation: none;
     opacity: 0;
   }
+}
 
-  .profession-overlay__short-hint {
+/* Reduced-motion gating: mirrors low-end behavior so WeChat users who enabled
+   system reduced motion get instant, non-animated renders even when the CSS
+   media query is not supported by the runtime. */
+.profession-overlay--reduce-motion {
+  animation: none;
+  opacity: 1;
+  transform: none;
+
+  .profession-overlay__message {
     animation: none;
     opacity: 1;
+    transform: none;
+    will-change: auto;
+  }
+
+  .profession-overlay__reveal-card {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .profession-overlay__reveal-tag-wrap {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .profession-overlay__celebration {
+    display: none;
+  }
+
+  .profession-overlay__reveal-checkmark {
+    animation: none;
+    opacity: 1;
+  }
+
+  .profession-overlay__reveal-mascot {
+    opacity: 1;
+  }
+
+  .profession-overlay__typing-dot {
+    animation: none;
+    opacity: 0.5;
+  }
+
+  .profession-overlay__sparkle {
+    animation: none;
+    opacity: 0;
+  }
+
+  .profession-overlay__short-hint,
+  .profession-overlay__typing-label,
+  .profession-overlay__tag-feedback,
+  .profession-overlay__offline-banner,
+  .profession-overlay__max-send-hint {
+    animation: none;
+    opacity: 1;
+  }
+
+  .profession-overlay__input-bar {
+    transition: none;
   }
 }

@@ -15,7 +15,7 @@ How the screen *feels* during interaction. Measures frame consistency, not raw s
 **Evidence required:**
 - WeChat DevTools Performance panel trace (≥3 interactions)
 - Frame timing data for entrance/exit animations
-- Scroll jank measurement on Primary tier device or benchmarkLevel ≤ 30 emulation
+- Scroll jank measurement on Primary tier device or benchmarkLevel ≤ 15 emulation (active threshold in `apps/mini-program/src/hooks/useDeviceTier.ts`)
 
 **Common killers:**
 - `filter: blur()` on animated elements
@@ -67,7 +67,7 @@ Behavior across representative Gen Z devices. Primary tier is the target; Degrad
 
 **Evidence required:**
 - Test on ≥2 representative Primary tier devices (mix of Xiaomi, OPPO, vivo, Huawei **+ at least 1 iPhone**)
-- Test on ≥1 Degradation tier device or benchmarkLevel ≥ 30 emulation
+- Test on ≥1 Degradation tier device or benchmarkLevel ≤ 15 emulation
 - `prefers-reduced-motion` detection for animation gating
 - `getSystemInfoSync().benchmarkLevel` usage on Android; model-based tier detection on iPhone (no benchmarkLevel)
 - Verify `env(safe-area-inset-*)` handling on iPhone with notch / Dynamic Island
@@ -108,7 +108,7 @@ Risk of WeChat mini-program memory kill or canvas crash on real devices.
 **Evidence required:**
 - Canvas DPR cap check (max 3×, see personality card sharing rules)
 - `onUnload` / `useUnload` cleanup audit for subscriptions, timers, image refs
-- Memory profile on Degradation tier device or benchmarkLevel ≥ 30
+- Memory profile on Degradation tier device or benchmarkLevel ≤ 15 emulation
 
 **Common killers:**
 - Canvas export at `systemInfo.pixelRatio` (can be 3.5×) without cap

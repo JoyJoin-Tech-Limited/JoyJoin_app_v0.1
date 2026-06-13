@@ -20,6 +20,8 @@ JoyJoin uses a **tiered device baseline** rather than a single lowest-common-den
 
 Frontend work should **optimize for the Primary tier** and maintain a **graceful degradation path** for the Degradation tier. Do not let the Degradation tier dictate the ceiling for the Primary tier.
 
+> **Runtime tier detection (2026-06-13):** `apps/mini-program/src/hooks/useDeviceTier.ts` uses `benchmarkLevel` on Android (`<= 15` = degradation) and falls back to iOS model/system heuristics when `benchmarkLevel` is unavailable. iPhone XR/XS/XS Max and iPhone SE 2/3 are classified as primary; old iPhone X/8/7/6/6s and first-gen SE, or iOS <15, are degradation.
+
 ## 性能预算
 
 | 指标 | Primary tier 目标 | Degradation tier 目标 | 说明 |

@@ -29,7 +29,7 @@ When in doubt, treat as Full. A padding change that affects visual hierarchy = F
 Before push on Routine changes:
 1. [ ] Spacing consistent with sibling screens? (eyeball)
 2. [ ] Color from token, not hex literal?
-3. [ ] No browser-only APIs (`window.*`, `vh`)?
+3. [ ] No browser-only APIs (`window.*`, `vh`) or dynamic CSS custom properties for per-frame values?
 4. [ ] Press/hover feedback on interactive elements?
 5. [ ] Layout on smallest target device?
 ## When to use this skill
@@ -79,7 +79,7 @@ For Full-tier changes. Routine changes use the quick check above.
 - [ ] **WeChat DevTools:** computed layout/typography verified on changed screens (attach screenshots or selector notes in PR)
 - [ ] Clear JoyJoin visual direction; no generic AI aesthetics
 - [ ] Brand colours, typography, spacing, and mascot usage follow `joyjoin-brand-guidelines`
-- [ ] Taro-native primitives and WXSS-safe patterns used (no browser-first assumptions)
+- [ ] Taro-native primitives and WXSS-safe patterns used (no browser-first assumptions; no dynamic CSS custom properties for per-frame values — use inline `style` transforms or SCSS tokens)
 - [ ] Rich content uses `RichText` or structured Taro nodes — not `dangerouslySetInnerHTML`
 - [ ] Flex-first layout; cross-end portability considered where selectors matter
 - [ ] Large lists use `CustomWrapper` / `VirtualList` or profiled approach

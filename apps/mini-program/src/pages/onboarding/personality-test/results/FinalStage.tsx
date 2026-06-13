@@ -258,13 +258,33 @@ export default function FinalStage({
   const currentIndex = getArchetypeIndex(displayArchetypeId)
   const allArchetypes = ARCHETYPE_CANONICAL_ORDER
 
+  // Score-tier colors for partner chemistry. Kept as a named map so the
+  // palette can be promoted to design-system tokens without scattering hex
+  // literals through the render tree.
+  const chemistryTierColors = useMemo(
+    () => ({
+      soul: '#ef4444',
+      harmony: '#f97316',
+      complement: '#8b5cf6',
+      potential: '#64748b',
+    }),
+    [],
+  )
+
   // Build partner data for detail sheet (memoized)
   const partnerData = useMemo(() => {
     return topMatches.slice(0, 3).map((match) => {
       const rawScore = Number(match.score)
       const displayScore = normalizeMatchScore(rawScore)
       const chemistryLabel = displayScore >= 85 ? '灵魂拍档' : displayScore >= 70 ? '默契搭档' : displayScore >= 55 ? '互补组合' : '潜力搭档'
-      const chemistryColor = displayScore >= 85 ? '#ef4444' : displayScore >= 70 ? '#f97316' : displayScore >= 55 ? '#8b5cf6' : '#64748b'
+      const chemistryColor =
+        displayScore >= 85
+          ? chemistryTierColors.soul
+          : displayScore >= 70
+            ? chemistryTierColors.harmony
+            : displayScore >= 55
+              ? chemistryTierColors.complement
+              : chemistryTierColors.potential
       const accent = getContrastSafeArchetypeColor(match.archetype)
       return {
         ...match,
@@ -274,7 +294,7 @@ export default function FinalStage({
         accent,
       }
     })
-  }, [topMatches])
+  }, [topMatches, chemistryTierColors])
 
   // Identify the dominant trait for the "你最强" highlight in the trait list.
   const topTraitKey = useMemo(() => {
@@ -393,8 +413,8 @@ export default function FinalStage({
                   className='personality-results__hero-xiaoyue-cta'
                   style={{
                     background: visual.accentStrong,
-                    '--cta-shadow': visual.accentGlow,
-                  } as React.CSSProperties}
+                    boxShadow: `0 4rpx 16rpx ${visual.accentGlow}`,
+                  }}
                   onClick={handleCardTap}
                   hoverClass='personality-results__hero-xiaoyue-cta--active'
                   role='button'
