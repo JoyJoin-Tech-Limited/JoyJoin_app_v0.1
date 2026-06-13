@@ -49,8 +49,7 @@
   &__aurora-orb {
     position: absolute;
     border-radius: 50%;
-    filter: blur(40rpx);
-    opacity: 0.55;
+    opacity: 0.65;
     animation: pool-registration-hero-aurora-drift 8s ease-in-out infinite;
 
     &--1 {
@@ -59,6 +58,7 @@
       top: -80rpx;
       right: -60rpx;
       background: rgba($color-primary, 0.35);
+      box-shadow: 0 0 40rpx 24rpx rgba($color-primary, 0.35);
       animation-duration: 10s;
     }
 
@@ -68,6 +68,7 @@
       bottom: -40rpx;
       left: -40rpx;
       background: rgba($color-secondary, 0.28);
+      box-shadow: 0 0 40rpx 24rpx rgba($color-secondary, 0.28);
       animation-duration: 12s;
       animation-delay: -3s;
     }
@@ -78,6 +79,7 @@
       top: 40%;
       left: 40%;
       background: rgba($color-primary-light, 0.6);
+      box-shadow: 0 0 40rpx 24rpx rgba($color-primary-light, 0.6);
       animation-duration: 9s;
       animation-delay: -5s;
     }

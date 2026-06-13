@@ -89,7 +89,7 @@ export default function PoolRegistrationHero({
 
         <View className='pool-registration-hero__meta-band'>
           {dateTimeLabel ? (
-            <View className='pool-registration-hero__meta-pill'>
+            <View className='pool-registration-hero__meta-pill' aria-label={`时间：${dateTimeLabel}`}>
               <Image
                 className='pool-registration-hero__meta-icon'
                 src={localAsset('/assets/icons/ui/icon-calendar.webp')}
@@ -99,7 +99,7 @@ export default function PoolRegistrationHero({
             </View>
           ) : null}
           {area ? (
-            <View className='pool-registration-hero__meta-pill'>
+            <View className='pool-registration-hero__meta-pill' aria-label={`地区：${area}`}>
               <Image
                 className='pool-registration-hero__meta-icon'
                 src={localAsset('/assets/icons/ui/icon-location.webp')}
@@ -109,7 +109,7 @@ export default function PoolRegistrationHero({
             </View>
           ) : null}
           {typeof price === 'number' && price > 0 ? (
-            <View className='pool-registration-hero__meta-pill'>
+            <View className='pool-registration-hero__meta-pill' aria-label={`报名费：${price} 元`}>
               <Text className='pool-registration-hero__meta-currency'>¥</Text>
               <Text className='pool-registration-hero__meta-text'>{price}</Text>
             </View>
