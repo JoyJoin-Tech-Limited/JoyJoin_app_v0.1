@@ -1,0 +1,175 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.xiaoyue-letter-card {
+  position: relative;
+  margin-bottom: $spacing-md;
+
+  &--hidden {
+    opacity: 0;
+    transform: translateY(20rpx);
+  }
+
+  &--enter {
+    opacity: 0;
+    transform: translateY(20rpx);
+    animation: xiaoyue-letter-card-enter 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: 0.12s;
+  }
+
+  &--visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  &__mascot-wrap {
+    position: absolute;
+    top: -44rpx;
+    left: $spacing-md;
+    z-index: 2;
+  }
+
+  &__paper {
+    position: relative;
+    @include card-premium;
+    padding: $spacing-lg;
+    padding-top: $spacing-xl;
+    background: linear-gradient(180deg, $color-surface 0%, rgba($color-bg-tint-warm, 0.6) 100%);
+    border: 2rpx solid rgba($color-primary, 0.08);
+    overflow: hidden;
+
+    &--loading {
+      padding-top: $spacing-lg;
+      min-height: 240rpx;
+      @include flex-center;
+    }
+  }
+
+  &__tail {
+    position: absolute;
+    top: -16rpx;
+    left: 68rpx;
+    width: 32rpx;
+    height: 32rpx;
+    background: $color-surface;
+    border-left: 2rpx solid rgba($color-primary, 0.08);
+    border-top: 2rpx solid rgba($color-primary, 0.08);
+    transform: rotate(45deg);
+  }
+
+  &__eyebrow {
+    display: block;
+    @include type-caption;
+    font-weight: $font-weight-semibold;
+    color: rgba($color-primary-dark, 0.82);
+    margin-bottom: $spacing-xs;
+  }
+
+  &__insight {
+    display: block;
+    @include type-subheading;
+    line-height: 1.6;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__promise {
+    display: block;
+    @include type-body;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+    margin-bottom: $spacing-md;
+  }
+
+  &__reasons {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-md;
+  }
+
+  &__trust-seal {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-pill;
+    background: rgba($color-success, 0.1);
+    border: 2rpx solid rgba($color-success, 0.18);
+    align-self: flex-start;
+  }
+
+  &__trust-check {
+    width: 18rpx;
+    height: 10rpx;
+    border-left: 4rpx solid $color-success;
+    border-bottom: 4rpx solid $color-success;
+    transform: rotate(-45deg);
+    flex-shrink: 0;
+  }
+
+  &__trust-text {
+    @include type-caption;
+    font-weight: $font-weight-semibold;
+    color: $color-success;
+  }
+
+  &__signoff {
+    display: block;
+    margin-top: $spacing-md;
+    text-align: right;
+    @include type-caption;
+    color: $color-text-muted;
+  }
+
+  &__skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    width: 100%;
+  }
+
+  &__skeleton-line {
+    height: 24rpx;
+    border-radius: 8rpx;
+    background: $color-divider;
+    animation: xiaoyue-letter-card-shimmer 1.5s ease-in-out infinite;
+
+    &--long { width: 100%; }
+    &--medium { width: 72%; }
+    &--short { width: 44%; }
+  }
+}
+
+@keyframes xiaoyue-letter-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes xiaoyue-letter-card-shimmer {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xiaoyue-letter-card--enter {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .xiaoyue-letter-card__skeleton-line {
+    animation: none;
+    opacity: 0.45;
+  }
+}

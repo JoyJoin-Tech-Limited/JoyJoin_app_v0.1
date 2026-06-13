@@ -1,0 +1,292 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.pool-registration-hero {
+  margin-bottom: $spacing-md;
+  border-radius: $card-radius;
+  overflow: hidden;
+  background: $color-surface;
+  box-shadow: $shadow-md;
+  contain: layout style;
+
+  &--hidden {
+    opacity: 0;
+    transform: translateY(24rpx) scale(0.985);
+  }
+
+  &--enter {
+    opacity: 0;
+    transform: translateY(24rpx) scale(0.985);
+    animation: pool-registration-hero-enter 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  &--visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  &__frame {
+    position: relative;
+    width: 100%;
+    height: 560rpx;
+    overflow: hidden;
+  }
+
+  &__image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__aurora {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba($color-primary-light, 0.9) 0%, rgba($color-secondary, 0.18) 100%);
+    overflow: hidden;
+  }
+
+  &__aurora-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(40rpx);
+    opacity: 0.55;
+    animation: pool-registration-hero-aurora-drift 8s ease-in-out infinite;
+
+    &--1 {
+      width: 320rpx;
+      height: 320rpx;
+      top: -80rpx;
+      right: -60rpx;
+      background: rgba($color-primary, 0.35);
+      animation-duration: 10s;
+    }
+
+    &--2 {
+      width: 260rpx;
+      height: 260rpx;
+      bottom: -40rpx;
+      left: -40rpx;
+      background: rgba($color-secondary, 0.28);
+      animation-duration: 12s;
+      animation-delay: -3s;
+    }
+
+    &--3 {
+      width: 180rpx;
+      height: 180rpx;
+      top: 40%;
+      left: 40%;
+      background: rgba($color-primary-light, 0.6);
+      animation-duration: 9s;
+      animation-delay: -5s;
+    }
+  }
+
+  &__scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0) 0%,
+      rgba(0, 0, 0, 0) 40%,
+      rgba(0, 0, 0, 0.12) 72%,
+      rgba(0, 0, 0, 0.32) 100%
+    );
+    pointer-events: none;
+  }
+
+  &__badge {
+    position: absolute;
+    top: $spacing-md;
+    left: $spacing-md;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.92);
+    border: 2rpx solid rgba($color-primary, 0.12);
+    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
+  }
+
+  &__badge-text {
+    @include type-caption;
+    font-weight: $font-weight-bold;
+    color: $color-primary-dark;
+  }
+
+  &__meta-band {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $spacing-xs;
+    row-gap: $spacing-xs;
+    padding: $spacing-md;
+  }
+
+  &__meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-width: 0;
+    max-width: 260rpx;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.9);
+    border: 2rpx solid rgba($color-surface, 0.5);
+    box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.08);
+  }
+
+  &__meta-icon {
+    width: 26rpx;
+    height: 26rpx;
+    flex-shrink: 0;
+  }
+
+  &__meta-currency {
+    @include type-caption;
+    font-weight: $font-weight-bold;
+    color: $color-primary-dark;
+  }
+
+  &__meta-text {
+    @include type-caption;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__seats {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-left: auto;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.9);
+    border: 2rpx solid rgba($color-surface, 0.5);
+    box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.08);
+  }
+
+  &__seats-heads {
+    display: flex;
+    align-items: center;
+  }
+
+  &__seat-head {
+    @include flex-center;
+    width: 48rpx;
+    height: 48rpx;
+    border-radius: 50%;
+    border: 2rpx solid;
+    margin-left: -22rpx;
+    overflow: hidden;
+    box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.08);
+    opacity: 0;
+    transform: scale(0);
+
+    .pool-registration-hero--enter & {
+      animation: pool-registration-hero-seat-pop 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .pool-registration-hero--visible & {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    &--delay-0 { animation-delay: 0.2s; }
+    &--delay-1 { animation-delay: 0.28s; }
+    &--delay-2 { animation-delay: 0.36s; }
+    &--delay-3 { animation-delay: 0.44s; }
+    &--delay-4 { animation-delay: 0.52s; }
+
+    &:first-child {
+      margin-left: 0;
+    }
+  }
+
+  &__seat-overflow {
+    @include flex-center;
+    width: 48rpx;
+    height: 48rpx;
+    border-radius: 50%;
+    background: $brand-gradient;
+    margin-left: -22rpx;
+    border: 2rpx solid rgba($color-surface, 0.5);
+  }
+
+  &__seat-overflow-text {
+    @include type-micro;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+  }
+
+  &__seat-dot {
+    width: 10rpx;
+    height: 10rpx;
+    border-radius: 50%;
+    background: $color-primary;
+  }
+
+  &__seats-text {
+    @include type-caption;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+}
+
+@keyframes pool-registration-hero-enter {
+  from {
+    opacity: 0;
+    transform: translateY(24rpx) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pool-registration-hero-seat-pop {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pool-registration-hero-aurora-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(12rpx, -16rpx) scale(1.05);
+  }
+  66% {
+    transform: translate(-8rpx, 10rpx) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pool-registration-hero--enter {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .pool-registration-hero__aurora-orb {
+    animation: none;
+  }
+
+  .pool-registration-hero__seat-head {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

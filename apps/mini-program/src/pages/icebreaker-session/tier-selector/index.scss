@@ -16,6 +16,7 @@
     @include type-heading;
     display: block;
     margin-bottom: $spacing-xs;
+    line-height: 1.4;
   }
 
   &__subtitle {
@@ -51,7 +52,7 @@
 
   &__grid-row {
     display: grid;
-    grid-template-columns: auto 1fr 1fr 1fr;
+    grid-template-columns: 160rpx 1fr 1fr 1fr;
     gap: $spacing-xs;
 
     &--no-vibe {
@@ -122,6 +123,7 @@
     font-size: $font-size-2xs;
     color: $color-text-secondary;
     line-height: 1.4;
+    white-space: nowrap;
   }
 
   &__grid-row-tag {
@@ -219,6 +221,119 @@
     color: $color-text-muted;
   }
 
+  // ── Custom Mode Card ────────────────────────────────────────────
+  &__custom-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-md;
+    background: $color-bg-tint-cream;
+    border: 4rpx dashed rgba($color-brand-gold, 0.6);
+    border-radius: $card-radius-sm;
+    transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 200ms ease,
+      background-color 200ms ease,
+      box-shadow 200ms ease;
+
+    &--active {
+      border-style: solid;
+      border-color: $color-brand-gold;
+      background: $color-bg-tint-warm;
+      box-shadow: 0 4rpx 24rpx rgba($color-brand-gold, 0.18);
+      transform: scale(1.02);
+    }
+
+    &--pressed {
+      transform: scale(0.97);
+    }
+  }
+
+  &__custom-card-icon {
+    width: 96rpx;
+    height: 96rpx;
+    flex-shrink: 0;
+  }
+
+  &__custom-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    flex: 1;
+  }
+
+  &__custom-card-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__custom-card-title {
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__custom-card-badge {
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+    background: $color-brand-gold;
+    padding: 4rpx 12rpx;
+    border-radius: 100rpx;
+    line-height: 1;
+  }
+
+  &__custom-card-tagline {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+
+  &__custom-card-meta {
+    font-size: $font-size-2xs;
+    color: $color-text-muted;
+  }
+
+  &__custom-card-check {
+    @include flex-center;
+    width: 40rpx;
+    height: 40rpx;
+    background: $color-brand-gold;
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: grid-check-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__custom-card-check-icon {
+    font-size: $font-size-xs;
+    color: $color-text-white;
+    font-weight: $font-weight-bold;
+    line-height: 1;
+  }
+
+  &__custom-card-sparkle {
+    position: absolute;
+    width: 12rpx;
+    height: 12rpx;
+    background: $color-brand-gold;
+    border-radius: 50%;
+    opacity: 0;
+
+    &--1 {
+      top: 16rpx;
+      right: 24rpx;
+      animation: custom-sparkle 1.6s ease-in-out infinite 0.2s;
+    }
+
+    &--2 {
+      bottom: 20rpx;
+      right: 56rpx;
+      width: 8rpx;
+      height: 8rpx;
+      animation: custom-sparkle 1.6s ease-in-out infinite 0.8s;
+    }
+  }
+
   // ── Tier Vibe Preview (Batch C ceremony backdrop) ────────────────
   &__preview {
     @include flex-center;
@@ -310,5 +425,30 @@
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  .tier-selector__custom-card {
+    transition: none;
+    transform: none;
+  }
+
+  .tier-selector__custom-card--active {
+    transform: none;
+  }
+
+  .tier-selector__custom-card-sparkle {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
+@keyframes custom-sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
   }
 }

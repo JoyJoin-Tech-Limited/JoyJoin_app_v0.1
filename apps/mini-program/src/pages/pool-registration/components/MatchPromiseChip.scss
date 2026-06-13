@@ -1,0 +1,64 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.match-promise-chip {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $card-radius-sm;
+  background: rgba($color-surface, 0.8);
+  border: 2rpx solid rgba($color-border, 0.8);
+
+  &--animate {
+    opacity: 0;
+    transform: translateY(12rpx);
+    animation: match-promise-chip-enter 0.34s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  &--visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  &--delay-0 { animation-delay: 0.2s; }
+  &--delay-1 { animation-delay: 0.32s; }
+  &--delay-2 { animation-delay: 0.44s; }
+  &--delay-3 { animation-delay: 0.56s; }
+  &--delay-4 { animation-delay: 0.68s; }
+  &--delay-5 { animation-delay: 0.8s; }
+
+  &__accent {
+    width: 6rpx;
+    height: 28rpx;
+    margin-top: 6rpx;
+    border-radius: 999rpx;
+    background: $brand-gradient;
+    flex-shrink: 0;
+  }
+
+  &__text {
+    flex: 1;
+    @include type-body;
+    line-height: $line-height-relaxed;
+  }
+}
+
+@keyframes match-promise-chip-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .match-promise-chip--animate {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

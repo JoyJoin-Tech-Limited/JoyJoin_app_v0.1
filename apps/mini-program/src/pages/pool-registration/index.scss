@@ -90,7 +90,9 @@
       @include type-headline;
       letter-spacing: -0.5rpx;
       line-height: 1.44;
-      word-break: keep-all;
+      word-break: normal;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
     }
   }
 
@@ -802,6 +804,36 @@
     box-shadow: 0 8rpx 32rpx rgba($color-primary, 0.35);
   }
 
+  &__submit--ceremony {
+    position: relative;
+    overflow: hidden;
+    background: $brand-gradient;
+    box-shadow: 0 12rpx 40rpx rgba($color-primary, 0.42);
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        rgba($color-text-white, 0) 0%,
+        rgba($color-text-white, 0.22) 50%,
+        rgba($color-text-white, 0) 100%
+      );
+      transform: skewX(-20deg);
+      animation: pool-reg-ceremony-shimmer 3.2s ease-in-out infinite;
+    }
+
+    &:active,
+    &--active {
+      transform: scale(0.98);
+      opacity: 0.94;
+    }
+  }
+
   &__empty {
     @include flex-center;
     flex-direction: column;
@@ -950,5 +982,22 @@
     &[disabled] {
       opacity: 0.5;
     }
+  }
+}
+
+@keyframes pool-reg-ceremony-shimmer {
+  0%,
+  100% {
+    left: -100%;
+  }
+  50% {
+    left: 140%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pool-reg__submit--ceremony::before {
+    animation: none;
+    display: none;
   }
 }
