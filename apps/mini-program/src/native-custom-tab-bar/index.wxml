@@ -93,7 +93,7 @@
         </view>
       </view>
     </view>
-  </view>
+  </cover-view>
 
   <!-- Semi-raised center CTA -->
   <view class="joy-custom-tab-bar__center-wrap">
@@ -118,4 +118,4 @@
       <view class="joy-custom-tab-bar__center-label">{{center.label}}</view>
     </view>
   </view>
-</view>
+</cover-view>
