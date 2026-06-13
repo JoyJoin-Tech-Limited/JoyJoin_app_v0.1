@@ -609,11 +609,22 @@ export default function PersonalityTestResultsPage() {
         return
       }
 
-      // Accessibility + Performance: skip slot animation for reduced-motion,
-      // degradation-tier devices, or when the feature flag is off.
-      // Includes shouldReduceMotion which covers low-benchmark devices
-      // that Taro.getSystemInfoSync().reduceMotion doesn't catch.
-      if (shouldReduceMotion || prefersReducedMotion || deviceTier.isDegradation || !personalitySlotAnimationEnabled) {
+      // Accessibility + Kill-switch: skip the slot animation only for
+      // explicit reduced-motion preferences or when the feature flag is off.
+      // We no longer use `deviceTier.isDegradation` as a hard skip because
+      // the animation flow measures real frame budget mid-spin and degrades
+      // effects gracefully (fewer particles, shorter glow, etc.). Hard-skipping
+      // here was bypassing the slot on capable Android devices due to the
+      // inverted benchmarkLevel interpretation in `useDeviceTier`.
+      const shouldSkipAnimation = shouldReduceMotion || prefersReducedMotion || !personalitySlotAnimationEnabled
+      if (shouldSkipAnimation) {
+        logInfo('[PersonalityResults] Skipping slot animation by request/accessibility/flag', {
+          shouldReduceMotion,
+          prefersReducedMotion,
+          personalitySlotAnimationEnabled,
+          deviceTier: deviceTier.tier,
+          benchmarkLevel: deviceTier.benchmarkLevel,
+        })
         const fetchPromise = fetchResult(nextRunId, Boolean(options?.forceRefresh))
         const resolved = await fetchPromise
         if (resolved && mountedRef.current && nextRunId === runIdRef.current) {
@@ -627,7 +638,11 @@ export default function PersonalityTestResultsPage() {
             completionMode: 'animated',
             isAuthenticated: auth.isAuthenticated,
             primaryArchetype: displayArchetypeName,
-            degradationTier: deviceTier.isDegradation ? 'degradation' : 'reduced-motion',
+            skipReason: shouldReduceMotion
+              ? 'shouldReduceMotion'
+              : prefersReducedMotion
+                ? 'prefersReducedMotion'
+                : 'featureFlagDisabled',
           })
         } else if (mountedRef.current && nextRunId === runIdRef.current) {
           // Fetch failed — show error instead of stuck loading

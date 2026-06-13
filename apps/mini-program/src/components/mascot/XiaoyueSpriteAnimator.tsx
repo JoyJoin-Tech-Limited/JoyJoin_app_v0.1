@@ -48,6 +48,12 @@ export interface XiaoyueSpriteAnimatorProps {
   isLoading?: boolean
   /** Crossfade duration in ms when switching states. Default 220. */
   transitionMs?: number
+  /**
+   * When set, the sprite renders a single static frame and does not animate.
+   * Useful for question screens where we want a consistent, eyes-open mascot
+   * pose instead of a looping frame that may show eyes closed.
+   */
+  staticFrame?: number
 }
 
 interface SpriteStateMeta {
@@ -71,6 +77,7 @@ interface SpriteFrameProps {
   autoPlay: boolean
   onComplete?: () => void
   onError?: () => void
+  staticFrame?: number
 }
 
 /**
@@ -81,8 +88,8 @@ interface SpriteFrameProps {
  * Animation is JS-driven (setInterval) to avoid dynamic-WXSS-keyframe issues
  * and to give exact per-frame control over timing, looping, and completion.
  */
-function SpriteFrame({ meta, size, autoPlay, onComplete, onError }: SpriteFrameProps) {
-  const [currentFrame, setCurrentFrame] = useState(0)
+function SpriteFrame({ meta, size, autoPlay, onComplete, onError, staticFrame }: SpriteFrameProps) {
+  const [currentFrame, setCurrentFrame] = useState(staticFrame ?? 0)
   const onCompleteRef = useRef(onComplete)
   useEffect(() => {
     onCompleteRef.current = onComplete
@@ -102,8 +109,9 @@ function SpriteFrame({ meta, size, autoPlay, onComplete, onError }: SpriteFrameP
   const translateY = Math.round(-padding * scale)
 
   useEffect(() => {
-    setCurrentFrame(0)
-    if (!autoPlay || frameCount <= 1) return
+    const initialFrame = staticFrame ?? 0
+    setCurrentFrame(Math.max(0, Math.min(initialFrame, frameCount - 1)))
+    if (staticFrame !== undefined || !autoPlay || frameCount <= 1) return
 
     const frameDuration = duration / frameCount
     let frame = 0
@@ -136,7 +144,7 @@ function SpriteFrame({ meta, size, autoPlay, onComplete, onError }: SpriteFrameP
       Taro.offAppShow(handleAppShow)
       Taro.offAppHide(handleAppHide)
     }
-  }, [autoPlay, frameCount, duration, loop])
+  }, [autoPlay, frameCount, duration, loop, staticFrame])
 
   return (
     <View className='xiaoyue-sprite__frame-inner'>
@@ -184,6 +192,7 @@ export default function XiaoyueSpriteAnimator({
   showGlow = false,
   isLoading = false,
   transitionMs = 220,
+  staticFrame,
 }: XiaoyueSpriteAnimatorProps) {
   const resolvedState: XiaoyueSpriteState = isLoading ? 'thinking' : state
   const meta = getStateMeta(resolvedState)
@@ -270,6 +279,7 @@ export default function XiaoyueSpriteAnimator({
           meta={meta}
           size={size}
           autoPlay={autoPlay && !reducedMotion}
+          staticFrame={staticFrame}
           onComplete={onComplete}
           onError={() => {
             if (!spriteError) {
@@ -289,6 +299,7 @@ export default function XiaoyueSpriteAnimator({
             meta={exitMeta}
             size={size}
             autoPlay={motionEnabled}
+            staticFrame={staticFrame}
           />
         </View>
       )}

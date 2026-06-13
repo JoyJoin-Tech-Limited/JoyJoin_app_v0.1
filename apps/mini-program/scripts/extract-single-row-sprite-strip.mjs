@@ -32,7 +32,7 @@ const ROOT = path.resolve(__dirname, '..')
 const GRID_DIR = path.join(ROOT, 'assets-source/mascot/yuezai sprite grid')
 const OUTPUT_DIR = path.join(ROOT, 'assets-source/mascot/xiaoyue-animations')
 
-const TARGET_SIZE = 200
+const DEFAULT_TARGET_SIZE = 200
 const FILL_RATIO = 0.95
 const PADDING = 8 // px breathing room around the shared content bbox
 const ALPHA_THRESHOLD = 10
@@ -42,6 +42,12 @@ const STATE_MAP = {
   'celebrate sprite grid v2': 'celebrate',
   'surprise sprite grid v2': 'surprised', // filename uses "surprise", state is "surprised"
 }
+
+/** Per-state rendering config (target size, timing, etc.). */
+const STATE_META_PATH = path.join(OUTPUT_DIR, 'state-meta.json')
+const stateMeta = fs.existsSync(STATE_META_PATH)
+  ? JSON.parse(fs.readFileSync(STATE_META_PATH, 'utf-8'))
+  : {}
 
 const VERDICT_THRESHOLDS = { passJaccard: 0.85, warnJaccard: 0.70 }
 
@@ -88,8 +94,11 @@ function jaccard(a, b) {
 }
 
 async function processGrid(gridPath, stateName) {
+  const meta = stateMeta[stateName] || {}
+  const targetSize = meta.frameWidth ?? meta.frameHeight ?? meta.targetSize ?? DEFAULT_TARGET_SIZE
+
   console.log(`\n${'='.repeat(60)}`)
-  console.log(`Processing: ${stateName}`)
+  console.log(`Processing: ${stateName} (target ${targetSize}x${targetSize})`)
   console.log('='.repeat(60))
 
   const { data, info } = await sharp(gridPath)
@@ -148,13 +157,13 @@ async function processGrid(gridPath, stateName) {
   const maxContentH = Math.max(...frameData.map(f => f.bbox.h))
   const cropW = maxContentW + PADDING * 2
   const cropH = maxContentH + PADDING * 2
-  const targetContentSize = Math.round(TARGET_SIZE * FILL_RATIO)
+  const targetContentSize = Math.round(targetSize * FILL_RATIO)
   const scale = Math.min(targetContentSize / cropW, targetContentSize / cropH)
   const finalW = Math.max(1, Math.round(cropW * scale))
   const finalH = Math.max(1, Math.round(cropH * scale))
   console.log(`Max content: ${maxContentW} x ${maxContentH}`)
   console.log(`Shared crop: ${cropW} x ${cropH} (with ${PADDING}px padding)`)
-  console.log(`Output: ${finalW} x ${finalH} centered in ${TARGET_SIZE}x${TARGET_SIZE}`)
+  console.log(`Output: ${finalW} x ${finalH} centered in ${targetSize}x${targetSize}`)
 
   // Step 5: per-frame crop + write
   const stateOutDir = path.join(OUTPUT_DIR, stateName)
@@ -207,10 +216,10 @@ async function processGrid(gridPath, stateName) {
         background: { r: 0, g: 0, b: 0, alpha: 0 },
       })
       .extend({
-        top: Math.floor((TARGET_SIZE - finalH) / 2),
-        bottom: Math.ceil((TARGET_SIZE - finalH) / 2),
-        left: Math.floor((TARGET_SIZE - finalW) / 2),
-        right: Math.ceil((TARGET_SIZE - finalW) / 2),
+        top: Math.floor((targetSize - finalH) / 2),
+        bottom: Math.ceil((targetSize - finalH) / 2),
+        left: Math.floor((targetSize - finalW) / 2),
+        right: Math.ceil((targetSize - finalW) / 2),
         background: { r: 0, g: 0, b: 0, alpha: 0 },
       })
       .png({ compressionLevel: 9 })
@@ -237,7 +246,7 @@ async function processGrid(gridPath, stateName) {
   }
 
   // Step 6: post-crop overlap test
-  console.log(`\n--- Overlap Test (output ${TARGET_SIZE}x${TARGET_SIZE} bboxes) ---`)
+  console.log(`\n--- Overlap Test (output ${targetSize}x${targetSize} bboxes) ---`)
   for (const ob of outputBboxes) {
     console.log(
       `  frame-${String(ob.frame).padStart(2, '0')}: bbox=[${ob.x},${ob.y},${ob.w}x${ob.h}] center=(${ob.cx.toFixed(1)},${ob.cy.toFixed(1)})`

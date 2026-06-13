@@ -4,12 +4,12 @@
  *
  * Each state becomes its own horizontal-strip spritesheet:
  *   src/assets/mascot/xiaoyue-<state>.webp
- *   src/assets/mascot/xiaoyue-<state>.png
  *
  * A master manifest indexes all states:
  *   src/assets/mascot/xiaoyue-spritesheet-manifest.json
  *
- * CSS animation uses background-size + steps() for GPU-efficient playback.
+ * We generate WebP only; PNG spritesheets in src/assets/mascot/ are orphaned
+ * because XiaoyueSpriteAnimator loads .webp via cdnAsset() (see AGENTS.md).
  *
  * Input structure (assets-source/mascot/xiaoyue-animations/):
  *   <state-name>/frame-00.png
@@ -31,9 +31,9 @@ const ROOT = path.resolve(__dirname, '..')
 const INPUT_DIR = path.join(ROOT, 'assets-source/mascot/xiaoyue-animations')
 const OUTPUT_DIR = path.join(ROOT, 'src/assets/mascot')
 
-/** Frame render size in px (source images are resized to this). */
-const FRAME_W = 200
-const FRAME_H = 200
+/** Default frame render size in px (source images are resized to this). */
+const DEFAULT_FRAME_W = 200
+const DEFAULT_FRAME_H = 200
 const PADDING = 2
 
 /** Default timing config per state (overrideable via state-meta.json). */
@@ -97,11 +97,13 @@ async function main() {
     const duration = meta.duration ?? DEFAULT_DURATION_MS
     const loop = meta.loop ?? DEFAULT_LOOP
     const oneShot = meta.oneShot ?? false
+    const frameW = meta.frameWidth ?? DEFAULT_FRAME_W
+    const frameH = meta.frameHeight ?? DEFAULT_FRAME_H
 
     // Build sheet for this state
-    const cellW = FRAME_W + PADDING * 2
+    const cellW = frameW + PADDING * 2
     const sheetWidth = frameCount * cellW
-    const sheetHeight = FRAME_H + PADDING * 2
+    const sheetHeight = frameH + PADDING * 2
 
     let composite = sharp({
       create: {
@@ -116,7 +118,7 @@ async function main() {
     for (let col = 0; col < frames.length; col++) {
       const framePath = path.join(stateDir, frames[col])
       const resized = await sharp(framePath)
-        .resize(FRAME_W, FRAME_H, { fit: 'contain', position: 'center', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .resize(frameW, frameH, { fit: 'contain', position: 'center', background: { r: 0, g: 0, b: 0, alpha: 0 } })
         .toBuffer()
 
       const left = col * cellW + PADDING
@@ -133,28 +135,19 @@ async function main() {
       .webp({ quality: 85, effort: 6, alphaQuality: 100 })
       .toFile(webpPath)
 
-    // Generate PNG fallback
-    const pngPath = path.join(OUTPUT_DIR, `xiaoyue-${stateName}.png`)
-    await composite
-      .clone()
-      .png({ compressionLevel: 9 })
-      .toFile(pngPath)
-
     const webpStat = fs.statSync(webpPath)
-    const pngStat = fs.statSync(pngPath)
     totalSize += webpStat.size
 
     console.log(
       `${stateName}: ${frameCount} frames, ` +
-      `WebP ${(webpStat.size / 1024).toFixed(1)}KB, ` +
-      `PNG ${(pngStat.size / 1024).toFixed(1)}KB`
+      `WebP ${(webpStat.size / 1024).toFixed(1)}KB`
     )
 
     manifestStates[stateName] = {
       sheet: `xiaoyue-${stateName}.webp`,
       frameCount,
-      frameWidth: FRAME_W,
-      frameHeight: FRAME_H,
+      frameWidth: frameW,
+      frameHeight: frameH,
       duration,
       loop,
       oneShot,
@@ -162,9 +155,11 @@ async function main() {
   }
 
   // Write master manifest
+  // Global frame width/height is kept as the default; per-state meta uses
+  // its own frameWidth/frameHeight so mixed-resolution sheets are supported.
   const manifest = {
     version: 1,
-    frame: { width: FRAME_W, height: FRAME_H, padding: PADDING },
+    frame: { width: DEFAULT_FRAME_W, height: DEFAULT_FRAME_H, padding: PADDING },
     states: manifestStates,
   }
 

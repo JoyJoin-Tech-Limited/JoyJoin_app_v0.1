@@ -33,10 +33,15 @@ export interface ProfessionChatOverlayProps {
   onSkip: () => void
 }
 
-const OPENING_MESSAGE_GENERIC = '好奇！你平时是做什么的呀？\n多说说看，悦仔好帮你找到真正聊得来的人～'
+const OPENING_MESSAGES_GENERIC: readonly string[] = [
+  '好奇！你现在主要从事哪个行业或岗位呀？',
+  '比如产品经理、设计师、教师、自由职业……说得越具体，悦仔越能帮你找到聊得来的人～',
+]
 
-const OPENING_MESSAGE_ARCHETYPE = (archetypeName: string) =>
-  `像你这样的${archetypeName}，平时是做什么的呀？\n多说说看，悦仔好帮你找到真正聊得来的人～`
+const OPENING_MESSAGES_ARCHETYPE = (archetypeName: string): readonly string[] => [
+  `像你这样的${archetypeName}，平时主要从事哪个行业或岗位呀？`,
+  '比如产品经理、设计师、教师、自由职业……说得越具体，悦仔越能帮你找到聊得来的人～',
+]
 
 const SKIP_RESPONSE_GENERIC = '好呀，那我们先跳过这题～等你想说了，随时可以在个人主页里补充'
 
@@ -345,10 +350,19 @@ export default function ProfessionChatOverlay({
     if (visible && !isClosing) {
       setInputValue(initialValue)
       const archetypeName = userArchetype ? (ARCHETYPE_BY_ID[userArchetype]?.nameCn ?? '') : ''
-      const openingText = archetypeName ? OPENING_MESSAGE_ARCHETYPE(archetypeName) : OPENING_MESSAGE_GENERIC
+      const openingTexts = archetypeName ? OPENING_MESSAGES_ARCHETYPE(archetypeName) : OPENING_MESSAGES_GENERIC
       setMessages([
-        { id: generateId(), sender: 'xiaoyue', text: openingText, expressionId: 'coachGuide' },
+        { id: generateId(), sender: 'xiaoyue', text: openingTexts[0], expressionId: 'coachGuide' },
       ])
+      // Stagger the clarification bubble so it feels like a real two-message turn.
+      if (bubbleStaggerRef.current) clearTimeout(bubbleStaggerRef.current)
+      bubbleStaggerRef.current = setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          { id: generateId(), sender: 'xiaoyue', text: openingTexts[1], expressionId: 'testCurious' },
+        ])
+        setScrollTrigger((c) => c + 1)
+      }, 450)
       setIsSubmitting(false)
       setHasSent(false)
       setShowRevealCard(false)
@@ -784,7 +798,6 @@ export default function ProfessionChatOverlay({
         enhanced
         showScrollbar={false}
         scrollIntoView={scrollIntoView}
-        style={{ paddingBottom: `${keyboardHeight}px` }}
         aria-live='polite'
         aria-atomic='false'
       >
@@ -923,6 +936,7 @@ export default function ProfessionChatOverlay({
 
       <View
         className='profession-overlay__input-bar'
+        style={{ bottom: `${keyboardHeight}px` }}
       >
         <Input
           className='profession-overlay__input'

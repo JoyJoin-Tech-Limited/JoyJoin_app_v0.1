@@ -9,8 +9,8 @@
     "celebrate": {
       "sheet": "xiaoyue-celebrate.webp",
       "frameCount": 7,
-      "frameWidth": 200,
-      "frameHeight": 200,
+      "frameWidth": 400,
+      "frameHeight": 400,
       "duration": 1500,
       "loop": false,
       "oneShot": true

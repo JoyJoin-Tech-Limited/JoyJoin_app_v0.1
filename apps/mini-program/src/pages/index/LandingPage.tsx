@@ -8,8 +8,11 @@ import BrandLogo from "../../components/ui/BrandLogo"
 import BondingCloud from "../../components/landing/BondingCloud"
 import PhaseIconCarousel from "../../components/landing/PhaseIconCarousel"
 import { useStaggerMount } from "../../hooks/useStaggerMount"
-import { runMiniProgramRouteTransition } from "../../lib/onboarding/onboardingNavigation"
+import { runMiniProgramRouteTransition, navigateToMiniProgramNextStep } from "../../lib/onboarding/onboardingNavigation"
+import { MINI_PROGRAM_ROUTES } from "../../lib/onboarding/onboardingRoutes"
 import { useWeChatLogin } from "../../hooks/auth/useWeChatLogin"
+import { useResetOnShow } from "../../hooks/useResetOnShow"
+import { readAnonymousAssessmentSession, isAnonymousAssessmentSessionCompleted } from "../../lib/auth/anonymousOnboarding"
 import { onboardingAnalytics } from "../../lib/onboarding/onboardingAnalytics"
 import { logWarn } from "../../lib/utils/logger"
 import "./index.scss"
@@ -34,6 +37,8 @@ interface MiniProgramLandingPageProps {
   isAuthTimedOut?: boolean
   onAuthRetry?: () => void
   onAuthDismiss?: () => void
+  /** Server-driven nextStep for authenticated returning users. */
+  userNextStep?: string | null
 }
 
 export default function MiniProgramLandingPage({
@@ -41,6 +46,7 @@ export default function MiniProgramLandingPage({
   isAuthTimedOut = false,
   onAuthRetry,
   onAuthDismiss,
+  userNextStep = null,
 }: MiniProgramLandingPageProps) {
   const router = useRouter()
   const invitationCode = router.params.invitationCode ?? ''
@@ -50,6 +56,7 @@ export default function MiniProgramLandingPage({
   const [mascotSrc, setMascotSrc] = useState(MASCOT_SRC)
   const [mascotError, setMascotError] = useState(false)
   const [phaseIconErrors, setPhaseIconErrors] = useState<Record<string, boolean>>({})
+  const [hasIncompleteSession, setHasIncompleteSession] = useState(false)
   const isMounted = useStaggerMount()
 
   const reduceMotion = useMemo(() => {
@@ -72,7 +79,13 @@ export default function MiniProgramLandingPage({
 
   useEffect(() => {
     loadBrandDisplayFont()
+    const snapshot = readAnonymousAssessmentSession()
+    setHasIncompleteSession(!!snapshot && !isAnonymousAssessmentSessionCompleted(snapshot))
   }, [])
+
+  // Reset navigation loading state when the user swipes back or foregrounds
+  // the landing page so the CTA never stays stuck on the ellipsis spinner.
+  useResetOnShow(() => setIsPageExiting(false))
 
   useEffect(() => {
     return () => {
@@ -93,6 +106,8 @@ export default function MiniProgramLandingPage({
     }
   }
 
+  const isContinueMode = hasIncompleteSession || (!!userNextStep && userNextStep !== 'discover')
+  const ctaLabel = isContinueMode ? '继续创建账户' : '测测我的社交氛围'
   const ctaDisabledClass = hasAcceptedLegal ? "" : " landing-page__cta--disabled"
   const ctaHoverClass = hasAcceptedLegal ? "landing-page__cta-hover" : ""
   const pageClassName = ["landing-page", isPageExiting ? "landing-page--exiting" : ""]
@@ -277,10 +292,27 @@ export default function MiniProgramLandingPage({
               return
             }
             hapticLight()
-            navigateWithLegalGate("/pages/onboarding/personality-test/index")
+            if (isContinueMode) {
+              // Returning from onboarding: resume where they left off.
+              // Authenticated users use their server nextStep; guests fall back
+              // to the personality test subpackage.
+              if (userNextStep && userNextStep !== 'discover') {
+                void navigateToMiniProgramNextStep(userNextStep, { mode: 'root' }).catch((err) => {
+                  logWarn('[LandingPage] Continue to nextStep failed', {
+                    nextStep: userNextStep,
+                    error: err instanceof Error ? err.message : String(err),
+                  })
+                  setIsPageExiting(false)
+                })
+              } else {
+                navigateWithLegalGate(MINI_PROGRAM_ROUTES.personalityTest)
+              }
+            } else {
+              navigateWithLegalGate("/pages/onboarding/personality-test/index")
+            }
           }}
         >
-          测测我的社交氛围
+          {ctaLabel}
         </Button>
 
         {/* Inline login for returning users */}

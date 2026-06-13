@@ -1510,6 +1510,7 @@ export default function PersonalityTestPage() {
                   autoPlay={mascotAutoPlay || resolvedMascotState !== 'idle'}
                   transitionMs={0}
                   className='personality-test__mascot-animator'
+                  staticFrame={0}
                 />
               </View>
               <View

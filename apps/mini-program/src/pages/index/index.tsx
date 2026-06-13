@@ -182,6 +182,7 @@ export default function Index() {
       isAuthTimedOut={isTimedOut}
       onAuthRetry={retry}
       onAuthDismiss={dismiss}
+      userNextStep={auth.user?.nextStep ?? null}
     />
   )
 }
