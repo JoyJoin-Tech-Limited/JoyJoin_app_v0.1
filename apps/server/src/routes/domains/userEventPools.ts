@@ -34,7 +34,7 @@ import { aiEndpointLimiter } from "../../rateLimiter";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import { paymentService } from "../../paymentService";
-import { resolveCouponValidation } from "../domains/payments";
+import { resolveCouponValidation, getTestPriceCents } from "../domains/payments";
 import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import * as schema from "@shared/schema";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -806,9 +806,15 @@ export function registerUserEventPoolRoutes(app: Express): void {
       }
 
       // Get pricing from admin portal
-      const pricing = await storage.getActivePricingSettings().catch(() => []);
-      const eventSinglePlan = pricing.find((item: any) => item.planType === "event_single");
-      const originalAmount = eventSinglePlan?.priceInCents ?? 8800;
+      const testPrice = getTestPriceCents();
+      let originalAmount: number;
+      if (testPrice !== null) {
+        originalAmount = testPrice;
+      } else {
+        const pricing = await storage.getActivePricingSettings().catch(() => []);
+        const eventSinglePlan = pricing.find((item: any) => item.planType === "event_single");
+        originalAmount = eventSinglePlan?.priceInCents ?? 8800;
+      }
 
       // Validate optional coupon code
       let couponId: string | undefined;

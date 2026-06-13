@@ -1,6 +1,5 @@
 import type { Express, Request } from "express";
-import { isEventPackPlanType, normalizeSubscriptionPlanType } from "@shared/api";
-import { buildCsvContent } from "@joyjoin/shared";
+import { buildCsvContent, isEventPackPlanType, normalizeSubscriptionPlanType } from "@joyjoin/shared";
 import { eventPoolRegistrations, users, eventPools, discoverAnalyticsEvents } from "@shared/schema";
 import { and, eq, sql, gte, lte } from "drizzle-orm";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
@@ -52,6 +51,14 @@ const SUBSCRIPTION_PRICE_FALLBACKS = {
   monthly: 9800,
   quarterly: 29400,
 } as const;
+
+export function getTestPriceCents(): number | null {
+  const raw = process.env.TEST_PAYMENT_PRICE_IN_CENTS;
+  if (!raw) return null;
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return n;
+}
 
 type NormalizedEventRegistrationPayload = {
   poolId: string;
@@ -157,6 +164,8 @@ function normalizeEventRegistrationPayload(payload: unknown): NormalizedEventReg
 }
 
 async function getEventSinglePaymentAmount(): Promise<number> {
+  const testPrice = getTestPriceCents();
+  if (testPrice !== null) return testPrice;
   const pricing = await storage.getActivePricingSettings().catch(() => []);
   const eventSinglePlan = pricing.find((item: any) => item.planType === "event_single");
   return eventSinglePlan?.priceInCents ?? 8800;
@@ -175,6 +184,9 @@ async function resolveSubscriptionCheckout(
     return { ok: false, message: "Invalid plan type" };
   }
 
+  const testPrice = getTestPriceCents();
+  if (testPrice !== null) return { ok: true, originalAmount: testPrice };
+
   const pricingPlan = await getActivePricingPlan(normalizedPlanType);
   return {
     ok: true,
@@ -192,6 +204,9 @@ async function resolveEventPackCheckout(
   if (!planType || !isEventPackPlanType(planType)) {
     return { ok: false, message: "Unsupported event pack type" };
   }
+
+  const testPrice = getTestPriceCents();
+  if (testPrice !== null) return { ok: true, relatedId: planType, originalAmount: testPrice };
 
   const pricingPlan = await getActivePricingPlan(planType);
   return {
