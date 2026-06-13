@@ -66,6 +66,8 @@ import {
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import PoolRegistrationHero from './components/PoolRegistrationHero'
 import XiaoyueLetterCard from './components/XiaoyueLetterCard'
+import XiaoyueCoachCard from './components/XiaoyueCoachCard'
+import { getIntentFeedback } from './components/intentFeedback'
 import './index.scss'
 
 const STEP_BRIEF = 0
@@ -399,6 +401,14 @@ export default function PoolRegistrationPage() {
   const hasBudgetSelection = selectedBudget !== ''
   const hasIntentSelection = formState.eventIntent.length > 0
   const canSubmit = hasBudgetSelection && hasIntentSelection
+  const advanceDisabled =
+    step === STEP_BUDGET
+      ? !hasBudgetSelection
+      : step === STEP_INTENT
+        ? !hasIntentSelection
+        : step === STEP_DETAILS
+          ? isRegistering || !canSubmit
+          : false
 
   const summaryItems = useMemo(() => {
     const languages = findLabels(formState.preferredLanguages, LANGUAGE_OPTIONS)
@@ -927,17 +937,14 @@ export default function PoolRegistrationPage() {
 
       {step === 1 ? (
         <View className={`pool-reg__step-content pool-reg__step-content--${step > prevStep ? 'forward' : 'back'}`}>
-          <Card className='pool-reg__panel'>
-            <Image
-              className='pool-reg__tier-mascot'
-              src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
-              mode='aspectFit'
-              lazyLoad
-            />
-            <Text className='pool-reg__section-kicker'>Step 1</Text>
-            <Text className='pool-reg__section-title'>先定一个你更舒服的预算区间</Text>
-            <Text className='pool-reg__section-copy'>{TIER_COPY.budgetStepHelper}</Text>
-
+          <XiaoyueCoachCard
+            step={1}
+            eyebrow='Step 1 · 预算'
+            title='先定一个你更舒服的预算区间'
+            copy={TIER_COPY.budgetStepHelper}
+            userArchetype={user?.primaryArchetype ?? undefined}
+            footer={<Text className='pool-reg__helper'>至少选择 1 个预算区间后，悦仔才能继续帮你匹配合拍的桌友。</Text>}
+          >
             <View className='pool-reg__choice-list'>
               {budgetOptions.map((option) => (
                 <ChoiceCard
@@ -948,32 +955,22 @@ export default function PoolRegistrationPage() {
                 />
               ))}
             </View>
-
-            <Text className='pool-reg__helper'>至少选择 1 个预算区间后，悦仔才能继续帮你匹配合拍的桌友。</Text>
-          </Card>
+          </XiaoyueCoachCard>
         </View>
       ) : null}
 
       {step === 2 ? (
         <View className={`pool-reg__step-content pool-reg__step-content--${step > prevStep ? 'forward' : 'back'}`}>
-          <XiaoyueChatBubble
-            content='预算选好了，接下来告诉悦仔你想收获什么'
-            pose='pointing'
-            horizontal
-            showGlow
-            className='pool-reg__step-coach'
-          />
-          <Card className='pool-reg__panel'>
-            <Text className='pool-reg__section-kicker'>Step 2</Text>
-            <Text className='pool-reg__section-title'>这次你更想收获什么</Text>
-            <Text className='pool-reg__section-copy'>
-              这里可以多选。悦仔会把你的社交期待和预算一起考虑，不会只按一个标签硬配。
-            </Text>
-
+          <XiaoyueCoachCard
+            step={2}
+            eyebrow='Step 2 · 期待'
+            title='这次你更想收获什么'
+            copy={getIntentFeedback(formState.eventIntent)}
+            userArchetype={user?.primaryArchetype ?? undefined}
+            footer={<Text className='pool-reg__helper'>至少选择 1 个期待方向后，悦仔就能把你的社交画像和预算一起跑匹配了。</Text>}
+          >
             {intentGrid}
-
-            <Text className='pool-reg__helper'>至少选择 1 个期待方向后，悦仔就能把你的社交画像和预算一起跑匹配了。</Text>
-          </Card>
+          </XiaoyueCoachCard>
         </View>
       ) : null}
 
@@ -1119,7 +1116,7 @@ export default function PoolRegistrationPage() {
               variant='primary'
               className='pool-reg__footer-btn pool-reg__footer-btn--primary'
               onClick={step === 3 ? handleRegister : handleAdvance}
-              disabled={step === 3 ? isRegistering || !canSubmit : false}
+              disabled={advanceDisabled}
               loading={step === 3 && isRegistering}
             >
               {step === 3

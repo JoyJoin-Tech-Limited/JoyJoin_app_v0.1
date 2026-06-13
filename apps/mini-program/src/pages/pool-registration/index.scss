@@ -602,9 +602,11 @@
   }
 
   &__choice-card {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: $spacing-xs;
+    min-height: 88rpx;
     padding: $spacing-md;
     border-radius: $card-radius-sm;
     border: 2rpx solid rgba($color-border, 0.92);
@@ -646,6 +648,29 @@
   &__choice-desc {
     @include type-caption;
     line-height: 1.6;
+  }
+
+  &__choice-check {
+    position: absolute;
+    top: $spacing-sm;
+    right: $spacing-sm;
+    width: 32rpx;
+    height: 32rpx;
+    border-radius: 999rpx;
+    background: $color-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: pool-reg-check-pop 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__choice-check-mark {
+    width: 14rpx;
+    height: 8rpx;
+    border-left: 4rpx solid $color-text-white;
+    border-bottom: 4rpx solid $color-text-white;
+    transform: rotate(-45deg);
+    margin-top: -2rpx;
   }
 
   &__error-wrap {

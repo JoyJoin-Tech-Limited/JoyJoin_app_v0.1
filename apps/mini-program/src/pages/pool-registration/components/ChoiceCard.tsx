@@ -48,6 +48,11 @@ export default function ChoiceCard({ option, selected, onClick, compact = false 
         <Text className='pool-reg__choice-title'>{option.label}</Text>
       </View>
       {option.description ? <Text className='pool-reg__choice-desc'>{option.description}</Text> : null}
+      {selected ? (
+        <View className='pool-reg__choice-check'>
+          <View className='pool-reg__choice-check-mark' />
+        </View>
+      ) : null}
     </View>
   )
 }
