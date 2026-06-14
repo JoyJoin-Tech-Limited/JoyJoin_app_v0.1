@@ -197,7 +197,7 @@ Boundary:
 
 ### Mini Program (Taro — launch-primary)
 
-- **Page registration:** `apps/mini-program/src/lib/onboarding/onboardingRoutes.ts` defines `MINI_PROGRAM_MAIN_PACKAGE_PAGES`, the onboarding **subpackage** (`root: pages/onboarding`, seven page entries), and `preloadRule` entries; `app.config.ts` imports these — edit onboardingRoutes when adding routes or changing package splits.
+- **Page registration:** `apps/mini-program/src/lib/onboarding/onboardingRoutes.ts` defines `MINI_PROGRAM_MAIN_PACKAGE_PAGES`, the subpackages (`root: pages/onboarding`, `pages/pool-registration`, `pages/matching-status`, `pages/icebreaker-session`), and `preloadRule` entries; `app.config.ts` imports these — edit onboardingRoutes when adding routes or changing package splits.
 - Taro page implementations: `apps/mini-program/src/pages/`
 - Mini Program runtime helpers: `apps/mini-program/src/lib/` — domain subdirectories: `api/`, `auth/`, `payment/`, `onboarding/`, `navigation/`, `wechat/`, `matching/`, `mascot/`, `analytics/`, `utils/`
 - Mini Program hook: `apps/mini-program/src/hooks/`

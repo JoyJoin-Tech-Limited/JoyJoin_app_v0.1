@@ -187,7 +187,10 @@ apps/user-client/src/assets/matching/
 |------|------|
 | 主包页面列表 + 分包声明 + `preloadRule` | [`apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts) → 由 [`app.config.ts`](../apps/mini-program/src/app.config.ts) 引用 |
 | Onboarding subpackage | `root: pages/onboarding`，7 个页面（见 `MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES`） |
-| 预下载 | `MINI_PROGRAM_PRELOAD_RULES`：从 `index` 与 `login` 预拉 `pages/onboarding` 分包 |
+| Pool-registration subpackage | `root: pages/pool-registration`，1 个页面；仪式化资源放在分包内 `assets/ceremony/` |
+| Matching-status subpackage | `root: pages/matching-status`，1 个页面 |
+| Icebreaker-session subpackage | `root: pages/icebreaker-session`，2 个页面 |
+| 预下载 | `MINI_PROGRAM_PRELOAD_RULES`：从 `index`/`login` 预拉 `pages/onboarding`；从 `event-detail`/`events` 预拉 `pages/pool-registration` |
 | 按需注入 | `app.config.ts` 中 `lazyCodeLoading: 'requiredComponents'` |
 
 **可重复探测：** 仓库根目录 `scripts/measure-mini-program-cold-entry.sh`（需本机微信开发者工具 CLI）用于冷启动与 onboarding 预载代理场景，详见 mini-program README *Cold-entry timing probe*。
@@ -258,5 +261,5 @@ When implementing features that push Primary-tier hardware, always provide a fal
 | Hero images | Use WebP + `decoding="async"`; avoid large PNG |
 | Archetype assets | Preload during idle time (intro screen); spritesheet bundled locally; canvas draws WebP primary with CDN PNG fallback |
 | Asset prefetching | Gate on real activity state — do not prefetch for no-activity users. Primary tier may prefetch more aggressively. |
-| Mini Program package loading | Keep tabBar pages in the main package; onboarding subpackage + `preloadRule` from `onboardingRoutes.ts` first; justify independent subpackages with measured wins and a self-contained bootstrap plan |
+| Mini Program package loading | Keep tabBar pages in the main package; put heavy non-tab flows (onboarding, pool-registration, matching-status, icebreaker-session) in subpackages with `preloadRule`; justify independent subpackages with measured wins and a self-contained bootstrap plan |
 | Device capability gate | Use `getSystemInfo` / `benchmarkLevel` to detect tier at runtime; never assume uniform low-end |

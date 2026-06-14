@@ -24,7 +24,7 @@ This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 
 - `src/app.ts` — app lifecycle entry (launch, providers, `AutoLoginBridge` for silent returning-user re-auth, pending-order resume bridge)
 - `src/app.config.ts` — consumes main package pages, subpackages, and `preloadRule` from `lib/onboarding/onboardingRoutes.ts` + tab config from `lib/navigation/tabBarConfig.ts`
-- `src/lib/onboarding/onboardingRoutes.ts` — **register new pages here** (main package list, onboarding subpackage under `pages/onboarding`, preload rules)
+- `src/lib/onboarding/onboardingRoutes.ts` — **register new pages here** (main package list, subpackages under `pages/onboarding`, `pages/pool-registration`, etc., preload rules)
 - `src/lib/api/api.ts` — mini-program auth/API bootstrap surface (`authenticateMiniProgramUser`, `authenticateMiniProgramUserWithTest`, `getUserState`)
 - `src/pages/onboarding/personality-test/` — V4 personality test, results, and post-result auth gate
 - `src/pages/login/index.tsx` + `src/hooks/auth/useWeChatLogin.ts` — returning-user WeChat login
@@ -46,6 +46,7 @@ src/
 │   ├── index/           # Landing / splash page (cold entry). Renders `AutoLoginBridge` silent re-auth; unified redirect effect routes authenticated users → `nextStep` and guests with incomplete anonymous assessment → personality test. Continue-mode CTA shows context-aware labels (`进入发现页` / `继续完善档案` / `继续完成测试`). Returning authenticated users with `nextStep='discover'` route to the Discover tab. `useResetOnShow` clears the navigation loading state on swipe-back/foreground so the CTA never stays stuck on the ellipsis spinner. 5s navigation safety timeout prevents stuck CTA on subpackage download hang.
 │   ├── login/           # WeChat login entry for returning users
 │   ├── onboarding/      # Subpackage: onboarding flow
+│   ├── pool-registration/  # Subpackage: pool sign-up flow (assets live here)
 │   ├── blind-box-payment/
 │   ├── payment-verification/
 │   ├── event-detail/
@@ -143,6 +144,9 @@ Assets are **CDN-first** in production, with a curated set of critical assets bu
 
 *Onboarding subpackage:*
 - `src/pages/onboarding/assets/archetypes` → `dist/pages/onboarding/assets/archetypes`
+
+*Pool-registration subpackage:*
+- `src/pages/pool-registration/assets/ceremony` → `dist/pages/pool-registration/assets/ceremony`
 
 *Icon tiers (bundled with @1x/@2x/@3x retina support via `JoyJoinIcon`):*
 - `src/assets/icons/mood-icons` (~16KB)
@@ -263,8 +267,12 @@ The shipped mini-program tab bar is the **native WeChat component** copied from 
 ## Package Loading Strategy
 
 1. **Tab pages** (`discover`, `events`, `connections`, `profile`, `center-hub`) live in the **main package**.
-2. **Heavy non-tab flows** (onboarding: personality test, profile forms, review) are in the **`pages/onboarding` subpackage**.
-3. **Preload rules** are declared from likely entry pages (`index`, `login`) before reaching for independent subpackages.
+2. **Heavy non-tab flows** are in subpackages:
+   - `pages/onboarding` — personality test, profile forms, review.
+   - `pages/pool-registration` — pool sign-up and ceremony assets.
+   - `pages/matching-status` — match waiting / reveal.
+   - `pages/icebreaker-session` — in-event social icebreaker.
+3. **Preload rules** are declared from likely entry pages (`index`, `login`, `event-detail`, `events`) before reaching for independent subpackages.
 4. Any proposal for independent subpackages must include a self-contained bootstrap plan because `app.ts` and `AuthProvider` centralize app-level providers and auth setup.
 
 ---
