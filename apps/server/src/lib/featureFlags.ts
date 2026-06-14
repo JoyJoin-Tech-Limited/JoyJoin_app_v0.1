@@ -44,6 +44,10 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  When false, POST /api/event-pools/:id/register returns 503.
    *  Env fallback: REGISTRATION_ENABLED (default: true). */
   registrationEnabled: "REGISTRATION_ENABLED",
+  /** When false, creation of and tier changes to the custom Social Icebreaker
+   *  mode are rejected. Existing preset-tier sessions are unaffected.
+   *  Env fallback: SOCIAL_ICEBREAKER_CUSTOM_MODE_ENABLED (default: true). */
+  socialIcebreakerCustomModeEnabled: "SOCIAL_ICEBREAKER_CUSTOM_MODE_ENABLED",
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

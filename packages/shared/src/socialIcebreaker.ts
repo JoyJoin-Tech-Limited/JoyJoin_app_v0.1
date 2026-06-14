@@ -19,7 +19,8 @@ export type SocialIcebreakerPhase =
   | 'group_mirror'
   | 'speed_friending'
   | 'mini_script'
-  | 'recap';
+  | 'recap'
+  | 'phase_selection';
 
 export type AtmosphereMood = 'relaxed' | 'funny' | 'life' | 'emotional';
 
@@ -403,6 +404,17 @@ export interface MiniScriptVote {
   votedAt: number;
 }
 
+/** Eligibility metadata for a selectable phase in custom mode. */
+export interface SelectablePhaseInfo {
+  phase: Exclude<SocialIcebreakerPhase, 'warmup' | 'recap' | 'phase_selection'>;
+  name: string;
+  nameEn: string;
+  emoji: string;
+  minPlayers: number;
+  disabled: boolean;
+  disabledReason?: string;
+}
+
 export interface SocialSessionState {
   socialSessionId: string;
   icebreakerSessionId: string;
@@ -424,8 +436,14 @@ export interface SocialSessionState {
   eventTier?: TierMachineId;
   vibe?: 'chat' | 'balanced' | 'game';
   enabledPhases?: SocialIcebreakerPhase[];
-  /** Compiled run plan from Game Design Agent; if present, session follows this instead of hardcoded PHASE_ORDER. */
+  /** Compiled run plan from Game Design Agent; if present, session follows this instead of hardcoded PHASE_ORDER.
+   *  Undefined for custom-mode sessions where the host picks phases manually. */
   runPlan?: IcebreakerRunPlan;
+  /** Server-generated nonce for the current custom-mode picker round.
+   *  Refreshed every time the session enters `phase_selection`. */
+  phaseSelectionId?: string;
+  /** Eligibility list sent to all clients when in custom mode. */
+  selectablePhases?: SelectablePhaseInfo[];
   /** When true, Xiaoyue auto-hosts: any participant can trigger actions, and phases auto-advance based on adaptive signals. */
   autoAdvanceEnabled?: boolean;
   /** Timestamp (ms) when auto-advance should trigger. Set when adaptive engine signals advance_ready. */
@@ -721,6 +739,17 @@ export const PHASE_CONFIG = {
     timeoutMinutes: 5,
     minPlayersRequired: 1,
   },
+  phase_selection: {
+    emoji: '🔀',
+    name: '环节选择',
+    nameEn: 'Phase Selection',
+    gradient: 'from-slate-400 to-zinc-500',
+    bgGradient: 'from-slate-50 via-zinc-50 to-neutral-50',
+    darkBgGradient: 'from-slate-950 via-zinc-950 to-neutral-950',
+    pillColor: 'bg-slate-100/80 text-slate-700',
+    timeoutMinutes: 5,
+    minPlayersRequired: 1,
+  },
 } as const;
 
 export const PHASE_ORDER: SocialIcebreakerPhase[] = [
@@ -781,6 +810,13 @@ export function getNextEligiblePhase(
   const playerCount: number = isLegacyCall && typeof third === 'number'
     ? third
     : (!isLegacyCall ? second.playerCount : 0);
+
+  // Custom mode: host-driven picker. Warmup and every real phase lead back to
+  // the picker; the picker itself leads to recap if advanced (fallback only).
+  if (!isLegacyCall && second.eventTier === 'custom') {
+    if (current === 'phase_selection') return 'recap';
+    return 'phase_selection';
+  }
 
   // If state was passed and has a run plan, use the plan's segment order
   if (!isLegacyCall && second.runPlan?.segments?.length) {

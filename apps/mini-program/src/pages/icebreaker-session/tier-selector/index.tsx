@@ -1,17 +1,19 @@
 import { useState, useEffect, useCallback } from 'react'
 import { View, Text, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
+import { resolveTierDisplay, type TierMachineId } from '@shared/socialIcebreakerTierManifest'
 import { useAuth } from '../../../hooks/useAuth'
 import { apiRequest } from '../../../lib/api/api'
+import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
+import { localAsset } from '../../../lib/utils/cdnAssets'
 import { TOAST_MEDIUM_MS } from '../../../lib/utils/uiConstants'
-import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { getUserDisplayName } from '../icebreakerSessionModel'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import { TIER_VIBE_BACKDROPS } from '../../../lib/ceremonyHeroes'
-import { resolveTierDisplay, type TierMachineId } from '@shared/socialIcebreakerTierManifest'
 import { VibeId, VIBE_TO_API } from '../../../lib/vibeMapping'
 import Button from '../../../components/ui/Button'
-import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
+
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import type { SocialStartResponse } from '../icebreakerSessionModel'
 import './index.scss'
@@ -19,6 +21,8 @@ import './index.scss'
 // ─── Constants ────────────────────────────────────────────────────
 
 const STORAGE_KEY = 'lastTierVibe'
+
+export const CUSTOM_TIER_ID: TierMachineId = 'custom'
 
 export const TIER_OPTIONS: Array<{
   id: TierMachineId
@@ -73,6 +77,11 @@ const YUEZAI_REACTIONS: Record<TierMachineId, Record<VibeId, string>> = {
     balanced: '全量体验，狂欢到底！',
     play_fun: '全量体验，狂欢到底！',
   },
+  custom: {
+    deep_chat: '自定义节奏，由你主导～',
+    balanced: '自定义节奏，由你主导～',
+    play_fun: '自定义节奏，由你主导～',
+  },
 }
 
 interface StoredSelection {
@@ -95,6 +104,7 @@ export default function TierSelectorPage() {
   const [fadeKey, setFadeKey] = useState(0)
 
   const runPlanTemplatesEnabled = user?.features?.runPlanTemplatesEnabled ?? false
+  const customModeEnabled = user?.features?.socialIcebreakerCustomModeEnabled ?? true
 
   // Reset transient flags on swipe-back / foreground
   useResetOnShow(setIsSubmitting)
@@ -125,7 +135,7 @@ export default function TierSelectorPage() {
   // Trigger fade animation when tier or vibe changes
   const handleSelectCombo = useCallback((tier: TierMachineId, vibe: VibeId) => {
     setSelectedTier(tier)
-    setSelectedVibe(runPlanTemplatesEnabled ? vibe : 'balanced')
+    setSelectedVibe(runPlanTemplatesEnabled && tier !== 'custom' ? vibe : 'balanced')
     setFadeKey((k) => k + 1)
   }, [runPlanTemplatesEnabled])
 
@@ -148,6 +158,10 @@ export default function TierSelectorPage() {
         vibe: selectedVibe,
       } as StoredSelection)
 
+      if (selectedTier === 'custom') {
+        socialIcebreakerAnalytics.track('custom_mode_selected', undefined, sessionId)
+      }
+
       const response = await apiRequest<SocialStartResponse>({
         path: '/api/social-icebreaker/start',
         method: 'POST',
@@ -156,7 +170,7 @@ export default function TierSelectorPage() {
           displayName,
           eventType: '活动',
           eventTier: selectedTier,
-          vibe: VIBE_TO_API[selectedVibe],
+          vibe: selectedTier === 'custom' ? undefined : VIBE_TO_API[selectedVibe],
         },
       })
 
@@ -174,7 +188,9 @@ export default function TierSelectorPage() {
     }
   }, [isSubmitting, sessionId, displayName, selectedTier, selectedVibe])
 
-  const yuezaiReaction = YUEZAI_REACTIONS[selectedTier][selectedVibe]
+  const yuezaiReaction = selectedTier === 'custom'
+    ? '这一局，你来搭～'
+    : YUEZAI_REACTIONS[selectedTier][selectedVibe]
 
   return (
     <View className='tier-selector'>
@@ -258,6 +274,41 @@ export default function TierSelectorPage() {
         </View>
       </View>
 
+      {/* Custom mode card */}
+      {customModeEnabled && (
+        <View className='tier-selector__section'>
+          <View
+            className={`tier-selector__custom-card ${selectedTier === 'custom' ? 'tier-selector__custom-card--active' : ''}`}
+            onClick={() => handleSelectCombo('custom', 'balanced')}
+            hoverClass='tier-selector__custom-card--pressed'
+            hoverStartTime={0}
+            hoverStayTime={200}
+          >
+            <Image
+              className='tier-selector__custom-card-icon'
+              src={localAsset('/assets/icons/phase-icons/custom-tier-icon.webp')}
+              mode='aspectFit'
+              lazyLoad
+            />
+            <View className='tier-selector__custom-card-body'>
+              <View className='tier-selector__custom-card-header'>
+                <Text className='tier-selector__custom-card-title'>自由局</Text>
+                <Text className='tier-selector__custom-card-badge'>自由定制</Text>
+              </View>
+              <Text className='tier-selector__custom-card-tagline'>想玩哪个，由你决定</Text>
+              <Text className='tier-selector__custom-card-meta'>时长由你决定 · 环节自由组合</Text>
+            </View>
+            {selectedTier === 'custom' && (
+              <View className='tier-selector__custom-card-check'>
+                <Text className='tier-selector__custom-card-check-icon'>✓</Text>
+              </View>
+            )}
+            <View className='tier-selector__custom-card-sparkle tier-selector__custom-card-sparkle--1' />
+            <View className='tier-selector__custom-card-sparkle tier-selector__custom-card-sparkle--2' />
+          </View>
+        </View>
+      )}
+
       {/* Tier Vibe Backdrop — Batch C ceremony hero for the selected tier */}
       <View className='tier-selector__preview' key={`preview-${fadeKey}`} aria-hidden>
         <Image
@@ -282,7 +333,7 @@ export default function TierSelectorPage() {
         <Text className='tier-selector__mascot-text'>{yuezaiReaction}</Text>
       </View>
 
-      <ResponsiveSpacer heightRpx={120} collapseBelow={700} />
+      <View className='tier-selector__filler' />
 
       {/* CTA */}
       <View className='tier-selector__footer'>

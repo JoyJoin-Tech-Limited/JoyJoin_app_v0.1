@@ -311,6 +311,7 @@ function runCopilotHook(eventName: string, payload: Record<string, unknown> = {}
     env: {
       ...process.env,
       ORCHESTRATION_DISABLE_RUNTIME_WRITES: runtimeWritesEnabled ? '0' : '1',
+      ORCHESTRATION_DISABLE_LOOP_STATUS: '1',
     },
   });
 
@@ -333,6 +334,7 @@ function runRecordSummaryCommand(
     env: {
       ...process.env,
       ORCHESTRATION_DISABLE_RUNTIME_WRITES: options.runtimeWritesEnabled ? '0' : '1',
+      ORCHESTRATION_DISABLE_LOOP_STATUS: '1',
     },
   });
 

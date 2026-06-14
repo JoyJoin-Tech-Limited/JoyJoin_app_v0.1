@@ -29,10 +29,11 @@ describe('speed_friending — implementation tests', () => {
       'speed_friending',
       'mini_script',
       'recap',
+      'phase_selection',
     ];
 
     expect(validPhases).toContain('speed_friending');
-    expect(new Set(validPhases).size).toBe(11);
+    expect(new Set(validPhases).size).toBe(12);
   });
 
   // ── Phase registry presence ──
@@ -42,7 +43,7 @@ describe('speed_friending — implementation tests', () => {
     const moduleIds = allModules.map((m) => m.id);
 
     expect(moduleIds).toContain('speed_friending');
-    expect(allModules.length).toBe(11);
+    expect(allModules.length).toBe(12);
   });
 
   it('speed_friending has correct PhaseModule shape', () => {
@@ -86,7 +87,8 @@ describe('speed_friending — implementation tests', () => {
     const ids = allModules.map((m) => m.id);
 
     expect(ids[0]).toBe('warmup');
-    expect(ids[ids.length - 1]).toBe('recap');
+    expect(ids[ids.length - 2]).toBe('recap');
+    expect(ids[ids.length - 1]).toBe('phase_selection');
     expect(new Set(ids).size).toBe(ids.length);
   });
 

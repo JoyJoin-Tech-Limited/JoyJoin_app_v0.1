@@ -148,6 +148,13 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
   Server recompiles run plan via template compiler (when `RUN_PLAN_TEMPLATES_ENABLED=true`)
   or legacy `compileAgentRunPlan()` (when `false`).
   Tier can only be changed during `waiting` or `warmup` phase.
+
+  **Custom mode (`custom`)** — host-driven free-form flow (feature flag `SOCIAL_ICEBREAKER_CUSTOM_MODE_ENABLED`, default `true`):
+  - Available as a fourth tier option. No fixed run plan; host picks phases one-by one from a carousel.
+  - `autoAdvanceEnabled` is set to `false`; only the host can advance/end.
+  - Server enters `phase_selection` between phases. Host chooses next phase via `POST /api/social-icebreaker/:socialSessionId/select-phase { phase, phaseSelectionId }`.
+  - Host can end early from `phase_selection` or `recap` via `POST /api/social-icebreaker/:socialSessionId/end-session { phaseSelectionId? }`, generating a recap snapshot identical to normal advance.
+  - Preset tiers can be re-selected from custom mode; custom data (selected phases, completed phases) is preserved but the fixed run plan takes over.
         │
         ▼
 [WARMUP PHASE]
@@ -623,14 +630,26 @@ const CLIENT_TO_API_VIBE = {
 |------|---------|
 | `shared/socialIcebreaker.ts` | Core types: phases, state, configs (`PHASE_CONFIG`, `PHASE_ORDER` — 11 phases, `MVP_PHASES`) |
 | `packages/shared/src/socialIcebreaker.ts` | Package alias of above |
-| `apps/server/src/routes/socialIcebreaker.ts` | Core Social Icebreaker API routes + client-state assembly over the PostgreSQL-backed session store. Includes speed_friending: GET state, next-round, and complete endpoints with round-robin circle-method pairing. |
+| `apps/server/src/routes/socialIcebreaker.ts` | Core Social Icebreaker API routes: start, session get/heartbeat, warmup/topics, moment-card telemetry, plus sub-router composition. |
+| `apps/server/src/routes/socialIcebreakerGameplayCore.ts` | Core gameplay phase routes: micro-challenge, lie-detective, personality-dice. |
+| `apps/server/src/routes/socialIcebreakerGameplayExtra.ts` | Extra gameplay phase routes: quip-battle, undercover-word, group-mirror, speed-friending, moment-card render, AI feedback. |
+| `apps/server/src/routes/socialIcebreakerCustom.ts` | Custom mode routes: `select-phase` and `end-session`. |
+| `apps/server/src/routes/socialIcebreakerTier.ts` | Tier/vibe selection route, including custom tier switching. |
 | `apps/server/src/routes/socialIcebreakerExtended.ts` | Extended phase routes: auction (generate-lots, bid, close-lot), speed_friending auto-init (pair generation on phase advance) + advance guard |
-| `apps/server/src/socialIcebreakerAIService.ts` | AI generation functions (DeepSeek) with curated fallbacks |
+| `apps/server/src/socialIcebreakerAIService.ts` | Public barrel for AI generation functions (re-exports topical modules). |
+| `apps/server/src/socialIcebreakerAICore.ts` | Shared AI core: `AIServiceResult`, `fireAndForgetQualityGate`. |
+| `apps/server/src/socialIcebreakerPersonalityDiceAI.ts` | Personality-dice challenge generation (V1/V4 choose mode). |
+| `apps/server/src/socialIcebreakerAuctionAI.ts` | Auction lot generation. |
+| `apps/server/src/socialIcebreakerMiniScriptAI.ts` | Mini-script framework JSON fetch (MiniMax-first hybrid). |
 | `apps/server/src/services/runPlanService.ts` | Template-driven run plan compiler with 4-tier fallback chain; feature-flag gated by `RUN_PLAN_TEMPLATES_ENABLED` |
 | `apps/server/src/repositories/runPlanTemplateRepo.ts` | DB queries for `run_plan_templates` table |
 | `packages/shared/src/runPlanCompiler.ts` | `resolveTemplateSlots()` — 9 default templates (3 vibes × 3 tiers), category-spacing enforcement, slot resolution |
 | `packages/shared/src/socialIcebreakerTierManifest.ts` | Tier machine IDs (`breeze`/`glow`/`blaze`) + `resolveTierDisplay()` + `LEGACY_TIER_MAP` |
-| `apps/mini-program/src/pages/icebreaker-session/tier-selector/index.tsx` | 3×3 tier+vibe selector grid (feature-flagged) |
+| `apps/mini-program/src/pages/icebreaker-session/tier-selector/index.tsx` | Tier+vibe selector grid, including `custom` mode (feature-flagged) |
+| `apps/mini-program/src/pages/icebreaker-session/components/IcebreakerTierSelector.tsx` | Inline tier options component used by the session page. |
+| `apps/mini-program/src/pages/icebreaker-session/components/CustomPhasePicker.tsx` | Host-facing PS5-style horizontal phase carousel for custom mode. |
+| `apps/mini-program/src/pages/icebreaker-session/components/PlayerCustomLobby.tsx` | Non-host waiting state during custom-mode `phase_selection`. |
+| `apps/mini-program/src/pages/icebreaker-session/components/CustomModeSection.tsx` | Host/player branch wrapper for the custom-mode `phase_selection` screen. |
 | `apps/mini-program/src/pages/icebreaker-session/phases/WarmupPhaseView.tsx` | Warmup phase with vibe-aware depth badges + 3-tier prompt reveal |
 | `apps/mini-program/src/hooks/useTierReveal.ts` | Staggered tier-prompt reveal hook |
 | `apps/mini-program/src/lib/vibeMapping.ts` | Client ↔ API bidirectional vibe mapping |

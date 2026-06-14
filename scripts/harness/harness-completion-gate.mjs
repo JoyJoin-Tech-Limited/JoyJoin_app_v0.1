@@ -300,7 +300,7 @@ function checkSecurity(changedFiles, fileContents) {
     }
 
     // eval / Function constructor (skip the gate script itself since it documents these patterns)
-    if (file === 'scripts/harness-completion-gate.mjs') continue;
+    if (file.endsWith('harness-completion-gate.mjs')) continue;
     if (/\beval\s*\(|new\s+Function\s*\(/g.test(content)) {
       findings.push({
         severity: 'blocker',
@@ -444,6 +444,9 @@ function checkMaintainability(changedFiles, fileContents) {
         message: 'Legacy shared/ directory import — use @joyjoin/shared instead',
       });
     }
+
+    // File size (skip test files — large integration tests are expected)
+    if (/\.test\.|\.spec\.|__tests__/.test(file)) continue;
 
     // File size
     const lines = content.split('\n').length;

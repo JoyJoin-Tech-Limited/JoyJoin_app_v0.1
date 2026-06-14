@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { getNextEligiblePhase, AUCTION_STARTING_COINS } from '@shared/socialIcebreaker';
 import {
   generateMicroChallenges,
-  generateRecapSummary,
   generateXiaoYueComment,
   generateAuctionLots,
   generateLieDetectiveStatements,
@@ -14,15 +13,11 @@ import {
 } from '../socialIcebreakerAIService';
 import { buildCachedAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
 import { cleanupPhaseStateForNextPhase } from '../socialIcebreakerPhaseConfig';
+import { isCustomMode } from '../services/customModeService';
 import {
   buildClientState,
   hasAllRosterParticipantsResponded,
   getMicroChallengeDeadlineMs,
-  buildLieDetectiveRecapHighlights,
-  buildPersonalityDiceRecapLines,
-  buildMiniScriptRecapLine,
-  buildAuctionRecapLines,
-  buildRecapParticipants,
   incrementCommonGround,
   getCurrentLieDetectivePlayer,
   hydrateDerivedState,
@@ -30,6 +25,7 @@ import {
   isHostAuthorized,
   recapDisplayNameByUserId,
   generateSpeedFriendingPairs,
+  ensureRecapSnapshot,
 } from './socialIcebreakerHelpers';
 import { buildArchetypeContext } from '../lib/contextInjector';
 import {
@@ -37,86 +33,14 @@ import {
   getParticipant,
   updateSession,
   listParticipants,
-  loadSessionLieTruths,
   setLieTruths,
   getLieTruths,
   savePhaseMetric,
 } from '../lib/socialIcebreakerStore';
-import { curateMedals } from '../lib/medalCuration';
 import { logger } from '../lib/logger';
 import { getFeatureFlag } from '../lib/featureFlags';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
-
-function buildRecapHighlights(state: SocialSessionState, roster?: Array<{ userId: string; displayName: string }>) {
-  const highlights: Partial<{
-    lieDetectiveV2Stats: { aiWinRate: number; hardestRound: number; fooledEveryone: number };
-    personalityDiceHighlights: { completedCount: number; passedCount: number; completionRate: number };
-    undercoverWordResult: { caught: boolean; undercoverDisplayName: string };
-    microChallengeHighlights: { completedCount: number; totalCount: number; completionRate: number };
-    groupMirrorHighlights: { topVotedDisplayName: string; questionText: string; voteCount: number };
-  }> = {};
-
-  if (state.lieDetectiveRevealHistory && state.lieDetectiveRevealHistory.length > 0) {
-    highlights.lieDetectiveV2Stats = buildLieDetectiveV2RecapData(state.lieDetectiveRevealHistory);
-  }
-
-  if (state.diceCompletedBy || state.dicePassedBy) {
-    const completedCount = state.diceCompletedBy?.length || 0;
-    const passedCount = state.dicePassedBy?.length || 0;
-    const totalChallenges = state.personalityDiceChallenges?.length || state.playerCount || 1;
-    highlights.personalityDiceHighlights = {
-      completedCount,
-      passedCount,
-      completionRate: Math.round(((completedCount + passedCount) / totalChallenges) * 100),
-    };
-  }
-
-  if (state.undercoverWordResults) {
-    highlights.undercoverWordResult = {
-      caught: state.undercoverWordResults.caught,
-      undercoverDisplayName: state.undercoverWordResults.undercoverDisplayName,
-    };
-  }
-
-  if (state.challengeCompletedBy) {
-    const completedCount = state.challengeCompletedBy.length;
-    const totalCount = state.playerCount || 1;
-    highlights.microChallengeHighlights = {
-      completedCount,
-      totalCount,
-      completionRate: Math.round((completedCount / totalCount) * 100),
-    };
-  }
-
-  const mirrorAnswers = state.groupMirrorVotes || state.groupMirrorAnswers || [];
-  if (mirrorAnswers.length > 0) {
-    const targetCounts: Record<string, number> = {};
-    for (const a of mirrorAnswers) {
-      targetCounts[a.targetUserId] = (targetCounts[a.targetUserId] || 0) + 1;
-    }
-    let topTarget = '';
-    let maxCount = 0;
-    for (const [uid, count] of Object.entries(targetCounts)) {
-      if (count > maxCount) {
-        maxCount = count;
-        topTarget = uid;
-      }
-    }
-    if (topTarget && maxCount > 0) {
-      const questions = state.groupMirrorQuestions || [];
-      const targetDisplayName = roster?.find((r) => r.userId === topTarget)?.displayName
-        || mirrorAnswers.find((a) => a.userId === topTarget)?.displayName
-        || '匿名';
-      highlights.groupMirrorHighlights = {
-        topVotedDisplayName: targetDisplayName,
-        questionText: questions[0]?.questionText || '',
-        voteCount: maxCount,
-      };
-    }
-  }
-
-  return highlights;
-}
+import { generatePhaseSelectionId } from '../services/customModeService';
 
 export function registerExtendedRoutes(router: Router): void {
 // ---------------------------------------------------------------------------
@@ -144,6 +68,10 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
 
   if (state.currentPhase !== currentPhase) {
     return res.status(400).json({ error: 'Phase mismatch' });
+  }
+
+  if (currentPhase === 'phase_selection') {
+    return res.status(400).json({ error: 'Use select-phase or end-session while in phase_selection' });
   }
 
   if (currentPhase === 'warmup') {
@@ -279,8 +207,20 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
 
   cleanupPhaseStateForNextPhase(state, currentPhase);
 
-  // Bonus gate: if advancing to mini_script for the first time, pause for host decision
-  if (effectiveNextPhase === 'mini_script' && !state.bonusGateOffered && !state.bonusGateAccepted && !state.bonusGateDeclined) {
+  if (effectiveNextPhase === 'phase_selection') {
+    state.phaseSelectionId = generatePhaseSelectionId();
+  }
+
+  // Bonus gate: if advancing to mini_script for the first time, pause for host decision.
+  // In custom mode the host already explicitly selected mini_script from the picker,
+  // so skip the redundant bonus gate.
+  if (
+    effectiveNextPhase === 'mini_script' &&
+    !isCustomMode(state) &&
+    !state.bonusGateOffered &&
+    !state.bonusGateAccepted &&
+    !state.bonusGateDeclined
+  ) {
     state.bonusGateOffered = true;
     // Fire-and-forget background framework pre-generation
     if (!state.bonusGateFrameworkPreloading) {
@@ -311,44 +251,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   await updateSession(socialSessionId, state);
 
   if (effectiveNextPhase === 'recap') {
-    if (!state.recapSnapshot) {
-      try {
-        const roster = await listParticipants(socialSessionId);
-        const medals = curateMedals(state, roster);
-
-        const durationMinutes = Math.round(
-          (Date.now() - (state.sessionStartedAt || state.phaseStartedAt || Date.now())) / 60000
-        );
-        const sessionLieMap = await loadSessionLieTruths(socialSessionId);
-        const lieHighlights = buildLieDetectiveRecapHighlights(state, roster, sessionLieMap);
-        const personalityDiceRecapLines = buildPersonalityDiceRecapLines(state);
-        const miniScriptRecapLine = buildMiniScriptRecapLine(state);
-        const auctionRecapLines = buildAuctionRecapLines(state);
-
-        const summaryResult = await generateRecapSummary({
-          participants: buildRecapParticipants(roster, state),
-          topicsDiscussed: (state.warmupTopics || []).slice(0, (state.currentTopicIndex ?? 0) + 1).map(t => t.question),
-          challengesCompleted: state.challengeCompletedBy?.length || 0,
-          commonGroundCount: state.commonGroundCount || 0,
-          lieDetectiveHighlights: lieHighlights.length ? lieHighlights : undefined,
-          personalityDiceRecapLines: personalityDiceRecapLines.length ? personalityDiceRecapLines : undefined,
-          miniScriptRecapLine,
-          auctionRecapLines: auctionRecapLines.length ? auctionRecapLines : undefined,
-          durationMinutes,
-        });
-
-        state.recapSnapshot = {
-          recapSummary: summaryResult.data,
-          medals,
-          meta: summaryResult.meta,
-          ...buildRecapHighlights(state, roster),
-        };
-        await updateSession(socialSessionId, state);
-      } catch (error) {
-        logger.error('[SocialIcebreaker] Failed to generate recap snapshot:', { error: String(error) });
-        // Continue without snapshot — GET /recap and GET /moment-card will fall back
-      }
-    }
+    await ensureRecapSnapshot(state, socialSessionId);
   }
 
   let content: any = null;
@@ -939,126 +842,26 @@ router.get('/:socialSessionId/recap', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (state.recapSnapshot) {
-    const roster = await listParticipants(socialSessionId);
-    return res.json({
-      summary: state.recapSnapshot.recapSummary,
-      meta: state.recapSnapshot.meta,
-      medals: state.recapSnapshot.medals,
-      lieDetectiveV2Stats: state.recapSnapshot.lieDetectiveV2Stats,
-      personalityDiceHighlights: state.recapSnapshot.personalityDiceHighlights,
-      undercoverWordResult: state.recapSnapshot.undercoverWordResult,
-      microChallengeHighlights: state.recapSnapshot.microChallengeHighlights,
-      groupMirrorHighlights: state.recapSnapshot.groupMirrorHighlights,
-      state: await buildClientState(state),
-    });
+  if (!state.recapSnapshot) {
+    await ensureRecapSnapshot(state, socialSessionId);
   }
 
-  const durationMinutes = Math.round((Date.now() - (state.sessionStartedAt || state.phaseStartedAt)) / 60000);
-
-  interface Medal {
-    emoji: string;
-    title: string;
-    recipientDisplayName: string;
-    description: string;
-  }
-  const medals: Medal[] = [];
-
-  // Fetch lie truths from the separate server-only table for medal computation.
-  const sessionLieMap = await loadSessionLieTruths(socialSessionId);
-
-  // 🕵️ 最佳侦探: most correct lie guesses
-  if (sessionLieMap.size > 0 && (state.votes || []).length > 0) {
-    const correctByVoter: Record<string, number> = {};
-    for (const vote of state.votes || []) {
-      const playerStmts = sessionLieMap.get(vote.targetUserId);
-      const lieStmt = playerStmts?.find(s => s.isLie);
-      if (lieStmt && vote.guessedStatementIndex === lieStmt.index) {
-        correctByVoter[vote.voterId] = (correctByVoter[vote.voterId] || 0) + 1;
-      }
-    }
-    const topVoter = Object.entries(correctByVoter).sort((a, b) => b[1] - a[1])[0];
-    if (topVoter && topVoter[1] > 0) {
-      const allPlayers = [
-        ...(state.lieDetectivePlayers || []),
-        { userId: state.hostUserId, displayName: state.hostDisplayName },
-      ];
-      const recipient = allPlayers.find(p => p.userId === topVoter[0]);
-      if (recipient) {
-        medals.push({
-          emoji: '🕵️',
-          title: '最佳侦探',
-          recipientDisplayName: recipient.displayName,
-          description: `猜对了 ${topVoter[1]} 个谎言`,
-        });
-      }
-    }
-  }
-
-  // ⚡ 挑战先锋: first person in challengeCompletedBy
-  if (state.challengeCompletedBy && state.challengeCompletedBy.length > 0) {
-    const firstUserId = state.challengeCompletedBy[0];
-    const allPlayersForChallenge = [
-      ...(state.lieDetectivePlayers || []),
-      { userId: state.hostUserId, displayName: state.hostDisplayName },
-    ];
-    const recipient = allPlayersForChallenge.find(p => p.userId === firstUserId);
-    if (recipient) {
-      medals.push({
-        emoji: '⚡',
-        title: '挑战先锋',
-        recipientDisplayName: recipient.displayName,
-        description: '第一个完成挑战',
-      });
-    }
-  }
-
-  // 💬 话题王
-  const MIN_TOPICS_FOR_MEDAL = 3;
-  if ((state.currentTopicIndex ?? 0) >= MIN_TOPICS_FOR_MEDAL - 1) {
-    medals.push({
-      emoji: '💬',
-      title: '话题王',
-      recipientDisplayName: state.hostDisplayName,
-      description: '带领大家聊了多个精彩话题',
-    });
-  }
-
-  try {
-    const roster = await listParticipants(socialSessionId);
-    const lieHighlights = buildLieDetectiveRecapHighlights(state, roster, sessionLieMap);
-    const personalityDiceRecapLines = buildPersonalityDiceRecapLines(state);
-    const miniScriptRecapLine = buildMiniScriptRecapLine(state);
-    const auctionRecapLines = buildAuctionRecapLines(state);
-
-    const summaryResult = await generateRecapSummary({
-      participants: buildRecapParticipants(roster, state),
-      topicsDiscussed: (state.warmupTopics || []).slice(0, (state.currentTopicIndex ?? 0) + 1).map(t => t.question),
-      challengesCompleted: state.challengeCompletedBy?.length || 0,
-      commonGroundCount: state.commonGroundCount || 0,
-      lieDetectiveHighlights: lieHighlights.length ? lieHighlights : undefined,
-      personalityDiceRecapLines: personalityDiceRecapLines.length ? personalityDiceRecapLines : undefined,
-      miniScriptRecapLine,
-      auctionRecapLines: auctionRecapLines.length ? auctionRecapLines : undefined,
-      durationMinutes,
-    });
-
-    const highlights = buildRecapHighlights(state, roster);
-    return res.json({
-      summary: summaryResult.data,
-      meta: summaryResult.meta,
-      medals,
-      lieDetectiveV2Stats: highlights.lieDetectiveV2Stats,
-      personalityDiceHighlights: highlights.personalityDiceHighlights,
-      undercoverWordResult: highlights.undercoverWordResult,
-      microChallengeHighlights: highlights.microChallengeHighlights,
-      groupMirrorHighlights: highlights.groupMirrorHighlights,
-      state: await buildClientState(state),
-    });
-  } catch (error) {
-    logger.error('[SocialIcebreaker] Failed to generate recap:', { error: String(error) });
+  const snapshot = state.recapSnapshot;
+  if (!snapshot) {
     return res.status(500).json({ error: 'Failed to generate recap' });
   }
+
+  return res.json({
+    summary: snapshot.recapSummary,
+    meta: snapshot.meta,
+    medals: snapshot.medals,
+    lieDetectiveV2Stats: snapshot.lieDetectiveV2Stats,
+    personalityDiceHighlights: snapshot.personalityDiceHighlights,
+    undercoverWordResult: snapshot.undercoverWordResult,
+    microChallengeHighlights: snapshot.microChallengeHighlights,
+    groupMirrorHighlights: snapshot.groupMirrorHighlights,
+    state: await buildClientState(state),
+  });
 });
 
 // ---------------------------------------------------------------------------

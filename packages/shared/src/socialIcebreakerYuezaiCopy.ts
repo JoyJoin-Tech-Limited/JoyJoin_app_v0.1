@@ -57,6 +57,14 @@ export const YUEZAI_TIER_COPY: Record<TierMachineId, YuezaiTierCopy> = {
     vibe: '刺激、尽兴、难忘',
     selectionReaction: '好，我们就玩狂欢局！今晚一起嗨到尽兴~',
   },
+  custom: {
+    quote: '想自己掌控节奏？自定义局交给你来导演！',
+    durationLabel: '由你决定',
+    phaseCountLabel: '自由组合',
+    contextTagline: '从所有环节里挑喜欢的，想玩哪个就玩哪个',
+    vibe: '自由、随心、主场感',
+    selectionReaction: '好，自定义局开始！你来选，我来帮大家热场~',
+  },
 };
 
 /** Returns copy for a given tier machine ID. */

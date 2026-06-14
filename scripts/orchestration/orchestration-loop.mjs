@@ -569,6 +569,15 @@ function cmdStatus(args) {
     if (arg.startsWith('--format=')) format = arg.slice('--format='.length);
   }
 
+  if (process.env.ORCHESTRATION_DISABLE_LOOP_STATUS === '1') {
+    if (format === 'markdown') {
+      console.log('# No Active Loop\n\nRun `node scripts/orchestration/orchestration-loop.mjs init --goal="..."` to start.');
+    } else {
+      console.log(JSON.stringify({ active: false, hint: 'Run init --goal="..." to start' }, null, 2));
+    }
+    process.exit(0);
+  }
+
   const state = loadLoopState();
   if (!state) {
     if (format === 'markdown') {

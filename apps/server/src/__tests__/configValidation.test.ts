@@ -33,6 +33,8 @@ describe("validateConfig", () => {
     delete process.env.WECHAT_PAY_PLATFORM_CERT;
     // Reset to a known-good environment before each test
     Object.assign(process.env, REQUIRED_VARS);
+    // Tests exercise production-mode validation; APP_MODE must match NODE_ENV.
+    process.env.APP_MODE = "production";
   });
 
   afterEach(() => {
@@ -52,6 +54,7 @@ describe("validateConfig", () => {
 
   it("does not exit when all required vars are set (non-production)", () => {
     process.env.NODE_ENV = "development";
+    process.env.APP_MODE = "development";
     expect(() => validateConfig()).not.toThrow();
     expect(exitSpy).not.toHaveBeenCalled();
   });
@@ -122,6 +125,7 @@ describe("validateConfig", () => {
 
   it("does NOT call process.exit in development when required vars are missing", () => {
     process.env.NODE_ENV = "development";
+    process.env.APP_MODE = "development";
     delete process.env.DATABASE_URL;
     delete process.env.SESSION_SECRET;
     // Should warn but not exit
@@ -131,6 +135,7 @@ describe("validateConfig", () => {
 
   it("emits a warning for invalid DATABASE_URL scheme in non-production", () => {
     process.env.NODE_ENV = "development";
+    process.env.APP_MODE = "development";
     process.env.DATABASE_URL = "mysql://invalid";
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     validateConfig();

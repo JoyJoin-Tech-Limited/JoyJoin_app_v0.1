@@ -49,8 +49,10 @@ export type CeremonyHeroKey = keyof typeof CEREMONY_HEROES
  * Tier-selector convenience map. Use this in `tier-selector/index.tsx`
  * to pick the right backdrop per selected tier.
  */
-export const TIER_VIBE_BACKDROPS: Record<'breeze' | 'glow' | 'blaze', string> = {
+export const TIER_VIBE_BACKDROPS: Record<'breeze' | 'glow' | 'blaze' | 'custom', string> = {
   breeze: CEREMONY_HEROES.tierVibeBreeze,
   glow: CEREMONY_HEROES.tierVibeGlow,
   blaze: CEREMONY_HEROES.tierVibeBlaze,
+  // v0.1: reuse glow backdrop for custom mode until a dedicated hero is designed.
+  custom: CEREMONY_HEROES.tierVibeGlow,
 }
