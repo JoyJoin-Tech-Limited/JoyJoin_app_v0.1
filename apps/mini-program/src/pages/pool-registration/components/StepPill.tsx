@@ -17,8 +17,12 @@ export default function StepPill({ index, label, active, complete }: StepPillPro
       ]
         .filter(Boolean)
         .join(' ')}
+      aria-label={`步骤 ${index}${complete ? ' 已完成' : active ? ' 进行中' : ''}: ${label}`}
+      role='listitem'
     >
-      <Text className='pool-reg__step-index'>{index}</Text>
+      <View className='pool-reg__step-index' aria-hidden='true'>
+        {complete ? <Text className='pool-reg__step-check'>✓</Text> : index}
+      </View>
       <Text className='pool-reg__step-text'>{label}</Text>
     </View>
   )

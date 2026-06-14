@@ -1,19 +1,18 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
-import { useStaggerMount } from '../../hooks/useStaggerMount'
-import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getEventPool, getMyPoolRegistrations, registerForPool, type EventPoolSummary, type PoolRegistrationSummary } from '@shared/api'
+import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
 import { getErrorMessage, type ErrorCode } from '@shared/copy/errorBaselines'
 import { ALL_INTENT_VALUES, INTENT_FLEXIBLE_OPTION } from '@shared/constants'
-import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
-import { apiRequest, type ApiError } from '../../lib/api/api'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
+
+import { useStaggerMount } from '../../hooks/useStaggerMount'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
-import { TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
-import { logInfo, logError } from '../../lib/utils/logger'
-import { haptics } from '../../lib/utils/haptics'
+import { apiRequest, type ApiError } from '../../lib/api/api'
+import { evictPersistedQuery } from '../../lib/api/persistentCache'
+import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
 import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import {
@@ -26,17 +25,21 @@ import {
   persistPaymentReturnContext,
   readStoredPaymentReturnContext,
 } from '../../lib/payment/paymentPendingOrderStorage'
+import { POOLS_QUERY_KEY, JOINED_EVENTS_QUERY_KEY } from '../../lib/prefetchEngine'
+import { haptics } from '../../lib/utils/haptics'
+import { logInfo, logError } from '../../lib/utils/logger'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
+import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
+import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscribeMessage'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import ChemistryMiniGrid from '../../components/discover/ChemistryMiniGrid'
-import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscribeMessage'
-import { evictPersistedQuery } from '../../lib/api/persistentCache'
-import { POOLS_QUERY_KEY, JOINED_EVENTS_QUERY_KEY } from '../../lib/prefetchEngine'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import StatusCard from '../../components/ui/StatusCard'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import XiaoyueChatBubble from '../../components/mascot/XiaoyueChatBubble'
+
 import {
   ALCOHOL_COMFORT_OPTIONS,
   BAR_THEME_OPTIONS,
@@ -48,7 +51,6 @@ import {
   INTENT_FLOW_OPTIONS,
   LANGUAGE_OPTIONS,
   resolvePoolEventType,
-  type FlowOption,
   type PoolEventType,
 } from './flowConfig'
 import {
@@ -63,11 +65,14 @@ import {
   type RegistrationFormState,
   type RegistrationStep,
 } from './poolRegistrationForm'
-import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
-import PoolRegistrationHero from './components/PoolRegistrationHero'
-import XiaoyueLetterCard from './components/XiaoyueLetterCard'
-import XiaoyueCoachCard from './components/XiaoyueCoachCard'
+import ChoiceCard from './components/ChoiceCard'
+import ChoiceChip from './components/ChoiceChip'
+import EventMetaIcon from './components/EventMetaIcon'
 import { getIntentFeedback } from './components/intentFeedback'
+import PoolRegistrationHero from './components/PoolRegistrationHero'
+import StepPill from './components/StepPill'
+import XiaoyueCoachCard from './components/XiaoyueCoachCard'
+import XiaoyueLetterCard from './components/XiaoyueLetterCard'
 import './index.scss'
 
 const STEP_BRIEF = 0
@@ -80,11 +85,6 @@ const MAX_INTENTS = 3
 const TIER_COPY = {
   budgetStepHelper: '这是报名时最重要的节奏信号之一，悦仔会优先帮你避开预算预期完全不一样的组合。',
 }
-
-import ChoiceCard from './components/ChoiceCard'
-import ChoiceChip from './components/ChoiceChip'
-import StepPill from './components/StepPill'
-import EventMetaIcon from './components/EventMetaIcon'
 
 function resolveMessage(error: unknown, fallbackCode: ErrorCode): string {
   const apiError = error as ApiError | undefined
@@ -158,6 +158,8 @@ export default function PoolRegistrationPage() {
   const [resumeContext, setResumeContext] = useState<MiniProgramPoolRegistrationReturnContext | null>(null)
   const [showBudgetReaction, setShowBudgetReaction] = useState(false)
   const budgetReactionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [showIntentReaction, setShowIntentReaction] = useState(false)
+  const intentReactionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const staggerMounted = useStaggerMount()
 
   const reduceMotion = useMemo(() => {
@@ -401,6 +403,20 @@ export default function PoolRegistrationPage() {
   const hasBudgetSelection = selectedBudget !== ''
   const hasIntentSelection = formState.eventIntent.length > 0
   const canSubmit = hasBudgetSelection && hasIntentSelection
+
+  // Brief celebratory Xiaoyue reaction when the user makes their first intent selection
+  useEffect(() => {
+    if (!hasIntentSelection) {
+      setShowIntentReaction(false)
+      return
+    }
+    setShowIntentReaction(true)
+    if (intentReactionTimerRef.current) clearTimeout(intentReactionTimerRef.current)
+    intentReactionTimerRef.current = setTimeout(() => setShowIntentReaction(false), 2200)
+    return () => {
+      if (intentReactionTimerRef.current) clearTimeout(intentReactionTimerRef.current)
+    }
+  }, [hasIntentSelection])
   const advanceDisabled =
     step === STEP_BUDGET
       ? !hasBudgetSelection
@@ -409,6 +425,21 @@ export default function PoolRegistrationPage() {
         : step === STEP_DETAILS
           ? isRegistering || !canSubmit
           : false
+
+  const advanceLabel = useMemo(() => {
+    if (step === STEP_BUDGET) {
+      return hasBudgetSelection ? '下一步：选择期待' : '先选一个预算区间'
+    }
+    if (step === STEP_INTENT) {
+      return hasIntentSelection ? '下一步：补细节' : '先选一个期待方向'
+    }
+    if (step === STEP_DETAILS) {
+      if (isRegistering) return '报名中…'
+      if (resumeContext?.paymentStatus === 'paid') return '继续完成报名'
+      return '确认加入这场局'
+    }
+    return '继续填写'
+  }, [step, hasBudgetSelection, hasIntentSelection, isRegistering, resumeContext?.paymentStatus])
 
   const summaryItems = useMemo(() => {
     const languages = findLabels(formState.preferredLanguages, LANGUAGE_OPTIONS)
@@ -943,7 +974,18 @@ export default function PoolRegistrationPage() {
             title='先定一个你更舒服的预算区间'
             copy={TIER_COPY.budgetStepHelper}
             userArchetype={user?.primaryArchetype ?? undefined}
-            footer={<Text className='pool-reg__helper'>至少选择 1 个预算区间后，悦仔才能继续帮你匹配合拍的桌友。</Text>}
+            visible={staggerMounted}
+            reduceMotion={reduceMotion}
+            footer={
+              hasBudgetSelection ? (
+                <View className='pool-reg__completion-pill'>
+                  <View className='pool-reg__completion-check' aria-hidden='true' />
+                  <Text className='pool-reg__completion-text'>预算已收到，可以继续了</Text>
+                </View>
+              ) : (
+                <Text className='pool-reg__helper'>至少选择 1 个预算区间后，悦仔才能继续帮你匹配合拍的桌友。</Text>
+              )
+            }
           >
             <View className='pool-reg__choice-list'>
               {budgetOptions.map((option) => (
@@ -959,6 +1001,16 @@ export default function PoolRegistrationPage() {
         </View>
       ) : null}
 
+      {showIntentReaction && step === 2 ? (
+        <XiaoyueChatBubble
+          content='get！悦仔会按这些期待帮你匹配~'
+          pose='casual'
+          horizontal
+          showGlow
+          className='pool-reg__step-coach'
+        />
+      ) : null}
+
       {step === 2 ? (
         <View className={`pool-reg__step-content pool-reg__step-content--${step > prevStep ? 'forward' : 'back'}`}>
           <XiaoyueCoachCard
@@ -967,7 +1019,18 @@ export default function PoolRegistrationPage() {
             title='这次你更想收获什么'
             copy={getIntentFeedback(formState.eventIntent)}
             userArchetype={user?.primaryArchetype ?? undefined}
-            footer={<Text className='pool-reg__helper'>至少选择 1 个期待方向后，悦仔就能把你的社交画像和预算一起跑匹配了。</Text>}
+            visible={staggerMounted}
+            reduceMotion={reduceMotion}
+            footer={
+              hasIntentSelection ? (
+                <View className='pool-reg__completion-pill'>
+                  <View className='pool-reg__completion-check' aria-hidden='true' />
+                  <Text className='pool-reg__completion-text'>期待已收到，可以继续了</Text>
+                </View>
+              ) : (
+                <Text className='pool-reg__helper'>至少选择 1 个期待方向后，悦仔就能把你的社交画像和预算一起跑匹配了。</Text>
+              )
+            }
           >
             {intentGrid}
           </XiaoyueCoachCard>
@@ -1103,9 +1166,10 @@ export default function PoolRegistrationPage() {
             className='pool-reg__submit pool-reg__submit--ceremony'
             onClick={handleAdvance}
             disabled={briefLoading && !briefData}
+            loading={briefLoading && !briefData}
             hoverClass='pool-reg__submit--active'
           >
-            {eventType ? `入座这场${eventType}` : '开始我的报名'}
+            {briefLoading && !briefData ? '悦仔正在准备…' : eventType ? `入座这场${eventType}` : '开始我的报名'}
           </Button>
         ) : (
           <View className='pool-reg__footer-actions'>
@@ -1119,13 +1183,7 @@ export default function PoolRegistrationPage() {
               disabled={advanceDisabled}
               loading={step === 3 && isRegistering}
             >
-              {step === 3
-                ? isRegistering
-                  ? '报名中…'
-                  : resumeContext?.paymentStatus === 'paid'
-                    ? '继续完成报名'
-                    : '确认加入这场局'
-                : '继续填写'}
+              {advanceLabel}
             </Button>
           </View>
         )}

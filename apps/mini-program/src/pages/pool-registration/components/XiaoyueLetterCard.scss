@@ -27,6 +27,18 @@
     top: -44rpx;
     left: $spacing-md;
     z-index: 2;
+
+    &--skeleton {
+      top: -40rpx;
+    }
+  }
+
+  &__skeleton-mascot {
+    width: 120rpx;
+    height: 120rpx;
+    border-radius: 50%;
+    background: $color-divider;
+    animation: xiaoyue-letter-card-shimmer 1.5s ease-in-out infinite;
   }
 
   &__paper {
@@ -55,6 +67,11 @@
     border-left: 2rpx solid rgba($color-primary, 0.08);
     border-top: 2rpx solid rgba($color-primary, 0.08);
     transform: rotate(45deg);
+
+    &--skeleton {
+      background: $color-divider;
+      border: none;
+    }
   }
 
   &__eyebrow {
@@ -70,6 +87,7 @@
     @include type-subheading;
     line-height: 1.6;
     margin-bottom: $spacing-sm;
+    word-break: keep-all;
   }
 
   &__promise {

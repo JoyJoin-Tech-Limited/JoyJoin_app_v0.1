@@ -63,8 +63,12 @@ export default function XiaoyueLetterCard({
 
   if (isLoading) {
     return (
-      <View className={rootClasses}>
+      <View className={rootClasses} aria-busy='true' aria-label='悦仔正在准备活动简报'>
+        <View className='xiaoyue-letter-card__mascot-wrap xiaoyue-letter-card__mascot-wrap--skeleton'>
+          <View className='xiaoyue-letter-card__skeleton-mascot' />
+        </View>
         <View className='xiaoyue-letter-card__paper xiaoyue-letter-card__paper--loading'>
+          <View className='xiaoyue-letter-card__tail xiaoyue-letter-card__tail--skeleton' />
           <View className='xiaoyue-letter-card__skeleton'>
             <View className='xiaoyue-letter-card__skeleton-line xiaoyue-letter-card__skeleton-line--long' />
             <View className='xiaoyue-letter-card__skeleton-line xiaoyue-letter-card__skeleton-line--medium' />

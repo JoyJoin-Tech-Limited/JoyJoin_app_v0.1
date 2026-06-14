@@ -14,6 +14,8 @@ interface XiaoyueCoachCardProps {
   footer?: React.ReactNode
   userArchetype?: string
   className?: string
+  visible?: boolean
+  reduceMotion?: boolean
 }
 
 export default function XiaoyueCoachCard({
@@ -25,14 +27,24 @@ export default function XiaoyueCoachCard({
   footer,
   userArchetype,
   className = '',
+  visible = true,
+  reduceMotion = false,
 }: XiaoyueCoachCardProps) {
   const archetypeTokens = useMemo(
     () => (userArchetype ? getArchetypeTokens(userArchetype) : null),
     [userArchetype],
   )
 
+  const rootClasses = [
+    'xiaoyue-coach-card',
+    visible ? (reduceMotion ? 'xiaoyue-coach-card--visible' : 'xiaoyue-coach-card--enter') : 'xiaoyue-coach-card--hidden',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
   return (
-    <View className={`xiaoyue-coach-card ${className}`}>
+    <View className={rootClasses}>
       <View className='xiaoyue-coach-card__mascot-wrap'>
         <XiaoyueSpriteAnimator
           state='coach'

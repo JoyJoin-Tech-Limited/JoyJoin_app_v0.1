@@ -4,6 +4,20 @@
 .xiaoyue-coach-card {
   position: relative;
   margin-bottom: $spacing-md;
+  opacity: 0;
+  transform: translateY(16rpx);
+  transition: opacity 0.32s ease, transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+
+  &--enter,
+  &--visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  &--hidden {
+    opacity: 0;
+    transform: translateY(16rpx);
+  }
 
   &__mascot-wrap {
     position: absolute;
@@ -47,6 +61,7 @@
     @include type-subheading;
     line-height: 1.5;
     margin-bottom: $spacing-sm;
+    word-break: keep-all;
   }
 
   &__copy {
