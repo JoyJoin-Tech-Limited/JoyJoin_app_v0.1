@@ -137,6 +137,7 @@ export const ICEBREAKER_XIAOYUE_EXPRESSION = {
   group_mirror: 'matchSuccess',
   recap: 'thanksFeedback',
   ended: 'thanksFeedback',
+  phase_selection: 'coachGuide',
 } as const satisfies Record<string, XiaoyueExpressionId>
 
 /** Map canonical expression IDs to sprite animation states.

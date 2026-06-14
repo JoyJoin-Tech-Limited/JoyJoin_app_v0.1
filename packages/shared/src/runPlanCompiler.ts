@@ -24,6 +24,7 @@ const TIER_BUDGETS: Record<TierMachineId, number> = {
   breeze: 40,
   glow: 60,
   blaze: 90,
+  custom: 0, // custom mode does not pre-compile a run plan
 };
 
 /** Core phases that are always included, in fixed order. */
@@ -46,6 +47,7 @@ const TIER_NON_CORE_POOLS: Record<TierMachineId, SocialIcebreakerPhase[]> = {
   breeze: ['lie_detective'],
   glow: ['lie_detective', 'personality_dice', 'group_mirror'],
   blaze: ['lie_detective', 'personality_dice', 'undercover_word', 'auction', 'quip_battle', 'group_mirror'],
+  custom: [], // custom mode does not pre-compile a run plan
 };
 
 /** Target number of non-core slots per tier. */
@@ -53,6 +55,7 @@ const TIER_SLOT_TARGETS: Record<TierMachineId, number> = {
   breeze: 1,
   glow: 3,
   blaze: 6,
+  custom: 0, // custom mode does not pre-compile a run plan
 };
 
 /** Vibe bias: phases to prioritize in the non-core pool selection. */
@@ -67,6 +70,9 @@ const VIBE_BIAS: Record<NonNullable<CompilationContext['vibe']>, SocialIcebreake
 function validateContext(ctx: CompilationContext): void {
   if (!ctx.tier || !TIER_BUDGETS[ctx.tier]) {
     throw new Error(`Invalid tier: ${ctx.tier}`);
+  }
+  if (ctx.tier === 'custom') {
+    throw new Error('Custom mode does not use the run plan compiler');
   }
   if (typeof ctx.playerCount !== 'number' || ctx.playerCount < 1) {
     throw new Error(`Invalid playerCount: ${ctx.playerCount}`);

@@ -11,9 +11,9 @@
  * - Kill-switch fallback requires zero deploy (env var change).
  */
 
-export type TierMachineId = 'breeze' | 'glow' | 'blaze'
+export type TierMachineId = 'breeze' | 'glow' | 'blaze' | 'custom'
 
-export const TIER_MACHINE_IDS: TierMachineId[] = ['breeze', 'glow', 'blaze']
+export const TIER_MACHINE_IDS: TierMachineId[] = ['breeze', 'glow', 'blaze', 'custom']
 
 export const LEGACY_TIER_MAP: Record<string, TierMachineId> = {
   standard: 'glow',
@@ -52,6 +52,12 @@ export const TIER_DISPLAY_MANIFEST: Record<TierMachineId, TierDisplayEntry> = {
     defaultEn: 'Blaze',
     variants: {},
     killSwitchFallback: '狂欢局',
+  },
+  custom: {
+    default: '自定义',
+    defaultEn: 'Custom',
+    variants: {},
+    killSwitchFallback: '自定义',
   },
 }
 

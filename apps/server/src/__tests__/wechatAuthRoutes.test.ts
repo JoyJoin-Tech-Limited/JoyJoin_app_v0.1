@@ -133,6 +133,7 @@ describe("wechat auth route hardening", () => {
     vi.clearAllMocks();
 
     process.env.NODE_ENV = "test";
+    process.env.APP_MODE = "production";
     process.env.PAYMENTS_ENABLED = "false";
 
     vi.mocked(usersRepo.getUserByWechatOpenId).mockResolvedValue(undefined as any);

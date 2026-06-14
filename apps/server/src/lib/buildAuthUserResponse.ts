@@ -60,7 +60,10 @@ export async function buildAuthUserResponse(userId: string): Promise<AuthUserRes
       activeAssessmentSessionId = activeSession.id;
     }
   } catch (e) {
-    // Ignore errors — session lookup is optional
+    logger.warn('Assessment session lookup failed (non-critical)', {
+      userId,
+      error: e instanceof Error ? e.message : String(e),
+    });
   }
 
   const nextStep = computeOnboardingNextStep(user);
@@ -93,7 +96,11 @@ export async function buildAuthUserResponse(userId: string): Promise<AuthUserRes
         }
       }
     } catch (e) {
-      // Non-critical: if cache lookup fails, return null silently
+      logger.warn('Xiaoyue analysis cache lookup failed (non-critical)', {
+        userId,
+        archetype: user.primaryArchetype,
+        error: e instanceof Error ? e.message : String(e),
+      });
     }
   }
 
@@ -110,6 +117,7 @@ const [
     paymentsEnabledFlag,
     personalityTestEchoEnabled,
     squadUnboxingDragRevealEnabled,
+    socialIcebreakerCustomModeEnabled,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
     getFeatureFlag('smartProfession', true),
@@ -123,6 +131,7 @@ const [
     getFeatureFlag('paymentsEnabled', false),
     getFeatureFlag('personalityTestEchoEnabled', true),
     getFeatureFlag('squadUnboxingDragRevealEnabled', true),
+    getFeatureFlag('socialIcebreakerCustomModeEnabled', true),
   ]);
 
   const authUserResponse: AuthUserResponse = {
@@ -150,6 +159,7 @@ const [
       paymentsEnabled: paymentsEnabledFlag,
       personalityTestEchoEnabled,
       squadUnboxingDragRevealEnabled,
+      socialIcebreakerCustomModeEnabled,
     },
   };
 

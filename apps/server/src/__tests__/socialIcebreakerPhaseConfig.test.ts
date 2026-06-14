@@ -206,6 +206,27 @@ describe('social icebreaker phase configuration', () => {
     expect(state.auctionAllLotsClosed).toBeUndefined();
   });
 
+  it('custom mode routes warmup and real phases back to phase_selection', () => {
+    const state: SocialSessionState = {
+      socialSessionId: 'social_test',
+      icebreakerSessionId: 'test',
+      currentPhase: 'warmup',
+      hostUserId: 'host',
+      hostDisplayName: 'Host',
+      playerCount: 4,
+      phaseStartedAt: Date.now(),
+      sessionStartedAt: Date.now(),
+      completedPhases: [],
+      eventTier: 'custom',
+      enabledPhases: DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES,
+    };
+    expect(getNextEligiblePhase('warmup', state)).toBe('phase_selection');
+    state.currentPhase = 'phase_selection';
+    expect(getNextEligiblePhase('phase_selection', state)).toBe('recap');
+    state.currentPhase = 'micro_challenge';
+    expect(getNextEligiblePhase('micro_challenge', state)).toBe('phase_selection');
+  });
+
   it('does not include group_mirror, undercover_word, or quip_battle by default', () => {
     const result = getServerEnabledPhases({} as NodeJS.ProcessEnv);
     expect(result).not.toContain('group_mirror');

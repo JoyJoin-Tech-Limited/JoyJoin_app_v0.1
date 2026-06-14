@@ -204,12 +204,18 @@
   }
 
   // ── Footer / CTA ────────────────────────────────────────────────
+  &__filler {
+    flex: 1;
+    min-height: 0;
+  }
+
   &__footer {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: $spacing-sm;
     padding-top: $spacing-md;
+    padding-bottom: calc($spacing-md + env(safe-area-inset-bottom));
   }
 
   &__cta {

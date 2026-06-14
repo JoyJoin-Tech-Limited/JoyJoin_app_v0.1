@@ -80,6 +80,7 @@ describe("GET /api/readyz", () => {
     process.env.SESSION_SECRET = "a".repeat(32);
     process.env.WECHAT_APPID = "wx1234567890abcdef";
     process.env.WECHAT_SECRET = "secret";
+    process.env.APP_MODE = "production";
   });
 
   it("returns 200 with all checks ok when DB succeeds and config is set", async () => {

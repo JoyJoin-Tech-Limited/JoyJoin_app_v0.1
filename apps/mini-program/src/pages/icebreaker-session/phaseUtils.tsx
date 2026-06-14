@@ -24,7 +24,7 @@ export const MOOD_OPTIONS: Array<{ mood: AtmosphereMood; label: string; asset: s
 
 // CDN-backed phase icons — eliminates domain-whitelist dependency and keeps the
 // mini-program package small. Assets uploaded via `npm run upload:cdn-assets`.
-const PHASE_ICON_SRC_MAP: Record<string, string> = {
+export const PHASE_ICON_SRC_MAP: Record<string, string> = {
   warmup: cdnAsset('/assets/icons/phase-icons/phase-warmup.webp'),
   'topic-card': cdnAsset('/assets/icons/phase-icons/phase-topic-card.png'),
   micro_challenge: cdnAsset('/assets/icons/phase-icons/phase-micro-challenge.webp'),
@@ -65,6 +65,8 @@ export function getPhaseLabel(phase: SessionPhase): string {
       return '迷你剧本杀'
     case 'recap':
       return '回顾'
+    case 'phase_selection':
+      return '环节选择'
     case 'ended':
       return '已结束'
     default:
@@ -86,6 +88,7 @@ const PHASE_EMOJI_MAP: Record<SessionPhase, string> = {
   group_mirror: '',
   recap: '',
   ended: '',
+  phase_selection: '',
 }
 
 /** Render a phase icon (Lovart 240px source, Taro downscales)
@@ -122,7 +125,7 @@ export function PhaseHeaderIcon({
           border: '1rpx solid rgba(139, 92, 246, 0.12)',
           verticalAlign: 'middle',
         }}
-        aria-hidden="true"
+        aria-hidden='true'
       />
     )
   }
