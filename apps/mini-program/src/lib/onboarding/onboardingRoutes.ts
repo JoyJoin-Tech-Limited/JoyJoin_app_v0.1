@@ -106,7 +106,6 @@ export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.terms,
   MINI_PROGRAM_PAGE_PATHS.eventDetail,
   MINI_PROGRAM_PAGE_PATHS.eventFeedback,
-  MINI_PROGRAM_PAGE_PATHS.poolRegistration,
   MINI_PROGRAM_PAGE_PATHS.eventCoordination,
   MINI_PROGRAM_PAGE_PATHS.squadUnboxing,
   MINI_PROGRAM_PAGE_PATHS.poolGroupDetail,
@@ -123,11 +122,14 @@ export const MINI_PROGRAM_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.icebreakerSession,
   MINI_PROGRAM_PAGE_PATHS.tierSelector,
   MINI_PROGRAM_PAGE_PATHS.matchingStatus,
+  MINI_PROGRAM_PAGE_PATHS.poolRegistration,
 ] as const
 
 export const MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT = 'pages/icebreaker-session' as const
 
 export const MINI_PROGRAM_MATCHING_SUBPACKAGE_ROOT = 'pages/matching-status' as const
+
+export const MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT = 'pages/pool-registration' as const
 
 export const MINI_PROGRAM_MATCHING_SUBPACKAGE_PAGES = [
   'index',
@@ -136,6 +138,10 @@ export const MINI_PROGRAM_MATCHING_SUBPACKAGE_PAGES = [
 export const MINI_PROGRAM_FEATURES_SUBPACKAGE_PAGES = [
   'index',
   'tier-selector/index',
+] as const
+
+export const MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_PAGES = [
+  'index',
 ] as const
 
 export const MINI_PROGRAM_SUBPACKAGES = [
@@ -151,6 +157,10 @@ export const MINI_PROGRAM_SUBPACKAGES = [
     root: MINI_PROGRAM_MATCHING_SUBPACKAGE_ROOT,
     pages: MINI_PROGRAM_MATCHING_SUBPACKAGE_PAGES,
   },
+  {
+    root: MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_PAGES,
+  },
 ] as const
 
 export const MINI_PROGRAM_PRELOAD_RULES = {
@@ -161,6 +171,14 @@ export const MINI_PROGRAM_PRELOAD_RULES = {
   [MINI_PROGRAM_PAGE_PATHS.login]: {
     network: 'all',
     packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT],
+  },
+  [MINI_PROGRAM_PAGE_PATHS.eventDetail]: {
+    network: 'all',
+    packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT],
+  },
+  [MINI_PROGRAM_PAGE_PATHS.events]: {
+    network: 'all',
+    packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT],
   },
 } as const
 

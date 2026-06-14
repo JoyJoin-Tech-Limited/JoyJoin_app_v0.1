@@ -6,8 +6,10 @@ import ArchetypeHead from '../../../components/mascot/ArchetypeHead'
 import type { PoolEventType } from '../flowConfig'
 import './PoolRegistrationHero.scss'
 
-const DINING_HERO_SRC = localAsset('/assets/ceremony/pool-registration/lovart-pool-registration-hero-dining-20260613-v1.webp')
-const DRINKS_HERO_SRC = localAsset('/assets/ceremony/pool-registration/lovart-pool-registration-hero-drinks-20260613-v1.webp')
+// These hero images live inside the pool-registration subpackage so they
+// travel with the page instead of inflating the main package.
+const DINING_HERO_SRC = './assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp'
+const DRINKS_HERO_SRC = './assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp'
 
 const MAX_COMPACT_HEADS = 5
 const SEAT_HEAD_SIZE = 40

@@ -205,6 +205,12 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/ceremony',
           to: 'dist/assets/ceremony',
         },
+        // Pool-registration ceremony heroes now travel with the subpackage so
+        // the main package stays under the 2 MB ceiling.
+        {
+          from: 'src/pages/pool-registration/assets',
+          to: 'dist/pages/pool-registration/assets',
+        },
         // Batch D milestone badges — 9 WebP files (~330KB total, q=70 600px).
         // Bundled locally (Path B, 2026-06-04) instead of CDN.
         // PNG masters live in `assets-source/lovart/batch-d/` (not bundled).

@@ -8,6 +8,8 @@ import {
   MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES,
   MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT,
   MINI_PROGRAM_PAGES,
+  MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_PAGES,
+  MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
   MINI_PROGRAM_PRELOAD_RULES,
   MINI_PROGRAM_ROUTES,
   MINI_PROGRAM_SUBPACKAGES,
@@ -42,6 +44,7 @@ describe('mini-program onboarding routes', () => {
 
   it('moves the onboarding chain into an ordinary subpackage registration', () => {
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/onboarding/onboarding/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/pool-registration/index')
     expect(MINI_PROGRAM_SUBPACKAGES).toEqual([
       {
         root: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT,
@@ -55,6 +58,10 @@ describe('mini-program onboarding routes', () => {
         root: MINI_PROGRAM_MATCHING_SUBPACKAGE_ROOT,
         pages: MINI_PROGRAM_MATCHING_SUBPACKAGE_PAGES,
       },
+      {
+        root: MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
+        pages: MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_PAGES,
+      },
     ])
   })
 
@@ -67,6 +74,14 @@ describe('mini-program onboarding routes', () => {
       'pages/login/index': {
         network: 'all',
         packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT],
+      },
+      'pages/event-detail/index': {
+        network: 'all',
+        packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT],
+      },
+      'pages/events/index': {
+        network: 'all',
+        packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT],
       },
     })
   })

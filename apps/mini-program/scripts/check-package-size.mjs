@@ -66,12 +66,29 @@ function getZipSize(dirPath) {
   }
 }
 
+function readAppConfig() {
+  const appJsonPath = path.join(DIST_DIR, 'app.json')
+  if (!fs.existsSync(appJsonPath)) {
+    return null
+  }
+  try {
+    return JSON.parse(fs.readFileSync(appJsonPath, 'utf-8'))
+  } catch {
+    return null
+  }
+}
+
 function main() {
   if (!fs.existsSync(DIST_DIR)) {
     console.error(`Missing dist directory: ${DIST_DIR}`)
     console.error('Run npm run build:weapp first.')
     process.exit(1)
   }
+
+  const appConfig = readAppConfig()
+  const subpackageRoots =
+    appConfig?.subPackages?.map((pkg) => pkg.root).filter(Boolean) ?? ['pages/onboarding']
+  const subpackageDirNames = subpackageRoots.map((root) => root.split('/').filter(Boolean)[1]).filter(Boolean)
 
   console.log('=== Package Size Breakdown ===\n')
 
@@ -99,12 +116,12 @@ function main() {
   }
   console.log(`Core framework:        ${formatSize(coreSize)}`)
 
-  // Main package pages (excluding onboarding subpackage)
+  // Main package pages (excluding all subpackage roots)
   const mainPagesDir = path.join(DIST_DIR, 'pages')
   let mainPagesSize = 0
   if (fs.existsSync(mainPagesDir)) {
     for (const name of fs.readdirSync(mainPagesDir)) {
-      if (name === 'onboarding') continue // subpackage
+      if (subpackageDirNames.includes(name)) continue
       const full = path.join(mainPagesDir, name)
       if (fs.statSync(full).isDirectory()) {
         mainPagesSize += getDirectorySize(full)
@@ -133,11 +150,11 @@ function main() {
         fs.copyFileSync(src, path.join(tmpDir, f))
       }
     }
-    // Copy pages (excluding onboarding)
+    // Copy pages (excluding subpackage roots)
     if (fs.existsSync(mainPagesDir)) {
       fs.mkdirSync(path.join(tmpDir, 'pages'))
       for (const name of fs.readdirSync(mainPagesDir)) {
-        if (name === 'onboarding') continue
+        if (subpackageDirNames.includes(name)) continue
         const src = path.join(mainPagesDir, name)
         const dst = path.join(tmpDir, 'pages', name)
         if (fs.statSync(src).isDirectory()) {
@@ -155,14 +172,18 @@ function main() {
 
     // Subpackages
     let subpackageTotal = 0
-    const onboardingDir = path.join(DIST_DIR, 'pages', 'onboarding')
-    if (fs.existsSync(onboardingDir)) {
-      const tmpOnboarding = fs.mkdtempSync(path.join(os.tmpdir(), 'joyjoin-mp-sub-'))
-      fs.cpSync(onboardingDir, path.join(tmpOnboarding, 'pages', 'onboarding'), { recursive: true })
-      const onboardingSize = getZipSize(tmpOnboarding)
-      console.log(`Onboarding subpkg:     ${formatSize(onboardingSize)} (limit: ${formatSize(SUBPACKAGE_MAX_BYTES)})`)
-      subpackageTotal += onboardingSize
-      fs.rmSync(tmpOnboarding, { recursive: true, force: true })
+    for (const root of subpackageRoots) {
+      const dirName = root.split('/').filter(Boolean)[1]
+      if (!dirName) continue
+      const subDir = path.join(DIST_DIR, 'pages', dirName)
+      if (!fs.existsSync(subDir)) continue
+      const tmpSub = fs.mkdtempSync(path.join(os.tmpdir(), 'joyjoin-mp-sub-'))
+      fs.cpSync(subDir, path.join(tmpSub, 'pages', dirName), { recursive: true })
+      const subSize = getZipSize(tmpSub)
+      const displayName = dirName.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+      console.log(`${displayName.padEnd(21)} ${formatSize(subSize)} (limit: ${formatSize(SUBPACKAGE_MAX_BYTES)})`)
+      subpackageTotal += subSize
+      fs.rmSync(tmpSub, { recursive: true, force: true })
     }
 
     const customTabBarDir = path.join(DIST_DIR, 'custom-tab-bar')
