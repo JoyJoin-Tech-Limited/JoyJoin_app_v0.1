@@ -9,17 +9,19 @@ interface ChoiceCardProps {
   selected: boolean
   onClick: () => void
   compact?: boolean
+  disabled?: boolean
 }
 
-export default function ChoiceCard({ option, selected, onClick, compact = false }: ChoiceCardProps) {
+export default function ChoiceCard({ option, selected, onClick, compact = false, disabled = false }: ChoiceCardProps) {
   const handleTap = useCallback(() => {
+    if (disabled) return
     try {
       Taro.vibrateShort({ type: 'light' })
     } catch {
       // decorative
     }
     onClick()
-  }, [onClick])
+  }, [disabled, onClick])
 
   return (
     <View
@@ -27,14 +29,16 @@ export default function ChoiceCard({ option, selected, onClick, compact = false 
         'pool-reg__choice-card',
         compact ? 'pool-reg__choice-card--compact' : '',
         selected ? 'pool-reg__choice-card--selected' : '',
+        disabled ? 'pool-reg__choice-card--disabled' : '',
       ]
         .filter(Boolean)
         .join(' ')}
-      hoverClass='pool-reg__choice-card--hover'
+      hoverClass={disabled ? '' : 'pool-reg__choice-card--hover'}
       onClick={handleTap}
       role='radio'
-      aria-label={`${option.label}${option.description ? '：' + option.description : ''}`}
+      aria-label={`${option.label}${option.description ? '：' + option.description : ''}${disabled ? '（不可选）' : ''}`}
       aria-checked={selected}
+      aria-disabled={disabled}
     >
       <View className='pool-reg__choice-label-row'>
         {option.emoji ? (

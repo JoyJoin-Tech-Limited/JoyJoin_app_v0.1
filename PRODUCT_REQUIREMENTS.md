@@ -1,7 +1,7 @@
 # JoyJoin (悦聚·Joy) - Product Requirements Document
 
 **Version:** 1.6  
-**Last Updated:** 2026-06-08  
+**Last Updated:** 2026-06-15  
 **Platform:** WeChat Mini Program (Taro) — launch-primary  
 **Reference Surface:** Web (React + Vite) — development sandbox / parity reference only, not shipping  
 **Target Market:** Hong Kong & Shenzhen  
@@ -77,7 +77,19 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-06-08)
+## 🆕 Recent Updates (Last updated: 2026-06-15)
+
+### 2026 Milestones (June 2026)
+
+**40. Interest-Heat Picker Full-Marks Push** 🎯 *(2026-06-15)*
+- **Scope:** Mini-program onboarding step 4 (`pages/onboarding/extended-data/index`) — interest selection and heat signaling.
+- **Category icon wiring fix:** Removed `category` from `CDN_ICON_TIERS` (`packages/shared/src/iconSystem/emojiToIconMap.ts`) so `JoyJoinIcon tier="category"` resolves bundled `src/assets/icons/category-icons/` via `require()` instead of a broken CDN path. Replaced the `category-social` (`话题`) asset through the Lovart pipeline.
+- **Preloader:** Added `usePreloadCategoryIcons` to warm the five bundled category icons before the heat picker appears; skipped on 2G and guarded to run once.
+- **UX redesign:** Tap-to-cycle each topic 0 → 1 (感兴趣) → 2 (很热衷) → 3 (必聊项) → off, with a 3-segment vertical tier indicator and a three-step heat guide.
+- **Milestone celebrations:** Centered toasts for unlock (≥3 selections), first L3 / 必聊项, and all five macro categories selected.
+- **Emotional-value polish:** Archetype-aware Xiaoyue coach copy and footer "heat story" pill; CTA unlock pulse; active category icon scale feedback; first-selection hint toast; offline submit guard.
+- **Accessibility & performance:** `role="button"`, `aria-pressed`, dynamic `aria-label` per card; `aria-live="polite"` on toasts; `@media (prefers-reduced-motion: reduce)` disables animations; transform-only interactions; timeout-ref cleanup on unmount.
+- **Audit scores:** 情绪价值 24/24, Frontend Design Audit 20/20, Completeness Audit 44/44, Performance Audit PASS (50/60).
 
 ### 2026 Milestones (May 2026)
 
@@ -124,6 +136,12 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Profile-review backport:** Adopted `InterestChipCloud` for interest + category chips.
 - **Analytics:** Lightweight `logInfo` events for `edit_profile_enter`, `edit_profile_save` (with `fieldsChanged`), `edit_profile_abandon` (with `secondsOnPage`).
 
+**39. Intent Icon Wiring Fix + Accessibility Polish** 🎯 *(2026-06-15)*
+- **Root cause:** `intent` was incorrectly listed in `CDN_ICON_TIERS` (`packages/shared/src/iconSystem/emojiToIconMap.ts`), so `JoyJoinIcon tier="intent"` tried to load from a CDN path that does not resolve in the mini-program runtime and fell back to generic emoji.
+- **Fix:** Removed `intent` from `CDN_ICON_TIERS`; intent icons now resolve through bundled `src/assets/icons/intent-icons/` via `require()`. Added `usePreloadIntentIcons` hook to pre-warm bundled intent icons before the grid renders in both `pages/pool-registration/index` and `pages/onboarding/essential-data/index`.
+- **UX hardening:** Disabled state when `MAX_INTENTS` cap is reached (explicit intents only; `随缘`/flexible remains exempt). Cards receive `aria-disabled`, a focus ring, and token-based muted colors instead of opacity-only dimming for accessible contrast. Shared `Checkmark` component standardizes the branded checkmark pop-in animation across intent cards and choice cards. `100vh` fallback added for `100dvh` WeChat pitfall; empty rulesets removed.
+- **Scope:** Affects onboarding `essential-data` Step 5 intent grid and pool-registration intent grid. No API or schema changes.
+
 **38. Mini-Program Landing & Profession Overlay Polish** 🧹 *(2026-06-13)*
 - **Landing continue-mode CTA:** context-aware labels replace the generic "继续创建账户" — `进入发现页` when the returning user's `nextStep` is `discover` (routed to the Discover tab), `继续完善档案` for authenticated users still in onboarding, and `继续完成测试` for guests with an incomplete anonymous assessment session. The CTA sets `isPageExiting` before navigation and resets it via `useResetOnShow` on swipe-back/foreground so the button never stays stuck on the ellipsis spinner.
 - **Profession overlay accessibility & performance:** `ProfessionChatOverlay` detects `prefers-reduced-motion` via `Taro.getSystemInfoSync` and applies a `profession-overlay--reduce-motion` class that suppresses entrance/exit animations, typing-dot bounce, sparkle bursts, and keyboard-slide transitions. The keyboard-aware input bar uses `transform: translateY(-keyboardHeight)` to stay on the compositor and avoid layout thrashing.
@@ -166,7 +184,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Dynamic event count:** Profile page replaced hardcoded "3" with live `joinedEvents.length` from the composite shell.
 - **Birth year range fix:** Edit-profile birth year picker now starts from `currentYear - 18` descending to 1950, and correctly reads from `birthdate` fallback.
 - **Industry English input:** Switched from server embedding search to local `searchOccupations` with pinyin/English/keyword support for instant, offline-friendly industry selection.
-- **Intent multi-select + 随缘:** 随缘 ("go with the flow") now coexists with other intent selections; unselected options auto-dim with `opacity: 0.7` for clear visual hierarchy.
+- **Intent multi-select + 随缘:** 随缘 ("go with the flow") now coexists with other intent selections; unselected options use token-based muted colors for clear visual hierarchy. Cards are disabled when the explicit-intent cap (`MAX_INTENTS=3`) is reached, with `aria-disabled` and focus-ring treatment.
 - **我的足迹 back button + alignment:** Conditional back button via `getCurrentPages().length > 1`; title centered.
 - **Android logo fix:** `BrandLogo.tsx` uses local `/assets/joyjoin-logo.webp`; native tab bar uses optimized `joyjoin-logo-tab.png` (19KB vs 596KB) to stay within the 2MB package budget.
 - **Interest intensity in settings:** Edit-profile now shows 3-tier level badges (已加入/升温中/高热) with tap-to-cycle `1→2→3→off` intensity control, protected behind a loading guard.

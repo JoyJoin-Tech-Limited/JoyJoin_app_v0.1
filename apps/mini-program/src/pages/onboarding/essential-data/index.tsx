@@ -30,6 +30,7 @@ import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
+import CheckBadge from '../../../components/ui/CheckBadge'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
 import FormStepper from '../../../components/ui/FormStepper'
@@ -459,44 +460,50 @@ export default function EssentialDataPage() {
   )
 
   // Memoize intent grid to prevent re-render on unrelated state changes
-  const intentGrid = useMemo(() => (
-    <View className='essential-data__intent-grid'>
-      {intentOptions.map((option) => {
-        const isFlexibleActive = intent.includes(INTENT_FLEXIBLE_OPTION.value)
-        const isExplicitlySelected = intent.includes(option.value)
-        const isDimmed = isFlexibleActive && option.value !== INTENT_FLEXIBLE_OPTION.value && !isExplicitlySelected
-        const visuallySelected = isExplicitlySelected || isDimmed
-        return (
-          <View
-            key={option.value}
-            className={[
-              'essential-data__intent-card',
-              visuallySelected ? 'essential-data__intent-card--selected' : '',
-              isDimmed ? 'essential-data__intent-card--dimmed' : '',
-            ].filter(Boolean).join(' ')}
-            onClick={() => toggleIntent(option.value)}
-            role='button'
-            aria-pressed={isExplicitlySelected}
-            aria-label={`${option.label}：${option.subtitle}`}
-          >
-            <JoyJoinIcon
-              emoji={option.emoji}
-              tier='intent'
-              size={48}
-              className='essential-data__intent-icon'
-            />
-            <Text className='essential-data__intent-label'>{option.label}</Text>
-            <Text className='essential-data__intent-subtitle'>{option.subtitle}</Text>
-            {visuallySelected && (
-              <View className='essential-data__intent-check'>
-                <Text className='essential-data__intent-check-icon'>✓</Text>
-              </View>
-            )}
-          </View>
-        )
-      })}
-    </View>
-  ), [intentOptions, intent, toggleIntent])
+  const intentGrid = useMemo(() => {
+    const isFlexibleActive = intent.includes(INTENT_FLEXIBLE_OPTION.value)
+    const explicitCount = intent.filter((item) => item !== INTENT_FLEXIBLE_OPTION.value).length
+    const isCapReached = explicitCount >= MAX_INTENTS
+    return (
+      <View className='essential-data__intent-grid'>
+        {intentOptions.map((option) => {
+          const isExplicitlySelected = intent.includes(option.value)
+          const isFlexibleOption = option.value === INTENT_FLEXIBLE_OPTION.value
+          const isDimmed = isFlexibleActive && !isFlexibleOption && !isExplicitlySelected
+          const isDisabled = isCapReached && !isExplicitlySelected && !isFlexibleOption
+          const visuallySelected = isExplicitlySelected || isDimmed
+          return (
+            <View
+              key={option.value}
+              className={[
+                'essential-data__intent-card',
+                visuallySelected ? 'essential-data__intent-card--selected' : '',
+                isDimmed ? 'essential-data__intent-card--dimmed' : '',
+                isDisabled ? 'essential-data__intent-card--disabled' : '',
+              ].filter(Boolean).join(' ')}
+              onClick={() => !isDisabled && toggleIntent(option.value)}
+              role='button'
+              aria-pressed={isExplicitlySelected}
+              aria-disabled={isDisabled}
+              aria-label={`${option.label}：${option.subtitle}${isDisabled ? '（已达上限）' : ''}`}
+            >
+              <JoyJoinIcon
+                emoji={option.emoji}
+                tier='intent'
+                size={48}
+                className='essential-data__intent-icon'
+              />
+              <Text className='essential-data__intent-label'>{option.label}</Text>
+              <Text className='essential-data__intent-subtitle'>{option.subtitle}</Text>
+              {visuallySelected && (
+                <CheckBadge className='essential-data__intent-check' />
+              )}
+            </View>
+          )
+        })}
+      </View>
+    )
+  }, [intentOptions, intent, toggleIntent])
 
   if (isLoading) {
     return (

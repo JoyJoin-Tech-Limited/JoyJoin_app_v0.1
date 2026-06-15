@@ -50,36 +50,40 @@ export const INTEREST_TAXONOMY: InterestDefinition[] = [
   { id: 'live_house', label: 'LiveHouse', macroCategory: 'entertainment', riasec: 'A', imageUrl: '/images/interests/live_house.jpg', active: true, synonyms: ['现场演出'] },
   { id: 'binge_watch', label: '追剧', macroCategory: 'entertainment', riasec: 'C', imageUrl: '/images/interests/binge_watch.jpg', active: true, synonyms: ['看剧', '刷剧'] },
 
-  // 生活方式 lifestyle (9张)
+  // 生活方式 lifestyle (11张)
   { id: 'hiking', label: '徒步', macroCategory: 'lifestyle', riasec: 'R', imageUrl: '/images/interests/hiking.jpg', active: true, synonyms: ['登山', '远足'] },
   { id: 'fitness', label: '健身', macroCategory: 'lifestyle', riasec: 'R', imageUrl: '/images/interests/fitness.jpg', active: true, synonyms: ['撸铁', '运动'] },
+  { id: 'climbing', label: '攀岩', macroCategory: 'lifestyle', riasec: 'R', imageUrl: '/images/interests/climbing.jpg', active: true, synonyms: ['抱石', 'bouldering', '室内攀岩'] },
   { id: 'camping', label: '露营', macroCategory: 'lifestyle', riasec: 'R', imageUrl: '/images/interests/camping.jpg', active: true, synonyms: ['野营', '户外露营'] },
-  { id: 'extreme_sports', label: '极限运动', macroCategory: 'lifestyle', riasec: 'R', imageUrl: '/images/interests/extreme_sports.jpg', active: true, synonyms: ['滑翔', '跳伞'] },
+  { id: 'extreme_sports', label: '户外冒险', macroCategory: 'lifestyle', riasec: 'R', imageUrl: '/images/interests/extreme_sports.jpg', active: true, synonyms: ['滑翔', '跳伞', '攀岩', '漂流'] },
   { id: 'photography', label: '摄影', macroCategory: 'lifestyle', riasec: 'A', imageUrl: '/images/interests/photography.jpg', active: true, synonyms: ['拍照', '街拍'] },
   { id: 'diy', label: '手作', macroCategory: 'lifestyle', riasec: 'A', imageUrl: '/images/interests/diy.jpg', active: true, synonyms: ['手工', 'DIY'] },
+  { id: 'vintage', label: '淘古着', macroCategory: 'lifestyle', riasec: 'A', imageUrl: '/images/interests/vintage.jpg', active: true, synonyms: ['vintage', '古着', '二手', '中古'] },
   { id: 'travel', label: '旅行', macroCategory: 'lifestyle', riasec: 'A', imageUrl: '/images/interests/travel.jpg', active: true, synonyms: ['旅游', '出行'] },
   { id: 'pets', label: '撸猫', macroCategory: 'lifestyle', riasec: 'S', imageUrl: '/images/interests/pets.jpg', active: true, synonyms: ['宠物', '撸狗', '吸猫'] },
-  { id: 'sailing', label: '海边帆船', macroCategory: 'lifestyle', riasec: 'R', imageUrl: '/images/interests/sailing.jpg', active: true, synonyms: ['帆船', '海上运动'] },
+  { id: 'sailing', label: '水上运动', macroCategory: 'lifestyle', riasec: 'R', imageUrl: '/images/interests/sailing.jpg', active: true, synonyms: ['帆船', '桨板', '皮划艇', '冲浪'] },
 
-  // 文化 culture (7张)
+  // 文化 culture (8张)
   { id: 'exhibition', label: '看展', macroCategory: 'culture', riasec: 'A', imageUrl: '/images/interests/exhibition.jpg', active: true, synonyms: ['展览', '艺术展'] },
   { id: 'music', label: '玩音乐', macroCategory: 'culture', riasec: 'A', imageUrl: '/images/interests/music.jpg', active: true, synonyms: ['乐器', '音乐创作'] },
   { id: 'theater', label: '话剧', macroCategory: 'culture', riasec: 'A', imageUrl: '/images/interests/theater.jpg', active: true, synonyms: ['戏剧', '舞台剧'] },
   { id: 'cinema', label: '电影', macroCategory: 'culture', riasec: 'A', imageUrl: '/images/interests/cinema.jpg', active: true, synonyms: ['看电影', '影院'] },
   { id: 'citywalk', label: 'CityWalk', macroCategory: 'culture', riasec: 'A', imageUrl: '/images/interests/citywalk.jpg', active: true, synonyms: ['城市漫步', '逛街'] },
+  { id: 'flea_market', label: '市集', macroCategory: 'culture', riasec: 'A', imageUrl: '/images/interests/flea_market.jpg', active: true, synonyms: ['创意市集', '文创市集', '周末市集'] },
   { id: 'standup', label: '脱口秀', macroCategory: 'culture', riasec: 'S', imageUrl: '/images/interests/standup.jpg', active: true, synonyms: ['单口喜剧', '开放麦'] },
   { id: 'concert', label: '演唱会', macroCategory: 'culture', riasec: 'S', imageUrl: '/images/interests/concert.jpg', active: true, synonyms: ['音乐会', '现场'] },
 
-  // 社交话题 social (9张)
+  // 话题 social (10张)
   { id: 'reading', label: '阅读', macroCategory: 'social', riasec: 'I', imageUrl: '/images/interests/reading.jpg', active: true, synonyms: ['看书', '读书'] },
   { id: 'tech', label: '科技', macroCategory: 'social', riasec: 'I', imageUrl: '/images/interests/tech.jpg', active: true, synonyms: ['数码', '科技圈'] },
+  { id: 'podcasts', label: '播客', macroCategory: 'social', riasec: 'A', imageUrl: '/images/interests/podcasts.jpg', active: true, synonyms: ['小宇宙', 'podcast', '听播客'] },
   { id: 'variety', label: '八卦', macroCategory: 'social', riasec: 'S', imageUrl: '/images/interests/variety.jpg', active: true, synonyms: ['娱乐八卦', '综艺'] },
   { id: 'career', label: '搞事业', macroCategory: 'social', riasec: 'E', imageUrl: '/images/interests/career.jpg', active: true, synonyms: ['职业发展', '工作'] },
   { id: 'fashion', label: '穿搭', macroCategory: 'social', riasec: 'C', imageUrl: '/images/interests/fashion.jpg', active: true, synonyms: ['时尚', '潮流'] },
   { id: 'bar', label: '小酒馆', macroCategory: 'social', riasec: 'S', imageUrl: '/images/interests/bar.jpg', active: true, synonyms: ['酒吧', '清吧'] },
-  { id: 'wine', label: '品酒', macroCategory: 'social', riasec: 'E', imageUrl: '/images/interests/wine.jpg', active: true, synonyms: ['红酒', '威士忌'] },
-  { id: 'startup', label: '创业圆桌', macroCategory: 'social', riasec: 'E', imageUrl: '/images/interests/startup.jpg', active: true, synonyms: ['创业', '商业'] },
-  { id: 'language', label: '语言交换', macroCategory: 'social', riasec: 'I', imageUrl: '/images/interests/language.jpg', active: true, synonyms: ['语言学习', '外语'] },
+  { id: 'wine', label: '小酌', macroCategory: 'social', riasec: 'E', imageUrl: '/images/interests/wine.jpg', active: true, synonyms: ['红酒', '威士忌', '精酿'] },
+  { id: 'startup', label: '创业', macroCategory: 'social', riasec: 'E', imageUrl: '/images/interests/startup.jpg', active: true, synonyms: ['创业圆桌', '商业', '搞钱'] },
+  { id: 'language', label: '语言搭子', macroCategory: 'social', riasec: 'I', imageUrl: '/images/interests/language.jpg', active: true, synonyms: ['语言学习', '外语', '语言交换'] },
 ];
 
 // ============ Lookup Maps (built at module load) ============
@@ -345,7 +349,7 @@ export const MACRO_CATEGORY_LABELS: Record<MacroCategory, string> = {
   entertainment: '娱乐',
   lifestyle: '生活方式',
   culture: '文化',
-  social: '社交话题',
+  social: '话题',
 };
 
 export const RIASEC_LABELS: Record<RiasecType, string> = {

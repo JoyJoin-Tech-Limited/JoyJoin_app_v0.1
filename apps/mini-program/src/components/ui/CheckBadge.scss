@@ -1,0 +1,32 @@
+@use '../../styles/variables' as *;
+
+.jj-check-badge {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 999rpx;
+  background: $color-primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: jj-check-badge-pop 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+
+  &__mark {
+    width: 14rpx;
+    height: 8rpx;
+    border-left: 4rpx solid $color-text-white;
+    border-bottom: 4rpx solid $color-text-white;
+    transform: rotate(-45deg);
+    margin-top: -2rpx;
+  }
+}
+
+@keyframes jj-check-badge-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

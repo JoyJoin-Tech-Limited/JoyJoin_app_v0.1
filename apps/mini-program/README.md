@@ -192,6 +192,7 @@ The mini-program replaces raw Unicode emoji with brand-aligned proprietary icons
 1. **Shared registry** — `packages/shared/src/iconSystem/emojiToIconMap.ts`
    - Maps Unicode emoji → `assetKey` + `tier` + `fallbackEmoji`
    - Supports **composite lookup** (same emoji resolves to different assets per tier)
+   - `CDN_ICON_TIERS` controls which tiers load from CDN vs the local bundle. Tiers listed there resolve via `cdnAsset()`; tiers **not** listed resolve via `require()` against bundled `src/assets/icons/<tier>/`. Keep critical UI chrome (e.g. `intent`, `category`) out of `CDN_ICON_TIERS` so subpackage pages never block on a network path.
    - `getIconMapping(emoji, tier?)` → tier-specific match first, then global fallback
    - `getIconAssetPath(assetKey, tier, density)` → builds `require()` path for Taro
 
@@ -207,6 +208,11 @@ The mini-program replaces raw Unicode emoji with brand-aligned proprietary icons
    - `.jj-icon-loading` — shimmer placeholder animation
 
 **Tier inventory** (`IconTier`): `expression`, `semantic`, `mood`, `chemistry`, `phase`, `status`, `reaction`, `category`, `intent`, `reveal`, `achievement`
+
+**Preloader hooks for bundled icon tiers:**
+- `usePreloadCategoryIcons` — warms the five bundled category icons before the interest-heat picker renders.
+- `usePreloadIntentIcons` — warms the six bundled intent icons before the intent grid renders.
+Both skip on 2G and run once per session.
 
 **When to use raw emoji intentionally** (do not wire through `JoyJoinIcon`):
 - Dynamic conversational copy (`ProfessionChatOverlay`, Xiaoyue bubbles)

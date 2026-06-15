@@ -313,7 +313,7 @@ apps/mini-program/
 │       │   ├── status-icons/      # Matching / event status badges (bundled)
 │       │   ├── reaction-icons/    # Icebreaker reaction buttons (CDN)
 │       │   ├── category-icons/    # Interest category selectors (CDN)
-│       │   ├── intent-icons/      # Onboarding intent selectors (CDN)
+│       │   ├── intent-icons/      # Onboarding intent selectors (bundled locally)
 │       │   ├── reveal-icons/      # Squad-unboxing reveal emblems (CDN)
 │       │   ├── achievement-badges/ # Gamification achievement toasts (CDN)
 │       │   ├── info-labels/       # Semantic info pills (CDN)

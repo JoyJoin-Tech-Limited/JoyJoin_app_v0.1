@@ -268,11 +268,15 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 **What's Collected:**
 - **ONLY Interest Carousel**
-  - 56 topics across 8 categories
-  - Multi-tap heat level (0/5/15/25)
-  - Includes topic avoidances
-  - Minimum 3 selections required (enforced on both client and server: `POST /api/user/interests` returns 400 if `totalSelections < 3`)
-- **Archetype-based recommendation hints** are shown alongside interest topics — the carousel displays personalised suggestions based on the user's archetype result from Step 1 (PR #309).
+  - 46 active topics across **5 macro categories** (`food`, `entertainment`, `lifestyle`, `culture`, `social`)
+  - Multi-tap heat level: tap cycles 0 → 1 → 2 → 3 → off
+    - Level 1 = 感兴趣 (heat 3)
+    - Level 2 = 很热衷 (heat 10)
+    - Level 3 = 必聊项 (heat 25)
+  - **3–10 selections required** (enforced on both client and server: `POST /api/user/interests` returns 400 if `totalSelections < 3`)
+- **Archetype-aware coaching:** Xiaoyue guidance and the footer "heat story" pill personalize around the user's archetype result from Step 1.
+- **Milestone feedback:** Centered celebration toasts fire when the user crosses ≥3 selections, sets the first L3 / 必聊项, or selects topics from all 5 macro categories.
+- **Category icons:** `JoyJoinIcon tier="category"` renders bundled proprietary icons (`src/assets/icons/category-icons/`); `usePreloadCategoryIcons` pre-warms them before the grid renders.
 
 **After Completion:**
 - `hasCompletedInterestsCarousel = true` (server-persisted; this is the canonical step-completion signal)

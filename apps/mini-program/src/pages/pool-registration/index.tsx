@@ -29,6 +29,7 @@ import { POOLS_QUERY_KEY, JOINED_EVENTS_QUERY_KEY } from '../../lib/prefetchEngi
 import { haptics } from '../../lib/utils/haptics'
 import { logInfo, logError } from '../../lib/utils/logger'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { usePreloadIntentIcons } from '../../hooks/usePreloadIntentIcons'
 import { TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscribeMessage'
@@ -38,6 +39,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import StatusCard from '../../components/ui/StatusCard'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import CheckBadge from '../../components/ui/CheckBadge'
 import XiaoyueChatBubble from '../../components/mascot/XiaoyueChatBubble'
 
 import {
@@ -225,26 +227,12 @@ export default function PoolRegistrationPage() {
     [eventType, poolArea],
   )
 
-  // Preload intent icons CDN assets when pool data is ready,
-  // so they're cached before the user reaches the intent step.
+  // Pre-warm bundled intent icons and the error-state mascot so they render
+  // instantly when needed.
+  usePreloadIntentIcons(!!pool && !authLoading)
+
   useEffect(() => {
     if (!pool || authLoading) return
-
-    const INTENT_ASSET_KEYS = [
-      'intent-friends',
-      'intent-networking',
-      'intent-discussion',
-      'intent-fun',
-      'intent-romance',
-      'intent-flexible',
-    ]
-
-    for (const key of INTENT_ASSET_KEYS) {
-      const url = cdnAsset(`/assets/icons/intent-icons/${key}.webp`)
-      Taro.getImageInfo({ src: url }).catch(() => {
-        // Silent — CDN preload is best-effort
-      })
-    }
 
     // Preload error-state mascot so it doesn't flash-load on error
     Taro.getImageInfo({ src: getXiaoyueExpressionAsset('actionFailure') }).catch(() => {
@@ -540,14 +528,17 @@ export default function PoolRegistrationPage() {
   // Memoize intent grid to prevent re-render on unrelated state changes
   const intentGrid = useMemo(() => {
     const isFlexibleActive = formState.eventIntent.includes(INTENT_FLEXIBLE_OPTION.value)
+    const explicitCount = formState.eventIntent.filter(
+      (item) => item !== INTENT_FLEXIBLE_OPTION.value,
+    ).length
+    const isCapReached = explicitCount >= MAX_INTENTS
     return (
       <View className='pool-reg__choice-grid'>
         {INTENT_FLOW_OPTIONS.map((option) => {
           const isExplicitlySelected = formState.eventIntent.includes(option.value)
-          const isDimmed =
-            isFlexibleActive &&
-            option.value !== INTENT_FLEXIBLE_OPTION.value &&
-            !isExplicitlySelected
+          const isFlexibleOption = option.value === INTENT_FLEXIBLE_OPTION.value
+          const isDimmed = isFlexibleActive && !isFlexibleOption && !isExplicitlySelected
+          const isDisabled = isCapReached && !isExplicitlySelected && !isFlexibleOption
 
           return (
             <View
@@ -556,14 +547,16 @@ export default function PoolRegistrationPage() {
                 'pool-reg__intent-card',
                 isExplicitlySelected || isDimmed ? 'pool-reg__intent-card--selected' : '',
                 isDimmed ? 'pool-reg__intent-card--dimmed' : '',
+                isDisabled ? 'pool-reg__intent-card--disabled' : '',
               ]
                 .filter(Boolean)
                 .join(' ')}
-              hoverClass='pool-reg__intent-card--hover'
-              onClick={() => handleIntentToggle(option.value)}
+              hoverClass={isDisabled ? '' : 'pool-reg__intent-card--hover'}
+              onClick={() => !isDisabled && handleIntentToggle(option.value)}
               role='button'
               aria-pressed={isExplicitlySelected}
-              aria-label={`${option.label}：${option.description}`}
+              aria-disabled={isDisabled}
+              aria-label={`${option.label}：${option.description}${isDisabled ? '（已达上限）' : ''}`}
             >
               {option.emoji != null ? (
                 <JoyJoinIcon
@@ -576,9 +569,7 @@ export default function PoolRegistrationPage() {
               <Text className='pool-reg__intent-label'>{option.label}</Text>
               <Text className='pool-reg__intent-subtitle'>{option.description}</Text>
               {isExplicitlySelected && (
-                <View className='pool-reg__intent-check'>
-                  <Text className='pool-reg__intent-check-icon'>&#x2713;</Text>
-                </View>
+                <CheckBadge className='pool-reg__intent-check' />
               )}
             </View>
           )

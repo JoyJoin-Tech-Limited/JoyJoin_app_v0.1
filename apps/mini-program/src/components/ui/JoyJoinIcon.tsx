@@ -42,6 +42,9 @@ function getReducedMotion(): boolean {
 
 const REDUCED_MOTION = getReducedMotion()
 
+/** Fallback placeholder background for loading icons. Mirrors $color-bg-subtle. */
+const DEFAULT_ICON_PLACEHOLDER_BG = 'rgba(0, 0, 0, 0.04)'
+
 export default function JoyJoinIcon({
   emoji,
   size,
@@ -122,7 +125,7 @@ export default function JoyJoinIcon({
           ? 'transparent'
           : mapping.tint
             ? `${mapping.tint}1A`
-            : 'rgba(0,0,0,0.04)',
+            : DEFAULT_ICON_PLACEHOLDER_BG,
         ...style,
       }}
       mode='aspectFit'

@@ -17,6 +17,7 @@ This package holds contracts and logic that are intentionally shared across mult
 - `packages/shared/src/districts.ts`
 - `packages/shared/src/occupations.ts`
 - `packages/shared/src/industryTaxonomy.ts`
+- `packages/shared/src/iconSystem/emojiToIconMap.ts` — emoji → proprietary icon mapping for `JoyJoinIcon`; `CDN_ICON_TIERS` controls CDN vs bundled resolution. `intent` and `category` icons are bundled locally in the mini-program.
 
 ### Shared domain engines
 - `packages/shared/src/personality/` — archetypes, adaptive engine, compatibility references

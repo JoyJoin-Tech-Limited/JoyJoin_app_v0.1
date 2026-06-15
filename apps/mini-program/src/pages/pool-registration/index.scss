@@ -3,6 +3,8 @@
 
 .pool-reg {
   @include page-gradient-bg;
+  // design-audit:intentional — dvh fallback for WeChat WKWebView (see AGENTS.md §4)
+  min-height: 100vh;
   min-height: 100dvh;
   box-sizing: border-box;
   padding: 0 $container-padding $spacing-2xl;
@@ -551,7 +553,7 @@
     border: 2rpx solid $color-border;
     border-radius: $card-radius-sm;
     position: relative;
-    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
 
     &--selected {
       background: rgba($color-primary, 0.10);
@@ -562,24 +564,37 @@
     &--dimmed {
       background: rgba($color-primary, 0.06);
       border-color: rgba($color-primary, 0.30);
-      opacity: 0.65;
+    }
+
+    &--disabled {
+      background: $color-bg;
+      border-color: $color-border;
+      opacity: 0.55;
+
+      &:active,
+      &--hover {
+        transform: none;
+      }
     }
 
     &--hover,
-    &:active {
+    &:active:not(&--disabled) {
       transform: scale(0.97);
     }
 
-    &:active {
+    &:active:not(&--disabled) {
+      box-shadow: 0 0 0 4rpx rgba($color-primary, 0.22);
+    }
+
+    &:focus {
+      outline: none;
       box-shadow: 0 0 0 4rpx rgba($color-primary, 0.22);
     }
   }
 
-  &__intent-icon {
-  }
-
   &__intent-label {
     @include type-label;
+    font-size: $font-size-base;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
     text-align: center;
@@ -587,30 +602,15 @@
 
   &__intent-subtitle {
     @include type-caption;
-    color: $color-text-muted;
+    color: $color-text-tertiary;
     text-align: center;
-    line-height: 1.4;
+    line-height: 1.5;
   }
 
   &__intent-check {
     position: absolute;
     top: $spacing-sm;
     right: $spacing-sm;
-    width: 32rpx;
-    height: 32rpx;
-    border-radius: 999rpx;
-    background: $color-primary;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: pool-reg-check-pop 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  &__intent-check-icon {
-    font-size: $font-size-2xs;
-    color: $color-text-white;
-    font-weight: $font-weight-bold;
-    line-height: 1;
   }
 
   &__choice-list {
@@ -641,13 +641,30 @@
       box-shadow: 0 8rpx 24rpx rgba($color-primary, 0.1);
     }
 
+    &--disabled {
+      opacity: 0.55;
+      background: rgba($color-surface, 0.96);
+      border-color: rgba($color-border, 0.92);
+
+      &:active,
+      &--hover {
+        transform: none;
+        opacity: 0.55;
+      }
+    }
+
     &--hover,
-    &:active {
+    &:active:not(&--disabled) {
       transform: scale(0.97);
       opacity: 0.92;
     }
 
-    &:active {
+    &:active:not(&--disabled) {
+      box-shadow: 0 0 0 4rpx rgba($color-primary, 0.22);
+    }
+
+    &:focus {
+      outline: none;
       box-shadow: 0 0 0 4rpx rgba($color-primary, 0.22);
     }
   }
@@ -734,6 +751,14 @@
     margin-bottom: $spacing-sm;
   }
 
+  &__field-desc {
+    display: block;
+    @include type-caption;
+    color: $color-text-tertiary;
+    line-height: $line-height-relaxed;
+    margin-bottom: $spacing-sm;
+  }
+
   &__chip-row {
     display: flex;
     flex-wrap: wrap;
@@ -755,13 +780,30 @@
       background: rgba($color-primary, 0.08);
     }
 
+    &--disabled {
+      opacity: 0.55;
+      background: rgba($color-surface, 0.96);
+      border-color: rgba($color-border, 0.92);
+
+      &:active,
+      &--hover {
+        transform: none;
+        opacity: 0.55;
+      }
+    }
+
     &--hover,
-    &:active {
+    &:active:not(&--disabled) {
       transform: scale(0.96);
       opacity: 0.9;
     }
 
-    &:active {
+    &:active:not(&--disabled) {
+      box-shadow: 0 0 0 4rpx rgba($color-primary, 0.22);
+    }
+
+    &:focus {
+      outline: none;
       box-shadow: 0 0 0 4rpx rgba($color-primary, 0.22);
     }
   }

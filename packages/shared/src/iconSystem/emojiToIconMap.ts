@@ -232,11 +232,15 @@ export function hasIconMapping(emoji: string): boolean {
 /**
  * Tiers that load from CDN instead of local bundle.
  * These asset sets are too large for the 2MB main package limit.
+ *
+ * NOTE: intent icons are bundled locally (see apps/mini-program/config/index.ts
+ * copy config and scripts/cdn-asset-manifest.json). Keep 'intent' out of this
+ * set so JoyJoinIcon resolves them via require() against the local bundle.
  */
 export const CDN_ICON_TIERS: ReadonlySet<IconTier> = new Set([
   'reaction',
-  'category',
-  'intent',
+  // 'category' is bundled locally; assets live in apps/mini-program/src/assets/icons/category-icons
+  // and are copied to dist/assets/icons/category-icons via config/index.ts.
   'reveal',
   'achievement',
 ])

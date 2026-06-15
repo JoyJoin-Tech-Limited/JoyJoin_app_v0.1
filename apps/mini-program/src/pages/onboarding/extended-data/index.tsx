@@ -16,10 +16,12 @@ import {
 } from '@shared/interests'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
-import { useInvalidateAuth } from '../../../hooks/useAuth'
+import { useAuth, useInvalidateAuth } from '../../../hooks/useAuth'
+import { ARCHETYPE_BY_ID, type ArchetypeId } from '@shared/personality'
 import { apiRequest, getUserState } from '../../../lib/api/api'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
 import { useOnboardingCheckpoint } from '../../../hooks/onboarding/useOnboardingCheckpoint'
+import { usePreloadCategoryIcons } from '../../../hooks/usePreloadCategoryIcons'
 import { CATEGORY_COLORS } from '@shared/ui/categoryColors'
 import { TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../../lib/utils/uiConstants'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
@@ -38,12 +40,20 @@ import './index.scss'
 const MIN_INTERESTS = 3
 const MAX_INTERESTS = 10
 
+const CATEGORY_ORDER: MacroCategory[] = ['food', 'entertainment', 'lifestyle', 'culture', 'social']
+
+const HEAT_CSS_VARS = {
+  1: 'var(--jj-heat-l1)',
+  2: 'var(--jj-heat-l2)',
+  3: 'var(--jj-heat-l3)',
+} as const
+
 const CATEGORY_META: Record<MacroCategory, { dotColor: string; description: string }> = {
   food: { dotColor: CATEGORY_COLORS.food, description: '适合聊口味、探店和周末吃什么。' },
   entertainment: { dotColor: CATEGORY_COLORS.entertainment, description: '更偏玩乐、破冰和局里活跃氛围。' },
-  lifestyle: { dotColor: CATEGORY_COLORS.lifestyle, description: '更像你的生活节奏和线下习惯。' },
+  lifestyle: { dotColor: CATEGORY_COLORS.lifestyle, description: '徒步、露营、撸猫、手工——你休息日怎么过，这里怎么选。' },
   culture: { dotColor: CATEGORY_COLORS.culture, description: '适合聊展览、演出、电影和内容审美。' },
-  social: { dotColor: CATEGORY_COLORS.social, description: '适合延展成深入对话和长期共同话题。' },
+  social: { dotColor: CATEGORY_COLORS.social, description: '八卦、搞钱、聊穿搭——开了口就停不下来的那种。' },
 }
 
 const INTEREST_LEVEL_META: Array<{
@@ -55,9 +65,9 @@ const INTEREST_LEVEL_META: Array<{
   bgColor: string
   borderColor: string
 }> = [
-  { level: 1, label: '感兴趣', shortLabel: '已标记', description: '加入你的兴趣画像', color: '#8B5CF6', bgColor: 'rgba(139,92,246,0.08)', borderColor: 'rgba(139,92,246,0.15)' },
-  { level: 2, label: '很热衷', shortLabel: '升温中', description: '更容易聊到停不下来', color: '#7C3AED', bgColor: 'rgba(124,58,237,0.14)', borderColor: 'rgba(124,58,237,0.35)' },
-  { level: 3, label: '必聊项', shortLabel: '高热', description: '优先匹配同好，预览重点展示', color: '#6D28D9', bgColor: 'rgba(109,40,217,0.22)', borderColor: 'rgba(109,40,217,0.55)' },
+  { level: 1, label: '感兴趣', shortLabel: '感兴趣', description: '加入你的兴趣画像', color: HEAT_CSS_VARS[1], bgColor: 'rgba(139,92,246,0.08)', borderColor: 'rgba(139,92,246,0.15)' },
+  { level: 2, label: '很热衷', shortLabel: '很热衷', description: '更容易聊到停不下来', color: HEAT_CSS_VARS[2], bgColor: 'rgba(124,58,237,0.14)', borderColor: 'rgba(124,58,237,0.35)' },
+  { level: 3, label: '必聊项', shortLabel: '必聊项', description: '优先匹配同好，预览重点展示', color: HEAT_CSS_VARS[3], bgColor: 'rgba(76,29,149,0.22)', borderColor: 'rgba(76,29,149,0.55)' },
 ]
 
 const activeInterests = INTEREST_TAXONOMY.filter((item) => item.active)
@@ -77,6 +87,27 @@ function getInterestLevelMeta(level: InterestSelectionLevel | undefined) {
   return INTEREST_LEVEL_META.find((item) => item.level === level)
 }
 
+function InterestTierIndicator({ level }: { level: InterestSelectionLevel }) {
+  return (
+    <View className='extended-data__tier-indicator' aria-label={`热度 ${level} 档`}>
+      {INTEREST_LEVEL_META.map((meta) => {
+        const filled = level >= meta.level
+        return (
+          <View
+            key={meta.level}
+            className={[
+              'extended-data__tier-indicator-segment',
+              filled ? 'extended-data__tier-indicator-segment--filled' : '',
+              `extended-data__tier-indicator-segment--level-${meta.level}`,
+            ].join(' ')}
+            style={filled ? { backgroundColor: meta.color } : undefined}
+          />
+        )
+      })}
+    </View>
+  )
+}
+
 export default function ExtendedDataPage() {
   const [levelsById, setLevelsById] = useState<Record<string, InterestSelectionLevel>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -87,10 +118,17 @@ export default function ExtendedDataPage() {
   const [showFirstSelectionHint, setShowFirstSelectionHint] = useState(false)
   const [hasShownFirstSelectionHint, setHasShownFirstSelectionHint] = useState(false)
   const [poppingCardId, setPoppingCardId] = useState<string | null>(null)
-  const [meterCelebration, setMeterCelebration] = useState(false)
+  const [milestone, setMilestone] = useState<'unlocked' | 'first-priority' | 'all-categories' | null>(null)
+  const poppingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const milestoneTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const { isLoading } = useAuthGuard({
     suspendOnboardingRedirect: isSubmitting || isPageExiting,
   })
+  const { user } = useAuth()
+  const userArchetype = (user?.archetype as ArchetypeId | undefined) ?? (user?.primaryArchetype as ArchetypeId | undefined)
+  const archetypeName = userArchetype ? ARCHETYPE_BY_ID[userArchetype]?.nameCn : undefined
+
+  usePreloadCategoryIcons(!isLoading)
   const invalidateAuth = useInvalidateAuth()
   const analytics = useOnboardingAnalytics('extended-data', { enabled: !isLoading })
   const { saveCheckpoint } = useOnboardingCheckpoint()
@@ -106,6 +144,17 @@ export default function ExtendedDataPage() {
 
     return () => clearTimeout(timer)
   }, [showFirstSelectionHint])
+
+  useEffect(() => {
+    return () => {
+      if (poppingTimeoutRef.current) {
+        clearTimeout(poppingTimeoutRef.current)
+      }
+      if (milestoneTimeoutRef.current) {
+        clearTimeout(milestoneTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const selectionDrafts = useMemo<InterestSelectionDraft[]>(
     () =>
@@ -125,25 +174,64 @@ export default function ExtendedDataPage() {
   const topPriorityCount = selectionPreview.topPriorities?.length ?? 0
 
   const prevSelectedCountRef = useRef(selectedCount)
+  const prevTopPriorityCountRef = useRef(topPriorityCount)
+  const prevCategoryCoverageRef = useRef<Set<string>>(new Set())
   useEffect(() => {
     const prev = prevSelectedCountRef.current
     prevSelectedCountRef.current = selectedCount
+    const prevPriority = prevTopPriorityCountRef.current
+    prevTopPriorityCountRef.current = topPriorityCount
+
+    const selectedCategories = new Set(
+      selectionPreview.selections.map((s) => INTEREST_TAXONOMY.find((i) => i.id === s.topicId)?.macroCategory).filter(Boolean),
+    )
+    const prevCategories = prevCategoryCoverageRef.current
+    prevCategoryCoverageRef.current = selectedCategories as Set<string>
+
+    let newMilestone: typeof milestone = null
     if (prev < MIN_INTERESTS && selectedCount >= MIN_INTERESTS) {
-      setMeterCelebration(true)
       haptics('success')
-      const timer = setTimeout(() => setMeterCelebration(false), 800)
-      return () => clearTimeout(timer)
+      newMilestone = 'unlocked'
+    } else if (prevPriority === 0 && topPriorityCount > 0) {
+      haptics('success')
+      newMilestone = 'first-priority'
+    } else if (selectedCategories.size === 5 && selectedCategories.size > prevCategories.size) {
+      haptics('success')
+      newMilestone = 'all-categories'
     }
-    return undefined
-  }, [selectedCount])
+
+    if (newMilestone) {
+      if (milestoneTimeoutRef.current) clearTimeout(milestoneTimeoutRef.current)
+      setMilestone(newMilestone)
+      milestoneTimeoutRef.current = setTimeout(() => {
+        milestoneTimeoutRef.current = null
+        setMilestone((current) => (current === newMilestone ? null : current))
+      }, 2200)
+    }
+  }, [selectedCount, topPriorityCount, selectionPreview.selections])
+
   const dominantCategories = useMemo(
     () =>
       Object.entries(selectionPreview.categoryHeat)
+        .filter(([, heat]) => heat > 0)
         .sort((left, right) => right[1] - left[1])
         .slice(0, 3)
         .map(([categoryId]) => categoryId),
     [selectionPreview.categoryHeat],
   )
+  const hasMultipleCategories = dominantCategories.length > 1
+  const topCategory = dominantCategories[0] as MacroCategory | undefined
+  const selectedCategories = useMemo(
+    () =>
+      new Set(
+        selectionPreview.selections
+          .map((s) => INTEREST_TAXONOMY.find((i) => i.id === s.topicId)?.macroCategory)
+          .filter(Boolean),
+      ) as Set<MacroCategory>,
+    [selectionPreview.selections],
+  )
+  const hasAllCategories = selectedCategories.size === CATEGORY_ORDER.length
+
   const highlightedSelections = useMemo(
     () =>
       [...selectionPreview.selections]
@@ -152,33 +240,59 @@ export default function ExtendedDataPage() {
     [selectionPreview.selections],
   )
   const canSubmit = selectedCount >= MIN_INTERESTS
-  const footerProgressPercent = Math.min(100, Math.round((selectedCount / MIN_INTERESTS) * 100))
 
   const coachCopy = useMemo(() => {
     if (selectedCount >= MAX_INTERESTS) {
-      return '兴趣库已经装得满满当当了～如果想换，可以先取消一项再选新的。'
+      return '兴趣库已经装得满满当当了～想换的话，先取消一项再选新的。'
     }
 
     if (selectedCount === 0) {
-      return '先轻点选中，再点同一项就会升级热度。第三档会成为预览页重点兴趣。'
+      return archetypeName
+        ? `作为${archetypeName}，你的社交雷达本来就很灵。先点一个真正想聊的话题，再点同一项就能升温。`
+        : '先点一个真正想聊的话题，再点同一项就能升温。三档会成为你的必聊项。'
+    }
+
+    if (!canSubmit) {
+      return archetypeName
+        ? `已经有 ${selectedCount} 个同好信号了。再选 ${MIN_INTERESTS - selectedCount} 个，${archetypeName}的画像就能生成。`
+        : `已经有 ${selectedCount} 个同好信号了。再选 ${MIN_INTERESTS - selectedCount} 个，画像就能生成。`
     }
 
     if (topPriorityCount > 0) {
-      return '你已经标出了重点兴趣，资料预览里会优先把这些高热主题亮出来。'
+      return '必聊项会优先帮你找到同好。继续升温，或者直接生成入场卡预览。'
     }
 
-    return '如果你有特别想聊的话题，再点同一项，把它升级成更高热度。'
-  }, [selectedCount, topPriorityCount])
+    return '画像已解锁！把最期待的兴趣升到必聊项，匹配会更精准。'
+  }, [archetypeName, canSubmit, selectedCount, topPriorityCount])
 
-  const footerTitle = canSubmit
-    ? '热度达标，可以生成预览了'
-    : `还差 ${Math.max(MIN_INTERESTS - selectedCount, 0)} 项，就能继续预览`
-  const footerSubtitle =
-    selectedCount === 0
-      ? '先点第一项，热度就会慢慢升起来。'
-      : topPriorityCount > 0
-        ? `已点亮 ${topPriorityCount} 个重点兴趣，当前热度 ${selectionPreview.totalHeat}。`
-        : `当前热度 ${selectionPreview.totalHeat}，再点同一项就会继续升温。`
+  const footerCoachLine = useMemo(() => {
+    if (selectedCount >= MAX_INTERESTS) {
+      return '可以生成预览了，也可以再调整一下。'
+    }
+
+    if (!canSubmit) {
+      return archetypeName
+        ? `再选 ${MIN_INTERESTS - selectedCount} 个，${archetypeName}的入场卡就能生成了～`
+        : `再选 ${MIN_INTERESTS - selectedCount} 个，你的入场卡就能生成了～`
+    }
+
+    if (topPriorityCount === 0) {
+      return '把最期待的兴趣升到必聊项吧，匹配会更精准。'
+    }
+
+    return '必聊项会优先帮你找到同好。'
+  }, [archetypeName, canSubmit, selectedCount, topPriorityCount])
+
+  const ctaLabel = useMemo(() => {
+    if (isSubmitting) {
+      return '提交中…'
+    }
+    if (canSubmit) {
+      return '生成我的入场卡预览'
+    }
+    return `还需 ${Math.max(MIN_INTERESTS - selectedCount, 0)} 项热度`
+  }, [canSubmit, isSubmitting, selectedCount])
+
   const pageClassName = ['extended-data', isPageExiting ? 'extended-data--exiting' : '']
     .filter(Boolean)
     .join(' ')
@@ -216,7 +330,13 @@ export default function ExtendedDataPage() {
       setLevelsById(nextLevels)
       haptics('light')
       setPoppingCardId(topicId)
-      setTimeout(() => setPoppingCardId((current) => (current === topicId ? null : current)), 200)
+      if (poppingTimeoutRef.current) {
+        clearTimeout(poppingTimeoutRef.current)
+      }
+      poppingTimeoutRef.current = setTimeout(() => {
+        poppingTimeoutRef.current = null
+        setPoppingCardId((current) => (current === topicId ? null : current))
+      }, 200)
     },
     [analytics, hasShownFirstSelectionHint, levelsById, selectedCount],
   )
@@ -227,6 +347,21 @@ export default function ExtendedDataPage() {
         analytics.validationFailed('interests', 'min-selection-not-reached')
       }
       return
+    }
+
+    try {
+      const network = await Taro.getNetworkType()
+      if (network.networkType === 'none') {
+        Taro.showToast({
+          title: '网络好像断了，连上后再试试',
+          icon: 'none',
+          duration: TOAST_DEFAULT_MS,
+        })
+        analytics.errorOccurred('submit_offline', 'network unavailable')
+        return
+      }
+    } catch {
+      // Best-effort: continue if network detection fails
     }
 
     setIsSubmitting(true)
@@ -251,6 +386,8 @@ export default function ExtendedDataPage() {
         nextStep: userState.nextStep ?? 'profile-review',
       })
 
+      // NOTE: prefers-reduced-motion is respected by the CSS animations in this screen.
+      // The route transition below is handled by onboardingNavigation and is not user-motion.
       await navigateToMiniProgramNextStep(userState.nextStep, {
         mode: 'replace',
         transition: { beforeNavigate: () => setIsPageExiting(true) },
@@ -293,7 +430,7 @@ export default function ExtendedDataPage() {
         <Text className='extended-data__eyebrow'>Onboarding 3 / 4</Text>
         <Text className='extended-data__title'>把兴趣热度标出来</Text>
         <Text className='extended-data__subtitle'>
-          轻点加入 → 再点升温 → 三档高热。越热的兴趣，匹配越精准。
+          轻点加入 → 再点升温 → 三档成为必聊项
         </Text>
       </View>
 
@@ -324,7 +461,7 @@ export default function ExtendedDataPage() {
             <View
               className='extended-data__heat-guide-dot'
               style={{
-                backgroundColor: item.bgColor,
+                backgroundColor: item.color,
                 borderColor: item.borderColor,
               }}
             />
@@ -343,8 +480,9 @@ export default function ExtendedDataPage() {
 
       <ScrollView className='extended-data__scroll' scrollY enhanced showScrollbar={false}>
         <View className='extended-data__content'>
-          {(Object.entries(groupedInterests) as [MacroCategory, InterestDefinition[]][]).map(
-            ([category, items]) => {
+          {(Object.entries(groupedInterests) as [MacroCategory, InterestDefinition][])
+            .sort((left, right) => CATEGORY_ORDER.indexOf(left[0]) - CATEGORY_ORDER.indexOf(right[0]))
+            .map(([category, items]) => {
               const selectedInCategory = items.filter((item) => levelsById[item.id]).length
 
               return (
@@ -355,7 +493,12 @@ export default function ExtendedDataPage() {
                         emoji={INTEREST_CATEGORY_EMOJIS[category]}
                         tier='category'
                         size={36}
-                        className='extended-data__category-icon'
+                        className={[
+                          'extended-data__category-icon',
+                          selectedInCategory > 0 ? 'extended-data__category-icon--active' : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
                       />
                       <View className='extended-data__category-title-group'>
                         <Text className='extended-data__category-title'>
@@ -388,30 +531,20 @@ export default function ExtendedDataPage() {
                           ]
                             .filter(Boolean)
                             .join(' ')}
+                          role='button'
+                          aria-pressed={!!level}
+                          aria-label={level ? `${item.label}，${levelMeta?.label}` : `${item.label}，未选择`}
                           onClick={() => toggleInterestLevel(item.id)}
                           hoverClass='extended-data__interest-card--pressed'
                           hoverStayTime={100}
                         >
                           <View className='extended-data__interest-card-top'>
                             <Text className='extended-data__interest-label'>{item.label}</Text>
-                            {level ? (
-                              <View
-                                className='extended-data__interest-heat-dot'
-                                style={{
-                                  backgroundColor: levelMeta?.color,
-                                  boxShadow: `0 0 8rpx ${levelMeta?.bgColor}`,
-                                }}
-                              />
-                            ) : null}
+                            {level ? <InterestTierIndicator level={level} /> : null}
                           </View>
                           <Text className='extended-data__interest-meta'>
                             {levelMeta?.shortLabel || '轻点选择'}
                           </Text>
-                          {level === 3 && (
-                            <View className='extended-data__interest-heat-badge'>
-                              <Text className='extended-data__interest-heat-badge-text'>高热</Text>
-                            </View>
-                          )}
                         </View>
                       )
                     })}
@@ -424,26 +557,64 @@ export default function ExtendedDataPage() {
       </ScrollView>
 
       {showFirstSelectionHint ? (
-        <View className='extended-data__hint-toast'>
-          <Text className='extended-data__hint-toast-text'>收到了，再点同一项就能把它升成更高热度。</Text>
+        <View className='extended-data__hint-toast' aria-live='polite' role='status'>
+          <Text className='extended-data__hint-toast-text'>第一个同好信号已点亮 ✨ 再点同一项就能升温。</Text>
+        </View>
+      ) : null}
+
+      {milestone ? (
+        <View className='extended-data__milestone-toast' aria-live='polite' role='status'>
+          <View className='extended-data__milestone-toast-inner'>
+            <Text className='extended-data__milestone-toast-emoji'>
+              {milestone === 'unlocked' ? '🎉' : milestone === 'first-priority' ? '⭐' : '🌈'}
+            </Text>
+            <Text className='extended-data__milestone-toast-title'>
+              {milestone === 'unlocked'
+                ? '同好画像解锁'
+                : milestone === 'first-priority'
+                  ? '首个必聊项诞生'
+                  : '五大领域全亮'}
+            </Text>
+            <Text className='extended-data__milestone-toast-subtitle'>
+              {milestone === 'unlocked'
+                ? '可以生成入场卡预览了'
+                : milestone === 'first-priority'
+                  ? '优先匹配同好从这里开始'
+                  : '你的兴趣版图真的很丰盛'}
+            </Text>
+          </View>
         </View>
       ) : null}
 
       <View className='extended-data__footer'>
         <View className='extended-data__footer-summary'>
-          <View className='extended-data__footer-summary-stats'>
-            <View className='extended-data__footer-summary-stat'>
-              <Text className='extended-data__footer-summary-value'>{selectedCount}</Text>
-              <Text className='extended-data__footer-summary-label'>已选兴趣</Text>
-            </View>
-            <View className='extended-data__footer-summary-stat'>
-              <Text className='extended-data__footer-summary-value'>{topPriorityCount}</Text>
-              <Text className='extended-data__footer-summary-label'>重点兴趣</Text>
-            </View>
-            <View className='extended-data__footer-summary-stat'>
-              <Text className='extended-data__footer-summary-value'>{selectionPreview.totalHeat}</Text>
-              <Text className='extended-data__footer-summary-label'>热度总值</Text>
-            </View>
+          <Text className='extended-data__footer-coach'>{footerCoachLine}</Text>
+
+          <View className='extended-data__footer-thermometer' aria-label='热度温度计'>
+            {INTEREST_LEVEL_META.map((meta) => {
+              const filled = selectedCount >= meta.level
+              return (
+                <View
+                  key={meta.level}
+                  className={[
+                    'extended-data__footer-thermometer-segment',
+                    filled ? 'extended-data__footer-thermometer-segment--filled' : '',
+                  ].join(' ')}
+                  style={filled ? { backgroundColor: meta.color } : undefined}
+                />
+              )
+            })}
+          </View>
+
+          <Text className='extended-data__footer-combined-stat'>
+            已选 {selectedCount} 项 · 必聊 {topPriorityCount} 项
+          </Text>
+
+          <View className='extended-data__footer-heat'>
+            <Text className='extended-data__footer-heat-value'>
+              热度总值 {selectionPreview.totalHeat}
+            </Text>
+            <Text className='extended-data__footer-heat-micro'>热度越高，匹配越优先</Text>
           </View>
 
           {highlightedSelections.length > 0 ? (
@@ -466,53 +637,38 @@ export default function ExtendedDataPage() {
             </View>
           ) : null}
 
-          {dominantCategories.length > 0 ? (
-            <View className='extended-data__footer-summary-categories'>
-              {dominantCategories.map((categoryId) => {
-                const category = categoryId as MacroCategory
-                return (
-                  <View key={categoryId} className='extended-data__footer-summary-cat'>
-                    <View
-                      className='extended-data__footer-summary-cat-dot'
-                      style={{ backgroundColor: CATEGORY_META[category]?.dotColor || CATEGORY_COLORS.food }}
-                    />
-                    <Text className='extended-data__footer-summary-cat-text'>
-                      {MACRO_CATEGORY_LABELS[category]}
-                    </Text>
-                  </View>
-                )
-              })}
+          {selectedCount > 0 ? (
+            <View className='extended-data__footer-story-pill'>
+              <Text className='extended-data__footer-story-pill-text'>
+                {hasAllCategories
+                  ? '🌈 兴趣横跨五大领域，你的同好画像很丰盛'
+                  : hasMultipleCategories && topCategory
+                    ? `🔥 ${MACRO_CATEGORY_LABELS[topCategory]} 是你和同好最容易聊起来的领域`
+                    : `✨ 已经点亮 ${selectedCount} 个同好信号${archetypeName ? `，${archetypeName}的画像正在成形` : ''}`}
+              </Text>
             </View>
           ) : null}
         </View>
 
-        <View className='extended-data__footer-meter'>
-          <View className='extended-data__footer-meter-track'>
-            <View
-              className={[
-                'extended-data__footer-meter-fill',
-                meterCelebration ? 'extended-data__footer-meter-fill--celebrating' : '',
-              ].filter(Boolean).join(' ')}
-              style={{ width: `${footerProgressPercent}%` }}
-            />
-          </View>
-          <Text className='extended-data__footer-meter-meta'>
-            {canSubmit ? '已经达到入场线' : `${selectedCount}/${MIN_INTERESTS} 起步`}
+        {error ? (
+          <Text className='extended-data__error' aria-live='assertive' role='alert'>
+            {error}
           </Text>
-        </View>
-
-        <Text className='extended-data__footer-title'>{footerTitle}</Text>
-        <Text className='extended-data__footer-subtitle'>{footerSubtitle}</Text>
-        {error ? <Text className='extended-data__error'>{error}</Text> : null}
+        ) : null}
 
         <Button
           variant='brand'
-          className='extended-data__submit'
+          className={[
+            'extended-data__submit',
+            canSubmit && !isSubmitting ? 'extended-data__submit--unlocked' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
           onClick={handleSubmit}
           disabled={!canSubmit || isSubmitting}
           loading={isSubmitting}
         >
-          {isSubmitting ? '提交中…' : `生成预览资料（${selectedCount}）`}
+          {ctaLabel}
         </Button>
       </View>
     </View>
