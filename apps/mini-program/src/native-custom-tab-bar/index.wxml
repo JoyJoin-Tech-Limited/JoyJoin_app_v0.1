@@ -1,9 +1,17 @@
-<cover-view class="joy-custom-tab-bar {{lowEnd ? 'joy-custom-tab-bar--low-end' : ''}}">
+<view class="joy-custom-tab-bar {{lowEnd ? 'joy-custom-tab-bar--low-end' : ''}}">
+  <!--
+    IMPORTANT: Keep this native custom tab bar as plain <view>/<image>.
+    Do NOT wrap children in <cover-view>/<cover-image>. WeChat's cover-view
+    overlay only reliably renders cover-view/cover-image children; plain
+    <view>/<image> inside a <cover-view> are dropped, causing blank tab icons
+    and labels. See commit 0f3f8361c for the original fix and 2f9a71b3a for
+    the accidental hybrid regression.
+  -->
   <!-- Screen-reader announcement region (visually hidden, aria-live for tab switches) -->
-  <cover-view class="joy-custom-tab-bar__sr-announce" aria-live="polite" aria-atomic="true">
+  <view class="joy-custom-tab-bar__sr-announce" aria-live="polite" aria-atomic="true">
     {{announcement}}
-  </cover-view>
-  <cover-view class="joy-custom-tab-bar__surface">
+  </view>
+  <view class="joy-custom-tab-bar__surface">
     <!-- Background with semi-circular notch -->
     <image
       class="joy-custom-tab-bar__bg"
@@ -93,10 +101,11 @@
         </view>
       </view>
     </view>
-  </cover-view>
+  </view>
 
   <!-- Semi-raised center CTA -->
   <view class="joy-custom-tab-bar__center-wrap">
+    <!-- selected === 4 is MINI_PROGRAM_TAB_INDEX.centerHub; keep in sync with tabBarConfig.ts -->
     <view
       class="joy-custom-tab-bar__center {{selected === 4 ? 'joy-custom-tab-bar__center--selected' : ''}}"
       bindtap="handleCenterTap"
@@ -104,6 +113,7 @@
       hover-stay-time="150"
       role="button"
       aria-label="{{center.label || 'JoyJoin 中心入口'}}"
+      aria-pressed="{{selected === 4}}"
     >
       <view class="joy-custom-tab-bar__center-outer-ring">
         <view class="joy-custom-tab-bar__center-button">
@@ -118,4 +128,4 @@
       <view class="joy-custom-tab-bar__center-label">{{center.label}}</view>
     </view>
   </view>
-</cover-view>
+</view>

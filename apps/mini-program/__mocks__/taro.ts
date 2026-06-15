@@ -17,6 +17,11 @@ export const showModal = vi.fn().mockResolvedValue({ confirm: true })
 export const setStorageSync = vi.fn()
 export const getStorageSync = vi.fn().mockReturnValue(null)
 export const removeStorageSync = vi.fn()
+export const getImageInfo = vi.fn().mockResolvedValue({
+  width: 100,
+  height: 100,
+  path: 'tmp://mock-image',
+})
 export const getSystemInfoSync = vi.fn().mockReturnValue({
   brand: 'test',
   model: 'test',
@@ -64,6 +69,7 @@ const taro = {
   setStorageSync,
   getStorageSync,
   removeStorageSync,
+  getImageInfo,
   getSystemInfoSync,
   createSelectorQuery,
   getCurrentPages,

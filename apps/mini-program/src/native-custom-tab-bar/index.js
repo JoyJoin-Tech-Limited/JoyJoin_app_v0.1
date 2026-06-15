@@ -7,14 +7,16 @@ Component({
   _syncTimer: null,
   _showTimer: null,
   _tapDebounceTimer: null,
+  _announceTimer: null,
   _lastBadgesKey: '',
-  _lastSelected: 0,
-  _lastCenterUrl: '',
   // Last selection confirmed by syncState (authoritative) — used for rollback
   _confirmedSelected: 0,
   _platform: '',
   _isLowEnd: false,
   _isOffline: false,
+  _networkStatusHandler: null,
+  // Last sync state; re-applied when network comes back online.
+  _lastSyncState: null,
   // Name lookup for accessibility announcements
   _tabNames: { 0: '发现', 1: '足迹', 2: '连接', 3: '我的', 4: '中心入口' },
 
@@ -83,7 +85,7 @@ Component({
       try {
         var info = wx.getSystemInfoSync ? wx.getSystemInfoSync() : {}
         this._platform = info.platform || 'other'
-        this._isLowEnd = (info.benchmarkLevel || 50) <= 15
+        this._isLowEnd = this._detectLowEnd(info)
       } catch (_e) {
         this._platform = 'unknown'
         this._isLowEnd = false
@@ -100,16 +102,57 @@ Component({
         })
       }
       if (wx.onNetworkStatusChange) {
-        wx.onNetworkStatusChange(function (res) {
+        this._networkStatusHandler = function (res) {
+          var wasOffline = self._isOffline
           self._isOffline = !res.isConnected
-        })
+          // When reconnecting, replay the last sync state so badges/center
+          // don't stay stale while the page's own refetch is still in flight.
+          if (wasOffline && !self._isOffline && self._lastSyncState) {
+            self.syncState(self._lastSyncState)
+          }
+        }
+        wx.onNetworkStatusChange(this._networkStatusHandler)
       }
     },
     detached: function () {
       clearTimeout(this._syncTimer)
       clearTimeout(this._showTimer)
       clearTimeout(this._tapDebounceTimer)
+      clearTimeout(this._announceTimer)
+      if (wx.offNetworkStatusChange && this._networkStatusHandler) {
+        wx.offNetworkStatusChange(this._networkStatusHandler)
+        this._networkStatusHandler = null
+      }
     },
+  },
+
+  /**
+   * Device-tier detection for the native tab bar.
+   * Mirrors apps/mini-program/src/hooks/useDeviceTier.ts so older iPhones
+   * without benchmarkLevel still get the degradation-tier animation disable.
+   */
+  _detectLowEnd: function (info) {
+    var benchmarkLevel = info.benchmarkLevel
+    if (typeof benchmarkLevel === 'number' && benchmarkLevel > 0) {
+      return benchmarkLevel <= 15
+    }
+
+    // iOS / unsupported benchmarkLevel: use model + system version heuristics.
+    var model = (info.model || '').toLowerCase()
+    var system = (info.system || '').toLowerCase()
+
+    // iPhone X/8/7/6/SE (1st gen) and older → degradation.
+    // Exclude modern variants that share a prefix: XR, XS, SE2/SE3/2020/2022.
+    var isModernSE = /iphone\s*se.*(2|3|2020|2022|2nd|3rd)/i.test(model)
+    var oldModel =
+      /iphone\s*(x|8|7|6|6s|se)\b/.test(model) &&
+      !/iphone\s*(xr|xs|11|12|13|14|15|16)/.test(model) &&
+      !isModernSE
+    var oldOS =
+      system.indexOf('ios ') === 0 &&
+      parseFloat(system.replace('ios ', '')) < 15
+
+    return oldModel || oldOS
   },
 
   pageLifetimes: {
@@ -134,11 +177,14 @@ Component({
      *
      * Debounced (50 ms) + diffed to prevent redundant setData bursts
      * from multiple alive tab pages. Badge updates use path syntax
-     * to avoid array reconstruction and cover-image flicker.
+     * to avoid array reconstruction and icon flicker.
      */
     syncState: function (state) {
       var self = this
-      // Skip state updates while offline — badge counts are stale without network
+      // Always keep the last known state so we can replay it on reconnect.
+      this._lastSyncState = state
+      // Skip state updates while offline — badge counts are stale without network.
+      // The network-status handler will re-call syncState when reconnecting.
       if (this._isOffline) return
       clearTimeout(this._syncTimer)
 
@@ -161,7 +207,6 @@ Component({
 
           if (centerChanged) {
             update.center = state.center
-            self._lastCenterUrl = state.center.action ? state.center.action.url : ''
             hasChange = true
           }
         }
@@ -202,8 +247,9 @@ Component({
     },
 
     setSelected: function (selected) {
-      this._confirmedSelected = selected
-      this.setData({ selected: selected })
+      var idx = Number(selected)
+      this._confirmedSelected = idx
+      this.setData({ selected: idx })
     },
 
     setCenterState: function (center) {
@@ -221,12 +267,12 @@ Component({
         self._tapDebounceTimer = null
       }, 300)
 
-      var index = e.currentTarget.dataset.index
+      var index = Number(e.currentTarget.dataset.index)
       var url = e.currentTarget.dataset.url
       var tabKey = e.currentTarget.dataset.tab
       var previousSelected = this._confirmedSelected
 
-      // No-op if already on this tab
+      // No-op if already on this tab (defensive: dataset may arrive as a string).
       if (index === previousSelected) return
 
       this.trackTabBarEvent('mini_program_tab_bar_tap', {
@@ -251,6 +297,7 @@ Component({
           console.warn('[TabBar] switchTab failed for tab ' + tabKey + ':', err)
           self._confirmedSelected = previousSelected
           self.setData({ selected: previousSelected })
+          self._showSwitchFailToast()
           self.trackTabBarEvent('mini_program_tab_bar_switch_fail', {
             tab: tabKey || 'unknown',
             index: index,
@@ -298,6 +345,7 @@ Component({
           console.warn('[TabBar] switchTab failed for center:', err)
           self._confirmedSelected = previousSelected
           self.setData({ selected: previousSelected })
+          self._showSwitchFailToast()
           self.trackTabBarEvent('mini_program_center_button_switch_fail', {
             action_kind: action.kind || 'unknown',
             error: (err && err.errMsg) || 'unknown',
@@ -317,9 +365,27 @@ Component({
       if (!name) return
       this.setData({ announcement: '已切换到' + name })
       var self = this
-      setTimeout(function () {
+      clearTimeout(this._announceTimer)
+      this._announceTimer = setTimeout(function () {
         if (self.data.announcement) self.setData({ announcement: '' })
       }, 1000)
+    },
+
+    /**
+     * Subtle user-facing feedback when wx.switchTab fails.
+     * Analytics + console.warn already fire; this prevents a silent UI rollback.
+     */
+    _showSwitchFailToast: function () {
+      if (!wx.showToast) return
+      try {
+        wx.showToast({
+          title: '切换失败，请重试',
+          icon: 'none',
+          duration: 2000,
+        })
+      } catch (_e) {
+        // Toast is decorative; ignore devices without support.
+      }
     },
 
     /**

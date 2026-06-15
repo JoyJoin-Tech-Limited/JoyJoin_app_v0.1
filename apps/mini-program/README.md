@@ -80,7 +80,6 @@ src/
 │   ├── _stagger.scss        # Stagger entrance animation utilities (.stagger-in, .stagger-in--N)
 │   └── colors.ts            # TypeScript brand color constants for JS consumption
 ├── native-custom-tab-bar/  # ACTIVE native WeChat tab bar (WXML/WXSS/JS)
-├── custom-tab-bar/      # INACTIVE Taro JSX tab bar (not shipped)
 ├── app.ts               # App lifecycle entry
 ├── app.config.ts        # App config: pages, subpackages, tabBar, preloadRule
 └── app.scss             # Global styles
@@ -224,28 +223,27 @@ Both skip on 2G and run once per session.
 
 ## Native Custom Tab Bar
 
-The shipped mini-program tab bar is the **native WeChat component** copied from `src/native-custom-tab-bar/` to `dist/custom-tab-bar/` during build. The Taro JSX implementation in `src/custom-tab-bar/` is **not** the active runtime path.
+The shipped mini-program tab bar is the **native WeChat component** copied from `src/native-custom-tab-bar/` to `dist/custom-tab-bar/` during build. There is no secondary Taro JSX tab bar in this workspace; all tab bar work happens in `src/native-custom-tab-bar/`.
 
 | Aspect | Details |
 |--------|---------|
 | **Active runtime** | `src/native-custom-tab-bar/` → copied to `dist/custom-tab-bar/` at build time |
-| **Inactive Taro JSX** | `src/custom-tab-bar/index.tsx` (kept for reference; not compiled into dist) |
 | **Copy rule** | `config/index.ts` `copy.patterns` handles the native → dist copy |
-| **WXML root** | `<cover-view class="joy-custom-tab-bar">` with nested `<cover-view>` and `<cover-image>` only |
+| **WXML root** | `<view class="joy-custom-tab-bar">` with nested `<view>` and `<image>` only. WeChat's `cover-view` overlay drops plain `<view>`/`<image>` children, so the active tab bar intentionally uses the standard view tree. |
 | **Center CTA** | Floating circular button ("进行中") with **solid `#FFF4F8` fill** (`$color-bg-tint-pink`, via CSS custom property `--jj-bg-tint-pink`), outer ring in `$color-secondary` at ~18% opacity, and shadow. Positioned via a flexbox wrapper (`justify-content: center`) instead of `left:50% + transform` to avoid WeChat `cover-view` compositing bugs during `setData` re-renders. **Not gradient** — solid fill is the mini-program CTA standard |
 | **Center hub page** | `/pages/center-hub/index` — dynamic content: active event card, pending registration status, or empty-state CTA |
 | **Routing model** | Center button always `switchTab` to hub (requires `centerHub` in `tabBar.list` — WeChat validates `switchTab` targets against `tabBar.list` even with `custom: true`); hub CTAs `navigateTo` detail pages or `switchTab` to discover |
-| **State sync** | `useCustomTabBarSync.ts` calls `Taro.getTabBar(page).syncState(...)` on every `useDidShow`. Native side debounces at 50ms with shallow diff to avoid `cover-image` flicker. `_confirmedSelected` tracks the authoritative selection for rollback |
-| **Badges** | Notification counts mapped to `discover`, `activities`, `chat` categories. Badge updates use WeChat path syntax (`leftTabs[idx].badgeCount`) to avoid array reconstruction and `cover-image` reload flicker |
+| **State sync** | `useCustomTabBarSync.ts` calls `Taro.getTabBar(page).syncState(...)` on every `useDidShow`. Native side debounces at 50ms with shallow diff to avoid icon flicker. `_confirmedSelected` tracks the authoritative selection for rollback |
+| **Badges** | Notification counts mapped to `discover`, `activities`, `chat` categories. Badge updates use WeChat path syntax (`leftTabs[idx].badgeCount`) to avoid array reconstruction and icon reload flicker |
 | **Device tiering** | `wx.getSystemInfoSync().benchmarkLevel <= 15` gates all animations (badge pop-in, pulse, fade-in, transitions) on low-end devices |
 | **Swipe-back safety** | `pageLifetimes.show` resets `selected` to `_confirmedSelected` after 100ms, correcting any stuck optimistic state after swipe-back |
 
 ### Layering & compatibility rules
 
-- Only `cover-view`, `cover-image`, and `button` are valid children inside the native tab bar tree.
+- The active tab bar uses plain `<view>`/`<image>` (not `<cover-view>`/`<cover-image>`). WeChat's native `cover-view` layer only reliably renders `cover-view`/`cover-image` children; mixing plain `<view>`/`<image>` inside a `<cover-view>` causes blank icons and labels. Do not reintroduce `<cover-view>` wrappers.
 - Root uses `position: fixed` + `z-index: 120`.
-- The center CTA button is a **root sibling** of the surface container (not nested inside it) to avoid `cover-view` clipping children.
-- The center CTA is wrapped in `.joy-custom-tab-bar__center-wrap` (flexbox `justify-content: center`) instead of using `left: 50%; transform: translateX(-50%)`. The `transform` pattern is unsafe in WeChat `cover-view` because `setData` re-renders combined with `hover-class` transforms can drop the `translateX` offset, causing the button to shift right.
+- The center CTA button is a **root sibling** of the surface container (not nested inside it) to avoid surface clipping children.
+- The center CTA is wrapped in `.joy-custom-tab-bar__center-wrap` (flexbox `justify-content: center`) instead of using `left: 50%; transform: translateX(-50%)`. The `transform` pattern is unsafe in the WeChat mini-program renderer because `setData` re-renders combined with `hover-class` transforms can drop the `translateX` offset, causing the button to shift right.
 - `textarea` and `input` near the bottom of the screen require real-device verification.
 - Skyline renderer is **disabled** by default; re-validate `getTabBar` behavior if enabling later.
 

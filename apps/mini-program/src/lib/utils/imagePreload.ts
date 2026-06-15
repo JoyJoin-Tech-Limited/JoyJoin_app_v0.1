@@ -15,6 +15,9 @@ export function preloadImage(src: string): Promise<boolean> {
       resolve(false)
       return
     }
+    // Taro may still return a rejecting promise even when fail/success
+    // callbacks are provided. Catch it so the rejection never surfaces
+    // as an unhandled promise rejection in vConsole.
     Taro.getImageInfo({
       src,
       success: () => resolve(true),
@@ -22,7 +25,7 @@ export function preloadImage(src: string): Promise<boolean> {
         logWarn('[preloadImage] Failed to preload', { src, err: err.errMsg })
         resolve(false)
       },
-    })
+    }).catch(() => resolve(false))
   })
 }
 

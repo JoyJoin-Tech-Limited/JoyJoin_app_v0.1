@@ -7,7 +7,6 @@ import { useStaggerMount } from '../hooks/useStaggerMount'
 import { useDeviceTier } from '../hooks/useDeviceTier'
 import { discoverAnalytics } from '../lib/analytics/discoverAnalytics'
 import { haptics } from '../lib/utils/haptics'
-import { preloadImage } from '../lib/utils/imagePreload'
 import './HeroPromoBanner.scss'
 
 export type PromoBannerVariant = 'A' | 'B' | 'C'
@@ -44,10 +43,8 @@ const PROMO_VARIANTS: Record<PromoBannerVariant, PromoVariantConfig> = {
   },
 } as const
 
-// WebP primary with explicit PNG fallback for environments where
-// canvas / older WeChat shells don't decode WebP cleanly.
+// Primary hero image. Bundled locally as WebP and also served from CDN.
 const HERO_IMAGE_WEBP = cdnAsset('/assets/promo/banner-hero-lovart-v1.webp')
-const HERO_IMAGE_PNG = cdnAsset('/assets/promo/banner-hero-lovart-v1.png')
 
 // ─── Sparkle layer (surprise-box breath of life) ─────────────────────
 // Five soft sparkles on negative-delay loop. Five (not three) so the
@@ -101,9 +98,6 @@ export default function HeroPromoBanner({
   enabled = true,
   onCtaTap,
 }: HeroPromoBannerProps) {
-  // [webp, png] — Taro <Image> doesn't have a `<source>` element, so we
-  // swap on error to the PNG URL. The state machine ensures we don't
-  // loop back to WebP (which would just error again).
   const [resolvedSrc, setResolvedSrc] = useState(HERO_IMAGE_WEBP)
   const [imageState, setImageState] = useState<'loading' | 'loaded' | 'error'>('loading')
   const [retryCount, setRetryCount] = useState(0)
@@ -151,14 +145,6 @@ export default function HeroPromoBanner({
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBannerEnabled, effectiveVariant])
-
-  // Predictive preload: on first mount, try to get the PNG into the
-  // WeChat image cache. Fire-and-forget; failures are silent. The PNG
-  // is the fallback path so priming it ensures the swap is instant.
-  useEffect(() => {
-    if (!isBannerEnabled) return
-    void preloadImage(HERO_IMAGE_PNG)
-  }, [isBannerEnabled])
 
   // Pause infinite animations (sparkles, CTA breathe) when the banner
   // scrolls off-screen. Saves ~5 composited animations on every other
@@ -209,16 +195,14 @@ export default function HeroPromoBanner({
       undefined,
       { variant: effectiveVariant, retryCount },
     )
-    setResolvedSrc((current) => (current === HERO_IMAGE_PNG ? current : HERO_IMAGE_PNG))
   }, [effectiveVariant, retryCount])
 
   const handleImageLoad = useCallback(() => {
     setImageState('loaded')
   }, [])
 
-  // Manual retry: re-attempt the WebP. If we get back to WebP and it
-  // fails again, the error handler falls through to PNG. Bounded by
-  // retryCount so a user can't hammer the CDN.
+  // Manual retry: re-attempt the WebP. Bounded by retryCount so a user
+  // can't hammer the CDN.
   const handleRetry = useCallback(() => {
     if (retryCount >= 2) return
     setImageState('loading')

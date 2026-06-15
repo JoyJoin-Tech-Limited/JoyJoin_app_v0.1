@@ -1,13 +1,31 @@
 /* ─── JoyJoin Custom Tab Bar ─────────────────────────────────── */
 
-/* Design tokens (mirrors $color-primary / $color-secondary / $color-bg-tint-pink).
-   WXSS custom properties work in WeChat >= 8.0.0 (baseline: 8.0.16, Aug 2022). */
+/*
+  Design tokens — kept in sync with apps/mini-program/src/styles/_variables.scss.
+  These are duplicated here because the native custom tab bar is copied as-is
+  to dist/custom-tab-bar/ and is not processed by Sass.
+
+  Token map:
+    --jj-primary        = $color-primary        #8B5CF6
+    --jj-primary-text   = $color-primary-dark   #7C3AED  (active label, WCAG safe)
+    --jj-secondary      = $color-secondary      #FF6B9D  (accents / outer ring)
+    --jj-secondary-text = darker pink           #C2185B  (badge, selected label)
+    --jj-bg-tint-pink   = $color-bg-tint-pink   #FFF4F8
+    --jj-text-inactive  = $color-text-secondary #6B7280  (WCAG 4.6:1 on white)
+    --jj-text-dark      = $color-text-primary   #2D3142
+    --jj-surface        = $color-surface        #FFFFFF
+    --jj-shadow-*       = derived from $color-text-primary
+
+  WXSS custom properties work in WeChat >= 8.0.0 (baseline: 8.0.16, Aug 2022).
+*/
 .joy-custom-tab-bar {
   --jj-primary: #8B5CF6;
+  --jj-primary-text: #7C3AED;
   --jj-secondary: #FF6B9D;
+  --jj-secondary-text: #C2185B;
   --jj-bg-tint-pink: #FFF4F8;
-  --jj-text-inactive: #9CA3AF;
-  --jj-text-dark: #374151;
+  --jj-text-inactive: #6B7280;
+  --jj-text-dark: #2D3142;
   --jj-surface: #FFFFFF;
   --jj-shadow-sm: rgba(45, 49, 66, 0.06);
   --jj-shadow-md: rgba(45, 49, 66, 0.1);
@@ -116,6 +134,11 @@
   border-radius: 24rpx;
 }
 
+/* Don't fight the active-pill animation with a simultaneous pressed scale. */
+.joy-custom-tab-bar__item--active.joy-custom-tab-bar__item--pressed {
+  transform: none;
+}
+
 .joy-custom-tab-bar__item-icon-wrap {
   position: relative;
   display: flex;
@@ -141,14 +164,14 @@
   margin-top: 8rpx;
   max-width: 96rpx;
   font-size: 22rpx;
-  line-height: 24rpx;
+  line-height: 30rpx;
   color: var(--jj-text-inactive);
   text-align: center;
   transition: color 150ms ease;
 }
 
 .joy-custom-tab-bar__item-label--active {
-  color: var(--jj-primary);
+  color: var(--jj-primary-text);
   font-weight: 600;
 }
 
@@ -168,7 +191,7 @@
   min-width: 32rpx;
   height: 32rpx;
   border-radius: 9999rpx;
-  background: var(--jj-secondary);
+  background: var(--jj-secondary-text);
   border: 2rpx solid rgba(255, 255, 255, 0.98);
   display: flex;
   align-items: center;
@@ -200,8 +223,8 @@
 /* ── Semi-raised center CTA ────────────────────────────────── */
 
 /* Logo settle-in (one-time on first render, transform-only, opacity-safe).
-   Coexists with the unscoped `cover-fade-in` on the parent cover-image:
-   fade reveals 0→1 in 200ms, settle expands 0.94→1.0 in 400ms.
+   Local assets load instantly, so this is a subtle scale settle rather than
+   a fade-in. Settle expands 0.94→1.0 in 400ms.
    Gated by prefers-reduced-motion + .joy-custom-tab-bar--low-end below. */
 .joy-custom-tab-bar__center-logo {
   width: 114rpx;
@@ -220,7 +243,7 @@
 }
 
 /* Flexbox wrapper replaces the fragile left:50% + translateX(-50%)
-   pattern which shifts right during cover-view re-renders. */
+   pattern which shifts right during WeChat renderer re-renders. */
 .joy-custom-tab-bar__center-wrap {
   position: absolute;
   left: 0;
@@ -285,8 +308,8 @@
   width: 24rpx;
   height: 24rpx;
   border-radius: 9999rpx;
-  /* Token: $color-secondary */
-  background: var(--jj-secondary);
+  /* Token: darker $color-secondary variant for WCAG contrast */
+  background: var(--jj-secondary-text);
   border: 2rpx solid rgba(255, 255, 255, 0.98);
   animation: pulse-dot 2s ease-in-out infinite;
 }
@@ -300,7 +323,7 @@
   margin-top: 8rpx;
   max-width: 148rpx;
   font-size: 22rpx;
-  line-height: 24rpx;
+  line-height: 30rpx;
   font-weight: 600;
   color: var(--jj-text-dark);
   text-align: center;
@@ -319,8 +342,8 @@
 }
 
 .joy-custom-tab-bar__center--selected .joy-custom-tab-bar__center-label {
-  /* Token: $color-secondary */
-  color: var(--jj-secondary);
+  /* Token: darker $color-secondary variant for WCAG contrast */
+  color: var(--jj-secondary-text);
 }
 
 /* Active-state glow on the center button ("you are here" signal).

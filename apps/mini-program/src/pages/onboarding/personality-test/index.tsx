@@ -185,7 +185,7 @@ function triggerXiaoyueAnalysisPrefetch(
       traitScores: {
         affinity: traitScores.A ?? traitScores.affinity ?? 0.5,
         openness: traitScores.O ?? traitScores.openness ?? 0.5,
-        conscientiousness: traitScores.C ?? traitScores.conscientness ?? 0.5,
+        conscientiousness: traitScores.C ?? traitScores.conscientiousness ?? 0.5,
         emotionalStability: traitScores.E ?? traitScores.emotionalStability ?? 0.5,
         extraversion: traitScores.X ?? traitScores.extraversion ?? 0.5,
         positivity: traitScores.P ?? traitScores.positivity ?? 0.5,
