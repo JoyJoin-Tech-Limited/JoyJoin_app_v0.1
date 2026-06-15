@@ -480,7 +480,7 @@ export default function ExtendedDataPage() {
 
       <ScrollView className='extended-data__scroll' scrollY enhanced showScrollbar={false}>
         <View className='extended-data__content'>
-          {(Object.entries(groupedInterests) as [MacroCategory, InterestDefinition][])
+          {(Object.entries(groupedInterests) as [MacroCategory, InterestDefinition[]][])
             .sort((left, right) => CATEGORY_ORDER.indexOf(left[0]) - CATEGORY_ORDER.indexOf(right[0]))
             .map(([category, items]) => {
               const selectedInCategory = items.filter((item) => levelsById[item.id]).length
@@ -651,9 +651,9 @@ export default function ExtendedDataPage() {
         </View>
 
         {error ? (
-          <Text className='extended-data__error' aria-live='assertive' role='alert'>
+          <View className='extended-data__error' aria-live='assertive' role='alert'>
             {error}
-          </Text>
+          </View>
         ) : null}
 
         <Button
