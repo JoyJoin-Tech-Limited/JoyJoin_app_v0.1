@@ -91,6 +91,17 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Accessibility & performance:** `role="button"`, `aria-pressed`, dynamic `aria-label` per card; `aria-live="polite"` on toasts; `@media (prefers-reduced-motion: reduce)` disables animations; transform-only interactions; timeout-ref cleanup on unmount.
 - **Audit scores:** 情绪价值 24/24, Frontend Design Audit 20/20, Completeness Audit 44/44, Performance Audit PASS (50/60).
 
+**41. Profile / “我的” Social-Passport Redesign + Wow Polish** 🪪 *(2026-06-15)*
+- **Scope:** Mini-program profile tab (`pages/profile/index`) — the logged-in "我的" surface.
+- **Social-passport hero:** Gradient-ring archetype avatar (`ArchetypeHead`), Xiaoyue greeting bubble, name/archetype/identity chip, share/edit CTAs.
+- **Three stat cards:** `已参加活动`, `我的连接数`, `资料完成度`; count-up animation via new shared `useCountUp` hook; empty-state CTAs (`去遇见`, `活动后解锁`, `去完善`); completion progress bar (40% essential + 30% extended + 30% archetype).
+- **Milestone badges:** `firstEvent` and `streak3` achievements rendered under the hero.
+- **Menu grid:** Two-column grid with rewards, invite, entitlements, events, terms, city unlock; 88rpx touch targets; haptics; reduced-motion/degradation fallbacks.
+- **Interactions & wow:** Pull-to-refresh; spring avatar entrance; staggered stats/menu reveal; stat-tap Xiaoyue mascot reaction; logout with busy guard and 401 handling; skeleton + branded error states.
+- **Data contract:** Consumes `GET /api/shell/profile` via `getProfileShell()` from `packages/shared/src/api.ts` with 60s stale time; refetched on `useDidShow`.
+- **Analytics:** `POST /api/analytics/profile` accepts whitelisted profile events (`profile_stat_tap`, `profile_archetype_cta_tap`, `profile_menu_tap`, `profile_logout_tap`, `profile_shell_retry`) stored in `discoverAnalyticsEvents`; rate-limited 120 req/min; client Zod validation in `profileAnalytics.ts`.
+- **Audit scores:** Frontend Design Audit 20/20, Completeness Audit 44/44, Performance Audit PASS, Harness Completion Gate 97/100.
+
 ### 2026 Milestones (May 2026)
 
 **29. Social Icebreaker Phase Quality Sprints** 🧊 *(2026-05-05 to 2026-05-07)*

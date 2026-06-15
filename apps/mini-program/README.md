@@ -71,6 +71,7 @@ src/
 │   ├── useStaggerMount.ts   # Single RAF mount trigger for CSS-staggered entrances
 │   ├── useResetOnShow.ts    # Resets transient navigation/submit flags on page re-show (swipe-back safety)
 │   ├── useUnload.ts         # Page unload lifecycle cleanup (timer leaks, refs, subscriptions)
+│   ├── useCountUp.ts        # Animated numeric count-up for hero stats (profile stats, etc.) with enabled/delay options and reduced-motion/degradation gating
 │   ├── useDeviceTier.ts     # Runtime device-capability tiering; Android uses benchmarkLevel, iOS falls back to model/system heuristics
 ├── lib/                 # Runtime helpers & business logic
 ├── providers/           # App-level React context providers

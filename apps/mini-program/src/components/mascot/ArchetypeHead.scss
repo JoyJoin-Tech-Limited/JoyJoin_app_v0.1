@@ -1,0 +1,21 @@
+@use '../../styles/variables' as *;
+
+.archetype-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  &--fallback {
+    width: 100%;
+    height: 100%;
+    background: rgba($color-primary, 0.1);
+    color: $color-primary;
+    font-family: $font-cn-display;
+    font-weight: $font-weight-bold;
+    font-size: 40%;
+    line-height: 1;
+  }
+}

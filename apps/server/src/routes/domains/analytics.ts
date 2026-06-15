@@ -24,6 +24,12 @@ const discoverAnalyticsLimiter = createRateLimiter({
   keyPrefix: "discover-analytics",
 });
 
+const profileAnalyticsLimiter = createRateLimiter({
+  windowMs: 60_000,
+  maxRequests: 120,
+  keyPrefix: "profile-analytics",
+});
+
 const paymentRitualAnalyticsLimiter = createRateLimiter({
   windowMs: 60_000,
   maxRequests: 120,
@@ -156,6 +162,18 @@ type SocialIcebreakerEventType = (typeof SOCIAL_ICEBREAKER_EVENT_TYPES)[number];
 const ALLOWED_SOCIAL_ICEBREAKER_EVENT_TYPES = new Set<SocialIcebreakerEventType>(
   SOCIAL_ICEBREAKER_EVENT_TYPES,
 );
+
+const PROFILE_EVENT_TYPES = [
+  "profile_stat_tap",
+  "profile_archetype_cta_tap",
+  "profile_menu_tap",
+  "profile_logout_tap",
+  "profile_shell_retry",
+] as const;
+
+type ProfileEventType = (typeof PROFILE_EVENT_TYPES)[number];
+
+const ALLOWED_PROFILE_EVENT_TYPES = new Set<ProfileEventType>(PROFILE_EVENT_TYPES);
 
 const MAX_METADATA_BYTES = 4_096;
 const MAX_POOL_ID_LENGTH = 120;
@@ -525,6 +543,54 @@ export function registerAnalyticsRoutes(app: Express): void {
       return res.status(200).json({ success: true });
     } catch (error) {
       logger.warn("social icebreaker analytics write failed (non-fatal)", {
+        request_id: req.requestId,
+        error: String(error),
+      });
+      return res.status(200).json({ success: false, error: "analytics write failed" });
+    }
+  });
+
+  /**
+   * POST /api/analytics/profile
+   *
+   * Profile page interaction instrumentation.
+   * Tracks: stat-card taps, archetype CTA taps, menu taps, logout taps.
+   *
+   * Fire-and-forget. Always returns 200. Silent fail.
+   * Reuses discoverAnalyticsEvents table for v0.1.
+   * Reuses discoverAnalyticsLimiter (120 req/min).
+   */
+  app.post("/api/analytics/profile", profileAnalyticsLimiter, async (req: Request, res) => {
+    try {
+      const { eventType, metadata, timestamp } = req.body as {
+        eventType?: unknown;
+        metadata?: unknown;
+        timestamp?: unknown;
+      };
+
+      if (
+        typeof eventType !== "string" ||
+        !ALLOWED_PROFILE_EVENT_TYPES.has(eventType as ProfileEventType)
+      ) {
+        return res.status(200).json({ success: false, error: "invalid eventType" });
+      }
+
+      const normalizedMetadata = sanitizeMetadata(metadata);
+      const userId = req.session?.userId ?? null;
+      const sessionId = req.sessionID ?? null;
+
+      await insertAnalyticsEvent(discoverAnalyticsEvents, {
+        userId,
+        sessionId,
+        eventType,
+        poolId: null,
+        metadata: normalizedMetadata,
+        timestamp: parseTimestamp(timestamp),
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      logger.warn("profile analytics write failed (non-fatal)", {
         request_id: req.requestId,
         error: String(error),
       });

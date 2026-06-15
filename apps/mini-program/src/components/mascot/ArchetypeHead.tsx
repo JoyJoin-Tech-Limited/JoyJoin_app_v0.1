@@ -1,6 +1,7 @@
 import { View, Image, Text } from '@tarojs/components'
 import { useState, useCallback } from 'react'
 import { localAsset } from '../../lib/utils/cdnAssets'
+import './ArchetypeHead.scss'
 
 /**
  * ArchetypeHead — proprietary head icon for the 12 JoyJoin archetypes.
@@ -20,6 +21,7 @@ interface ArchetypeHeadProps {
   size?: number // rpx
   fallback?: 'initial' | 'none'
   fallbackText?: string
+  className?: string
 }
 
 const HEAD_PATHS: Record<string, string> = {
@@ -47,6 +49,7 @@ export default function ArchetypeHead({
   size = 80,
   fallback = 'initial',
   fallbackText,
+  className = '',
 }: ArchetypeHeadProps) {
   const src = archetype ? HEAD_PATHS[archetype] : undefined
   const sizeStr = `${size}rpx`
@@ -60,16 +63,16 @@ export default function ArchetypeHead({
     if (fallback === 'none') return null
     return (
       <View
-        className='archetype-head archetype-head--fallback'
+        className={`archetype-head archetype-head--fallback ${className}`}
         style={{ width: sizeStr, height: sizeStr }}
       >
-        <Text>{getFallbackInitial(fallbackText)}</Text>
+        <Text style={{ fontSize: `${size * 0.4}rpx` }}>{getFallbackInitial(fallbackText)}</Text>
       </View>
     )
   }
 
   return (
-    <View className='archetype-head'>
+    <View className={`archetype-head ${className}`} style={{ width: sizeStr, height: sizeStr }}>
       <Image
         src={src}
         mode='aspectFit'

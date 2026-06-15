@@ -12,6 +12,7 @@ import type { GroupAnalysisResponse } from './types/groupAnalysis'
 import type { MascotBackstory } from './mascotConfig'
 import type { TierDisplayFlags } from './socialIcebreakerTierManifest'
 import type { XiaoyueAnalysisPublicResult } from './personality/discovery'
+import type { ProfileShellResponse } from './apiShell'
 import { z } from 'zod'
 
 export type ApiMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
@@ -679,6 +680,11 @@ export function getPaymentStatus(
 
 export function getCurrentUser(api: ApiTransport): Promise<AuthUserResponse> {
   return api<AuthUserResponse>({ path: '/api/auth/user' })
+}
+
+/** Composite profile shell — user, coupons, and stats in one request. */
+export function getProfileShell(api: ApiTransport): Promise<ProfileShellResponse> {
+  return api<ProfileShellResponse>({ path: '/api/shell/profile' })
 }
 
 /** AI-generated profile insight for review / portrait surfaces (presentation-only). */

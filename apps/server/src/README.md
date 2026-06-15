@@ -166,6 +166,17 @@ Boundary:
 - Cache invalidation is triggered on mutations: payment/coupon use, pool registration, connection creation.
 - Legacy endpoints (`/api/events/joined`, `/api/my-connections`) remain for client fallback.
 
+### Client analytics
+
+Lightweight fire-and-forget endpoints for product analytics.
+
+Primary files:
+- `apps/server/src/routes/domains/analytics.ts` — mounts `POST /api/analytics/profile` and `POST /api/analytics/payment`
+
+Key endpoints:
+- `POST /api/analytics/profile` — Profile tab interaction events (`profile_stat_tap`, `profile_archetype_cta_tap`, `profile_menu_tap`, `profile_logout_tap`, `profile_shell_retry`). Validates against an allowed-event whitelist, rate-limited at 120 req/min, stored in `discoverAnalyticsEvents`.
+- `POST /api/analytics/payment` — Payment Ritual V2 funnel events; stored in `paymentRitualEvents`.
+
 ### Repository and facade boundaries
 
 - Add new persistence logic to the nearest file in `apps/server/src/repositories/`.
