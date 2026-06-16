@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef } from 'react'
 import Taro from '@tarojs/taro'
 import { localAsset } from '../lib/utils/cdnAssets'
 import { INTENT_FLOW_OPTIONS } from '../pages/pool-registration/flowConfig'
-import { localAsset } from '../lib/utils/cdnAssets'
 import {
   getIconMapping,
   getLocalIconAssetPath,

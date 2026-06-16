@@ -9,7 +9,6 @@ import {
   type IconMapping,
   type IconTier,
 } from '@joyjoin/shared/iconSystem'
-import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 
 interface JoyJoinIconProps {
   emoji: string

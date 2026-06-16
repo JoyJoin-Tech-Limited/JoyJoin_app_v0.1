@@ -8,10 +8,11 @@ import {
 import { localAsset } from '../../lib/utils/cdnAssets'
 import { BRAND_COLORS } from '../../styles/colors'
 
+import './RatingFace.scss'
+
 function hexWithAlpha(hex: string, alphaHex: string): string {
   return hex.startsWith('#') ? hex + alphaHex : hex
 }
-import './RatingFace.scss'
 
 interface FaceErrorState {
   [assetKey: string]: boolean
