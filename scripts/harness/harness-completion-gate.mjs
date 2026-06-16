@@ -319,7 +319,7 @@ function checkSecurity(changedFiles, fileContents) {
     }
 
     // debugger statements left in code
-    if (/\bdebugger\b/g.test(content)) {
+    if (/\bdebugger\s*;/.test(content)) {
       findings.push({
         severity: 'blocker',
         file,

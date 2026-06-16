@@ -12,6 +12,7 @@ import { socialIcebreakerAnalytics } from '../../lib/analytics/socialIcebreakerA
 import {
   usePreloadCdnIcons,
   SPRITE_SHEET_ASSETS,
+  ICEBREAKER_PHASE_EMBLEM_ASSETS,
 } from '../../hooks/usePreloadCdnIcons'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { getMascotDisplayName } from '../../lib/mascot/mascotDisplay'
@@ -103,9 +104,9 @@ export default function IcebreakerSessionPage() {
   const prevPhaseRef = useRef<SessionPhase>('waiting')
   const customSessionCompletedRef = useRef(false)
 
-  // Preload CDN-only sprite sheets in parallel with session bootstrap.
-  // Reaction/reveal/achievement icons are now locally bundled.
-  usePreloadCdnIcons(SPRITE_SHEET_ASSETS)
+  // Preload CDN-only assets in parallel with session bootstrap.
+  // Phase emblems, reactions, reveals, and achievements are CDN tiers.
+  usePreloadCdnIcons([...SPRITE_SHEET_ASSETS, ...ICEBREAKER_PHASE_EMBLEM_ASSETS])
 
   const {
     data: eventSession,
@@ -799,7 +800,7 @@ export default function IcebreakerSessionPage() {
         <View className='icebreaker__host-badge-text'>
           <Image
             className='icebreaker__host-badge-icon'
-            src={localAsset('/assets/icons/status-icons/status-crown.png')}
+            src={localAsset('/assets/icons/status-icons/status-crown.webp')}
             lazyLoad
           />
           <Text>你是主持人</Text>
@@ -1165,7 +1166,7 @@ function WaitingPhase({
     <View className='icebreaker__waiting'>
       <Card className='icebreaker__waiting-card'>
         <Image
-          src={localAsset('/assets/icons/status-icons/status-waiting.png')}
+          src={localAsset('/assets/icons/status-icons/status-waiting.webp')}
           style={{ width: '80rpx', height: '80rpx' }}
           lazyLoad
           className='icebreaker__waiting-emoji'

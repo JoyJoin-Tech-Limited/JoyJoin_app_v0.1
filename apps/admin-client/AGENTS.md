@@ -1,6 +1,6 @@
 # Admin Client — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents. Last updated: 2026-05-24
+> Compact instructions for AI coding agents. Last updated: 2026-06-16
 
 ---
 
@@ -186,7 +186,11 @@ Check specific permissions using the shared RBAC helpers, not hardcoded role che
 
 - **Queries**: `useQuery` / `useMutation` from `@tanstack/react-query`
 - **Query client**: Import from `@/lib/queryClient`
-- **API calls**: `fetch()` with `credentials: "include"` (cookie-based session)
+- **API calls**:
+  - Prefer `apiRequest(method, url, body?)` from `@/lib/queryClient` for mutations — it checks `res.ok` and throws on 4xx/5xx so React Query surfaces errors to `onError`.
+  - Prefer the default `queryFn` from `queryClient` for queries — it also checks `res.ok` and throws on non-2xx.
+  - Only use raw `fetch()` when the default queryFn cannot be used, and always validate `res.ok` before calling `res.json()`.
+- **Anti-pattern**: `fetch(...).then(r => r.json())` without checking `r.ok` — this silently turns HTTP error JSON into success data and can crash downstream code.
 - **Admin API base**: `/api/admin/*` — all admin routes require admin middleware server-side
 - **Cache invalidation**: `queryClient.invalidateQueries()` after mutations
 - **Error handling**: Catch and display user-friendly error toasts (via shadcn/ui Toast)

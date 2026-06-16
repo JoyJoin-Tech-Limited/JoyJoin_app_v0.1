@@ -96,11 +96,11 @@ export const CHEMISTRY_BADGE_MAP: Record<string, IconMapping> = {
 
 export const PHASE_EMBLEM_MAP: Record<string, IconMapping> = {
   '🌅': { assetKey: 'phase-warmup', tier: 'phase', size: 80, fallbackEmoji: '🌅' },
-  '⚡': { assetKey: 'phase-challenge', tier: 'phase', size: 80, fallbackEmoji: '⚡' },
-  '🕵️': { assetKey: 'phase-detective', tier: 'phase', size: 80, fallbackEmoji: '🕵️' },
-  '🎲': { assetKey: 'phase-dice', tier: 'phase', size: 80, fallbackEmoji: '🎲' },
+  '⚡': { assetKey: 'phase-micro-challenge', tier: 'phase', size: 80, fallbackEmoji: '⚡' },
+  '🕵️': { assetKey: 'phase-lie-detective', tier: 'phase', size: 80, fallbackEmoji: '🕵️' },
+  '🎲': { assetKey: 'phase-personality-dice', tier: 'phase', size: 80, fallbackEmoji: '🎲' },
   '🎪': { assetKey: 'phase-auction', tier: 'phase', size: 80, fallbackEmoji: '🎪' },
-  '🎭': { assetKey: 'phase-script', tier: 'phase', size: 80, fallbackEmoji: '🎭' },
+  '🎭': { assetKey: 'phase-mini-script', tier: 'phase', size: 80, fallbackEmoji: '🎭' },
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -233,17 +233,66 @@ export function hasIconMapping(emoji: string): boolean {
  * Tiers that load from CDN instead of local bundle.
  * These asset sets are too large for the 2MB main package limit.
  *
- * NOTE: intent icons are bundled locally (see apps/mini-program/config/index.ts
- * copy config and scripts/cdn-asset-manifest.json). Keep 'intent' out of this
- * set so JoyJoinIcon resolves them via require() against the local bundle.
+ * NOTE: The following tiers are bundled locally and must be kept OUT of this
+ * set so subpackage pages never block on a network path:
+ *   - expression (rating-faces)
+ *   - semantic (info-labels)
+ *   - mood
+ *   - chemistry
+ *   - status
+ *   - category
+ *   - intent
+ *
+ * 'phase' is CDN-only: only a curated landing-page subset is bundled locally
+ * under /assets/landing-phase-icons/; the full set lives on CDN and the build
+ * clean step removes dist/assets/icons/phase-icons to save package size.
  */
 export const CDN_ICON_TIERS: ReadonlySet<IconTier> = new Set([
+  'phase',
   'reaction',
   // 'category' is bundled locally; assets live in apps/mini-program/src/assets/icons/category-icons
   // and are copied to dist/assets/icons/category-icons via config/index.ts.
   'reveal',
   'achievement',
 ])
+
+const ICON_FOLDER_MAP: Record<IconTier, string> = {
+  expression: 'rating-faces',
+  semantic: 'info-labels',
+  mood: 'mood-icons',
+  chemistry: 'chemistry-badges',
+  phase: 'phase-icons',
+  status: 'status-icons',
+  reaction: 'reaction-icons',
+  category: 'category-icons',
+  intent: 'intent-icons',
+  reveal: 'reveal-icons',
+  achievement: 'achievement-badges',
+}
+
+/**
+ * Build a root-relative asset path for an icon asset.
+ *
+ * Returns `/assets/icons/<folder>/<assetKey><suffix>.webp` for both CDN and
+ * local tiers. Callers should wrap the result with `cdnAsset()` for CDN tiers
+ * or `localAsset()` for bundled local tiers.
+ *
+ * Prefer this over `getIconAssetPath()` to avoid the legacy `../../assets/...`
+ * require()-style path and the associated regex replacement in callers.
+ *
+ * @param assetKey — e.g. 'rating-1-disappointed'
+ * @param tier — determines the asset folder
+ * @param density — 1, 2, or 3 for @1x/@2x/@3x
+ */
+export function getLocalIconAssetPath(
+  assetKey: string,
+  tier: IconTier,
+  density: 1 | 2 | 3 = 1,
+): string {
+  const folder = ICON_FOLDER_MAP[tier]
+  const suffix = density === 1 ? '' : `@${density}x`
+  return `/assets/icons/${folder}/${assetKey}${suffix}.webp`
+}
 
 /**
  * Build a Taro/WeChat asset path for an icon asset.
@@ -253,6 +302,8 @@ export const CDN_ICON_TIERS: ReadonlySet<IconTier> = new Set([
  * For local tiers, returns an absolute path like `/assets/icons/...` that
  * should be wrapped with `localAsset()` at the call site.
  *
+ * @deprecated Use `getLocalIconAssetPath()` plus `localAsset()`/`cdnAsset()`
+ *   instead. `require()` of non-JS assets crashes in WeChat subpackages.
  * @param assetKey — e.g. 'rating-1-disappointed'
  * @param tier — determines the asset folder
  * @param density — 1, 2, or 3 for @1x/@2x/@3x
@@ -262,23 +313,9 @@ export function getIconAssetPath(
   tier: IconTier,
   density: 1 | 2 | 3 = 1,
 ): string {
-  const folderMap: Record<IconTier, string> = {
-    expression: 'rating-faces',
-    semantic: 'info-labels',
-    mood: 'mood-icons',
-    chemistry: 'chemistry-badges',
-    phase: 'phase-icons',
-    status: 'status-icons',
-    reaction: 'reaction-icons',
-    category: 'category-icons',
-    intent: 'intent-icons',
-    reveal: 'reveal-icons',
-    achievement: 'achievement-badges',
-  }
-  const folder = folderMap[tier]
-  const suffix = density === 1 ? '' : `@${density}x`
+  const localPath = getLocalIconAssetPath(assetKey, tier, density)
   if (CDN_ICON_TIERS.has(tier)) {
-    return `/assets/icons/${folder}/${assetKey}${suffix}.webp`
+    return localPath
   }
-  return `/assets/icons/${folder}/${assetKey}${suffix}.webp`
+  return localPath.replace(/^\/assets\//, '../../assets/')
 }

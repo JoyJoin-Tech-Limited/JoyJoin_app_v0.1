@@ -30,3 +30,9 @@
     opacity: 1;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .jj-check-badge {
+    animation: none;
+  }
+}

@@ -184,7 +184,7 @@ Are key transitions treated as meaningful ceremonies, not mechanical state chang
 
 ## Measured uplift — Batches C + D (2026-06-04)
 
-**Scope:** Two new Lovart commission batches wired across 11 mini-program surfaces via `apps/mini-program/src/lib/ceremonyHeroes.ts` + `milestoneBadges.ts` (Path B local-bundle). See `../handoffs/taro-batch-c-d-wiring-20260604.md` for the wiring brief and `../mini-program/mini-program-product-reference.md` §4 for the per-surface notes.
+**Scope:** Two new Lovart commission batches wired across 11 mini-program surfaces via `apps/mini-program/src/lib/ceremonyHeroes.ts` + `milestoneBadges.ts` (CDN-backed). See `../handoffs/taro-batch-c-d-wiring-20260604.md` for the wiring brief and `../mini-program/mini-program-product-reference.md` §4 for the per-surface notes.
 
 **Dimensions lifted (preliminary):**
 

@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef } from 'react'
 import Taro from '@tarojs/taro'
 import { INTEREST_CATEGORY_EMOJIS } from '@shared/api'
 import { localAsset } from '../lib/utils/cdnAssets'
+import {
+  getIconMapping,
+  getLocalIconAssetPath,
+} from '@joyjoin/shared/iconSystem'
 
 /**
  * Pre-warm bundled interest-category icon assets so they render instantly
@@ -14,15 +18,12 @@ export function usePreloadCategoryIcons(enabled: boolean) {
   const hasPreloaded = useRef(false)
 
   const iconPaths = useMemo(() => {
-    const pathMap: Record<string, string> = {
-      '🍜': localAsset('/assets/icons/category-icons/category-food.webp'),
-      '🎮': localAsset('/assets/icons/category-icons/category-entertainment.webp'),
-      '🌿': localAsset('/assets/icons/category-icons/category-lifestyle.webp'),
-      '🎭': localAsset('/assets/icons/category-icons/category-culture.webp'),
-      '👥': localAsset('/assets/icons/category-icons/category-social.webp'),
-    }
     return Object.values(INTEREST_CATEGORY_EMOJIS)
-      .map((emoji) => pathMap[emoji])
+      .map((emoji) => {
+        const mapping = getIconMapping(emoji, 'category')
+        if (!mapping) return ''
+        return localAsset(getLocalIconAssetPath(mapping.assetKey, mapping.tier, 1))
+      })
       .filter(Boolean) as string[]
   }, [])
 

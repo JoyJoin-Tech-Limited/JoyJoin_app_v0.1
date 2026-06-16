@@ -110,6 +110,8 @@ Owns admin authentication, RBAC, moderation, venue/event operations, KPI endpoin
 Primary files:
 - `apps/server/src/routes/domains/admin.ts`
 - `apps/server/src/routes/domains/adminEventPools.ts` — CRUD, venue hints, time slot validation, archive/deletion for event pools
+- `apps/server/src/routes/domains/venues.ts` — venue CRUD, onboarding lifecycle, deals, time slots, data quality
+- `apps/server/src/repositories/venuesRepo.ts` — canonical venue data access; maps raw PostgreSQL `snake_case` rows to camelCase API contract
 - `apps/server/src/routes/domains/adminOperations.ts` — content filter log admin endpoint (`GET /api/admin/content-filter/logs`), admin notification broadcast/send with content safety gating
 - `apps/server/src/adminAuth.ts`
 - `apps/server/src/lib/adminAuditLogger.ts`

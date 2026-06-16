@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Gift, Percent, CircleDollarSign, Edit, Trash2, Calendar, Eye, Tag } from "lucide-react";
-import { queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
 import { Venue, VenueDeal, DISCOUNT_TYPES, REDEMPTION_METHODS } from "./venueConstants";
 
@@ -59,7 +59,13 @@ export default function VenueDealsManager({ venue, open, onOpenChange }: VenueDe
     queryKey: ["/api/admin/venues", venue?.id, "deals"],
     queryFn: async () => {
       if (!venue) return [];
-      return await fetch(`/api/admin/venues/${venue.id}/deals`, { credentials: "include" }).then((r) => r.json()).catch((err) => { console.error(err); return []; });
+      try {
+        const res = await apiRequest("GET", `/api/admin/venues/${venue.id}/deals`);
+        return await res.json();
+      } catch (err) {
+        console.error(err);
+        return [];
+      }
     },
     enabled: open && !!venue,
   });

@@ -188,7 +188,7 @@
     border: 2rpx solid $color-border;
     background: $color-bg;
     position: relative;
-    transition: all 0.2s ease;
+    transition: border-color 0.2s ease, background-color 0.2s ease, opacity 0.2s ease;
 
     &--selected {
       border-color: $color-primary;

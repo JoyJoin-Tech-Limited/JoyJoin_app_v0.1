@@ -22,6 +22,7 @@ import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import { getXiaoyueExpressionAsset, type XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
 import { localAsset } from '../../lib/utils/cdnAssets'
+import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import { useCountUp } from '../../hooks/useCountUp'
@@ -38,8 +39,8 @@ const UI_ICONS = {
   status: localAsset('/assets/icons/ui/icon-status.webp'),
 }
 
-const FIRST_EVENT_BADGE = localAsset('/assets/badges/first-event-celebrate-20260604-v1.webp')
-const STREAK_3_BADGE = localAsset('/assets/badges/streak-3-events-20260604-v1.webp')
+const FIRST_EVENT_BADGE = MILESTONE_BADGES.firstEvent
+const STREAK_3_BADGE = MILESTONE_BADGES.streak3
 
 const DEFAULT_BRAND_GRADIENT = 'linear-gradient(135deg, #8B5CF6, #EC4899)'
 

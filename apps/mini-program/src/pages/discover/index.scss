@@ -7,6 +7,8 @@
   align-items: center;
   justify-content: center;
   flex-direction: column;
+  // design-audit:intentional — dvh fallback for WeChat WKWebView (see AGENTS.md §4)
+  min-height: 100vh;
   min-height: 100dvh;
   background: $color-bg-gradient;
 
@@ -20,6 +22,8 @@
 .discover-auth {
   display: flex;
   flex-direction: column;
+  // design-audit:intentional — dvh fallback for WeChat WKWebView (see AGENTS.md §4)
+  min-height: 100vh;
   min-height: 100dvh;
   background: $color-bg-gradient;
 
@@ -419,6 +423,10 @@
     &--urgent {
       font-weight: $font-weight-bold;
     }
+
+    &--critical {
+      color: $color-error !important;
+    }
   }
 
   // ── Hero (personalized message) ───────────────────────────────
@@ -620,7 +628,17 @@
   }
 
   &--full &__progress-fill {
+    background: $color-text-muted !important;
     opacity: 0.4;
+  }
+
+  &--full &__pulse-dot {
+    background: $color-text-muted !important;
+    animation: none;
+  }
+
+  &--full &__pulse-label {
+    color: $color-text-muted !important;
   }
 
   // ── High-chemistry celebration badge ──────────────────────────
@@ -637,6 +655,7 @@
     color: $color-text-white;
     opacity: 0;
     transform: translateY(4rpx);
+    white-space: nowrap;
     animation: celebration-badge-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
   }
 

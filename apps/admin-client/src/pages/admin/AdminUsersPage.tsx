@@ -157,8 +157,10 @@ export default function AdminUsersPage() {
   });
 
   const unbanMutation = useMutation({
-    mutationFn: (userId: string) =>
-      fetch(`/api/admin/users/${userId}/unban`, { method: "PATCH", credentials: "include" }).then(r => r.json()),
+    mutationFn: async (userId: string) => {
+      const res = await apiRequest("PATCH", `/api/admin/users/${userId}/unban`);
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       setSelectedUser(null);

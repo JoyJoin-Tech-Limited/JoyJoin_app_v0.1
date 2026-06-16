@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Plus, Clock, Edit, Trash2, Calendar, Users } from "lucide-react";
-import { queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
 import { Venue } from "./venueConstants";
 
@@ -80,7 +80,13 @@ export default function VenueTimeSlotsManager({ venue, open, onOpenChange }: Ven
     queryKey: ["/api/admin/venues", venue?.id, "time-slots"],
     queryFn: async () => {
       if (!venue) return [];
-      return await fetch(`/api/admin/venues/${venue.id}/time-slots`, { credentials: "include" }).then((r) => r.json()).catch((err) => { console.error(err); return []; });
+      try {
+        const res = await apiRequest("GET", `/api/admin/venues/${venue.id}/time-slots`);
+        return await res.json();
+      } catch (err) {
+        console.error(err);
+        return [];
+      }
     },
     enabled: open && !!venue,
   });

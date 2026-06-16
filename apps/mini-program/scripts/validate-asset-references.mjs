@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const SRC_DIR = path.join(ROOT, 'src')
+const CONFIG_PATH = path.join(ROOT, 'config', 'index.ts')
 const MANIFEST_PATH = path.join(__dirname, 'cdn-asset-manifest.json')
 
 const EXTENSIONS = ['.ts', '.tsx', '.js', '.wxml', '.wxss', '.scss', '.css']
@@ -50,6 +51,64 @@ function readManifest() {
   }
   const raw = fs.readFileSync(MANIFEST_PATH, 'utf-8')
   return JSON.parse(raw)
+}
+
+/**
+ * Read Taro copy patterns from config/index.ts and expand them into the set
+ * of root-relative `/assets/...` paths that will exist in `dist/` after build.
+ * This lets the validator recognise local bundled assets that are copied from
+ * a different source path (e.g. `/assets/personality/xiaoyue/...` copied to
+ * `/assets/xiaoyue-expressions/...`) or extension-swapped (`.webp` → `.png`).
+ */
+function readBundledAssetPaths() {
+  const bundled = new Set()
+  if (!fs.existsSync(CONFIG_PATH)) return bundled
+
+  const raw = fs.readFileSync(CONFIG_PATH, 'utf-8')
+  // Extract the copy patterns array: copy: { patterns: [ ... ], options: {} }
+  const patternsMatch = raw.match(/copy:\s*\{\s*patterns:\s*\[([\s\S]*?)\]\s*,?/)
+  if (!patternsMatch) return bundled
+
+  const patternsBlock = patternsMatch[1]
+  // Match each { from: '...', to: '...', } object inside the array.
+  const objectRegex = /\{\s*from:\s*['"`]([^'"`]+)['"`]\s*,\s*to:\s*['"`]([^'"`]+)['"`]\s*,?\s*\}/g
+  const pairs = []
+  let m
+  while ((m = objectRegex.exec(patternsBlock)) !== null) {
+    pairs.push({ from: m[1], to: m[2] })
+  }
+
+  for (const { from, to } of pairs) {
+    const fromPath = path.join(ROOT, from)
+    if (!fs.existsSync(fromPath)) continue
+
+    const fromStat = fs.statSync(fromPath)
+    if (fromStat.isDirectory()) {
+      // Recursively enumerate files and mirror them under `to`.
+      const srcPrefixLen = fromPath.length
+      function walk(dir) {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const fullPath = path.join(dir, entry.name)
+          if (entry.isDirectory()) {
+            walk(fullPath)
+          } else if (entry.isFile()) {
+            const relativeToFrom = fullPath.slice(srcPrefixLen)
+            const destPath = path.posix.join(to.replace(/^dist\//, 'dist/'), relativeToFrom.replace(/\\/g, '/'))
+            const rootRelative = '/' + destPath.replace(/^dist\//, '')
+            bundled.add(rootRelative)
+          }
+        }
+      }
+      walk(fromPath)
+    } else {
+      // Single-file copy: `to` is the exact dist path.
+      const destPath = to.replace(/\\/g, '/')
+      const rootRelative = '/' + destPath.replace(/^dist\//, '')
+      bundled.add(rootRelative)
+    }
+  }
+
+  return bundled
 }
 
 /**
@@ -174,6 +233,7 @@ function validate() {
   const manifest = readManifest()
   const manifestPaths = new Set(manifest.assets.map((a) => '/' + a.localPath))
   const pendingPaths = new Set((manifest.pendingAssets || []).map((p) => '/' + p))
+  const bundledPaths = readBundledAssetPaths()
   const refs = scanAssetReferences()
 
   let errors = 0
@@ -189,8 +249,9 @@ function validate() {
     const inSrc = fs.existsSync(srcPath)
     const inManifest = manifestPaths.has(ref.path)
     const inPending = pendingPaths.has(ref.path)
+    const inBundled = bundledPaths.has(ref.path)
 
-    if (!inSrc && !inManifest) {
+    if (!inSrc && !inManifest && !inBundled) {
       if (inPending) {
         pendingRefs.push(ref)
       } else if (ref.type === 'hardcoded') {

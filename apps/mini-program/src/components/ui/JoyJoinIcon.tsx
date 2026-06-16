@@ -1,9 +1,10 @@
 import { Image, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState, useCallback, useMemo } from 'react'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import {
   getIconMapping,
-  getIconAssetPath,
+  getLocalIconAssetPath,
   CDN_ICON_TIERS,
   type IconMapping,
   type IconTier,
@@ -43,8 +44,17 @@ function getReducedMotion(): boolean {
 
 const REDUCED_MOTION = getReducedMotion()
 
-/** Fallback placeholder background for loading icons. Mirrors $color-bg-subtle. */
-const DEFAULT_ICON_PLACEHOLDER_BG = 'rgba(0, 0, 0, 0.04)'
+/** Append a hex alpha channel safely; fall back to the original colour if not hex. */
+function hexWithAlpha(hex: string | undefined, alphaHex: string): string {
+  if (!hex || !hex.startsWith('#')) return hex ?? 'transparent'
+  return hex + alphaHex
+}
+
+/** Fallback placeholder background for loading icons.
+ *  Mirrors the SCSS token `rgba($color-text-primary, 0.04)` (#2D3142 at 4% opacity).
+ *  Keep in sync with `apps/mini-program/src/styles/_variables.scss`.
+ */
+const DEFAULT_ICON_PLACEHOLDER_BG = 'rgba(45, 49, 66, 0.04)'
 
 export default function JoyJoinIcon({
   emoji,
@@ -67,7 +77,7 @@ export default function JoyJoinIcon({
 
   const transition = useMemo(() => {
     if (REDUCED_MOTION) return 'none'
-    return 'opacity 200ms ease-out, transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1)'
+    return 'opacity 200ms ease-out, transform 300ms cubic-bezier(0.22, 1, 0.36, 1)'
   }, [])
 
   if (!mapping) {
@@ -94,8 +104,14 @@ export default function JoyJoinIcon({
 
   let src: string
   try {
-    const assetPath = getIconAssetPath(mapping.assetKey, mapping.tier, 1)
-    src = CDN_ICON_TIERS.has(mapping.tier) ? cdnAsset(assetPath) : localAsset(assetPath)
+    const assetPath = getLocalIconAssetPath(mapping.assetKey, mapping.tier, 1)
+    if (CDN_ICON_TIERS.has(mapping.tier)) {
+      src = cdnAsset(assetPath)
+    } else {
+      // Local bundled assets are served from the mini-program root.
+      // Avoid runtime require() of non-JS assets — it crashes in subpackages.
+      src = localAsset(assetPath)
+    }
   } catch {
     return (
       <Text
@@ -120,7 +136,7 @@ export default function JoyJoinIcon({
         backgroundColor: loaded
           ? 'transparent'
           : mapping.tint
-            ? `${mapping.tint}1A`
+            ? hexWithAlpha(mapping.tint, '1A')
             : DEFAULT_ICON_PLACEHOLDER_BG,
         ...style,
       }}

@@ -15,38 +15,38 @@
  * Brief:  `docs/design/lovart-brief-achievement-milestone-batch-d-20260604.md`
  *
  * Raster spec:
- * - WebP primary (q=55, 600px max width) — Path B local-bundle deployment
- * - Bundled locally via Taro `copy.patterns` in `config/index.ts`
- * - Total: ~300KB across 9 files (main package zip ~1.98MB)
+ * - WebP primary (q=55, 600px max width) — CDN deployment
+ * - Uploaded via `npm run upload:cdn-assets`; not bundled in the mini-program
+ * - Total: ~300KB across 9 files
  *
  * Usage:
  *   import { MILESTONE_BADGES } from '../lib/milestoneBadges'
  *   <Image src={MILESTONE_BADGES.firstEvent} className='badge' />
  */
 
-import { localAsset } from './utils/cdnAssets'
+import { cdnAsset } from './utils/cdnAssets'
 
 const BASE = '/assets/badges'
 
 export const MILESTONE_BADGES = {
   /** D1 — `my-events` empty → first join transition, or "first event" profile badge */
-  firstEvent: localAsset(`${BASE}/first-event-celebrate-20260604-v1.webp`),
+  firstEvent: cdnAsset(`${BASE}/first-event-celebrate-20260604-v1.webp`),
   /** D2 — Profile / rewards — "你已参加 3 场活动" */
-  streak3: localAsset(`${BASE}/streak-3-events-20260604-v1.webp`),
+  streak3: cdnAsset(`${BASE}/streak-3-events-20260604-v1.webp`),
   /** D3 — `personality-test` at Q30 trigger */
-  quizHalfway: localAsset(`${BASE}/quiz-halfway-cheer-20260604-v1.webp`),
+  quizHalfway: cdnAsset(`${BASE}/quiz-halfway-cheer-20260604-v1.webp`),
   /** D4a — `matching-status` shared-chemistry card, paired with Batch B `reveal-same-relationship` */
-  matchReasonSameRelationship: localAsset(`${BASE}/match-reason-same-relationship-20260604-v1.webp`),
+  matchReasonSameRelationship: cdnAsset(`${BASE}/match-reason-same-relationship-20260604-v1.webp`),
   /** D4b — Paired with Batch B `reveal-same-archetype-band` */
-  matchReasonSameArchetypeBand: localAsset(`${BASE}/match-reason-same-archetype-band-20260604-v1.webp`),
+  matchReasonSameArchetypeBand: cdnAsset(`${BASE}/match-reason-same-archetype-band-20260604-v1.webp`),
   /** D4c — Paired with Batch B `reveal-same-work-industry` */
-  matchReasonSameWorkIndustry: localAsset(`${BASE}/match-reason-same-work-industry-20260604-v1.webp`),
+  matchReasonSameWorkIndustry: cdnAsset(`${BASE}/match-reason-same-work-industry-20260604-v1.webp`),
   /** D4d — Paired with Batch B `reveal-exact-archetype` */
-  matchReasonExactArchetype: localAsset(`${BASE}/match-reason-exact-archetype-20260604-v1.webp`),
+  matchReasonExactArchetype: cdnAsset(`${BASE}/match-reason-exact-archetype-20260604-v1.webp`),
   /** D4e — Paired with Batch B `reveal-hometown-industry` */
-  matchReasonHometownIndustry: localAsset(`${BASE}/match-reason-hometown-industry-20260604-v1.webp`),
+  matchReasonHometownIndustry: cdnAsset(`${BASE}/match-reason-hometown-industry-20260604-v1.webp`),
   /** D5 — `RecapPhaseView` end stamp overlay */
-  recapStamp: localAsset(`${BASE}/recap-stamp-of-you-20260604-v1.webp`),
+  recapStamp: cdnAsset(`${BASE}/recap-stamp-of-you-20260604-v1.webp`),
 } as const
 
 export type MilestoneBadgeKey = keyof typeof MILESTONE_BADGES

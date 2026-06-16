@@ -533,7 +533,7 @@ export function registerVenueRoutes(app: Express): void {
       }
       
       // Only return partner venues with active deals
-      if (venue.partner_status !== 'active') {
+      if (venue.partnerStatus !== 'active') {
         return res.json({ venue: null, deals: [] });
       }
       

@@ -1,5 +1,5 @@
 import { View, Text, Image } from '@tarojs/components'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { loadBrandDisplayFont } from '../../lib/utils/brandFont'
 import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
 import Taro, { usePullDownRefresh } from '@tarojs/taro'
@@ -405,8 +405,6 @@ function AuthenticatedDiscover({
 
   // GPS denied / unknown → show neutral pill without city assumption
   const isGeoUnknown = geoStatus === 'denied' || geoStatus === 'error'
-  const pillPrefix = isGeoUnknown ? '' : '在 深圳 • '
-  const showPillCity = !isGeoUnknown
 
   const handleRefresh = useCallback(() => {
     haptics('light')
@@ -499,7 +497,7 @@ function AuthenticatedDiscover({
         <View className='discover-auth__explore-title-row'>
           <Image
             className='discover-auth__explore-mascot'
-            src={getXiaoyueExpressionAsset('coachGuide')}
+            src={localAsset('/assets/xiaoyue-expressions/xiaoyue-coach-guide.webp')}
             mode='aspectFit'
           />
           <Text className='discover-auth__explore-title'>探索体验</Text>

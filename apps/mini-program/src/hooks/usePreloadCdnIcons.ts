@@ -27,7 +27,17 @@ export function preloadCdnAssets(assetPaths: string[]): Promise<PromiseSettledRe
  */
 export function usePreloadCdnIcons(assetPaths: string[]) {
   useEffect(() => {
-    void preloadCdnAssets(assetPaths)
+    const preload = async () => {
+      try {
+        const network = await Taro.getNetworkType()
+        // Skip on 2G: heavy CDN preloads contend with session bootstrap on weak networks.
+        if (network.networkType === '2g') return
+      } catch {
+        // Best-effort: continue preloading if network detection fails
+      }
+      void preloadCdnAssets(assetPaths)
+    }
+    preload()
   }, [assetPaths])
 }
 
@@ -62,8 +72,7 @@ export const SPRITE_SHEET_ASSETS = [
 ]
 
 /** Common icebreaker reaction icon CDN paths.
- *  ⚠️ Now locally bundled — these are copied to dist/assets/ by the build.
- *  Preloading from CDN is no longer necessary. */
+ *  These are CDN tiers (see CDN_ICON_TIERS); preloading warms the CDN cache. */
 export const ICEBREAKER_REACTION_ASSETS = [
   '/assets/icons/reaction-icons/reaction-funny.webp',
   '/assets/icons/reaction-icons/reaction-fire.webp',
@@ -75,8 +84,7 @@ export const ICEBREAKER_REACTION_ASSETS = [
 ]
 
 /** Common icebreaker reveal icon CDN paths.
- *  ⚠️ Now locally bundled — these are copied to dist/assets/ by the build.
- *  Preloading from CDN is no longer necessary. */
+ *  These are CDN tiers (see CDN_ICON_TIERS); preloading warms the CDN cache. */
 export const ICEBREAKER_REVEAL_ASSETS = [
   '/assets/icons/reveal-icons/reveal-same-relationship.webp',
   '/assets/icons/reveal-icons/reveal-same-archetype-band.webp',
@@ -85,9 +93,24 @@ export const ICEBREAKER_REVEAL_ASSETS = [
   '/assets/icons/reveal-icons/reveal-hometown-industry.webp',
 ]
 
+/** Common icebreaker phase emblem CDN paths.
+ *  These are CDN tiers (see CDN_ICON_TIERS); preloading warms the CDN cache. */
+export const ICEBREAKER_PHASE_EMBLEM_ASSETS = [
+  '/assets/icons/phase-icons/phase-warmup.webp',
+  '/assets/icons/phase-icons/phase-micro-challenge.webp',
+  '/assets/icons/phase-icons/phase-lie-detective.webp',
+  '/assets/icons/phase-icons/phase-personality-dice.webp',
+  '/assets/icons/phase-icons/phase-auction.webp',
+  '/assets/icons/phase-icons/phase-mini-script.webp',
+  '/assets/icons/phase-icons/phase-quip-battle.webp',
+  '/assets/icons/phase-icons/phase-undercover-word.webp',
+  '/assets/icons/phase-icons/phase-group-mirror.webp',
+  '/assets/icons/phase-icons/phase-speed-friending.webp',
+  '/assets/icons/phase-icons/phase-recap.webp',
+]
+
 /** Common achievement badge CDN paths (top 5 most likely).
- *  ⚠️ Now locally bundled — these are copied to dist/assets/ by the build.
- *  Preloading from CDN is no longer necessary. */
+ *  These are CDN tiers (see CDN_ICON_TIERS); preloading warms the CDN cache. */
 export const COMMON_ACHIEVEMENT_ASSETS = [
   '/assets/icons/achievement-badges/achievement-first-answer.webp',
   '/assets/icons/achievement-badges/achievement-quick-thinker.webp',
