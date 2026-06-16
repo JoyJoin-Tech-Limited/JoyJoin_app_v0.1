@@ -272,7 +272,7 @@ export default function AdminUsersPage() {
             const headers = ["ID", "姓名", "邮箱", "手机号", "城市", "性别", "原型", "资料完整度", "注册时间", "状态"];
             const rows = users.map((u) => [
               u.id,
-              `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.displayName || '未命名',
+              `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.displayName || u.wechatNickname || '未命名',
               u.email,
               u.phoneNumber,
               u.currentCity || '',
@@ -450,7 +450,7 @@ export default function AdminUsersPage() {
               <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-3">
                 <div className="flex-1 min-w-0">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    {user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || '未命名'}
+                    {user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.wechatNickname || '未命名'}
                     {user.isAdmin && <Crown className="h-4 w-4 text-amber-500" />}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground truncate">{user.email || user.phoneNumber}</p>
@@ -529,7 +529,7 @@ export default function AdminUsersPage() {
               {userDetail?.user.isBanned && <Badge variant="destructive">已封禁</Badge>}
             </SheetTitle>
             <SheetDescription>
-              {userDetail?.user.displayName || '—'} · {userDetail?.user.phoneNumber || userDetail?.user.email || '—'}
+              {(userDetail?.user.displayName || userDetail?.user.wechatNickname) || '—'} · {userDetail?.user.phoneNumber || userDetail?.user.email || '—'}
             </SheetDescription>
           </SheetHeader>
 
@@ -586,7 +586,7 @@ export default function AdminUsersPage() {
                       <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                         <div>
                           <p className="text-xs text-muted-foreground">昵称</p>
-                          <p className="font-medium">{userDetail.user.displayName || '未设置'}</p>
+                          <p className="font-medium">{userDetail.user.displayName || userDetail.user.wechatNickname || '未设置'}</p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">手机/邮箱</p>
@@ -1065,7 +1065,7 @@ export default function AdminUsersPage() {
               {userDetail && (
                 <>
                   <p>
-                    你即将封禁用户 <strong>{userDetail.user.displayName || userDetail.user.phoneNumber}</strong>。
+                    你即将封禁用户 <strong>{userDetail.user.displayName || userDetail.user.wechatNickname || userDetail.user.phoneNumber}</strong>。
                     此操作将立即生效，该用户将无法登录、参加活动或接收匹配。
                   </p>
                   <div className="space-y-2">
@@ -1116,7 +1116,7 @@ export default function AdminUsersPage() {
               {userDetail && (
                 <>
                   <p>
-                    你即将永久删除用户 <strong>{userDetail.user.displayName || userDetail.user.phoneNumber}</strong> 的<strong>所有数据</strong>。
+                    你即将永久删除用户 <strong>{userDetail.user.displayName || userDetail.user.wechatNickname || userDetail.user.phoneNumber}</strong> 的<strong>所有数据</strong>。
                   </p>
                   <p className="text-destructive font-medium">
                     此操作不可撤销！以下数据将被永久清除：

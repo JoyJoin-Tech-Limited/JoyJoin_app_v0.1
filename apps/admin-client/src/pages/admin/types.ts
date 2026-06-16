@@ -36,6 +36,7 @@ export interface AdminUser {
   firstName: string;
   lastName: string;
   displayName?: string;
+  wechatNickname?: string;
   email: string;
   phoneNumber: string;
   gender?: string;

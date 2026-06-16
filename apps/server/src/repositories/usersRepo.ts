@@ -16,7 +16,7 @@ import {
   assessmentAnswers,
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, sql, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { computeOnboardingNextStep } from "../lib/computeOnboardingNextStep";
 
 export interface UsersRepository {
@@ -54,8 +54,10 @@ export const usersRepo: UsersRepository = {
   },
 
   async getAllUsers(): Promise<User[]> {
-    const result = await db.execute(sql`SELECT * FROM users`);
-    return result.rows as unknown as User[];
+    // Use Drizzle's query builder so column names are mapped from snake_case
+    // DB columns to camelCase TypeScript keys. Raw `db.execute(sql`SELECT *`)`
+    // returns snake_case keys, which breaks callers that expect camelCase.
+    return db.select().from(users);
   },
 
   async getUserByPhone(phoneNumber: string): Promise<User[]> {
