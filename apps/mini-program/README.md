@@ -146,7 +146,7 @@ Assets are **CDN-first** in production, with a curated set of critical assets bu
 - `src/pages/onboarding/assets/archetypes` → `dist/pages/onboarding/assets/archetypes`
 
 *Pool-registration subpackage:*
-- `src/pages/pool-registration/assets/ceremony` → `dist/pages/pool-registration/assets/ceremony`
+- `src/pages/pool-registration/assets/` → `dist/pages/pool-registration/assets/` (pool-specific hero backdrops; Batch C ceremony registry is CDN-backed)
 
 *Icon tiers (bundled with @1x/@2x/@3x retina support via `JoyJoinIcon`):*
 - `src/assets/icons/mood-icons` (~16KB)
@@ -154,10 +154,12 @@ Assets are **CDN-first** in production, with a curated set of critical assets bu
 - `src/assets/icons/status-icons` (~8KB)
 - `src/assets/icons/category-icons` (~60KB)
 - `src/assets/icons/intent-icons` (~60KB)
-- `src/assets/icons/reaction-icons` (~120KB)
-- `src/assets/icons/reveal-icons` (~156KB)
-- `src/assets/icons/achievement-badges` (~144KB)
 - `src/assets/icons/archetype` (~72KB, head icons for avatars)
+
+*Source-only icon tiers (uploaded to CDN, not copied to `dist`):*
+- `src/assets/icons/reaction-icons` (~120KB source)
+- `src/assets/icons/reveal-icons` (~156KB source)
+- `src/assets/icons/achievement-badges` (~144KB source)
 
 *Fonts:*
 - `src/assets/fonts/Quicksand` (~256KB, English brand font)
@@ -175,15 +177,15 @@ Assets are **CDN-first** in production, with a curated set of critical assets bu
 *Game UI:*
 - `src/assets/lovart/icebreaker/icons/icon-coin-*.png` → `dist/assets/auction-icons/` (~28KB)
 
-*Lovart ceremony & milestone heroes (Batch C + D, 2026-06-04, Path B — local-bundle):*
-- `src/assets/ceremony/*.webp` → `dist/assets/ceremony/` (8 files, ~285KB total, q=55, 600px)
-- `src/assets/badges/*.webp` → `dist/assets/badges/` (9 files, ~300KB total, q=55, 600px)
-- Registries in `src/lib/ceremonyHeroes.ts` + `src/lib/milestoneBadges.ts` use `localAsset()` (NOT `cdnAsset()`).
+*Lovart ceremony & milestone heroes (Batch C + D, 2026-06-04 → moved to CDN 2026-06-16):*
+- `src/assets/ceremony/*.webp` (8 files, ~285KB total, q=55, 600px) are uploaded to CDN; not copied to `dist`.
+- `src/assets/badges/*.webp` (9 files, ~300KB total, q=55, 600px) are uploaded to CDN; not copied to `dist`.
+- Registries in `src/lib/ceremonyHeroes.ts` + `src/lib/milestoneBadges.ts` use `cdnAsset()` (NOT `localAsset()`).
 - PNG masters live in `assets-source/lovart/batch-{c,d}/` and are NOT bundled.
-- Re-encode via `node scripts/optimize-ceremony-batch-c.mjs` / `node scripts/optimize-badges-batch-d.mjs` (q=55, 600px) before committing new tiles.
+- Re-encode via `node scripts/optimize-ceremony-batch-c.mjs` / `node scripts/optimize-badges-batch-d.mjs` (q=55, 600px) before committing new tiles, then upload via the CDN workflow.
 
 *CDN-only assets (too large for bundle or non-critical):*
-Archetype full-body images, matching heroes, promo banners, Lovart illustrations (Batches A + B — pre-Path-B), icebreaker backgrounds, celebration images, extra Xiaoyue expressions, mini-script heroes, UI info-label icons. Loaded via `cdnAsset()` with route-based preloading via `routePreloadAssets.ts`.
+Archetype full-body images, matching heroes, promo banners, Lovart illustrations (Batches A + B), Lovart ceremony & milestone heroes (Batches C + D), **phase-emblem** icon tier, reaction/reveal/achievement icon tiers, icebreaker backgrounds, celebration images, extra Xiaoyue expressions, mini-script heroes, UI info-label icons. Loaded via `cdnAsset()` with route-based preloading via `routePreloadAssets.ts`. The icebreaker session also preloads `ICEBREAKER_PHASE_EMBLEM_ASSETS` on entry.
 
 ### Proprietary Icon System
 
@@ -192,13 +194,14 @@ The mini-program replaces raw Unicode emoji with brand-aligned proprietary icons
 1. **Shared registry** — `packages/shared/src/iconSystem/emojiToIconMap.ts`
    - Maps Unicode emoji → `assetKey` + `tier` + `fallbackEmoji`
    - Supports **composite lookup** (same emoji resolves to different assets per tier)
-   - `CDN_ICON_TIERS` controls which tiers load from CDN vs the local bundle. Tiers listed there resolve via `cdnAsset()`; tiers **not** listed resolve via `require()` against bundled `src/assets/icons/<tier>/`. Keep critical UI chrome (e.g. `intent`, `category`) out of `CDN_ICON_TIERS` so subpackage pages never block on a network path.
+   - `CDN_ICON_TIERS` controls which tiers load from CDN vs the local bundle. Tiers listed there should be wrapped with `cdnAsset()`; tiers **not** listed should be wrapped with `localAsset()` against bundled `src/assets/icons/<tier>/`. Keep critical UI chrome (e.g. `intent`, `category`) out of `CDN_ICON_TIERS` so subpackage pages never block on a network path.
    - `getIconMapping(emoji, tier?)` → tier-specific match first, then global fallback
-   - `getIconAssetPath(assetKey, tier, density)` → builds `require()` path for Taro
+   - `getLocalIconAssetPath(assetKey, tier, density)` → builds root-relative `/assets/icons/...` path (preferred)
+   - `getIconAssetPath(assetKey, tier, density)` → legacy relative `require()` path (deprecated; `require()` of non-JS assets crashes in WeChat subpackages)
 
 2. **Renderer** — `apps/mini-program/src/components/ui/JoyJoinIcon.tsx`
    - Props: `emoji`, `size?`, `tier?`, `className?`, `style?`
-   - 4-tier fallback: no mapping → `require()` fail → image load fail → native emoji
+   - 4-tier fallback: no mapping → asset resolve fail → image load fail → native emoji
    - Load animation: fade-in + spring-bounce scale (`cubic-bezier(0.34, 1.56, 0.64, 1)`)
    - Reduced-motion support via `Taro.getSystemInfoSync().reduceMotion`
    - Shimmer placeholder while loading; `alt={fallbackEmoji}` for accessibility
@@ -274,7 +277,7 @@ The shipped mini-program tab bar is the **native WeChat component** copied from 
 1. **Tab pages** (`discover`, `events`, `connections`, `profile`, `center-hub`) live in the **main package**.
 2. **Heavy non-tab flows** are in subpackages:
    - `pages/onboarding` — personality test, profile forms, review.
-   - `pages/pool-registration` — pool sign-up and ceremony assets.
+   - `pages/pool-registration` — pool sign-up and pool-specific hero backdrops.
    - `pages/matching-status` — match waiting / reveal.
    - `pages/icebreaker-session` — in-event social icebreaker.
 3. **Preload rules** are declared from likely entry pages (`index`, `login`, `event-detail`, `events`) before reaching for independent subpackages.

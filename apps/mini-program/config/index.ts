@@ -125,6 +125,16 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/icons/status-icons',
           to: 'dist/assets/icons/status-icons',
         },
+        // Info labels — semantic inline labels (calendar, location, people, target).
+        {
+          from: 'src/assets/icons/info-labels',
+          to: 'dist/assets/icons/info-labels',
+        },
+        // Rating faces — event-feedback 5-step rating selector (~15KB @1x / ~60KB all).
+        {
+          from: 'src/assets/icons/rating-faces',
+          to: 'dist/assets/icons/rating-faces',
+        },
         // Category icons — interest category labels in onboarding (~13KB @1x / ~38KB all).
         {
           from: 'src/assets/icons/category-icons',
@@ -135,21 +145,10 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/icons/intent-icons',
           to: 'dist/assets/icons/intent-icons',
         },
-        // Reaction icons — icebreaker phase reactions (~11KB @1x / ~38KB all).
-        {
-          from: 'src/assets/icons/reaction-icons',
-          to: 'dist/assets/icons/reaction-icons',
-        },
-        // Reveal icons — matching common ground reveals (~17KB @1x / ~62KB all).
-        {
-          from: 'src/assets/icons/reveal-icons',
-          to: 'dist/assets/icons/reveal-icons',
-        },
-        // Achievement badges — personality test milestones (~14KB @1x / ~51KB all).
-        {
-          from: 'src/assets/icons/achievement-badges',
-          to: 'dist/assets/icons/achievement-badges',
-        },
+        // NOTE: reaction, reveal, and achievement icons are CDN tiers
+        // (CDN_ICON_TIERS in packages/shared/src/iconSystem/emojiToIconMap.ts).
+        // Do NOT copy them into the main package — JoyJoinIcon resolves them
+        // via cdnAsset() and they are preloaded from the CDN at runtime.
         // Quicksand English brand font (~124KB).
         {
           from: 'src/assets/fonts/Quicksand',
@@ -166,27 +165,27 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         // all other phase icons remain on CDN. WebP saves ~70KB vs PNG.
         {
           from: 'src/assets/icons/phase-icons/phase-topic-card.webp',
-          to: 'dist/assets/landing-phase-icons/phase-topic-card.png',
+          to: 'dist/assets/landing-phase-icons/phase-topic-card.webp',
         },
         {
           from: 'src/assets/icons/phase-icons/phase-lie-detective.webp',
-          to: 'dist/assets/landing-phase-icons/phase-lie-detective.png',
+          to: 'dist/assets/landing-phase-icons/phase-lie-detective.webp',
         },
         {
           from: 'src/assets/icons/phase-icons/phase-personality-dice.webp',
-          to: 'dist/assets/landing-phase-icons/phase-personality-dice.png',
+          to: 'dist/assets/landing-phase-icons/phase-personality-dice.webp',
         },
         {
           from: 'src/assets/icons/phase-icons/phase-auction.webp',
-          to: 'dist/assets/landing-phase-icons/phase-auction.png',
+          to: 'dist/assets/landing-phase-icons/phase-auction.webp',
         },
         {
           from: 'src/assets/icons/phase-icons/phase-mini-script.webp',
-          to: 'dist/assets/landing-phase-icons/phase-mini-script.png',
+          to: 'dist/assets/landing-phase-icons/phase-mini-script.webp',
         },
         {
           from: 'src/assets/icons/phase-icons/phase-quip-battle.webp',
-          to: 'dist/assets/landing-phase-icons/phase-quip-battle.png',
+          to: 'dist/assets/landing-phase-icons/phase-quip-battle.webp',
         },
         // Archetype head icons — tiny (~45KB total), used everywhere for avatars.
         {
@@ -199,25 +198,44 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           to: 'dist/assets/empty-state',
         },
         // Batch C ceremony heroes — 8 WebP files (~310KB total, q=70 600px).
-        // Bundled locally (Path B, 2026-06-04) instead of CDN.
+        // Served from CDN; source stays in src/assets/ceremony for upload via
+        // `npm run upload:cdn-assets`. Local copies are no longer bundled so
+        // the main package stays under WeChat's 2MB ceiling.
         // PNG masters live in `assets-source/lovart/batch-c/` (not bundled).
-        {
-          from: 'src/assets/ceremony',
-          to: 'dist/assets/ceremony',
-        },
         // Pool-registration ceremony heroes now travel with the subpackage so
         // the main package stays under the 2 MB ceiling.
         {
           from: 'src/pages/pool-registration/assets',
           to: 'dist/pages/pool-registration/assets',
         },
-        // Batch D milestone badges — 9 WebP files (~330KB total, q=70 600px).
-        // Bundled locally (Path B, 2026-06-04) instead of CDN.
-        // PNG masters live in `assets-source/lovart/batch-d/` (not bundled).
+        // Custom-tier icon — bundled locally for the icebreaker tier selector.
+        // Lives in the phase-icons source folder but is copied out so it is not
+        // wiped by the CDN-only phase-icons cleanup step.
         {
-          from: 'src/assets/badges',
-          to: 'dist/assets/badges',
+          from: 'src/assets/icons/phase-icons/custom-tier-icon.webp',
+          to: 'dist/assets/icons/custom-tier-icon.webp',
         },
+        {
+          from: 'src/assets/icons/phase-icons/custom-tier-icon@2x.webp',
+          to: 'dist/assets/icons/custom-tier-icon@2x.webp',
+        },
+        {
+          from: 'src/assets/icons/phase-icons/custom-tier-icon@3x.webp',
+          to: 'dist/assets/icons/custom-tier-icon@3x.webp',
+        },
+        // Xiaoyue mascot sprite sheets — bundled locally as CDN fallback
+        // (~350KB total). Used by XiaoyueSpriteAnimator across the app.
+        {
+          from: 'src/assets/mascot',
+          to: 'dist/assets/mascot',
+        },
+        // Matching status heroes — referenced via cdnAsset(); local copies are
+        // not bundled because cdnAsset() returns the CDN URL in production.
+        // Batch D milestone badges — 9 WebP files (~330KB total, q=70 600px).
+        // Served from CDN; source stays in src/assets/badges for upload via
+        // `npm run upload:cdn-assets`. Local copies are no longer bundled so
+        // the main package stays under WeChat's 2MB ceiling.
+        // PNG masters live in `assets-source/lovart/batch-d/` (not bundled).
         // Auction phase coin icons — tiny game UI elements (~23KB).
         // Copied to a dedicated directory so the clean step doesn't remove them
         // (the clean step wipes the entire lovart/ tree for CDN assets).
@@ -238,8 +256,8 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/qr',
           to: 'dist/assets/qr',
         },
-        // Xiaoyue expressions — loading + welcome are critical first-impression assets.
-        // Others remain on CDN to stay within package size limits.
+        // Xiaoyue expressions — loading + welcome + coach-guide are critical
+        // first-impression assets. Others remain on CDN to stay within package size limits.
         {
           from: 'src/assets/personality/xiaoyue/xiaoyue-loading-system.png',
           to: 'dist/assets/xiaoyue-expressions/xiaoyue-loading-system.png',
@@ -247,6 +265,14 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         {
           from: 'src/assets/personality/xiaoyue/xiaoyue-home-welcome.png',
           to: 'dist/assets/xiaoyue-expressions/xiaoyue-home-welcome.png',
+        },
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-coach-guide.webp',
+          to: 'dist/assets/xiaoyue-expressions/xiaoyue-coach-guide.webp',
+        },
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-home-welcome.webp',
+          to: 'dist/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp',
         },
         // Lovart generic empty/error illustrations — CDN only to save package size.
         // Previously bundled locally but moved back to CDN to stay under 2MB.

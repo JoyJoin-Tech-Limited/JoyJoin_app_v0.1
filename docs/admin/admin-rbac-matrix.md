@@ -105,10 +105,24 @@ Reference for which admin portal pages map to which API endpoints and which role
 
 | Admin Page | Action | Method | Endpoint | Required Middleware |
 |------------|--------|--------|----------|---------------------|
-| `/admin/venues` | CRUD venues | GET/POST/PATCH/DELETE | `/api/admin/venues*` | `requireAdmin` |
-| `/admin/venues` | Time slots | GET/POST/PATCH/DELETE | `/api/admin/time-slots*` | `requireAdmin` |
+| `/admin/venues` | List venues | GET | `/api/admin/venues` | `requireAdmin` |
+| `/admin/venues` | Create venue | POST | `/api/admin/venues` | `requireAdmin` + `requireOperatorOrAbove` |
+| `/admin/venues` | Get venue detail | GET | `/api/admin/venues/:id` | `requireAdmin` |
+| `/admin/venues` | Update venue | PATCH | `/api/admin/venues/:id` | `requireAdmin` + `requireOperatorOrAbove` |
+| `/admin/venues` | Delete venue | DELETE | `/api/admin/venues/:id` | `requireAdmin` + `requireOperatorOrAbove` |
+| `/admin/venues` | Submit for review | POST | `/api/admin/venues/:id/submit-for-review` | `requireAdmin` + `requireOperatorOrAbove` |
+| `/admin/venues` | Approve venue | POST | `/api/admin/venues/:id/approve` | `requireAdmin` + `requireOperatorOrAbove` |
+| `/admin/venues` | Reject venue | POST | `/api/admin/venues/:id/reject` | `requireAdmin` + `requireOperatorOrAbove` |
+| `/admin/venues` | Suspend venue | POST | `/api/admin/venues/:id/suspend` | `requireAdmin` + `requireOperatorOrAbove` |
+| `/admin/venues` | List venue deals | GET | `/api/admin/venues/:id/deals` | `requireAdmin` |
+| `/admin/venues` | Manage venue deals | POST/PATCH/DELETE | `/api/admin/venues/:id/deals*` | `requireAdmin` + `requireOperatorOrAbove` |
+| `/admin/venues` | List venue time slots | GET | `/api/admin/venues/:id/time-slots` | `requireAdmin` |
+| `/admin/venues` | Manage venue time slots | POST/PATCH/DELETE | `/api/admin/venues/:id/time-slots*` | `requireAdmin` + `requireOperatorOrAbove` |
+| `/admin/venues` | All time slots (calendar) | GET | `/api/admin/time-slots/all` | `requireAdmin` |
 | `/admin/subscriptions` | List/create/update | GET/POST/PATCH | `/api/admin/subscriptions*` | `requireAdmin` |
 | `/admin/coupons` | Coupon management | GET/POST/PATCH | `/api/admin/coupons*` | `requireAdmin` |
+
+> **API contract:** Venue GET/POST/PATCH responses return camelCase keys (`type`, `isActive`, `onboardingStatus`, `maxConcurrentEvents`, `bookingCount`, etc.) mapped from the underlying PostgreSQL `snake_case` columns by `venuesRepo.ts`. Admin client pages should use `apiRequest` or the default React Query `queryFn` (both check `res.ok`) instead of raw `fetch(...).then(r => r.json())`.
 
 ---
 

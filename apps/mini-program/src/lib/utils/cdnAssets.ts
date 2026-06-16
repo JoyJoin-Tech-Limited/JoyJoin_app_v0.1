@@ -17,7 +17,9 @@ export const CDN_BASE_URL = (
   process.env.TARO_APP_CDN_BASE_URL ?? DEFAULT_CDN_BASE_URL
 ).replace(/\/$/, '')
 
-const isProductionBuild = process.env.NODE_ENV === 'production'
+const nodeEnv: string = (process.env.NODE_ENV as string | undefined) ?? 'development'
+const isProductionBuild = nodeEnv === 'production'
+const isTestEnv = nodeEnv === 'test'
 
 /** Returns CDN URL if configured, otherwise the local path. */
 export function cdnAsset(localPath: string): string {
@@ -29,11 +31,14 @@ export function cdnAsset(localPath: string): string {
           `Set TARO_APP_CDN_BASE_URL in apps/mini-program/.env.local and rebuild.`
       )
     }
-    // eslint-disable-next-line no-console
-    console.warn(
-      `[cdnAsset] TARO_APP_CDN_BASE_URL is not set. ` +
-        `Asset "${localPath}" will use local path, which may be missing in production.`
-    )
+    // Suppress noisy warnings in test output; local fallback is expected in vitest.
+    if (!isTestEnv) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[cdnAsset] TARO_APP_CDN_BASE_URL is not set. ` +
+          `Asset "${localPath}" will use local path, which may be missing in production.`
+      )
+    }
     return localPath
   }
   // localPath always starts with /

@@ -19,6 +19,17 @@
     transform: translateY(16rpx);
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    &,
+    &--enter,
+    &--visible,
+    &--hidden {
+      transition: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+
   &__mascot-wrap {
     position: absolute;
     top: -40rpx;

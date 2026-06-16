@@ -22,12 +22,12 @@ import "./index.scss"
  *  (CDN fallback remains for other surfaces; these 6 are critical for first impression.)
  */
 const LANDING_PHASE_ICONS: Record<string, string> = {
-  'topic-card': localAsset('/assets/landing-phase-icons/phase-topic-card.png'),
-  'lie_detective': localAsset('/assets/landing-phase-icons/phase-lie-detective.png'),
-  'personality_dice': localAsset('/assets/landing-phase-icons/phase-personality-dice.png'),
-  'auction': localAsset('/assets/landing-phase-icons/phase-auction.png'),
-  'mini_script': localAsset('/assets/landing-phase-icons/phase-mini-script.png'),
-  'quip_battle': localAsset('/assets/landing-phase-icons/phase-quip-battle.png'),
+  'topic-card': localAsset('/assets/landing-phase-icons/phase-topic-card.webp'),
+  'lie_detective': localAsset('/assets/landing-phase-icons/phase-lie-detective.webp'),
+  'personality_dice': localAsset('/assets/landing-phase-icons/phase-personality-dice.webp'),
+  'auction': localAsset('/assets/landing-phase-icons/phase-auction.webp'),
+  'mini_script': localAsset('/assets/landing-phase-icons/phase-mini-script.webp'),
+  'quip_battle': localAsset('/assets/landing-phase-icons/phase-quip-battle.webp'),
 }
 
 /** Mascot — bundled locally for guaranteed display. */
@@ -348,7 +348,7 @@ export default function MiniProgramLandingPage({
               setHasAcceptedLegal((current) => !current)
             }}
           >
-            {hasAcceptedLegal && <Text className="landing-page__legal-checkbox-icon">✓</Text>}
+            {hasAcceptedLegal && <View className="landing-page__legal-checkbox-mark" aria-hidden="true" />}
           </View>
 
           <View className="landing-page__legal-text">

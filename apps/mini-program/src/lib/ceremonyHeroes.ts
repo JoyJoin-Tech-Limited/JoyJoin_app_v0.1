@@ -11,36 +11,36 @@
  * Brief:  `docs/design/lovart-brief-ceremony-belonging-batch-c-20260604.md`
  *
  * Raster spec:
- * - WebP primary (q=55, 600px max width) — Path B local-bundle deployment
- * - Bundled locally via Taro `copy.patterns` in `config/index.ts`
- * - Total: ~285KB across 8 files (main package zip ~1.98MB)
+ * - WebP primary (q=55, 600px max width) — CDN deployment
+ * - Uploaded via `npm run upload:cdn-assets`; not bundled in the mini-program
+ * - Total: ~285KB across 8 files
  *
  * Usage:
  *   import { CEREMONY_HEROES } from '../lib/ceremonyHeroes'
  *   <Image src={CEREMONY_HEROES.welcomeBack} className='hero' mode='aspectFit' />
  */
 
-import { localAsset } from './utils/cdnAssets'
+import { cdnAsset } from './utils/cdnAssets'
 
 const BASE = '/assets/ceremony'
 
 export const CEREMONY_HEROES = {
   /** C1 — `/pages/onboarding/welcome-back` */
-  welcomeBack: localAsset(`${BASE}/welcome-back-hero-20260604-v1.webp`),
+  welcomeBack: cdnAsset(`${BASE}/welcome-back-hero-20260604-v1.webp`),
   /** C2 — `/pages/payment-verification` success state */
-  eventPaidConfirmed: localAsset(`${BASE}/event-paid-confirmed-20260604-v1.webp`),
+  eventPaidConfirmed: cdnAsset(`${BASE}/event-paid-confirmed-20260604-v1.webp`),
   /** C3a — `/pages/icebreaker-session/tier-selector` 破冰局 (40 min) backdrop */
-  tierVibeBreeze: localAsset(`${BASE}/tier-vibe-breeze-20260604-v1.webp`),
+  tierVibeBreeze: cdnAsset(`${BASE}/tier-vibe-breeze-20260604-v1.webp`),
   /** C3b — `/pages/icebreaker-session/tier-selector` 畅聊局 (60 min) backdrop */
-  tierVibeGlow: localAsset(`${BASE}/tier-vibe-glow-20260604-v1.webp`),
+  tierVibeGlow: cdnAsset(`${BASE}/tier-vibe-glow-20260604-v1.webp`),
   /** C3c — `/pages/icebreaker-session/tier-selector` 狂欢局 (90 min) backdrop */
-  tierVibeBlaze: localAsset(`${BASE}/tier-vibe-blaze-20260604-v1.webp`),
+  tierVibeBlaze: cdnAsset(`${BASE}/tier-vibe-blaze-20260604-v1.webp`),
   /** C4 — `/pages/invite` share-card section */
-  inviteCoBranded: localAsset(`${BASE}/invite-co-branded-20260604-v1.webp`),
+  inviteCoBranded: cdnAsset(`${BASE}/invite-co-branded-20260604-v1.webp`),
   /** C5 — `/pages/event-feedback` success state */
-  eventFeedbackThanks: localAsset(`${BASE}/event-feedback-thanks-20260604-v1.webp`),
+  eventFeedbackThanks: cdnAsset(`${BASE}/event-feedback-thanks-20260604-v1.webp`),
   /** C6 — `/pages/icebreaker-session/phases/RecapPhaseView` end overlay */
-  seeYouNextTime: localAsset(`${BASE}/see-you-next-time-20260604-v1.webp`),
+  seeYouNextTime: cdnAsset(`${BASE}/see-you-next-time-20260604-v1.webp`),
 } as const
 
 export type CeremonyHeroKey = keyof typeof CEREMONY_HEROES

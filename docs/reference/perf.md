@@ -187,7 +187,7 @@ apps/user-client/src/assets/matching/
 |------|------|
 | 主包页面列表 + 分包声明 + `preloadRule` | [`apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts) → 由 [`app.config.ts`](../apps/mini-program/src/app.config.ts) 引用 |
 | Onboarding subpackage | `root: pages/onboarding`，7 个页面（见 `MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES`） |
-| Pool-registration subpackage | `root: pages/pool-registration`，1 个页面；仪式化资源放在分包内 `assets/ceremony/` |
+| Pool-registration subpackage | `root: pages/pool-registration`，1 个页面；pool-specific hero backdrops 在分包内 `assets/`，Batch C 仪式化资源走 CDN |
 | Matching-status subpackage | `root: pages/matching-status`，1 个页面 |
 | Icebreaker-session subpackage | `root: pages/icebreaker-session`，2 个页面 |
 | 预下载 | `MINI_PROGRAM_PRELOAD_RULES`：从 `index`/`login` 预拉 `pages/onboarding`；从 `event-detail`/`events` 预拉 `pages/pool-registration` |

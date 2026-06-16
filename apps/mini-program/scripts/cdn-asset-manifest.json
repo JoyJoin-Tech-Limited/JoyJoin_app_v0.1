@@ -71,54 +71,6 @@
             "cdnPath": "assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2"
         },
         {
-            "localPath": "assets/icons/archetype/archetype-cat-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-cat-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-corgi-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-corgi-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-dolphin_calm-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-dolphin_calm-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-elephant-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-elephant-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-fox-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-fox-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-hamster_praise-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-hamster_praise-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-koala-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-koala-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-octopus-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-octopus-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-owl-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-owl-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-rooster-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-rooster-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-spider-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-spider-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-turtle-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-turtle-head@3x.webp"
-        },
-        {
             "localPath": "assets/icons/chemistry-badges/chem-chat.webp",
             "cdnPath": "assets/icons/chemistry-badges/chem-chat.webp"
         },
@@ -133,22 +85,6 @@
         {
             "localPath": "assets/icons/chemistry-badges/chem-warm.webp",
             "cdnPath": "assets/icons/chemistry-badges/chem-warm.webp"
-        },
-        {
-            "localPath": "assets/icons/mood-icons/mood-emotional.png",
-            "cdnPath": "assets/icons/mood-icons/mood-emotional.png"
-        },
-        {
-            "localPath": "assets/icons/mood-icons/mood-funny.png",
-            "cdnPath": "assets/icons/mood-icons/mood-funny.png"
-        },
-        {
-            "localPath": "assets/icons/mood-icons/mood-life.png",
-            "cdnPath": "assets/icons/mood-icons/mood-life.png"
-        },
-        {
-            "localPath": "assets/icons/mood-icons/mood-relaxed.png",
-            "cdnPath": "assets/icons/mood-icons/mood-relaxed.png"
         },
         {
             "localPath": "assets/icons/phase-icons/phase-auction.webp",
@@ -195,12 +131,8 @@
             "cdnPath": "assets/icons/phase-icons/phase-warmup.webp"
         },
         {
-            "localPath": "assets/icons/status-icons/status-crown.png",
-            "cdnPath": "assets/icons/status-icons/status-crown.png"
-        },
-        {
-            "localPath": "assets/icons/status-icons/status-waiting.png",
-            "cdnPath": "assets/icons/status-icons/status-waiting.png"
+            "localPath": "assets/icons/phase-icons/phase-speed-friending.webp",
+            "cdnPath": "assets/icons/phase-icons/phase-speed-friending.webp"
         },
         {
             "localPath": "assets/icons/ui/icon-calendar.webp",
@@ -703,24 +635,76 @@
             "cdnPath": "assets/miniscript/xianxia-thumb.webp"
         },
         {
-            "localPath": "assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf",
-            "cdnPath": "assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf"
-        },
-        {
             "localPath": "assets/promo/banner-hero-lovart-v1.webp",
             "cdnPath": "assets/promo/banner-hero-lovart-v1.webp"
         },
         {
-            "localPath": "assets/matching/matching-bg.webp",
-            "cdnPath": "assets/matching-heroes/matching-bg.webp"
+            "localPath": "assets/ceremony/welcome-back-hero-20260604-v1.webp",
+            "cdnPath": "assets/ceremony/welcome-back-hero-20260604-v1.webp"
         },
         {
-            "localPath": "assets/matching/matching-waiting-hero.webp",
-            "cdnPath": "assets/matching-heroes/matching-waiting-hero.webp"
+            "localPath": "assets/ceremony/event-paid-confirmed-20260604-v1.webp",
+            "cdnPath": "assets/ceremony/event-paid-confirmed-20260604-v1.webp"
         },
         {
-            "localPath": "assets/matching/matching-no-match-hero.webp",
-            "cdnPath": "assets/matching-heroes/matching-no-match-hero.webp"
+            "localPath": "assets/ceremony/tier-vibe-breeze-20260604-v1.webp",
+            "cdnPath": "assets/ceremony/tier-vibe-breeze-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/tier-vibe-glow-20260604-v1.webp",
+            "cdnPath": "assets/ceremony/tier-vibe-glow-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/tier-vibe-blaze-20260604-v1.webp",
+            "cdnPath": "assets/ceremony/tier-vibe-blaze-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/invite-co-branded-20260604-v1.webp",
+            "cdnPath": "assets/ceremony/invite-co-branded-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/event-feedback-thanks-20260604-v1.webp",
+            "cdnPath": "assets/ceremony/event-feedback-thanks-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/see-you-next-time-20260604-v1.webp",
+            "cdnPath": "assets/ceremony/see-you-next-time-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/first-event-celebrate-20260604-v1.webp",
+            "cdnPath": "assets/badges/first-event-celebrate-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/streak-3-events-20260604-v1.webp",
+            "cdnPath": "assets/badges/streak-3-events-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/quiz-halfway-cheer-20260604-v1.webp",
+            "cdnPath": "assets/badges/quiz-halfway-cheer-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/match-reason-same-relationship-20260604-v1.webp",
+            "cdnPath": "assets/badges/match-reason-same-relationship-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/match-reason-same-archetype-band-20260604-v1.webp",
+            "cdnPath": "assets/badges/match-reason-same-archetype-band-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/match-reason-same-work-industry-20260604-v1.webp",
+            "cdnPath": "assets/badges/match-reason-same-work-industry-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/match-reason-exact-archetype-20260604-v1.webp",
+            "cdnPath": "assets/badges/match-reason-exact-archetype-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/match-reason-hometown-industry-20260604-v1.webp",
+            "cdnPath": "assets/badges/match-reason-hometown-industry-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/recap-stamp-of-you-20260604-v1.webp",
+            "cdnPath": "assets/badges/recap-stamp-of-you-20260604-v1.webp"
         }
     ]
 }

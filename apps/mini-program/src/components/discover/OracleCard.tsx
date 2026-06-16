@@ -30,7 +30,6 @@ const HIGH_FILL_PCT = 75
 const HIGH_CHEMISTRY_CELEBRATION_THRESHOLD = 3
 
 const FALLBACK_COLOR = '#8B5CF6'
-const CRITICAL_COLOR = '#EF4444'
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   '饭局': '饭局', '酒局': '酒局', '其他': '其他',
@@ -184,8 +183,6 @@ export default React.memo(function OracleCard({
     return '新场开局'
   })()
 
-  const urgencyColor = isCritical ? CRITICAL_COLOR : familyColor
-
   // ── L1 Hero: chemistry celebration ───────────────────────────
 
   const ctaLabel = isPoolFull ? '已满员' : cta.primary
@@ -214,7 +211,7 @@ export default React.memo(function OracleCard({
       style={{
         animationDelay: isDegradation ? undefined : animDelay,
         background: gradient,
-        boxShadow: `0 8rpx 32rpx ${familyColor}1A`,
+        boxShadow: `0 8rpx 32rpx ${familyAlphaHex(familyColor, '1A')}`,
       }}
       onClick={handleTap}
     >
@@ -223,19 +220,19 @@ export default React.memo(function OracleCard({
         <View className='oracle-card__pulse-pill'>
           <View
             className={`oracle-card__pulse-dot${isUrgent && !isPoolFull ? ' oracle-card__pulse-dot--urgent' : ''}`}
-            style={isPoolFull ? { backgroundColor: '#9CA3AF' } : { backgroundColor: familyColor }}
+            style={{ backgroundColor: familyColor }}
           />
           <Text
             className='oracle-card__pulse-label'
-            style={isPoolFull ? { color: '#9CA3AF' } : { color: familyColor }}
+            style={{ color: familyColor }}
           >
             {momentumLabel}
           </Text>
         </View>
         {!isPoolFull && countdownLabel && (
           <Text
-            className={`oracle-card__countdown${isUrgent ? ' oracle-card__countdown--urgent' : ''}`}
-            style={isUrgent ? { color: urgencyColor } : undefined}
+            className={`oracle-card__countdown${isUrgent ? ' oracle-card__countdown--urgent' : ''}${isCritical ? ' oracle-card__countdown--critical' : ''}`}
+            style={isUrgent ? { color: familyColor } : undefined}
           >
             {countdownLabel}
           </Text>
@@ -321,7 +318,7 @@ export default React.memo(function OracleCard({
                 className={`oracle-card__progress-fill${fillPct >= HIGH_FILL_PCT ? ' oracle-card__progress-fill--hot' : ''}`}
                 style={{
                   transform: `scaleX(${fillPct / 100})`,
-                  backgroundColor: isPoolFull ? '#9CA3AF' : familyColor,
+                  backgroundColor: familyColor,
                 }}
               />
             </View>
@@ -333,7 +330,7 @@ export default React.memo(function OracleCard({
 
         <View
           className={`oracle-card__cta${shouldPulseCta ? ' oracle-card__cta--pulse' : ''}`}
-          style={{ backgroundColor: isPoolFull ? '#E5E7EB' : familyColor }}
+          style={{ backgroundColor: familyColor }}
           hoverClass={isPoolFull ? '' : 'oracle-card__cta--hover'}
           role='button'
           aria-label={isPoolFull ? '已满员，下次早点来哦' : `${ctaLabel}，${ctaSubline}`}

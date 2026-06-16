@@ -351,14 +351,15 @@
   outline-offset: 2rpx;
 }
 
-.landing-page__legal-checkbox-icon {
+.landing-page__legal-checkbox-mark {
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 24rpx;
-  color: $color-text-white;
-  font-weight: 600;
+  width: 14rpx;
+  height: 8rpx;
+  border-left: 4rpx solid $color-text-white;
+  border-bottom: 4rpx solid $color-text-white;
+  transform: translate(-50%, -60%) rotate(-45deg);
   pointer-events: none;
 }
 

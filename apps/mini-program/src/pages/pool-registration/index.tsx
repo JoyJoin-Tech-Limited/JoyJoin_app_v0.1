@@ -28,7 +28,7 @@ import {
 import { POOLS_QUERY_KEY, JOINED_EVENTS_QUERY_KEY } from '../../lib/prefetchEngine'
 import { haptics } from '../../lib/utils/haptics'
 import { logInfo, logError } from '../../lib/utils/logger'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { usePreloadIntentIcons } from '../../hooks/usePreloadIntentIcons'
 import { TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
@@ -176,6 +176,7 @@ export default function PoolRegistrationPage() {
     data: pool,
     isLoading,
     error: poolError,
+    refetch: refetchPool,
   } = useQuery<EventPoolSummary>({
     queryKey: ['mini-program', 'event-pool', poolId],
     queryFn: () => getEventPool(apiRequest, poolId),
@@ -183,7 +184,7 @@ export default function PoolRegistrationPage() {
   })
 
   // Check if the user is already registered for this pool
-  const { data: myRegistrations } = useQuery<PoolRegistrationSummary[]>({
+  const { data: myRegistrations, isLoading: isLoadingMyRegistrations } = useQuery<PoolRegistrationSummary[]>({
     queryKey: ['mini-program', 'my-pool-registrations'],
     queryFn: () => getMyPoolRegistrations(apiRequest),
     enabled: !!poolId && !authLoading,
@@ -753,7 +754,7 @@ export default function PoolRegistrationPage() {
     user?.id,
   ])
 
-  if (authLoading || isLoading) {
+  if (authLoading || isLoading || isLoadingMyRegistrations) {
     return <LoadingScreen message='正在加载报名信息…' />
   }
 
@@ -773,7 +774,7 @@ export default function PoolRegistrationPage() {
               ? resolveMessage(poolError, 'load-failed')
               : '悦仔正在努力同步这场活动的最新信息，稍后再试就好。'}
           </Text>
-          <Button variant='primary' className='pool-reg__single-action' onClick={() => refetchBrief()}>
+          <Button variant='primary' className='pool-reg__single-action' onClick={() => refetchPool()}>
             重试
           </Button>
           <Button variant='secondary' className='pool-reg__single-action' onClick={() => Taro.navigateBack()}>
@@ -791,7 +792,7 @@ export default function PoolRegistrationPage() {
           <Image
             className='pool-reg__already-mascot'
             mode='aspectFit'
-            src={getXiaoyueExpressionAsset('homeWelcome')}
+            src={localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')}
             ariaLabel='已报名'
           />
           <Text className='pool-reg__already-title'>你已经加入这场{eventType}了</Text>
@@ -931,7 +932,7 @@ export default function PoolRegistrationPage() {
       ) : null}
 
       {step > 0 ? (
-        <View className='pool-reg__stepper'>
+        <View className='pool-reg__stepper' role='list' aria-label='报名步骤'>
           {stepLabels.map((label, index) => {
             const stepIndex = index + 1
             return (
@@ -949,7 +950,7 @@ export default function PoolRegistrationPage() {
 
       {showBudgetReaction && step === 1 ? (
         <XiaoyueChatBubble
-          content='收到！悦仔会按这个预算帮你配对~'
+          content='收到！悦仔会按这个预算帮你配对'
           pose='casual'
           horizontal
           showGlow
@@ -978,7 +979,7 @@ export default function PoolRegistrationPage() {
               )
             }
           >
-            <View className='pool-reg__choice-list'>
+            <View className='pool-reg__choice-list' role='radiogroup' aria-label='预算选择'>
               {budgetOptions.map((option) => (
                 <ChoiceCard
                   key={option.value}
@@ -994,7 +995,7 @@ export default function PoolRegistrationPage() {
 
       {showIntentReaction && step === 2 ? (
         <XiaoyueChatBubble
-          content='get！悦仔会按这些期待帮你匹配~'
+          content='收到！悦仔会按这些期待帮你匹配'
           pose='casual'
           horizontal
           showGlow
@@ -1088,7 +1089,7 @@ export default function PoolRegistrationPage() {
 
                 <View className='pool-reg__field'>
                   <Text className='pool-reg__field-title'>喝酒舒适度</Text>
-                  <View className='pool-reg__choice-grid'>
+                  <View className='pool-reg__choice-grid' role='radiogroup' aria-label='喝酒舒适度'>
                     {ALCOHOL_COMFORT_OPTIONS.map((option) => (
                       <ChoiceCard
                         key={option.value}

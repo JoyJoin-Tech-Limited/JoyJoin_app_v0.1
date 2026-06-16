@@ -15,6 +15,8 @@
     @include flex-center;
     flex-direction: column;
     gap: $spacing-md;
+    // design-audit:intentional — dvh fallback for WeChat WKWebView (see AGENTS.md §4)
+    min-height: 80vh;
     min-height: 80dvh;
     text-align: center;
   }
@@ -93,8 +95,6 @@
       letter-spacing: -0.5rpx;
       line-height: 1.44;
       word-break: keep-all;
-      overflow-wrap: break-word;
-      word-wrap: break-word;
     }
   }
 
@@ -252,7 +252,7 @@
     border: 2rpx solid;
     margin-left: -22rpx;
     overflow: hidden;
-    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+    box-shadow: $shadow-sm;
 
     &:first-child {
       margin-left: 0;
@@ -266,7 +266,7 @@
     border-radius: 50%;
     background: $brand-gradient;
     margin-left: -22rpx;
-    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.12);
+    box-shadow: $shadow-sm;
     border: 2rpx solid rgba($color-surface, 0.5);
   }
 
@@ -383,11 +383,13 @@
     animation: pool-reg-step-complete 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  &__step-check {
-    font-size: $font-size-2xs;
-    font-weight: $font-weight-bold;
-    color: $color-text-white;
-    line-height: 1;
+  &__step-check-mark {
+    width: 12rpx;
+    height: 7rpx;
+    border-left: 3rpx solid $color-text-white;
+    border-bottom: 3rpx solid $color-text-white;
+    transform: rotate(-45deg);
+    margin-top: -2rpx;
   }
 
   &__step-text {
@@ -974,6 +976,8 @@
   &__empty {
     @include flex-center;
     flex-direction: column;
+    // design-audit:intentional — dvh fallback for WeChat WKWebView (see AGENTS.md §4)
+    min-height: 72vh;
     min-height: 72dvh;
     text-align: center;
   }
@@ -1087,6 +1091,8 @@
     @include flex-center;
     flex-direction: column;
     gap: $spacing-md;
+    // design-audit:intentional — dvh fallback for WeChat WKWebView (see AGENTS.md §4)
+    min-height: 72vh;
     min-height: 72dvh;
     text-align: center;
     @include card-premium;

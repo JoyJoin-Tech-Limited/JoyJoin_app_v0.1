@@ -286,7 +286,7 @@ export default function TierSelectorPage() {
           >
             <Image
               className='tier-selector__custom-card-icon'
-              src={localAsset('/assets/icons/phase-icons/custom-tier-icon.webp')}
+              src={localAsset('/assets/icons/custom-tier-icon.webp')}
               mode='aspectFit'
               lazyLoad
             />

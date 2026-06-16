@@ -5,6 +5,56 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "@shared/schema";
 import { logger } from "../lib/logger";
 
+function mapVenueRowToCamelCase(row: any): any {
+  if (!row) return row;
+  return {
+    id: row.id,
+    name: row.name,
+    type: row.venue_type,
+    address: row.address,
+    city: row.city,
+    district: row.area,
+    contactPerson: row.contact_person,
+    contactPhone: row.contact_phone,
+    commissionRate: row.commission_rate,
+    tags: row.tags,
+    cuisines: row.cuisines,
+    priceRange: row.price_range,
+    budgetCategories: row.budget_categories,
+    decorStyle: row.decor_style,
+    tasteIntensity: row.taste_intensity,
+    barThemes: row.bar_themes,
+    alcoholOptions: row.alcohol_options,
+    barPriceRange: row.bar_price_range,
+    vibeDescriptor: row.vibe_descriptor,
+    maxConcurrentEvents: row.capacity,
+    seatingCapacity: row.seating_capacity,
+    operatingHours: row.operating_hours,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    districtId: row.district_id,
+    clusterId: row.cluster_id,
+    notes: row.notes,
+    priceNote: row.price_note,
+    coverImageUrl: row.cover_image_url,
+    galleryImages: row.gallery_images,
+    partnerStatus: row.partner_status,
+    partnerSince: row.partner_since,
+    onboardingStatus: row.onboarding_status,
+    partnerCompanyName: row.partner_company_name,
+    businessLicenseNo: row.business_license_no,
+    partnerEmail: row.partner_email,
+    bankAccountInfo: row.bank_account_info,
+    contractStartDate: row.contract_start_date,
+    contractEndDate: row.contract_end_date,
+    isActive: row.is_active,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    bookingCount: row.booking_count !== undefined ? Number(row.booking_count) : undefined,
+    totalCommission: row.total_commission !== undefined ? Number(row.total_commission) : undefined,
+  };
+}
+
 export interface VenuesRepository {
   getAllVenues(): Promise<any[]>;
   getVenue(id: string): Promise<any>;
@@ -54,12 +104,12 @@ export const venuesRepo: VenuesRepository = {
       GROUP BY v.id
       ORDER BY v.created_at DESC
     `);
-    return result.rows;
+    return result.rows.map(mapVenueRowToCamelCase);
   },
 
   async getVenue(id: string): Promise<any> {
     const result = await db.execute(sql`SELECT * FROM venues WHERE id = ${id}`);
-    return result.rows[0];
+    return mapVenueRowToCamelCase(result.rows[0]);
   },
 
   async getVenueByName(name: string): Promise<any> {
@@ -68,7 +118,7 @@ export const venuesRepo: VenuesRepository = {
       WHERE name = ${name} AND is_active = true 
       LIMIT 1
     `);
-    return result.rows[0];
+    return mapVenueRowToCamelCase(result.rows[0]);
   },
 
   async getActiveVenueDistricts(venueType?: string): Promise<{ clusterId: string; districtId: string; count: number }[]> {
@@ -127,7 +177,7 @@ export const venuesRepo: VenuesRepository = {
       )
       RETURNING *
     `);
-    return result.rows[0];
+    return mapVenueRowToCamelCase(result.rows[0]);
   },
 
   async updateVenue(id: string, updates: any): Promise<any> {
@@ -296,7 +346,7 @@ export const venuesRepo: VenuesRepository = {
     // SECURITY: setClauses contains only hardcoded column names. Never make them dynamic.
     const query = sql.raw(`UPDATE venues SET ${setClauses.join(', ')}, updated_at = NOW() WHERE id = $${values.length} RETURNING *`);
     const result = await db.execute(query);
-    return result.rows[0];
+    return mapVenueRowToCamelCase(result.rows[0]);
   },
 
   async deleteVenue(id: string): Promise<void> {

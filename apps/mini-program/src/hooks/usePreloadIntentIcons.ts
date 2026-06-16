@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react'
 import Taro from '@tarojs/taro'
 import { INTENT_FLOW_OPTIONS } from '../pages/pool-registration/flowConfig'
+import { localAsset } from '../lib/utils/cdnAssets'
+import {
+  getIconMapping,
+  getLocalIconAssetPath,
+} from '@joyjoin/shared/iconSystem'
 
 /**
  * Pre-warm bundled intent icon assets so they render instantly when the
@@ -15,16 +20,12 @@ export function usePreloadIntentIcons(enabled: boolean) {
   const hasPreloaded = useRef(false)
 
   const iconPaths = useMemo(() => {
-    const pathMap: Record<string, string> = {
-      '👋': require('../assets/icons/intent-icons/intent-friends.webp') as string,
-      '🤝': require('../assets/icons/intent-icons/intent-networking.webp') as string,
-      '💬': require('../assets/icons/intent-icons/intent-discussion.webp') as string,
-      '🎉': require('../assets/icons/intent-icons/intent-fun.webp') as string,
-      '💕': require('../assets/icons/intent-icons/intent-romance.webp') as string,
-      '🎲': require('../assets/icons/intent-icons/intent-flexible.webp') as string,
-    }
-    return INTENT_FLOW_OPTIONS.map((option) => pathMap[option.emoji ?? ''])
-      .filter(Boolean) as string[]
+    return INTENT_FLOW_OPTIONS.map((option) => {
+      const emoji = option.emoji ?? ''
+      const mapping = getIconMapping(emoji, 'intent')
+      if (!mapping) return ''
+      return localAsset(getLocalIconAssetPath(mapping.assetKey, mapping.tier, 1))
+    }).filter(Boolean) as string[]
   }, [])
 
   useEffect(() => {

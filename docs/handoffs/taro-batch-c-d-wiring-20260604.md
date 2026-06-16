@@ -4,7 +4,9 @@
 > **From:** Supervisor (Lovart commission orchestration)
 > **To:** Taro Mini-Program Frontend Engineer
 > **Scope:** Wire 11 mini-program surfaces to the new Lovart-batch C + D asset registries
-> **Status:** ✅ **Shipped 2026-06-04** (all 11 surfaces wired, 5 audits + P0/P1 fixes applied, Path B local-bundle active)
+> **Status:** ✅ **Shipped 2026-06-04** (all 11 surfaces wired, 5 audits + P0/P1 fixes applied)
+>
+> **Update 2026-06-16:** Batch C + D assets moved from local bundle to CDN. The 2026-06-13 mascot sprite-sheet fallback added ~684KB to the main package, pushing it over WeChat's 2MB hard limit. `ceremonyHeroes.ts` and `milestoneBadges.ts` now resolve via `cdnAsset()`, and the assets are declared in `cdn-asset-manifest.json` for upload. Optimized WebP copies remain in `src/assets/ceremony/` and `src/assets/badges/` as CDN source; PNG masters live in `assets-source/lovart/batch-{c,d}/`.
 
 ---
 
@@ -30,7 +32,7 @@ Both are the lowest-scoring dimensions today. See [`docs/reference/emotional-val
 | **Batch D registry** (9 keys + Batch B pair map) | `apps/mini-program/src/lib/milestoneBadges.ts` |
 | **Pattern reference** (existing) | `apps/mini-program/src/lib/mascot/xiaoyueExpressions.ts` |
 
-Both registries use `localAsset()` and return WebP paths shipped inside the package at `apps/mini-program/src/assets/ceremony/` and `.../badges/`. **Path B local-bundle:** the original brief called for `cdnAsset()`; we switched to `localAsset()` after re-encoding at q=55, 600px max (was q=85, 800px) — raw total dropped from 1.1MB to 570KB and the main package zip still fits at 1.98MB (20KB headroom under the 2MB WeChat hard limit). PNG masters are kept in `apps/mini-program/assets-source/lovart/batch-{c,d}/` (NOT bundled) so re-encoding is lossless. Future batches must re-evaluate this trade-off (see `apps/mini-program/README.md` §4 for the bundled-pattern rules).
+Both registries now use `cdnAsset()` and return WebP paths served from the CDN. **Historical context:** the 2026-06-04 handoff used `localAsset()` (Path B local-bundle) after re-encoding at q=55, 600px max — raw total dropped from 1.1MB to 570KB and the main package zip fit at 1.98MB. On 2026-06-16 the mascot sprite-sheet fallback was added to the main package (~684KB), pushing the zip over WeChat's 2MB hard limit. Ceremony and milestone assets were therefore moved back to CDN to preserve the mascot fallback. PNG masters remain in `apps/mini-program/assets-source/lovart/batch-{c,d}/` (NOT bundled) and the WebP assets are declared in `apps/mini-program/scripts/cdn-asset-manifest.json` for upload.
 
 ---
 
@@ -92,7 +94,7 @@ Reference images: `tmp/xiaoyue-reference-grid.webp`, `xiaoyue-master-spritesheet
 - **Reduced motion** respected: the 0.5s entrance animation on D3 must be suppressed under `@media (prefers-reduced-motion: reduce)`
 - **Haptics**: add `haptics('light')` on D3 tap (it's interactive), `haptics('success')` on C2 + C6
 - **Accessibility**: hero `<Image>` needs `aria-label` if purely decorative (e.g. C1, C2, C6 — the copy carries the meaning); the D badges get `aria-label="已参加 3 场活动"` style
-- **Package size**: total raw WebP is 570KB after Path B re-encode (q=55, 600px); main package zip 1.98MB (20KB headroom under 2MB WeChat hard limit, 180KB over 1.80MB guideline). PNG masters stay in `assets-source/` and are not bundled.
+- **Package size (historical 2026-06-04)**: total raw WebP was 570KB after Path B re-encode (q=55, 600px); main package zip 1.98MB (20KB headroom under 2MB WeChat hard limit). As of 2026-06-16 these assets are CDN-backed; see status note above.
 - **No regressions**: all 4 Xiaoyue cells (C1, C2, C5, C6) + D5 must depict the **same character** (matching the Lovart-generated assets). Verify by visual side-by-side check after the build
 
 ---
