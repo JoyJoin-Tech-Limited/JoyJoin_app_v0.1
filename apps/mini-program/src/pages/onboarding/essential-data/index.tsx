@@ -268,7 +268,7 @@ export default function EssentialDataPage() {
   const isStepValid = useMemo(() => {
     switch (currentStep) {
       case 0:
-        return displayName.trim().length >= 2
+        return displayName.trim().length >= 1
       case 1:
         return gender !== '' && birthYear > 0
       case 2:
@@ -432,31 +432,35 @@ export default function EssentialDataPage() {
   const toggleIntent = useCallback(
     (value: string) => {
       haptics('light')
+
       if (value === INTENT_FLEXIBLE_OPTION.value) {
-        // Toggle flexible independently; when turned off, keep other explicit selections
-        if (intent.includes(value)) {
-          setIntent(intent.filter((item) => item !== value))
-        } else {
-          setIntent([...intent, value])
+        setIntent((current) => {
+          if (current.includes(value)) {
+            return current.filter((item) => item !== value)
+          }
+          return [...current, value]
+        })
+        return
+      }
+
+      setIntent((current) => {
+        // Deselecting
+        if (current.includes(value)) {
+          return current.filter((item) => item !== value)
         }
-        return
-      }
 
-      // Regular option toggle
-      if (intent.includes(value)) {
-        setIntent(intent.filter((item) => item !== value))
-        return
-      }
+        // Selecting: enforce MAX_INTENTS cap on explicit intents only
+        const explicitCount = current.filter((item) => item !== INTENT_FLEXIBLE_OPTION.value).length
+        if (explicitCount >= MAX_INTENTS) {
+          analytics.validationFailed('intent', 'max-selection-reached')
+          Taro.showToast({ title: `最多选择 ${MAX_INTENTS} 个意图`, icon: 'none', duration: TOAST_DEFAULT_MS })
+          return current
+        }
 
-      const explicitCount = intent.filter((item) => item !== INTENT_FLEXIBLE_OPTION.value).length
-      if (explicitCount >= MAX_INTENTS) {
-        analytics.validationFailed('intent', 'max-selection-reached')
-        Taro.showToast({ title: `最多选择 ${MAX_INTENTS} 个意图`, icon: 'none', duration: TOAST_DEFAULT_MS })
-        return
-      }
-      setIntent([...intent, value])
+        return [...current, value]
+      })
     },
-    [analytics, intent],
+    [analytics],
   )
 
   // Memoize intent grid to prevent re-render on unrelated state changes
@@ -471,7 +475,7 @@ export default function EssentialDataPage() {
           const isFlexibleOption = option.value === INTENT_FLEXIBLE_OPTION.value
           const isDimmed = isFlexibleActive && !isFlexibleOption && !isExplicitlySelected
           const isDisabled = isCapReached && !isExplicitlySelected && !isFlexibleOption
-          const visuallySelected = isExplicitlySelected || isDimmed
+          const visuallySelected = isExplicitlySelected
           return (
             <View
               key={option.value}
@@ -556,11 +560,11 @@ export default function EssentialDataPage() {
                   }}
                   onBlur={(e) => {
                     const v = e.detail.value.trim()
-                    if (v !== '' && v.length < 2) analytics.validationFailed('displayName', 'too-short')
+                    if (v !== '' && v.length < 1) analytics.validationFailed('displayName', 'too-short')
                   }}
                   maxlength={20}
                 />
-                <Text className='essential-data__hint'>2-20 个字符，会显示在活动和匹配资料里。</Text>
+                <Text className='essential-data__hint'>1-20 个字符，会显示在活动和匹配资料里。</Text>
                 <ContentBlockedError
                   message={contentViolations.displayName || ''}
                   visible={!!contentViolations.displayName}

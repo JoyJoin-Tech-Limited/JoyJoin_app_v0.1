@@ -341,8 +341,8 @@ export default function EditProfilePage() {
 
       // Validation with field errors + scroll-to-error
       const errors: Record<string, string> = {}
-      if (!displayName.trim() || displayName.trim().length < 2) {
-        errors.displayName = '昵称至少需要 2 个字符'
+      if (!displayName.trim() || displayName.trim().length < 1) {
+        errors.displayName = '昵称至少需要 1 个字符'
       }
       if (!gender) {
         errors.gender = '请选择性别'

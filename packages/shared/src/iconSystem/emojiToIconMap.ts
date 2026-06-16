@@ -250,7 +250,8 @@ export const CDN_ICON_TIERS: ReadonlySet<IconTier> = new Set([
  *
  * For CDN tiers, returns an absolute path like `/assets/icons/...` that
  * should be wrapped with `cdnAsset()` at the call site.
- * For local tiers, returns a relative require() path like `../../assets/icons/...`.
+ * For local tiers, returns an absolute path like `/assets/icons/...` that
+ * should be wrapped with `localAsset()` at the call site.
  *
  * @param assetKey — e.g. 'rating-1-disappointed'
  * @param tier — determines the asset folder
@@ -279,5 +280,5 @@ export function getIconAssetPath(
   if (CDN_ICON_TIERS.has(tier)) {
     return `/assets/icons/${folder}/${assetKey}${suffix}.webp`
   }
-  return `../../assets/icons/${folder}/${assetKey}${suffix}.webp`
+  return `/assets/icons/${folder}/${assetKey}${suffix}.webp`
 }

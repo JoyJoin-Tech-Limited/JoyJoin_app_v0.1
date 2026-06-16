@@ -10,6 +10,7 @@ import {
 import { STALE_TIME_DEFAULT_MS } from '../../lib/utils/uiConstants'
 import { apiRequest } from '../../lib/api/api'
 import { getMiniProgramCenterState, type CustomTabBarSyncState } from '../../lib/navigation/centerTabRouting'
+import { MINI_PROGRAM_TAB_INDEX, type MiniProgramTabKey } from '../../lib/navigation/tabBarConfig'
 import { useNotificationCounts } from '../useNotificationCounts'
 
 export interface TabBadgeCounts {
@@ -18,13 +19,21 @@ export interface TabBadgeCounts {
   chat: number
 }
 
-/** Native WeChat custom-tab-bar component interface (syncState method). */
+/** Native WeChat custom-tab-bar component interface. */
 interface NativeCustomTabBar {
   syncState(state: CustomTabBarSyncState & { badges?: TabBadgeCounts }): void
+  setSelected(index: number): void
 }
 
 interface UseCustomTabBarSyncOptions {
   enabled?: boolean
+  /**
+   * Which tab this page represents. Each tab page owns its own native
+   * tab-bar instance, so the visible page must set its OWN selected index
+   * on show — otherwise the freshly-mounted instance keeps its default
+   * `selected: 0` and highlights 发现 until the next tap.
+   */
+  tabKey?: MiniProgramTabKey
   poolRegistrations?: PoolRegistrationSummary[]
   events?: BlindBoxEventSummary[]
 }
@@ -39,6 +48,7 @@ function getNativeTabBar(page: Taro.PageInstance | null | undefined): NativeCust
 
 export function useCustomTabBarSync({
   enabled = true,
+  tabKey,
   poolRegistrations: providedPoolRegistrations,
   events: providedEvents,
 }: UseCustomTabBarSyncOptions) {
@@ -84,10 +94,15 @@ export function useCustomTabBarSync({
     if (!enabled) return
     const page = Taro.getCurrentInstance().page
     const tabBar = getNativeTabBar(page)
-    // Only sync center + badges on show — never touch `selected`.
-    // `handleTabTap` in the native component is the sole authority
-    // for the selected highlight, so hidden pages can never race
-    // and overwrite the user's current tab selection.
+    // Authoritatively set THIS page's own selected index on show. useDidShow
+    // only fires for the page becoming visible, so it can never race a hidden
+    // page — it sets its own index. Without this, a freshly-mounted tab-bar
+    // instance keeps its default `selected: 0` and highlights 发现 until the
+    // user taps again (the one-tap-lag bug).
+    if (tabKey !== undefined) {
+      tabBar?.setSelected(MINI_PROGRAM_TAB_INDEX[tabKey])
+    }
+    // Sync center + badges (never `selected` here — handled above per-page).
     tabBar?.syncState({ center: centerState, badges })
   })
 

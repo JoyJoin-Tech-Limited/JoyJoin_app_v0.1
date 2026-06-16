@@ -5,6 +5,7 @@ import {
   RATING_FACES_ORDERED,
   getIconAssetPath,
 } from '@joyjoin/shared/iconSystem'
+import { localAsset } from '../../lib/utils/cdnAssets'
 import './RatingFace.scss'
 
 interface RatingFaceProps {
@@ -58,12 +59,11 @@ export default function RatingFace({
         const sizeRpx = 64
         const sizeStr = `${sizeRpx}rpx`
 
-        // Resolve asset path
+        // Resolve asset path (local bundled tier). If the asset is missing,
+        // fall back to emoji text instead of crashing.
         let src: string | null = null
         try {
-          const path1x = getIconAssetPath(mapping.assetKey, mapping.tier, 1)
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          src = require(path1x) as string
+          src = localAsset(getIconAssetPath(mapping.assetKey, mapping.tier, 1))
         } catch {
           src = null
         }

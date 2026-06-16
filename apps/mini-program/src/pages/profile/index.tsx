@@ -106,6 +106,7 @@ export default function ProfilePage() {
 
   useCustomTabBarSync({
     enabled: !authLoading,
+    tabKey: 'profile',
   })
 
   useEffect(() => {

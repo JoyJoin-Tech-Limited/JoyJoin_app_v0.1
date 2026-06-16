@@ -467,8 +467,8 @@ export default function ProfessionChatOverlay({
     const text = (overrideText ?? inputValue).trim()
     if (!text || isSubmittingRef.current) return
 
-    // Encourage more detail for very short input
-    if (text.length < 3 && !hasSent) {
+    // Encourage more detail for very short input (single character only)
+    if (text.length < 2 && !hasSent) {
       setShowShortHint(true)
       return
     }
@@ -649,8 +649,8 @@ export default function ProfessionChatOverlay({
     const text = inputValue.trim()
     if (!text || isSubmittingRef.current) return
 
-    // Encourage more detail for very short input
-    if (text.length < 3 && !hasSent) {
+    // Encourage more detail for very short input (single character only)
+    if (text.length < 2 && !hasSent) {
       setShowShortHint(true)
       return
     }

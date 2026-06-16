@@ -28,7 +28,9 @@ import {
   isAnonymousAssessmentSessionCompleted,
   readAnonymousAssessmentSession,
   readAnonymousAssessmentAnswers,
+  readAnonymousAssessmentSkipped,
   saveAnonymousAssessmentSession,
+  saveAnonymousAssessmentSkipped,
   upsertAnonymousAssessmentAnswer,
   type AnonymousAssessmentResult,
   type AnonymousAssessmentSessionSnapshot,
@@ -93,6 +95,25 @@ interface AssessmentQuestion {
 }
 
 export type { AssessmentQuestion, AssessmentOption, AssessmentSliderConfig, AssessmentQuestionType }
+
+function buildAnonymousEngineState(
+  answers: ReturnType<typeof readAnonymousAssessmentAnswers>,
+  skippedQuestionIds: string[] = [],
+  skipCount?: number,
+) {
+  let engineState = initializeEngineState()
+  for (const ans of answers) {
+    const q = questionsV4.find((quest) => quest.id === ans.questionId)
+    if (q) {
+      engineState = processAnswer(engineState, q, ans.selectedOption)
+    }
+  }
+  for (const skippedId of skippedQuestionIds) {
+    engineState.skippedQuestionIds.add(skippedId)
+  }
+  engineState.skipCount = skipCount ?? skippedQuestionIds.length
+  return engineState
+}
 
 interface AssessmentProgress {
   answered: number
@@ -533,15 +554,14 @@ export default function PersonalityTestPage() {
         }
         saveAnonymousAssessmentSession(nextSnapshot)
 
-        // Initialize anonymous engine state from stored answers for back + skip support
+        // Initialize anonymous engine state from stored answers + skipped questions
         const storedAnswers = readAnonymousAssessmentAnswers()
-        let engineState = initializeEngineState()
-        for (const ans of storedAnswers) {
-          const q = questionsV4.find((quest) => quest.id === ans.questionId)
-          if (q) {
-            engineState = processAnswer(engineState, q, ans.selectedOption)
-          }
-        }
+        const skippedState = readAnonymousAssessmentSkipped()
+        const engineState = buildAnonymousEngineState(
+          storedAnswers,
+          skippedState.skippedQuestionIds,
+          skippedState.skipCount,
+        )
         anonymousEngineStateRef.current = engineState
         setSkipsRemaining(MAX_SKIP_COUNT - engineState.skipCount)
       }
@@ -1028,14 +1048,13 @@ export default function PersonalityTestPage() {
         answeredAt: new Date().toISOString(),
       })
 
-      // Rebuild engine state
-      let engineState = initializeEngineState()
-      for (const ans of nextAnswers) {
-        const q = questionsV4.find((quest) => quest.id === ans.questionId)
-        if (q) {
-          engineState = processAnswer(engineState, q, ans.selectedOption)
-        }
-      }
+      // Rebuild engine state, restoring any questions the user previously skipped
+      const skippedState = readAnonymousAssessmentSkipped()
+      const engineState = buildAnonymousEngineState(
+        nextAnswers,
+        skippedState.skippedQuestionIds,
+        skippedState.skipCount,
+      )
       anonymousEngineStateRef.current = engineState
 
       const nextQuestion = selectNextQuestion(engineState)
@@ -1134,57 +1153,36 @@ export default function PersonalityTestPage() {
     setIsSkipping(true)
     setError('')
     try {
-      if (isAuthenticated) {
-        const result = await apiRequest<{
-          success: boolean
-          newQuestion?: AssessmentQuestion | null
-          skipCount: number
-          canSkip: boolean
-          remainingSkips: number
-        }>({
-          path: `/api/assessment/v4/${encodeURIComponent(sessionId)}/skip`,
-          method: 'POST',
-          data: { questionId: question.id },
-        })
-        setSkipsRemaining(result.remainingSkips)
-        if (result.newQuestion) {
-          setQuestion(result.newQuestion)
-        }
-        return
+      const result = await apiRequest<{
+        success: boolean
+        newQuestion?: AssessmentQuestion | null
+        skipCount: number
+        canSkip: boolean
+        remainingSkips: number
+      }>({
+        path: `/api/assessment/v4/${encodeURIComponent(sessionId)}/skip`,
+        method: 'POST',
+        data: { questionId: question.id },
+      })
+      setSkipsRemaining(result.remainingSkips)
+      if (result.newQuestion) {
+        setQuestion(result.newQuestion)
       }
 
-      // Anonymous skip (client-side)
-      let engineState = anonymousEngineStateRef.current || initializeEngineState()
-      const skipResult = skipQuestion(engineState, question.id)
-      if (!skipResult) {
-        Taro.showToast({ title: '已达换题上限', icon: 'none' })
-        return
-      }
-      anonymousEngineStateRef.current = skipResult.newState
-      setSkipsRemaining(MAX_SKIP_COUNT - skipResult.newState.skipCount)
-
-      if (skipResult.newQuestion) {
-        const mapped: AssessmentQuestion = {
-          id: skipResult.newQuestion.id,
-          scenarioText: skipResult.newQuestion.scenarioText,
-          questionText: skipResult.newQuestion.questionText,
-          options: skipResult.newQuestion.options.map((o) => ({
-            value: o.value,
-            text: o.text,
-            traitScores: o.traitScores as Record<string, number>,
-            iconAssetKey: o.iconAssetKey,
-          })),
-          questionType: skipResult.newQuestion.questionType ?? 'choice',
-          sliderConfig: skipResult.newQuestion.sliderConfig
-            ? {
-                leftLabel: skipResult.newQuestion.sliderConfig.leftLabel,
-                rightLabel: skipResult.newQuestion.sliderConfig.rightLabel,
-                leftEmoji: skipResult.newQuestion.sliderConfig.leftEmoji,
-                rightEmoji: skipResult.newQuestion.sliderConfig.rightEmoji,
-              }
-            : undefined,
+      if (!isAuthenticated) {
+        // Keep local anonymous engine/storage in sync for back-review and reloads.
+        // The server is the source of truth for the next question; we mirror the
+        // skip locally so back/forward navigation doesn't resurrect skipped IDs.
+        const engineState = anonymousEngineStateRef.current || initializeEngineState()
+        const skipResult = skipQuestion(engineState, question.id)
+        if (skipResult) {
+          anonymousEngineStateRef.current = skipResult.newState
+          const skippedState = readAnonymousAssessmentSkipped()
+          const nextSkippedIds = Array.from(
+            new Set([...skippedState.skippedQuestionIds, question.id]),
+          )
+          saveAnonymousAssessmentSkipped(nextSkippedIds, skipResult.newState.skipCount)
         }
-        setQuestion(mapped)
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : '换题失败，请重试'

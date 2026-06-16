@@ -254,6 +254,7 @@ export default function CenterHubPage() {
 
   useCustomTabBarSync({
     enabled: !authLoading,
+    tabKey: 'centerHub',
   })
 
   const {

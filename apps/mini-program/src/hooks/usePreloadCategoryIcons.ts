@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import Taro from '@tarojs/taro'
 import { INTEREST_CATEGORY_EMOJIS } from '@shared/api'
+import { localAsset } from '../lib/utils/cdnAssets'
 
 /**
  * Pre-warm bundled interest-category icon assets so they render instantly
@@ -14,11 +15,11 @@ export function usePreloadCategoryIcons(enabled: boolean) {
 
   const iconPaths = useMemo(() => {
     const pathMap: Record<string, string> = {
-      '🍜': require('../assets/icons/category-icons/category-food.webp') as string,
-      '🎮': require('../assets/icons/category-icons/category-entertainment.webp') as string,
-      '🌿': require('../assets/icons/category-icons/category-lifestyle.webp') as string,
-      '🎭': require('../assets/icons/category-icons/category-culture.webp') as string,
-      '👥': require('../assets/icons/category-icons/category-social.webp') as string,
+      '🍜': localAsset('/assets/icons/category-icons/category-food.webp'),
+      '🎮': localAsset('/assets/icons/category-icons/category-entertainment.webp'),
+      '🌿': localAsset('/assets/icons/category-icons/category-lifestyle.webp'),
+      '🎭': localAsset('/assets/icons/category-icons/category-culture.webp'),
+      '👥': localAsset('/assets/icons/category-icons/category-social.webp'),
     }
     return Object.values(INTEREST_CATEGORY_EMOJIS)
       .map((emoji) => pathMap[emoji])

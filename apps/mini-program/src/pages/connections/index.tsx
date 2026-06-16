@@ -33,6 +33,7 @@ export default function ConnectionsPage() {
 
   useCustomTabBarSync({
     enabled: !authLoading,
+    tabKey: 'connections',
   })
 
   useEffect(() => {

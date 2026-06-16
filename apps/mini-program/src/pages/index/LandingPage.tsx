@@ -5,7 +5,6 @@ import { cdnAsset, localAsset } from "../../lib/utils/cdnAssets"
 import { loadBrandDisplayFont } from "../../lib/utils/brandFont"
 import Button from "../../components/ui/Button"
 import BrandLogo from "../../components/ui/BrandLogo"
-import BondingCloud from "../../components/landing/BondingCloud"
 import PhaseIconCarousel from "../../components/landing/PhaseIconCarousel"
 import { useStaggerMount } from "../../hooks/useStaggerMount"
 import { useDeviceTier } from "../../hooks/useDeviceTier"
@@ -201,13 +200,6 @@ export default function MiniProgramLandingPage({
             <Text className="headline">你的<Text className="headline--accent">命格</Text>里，藏着谁</Text>
             <Text className="subtitle">测出你的氛围命格，找到最聊得来的 4-6 人小局</Text>
           </View>
-        </View>
-
-        {/* BondingCloud */}
-        <View
-          className={`bonding-cloud-wrap ${isMounted ? "stagger-in stagger-in--2" : "stagger-in-hidden"}`}
-        >
-          <BondingCloud />
         </View>
 
         {/* Game preview */}

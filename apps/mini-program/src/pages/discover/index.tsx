@@ -648,6 +648,7 @@ export default function DiscoverPage() {
 
   useCustomTabBarSync({
     enabled: isAuthenticated,
+    tabKey: 'discover',
   })
 
   useEffect(() => {

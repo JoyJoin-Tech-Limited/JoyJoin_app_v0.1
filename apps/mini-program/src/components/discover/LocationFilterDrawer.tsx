@@ -143,6 +143,7 @@ export default function LocationFilterDrawer({
         {/* Scrollable content */}
         <ScrollView
           className='location-drawer__scroll'
+          style={{ height: '100%' }}
           scrollY
           enhanced
           showScrollbar={false}

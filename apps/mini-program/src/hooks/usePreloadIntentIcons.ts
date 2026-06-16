@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import Taro from '@tarojs/taro'
+import { localAsset } from '../lib/utils/cdnAssets'
 import { INTENT_FLOW_OPTIONS } from '../pages/pool-registration/flowConfig'
 
 /**
@@ -16,12 +17,12 @@ export function usePreloadIntentIcons(enabled: boolean) {
 
   const iconPaths = useMemo(() => {
     const pathMap: Record<string, string> = {
-      '👋': require('../assets/icons/intent-icons/intent-friends.webp') as string,
-      '🤝': require('../assets/icons/intent-icons/intent-networking.webp') as string,
-      '💬': require('../assets/icons/intent-icons/intent-discussion.webp') as string,
-      '🎉': require('../assets/icons/intent-icons/intent-fun.webp') as string,
-      '💕': require('../assets/icons/intent-icons/intent-romance.webp') as string,
-      '🎲': require('../assets/icons/intent-icons/intent-flexible.webp') as string,
+      '👋': localAsset('/assets/icons/intent-icons/intent-friends.webp'),
+      '🤝': localAsset('/assets/icons/intent-icons/intent-networking.webp'),
+      '💬': localAsset('/assets/icons/intent-icons/intent-discussion.webp'),
+      '🎉': localAsset('/assets/icons/intent-icons/intent-fun.webp'),
+      '💕': localAsset('/assets/icons/intent-icons/intent-romance.webp'),
+      '🎲': localAsset('/assets/icons/intent-icons/intent-flexible.webp'),
     }
     return INTENT_FLOW_OPTIONS.map((option) => pathMap[option.emoji ?? ''])
       .filter(Boolean) as string[]

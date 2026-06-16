@@ -710,3 +710,65 @@ describe("PUT /api/assessment/v4/:sessionId/answer", () => {
     });
   });
 });
+
+
+describe("POST /api/assessment/v4/:sessionId/skip", () => {
+  beforeEach(() => {
+    mockStorage = createMockStorage();
+    vi.clearAllMocks();
+  });
+
+  it("excludes the skipped question from future selections and resumes", async () => {
+    await withServer(async (baseUrl) => {
+      const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
+      const cookie = cookieHeader(loginRes);
+
+      const startRes = await fetch(`${baseUrl}/api/assessment/v4/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", cookie },
+        body: JSON.stringify({}),
+      });
+      const startBody: any = await startRes.json();
+      expect(startBody.nextQuestion).not.toBeNull();
+      const skippedQuestionId = startBody.nextQuestion.id;
+
+      const skipRes = await fetch(
+        `${baseUrl}/api/assessment/v4/${startBody.sessionId}/skip`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", cookie },
+          body: JSON.stringify({ questionId: skippedQuestionId }),
+        }
+      );
+      const skipBody: any = await skipRes.json();
+      expect(skipBody.success).toBe(true);
+      expect(skipBody.newQuestion.id).not.toBe(skippedQuestionId);
+
+      // Answering the replacement should not resurrect the skipped question
+      const answerRes = await fetch(
+        `${baseUrl}/api/assessment/v4/${startBody.sessionId}/answer`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", cookie },
+          body: JSON.stringify({
+            questionId: skipBody.newQuestion.id,
+            selectedOption: skipBody.newQuestion.options[0].value,
+          }),
+        }
+      );
+      const answerBody: any = await answerRes.json();
+      expect(answerBody.nextQuestion).not.toBeNull();
+      expect(answerBody.nextQuestion.id).not.toBe(skippedQuestionId);
+
+      // Resuming the session should also keep the skipped question excluded
+      const resumeRes = await fetch(`${baseUrl}/api/assessment/v4/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", cookie },
+        body: JSON.stringify({ sessionId: startBody.sessionId }),
+      });
+      const resumeBody: any = await resumeRes.json();
+      expect(resumeBody.nextQuestion).not.toBeNull();
+      expect(resumeBody.nextQuestion.id).not.toBe(skippedQuestionId);
+    });
+  });
+});

@@ -8,6 +8,7 @@ import {
   type IconMapping,
   type IconTier,
 } from '@joyjoin/shared/iconSystem'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 
 interface JoyJoinIconProps {
   emoji: string
@@ -94,12 +95,7 @@ export default function JoyJoinIcon({
   let src: string
   try {
     const assetPath = getIconAssetPath(mapping.assetKey, mapping.tier, 1)
-    if (CDN_ICON_TIERS.has(mapping.tier)) {
-      src = assetPath
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      src = require(assetPath) as string
-    }
+    src = CDN_ICON_TIERS.has(mapping.tier) ? cdnAsset(assetPath) : localAsset(assetPath)
   } catch {
     return (
       <Text

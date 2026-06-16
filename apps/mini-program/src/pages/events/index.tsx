@@ -49,6 +49,7 @@ export default function EventsPage() {
   const markAsRead = useMarkNotificationsAsRead()
   useCustomTabBarSync({
     enabled: !authLoading,
+    tabKey: 'events',
   })
 
   const [canGoBack, setCanGoBack] = useState(false)

@@ -41,6 +41,7 @@
     bottom: $tab-bar-root-height;
     left: 0;
     max-height: calc(980rpx - $tab-bar-root-height);
+    min-height: 0;
     background: $color-surface;
     border-radius: 32rpx 32rpx 0 0;
     box-shadow: 0 -8rpx 32rpx rgba(0, 0, 0, 0.08);
@@ -51,6 +52,7 @@
                 opacity 250ms ease-out;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 
     &--open {
       transform: translateY(0);
