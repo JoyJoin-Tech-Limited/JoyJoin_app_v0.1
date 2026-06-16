@@ -40,40 +40,40 @@ jobs:
       - name: Activity Flow — Icebreaker Session Lifecycle
         run: npx vitest run apps/server/src/__tests__/socialIcebreaker.test.ts apps/server/src/__tests__/socialIcebreakerSweep.test.ts apps/server/src/__tests__/socialIcebreakerStore.test.ts apps/server/src/__tests__/socialIcebreakerHelpers.test.ts --reporter=verbose 2>&1 || true
 
-      - name: Activity Flow — Icebreaker Phase: Warmup
+      - name: 'Activity Flow — Icebreaker Phase: Warmup'
         run: npx vitest run apps/server/src/__tests__/warmupPhase.test.ts --reporter=verbose 2>&1 || true
 
-      - name: Activity Flow — Icebreaker Phase: Micro Challenge
+      - name: 'Activity Flow — Icebreaker Phase: Micro Challenge'
         run: npx vitest run apps/server/src/__tests__/microChallengeSelector.test.ts apps/server/src/__tests__/microChallengeGroupMirrorV2.integration.test.ts --reporter=verbose 2>&1 || true
 
-      - name: Activity Flow — Icebreaker Phase: Lie Detective
+      - name: 'Activity Flow — Icebreaker Phase: Lie Detective'
         run: npx vitest run apps/server/src/__tests__/lieDetectiveV2.test.ts --reporter=verbose 2>&1 || true
 
-      - name: Activity Flow — Icebreaker Phase: Auction
+      - name: 'Activity Flow — Icebreaker Phase: Auction'
         run: npx vitest run apps/server/src/__tests__/auctionPhase.test.ts --reporter=verbose 2>&1 || true
 
-      - name: Activity Flow — Icebreaker Phase: Personality Dice
+      - name: 'Activity Flow — Icebreaker Phase: Personality Dice'
         run: npx vitest run apps/server/src/__tests__/personalityDice.test.ts --reporter=verbose 2>&1 || true
 
-      - name: Activity Flow — Icebreaker Phase: Quip Battle
+      - name: 'Activity Flow — Icebreaker Phase: Quip Battle'
         run: npx vitest run apps/server/src/__tests__/quipBattlePhase.test.ts --reporter=verbose 2>&1 || true
 
-      - name: Activity Flow — Icebreaker Phase: Undercover Word
+      - name: 'Activity Flow — Icebreaker Phase: Undercover Word'
         run: npx vitest run apps/server/src/__tests__/undercoverWord.test.ts --reporter=verbose 2>&1 || true
 
-      - name: Activity Flow — Icebreaker Phase: Group Mirror
+      - name: 'Activity Flow — Icebreaker Phase: Group Mirror'
         run: npx vitest run apps/server/src/__tests__/microChallengeGroupMirrorV2.integration.test.ts --reporter=verbose 2>&1 || true
 
-      - name: Activity Flow — Icebreaker Phase: Speed Friending
+      - name: 'Activity Flow — Icebreaker Phase: Speed Friending'
         run: npx vitest run apps/server/src/__tests__/speedFriending.test.ts --reporter=verbose 2>&1 || true
 
-      - name: Activity Flow — Icebreaker Phase: MiniScript
+      - name: 'Activity Flow — Icebreaker Phase: MiniScript'
         run: npx vitest run apps/server/src/__tests__/miniscriptGameplay.test.ts apps/server/src/__tests__/miniscriptRoutes.test.ts apps/server/src/__tests__/miniscriptGenerateAndPoll.test.ts apps/server/src/__tests__/bonusGate.test.ts --reporter=verbose 2>&1 || true
 
-      - name: Activity Flow — Icebreaker Phase: Recap
+      - name: 'Activity Flow — Icebreaker Phase: Recap'
         run: npx vitest run apps/server/src/__tests__/recapPhase.test.ts --reporter=verbose 2>&1 || true
 
-      - name: Activity Flow — Event Feedback & Outcomes
+      - name: 'Activity Flow — Event Feedback & Outcomes'
         run: npx vitest run apps/server/src/__tests__/eventGroupOutcomeRoutes.test.ts --reporter=verbose 2>&1 || true
 
       - name: Activity Flow — Phase Configuration
