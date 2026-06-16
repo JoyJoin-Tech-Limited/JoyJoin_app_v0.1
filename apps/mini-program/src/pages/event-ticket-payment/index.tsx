@@ -21,6 +21,9 @@ import type { MiniProgramPoolRegistrationReturnContext } from '../../lib/payment
 import { evictPersistedQuery } from '../../lib/api/persistentCache'
 import { POOLS_QUERY_KEY, JOINED_EVENTS_QUERY_KEY } from '../../lib/prefetchEngine'
 import { CEREMONY_HEROES } from '../../lib/ceremonyHeroes'
+import { useLoadingDeadline } from '../../hooks/useLoadingDeadline'
+import StatusCard from '../../components/ui/StatusCard'
+import Button from '../../components/ui/Button'
 import './index.scss'
 
 const TOAST_DURATION = 2000
@@ -111,7 +114,12 @@ export default function EventTicketPaymentPage() {
   }, [user?.id])
 
   // Fetch pool data
-  const { data: pool, isLoading: poolLoading, isError: poolError } = useQuery({
+  const {
+    data: pool,
+    isLoading: poolLoading,
+    isError: poolError,
+    refetch: refetchPool,
+  } = useQuery({
     queryKey: ['mini-program', 'event-pool', poolId],
     queryFn: () => getEventPool(apiRequest, poolId),
     enabled: !!poolId && isPageReady,
@@ -295,8 +303,33 @@ export default function EventTicketPaymentPage() {
     Taro.navigateBack()
   }, [])
 
-  // Loading state
-  if (!isPageReady || poolLoading) {
+  // Loading state with deadline safeguard
+  const isPageLoading = !isPageReady || poolLoading
+  const { isStale: isPageLoadingStale } = useLoadingDeadline(isPageLoading, 8000)
+
+  if (isPageLoading) {
+    if (isPageLoadingStale) {
+      return (
+        <View className='ticket-loading ticket-loading--stale'>
+          <StatusCard
+            tone='error'
+            title='加载有点慢'
+            description='活动信息加载超时，刷新一下再试试'
+            action={{
+              label: '重新加载',
+              onClick: () => void refetchPool(),
+              variant: 'primary',
+            }}
+            footer={
+              <Button variant='secondary' onClick={() => Taro.navigateBack()}>
+                返回上一页
+              </Button>
+            }
+          />
+        </View>
+      )
+    }
+
     return (
       <View className='ticket-loading'>
         <Text className='ticket-loading__text'>加载中…</Text>

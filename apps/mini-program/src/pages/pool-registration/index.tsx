@@ -30,6 +30,8 @@ import { haptics } from '../../lib/utils/haptics'
 import { logInfo, logError } from '../../lib/utils/logger'
 import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { usePreloadIntentIcons } from '../../hooks/usePreloadIntentIcons'
+import { useLoadingDeadline } from '../../hooks/useLoadingDeadline'
+import { AUTH_QUERY_KEY } from '../../lib/api/authSession'
 import { TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { CEREMONY_HEROES } from '../../lib/ceremonyHeroes'
@@ -185,7 +187,11 @@ export default function PoolRegistrationPage() {
   })
 
   // Check if the user is already registered for this pool
-  const { data: myRegistrations, isLoading: isLoadingMyRegistrations } = useQuery<PoolRegistrationSummary[]>({
+  const {
+    data: myRegistrations,
+    isLoading: isLoadingMyRegistrations,
+    refetch: refetchMyRegistrations,
+  } = useQuery<PoolRegistrationSummary[]>({
     queryKey: ['mini-program', 'my-pool-registrations'],
     queryFn: () => getMyPoolRegistrations(apiRequest),
     enabled: !!poolId && !authLoading,
@@ -755,7 +761,36 @@ export default function PoolRegistrationPage() {
     user?.id,
   ])
 
-  if (authLoading || isLoading || isLoadingMyRegistrations) {
+  const isPageLoading = authLoading || isLoading || isLoadingMyRegistrations
+  const { isStale: isPageLoadingStale } = useLoadingDeadline(isPageLoading, 8000)
+
+  if (isPageLoading) {
+    if (isPageLoadingStale) {
+      return (
+        <View className='pool-reg'>
+          <StatusCard
+            tone='error'
+            title='加载有点慢'
+            description='网络或服务器响应超时，刷新一下再试试'
+            action={{
+              label: '重新加载',
+              onClick: () => {
+                void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY })
+                void refetchPool()
+                void refetchMyRegistrations()
+              },
+              variant: 'primary',
+            }}
+            footer={
+              <Button variant='secondary' onClick={() => Taro.navigateBack()}>
+                返回上一页
+              </Button>
+            }
+          />
+        </View>
+      )
+    }
+
     return <LoadingScreen message='正在加载报名信息…' />
   }
 
@@ -1158,11 +1193,9 @@ export default function PoolRegistrationPage() {
             variant='brand'
             className='pool-reg__submit pool-reg__submit--ceremony'
             onClick={handleAdvance}
-            disabled={briefLoading && !briefData}
-            loading={briefLoading && !briefData}
             hoverClass='pool-reg__submit--active'
           >
-            {briefLoading && !briefData ? '悦仔正在准备…' : eventType ? `入座这场${eventType}` : '开始我的报名'}
+            {eventType ? `入座这场${eventType}` : '开始我的报名'}
           </Button>
         ) : (
           <View className='pool-reg__footer-actions'>

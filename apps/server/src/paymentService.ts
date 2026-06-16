@@ -35,6 +35,16 @@ import { db } from "./db";
 const WECHAT_PAY_API_BASE = "https://api.mch.weixin.qq.com";
 const WEBHOOK_TOLERANCE_SECONDS = 300;
 
+// Hard ceiling for WeChat Pay API calls. WeChat Pay normally responds in <1s;
+// if it stalls (DNS/TLS/network), fail fast instead of holding the request forever.
+function getWechatPayTimeoutMs(): number {
+  const configured = Number(process.env.WECHAT_PAY_REQUEST_TIMEOUT_MS ?? 10000);
+  // Allow fast timeouts in tests; enforce a 3s production floor to avoid
+  // spurious failures on normal WeChat Pay latency spikes.
+  const minMs = process.env.NODE_ENV === "test" ? 50 : 3000;
+  return Math.max(minMs, configured);
+}
+
 type WechatApiMethod = "GET" | "POST";
 
 type WechatWebhookHeaders = Record<string, string | string[] | undefined>;
@@ -636,24 +646,40 @@ export class PaymentService {
     const bodyString = params.body ? JSON.stringify(params.body) : "";
     const authorization = this.buildAuthorizationHeader(params.method, params.path, bodyString);
 
-    const response = await fetch(`${WECHAT_PAY_API_BASE}${params.path}`, {
-      method: params.method,
-      headers: {
-        Accept: "application/json",
-        Authorization: authorization,
-        ...(params.body ? { "Content-Type": "application/json" } : {}),
-      },
-      body: params.body ? bodyString : undefined,
-    });
+    const timeoutMs = getWechatPayTimeoutMs();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    const responseText = await response.text();
-    const responseJson = responseText ? this.safeJsonParse(responseText) : undefined;
+    try {
+      const response = await fetch(`${WECHAT_PAY_API_BASE}${params.path}`, {
+        method: params.method,
+        headers: {
+          Accept: "application/json",
+          Authorization: authorization,
+          ...(params.body ? { "Content-Type": "application/json" } : {}),
+        },
+        body: params.body ? bodyString : undefined,
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      throw new Error(`WeChat Pay API request failed (${response.status}): ${responseText}`);
+      const responseText = await response.text();
+      const responseJson = responseText ? this.safeJsonParse(responseText) : undefined;
+
+      if (!response.ok) {
+        throw new Error(`WeChat Pay API request failed (${response.status}): ${responseText}`);
+      }
+
+      return (responseJson ?? {}) as T;
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error(
+          `WeChat Pay API request timed out after ${timeoutMs}ms (${params.method} ${params.path})`
+        );
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    return (responseJson ?? {}) as T;
   }
 
   private buildAuthorizationHeader(method: WechatApiMethod, path: string, body: string): string {
