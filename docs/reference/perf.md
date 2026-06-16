@@ -1,8 +1,8 @@
 # JoyJoin 性能优化指南
 
-> **Last updated:** 2026-05-13 (device baseline tiering: tier-1 Gen Z 8GB+/120Hz/5G primary, degradation path secondary)
+> **Last updated:** 2026-06-16 (Profile page predictive prefetch + offline-first shell + share-card degradation)
+> **Previous:** 2026-05-13 (device baseline tiering: tier-1 Gen Z 8GB+/120Hz/5G primary, degradation path secondary)
 > **Previous:** 2026-05-22 (archetype asset optimization: local spritesheet, WebP-first canvas, PNG moved to CDN, onboarding subpackage 1.4M → 788K)
-> **Previous:** 2026-04-19 (mini-program launch-primary wiring: `onboardingRoutes.ts`, `preloadRule`, cold-entry probe)
 
 ## Device Baseline Tiers
 
@@ -98,6 +98,16 @@ engine.stage('events', async () => {
 - **Fallback:** Events and Connections pages gracefully fall back to legacy endpoints if composite 500s.
 
 See `docs/mini-program/mini-program-data-fetching.md` for query key mapping and `apps/mini-program/src/lib/prefetchEngine.ts` for the engine implementation.
+
+#### Profile 页预取与离线韧性（2026-06-16）
+
+`apps/mini-program/src/pages/profile/index.tsx` 在数据稳定后通过 `PrefetchEngine` 预取相邻的 Events 与 Connections shells，减少 tab 切换冷启动耗时。同时采用以下策略保证弱网/离线体验：
+
+- `useQuery` 配置 `networkMode: 'offlineFirst'`，配合指数退避 `retryDelay` 与离线感知 `retry` 谓词，避免离线时无限重试。
+- 监听 `Taro.onNetworkStatusChange`，网络恢复时自动重新拉取 `GET /api/shell/profile`。
+- 错误态优先展示缓存的 `PROFILE_SHELL_QUERY_KEY` 数据（`profileShell = shell ?? cachedShell`），仅在无缓存时才显示错误卡片。
+- 分享海报（750×750 canvas）在 `useDeviceTier().isDegradation` 设备上强制使用 DPR 1，降低大 canvas 内存占用；`profilePoster.ts` 通过 `ctx.draw(false, callback)` 刷新画布并带 15s 超时保护。
+- `useProfileShareCard.ts` 使用 `mountedRef` 与 unmount cleanup，防止异步生成/保存海报时泄漏 loading 状态。
 
 #### Legacy per-query prefetch
 

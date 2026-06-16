@@ -72,6 +72,7 @@ const DAYS_OF_WEEK = [
 interface Venue {
   id: string;
   name: string;
+  brandName?: string | null;
   type: string;
   address: string;
   city: string;
@@ -225,6 +226,7 @@ export default function AdminVenuesPage() {
   
   const [formData, setFormData] = useState({
     name: "",
+    brandName: "",
     type: "restaurant",
     address: "",
     city: "深圳",
@@ -427,6 +429,7 @@ export default function AdminVenuesPage() {
   const resetForm = () => {
     setFormData({
       name: "",
+      brandName: "",
       type: "restaurant",
       address: "",
       city: "深圳",
@@ -482,6 +485,7 @@ export default function AdminVenuesPage() {
 
     createMutation.mutate({
       name: formData.name,
+      brandName: formData.brandName || undefined,
       type: formData.type,
       address: formData.address,
       city: formData.city,
@@ -520,6 +524,7 @@ export default function AdminVenuesPage() {
     setSelectedVenue(venue);
     setFormData({
       name: venue.name,
+      brandName: (venue as any).brandName || (venue as any).brand_name || "",
       type: venue.type,
       address: venue.address,
       city: venue.city,
@@ -571,6 +576,7 @@ export default function AdminVenuesPage() {
       id: selectedVenue.id,
       data: {
         name: formData.name,
+        brandName: formData.brandName || null,
         type: formData.type,
         address: formData.address,
         city: formData.city,
@@ -982,7 +988,7 @@ export default function AdminVenuesPage() {
               <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-3">
                 <div className="flex-1 min-w-0">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    {venue.name}
+                    {venue.brandName || venue.name}
                     <Badge variant="outline">{getTypeLabel(venue.type)}</Badge>
                   </CardTitle>
                   <p className="text-sm text-muted-foreground truncate">{venue.city} · {venue.district}</p>

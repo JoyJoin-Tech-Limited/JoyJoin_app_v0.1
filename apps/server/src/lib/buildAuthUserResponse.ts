@@ -118,6 +118,7 @@ const [
     personalityTestEchoEnabled,
     squadUnboxingDragRevealEnabled,
     socialIcebreakerCustomModeEnabled,
+    profileRedesignEnabled,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
     getFeatureFlag('smartProfession', true),
@@ -132,6 +133,7 @@ const [
     getFeatureFlag('personalityTestEchoEnabled', true),
     getFeatureFlag('squadUnboxingDragRevealEnabled', true),
     getFeatureFlag('socialIcebreakerCustomModeEnabled', true),
+    getFeatureFlag('profileRedesignEnabled', true),
   ]);
 
   const authUserResponse: AuthUserResponse = {
@@ -160,6 +162,7 @@ const [
       personalityTestEchoEnabled,
       squadUnboxingDragRevealEnabled,
       socialIcebreakerCustomModeEnabled,
+      profileRedesignEnabled,
     },
   };
 

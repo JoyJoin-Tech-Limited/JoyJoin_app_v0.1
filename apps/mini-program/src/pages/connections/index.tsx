@@ -1,25 +1,34 @@
-import { View, Text, ScrollView } from '@tarojs/components'
+import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useEffect } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest, fetchConnectionsShell } from '../../lib/api/api'
 import { injectConnectionsShellIntoCache } from '../../lib/prefetchEngine'
 import { queryClient } from '../../lib/api/queryClient'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { getArchetypeFamily } from '@shared/archetypeColors'
 import { getEmptyStateMessage } from '@shared/copy/emptyStates'
+import { useAuth } from '../../hooks/useAuth'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
-import ArchetypeHead from '../../components/mascot/ArchetypeHead'
+import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
 import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
-import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import ProfileArchetypeHero from '../../components/profile/ProfileArchetypeHero'
+import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import Card from '../../components/ui/Card'
+import { localAsset } from '../../lib/utils/cdnAssets'
 import './index.scss'
+
+// Motion: card press feedback is gated by @media (prefers-reduced-motion: reduce) in index.scss.
 
 interface Connection {
   id: string
   peerName?: string
   peerArchetype?: string
+  peerAgeRange?: string | null
+  peerCity?: string | null
+  peerBio?: string | null
   eventTitle?: string
   sharedEventTitle?: string
   chemistryScore?: number | string
@@ -27,9 +36,51 @@ interface Connection {
   [key: string]: unknown
 }
 
+function formatChemistryScore(score: number | string | undefined): string | null {
+  if (score == null || score === '') return null
+  const n = typeof score === 'string' ? Number(score) : score
+  if (!Number.isFinite(n)) return null
+  return `${Math.round(n)}`
+}
+
+function buildMutualContext(
+  userCity: string | null | undefined,
+  userArchetype: string | null | undefined,
+  connection: Connection,
+): string | null {
+  const fragments: string[] = []
+  const peerCity = connection.peerCity
+  if (userCity && peerCity && userCity.trim() === peerCity.trim()) {
+    fragments.push(`同在${peerCity}`)
+  }
+
+  const peerArchetype = connection.peerArchetype
+  if (userArchetype && peerArchetype) {
+    const same = userArchetype === peerArchetype
+    if (same) {
+      const name = ARCHETYPE_BY_ID[peerArchetype]?.nameCn || peerArchetype
+      fragments.push(`同为${name}`)
+    } else if (getArchetypeFamily(userArchetype) === getArchetypeFamily(peerArchetype)) {
+      fragments.push('原型同频')
+    } else {
+      fragments.push('原型互补')
+    }
+  }
+
+  const score = formatChemistryScore(connection.chemistryScore)
+  if (score) {
+    fragments.push(`默契值 ${score}`)
+  }
+
+  return fragments.length > 0 ? fragments.join(' · ') : null
+}
+
 export default function ConnectionsPage() {
   const { authLoading, renderGate } = useMiniPageGate()
+  const { user } = useAuth()
+  const redesignEnabled = user?.features?.profileRedesignEnabled ?? true
   const markAsRead = useMarkNotificationsAsRead()
+  const viewTrackedRef = useRef(false)
 
   useCustomTabBarSync({
     enabled: !authLoading,
@@ -47,7 +98,7 @@ export default function ConnectionsPage() {
       try {
         const shell = await fetchConnectionsShell()
         injectConnectionsShellIntoCache(queryClient, shell)
-        return shell.connections
+        return shell.connections as Connection[]
       } catch {
         // Composite unavailable — fall back to legacy endpoint.
       }
@@ -55,6 +106,26 @@ export default function ConnectionsPage() {
     },
     enabled: !authLoading,
   })
+
+  useEffect(() => {
+    if (viewTrackedRef.current || isLoading || connections.length === 0) return
+    viewTrackedRef.current = true
+    profileAnalytics.track('connection_card_view', {
+      hasBio: connections.some((c) => Boolean(c.peerBio && c.peerBio.trim().length > 0)),
+    })
+  }, [isLoading, connections])
+
+  const userCity = user?.currentCity
+  const userArchetype = user?.archetype
+
+  const connectionItems = useMemo(
+    () =>
+      connections.map((conn) => ({
+        ...conn,
+        contextLine: buildMutualContext(userCity, userArchetype, conn),
+      })),
+    [connections, userCity, userArchetype],
+  )
 
   return renderGate(
     <View className='connections-page tab-page-enter'>
@@ -85,10 +156,10 @@ export default function ConnectionsPage() {
             />
           </View>
         ) : connections.length > 0 ? (
-          connections.map((conn) => (
+          connectionItems.map((conn) => (
             <Card
               key={String(conn.id)}
-              className='connections-page__card'
+              className={`connections-page__card ${redesignEnabled ? '' : 'connections-page__card--legacy'}`}
               onClick={() => {
                 const actions: string[] = []
                 if (conn.wechatId) actions.push(`微信号：${conn.wechatId}`)
@@ -108,43 +179,63 @@ export default function ConnectionsPage() {
                 })
               }}
             >
-              <View className='connections-page__card-avatar'>
-                <ArchetypeHead
+              {redesignEnabled ? (
+                <ProfileArchetypeHero
                   archetype={conn.peerArchetype}
-                  size={72}
-                  fallbackText={conn.peerName ?? undefined}
+                  displayName={conn.peerName ?? '悦聚好友'}
+                  age={conn.peerAgeRange ?? null}
+                  city={conn.peerCity ?? null}
+                  bio={conn.peerBio ?? null}
+                  contextLine={conn.contextLine}
+                  size='sm'
+                  showLabel
                 />
-              </View>
-              <View className='connections-page__card-info'>
-                <Text className='connections-page__card-name'>{conn.peerName ?? '悦聚好友'}</Text>
-                {conn.peerArchetype ? (
-                  <Text className='connections-page__card-archetype'>
-                    {ARCHETYPE_BY_ID[conn.peerArchetype]?.nameCn || conn.peerArchetype}
-                  </Text>
-                ) : null}
-                {conn.chemistryScore ? (
-                  <View className='connections-page__chemistry-badge'>
-                    <Text className='connections-page__chemistry-text'>
-                      默契值 {conn.chemistryScore}
-                    </Text>
+              ) : (
+                <>
+                  <View className='connections-page__card-avatar'>
+                    <ArchetypeHead
+                      archetype={conn.peerArchetype}
+                      size={72}
+                      fallbackText={conn.peerName ?? undefined}
+                    />
                   </View>
-                ) : (
-                  <View className='connections-page__chemistry-badge connections-page__chemistry-badge--new'>
-                    <Text className='connections-page__chemistry-text'>新连接</Text>
+                  <View className='connections-page__card-info'>
+                    <Text className='connections-page__card-name'>{conn.peerName ?? '悦聚好友'}</Text>
+                    {conn.peerArchetype ? (
+                      <Text className='connections-page__card-archetype'>
+                        {ARCHETYPE_BY_ID[conn.peerArchetype]?.nameCn || conn.peerArchetype}
+                      </Text>
+                    ) : null}
+                    {conn.chemistryScore ? (
+                      <View className='connections-page__chemistry-badge'>
+                        <Text className='connections-page__chemistry-text'>
+                          默契值 {conn.chemistryScore}
+                        </Text>
+                      </View>
+                    ) : (
+                      <View className='connections-page__chemistry-badge connections-page__chemistry-badge--new'>
+                        <Text className='connections-page__chemistry-text'>新连接</Text>
+                      </View>
+                    )}
+                    {conn.sharedEventTitle ? (
+                      <View className='connections-page__shared-event'>
+                        <View className='jj-icon-text'>
+                          <Image
+                            className='connections-page__shared-event-icon'
+                            src={localAsset('/assets/icons/ui/icon-calendar.webp')}
+                            mode='aspectFit'
+                            style={{ width: '20rpx', height: '20rpx' }}
+                          />
+                          <Text className='connections-page__shared-event-text'>{conn.sharedEventTitle}</Text>
+                        </View>
+                      </View>
+                    ) : null}
+                    {conn.eventTitle ? (
+                      <Text className='connections-page__card-event'>来自：{conn.eventTitle}</Text>
+                    ) : null}
                   </View>
-                )}
-                {conn.sharedEventTitle ? (
-                  <View className='connections-page__shared-event'>
-                    <View className='jj-icon-text'>
-                      <JoyJoinIcon emoji='📅' size={20} />
-                      <Text className='connections-page__shared-event-text'>{conn.sharedEventTitle}</Text>
-                    </View>
-                  </View>
-                ) : null}
-                {conn.eventTitle ? (
-                  <Text className='connections-page__card-event'>来自：{conn.eventTitle}</Text>
-                ) : null}
-              </View>
+                </>
+              )}
             </Card>
           ))
         ) : (
@@ -158,6 +249,6 @@ export default function ConnectionsPage() {
         )}
         <View className='connections-page__spacer' />
       </ScrollView>
-    </View>
+    </View>,
   )
 }

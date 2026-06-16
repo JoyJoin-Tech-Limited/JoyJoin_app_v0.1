@@ -20,32 +20,29 @@ describe('Multi-Layer Defense - Candidate Generation', () => {
     });
     
     it('should generate candidates for ambiguous "投资" if confidence < 0.7', async () => {
-      // Test various investment-related terms
-      const testCases = [
-        '做投资',
-        '投资相关',
-        '投资领域'
-      ];
-      
-      for (const input of testCases) {
-        const result = await classifyIndustry(input);
-        
+      // Test various investment-related terms in parallel to keep the wall-clock
+      // time below the default 15s timeout when the AI fallback layer is under
+      // contention from other inference tests.
+      const testCases = ['做投资', '投资相关', '投资领域']
+      const results = await Promise.all(testCases.map((input) => classifyIndustry(input)))
+
+      for (const result of results) {
         // If confidence is low, should have candidates
         if (result.confidence < 0.7) {
-          expect(result.candidates).toBeDefined();
-          expect(Array.isArray(result.candidates)).toBe(true);
-          
+          expect(result.candidates).toBeDefined()
+          expect(Array.isArray(result.candidates)).toBe(true)
+
           if (result.candidates && result.candidates.length > 0) {
             // Verify candidate structure
-            const firstCandidate = result.candidates[0];
-            expect(firstCandidate.category).toBeDefined();
-            expect(firstCandidate.segment).toBeDefined();
-            expect(firstCandidate.confidence).toBeGreaterThan(0);
-            expect(firstCandidate.reasoning).toBeTruthy();
+            const firstCandidate = result.candidates[0]
+            expect(firstCandidate.category).toBeDefined()
+            expect(firstCandidate.segment).toBeDefined()
+            expect(firstCandidate.confidence).toBeGreaterThan(0)
+            expect(firstCandidate.reasoning).toBeTruthy()
           }
         }
       }
-    });
+    }, 30_000)
   });
   
   describe('Candidate List Quality', () => {

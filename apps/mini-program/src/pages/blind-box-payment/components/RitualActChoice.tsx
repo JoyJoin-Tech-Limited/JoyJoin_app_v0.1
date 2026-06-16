@@ -44,7 +44,7 @@ function RitualActChoice({
           </Text>
         </View>
         <View className='ritual-act-choice__progress-track'>
-          <View className='ritual-act-choice__progress-fill' style={{ width: '66%' }} />
+          <View className='ritual-act-choice__progress-fill' style={{ transform: 'scaleX(0.66)', transformOrigin: 'left center' }} />
         </View>
       </View>
 

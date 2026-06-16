@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { View, Text, Input, ScrollView, Picker } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import {
@@ -24,6 +25,7 @@ import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { logInfo, logError } from '../../lib/utils/logger'
 import { haptics } from '../../lib/utils/haptics'
 import { useResetOnShow } from '../../hooks/useResetOnShow'
+import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 
 import ProfileArchetypeHero from '../../components/profile/ProfileArchetypeHero'
@@ -35,6 +37,7 @@ import Chip from '../../components/ui/Chip'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import ContentBlockedError from '../../components/ContentBlockedError'
+import { isEditProfileSaveDisabled } from './saveButtonLogic'
 import './index.scss'
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -103,6 +106,7 @@ export default function EditProfilePage() {
   const { authLoading, renderGate } = useMiniPageGate()
   const { user } = useAuth()
   const invalidateAuth = useInvalidateAuth()
+  const redesignEnabled = user?.features?.profileRedesignEnabled ?? true
   const didSaveRef = useRef(false)
   const enterTimeRef = useRef(Date.now())
 
@@ -116,6 +120,8 @@ export default function EditProfilePage() {
 
   // Social profile
   const [professionText, setProfessionText] = useState('')
+  const [bio, setBio] = useState('')
+  const [originalBio, setOriginalBio] = useState('')
   const [professionClassification, setProfessionClassification] = useState<import('../../components/ProfessionChatOverlay').ProfessionClassificationData | null>(null)
   const [showProfessionOverlay, setShowProfessionOverlay] = useState(false)
   const [isProfessionOverlayClosing, setIsProfessionOverlayClosing] = useState(false)
@@ -124,14 +130,14 @@ export default function EditProfilePage() {
   // Interests
   const [selectedInterests, setSelectedInterests] = useState<string[]>([])
   const [interestLevels, setInterestLevels] = useState<Record<string, InterestSelectionLevel>>({})
-  const [isLoadingInterests, setIsLoadingInterests] = useState(false)
 
   // UI state
   const [isSaving, setIsSaving] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [contentViolations, setContentViolations] = useState<Record<string, string>>({})
-  const [hasChanges, setHasChanges] = useState(false)
+  const [changedFields, setChangedFields] = useState<Record<string, boolean>>({})
+  const hasChanges = Object.values(changedFields).some(Boolean)
   const [isInitializing, setIsInitializing] = useState(true)
   const [scrollIntoViewId, setScrollIntoViewId] = useState('')
 
@@ -190,6 +196,9 @@ export default function EditProfilePage() {
     setHometownRegionCity(u.hometownRegionCity || '')
     setEducationLevel(typeof u.educationLevel === 'string' ? u.educationLevel : '')
     setProfessionText(typeof u.occupationId === 'string' ? u.occupationId : '')
+    const initialBio = typeof u.bio === 'string' ? u.bio : ''
+    setBio(initialBio)
+    setOriginalBio(initialBio)
     setProfessionClassification({
       occupationId: typeof u.occupationId === 'string' ? u.occupationId : '',
       standardizedOccupationId: typeof u.standardizedOccupationId === 'string' ? u.standardizedOccupationId : null,
@@ -210,42 +219,52 @@ export default function EditProfilePage() {
     setSelectedInterests((current) => (current.length > 0 ? current : interests.filter(Boolean)))
   }, [user])
 
-  // Load structured interests
+  // Load structured interests with retry and offline resilience.
+  const {
+    isLoading: isLoadingInterests,
+    error: interestsError,
+  } = useQuery({
+    queryKey: ['mini-program', 'user-interests', user?.id],
+    queryFn: async () => {
+      const interestProfile = await getUserInterests(apiRequest)
+      if (!Array.isArray(interestProfile?.selections)) return null
+      const levels = interestProfile.selections.reduce<Record<string, InterestSelectionLevel>>(
+        (acc, selection) => {
+          if (typeof selection?.topicId !== 'string' || selection.topicId.trim() === '') return acc
+          acc[selection.topicId] = selection.level === 2 || selection.level === 3 ? selection.level : 1
+          return acc
+        },
+        {},
+      )
+      setSelectedInterests(Object.keys(levels))
+      setInterestLevels(levels)
+      return interestProfile
+    },
+    enabled: !authLoading && !!user?.hasCompletedInterestsCarousel,
+    staleTime: 5 * 60 * 1000,
+    retry: (failureCount, error) => {
+      const statusCode = typeof error === 'object' && error !== null && 'statusCode' in error
+        ? Number((error as { statusCode?: unknown }).statusCode)
+        : undefined
+      // 404 means the user hasn't saved interests yet; don't retry.
+      if (statusCode === 404) return false
+      return failureCount < 3
+    },
+    networkMode: 'offlineFirst',
+  })
+
   useEffect(() => {
-    let cancelled = false
-    if (authLoading || !user?.hasCompletedInterestsCarousel) {
-      return () => { cancelled = true }
+    if (!interestsError) return
+    const statusCode = typeof interestsError === 'object' && interestsError !== null && 'statusCode' in interestsError
+      ? Number((interestsError as { statusCode?: unknown }).statusCode)
+      : undefined
+    if (statusCode !== 404) {
+      logError('[EditProfile] Failed to load structured interests', {
+        statusCode,
+        message: interestsError instanceof Error ? interestsError.message : 'Unknown',
+      })
     }
-
-    setIsLoadingInterests(true)
-    void getUserInterests(apiRequest)
-      .then((interestProfile) => {
-        if (cancelled || !Array.isArray(interestProfile?.selections)) return
-        const levels = interestProfile.selections.reduce<Record<string, InterestSelectionLevel>>(
-          (acc, selection) => {
-            if (typeof selection?.topicId !== 'string' || selection.topicId.trim() === '') return acc
-            acc[selection.topicId] = selection.level === 2 || selection.level === 3 ? selection.level : 1
-            return acc
-          },
-          {},
-        )
-        setSelectedInterests(Object.keys(levels))
-        setInterestLevels(levels)
-      })
-      .catch((error) => {
-        const statusCode = typeof error === 'object' && error !== null && 'statusCode' in error
-          ? Number((error as { statusCode?: unknown }).statusCode)
-          : undefined
-        if (statusCode !== 404) {
-          logError('[EditProfile] Failed to load structured interests', { statusCode, message: error instanceof Error ? error.message : 'Unknown' })
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingInterests(false)
-      })
-
-    return () => { cancelled = true }
-  }, [authLoading, user?.hasCompletedInterestsCarousel])
+  }, [interestsError])
 
   // ─── Handlers ─────────────────────────────────────────────────────
 
@@ -255,24 +274,24 @@ export default function EditProfilePage() {
     if (!currentLevel) {
       setSelectedInterests([...selectedInterests, interestId])
       setInterestLevels({ ...interestLevels, [interestId]: 1 })
-      setHasChanges(true)
+      setChangedFields((prev) => ({ ...prev, interests: true }))
       return
     }
     if (currentLevel === 1) {
       setInterestLevels({ ...interestLevels, [interestId]: 2 })
-      setHasChanges(true)
+      setChangedFields((prev) => ({ ...prev, interests: true }))
       return
     }
     if (currentLevel === 2) {
       setInterestLevels({ ...interestLevels, [interestId]: 3 })
-      setHasChanges(true)
+      setChangedFields((prev) => ({ ...prev, interests: true }))
       return
     }
     setSelectedInterests(selectedInterests.filter((id) => id !== interestId))
     const nextLevels = { ...interestLevels }
     delete nextLevels[interestId]
     setInterestLevels(nextLevels)
-    setHasChanges(true)
+    setChangedFields((prev) => ({ ...prev, interests: true }))
   }, [interestLevels, selectedInterests])
 
   const toggleIntent = useCallback((value: string) => {
@@ -283,12 +302,12 @@ export default function EditProfilePage() {
       } else {
         setIntent([...intent, value])
       }
-      setHasChanges(true)
+      setChangedFields((prev) => ({ ...prev, intent: true }))
       return
     }
     if (intent.includes(value)) {
       setIntent(intent.filter((item) => item !== value))
-      setHasChanges(true)
+      setChangedFields((prev) => ({ ...prev, intent: true }))
       return
     }
     const explicitCount = intent.filter((item) => item !== INTENT_FLEXIBLE_OPTION.value).length
@@ -298,7 +317,7 @@ export default function EditProfilePage() {
       return
     }
     setIntent([...intent, value])
-    setHasChanges(true)
+    setChangedFields((prev) => ({ ...prev, intent: true }))
   }, [intent])
 
   const handleBirthYearChange = useCallback((e: any) => {
@@ -306,7 +325,7 @@ export default function EditProfilePage() {
     const year = parseInt(BIRTH_YEAR_RANGE[idx], 10)
     if (!isNaN(year)) {
       setBirthYear(year)
-      setHasChanges(true)
+      setChangedFields((prev) => ({ ...prev, birthYear: true }))
       setFieldErrors((prev) => ({ ...prev, birthYear: '' }))
     }
   }, [])
@@ -316,7 +335,7 @@ export default function EditProfilePage() {
     setProfessionText(value)
     if (classification) setProfessionClassification(classification)
     setIsProfessionOverlayClosing(true)
-    setHasChanges(true)
+    setChangedFields((prev) => ({ ...prev, profession: true }))
     setTimeout(() => {
       setShowProfessionOverlay(false)
       setIsProfessionOverlayClosing(false)
@@ -353,6 +372,10 @@ export default function EditProfilePage() {
       if (!currentCity.trim()) {
         errors.currentCity = '请填写所在城市'
       }
+      const trimmedBio = redesignEnabled ? bio.trim() : ''
+      if (redesignEnabled && trimmedBio.length > 100) {
+        errors.bio = '一句话介绍不能超过 100 个字符'
+      }
 
       if (Object.keys(errors).length > 0) {
         haptics('warning')
@@ -373,6 +396,7 @@ export default function EditProfilePage() {
         gender,
         birthYear,
         currentCity: currentCity.trim(),
+        ...(redesignEnabled ? { bio: trimmedBio } : {}),
         ...(hometownRegionCity.trim() ? { hometownRegionCity: hometownRegionCity.trim() } : {}),
         ...(educationLevel ? { educationLevel } : {}),
         ...(intent.length > 0 ? { intent } : {}),
@@ -424,7 +448,7 @@ export default function EditProfilePage() {
 
       invalidateAuth()
       didSaveRef.current = true
-      setHasChanges(false)
+      setChangedFields({})
       haptics('success')
       logInfo('[EditProfile] Save success', { fieldsChanged })
 
@@ -474,13 +498,33 @@ export default function EditProfilePage() {
     interestLevels,
     invalidateAuth,
     contentViolations,
+    bio,
   ])
 
   const birthYearIndex = birthYear ? BIRTH_YEAR_RANGE.indexOf(String(birthYear)) : -1
   const previewName = displayName || user?.nickname || user?.displayName || '悦聚用户'
   const previewArchetype = user?.archetype
+  const previewAge =
+    user?.age != null && !Number.isNaN(Number(user.age)) && Number(user.age) > 0
+      ? Number(user.age)
+      : birthYear
+        ? CURRENT_YEAR - birthYear
+        : null
+  const previewBio = redesignEnabled ? bio.trim() || null : null
 
   const intentOptions = useMemo(() => [...INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION], [])
+
+  const isSaveDisabled = isEditProfileSaveDisabled({
+    isSaving,
+    displayName,
+    gender,
+    birthYear,
+    currentCity,
+    bio,
+    originalBio,
+    hasChanges,
+    redesignEnabled,
+  })
 
   // ─── Render ───────────────────────────────────────────────────────
 
@@ -511,6 +555,9 @@ export default function EditProfilePage() {
         <ProfileArchetypeHero
           archetype={previewArchetype}
           displayName={previewName}
+          age={previewAge}
+          city={currentCity.trim() || null}
+          bio={previewBio}
           size='sm'
           className='edit-profile__preview'
         />
@@ -518,9 +565,6 @@ export default function EditProfilePage() {
         {/* ── Step 1: 基础档案 ── */}
         <View className='edit-profile__section'>
           <View className='edit-profile__section-header'>
-            <View className='edit-profile__progress-bar'>
-              <View className='edit-profile__progress-fill' style={{ width: '50%' }} />
-            </View>
             <Text className='edit-profile__section-title'>基础档案</Text>
             <Text className='edit-profile__section-subtitle'>确认你的基本信息</Text>
           </View>
@@ -534,7 +578,7 @@ export default function EditProfilePage() {
                 value={displayName}
                 onInput={(e) => {
                   setDisplayName(e.detail.value)
-                  setHasChanges(true)
+                  setChangedFields((prev) => ({ ...prev, displayName: true }))
                   setFieldErrors((prev) => ({ ...prev, displayName: '' }))
                   setContentViolations((prev) => ({ ...prev, displayName: '' }))
                 }}
@@ -566,7 +610,7 @@ export default function EditProfilePage() {
                     className={`edit-profile__radio ${gender === opt.value ? 'edit-profile__radio--active' : ''}`}
                     onClick={() => {
                       setGender(opt.value)
-                      setHasChanges(true)
+                      setChangedFields((prev) => ({ ...prev, gender: true }))
                       setFieldErrors((prev) => ({ ...prev, gender: '' }))
                     }}
                   >
@@ -605,7 +649,7 @@ export default function EditProfilePage() {
                 value={currentCity}
                 onInput={(e) => {
                   setCurrentCity(e.detail.value)
-                  setHasChanges(true)
+                  setChangedFields((prev) => ({ ...prev, currentCity: true }))
                   setFieldErrors((prev) => ({ ...prev, currentCity: '' }))
                   setContentViolations((prev) => ({ ...prev, currentCity: '' }))
                 }}
@@ -627,7 +671,45 @@ export default function EditProfilePage() {
               />
             </View>
 
-            {/* Hometown */}
+            {redesignEnabled && (
+              <View className='edit-profile__field' id='field-bio' data-field='bio'>
+                <Text className='edit-profile__label'>
+                  一句话介绍
+                  <Text className='edit-profile__bio-counter'>{bio.length}/100</Text>
+                </Text>
+                <Input
+                  className={`edit-profile__input ${fieldErrors.bio ? 'edit-profile__input--error' : ''}`}
+                  value={bio}
+                  onInput={(e) => {
+                    const newBio = e.detail.value
+                    setBio(newBio)
+                    setChangedFields((prev) => ({ ...prev, bio: newBio.trim() !== originalBio.trim() }))
+                    setFieldErrors((prev) => ({ ...prev, bio: '' }))
+                    setContentViolations((prev) => ({ ...prev, bio: '' }))
+                  }}
+                  onFocus={() => {
+                    profileAnalytics.track('profile_edit_tap', { field: 'bio' })
+                  }}
+                  placeholder='输入你的社交签名'
+                  maxlength={100}
+                />
+                {fieldErrors.bio && (
+                  <Text className='edit-profile__field-error'>{fieldErrors.bio}</Text>
+                )}
+                <ContentBlockedError
+                  message={contentViolations.bio || ''}
+                  visible={!!contentViolations.bio}
+                  fieldName='bio'
+                  onDismiss={() => setContentViolations((prev) => {
+                    const next = { ...prev }
+                    delete next.bio
+                    return next
+                  })}
+                />
+              </View>
+            )}
+
+            {/* Hometown }}
             <View className='edit-profile__field'>
               <Text className='edit-profile__label'>家乡</Text>
               <Input
@@ -635,7 +717,7 @@ export default function EditProfilePage() {
                 value={hometownRegionCity}
                 onInput={(e) => {
                   setHometownRegionCity(e.detail.value)
-                  setHasChanges(true)
+                  setChangedFields((prev) => ({ ...prev, hometown: true }))
                 }}
                 placeholder='如：广州'
                 maxlength={30}
@@ -657,7 +739,7 @@ export default function EditProfilePage() {
                       ].filter(Boolean).join(' ')}
                       onClick={() => {
                         setEducationLevel(selected ? '' : option)
-                        setHasChanges(true)
+                        setChangedFields((prev) => ({ ...prev, education: true }))
                       }}
                     >
                       <Text className='edit-profile__choice-chip-text'>{option}</Text>
@@ -672,9 +754,6 @@ export default function EditProfilePage() {
         {/* ── Step 2: 社交画像 ── */}
         <View className='edit-profile__section'>
           <View className='edit-profile__section-header'>
-            <View className='edit-profile__progress-bar'>
-              <View className='edit-profile__progress-fill edit-profile__progress-fill--complete' />
-            </View>
             <Text className='edit-profile__section-title'>社交画像</Text>
             <Text className='edit-profile__section-subtitle'>定义你的社交身份</Text>
           </View>
@@ -712,7 +791,7 @@ export default function EditProfilePage() {
                       <Text className='edit-profile__intent-subtitle'>{option.subtitle}</Text>
                       {isSelected && (
                         <View className='edit-profile__intent-check'>
-                          <Text className='edit-profile__intent-check-icon'>✓</Text>
+                          <View className='edit-profile__intent-check-icon' />
                         </View>
                       )}
                     </View>
@@ -775,7 +854,7 @@ export default function EditProfilePage() {
           variant='primary'
           className='edit-profile__save-btn'
           onClick={handleSave}
-          disabled={isSaving}
+          disabled={isSaveDisabled}
           loading={isSaving}
         >
           {isSaving ? '保存中…' : '保存修改'}

@@ -4,7 +4,7 @@
 .edit-profile {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  @include viewport-min-height;
   background: $color-bg-gradient;
   position: relative;
 
@@ -21,7 +21,7 @@
     margin: 0 $container-padding $spacing-lg;
   }
 
-  // Section header with progress bar
+  // Section header
   &__section {
     padding: 0 $container-padding;
     margin-bottom: $spacing-lg;
@@ -31,34 +31,13 @@
     margin-bottom: $spacing-md;
   }
 
-  &__progress-bar {
-    width: 100%;
-    height: 6rpx;
-    background: rgba($color-primary, 0.08);
-    border-radius: 3rpx;
-    margin-bottom: $spacing-sm;
-    overflow: hidden;
-  }
-
-  &__progress-fill {
-    height: 100%;
-    width: 50%;
-    background: $color-primary;
-    border-radius: 3rpx;
-    transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-
-    &--complete {
-      width: 100%;
-    }
-  }
-
   &__section-title {
     display: block;
     font-size: $font-size-xl;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
-    line-height: $line-height-tight;
-    margin-bottom: 4rpx;
+    line-height: $line-height-normal;
+    margin-bottom: $spacing-xs;
   }
 
   &__section-subtitle {
@@ -84,12 +63,20 @@
   }
 
   &__label {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     font-size: $font-size-sm;
     font-weight: $font-weight-medium;
     color: $color-text-secondary;
     margin-bottom: $spacing-sm;
     line-height: $line-height-normal;
+  }
+
+  &__bio-counter {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    font-weight: $font-weight-normal;
   }
 
   &__input {
@@ -102,7 +89,7 @@
     font-size: $font-size-base;
     color: $color-text-primary;
     line-height: $line-height-normal;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: border-color 0.2s ease;
 
     &:focus {
       border-color: $color-primary;
@@ -184,7 +171,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 72rpx;
+    min-height: $cta-min-tap;
     padding: 8rpx 24rpx;
     border-radius: 16rpx;
     background: $color-surface;
@@ -206,7 +193,7 @@
   }
 
   &__choice-chip-text {
-    line-height: 1.3;
+    line-height: $line-height-normal;
   }
 
   // Intent grid
@@ -221,7 +208,7 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 4rpx;
+    gap: $spacing-xs;
     min-height: 88rpx;
     padding: $spacing-md;
     border-radius: 20rpx;
@@ -266,9 +253,11 @@
   }
 
   &__intent-check-icon {
-    font-size: $font-size-2xs;
-    color: $color-text-white;
-    line-height: 1;
+    width: 14rpx;
+    height: 8rpx;
+    border-left: 2rpx solid $color-text-white;
+    border-bottom: 2rpx solid $color-text-white;
+    transform: rotate(-45deg) translateY(-1rpx);
   }
 
   &__intent-count {
@@ -306,7 +295,7 @@
   &__interest-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 12rpx;
+    gap: $spacing-xs;
 
     &--loading {
       opacity: 0.5;

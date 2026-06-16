@@ -29,7 +29,9 @@ This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 - `src/pages/onboarding/personality-test/` — V4 personality test, results, and post-result auth gate
 - `src/pages/login/index.tsx` + `src/hooks/auth/useWeChatLogin.ts` — returning-user WeChat login
 - `src/pages/blind-box-payment/`, `src/pages/payment-verification/` — JSAPI payment + post-pay polling
+- `src/pages/event-ticket-payment/` — paid event-ticket registration with ceremony success/verifying states
 - `src/components/HeroPromoBanner.tsx` — top-of-discover hero promo banner (full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles). Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`)
+- `src/pages/profile/index.tsx` — redesigned "我的" profile tab (social-passport hero with age/city/bio chips, stats, milestones, menu grid, profile-card share, one-time 100% completion ceremony). Uses `GET /api/shell/profile` via `getProfileShell()` with offline-first query config and cached-shell fallback. Feature-flagged by `user.features.profileRedesignEnabled` (env `PROFILE_REDESIGN_ENABLED`, default `true`). Bio contributes +10% completion bonus; empty bio shows a dashed CTA to edit. Share-card generation lives in `src/pages/profile/profilePoster.ts` and `src/pages/profile/useProfileShareCard.ts`.
 
 ---
 
@@ -46,12 +48,12 @@ src/
 │   ├── index/           # Landing / splash page (cold entry). Renders `AutoLoginBridge` silent re-auth; unified redirect effect routes authenticated users → `nextStep` and guests with incomplete anonymous assessment → personality test. Continue-mode CTA shows context-aware labels (`进入发现页` / `继续完善档案` / `继续完成测试`). Returning authenticated users with `nextStep='discover'` route to the Discover tab. `useResetOnShow` clears the navigation loading state on swipe-back/foreground so the CTA never stays stuck on the ellipsis spinner. 5s navigation safety timeout prevents stuck CTA on subpackage download hang.
 │   ├── login/           # WeChat login entry for returning users
 │   ├── onboarding/      # Subpackage: onboarding flow
-│   ├── pool-registration/  # Subpackage: pool sign-up flow (assets live here)
+│   ├── pool-registration/  # Subpackage: pool sign-up flow (success uses CDN ceremony hero)
 │   ├── blind-box-payment/
 │   ├── payment-verification/
 │   ├── event-detail/
 │   ├── event-feedback/
-│   ├── pool-registration/
+│   ├── event-ticket-payment/
 │   ├── matching-status/
 │   ├── squad-unboxing/
 │   ├── pool-group-detail/
@@ -178,7 +180,7 @@ Assets are **CDN-first** in production, with a curated set of critical assets bu
 - `src/assets/lovart/icebreaker/icons/icon-coin-*.png` → `dist/assets/auction-icons/` (~28KB)
 
 *Lovart ceremony & milestone heroes (Batch C + D, 2026-06-04 → moved to CDN 2026-06-16):*
-- `src/assets/ceremony/*.webp` (8 files, ~285KB total, q=55, 600px) are uploaded to CDN; not copied to `dist`.
+- `src/assets/ceremony/*.webp` (14 files: Batch C 8 + v0.1 gap-fill 6, ~363KB total, q=55, 600px) are uploaded to CDN; not copied to `dist`.
 - `src/assets/badges/*.webp` (9 files, ~300KB total, q=55, 600px) are uploaded to CDN; not copied to `dist`.
 - Registries in `src/lib/ceremonyHeroes.ts` + `src/lib/milestoneBadges.ts` use `cdnAsset()` (NOT `localAsset()`).
 - PNG masters live in `assets-source/lovart/batch-{c,d}/` and are NOT bundled.
@@ -277,7 +279,7 @@ The shipped mini-program tab bar is the **native WeChat component** copied from 
 1. **Tab pages** (`discover`, `events`, `connections`, `profile`, `center-hub`) live in the **main package**.
 2. **Heavy non-tab flows** are in subpackages:
    - `pages/onboarding` — personality test, profile forms, review.
-   - `pages/pool-registration` — pool sign-up and pool-specific hero backdrops.
+   - `pages/pool-registration` — pool sign-up (free registration success uses CDN ceremony hero).
    - `pages/matching-status` — match waiting / reveal.
    - `pages/icebreaker-session` — in-event social icebreaker.
 3. **Preload rules** are declared from likely entry pages (`index`, `login`, `event-detail`, `events`) before reaching for independent subpackages.

@@ -1,7 +1,7 @@
 # JoyJoin Developer Quick Reference Guide
 
 **Version:** 2.3
-**Last Updated:** 2026-06-08
+**Last Updated:** 2026-06-16
 **For:** Tech Team Onboarding & Codebase Navigation
 
 ---
@@ -220,6 +220,7 @@ joyjoin-monorepo/
 | 完成度 audit (completeness + ROI recommendations) | `.github/skills/completeness-audit/SKILL.md` (pipeline: ui-layout-audit → frontend-design-audit → completeness-audit) |
 | Hero promo banner (discover top surface) | `apps/mini-program/src/components/HeroPromoBanner.tsx` — full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles. CTA always wired so it never silently disables; `margin-bottom: 8rpx` prevents boundary clipping. Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`, default `true`). Promo copy must not fabricate social-proof metrics. |
 | Status card (empty/error) | `apps/mini-program/src/components/ui/StatusCard.tsx` — unified status surface with Lovart hero illustration (WebP + PNG fallback), title, description, and optional action. Used on Discover and Events for empty states and on Discover for list-fetch error states. |
+| Profile tab (redesign) | `apps/mini-program/src/pages/profile/index.tsx` — social-passport hero with age/city/bio chips, stat cards, milestone badges, menu grid, profile-card share, and one-time 100% completion ceremony. Consumes `GET /api/shell/profile` via `getProfileShell()` with offline-first React Query config and cached-shell fallback; `PrefetchEngine` warms Events/Connections shells after data stabilizes. Feature-flagged by `user.features.profileRedesignEnabled` (env `PROFILE_REDESIGN_ENABLED`, default `true`). Bio adds +10% completion bonus; `PATCH /api/profile` persists the optional 100-character bio. |
 
 ```bash
 npm run dev:weapp --workspace=mini-program
@@ -321,8 +322,9 @@ interface UseAuthResult {
     onboardingForceSkip?: boolean;     // Admin force-skip button on onboarding
     matchingLiveReveal?: boolean;      // Live reveal overlay on matching status
     socialIcebreakerClientForceEnd?: boolean; // Host emergency end button
-    personalityShareEnabled?: boolean; // Share poster generation on results page
+    personalityShareEnabled?: boolean; // Share poster generation on results page and profile-card share
     personalitySlotAnimationEnabled?: boolean; // Slot machine reveal animation
+    profileRedesignEnabled?: boolean; // Profile tab redesign (social-passport hero, milestones, share card)
   }; // Feature flags from server (DB-backed, resolved in parallel, see lib/featureFlags.ts)
 }
 ```

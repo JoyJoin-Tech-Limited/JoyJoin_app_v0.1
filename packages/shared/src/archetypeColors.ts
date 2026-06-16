@@ -49,6 +49,9 @@ export const ARCHETYPE_COLORS: Record<string, ArchetypeHSL> = {
 /** Default primary accent (purple) when no archetype is determined. */
 export const DEFAULT_ACCENT: ArchetypeHSL = { h: 280, s: 45, l: 55 }
 
+/** Hex equivalent of the SCSS `$color-primary` token for runtime APIs (e.g. Taro.showModal). */
+export const BRAND_PRIMARY_HEX = '#8B5CF6' as const
+
 /** Minimum confidence threshold for applying archetype color. */
 export const MIN_CONFIDENCE_THRESHOLD = 0.35
 

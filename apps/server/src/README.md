@@ -176,7 +176,7 @@ Primary files:
 - `apps/server/src/routes/domains/analytics.ts` — mounts `POST /api/analytics/profile` and `POST /api/analytics/payment`
 
 Key endpoints:
-- `POST /api/analytics/profile` — Profile tab interaction events (`profile_stat_tap`, `profile_archetype_cta_tap`, `profile_menu_tap`, `profile_logout_tap`, `profile_shell_retry`). Validates against an allowed-event whitelist, rate-limited at 120 req/min, stored in `discoverAnalyticsEvents`.
+- `POST /api/analytics/profile` — Profile tab interaction events (`profile_stat_tap`, `profile_archetype_cta_tap`, `profile_menu_tap`, `profile_logout_tap`, `profile_logout_cancel`, `profile_shell_retry`, `profile_share_app_message`, `profile_share_timeline`, `profile_milestone_impression`, `profile_milestone_tap`, `profile_pull_refresh`, `profile_share_card_generated`, `profile_share_card_error`, `profile_view`). Validates against an allowed-event whitelist, rate-limited at 120 req/min, stored in `discoverAnalyticsEvents`.
 - `POST /api/analytics/payment` — Payment Ritual V2 funnel events; stored in `paymentRitualEvents`.
 
 ### Repository and facade boundaries

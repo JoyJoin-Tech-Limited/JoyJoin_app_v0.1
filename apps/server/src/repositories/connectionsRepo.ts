@@ -10,6 +10,7 @@
 import { and, eq, or, desc, sql } from "drizzle-orm";
 import { db } from "../db";
 import { connections, users, events } from "@shared/schema";
+import { formatAgeRangeBand } from "@shared/utils";
 
 export interface ConnectionSummary {
   id: string;
@@ -17,6 +18,9 @@ export interface ConnectionSummary {
   peerArchetype: string | null;
   eventTitle: string | null;
   wechatId: string | null;
+  peerCity: string | null;
+  peerBio: string | null;
+  peerAgeRange: string | null;
 }
 
 export interface PendingRequestSummary {
@@ -53,6 +57,10 @@ export async function getUserConnections(userId: string): Promise<ConnectionSumm
       `,
       peerName: users.displayName,
       peerArchetype: users.archetype,
+      peerCity: users.currentCity,
+      peerBio: users.bio,
+      peerBirthdate: users.birthdate,
+      peerAgeVisibility: users.ageVisibility,
       eventTitle: events.title,
     })
     .from(connections)
@@ -83,6 +91,11 @@ export async function getUserConnections(userId: string): Promise<ConnectionSumm
     peerArchetype: row.peerArchetype ?? null,
     eventTitle: row.eventTitle ?? null,
     wechatId: row.peerWechatId ?? null,
+    peerCity: row.peerCity ?? null,
+    // Bio is only returned for mutual (post-event) connection-card viewers.
+    peerBio: row.peerBio ?? null,
+    // Align with schema default `show_age_range` while keeping privacy-first fallback.
+    peerAgeRange: formatAgeRangeBand(row.peerBirthdate, row.peerAgeVisibility ?? "show_age_range"),
   }));
 }
 

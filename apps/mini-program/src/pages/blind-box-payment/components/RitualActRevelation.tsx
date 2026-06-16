@@ -1,8 +1,9 @@
-import { View, Text } from '@tarojs/components'
+import { View, Text, Image } from '@tarojs/components'
 import { memo, useEffect, useState } from 'react'
 import type { ArchetypeTheme } from '../lib/paymentRitualState'
 import { getActIICopy, getArchetypeValueProposition } from '../lib/paymentRitualCopy'
 import { trackAct2Reveal, trackArchetypeShown } from '../lib/paymentRitualAnalytics'
+import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
 
 interface Props {
   archetype: string | null
@@ -54,6 +55,12 @@ function RitualActRevelation({
       className={`ritual-act-revelation ${visible ? 'ritual-act-revelation--visible' : ''}`}
       style={{ background: theme.accentSoft }}
     >
+      <Image
+        className='ritual-act-revelation__backdrop'
+        src={CEREMONY_HEROES.blindBoxReveal}
+        mode='aspectFill'
+        ariaLabel='盲盒揭晓'
+      />
       {/* Archetype Hero Banner */}
       <View className='ritual-act-revelation__hero'>
         {/* Ritual: "The Reveal" */}

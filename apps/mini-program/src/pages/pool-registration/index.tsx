@@ -32,6 +32,7 @@ import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { usePreloadIntentIcons } from '../../hooks/usePreloadIntentIcons'
 import { TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
+import { CEREMONY_HEROES } from '../../lib/ceremonyHeroes'
 import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscribeMessage'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import ChemistryMiniGrid from '../../components/discover/ChemistryMiniGrid'
@@ -834,10 +835,10 @@ export default function PoolRegistrationPage() {
       <View className='pool-reg'>
         <Card className='pool-reg__success'>
           <Image
-            className='pool-reg__success-mascot'
+            className='pool-reg__success-hero'
             mode='aspectFit'
-            src={getXiaoyueExpressionAsset('matchSuccess')}
-            ariaLabel='匹配成功'
+            src={CEREMONY_HEROES.poolRegistrationSuccess}
+            ariaLabel='已加入活动池'
           />
           <Text className='pool-reg__success-title'>已加入这场{eventType}</Text>
           <Text className='pool-reg__success-text'>

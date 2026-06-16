@@ -10,6 +10,7 @@ function mapVenueRowToCamelCase(row: any): any {
   return {
     id: row.id,
     name: row.name,
+    brandName: row.brand_name,
     type: row.venue_type,
     address: row.address,
     city: row.city,
@@ -153,7 +154,7 @@ export const venuesRepo: VenuesRepository = {
   async createVenue(data: any): Promise<any> {
     const result = await db.execute(sql`
       INSERT INTO venues (
-        name, venue_type, address, city, area,
+        name, brand_name, venue_type, address, city, area,
         district_id, cluster_id,
         contact_person, contact_phone, commission_rate, tags, cuisines, 
         price_range, budget_categories, decor_style, taste_intensity, capacity, seating_capacity,
@@ -163,7 +164,7 @@ export const venuesRepo: VenuesRepository = {
         bank_account_info, contract_start_date, contract_end_date
       )
       VALUES (
-        ${data.name}, ${data.type}, ${data.address}, ${data.city}, ${data.district},
+        ${data.name}, ${data.brandName || null}, ${data.type}, ${data.address}, ${data.city}, ${data.district},
         ${data.districtId || null}, ${data.clusterId || null},
         ${data.contactName || null}, ${data.contactPhone || null}, ${data.commissionRate || 20},
         ${data.tags || []}, ${data.cuisines || []}, ${data.priceRange || null},
@@ -187,6 +188,10 @@ export const venuesRepo: VenuesRepository = {
     if (updates.name !== undefined) {
       setClauses.push(`name = $${values.length + 1}`);
       values.push(updates.name);
+    }
+    if (updates.brandName !== undefined) {
+      setClauses.push(`brand_name = $${values.length + 1}`);
+      values.push(updates.brandName);
     }
     if (updates.type !== undefined) {
       setClauses.push(`venue_type = $${values.length + 1}`);
@@ -512,7 +517,7 @@ export const venuesRepo: VenuesRepository = {
 
   async getEventVenueBooking(eventId: string): Promise<any | undefined> {
     const result = await db.execute(sql`
-      SELECT vb.*, v.name as venue_name, v.address, v.city, v.district
+      SELECT vb.*, COALESCE(v.brand_name, v.name) as venue_name, v.address, v.city, v.district
       FROM venue_bookings vb
       LEFT JOIN venues v ON vb.venue_id = v.id
       WHERE vb.event_id = ${eventId}
@@ -622,7 +627,7 @@ export const venuesRepo: VenuesRepository = {
     const result = await db.execute(sql`
       SELECT 
         vts.*,
-        v.name as venue_name,
+        COALESCE(v.brand_name, v.name) as venue_name,
         v.city as venue_city,
         v.district as venue_district
       FROM venue_time_slots vts

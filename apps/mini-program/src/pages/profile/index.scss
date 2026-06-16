@@ -1,26 +1,55 @@
 @use '../../styles/variables' as *;
+@use '../../styles/dark-variables' as *;
 @use '../../styles/mixins' as *;
 
 .profile-page {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
-  background: $color-bg-gradient;
+  @include viewport-min-height;
   overflow: hidden;
+
+  // Themeable color surface for light / dark mode support.
+  --profile-bg: #{$color-bg-gradient};
+  --profile-surface: #{$color-surface};
+  --profile-text-primary: #{$color-text-primary};
+  --profile-text-secondary: #{$color-text-secondary};
+  --profile-text-tertiary: #{$color-text-tertiary};
+  --profile-text-link: #{$color-text-link};
+  --profile-text-white: #{$color-text-white};
+  --profile-primary: #{$color-primary};
+  --profile-primary-04: #{rgba($color-primary, 0.04)};
+  --profile-primary-06: #{rgba($color-primary, 0.06)};
+  --profile-primary-08: #{rgba($color-primary, 0.08)};
+  --profile-primary-14: #{rgba($color-primary, 0.14)};
+  --profile-primary-16: #{rgba($color-primary, 0.16)};
+  --profile-primary-35: #{rgba($color-primary, 0.35)};
+  --profile-text-primary-06: #{rgba($color-text-primary, 0.06)};
+  --profile-text-primary-08: #{rgba($color-text-primary, 0.08)};
+  --profile-text-secondary-04: #{rgba($color-text-secondary, 0.04)};
+  --profile-text-secondary-08: #{rgba($color-text-secondary, 0.08)};
+  --profile-text-secondary-10: #{rgba($color-text-secondary, 0.10)};
+  --profile-text-secondary-12: #{rgba($color-text-secondary, 0.12)};
+  --profile-text-tertiary-12: #{rgba($color-text-tertiary, 0.12)};
+  --profile-divider: #{$color-divider};
+  --profile-success: #{$color-success};
+  --profile-success-10: #{rgba($color-success, 0.10)};
+  --profile-brand-gradient: #{$brand-gradient};
+
+  background: var(--profile-bg);
 
   &__scroll {
     flex: 1;
-    overflow-y: auto;
+    min-height: 0;
   }
 
   &__loading {
     @include flex-center;
-    min-height: 100dvh;
+    @include viewport-min-height;
   }
 
   &__loading-text {
     @include type-body;
-    color: $color-text-secondary;
+    color: var(--profile-text-secondary);
   }
 
   // Hero
@@ -28,8 +57,12 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: calc(#{$spacing-2xl} + env(safe-area-inset-top)) $container-padding $spacing-lg;
     text-align: center;
+    @include safe-area-top(padding-top, $spacing-lg + $spacing-xs);
+    padding-right: $container-padding;
+    padding-bottom: $spacing-lg;
+    padding-left: $container-padding;
+    gap: $spacing-sm;
     opacity: 0;
     transform: translateY(16rpx);
     transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
@@ -45,58 +78,76 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: $spacing-2xl $container-padding $spacing-lg;
-    gap: $spacing-md;
+    gap: $spacing-sm;
+    @include safe-area-top(padding-top, $spacing-lg + $spacing-xs);
+    padding-right: $container-padding;
+    padding-bottom: $spacing-lg;
+    padding-left: $container-padding;
   }
 
   &__avatar-skeleton {
     width: 136rpx;
     height: 136rpx;
     border-radius: 50%;
-    background: rgba($color-primary, 0.08);
+    background: var(--profile-primary-08);
   }
 
   &__name-skeleton {
     width: 160rpx;
-    height: 44rpx;
+    height: 36rpx;
     border-radius: $radius-pill;
-    background: rgba($color-text-primary, 0.06);
+    background: var(--profile-text-primary-06);
   }
 
   &__pill-skeleton {
     width: 200rpx;
-    height: 44rpx;
+    height: 36rpx;
     border-radius: $radius-pill;
-    background: rgba($color-primary, 0.08);
+    background: var(--profile-primary-08);
   }
 
   &__avatar-ring {
     width: 136rpx;
     height: 136rpx;
     border-radius: 50%;
-    padding: 8rpx;
-    background: $brand-gradient;
-    box-shadow: 0 8rpx 32rpx rgba($color-primary, 0.22);
-    margin-bottom: $spacing-md;
+    background: var(--profile-surface);
+    border: 2rpx solid var(--profile-primary-35);
+    padding: 0;
+    box-sizing: border-box;
+    @include flex-center;
+    overflow: hidden;
   }
 
   &__avatar-head {
     border-radius: 50%;
-    background: $color-surface;
+    background: var(--profile-surface);
   }
 
   &__hero--entered &__avatar-head {
-    animation: avatar-spring 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    animation: avatar-spring 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   &__name {
-    @include type-heading;
-    font-size: $font-size-xl;
+    font-size: $font-size-lg;
     font-family: $font-cn-display;
-    line-height: $line-height-tight;
-    margin-bottom: $spacing-sm;
+    font-weight: $font-weight-bold;
+    line-height: $line-height-normal;
+    color: var(--profile-text-primary);
     display: block;
-    max-width: 70vw;
+    max-width: 520rpx;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__subtitle {
+    font-size: $font-size-sm;
+    font-family: $font-ui;
+    font-weight: $font-weight-medium;
+    line-height: $line-height-normal;
+    color: var(--profile-text-secondary);
+    display: block;
+    max-width: 520rpx;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -105,48 +156,107 @@
   &__archetype-pill {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: $spacing-xs;
-    min-height: 64rpx;
-    padding: $spacing-xs $spacing-sm;
+    min-height: $cta-min-tap;
+    padding: $spacing-xs $spacing-md;
     border-radius: $radius-pill;
-    margin-bottom: $spacing-md;
-    background: $brand-gradient;
+    background: var(--profile-brand-gradient);
     box-shadow: $shadow-sm;
     transition: transform 0.12s ease, opacity 0.12s ease;
+    box-sizing: border-box;
 
-    &:active {
-      transform: scale(0.98);
+    &--pressed {
+      transform: scale(0.97);
       opacity: 0.92;
     }
   }
 
   &__archetype-pill-text {
     font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-text-white;
+    font-family: $font-ui;
+    font-weight: $font-weight-medium;
+    color: var(--profile-text-white);
+    line-height: $line-height-normal;
   }
 
   &__unlock-pill {
     display: inline-flex;
     align-items: center;
-    min-height: 88rpx;
+    min-height: $cta-min-tap;
     padding: $spacing-xs $spacing-md;
     border-radius: $radius-pill;
-    background: rgba($color-primary, 0.08);
-    border: 2rpx solid rgba($color-primary, 0.16);
-    margin-bottom: $spacing-md;
+    background: var(--profile-primary-08);
+    border: 2rpx solid var(--profile-primary-16);
     transition: background 0.12s ease, transform 0.12s ease;
+    box-sizing: border-box;
 
-    &:active {
-      background: rgba($color-primary, 0.14);
-      transform: scale(0.98);
+    &--pressed {
+      background: var(--profile-primary-14);
+      transform: scale(0.97);
     }
   }
 
   &__unlock-pill-text {
     font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-primary;
+    font-family: $font-ui;
+    font-weight: $font-weight-medium;
+    color: var(--profile-primary);
+    line-height: $line-height-normal;
+  }
+
+  // Bio line / empty-state CTA
+  &__bio-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: $spacing-sm;
+    max-width: 560rpx;
+  }
+
+  &__bio-text {
+    font-size: $font-size-sm;
+    font-family: $font-ui;
+    color: var(--profile-text-secondary);
+    line-height: $line-height-relaxed;
+    text-align: center;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__bio-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-height: $cta-min-tap;
+    padding: $spacing-xs $spacing-sm;
+    background: var(--profile-surface);
+    border: 2rpx dashed var(--profile-primary-35);
+    border-radius: $card-radius-sm;
+    transition: transform 0.12s ease, opacity 0.12s ease;
+    box-sizing: border-box;
+
+    &--pressed {
+      transform: scale(0.98);
+      opacity: 0.9;
+      background: var(--profile-primary-04);
+    }
+  }
+
+  &__bio-cta-text {
+    font-size: $font-size-sm;
+    font-family: $font-ui;
+    font-weight: $font-weight-medium;
+    color: var(--profile-primary);
+    line-height: $line-height-normal;
+  }
+
+  &__bio-cta-chevron {
+    width: 12rpx;
+    height: 12rpx;
+    border-top: 2rpx solid var(--profile-primary);
+    border-right: 2rpx solid var(--profile-primary);
+    transform: rotate(45deg);
+    flex-shrink: 0;
   }
 
   // Xiaoyue greeting
@@ -154,7 +264,7 @@
     display: flex;
     align-items: center;
     gap: $spacing-sm;
-    margin-top: $spacing-xs;
+    margin-top: $spacing-sm;
   }
 
   &__greeting-mascot {
@@ -166,7 +276,7 @@
   &__greeting-bubble {
     position: relative;
     padding: $spacing-xs $spacing-sm;
-    background: $color-surface;
+    background: var(--profile-surface);
     border-radius: $card-radius-sm;
     border-bottom-left-radius: $spacing-xs;
     box-shadow: $shadow-sm;
@@ -179,18 +289,19 @@
   }
 
   &__greeting-text {
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: $line-height-normal;
-    max-width: 60vw;
+    font-size: $font-size-base;
+    font-family: $font-ui;
+    color: var(--profile-text-secondary);
+    line-height: $line-height-relaxed;
+    max-width: 416rpx;
     word-break: keep-all;
-    overflow-wrap: normal;
+    overflow-wrap: break-word;
   }
 
   // Stats row
   &__stats {
     display: flex;
-    gap: $spacing-md;
+    gap: $spacing-sm;
     padding: 0 $container-padding;
     margin-bottom: $spacing-lg;
     opacity: 0;
@@ -205,14 +316,17 @@
   }
 
   &__stat {
+    position: relative;
     flex: 1;
     min-width: 0;
+    min-height: 144rpx;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: $spacing-xs;
     padding: $spacing-md $spacing-sm;
-    background: $color-surface;
+    background: var(--profile-surface);
     border-radius: $card-radius-sm;
     box-shadow: $shadow-card;
     transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
@@ -220,7 +334,11 @@
 
     &--pressed {
       transform: scale(0.97);
-      background: rgba($color-primary, 0.04);
+      background: var(--profile-primary-04);
+    }
+
+    .profile-page__stats--entered &--pressed {
+      transform: scale(0.97);
     }
 
     &--skeleton {
@@ -228,31 +346,32 @@
     }
   }
 
-  &__stat-icon-skeleton {
-    width: 44rpx;
-    height: 44rpx;
-    border-radius: 50%;
-    background: rgba($color-text-primary, 0.06);
-  }
-
   &__stat-value-skeleton {
-    width: 48rpx;
-    height: 40rpx;
+    width: 56rpx;
+    height: 48rpx;
     border-radius: $radius-pill;
-    background: rgba($color-text-primary, 0.08);
+    background: var(--profile-text-primary-08);
   }
 
   &__stat-label-skeleton {
-    width: 80rpx;
-    height: 24rpx;
+    width: 96rpx;
+    height: 22rpx;
     border-radius: $radius-pill;
-    background: rgba($color-text-secondary, 0.1);
+    background: var(--profile-text-secondary-10);
+  }
+
+  &__stat-progress-skeleton {
+    width: 80%;
+    height: 6rpx;
+    border-radius: 3rpx;
+    background: var(--profile-primary-08);
+    margin-top: $spacing-xs;
   }
 
   &__stat-progress {
-    width: 100%;
+    width: 80%;
     height: 6rpx;
-    background: rgba($color-primary, 0.08);
+    background: var(--profile-primary-08);
     border-radius: 3rpx;
     margin-top: $spacing-xs;
     overflow: hidden;
@@ -262,30 +381,100 @@
     height: 100%;
     width: 100%;
     border-radius: 3rpx;
-    background: $color-primary;
+    background: var(--profile-primary);
     transform: scaleX(0);
     transform-origin: left center;
     transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
+  &__completion-seal {
+    position: absolute;
+    top: -8rpx;
+    right: -8rpx;
+    width: 40rpx;
+    height: 40rpx;
+    border-radius: 50%;
+    background: var(--profile-success);
+    box-shadow: $shadow-sm;
+    @include flex-center;
+    opacity: 0;
+    transform: scale(0.5);
+    animation: completion-seal-pop 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  &__completion-seal-check {
+    width: 16rpx;
+    height: 9rpx;
+    border-left: 3rpx solid var(--profile-text-white);
+    border-bottom: 3rpx solid var(--profile-text-white);
+    transform: rotate(-45deg) translateY(-2rpx);
+  }
+
   &__stat-icon {
-    width: 44rpx;
-    height: 44rpx;
-    opacity: 0.9;
+    width: 32rpx;
+    height: 32rpx;
+    flex-shrink: 0;
+    opacity: 0.7;
   }
 
   &__stat-value {
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
+    font-size: $font-size-xl;
     font-family: $font-en-brand;
-    color: $color-text-primary;
-    line-height: $line-height-tight;
+    font-weight: $font-weight-bold;
+    color: var(--profile-text-primary);
+    line-height: $line-height-normal;
   }
 
   &__stat-label {
     font-size: $font-size-xs;
-    color: $color-text-secondary;
+    font-family: $font-ui;
+    font-weight: $font-weight-normal;
+    color: var(--profile-text-secondary);
     line-height: $line-height-normal;
+  }
+
+  &__stat-caption {
+    font-size: $font-size-2xs;
+    font-family: $font-ui;
+    font-weight: $font-weight-medium;
+    color: var(--profile-text-link);
+    line-height: $line-height-normal;
+  }
+
+  &__chevron {
+    width: 12rpx;
+    height: 12rpx;
+    border-top: 2rpx solid var(--profile-text-tertiary);
+    border-right: 2rpx solid var(--profile-text-tertiary);
+    transform: rotate(45deg);
+    opacity: 0.55;
+    flex-shrink: 0;
+
+    &--stat {
+      position: absolute;
+      right: $spacing-sm;
+      bottom: $spacing-sm;
+    }
+
+    &--menu {
+      margin-left: $spacing-xs;
+    }
+
+    &--skeleton {
+      border-color: var(--profile-text-tertiary-12);
+      opacity: 1;
+    }
+  }
+
+  &__stat-chevron {
+    position: absolute;
+    right: $spacing-sm;
+    bottom: $spacing-sm;
+    font-size: $font-size-sm;
+    font-family: $font-ui;
+    color: var(--profile-text-tertiary);
+    line-height: 1;
+    opacity: 0.6;
   }
 
   // Milestones
@@ -296,9 +485,10 @@
 
   &__milestones-title {
     display: block;
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
+    font-size: $font-size-base;
+    font-family: $font-ui;
+    font-weight: $font-weight-semibold;
+    color: var(--profile-text-secondary);
     margin-bottom: $spacing-sm;
   }
 
@@ -319,7 +509,15 @@
 
     &--pressed {
       transform: scale(0.97);
-      background: rgba($color-primary, 0.06);
+      background: var(--profile-primary-06);
+    }
+
+    &--locked {
+      background: var(--profile-text-secondary-04);
+    }
+
+    &--celebrating {
+      animation: milestone-celebrate 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
   }
 
@@ -331,8 +529,31 @@
 
   &__milestone-label {
     font-size: $font-size-sm;
+    font-family: $font-ui;
     font-weight: $font-weight-semibold;
-    color: $color-text-primary;
+    color: var(--profile-text-primary);
+    word-break: keep-all;
+    overflow-wrap: normal;
+  }
+
+  &__milestone-lock-icon {
+    width: 80rpx;
+    height: 80rpx;
+    flex-shrink: 0;
+    opacity: 0.45;
+  }
+
+  &__milestone--locked &__milestone-img {
+    filter: grayscale(100%);
+    opacity: 0.55;
+  }
+
+  &__milestone-sublabel {
+    font-size: $font-size-2xs;
+    font-family: $font-ui;
+    font-weight: $font-weight-medium;
+    color: var(--profile-text-secondary);
+    line-height: $line-height-normal;
     word-break: keep-all;
     overflow-wrap: normal;
   }
@@ -341,11 +562,44 @@
     animation: milestone-pulse 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 
-  // Menu grid
-  &__menu {
+  &__milestones--seen &__milestone {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  // Day-0 warm nudge
+  &__empty-nudge {
     display: flex;
-    flex-wrap: wrap;
-    gap: $spacing-md;
+    align-items: center;
+    gap: $spacing-sm;
+    margin: 0 $container-padding $spacing-lg;
+  }
+
+  &__empty-nudge-mascot {
+    width: 64rpx;
+    height: 64rpx;
+    flex-shrink: 0;
+  }
+
+  &__empty-nudge-bubble {
+    position: relative;
+    padding: $spacing-xs $spacing-sm;
+    background: var(--profile-surface);
+    border-radius: $card-radius-sm;
+    border-bottom-left-radius: $spacing-xs;
+    box-shadow: $shadow-sm;
+  }
+
+  &__empty-nudge-text {
+    font-size: $font-size-sm;
+    font-family: $font-ui;
+    color: var(--profile-text-secondary);
+    line-height: $line-height-relaxed;
+  }
+
+  // Menu section
+  &__menu-section {
     padding: 0 $container-padding;
     margin-bottom: $spacing-lg;
     opacity: 0;
@@ -359,33 +613,81 @@
     }
   }
 
-  &__menu-item {
-    width: calc(50% - #{$spacing-md / 2});
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-sm;
-    padding: $spacing-md;
-    background: $color-surface;
-    border-radius: $card-radius-sm;
+  &__menu-title {
+    display: block;
+    font-size: $font-size-base;
+    font-family: $font-ui;
+    font-weight: $font-weight-semibold;
+    color: var(--profile-text-secondary);
+    margin-bottom: $spacing-sm;
+  }
+
+  &__menu {
+    background: var(--profile-surface);
+    border-radius: $card-radius;
     box-shadow: $shadow-card;
-    transition: transform 0.12s ease, background 0.12s ease;
+    overflow: hidden;
+  }
+
+  &__menu-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    height: $button-height;
+    min-height: $cta-min-tap;
+    padding: 0 $spacing-md;
+    border-bottom: 1rpx solid var(--profile-divider);
+    opacity: 0;
+    transform: translateY(12rpx);
+    transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+
+    &:last-child {
+      border-bottom: none;
+    }
 
     &--pressed {
-      transform: scale(0.98);
-      background: rgba($color-primary, 0.04);
+      background: var(--profile-primary-04);
     }
   }
 
-  &__menu-item-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
+  &__menu-section--entered &__menu-row {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  &__menu-icon-well {
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: 50%;
+    background: var(--profile-primary-06);
+    @include flex-center;
+    flex-shrink: 0;
   }
 
   &__menu-icon {
-    width: 44rpx;
-    height: 44rpx;
+    width: $icon-slot-md;
+    height: $icon-slot-md;
+    flex-shrink: 0;
     opacity: 0.9;
+  }
+
+  &__menu-label {
+    flex: 1;
+    font-size: $font-size-base;
+    font-family: $font-ui;
+    font-weight: $font-weight-medium;
+    color: var(--profile-text-primary);
+    line-height: $line-height-normal;
+    word-break: keep-all;
+    overflow-wrap: normal;
+  }
+
+  &__menu-row-right {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    flex-shrink: 0;
   }
 
   &__menu-badge {
@@ -395,37 +697,74 @@
     min-width: 36rpx;
     height: 36rpx;
     padding: 0 $spacing-xs;
-    background: $color-primary;
+    background: var(--profile-primary);
     border-radius: $radius-pill;
   }
 
   &__menu-badge-text {
     font-size: $font-size-2xs;
-    color: $color-text-white;
+    font-family: $font-ui;
+    color: var(--profile-text-white);
     font-weight: $font-weight-bold;
   }
 
-  &__menu-label {
+  &__menu-chevron {
     font-size: $font-size-base;
-    font-weight: $font-weight-medium;
-    color: $color-text-primary;
-    word-break: keep-all;
-    overflow-wrap: normal;
+    font-family: $font-ui;
+    color: var(--profile-text-tertiary);
+    line-height: 1;
+  }
+
+  &__menu-title-skeleton {
+    width: 120rpx;
+    height: 24rpx;
+    border-radius: $radius-pill;
+    background: var(--profile-text-secondary-12);
+    margin-bottom: $spacing-sm;
   }
 
   &__menu-skeleton {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $spacing-md;
-    padding: 0 $container-padding;
-    margin-bottom: $spacing-lg;
+    background: var(--profile-surface);
+    border-radius: $card-radius;
+    box-shadow: $shadow-card;
+    overflow: hidden;
   }
 
-  &__menu-item-skeleton {
-    width: calc(50% - #{$spacing-md / 2});
-    height: 144rpx;
-    border-radius: $card-radius-sm;
-    background: rgba($color-text-primary, 0.04);
+  &__menu-row-skeleton {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    height: $button-height;
+    min-height: $cta-min-tap;
+    padding: 0 $spacing-md;
+    border-bottom: 1rpx solid var(--profile-divider);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__menu-row-icon-skeleton {
+    width: $icon-slot-md;
+    height: $icon-slot-md;
+    border-radius: 50%;
+    background: var(--profile-text-primary-06);
+    flex-shrink: 0;
+  }
+
+  &__menu-row-label-skeleton {
+    flex: 1;
+    height: 28rpx;
+    border-radius: $radius-pill;
+    background: var(--profile-text-primary-06);
+  }
+
+  &__menu-row-chevron-skeleton {
+    width: 16rpx;
+    height: 28rpx;
+    border-radius: $radius-pill;
+    background: var(--profile-text-tertiary-12);
+    flex-shrink: 0;
   }
 
   // Error card
@@ -436,10 +775,28 @@
     gap: $spacing-sm;
     margin: 0 $container-padding $spacing-lg;
     padding: $spacing-lg;
-    background: $color-surface;
+    background: var(--profile-surface);
     border-radius: $card-radius;
     box-shadow: $shadow-card;
     text-align: center;
+  }
+
+  &__refresh-success {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 $container-padding $spacing-lg;
+    padding: $spacing-sm $spacing-md;
+    background: var(--profile-success-10);
+    border-radius: $radius-pill;
+  }
+
+  &__refresh-success-text {
+    font-size: $font-size-sm;
+    font-family: $font-ui;
+    font-weight: $font-weight-medium;
+    color: var(--profile-success);
+    line-height: $line-height-normal;
   }
 
   &__error-mascot {
@@ -449,21 +806,28 @@
 
   &__error-title {
     font-size: $font-size-md;
+    font-family: $font-cn-display;
     font-weight: $font-weight-bold;
-    color: $color-text-primary;
+    color: var(--profile-text-primary);
   }
 
   &__error-subtitle {
     font-size: $font-size-sm;
-    color: $color-text-secondary;
+    font-family: $font-ui;
+    color: var(--profile-text-secondary);
   }
 
   &__error-retry {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: $button-height-sm;
     margin-top: $spacing-xs;
     padding: $spacing-xs $spacing-lg;
-    background: $color-primary;
+    background: var(--profile-primary);
     border-radius: $radius-pill;
     transition: transform 0.12s ease, opacity 0.12s ease;
+    box-sizing: border-box;
 
     &--pressed {
       transform: scale(0.97);
@@ -474,14 +838,14 @@
   &__error-retry-text {
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
-    color: $color-text-white;
+    color: var(--profile-text-white);
   }
 
   // Logout
   &__logout {
     display: flex;
     justify-content: center;
-    padding: $spacing-lg $container-padding;
+    padding: $spacing-md $container-padding;
   }
 
   &__logout-btn {
@@ -489,12 +853,12 @@
     align-items: center;
     justify-content: center;
     padding: $spacing-sm $spacing-lg;
-    min-height: 88rpx;
+    min-height: $cta-min-tap;
     border-radius: $radius-pill;
     transition: background 0.12s ease, transform 0.12s ease, opacity 0.12s ease;
 
     &--pressed {
-      background: rgba($color-text-primary, 0.04);
+      background: #{rgba($color-text-primary, 0.04)};
       transform: scale(0.98);
     }
 
@@ -506,12 +870,13 @@
 
   &__logout-text {
     font-size: $font-size-sm;
-    color: $color-text-muted;
-    line-height: 1.5;
+    font-family: $font-ui;
+    color: var(--profile-text-secondary);
+    line-height: $line-height-normal;
   }
 
   &__spacer {
-    @include safe-area-bottom-padding(padding-bottom, $tab-bar-root-height + $spacing-lg);
+    @include safe-area-bottom-padding(padding-bottom, $tab-bar-root-height + $spacing-md + $spacing-xs);
     height: 0;
   }
 }
@@ -556,10 +921,71 @@
   }
 }
 
+@keyframes milestone-celebrate {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.12);
+  }
+  70% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes completion-seal-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .profile-page {
+    --profile-bg: #{$dark-profile-bg-gradient};
+    --profile-surface: #{$dark-color-surface};
+    --profile-text-primary: #{$dark-color-text-primary};
+    --profile-text-secondary: #{$dark-color-text-secondary};
+    --profile-text-tertiary: #{$dark-color-text-tertiary};
+    --profile-text-link: #{$dark-color-text-link};
+    --profile-text-white: #{$dark-color-text-white};
+    --profile-primary: #{$dark-color-primary};
+    --profile-primary-04: #{rgba($dark-color-primary, 0.04)};
+    --profile-primary-06: #{rgba($dark-color-primary, 0.06)};
+    --profile-primary-08: #{rgba($dark-color-primary, 0.08)};
+    --profile-primary-14: #{rgba($dark-color-primary, 0.14)};
+    --profile-primary-16: #{rgba($dark-color-primary, 0.16)};
+    --profile-primary-35: #{rgba($dark-color-primary, 0.35)};
+    --profile-text-primary-06: #{rgba($dark-color-text-primary, 0.06)};
+    --profile-text-primary-08: #{rgba($dark-color-text-primary, 0.08)};
+    --profile-text-secondary-04: #{rgba($dark-color-text-secondary, 0.04)};
+    --profile-text-secondary-08: #{rgba($dark-color-text-secondary, 0.08)};
+    --profile-text-secondary-10: #{rgba($dark-color-text-secondary, 0.10)};
+    --profile-text-secondary-12: #{rgba($dark-color-text-secondary, 0.12)};
+    --profile-text-tertiary-12: #{rgba($dark-color-text-tertiary, 0.12)};
+    --profile-divider: #{rgba($dark-color-text-primary, 0.08)};
+    --profile-success: #{$dark-color-success};
+    --profile-success-10: #{rgba($dark-color-success, 0.1)};
+    --profile-brand-gradient: #{$brand-gradient};
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .profile-page__hero,
   .profile-page__stats,
-  .profile-page__menu {
+  .profile-page__menu-section,
+  .profile-page__completion-seal {
     opacity: 1;
     transform: none;
     transition: none;
@@ -574,16 +1000,22 @@
   }
 
   .profile-page__stat,
-  .profile-page__menu-item,
-  .profile-page__milestone {
+  .profile-page__menu-row,
+  .profile-page__milestone,
+  .profile-page__milestone--celebrating,
+  .profile-page__menu-section--entered .profile-page__menu-row {
+    opacity: 1;
+    transform: none;
     transition: none;
+    animation: none;
   }
 }
 
 .profile-page--degradation {
   .profile-page__hero,
   .profile-page__stats,
-  .profile-page__menu {
+  .profile-page__menu-section,
+  .profile-page__completion-seal {
     opacity: 1;
     transform: none;
     transition: none;
@@ -598,8 +1030,27 @@
   }
 
   .profile-page__stat,
-  .profile-page__menu-item,
-  .profile-page__milestone {
+  .profile-page__menu-row,
+  .profile-page__milestone,
+  .profile-page__milestone--celebrating,
+  .profile-page__menu-section--entered .profile-page__menu-row {
+    opacity: 1;
+    transform: none;
     transition: none;
+    animation: none;
   }
+}
+
+
+// Off-screen canvas for social-card poster generation.
+// WeChat requires the canvas element to exist in the DOM; keeping it
+// positioned off-screen avoids layout impact while allowing canvasToTempFilePath.
+.profile-page__poster-canvas {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }

@@ -457,6 +457,12 @@ export function registerProfileRoutes(app: Express): void {
 
       const profileData: Record<string, any> = { ...result.data };
 
+      // Bio normalization: empty/whitespace input clears the bio (stored as null)
+      if ('bio' in profileData) {
+        const trimmed = typeof profileData.bio === 'string' ? profileData.bio.trim() : '';
+        profileData.bio = trimmed.length > 0 ? trimmed : null;
+      }
+
       // ✅ Age validation (Phase 0: Fix #8) - JoyJoin is 18+ only
       if (profileData.birthdate) {
         const birthDate = new Date(profileData.birthdate);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { View, Text, ScrollView } from '@tarojs/components'
+import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { registerForPoolWithPayment, getEventPool } from '@shared/api'
@@ -20,6 +20,8 @@ import {
 import type { MiniProgramPoolRegistrationReturnContext } from '../../lib/payment/paymentPendingOrder'
 import { evictPersistedQuery } from '../../lib/api/persistentCache'
 import { POOLS_QUERY_KEY, JOINED_EVENTS_QUERY_KEY } from '../../lib/prefetchEngine'
+import { CEREMONY_HEROES } from '../../lib/ceremonyHeroes'
+import './index.scss'
 
 const TOAST_DURATION = 2000
 
@@ -323,9 +325,12 @@ export default function EventTicketPaymentPage() {
   if (payment.status === 'success') {
     return (
       <View className='ticket-success' role='status' aria-live='polite'>
-        <View className='ticket-success__checkmark'>
-          <Text>✓</Text>
-        </View>
+        <Image
+          className='ticket-success__hero'
+          src={CEREMONY_HEROES.eventTicketSuccess}
+          mode='aspectFit'
+          ariaLabel='报名成功'
+        />
         <Text className='ticket-success__title'>报名成功！</Text>
         <Text className='ticket-success__subtitle'>你已成功报名 {pool.title}</Text>
         <View className='ticket-success__cta' hoverClass='ticket-success__cta--pressed' onClick={handleBackToEvents}>
@@ -339,9 +344,12 @@ export default function EventTicketPaymentPage() {
   if (payment.status === 'verifying') {
     return (
       <View className='ticket-verifying' role='status' aria-live='polite' aria-busy='true'>
-        <View className='ticket-verifying__mascot'>
-          <View className='ticket-verifying__mascot-inner' />
-        </View>
+        <Image
+          className='ticket-verifying__hero'
+          src={CEREMONY_HEROES.paymentVerifying}
+          mode='aspectFit'
+          ariaLabel='支付确认中'
+        />
         <Text className='ticket-verifying__text'>悦仔正在确认你的支付…</Text>
         <View className='ticket-verifying__dots'>
           <View className='ticket-verifying__dot' />

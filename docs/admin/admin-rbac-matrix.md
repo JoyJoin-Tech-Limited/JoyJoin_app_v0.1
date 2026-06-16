@@ -122,7 +122,7 @@ Reference for which admin portal pages map to which API endpoints and which role
 | `/admin/subscriptions` | List/create/update | GET/POST/PATCH | `/api/admin/subscriptions*` | `requireAdmin` |
 | `/admin/coupons` | Coupon management | GET/POST/PATCH | `/api/admin/coupons*` | `requireAdmin` |
 
-> **API contract:** Venue GET/POST/PATCH responses return camelCase keys (`type`, `isActive`, `onboardingStatus`, `maxConcurrentEvents`, `bookingCount`, etc.) mapped from the underlying PostgreSQL `snake_case` columns by `venuesRepo.ts`. Admin client pages should use `apiRequest` or the default React Query `queryFn` (both check `res.ok`) instead of raw `fetch(...).then(r => r.json())`.
+> **API contract:** Venue GET/POST/PATCH responses return camelCase keys (`type`, `isActive`, `onboardingStatus`, `maxConcurrentEvents`, `bookingCount`, `brandName`, etc.) mapped from the underlying PostgreSQL `snake_case` columns by `venuesRepo.ts`. Admin client pages should use `apiRequest` or the default React Query `queryFn` (both check `res.ok`) instead of raw `fetch(...).then(r => r.json())`.
 
 ---
 

@@ -30,6 +30,8 @@ The canonical venue model lives in `packages/shared/src/schema.ts` (`venues` tab
 
 | Field | Purpose |
 |-------|---------|
+| `name` | Internal identifier / fallback display name |
+| `brandName` | Actual restaurant/bar brand name shown to users and admins |
 | `venueType` | `restaurant`, `bar`, `homebar`, `cafe` |
 | `city` / `area` | Hard location constraints (深圳, 香港 + district) |
 | `cuisines` | Array of cuisine tags for matching |
@@ -69,7 +71,7 @@ Ensure the new value is accepted in the registration/pool form, `venues.budgetCa
 |---------|--------------|-----|
 | Groups matched but no venue assigned | No time slots cover the event datetime; or no budget overlap | Add time slots; check registration budget options |
 | `AmapPicker` shows "地图加载失败" | Missing `AMAP_API_KEY` or `AMAP_SECURITY_KEY` | Set env vars and restart server; verify `/api/config/amap` returns keys |
-| Venue data quality shows duplicate names | Same venue added twice with slight name differences | Merge duplicates; add DB unique constraint if product agrees |
+| Venue data quality shows duplicate names | Same venue added twice with slight name differences | Merge duplicates; prefer `brandName` for user-facing identity; add DB unique constraint if product agrees |
 | `venueMatchingService` returns empty for dining event | `dateTime` crosses midnight (not supported) or no slots available | Split cross-day events; add time slots |
 | Admin can't see venue deals on event page | `partnerStatus` is not `active` or deals are expired | Update `partnerStatus` or deal `validUntil` |
 

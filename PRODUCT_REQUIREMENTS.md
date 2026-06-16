@@ -91,16 +91,24 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Accessibility & performance:** `role="button"`, `aria-pressed`, dynamic `aria-label` per card; `aria-live="polite"` on toasts; `@media (prefers-reduced-motion: reduce)` disables animations; transform-only interactions; timeout-ref cleanup on unmount.
 - **Audit scores:** 情绪价值 24/24, Frontend Design Audit 20/20, Completeness Audit 44/44, Performance Audit PASS (50/60).
 
-**41. Profile / “我的” Social-Passport Redesign + Wow Polish** 🪪 *(2026-06-15)*
+**41. Profile / “我的” Social-Passport Redesign + Wow Polish** 🪪 *(2026-06-16)*
 - **Scope:** Mini-program profile tab (`pages/profile/index`) — the logged-in "我的" surface.
-- **Social-passport hero:** Gradient-ring archetype avatar (`ArchetypeHead`), Xiaoyue greeting bubble, name/archetype/identity chip, share/edit CTAs.
-- **Three stat cards:** `已参加活动`, `我的连接数`, `资料完成度`; count-up animation via new shared `useCountUp` hook; empty-state CTAs (`去遇见`, `活动后解锁`, `去完善`); completion progress bar (40% essential + 30% extended + 30% archetype).
-- **Milestone badges:** `firstEvent` and `streak3` achievements rendered under the hero.
+- **Feature flag:** Gated by `features.profileRedesignEnabled` (DB-backed, env `PROFILE_REDESIGN_ENABLED`, default `true`). When disabled, the page falls back to a simplified legacy-style layout.
+- **Social-passport hero:** Gradient-ring archetype avatar (`ArchetypeHead`), Xiaoyue greeting bubble, name/archetype/identity chip, optional age/city/bio chips, and share/edit CTAs. When `bio` is empty, a dashed CTA invites the user to write a 1–100 character social signature; tapping it fires `profile_edit_tap { field: 'bio', source: 'profile_cta' }`.
+- **Three stat cards:** `已参加活动`, `我的连接数`, `资料完成度`; count-up animation via shared `useCountUp` hook; empty-state CTAs (`去遇见`, `活动后解锁`, `去完善`); archetype-tinted completion progress bar (40% essential + 30% extended + 30% archetype). A non-empty bio contributes a +10% completion bonus (capped at 100%).
+- **100% completion ceremony:** When `资料完成度` first reaches 100%, a one-time confetti-seal celebration plays and `profile_completion { hasBio }` is tracked. The ceremony is gated by `profileRedesignEnabled`, reduced-motion preference, and a client-side storage flag so it fires once per user.
+- **Milestone badges:** `firstEvent` and `streak3` achievements rendered under the hero when the redesign is enabled. Locked badges show the real badge asset in grayscale rather than a generic lock icon; the celebration toasts the highest crossed milestone when multiple thresholds are crossed at once.
 - **Menu grid:** Two-column grid with rewards, invite, entitlements, events, terms, city unlock; 88rpx touch targets; haptics; reduced-motion/degradation fallbacks.
-- **Interactions & wow:** Pull-to-refresh; spring avatar entrance; staggered stats/menu reveal; stat-tap Xiaoyue mascot reaction; logout with busy guard and 401 handling; skeleton + branded error states.
+- **Profile-card share (P1):** A "分享我的社交名片" menu row (gated by `features.personalityShareEnabled` and requiring an archetype) generates a 750×750 profile-card poster with the user's archetype image, name/family/tagline, stat chips, and referral code. Native share hooks (`useShareAppMessage`/`useShareTimeline`) pass the user's `referralCode` as `invitationCode` so shares land on the landing page with attribution.
+- **Connections preview enrichment:** The shared `ProfileArchetypeHero` component is reused on the Connections tab, showing each peer's age range, city, bio, and a mutual-context line (e.g., shared city/archetype/chemistry score). The legacy connection-card fallback remains for edge cases.
+- **Day-0 nudge (P1):** When both joined events and connections are zero, Xiaoyue surfaces a warm day-0 nudge under the stats.
+- **Interactions & wow:** Pull-to-refresh; spring avatar entrance; staggered stats/menu reveal; stat-tap Xiaoyue mascot reaction; logout with busy guard and 401 handling; skeleton + branded error states; text chevrons use bundled SVG instead of raw glyphs.
+- **Offline resilience (P2):** Profile reads its cached `PROFILE_SHELL_QUERY_KEY` before rendering the error card (`profileShell = shell ?? cachedShell`). `useQuery` uses `networkMode: 'offlineFirst'`, exponential `retryDelay`, and an offline-aware `retry` predicate. `Taro.onNetworkStatusChange` auto-refetches when connectivity returns.
+- **Predictive prefetch (P2):** After Profile shell data stabilizes, `PrefetchEngine` warms the Events and Connections shells so adjacent tabs load instantly.
 - **Data contract:** Consumes `GET /api/shell/profile` via `getProfileShell()` from `packages/shared/src/api.ts` with 60s stale time; refetched on `useDidShow`.
-- **Analytics:** `POST /api/analytics/profile` accepts whitelisted profile events (`profile_stat_tap`, `profile_archetype_cta_tap`, `profile_menu_tap`, `profile_logout_tap`, `profile_shell_retry`) stored in `discoverAnalyticsEvents`; rate-limited 120 req/min; client Zod validation in `profileAnalytics.ts`.
-- **Audit scores:** Frontend Design Audit 20/20, Completeness Audit 44/44, Performance Audit PASS, Harness Completion Gate 97/100.
+- **Analytics:** `POST /api/analytics/profile` accepts whitelisted profile events (`profile_stat_tap`, `profile_archetype_cta_tap`, `profile_menu_tap`, `profile_logout_tap`, `profile_shell_retry`, `profile_share_app_message`, `profile_share_timeline`, `profile_milestone_impression`, `profile_milestone_tap`, `profile_pull_refresh`, `profile_share_card_generated`, `profile_share_card_error`, `profile_view`, `profile_edit_tap`, `profile_completion`, `connection_card_view`) stored in `discoverAnalyticsEvents`; rate-limited 120 req/min; client Zod validation in `profileAnalytics.ts`.
+- **Code organization:** Logic extracted into `pages/profile/profileConstants.ts`, `pages/profile/profilePoster.ts`, and `pages/profile/useProfileShareCard.ts`; regression tests in `profileConstants.test.ts`.
+- **Audit scores:** Frontend Design Audit 20/20, Completeness Audit 44/44, Performance Audit PASS (48/60). The Profile page is no longer flagged by the Harness Completion Gate; the repository-wide gate reports CONCERN (85/100) due to pre-existing maintainability issues in unrelated files.
 
 ### 2026 Milestones (May 2026)
 
@@ -1962,7 +1970,8 @@ Process:
 ```sql
 venues
   id UUID PRIMARY KEY
-  name TEXT NOT NULL
+  name TEXT NOT NULL                -- internal identifier / fallback display name
+  brand_name TEXT                   -- actual restaurant/bar brand name shown to users and admins
   venue_type TEXT NOT NULL          -- restaurant | bar | homebar | cafe
   address TEXT NOT NULL
   city TEXT NOT NULL                -- 深圳, 香港
@@ -1999,13 +2008,13 @@ venues
 #### Admin Interface
 
 **List View:**
-- Cards with venue name, city/district, type, partner status
+- Cards with venue brand name (or internal name as fallback), city/district, type, partner status
 - Filter by city, type, partner status
 - Search by name or address
 - Data quality summary (missing fields, duplicates)
 
 **Create / Edit:**
-- Basic info: name, type, address, city, district, coordinates (AMap picker)
+- Basic info: name (internal identifier), brandName (user-facing brand), type, address, city, district, coordinates (AMap picker)
 - Matching tags: cuisines, atmosphere tags, decor style, taste intensity
 - Budget categories: multi-select price ranges per venue type
 - Capacity: `seatingCapacity` (people per event) + `maxConcurrentEvents` (simultaneous events)

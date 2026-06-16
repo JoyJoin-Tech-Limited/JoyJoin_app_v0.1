@@ -28,6 +28,7 @@ describe("venuesRepo camelCase contract", () => {
     expect(source).toContain("maxConcurrentEvents: row.capacity");
     expect(source).toContain("district: row.area");
     expect(source).toContain("bookingCount: row.booking_count");
+    expect(source).toContain("brandName: row.brand_name");
   });
 
   it("applies the mapper to all venue read/write return paths", () => {

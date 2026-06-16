@@ -671,6 +671,30 @@
             "cdnPath": "assets/ceremony/see-you-next-time-20260604-v1.webp"
         },
         {
+            "localPath": "assets/ceremony/event-ticket-success-20260616-v1.webp",
+            "cdnPath": "assets/ceremony/event-ticket-success-20260616-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/payment-verifying-20260616-v1.webp",
+            "cdnPath": "assets/ceremony/payment-verifying-20260616-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/pool-registration-success-20260616-v1.webp",
+            "cdnPath": "assets/ceremony/pool-registration-success-20260616-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/blind-box-reveal-20260616-v1.webp",
+            "cdnPath": "assets/ceremony/blind-box-reveal-20260616-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/invite-header-20260616-v1.webp",
+            "cdnPath": "assets/ceremony/invite-header-20260616-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/tier-custom-20260616-v1.webp",
+            "cdnPath": "assets/ceremony/tier-custom-20260616-v1.webp"
+        },
+        {
             "localPath": "assets/badges/first-event-celebrate-20260604-v1.webp",
             "cdnPath": "assets/badges/first-event-celebrate-20260604-v1.webp"
         },

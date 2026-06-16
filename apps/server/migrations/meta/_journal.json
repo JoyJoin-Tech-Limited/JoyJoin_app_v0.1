@@ -393,6 +393,13 @@
       "when": 1780395567634,
       "tag": "seed_venue_time_slots_20260602",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1750076467000,
+      "tag": "20260616134100_add_venue_brand_name",
+      "breakpoints": true
     }
   ]
 }

@@ -4,8 +4,7 @@
 .connections-page {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
-  min-height: 100dvh;
+  @include viewport-min-height;
   background: $color-bg-gradient;
 
   &__header {
@@ -17,13 +16,15 @@
     font-size: $font-size-2xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
-    margin-bottom: $spacing-xs;
+    line-height: $line-height-normal;
+    margin-bottom: $spacing-sm;
   }
 
   &__subtitle {
     display: block;
     font-size: $font-size-base;
     color: $color-text-secondary;
+    line-height: $line-height-normal;
   }
 
   &__list {
@@ -43,11 +44,31 @@
 
   &__card {
     @include card;
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
-    padding: $spacing-lg;
+    padding: 0;
+    overflow: hidden;
     margin-bottom: $spacing-md;
+    transition: transform 0.12s ease, opacity 0.12s ease;
+
+    &:active {
+      transform: scale(0.98);
+      opacity: 0.96;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+
+      &:active {
+        transform: none;
+        opacity: 1;
+      }
+    }
+
+    &--legacy {
+      display: flex;
+      align-items: center;
+      gap: $spacing-md;
+      padding: $spacing-lg;
+    }
   }
 
   &__card-avatar {
@@ -114,6 +135,13 @@
     border-radius: 100rpx;
     margin-top: $spacing-xs;
     margin-right: $spacing-xs;
+  }
+
+  &__shared-event-icon {
+    width: 20rpx;
+    height: 20rpx;
+    flex-shrink: 0;
+    margin-right: 6rpx;
   }
 
   &__shared-event-text {

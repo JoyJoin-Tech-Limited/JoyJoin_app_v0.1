@@ -19,18 +19,23 @@
     min-height: 80vh;
     min-height: 80dvh;
     text-align: center;
+    padding: $spacing-lg 0;
   }
 
-  &__success-mascot {
-    width: 200rpx;
-    height: 200rpx;
+  &__success-hero {
+    width: 100%;
+    max-width: 600rpx;
+    height: 420rpx;
     margin: 0 auto;
     display: block;
+    opacity: 0;
+    animation: pool-reg-success-hero-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
   }
 
   &__success-title {
     display: block;
     @include type-heading;
+    margin-top: $spacing-xs;
   }
 
   &__success-text {
@@ -46,6 +51,7 @@
     color: $color-text-muted;
     line-height: $line-height-relaxed;
     max-width: 600rpx;
+    margin-top: -$spacing-xs;
   }
 
   &__notify-btn {
@@ -1167,5 +1173,23 @@
 @media (prefers-reduced-motion: reduce) {
   .pool-reg__submit--ceremony::before {
     display: none;
+  }
+}
+
+@keyframes pool-reg-success-hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pool-reg__success-hero {
+    animation: none;
+    opacity: 1;
   }
 }

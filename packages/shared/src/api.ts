@@ -420,6 +420,8 @@ promoBannerEnabled?: boolean
      *  mode are rejected. Existing preset-tier sessions are unaffected.
      *  Default: true. */
     socialIcebreakerCustomModeEnabled?: boolean
+    /** When true, enables the redesigned profile page UI. Default: true. */
+    profileRedesignEnabled?: boolean
   }
 }
 
@@ -830,6 +832,8 @@ export interface EssentialDataPayload {
   occupationId?: string
   workMode?: string
   intent?: string[]
+  /** One-line social signature / bio (≤100 chars). */
+  bio?: string
   [key: string]: unknown
 }
 
@@ -1097,6 +1101,17 @@ export interface MyConnection {
   connectionReasons?: string[] | null
   nextStepPreference?: string | null
   createdAt?: Date | string | null
+}
+
+export interface ConnectionSummary {
+  id: string
+  peerName: string | null
+  peerArchetype: string | null
+  eventTitle: string | null
+  wechatId: string | null
+  peerCity: string | null
+  peerBio: string | null
+  peerAgeRange: string | null
 }
 
 export type EventThemeVibe = 'playful' | 'professional' | 'creative' | 'adventurous'

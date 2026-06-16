@@ -151,7 +151,12 @@ export default function InvitePage() {
       onRefresherRefresh={handleRefresh}
     >
       <View className='invite-page__hero'>
-        <JoyJoinIcon emoji='🎉' size={64} className='invite-page__hero-emoji' />
+        <Image
+          className='invite-page__hero-image'
+          src={CEREMONY_HEROES.inviteHeader}
+          mode='aspectFit'
+          ariaLabel='邀请好友'
+        />
         <Text className='invite-page__hero-title'>邀请好友，一起悦聚</Text>
         <Text className='invite-page__hero-subtitle'>邀请越多，奖励越丰厚</Text>
       </View>

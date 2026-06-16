@@ -67,7 +67,7 @@ function RitualActAnticipation({
           }`}
         >
           <View className='ritual-act-anticipation__progress-track'>
-            <View className='ritual-act-anticipation__progress-fill' style={{ width: '33%' }} />
+            <View className='ritual-act-anticipation__progress-fill' style={{ transform: 'scaleX(0.33)', transformOrigin: 'left center' }} />
           </View>
           <Text className='ritual-act-anticipation__progress-label'>{copy.progressHint}</Text>
         </View>

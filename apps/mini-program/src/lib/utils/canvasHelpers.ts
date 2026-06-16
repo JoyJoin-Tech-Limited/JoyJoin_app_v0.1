@@ -46,14 +46,22 @@ export function toCanvasRGBA(color: string, alpha = 1): string {
 export async function resolveImagePath(src: string, timeoutMs = 5000): Promise<string> {
   if (!src) return ''
 
+  let timeoutHandle: ReturnType<typeof setTimeout> | null = null
+
   const result = await Promise.race([
-    Taro.getImageInfo({ src }).then(info => info.path || ''),
-    new Promise<string>((resolve) =>
-      setTimeout(() => {
+    Taro.getImageInfo({ src }).then((info) => {
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle)
+        timeoutHandle = null
+      }
+      return info.path || ''
+    }),
+    new Promise<string>((resolve) => {
+      timeoutHandle = setTimeout(() => {
         logWarn('[canvasHelpers] resolveImagePath: timeout', { src, timeoutMs })
         resolve('')
       }, timeoutMs)
-    ),
+    }),
   ])
 
   return result
@@ -101,7 +109,7 @@ export function fillRoundedRect(ctx: Taro.CanvasContext, x: number, y: number, w
   ctx.restore()
 }
 
-export function strokeRoundedRect(ctx: Taro.CanvasContext, x: number, y: number, width: number, height: number, radius: number, strokeStyle: string, lineWidth: number): void {
+export function strokeRoundedRect(ctx: Taro.CanvasContext, x: number, y: number, width: number, height: number, radius: number, strokeStyle: string | Taro.CanvasGradient, lineWidth: number): void {
   ctx.save()
   drawRoundedRect(ctx, x, y, width, height, radius)
   ctx.setStrokeStyle(strokeStyle)
@@ -212,9 +220,8 @@ export async function exportCanvasWithRetry(
   canvasId: string,
   width: number,
   height: number,
+  dprValues: number[] = [2, 1],
 ): Promise<string> {
-  const dprValues = [2, 1]
-
   for (let attempt = 0; attempt < dprValues.length; attempt++) {
     const dpr = dprValues[attempt]
     try {

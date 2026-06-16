@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import Taro from '@tarojs/taro'
+import { useEffect, useRef, useState } from 'react'
 
 export interface UseCountUpOptions {
   /** Animation duration in milliseconds. Default: 900. */
@@ -7,6 +8,15 @@ export interface UseCountUpOptions {
   enabled?: boolean
   /** Delay before counting starts. Default: 0. */
   delay?: number
+  /** Explicitly request reduced-motion handling. If omitted, the hook reads the system setting once. */
+  prefersReducedMotion?: boolean
+}
+
+let systemReducedMotion = false
+try {
+  systemReducedMotion = (Taro.getSystemInfoSync() as any).reduceMotion === true
+} catch {
+  systemReducedMotion = false
 }
 
 /**
@@ -14,13 +24,25 @@ export interface UseCountUpOptions {
  *
  * Designed for small hero numbers (stats, completion percentages). Falls back
  * instantly to the target when `enabled` is false or on the degradation tier.
+ *
+ * Once the animation has completed for a given mount, re-enabling does not
+ * reset to 0 — it snaps to the target to avoid a flash on re-fetch/re-show.
  */
 export function useCountUp(target: number, options: UseCountUpOptions = {}): number {
-  const { duration = 900, enabled = true, delay = 0 } = options
-  const [value, setValue] = useState(enabled ? 0 : target)
+  const { duration = 900, enabled = true, delay = 0, prefersReducedMotion } = options
+  const shouldReduceMotion = prefersReducedMotion ?? systemReducedMotion
+  const [value, setValue] = useState(enabled && !shouldReduceMotion ? 0 : target)
+  const hasAnimatedRef = useRef(false)
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || shouldReduceMotion) {
+      setValue(target)
+      return
+    }
+
+    // If we already animated on this mount, snap to target to avoid flashing
+    // from final -> 0 -> final when enabled flips (e.g., pull-to-refresh).
+    if (hasAnimatedRef.current) {
       setValue(target)
       return
     }
@@ -41,6 +63,8 @@ export function useCountUp(target: number, options: UseCountUpOptions = {}): num
       setValue(next)
       if (progress < 1) {
         rafId = requestAnimationFrame(step)
+      } else {
+        hasAnimatedRef.current = true
       }
     }
 

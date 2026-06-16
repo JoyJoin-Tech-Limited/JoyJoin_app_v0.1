@@ -1,11 +1,13 @@
 // Event Ticket Payment Page
 // Premium ticket-card layout with event info, registration summary, price block, upsell, and sticky CTA.
 
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
 // Use system-level color tokens from _variables.scss
 $color-text: $color-text-primary;
 $color-text-subtle: $color-text-secondary;
 $color-savings: $color-success;
-$cta-min-tap: 88rpx;
 
 .ticket-page {
   display: flex;
@@ -496,34 +498,30 @@ $cta-min-tap: 88rpx;
   min-height: 100dvh;
   padding: 48rpx;
 
-  &__checkmark {
-    width: 128rpx;
-    height: 128rpx;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba($color-success, 0.1);
-    border-radius: 50%;
-    margin-bottom: 32rpx;
-
-    Text {
-      font-size: 64rpx;
-      color: $color-success;
-    }
+  &__hero {
+    width: 600rpx;
+    height: 450rpx;
+    max-width: 100%;
+    margin-bottom: $spacing-lg;
+    opacity: 0;
+    animation: ticket-success-hero-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
   }
 
   &__title {
-    font-size: 40rpx;
-    font-weight: 700;
+    font-size: 44rpx;
+    font-weight: 800;
     color: $color-text;
-    margin-bottom: 16rpx;
+    margin-bottom: $spacing-sm;
+    text-align: center;
   }
 
   &__subtitle {
     font-size: 28rpx;
     color: $color-text-subtle;
     text-align: center;
-    margin-bottom: 48rpx;
+    line-height: 1.55;
+    margin-bottom: 56rpx;
+    max-width: 560rpx;
   }
 
   &__cta {
@@ -531,13 +529,15 @@ $cta-min-tap: 88rpx;
     align-items: center;
     justify-content: center;
     min-height: $cta-min-tap;
-    padding: 0 56rpx;
+    padding: 0 64rpx;
     background: $color-primary;
-    border-radius: 20rpx;
-    transition: opacity 0.12s ease;
+    border-radius: 24rpx;
+    box-shadow: 0 8rpx 32rpx rgba($color-primary, 0.35);
+    transition: opacity 0.12s ease, transform 0.12s ease;
 
     &--pressed {
-      opacity: 0.85;
+      opacity: 0.9;
+      transform: scale(0.97);
     }
   }
 
@@ -557,25 +557,18 @@ $cta-min-tap: 88rpx;
   min-height: 100dvh;
   padding: 48rpx;
 
-  &__mascot {
-    width: 128rpx;
-    height: 128rpx;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 32rpx;
-  }
-
-  &__mascot-inner {
-    width: 96rpx;
-    height: 96rpx;
-    background: rgba($color-primary, 0.08);
-    border-radius: 50%;
-    border: 2rpx solid rgba($color-primary, 0.15);
+  &__hero {
+    width: 360rpx;
+    height: 288rpx;
+    max-width: 100%;
+    margin-bottom: 40rpx;
+    opacity: 0;
+    animation: ticket-verify-hero-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 
   &__text {
-    font-size: 28rpx;
+    font-size: 30rpx;
+    font-weight: 600;
     color: $color-text;
     margin-bottom: 32rpx;
   }
@@ -606,5 +599,35 @@ $cta-min-tap: 88rpx;
   40% {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes ticket-success-hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes ticket-verify-hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(12rpx) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket-success__hero,
+  .ticket-verifying__hero {
+    animation: none;
+    opacity: 1;
   }
 }

@@ -168,7 +168,16 @@ const PROFILE_EVENT_TYPES = [
   "profile_archetype_cta_tap",
   "profile_menu_tap",
   "profile_logout_tap",
+  "profile_logout_cancel",
   "profile_shell_retry",
+  "profile_share_app_message",
+  "profile_share_timeline",
+  "profile_milestone_impression",
+  "profile_milestone_tap",
+  "profile_pull_refresh",
+  "profile_share_card_generated",
+  "profile_share_card_error",
+  "profile_view",
 ] as const;
 
 type ProfileEventType = (typeof PROFILE_EVENT_TYPES)[number];
