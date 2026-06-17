@@ -385,4 +385,20 @@ describe('native custom tab bar behavior', () => {
     await vi.advanceTimersByTimeAsync(1000)
     expect(component.data.announcement).toBe('')
   })
+
+  it('announces tab switch even when the runtime drops _tabNames from the instance', async () => {
+    setupMocks({ switchTabResult: 'success' })
+    const component = await loadComponent()
+    component.attached()
+
+    // Simulate WeChat runtimes that do not reliably attach root-level
+    // non-data properties to custom-tab-bar instances (observed as
+    // "undefined is not an object (evaluating 'this._tabNames[e]')").
+    delete component._tabNames
+
+    component.handleTabTap(makeEvent(1, '/pages/events/index', 'events'))
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(component.data.announcement).toBe('已切换到足迹')
+  })
 })

@@ -1,3 +1,10 @@
+// Accessibility name lookup for tab-switch announcements.
+// Kept as a file-scoped constant so _announceTab can fall back even if a
+// WeChat runtime fails to attach root-level properties to the custom-tab-bar
+// instance (observed on iPhone / iOS 26.1 / WeChat 8.0.74 as
+// "undefined is not an object (evaluating 'this._tabNames[e]')").
+var TAB_NAMES = { 0: '发现', 1: '足迹', 2: '连接', 3: '我的', 4: '中心入口' }
+
 Component({
   options: {
     addGlobalClass: true,
@@ -17,8 +24,9 @@ Component({
   _networkStatusHandler: null,
   // Last sync state; re-applied when network comes back online.
   _lastSyncState: null,
-  // Name lookup for accessibility announcements
-  _tabNames: { 0: '发现', 1: '足迹', 2: '连接', 3: '我的', 4: '中心入口' },
+  // Name lookup for accessibility announcements (re-assigned in attached
+  // to guarantee it exists on the instance before any tap callback runs).
+  _tabNames: TAB_NAMES,
 
   data: {
     selected: 0,
@@ -93,6 +101,10 @@ Component({
       if (this._isLowEnd) {
         this.setData({ lowEnd: true })
       }
+      // Re-assign the accessibility map to the instance. Some WeChat runtimes
+      // do not reliably copy root-level non-data fields onto custom-tab-bar
+      // instances, which left this._tabNames undefined inside _announceTab.
+      this._tabNames = TAB_NAMES
       // Detect initial network state for offline guard
       if (wx.getNetworkType) {
         wx.getNetworkType({
@@ -361,7 +373,8 @@ Component({
      * Auto-clears after 1s to avoid stale announcements.
      */
     _announceTab: function (index) {
-      var name = this._tabNames[index] || ''
+      var names = this._tabNames || TAB_NAMES
+      var name = names[index] || ''
       if (!name) return
       this.setData({ announcement: '已切换到' + name })
       var self = this
