@@ -3,8 +3,21 @@
  * Tests that low-confidence inputs generate candidate lists for user selection
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { classifyIndustry } from '../industryClassifier';
+
+// Force deterministic fallback behavior in this test file by making the AI
+// layer fail consistently. Other test files may leave a mocked openai module
+// in the worker cache; hoisting this mock ensures isolation.
+vi.mock('openai', () => ({
+  default: class MockOpenAI {
+    chat = {
+      completions: {
+        create: vi.fn().mockRejectedValue(new Error('AI unavailable in tests')),
+      },
+    };
+  },
+}));
 
 describe('Multi-Layer Defense - Candidate Generation', () => {
   describe('Ambiguous Input: "投资"', () => {

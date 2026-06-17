@@ -37,14 +37,15 @@ class ShellCache {
 
   /**
    * Invalidate every cached entry belonging to a user.
-   * Uses a wildcard prefix scan.
+   * Matches any key that starts with the shell prefix and contains the user id
+   * segment (e.g. `shell-discover-{userId}-0-20`, `shell-connections-{userId}`).
    */
   invalidateUser(userId: string): void {
     const keys = this.cache.keys();
     const prefix = `shell-`;
-    const userSuffix = `-${userId}-`;
+    const userMarker = `-${userId}`;
     for (const key of keys) {
-      if (key.startsWith(prefix) && key.includes(userSuffix)) {
+      if (key.startsWith(prefix) && key.includes(userMarker)) {
         this.cache.del(key);
       }
     }

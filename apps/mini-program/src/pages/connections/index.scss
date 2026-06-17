@@ -7,39 +7,17 @@
   @include viewport-min-height;
   background: $color-bg-gradient;
 
-  &__header {
-    padding: $spacing-xl $container-padding $spacing-md;
-  }
-
-  &__title {
-    display: block;
-    font-size: $font-size-2xl;
-    font-weight: $font-weight-black;
-    color: $color-text-primary;
-    line-height: $line-height-normal;
-    margin-bottom: $spacing-sm;
-  }
-
-  &__subtitle {
-    display: block;
-    font-size: $font-size-base;
-    color: $color-text-secondary;
-    line-height: $line-height-normal;
-  }
-
   &__list {
     flex: 1;
     padding: 0 $container-padding;
   }
 
   &__loading {
-    @include scroll-view-centered-state;
-    gap: $spacing-sm;
-  }
-
-  &__loading-text {
-    font-size: $font-size-base;
-    color: $color-text-secondary;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
   }
 
   &__card {
@@ -149,52 +127,12 @@
     color: $color-primary;
   }
 
-  &__card-wechat {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    margin-top: $spacing-xs;
-    padding: 4rpx 12rpx;
-    background: rgba($color-primary, 0.08);
-    border-radius: 8rpx;
-    width: fit-content;
-  }
-
-  &__card-wechat-label {
-    font-size: $font-size-xs;
-    color: $color-text-muted;
-  }
-
-  &__card-wechat-id {
-    font-size: $font-size-xs;
-    color: $color-primary;
-    font-weight: $font-weight-semibold;
-  }
-
-  &__card-wechat-action {
-    font-size: $font-size-xs;
-    color: $color-primary;
-    margin-left: 4rpx;
-  }
-
   &__empty-state {
-    @include scroll-view-centered-state;
-    gap: $spacing-sm;
-  }
-
-  &__empty-mascot {
-    width: 240rpx;
-    height: 240rpx;
-  }
-
-  &__empty-text {
-    font-size: $font-size-base;
-    color: $color-text-secondary;
-  }
-
-  &__empty-hint {
-    font-size: $font-size-sm;
-    color: $color-text-muted;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
   }
 
   &__spacer {
@@ -202,3 +140,4 @@
     height: 0;
   }
 }
+

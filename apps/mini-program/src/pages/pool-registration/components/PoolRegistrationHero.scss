@@ -28,7 +28,7 @@
   &__frame {
     position: relative;
     width: 100%;
-    height: 560rpx;
+    height: 480rpx;
     overflow: hidden;
   }
 
@@ -92,21 +92,32 @@
       180deg,
       rgba(0, 0, 0, 0) 0%,
       rgba(0, 0, 0, 0) 40%,
-      rgba(0, 0, 0, 0.12) 72%,
-      rgba(0, 0, 0, 0.32) 100%
+      rgba(0, 0, 0, 0.16) 72%,
+      rgba(0, 0, 0, 0.36) 100%
     );
     pointer-events: none;
   }
 
-  &__badge {
+  // ─── Top chrome: event badge + seats mini-pill ────────────────────
+  &__top-chrome {
     position: absolute;
-    top: $spacing-md;
-    left: $spacing-md;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    z-index: 2;
+  }
+
+  &__badge {
     padding: $spacing-xs $spacing-sm;
     border-radius: $radius-pill;
     background: rgba($color-surface, 0.92);
     border: 2rpx solid rgba($color-primary, 0.12);
-    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
+    box-shadow: $shadow-sm;
   }
 
   &__badge-text {
@@ -115,6 +126,18 @@
     color: $color-primary-dark;
   }
 
+  &__seats-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.92);
+    border: 2rpx solid rgba($color-surface, 0.5);
+    box-shadow: $shadow-sm;
+  }
+
+  // ─── Bottom meta band: date / location / price ────────────────────
   &__meta-band {
     position: absolute;
     bottom: 0;
@@ -126,6 +149,7 @@
     gap: $spacing-xs;
     row-gap: $spacing-xs;
     padding: $spacing-md;
+    z-index: 2;
   }
 
   &__meta-pill {
@@ -133,45 +157,33 @@
     align-items: center;
     gap: $spacing-xs;
     min-width: 0;
-    max-width: 260rpx;
-    padding: $spacing-xs $spacing-sm;
+    // Optical sizing: slightly tighter than 8rpx rhythm so the pill feels compact against the hero image.
+    padding: 10rpx 18rpx;
     border-radius: $radius-pill;
-    background: rgba($color-surface, 0.9);
-    border: 2rpx solid rgba($color-surface, 0.5);
-    box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.08);
+    background: rgba($color-surface, 0.92);
+    border: 2rpx solid rgba($color-primary, 0.12);
+    box-shadow: $shadow-sm;
   }
 
   &__meta-icon {
-    width: 26rpx;
-    height: 26rpx;
+    width: 32rpx;
+    height: 32rpx;
     flex-shrink: 0;
   }
 
   &__meta-currency {
-    @include type-caption;
+    @include font-cn-display;
+    font-size: $font-size-md;
     font-weight: $font-weight-bold;
     color: $color-primary-dark;
   }
 
   &__meta-text {
-    @include type-caption;
-    font-weight: $font-weight-semibold;
+    @include font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
     color: $color-text-primary;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__seats {
-    display: inline-flex;
-    align-items: center;
-    gap: $spacing-xs;
-    margin-left: auto;
-    padding: $spacing-xs $spacing-sm;
-    border-radius: $radius-pill;
-    background: rgba($color-surface, 0.9);
-    border: 2rpx solid rgba($color-surface, 0.5);
-    box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.08);
+    line-height: 1.4;
   }
 
   &__seats-heads {
@@ -181,13 +193,13 @@
 
   &__seat-head {
     @include flex-center;
-    width: 48rpx;
-    height: 48rpx;
+    width: 44rpx;
+    height: 44rpx;
     border-radius: 50%;
     border: 2rpx solid;
-    margin-left: -22rpx;
+    margin-left: -18rpx;
     overflow: hidden;
-    box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.08);
+    box-shadow: $shadow-sm;
     opacity: 0;
     transform: scale(0);
 
@@ -213,11 +225,11 @@
 
   &__seat-overflow {
     @include flex-center;
-    width: 48rpx;
-    height: 48rpx;
+    width: 44rpx;
+    height: 44rpx;
     border-radius: 50%;
     background: $brand-gradient;
-    margin-left: -22rpx;
+    margin-left: -18rpx;
     border: 2rpx solid rgba($color-surface, 0.5);
   }
 

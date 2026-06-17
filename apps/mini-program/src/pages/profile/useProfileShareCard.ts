@@ -4,10 +4,7 @@ import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
 import { haptics } from '../../lib/utils/haptics'
 import { logError } from '../../lib/utils/logger'
 import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
-import {
-  generateProfileSharePoster,
-  type ProfilePosterInput,
-} from './profilePoster'
+import type { ProfilePosterInput } from './profilePoster'
 
 export interface UseProfileShareCardOptions {
   displayName: string
@@ -99,6 +96,7 @@ export function useProfileShareCard(options: UseProfileShareCardOptions) {
         preferredDpr: isDegradation ? 1 : 2,
       }
 
+      const { generateProfileSharePoster } = await import('./profilePoster')
       const posterPath = await generateProfileSharePoster(input)
 
       if (!mountedRef.current) return

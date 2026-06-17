@@ -65,9 +65,9 @@ const INTEREST_LEVEL_META: Array<{
   bgColor: string
   borderColor: string
 }> = [
-  { level: 1, label: '感兴趣', shortLabel: '感兴趣', description: '加入你的兴趣画像', color: HEAT_CSS_VARS[1], bgColor: 'rgba(139,92,246,0.08)', borderColor: 'rgba(139,92,246,0.15)' },
-  { level: 2, label: '很热衷', shortLabel: '很热衷', description: '更容易聊到停不下来', color: HEAT_CSS_VARS[2], bgColor: 'rgba(124,58,237,0.14)', borderColor: 'rgba(124,58,237,0.35)' },
-  { level: 3, label: '必聊项', shortLabel: '必聊项', description: '优先匹配同好，预览重点展示', color: HEAT_CSS_VARS[3], bgColor: 'rgba(76,29,149,0.22)', borderColor: 'rgba(76,29,149,0.55)' },
+  { level: 1, label: '感兴趣', shortLabel: '感兴趣', description: '加入你的兴趣画像', color: HEAT_CSS_VARS[1], bgColor: 'rgba(167,139,250,0.12)', borderColor: 'rgba(167,139,250,0.28)' },
+  { level: 2, label: '很热衷', shortLabel: '很热衷', description: '更容易聊到停不下来', color: HEAT_CSS_VARS[2], bgColor: 'rgba(139,92,246,0.14)', borderColor: 'rgba(139,92,246,0.35)' },
+  { level: 3, label: '必聊项', shortLabel: '必聊项', description: '优先匹配同好，预览重点展示', color: HEAT_CSS_VARS[3], bgColor: 'rgba(249,115,22,0.16)', borderColor: 'rgba(249,115,22,0.42)' },
 ]
 
 const activeInterests = INTEREST_TAXONOMY.filter((item) => item.active)
@@ -493,6 +493,7 @@ export default function ExtendedDataPage() {
                         emoji={INTEREST_CATEGORY_EMOJIS[category]}
                         tier='category'
                         size={36}
+                        lazyLoad={false}
                         className={[
                           'extended-data__category-icon',
                           selectedInCategory > 0 ? 'extended-data__category-icon--active' : '',

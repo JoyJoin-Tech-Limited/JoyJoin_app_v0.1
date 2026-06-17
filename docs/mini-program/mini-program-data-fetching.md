@@ -55,7 +55,7 @@ The mini-program uses **composite shell endpoints** to reduce tab-switch latency
 | `GET /api/shell/discover` | `AUTH_QUERY_KEY`, discover data | 1.5s after landing entry |
 | `GET /api/shell/profile` | `AUTH_QUERY_KEY`, `COUPONS_QUERY_KEY`, profile stats | 4s after landing entry |
 | `GET /api/shell/events` | `AUTH_QUERY_KEY` (gated), `['mini-program', 'joined-events']`, notification counts | 3s after landing entry |
-| `GET /api/shell/connections` | `AUTH_QUERY_KEY` (gated), `['mini-program', 'connections']`, notification counts | 5s after landing entry |
+| `GET /api/shell/connections` | `AUTH_QUERY_KEY` (gated), `['mini-program', 'shell/connections']` (full shell), `['mini-program', 'connections']` (legacy compatibility), notification counts | 5s after landing entry |
 
 **Client-side fetchers:** `apps/mini-program/src/lib/api/api.ts` — `fetchDiscoverShell()`, `fetchProfileShell()`, `fetchEventsShell()`, `fetchConnectionsShell()`
 
@@ -63,7 +63,7 @@ The mini-program uses **composite shell endpoints** to reduce tab-switch latency
 
 **Auth-injection hygiene (2026-06-05):** The pruned auth fragments injected for Discover, Events, and Connections shells intentionally omit kill-switch fields (e.g., `paymentsEnabled`). The live `GET /api/auth/user` fetch must remain the source of truth for feature flags; injecting a hardcoded default (e.g., `paymentsEnabled: false`) caused stale "权益维护中" toasts when the server had payments enabled. Only onboarding completion flags (`profileEssentialComplete`, `profileExtendedComplete`, `activeAssessmentSessionId`) are set in the injected fragment.
 
-**Cache invalidation:** Server-side `shellCache.invalidateUser(userId)` is called on mutations (payment fulfillment, pool registration, connection creation, assessment completion). This clears all cached shells for the user.
+**Cache invalidation:** Server-side `shellCache.invalidateUser(userId)` is called on mutations (payment fulfillment, pool registration, connection creation, assessment completion, event-feedback submission). This clears all cached shells for the user.
 
 **Fallback behavior:** Events and Connections pages fall back to legacy endpoints (`/api/events/joined`, `/api/my-connections`) if the composite endpoint returns 500.
 

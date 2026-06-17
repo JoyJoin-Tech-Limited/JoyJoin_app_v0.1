@@ -40,12 +40,12 @@ export function usePreloadIntentIcons(enabled: boolean) {
         // Best-effort: continue preloading if network detection fails
       }
 
-      hasPreloaded.current = true
       for (const url of iconPaths) {
         Taro.getImageInfo({ src: url }).catch(() => {
           // Silent — local preload is best-effort
         })
       }
+      hasPreloaded.current = true
     }
 
     preload()

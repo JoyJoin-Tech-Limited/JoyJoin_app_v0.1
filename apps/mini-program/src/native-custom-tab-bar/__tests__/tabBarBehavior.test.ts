@@ -172,6 +172,48 @@ describe('native custom tab bar behavior', () => {
     expect(component.data.lowEnd).toBe(true)
   })
 
+  it('computes sliding pill geometry on attach', async () => {
+    setupMocks()
+    const component = await loadComponent()
+
+    component.attached()
+
+    expect(component.data.tabItemWidth).toBeGreaterThan(0)
+    expect(component.data.pillWidth).toBe(component.data.tabItemWidth)
+    expect(component.data.pillTranslateX).toBe(0)
+  })
+
+  it('moves the sliding pill when a side tab is tapped', async () => {
+    setupMocks({ switchTabResult: 'success' })
+    const component = await loadComponent()
+    component.attached()
+
+    component.handleTabTap(makeEvent(1, '/pages/events/index', 'events'))
+
+    expect(component.data.pillTranslateX).toBeGreaterThan(0)
+  })
+
+  it('hides the sliding pill when the center button is selected', async () => {
+    setupMocks({ switchTabResult: 'success' })
+    const component = await loadComponent()
+    component.attached()
+
+    component.handleCenterTap()
+
+    expect(component.data.selected).toBe(4)
+  })
+
+  it('updates the sliding pill via setSelected', async () => {
+    setupMocks()
+    const component = await loadComponent()
+    component.attached()
+
+    component.setSelected(3)
+
+    expect(component.data.selected).toBe(3)
+    expect(component.data.pillTranslateX).toBeGreaterThan(0)
+  })
+
   it('switches side tab with optimistic highlight and announces on success', async () => {
     setupMocks({ switchTabResult: 'success' })
     const component = await loadComponent()
@@ -241,7 +283,7 @@ describe('native custom tab bar behavior', () => {
     )
   })
 
-  it('debounces rapid taps within 300ms', async () => {
+  it('debounces rapid taps within 180ms', async () => {
     setupMocks({ switchTabResult: 'success' })
     const component = await loadComponent()
     component.attached()
@@ -254,7 +296,7 @@ describe('native custom tab bar behavior', () => {
     expect(component.data.selected).toBe(1)
 
     // After debounce window, a new tap works.
-    await vi.advanceTimersByTimeAsync(300)
+    await vi.advanceTimersByTimeAsync(180)
     component.handleTabTap(makeEvent(2, '/pages/connections/index', 'connections'))
     expect(global.wx.switchTab).toHaveBeenCalledTimes(2)
     expect(component.data.selected).toBe(2)

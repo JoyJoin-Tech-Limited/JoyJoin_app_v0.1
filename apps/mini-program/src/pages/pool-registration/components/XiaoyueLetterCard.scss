@@ -22,14 +22,39 @@
     transform: none;
   }
 
+  &__paper {
+    position: relative;
+    @include card-premium;
+    padding: $spacing-lg;
+    background: linear-gradient(180deg, $color-surface 0%, rgba($color-bg-tint-warm, 0.6) 100%);
+    border: 2rpx solid rgba($color-primary, 0.08);
+    overflow: hidden;
+
+    &--loading {
+      min-height: 320rpx;
+    }
+  }
+
+  // ─── Header: mascot left, title block right ───────────────────────
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-md;
+    margin-bottom: $spacing-sm;
+  }
+
   &__mascot-wrap {
-    position: absolute;
-    top: -44rpx;
-    left: $spacing-md;
-    z-index: 2;
+    width: 120rpx;
+    height: 120rpx;
+    flex-shrink: 0;
+    margin-top: -$spacing-sm;
 
     &--skeleton {
-      top: -40rpx;
+      margin-top: 0;
+    }
+
+    &--bob {
+      animation: xiaoyue-letter-card-mascot-bob 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
     }
   }
 
@@ -41,44 +66,47 @@
     animation: xiaoyue-letter-card-shimmer 1.5s ease-in-out infinite;
   }
 
-  &__paper {
-    position: relative;
-    @include card-premium;
-    padding: $spacing-lg;
-    padding-top: $spacing-xl;
-    background: linear-gradient(180deg, $color-surface 0%, rgba($color-bg-tint-warm, 0.6) 100%);
-    border: 2rpx solid rgba($color-primary, 0.08);
-    overflow: hidden;
+  &__title-block {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
 
     &--loading {
-      padding-top: $spacing-lg;
-      min-height: 240rpx;
-      @include flex-center;
+      gap: $spacing-sm;
+      padding-top: $spacing-sm;
     }
   }
 
-  &__tail {
-    position: absolute;
-    top: -16rpx;
-    left: 68rpx;
-    width: 32rpx;
-    height: 32rpx;
-    background: $color-surface;
-    border-left: 2rpx solid rgba($color-primary, 0.08);
-    border-top: 2rpx solid rgba($color-primary, 0.08);
-    transform: rotate(45deg);
+  &__skeleton-body {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    margin-top: $spacing-sm;
+  }
 
-    &--skeleton {
-      background: $color-divider;
-      border: none;
-    }
+  &__skeleton-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+    margin-top: $spacing-xs;
+  }
+
+  &__skeleton-chip {
+    width: 180rpx;
+    height: 56rpx;
+    border-radius: $radius-pill;
+    background: $color-divider;
+    animation: xiaoyue-letter-card-shimmer 1.5s ease-in-out infinite;
   }
 
   &__eyebrow {
     display: block;
-    @include type-caption;
-    font-weight: $font-weight-semibold;
-    color: rgba($color-primary-dark, 0.82);
+    @include font-cn-display;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-bold;
+    line-height: 1.4;
     margin-bottom: $spacing-xs;
   }
 
@@ -86,8 +114,6 @@
     display: block;
     @include type-subheading;
     line-height: 1.6;
-    margin-bottom: $spacing-sm;
-    word-break: keep-all;
   }
 
   &__promise {
@@ -100,7 +126,7 @@
 
   &__reasons {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: $spacing-sm;
     margin-bottom: $spacing-md;
   }
@@ -109,6 +135,7 @@
     display: inline-flex;
     align-items: center;
     gap: $spacing-xs;
+    // Optical sizing: compact pill so it doesn't compete with the letter title.
     padding: $spacing-xs $spacing-sm;
     border-radius: $radius-pill;
     background: rgba($color-success, 0.1);
@@ -137,13 +164,6 @@
     text-align: right;
     @include type-caption;
     color: $color-text-muted;
-  }
-
-  &__skeleton {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-sm;
-    width: 100%;
   }
 
   &__skeleton-line {
@@ -179,11 +199,27 @@
   }
 }
 
+@keyframes xiaoyue-letter-card-mascot-bob {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8rpx);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .xiaoyue-letter-card--enter {
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  .xiaoyue-letter-card__mascot-wrap--bob {
+    animation: none;
   }
 
   .xiaoyue-letter-card__skeleton-line {

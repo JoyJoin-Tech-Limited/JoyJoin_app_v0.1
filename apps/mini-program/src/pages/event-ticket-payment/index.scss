@@ -1,13 +1,16 @@
 // Event Ticket Payment Page
-// Premium ticket-card layout with event info, registration summary, price block, upsell, and sticky CTA.
+// Premium ticket-card layout with event banner, perforation divider, info grid,
+// coupon stub, barcode decoration, price card, upsell, and sticky CTA.
 
 @use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
 
-// Use system-level color tokens from _variables.scss
-$color-text: $color-text-primary;
-$color-text-subtle: $color-text-secondary;
-$color-savings: $color-success;
+// ── Color aliases ──
+$ticket-text: $color-text-primary;
+$ticket-text-subtle: $color-text-secondary;
+$ticket-text-muted: $color-text-tertiary;
+$ticket-coupon: $color-secondary;
+$ticket-coupon-bg: rgba($color-secondary, 0.08);
 
 .ticket-page {
   display: flex;
@@ -21,329 +24,394 @@ $color-savings: $color-success;
   min-height: 0;
 }
 
-// ── Section base ──────────────────────────────────────────
-.ticket-section {
+// ── Ticket Card ──
+.ticket-card {
+  position: relative;
   margin: 24rpx 32rpx 0;
-  padding: 32rpx;
   background: $color-surface;
-  border-radius: 24rpx;
-  box-shadow: 0 2rpx 16rpx rgba(0, 0, 0, 0.04);
+  border-radius: $card-radius-lg;
+  box-shadow: $shadow-card;
+  overflow: hidden;
 
-  &__label {
+  &--entrance {
+    opacity: 0;
+    transform: translateY(24rpx) scale(0.98);
+    animation: ticket-card-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
+  }
+
+  &__banner {
+    position: relative;
+    width: 100%;
+    height: 320rpx;
+    overflow: hidden;
+  }
+
+  &__banner-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__banner-scrim {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba($color-surface, 0) 0%, rgba($color-surface, 0.25) 55%, rgba($color-surface, 0.92) 100%);
+    pointer-events: none;
+  }
+
+  &__type-badge {
+    position: absolute;
+    top: 24rpx;
+    left: 24rpx;
+    display: inline-flex;
+    align-items: center;
+    padding: 10rpx 20rpx;
+    background: rgba($color-surface, 0.92);
+    border-radius: $radius-pill;
+    box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(4rpx);
+  }
+
+  &__type-badge-text {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+  }
+
+  &__banner-title-wrap {
+    position: absolute;
+    bottom: 24rpx;
+    left: 28rpx;
+    right: 28rpx;
+  }
+
+  &__banner-title {
     display: block;
-    font-size: 24rpx;
-    color: $color-text-subtle;
-    margin-bottom: 16rpx;
-  }
-}
-
-// ── Hero (Event Identity) ─────────────────────────────────
-.ticket-section--hero {
-  margin-top: 32rpx;
-  padding-bottom: 24rpx;
-}
-
-.ticket-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 8rpx 16rpx;
-  background: rgba($color-primary, 0.08);
-  border-radius: 16rpx;
-  margin-bottom: 16rpx;
-
-  Text {
-    font-size: 24rpx;
-    color: $color-primary;
-    font-weight: 600;
-  }
-}
-
-.ticket-title {
-  display: block;
-  font-size: 36rpx;
-  font-weight: 700;
-  color: $color-text;
-  line-height: 1.4;
-  margin-bottom: 16rpx;
-  word-break: keep-all;
-  overflow-wrap: break-word;
-}
-
-.ticket-meta {
-  display: flex;
-  gap: 24rpx;
-
-  &__item {
-    font-size: 26rpx;
-    color: $color-text-subtle;
-  }
-}
-
-// ── Summary ───────────────────────────────────────────────
-.ticket-section--summary {
-  padding-bottom: 24rpx;
-}
-
-.ticket-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8rpx;
-}
-
-.ticket-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 8rpx 16rpx;
-  background: rgba($color-primary, 0.06);
-  border-radius: 12rpx;
-
-  Text {
-    font-size: 24rpx;
-    color: $color-text;
+    font-family: $font-cn-display;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    color: $ticket-text;
+    line-height: $line-height-snug;
+    word-break: keep-all;
+    text-shadow: 0 2rpx 8rpx rgba($color-surface, 0.8);
   }
 
-  &--intent {
-    background: rgba($color-secondary, 0.08);
-    Text { color: $color-secondary; }
-  }
-
-  &--subtle {
-    background: rgba($color-text-subtle, 0.06);
-    Text { color: $color-text-subtle; }
-  }
-}
-
-// ── Price Block ───────────────────────────────────────────
-.ticket-section--price {
-  padding-bottom: 24rpx;
-}
-
-.ticket-plan-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12rpx 16rpx;
-  background: rgba($color-primary, 0.06);
-  border-radius: 12rpx;
-  margin-bottom: 16rpx;
-
-  Text {
-    font-size: 24rpx;
-    color: $color-primary;
-    font-weight: 600;
-  }
-}
-
-.ticket-plan-reset {
-  Text {
-    font-size: 24rpx;
-    color: $color-text-subtle;
-    text-decoration: underline;
-  }
-
-  &--pressed {
-    opacity: 0.6;
-  }
-}
-
-.ticket-price-row {
-  display: flex;
-  align-items: baseline;
-  gap: 16rpx;
-  margin-bottom: 8rpx;
-}
-
-.ticket-price {
-  font-size: 56rpx;
-  font-weight: 800;
-  color: $color-text;
-  line-height: 1.1;
-}
-
-.ticket-price-note {
-  font-size: 26rpx;
-  color: $color-text-subtle;
-}
-
-.ticket-coupon-area {
-  margin-top: 16rpx;
-}
-
-.ticket-coupon-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12rpx 16rpx;
-  background: rgba($color-success, 0.08);
-  border-radius: 12rpx;
-}
-
-.ticket-coupon-text {
-  font-size: 24rpx;
-  color: $color-savings;
-  font-weight: 600;
-}
-
-.ticket-coupon-arrow {
-  font-size: 20rpx;
-  color: $color-savings;
-  opacity: 0.6;
-}
-
-.ticket-coupon-detail {
-  padding: 16rpx;
-  margin-top: 8rpx;
-  background: rgba($color-success, 0.04);
-  border-radius: 12rpx;
-
-  &__row {
+  // Perforation divider with notched cutouts
+  &__perforation {
+    position: relative;
     display: flex;
-    justify-content: space-between;
-    padding: 4rpx 0;
+    align-items: center;
+    height: 24rpx;
+    background: $color-surface;
   }
 
-  &__label {
-    font-size: 24rpx;
-    color: $color-text-subtle;
-  }
+  &__notch {
+    position: absolute;
+    top: 50%;
+    width: 32rpx;
+    height: 32rpx;
+    margin-top: -16rpx;
+    background: $color-bg;
+    border-radius: 50%;
+    z-index: 2;
 
-  &__value {
-    font-size: 24rpx;
-    color: $color-text;
-    font-weight: 600;
+    &--left {
+      left: -16rpx;
+    }
 
-    &--highlight {
-      color: $color-savings;
+    &--right {
+      right: -16rpx;
     }
   }
-}
 
-.ticket-final-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 16rpx;
-  margin-top: 16rpx;
-  border-top: 1rpx solid rgba(0, 0, 0, 0.06);
-}
-
-.ticket-final-label {
-  font-size: 26rpx;
-  color: $color-text-subtle;
-}
-
-.ticket-final-price {
-  font-size: 40rpx;
-  font-weight: 700;
-  color: $color-text;
-}
-
-// ── Upsell ────────────────────────────────────────────────
-.ticket-section--upsell {
-  padding: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.ticket-upsell-trigger {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20rpx 32rpx;
-  background: $color-surface;
-  border-radius: 24rpx;
-  box-shadow: 0 2rpx 16rpx rgba(0, 0, 0, 0.04);
-
-  &__text {
-    font-size: 26rpx;
-    color: $color-text-subtle;
-    font-weight: 500;
+  &__dash-line {
     flex: 1;
-    margin-right: 16rpx;
+    height: 0;
+    margin: 0 24rpx;
+    border-bottom: 2rpx dashed rgba($color-border, 0.85);
   }
 
-  &__arrow {
+  // Body
+  &__body {
+    padding: 8rpx 32rpx 32rpx;
+  }
+
+  &__meta-grid {
+    display: flex;
+    padding-bottom: 24rpx;
+    border-bottom: 1rpx solid $color-divider;
+  }
+
+  &__meta-cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+
+    &--right {
+      align-items: flex-end;
+    }
+  }
+
+  &__meta-label {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $ticket-text-muted;
+    letter-spacing: 2rpx;
+  }
+
+  &__meta-value {
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: $ticket-text;
+  }
+
+  &__meta-hint {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $ticket-text-muted;
+    line-height: $line-height-snug;
+  }
+
+  // Section base
+  &__section {
+    margin-top: 28rpx;
+
+    &--choices {
+      margin-top: 24rpx;
+    }
+  }
+
+  &__section-header {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+    margin-bottom: 16rpx;
+  }
+
+  &__section-accent {
+    width: 6rpx;
+    height: 24rpx;
+    background: $color-primary;
+    border-radius: 999rpx;
+  }
+
+  &__section-label {
+    font-family: $font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $ticket-text;
+    letter-spacing: 1rpx;
+  }
+
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12rpx;
+  }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 10rpx 18rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-primary, 0.06);
+
+    Text {
+      font-family: $font-ui;
+      font-size: $font-size-sm;
+      font-weight: $font-weight-semibold;
+      color: $color-primary-dark;
+    }
+
+    &--intent {
+      background: rgba($color-secondary, 0.08);
+      Text { color: $color-secondary; }
+    }
+
+    &--language,
+    &--dietary,
+    &--alcohol {
+      background: rgba($color-text-secondary, 0.06);
+      Text { color: $ticket-text-subtle; }
+    }
+
+    &--theme {
+      background: rgba($color-amber, 0.08);
+      Text { color: $color-amber-700; }
+    }
+
+    &--budget {
+      background: rgba($color-success, 0.08);
+      Text { color: darken-color($color-success, 15%); }
+    }
+  }
+
+  // Terms as compact chips
+  &__terms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12rpx;
+    margin-top: 28rpx;
+  }
+
+  &__terms-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 10rpx 18rpx;
+    background: $color-bg-warm-mid;
+    border-radius: $radius-pill;
+
+    &-text {
+      font-family: $font-ui;
+      font-size: $font-size-xs;
+      color: $ticket-text-subtle;
+    }
+  }
+
+  // Coupon stub
+  &__coupon-stub {
+    position: relative;
+    display: flex;
+    margin: 0 24rpx 24rpx;
+    background: $ticket-coupon-bg;
+    border-radius: $card-radius-sm;
+    overflow: hidden;
+  }
+
+  &__coupon-stub-left,
+  &__coupon-stub-right {
+    position: relative;
+    width: 20rpx;
+    flex-shrink: 0;
+    background: $color-surface;
+  }
+
+  &__coupon-stub-notch {
+    position: absolute;
+    top: 50%;
+    width: 24rpx;
+    height: 24rpx;
+    margin-top: -12rpx;
+    background: $color-surface;
+    border-radius: 50%;
+
+    &--left {
+      left: -12rpx;
+      box-shadow: inset -2rpx 0 4rpx rgba(0, 0, 0, 0.04);
+    }
+
+    &--right {
+      right: -12rpx;
+      box-shadow: inset 2rpx 0 4rpx rgba(0, 0, 0, 0.04);
+    }
+  }
+
+  &__coupon-stub-body {
+    flex: 1;
+    padding: 22rpx 20rpx;
+  }
+
+  &__coupon-stub-header {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+    margin-bottom: 8rpx;
+  }
+
+  &__coupon-stub-title {
+    font-family: $font-cn-display;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: $ticket-coupon;
+  }
+
+  &__coupon-stub-savings {
+    display: block;
+    font-family: $font-cn-display;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-black;
+    color: $ticket-coupon;
+    margin-bottom: 4rpx;
+  }
+
+  &__coupon-stub-code {
+    display: block;
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $ticket-text-muted;
+  }
+
+  &__coupon-stub-detail {
+    margin-top: 12rpx;
+    padding-top: 12rpx;
+    border-top: 1rpx dashed rgba($color-secondary, 0.2);
+
+    Text {
+      font-family: $font-ui;
+      font-size: $font-size-xs;
+      color: $ticket-text-subtle;
+    }
+  }
+
+  // Stamp reveal (WOW element)
+  &__stamp {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: 50%;
+    background: $color-surface;
+    border: 2rpx solid $ticket-coupon;
+    transform: scale(1);
+
+    &--animated {
+      animation: ticket-stamp-pop 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+  }
+
+  &__stamp-text {
+    font-family: $font-cn-display;
     font-size: 20rpx;
-    color: $color-text-subtle;
+    font-weight: $font-weight-black;
+    color: $ticket-coupon;
   }
 
-  &--pressed {
-    opacity: 0.6;
-  }
-}
-
-.ticket-upsell-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
-  margin-top: 16rpx;
-}
-
-.ticket-upsell-card {
-  padding: 24rpx;
-  background: $color-surface;
-  border-radius: 20rpx;
-  border: 2rpx solid transparent;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.03);
-
-  &--selected {
-    border-color: $color-primary;
-    background: rgba($color-primary, 0.02);
-  }
-
-  &--pressed {
-    opacity: 0.7;
-  }
-
-  &__header {
+  // Barcode decoration
+  &__barcode {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8rpx;
+    height: 48rpx;
+    padding: 0 48rpx 28rpx;
+    opacity: 0.18;
   }
 
-  &__title {
-    font-size: 28rpx;
-    font-weight: 700;
-    color: $color-text;
-  }
-
-  &__badge {
-    padding: 8rpx 16rpx;
-    background: rgba($color-savings, 0.1);
-    border-radius: 12rpx;
-
-    Text {
-      font-size: 24rpx;
-      color: $color-savings;
-      font-weight: 600;
-    }
-  }
-
-  &__price {
-    display: block;
-    font-size: 44rpx;
-    font-weight: 800;
-    color: $color-text;
-    margin-bottom: 8rpx;
-  }
-
-  &__desc {
-    display: block;
-    font-size: 24rpx;
-    color: $color-text-subtle;
+  &__barcode-line {
+    flex-shrink: 0;
+    height: 100%;
+    background: $color-text-primary;
+    border-radius: 1rpx;
   }
 }
 
-// ── Abandon Link ──────────────────────────────────────────
+
+// ── Abandon Link ──
 .ticket-abandon {
   display: flex;
   justify-content: center;
-  padding: 32rpx;
+  padding: 40rpx 32rpx;
 
   Text {
-    font-size: 26rpx;
-    color: $color-text-subtle;
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    color: $ticket-text-muted;
   }
 
   &--pressed {
@@ -351,12 +419,12 @@ $color-savings: $color-success;
   }
 }
 
-// ── Bottom Spacer ─────────────────────────────────────────
+// ── Bottom Spacer ──
 .ticket-bottom-spacer {
   height: 200rpx;
 }
 
-// ── Sticky Footer CTA ─────────────────────────────────────
+// ── Sticky Footer CTA ──
 .ticket-footer {
   position: fixed;
   bottom: 0;
@@ -373,8 +441,9 @@ $color-savings: $color-success;
     margin-top: 12rpx;
 
     Text {
-      font-size: 24rpx;
-      color: $color-secondary;
+      font-family: $font-ui;
+      font-size: $font-size-xs;
+      color: $color-error;
     }
   }
 }
@@ -383,15 +452,16 @@ $color-savings: $color-success;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: $cta-min-tap;
+  min-height: $button-height;
   background: $color-primary;
-  border-radius: 20rpx;
-  transition: opacity 0.12s ease;
+  border-radius: $button-radius;
+  transition: opacity 0.12s ease, transform 0.12s ease;
 
   &__text {
-    font-size: 32rpx;
-    font-weight: 700;
-    color: #FFFFFF;
+    font-family: $font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
   }
 
   &--loading {
@@ -399,27 +469,16 @@ $color-savings: $color-success;
   }
 
   &--pressed {
-    opacity: 0.85;
+    opacity: 0.9;
+    transform: scale(0.98);
   }
 
   &--retry {
-    background: $color-secondary;
+    background: $color-error;
   }
 }
 
-// ── Reduced Motion ────────────────────────────────────────
-@media (prefers-reduced-motion: reduce) {
-  .ticket-verifying__dot {
-    animation: none;
-    opacity: 0.6;
-  }
-
-  .ticket-upsell-card {
-    transition: none;
-  }
-}
-
-// ── Loading State ─────────────────────────────────────────
+// ── Loading State ──
 .ticket-loading {
   display: flex;
   align-items: center;
@@ -427,12 +486,24 @@ $color-savings: $color-success;
   min-height: 100dvh;
 
   &__text {
-    font-size: 28rpx;
-    color: $color-text-subtle;
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    color: $ticket-text-subtle;
+  }
+
+  &__back {
+    margin-top: 16rpx;
+    text-align: center;
+
+    Text {
+      font-family: $font-ui;
+      font-size: $font-size-sm;
+      color: $color-primary;
+    }
   }
 }
 
-// ── Error State ───────────────────────────────────────────
+// ── Error State ──
 .ticket-error {
   display: flex;
   flex-direction: column;
@@ -447,19 +518,20 @@ $color-savings: $color-success;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba($color-secondary, 0.1);
+    background: rgba($color-error, 0.1);
     border-radius: 50%;
     margin-bottom: 32rpx;
 
     Text {
       font-size: 48rpx;
-      color: $color-secondary;
+      color: $color-error;
     }
   }
 
   &__title {
-    font-size: 28rpx;
-    color: $color-text;
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    color: $ticket-text;
     text-align: center;
     margin-bottom: 32rpx;
   }
@@ -475,12 +547,12 @@ $color-savings: $color-success;
     justify-content: center;
     min-height: $cta-min-tap;
     padding: 0 48rpx;
-    border-radius: 20rpx;
+    border-radius: $button-radius;
     transition: opacity 0.12s ease;
 
     &--back {
       background: rgba($color-primary, 0.08);
-      Text { font-size: 28rpx; color: $color-primary; font-weight: 600; }
+      Text { font-family: $font-ui; font-size: $font-size-base; color: $color-primary; font-weight: $font-weight-bold; }
     }
 
     &--pressed {
@@ -489,7 +561,7 @@ $color-savings: $color-success;
   }
 }
 
-// ── Success State ─────────────────────────────────────────
+// ── Success State ──
 .ticket-success {
   display: flex;
   flex-direction: column;
@@ -508,18 +580,20 @@ $color-savings: $color-success;
   }
 
   &__title {
-    font-size: 44rpx;
-    font-weight: 800;
-    color: $color-text;
+    font-family: $font-cn-display;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    color: $ticket-text;
     margin-bottom: $spacing-sm;
     text-align: center;
   }
 
   &__subtitle {
-    font-size: 28rpx;
-    color: $color-text-subtle;
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    color: $ticket-text-subtle;
     text-align: center;
-    line-height: 1.55;
+    line-height: $line-height-relaxed;
     margin-bottom: 56rpx;
     max-width: 560rpx;
   }
@@ -531,7 +605,7 @@ $color-savings: $color-success;
     min-height: $cta-min-tap;
     padding: 0 64rpx;
     background: $color-primary;
-    border-radius: 24rpx;
+    border-radius: $button-radius;
     box-shadow: 0 8rpx 32rpx rgba($color-primary, 0.35);
     transition: opacity 0.12s ease, transform 0.12s ease;
 
@@ -542,13 +616,14 @@ $color-savings: $color-success;
   }
 
   &__cta-text {
-    font-size: 32rpx;
-    font-weight: 700;
-    color: #FFFFFF;
+    font-family: $font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
   }
 }
 
-// ── Verifying State ───────────────────────────────────────
+// ── Verifying State ──
 .ticket-verifying {
   display: flex;
   flex-direction: column;
@@ -567,9 +642,10 @@ $color-savings: $color-success;
   }
 
   &__text {
-    font-size: 30rpx;
-    font-weight: 600;
-    color: $color-text;
+    font-family: $font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $ticket-text;
     margin-bottom: 32rpx;
   }
 
@@ -591,6 +667,7 @@ $color-savings: $color-success;
   }
 }
 
+// ── Keyframes ──
 @keyframes ticket-dot-pulse {
   0%, 80%, 100% {
     opacity: 0.2;
@@ -624,10 +701,308 @@ $color-savings: $color-success;
   }
 }
 
+@keyframes ticket-stamp-pop {
+  from {
+    opacity: 0;
+    transform: scale(0) rotate(-15deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes ticket-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(24rpx) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// ── Reduced Motion ──
 @media (prefers-reduced-motion: reduce) {
+  .ticket-verifying__dot {
+    animation: none;
+    opacity: 0.6;
+  }
+
   .ticket-success__hero,
   .ticket-verifying__hero {
     animation: none;
     opacity: 1;
   }
+
+  .ticket-card__stamp--animated,
+  .ticket-card--entrance {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .ticket-plan-card,
+  .ticket-cta {
+    transition: none;
+  }
+}
+
+// ── Plan Selector ──
+.ticket-plan-section {
+  margin: 24rpx 32rpx 0;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+    margin-bottom: 16rpx;
+  }
+
+  &__header-accent {
+    width: 6rpx;
+    height: 24rpx;
+    background: $color-primary;
+    border-radius: 999rpx;
+  }
+
+  &__label {
+    font-family: $font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $ticket-text;
+    letter-spacing: 1rpx;
+  }
+}
+
+.ticket-plan-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.ticket-plan-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 18rpx;
+  padding: 24rpx;
+  background: $color-surface;
+  border-radius: $card-radius;
+  box-shadow: $shadow-card;
+  border: 2rpx solid transparent;
+  transition: border-color 0.15s ease, transform 0.12s ease;
+
+  &--selected {
+    border-color: $color-primary;
+    background: rgba($color-primary, 0.03);
+  }
+
+  &--pressed {
+    transform: scale(0.99);
+  }
+
+  &__radio {
+    flex-shrink: 0;
+    width: 40rpx;
+    height: 40rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 4rpx;
+    border-radius: 50%;
+    border: 2rpx solid $color-border;
+    background: $color-surface;
+  }
+
+  &__radio-dot {
+    width: 20rpx;
+    height: 20rpx;
+    border-radius: 50%;
+    background: transparent;
+    transition: background 0.15s ease;
+
+    &--active {
+      background: $color-primary;
+    }
+  }
+
+  &__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+  }
+
+  &__top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16rpx;
+  }
+
+  &__title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+  }
+
+  &__title {
+    font-family: $font-cn-display;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: $ticket-text;
+  }
+
+  &__badge {
+    padding: 4rpx 12rpx;
+    background: rgba($color-secondary, 0.1);
+    border-radius: $radius-pill;
+
+    Text {
+      font-family: $font-ui;
+      font-size: 20rpx;
+      font-weight: $font-weight-bold;
+      color: $color-secondary;
+    }
+
+    &--best {
+      background: rgba($color-primary, 0.1);
+
+      Text {
+        color: $color-primary;
+      }
+    }
+  }
+
+  &__price {
+    font-family: $font-cn-display;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-black;
+    color: $ticket-text;
+  }
+
+  &__desc {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    color: $ticket-text-muted;
+  }
+}
+
+// ── Price Summary ──
+.ticket-price-summary {
+  margin: 24rpx 32rpx 0;
+  padding: 24rpx 32rpx;
+  background: $color-surface;
+  border-radius: $card-radius;
+  box-shadow: $shadow-card;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12rpx;
+
+    &--total {
+      margin-top: 16rpx;
+      margin-bottom: 0;
+      padding-top: 16rpx;
+      border-top: 1rpx dashed $color-border;
+    }
+  }
+
+  &__label {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    color: $ticket-text-subtle;
+  }
+
+  &__value {
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: $ticket-text;
+
+    &--struck {
+      text-decoration: line-through;
+      color: $ticket-text-muted;
+      font-weight: $font-weight-medium;
+    }
+
+    &--discount {
+      color: $color-secondary;
+    }
+
+    &--total {
+      font-family: $font-cn-display;
+      font-size: $font-size-xl;
+      font-weight: $font-weight-black;
+      color: $color-primary;
+    }
+  }
+}
+
+// ── Trust & Policy ──
+.ticket-trust-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 24rpx 32rpx 0;
+
+  &__text {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $ticket-text-muted;
+  }
+}
+
+.ticket-refund-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  margin: 12rpx 32rpx 0;
+  padding: 8rpx 0;
+
+  &__text {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $color-primary;
+  }
+
+  &__arrow {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    color: $color-primary;
+  }
+
+  &--pressed {
+    opacity: 0.7;
+  }
+}
+
+// ── CTA Badge ──
+.ticket-cta__content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+}
+
+.ticket-cta__badge {
+  padding: 4rpx 12rpx;
+  background: rgba($color-text-white, 0.2);
+  border-radius: $radius-pill;
+
+  &-text {
+    font-family: $font-ui;
+    font-size: 20rpx;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+  }
+}
+
+// Small helper to darken success color for budget chip text
+@function darken-color($color, $amount) {
+  @return mix(#111111, $color, $amount);
 }

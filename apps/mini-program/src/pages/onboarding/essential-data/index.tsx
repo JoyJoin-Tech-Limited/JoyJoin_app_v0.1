@@ -8,6 +8,7 @@ import {
   INTENT_FLEXIBLE_OPTION,
   INTENT_OPTIONS,
   RELATIONSHIP_STATUS_OPTIONS,
+  toggleIntentValue,
 } from '@shared/constants'
 import {
   getOccupationGuidance,
@@ -29,8 +30,8 @@ import { haptics } from '../../../lib/utils/haptics'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
-import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
-import CheckBadge from '../../../components/ui/CheckBadge'
+import IntentCard from '../../../components/intent/IntentCard'
+import type { IntentCardOption } from '../../../components/intent/IntentCard'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
 import FormStepper from '../../../components/ui/FormStepper'
@@ -240,7 +241,14 @@ export default function EssentialDataPage() {
   const birthYearIndex = birthYear > 0 ? BIRTH_YEAR_RANGE.indexOf(birthYear) : -1
   const currentCityIndex = currentCity ? cityOptions.findIndex((option) => option === currentCity) : -1
   const relationshipIndex = relationshipStatus ? relationshipOptions.findIndex((option) => option === relationshipStatus) : -1
-  const intentOptions = useMemo(() => [...INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION], [])
+  const intentOptions = useMemo(
+    () =>
+      [...INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION].map((option) => ({
+        ...option,
+        subtitle: option.subtitle ?? (option as { description?: string }).description,
+      })),
+    [],
+  )
 
   const stepConfig = STEP_CONFIG[currentStep]
 
@@ -429,38 +437,39 @@ export default function EssentialDataPage() {
     }, shouldReduceMotion ? 0 : 350)
   }, [shouldReduceMotion])
 
+  const INTENT_REACTIONS: Record<string, string> = useMemo(
+    () => ({
+      friends: '新朋友 +1，这一局会很有趣。',
+      networking: '拓展人脉，悦仔会帮你找能互相增值的圈子。',
+      discussion: '想深聊？我会帮你匹配也愿意倾听的人。',
+      fun: '开心优先，别想太多。',
+      romance: '心动模式开启，悦仔会悄悄留意默契。',
+      flexible: '交给悦仔安排，放心。',
+    }),
+    [],
+  )
+
   const toggleIntent = useCallback(
     (value: string) => {
-      haptics('light')
-
-      if (value === INTENT_FLEXIBLE_OPTION.value) {
-        setIntent((current) => {
-          if (current.includes(value)) {
-            return current.filter((item) => item !== value)
-          }
-          return [...current, value]
-        })
-        return
-      }
-
       setIntent((current) => {
-        // Deselecting
-        if (current.includes(value)) {
-          return current.filter((item) => item !== value)
-        }
-
-        // Selecting: enforce MAX_INTENTS cap on explicit intents only
-        const explicitCount = current.filter((item) => item !== INTENT_FLEXIBLE_OPTION.value).length
-        if (explicitCount >= MAX_INTENTS) {
+        const next = toggleIntentValue(current, value, { maxExplicit: MAX_INTENTS })
+        if (next === null) {
+          haptics('warning')
           analytics.validationFailed('intent', 'max-selection-reached')
-          Taro.showToast({ title: `最多选择 ${MAX_INTENTS} 个意图`, icon: 'none', duration: TOAST_DEFAULT_MS })
+          Taro.showToast({ title: `最多选择 ${MAX_INTENTS} 个期待`, icon: 'none', duration: TOAST_DEFAULT_MS })
           return current
         }
 
-        return [...current, value]
+        haptics('light')
+        if (next.length < current.length) {
+          triggerMascotReaction('好，再调整一下。')
+        } else {
+          triggerMascotReaction(INTENT_REACTIONS[value] ?? '收到！')
+        }
+        return next
       })
     },
-    [analytics],
+    [analytics, INTENT_REACTIONS, triggerMascotReaction],
   )
 
   // Memoize intent grid to prevent re-render on unrelated state changes
@@ -470,39 +479,23 @@ export default function EssentialDataPage() {
     const isCapReached = explicitCount >= MAX_INTENTS
     return (
       <View className='essential-data__intent-grid'>
-        {intentOptions.map((option) => {
+        {intentOptions.map((option: IntentCardOption) => {
           const isExplicitlySelected = intent.includes(option.value)
           const isFlexibleOption = option.value === INTENT_FLEXIBLE_OPTION.value
           const isDimmed = isFlexibleActive && !isFlexibleOption && !isExplicitlySelected
           const isDisabled = isCapReached && !isExplicitlySelected && !isFlexibleOption
-          const visuallySelected = isExplicitlySelected
+
           return (
-            <View
+            <IntentCard
               key={option.value}
-              className={[
-                'essential-data__intent-card',
-                visuallySelected ? 'essential-data__intent-card--selected' : '',
-                isDimmed ? 'essential-data__intent-card--dimmed' : '',
-                isDisabled ? 'essential-data__intent-card--disabled' : '',
-              ].filter(Boolean).join(' ')}
-              onClick={() => !isDisabled && toggleIntent(option.value)}
-              role='button'
-              aria-pressed={isExplicitlySelected}
-              aria-disabled={isDisabled}
-              aria-label={`${option.label}：${option.subtitle}${isDisabled ? '（已达上限）' : ''}`}
-            >
-              <JoyJoinIcon
-                emoji={option.emoji}
-                tier='intent'
-                size={48}
-                className='essential-data__intent-icon'
-              />
-              <Text className='essential-data__intent-label'>{option.label}</Text>
-              <Text className='essential-data__intent-subtitle'>{option.subtitle}</Text>
-              {visuallySelected && (
-                <CheckBadge className='essential-data__intent-check' />
-              )}
-            </View>
+              option={option}
+              selected={isExplicitlySelected}
+              dimmed={isDimmed}
+              disabled={isDisabled}
+              onClick={() => toggleIntent(option.value)}
+              iconSize={48}
+              testId={`essential-intent-${option.value}`}
+            />
           )
         })}
       </View>

@@ -181,6 +181,66 @@ cp deployment/.env.production.example deployment/.env.production
 
 ---
 
+## 同服务器 staging（体验版测试价）
+
+为了在不污染生产数据的前提下测试 ¥0.01 支付流程，可在同一台远程服务器上部署隔离的 staging API。
+
+### 文件与域名
+
+- 编排：`deployment/docker-compose.staging.yml`
+- Nginx：`deployment/nginx/joyjoin.conf` 已包含 `staging.joyjoinapp.com`
+- 环境模板：`deployment/.env.staging.example`
+- 域名：`staging.joyjoinapp.com` A 记录指向同一服务器 IP
+
+### 部署步骤（服务器内执行）
+
+```bash
+cd ~/JoyJoin/deployment
+cp .env.staging.example .env.staging
+# 编辑 .env.staging：DATABASE_URL、APP_MODE=staging、TEST_PAYMENT_PRICE_IN_CENTS=1 等
+
+# 首次或重置数据库时重建 Postgres 卷
+docker compose -f docker-compose.staging.yml down
+docker volume rm deployment_pgdata_staging
+docker compose -f docker-compose.staging.yml up -d --build
+
+# 应用迁移（ staging 不自动运行 DDL）
+for f in ../migrations/*.sql; do
+  docker exec -i postgres-staging \
+    psql "postgresql://joyjoin:<POSTGRES_PASSWORD>@localhost:5432/joyjoin_staging" < "$f"
+done
+```
+
+> 注意：`docker-compose.staging.yml` 中的 `postgres-staging` 服务不要写死 `POSTGRES_PASSWORD`，应让它从 `.env.staging` 读取，否则会出现密码不一致导致 API 无法连接的问题。
+
+### 验证
+
+```bash
+curl -fsS https://staging.joyjoinapp.com/api/health
+```
+
+### 小程序指向 staging
+
+构建前在 `apps/mini-program/.env.local` 中设置：
+
+```env
+TARO_APP_API_BASE_URL=https://staging.joyjoinapp.com
+```
+
+然后在微信公众平台 → 开发管理 → 服务器域名中添加 `https://staging.joyjoinapp.com` 和 `wss://staging.joyjoinapp.com`，再上传体验版。
+
+### 关键环境变量
+
+```env
+APP_MODE=staging              # 必须：启用 test pricing、保留微信登录
+NODE_ENV=staging              # 容器内仍会被 npm 脚本覆写为 production
+TEST_PAYMENT_PRICE_IN_CENTS=1 # ¥0.01，仅在 APP_MODE != production 时生效
+PORT=5001
+APP_URL=https://staging.joyjoinapp.com
+```
+
+---
+
 ## 发布后检查
 
 ```bash
@@ -198,6 +258,7 @@ https://joyjoinapp.com
 https://admin.joyjoinapp.com
 https://joyjoinapp.com/api/health
 https://api.joyjoinapp.com/api/health
+https://staging.joyjoinapp.com/api/health
 ```
 
 ---

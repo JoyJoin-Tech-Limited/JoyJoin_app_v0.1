@@ -30,8 +30,11 @@ export interface PendingRequestSummary {
   eventTitle: string | null;
 }
 
+const CONNECTIONS_QUERY_LIMIT = 200;
+const PENDING_REQUESTS_QUERY_LIMIT = 50;
+
 /**
- * Fetch all mutual connections for a user.
+ * Fetch mutual connections for a user, capped for shell performance.
  * N+1-free: single round-trip with conditional joins for peer resolution.
  */
 export async function getUserConnections(userId: string): Promise<ConnectionSummary[]> {
@@ -83,7 +86,8 @@ export async function getUserConnections(userId: string): Promise<ConnectionSumm
         eq(connections.status, "mutual")
       )
     )
-    .orderBy(desc(connections.createdAt));
+    .orderBy(desc(connections.createdAt))
+    .limit(CONNECTIONS_QUERY_LIMIT);
 
   return rows.map((row: typeof rows[number]) => ({
     id: row.id,
@@ -143,7 +147,8 @@ export async function getUserPendingRequests(userId: string): Promise<PendingReq
         sql`${connections.initiatorId} != ${userId}`
       )
     )
-    .orderBy(desc(connections.createdAt));
+    .orderBy(desc(connections.createdAt))
+    .limit(PENDING_REQUESTS_QUERY_LIMIT);
 
   return rows.map((row: typeof rows[number]) => ({
     id: row.id,

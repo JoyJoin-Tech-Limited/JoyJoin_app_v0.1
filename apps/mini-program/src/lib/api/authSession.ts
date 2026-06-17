@@ -32,6 +32,25 @@ export function clearAuthStorage(): void {
   }
 }
 
+/**
+ * Read the last persisted auth user from storage.
+ * Used to hydrate useAuth on tab switches so protected pages don't flash a
+ * loading gate while the cached session is still valid.
+ */
+export function getStoredAuthUser<TUser extends UserState = UserState>(): TUser | null {
+  try {
+    const raw = Taro.getStorageSync(HYDRATE_AUTH_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+    if (parsed && typeof parsed === 'object' && parsed.id) {
+      return parsed as TUser
+    }
+  } catch {
+    // Storage read failures are non-critical; fall back to fetching.
+  }
+  return null
+}
+
 type SessionResetMode = 'soft' | 'hard'
 
 let loginRedirectQueued = false

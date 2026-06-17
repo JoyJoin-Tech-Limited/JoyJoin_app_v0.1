@@ -21,6 +21,7 @@ const ProfileAnalyticsEventSchema = z.object({
     'profile_edit_tap',
     'profile_completion',
     'connection_card_view',
+    'connection_empty_state_cta_tap',
   ]),
   metadata: z.record(z.unknown()).optional(),
   timestamp: z.number(),

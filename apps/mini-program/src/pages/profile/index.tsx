@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, Image, Canvas } from '@tarojs/components'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import Taro, { useDidShow, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { haptics } from '../../lib/utils/haptics'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -31,13 +32,13 @@ import {
 } from '../../lib/prefetchEngine'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
+import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
 import { logError, logInfo } from '../../lib/utils/logger'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import { getXiaoyueExpressionAsset, type XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
-import { localAsset } from '../../lib/utils/cdnAssets'
 import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
-import { PROFILE_SHARE_POSTER_CANVAS_ID } from './profilePoster'
+import { PROFILE_SHARE_POSTER_CANVAS_ID } from './profilePosterConstants'
 import { useProfileShareCard } from './useProfileShareCard'
 import {
   ARCHETYPE_FAMILY_NAME,
@@ -50,18 +51,17 @@ import {
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import { CountUpText } from '../../components/ui/CountUpText'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
+import ShareCardShimmer from './ShareCardShimmer'
 import './index.scss'
 
-const UI_ICONS = {
-  people: localAsset('/assets/icons/ui/icon-people.webp'),
-  footprint: localAsset('/assets/icons/ui/icon-footprint.webp'),
-  edit: localAsset('/assets/icons/ui/icon-edit.webp'),
-  coupon: localAsset('/assets/icons/ui/icon-coupon.webp'),
-  link: localAsset('/assets/icons/ui/icon-link.webp'),
-  price: localAsset('/assets/icons/ui/icon-price.webp'),
-  status: localAsset('/assets/icons/ui/icon-status.webp'),
-  lock: localAsset('/assets/icons/ui/icon-lock.webp'),
-  share: localAsset('/assets/icons/ui/icon-link.webp'),
+const MENU_EMOJI = {
+  edit: '✏️',
+  shareCard: '📤',
+  coupon: '🎁',
+  invite: '🔗',
+  benefits: '👑',
+  footprints: '👣',
+  terms: '📄',
 }
 
 const REFERRAL_STATS_QUERY_KEY = ['mini-program', 'referral-stats'] as const
@@ -82,13 +82,13 @@ interface StatItem {
   caption?: string
   action: () => void
   progress?: number
-  icon: string
+  emoji: string
 }
 
 interface MenuItem {
   key: string
   label: string
-  icon: string
+  emoji: string
   badge?: number
   action: () => void
 }
@@ -104,6 +104,7 @@ export default function ProfilePage() {
   const logoutLockRef = useRef(false)
   const reactionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [entered, setEntered] = useState(false)
+  const [tabEntranceClass] = useState(() => (consumeTabEntrance() ? 'tab-page-enter' : ''))
   const [reducedMotion, setReducedMotion] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [refresherTriggered, setRefresherTriggered] = useState(false)
@@ -121,6 +122,7 @@ export default function ProfilePage() {
   const milestoneImpressionTrackedRef = useRef<Set<string>>(new Set())
   const profileViewTrackedRef = useRef(false)
   const [celebrateCompletion, setCelebrateCompletion] = useState(false)
+  const [shareShimmerVisible, setShareShimmerVisible] = useState(false)
 
   const { isDegradation } = useDeviceTier()
   const redesignEnabled = authUser?.features?.profileRedesignEnabled ?? true
@@ -605,7 +607,7 @@ export default function ProfilePage() {
         label: '已参加活动',
         numericValue: eventsJoined,
         caption: eventsJoined === 0 ? '去遇见' : undefined,
-        icon: UI_ICONS.people,
+        emoji: '👥',
         action: () => {
           haptics('light')
           profileAnalytics.track('profile_stat_tap', { stat: 'events', value: eventsJoined })
@@ -618,7 +620,7 @@ export default function ProfilePage() {
         label: '我的连接数',
         numericValue: connectionsCount,
         caption: connectionsCount === 0 ? '活动后解锁' : undefined,
-        icon: UI_ICONS.link,
+        emoji: '🔗',
         action: () => {
           haptics('light')
           profileAnalytics.track('profile_stat_tap', {
@@ -634,7 +636,7 @@ export default function ProfilePage() {
         label: '资料完成度',
         numericValue: completion,
         caption: completion < 100 ? '去完善' : undefined,
-        icon: UI_ICONS.edit,
+        emoji: '✏️',
         action: () => {
           haptics('light')
           profileAnalytics.track('profile_stat_tap', { stat: 'completion', value: completion })
@@ -656,7 +658,7 @@ export default function ProfilePage() {
       {
         key: 'edit-profile',
         label: '编辑资料',
-        icon: UI_ICONS.edit,
+        emoji: MENU_EMOJI.edit,
         action: () => {
           haptics('light')
           profileAnalytics.track('profile_menu_tap', { menu: 'edit-profile' })
@@ -668,7 +670,7 @@ export default function ProfilePage() {
             {
               key: 'share-card',
               label: '分享我的社交名片',
-              icon: UI_ICONS.share,
+              emoji: MENU_EMOJI.shareCard,
               action: handleShareCard,
             },
           ]
@@ -676,7 +678,7 @@ export default function ProfilePage() {
       {
         key: 'rewards',
         label: '奖励福利',
-        icon: UI_ICONS.coupon,
+        emoji: MENU_EMOJI.coupon,
         badge: couponsCount,
         action: () => {
           haptics('light')
@@ -687,7 +689,7 @@ export default function ProfilePage() {
       {
         key: 'invite',
         label: '邀请好友',
-        icon: UI_ICONS.link,
+        emoji: MENU_EMOJI.invite,
         action: () => {
           haptics('light')
           profileAnalytics.track('profile_menu_tap', { menu: 'invite' })
@@ -697,7 +699,7 @@ export default function ProfilePage() {
       {
         key: 'benefits',
         label: '我的权益',
-        icon: UI_ICONS.price,
+        emoji: MENU_EMOJI.benefits,
         action: () => {
           haptics('light')
           profileAnalytics.track('profile_menu_tap', { menu: 'benefits' })
@@ -707,7 +709,7 @@ export default function ProfilePage() {
       {
         key: 'footprints',
         label: '我的足迹',
-        icon: UI_ICONS.footprint,
+        emoji: MENU_EMOJI.footprints,
         action: () => {
           haptics('light')
           profileAnalytics.track('profile_menu_tap', { menu: 'footprints' })
@@ -717,11 +719,11 @@ export default function ProfilePage() {
       {
         key: 'terms',
         label: '服务条款',
-        icon: UI_ICONS.status,
+        emoji: MENU_EMOJI.terms,
         action: () => {
           haptics('light')
           profileAnalytics.track('profile_menu_tap', { menu: 'terms' })
-          void Taro.navigateTo({ url: '/pages/terms/index' })
+          void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.terms })
         },
       },
     ],
@@ -799,6 +801,17 @@ export default function ProfilePage() {
     }
   }, [isLoadingShell, shell, eventsJoined, completion, clearReaction, celebratingMilestone])
 
+  // Share-card shimmer: show a local skeleton preview only if generation takes
+  // longer than 200 ms, so fast paths avoid any flash.
+  useEffect(() => {
+    if (!isGeneratingSharePoster) {
+      setShareShimmerVisible(false)
+      return
+    }
+    const timer = setTimeout(() => setShareShimmerVisible(true), 200)
+    return () => clearTimeout(timer)
+  }, [isGeneratingSharePoster])
+
   const milestonesClass = showMilestones
     ? milestonesAnimated
       ? 'profile-page__milestones--seen'
@@ -809,12 +822,11 @@ export default function ProfilePage() {
 
   return renderGate(
     <View
-      className={`profile-page tab-page-enter ${isDegradation ? 'profile-page--degradation' : ''}`}
+      className={`profile-page ${tabEntranceClass} ${isDegradation ? 'profile-page--degradation' : ''}`}
     >
       <ScrollView
         className='profile-page__scroll'
         scrollY
-        enhanced
         showScrollbar={false}
         refresherEnabled
         refresherTriggered={refresherTriggered}
@@ -901,7 +913,7 @@ export default function ProfilePage() {
             {/* Xiaoyue greeting */}
             <View className='profile-page__greeting'>
               <Image
-                className='profile-page__greeting-mascot'
+                className={`profile-page__greeting-mascot ${heroEntered ? 'profile-page__greeting-mascot--entered' : ''}`}
                 src={getXiaoyueExpressionAsset(greetingExpression)}
                 mode='aspectFit'
                 aria-label='悦仔'
@@ -940,11 +952,11 @@ export default function ProfilePage() {
                   onClick={stat.action}
                   aria-label={`${stat.label} ${stat.numericValue}${stat.key === 'completion' ? '%' : ''}`}
                 >
-                  <Image
+                  <JoyJoinIcon
+                    emoji={stat.emoji}
+                    tier='ui'
+                    size={32}
                     className='profile-page__stat-icon'
-                    src={stat.icon}
-                    mode='aspectFit'
-                    aria-hidden='true'
                   />
                   <CountUpText
                     className='profile-page__stat-value'
@@ -1118,26 +1130,35 @@ export default function ProfilePage() {
             <Text className='profile-page__menu-title'>常用功能</Text>
             <View className='profile-page__menu'>
               {menuItems.map((item, index) => (
-                <View
-                  key={item.key}
-                  className='profile-page__menu-row'
-                  style={{ transitionDelay: `${Math.min(index * 50, 300)}ms` }}
-                  hoverClass='profile-page__menu-row--pressed'
-                  onClick={item.action}
-                  aria-label={item.label}
-                >
-                  <View className='profile-page__menu-icon-well'>
-                    <Image className='profile-page__menu-icon' src={item.icon} mode='aspectFit' />
+                <View key={item.key}>
+                  <View
+                    className='profile-page__menu-row'
+                    style={{ transitionDelay: `${Math.min(index * 50, 300)}ms` }}
+                    hoverClass='profile-page__menu-row--pressed'
+                    onClick={item.action}
+                    aria-label={item.label}
+                  >
+                    <View className='profile-page__menu-icon-well'>
+                      <JoyJoinIcon
+                        emoji={item.emoji}
+                        tier='ui'
+                        size={40}
+                        className='profile-page__menu-icon'
+                      />
+                    </View>
+                    <Text className='profile-page__menu-label'>{item.label}</Text>
+                    <View className='profile-page__menu-row-right'>
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <View className='profile-page__menu-badge'>
+                          <Text className='profile-page__menu-badge-text'>{item.badge}</Text>
+                        </View>
+                      )}
+                      <View className='profile-page__chevron profile-page__chevron--menu' aria-hidden='true' />
+                    </View>
                   </View>
-                  <Text className='profile-page__menu-label'>{item.label}</Text>
-                  <View className='profile-page__menu-row-right'>
-                    {item.badge !== undefined && item.badge > 0 && (
-                      <View className='profile-page__menu-badge'>
-                        <Text className='profile-page__menu-badge-text'>{item.badge}</Text>
-                      </View>
-                    )}
-                    <View className='profile-page__chevron profile-page__chevron--menu' aria-hidden='true' />
-                  </View>
+                  {item.key === 'share-card' && isGeneratingSharePoster && shareShimmerVisible && (
+                    <ShareCardShimmer />
+                  )}
                 </View>
               ))}
             </View>

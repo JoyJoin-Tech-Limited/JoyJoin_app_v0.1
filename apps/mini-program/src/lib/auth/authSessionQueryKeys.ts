@@ -10,6 +10,10 @@ export const MINI_PROGRAM_USER_SCOPED_QUERY_KEY_PREFIXES = [
   ['mini-program', 'my-blind-box-events'],
   ['mini-program', 'joined-events'],
   ['mini-program', 'connections'],
+  ['mini-program', 'shell/discover'],
+  ['mini-program', 'shell/events'],
+  ['mini-program', 'shell/profile'],
+  ['mini-program', 'shell/connections'],
   ['mini-program', 'referral-stats'],
   ['mini-program', 'pool-registration'],
 ] as const

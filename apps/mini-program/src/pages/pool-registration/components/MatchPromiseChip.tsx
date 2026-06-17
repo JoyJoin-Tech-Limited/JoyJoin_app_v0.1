@@ -17,7 +17,7 @@ export default function MatchPromiseChip({ reason, index, animate }: MatchPromis
         delayClass,
       ].join(' ')}
     >
-      <View className='match-promise-chip__accent' />
+      <View className='match-promise-chip__dot' />
       <Text className='match-promise-chip__text'>{reason}</Text>
     </View>
   )

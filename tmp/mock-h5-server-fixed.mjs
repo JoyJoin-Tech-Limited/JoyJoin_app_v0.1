@@ -94,6 +94,6 @@ const server = http.createServer((req, res) => {
 })
 
 server.listen(PORT, () => {
-  console.log(`H5 mock server running at http://localhost:${PORT}`)
-  console.log(`Serving static files from: ${DIST_DIR}`)
+  process.stdout.write(`H5 mock server running at http://localhost:${PORT}\n`)
+  process.stdout.write(`Serving static files from: ${DIST_DIR}\n`)
 })

@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { View, Text, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -6,15 +6,14 @@ import { getEventPool, getMyPoolRegistrations, registerForPool, type EventPoolSu
 import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
 import { getErrorMessage, type ErrorCode } from '@shared/copy/errorBaselines'
 import { ALL_INTENT_VALUES, INTENT_FLEXIBLE_OPTION } from '@shared/constants'
-import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 
 import { useStaggerMount } from '../../hooks/useStaggerMount'
+import { useReactionTimer } from '../../hooks/useReactionTimer'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { apiRequest, type ApiError } from '../../lib/api/api'
 import { evictPersistedQuery } from '../../lib/api/persistentCache'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
-import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import {
   buildPoolRegistrationPaymentReturnContext,
   type MiniProgramPaymentEntitlementCode,
@@ -28,18 +27,15 @@ import {
 import { POOLS_QUERY_KEY, JOINED_EVENTS_QUERY_KEY } from '../../lib/prefetchEngine'
 import { haptics } from '../../lib/utils/haptics'
 import { logInfo, logError } from '../../lib/utils/logger'
-import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { usePreloadIntentIcons } from '../../hooks/usePreloadIntentIcons'
 import { useLoadingDeadline } from '../../hooks/useLoadingDeadline'
 import { AUTH_QUERY_KEY } from '../../lib/api/authSession'
 import { TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
-import { CEREMONY_HEROES } from '../../lib/ceremonyHeroes'
 import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscribeMessage'
 import LoadingScreen from '../../components/loading/LoadingScreen'
-import ChemistryMiniGrid from '../../components/discover/ChemistryMiniGrid'
-import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import Card from '../../components/ui/Card'
 import StatusCard from '../../components/ui/StatusCard'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import CheckBadge from '../../components/ui/CheckBadge'
@@ -72,12 +68,17 @@ import {
 } from './poolRegistrationForm'
 import ChoiceCard from './components/ChoiceCard'
 import ChoiceChip from './components/ChoiceChip'
-import EventMetaIcon from './components/EventMetaIcon'
 import { getIntentFeedback } from './components/intentFeedback'
 import PoolRegistrationHero from './components/PoolRegistrationHero'
 import StepPill from './components/StepPill'
 import XiaoyueCoachCard from './components/XiaoyueCoachCard'
 import XiaoyueLetterCard from './components/XiaoyueLetterCard'
+import {
+  PoolRegistrationLoading,
+  PoolRegistrationEmpty,
+  PoolRegistrationAlreadyJoined,
+  PoolRegistrationSuccess,
+} from './components/PoolRegistrationTerminalStates'
 import './index.scss'
 
 const STEP_BRIEF = 0
@@ -146,7 +147,7 @@ export default function PoolRegistrationPage() {
   const invitationCode = router.params.invitationCode ?? ''
   const { user, isLoading: authLoading } = useAuthGuard()
 
-  const resolvedInvitationCode = invitationCode || (user as any)?.pendingReferralCode || ''
+  const resolvedInvitationCode = invitationCode || user?.pendingReferralCode || ''
   const hasTrackedStartRef = useRef(false)
   const registeredRef = useRef(false)
   const queryClient = useQueryClient()
@@ -161,10 +162,8 @@ export default function PoolRegistrationPage() {
   // Scroll-to-error anchor — set when error appears, cleared so it doesn't re-scroll on re-render
   const [scrollErrorId, setScrollErrorId] = useState('')
   const [resumeContext, setResumeContext] = useState<MiniProgramPoolRegistrationReturnContext | null>(null)
-  const [showBudgetReaction, setShowBudgetReaction] = useState(false)
-  const budgetReactionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [showIntentReaction, setShowIntentReaction] = useState(false)
-  const intentReactionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [showBudgetReaction, triggerBudgetReaction] = useReactionTimer()
+  const [showIntentReaction, triggerIntentReaction, hideIntentReaction] = useReactionTimer()
   const staggerMounted = useStaggerMount()
 
   const reduceMotion = useMemo(() => {
@@ -316,15 +315,6 @@ export default function PoolRegistrationPage() {
     }
   }, [poolId])
 
-  // Cleanup budget reaction timer on unmount
-  useEffect(() => {
-    return () => {
-      if (budgetReactionTimerRef.current) {
-        clearTimeout(budgetReactionTimerRef.current)
-      }
-    }
-  }, [])
-
   // When error appears: trigger haptics + scroll into view
   useEffect(() => {
     if (!error) {
@@ -403,16 +393,11 @@ export default function PoolRegistrationPage() {
   // Brief celebratory Xiaoyue reaction when the user makes their first intent selection
   useEffect(() => {
     if (!hasIntentSelection) {
-      setShowIntentReaction(false)
+      hideIntentReaction()
       return
     }
-    setShowIntentReaction(true)
-    if (intentReactionTimerRef.current) clearTimeout(intentReactionTimerRef.current)
-    intentReactionTimerRef.current = setTimeout(() => setShowIntentReaction(false), 2200)
-    return () => {
-      if (intentReactionTimerRef.current) clearTimeout(intentReactionTimerRef.current)
-    }
-  }, [hasIntentSelection])
+    triggerIntentReaction()
+  }, [hasIntentSelection, hideIntentReaction, triggerIntentReaction])
   const advanceDisabled =
     step === STEP_BUDGET
       ? !hasBudgetSelection
@@ -470,11 +455,9 @@ export default function PoolRegistrationPage() {
               barBudgetRange: undefined,
             },
       )
-      setShowBudgetReaction(true)
-      if (budgetReactionTimerRef.current) clearTimeout(budgetReactionTimerRef.current)
-      budgetReactionTimerRef.current = setTimeout(() => setShowBudgetReaction(false), 2200)
+      triggerBudgetReaction()
     },
-    [eventType],
+    [eventType, triggerBudgetReaction],
   )
 
   const handleIntentToggle = useCallback((value: string) => {
@@ -482,7 +465,6 @@ export default function PoolRegistrationPage() {
 
     if (value === INTENT_FLEXIBLE_OPTION.value) {
       setFormState((currentState) => {
-        const toggled = !currentState.eventIntent.includes(value)
         discoverAnalytics.track('registration_intent_toggled', poolId, { value, flexible: true })
         return {
           ...currentState,
@@ -695,7 +677,8 @@ export default function PoolRegistrationPage() {
         poolId,
         eventType,
         step,
-        payload,
+        intentCount: payload.eventIntent?.length,
+        hasDietary: payload.dietaryRestrictions && payload.dietaryRestrictions.length > 0,
       })
       await registerForPool(apiRequest, poolId, payload)
       await Promise.allSettled([
@@ -767,27 +750,15 @@ export default function PoolRegistrationPage() {
   if (isPageLoading) {
     if (isPageLoadingStale) {
       return (
-        <View className='pool-reg'>
-          <StatusCard
-            tone='error'
-            title='加载有点慢'
-            description='网络或服务器响应超时，刷新一下再试试'
-            action={{
-              label: '重新加载',
-              onClick: () => {
-                void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY })
-                void refetchPool()
-                void refetchMyRegistrations()
-              },
-              variant: 'primary',
-            }}
-            footer={
-              <Button variant='secondary' onClick={() => Taro.navigateBack()}>
-                返回上一页
-              </Button>
-            }
-          />
-        </View>
+        <PoolRegistrationLoading
+          isStale
+          onRetry={() => {
+            void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY })
+            void refetchPool()
+            void refetchMyRegistrations()
+          }}
+          onBack={() => Taro.navigateBack()}
+        />
       )
     }
 
@@ -796,118 +767,34 @@ export default function PoolRegistrationPage() {
 
   if (!poolId || poolError || !pool) {
     return (
-      <View className='pool-reg'>
-        <Card className='pool-reg__empty'>
-          <Image
-            className='pool-reg__empty-hero'
-            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
-            mode='aspectFit'
-            lazyLoad
-          />
-          <Text className='pool-reg__empty-title'>这场活动暂时打不开</Text>
-          <Text className='pool-reg__empty-text'>
-            {poolError
-              ? resolveMessage(poolError, 'load-failed')
-              : '悦仔正在努力同步这场活动的最新信息，稍后再试就好。'}
-          </Text>
-          <Button variant='primary' className='pool-reg__single-action' onClick={() => refetchPool()}>
-            重试
-          </Button>
-          <Button variant='secondary' className='pool-reg__single-action' onClick={() => Taro.navigateBack()}>
-            返回上一页
-          </Button>
-        </Card>
-      </View>
+      <PoolRegistrationEmpty
+        errorMessage={poolError ? resolveMessage(poolError, 'load-failed') : undefined}
+        onRetry={() => refetchPool()}
+        onBack={() => Taro.navigateBack()}
+      />
     )
   }
 
   if (alreadyRegistered) {
     return (
-      <View className='pool-reg'>
-        <Card className='pool-reg__already-joined'>
-          <Image
-            className='pool-reg__already-mascot'
-            mode='aspectFit'
-            src={localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')}
-            ariaLabel='已报名'
-          />
-          <Text className='pool-reg__already-title'>你已经加入这场{eventType}了</Text>
-          <Text className='pool-reg__already-text'>
-            你的预算和社交期待已经在匹配引擎里跑着了，有结果会第一时间通知你。
-          </Text>
-          <View className='pool-reg__already-meta'>
-            <View className='pool-reg__already-meta-row'>
-              <EventMetaIcon kind='type' />
-              <Text>{eventType}</Text>
-            </View>
-            {pool.dateTime ? (
-              <View className='pool-reg__already-meta-row'>
-                <EventMetaIcon kind='calendar' />
-                <Text>{poolDateTimeLabel}</Text>
-              </View>
-            ) : null}
-            {poolArea ? (
-              <View className='pool-reg__already-meta-row'>
-                <EventMetaIcon kind='location' />
-                <Text>{poolArea}</Text>
-              </View>
-            ) : null}
-          </View>
-          <Button
-            variant='primary'
-            className='pool-reg__already-cta'
-            onClick={() => Taro.switchTab({ url: '/pages/events/index' })}
-          >
-            去我的足迹查看状态
-          </Button>
-        </Card>
-      </View>
+      <PoolRegistrationAlreadyJoined
+        eventType={eventType}
+        poolDateTimeLabel={poolDateTimeLabel}
+        poolArea={poolArea}
+        poolDateTime={pool.dateTime}
+      />
     )
   }
 
   if (registered) {
     return (
-      <View className='pool-reg'>
-        <Card className='pool-reg__success'>
-          <Image
-            className='pool-reg__success-hero'
-            mode='aspectFit'
-            src={CEREMONY_HEROES.poolRegistrationSuccess}
-            ariaLabel='已加入活动池'
-          />
-          <Text className='pool-reg__success-title'>已加入这场{eventType}</Text>
-          <Text className='pool-reg__success-text'>
-            我们会按照你刚刚填写的预算、社交期待和偏好完成匹配，有结果会第一时间通知你。
-          </Text>
-          <Text className='pool-reg__success-notify-hint'>
-            {`想在${DEFAULT_MASCOT_DISPLAY_NAME}帮你匹配成功时收到微信提醒？点一下授权（可在微信授权弹窗中选择）。`}
-          </Text>
-          <Button
-            variant='secondary'
-            className='pool-reg__notify-btn'
-            onClick={handleEnableMatchNotifications}
-          >
-            开启匹配结果通知
-          </Button>
-          {successHighlights.length > 0 ? (
-            <View className='pool-reg__success-pills'>
-              {successHighlights.map((item) => (
-                <Text key={item} className='pool-reg__success-pill'>
-                  {item}
-                </Text>
-              ))}
-            </View>
-          ) : null}
-          <Button
-            variant='primary'
-            className='pool-reg__back-btn'
-            onClick={() => Taro.switchTab({ url: '/pages/events/index' })}
-          >
-            去看我的足迹
-          </Button>
-          <ChemistryMiniGrid pool={pool} userArchetype={user?.primaryArchetype ?? null} />
-        </Card>
-      </View>
+      <PoolRegistrationSuccess
+        eventType={eventType}
+        highlights={successHighlights}
+        pool={pool}
+        userArchetype={user?.primaryArchetype ?? null}
+        onEnableNotifications={handleEnableMatchNotifications}
+      />
     )
   }
 

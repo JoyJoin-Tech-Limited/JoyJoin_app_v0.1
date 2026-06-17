@@ -50,6 +50,8 @@ export const CEREMONY_HEROES = {
   /** C6 — `/pages/icebreaker-session/phases/RecapPhaseView` end overlay */
   seeYouNextTime: cdnAsset(`${BASE}/see-you-next-time-20260604-v1.webp`),
 
+  /** v0.1 — `/pages/event-ticket-payment` ticket hero banner */
+  eventTicketHero: cdnAsset(`${BASE}/lovart-event-ticket-payment-hero-20260617-v1.webp`),
   /** v0.1 — `/pages/event-ticket-payment` success state */
   eventTicketSuccess: cdnAsset(`${BASE}/event-ticket-success-20260616-v1.webp`),
   /** v0.1 — `/pages/event-ticket-payment` verifying state */

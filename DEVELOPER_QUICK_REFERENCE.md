@@ -1,7 +1,7 @@
 # JoyJoin Developer Quick Reference Guide
 
 **Version:** 2.3
-**Last Updated:** 2026-06-16
+**Last Updated:** 2026-06-17
 **For:** Tech Team Onboarding & Codebase Navigation
 
 ---
@@ -95,7 +95,8 @@ npm run check:server     # Typecheck only the server workspace
 npm run check:full       # Run guardrails, lint, tests, and the full build
 npm run lint             # Alias of the repo TypeScript checks
 npm run test             # Run workspace tests (server tests + no-op placeholders elsewhere)
-npm run build:weapp --workspace=mini-program  # Build the WeChat Mini Program workspace
+npm run build:weapp --workspace=mini-program  # Build the WeChat Mini Program workspace (runs validate:icon-transparency first)
+npm run validate:icon-transparency -w mini-program  # Fail if bundled icons on variable backgrounds are opaque
 gh workflow run "Upload CDN Assets"            # Upload static assets to joyjoinapp.com/static
 npm run upload:cdn-assets -w mini-program       # Upload CDN assets locally (rsync to CVM)
 npm run upload:cdn-assets:dry-run -w mini-program  # Preview what would upload
@@ -111,6 +112,18 @@ npm run db:studio        # Open Drizzle Studio (database GUI)
 - Active production deploys run from `.github/workflows/cicd.yml`: GitHub Actions SSHes to `SERVER_IP`, resets the repo on the remote host, runs `cd ~/JoyJoin/deployment`, then runs `docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans`.
 - The public edge is the self-managed remote server plus host Nginx using `deployment/nginx/joyjoin.conf` (`joyjoinapp.com`, `www.joyjoinapp.com`, `admin.joyjoinapp.com`, `api.joyjoinapp.com`). This is the active production path; do not revive old Fly.io deployment assumptions in active docs or scripts.
 - The app runtime still requires `DATABASE_URL`, but the repository does **not** provision PostgreSQL on the remote host (`deployment/docker-compose.nginx.yml` has no DB service and no `5432` mapping). Current deployment expects an external PostgreSQL instance via `DATABASE_URL`.
+
+### Same-server staging for 体验版 test pricing
+
+An isolated staging API can run on the same production host:
+
+- Compose: `deployment/docker-compose.staging.yml` (`postgres-staging` + `joyjoin-api-staging` on `127.0.0.1:5001`)
+- Nginx server block: `deployment/nginx/joyjoin.conf` (`staging.joyjoinapp.com`)
+- Env template: `deployment/.env.staging.example`
+- Build the mini-program with `TARO_APP_API_BASE_URL=https://staging.joyjoinapp.com`
+- Set `APP_MODE=staging` and `TEST_PAYMENT_PRICE_IN_CENTS=1` to charge ¥0.01 in 体验版
+
+See `deployment/README.md` and `docs/operations/test-mode-operations.md` §G for full setup.
 
 ---
 
@@ -211,7 +224,7 @@ joyjoin-monorepo/
 | WeChat login | Returning: `pages/login/index.tsx` + `hooks/useWeChatLogin.ts` → `POST /api/auth/wechat/login`. With assessment import: `authenticateMiniProgramUserWithTest` in `lib/api.ts` → `POST /api/auth/wechat/login-with-test` |
 | Blind-box payment + verification | `pages/blind-box-payment/`, `pages/payment-verification/`; `lib/paymentEntry.ts`, `lib/paymentPendingOrder.ts`, `lib/paymentPendingOrderStorage.ts`; shared intent helper `createMiniProgramPaymentIntent` in `packages/shared/src/api.ts`. **Payment Ritual V2:** `GET /api/payments/ritual-context` (real DB-backed community stats), `POST /api/analytics/payment` (dedicated A/B analytics endpoint). **Mock payment mode:** when `MOCK_PAYMENTS=true`, server creates instantly-paid orders (skips WeChat Pay API); client skips `Taro.requestPayment()` for mock orders. |
 | Auth + API bootstrap | `apps/mini-program/src/lib/api/api.ts` |
-| Custom tab bar (native) | `apps/mini-program/src/native-custom-tab-bar/` (see `apps/mini-program/README.md`) |
+| Custom tab bar (native) | `apps/mini-program/src/native-custom-tab-bar/` (see `apps/mini-program/README.md`). Sliding active pill via GPU `transform` + 180ms tap debounce for tab-switch performance |
 | Tab list + `tabBar.custom` | `apps/mini-program/src/lib/navigation/tabBarConfig.ts` + `app.config.ts` |
 | Shared contracts with web | `packages/shared/src/api.ts`, `centerTabRouting.ts`, `onboarding.ts`, `hongKongTime.ts` |
 | Navigation / exit-transition hook | `apps/mini-program/src/hooks/navigation/useJoyJoinNavigation.ts` |
@@ -350,7 +363,7 @@ The primary tab pages now follow a consistent loading / empty / error vocabulary
 |------|---------|-------|-------|
 | Discover | Skeleton shimmer above list | `StatusCard` with Lovart `lovart-generic-empty.webp` + action CTA | `StatusCard` `tone='error'` with Lovart error illustration + retry |
 | Events | Skeleton shimmer above tabs | `StatusCard` with Lovart `lovart-generic-empty.webp` + action CTA | `XiaoyueEmptyState` `emotion='sad'` + retry |
-| Connections | `XiaoyueEmptyState` `emotion='waiting'` | `XiaoyueEmptyState` (contextual) | `XiaoyueEmptyState` `emotion='sad'` + retry |
+| Connections | `XiaoyueEmptyState` `emotion='waiting'` | `XiaoyueEmptyState` context-aware: `no-events` → discover, `upcoming-event` → events, `feedback-pending` → event-feedback, `feedback-complete` → celebrate badge | `XiaoyueEmptyState` `emotion='reassure'` + retry |
 
 Full-screen empty/error states inside `ScrollView` must use `@include scroll-view-centered-state` (`_mixins.scss`) to guarantee vertical centering.
 

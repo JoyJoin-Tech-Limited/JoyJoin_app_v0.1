@@ -11,6 +11,8 @@ import {
   MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_PAGES,
   MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
   MINI_PROGRAM_PRELOAD_RULES,
+  MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_PAGES,
+  MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_ROOT,
   MINI_PROGRAM_ROUTES,
   MINI_PROGRAM_SUBPACKAGES,
   nextStepToMiniProgramRoute,
@@ -27,7 +29,7 @@ describe('mini-program onboarding routes', () => {
 
   it('retains the canonical events tab page and core pages', () => {
     expect(MINI_PROGRAM_PAGES).toContain('pages/events/index')
-    expect(MINI_PROGRAM_PAGES).toContain('pages/terms/index')
+    expect(MINI_PROGRAM_PAGES).toContain('pages/profile-linked/terms/index')
     expect(MINI_PROGRAM_PAGES).toContain('pages/event-detail/index')
     expect(MINI_PROGRAM_PAGES).toContain('pages/pool-registration/index')
   })
@@ -45,10 +47,18 @@ describe('mini-program onboarding routes', () => {
   it('moves the onboarding chain into an ordinary subpackage registration', () => {
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/onboarding/onboarding/index')
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/pool-registration/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/edit-profile/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/rewards/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/invite/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/terms/index')
     expect(MINI_PROGRAM_SUBPACKAGES).toEqual([
       {
         root: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT,
         pages: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES,
+      },
+      {
+        root: MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_ROOT,
+        pages: MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_PAGES,
       },
       {
         root: MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT,
@@ -86,6 +96,10 @@ describe('mini-program onboarding routes', () => {
       'pages/discover/index': {
         network: 'all',
         packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT],
+      },
+      'pages/profile/index': {
+        network: 'all',
+        packages: [MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_ROOT],
       },
     })
   })

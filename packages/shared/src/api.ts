@@ -1513,6 +1513,8 @@ export {
   type ProfileShellResponse,
   EventsShellResponseSchema,
   type EventsShellResponse,
+  ConnectionsShellContextSchema,
+  type ConnectionsShellContext,
   ConnectionsShellResponseSchema,
   type ConnectionsShellResponse,
 } from './apiShell'

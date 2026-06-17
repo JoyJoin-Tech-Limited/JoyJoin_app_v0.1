@@ -21,6 +21,7 @@ export type IconTier =
   | 'intent'
   | 'reveal'
   | 'achievement'
+  | 'ui'
 
 export interface IconMapping {
   /** Asset base name (without .png or @2x/@3x suffix) */
@@ -179,6 +180,26 @@ export const STATUS_ICON_MAP: Record<string, IconMapping> = {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// UI ICONS — Profile / settings list affordances (bundled locally)
+// ═══════════════════════════════════════════════════════════════════
+
+export const UI_ICON_MAP: Record<string, IconMapping> = {
+  '✏️': { assetKey: 'icon-edit', tier: 'ui', size: 48, fallbackEmoji: '✏️', tint: '#8B5CF6' },
+  '🎁': { assetKey: 'icon-coupon', tier: 'ui', size: 48, fallbackEmoji: '🎁', tint: '#8B5CF6' },
+  '🔗': { assetKey: 'icon-link', tier: 'ui', size: 48, fallbackEmoji: '🔗', tint: '#8B5CF6' },
+  // NOTE: 📤 deliberately reuses icon-people because no dedicated share-card asset exists yet.
+  // The share-card row remains visually distinct from the invite row (📤/👥 vs 🔗) by label/context.
+  '📤': { assetKey: 'icon-people', tier: 'ui', size: 48, fallbackEmoji: '📤', tint: '#8B5CF6' },
+  '👑': { assetKey: 'icon-price', tier: 'ui', size: 48, fallbackEmoji: '👑', tint: '#8B5CF6' },
+  '👣': { assetKey: 'icon-footprint', tier: 'ui', size: 48, fallbackEmoji: '👣', tint: '#8B5CF6' },
+  '📄': { assetKey: 'icon-status', tier: 'ui', size: 48, fallbackEmoji: '📄', tint: '#8B5CF6' },
+  '👥': { assetKey: 'icon-people', tier: 'ui', size: 48, fallbackEmoji: '👥', tint: '#8B5CF6' },
+  '🎫': { assetKey: 'icon-ticket', tier: 'ui', size: 48, fallbackEmoji: '🎫', tint: '#8B5CF6' },
+  '🏆': { assetKey: 'icon-trophy', tier: 'ui', size: 48, fallbackEmoji: '🏆', tint: '#8B5CF6' },
+  '✅': { assetKey: 'icon-check', tier: 'ui', size: 48, fallbackEmoji: '✅', tint: '#8B5CF6' },
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // MASTER MAP — All emoji → icon mappings
 // ═══════════════════════════════════════════════════════════════════
 
@@ -204,6 +225,7 @@ const TIER_MAPS: Record<IconTier, Record<string, IconMapping>> = {
   intent: INTENT_MAP,
   reveal: REVEAL_MAP,
   achievement: ACHIEVEMENT_MAP,
+  ui: UI_ICON_MAP,
 }
 
 /**
@@ -242,6 +264,7 @@ export function hasIconMapping(emoji: string): boolean {
  *   - status
  *   - category
  *   - intent
+ *   - ui (profile/settings list icons)
  *
  * 'phase' is CDN-only: only a curated landing-page subset is bundled locally
  * under /assets/landing-phase-icons/; the full set lives on CDN and the build
@@ -268,6 +291,7 @@ const ICON_FOLDER_MAP: Record<IconTier, string> = {
   intent: 'intent-icons',
   reveal: 'reveal-icons',
   achievement: 'achievement-badges',
+  ui: 'ui',
 }
 
 /**

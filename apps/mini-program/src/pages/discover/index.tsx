@@ -24,6 +24,7 @@ import { apiRequest, fetchDiscoverShell } from '../../lib/api/api'
 import { injectDiscoverShellIntoCache, POOLS_QUERY_KEY } from '../../lib/prefetchEngine'
 import { evictPersistedQuery } from '../../lib/api/persistentCache'
 import { useAuth } from '../../hooks/useAuth'
+import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import LoadingScreen from '../../components/loading/LoadingScreen'
@@ -127,6 +128,7 @@ function AuthenticatedDiscover({
   const avatarUrl = (user as any)?.profileImageUrl || (user as any)?.wechatAvatarUrl || xiaoyueAsset
 
   const [avatarError, setAvatarError] = useState(false)
+  const [tabEntranceClass] = useState(() => (consumeTabEntrance() ? 'tab-page-enter' : ''))
 
   // ── Geo detection state ──
   const [detectedClusterId, setDetectedClusterId] = useState<string | null>(null)
@@ -459,7 +461,7 @@ function AuthenticatedDiscover({
 
   // ── Render ──
   return (
-    <View className='discover-auth tab-page-enter'>
+    <View className={`discover-auth ${tabEntranceClass}`}>
       {/* Hero promo banner — top of page */}
       <HeroPromoBanner
         className='discover-auth__promo'

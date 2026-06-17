@@ -760,23 +760,25 @@ const src = '/assets/icons/archetype/archetype-corgi-head@3x.webp'
 `dvh` is not reliably supported in WeChat WKWebView / Taro. Drawers or containers sized with `70dvh` may collapse or ignore the unit on some devices / WeChat versions.
 
 **Workaround**:
-- Use `rpx` with a fixed approximation (e.g., `980rpx` is ~70% of a typical device height).
-- Pair with an explicit `height: 100%` on `<ScrollView>` and `min-height: 0` on the flex parent.
+- Use `rpx` with a fixed approximation (e.g., `1020rpx` is ~75% of a typical device height).
+- Pair with an explicit `height: 100%` on `<ScrollView>`, `min-height: 0` on the flex parent, and `enableFlex` on the ScrollView.
+- Add `catchMove` to the drawer surface (not just the backdrop) to prevent background page scroll penetration; ScrollView will still consume its own scroll events.
 
 ```scss
 /* LocationFilterDrawer pattern */
 .drawer {
-  max-height: 980rpx;
+  max-height: calc(1020rpx - $tab-bar-root-height);
+  display: flex;
+  flex-direction: column;
 }
 .drawer__scroll {
   flex: 1;
   min-height: 0;
-  height: 100%;
 }
 ```
 
 ```tsx
-<ScrollView style={{ height: '100%' }}>
+<ScrollView style={{ height: '100%' }} scrollY enhanced enableFlex>
 ```
 
 ### 7. CSS `background-image` with remote URLs (2026-06-05)

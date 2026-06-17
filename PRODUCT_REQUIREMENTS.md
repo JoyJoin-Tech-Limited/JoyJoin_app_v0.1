@@ -130,7 +130,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Composite tab endpoints:** `GET /api/shell/discover`, `/api/shell/profile`, `/api/shell/events`, `/api/shell/connections` bundle auth user + tab data into single responses, eliminating cold-start round-trips on tab switch.
 - **Shared server infrastructure:** `shellCache.ts` (NodeCache singleton, 30s TTL, cross-shell invalidation), `buildAuthUserResponse.ts` (shared auth builder), `shellRepository.ts` (N+1-free composite assembly). Prerequisite repos: `joinedEventsRepo.ts` and `connectionsRepo.ts`.
 - **Client prefetch engine:** Landing page stages all 4 shells after entry animation via `PrefetchEngine` (`apps/mini-program/src/lib/prefetchEngine.ts`), injecting composite data into existing TanStack Query keys. Auth injection is gated for pruned shells; Profile shell injects unconditionally. **2026-06-05 fix:** `PrefetchEngine` intentionally omits `paymentsEnabled` from pruned auth fragments so the live `/api/auth/user` response remains the sole source of truth for kill-switch state.
-- **Cache invalidation:** `shellCache.invalidateUser(userId)` triggered on payment/coupon use, pool registration, connection creation, and assessment completion.
+- **Cache invalidation:** `shellCache.invalidateUser(userId)` triggered on payment/coupon use, pool registration, connection creation, assessment completion, and event-feedback submission (so the Connections tab transitions out of `feedback-pending`).
 - **Graceful fallback:** Events and Connections pages fall back to legacy endpoints (`/api/events/joined`, `/api/my-connections`) if composite 500s. Discover shell already had fallback from pilot.
 - **Profile page deduplication:** Removed duplicate `auth-user-profile` fetch; Profile page now reads directly from `AUTH_QUERY_KEY`.
 
@@ -155,11 +155,16 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Profile-review backport:** Adopted `InterestChipCloud` for interest + category chips.
 - **Analytics:** Lightweight `logInfo` events for `edit_profile_enter`, `edit_profile_save` (with `fieldsChanged`), `edit_profile_abandon` (with `secondsOnPage`).
 
-**39. Intent Icon Wiring Fix + Accessibility Polish** 🎯 *(2026-06-15)*
-- **Root cause:** `intent` was incorrectly listed in `CDN_ICON_TIERS` (`packages/shared/src/iconSystem/emojiToIconMap.ts`), so `JoyJoinIcon tier="intent"` tried to load from a CDN path that does not resolve in the mini-program runtime and fell back to generic emoji.
-- **Fix:** Removed `intent` from `CDN_ICON_TIERS`; intent icons now resolve through bundled `src/assets/icons/intent-icons/` via `require()`. Added `usePreloadIntentIcons` hook to pre-warm bundled intent icons before the grid renders in both `pages/pool-registration/index` and `pages/onboarding/essential-data/index`.
-- **UX hardening:** Disabled state when `MAX_INTENTS` cap is reached (explicit intents only; `随缘`/flexible remains exempt). Cards receive `aria-disabled`, a focus ring, and token-based muted colors instead of opacity-only dimming for accessible contrast. Shared `Checkmark` component standardizes the branded checkmark pop-in animation across intent cards and choice cards. `100vh` fallback added for `100dvh` WeChat pitfall; empty rulesets removed.
-- **Scope:** Affects onboarding `essential-data` Step 5 intent grid and pool-registration intent grid. No API or schema changes.
+**39. Intent Icon Wiring + Shared Selection Logic** 🎯 *(2026-06-17)*
+- **Icon wiring:** Pool registration, onboarding `essential-data`, profile-review, and edit-profile now render intent options through `JoyJoinIcon tier="intent"`. `intent` remains out of `CDN_ICON_TIERS` so assets resolve from the bundled `src/assets/icons/intent-icons/` (no runtime `require()` in subpackages). `usePreloadIntentIcons` pre-warms the bundled set before the grid renders.
+- **Shared selection logic:** New `toggleIntentValue(selected, value, { maxExplicit })` helper in `packages/shared/src/constants.ts` centralizes the `MAX_INTENTS=3` cap and `随缘`/flexible coexistence rules. It returns `null` when the cap would be exceeded, letting callers surface haptic + toast feedback. Covered by 8 unit tests in `packages/shared/src/__tests__/intents.test.ts`. Used by pool-registration, onboarding `essential-data`, and edit-profile.
+- **Reusable component:** `apps/mini-program/src/components/intent/IntentCard.tsx` is the single component for intent selection cards. It renders the Lovart icon, label/subtitle, selected checkmark, disabled/dimmed states, `haptics('light')`, and accessible `aria-pressed`/`aria-disabled`/`aria-label` attributes. Token-based muted colors replace opacity-only dimming for accessible contrast.
+- **Copy update:** Edit-profile intent field label changed from「社交意图」to「社交期待」; each option shows a 36rpx `JoyJoinIcon` left of the label with disabled/dimmed states.
+- **Completion feedback:** Pool-registration shows a muted completion pill "已经选满 3 个期待，先聚焦这些方向" when the explicit-intent cap is reached.
+- **Profile review:** Intent chips on the review page render with `JoyJoinIcon tier='intent' size={24}`.
+- **Pool-registration refactor:** Extracted terminal states (loading stale, empty, already-joined, success) into `apps/mini-program/src/pages/pool-registration/components/PoolRegistrationTerminalStates.tsx` and added reusable `useReactionTimer` hook in `apps/mini-program/src/hooks/`. Removed the unfinished `PoolRegistrationFlowSteps.tsx` split file.
+- **Tooling / quality:** Restored `min-height: 100vh` fallback before `100dvh` in `pool-registration/index.scss` per `AGENTS.md §4` WeChat WKWebView guidance; fixed `scripts/devtools/design-audit.mjs` regex so `min-height: 100vh` is no longer flagged; removed the registration `logInfo` PII payload and deduplicated reaction timer logic.
+- **Scope:** Affects onboarding `essential-data` Step 5 intent grid, pool-registration intent grid, edit-profile, and profile-review. No API or schema changes.
 
 **38. Mini-Program Landing & Profession Overlay Polish** 🧹 *(2026-06-13)*
 - **Landing continue-mode CTA:** context-aware labels replace the generic "继续创建账户" — `进入发现页` when the returning user's `nextStep` is `discover` (routed to the Discover tab), `继续完善档案` for authenticated users still in onboarding, and `继续完成测试` for guests with an incomplete anonymous assessment session. The CTA sets `isPageExiting` before navigation and resets it via `useResetOnShow` on swipe-back/foreground so the button never stays stuck on the ellipsis spinner.
@@ -188,7 +193,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 **35. Mini-Program Bug-Fix & Polish Sprint** 🐛 *(2026-06-05)*
 - **Discover empty state restored:** Replaced regressed empty state with `StatusCard` using Lovart `lovart-generic-empty.webp` hero illustration, warm title/description, and a primary action CTA (`去发现活动` or `清除筛选` when filters are active).
 - **Events empty/error states:** Empty state now uses the same `StatusCard` + Lovart pattern; fetch failures render `XiaoyueEmptyState` with `emotion='sad'` and a retry CTA.
-- **Connections loading/error states:** Branded loading via `XiaoyueEmptyState` `emotion='waiting'`; fetch failures render `emotion='sad'` with retry. Auth gate uses `useMiniPageGate` with a 4s force-release timeout to prevent stuck loading after app resume.
+- **Connections empty/loading/error states:** Context-aware empty states driven by server-side `connectionsContext` (`no-events`, `upcoming-event`, `feedback-pending`, `feedback-complete`). Loading uses `XiaoyueEmptyState` `emotion='waiting'`; `feedback-complete` adds a celebration check-badge + success haptic; CTA busy state shows a spinner + "跳转中…". Fetch failures render `XiaoyueEmptyState` `emotion='reassure'` with retry. Empty-state height is computed from `Taro.getSystemInfoSync()` instead of `100vh/100dvh`. Auth gate uses `useMiniPageGate` with a 4s force-release timeout to prevent stuck loading after app resume.
 - **`HeroPromoBanner` hardening:** CTA always receives `onCtaTap` so it never silently disables; added `margin-bottom: 8rpx` to prevent boundary clipping; static copy stripped of fabricated social-proof metrics.
 - **`LocationFilterDrawer` scroll fix:** Removed conflicting inline `height: 100%`; added WeChat `enableFlex` prop to `<ScrollView>`; drawer sheet now renders at `z-index: $z-modal` (`200`); district tiles have `role='button'`, `aria-pressed`, descriptive `aria-label`, and SCSS-token-driven heat-dot colours.
 - **`XiaoyueSpriteAnimator` crossfade gating:** Exit-frame animation respects `prefers-reduced-motion` and `useDeviceTier` degradation tier to prevent jank on low-end devices.
@@ -1631,6 +1636,8 @@ interface PrivacySettings {
 5. 👤 我的 (Profile) → /profile
    - User profile, settings, 权益状态
 ```
+
+- Tab-switch performance: native custom tab bar uses a shared translating active pill (GPU `transform`, 180ms tap debounce) and auth hydration from local storage so returning users do not see a loading flash on every tab switch.
 
 > ⚠️ **Legacy reference**: The old PRD documented a different nav (`首页 / 发现 / 我的活动 / 消息 / 我的`). That structure is deprecated. The tab formerly labelled `圈子` is now `连接`.
 

@@ -4,6 +4,8 @@ import Taro, { useRouter } from '@tarojs/taro'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest } from '../../lib/api/api'
+import { queryClient } from '../../lib/api/queryClient'
+import { CONNECTIONS_SHELL_QUERY_KEY } from '../../lib/prefetchEngine'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { getMascotDisplayName } from '../../lib/mascot/mascotDisplay'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
@@ -92,6 +94,9 @@ export default function EventFeedbackPage() {
       })
       setMutualMatches(res.mutualMatches || [])
       setStep('revealed')
+      // Invalidate the Connections Predictive Shell so the 连接 tab reflects the
+      // new feedback-complete / connections state instead of stale feedback-pending.
+      queryClient.invalidateQueries({ queryKey: CONNECTIONS_SHELL_QUERY_KEY })
       Taro.showToast({ title: '反馈已提交', icon: 'success', duration: TOAST_DEFAULT_MS })
     } catch (err) {
       const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
@@ -203,7 +208,6 @@ export default function EventFeedbackPage() {
     return (
       <View className='event-feedback'>
         <View className='event-feedback__header'>
-          <Text className='event-feedback__title'>活动反馈</Text>
           <Text className='event-feedback__subtitle'>今晚这局怎么样？</Text>
         </View>
 
@@ -232,7 +236,6 @@ export default function EventFeedbackPage() {
     return (
       <View className='event-feedback'>
         <View className='event-feedback__header'>
-          <Text className='event-feedback__title'>活动反馈</Text>
           <Text className='event-feedback__subtitle'>想继续了解谁？</Text>
         </View>
 
@@ -295,7 +298,6 @@ export default function EventFeedbackPage() {
   return (
     <View className='event-feedback'>
       <View className='event-feedback__header'>
-        <Text className='event-feedback__title'>活动反馈</Text>
         <Text className='event-feedback__subtitle'>最后一步</Text>
       </View>
 

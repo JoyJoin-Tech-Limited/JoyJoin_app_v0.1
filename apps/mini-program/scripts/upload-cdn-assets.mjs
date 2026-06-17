@@ -155,7 +155,10 @@ async function uploadRsync(files) {
 
       const stagingDest = path.join(stagingDir, cdnPath)
       fs.mkdirSync(path.dirname(stagingDest), { recursive: true })
-      fs.cpSync(src, stagingDest)
+      // Resolve symlinks so local alias directories (e.g. src/assets/archetypes)
+      // copy the real file instead of a broken symlink on the remote host.
+      const realSrc = fs.realpathSync(src)
+      fs.cpSync(realSrc, stagingDest)
       stagedCount++
 
       logFile(cdnPath, fs.statSync(src).size)

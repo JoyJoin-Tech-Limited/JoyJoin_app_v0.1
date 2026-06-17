@@ -110,6 +110,8 @@ npm run test --workspace=mini-program
 
 Assets are **CDN-first** in production, with a curated set of critical assets bundled locally for instant display and offline resilience. The build inlines `TARO_APP_CDN_BASE_URL` from `apps/mini-program/.env.local`.
 
+**Shared CDN strategy:** both production and staging mini-program builds load large assets from the same production CDN path (`https://joyjoinapp.com/static`). This avoids maintaining duplicate staging asset directories and ensures a single source of truth for ceremony heroes, badges, icons, and other CDN-backed assets. Run `npm run upload:cdn-assets` against `/var/www/cdn` after adding or updating CDN assets.
+
 **Critical rules:**
 1. Use `cdnAsset('/assets/...')` for CDN assets and `localAsset('/assets/...')` for bundled assets — never hardcode `/assets/` paths.
 2. Production builds **fail** if `TARO_APP_CDN_BASE_URL` is missing.
@@ -132,7 +134,7 @@ Assets are **CDN-first** in production, with a curated set of critical assets bu
 | `npm run optimize:promo` | Generate promotional image assets |
 | `npm run optimize:lovart` | Generate Lovart-designed image assets |
 | `npm run check:lovart-assets` | Validate Lovart asset sizes |
-| `npm run upload:cdn-assets` | Upload manifest assets to CDN (`--dry-run` for preview). For production, trigger `gh workflow run "Upload CDN Assets"` which builds + uploads via GitHub Actions. |
+| `npm run upload:cdn-assets` | Upload manifest assets to CDN (`--dry-run` for preview). For production, trigger `gh workflow run "Upload CDN Assets"` which builds + uploads via GitHub Actions. **Symlink resolution:** the uploader resolves symlinks (e.g. `src/assets/archetypes/` → `src/pages/onboarding/assets/archetypes/`) before rsync so the remote host receives real files, not broken symlinks. |
 | `npm run check:package-size` | Audit mini-program bundle size against 2MB WeChat limit (measures actual zip-compressed size) |
 
 **Active copy patterns** (`config/index.ts`) — bundled assets:
@@ -187,7 +189,11 @@ Assets are **CDN-first** in production, with a curated set of critical assets bu
 - Re-encode via `node scripts/optimize-ceremony-batch-c.mjs` / `node scripts/optimize-badges-batch-d.mjs` (q=55, 600px) before committing new tiles, then upload via the CDN workflow.
 
 *CDN-only assets (too large for bundle or non-critical):*
-Archetype full-body images, matching heroes, promo banners, Lovart illustrations (Batches A + B), Lovart ceremony & milestone heroes (Batches C + D), **phase-emblem** icon tier, reaction/reveal/achievement icon tiers, icebreaker backgrounds, celebration images, extra Xiaoyue expressions, mini-script heroes, UI info-label icons. Loaded via `cdnAsset()` with route-based preloading via `routePreloadAssets.ts`. The icebreaker session also preloads `ICEBREAKER_PHASE_EMBLEM_ASSETS` on entry.
+Archetype full-body images (WebP primary + PNG fallback for canvas), matching heroes, promo banners, Lovart illustrations (Batches A + B), Lovart ceremony & milestone heroes (Batches C + D), **phase-emblem** icon tier, reaction/reveal/achievement icon tiers, icebreaker backgrounds, celebration images, extra Xiaoyue expressions, mini-script heroes, ceremony heroes, milestone badges. Loaded via `cdnAsset()` with route-based preloading via `routePreloadAssets.ts`. The icebreaker session also preloads `ICEBREAKER_PHASE_EMBLEM_ASSETS` on entry.
+
+*CDN fallbacks for locally bundled assets:*
+- `ArchetypeHead` head icons (`src/assets/icons/archetype/archetype-*-head.webp`) are bundled locally; CDN fallback copies exist at the same path under `https://joyjoinapp.com/static/` for subpackage/cache-miss robustness.
+- Profile-share canvas uses `assets/personality/archetypes/archetype-*.webp` (CDN) with `archetype-*.png` (CDN) fallback because canvas `drawImage` cannot resolve local bundled paths.
 
 ### Proprietary Icon System
 
@@ -202,8 +208,9 @@ The mini-program replaces raw Unicode emoji with brand-aligned proprietary icons
    - `getIconAssetPath(assetKey, tier, density)` → legacy relative `require()` path (deprecated; `require()` of non-JS assets crashes in WeChat subpackages)
 
 2. **Renderer** — `apps/mini-program/src/components/ui/JoyJoinIcon.tsx`
-   - Props: `emoji`, `size?`, `tier?`, `className?`, `style?`
+   - Props: `emoji`, `size?`, `tier?`, `className?`, `style?`, `lazyLoad?`
    - 4-tier fallback: no mapping → asset resolve fail → image load fail → native emoji
+   - **Loading policy:** CDN tiers lazy-load by default; locally bundled tiers load eagerly by default to avoid emoji fallback in subpackage pages. Pass `lazyLoad` to override.
    - Load animation: fade-in + spring-bounce scale (`cubic-bezier(0.34, 1.56, 0.64, 1)`)
    - Reduced-motion support via `Taro.getSystemInfoSync().reduceMotion`
    - Shimmer placeholder while loading; `alt={fallbackEmoji}` for accessibility
@@ -211,6 +218,10 @@ The mini-program replaces raw Unicode emoji with brand-aligned proprietary icons
 3. **Utility classes** — `apps/mini-program/src/styles/_utilities.scss`
    - `.jj-icon-text` — flex row for icon + label (8rpx gap; `--tight` / `--loose` modifiers)
    - `.jj-icon-loading` — shimmer placeholder animation
+
+4. **Build-time guard** — `npm run validate:icon-transparency`
+   - Fails the build if any bundled icon that floats on a variable background is fully opaque (e.g. a white matte behind `category-social`).
+   - Run automatically before `npm run build:weapp`.
 
 **Tier inventory** (`IconTier`): `expression`, `semantic`, `mood`, `chemistry`, `phase`, `status`, `reaction`, `category`, `intent`, `reveal`, `achievement`
 
@@ -258,13 +269,15 @@ The shipped mini-program tab bar is the **native WeChat component** copied from 
 | Feature | Implementation |
 |---------|----------------|
 | **Tap feedback** | `hover-class` on side tabs + center button with `hover-stay-time="150"`. Transitions live on base elements (not `hover-class`) for WeChat compatibility |
-| **Active tab pill** | `rgba(139, 92, 246, 0.08)` background + `border-radius: 24rpx` (8rpx grid). Entrance animation: `active-pill-enter` (200ms micro-bounce, scale 0.94→1) |
+| **Active tab pill** | Single shared `.joy-custom-tab-bar__active-pill` positioned with inline `transform: translateX({{pillTranslateX}}rpx)`. 220ms GPU transform transition between tabs; hidden (`opacity: 0`) when center hub is selected. Per-item scale micro-bounce removed |
+| **PageMorphWrapper immediate mode** | If `isLoading` was never true, the loading layer renders with `transition: none` (`page-morph--immediate`) so cached auth does not flash a loading shell on tab switches |
+| **Tab-page entrance** | `.tab-page-enter` animation is gated by `consumeTabEntrance()` in `src/lib/utils/tabEntranceState.ts`; it plays only on the first tab page rendered after app cold start, not on every tab switch |
 | **Haptics** | `wx.vibrateShort({ type: 'light' })` on every side-tab tap |
 | **Badge pop-in** | `scale(0→1.15→1)` spring animation (200ms) |
 | **Center badge pulse** | Continuous `scale` pulse on the center red dot |
 | **Cover-image fade-in** | Scoped 200ms opacity fade on specific elements only (global selector removed to prevent re-trigger on every `setData`) |
 | **Reduced motion** | `@media (prefers-reduced-motion: reduce)` disables all animations, including `will-change` reset to `auto`; respects system setting |
-| **SwitchTab rollback** | Rollback uses `_confirmedSelected` (authoritative, not optimistic) to handle rapid tab switching. Success/fail tracked via `wx.reportAnalytics` (`mini_program_tab_bar_switch_success` / `_fail`). 300ms double-tap debounce on tap handlers |
+| **SwitchTab rollback** | Rollback uses `_confirmedSelected` (authoritative, not optimistic) to handle rapid tab switching. Success/fail tracked via `wx.reportAnalytics` (`mini_program_tab_bar_switch_success` / `_fail`). 180ms double-tap debounce on tap handlers |
 | **Sync debounce** | 50ms debounce + shallow diff in `syncState`; path-syntax badge updates prevent flicker |
 | **Haptics** | Platform-aware: `type: 'light'` on iOS, plain `wx.vibrateShort()` on Android. Silently fails on unsupported devices |
 | **CSS theming** | 8 brand tokens declared as CSS custom properties on root (e.g. `--jj-primary`, `--jj-secondary`, `--jj-bg-tint-pink`). All hardcoded color values reference these tokens |
@@ -284,6 +297,7 @@ The shipped mini-program tab bar is the **native WeChat component** copied from 
    - `pages/icebreaker-session` — in-event social icebreaker.
 3. **Preload rules** are declared from likely entry pages (`index`, `login`, `event-detail`, `events`) before reaching for independent subpackages.
 4. Any proposal for independent subpackages must include a self-contained bootstrap plan because `app.ts` and `AuthProvider` centralize app-level providers and auth setup.
+5. `useAuth` hydrates from `HYDRATE_AUTH_STORAGE_KEY` (`mj_auth_cache`) via `getStoredAuthUser()` so returning users skip the auth-loading gate on tab switches. `AuthProvider` triggers a background revalidation on mount and on app foreground.
 
 ---
 

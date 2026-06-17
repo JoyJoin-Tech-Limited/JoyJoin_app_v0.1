@@ -14,6 +14,7 @@ interface XiaoyueLetterCardProps {
   reasons: string[]
   trustLabel: string
   userName?: string
+  userSocialTag?: string
   userArchetype?: string
   visible: boolean
   reduceMotion: boolean
@@ -26,6 +27,7 @@ export default function XiaoyueLetterCard({
   reasons,
   trustLabel,
   userName,
+  userSocialTag,
   userArchetype,
   visible,
   reduceMotion,
@@ -48,9 +50,16 @@ export default function XiaoyueLetterCard({
     [userArchetype],
   )
 
-  const eyebrowText = archetypeName
-    ? `写给${userName ? ` ${stripEmojis(userName)}` : ''}「${archetypeName}」的小信`
-    : `加入前的一封小信`
+  const resolvedTag = useMemo(() => {
+    const raw = userSocialTag || userName || ''
+    return stripEmojis(raw).trim()
+  }, [userSocialTag, userName])
+
+  const eyebrowText = resolvedTag
+    ? `写给「${resolvedTag}」的小信`
+    : archetypeName
+      ? `写给「${archetypeName}」的小信`
+      : `加入前的一封小信`
 
   const cleanInsight = stripEmojis(insight)
   const cleanPromise = stripEmojis(matchingPromise)
@@ -64,16 +73,24 @@ export default function XiaoyueLetterCard({
   if (isLoading) {
     return (
       <View className={rootClasses} aria-busy='true' aria-label='悦仔正在准备活动简报'>
-        <View className='xiaoyue-letter-card__mascot-wrap xiaoyue-letter-card__mascot-wrap--skeleton'>
-          <View className='xiaoyue-letter-card__skeleton-mascot' />
-        </View>
         <View className='xiaoyue-letter-card__paper xiaoyue-letter-card__paper--loading'>
-          <View className='xiaoyue-letter-card__tail xiaoyue-letter-card__tail--skeleton' />
-          <View className='xiaoyue-letter-card__skeleton'>
+          <View className='xiaoyue-letter-card__header'>
+            <View className='xiaoyue-letter-card__mascot-wrap xiaoyue-letter-card__mascot-wrap--skeleton'>
+              <View className='xiaoyue-letter-card__skeleton-mascot' />
+            </View>
+            <View className='xiaoyue-letter-card__title-block xiaoyue-letter-card__title-block--loading'>
+              <View className='xiaoyue-letter-card__skeleton-line xiaoyue-letter-card__skeleton-line--medium' />
+              <View className='xiaoyue-letter-card__skeleton-line xiaoyue-letter-card__skeleton-line--long' />
+            </View>
+          </View>
+          <View className='xiaoyue-letter-card__skeleton-body'>
             <View className='xiaoyue-letter-card__skeleton-line xiaoyue-letter-card__skeleton-line--long' />
             <View className='xiaoyue-letter-card__skeleton-line xiaoyue-letter-card__skeleton-line--medium' />
-            <View className='xiaoyue-letter-card__skeleton-line xiaoyue-letter-card__skeleton-line--short' />
-            <View className='xiaoyue-letter-card__skeleton-line xiaoyue-letter-card__skeleton-line--long' />
+            <View className='xiaoyue-letter-card__skeleton-chips'>
+              <View className='xiaoyue-letter-card__skeleton-chip' />
+              <View className='xiaoyue-letter-card__skeleton-chip' />
+              <View className='xiaoyue-letter-card__skeleton-chip' />
+            </View>
           </View>
         </View>
       </View>
@@ -82,34 +99,46 @@ export default function XiaoyueLetterCard({
 
   return (
     <View className={rootClasses}>
-      <View className='xiaoyue-letter-card__mascot-wrap'>
-        <XiaoyueSpriteAnimator
-          state={spriteState}
-          size='120rpx'
-          showGlow
-          autoPlay
-          transitionMs={300}
-        />
-      </View>
-
       <View className='xiaoyue-letter-card__paper'>
-        <View className='xiaoyue-letter-card__tail' />
-        <Text className='xiaoyue-letter-card__eyebrow' style={archetypeTokens ? { color: archetypeTokens.primary } : undefined}>
-          {eyebrowText}
-        </Text>
-        <Text className='xiaoyue-letter-card__insight'>{cleanInsight}</Text>
+        <View className='xiaoyue-letter-card__header'>
+          <View
+            className={[
+              'xiaoyue-letter-card__mascot-wrap',
+              visible && !reduceMotion ? 'xiaoyue-letter-card__mascot-wrap--bob' : '',
+            ].join(' ')}
+          >
+            <XiaoyueSpriteAnimator
+              state={spriteState}
+              size='120rpx'
+              showGlow
+              autoPlay
+              transitionMs={300}
+            />
+          </View>
+
+          <View className='xiaoyue-letter-card__title-block'>
+            <Text
+              className='xiaoyue-letter-card__eyebrow'
+              style={archetypeTokens ? { color: archetypeTokens.primary } : undefined}
+            >
+              {eyebrowText}
+            </Text>
+            <Text className='xiaoyue-letter-card__insight'>{cleanInsight}</Text>
+          </View>
+        </View>
+
         <Text className='xiaoyue-letter-card__promise'>{cleanPromise}</Text>
 
         {cleanReasons.length > 0 ? (
           <View className='xiaoyue-letter-card__reasons'>
             {cleanReasons.map((reason, index) => (
-              <MatchPromiseChip key={reason} reason={reason} index={index} animate={visible && !reduceMotion} />
+              <MatchPromiseChip key={`reason-${index}-${reason}`} reason={reason} index={index} animate={visible && !reduceMotion} />
             ))}
           </View>
         ) : null}
 
-        <View className='xiaoyue-letter-card__trust-seal'>
-          <View className='xiaoyue-letter-card__trust-check' />
+        <View className='xiaoyue-letter-card__trust-seal' aria-label={trustLabel}>
+          <View className='xiaoyue-letter-card__trust-check' aria-hidden='true' />
           <Text className='xiaoyue-letter-card__trust-text'>{trustLabel}</Text>
         </View>
 

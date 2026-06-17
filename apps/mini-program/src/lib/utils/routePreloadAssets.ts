@@ -91,7 +91,7 @@ export const ROUTE_PRELOAD_MAP: Record<string, string[]> = {
   'pages/matching-status/index': MATCHING_PRELOADS,
   'pages/event-detail/index': EVENT_DETAIL_PRELOADS,
   'pages/icebreaker-session/index': ICEBREAKER_PRELOADS,
-  'pages/rewards/index': REWARDS_PRELOADS,
+  'pages/profile-linked/rewards/index': REWARDS_PRELOADS,
   'pages/onboarding/personality-test/index': PERSONALITY_TEST_PRELOADS,
 }
 
@@ -105,7 +105,7 @@ export const PREDICTIVE_PRELOAD_MAP: Record<string, string[]> = {
   'pages/event-detail/index': ['pages/pool-registration/index'],
   'pages/connections/index': ['pages/event-detail/index'],
   'pages/events/index': ['pages/event-detail/index', 'pages/pool-registration/index'],
-  'pages/profile/index': ['pages/edit-profile/index'],
+  'pages/profile/index': ['pages/profile-linked/edit-profile/index'],
 }
 
 // ─── Preload API ───

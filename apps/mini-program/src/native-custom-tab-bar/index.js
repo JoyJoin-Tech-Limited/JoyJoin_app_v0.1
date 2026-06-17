@@ -5,6 +5,28 @@
 // "undefined is not an object (evaluating 'this._tabNames[e]')").
 var TAB_NAMES = { 0: '发现', 1: '足迹', 2: '连接', 3: '我的', 4: '中心入口' }
 
+// Layout constants for the sliding active pill (must stay in sync with index.wxss).
+// 750rpx design width minus surface margins, row padding, and center gap.
+var TAB_BAR_CENTER_GAP_RPX = 192
+var TAB_BAR_SURFACE_MARGIN_RPX = 24
+var TAB_BAR_ROW_PADDING_RPX = 24
+
+function computeTabItemWidth(windowWidth) {
+  var designWidth = 750
+  var availableRpx =
+    designWidth -
+    TAB_BAR_SURFACE_MARGIN_RPX * 2 -
+    TAB_BAR_ROW_PADDING_RPX * 2 -
+    TAB_BAR_CENTER_GAP_RPX
+  return availableRpx / 4
+}
+
+function computePillTranslateX(index, itemWidth) {
+  if (index < 0 || index > 3) return 0
+  var gapOffset = index >= 2 ? TAB_BAR_CENTER_GAP_RPX : 0
+  return Math.round(index * itemWidth + gapOffset)
+}
+
 Component({
   options: {
     addGlobalClass: true,
@@ -32,6 +54,10 @@ Component({
     selected: 0,
     lowEnd: false,
     announcement: '',
+    // Sliding active pill geometry (in rpx)
+    pillWidth: 0,
+    pillTranslateX: 0,
+    tabItemWidth: 0,
     center: {
       label: '进行中',
       showBadge: false,
@@ -101,6 +127,17 @@ Component({
       if (this._isLowEnd) {
         this.setData({ lowEnd: true })
       }
+
+      // Compute sliding pill geometry from the current screen width.
+      // Values are stored in rpx so inline styles can use them directly.
+      var windowWidth = info.windowWidth || 375
+      var itemWidth = Math.round(computeTabItemWidth(windowWidth))
+      this.setData({
+        tabItemWidth: itemWidth,
+        pillWidth: itemWidth,
+        pillTranslateX: 0,
+      })
+
       // Re-assign the accessibility map to the instance. Some WeChat runtimes
       // do not reliably copy root-level non-data fields onto custom-tab-bar
       // instances, which left this._tabNames undefined inside _announceTab.
@@ -176,7 +213,9 @@ Component({
       clearTimeout(this._showTimer)
       this._showTimer = setTimeout(function () {
         if (self.data.selected !== self._confirmedSelected) {
-          self.setData({ selected: self._confirmedSelected })
+          var idx = self._confirmedSelected
+          var translateX = computePillTranslateX(idx, self.data.tabItemWidth)
+          self.setData({ selected: idx, pillTranslateX: translateX })
         }
       }, 100)
     },
@@ -261,7 +300,8 @@ Component({
     setSelected: function (selected) {
       var idx = Number(selected)
       this._confirmedSelected = idx
-      this.setData({ selected: idx })
+      var translateX = computePillTranslateX(idx, this.data.tabItemWidth)
+      this.setData({ selected: idx, pillTranslateX: translateX })
     },
 
     setCenterState: function (center) {
@@ -277,7 +317,7 @@ Component({
       if (this._tapDebounceTimer) return
       this._tapDebounceTimer = setTimeout(function () {
         self._tapDebounceTimer = null
-      }, 300)
+      }, 180)
 
       var index = Number(e.currentTarget.dataset.index)
       var url = e.currentTarget.dataset.url
@@ -295,7 +335,8 @@ Component({
       // Optimistic update: update _confirmedSelected too so the
       // pageLifetimes.show safety net (100ms) doesn't revert it.
       this._confirmedSelected = index
-      this.setData({ selected: index })
+      var translateX = computePillTranslateX(index, this.data.tabItemWidth)
+      this.setData({ selected: index, pillTranslateX: translateX })
       wx.switchTab({
         url: url,
         success: function () {
@@ -326,7 +367,7 @@ Component({
       if (this._tapDebounceTimer) return
       this._tapDebounceTimer = setTimeout(function () {
         self._tapDebounceTimer = null
-      }, 300)
+      }, 180)
 
       var action = this.data.center && this.data.center.action
       if (!action || !action.url) return
@@ -344,7 +385,8 @@ Component({
       // Optimistic update: update _confirmedSelected too so the
       // pageLifetimes.show safety net (100ms) doesn't revert it.
       this._confirmedSelected = 4
-      this.setData({ selected: 4 })
+      // Hide the sliding pill while the center button is selected.
+      this.setData({ selected: 4, pillTranslateX: 0 })
       wx.switchTab({
         url: action.url,
         success: function () {

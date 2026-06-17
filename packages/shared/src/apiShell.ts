@@ -107,6 +107,15 @@ export type EventsShellResponse = z.infer<typeof EventsShellResponseSchema>
 
 // ── Connections Predictive Shell ────────────────────────────────────────────
 
+export const ConnectionsShellContextSchema = z.object({
+  mode: z.enum(['no-events', 'upcoming-event', 'feedback-pending', 'feedback-complete']),
+  upcomingEventTitle: z.string().nullable().optional(),
+  nextFeedbackEventId: z.string().nullable().optional(),
+  nextFeedbackEventTitle: z.string().nullable().optional(),
+});
+
+export type ConnectionsShellContext = z.infer<typeof ConnectionsShellContextSchema>
+
 export const ConnectionsShellResponseSchema = z.object({
   user: z.object({
     nextStep: z.string(),
@@ -114,6 +123,7 @@ export const ConnectionsShellResponseSchema = z.object({
   }),
   connections: z.array(z.any()),
   pendingRequests: z.array(z.any()),
+  connectionsContext: ConnectionsShellContextSchema.nullable(),
   notifications: z.object({
     discover: z.number(),
     activities: z.number(),

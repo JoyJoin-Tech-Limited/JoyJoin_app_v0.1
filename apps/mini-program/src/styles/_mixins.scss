@@ -553,10 +553,10 @@ $onboarding-stage-shift-ids: (
 }
 
 // ─── Empty State Shell ─────────────────────────────────────────────
-@mixin empty-state-shell {
+@mixin empty-state-shell($gap: $spacing-sm) {
   @include flex-center;
   flex-direction: column;
-  gap: $spacing-sm;
+  gap: $gap;
   padding: $spacing-2xl;
   text-align: center;
 }
@@ -566,6 +566,7 @@ $onboarding-stage-shift-ids: (
 /// Use for loading and empty states inside ScrollView containers
 /// where the parent does not provide flex-based centering.
 @mixin scroll-view-centered-state {
+  min-height: 60vh;
   min-height: 60dvh;
   display: flex;
   flex-direction: column;

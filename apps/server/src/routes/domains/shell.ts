@@ -35,6 +35,9 @@ export function _clearShellCacheForTest(): void {
 }
 
 const CACHE_CONTROL_HEADER = "private, max-age=60, stale-while-revalidate=300";
+const DEFAULT_DISCOVER_LIMIT = 20;
+const MAX_DISCOVER_LIMIT = 50;
+// Pagination note: all list queries route through shellRepository and use db.select(...).limit(...) caps.
 
 export function registerShellRoutes(app: Express): void {
   app.get("/api/shell/discover", requireAuth, async (req: Request, res: Response) => {
@@ -49,9 +52,12 @@ export function registerShellRoutes(app: Express): void {
     try {
       const queryParse = DiscoverShellQuerySchema.safeParse(req.query);
       const { cursor: rawCursor, limit: rawLimit } = queryParse.success ? queryParse.data : {};
-      const limit = Number.isFinite(rawLimit) && rawLimit! > 0 ? rawLimit : undefined;
+      const limit = Math.min(
+        Number.isFinite(rawLimit) && rawLimit! > 0 ? rawLimit! : DEFAULT_DISCOVER_LIMIT,
+        MAX_DISCOVER_LIMIT,
+      );
 
-      const cacheKey = `shell-discover-${userId}-${rawCursor ?? "0"}-${limit ?? 20}`;
+      const cacheKey = `shell-discover-${userId}-${rawCursor ?? "0"}-${limit}`;
       let cacheHit = false;
       let payload: DiscoverShellResponse | undefined = shellCache.get(cacheKey);
 
@@ -235,6 +241,7 @@ export function registerShellRoutes(app: Express): void {
         cache_hit: cacheHit,
         connection_count: payload.connections.length,
         pending_count: payload.pendingRequests.length,
+        context_mode: payload.connectionsContext?.mode ?? null,
       });
 
       res.setHeader("X-Response-Time", `${durationMs}ms`);

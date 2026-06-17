@@ -23,6 +23,10 @@ import {
   type ProfileTaglineResponse,
 } from '@shared/ai/onboarding';
 import { logAITrace } from './lib/aiTraceLogger';
+import { XIAOYUE_CRAFT_LITE } from './prompts/craft';
+import { INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION } from '@shared/constants';
+import { MACRO_CATEGORY_LABELS } from '@shared/interests';
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames';
 
 const PROMPT_VERSION = 'profile-tagline-v1';
 
@@ -55,25 +59,16 @@ function getFallbackLine(archetype?: string): string {
 
 // ─── Input contract ────────────────────────────────────────────────────────────
 
-// Interest category key → Chinese display label
-const CATEGORY_LABELS: Record<string, string> = {
-  career: '职场野心',
-  philosophy: '深度思想',
-  lifestyle: '生活方式',
-  culture: '文化娱乐',
-  city: '城市探索',
-  tech: '前沿科技',
-};
+// Intent key → Chinese display label (synced with @shared/constants)
+const ALL_INTENT_OPTIONS = [...INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION];
+function getIntentLabel(key: string): string {
+  return ALL_INTENT_OPTIONS.find((o) => o.value === key)?.label ?? key;
+}
 
-// Intent key → Chinese display label
-const INTENT_LABELS: Record<string, string> = {
-  make_friends: '交朋友',
-  dating: '脱单约会',
-  expand_network: '拓展人脉',
-  find_partner: '寻找合伙人',
-  casual_chat: '随便聊聊',
-  flexible: '随缘',
-};
+// Interest category key → Chinese display label (synced with @shared/interests)
+function getCategoryLabel(key: string): string {
+  return (MACRO_CATEGORY_LABELS as Record<string, string>)[key] ?? key;
+}
 
 export interface ProfileTaglineInput {
   /** Primary archetype name (Chinese), e.g. "fox" */
@@ -109,10 +104,10 @@ export async function generateProfileTagline(
   const topInterestCategories = Object.entries(categoryHeat)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 2)
-    .map(([k]) => CATEGORY_LABELS[k] ?? k);
+    .map(([k]) => getCategoryLabel(k));
 
   // Resolve intent labels
-  const intentLabels = intentKeys.slice(0, 2).map((k) => INTENT_LABELS[k] ?? k);
+  const intentLabels = intentKeys.slice(0, 2).map((k) => getIntentLabel(k));
 
   // Build a minimal, deterministic prompt.  Use only declared profile data —
   // no history, no latent state, no inferred attributes.
@@ -125,7 +120,8 @@ export async function generateProfileTagline(
       ? `社交目标：${intentLabels.slice(0, 2).join('、')}`
       : '';
 
-  const contextLines = [archetype ? `性格原型：${archetype}` : '', interestFragment, intentFragment]
+  const archetypeName = archetype ? (ARCHETYPE_BY_ID[archetype]?.nameCn ?? archetype) : '';
+  const contextLines = [archetypeName ? `性格原型：${archetypeName}` : '', interestFragment, intentFragment]
     .filter(Boolean)
     .join('，');
 
@@ -151,12 +147,16 @@ export async function generateProfileTagline(
 
   const prompt = `你是一个温暖、睿智的社交洞察助手。根据用户的简要档案，生成一句简短的社交风格洞察，帮助用户感受到"这个平台了解我"。
 
+${XIAOYUE_CRAFT_LITE}
+
 要求：
 - 只返回这一句话，不要前缀、不要标点以外的内容
 - 长度：20-36个汉字
 - 语气：温暖、鼓励，略带洞察感，不夸张
 - 聚焦于社交场景中的真实表现，而非性格评价
 - 以第二人称（"你"）书写
+- 不要出现"你是一个...的人"这类抽象评价；用具象场景代替
+- 避免AI常见词："总的来说"、"值得注意的是"、"不仅仅"、"作为一种"、"让我们一起"等
 
 用户档案：${contextLines}
 

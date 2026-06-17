@@ -2,13 +2,15 @@
 @use '../../../styles/mixins' as *;
 
 .match-promise-chip {
-  display: flex;
-  align-items: flex-start;
-  gap: $spacing-sm;
-  padding: $spacing-sm $spacing-md;
-  border-radius: $card-radius-sm;
-  background: rgba($color-surface, 0.8);
-  border: 2rpx solid rgba($color-border, 0.8);
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  max-width: 100%;
+  padding: $spacing-xs $spacing-md;
+  border-radius: $radius-pill;
+  background: rgba($color-primary, 0.08);
+  border: 2rpx solid rgba($color-primary, 0.14);
+  box-sizing: border-box;
 
   &--animate {
     opacity: 0;
@@ -28,19 +30,22 @@
   &--delay-4 { animation-delay: 0.68s; }
   &--delay-5 { animation-delay: 0.8s; }
 
-  &__accent {
-    width: 6rpx;
-    height: 28rpx;
-    margin-top: 6rpx;
-    border-radius: 999rpx;
-    background: $brand-gradient;
+  &__dot {
+    width: 8rpx;
+    height: 8rpx;
+    border-radius: 50%;
+    background: $color-secondary;
     flex-shrink: 0;
   }
 
   &__text {
     flex: 1;
-    @include type-body;
-    line-height: $line-height-relaxed;
+    min-width: 0;
+    @include font-cn-display;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    line-height: 1.5;
   }
 }
 

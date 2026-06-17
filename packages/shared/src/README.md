@@ -12,7 +12,7 @@ This package holds contracts and logic that are intentionally shared across mult
 - `packages/shared/src/schema/_definitions.ts` — Drizzle table definitions, including `contentFilterLogs` (content_filter_logs table for auditable content violation records)
 
 ### Shared product vocabularies and constants
-- `packages/shared/src/constants.ts`
+- `packages/shared/src/constants.ts` — canonical intent/options constants and `toggleIntentValue()` helper for multi-select cap logic
 - `packages/shared/src/interests.ts`
 - `packages/shared/src/districts.ts`
 - `packages/shared/src/occupations.ts`

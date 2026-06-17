@@ -89,3 +89,75 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
 
   return allEvents;
 }
+
+/**
+ * Lightweight event slice for the Connections shell context resolver.
+ *
+ * Only id/title/dateTime are returned, and results are capped to reduce payload
+ * size for users with long event histories. Upcoming events are naturally at the
+ * top of a descending-by-dateTime list, so the cap still covers the nearest
+ * upcoming event and the most recent past events for feedback-pending logic.
+ */
+export interface ConnectionsContextEvent {
+  id: string;
+  title?: string;
+  dateTime?: string;
+}
+
+const CONNECTIONS_CONTEXT_EVENT_LIMIT = 50;
+
+export async function getConnectionsContextEvents(userId: string): Promise<ConnectionsContextEvent[]> {
+  const now = new Date();
+
+  const [legacyRows, poolRows] = await Promise.all([
+    db
+      .select({
+        id: events.id,
+        title: events.title,
+        dateTime: events.dateTime,
+      })
+      .from(eventAttendance)
+      .innerJoin(events, eq(eventAttendance.eventId, events.id))
+      .where(eq(eventAttendance.userId, userId))
+      .orderBy(desc(events.dateTime))
+      .limit(CONNECTIONS_CONTEXT_EVENT_LIMIT),
+
+    db
+      .select({
+        id: eventPools.id,
+        title: eventPools.title,
+        dateTime: eventPools.dateTime,
+      })
+      .from(eventPoolRegistrations)
+      .innerJoin(eventPools, eq(eventPoolRegistrations.poolId, eventPools.id))
+      .where(
+        and(
+          eq(eventPoolRegistrations.userId, userId),
+          inArray(eventPoolRegistrations.matchStatus, ["pending", "matched"])
+        )
+      )
+      .orderBy(desc(eventPools.dateTime))
+      .limit(CONNECTIONS_CONTEXT_EVENT_LIMIT),
+  ]);
+
+  const legacyEvents: ConnectionsContextEvent[] = legacyRows.map((row: typeof legacyRows[number]) => ({
+    id: row.id,
+    title: row.title ?? undefined,
+    dateTime: row.dateTime?.toISOString?.() ?? String(row.dateTime),
+  }));
+
+  const poolEvents: ConnectionsContextEvent[] = poolRows.map((row: typeof poolRows[number]) => ({
+    id: row.id,
+    title: row.title ?? undefined,
+    dateTime: row.dateTime?.toISOString?.() ?? String(row.dateTime),
+  }));
+
+  const allEvents = [...legacyEvents, ...poolEvents];
+  allEvents.sort((a, b) => {
+    const dateA = a.dateTime ? new Date(a.dateTime).getTime() : 0;
+    const dateB = b.dateTime ? new Date(b.dateTime).getTime() : 0;
+    return dateB - dateA;
+  });
+
+  return allEvents.slice(0, CONNECTIONS_CONTEXT_EVENT_LIMIT);
+}

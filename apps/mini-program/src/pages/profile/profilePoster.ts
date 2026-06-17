@@ -13,8 +13,9 @@ import {
   createMetallicGold,
   exportCanvasWithRetry,
 } from '../../lib/utils/canvasHelpers'
+import { PROFILE_SHARE_POSTER_CANVAS_ID } from './profilePosterConstants'
 
-export const PROFILE_SHARE_POSTER_CANVAS_ID = 'profile-share-poster-canvas'
+export { PROFILE_SHARE_POSTER_CANVAS_ID }
 
 const POSTER_SIZE = 750
 const MARGIN = 40

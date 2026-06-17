@@ -2,9 +2,13 @@
 @use '../../../styles/mixins' as *;
 
 .extended-data {
-  --jj-heat-l1: #8B5CF6;
-  --jj-heat-l2: #7C3AED;
-  --jj-heat-l3: #4C1D95;
+  --jj-heat-l1: #A78BFA;
+  --jj-heat-l2: #8B5CF6;
+  --jj-heat-l3: #F97316;
+
+  $heat-l1: #A78BFA;
+  $heat-l2: #8B5CF6;
+  $heat-l3: #F97316;
 
   display: flex;
   flex-direction: column;
@@ -234,21 +238,21 @@
     }
 
     &--level-1 {
-      border-color: rgba($color-primary, 0.22);
-      background: rgba($color-primary-light, 0.45);
-      box-shadow: 0 4rpx 12rpx rgba($color-primary, 0.06);
+      border-color: rgba($heat-l1, 0.42);
+      background: rgba($heat-l1, 0.16);
+      box-shadow: 0 4rpx 12rpx rgba($heat-l1, 0.08);
     }
 
     &--level-2 {
-      border-color: rgba($color-primary, 0.40);
-      background: rgba($color-primary-light, 0.65);
-      box-shadow: 0 6rpx 18rpx rgba($color-primary, 0.10);
+      border-color: rgba($heat-l2, 0.44);
+      background: rgba($heat-l2, 0.18);
+      box-shadow: 0 6rpx 18rpx rgba($heat-l2, 0.10);
     }
 
     &--level-3 {
-      border-color: rgba($color-primary, 0.60);
-      background: rgba($color-primary-light, 0.88);
-      box-shadow: 0 10rpx 28rpx rgba($color-primary, 0.18);
+      border-color: rgba($heat-l3, 0.58);
+      background: rgba($heat-l3, 0.20);
+      box-shadow: 0 10rpx 28rpx rgba($heat-l3, 0.18);
       transform: translateY(-4rpx);
     }
 
@@ -295,9 +299,9 @@
       transform: scaleX(1);
     }
 
-    // L3 uses the deep purple plus a subtle warm-coral accent shadow for emotional payoff.
+    // L3 uses the warm-coral accent shadow for emotional payoff.
     &--level-3#{&}--filled {
-      box-shadow: 0 0 6rpx rgba($color-secondary, 0.45);
+      box-shadow: 0 0 6rpx rgba($heat-l3, 0.45);
     }
   }
 
@@ -472,14 +476,14 @@
     border: 2rpx solid rgba($color-primary, 0.12);
 
     &--level-2 {
-      background: rgba($color-primary-light, 0.60);
-      border-color: rgba($color-primary, 0.28);
+      background: rgba($heat-l2, 0.18);
+      border-color: rgba($heat-l2, 0.36);
     }
 
     &--level-3 {
-      background: rgba($color-primary-light, 0.85);
-      border-color: rgba($color-primary, 0.45);
-      box-shadow: 0 4rpx 12rpx rgba($color-primary, 0.10);
+      background: rgba($heat-l3, 0.22);
+      border-color: rgba($heat-l3, 0.52);
+      box-shadow: 0 4rpx 12rpx rgba($heat-l3, 0.12);
     }
   }
 

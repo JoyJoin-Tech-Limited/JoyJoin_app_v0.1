@@ -8,11 +8,13 @@ import './PoolRegistrationHero.scss'
 
 // These hero images live inside the pool-registration subpackage so they
 // travel with the page instead of inflating the main package.
-const DINING_HERO_SRC = './assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp'
-const DRINKS_HERO_SRC = './assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp'
+// Use the absolute subpackage path (resolved from the WeChat package root),
+// matching the onboarding subpackage asset convention.
+const DINING_HERO_SRC = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp'
+const DRINKS_HERO_SRC = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp'
 
 const MAX_COMPACT_HEADS = 5
-const SEAT_HEAD_SIZE = 40
+const SEAT_HEAD_SIZE = 36
 
 interface PoolRegistrationHeroProps {
   eventType: PoolEventType
@@ -29,19 +31,15 @@ function resolveHeroSrc(eventType: PoolEventType): string {
   return eventType === '酒局' ? DRINKS_HERO_SRC : DINING_HERO_SRC
 }
 
-export default function PoolRegistrationHero({
-  eventType,
-  dateTimeLabel,
-  area,
-  price,
-  registrationTotal,
+function SeatHeads({
   sampleArchetypes,
   visible,
   reduceMotion,
-}: PoolRegistrationHeroProps) {
-  const [imageFailed, setImageFailed] = useState(false)
-  const heroSrc = resolveHeroSrc(eventType)
-
+}: {
+  sampleArchetypes?: string[]
+  visible: boolean
+  reduceMotion: boolean
+}) {
   const compactHeads = useMemo(() => {
     const archetypes = sampleArchetypes ?? []
     if (!archetypes.length) return []
@@ -57,11 +55,61 @@ export default function PoolRegistrationHero({
 
   const hasOverflow = (sampleArchetypes?.length ?? 0) > MAX_COMPACT_HEADS
 
+  if (compactHeads.length === 0) {
+    return <View className='pool-registration-hero__seat-dot' />
+  }
+
+  return (
+    <>
+      {compactHeads.map((key, index) => {
+        const tokens = getArchetypeTokens(key)
+        const delayClass =
+          visible && !reduceMotion
+            ? `pool-registration-hero__seat-head--delay-${Math.min(index, 4)}`
+            : ''
+        return (
+          <View
+            key={key + index}
+            className={['pool-registration-hero__seat-head', delayClass].join(' ')}
+            style={{
+              borderColor: tokens.primary,
+              backgroundColor: tokens.background,
+              zIndex: compactHeads.length - index,
+            }}
+          >
+            <ArchetypeHead archetype={key} size={SEAT_HEAD_SIZE} />
+          </View>
+        )
+      })}
+      {hasOverflow ? (
+        <View className='pool-registration-hero__seat-overflow'>
+          <Text className='pool-registration-hero__seat-overflow-text'>+</Text>
+        </View>
+      ) : null}
+    </>
+  )
+}
+
+export default function PoolRegistrationHero({
+  eventType,
+  dateTimeLabel,
+  area,
+  price,
+  registrationTotal,
+  sampleArchetypes,
+  visible,
+  reduceMotion,
+}: PoolRegistrationHeroProps) {
+  const [imageFailed, setImageFailed] = useState(false)
+  const heroSrc = resolveHeroSrc(eventType)
+
   const showAurora = imageFailed
   const rootClasses = [
     'pool-registration-hero',
     visible ? (reduceMotion ? 'pool-registration-hero--visible' : 'pool-registration-hero--enter') : 'pool-registration-hero--hidden',
   ].join(' ')
+
+  const seatsText = registrationTotal > 0 ? `${registrationTotal} 人已报名` : '等你加入'
 
   return (
     <View className={rootClasses}>
@@ -85,8 +133,17 @@ export default function PoolRegistrationHero({
 
         <View className='pool-registration-hero__scrim' />
 
-        <View className='pool-registration-hero__badge'>
-          <Text className='pool-registration-hero__badge-text'>{eventType}</Text>
+        <View className='pool-registration-hero__top-chrome'>
+          <View className='pool-registration-hero__badge'>
+            <Text className='pool-registration-hero__badge-text'>{eventType}</Text>
+          </View>
+
+          <View className='pool-registration-hero__seats-pill' aria-label={seatsText}>
+            <View className='pool-registration-hero__seats-heads'>
+              <SeatHeads sampleArchetypes={sampleArchetypes} visible={visible} reduceMotion={reduceMotion} />
+            </View>
+            <Text className='pool-registration-hero__seats-text'>{seatsText}</Text>
+          </View>
         </View>
 
         <View className='pool-registration-hero__meta-band'>
@@ -116,42 +173,6 @@ export default function PoolRegistrationHero({
               <Text className='pool-registration-hero__meta-text'>{price}</Text>
             </View>
           ) : null}
-
-          <View className='pool-registration-hero__seats'>
-            <View className='pool-registration-hero__seats-heads'>
-              {compactHeads.length > 0 ? (
-                <>
-                  {compactHeads.map((key, index) => {
-                    const tokens = getArchetypeTokens(key)
-                    const delayClass = visible && !reduceMotion ? `pool-registration-hero__seat-head--delay-${Math.min(index, 4)}` : ''
-                    return (
-                      <View
-                        key={key + index}
-                        className={['pool-registration-hero__seat-head', delayClass].join(' ')}
-                        style={{
-                          borderColor: tokens.primary,
-                          backgroundColor: tokens.background,
-                          zIndex: compactHeads.length - index,
-                        }}
-                      >
-                        <ArchetypeHead archetype={key} size={SEAT_HEAD_SIZE} />
-                      </View>
-                    )
-                  })}
-                  {hasOverflow ? (
-                    <View className='pool-registration-hero__seat-overflow'>
-                      <Text className='pool-registration-hero__seat-overflow-text'>+</Text>
-                    </View>
-                  ) : null}
-                </>
-              ) : (
-                <View className='pool-registration-hero__seat-dot' />
-              )}
-            </View>
-            <Text className='pool-registration-hero__seats-text'>
-              {registrationTotal > 0 ? `${registrationTotal} 人已报名` : '等你加入'}
-            </Text>
-          </View>
         </View>
       </View>
     </View>

@@ -16,6 +16,11 @@ interface JoyJoinIconProps {
   tier?: IconTier
   className?: string
   style?: React.CSSProperties
+  /**
+   * Whether to lazy-load the image. When omitted, CDN icons lazy-load and
+   * local bundled icons load eagerly to avoid emoji fallback in subpackages.
+   */
+  lazyLoad?: boolean
 }
 
 /**
@@ -61,8 +66,14 @@ export default function JoyJoinIcon({
   tier,
   className = '',
   style = {},
+  lazyLoad: lazyLoadProp,
 }: JoyJoinIconProps) {
   const mapping: IconMapping | undefined = getIconMapping(emoji, tier)
+  // Local bundled icons are small and should render immediately, especially in
+  // subpackage pages where WeChat's lazy-load can fail and fall back to emoji.
+  // CDN icons are larger and benefit from lazy-loading.
+  const isCdnTier = mapping ? CDN_ICON_TIERS.has(mapping.tier) : false
+  const lazyLoad = lazyLoadProp ?? isCdnTier
   const [hasError, setHasError] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
@@ -140,7 +151,7 @@ export default function JoyJoinIcon({
         ...style,
       }}
       mode='aspectFit'
-      lazyLoad
+      lazyLoad={lazyLoad}
       onLoad={handleLoad}
       onError={handleError}
     />

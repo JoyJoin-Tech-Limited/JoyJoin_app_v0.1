@@ -345,9 +345,9 @@ export default function MiniProgramLandingPage({
 
           <View className="landing-page__legal-text">
             <Text>我已阅读并同意</Text>
-            <Navigator url="/pages/terms/index" className="landing-page__legal-link">《用户协议》</Navigator>
+            <Navigator url={MINI_PROGRAM_ROUTES.terms} className="landing-page__legal-link">《用户协议》</Navigator>
             <Text>和</Text>
-            <Navigator url="/pages/terms/index?section=privacy" className="landing-page__legal-link">《隐私政策》</Navigator>
+            <Navigator url={`${MINI_PROGRAM_ROUTES.terms}?section=privacy`} className="landing-page__legal-link">《隐私政策》</Navigator>
           </View>
 
           <Text aria-live="polite" className="landing-page__sr-only">

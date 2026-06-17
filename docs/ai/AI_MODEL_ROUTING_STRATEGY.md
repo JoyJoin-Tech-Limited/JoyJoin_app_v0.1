@@ -44,7 +44,7 @@ Source of truth: `apps/server/src/ai/socialModelRouter.ts`
 | `generateMicroChallenges` | `apps/server/src/socialIcebreakerAIService.ts` | MiniMax | Flash non-thinking | Structured game prompt output |
 | `generatePersonalityDiceChallenges` | `apps/server/src/socialIcebreakerAIService.ts` | MiniMax | Flash non-thinking | Structured game prompt output |
 | `generatePersonalityDiceChallengeGroups` | `apps/server/src/socialIcebreakerAIService.ts` | DeepSeek | Flash thinking, `reasoningEffort: 'high'` | V4 3-option-per-player generation |
-| `generateProfileTagline` | `apps/server/src/profileTaglineService.ts` | MiniMax | Flash non-thinking | Short expressive onboarding copy |
+| `generateProfileTagline` | `apps/server/src/profileTaglineService.ts` | DeepSeek | Flash non-thinking | Short expressive onboarding copy; prompt injects `XIAOYUE_CRAFT_LITE` for warm, concrete copy |
 | `generateConversationTopics` | `apps/server/src/conversationTopicsService.ts` | MiniMax | Flash non-thinking | Group conversation copy |
 | `generateWelcomeMessage` | `apps/server/src/icebreakerAIService.ts` | MiniMax | Flash non-thinking | Warm facilitation copy |
 | `generateClosingMessage` | `apps/server/src/icebreakerAIService.ts` | MiniMax | Flash non-thinking | Warm facilitation copy |

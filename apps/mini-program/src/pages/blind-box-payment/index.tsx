@@ -969,9 +969,9 @@ export default function BlindBoxPaymentPage() {
           >
             返回
           </JoyButton>
-          <Text className='payment-page__eyebrow'>
-            {registrationReturnContext ? '继续报名' : '福利柜'}
-          </Text>
+          {registrationReturnContext ? (
+            <Text className='payment-page__eyebrow'>继续报名</Text>
+          ) : null}
           <Text className='payment-page__title'>
             {registrationReturnContext ? '先确认已有订单，再回来完成报名' : '解锁专属权益'}
           </Text>
@@ -1036,9 +1036,9 @@ export default function BlindBoxPaymentPage() {
         >
           返回
         </JoyButton>
-        <Text className='payment-page__eyebrow'>
-          {registrationReturnContext ? '继续报名' : '福利柜'}
-        </Text>
+        {registrationReturnContext ? (
+          <Text className='payment-page__eyebrow'>继续报名</Text>
+        ) : null}
         <Text className='payment-page__title'>
           {registrationReturnContext ? '先开通权益，再回来完成报名' : '解锁专属权益'}
         </Text>

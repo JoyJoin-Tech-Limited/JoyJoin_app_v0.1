@@ -5,7 +5,8 @@
 .profile-page {
   display: flex;
   flex-direction: column;
-  @include viewport-min-height;
+  min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
 
   // Themeable color surface for light / dark mode support.
@@ -40,6 +41,7 @@
   &__scroll {
     flex: 1;
     min-height: 0;
+    height: 100%;
   }
 
   &__loading {
@@ -271,6 +273,12 @@
     width: 64rpx;
     height: 64rpx;
     flex-shrink: 0;
+    opacity: 0;
+    transform: scale(0.85);
+
+    &--entered {
+      animation: mascot-pop 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
   }
 
   &__greeting-bubble {
@@ -466,17 +474,6 @@
     }
   }
 
-  &__stat-chevron {
-    position: absolute;
-    right: $spacing-sm;
-    bottom: $spacing-sm;
-    font-size: $font-size-sm;
-    font-family: $font-ui;
-    color: var(--profile-text-tertiary);
-    line-height: 1;
-    opacity: 0.6;
-  }
-
   // Milestones
   &__milestones {
     padding: 0 $container-padding;
@@ -532,8 +529,8 @@
     font-family: $font-ui;
     font-weight: $font-weight-semibold;
     color: var(--profile-text-primary);
-    word-break: keep-all;
-    overflow-wrap: normal;
+    text-align: center;
+    line-height: $line-height-normal;
   }
 
   &__milestone-lock-icon {
@@ -554,8 +551,7 @@
     font-weight: $font-weight-medium;
     color: var(--profile-text-secondary);
     line-height: $line-height-normal;
-    word-break: keep-all;
-    overflow-wrap: normal;
+    text-align: center;
   }
 
   &__milestones--entered &__milestone {
@@ -640,7 +636,8 @@
     opacity: 0;
     transform: translateY(12rpx);
     transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+      background 0.15s ease;
 
     &:last-child {
       border-bottom: none;
@@ -648,6 +645,7 @@
 
     &--pressed {
       background: var(--profile-primary-04);
+      transform: scale(0.985);
     }
   }
 
@@ -666,10 +664,9 @@
   }
 
   &__menu-icon {
-    width: $icon-slot-md;
-    height: $icon-slot-md;
+    width: 40rpx;
+    height: 40rpx;
     flex-shrink: 0;
-    opacity: 0.9;
   }
 
   &__menu-label {
@@ -679,8 +676,7 @@
     font-weight: $font-weight-medium;
     color: var(--profile-text-primary);
     line-height: $line-height-normal;
-    word-break: keep-all;
-    overflow-wrap: normal;
+    @include text-truncate;
   }
 
   &__menu-row-right {
@@ -706,13 +702,6 @@
     font-family: $font-ui;
     color: var(--profile-text-white);
     font-weight: $font-weight-bold;
-  }
-
-  &__menu-chevron {
-    font-size: $font-size-base;
-    font-family: $font-ui;
-    color: var(--profile-text-tertiary);
-    line-height: 1;
   }
 
   &__menu-title-skeleton {
@@ -907,6 +896,21 @@
   }
 }
 
+@keyframes mascot-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @keyframes milestone-pulse {
   0% {
     transform: scale(0.96);
@@ -992,6 +996,7 @@
   }
 
   .profile-page__hero--entered .profile-page__avatar-head,
+  .profile-page__greeting-mascot--entered,
   .profile-page__greeting-bubble--entered,
   .profile-page__milestones--entered .profile-page__milestone {
     animation: none;
@@ -1022,6 +1027,7 @@
   }
 
   .profile-page__hero--entered .profile-page__avatar-head,
+  .profile-page__greeting-mascot--entered,
   .profile-page__greeting-bubble--entered,
   .profile-page__milestones--entered .profile-page__milestone {
     animation: none;
@@ -1038,6 +1044,16 @@
     transform: none;
     transition: none;
     animation: none;
+  }
+
+  .profile-page__archetype-pill,
+  .profile-page__unlock-pill,
+  .profile-page__bio-cta,
+  .profile-page__error-retry,
+  .profile-page__logout-btn {
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
   }
 }
 

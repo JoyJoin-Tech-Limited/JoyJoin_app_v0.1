@@ -132,6 +132,8 @@ $card-radius-sm:   24rpx;
 $card-radius-lg:   40rpx;
 $radius-md:        16rpx;
 $radius-pill:      56rpx;
+$radius-full:      100rpx; // Fully rounded pill / floating action.
+$radius-circle:    50%;     // Perfect circles (mascot fallback, badges, spinners).
 $input-height:     88rpx;
 $tab-bar-height:        128rpx;  // Surface height
 $tab-bar-root-height:   182rpx;  // Full footprint including center protrusion
@@ -143,6 +145,7 @@ $shadow-sm:   0 2rpx 12rpx rgba(0, 0, 0, 0.07);
 $shadow-md:   0 4rpx 24rpx rgba(0, 0, 0, 0.10);
 $shadow-lg:   0 8rpx 40rpx rgba(0, 0, 0, 0.14);
 $shadow-card: 0 2rpx 12rpx rgba(0, 0, 0, 0.07);
+$shadow-primary-soft: 0 8rpx 32rpx rgba($color-primary, 0.35);
 
 // ─── Z-index ──────────────────────────────────────────────────────
 $z-tab-bar: 100;

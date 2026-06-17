@@ -21,15 +21,17 @@ import {
   users,
   eventAttendance,
   connections,
+  eventFeedback,
 } from "@shared/schema";
-import type { DiscoverShellPoolItem, ProfileShellResponse, UserCouponsResponse } from "@shared/api";
+import type { DiscoverShellPoolItem, ProfileShellResponse, UserCouponsResponse, ConnectionsShellContext } from "@shared/api";
 import { getArchetypeFamily } from "@shared/archetypeColors";
 import { computeOracleCardFields } from "../lib/oracleCardComputation";
 import { buildAuthUserResponse } from "../lib/buildAuthUserResponse";
 import { paymentsRepo } from "./paymentsRepo";
 import { notificationsRepo } from "./notificationsRepo";
-import { getUserJoinedEventsSummary } from "./joinedEventsRepo";
+import { getUserJoinedEventsSummary, getConnectionsContextEvents } from "./joinedEventsRepo";
 import { getUserConnections, getUserPendingRequests } from "./connectionsRepo";
+import { resolveConnectionsContext, type JoinedEventForContext } from "../lib/connectionsContextResolver";
 
 const SAMPLE_ARCHETYPE_COUNT = 5;
 const DEFAULT_PAGE_LIMIT = 20;
@@ -525,6 +527,7 @@ export interface ConnectionsShellQueryResult {
   user: { nextStep: string; primaryArchetype: string | null }
   connections: Awaited<ReturnType<typeof getUserConnections>>
   pendingRequests: Awaited<ReturnType<typeof getUserPendingRequests>>
+  connectionsContext: ConnectionsShellContext | null
   notifications: Awaited<ReturnType<typeof notificationsRepo.getNotificationCounts>>
   meta: { cacheKey: string; serverTime: string }
 }
@@ -541,12 +544,25 @@ export async function getConnectionsShellData(params: {
     throw new Error(`User not found: ${userId}`)
   }
 
-  // 2. Connections + pending requests + notifications in parallel (3 round-trips)
-  const [connections, pendingRequests, notifications] = await Promise.all([
+  // 2. Connections + pending requests + notifications + lightweight joined events in parallel
+  const [connections, pendingRequests, notifications, joinedEvents] = await Promise.all([
     getUserConnections(userId),
     getUserPendingRequests(userId),
     notificationsRepo.getNotificationCounts(userId),
+    getConnectionsContextEvents(userId),
   ])
+
+  // 3. Feedback rows for joined events (1 round-trip, skipped if no events)
+  const eventIds = joinedEvents.map((e) => e.id)
+  const feedbackRows: { eventId: string }[] = eventIds.length
+    ? await db
+        .select({ eventId: eventFeedback.eventId })
+        .from(eventFeedback)
+        .where(and(eq(eventFeedback.userId, userId), inArray(eventFeedback.eventId, eventIds)))
+    : []
+  const feedbackEventIds = new Set(feedbackRows.map((r) => r.eventId))
+
+  const connectionsContext = resolveConnectionsContext(joinedEvents, feedbackEventIds, now)
 
   return {
     user: {
@@ -555,6 +571,7 @@ export async function getConnectionsShellData(params: {
     },
     connections,
     pendingRequests,
+    connectionsContext,
     notifications,
     meta: {
       cacheKey: `shell-connections-${userId}`,

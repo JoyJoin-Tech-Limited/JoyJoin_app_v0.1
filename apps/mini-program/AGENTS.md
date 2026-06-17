@@ -134,7 +134,7 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 - **Tab bar logo**: dedicated 128×128 `joyjoin-logo-tab.png` (19KB) — NOT the full `joyjoin-logo.png` (596KB).
 - **Never** bundle local PNG archetype art. If canvas needs PNG, use `cdnAsset('/assets/personality/archetypes')`.
 - **Archetype images must not have text overlays** — no archetype-name initials or watermarks on hero art.
-- **Batch C + D ceremony/badges (2026-06-04, Path B)**: 8 ceremony WebP in `src/assets/ceremony/` + 9 badge WebP in `src/assets/badges/` (q=55, 600px) are bundled locally via Taro `copy.patterns`. Registries use `localAsset()` (NOT `cdnAsset()`). PNG masters live in `assets-source/lovart/batch-{c,d}/` and are NOT bundled. Total raw: 570KB; main package zip stays at 1.98MB.
+- **Batch C + D ceremony/badges (2026-06-04 Path B local-bundle → 2026-06-16 CDN)**: 8 ceremony WebP in `src/assets/ceremony/` + 9 badge WebP in `src/assets/badges/` (q=55, 600px) are uploaded to CDN; they are no longer copied to `dist/`. Registries in `src/lib/ceremonyHeroes.ts` + `src/lib/milestoneBadges.ts` use `cdnAsset()` (NOT `localAsset()`). PNG masters live in `assets-source/lovart/batch-{c,d}/` and are NOT bundled. Re-encode via `node scripts/optimize-ceremony-batch-c.mjs` / `node scripts/optimize-badges-batch-d.mjs` before committing new tiles, then upload via the CDN workflow.
 
 ---
 

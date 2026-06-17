@@ -12,7 +12,7 @@ describe('icon tier invariants', () => {
 
   it('keeps locally-copied icon tiers out of the CDN set', () => {
     // Tiers that ship inside the WeChat package must not be in CDN_ICON_TIERS.
-    const localTiers = ['mood', 'status', 'intent', 'category', 'chemistry', 'expression', 'semantic']
+    const localTiers = ['mood', 'status', 'intent', 'category', 'chemistry', 'expression', 'semantic', 'ui']
     for (const tier of localTiers) {
       expect(CDN_ICON_TIERS.has(tier as any)).toBe(false)
     }

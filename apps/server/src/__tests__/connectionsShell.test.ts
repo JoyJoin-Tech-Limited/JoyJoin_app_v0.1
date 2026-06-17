@@ -112,6 +112,7 @@ function makeConnectionsShellResponse() {
         eventTitle: "周三饭局",
       },
     ],
+    connectionsContext: null,
     notifications: {
       discover: 0,
       activities: 2,
@@ -174,6 +175,7 @@ describe("GET /api/shell/connections", () => {
       expect(logCall![1].cache_hit).toBe(false);
       expect(logCall![1].connection_count).toBe(1);
       expect(logCall![1].pending_count).toBe(1);
+      expect(logCall![1].context_mode).toBeNull();
 
       expect(res.headers.get("X-Response-Time")).toBeTruthy();
       expect(res.headers.get("Cache-Control")).toContain("private");

@@ -42,8 +42,10 @@ function getNativeTabBar(page: Taro.PageInstance | null | undefined): NativeCust
   if (!page) return undefined
   // Bypass Taro.getTabBar: it expects $taroInstances (Taro-managed tab bar only).
   // JoyJoin ships a native WeChat component, so we call getTabBar() directly.
-  const tabBar = (page as unknown as { getTabBar(): NativeCustomTabBar | undefined }).getTabBar()
-  return tabBar
+  // H5 runtime does not provide getTabBar; guard to avoid crashing in browser builds.
+  const pageWithTabBar = page as unknown as { getTabBar?(): NativeCustomTabBar | undefined }
+  if (typeof pageWithTabBar.getTabBar !== 'function') return undefined
+  return pageWithTabBar.getTabBar()
 }
 
 export function useCustomTabBarSync({
