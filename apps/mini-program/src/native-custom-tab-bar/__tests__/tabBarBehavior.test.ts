@@ -172,25 +172,24 @@ describe('native custom tab bar behavior', () => {
     expect(component.data.lowEnd).toBe(true)
   })
 
-  it('computes sliding pill geometry on attach', async () => {
+  it('initializes without sliding-pill geometry state', async () => {
     setupMocks()
     const component = await loadComponent()
 
     component.attached()
 
-    expect(component.data.tabItemWidth).toBeGreaterThan(0)
-    expect(component.data.pillWidth).toBe(component.data.tabItemWidth)
-    expect(component.data.pillTranslateX).toBe(0)
+    expect(component.data.pillTranslateX).toBeUndefined()
+    expect(component.data.pillWidth).toBeUndefined()
   })
 
-  it('moves the sliding pill when a side tab is tapped', async () => {
+  it('updates selected when a side tab is tapped', async () => {
     setupMocks({ switchTabResult: 'success' })
     const component = await loadComponent()
     component.attached()
 
     component.handleTabTap(makeEvent(1, '/pages/events/index', 'events'))
 
-    expect(component.data.pillTranslateX).toBeGreaterThan(0)
+    expect(component.data.selected).toBe(1)
   })
 
   it('hides the sliding pill when the center button is selected', async () => {
@@ -203,7 +202,7 @@ describe('native custom tab bar behavior', () => {
     expect(component.data.selected).toBe(4)
   })
 
-  it('updates the sliding pill via setSelected', async () => {
+  it('updates selection via setSelected', async () => {
     setupMocks()
     const component = await loadComponent()
     component.attached()
@@ -211,7 +210,7 @@ describe('native custom tab bar behavior', () => {
     component.setSelected(3)
 
     expect(component.data.selected).toBe(3)
-    expect(component.data.pillTranslateX).toBeGreaterThan(0)
+    expect(component._confirmedSelected).toBe(3)
   })
 
   it('switches side tab with optimistic highlight and announces on success', async () => {
@@ -283,7 +282,7 @@ describe('native custom tab bar behavior', () => {
     )
   })
 
-  it('debounces rapid taps within 180ms', async () => {
+  it('debounces rapid taps within 80ms', async () => {
     setupMocks({ switchTabResult: 'success' })
     const component = await loadComponent()
     component.attached()
@@ -296,7 +295,7 @@ describe('native custom tab bar behavior', () => {
     expect(component.data.selected).toBe(1)
 
     // After debounce window, a new tap works.
-    await vi.advanceTimersByTimeAsync(180)
+    await vi.advanceTimersByTimeAsync(80)
     component.handleTabTap(makeEvent(2, '/pages/connections/index', 'connections'))
     expect(global.wx.switchTab).toHaveBeenCalledTimes(2)
     expect(component.data.selected).toBe(2)
@@ -341,6 +340,25 @@ describe('native custom tab bar behavior', () => {
     expect(component.data.leftTabs[1].badgeCount).toBe(0)
     expect(component.data.rightTabs[0].badgeCount).toBe(12)
     expect(component.data.rightTabs[1].badgeCount).toBe(0)
+  })
+
+  it('syncState applies selected immediately before badge debounce', async () => {
+    setupMocks()
+    const component = await loadComponent()
+    component.attached()
+
+    component.syncState({
+      selected: 3,
+      badges: { discover: 1, activities: 0, chat: 0 },
+    })
+
+    expect(component.data.selected).toBe(3)
+    expect(component._confirmedSelected).toBe(3)
+    expect(component.data.leftTabs[0].badgeCount).toBe(0)
+
+    await vi.advanceTimersByTimeAsync(50)
+
+    expect(component.data.leftTabs[0].badgeCount).toBe(1)
   })
 
   it('syncState debounces rapid badge updates', async () => {

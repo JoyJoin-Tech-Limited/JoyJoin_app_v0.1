@@ -5,26 +5,24 @@
 // "undefined is not an object (evaluating 'this._tabNames[e]')").
 var TAB_NAMES = { 0: '发现', 1: '足迹', 2: '连接', 3: '我的', 4: '中心入口' }
 
-// Layout constants for the sliding active pill (must stay in sync with index.wxss).
-// 750rpx design width minus surface margins, row padding, and center gap.
-var TAB_BAR_CENTER_GAP_RPX = 192
-var TAB_BAR_SURFACE_MARGIN_RPX = 24
-var TAB_BAR_ROW_PADDING_RPX = 24
-
-function computeTabItemWidth(windowWidth) {
-  var designWidth = 750
-  var availableRpx =
-    designWidth -
-    TAB_BAR_SURFACE_MARGIN_RPX * 2 -
-    TAB_BAR_ROW_PADDING_RPX * 2 -
-    TAB_BAR_CENTER_GAP_RPX
-  return availableRpx / 4
+var TAB_TAP_DEBOUNCE_MS = 80
+var ROUTE_TO_SELECTED = {
+  'pages/discover/index': 0,
+  'pages/events/index': 1,
+  'pages/connections/index': 2,
+  'pages/profile/index': 3,
+  'pages/center-hub/index': 4,
 }
 
-function computePillTranslateX(index, itemWidth) {
-  if (index < 0 || index > 3) return 0
-  var gapOffset = index >= 2 ? TAB_BAR_CENTER_GAP_RPX : 0
-  return Math.round(index * itemWidth + gapOffset)
+function getCurrentRouteSelected() {
+  try {
+    var pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
+    var current = pages && pages.length ? pages[pages.length - 1] : null
+    var route = current && current.route
+    return ROUTE_TO_SELECTED[route]
+  } catch (_e) {
+    return undefined
+  }
 }
 
 Component({
@@ -54,10 +52,6 @@ Component({
     selected: 0,
     lowEnd: false,
     announcement: '',
-    // Sliding active pill geometry (in rpx)
-    pillWidth: 0,
-    pillTranslateX: 0,
-    tabItemWidth: 0,
     center: {
       label: '进行中',
       showBadge: false,
@@ -128,15 +122,10 @@ Component({
         this.setData({ lowEnd: true })
       }
 
-      // Compute sliding pill geometry from the current screen width.
-      // Values are stored in rpx so inline styles can use them directly.
-      var windowWidth = info.windowWidth || 375
-      var itemWidth = Math.round(computeTabItemWidth(windowWidth))
-      this.setData({
-        tabItemWidth: itemWidth,
-        pillWidth: itemWidth,
-        pillTranslateX: 0,
-      })
+      var routeSelected = getCurrentRouteSelected()
+      if (routeSelected !== undefined) {
+        this._applySelected(routeSelected)
+      }
 
       // Re-assign the accessibility map to the instance. Some WeChat runtimes
       // do not reliably copy root-level non-data fields onto custom-tab-bar
@@ -205,23 +194,30 @@ Component({
   },
 
   pageLifetimes: {
-    // Safety net: if an optimistic update left selected in a wrong state
-    // after swipe-back, reset to the last confirmed value after syncState
-    // has had time to fire (syncState debounce = 50ms).
+    // Safety net: route is the final authority for visible tab state.
     show: function () {
       var self = this
       clearTimeout(this._showTimer)
       this._showTimer = setTimeout(function () {
-        if (self.data.selected !== self._confirmedSelected) {
-          var idx = self._confirmedSelected
-          var translateX = computePillTranslateX(idx, self.data.tabItemWidth)
-          self.setData({ selected: idx, pillTranslateX: translateX })
+        var routeSelected = getCurrentRouteSelected()
+        var idx = routeSelected !== undefined ? routeSelected : self._confirmedSelected
+        if (self.data.selected !== idx) {
+          self._applySelected(idx)
         }
-      }, 100)
+      }, 0)
     },
   },
 
   methods: {
+    _applySelected: function (selected) {
+      var idx = Number(selected)
+      if (Number.isNaN(idx)) return
+      this._confirmedSelected = idx
+      if (this.data.selected !== idx) {
+        this.setData({ selected: idx })
+      }
+    },
+
     /**
      * Called by useCustomTabBarSync hook via Taro.getTabBar(page).
      * Accepts: { selected, center, badges? }
@@ -234,6 +230,9 @@ Component({
       var self = this
       // Always keep the last known state so we can replay it on reconnect.
       this._lastSyncState = state
+      if (state && state.selected !== undefined) {
+        this._applySelected(state.selected)
+      }
       // Skip state updates while offline — badge counts are stale without network.
       // The network-status handler will re-call syncState when reconnecting.
       if (this._isOffline) return
@@ -242,11 +241,6 @@ Component({
       this._syncTimer = setTimeout(function () {
         var update = {}
         var hasChange = false
-
-        // Note: `selected` is NEVER passed by the hook.
-        // handleTabTap/handleCenterTap are the sole authorities.
-        // If selected ever drifts, pageLifetimes.show safety net
-        // reverts it to _confirmedSelected.
 
         // Center: shallow-compare key fields to avoid re-rendering identical state
         if (state.center) {
@@ -298,10 +292,7 @@ Component({
     },
 
     setSelected: function (selected) {
-      var idx = Number(selected)
-      this._confirmedSelected = idx
-      var translateX = computePillTranslateX(idx, this.data.tabItemWidth)
-      this.setData({ selected: idx, pillTranslateX: translateX })
+      this._applySelected(selected)
     },
 
     setCenterState: function (center) {
@@ -317,7 +308,7 @@ Component({
       if (this._tapDebounceTimer) return
       this._tapDebounceTimer = setTimeout(function () {
         self._tapDebounceTimer = null
-      }, 180)
+      }, TAB_TAP_DEBOUNCE_MS)
 
       var index = Number(e.currentTarget.dataset.index)
       var url = e.currentTarget.dataset.url
@@ -335,8 +326,7 @@ Component({
       // Optimistic update: update _confirmedSelected too so the
       // pageLifetimes.show safety net (100ms) doesn't revert it.
       this._confirmedSelected = index
-      var translateX = computePillTranslateX(index, this.data.tabItemWidth)
-      this.setData({ selected: index, pillTranslateX: translateX })
+      this.setData({ selected: index })
       wx.switchTab({
         url: url,
         success: function () {
@@ -367,7 +357,7 @@ Component({
       if (this._tapDebounceTimer) return
       this._tapDebounceTimer = setTimeout(function () {
         self._tapDebounceTimer = null
-      }, 180)
+      }, TAB_TAP_DEBOUNCE_MS)
 
       var action = this.data.center && this.data.center.action
       if (!action || !action.url) return
@@ -385,8 +375,7 @@ Component({
       // Optimistic update: update _confirmedSelected too so the
       // pageLifetimes.show safety net (100ms) doesn't revert it.
       this._confirmedSelected = 4
-      // Hide the sliding pill while the center button is selected.
-      this.setData({ selected: 4, pillTranslateX: 0 })
+      this.setData({ selected: 4 })
       wx.switchTab({
         url: action.url,
         success: function () {

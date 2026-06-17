@@ -21,7 +21,7 @@ export interface TabBadgeCounts {
 
 /** Native WeChat custom-tab-bar component interface. */
 interface NativeCustomTabBar {
-  syncState(state: CustomTabBarSyncState & { badges?: TabBadgeCounts }): void
+  syncState(state: CustomTabBarSyncState & { badges?: TabBadgeCounts; selected?: number }): void
   setSelected(index: number): void
 }
 
@@ -104,8 +104,11 @@ export function useCustomTabBarSync({
     if (tabKey !== undefined) {
       tabBar?.setSelected(MINI_PROGRAM_TAB_INDEX[tabKey])
     }
-    // Sync center + badges (never `selected` here — handled above per-page).
-    tabBar?.syncState({ center: centerState, badges })
+    tabBar?.syncState({
+      selected: tabKey !== undefined ? MINI_PROGRAM_TAB_INDEX[tabKey] : undefined,
+      center: centerState,
+      badges,
+    })
   })
 
   useDidHide(() => {
@@ -117,10 +120,12 @@ export function useCustomTabBarSync({
     const page = Taro.getCurrentInstance().page
     const tabBar = getNativeTabBar(page)
     if (!isVisibleRef.current) return
-    // Only sync center + badges (NOT selected) to prevent hidden pages
-    // from overwriting the visible page's tab selection on data update.
-    tabBar?.syncState({ center: centerState, badges })
-  }, [enabled, centerState, badges])
+    tabBar?.syncState({
+      selected: tabKey !== undefined ? MINI_PROGRAM_TAB_INDEX[tabKey] : undefined,
+      center: centerState,
+      badges,
+    })
+  }, [enabled, tabKey, centerState, badges])
 
   return {
     centerState,

@@ -128,21 +128,19 @@ export default function LocationFilterDrawer({
         aria-label='关闭区域选择'
       />
 
-      {/* Drawer Surface — catchMove prevents touch events from leaking to the
-          background Discover page when the user swipes on the drawer chrome
-          or when the internal ScrollView hits its top/bottom edge. */}
+      {/* Drawer Surface — do not catchMove here: parent catchMove cancels the
+          inner ScrollView's native scroll gestures in WeChat. */}
       <View
         className={`location-drawer__surface ${open ? 'location-drawer__surface--open' : ''}`}
         role='dialog'
         aria-modal='true'
         aria-label='偏好区域选择'
-        catchMove
       >
         {/* Drag handle */}
-        <View className='location-drawer__handle-bar' />
+        <View className='location-drawer__handle-bar' catchMove />
 
         {/* Header */}
-        <View className='location-drawer__header'>
+        <View className='location-drawer__header' catchMove>
           <View className='location-drawer__title-row'>
             <Image
               className='location-drawer__title-mascot'
@@ -163,14 +161,11 @@ export default function LocationFilterDrawer({
           </View>
         </View>
 
-        {/* Scrollable content */}
+        {/* Scrollable content — WeChat scroll-y requires a concrete height. */}
         <ScrollView
           className='location-drawer__scroll'
-          style={{ height: '100%' }}
           scrollY
-          enhanced
           showScrollbar={false}
-          enableFlex
         >
           <View className='location-drawer__content'>
             {/* All Regions tile */}

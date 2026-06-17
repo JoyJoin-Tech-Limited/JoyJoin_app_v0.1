@@ -21,19 +21,12 @@
 
     <!-- Tab row: left 2 + gap + right 2 -->
     <view class="joy-custom-tab-bar__row">
-      <!-- Shared sliding active pill (moves between tabs) -->
-      <view
-        class="joy-custom-tab-bar__active-pill"
-        style="transform: translateX({{pillTranslateX}}rpx); width: {{pillWidth}}rpx; opacity: {{selected === 4 ? 0 : 1}};"
-        aria-hidden="true"
-      />
-
       <!-- Left side tabs -->
       <view class="joy-custom-tab-bar__side">
         <view
           wx:for="{{leftTabs}}"
           wx:key="key"
-          class="joy-custom-tab-bar__item"
+          class="joy-custom-tab-bar__item {{selected === item.index ? 'joy-custom-tab-bar__item--active' : ''}}"
           data-index="{{item.index}}"
           data-url="{{item.url}}"
           data-tab="{{item.key}}"
@@ -74,7 +67,7 @@
         <view
           wx:for="{{rightTabs}}"
           wx:key="key"
-          class="joy-custom-tab-bar__item"
+          class="joy-custom-tab-bar__item {{selected === item.index ? 'joy-custom-tab-bar__item--active' : ''}}"
           data-index="{{item.index}}"
           data-url="{{item.url}}"
           data-tab="{{item.key}}"
