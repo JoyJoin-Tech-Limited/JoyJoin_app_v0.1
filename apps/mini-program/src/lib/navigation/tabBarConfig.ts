@@ -19,8 +19,8 @@ export const MINI_PROGRAM_TAB_ITEMS: MiniProgramTabItem[] = [
     text: '发现',
     appIconPath: 'assets/tab-icons/发现 icon_inactive.png',
     appSelectedIconPath: 'assets/tab-icons/发现 icon.png',
-    componentIconPath: '../assets/tab-icons/发现 icon_inactive.png',
-    componentSelectedIconPath: '../assets/tab-icons/发现 icon.png',
+    componentIconPath: '../assets/tab-icons/发现 icon_inactive.webp',
+    componentSelectedIconPath: '../assets/tab-icons/发现 icon.webp',
   },
   {
     key: 'events',
@@ -29,8 +29,8 @@ export const MINI_PROGRAM_TAB_ITEMS: MiniProgramTabItem[] = [
     text: '足迹',
     appIconPath: 'assets/tab-icons/足迹 icon_inactive.png',
     appSelectedIconPath: 'assets/tab-icons/足迹 icon.png',
-    componentIconPath: '../assets/tab-icons/足迹 icon_inactive.png',
-    componentSelectedIconPath: '../assets/tab-icons/足迹 icon.png',
+    componentIconPath: '../assets/tab-icons/足迹 icon_inactive.webp',
+    componentSelectedIconPath: '../assets/tab-icons/足迹 icon.webp',
   },
   {
     key: 'connections',
@@ -39,8 +39,8 @@ export const MINI_PROGRAM_TAB_ITEMS: MiniProgramTabItem[] = [
     text: '连接',
     appIconPath: 'assets/tab-icons/连接 icon_inactive.png',
     appSelectedIconPath: 'assets/tab-icons/连接 icon.png',
-    componentIconPath: '../assets/tab-icons/连接 icon_inactive.png',
-    componentSelectedIconPath: '../assets/tab-icons/连接 icon.png',
+    componentIconPath: '../assets/tab-icons/连接 icon_inactive.webp',
+    componentSelectedIconPath: '../assets/tab-icons/连接 icon.webp',
   },
   {
     key: 'profile',
@@ -49,8 +49,8 @@ export const MINI_PROGRAM_TAB_ITEMS: MiniProgramTabItem[] = [
     text: '我的',
     appIconPath: 'assets/tab-icons/我的 icon_inactive.png',
     appSelectedIconPath: 'assets/tab-icons/我的 icon.png',
-    componentIconPath: '../assets/tab-icons/我的 icon_inactive.png',
-    componentSelectedIconPath: '../assets/tab-icons/我的 icon.png',
+    componentIconPath: '../assets/tab-icons/我的 icon_inactive.webp',
+    componentSelectedIconPath: '../assets/tab-icons/我的 icon.webp',
   },
 ] as const
 
@@ -62,8 +62,8 @@ export const MINI_PROGRAM_CENTER_HUB_TAB_ITEM: MiniProgramTabItem = {
   text: '进行中',
   appIconPath: 'assets/tab-icons/发现 icon_inactive.png',
   appSelectedIconPath: 'assets/tab-icons/发现 icon.png',
-  componentIconPath: '../assets/tab-icons/发现 icon_inactive.png',
-  componentSelectedIconPath: '../assets/tab-icons/发现 icon.png',
+  componentIconPath: '../assets/tab-icons/发现 icon_inactive.webp',
+  componentSelectedIconPath: '../assets/tab-icons/发现 icon.webp',
 }
 
 export const MINI_PROGRAM_TAB_INDEX: Record<MiniProgramTabKey, number> = {

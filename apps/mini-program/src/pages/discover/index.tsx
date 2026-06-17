@@ -44,7 +44,9 @@ import {
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import { getDevMockPools } from '../../lib/dev/devPoolMocks'
+import { logInfo, logWarn } from '../../lib/utils/logger'
 import MiniProgramLandingPage from '../index/LandingPage'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import './index.scss'
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -167,14 +169,23 @@ function AuthenticatedDiscover({
       try {
         const shell = await fetchDiscoverShell()
         injectDiscoverShellIntoCache(queryClient, shell)
+        logInfo('[Discover] Shell loaded', { poolCount: shell.pools.items.length })
         return shell.pools.items as EventPoolSummary[]
-      } catch {
+      } catch (shellError) {
         // Composite unavailable — fall back to legacy 3-request pattern.
+        logWarn('[Discover] Shell failed; falling back to getEventPools', {
+          error: shellError instanceof Error ? shellError.message : String(shellError),
+        })
       }
 
       try {
-        return await getEventPools(apiRequest)
+        const pools = await getEventPools(apiRequest)
+        logInfo('[Discover] Fallback pools loaded', { poolCount: pools.length })
+        return pools
       } catch (e) {
+        logWarn('[Discover] Fallback pools failed', {
+          error: e instanceof Error ? e.message : String(e),
+        })
         // Dev-only mock fallback for UI testing without backend.
         // Gated to development so production never serves fake data (AC-12).
         if (process.env.NODE_ENV === 'development') {
@@ -185,7 +196,10 @@ function AuthenticatedDiscover({
     },
   })
 
-  const { data: registrations = [] } = useQuery({
+  const {
+    data: registrations = [],
+    isLoading: isLoadingRegistrations,
+  } = useQuery({
     queryKey: ['mini-program', 'my-pool-registrations'],
     staleTime: 2 * 60 * 1000,
     queryFn: () => getMyPoolRegistrations(apiRequest),
@@ -355,13 +369,15 @@ function AuthenticatedDiscover({
   const timeGreeting = useMemo(() => getTimeGreeting(displayName), [displayName])
   const dynamicSubtitle = useMemo(
     () =>
-      getDiscoverSubtitle({
-        displayName,
-        archetype: userArchetype,
-        registrationCount: registrations.length,
-        openPoolCount: pools.filter((p) => p.status !== 'closed').length,
-      }),
-    [displayName, userArchetype, registrations.length, pools],
+      isLoadingRegistrations
+        ? '发现适合你的聚会…'
+        : getDiscoverSubtitle({
+            displayName,
+            archetype: userArchetype,
+            registrationCount: registrations.length,
+            openPoolCount: pools.filter((p) => p.status !== 'closed').length,
+          }),
+    [displayName, userArchetype, registrations.length, pools, isLoadingRegistrations],
   )
   // ── Handlers ──
   const openPools = useMemo(
@@ -519,7 +535,7 @@ function AuthenticatedDiscover({
           <Text className='discover-auth__location-pill-text'>
             {isGeoUnknown ? '选择你的区域' : `在 深圳 • ${locationPillLabel}`}
           </Text>
-          <JoyJoinIcon emoji='▼' size={16} className='discover-auth__location-pill-chevron' />
+          <View className='discover-auth__location-pill-chevron' aria-hidden='true' />
         </View>
       </View>
 
@@ -650,6 +666,18 @@ export default function DiscoverPage() {
     enabled: isAuthenticated,
     tabKey: 'discover',
   })
+
+  // Unauthenticated users should see the dedicated landing page (non-tab)
+  // rather than the landing component embedded inside the Discover tab,
+  // which incorrectly shows the tab bar and misses landing-specific styles.
+  useEffect(() => {
+    if (isLoading || isAuthenticated) return
+    Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.index }).catch((err) => {
+      logWarn('[Discover] Redirect to landing failed', {
+        error: err instanceof Error ? err.message : String(err),
+      })
+    })
+  }, [isLoading, isAuthenticated])
 
   useEffect(() => {
     if (!isAuthenticated || hasMarkedRef.current) return

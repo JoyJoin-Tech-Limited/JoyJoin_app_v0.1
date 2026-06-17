@@ -1,17 +1,27 @@
 import { View, Text, Image } from '@tarojs/components'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getArchetypeTokens } from '@shared/archetypeColorTokens'
-import { localAsset } from '../../../lib/utils/cdnAssets'
+import { cdnAsset, localAsset } from '../../../lib/utils/cdnAssets'
 import ArchetypeHead from '../../../components/mascot/ArchetypeHead'
 import type { PoolEventType } from '../flowConfig'
 import './PoolRegistrationHero.scss'
 
-// These hero images live inside the pool-registration subpackage so they
-// travel with the page instead of inflating the main package.
-// Use the absolute subpackage path (resolved from the WeChat package root),
-// matching the onboarding subpackage asset convention.
-const DINING_HERO_SRC = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp'
-const DRINKS_HERO_SRC = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp'
+// Primary source: CDN (fast once Tencent Cloud CDN is enabled).
+// Fallback source: main-package local copy that survives clean:cdn-assets.
+// Subpackage local copy is kept as a tertiary fallback for offline resilience.
+const HERO_BASE_PATH = '/assets/ceremony/lovart-pool-registration-hero'
+const DINING_HERO_CDN = cdnAsset(`${HERO_BASE_PATH}-dining-20260613-v1.webp`)
+const DRINKS_HERO_CDN = cdnAsset(`${HERO_BASE_PATH}-drinks-20260613-v1.webp`)
+const DINING_HERO_LOCAL = localAsset('/assets/pool-heroes/lovart-pool-registration-hero-dining-20260613-v1.webp')
+const DRINKS_HERO_LOCAL = localAsset('/assets/pool-heroes/lovart-pool-registration-hero-drinks-20260613-v1.webp')
+const DINING_HERO_SUBPACKAGE = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp'
+const DRINKS_HERO_SUBPACKAGE = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp'
+
+const HERO_ATTEMPTS = [
+  (eventType: PoolEventType) => (eventType === '酒局' ? DRINKS_HERO_CDN : DINING_HERO_CDN),
+  (eventType: PoolEventType) => (eventType === '酒局' ? DRINKS_HERO_LOCAL : DINING_HERO_LOCAL),
+  (eventType: PoolEventType) => (eventType === '酒局' ? DRINKS_HERO_SUBPACKAGE : DINING_HERO_SUBPACKAGE),
+]
 
 const MAX_COMPACT_HEADS = 5
 const SEAT_HEAD_SIZE = 36
@@ -27,8 +37,9 @@ interface PoolRegistrationHeroProps {
   reduceMotion: boolean
 }
 
-function resolveHeroSrc(eventType: PoolEventType): string {
-  return eventType === '酒局' ? DRINKS_HERO_SRC : DINING_HERO_SRC
+function resolveHeroSrc(eventType: PoolEventType, attempt: number): string {
+  const index = Math.max(0, Math.min(attempt, HERO_ATTEMPTS.length - 1))
+  return HERO_ATTEMPTS[index](eventType)
 }
 
 function SeatHeads({
@@ -100,10 +111,20 @@ export default function PoolRegistrationHero({
   visible,
   reduceMotion,
 }: PoolRegistrationHeroProps) {
-  const [imageFailed, setImageFailed] = useState(false)
-  const heroSrc = resolveHeroSrc(eventType)
+  // Attempt index: 0 = CDN, 1 = main-package local, 2 = subpackage local, 3+ = failed
+  const [imageAttempt, setImageAttempt] = useState(0)
+  const heroSrc = resolveHeroSrc(eventType, imageAttempt)
 
-  const showAurora = imageFailed
+  // If the hero becomes visible and all sources failed, retry the subpackage/local
+  // fallback once. This covers the case where the subpackage was still downloading
+  // when the first attempt ran.
+  useEffect(() => {
+    if (visible && imageAttempt >= HERO_ATTEMPTS.length) {
+      setImageAttempt(HERO_ATTEMPTS.length - 1)
+    }
+  }, [visible, imageAttempt])
+
+  const showAurora = imageAttempt >= HERO_ATTEMPTS.length
   const rootClasses = [
     'pool-registration-hero',
     visible ? (reduceMotion ? 'pool-registration-hero--visible' : 'pool-registration-hero--enter') : 'pool-registration-hero--hidden',
@@ -127,7 +148,7 @@ export default function PoolRegistrationHero({
             mode='aspectFill'
             lazyLoad={false}
             aria-label={`${eventType}邀请图`}
-            onError={() => setImageFailed(true)}
+            onError={() => setImageAttempt((prev) => prev + 1)}
           />
         )}
 

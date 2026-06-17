@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { listGuardrailsAppSourcePaths } from '../guardrails-app-sources.mjs';
+import { listGuardrailsAppSourcePaths, isPlaceholder } from '../guardrails-app-sources.mjs';
 
 const emojiPattern = /[\u{1F300}-\u{1F9FF}\u{2300}-\u{23FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
 const allowedEmojiContextPattern = /emoji\s*=\s*['"]|icon\s*=\s*['"]|fallbackEmoji/;
@@ -141,4 +141,26 @@ test('centering safety heuristic ignores non-state blocks', () => {
     }
   `;
   assert.deepEqual(findUnsafeStateBlocks(nonState), []);
+});
+
+// --- Secret placeholder heuristic tests ---
+
+test('isPlaceholder recognizes explicit placeholder tokens', () => {
+  assert.ok(isPlaceholder('<replace-with-admin-create-secret-key>'));
+  assert.ok(isPlaceholder('replace-with-wechat-secret'));
+  assert.ok(isPlaceholder('your_api_key_here'));
+  assert.ok(isPlaceholder('change-me'));
+  assert.ok(isPlaceholder('example'));
+  assert.ok(isPlaceholder('${{ secrets.VALUE }}'));
+});
+
+test('isPlaceholder treats numeric-only example values as placeholders', () => {
+  assert.ok(isPlaceholder('123456'), 'short numeric placeholder should be allowed');
+  assert.ok(isPlaceholder('1234567890123456789'), 'long numeric placeholder should be allowed');
+});
+
+test('isPlaceholder rejects real-looking secret values', () => {
+  assert.ok(!isPlaceholder('sk-abc123xyz789'));
+  assert.ok(!isPlaceholder('super_secret_value_42'));
+  assert.ok(!isPlaceholder('postgres://user:pass@host/db'));
 });

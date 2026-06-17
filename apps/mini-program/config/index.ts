@@ -197,6 +197,15 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/empty-state',
           to: 'dist/assets/empty-state',
         },
+        // Discover hero promo banner — first-impression asset, bundled locally
+        // (~65KB) so it paints instantly on cold entry. CDN fallback is still
+        // available if the local copy fails to load.
+        // NOTE: copied to `promo-local/` because the clean step wipes the CDN
+        // `promo/` directory from the package.
+        {
+          from: 'src/assets/promo/banner-hero-lovart-v1.webp',
+          to: 'dist/assets/promo-local/banner-hero-lovart-v1.webp',
+        },
         // Batch C ceremony heroes — 8 WebP files (~310KB total, q=70 600px).
         // Served from CDN; source stays in src/assets/ceremony for upload via
         // `npm run upload:cdn-assets`. Local copies are no longer bundled so
@@ -207,6 +216,17 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         {
           from: 'src/pages/pool-registration/assets',
           to: 'dist/pages/pool-registration/assets',
+        },
+        // Pool-registration hero fallback — also copied to a main-package directory
+        // that survives clean:cdn-assets so the hero can load locally if the CDN
+        // or subpackage path fails. (~50KB total for both dining + drinks heroes).
+        {
+          from: 'src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp',
+          to: 'dist/assets/pool-heroes/lovart-pool-registration-hero-dining-20260613-v1.webp',
+        },
+        {
+          from: 'src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp',
+          to: 'dist/assets/pool-heroes/lovart-pool-registration-hero-drinks-20260613-v1.webp',
         },
         // Custom-tier icon — bundled locally for the icebreaker tier selector.
         // Lives in the phase-icons source folder but is copied out so it is not
@@ -274,10 +294,6 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/personality/xiaoyue/xiaoyue-home-welcome.webp',
           to: 'dist/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp',
         },
-        // Lovart generic empty/error illustrations — CDN only to save package size.
-        // Previously bundled locally but moved back to CDN to stay under 2MB.
-        // Kept as WebP; CDN delivery handles iOS compatibility via webp={true}.
-
         // UI icons — info labels across the app (~81KB).
         {
           from: 'src/assets/icons/ui',

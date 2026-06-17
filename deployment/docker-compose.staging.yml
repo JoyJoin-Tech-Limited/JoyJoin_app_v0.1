@@ -44,5 +44,14 @@ services:
     ports:
       - "127.0.0.1:5001:5001"
 
+  joyjoin-admin-staging:
+    build:
+      context: ..
+      dockerfile: apps/admin-client/Dockerfile
+    container_name: joyjoin-admin-staging
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3002:80"
+
 volumes:
   pgdata_staging:

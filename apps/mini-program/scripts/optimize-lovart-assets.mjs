@@ -29,6 +29,19 @@ const WEBP_EFFORT = 6
 const PNG_QUALITY = 80
 const PNG_EFFORT = 10
 
+function collectPngFiles(dir) {
+  const result = []
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name)
+    if (entry.isDirectory()) {
+      result.push(...collectPngFiles(fullPath))
+    } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.png')) {
+      result.push(fullPath)
+    }
+  }
+  return result
+}
+
 async function main() {
   const { default: sharp } = await import('sharp')
 
@@ -42,7 +55,7 @@ async function main() {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true })
   }
 
-  const files = fs.readdirSync(INPUT_DIR).filter((f) => f.toLowerCase().endsWith('.png'))
+  const files = collectPngFiles(INPUT_DIR)
 
   if (files.length === 0) {
     console.log('No PNG files found in', INPUT_DIR)
@@ -53,11 +66,16 @@ async function main() {
   let totalWebp = 0
   let totalPng = 0
 
-  for (const file of files) {
-    const inputPath = path.join(INPUT_DIR, file)
-    const base = path.basename(file, '.png')
-    const outputWebp = path.join(OUTPUT_DIR, `${base}.webp`)
-    const outputPng = path.join(OUTPUT_DIR, `${base}.png`)
+  for (const inputPath of files) {
+    const relativePath = path.relative(INPUT_DIR, inputPath)
+    const base = path.basename(inputPath, '.png')
+    const outputDir = path.join(OUTPUT_DIR, path.dirname(relativePath))
+    const outputWebp = path.join(outputDir, `${base}.webp`)
+    const outputPng = path.join(outputDir, `${base}.png`)
+
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true })
+    }
 
     const inputStat = fs.statSync(inputPath)
     totalIn += inputStat.size
@@ -81,7 +99,7 @@ async function main() {
     totalPng += pngStat.size
 
     console.log(
-      `${base}:  ${(inputStat.size / 1024).toFixed(0)}KB raw → ` +
+      `${relativePath}:  ${(inputStat.size / 1024).toFixed(0)}KB raw → ` +
         `${(webpStat.size / 1024).toFixed(0)}KB webp + ${(pngStat.size / 1024).toFixed(0)}KB png ` +
         `(${((webpStat.size / inputStat.size) * 100).toFixed(0)}% webp)`,
     )

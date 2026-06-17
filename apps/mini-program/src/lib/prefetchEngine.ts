@@ -21,7 +21,7 @@ export const DISCOVER_SHELL_QUERY_KEY = ['mini-program', 'shell/discover'] as co
 
 /** Query keys that existing Discover hooks read from. */
 export const POOLS_QUERY_KEY = ['mini-program', 'event-pools'] as const
-const REGISTRATIONS_QUERY_KEY = ['mini-program', 'my-pool-registrations'] as const
+export const REGISTRATIONS_QUERY_KEY = ['mini-program', 'my-pool-registrations'] as const
 
 /** Cache key for the raw Profile composite response. */
 export const PROFILE_SHELL_QUERY_KEY = ['mini-program', 'shell/profile'] as const

@@ -62,4 +62,48 @@ describe('imagePreload', () => {
 
     expect(results).toEqual([true, false, true])
   })
+
+  it('respects concurrency limit', async () => {
+    let running = 0
+    let maxRunning = 0
+
+    vi.spyOn(Taro, 'getImageInfo').mockImplementation((({ success }: any) => {
+      running++
+      maxRunning = Math.max(maxRunning, running)
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          running--
+          success?.({})
+          resolve()
+        }, 10)
+      })
+    }) as any)
+
+    const promise = preloadImages(['a.webp', 'b.webp', 'c.webp', 'd.webp'], 2)
+    const results = await promise
+
+    expect(results).toEqual([true, true, true, true])
+    expect(maxRunning).toBe(2)
+  })
+
+  it('falls back to unbounded concurrency when limit is not provided', async () => {
+    let running = 0
+    let maxRunning = 0
+
+    vi.spyOn(Taro, 'getImageInfo').mockImplementation((({ success }: any) => {
+      running++
+      maxRunning = Math.max(maxRunning, running)
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          running--
+          success?.({})
+          resolve()
+        }, 5)
+      })
+    }) as any)
+
+    await preloadImages(['a.webp', 'b.webp', 'c.webp', 'd.webp'])
+
+    expect(maxRunning).toBe(4)
+  })
 })

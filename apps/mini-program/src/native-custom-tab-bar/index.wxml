@@ -1,4 +1,4 @@
-<view class="joy-custom-tab-bar {{lowEnd ? 'joy-custom-tab-bar--low-end' : ''}}">
+<view class="joy-custom-tab-bar {{lowEnd ? 'joy-custom-tab-bar--low-end' : ''}}" hidden="{{hidden}}">
   <!--
     IMPORTANT: Keep this native custom tab bar as plain <view>/<image>.
     Do NOT wrap children in <cover-view>/<cover-image>. WeChat's cover-view
@@ -23,7 +23,7 @@
     <view class="joy-custom-tab-bar__row">
       <!-- Shared sliding active pill (moves between tabs) -->
       <view
-        class="joy-custom-tab-bar__active-pill"
+        class="joy-custom-tab-bar__active-pill {{pillTransitionEnabled ? '' : 'joy-custom-tab-bar__active-pill--no-transition'}}"
         style="transform: translateX({{pillTranslateX}}rpx); width: {{pillWidth}}rpx; opacity: {{selected === 4 ? 0 : 1}};"
         aria-hidden="true"
       />

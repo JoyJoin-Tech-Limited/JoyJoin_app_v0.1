@@ -1,4 +1,4 @@
-import { cdnAsset } from './cdnAssets'
+import { cdnAsset, localAsset } from './cdnAssets'
 import { preloadImagesWithDiagnostics } from './imagePreload'
 import { logInfo } from './logger'
 
@@ -39,7 +39,10 @@ export const ARCHETYPE_GLYPH_CDN_ASSETS: string[] = [
 // ─── Per-route asset lists ───
 
 const DISCOVER_PRELOADS: string[] = [
-  // Promo banners now bundled locally
+  // Discover hero banner is bundled locally so the first tab paint is not
+  // blocked by CDN latency. Empty/error illustrations stay CDN-only because
+  // they are only shown when there are no pools or an error.
+  localAsset('/assets/promo-local/banner-hero-lovart-v1.webp'),
 ]
 
 const MATCHING_PRELOADS: string[] = [
@@ -65,16 +68,20 @@ const ICEBREAKER_PRELOADS = [
   cdnAsset('/assets/lovart/icebreaker/backgrounds/bg-personality-dice.jpg'),
   cdnAsset('/assets/lovart/icebreaker/backgrounds/bg-quip-battle.jpg'),
   cdnAsset('/assets/lovart/icebreaker/backgrounds/bg-undercover-word.jpg'),
-  // Celebrations (~765KB total)
-  cdnAsset('/assets/lovart/icebreaker/celebrations/celebration-auction-sold.png'),
-  cdnAsset('/assets/lovart/icebreaker/celebrations/celebration-dice-reveal.png'),
-  cdnAsset('/assets/lovart/icebreaker/celebrations/celebration-mirror-result.png'),
-  cdnAsset('/assets/lovart/icebreaker/celebrations/celebration-quip-champion.png'),
-  cdnAsset('/assets/lovart/icebreaker/celebrations/celebration-undercover-secret.png'),
+  // Celebrations (~93KB total, WebP)
+  cdnAsset('/assets/lovart/icebreaker/celebrations/celebration-auction-sold.webp'),
+  cdnAsset('/assets/lovart/icebreaker/celebrations/celebration-dice-reveal.webp'),
+  cdnAsset('/assets/lovart/icebreaker/celebrations/celebration-mirror-result.webp'),
+  cdnAsset('/assets/lovart/icebreaker/celebrations/celebration-quip-champion.webp'),
+  cdnAsset('/assets/lovart/icebreaker/celebrations/celebration-undercover-secret.webp'),
 ]
 
 const POOL_REGISTRATION_PRELOADS = [
   ...MATCHING_PRELOADS,
+  // Pool-registration Step 0 hero — CDN primary with local fallback. Preload both
+  // variants since eventType is not known until the page renders.
+  cdnAsset('/assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp'),
+  cdnAsset('/assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp'),
 ]
 
 const REWARDS_PRELOADS = [

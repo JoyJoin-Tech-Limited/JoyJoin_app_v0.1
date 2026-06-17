@@ -74,7 +74,7 @@ Set at least these values in `.env`:
 - `PORT=5000`
 - `DATABASE_URL=postgresql://...`
 - `SESSION_SECRET=<random-long-secret>`
-- `ADMIN_CREATE_SECRET_KEY=<internal-cli-secret>`
+- `ADMIN_CREATE_SECRET_KEY=<replace-with-admin-create-secret-key>`
 
 ### 3) Push schema (safe mode)
 
@@ -161,7 +161,7 @@ DATABASE_URL=postgresql://<db-user>:<db-password>@<db-host>/<db-name>?sslmode=re
 SESSION_SECRET=<replace-with-a-strong-random-secret>
 WECHAT_APPID=<replace-with-wechat-app-id>
 WECHAT_SECRET=<replace-with-wechat-secret>
-ADMIN_CREATE_SECRET_KEY=<replace-with-internal-cli-secret>
+ADMIN_CREATE_SECRET_KEY=<replace-with-admin-create-secret-key>
 COOKIE_DOMAIN=
 ```
 
@@ -382,7 +382,12 @@ Run `npm run dep-check` to verify ownership is correct.
 
 ## CI/CD
 
-The GitHub Actions pipeline (`.github/workflows/cicd.yml`) runs on push to `main`:
+The GitHub Actions pipelines run on branch push:
+
+- `.github/workflows/deploy-staging.yml` runs on push to `main` and deploys to staging.
+- `.github/workflows/deploy-production.yml` runs on push to `release` and deploys to production (gated by the `production` environment).
+
+Both share `.github/workflows/quality-gates.yml`, which runs:
 
 1. **Guardrails** — env files, secrets, legacy identifiers, import boundaries
 2. **Typecheck** — TypeScript for mini-program, admin-client, and server

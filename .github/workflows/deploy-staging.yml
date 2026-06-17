@@ -1,0 +1,274 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: joyjoin-staging-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  quality-gates:
+    uses: ./.github/workflows/quality-gates.yml
+    secrets: inherit
+
+  deploy-staging:
+    name: Staging Deployment
+    needs: [quality-gates]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare remote rsync target
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          script: |
+            set -euo pipefail
+            mkdir -p ~/JoyJoin
+            if ! command -v rsync >/dev/null 2>&1; then
+              echo "rsync not found on server; installing..."
+              if command -v dnf >/dev/null 2>&1; then
+                sudo dnf install -y rsync
+              elif command -v yum >/dev/null 2>&1; then
+                sudo yum install -y rsync
+              elif command -v apt-get >/dev/null 2>&1; then
+                sudo apt-get update
+                sudo apt-get install -y rsync
+              else
+                echo "❌ Cannot install rsync automatically. Install rsync on the server and rerun deployment."
+                exit 1
+              fi
+            fi
+
+      - name: Upload deployment workspace via rsync
+        uses: burnett01/rsync-deployments@7.1.0
+        with:
+          switches: >-
+            -az --delete
+            --exclude=.git/
+            --exclude=.github/
+            --exclude=.cursor/
+            --exclude=.agents/
+            --exclude=.env
+            --exclude=.env.*
+            --exclude=node_modules/
+            --exclude=dist/
+            --exclude=build/
+            --exclude=coverage/
+            --exclude=.joyjoin/
+            --exclude=tmp/
+            --exclude=reports/
+            --exclude=attached_assets/
+            --exclude=archived/
+          path: ./
+          remote_path: ~/JoyJoin/
+          remote_host: ${{ secrets.SERVER_IP }}
+          remote_user: ${{ secrets.SERVER_USER }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          remote_key_pass: ${{ secrets.SSH_KEY_PASSPHRASE }}
+
+      - name: Encode multiline secrets for SSH transport
+        env:
+          WECHAT_PAY_PRIVATE_KEY: ${{ secrets.WECHAT_PAY_PRIVATE_KEY }}
+          WECHAT_PAY_PLATFORM_CERT: ${{ secrets.WECHAT_PAY_PLATFORM_CERT }}
+        run: |
+          echo "WECHAT_PAY_PRIVATE_KEY_B64=$(printf '%s' "$WECHAT_PAY_PRIVATE_KEY" | base64 -w0)" >> "$GITHUB_ENV"
+          echo "WECHAT_PAY_PLATFORM_CERT_B64=$(printf '%s' "$WECHAT_PAY_PLATFORM_CERT" | base64 -w0)" >> "$GITHUB_ENV"
+
+      - name: SSH Remote Staging Deployment
+        env:
+          # ── Staging-specific secrets (must differ from production) ───────
+          STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          STAGING_SESSION_SECRET: ${{ secrets.STAGING_SESSION_SECRET }}
+          STAGING_ADMIN_CREATE_SECRET_KEY: ${{ secrets.STAGING_ADMIN_CREATE_SECRET_KEY }}
+          STAGING_POSTGRES_PASSWORD: ${{ secrets.STAGING_POSTGRES_PASSWORD }}
+          # ── Required production secrets reused in staging ────────────────
+          WECHAT_APPID: ${{ secrets.WECHAT_APPID }}
+          WECHAT_SECRET: ${{ secrets.WECHAT_SECRET }}
+          # ── Optional app secrets reused in staging ───────────────────────
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          WECHAT_PAY_APP_ID: ${{ secrets.WECHAT_PAY_APP_ID }}
+          WECHAT_PAY_MCH_ID: ${{ secrets.WECHAT_PAY_MCH_ID }}
+          WECHAT_PAY_SERIAL_NO: ${{ secrets.WECHAT_PAY_SERIAL_NO }}
+          WECHAT_PAY_PRIVATE_KEY_B64: ${{ env.WECHAT_PAY_PRIVATE_KEY_B64 }}
+          WECHAT_PAY_APIV3_KEY: ${{ secrets.WECHAT_PAY_APIV3_KEY }}
+          WECHAT_PAY_PLATFORM_CERT_B64: ${{ env.WECHAT_PAY_PLATFORM_CERT_B64 }}
+          AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
+          AMAP_SECURITY_KEY: ${{ secrets.AMAP_SECURITY_KEY }}
+          # ── Repository variables (non-secret config) ─────────────────────
+          NODE_ENV: staging
+          PORT: 5001
+          APP_URL: https://staging.joyjoinapp.com
+          COOKIE_DOMAIN: .staging.joyjoinapp.com
+          CORS_ORIGINS: https://staging.joyjoinapp.com,https://staging.admin.joyjoinapp.com
+          ALLOWED_ORIGINS: https://staging.joyjoinapp.com,https://staging.admin.joyjoinapp.com
+          PAYMENTS_ENABLED: ${{ vars.PAYMENTS_ENABLED }}
+          MINIMAX_BASE_URL: ${{ vars.MINIMAX_BASE_URL }}
+          MINIMAX_MODEL: ${{ vars.MINIMAX_MODEL }}
+          MINIMAX_TIMEOUT_MS: ${{ vars.MINIMAX_TIMEOUT_MS }}
+          CREATIVE_AI_PROVIDER: ${{ vars.CREATIVE_AI_PROVIDER }}
+          CREATIVE_AI_TAGS_PROVIDER: ${{ vars.CREATIVE_AI_TAGS_PROVIDER }}
+          CREATIVE_AI_THEME_PROVIDER: ${{ vars.CREATIVE_AI_THEME_PROVIDER }}
+          CREATIVE_AI_TITLE_PROVIDER: ${{ vars.CREATIVE_AI_TITLE_PROVIDER }}
+          AI_TIMEOUT_MS: ${{ vars.AI_TIMEOUT_MS }}
+          SOCIAL_AI_PROVIDER: ${{ vars.SOCIAL_AI_PROVIDER }}
+          SOCIAL_AUCTION_LLM_ENABLED: ${{ vars.SOCIAL_AUCTION_LLM_ENABLED }}
+          SOCIAL_MICRO_CHALLENGE_LLM_ENABLED: ${{ vars.SOCIAL_MICRO_CHALLENGE_LLM_ENABLED }}
+          SOCIAL_MINISCRIPT_LLM_ENABLED: ${{ vars.SOCIAL_MINISCRIPT_LLM_ENABLED }}
+          SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT: ${{ vars.SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT }}
+          MASCOT_DISPLAY_NAME: ${{ vars.MASCOT_DISPLAY_NAME }}
+          MASCOT_BACKSTORY_ENABLED: ${{ vars.MASCOT_BACKSTORY_ENABLED }}
+          MASCOT_ORIGIN_LORE_ENABLED: ${{ vars.MASCOT_ORIGIN_LORE_ENABLED }}
+          DEBUG_AUTH: ${{ vars.DEBUG_AUTH }}
+          ENABLE_MATCHER_V2: ${{ vars.ENABLE_MATCHER_V2 }}
+          ENABLE_SEMANTIC_SIMILARITY: ${{ vars.ENABLE_SEMANTIC_SIMILARITY }}
+          EMBEDDING_BASE_URL: ${{ vars.EMBEDDING_BASE_URL }}
+          EMBEDDING_MODEL: ${{ vars.EMBEDDING_MODEL }}
+          ENABLE_ADAPTIVE_WEIGHTS: ${{ vars.ENABLE_ADAPTIVE_WEIGHTS }}
+          LOG_LEVEL: ${{ vars.LOG_LEVEL }}
+          SOCIAL_DEFAULT_REASONING_EFFORT: ${{ vars.SOCIAL_DEFAULT_REASONING_EFFORT }}
+          DEEPSEEK_PRO_DAILY_BUDGET_USD: ${{ vars.DEEPSEEK_PRO_DAILY_BUDGET_USD }}
+          ENABLE_PRO_MATCH_EXPLANATIONS: ${{ vars.ENABLE_PRO_MATCH_EXPLANATIONS }}
+          XIAOYUE_MAX_TURNS: ${{ vars.XIAOYUE_MAX_TURNS }}
+          WECHAT_PAY_NOTIFY_URL: ${{ vars.WECHAT_PAY_NOTIFY_URL }}
+          APP_MODE: staging
+          TEST_PAYMENT_PRICE_IN_CENTS: 1
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          command_timeout: 60m
+          envs: STAGING_DATABASE_URL,STAGING_SESSION_SECRET,STAGING_ADMIN_CREATE_SECRET_KEY,STAGING_POSTGRES_PASSWORD,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,COOKIE_DOMAIN,CORS_ORIGINS,ALLOWED_ORIGINS,PAYMENTS_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,AI_TIMEOUT_MS,AMAP_API_KEY,AMAP_SECURITY_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,EMBEDDING_BASE_URL,EMBEDDING_MODEL,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL,APP_MODE,TEST_PAYMENT_PRICE_IN_CENTS
+          script: |
+            set -euo pipefail
+
+            : "${STAGING_DATABASE_URL:?STAGING_DATABASE_URL GitHub secret is required}"
+            : "${STAGING_SESSION_SECRET:?STAGING_SESSION_SECRET GitHub secret is required}"
+            : "${WECHAT_APPID:?WECHAT_APPID GitHub secret is required}"
+            : "${WECHAT_SECRET:?WECHAT_SECRET GitHub secret is required}"
+            : "${STAGING_POSTGRES_PASSWORD:?STAGING_POSTGRES_PASSWORD GitHub secret is required}"
+
+            cd ~/JoyJoin
+
+            # Write the staging env file fresh from CI secrets/vars.
+            # This overwrites any stale keys and keeps staging in sync with GitHub.
+            ENV_FILE=~/JoyJoin/deployment/.env.staging
+            mkdir -p ~/JoyJoin/deployment
+
+            # Decode multiline PEM secrets
+            WECHAT_PAY_PRIVATE_KEY=""
+            WECHAT_PAY_PLATFORM_CERT=""
+            if [ -n "${WECHAT_PAY_PRIVATE_KEY_B64:-}" ]; then
+              WECHAT_PAY_PRIVATE_KEY=$(echo "$WECHAT_PAY_PRIVATE_KEY_B64" | base64 -d)
+            fi
+            if [ -n "${WECHAT_PAY_PLATFORM_CERT_B64:-}" ]; then
+              WECHAT_PAY_PLATFORM_CERT=$(echo "$WECHAT_PAY_PLATFORM_CERT_B64" | base64 -d)
+            fi
+
+            # Write env values wrapped in single quotes so bash "source" does not
+            # expand $-characters in secrets/URLs when deploy-staging.sh loads the file.
+            write_if_nonempty() {
+              local key="$1"
+              local value="${2-}"
+              [ -n "${value}" ] || return 0
+              printf "%s='%s'\n" "$key" "$value" >> "$ENV_FILE"
+            }
+
+            cat > "$ENV_FILE" <<EOF
+            # Auto-generated by GitHub Actions deploy-staging.yml
+            # Do not edit manually on the server — changes will be overwritten on next deploy.
+            APP_MODE='staging'
+            NODE_ENV='staging'
+            PORT='5001'
+            APP_URL='https://staging.joyjoinapp.com'
+            COOKIE_DOMAIN='.staging.joyjoinapp.com'
+            CORS_ORIGINS='${CORS_ORIGINS}'
+            ALLOWED_ORIGINS='${ALLOWED_ORIGINS}'
+            DATABASE_URL='${STAGING_DATABASE_URL}'
+            SESSION_SECRET='${STAGING_SESSION_SECRET}'
+            POSTGRES_PASSWORD='${STAGING_POSTGRES_PASSWORD}'
+            ADMIN_CREATE_SECRET_KEY='${STAGING_ADMIN_CREATE_SECRET_KEY}'
+            TEST_PAYMENT_PRICE_IN_CENTS='1'
+            WECHAT_APPID='${WECHAT_APPID}'
+            WECHAT_SECRET='${WECHAT_SECRET}'
+            EOF
+
+            write_if_nonempty "DEEPSEEK_API_KEY" "$DEEPSEEK_API_KEY"
+            write_if_nonempty "JWT_SECRET" "$JWT_SECRET"
+            write_if_nonempty "MINIMAX_API_KEY" "$MINIMAX_API_KEY"
+            write_if_nonempty "WECHAT_PAY_APP_ID" "$WECHAT_PAY_APP_ID"
+            write_if_nonempty "WECHAT_PAY_MCH_ID" "$WECHAT_PAY_MCH_ID"
+            write_if_nonempty "WECHAT_PAY_SERIAL_NO" "$WECHAT_PAY_SERIAL_NO"
+            write_if_nonempty "WECHAT_PAY_PRIVATE_KEY" "$WECHAT_PAY_PRIVATE_KEY"
+            write_if_nonempty "WECHAT_PAY_APIV3_KEY" "$WECHAT_PAY_APIV3_KEY"
+            write_if_nonempty "WECHAT_PAY_PLATFORM_CERT" "$WECHAT_PAY_PLATFORM_CERT"
+            write_if_nonempty "PAYMENTS_ENABLED" "$PAYMENTS_ENABLED"
+            write_if_nonempty "MINIMAX_BASE_URL" "$MINIMAX_BASE_URL"
+            write_if_nonempty "MINIMAX_MODEL" "$MINIMAX_MODEL"
+            write_if_nonempty "MINIMAX_TIMEOUT_MS" "$MINIMAX_TIMEOUT_MS"
+            write_if_nonempty "CREATIVE_AI_PROVIDER" "$CREATIVE_AI_PROVIDER"
+            write_if_nonempty "CREATIVE_AI_TAGS_PROVIDER" "$CREATIVE_AI_TAGS_PROVIDER"
+            write_if_nonempty "CREATIVE_AI_THEME_PROVIDER" "$CREATIVE_AI_THEME_PROVIDER"
+            write_if_nonempty "CREATIVE_AI_TITLE_PROVIDER" "$CREATIVE_AI_TITLE_PROVIDER"
+            write_if_nonempty "AI_TIMEOUT_MS" "$AI_TIMEOUT_MS"
+            write_if_nonempty "AMAP_API_KEY" "$AMAP_API_KEY"
+            write_if_nonempty "AMAP_SECURITY_KEY" "$AMAP_SECURITY_KEY"
+            write_if_nonempty "SOCIAL_AI_PROVIDER" "$SOCIAL_AI_PROVIDER"
+            write_if_nonempty "SOCIAL_AUCTION_LLM_ENABLED" "$SOCIAL_AUCTION_LLM_ENABLED"
+            write_if_nonempty "SOCIAL_MICRO_CHALLENGE_LLM_ENABLED" "$SOCIAL_MICRO_CHALLENGE_LLM_ENABLED"
+            write_if_nonempty "SOCIAL_MINISCRIPT_LLM_ENABLED" "$SOCIAL_MINISCRIPT_LLM_ENABLED"
+            write_if_nonempty "SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT" "$SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT"
+            write_if_nonempty "MASCOT_DISPLAY_NAME" "$MASCOT_DISPLAY_NAME"
+            write_if_nonempty "MASCOT_BACKSTORY_ENABLED" "$MASCOT_BACKSTORY_ENABLED"
+            write_if_nonempty "MASCOT_ORIGIN_LORE_ENABLED" "$MASCOT_ORIGIN_LORE_ENABLED"
+            write_if_nonempty "DEBUG_AUTH" "$DEBUG_AUTH"
+            write_if_nonempty "ENABLE_MATCHER_V2" "$ENABLE_MATCHER_V2"
+            write_if_nonempty "ENABLE_SEMANTIC_SIMILARITY" "$ENABLE_SEMANTIC_SIMILARITY"
+            write_if_nonempty "EMBEDDING_BASE_URL" "$EMBEDDING_BASE_URL"
+            write_if_nonempty "EMBEDDING_MODEL" "$EMBEDDING_MODEL"
+            write_if_nonempty "ENABLE_ADAPTIVE_WEIGHTS" "$ENABLE_ADAPTIVE_WEIGHTS"
+            write_if_nonempty "LOG_LEVEL" "$LOG_LEVEL"
+            write_if_nonempty "SOCIAL_DEFAULT_REASONING_EFFORT" "$SOCIAL_DEFAULT_REASONING_EFFORT"
+            write_if_nonempty "DEEPSEEK_PRO_DAILY_BUDGET_USD" "$DEEPSEEK_PRO_DAILY_BUDGET_USD"
+            write_if_nonempty "ENABLE_PRO_MATCH_EXPLANATIONS" "$ENABLE_PRO_MATCH_EXPLANATIONS"
+            write_if_nonempty "XIAOYUE_MAX_TURNS" "$XIAOYUE_MAX_TURNS"
+            write_if_nonempty "WECHAT_PAY_NOTIFY_URL" "$WECHAT_PAY_NOTIFY_URL"
+
+            chmod 600 "$ENV_FILE"
+
+            echo "🔐 Wrote fresh .env.staging from GitHub secrets/vars"
+            echo "🚀 Running deploy-staging.sh..."
+            ~/JoyJoin/deployment/scripts/deploy-staging.sh
+
+      - name: Notify staging deployment failure
+        if: failure()
+        env:
+          WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B "$GITHUB_SHA" | head -1)
+          echo "::error::Staging deploy failed for commit ${GITHUB_SHA:0:7}: $COMMIT_MSG"
+          if [ -n "$WECOM_BOT_KEY" ]; then
+            node scripts/wecom-notify.mjs \
+              --markdown "## ❌ Staging Deploy Failed\n\nCommit: ${GITHUB_SHA:0:7} — $COMMIT_MSG\n\nRun: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          fi
+
+      - name: Notify staging deployment success
+        if: success() && github.event_name == 'push'
+        env:
+          WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
+        run: |
+          if [ -n "$WECOM_BOT_KEY" ]; then
+            node scripts/wecom-notify.mjs \
+              --markdown "## ✅ Staging Deploy Success\n\nCommit ${GITHUB_SHA:0:7} deployed to staging"
+          fi

@@ -58,7 +58,7 @@ The placement pattern in every case is: **add the new asset as a hero/backdrop l
 | C3a | `pages/icebreaker-session/tier-selector/index.tsx` (breeze card) | `TIER_VIBE_BACKDROPS.breeze` | Backdrop layer on the `breeze` tier card (~200rpx) | 身份认同 +3, 仪式感 +2 |
 | C3b | Same page, glow card | `TIER_VIBE_BACKDROPS.glow` | Backdrop on `glow` tier card | 身份认同 +5, 仪式感 +3 |
 | C3c | Same page, blaze card | `TIER_VIBE_BACKDROPS.blaze` | Backdrop on `blaze` tier card | 惊喜感 +3, 身份认同 +3 |
-| C4 | `pages/invite/index.tsx` (share-card section) | `CEREMONY_HEROES.inviteCoBranded` | ~200rpx square hero in the share-card section | 归属感 +5, 惊喜感 +2 |
+| C4 | `pages/profile-linked/invite/index.tsx` (share-card section) | `CEREMONY_HEROES.inviteCoBranded` | ~200rpx square hero in the share-card section | 归属感 +5, 惊喜感 +2 |
 | C5 | `pages/event-feedback/index.tsx` (success state) | `CEREMONY_HEROES.eventFeedbackThanks` | ~240rpx hero above existing `thanksFeedback` Xiaoyue | 仪式感 +4, 归属感 +3 |
 | C6 | `pages/icebreaker-session/phases/RecapPhaseView.tsx` (end overlay) | `CEREMONY_HEROES.seeYouNextTime` | Full-bleed end overlay (~60% viewport height) when session reaches `ended` state | 仪式感 +4, 归属感 +3 |
 

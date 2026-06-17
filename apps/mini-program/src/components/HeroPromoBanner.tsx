@@ -1,7 +1,7 @@
 import { Image, Text, View } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { cdnAsset } from '../lib/utils/cdnAssets'
+import { cdnAsset, localAsset } from '../lib/utils/cdnAssets'
 import { useMiniRevealMotion } from '../hooks/useMiniRevealMotion'
 import { useStaggerMount } from '../hooks/useStaggerMount'
 import { useDeviceTier } from '../hooks/useDeviceTier'
@@ -43,8 +43,10 @@ const PROMO_VARIANTS: Record<PromoBannerVariant, PromoVariantConfig> = {
   },
 } as const
 
-// Primary hero image. Bundled locally as WebP and also served from CDN.
-const HERO_IMAGE_WEBP = cdnAsset('/assets/promo/banner-hero-lovart-v1.webp')
+// Primary hero image — bundled locally so the discover banner paints instantly
+// on first entry. CDN is used only if the local copy fails to load.
+const HERO_IMAGE_LOCAL = localAsset('/assets/promo-local/banner-hero-lovart-v1.webp')
+const HERO_IMAGE_CDN = cdnAsset('/assets/promo/banner-hero-lovart-v1.webp')
 
 // ─── Sparkle layer (surprise-box breath of life) ─────────────────────
 // Five soft sparkles on negative-delay loop. Five (not three) so the
@@ -98,7 +100,8 @@ export default function HeroPromoBanner({
   enabled = true,
   onCtaTap,
 }: HeroPromoBannerProps) {
-  const [resolvedSrc, setResolvedSrc] = useState(HERO_IMAGE_WEBP)
+  const [resolvedSrc, setResolvedSrc] = useState(HERO_IMAGE_LOCAL)
+  const [hasSwitchedToCdn, setHasSwitchedToCdn] = useState(false)
   const [imageState, setImageState] = useState<'loading' | 'loaded' | 'error'>('loading')
   const [retryCount, setRetryCount] = useState(0)
   const { shouldReduceMotion } = useMiniRevealMotion()
@@ -189,24 +192,31 @@ export default function HeroPromoBanner({
   }, [shouldReduceMotion, isDegradation])
 
   const handleImageError = useCallback(() => {
+    if (!hasSwitchedToCdn) {
+      // Local WebP failed — fall back to CDN once before showing the error state.
+      setHasSwitchedToCdn(true)
+      setResolvedSrc(HERO_IMAGE_CDN)
+      return
+    }
     setImageState('error')
     discoverAnalytics.track(
       'promo_banner_image_error',
       undefined,
       { variant: effectiveVariant, retryCount },
     )
-  }, [effectiveVariant, retryCount])
+  }, [effectiveVariant, retryCount, hasSwitchedToCdn])
 
   const handleImageLoad = useCallback(() => {
     setImageState('loaded')
   }, [])
 
-  // Manual retry: re-attempt the WebP. Bounded by retryCount so a user
-  // can't hammer the CDN.
+  // Manual retry: re-attempt the local WebP first, then CDN. Bounded by
+  // retryCount so a user can't hammer the network.
   const handleRetry = useCallback(() => {
     if (retryCount >= 2) return
     setImageState('loading')
-    setResolvedSrc(HERO_IMAGE_WEBP)
+    setHasSwitchedToCdn(false)
+    setResolvedSrc(HERO_IMAGE_LOCAL)
     setRetryCount((c) => c + 1)
     discoverAnalytics.track(
       'promo_banner_image_retry',

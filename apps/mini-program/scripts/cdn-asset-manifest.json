@@ -327,24 +327,24 @@
             "cdnPath": "assets/lovart/icebreaker/backgrounds/bg-undercover-word.jpg"
         },
         {
-            "localPath": "assets/lovart/icebreaker/celebrations/celebration-auction-sold.png",
-            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-auction-sold.png"
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-auction-sold.webp",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-auction-sold.webp"
         },
         {
-            "localPath": "assets/lovart/icebreaker/celebrations/celebration-dice-reveal.png",
-            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-dice-reveal.png"
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-dice-reveal.webp",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-dice-reveal.webp"
         },
         {
-            "localPath": "assets/lovart/icebreaker/celebrations/celebration-mirror-result.png",
-            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-mirror-result.png"
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-mirror-result.webp",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-mirror-result.webp"
         },
         {
-            "localPath": "assets/lovart/icebreaker/celebrations/celebration-quip-champion.png",
-            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-quip-champion.png"
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-quip-champion.webp",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-quip-champion.webp"
         },
         {
-            "localPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.png",
-            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.png"
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.webp",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.webp"
         },
         {
             "localPath": "assets/lovart/icebreaker/icons/icon-coin-empty.png",
@@ -691,36 +691,36 @@
             "cdnPath": "assets/tab-bar-notch-bg.png"
         },
         {
-            "localPath": "assets/tab-icons/发现 icon_inactive.png",
-            "cdnPath": "assets/tab-icons/发现 icon_inactive.png"
+            "localPath": "assets/tab-icons/\u53d1\u73b0 icon_inactive.png",
+            "cdnPath": "assets/tab-icons/\u53d1\u73b0 icon_inactive.png"
         },
         {
-            "localPath": "assets/tab-icons/发现 icon.png",
-            "cdnPath": "assets/tab-icons/发现 icon.png"
+            "localPath": "assets/tab-icons/\u53d1\u73b0 icon.png",
+            "cdnPath": "assets/tab-icons/\u53d1\u73b0 icon.png"
         },
         {
-            "localPath": "assets/tab-icons/我的 icon_inactive.png",
-            "cdnPath": "assets/tab-icons/我的 icon_inactive.png"
+            "localPath": "assets/tab-icons/\u6211\u7684 icon_inactive.png",
+            "cdnPath": "assets/tab-icons/\u6211\u7684 icon_inactive.png"
         },
         {
-            "localPath": "assets/tab-icons/我的 icon.png",
-            "cdnPath": "assets/tab-icons/我的 icon.png"
+            "localPath": "assets/tab-icons/\u6211\u7684 icon.png",
+            "cdnPath": "assets/tab-icons/\u6211\u7684 icon.png"
         },
         {
-            "localPath": "assets/tab-icons/足迹 icon_inactive.png",
-            "cdnPath": "assets/tab-icons/足迹 icon_inactive.png"
+            "localPath": "assets/tab-icons/\u8db3\u8ff9 icon_inactive.png",
+            "cdnPath": "assets/tab-icons/\u8db3\u8ff9 icon_inactive.png"
         },
         {
-            "localPath": "assets/tab-icons/足迹 icon.png",
-            "cdnPath": "assets/tab-icons/足迹 icon.png"
+            "localPath": "assets/tab-icons/\u8db3\u8ff9 icon.png",
+            "cdnPath": "assets/tab-icons/\u8db3\u8ff9 icon.png"
         },
         {
-            "localPath": "assets/tab-icons/连接 icon_inactive.png",
-            "cdnPath": "assets/tab-icons/连接 icon_inactive.png"
+            "localPath": "assets/tab-icons/\u8fde\u63a5 icon_inactive.png",
+            "cdnPath": "assets/tab-icons/\u8fde\u63a5 icon_inactive.png"
         },
         {
-            "localPath": "assets/tab-icons/连接 icon.png",
-            "cdnPath": "assets/tab-icons/连接 icon.png"
+            "localPath": "assets/tab-icons/\u8fde\u63a5 icon.png",
+            "cdnPath": "assets/tab-icons/\u8fde\u63a5 icon.png"
         },
         {
             "localPath": "assets/miniscript/ancient-chinese-thumb.webp",
@@ -945,6 +945,14 @@
         {
             "localPath": "assets/personality/archetypes/archetype-turtle.png",
             "cdnPath": "assets/personality/archetypes/archetype-turtle.png"
+        },
+        {
+            "localPath": "assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp",
+            "cdnPath": "assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp",
+            "cdnPath": "assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp"
         }
     ]
 }

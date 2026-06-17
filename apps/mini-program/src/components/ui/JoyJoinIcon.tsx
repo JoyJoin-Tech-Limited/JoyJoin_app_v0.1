@@ -2,6 +2,7 @@ import { Image, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState, useCallback, useMemo } from 'react'
 import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
+import { logError, logWarn } from '../../lib/utils/logger'
 import {
   getIconMapping,
   getLocalIconAssetPath,
@@ -77,10 +78,6 @@ export default function JoyJoinIcon({
   const [hasError, setHasError] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
-  const handleError = useCallback(() => {
-    setHasError(true)
-  }, [])
-
   const handleLoad = useCallback(() => {
     setLoaded(true)
   }, [])
@@ -91,6 +88,7 @@ export default function JoyJoinIcon({
   }, [])
 
   if (!mapping) {
+    logWarn('[JoyJoinIcon] No icon mapping found for emoji', { emoji, tier })
     return (
       <Text className={className} style={style}>
         {emoji}
@@ -100,17 +98,6 @@ export default function JoyJoinIcon({
 
   const displaySize = size ?? mapping.size
   const sizeStr = `${displaySize}rpx`
-
-  if (hasError) {
-    return (
-      <Text
-        className={`${className} ${!loaded ? 'jj-icon-loading' : ''}`}
-        style={{ fontSize: sizeStr, lineHeight: sizeStr, ...style }}
-      >
-        {mapping.fallbackEmoji}
-      </Text>
-    )
-  }
 
   let src: string
   try {
@@ -122,7 +109,34 @@ export default function JoyJoinIcon({
       // Avoid runtime require() of non-JS assets — it crashes in subpackages.
       src = localAsset(assetPath)
     }
-  } catch {
+  } catch (err) {
+    logError('[JoyJoinIcon] Asset path resolution failed, falling back to emoji', {
+      emoji,
+      tier,
+      assetKey: mapping.assetKey,
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return (
+      <Text
+        className={`${className} ${!loaded ? 'jj-icon-loading' : ''}`}
+        style={{ fontSize: sizeStr, lineHeight: sizeStr, ...style }}
+      >
+        {mapping.fallbackEmoji}
+      </Text>
+    )
+  }
+
+  const handleError = useCallback(() => {
+    logError('[JoyJoinIcon] Asset failed to load, falling back to emoji', {
+      emoji,
+      tier,
+      assetKey: mapping.assetKey,
+      src,
+    })
+    setHasError(true)
+  }, [emoji, mapping.assetKey, src, tier])
+
+  if (hasError) {
     return (
       <Text
         className={`${className} ${!loaded ? 'jj-icon-loading' : ''}`}

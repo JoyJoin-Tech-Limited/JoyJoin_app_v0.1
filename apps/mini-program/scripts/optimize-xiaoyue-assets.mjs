@@ -17,9 +17,13 @@
  * payment verification — mascots should load sharp with no broken image.
  */
 
+import { execFile } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
+
+const execFileAsync = promisify(execFile)
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
@@ -52,8 +56,38 @@ const MANIFEST = [
   'xiaoyue-city-unlock',
 ]
 
+async function optimizeIntroAnimation() {
+  const input = path.join(INPUT_DIR, 'xiaoyue-intro-animated.webp')
+  const output = path.join(OUTPUT_DIR, 'xiaoyue-intro-animated.webp')
+
+  if (!fs.existsSync(input)) {
+    console.error(`Skipping intro animation: missing master ${input}`)
+    return
+  }
+
+  const inputStat = fs.statSync(input)
+
+  // Resize 480×480 master → 360×360 display size, target ~150KB max.
+  // ImageMagick handles animated WebP; target-size keeps output under budget.
+  await execFileAsync('magick', [
+    input,
+    '-resize',
+    '360x360',
+    '-define',
+    'webp:target-size=150kb',
+    output,
+  ])
+
+  const outStat = fs.statSync(output)
+  console.log(
+    `xiaoyue-intro-animated.webp  ${(inputStat.size / 1024).toFixed(0)}KB master → ${(outStat.size / 1024).toFixed(0)}KB webp`,
+  )
+}
+
 async function main() {
   const { default: sharp } = await import('sharp')
+
+  await optimizeIntroAnimation()
 
   for (const base of MANIFEST) {
     const inputPng = path.join(INPUT_DIR, `${base}.png`)

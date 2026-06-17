@@ -1,7 +1,7 @@
 # JoyJoin Mini-Program Asset Strategy
 
 > Canonical reference for how static assets are managed in the mini-program build.
-> Last updated: 2026-06-17
+> Last updated: 2026-06-18
 
 ---
 
@@ -20,8 +20,8 @@ This split keeps the main package under WeChat's 2MB compressed limit while ensu
 
 | Limit | Current (post-2026-06-16 cleanup) | Headroom |
 |-------|-----------------------------------|----------|
-| 2.0 MB source (WeChat hard limit) | ~1.87 MB zip | ~130 KB |
-| 1.8 MB zip (guideline) | ~1.87 MB | ⚠️ slightly over |
+| 2.0 MB source (WeChat hard limit) | ~1.97 MB zip | ~30 KB |
+| 1.8 MB zip (guideline) | ~1.97 MB | ⚠️ over guideline |
 
 **Budget rule of thumb:** every 100KB of raw assets ≈ 25-35KB compressed.
 
@@ -83,9 +83,14 @@ Assets copied by `vite-plugin-static-copy` in `config/index.ts`.
 ### Landing Page (critical first impression)
 | Asset | Path | Size | Used in |
 |-------|------|------|---------|
-| Phase icons (6) | `assets/landing-phase-icons/` | ~139KB | Landing page `PhaseIconCarousel` — 3D turntable with auto-rotate, swipe gesture, organic random intervals, direction randomization, and cycle shuffle. Reduced-motion and low-end fallback to static grid. **Performance:** `box-shadow` (not `drop-shadow`) for GPU-composited depth; `backface-visibility: hidden` + `translateZ(0)` forced compositing; `will-change` gated to active playback only. |
+| Phase icons (6) | `assets/landing-phase-icons/` | ~139KB | Landing page `PhaseIconCarousel` — 3D turntable with auto-rotate, swipe gesture, organic random intervals, direction randomization, and cycle shuffle. The carousel is the mandatory default experience; no reduced-motion or low-end static-grid fallback. Per-icon error placeholders remain. **Performance:** `box-shadow` (not `drop-shadow`) for GPU-composited depth; `backface-visibility: hidden` + `translateZ(0)` forced compositing; `will-change` gated to active playback only. |
 | Xiaoyue welcome | `assets/xiaoyue-expressions/xiaoyue-home-welcome.png` | ~63KB | Landing + center-hub header |
 | Xiaoyue loading | `assets/xiaoyue-expressions/xiaoyue-loading-system.png` | ~47KB | Loading screen fallback |
+
+### Mascot Sprite Fallback
+| Asset | Path | Size | Used in |
+|-------|------|------|---------|
+| Xiaoyue mascot sprite sheets | `assets/mascot/` | ~350KB | `XiaoyueSpriteAnimator` across the app. CDN is the primary source; local bundled copies are kept as offline / stale-CDN fallback. The app-launch preloader (`preloadOnboardingAssets`) warms only a curated core set on capable devices to avoid launch regression. |
 
 ### Support
 | Asset | Path | Size | Used in |
@@ -104,13 +109,13 @@ These are **NOT** copied to `dist/assets/` by the build. They must exist on the 
 | **Archetype PNG fallback** | `assets/personality/archetypes/archetype-*.png` | ~700KB | Canvas `drawImage` fallback when WebP is rejected |
 | **Archetype head fallback** | `assets/icons/archetype/archetype-*-head.webp` | ~96KB | CDN fallback for `ArchetypeHead.tsx` when local bundle misses |
 | **Xiaoyue expressions** (other 18) | `assets/personality/xiaoyue/xiaoyue-*.webp` | ~1.1MB | Mascot across all screens |
-| **Xiaoyue sprites** | `assets/mascot/xiaoyue-*.webp` | ~746KB | Sprite animator |
+| **Xiaoyue sprites** | `assets/mascot/xiaoyue-*.webp` | ~746KB | Sprite animator (CDN primary; local bundled fallback copies exist for offline / stale-CDN cases) |
 | **Lovart generic** | `assets/lovart/lovart-generic-*.webp` | ~97KB | Empty/error states |
 | **Icebreaker backgrounds** | `assets/lovart/icebreaker/backgrounds/*.jpg` | ~450KB | Challenge card backgrounds |
 | **Celebration images** | `assets/lovart/icebreaker/celebrations/*.png` | ~770KB | Post-phase celebration overlays |
 | **Lovart illustrations** | `assets/lovart/lovart-*.webp` | ~130KB | Empty/error states |
 | **Matching heroes** | `assets/matching/matching-*.webp` | ~157KB | Matching status page |
-| **Promo banners** | `assets/promo/banner-*.webp` | ~175KB | Discover hero banner (`HeroPromoBanner.tsx`); WebP primary with PNG fallback at `banner-hero-lovart-v1.{webp,png}` |
+| **Promo banners** | `assets/promo/banner-*.webp` | ~175KB | Source copies of promo banners for CDN upload. The active Discover hero banner is bundled locally at `assets/promo-local/banner-hero-lovart-v1.webp` and falls back to this CDN path on `onError`. |
 | **Personality emojis** | `assets/lovart/personality-emojis/*.png` | ~170KB | Personality test emoji choices |
 | **Phase emblems** | `assets/icons/phase-icons/phase-*.webp` | ~120KB | Phase toasts, icebreaker session (full set; 6 landing variants are bundled) |
 | **Reaction icons** | `assets/icons/reaction-icons/*.webp` | ~120KB | Icebreaker phase reactions |
@@ -129,9 +134,11 @@ These are **NOT** copied to `dist/assets/` by the build. They must exist on the 
 ```
 1. Taro build → compiles JS/WXSS/WXML
 2. vite-plugin-static-copy → copies patterns from config/index.ts to dist/
-3. clean:cdn-assets → removes CDN-only directories from dist/assets/
+3. clean:cdn-assets → removes CDN-only directories from `dist/assets/`
 4. miniprogram-ci upload → compresses and uploads to WeChat
 ```
+
+**Local-first promo banner exception:** `promo-local/` is copied into the package by `config/index.ts` and is **not** removed by `clean:cdn-assets`. The original `promo/` source directory remains CDN-only.
 
 ### Clean step (`npm run clean:cdn-assets`)
 Removes these directories from `dist/assets/` to keep package small:
@@ -139,7 +146,8 @@ Removes these directories from `dist/assets/` to keep package small:
 personality/       # Xiaoyue expressions (CDN)
 lovart/            # Lovart illustrations (CDN)
 matching/          # Matching heroes (CDN)
-promo/             # Promo banners (CDN)
+promo/             # Promo banner sources for CDN upload (NOT bundled)
+promo-local/       # Discover hero banner bundled locally; CDN fallback stays in promo/
 icons/phase-icons/ # Phase icons (CDN, except landing-phase-icons)
 ```
 
@@ -154,6 +162,19 @@ Taro.getSystemInfoSync().pixelRatio
 ```
 
 Fallback chain: if `@3x` fails → `@2x` → `@1x` → native emoji.
+
+### App-launch preloading
+`apps/mini-program/src/lib/utils/onboardingPreload.ts` runs once at app launch and warms onboarding-critical raster assets in staggered tiers so the first paint never blocks:
+
+| Tier | Delay | Assets | Gating |
+|------|-------|--------|--------|
+| 1 (critical) | 0ms | Intro animation + welcome mascot | Runs unless skipped by network |
+| 2 (test phase) | ~400ms | Test expressions, personality emoji icons, intent icons, milestone badge, welcome-back ceremony hero | Runs unless skipped by network |
+| 3 (heavy) | ~1200ms | Curated core mascot sprite sheets (welcome, idle, coach, loading, listening, thinking) | Skipped on 2G/offline **and** on low-end devices (`benchmarkLevel <= 15`) |
+
+- The preloader is **one-shot** and cancels pending timers if reset (test hook: `__resetOnboardingPreloadGuard`).
+- Heavy bundles use `preloadImages(..., concurrency)` to avoid decoder saturation.
+- Archetype full-body images and the slot-machine spritesheet are **not** preloaded at app launch; they are handled by the onboarding subpackage pages when the user actually enters them.
 
 ---
 

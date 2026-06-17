@@ -166,6 +166,15 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Tooling / quality:** Restored `min-height: 100vh` fallback before `100dvh` in `pool-registration/index.scss` per `AGENTS.md §4` WeChat WKWebView guidance; fixed `scripts/devtools/design-audit.mjs` regex so `min-height: 100vh` is no longer flagged; removed the registration `logInfo` PII payload and deduplicated reaction timer logic.
 - **Scope:** Affects onboarding `essential-data` Step 5 intent grid, pool-registration intent grid, edit-profile, and profile-review. No API or schema changes.
 
+**40. App-Launch Onboarding Preloader + Archetype Asset Registry Refactor** 🚀 *(2026-06-18)*
+- **Staggered app-launch preloader:** `apps/mini-program/src/lib/utils/onboardingPreload.ts` replaces the previous heavy app-launch preload. It warms onboarding-critical raster assets in three tiers (immediate intro/welcome art; ~400ms test expressions + personality emoji + intent icons + milestone badge + welcome-back hero; ~1200ms curated core mascot sprite sheets). It skips entirely on 2G/offline and defers the heavy tier on low-end devices (`benchmarkLevel <= 15`), removing all 12 archetype CDN images and the full mascot sprite set from the app-launch critical path.
+- **Concurrency-limited batch preloading:** `preloadImages` in `apps/mini-program/src/lib/utils/imagePreload.ts` now accepts an optional `concurrency` cap to avoid decoder saturation on heavy bundles.
+- **Canonical archetype asset registry:** Moved `ARCHETYPE_ASSET_MAP`, spritesheet helpers, and bulk-preload utilities from `pages/onboarding/personality-test/visuals.ts` to `apps/mini-program/src/lib/utils/archetypeAssets.ts`. `visuals.ts` re-exports them for existing consumers; new code should import from the lib utility.
+- **Intent icon pre-warming:** `usePreloadIntentIcons` now skips on offline networks in addition to 2G, ensuring subpackage intent grids render proprietary icons reliably.
+- **Pool-registration intent card reuse:** The pool-registration intent grid now uses the shared `IntentCard` component (already used in onboarding essential-data and edit-profile), fixing invisible selection feedback from missing pool-registration SCSS classes and removing dead styles.
+- **Tests:** Added `onboardingPreload.test.ts` and `imagePreload.test.ts` covering tier gating, network/device skip logic, timer cleanup, and concurrency.
+- **Docs synced:** `apps/mini-program/README.md`, `apps/mini-program/docs/ASSET_STRATEGY.md`, `docs/mini-program/mini-program-product-reference.md`, `docs/reference/perf.md`, `AGENTS.md`.
+
 **38. Mini-Program Landing & Profession Overlay Polish** 🧹 *(2026-06-13)*
 - **Landing continue-mode CTA:** context-aware labels replace the generic "继续创建账户" — `进入发现页` when the returning user's `nextStep` is `discover` (routed to the Discover tab), `继续完善档案` for authenticated users still in onboarding, and `继续完成测试` for guests with an incomplete anonymous assessment session. The CTA sets `isPageExiting` before navigation and resets it via `useResetOnShow` on swipe-back/foreground so the button never stays stuck on the ellipsis spinner.
 - **Profession overlay accessibility & performance:** `ProfessionChatOverlay` detects `prefers-reduced-motion` via `Taro.getSystemInfoSync` and applies a `profession-overlay--reduce-motion` class that suppresses entrance/exit animations, typing-dot bounce, sparkle bursts, and keyboard-slide transitions. The keyboard-aware input bar uses `transform: translateY(-keyboardHeight)` to stay on the compositor and avoid layout thrashing.
@@ -719,7 +728,7 @@ WHERE id = user_id;
 #### Discover Hero Promo Banner (top-of-page)
 
 - **Component:** `HeroPromoBanner` (`apps/mini-program/src/components/HeroPromoBanner.tsx`) — single hero surface, not a carousel
-- **Visual:** Full-bleed Lovart illustration (`banner-hero-lovart-v1.webp` + `.png` fallback) with copy-side purple/pink wash, glass copy panel (eyebrow + title + subtitle + CTA), breathing CTA pill with circular arrow, 5 sparkles drifting on negative-delay loop
+- **Visual:** Full-bleed Lovart illustration. The banner is bundled locally (`banner-hero-lovart-v1.webp` under `assets/promo-local/`) for instant first paint and falls back to the CDN copy on `onError`; PNG fallback is available via CDN if the runtime rejects WebP. Copy-side purple/pink wash, glass copy panel (eyebrow + title + subtitle + CTA), breathing CTA pill with circular arrow, 5 sparkles drifting on negative-delay loop
 - **Variant selection:**
   - No archetype → variant C ("先测再玩" — nudges personality test)
   - Has archetype → variant A ("本周推荐" — this weekend) by default
@@ -728,7 +737,7 @@ WHERE id = user_id;
 - **Performance:** Animations gated by `useDeviceTier` (degradation tier kills idle loops) and `IntersectionObserver` (pauses off-screen); sparkles use `transform`/`opacity` only with `will-change` for GPU promotion
 - **Kill switch:** `user.features.promoBannerEnabled` (server-driven, DB-backed via `featureFlags.FLAG_ENV_MAP`; admin-toggleable at `/admin/feature-flags`; env fallback `PROMO_BANNER_ENABLED`, default `true`)
 - **Copy trust rule (2026-06-05):** Static promo variants must not fabricate social-proof metrics (e.g., fake user counts, popularity percentages, "已有 10,000+ 人加入"). Use real query-backed numbers or omit the metric.
-- **Analytics:** `promo_banner_impression` (mount), `promo_banner_cta_tap` (CTA), `promo_banner_image_error` (CDN failure), `promo_banner_image_retry` (manual recovery, bounded at 2 attempts)
+- **Analytics:** `promo_banner_impression` (mount), `promo_banner_cta_tap` (CTA), `promo_banner_image_error` (local or CDN load failure), `promo_banner_image_retry` (manual recovery, bounded at 2 attempts)
 
 #### Blind Box Event Lifecycle
 
@@ -1543,7 +1552,7 @@ CREATE TABLE event_feedback (
 
 ### 1.8 User Profile Management
 
-**Canonical (Mini-Program):** `apps/mini-program/src/pages/profile/index.tsx`, `apps/mini-program/src/pages/edit-profile/index.tsx`
+**Canonical (Mini-Program):** `apps/mini-program/src/pages/profile/index.tsx`, `apps/mini-program/src/pages/profile-linked/edit-profile/index.tsx`
 
 **Web Reference:** `apps/user-client/src/pages/ProfilePage.tsx`, `apps/user-client/src/pages/Edit*.tsx`
 

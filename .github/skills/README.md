@@ -318,7 +318,7 @@ node scripts/skill-router.mjs "add a nextStep rule after profile review"
 node scripts/test-skill-routing.mjs
 ```
 
-The production pipeline also runs both routing commands from `.github/workflows/cicd.yml`, so stale routing metadata is now blocked in CI as well as during local validation.
+Both the staging (`deploy-staging.yml`) and production (`deploy-production.yml`) pipelines call `.github/workflows/quality-gates.yml`, which runs both routing commands, so stale routing metadata is now blocked in CI as well as during local validation.
 
 ### Maintenance rules
 

@@ -41,4 +41,4 @@ Additional terminology note:
   - `apps/user-client/src/pages/FAQPage.tsx`
 - Mini-program files with support-related copy only, not an actual customer-service control:
   - `apps/mini-program/src/pages/blind-box-payment/index.tsx`
-  - `apps/mini-program/src/pages/terms/index.tsx`
+  - `apps/mini-program/src/pages/profile-linked/terms/index.tsx`

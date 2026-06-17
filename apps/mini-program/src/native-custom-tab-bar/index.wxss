@@ -144,6 +144,13 @@
   will-change: transform, opacity;
 }
 
+/* Interruptible transition: applied temporarily during rapid back-and-forth
+   taps so the pill snaps to the latest tab instead of sweeping across the
+   bar. The class is removed after the next setData. */
+.joy-custom-tab-bar__active-pill--no-transition {
+  transition: none !important;
+}
+
 .joy-custom-tab-bar__item-icon-wrap {
   position: relative;
   display: flex;
@@ -441,7 +448,7 @@
     transition: none !important;
     will-change: auto !important;
   }
-  image {
+  .joy-custom-tab-bar image {
     animation: none !important;
     opacity: 1 !important;
   }

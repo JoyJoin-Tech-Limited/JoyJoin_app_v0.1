@@ -5,6 +5,22 @@
 // "undefined is not an object (evaluating 'this._tabNames[e]')").
 var TAB_NAMES = { 0: '发现', 1: '足迹', 2: '连接', 3: '我的', 4: '中心入口' }
 
+// WeChat normally only attaches the custom-tab-bar component on tabBar pages,
+// but in some base-library / routing scenarios it can be attached to non-tab
+// pages (e.g. the landing page). Keep an explicit allow-list and hide the bar
+// when that happens instead of leaking a fixed-position UI over the page.
+// Source of truth: MINI_PROGRAM_TAB_BAR_CONFIG_ITEMS in
+// apps/mini-program/src/lib/navigation/tabBarConfig.ts (referenced by
+// tabBar.list in apps/mini-program/src/app.config.ts).
+// If the tabBar list changes, this allow-list must be updated too.
+var TAB_BAR_PAGE_PATHS = {
+  'pages/discover/index': true,
+  'pages/events/index': true,
+  'pages/connections/index': true,
+  'pages/profile/index': true,
+  'pages/center-hub/index': true,
+}
+
 // Layout constants for the sliding active pill (must stay in sync with index.wxss).
 // 750rpx design width minus surface margins, row padding, and center gap.
 var TAB_BAR_CENTER_GAP_RPX = 192
@@ -35,7 +51,6 @@ Component({
   // Internal debounce / diff state (not reactive)
   _syncTimer: null,
   _showTimer: null,
-  _tapDebounceTimer: null,
   _announceTimer: null,
   _lastBadgesKey: '',
   // Last selection confirmed by syncState (authoritative) — used for rollback
@@ -44,6 +59,13 @@ Component({
   _isLowEnd: false,
   _isOffline: false,
   _networkStatusHandler: null,
+  // Switch guard: ignore tab taps while a wx.switchTab is already in flight.
+  _switchInFlight: false,
+  _switchFlightTimer: null,
+  // Transition interrupt: disable CSS transition when a new tap arrives while
+  // the previous pill animation is still running, so rapid switches snap.
+  _transitionRestoreTimer: null,
+  _lastPillSetAt: 0,
   // Last sync state; re-applied when network comes back online.
   _lastSyncState: null,
   // Name lookup for accessibility announcements (re-assigned in attached
@@ -54,6 +76,10 @@ Component({
     selected: 0,
     lowEnd: false,
     announcement: '',
+    // Guard against the tab bar being attached to a non-tab page.
+    hidden: false,
+    // CSS transition toggle for interruptible rapid switching.
+    pillTransitionEnabled: true,
     // Sliding active pill geometry (in rpx)
     pillWidth: 0,
     pillTranslateX: 0,
@@ -73,8 +99,8 @@ Component({
         index: 0,
         url: '/pages/discover/index',
         text: '发现',
-        icon: '../assets/tab-icons/发现 icon_inactive.png',
-        selectedIcon: '../assets/tab-icons/发现 icon.png',
+        icon: '../assets/tab-icons/发现 icon_inactive.webp',
+        selectedIcon: '../assets/tab-icons/发现 icon.webp',
         badgeCount: 0,
         badgeCategory: 'discover',
       },
@@ -83,8 +109,8 @@ Component({
         index: 1,
         url: '/pages/events/index',
         text: '足迹',
-        icon: '../assets/tab-icons/足迹 icon_inactive.png',
-        selectedIcon: '../assets/tab-icons/足迹 icon.png',
+        icon: '../assets/tab-icons/足迹 icon_inactive.webp',
+        selectedIcon: '../assets/tab-icons/足迹 icon.webp',
         badgeCount: 0,
         badgeCategory: 'activities',
       },
@@ -95,8 +121,8 @@ Component({
         index: 2,
         url: '/pages/connections/index',
         text: '连接',
-        icon: '../assets/tab-icons/连接 icon_inactive.png',
-        selectedIcon: '../assets/tab-icons/连接 icon.png',
+        icon: '../assets/tab-icons/连接 icon_inactive.webp',
+        selectedIcon: '../assets/tab-icons/连接 icon.webp',
         badgeCount: 0,
         badgeCategory: 'chat',
       },
@@ -105,8 +131,8 @@ Component({
         index: 3,
         url: '/pages/profile/index',
         text: '我的',
-        icon: '../assets/tab-icons/我的 icon_inactive.png',
-        selectedIcon: '../assets/tab-icons/我的 icon.png',
+        icon: '../assets/tab-icons/我的 icon_inactive.webp',
+        selectedIcon: '../assets/tab-icons/我的 icon.webp',
         badgeCount: 0,
         badgeCategory: null,
       },
@@ -128,14 +154,22 @@ Component({
         this.setData({ lowEnd: true })
       }
 
+      // Determine visibility based on the current page route. This prevents the
+      // custom tab bar from rendering on non-tab pages such as the landing page.
+      this._updateVisibility()
+
       // Compute sliding pill geometry from the current screen width.
       // Values are stored in rpx so inline styles can use them directly.
       var windowWidth = info.windowWidth || 375
       var itemWidth = Math.round(computeTabItemWidth(windowWidth))
+      // If the component is ever re-attached, keep the pill aligned with the
+      // rendered selection instead of snapping back to index 0.
+      var currentSelected = Number(this.data.selected) || 0
+      this._confirmedSelected = currentSelected
       this.setData({
         tabItemWidth: itemWidth,
         pillWidth: itemWidth,
-        pillTranslateX: 0,
+        pillTranslateX: computePillTranslateX(currentSelected, itemWidth),
       })
 
       // Re-assign the accessibility map to the instance. Some WeChat runtimes
@@ -166,7 +200,8 @@ Component({
     detached: function () {
       clearTimeout(this._syncTimer)
       clearTimeout(this._showTimer)
-      clearTimeout(this._tapDebounceTimer)
+      clearTimeout(this._switchFlightTimer)
+      clearTimeout(this._transitionRestoreTimer)
       clearTimeout(this._announceTimer)
       if (wx.offNetworkStatusChange && this._networkStatusHandler) {
         wx.offNetworkStatusChange(this._networkStatusHandler)
@@ -210,18 +245,72 @@ Component({
     // has had time to fire (syncState debounce = 50ms).
     show: function () {
       var self = this
+      // Re-evaluate visibility whenever the tab bar is shown; this covers
+      // navigation between tab and non-tab pages in edge-case routing scenarios.
+      this._updateVisibility()
       clearTimeout(this._showTimer)
       this._showTimer = setTimeout(function () {
-        if (self.data.selected !== self._confirmedSelected) {
-          var idx = self._confirmedSelected
-          var translateX = computePillTranslateX(idx, self.data.tabItemWidth)
-          self.setData({ selected: idx, pillTranslateX: translateX })
+        var idx = self._confirmedSelected
+        var expectedTranslateX = computePillTranslateX(idx, self.data.tabItemWidth)
+        // Re-sync both the label/icon highlight and the sliding pill. The pill
+        // can drift without `selected` changing (e.g., a failed switchTab
+        // rollback only reset `selected`).
+        if (self.data.selected !== idx || self.data.pillTranslateX !== expectedTranslateX) {
+          self._setPillState(idx, expectedTranslateX)
         }
       }, 100)
     },
   },
 
   methods: {
+    /**
+     * Hide the tab bar when attached to a page that is not in tabBar.list.
+     * Uses getCurrentPages() because the component has no other way to know
+     * the host route.
+     */
+    _updateVisibility: function () {
+      var shouldShow = false
+      if (typeof getCurrentPages === 'function') {
+        var pages = getCurrentPages()
+        var route = pages.length > 0 ? pages[pages.length - 1].route : ''
+        shouldShow = !!TAB_BAR_PAGE_PATHS[route]
+      }
+      // Show when on a tab page, hide otherwise. `hidden` is the inverse of `shouldShow`.
+      var nextHidden = !shouldShow
+      if (this.data.hidden !== nextHidden) {
+        this.setData({ hidden: nextHidden })
+      }
+    },
+
+    /**
+     * Set selected + pillTranslateX in one setData, with transition interrupt.
+     * If a new selection arrives within the CSS transition window (220 ms),
+     * disable the transition so the pill snaps to the new tab instead of
+     * animating across intermediate tabs during rapid back-and-forth taps.
+     */
+    _setPillState: function (selected, translateX) {
+      var now = Date.now()
+      var transitionEnabled = true
+      if (this._lastPillSetAt && now - this._lastPillSetAt < 220) {
+        transitionEnabled = false
+      }
+      this._lastPillSetAt = now
+
+      var self = this
+      this.setData({
+        selected: selected,
+        pillTranslateX: translateX,
+        pillTransitionEnabled: transitionEnabled,
+      })
+
+      if (!transitionEnabled) {
+        clearTimeout(this._transitionRestoreTimer)
+        this._transitionRestoreTimer = setTimeout(function () {
+          self.setData({ pillTransitionEnabled: true })
+        }, 50)
+      }
+    },
+
     /**
      * Called by useCustomTabBarSync hook via Taro.getTabBar(page).
      * Accepts: { selected, center, badges? }
@@ -255,6 +344,8 @@ Component({
           if (state.center.label !== currentCenter.label) centerChanged = true
           if (state.center.showBadge !== currentCenter.showBadge) centerChanged = true
           if (state.center.action && state.center.action.url !== currentCenter.action.url) centerChanged = true
+          if (state.center.action && state.center.action.kind !== currentCenter.action.kind) centerChanged = true
+          if (state.center.action && state.center.action.navigation !== currentCenter.action.navigation) centerChanged = true
 
           if (centerChanged) {
             update.center = state.center
@@ -301,7 +392,7 @@ Component({
       var idx = Number(selected)
       this._confirmedSelected = idx
       var translateX = computePillTranslateX(idx, this.data.tabItemWidth)
-      this.setData({ selected: idx, pillTranslateX: translateX })
+      this._setPillState(idx, translateX)
     },
 
     setCenterState: function (center) {
@@ -312,12 +403,31 @@ Component({
       this.syncState({ badges: badges })
     },
 
+    /**
+     * Mark a tab switch as in-flight and arm a 2 s safety timeout. We ignore
+     * additional taps while a switch is pending so rapid back-and-forth taps
+     * cannot queue conflicting wx.switchTab calls.
+     */
+    _startSwitchFlight: function () {
+      var self = this
+      this._switchInFlight = true
+      clearTimeout(this._switchFlightTimer)
+      this._switchFlightTimer = setTimeout(function () {
+        self._switchInFlight = false
+      }, 2000)
+    },
+
+    _endSwitchFlight: function () {
+      this._switchInFlight = false
+      clearTimeout(this._switchFlightTimer)
+    },
+
     handleTabTap: function (e) {
       var self = this
-      if (this._tapDebounceTimer) return
-      this._tapDebounceTimer = setTimeout(function () {
-        self._tapDebounceTimer = null
-      }, 180)
+      // Ignore taps while a previous switch is still pending. The 2 s safety
+      // timeout inside _startSwitchFlight ensures we never stay locked if the
+      // WeChat runtime fails to call success/fail.
+      if (this._switchInFlight) return
 
       var index = Number(e.currentTarget.dataset.index)
       var url = e.currentTarget.dataset.url
@@ -336,10 +446,12 @@ Component({
       // pageLifetimes.show safety net (100ms) doesn't revert it.
       this._confirmedSelected = index
       var translateX = computePillTranslateX(index, this.data.tabItemWidth)
-      this.setData({ selected: index, pillTranslateX: translateX })
+      this._setPillState(index, translateX)
+      this._startSwitchFlight()
       wx.switchTab({
         url: url,
         success: function () {
+          self._endSwitchFlight()
           self._announceTab(index)
           self.trackTabBarEvent('mini_program_tab_bar_switch_success', {
             tab: tabKey || 'unknown',
@@ -347,9 +459,11 @@ Component({
           })
         },
         fail: function (err) {
+          self._endSwitchFlight()
           console.warn('[TabBar] switchTab failed for tab ' + tabKey + ':', err)
           self._confirmedSelected = previousSelected
-          self.setData({ selected: previousSelected })
+          var rollbackTranslateX = computePillTranslateX(previousSelected, self.data.tabItemWidth)
+          self._setPillState(previousSelected, rollbackTranslateX)
           self._showSwitchFailToast()
           self.trackTabBarEvent('mini_program_tab_bar_switch_fail', {
             tab: tabKey || 'unknown',
@@ -364,10 +478,7 @@ Component({
 
     handleCenterTap: function () {
       var self = this
-      if (this._tapDebounceTimer) return
-      this._tapDebounceTimer = setTimeout(function () {
-        self._tapDebounceTimer = null
-      }, 180)
+      if (this._switchInFlight) return
 
       var action = this.data.center && this.data.center.action
       if (!action || !action.url) return
@@ -386,19 +497,23 @@ Component({
       // pageLifetimes.show safety net (100ms) doesn't revert it.
       this._confirmedSelected = 4
       // Hide the sliding pill while the center button is selected.
-      this.setData({ selected: 4, pillTranslateX: 0 })
+      this._setPillState(4, 0)
+      this._startSwitchFlight()
       wx.switchTab({
         url: action.url,
         success: function () {
+          self._endSwitchFlight()
           self._announceTab(4)
           self.trackTabBarEvent('mini_program_center_button_switch_success', {
             action_kind: action.kind || 'unknown',
           })
         },
         fail: function (err) {
+          self._endSwitchFlight()
           console.warn('[TabBar] switchTab failed for center:', err)
           self._confirmedSelected = previousSelected
-          self.setData({ selected: previousSelected })
+          var rollbackTranslateX = computePillTranslateX(previousSelected, self.data.tabItemWidth)
+          self._setPillState(previousSelected, rollbackTranslateX)
           self._showSwitchFailToast()
           self.trackTabBarEvent('mini_program_center_button_switch_fail', {
             action_kind: action.kind || 'unknown',

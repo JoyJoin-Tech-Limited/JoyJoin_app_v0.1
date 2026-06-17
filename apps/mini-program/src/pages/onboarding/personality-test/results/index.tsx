@@ -25,7 +25,6 @@ import { getDegradationTier, type DegradationTier } from '../../../../lib/utils/
 import { haptics } from '../../../../lib/utils/haptics'
 import { getMascotDisplayName } from '../../../../lib/mascot/mascotDisplay'
 import { logError, logInfo, logWarn } from '../../../../lib/utils/logger'
-import { useMiniRevealMotion } from '../../../../hooks/useMiniRevealMotion'
 import { useUnload } from '../../../../hooks/useUnload'
 import { useDeviceTier } from '../../../../hooks/useDeviceTier'
 import { preloadImagesWithDiagnostics } from '../../../../lib/utils/imagePreload'
@@ -97,7 +96,6 @@ interface XiaoyueAnalysisResult {
 }
 
 export default function PersonalityTestResultsPage() {
-  const { shouldReduceMotion } = useMiniRevealMotion()
   const auth = useAuth()
   const deviceTier = useDeviceTier()
 
@@ -118,16 +116,6 @@ export default function PersonalityTestResultsPage() {
   const [resultState, setResultState] = useState<ResolvedResultState | null>(initialResolvedResult)
   const [flowStage, setFlowStage] = useState<FlowStage>(hasCompletedReplay ? 'result' : 'loading')
   const [slotPhase, setSlotPhase] = useState<SlotPhase>('anticipation')
-
-  /** Accessibility: respect system reduced-motion preference. */
-  const prefersReducedMotion = useMemo(() => {
-    try {
-      const info = Taro.getSystemInfoSync()
-      return (info as any).reduceMotion === true
-    } catch {
-      return false
-    }
-  }, [])
 
   // Track spritesheet decode readiness before starting slot animation.
   // Falls back after 500ms so we never block indefinitely.
@@ -604,21 +592,12 @@ export default function PersonalityTestResultsPage() {
         return
       }
 
-      // Accessibility + Kill-switch: skip the slot animation only for
-      // explicit reduced-motion preferences or when the feature flag is off.
-      // We no longer use `deviceTier.isDegradation` as a hard skip because
-      // the animation flow measures real frame budget mid-spin and degrades
-      // effects gracefully (fewer particles, shorter glow, etc.). Hard-skipping
-      // here was bypassing the slot on capable Android devices due to the
-      // inverted benchmarkLevel interpretation in `useDeviceTier`.
-      const shouldSkipAnimation = shouldReduceMotion || prefersReducedMotion || !personalitySlotAnimationEnabled
+      // Kill-switch only: the slot animation is the default experience.
+      // It is skipped only when the server-side feature flag explicitly disables it.
+      const shouldSkipAnimation = !personalitySlotAnimationEnabled
       if (shouldSkipAnimation) {
-        logInfo('[PersonalityResults] Skipping slot animation by request/accessibility/flag', {
-          shouldReduceMotion,
-          prefersReducedMotion,
+        logInfo('[PersonalityResults] Slot animation disabled by feature flag', {
           personalitySlotAnimationEnabled,
-          deviceTier: deviceTier.tier,
-          benchmarkLevel: deviceTier.benchmarkLevel,
         })
         const fetchPromise = fetchResult(nextRunId, Boolean(options?.forceRefresh))
         const resolved = await fetchPromise
@@ -633,16 +612,25 @@ export default function PersonalityTestResultsPage() {
             completionMode: 'animated',
             isAuthenticated: auth.isAuthenticated,
             primaryArchetype: displayArchetypeName,
-            skipReason: shouldReduceMotion
-              ? 'shouldReduceMotion'
-              : prefersReducedMotion
-                ? 'prefersReducedMotion'
-                : 'featureFlagDisabled',
+            skipReason: 'featureFlagDisabled',
           })
         } else if (mountedRef.current && nextRunId === runIdRef.current) {
-          // Fetch failed — show error instead of stuck loading
-          setFlowStage('error')
-          setErrorMessage((prev) => prev || getErrorMessage('sync-failed'))
+          // Fetch failed — fall back to any cached/local result before surfacing
+          // an error screen. This prevents transient network timeouts from
+          // stranding users when a local result is already available.
+          const cached = resultStateRef.current ?? buildResolvedResultState(readAnonymousAssessmentSession())
+          if (cached) {
+            resultStateRef.current = cached
+            setResultState(cached)
+            setFlowStage('result')
+            setSlotDisplay(prev => ({ ...prev, progress: 100 }))
+            setPhaseText('')
+            setCompletionMode('animated')
+            analytics.errorOccurred('result_fetch_failed_cached_fallback', 'used cached result after fetch failure')
+          } else {
+            setFlowStage('error')
+            setErrorMessage((prev) => prev || getErrorMessage('sync-failed'))
+          }
         }
         return
       }
@@ -1325,30 +1313,30 @@ export default function PersonalityTestResultsPage() {
       let nextSquarePath: string | undefined
       if (!deviceTier.isDegradation) {
         try {
-        const squareInput: PersonalitySquarePosterInput = {
-          archetype: displayArchetypeName,
-          subtitle: visual.nickname || displayArchetypeName,
-          tagline: visual.tagline || visual.description || summary,
-          shareLine,
-          rarityPercentage: typeof visual.rarityPercentage === 'number' ? visual.rarityPercentage : 0,
-          archetypeAsset: canvasArchetypeAsset,
-          archetypeAssetPng: visual.assetPng,
-          traitEntries: traitEntries.slice(0, 3).map(({ label, value }) => ({ label, value })),
-          energyLevel,
-          skillSet: skillSet
-            ? { activeSkill: { name: skillSet.activeSkill.name }, passiveSkill: { name: skillSet.passiveSkill.name } }
-            : undefined,
-          archetypeRank,
-          serialNumber,
+          const squareInput: PersonalitySquarePosterInput = {
+            archetype: displayArchetypeName,
+            subtitle: visual.nickname || displayArchetypeName,
+            tagline: visual.tagline || visual.description || summary,
+            shareLine,
+            rarityPercentage: typeof visual.rarityPercentage === 'number' ? visual.rarityPercentage : 0,
+            archetypeAsset: canvasArchetypeAsset,
+            archetypeAssetPng: visual.assetPng,
+            traitEntries: traitEntries.slice(0, 3).map(({ label, value }) => ({ label, value })),
+            energyLevel,
+            skillSet: skillSet
+              ? { activeSkill: { name: skillSet.activeSkill.name }, passiveSkill: { name: skillSet.passiveSkill.name } }
+              : undefined,
+            archetypeRank,
+            serialNumber,
+          }
+          setGenerationPhase('正在生成朋友圈卡片…')
+          nextSquarePath = await generatePersonalitySquarePoster(squareInput)
+          setSquarePosterPath(nextSquarePath)
+        } catch (squareErr) {
+          logWarn('[PersonalityResults] Square poster generation failed, degrading to portrait-only', {
+            error: squareErr instanceof Error ? squareErr.message : String(squareErr),
+          })
         }
-        setGenerationPhase('正在生成朋友圈卡片…')
-        nextSquarePath = await generatePersonalitySquarePoster(squareInput)
-        setSquarePosterPath(nextSquarePath)
-      } catch (squareErr) {
-        logWarn('[PersonalityResults] Square poster generation failed, degrading to portrait-only', {
-          error: squareErr instanceof Error ? squareErr.message : String(squareErr),
-        })
-      }
       }
 
       haptics('success')
@@ -1417,7 +1405,6 @@ export default function PersonalityTestResultsPage() {
             isSlowNetwork={isSlowNetwork}
             progress={progress}
             phaseText={phaseText}
-            shouldReduceMotion={shouldReduceMotion}
           />
         )
       case 'reveal':
@@ -1486,7 +1473,7 @@ export default function PersonalityTestResultsPage() {
   })()
 
   return (
-    <View className={`personality-results personality-results--${flowStage}${prefersReducedMotion ? ' personality-results--reduce-motion' : ''}${deviceTier.isDegradation ? ' personality-results--low-end' : ''}`}>
+    <View className={`personality-results personality-results--${flowStage}${deviceTier.isDegradation ? ' personality-results--low-end' : ''}`}>
       {content}
       {showSkipAnimation && (
         <View

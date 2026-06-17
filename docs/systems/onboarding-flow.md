@@ -246,7 +246,7 @@ await fetch('/api/auth/wechat/login-with-test', {
 2. Gender + Birthday (Birth Year)
 3. Professional Profile: Education Level + Industry (3-tier) + Occupation + Work Mode
 4. Location: Current City (required) + Hometown (optional)
-5. Intent / Social Goals (multi-select — sourced from shared constants in `packages/shared/src/constants.ts` via `INTENT_OPTIONS` / `INTENT_FLEXIBLE_OPTION` / `getIntentLabel` / `toggleIntentValue`, see PR #299)
+5. Intent / Social Goals (multi-select — sourced from shared constants in `packages/shared/src/constants.ts` via `INTENT_OPTIONS` / `INTENT_FLEXIBLE_OPTION` / `getIntentLabel` / `toggleIntentValue`, see PR #299). Renders with the shared `IntentCard` component and `JoyJoinIcon tier='intent'`; `usePreloadIntentIcons` pre-warms the bundled intent icons before the grid renders.
 
 > Intent options and selection logic are defined as a **single source of truth** in `packages/shared/src/constants.ts` (`INTENT_OPTIONS`, `INTENT_FLEXIBLE_OPTION`, `getIntentLabel`, `toggleIntentValue`). Use `toggleIntentValue(selected, value, { maxExplicit: 3 })` to enforce the explicit-intent cap while letting `随缘`/flexible coexist; it returns `null` when the cap is exceeded. Do **not** hardcode intent option arrays or cap logic in individual components — import from these shared constants.
 
@@ -301,7 +301,7 @@ await fetch('/api/auth/wechat/login-with-test', {
   - **AI social tagline** — short warm insight line fetched from `GET /api/onboarding/profile-tagline` (service: `apps/server/src/profileTaglineService.ts`; contract: `ProfileTaglineResponse` in `packages/shared/src/ai/onboarding.ts`). Rendered as a centered quote block (`✨ 悦仔的观察`) with shimmer skeleton and retry on error. This is a presentation-only enhancement and does not block navigation.
   - **Archetype summary** — one-line description of the user's V4 archetype result.
   - **Profile mini-cards** —家乡、关系状态、学历、职业、行业 rendered with brand-colored dot indicators.
-  - **Intent chips** — top social intents labeled with `JoyJoinIcon` (`tier='intent'`) and Chinese text.
+  - **Intent chips** — top social intents labeled with `JoyJoinIcon` (`tier='intent'`) and Chinese text. Intent icons are pre-warmed by `usePreloadIntentIcons` before grids render.
   - **Interest heat map** — `InterestHeatMap` stats + `InterestChipCloud` dominant-category chips.
 - **Floating CTA** — pill-shaped "确认并进入发现" button anchored above the safe area; gains elevation when the page is scrolled.
 - **Motion gating** — all entrance animations, shimmer, and CTA transitions respect `@media (prefers-reduced-motion: reduce)`; the JS `useMiniRevealMotion().shouldReduceMotion` flag suppresses the poster shimmer at runtime.

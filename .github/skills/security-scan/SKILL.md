@@ -33,7 +33,8 @@ Use this skill when you are:
 
 2. Start from current enforcement files.
    `apps/server/src/auth/policy.ts`, `scripts/check-guardrails.mjs`, `docs/launch-risks.md`,
-   and `.github/workflows/cicd.yml` are better sources of truth than stale summary docs.
+   `.github/workflows/quality-gates.yml`, `.github/workflows/deploy-staging.yml`,
+   and `.github/workflows/deploy-production.yml` are better sources of truth than stale summary docs.
 
 3. Treat secrets and debug overrides as trust-boundary issues.
    Review where secrets enter, where debug flags are allowed, and whether production fails closed by default.
@@ -49,7 +50,7 @@ Use this skill when you are:
 
 - `apps/server/src/auth/policy.ts` is the auth-debug policy source of truth.
 - `scripts/check-guardrails.mjs` enforces env, secret, and legacy guardrails in CI.
-- `.github/workflows/cicd.yml` currently runs guardrails, type checks, server tests, and simulation.
+- `.github/workflows/quality-gates.yml` runs guardrails, type checks, tests, harness gate, and simulation; `deploy-staging.yml` and `deploy-production.yml` run it on `main` and `release` respectively.
 - `docs/launch-risks.md` and `docs/CLI_TOOLS.md` describe the current known-risk posture and debug-tool constraints.
 
 ## Quick examples
@@ -86,6 +87,8 @@ List the concrete checks performed, the files reviewed, and any missing automati
 - `apps/server/src/auth/policy.ts`
 - `apps/server/src/cli/bypassLogin.ts`
 - `scripts/check-guardrails.mjs`
-- `.github/workflows/cicd.yml`
+- `.github/workflows/quality-gates.yml`
+- `.github/workflows/deploy-staging.yml`
+- `.github/workflows/deploy-production.yml`
 - `docs/launch-risks.md`
 - `docs/CLI_TOOLS.md`
