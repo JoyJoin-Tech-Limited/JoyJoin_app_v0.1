@@ -288,7 +288,7 @@ export default function CenterHubPage() {
           <View className='center-hub__header'>
             <Image
               className='center-hub__header-mascot'
-              src={localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.png')}
+              src={localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')}
               mode='aspectFit'
               lazyLoad
             />

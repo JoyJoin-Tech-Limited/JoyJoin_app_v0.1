@@ -283,10 +283,6 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           to: 'dist/assets/xiaoyue-expressions/xiaoyue-loading-system.png',
         },
         {
-          from: 'src/assets/personality/xiaoyue/xiaoyue-home-welcome.png',
-          to: 'dist/assets/xiaoyue-expressions/xiaoyue-home-welcome.png',
-        },
-        {
           from: 'src/assets/personality/xiaoyue/xiaoyue-coach-guide.webp',
           to: 'dist/assets/xiaoyue-expressions/xiaoyue-coach-guide.webp',
         },
