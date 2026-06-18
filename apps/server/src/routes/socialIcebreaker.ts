@@ -146,13 +146,8 @@ router.post('/start', async (req: any, res) => {
 
     state.playerCount = rosterCount;
     state.activePlayerCount = activeCount;
-    // ensureSessionEnabledPhases mutates `state` in place for older persisted
-    // sessions; only persist when that backfill actually changed the payload.
-    const enabledPhasesBefore = JSON.stringify(state.enabledPhases ?? []);
     ensureSessionEnabledPhases(state);
-    if (JSON.stringify(state.enabledPhases ?? []) !== enabledPhasesBefore) {
-      await updateSession(existing.socialSessionId, state);
-    }
+    await updateSession(existing.socialSessionId, state);
 
     return res.json({
       socialSessionId: existing.socialSessionId,
@@ -804,7 +799,9 @@ router.post('/:socialSessionId/micro-challenge/generate', async (req: any, res) 
 
     return res.json({ challenge: state.currentChallenge, meta: challengeResult.meta });
   } catch (error) {
-    logger.error('[SocialIcebreaker] micro-challenge/generate error:', { error });
+    logger.error('[SocialIcebreaker] micro-challenge/generate error:', {
+      error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+    });
     return res.status(500).json({ error: 'Failed to generate micro-challenge' });
   }
 });

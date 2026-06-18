@@ -60,7 +60,6 @@ export * from './legal/joyjoinTermsZh';
 export * from './miniscriptCatalog';
 export * from './miniscriptStoryFramework';
 export * from './miniscriptGameModes';
-export * from './schemaAnalytics';
 export * from './aiModels';
 export * from './socialIcebreakerTierManifest';
 export * from './socialIcebreakerRunPlans';

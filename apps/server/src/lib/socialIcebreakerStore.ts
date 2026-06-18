@@ -20,12 +20,12 @@ import {
   socialIcebreakerLieTruths,
   socialIcebreakerPhasePulseChecks,
   socialIcebreakerPhaseMetrics,
+  socialIcebreakerMiniscriptSecrets,
   momentCardInteractions,
   preGenerationJobs,
   preGenerationResults,
   users,
 } from '@shared/schema';
-import { socialIcebreakerMiniscriptSecrets } from '@shared/schemaAnalytics';
 import type {
   SocialSessionParticipantSummary,
   SocialSessionState,
