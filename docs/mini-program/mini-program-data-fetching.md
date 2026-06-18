@@ -67,6 +67,8 @@ The mini-program uses **composite shell endpoints** to reduce tab-switch latency
 
 **Fallback behavior:** Events and Connections pages fall back to legacy endpoints (`/api/events/joined`, `/api/my-connections`) if the composite endpoint returns 500.
 
+**Discover diagnostics (2026-06-18):** The Discover page logs structured diagnostics via `logInfo`/`logWarn` to distinguish a successful but empty shell (`shell-empty`) from a shell fetch failure (`shell-failed`) and from a legacy fallback fetch failure. This makes staging/data-empty issues easier to triage without confusing client bugs for missing data.
+
 ## Verification
 
 - `npm run typecheck -w mini-program`

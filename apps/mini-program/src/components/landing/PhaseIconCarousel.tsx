@@ -3,6 +3,7 @@ import Taro, { useDidHide } from "@tarojs/taro"
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { localAsset } from "../../lib/utils/cdnAssets"
 import { onboardingAnalytics } from "../../lib/onboarding/onboardingAnalytics"
+import "./PhaseIconCarousel.scss"
 
 export interface PhaseIconCarouselProps {
   isVisible: boolean
@@ -23,49 +24,6 @@ const PHASES: PhaseDef[] = [
   { key: "mini_script", label: "迷你剧本杀", slogan: "5分钟全员入戏", icon: localAsset("/assets/landing-phase-icons/phase-mini-script.webp") },
   { key: "quip_battle", label: "机智对决", slogan: "妙语连珠，接招吧", icon: localAsset("/assets/landing-phase-icons/phase-quip-battle.webp") },
 ]
-
-function checkReducedMotion(): boolean {
-  try {
-    const mq = (Taro.getApp() as any).config?.window?.prefersReducedMotion
-    if (mq != null) return !!mq
-  } catch { /* ignore */ }
-  try {
-    const info = Taro.getSystemInfoSync()
-    return !!(info as any).reduceMotion
-  } catch {
-    return false
-  }
-}
-
-function checkIsLowEnd(): boolean {
-  try {
-    const info = Taro.getSystemInfoSync()
-    const level = (info.benchmarkLevel ?? -1) as number
-    if (level >= 0) return level < 20
-
-    // iPhone fallback: benchmarkLevel not available on iOS
-    const model = (info.model ?? "") as string
-    const system = (info.system ?? "") as string
-
-    const iphoneMatch = model.match(/iPhone\s*(\d+)[,\s]/i)
-    if (iphoneMatch) {
-      const gen = parseInt(iphoneMatch[1], 10)
-      return gen <= 10 // iPhone X and older → degradation tier
-    }
-
-    // Android version fallback
-    if (system.includes("Android")) {
-      const versionMatch = system.match(/Android\s+(\d+)/)
-      if (versionMatch) {
-        return parseInt(versionMatch[1], 10) < 10
-      }
-    }
-
-    return false
-  } catch {
-    return false
-  }
-}
 
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr]
@@ -98,14 +56,6 @@ export default function PhaseIconCarousel({ isVisible }: PhaseIconCarouselProps)
   const phasesRef = useRef(phases)
   useEffect(() => { currentIndexRef.current = currentIndex }, [currentIndex])
   useEffect(() => { phasesRef.current = phases }, [phases])
-
-  const { reducedMotion, isLowEnd } = useMemo(() => ({
-    reducedMotion: checkReducedMotion(),
-    isLowEnd: checkIsLowEnd(),
-  }), [])
-
-  if (reducedMotion || isLowEnd) return null
-  const allIconsFailed = Object.keys(iconErrors).length >= phases.length
 
   useEffect(() => {
     if (isVisible) {
@@ -245,18 +195,6 @@ export default function PhaseIconCarousel({ isVisible }: PhaseIconCarouselProps)
   }
 
   const currentPhase = phases[currentIndex]
-
-  if (allIconsFailed) {
-    return (
-      <View className="phase-carousel phase-carousel--fallback">
-        <View className="phase-carousel__fallback-inner">
-          <Text className="phase-carousel__fallback-icon">玩法一览</Text>
-          <Text className="phase-carousel__fallback-label">氛围引擎 · 10+ 种玩法随局定制</Text>
-          <Text className="phase-carousel__fallback-sublabel">话题卡 · 谎言侦探 · 人格骰子 · 拍卖 · 迷你剧本杀 · 机智对决 等 11 种玩法</Text>
-        </View>
-      </View>
-    )
-  }
 
   return (
     <View

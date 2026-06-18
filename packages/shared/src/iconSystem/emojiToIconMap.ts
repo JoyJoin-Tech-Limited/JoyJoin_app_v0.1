@@ -67,6 +67,11 @@ export const INFO_LABEL_MAP: Record<string, IconMapping> = {
   '🎯': { assetKey: 'label-target', tier: 'semantic', size: 24, fallbackEmoji: '🎯' },
   // Discover page mappings
   '🤝': { assetKey: 'label-people', tier: 'semantic', size: 32, fallbackEmoji: '🤝' },
+  '🌆': { assetKey: 'label-cityscape', tier: 'semantic', size: 24, fallbackEmoji: '🌆' },
+  '🗺️': { assetKey: 'label-map', tier: 'semantic', size: 24, fallbackEmoji: '🗺️' },
+  '🌏': { assetKey: 'label-globe-asia', tier: 'semantic', size: 24, fallbackEmoji: '🌏' },
+  '🌐': { assetKey: 'label-globe-meridians', tier: 'semantic', size: 24, fallbackEmoji: '🌐' },
+  '✈️': { assetKey: 'label-airplane', tier: 'semantic', size: 24, fallbackEmoji: '✈️' },
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -110,10 +115,11 @@ export const PHASE_EMBLEM_MAP: Record<string, IconMapping> = {
 
 export const CATEGORY_MAP: Record<string, IconMapping> = {
   '🍜': { assetKey: 'category-food', tier: 'category', size: 32, fallbackEmoji: '🍜' },
-  '🎮': { assetKey: 'category-entertainment', tier: 'category', size: 32, fallbackEmoji: '🎮' },
-  '🌿': { assetKey: 'category-lifestyle', tier: 'category', size: 32, fallbackEmoji: '🌿' },
+  '🎮': { assetKey: 'category-play', tier: 'category', size: 32, fallbackEmoji: '🎮' },
+  '🌿': { assetKey: 'category-sports', tier: 'category', size: 32, fallbackEmoji: '🌿' },
   '🎭': { assetKey: 'category-culture', tier: 'category', size: 32, fallbackEmoji: '🎭' },
-  '👥': { assetKey: 'category-social', tier: 'category', size: 32, fallbackEmoji: '👥' },
+  '🏠': { assetKey: 'category-life', tier: 'category', size: 32, fallbackEmoji: '🏠' },
+  '💡': { assetKey: 'category-growth', tier: 'category', size: 32, fallbackEmoji: '💡' },
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -141,6 +147,12 @@ export const REACTION_MAP: Record<string, IconMapping> = {
   '🌹': { assetKey: 'reaction-rose', tier: 'reaction', size: 56, fallbackEmoji: '🌹' },
   '🤔': { assetKey: 'reaction-think', tier: 'reaction', size: 56, fallbackEmoji: '🤔' },
   '😮': { assetKey: 'reaction-wow', tier: 'reaction', size: 56, fallbackEmoji: '😮' },
+  '💰': { assetKey: 'reaction-money-bag', tier: 'reaction', size: 56, fallbackEmoji: '💰' },
+  '😏': { assetKey: 'reaction-smirk', tier: 'reaction', size: 56, fallbackEmoji: '😏' },
+  '😎': { assetKey: 'reaction-sunglasses', tier: 'reaction', size: 56, fallbackEmoji: '😎' },
+  '💜': { assetKey: 'reaction-purple-heart', tier: 'reaction', size: 56, fallbackEmoji: '💜' },
+  '😅': { assetKey: 'reaction-sweat', tier: 'reaction', size: 56, fallbackEmoji: '😅' },
+  '😈': { assetKey: 'reaction-devil', tier: 'reaction', size: 56, fallbackEmoji: '😈' },
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -177,6 +189,17 @@ export const STATUS_ICON_MAP: Record<string, IconMapping> = {
   '👑': { assetKey: 'status-crown', tier: 'status', size: 24, fallbackEmoji: '👑', tint: '#8B5CF6' },
   '⏳': { assetKey: 'status-waiting', tier: 'status', size: 80, fallbackEmoji: '⏳' },
   'ℹ️': { assetKey: 'status-info', tier: 'status', size: 48, fallbackEmoji: 'ℹ️' },
+  '⏰': { assetKey: 'status-alarm-clock', tier: 'status', size: 24, fallbackEmoji: '⏰' },
+  '📣': { assetKey: 'status-megaphone', tier: 'status', size: 24, fallbackEmoji: '📣' },
+  '📊': { assetKey: 'status-bar-chart', tier: 'status', size: 24, fallbackEmoji: '📊' },
+  '⚠️': { assetKey: 'status-warning', tier: 'status', size: 24, fallbackEmoji: '⚠️' },
+  '🚫': { assetKey: 'status-prohibited', tier: 'status', size: 24, fallbackEmoji: '🚫' },
+  '🔔': { assetKey: 'status-bell', tier: 'status', size: 24, fallbackEmoji: '🔔' },
+  '🔓': { assetKey: 'status-unlocked', tier: 'status', size: 24, fallbackEmoji: '🔓' },
+  '🌟': { assetKey: 'status-star', tier: 'status', size: 24, fallbackEmoji: '🌟' },
+  '✕': { assetKey: 'status-close', tier: 'status', size: 24, fallbackEmoji: '✕' },
+  '✓': { assetKey: 'status-check', tier: 'status', size: 24, fallbackEmoji: '✓' },
+  '🪞': { assetKey: 'status-mirror', tier: 'status', size: 24, fallbackEmoji: '🪞' },
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -185,7 +208,7 @@ export const STATUS_ICON_MAP: Record<string, IconMapping> = {
 
 export const UI_ICON_MAP: Record<string, IconMapping> = {
   '✏️': { assetKey: 'icon-edit', tier: 'ui', size: 48, fallbackEmoji: '✏️', tint: '#8B5CF6' },
-  '🎁': { assetKey: 'icon-coupon', tier: 'ui', size: 48, fallbackEmoji: '🎁', tint: '#8B5CF6' },
+  '🎁': { assetKey: 'icon-gift', tier: 'ui', size: 48, fallbackEmoji: '🎁', tint: '#8B5CF6' },
   '🔗': { assetKey: 'icon-link', tier: 'ui', size: 48, fallbackEmoji: '🔗', tint: '#8B5CF6' },
   // NOTE: 📤 deliberately reuses icon-people because no dedicated share-card asset exists yet.
   // The share-card row remains visually distinct from the invite row (📤/👥 vs 🔗) by label/context.
@@ -197,6 +220,8 @@ export const UI_ICON_MAP: Record<string, IconMapping> = {
   '🎫': { assetKey: 'icon-ticket', tier: 'ui', size: 48, fallbackEmoji: '🎫', tint: '#8B5CF6' },
   '🏆': { assetKey: 'icon-trophy', tier: 'ui', size: 48, fallbackEmoji: '🏆', tint: '#8B5CF6' },
   '✅': { assetKey: 'icon-check', tier: 'ui', size: 48, fallbackEmoji: '✅', tint: '#8B5CF6' },
+  '📝': { assetKey: 'icon-memo', tier: 'ui', size: 48, fallbackEmoji: '📝', tint: '#8B5CF6' },
+  '🔍': { assetKey: 'icon-search', tier: 'ui', size: 48, fallbackEmoji: '🔍', tint: '#8B5CF6' },
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -229,23 +254,54 @@ const TIER_MAPS: Record<IconTier, Record<string, IconMapping>> = {
 }
 
 /**
+ * When no explicit tier is given and the emoji is not in the flat master map,
+ * try to resolve it unambiguously through a single tier-specific map.
+ *
+ * This prevents dynamic/server-provided emojis (theme emojis, status icons,
+ * icebreaker challenge emojis, etc.) from silently falling back to native emoji
+ * when a proprietary asset exists in only one context. Emojis that appear in
+ * multiple tier maps remain ambiguous and still require an explicit `tier` prop.
+ */
+function resolveUnambiguousTierMapping(emoji: string): IconMapping | undefined {
+  let match: IconMapping | undefined
+  for (const tierMap of Object.values(TIER_MAPS)) {
+    const mapping = tierMap[emoji]
+    if (!mapping) continue
+    if (match) {
+      // Ambiguous: emoji exists in more than one tier map.
+      return undefined
+    }
+    match = mapping
+  }
+  return match
+}
+
+/**
  * Look up an icon mapping by emoji character, with an optional tier override.
  *
  * When `tier` is provided, the lookup checks the tier-specific map first.
  * If no tier-specific match is found, it falls back to the global flat map.
  * This allows the same emoji to resolve to different assets depending on
  * context (e.g. 🔥 as a chemistry badge vs. an icebreaker reaction).
+ *
+ * When `tier` is omitted and the emoji is not in the flat map, the lookup
+ * attempts an unambiguous tier-specific resolution (see
+ * `resolveUnambiguousTierMapping`).
  */
 export function getIconMapping(emoji: string, tier?: IconTier): IconMapping | undefined {
   if (tier) {
     const tierMatch = TIER_MAPS[tier][emoji]
     if (tierMatch) return tierMatch
   }
-  return EMOJI_TO_ICON_MAP[emoji]
+  return EMOJI_TO_ICON_MAP[emoji] ?? resolveUnambiguousTierMapping(emoji)
 }
 
 /**
  * Check if a given emoji has a proprietary icon replacement.
+ *
+ * Note: this intentionally mirrors the legacy flat-map-only check so callers
+ * that gate rendering on it behave consistently. For a tier-aware check, use
+ * `getIconMapping(emoji, tier) !== undefined`.
  */
 export function hasIconMapping(emoji: string): boolean {
   return emoji in EMOJI_TO_ICON_MAP

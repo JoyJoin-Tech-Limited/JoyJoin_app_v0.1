@@ -109,10 +109,14 @@
   }
 
   &__location-pill-chevron {
-    font-size: 16rpx;
-    line-height: 1;
-    color: $color-text-white;
+    width: 10rpx;
+    height: 10rpx;
     margin-left: 8rpx;
+    border-right: 3rpx solid $color-text-white;
+    border-bottom: 3rpx solid $color-text-white;
+    transform: rotate(45deg);
+    transform-origin: 70% 70%;
+    opacity: 0.9;
   }
 
   &__greeting-line {

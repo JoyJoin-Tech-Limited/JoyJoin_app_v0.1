@@ -1,6 +1,7 @@
 # JoyJoin 性能优化指南
 
-> **Last updated:** 2026-06-16 (Profile page predictive prefetch + offline-first shell + share-card degradation)
+> **Last updated:** 2026-06-17 (Profile-linked subpackage migration + `usePageTTI` instrumentation with cold ≤2000 ms / warm ≤800 ms budgets)
+> **Previous:** 2026-06-16 (Profile page predictive prefetch + offline-first shell + share-card degradation)
 > **Previous:** 2026-05-13 (device baseline tiering: tier-1 Gen Z 8GB+/120Hz/5G primary, degradation path secondary)
 > **Previous:** 2026-05-22 (archetype asset optimization: local spritesheet, WebP-first canvas, PNG moved to CDN, onboarding subpackage 1.4M → 788K)
 
@@ -99,6 +100,15 @@ engine.stage('events', async () => {
 
 See `docs/mini-program/mini-program-data-fetching.md` for query key mapping and `apps/mini-program/src/lib/prefetchEngine.ts` for the engine implementation.
 
+#### 页面 TTI 监控（2026-06-17）
+
+`apps/mini-program/src/hooks/usePageTTI.ts` 提供轻量级小程序页面首达可交互时间（Time to Interactive）埋点：
+
+- 以 `useLoad` / `useDidShow` 作为起点，`ready` prop（可选）作为内容可交互信号。
+- 预算：冷启动 ≤ 2000 ms，温启动 / 预载分包 ≤ 800 ms。
+- 通过 `logInfo` 上报，并在微信环境回退到 `wx.reportAnalytics('page_tti', ...)`。
+- 不阻塞渲染、不抛异常、无副作用；已应用于 `pages/profile-linked/*` 迁移页面。
+
 #### Profile 页预取与离线韧性（2026-06-16）
 
 `apps/mini-program/src/pages/profile/index.tsx` 在数据稳定后通过 `PrefetchEngine` 预取相邻的 Events 与 Connections shells，减少 tab 切换冷启动耗时。同时采用以下策略保证弱网/离线体验：
@@ -149,7 +159,7 @@ queryClient.prefetchQuery({
 
 #### Archetype assets
 
-The 12 archetype full-size WebP files (~18–25 KB each, ~250 KB total) are served from CDN and **preloaded during idle time** (intro screen) so the slot machine animation and result reveal are instant. The slot machine spritesheet (20 KB) is bundled locally in the preloaded onboarding subpackage — zero network on animation start.
+The 12 archetype full-size WebP files (~18–25 KB each, ~250 KB total) are served from CDN. The **primary archetype image is preloaded on test completion and again on the results page mount** so the result reveal is instant; the remaining images load on demand. The slot machine spritesheet (20 KB) is bundled locally in the preloaded onboarding subpackage — zero network on animation start.
 
 **Canvas poster generation** draws WebP primary with CDN PNG fallback (PNG moved off-subpackage to CDN in 2026-05-22, saving ~672 KB). The colored-circle fallback (archetype initial + accent color) renders if both formats fail.
 
@@ -191,6 +201,14 @@ apps/user-client/src/assets/matching/
 
 `apps/mini-program` 是当前 **launch-primary** WeChat 客户端；性能预算与分包决策优先在这里验证，再对照 web。权威策略说明见 [`apps/mini-program/README.md`](../apps/mini-program/README.md) 的 *Package Loading Strategy*。
 
+**当前主包预算与资产策略（2026-06-18）：**
+
+- 压缩后主包约为 **1.88 MB**，保留约 120 KB 的余量（WeChat 主包硬上限 2 MB）。
+- 仅 6 个核心 Xiaoyue  mascot 精灵状态（`welcome`/`idle`/`coach`/`loading`/`listening`/`thinking`）作为本地兜底打包；其余 14 个状态走 CDN。
+- `status-icons`、`info-labels`（semantic）、`ui` 三个 icon tier 在构建时剔除 `@3x`，以 `@1x`/`@2x` 打包；3x 设备回退到 `@2x`。
+- 48 个兴趣插画（taxonomy v2.0）全部走 CDN，统一通过 `packages/shared/src/interests.ts` 中的 `imageUrl` + `cdnAsset()` 解析。
+- `TARO_APP_CDN_BASE_URL` 在 `apps/mini-program/config/index.ts` 与 CI workflow 中均默认回退到 `https://joyjoinapp.com/static`，确保生产构建不会丢失 CDN 前缀。
+
 **代码中的真实配置（与文档同步）：**
 
 | 机制 | 位置 |
@@ -200,7 +218,8 @@ apps/user-client/src/assets/matching/
 | Pool-registration subpackage | `root: pages/pool-registration`，1 个页面；pool-specific hero backdrops 在分包内 `assets/`，Batch C 仪式化资源走 CDN |
 | Matching-status subpackage | `root: pages/matching-status`，1 个页面 |
 | Icebreaker-session subpackage | `root: pages/icebreaker-session`，2 个页面 |
-| 预下载 | `MINI_PROGRAM_PRELOAD_RULES`：从 `index`/`login` 预拉 `pages/onboarding`；从 `event-detail`/`events` 预拉 `pages/pool-registration` |
+| Profile-linked subpackage | `root: pages/profile-linked`，4 个页面（edit-profile, rewards, invite, terms）；从 `pages/profile` 预拉 |
+| 预下载 | `MINI_PROGRAM_PRELOAD_RULES`：从 `index`/`login` 预拉 `pages/onboarding`；从 `event-detail`/`events` 预拉 `pages/pool-registration`；从 `profile` 预拉 `pages/profile-linked` |
 | 按需注入 | `app.config.ts` 中 `lazyCodeLoading: 'requiredComponents'` |
 
 **可重复探测：** 仓库根目录 `scripts/measure-mini-program-cold-entry.sh`（需本机微信开发者工具 CLI）用于冷启动与 onboarding 预载代理场景，详见 mini-program README *Cold-entry timing probe*。
@@ -209,7 +228,7 @@ apps/user-client/src/assets/matching/
 
 - **默认顺序：** 普通分包 -> `preloadRule` -> 资源与首屏清理 -> 再评估是否值得上独立分包
 - **主包约束：** tabBar 页面必须留在主包
-- **优先对象：** 人格测试、结果页、以及其他重资源但非 tabBar 的深链路页面
+- **优先对象：** 人格测试、结果页、profile-linked 辅助页，以及其他重资源但非 tabBar 的深链路页面
 - **何时考虑独立分包：** 只有在普通分包和 preload 之后，目标页冷启动或首达时间仍明显超预算，并且收益足以覆盖额外 bootstrap 成本
 - **JoyJoin 当前成本点：** `apps/mini-program/src/app.ts` 与 `apps/mini-program/src/providers/AuthProvider.tsx` 持有 app 级 providers；独立分包若落地，必须设计自举能力，不能默认依赖现有全局启动链
 - **注意：** 异步分包/异步加载可以补充延迟加载，但不能绕过微信分包边界规则
@@ -269,7 +288,10 @@ When implementing features that push Primary-tier hardware, always provide a fal
 | Admin code | Must not be imported into `apps/user-client` |
 | Matching background | Reuse `matching/shared/matching-bg.svg` via `MatchingStateLayout` — never duplicate |
 | Hero images | Use WebP + `decoding="async"`; avoid large PNG |
-| Archetype assets | Preload during idle time (intro screen); spritesheet bundled locally; canvas draws WebP primary with CDN PNG fallback |
+| Archetype assets | Preload primary image on test completion + results mount; spritesheet bundled locally; do not bulk-preload all 12 full-size images in the app-launch critical path; canvas draws WebP primary with CDN PNG fallback |
+| Interest illustrations | 48 v2.0 interest cards are CDN-only; canonical `imageUrl` in `packages/shared/src/interests.ts`; resolve via `cdnAsset()` |
+| Mascot sprite sheets | Bundle only 6 core states locally; remaining 14 states CDN-primary with local fallback on `onError` |
+| Bundled icon density | `status`/`semantic`/`ui` tiers ship at `@1x`/`@2x`; `@3x` stripped at build to save package size |
 | Asset prefetching | Gate on real activity state — do not prefetch for no-activity users. Primary tier may prefetch more aggressively. |
-| Mini Program package loading | Keep tabBar pages in the main package; put heavy non-tab flows (onboarding, pool-registration, matching-status, icebreaker-session) in subpackages with `preloadRule`; justify independent subpackages with measured wins and a self-contained bootstrap plan |
+| Mini Program package loading | Keep tabBar pages in the main package; put heavy non-tab flows (onboarding, pool-registration, matching-status, icebreaker-session) in subpackages with `preloadRule`; justify independent subpackages with measured wins and a self-contained bootstrap plan; stay under ~1.88 MB compressed main package |
 | Device capability gate | Use `getSystemInfo` / `benchmarkLevel` to detect tier at runtime; never assume uniform low-end |

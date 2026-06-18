@@ -3,8 +3,10 @@
  * Generate archetype head icons (240×240px) from full-body PNG masters.
  *
  * Extraction strategy:
- *   - Crop the upper ~45% of each full-body illustration (head region)
- *   - Center-crop horizontally, then resize to 240×240 with cover fit
+ *   - Find the bounding box of non-transparent pixels in the source PNG
+ *   - Crop to that content region
+ *   - Scale with "contain" fit onto a 240×240 transparent canvas so the
+ *     full character head stays visible inside a circular badge
  *   - Output WebP primary to src/assets/icons/archetype/
  *
  * The 240px resolution gives @2x crispness at 120rpx display size and
@@ -27,7 +29,6 @@ const INPUT_DIR = path.join(ROOT, 'assets-source/personality/archetypes')
 const OUTPUT_DIR = path.join(ROOT, 'src/assets/icons/archetype')
 
 const HEAD_SIZE = 240
-const CROP_TOP_RATIO = 0.45 // upper 45% of the illustration
 
 const MANIFEST = [
   { base: 'archetype-corgi', key: 'corgi' },
@@ -43,6 +44,45 @@ const MANIFEST = [
   { base: 'archetype-turtle', key: 'turtle' },
   { base: 'archetype-cat', key: 'cat' },
 ]
+
+async function getContentBbox(sharpInstance) {
+  const { data, info } = await sharpInstance
+    .raw()
+    .ensureAlpha()
+    .toBuffer({ resolveWithObject: true })
+
+  const { width, height } = info
+  let minX = width
+  let minY = height
+  let maxX = 0
+  let maxY = 0
+  let hasPixel = false
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const idx = (y * width + x) * 4
+      const alpha = data[idx + 3]
+      if (alpha > 10) {
+        hasPixel = true
+        minX = Math.min(minX, x)
+        minY = Math.min(minY, y)
+        maxX = Math.max(maxX, x)
+        maxY = Math.max(maxY, y)
+      }
+    }
+  }
+
+  if (!hasPixel) {
+    return { left: 0, top: 0, width, height }
+  }
+
+  return {
+    left: minX,
+    top: minY,
+    width: maxX - minX + 1,
+    height: maxY - minY + 1,
+  }
+}
 
 async function main() {
   const { default: sharp } = await import('sharp')
@@ -63,20 +103,37 @@ async function main() {
     const inputStat = fs.statSync(inputPng)
     totalIn += inputStat.size
 
-    const metadata = await sharp(inputPng).metadata()
-    const w = metadata.width
-    const h = metadata.height
+    const inputSharp = sharp(inputPng)
+    const bbox = await getContentBbox(inputSharp.clone())
 
-    // Crop the head region: top 45%, centered horizontally, square-ish region
-    // Use the smaller of width/height*0.45 for crop height to avoid over-cropping
-    const cropH = Math.round(h * CROP_TOP_RATIO)
-    const cropW = Math.min(w, cropH)
-    const left = Math.round((w - cropW) / 2)
-    const top = 0
+    // Crop to content bbox, then contain-fit onto a 240x240 transparent canvas
+    const croppedBuf = await inputSharp
+      .extract(bbox)
+      .toBuffer()
 
-    const webpBuf = await sharp(inputPng)
-      .extract({ left, top, width: cropW, height: cropH })
-      .resize(HEAD_SIZE, HEAD_SIZE, { fit: 'cover', position: 'center' })
+    const cropped = sharp(croppedBuf)
+    const metadata = await cropped.metadata()
+    const contentW = metadata.width
+    const contentH = metadata.height
+    const scale = Math.min(HEAD_SIZE / contentW, HEAD_SIZE / contentH)
+    const resizeW = Math.round(contentW * scale)
+    const resizeH = Math.round(contentH * scale)
+    const left = Math.round((HEAD_SIZE - resizeW) / 2)
+    const top = Math.round((HEAD_SIZE - resizeH) / 2)
+
+    const resizedBuf = await cropped
+      .resize(resizeW, resizeH, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .toBuffer()
+
+    const webpBuf = await sharp({
+      create: {
+        width: HEAD_SIZE,
+        height: HEAD_SIZE,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      },
+    })
+      .composite([{ input: resizedBuf, left, top }])
       .webp({ quality: 85, effort: 6, alphaQuality: 100 })
       .toBuffer()
 
@@ -86,8 +143,8 @@ async function main() {
     totalOut += outStat.size
 
     console.log(
-      `${key}: ${w}×${h} raw → crop ${cropW}×${cropH} → ${HEAD_SIZE}×${HEAD_SIZE} webp ` +
-        `(${(outStat.size / 1024).toFixed(1)}KB)`,
+      `${key}: ${metadata.width}×${metadata.height} content → ${resizeW}×${resizeH} ` +
+        `on ${HEAD_SIZE}×${HEAD_SIZE} canvas (${(outStat.size / 1024).toFixed(1)}KB)`,
     )
   }
 

@@ -37,8 +37,7 @@ import LoadingScreen from '../../components/loading/LoadingScreen'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import StatusCard from '../../components/ui/StatusCard'
-import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
-import CheckBadge from '../../components/ui/CheckBadge'
+import IntentCard from '../../components/intent/IntentCard'
 import XiaoyueChatBubble from '../../components/mascot/XiaoyueChatBubble'
 
 import {
@@ -236,7 +235,7 @@ export default function PoolRegistrationPage() {
 
   // Pre-warm bundled intent icons and the error-state mascot so they render
   // instantly when needed.
-  usePreloadIntentIcons(!!pool && !authLoading)
+  usePreloadIntentIcons(INTENT_FLOW_OPTIONS, !!pool && !authLoading)
 
   useEffect(() => {
     if (!pool || authLoading) return
@@ -461,8 +460,6 @@ export default function PoolRegistrationPage() {
   )
 
   const handleIntentToggle = useCallback((value: string) => {
-    haptics('light')
-
     if (value === INTENT_FLEXIBLE_OPTION.value) {
       setFormState((currentState) => {
         discoverAnalytics.track('registration_intent_toggled', poolId, { value, flexible: true })
@@ -531,37 +528,21 @@ export default function PoolRegistrationPage() {
           const isDisabled = isCapReached && !isExplicitlySelected && !isFlexibleOption
 
           return (
-            <View
+            <IntentCard
               key={option.value}
-              className={[
-                'pool-reg__intent-card',
-                isExplicitlySelected || isDimmed ? 'pool-reg__intent-card--selected' : '',
-                isDimmed ? 'pool-reg__intent-card--dimmed' : '',
-                isDisabled ? 'pool-reg__intent-card--disabled' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              hoverClass={isDisabled ? '' : 'pool-reg__intent-card--hover'}
-              onClick={() => !isDisabled && handleIntentToggle(option.value)}
-              role='button'
-              aria-pressed={isExplicitlySelected}
-              aria-disabled={isDisabled}
-              aria-label={`${option.label}：${option.description}${isDisabled ? '（已达上限）' : ''}`}
-            >
-              {option.emoji != null ? (
-                <JoyJoinIcon
-                  emoji={option.emoji}
-                  tier='intent'
-                  size={48}
-                  className='pool-reg__intent-icon'
-                />
-              ) : null}
-              <Text className='pool-reg__intent-label'>{option.label}</Text>
-              <Text className='pool-reg__intent-subtitle'>{option.description}</Text>
-              {isExplicitlySelected && (
-                <CheckBadge className='pool-reg__intent-check' />
-              )}
-            </View>
+              option={{
+                value: option.value,
+                label: option.label,
+                emoji: option.emoji,
+                subtitle: option.description,
+              }}
+              selected={isExplicitlySelected}
+              dimmed={isDimmed}
+              disabled={isDisabled}
+              onClick={() => handleIntentToggle(option.value)}
+              iconSize={48}
+              testId={`pool-reg-intent-${option.value}`}
+            />
           )
         })}
       </View>
@@ -801,7 +782,8 @@ export default function PoolRegistrationPage() {
   const resumeNotice = resumeContext ? getResumeNoticeCopy(resumeContext) : null
 
   return (
-    <ScrollView className='pool-reg' scrollY enhanced showScrollbar={false} scrollIntoView={scrollErrorId}>
+    <View className='pool-reg'>
+      <ScrollView className='pool-reg__scroll' scrollY enhanced showScrollbar={false} scrollIntoView={scrollErrorId}>
       {step === 0 ? (
         <>
           <View className='pool-reg__header'>
@@ -974,7 +956,7 @@ export default function PoolRegistrationPage() {
           </Card>
 
           <Card className='pool-reg__panel'>
-            <Text className='pool-reg__section-kicker'>Step 3</Text>
+            <Text className='pool-reg__section-kicker'>Step 3 · 细节</Text>
             <Text className='pool-reg__section-title'>再补几项细节，让匹配更顺</Text>
             <Text className='pool-reg__section-copy'>
               语言和具体偏好都可以留空。你填得越清楚，悦仔越容易帮你把这一桌的节奏调顺。
@@ -1073,6 +1055,7 @@ export default function PoolRegistrationPage() {
           />
         </View>
       ) : null}
+      </ScrollView>
 
       <View className='pool-reg__footer'>
         {step === 0 ? (
@@ -1101,6 +1084,6 @@ export default function PoolRegistrationPage() {
           </View>
         )}
       </View>
-    </ScrollView>
+    </View>
   )
 }

@@ -47,7 +47,7 @@ export function HalfwayMilestone({
       <View className='halfway-milestone__badge'>
         {badgeError ? (
           <View className='halfway-milestone__badge-fallback' aria-hidden='true'>
-            <Text className='halfway-milestone__badge-fallback-icon'>🎯</Text>
+            <JoyJoinIcon emoji='🎯' size={48} className='halfway-milestone__badge-fallback-icon' />
           </View>
         ) : (
           <Image
@@ -68,7 +68,7 @@ export function HalfwayMilestone({
         <Text className='halfway-milestone__text-eyebrow'>半程已过</Text>
         <Text className='halfway-milestone__text-main'>越来越了解你的性格了</Text>
         <Text className='halfway-milestone__text-sub'>
-          悦仔为你加油 <JoyJoinIcon emoji='✨' size={28} />
+          悦仔为你加油 <JoyJoinIcon emoji='✨' tier='mood' size={28} />
         </Text>
       </View>
     </View>

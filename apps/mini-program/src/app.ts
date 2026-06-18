@@ -5,20 +5,19 @@ import { useAuth } from './hooks/useAuth'
 import { logInfo, logWarn } from './lib/utils/logger'
 import { buildPaymentVerificationUrl, decidePendingOrderAutoResume } from './lib/payment/paymentPendingOrder'
 import { clearPendingOrderStorage, getPendingOrderStorageSnapshot } from './lib/payment/paymentPendingOrderStorage'
-import { authenticateMiniProgramUser, getUserState, type ApiError } from './lib/api/api'
+import { authenticateMiniProgramUser, checkReturningMiniProgramWeChatUser, getUserState, type ApiError } from './lib/api/api'
 import { seedMiniProgramAuthSession, isTransportApiError } from './lib/api/authSession'
 import { useQueryClient } from '@tanstack/react-query'
 import AuthProvider from './providers/AuthProvider'
 import { DynamicAccentProvider } from './providers/DynamicAccentProvider'
 import { AchievementProvider } from './providers/AchievementProvider'
 import AchievementPopup from './components/AchievementPopup'
+import TabBarStateBridge from './components/TabBarStateBridge'
 import './app.scss'
 import { loadBrandFonts } from './lib/utils/brandFont'
 import { useProfessionRetry } from './hooks/useProfessionRetry'
 import { preloadCdnAssets, ARCHETYPE_GLYPH_ASSETS } from './hooks/usePreloadCdnIcons'
-import { preloadImagesWithDiagnostics } from './lib/utils/imagePreload'
-import { cdnAsset } from './lib/utils/cdnAssets'
-import { ONBOARDING_CRITICAL_CDN_ASSETS } from './lib/utils/routePreloadAssets'
+import { preloadOnboardingAssets } from './lib/utils/onboardingPreload'
 
 function AutoLoginBridge() {
   const { isAuthenticated, isLoading } = useAuth()
@@ -33,9 +32,19 @@ function AutoLoginBridge() {
 
     logInfo('[AutoLogin] Attempting silent auto-login for returning user')
 
-    void authenticateMiniProgramUser()
-      .then(() => getUserState())
+    void checkReturningMiniProgramWeChatUser()
+      .then(({ exists }) => {
+        if (!exists) {
+          // Brand-new users must stay in guest mode until they explicitly tap
+          // the WeChat-login CTA on the personality-test result page. Silent
+          // sign-up here would skip the slot animation, result page, and auth moment.
+          logInfo('[AutoLogin] No existing WeChat user; staying guest for result-page login')
+          return null
+        }
+        return authenticateMiniProgramUser().then(() => getUserState())
+      })
       .then((userState) => {
+        if (!userState) return
         seedMiniProgramAuthSession(userState, queryClient)
         logInfo('[AutoLogin] Silent auto-login successful', { nextStep: userState.nextStep })
       })
@@ -168,14 +177,11 @@ function App({ children }: PropsWithChildren<any>) {
     // warm when the user reaches profile / matching / results screens.
     void preloadCdnAssets(ARCHETYPE_GLYPH_ASSETS)
 
-    // Preload critical onboarding assets (intro animation, mascot expressions)
-    // at app launch so they're cached before the user enters the personality test.
-    // Animated WebP cannot be bundled locally on iOS, so preloading is the only
-    // way to achieve instant first paint.
-    void preloadImagesWithDiagnostics(
-      ONBOARDING_CRITICAL_CDN_ASSETS.map(cdnAsset),
-      'app-launch:onboarding',
-    )
+    // Preload the full onboarding asset bundle in staggered tiers so every
+    // raster the user may encounter (intro animation, test expressions,
+    // personality emoji icons, archetype images, sprite sheets, ceremony hero)
+    // is warm before first entrance. Weak networks are skipped automatically.
+    void preloadOnboardingAssets()
   })
 
   return createElement(
@@ -191,6 +197,7 @@ function App({ children }: PropsWithChildren<any>) {
         createElement(PendingOrderResumeBridge),
         createElement(ProfessionRetryBridge),
         createElement(AchievementPopup),
+        createElement(TabBarStateBridge),
         children,
       ),
     ),

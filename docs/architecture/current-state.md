@@ -178,7 +178,7 @@ Boundary:
 ### 6. Runtime deployment topology
 
 **Active production path**
-- `.github/workflows/cicd.yml` deploys by SSHing into the remote server (`SERVER_IP` secret), resetting the checked-out repo, changing into `~/JoyJoin/deployment`, and then running `docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans`.
+- `.github/workflows/deploy-staging.yml` (push to `main`) and `.github/workflows/deploy-production.yml` (push to `release`) deploy by SSHing into the remote server (`SERVER_IP` secret), rsyncing code to `~/JoyJoin`, and running `deployment/scripts/deploy-staging.sh` or `deployment/scripts/deploy-production.sh` respectively. The production job is gated by the GitHub `production` environment.
 - `deployment/nginx/joyjoin.conf` is the public edge configuration for host Nginx serving `joyjoinapp.com`, `www.joyjoinapp.com`, `admin.joyjoinapp.com`, and `api.joyjoinapp.com`.
 - `deployment/docker-compose.nginx.yml` runs the active runtime containers: `joyjoin-api`, `joyjoin-user`, and `joyjoin-admin`.
 
@@ -204,7 +204,7 @@ Boundary:
 - Mini Program provider: `apps/mini-program/src/providers/` (`AuthProvider.tsx`, achievement/accent providers)
 - Native WeChat custom tab bar implementation: `apps/mini-program/src/native-custom-tab-bar/`
 - The build copies `apps/mini-program/src/native-custom-tab-bar/` into the runtime `custom-tab-bar/` directory; `apps/mini-program/src/custom-tab-bar/` is not the active runtime path.
-- Tab selection / center CTA sync: `apps/mini-program/src/lib/navigation/tabBarConfig.ts`, `apps/mini-program/src/lib/navigation/centerTabRouting.ts`, `apps/mini-program/src/hooks/navigation/useCustomTabBarSync.ts`
+- Tab selection / center CTA sync: `apps/mini-program/src/lib/navigation/tabBarConfig.ts`, `apps/mini-program/src/lib/navigation/centerTabRouting.ts`, `apps/mini-program/src/lib/navigation/tabBarState.ts`, `apps/mini-program/src/hooks/navigation/useCustomTabBarSync.ts`, `apps/mini-program/src/hooks/navigation/useTabBarStateBridge.ts`
 - Active custom-tab-bar constraints live in `apps/mini-program/README.md` and `AGENTS.md` § Custom tab bar geometry; keep the native tree within `cover-view` nesting rules and treat shadow, gradient, and overflow-driven protrusions as compatibility-sensitive. Center button is a root sibling (not nested inside surface) to avoid `cover-view` clipping.
 - App-level config / lifecycle: `apps/mini-program/src/app.ts` (provider setup), `apps/mini-program/src/app.config.ts` (`lazyCodeLoading: 'requiredComponents'`, `tabBar.custom`, window defaults)
 - Cross-platform contract or pure business rule: `packages/shared/src/` (`api.ts`, `centerTabRouting.ts`, `hongKongTime.ts`, `onboarding.ts`)

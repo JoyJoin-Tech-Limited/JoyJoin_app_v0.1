@@ -2,7 +2,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { listGuardrailsAppSourcePaths } from '../guardrails-app-sources.mjs';
+import { listGuardrailsAppSourcePaths, isPlaceholder } from '../guardrails-app-sources.mjs';
 
 const trackedFiles = Array.from(new Set(
   execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], { encoding: 'utf8' })
@@ -177,25 +177,12 @@ function shouldScanForSecrets(file) {
   );
 }
 
-function isPlaceholder(value) {
-  const normalized = value.trim().toLowerCase();
-  return [
-    'example',
-    'placeholder',
-    'replace',
-    'change-me',
-    'changeme',
-    'your_',
-    '<',
-    '${{',
-    '$',
-    'localhost',
-    '127.0.0.1',
-  ].some((token) => normalized.includes(token));
-}
-
 for (const file of trackedFiles) {
   if (!shouldScanForSecrets(file)) continue;
+  if (!fs.existsSync(file)) {
+    // File may have been deleted during development but still be listed by git ls-files.
+    continue;
+  }
   const content = fs.readFileSync(file, 'utf8');
   const lines = content.split(/\r?\n/);
   lines.forEach((line, index) => {

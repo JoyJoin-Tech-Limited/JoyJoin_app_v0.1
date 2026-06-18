@@ -62,7 +62,7 @@ npm run seed:test-data
 Creates:
 
 - **8 test users** — diverse profiles (genders, cities, archetypes, completion states)
-- **1 test admin** — `test_admin_seed` / `TestAdmin123!` (super_admin)
+- **1 test admin** — `test_admin_seed` / `$TEST_ADMIN_PASSWORD` (super_admin)
 - **1 test event pool** — "QA 测试饭局 — 周五夜聊" (Shenzhen, active)
 - **Feature flags** — beta flags configured (see §C for list)
 
@@ -272,7 +272,7 @@ Use the POST `/api/test/admin/users` and `/api/test/admin/event-pools` endpoints
 
 ## G. Staging Environment for 体验版 Test Pricing
 
-JoyJoin supports a same-server staging API (`staging.joyjoinapp.com`) that lets the WeChat 体验版 charge ¥0.01 test prices without affecting production data or real pricing.
+JoyJoin supports a same-server staging API (`staging.joyjoinapp.com`) and staging admin portal (`staging.admin.joyjoinapp.com`) that let the WeChat 体验版 charge ¥0.01 test prices without affecting production data or real pricing.
 
 ### How it works
 
@@ -285,10 +285,14 @@ JoyJoin supports a same-server staging API (`staging.joyjoinapp.com`) that lets 
 See `deployment/README.md` §“同服务器 staging（体验版测试价）” for the full steps. Short version:
 
 ```bash
-cd ~/JoyJoin/deployment
-docker compose -f docker-compose.staging.yml up -d --build
-# apply migrations manually; staging does not auto-run DDL
+ssh -i "~/Desktop/Business idea/JoyJoin/SSH/OpenCode.pem" root@1.12.243.104
+cd ~/JoyJoin
+./deployment/scripts/deploy-staging.sh
 ```
+
+The script reloads Nginx, rebuilds the staging API + admin containers, applies migrations, and health-checks both `staging.joyjoinapp.com` and `staging.admin.joyjoinapp.com`.
+
+Once the initial manual deploy is done, every push to `main` automatically triggers `.github/workflows/deploy-staging.yml`, which re-runs the same steps from CI. Staging secrets are kept in sync from GitHub (`STAGING_DATABASE_URL`, `STAGING_SESSION_SECRET`, `STAGING_ADMIN_CREATE_SECRET_KEY`, `STAGING_POSTGRES_PASSWORD`) while app secrets (WeChat, AI, WeChat Pay) are reused from production secrets.
 
 ### Mini-program build
 
@@ -307,6 +311,16 @@ Upload the result as a 体验版 and add these domains in the WeChat admin conso
 
 - `https://staging.joyjoinapp.com`
 - `wss://staging.joyjoinapp.com`
+
+### Managing staging data
+
+Use the isolated staging admin portal to create event pools, manage feature flags, and inspect staging users without touching production:
+
+```text
+https://staging.admin.joyjoinapp.com
+```
+
+The staging admin portal proxies `/api/*` to the staging API, so any event created there appears in the 体验版 when `TARO_APP_API_BASE_URL=https://staging.joyjoinapp.com`.
 
 ### Verifying test pricing
 

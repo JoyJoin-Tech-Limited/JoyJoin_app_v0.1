@@ -1,9 +1,9 @@
 # Lovart Design Brief: Functional Icon Batch A
 
-> **Status:** 📝 Ready for commission
+> **Status:** ✅ Integrated (2026-06-18)
 > **Goal:** Replace generic Unicode emoji across high-traffic functional surfaces with cohesive, brand-aligned proprietary icons. This batch covers icebreaker reactions, interest categories, and social intent selectors.
 > **Target:** WeChat Mini Program (Taro)
-> **Integration:** Maps into `emojiToIconMap.ts` via the new `tier` override system (foundation PR shipped 2026-05-27).
+> **Integration:** Maps into `emojiToIconMap.ts` via the `tier` override system (foundation PR shipped 2026-05-27). **2026-06-18 update:** the original 16 icons were joined by six additional reaction icons cropped from a Lovart 5×5 status/UI grid (`💰😏😎💜😅😈`), bringing the live `reaction-icons` set to 13 assets. `status-icons`, `ui`, and `info-labels` tiers were also populated from the same grid.
 
 ---
 

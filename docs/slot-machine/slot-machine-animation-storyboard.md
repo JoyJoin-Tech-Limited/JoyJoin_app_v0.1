@@ -165,7 +165,7 @@ if (distToTarget > stepsRemaining + 1) {
 ```
 
 #### Accessibility Note
-- **Reduced Motion**: Skip near-miss entirely, jump straight to landing
+- **Reduced Motion**: The slot-machine result reveal is now a mandatory default experience; it is not bypassed by `prefers-reduced-motion`. The only bypass is the server-driven `personalitySlotAnimationEnabled` feature flag.
 - **Cognitive Load**: Near-miss should feel intentional, not like an error
 
 ---
@@ -351,7 +351,7 @@ interface StateConfig {
 - Reduce particle count (40 max)
 - Use CSS transforms over position changes
 - Leverage `will-change` for animated elements
-- Implement reduced motion preferences
+- Respect `prefers-reduced-motion` on all optional effects; the slot-machine reveal is intentionally mandatory and gated only by the `personalitySlotAnimationEnabled` feature flag
 - Disable effects below 30fps threshold
 
 **GPU Acceleration**:
@@ -366,8 +366,8 @@ interface StateConfig {
 
 **Reduced Motion**:
 ```typescript
-if (prefersReducedMotion) {
-  // Skip all spinning phases
+if (!features.personalitySlotAnimationEnabled) {
+  // Feature-flag bypass: skip all spinning phases
   setCurrentIndex(targetIndex);
   setState("landed");
   // Simplified celebration (no particles)
@@ -375,6 +375,8 @@ if (prefersReducedMotion) {
   onLand();
 }
 ```
+
+> Product note (2026-06-18): `prefers-reduced-motion` and degradation-tier detection no longer bypass the slot animation. The feature flag is the only kill switch.
 
 **Screen Reader Announcements**:
 ```jsx

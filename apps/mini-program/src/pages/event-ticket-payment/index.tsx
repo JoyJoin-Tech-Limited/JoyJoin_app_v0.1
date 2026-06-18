@@ -905,7 +905,7 @@ export default function EventTicketPaymentPage() {
 
         {/* ── Trust & Policy ── */}
         <View className='ticket-trust-row'>
-          <Text className='ticket-trust-row__text'>微信支付 · 安全加密 · 未成行可退</Text>
+          <Text className='ticket-trust-row__text'>微信支付 · 安全加密</Text>
         </View>
         <View
           className='ticket-refund-link'

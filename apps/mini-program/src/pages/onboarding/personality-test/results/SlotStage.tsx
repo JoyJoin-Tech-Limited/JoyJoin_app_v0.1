@@ -30,7 +30,6 @@ interface SlotStageProps {
   isSlowNetwork: boolean
   progress: number
   phaseText?: string
-  shouldReduceMotion?: boolean
 }
 
 /* ── memoised card row (prevents 47 re-renders every tick) ─────────── */
@@ -95,7 +94,6 @@ export default function SlotStage({
   isSlowNetwork,
   progress,
   phaseText,
-  shouldReduceMotion,
 }: SlotStageProps) {
   /* internal unbounded track position */
   const [displayIndex, setDisplayIndex] = useState(reelIndex)
@@ -182,36 +180,6 @@ export default function SlotStage({
         : slotPhase === 'slowing'
           ? '命格卡面正在减速，即将锁定'
           : '命格卡面揭晓中'
-
-  // Cognitive accessibility: when reduced motion is active, show a static result card
-  // with a simple fade-in instead of the spinning slot machine.
-  if (shouldReduceMotion) {
-    const targetArchetype = extendedArchetypes[displayIndex] ?? ARCHETYPE_SEQUENCE[0]
-    const targetVisual = getArchetypeVisual(targetArchetype)
-    return (
-      <View className='personality-results__immersive-shell personality-results__immersive-shell--reduced' role='status' aria-live='polite' aria-label={`命格卡面已锁定：${ARCHETYPE_BY_ID[targetArchetype]?.nameCn ?? targetArchetype}`}>
-        <Text className='personality-results__immersive-eyebrow'>JoyJoin 原型揭晓</Text>
-        <Text className='personality-results__immersive-title'>你的命格卡面已锁定</Text>
-        <Card
-          className='personality-results__slot-card personality-results__slot-card--active'
-          style={{
-            background: targetVisual.accentSurface,
-            borderColor: targetVisual.accentBorder,
-            boxShadow: `0 18rpx 48rpx ${targetVisual.accentGlow}`,
-          }}
-        >
-          <ArchetypeSpritesheet
-            archetype={targetArchetype}
-            className='personality-results__slot-image'
-            fallbackColor={targetVisual.accentSoft}
-          />
-          <Text className='personality-results__slot-name'>
-            {ARCHETYPE_BY_ID[targetArchetype]?.nameCn ?? targetArchetype}
-          </Text>
-        </Card>
-      </View>
-    )
-  }
 
   return (
     <View className='personality-results__immersive-shell' role='status' aria-live='polite' aria-label={slotAriaLabel}>

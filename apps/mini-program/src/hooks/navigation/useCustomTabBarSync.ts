@@ -1,27 +1,16 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import Taro, { useDidShow, useDidHide } from '@tarojs/taro'
-import { useQuery } from '@tanstack/react-query'
 import {
-  getMyBlindBoxEvents,
-  getMyPoolRegistrations,
-  type BlindBoxEventSummary,
-  type PoolRegistrationSummary,
-} from '@shared/api'
-import { STALE_TIME_DEFAULT_MS } from '../../lib/utils/uiConstants'
-import { apiRequest } from '../../lib/api/api'
-import { getMiniProgramCenterState, type CustomTabBarSyncState } from '../../lib/navigation/centerTabRouting'
+  getTabBarState,
+  setTabBarSelected,
+  subscribeTabBarState,
+  type TabBarState,
+} from '../../lib/navigation/tabBarState'
 import { MINI_PROGRAM_TAB_INDEX, type MiniProgramTabKey } from '../../lib/navigation/tabBarConfig'
-import { useNotificationCounts } from '../useNotificationCounts'
-
-export interface TabBadgeCounts {
-  discover: number
-  activities: number
-  chat: number
-}
 
 /** Native WeChat custom-tab-bar component interface. */
 interface NativeCustomTabBar {
-  syncState(state: CustomTabBarSyncState & { badges?: TabBadgeCounts; selected?: number }): void
+  syncState(state: Partial<TabBarState>): void
   setSelected(index: number): void
 }
 
@@ -32,10 +21,12 @@ interface UseCustomTabBarSyncOptions {
    * tab-bar instance, so the visible page must set its OWN selected index
    * on show — otherwise the freshly-mounted instance keeps its default
    * `selected: 0` and highlights 发现 until the next tap.
+   *
+   * This update always runs on `useDidShow`, independent of `enabled`,
+   * because `useDidShow` never fires again when `enabled` later flips to
+   * true while the page is already visible.
    */
   tabKey?: MiniProgramTabKey
-  poolRegistrations?: PoolRegistrationSummary[]
-  events?: BlindBoxEventSummary[]
 }
 
 function getNativeTabBar(page: Taro.PageInstance | null | undefined): NativeCustomTabBar | undefined {
@@ -48,67 +39,43 @@ function getNativeTabBar(page: Taro.PageInstance | null | undefined): NativeCust
   return pageWithTabBar.getTabBar()
 }
 
+function syncTabBarState(tabBar: NativeCustomTabBar | undefined, state: TabBarState): void {
+  tabBar?.syncState({ center: state.center, badges: state.badges })
+}
+
 export function useCustomTabBarSync({
   enabled = true,
   tabKey,
-  poolRegistrations: providedPoolRegistrations,
-  events: providedEvents,
 }: UseCustomTabBarSyncOptions) {
-  const { data: queriedPoolRegistrations } = useQuery({
-    queryKey: ['mini-program', 'my-pool-registrations'],
-    queryFn: () => getMyPoolRegistrations(apiRequest),
-    enabled: enabled && providedPoolRegistrations === undefined,
-    staleTime: STALE_TIME_DEFAULT_MS,
-  })
-
-  const { data: queriedEvents } = useQuery({
-    queryKey: ['mini-program', 'my-blind-box-events'],
-    queryFn: () => getMyBlindBoxEvents(apiRequest),
-    enabled: enabled && providedEvents === undefined,
-    staleTime: 30_000,
-  })
-
-  const { data: notificationCounts } = useNotificationCounts(enabled)
-
-  const poolRegistrations = providedPoolRegistrations ?? queriedPoolRegistrations
-  const events = providedEvents ?? queriedEvents
-
-  const badges = useMemo<TabBadgeCounts>(
-    () => ({
-      discover: notificationCounts?.discover ?? 0,
-      activities: notificationCounts?.activities ?? 0,
-      chat: notificationCounts?.chat ?? 0,
-    }),
-    [notificationCounts]
-  )
-
-  const centerState = useMemo(
-    () => getMiniProgramCenterState(poolRegistrations, events),
-    [poolRegistrations, events]
-  )
-
   // Track whether the current page is visible to avoid hidden pages
   // from calling syncState at all during data refetches.
   const isVisibleRef = useRef(false)
 
   useDidShow(() => {
     isVisibleRef.current = true
-    if (!enabled) return
+
     const page = Taro.getCurrentInstance().page
     const tabBar = getNativeTabBar(page)
+
     // Authoritatively set THIS page's own selected index on show. useDidShow
     // only fires for the page becoming visible, so it can never race a hidden
     // page — it sets its own index. Without this, a freshly-mounted tab-bar
     // instance keeps its default `selected: 0` and highlights 发现 until the
     // user taps again (the one-tap-lag bug).
+    //
+    // This must run regardless of `enabled`: if the page becomes visible while
+    // auth is still loading, `enabled` is false and no further useDidShow fires
+    // when auth resolves. The selected highlight would stay stuck on 发现.
     if (tabKey !== undefined) {
-      tabBar?.setSelected(MINI_PROGRAM_TAB_INDEX[tabKey])
+      const index = MINI_PROGRAM_TAB_INDEX[tabKey]
+      setTabBarSelected(index)
+      tabBar?.setSelected(index)
     }
-    tabBar?.syncState({
-      selected: tabKey !== undefined ? MINI_PROGRAM_TAB_INDEX[tabKey] : undefined,
-      center: centerState,
-      badges,
-    })
+
+    if (!enabled) return
+
+    // Sync the latest chrome state (center + badges) from the app-level bridge.
+    syncTabBarState(tabBar, getTabBarState())
   })
 
   useDidHide(() => {
@@ -116,21 +83,15 @@ export function useCustomTabBarSync({
   })
 
   useEffect(() => {
-    if (!enabled) return
-    const page = Taro.getCurrentInstance().page
-    const tabBar = getNativeTabBar(page)
-    if (!isVisibleRef.current) return
-    tabBar?.syncState({
-      selected: tabKey !== undefined ? MINI_PROGRAM_TAB_INDEX[tabKey] : undefined,
-      center: centerState,
-      badges,
-    })
-  }, [enabled, tabKey, centerState, badges])
+    if (!enabled) return undefined
 
-  return {
-    centerState,
-    poolRegistrations,
-    events,
-    notificationCounts,
-  }
+    // Subscribe to the singleton tab-bar state. While this page is visible,
+    // push any badge/center updates to its native tab bar instance.
+    return subscribeTabBarState((state) => {
+      if (!isVisibleRef.current) return
+      const page = Taro.getCurrentInstance().page
+      const tabBar = getNativeTabBar(page)
+      syncTabBarState(tabBar, state)
+    })
+  }, [enabled])
 }

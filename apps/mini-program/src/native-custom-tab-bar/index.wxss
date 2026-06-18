@@ -138,6 +138,13 @@
   border-radius: 24rpx;
 }
 
+/* Interruptible transition: applied temporarily during rapid back-and-forth
+   taps so the pill snaps to the latest tab instead of sweeping across the
+   bar. The class is removed after the next setData. */
+.joy-custom-tab-bar__active-pill--no-transition {
+  transition: none !important;
+}
+
 .joy-custom-tab-bar__item-icon-wrap {
   position: relative;
   display: flex;
@@ -221,12 +228,10 @@
    a fade-in. Settle expands 0.94→1.0 in 400ms.
    Gated by prefers-reduced-motion + .joy-custom-tab-bar--low-end below. */
 .joy-custom-tab-bar__center-logo {
-  width: 114rpx;
-  height: 114rpx;
-  /* 4rpx padding inside the 122rpx purple pill is deliberate (user spec
-     2026-06-04: "minimal breathing room, impactful logo"). Off the 8rpx
-     grid — do NOT "fix" by bumping to 8rpx; that re-introduces the frame
-     effect the user rejected. 114rpx is the load-bearing number here. */
+  /* Enlarged ~20% from the original 114rpx for a more impactful logo/tap target.
+     142rpx leaves the same 4rpx breathing room inside the 150rpx inner button. */
+  width: 142rpx;
+  height: 142rpx;
   transform-origin: 50% 60%;
   animation: logo-settle 400ms cubic-bezier(0.22, 1, 0.36, 1) 1 both;
 }
@@ -256,6 +261,11 @@
   flex-direction: column;
   align-items: center;
   pointer-events: auto;
+  /* Raise the center unit so the circle's horizontal midline (the left/right
+     radius points) sits flush with the top edge of the tab-bar surface.
+     Surface top is 38rpx from the root top (182 - 16 - 128); for a 164rpx
+     outer ring the required offset is 38 - 82 = -44rpx. */
+  margin-top: -44rpx;
   transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1), opacity 100ms ease-out;
   will-change: transform, opacity;
 }
@@ -263,8 +273,9 @@
 .joy-custom-tab-bar__center-outer-ring {
   position: relative;
   display: flex;
-  height: 136rpx;
-  width: 136rpx;
+  /* Enlarged ~20% from 136rpx for a stronger center CTA presence. */
+  height: 164rpx;
+  width: 164rpx;
   align-items: center;
   justify-content: center;
   border-radius: 9999rpx;
@@ -273,13 +284,17 @@
   border: 2rpx solid rgba(255, 107, 157, 0.18);
   transition: background-color 150ms ease, border-color 150ms ease;
   will-change: background-color, border-color;
+  /* Keep the circle visually in front of the label pill so the pill appears
+     to emerge from behind it, creating one integrated center CTA shape. */
+  z-index: 2;
 }
 
 .joy-custom-tab-bar__center-button {
   position: relative;
   display: flex;
-  height: 122rpx;
-  width: 122rpx;
+  /* Scaled with the outer ring to keep the same 7rpx gap on each side. */
+  height: 150rpx;
+  width: 150rpx;
   align-items: center;
   justify-content: center;
   border-radius: 9999rpx;
@@ -297,10 +312,11 @@
 
 .joy-custom-tab-bar__center-badge {
   position: absolute;
-  top: 8rpx;
-  right: 8rpx;
-  width: 24rpx;
-  height: 24rpx;
+  /* Scaled with the larger button to keep the badge near the top-right corner. */
+  top: 10rpx;
+  right: 10rpx;
+  width: 28rpx;
+  height: 28rpx;
   border-radius: 9999rpx;
   /* Token: darker $color-secondary variant for WCAG contrast */
   background: var(--jj-secondary-text);
@@ -313,9 +329,26 @@
   50% { transform: scale(1.2); opacity: 0.8; }
 }
 
-.joy-custom-tab-bar__center-label {
-  margin-top: 8rpx;
+.joy-custom-tab-bar__center-label-pill {
+  position: relative;
+  z-index: 1;
+  /* Tuck the rounded square under the enlarged circle so the two pieces read as
+     one connected CTA. With a 164rpx ring and -44rpx center offset, the ring
+     bottom sits at 120rpx; -16rpx overlap keeps the pill anchored visually. */
+  margin-top: -16rpx;
+  padding: 6rpx 18rpx;
+  min-width: 72rpx;
   max-width: 148rpx;
+  border-radius: 16rpx;
+  background: var(--jj-bg-tint-pink);
+  border: 2rpx solid rgba(255, 255, 255, 0.96);
+  box-shadow: 0 4rpx 12rpx var(--jj-shadow-sm);
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.joy-custom-tab-bar__center-label {
+  max-width: 112rpx;
   font-size: 22rpx;
   line-height: 30rpx;
   font-weight: 600;
@@ -342,7 +375,7 @@
 
 /* Active-state glow on the center button ("you are here" signal).
    Static, not animated — a 4rpx pink ring + 18rpx pink halo sit
-   inside the 5rpx gap between the 122rpx inner button and the 136rpx
+   inside the 5rpx gap between the 150rpx inner button and the 164rpx
    outer ring, so the white outer ring stays visible. Box-shadow
    transition 240ms keeps the selection feel responsive without being
    attention-grabbing. */
@@ -435,7 +468,7 @@
     transition: none !important;
     will-change: auto !important;
   }
-  image {
+  .joy-custom-tab-bar image {
     animation: none !important;
     opacity: 1 !important;
   }

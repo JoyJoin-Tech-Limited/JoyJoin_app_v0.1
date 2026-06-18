@@ -1,9 +1,9 @@
 # Lovart Design Brief: Emotional Icon Batch B
 
-> **Status:** 📝 Ready for commission
+> **Status:** ✅ Integrated (2026-06-18)
 > **Goal:** Replace generic Unicode emoji in peak emotional moments (matching reveals + achievement badges) with premium, brand-aligned proprietary icons.
 > **Target:** WeChat Mini Program (Taro)
-> **Integration:** Maps into `emojiToIconMap.ts` via the `tier` override system (foundation PR shipped 2026-05-27).
+> **Integration:** Maps into `emojiToIconMap.ts` via the `tier` override system (foundation PR shipped 2026-05-27). **2026-06-18 update:** `reveal` and `achievement` tiers remain CDN-primary and are live on `https://joyjoinapp.com/static/assets/icons/`.
 
 ---
 

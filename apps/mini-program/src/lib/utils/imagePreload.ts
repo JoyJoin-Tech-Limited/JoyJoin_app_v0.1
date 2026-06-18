@@ -1,5 +1,6 @@
 import Taro from '@tarojs/taro'
 import { logInfo, logWarn } from './logger'
+import { cacheAssets } from './persistentAssetCache'
 
 /**
  * Preload a single image into the WeChat image cache using getImageInfo.
@@ -32,9 +33,38 @@ export function preloadImage(src: string): Promise<boolean> {
 /**
  * Fire-and-forget batch preload. Failures are silent — we still get cache
  * hits for anything that succeeded.
+ *
+ * @param concurrency  Optional cap on parallel getImageInfo calls. Useful for
+ *                     heavy bundles (e.g. mascot spritesheets) to avoid
+ *                     saturating the image decoder on low-end devices.
  */
-export function preloadImages(srcs: string[]): Promise<boolean[]> {
-  return Promise.all(srcs.map(preloadImage))
+export function preloadImages(srcs: string[], concurrency?: number): Promise<boolean[]> {
+  if (!concurrency || concurrency <= 0 || srcs.length <= concurrency) {
+    return Promise.all(srcs.map(preloadImage))
+  }
+
+  return new Promise((resolve) => {
+    const results: boolean[] = new Array(srcs.length).fill(false)
+    let index = 0
+    let running = 0
+
+    const next = () => {
+      while (running < concurrency && index < srcs.length) {
+        const currentIndex = index++
+        running++
+        preloadImage(srcs[currentIndex]).then((ok) => {
+          results[currentIndex] = ok
+          running--
+          next()
+        })
+      }
+      if (running === 0 && index >= srcs.length) {
+        resolve(results)
+      }
+    }
+
+    next()
+  })
 }
 
 /**
@@ -44,12 +74,30 @@ export function preloadImages(srcs: string[]): Promise<boolean[]> {
 export async function preloadImagesWithDiagnostics(
   srcs: string[],
   context: string,
+  concurrency?: number,
 ): Promise<void> {
-  const results = await preloadImages(srcs)
+  const results = await preloadImages(srcs, concurrency)
   const successCount = results.filter(Boolean).length
   logInfo(`[preloadImages] ${context}`, {
     total: srcs.length,
     success: successCount,
     failed: srcs.length - successCount,
   })
+}
+
+/**
+ * Preload and persist a list of images.
+ * Downloads from CDN, saves to persistent local storage, and warms the
+ * WeChat image cache. Return visitors read from local storage (zero network).
+ *
+ * @param concurrency  Optional cap on parallel downloads.
+ */
+export async function preloadAndPersistImages(
+  srcs: string[],
+  context: string,
+  concurrency = 3,
+): Promise<void> {
+  await preloadImagesWithDiagnostics(srcs, `persist:${context}`, concurrency)
+  // Run persistent caching in parallel — failures are non-critical.
+  void cacheAssets(srcs, concurrency)
 }

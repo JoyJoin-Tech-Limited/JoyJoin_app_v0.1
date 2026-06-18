@@ -13,11 +13,11 @@ This package holds contracts and logic that are intentionally shared across mult
 
 ### Shared product vocabularies and constants
 - `packages/shared/src/constants.ts` — canonical intent/options constants and `toggleIntentValue()` helper for multi-select cap logic
-- `packages/shared/src/interests.ts`
+- `packages/shared/src/interests.ts` — canonical interest taxonomy v2.0.0: 48 active interests across 6 macro categories, each with a CDN `.webp` `imageUrl` consumed by both server and mini-program
 - `packages/shared/src/districts.ts`
 - `packages/shared/src/occupations.ts`
 - `packages/shared/src/industryTaxonomy.ts`
-- `packages/shared/src/iconSystem/emojiToIconMap.ts` — emoji → proprietary icon mapping for `JoyJoinIcon`; `CDN_ICON_TIERS` controls CDN vs bundled resolution. `intent` and `category` icons are bundled locally in the mini-program.
+- `packages/shared/src/iconSystem/emojiToIconMap.ts` — emoji → proprietary icon mapping for `JoyJoinIcon`; `CDN_ICON_TIERS` controls CDN vs bundled resolution. `status`, `ui`, and `semantic`/`info-label` icons are bundled locally; `reaction`, `reveal`, `achievement`, and `phase` icons are CDN-primary. When no explicit `tier` is provided, `getIconMapping()` falls back to an unambiguous single-tier mapping if the emoji exists in exactly one tier map.
 
 ### Shared domain engines
 - `packages/shared/src/personality/` — archetypes, adaptive engine, compatibility references

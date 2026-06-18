@@ -35,11 +35,16 @@ interface UndercoverWordPhaseViewProps {
   isAdvancing?: boolean;
 }
 
+const funny_emoji = '😂'
+const thinking_emoji = '🤔'
+const fire_emoji = '🔥'
+const clap_emoji = '👏'
+
 const REACTION_ITEMS = [
-  { emoji: '😂', label: '好笑' },
-  { emoji: '🤔', label: '疑惑' },
-  { emoji: '🔥', label: '精彩' },
-  { emoji: '👏', label: '点赞' },
+  { emoji: funny_emoji, label: '好笑' },
+  { emoji: thinking_emoji, label: '疑惑' },
+  { emoji: fire_emoji, label: '精彩' },
+  { emoji: clap_emoji, label: '点赞' },
 ];
 
 export default function UndercoverWordPhaseView({
@@ -90,6 +95,10 @@ export default function UndercoverWordPhaseView({
 
   const describedCount = currentRoundData?.descriptions.length ?? 0;
   const describeProgress = playerCount > 0 ? describedCount / playerCount : 0;
+  const undercover_emoji = '🕵️'
+  const civilian_emoji = '🙂'
+  const identity_emoji = isUndercover ? undercover_emoji : civilian_emoji
+  const checkmark_emoji = '✓'
 
   // ── Effects ─────────────────────────────────────────────────────
   // Auto-flip card once when a new pair arrives
@@ -280,7 +289,11 @@ export default function UndercoverWordPhaseView({
               marginBottom: '12rpx',
             }}
           >
-            <JoyJoinIcon emoji={results.caught ? '🎉' : '😈'} size={48} />
+            {results.caught ? (
+              <JoyJoinIcon emoji='🎉' tier='reaction' size={48} />
+            ) : (
+              <JoyJoinIcon emoji='😈' size={48} />
+            )}
             <Text className='icebreaker__challenge-title'>
               卧底是：{results.undercoverDisplayName}
             </Text>
@@ -500,7 +513,7 @@ export default function UndercoverWordPhaseView({
                                 flexShrink: 0,
                               }}
                             >
-                              <Text style={{ fontSize: '24rpx' }} className='icebreaker__text--light'>✓</Text>
+                              <Text style={{ fontSize: '24rpx' }} className='icebreaker__text--light'>{checkmark_emoji}</Text>
                             </View>
                           )}
                         </View>
@@ -570,7 +583,7 @@ export default function UndercoverWordPhaseView({
                 gap: '16rpx',
               }}
             >
-              <JoyJoinIcon emoji={isUndercover ? '🕵️' : '🙂'} size={64} />
+              <JoyJoinIcon emoji={identity_emoji} size={64} />
               <Text
                 style={{
                   fontSize: '48rpx',
@@ -754,7 +767,7 @@ export default function UndercoverWordPhaseView({
               padding: '16rpx',
             }}
           >
-            <Text style={{ fontSize: '28rpx', color: '#22C55E' }}>✓</Text>
+            <Text style={{ fontSize: '28rpx', color: '#22C55E' }}>{checkmark_emoji}</Text>
             <Text className='icebreaker__helper-text'>已提交，等待其他人...</Text>
           </View>
         )}

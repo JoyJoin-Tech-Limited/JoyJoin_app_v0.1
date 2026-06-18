@@ -4,7 +4,7 @@
 # investigates root cause, and creates fix PRs.
 #
 # Triggered by:
-#   - workflow_run: when CI/CD pipeline fails (cicd.yml)
+#   - workflow_run: when deploy-staging.yml or deploy-production.yml fails
 #   - workflow_dispatch: manual trigger
 #
 # Secrets:
@@ -15,7 +15,7 @@ name: Auto-CI-Fix
 
 on:
   workflow_run:
-    workflows: ['JoyJoin Production Pipeline']
+    workflows: ['Deploy Staging', 'Deploy Production']
     types: [completed]
   workflow_dispatch:
     inputs:

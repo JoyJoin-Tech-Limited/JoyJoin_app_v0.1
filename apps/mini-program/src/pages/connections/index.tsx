@@ -2,13 +2,12 @@ import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { getArchetypeFamily } from '@shared/archetypeColors'
+import type { ConnectionsShellResponse } from '@shared/api'
 import { apiRequest, fetchConnectionsShell } from '../../lib/api/api'
 import { injectConnectionsShellIntoCache, CONNECTIONS_SHELL_QUERY_KEY } from '../../lib/prefetchEngine'
 import { queryClient } from '../../lib/api/queryClient'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
-import { getArchetypeFamily } from '@shared/archetypeColors'
-import { getEmptyStatePrompt, getEmptyStateAction } from '@shared/copy/emptyStates'
-import type { ConnectionsShellResponse } from '@shared/api'
 import { useAuth } from '../../hooks/useAuth'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
@@ -91,6 +90,7 @@ export default function ConnectionsPage() {
   const { isPrimary } = useDeviceTier()
   const markAsRead = useMarkNotificationsAsRead()
   const viewTrackedRef = useRef(false)
+  const emptyStateViewTrackedRef = useRef(false)
   const celebratedRef = useRef(false)
 
   // Empty-state wrapper should fill the visible page below the custom tab bar.
@@ -144,7 +144,7 @@ export default function ConnectionsPage() {
     enabled: !authLoading,
   })
 
-  const connections = shell?.connections ?? []
+  const connections = useMemo(() => shell?.connections ?? [], [shell?.connections])
   const connectionsContext = shell?.connectionsContext ?? null
 
   const handleRefresherRefresh = useCallback(async () => {
@@ -197,6 +197,17 @@ export default function ConnectionsPage() {
     haptics('success')
   }, [connectionsContext])
 
+  useEffect(() => {
+    if (emptyStateViewTrackedRef.current || isLoading || isError || connections.length > 0) return
+    emptyStateViewTrackedRef.current = true
+    profileAnalytics.track('connection_empty_state_impression', {
+      mode: connectionsContext?.mode ?? 'fallback',
+      archetype: user?.archetype ?? null,
+      has_archetype_badge: Boolean(user?.archetype),
+      has_celebration_badge: connectionsContext?.mode === 'feedback-complete',
+    })
+  }, [isLoading, isError, connections.length, connectionsContext, user?.archetype])
+
   const userCity = user?.currentCity
   const userArchetype = user?.archetype
 
@@ -212,6 +223,8 @@ export default function ConnectionsPage() {
   type EmptyStateConfig =
     | {
         emotion: XiaoyueEmptyStateProps['emotion']
+        archetypeId?: string | null
+        showCelebrationBadge?: boolean
         title: string
         subtitle: string
         actionLabel: string
@@ -219,6 +232,8 @@ export default function ConnectionsPage() {
       }
     | {
         emotion: XiaoyueEmptyStateProps['emotion']
+        archetypeId?: string | null
+        showCelebrationBadge?: boolean
         title: string
         subtitle: string
         actionLabel?: undefined
@@ -226,17 +241,18 @@ export default function ConnectionsPage() {
       }
 
   const emptyStateConfig = useMemo<EmptyStateConfig>(() => {
-    const userArchetype = shell?.user?.primaryArchetype ?? user?.archetype ?? null
-    const archetypeName = userArchetype ? ARCHETYPE_BY_ID[userArchetype]?.nameCn ?? null : null
+    const resolvedArchetype = shell?.user?.primaryArchetype ?? user?.archetype ?? null
+    const archetypeName = resolvedArchetype ? ARCHETYPE_BY_ID[resolvedArchetype]?.nameCn ?? null : null
 
     if (!connectionsContext) {
       return {
         emotion: 'curious',
-        title: getEmptyStatePrompt('connections'),
+        archetypeId: resolvedArchetype,
+        title: '连接还在路上',
         subtitle: archetypeName
-          ? `你的${archetypeName}磁场，正在等待同频伙伴`
-          : '参加活动后即可与活动伙伴建立连接',
-        actionLabel: '去发现页看看',
+          ? `这里会收藏你在活动里互相欣赏的伙伴。先参加一局活动，遇到喜欢的人就互选，连接就会出现在这里。`
+          : '这里会收藏你在活动里互相欣赏的伙伴。先参加一局活动，遇到喜欢的人就互选，连接就会出现在这里。',
+        actionLabel: '去看看活动',
         onAction: () => runEmptyStateAction(() => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover }), MINI_PROGRAM_ROUTES.discover),
       }
     }
@@ -245,10 +261,9 @@ export default function ConnectionsPage() {
       case 'no-events':
         return {
           emotion: 'curious',
+          archetypeId: resolvedArchetype,
           title: '还没有连接呢',
-          subtitle: archetypeName
-            ? `你的${archetypeName}磁场，正在等待同频伙伴`
-            : '先参加一局活动，和志同道合的伙伴建立连接',
+          subtitle: '连接是在活动里互相选择的人。参加一局活动，结束后提交反馈，和你互相选择的人会出现在这里。',
           actionLabel: '去发现页看看',
           onAction: () => runEmptyStateAction(() => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover }), MINI_PROGRAM_ROUTES.discover),
         }
@@ -256,8 +271,9 @@ export default function ConnectionsPage() {
         const eventTitle = connectionsContext.upcomingEventTitle || '下一场活动'
         return {
           emotion: 'waiting',
-          title: '活动还在路上',
-          subtitle: `「${eventTitle}」结束后回来提交反馈，互相选择的伙伴就会成为连接`,
+          archetypeId: resolvedArchetype,
+          title: '活动还没开始呢',
+          subtitle: `参加「${eventTitle}」后，回来提交反馈。活动中互相选择的伙伴，会成为你的连接并交换联系方式。`,
           actionLabel: '查看我的活动',
           onAction: () => runEmptyStateAction(() => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }), MINI_PROGRAM_ROUTES.events),
         }
@@ -267,8 +283,9 @@ export default function ConnectionsPage() {
         const feedbackUrl = `/pages/event-feedback/index?id=${encodeURIComponent(connectionsContext.nextFeedbackEventId || '')}`
         return {
           emotion: 'coaching',
-          title: '还差一步，连接就能见面',
-          subtitle: `提交「${eventTitle}」的反馈后，你和互相选择的伙伴就会成为连接`,
+          archetypeId: resolvedArchetype,
+          title: '还差一步解锁连接',
+          subtitle: `提交「${eventTitle}」的反馈，告诉悦仔你想和谁继续认识。互相选择的人，会立刻出现在这里。`,
           actionLabel: '去提交反馈',
           onAction: () => runEmptyStateAction(() => Taro.navigateTo({ url: feedbackUrl }), feedbackUrl),
         }
@@ -276,19 +293,22 @@ export default function ConnectionsPage() {
       case 'feedback-complete':
         return {
           emotion: 'celebration',
-          title: '反馈已收到，连接正在生成',
-          subtitle: archetypeName
-            ? `你的${archetypeName}磁场已就位，互相选择的好友会在这里出现`
-            : '互相选择的好友会在这里出现，稍等片刻再来查看',
-          actionLabel: '去发现页看看',
+          archetypeId: resolvedArchetype,
+          showCelebrationBadge: true,
+          title: '反馈已收到',
+          subtitle: '悦仔正在把互相选择的人加到你的连接里。过一会儿再来，就能看到新的朋友了。',
+          actionLabel: '先去发现页逛逛',
           onAction: () => runEmptyStateAction(() => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover }), MINI_PROGRAM_ROUTES.discover),
         }
       default:
         return {
           emotion: 'curious',
-          title: getEmptyStatePrompt('connections'),
-          subtitle: '参加活动后即可与活动伙伴建立连接',
-          actionLabel: '去发现页看看',
+          archetypeId: resolvedArchetype,
+          title: '连接还在路上',
+          subtitle: archetypeName
+            ? `这里会收藏你在活动里互相欣赏的伙伴。先参加一局活动，遇到喜欢的人就互选，连接就会出现在这里。`
+            : '这里会收藏你在活动里互相欣赏的伙伴。先参加一局活动，遇到喜欢的人就互选，连接就会出现在这里。',
+          actionLabel: '去看看活动',
           onAction: () => runEmptyStateAction(() => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover }), MINI_PROGRAM_ROUTES.discover),
         }
     }
@@ -419,6 +439,7 @@ export default function ConnectionsPage() {
           <View className='connections-page__empty-state' style={emptyWrapperStyle}>
             <XiaoyueEmptyState
               emotion={emptyStateConfig.emotion}
+              archetypeId={emptyStateConfig.archetypeId}
               title={emptyStateConfig.title}
               subtitle={emptyStateConfig.subtitle}
               actionLabel={emptyStateConfig.actionLabel}
@@ -426,9 +447,10 @@ export default function ConnectionsPage() {
               disabled={isNavigating}
               loading={isNavigating}
               loadingLabel='跳转中…'
-              showCelebrationBadge={connectionsContext?.mode === 'feedback-complete'}
+              showCelebrationBadge={emptyStateConfig.showCelebrationBadge ?? false}
               size='md'
               disableBreathe={!isPrimary}
+              disableBlur={!isPrimary}
             />
           </View>
         )}

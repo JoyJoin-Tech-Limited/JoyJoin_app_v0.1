@@ -1,6 +1,6 @@
 # JoyJoin Monorepo Folder Structure Blueprint
 
-> **Living document.** Last updated: 2026-05-05  
+> **Living document.** Last updated: 2026-06-17  
 > **Purpose:** Single source of truth for "where does this go?" Eliminates guesswork for agents and humans navigating the codebase.  
 > **Scope:** Covers all top-level directories, workspace internals, and cross-cutting concerns. Excludes `node_modules/`, `.git/`, build artifacts.
 
@@ -265,14 +265,15 @@ apps/mini-program/
 │   │   ├── event-coordination/    # Event day coordination
 │   │   ├── event-feedback/        # Post-event feedback
 │   │   ├── profile/               # User profile view
-│   │   ├── edit-profile/          # Profile editing
+│   │   ├── profile-linked/        # Subpackage: profile-linked auxiliary pages
+│   │   │   ├── edit-profile/      # Profile editing
+│   │   │   ├── rewards/           # Gamification / rewards
+│   │   │   ├── invite/            # Referral / invite friends
+│   │   │   └── terms/             # Legal terms
 │   │   ├── connections/           # Connection list (replaced /chats)
-│   │   ├── rewards/               # Gamification / rewards
 │   │   ├── blind-box-payment/     # Payment flow
 │   │   ├── payment-verification/  # Payment status check
 │   │   ├── squad-unboxing/        # Match reveal animation
-│   │   ├── invite/                # Referral / invite friends
-│   │   ├── terms/                 # Legal terms
 │   │   └── center-hub/            # Center tab hub page: active events, pending registrations, empty state
 │   ├── components/                # Shared Taro components
 │   │   ├── ui/                    # UI primitives (Button, Card, FormStepper, etc.)
@@ -285,7 +286,8 @@ apps/mini-program/
 │   │   ├── auth/                  # useWeChatLogin, authState
 │   │   ├── payment/               # usePaymentCoupon
 │   │   ├── navigation/            # useJoyJoinNavigation, useMiniPageGate
-│   │   └── onboarding/            # useOnboardingCheckpoint, useOnboardingAnalytics
+│   │   ├── onboarding/            # useOnboardingCheckpoint, useOnboardingAnalytics
+│   │   └── usePageTTI.ts          # Time-to-first-interactive instrumentation (cold ≤2000 ms, warm ≤800 ms)
 │   ├── lib/                       # API client, utilities
 │   │   ├── api/                   # api.ts, authSession, websocket, queryClient, persistentCache
 │   │   ├── auth/                  # anonymousOnboarding, authSessionQueryKeys, authSessionRules
@@ -316,9 +318,10 @@ apps/mini-program/
 │       │   ├── intent-icons/      # Onboarding intent selectors (bundled locally)
 │       │   ├── reveal-icons/      # Squad-unboxing reveal emblems (CDN)
 │       │   ├── achievement-badges/ # Gamification achievement toasts (CDN)
-│       │   ├── info-labels/       # Semantic info pills (bundled locally; currently unused)
+│       │   ├── info-labels/       # Semantic / info label icons (bundled locally; calendar/location/people/target inline labels)
 │       │   ├── rating-faces/      # Rating / evaluation faces (bundled locally)
-│       │   └── phase-icons/       # Icebreaker phase emblems (CDN)
+│       │   ├── phase-icons/       # Icebreaker phase emblems (CDN)
+│       │   └── ui/                # Profile / settings list icons (bundled locally)
 │       ├── fonts/                 # Brand fonts (partially bundled, partially CDN)
 │       │   ├── Quicksand/         # English brand font (~124KB, bundled)
 │       │   └── Alimama/           # Chinese display font — minimal subset bundled, full from CDN
@@ -384,7 +387,7 @@ packages/shared/
 │   │   ├── categoryColors.ts
 │   │   └── connectionPointCompat.ts
 │   ├── iconSystem/                # Proprietary icon mapping system (emoji → tiered asset)
-│   │   └── emojiToIconMap.ts      # Composite lookup: same Unicode emoji resolves to different assets per context tier (reaction, category, intent, reveal, achievement, etc.)
+│   │   └── emojiToIconMap.ts      # Composite lookup: same Unicode emoji resolves to different assets per context tier (reaction, category, intent, reveal, achievement, status, ui, semantic/info-label, etc.); unambiguous single-tier emojis fall back automatically
 │   ├── legal/                     # Legal copy
 │   │   └── joyjoinTermsZh.ts
 │   ├── ai/                        # Shared AI prompts & types
@@ -657,7 +660,9 @@ scripts/
 ```
 .github/
 ├── workflows/                     # GitHub Actions workflows
-│   ├── cicd.yml                   # Main deploy pipeline
+│   ├── deploy-production.yml      # Production deploy pipeline (release branch)
+│   ├── deploy-staging.yml         # Staging deploy pipeline (main branch)
+│   ├── quality-gates.yml          # Shared quality gates (reusable workflow)
 │   ├── auto-debug.yml             # Daily bug scanning
 │   ├── auto-docs.yml              # Daily doc generation
 │   ├── auto-digest.yml            # Daily engineering digest

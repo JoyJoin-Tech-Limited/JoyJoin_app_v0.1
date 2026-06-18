@@ -41,6 +41,7 @@ export const createSelectorQuery = vi.fn().mockReturnValue({
   exec: vi.fn((cb: Function) => cb && cb([])),
 })
 export const getCurrentPages = vi.fn().mockReturnValue([])
+export const getCurrentInstance = vi.fn(() => ({ page: undefined }))
 export const useRouter = vi.fn().mockReturnValue({ params: {}, path: '' })
 export const useDidShow = vi.fn()
 export const useDidHide = vi.fn()
@@ -73,6 +74,7 @@ const taro = {
   getSystemInfoSync,
   createSelectorQuery,
   getCurrentPages,
+  getCurrentInstance,
   useRouter,
   useDidShow,
   useDidHide,

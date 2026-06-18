@@ -19,7 +19,7 @@ import XiaoyueSpriteAnimator, {
   type XiaoyueSpriteState,
 } from '../../../components/mascot/XiaoyueSpriteAnimator'
 import { useAuth, useInvalidateAuth } from '../../../hooks/useAuth'
-import { apiRequest, getUserState } from '../../../lib/api/api'
+import { apiRequest } from '../../../lib/api/api'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
 import { useOnboardingCheckpoint } from '../../../hooks/onboarding/useOnboardingCheckpoint'
 import {
@@ -136,6 +136,8 @@ interface AssessmentStartResponse {
   progress: AssessmentProgress
   currentMatches: AssessmentMatch[]
   isComplete: boolean
+  /** Server-computed final result (present when isComplete === true). */
+  result?: AnonymousAssessmentResult
 }
 
 interface AssessmentAnswerResponse {
@@ -370,10 +372,22 @@ export default function PersonalityTestPage() {
   // Captures the sprite state that was active before the hover preview so we
   // can restore it on early release (e.g. tap-then-cancel before 200ms).
   const prePreviewSpriteRef = useRef<XiaoyueSpriteState | null>(null)
-
+  // Holds the server-completed result until the celebrate animation finishes.
+  // Navigation is gated by OnboardingLoadingShell's onCelebrateReady so the
+  // user sees the full completion beat before the slot/result page appears.
+  const pendingCompletionRef = useRef<{
+    sessionId: string
+    topArchetypes?: AnonymousAssessmentTopMatch[] | null
+    finalResult?: AnonymousAssessmentResult | null
+  } | null>(null)
   const backReview = useBackReview()
 
   const isAuthenticated = auth.isAuthenticated
+
+  // Mirror auth state in a ref so the celebrate-ready closure always reads the
+  // latest value even if AutoLoginBridge flips it mid-animation.
+  const isAuthenticatedRef = useRef(isAuthenticated)
+  isAuthenticatedRef.current = isAuthenticated
 
   // Feature flag: echo loading state (kill switch). Authenticated users get
   // the server-driven flag; anonymous users default to enabled.
@@ -474,6 +488,32 @@ export default function PersonalityTestPage() {
     await Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults })
   }, [currentMatches])
 
+  const handleCelebrateReady = useCallback(async () => {
+    const pending = pendingCompletionRef.current
+    if (!pending) return
+    pendingCompletionRef.current = null
+
+    // For returning authenticated users (e.g., restart onboarding), persist the
+    // checkpoint so the server knows this step was completed, then refresh auth
+    // state so the result page sees the latest nextStep.
+    if (isAuthenticatedRef.current) {
+      try {
+        await saveCheckpoint('personality-test')
+        await invalidateAuth()
+      } catch (err) {
+        logWarn('[PersonalityTest] Checkpoint/auth refresh failed during celebrate handoff', {
+          message: err instanceof Error ? err.message : String(err),
+        })
+      }
+    }
+
+    await completeAnonymousAssessment(pending.sessionId, pending.topArchetypes, pending.finalResult)
+    anonymousEngineStateRef.current = null
+    // If we reach this line, the navigation was silently rejected (WeChat
+    // runtime quirk). Reset isPageExiting so the user can interact again.
+    setIsPageExiting(false)
+  }, [completeAnonymousAssessment, invalidateAuth, saveCheckpoint])
+
   /** Hard guard: refuse to transition if the server returned an incomplete or invalid finalResult. */
   function isValidFinalResult(result: AnonymousAssessmentResult | undefined): boolean {
     if (!result) return false
@@ -567,39 +607,41 @@ export default function PersonalityTestPage() {
       }
 
       if (result.isComplete || !result.nextQuestion) {
-        setPhase('completing')
         const completedAnswerCount = result.progress?.answered ?? 0
 
-        if (isAuthenticated) {
-          clearAnonymousAssessmentStorage()
-          await saveCheckpoint('personality-test')
-          await invalidateAuth()
-          const userState = await getUserState()
-          analytics.stepCompleted({
-            isAuthenticated: true,
-            answerCount: completedAnswerCount,
-            nextStep: userState.nextStep ?? 'essential-data',
-          })
-          await navigateToMiniProgramNextStep(userState.nextStep, {
-            mode: 'replace',
-            transition: { beforeNavigate: () => setIsPageExiting(true) },
-          })
-          // If we reach this line, the navigation was silently rejected (WeChat
-          // runtime quirk). Reset isPageExiting so the user can interact again.
+        if (!isValidFinalResult(result.result)) {
           setIsPageExiting(false)
+          setError('结果同步出了点小问题，请重试一次')
+          analytics.errorOccurred('invalid_final_result', 'primaryArchetype missing or invalid')
+          logError('[PersonalityTest] Invalid finalResult from server on start', {
+            sessionId: result.sessionId,
+            result: result.result,
+          })
           return
         }
 
+        // P0-3: prefetch the Xiaoyue AI analysis so the result page lands
+        // on a populated analysis instead of a 400ms skeleton.
+        if (result.result && result.result.primaryArchetype) {
+          triggerXiaoyueAnalysisPrefetch(result.result, result.currentMatches ?? currentMatches)
+        }
+
         analytics.stepCompleted({
-          isAuthenticated: false,
+          isAuthenticated,
           answerCount: completedAnswerCount,
           destination: MINI_PROGRAM_ROUTES.personalityTestResults,
         })
-        await completeAnonymousAssessment(result.sessionId, result.currentMatches ?? currentMatches)
-        anonymousEngineStateRef.current = null
-        // If we reach this line, the navigation was silently rejected (WeChat
-        // runtime quirk). Reset isPageExiting so the user can interact again.
-        setIsPageExiting(false)
+
+        // Stash the completed result and show the celebration shell. Navigation
+        // to the slot/result page is gated by onCelebrateReady so the user sees
+        // the full completion beat, and *all* users (guests + authenticated)
+        // go through the result page rather than skipping straight to nextStep.
+        pendingCompletionRef.current = {
+          sessionId: result.sessionId,
+          topArchetypes: result.currentMatches ?? currentMatches,
+          finalResult: result.result,
+        }
+        setPhase('completing')
         return
       }
 
@@ -616,11 +658,8 @@ export default function PersonalityTestPage() {
     }
   }, [
     analytics,
-    completeAnonymousAssessment,
     currentMatches,
-    invalidateAuth,
     isAuthenticated,
-    saveCheckpoint,
   ])
 
   const handleAnswer = useCallback(async (option: AssessmentOption) => {
@@ -703,7 +742,6 @@ export default function PersonalityTestPage() {
       }
 
       if (result.isComplete || !result.nextQuestion) {
-        setPhase('completing')
         const completedAnswerCount = result.progress?.answered ?? ((progress?.answered ?? 0) + 1)
         logInfo('[PersonalityTest] Assessment complete', {
           isAuthenticated,
@@ -719,31 +757,6 @@ export default function PersonalityTestPage() {
           )
         }
 
-        if (isAuthenticated) {
-          clearAnonymousAssessmentStorage()
-          await saveCheckpoint('personality-test')
-          await invalidateAuth()
-          const userState = await getUserState()
-          analytics.stepCompleted({
-            isAuthenticated: true,
-            answerCount: completedAnswerCount,
-            nextStep: userState.nextStep ?? 'essential-data',
-          })
-          await navigateToMiniProgramNextStep(userState.nextStep, {
-            mode: 'replace',
-            transition: { beforeNavigate: () => setIsPageExiting(true) },
-          })
-          // If we reach this line, the navigation was silently rejected (WeChat
-          // runtime quirk). Reset isPageExiting so the user can interact again.
-          setIsPageExiting(false)
-          return
-        }
-
-        analytics.stepCompleted({
-          isAuthenticated: false,
-          answerCount: completedAnswerCount,
-          destination: MINI_PROGRAM_ROUTES.personalityTestResults,
-        })
         if (!isValidFinalResult(result.result)) {
           setIsPageExiting(false)
           setError('结果同步出了点小问题，请重试一次')
@@ -754,11 +767,23 @@ export default function PersonalityTestPage() {
           })
           return
         }
-        await completeAnonymousAssessment(thisSessionId, result.currentMatches ?? currentMatches, result.result)
-        anonymousEngineStateRef.current = null
-        // If we reach this line, the navigation was silently rejected (WeChat
-        // runtime quirk). Reset isPageExiting so the user can interact again.
-        setIsPageExiting(false)
+
+        analytics.stepCompleted({
+          isAuthenticated,
+          answerCount: completedAnswerCount,
+          destination: MINI_PROGRAM_ROUTES.personalityTestResults,
+        })
+
+        // Stash the completed result and show the celebration shell. Navigation
+        // to the slot/result page is gated by onCelebrateReady so the user sees
+        // the full completion beat, and *all* users (guests + authenticated)
+        // go through the result page rather than skipping straight to nextStep.
+        pendingCompletionRef.current = {
+          sessionId: thisSessionId,
+          topArchetypes: result.currentMatches ?? currentMatches,
+          finalResult: result.result,
+        }
+        setPhase('completing')
         return
       }
 
@@ -794,14 +819,11 @@ export default function PersonalityTestPage() {
     }
   }, [
     analytics,
-    completeAnonymousAssessment,
     currentMatches,
-    invalidateAuth,
     isAuthenticated,
     isSubmitting,
     progress,
     question,
-    saveCheckpoint,
     sessionId,
   ])
 
@@ -1059,18 +1081,21 @@ export default function PersonalityTestPage() {
 
       const nextQuestion = selectNextQuestion(engineState)
       if (!nextQuestion) {
-        clearAnonymousAssessmentStorage()
-        anonymousEngineStateRef.current = null
-        setPhase('completing')
         analytics.stepCompleted({
           isAuthenticated: false,
           answerCount: engineState.answeredQuestionIds.size,
           destination: MINI_PROGRAM_ROUTES.personalityTestResults,
         })
-        await completeAnonymousAssessment(sessionId || 'anonymous-client', engineState.currentMatches.slice(0, 3))
-        // If we reach this line, the navigation was silently rejected (WeChat
-        // runtime quirk). Reset isPageExiting so the user can interact again.
-        setIsPageExiting(false)
+
+        // Stash the client-side completion and show the celebration shell.
+        // Navigation is gated by onCelebrateReady so the slot/result page does
+        // not cut the celebration short.
+        pendingCompletionRef.current = {
+          sessionId: sessionId || 'anonymous-client',
+          topArchetypes: engineState.currentMatches.slice(0, 3),
+          finalResult: null,
+        }
+        setPhase('completing')
         return
       }
 
@@ -1135,7 +1160,7 @@ export default function PersonalityTestPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [analytics, backReview, completeAnonymousAssessment, isAuthenticated, question, sessionId])
+  }, [analytics, backReview, isAuthenticated, question, sessionId])
 
   const handleCancelBackReview = useCallback(() => {
     backReview.cancelBackReview()
@@ -1373,6 +1398,7 @@ export default function PersonalityTestPage() {
         xiaoyueExpression={PERSONALITY_TEST_XIAOYUE_EXPRESSION.completing}
         celebrate
         sparkleCount={6}
+        onCelebrateReady={() => void handleCelebrateReady()}
       />
     )
   }

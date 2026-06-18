@@ -1,8 +1,14 @@
-import { View, Text } from '@tarojs/components'
+import { View, Text, Image } from '@tarojs/components'
 import './InterestChipCloud.scss'
+import { getInterestAssetUrl } from '../../lib/utils/interestAssets'
 
 export interface InterestChipCloudProps {
   labels: string[]
+  /**
+   * Optional parallel array of interest IDs. When provided and an entry exists
+   * for a label, a small interest illustration is rendered next to the text.
+   */
+  interestIds?: string[]
   levels?: Record<string, 1 | 2 | 3>
   accent?: boolean
   compact?: boolean
@@ -21,6 +27,7 @@ export interface InterestChipCloudProps {
  */
 export default function InterestChipCloud({
   labels,
+  interestIds,
   levels,
   accent = false,
   compact = false,
@@ -43,6 +50,8 @@ export default function InterestChipCloud({
         <View className='interest-chip-cloud__chips'>
           {labels.map((label, index) => {
             const level = levels?.[label]
+            const interestId = interestIds?.[index]
+            const iconUrl = interestId ? getInterestAssetUrl(interestId) : null
             return (
               <View
                 key={`${label}-${index}`}
@@ -51,8 +60,17 @@ export default function InterestChipCloud({
                   accent ? 'interest-chip-cloud__chip--accent' : '',
                   level ? `interest-chip-cloud__chip--level-${level}` : '',
                   compact ? 'interest-chip-cloud__chip--compact' : '',
+                  iconUrl ? 'interest-chip-cloud__chip--with-icon' : '',
                 ].filter(Boolean).join(' ')}
               >
+                {iconUrl && (
+                  <Image
+                    className='interest-chip-cloud__chip-icon'
+                    src={iconUrl}
+                    mode='aspectFit'
+                    lazyLoad
+                  />
+                )}
                 <Text className='interest-chip-cloud__chip-text'>{label}</Text>
               </View>
             )

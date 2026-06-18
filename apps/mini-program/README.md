@@ -31,7 +31,7 @@ This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 - `src/pages/blind-box-payment/`, `src/pages/payment-verification/` — JSAPI payment + post-pay polling
 - `src/pages/event-ticket-payment/` — paid event-ticket registration with ceremony success/verifying states
 - `src/components/HeroPromoBanner.tsx` — top-of-discover hero promo banner (full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles). Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`)
-- `src/pages/profile/index.tsx` — redesigned "我的" profile tab (social-passport hero with age/city/bio chips, stats, milestones, menu grid, profile-card share, one-time 100% completion ceremony). Uses `GET /api/shell/profile` via `getProfileShell()` with offline-first query config and cached-shell fallback. Feature-flagged by `user.features.profileRedesignEnabled` (env `PROFILE_REDESIGN_ENABLED`, default `true`). Bio contributes +10% completion bonus; empty bio shows a dashed CTA to edit. Share-card generation lives in `src/pages/profile/profilePoster.ts` and `src/pages/profile/useProfileShareCard.ts`.
+- `src/pages/profile/index.tsx` — redesigned "我的" profile tab (social-passport hero with age/city/bio chips, stats, milestones, menu grid, profile-card share, one-time 100% completion ceremony). Uses `GET /api/shell/profile` via `getProfileShell()` with offline-first query config and cached-shell fallback. Feature-flagged by `user.features.profileRedesignEnabled` (env `PROFILE_REDESIGN_ENABLED`, default `true`). Bio contributes +10% completion bonus; empty bio shows a dashed CTA to edit. Share-card generation lives in `src/pages/profile/profilePoster.ts` and `src/pages/profile/useProfileShareCard.ts`; `generateProfileSharePoster` is dynamically imported on first tap, with `ShareCardShimmer` providing reduced-motion/degradation-gated feedback.
 
 ---
 
@@ -58,10 +58,11 @@ src/
 │   ├── squad-unboxing/
 │   ├── pool-group-detail/
 │   ├── icebreaker-session/
-│   ├── edit-profile/
-│   ├── rewards/
-│   ├── invite/
-│   └── terms/
+│   └── profile-linked/      # Subpackage: edit-profile, rewards, invite, terms (preloaded from profile)
+│       ├── edit-profile/
+│       ├── rewards/
+│       ├── invite/
+│       └── terms/
 ├── components/          # Shared UI components & primitives
 │   ├── ui/              # BrandLogo, Button, Card, StatusCard, JoyJoinIcon, Chip, SegmentedProgress, TraitRadarChart, etc.
 │   ├── profile/         # Profile-specific components (ProfileArchetypeHero, InterestChipCloud, ProfessionDisplayField)
@@ -75,6 +76,7 @@ src/
 │   ├── useUnload.ts         # Page unload lifecycle cleanup (timer leaks, refs, subscriptions)
 │   ├── useCountUp.ts        # Animated numeric count-up for hero stats (profile stats, etc.) with enabled/delay options and reduced-motion/degradation gating
 │   ├── useDeviceTier.ts     # Runtime device-capability tiering; Android uses benchmarkLevel, iOS falls back to model/system heuristics
+│   ├── usePageTTI.ts        # Lightweight time-to-first-interactive instrumentation for mini-program pages; budgets: cold ≤2000 ms, warm ≤800 ms
 ├── lib/                 # Runtime helpers & business logic
 ├── providers/           # App-level React context providers
 ├── assets/              # Static assets (copied to dist/assets)
@@ -112,12 +114,22 @@ Assets are **CDN-first** in production, with a curated set of critical assets bu
 
 **Shared CDN strategy:** both production and staging mini-program builds load large assets from the same production CDN path (`https://joyjoinapp.com/static`). This avoids maintaining duplicate staging asset directories and ensures a single source of truth for ceremony heroes, badges, icons, and other CDN-backed assets. Run `npm run upload:cdn-assets` against `/var/www/cdn` after adding or updating CDN assets.
 
+**Tencent Cloud CDN (free tier):** if downloads from the origin server are slow, put Tencent Cloud CDN in front of the origin. Recommended setup:
+1. Create a CDN domain `static.joyjoinapp.com` with origin type **Self-owned origin** and origin address `joyjoinapp.com` (or your CVM IP).
+2. CNAME `static.joyjoinapp.com` to the Tencent CDN CNAME.
+3. Set `TARO_APP_CDN_BASE_URL=https://static.joyjoinapp.com` in `apps/mini-program/.env.local` and rebuild.
+4. Whitelist `https://static.joyjoinapp.com` in the WeChat Mini Program admin console under download/upload domains.
+
+No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via the existing `/static/` location and respect the `Cache-Control: max-age=31536000, immutable` headers.
+
 **Critical rules:**
 1. Use `cdnAsset('/assets/...')` for CDN assets and `localAsset('/assets/...')` for bundled assets — never hardcode `/assets/` paths.
-2. Production builds **fail** if `TARO_APP_CDN_BASE_URL` is missing.
+2. Production builds **guarantee** a CDN base URL: `config/index.ts` defaults to `https://joyjoinapp.com/static`, and the CI workflow falls back to the same value. Override `TARO_APP_CDN_BASE_URL` only for a custom CDN or staging origin.
 3. Run `npm run validate:assets` before committing to catch orphan references.
 4. Add new CDN assets to `src/assets/` **and** `scripts/cdn-asset-manifest.json` so the CDN uploader discovers them.
 5. Run `npm run check:package-size` after build to verify the compressed main package stays under the 2MB WeChat limit.
+6. **Mascot bundle policy:** only 6 core Xiaoyue sprite states (`welcome`, `idle`, `coach`, `loading`, `listening`, `thinking`) are bundled locally; the remaining 14 states are CDN-primary with local fallback via `XiaoyueSpriteAnimator.onError`.
+7. **Bundled icon density policy:** `status-icons`, `info-labels` (semantic), and `ui` tiers ship at `@1x`/`@2x` only; `@3x` variants are stripped by `clean:cdn-assets` to save package size. Source `@3x` files remain for CDN fallback.
 
 | Script | Purpose |
 |--------|---------|
@@ -141,8 +153,8 @@ Assets are **CDN-first** in production, with a curated set of critical assets bu
 
 *Tab bar & shell (critical — must be local):*
 - `src/assets/tab-icons` → `dist/assets/tab-icons` (~80KB)
-- `src/assets/joyjoin-logo.webp` → `dist/assets/joyjoin-logo.webp` (~128KB)
-- `src/assets/joyjoin-logo-tab.png` → `dist/assets/joyjoin-logo-tab.png` (~20KB)
+- `src/assets/joyjoin-logo.png` → `dist/assets/joyjoin-logo.png` (~32KB)
+- `src/assets/joyjoin-logo-tab.png` → `dist/assets/joyjoin-logo-tab.png` (~15KB)
 - `src/assets/tab-bar-notch-bg.png` → `dist/assets/tab-bar-notch-bg.png` (~4KB)
 - `src/native-custom-tab-bar/` → `dist/custom-tab-bar/`
 
@@ -151,14 +163,18 @@ Assets are **CDN-first** in production, with a curated set of critical assets bu
 
 *Pool-registration subpackage:*
 - `src/pages/pool-registration/assets/` → `dist/pages/pool-registration/assets/` (pool-specific hero backdrops; Batch C ceremony registry is CDN-backed)
+- `src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-*.webp` → `dist/assets/pool-heroes/` (main-package local fallback that survives `clean:cdn-assets`; CDN primary via `assets/ceremony/`)
 
-*Icon tiers (bundled with @1x/@2x/@3x retina support via `JoyJoinIcon`):*
-- `src/assets/icons/mood-icons` (~16KB)
-- `src/assets/icons/chemistry-badges` (~16KB)
-- `src/assets/icons/status-icons` (~8KB)
-- `src/assets/icons/category-icons` (~60KB)
-- `src/assets/icons/intent-icons` (~60KB)
-- `src/assets/icons/archetype` (~72KB, head icons for avatars)
+*Icon tiers (bundled with @1x/@2x retina support via `JoyJoinIcon`; `status`/`semantic`/`ui` @3x stripped at build):*
+- `src/assets/icons/mood-icons` (~16KB raw)
+- `src/assets/icons/chemistry-badges` (~16KB raw)
+- `src/assets/icons/status-icons` (~360KB raw, Lovart 5×5 status grid: alarm/bar-chart/bell/check/close/mirror/sparkle/unlock + legacy crown/info; `@3x` stripped at build)
+- `src/assets/icons/category-icons` (~108KB raw)
+- `src/assets/icons/intent-icons` (~88KB raw)
+- `src/assets/icons/rating-faces` (~84KB raw, event-feedback 5-step rating selector)
+- `src/assets/icons/info-labels` (~216KB raw, semantic info labels such as calendar/location/people/target/globe; `@3x` stripped at build)
+- `src/assets/icons/ui` (~204KB raw, profile/settings list icons + gift/search/memo from Lovart 5×5 UI grid; `@3x` stripped at build)
+- `src/assets/icons/archetype` (~108KB raw, head icons for avatars)
 
 *Source-only icon tiers (uploaded to CDN, not copied to `dist`):*
 - `src/assets/icons/reaction-icons` (~120KB source)
@@ -178,6 +194,15 @@ Assets are **CDN-first** in production, with a curated set of critical assets bu
 - `src/assets/personality/xiaoyue/xiaoyue-loading-system.webp` (~49KB)
 - `src/assets/personality/xiaoyue/xiaoyue-home-welcome.webp` (~39KB)
 
+*Mascot sprite sheets (6 core states bundled; 14 CDN-only):*
+- Bundled: `welcome`, `idle`, `coach`, `loading`, `listening`, `thinking` (~235KB total).
+- CDN-primary: all other Xiaoyue sprite states. `XiaoyueSpriteAnimator` falls back to the bundled local copy on `onError`.
+
+*Interest taxonomy v2.0 illustrations (CDN-only):*
+- 48 active interests across 6 macro categories (`food`, `play`, `sports`, `culture`, `life`, `growth`).
+- Canonical `imageUrl` lives in `packages/shared/src/interests.ts`; mini-program resolves via `getInterestAssetUrl()` → `cdnAsset()`.
+- 4 refreshed category icon sets are bundled locally with CDN fallback copies.
+
 *Game UI:*
 - `src/assets/lovart/icebreaker/icons/icon-coin-*.png` → `dist/assets/auction-icons/` (~28KB)
 
@@ -189,7 +214,10 @@ Assets are **CDN-first** in production, with a curated set of critical assets bu
 - Re-encode via `node scripts/optimize-ceremony-batch-c.mjs` / `node scripts/optimize-badges-batch-d.mjs` (q=55, 600px) before committing new tiles, then upload via the CDN workflow.
 
 *CDN-only assets (too large for bundle or non-critical):*
-Archetype full-body images (WebP primary + PNG fallback for canvas), matching heroes, promo banners, Lovart illustrations (Batches A + B), Lovart ceremony & milestone heroes (Batches C + D), **phase-emblem** icon tier, reaction/reveal/achievement icon tiers, icebreaker backgrounds, celebration images, extra Xiaoyue expressions, mini-script heroes, ceremony heroes, milestone badges. Loaded via `cdnAsset()` with route-based preloading via `routePreloadAssets.ts`. The icebreaker session also preloads `ICEBREAKER_PHASE_EMBLEM_ASSETS` on entry.
+Archetype full-body images (WebP primary + PNG fallback for canvas), matching heroes, Lovart illustrations (Batches A + B), Lovart ceremony & milestone heroes (Batches C + D), **phase-emblem** icon tier, reaction/reveal/achievement icon tiers, icebreaker backgrounds, celebration images, extra Xiaoyue expressions, mini-script heroes, ceremony heroes, milestone badges, **interest taxonomy v2.0 illustrations** (`images/interests/*.webp`). Loaded via `cdnAsset()` with route-based preloading via `routePreloadAssets.ts`. The icebreaker session also preloads `ICEBREAKER_PHASE_EMBLEM_ASSETS` on entry.
+
+*Local-first with CDN fallback:*
+- Discover promo banner (`src/assets/promo/banner-hero-lovart-v1.webp`) is copied to `dist/assets/promo-local/` and loaded locally; `onError` falls back to the CDN copy under `assets/promo/`. This keeps the Discover hero instant on first paint.
 
 *CDN fallbacks for locally bundled assets:*
 - `ArchetypeHead` head icons (`src/assets/icons/archetype/archetype-*-head.webp`) are bundled locally; CDN fallback copies exist at the same path under `https://joyjoinapp.com/static/` for subpackage/cache-miss robustness.
@@ -203,7 +231,7 @@ The mini-program replaces raw Unicode emoji with brand-aligned proprietary icons
    - Maps Unicode emoji → `assetKey` + `tier` + `fallbackEmoji`
    - Supports **composite lookup** (same emoji resolves to different assets per tier)
    - `CDN_ICON_TIERS` controls which tiers load from CDN vs the local bundle. Tiers listed there should be wrapped with `cdnAsset()`; tiers **not** listed should be wrapped with `localAsset()` against bundled `src/assets/icons/<tier>/`. Keep critical UI chrome (e.g. `intent`, `category`) out of `CDN_ICON_TIERS` so subpackage pages never block on a network path.
-   - `getIconMapping(emoji, tier?)` → tier-specific match first, then global fallback
+   - `getIconMapping(emoji, tier?)` → tier-specific match first, then global fallback; if the emoji exists in exactly one tier map and no explicit `tier` is provided, the unambiguous tier mapping is used automatically
    - `getLocalIconAssetPath(assetKey, tier, density)` → builds root-relative `/assets/icons/...` path (preferred)
    - `getIconAssetPath(assetKey, tier, density)` → legacy relative `require()` path (deprecated; `require()` of non-JS assets crashes in WeChat subpackages)
 
@@ -223,12 +251,15 @@ The mini-program replaces raw Unicode emoji with brand-aligned proprietary icons
    - Fails the build if any bundled icon that floats on a variable background is fully opaque (e.g. a white matte behind `category-social`).
    - Run automatically before `npm run build:weapp`.
 
-**Tier inventory** (`IconTier`): `expression`, `semantic`, `mood`, `chemistry`, `phase`, `status`, `reaction`, `category`, `intent`, `reveal`, `achievement`
+**Tier inventory** (`IconTier`): `expression` (rating faces), `semantic` (maps to `info-labels` folder), `mood`, `chemistry`, `phase`, `status`, `reaction`, `category`, `intent`, `reveal`, `achievement`, `ui`
 
 **Preloader hooks for bundled icon tiers:**
 - `usePreloadCategoryIcons` — warms the five bundled category icons before the interest-heat picker renders.
-- `usePreloadIntentIcons` — warms the six bundled intent icons before the intent grid renders.
-Both skip on 2G and run once per session.
+- `usePreloadIntentIcons` — warms the bundled intent icons before the intent grid renders; skips on 2G/offline and runs once per session.
+- `preloadOnboardingAssets` (`src/lib/utils/onboardingPreload.ts`) — app-launch staggered preloader for onboarding-critical raster assets. Tier 1 (immediate) warms intro/welcome art; Tier 2 (~400ms) warms test expressions, personality emoji icons, intent icons, milestone badge, and welcome-back hero; Tier 3 (~1200ms) warms a curated core of mascot sprite sheets on capable devices. Skips entirely on 2G/offline and defers Tier 3 on low-end devices (`benchmarkLevel <= 15`).
+
+**Archetype asset registry:**
+- `src/lib/utils/archetypeAssets.ts` is the canonical source for full-size archetype WebP/PNG URLs, the bundled slot-machine spritesheet path, and bulk-preload helpers (`getAllArchetypeAssetUrls`, `getArchetypeSpritesheetLocalPath`). The personality-test subpackage re-exports these from `pages/onboarding/personality-test/visuals.ts` for historical consumers.
 
 **When to use raw emoji intentionally** (do not wire through `JoyJoinIcon`):
 - Dynamic conversational copy (`ProfessionChatOverlay`, Xiaoyue bubbles)
@@ -241,6 +272,15 @@ Both skip on 2G and run once per session.
 ## Native Custom Tab Bar
 
 The shipped mini-program tab bar is the **native WeChat component** copied from `src/native-custom-tab-bar/` to `dist/custom-tab-bar/` during build. There is no secondary Taro JSX tab bar in this workspace; all tab bar work happens in `src/native-custom-tab-bar/`.
+
+**Route-based visibility guard:** the native component keeps an explicit `TAB_BAR_PAGE_PATHS` allow-list (source of truth: `src/lib/navigation/tabBarConfig.ts`) and hides itself when attached to a non-tab page (e.g., the landing page), preventing the tab bar from leaking onto non-tab routes.
+
+The guard normalizes route formats (`pages/discover/index`, `/pages/discover/index`, and `pages/discover/index?$taroTimestamp=...`) before the allow-list lookup, defaults to `hidden: true`, and lets every tab page explicitly reveal the bar via `setSelected()` on `useDidShow`. This avoids a DevTools/device bug where `getCurrentPages()` is empty or returns an un-normalized route at attach time and the tab bar disappears permanently.
+
+> **Smoke test:** after any tab-bar or routing change, run the DevTools smoke in
+> [`docs/runbooks/mini-program-tab-bar-smoke.md`](../../docs/runbooks/mini-program-tab-bar-smoke.md).
+> It documents the correct verification technique: check the **computed
+> `display` and outer `hidden` attribute**, not just the WXML tree.
 
 | Aspect | Details |
 |--------|---------|
@@ -295,7 +335,8 @@ The shipped mini-program tab bar is the **native WeChat component** copied from 
    - `pages/pool-registration` — pool sign-up (free registration success uses CDN ceremony hero).
    - `pages/matching-status` — match waiting / reveal.
    - `pages/icebreaker-session` — in-event social icebreaker.
-3. **Preload rules** are declared from likely entry pages (`index`, `login`, `event-detail`, `events`) before reaching for independent subpackages.
+   - `pages/profile-linked` — edit-profile, rewards, invite, terms (preloaded from `pages/profile`).
+3. **Preload rules** are declared from likely entry pages (`index`, `login`, `event-detail`, `events`, `profile`) before reaching for independent subpackages.
 4. Any proposal for independent subpackages must include a self-contained bootstrap plan because `app.ts` and `AuthProvider` centralize app-level providers and auth setup.
 5. `useAuth` hydrates from `HYDRATE_AUTH_STORAGE_KEY` (`mj_auth_cache`) via `getStoredAuthUser()` so returning users skip the auth-loading gate on tab switches. `AuthProvider` triggers a background revalidation on mount and on app foreground.
 
@@ -377,3 +418,4 @@ For **matched** flows, `GET /api/pool-groups/:groupId/analysis` returns `fromCac
 | [`.github/skills/mini-program-frontend-excellence/SKILL.md`](../../.github/skills/mini-program-frontend-excellence/SKILL.md) | Skill: UI quality, pixel precision, 8rpx rhythm |
 | [`docs/DEVICE_QA_CHECKLIST.md`](./docs/DEVICE_QA_CHECKLIST.md) | Pre-release device QA checklist |
 | [`docs/LIST_VIRTUALIZATION.md`](./docs/LIST_VIRTUALIZATION.md) | Long-list thresholds and animation budget |
+

@@ -67,6 +67,65 @@ get_element({ selector: ".discover-auth__action-card", action: "tap" })
 - Image sources via `p4` attributes
 - No colors, fonts, or layout metrics
 
+### Correct DevTools smoke test for visibility-dependent components
+
+Some components — most importantly the **native custom tab bar** — can exist in
+ the WXML tree while being invisible because WeChat's `hidden` attribute sets
+`display: none`. A smoke test that only checks "is the element in the tree?"
+will give false positives.
+
+Use this procedure after any tab-bar or routing change:
+
+1. Build and reload DevTools:
+
+   ```bash
+   cd apps/mini-program
+   npm run build:weapp
+   ```
+
+   Then close and reopen the project in DevTools (or press `Command + R`) to
+   clear the custom-tab-bar compile cache.
+
+2. Navigate to a tab page, e.g.:
+
+   ```typescript
+   navigate_to({ url: "/pages/discover/index" })
+   ```
+
+3. In DevTools, select the tab-bar root (`.joy-custom-tab-bar`).
+4. In the right-hand styles / computed pane, verify:
+
+   | Check | Pass criteria on a tab page |
+   | --- | --- |
+   | Outer `hidden` attribute | **absent** |
+   | Computed `display` | `block` (or any non-`none` value) |
+
+5. Navigate to a non-tab page and verify the opposite:
+
+   ```typescript
+   // AppService console
+   wx.reLaunch({ url: "/pages/login/index" })
+   ```
+
+   | Check | Pass criteria on a non-tab page |
+   | --- | --- |
+   | Element presence | Not in the tree, **or** `hidden=""` present |
+   | Computed `display` | `none` |
+
+6. Record results in a small matrix:
+
+   | Page | Route | `display` | `hidden` attr |
+   | --- | --- | --- | --- |
+   | 发现 | `pages/discover/index` | `block` | absent ✅ |
+   | 足迹 | `pages/events/index` | `block` | absent ✅ |
+   | 连接 | `pages/connections/index` | `block` | absent ✅ |
+   | 我的 | `pages/profile/index` | `block` | absent ✅ |
+   | 中心入口 | `pages/center-hub/index` | `block` | absent ✅ |
+   | Login | `pages/login/index` | n/a | hidden / not attached ✅ |
+
+For the complete runbook, see
+[`docs/runbooks/mini-program-tab-bar-smoke.md`](../../../docs/runbooks/mini-program-tab-bar-smoke.md).
+
 ## Approach C: Real Device Preview (CLI QR Code)
 
 Use when you need to see the exact WeChat runtime rendering (fonts, native components, safe areas).

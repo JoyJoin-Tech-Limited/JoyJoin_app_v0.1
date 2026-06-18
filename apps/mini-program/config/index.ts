@@ -31,7 +31,10 @@ const MINI_PROGRAM_XIAOYUE_CONNECTION_REACTIONS_ENABLED =
   ''
 
 /** Inlined at build time — WeChat runtime has no `process` global. */
-const MINI_PROGRAM_CDN_BASE_URL = process.env.TARO_APP_CDN_BASE_URL ?? ''
+const PRODUCTION_CDN_BASE_URL = 'https://cdn.joyjoinapp.com/static'
+const MINI_PROGRAM_CDN_BASE_URL =
+  process.env.TARO_APP_CDN_BASE_URL ||
+  (process.env.NODE_ENV === 'production' ? PRODUCTION_CDN_BASE_URL : '')
 const MINI_PROGRAM_TARO_ENV = process.env.TARO_ENV ?? 'weapp'
 const MINI_PROGRAM_NODE_ENV = process.env.NODE_ENV ?? 'production'
 
@@ -39,7 +42,7 @@ if (MINI_PROGRAM_NODE_ENV === 'production' && !MINI_PROGRAM_CDN_BASE_URL) {
   throw new Error(
     '[mini-program build] TARO_APP_CDN_BASE_URL is required in production builds.\n' +
       '  Set it in apps/mini-program/.env.local or as an environment variable, then rebuild.\n' +
-      '  Example: TARO_APP_CDN_BASE_URL=https://joyjoinapp.com/static',
+      '  Example: TARO_APP_CDN_BASE_URL=https://cdn.joyjoinapp.com/static',
   )
 }
 
@@ -197,6 +200,15 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/empty-state',
           to: 'dist/assets/empty-state',
         },
+        // Discover hero promo banner — first-impression asset, bundled locally
+        // (~65KB) so it paints instantly on cold entry. CDN fallback is still
+        // available if the local copy fails to load.
+        // NOTE: copied to `promo-local/` because the clean step wipes the CDN
+        // `promo/` directory from the package.
+        {
+          from: 'src/assets/promo/banner-hero-lovart-v1.webp',
+          to: 'dist/assets/promo-local/banner-hero-lovart-v1.webp',
+        },
         // Batch C ceremony heroes — 8 WebP files (~310KB total, q=70 600px).
         // Served from CDN; source stays in src/assets/ceremony for upload via
         // `npm run upload:cdn-assets`. Local copies are no longer bundled so
@@ -207,6 +219,17 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         {
           from: 'src/pages/pool-registration/assets',
           to: 'dist/pages/pool-registration/assets',
+        },
+        // Pool-registration hero fallback — also copied to a main-package directory
+        // that survives clean:cdn-assets so the hero can load locally if the CDN
+        // or subpackage path fails. (~50KB total for both dining + drinks heroes).
+        {
+          from: 'src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp',
+          to: 'dist/assets/pool-heroes/lovart-pool-registration-hero-dining-20260613-v1.webp',
+        },
+        {
+          from: 'src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp',
+          to: 'dist/assets/pool-heroes/lovart-pool-registration-hero-drinks-20260613-v1.webp',
         },
         // Custom-tier icon — bundled locally for the icebreaker tier selector.
         // Lives in the phase-icons source folder but is copied out so it is not
@@ -223,11 +246,37 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/icons/phase-icons/custom-tier-icon@3x.webp',
           to: 'dist/assets/icons/custom-tier-icon@3x.webp',
         },
-        // Xiaoyue mascot sprite sheets — bundled locally as CDN fallback
-        // (~350KB total). Used by XiaoyueSpriteAnimator across the app.
+        // Xiaoyue mascot sprite sheets — bundled locally as CDN fallback.
+        // Only the core states that appear during the first session are kept
+        // in the main package; the rest are CDN-only to stay under the 2 MB
+        // WeChat limit. XiaoyueSpriteAnimator always tries CDN first.
         {
-          from: 'src/assets/mascot',
-          to: 'dist/assets/mascot',
+          from: 'src/assets/mascot/xiaoyue-welcome.webp',
+          to: 'dist/assets/mascot/xiaoyue-welcome.webp',
+        },
+        {
+          from: 'src/assets/mascot/xiaoyue-idle.webp',
+          to: 'dist/assets/mascot/xiaoyue-idle.webp',
+        },
+        {
+          from: 'src/assets/mascot/xiaoyue-coach.webp',
+          to: 'dist/assets/mascot/xiaoyue-coach.webp',
+        },
+        {
+          from: 'src/assets/mascot/xiaoyue-loading.webp',
+          to: 'dist/assets/mascot/xiaoyue-loading.webp',
+        },
+        {
+          from: 'src/assets/mascot/xiaoyue-listening.webp',
+          to: 'dist/assets/mascot/xiaoyue-listening.webp',
+        },
+        {
+          from: 'src/assets/mascot/xiaoyue-thinking.webp',
+          to: 'dist/assets/mascot/xiaoyue-thinking.webp',
+        },
+        {
+          from: 'src/assets/mascot/xiaoyue-spritesheet-manifest.json',
+          to: 'dist/assets/mascot/xiaoyue-spritesheet-manifest.json',
         },
         // Matching status heroes — referenced via cdnAsset(); local copies are
         // not bundled because cdnAsset() returns the CDN URL in production.
@@ -263,10 +312,6 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           to: 'dist/assets/xiaoyue-expressions/xiaoyue-loading-system.png',
         },
         {
-          from: 'src/assets/personality/xiaoyue/xiaoyue-home-welcome.png',
-          to: 'dist/assets/xiaoyue-expressions/xiaoyue-home-welcome.png',
-        },
-        {
           from: 'src/assets/personality/xiaoyue/xiaoyue-coach-guide.webp',
           to: 'dist/assets/xiaoyue-expressions/xiaoyue-coach-guide.webp',
         },
@@ -274,10 +319,6 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/personality/xiaoyue/xiaoyue-home-welcome.webp',
           to: 'dist/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp',
         },
-        // Lovart generic empty/error illustrations — CDN only to save package size.
-        // Previously bundled locally but moved back to CDN to stay under 2MB.
-        // Kept as WebP; CDN delivery handles iOS compatibility via webp={true}.
-
         // UI icons — info labels across the app (~81KB).
         {
           from: 'src/assets/icons/ui',

@@ -2,7 +2,7 @@ import Taro from '@tarojs/taro'
 import { useMemo } from 'react'
 
 type MotionMode = 'full' | 'reduce'
-type MotionSource = 'query' | 'storage' | 'benchmark' | 'default'
+type MotionSource = 'query' | 'storage' | 'benchmark' | 'system' | 'default'
 
 export interface MiniRevealMotionPreference {
   motionMode: MotionMode
@@ -11,7 +11,6 @@ export interface MiniRevealMotionPreference {
 }
 
 const MOTION_STORAGE_KEY = 'joyjoin:mini-reveal-motion'
-const LOW_MOTION_BENCHMARK_LEVEL = 15
 
 function normalizeMotionMode(value?: string): MotionMode | null {
   if (!value) {
@@ -40,20 +39,12 @@ function readStoredMotionMode(): MotionMode | null {
   }
 }
 
-function shouldUseBenchmarkFallback(): boolean {
+function shouldUseReducedMotionFallback(): boolean {
   try {
     const systemInfo = Taro.getSystemInfoSync()
 
     // OS-level reduced-motion preference (iOS / Android accessibility)
-    if ((systemInfo as unknown as Record<string, unknown>).reduceMotion === true) {
-      return true
-    }
-
-    return (
-      typeof systemInfo.benchmarkLevel === 'number' &&
-      systemInfo.benchmarkLevel > 0 &&
-      systemInfo.benchmarkLevel <= LOW_MOTION_BENCHMARK_LEVEL
-    )
+    return (systemInfo as unknown as Record<string, unknown>).reduceMotion === true
   } catch {
     return false
   }
@@ -86,11 +77,11 @@ export function resolveMiniRevealMotionPreference(
     }
   }
 
-  if (shouldUseBenchmarkFallback()) {
+  if (shouldUseReducedMotionFallback()) {
     return {
       motionMode: 'reduce',
       shouldReduceMotion: true,
-      source: 'benchmark',
+      source: 'system',
     }
   }
 

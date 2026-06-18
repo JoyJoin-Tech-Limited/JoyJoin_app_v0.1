@@ -1,6 +1,6 @@
 {
     "_comment": "Assets to upload to CDN for JoyJoin Mini Program. Run this after each build that changes assets.",
-    "cdnBaseUrl": "https://joyjoinapp.com/static",
+    "cdnBaseUrl": "https://cdn.joyjoinapp.com/static",
     "assets": [
         {
             "localPath": "assets/joyjoin-logo.webp",
@@ -149,6 +149,78 @@
         {
             "localPath": "assets/icons/reaction-icons/reaction-wow@3x.webp",
             "cdnPath": "assets/icons/reaction-icons/reaction-wow@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-money-bag.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-money-bag.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-money-bag@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-money-bag@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-money-bag@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-money-bag@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-smirk.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-smirk.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-smirk@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-smirk@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-smirk@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-smirk@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-sunglasses.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-sunglasses.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-sunglasses@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-sunglasses@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-sunglasses@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-sunglasses@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-purple-heart.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-purple-heart.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-purple-heart@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-purple-heart@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-purple-heart@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-purple-heart@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-sweat.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-sweat.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-sweat@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-sweat@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-sweat@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-sweat@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-devil.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-devil.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-devil@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-devil@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-devil@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-devil@3x.webp"
         },
         {
             "localPath": "assets/icons/reveal-icons/reveal-exact-archetype.webp",
@@ -327,24 +399,24 @@
             "cdnPath": "assets/lovart/icebreaker/backgrounds/bg-undercover-word.jpg"
         },
         {
-            "localPath": "assets/lovart/icebreaker/celebrations/celebration-auction-sold.png",
-            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-auction-sold.png"
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-auction-sold.webp",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-auction-sold.webp"
         },
         {
-            "localPath": "assets/lovart/icebreaker/celebrations/celebration-dice-reveal.png",
-            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-dice-reveal.png"
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-dice-reveal.webp",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-dice-reveal.webp"
         },
         {
-            "localPath": "assets/lovart/icebreaker/celebrations/celebration-mirror-result.png",
-            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-mirror-result.png"
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-mirror-result.webp",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-mirror-result.webp"
         },
         {
-            "localPath": "assets/lovart/icebreaker/celebrations/celebration-quip-champion.png",
-            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-quip-champion.png"
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-quip-champion.webp",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-quip-champion.webp"
         },
         {
-            "localPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.png",
-            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.png"
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.webp",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.webp"
         },
         {
             "localPath": "assets/lovart/icebreaker/icons/icon-coin-empty.png",
@@ -945,6 +1017,206 @@
         {
             "localPath": "assets/personality/archetypes/archetype-turtle.png",
             "cdnPath": "assets/personality/archetypes/archetype-turtle.png"
+        },
+        {
+            "localPath": "assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp",
+            "cdnPath": "assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp",
+            "cdnPath": "assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp"
+        },
+        {
+            "localPath": "assets/interests/bar.webp",
+            "cdnPath": "images/interests/bar.webp"
+        },
+        {
+            "localPath": "assets/interests/bbq.webp",
+            "cdnPath": "images/interests/bbq.webp"
+        },
+        {
+            "localPath": "assets/interests/beauty.webp",
+            "cdnPath": "images/interests/beauty.webp"
+        },
+        {
+            "localPath": "assets/interests/binge_watch.webp",
+            "cdnPath": "images/interests/binge_watch.webp"
+        },
+        {
+            "localPath": "assets/interests/board_games.webp",
+            "cdnPath": "images/interests/board_games.webp"
+        },
+        {
+            "localPath": "assets/interests/camping.webp",
+            "cdnPath": "images/interests/camping.webp"
+        },
+        {
+            "localPath": "assets/interests/cantonese.webp",
+            "cdnPath": "images/interests/cantonese.webp"
+        },
+        {
+            "localPath": "assets/interests/career.webp",
+            "cdnPath": "images/interests/career.webp"
+        },
+        {
+            "localPath": "assets/interests/cinema.webp",
+            "cdnPath": "images/interests/cinema.webp"
+        },
+        {
+            "localPath": "assets/interests/citywalk.webp",
+            "cdnPath": "images/interests/citywalk.webp"
+        },
+        {
+            "localPath": "assets/interests/climbing.webp",
+            "cdnPath": "images/interests/climbing.webp"
+        },
+        {
+            "localPath": "assets/interests/coffee.webp",
+            "cdnPath": "images/interests/coffee.webp"
+        },
+        {
+            "localPath": "assets/interests/concert.webp",
+            "cdnPath": "images/interests/concert.webp"
+        },
+        {
+            "localPath": "assets/interests/cycling.webp",
+            "cdnPath": "images/interests/cycling.webp"
+        },
+        {
+            "localPath": "assets/interests/dessert.webp",
+            "cdnPath": "images/interests/dessert.webp"
+        },
+        {
+            "localPath": "assets/interests/diy.webp",
+            "cdnPath": "images/interests/diy.webp"
+        },
+        {
+            "localPath": "assets/interests/escape_room.webp",
+            "cdnPath": "images/interests/escape_room.webp"
+        },
+        {
+            "localPath": "assets/interests/exhibition.webp",
+            "cdnPath": "images/interests/exhibition.webp"
+        },
+        {
+            "localPath": "assets/interests/extreme_sports.webp",
+            "cdnPath": "images/interests/extreme_sports.webp"
+        },
+        {
+            "localPath": "assets/interests/fashion.webp",
+            "cdnPath": "images/interests/fashion.webp"
+        },
+        {
+            "localPath": "assets/interests/fitness.webp",
+            "cdnPath": "images/interests/fitness.webp"
+        },
+        {
+            "localPath": "assets/interests/flea_market.webp",
+            "cdnPath": "images/interests/flea_market.webp"
+        },
+        {
+            "localPath": "assets/interests/food_hunting.webp",
+            "cdnPath": "images/interests/food_hunting.webp"
+        },
+        {
+            "localPath": "assets/interests/gaming.webp",
+            "cdnPath": "images/interests/gaming.webp"
+        },
+        {
+            "localPath": "assets/interests/hiking.webp",
+            "cdnPath": "images/interests/hiking.webp"
+        },
+        {
+            "localPath": "assets/interests/hotpot.webp",
+            "cdnPath": "images/interests/hotpot.webp"
+        },
+        {
+            "localPath": "assets/interests/japanese.webp",
+            "cdnPath": "images/interests/japanese.webp"
+        },
+        {
+            "localPath": "assets/interests/ktv.webp",
+            "cdnPath": "images/interests/ktv.webp"
+        },
+        {
+            "localPath": "assets/interests/language.webp",
+            "cdnPath": "images/interests/language.webp"
+        },
+        {
+            "localPath": "assets/interests/live_house.webp",
+            "cdnPath": "images/interests/live_house.webp"
+        },
+        {
+            "localPath": "assets/interests/music.webp",
+            "cdnPath": "images/interests/music.webp"
+        },
+        {
+            "localPath": "assets/interests/pets.webp",
+            "cdnPath": "images/interests/pets.webp"
+        },
+        {
+            "localPath": "assets/interests/photography.webp",
+            "cdnPath": "images/interests/photography.webp"
+        },
+        {
+            "localPath": "assets/interests/podcasts.webp",
+            "cdnPath": "images/interests/podcasts.webp"
+        },
+        {
+            "localPath": "assets/interests/private_kitchen.webp",
+            "cdnPath": "images/interests/private_kitchen.webp"
+        },
+        {
+            "localPath": "assets/interests/reading.webp",
+            "cdnPath": "images/interests/reading.webp"
+        },
+        {
+            "localPath": "assets/interests/sailing.webp",
+            "cdnPath": "images/interests/sailing.webp"
+        },
+        {
+            "localPath": "assets/interests/script_kill.webp",
+            "cdnPath": "images/interests/script_kill.webp"
+        },
+        {
+            "localPath": "assets/interests/standup.webp",
+            "cdnPath": "images/interests/standup.webp"
+        },
+        {
+            "localPath": "assets/interests/startup.webp",
+            "cdnPath": "images/interests/startup.webp"
+        },
+        {
+            "localPath": "assets/interests/tech.webp",
+            "cdnPath": "images/interests/tech.webp"
+        },
+        {
+            "localPath": "assets/interests/theater.webp",
+            "cdnPath": "images/interests/theater.webp"
+        },
+        {
+            "localPath": "assets/interests/travel.webp",
+            "cdnPath": "images/interests/travel.webp"
+        },
+        {
+            "localPath": "assets/interests/variety.webp",
+            "cdnPath": "images/interests/variety.webp"
+        },
+        {
+            "localPath": "assets/interests/vintage.webp",
+            "cdnPath": "images/interests/vintage.webp"
+        },
+        {
+            "localPath": "assets/interests/werewolf.webp",
+            "cdnPath": "images/interests/werewolf.webp"
+        },
+        {
+            "localPath": "assets/interests/western.webp",
+            "cdnPath": "images/interests/western.webp"
+        },
+        {
+            "localPath": "assets/interests/wine.webp",
+            "cdnPath": "images/interests/wine.webp"
         }
     ]
 }

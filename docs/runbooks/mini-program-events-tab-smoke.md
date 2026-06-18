@@ -5,6 +5,12 @@
 >
 > **Audience:** Frontend engineers and QA validating `apps/mini-program` in
 > WeChat DevTools.
+>
+> **Companion runbook:** For the general native custom tab-bar visibility smoke
+> (checking that the bar renders on all tab pages and hides on non-tab pages),
+> see [`mini-program-tab-bar-smoke.md`](./mini-program-tab-bar-smoke.md). That
+> runbook also documents the correct DevTools verification technique: verify the
+> **computed `display` and outer `hidden` attribute**, not just the WXML tree.
 
 ---
 
@@ -36,6 +42,12 @@ Expected result:
 - WeChat build succeeds and refreshes `apps/mini-program/dist`.
 
 These checks validate the route inventory and tab-shell config. The manual DevTools smoke below is still required to confirm runtime navigation.
+
+> **Visual verification note:** When confirming the tab bar appears for the
+> Events tab, follow the method in [`mini-program-tab-bar-smoke.md`](./mini-program-tab-bar-smoke.md):
+> select the `.joy-custom-tab-bar` root in DevTools and confirm `hidden` is
+> absent and computed `display` is `block`. The WXML tree alone can show the
+> component while `hidden=""` makes it invisible.
 
 ---
 
@@ -148,8 +160,8 @@ Treat the smoke as passed only when both entry points behave as follows:
 
 | Entry path | Final route | Final header | Tab expectation |
 | --- | --- | --- | --- |
-| `pages/events/index` | `pages/events/index` | `我的足迹` | second tab selected |
-| `pages/my-events/index` | `pages/events/index` | `我的足迹` | second tab selected |
+| `pages/events/index` | `pages/events/index` | `我的足迹` | second tab selected; tab bar visible (`display: block`, no `hidden`) |
+| `pages/my-events/index` | `pages/events/index` | `我的足迹` | second tab selected; tab bar visible (`display: block`, no `hidden`) |
 
 ---
 
@@ -161,6 +173,10 @@ Treat any of the following as a regression:
 - The final route after the alias is still the alias path instead of `pages/events/index`.
 - The selected tab does not move to the second `足迹` slot.
 - The final page title is not `我的足迹`.
+- The tab bar is present in the WXML tree but invisible (`display: none` or
+  `hidden=""`) on the Events tab — this is a tab-bar visibility regression, not
+  an Events routing regression; debug with
+  [`mini-program-tab-bar-smoke.md`](./mini-program-tab-bar-smoke.md).
 
 Operational issues that are not product regressions:
 

@@ -1,0 +1,477 @@
+[
+  {
+    "tier": "status",
+    "name": "status-alarm-clock",
+    "emoji": "⏰",
+    "row": 0,
+    "col": 0,
+    "cell": "410x410",
+    "bbox": "291x311",
+    "centroidOffset": {
+      "x": -2.23,
+      "y": -9.93
+    },
+    "crop": "348x348",
+    "outputs": [
+      "status-alarm-clock.webp",
+      "status-alarm-clock@2x.webp",
+      "status-alarm-clock@3x.webp"
+    ]
+  },
+  {
+    "tier": "status",
+    "name": "status-megaphone",
+    "emoji": "📣",
+    "row": 0,
+    "col": 1,
+    "cell": "409x410",
+    "bbox": "350x305",
+    "centroidOffset": {
+      "x": -16.13,
+      "y": -3.53
+    },
+    "crop": "392x392",
+    "outputs": [
+      "status-megaphone.webp",
+      "status-megaphone@2x.webp",
+      "status-megaphone@3x.webp"
+    ]
+  },
+  {
+    "tier": "status",
+    "name": "status-bar-chart",
+    "emoji": "📊",
+    "row": 0,
+    "col": 2,
+    "cell": "410x410",
+    "bbox": "338x303",
+    "centroidOffset": {
+      "x": 18.71,
+      "y": 28.73
+    },
+    "crop": "379x379",
+    "outputs": [
+      "status-bar-chart.webp",
+      "status-bar-chart@2x.webp",
+      "status-bar-chart@3x.webp"
+    ]
+  },
+  {
+    "tier": "status",
+    "name": "status-warning",
+    "emoji": "⚠️",
+    "row": 0,
+    "col": 3,
+    "cell": "409x410",
+    "bbox": "298x293",
+    "centroidOffset": {
+      "x": 1.6,
+      "y": 33.16
+    },
+    "crop": "334x334",
+    "outputs": [
+      "status-warning.webp",
+      "status-warning@2x.webp",
+      "status-warning@3x.webp"
+    ]
+  },
+  {
+    "tier": "status",
+    "name": "status-prohibited",
+    "emoji": "🚫",
+    "row": 0,
+    "col": 4,
+    "cell": "410x410",
+    "bbox": "291x298",
+    "centroidOffset": {
+      "x": -0.59,
+      "y": 0.28
+    },
+    "crop": "334x334",
+    "outputs": [
+      "status-prohibited.webp",
+      "status-prohibited@2x.webp",
+      "status-prohibited@3x.webp"
+    ]
+  },
+  {
+    "tier": "semantic",
+    "name": "label-cityscape",
+    "emoji": "🌆",
+    "row": 1,
+    "col": 0,
+    "cell": "410x409",
+    "bbox": "353x328",
+    "centroidOffset": {
+      "x": 1.28,
+      "y": 15.05
+    },
+    "crop": "395x395",
+    "outputs": [
+      "label-cityscape.webp",
+      "label-cityscape@2x.webp",
+      "label-cityscape@3x.webp"
+    ]
+  },
+  {
+    "tier": "semantic",
+    "name": "label-map",
+    "emoji": "🗺️",
+    "row": 1,
+    "col": 1,
+    "cell": "409x409",
+    "bbox": "326x273",
+    "centroidOffset": {
+      "x": -0.04,
+      "y": -0.08
+    },
+    "crop": "365x365",
+    "outputs": [
+      "label-map.webp",
+      "label-map@2x.webp",
+      "label-map@3x.webp"
+    ]
+  },
+  {
+    "tier": "semantic",
+    "name": "label-globe-asia",
+    "emoji": "🌏",
+    "row": 1,
+    "col": 2,
+    "cell": "410x409",
+    "bbox": "306x310",
+    "centroidOffset": {
+      "x": 0.04,
+      "y": -0.25
+    },
+    "crop": "347x347",
+    "outputs": [
+      "label-globe-asia.webp",
+      "label-globe-asia@2x.webp",
+      "label-globe-asia@3x.webp"
+    ]
+  },
+  {
+    "tier": "semantic",
+    "name": "label-globe-meridians",
+    "emoji": "🌐",
+    "row": 1,
+    "col": 3,
+    "cell": "409x409",
+    "bbox": "354x343",
+    "centroidOffset": {
+      "x": -36.5,
+      "y": -1.79
+    },
+    "crop": "396x396",
+    "outputs": [
+      "label-globe-meridians.webp",
+      "label-globe-meridians@2x.webp",
+      "label-globe-meridians@3x.webp"
+    ]
+  },
+  {
+    "tier": "semantic",
+    "name": "label-airplane",
+    "emoji": "✈️",
+    "row": 1,
+    "col": 4,
+    "cell": "410x409",
+    "bbox": "358x282",
+    "centroidOffset": {
+      "x": -4.93,
+      "y": -23.82
+    },
+    "crop": "401x401",
+    "outputs": [
+      "label-airplane.webp",
+      "label-airplane@2x.webp",
+      "label-airplane@3x.webp"
+    ]
+  },
+  {
+    "tier": "reaction",
+    "name": "reaction-money-bag",
+    "emoji": "💰",
+    "row": 2,
+    "col": 0,
+    "cell": "410x410",
+    "bbox": "246x358",
+    "centroidOffset": {
+      "x": -0.78,
+      "y": -7.57
+    },
+    "crop": "401x401",
+    "outputs": [
+      "reaction-money-bag.webp",
+      "reaction-money-bag@2x.webp",
+      "reaction-money-bag@3x.webp"
+    ]
+  },
+  {
+    "tier": "reaction",
+    "name": "reaction-smirk",
+    "emoji": "😏",
+    "row": 2,
+    "col": 1,
+    "cell": "409x410",
+    "bbox": "293x287",
+    "centroidOffset": {
+      "x": -0.38,
+      "y": -1.29
+    },
+    "crop": "328x328",
+    "outputs": [
+      "reaction-smirk.webp",
+      "reaction-smirk@2x.webp",
+      "reaction-smirk@3x.webp"
+    ]
+  },
+  {
+    "tier": "reaction",
+    "name": "reaction-sunglasses",
+    "emoji": "😎",
+    "row": 2,
+    "col": 2,
+    "cell": "410x410",
+    "bbox": "288x283",
+    "centroidOffset": {
+      "x": -0.93,
+      "y": -1.32
+    },
+    "crop": "323x323",
+    "outputs": [
+      "reaction-sunglasses.webp",
+      "reaction-sunglasses@2x.webp",
+      "reaction-sunglasses@3x.webp"
+    ]
+  },
+  {
+    "tier": "reaction",
+    "name": "reaction-purple-heart",
+    "emoji": "💜",
+    "row": 2,
+    "col": 3,
+    "cell": "409x410",
+    "bbox": "305x356",
+    "centroidOffset": {
+      "x": 0.04,
+      "y": 19.05
+    },
+    "crop": "399x399",
+    "outputs": [
+      "reaction-purple-heart.webp",
+      "reaction-purple-heart@2x.webp",
+      "reaction-purple-heart@3x.webp"
+    ]
+  },
+  {
+    "tier": "reaction",
+    "name": "reaction-sweat",
+    "emoji": "😅",
+    "row": 2,
+    "col": 4,
+    "cell": "410x410",
+    "bbox": "296x286",
+    "centroidOffset": {
+      "x": -1.81,
+      "y": -2.6
+    },
+    "crop": "332x332",
+    "outputs": [
+      "reaction-sweat.webp",
+      "reaction-sweat@2x.webp",
+      "reaction-sweat@3x.webp"
+    ]
+  },
+  {
+    "tier": "status",
+    "name": "status-mirror",
+    "emoji": "🪞",
+    "row": 3,
+    "col": 0,
+    "cell": "410x409",
+    "bbox": "304x409",
+    "centroidOffset": {
+      "x": -6.61,
+      "y": -50.82
+    },
+    "crop": "409x409",
+    "outputs": [
+      "status-mirror.webp",
+      "status-mirror@2x.webp",
+      "status-mirror@3x.webp"
+    ]
+  },
+  {
+    "tier": "status",
+    "name": "status-unlocked",
+    "emoji": "🔓",
+    "row": 3,
+    "col": 1,
+    "cell": "409x409",
+    "bbox": "225x409",
+    "centroidOffset": {
+      "x": 5.12,
+      "y": -20.58
+    },
+    "crop": "409x409",
+    "outputs": [
+      "status-unlocked.webp",
+      "status-unlocked@2x.webp",
+      "status-unlocked@3x.webp"
+    ]
+  },
+  {
+    "tier": "status",
+    "name": "status-star",
+    "emoji": "🌟",
+    "row": 3,
+    "col": 2,
+    "cell": "410x409",
+    "bbox": "314x395",
+    "centroidOffset": {
+      "x": -1.86,
+      "y": -29.62
+    },
+    "crop": "409x409",
+    "outputs": [
+      "status-star.webp",
+      "status-star@2x.webp",
+      "status-star@3x.webp"
+    ]
+  },
+  {
+    "tier": "status",
+    "name": "status-close",
+    "emoji": "✕",
+    "row": 3,
+    "col": 3,
+    "cell": "409x409",
+    "bbox": "269x383",
+    "centroidOffset": {
+      "x": -0.91,
+      "y": -39.03
+    },
+    "crop": "409x409",
+    "outputs": [
+      "status-close.webp",
+      "status-close@2x.webp",
+      "status-close@3x.webp"
+    ]
+  },
+  {
+    "tier": "status",
+    "name": "status-check",
+    "emoji": "✓",
+    "row": 3,
+    "col": 4,
+    "cell": "410x409",
+    "bbox": "302x370",
+    "centroidOffset": {
+      "x": 1.34,
+      "y": -31.43
+    },
+    "crop": "409x409",
+    "outputs": [
+      "status-check.webp",
+      "status-check@2x.webp",
+      "status-check@3x.webp"
+    ]
+  },
+  {
+    "tier": "reaction",
+    "name": "reaction-devil",
+    "emoji": "😈",
+    "row": 4,
+    "col": 0,
+    "cell": "410x410",
+    "bbox": "304x269",
+    "centroidOffset": {
+      "x": -4.0,
+      "y": -15.18
+    },
+    "crop": "340x340",
+    "outputs": [
+      "reaction-devil.webp",
+      "reaction-devil@2x.webp",
+      "reaction-devil@3x.webp"
+    ]
+  },
+  {
+    "tier": "status",
+    "name": "status-bell",
+    "emoji": "🔔",
+    "row": 4,
+    "col": 1,
+    "cell": "409x410",
+    "bbox": "316x263",
+    "centroidOffset": {
+      "x": -7.74,
+      "y": -1.66
+    },
+    "crop": "354x354",
+    "outputs": [
+      "status-bell.webp",
+      "status-bell@2x.webp",
+      "status-bell@3x.webp"
+    ]
+  },
+  {
+    "tier": "ui",
+    "name": "icon-gift",
+    "emoji": "🎁",
+    "row": 4,
+    "col": 2,
+    "cell": "410x410",
+    "bbox": "305x293",
+    "centroidOffset": {
+      "x": -0.71,
+      "y": -10.1
+    },
+    "crop": "342x342",
+    "outputs": [
+      "icon-gift.webp",
+      "icon-gift@2x.webp",
+      "icon-gift@3x.webp"
+    ]
+  },
+  {
+    "tier": "ui",
+    "name": "icon-search",
+    "emoji": "🔍",
+    "row": 4,
+    "col": 3,
+    "cell": "409x410",
+    "bbox": "304x271",
+    "centroidOffset": {
+      "x": -14.26,
+      "y": -24.22
+    },
+    "crop": "340x340",
+    "outputs": [
+      "icon-search.webp",
+      "icon-search@2x.webp",
+      "icon-search@3x.webp"
+    ]
+  },
+  {
+    "tier": "ui",
+    "name": "icon-memo",
+    "emoji": "📝",
+    "row": 4,
+    "col": 4,
+    "cell": "410x410",
+    "bbox": "307x283",
+    "centroidOffset": {
+      "x": 2.36,
+      "y": -6.67
+    },
+    "crop": "344x344",
+    "outputs": [
+      "icon-memo.webp",
+      "icon-memo@2x.webp",
+      "icon-memo@3x.webp"
+    ]
+  }
+]

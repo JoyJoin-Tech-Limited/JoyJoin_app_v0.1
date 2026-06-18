@@ -109,7 +109,7 @@ npm run db:studio        # Open Drizzle Studio (database GUI)
 
 ### Production deployment topology
 
-- Active production deploys run from `.github/workflows/cicd.yml`: GitHub Actions SSHes to `SERVER_IP`, resets the repo on the remote host, runs `cd ~/JoyJoin/deployment`, then runs `docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans`.
+- Active production deploys run from `.github/workflows/deploy-production.yml` (triggered by pushes to `release`): GitHub Actions SSHes to `SERVER_IP`, rsyncs code to the remote host, runs `deployment/scripts/deploy-production.sh`, which reloads Nginx and restarts containers. Pushes to `main` deploy to staging via `.github/workflows/deploy-staging.yml`.
 - The public edge is the self-managed remote server plus host Nginx using `deployment/nginx/joyjoin.conf` (`joyjoinapp.com`, `www.joyjoinapp.com`, `admin.joyjoinapp.com`, `api.joyjoinapp.com`). This is the active production path; do not revive old Fly.io deployment assumptions in active docs or scripts.
 - The app runtime still requires `DATABASE_URL`, but the repository does **not** provision PostgreSQL on the remote host (`deployment/docker-compose.nginx.yml` has no DB service and no `5432` mapping). Current deployment expects an external PostgreSQL instance via `DATABASE_URL`.
 
@@ -231,7 +231,7 @@ joyjoin-monorepo/
 | Swipe-back flag-reset hook | `apps/mini-program/src/hooks/useResetOnShow.ts` |
 | Quality bar (pixel precision, DevTools) | `.github/skills/mini-program-frontend-excellence/SKILL.md` |
 | 完成度 audit (completeness + ROI recommendations) | `.github/skills/completeness-audit/SKILL.md` (pipeline: ui-layout-audit → frontend-design-audit → completeness-audit) |
-| Hero promo banner (discover top surface) | `apps/mini-program/src/components/HeroPromoBanner.tsx` — full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles. CTA always wired so it never silently disables; `margin-bottom: 8rpx` prevents boundary clipping. Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`, default `true`). Promo copy must not fabricate social-proof metrics. |
+| Hero promo banner (discover top surface) | `apps/mini-program/src/components/HeroPromoBanner.tsx` — full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles. The hero image is bundled locally (`assets/promo-local/banner-hero-lovart-v1.webp`) with CDN fallback on `onError`. CTA always wired so it never silently disables; `margin-bottom: 8rpx` prevents boundary clipping. Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`, default `true`). Promo copy must not fabricate social-proof metrics. |
 | Status card (empty/error) | `apps/mini-program/src/components/ui/StatusCard.tsx` — unified status surface with Lovart hero illustration (WebP + PNG fallback), title, description, and optional action. Used on Discover and Events for empty states and on Discover for list-fetch error states. |
 | Profile tab (redesign) | `apps/mini-program/src/pages/profile/index.tsx` — social-passport hero with age/city/bio chips, stat cards, milestone badges, menu grid, profile-card share, and one-time 100% completion ceremony. Consumes `GET /api/shell/profile` via `getProfileShell()` with offline-first React Query config and cached-shell fallback; `PrefetchEngine` warms Events/Connections shells after data stabilizes. Feature-flagged by `user.features.profileRedesignEnabled` (env `PROFILE_REDESIGN_ENABLED`, default `true`). Bio adds +10% completion bonus; `PATCH /api/profile` persists the optional 100-character bio. |
 
@@ -510,7 +510,7 @@ These are commented out in schema but kept for backward compatibility.
 
 ### Profile Edit Routes
 
-**Mini-program (launch-primary):** `pages/edit-profile/index` — single consolidated 2-step editor.
+**Mini-program (launch-primary):** `pages/profile-linked/edit-profile/index` — single consolidated 2-step editor (lives in the `pages/profile-linked` subpackage, preloaded from `pages/profile/index`).
 
 **Web (archived):** The following granular edit routes were part of the archived `user-client` and are not active in the mini-program:
 
@@ -669,7 +669,7 @@ After `FinalProfileReviewPage`, a secondary CTA "先浏览 →" lets users enter
 | Cross-app imports | Apps must **not** import from other apps — shared logic goes in `packages/shared` |
 | Matching background | Reuse `matching/shared/matching-bg.svg` via `MatchingStateLayout` — never duplicate |
 | Hero images | Prefer WebP + `decoding="async"` over PNG for hero/above-fold images |
-| Archetype assets | Defer/gate — do not preload all 12 archetype PNGs in the critical path |
+| Archetype assets | Defer/gate — do not bulk-preload all 12 archetype images in the app-launch critical path. Preload only the primary result image on test completion / results mount; use `apps/mini-program/src/lib/utils/archetypeAssets.ts` as the canonical registry. |
 | Asset prefetching | Gate on real activity state — do not prefetch for no-activity users |
 
 ---

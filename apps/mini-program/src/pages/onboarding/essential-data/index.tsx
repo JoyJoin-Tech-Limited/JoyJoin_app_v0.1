@@ -24,6 +24,7 @@ import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingA
 import { useOnboardingCheckpoint } from '../../../hooks/onboarding/useOnboardingCheckpoint'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
+import { usePreloadIntentIcons } from '../../../hooks/usePreloadIntentIcons'
 import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
 import { logError, logInfo } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
@@ -176,12 +177,18 @@ export default function EssentialDataPage() {
   const [professionClassification, setProfessionClassification] = useState<ProfessionClassificationData | null>(null)
 
   useResetOnShow(setIsPageExiting, setIsSubmitting)
+
   const [mascotReaction, setMascotReaction] = useState('')
   const mascotTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { user, isLoading } = useAuthGuard({
     suspendOnboardingRedirect: isSubmitting || isPageExiting,
   })
+
+  // Pre-warm bundled intent icons so the onboarding intent grid renders
+  // instantly and does not fall back to native emoji in the subpackage.
+  usePreloadIntentIcons([...INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION], !isLoading)
+
   const userArchetype = (user?.primaryArchetype as string | undefined) || (user?.archetype as string | undefined) || ''
   const archetypeVisual = userArchetype ? getArchetypeVisual(userArchetype) : null
   const accentColor = archetypeVisual?.accent || ''

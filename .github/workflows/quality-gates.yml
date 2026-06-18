@@ -1,0 +1,233 @@
+name: Quality Gates
+
+on:
+  workflow_call:
+    secrets:
+      DEEPSEEK_API_KEY:
+        required: true
+
+concurrency:
+  group: quality-gates-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  guardrails:
+    name: Guardrails
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify env, secret, legacy, and import-boundary guardrails
+        run: node scripts/check/check-guardrails.mjs
+
+      - name: Verify workspace dependency ownership
+        run: node scripts/check/check-workspace-dependency-ownership.mjs
+
+      - name: Validate skill routing coverage
+        run: node scripts/verify/validate-skill-routing.mjs
+
+      - name: Run skill routing regression suite
+        run: node scripts/test/test-skill-routing.mjs
+
+      - name: Verify migration journal sync
+        run: node scripts/verify/verify-journal-sync.mjs
+
+  lint-shared:
+    needs: [guardrails]
+    name: Type Check Shared Package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck -w @joyjoin/shared
+
+  lint-admin:
+    needs: [guardrails]
+    name: Type Check Admin Client
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck -w @joyjoin/admin-client
+
+  lint-server:
+    needs: [guardrails]
+    name: Type Check Server
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck -w @joyjoin/server
+
+  lint-mini-program:
+    needs: [guardrails]
+    name: Type Check Mini-Program
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Type check
+        run: npm run typecheck --workspace=mini-program
+
+  test-server:
+    needs: [guardrails]
+    name: Server Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test -w @joyjoin/server
+
+  test-shared:
+    needs: [guardrails]
+    name: Shared Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm run test -w @joyjoin/shared
+
+  test-admin-client:
+    needs: [guardrails]
+    name: Admin Client Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm run test -w @joyjoin/admin-client
+
+  test-mini-program:
+    needs: [guardrails]
+    name: Mini Program Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm run test --workspace=mini-program
+
+  harness-gate:
+    needs: [guardrails]
+    name: Harness Completion Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Harness 5-Pillar Gate
+        run: npm run harness:gate
+
+  ai-test:
+    name: AI Simulation Test
+    needs: [lint-shared, lint-admin, lint-server, lint-mini-program, test-server, test-shared, test-admin-client, test-mini-program, harness-gate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Simulation
+        run: npx tsx apps/server/src/tests/runSimulation.ts 100
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}

@@ -153,8 +153,12 @@ async function fetchFailingRun() {
       } catch {}
     }
   } else {
-    // Get latest failed run on CI/CD pipeline
-    const result = gh(['run', 'list', '--repo', repo, '--workflow', 'cicd.yml', '--status', 'failure', '--limit', '3', '--json', 'databaseId,conclusion,headBranch,displayTitle,url']);
+    // Get latest failed run on the deploy workflows
+    let result = gh(['run', 'list', '--repo', repo, '--workflow', 'deploy-staging.yml', '--status', 'failure', '--limit', '3', '--json', 'databaseId,conclusion,headBranch,displayTitle,url']);
+    if (!result.ok || !result.output) {
+      // Fall back to production workflow if no failed staging runs
+      result = gh(['run', 'list', '--repo', repo, '--workflow', 'deploy-production.yml', '--status', 'failure', '--limit', '3', '--json', 'databaseId,conclusion,headBranch,displayTitle,url']);
+    }
     if (result.ok && result.output) {
       try {
         const runs = JSON.parse(result.output);

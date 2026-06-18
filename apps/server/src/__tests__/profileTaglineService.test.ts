@@ -36,7 +36,7 @@ describe('profileTaglineService', () => {
 
     const result = await generateProfileTagline({
       archetype: 'fox',
-      categoryHeat: { culture: 18, lifestyle: 12 },
+      categoryHeat: { culture: 18, life: 12 },
       intentKeys: ['friends', 'networking'],
     });
 
@@ -50,7 +50,7 @@ describe('profileTaglineService', () => {
     expect(result.insightLine).toBe('你常常能把轻松的话题自然带向更有意思的交流。');
     const prompt = callSocialAIMock.mock.calls[0][0].messages[0].content as string;
     expect(prompt).toContain('寻宝狐');
-    expect(prompt).toContain('文化');
+    expect(prompt).toContain('文艺现场');
     expect(prompt).toContain('交新朋友');
     expect(result.meta.provider).toBe('deepseek');
     expect(result.meta.fromCache).toBe(false);
@@ -68,7 +68,7 @@ describe('profileTaglineService', () => {
 
     const result = await generateProfileTagline({
       archetype: 'koala',
-      categoryHeat: { lifestyle: 9 },
+      categoryHeat: { life: 9 },
       intentKeys: ['friends'],
     });
 
@@ -85,7 +85,7 @@ describe('profileTaglineService', () => {
 
     const result = await generateProfileTagline({
       archetype: 'cat',
-      categoryHeat: { social: 7 },
+      categoryHeat: { growth: 7 },
       intentKeys: ['flexible'],
     });
 
