@@ -133,6 +133,7 @@ describe("wechat auth route hardening", () => {
     vi.clearAllMocks();
 
     process.env.NODE_ENV = "test";
+    process.env.APP_MODE = "production";
     process.env.PAYMENTS_ENABLED = "false";
 
     vi.mocked(usersRepo.getUserByWechatOpenId).mockResolvedValue(undefined as any);
@@ -228,6 +229,38 @@ describe("wechat auth route hardening", () => {
         paymentsEnabled: false,
       });
       expectNoSensitiveAuthFields(authUserBody);
+    });
+  });
+
+  it("returns exists=true on /api/auth/wechat/check for a known openid", async () => {
+    vi.mocked(usersRepo.getUserByWechatOpenId).mockResolvedValue(mockUser as any);
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/auth/wechat/check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: "wechat_test_check_existing" }),
+      });
+      const body = await response.json() as any;
+
+      expect(response.status).toBe(200);
+      expect(body).toEqual({ exists: true });
+    });
+  });
+
+  it("returns exists=false on /api/auth/wechat/check for an unknown openid", async () => {
+    vi.mocked(usersRepo.getUserByWechatOpenId).mockResolvedValue(undefined as any);
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/auth/wechat/check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: "wechat_test_check_new" }),
+      });
+      const body = await response.json() as any;
+
+      expect(response.status).toBe(200);
+      expect(body).toEqual({ exists: false });
     });
   });
 });

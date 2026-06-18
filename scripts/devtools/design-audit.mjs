@@ -35,7 +35,7 @@ const RULES = [
   [/font-family:\s*Arial/i, "Arial font — use JoyJoin semantic font tokens", "warn"],
 
   // Layout anti-patterns
-  [/height:\s*100vh/i, "height: 100vh — use min-height: 100dvh or viewport-zero-scroll pattern", "error"],
+  [/(?<!min-)height:\s*100vh/i, "height: 100vh — use min-height: 100dvh or viewport-zero-scroll pattern", "error"],
   [/(?<![a-zA-Z-])h-screen(?![a-zA-Z-])/, "h-screen — use min-h-[100dvh] or viewport-zero-scroll pattern", "error"],
   [/className=.*grid.*grid-cols-3.*gap/i, "Generic 3-column card grid — consider asymmetric layout", "warn"],
   [/className=.*flex.*justify-center.*items-center.*w-full/i, "Everything centered — consider asymmetric or intentional alignment", "info"],

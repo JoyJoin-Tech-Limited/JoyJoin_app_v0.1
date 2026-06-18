@@ -8,9 +8,11 @@ import { POLL_SOCIAL_SESSION_MS, TOAST_MEDIUM_MS, TOAST_DEFAULT_MS } from '../..
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useAuth } from '../../hooks/useAuth'
 import { logInfo, logError } from '../../lib/utils/logger'
+import { socialIcebreakerAnalytics } from '../../lib/analytics/socialIcebreakerAnalytics'
 import {
   usePreloadCdnIcons,
   SPRITE_SHEET_ASSETS,
+  ICEBREAKER_PHASE_EMBLEM_ASSETS,
 } from '../../hooks/usePreloadCdnIcons'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { getMascotDisplayName } from '../../lib/mascot/mascotDisplay'
@@ -34,12 +36,14 @@ import {
   WarmupPhaseView,
 } from './phaseViews'
 import { apiVibeToClient, VibeId } from '../../lib/vibeMapping'
+import IcebreakerTierSelector from './components/IcebreakerTierSelector'
+import CustomModeSection from './components/CustomModeSection'
 import { PhaseIntroOverlay } from './overlays/PhaseIntroOverlay'
 import { MiniScriptPhaseView } from './phases/MiniScriptPhaseView'
 import { IcebreakerToolSelector } from './overlays/IcebreakerToolSelector'
 import { MiniScriptConfigModal } from './overlays/MiniScriptConfigModal'
 import BonusGateOverlay from './overlays/BonusGateOverlay'
-import type { AtmosphereMood, SocialSessionState } from '@shared/socialIcebreaker'
+import type { AtmosphereMood, SocialIcebreakerPhase, SocialSessionState } from '@shared/socialIcebreaker'
 import { PHASE_CONFIG } from '@shared/socialIcebreaker'
 import { resolveTierDisplay, type TierMachineId } from '@shared/socialIcebreakerTierManifest'
 import type { MiniScriptGenre, MiniScriptStyle, MiniScriptVoteInput } from '@shared/miniscriptStoryFramework'
@@ -98,10 +102,11 @@ export default function IcebreakerSessionPage() {
   const [phaseToast, setPhaseToast] = useState<{ visible: boolean; text: ReactNode }>({ visible: false, text: '' })
   const startAttemptRef = useRef<string | null>(null)
   const prevPhaseRef = useRef<SessionPhase>('waiting')
+  const customSessionCompletedRef = useRef(false)
 
-  // Preload CDN-only sprite sheets in parallel with session bootstrap.
-  // Reaction/reveal/achievement icons are now locally bundled.
-  usePreloadCdnIcons(SPRITE_SHEET_ASSETS)
+  // Preload CDN-only assets in parallel with session bootstrap.
+  // Phase emblems, reactions, reveals, and achievements are CDN tiers.
+  usePreloadCdnIcons([...SPRITE_SHEET_ASSETS, ...ICEBREAKER_PHASE_EMBLEM_ASSETS])
 
   const {
     data: eventSession,
@@ -225,21 +230,13 @@ export default function IcebreakerSessionPage() {
 
   const phase: SessionPhase = session?.phase ?? 'waiting'
 
-  // Phase intro overlay: trigger when entering a playable phase (not initial load)
-  // TODO(P2-follow-up): Extract into useSessionPhase() hook to reduce God-component size
-  useEffect(() => {
-    const prev = prevPhaseRef.current
-    const skipPhases: SessionPhase[] = ['waiting', 'ended']
-    const isRealTransition = prev !== phase && !skipPhases.includes(phase) && prev !== 'waiting'
-    if (isRealTransition) {
-      setShowPhaseIntro(true)
-    }
-    prevPhaseRef.current = phase
-  }, [phase])
+  if (session?.eventTier === 'custom' && (phase === 'recap' || phase === 'ended')) {
+    customSessionCompletedRef.current = true
+  }
 
   // Xiaoyue phase-transition toast
   useEffect(() => {
-    if (phase && phase !== 'warmup' && prevPhaseRef.current !== 'waiting') {
+    if (phase && phase !== 'warmup' && phase !== 'phase_selection' && prevPhaseRef.current !== 'waiting') {
       const toastText = getPhaseToastText(phase)
       setPhaseToast({ visible: true, text: toastText })
       const timer = setTimeout(() => setPhaseToast({ visible: false, text: '' }), 3000)
@@ -252,6 +249,70 @@ export default function IcebreakerSessionPage() {
     ? deriveParticipants(session, [], hostUserId)
     : []
   const playerCount = session?.playerCount ?? participants.length
+
+  // Phase intro overlay: trigger when entering a playable phase (not initial load).
+  // Future refactor: extract into useSessionPhase() hook to reduce God-component size.
+  useEffect(() => {
+    const prev = prevPhaseRef.current
+    const skipPhases: SessionPhase[] = ['waiting', 'ended', 'phase_selection']
+    const isRealTransition = prev !== phase && !skipPhases.includes(phase) && prev !== 'waiting'
+    if (isRealTransition) {
+      setShowPhaseIntro(true)
+    }
+    // Track when the host returns to the custom-mode picker after a real phase.
+    if (prev !== phase && phase === 'phase_selection' && prev !== 'waiting' && prev !== 'ended') {
+      socialIcebreakerAnalytics.track(
+        'phase_picker_returned',
+        socialSessionId ?? undefined,
+        session?.icebreakerSessionId,
+        prev,
+        {
+          playerCount,
+          completedCount: session?.completedPhases?.length ?? 0,
+        },
+      )
+    }
+    prevPhaseRef.current = phase
+  }, [phase, socialSessionId, session, playerCount])
+
+  // Keep latest session metadata in refs for unmount-time abandonment tracking.
+  const customSessionMetaRef = useRef({
+    socialSessionId: '',
+    icebreakerSessionId: '',
+    eventTier: undefined as string | undefined,
+    phase: '' as string,
+    playerCount: 0,
+    completedPhases: [] as string[],
+  })
+  useEffect(() => {
+    customSessionMetaRef.current = {
+      socialSessionId: socialSessionId ?? '',
+      icebreakerSessionId: session?.icebreakerSessionId ?? '',
+      eventTier: session?.eventTier,
+      phase,
+      playerCount,
+      completedPhases: session?.completedPhases ?? [],
+    }
+  }, [session, socialSessionId, phase, playerCount])
+
+  // Track custom-mode abandonment when the page unmounts without reaching recap/ended.
+  useEffect(() => {
+    return () => {
+      const meta = customSessionMetaRef.current
+      if (meta.eventTier === 'custom' && !customSessionCompletedRef.current && meta.socialSessionId) {
+        socialIcebreakerAnalytics.track(
+          'custom_session_abandoned',
+          meta.socialSessionId,
+          meta.icebreakerSessionId,
+          meta.phase,
+          {
+            playerCount: meta.playerCount,
+            completedPhases: meta.completedPhases,
+          },
+        )
+      }
+    }
+  }, [])
 
   const recapQuery = useQuery<SocialRecapResponse>({
     queryKey: ['mini-program', 'social-icebreaker-recap', socialSessionId],
@@ -371,6 +432,117 @@ export default function IcebreakerSessionPage() {
       currentPhase: session.currentPhase,
     })
   }, [performSocialAction, session, socialSessionId])
+
+  const handleSelectCustomPhase = useCallback(
+    async (selectedPhase: SocialIcebreakerPhase) => {
+      if (!socialSessionId || !session?.phaseSelectionId) {
+        return
+      }
+
+      if (pendingAction !== null) {
+        return
+      }
+
+      setPendingAction('select-phase')
+
+      try {
+        await apiRequest({
+          path: `/api/social-icebreaker/${socialSessionId}/select-phase`,
+          method: 'POST',
+          data: { phase: selectedPhase, phaseSelectionId: session.phaseSelectionId },
+        })
+        await socialSessionQuery.refetch()
+      } catch (err: unknown) {
+        logError('[IcebreakerSession] Select custom phase failed', { socialSessionId, selectedPhase, err })
+        socialIcebreakerAnalytics.track(
+          'select_phase_failed',
+          socialSessionId,
+          session?.icebreakerSessionId,
+          selectedPhase,
+          {
+            phaseSelectionId: session?.phaseSelectionId,
+            playerCount,
+            error: err instanceof Error ? err.message : 'unknown',
+          },
+        )
+        void Taro.showToast({
+          title: '选择没成功，再试试',
+          icon: 'none',
+          duration: 2000,
+        })
+      } finally {
+        setPendingAction(null)
+      }
+    },
+    [socialSessionId, session, socialSessionQuery, pendingAction],
+  )
+
+  const handleEndCustomSession = useCallback(
+    async () => {
+      if (!socialSessionId || !session?.phaseSelectionId) {
+        return
+      }
+
+      if (pendingAction !== null) {
+        return
+      }
+
+      socialIcebreakerAnalytics.track(
+        'end_party_tapped',
+        socialSessionId,
+        session.icebreakerSessionId,
+        undefined,
+        {
+          phaseSelectionId: session.phaseSelectionId,
+          playerCount,
+          completedCount: session.completedPhases?.length ?? 0,
+        },
+      )
+
+      setPendingAction('end-session')
+
+      try {
+        await apiRequest({
+          path: `/api/social-icebreaker/${socialSessionId}/end-session`,
+          method: 'POST',
+          data: { phaseSelectionId: session.phaseSelectionId },
+        })
+        socialIcebreakerAnalytics.track(
+          'custom_session_completed',
+          socialSessionId,
+          session.icebreakerSessionId,
+          undefined,
+          {
+            playerCount,
+            completedPhases: session.completedPhases,
+          },
+        )
+        await socialSessionQuery.refetch()
+      } catch (err: unknown) {
+        logError('[IcebreakerSession] End custom session failed', { socialSessionId, err })
+        socialIcebreakerAnalytics.track(
+          'end_party_failed',
+          socialSessionId,
+          session?.icebreakerSessionId,
+          undefined,
+          {
+            phaseSelectionId: session?.phaseSelectionId,
+            playerCount,
+            completedCount: session?.completedPhases?.length ?? 0,
+            error: err instanceof Error ? err.message : 'unknown',
+          },
+        )
+        void Taro.showToast({
+          title: '结束派对没成功，再试试',
+          icon: 'none',
+          duration: 2000,
+        })
+      } finally {
+        setPendingAction(null)
+      }
+    },
+    [socialSessionId, session, socialSessionQuery, pendingAction, playerCount],
+  )
 
   const [topicsError, setTopicsError] = useState(false)
 
@@ -614,6 +786,7 @@ export default function IcebreakerSessionPage() {
     phase !== 'recap' &&
     phase !== 'ended' &&
     phase !== 'waiting' &&
+    phase !== 'phase_selection' &&
     phase !== 'auction' &&
     phase !== 'mini_script' &&
     phase !== 'warmup' &&
@@ -627,7 +800,7 @@ export default function IcebreakerSessionPage() {
         <View className='icebreaker__host-badge-text'>
           <Image
             className='icebreaker__host-badge-icon'
-            src={localAsset('/assets/icons/status-icons/status-crown.png')}
+            src={localAsset('/assets/icons/status-icons/status-crown.webp')}
             lazyLoad
           />
           <Text>你是主持人</Text>
@@ -648,6 +821,7 @@ export default function IcebreakerSessionPage() {
   const supportedPhases: SessionPhase[] = [
     'waiting',
     'warmup',
+    'phase_selection',
     'micro_challenge',
     'lie_detective',
     'auction',
@@ -732,44 +906,12 @@ export default function IcebreakerSessionPage() {
         )}
 
         {(phase === 'waiting' || phase === 'warmup') && isHost && session && (
-          <View className='icebreaker__tier-selector'>
-            <Text className='icebreaker__tier-selector-label'>
-              选择破冰模式
-              {pendingAction === 'set-tier' && (
-                <Text className='icebreaker__tier-selector-label--loading'> 切换中…</Text>
-              )}
-            </Text>
-            <View className='icebreaker__tier-options'>
-              {([
-                { tier: 'breeze' as const, title: '破冰局', desc: '40分钟 · 轻松暖场', tag: null },
-                { tier: 'glow' as const, title: '畅聊局', desc: '60分钟 · 深度互动', tag: '推荐' },
-                { tier: 'blaze' as const, title: '狂欢局', desc: '90分钟 · 全阶段体验', tag: null },
-              ]).map((option) => {
-                const isActive = session.eventTier === option.tier
-                const isBusy = pendingAction === 'set-tier'
-                return (
-                  <View
-                    key={option.tier}
-                    onClick={isBusy ? undefined : () => handleSetTier(option.tier)}
-                    hoverClass='icebreaker__tier-option--pressed'
-                    hoverStartTime={0}
-                    hoverStayTime={100}
-                    className={`icebreaker__tier-option ${isActive ? 'icebreaker__tier-option--active' : ''} ${isBusy ? 'icebreaker__tier-option--busy' : ''}`}
-                  >
-                    {option.tag && (
-                      <Text className='icebreaker__tier-option-tag'>{option.tag}</Text>
-                    )}
-                    <Text className='icebreaker__tier-option-title'>
-                      {option.title}
-                    </Text>
-                    <Text className='icebreaker__tier-option-desc'>
-                      {option.desc}
-                    </Text>
-                  </View>
-                )
-              })}
-            </View>
-          </View>
+          <IcebreakerTierSelector
+            activeTier={session.eventTier}
+            customEnabled={features?.socialIcebreakerCustomModeEnabled !== false}
+            isBusy={pendingAction === 'set-tier'}
+            onSetTier={handleSetTier}
+          />
         )}
 
         {phase === 'warmup' && session && (
@@ -783,6 +925,7 @@ export default function IcebreakerSessionPage() {
             isHost={isHost}
             vibe={apiVibeToClient(session.vibe)}
             archetypeMixText={session.archetypeMixText}
+            isCustomMode={session.eventTier === 'custom'}
             onGenerateTopics={handleGenerateTopics}
             onToggleReady={handleToggleWarmupReady}
             onNextTopic={handleNextWarmupTopic}
@@ -792,6 +935,18 @@ export default function IcebreakerSessionPage() {
             isAdvancingTopic={pendingAction === 'warmup-next-topic'}
             isAdvancing={pendingAction === 'advance'}
             topicsError={topicsError}
+          />
+        )}
+
+        {phase === 'phase_selection' && session && (
+          <CustomModeSection
+            isHost={isHost}
+            socialSessionId={socialSessionId}
+            session={session}
+            playerCount={playerCount}
+            pendingAction={pendingAction}
+            onSelectPhase={handleSelectCustomPhase}
+            onEndSession={handleEndCustomSession}
           />
         )}
 
@@ -1011,7 +1166,7 @@ function WaitingPhase({
     <View className='icebreaker__waiting'>
       <Card className='icebreaker__waiting-card'>
         <Image
-          src={localAsset('/assets/icons/status-icons/status-waiting.png')}
+          src={localAsset('/assets/icons/status-icons/status-waiting.webp')}
           style={{ width: '80rpx', height: '80rpx' }}
           lazyLoad
           className='icebreaker__waiting-emoji'

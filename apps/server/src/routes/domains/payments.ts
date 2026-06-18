@@ -20,6 +20,7 @@ import { logAdminAudit } from "../../lib/adminAuditLogger";
 import { db } from "../../db";
 import { getActingAdminId } from "../../lib/getActingAdminId";
 import { getFeatureFlag } from "../../lib/featureFlags";
+import { getTestPriceCents } from "../../lib/paymentTestPrice";
 
 const getRequestClientIp = (req: Request): string => {
   const forwardedFor = req.headers["x-forwarded-for"];
@@ -51,14 +52,6 @@ const SUBSCRIPTION_PRICE_FALLBACKS = {
   monthly: 9800,
   quarterly: 29400,
 } as const;
-
-export function getTestPriceCents(): number | null {
-  const raw = process.env.TEST_PAYMENT_PRICE_IN_CENTS;
-  if (!raw) return null;
-  const n = parseInt(raw, 10);
-  if (!Number.isFinite(n) || n < 0) return null;
-  return n;
-}
 
 type NormalizedEventRegistrationPayload = {
   poolId: string;

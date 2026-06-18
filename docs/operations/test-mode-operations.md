@@ -62,7 +62,7 @@ npm run seed:test-data
 Creates:
 
 - **8 test users** — diverse profiles (genders, cities, archetypes, completion states)
-- **1 test admin** — `test_admin_seed` / `TestAdmin123!` (super_admin)
+- **1 test admin** — `test_admin_seed` / `$TEST_ADMIN_PASSWORD` (super_admin)
 - **1 test event pool** — "QA 测试饭局 — 周五夜聊" (Shenzhen, active)
 - **Feature flags** — beta flags configured (see §C for list)
 
@@ -86,7 +86,7 @@ npm run dev:server
 | `+8613800000007` | 社交_小海 | Male | Hong Kong | 机灵海豚 | Complete |
 | `+8613800000008` | 探索_小阳二 | Female | Guangzhou | 太阳鸡 | Complete |
 
-**Common password:** `test123456`
+**Common password:** `$TEST_USER_PASSWORD` (set via `TEST_USER_PASSWORD` env var)
 
 ### Verify Setup
 
@@ -94,7 +94,7 @@ npm run dev:server
 # Login via local auth
 curl -X POST http://localhost:5000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"phoneNumber":"+8613800000001","password":"test123456"}'
+  -d '{"phoneNumber":"+8613800000001","password":"$TEST_USER_PASSWORD"}'
 
 # Check test status
 curl http://localhost:5000/api/test/admin/status \
@@ -123,7 +123,7 @@ All endpoints are gated by `requireSuperAdmin`. Call them with a super_admin ses
 # Login as super_admin:
 curl -X POST https://joyjoinapp.com/api/admin/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"test_admin_seed","password":"TestAdmin123!"}' \
+  -d '{"username":"test_admin_seed","password":"$TEST_ADMIN_PASSWORD"}' \
   -c cookies.txt
 
 # Check test status:
@@ -133,7 +133,7 @@ curl https://joyjoinapp.com/api/test/admin/status -b cookies.txt
 curl -X POST https://joyjoinapp.com/api/test/admin/users \
   -H "Content-Type: application/json" \
   -b cookies.txt \
-  -d '{"phone":"+8613800000100","password":"test123456","displayName":"QA_张三","gender":"男性","city":"深圳"}'
+  -d '{"phone":"+8613800000100","password":"$TEST_USER_PASSWORD","displayName":"QA_张三","gender":"男性","city":"深圳"}'
 
 # Create an event pool (createdBy = some user ID from the response above):
 curl -X POST https://joyjoinapp.com/api/test/admin/event-pools \
@@ -267,6 +267,64 @@ Idempotent: already-existing users (same phone prefix `+861380000`) are skipped.
 ### Production (via Test Admin API)
 
 Use the POST `/api/test/admin/users` and `/api/test/admin/event-pools` endpoints (see §B) to bulk-create on production. For large batches, call multiple times from a script.
+
+---
+
+## G. Staging Environment for 体验版 Test Pricing
+
+JoyJoin supports a same-server staging API (`staging.joyjoinapp.com`) and staging admin portal (`staging.admin.joyjoinapp.com`) that let the WeChat 体验版 charge ¥0.01 test prices without affecting production data or real pricing.
+
+### How it works
+
+- `APP_MODE=staging` keeps WeChat auth active (unlike `APP_MODE=test`, which switches to local phone+password and breaks 体验版 login).
+- `TEST_PAYMENT_PRICE_IN_CENTS=1` overrides event registration, subscription, and event-pack prices to ¥0.01.
+- The override is gated by `APP_MODE !== "production"`, so production always uses real prices.
+
+### Server setup
+
+See `deployment/README.md` §“同服务器 staging（体验版测试价）” for the full steps. Short version:
+
+```bash
+ssh -i "~/Desktop/Business idea/JoyJoin/SSH/OpenCode.pem" root@1.12.243.104
+cd ~/JoyJoin
+./deployment/scripts/deploy-staging.sh
+```
+
+The script reloads Nginx, rebuilds the staging API + admin containers, applies migrations, and health-checks both `staging.joyjoinapp.com` and `staging.admin.joyjoinapp.com`.
+
+Once the initial manual deploy is done, every push to `main` automatically triggers `.github/workflows/deploy-staging.yml`, which re-runs the same steps from CI. Staging secrets are kept in sync from GitHub (`STAGING_DATABASE_URL`, `STAGING_SESSION_SECRET`, `STAGING_ADMIN_CREATE_SECRET_KEY`, `STAGING_POSTGRES_PASSWORD`) while app secrets (WeChat, AI, WeChat Pay) are reused from production secrets.
+
+### Mini-program build
+
+Set the staging origin before building:
+
+```bash
+# apps/mini-program/.env.local
+TARO_APP_API_BASE_URL=https://staging.joyjoinapp.com
+```
+
+```bash
+npm run build:weapp --workspace=mini-program
+```
+
+Upload the result as a 体验版 and add these domains in the WeChat admin console:
+
+- `https://staging.joyjoinapp.com`
+- `wss://staging.joyjoinapp.com`
+
+### Managing staging data
+
+Use the isolated staging admin portal to create event pools, manage feature flags, and inspect staging users without touching production:
+
+```text
+https://staging.admin.joyjoinapp.com
+```
+
+The staging admin portal proxies `/api/*` to the staging API, so any event created there appears in the 体验版 when `TARO_APP_API_BASE_URL=https://staging.joyjoinapp.com`.
+
+### Verifying test pricing
+
+After logging into the 体验版, start any paid flow (event registration, subscription, event pack). The price should show ¥0.01 and create a real WeChat Pay order for ¥0.01. Webhook fulfillment still runs normally against the staging database.
 
 ---
 

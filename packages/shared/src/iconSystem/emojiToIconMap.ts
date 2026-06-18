@@ -21,6 +21,7 @@ export type IconTier =
   | 'intent'
   | 'reveal'
   | 'achievement'
+  | 'ui'
 
 export interface IconMapping {
   /** Asset base name (without .png or @2x/@3x suffix) */
@@ -66,6 +67,11 @@ export const INFO_LABEL_MAP: Record<string, IconMapping> = {
   '🎯': { assetKey: 'label-target', tier: 'semantic', size: 24, fallbackEmoji: '🎯' },
   // Discover page mappings
   '🤝': { assetKey: 'label-people', tier: 'semantic', size: 32, fallbackEmoji: '🤝' },
+  '🌆': { assetKey: 'label-cityscape', tier: 'semantic', size: 24, fallbackEmoji: '🌆' },
+  '🗺️': { assetKey: 'label-map', tier: 'semantic', size: 24, fallbackEmoji: '🗺️' },
+  '🌏': { assetKey: 'label-globe-asia', tier: 'semantic', size: 24, fallbackEmoji: '🌏' },
+  '🌐': { assetKey: 'label-globe-meridians', tier: 'semantic', size: 24, fallbackEmoji: '🌐' },
+  '✈️': { assetKey: 'label-airplane', tier: 'semantic', size: 24, fallbackEmoji: '✈️' },
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -96,11 +102,11 @@ export const CHEMISTRY_BADGE_MAP: Record<string, IconMapping> = {
 
 export const PHASE_EMBLEM_MAP: Record<string, IconMapping> = {
   '🌅': { assetKey: 'phase-warmup', tier: 'phase', size: 80, fallbackEmoji: '🌅' },
-  '⚡': { assetKey: 'phase-challenge', tier: 'phase', size: 80, fallbackEmoji: '⚡' },
-  '🕵️': { assetKey: 'phase-detective', tier: 'phase', size: 80, fallbackEmoji: '🕵️' },
-  '🎲': { assetKey: 'phase-dice', tier: 'phase', size: 80, fallbackEmoji: '🎲' },
+  '⚡': { assetKey: 'phase-micro-challenge', tier: 'phase', size: 80, fallbackEmoji: '⚡' },
+  '🕵️': { assetKey: 'phase-lie-detective', tier: 'phase', size: 80, fallbackEmoji: '🕵️' },
+  '🎲': { assetKey: 'phase-personality-dice', tier: 'phase', size: 80, fallbackEmoji: '🎲' },
   '🎪': { assetKey: 'phase-auction', tier: 'phase', size: 80, fallbackEmoji: '🎪' },
-  '🎭': { assetKey: 'phase-script', tier: 'phase', size: 80, fallbackEmoji: '🎭' },
+  '🎭': { assetKey: 'phase-mini-script', tier: 'phase', size: 80, fallbackEmoji: '🎭' },
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -109,10 +115,11 @@ export const PHASE_EMBLEM_MAP: Record<string, IconMapping> = {
 
 export const CATEGORY_MAP: Record<string, IconMapping> = {
   '🍜': { assetKey: 'category-food', tier: 'category', size: 32, fallbackEmoji: '🍜' },
-  '🎮': { assetKey: 'category-entertainment', tier: 'category', size: 32, fallbackEmoji: '🎮' },
-  '🌿': { assetKey: 'category-lifestyle', tier: 'category', size: 32, fallbackEmoji: '🌿' },
+  '🎮': { assetKey: 'category-play', tier: 'category', size: 32, fallbackEmoji: '🎮' },
+  '🌿': { assetKey: 'category-sports', tier: 'category', size: 32, fallbackEmoji: '🌿' },
   '🎭': { assetKey: 'category-culture', tier: 'category', size: 32, fallbackEmoji: '🎭' },
-  '👥': { assetKey: 'category-social', tier: 'category', size: 32, fallbackEmoji: '👥' },
+  '🏠': { assetKey: 'category-life', tier: 'category', size: 32, fallbackEmoji: '🏠' },
+  '💡': { assetKey: 'category-growth', tier: 'category', size: 32, fallbackEmoji: '💡' },
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -140,6 +147,12 @@ export const REACTION_MAP: Record<string, IconMapping> = {
   '🌹': { assetKey: 'reaction-rose', tier: 'reaction', size: 56, fallbackEmoji: '🌹' },
   '🤔': { assetKey: 'reaction-think', tier: 'reaction', size: 56, fallbackEmoji: '🤔' },
   '😮': { assetKey: 'reaction-wow', tier: 'reaction', size: 56, fallbackEmoji: '😮' },
+  '💰': { assetKey: 'reaction-money-bag', tier: 'reaction', size: 56, fallbackEmoji: '💰' },
+  '😏': { assetKey: 'reaction-smirk', tier: 'reaction', size: 56, fallbackEmoji: '😏' },
+  '😎': { assetKey: 'reaction-sunglasses', tier: 'reaction', size: 56, fallbackEmoji: '😎' },
+  '💜': { assetKey: 'reaction-purple-heart', tier: 'reaction', size: 56, fallbackEmoji: '💜' },
+  '😅': { assetKey: 'reaction-sweat', tier: 'reaction', size: 56, fallbackEmoji: '😅' },
+  '😈': { assetKey: 'reaction-devil', tier: 'reaction', size: 56, fallbackEmoji: '😈' },
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -176,6 +189,39 @@ export const STATUS_ICON_MAP: Record<string, IconMapping> = {
   '👑': { assetKey: 'status-crown', tier: 'status', size: 24, fallbackEmoji: '👑', tint: '#8B5CF6' },
   '⏳': { assetKey: 'status-waiting', tier: 'status', size: 80, fallbackEmoji: '⏳' },
   'ℹ️': { assetKey: 'status-info', tier: 'status', size: 48, fallbackEmoji: 'ℹ️' },
+  '⏰': { assetKey: 'status-alarm-clock', tier: 'status', size: 24, fallbackEmoji: '⏰' },
+  '📣': { assetKey: 'status-megaphone', tier: 'status', size: 24, fallbackEmoji: '📣' },
+  '📊': { assetKey: 'status-bar-chart', tier: 'status', size: 24, fallbackEmoji: '📊' },
+  '⚠️': { assetKey: 'status-warning', tier: 'status', size: 24, fallbackEmoji: '⚠️' },
+  '🚫': { assetKey: 'status-prohibited', tier: 'status', size: 24, fallbackEmoji: '🚫' },
+  '🔔': { assetKey: 'status-bell', tier: 'status', size: 24, fallbackEmoji: '🔔' },
+  '🔓': { assetKey: 'status-unlocked', tier: 'status', size: 24, fallbackEmoji: '🔓' },
+  '🌟': { assetKey: 'status-star', tier: 'status', size: 24, fallbackEmoji: '🌟' },
+  '✕': { assetKey: 'status-close', tier: 'status', size: 24, fallbackEmoji: '✕' },
+  '✓': { assetKey: 'status-check', tier: 'status', size: 24, fallbackEmoji: '✓' },
+  '🪞': { assetKey: 'status-mirror', tier: 'status', size: 24, fallbackEmoji: '🪞' },
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// UI ICONS — Profile / settings list affordances (bundled locally)
+// ═══════════════════════════════════════════════════════════════════
+
+export const UI_ICON_MAP: Record<string, IconMapping> = {
+  '✏️': { assetKey: 'icon-edit', tier: 'ui', size: 48, fallbackEmoji: '✏️', tint: '#8B5CF6' },
+  '🎁': { assetKey: 'icon-gift', tier: 'ui', size: 48, fallbackEmoji: '🎁', tint: '#8B5CF6' },
+  '🔗': { assetKey: 'icon-link', tier: 'ui', size: 48, fallbackEmoji: '🔗', tint: '#8B5CF6' },
+  // NOTE: 📤 deliberately reuses icon-people because no dedicated share-card asset exists yet.
+  // The share-card row remains visually distinct from the invite row (📤/👥 vs 🔗) by label/context.
+  '📤': { assetKey: 'icon-people', tier: 'ui', size: 48, fallbackEmoji: '📤', tint: '#8B5CF6' },
+  '👑': { assetKey: 'icon-price', tier: 'ui', size: 48, fallbackEmoji: '👑', tint: '#8B5CF6' },
+  '👣': { assetKey: 'icon-footprint', tier: 'ui', size: 48, fallbackEmoji: '👣', tint: '#8B5CF6' },
+  '📄': { assetKey: 'icon-status', tier: 'ui', size: 48, fallbackEmoji: '📄', tint: '#8B5CF6' },
+  '👥': { assetKey: 'icon-people', tier: 'ui', size: 48, fallbackEmoji: '👥', tint: '#8B5CF6' },
+  '🎫': { assetKey: 'icon-ticket', tier: 'ui', size: 48, fallbackEmoji: '🎫', tint: '#8B5CF6' },
+  '🏆': { assetKey: 'icon-trophy', tier: 'ui', size: 48, fallbackEmoji: '🏆', tint: '#8B5CF6' },
+  '✅': { assetKey: 'icon-check', tier: 'ui', size: 48, fallbackEmoji: '✅', tint: '#8B5CF6' },
+  '📝': { assetKey: 'icon-memo', tier: 'ui', size: 48, fallbackEmoji: '📝', tint: '#8B5CF6' },
+  '🔍': { assetKey: 'icon-search', tier: 'ui', size: 48, fallbackEmoji: '🔍', tint: '#8B5CF6' },
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -204,6 +250,30 @@ const TIER_MAPS: Record<IconTier, Record<string, IconMapping>> = {
   intent: INTENT_MAP,
   reveal: REVEAL_MAP,
   achievement: ACHIEVEMENT_MAP,
+  ui: UI_ICON_MAP,
+}
+
+/**
+ * When no explicit tier is given and the emoji is not in the flat master map,
+ * try to resolve it unambiguously through a single tier-specific map.
+ *
+ * This prevents dynamic/server-provided emojis (theme emojis, status icons,
+ * icebreaker challenge emojis, etc.) from silently falling back to native emoji
+ * when a proprietary asset exists in only one context. Emojis that appear in
+ * multiple tier maps remain ambiguous and still require an explicit `tier` prop.
+ */
+function resolveUnambiguousTierMapping(emoji: string): IconMapping | undefined {
+  let match: IconMapping | undefined
+  for (const tierMap of Object.values(TIER_MAPS)) {
+    const mapping = tierMap[emoji]
+    if (!mapping) continue
+    if (match) {
+      // Ambiguous: emoji exists in more than one tier map.
+      return undefined
+    }
+    match = mapping
+  }
+  return match
 }
 
 /**
@@ -213,17 +283,25 @@ const TIER_MAPS: Record<IconTier, Record<string, IconMapping>> = {
  * If no tier-specific match is found, it falls back to the global flat map.
  * This allows the same emoji to resolve to different assets depending on
  * context (e.g. 🔥 as a chemistry badge vs. an icebreaker reaction).
+ *
+ * When `tier` is omitted and the emoji is not in the flat map, the lookup
+ * attempts an unambiguous tier-specific resolution (see
+ * `resolveUnambiguousTierMapping`).
  */
 export function getIconMapping(emoji: string, tier?: IconTier): IconMapping | undefined {
   if (tier) {
     const tierMatch = TIER_MAPS[tier][emoji]
     if (tierMatch) return tierMatch
   }
-  return EMOJI_TO_ICON_MAP[emoji]
+  return EMOJI_TO_ICON_MAP[emoji] ?? resolveUnambiguousTierMapping(emoji)
 }
 
 /**
  * Check if a given emoji has a proprietary icon replacement.
+ *
+ * Note: this intentionally mirrors the legacy flat-map-only check so callers
+ * that gate rendering on it behave consistently. For a tier-aware check, use
+ * `getIconMapping(emoji, tier) !== undefined`.
  */
 export function hasIconMapping(emoji: string): boolean {
   return emoji in EMOJI_TO_ICON_MAP
@@ -232,22 +310,80 @@ export function hasIconMapping(emoji: string): boolean {
 /**
  * Tiers that load from CDN instead of local bundle.
  * These asset sets are too large for the 2MB main package limit.
+ *
+ * NOTE: The following tiers are bundled locally and must be kept OUT of this
+ * set so subpackage pages never block on a network path:
+ *   - expression (rating-faces)
+ *   - semantic (info-labels)
+ *   - mood
+ *   - chemistry
+ *   - status
+ *   - category
+ *   - intent
+ *   - ui (profile/settings list icons)
+ *
+ * 'phase' is CDN-only: only a curated landing-page subset is bundled locally
+ * under /assets/landing-phase-icons/; the full set lives on CDN and the build
+ * clean step removes dist/assets/icons/phase-icons to save package size.
  */
 export const CDN_ICON_TIERS: ReadonlySet<IconTier> = new Set([
+  'phase',
   'reaction',
-  'category',
-  'intent',
+  // 'category' is bundled locally; assets live in apps/mini-program/src/assets/icons/category-icons
+  // and are copied to dist/assets/icons/category-icons via config/index.ts.
   'reveal',
   'achievement',
 ])
+
+const ICON_FOLDER_MAP: Record<IconTier, string> = {
+  expression: 'rating-faces',
+  semantic: 'info-labels',
+  mood: 'mood-icons',
+  chemistry: 'chemistry-badges',
+  phase: 'phase-icons',
+  status: 'status-icons',
+  reaction: 'reaction-icons',
+  category: 'category-icons',
+  intent: 'intent-icons',
+  reveal: 'reveal-icons',
+  achievement: 'achievement-badges',
+  ui: 'ui',
+}
+
+/**
+ * Build a root-relative asset path for an icon asset.
+ *
+ * Returns `/assets/icons/<folder>/<assetKey><suffix>.webp` for both CDN and
+ * local tiers. Callers should wrap the result with `cdnAsset()` for CDN tiers
+ * or `localAsset()` for bundled local tiers.
+ *
+ * Prefer this over `getIconAssetPath()` to avoid the legacy `../../assets/...`
+ * require()-style path and the associated regex replacement in callers.
+ *
+ * @param assetKey — e.g. 'rating-1-disappointed'
+ * @param tier — determines the asset folder
+ * @param density — 1, 2, or 3 for @1x/@2x/@3x
+ */
+export function getLocalIconAssetPath(
+  assetKey: string,
+  tier: IconTier,
+  density: 1 | 2 | 3 = 1,
+): string {
+  const folder = ICON_FOLDER_MAP[tier]
+  const suffix = density === 1 ? '' : `@${density}x`
+  return `/assets/icons/${folder}/${assetKey}${suffix}.webp`
+}
 
 /**
  * Build a Taro/WeChat asset path for an icon asset.
  *
  * For CDN tiers, returns an absolute path like `/assets/icons/...` that
  * should be wrapped with `cdnAsset()` at the call site.
- * For local tiers, returns a relative require() path like `../../assets/icons/...`.
+ * For local tiers, returns an absolute path like `/assets/icons/...` that
+ * should be wrapped with `localAsset()` at the call site.
  *
+ * @deprecated Use `getLocalIconAssetPath()` plus `localAsset()`/`cdnAsset()`
+ *   instead. `require()` of non-JS assets crashes in WeChat subpackages.
  * @param assetKey — e.g. 'rating-1-disappointed'
  * @param tier — determines the asset folder
  * @param density — 1, 2, or 3 for @1x/@2x/@3x
@@ -257,23 +393,9 @@ export function getIconAssetPath(
   tier: IconTier,
   density: 1 | 2 | 3 = 1,
 ): string {
-  const folderMap: Record<IconTier, string> = {
-    expression: 'rating-faces',
-    semantic: 'info-labels',
-    mood: 'mood-icons',
-    chemistry: 'chemistry-badges',
-    phase: 'phase-icons',
-    status: 'status-icons',
-    reaction: 'reaction-icons',
-    category: 'category-icons',
-    intent: 'intent-icons',
-    reveal: 'reveal-icons',
-    achievement: 'achievement-badges',
-  }
-  const folder = folderMap[tier]
-  const suffix = density === 1 ? '' : `@${density}x`
+  const localPath = getLocalIconAssetPath(assetKey, tier, density)
   if (CDN_ICON_TIERS.has(tier)) {
-    return `/assets/icons/${folder}/${assetKey}${suffix}.webp`
+    return localPath
   }
-  return `../../assets/icons/${folder}/${assetKey}${suffix}.webp`
+  return localPath.replace(/^\/assets\//, '../../assets/')
 }

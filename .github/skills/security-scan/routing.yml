@@ -33,7 +33,9 @@ owned_files:
   - apps/server/src/auth/policy.ts
   - apps/server/src/cli/bypassLogin.ts
   - scripts/check-guardrails.mjs
-  - .github/workflows/cicd.yml
+  - .github/workflows/quality-gates.yml
+  - .github/workflows/deploy-staging.yml
+  - .github/workflows/deploy-production.yml
   - docs/launch-risks.md
   - docs/CLI_TOOLS.md
 

@@ -156,6 +156,7 @@ describe.skip("PaymentService", () => {
     process.env = {
       ...envSnapshot,
       APP_URL: "https://joyjoin.example.com",
+      WECHAT_APPID: "wx-prod-app-id",
       WECHAT_PAY_APP_ID: "wx-prod-app-id",
       WECHAT_PAY_MCH_ID: "mch-123456",
       WECHAT_PAY_SERIAL_NO: "merchant-serial-001",
@@ -414,4 +415,65 @@ describe.skip("PaymentService", () => {
 
     expect(global.fetch).not.toHaveBeenCalled();
   });
+});
+
+// Regression test for WeChat Pay API timeout. This block runs independently of
+// the skipped integration suite above and does not need real WeChat credentials.
+describe("PaymentService WeChat Pay timeout", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    payments.splice(0, payments.length);
+    process.env = {
+      ...envSnapshot,
+      APP_URL: "https://joyjoin.example.com",
+      WECHAT_APPID: "wx-prod-app-id",
+      WECHAT_PAY_APP_ID: "wx-prod-app-id",
+      WECHAT_PAY_MCH_ID: "mch-123456",
+      WECHAT_PAY_SERIAL_NO: "merchant-serial-001",
+      WECHAT_PAY_PRIVATE_KEY: merchantKeys.privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
+      WECHAT_PAY_APIV3_KEY: apiV3Key,
+      WECHAT_PAY_PLATFORM_CERT: platformKeys.publicKey.export({ type: "spki", format: "pem" }).toString(),
+      WECHAT_PAY_PLATFORM_PUBLIC_KEY: platformKeys.publicKey.export({ type: "spki", format: "pem" }).toString(),
+      WECHAT_PAY_PLATFORM_SERIAL: "platform-serial-001",
+      WECHAT_PAY_REQUEST_TIMEOUT_MS: "50",
+    };
+  });
+
+  afterAll(() => {
+    process.env = envSnapshot;
+    global.fetch = originalFetch;
+  });
+
+  it("fails fast when the WeChat Pay API does not respond", async () => {
+    global.fetch = vi.fn((_url, init) => {
+      return new Promise((_, reject) => {
+        const signal = init?.signal as AbortSignal | undefined;
+        if (signal?.aborted) {
+          const abortError = new Error("Aborted");
+          abortError.name = "AbortError";
+          reject(abortError);
+          return;
+        }
+        signal?.addEventListener("abort", () => {
+          const abortError = new Error("Aborted");
+          abortError.name = "AbortError";
+          reject(abortError);
+        });
+      });
+    }) as any;
+
+    const service = new PaymentService();
+
+    await expect(
+      service.createMiniProgramPayment({
+        userId: "user-timeout",
+        paymentType: "event_bundle",
+        relatedId: "subscription-timeout",
+        originalAmount: 9800,
+        openid: "mock-openid-timeout",
+      })
+    ).rejects.toThrow("WeChat Pay API request timed out after 50ms");
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  }, 1000);
 });

@@ -16,26 +16,26 @@ export interface SessionParticipant {
 
 /** Root-relative paths — work from any JS chunk (e.g. `dist/common.js`); avoid `require('../../assets/…')` which resolves wrong when hoisted. */
 export const MOOD_OPTIONS: Array<{ mood: AtmosphereMood; label: string; asset: string }> = [
-  { mood: 'funny', label: '搞笑', asset: '/assets/icons/mood-icons/mood-funny.png' },
-  { mood: 'life', label: '生活', asset: '/assets/icons/mood-icons/mood-life.png' },
-  { mood: 'relaxed', label: '轻松', asset: '/assets/icons/mood-icons/mood-relaxed.png' },
-  { mood: 'emotional', label: '情感', asset: '/assets/icons/mood-icons/mood-emotional.png' },
+  { mood: 'funny', label: '搞笑', asset: '/assets/icons/mood-icons/mood-funny.webp' },
+  { mood: 'life', label: '生活', asset: '/assets/icons/mood-icons/mood-life.webp' },
+  { mood: 'relaxed', label: '轻松', asset: '/assets/icons/mood-icons/mood-relaxed.webp' },
+  { mood: 'emotional', label: '情感', asset: '/assets/icons/mood-icons/mood-emotional.webp' },
 ]
 
 // CDN-backed phase icons — eliminates domain-whitelist dependency and keeps the
 // mini-program package small. Assets uploaded via `npm run upload:cdn-assets`.
-const PHASE_ICON_SRC_MAP: Record<string, string> = {
+export const PHASE_ICON_SRC_MAP: Record<string, string> = {
   warmup: cdnAsset('/assets/icons/phase-icons/phase-warmup.webp'),
-  'topic-card': cdnAsset('/assets/icons/phase-icons/phase-topic-card.png'),
+  'topic-card': cdnAsset('/assets/icons/phase-icons/phase-topic-card.webp'),
   micro_challenge: cdnAsset('/assets/icons/phase-icons/phase-micro-challenge.webp'),
-  lie_detective: cdnAsset('/assets/icons/phase-icons/phase-lie-detective.png'),
-  personality_dice: cdnAsset('/assets/icons/phase-icons/phase-personality-dice.png'),
-  auction: cdnAsset('/assets/icons/phase-icons/phase-auction.png'),
-  quip_battle: cdnAsset('/assets/icons/phase-icons/phase-quip-battle.png'),
+  lie_detective: cdnAsset('/assets/icons/phase-icons/phase-lie-detective.webp'),
+  personality_dice: cdnAsset('/assets/icons/phase-icons/phase-personality-dice.webp'),
+  auction: cdnAsset('/assets/icons/phase-icons/phase-auction.webp'),
+  quip_battle: cdnAsset('/assets/icons/phase-icons/phase-quip-battle.webp'),
   undercover_word: cdnAsset('/assets/icons/phase-icons/phase-undercover-word.webp'),
   group_mirror: cdnAsset('/assets/icons/phase-icons/phase-group-mirror.webp'),
   speed_friending: cdnAsset('/assets/icons/phase-icons/phase-speed-friending.webp'),
-  mini_script: cdnAsset('/assets/icons/phase-icons/phase-mini-script.png'),
+  mini_script: cdnAsset('/assets/icons/phase-icons/phase-mini-script.webp'),
   recap: cdnAsset('/assets/icons/phase-icons/phase-recap.webp'),
 }
 
@@ -65,6 +65,8 @@ export function getPhaseLabel(phase: SessionPhase): string {
       return '迷你剧本杀'
     case 'recap':
       return '回顾'
+    case 'phase_selection':
+      return '环节选择'
     case 'ended':
       return '已结束'
     default:
@@ -86,6 +88,7 @@ const PHASE_EMOJI_MAP: Record<SessionPhase, string> = {
   group_mirror: '',
   recap: '',
   ended: '',
+  phase_selection: '',
 }
 
 /** Render a phase icon (Lovart 240px source, Taro downscales)
@@ -122,7 +125,7 @@ export function PhaseHeaderIcon({
           border: '1rpx solid rgba(139, 92, 246, 0.12)',
           verticalAlign: 'middle',
         }}
-        aria-hidden="true"
+        aria-hidden='true'
       />
     )
   }

@@ -155,7 +155,10 @@ async function uploadRsync(files) {
 
       const stagingDest = path.join(stagingDir, cdnPath)
       fs.mkdirSync(path.dirname(stagingDest), { recursive: true })
-      fs.cpSync(src, stagingDest)
+      // Resolve symlinks so local alias directories (e.g. src/assets/archetypes)
+      // copy the real file instead of a broken symlink on the remote host.
+      const realSrc = fs.realpathSync(src)
+      fs.cpSync(realSrc, stagingDest)
       stagedCount++
 
       logFile(cdnPath, fs.statSync(src).size)
@@ -174,6 +177,14 @@ async function uploadRsync(files) {
     } else {
       console.log(`   🚀 Syncing ${stagedCount} files in one batch...`)
       await runCommand('rsync', ['-avz', '--checksum', '-e', `ssh ${sshArgsQuoted.join(' ')}`, src, dest])
+
+      // Ensure nginx can read all uploaded assets regardless of the umask on the remote host.
+      console.log(`   🔧 Fixing permissions on ${remotePath}...`)
+      await runCommand('ssh', [
+        ...sshArgs,
+        `${user}@${host}`,
+        `chmod 755 ${remotePath} && find ${remotePath}/assets -type f -exec chmod 644 {} \\; && find ${remotePath}/assets -type d -exec chmod 755 {} \\;`,
+      ])
     }
   } finally {
     fs.rmSync(stagingDir, { recursive: true, force: true })

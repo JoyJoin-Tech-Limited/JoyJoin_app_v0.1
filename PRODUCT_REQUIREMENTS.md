@@ -1,7 +1,7 @@
 # JoyJoin (悦聚·Joy) - Product Requirements Document
 
 **Version:** 1.6  
-**Last Updated:** 2026-06-08  
+**Last Updated:** 2026-06-15  
 **Platform:** WeChat Mini Program (Taro) — launch-primary  
 **Reference Surface:** Web (React + Vite) — development sandbox / parity reference only, not shipping  
 **Target Market:** Hong Kong & Shenzhen  
@@ -77,7 +77,58 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-06-08)
+## 🆕 Recent Updates (Last updated: 2026-06-18)
+
+### 2026 Milestones (June 2026)
+
+**40. Interest-Heat Picker Full-Marks Push** 🎯 *(2026-06-15)*
+- **Scope:** Mini-program onboarding step 4 (`pages/onboarding/extended-data/index`) — interest selection and heat signaling.
+- **Category icon wiring fix:** Removed `category` from `CDN_ICON_TIERS` (`packages/shared/src/iconSystem/emojiToIconMap.ts`) so `JoyJoinIcon tier="category"` resolves bundled `src/assets/icons/category-icons/` via `require()` instead of a broken CDN path. Replaced the `category-social` (`话题`) asset through the Lovart pipeline.
+- **Preloader:** Added `usePreloadCategoryIcons` to warm the five bundled category icons before the heat picker appears; skipped on 2G and guarded to run once.
+- **UX redesign:** Tap-to-cycle each topic 0 → 1 (感兴趣) → 2 (很热衷) → 3 (必聊项) → off, with a 3-segment vertical tier indicator and a three-step heat guide.
+- **Milestone celebrations:** Centered toasts for unlock (≥3 selections), first L3 / 必聊项, and all five macro categories selected.
+- **Emotional-value polish:** Archetype-aware Xiaoyue coach copy and footer "heat story" pill; CTA unlock pulse; active category icon scale feedback; first-selection hint toast; offline submit guard.
+- **Accessibility & performance:** `role="button"`, `aria-pressed`, dynamic `aria-label` per card; `aria-live="polite"` on toasts; `@media (prefers-reduced-motion: reduce)` disables animations; transform-only interactions; timeout-ref cleanup on unmount.
+- **Audit scores:** 情绪价值 24/24, Frontend Design Audit 20/20, Completeness Audit 44/44, Performance Audit PASS (50/60).
+
+**41. Profile / “我的” Social-Passport Redesign + Wow Polish** 🪪 *(2026-06-16)*
+- **Scope:** Mini-program profile tab (`pages/profile/index`) — the logged-in "我的" surface.
+- **Feature flag:** Gated by `features.profileRedesignEnabled` (DB-backed, env `PROFILE_REDESIGN_ENABLED`, default `true`). When disabled, the page falls back to a simplified legacy-style layout.
+- **Social-passport hero:** Gradient-ring archetype avatar (`ArchetypeHead`), Xiaoyue greeting bubble, name/archetype/identity chip, optional age/city/bio chips, and share/edit CTAs. When `bio` is empty, a dashed CTA invites the user to write a 1–100 character social signature; tapping it fires `profile_edit_tap { field: 'bio', source: 'profile_cta' }`.
+- **Three stat cards:** `已参加活动`, `我的连接数`, `资料完成度`; count-up animation via shared `useCountUp` hook; empty-state CTAs (`去遇见`, `活动后解锁`, `去完善`); archetype-tinted completion progress bar (40% essential + 30% extended + 30% archetype). A non-empty bio contributes a +10% completion bonus (capped at 100%).
+- **100% completion ceremony:** When `资料完成度` first reaches 100%, a one-time confetti-seal celebration plays and `profile_completion { hasBio }` is tracked. The ceremony is gated by `profileRedesignEnabled`, reduced-motion preference, and a client-side storage flag so it fires once per user.
+- **Milestone badges:** `firstEvent` and `streak3` achievements rendered under the hero when the redesign is enabled. Locked badges show the real badge asset in grayscale rather than a generic lock icon; the celebration toasts the highest crossed milestone when multiple thresholds are crossed at once.
+- **Menu grid:** Two-column grid with rewards, invite, entitlements, events, terms, city unlock; 88rpx touch targets; haptics; reduced-motion/degradation fallbacks.
+- **Profile-card share (P1):** A "分享我的社交名片" menu row (gated by `features.personalityShareEnabled` and requiring an archetype) generates a 750×750 profile-card poster with the user's archetype image, name/family/tagline, stat chips, and referral code. Native share hooks (`useShareAppMessage`/`useShareTimeline`) pass the user's `referralCode` as `invitationCode` so shares land on the landing page with attribution.
+- **Connections preview enrichment:** The shared `ProfileArchetypeHero` component is reused on the Connections tab, showing each peer's age range, city, bio, and a mutual-context line (e.g., shared city/archetype/chemistry score). The legacy connection-card fallback remains for edge cases.
+- **Day-0 nudge (P1):** When both joined events and connections are zero, Xiaoyue surfaces a warm day-0 nudge under the stats.
+- **Interactions & wow:** Pull-to-refresh; spring avatar entrance; staggered stats/menu reveal; stat-tap Xiaoyue mascot reaction; logout with busy guard and 401 handling; skeleton + branded error states; text chevrons use bundled SVG instead of raw glyphs.
+- **Offline resilience (P2):** Profile reads its cached `PROFILE_SHELL_QUERY_KEY` before rendering the error card (`profileShell = shell ?? cachedShell`). `useQuery` uses `networkMode: 'offlineFirst'`, exponential `retryDelay`, and an offline-aware `retry` predicate. `Taro.onNetworkStatusChange` auto-refetches when connectivity returns.
+- **Predictive prefetch (P2):** After Profile shell data stabilizes, `PrefetchEngine` warms the Events and Connections shells so adjacent tabs load instantly.
+- **Data contract:** Consumes `GET /api/shell/profile` via `getProfileShell()` from `packages/shared/src/api.ts` with 60s stale time; refetched on `useDidShow`.
+- **Analytics:** `POST /api/analytics/profile` accepts whitelisted profile events (`profile_stat_tap`, `profile_archetype_cta_tap`, `profile_menu_tap`, `profile_logout_tap`, `profile_shell_retry`, `profile_share_app_message`, `profile_share_timeline`, `profile_milestone_impression`, `profile_milestone_tap`, `profile_pull_refresh`, `profile_share_card_generated`, `profile_share_card_error`, `profile_view`, `profile_edit_tap`, `profile_completion`, `connection_card_view`) stored in `discoverAnalyticsEvents`; rate-limited 120 req/min; client Zod validation in `profileAnalytics.ts`.
+- **Code organization:** Logic extracted into `pages/profile/profileConstants.ts`, `pages/profile/profilePoster.ts`, and `pages/profile/useProfileShareCard.ts`; regression tests in `profileConstants.test.ts`.
+- **Audit scores:** Frontend Design Audit 20/20, Completeness Audit 44/44, Performance Audit PASS (48/60). The Profile page is no longer flagged by the Harness Completion Gate; the repository-wide gate reports CONCERN (85/100) due to pre-existing maintainability issues in unrelated files.
+
+**42. Lovart 5×5 Status/UI Icon Integration** 🎨 *(2026-06-18)*
+- **Scope:** Mini-program proprietary icon system (`packages/shared/src/iconSystem/emojiToIconMap.ts`, `apps/mini-program/src/components/ui/JoyJoinIcon.tsx`).
+- **New assets:** Cropped a single 2048×2048 Lovart grid into 25 WebP icons with @2x/@3x variants: `status-icons` (⏰📣📊⚠️🚫🪞🔓🌟✕✓🔔), `ui` (🎁🔍📝), `info-labels` (✈️🌆🌏🌐🗺️), and six `reaction-icons` (💰😏😎💜😅😈).
+- **Registry:** Added the 25 new emoji→icon mappings to `INFO_LABEL_MAP`, `REACTION_MAP`, `STATUS_ICON_MAP`, and `UI_ICON_MAP`; `IconTier` now covers `expression`, `semantic`, `mood`, `chemistry`, `phase`, `status`, `reaction`, `category`, `intent`, `reveal`, `achievement`, `ui`.
+- **Fallback behavior:** Implemented unambiguous tier-specific fallback in `getIconMapping()`: when no explicit `tier` prop is passed and the emoji exists in exactly one tier map, that tier's asset is used automatically. `StatusCard` now passes appropriate default tiers for empty/error/info icons.
+- **Hosting:** `status`/`ui`/`semantic` tiers are bundled locally; `reaction` remains CDN-primary with the same `reaction-icons/` folder mirrored locally for `cdnAsset()` fallback when `TARO_APP_CDN_BASE_URL` is unset. Six new reaction icon sets were pushed to the production CDN via the `icon-cdn-asset-upload` branch and verified HTTP 200.
+- **Validation:** Shared tests (292 passed), mini-program tests (393 passed), typecheck, guardrails, and icon transparency validation all pass. Main package size remains over the 2 MB WeChat guideline due to pre-existing local assets; the new icon sets are small relative to the existing footprint.
+
+**43. Interest Taxonomy v2.0 + Illustrated Assets + Package-Size Recovery** 🏷️ *(2026-06-18)*
+- **Scope:** Canonical interest taxonomy (`packages/shared/src/interests.ts`) and mini-program asset pipeline.
+- **Taxonomy v2.0.0:** Restructured around meeting scenes — 48 active interests across 6 macro categories: 美食小酌 (`food`), 聚会玩乐 (`play`), 运动户外 (`sports`), 文艺现场 (`culture`), 生活美学 (`life`), 思想成长 (`growth`). Added RIASEC mapping to every interest.
+- **Illustrations:** Generated 48 proprietary `.webp` interest illustrations (≤ ~20 KB each) and 4 refreshed category icon sets; uploaded to the production CDN (`https://joyjoinapp.com/static/images/interests/` and `…/images/icons/category-icons/`). All live assets verified HTTP 200 via `validate:assets`.
+- **Frontend wiring:** `getInterestAssetUrl()` resolves the canonical `imageUrl` through `cdnAsset()`; `InterestChipCloud` renders interest icons with level visualization; `pages/onboarding/profile-review/index.tsx` passes top-interest IDs to the chip cloud.
+- **Build-time CDN URL guarantee:** `apps/mini-program/config/index.ts` now defaults `TARO_APP_CDN_BASE_URL` to `https://joyjoinapp.com/static` in production, and `.github/workflows/taro-weapp-build.yml` also falls back to the same value, preventing undefined CDN hostnames in release builds.
+- **Package-size recovery:** Reduced the compressed main package from ~2.55 MB peak back down to ~1.88 MB by:
+  - Bundling only 6 core Xiaoyue mascot sprite states (`welcome`, `idle`, `coach`, `loading`, `listening`, `thinking`) locally; the remaining 14 states are CDN-primary with local `.webp` fallback.
+  - Stripping `@3x` variants from bundled `status-icons`, `info-labels` (semantic), and `ui` tiers at build time via `clean:cdn-assets`; 3x devices scale the `@2x` assets.
+- **Guardrails cleanup:** Removed stray inline emojis and ad-hoc `font-size` literals from `StatusCard.tsx`, `HalfwayMilestone.tsx`, `emptyStates.ts`, `packages/shared/src/api.ts`, `extended-data/index.tsx`, `UndercoverWordPhaseView.tsx`, and `event-ticket-payment/index.scss`.
+- **Validation:** Typecheck, build, package-size check, guardrails, shared tests (292), server tests (1784), and mini-program tests (393) all pass.
 
 ### 2026 Milestones (May 2026)
 
@@ -99,7 +150,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Composite tab endpoints:** `GET /api/shell/discover`, `/api/shell/profile`, `/api/shell/events`, `/api/shell/connections` bundle auth user + tab data into single responses, eliminating cold-start round-trips on tab switch.
 - **Shared server infrastructure:** `shellCache.ts` (NodeCache singleton, 30s TTL, cross-shell invalidation), `buildAuthUserResponse.ts` (shared auth builder), `shellRepository.ts` (N+1-free composite assembly). Prerequisite repos: `joinedEventsRepo.ts` and `connectionsRepo.ts`.
 - **Client prefetch engine:** Landing page stages all 4 shells after entry animation via `PrefetchEngine` (`apps/mini-program/src/lib/prefetchEngine.ts`), injecting composite data into existing TanStack Query keys. Auth injection is gated for pruned shells; Profile shell injects unconditionally. **2026-06-05 fix:** `PrefetchEngine` intentionally omits `paymentsEnabled` from pruned auth fragments so the live `/api/auth/user` response remains the sole source of truth for kill-switch state.
-- **Cache invalidation:** `shellCache.invalidateUser(userId)` triggered on payment/coupon use, pool registration, connection creation, and assessment completion.
+- **Cache invalidation:** `shellCache.invalidateUser(userId)` triggered on payment/coupon use, pool registration, connection creation, assessment completion, and event-feedback submission (so the Connections tab transitions out of `feedback-pending`).
 - **Graceful fallback:** Events and Connections pages fall back to legacy endpoints (`/api/events/joined`, `/api/my-connections`) if composite 500s. Discover shell already had fallback from pilot.
 - **Profile page deduplication:** Removed duplicate `auth-user-profile` fetch; Profile page now reads directly from `AUTH_QUERY_KEY`.
 
@@ -123,6 +174,26 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Edit-profile:** 2-step continuous scroll (Step 1 "基础档案" + Step 2 "社交画像"). Field-level validation, scroll-to-error via `ScrollView scrollIntoView`, unsaved-changes guard, skeleton loading, haptics, floating CTA bar. Completeness audit: 44/44.
 - **Profile-review backport:** Adopted `InterestChipCloud` for interest + category chips.
 - **Analytics:** Lightweight `logInfo` events for `edit_profile_enter`, `edit_profile_save` (with `fieldsChanged`), `edit_profile_abandon` (with `secondsOnPage`).
+
+**39. Intent Icon Wiring + Shared Selection Logic** 🎯 *(2026-06-17)*
+- **Icon wiring:** Pool registration, onboarding `essential-data`, profile-review, and edit-profile now render intent options through `JoyJoinIcon tier="intent"`. `intent` remains out of `CDN_ICON_TIERS` so assets resolve from the bundled `src/assets/icons/intent-icons/` (no runtime `require()` in subpackages). `usePreloadIntentIcons` pre-warms the bundled set before the grid renders.
+- **Shared selection logic:** New `toggleIntentValue(selected, value, { maxExplicit })` helper in `packages/shared/src/constants.ts` centralizes the `MAX_INTENTS=3` cap and `随缘`/flexible coexistence rules. It returns `null` when the cap would be exceeded, letting callers surface haptic + toast feedback. Covered by 8 unit tests in `packages/shared/src/__tests__/intents.test.ts`. Used by pool-registration, onboarding `essential-data`, and edit-profile.
+- **Reusable component:** `apps/mini-program/src/components/intent/IntentCard.tsx` is the single component for intent selection cards. It renders the Lovart icon, label/subtitle, selected checkmark, disabled/dimmed states, `haptics('light')`, and accessible `aria-pressed`/`aria-disabled`/`aria-label` attributes. Token-based muted colors replace opacity-only dimming for accessible contrast.
+- **Copy update:** Edit-profile intent field label changed from「社交意图」to「社交期待」; each option shows a 36rpx `JoyJoinIcon` left of the label with disabled/dimmed states.
+- **Completion feedback:** Pool-registration shows a muted completion pill "已经选满 3 个期待，先聚焦这些方向" when the explicit-intent cap is reached.
+- **Profile review:** Intent chips on the review page render with `JoyJoinIcon tier='intent' size={24}`.
+- **Pool-registration refactor:** Extracted terminal states (loading stale, empty, already-joined, success) into `apps/mini-program/src/pages/pool-registration/components/PoolRegistrationTerminalStates.tsx` and added reusable `useReactionTimer` hook in `apps/mini-program/src/hooks/`. Removed the unfinished `PoolRegistrationFlowSteps.tsx` split file.
+- **Tooling / quality:** Restored `min-height: 100vh` fallback before `100dvh` in `pool-registration/index.scss` per `AGENTS.md §4` WeChat WKWebView guidance; fixed `scripts/devtools/design-audit.mjs` regex so `min-height: 100vh` is no longer flagged; removed the registration `logInfo` PII payload and deduplicated reaction timer logic.
+- **Scope:** Affects onboarding `essential-data` Step 5 intent grid, pool-registration intent grid, edit-profile, and profile-review. No API or schema changes.
+
+**40. App-Launch Onboarding Preloader + Archetype Asset Registry Refactor** 🚀 *(2026-06-18)*
+- **Staggered app-launch preloader:** `apps/mini-program/src/lib/utils/onboardingPreload.ts` replaces the previous heavy app-launch preload. It warms onboarding-critical raster assets in three tiers (immediate intro/welcome art; ~400ms test expressions + personality emoji + intent icons + milestone badge + welcome-back hero; ~1200ms curated core mascot sprite sheets). It skips entirely on 2G/offline and defers the heavy tier on low-end devices (`benchmarkLevel <= 15`), removing all 12 archetype CDN images and the full mascot sprite set from the app-launch critical path.
+- **Concurrency-limited batch preloading:** `preloadImages` in `apps/mini-program/src/lib/utils/imagePreload.ts` now accepts an optional `concurrency` cap to avoid decoder saturation on heavy bundles.
+- **Canonical archetype asset registry:** Moved `ARCHETYPE_ASSET_MAP`, spritesheet helpers, and bulk-preload utilities from `pages/onboarding/personality-test/visuals.ts` to `apps/mini-program/src/lib/utils/archetypeAssets.ts`. `visuals.ts` re-exports them for existing consumers; new code should import from the lib utility.
+- **Intent icon pre-warming:** `usePreloadIntentIcons` now skips on offline networks in addition to 2G, ensuring subpackage intent grids render proprietary icons reliably.
+- **Pool-registration intent card reuse:** The pool-registration intent grid now uses the shared `IntentCard` component (already used in onboarding essential-data and edit-profile), fixing invisible selection feedback from missing pool-registration SCSS classes and removing dead styles.
+- **Tests:** Added `onboardingPreload.test.ts` and `imagePreload.test.ts` covering tier gating, network/device skip logic, timer cleanup, and concurrency.
+- **Docs synced:** `apps/mini-program/README.md`, `apps/mini-program/docs/ASSET_STRATEGY.md`, `docs/mini-program/mini-program-product-reference.md`, `docs/reference/perf.md`, `AGENTS.md`.
 
 **38. Mini-Program Landing & Profession Overlay Polish** 🧹 *(2026-06-13)*
 - **Landing continue-mode CTA:** context-aware labels replace the generic "继续创建账户" — `进入发现页` when the returning user's `nextStep` is `discover` (routed to the Discover tab), `继续完善档案` for authenticated users still in onboarding, and `继续完成测试` for guests with an incomplete anonymous assessment session. The CTA sets `isPageExiting` before navigation and resets it via `useResetOnShow` on swipe-back/foreground so the button never stays stuck on the ellipsis spinner.
@@ -151,7 +222,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 **35. Mini-Program Bug-Fix & Polish Sprint** 🐛 *(2026-06-05)*
 - **Discover empty state restored:** Replaced regressed empty state with `StatusCard` using Lovart `lovart-generic-empty.webp` hero illustration, warm title/description, and a primary action CTA (`去发现活动` or `清除筛选` when filters are active).
 - **Events empty/error states:** Empty state now uses the same `StatusCard` + Lovart pattern; fetch failures render `XiaoyueEmptyState` with `emotion='sad'` and a retry CTA.
-- **Connections loading/error states:** Branded loading via `XiaoyueEmptyState` `emotion='waiting'`; fetch failures render `emotion='sad'` with retry. Auth gate uses `useMiniPageGate` with a 4s force-release timeout to prevent stuck loading after app resume.
+- **Connections empty/loading/error states:** Context-aware empty states driven by server-side `connectionsContext` (`no-events`, `upcoming-event`, `feedback-pending`, `feedback-complete`). Loading uses `XiaoyueEmptyState` `emotion='waiting'`; `feedback-complete` adds a celebration check-badge + success haptic; CTA busy state shows a spinner + "跳转中…". Fetch failures render `XiaoyueEmptyState` `emotion='reassure'` with retry. Empty-state height is computed from `Taro.getSystemInfoSync()` instead of `100vh/100dvh`. Auth gate uses `useMiniPageGate` with a 4s force-release timeout to prevent stuck loading after app resume.
 - **`HeroPromoBanner` hardening:** CTA always receives `onCtaTap` so it never silently disables; added `margin-bottom: 8rpx` to prevent boundary clipping; static copy stripped of fabricated social-proof metrics.
 - **`LocationFilterDrawer` scroll fix:** Removed conflicting inline `height: 100%`; added WeChat `enableFlex` prop to `<ScrollView>`; drawer sheet now renders at `z-index: $z-modal` (`200`); district tiles have `role='button'`, `aria-pressed`, descriptive `aria-label`, and SCSS-token-driven heat-dot colours.
 - **`XiaoyueSpriteAnimator` crossfade gating:** Exit-frame animation respects `prefers-reduced-motion` and `useDeviceTier` degradation tier to prevent jank on low-end devices.
@@ -166,7 +237,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Dynamic event count:** Profile page replaced hardcoded "3" with live `joinedEvents.length` from the composite shell.
 - **Birth year range fix:** Edit-profile birth year picker now starts from `currentYear - 18` descending to 1950, and correctly reads from `birthdate` fallback.
 - **Industry English input:** Switched from server embedding search to local `searchOccupations` with pinyin/English/keyword support for instant, offline-friendly industry selection.
-- **Intent multi-select + 随缘:** 随缘 ("go with the flow") now coexists with other intent selections; unselected options auto-dim with `opacity: 0.7` for clear visual hierarchy.
+- **Intent multi-select + 随缘:** 随缘 ("go with the flow") now coexists with other intent selections; unselected options use token-based muted colors for clear visual hierarchy. Cards are disabled when the explicit-intent cap (`MAX_INTENTS=3`) is reached, with `aria-disabled` and focus-ring treatment.
 - **我的足迹 back button + alignment:** Conditional back button via `getCurrentPages().length > 1`; title centered.
 - **Android logo fix:** `BrandLogo.tsx` uses local `/assets/joyjoin-logo.webp`; native tab bar uses optimized `joyjoin-logo-tab.png` (19KB vs 596KB) to stay within the 2MB package budget.
 - **Interest intensity in settings:** Edit-profile now shows 3-tier level badges (已加入/升温中/高热) with tap-to-cycle `1→2→3→off` intensity control, protected behind a loading guard.
@@ -677,7 +748,7 @@ WHERE id = user_id;
 #### Discover Hero Promo Banner (top-of-page)
 
 - **Component:** `HeroPromoBanner` (`apps/mini-program/src/components/HeroPromoBanner.tsx`) — single hero surface, not a carousel
-- **Visual:** Full-bleed Lovart illustration (`banner-hero-lovart-v1.webp` + `.png` fallback) with copy-side purple/pink wash, glass copy panel (eyebrow + title + subtitle + CTA), breathing CTA pill with circular arrow, 5 sparkles drifting on negative-delay loop
+- **Visual:** Full-bleed Lovart illustration. The banner is bundled locally (`banner-hero-lovart-v1.webp` under `assets/promo-local/`) for instant first paint and falls back to the CDN copy on `onError`; PNG fallback is available via CDN if the runtime rejects WebP. Copy-side purple/pink wash, glass copy panel (eyebrow + title + subtitle + CTA), breathing CTA pill with circular arrow, 5 sparkles drifting on negative-delay loop
 - **Variant selection:**
   - No archetype → variant C ("先测再玩" — nudges personality test)
   - Has archetype → variant A ("本周推荐" — this weekend) by default
@@ -686,7 +757,7 @@ WHERE id = user_id;
 - **Performance:** Animations gated by `useDeviceTier` (degradation tier kills idle loops) and `IntersectionObserver` (pauses off-screen); sparkles use `transform`/`opacity` only with `will-change` for GPU promotion
 - **Kill switch:** `user.features.promoBannerEnabled` (server-driven, DB-backed via `featureFlags.FLAG_ENV_MAP`; admin-toggleable at `/admin/feature-flags`; env fallback `PROMO_BANNER_ENABLED`, default `true`)
 - **Copy trust rule (2026-06-05):** Static promo variants must not fabricate social-proof metrics (e.g., fake user counts, popularity percentages, "已有 10,000+ 人加入"). Use real query-backed numbers or omit the metric.
-- **Analytics:** `promo_banner_impression` (mount), `promo_banner_cta_tap` (CTA), `promo_banner_image_error` (CDN failure), `promo_banner_image_retry` (manual recovery, bounded at 2 attempts)
+- **Analytics:** `promo_banner_impression` (mount), `promo_banner_cta_tap` (CTA), `promo_banner_image_error` (local or CDN load failure), `promo_banner_image_retry` (manual recovery, bounded at 2 attempts)
 
 #### Blind Box Event Lifecycle
 
@@ -1501,7 +1572,7 @@ CREATE TABLE event_feedback (
 
 ### 1.8 User Profile Management
 
-**Canonical (Mini-Program):** `apps/mini-program/src/pages/profile/index.tsx`, `apps/mini-program/src/pages/edit-profile/index.tsx`
+**Canonical (Mini-Program):** `apps/mini-program/src/pages/profile/index.tsx`, `apps/mini-program/src/pages/profile-linked/edit-profile/index.tsx`
 
 **Web Reference:** `apps/user-client/src/pages/ProfilePage.tsx`, `apps/user-client/src/pages/Edit*.tsx`
 
@@ -1594,6 +1665,8 @@ interface PrivacySettings {
 5. 👤 我的 (Profile) → /profile
    - User profile, settings, 权益状态
 ```
+
+- Tab-switch performance: native custom tab bar uses a shared translating active pill (GPU `transform`, 180ms tap debounce) and auth hydration from local storage so returning users do not see a loading flash on every tab switch.
 
 > ⚠️ **Legacy reference**: The old PRD documented a different nav (`首页 / 发现 / 我的活动 / 消息 / 我的`). That structure is deprecated. The tab formerly labelled `圈子` is now `连接`.
 
@@ -1933,7 +2006,8 @@ Process:
 ```sql
 venues
   id UUID PRIMARY KEY
-  name TEXT NOT NULL
+  name TEXT NOT NULL                -- internal identifier / fallback display name
+  brand_name TEXT                   -- actual restaurant/bar brand name shown to users and admins
   venue_type TEXT NOT NULL          -- restaurant | bar | homebar | cafe
   address TEXT NOT NULL
   city TEXT NOT NULL                -- 深圳, 香港
@@ -1970,13 +2044,13 @@ venues
 #### Admin Interface
 
 **List View:**
-- Cards with venue name, city/district, type, partner status
+- Cards with venue brand name (or internal name as fallback), city/district, type, partner status
 - Filter by city, type, partner status
 - Search by name or address
 - Data quality summary (missing fields, duplicates)
 
 **Create / Edit:**
-- Basic info: name, type, address, city, district, coordinates (AMap picker)
+- Basic info: name (internal identifier), brandName (user-facing brand), type, address, city, district, coordinates (AMap picker)
 - Matching tags: cuisines, atmosphere tags, decor style, taste intensity
 - Budget categories: multi-select price ranges per venue type
 - Capacity: `seatingCapacity` (people per event) + `maxConcurrentEvents` (simultaneous events)

@@ -1,0 +1,71 @@
+{
+  "id": "auto-docs-2026-06-16",
+  "title": "Auto-Docs Coverage Report 2026-06-16",
+  "status": "candidate",
+  "owner": "auto-docs",
+  "lastValidatedAt": "2026-06-16T09:34:50.331Z",
+  "tags": [
+    "auto-docs",
+    "documentation"
+  ],
+  "triggerTerms": [
+    "docs",
+    "documentation",
+    "readme"
+  ],
+  "relatedPaths": [
+    "docs/architecture/matching.md",
+    "docs/architecture/matching.md",
+    "docs/architecture/social-icebreaker.md",
+    "docs/architecture/social-icebreaker.md",
+    "docs/architecture/payment.md",
+    "docs/architecture/websocket.md",
+    "packages/shared/src/matching",
+    "apps/server/src/services/matching",
+    "apps/server/src/services/socialIcebreaker",
+    "packages/shared/src/socialIcebreaker",
+    "apps/server/src/services/payment",
+    "apps/server/src/websocket"
+  ],
+  "sources": [
+    "scripts/auto-docs.mjs"
+  ],
+  "confidence": "medium",
+  "summary": {
+    "totalGaps": 6,
+    "canonicalIssues": 0,
+    "scanRange": "last 20 commits",
+    "gaps": [
+      {
+        "doc": "docs/architecture/matching.md",
+        "source": "packages/shared/src/matching",
+        "status": "missing"
+      },
+      {
+        "doc": "docs/architecture/matching.md",
+        "source": "apps/server/src/services/matching",
+        "status": "missing"
+      },
+      {
+        "doc": "docs/architecture/social-icebreaker.md",
+        "source": "apps/server/src/services/socialIcebreaker",
+        "status": "missing"
+      },
+      {
+        "doc": "docs/architecture/social-icebreaker.md",
+        "source": "packages/shared/src/socialIcebreaker",
+        "status": "missing"
+      },
+      {
+        "doc": "docs/architecture/payment.md",
+        "source": "apps/server/src/services/payment",
+        "status": "missing"
+      },
+      {
+        "doc": "docs/architecture/websocket.md",
+        "source": "apps/server/src/websocket",
+        "status": "missing"
+      }
+    ]
+  }
+}

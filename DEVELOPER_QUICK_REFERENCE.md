@@ -1,7 +1,7 @@
 # JoyJoin Developer Quick Reference Guide
 
 **Version:** 2.3
-**Last Updated:** 2026-06-08
+**Last Updated:** 2026-06-17
 **For:** Tech Team Onboarding & Codebase Navigation
 
 ---
@@ -95,7 +95,8 @@ npm run check:server     # Typecheck only the server workspace
 npm run check:full       # Run guardrails, lint, tests, and the full build
 npm run lint             # Alias of the repo TypeScript checks
 npm run test             # Run workspace tests (server tests + no-op placeholders elsewhere)
-npm run build:weapp --workspace=mini-program  # Build the WeChat Mini Program workspace
+npm run build:weapp --workspace=mini-program  # Build the WeChat Mini Program workspace (runs validate:icon-transparency first)
+npm run validate:icon-transparency -w mini-program  # Fail if bundled icons on variable backgrounds are opaque
 gh workflow run "Upload CDN Assets"            # Upload static assets to joyjoinapp.com/static
 npm run upload:cdn-assets -w mini-program       # Upload CDN assets locally (rsync to CVM)
 npm run upload:cdn-assets:dry-run -w mini-program  # Preview what would upload
@@ -108,9 +109,21 @@ npm run db:studio        # Open Drizzle Studio (database GUI)
 
 ### Production deployment topology
 
-- Active production deploys run from `.github/workflows/cicd.yml`: GitHub Actions SSHes to `SERVER_IP`, resets the repo on the remote host, runs `cd ~/JoyJoin/deployment`, then runs `docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans`.
+- Active production deploys run from `.github/workflows/deploy-production.yml` (triggered by pushes to `release`): GitHub Actions SSHes to `SERVER_IP`, rsyncs code to the remote host, runs `deployment/scripts/deploy-production.sh`, which reloads Nginx and restarts containers. Pushes to `main` deploy to staging via `.github/workflows/deploy-staging.yml`.
 - The public edge is the self-managed remote server plus host Nginx using `deployment/nginx/joyjoin.conf` (`joyjoinapp.com`, `www.joyjoinapp.com`, `admin.joyjoinapp.com`, `api.joyjoinapp.com`). This is the active production path; do not revive old Fly.io deployment assumptions in active docs or scripts.
 - The app runtime still requires `DATABASE_URL`, but the repository does **not** provision PostgreSQL on the remote host (`deployment/docker-compose.nginx.yml` has no DB service and no `5432` mapping). Current deployment expects an external PostgreSQL instance via `DATABASE_URL`.
+
+### Same-server staging for 体验版 test pricing
+
+An isolated staging API can run on the same production host:
+
+- Compose: `deployment/docker-compose.staging.yml` (`postgres-staging` + `joyjoin-api-staging` on `127.0.0.1:5001`)
+- Nginx server block: `deployment/nginx/joyjoin.conf` (`staging.joyjoinapp.com`)
+- Env template: `deployment/.env.staging.example`
+- Build the mini-program with `TARO_APP_API_BASE_URL=https://staging.joyjoinapp.com`
+- Set `APP_MODE=staging` and `TEST_PAYMENT_PRICE_IN_CENTS=1` to charge ¥0.01 in 体验版
+
+See `deployment/README.md` and `docs/operations/test-mode-operations.md` §G for full setup.
 
 ---
 
@@ -211,15 +224,16 @@ joyjoin-monorepo/
 | WeChat login | Returning: `pages/login/index.tsx` + `hooks/useWeChatLogin.ts` → `POST /api/auth/wechat/login`. With assessment import: `authenticateMiniProgramUserWithTest` in `lib/api.ts` → `POST /api/auth/wechat/login-with-test` |
 | Blind-box payment + verification | `pages/blind-box-payment/`, `pages/payment-verification/`; `lib/paymentEntry.ts`, `lib/paymentPendingOrder.ts`, `lib/paymentPendingOrderStorage.ts`; shared intent helper `createMiniProgramPaymentIntent` in `packages/shared/src/api.ts`. **Payment Ritual V2:** `GET /api/payments/ritual-context` (real DB-backed community stats), `POST /api/analytics/payment` (dedicated A/B analytics endpoint). **Mock payment mode:** when `MOCK_PAYMENTS=true`, server creates instantly-paid orders (skips WeChat Pay API); client skips `Taro.requestPayment()` for mock orders. |
 | Auth + API bootstrap | `apps/mini-program/src/lib/api/api.ts` |
-| Custom tab bar (native) | `apps/mini-program/src/native-custom-tab-bar/` (see `apps/mini-program/README.md`) |
+| Custom tab bar (native) | `apps/mini-program/src/native-custom-tab-bar/` (see `apps/mini-program/README.md`). Sliding active pill via GPU `transform` + 180ms tap debounce for tab-switch performance |
 | Tab list + `tabBar.custom` | `apps/mini-program/src/lib/navigation/tabBarConfig.ts` + `app.config.ts` |
 | Shared contracts with web | `packages/shared/src/api.ts`, `centerTabRouting.ts`, `onboarding.ts`, `hongKongTime.ts` |
 | Navigation / exit-transition hook | `apps/mini-program/src/hooks/navigation/useJoyJoinNavigation.ts` |
 | Swipe-back flag-reset hook | `apps/mini-program/src/hooks/useResetOnShow.ts` |
 | Quality bar (pixel precision, DevTools) | `.github/skills/mini-program-frontend-excellence/SKILL.md` |
 | 完成度 audit (completeness + ROI recommendations) | `.github/skills/completeness-audit/SKILL.md` (pipeline: ui-layout-audit → frontend-design-audit → completeness-audit) |
-| Hero promo banner (discover top surface) | `apps/mini-program/src/components/HeroPromoBanner.tsx` — full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles. CTA always wired so it never silently disables; `margin-bottom: 8rpx` prevents boundary clipping. Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`, default `true`). Promo copy must not fabricate social-proof metrics. |
+| Hero promo banner (discover top surface) | `apps/mini-program/src/components/HeroPromoBanner.tsx` — full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles. The hero image is bundled locally (`assets/promo-local/banner-hero-lovart-v1.webp`) with CDN fallback on `onError`. CTA always wired so it never silently disables; `margin-bottom: 8rpx` prevents boundary clipping. Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`, default `true`). Promo copy must not fabricate social-proof metrics. |
 | Status card (empty/error) | `apps/mini-program/src/components/ui/StatusCard.tsx` — unified status surface with Lovart hero illustration (WebP + PNG fallback), title, description, and optional action. Used on Discover and Events for empty states and on Discover for list-fetch error states. |
+| Profile tab (redesign) | `apps/mini-program/src/pages/profile/index.tsx` — social-passport hero with age/city/bio chips, stat cards, milestone badges, menu grid, profile-card share, and one-time 100% completion ceremony. Consumes `GET /api/shell/profile` via `getProfileShell()` with offline-first React Query config and cached-shell fallback; `PrefetchEngine` warms Events/Connections shells after data stabilizes. Feature-flagged by `user.features.profileRedesignEnabled` (env `PROFILE_REDESIGN_ENABLED`, default `true`). Bio adds +10% completion bonus; `PATCH /api/profile` persists the optional 100-character bio. |
 
 ```bash
 npm run dev:weapp --workspace=mini-program
@@ -321,8 +335,9 @@ interface UseAuthResult {
     onboardingForceSkip?: boolean;     // Admin force-skip button on onboarding
     matchingLiveReveal?: boolean;      // Live reveal overlay on matching status
     socialIcebreakerClientForceEnd?: boolean; // Host emergency end button
-    personalityShareEnabled?: boolean; // Share poster generation on results page
+    personalityShareEnabled?: boolean; // Share poster generation on results page and profile-card share
     personalitySlotAnimationEnabled?: boolean; // Slot machine reveal animation
+    profileRedesignEnabled?: boolean; // Profile tab redesign (social-passport hero, milestones, share card)
   }; // Feature flags from server (DB-backed, resolved in parallel, see lib/featureFlags.ts)
 }
 ```
@@ -348,7 +363,7 @@ The primary tab pages now follow a consistent loading / empty / error vocabulary
 |------|---------|-------|-------|
 | Discover | Skeleton shimmer above list | `StatusCard` with Lovart `lovart-generic-empty.webp` + action CTA | `StatusCard` `tone='error'` with Lovart error illustration + retry |
 | Events | Skeleton shimmer above tabs | `StatusCard` with Lovart `lovart-generic-empty.webp` + action CTA | `XiaoyueEmptyState` `emotion='sad'` + retry |
-| Connections | `XiaoyueEmptyState` `emotion='waiting'` | `XiaoyueEmptyState` (contextual) | `XiaoyueEmptyState` `emotion='sad'` + retry |
+| Connections | `XiaoyueEmptyState` `emotion='waiting'` | `XiaoyueEmptyState` context-aware: `no-events` → discover, `upcoming-event` → events, `feedback-pending` → event-feedback, `feedback-complete` → celebrate badge | `XiaoyueEmptyState` `emotion='reassure'` + retry |
 
 Full-screen empty/error states inside `ScrollView` must use `@include scroll-view-centered-state` (`_mixins.scss`) to guarantee vertical centering.
 
@@ -495,7 +510,7 @@ These are commented out in schema but kept for backward compatibility.
 
 ### Profile Edit Routes
 
-**Mini-program (launch-primary):** `pages/edit-profile/index` — single consolidated 2-step editor.
+**Mini-program (launch-primary):** `pages/profile-linked/edit-profile/index` — single consolidated 2-step editor (lives in the `pages/profile-linked` subpackage, preloaded from `pages/profile/index`).
 
 **Web (archived):** The following granular edit routes were part of the archived `user-client` and are not active in the mini-program:
 
@@ -654,7 +669,7 @@ After `FinalProfileReviewPage`, a secondary CTA "先浏览 →" lets users enter
 | Cross-app imports | Apps must **not** import from other apps — shared logic goes in `packages/shared` |
 | Matching background | Reuse `matching/shared/matching-bg.svg` via `MatchingStateLayout` — never duplicate |
 | Hero images | Prefer WebP + `decoding="async"` over PNG for hero/above-fold images |
-| Archetype assets | Defer/gate — do not preload all 12 archetype PNGs in the critical path |
+| Archetype assets | Defer/gate — do not bulk-preload all 12 archetype images in the app-launch critical path. Preload only the primary result image on test completion / results mount; use `apps/mini-program/src/lib/utils/archetypeAssets.ts` as the canonical registry. |
 | Asset prefetching | Gate on real activity state — do not prefetch for no-activity users |
 
 ---

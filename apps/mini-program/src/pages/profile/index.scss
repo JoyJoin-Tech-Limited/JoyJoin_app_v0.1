@@ -1,128 +1,480 @@
 @use '../../styles/variables' as *;
+@use '../../styles/dark-variables' as *;
 @use '../../styles/mixins' as *;
 
 .profile-page {
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
   min-height: 100dvh;
-  background: $color-bg-gradient;
   overflow: hidden;
+
+  // Themeable color surface for light / dark mode support.
+  --profile-bg: #{$color-bg-gradient};
+  --profile-surface: #{$color-surface};
+  --profile-text-primary: #{$color-text-primary};
+  --profile-text-secondary: #{$color-text-secondary};
+  --profile-text-tertiary: #{$color-text-tertiary};
+  --profile-text-link: #{$color-text-link};
+  --profile-text-white: #{$color-text-white};
+  --profile-primary: #{$color-primary};
+  --profile-primary-04: #{rgba($color-primary, 0.04)};
+  --profile-primary-06: #{rgba($color-primary, 0.06)};
+  --profile-primary-08: #{rgba($color-primary, 0.08)};
+  --profile-primary-14: #{rgba($color-primary, 0.14)};
+  --profile-primary-16: #{rgba($color-primary, 0.16)};
+  --profile-primary-35: #{rgba($color-primary, 0.35)};
+  --profile-text-primary-06: #{rgba($color-text-primary, 0.06)};
+  --profile-text-primary-08: #{rgba($color-text-primary, 0.08)};
+  --profile-text-secondary-04: #{rgba($color-text-secondary, 0.04)};
+  --profile-text-secondary-08: #{rgba($color-text-secondary, 0.08)};
+  --profile-text-secondary-10: #{rgba($color-text-secondary, 0.10)};
+  --profile-text-secondary-12: #{rgba($color-text-secondary, 0.12)};
+  --profile-text-tertiary-12: #{rgba($color-text-tertiary, 0.12)};
+  --profile-divider: #{$color-divider};
+  --profile-success: #{$color-success};
+  --profile-success-10: #{rgba($color-success, 0.10)};
+  --profile-brand-gradient: #{$brand-gradient};
+
+  background: var(--profile-bg);
 
   &__scroll {
     flex: 1;
-    overflow-y: auto;
+    min-height: 0;
+    height: 100%;
   }
 
   &__loading {
     @include flex-center;
-    min-height: 100dvh;
+    @include viewport-min-height;
   }
 
   &__loading-text {
     @include type-body;
-    color: $color-text-secondary;
+    color: var(--profile-text-secondary);
   }
 
-  // Hero section
+  // Hero
   &__hero {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: $spacing-2xl $container-padding $spacing-lg;
     text-align: center;
-  }
-
-  &__avatar {
-    width: 120rpx;
-    height: 120rpx;
-    border-radius: 60rpx;
-    background: rgba($color-primary, 0.08);
-    @include flex-center;
-    margin-bottom: $spacing-md;
-    overflow: hidden;
-  }
-
-  &__name {
-    @include type-heading;
-    margin-bottom: $spacing-xs;
-    display: block;
-  }
-
-  &__archetype {
-    @include type-body;
-    color: $color-primary;
-    font-weight: $font-weight-medium;
-    display: block;
-  }
-
-  // Archetype celebration card
-  &__archetype-card {
-    margin: 0 $container-padding $spacing-lg;
-    padding: $spacing-lg;
-    border-radius: $card-radius;
-    border: 2rpx solid rgba($color-primary, 0.08);
+    @include safe-area-top(padding-top, $spacing-lg + $spacing-xs);
+    padding-right: $container-padding;
+    padding-bottom: $spacing-lg;
+    padding-left: $container-padding;
+    gap: $spacing-sm;
     opacity: 0;
-    transform: translateY(12rpx);
-    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    transform: translateY(16rpx);
+    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 
-    &--visible {
+    &--entered {
       opacity: 1;
       transform: translateY(0);
     }
   }
 
-  &__archetype-card-inner {
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
-  }
-
-  &__archetype-card-text {
+  &__hero-skeleton {
     display: flex;
     flex-direction: column;
-    gap: 4rpx;
+    align-items: center;
+    gap: $spacing-sm;
+    @include safe-area-top(padding-top, $spacing-lg + $spacing-xs);
+    padding-right: $container-padding;
+    padding-bottom: $spacing-lg;
+    padding-left: $container-padding;
   }
 
-  &__archetype-card-label {
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
+  &__avatar-skeleton {
+    width: 136rpx;
+    height: 136rpx;
+    border-radius: 50%;
+    background: var(--profile-primary-08);
+  }
+
+  &__name-skeleton {
+    width: 160rpx;
+    height: 36rpx;
+    border-radius: $radius-pill;
+    background: var(--profile-text-primary-06);
+  }
+
+  &__pill-skeleton {
+    width: 200rpx;
+    height: 36rpx;
+    border-radius: $radius-pill;
+    background: var(--profile-primary-08);
+  }
+
+  &__avatar-ring {
+    width: 136rpx;
+    height: 136rpx;
+    border-radius: 50%;
+    background: var(--profile-surface);
+    border: 2rpx solid var(--profile-primary-35);
+    padding: 0;
+    box-sizing: border-box;
+    @include flex-center;
+    overflow: hidden;
+  }
+
+  &__avatar-head {
+    border-radius: 50%;
+    background: var(--profile-surface);
+  }
+
+  &__hero--entered &__avatar-head {
+    animation: avatar-spring 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  &__name {
+    font-size: $font-size-lg;
+    font-family: $font-cn-display;
+    font-weight: $font-weight-bold;
+    line-height: $line-height-normal;
+    color: var(--profile-text-primary);
+    display: block;
+    max-width: 520rpx;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__subtitle {
+    font-size: $font-size-sm;
+    font-family: $font-ui;
+    font-weight: $font-weight-medium;
+    line-height: $line-height-normal;
+    color: var(--profile-text-secondary);
+    display: block;
+    max-width: 520rpx;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__archetype-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    min-height: $cta-min-tap;
+    padding: $spacing-xs $spacing-md;
+    border-radius: $radius-pill;
+    background: var(--profile-brand-gradient);
+    box-shadow: $shadow-sm;
+    transition: transform 0.12s ease, opacity 0.12s ease;
+    box-sizing: border-box;
+
+    &--pressed {
+      transform: scale(0.97);
+      opacity: 0.92;
+    }
+  }
+
+  &__archetype-pill-text {
+    font-size: $font-size-sm;
+    font-family: $font-ui;
+    font-weight: $font-weight-medium;
+    color: var(--profile-text-white);
     line-height: $line-height-normal;
   }
 
-  &__archetype-card-name {
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    line-height: $line-height-tight;
+  &__unlock-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: $cta-min-tap;
+    padding: $spacing-xs $spacing-md;
+    border-radius: $radius-pill;
+    background: var(--profile-primary-08);
+    border: 2rpx solid var(--profile-primary-16);
+    transition: background 0.12s ease, transform 0.12s ease;
+    box-sizing: border-box;
+
+    &--pressed {
+      background: var(--profile-primary-14);
+      transform: scale(0.97);
+    }
   }
 
-  // Quick stats
+  &__unlock-pill-text {
+    font-size: $font-size-sm;
+    font-family: $font-ui;
+    font-weight: $font-weight-medium;
+    color: var(--profile-primary);
+    line-height: $line-height-normal;
+  }
+
+  // Bio line / empty-state CTA
+  &__bio-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: $spacing-sm;
+    max-width: 560rpx;
+  }
+
+  &__bio-text {
+    font-size: $font-size-sm;
+    font-family: $font-ui;
+    color: var(--profile-text-secondary);
+    line-height: $line-height-relaxed;
+    text-align: center;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__bio-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-height: $cta-min-tap;
+    padding: $spacing-xs $spacing-sm;
+    background: var(--profile-surface);
+    border: 2rpx dashed var(--profile-primary-35);
+    border-radius: $card-radius-sm;
+    transition: transform 0.12s ease, opacity 0.12s ease;
+    box-sizing: border-box;
+
+    &--pressed {
+      transform: scale(0.98);
+      opacity: 0.9;
+      background: var(--profile-primary-04);
+    }
+  }
+
+  &__bio-cta-text {
+    font-size: $font-size-sm;
+    font-family: $font-ui;
+    font-weight: $font-weight-medium;
+    color: var(--profile-primary);
+    line-height: $line-height-normal;
+  }
+
+  &__bio-cta-chevron {
+    width: 12rpx;
+    height: 12rpx;
+    border-top: 2rpx solid var(--profile-primary);
+    border-right: 2rpx solid var(--profile-primary);
+    transform: rotate(45deg);
+    flex-shrink: 0;
+  }
+
+  // Xiaoyue greeting
+  &__greeting {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-top: $spacing-sm;
+  }
+
+  &__greeting-mascot {
+    width: 64rpx;
+    height: 64rpx;
+    flex-shrink: 0;
+    opacity: 0;
+    transform: scale(0.85);
+
+    &--entered {
+      animation: mascot-pop 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  }
+
+  &__greeting-bubble {
+    position: relative;
+    padding: $spacing-xs $spacing-sm;
+    background: var(--profile-surface);
+    border-radius: $card-radius-sm;
+    border-bottom-left-radius: $spacing-xs;
+    box-shadow: $shadow-sm;
+    opacity: 0;
+    transform: translateY(8rpx);
+
+    &--entered {
+      animation: text-reveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+  }
+
+  &__greeting-text {
+    font-size: $font-size-base;
+    font-family: $font-ui;
+    color: var(--profile-text-secondary);
+    line-height: $line-height-relaxed;
+    max-width: 416rpx;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  // Stats row
   &__stats {
     display: flex;
-    gap: $spacing-md;
+    gap: $spacing-sm;
     padding: 0 $container-padding;
     margin-bottom: $spacing-lg;
+    opacity: 0;
+    transform: translateY(16rpx);
+    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.1s,
+      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.1s;
+
+    &--entered {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   &__stat {
+    position: relative;
     flex: 1;
-    @include card;
-    padding: $spacing-lg;
-    text-align: center;
+    min-width: 0;
+    min-height: 144rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    padding: $spacing-md $spacing-sm;
+    background: var(--profile-surface);
+    border-radius: $card-radius-sm;
+    box-shadow: $shadow-card;
+    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+
+    &--pressed {
+      transform: scale(0.97);
+      background: var(--profile-primary-04);
+    }
+
+    .profile-page__stats--entered &--pressed {
+      transform: scale(0.97);
+    }
+
+    &--skeleton {
+      pointer-events: none;
+    }
+  }
+
+  &__stat-value-skeleton {
+    width: 56rpx;
+    height: 48rpx;
+    border-radius: $radius-pill;
+    background: var(--profile-text-primary-08);
+  }
+
+  &__stat-label-skeleton {
+    width: 96rpx;
+    height: 22rpx;
+    border-radius: $radius-pill;
+    background: var(--profile-text-secondary-10);
+  }
+
+  &__stat-progress-skeleton {
+    width: 80%;
+    height: 6rpx;
+    border-radius: 3rpx;
+    background: var(--profile-primary-08);
+    margin-top: $spacing-xs;
+  }
+
+  &__stat-progress {
+    width: 80%;
+    height: 6rpx;
+    background: var(--profile-primary-08);
+    border-radius: 3rpx;
+    margin-top: $spacing-xs;
+    overflow: hidden;
+  }
+
+  &__stat-progress-bar {
+    height: 100%;
+    width: 100%;
+    border-radius: 3rpx;
+    background: var(--profile-primary);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__completion-seal {
+    position: absolute;
+    top: -8rpx;
+    right: -8rpx;
+    width: 40rpx;
+    height: 40rpx;
+    border-radius: 50%;
+    background: var(--profile-success);
+    box-shadow: $shadow-sm;
+    @include flex-center;
+    opacity: 0;
+    transform: scale(0.5);
+    animation: completion-seal-pop 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  &__completion-seal-check {
+    width: 16rpx;
+    height: 9rpx;
+    border-left: 3rpx solid var(--profile-text-white);
+    border-bottom: 3rpx solid var(--profile-text-white);
+    transform: rotate(-45deg) translateY(-2rpx);
+  }
+
+  &__stat-icon {
+    width: 32rpx;
+    height: 32rpx;
+    flex-shrink: 0;
+    opacity: 0.7;
   }
 
   &__stat-value {
-    @include type-subheading;
-    margin-bottom: $spacing-xs;
-    display: block;
+    font-size: $font-size-xl;
+    font-family: $font-en-brand;
+    font-weight: $font-weight-bold;
+    color: var(--profile-text-primary);
+    line-height: $line-height-normal;
   }
 
   &__stat-label {
-    @include type-caption;
-    display: block;
+    font-size: $font-size-xs;
+    font-family: $font-ui;
+    font-weight: $font-weight-normal;
+    color: var(--profile-text-secondary);
+    line-height: $line-height-normal;
   }
 
-  // D1 + D2 — Milestone badges row (Batch D)
+  &__stat-caption {
+    font-size: $font-size-2xs;
+    font-family: $font-ui;
+    font-weight: $font-weight-medium;
+    color: var(--profile-text-link);
+    line-height: $line-height-normal;
+  }
+
+  &__chevron {
+    width: 12rpx;
+    height: 12rpx;
+    border-top: 2rpx solid var(--profile-text-tertiary);
+    border-right: 2rpx solid var(--profile-text-tertiary);
+    transform: rotate(45deg);
+    opacity: 0.55;
+    flex-shrink: 0;
+
+    &--stat {
+      position: absolute;
+      right: $spacing-sm;
+      bottom: $spacing-sm;
+    }
+
+    &--menu {
+      margin-left: $spacing-xs;
+    }
+
+    &--skeleton {
+      border-color: var(--profile-text-tertiary-12);
+      opacity: 1;
+    }
+  }
+
+  // Milestones
   &__milestones {
     padding: 0 $container-padding;
     margin-bottom: $spacing-lg;
@@ -130,9 +482,10 @@
 
   &__milestones-title {
     display: block;
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
+    font-size: $font-size-base;
+    font-family: $font-ui;
+    font-weight: $font-weight-semibold;
+    color: var(--profile-text-secondary);
     margin-bottom: $spacing-sm;
   }
 
@@ -153,7 +506,15 @@
 
     &--pressed {
       transform: scale(0.97);
-      background: rgba($color-primary, 0.06);
+      background: var(--profile-primary-06);
+    }
+
+    &--locked {
+      background: var(--profile-text-secondary-04);
+    }
+
+    &--celebrating {
+      animation: milestone-celebrate 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
   }
 
@@ -165,137 +526,547 @@
 
   &__milestone-label {
     font-size: $font-size-sm;
+    font-family: $font-ui;
     font-weight: $font-weight-semibold;
-    color: $color-text-primary;
+    color: var(--profile-text-primary);
+    text-align: center;
+    line-height: $line-height-normal;
   }
 
-  // Action rows
-  &__section {
-    @include card;
+  &__milestone-lock-icon {
+    width: 80rpx;
+    height: 80rpx;
+    flex-shrink: 0;
+    opacity: 0.45;
+  }
+
+  &__milestone--locked &__milestone-img {
+    filter: grayscale(100%);
+    opacity: 0.55;
+  }
+
+  &__milestone-sublabel {
+    font-size: $font-size-2xs;
+    font-family: $font-ui;
+    font-weight: $font-weight-medium;
+    color: var(--profile-text-secondary);
+    line-height: $line-height-normal;
+    text-align: center;
+  }
+
+  &__milestones--entered &__milestone {
+    animation: milestone-pulse 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  &__milestones--seen &__milestone {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  // Day-0 warm nudge
+  &__empty-nudge {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
     margin: 0 $container-padding $spacing-lg;
+  }
+
+  &__empty-nudge-mascot {
+    width: 64rpx;
+    height: 64rpx;
+    flex-shrink: 0;
+  }
+
+  &__empty-nudge-bubble {
+    position: relative;
+    padding: $spacing-xs $spacing-sm;
+    background: var(--profile-surface);
+    border-radius: $card-radius-sm;
+    border-bottom-left-radius: $spacing-xs;
+    box-shadow: $shadow-sm;
+  }
+
+  &__empty-nudge-text {
+    font-size: $font-size-sm;
+    font-family: $font-ui;
+    color: var(--profile-text-secondary);
+    line-height: $line-height-relaxed;
+  }
+
+  // Menu section
+  &__menu-section {
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-lg;
+    opacity: 0;
+    transform: translateY(16rpx);
+    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.2s,
+      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.2s;
+
+    &--entered {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  &__menu-title {
+    display: block;
+    font-size: $font-size-base;
+    font-family: $font-ui;
+    font-weight: $font-weight-semibold;
+    color: var(--profile-text-secondary);
+    margin-bottom: $spacing-sm;
+  }
+
+  &__menu {
+    background: var(--profile-surface);
+    border-radius: $card-radius;
+    box-shadow: $shadow-card;
     overflow: hidden;
   }
 
-  &__action-row {
+  &__menu-row {
     display: flex;
     align-items: center;
     gap: $spacing-md;
-    padding: $spacing-lg;
-    min-height: 96rpx;
-    border-bottom: 1rpx solid $color-divider;
-    transition: background 0.12s ease;
+    height: $button-height;
+    min-height: $cta-min-tap;
+    padding: 0 $spacing-md;
+    border-bottom: 1rpx solid var(--profile-divider);
+    opacity: 0;
+    transform: translateY(12rpx);
+    transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+      background 0.15s ease;
 
     &:last-child {
       border-bottom: none;
     }
 
-    &:active {
-      background: rgba($color-text-primary, 0.02);
-    }
-
-    &--active {
-      background: rgba($color-primary, 0.06);
+    &--pressed {
+      background: var(--profile-primary-04);
+      transform: scale(0.985);
     }
   }
 
-  &__action-icon {
-    font-size: $font-size-xl;
-    width: 48rpx;
-    text-align: center;
+  &__menu-section--entered &__menu-row {
+    opacity: 1;
+    transform: translateY(0);
   }
 
-  &__action-text {
+  &__menu-icon-well {
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: 50%;
+    background: var(--profile-primary-06);
+    @include flex-center;
+    flex-shrink: 0;
+  }
+
+  &__menu-icon {
+    width: 40rpx;
+    height: 40rpx;
+    flex-shrink: 0;
+  }
+
+  &__menu-label {
     flex: 1;
-    @include type-body;
+    font-size: $font-size-base;
+    font-family: $font-ui;
     font-weight: $font-weight-medium;
+    color: var(--profile-text-primary);
+    line-height: $line-height-normal;
+    @include text-truncate;
   }
 
-  &__action-arrow {
-    font-size: $font-size-lg;
-    color: $color-text-muted;
+  &__menu-row-right {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    flex-shrink: 0;
   }
 
-  &__action-badge {
+  &__menu-badge {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 40rpx;
-    height: 40rpx;
+    min-width: 36rpx;
+    height: 36rpx;
     padding: 0 $spacing-xs;
-    background: $color-primary;
-    border-radius: 100rpx;
+    background: var(--profile-primary);
+    border-radius: $radius-pill;
   }
 
-  &__action-count {
-    font-size: $font-size-xs;
-    color: $color-surface;
+  &__menu-badge-text {
+    font-size: $font-size-2xs;
+    font-family: $font-ui;
+    color: var(--profile-text-white);
     font-weight: $font-weight-bold;
   }
 
-  // Logout
-  &__logout-section {
-    padding: 0 $container-padding;
+  &__menu-title-skeleton {
+    width: 120rpx;
+    height: 24rpx;
+    border-radius: $radius-pill;
+    background: var(--profile-text-secondary-12);
+    margin-bottom: $spacing-sm;
   }
 
-  &__logout-btn {
-    width: 100%;
-    height: $button-height;
-    border-radius: $button-radius;
-    background: $color-surface;
-    border: 2rpx solid $color-border;
-    color: $color-error;
-    @include type-body;
-    font-weight: $font-weight-medium;
+  &__menu-skeleton {
+    background: var(--profile-surface);
+    border-radius: $card-radius;
+    box-shadow: $shadow-card;
+    overflow: hidden;
+  }
 
-    &::after {
-      border: none;
+  &__menu-row-skeleton {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    height: $button-height;
+    min-height: $cta-min-tap;
+    padding: 0 $spacing-md;
+    border-bottom: 1rpx solid var(--profile-divider);
+
+    &:last-child {
+      border-bottom: none;
     }
   }
 
-  // Empty / login state
-  &__empty-state {
-    @include flex-center;
+  &__menu-row-icon-skeleton {
+    width: $icon-slot-md;
+    height: $icon-slot-md;
+    border-radius: 50%;
+    background: var(--profile-text-primary-06);
+    flex-shrink: 0;
+  }
+
+  &__menu-row-label-skeleton {
+    flex: 1;
+    height: 28rpx;
+    border-radius: $radius-pill;
+    background: var(--profile-text-primary-06);
+  }
+
+  &__menu-row-chevron-skeleton {
+    width: 16rpx;
+    height: 28rpx;
+    border-radius: $radius-pill;
+    background: var(--profile-text-tertiary-12);
+    flex-shrink: 0;
+  }
+
+  // Error card
+  &__error-card {
+    display: flex;
     flex-direction: column;
+    align-items: center;
     gap: $spacing-sm;
-    min-height: 100dvh;
+    margin: 0 $container-padding $spacing-lg;
+    padding: $spacing-lg;
+    background: var(--profile-surface);
+    border-radius: $card-radius;
+    box-shadow: $shadow-card;
     text-align: center;
   }
 
-  &__empty-emoji {
-    font-size: 64rpx;
+  &__refresh-success {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 $container-padding $spacing-lg;
+    padding: $spacing-sm $spacing-md;
+    background: var(--profile-success-10);
+    border-radius: $radius-pill;
   }
 
-  &__empty-text {
-    @include type-body;
-    color: $color-text-secondary;
+  &__refresh-success-text {
+    font-size: $font-size-sm;
+    font-family: $font-ui;
+    font-weight: $font-weight-medium;
+    color: var(--profile-success);
+    line-height: $line-height-normal;
   }
 
-  &__login-btn {
-    @include button-primary;
-    padding: 0 $spacing-xl;
-    margin-top: $spacing-md;
+  &__error-mascot {
+    width: 120rpx;
+    height: 120rpx;
   }
 
-  &__login-btn-text {
-    color: $color-text-white;
-    @include type-body;
+  &__error-title {
+    font-size: $font-size-md;
+    font-family: $font-cn-display;
+    font-weight: $font-weight-bold;
+    color: var(--profile-text-primary);
+  }
+
+  &__error-subtitle {
+    font-size: $font-size-sm;
+    font-family: $font-ui;
+    color: var(--profile-text-secondary);
+  }
+
+  &__error-retry {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: $button-height-sm;
+    margin-top: $spacing-xs;
+    padding: $spacing-xs $spacing-lg;
+    background: var(--profile-primary);
+    border-radius: $radius-pill;
+    transition: transform 0.12s ease, opacity 0.12s ease;
+    box-sizing: border-box;
+
+    &--pressed {
+      transform: scale(0.97);
+      opacity: 0.92;
+    }
+  }
+
+  &__error-retry-text {
+    font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
+    color: var(--profile-text-white);
+  }
+
+  // Logout
+  &__logout {
+    display: flex;
+    justify-content: center;
+    padding: $spacing-md $container-padding;
+  }
+
+  &__logout-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-sm $spacing-lg;
+    min-height: $cta-min-tap;
+    border-radius: $radius-pill;
+    transition: background 0.12s ease, transform 0.12s ease, opacity 0.12s ease;
+
+    &--pressed {
+      background: #{rgba($color-text-primary, 0.04)};
+      transform: scale(0.98);
+    }
+
+    &--busy {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+  }
+
+  &__logout-text {
+    font-size: $font-size-sm;
+    font-family: $font-ui;
+    color: var(--profile-text-secondary);
+    line-height: $line-height-normal;
   }
 
   &__spacer {
-    @include safe-area-bottom-padding(padding-bottom, $tab-bar-root-height + $spacing-lg);
+    @include safe-area-bottom-padding(padding-bottom, $tab-bar-root-height + $spacing-md + $spacing-xs);
     height: 0;
   }
 }
 
+@keyframes avatar-spring {
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes text-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(8rpx);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mascot-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes milestone-pulse {
+  0% {
+    transform: scale(0.96);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes milestone-celebrate {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.12);
+  }
+  70% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes completion-seal-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .profile-page {
+    --profile-bg: #{$dark-profile-bg-gradient};
+    --profile-surface: #{$dark-color-surface};
+    --profile-text-primary: #{$dark-color-text-primary};
+    --profile-text-secondary: #{$dark-color-text-secondary};
+    --profile-text-tertiary: #{$dark-color-text-tertiary};
+    --profile-text-link: #{$dark-color-text-link};
+    --profile-text-white: #{$dark-color-text-white};
+    --profile-primary: #{$dark-color-primary};
+    --profile-primary-04: #{rgba($dark-color-primary, 0.04)};
+    --profile-primary-06: #{rgba($dark-color-primary, 0.06)};
+    --profile-primary-08: #{rgba($dark-color-primary, 0.08)};
+    --profile-primary-14: #{rgba($dark-color-primary, 0.14)};
+    --profile-primary-16: #{rgba($dark-color-primary, 0.16)};
+    --profile-primary-35: #{rgba($dark-color-primary, 0.35)};
+    --profile-text-primary-06: #{rgba($dark-color-text-primary, 0.06)};
+    --profile-text-primary-08: #{rgba($dark-color-text-primary, 0.08)};
+    --profile-text-secondary-04: #{rgba($dark-color-text-secondary, 0.04)};
+    --profile-text-secondary-08: #{rgba($dark-color-text-secondary, 0.08)};
+    --profile-text-secondary-10: #{rgba($dark-color-text-secondary, 0.10)};
+    --profile-text-secondary-12: #{rgba($dark-color-text-secondary, 0.12)};
+    --profile-text-tertiary-12: #{rgba($dark-color-text-tertiary, 0.12)};
+    --profile-divider: #{rgba($dark-color-text-primary, 0.08)};
+    --profile-success: #{$dark-color-success};
+    --profile-success-10: #{rgba($dark-color-success, 0.1)};
+    --profile-brand-gradient: #{$brand-gradient};
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .profile-page__archetype-card {
+  .profile-page__hero,
+  .profile-page__stats,
+  .profile-page__menu-section,
+  .profile-page__completion-seal {
     opacity: 1;
     transform: none;
     transition: none;
   }
 
-  .profile-page__milestone {
+  .profile-page__hero--entered .profile-page__avatar-head,
+  .profile-page__greeting-mascot--entered,
+  .profile-page__greeting-bubble--entered,
+  .profile-page__milestones--entered .profile-page__milestone {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .profile-page__stat,
+  .profile-page__menu-row,
+  .profile-page__milestone,
+  .profile-page__milestone--celebrating,
+  .profile-page__menu-section--entered .profile-page__menu-row {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    animation: none;
+  }
+}
+
+.profile-page--degradation {
+  .profile-page__hero,
+  .profile-page__stats,
+  .profile-page__menu-section,
+  .profile-page__completion-seal {
+    opacity: 1;
+    transform: none;
     transition: none;
   }
+
+  .profile-page__hero--entered .profile-page__avatar-head,
+  .profile-page__greeting-mascot--entered,
+  .profile-page__greeting-bubble--entered,
+  .profile-page__milestones--entered .profile-page__milestone {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .profile-page__stat,
+  .profile-page__menu-row,
+  .profile-page__milestone,
+  .profile-page__milestone--celebrating,
+  .profile-page__menu-section--entered .profile-page__menu-row {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    animation: none;
+  }
+
+  .profile-page__archetype-pill,
+  .profile-page__unlock-pill,
+  .profile-page__bio-cta,
+  .profile-page__error-retry,
+  .profile-page__logout-btn {
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+
+// Off-screen canvas for social-card poster generation.
+// WeChat requires the canvas element to exist in the DOM; keeping it
+// positioned off-screen avoids layout impact while allowing canvasToTempFilePath.
+.profile-page__poster-canvas {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }

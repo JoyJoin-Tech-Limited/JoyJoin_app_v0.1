@@ -1,6 +1,7 @@
 import { View, Image, Text } from '@tarojs/components'
 import { useState, useCallback } from 'react'
-import { localAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
+import './ArchetypeHead.scss'
 
 /**
  * ArchetypeHead — proprietary head icon for the 12 JoyJoin archetypes.
@@ -20,6 +21,7 @@ interface ArchetypeHeadProps {
   size?: number // rpx
   fallback?: 'initial' | 'none'
   fallbackText?: string
+  className?: string
 }
 
 const HEAD_PATHS: Record<string, string> = {
@@ -37,6 +39,11 @@ const HEAD_PATHS: Record<string, string> = {
   cat: localAsset('/assets/icons/archetype/archetype-cat-head.webp'),
 }
 
+/** CDN fallback for archetype heads — mirrors the bundled file layout. */
+function getCdnHeadPath(archetype: string): string {
+  return cdnAsset(`/assets/icons/archetype/archetype-${archetype}-head.webp`)
+}
+
 function getFallbackInitial(text?: string): string {
   if (!text) return '?'
   return text.charAt(0).toUpperCase()
@@ -47,35 +54,46 @@ export default function ArchetypeHead({
   size = 80,
   fallback = 'initial',
   fallbackText,
+  className = '',
 }: ArchetypeHeadProps) {
-  const src = archetype ? HEAD_PATHS[archetype] : undefined
+  const localSrc = archetype ? HEAD_PATHS[archetype] : undefined
   const sizeStr = `${size}rpx`
-  const [hasError, setHasError] = useState(false)
+  const [hasLocalError, setHasLocalError] = useState(false)
+  const [hasCdnError, setHasCdnError] = useState(false)
 
-  const handleError = useCallback(() => {
-    setHasError(true)
+  const handleLocalError = useCallback(() => {
+    setHasLocalError(true)
   }, [])
 
-  if (!src || hasError) {
+  const handleCdnError = useCallback(() => {
+    setHasCdnError(true)
+  }, [])
+
+  if (!localSrc || (hasLocalError && hasCdnError)) {
     if (fallback === 'none') return null
     return (
       <View
-        className='archetype-head archetype-head--fallback'
+        className={`archetype-head archetype-head--fallback ${className}`}
         style={{ width: sizeStr, height: sizeStr }}
       >
-        <Text>{getFallbackInitial(fallbackText)}</Text>
+        <Text style={{ fontSize: `${size * 0.4}rpx` }}>{getFallbackInitial(fallbackText)}</Text>
       </View>
     )
   }
 
+  // Try local bundled WebP first; fall back to CDN WebP if the bundled copy
+  // is missing or stale (e.g. after a subpackage update or cache mismatch).
+  const src = hasLocalError && archetype ? getCdnHeadPath(archetype) : localSrc
+  const onError = hasLocalError ? handleCdnError : handleLocalError
+
   return (
-    <View className='archetype-head'>
+    <View className={`archetype-head ${className}`} style={{ width: sizeStr, height: sizeStr }}>
       <Image
         src={src}
         mode='aspectFit'
         style={{ width: sizeStr, height: sizeStr }}
         lazyLoad={false}
-        onError={handleError}
+        onError={onError}
       />
     </View>
   )

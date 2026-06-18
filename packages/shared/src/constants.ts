@@ -197,6 +197,38 @@ export function getIntentEmoji(intent: string): string {
   return all.find((o) => o.value === intent)?.emoji ?? "🎯";
 }
 
+/**
+ * Toggles an intent value in the current selection, respecting the max-explicit
+ * cap and the special "flexible" option which is never blocked by the cap.
+ *
+ * Returns `null` when the toggle is blocked by the cap (caller should show
+ * feedback). Returns the updated array on success.
+ */
+export function toggleIntentValue(
+  current: string[],
+  value: string,
+  options: { maxExplicit?: number; flexibleValue?: string } = {},
+): string[] | null {
+  const { maxExplicit = 3, flexibleValue = INTENT_FLEXIBLE_OPTION.value } = options;
+
+  // Deselecting is always allowed.
+  if (current.includes(value)) {
+    return current.filter((item) => item !== value);
+  }
+
+  // Flexible can always be added.
+  if (value === flexibleValue) {
+    return [...current, value];
+  }
+
+  const explicitCount = current.filter((item) => item !== flexibleValue).length;
+  if (explicitCount >= maxExplicit) {
+    return null;
+  }
+
+  return [...current, value];
+}
+
 // ============ 契合点系统 ============
 
 export const CONNECTION_POINT_TYPES = {

@@ -536,14 +536,14 @@ export class LegacyStorageRepo implements LegacyStorage {
     const result = await db.execute(sql`
       SELECT 
         v.id,
-        v.name as venue_name,
+        COALESCE(v.brand_name, v.name) as venue_name,
         v.commission_rate,
         COUNT(vb.id)::int as booking_count,
         COALESCE(SUM(vb.final_amount), 0)::int as total_revenue,
         COALESCE(SUM(vb.commission_amount), 0)::int as total_commission
       FROM venues v
       LEFT JOIN venue_bookings vb ON v.id = vb.venue_id
-      GROUP BY v.id, v.name, v.commission_rate
+      GROUP BY v.id, COALESCE(v.brand_name, v.name), v.commission_rate
       ORDER BY total_commission DESC
     `);
     return result.rows;

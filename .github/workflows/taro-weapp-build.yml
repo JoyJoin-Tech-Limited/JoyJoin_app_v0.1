@@ -51,7 +51,7 @@ jobs:
       - name: Build Taro WeChat mini-program
         run: npm run build:weapp -w mini-program
         env:
-          TARO_APP_CDN_BASE_URL: ${{ vars.TARO_APP_CDN_BASE_URL }}
+          TARO_APP_CDN_BASE_URL: ${{ vars.TARO_APP_CDN_BASE_URL || 'https://joyjoinapp.com/static' }}
 
       - name: Check package size
         run: npm run check:package-size -w mini-program

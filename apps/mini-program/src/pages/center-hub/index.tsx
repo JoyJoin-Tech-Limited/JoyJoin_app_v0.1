@@ -1,7 +1,7 @@
 import { CustomWrapper, View, Text, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { haptics } from '../../lib/utils/haptics'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -17,6 +17,7 @@ import {
 import { apiRequest } from '../../lib/api/api'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
+import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
 import { buildPoolGroupDetailUrl } from '../../lib/navigation/matchingNavigation'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -251,9 +252,11 @@ function CenterHubContent({
 
 export default function CenterHubPage() {
   const { authLoading, renderGate } = useMiniPageGate()
+  const [tabEntranceClass] = useState(() => (consumeTabEntrance() ? 'tab-page-enter' : ''))
 
   useCustomTabBarSync({
     enabled: !authLoading,
+    tabKey: 'centerHub',
   })
 
   const {
@@ -281,11 +284,11 @@ export default function CenterHubPage() {
       isLoading={authLoading}
       loading={<LoadingScreen message='正在加载你的活动…' />}
       content={
-        <View className='center-hub tab-page-enter'>
+        <View className={`center-hub ${tabEntranceClass}`}>
           <View className='center-hub__header'>
             <Image
               className='center-hub__header-mascot'
-              src={localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.png')}
+              src={localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')}
               mode='aspectFit'
               lazyLoad
             />

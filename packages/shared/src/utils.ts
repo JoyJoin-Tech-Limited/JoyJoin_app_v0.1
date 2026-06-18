@@ -55,6 +55,31 @@ export function getGenerationLabel(birthdate: string | Date | null | undefined):
 }
 
 /**
+ * Get a raw 5-year age band without suffix (e.g. "25-29").
+ * Used for peer-facing previews where the exact age must never be exposed.
+ */
+export function getAgeBand(age: number): string {
+  const lowerBound = Math.floor(age / 5) * 5;
+  const upperBound = lowerBound + 4;
+  return `${lowerBound}-${upperBound}`;
+}
+
+/**
+ * Format a raw 5-year age band for a birthdate, respecting the user's visibility setting.
+ * Returns null when hidden or birthdate is missing.
+ */
+export function formatAgeRangeBand(
+  birthdate: string | Date | null | undefined,
+  visibility: string = "hide_all"
+): string | null {
+  if (!birthdate || visibility === "hide_all") {
+    return null;
+  }
+  const age = calculateAge(birthdate);
+  return getAgeBand(age);
+}
+
+/**
  * Format age for display
  * @param birthdate - ISO date string (YYYY-MM-DD) or Date object
  * @param visibility - Age visibility setting (hide_all, show_age_range, or legacy values)

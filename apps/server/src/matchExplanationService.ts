@@ -491,24 +491,6 @@ async function saveIceBreakersCache(
     logger.warn('[IceBreakers] Error saving cache:', { error: error instanceof Error ? error.message : String(error) });
   }
 }
-
-// ============ 原型中文名映射 ============
-
-const archetypeNames: Record<string, string> = {
-  "corgi": "corgi",
-  "rooster": "rooster",
-  "hamster_praise": "hamster_praise",
-  "fox": "fox",
-  "dolphin_calm": "dolphin_calm",
-  "spider": "spider",
-  "koala": "koala",
-  "octopus": "octopus",
-  "owl": "owl",
-  "elephant": "elephant",
-  "turtle": "turtle",
-  "cat": "cat",
-};
-
 // ============ 辅助函数 ============
 
 /**
@@ -521,7 +503,6 @@ function findSharedInterests(
   if (!interests1 || !interests2) return [];
   return interests1.filter(i => interests2.includes(i));
 }
-
 /**
  * 获取工作模式的中文标签（使用共享常量 WORK_MODE_LABELS）
  */
@@ -1117,7 +1098,7 @@ function getInterestThemeBucket(interest: string): GroupThemeBucket {
   const normalized = normalizeInterestForTheme(interest);
 
   if (
-    ['旅游', '旅行', '户外', '徒步', '露营', 'CityWalk', '城市漫步', '海边帆船'].includes(normalized)
+    ['旅游', '旅行', '户外', '徒步', '露营', 'CityWalk', '城市漫步', '水上运动'].includes(normalized)
   ) {
     return 'exploration';
   }

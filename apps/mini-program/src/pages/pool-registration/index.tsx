@@ -1,25 +1,19 @@
-import { View, Text, ScrollView, Image } from '@tarojs/components'
-import ArchetypeHead from '../../components/mascot/ArchetypeHead'
-import { useStaggerMount } from '../../hooks/useStaggerMount'
-import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
-import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
-import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
+import { View, Text, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getEventPool, getMyPoolRegistrations, registerForPool, type EventPoolSummary, type PoolRegistrationSummary } from '@shared/api'
+import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
 import { getErrorMessage, type ErrorCode } from '@shared/copy/errorBaselines'
 import { ALL_INTENT_VALUES, INTENT_FLEXIBLE_OPTION } from '@shared/constants'
-import { ARCHETYPE_BY_ID } from '@shared/personality'
-import { getArchetypeTokens } from '@shared/archetypeColorTokens'
-import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
-import { apiRequest, type ApiError } from '../../lib/api/api'
+
+import { useStaggerMount } from '../../hooks/useStaggerMount'
+import { useReactionTimer } from '../../hooks/useReactionTimer'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
-import { COLOR_PRIMARY, TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
-import { logInfo, logError } from '../../lib/utils/logger'
-import { haptics } from '../../lib/utils/haptics'
+import { apiRequest, type ApiError } from '../../lib/api/api'
+import { evictPersistedQuery } from '../../lib/api/persistentCache'
+import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
-import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import {
   buildPoolRegistrationPaymentReturnContext,
   type MiniProgramPaymentEntitlementCode,
@@ -30,17 +24,22 @@ import {
   persistPaymentReturnContext,
   readStoredPaymentReturnContext,
 } from '../../lib/payment/paymentPendingOrderStorage'
-import LoadingScreen from '../../components/loading/LoadingScreen'
-import ChemistryMiniGrid from '../../components/discover/ChemistryMiniGrid'
-import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscribeMessage'
-import { evictPersistedQuery } from '../../lib/api/persistentCache'
 import { POOLS_QUERY_KEY, JOINED_EVENTS_QUERY_KEY } from '../../lib/prefetchEngine'
-import Card from '../../components/ui/Card'
+import { haptics } from '../../lib/utils/haptics'
+import { logInfo, logError } from '../../lib/utils/logger'
+import { usePreloadIntentIcons } from '../../hooks/usePreloadIntentIcons'
+import { useLoadingDeadline } from '../../hooks/useLoadingDeadline'
+import { AUTH_QUERY_KEY } from '../../lib/api/authSession'
+import { TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
+import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
+import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscribeMessage'
+import LoadingScreen from '../../components/loading/LoadingScreen'
 import Button from '../../components/ui/Button'
+import Card from '../../components/ui/Card'
 import StatusCard from '../../components/ui/StatusCard'
-import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import IntentCard from '../../components/intent/IntentCard'
 import XiaoyueChatBubble from '../../components/mascot/XiaoyueChatBubble'
+
 import {
   ALCOHOL_COMFORT_OPTIONS,
   BAR_THEME_OPTIONS,
@@ -52,7 +51,6 @@ import {
   INTENT_FLOW_OPTIONS,
   LANGUAGE_OPTIONS,
   resolvePoolEventType,
-  type FlowOption,
   type PoolEventType,
 } from './flowConfig'
 import {
@@ -67,10 +65,20 @@ import {
   type RegistrationFormState,
   type RegistrationStep,
 } from './poolRegistrationForm'
-import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
+import ChoiceCard from './components/ChoiceCard'
+import ChoiceChip from './components/ChoiceChip'
+import { getIntentFeedback } from './components/intentFeedback'
+import PoolRegistrationHero from './components/PoolRegistrationHero'
+import StepPill from './components/StepPill'
+import XiaoyueCoachCard from './components/XiaoyueCoachCard'
+import XiaoyueLetterCard from './components/XiaoyueLetterCard'
+import {
+  PoolRegistrationLoading,
+  PoolRegistrationEmpty,
+  PoolRegistrationAlreadyJoined,
+  PoolRegistrationSuccess,
+} from './components/PoolRegistrationTerminalStates'
 import './index.scss'
-
-const PRIMARY_BRAND_COLOR = COLOR_PRIMARY
 
 const STEP_BRIEF = 0
 const STEP_BUDGET = 1
@@ -81,237 +89,6 @@ const MAX_INTENTS = 3
 
 const TIER_COPY = {
   budgetStepHelper: '这是报名时最重要的节奏信号之一，悦仔会优先帮你避开预算预期完全不一样的组合。',
-}
-
-interface ChoiceCardProps {
-  option: FlowOption
-  selected: boolean
-  onClick: () => void
-  compact?: boolean
-}
-
-function ChoiceCard({ option, selected, onClick, compact = false }: ChoiceCardProps) {
-  const handleTap = useCallback(() => {
-    try {
-      Taro.vibrateShort({ type: 'light' })
-    } catch {
-      // decorative
-    }
-    onClick()
-  }, [onClick])
-
-  return (
-    <View
-      className={[
-        'pool-reg__choice-card',
-        compact ? 'pool-reg__choice-card--compact' : '',
-        selected ? 'pool-reg__choice-card--selected' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      hoverClass='pool-reg__choice-card--hover'
-      onClick={handleTap}
-      role='radio'
-      aria-label={`${option.label}${option.description ? '：' + option.description : ''}`}
-      aria-checked={selected}
-    >
-      <View className='pool-reg__choice-label-row'>
-        {option.emoji ? (
-          <JoyJoinIcon
-            emoji={option.emoji}
-            tier='intent'
-            size={compact ? 36 : 40}
-            className='pool-reg__choice-icon'
-          />
-        ) : null}
-        <Text className='pool-reg__choice-title'>{option.label}</Text>
-      </View>
-      {option.description ? <Text className='pool-reg__choice-desc'>{option.description}</Text> : null}
-    </View>
-  )
-}
-
-interface ChoiceChipProps {
-  option: FlowOption
-  selected: boolean
-  onClick: () => void
-}
-
-function ChoiceChip({ option, selected, onClick }: ChoiceChipProps) {
-  const handleTap = useCallback(() => {
-    try {
-      Taro.vibrateShort({ type: 'light' })
-    } catch {
-      // decorative
-    }
-    onClick()
-  }, [onClick])
-
-  return (
-    <View
-      className={['pool-reg__chip', selected ? 'pool-reg__chip--active' : '']
-        .filter(Boolean)
-        .join(' ')}
-      hoverClass='pool-reg__chip--hover'
-      onClick={handleTap}
-      role='checkbox'
-      aria-label={option.label}
-      aria-checked={selected}
-    >
-      {option.emoji ? <JoyJoinIcon emoji={option.emoji} tier='intent' size={28} className='pool-reg__chip-icon' /> : null}
-      <Text className='pool-reg__chip-label'>{option.label}</Text>
-    </View>
-  )
-}
-
-interface StepPillProps {
-  index: number
-  label: string
-  active: boolean
-  complete: boolean
-}
-
-function StepPill({ index, label, active, complete }: StepPillProps) {
-  return (
-    <View
-      className={[
-        'pool-reg__step-pill',
-        active ? 'pool-reg__step-pill--active' : '',
-        complete ? 'pool-reg__step-pill--complete' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-    >
-      <Text className='pool-reg__step-index'>{index}</Text>
-      <Text className='pool-reg__step-text'>{label}</Text>
-    </View>
-  )
-}
-
-/** Meta-icon image sources — hoisted to module level to avoid recreation on every render. */
-const META_ICON_SRC: Record<string, string> = {
-  calendar: localAsset('/assets/icons/ui/icon-calendar.webp'),
-  location: localAsset('/assets/icons/ui/icon-location.webp'),
-  people: localAsset('/assets/icons/ui/icon-people.webp'),
-}
-
-/** Proprietary meta icon using bundled UI assets.
- *  Zero emoji fallback — actual crisp WebP icons shipped in the package. */
-interface EventMetaIconProps {
-  kind: 'type' | 'calendar' | 'location' | 'people'
-}
-function EventMetaIcon({ kind }: EventMetaIconProps) {
-  if (kind === 'type') {
-    // CSS-only target icon — clean, scalable, no emoji, zero failure surface
-    return (
-      <View className='pool-reg__type-icon' aria-role='img' aria-label='活动类型'>
-        <View className='pool-reg__type-icon-ring pool-reg__type-icon-ring--outer' />
-        <View className='pool-reg__type-icon-ring pool-reg__type-icon-ring--inner' />
-        <View className='pool-reg__type-icon-dot' />
-      </View>
-    )
-  }
-  return (
-    <Image
-      className='pool-reg__meta-icon-img'
-      src={META_ICON_SRC[kind]}
-      mode='aspectFit'
-      lazyLoad={false}
-      aria-role='img'
-      aria-label={kind === 'calendar' ? '时间' : kind === 'location' ? '地区' : '报名人数'}
-      onError={() => {
-        // Silently degrade to blank if bundled asset is missing —
-        // the adjacent label text carries the semantic meaning.
-      }}
-    />
-  )
-}
-
-const MAX_CLUSTER_CIRCLES = 20
-const MAX_CIRCLES_PER_ARCHETYPE = 3
-
-/** Archetype avatar cluster — overlapping pills showing crowd composition.
- *  Scales to 20+ circles by deduplicating, sorting by frequency, and
- *  rendering multiple circles for dominant archetypes. */
-interface ArchetypeClusterProps {
-  archetypes: string[]
-  totalCount: number
-}
-function ArchetypeCluster({ archetypes, totalCount }: ArchetypeClusterProps) {
-  const distribution = useMemo(() => {
-    if (!archetypes.length) return []
-    const counts = new Map<string, number>()
-    for (const a of archetypes) {
-      counts.set(a, (counts.get(a) ?? 0) + 1)
-    }
-    const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])
-
-    const result: string[] = []
-    for (const [key, count] of sorted) {
-      if (result.length >= MAX_CLUSTER_CIRCLES) break
-      const circles = Math.min(
-        MAX_CIRCLES_PER_ARCHETYPE,
-        Math.max(1, Math.ceil(count / 5)),
-        MAX_CLUSTER_CIRCLES - result.length,
-      )
-      for (let i = 0; i < circles; i++) {
-        result.push(key)
-      }
-    }
-    return result
-  }, [archetypes])
-
-  const hasOverflow = distribution.length >= MAX_CLUSTER_CIRCLES && totalCount > distribution.length
-
-  const topNames = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const a of archetypes) {
-      counts.set(a, (counts.get(a) ?? 0) + 1)
-    }
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([key]) => ARCHETYPE_BY_ID[key]?.nameCn)
-      .filter(Boolean)
-  }, [archetypes])
-
-  const labelText =
-    topNames.length > 0
-      ? `已有 ${totalCount} 位伙伴报名，包括${topNames.join('、')}${hasOverflow ? '…' : ''}`
-      : `已有 ${totalCount} 位伙伴报名`
-
-  return (
-    <View className='pool-reg__archetype-cluster'>
-      <View className='pool-reg__archetype-heads'>
-        {distribution.map((key, index) => {
-          const tokens = getArchetypeTokens(key)
-          return (
-            <View
-              key={key + index}
-              className='pool-reg__archetype-head-wrap'
-              style={{
-                borderColor: tokens.primary,
-                backgroundColor: tokens.background,
-                zIndex: distribution.length - index,
-              }}
-            >
-              <ArchetypeHead archetype={key} size={40} />
-            </View>
-          )
-        })}
-        {hasOverflow ? (
-          <View
-            className='pool-reg__archetype-overflow-badge'
-            aria-role='img'
-            aria-label={`还有更多人报名`}
-          >
-            <Text className='pool-reg__archetype-overflow-text'>+</Text>
-          </View>
-        ) : null}
-      </View>
-      <Text className='pool-reg__archetype-cluster-label'>{labelText}</Text>
-    </View>
-  )
 }
 
 function resolveMessage(error: unknown, fallbackCode: ErrorCode): string {
@@ -369,7 +146,7 @@ export default function PoolRegistrationPage() {
   const invitationCode = router.params.invitationCode ?? ''
   const { user, isLoading: authLoading } = useAuthGuard()
 
-  const resolvedInvitationCode = invitationCode || (user as any)?.pendingReferralCode || ''
+  const resolvedInvitationCode = invitationCode || user?.pendingReferralCode || ''
   const hasTrackedStartRef = useRef(false)
   const registeredRef = useRef(false)
   const queryClient = useQueryClient()
@@ -384,8 +161,8 @@ export default function PoolRegistrationPage() {
   // Scroll-to-error anchor — set when error appears, cleared so it doesn't re-scroll on re-render
   const [scrollErrorId, setScrollErrorId] = useState('')
   const [resumeContext, setResumeContext] = useState<MiniProgramPoolRegistrationReturnContext | null>(null)
-  const [showBudgetReaction, setShowBudgetReaction] = useState(false)
-  const budgetReactionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [showBudgetReaction, triggerBudgetReaction] = useReactionTimer()
+  const [showIntentReaction, triggerIntentReaction, hideIntentReaction] = useReactionTimer()
   const staggerMounted = useStaggerMount()
 
   const reduceMotion = useMemo(() => {
@@ -400,6 +177,7 @@ export default function PoolRegistrationPage() {
     data: pool,
     isLoading,
     error: poolError,
+    refetch: refetchPool,
   } = useQuery<EventPoolSummary>({
     queryKey: ['mini-program', 'event-pool', poolId],
     queryFn: () => getEventPool(apiRequest, poolId),
@@ -407,7 +185,11 @@ export default function PoolRegistrationPage() {
   })
 
   // Check if the user is already registered for this pool
-  const { data: myRegistrations } = useQuery<PoolRegistrationSummary[]>({
+  const {
+    data: myRegistrations,
+    isLoading: isLoadingMyRegistrations,
+    refetch: refetchMyRegistrations,
+  } = useQuery<PoolRegistrationSummary[]>({
     queryKey: ['mini-program', 'my-pool-registrations'],
     queryFn: () => getMyPoolRegistrations(apiRequest),
     enabled: !!poolId && !authLoading,
@@ -451,26 +233,12 @@ export default function PoolRegistrationPage() {
     [eventType, poolArea],
   )
 
-  // Preload intent icons CDN assets when pool data is ready,
-  // so they're cached before the user reaches the intent step.
+  // Pre-warm bundled intent icons and the error-state mascot so they render
+  // instantly when needed.
+  usePreloadIntentIcons(INTENT_FLOW_OPTIONS, !!pool && !authLoading)
+
   useEffect(() => {
     if (!pool || authLoading) return
-
-    const INTENT_ASSET_KEYS = [
-      'intent-friends',
-      'intent-networking',
-      'intent-discussion',
-      'intent-fun',
-      'intent-romance',
-      'intent-flexible',
-    ]
-
-    for (const key of INTENT_ASSET_KEYS) {
-      const url = cdnAsset(`/assets/icons/intent-icons/${key}.webp`)
-      Taro.getImageInfo({ src: url }).catch(() => {
-        // Silent — CDN preload is best-effort
-      })
-    }
 
     // Preload error-state mascot so it doesn't flash-load on error
     Taro.getImageInfo({ src: getXiaoyueExpressionAsset('actionFailure') }).catch(() => {
@@ -545,15 +313,6 @@ export default function PoolRegistrationPage() {
       }
     }
   }, [poolId])
-
-  // Cleanup budget reaction timer on unmount
-  useEffect(() => {
-    return () => {
-      if (budgetReactionTimerRef.current) {
-        clearTimeout(budgetReactionTimerRef.current)
-      }
-    }
-  }, [])
 
   // When error appears: trigger haptics + scroll into view
   useEffect(() => {
@@ -630,6 +389,38 @@ export default function PoolRegistrationPage() {
   const hasIntentSelection = formState.eventIntent.length > 0
   const canSubmit = hasBudgetSelection && hasIntentSelection
 
+  // Brief celebratory Xiaoyue reaction when the user makes their first intent selection
+  useEffect(() => {
+    if (!hasIntentSelection) {
+      hideIntentReaction()
+      return
+    }
+    triggerIntentReaction()
+  }, [hasIntentSelection, hideIntentReaction, triggerIntentReaction])
+  const advanceDisabled =
+    step === STEP_BUDGET
+      ? !hasBudgetSelection
+      : step === STEP_INTENT
+        ? !hasIntentSelection
+        : step === STEP_DETAILS
+          ? isRegistering || !canSubmit
+          : false
+
+  const advanceLabel = useMemo(() => {
+    if (step === STEP_BUDGET) {
+      return hasBudgetSelection ? '下一步：选择期待' : '先选一个预算区间'
+    }
+    if (step === STEP_INTENT) {
+      return hasIntentSelection ? '下一步：补细节' : '先选一个期待方向'
+    }
+    if (step === STEP_DETAILS) {
+      if (isRegistering) return '报名中…'
+      if (resumeContext?.paymentStatus === 'paid') return '继续完成报名'
+      return '确认加入这场局'
+    }
+    return '继续填写'
+  }, [step, hasBudgetSelection, hasIntentSelection, isRegistering, resumeContext?.paymentStatus])
+
   const summaryItems = useMemo(() => {
     const languages = findLabels(formState.preferredLanguages, LANGUAGE_OPTIONS)
     const intents = findLabels(formState.eventIntent, INTENT_FLOW_OPTIONS)
@@ -663,19 +454,14 @@ export default function PoolRegistrationPage() {
               barBudgetRange: undefined,
             },
       )
-      setShowBudgetReaction(true)
-      if (budgetReactionTimerRef.current) clearTimeout(budgetReactionTimerRef.current)
-      budgetReactionTimerRef.current = setTimeout(() => setShowBudgetReaction(false), 2200)
+      triggerBudgetReaction()
     },
-    [eventType],
+    [eventType, triggerBudgetReaction],
   )
 
   const handleIntentToggle = useCallback((value: string) => {
-    haptics('light')
-
     if (value === INTENT_FLEXIBLE_OPTION.value) {
       setFormState((currentState) => {
-        const toggled = !currentState.eventIntent.includes(value)
         discoverAnalytics.track('registration_intent_toggled', poolId, { value, flexible: true })
         return {
           ...currentState,
@@ -729,47 +515,34 @@ export default function PoolRegistrationPage() {
   // Memoize intent grid to prevent re-render on unrelated state changes
   const intentGrid = useMemo(() => {
     const isFlexibleActive = formState.eventIntent.includes(INTENT_FLEXIBLE_OPTION.value)
+    const explicitCount = formState.eventIntent.filter(
+      (item) => item !== INTENT_FLEXIBLE_OPTION.value,
+    ).length
+    const isCapReached = explicitCount >= MAX_INTENTS
     return (
       <View className='pool-reg__choice-grid'>
         {INTENT_FLOW_OPTIONS.map((option) => {
           const isExplicitlySelected = formState.eventIntent.includes(option.value)
-          const isDimmed =
-            isFlexibleActive &&
-            option.value !== INTENT_FLEXIBLE_OPTION.value &&
-            !isExplicitlySelected
+          const isFlexibleOption = option.value === INTENT_FLEXIBLE_OPTION.value
+          const isDimmed = isFlexibleActive && !isFlexibleOption && !isExplicitlySelected
+          const isDisabled = isCapReached && !isExplicitlySelected && !isFlexibleOption
 
           return (
-            <View
+            <IntentCard
               key={option.value}
-              className={[
-                'pool-reg__intent-card',
-                isExplicitlySelected || isDimmed ? 'pool-reg__intent-card--selected' : '',
-                isDimmed ? 'pool-reg__intent-card--dimmed' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              hoverClass='pool-reg__intent-card--hover'
+              option={{
+                value: option.value,
+                label: option.label,
+                emoji: option.emoji,
+                subtitle: option.description,
+              }}
+              selected={isExplicitlySelected}
+              dimmed={isDimmed}
+              disabled={isDisabled}
               onClick={() => handleIntentToggle(option.value)}
-              role='button'
-              aria-pressed={isExplicitlySelected}
-              aria-label={`${option.label}：${option.description}`}
-            >
-              {option.emoji != null ? (
-                <JoyJoinIcon
-                  emoji={option.emoji}
-                  tier='intent'
-                  size={48}
-                  className='pool-reg__intent-icon'
-                />
-              ) : null}
-              <Text className='pool-reg__intent-label'>{option.label}</Text>
-              <Text className='pool-reg__intent-subtitle'>{option.description}</Text>
-              {isExplicitlySelected && (
-                <View className='pool-reg__intent-check'>
-                  <Text className='pool-reg__intent-check-icon'>&#x2713;</Text>
-                </View>
-              )}
-            </View>
+              iconSize={48}
+              testId={`pool-reg-intent-${option.value}`}
+            />
           )
         })}
       </View>
@@ -885,7 +658,8 @@ export default function PoolRegistrationPage() {
         poolId,
         eventType,
         step,
-        payload,
+        intentCount: payload.eventIntent?.length,
+        hasDietary: payload.dietaryRestrictions && payload.dietaryRestrictions.length > 0,
       })
       await registerForPool(apiRequest, poolId, payload)
       await Promise.allSettled([
@@ -951,216 +725,93 @@ export default function PoolRegistrationPage() {
     user?.id,
   ])
 
-  if (authLoading || isLoading) {
+  const isPageLoading = authLoading || isLoading || isLoadingMyRegistrations
+  const { isStale: isPageLoadingStale } = useLoadingDeadline(isPageLoading, 8000)
+
+  if (isPageLoading) {
+    if (isPageLoadingStale) {
+      return (
+        <PoolRegistrationLoading
+          isStale
+          onRetry={() => {
+            void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY })
+            void refetchPool()
+            void refetchMyRegistrations()
+          }}
+          onBack={() => Taro.navigateBack()}
+        />
+      )
+    }
+
     return <LoadingScreen message='正在加载报名信息…' />
   }
 
   if (!poolId || poolError || !pool) {
     return (
-      <View className='pool-reg'>
-        <Card className='pool-reg__empty'>
-          <Image
-            className='pool-reg__empty-hero'
-            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
-            mode='aspectFit'
-            lazyLoad
-          />
-          <Text className='pool-reg__empty-title'>这场活动暂时打不开</Text>
-          <Text className='pool-reg__empty-text'>
-            {poolError
-              ? resolveMessage(poolError, 'load-failed')
-              : '悦仔正在努力同步这场活动的最新信息，稍后再试就好。'}
-          </Text>
-          <Button variant='primary' className='pool-reg__single-action' onClick={() => refetchBrief()}>
-            重试
-          </Button>
-          <Button variant='secondary' className='pool-reg__single-action' onClick={() => Taro.navigateBack()}>
-            返回上一页
-          </Button>
-        </Card>
-      </View>
+      <PoolRegistrationEmpty
+        errorMessage={poolError ? resolveMessage(poolError, 'load-failed') : undefined}
+        onRetry={() => refetchPool()}
+        onBack={() => Taro.navigateBack()}
+      />
     )
   }
 
   if (alreadyRegistered) {
     return (
-      <View className='pool-reg'>
-        <Card className='pool-reg__already-joined'>
-          <Image
-            className='pool-reg__already-mascot'
-            mode='aspectFit'
-            src={getXiaoyueExpressionAsset('homeWelcome')}
-            ariaLabel='已报名'
-          />
-          <Text className='pool-reg__already-title'>你已经加入这场{eventType}了</Text>
-          <Text className='pool-reg__already-text'>
-            你的预算和社交期待已经在匹配引擎里跑着了，有结果会第一时间通知你。
-          </Text>
-          <View className='pool-reg__already-meta'>
-            <View className='pool-reg__already-meta-row'>
-              <EventMetaIcon kind='type' />
-              <Text>{eventType}</Text>
-            </View>
-            {pool.dateTime ? (
-              <View className='pool-reg__already-meta-row'>
-                <EventMetaIcon kind='calendar' />
-                <Text>{poolDateTimeLabel}</Text>
-              </View>
-            ) : null}
-            {poolArea ? (
-              <View className='pool-reg__already-meta-row'>
-                <EventMetaIcon kind='location' />
-                <Text>{poolArea}</Text>
-              </View>
-            ) : null}
-          </View>
-          <Button
-            variant='primary'
-            className='pool-reg__already-cta'
-            onClick={() => Taro.switchTab({ url: '/pages/events/index' })}
-          >
-            去我的足迹查看状态
-          </Button>
-        </Card>
-      </View>
+      <PoolRegistrationAlreadyJoined
+        eventType={eventType}
+        poolDateTimeLabel={poolDateTimeLabel}
+        poolArea={poolArea}
+        poolDateTime={pool.dateTime}
+      />
     )
   }
 
   if (registered) {
     return (
-      <View className='pool-reg'>
-        <Card className='pool-reg__success'>
-          <Image
-            className='pool-reg__success-mascot'
-            mode='aspectFit'
-            src={getXiaoyueExpressionAsset('matchSuccess')}
-            ariaLabel='匹配成功'
-          />
-          <Text className='pool-reg__success-title'>已加入这场{eventType}</Text>
-          <Text className='pool-reg__success-text'>
-            我们会按照你刚刚填写的预算、社交期待和偏好完成匹配，有结果会第一时间通知你。
-          </Text>
-          <Text className='pool-reg__success-notify-hint'>
-            {`想在${DEFAULT_MASCOT_DISPLAY_NAME}帮你匹配成功时收到微信提醒？点一下授权（可在微信授权弹窗中选择）。`}
-          </Text>
-          <Button
-            variant='secondary'
-            className='pool-reg__notify-btn'
-            onClick={handleEnableMatchNotifications}
-          >
-            开启匹配结果通知
-          </Button>
-          {successHighlights.length > 0 ? (
-            <View className='pool-reg__success-pills'>
-              {successHighlights.map((item) => (
-                <Text key={item} className='pool-reg__success-pill'>
-                  {item}
-                </Text>
-              ))}
-            </View>
-          ) : null}
-          <Button
-            variant='primary'
-            className='pool-reg__back-btn'
-            onClick={() => Taro.switchTab({ url: '/pages/events/index' })}
-          >
-            去看我的足迹
-          </Button>
-          <ChemistryMiniGrid pool={pool} userArchetype={user?.primaryArchetype ?? null} />
-        </Card>
-      </View>
+      <PoolRegistrationSuccess
+        eventType={eventType}
+        highlights={successHighlights}
+        pool={pool}
+        userArchetype={user?.primaryArchetype ?? null}
+        onEnableNotifications={handleEnableMatchNotifications}
+      />
     )
   }
 
   const resumeNotice = resumeContext ? getResumeNoticeCopy(resumeContext) : null
 
   return (
-    <ScrollView className='pool-reg' scrollY enhanced showScrollbar={false} scrollIntoView={scrollErrorId}>
-      <View className='pool-reg__header'>
-        <Text className='pool-reg__eyebrow'>活动池报名</Text>
-        <Text className='pool-reg__title pool-reg__title--headline'>{pool?.title ?? '活动报名'}</Text>
-        {pool?.description ? (
-          <Text className='pool-reg__description'>{pool.description}</Text>
-        ) : null}
-        {typeof pool?.price === 'number' && pool.price > 0 ? (
-          <View className='pool-reg__price-pill'>
-            <Text className='pool-reg__price-label'>报名费</Text>
-            <Text className='pool-reg__price-value'>¥{pool.price}</Text>
+    <View className='pool-reg'>
+      <ScrollView className='pool-reg__scroll' scrollY enhanced showScrollbar={false} scrollIntoView={scrollErrorId}>
+      {step === 0 ? (
+        <>
+          <View className='pool-reg__header'>
+            <Text className='pool-reg__eyebrow'>活动池报名</Text>
+            <Text className='pool-reg__title pool-reg__title--headline'>{pool?.title ?? '活动报名'}</Text>
           </View>
-        ) : null}
-      </View>
 
-      <Card className='pool-reg__card'>
-        <View
-          className={[
-            'pool-reg__info-row',
-            staggerMounted ? 'stagger-in stagger-in--0' : 'stagger-in-hidden',
-          ].join(' ')}
-        >
-          <View className='pool-reg__info-label'>
-            <EventMetaIcon kind='type' />
-            <Text>类型</Text>
-          </View>
-          <Text className='pool-reg__info-value'>{eventType}</Text>
-        </View>
-        {pool.dateTime ? (
-          <View
-            className={[
-              'pool-reg__info-row',
-              staggerMounted ? 'stagger-in stagger-in--1' : 'stagger-in-hidden',
-            ].join(' ')}
-          >
-            <View className='pool-reg__info-label'>
-              <EventMetaIcon kind='calendar' />
-              <Text>时间</Text>
-            </View>
-            <Text className='pool-reg__info-value'>{poolDateTimeLabel}</Text>
-          </View>
-        ) : null}
-        {poolArea ? (
-          <View
-            className={[
-              'pool-reg__info-row',
-              staggerMounted ? 'stagger-in stagger-in--2' : 'stagger-in-hidden',
-            ].join(' ')}
-          >
-            <View className='pool-reg__info-label'>
-              <EventMetaIcon kind='location' />
-              <Text>地区</Text>
-            </View>
-            <Text className='pool-reg__info-value'>{poolArea}</Text>
-          </View>
-        ) : null}
-        <View
-          className={[
-            'pool-reg__info-row',
-            staggerMounted ? 'stagger-in stagger-in--3' : 'stagger-in-hidden',
-          ].join(' ')}
-        >
-          <View className='pool-reg__info-label'>
-            <EventMetaIcon kind='people' />
-            <Text>已报名</Text>
-          </View>
-          <Text
-            className={[
-              'pool-reg__info-value',
-              registrationTotal > 0 ? 'pool-reg__info-value--highlight' : '',
-            ].join(' ')}
-          >
-            {registrationTotal > 0 ? `${registrationTotal} 人` : '等你加入'}
-          </Text>
-        </View>
-      </Card>
-
-      {pool?.sampleArchetypes && pool.sampleArchetypes.length > 0 ? (
-        <View
-          className={[
-            'pool-reg__cluster-wrap',
-            staggerMounted ? 'stagger-in stagger-in--4' : 'stagger-in-hidden',
-          ].join(' ')}
-        >
-          <ArchetypeCluster archetypes={pool.sampleArchetypes} totalCount={registrationTotal} />
-        </View>
+          <PoolRegistrationHero
+            eventType={eventType}
+            dateTimeLabel={poolDateTimeLabel}
+            area={poolArea}
+            price={pool?.price}
+            registrationTotal={registrationTotal}
+            sampleArchetypes={pool?.sampleArchetypes}
+            visible={staggerMounted}
+            reduceMotion={reduceMotion}
+          />
+          <XiaoyueLetterCard
+            insight={brief.insight}
+            matchingPromise={brief.matchingPromise}
+            reasons={brief.reasons.slice(0, 3)}
+            trustLabel='匹配后再揭晓桌友'
+            userArchetype={user?.primaryArchetype ?? undefined}
+            visible={staggerMounted}
+            reduceMotion={reduceMotion}
+            isLoading={briefLoading && !briefData}
+          />
+        </>
       ) : null}
 
       {resumeNotice ? (
@@ -1186,7 +837,7 @@ export default function PoolRegistrationPage() {
       ) : null}
 
       {step > 0 ? (
-        <View className='pool-reg__stepper'>
+        <View className='pool-reg__stepper' role='list' aria-label='报名步骤'>
           {stepLabels.map((label, index) => {
             const stepIndex = index + 1
             return (
@@ -1202,47 +853,9 @@ export default function PoolRegistrationPage() {
         </View>
       ) : null}
 
-      {step === 0 ? (
-        <Card className='pool-reg__brief-card'>
-          {briefLoading && !briefData ? (
-            <View className='pool-reg__brief-skeleton'>
-              <View className='pool-reg__brief-skeleton-line pool-reg__brief-skeleton-line--long' />
-              <View className='pool-reg__brief-skeleton-line pool-reg__brief-skeleton-line--medium' />
-              <View className='pool-reg__brief-skeleton-line pool-reg__brief-skeleton-line--short' />
-              <View className='pool-reg__brief-skeleton-line pool-reg__brief-skeleton-line--long' />
-              <View className='pool-reg__brief-skeleton-line pool-reg__brief-skeleton-line--medium' />
-            </View>
-          ) : (
-            <>
-              <Image
-                className='pool-reg__brief-mascot'
-                src={getXiaoyueExpressionAsset('coachGuide')}
-                mode='aspectFit'
-              />
-              <Text className='pool-reg__section-kicker'>加入前的一封小信</Text>
-              <Text className='pool-reg__brief-insight'>{brief.insight}</Text>
-              <Text className='pool-reg__brief-promise'>{brief.matchingPromise}</Text>
-
-              <View className='pool-reg__reason-list'>
-                {brief.reasons.slice(0, 3).map((reason) => (
-                  <View key={reason} className='pool-reg__reason-item'>
-                    <View className='pool-reg__reason-bullet' />
-                    <Text className='pool-reg__reason-text'>{reason}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <View className='pool-reg__trust-row'>
-                <Text className='pool-reg__trust-pill'>匹配后再揭晓桌友</Text>
-              </View>
-            </>
-          )}
-        </Card>
-      ) : null}
-
       {showBudgetReaction && step === 1 ? (
         <XiaoyueChatBubble
-          content='收到！悦仔会按这个预算帮你配对~'
+          content='收到！悦仔会按这个预算帮你配对'
           pose='casual'
           horizontal
           showGlow
@@ -1252,18 +865,26 @@ export default function PoolRegistrationPage() {
 
       {step === 1 ? (
         <View className={`pool-reg__step-content pool-reg__step-content--${step > prevStep ? 'forward' : 'back'}`}>
-          <Card className='pool-reg__panel'>
-            <Image
-              className='pool-reg__tier-mascot'
-              src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
-              mode='aspectFit'
-              lazyLoad
-            />
-            <Text className='pool-reg__section-kicker'>Step 1</Text>
-            <Text className='pool-reg__section-title'>先定一个你更舒服的预算区间</Text>
-            <Text className='pool-reg__section-copy'>{TIER_COPY.budgetStepHelper}</Text>
-
-            <View className='pool-reg__choice-list'>
+          <XiaoyueCoachCard
+            step={1}
+            eyebrow='Step 1 · 预算'
+            title='先定一个你更舒服的预算区间'
+            copy={TIER_COPY.budgetStepHelper}
+            userArchetype={user?.primaryArchetype ?? undefined}
+            visible={staggerMounted}
+            reduceMotion={reduceMotion}
+            footer={
+              hasBudgetSelection ? (
+                <View className='pool-reg__completion-pill'>
+                  <View className='pool-reg__completion-check' aria-hidden='true' />
+                  <Text className='pool-reg__completion-text'>预算已收到，可以继续了</Text>
+                </View>
+              ) : (
+                <Text className='pool-reg__helper'>至少选择 1 个预算区间后，悦仔才能继续帮你匹配合拍的桌友。</Text>
+              )
+            }
+          >
+            <View className='pool-reg__choice-list' role='radiogroup' aria-label='预算选择'>
               {budgetOptions.map((option) => (
                 <ChoiceCard
                   key={option.value}
@@ -1273,32 +894,43 @@ export default function PoolRegistrationPage() {
                 />
               ))}
             </View>
-
-            <Text className='pool-reg__helper'>至少选择 1 个预算区间后，悦仔才能继续帮你匹配合拍的桌友。</Text>
-          </Card>
+          </XiaoyueCoachCard>
         </View>
+      ) : null}
+
+      {showIntentReaction && step === 2 ? (
+        <XiaoyueChatBubble
+          content='收到！悦仔会按这些期待帮你匹配'
+          pose='casual'
+          horizontal
+          showGlow
+          className='pool-reg__step-coach'
+        />
       ) : null}
 
       {step === 2 ? (
         <View className={`pool-reg__step-content pool-reg__step-content--${step > prevStep ? 'forward' : 'back'}`}>
-          <XiaoyueChatBubble
-            content='预算选好了，接下来告诉悦仔你想收获什么'
-            pose='pointing'
-            horizontal
-            showGlow
-            className='pool-reg__step-coach'
-          />
-          <Card className='pool-reg__panel'>
-            <Text className='pool-reg__section-kicker'>Step 2</Text>
-            <Text className='pool-reg__section-title'>这次你更想收获什么</Text>
-            <Text className='pool-reg__section-copy'>
-              这里可以多选。悦仔会把你的社交期待和预算一起考虑，不会只按一个标签硬配。
-            </Text>
-
+          <XiaoyueCoachCard
+            step={2}
+            eyebrow='Step 2 · 期待'
+            title='这次你更想收获什么'
+            copy={getIntentFeedback(formState.eventIntent)}
+            userArchetype={user?.primaryArchetype ?? undefined}
+            visible={staggerMounted}
+            reduceMotion={reduceMotion}
+            footer={
+              hasIntentSelection ? (
+                <View className='pool-reg__completion-pill'>
+                  <View className='pool-reg__completion-check' aria-hidden='true' />
+                  <Text className='pool-reg__completion-text'>期待已收到，可以继续了</Text>
+                </View>
+              ) : (
+                <Text className='pool-reg__helper'>至少选择 1 个期待方向后，悦仔就能把你的社交画像和预算一起跑匹配了。</Text>
+              )
+            }
+          >
             {intentGrid}
-
-            <Text className='pool-reg__helper'>至少选择 1 个期待方向后，悦仔就能把你的社交画像和预算一起跑匹配了。</Text>
-          </Card>
+          </XiaoyueCoachCard>
         </View>
       ) : null}
 
@@ -1324,7 +956,7 @@ export default function PoolRegistrationPage() {
           </Card>
 
           <Card className='pool-reg__panel'>
-            <Text className='pool-reg__section-kicker'>Step 3</Text>
+            <Text className='pool-reg__section-kicker'>Step 3 · 细节</Text>
             <Text className='pool-reg__section-title'>再补几项细节，让匹配更顺</Text>
             <Text className='pool-reg__section-copy'>
               语言和具体偏好都可以留空。你填得越清楚，悦仔越容易帮你把这一桌的节奏调顺。
@@ -1362,7 +994,7 @@ export default function PoolRegistrationPage() {
 
                 <View className='pool-reg__field'>
                   <Text className='pool-reg__field-title'>喝酒舒适度</Text>
-                  <View className='pool-reg__choice-grid'>
+                  <View className='pool-reg__choice-grid' role='radiogroup' aria-label='喝酒舒适度'>
                     {ALCOHOL_COMFORT_OPTIONS.map((option) => (
                       <ChoiceCard
                         key={option.value}
@@ -1423,16 +1055,17 @@ export default function PoolRegistrationPage() {
           />
         </View>
       ) : null}
+      </ScrollView>
 
       <View className='pool-reg__footer'>
         {step === 0 ? (
           <Button
-            variant='primary'
-            className='pool-reg__submit'
+            variant='brand'
+            className='pool-reg__submit pool-reg__submit--ceremony'
             onClick={handleAdvance}
-            disabled={briefLoading && !briefData}
+            hoverClass='pool-reg__submit--active'
           >
-            开始填写偏好
+            {eventType ? `入座这场${eventType}` : '开始我的报名'}
           </Button>
         ) : (
           <View className='pool-reg__footer-actions'>
@@ -1443,20 +1076,14 @@ export default function PoolRegistrationPage() {
               variant='primary'
               className='pool-reg__footer-btn pool-reg__footer-btn--primary'
               onClick={step === 3 ? handleRegister : handleAdvance}
-              disabled={step === 3 ? isRegistering || !canSubmit : false}
+              disabled={advanceDisabled}
               loading={step === 3 && isRegistering}
             >
-              {step === 3
-                ? isRegistering
-                  ? '报名中…'
-                  : resumeContext?.paymentStatus === 'paid'
-                    ? '继续完成报名'
-                    : '确认加入这场局'
-                : '继续填写'}
+              {advanceLabel}
             </Button>
           </View>
         )}
       </View>
-    </ScrollView>
+    </View>
   )
 }

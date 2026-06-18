@@ -10,6 +10,7 @@ import { evictPersistedQuery } from '../../lib/api/persistentCache'
 import { queryClient } from '../../lib/api/queryClient'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
+import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Card from '../../components/ui/Card'
@@ -49,9 +50,11 @@ export default function EventsPage() {
   const markAsRead = useMarkNotificationsAsRead()
   useCustomTabBarSync({
     enabled: !authLoading,
+    tabKey: 'events',
   })
 
   const [canGoBack, setCanGoBack] = useState(false)
+  const [tabEntranceClass] = useState(() => (consumeTabEntrance() ? 'tab-page-enter' : ''))
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -158,7 +161,7 @@ export default function EventsPage() {
   }
 
   return renderGate(
-    <View className='events-page tab-page-enter'>
+    <View className={`events-page ${tabEntranceClass}`}>
       <View className='events-page__header'>
         {canGoBack && (
           <View className='events-page__back' onClick={handleBack}>

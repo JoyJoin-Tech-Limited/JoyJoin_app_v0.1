@@ -1,0 +1,82 @@
+@use "../../../styles/variables" as *;
+@use "../../../styles/mixins" as *;
+
+.terms-page {
+  @include page-gradient-bg;
+  padding: $container-padding;
+  @include safe-area-bottom-padding(padding-bottom, 80rpx);
+
+  &__banner {
+    @include card;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+  }
+
+  &__banner-tag {
+    display: inline-flex;
+    margin-bottom: $spacing-sm;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: 999rpx;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+    background: rgba($color-primary, 0.10);
+  }
+
+  &__banner-title {
+    @include type-heading;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__banner-date {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__banner-intro {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.6;
+  }
+
+  &__section {
+    @include card;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+
+    &--focus {
+      box-shadow: 0 0 0 2rpx rgba($color-primary, 0.18), 0 8rpx 24rpx rgba($color-primary, 0.08);
+    }
+  }
+
+  &__section-heading {
+    display: block;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__section-text {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.8;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__footer {
+    padding: $spacing-lg 0;
+    text-align: center;
+  }
+
+  &__footer-text {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    line-height: 1.6;
+  }
+}

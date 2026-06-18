@@ -32,6 +32,13 @@
   }
 }
 
+/* Skip the initial crossfade when the wrapper was never in a loading state.
+   This prevents the loading layer from painting briefly when auth is already
+   cached on tab switches. */
+.page-morph--immediate .page-morph__layer {
+  transition: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .page-morph__layer {
     transition: none;

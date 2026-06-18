@@ -928,6 +928,49 @@ export function setupWechatAuth(app: Express) {
   });
 
   /**
+   * POST /api/auth/wechat/check
+   * Lightweight existence check for WeChat Mini Program returning users.
+   * Exchanges the login code for an openid and reports whether a JoyJoin user
+   * already exists for that openid. Unlike /api/auth/wechat/login, this endpoint
+   * never creates a user, regenerates a session, or returns a session token.
+   *
+   * Used by the mini-program AutoLoginBridge so brand-new users are not silently
+   * signed up before they have seen the personality-test result page.
+   */
+  app.post("/api/auth/wechat/check", async (req: Request, res) => {
+    try {
+      const { code } = req.body as { code?: string };
+
+      if (!code) {
+        return res.status(400).json({ error: "WeChat code is required" });
+      }
+
+      const { openid } = await getWechatOpenId(code);
+      const existingUser = await usersRepo.getUserByWechatOpenId(openid);
+
+      res.json({ exists: Boolean(existingUser) });
+    } catch (error) {
+      const err = error as Error & { code?: string; status?: number };
+      logger.error("[WeChat Auth] Error during WeChat existence check", {
+        message: err?.message,
+        code: err?.code,
+        name: err?.name,
+        stack: err?.stack,
+      });
+
+      let status = 500;
+      let clientMessage = "Server error during authentication check";
+
+      if (err?.code === "WECHAT_AUTH_FAILED" || err?.code === "WECHAT_CONFIG_ERROR") {
+        status = 401;
+        clientMessage = "WeChat authentication failed";
+      }
+
+      res.status(status).json({ error: clientMessage });
+    }
+  });
+
+  /**
    * POST /api/auth/wechat/login
    * WeChat Mini Program authentication for returning users (no test answers needed).
    */

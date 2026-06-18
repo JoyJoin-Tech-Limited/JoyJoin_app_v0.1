@@ -1,6 +1,6 @@
 # Mini-Program — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-06-11
+> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-06-18
 
 ---
 
@@ -110,6 +110,7 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 - **Canvas `drawImage` requires a network-resolvable URL** — local bundled paths (e.g., `/pages/onboarding/assets/...`) work for `<Image>` but NOT for canvas. Pass `visual.asset` (CDN URL) to canvas.
 - **`miniprogram-ci` rejects empty `iconPath`** on `tabBarConfig.ts` centerHub with `800059`. Use a placeholder; the custom tab bar component renders the center button independently.
 - **Tab bar geometry**: `$tab-bar-height: 128rpx`; root footprint: `$tab-bar-root-height: 182rpx`; center CTA is a **root sibling** of `.joy-custom-tab-bar__surface`, not nested inside.
+- **Tab bar route guard:** the native custom tab bar keeps an explicit `TAB_BAR_PAGE_PATHS` allow-list sourced from `src/lib/navigation/tabBarConfig.ts` and hides itself when attached to a non-tab route (e.g., the landing page), preventing the tab bar from leaking onto non-tab pages.
 - **`<ChallengeCardBgImage>`** (WeChat-safe `<Image>` component) must be used for challenge-card backgrounds — CSS `background-image` with CDN URLs is flaky in WeChat runtime.
 - **ArchetypeSpritesheet** uses the same `<Image>` + `overflow:hidden` + `transform: translate()` pattern for spritesheet region crops — CSS `backgroundImage: url()` is unreliable in WeChat. See `apps/mini-program/src/pages/onboarding/personality-test/results/ArchetypeSpritesheet.tsx`.
 - **WeChat WXSS silently drops `hsla()`** — all color values emitted from shared `@shared/archetypeColors` must use `rgba()` via `formatHSLAsRGBA()`. Canvas calls use `toCanvasRGBA()` from `canvasHelpers.ts` at `apps/mini-program/src/lib/utils/canvasHelpers.ts` (shared by both portrait and square poster renderers).
@@ -124,6 +125,7 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 
 ## 4. Asset loading strategy (HARD rules)
 
+- **Build-time CDN URL guarantee**: `config/index.ts` defaults `TARO_APP_CDN_BASE_URL` to `https://joyjoinapp.com/static` in production; CI workflow has the same fallback. Source code must use `cdnAsset()` / `localAsset()` helpers — never hardcode the CDN hostname.
 - **Two-tier brand font**: minimal Alimama subset (66KB) bundled; full font (621KB) loads from CDN with 500ms defer.
 - **Quicksand English font** (256KB) bundled and loaded on app launch.
 - **Slot machine archetype spritesheet** (`archetype-spritesheet.webp`) — bundled at `/pages/onboarding/assets/archetypes/` (subpackage, preloaded at landing).
@@ -132,9 +134,12 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 - **Promo banner**: full-bleed Lovart illustration + WebP→PNG fallback. Kill switch: `PROMO_BANNER_ENABLED` (default `true`).
 - **Welcome coupon banner** (`FirstTimeCouponBanner`): zero external assets, zero package weight. Solid cream bg + CSS decorative circle. Archetype-tinted via inline `hsla()`. Analytics: `welcome_coupon_banner_impression` + `welcome_coupon_banner_tap` via `discoverAnalytics`.
 - **Tab bar logo**: dedicated 128×128 `joyjoin-logo-tab.png` (19KB) — NOT the full `joyjoin-logo.png` (596KB).
+- **Mascot sprite bundle policy (2026-06-18)**: only 6 core Xiaoyue sprite states (`welcome`, `idle`, `coach`, `loading`, `listening`, `thinking`) are bundled locally (~235KB); the remaining 14 states are CDN-primary. `XiaoyueSpriteAnimator` tries CDN first and falls back to the local bundled `.webp` on `onError`.
+- **Bundled icon density policy (2026-06-18)**: `status-icons`, `info-labels` (semantic), and `ui` tiers ship at `@1x`/`@2x` only. `clean:cdn-assets` strips their `@3x` variants to keep the main package under 2MB. Source `@3x` files remain for CDN fallback.
+- **Interest taxonomy v2.0 illustrations (2026-06-18)**: 48 active interests across 6 macro categories are CDN-only. Canonical `imageUrl` lives in `packages/shared/src/interests.ts`; mini-program resolves via `getInterestAssetUrl()` → `cdnAsset()`. 4 refreshed category icon sets are bundled locally with CDN fallback copies.
 - **Never** bundle local PNG archetype art. If canvas needs PNG, use `cdnAsset('/assets/personality/archetypes')`.
 - **Archetype images must not have text overlays** — no archetype-name initials or watermarks on hero art.
-- **Batch C + D ceremony/badges (2026-06-04, Path B)**: 8 ceremony WebP in `src/assets/ceremony/` + 9 badge WebP in `src/assets/badges/` (q=55, 600px) are bundled locally via Taro `copy.patterns`. Registries use `localAsset()` (NOT `cdnAsset()`). PNG masters live in `assets-source/lovart/batch-{c,d}/` and are NOT bundled. Total raw: 570KB; main package zip stays at 1.98MB.
+- **Batch C + D ceremony/badges (2026-06-04 Path B local-bundle → 2026-06-16 CDN)**: 8 ceremony WebP in `src/assets/ceremony/` + 9 badge WebP in `src/assets/badges/` (q=55, 600px) are uploaded to CDN; they are no longer copied to `dist/`. Registries in `src/lib/ceremonyHeroes.ts` + `src/lib/milestoneBadges.ts` use `cdnAsset()` (NOT `localAsset()`). PNG masters live in `assets-source/lovart/batch-{c,d}/` and are NOT bundled. Re-encode via `node scripts/optimize-ceremony-batch-c.mjs` / `node scripts/optimize-badges-batch-d.mjs` before committing new tiles, then upload via the CDN workflow.
 
 ---
 
@@ -215,4 +220,4 @@ npx miniprogram-ci upload \
 
 ## 11. Shared animation hooks
 
-- **`useMiniRevealMotion.ts`** (`src/hooks/useMiniRevealMotion.ts`) — shared reveal-animation hook consumed by `AnalyzingAnimation` (results page), profile-review stagger entries, personality-test card tilt, and squad-unboxing drag-reveal. Provides `shouldReduceMotion` boolean. Low-end gate threshold: `LOW_MOTION_BENCHMARK_LEVEL = 15` (aligned with `.joy-custom-tab-bar--low-end` at `wx.getSystemInfoSync().benchmarkLevel <= 15`). Also checks `Taro.getSystemInfoSync().reduceMotion` for OS-level accessibility preference. **2026-06-10:** benchmarkLevel raised from 8→15 for consistency; `reduceMotion` JS check added. **2026-06-13:** iOS WeChat does not expose `benchmarkLevel`; `useDeviceTier()` in `src/hooks/useDeviceTier.ts` falls back to model/system heuristics so iPhone XR/XS/XS Max/SE 2/3 are classified as primary and old iPhone X/8/7/6/6s/first-gen SE or iOS <15 as degradation.
+- **`useMiniRevealMotion.ts`** (`src/hooks/useMiniRevealMotion.ts`) — shared reveal-animation hook consumed by `AnalyzingAnimation` (results page), profile-review stagger entries, personality-test card tilt, and squad-unboxing drag-reveal. Provides `shouldReduceMotion` boolean. **Honors only the OS-level `Taro.getSystemInfoSync().reduceMotion` accessibility setting.** The previous benchmark-based low-end gate (`LOW_MOTION_BENCHMARK_LEVEL`) was removed in 2026-06-18 because product defaults now mandate carousel and slot animations; `useDeviceTier()` remains available for surfaces that still need degradation-aware gating.

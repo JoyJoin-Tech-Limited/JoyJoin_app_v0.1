@@ -1,9 +1,11 @@
 import { Image, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState, useCallback, useMemo } from 'react'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
+import { logError, logWarn } from '../../lib/utils/logger'
 import {
   getIconMapping,
-  getIconAssetPath,
+  getLocalIconAssetPath,
   CDN_ICON_TIERS,
   type IconMapping,
   type IconTier,
@@ -15,6 +17,11 @@ interface JoyJoinIconProps {
   tier?: IconTier
   className?: string
   style?: React.CSSProperties
+  /**
+   * Whether to lazy-load the image. When omitted, CDN icons lazy-load and
+   * local bundled icons load eagerly to avoid emoji fallback in subpackages.
+   */
+  lazyLoad?: boolean
 }
 
 /**
@@ -42,20 +49,34 @@ function getReducedMotion(): boolean {
 
 const REDUCED_MOTION = getReducedMotion()
 
+/** Append a hex alpha channel safely; fall back to the original colour if not hex. */
+function hexWithAlpha(hex: string | undefined, alphaHex: string): string {
+  if (!hex || !hex.startsWith('#')) return hex ?? 'transparent'
+  return hex + alphaHex
+}
+
+/** Fallback placeholder background for loading icons.
+ *  Mirrors the SCSS token `rgba($color-text-primary, 0.04)` (#2D3142 at 4% opacity).
+ *  Keep in sync with `apps/mini-program/src/styles/_variables.scss`.
+ */
+const DEFAULT_ICON_PLACEHOLDER_BG = 'rgba(45, 49, 66, 0.04)'
+
 export default function JoyJoinIcon({
   emoji,
   size,
   tier,
   className = '',
   style = {},
+  lazyLoad: lazyLoadProp,
 }: JoyJoinIconProps) {
   const mapping: IconMapping | undefined = getIconMapping(emoji, tier)
+  // Local bundled icons are small and should render immediately, especially in
+  // subpackage pages where WeChat's lazy-load can fail and fall back to emoji.
+  // CDN icons are larger and benefit from lazy-loading.
+  const isCdnTier = mapping ? CDN_ICON_TIERS.has(mapping.tier) : false
+  const lazyLoad = lazyLoadProp ?? isCdnTier
   const [hasError, setHasError] = useState(false)
   const [loaded, setLoaded] = useState(false)
-
-  const handleError = useCallback(() => {
-    setHasError(true)
-  }, [])
 
   const handleLoad = useCallback(() => {
     setLoaded(true)
@@ -63,10 +84,11 @@ export default function JoyJoinIcon({
 
   const transition = useMemo(() => {
     if (REDUCED_MOTION) return 'none'
-    return 'opacity 200ms ease-out, transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1)'
+    return 'opacity 200ms ease-out, transform 300ms cubic-bezier(0.22, 1, 0.36, 1)'
   }, [])
 
   if (!mapping) {
+    logWarn('[JoyJoinIcon] No icon mapping found for emoji', { emoji, tier })
     return (
       <Text className={className} style={style}>
         {emoji}
@@ -77,7 +99,23 @@ export default function JoyJoinIcon({
   const displaySize = size ?? mapping.size
   const sizeStr = `${displaySize}rpx`
 
-  if (hasError) {
+  let src: string
+  try {
+    const assetPath = getLocalIconAssetPath(mapping.assetKey, mapping.tier, 1)
+    if (CDN_ICON_TIERS.has(mapping.tier)) {
+      src = cdnAsset(assetPath)
+    } else {
+      // Local bundled assets are served from the mini-program root.
+      // Avoid runtime require() of non-JS assets — it crashes in subpackages.
+      src = localAsset(assetPath)
+    }
+  } catch (err) {
+    logError('[JoyJoinIcon] Asset path resolution failed, falling back to emoji', {
+      emoji,
+      tier,
+      assetKey: mapping.assetKey,
+      error: err instanceof Error ? err.message : String(err),
+    })
     return (
       <Text
         className={`${className} ${!loaded ? 'jj-icon-loading' : ''}`}
@@ -88,16 +126,17 @@ export default function JoyJoinIcon({
     )
   }
 
-  let src: string
-  try {
-    const assetPath = getIconAssetPath(mapping.assetKey, mapping.tier, 1)
-    if (CDN_ICON_TIERS.has(mapping.tier)) {
-      src = assetPath
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      src = require(assetPath) as string
-    }
-  } catch {
+  const handleError = useCallback(() => {
+    logError('[JoyJoinIcon] Asset failed to load, falling back to emoji', {
+      emoji,
+      tier,
+      assetKey: mapping.assetKey,
+      src,
+    })
+    setHasError(true)
+  }, [emoji, mapping.assetKey, src, tier])
+
+  if (hasError) {
     return (
       <Text
         className={`${className} ${!loaded ? 'jj-icon-loading' : ''}`}
@@ -121,12 +160,12 @@ export default function JoyJoinIcon({
         backgroundColor: loaded
           ? 'transparent'
           : mapping.tint
-            ? `${mapping.tint}1A`
-            : 'rgba(0,0,0,0.04)',
+            ? hexWithAlpha(mapping.tint, '1A')
+            : DEFAULT_ICON_PLACEHOLDER_BG,
         ...style,
       }}
       mode='aspectFit'
-      lazyLoad
+      lazyLoad={lazyLoad}
       onLoad={handleLoad}
       onError={handleError}
     />

@@ -114,6 +114,9 @@ describe("GET /api/my-connections", () => {
         peerArchetype: "柯基",
         eventTitle: "周五夜聊",
         wechatId: "alice_wx",
+        peerCity: "深圳",
+        peerBio: "喜欢咖啡和聊天",
+        peerAgeRange: "25-29",
       },
       {
         id: "conn-2",
@@ -121,6 +124,9 @@ describe("GET /api/my-connections", () => {
         peerArchetype: "狐狸",
         eventTitle: "周三饭局",
         wechatId: null,
+        peerCity: null,
+        peerBio: null,
+        peerAgeRange: null,
       },
     ]);
 
@@ -141,7 +147,13 @@ describe("GET /api/my-connections", () => {
       expect(body[0].peerArchetype).toBe("柯基");
       expect(body[0].eventTitle).toBe("周五夜聊");
       expect(body[0].wechatId).toBe("alice_wx");
+      expect(body[0].peerCity).toBe("深圳");
+      expect(body[0].peerBio).toBe("喜欢咖啡和聊天");
+      expect(body[0].peerAgeRange).toBe("25-29");
       expect(body[1].wechatId).toBeNull();
+      expect(body[1].peerCity).toBeNull();
+      expect(body[1].peerBio).toBeNull();
+      expect(body[1].peerAgeRange).toBeNull();
 
       expect(mockGetUserConnections).toHaveBeenCalledWith("user-123");
 

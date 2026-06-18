@@ -2,6 +2,7 @@ import Taro from '@tarojs/taro'
 
 export const ANONYMOUS_ASSESSMENT_SESSION_STORAGE_KEY = 'joyjoin_v4_assessment_session'
 export const ANONYMOUS_ASSESSMENT_ANSWERS_STORAGE_KEY = 'joyjoin_v4_presignup_answers'
+export const ANONYMOUS_ASSESSMENT_SKIPPED_STORAGE_KEY = 'joyjoin_v4_presignup_skipped'
 
 export interface AnonymousAssessmentTopMatch {
   archetype: string
@@ -34,6 +35,12 @@ export interface AnonymousAssessmentSessionSnapshot {
   result?: AnonymousAssessmentResult | null
   topArchetypes?: AnonymousAssessmentTopMatch[] | null
   resultSequenceCompletedAt?: string
+}
+
+export interface AnonymousAssessmentSkippedState {
+  skippedQuestionIds: string[]
+  skipCount: number
+  timestamp: number
 }
 
 export interface AnonymousAssessmentImportGateState {
@@ -98,9 +105,30 @@ export function upsertAnonymousAssessmentAnswer(answer: AnonymousAssessmentAnswe
   writeStorageValue(ANONYMOUS_ASSESSMENT_ANSWERS_STORAGE_KEY, nextAnswers)
 }
 
+export function readAnonymousAssessmentSkipped(): AnonymousAssessmentSkippedState {
+  const stored = readStorageValue<AnonymousAssessmentSkippedState>(ANONYMOUS_ASSESSMENT_SKIPPED_STORAGE_KEY)
+  if (!stored || !Array.isArray(stored.skippedQuestionIds)) {
+    return { skippedQuestionIds: [], skipCount: 0, timestamp: 0 }
+  }
+  return {
+    skippedQuestionIds: stored.skippedQuestionIds.filter((id) => typeof id === 'string'),
+    skipCount: typeof stored.skipCount === 'number' ? stored.skipCount : stored.skippedQuestionIds.length,
+    timestamp: stored.timestamp || 0,
+  }
+}
+
+export function saveAnonymousAssessmentSkipped(skippedQuestionIds: string[], skipCount?: number): void {
+  writeStorageValue(ANONYMOUS_ASSESSMENT_SKIPPED_STORAGE_KEY, {
+    skippedQuestionIds,
+    skipCount: skipCount ?? skippedQuestionIds.length,
+    timestamp: Date.now(),
+  })
+}
+
 export function clearAnonymousAssessmentStorage(): void {
   Taro.removeStorageSync(ANONYMOUS_ASSESSMENT_SESSION_STORAGE_KEY)
   Taro.removeStorageSync(ANONYMOUS_ASSESSMENT_ANSWERS_STORAGE_KEY)
+  Taro.removeStorageSync(ANONYMOUS_ASSESSMENT_SKIPPED_STORAGE_KEY)
 }
 
 export function getAnonymousAssessmentImportGateState(input: {

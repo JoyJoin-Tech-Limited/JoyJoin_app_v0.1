@@ -3,6 +3,7 @@ import { DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES } from '@shared/socialIcebreak
 import { getPhaseModule } from '@shared/phaseRegistry';
 import { getNextPhaseFromPlan } from '@shared/phaseModule';
 import type { IcebreakerRunPlan } from '@shared/phaseModule';
+import { isCustomMode } from './services/customModeService';
 
 function isEnabled(value: string | undefined, defaultValue: boolean): boolean {
   if (value === undefined) return defaultValue;
@@ -76,6 +77,8 @@ export function ensureSessionEnabledPhases(state: SocialSessionState): SocialIce
   return enabledPhases;
 }
 
+export { isCustomMode };
+
 /**
  * Get the list of phases to use for navigation.
  *
@@ -123,6 +126,13 @@ export function getNextEligiblePhase(
   current: SocialIcebreakerPhase,
   state: SocialSessionState,
 ): SocialIcebreakerPhase {
+  // Custom mode: host-driven picker. Warmup and every real phase lead back to
+  // the picker; the picker itself leads to recap as a safe fallback.
+  if (isCustomMode(state)) {
+    if (current === 'phase_selection') return 'recap';
+    return 'phase_selection';
+  }
+
   let candidate: SocialIcebreakerPhase = getNextPhase(current, state);
   const visited = new Set<SocialIcebreakerPhase>();
 

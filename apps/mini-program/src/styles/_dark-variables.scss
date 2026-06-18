@@ -1,0 +1,29 @@
+// ─── Dark Mode Semantic Tokens ──────────────────────────────────────
+// Use these for `@media (prefers-color-scheme: dark)` overrides.
+// Keep this file additive; do not replace the light-mode $color-* tokens.
+
+// Backgrounds
+$dark-color-bg-deep:      #111111;
+$dark-color-bg-mid:       #1e1b4b;
+$dark-color-surface:      #2d3142;
+
+// Text
+$dark-color-text-primary:   #fafafa;
+$dark-color-text-secondary: #9ca3af;
+$dark-color-text-tertiary:  #6b7280;
+$dark-color-text-link:      #a78bfa;
+$dark-color-text-white:     #fafafa;
+
+// Accent
+$dark-color-primary:        #8b5cf6;
+
+// Status
+$dark-color-success:        #2ecc71;
+
+// Background gradients
+$dark-profile-bg-gradient: linear-gradient(
+  180deg,
+  $dark-color-bg-deep 0%,
+  $dark-color-bg-mid 50%,
+  $dark-color-bg-deep 100%
+);

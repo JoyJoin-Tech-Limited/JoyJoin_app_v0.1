@@ -1,4 +1,4 @@
-import { PropsWithChildren, createElement } from 'react'
+import { PropsWithChildren, createElement, useEffect } from 'react'
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { useDidShow } from '@tarojs/taro'
 import { bootstrapMiniProgramAuthSession } from '../lib/api/authSession'
@@ -8,6 +8,12 @@ import { authAnalytics } from '../lib/analytics/authAnalytics'
 
 function AuthRefreshBridge({ children }: PropsWithChildren) {
   const client = useQueryClient()
+
+  // One-time background revalidation on app launch. useAuth now hydrates from
+  // storage, so this fetches without blocking the UI.
+  useEffect(() => {
+    void bootstrapMiniProgramAuthSession(client)
+  }, [client])
 
   useDidShow(() => {
     const startedAt = Date.now()

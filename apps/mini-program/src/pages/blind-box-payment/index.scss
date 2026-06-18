@@ -66,10 +66,12 @@
   }
 
   &__progress-fill {
+    width: 100%;
     height: 100%;
     background: $color-primary;
     border-radius: 2rpx;
-    transition: width 500ms ease-out;
+    transform-origin: left center;
+    transition: transform 500ms ease-out;
   }
 
   &__progress-label {
@@ -208,6 +210,7 @@
 // ═══════════════════════════════════════════
 
 .ritual-act-revelation {
+  position: relative;
   padding: $spacing-xl $spacing-lg;
   border-radius: $card-radius;
   margin: 0 -32rpx;
@@ -215,17 +218,51 @@
   transform: translateY(16rpx);
   transition: opacity 500ms cubic-bezier(0.22, 1, 0.36, 1),
               transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
 
   &--visible {
     opacity: 1;
     transform: translateY(0);
   }
 
+  &__backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.26;
+    z-index: 0;
+    transform: scale(1.05);
+    animation: ritual-backdrop-settle 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  // readability scrim — keeps text legible over busy hero art
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      180deg,
+      rgba($color-surface, 0.45) 0%,
+      rgba($color-surface, 0.12) 40%,
+      rgba($color-surface, 0.35) 100%
+    );
+    z-index: 0;
+    pointer-events: none;
+  }
+
   &__hero {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     gap: $spacing-sm;
     text-align: center;
+    padding: $spacing-md 0;
   }
 
   &__badge {
@@ -242,12 +279,14 @@
     font-size: $font-size-2xl;
     line-height: 1.25;
     color: $color-text-primary;
+    text-shadow: 0 2rpx 16rpx rgba($color-surface, 0.8);
   }
 
   &__subline {
     font-size: $font-size-base;
     color: $color-text-secondary;
     line-height: 1.6;
+    text-shadow: 0 2rpx 12rpx rgba($color-surface, 0.8);
   }
 
   &__context {
@@ -288,6 +327,7 @@
     font-size: $font-size-base;
     font-weight: 600;
     line-height: 1.5;
+    box-shadow: 0 4rpx 24rpx rgba($color-text-primary, 0.06);
   }
 
   &__invitation {
@@ -297,6 +337,25 @@
     margin-top: $spacing-sm;
     opacity: 0;
     animation: fade-up 400ms ease-out forwards;
+    text-shadow: 0 2rpx 12rpx rgba($color-surface, 0.8);
+  }
+}
+
+@keyframes ritual-backdrop-settle {
+  from {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+  to {
+    opacity: 0.26;
+    transform: scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ritual-act-revelation__backdrop {
+    animation: none;
+    transform: scale(1.05);
   }
 }
 
@@ -341,10 +400,12 @@
   }
 
   &__progress-fill {
+    width: 100%;
     height: 100%;
     background: $color-primary;
     border-radius: 4rpx;
-    transition: width 500ms ease-out;
+    transform-origin: left center;
+    transition: transform 500ms ease-out;
   }
 
   &__header {

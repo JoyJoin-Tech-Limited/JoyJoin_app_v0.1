@@ -23,6 +23,7 @@ import { shenzhenClusters, getDistrictsByCluster } from "@shared/districts";
 
 export interface VenueFormData {
   name: string;
+  brandName: string;
   type: string;
   address: string;
   city: string;
@@ -129,9 +130,15 @@ export default function VenueFormFields({ formData, setFormData, mode, setShowMa
     <div className="space-y-4 py-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor={`${prefix}name`}>场地名称 *</Label>
-          <Input id={`${prefix}name`} placeholder="例：海底捞火锅" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} data-testid={`input-${testIdPrefix}name`} />
+          <Label htmlFor={`${prefix}name`}>场地名称（内部标识） *</Label>
+          <Input id={`${prefix}name`} placeholder="例：宝安和风料理" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} data-testid={`input-${testIdPrefix}name`} />
         </div>
+        <div className="space-y-2">
+          <Label htmlFor={`${prefix}brandName`}>门店品牌名称</Label>
+          <Input id={`${prefix}brandName`} placeholder="例：Bruma、Batch & Co、海底捞火锅" value={formData.brandName} onChange={(e) => setFormData({ ...formData, brandName: e.target.value })} data-testid={`input-${testIdPrefix}brandName`} />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor={`${prefix}type`}>场地类型 *</Label>
           <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v })}>

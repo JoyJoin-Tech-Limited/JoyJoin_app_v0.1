@@ -352,7 +352,7 @@ export async function assignVenuesToGroups(
       // Use 1-based group index to align with group.groupNumber in saveVenueAssignments
       assignments.set(i + 1, bestMatch);
       slotUsageTracker.set(bestMatch.timeSlotId, (slotUsageTracker.get(bestMatch.timeSlotId) ?? 0) + 1);
-      logger.info(`[VenueAssignment] Group ${i + 1} → ${bestMatch.venue.name} (score: ${bestMatch.score})`);
+      logger.info(`[VenueAssignment] Group ${i + 1} → ${bestMatch.venue.brandName || bestMatch.venue.name} (score: ${bestMatch.score})`);
       logger.info(`[VenueAssignment] Reasons: ${bestMatch.reasons.join(', ')}`);
     } else {
       // Determine why no venue was found
@@ -531,7 +531,7 @@ export async function saveVenueAssignments(
         await tx
           .update(eventPoolGroups)
           .set({
-            venueName: assignment.venue.name,
+            venueName: assignment.venue.brandName || assignment.venue.name,
             venueAddress: assignment.venue.address,
             venueId: assignment.venue.id,
             venueAssignmentStatus: 'assigned',
@@ -559,7 +559,7 @@ export async function saveVenueAssignments(
     const unassignedReason = unassigned.get(group.groupNumber);
     if (assignment && !existingBookingMap.has(group.id)) {
       newlyAssigned++;
-      logger.info(`[VenueAssignment] Saved: Group ${group.groupNumber} → ${assignment.venue.name} (slot: ${assignment.timeSlotId})`);
+      logger.info(`[VenueAssignment] Saved: Group ${group.groupNumber} → ${assignment.venue.brandName || assignment.venue.name} (slot: ${assignment.timeSlotId})`);
     } else if (unassignedReason) {
       unassignedBreakdown[unassignedReason] = (unassignedBreakdown[unassignedReason] || 0) + 1;
       logger.info(`[VenueAssignment] Marked group ${group.groupNumber} as unassigned: ${unassignedReason}`);

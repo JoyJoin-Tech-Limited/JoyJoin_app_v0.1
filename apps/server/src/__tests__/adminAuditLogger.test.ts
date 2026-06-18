@@ -8,6 +8,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { logAdminAudit, ADMIN_AUDIT_ACTIONS, type AdminAuditRecord } from '../lib/adminAuditLogger';
 
+// The logger fire-and-forgets a DB insert; mock it so the async microtask
+// does not race against vitest teardown and emit stray console.error logs.
+vi.mock('../db', () => ({
+  db: {
+    insert: vi.fn(() => ({
+      values: vi.fn().mockResolvedValue(undefined),
+    })),
+  },
+}));
+
 describe('logAdminAudit', () => {
   let consoleSpy: ReturnType<typeof vi.spyOn>;
 

@@ -1,0 +1,101 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.xiaoyue-coach-card {
+  position: relative;
+  margin-bottom: $spacing-md;
+  opacity: 0;
+  transform: translateY(16rpx);
+  transition: opacity 0.32s ease, transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+
+  &--enter,
+  &--visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  &--hidden {
+    opacity: 0;
+    transform: translateY(16rpx);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &,
+    &--enter,
+    &--visible,
+    &--hidden {
+      transition: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  &__mascot-wrap {
+    position: absolute;
+    top: -40rpx;
+    left: $spacing-md;
+    z-index: 2;
+  }
+
+  &__paper {
+    position: relative;
+    @include card-premium;
+    padding: $spacing-lg;
+    padding-top: $spacing-xl;
+    background: linear-gradient(180deg, $color-surface 0%, rgba($color-bg-tint-warm, 0.5) 100%);
+    border: 2rpx solid rgba($color-primary, 0.08);
+    overflow: hidden;
+  }
+
+  &__tail {
+    position: absolute;
+    top: -16rpx;
+    left: 68rpx;
+    width: 32rpx;
+    height: 32rpx;
+    background: $color-surface;
+    border-left: 2rpx solid rgba($color-primary, 0.08);
+    border-top: 2rpx solid rgba($color-primary, 0.08);
+    transform: rotate(45deg);
+  }
+
+  &__eyebrow {
+    display: block;
+    @include type-caption;
+    font-weight: $font-weight-semibold;
+    color: rgba($color-primary-dark, 0.82);
+    margin-bottom: $spacing-xs;
+  }
+
+  &__title {
+    display: block;
+    @include type-subheading;
+    line-height: 1.5;
+    margin-bottom: $spacing-sm;
+    word-break: keep-all;
+  }
+
+  &__copy {
+    display: block;
+    @include type-body;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+    margin-bottom: $spacing-md;
+  }
+
+  &__body {
+    margin-bottom: $spacing-md;
+  }
+
+  &__footer {
+    margin-top: $spacing-sm;
+  }
+
+  &__signoff {
+    display: block;
+    margin-top: $spacing-md;
+    text-align: right;
+    @include type-caption;
+    color: $color-text-muted;
+  }
+}

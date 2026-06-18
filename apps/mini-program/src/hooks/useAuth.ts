@@ -6,6 +6,7 @@ import {
   AUTH_QUERY_KEY,
   bootstrapMiniProgramAuthSession,
   clearAuthStorage,
+  getStoredAuthUser,
   isTransportApiError,
   isUnauthorizedApiError,
   persistAuthToStorage,
@@ -106,6 +107,7 @@ async function getAuthUser(): Promise<AuthUser | null> {
  */
 export function useAuth(): UseAuthResult {
   const mockUser = getMockAuthUser()
+  const storedUser = getStoredAuthUser<AuthUser>()
 
   const { data: user, isLoading, isFetching, refetch } = useQuery<AuthUser | null>({
     queryKey: AUTH_QUERY_KEY,
@@ -116,7 +118,9 @@ export function useAuth(): UseAuthResult {
       return failureCount < 2
     },
     staleTime: Infinity,
-    initialData: mockUser ?? undefined,
+    // Hydrate from storage so returning users skip the auth-loading gate
+    // on tab switches. A background revalidation still runs via AuthProvider.
+    initialData: mockUser ?? storedUser ?? undefined,
   })
 
   const effectiveUser = mockUser ?? user

@@ -1,4 +1,6 @@
 import { View, Text, Image } from '@tarojs/components'
+import Taro from '@tarojs/taro'
+import { useMemo } from 'react'
 import { getXiaoyueExpressionAsset, XIAOYUE_EXPRESSION_TO_SPRITE_STATE, type XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
 import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from './XiaoyueSpriteAnimator'
 import './XiaoyueChatBubble.scss'
@@ -66,6 +68,15 @@ export default function XiaoyueChatBubble({
     : expressionIdProp ?? POSE_TO_EXPRESSION[pose]
   const sentences = content.split(/[。.]/).filter((s) => s.trim().length > 0)
 
+  const prefersReducedMotion = useMemo(() => {
+    try {
+      return (Taro.getSystemInfoSync() as any).reduceMotion ?? false
+    } catch {
+      return false
+    }
+  }, [])
+  const effectiveStaggerDelay = prefersReducedMotion ? 0 : staggerDelay
+
   const layoutClass = wide
     ? 'xiaoyue-chat-bubble--wide'
     : horizontal
@@ -103,7 +114,7 @@ export default function XiaoyueChatBubble({
           <Text
             key={i}
             className='xiaoyue-chat-bubble__sentence'
-            style={{ animationDelay: `${i * staggerDelay}ms` }}
+            style={{ animationDelay: `${i * effectiveStaggerDelay}ms` }}
           >
             {sentence.trim()}
             {i < sentences.length - 1 ? '。' : ''}

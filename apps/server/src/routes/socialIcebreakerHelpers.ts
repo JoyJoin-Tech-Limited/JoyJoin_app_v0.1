@@ -9,10 +9,14 @@ import {
   getParticipant,
   listParticipants,
   updateSession,
+  loadSessionLieTruths,
 } from '../lib/socialIcebreakerStore';
 import { shouldAutoAdvance } from '../xiaoyueAdaptiveEngine';
 import { logger } from '../lib/logger';
 import { buildArchetypeContext } from '../lib/contextInjector';
+import { isCustomMode, computeSelectablePhases } from '../services/customModeService';
+import { curateMedals } from '../lib/medalCuration';
+import { generateRecapSummary, buildLieDetectiveV2RecapData } from '../socialIcebreakerAIService';
 
 function isEnabled(value: string | undefined, defaultValue: boolean): boolean {
   if (value === undefined) return defaultValue;
@@ -131,9 +135,12 @@ export async function buildClientState(
 ): Promise<SocialSessionState> {
   const joinedParticipants = await listParticipants(state.socialSessionId);
   const archetypeCtx = buildArchetypeContext(joinedParticipants.map((p) => ({ archetype: p.archetype })));
+  const withCustomExtras = isCustomMode(state)
+    ? { ...state, selectablePhases: computeSelectablePhases(state) }
+    : state;
   return sanitizeStateForClient(
     {
-      ...state,
+      ...withCustomExtras,
       joinedParticipants,
       archetypeMixText: archetypeCtx.mixText || undefined,
     },
@@ -256,6 +263,125 @@ export function buildRecapParticipants(
   return out.length > 0 ? out : [{ displayName: '参与者' }];
 }
 
+export function buildRecapHighlights(state: SocialSessionState, roster?: Array<{ userId: string; displayName: string }>) {
+  const highlights: Partial<{
+    lieDetectiveV2Stats: { aiWinRate: number; hardestRound: number; fooledEveryone: number };
+    personalityDiceHighlights: { completedCount: number; passedCount: number; completionRate: number };
+    undercoverWordResult: { caught: boolean; undercoverDisplayName: string };
+    microChallengeHighlights: { completedCount: number; totalCount: number; completionRate: number };
+    groupMirrorHighlights: { topVotedDisplayName: string; questionText: string; voteCount: number };
+  }> = {};
+
+  if (state.lieDetectiveRevealHistory && state.lieDetectiveRevealHistory.length > 0) {
+    highlights.lieDetectiveV2Stats = buildLieDetectiveV2RecapData(state.lieDetectiveRevealHistory);
+  }
+
+  if (state.diceCompletedBy || state.dicePassedBy) {
+    const completedCount = state.diceCompletedBy?.length || 0;
+    const passedCount = state.dicePassedBy?.length || 0;
+    const totalChallenges = state.personalityDiceChallenges?.length || state.playerCount || 1;
+    highlights.personalityDiceHighlights = {
+      completedCount,
+      passedCount,
+      completionRate: Math.round(((completedCount + passedCount) / totalChallenges) * 100),
+    };
+  }
+
+  if (state.undercoverWordResults) {
+    highlights.undercoverWordResult = {
+      caught: state.undercoverWordResults.caught,
+      undercoverDisplayName: state.undercoverWordResults.undercoverDisplayName,
+    };
+  }
+
+  if (state.challengeCompletedBy) {
+    const completedCount = state.challengeCompletedBy.length;
+    const totalCount = state.playerCount || 1;
+    highlights.microChallengeHighlights = {
+      completedCount,
+      totalCount,
+      completionRate: Math.round((completedCount / totalCount) * 100),
+    };
+  }
+
+  const mirrorAnswers = state.groupMirrorVotes || state.groupMirrorAnswers || [];
+  if (mirrorAnswers.length > 0) {
+    const targetCounts: Record<string, number> = {};
+    for (const a of mirrorAnswers) {
+      targetCounts[a.targetUserId] = (targetCounts[a.targetUserId] || 0) + 1;
+    }
+    let topTarget = '';
+    let maxCount = 0;
+    for (const [uid, count] of Object.entries(targetCounts)) {
+      if (count > maxCount) {
+        maxCount = count;
+        topTarget = uid;
+      }
+    }
+    if (topTarget && maxCount > 0) {
+      const questions = state.groupMirrorQuestions || [];
+      const targetDisplayName = roster?.find((r) => r.userId === topTarget)?.displayName
+        || mirrorAnswers.find((a) => a.userId === topTarget)?.displayName
+        || '匿名';
+      highlights.groupMirrorHighlights = {
+        topVotedDisplayName: targetDisplayName,
+        questionText: questions[0]?.questionText || '',
+        voteCount: maxCount,
+      };
+    }
+  }
+
+  return highlights;
+}
+
+/**
+ * Generate and persist a recap snapshot for a session entering the recap phase.
+ * Idempotent: if a snapshot already exists, it is left untouched.
+ */
+export async function ensureRecapSnapshot(
+  state: SocialSessionState,
+  socialSessionId: string,
+): Promise<void> {
+  if (state.recapSnapshot) return;
+
+  try {
+    const roster = await listParticipants(socialSessionId);
+    const medals = curateMedals(state, roster);
+
+    const durationMinutes = Math.round(
+      (Date.now() - (state.sessionStartedAt || state.phaseStartedAt || Date.now())) / 60000
+    );
+    const sessionLieMap = await loadSessionLieTruths(socialSessionId);
+    const lieHighlights = buildLieDetectiveRecapHighlights(state, roster, sessionLieMap);
+    const personalityDiceRecapLines = buildPersonalityDiceRecapLines(state);
+    const miniScriptRecapLine = buildMiniScriptRecapLine(state);
+    const auctionRecapLines = buildAuctionRecapLines(state);
+
+    const summaryResult = await generateRecapSummary({
+      participants: buildRecapParticipants(roster, state),
+      topicsDiscussed: (state.warmupTopics || []).slice(0, (state.currentTopicIndex ?? 0) + 1).map(t => t.question),
+      challengesCompleted: state.challengeCompletedBy?.length || 0,
+      commonGroundCount: state.commonGroundCount || 0,
+      lieDetectiveHighlights: lieHighlights.length ? lieHighlights : undefined,
+      personalityDiceRecapLines: personalityDiceRecapLines.length ? personalityDiceRecapLines : undefined,
+      miniScriptRecapLine,
+      auctionRecapLines: auctionRecapLines.length ? auctionRecapLines : undefined,
+      durationMinutes,
+    });
+
+    state.recapSnapshot = {
+      recapSummary: summaryResult.data,
+      medals,
+      meta: summaryResult.meta,
+      ...buildRecapHighlights(state, roster),
+    };
+    await updateSession(socialSessionId, state);
+  } catch (error) {
+    logger.error('[SocialIcebreaker] Failed to generate recap snapshot:', { error: String(error) });
+    // Continue without snapshot — consumers fall back to on-demand generation.
+  }
+}
+
 export function incrementCommonGround(state: SocialSessionState): void {
   state.commonGroundCount = Math.max(0, state.commonGroundCount || 0) + 1;
 }
@@ -276,7 +402,9 @@ export async function isHostAuthorized(
   socialSessionId: string,
 ): Promise<boolean> {
   if (!userId) return false;
-  if (state.autoAdvanceEnabled === true) {
+  // Treat undefined as true for backward compatibility with sessions created
+  // before the autoAdvanceEnabled field was introduced.
+  if (state.autoAdvanceEnabled !== false) {
     const participant = await getParticipant(socialSessionId, userId);
     return !!participant;
   }
@@ -291,6 +419,7 @@ export async function isHostAuthorized(
 export async function processAutoAdvance(state: SocialSessionState): Promise<SocialSessionState> {
   if (state.autoAdvanceEnabled !== true) return state;
   if (state.currentPhase === 'recap') return state;
+  if (isCustomMode(state)) return state;
 
   // If auto-advance is not yet scheduled, check if we should schedule it
   if (!state.autoAdvanceScheduledAt) {

@@ -246,9 +246,9 @@ await fetch('/api/auth/wechat/login-with-test', {
 2. Gender + Birthday (Birth Year)
 3. Professional Profile: Education Level + Industry (3-tier) + Occupation + Work Mode
 4. Location: Current City (required) + Hometown (optional)
-5. Intent / Social Goals (multi-select — sourced from shared constants in `packages/shared/src/constants.ts` via `INTENT_OPTIONS` / `INTENT_FLEXIBLE_OPTION` / `getIntentLabel`, see PR #299)
+5. Intent / Social Goals (multi-select — sourced from shared constants in `packages/shared/src/constants.ts` via `INTENT_OPTIONS` / `INTENT_FLEXIBLE_OPTION` / `getIntentLabel` / `toggleIntentValue`, see PR #299). Renders with the shared `IntentCard` component and `JoyJoinIcon tier='intent'`; `usePreloadIntentIcons` pre-warms the bundled intent icons before the grid renders.
 
-> Intent options are defined as a **single source of truth** in `packages/shared/src/constants.ts` (`INTENT_OPTIONS`, `INTENT_FLEXIBLE_OPTION`, `getIntentLabel`). Do **not** hardcode intent option arrays in individual components — import from these shared constants.
+> Intent options and selection logic are defined as a **single source of truth** in `packages/shared/src/constants.ts` (`INTENT_OPTIONS`, `INTENT_FLEXIBLE_OPTION`, `getIntentLabel`, `toggleIntentValue`). Use `toggleIntentValue(selected, value, { maxExplicit: 3 })` to enforce the explicit-intent cap while letting `随缘`/flexible coexist; it returns `null` when the cap is exceeded. Do **not** hardcode intent option arrays or cap logic in individual components — import from these shared constants.
 
 > Valid `workMode` enum values (from `packages/shared/src/constants.ts`) are: `founder`, `self_employed`, `employed`, `student`, `transitioning`, `caregiver_retired`, `successor`（家族企业接班场景）. UI 文案可以对应为：创业者（founder）、自雇 / 自由职业（self_employed）、受薪上班族（employed）、学生（student）、职业过渡中（transitioning）、全职照护 / 退休（caregiver_retired）、家族企业接班人（successor）。
 
@@ -268,11 +268,15 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 **What's Collected:**
 - **ONLY Interest Carousel**
-  - 56 topics across 8 categories
-  - Multi-tap heat level (0/5/15/25)
-  - Includes topic avoidances
-  - Minimum 3 selections required (enforced on both client and server: `POST /api/user/interests` returns 400 if `totalSelections < 3`)
-- **Archetype-based recommendation hints** are shown alongside interest topics — the carousel displays personalised suggestions based on the user's archetype result from Step 1 (PR #309).
+  - 48 active topics across **6 macro categories** (`food` 美食小酌, `play` 聚会玩乐, `sports` 运动户外, `culture` 文艺现场, `life` 生活美学, `growth` 思想成长)
+  - Multi-tap heat level: tap cycles 0 → 1 → 2 → 3 → off
+    - Level 1 = 感兴趣 (heat 3)
+    - Level 2 = 很热衷 (heat 10)
+    - Level 3 = 必聊项 (heat 25)
+  - **3–10 selections required** (enforced on both client and server: `POST /api/user/interests` returns 400 if `totalSelections < 3`)
+- **Archetype-aware coaching:** Xiaoyue guidance and the footer "heat story" pill personalize around the user's archetype result from Step 1.
+- **Milestone feedback:** Centered celebration toasts fire when the user crosses ≥3 selections, sets the first L3 / 必聊项, or selects topics from all 6 macro categories.
+- **Category icons:** `JoyJoinIcon tier="category"` renders bundled proprietary icons (`src/assets/icons/category-icons/`); `usePreloadCategoryIcons` pre-warms them before the grid renders.
 
 **After Completion:**
 - `hasCompletedInterestsCarousel = true` (server-persisted; this is the canonical step-completion signal)
@@ -286,25 +290,36 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 **Route:** `/onboarding/review`
 
+**Page:** `apps/mini-program/src/pages/onboarding/profile-review/index.tsx`
+
 **User State:** Has completed essential and extended data
 
 **Content:**
-- Animated "analyzing" phase (minimum **1200 ms** for standard motion; **500 ms** for reduced-motion users). After 600 ms a tap/click anywhere skips straight to the reveal — preventing artificial waiting when data is already ready. (Prior to PR #383 this was a fixed 2500 ms wait with no skip path.)
-- Profile portrait card reveal with archetype, interests, and stats
-- **Interest chips** — top interests rendered via `InterestChipCloud` (shared profile component) with dominant category chips below
-- **AI insight tagline** — a short personalised `insightLine` fetched from `GET /api/onboarding/profile-tagline` (service: `apps/server/src/profileTaglineService.ts`; contract: `ProfileTaglineResponse` in `packages/shared/src/ai/onboarding.ts`). Displayed inside `ProfilePortraitCard`. Rendered as a presentation-only enhancement; does not block navigation.
-- **Match Power preview** — displays the user's computed match score before they enter the Discover pool
-- **Archetype-personalized CTA** — the call-to-action copy is tailored to the user's archetype result (e.g., different messaging for each archetype type)
-- **Limited browse mode CTA** *(scoped experiment)* — a secondary "先浏览 →" CTA that lets the user enter read-only event discovery without committing to registration. Controlled by `ENABLE_LIMITED_BROWSE_MODE` constant in `FinalProfileReviewPage.tsx` (currently `true`). Can be disabled per-session via `?exp=no_limited_browse` in the URL. Do **not** generalize this pattern or add permanent browse-mode routing without verifying the gating logic and confirming it is no longer an experiment. See `LimitedBrowseBanner` component for the session flag.
+- **Analyzing interstitial** — `AnalyzingAnimation` with Xiaoyue mascot shows `正在生成你的专属画像…` for a minimum **1200 ms**; reduced-motion users see a simplified, low-motion state. The interstitial is presentation-only and does not block submission.
+- **Admission poster card** — a single vertically scrolling "Pokémon-card" profile poster (`profile-review__poster`) with archetype-themed gradient border, holographic shimmer (suppressed via `prefers-reduced-motion`), and rarity stamp.
+  - Header: display name, archetype badge, and compact tags for gender, age, city, and relationship status.
+  - **AI social tagline** — short warm insight line fetched from `GET /api/onboarding/profile-tagline` (service: `apps/server/src/profileTaglineService.ts`; contract: `ProfileTaglineResponse` in `packages/shared/src/ai/onboarding.ts`). Rendered as a centered quote block (`✨ 悦仔的观察`) with shimmer skeleton and retry on error. This is a presentation-only enhancement and does not block navigation.
+  - **Archetype summary** — one-line description of the user's V4 archetype result.
+  - **Profile mini-cards** —家乡、关系状态、学历、职业、行业 rendered with brand-colored dot indicators.
+  - **Intent chips** — top social intents labeled with `JoyJoinIcon` (`tier='intent'`) and Chinese text. Intent icons are pre-warmed by `usePreloadIntentIcons` before grids render.
+  - **Interest heat map** — `InterestHeatMap` stats + `InterestChipCloud` dominant-category chips.
+- **Floating CTA** — pill-shaped "确认并进入发现" button anchored above the safe area; gains elevation when the page is scrolled.
+- **Motion gating** — all entrance animations, shimmer, and CTA transitions respect `@media (prefers-reduced-motion: reduce)`; the JS `useMiniRevealMotion().shouldReduceMotion` flag suppresses the poster shimmer at runtime.
+
+**What is NOT included (legacy / deprecated):**
+- Match Power preview before Discover.
+- Limited browse mode CTA.
+- Archetype-personalized CTA copy variants.
 
 **Downstream onboarding data reuse:** The user's interest selections made in Step 4 (Extended Data) are automatically reused downstream — they seed the optional **Interest Signal Boost** pre-match calibration tool (surfaced after pool registration), and pre-select the user's highest-heat interest for the boost UX. No re-asking of onboarding data is needed.
 
 **Data Contract:**
 - Server field: `user.hasSeenProfileReview` (persisted to database)
-- API: `POST /api/profile-review/complete` to mark as seen
+- API: `POST /api/onboarding/profile-review/complete` to mark as seen
 
 **After Completion:**
 - `hasSeenProfileReview = true`
+- The page shows a brief "入场卡已确认" Xiaoyue celebration toast.
 - Navigate via **server-computed `nextStep`** using the route map:
   ```ts
   const NEXT_STEP_TO_PATH: Record<string, string> = {

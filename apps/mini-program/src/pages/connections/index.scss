@@ -4,27 +4,8 @@
 .connections-page {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
-  min-height: 100dvh;
+  @include viewport-min-height;
   background: $color-bg-gradient;
-
-  &__header {
-    padding: $spacing-xl $container-padding $spacing-md;
-  }
-
-  &__title {
-    display: block;
-    font-size: $font-size-2xl;
-    font-weight: $font-weight-black;
-    color: $color-text-primary;
-    margin-bottom: $spacing-xs;
-  }
-
-  &__subtitle {
-    display: block;
-    font-size: $font-size-base;
-    color: $color-text-secondary;
-  }
 
   &__list {
     flex: 1;
@@ -32,22 +13,40 @@
   }
 
   &__loading {
-    @include scroll-view-centered-state;
-    gap: $spacing-sm;
-  }
-
-  &__loading-text {
-    font-size: $font-size-base;
-    color: $color-text-secondary;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
   }
 
   &__card {
     @include card;
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
-    padding: $spacing-lg;
+    padding: 0;
+    overflow: hidden;
     margin-bottom: $spacing-md;
+    transition: transform 0.12s ease, opacity 0.12s ease;
+
+    &:active {
+      transform: scale(0.98);
+      opacity: 0.96;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+
+      &:active {
+        transform: none;
+        opacity: 1;
+      }
+    }
+
+    &--legacy {
+      display: flex;
+      align-items: center;
+      gap: $spacing-md;
+      padding: $spacing-lg;
+    }
   }
 
   &__card-avatar {
@@ -116,57 +115,24 @@
     margin-right: $spacing-xs;
   }
 
+  &__shared-event-icon {
+    width: 20rpx;
+    height: 20rpx;
+    flex-shrink: 0;
+    margin-right: 6rpx;
+  }
+
   &__shared-event-text {
     font-size: $font-size-xs;
     color: $color-primary;
   }
 
-  &__card-wechat {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    margin-top: $spacing-xs;
-    padding: 4rpx 12rpx;
-    background: rgba($color-primary, 0.08);
-    border-radius: 8rpx;
-    width: fit-content;
-  }
-
-  &__card-wechat-label {
-    font-size: $font-size-xs;
-    color: $color-text-muted;
-  }
-
-  &__card-wechat-id {
-    font-size: $font-size-xs;
-    color: $color-primary;
-    font-weight: $font-weight-semibold;
-  }
-
-  &__card-wechat-action {
-    font-size: $font-size-xs;
-    color: $color-primary;
-    margin-left: 4rpx;
-  }
-
   &__empty-state {
-    @include scroll-view-centered-state;
-    gap: $spacing-sm;
-  }
-
-  &__empty-mascot {
-    width: 240rpx;
-    height: 240rpx;
-  }
-
-  &__empty-text {
-    font-size: $font-size-base;
-    color: $color-text-secondary;
-  }
-
-  &__empty-hint {
-    font-size: $font-size-sm;
-    color: $color-text-muted;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
   }
 
   &__spacer {
@@ -174,3 +140,4 @@
     height: 0;
   }
 }
+

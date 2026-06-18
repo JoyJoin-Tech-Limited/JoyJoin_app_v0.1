@@ -36,6 +36,7 @@ export type ErrorCode =
   | 'REGISTRATION_DEADLINE_PASSED'
   | 'POOL_FULL'
   | 'REGISTRATION_FAILED'
+  | 'REGISTRATION_DISABLED'
   | 'PAYMENTS_DISABLED';
 
 interface ErrorTemplate {
@@ -151,6 +152,10 @@ const ERROR_TEMPLATES: Record<ErrorCode, ErrorTemplate> = {
   REGISTRATION_FAILED: {
     surface: 'toast-error',
     default: '提交没成功，再试一次',
+  },
+  REGISTRATION_DISABLED: {
+    surface: 'toast-error',
+    default: '报名通道暂时关闭',
   },
   PAYMENTS_DISABLED: {
     surface: 'full-page-error',

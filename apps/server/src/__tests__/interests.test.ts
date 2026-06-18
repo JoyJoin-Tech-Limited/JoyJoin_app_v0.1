@@ -36,7 +36,7 @@ describe('Interest Taxonomy', () => {
     for (const interest of INTEREST_TAXONOMY) {
       expect(interest.id).toBeTruthy();
       expect(interest.label).toBeTruthy();
-      expect(['food', 'entertainment', 'lifestyle', 'culture', 'social']).toContain(interest.macroCategory);
+      expect(['food', 'play', 'sports', 'culture', 'life', 'growth']).toContain(interest.macroCategory);
       expect(['R', 'I', 'A', 'S', 'E', 'C']).toContain(interest.riasec);
       expect(typeof interest.active).toBe('boolean');
     }
@@ -238,14 +238,14 @@ describe('buildCardDeck', () => {
     const deck = buildCardDeck(18);
     const categories = new Set(deck.map(c => c.macroCategory));
     // Should cover all 5 categories
-    expect(categories.size).toBe(5);
+    expect(categories.size).toBe(6);
   });
 });
 
 describe('getChipListByCategory', () => {
   it('should group interests by category', () => {
     const chipList = getChipListByCategory();
-    expect(Object.keys(chipList)).toEqual(['food', 'entertainment', 'lifestyle', 'culture', 'social']);
+    expect(Object.keys(chipList)).toEqual(['food', 'play', 'sports', 'culture', 'life', 'growth']);
     // Each category should have at least one interest
     for (const category of Object.keys(chipList) as (keyof typeof chipList)[]) {
       expect(chipList[category].length).toBeGreaterThan(0);

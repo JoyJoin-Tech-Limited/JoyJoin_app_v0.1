@@ -26,6 +26,7 @@ export const DAYS_OF_WEEK = [
 export interface Venue {
   id: string;
   name: string;
+  brandName?: string | null;
   type: string;
   address: string;
   city: string;
@@ -149,6 +150,7 @@ export const REDEMPTION_METHODS = [
 
 export interface VenueFormData {
   name: string;
+  brandName: string;
   type: string;
   address: string;
   city: string;

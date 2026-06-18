@@ -31,6 +31,8 @@ interface WarmupPhaseViewProps {
   vibe?: VibeId
   /** Server-computed archetype mix text; falls back to client-side computation if absent. */
   archetypeMixText?: string
+  /** True when the session is in custom tier mode; changes the final warmup CTA label. */
+  isCustomMode?: boolean
   onGenerateTopics: (mood: AtmosphereMood) => void
   onToggleReady: () => void
   onNextTopic: () => void
@@ -135,6 +137,7 @@ export function WarmupPhaseView({
   isHost,
   vibe,
   archetypeMixText: propArchetypeMixText,
+  isCustomMode,
   onGenerateTopics,
   onToggleReady,
   onNextTopic,
@@ -361,7 +364,7 @@ export function WarmupPhaseView({
                     )}
                     {p.isHost && (
                       <Image
-                        src={localAsset('/assets/icons/status-icons/status-crown.png')}
+                        src={localAsset('/assets/icons/status-icons/status-crown.webp')}
                         className='icebreaker__participant-host'
                         lazyLoad
                       />
@@ -482,7 +485,7 @@ export function WarmupPhaseView({
                 disabled={isAdvancing}
                 loading={isAdvancing}
               >
-                {isAdvancing ? '切换中…' : '进入下一阶段'}
+                {isAdvancing ? '切换中…' : isCustomMode ? '选择下一个游戏' : '进入下一阶段'}
               </Button>
             ) : null}
 

@@ -1,0 +1,191 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [release]
+  workflow_dispatch:
+
+concurrency:
+  group: joyjoin-prod-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  quality-gates:
+    uses: ./.github/workflows/quality-gates.yml
+    secrets: inherit
+
+  deploy-production:
+    name: Production Deployment
+    needs: [quality-gates]
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare remote rsync target
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          script: |
+            set -euo pipefail
+            mkdir -p ~/JoyJoin
+            if ! command -v rsync >/dev/null 2>&1; then
+              echo "rsync not found on server; installing..."
+              if command -v dnf >/dev/null 2>&1; then
+                sudo dnf install -y rsync
+              elif command -v yum >/dev/null 2>&1; then
+                sudo yum install -y rsync
+              elif command -v apt-get >/dev/null 2>&1; then
+                sudo apt-get update
+                sudo apt-get install -y rsync
+              else
+                echo "❌ Cannot install rsync automatically. Install rsync on the server and rerun deployment."
+                exit 1
+              fi
+            fi
+            if ! command -v pg_dump >/dev/null 2>&1; then
+              echo "postgresql client not found on server; installing..."
+              if command -v dnf >/dev/null 2>&1; then
+                sudo dnf install -y postgresql
+              elif command -v yum >/dev/null 2>&1; then
+                sudo yum install -y postgresql
+              elif command -v apt-get >/dev/null 2>&1; then
+                sudo apt-get update
+                sudo apt-get install -y postgresql-client
+              else
+                echo "⚠️ Cannot install postgresql client automatically. pg_dump snapshots will be skipped."
+              fi
+            fi
+
+      - name: Upload deployment workspace via rsync
+        uses: burnett01/rsync-deployments@7.1.0
+        with:
+          switches: >-
+            -az --delete
+            --exclude=.git/
+            --exclude=.github/
+            --exclude=.cursor/
+            --exclude=.agents/
+            --exclude=.env
+            --exclude=.env.*
+            --exclude=node_modules/
+            --exclude=dist/
+            --exclude=build/
+            --exclude=coverage/
+            --exclude=.joyjoin/
+            --exclude=tmp/
+            --exclude=reports/
+            --exclude=attached_assets/
+            --exclude=archived/
+          path: ./
+          remote_path: ~/JoyJoin/
+          remote_host: ${{ secrets.SERVER_IP }}
+          remote_user: ${{ secrets.SERVER_USER }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          remote_key_pass: ${{ secrets.SSH_KEY_PASSPHRASE }}
+
+      - name: Encode multiline secrets for SSH transport
+        env:
+          WECHAT_PAY_PRIVATE_KEY: ${{ secrets.WECHAT_PAY_PRIVATE_KEY }}
+          WECHAT_PAY_PLATFORM_CERT: ${{ secrets.WECHAT_PAY_PLATFORM_CERT }}
+        run: |
+          echo "WECHAT_PAY_PRIVATE_KEY_B64=$(printf '%s' "$WECHAT_PAY_PRIVATE_KEY" | base64 -w0)" >> "$GITHUB_ENV"
+          echo "WECHAT_PAY_PLATFORM_CERT_B64=$(printf '%s' "$WECHAT_PAY_PLATFORM_CERT" | base64 -w0)" >> "$GITHUB_ENV"
+
+      - name: SSH Remote Production Deployment
+        env:
+          # ── Required secrets (production API startup) ─────────────────────
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          WECHAT_APPID: ${{ secrets.WECHAT_APPID }}
+          WECHAT_SECRET: ${{ secrets.WECHAT_SECRET }}
+          # ── Optional secrets (sync only when set in GitHub) ──────────────
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ADMIN_CREATE_SECRET_KEY: ${{ secrets.ADMIN_CREATE_SECRET_KEY }}
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          WECHAT_PAY_APP_ID: ${{ secrets.WECHAT_PAY_APP_ID }}
+          WECHAT_PAY_MCH_ID: ${{ secrets.WECHAT_PAY_MCH_ID }}
+          WECHAT_PAY_SERIAL_NO: ${{ secrets.WECHAT_PAY_SERIAL_NO }}
+          WECHAT_PAY_PRIVATE_KEY_B64: ${{ env.WECHAT_PAY_PRIVATE_KEY_B64 }}
+          WECHAT_PAY_APIV3_KEY: ${{ secrets.WECHAT_PAY_APIV3_KEY }}
+          WECHAT_PAY_PLATFORM_CERT_B64: ${{ env.WECHAT_PAY_PLATFORM_CERT_B64 }}
+          # ── Repository variables (non-secret / public config) ───────────
+          NODE_ENV: ${{ vars.NODE_ENV }}
+          PORT: ${{ vars.PORT }}
+          APP_URL: ${{ vars.APP_URL }}
+          COOKIE_DOMAIN: ${{ vars.COOKIE_DOMAIN }}
+          CORS_ORIGINS: ${{ vars.CORS_ORIGINS }}
+          ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
+          PAYMENTS_ENABLED: ${{ vars.PAYMENTS_ENABLED }}
+          MINIMAX_BASE_URL: ${{ vars.MINIMAX_BASE_URL }}
+          MINIMAX_MODEL: ${{ vars.MINIMAX_MODEL }}
+          MINIMAX_TIMEOUT_MS: ${{ vars.MINIMAX_TIMEOUT_MS }}
+          CREATIVE_AI_PROVIDER: ${{ vars.CREATIVE_AI_PROVIDER }}
+          CREATIVE_AI_TAGS_PROVIDER: ${{ vars.CREATIVE_AI_TAGS_PROVIDER }}
+          CREATIVE_AI_THEME_PROVIDER: ${{ vars.CREATIVE_AI_THEME_PROVIDER }}
+          CREATIVE_AI_TITLE_PROVIDER: ${{ vars.CREATIVE_AI_TITLE_PROVIDER }}
+          AI_TIMEOUT_MS: ${{ vars.AI_TIMEOUT_MS }}
+          # ── Geocoding / Maps ─────────────────────────────────────────────
+          AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
+          AMAP_SECURITY_KEY: ${{ secrets.AMAP_SECURITY_KEY }}
+          # ── Feature flags & AI behavior ──────────────────────────────────
+          SOCIAL_AI_PROVIDER: ${{ vars.SOCIAL_AI_PROVIDER }}
+          SOCIAL_AUCTION_LLM_ENABLED: ${{ vars.SOCIAL_AUCTION_LLM_ENABLED }}
+          SOCIAL_MICRO_CHALLENGE_LLM_ENABLED: ${{ vars.SOCIAL_MICRO_CHALLENGE_LLM_ENABLED }}
+          SOCIAL_MINISCRIPT_LLM_ENABLED: ${{ vars.SOCIAL_MINISCRIPT_LLM_ENABLED }}
+          SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT: ${{ vars.SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT }}
+          MASCOT_DISPLAY_NAME: ${{ vars.MASCOT_DISPLAY_NAME }}
+          MASCOT_BACKSTORY_ENABLED: ${{ vars.MASCOT_BACKSTORY_ENABLED }}
+          MASCOT_ORIGIN_LORE_ENABLED: ${{ vars.MASCOT_ORIGIN_LORE_ENABLED }}
+          DEBUG_AUTH: ${{ vars.DEBUG_AUTH }}
+          ENABLE_MATCHER_V2: ${{ vars.ENABLE_MATCHER_V2 }}
+          ENABLE_SEMANTIC_SIMILARITY: ${{ vars.ENABLE_SEMANTIC_SIMILARITY }}
+          EMBEDDING_BASE_URL: ${{ vars.EMBEDDING_BASE_URL }}
+          EMBEDDING_MODEL: ${{ vars.EMBEDDING_MODEL }}
+          ENABLE_ADAPTIVE_WEIGHTS: ${{ vars.ENABLE_ADAPTIVE_WEIGHTS }}
+          LOG_LEVEL: ${{ vars.LOG_LEVEL }}
+          SOCIAL_DEFAULT_REASONING_EFFORT: ${{ vars.SOCIAL_DEFAULT_REASONING_EFFORT }}
+          DEEPSEEK_PRO_DAILY_BUDGET_USD: ${{ vars.DEEPSEEK_PRO_DAILY_BUDGET_USD }}
+          ENABLE_PRO_MATCH_EXPLANATIONS: ${{ vars.ENABLE_PRO_MATCH_EXPLANATIONS }}
+          XIAOYUE_MAX_TURNS: ${{ vars.XIAOYUE_MAX_TURNS }}
+          WECHAT_PAY_NOTIFY_URL: ${{ vars.WECHAT_PAY_NOTIFY_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          command_timeout: 60m
+          envs: DATABASE_URL,SESSION_SECRET,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,ADMIN_CREATE_SECRET_KEY,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,COOKIE_DOMAIN,CORS_ORIGINS,ALLOWED_ORIGINS,PAYMENTS_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,AI_TIMEOUT_MS,AMAP_API_KEY,AMAP_SECURITY_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,EMBEDDING_BASE_URL,EMBEDDING_MODEL,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL,GITHUB_TOKEN
+          script: |
+            set -euo pipefail
+            cd ~/JoyJoin
+            ~/JoyJoin/deployment/scripts/deploy-production.sh
+
+      - name: Notify deployment failure
+        if: failure()
+        env:
+          WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B "$GITHUB_SHA" | head -1)
+          echo "::error::Deploy failed for commit ${GITHUB_SHA:0:7}: $COMMIT_MSG"
+          if [ -n "$WECOM_BOT_KEY" ]; then
+            node scripts/wecom-notify.mjs \
+              --markdown "## ❌ Deploy Failed\n\nCommit: ${GITHUB_SHA:0:7} — $COMMIT_MSG\n\nRun: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          fi
+
+      - name: Notify deployment success
+        if: success() && github.event_name == 'push'
+        env:
+          WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
+        run: |
+          if [ -n "$WECOM_BOT_KEY" ]; then
+            node scripts/wecom-notify.mjs \
+              --markdown "## ✅ Deploy Success\n\nCommit ${GITHUB_SHA:0:7} deployed to production"
+          fi

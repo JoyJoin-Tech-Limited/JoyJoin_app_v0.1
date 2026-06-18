@@ -1,0 +1,75 @@
+@use '../../styles/variables' as *;
+
+.share-card-shimmer {
+  padding: $spacing-sm $spacing-md $spacing-md;
+  background: var(--profile-surface);
+  border-bottom: 1rpx solid var(--profile-divider);
+
+  &__card {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    border-radius: $card-radius-sm;
+    background: var(--profile-primary-04);
+    margin-bottom: $spacing-xs;
+  }
+
+  &__avatar {
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: 50%;
+    background: var(--profile-primary-14);
+    animation: share-card-shimmer-pulse 1.2s ease-in-out infinite;
+  }
+
+  &__lines {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__line {
+    height: 20rpx;
+    border-radius: $radius-pill;
+    background: var(--profile-primary-14);
+    animation: share-card-shimmer-pulse 1.2s ease-in-out infinite;
+
+    &--short {
+      width: 60%;
+    }
+  }
+
+  &__text {
+    display: block;
+    font-size: $font-size-xs;
+    font-family: $font-ui;
+    color: var(--profile-text-secondary);
+    text-align: center;
+    line-height: $line-height-normal;
+  }
+}
+
+@keyframes share-card-shimmer-pulse {
+  0%, 100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .share-card-shimmer__avatar,
+  .share-card-shimmer__line {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+.profile-page--degradation .share-card-shimmer__avatar,
+.profile-page--degradation .share-card-shimmer__line {
+  animation: none;
+  opacity: 1;
+}

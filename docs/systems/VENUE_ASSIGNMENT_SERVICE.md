@@ -1,6 +1,6 @@
 # Venue Assignment Service
 
-> Canonical reference for automatic venue-to-group assignment after pool matching. Last updated: 2026-06-02
+> Canonical reference for automatic venue-to-group assignment after pool matching. Last updated: 2026-06-16
 
 ## Overview
 
@@ -106,6 +106,8 @@ idx_event_pool_groups_venue_status (venue_assignment_status)
   }
 }
 ```
+
+`venueName` is resolved as `COALESCE(brand_name, name)` so the public brand name is shown when populated, falling back to the internal venue name otherwise.
 
 When `venueAssignmentStatus === 'unassigned'`, the mini-program shows a "地点待定" state.
 

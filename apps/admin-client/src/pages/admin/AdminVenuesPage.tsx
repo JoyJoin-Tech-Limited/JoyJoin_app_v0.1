@@ -37,7 +37,7 @@ import { Switch } from "@/components/ui/switch";
 import { Store, Plus, Edit, Trash2, Building, TrendingUp, Calendar, DollarSign, Clock, X, CalendarDays, LayoutGrid, AlertTriangle, ArrowRightLeft, Gift, Percent, Tag, CircleDollarSign, Eye, EyeOff, MapPin, Map, Check, Loader2 } from "lucide-react";
 import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
 import { shenzhenClusters, getDistrictsByCluster, getDistrictById, getClusterById } from "@shared/districts";
-import { queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import AmapPicker from "@/components/discover/AmapPicker";
@@ -72,6 +72,7 @@ const DAYS_OF_WEEK = [
 interface Venue {
   id: string;
   name: string;
+  brandName?: string | null;
   type: string;
   address: string;
   city: string;
@@ -225,6 +226,7 @@ export default function AdminVenuesPage() {
   
   const [formData, setFormData] = useState({
     name: "",
+    brandName: "",
     type: "restaurant",
     address: "",
     city: "深圳",
@@ -268,7 +270,6 @@ export default function AdminVenuesPage() {
   // Query for all time slots (always fetch for card summaries + calendar view)
   const { data: allTimeSlots = [], isLoading: allTimeSlotsLoading } = useQuery<AllTimeSlot[]>({
     queryKey: ["/api/admin/time-slots/all"],
-    queryFn: () => fetch("/api/admin/time-slots/all", { credentials: "include" }).then(r => r.json()),
   });
 
   // Group time slots by day of week for calendar display
@@ -293,13 +294,14 @@ export default function AdminVenuesPage() {
   }, [allTimeSlots]);
 
   const createMutation = useMutation({
-    mutationFn: (data: any) =>
-      fetch("/api/admin/venues", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(data),
-      }).then((r) => r.json()),
+    mutationFn: async (data: any) => {
+      try {
+        const res = await apiRequest("POST", "/api/admin/venues", data);
+        return await res.json();
+      } catch (err) {
+        throw err instanceof Error ? err : new Error("创建场地失败");
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/venues"] });
       setShowCreateDialog(false);
@@ -319,13 +321,14 @@ export default function AdminVenuesPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      fetch(`/api/admin/venues/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(data),
-      }).then((r) => r.json()),
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      try {
+        const res = await apiRequest("PATCH", `/api/admin/venues/${id}`, data);
+        return await res.json();
+      } catch (err) {
+        throw err instanceof Error ? err : new Error("更新场地失败");
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/venues"] });
       setShowEditDialog(false);
@@ -426,6 +429,7 @@ export default function AdminVenuesPage() {
   const resetForm = () => {
     setFormData({
       name: "",
+      brandName: "",
       type: "restaurant",
       address: "",
       city: "深圳",
@@ -481,6 +485,7 @@ export default function AdminVenuesPage() {
 
     createMutation.mutate({
       name: formData.name,
+      brandName: formData.brandName || undefined,
       type: formData.type,
       address: formData.address,
       city: formData.city,
@@ -519,6 +524,7 @@ export default function AdminVenuesPage() {
     setSelectedVenue(venue);
     setFormData({
       name: venue.name,
+      brandName: (venue as any).brandName || (venue as any).brand_name || "",
       type: venue.type,
       address: venue.address,
       city: venue.city,
@@ -570,6 +576,7 @@ export default function AdminVenuesPage() {
       id: selectedVenue.id,
       data: {
         name: formData.name,
+        brandName: formData.brandName || null,
         type: formData.type,
         address: formData.address,
         city: formData.city,
@@ -981,7 +988,7 @@ export default function AdminVenuesPage() {
               <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-3">
                 <div className="flex-1 min-w-0">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    {venue.name}
+                    {venue.brandName || venue.name}
                     <Badge variant="outline">{getTypeLabel(venue.type)}</Badge>
                   </CardTitle>
                   <p className="text-sm text-muted-foreground truncate">{venue.city} · {venue.district}</p>

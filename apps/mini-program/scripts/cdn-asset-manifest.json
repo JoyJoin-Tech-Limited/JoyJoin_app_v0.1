@@ -3,58 +3,6 @@
     "cdnBaseUrl": "https://joyjoinapp.com/static",
     "assets": [
         {
-            "localPath": "assets/archetypes/archetype-cat.webp",
-            "cdnPath": "assets/archetypes/archetype-cat.webp"
-        },
-        {
-            "localPath": "assets/archetypes/archetype-corgi.webp",
-            "cdnPath": "assets/archetypes/archetype-corgi.webp"
-        },
-        {
-            "localPath": "assets/archetypes/archetype-dolphin_calm.webp",
-            "cdnPath": "assets/archetypes/archetype-dolphin_calm.webp"
-        },
-        {
-            "localPath": "assets/archetypes/archetype-elephant.webp",
-            "cdnPath": "assets/archetypes/archetype-elephant.webp"
-        },
-        {
-            "localPath": "assets/archetypes/archetype-fox.webp",
-            "cdnPath": "assets/archetypes/archetype-fox.webp"
-        },
-        {
-            "localPath": "assets/archetypes/archetype-hamster_praise.webp",
-            "cdnPath": "assets/archetypes/archetype-hamster_praise.webp"
-        },
-        {
-            "localPath": "assets/archetypes/archetype-koala.webp",
-            "cdnPath": "assets/archetypes/archetype-koala.webp"
-        },
-        {
-            "localPath": "assets/archetypes/archetype-octopus.webp",
-            "cdnPath": "assets/archetypes/archetype-octopus.webp"
-        },
-        {
-            "localPath": "assets/archetypes/archetype-owl.webp",
-            "cdnPath": "assets/archetypes/archetype-owl.webp"
-        },
-        {
-            "localPath": "assets/archetypes/archetype-rooster.webp",
-            "cdnPath": "assets/archetypes/archetype-rooster.webp"
-        },
-        {
-            "localPath": "assets/archetypes/archetype-spider.webp",
-            "cdnPath": "assets/archetypes/archetype-spider.webp"
-        },
-        {
-            "localPath": "assets/archetypes/archetype-spritesheet.webp",
-            "cdnPath": "assets/archetypes/archetype-spritesheet.webp"
-        },
-        {
-            "localPath": "assets/archetypes/archetype-turtle.webp",
-            "cdnPath": "assets/archetypes/archetype-turtle.webp"
-        },
-        {
             "localPath": "assets/joyjoin-logo.webp",
             "cdnPath": "assets/joyjoin-logo.webp"
         },
@@ -69,86 +17,6 @@
         {
             "localPath": "assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2",
             "cdnPath": "assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-cat-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-cat-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-corgi-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-corgi-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-dolphin_calm-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-dolphin_calm-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-elephant-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-elephant-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-fox-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-fox-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-hamster_praise-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-hamster_praise-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-koala-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-koala-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-octopus-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-octopus-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-owl-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-owl-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-rooster-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-rooster-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-spider-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-spider-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/archetype/archetype-turtle-head@3x.webp",
-            "cdnPath": "assets/icons/archetype/archetype-turtle-head@3x.webp"
-        },
-        {
-            "localPath": "assets/icons/chemistry-badges/chem-chat.webp",
-            "cdnPath": "assets/icons/chemistry-badges/chem-chat.webp"
-        },
-        {
-            "localPath": "assets/icons/chemistry-badges/chem-fire.webp",
-            "cdnPath": "assets/icons/chemistry-badges/chem-fire.webp"
-        },
-        {
-            "localPath": "assets/icons/chemistry-badges/chem-sprout.webp",
-            "cdnPath": "assets/icons/chemistry-badges/chem-sprout.webp"
-        },
-        {
-            "localPath": "assets/icons/chemistry-badges/chem-warm.webp",
-            "cdnPath": "assets/icons/chemistry-badges/chem-warm.webp"
-        },
-        {
-            "localPath": "assets/icons/mood-icons/mood-emotional.png",
-            "cdnPath": "assets/icons/mood-icons/mood-emotional.png"
-        },
-        {
-            "localPath": "assets/icons/mood-icons/mood-funny.png",
-            "cdnPath": "assets/icons/mood-icons/mood-funny.png"
-        },
-        {
-            "localPath": "assets/icons/mood-icons/mood-life.png",
-            "cdnPath": "assets/icons/mood-icons/mood-life.png"
-        },
-        {
-            "localPath": "assets/icons/mood-icons/mood-relaxed.png",
-            "cdnPath": "assets/icons/mood-icons/mood-relaxed.png"
         },
         {
             "localPath": "assets/icons/phase-icons/phase-auction.webp",
@@ -195,56 +63,308 @@
             "cdnPath": "assets/icons/phase-icons/phase-warmup.webp"
         },
         {
-            "localPath": "assets/icons/status-icons/status-crown.png",
-            "cdnPath": "assets/icons/status-icons/status-crown.png"
+            "localPath": "assets/icons/phase-icons/phase-speed-friending.webp",
+            "cdnPath": "assets/icons/phase-icons/phase-speed-friending.webp"
         },
         {
-            "localPath": "assets/icons/status-icons/status-waiting.png",
-            "cdnPath": "assets/icons/status-icons/status-waiting.png"
+            "localPath": "assets/icons/reaction-icons/reaction-celebrate.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-celebrate.webp"
         },
         {
-            "localPath": "assets/icons/ui/icon-calendar.webp",
-            "cdnPath": "assets/icons/ui/icon-calendar.webp"
+            "localPath": "assets/icons/reaction-icons/reaction-celebrate@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-celebrate@2x.webp"
         },
         {
-            "localPath": "assets/icons/ui/icon-chemistry.webp",
-            "cdnPath": "assets/icons/ui/icon-chemistry.webp"
+            "localPath": "assets/icons/reaction-icons/reaction-celebrate@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-celebrate@3x.webp"
         },
         {
-            "localPath": "assets/icons/ui/icon-coupon.webp",
-            "cdnPath": "assets/icons/ui/icon-coupon.webp"
+            "localPath": "assets/icons/reaction-icons/reaction-clap.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-clap.webp"
         },
         {
-            "localPath": "assets/icons/ui/icon-edit.webp",
-            "cdnPath": "assets/icons/ui/icon-edit.webp"
+            "localPath": "assets/icons/reaction-icons/reaction-clap@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-clap@2x.webp"
         },
         {
-            "localPath": "assets/icons/ui/icon-filter.webp",
-            "cdnPath": "assets/icons/ui/icon-filter.webp"
+            "localPath": "assets/icons/reaction-icons/reaction-clap@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-clap@3x.webp"
         },
         {
-            "localPath": "assets/icons/ui/icon-footprint.webp",
-            "cdnPath": "assets/icons/ui/icon-footprint.webp"
+            "localPath": "assets/icons/reaction-icons/reaction-fire.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-fire.webp"
         },
         {
-            "localPath": "assets/icons/ui/icon-link.webp",
-            "cdnPath": "assets/icons/ui/icon-link.webp"
+            "localPath": "assets/icons/reaction-icons/reaction-fire@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-fire@2x.webp"
         },
         {
-            "localPath": "assets/icons/ui/icon-location.webp",
-            "cdnPath": "assets/icons/ui/icon-location.webp"
+            "localPath": "assets/icons/reaction-icons/reaction-fire@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-fire@3x.webp"
         },
         {
-            "localPath": "assets/icons/ui/icon-people.webp",
-            "cdnPath": "assets/icons/ui/icon-people.webp"
+            "localPath": "assets/icons/reaction-icons/reaction-funny.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-funny.webp"
         },
         {
-            "localPath": "assets/icons/ui/icon-price.webp",
-            "cdnPath": "assets/icons/ui/icon-price.webp"
+            "localPath": "assets/icons/reaction-icons/reaction-funny@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-funny@2x.webp"
         },
         {
-            "localPath": "assets/icons/ui/icon-status.webp",
-            "cdnPath": "assets/icons/ui/icon-status.webp"
+            "localPath": "assets/icons/reaction-icons/reaction-funny@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-funny@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-rose.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-rose.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-rose@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-rose@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-rose@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-rose@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-think.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-think.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-think@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-think@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-think@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-think@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-wow.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-wow.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-wow@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-wow@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-wow@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-wow@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-money-bag.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-money-bag.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-money-bag@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-money-bag@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-money-bag@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-money-bag@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-smirk.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-smirk.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-smirk@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-smirk@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-smirk@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-smirk@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-sunglasses.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-sunglasses.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-sunglasses@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-sunglasses@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-sunglasses@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-sunglasses@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-purple-heart.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-purple-heart.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-purple-heart@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-purple-heart@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-purple-heart@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-purple-heart@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-sweat.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-sweat.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-sweat@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-sweat@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-sweat@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-sweat@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-devil.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-devil.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-devil@2x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-devil@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reaction-icons/reaction-devil@3x.webp",
+            "cdnPath": "assets/icons/reaction-icons/reaction-devil@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reveal-icons/reveal-exact-archetype.webp",
+            "cdnPath": "assets/icons/reveal-icons/reveal-exact-archetype.webp"
+        },
+        {
+            "localPath": "assets/icons/reveal-icons/reveal-exact-archetype@2x.webp",
+            "cdnPath": "assets/icons/reveal-icons/reveal-exact-archetype@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reveal-icons/reveal-exact-archetype@3x.webp",
+            "cdnPath": "assets/icons/reveal-icons/reveal-exact-archetype@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reveal-icons/reveal-hometown-industry.webp",
+            "cdnPath": "assets/icons/reveal-icons/reveal-hometown-industry.webp"
+        },
+        {
+            "localPath": "assets/icons/reveal-icons/reveal-hometown-industry@2x.webp",
+            "cdnPath": "assets/icons/reveal-icons/reveal-hometown-industry@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reveal-icons/reveal-hometown-industry@3x.webp",
+            "cdnPath": "assets/icons/reveal-icons/reveal-hometown-industry@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reveal-icons/reveal-same-archetype-band.webp",
+            "cdnPath": "assets/icons/reveal-icons/reveal-same-archetype-band.webp"
+        },
+        {
+            "localPath": "assets/icons/reveal-icons/reveal-same-archetype-band@2x.webp",
+            "cdnPath": "assets/icons/reveal-icons/reveal-same-archetype-band@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reveal-icons/reveal-same-archetype-band@3x.webp",
+            "cdnPath": "assets/icons/reveal-icons/reveal-same-archetype-band@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reveal-icons/reveal-same-relationship.webp",
+            "cdnPath": "assets/icons/reveal-icons/reveal-same-relationship.webp"
+        },
+        {
+            "localPath": "assets/icons/reveal-icons/reveal-same-relationship@2x.webp",
+            "cdnPath": "assets/icons/reveal-icons/reveal-same-relationship@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reveal-icons/reveal-same-relationship@3x.webp",
+            "cdnPath": "assets/icons/reveal-icons/reveal-same-relationship@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/reveal-icons/reveal-same-work-industry.webp",
+            "cdnPath": "assets/icons/reveal-icons/reveal-same-work-industry.webp"
+        },
+        {
+            "localPath": "assets/icons/reveal-icons/reveal-same-work-industry@2x.webp",
+            "cdnPath": "assets/icons/reveal-icons/reveal-same-work-industry@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/reveal-icons/reveal-same-work-industry@3x.webp",
+            "cdnPath": "assets/icons/reveal-icons/reveal-same-work-industry@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-destined-match.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-destined-match.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-destined-match@2x.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-destined-match@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-destined-match@3x.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-destined-match@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-explorer.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-explorer.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-explorer@2x.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-explorer@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-explorer@3x.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-explorer@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-first-answer.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-first-answer.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-first-answer@2x.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-first-answer@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-first-answer@3x.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-first-answer@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-halfway-hero.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-halfway-hero.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-halfway-hero@2x.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-halfway-hero@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-halfway-hero@3x.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-halfway-hero@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-night-owl.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-night-owl.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-night-owl@2x.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-night-owl@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-night-owl@3x.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-night-owl@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-perfectionist.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-perfectionist.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-perfectionist@2x.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-perfectionist@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-perfectionist@3x.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-perfectionist@3x.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-quick-thinker.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-quick-thinker.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-quick-thinker@2x.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-quick-thinker@2x.webp"
+        },
+        {
+            "localPath": "assets/icons/achievement-badges/achievement-quick-thinker@3x.webp",
+            "cdnPath": "assets/icons/achievement-badges/achievement-quick-thinker@3x.webp"
         },
         {
             "localPath": "assets/illustrations/lovart-blind-box-body.webp",
@@ -279,24 +399,24 @@
             "cdnPath": "assets/lovart/icebreaker/backgrounds/bg-undercover-word.jpg"
         },
         {
-            "localPath": "assets/lovart/icebreaker/celebrations/celebration-auction-sold.png",
-            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-auction-sold.png"
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-auction-sold.webp",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-auction-sold.webp"
         },
         {
-            "localPath": "assets/lovart/icebreaker/celebrations/celebration-dice-reveal.png",
-            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-dice-reveal.png"
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-dice-reveal.webp",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-dice-reveal.webp"
         },
         {
-            "localPath": "assets/lovart/icebreaker/celebrations/celebration-mirror-result.png",
-            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-mirror-result.png"
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-mirror-result.webp",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-mirror-result.webp"
         },
         {
-            "localPath": "assets/lovart/icebreaker/celebrations/celebration-quip-champion.png",
-            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-quip-champion.png"
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-quip-champion.webp",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-quip-champion.webp"
         },
         {
-            "localPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.png",
-            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.png"
+            "localPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.webp",
+            "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.webp"
         },
         {
             "localPath": "assets/lovart/icebreaker/icons/icon-coin-empty.png",
@@ -703,24 +823,400 @@
             "cdnPath": "assets/miniscript/xianxia-thumb.webp"
         },
         {
-            "localPath": "assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf",
-            "cdnPath": "assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf"
-        },
-        {
             "localPath": "assets/promo/banner-hero-lovart-v1.webp",
             "cdnPath": "assets/promo/banner-hero-lovart-v1.webp"
         },
         {
-            "localPath": "assets/matching/matching-bg.webp",
-            "cdnPath": "assets/matching-heroes/matching-bg.webp"
+            "localPath": "assets/ceremony/welcome-back-hero-20260604-v1.webp",
+            "cdnPath": "assets/ceremony/welcome-back-hero-20260604-v1.webp"
         },
         {
-            "localPath": "assets/matching/matching-waiting-hero.webp",
-            "cdnPath": "assets/matching-heroes/matching-waiting-hero.webp"
+            "localPath": "assets/ceremony/event-paid-confirmed-20260604-v1.webp",
+            "cdnPath": "assets/ceremony/event-paid-confirmed-20260604-v1.webp"
         },
         {
-            "localPath": "assets/matching/matching-no-match-hero.webp",
-            "cdnPath": "assets/matching-heroes/matching-no-match-hero.webp"
+            "localPath": "assets/ceremony/tier-vibe-breeze-20260604-v1.webp",
+            "cdnPath": "assets/ceremony/tier-vibe-breeze-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/tier-vibe-glow-20260604-v1.webp",
+            "cdnPath": "assets/ceremony/tier-vibe-glow-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/tier-vibe-blaze-20260604-v1.webp",
+            "cdnPath": "assets/ceremony/tier-vibe-blaze-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/invite-co-branded-20260604-v1.webp",
+            "cdnPath": "assets/ceremony/invite-co-branded-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/event-feedback-thanks-20260604-v1.webp",
+            "cdnPath": "assets/ceremony/event-feedback-thanks-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/see-you-next-time-20260604-v1.webp",
+            "cdnPath": "assets/ceremony/see-you-next-time-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/event-ticket-success-20260616-v1.webp",
+            "cdnPath": "assets/ceremony/event-ticket-success-20260616-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/lovart-event-ticket-payment-hero-20260617-v1.webp",
+            "cdnPath": "assets/ceremony/lovart-event-ticket-payment-hero-20260617-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/payment-verifying-20260616-v1.webp",
+            "cdnPath": "assets/ceremony/payment-verifying-20260616-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/pool-registration-success-20260616-v1.webp",
+            "cdnPath": "assets/ceremony/pool-registration-success-20260616-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/blind-box-reveal-20260616-v1.webp",
+            "cdnPath": "assets/ceremony/blind-box-reveal-20260616-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/invite-header-20260616-v1.webp",
+            "cdnPath": "assets/ceremony/invite-header-20260616-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/tier-custom-20260616-v1.webp",
+            "cdnPath": "assets/ceremony/tier-custom-20260616-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/first-event-celebrate-20260604-v1.webp",
+            "cdnPath": "assets/badges/first-event-celebrate-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/streak-3-events-20260604-v1.webp",
+            "cdnPath": "assets/badges/streak-3-events-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/quiz-halfway-cheer-20260604-v1.webp",
+            "cdnPath": "assets/badges/quiz-halfway-cheer-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/match-reason-same-relationship-20260604-v1.webp",
+            "cdnPath": "assets/badges/match-reason-same-relationship-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/match-reason-same-archetype-band-20260604-v1.webp",
+            "cdnPath": "assets/badges/match-reason-same-archetype-band-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/match-reason-same-work-industry-20260604-v1.webp",
+            "cdnPath": "assets/badges/match-reason-same-work-industry-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/match-reason-exact-archetype-20260604-v1.webp",
+            "cdnPath": "assets/badges/match-reason-exact-archetype-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/match-reason-hometown-industry-20260604-v1.webp",
+            "cdnPath": "assets/badges/match-reason-hometown-industry-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/badges/recap-stamp-of-you-20260604-v1.webp",
+            "cdnPath": "assets/badges/recap-stamp-of-you-20260604-v1.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-cat-head.webp",
+            "cdnPath": "assets/icons/archetype/archetype-cat-head.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-corgi-head.webp",
+            "cdnPath": "assets/icons/archetype/archetype-corgi-head.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-dolphin_calm-head.webp",
+            "cdnPath": "assets/icons/archetype/archetype-dolphin_calm-head.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-elephant-head.webp",
+            "cdnPath": "assets/icons/archetype/archetype-elephant-head.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-fox-head.webp",
+            "cdnPath": "assets/icons/archetype/archetype-fox-head.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-hamster_praise-head.webp",
+            "cdnPath": "assets/icons/archetype/archetype-hamster_praise-head.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-koala-head.webp",
+            "cdnPath": "assets/icons/archetype/archetype-koala-head.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-octopus-head.webp",
+            "cdnPath": "assets/icons/archetype/archetype-octopus-head.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-owl-head.webp",
+            "cdnPath": "assets/icons/archetype/archetype-owl-head.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-rooster-head.webp",
+            "cdnPath": "assets/icons/archetype/archetype-rooster-head.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-spider-head.webp",
+            "cdnPath": "assets/icons/archetype/archetype-spider-head.webp"
+        },
+        {
+            "localPath": "assets/icons/archetype/archetype-turtle-head.webp",
+            "cdnPath": "assets/icons/archetype/archetype-turtle-head.webp"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-cat.png",
+            "cdnPath": "assets/personality/archetypes/archetype-cat.png"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-corgi.png",
+            "cdnPath": "assets/personality/archetypes/archetype-corgi.png"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-dolphin_calm.png",
+            "cdnPath": "assets/personality/archetypes/archetype-dolphin_calm.png"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-elephant.png",
+            "cdnPath": "assets/personality/archetypes/archetype-elephant.png"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-fox.png",
+            "cdnPath": "assets/personality/archetypes/archetype-fox.png"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-hamster_praise.png",
+            "cdnPath": "assets/personality/archetypes/archetype-hamster_praise.png"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-koala.png",
+            "cdnPath": "assets/personality/archetypes/archetype-koala.png"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-octopus.png",
+            "cdnPath": "assets/personality/archetypes/archetype-octopus.png"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-owl.png",
+            "cdnPath": "assets/personality/archetypes/archetype-owl.png"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-rooster.png",
+            "cdnPath": "assets/personality/archetypes/archetype-rooster.png"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-spider.png",
+            "cdnPath": "assets/personality/archetypes/archetype-spider.png"
+        },
+        {
+            "localPath": "assets/personality/archetypes/archetype-turtle.png",
+            "cdnPath": "assets/personality/archetypes/archetype-turtle.png"
+        },
+        {
+            "localPath": "assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp",
+            "cdnPath": "assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp"
+        },
+        {
+            "localPath": "assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp",
+            "cdnPath": "assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp"
+        },
+        {
+            "localPath": "assets/interests/bar.webp",
+            "cdnPath": "images/interests/bar.webp"
+        },
+        {
+            "localPath": "assets/interests/bbq.webp",
+            "cdnPath": "images/interests/bbq.webp"
+        },
+        {
+            "localPath": "assets/interests/beauty.webp",
+            "cdnPath": "images/interests/beauty.webp"
+        },
+        {
+            "localPath": "assets/interests/binge_watch.webp",
+            "cdnPath": "images/interests/binge_watch.webp"
+        },
+        {
+            "localPath": "assets/interests/board_games.webp",
+            "cdnPath": "images/interests/board_games.webp"
+        },
+        {
+            "localPath": "assets/interests/camping.webp",
+            "cdnPath": "images/interests/camping.webp"
+        },
+        {
+            "localPath": "assets/interests/cantonese.webp",
+            "cdnPath": "images/interests/cantonese.webp"
+        },
+        {
+            "localPath": "assets/interests/career.webp",
+            "cdnPath": "images/interests/career.webp"
+        },
+        {
+            "localPath": "assets/interests/cinema.webp",
+            "cdnPath": "images/interests/cinema.webp"
+        },
+        {
+            "localPath": "assets/interests/citywalk.webp",
+            "cdnPath": "images/interests/citywalk.webp"
+        },
+        {
+            "localPath": "assets/interests/climbing.webp",
+            "cdnPath": "images/interests/climbing.webp"
+        },
+        {
+            "localPath": "assets/interests/coffee.webp",
+            "cdnPath": "images/interests/coffee.webp"
+        },
+        {
+            "localPath": "assets/interests/concert.webp",
+            "cdnPath": "images/interests/concert.webp"
+        },
+        {
+            "localPath": "assets/interests/cycling.webp",
+            "cdnPath": "images/interests/cycling.webp"
+        },
+        {
+            "localPath": "assets/interests/dessert.webp",
+            "cdnPath": "images/interests/dessert.webp"
+        },
+        {
+            "localPath": "assets/interests/diy.webp",
+            "cdnPath": "images/interests/diy.webp"
+        },
+        {
+            "localPath": "assets/interests/escape_room.webp",
+            "cdnPath": "images/interests/escape_room.webp"
+        },
+        {
+            "localPath": "assets/interests/exhibition.webp",
+            "cdnPath": "images/interests/exhibition.webp"
+        },
+        {
+            "localPath": "assets/interests/extreme_sports.webp",
+            "cdnPath": "images/interests/extreme_sports.webp"
+        },
+        {
+            "localPath": "assets/interests/fashion.webp",
+            "cdnPath": "images/interests/fashion.webp"
+        },
+        {
+            "localPath": "assets/interests/fitness.webp",
+            "cdnPath": "images/interests/fitness.webp"
+        },
+        {
+            "localPath": "assets/interests/flea_market.webp",
+            "cdnPath": "images/interests/flea_market.webp"
+        },
+        {
+            "localPath": "assets/interests/food_hunting.webp",
+            "cdnPath": "images/interests/food_hunting.webp"
+        },
+        {
+            "localPath": "assets/interests/gaming.webp",
+            "cdnPath": "images/interests/gaming.webp"
+        },
+        {
+            "localPath": "assets/interests/hiking.webp",
+            "cdnPath": "images/interests/hiking.webp"
+        },
+        {
+            "localPath": "assets/interests/hotpot.webp",
+            "cdnPath": "images/interests/hotpot.webp"
+        },
+        {
+            "localPath": "assets/interests/japanese.webp",
+            "cdnPath": "images/interests/japanese.webp"
+        },
+        {
+            "localPath": "assets/interests/ktv.webp",
+            "cdnPath": "images/interests/ktv.webp"
+        },
+        {
+            "localPath": "assets/interests/language.webp",
+            "cdnPath": "images/interests/language.webp"
+        },
+        {
+            "localPath": "assets/interests/live_house.webp",
+            "cdnPath": "images/interests/live_house.webp"
+        },
+        {
+            "localPath": "assets/interests/music.webp",
+            "cdnPath": "images/interests/music.webp"
+        },
+        {
+            "localPath": "assets/interests/pets.webp",
+            "cdnPath": "images/interests/pets.webp"
+        },
+        {
+            "localPath": "assets/interests/photography.webp",
+            "cdnPath": "images/interests/photography.webp"
+        },
+        {
+            "localPath": "assets/interests/podcasts.webp",
+            "cdnPath": "images/interests/podcasts.webp"
+        },
+        {
+            "localPath": "assets/interests/private_kitchen.webp",
+            "cdnPath": "images/interests/private_kitchen.webp"
+        },
+        {
+            "localPath": "assets/interests/reading.webp",
+            "cdnPath": "images/interests/reading.webp"
+        },
+        {
+            "localPath": "assets/interests/sailing.webp",
+            "cdnPath": "images/interests/sailing.webp"
+        },
+        {
+            "localPath": "assets/interests/script_kill.webp",
+            "cdnPath": "images/interests/script_kill.webp"
+        },
+        {
+            "localPath": "assets/interests/standup.webp",
+            "cdnPath": "images/interests/standup.webp"
+        },
+        {
+            "localPath": "assets/interests/startup.webp",
+            "cdnPath": "images/interests/startup.webp"
+        },
+        {
+            "localPath": "assets/interests/tech.webp",
+            "cdnPath": "images/interests/tech.webp"
+        },
+        {
+            "localPath": "assets/interests/theater.webp",
+            "cdnPath": "images/interests/theater.webp"
+        },
+        {
+            "localPath": "assets/interests/travel.webp",
+            "cdnPath": "images/interests/travel.webp"
+        },
+        {
+            "localPath": "assets/interests/variety.webp",
+            "cdnPath": "images/interests/variety.webp"
+        },
+        {
+            "localPath": "assets/interests/vintage.webp",
+            "cdnPath": "images/interests/vintage.webp"
+        },
+        {
+            "localPath": "assets/interests/werewolf.webp",
+            "cdnPath": "images/interests/werewolf.webp"
+        },
+        {
+            "localPath": "assets/interests/western.webp",
+            "cdnPath": "images/interests/western.webp"
+        },
+        {
+            "localPath": "assets/interests/wine.webp",
+            "cdnPath": "images/interests/wine.webp"
         }
     ]
 }

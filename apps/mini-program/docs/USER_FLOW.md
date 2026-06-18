@@ -124,11 +124,11 @@ flowchart TD
 | **Event Feedback** | `pages/event-feedback/index` | Event Detail | Back navigation | `POST /api/events/{id}/feedback` | Auth, event ID | 5-star rating, comment textarea |
 | **Icebreaker Session** | `pages/icebreaker-session/index` | Event Detail / Group Detail | Back/Events tab | `GET /api/events/{id}/session`, `POST /api/social-icebreaker/start`, `POST /api/social-icebreaker/{id}/*` | Auth, event/session ID | Phase machine: waiting→warmup→micro→lie_detective→auction→dice→mini_script→recap→ended. Host controls |
 | **Profile Tab** | `pages/profile/index` | Tab bar | Edit Profile, Rewards, Invite, Payment, Events tab, Terms | `GET /api/auth/user`, `GET /api/coupons` | Auth required | Stats cards, onboarding status, logout |
-| **Edit Profile** | `pages/edit-profile/index` | Profile | Back/Profile tab | `POST /api/onboarding/essential-data`, `POST /api/onboarding/interests`, `GET /api/user/interests` | Auth required | Name, gender, birth year, city, hometown, interests with levels |
-| **Rewards** | `pages/rewards/index` | Profile | Invite | `GET /api/coupons`, `GET /api/gamification`, `GET /api/gamification/history`, `GET /api/redeemable-items`, `POST /api/gamification/redeem` | Auth required | Coupons, joy coins, XP, level, redeemable items, history |
-| **Invite** | `pages/invite/index` | Profile, Rewards | None (copy actions) | `GET /api/referral-stats` | Auth required | Referral code, invite link, reward tiers |
+| **Edit Profile** | `pages/profile-linked/edit-profile/index` | Profile | Back/Profile tab | `POST /api/onboarding/essential-data`, `POST /api/onboarding/interests`, `GET /api/user/interests` | Auth required | Name, gender, birth year, city, hometown, interests with levels |
+| **Rewards** | `pages/profile-linked/rewards/index` | Profile | Invite | `GET /api/coupons`, `GET /api/gamification`, `GET /api/gamification/history`, `GET /api/redeemable-items`, `POST /api/gamification/redeem` | Auth required | Coupons, joy coins, XP, level, redeemable items, history |
+| **Invite** | `pages/profile-linked/invite/index` | Profile, Rewards | None (copy actions) | `GET /api/referral-stats` | Auth required | Referral code, invite link, reward tiers |
 | **Connections** | `pages/connections/index` | Tab bar | None | `GET /api/my-connections` | Auth required | Post-event connections list, peer archetype display |
-| **Terms** | `pages/terms/index` | LandingPage (legal links), Profile | None | None | None | Terms & Privacy policy sections, scroll-to-anchor |
+| **Terms** | `pages/profile-linked/terms/index` | LandingPage (legal links), Profile | None | None | None | Terms & Privacy policy sections, scroll-to-anchor |
 | **Center Tab Empty** | `pages/center-tab-empty/index` | Custom tab bar center | Discover | None | None | Empty state when no activities |
 | **My Events (Legacy)** | `pages/my-events/index` | Deep links | Events tab (redirect) | None | None | Legacy redirect stub |
 | **Journey (Legacy)** | `pages/journey/index` | Deep links | Events tab (redirect) | None | None | Legacy redirect stub |

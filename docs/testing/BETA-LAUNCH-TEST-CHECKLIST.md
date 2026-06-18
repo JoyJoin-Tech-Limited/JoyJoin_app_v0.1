@@ -51,10 +51,10 @@
 | # | Test Case | Steps | Expected |
 |---|-----------|-------|----------|
 | 2.1 | Open location filter | On Discover page, tap location pill/button | `LocationFilterDrawer` slides up from bottom with backdrop overlay |
-| 2.2 | Drawer layout | Inspect drawer contents | Three cluster sections visible: 南山区 (2 districts), 福田区 (1 district), 外区域 (pending, 8 districts). District tiles have heat indicators (热门/active/normal/pending). Pending tiles show "即将开放" label at 0.55 opacity. Top bar has title + close button. |
-| 2.3 | Select a district | Tap a district tile (e.g., 南山中心区) | Tile shows selected state (`aria-pressed=true`). District name shown on discover pill. |
-| 2.4 | Apply filter | Tap "确认" or close drawer | Discover pool list filtered to selected district(s) |
-| 2.5 | Clear selection | Re-open drawer, tap the selected district again to deselect | Selection cleared; discover shows all districts |
+| 2.2 | Drawer layout | Inspect drawer contents | Three cluster sections visible: 南山区 (6 districts), 福田区 (3 districts), 即将开放 (8 districts). District tiles render in a 2-column grid with 28rpx names. Heat shows as compact top-right badges (`热门`/`活跃`/`即将开放`); `normal` has no badge. Pending tiles are at 0.55 opacity. Top bar has Xiaoyue mascot + title + close button. |
+| 2.3 | Select a district | Tap a district tile (e.g., 科技园) | Tile shows selected state (`aria-pressed=true`) with filled primary background and white checkmark; haptic fires. Drawer auto-closes; district name shown on discover pill. |
+| 2.4 | Apply/clear filter | Tap the selected district tile again, or tap "全部区域" | Selection cleared; discover shows all districts. Tap "全部区域" also clears any active filter. |
+| 2.5 | Scroll containment | With drawer open, swipe up/down on the drawer content and on the backdrop | Drawer `ScrollView` scrolls its own content; swiping the backdrop (or at scroll edges) does not scroll the background Discover page. |
 | 2.6 | Close drawer via backdrop | With drawer open, tap the backdrop area | Drawer closes without changing selection |
 | 2.7 | Close drawer via ✕ | Tap the `✕` close button | Drawer closes without changing selection |
 
@@ -62,10 +62,10 @@
 
 | # | Test Case | Steps | Expected |
 |---|-----------|-------|----------|
-| 2.8 | Multiple districts selectable? | Try selecting districts from different clusters | Verify current behavior (likely single-select) |
+| 2.8 | Single-select behavior | Try selecting districts from different clusters | Only one district (or "全部区域") can be active at a time; previous selection is replaced. |
 | 2.9 | No pools in selected district | Select a district with no active pools | Discover shows empty state (StatusCard with "去发现活动" or "清除筛选") |
 | 2.10 | Scroll within drawer | If many districts, scroll the list | `ScrollView` scrolls smoothly with no layout jump at flex bounds |
-| 2.11 | Verify heat indicators | Compare district heat data vs `packages/shared/src/districts.ts` | `hot` districts show orange/red dot + "热门" label; `active` shows blue/teal dot + "活跃" label; `normal` has no label; `pending` shows "即将开放" at 0.55 opacity with grey dot |
+| 2.11 | Verify heat indicators | Compare district heat data vs `packages/shared/src/districts.ts` | `hot` districts show a pink/coral top-right badge "热门"; `active` shows a gold badge "活跃"; `normal` has no badge; `pending` shows a grey badge "即将开放" at 0.55 opacity |
 
 ---
 
@@ -186,7 +186,7 @@
 | # | Test Case | Steps | Expected |
 |---|-----------|-------|----------|
 | 6.1 | Discover tab | Launch app | Discover tab selected by default. Tab icon for Discover highlighted with brand pink tint. |
-| 6.2 | Navigate side tabs | Tab Discover → Events → Connections → Profile | Each tab tap: optimistic highlight → `wx.switchTab` → page loads. Haptic `light` vibration on each tap. |
+| 6.2 | Navigate side tabs | Tab Discover → Events → Connections → Profile | Shared active pill translates to the selected tab (GPU transform, 220ms). Optimistic highlight → `wx.switchTab` → page loads. 180ms double-tap debounce. Haptic `light` vibration on each tap. |
 | 6.3 | Center button | Tap center CTA button | Navigates to CenterHub (`/pages/center-hub/index`). Button shows JoyJoin logo. |
 | 6.4 | Tab sync across pages | Navigate from Discover → pool detail (non-tab page) → tab back | Tab bar state preserved; correct tab highlighted on return |
 | 6.5 | Tab bar layout | Inspect tab bar layout | 4 side tabs (2 left + 2 right) + center floating CTA. Surface height 128rpx, root footprint 182rpx. Center button 148rpx, solid `#FFF4F8` fill. |
@@ -204,7 +204,7 @@
 
 | # | Test Case | Steps | Expected |
 |---|-----------|-------|----------|
-| 6.10 | Rapid tab switching | Quickly tap multiple tabs in succession | Sync state debounced (50ms). Rollback handles overwritten optimistic states gracefully. |
+| 6.10 | Rapid tab switching | Quickly tap multiple tabs in succession | Tab tap handlers debounced 180ms; sync state debounced 50ms. Rollback handles overwritten optimistic states gracefully. |
 | 6.11 | Tab tap failure | Simulate `wx.switchTab` failure | Tab rolls back to previous confirmed selection. `console.warn` logged. |
 | 6.12 | Low-end device | Test on device with `benchmarkLevel <= 15` | Tab bar animations disabled via `.joy-custom-tab-bar--low-end` class. Still functional. |
 | 6.13 | Reduced motion | System accessibility: `prefers-reduced-motion: reduce` | All tab bar animations suppressed (spring, pulse, fade-in). |

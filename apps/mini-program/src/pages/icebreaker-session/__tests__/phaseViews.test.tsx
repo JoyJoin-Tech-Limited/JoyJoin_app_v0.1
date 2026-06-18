@@ -1,24 +1,22 @@
 import { describe, expect, it } from 'vitest'
+import * as mod from '../phaseViews'
 
 // ── Barrel exports: verify all named exports are available ─────────────
 describe('phaseViews barrel exports', () => {
-  it('exports all shared utility types and functions', async () => {
-    const mod = await import('../phaseViews')
+  it('exports all shared utility types and functions', () => {
     expect(mod).toHaveProperty('MOOD_OPTIONS')
     expect(mod).toHaveProperty('getPhaseLabel')
     expect(mod).toHaveProperty('PhaseHeaderIcon')
     expect(mod).toHaveProperty('getMoodLabel')
   })
 
-  it('exports all expansion phase views', async () => {
-    const mod = await import('../phaseViews')
+  it('exports all expansion phase views', () => {
     expect(mod).toHaveProperty('QuipBattlePhaseView')
     expect(mod).toHaveProperty('UndercoverWordPhaseView')
     expect(mod).toHaveProperty('GroupMirrorPhaseView')
   })
 
-  it('exports all core phase views', async () => {
-    const mod = await import('../phaseViews')
+  it('exports all core phase views', () => {
     expect(mod).toHaveProperty('WarmupPhaseView')
     expect(mod).toHaveProperty('MicroChallengePhaseView')
     expect(mod).toHaveProperty('LieDetectivePhaseView')

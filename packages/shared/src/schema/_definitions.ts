@@ -841,6 +841,7 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   tableVibePreference: true,
   hometownAffinityOptin: true,
 }).partial().extend({
+  bio: z.string().trim().max(100, "bio 不能超过 100 个字符").optional().transform((v) => v === undefined ? undefined : (v === '' ? null : v)),
   industryConfidence: z.union([z.string(), z.number()]).optional(),
 });
 
@@ -1187,6 +1188,7 @@ export const insertRoleResultSchema = createInsertSchema(roleResults).omit({
 export const venues = pgTable("venues", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
+  brandName: text("brand_name"), // Actual restaurant/bar brand name shown to users and admins (e.g. "Bruma", "Batch & Co")
   venueType: text("venue_type").notNull(), // restaurant, bar, homebar, cafe
   address: text("address").notNull(),
   city: text("city").notNull(), // 深圳, 香港

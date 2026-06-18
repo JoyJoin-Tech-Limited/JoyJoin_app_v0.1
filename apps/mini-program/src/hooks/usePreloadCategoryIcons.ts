@@ -1,0 +1,52 @@
+import { useEffect, useMemo, useRef } from 'react'
+import Taro from '@tarojs/taro'
+import { INTEREST_CATEGORY_EMOJIS } from '@shared/api'
+import { localAsset } from '../lib/utils/cdnAssets'
+import {
+  getIconMapping,
+  getLocalIconAssetPath,
+} from '@joyjoin/shared/iconSystem'
+
+/**
+ * Pre-warm bundled interest-category icon assets so they render instantly
+ * when the user reaches the interest-heat picker.
+ *
+ * The preload is skipped on very weak networks (2G) and guarded by a one-shot
+ * flag so it does not re-run on background refetches.
+ */
+export function usePreloadCategoryIcons(enabled: boolean) {
+  const hasPreloaded = useRef(false)
+
+  const iconPaths = useMemo(() => {
+    return Object.values(INTEREST_CATEGORY_EMOJIS)
+      .map((emoji) => {
+        const mapping = getIconMapping(emoji, 'category')
+        if (!mapping) return ''
+        return localAsset(getLocalIconAssetPath(mapping.assetKey, mapping.tier, 1))
+      })
+      .filter(Boolean) as string[]
+  }, [])
+
+  useEffect(() => {
+    if (!enabled || hasPreloaded.current) return
+
+    const preload = async () => {
+      try {
+        const network = await Taro.getNetworkType()
+        // Skip on 2G: subpackage download is the bottleneck, not image decode.
+        if (network.networkType === '2g') return
+      } catch {
+        // Best-effort: continue preloading if network detection fails
+      }
+
+      hasPreloaded.current = true
+      for (const url of iconPaths) {
+        Taro.getImageInfo({ src: url }).catch(() => {
+          // Silent — local preload is best-effort
+        })
+      }
+    }
+
+    preload()
+  }, [enabled, iconPaths])
+}

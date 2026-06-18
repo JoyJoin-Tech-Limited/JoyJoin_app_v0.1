@@ -4,7 +4,9 @@
 
 当前仓库的**生效生产路径**不是 Fly.io / Railway / Vercel 组合，而是：
 
-1. GitHub Actions 触发生产流水线
+1. GitHub Actions 分支驱动部署：
+   - `main` → 自动部署到 **staging**（`staging.joyjoinapp.com`）
+   - `release` → 经过 `production` 环境审批后自动部署到 **production**
 2. 通过 SSH 连接远程应用服务器（`SERVER_IP` / `SERVER_USER`）
 3. 在远程服务器的 `~/JoyJoin` 目录执行代码同步
 4. 在 `~/JoyJoin/deployment` 下运行 `docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans`
@@ -38,7 +40,9 @@ GitHub Actions
 
 ## 仓库里哪些文件是当前权威来源
 
-- 生产部署流水线：`.github/workflows/cicd.yml`
+- 生产部署流水线：`.github/workflows/deploy-production.yml`（`release` 分支触发）
+- Staging 部署流水线：`.github/workflows/deploy-staging.yml`（`main` 分支触发）
+- 共享质量门：`.github/workflows/quality-gates.yml`
 - 运行时编排：`deployment/docker-compose.nginx.yml`
 - 网关与域名：`deployment/nginx/joyjoin.conf`
 - 生产环境变量模板：`deployment/.env.production.example`
@@ -174,10 +178,108 @@ cd ~/JoyJoin
 cp deployment/.env.production.example deployment/.env.production
 # 先把 deployment/.env.production 里的占位值全部替换成真实生产变量，
 # 尤其是 DATABASE_URL / SESSION_SECRET / WECHAT_SECRET 等，再执行：
-./deployment/scripts/deploy.sh production
+./deployment/scripts/deploy-production.sh
 ```
 
-该脚本现在对齐当前的自管服务器部署方式：使用现有 Docker Compose + Nginx，并直接读取 `deployment/.env.production`。当前脚本只支持 `production`，因为现有 Compose 文件、域名和 `env_file` 都绑定到生产拓扑。
+生产部署脚本 `deployment/scripts/deploy-production.sh` 对齐当前的自管服务器部署方式：使用现有 Docker Compose + Nginx，并直接读取 `deployment/.env.production`。
+
+> 注意：GitHub Actions 生产流水线在 `release` 分支推送时触发，并会调用服务器上的 `deploy-production.sh`。手动执行仅用于紧急回滚或绕过 CI 的场景。
+
+---
+
+## 同服务器 staging（体验版测试价）
+
+为了在不污染生产数据的前提下测试 ¥0.01 支付流程，可在同一台远程服务器上部署隔离的 staging API 和 staging 管理后台。
+
+### 文件与域名
+
+- 编排：`deployment/docker-compose.staging.yml`
+- Nginx：`deployment/nginx/joyjoin.conf` 已包含 `staging.joyjoinapp.com` 和 `staging.admin.joyjoinapp.com`
+- 环境模板：`deployment/.env.staging.example`
+- 域名：
+  - `staging.joyjoinapp.com` A 记录指向同一服务器 IP
+  - `staging.admin.joyjoinapp.com` A 记录指向同一服务器 IP
+
+### 部署步骤
+
+#### 自动部署（推荐）
+
+每次推送 `main` 分支，GitHub Actions 会自动：
+
+1. 运行质量门（guardrails、类型检查、测试、Harness gate、AI 模拟）
+2. rsync 代码到服务器 `~/JoyJoin`
+3. 从 GitHub secrets/vars 写入 `deployment/.env.staging`
+4. 执行 `deployment/scripts/deploy-staging.sh`
+5. 健康检查 `staging.joyjoinapp.com` 和 `staging.admin.joyjoinapp.com`
+
+#### 手动部署（服务器内执行）
+
+如需绕过 CI，从本机 SSH 到远程服务器（示例，使用你保存的 key）：
+
+```bash
+ssh -i "~/Desktop/Business idea/JoyJoin/SSH/OpenCode.pem" root@1.12.243.104
+```
+
+在服务器内执行：
+
+```bash
+cd ~/JoyJoin/deployment
+cp .env.staging.example .env.staging
+# 编辑 .env.staging：DATABASE_URL、APP_MODE=staging、TEST_PAYMENT_PRICE_IN_CENTS=1 等
+```
+
+首次使用 staging 前，需要为域名签发 TLS 证书（如果还没签过）：
+
+```bash
+sudo certbot certonly --nginx -d staging.joyjoinapp.com
+sudo certbot certonly --nginx -d staging.admin.joyjoinapp.com
+```
+
+然后一键部署 staging：
+
+```bash
+./deployment/scripts/deploy-staging.sh
+```
+
+> 注意：
+> - `docker-compose.staging.yml` 中的 `postgres-staging` 服务不要写死 `POSTGRES_PASSWORD`，应让它从 `.env.staging` 读取，否则会出现密码不一致导致 API 无法连接的问题。
+> - CI 自动部署时会覆盖写入 `.env.staging`，手动编辑的值会在下一次 `main` 推送后被覆盖。
+
+如需重置 staging 数据库，手动重建 Postgres 卷后再跑脚本：
+
+```bash
+cd ~/JoyJoin/deployment
+docker compose -f docker-compose.staging.yml down
+docker volume rm deployment_pgdata_staging
+./deployment/scripts/deploy-staging.sh
+```
+
+### 验证
+
+```bash
+curl -fsS https://staging.joyjoinapp.com/api/health
+curl -fsS https://staging.admin.joyjoinapp.com/api/health
+```
+
+### 小程序指向 staging
+
+构建前在 `apps/mini-program/.env.local` 中设置：
+
+```env
+TARO_APP_API_BASE_URL=https://staging.joyjoinapp.com
+```
+
+然后在微信公众平台 → 开发管理 → 服务器域名中添加 `https://staging.joyjoinapp.com` 和 `wss://staging.joyjoinapp.com`，再上传体验版。
+
+### 关键环境变量
+
+```env
+APP_MODE=staging              # 必须：启用 test pricing、保留微信登录
+NODE_ENV=staging              # 容器内仍会被 npm 脚本覆写为 production
+TEST_PAYMENT_PRICE_IN_CENTS=1 # ¥0.01，仅在 APP_MODE != production 时生效
+PORT=5001
+APP_URL=https://staging.joyjoinapp.com
+```
 
 ---
 
@@ -198,6 +300,8 @@ https://joyjoinapp.com
 https://admin.joyjoinapp.com
 https://joyjoinapp.com/api/health
 https://api.joyjoinapp.com/api/health
+https://staging.joyjoinapp.com/api/health
+https://staging.admin.joyjoinapp.com
 ```
 
 ---

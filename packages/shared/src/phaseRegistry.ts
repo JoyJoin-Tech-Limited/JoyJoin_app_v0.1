@@ -214,6 +214,25 @@ export const PHASE_REGISTRY: Record<SocialIcebreakerPhase, PhaseModule> = {
     darkBgGradient: 'from-violet-950 via-purple-950 to-zinc-900',
     pillColor: 'bg-violet-100/80 text-violet-700',
   },
+  phase_selection: {
+    id: 'phase_selection',
+    name: '环节选择',
+    nameEn: 'Phase Selection',
+    emoji: '🔀',
+    durationMinutes: 0,
+    minPlayers: 1,
+    category: 'conversation',
+    energyArc: 'warmup',
+    requiresGeneration: false,
+    generationLeadTimeMinutes: 0,
+    canBeSkipped: false,
+    participation: 'observe_ok',
+    tone: 'neutral',
+    gradient: 'from-slate-400 to-zinc-500',
+    bgGradient: 'from-slate-50 via-zinc-50 to-neutral-50',
+    darkBgGradient: 'from-slate-950 via-zinc-950 to-neutral-950',
+    pillColor: 'bg-slate-100/80 text-slate-700',
+  },
 } as const;
 
 export function getPhaseModule(phase: SocialIcebreakerPhase): PhaseModule {

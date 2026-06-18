@@ -24,7 +24,9 @@ export interface MiniProgramCenterState {
 }
 
 export interface CustomTabBarSyncState {
-  selected?: number
+  // Note: `selected` is intentionally omitted. The native tab bar owns the
+  // selected highlight via handleTabTap/handleCenterTap; pages only sync
+  // center state and badges.
   center: MiniProgramCenterState
 }
 

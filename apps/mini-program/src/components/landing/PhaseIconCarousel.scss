@@ -1,0 +1,284 @@
+@use "../../styles/variables" as *;
+
+/* ── Phase Icon Carousel ───────────────────────────────────────────── */
+.phase-carousel {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8rpx 0 4rpx;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+
+  &:active {
+    transform: scale(0.98);
+    opacity: 0.92;
+  }
+
+  &--dragging {
+    cursor: grabbing;
+  }
+
+  /* NOTE: The all-icons-failed fallback card was intentionally removed.
+     The carousel is the default landing experience and must always render. */
+}
+
+.phase-carousel__hint {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  animation: carousel-hint-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards,
+             carousel-hint-out 0.4s cubic-bezier(0.22, 1, 0.36, 1) 3.8s forwards;
+}
+
+.phase-carousel__hint-text {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  background: rgba($color-surface, 0.95);
+  padding: 6rpx 20rpx;
+  border-radius: 24rpx;
+  box-shadow: $shadow-sm;
+  white-space: nowrap;
+}
+
+.phase-carousel__track {
+  position: relative;
+  width: 100%;
+  height: 248rpx;
+}
+
+.phase-carousel__item {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  width: 128rpx;
+  height: 128rpx;
+  margin-left: -64rpx;
+  margin-top: -64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border-radius: 50%;
+  /* Force GPU layer for smooth 3D transforms on all devices */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  /* will-change gated to active carousel state to free GPU memory when idle */
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+
+  .phase-carousel:not(.phase-carousel--paused) & {
+    will-change: transform, opacity;
+  }
+
+  &--birth {
+    transform: translate(0, 0) scale(0.25) rotateY(180deg);
+    opacity: 0;
+  }
+
+  /* Front-center: largest, brightest, with glow and shadow */
+  &--pos-0 {
+    transform: translate(0, 48rpx) scale(1.1);
+    opacity: 1;
+    z-index: 10;
+
+    /* Shadow is on the INNER image element to avoid repaint during transform */
+    .phase-carousel__item-img {
+      box-shadow: 0 8rpx 20rpx rgba($color-primary, 0.18);
+      border-radius: 50%;
+    }
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: -16rpx;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba($color-primary, 0.1) 0%, transparent 70%);
+      z-index: -1;
+      animation: carousel-glow-pulse 3s ease-in-out infinite;
+    }
+  }
+
+  /* Front-right: medium size, right of center
+     (168rpx / 122rpx are optical ellipse positions tuned for 3D depth —
+      not strict 8rpx-grid; altering them breaks the turntable perspective) */
+  &--pos-1 {
+    transform: translate(168rpx, -12rpx) scale(0.82);
+    opacity: 0.56;
+    z-index: 8;
+  }
+
+  /* Back-right: small, upper-right quadrant */
+  &--pos-2 {
+    transform: translate(122rpx, -64rpx) scale(0.6);
+    opacity: 0.24;
+    z-index: 4;
+  }
+
+  /* Back: smallest, near top center (farthest from viewer) */
+  &--pos-3 {
+    transform: translate(0, -84rpx) scale(0.45);
+    opacity: 0.1;
+    z-index: 1;
+  }
+
+  /* Back-left: small, upper-left quadrant */
+  &--pos-4 {
+    transform: translate(-122rpx, -64rpx) scale(0.6);
+    opacity: 0.24;
+    z-index: 4;
+  }
+
+  /* Front-left: medium size, left of center */
+  &--pos-5 {
+    transform: translate(-168rpx, -12rpx) scale(0.82);
+    opacity: 0.56;
+    z-index: 8;
+  }
+}
+
+.phase-carousel__item-img {
+  width: 100%;
+  height: 100%;
+}
+
+.phase-carousel__item-fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 24rpx;
+  background: linear-gradient(135deg, $color-bg-tint-purple 0%, $color-primary-light 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phase-carousel__item-fallback-icon {
+  font-family: $font-en-brand;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+}
+
+.phase-carousel__info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rpx;
+  margin-top: 24rpx;
+  min-height: 72rpx;
+}
+
+.phase-carousel__label {
+  font-family: $font-cn-display;
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary-warm;
+  line-height: 1.4;
+}
+
+.phase-carousel__slogan {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+}
+
+.phase-carousel__dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  margin-top: 16rpx;
+}
+
+.phase-carousel__dot {
+  /* Fixed logical width; use scaleX for the active grow so the transition
+     stays compositor-only and never triggers layout. */
+  width: 20rpx;
+  height: 8rpx;
+  border-radius: 4rpx;
+  background: rgba($color-text-secondary, 0.28);
+  transform: scaleX(0.4);
+  transform-origin: center;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+              background 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+
+  &--active {
+    transform: scaleX(1);
+    background: $color-primary;
+    animation: carousel-dot-pulse 2.5s ease-in-out infinite;
+  }
+}
+
+.phase-carousel--paused .phase-carousel__track {
+  opacity: 0.3;
+  transition: opacity 0.4s ease;
+}
+
+.phase-carousel__pause-indicator {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10rpx;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.phase-carousel--paused .phase-carousel__pause-indicator {
+  opacity: 1;
+}
+
+.phase-carousel__play-circle {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: rgba($color-surface, 0.96);
+  box-shadow: $shadow-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phase-carousel__play-triangle {
+  font-size: 28rpx;
+  color: $color-text-primary-warm;
+  margin-left: 4rpx;
+}
+
+.phase-carousel__pause-hint {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  background: rgba($color-surface, 0.9);
+  padding: 4rpx 16rpx;
+  border-radius: 12rpx;
+}
+
+/* Keyframes */
+@keyframes carousel-glow-pulse {
+  0%, 100% { opacity: 0.08; transform: scale(1); }
+  50% { opacity: 0.16; transform: scale(1.06); }
+}
+
+@keyframes carousel-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@keyframes carousel-hint-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8rpx); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes carousel-hint-out {
+  from { opacity: 1; transform: translateX(-50%) translateY(0); }
+  to   { opacity: 0; transform: translateX(-50%) translateY(-8rpx); }
+}

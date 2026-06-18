@@ -1,5 +1,5 @@
 /**
- * Empty State Copy — 🟡 Should Follow
+ * Empty State Copy — Should Follow
  *
  * Every empty state MUST include action guidance in 悦仔 Voice.
  * Never just安慰 — always give the user a next step.
@@ -27,8 +27,8 @@ const EMPTY_STATE_TEMPLATES: Record<EmptySurface, EmptyStateTemplate> = {
   connections: {
     prompt: '还没有连接呢',
     action: '参加活动认识新朋友吧',
-    promptMascot: '{{mascotName}}还没看到你的新朋友',
-    actionMascot: '先参加一局活动？',
+    promptMascot: '{{mascotName}}正在等你带新朋友回来',
+    actionMascot: '先去发现页挑一局活动？',
   },
   notifications: {
     prompt: '暂时没有新通知',

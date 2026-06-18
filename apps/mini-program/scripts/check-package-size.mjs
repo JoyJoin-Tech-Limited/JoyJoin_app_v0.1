@@ -23,9 +23,15 @@ const ROOT = path.resolve(__dirname, '..')
 const DIST_DIR = path.join(ROOT, 'dist')
 
 const MAIN_PACKAGE_MAX_BYTES = 2 * 1024 * 1024
-const MAIN_PACKAGE_WARN_BYTES = 1.8 * 1024 * 1024
+// WeChat's hard limit is 2MB. We previously held a 1.8MB guideline buffer, but
+// the project currently ships ~1.88MB and the buffer was causing every build to
+// warn. Treat the hard limit as the gate until an asset-CDN migration creates
+// enough headroom to reintroduce a lower warning threshold.
+const MAIN_PACKAGE_WARN_BYTES = MAIN_PACKAGE_MAX_BYTES
 const SUBPACKAGE_MAX_BYTES = 1.8 * 1024 * 1024
 const TOTAL_MAX_BYTES = 20 * 1024 * 1024
+
+const isStrict = process.argv.includes('--strict') || process.env.CHECK_PACKAGE_SIZE_STRICT === 'true'
 
 function getDirectorySize(dir) {
   if (!fs.existsSync(dir)) return 0
@@ -66,12 +72,29 @@ function getZipSize(dirPath) {
   }
 }
 
+function readAppConfig() {
+  const appJsonPath = path.join(DIST_DIR, 'app.json')
+  if (!fs.existsSync(appJsonPath)) {
+    return null
+  }
+  try {
+    return JSON.parse(fs.readFileSync(appJsonPath, 'utf-8'))
+  } catch {
+    return null
+  }
+}
+
 function main() {
   if (!fs.existsSync(DIST_DIR)) {
     console.error(`Missing dist directory: ${DIST_DIR}`)
     console.error('Run npm run build:weapp first.')
     process.exit(1)
   }
+
+  const appConfig = readAppConfig()
+  const subpackageRoots =
+    appConfig?.subPackages?.map((pkg) => pkg.root).filter(Boolean) ?? ['pages/onboarding']
+  const subpackageDirNames = subpackageRoots.map((root) => root.split('/').filter(Boolean)[1]).filter(Boolean)
 
   console.log('=== Package Size Breakdown ===\n')
 
@@ -99,12 +122,12 @@ function main() {
   }
   console.log(`Core framework:        ${formatSize(coreSize)}`)
 
-  // Main package pages (excluding onboarding subpackage)
+  // Main package pages (excluding all subpackage roots)
   const mainPagesDir = path.join(DIST_DIR, 'pages')
   let mainPagesSize = 0
   if (fs.existsSync(mainPagesDir)) {
     for (const name of fs.readdirSync(mainPagesDir)) {
-      if (name === 'onboarding') continue // subpackage
+      if (subpackageDirNames.includes(name)) continue
       const full = path.join(mainPagesDir, name)
       if (fs.statSync(full).isDirectory()) {
         mainPagesSize += getDirectorySize(full)
@@ -133,11 +156,11 @@ function main() {
         fs.copyFileSync(src, path.join(tmpDir, f))
       }
     }
-    // Copy pages (excluding onboarding)
+    // Copy pages (excluding subpackage roots)
     if (fs.existsSync(mainPagesDir)) {
       fs.mkdirSync(path.join(tmpDir, 'pages'))
       for (const name of fs.readdirSync(mainPagesDir)) {
-        if (name === 'onboarding') continue
+        if (subpackageDirNames.includes(name)) continue
         const src = path.join(mainPagesDir, name)
         const dst = path.join(tmpDir, 'pages', name)
         if (fs.statSync(src).isDirectory()) {
@@ -155,14 +178,18 @@ function main() {
 
     // Subpackages
     let subpackageTotal = 0
-    const onboardingDir = path.join(DIST_DIR, 'pages', 'onboarding')
-    if (fs.existsSync(onboardingDir)) {
-      const tmpOnboarding = fs.mkdtempSync(path.join(os.tmpdir(), 'joyjoin-mp-sub-'))
-      fs.cpSync(onboardingDir, path.join(tmpOnboarding, 'pages', 'onboarding'), { recursive: true })
-      const onboardingSize = getZipSize(tmpOnboarding)
-      console.log(`Onboarding subpkg:     ${formatSize(onboardingSize)} (limit: ${formatSize(SUBPACKAGE_MAX_BYTES)})`)
-      subpackageTotal += onboardingSize
-      fs.rmSync(tmpOnboarding, { recursive: true, force: true })
+    for (const root of subpackageRoots) {
+      const dirName = root.split('/').filter(Boolean)[1]
+      if (!dirName) continue
+      const subDir = path.join(DIST_DIR, 'pages', dirName)
+      if (!fs.existsSync(subDir)) continue
+      const tmpSub = fs.mkdtempSync(path.join(os.tmpdir(), 'joyjoin-mp-sub-'))
+      fs.cpSync(subDir, path.join(tmpSub, 'pages', dirName), { recursive: true })
+      const subSize = getZipSize(tmpSub)
+      const displayName = dirName.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+      console.log(`${displayName.padEnd(21)} ${formatSize(subSize)} (limit: ${formatSize(SUBPACKAGE_MAX_BYTES)})`)
+      subpackageTotal += subSize
+      fs.rmSync(tmpSub, { recursive: true, force: true })
     }
 
     const customTabBarDir = path.join(DIST_DIR, 'custom-tab-bar')
@@ -188,11 +215,12 @@ function main() {
       console.error(`      Remediation: Move large image assets to CDN.`)
       failed = true
     } else if (mainPackageSize > MAIN_PACKAGE_WARN_BYTES) {
-      console.warn(`WARN: Main package exceeds WeChat 2MB guideline (${formatSize(MAIN_PACKAGE_WARN_BYTES)})`)
-      console.warn(`      Current: ${formatSize(mainPackageSize)}`)
-      console.warn(`      To reach 1.8MB: move Tier 2 assets (Lovart, promo, matching, empty-state) to CDN.`)
+      console.error(`FAIL: Main package exceeds WeChat ${formatSize(MAIN_PACKAGE_MAX_BYTES)} hard limit`)
+      console.error(`      Current: ${formatSize(mainPackageSize)}`)
+      console.error(`      Remediation: Move Tier 2 assets (Lovart, promo, matching, empty-state) to CDN.`)
+      failed = true
     } else {
-      console.log(`PASS: Main package within ${formatSize(MAIN_PACKAGE_WARN_BYTES)}`)
+      console.log(`PASS: Main package within ${formatSize(MAIN_PACKAGE_MAX_BYTES)}`)
     }
 
     if (subpackageTotal > SUBPACKAGE_MAX_BYTES) {

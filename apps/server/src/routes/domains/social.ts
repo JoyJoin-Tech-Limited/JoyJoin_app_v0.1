@@ -163,6 +163,10 @@ export function registerSocialRoutes(app: Express): void {
         }
       }
 
+      // Always invalidate the submitter's shell cache so the Connections tab
+      // can move from feedback-pending to feedback-complete / connections.
+      shellCache.invalidateUser(userId);
+
       const MUTUAL_MATCH_NOTIFICATION_WINDOW_MS = 60_000;
       try {
         const freshMutualRows = await storage.getMutualConnections(eventId, userId);

@@ -1,0 +1,87 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.intent-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  min-height: 176rpx;
+  padding: $spacing-md;
+  text-align: center;
+  background: $color-bg;
+  border: 2rpx solid $color-border;
+  border-radius: $card-radius-sm;
+  position: relative;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+
+  &--selected {
+    background: rgba($color-primary, 0.10);
+    border-color: $color-primary;
+    box-shadow: 0 2rpx 12rpx rgba($color-primary, 0.16);
+  }
+
+  &--dimmed {
+    background: rgba($color-primary, 0.06);
+    border-color: rgba($color-primary, 0.30);
+  }
+
+  &--disabled {
+    background: $color-bg;
+    border-color: $color-border;
+    opacity: 0.55;
+
+    &:active,
+    &--hover {
+      transform: none;
+    }
+  }
+
+  &--hover,
+  &:active:not(&--disabled) {
+    transform: scale(0.97);
+  }
+
+  &:active:not(&--disabled) {
+    box-shadow: 0 0 0 4rpx rgba($color-primary, 0.22);
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 4rpx rgba($color-primary, 0.22);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &--hover,
+    &:active:not(&--disabled) {
+      transform: none;
+    }
+  }
+
+  &__icon {
+    margin-bottom: 4rpx;
+  }
+
+  &__label {
+    @include type-label;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    text-align: center;
+  }
+
+  &__subtitle {
+    @include type-caption;
+    color: $color-text-tertiary;
+    text-align: center;
+    line-height: $line-height-normal;
+  }
+
+  &__check {
+    position: absolute;
+    top: $spacing-sm;
+    right: $spacing-sm;
+  }
+}

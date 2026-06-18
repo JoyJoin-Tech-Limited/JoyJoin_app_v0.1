@@ -1,0 +1,57 @@
+# Same-server staging deployment.
+# Runs an isolated staging API + staging Postgres on the same host as production.
+#
+# WARNING: staging shares the host machine with production. A runaway staging
+# process can affect production performance or stability. For a safer setup,
+# use a separate staging server instead.
+#
+# Usage:
+#   cd deployment
+#   cp .env.staging.example .env.staging
+#   # edit .env.staging with real values
+#   docker compose -f docker-compose.staging.yml up -d --build
+
+services:
+  postgres-staging:
+    image: postgres:16
+    container_name: postgres-staging
+    restart: unless-stopped
+    env_file:
+      - .env.staging
+    environment:
+      POSTGRES_USER: joyjoin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-staging_joyjoin_password}
+      POSTGRES_DB: joyjoin_staging
+    volumes:
+      - pgdata_staging:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"
+
+  joyjoin-api-staging:
+    build:
+      context: ..
+      dockerfile: apps/server/Dockerfile
+    container_name: joyjoin-api-staging
+    restart: unless-stopped
+    depends_on:
+      postgres-staging:
+        condition: service_started
+    env_file:
+      - .env.staging
+    environment:
+      NODE_ENV: staging
+      PORT: "5001"
+    ports:
+      - "127.0.0.1:5001:5001"
+
+  joyjoin-admin-staging:
+    build:
+      context: ..
+      dockerfile: apps/admin-client/Dockerfile
+    container_name: joyjoin-admin-staging
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3002:80"
+
+volumes:
+  pgdata_staging:

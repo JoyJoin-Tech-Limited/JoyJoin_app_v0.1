@@ -72,8 +72,9 @@
   }
 
   &__title {
+    @include font-cn-display;
     font-size: $font-size-xl;
-    line-height: 1.35;
+    line-height: 1.45;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
   }

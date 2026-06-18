@@ -128,7 +128,7 @@ export function registerAdminUserRoutes(app: Express): void {
         if (completeness.score < 50 && completenessStats.weakUsers.length < 10) {
           completenessStats.weakUsers.push({
             id: user.id,
-            displayName: user.displayName || user.firstName || '未命名',
+            displayName: user.displayName || user.wechatNickname || user.firstName || '未命名',
             score: completeness.score,
             starRating: completeness.starRating,
             missingFields: completeness.missingFields.slice(0, 5),
@@ -371,6 +371,7 @@ export function registerAdminUserRoutes(app: Express): void {
           user.firstName?.toLowerCase().includes(searchLower) ||
           user.lastName?.toLowerCase().includes(searchLower) ||
           user.displayName?.toLowerCase().includes(searchLower) ||
+          user.wechatNickname?.toLowerCase().includes(searchLower) ||
           user.email?.toLowerCase().includes(searchLower) ||
           user.phoneNumber?.includes(search)
         );

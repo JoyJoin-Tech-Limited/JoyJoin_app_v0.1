@@ -69,7 +69,7 @@ export default function AnalyzingAnimation({
   if (shouldReduceMotion) {
     return (
       <View className='analyzing-animation analyzing-animation--reduced'>
-        <JoyJoinIcon emoji='✨' size={48} className='analyzing-animation__emoji' />
+        <JoyJoinIcon emoji='✨' tier='mood' size={48} className='analyzing-animation__emoji' />
         <Text className='analyzing-animation__label'>{label}</Text>
       </View>
     )

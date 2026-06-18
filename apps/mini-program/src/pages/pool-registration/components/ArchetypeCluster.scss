@@ -1,0 +1,86 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.archetype-cluster {
+  @include card;
+  padding: $spacing-md $spacing-lg;
+  background: linear-gradient(180deg, rgba($color-surface, 0.98) 0%, rgba($color-primary, 0.04) 100%);
+  border: 2rpx solid rgba($color-primary, 0.06);
+
+  &--empty {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__empty-pulse {
+    width: 48rpx;
+    height: 48rpx;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.12);
+    animation: archetype-cluster-pulse 1.6s ease-in-out infinite;
+  }
+
+  &__heads {
+    display: flex;
+    align-items: center;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__head-wrap {
+    @include flex-center;
+    width: 48rpx;
+    height: 48rpx;
+    border-radius: 50%;
+    border: 2rpx solid;
+    margin-left: -22rpx;
+    overflow: hidden;
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+
+    &:first-child {
+      margin-left: 0;
+    }
+  }
+
+  &__overflow-badge {
+    @include flex-center;
+    width: 48rpx;
+    height: 48rpx;
+    border-radius: 50%;
+    background: $brand-gradient;
+    margin-left: -22rpx;
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.12);
+    border: 2rpx solid rgba($color-surface, 0.5);
+  }
+
+  &__overflow-text {
+    @include type-caption;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+  }
+
+  &__label {
+    @include type-label;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+  }
+}
+
+@keyframes archetype-cluster-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .archetype-cluster__empty-pulse {
+    animation: none;
+    opacity: 0.6;
+  }
+}

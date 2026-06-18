@@ -23,13 +23,13 @@ jobs:
           npm ci
           npm run build:weapp -w mini-program
 
-      - name: Upload manifest assets to CVM /static/
+      - name: Upload manifest assets to CVM /var/www/cdn/
         env:
           CDN_BACKEND: rsync
           CDN_BASE_URL: https://joyjoinapp.com/static
           CDN_RSYNC_HOST: ${{ secrets.SERVER_IP }}
           CDN_RSYNC_USER: ${{ secrets.SERVER_USER }}
-          CDN_RSYNC_PATH: /static
+          CDN_RSYNC_PATH: /var/www/cdn
         run: |
           # Write deploy key with proper newline handling
           printf '%s\n' '${{ secrets.SSH_PRIVATE_KEY }}' > /tmp/deploy_key

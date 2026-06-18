@@ -1876,8 +1876,8 @@ export async function saveMatchResults(
         try {
           const venueEntries = Array.from(assignments.entries());
           const unassignedEntries = Array.from(unassigned.entries());
-          const topVenue = venueEntries.length > 0 ? venueEntries[0][1].venue.name : undefined;
-          const uniqueVenues = new Set(venueEntries.map(([, a]) => a.venue.name)).size;
+          const topVenue = venueEntries.length > 0 ? venueEntries[0][1].venue.brandName || venueEntries[0][1].venue.name : undefined;
+          const uniqueVenues = new Set(venueEntries.map(([, a]) => a.venue.brandName || a.venue.name)).size;
           const reasonBreakdown: Record<string, number> = {};
           for (const [, reason] of unassignedEntries) {
             reasonBreakdown[reason] = (reasonBreakdown[reason] || 0) + 1;
@@ -1920,7 +1920,7 @@ export async function saveMatchResults(
                     category: 'activities',
                     type: 'venue_assigned',
                     title: '场地已确定',
-                    message: `活动场地：${assignment.venue.name}，地址：${assignment.venue.address || '详见活动页'}`,
+                    message: `活动场地：${assignment.venue.brandName || assignment.venue.name}，地址：${assignment.venue.address || '详见活动页'}`,
                     relatedResourceId: poolId,
                   })
                 )

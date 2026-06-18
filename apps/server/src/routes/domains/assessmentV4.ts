@@ -38,6 +38,34 @@ function annotatedShuffleOptions(questionId: string, options: any[]): any[] {
   return shuffleOptions(annotated);
 }
 
+async function restoreEngineState(session: any, assessmentConfig: any) {
+  const {
+    questionsV4,
+    initializeEngineState,
+    processAnswer,
+  } = await import('@shared/personality');
+
+  const answers = await storage.getAssessmentAnswers(session.id);
+  let engineState = initializeEngineState(assessmentConfig);
+
+  // Rehydrate skip state so swapped questions (and their variants) stay excluded
+  // when the engine is rebuilt from stored answers.
+  const skippedIds: string[] = (session.skippedQuestionIds as string[]) || [];
+  for (const skippedId of skippedIds) {
+    engineState.skippedQuestionIds.add(skippedId);
+  }
+  engineState.skipCount = session.skipCount || 0;
+
+  for (const answer of answers) {
+    const q = questionsV4.find((quest: any) => quest.id === answer.questionId);
+    if (q) {
+      engineState = processAnswer(engineState, q, answer.selectedOption);
+    }
+  }
+
+  return { engineState, answers };
+}
+
 export function registerAssessmentV4Routes(app: Express): void {
   app.post('/api/assessment/v4/start', async (req: any, res) => {
     try {
@@ -54,8 +82,8 @@ export function registerAssessmentV4Routes(app: Express): void {
       
       // Import adaptive engine
       const { 
-        initializeEngineState, 
-        processAnswer, 
+        initializeEngineState,
+        processAnswer,
         selectNextQuestion,
         shouldTerminate,
         getClosingQuestionsRemaining,
@@ -90,19 +118,10 @@ export function registerAssessmentV4Routes(app: Express): void {
           // Resume existing session - it was created by presignup-sync
           session = existingUserSession;
           
-          // Reconstruct engine state from session data
-          const answers = await storage.getAssessmentAnswers(session.id);
-          engineState = initializeEngineState(assessmentConfig);
-          
-          // Replay answers to rebuild state
-          for (const answer of answers) {
-            const question = (await import('@shared/personality')).questionsV4.find(
-              q => q.id === answer.questionId
-            );
-            if (question) {
-              engineState = processAnswer(engineState, question, answer.selectedOption);
-            }
-          }
+          // Reconstruct engine state from session data (answers + skipped questions)
+          const restoreResult = await restoreEngineState(session, assessmentConfig);
+          engineState = restoreResult.engineState;
+          const answers = restoreResult.answers;
           
           logger.info("[V4 Start] Resuming existing session for user", { userId, answerCount: answers.length });
         } else if (existingUserSession && existingUserSession.completedAt) {
@@ -130,19 +149,10 @@ export function registerAssessmentV4Routes(app: Express): void {
           phase: session.phase,
         });
         
-        // Reconstruct engine state from session data
-        const answers = await storage.getAssessmentAnswers(existingSessionId);
-        engineState = initializeEngineState(assessmentConfig);
-        
-        // Replay answers to rebuild state
-        for (const answer of answers) {
-          const question = (await import('@shared/personality')).questionsV4.find(
-            q => q.id === answer.questionId
-          );
-          if (question) {
-            engineState = processAnswer(engineState, question, answer.selectedOption);
-          }
-        }
+        // Reconstruct engine state from session data (answers + skipped questions)
+        const restoreResult = await restoreEngineState(session, assessmentConfig);
+        engineState = restoreResult.engineState;
+        const answers = restoreResult.answers;
         
         logger.info('[V4 Start] Replayed answers for session', { count: answers.length, sessionId: existingSessionId });
       }
@@ -313,8 +323,6 @@ export function registerAssessmentV4Routes(app: Express): void {
       // Import modules
       const { 
         questionsV4, 
-        initializeEngineState, 
-        processAnswer, 
         selectNextQuestion,
         shouldTerminate,
         isAssessmentComplete,
@@ -373,17 +381,11 @@ export function registerAssessmentV4Routes(app: Express): void {
         traitScores: option.traitScores,
       });
       
-      // Rebuild engine state
-      const answers = await storage.getAssessmentAnswers(sessionId);
-      let engineState = initializeEngineState(assessmentConfig);
-      
-      for (const answer of answers) {
-        const q = questionsV4.find(quest => quest.id === answer.questionId);
-        if (q) {
-          engineState = processAnswer(engineState, q, answer.selectedOption);
-        }
-      }
-      
+      // Rebuild engine state (answers + skipped questions)
+      const restoreResult = await restoreEngineState(session, assessmentConfig);
+      let engineState = restoreResult.engineState;
+      const answers = restoreResult.answers;
+
       // Check if complete (adaptive phase done AND all universal closing questions answered)
       const isComplete = isAssessmentComplete(engineState);
       
@@ -630,8 +632,6 @@ export function registerAssessmentV4Routes(app: Express): void {
 
       const {
         questionsV4,
-        initializeEngineState,
-        processAnswer,
         selectNextQuestion,
         shouldTerminate,
         isAssessmentComplete,
@@ -689,16 +689,10 @@ export function registerAssessmentV4Routes(app: Express): void {
         traitScores: option.traitScores,
       });
 
-      // Rebuild engine state by replaying all answers
-      const answers = await storage.getAssessmentAnswers(sessionId);
-      let engineState = initializeEngineState(assessmentConfig);
-
-      for (const answer of answers) {
-        const q = questionsV4.find(quest => quest.id === answer.questionId);
-        if (q) {
-          engineState = processAnswer(engineState, q, answer.selectedOption);
-        }
-      }
+      // Rebuild engine state by replaying all answers (including skipped state)
+      const restoreResult = await restoreEngineState(session, assessmentConfig);
+      let engineState = restoreResult.engineState;
+      const answers = restoreResult.answers;
 
       const isComplete = isAssessmentComplete(engineState);
 
@@ -876,9 +870,6 @@ export function registerAssessmentV4Routes(app: Express): void {
       }
       
       const { 
-        questionsV4, 
-        initializeEngineState, 
-        processAnswer, 
         skipQuestion,
         MAX_SKIP_COUNT,
         DEFAULT_ASSESSMENT_CONFIG,
@@ -903,24 +894,9 @@ export function registerAssessmentV4Routes(app: Express): void {
         });
       }
       
-      // Rebuild engine state with skipped questions
-      const answers = await storage.getAssessmentAnswers(sessionId);
-      let engineState = initializeEngineState(assessmentConfig);
-      
-      // Add previously skipped questions to state
-      for (const skippedId of skippedQuestionIds) {
-        engineState.skippedQuestionIds.add(skippedId);
-      }
-      engineState.skipCount = currentSkipCount;
-      
-      // Process previous answers
-      for (const answer of answers) {
-        const q = questionsV4.find(quest => quest.id === answer.questionId);
-        if (q) {
-          engineState = processAnswer(engineState, q, answer.selectedOption);
-        }
-      }
-      
+      // Rebuild engine state with skipped questions, then skip current question
+      const { engineState } = await restoreEngineState(session, assessmentConfig);
+
       // Skip current question
       const skipResult = skipQuestion(engineState, questionId);
       
@@ -1022,8 +998,6 @@ export function registerAssessmentV4Routes(app: Express): void {
       
       // Import adaptive engine to get next question
       const { 
-        initializeEngineState, 
-        processAnswer, 
         selectNextQuestion,
         shouldTerminate,
         getClosingQuestionsRemaining,
@@ -1035,20 +1009,9 @@ export function registerAssessmentV4Routes(app: Express): void {
       const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
       const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
       
-      // Reconstruct engine state from session answers
-      const answers = await storage.getAssessmentAnswers(sessionId);
-      let engineState = initializeEngineState(assessmentConfig);
-      
-      // Replay answers to rebuild state
-      for (const answer of answers) {
-        const question = (await import('@shared/personality')).questionsV4.find(
-          q => q.id === answer.questionId
-        );
-        if (question) {
-          engineState = processAnswer(engineState, question, answer.selectedOption);
-        }
-      }
-      
+      // Reconstruct engine state from session answers (including skipped state)
+      const { engineState } = await restoreEngineState(session, assessmentConfig);
+
       // Get next question
       const nextQuestion = selectNextQuestion(engineState);
       

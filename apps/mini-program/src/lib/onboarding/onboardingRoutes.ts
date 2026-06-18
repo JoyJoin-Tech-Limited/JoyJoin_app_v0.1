@@ -19,7 +19,7 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   profile: 'pages/profile/index',
   login: 'pages/login/index',
   index: 'pages/index/index',
-  terms: 'pages/terms/index',
+  terms: 'pages/profile-linked/terms/index',
   eventDetail: 'pages/event-detail/index',
   eventFeedback: 'pages/event-feedback/index',
   poolRegistration: 'pages/pool-registration/index',
@@ -30,9 +30,9 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   centerTabEmpty: 'pages/center-tab-empty/index',
   icebreakerSession: 'pages/icebreaker-session/index',
   tierSelector: 'pages/icebreaker-session/tier-selector/index',
-  editProfile: 'pages/edit-profile/index',
-  rewards: 'pages/rewards/index',
-  invite: 'pages/invite/index',
+  editProfile: 'pages/profile-linked/edit-profile/index',
+  rewards: 'pages/profile-linked/rewards/index',
+  invite: 'pages/profile-linked/invite/index',
   cityUnlock: 'pages/city-unlock/index',
 } as const
 
@@ -64,11 +64,14 @@ export const MINI_PROGRAM_ROUTES = {
   editProfile: `/${MINI_PROGRAM_PAGE_PATHS.editProfile}`,
   rewards: `/${MINI_PROGRAM_PAGE_PATHS.rewards}`,
   invite: `/${MINI_PROGRAM_PAGE_PATHS.invite}`,
+  terms: `/${MINI_PROGRAM_PAGE_PATHS.terms}`,
   cityUnlock: `/${MINI_PROGRAM_PAGE_PATHS.cityUnlock}`,
   index: `/${MINI_PROGRAM_PAGE_PATHS.index}`,
 } as const
 
 export const MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT = 'pages/onboarding' as const
+
+export const MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_ROOT = 'pages/profile-linked' as const
 
 export const MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES = [
   'onboarding/index',
@@ -79,6 +82,13 @@ export const MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES = [
   'extended-data/index',
   'profile-review/index',
   'welcome-back/index',
+] as const
+
+export const MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_PAGES = [
+  'edit-profile/index',
+  'rewards/index',
+  'invite/index',
+  'terms/index',
 ] as const
 
 export const MINI_PROGRAM_ONBOARDING_PACKAGE_PAGE_PATHS = [
@@ -103,31 +113,37 @@ export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.connections,
   MINI_PROGRAM_PAGE_PATHS.profile,
   MINI_PROGRAM_PAGE_PATHS.login,
-  MINI_PROGRAM_PAGE_PATHS.terms,
   MINI_PROGRAM_PAGE_PATHS.eventDetail,
   MINI_PROGRAM_PAGE_PATHS.eventFeedback,
-  MINI_PROGRAM_PAGE_PATHS.poolRegistration,
   MINI_PROGRAM_PAGE_PATHS.eventCoordination,
   MINI_PROGRAM_PAGE_PATHS.squadUnboxing,
   MINI_PROGRAM_PAGE_PATHS.poolGroupDetail,
   MINI_PROGRAM_PAGE_PATHS.centerTabEmpty,
+  MINI_PROGRAM_PAGE_PATHS.cityUnlock,
+] as const
+
+export const MINI_PROGRAM_PROFILE_LINKED_PACKAGE_PAGE_PATHS = [
   MINI_PROGRAM_PAGE_PATHS.editProfile,
   MINI_PROGRAM_PAGE_PATHS.rewards,
   MINI_PROGRAM_PAGE_PATHS.invite,
-  MINI_PROGRAM_PAGE_PATHS.cityUnlock,
+  MINI_PROGRAM_PAGE_PATHS.terms,
 ] as const
 
 export const MINI_PROGRAM_PAGES = [
   ...MINI_PROGRAM_MAIN_PACKAGE_PAGES,
   ...MINI_PROGRAM_ONBOARDING_PACKAGE_PAGE_PATHS,
+  ...MINI_PROGRAM_PROFILE_LINKED_PACKAGE_PAGE_PATHS,
   MINI_PROGRAM_PAGE_PATHS.icebreakerSession,
   MINI_PROGRAM_PAGE_PATHS.tierSelector,
   MINI_PROGRAM_PAGE_PATHS.matchingStatus,
+  MINI_PROGRAM_PAGE_PATHS.poolRegistration,
 ] as const
 
 export const MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT = 'pages/icebreaker-session' as const
 
 export const MINI_PROGRAM_MATCHING_SUBPACKAGE_ROOT = 'pages/matching-status' as const
+
+export const MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT = 'pages/pool-registration' as const
 
 export const MINI_PROGRAM_MATCHING_SUBPACKAGE_PAGES = [
   'index',
@@ -138,10 +154,18 @@ export const MINI_PROGRAM_FEATURES_SUBPACKAGE_PAGES = [
   'tier-selector/index',
 ] as const
 
+export const MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_PAGES = [
+  'index',
+] as const
+
 export const MINI_PROGRAM_SUBPACKAGES = [
   {
     root: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT,
     pages: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES,
+  },
+  {
+    root: MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_PAGES,
   },
   {
     root: MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT,
@@ -150,6 +174,10 @@ export const MINI_PROGRAM_SUBPACKAGES = [
   {
     root: MINI_PROGRAM_MATCHING_SUBPACKAGE_ROOT,
     pages: MINI_PROGRAM_MATCHING_SUBPACKAGE_PAGES,
+  },
+  {
+    root: MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_PAGES,
   },
 ] as const
 
@@ -161,6 +189,22 @@ export const MINI_PROGRAM_PRELOAD_RULES = {
   [MINI_PROGRAM_PAGE_PATHS.login]: {
     network: 'all',
     packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT],
+  },
+  [MINI_PROGRAM_PAGE_PATHS.eventDetail]: {
+    network: 'all',
+    packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT],
+  },
+  [MINI_PROGRAM_PAGE_PATHS.events]: {
+    network: 'all',
+    packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT],
+  },
+  [MINI_PROGRAM_PAGE_PATHS.discover]: {
+    network: 'all',
+    packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT],
+  },
+  [MINI_PROGRAM_PAGE_PATHS.profile]: {
+    network: 'all',
+    packages: [MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_ROOT],
   },
 } as const
 

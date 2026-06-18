@@ -1,0 +1,248 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.invite-page {
+  min-height: 100dvh;
+  @include page-gradient-bg;
+
+  &--error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+    padding: $container-padding;
+  }
+
+  &__error-card {
+    width: 100%;
+    max-width: 600rpx;
+  }
+
+  &__error-action {
+    margin-top: $spacing-lg;
+  }
+
+  &__hero {
+    text-align: center;
+    padding: $spacing-2xl $container-padding $spacing-xl;
+  }
+
+  &__hero-image {
+    display: block;
+    width: 400rpx;
+    height: 300rpx;
+    max-width: 100%;
+    margin: 0 auto $spacing-lg;
+    opacity: 0;
+    animation: invite-hero-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.05s forwards;
+  }
+
+  &__hero-title {
+    @include type-title;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__hero-subtitle {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+  }
+
+  &__code-card {
+    @include card;
+    margin: 0 $container-padding $spacing-lg;
+    padding: $spacing-xl;
+    text-align: center;
+  }
+
+  &__code-label { display: block; font-size: $font-size-sm; color: $color-text-secondary; margin-bottom: $spacing-sm; }
+  &__code-value { display: block; font-size: $font-size-2xl; font-weight: $font-weight-black; color: $color-primary; letter-spacing: 8rpx; margin-bottom: $spacing-lg; }
+  &__code-actions { display: flex; flex-direction: column; gap: $spacing-sm; }
+  &__copy-btn { width: 100%; }
+
+  &__stats {
+    display: flex;
+    gap: $spacing-md;
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-xl;
+  }
+
+  &__stat {
+    flex: 1;
+    @include card;
+    padding: $spacing-lg;
+    text-align: center;
+  }
+
+  &__stat-value { display: block; font-size: $font-size-xl; font-weight: $font-weight-black; color: $color-text-primary; }
+  &__stat-label { display: block; font-size: $font-size-sm; color: $color-text-secondary; margin-top: $spacing-xs; }
+
+  &__section {
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__section-title { @include type-heading; margin-bottom: $spacing-md; }
+
+  &__link-card {
+    @include card;
+    padding: $spacing-lg;
+  }
+
+  // C4 — Co-branded ceremony hero (Batch C)
+  &__share-hero {
+    display: block;
+    width: 200rpx;
+    height: 200rpx;
+    margin: 0 auto $spacing-md;
+    opacity: 0;
+    animation: invite-share-hero-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
+  }
+
+  &__link-label {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__link-value {
+    display: block;
+    padding: $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba($color-text-primary, 0.04);
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    overflow-wrap: break-word;
+  }
+
+  &__link-actions {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    margin-top: $spacing-md;
+  }
+
+  &__link-btn {
+    width: 100%;
+  }
+
+  &__link-helper {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: 1.6;
+    margin-top: $spacing-md;
+    overflow-wrap: normal;
+    word-break: break-word;
+  }
+
+  &__tier {
+    @include card;
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+    transition: border-color 0.2s ease, background 0.2s ease;
+
+    &--unlocked {
+      border: 2rpx solid $color-success;
+      background: rgba($color-success, 0.05);
+    }
+  }
+
+  &__tier-icon {
+    width: 48rpx;
+    height: 48rpx;
+    flex-shrink: 0;
+  }
+
+  &__tier-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__tier-target {
+    display: block;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    overflow-wrap: normal;
+    word-break: break-word;
+  }
+
+  &__tier-reward {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+    margin-top: $spacing-xs;
+    overflow-wrap: normal;
+    word-break: break-word;
+  }
+
+  &__tier-status {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    flex-shrink: 0;
+
+    &--unlocked {
+      color: $color-success;
+    }
+  }
+
+  &__tier-check {
+    width: 20rpx;
+    height: 20rpx;
+  }
+
+  &__tier-status-text {
+    font-size: $font-size-sm;
+    color: inherit;
+  }
+
+  &__spacer {
+    @include safe-area-bottom-padding(height, $spacing-xl);
+  }
+}
+
+@keyframes invite-share-hero-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes invite-hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .invite-page__tier {
+    transition: none;
+  }
+
+  .invite-page__share-hero,
+  .invite-page__hero-image {
+    animation: none;
+    opacity: 1;
+  }
+}

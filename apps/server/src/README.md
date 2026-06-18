@@ -110,6 +110,8 @@ Owns admin authentication, RBAC, moderation, venue/event operations, KPI endpoin
 Primary files:
 - `apps/server/src/routes/domains/admin.ts`
 - `apps/server/src/routes/domains/adminEventPools.ts` — CRUD, venue hints, time slot validation, archive/deletion for event pools
+- `apps/server/src/routes/domains/venues.ts` — venue CRUD, onboarding lifecycle, deals, time slots, data quality
+- `apps/server/src/repositories/venuesRepo.ts` — canonical venue data access; maps raw PostgreSQL `snake_case` rows to camelCase API contract
 - `apps/server/src/routes/domains/adminOperations.ts` — content filter log admin endpoint (`GET /api/admin/content-filter/logs`), admin notification broadcast/send with content safety gating
 - `apps/server/src/adminAuth.ts`
 - `apps/server/src/lib/adminAuditLogger.ts`
@@ -165,6 +167,17 @@ Boundary:
 - Shells return pruned or full `AuthUserResponse` depending on the tab's needs.
 - Cache invalidation is triggered on mutations: payment/coupon use, pool registration, connection creation.
 - Legacy endpoints (`/api/events/joined`, `/api/my-connections`) remain for client fallback.
+
+### Client analytics
+
+Lightweight fire-and-forget endpoints for product analytics.
+
+Primary files:
+- `apps/server/src/routes/domains/analytics.ts` — mounts `POST /api/analytics/profile` and `POST /api/analytics/payment`
+
+Key endpoints:
+- `POST /api/analytics/profile` — Profile tab interaction events (`profile_stat_tap`, `profile_archetype_cta_tap`, `profile_menu_tap`, `profile_logout_tap`, `profile_logout_cancel`, `profile_shell_retry`, `profile_share_app_message`, `profile_share_timeline`, `profile_milestone_impression`, `profile_milestone_tap`, `profile_pull_refresh`, `profile_share_card_generated`, `profile_share_card_error`, `profile_view`). Validates against an allowed-event whitelist, rate-limited at 120 req/min, stored in `discoverAnalyticsEvents`.
+- `POST /api/analytics/payment` — Payment Ritual V2 funnel events; stored in `paymentRitualEvents`.
 
 ### Repository and facade boundaries
 

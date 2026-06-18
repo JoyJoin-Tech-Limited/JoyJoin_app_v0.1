@@ -10,6 +10,7 @@
 import { and, eq, or, desc, sql } from "drizzle-orm";
 import { db } from "../db";
 import { connections, users, events } from "@shared/schema";
+import { formatAgeRangeBand } from "@shared/utils";
 
 export interface ConnectionSummary {
   id: string;
@@ -17,6 +18,9 @@ export interface ConnectionSummary {
   peerArchetype: string | null;
   eventTitle: string | null;
   wechatId: string | null;
+  peerCity: string | null;
+  peerBio: string | null;
+  peerAgeRange: string | null;
 }
 
 export interface PendingRequestSummary {
@@ -26,8 +30,11 @@ export interface PendingRequestSummary {
   eventTitle: string | null;
 }
 
+const CONNECTIONS_QUERY_LIMIT = 200;
+const PENDING_REQUESTS_QUERY_LIMIT = 50;
+
 /**
- * Fetch all mutual connections for a user.
+ * Fetch mutual connections for a user, capped for shell performance.
  * N+1-free: single round-trip with conditional joins for peer resolution.
  */
 export async function getUserConnections(userId: string): Promise<ConnectionSummary[]> {
@@ -53,6 +60,10 @@ export async function getUserConnections(userId: string): Promise<ConnectionSumm
       `,
       peerName: users.displayName,
       peerArchetype: users.archetype,
+      peerCity: users.currentCity,
+      peerBio: users.bio,
+      peerBirthdate: users.birthdate,
+      peerAgeVisibility: users.ageVisibility,
       eventTitle: events.title,
     })
     .from(connections)
@@ -75,7 +86,8 @@ export async function getUserConnections(userId: string): Promise<ConnectionSumm
         eq(connections.status, "mutual")
       )
     )
-    .orderBy(desc(connections.createdAt));
+    .orderBy(desc(connections.createdAt))
+    .limit(CONNECTIONS_QUERY_LIMIT);
 
   return rows.map((row: typeof rows[number]) => ({
     id: row.id,
@@ -83,6 +95,11 @@ export async function getUserConnections(userId: string): Promise<ConnectionSumm
     peerArchetype: row.peerArchetype ?? null,
     eventTitle: row.eventTitle ?? null,
     wechatId: row.peerWechatId ?? null,
+    peerCity: row.peerCity ?? null,
+    // Bio is only returned for mutual (post-event) connection-card viewers.
+    peerBio: row.peerBio ?? null,
+    // Align with schema default `show_age_range` while keeping privacy-first fallback.
+    peerAgeRange: formatAgeRangeBand(row.peerBirthdate, row.peerAgeVisibility ?? "show_age_range"),
   }));
 }
 
@@ -130,7 +147,8 @@ export async function getUserPendingRequests(userId: string): Promise<PendingReq
         sql`${connections.initiatorId} != ${userId}`
       )
     )
-    .orderBy(desc(connections.createdAt));
+    .orderBy(desc(connections.createdAt))
+    .limit(PENDING_REQUESTS_QUERY_LIMIT);
 
   return rows.map((row: typeof rows[number]) => ({
     id: row.id,

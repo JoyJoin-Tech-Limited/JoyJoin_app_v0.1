@@ -128,7 +128,7 @@ export function MatchingStatusPendingSection({
 
           {newMemberJoined ? (
             <View className='matching-status__waiting-seat-burst'>
-              <JoyJoinIcon emoji='✨' size={32} className='matching-status__waiting-seat-burst-emoji' />
+              <JoyJoinIcon emoji='✨' tier='chemistry' size={32} className='matching-status__waiting-seat-burst-emoji' />
               <Text className='matching-status__waiting-seat-burst-text'>
                 {newMemberArchetype ? `${newMemberArchetype} 刚入座` : '这桌刚多了一位新朋友'}
               </Text>

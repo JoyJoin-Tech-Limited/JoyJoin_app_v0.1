@@ -1,5 +1,4 @@
-import { View, Text, ScrollView } from '@tarojs/components'
-import JoyJoinIcon from '../ui/JoyJoinIcon'
+import { View, Text, ScrollView, Image } from '@tarojs/components'
 import React, { useCallback, useRef, useEffect } from 'react'
 import {
   shenzhenClusters,
@@ -8,8 +7,11 @@ import {
   type District,
   type HeatLevel,
 } from '@shared/districts'
+import JoyJoinIcon from '../ui/JoyJoinIcon'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import { haptics } from '../../lib/utils/haptics'
+import { localAsset } from '../../lib/utils/cdnAssets'
+import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import './LocationFilterDrawer.scss'
 
 const ALL_CLUSTER_ID = '__all__'
@@ -56,6 +58,7 @@ export default function LocationFilterDrawer({
     (clusterId: string, districtId: string) => {
       if (transitioningRef.current) return
       transitioningRef.current = true
+      haptics('light')
 
       discoverAnalytics.track('filter_select', undefined, {
         clusterId,
@@ -85,23 +88,37 @@ export default function LocationFilterDrawer({
     onClose()
   }, [onClose, selectedCluster, selectedDistrict])
 
-  const isAllSelected = selectedCluster === ALL_CLUSTER_ID && selectedDistrict === ALL_DISTRICT_ID
+  const handleCloseTap = useCallback(() => {
+    if (transitioningRef.current) return
+    haptics('light')
+    discoverAnalytics.track('filter_close', undefined, {
+      didSelect: false,
+      selectedCluster,
+      selectedDistrict,
+    })
+    onClose()
+  }, [onClose, selectedCluster, selectedDistrict])
 
-  const heatDotClass = (heat: HeatLevel): string => {
+  const isAllSelected = selectedCluster === ALL_CLUSTER_ID && selectedDistrict === ALL_DISTRICT_ID
+  const { shouldReduceMotion: reducedMotion } = useMiniRevealMotion()
+
+  const heatBadgeClass = (heat: HeatLevel): string => {
     switch (heat) {
       case 'hot':
-        return 'location-drawer__heat-dot--hot'
+        return 'location-drawer__heat-badge--hot'
       case 'active':
-        return 'location-drawer__heat-dot--active'
+        return 'location-drawer__heat-badge--active'
       case 'pending':
-        return 'location-drawer__heat-dot--pending'
+        return 'location-drawer__heat-badge--pending'
       default:
         return ''
     }
   }
 
   return (
-    <View className={`location-drawer ${open ? 'location-drawer--open' : ''}`}>
+    <View
+      className={`location-drawer ${open ? 'location-drawer--open' : ''} ${reducedMotion ? 'location-drawer--reduce-motion' : ''}`}
+    >
       {/* Backdrop */}
       <View
         className={`location-drawer__backdrop ${open ? 'location-drawer__backdrop--open' : ''}`}
@@ -111,27 +128,33 @@ export default function LocationFilterDrawer({
         aria-label='关闭区域选择'
       />
 
-      {/* Drawer Surface */}
+      {/* Drawer Surface — catchMove prevents touch events from leaking to the
+          background Discover page when the user swipes on the drawer chrome
+          or when the internal ScrollView hits its top/bottom edge. */}
       <View
         className={`location-drawer__surface ${open ? 'location-drawer__surface--open' : ''}`}
+        role='dialog'
+        aria-modal='true'
+        aria-label='偏好区域选择'
+        catchMove
       >
         {/* Drag handle */}
         <View className='location-drawer__handle-bar' />
 
         {/* Header */}
         <View className='location-drawer__header'>
-          <Text className='location-drawer__title'>偏好区域</Text>
+          <View className='location-drawer__title-row'>
+            <Image
+              className='location-drawer__title-mascot'
+              src={localAsset('/assets/xiaoyue-expressions/xiaoyue-coach-guide.webp')}
+              mode='aspectFit'
+              aria-hidden='true'
+            />
+            <Text className='location-drawer__title'>偏好区域</Text>
+          </View>
           <View
             className='location-drawer__close'
-            onClick={() => {
-              haptics('light')
-              discoverAnalytics.track('filter_close', undefined, {
-                didSelect: false,
-                selectedCluster,
-                selectedDistrict,
-              })
-              onClose()
-            }}
+            onClick={handleCloseTap}
             hoverClass='location-drawer__close--hover'
             role='button'
             aria-label='关闭区域选择'
@@ -143,61 +166,71 @@ export default function LocationFilterDrawer({
         {/* Scrollable content */}
         <ScrollView
           className='location-drawer__scroll'
+          style={{ height: '100%' }}
           scrollY
           enhanced
           showScrollbar={false}
           enableFlex
         >
-          {/* All Regions tile */}
-          <View
-            className={`location-drawer__all-tile ${isAllSelected ? 'location-drawer__all-tile--active' : ''}`}
-            onClick={() => handleSelect(ALL_CLUSTER_ID, ALL_DISTRICT_ID)}
-            hoverClass='location-drawer__tile--hover'
-          >
-            <JoyJoinIcon className='location-drawer__all-tile-icon' emoji='🌐' size={28} />
-            <Text className='location-drawer__all-tile-text'>全部区域</Text>
-          </View>
-
-          {/* Cluster sections */}
-          {shenzhenClusters.map((cluster: DistrictCluster) => (
-            <View key={cluster.id} className='location-drawer__cluster'>
-              <Text className='location-drawer__cluster-name'>{cluster.displayName}</Text>
-              <View className='location-drawer__district-grid'>
-                {cluster.districts.map((district: District) => {
-                  const isActive =
-                    selectedCluster === cluster.id && selectedDistrict === district.id
-                  const heatDotModifier = heatDotClass(district.heat)
-                  const heatLabel = heatConfig[district.heat].label
-
-                  return (
-                    <View
-                      key={district.id}
-                      className={`location-drawer__district-tile ${isActive ? 'location-drawer__district-tile--active' : ''} ${district.heat === 'pending' ? 'location-drawer__district-tile--pending' : ''}`}
-                      onClick={() => handleSelect(cluster.id, district.id)}
-                      hoverClass='location-drawer__tile--hover'
-                      role='button'
-                      aria-pressed={isActive}
-                      aria-label={`${district.name}${heatLabel ? '，' + heatLabel : ''}`}
-                    >
-                      {heatDotModifier && (
-                        <View className='location-drawer__heat-row'>
-                          <View className={`location-drawer__heat-dot ${heatDotModifier}`} />
-                          {heatLabel && (
-                            <Text className='location-drawer__heat-label'>{heatLabel}</Text>
-                          )}
-                        </View>
-                      )}
-                      <Text
-                        className='location-drawer__district-name'
-                      >
-                        {district.name}
-                      </Text>
-                    </View>
-                  )
-                })}
-              </View>
+          <View className='location-drawer__content'>
+            {/* All Regions tile */}
+            <View
+              className={`location-drawer__all-tile ${isAllSelected ? 'location-drawer__all-tile--active' : ''}`}
+              onClick={() => handleSelect(ALL_CLUSTER_ID, ALL_DISTRICT_ID)}
+              hoverClass='location-drawer__tile--hover'
+              role='button'
+              aria-pressed={isAllSelected}
+              aria-label='全部区域'
+            >
+              <JoyJoinIcon className='location-drawer__all-tile-icon' emoji='🌐' size={36} />
+              <Text className='location-drawer__all-tile-text'>全部区域</Text>
             </View>
-          ))}
+
+            {/* Cluster sections */}
+            {shenzhenClusters.map((cluster: DistrictCluster) => (
+              <View key={cluster.id} className='location-drawer__cluster'>
+                <View className='location-drawer__cluster-header'>
+                  <View className='location-drawer__cluster-dot' />
+                  <Text className='location-drawer__cluster-name'>{cluster.displayName}</Text>
+                </View>
+                <View className='location-drawer__district-grid'>
+                  {cluster.districts.map((district: District) => {
+                    const isActive =
+                      selectedCluster === cluster.id && selectedDistrict === district.id
+                    const heatBadgeModifier = heatBadgeClass(district.heat)
+                    const heatLabel = heatConfig[district.heat].label
+
+                    return (
+                      <View
+                        key={district.id}
+                        className={`location-drawer__district-tile ${isActive ? 'location-drawer__district-tile--active' : ''} ${district.heat === 'pending' ? 'location-drawer__district-tile--pending' : ''}`}
+                        onClick={() => handleSelect(cluster.id, district.id)}
+                        hoverClass='location-drawer__tile--hover'
+                        role='button'
+                        aria-pressed={isActive}
+                        aria-label={`${district.name}${heatLabel ? '，' + heatLabel : ''}`}
+                      >
+                        {isActive ? (
+                          <View className='location-drawer__check' aria-hidden='true'>
+                            <Text className='location-drawer__check-icon'>✓</Text>
+                          </View>
+                        ) : (
+                          heatLabel && (
+                            <View
+                              className={`location-drawer__heat-badge ${heatBadgeModifier}`}
+                            >
+                              <Text>{heatLabel}</Text>
+                            </View>
+                          )
+                        )}
+                        <Text className='location-drawer__district-name'>{district.name}</Text>
+                      </View>
+                    )
+                  })}
+                </View>
+              </View>
+            ))}
+          </View>
 
           {/* Safe area bottom padding */}
           <View className='location-drawer__safe-bottom' />

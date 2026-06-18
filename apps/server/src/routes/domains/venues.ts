@@ -19,7 +19,7 @@ import { notifyVenueOnboardingStatusChange } from "../../lib/wecomNotifier";
 function buildVenueAuditAfter(body: Record<string, unknown> | undefined): Record<string, unknown> {
   if (!body) return {};
   const allowedKeys = [
-    "name", "type", "city", "district", "clusterId", "districtId",
+    "name", "brandName", "type", "city", "district", "clusterId", "districtId",
     "commissionRate", "tags", "cuisines", "priceRange", "budgetCategories", "maxConcurrentEvents", "seatingCapacity",
     "decorStyle", "tasteIntensity", "barThemes", "alcoholOptions", "vibeDescriptor", "isActive",
     "onboardingStatus", "partnerStatus", "partnerCompanyName", "businessLicenseNo", "partnerEmail",
@@ -32,6 +32,7 @@ function buildVenueAuditAfter(body: Record<string, unknown> | undefined): Record
 
 const venueSchema = z.object({
   name: z.string().min(1),
+  brandName: z.string().optional(),
   type: z.string().min(1).optional(),
   address: z.string().min(1),
   city: z.string().min(1),
@@ -141,7 +142,7 @@ export function registerVenueRoutes(app: Express): void {
         return res.status(400).json({ message: "Invalid venue data", errors: parsed.error.issues });
       }
       const { 
-        name, type, address, city, district, clusterId, districtId,
+        name, brandName, type, address, city, district, clusterId, districtId,
         contactName, contactPhone, commissionRate, tags, cuisines, 
         priceRange, budgetCategories, maxConcurrentEvents, seatingCapacity, notes, decorStyle, tasteIntensity,
         barThemes, alcoholOptions, vibeDescriptor,
@@ -156,6 +157,7 @@ export function registerVenueRoutes(app: Express): void {
 
       const venue = await storage.createVenue({
         name,
+        brandName: brandName || null,
         type,
         address,
         city,
@@ -353,7 +355,7 @@ export function registerVenueRoutes(app: Express): void {
     if (options.notify) {
       try {
         await notifyVenueOnboardingStatusChange({
-          venueName: venue.name,
+          venueName: venue.brandName || venue.name,
           venueCity: venue.city,
           venueArea: venue.area || venue.district,
           oldStatus: fromStatus,
@@ -533,7 +535,7 @@ export function registerVenueRoutes(app: Express): void {
       }
       
       // Only return partner venues with active deals
-      if (venue.partner_status !== 'active') {
+      if (venue.partnerStatus !== 'active') {
         return res.json({ venue: null, deals: [] });
       }
       
@@ -1134,7 +1136,7 @@ export function registerVenueRoutes(app: Express): void {
           .update(eventPoolGroups)
           .set({
             venueId: newVenueId,
-            venueName: newVenue.name,
+            venueName: newVenue.brandName || newVenue.name,
             venueAddress: newVenue.address,
             venueAssignmentStatus: 'manual_override',
             venueAssignmentReason: reason || 'admin_migrated',

@@ -33,11 +33,11 @@
     }
 
     &--1.profile-review__stage--visible {
-      animation-delay: 0.03s;
+      animation-delay: 0.04s;
     }
 
     &--2.profile-review__stage--visible {
-      animation-delay: 0.06s;
+      animation-delay: 0.08s;
     }
 
     &--3.profile-review__stage--visible {
@@ -45,15 +45,23 @@
     }
 
     &--4.profile-review__stage--visible {
-      animation-delay: 0.18s;
+      animation-delay: 0.2s;
     }
 
     &--5.profile-review__stage--visible {
-      animation-delay: 0.24s;
+      animation-delay: 0.26s;
     }
 
     &--6.profile-review__stage--visible {
-      animation-delay: 0.3s;
+      animation-delay: 0.32s;
+    }
+
+    &--7.profile-review__stage--visible {
+      animation-delay: 0.38s;
+    }
+
+    &--8.profile-review__stage--visible {
+      animation-delay: 0.44s;
     }
   }
 
@@ -69,7 +77,8 @@
   }
 
   &__hero {
-    margin-bottom: $spacing-sm;
+    margin-bottom: $spacing-md;
+    text-align: center;
   }
 
   &__eyebrow {
@@ -92,6 +101,7 @@
     line-height: 1.4;
     word-break: keep-all;
     overflow-wrap: break-word;
+    text-align: center;
   }
 
   &__title-en {
@@ -108,105 +118,199 @@
     line-height: $line-height-relaxed;
     word-break: break-word;
     overflow-wrap: break-word;
+    text-align: center;
   }
 
   &__mascot {
     margin-bottom: $spacing-md;
   }
 
-  &__hero-card {
+  // ─── Single playful admission poster ───────────────────────────────────────
+  &__poster {
+    position: relative;
     @include card-premium;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-    gap: $spacing-md;
-    padding: $spacing-lg;
+    padding: 0;
     margin-bottom: $spacing-md;
+    border-radius: $card-radius-lg;
+    border: 3rpx solid rgba($color-primary, 0.18);
     overflow: hidden;
+    background: $color-surface;
+
+    &--themed {
+      box-shadow: 0 12rpx 48rpx rgba($color-primary, 0.12), 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
+    }
   }
 
-  &__avatar-wrap {
-    @include flex-center;
-    width: 240rpx;
-    height: 240rpx;
-    flex: 0 0 auto;
-    border-radius: $radius-pill;
-    background: rgba($color-primary-light, 0.6);
-    box-shadow: 0 8rpx 20rpx rgba($color-primary, 0.10);
+  &__poster-shimmer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.32;
+    background: linear-gradient(
+      110deg,
+      transparent 25%,
+      rgba(255, 255, 255, 0.72) 50%,
+      transparent 75%
+    );
+    transform: translateX(-150%);
+    animation: profile-review-shimmer 3.2s ease-in-out infinite;
   }
 
-  &__avatar-image {
-    width: 200rpx;
-    height: 200rpx;
+  &__stamp {
+    position: absolute;
+    top: $spacing-md;
+    right: $spacing-md;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 104rpx;
+    height: 104rpx;
+    border-radius: 50%;
+    background: rgba($color-amber, 0.12);
+    border: 2rpx dashed rgba($color-amber, 0.45);
+    transform: rotate(12deg);
   }
 
-  &__hero-copy {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
+  &__stamp-text {
+    display: block;
+    width: 88rpx;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-bold;
+    color: $color-amber-700;
+    line-height: 1.25;
+    text-align: center;
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 
-  &__hero-name {
+  &__poster-header {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: $spacing-lg $spacing-md $spacing-md;
+    text-align: center;
+  }
+
+  &__poster-name {
     display: block;
     font-size: $font-size-xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
+    line-height: 1.4;
     word-break: break-word;
     overflow-wrap: break-word;
-    overflow: hidden;
   }
 
-  &__hero-archetype-badge {
+  &__poster-archetype {
     display: inline-flex;
     align-items: center;
     margin-top: $spacing-sm;
-    max-width: 100%;
     padding: $spacing-xs $spacing-sm;
     border-radius: $radius-pill;
     border: 2rpx solid transparent;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    word-break: break-word;
-    overflow-wrap: break-word;
-    overflow: hidden;
-    box-sizing: border-box;
   }
 
-  &__hero-archetype-badge-text {
+  &__poster-archetype-text {
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
+  }
+
+  &__poster-tags {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: $spacing-sm;
+    margin-top: $spacing-sm;
+  }
+
+  &__poster-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-pill;
+    background: rgba($color-primary-light, 0.5);
+    border: 2rpx solid rgba($color-secondary, 0.12);
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  &__poster-tag-text {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  &__hero-summary {
-    display: block;
-    margin-top: $spacing-sm;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: $line-height-relaxed;
-    word-break: break-word;
-    overflow-wrap: break-word;
-    overflow: hidden;
+  &__section {
+    position: relative;
+    z-index: 2;
+    padding: $spacing-md;
+    text-align: center;
+
+    & + & {
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 15%;
+        right: 15%;
+        height: 0;
+        border-top: 2rpx dashed rgba($color-border, 0.8);
+      }
+    }
   }
 
-  /* AI-generated social tag — presented prominently as the user's tagline */
-  &__hero-tagline {
+  &__section-label {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-sm;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-pill;
+    background: rgba($color-primary-light, 0.72);
+    color: $color-primary;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__section-label-icon {
     display: flex;
     align-items: center;
-    margin-top: $spacing-sm;
-    padding: 16rpx $spacing-sm;
-    background: rgba($color-primary-light, 0.5);
-    border-radius: 16rpx;
+    justify-content: center;
+    width: 24rpx;
+    height: 24rpx;
+    flex-shrink: 0;
+  }
+
+  &__section-label-text {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    line-height: 1.4;
+  }
+
+  // ─── AI-generated social tag (first wow moment) ────────────────────────────
+  &__ai-tag {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba($color-surface, 0.86);
     border: 2rpx solid rgba($color-primary, 0.1);
-    max-width: 100%;
-    overflow: hidden;
-    box-sizing: border-box;
+    box-shadow: inset 0 2rpx 8rpx rgba($color-primary, 0.04);
 
     &--loading {
-      background: rgba($color-primary-light, 0.25);
-      min-height: 48rpx;
+      min-height: 96rpx;
+      background: rgba($color-primary-light, 0.35);
     }
 
     &--error {
@@ -214,96 +318,101 @@
     }
   }
 
-  &__hero-tagline-retry {
+  &__ai-tag-quote {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: rgba($color-primary, 0.35);
+    line-height: 1;
+    font-family: Georgia, serif;
+
+    &--top {
+      margin-bottom: -$spacing-xs;
+    }
+
+    &--bottom {
+      margin-top: -$spacing-xs;
+    }
+  }
+
+  &__ai-tag-text-wrap {
+    display: block;
+    width: 100%;
+  }
+
+  &__ai-tag-text {
+    display: block;
+    width: 100%;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: $line-height-normal;
+    text-align: center;
+    word-break: normal;
+    overflow-wrap: break-word;
+  }
+
+  &__ai-tag-retry {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-width: 88rpx;
     min-height: 44rpx;
-    margin-left: $spacing-sm;
+    margin-top: $spacing-sm;
     padding: 4rpx $spacing-sm;
     border-radius: $radius-pill;
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
     color: $color-primary;
     background: rgba($color-primary, 0.08);
-    flex-shrink: 0;
   }
 
-  &__hero-tagline-text {
-    font-size: $font-size-base;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-    line-height: $line-height-relaxed;
-    word-break: break-word;
-    overflow-wrap: break-word;
-    overflow: hidden;
-  }
-
-  &__hero-tagline-shimmer {
-    flex: 1;
-    height: 40rpx;
+  &__ai-tag-shimmer {
+    width: 78%;
+    height: 44rpx;
+    margin: 0 auto;
     border-radius: 8rpx;
     background: rgba($color-primary, 0.12);
-    animation: hero-tagline-pulse 1.5s ease-in-out infinite;
+    animation: profile-review-pulse 1.5s ease-in-out infinite;
   }
 
-  &__hero-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $spacing-sm;
-    width: 100%;
-    overflow: hidden;
-  }
-
-  &__hero-tag {
-    display: inline-flex;
-    align-items: center;
-    padding: $spacing-xs $spacing-sm;
-    border-radius: $radius-pill;
-    background: rgba($color-primary-light, 0.4);
-    border: 2rpx solid rgba($color-secondary, 0.14);
-    max-width: 100%;
-    overflow: hidden;
-  }
-
-  &__hero-tag-text {
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &__card {
-    @include card-premium;
-    padding: $spacing-lg;
-    margin-bottom: $spacing-md;
-  }
-
-  &__card-title {
+  &__archetype-summary {
     display: block;
-    margin-bottom: $spacing-md;
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    line-height: $line-height-normal;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+    text-align: center;
+    word-break: normal;
+    overflow-wrap: break-word;
   }
 
+  // ─── Profile mini-cards (all centered) ─────────────────────────────────────
   &__info-grid {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: $spacing-sm;
   }
 
   &__info-block {
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     width: calc((100% - #{$spacing-sm}) / 2);
+    max-width: 280rpx;
     padding: $spacing-sm;
     border-radius: $card-radius-sm;
     background: rgba($color-bg, 0.96);
     overflow: hidden;
     min-width: 0;
+  }
+
+  &__info-dot {
+    width: 8rpx;
+    height: 8rpx;
+    margin-bottom: $spacing-xs;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.6);
   }
 
   &__info-label {
@@ -327,45 +436,56 @@
     overflow: hidden;
   }
 
-  &__chip-group {
+  // ─── Intent chips ──────────────────────────────────────────────────────────
+  &__intent-wrap {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: $spacing-sm;
-    margin-top: $spacing-md;
   }
 
-  &__chip {
+  &__intent-chip {
     display: inline-flex;
     align-items: center;
+    gap: $spacing-xs;
     padding: $spacing-xs $spacing-sm;
     border-radius: $radius-pill;
-    background: rgba($color-primary-light, 0.92);
+    background: rgba($color-secondary, 0.12);
+    border: 2rpx solid rgba($color-secondary, 0.18);
     max-width: 100%;
     overflow: hidden;
-
-    &--accent {
-      background: rgba($color-secondary, 0.12);
-      border: 2rpx solid rgba($color-secondary, 0.18);
-    }
   }
 
-  &__chip-text {
-    font-size: $font-size-xs;
+  &__intent-chip-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24rpx;
+    height: 24rpx;
+    flex-shrink: 0;
+  }
+
+  &__intent-chip-text {
+    font-size: $font-size-sm;
     color: $color-text-secondary;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
+  // ─── Interest heat ─────────────────────────────────────────────────────────
   &__interest-stats {
     display: flex;
+    justify-content: center;
     gap: $spacing-sm;
+    margin-bottom: $spacing-md;
   }
 
   &__interest-stat {
     flex: 1;
     min-width: 0;
-    padding: $spacing-sm;
+    max-width: 200rpx;
+    padding: $spacing-sm $spacing-xs;
     border-radius: $card-radius-sm;
     background: rgba($color-primary-light, 0.5);
     text-align: center;
@@ -380,6 +500,7 @@
     font-size: $font-size-xl;
     font-weight: $font-weight-black;
     color: $color-primary;
+    font-family: $font-en-brand;
     word-break: break-word;
     overflow-wrap: break-word;
   }
@@ -394,6 +515,15 @@
     white-space: nowrap;
   }
 
+  &__chip-group {
+    margin-top: $spacing-md;
+
+    .interest-chip-cloud__chips {
+      justify-content: center;
+    }
+  }
+
+  // ─── Skeleton / placeholder states ─────────────────────────────────────────
   &__interest-skeleton {
     display: flex;
     flex-direction: column;
@@ -421,6 +551,7 @@
   &__skeleton-chip-row {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: $spacing-sm;
   }
 
@@ -557,16 +688,22 @@
     text-align: center;
   }
 
+  // ─── Floating CTA ──────────────────────────────────────────────────────────
   &__cta {
-    padding: $spacing-md $container-padding;
-    @include safe-area-inline($container-padding);
+    position: relative;
+    z-index: 10;
+    margin: 0 $container-padding $spacing-md;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.94);
+    box-shadow: $shadow-lg;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
     @include safe-area-bottom-padding(padding-bottom, $spacing-md);
-    background: $color-surface;
-    box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.04);
-  }
 
-  &__footer-reserve {
-    height: 200rpx;
+    &--scrolled {
+      transform: translateY(-4rpx);
+      box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.14);
+    }
   }
 
   &__submit {
@@ -580,6 +717,10 @@
     &[disabled] {
       opacity: 0.55;
     }
+  }
+
+  &__footer-reserve {
+    height: 140rpx;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -599,36 +740,39 @@
       transform: none !important;
     }
 
+    &__poster-shimmer,
     &__skeleton-line,
-    &__skeleton-chip {
+    &__skeleton-chip,
+    &__interest-placeholder-dot,
+    &__ai-tag-shimmer {
       animation: none;
       opacity: 0.88;
     }
 
-    &__interest-placeholder-dot {
-      animation: none;
-      opacity: 0.5;
-    }
-
-    &__hero-tagline-shimmer {
-      animation: none;
-      background: rgba($color-primary, 0.1);
+    &__cta {
+      transition: none;
     }
   }
 }
 
-@keyframes hero-tagline-pulse {
-  0%, 100% {
-    opacity: 0.25;
+@keyframes profile-review-shimmer {
+  0% {
+    transform: translateX(-150%);
   }
 
-  50% {
-    opacity: 0.65;
+  45%,
+  55% {
+    transform: translateX(150%);
+  }
+
+  100% {
+    transform: translateX(150%);
   }
 }
 
 @keyframes placeholder-dot-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.35;
     transform: scale(1);
   }

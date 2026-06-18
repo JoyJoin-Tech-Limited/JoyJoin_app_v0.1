@@ -93,6 +93,52 @@ export function isUniversalClosingQuestionId(id: string): boolean {
   return UNIVERSAL_CLOSING_QUESTION_IDS.includes(id);
 }
 
+// ── Variant relationship maps ───────────────────────────────────────────────
+// A question and its variant(s) share the same scenario intent. If one has
+// been answered or skipped, the other(s) must not be served later.
+const VARIANT_BASE_MAP: Record<string, string> = {};
+const BASE_VARIANTS_MAP: Record<string, string[]> = {};
+for (const q of questionsV4) {
+  if (q.variantOf) {
+    VARIANT_BASE_MAP[q.id] = q.variantOf;
+    if (!BASE_VARIANTS_MAP[q.variantOf]) {
+      BASE_VARIANTS_MAP[q.variantOf] = [];
+    }
+    BASE_VARIANTS_MAP[q.variantOf].push(q.id);
+  }
+}
+
+function isQuestionIdExcluded(
+  questionId: string,
+  answeredQuestionIds: Set<string>,
+  skippedQuestionIds: Set<string>
+): boolean {
+  if (answeredQuestionIds.has(questionId) || skippedQuestionIds.has(questionId)) {
+    return true;
+  }
+  const baseId = VARIANT_BASE_MAP[questionId];
+  if (baseId && (answeredQuestionIds.has(baseId) || skippedQuestionIds.has(baseId))) {
+    return true;
+  }
+  const variants = BASE_VARIANTS_MAP[questionId];
+  if (variants) {
+    for (const variantId of variants) {
+      if (answeredQuestionIds.has(variantId) || skippedQuestionIds.has(variantId)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function isQuestionExcluded(
+  question: AdaptiveQuestion,
+  answeredQuestionIds: Set<string>,
+  skippedQuestionIds: Set<string>
+): boolean {
+  return isQuestionIdExcluded(question.id, answeredQuestionIds, skippedQuestionIds);
+}
+
 /**
  * Instrumentation for tracking targetPair question selection
  * Used for debugging and calibration analysis
@@ -404,8 +450,8 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
   // Complete anchor questions first to ensure calibrated baseline
   if (questionCount < config.anchorQuestionCount) {
     const anchors = getAnchorQuestions();
-    const unansweredAnchors = anchors.filter(q => 
-      !answeredQuestionIds.has(q.id) && !skippedQuestionIds.has(q.id)
+    const unansweredAnchors = anchors.filter(q =>
+      !isQuestionExcluded(q, answeredQuestionIds, skippedQuestionIds)
     );
     if (unansweredAnchors.length > 0) {
       return unansweredAnchors[0];
@@ -424,7 +470,7 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
     const calId = selectCalQuestion(s.detectedCohort, s.answeredQuestionIds, s.calibrationQuestionsAsked, max);
     if (calId) {
       const cq = questionsV4.find(q => q.id === calId);
-      if (cq && !s.answeredQuestionIds.has(calId) && !s.skippedQuestionIds.has(calId)) return cq;
+      if (cq && !isQuestionExcluded(cq, s.answeredQuestionIds, s.skippedQuestionIds)) return cq;
     }
     if (s.calibrationQuestionsAsked < max) s = { ...s, calibrationQuestionsAsked: max };
   }
@@ -472,9 +518,8 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
 
   // Exclude universal closing questions from the adaptive pool – they are
   // reserved for the guaranteed closing phase and must not be selected early.
-  const availableQuestions = questionsV4.filter(q => 
-    !answeredQuestionIds.has(q.id) &&
-    !skippedQuestionIds.has(q.id) &&
+  const availableQuestions = questionsV4.filter(q =>
+    !isQuestionExcluded(q, answeredQuestionIds, skippedQuestionIds) &&
     !(UNIVERSAL_CLOSING_QUESTION_IDS).includes(q.id)
   );
   if (availableQuestions.length === 0) {
@@ -537,10 +582,9 @@ export function selectAlternativeQuestion(
 ): AdaptiveQuestion | null {
   const { answeredQuestionIds, skippedQuestionIds } = state;
   
-  const sameLevelQuestions = questionsV4.filter(q => 
+  const sameLevelQuestions = questionsV4.filter(q =>
     q.level === preferredLevel &&
-    !answeredQuestionIds.has(q.id) && 
-    !skippedQuestionIds.has(q.id) &&
+    !isQuestionExcluded(q, answeredQuestionIds, skippedQuestionIds) &&
     !isUniversalClosingQuestionId(q.id)
   );
   
