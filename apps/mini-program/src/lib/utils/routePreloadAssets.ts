@@ -1,5 +1,6 @@
 import { cdnAsset, localAsset } from './cdnAssets'
 import { preloadImagesWithDiagnostics } from './imagePreload'
+import { cacheAssets, clearAssetCacheOnVersionChange } from './persistentAssetCache'
 import { logInfo } from './logger'
 
 /**
@@ -128,6 +129,8 @@ export function preloadRouteAssets(route: string): void {
   // Defer by one tick so we never block first paint or interaction.
   setTimeout(() => {
     void preloadImagesWithDiagnostics(assets, route)
+    // Persistent cache in background — return visitors get zero-network reads.
+    void cacheAssets(assets, 2)
   }, 0)
 }
 
@@ -148,6 +151,7 @@ export function preloadPredictiveAssets(currentRoute: string): void {
   setTimeout(() => {
     logInfo('[preload] Predictive', { from: currentRoute, nextRoutes, assetCount: assets.length })
     void preloadImagesWithDiagnostics(assets, `predictive:${currentRoute}`)
+    void cacheAssets(assets, 2)
   }, 500)
 }
 

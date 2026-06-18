@@ -147,6 +147,12 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 
 - **CTAs use solid `$color-primary` (`#8B5CF6`) — no gradient.** Gradient was purged from all mini-program CTAs.
 - **Bottom action bar pattern**: solid white (`$color-surface`) + subtle top shadow (`rgba($color-text-primary, 0.04)`).
+- **Empty-state typography standard (2026-06-18):**
+  - Use `XiaoyueEmptyState` for mascot-led empty/loading/error states (Connections, Center Hub).
+  - Use `StatusCard` for Lovart-hero empty/error states (Discover, Events).
+  - Titles: Alimama brand font, `line-height ≥ 1.4`, bold.
+  - Subtitles/body: system UI font, `line-height ≥ 1.6`.
+  - Title-to-subtitle spacing: 16–24rpx (`$spacing-sm` to `$spacing-md`).
 - **Zero-emoji on primary copy**. Use `JoyJoinIcon` for reactions, categories, intents, achievements, chemistry badges, status icons, phase emblems, info labels.
 - **Xiaoyue copy**: subject to `xiaoyue-writing-craft` 9 axioms. Use `getErrorMessage`, `getEmptyStateMessage`, etc. from `packages/shared/src/copy/`.
 - **Error-state ARIA**: `role='alert'` + `aria-live='polite'` for inline error states; `role='status'` + `aria-live='polite'` + `aria-busy='true'` for loading screens (e.g., `JoyJoinLoadingScreen`).

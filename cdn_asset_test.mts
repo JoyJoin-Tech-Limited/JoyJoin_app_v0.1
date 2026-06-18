@@ -1,11 +1,11 @@
 import { cdnAsset, localAsset } from './apps/mini-program/src/lib/utils/cdnAssets.ts'
 
 const cases = [
-  { input: '/assets/personality/archetypes/corgi.webp', expected: 'https://joyjoinapp.com/static/assets/personality/archetypes/corgi.webp' },
-  { input: '/assets/ceremony/pool-registration-success.webp', expected: 'https://joyjoinapp.com/static/assets/ceremony/pool-registration-success.webp' },
-  { input: '/assets/mascot/homeWelcome.webp', expected: 'https://joyjoinapp.com/static/assets/mascot/homeWelcome.webp' },
-  { input: '/assets/icons/phase/phase-warmup.webp', expected: 'https://joyjoinapp.com/static/assets/icons/phase/phase-warmup.webp' },
-  { input: '/assets/icons/reaction/reaction-like.webp', expected: 'https://joyjoinapp.com/static/assets/icons/reaction/reaction-like.webp' },
+  { input: '/assets/personality/archetypes/corgi.webp', expected: 'https://cdn.joyjoinapp.com/static/assets/personality/archetypes/corgi.webp' },
+  { input: '/assets/ceremony/pool-registration-success.webp', expected: 'https://cdn.joyjoinapp.com/static/assets/ceremony/pool-registration-success.webp' },
+  { input: '/assets/mascot/homeWelcome.webp', expected: 'https://cdn.joyjoinapp.com/static/assets/mascot/homeWelcome.webp' },
+  { input: '/assets/icons/phase/phase-warmup.webp', expected: 'https://cdn.joyjoinapp.com/static/assets/icons/phase/phase-warmup.webp' },
+  { input: '/assets/icons/reaction/reaction-like.webp', expected: 'https://cdn.joyjoinapp.com/static/assets/icons/reaction/reaction-like.webp' },
 ]
 
 let passed = 0

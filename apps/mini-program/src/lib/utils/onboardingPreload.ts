@@ -7,6 +7,7 @@ import { getXiaoyueExpressionAsset } from '../mascot/xiaoyueExpressions'
 import { cdnAsset, localAsset } from './cdnAssets'
 import { logInfo, logWarn } from './logger'
 import { preloadImagesWithDiagnostics } from './imagePreload'
+import { cacheAssets, clearAssetCacheOnVersionChange } from './persistentAssetCache'
 import { ONBOARDING_CRITICAL_CDN_ASSETS } from './routePreloadAssets'
 import { INTENT_FLEXIBLE_OPTION, INTENT_OPTIONS } from '@shared/constants'
 import { getIconMapping, getLocalIconAssetPath, CDN_ICON_TIERS } from '@joyjoin/shared/iconSystem'
@@ -154,6 +155,9 @@ export async function preloadOnboardingAssets(): Promise<void> {
   if (hasPreloadedOnboardingAssets) return
   hasPreloadedOnboardingAssets = true
 
+  // Invalidate stale local cache if app version changed.
+  clearAssetCacheOnVersionChange()
+
   const networkCheck = await shouldSkipPreload()
   if (networkCheck.skip) {
     logInfo('[preloadOnboardingAssets] Skipped — weak or no network', { reason: networkCheck.reason })
@@ -181,6 +185,19 @@ export async function preloadOnboardingAssets(): Promise<void> {
   // Tier 3: heavy sprite sheets — lowest priority, concurrency-limited.
   if (heavy.length > 0) {
     schedulePreload(heavy, 'onboarding:heavy', 1200, 2)
+  }
+
+  // Tier 4: persist critical + test phase assets to local storage for zero-network
+  // return visits. Runs after warm-preloads have started, deferred so it never
+  // competes with first-paint critical path.
+  const persistTargets = [...critical, ...testPhase]
+  if (persistTargets.length > 0) {
+    const timer = setTimeout(() => {
+      const idx = activeTimers.indexOf(timer)
+      if (idx !== -1) activeTimers.splice(idx, 1)
+      void cacheAssets(persistTargets, 2)
+    }, 2000)
+    activeTimers.push(timer)
   }
 }
 

@@ -1,6 +1,6 @@
 {
     "_comment": "Assets to upload to CDN for JoyJoin Mini Program. Run this after each build that changes assets.",
-    "cdnBaseUrl": "https://joyjoinapp.com/static",
+    "cdnBaseUrl": "https://cdn.joyjoinapp.com/static",
     "assets": [
         {
             "localPath": "assets/joyjoin-logo.webp",

@@ -1,5 +1,6 @@
 import Taro from '@tarojs/taro'
 import { logInfo, logWarn } from './logger'
+import { cacheAssets } from './persistentAssetCache'
 
 /**
  * Preload a single image into the WeChat image cache using getImageInfo.
@@ -82,4 +83,21 @@ export async function preloadImagesWithDiagnostics(
     success: successCount,
     failed: srcs.length - successCount,
   })
+}
+
+/**
+ * Preload and persist a list of images.
+ * Downloads from CDN, saves to persistent local storage, and warms the
+ * WeChat image cache. Return visitors read from local storage (zero network).
+ *
+ * @param concurrency  Optional cap on parallel downloads.
+ */
+export async function preloadAndPersistImages(
+  srcs: string[],
+  context: string,
+  concurrency = 3,
+): Promise<void> {
+  await preloadImagesWithDiagnostics(srcs, `persist:${context}`, concurrency)
+  // Run persistent caching in parallel — failures are non-critical.
+  void cacheAssets(srcs, concurrency)
 }

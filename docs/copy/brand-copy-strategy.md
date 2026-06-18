@@ -178,8 +178,8 @@ function getErrorMessage(
 
 // Template with interpolation
 function getEmptyStateMessage(
-  surface: 'events' | 'connections' | 'notifications',
-  context?: { mascotName?: string }
+  surface: 'events' | 'connections' | 'notifications' | 'messages' | 'history',
+  context?: { mascotName?: string; includeAction?: boolean }
 ): string
 
 // Tone-aware dispatch
@@ -288,6 +288,14 @@ Full page (悦仔 Voice):        "悦仔遇到点小麻烦，再试试看~"
 
 ```
 悦仔还没找到适合你的{noun}，先{action}？
+```
+
+For high-stakes surfaces where the user needs to understand *how* value is created
+(e.g. 我的连接), explain the mechanism in one sentence before the action nudge:
+
+```
+连接是在活动里互相选择的人。参加一局活动，结束后提交反馈，
+和你互相选择的人会出现在这里。
 ```
 
 ### 9.6 Trust-Sensitive Rule

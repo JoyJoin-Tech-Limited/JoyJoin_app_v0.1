@@ -31,7 +31,7 @@ const MINI_PROGRAM_XIAOYUE_CONNECTION_REACTIONS_ENABLED =
   ''
 
 /** Inlined at build time — WeChat runtime has no `process` global. */
-const PRODUCTION_CDN_BASE_URL = 'https://joyjoinapp.com/static'
+const PRODUCTION_CDN_BASE_URL = 'https://cdn.joyjoinapp.com/static'
 const MINI_PROGRAM_CDN_BASE_URL =
   process.env.TARO_APP_CDN_BASE_URL ||
   (process.env.NODE_ENV === 'production' ? PRODUCTION_CDN_BASE_URL : '')
@@ -42,7 +42,7 @@ if (MINI_PROGRAM_NODE_ENV === 'production' && !MINI_PROGRAM_CDN_BASE_URL) {
   throw new Error(
     '[mini-program build] TARO_APP_CDN_BASE_URL is required in production builds.\n' +
       '  Set it in apps/mini-program/.env.local or as an environment variable, then rebuild.\n' +
-      '  Example: TARO_APP_CDN_BASE_URL=https://joyjoinapp.com/static',
+      '  Example: TARO_APP_CDN_BASE_URL=https://cdn.joyjoinapp.com/static',
   )
 }
 
