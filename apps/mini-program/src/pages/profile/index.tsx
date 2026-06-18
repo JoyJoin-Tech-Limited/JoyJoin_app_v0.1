@@ -827,6 +827,9 @@ export default function ProfilePage() {
       <ScrollView
         className='profile-page__scroll'
         scrollY
+        enhanced
+        enableFlex
+        bounces
         showScrollbar={false}
         refresherEnabled
         refresherTriggered={refresherTriggered}

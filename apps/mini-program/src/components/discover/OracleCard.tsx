@@ -199,6 +199,8 @@ export default React.memo(function OracleCard({
   ].filter(Boolean).join(' ')
 
   const eventTypeLabel = getEventTypeLabel(pool.eventType)
+  const titleLabel = (pool.title || '悦聚活动').trim()
+  const shouldShowTitle = titleLabel !== eventTypeLabel
   const cardAriaLabel = `${dateLabel} ${timeLabel} ${eventTypeLabel}${pool.city ? ' ' + pool.city : ''}${isPoolFull ? '，已满员' : ''}，${heroMessage}`
 
   return (
@@ -285,9 +287,11 @@ export default React.memo(function OracleCard({
       </View>
 
       {/* L4 Title */}
-      <View className='oracle-card__meta'>
-        <Text className='oracle-card__title'>{pool.title || '悦聚活动'}</Text>
-      </View>
+      {shouldShowTitle && (
+        <View className='oracle-card__meta'>
+          <Text className='oracle-card__title'>{titleLabel}</Text>
+        </View>
+      )}
 
       {/* L5 Social proof teaser */}
       {(teaser || subline) && (

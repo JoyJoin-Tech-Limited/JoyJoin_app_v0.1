@@ -130,18 +130,12 @@
 /* ── Shared sliding active pill ─────────────────────────────── */
 
 .joy-custom-tab-bar__active-pill {
-  position: absolute;
-  left: 24rpx;
-  top: 8rpx;
-  height: 112rpx;
-  border-radius: 24rpx;
+  display: none;
+}
+
+.joy-custom-tab-bar__item--active {
   background: rgba(139, 92, 246, 0.08);
-  pointer-events: none;
-  z-index: 0;
-  /* GPU-only transform: translateX is updated per tab selection */
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-              opacity 120ms ease;
-  will-change: transform, opacity;
+  border-radius: 24rpx;
 }
 
 /* Interruptible transition: applied temporarily during rapid back-and-forth

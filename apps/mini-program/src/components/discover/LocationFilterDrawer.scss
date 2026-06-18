@@ -8,7 +8,8 @@
 //   • 2-column district grid for breathable, tappable cards
 //   • Clear hierarchy: all-regions hero → cluster sections → district tiles
 //   • Active state is unmistakable (filled primary + checkmark)
-//   • Scroll events are contained inside the drawer surface (catchMove)
+//   • Scroll events are handled by the inner ScrollView; only chrome/backdrop
+//     catch touchmove so the district list remains scrollable.
 .location-drawer {
   position: fixed;
   top: 0;
@@ -47,8 +48,9 @@
     right: 0;
     bottom: $tab-bar-root-height;
     left: 0;
-    // Tall enough to show ~1.5 clusters without scrolling; capped for smaller screens.
-    max-height: calc(1020rpx - $tab-bar-root-height);
+    // Fixed height so the flex child (ScrollView) gets a definite pixel value —
+    // WeChat Mini Program requires a concrete height for scroll-y to activate.
+    height: calc(1020rpx - $tab-bar-root-height);
     min-height: 0;
     background: $color-surface;
     border-radius: 40rpx 40rpx 0 0;
@@ -125,8 +127,10 @@
 
   // ── Scrollable Content ────────────────────────────────────────
   &__scroll {
-    flex: 1;
+    flex: none;
+    height: calc(1020rpx - $tab-bar-root-height - 165rpx);
     min-height: 0;
+    overflow: hidden;
   }
 
   &__content {
