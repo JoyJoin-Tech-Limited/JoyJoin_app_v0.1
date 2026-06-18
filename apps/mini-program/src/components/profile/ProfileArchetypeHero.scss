@@ -1,5 +1,4 @@
 @use '../../styles/variables' as *;
-@use '../../styles/dark-variables' as *;
 @use '../../styles/mixins' as *;
 
 .profile-archetype-hero {
@@ -164,62 +163,6 @@
     color: $color-text-secondary;
     line-height: $line-height-normal;
     @include text-truncate;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    &--family-warm {
-      background: linear-gradient(155deg, rgba($dark-color-surface, 0.98) 0%, rgba($color-archetype-warm, 0.14) 100%);
-    }
-
-    &--family-cool {
-      background: linear-gradient(155deg, rgba($dark-color-surface, 0.98) 0%, rgba($color-archetype-cool, 0.14) 100%);
-    }
-
-    &--family-fire {
-      background: linear-gradient(155deg, rgba($dark-color-surface, 0.98) 0%, rgba($color-archetype-fire, 0.14) 100%);
-    }
-
-    &--family-calm {
-      background: linear-gradient(155deg, rgba($dark-color-surface, 0.98) 0%, rgba($color-archetype-calm, 0.14) 100%);
-    }
-
-    &__name {
-      color: $dark-color-text-primary;
-    }
-
-    &__chip {
-      background: rgba($dark-color-surface, 0.72);
-      border-color: rgba($dark-color-text-primary, 0.08);
-    }
-
-    &__chip-text {
-      color: $dark-color-text-secondary;
-    }
-
-    &__bio {
-      color: $dark-color-text-primary;
-    }
-
-    &__bio-cta {
-      background: rgba($dark-color-surface, 0.5);
-      border-color: rgba($dark-color-primary, 0.35);
-
-      &--pressed {
-        background: rgba($dark-color-surface, 0.75);
-      }
-    }
-
-    &__bio-cta-text {
-      color: $dark-color-text-link;
-    }
-
-    &__bio-cta-chevron {
-      border-color: $dark-color-text-link;
-    }
-
-    &__context {
-      color: $dark-color-text-secondary;
-    }
   }
 
   @media (prefers-reduced-motion: reduce) {

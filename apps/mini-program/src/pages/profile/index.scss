@@ -1,5 +1,4 @@
 @use '../../styles/variables' as *;
-@use '../../styles/dark-variables' as *;
 @use '../../styles/mixins' as *;
 
 .profile-page {
@@ -9,7 +8,7 @@
   min-height: 100dvh;
   overflow: hidden;
 
-  // Themeable color surface for light / dark mode support.
+  // Keep the profile experience on the product's light visual theme.
   --profile-bg: #{$color-bg-gradient};
   --profile-surface: #{$color-surface};
   --profile-text-primary: #{$color-text-primary};
@@ -952,36 +951,6 @@
   100% {
     opacity: 1;
     transform: scale(1);
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  .profile-page {
-    --profile-bg: #{$dark-profile-bg-gradient};
-    --profile-surface: #{$dark-color-surface};
-    --profile-text-primary: #{$dark-color-text-primary};
-    --profile-text-secondary: #{$dark-color-text-secondary};
-    --profile-text-tertiary: #{$dark-color-text-tertiary};
-    --profile-text-link: #{$dark-color-text-link};
-    --profile-text-white: #{$dark-color-text-white};
-    --profile-primary: #{$dark-color-primary};
-    --profile-primary-04: #{rgba($dark-color-primary, 0.04)};
-    --profile-primary-06: #{rgba($dark-color-primary, 0.06)};
-    --profile-primary-08: #{rgba($dark-color-primary, 0.08)};
-    --profile-primary-14: #{rgba($dark-color-primary, 0.14)};
-    --profile-primary-16: #{rgba($dark-color-primary, 0.16)};
-    --profile-primary-35: #{rgba($dark-color-primary, 0.35)};
-    --profile-text-primary-06: #{rgba($dark-color-text-primary, 0.06)};
-    --profile-text-primary-08: #{rgba($dark-color-text-primary, 0.08)};
-    --profile-text-secondary-04: #{rgba($dark-color-text-secondary, 0.04)};
-    --profile-text-secondary-08: #{rgba($dark-color-text-secondary, 0.08)};
-    --profile-text-secondary-10: #{rgba($dark-color-text-secondary, 0.10)};
-    --profile-text-secondary-12: #{rgba($dark-color-text-secondary, 0.12)};
-    --profile-text-tertiary-12: #{rgba($dark-color-text-tertiary, 0.12)};
-    --profile-divider: #{rgba($dark-color-text-primary, 0.08)};
-    --profile-success: #{$dark-color-success};
-    --profile-success-10: #{rgba($dark-color-success, 0.1)};
-    --profile-brand-gradient: #{$brand-gradient};
   }
 }
 
