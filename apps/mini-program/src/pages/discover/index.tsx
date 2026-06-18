@@ -44,6 +44,7 @@ import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import { getDevMockPools } from '../../lib/dev/devPoolMocks'
 import MiniProgramLandingPage from '../index/LandingPage'
+import SingleTestBanner from '../../components/dev/SingleTestBanner'
 import './index.scss'
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -462,6 +463,11 @@ function AuthenticatedDiscover({
   // ── Render ──
   return (
     <View className='discover-auth tab-page-enter'>
+      {/* Test mode banner — APP_MODE=test only */}
+      {(user as any)?.appMode === 'test' && (
+        <SingleTestBanner className='discover-auth__test-banner' />
+      )}
+
       {/* Hero promo banner — top of page */}
       <HeroPromoBanner
         className='discover-auth__promo'

@@ -125,8 +125,11 @@ const [
     getFeatureFlag('squadUnboxingDragRevealEnabled', true),
   ]);
 
+  const appMode: 'production' | 'test' = (process.env.APP_MODE === 'test') ? 'test' : 'production';
+
   const authUserResponse: AuthUserResponse = {
     ...sanitizeAuthUser(user),
+    appMode,
     nextStep,
     profileEssentialComplete,
     profileExtendedComplete,
