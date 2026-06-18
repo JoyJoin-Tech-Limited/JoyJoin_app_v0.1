@@ -15,6 +15,8 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 .ticket-page {
   display: flex;
   flex-direction: column;
+  // design-audit:intentional — vh fallback required for WeChat WKWebView (AGENTS.md §4)
+  min-height: 100vh;
   min-height: 100dvh;
   background: $color-bg;
 }
@@ -68,10 +70,11 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     display: inline-flex;
     align-items: center;
     padding: 10rpx 20rpx;
-    background: rgba($color-surface, 0.92);
+    // Near-opaque so the badge stays legible over the banner image without
+    // backdrop-filter (WKWebView compositor cost — see AGENTS.md promo banner note).
+    background: rgba($color-surface, 0.96);
     border-radius: $radius-pill;
     box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
-    backdrop-filter: blur(4rpx);
   }
 
   &__type-badge-text {
@@ -378,7 +381,7 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 
   &__stamp-text {
     font-family: $font-cn-display;
-    font-size: 20rpx;
+    font-size: $font-size-2xs;
     font-weight: $font-weight-black;
     color: $ticket-coupon;
   }
@@ -406,7 +409,7 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 .ticket-abandon {
   display: flex;
   justify-content: center;
-  padding: 40rpx 32rpx;
+  padding: 32rpx 32rpx;
 
   Text {
     font-family: $font-ui;
@@ -483,6 +486,8 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
+  // design-audit:intentional — vh fallback required for WeChat WKWebView (AGENTS.md §4)
+  min-height: 100vh;
   min-height: 100dvh;
 
   &__text {
@@ -509,6 +514,8 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  // design-audit:intentional — vh fallback required for WeChat WKWebView (AGENTS.md §4)
+  min-height: 100vh;
   min-height: 100dvh;
   padding: 48rpx;
 
@@ -523,7 +530,7 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     margin-bottom: 32rpx;
 
     Text {
-      font-size: 48rpx;
+      font-size: $font-size-2xl;
       color: $color-error;
     }
   }
@@ -567,6 +574,8 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  // design-audit:intentional — vh fallback required for WeChat WKWebView (AGENTS.md §4)
+  min-height: 100vh;
   min-height: 100dvh;
   padding: 48rpx;
 
@@ -629,6 +638,8 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  // design-audit:intentional — vh fallback required for WeChat WKWebView (AGENTS.md §4)
+  min-height: 100vh;
   min-height: 100dvh;
   padding: 48rpx;
 
@@ -861,7 +872,7 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 
     Text {
       font-family: $font-ui;
-      font-size: 20rpx;
+      font-size: $font-size-2xs;
       font-weight: $font-weight-bold;
       color: $color-secondary;
     }
@@ -996,7 +1007,7 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 
   &-text {
     font-family: $font-ui;
-    font-size: 20rpx;
+    font-size: $font-size-2xs;
     font-weight: $font-weight-bold;
     color: $color-text-white;
   }

@@ -22,8 +22,10 @@
   }
 
   &__title {
+    @include font-cn-display;
     font-size: $font-size-2xl;
     font-weight: $font-weight-bold;
+    line-height: 1.45;
     color: $color-text-primary;
   }
 
@@ -36,14 +38,17 @@
   }
 
   &__state-title {
+    @include font-cn-display;
     font-size: $font-size-lg;
     font-weight: $font-weight-bold;
+    line-height: 1.45;
     color: $color-text-primary;
     margin-top: $spacing-xl;
   }
 
   &__state-subtitle {
     font-size: $font-size-base;
+    line-height: 1.6;
     color: $color-text-muted;
     margin-top: $spacing-sm;
   }

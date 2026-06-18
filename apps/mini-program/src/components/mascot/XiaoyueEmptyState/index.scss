@@ -6,11 +6,42 @@
 
   &__mascot-wrap {
     position: relative;
-    margin-bottom: $spacing-lg;
+    margin-bottom: 32rpx;
     animation: mascot-wrap-entrance 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &--has-archetype {
+      .xiaoyue-empty-state__mascot-badge {
+        right: -8rpx;
+        bottom: auto;
+        top: -8rpx;
+      }
+    }
+  }
+
+  &__archetype-halo {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 320rpx;
+    height: 320rpx;
+    transform: translate(-50%, -50%) scale(0.88);
+    border-radius: $radius-circle;
+    opacity: 0.64;
+    filter: blur(4rpx);
+    animation: halo-bloom 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
+    z-index: 0;
+
+    &--no-blur {
+      filter: none;
+      opacity: 0.5;
+    }
   }
 
   &__mascot {
+    position: relative;
+    z-index: 1;
+    border-radius: $card-radius;
+    overflow: hidden;
     animation: mascot-breathe 3s ease-in-out 0.55s infinite;
 
     &--no-breathe {
@@ -37,6 +68,7 @@
     box-shadow: $shadow-md;
     @include flex-center;
     animation: badge-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+    z-index: 2;
   }
 
   &__mascot-badge-icon {
@@ -44,7 +76,25 @@
     height: 32rpx;
   }
 
+  &__archetype-badge {
+    position: absolute;
+    right: -8rpx;
+    bottom: -8rpx;
+    width: 84rpx;
+    height: 84rpx;
+    border-radius: $radius-circle;
+    background: $color-surface;
+    border: 4rpx solid $color-surface;
+    box-shadow: $shadow-md;
+    @include flex-center;
+    overflow: hidden;
+    animation: archetype-badge-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+    z-index: 2;
+  }
+
   &__mascot-fallback {
+    position: relative;
+    z-index: 1;
     border-radius: $radius-circle;
     --fallback-size: 70rpx;
     background: linear-gradient(135deg, $color-primary-light 0%, rgba($color-primary, 0.12) 100%);
@@ -61,11 +111,12 @@
 
   &__title {
     @include type-heading;
-    line-height: 1.4;
+    line-height: 1.45;
     word-break: normal;
     overflow-wrap: break-word;
     word-wrap: break-word;
     max-width: 560rpx;
+    padding: 0 $spacing-md;
     margin-bottom: $spacing-md;
     animation: empty-fade-up 0.35s ease-out 0.1s both;
   }
@@ -78,8 +129,9 @@
     overflow-wrap: break-word;
     word-wrap: break-word;
     max-width: 560rpx;
+    padding: 0 $spacing-md;
     margin-bottom: 0;
-    animation: empty-fade-up 0.35s ease-out 0.18s both;
+    animation: empty-fade-up 0.35s ease-out 0.22s both;
   }
 
   &__action {
@@ -91,12 +143,18 @@
     box-shadow: $shadow-primary-soft;
     @include flex-center;
     gap: $spacing-xs;
-    animation: empty-cta-entrance 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.26s both;
+    transition: transform 0.1s ease, opacity 0.1s ease;
+    animation: empty-cta-entrance 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.32s both;
 
     &:active,
     &--active {
       transform: scale(0.98);
       opacity: 0.92;
+    }
+
+    .xiaoyue-empty-state--celebration & {
+      background: linear-gradient(135deg, $color-primary 0%, $color-secondary 100%);
+      box-shadow: 0 8rpx 32rpx rgba($color-secondary, 0.35);
     }
 
     &--disabled {
@@ -140,6 +198,17 @@
   }
 }
 
+@keyframes halo-bloom {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.72);
+  }
+  to {
+    opacity: 0.72;
+    transform: translate(-50%, -50%) scale(0.86);
+  }
+}
+
 @keyframes mascot-breathe {
   0%, 100% {
     transform: scale(1);
@@ -170,6 +239,20 @@
   }
   70% {
     transform: scale(1.15) rotate(6deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+@keyframes archetype-badge-pop {
+  0% {
+    transform: scale(0) rotate(-30deg);
+    opacity: 0;
+  }
+  65% {
+    transform: scale(1.18) rotate(8deg);
   }
   100% {
     transform: scale(1) rotate(0);
@@ -210,10 +293,12 @@
 
 @media (prefers-reduced-motion: reduce) {
   .xiaoyue-empty-state__mascot-wrap,
+  .xiaoyue-empty-state__archetype-halo,
   .xiaoyue-empty-state__mascot,
   .xiaoyue-empty-state__mascot--no-breathe,
   .xiaoyue-empty-state__mascot--reduced,
   .xiaoyue-empty-state__mascot-badge,
+  .xiaoyue-empty-state__archetype-badge,
   .xiaoyue-empty-state__title,
   .xiaoyue-empty-state__subtitle,
   .xiaoyue-empty-state__action,
@@ -221,6 +306,11 @@
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+    transition: none !important;
+  }
+
+  .xiaoyue-empty-state__archetype-halo {
+    transform: translate(-50%, -50%) scale(0.86) !important;
   }
 
   .xiaoyue-empty-state__action:active,

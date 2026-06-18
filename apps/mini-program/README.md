@@ -124,10 +124,12 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 
 **Critical rules:**
 1. Use `cdnAsset('/assets/...')` for CDN assets and `localAsset('/assets/...')` for bundled assets — never hardcode `/assets/` paths.
-2. Production builds **fail** if `TARO_APP_CDN_BASE_URL` is missing.
+2. Production builds **guarantee** a CDN base URL: `config/index.ts` defaults to `https://joyjoinapp.com/static`, and the CI workflow falls back to the same value. Override `TARO_APP_CDN_BASE_URL` only for a custom CDN or staging origin.
 3. Run `npm run validate:assets` before committing to catch orphan references.
 4. Add new CDN assets to `src/assets/` **and** `scripts/cdn-asset-manifest.json` so the CDN uploader discovers them.
 5. Run `npm run check:package-size` after build to verify the compressed main package stays under the 2MB WeChat limit.
+6. **Mascot bundle policy:** only 6 core Xiaoyue sprite states (`welcome`, `idle`, `coach`, `loading`, `listening`, `thinking`) are bundled locally; the remaining 14 states are CDN-primary with local fallback via `XiaoyueSpriteAnimator.onError`.
+7. **Bundled icon density policy:** `status-icons`, `info-labels` (semantic), and `ui` tiers ship at `@1x`/`@2x` only; `@3x` variants are stripped by `clean:cdn-assets` to save package size. Source `@3x` files remain for CDN fallback.
 
 | Script | Purpose |
 |--------|---------|
@@ -151,8 +153,8 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 
 *Tab bar & shell (critical — must be local):*
 - `src/assets/tab-icons` → `dist/assets/tab-icons` (~80KB)
-- `src/assets/joyjoin-logo.webp` → `dist/assets/joyjoin-logo.webp` (~128KB)
-- `src/assets/joyjoin-logo-tab.png` → `dist/assets/joyjoin-logo-tab.png` (~20KB)
+- `src/assets/joyjoin-logo.png` → `dist/assets/joyjoin-logo.png` (~32KB)
+- `src/assets/joyjoin-logo-tab.png` → `dist/assets/joyjoin-logo-tab.png` (~15KB)
 - `src/assets/tab-bar-notch-bg.png` → `dist/assets/tab-bar-notch-bg.png` (~4KB)
 - `src/native-custom-tab-bar/` → `dist/custom-tab-bar/`
 
@@ -163,16 +165,16 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 - `src/pages/pool-registration/assets/` → `dist/pages/pool-registration/assets/` (pool-specific hero backdrops; Batch C ceremony registry is CDN-backed)
 - `src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-*.webp` → `dist/assets/pool-heroes/` (main-package local fallback that survives `clean:cdn-assets`; CDN primary via `assets/ceremony/`)
 
-*Icon tiers (bundled with @1x/@2x/@3x retina support via `JoyJoinIcon`):*
-- `src/assets/icons/mood-icons` (~16KB)
-- `src/assets/icons/chemistry-badges` (~16KB)
-- `src/assets/icons/status-icons` (~8KB)
-- `src/assets/icons/category-icons` (~60KB)
-- `src/assets/icons/intent-icons` (~60KB)
-- `src/assets/icons/expression-icons` (~24KB, event-feedback rating faces)
-- `src/assets/icons/semantic-icons` (~16KB, info labels such as calendar/location/people)
-- `src/assets/icons/ui` (~20KB, profile/settings list icons)
-- `src/assets/icons/archetype` (~72KB, head icons for avatars)
+*Icon tiers (bundled with @1x/@2x retina support via `JoyJoinIcon`; `status`/`semantic`/`ui` @3x stripped at build):*
+- `src/assets/icons/mood-icons` (~16KB raw)
+- `src/assets/icons/chemistry-badges` (~16KB raw)
+- `src/assets/icons/status-icons` (~360KB raw, Lovart 5×5 status grid: alarm/bar-chart/bell/check/close/mirror/sparkle/unlock + legacy crown/info; `@3x` stripped at build)
+- `src/assets/icons/category-icons` (~108KB raw)
+- `src/assets/icons/intent-icons` (~88KB raw)
+- `src/assets/icons/rating-faces` (~84KB raw, event-feedback 5-step rating selector)
+- `src/assets/icons/info-labels` (~216KB raw, semantic info labels such as calendar/location/people/target/globe; `@3x` stripped at build)
+- `src/assets/icons/ui` (~204KB raw, profile/settings list icons + gift/search/memo from Lovart 5×5 UI grid; `@3x` stripped at build)
+- `src/assets/icons/archetype` (~108KB raw, head icons for avatars)
 
 *Source-only icon tiers (uploaded to CDN, not copied to `dist`):*
 - `src/assets/icons/reaction-icons` (~120KB source)
@@ -192,6 +194,15 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 - `src/assets/personality/xiaoyue/xiaoyue-loading-system.webp` (~49KB)
 - `src/assets/personality/xiaoyue/xiaoyue-home-welcome.webp` (~39KB)
 
+*Mascot sprite sheets (6 core states bundled; 14 CDN-only):*
+- Bundled: `welcome`, `idle`, `coach`, `loading`, `listening`, `thinking` (~235KB total).
+- CDN-primary: all other Xiaoyue sprite states. `XiaoyueSpriteAnimator` falls back to the bundled local copy on `onError`.
+
+*Interest taxonomy v2.0 illustrations (CDN-only):*
+- 48 active interests across 6 macro categories (`food`, `play`, `sports`, `culture`, `life`, `growth`).
+- Canonical `imageUrl` lives in `packages/shared/src/interests.ts`; mini-program resolves via `getInterestAssetUrl()` → `cdnAsset()`.
+- 4 refreshed category icon sets are bundled locally with CDN fallback copies.
+
 *Game UI:*
 - `src/assets/lovart/icebreaker/icons/icon-coin-*.png` → `dist/assets/auction-icons/` (~28KB)
 
@@ -203,7 +214,7 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 - Re-encode via `node scripts/optimize-ceremony-batch-c.mjs` / `node scripts/optimize-badges-batch-d.mjs` (q=55, 600px) before committing new tiles, then upload via the CDN workflow.
 
 *CDN-only assets (too large for bundle or non-critical):*
-Archetype full-body images (WebP primary + PNG fallback for canvas), matching heroes, Lovart illustrations (Batches A + B), Lovart ceremony & milestone heroes (Batches C + D), **phase-emblem** icon tier, reaction/reveal/achievement icon tiers, icebreaker backgrounds, celebration images, extra Xiaoyue expressions, mini-script heroes, ceremony heroes, milestone badges. Loaded via `cdnAsset()` with route-based preloading via `routePreloadAssets.ts`. The icebreaker session also preloads `ICEBREAKER_PHASE_EMBLEM_ASSETS` on entry.
+Archetype full-body images (WebP primary + PNG fallback for canvas), matching heroes, Lovart illustrations (Batches A + B), Lovart ceremony & milestone heroes (Batches C + D), **phase-emblem** icon tier, reaction/reveal/achievement icon tiers, icebreaker backgrounds, celebration images, extra Xiaoyue expressions, mini-script heroes, ceremony heroes, milestone badges, **interest taxonomy v2.0 illustrations** (`images/interests/*.webp`). Loaded via `cdnAsset()` with route-based preloading via `routePreloadAssets.ts`. The icebreaker session also preloads `ICEBREAKER_PHASE_EMBLEM_ASSETS` on entry.
 
 *Local-first with CDN fallback:*
 - Discover promo banner (`src/assets/promo/banner-hero-lovart-v1.webp`) is copied to `dist/assets/promo-local/` and loaded locally; `onError` falls back to the CDN copy under `assets/promo/`. This keeps the Discover hero instant on first paint.
@@ -220,7 +231,7 @@ The mini-program replaces raw Unicode emoji with brand-aligned proprietary icons
    - Maps Unicode emoji → `assetKey` + `tier` + `fallbackEmoji`
    - Supports **composite lookup** (same emoji resolves to different assets per tier)
    - `CDN_ICON_TIERS` controls which tiers load from CDN vs the local bundle. Tiers listed there should be wrapped with `cdnAsset()`; tiers **not** listed should be wrapped with `localAsset()` against bundled `src/assets/icons/<tier>/`. Keep critical UI chrome (e.g. `intent`, `category`) out of `CDN_ICON_TIERS` so subpackage pages never block on a network path.
-   - `getIconMapping(emoji, tier?)` → tier-specific match first, then global fallback
+   - `getIconMapping(emoji, tier?)` → tier-specific match first, then global fallback; if the emoji exists in exactly one tier map and no explicit `tier` is provided, the unambiguous tier mapping is used automatically
    - `getLocalIconAssetPath(assetKey, tier, density)` → builds root-relative `/assets/icons/...` path (preferred)
    - `getIconAssetPath(assetKey, tier, density)` → legacy relative `require()` path (deprecated; `require()` of non-JS assets crashes in WeChat subpackages)
 
@@ -240,7 +251,7 @@ The mini-program replaces raw Unicode emoji with brand-aligned proprietary icons
    - Fails the build if any bundled icon that floats on a variable background is fully opaque (e.g. a white matte behind `category-social`).
    - Run automatically before `npm run build:weapp`.
 
-**Tier inventory** (`IconTier`): `expression`, `semantic`, `mood`, `chemistry`, `phase`, `status`, `reaction`, `category`, `intent`, `reveal`, `achievement`, `ui`
+**Tier inventory** (`IconTier`): `expression` (rating faces), `semantic` (maps to `info-labels` folder), `mood`, `chemistry`, `phase`, `status`, `reaction`, `category`, `intent`, `reveal`, `achievement`, `ui`
 
 **Preloader hooks for bundled icon tiers:**
 - `usePreloadCategoryIcons` — warms the five bundled category icons before the interest-heat picker renders.
@@ -263,6 +274,13 @@ The mini-program replaces raw Unicode emoji with brand-aligned proprietary icons
 The shipped mini-program tab bar is the **native WeChat component** copied from `src/native-custom-tab-bar/` to `dist/custom-tab-bar/` during build. There is no secondary Taro JSX tab bar in this workspace; all tab bar work happens in `src/native-custom-tab-bar/`.
 
 **Route-based visibility guard:** the native component keeps an explicit `TAB_BAR_PAGE_PATHS` allow-list (source of truth: `src/lib/navigation/tabBarConfig.ts`) and hides itself when attached to a non-tab page (e.g., the landing page), preventing the tab bar from leaking onto non-tab routes.
+
+The guard normalizes route formats (`pages/discover/index`, `/pages/discover/index`, and `pages/discover/index?$taroTimestamp=...`) before the allow-list lookup, defaults to `hidden: true`, and lets every tab page explicitly reveal the bar via `setSelected()` on `useDidShow`. This avoids a DevTools/device bug where `getCurrentPages()` is empty or returns an un-normalized route at attach time and the tab bar disappears permanently.
+
+> **Smoke test:** after any tab-bar or routing change, run the DevTools smoke in
+> [`docs/runbooks/mini-program-tab-bar-smoke.md`](../../docs/runbooks/mini-program-tab-bar-smoke.md).
+> It documents the correct verification technique: check the **computed
+> `display` and outer `hidden` attribute**, not just the WXML tree.
 
 | Aspect | Details |
 |--------|---------|

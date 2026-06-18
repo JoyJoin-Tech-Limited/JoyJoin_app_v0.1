@@ -14,14 +14,27 @@ The JoyJoin mini-program uses a **two-tier asset strategy**:
 
 This split keeps the main package under WeChat's 2MB compressed limit while ensuring first-impression assets are instant.
 
+### Build-time CDN URL guarantee
+
+`config/index.ts` now defaults `TARO_APP_CDN_BASE_URL` to `https://joyjoinapp.com/static` in production builds. The CI workflow (`.github/workflows/taro-weapp-build.yml`) also falls back to the same value. This guarantees that production builds never ship with an undefined CDN base, preventing broken CDN asset URLs in release builds.
+
+- Local dev: set `TARO_APP_CDN_BASE_URL=https://joyjoinapp.com/static` in `apps/mini-program/.env.local` to load production CDN assets during development.
+- Custom CDN: override `TARO_APP_CDN_BASE_URL` before building (e.g. `https://static.joyjoinapp.com`).
+- Never hardcode CDN hostnames in source code; always route through `cdnAsset()` so the build-time base applies uniformly.
+
 ---
 
 ## Package Budget
 
 | Limit | Current (post-2026-06-16 cleanup) | Headroom |
 |-------|-----------------------------------|----------|
-| 2.0 MB source (WeChat hard limit) | ~1.97 MB zip | ~30 KB |
-| 1.8 MB zip (guideline) | ~1.97 MB | ⚠️ over guideline |
+| 2.0 MB source (WeChat hard limit) | ~1.88 MB zip | ~120 KB |
+| 1.8 MB zip (guideline) | ~1.88 MB | ⚠️ close to guideline |
+
+**Recent wins (2026-06-18):**
+- Bundled only **6 core Xiaoyue mascot sprite states** (~235 KB) instead of all 20; remaining 14 states are CDN-primary.
+- Stripped `@3x` variants from bundled `status-icons`, `info-labels` (semantic), and `ui` tiers at build time, saving ~100 KB+ compressed.
+- Moved **48 interest illustrations** to CDN; the canonical `imageUrl` lives in `packages/shared/src/interests.ts` and resolves via `cdnAsset()`.
 
 **Budget rule of thumb:** every 100KB of raw assets ≈ 25-35KB compressed.
 
@@ -46,12 +59,12 @@ Assets copied by `vite-plugin-static-copy` in `config/index.ts`.
 |------|------|------------|---------|---------|
 | **Mood** | `icons/mood-icons/` | @1x/@2x/@3x | Bundled locally | Icebreaker atmosphere selector |
 | **Chemistry** | `icons/chemistry-badges/` | @1x/@2x/@3x | Bundled locally | Matching status indicators |
-| **Status** | `icons/status-icons/` | @1x/@2x/@3x | Bundled locally | Host crown, waiting spinner |
+| **Status** | `icons/status-icons/` | @1x/@2x (bundled); @3x CDN fallback | Bundled locally | Host crown, waiting spinner, notification bell, check/close states, alarm/bar-chart meta labels |
 | **Category** | `icons/category-icons/` | @1x/@2x/@3x | Bundled locally | Interest category headers |
 | **Intent** | `icons/intent-icons/` | @1x/@2x/@3x | Bundled locally | Social intent selection grid |
 | **Expression / rating faces** | `icons/rating-faces/` | @1x/@2x/@3x | Bundled locally | Event-feedback 5-step rating selector |
-| **Semantic / info labels** | `icons/info-labels/` | @1x/@2x/@3x | Bundled locally | Calendar, location, people, target inline labels |
-| **UI** | `icons/ui/` | @1x/@2x/@3x | Bundled locally | Profile/settings list icons, event meta icons |
+| **Semantic / info labels** | `icons/info-labels/` | @1x/@2x (bundled); @3x CDN fallback | Bundled locally | Calendar, location, people, target inline labels |
+| **UI** | `icons/ui/` | @1x/@2x (bundled); @3x CDN fallback | Bundled locally | Profile/settings list icons, event meta icons |
 | **Archetype heads** | `icons/archetype/` | bare `.webp` (@1x implicit) | Bundled locally + CDN fallback | Profile avatars (`ArchetypeHead.tsx`) |
 | **Reaction** | `icons/reaction-icons/` | @1x/@2x/@3x | **CDN** | Icebreaker phase reactions |
 | **Reveal** | `icons/reveal-icons/` | @1x/@2x/@3x | **CDN** | Matching common-ground reveals |
@@ -61,6 +74,8 @@ Assets copied by `vite-plugin-static-copy` in `config/index.ts`.
 > **Retina strategy:** `JoyJoinIcon` always requests the bare `@1x` filename; WeChat's runtime auto-resolves `@2x`/`@3x` variants based on device `pixelRatio`. Hardcoding `@3x` in `src` causes the `@3x@3x` double-suffix 404 bug (see Common Mistakes).
 >
 > **CDN resolution:** Tiers in `CDN_ICON_TIERS` (`phase`, `reaction`, `reveal`, `achievement`) are wrapped with `cdnAsset()` by `JoyJoinIcon`. All other tiers are wrapped with `localAsset()` and must have a copy pattern in `config/index.ts`.
+>
+> **2026-06-18 Lovart 5×5 integration:** A single 2048×2048 Lovart status/UI grid was cropped into `status-icons` (⏰📣📊⚠️🚫🪞🔓🌟✕✓🔔), `ui` (🎁🔍📝), and `info-labels` (✈️🌆🌏🌐🗺️), plus six new `reaction-icons` (💰😏😎💜😅😈). The new mappings are registered in `packages/shared/src/iconSystem/emojiToIconMap.ts`. `status`/`ui`/`semantic` tiers are bundled locally; `reaction` remains CDN-primary with the same `reaction-icons/` folder mirrored locally so `cdnAsset()` can fall back when `TARO_APP_CDN_BASE_URL` is unset.
 
 ### Game & Empty States
 | Asset | Path | Size | Used in |
@@ -90,7 +105,7 @@ Assets copied by `vite-plugin-static-copy` in `config/index.ts`.
 ### Mascot Sprite Fallback
 | Asset | Path | Size | Used in |
 |-------|------|------|---------|
-| Xiaoyue mascot sprite sheets | `assets/mascot/` | ~350KB | `XiaoyueSpriteAnimator` across the app. CDN is the primary source; local bundled copies are kept as offline / stale-CDN fallback. The app-launch preloader (`preloadOnboardingAssets`) warms only a curated core set on capable devices to avoid launch regression. |
+| Xiaoyue mascot sprite sheets (core 6) | `assets/mascot/` | ~235KB | `XiaoyueSpriteAnimator` across the app. Only the 6 core first-session states are bundled locally (`welcome`, `idle`, `coach`, `loading`, `listening`, `thinking`); the remaining 14 states are CDN-primary. Local copies act as offline / stale-CDN fallback. The app-launch preloader (`preloadOnboardingAssets`) warms only the bundled core set on capable devices to avoid launch regression. |
 
 ### Support
 | Asset | Path | Size | Used in |
@@ -124,6 +139,8 @@ These are **NOT** copied to `dist/assets/` by the build. They must exist on the 
 | **Ceremony heroes** | `assets/ceremony/*.webp` | ~363KB | Batch C + v0.1 gap-fill ceremony moments |
 | **Milestone badges** | `assets/badges/*.webp` | ~300KB | Batch D collectible milestone badges |
 | **Miniscript heroes** | `assets/miniscript/*-hero.webp` | ~590KB | Mini-script phase selection |
+| **Interest illustrations** | `images/interests/*.webp` | ~850KB | 48 interest cards across 6 macro categories (`InterestChipCloud`, extended-data picker, profile-review) |
+| **Category icons (refreshed)** | `images/icons/category-icons/*.webp` | ~38KB | 4 refreshed bundled category icons + CDN fallback copies |
 | **Alimama full font** | `assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2` | ~621KB | Chinese display font (deferred 500ms load) |
 
 ---
@@ -150,6 +167,8 @@ promo/             # Promo banner sources for CDN upload (NOT bundled)
 promo-local/       # Discover hero banner bundled locally; CDN fallback stays in promo/
 icons/phase-icons/ # Phase icons (CDN, except landing-phase-icons)
 ```
+
+The `clean:cdn-assets` step also strips `@3x` variants from bundled `status-icons`, `info-labels`, and `ui` directories to save package size. The source `@3x` files remain in `src/assets/` for CDN upload / fallback purposes.
 
 **Do NOT add copy patterns for these directories** unless you also update the clean step.
 
@@ -307,14 +326,14 @@ src/assets/
 │   ├── archetype/             ✅ bundled (local) + CDN fallback copies
 │   ├── category-icons/        ✅ bundled (local)
 │   ├── chemistry-badges/      ✅ bundled (local)
-│   ├── info-labels/           ✅ bundled (local) [semantic / info labels]
+│   ├── info-labels/           ✅ bundled (local) [semantic / info labels]; @3x stripped at build
 │   ├── intent-icons/          ✅ bundled (local)
 │   ├── phase-icons/           ❌ CDN (full set); 6 landing variants + custom-tier-icon bundled
 │   ├── rating-faces/          ✅ bundled (local) [expression / rating faces]
 │   ├── reaction-icons/        ❌ CDN (source kept for upload, not bundled)
 │   ├── reveal-icons/          ❌ CDN (source kept for upload, not bundled)
-│   ├── status-icons/          ✅ bundled (local)
-│   └── ui/                    ✅ bundled (local)
+│   ├── status-icons/          ✅ bundled (local); @3x stripped at build
+│   └── ui/                    ✅ bundled (local); @3x stripped at build
 ├── personality/
 │   ├── archetypes/            ❌ CDN (WebP + PNG; source kept for upload, not bundled)
 │   └── xiaoyue/               ❌ CDN (except loading-system + home-welcome + coach-guide)

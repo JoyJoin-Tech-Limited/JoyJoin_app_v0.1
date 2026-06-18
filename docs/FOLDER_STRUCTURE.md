@@ -318,7 +318,7 @@ apps/mini-program/
 │       │   ├── intent-icons/      # Onboarding intent selectors (bundled locally)
 │       │   ├── reveal-icons/      # Squad-unboxing reveal emblems (CDN)
 │       │   ├── achievement-badges/ # Gamification achievement toasts (CDN)
-│       │   ├── info-labels/       # Semantic info pills (bundled locally; currently unused)
+│       │   ├── info-labels/       # Semantic / info label icons (bundled locally; calendar/location/people/target inline labels)
 │       │   ├── rating-faces/      # Rating / evaluation faces (bundled locally)
 │       │   ├── phase-icons/       # Icebreaker phase emblems (CDN)
 │       │   └── ui/                # Profile / settings list icons (bundled locally)
@@ -387,7 +387,7 @@ packages/shared/
 │   │   ├── categoryColors.ts
 │   │   └── connectionPointCompat.ts
 │   ├── iconSystem/                # Proprietary icon mapping system (emoji → tiered asset)
-│   │   └── emojiToIconMap.ts      # Composite lookup: same Unicode emoji resolves to different assets per context tier (reaction, category, intent, reveal, achievement, etc.)
+│   │   └── emojiToIconMap.ts      # Composite lookup: same Unicode emoji resolves to different assets per context tier (reaction, category, intent, reveal, achievement, status, ui, semantic/info-label, etc.); unambiguous single-tier emojis fall back automatically
 │   ├── legal/                     # Legal copy
 │   │   └── joyjoinTermsZh.ts
 │   ├── ai/                        # Shared AI prompts & types

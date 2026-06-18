@@ -6,6 +6,8 @@ declare global {
   var Component: ReturnType<typeof vi.fn>
   // eslint-disable-next-line no-var
   var wx: Record<string, any>
+  // eslint-disable-next-line no-var
+  var getCurrentPages: () => Array<{ route?: string }>
 }
 
 interface ComponentConfig {
@@ -513,5 +515,27 @@ describe('native custom tab bar behavior', () => {
     await vi.advanceTimersByTimeAsync(0)
 
     expect(component.data.announcement).toBe('已切换到足迹')
+  })
+
+  it('shows the tab bar on tab pages regardless of leading slash or query in route', async () => {
+    setupMocks()
+    global.getCurrentPages = vi.fn().mockReturnValue([{ route: '/pages/discover/index?$taroTimestamp=123' }])
+    const component = await loadComponent()
+
+    component.attached()
+    expect(component.data.hidden).toBe(true)
+
+    component.setSelected(0)
+    expect(component.data.hidden).toBe(false)
+  })
+
+  it('hides the tab bar when attached to a known non-tab page', async () => {
+    setupMocks()
+    global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/index/index' }])
+    const component = await loadComponent()
+
+    component.attached()
+
+    expect(component.data.hidden).toBe(true)
   })
 })

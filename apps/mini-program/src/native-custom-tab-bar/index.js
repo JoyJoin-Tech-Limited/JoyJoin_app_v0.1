@@ -77,7 +77,8 @@ Component({
     lowEnd: false,
     announcement: '',
     // Guard against the tab bar being attached to a non-tab page.
-    hidden: false,
+    // Default to hidden until a tab page explicitly calls setSelected().
+    hidden: true,
     // CSS transition toggle for interruptible rapid switching.
     pillTransitionEnabled: true,
     // Sliding active pill geometry (in rpx)
@@ -99,8 +100,8 @@ Component({
         index: 0,
         url: '/pages/discover/index',
         text: '发现',
-        icon: '../assets/tab-icons/发现 icon_inactive.webp',
-        selectedIcon: '../assets/tab-icons/发现 icon.webp',
+        icon: '../assets/tab-icons/发现 icon_inactive.png',
+        selectedIcon: '../assets/tab-icons/发现 icon.png',
         badgeCount: 0,
         badgeCategory: 'discover',
       },
@@ -109,8 +110,8 @@ Component({
         index: 1,
         url: '/pages/events/index',
         text: '足迹',
-        icon: '../assets/tab-icons/足迹 icon_inactive.webp',
-        selectedIcon: '../assets/tab-icons/足迹 icon.webp',
+        icon: '../assets/tab-icons/足迹 icon_inactive.png',
+        selectedIcon: '../assets/tab-icons/足迹 icon.png',
         badgeCount: 0,
         badgeCategory: 'activities',
       },
@@ -121,8 +122,8 @@ Component({
         index: 2,
         url: '/pages/connections/index',
         text: '连接',
-        icon: '../assets/tab-icons/连接 icon_inactive.webp',
-        selectedIcon: '../assets/tab-icons/连接 icon.webp',
+        icon: '../assets/tab-icons/连接 icon_inactive.png',
+        selectedIcon: '../assets/tab-icons/连接 icon.png',
         badgeCount: 0,
         badgeCategory: 'chat',
       },
@@ -131,8 +132,8 @@ Component({
         index: 3,
         url: '/pages/profile/index',
         text: '我的',
-        icon: '../assets/tab-icons/我的 icon_inactive.webp',
-        selectedIcon: '../assets/tab-icons/我的 icon.webp',
+        icon: '../assets/tab-icons/我的 icon_inactive.png',
+        selectedIcon: '../assets/tab-icons/我的 icon.png',
         badgeCount: 0,
         badgeCategory: null,
       },
@@ -269,16 +270,22 @@ Component({
      * the host route.
      */
     _updateVisibility: function () {
-      var shouldShow = false
-      if (typeof getCurrentPages === 'function') {
-        var pages = getCurrentPages()
-        var route = pages.length > 0 ? pages[pages.length - 1].route : ''
-        shouldShow = !!TAB_BAR_PAGE_PATHS[route]
-      }
-      // Show when on a tab page, hide otherwise. `hidden` is the inverse of `shouldShow`.
-      var nextHidden = !shouldShow
-      if (this.data.hidden !== nextHidden) {
-        this.setData({ hidden: nextHidden })
+      if (typeof getCurrentPages !== 'function') return
+      var pages = getCurrentPages()
+      var route = pages.length > 0 ? pages[pages.length - 1].route : ''
+      // WeChat base libraries differ: some return `pages/discover/index`,
+      // others return `/pages/discover/index`. Taro may also append query params
+      // (e.g. `$taroTimestamp=...`). Normalize before the allow-list lookup so
+      // the tab bar isn't accidentally hidden on valid tab pages.
+      route = typeof route === 'string' ? route.replace(/^\/+/, '').split('?')[0] : ''
+      // Only hide when we are *certain* this is a non-tab page. The custom tab
+      // bar is normally only attached to tab pages; defaulting to hidden and
+      // letting setSelected() reveal it avoids the tab bar disappearing when
+      // getCurrentPages() is empty or the route format is unexpected.
+      if (route && !TAB_BAR_PAGE_PATHS[route]) {
+        if (!this.data.hidden) {
+          this.setData({ hidden: true })
+        }
       }
     },
 
@@ -393,6 +400,10 @@ Component({
       this._confirmedSelected = idx
       var translateX = computePillTranslateX(idx, this.data.tabItemWidth)
       this._setPillState(idx, translateX)
+      // A tab page is taking ownership of this instance; make sure it is visible.
+      if (this.data.hidden) {
+        this.setData({ hidden: false })
+      }
     },
 
     setCenterState: function (center) {
@@ -583,6 +594,24 @@ Component({
       } catch (err) {
         console.warn('[TabBarAnalytics]', eventType, data)
       }
+    },
+
+    /**
+     * Observability hook for image load failures in the tab bar.
+     * WeChat does not surface broken image URLs by default; logging here
+     * lets us distinguish asset bundling/path issues from runtime decoder
+     * issues (e.g. WebP decoding failures on certain base-library versions).
+     */
+    handleIconError: function (e) {
+      var dataset = (e && e.currentTarget && e.currentTarget.dataset) || {}
+      var detail = (e && e.detail) || {}
+      var errorInfo = {
+        tab: dataset.tab || 'unknown',
+        src: dataset.src || '',
+        errMsg: detail.errMsg || 'image load failed',
+      }
+      console.warn('[TabBar] icon load failed:', errorInfo)
+      this.trackTabBarEvent('mini_program_tab_bar_icon_error', errorInfo)
     },
 
 

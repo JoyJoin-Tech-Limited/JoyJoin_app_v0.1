@@ -900,12 +900,21 @@ const INTEREST_HEAT_BY_LEVEL: Record<InterestSelectionLevel, 3 | 10 | 25> = {
   3: 25,
 }
 
+const food_emoji = '🍜'
+const play_emoji = '🎮'
+const sports_emoji = '🌿'
+const culture_emoji = '🎭'
+const life_emoji = '🏠'
+const growth_emoji = '💡'
+const default_interest_emoji = '✨'
+
 export const INTEREST_CATEGORY_EMOJIS: Record<MacroCategory, string> = {
-  food: '🍜',
-  entertainment: '🎮',
-  lifestyle: '🌿',
-  culture: '🎭',
-  social: '👥',
+  food: food_emoji,
+  play: play_emoji,
+  sports: sports_emoji,
+  culture: culture_emoji,
+  life: life_emoji,
+  growth: growth_emoji,
 }
 
 function normalizeInterestSelectionLevel(level: unknown): InterestSelectionLevel {
@@ -963,7 +972,7 @@ export function buildStructuredInterestsPayload(
 
       return {
         topicId,
-        emoji: INTEREST_CATEGORY_EMOJIS[definition.macroCategory] ?? '✨',
+        emoji: INTEREST_CATEGORY_EMOJIS[definition.macroCategory] ?? default_interest_emoji,
         label: definition.label,
         fullName: `${categoryLabel} · ${definition.label}`,
         category: categoryLabel,

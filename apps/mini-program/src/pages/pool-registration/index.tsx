@@ -782,7 +782,8 @@ export default function PoolRegistrationPage() {
   const resumeNotice = resumeContext ? getResumeNoticeCopy(resumeContext) : null
 
   return (
-    <ScrollView className='pool-reg' scrollY enhanced showScrollbar={false} scrollIntoView={scrollErrorId}>
+    <View className='pool-reg'>
+      <ScrollView className='pool-reg__scroll' scrollY enhanced showScrollbar={false} scrollIntoView={scrollErrorId}>
       {step === 0 ? (
         <>
           <View className='pool-reg__header'>
@@ -955,7 +956,7 @@ export default function PoolRegistrationPage() {
           </Card>
 
           <Card className='pool-reg__panel'>
-            <Text className='pool-reg__section-kicker'>Step 3</Text>
+            <Text className='pool-reg__section-kicker'>Step 3 · 细节</Text>
             <Text className='pool-reg__section-title'>再补几项细节，让匹配更顺</Text>
             <Text className='pool-reg__section-copy'>
               语言和具体偏好都可以留空。你填得越清楚，悦仔越容易帮你把这一桌的节奏调顺。
@@ -1054,6 +1055,7 @@ export default function PoolRegistrationPage() {
           />
         </View>
       ) : null}
+      </ScrollView>
 
       <View className='pool-reg__footer'>
         {step === 0 ? (
@@ -1082,6 +1084,6 @@ export default function PoolRegistrationPage() {
           </View>
         )}
       </View>
-    </ScrollView>
+    </View>
   )
 }

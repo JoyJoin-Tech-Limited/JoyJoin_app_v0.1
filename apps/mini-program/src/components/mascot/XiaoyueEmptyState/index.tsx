@@ -1,6 +1,9 @@
 import { View, Image, Text } from '@tarojs/components'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { cdnAsset, localAsset } from '@/lib/utils/cdnAssets'
+import { getArchetypeTokens } from '@shared/archetypeColorTokens'
+import ArchetypeHead from '../ArchetypeHead'
+import './index.scss'
 
 export type XiaoyueEmptyStateEmotion =
   | 'coaching'
@@ -22,10 +25,14 @@ export interface XiaoyueEmptyStateProps {
   size?: 'sm' | 'md' | 'lg'
   /** Disable the infinite mascot breathe animation (e.g. on degradation-tier devices). */
   disableBreathe?: boolean
+  /** Disable halo blur for performance on degradation-tier devices. */
+  disableBlur?: boolean
   /** Explicit reduced-motion override. CSS media query is the primary guard. */
   motionReduced?: boolean
   /** Show a small celebration badge on the mascot (e.g. feedback-complete). */
   showCelebrationBadge?: boolean
+  /** Render the user's archetype head badge and halo for identity-rich empty states. */
+  archetypeId?: string | null
 }
 
 const SIZE_MAP = { sm: 160, md: 200, lg: 240 }
@@ -54,8 +61,10 @@ export default function XiaoyueEmptyState({
   loadingLabel,
   size = 'md',
   disableBreathe = false,
+  disableBlur = false,
   motionReduced = false,
   showCelebrationBadge = false,
+  archetypeId,
 }: XiaoyueEmptyStateProps) {
   const [imgError, setImgError] = useState(false)
   const dim = SIZE_MAP[size]
@@ -67,9 +76,38 @@ export default function XiaoyueEmptyState({
     showCelebrationBadge && 'xiaoyue-empty-state__mascot--celebrate'
   )
 
+  const hasArchetypeBadge = Boolean(archetypeId)
+  const archetypeTokens = useMemo(() => getArchetypeTokens(archetypeId), [archetypeId])
+  const haloStyle = useMemo(() => {
+    const background = archetypeId
+      ? archetypeTokens.background
+      : '#F5F0FF' // brand-primary tint fallback
+    const surface = archetypeId
+      ? archetypeTokens.surface
+      : '#EDE9FE' // brand-primary-light fallback
+    return {
+      background: `radial-gradient(circle, ${background} 0%, ${surface} 70%, transparent 100%)`,
+      filter: disableBlur ? 'none' : undefined,
+      opacity: disableBlur ? 0.5 : undefined,
+    }
+  }, [archetypeId, archetypeTokens, disableBlur])
+
   return (
-    <View className='xiaoyue-empty-state'>
-      <View className='xiaoyue-empty-state__mascot-wrap'>
+    <View className={classNames('xiaoyue-empty-state', showCelebrationBadge && 'xiaoyue-empty-state--celebration')}>
+      <View
+        className={classNames(
+          'xiaoyue-empty-state__mascot-wrap',
+          hasArchetypeBadge && 'xiaoyue-empty-state__mascot-wrap--has-archetype'
+        )}
+      >
+        <View
+          className={classNames(
+            'xiaoyue-empty-state__archetype-halo',
+            disableBlur && 'xiaoyue-empty-state__archetype-halo--no-blur'
+          )}
+          style={haloStyle}
+          aria-hidden='true'
+        />
         {!imgError ? (
           <Image
             className={mascotClass}
@@ -98,6 +136,11 @@ export default function XiaoyueEmptyState({
               src={localAsset('/assets/icons/ui/icon-check.webp')}
               mode='aspectFit'
             />
+          </View>
+        )}
+        {hasArchetypeBadge && (
+          <View className='xiaoyue-empty-state__archetype-badge' aria-hidden='true'>
+            <ArchetypeHead archetype={archetypeId} size={76} fallback='none' />
           </View>
         )}
       </View>

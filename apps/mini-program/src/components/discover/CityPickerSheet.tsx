@@ -200,7 +200,7 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
 
         {/* Search */}
         <View className='city-picker-sheet__search'>
-          <JoyJoinIcon emoji='🔍' size={28} className='city-picker-sheet__search-icon' />
+          <JoyJoinIcon emoji='🔍' tier='ui' size={28} className='city-picker-sheet__search-icon' />
           <Input
             className='city-picker-sheet__search-input'
             type='text'

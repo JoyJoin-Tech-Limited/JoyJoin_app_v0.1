@@ -31,7 +31,10 @@ const MINI_PROGRAM_XIAOYUE_CONNECTION_REACTIONS_ENABLED =
   ''
 
 /** Inlined at build time — WeChat runtime has no `process` global. */
-const MINI_PROGRAM_CDN_BASE_URL = process.env.TARO_APP_CDN_BASE_URL ?? ''
+const PRODUCTION_CDN_BASE_URL = 'https://joyjoinapp.com/static'
+const MINI_PROGRAM_CDN_BASE_URL =
+  process.env.TARO_APP_CDN_BASE_URL ||
+  (process.env.NODE_ENV === 'production' ? PRODUCTION_CDN_BASE_URL : '')
 const MINI_PROGRAM_TARO_ENV = process.env.TARO_ENV ?? 'weapp'
 const MINI_PROGRAM_NODE_ENV = process.env.NODE_ENV ?? 'production'
 
@@ -243,11 +246,37 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/icons/phase-icons/custom-tier-icon@3x.webp',
           to: 'dist/assets/icons/custom-tier-icon@3x.webp',
         },
-        // Xiaoyue mascot sprite sheets — bundled locally as CDN fallback
-        // (~350KB total). Used by XiaoyueSpriteAnimator across the app.
+        // Xiaoyue mascot sprite sheets — bundled locally as CDN fallback.
+        // Only the core states that appear during the first session are kept
+        // in the main package; the rest are CDN-only to stay under the 2 MB
+        // WeChat limit. XiaoyueSpriteAnimator always tries CDN first.
         {
-          from: 'src/assets/mascot',
-          to: 'dist/assets/mascot',
+          from: 'src/assets/mascot/xiaoyue-welcome.webp',
+          to: 'dist/assets/mascot/xiaoyue-welcome.webp',
+        },
+        {
+          from: 'src/assets/mascot/xiaoyue-idle.webp',
+          to: 'dist/assets/mascot/xiaoyue-idle.webp',
+        },
+        {
+          from: 'src/assets/mascot/xiaoyue-coach.webp',
+          to: 'dist/assets/mascot/xiaoyue-coach.webp',
+        },
+        {
+          from: 'src/assets/mascot/xiaoyue-loading.webp',
+          to: 'dist/assets/mascot/xiaoyue-loading.webp',
+        },
+        {
+          from: 'src/assets/mascot/xiaoyue-listening.webp',
+          to: 'dist/assets/mascot/xiaoyue-listening.webp',
+        },
+        {
+          from: 'src/assets/mascot/xiaoyue-thinking.webp',
+          to: 'dist/assets/mascot/xiaoyue-thinking.webp',
+        },
+        {
+          from: 'src/assets/mascot/xiaoyue-spritesheet-manifest.json',
+          to: 'dist/assets/mascot/xiaoyue-spritesheet-manifest.json',
         },
         // Matching status heroes — referenced via cdnAsset(); local copies are
         // not bundled because cdnAsset() returns the CDN URL in production.

@@ -1,6 +1,6 @@
 # Mini-Program — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-06-11
+> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-06-18
 
 ---
 
@@ -125,6 +125,7 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 
 ## 4. Asset loading strategy (HARD rules)
 
+- **Build-time CDN URL guarantee**: `config/index.ts` defaults `TARO_APP_CDN_BASE_URL` to `https://joyjoinapp.com/static` in production; CI workflow has the same fallback. Source code must use `cdnAsset()` / `localAsset()` helpers — never hardcode the CDN hostname.
 - **Two-tier brand font**: minimal Alimama subset (66KB) bundled; full font (621KB) loads from CDN with 500ms defer.
 - **Quicksand English font** (256KB) bundled and loaded on app launch.
 - **Slot machine archetype spritesheet** (`archetype-spritesheet.webp`) — bundled at `/pages/onboarding/assets/archetypes/` (subpackage, preloaded at landing).
@@ -133,6 +134,9 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 - **Promo banner**: full-bleed Lovart illustration + WebP→PNG fallback. Kill switch: `PROMO_BANNER_ENABLED` (default `true`).
 - **Welcome coupon banner** (`FirstTimeCouponBanner`): zero external assets, zero package weight. Solid cream bg + CSS decorative circle. Archetype-tinted via inline `hsla()`. Analytics: `welcome_coupon_banner_impression` + `welcome_coupon_banner_tap` via `discoverAnalytics`.
 - **Tab bar logo**: dedicated 128×128 `joyjoin-logo-tab.png` (19KB) — NOT the full `joyjoin-logo.png` (596KB).
+- **Mascot sprite bundle policy (2026-06-18)**: only 6 core Xiaoyue sprite states (`welcome`, `idle`, `coach`, `loading`, `listening`, `thinking`) are bundled locally (~235KB); the remaining 14 states are CDN-primary. `XiaoyueSpriteAnimator` tries CDN first and falls back to the local bundled `.webp` on `onError`.
+- **Bundled icon density policy (2026-06-18)**: `status-icons`, `info-labels` (semantic), and `ui` tiers ship at `@1x`/`@2x` only. `clean:cdn-assets` strips their `@3x` variants to keep the main package under 2MB. Source `@3x` files remain for CDN fallback.
+- **Interest taxonomy v2.0 illustrations (2026-06-18)**: 48 active interests across 6 macro categories are CDN-only. Canonical `imageUrl` lives in `packages/shared/src/interests.ts`; mini-program resolves via `getInterestAssetUrl()` → `cdnAsset()`. 4 refreshed category icon sets are bundled locally with CDN fallback copies.
 - **Never** bundle local PNG archetype art. If canvas needs PNG, use `cdnAsset('/assets/personality/archetypes')`.
 - **Archetype images must not have text overlays** — no archetype-name initials or watermarks on hero art.
 - **Batch C + D ceremony/badges (2026-06-04 Path B local-bundle → 2026-06-16 CDN)**: 8 ceremony WebP in `src/assets/ceremony/` + 9 badge WebP in `src/assets/badges/` (q=55, 600px) are uploaded to CDN; they are no longer copied to `dist/`. Registries in `src/lib/ceremonyHeroes.ts` + `src/lib/milestoneBadges.ts` use `cdnAsset()` (NOT `localAsset()`). PNG masters live in `assets-source/lovart/batch-{c,d}/` and are NOT bundled. Re-encode via `node scripts/optimize-ceremony-batch-c.mjs` / `node scripts/optimize-badges-batch-d.mjs` before committing new tiles, then upload via the CDN workflow.

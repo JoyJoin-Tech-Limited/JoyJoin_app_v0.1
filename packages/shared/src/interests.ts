@@ -11,11 +11,11 @@
 import { z } from "zod";
 
 // ============ Version Management ============
-export const TAXONOMY_VERSION = "1.0.0";
+export const TAXONOMY_VERSION = "2.0.0";
 
 // ============ Type Definitions ============
 export type RiasecType = 'R' | 'I' | 'A' | 'S' | 'E' | 'C';
-export type MacroCategory = 'food' | 'entertainment' | 'lifestyle' | 'culture' | 'social';
+export type MacroCategory = 'food' | 'play' | 'sports' | 'culture' | 'life' | 'growth';
 
 export interface InterestDefinition {
   id: string;
@@ -28,62 +28,67 @@ export interface InterestDefinition {
 }
 
 // ============ Canonical Interest Taxonomy ============
+// v2.0.0 — scene-first taxonomy: every category answers "where / what would we do together?"
 export const INTEREST_TAXONOMY: InterestDefinition[] = [
-  // 美食 food (10张)
-  { id: 'hotpot', label: '火锅', macroCategory: 'food', riasec: 'S', imageUrl: '/images/interests/hotpot.jpg', active: true, synonyms: ['涮锅', '火锅店'] },
-  { id: 'bbq', label: '撸串', macroCategory: 'food', riasec: 'S', imageUrl: '/images/interests/bbq.jpg', active: true, synonyms: ['烧烤', '串串'] },
-  { id: 'cantonese', label: '早茶', macroCategory: 'food', riasec: 'S', imageUrl: '/images/interests/cantonese.jpg', active: true, synonyms: ['粤式早茶', '茶点'] },
-  { id: 'japanese', label: '日料', macroCategory: 'food', riasec: 'A', imageUrl: '/images/interests/japanese.jpg', active: true, synonyms: ['日式料理', '寿司'] },
-  { id: 'western', label: '西餐', macroCategory: 'food', riasec: 'C', imageUrl: '/images/interests/western.jpg', active: true, synonyms: ['法餐', '意餐'] },
-  { id: 'dessert', label: '下午茶', macroCategory: 'food', riasec: 'S', imageUrl: '/images/interests/dessert.jpg', active: true, synonyms: ['甜点', '蛋糕'] },
-  { id: 'coffee', label: '咖啡', macroCategory: 'food', riasec: 'I', imageUrl: '/images/interests/coffee.jpg', active: true, synonyms: ['咖啡馆', '精品咖啡'] },
-  { id: 'food_hunting', label: '探店', macroCategory: 'food', riasec: 'E', imageUrl: '/images/interests/food_hunting.jpg', active: true, synonyms: ['美食探店', '寻味'] },
-  { id: 'dabianlu', label: '打边炉', macroCategory: 'food', riasec: 'S', imageUrl: '/images/interests/dabianlu.jpg', active: true, synonyms: ['港式火锅'] },
-  { id: 'private_kitchen', label: '私厨', macroCategory: 'food', riasec: 'E', imageUrl: '/images/interests/private_kitchen.jpg', active: true, synonyms: ['私房菜'] },
+  // 美食小酌 food — 一起吃/喝的场景
+  { id: 'hotpot', label: '火锅', macroCategory: 'food', riasec: 'S', imageUrl: '/images/interests/hotpot.webp', active: true, synonyms: ['涮锅', '火锅店', '打边炉', '港式火锅'] },
+  { id: 'bbq', label: '撸串', macroCategory: 'food', riasec: 'S', imageUrl: '/images/interests/bbq.webp', active: true, synonyms: ['烧烤', '串串'] },
+  { id: 'cantonese', label: '早茶', macroCategory: 'food', riasec: 'S', imageUrl: '/images/interests/cantonese.webp', active: true, synonyms: ['粤式早茶', '茶点'] },
+  { id: 'japanese', label: '日料', macroCategory: 'food', riasec: 'A', imageUrl: '/images/interests/japanese.webp', active: true, synonyms: ['日式料理', '寿司'] },
+  { id: 'western', label: '西餐', macroCategory: 'food', riasec: 'C', imageUrl: '/images/interests/western.webp', active: true, synonyms: ['法餐', '意餐'] },
+  { id: 'dessert', label: '下午茶', macroCategory: 'food', riasec: 'S', imageUrl: '/images/interests/dessert.webp', active: true, synonyms: ['甜点', '蛋糕', '咖啡'] },
+  { id: 'coffee', label: '咖啡', macroCategory: 'food', riasec: 'I', imageUrl: '/images/interests/coffee.webp', active: true, synonyms: ['咖啡馆', '精品咖啡', '下午茶'] },
+  { id: 'food_hunting', label: '探店', macroCategory: 'food', riasec: 'E', imageUrl: '/images/interests/food_hunting.webp', active: true, synonyms: ['美食探店', '寻味'] },
+  { id: 'private_kitchen', label: '私厨', macroCategory: 'food', riasec: 'E', imageUrl: '/images/interests/private_kitchen.webp', active: true, synonyms: ['私房菜'] },
+  { id: 'wine', label: '小酌', macroCategory: 'food', riasec: 'E', imageUrl: '/images/interests/wine.webp', active: true, synonyms: ['红酒', '威士忌', '精酿', '清吧', '小酒馆'] },
 
-  // 娱乐 entertainment (7张)
-  { id: 'script_kill', label: '剧本杀', macroCategory: 'entertainment', riasec: 'I', imageUrl: '/images/interests/script_kill.jpg', active: true, synonyms: ['推理', '谋杀之谜'] },
-  { id: 'escape_room', label: '密室', macroCategory: 'entertainment', riasec: 'I', imageUrl: '/images/interests/escape_room.jpg', active: true, synonyms: ['密室逃脱'] },
-  { id: 'board_games', label: '桌游', macroCategory: 'entertainment', riasec: 'I', imageUrl: '/images/interests/board_games.jpg', active: true, synonyms: ['卡牌游戏'] },
-  { id: 'ktv', label: 'KTV', macroCategory: 'entertainment', riasec: 'S', imageUrl: '/images/interests/ktv.jpg', active: true, synonyms: ['唱K', '卡拉OK'] },
-  { id: 'gaming', label: '电竞', macroCategory: 'entertainment', riasec: 'R', imageUrl: '/images/interests/gaming.jpg', active: true, synonyms: ['游戏', '电子游戏'] },
-  { id: 'live_house', label: 'LiveHouse', macroCategory: 'entertainment', riasec: 'A', imageUrl: '/images/interests/live_house.jpg', active: true, synonyms: ['现场演出'] },
-  { id: 'binge_watch', label: '追剧', macroCategory: 'entertainment', riasec: 'C', imageUrl: '/images/interests/binge_watch.jpg', active: true, synonyms: ['看剧', '刷剧'] },
+  // 聚会玩乐 play — 一群人一起玩/破冰的场景
+  { id: 'script_kill', label: '剧本杀', macroCategory: 'play', riasec: 'I', imageUrl: '/images/interests/script_kill.webp', active: true, synonyms: ['推理', '谋杀之谜'] },
+  { id: 'escape_room', label: '密室', macroCategory: 'play', riasec: 'I', imageUrl: '/images/interests/escape_room.webp', active: true, synonyms: ['密室逃脱'] },
+  { id: 'board_games', label: '桌游', macroCategory: 'play', riasec: 'I', imageUrl: '/images/interests/board_games.webp', active: true, synonyms: ['卡牌游戏'] },
+  { id: 'ktv', label: 'KTV', macroCategory: 'play', riasec: 'S', imageUrl: '/images/interests/ktv.webp', active: true, synonyms: ['唱K', '卡拉OK'] },
+  { id: 'gaming', label: '电竞', macroCategory: 'play', riasec: 'R', imageUrl: '/images/interests/gaming.webp', active: true, synonyms: ['游戏', '电子游戏', '开黑'] },
+  { id: 'live_house', label: 'LiveHouse', macroCategory: 'play', riasec: 'A', imageUrl: '/images/interests/live_house.webp', active: true, synonyms: ['现场演出'] },
+  { id: 'bar', label: '小酒馆', macroCategory: 'play', riasec: 'S', imageUrl: '/images/interests/bar.webp', active: true, synonyms: ['酒吧', '清吧', '微醺'] },
+  { id: 'werewolf', label: '狼人杀/阿瓦隆', macroCategory: 'play', riasec: 'S', imageUrl: '/images/interests/werewolf.webp', active: true, synonyms: ['狼人杀', '阿瓦隆', '桌游'] },
 
-  // 生活方式 lifestyle (11张)
-  { id: 'hiking', label: '徒步', macroCategory: 'lifestyle', riasec: 'R', imageUrl: '/images/interests/hiking.jpg', active: true, synonyms: ['登山', '远足'] },
-  { id: 'fitness', label: '健身', macroCategory: 'lifestyle', riasec: 'R', imageUrl: '/images/interests/fitness.jpg', active: true, synonyms: ['撸铁', '运动'] },
-  { id: 'climbing', label: '攀岩', macroCategory: 'lifestyle', riasec: 'R', imageUrl: '/images/interests/climbing.jpg', active: true, synonyms: ['抱石', 'bouldering', '室内攀岩'] },
-  { id: 'camping', label: '露营', macroCategory: 'lifestyle', riasec: 'R', imageUrl: '/images/interests/camping.jpg', active: true, synonyms: ['野营', '户外露营'] },
-  { id: 'extreme_sports', label: '户外冒险', macroCategory: 'lifestyle', riasec: 'R', imageUrl: '/images/interests/extreme_sports.jpg', active: true, synonyms: ['滑翔', '跳伞', '攀岩', '漂流'] },
-  { id: 'photography', label: '摄影', macroCategory: 'lifestyle', riasec: 'A', imageUrl: '/images/interests/photography.jpg', active: true, synonyms: ['拍照', '街拍'] },
-  { id: 'diy', label: '手作', macroCategory: 'lifestyle', riasec: 'A', imageUrl: '/images/interests/diy.jpg', active: true, synonyms: ['手工', 'DIY'] },
-  { id: 'vintage', label: '淘古着', macroCategory: 'lifestyle', riasec: 'A', imageUrl: '/images/interests/vintage.jpg', active: true, synonyms: ['vintage', '古着', '二手', '中古'] },
-  { id: 'travel', label: '旅行', macroCategory: 'lifestyle', riasec: 'A', imageUrl: '/images/interests/travel.jpg', active: true, synonyms: ['旅游', '出行'] },
-  { id: 'pets', label: '撸猫', macroCategory: 'lifestyle', riasec: 'S', imageUrl: '/images/interests/pets.jpg', active: true, synonyms: ['宠物', '撸狗', '吸猫'] },
-  { id: 'sailing', label: '水上运动', macroCategory: 'lifestyle', riasec: 'R', imageUrl: '/images/interests/sailing.jpg', active: true, synonyms: ['帆船', '桨板', '皮划艇', '冲浪'] },
+  // 运动户外 sports — 一起动、分泌多巴胺的场景
+  { id: 'hiking', label: '徒步', macroCategory: 'sports', riasec: 'R', imageUrl: '/images/interests/hiking.webp', active: true, synonyms: ['登山', '远足'] },
+  { id: 'fitness', label: '健身', macroCategory: 'sports', riasec: 'R', imageUrl: '/images/interests/fitness.webp', active: true, synonyms: ['撸铁', '运动'] },
+  { id: 'climbing', label: '攀岩', macroCategory: 'sports', riasec: 'R', imageUrl: '/images/interests/climbing.webp', active: true, synonyms: ['抱石', 'bouldering', '室内攀岩'] },
+  { id: 'camping', label: '露营', macroCategory: 'sports', riasec: 'R', imageUrl: '/images/interests/camping.webp', active: true, synonyms: ['野营', '户外露营'] },
+  { id: 'extreme_sports', label: '户外冒险', macroCategory: 'sports', riasec: 'R', imageUrl: '/images/interests/extreme_sports.webp', active: true, synonyms: ['滑翔', '跳伞', '漂流'] },
+  { id: 'sailing', label: '水上运动', macroCategory: 'sports', riasec: 'R', imageUrl: '/images/interests/sailing.webp', active: true, synonyms: ['帆船', '桨板', '皮划艇', '冲浪'] },
+  { id: 'cycling', label: '骑行', macroCategory: 'sports', riasec: 'R', imageUrl: '/images/interests/cycling.webp', active: true, synonyms: ['自行车', '公路车', '骑行'] },
 
-  // 文化 culture (8张)
-  { id: 'exhibition', label: '看展', macroCategory: 'culture', riasec: 'A', imageUrl: '/images/interests/exhibition.jpg', active: true, synonyms: ['展览', '艺术展'] },
-  { id: 'music', label: '玩音乐', macroCategory: 'culture', riasec: 'A', imageUrl: '/images/interests/music.jpg', active: true, synonyms: ['乐器', '音乐创作'] },
-  { id: 'theater', label: '话剧', macroCategory: 'culture', riasec: 'A', imageUrl: '/images/interests/theater.jpg', active: true, synonyms: ['戏剧', '舞台剧'] },
-  { id: 'cinema', label: '电影', macroCategory: 'culture', riasec: 'A', imageUrl: '/images/interests/cinema.jpg', active: true, synonyms: ['看电影', '影院'] },
-  { id: 'citywalk', label: 'CityWalk', macroCategory: 'culture', riasec: 'A', imageUrl: '/images/interests/citywalk.jpg', active: true, synonyms: ['城市漫步', '逛街'] },
-  { id: 'flea_market', label: '市集', macroCategory: 'culture', riasec: 'A', imageUrl: '/images/interests/flea_market.jpg', active: true, synonyms: ['创意市集', '文创市集', '周末市集'] },
-  { id: 'standup', label: '脱口秀', macroCategory: 'culture', riasec: 'S', imageUrl: '/images/interests/standup.jpg', active: true, synonyms: ['单口喜剧', '开放麦'] },
-  { id: 'concert', label: '演唱会', macroCategory: 'culture', riasec: 'S', imageUrl: '/images/interests/concert.jpg', active: true, synonyms: ['音乐会', '现场'] },
+  // 文艺现场 culture — 一起看/体验内容的场景
+  { id: 'exhibition', label: '看展', macroCategory: 'culture', riasec: 'A', imageUrl: '/images/interests/exhibition.webp', active: true, synonyms: ['展览', '艺术展'] },
+  { id: 'music', label: '玩音乐', macroCategory: 'culture', riasec: 'A', imageUrl: '/images/interests/music.webp', active: true, synonyms: ['乐器', '音乐创作'] },
+  { id: 'theater', label: '话剧', macroCategory: 'culture', riasec: 'A', imageUrl: '/images/interests/theater.webp', active: true, synonyms: ['戏剧', '舞台剧'] },
+  { id: 'cinema', label: '电影', macroCategory: 'culture', riasec: 'A', imageUrl: '/images/interests/cinema.webp', active: true, synonyms: ['看电影', '影院'] },
+  { id: 'flea_market', label: '市集', macroCategory: 'culture', riasec: 'A', imageUrl: '/images/interests/flea_market.webp', active: true, synonyms: ['创意市集', '文创市集', '周末市集'] },
+  { id: 'standup', label: '脱口秀', macroCategory: 'culture', riasec: 'S', imageUrl: '/images/interests/standup.webp', active: true, synonyms: ['单口喜剧', '开放麦'] },
+  { id: 'concert', label: '演唱会', macroCategory: 'culture', riasec: 'S', imageUrl: '/images/interests/concert.webp', active: true, synonyms: ['音乐会', '现场'] },
+  { id: 'binge_watch', label: '追剧', macroCategory: 'culture', riasec: 'C', imageUrl: '/images/interests/binge_watch.webp', active: true, synonyms: ['看剧', '刷剧'] },
 
-  // 话题 social (10张)
-  { id: 'reading', label: '阅读', macroCategory: 'social', riasec: 'I', imageUrl: '/images/interests/reading.jpg', active: true, synonyms: ['看书', '读书'] },
-  { id: 'tech', label: '科技', macroCategory: 'social', riasec: 'I', imageUrl: '/images/interests/tech.jpg', active: true, synonyms: ['数码', '科技圈'] },
-  { id: 'podcasts', label: '播客', macroCategory: 'social', riasec: 'A', imageUrl: '/images/interests/podcasts.jpg', active: true, synonyms: ['小宇宙', 'podcast', '听播客'] },
-  { id: 'variety', label: '八卦', macroCategory: 'social', riasec: 'S', imageUrl: '/images/interests/variety.jpg', active: true, synonyms: ['娱乐八卦', '综艺'] },
-  { id: 'career', label: '搞事业', macroCategory: 'social', riasec: 'E', imageUrl: '/images/interests/career.jpg', active: true, synonyms: ['职业发展', '工作'] },
-  { id: 'fashion', label: '穿搭', macroCategory: 'social', riasec: 'C', imageUrl: '/images/interests/fashion.jpg', active: true, synonyms: ['时尚', '潮流'] },
-  { id: 'bar', label: '小酒馆', macroCategory: 'social', riasec: 'S', imageUrl: '/images/interests/bar.jpg', active: true, synonyms: ['酒吧', '清吧'] },
-  { id: 'wine', label: '小酌', macroCategory: 'social', riasec: 'E', imageUrl: '/images/interests/wine.jpg', active: true, synonyms: ['红酒', '威士忌', '精酿'] },
-  { id: 'startup', label: '创业', macroCategory: 'social', riasec: 'E', imageUrl: '/images/interests/startup.jpg', active: true, synonyms: ['创业圆桌', '商业', '搞钱'] },
-  { id: 'language', label: '语言搭子', macroCategory: 'social', riasec: 'I', imageUrl: '/images/interests/language.jpg', active: true, synonyms: ['语言学习', '外语', '语言交换'] },
+  // 生活美学 life — 慢生活、审美、创作、陪伴的场景
+  { id: 'photography', label: '摄影', macroCategory: 'life', riasec: 'A', imageUrl: '/images/interests/photography.webp', active: true, synonyms: ['拍照', '街拍'] },
+  { id: 'diy', label: '手作', macroCategory: 'life', riasec: 'A', imageUrl: '/images/interests/diy.webp', active: true, synonyms: ['手工', 'DIY'] },
+  { id: 'vintage', label: '淘古着', macroCategory: 'life', riasec: 'A', imageUrl: '/images/interests/vintage.webp', active: true, synonyms: ['vintage', '古着', '二手', '中古'] },
+  { id: 'travel', label: '旅行', macroCategory: 'life', riasec: 'A', imageUrl: '/images/interests/travel.webp', active: true, synonyms: ['旅游', '出行'] },
+  { id: 'pets', label: '宠物', macroCategory: 'life', riasec: 'S', imageUrl: '/images/interests/pets.webp', active: true, synonyms: ['撸猫', '撸狗', '吸猫', '养宠'] },
+  { id: 'citywalk', label: 'CityWalk', macroCategory: 'life', riasec: 'A', imageUrl: '/images/interests/citywalk.webp', active: true, synonyms: ['城市漫步', '逛街'] },
+  { id: 'fashion', label: '穿搭', macroCategory: 'life', riasec: 'C', imageUrl: '/images/interests/fashion.webp', active: true, synonyms: ['时尚', '潮流'] },
+  { id: 'beauty', label: '护肤美妆', macroCategory: 'life', riasec: 'A', imageUrl: '/images/interests/beauty.webp', active: true, synonyms: ['美妆', '护肤', '化妆'] },
+
+  // 思想成长 growth — 一起聊、一起学的场景
+  { id: 'reading', label: '阅读', macroCategory: 'growth', riasec: 'I', imageUrl: '/images/interests/reading.webp', active: true, synonyms: ['看书', '读书'] },
+  { id: 'tech', label: '科技', macroCategory: 'growth', riasec: 'I', imageUrl: '/images/interests/tech.webp', active: true, synonyms: ['数码', '科技圈'] },
+  { id: 'podcasts', label: '播客', macroCategory: 'growth', riasec: 'A', imageUrl: '/images/interests/podcasts.webp', active: true, synonyms: ['小宇宙', 'podcast', '听播客'] },
+  { id: 'variety', label: '八卦', macroCategory: 'growth', riasec: 'S', imageUrl: '/images/interests/variety.webp', active: true, synonyms: ['娱乐八卦', '综艺'] },
+  { id: 'career', label: '搞事业', macroCategory: 'growth', riasec: 'E', imageUrl: '/images/interests/career.webp', active: true, synonyms: ['职业发展', '工作'] },
+  { id: 'startup', label: '创业', macroCategory: 'growth', riasec: 'E', imageUrl: '/images/interests/startup.webp', active: true, synonyms: ['创业圆桌', '商业', '搞钱'] },
+  { id: 'language', label: '语言搭子', macroCategory: 'growth', riasec: 'I', imageUrl: '/images/interests/language.webp', active: true, synonyms: ['语言学习', '外语', '语言交换'] },
 ];
 
 // ============ Lookup Maps (built at module load) ============
@@ -345,11 +350,12 @@ export const RIASEC_QUOTAS: Record<RiasecType, number> = {
 };
 
 export const MACRO_CATEGORY_LABELS: Record<MacroCategory, string> = {
-  food: '美食',
-  entertainment: '娱乐',
-  lifestyle: '生活方式',
-  culture: '文化',
-  social: '话题',
+  food: '美食小酌',
+  play: '聚会玩乐',
+  sports: '运动户外',
+  culture: '文艺现场',
+  life: '生活美学',
+  growth: '思想成长',
 };
 
 export const RIASEC_LABELS: Record<RiasecType, string> = {
@@ -406,7 +412,7 @@ export function buildCardDeck(targetCount: number = 18): InterestDefinition[] {
 
   // Ensure minimum category coverage (at least 2 per category)
   const categoryCount: Record<MacroCategory, number> = {
-    food: 0, entertainment: 0, lifestyle: 0, culture: 0, social: 0,
+    food: 0, play: 0, sports: 0, culture: 0, life: 0, growth: 0,
   };
   for (const interest of selected) {
     categoryCount[interest.macroCategory]++;
@@ -445,10 +451,11 @@ export function buildCardDeck(targetCount: number = 18): InterestDefinition[] {
 export function getChipListByCategory(): Record<MacroCategory, InterestDefinition[]> {
   const result: Record<MacroCategory, InterestDefinition[]> = {
     food: [],
-    entertainment: [],
-    lifestyle: [],
+    play: [],
+    sports: [],
     culture: [],
-    social: [],
+    life: [],
+    growth: [],
   };
 
   for (const interest of getActiveInterests()) {

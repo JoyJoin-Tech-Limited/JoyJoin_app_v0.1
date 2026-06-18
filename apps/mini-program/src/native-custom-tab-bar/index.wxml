@@ -49,6 +49,9 @@
               class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--active' : ''}}"
               src="{{selected === item.index ? item.selectedIcon : item.icon}}"
               mode="aspectFit"
+              data-tab="{{item.key}}"
+              data-src="{{selected === item.index ? item.selectedIcon : item.icon}}"
+              binderror="handleIconError"
             />
             <view
               wx:if="{{item.badgeCount > 0}}"
@@ -90,6 +93,9 @@
               class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--active' : ''}}"
               src="{{selected === item.index ? item.selectedIcon : item.icon}}"
               mode="aspectFit"
+              data-tab="{{item.key}}"
+              data-src="{{selected === item.index ? item.selectedIcon : item.icon}}"
+              binderror="handleIconError"
             />
             <view
               wx:if="{{item.badgeCount > 0}}"
@@ -128,11 +134,16 @@
             class="joy-custom-tab-bar__center-logo"
             src="../assets/joyjoin-logo-tab.png"
             mode="aspectFit"
+            data-tab="center"
+            data-src="../assets/joyjoin-logo-tab.png"
+            binderror="handleIconError"
           />
           <view wx:if="{{center.showBadge}}" class="joy-custom-tab-bar__center-badge"></view>
         </view>
       </view>
-      <view class="joy-custom-tab-bar__center-label">{{center.label}}</view>
+      <view class="joy-custom-tab-bar__center-label-pill">
+        <view class="joy-custom-tab-bar__center-label">{{center.label}}</view>
+      </view>
     </view>
   </view>
 </view>

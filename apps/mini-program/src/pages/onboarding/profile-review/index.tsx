@@ -192,24 +192,37 @@ export default function ProfileReviewPage() {
         .slice(0, 3)
     : []
 
-  const topInterestLabels = useMemo(() => {
+  const topInterestItems = useMemo(() => {
     if (!interestsData) {
-      return [] as string[]
+      return [] as Array<{ id: string; label: string }>
     }
 
     if (Array.isArray(interestsData.topPriorities) && interestsData.topPriorities.length > 0) {
-      return interestsData.topPriorities.map((item) => item.label).slice(0, 4)
+      return interestsData.topPriorities
+        .map((item) => ({ id: item.topicId, label: item.label }))
+        .filter((item) => item.id)
+        .slice(0, 4)
     }
 
     if (!Array.isArray(interestsData.selections)) {
-      return []
+      return [] as Array<{ id: string; label: string }>
     }
 
     return [...interestsData.selections]
       .sort((left, right) => right.level - left.level || right.heat - left.heat)
       .slice(0, 4)
-      .map((item) => item.label)
+      .map((item) => ({ id: item.topicId, label: item.label }))
   }, [interestsData])
+
+  const topInterestLabels = useMemo(
+    () => topInterestItems.map((item) => item.label),
+    [topInterestItems],
+  )
+
+  const topInterestIds = useMemo(
+    () => topInterestItems.map((item) => item.id),
+    [topInterestItems],
+  )
 
   const dominantCategories = useMemo(() => {
     if (!interestsData?.categoryHeat) {
@@ -590,6 +603,7 @@ export default function ProfileReviewPage() {
                   {topInterestLabels.length > 0 ? (
                     <InterestChipCloud
                       labels={topInterestLabels}
+                      interestIds={topInterestIds}
                       accent
                       className='profile-review__chip-group'
                     />

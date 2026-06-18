@@ -201,6 +201,14 @@ apps/user-client/src/assets/matching/
 
 `apps/mini-program` 是当前 **launch-primary** WeChat 客户端；性能预算与分包决策优先在这里验证，再对照 web。权威策略说明见 [`apps/mini-program/README.md`](../apps/mini-program/README.md) 的 *Package Loading Strategy*。
 
+**当前主包预算与资产策略（2026-06-18）：**
+
+- 压缩后主包约为 **1.88 MB**，保留约 120 KB 的余量（WeChat 主包硬上限 2 MB）。
+- 仅 6 个核心 Xiaoyue  mascot 精灵状态（`welcome`/`idle`/`coach`/`loading`/`listening`/`thinking`）作为本地兜底打包；其余 14 个状态走 CDN。
+- `status-icons`、`info-labels`（semantic）、`ui` 三个 icon tier 在构建时剔除 `@3x`，以 `@1x`/`@2x` 打包；3x 设备回退到 `@2x`。
+- 48 个兴趣插画（taxonomy v2.0）全部走 CDN，统一通过 `packages/shared/src/interests.ts` 中的 `imageUrl` + `cdnAsset()` 解析。
+- `TARO_APP_CDN_BASE_URL` 在 `apps/mini-program/config/index.ts` 与 CI workflow 中均默认回退到 `https://joyjoinapp.com/static`，确保生产构建不会丢失 CDN 前缀。
+
 **代码中的真实配置（与文档同步）：**
 
 | 机制 | 位置 |
@@ -281,6 +289,9 @@ When implementing features that push Primary-tier hardware, always provide a fal
 | Matching background | Reuse `matching/shared/matching-bg.svg` via `MatchingStateLayout` — never duplicate |
 | Hero images | Use WebP + `decoding="async"`; avoid large PNG |
 | Archetype assets | Preload primary image on test completion + results mount; spritesheet bundled locally; do not bulk-preload all 12 full-size images in the app-launch critical path; canvas draws WebP primary with CDN PNG fallback |
+| Interest illustrations | 48 v2.0 interest cards are CDN-only; canonical `imageUrl` in `packages/shared/src/interests.ts`; resolve via `cdnAsset()` |
+| Mascot sprite sheets | Bundle only 6 core states locally; remaining 14 states CDN-primary with local fallback on `onError` |
+| Bundled icon density | `status`/`semantic`/`ui` tiers ship at `@1x`/`@2x`; `@3x` stripped at build to save package size |
 | Asset prefetching | Gate on real activity state — do not prefetch for no-activity users. Primary tier may prefetch more aggressively. |
-| Mini Program package loading | Keep tabBar pages in the main package; put heavy non-tab flows (onboarding, pool-registration, matching-status, icebreaker-session) in subpackages with `preloadRule`; justify independent subpackages with measured wins and a self-contained bootstrap plan |
+| Mini Program package loading | Keep tabBar pages in the main package; put heavy non-tab flows (onboarding, pool-registration, matching-status, icebreaker-session) in subpackages with `preloadRule`; justify independent subpackages with measured wins and a self-contained bootstrap plan; stay under ~1.88 MB compressed main package |
 | Device capability gate | Use `getSystemInfo` / `benchmarkLevel` to detect tier at runtime; never assume uniform low-end |

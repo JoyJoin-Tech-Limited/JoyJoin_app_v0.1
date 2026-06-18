@@ -40,7 +40,7 @@ import './index.scss'
 const MIN_INTERESTS = 3
 const MAX_INTERESTS = 10
 
-const CATEGORY_ORDER: MacroCategory[] = ['food', 'entertainment', 'lifestyle', 'culture', 'social']
+const CATEGORY_ORDER: MacroCategory[] = ['food', 'play', 'sports', 'culture', 'life', 'growth']
 
 const HEAT_CSS_VARS = {
   1: 'var(--jj-heat-l1)',
@@ -49,11 +49,12 @@ const HEAT_CSS_VARS = {
 } as const
 
 const CATEGORY_META: Record<MacroCategory, { dotColor: string; description: string }> = {
-  food: { dotColor: CATEGORY_COLORS.food, description: '适合聊口味、探店和周末吃什么。' },
-  entertainment: { dotColor: CATEGORY_COLORS.entertainment, description: '更偏玩乐、破冰和局里活跃氛围。' },
-  lifestyle: { dotColor: CATEGORY_COLORS.lifestyle, description: '徒步、露营、撸猫、手工——你休息日怎么过，这里怎么选。' },
-  culture: { dotColor: CATEGORY_COLORS.culture, description: '适合聊展览、演出、电影和内容审美。' },
-  social: { dotColor: CATEGORY_COLORS.social, description: '八卦、搞钱、聊穿搭——开了口就停不下来的那种。' },
+  food: { dotColor: CATEGORY_COLORS.food, description: '火锅、日料、咖啡、小酌——适合边吃边聊的场景。' },
+  play: { dotColor: CATEGORY_COLORS.play, description: '剧本杀、KTV、小酒馆——一群人一起玩最热闹。' },
+  sports: { dotColor: CATEGORY_COLORS.sports, description: '徒步、健身、露营、骑行——用身体认识新朋友。' },
+  culture: { dotColor: CATEGORY_COLORS.culture, description: '看展、电影、演唱会、追剧——一起去看点什么。' },
+  life: { dotColor: CATEGORY_COLORS.life, description: '摄影、穿搭、旅行、CityWalk——把日常过成喜欢的样子。' },
+  growth: { dotColor: CATEGORY_COLORS.growth, description: '阅读、科技、搞事业、语言搭子——聊得来也学得动。' },
 }
 
 const INTEREST_LEVEL_META: Array<{
@@ -424,6 +425,17 @@ export default function ExtendedDataPage() {
     )
   }
 
+  const unlocked_emoji = '🎉'
+  const first_priority_emoji = '⭐'
+  const all_categories_emoji = '🌈'
+  const milestone_emoji = milestone
+    ? milestone === 'unlocked'
+      ? unlocked_emoji
+      : milestone === 'first-priority'
+        ? first_priority_emoji
+        : all_categories_emoji
+    : null
+
   return (
     <View className={pageClassName}>
       <View className='extended-data__header extended-data__stage extended-data__stage--1'>
@@ -559,22 +571,23 @@ export default function ExtendedDataPage() {
 
       {showFirstSelectionHint ? (
         <View className='extended-data__hint-toast' aria-live='polite' role='status'>
-          <Text className='extended-data__hint-toast-text'>第一个同好信号已点亮 ✨ 再点同一项就能升温。</Text>
+          <JoyJoinIcon emoji='✨' size={28} className='extended-data__hint-toast-icon' />
+          <Text className='extended-data__hint-toast-text'>第一个同好信号已点亮，再点同一项就能升温。</Text>
         </View>
       ) : null}
 
       {milestone ? (
         <View className='extended-data__milestone-toast' aria-live='polite' role='status'>
           <View className='extended-data__milestone-toast-inner'>
-            <Text className='extended-data__milestone-toast-emoji'>
-              {milestone === 'unlocked' ? '🎉' : milestone === 'first-priority' ? '⭐' : '🌈'}
-            </Text>
+            {milestone_emoji && (
+              <JoyJoinIcon emoji={milestone_emoji} size={56} className='extended-data__milestone-toast-emoji' />
+            )}
             <Text className='extended-data__milestone-toast-title'>
               {milestone === 'unlocked'
                 ? '同好画像解锁'
                 : milestone === 'first-priority'
                   ? '首个必聊项诞生'
-                  : '五大领域全亮'}
+                  : '六大领域全亮'}
             </Text>
             <Text className='extended-data__milestone-toast-subtitle'>
               {milestone === 'unlocked'
@@ -640,13 +653,29 @@ export default function ExtendedDataPage() {
 
           {selectedCount > 0 ? (
             <View className='extended-data__footer-story-pill'>
-              <Text className='extended-data__footer-story-pill-text'>
-                {hasAllCategories
-                  ? '🌈 兴趣横跨五大领域，你的同好画像很丰盛'
-                  : hasMultipleCategories && topCategory
-                    ? `🔥 ${MACRO_CATEGORY_LABELS[topCategory]} 是你和同好最容易聊起来的领域`
-                    : `✨ 已经点亮 ${selectedCount} 个同好信号${archetypeName ? `，${archetypeName}的画像正在成形` : ''}`}
-              </Text>
+              {hasAllCategories ? (
+                <>
+                  <JoyJoinIcon emoji='🌈' size={24} className='extended-data__footer-story-pill-icon' />
+                  <Text className='extended-data__footer-story-pill-text'>
+                    兴趣横跨六大领域，你的同好画像很丰盛
+                  </Text>
+                </>
+              ) : hasMultipleCategories && topCategory ? (
+                <>
+                  <JoyJoinIcon emoji='🔥' size={24} className='extended-data__footer-story-pill-icon' />
+                  <Text className='extended-data__footer-story-pill-text'>
+                    {MACRO_CATEGORY_LABELS[topCategory]} 是你和同好最容易聊起来的领域
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <JoyJoinIcon emoji='✨' size={24} className='extended-data__footer-story-pill-icon' />
+                  <Text className='extended-data__footer-story-pill-text'>
+                    已经点亮 {selectedCount} 个同好信号
+                    {archetypeName ? `，${archetypeName}的画像正在成形` : ''}
+                  </Text>
+                </>
+              )}
             </View>
           ) : null}
         </View>
