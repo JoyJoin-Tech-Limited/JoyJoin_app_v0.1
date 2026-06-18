@@ -51,6 +51,15 @@ class ShellCache {
     }
   }
 
+  /** Invalidate every user's Discover shell after a global pool change. */
+  invalidateDiscover(): void {
+    for (const key of this.cache.keys()) {
+      if (key.startsWith("shell-discover-")) {
+        this.cache.del(key);
+      }
+    }
+  }
+
   /** Test hygiene only. */
   flushAll(): void {
     this.cache.flushAll();

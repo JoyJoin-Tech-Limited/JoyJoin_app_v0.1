@@ -21,6 +21,7 @@ import {
   type District,
 } from '@shared/districts'
 import { apiRequest, fetchDiscoverShell } from '../../lib/api/api'
+import { loadDiscoverPools } from '../../lib/api/discoverPools'
 import { injectDiscoverShellIntoCache, POOLS_QUERY_KEY } from '../../lib/prefetchEngine'
 import { evictPersistedQuery } from '../../lib/api/persistentCache'
 import { useAuth } from '../../hooks/useAuth'
@@ -164,26 +165,22 @@ function AuthenticatedDiscover({
     queryKey: ['mini-program', 'event-pools'],
     staleTime: 2 * 60 * 1000,
     queryFn: async (): Promise<EventPoolSummary[]> => {
-      // Primary: composite endpoint — 1 request for all Discover data.
-      // Why: cuts TTFB and request overhead vs 3 parallel calls.
       try {
-        const shell = await fetchDiscoverShell()
-        injectDiscoverShellIntoCache(queryClient, shell)
-        logInfo('[Discover] Shell loaded', { poolCount: shell.pools.items.length })
-        return shell.pools.items as EventPoolSummary[]
-      } catch (shellError) {
-        // Composite unavailable — fall back to legacy 3-request pattern.
-        logWarn('[Discover] Shell failed; falling back to getEventPools', {
-          error: shellError instanceof Error ? shellError.message : String(shellError),
+        const loadedPools = await loadDiscoverPools({
+          fetchShell: fetchDiscoverShell,
+          fetchLegacyPools: () => getEventPools(apiRequest),
+          onShellLoaded: (shell) => {
+            injectDiscoverShellIntoCache(queryClient, shell)
+            logInfo('[Discover] Shell loaded', { poolCount: shell.pools.items.length })
+            if (shell.pools.items.length === 0) {
+              logWarn('[Discover] Shell returned no pools; checking canonical endpoint')
+            }
+          },
         })
-      }
-
-      try {
-        const pools = await getEventPools(apiRequest)
-        logInfo('[Discover] Fallback pools loaded', { poolCount: pools.length })
-        return pools
+        logInfo('[Discover] Pools ready', { poolCount: loadedPools.length })
+        return loadedPools
       } catch (e) {
-        logWarn('[Discover] Fallback pools failed', {
+        logWarn('[Discover] Pool loading failed', {
           error: e instanceof Error ? e.message : String(e),
         })
         // Dev-only mock fallback for UI testing without backend.

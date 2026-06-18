@@ -20,6 +20,7 @@ import {
 import { matchEventPool, saveMatchResults } from "../../poolMatchingService";
 import { broadcastAdminAction } from "../../eventBroadcast";
 import { notifyPoolCancelled } from "../../lib/wecomNotifications";
+import { shellCache } from "../../lib/shellCache";
 
 const updateEventPoolSchema = z.object({
   title: z.string().min(1).optional(),
@@ -154,6 +155,7 @@ export function registerAdminEventPoolRoutes(app: Express): void {
         .returning();
 
       logger.info("[EventPools] created pool", { data: { poolId: pool.id } });
+      shellCache.invalidateDiscover();
 
       logAdminAudit({
         action: "EVENT_POOL_CREATED",
@@ -288,6 +290,8 @@ export function registerAdminEventPoolRoutes(app: Express): void {
 
         return res.status(404).json({ message: "Event pool not found" });
       }
+
+      shellCache.invalidateDiscover();
 
       if (updates.status && updates.status !== oldStatus) {
         logAdminAudit({
