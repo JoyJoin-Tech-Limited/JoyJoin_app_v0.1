@@ -301,12 +301,37 @@ export type UserState = AuthUserResponse
  */
 export async function authenticateMiniProgramUser(input?: {
   referralCode?: string
-}): Promise<void> {
+}): Promise<{ isNewUser: boolean }> {
   const payload: Record<string, unknown> = {}
   if (input?.referralCode) {
     payload.referralCode = input.referralCode
   }
-  await postMiniProgramWeChatLogin('/api/auth/wechat/login', payload, '无法建立微信登录会话')
+  return postMiniProgramWeChatLogin('/api/auth/wechat/login', payload, '无法建立微信登录会话')
+}
+
+/**
+ * Check whether the current WeChat Mini Program user already has a JoyJoin
+ * account, without creating one or establishing a session. Used by the silent
+ * auto-login bridge to avoid signing up new users before they reach the
+ * personality-test result page.
+ */
+export async function checkReturningMiniProgramWeChatUser(): Promise<{ exists: boolean }> {
+  const code = await getMiniProgramLoginCode()
+  const data = await apiRequest<{
+    exists?: boolean
+    error?: string
+  }>({
+    path: '/api/auth/wechat/check',
+    method: 'POST',
+    handleUnauthorized: false,
+    data: { code },
+  })
+
+  if (typeof data.exists !== 'boolean') {
+    throw createApiError('无法检查微信登录状态')
+  }
+
+  return { exists: data.exists }
 }
 
 export async function authenticateMiniProgramUserWithTest(input: {
@@ -385,12 +410,13 @@ async function postMiniProgramWeChatLogin(
   path: string,
   payload: Record<string, unknown>,
   fallbackErrorMessage: string,
-): Promise<void> {
+): Promise<{ isNewUser: boolean }> {
   const code = await getMiniProgramLoginCode()
   const data = await apiRequest<{
     success?: boolean
     error?: string
     sessionToken?: string
+    isNewUser?: boolean
   }>({
     path,
     method: 'POST',
@@ -408,6 +434,8 @@ async function postMiniProgramWeChatLogin(
   if (typeof data.sessionToken === 'string' && data.sessionToken.length > 0) {
     setSessionToken(data.sessionToken)
   }
+
+  return { isNewUser: data.isNewUser ?? false }
 }
 
 /**
