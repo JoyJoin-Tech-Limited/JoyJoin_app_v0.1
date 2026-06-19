@@ -1,4 +1,4 @@
-<view class="joy-custom-tab-bar {{lowEnd ? 'joy-custom-tab-bar--low-end' : ''}}" hidden="{{hidden}}">
+<view class="joy-custom-tab-bar {{lowEnd ? 'joy-custom-tab-bar--low-end' : ''}} {{collapsed ? 'joy-custom-tab-bar--collapsed' : ''}}" hidden="{{hidden}}">
   <!--
     IMPORTANT: Keep this native custom tab bar as plain <view>/<image>.
     Do NOT wrap children in <cover-view>/<cover-image>. WeChat's cover-view

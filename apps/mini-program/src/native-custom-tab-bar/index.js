@@ -68,6 +68,9 @@ Component({
   _lastPillSetAt: 0,
   // Last sync state; re-applied when network comes back online.
   _lastSyncState: null,
+  // Discover-only scroll-responsive collapse: set to true when the component
+  // is detached so callers (e.g. pages/discover) can no-op gracefully.
+  _isDetached: false,
   // Name lookup for accessibility announcements (re-assigned in attached
   // to guarantee it exists on the instance before any tap callback runs).
   _tabNames: TAB_NAMES,
@@ -81,6 +84,8 @@ Component({
     hidden: true,
     // CSS transition toggle for interruptible rapid switching.
     pillTransitionEnabled: true,
+    // Discover-only scroll-responsive collapse state (initially expanded).
+    collapsed: false,
     // Sliding active pill geometry (in rpx)
     pillWidth: 0,
     pillTranslateX: 0,
@@ -143,6 +148,8 @@ Component({
   lifetimes: {
     attached: function () {
       var self = this
+      // Reset the detached guard so re-attached instances accept state updates.
+      this._isDetached = false
       try {
         var info = wx.getSystemInfoSync ? wx.getSystemInfoSync() : {}
         this._platform = info.platform || 'other'
@@ -199,6 +206,7 @@ Component({
       }
     },
     detached: function () {
+      this._isDetached = true
       clearTimeout(this._syncTimer)
       clearTimeout(this._showTimer)
       clearTimeout(this._switchFlightTimer)
@@ -412,6 +420,30 @@ Component({
 
     setBadges: function (badges) {
       this.syncState({ badges: badges })
+    },
+
+    /**
+     * Discover-only scroll-responsive collapse.
+     * Expands/collapses the tab bar surface and center CTA via CSS class.
+     * Returns true when the call was applied (or already in target state),
+     * false when the component instance is no longer attached.
+     */
+    setCollapsed: function (collapsed) {
+      if (!this || this._isDetached) return false
+      var next = Boolean(collapsed)
+      if (this.data.collapsed === next) return false
+      this.setData({ collapsed: next })
+      // Announce state change for screen-reader users, auto-cleared after 1 s.
+      var announcement = next ? '标签栏已收起' : '标签栏已展开'
+      this.setData({ announcement: announcement })
+      var self = this
+      clearTimeout(this._announceTimer)
+      this._announceTimer = setTimeout(function () {
+        if (self.data.announcement === announcement) {
+          self.setData({ announcement: '' })
+        }
+      }, 1000)
+      return true
     },
 
     /**

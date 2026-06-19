@@ -308,13 +308,15 @@
 //   L4 Title            — 26rpx, semibold                (event name)
 //   L5 Teaser           — 28rpx, $font-cn-display, bold  (social proof)
 //   L5 Teaser sub       — 24rpx                          (detail)
-//   L6 Progress         — 24rpx                          (scarcity)
+//   L6 Presence strip   — 24rpx count                    (scarcity)
 //   L6 CTA              — 32rpx, $font-cn-display, black (action)
 //   L6 CTA sub          — 22rpx                          (value prop)
 .oracle-card {
   @include card;
   box-sizing: border-box;
-  min-height: 556rpx;
+  // Calibrated to fit the tallest OracleCard (title + teaser + CTA).
+  // VirtualList itemHeight must match this value. Re-measure in DevTools.
+  min-height: 560rpx;
   padding: 24rpx $spacing-lg;
   border-radius: $card-radius-sm;
   border: 2rpx solid rgba($color-surface, 0.9);
@@ -331,7 +333,7 @@
   }
 
   &--skeleton {
-    min-height: 556rpx;
+    min-height: 560rpx;
     pointer-events: none;
     opacity: 1;
     transform: none;
@@ -449,11 +451,6 @@
     @include text-truncate;
   }
 
-  // ── Ecosystem bar ─────────────────────────────────────────────
-  &__ecosystem {
-    margin-bottom: $spacing-xs;
-  }
-
   // ── Decision Facts (the 3 key factors: WHEN / WHAT / WHERE) ───
   &__facts {
     margin-bottom: $spacing-xs;
@@ -542,48 +539,15 @@
     @include text-truncate;
   }
 
-  // ── Footer (progress + CTA) ───────────────────────────────────
+  // ── Footer (presence strip + CTA) ─────────────────────────────
   &__footer {
     display: flex;
     flex-direction: column;
     gap: 8rpx;
   }
 
-  &__progress-row {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-  }
-
-  &__progress-track {
-    flex: 1;
-    height: 6rpx;
-    border-radius: 3rpx;
-    background: $color-divider;
-    overflow: hidden;
-  }
-
-  &__progress-fill {
-    height: 100%;
-    border-radius: 3rpx;
-    transform-origin: left;
-    @media (prefers-reduced-motion: no-preference) {
-      transition: transform 0.4s ease-out;
-    }
-
-    &--hot {
-      animation: progress-fill-pulse 1.5s ease-in-out infinite;
-    }
-  }
-
-  &__progress-text {
-    font-size: 24rpx;
-    font-weight: $font-weight-medium;
-    color: $color-text-muted;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-
+  // ParticipantPresenceStrip is styled in its own component SCSS.
+  // Page-level placement overrides live below.
   &__cta {
     display: flex;
     flex-direction: column;
@@ -629,11 +593,6 @@
 
   &--full &__cta-subline {
     color: $color-text-muted;
-  }
-
-  &--full &__progress-fill {
-    background: $color-text-muted !important;
-    opacity: 0.4;
   }
 
   &--full &__pulse-dot {
@@ -684,10 +643,6 @@
     opacity: 1;
   }
 
-  &--low-end &__progress-fill {
-    transition: none;
-  }
-
   &--low-end &__celebration-badge {
     animation: none;
     opacity: 1;
@@ -695,56 +650,21 @@
   }
 }
 
-// ─── EcosystemBar component styles ───────────────────────────────
-.ecosystem-bar {
-  &__glyphs {
-    display: flex;
-    align-items: center;
-    height: 48rpx;
-  }
+// ─── ParticipantPresenceStrip page-level placement ───────────────
+.participant-presence-strip {
+  // Ensures the strip sits cleanly inside the card footer.
+  width: 100%;
 
-  &__glyph-wrap {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  &__more {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 36rpx;
-    height: 36rpx;
-    padding: 0 8rpx;
-    border-radius: 999rpx;
-    background: $color-divider;
-    font-size: 20rpx;
-    font-weight: $font-weight-semibold;
-    color: $color-text-secondary;
-    margin-left: 8rpx;
-  }
-
-  &__empty-state {
-    display: flex;
-    align-items: center;
-    gap: 10rpx;
-  }
-
-  &__empty-glyph {
-    width: 32rpx;
-    height: 32rpx;
-    border-radius: 50%;
-    border: 2rpx dashed $color-divider;
-    background: rgba($color-surface, 0.5);
-    flex-shrink: 0;
-  }
-
-  &__empty {
-    display: block;
-    font-size: 22rpx;
-    line-height: 48rpx;
-    color: $color-text-muted;
-    @include text-truncate;
+  // Reduced motion: strip animations are governed inside the component,
+  // but page-level low-end gating also disables motion.
+  .oracle-card--low-end & {
+    &__coin,
+    &__empty-coin,
+    &__overflow {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
   }
 }
 
@@ -798,11 +718,6 @@
 @keyframes pulse-dot-urgent {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.35; transform: scale(1.4); }
-}
-
-@keyframes progress-fill-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
 }
 
 @keyframes oracle-card-enter {
@@ -904,9 +819,12 @@
     transform: none;
   }
 
-  .oracle-card__progress-fill--hot {
-    animation: none;
-    opacity: 1;
+  .participant-presence-strip__coin,
+  .participant-presence-strip__empty-coin,
+  .participant-presence-strip__overflow {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 
   .oracle-card__celebration-badge {

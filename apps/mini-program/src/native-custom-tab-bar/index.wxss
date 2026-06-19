@@ -73,9 +73,12 @@
   border: 1rpx solid rgba(139, 92, 246, 0.06);
   overflow: hidden;
   z-index: 1;
-  /* GPU-composite the pill surface */
+  /* GPU-composite the pill surface — collapse scales from bottom so the
+     surface shrinks into the safe area rather than pulling away from it. */
   will-change: transform;
   transform: translateZ(0);
+  transform-origin: center bottom;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .joy-custom-tab-bar__bg {
@@ -152,6 +155,7 @@
   height: 48rpx;
   align-items: center;
   justify-content: center;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .joy-custom-tab-bar__item-icon {
@@ -173,7 +177,9 @@
   line-height: 30rpx;
   color: var(--jj-text-inactive);
   text-align: center;
-  transition: color 150ms ease;
+  /* Cascade delay: labels fade after the surface starts moving, creating a
+     crafted staging effect on expand. Surface (0ms) → labels (30ms) → center pill (60ms). */
+  transition: color 150ms ease, opacity 220ms ease 30ms;
 }
 
 .joy-custom-tab-bar__item-label--active {
@@ -266,7 +272,7 @@
      Surface top is 38rpx from the root top (182 - 16 - 128); for a 164rpx
      outer ring the required offset is 38 - 82 = -44rpx. */
   margin-top: -44rpx;
-  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1), opacity 100ms ease-out;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 100ms ease-out;
   will-change: transform, opacity;
 }
 
@@ -345,6 +351,8 @@
   box-shadow: 0 4rpx 12rpx var(--jj-shadow-sm);
   box-sizing: border-box;
   text-align: center;
+  /* Cascade delay: center pill appears last in the expand cascade. */
+  transition: opacity 220ms ease 60ms;
 }
 
 .joy-custom-tab-bar__center-label {
@@ -390,13 +398,53 @@
 /* Cover-image fade-in removed: local assets load instantly and the global
    animation caused re-render flicker every time setData fired. */
 
+/* ── Discover-only scroll-responsive collapse ───────────────────── */
+
+.joy-custom-tab-bar--collapsed .joy-custom-tab-bar__surface {
+  /* 128rpx → 88rpx (0.6875×) — hits the 88rpx minimum touch target. */
+  transform: translateZ(0) scaleY(0.6875);
+}
+
+/* Counter-scale icon wraps so icons stay visually 40rpx when the surface
+   is collapsed. net: 0.6875 × 1.4545 ≈ 1.0. */
+.joy-custom-tab-bar--collapsed .joy-custom-tab-bar__item-icon-wrap {
+  transform: scaleY(1.4545);
+  transform-origin: center center;
+}
+
+.joy-custom-tab-bar--collapsed .joy-custom-tab-bar__center {
+  /* Center CTA tracks the surface top: 128 → 88rpx = 40rpx shift down. */
+  transform: translateY(40rpx);
+}
+
+.joy-custom-tab-bar--collapsed .joy-custom-tab-bar__item-label {
+  opacity: 0;
+}
+
+.joy-custom-tab-bar--collapsed .joy-custom-tab-bar__center-label-pill {
+  opacity: 0;
+}
+
+/* Badges distort under the icon-wrap counter-scale; hide them in
+   collapsed state since the compact surface has no room for them. */
+.joy-custom-tab-bar--collapsed .joy-custom-tab-bar__item-badge {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.joy-custom-tab-bar--collapsed .joy-custom-tab-bar__item--active {
+  background-color: transparent;
+}
+
 /* Low-end device (benchmarkLevel <= 15): disable all animations */
+.joy-custom-tab-bar--low-end .joy-custom-tab-bar__surface,
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__item,
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__active-pill,
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__center {
   transition: none !important;
   will-change: auto !important;
   animation: none !important;
+  transform: none !important;
 }
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__item--pressed,
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__center--pressed {
@@ -431,14 +479,17 @@
   will-change: auto !important;
 }
 
-/* Reduced motion: disable all animations */
+/* Reduced motion: disable all animations, reset transform to avoid
+   unnecessary GPU compositor layers when collapse is disabled. */
 @media (prefers-reduced-motion: reduce) {
+  .joy-custom-tab-bar__surface,
   .joy-custom-tab-bar__item,
   .joy-custom-tab-bar__active-pill,
   .joy-custom-tab-bar__center {
     transition: none !important;
     will-change: auto !important;
     animation: none !important;
+    transform: none !important;
   }
   .joy-custom-tab-bar__item--pressed,
   .joy-custom-tab-bar__center--pressed {
@@ -467,6 +518,10 @@
   .joy-custom-tab-bar__center-button {
     transition: none !important;
     will-change: auto !important;
+  }
+  /* Counter-scale icons must not squash under reduced motion. */
+  .joy-custom-tab-bar--collapsed .joy-custom-tab-bar__item-icon-wrap {
+    transform: none !important;
   }
   .joy-custom-tab-bar image {
     animation: none !important;

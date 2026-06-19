@@ -2,7 +2,7 @@ import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import React from 'react'
 import Card from '../ui/Card'
-import EcosystemBar from './EcosystemBar'
+import ParticipantPresenceStrip from './ParticipantPresenceStrip'
 import CompatibilityIndicator from './CompatibilityIndicator'
 import { formatDateTimeParts } from '../../lib/matching/groupDisplay'
 import {
@@ -26,7 +26,6 @@ const CARD_VARIANT = 'oracle_v1'
 
 const URGENT_HOURS = 24
 const CRITICAL_HOURS = 6
-const HIGH_FILL_PCT = 75
 const HIGH_CHEMISTRY_CELEBRATION_THRESHOLD = 3
 
 const FALLBACK_COLOR = '#8B5CF6'
@@ -73,7 +72,7 @@ export default React.memo(function OracleCard({
 
   // ── Derived pool state ───────────────────────────────────────
 
-  const isEmptyPool = (pool.registrationCount ?? 0) === 0
+  const isEmptyPool = (pool.currentParticipants ?? pool.registrationCount ?? 0) === 0
   const accentFamily = isEmptyPool ? 'fire' : (pool.accentFamily ?? 'calm')
   const familyColor = ARCHETYPE_FAMILY_COLORS[accentFamily] ?? FALLBACK_COLOR
   const gradient = ARCHETYPE_FAMILY_GRADIENTS[accentFamily] ?? ARCHETYPE_FAMILY_GRADIENTS.calm
@@ -84,10 +83,6 @@ export default React.memo(function OracleCard({
 
   const isPoolFull = typeof maxParticipants === 'number' && maxParticipants > 0
     && currentParticipants >= maxParticipants
-
-  const fillPct = maxParticipants
-    ? Math.min(100, Math.round((currentParticipants / maxParticipants) * 100))
-    : 0
 
   // ── Memoised chemistry share ─────────────────────────────────
 
@@ -154,9 +149,7 @@ export default React.memo(function OracleCard({
     subline: getTypeDensitySubline(pool),
     cta: getCtaLabel(pool),
     dateTime: formatDateTimeParts(pool.dateTime),
-  }), [pool.id, pool.highChemistryCount, pool.userTypeCount,
-       pool.narrativePivot, pool.registrationCount, pool.dateTime,
-       pool.topComplementaryType, pool.price, userArchetype])
+  }), [pool, userArchetype])
 
   const { heroMessage, teaser, subline, cta, dateTime: { date: dateLabel, time: timeLabel } } = copyRef
 
@@ -177,16 +170,16 @@ export default React.memo(function OracleCard({
   const momentumLabel = (() => {
     if (isPoolFull) return '已满员'
     const rc = pool.registrationCount ?? 0
-    if (rc === 0) return '新场开局'
-    if (rc >= 8) return '热度很高'
-    if (rc >= 3) return '正在升温'
-    return '新场开局'
+    if (rc === 0) return '刚开桌，趁热'
+    if (rc >= 8) return '差不多坐满了'
+    if (rc >= 3) return '越来越热闹了'
+    return '刚开桌，趁热'
   })()
 
   // ── L1 Hero: chemistry celebration ───────────────────────────
 
   const ctaLabel = isPoolFull ? '已满员' : cta.primary
-  const ctaSubline = isPoolFull ? '下次早点来哦～' : '报名后解锁完整默契参考'
+  const ctaSubline = isPoolFull ? '下次早点来哦～' : '好奇的话，点开看看'
   const animDelay = index < 6 ? String(Math.min(index, 4) * 60) + 'ms' : undefined
 
   // ── Render ───────────────────────────────────────────────────
@@ -251,14 +244,6 @@ export default React.memo(function OracleCard({
         </View>
       </View>
 
-      <View className='oracle-card__ecosystem'>
-        <EcosystemBar
-          archetypes={pool.sampleArchetypes ?? []}
-          userArchetype={userArchetype}
-          registrationCount={pool.registrationCount ?? 0}
-        />
-      </View>
-
       {/* L3 Decision Facts */}
       <View className='oracle-card__facts'>
         <View className='oracle-card__fact-when-row'>
@@ -313,24 +298,15 @@ export default React.memo(function OracleCard({
         </View>
       )}
 
-      {/* L6 Action: progress + CTA */}
+      {/* L6 Action: presence strip + CTA */}
       <View className='oracle-card__footer'>
-        {typeof maxParticipants === 'number' && maxParticipants > 0 && (
-          <View className='oracle-card__progress-row'>
-            <View className='oracle-card__progress-track'>
-              <View
-                className={`oracle-card__progress-fill${fillPct >= HIGH_FILL_PCT ? ' oracle-card__progress-fill--hot' : ''}`}
-                style={{
-                  transform: `scaleX(${fillPct / 100})`,
-                  backgroundColor: familyColor,
-                }}
-              />
-            </View>
-            <Text className='oracle-card__progress-text'>
-              {currentParticipants}/{maxParticipants}{' '}人
-            </Text>
-          </View>
-        )}
+        <ParticipantPresenceStrip
+          pool={pool}
+          userArchetype={userArchetype}
+          accentColor={familyColor}
+          index={index}
+          maxParticipants={maxParticipants}
+        />
 
         <View
           className={`oracle-card__cta${shouldPulseCta ? ' oracle-card__cta--pulse' : ''}`}

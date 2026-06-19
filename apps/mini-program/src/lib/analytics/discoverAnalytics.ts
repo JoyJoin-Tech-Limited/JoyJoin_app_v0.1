@@ -38,6 +38,7 @@ export type DiscoverAnalyticsEventType =
   | 'geo_failed'
   | 'geo_auto_filter'
   | 'filter_auto_relax'
+  | 'presence_strip_impression'
   | 'city_picker_open'
   | 'city_picker_close'
   | 'city_picker_select'
@@ -84,10 +85,63 @@ function initializeSessionStartTime(): number {
   return now
 }
 
+// ─── Internal: generic debounced batch tracker ─────────────────
+
+class BatchTracker {
+  private buffer: Array<{ poolId?: string; metadata?: Record<string, unknown> }> = []
+  private timer: ReturnType<typeof setTimeout> | null = null
+
+  constructor(
+    private readonly eventType: DiscoverAnalyticsEventType,
+    private readonly flushDelayMs: number,
+    private readonly maxBufferSize: number,
+    private readonly sender: (
+      eventType: DiscoverAnalyticsEventType,
+      poolId?: string,
+      metadata?: Record<string, unknown>,
+    ) => void,
+  ) {}
+
+  track(poolId?: string, metadata?: Record<string, unknown>): void {
+    this.buffer.push({ poolId, metadata })
+
+    if (this.timer) {
+      clearTimeout(this.timer)
+      this.timer = null
+    }
+
+    this.timer = setTimeout(() => {
+      this.flush()
+    }, this.flushDelayMs)
+
+    if (this.buffer.length >= this.maxBufferSize) {
+      this.flush()
+    }
+  }
+
+  private flush(): void {
+    if (this.timer) {
+      clearTimeout(this.timer)
+      this.timer = null
+    }
+
+    const buffer = this.buffer
+    this.buffer = []
+
+    for (const item of buffer) {
+      this.sender(this.eventType, item.poolId, item.metadata)
+    }
+  }
+}
+
 class DiscoverAnalytics {
   private sessionStartTime = initializeSessionStartTime()
-  private impressionBuffer: Array<{ poolId?: string; metadata?: Record<string, unknown> }> = []
-  private impressionFlushTimer: ReturnType<typeof setTimeout> | null = null
+  private impressionTracker = new BatchTracker('pool_card_impression', 1500, 10, (eventType, poolId, metadata) => {
+    this.track(eventType, poolId, metadata)
+  })
+  private presenceStripTracker = new BatchTracker('presence_strip_impression', 1500, 10, (eventType, poolId, metadata) => {
+    this.track(eventType, poolId, metadata)
+  })
 
   resetSession(): void {
     this.sessionStartTime = Date.now()
@@ -127,38 +181,19 @@ class DiscoverAnalytics {
   }
 
   /**
-   * Buffer impression events and flush them with a debounce.
+   * Buffer pool-card impression events and flush them with a debounce.
    * Prevents request spam when VirtualList renders many cards at once.
    */
   trackImpression(poolId?: string, metadata?: Record<string, unknown>): void {
-    this.impressionBuffer.push({ poolId, metadata })
-
-    if (this.impressionFlushTimer) {
-      clearTimeout(this.impressionFlushTimer)
-    }
-
-    this.impressionFlushTimer = setTimeout(() => {
-      this.flushImpressions()
-    }, 1500)
-
-    // Flush immediately if buffer grows large
-    if (this.impressionBuffer.length >= 10) {
-      this.flushImpressions()
-    }
+    this.impressionTracker.track(poolId, metadata)
   }
 
-  private flushImpressions(): void {
-    if (this.impressionFlushTimer) {
-      clearTimeout(this.impressionFlushTimer)
-      this.impressionFlushTimer = null
-    }
-
-    const buffer = this.impressionBuffer
-    this.impressionBuffer = []
-
-    for (const item of buffer) {
-      this.track('pool_card_impression', item.poolId, item.metadata)
-    }
+  /**
+   * Buffer presence-strip impression events and flush them with a debounce.
+   * Prevents request spam when VirtualList renders many cards at once.
+   */
+  trackPresenceStripImpression(poolId?: string, metadata?: Record<string, unknown>): void {
+    this.presenceStripTracker.track(poolId, metadata)
   }
 }
 

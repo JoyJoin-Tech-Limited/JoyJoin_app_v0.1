@@ -2,7 +2,7 @@ import { View, Text, Image } from '@tarojs/components'
 import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { loadBrandDisplayFont } from '../../lib/utils/brandFont'
 import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
-import Taro, { usePullDownRefresh } from '@tarojs/taro'
+import Taro, { usePullDownRefresh, usePageScroll, useDidHide, useDidShow } from '@tarojs/taro'
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { haptics } from '../../lib/utils/haptics'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -57,8 +57,19 @@ const ALL_DISTRICT_ID = '__all__'
 const LOCATION_STORAGE_KEY = 'discover_last_location'
 const LOCATION_TTL_DAYS = 7
 
-// Measured OracleCard height in rpx. Keep in sync with `.oracle-card` height.
-const DISCOVER_CARD_HEIGHT_RPX = 556
+// Scroll-responsive tab bar collapse thresholds (rpx).
+// Hysteresis window: collapse at >200, expand at <160 — prevents flapping
+// when the user scrolls slowly around the boundary.
+const TAB_BAR_COLLAPSE_THRESHOLD_RPX = 200
+const TAB_BAR_EXPAND_THRESHOLD_RPX = 160
+
+// Feature-flag kill switch: disable collapse when false (e.g. rendering issues
+// on specific WeChat base-library versions). Default true for the POC.
+const COLLAPSIBLE_TAB_BAR_ENABLED = true
+
+// Estimated OracleCard max height in rpx. Keep in sync with `.oracle-card` min-height.
+// Last calibrated: 2026-06-19 — DevTools measurement still required before final sign-off.
+const DISCOVER_CARD_HEIGHT_RPX = 560
 
 // ─── Promo banner variant assignment ──────────────────────────────
 function resolveVariant(userId: string | undefined, hasArchetype: boolean): PromoBannerVariant {
@@ -630,6 +641,106 @@ export default function DiscoverPage() {
   const { isAuthenticated, isLoading } = useAuth()
   const markAsRead = useMarkNotificationsAsRead()
   const hasMarkedRef = useRef(false)
+
+  // ── Discover-only scroll-responsive tab bar collapse ──
+  // Collapses the native custom tab bar as the user scrolls down the feed,
+  // and restores it when leaving the page. Gated by reduced motion and
+  // low-end device tier (benchmarkLevel <= 15).
+  const collapsedRef = useRef(false)
+  const windowWidthRef = useRef(375)
+  const motionGateRef = useRef({ reduceMotion: false, lowEnd: false })
+  const tabBarRef = useRef<{ setCollapsed?: (c: boolean) => void } | null>(null)
+
+  const setTabBarCollapsed = useCallback((collapsed: boolean) => {
+    try {
+      const tabBar = tabBarRef.current ?? (Taro.getCurrentInstance().page as any)?.getTabBar?.()
+      if (tabBar && typeof tabBar.setCollapsed === 'function') {
+        tabBar.setCollapsed(collapsed)
+      }
+    } catch {
+      // Gracefully ignore if the tab bar instance is detached or unavailable.
+    }
+  }, [])
+
+  /** Track collapse/expand transitions for operational visibility. */
+  const trackTabBarTransition = useCallback((collapsed: boolean, scrollTopRpx: number) => {
+    try {
+      wx.reportAnalytics(collapsed ? 'tab_bar_collapsed' : 'tab_bar_expanded', {
+        scroll_top_rpx: Math.round(scrollTopRpx),
+        trigger: 'scroll',
+      })
+    } catch {
+      // Analytics are non-critical.
+    }
+  }, [])
+
+  useEffect(() => {
+    try {
+      const info = Taro.getSystemInfoSync() as any
+      windowWidthRef.current = info.windowWidth || 375
+      motionGateRef.current = {
+        reduceMotion: !!info.reduceMotion,
+        lowEnd: typeof info.benchmarkLevel === 'number' && info.benchmarkLevel <= 15,
+      }
+      tabBarRef.current = (Taro.getCurrentInstance().page as any)?.getTabBar?.() || null
+    } catch {
+      windowWidthRef.current = 375
+      motionGateRef.current = { reduceMotion: false, lowEnd: false }
+      tabBarRef.current = null
+    }
+    // Ensure the tab bar starts expanded when Discover mounts.
+    collapsedRef.current = false
+    setTabBarCollapsed(false)
+  }, [setTabBarCollapsed])
+
+  usePageScroll(({ scrollTop }) => {
+    if (!COLLAPSIBLE_TAB_BAR_ENABLED || motionGateRef.current.reduceMotion || motionGateRef.current.lowEnd) return
+    const scrollTopRpx = scrollTop * (750 / windowWidthRef.current)
+    if (collapsedRef.current) {
+      if (scrollTopRpx <= TAB_BAR_EXPAND_THRESHOLD_RPX) {
+        collapsedRef.current = false
+        setTabBarCollapsed(false)
+        trackTabBarTransition(false, scrollTopRpx)
+      }
+    } else {
+      if (scrollTopRpx > TAB_BAR_COLLAPSE_THRESHOLD_RPX) {
+        collapsedRef.current = true
+        setTabBarCollapsed(true)
+        trackTabBarTransition(true, scrollTopRpx)
+      }
+    }
+  })
+
+  useDidShow(() => {
+    // Recover the correct collapse state when the page becomes visible again
+    // (e.g. swipe-back from a detail page or foregrounding the app). Without
+    // this, the tab bar would flash expanded until the next scroll event.
+    if (motionGateRef.current.reduceMotion || motionGateRef.current.lowEnd) return
+    try {
+      const query = Taro.createSelectorQuery()
+      query.selectViewport().scrollOffset((res) => {
+        if (!res || typeof res.scrollTop !== 'number') return
+        const scrollTopRpx = res.scrollTop * (750 / windowWidthRef.current)
+        const shouldCollapse = scrollTopRpx > TAB_BAR_COLLAPSE_THRESHOLD_RPX
+        if (shouldCollapse !== collapsedRef.current) {
+          collapsedRef.current = shouldCollapse
+          setTabBarCollapsed(shouldCollapse)
+        }
+      }).exec()
+    } catch {
+      // Default to expanded if query fails.
+      collapsedRef.current = false
+      setTabBarCollapsed(false)
+    }
+  })
+
+  useDidHide(() => {
+    // Always restore the expanded tab bar when the user leaves Discover so
+    // other non-collapse-wired tabs (Events, Connections, Profile, Center-Hub)
+    // never inherit a collapsed bar.
+    collapsedRef.current = false
+    setTabBarCollapsed(false)
+  })
 
   // ── Location filter state (lifted from AuthenticatedDiscover to render modals at root level) ──
   const saved = useMemo(() => readSavedLocation(), [])

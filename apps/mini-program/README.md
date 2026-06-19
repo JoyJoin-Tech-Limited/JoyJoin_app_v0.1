@@ -68,7 +68,7 @@ src/
 │   ├── profile/         # Profile-specific components (ProfileArchetypeHero, InterestChipCloud, ProfessionDisplayField)
 │   ├── landing/         # Landing-page-specific components (BondingCloud)
 │   ├── mascot/          # XiaoyueSpriteAnimator, XiaoyueChatBubble, XiaoyueEmptyState, etc.
-│   ├── discover/        # Discover feed components (OracleCard, CompatibilityIndicator, EcosystemBar)
+│   ├── discover/        # Discover feed components (OracleCard, CompatibilityIndicator, ParticipantPresenceStrip)
 │   └── ContentBlockedError.tsx  # Inline field error for sensitive-word violations; field-aware hints, tap-to-dismiss, haptics, aria-live, reduced-motion. Used in edit-profile and onboarding essential-data forms.
 ├── hooks/               # Custom React hooks
 │   ├── useStaggerMount.ts   # Single RAF mount trigger for CSS-staggered entrances

@@ -538,4 +538,73 @@ describe('native custom tab bar behavior', () => {
 
     expect(component.data.hidden).toBe(true)
   })
+
+  describe('setCollapsed', () => {
+    it('collapses and expands the tab bar', async () => {
+      setupMocks()
+      const component = await loadComponent()
+      component.attached()
+
+      expect(component.data.collapsed).toBe(false)
+
+      const collapsedResult = component.setCollapsed(true)
+      expect(collapsedResult).toBe(true)
+      expect(component.data.collapsed).toBe(true)
+
+      const expandedResult = component.setCollapsed(false)
+      expect(expandedResult).toBe(true)
+      expect(component.data.collapsed).toBe(false)
+    })
+
+    it('returns false without redundant setData when already in target state', async () => {
+      setupMocks()
+      const component = await loadComponent()
+      component.attached()
+
+      expect(component.setCollapsed(false)).toBe(false)
+      expect(component.data.collapsed).toBe(false)
+    })
+
+    it('returns false and no-ops when the component is detached', async () => {
+      setupMocks()
+      const component = await loadComponent()
+      component.attached()
+
+      component.detached()
+
+      const result = component.setCollapsed(true)
+      expect(result).toBe(false)
+      expect(component.data.collapsed).toBe(false)
+    })
+
+    it('allows setCollapsed to work again after detach + re-attach', async () => {
+      setupMocks()
+      const component = await loadComponent()
+      component.attached()
+
+      component.detached()
+      expect(component._isDetached).toBe(true)
+      expect(component.setCollapsed(true)).toBe(false)
+
+      // Simulate WeChat re-attaching the custom tab bar instance.
+      component.attached()
+      expect(component._isDetached).toBe(false)
+
+      expect(component.setCollapsed(true)).toBe(true)
+      expect(component.data.collapsed).toBe(true)
+
+      expect(component.setCollapsed(false)).toBe(true)
+      expect(component.data.collapsed).toBe(false)
+    })
+
+    it('allows collapse state changes on low-end devices (gating is caller responsibility)', async () => {
+      setupMocks()
+      const component = await loadComponent()
+      component.attached()
+      component.setData({ lowEnd: true })
+
+      expect(component.setCollapsed(true)).toBe(true)
+      expect(component.data.collapsed).toBe(true)
+    })
+  })
 })
