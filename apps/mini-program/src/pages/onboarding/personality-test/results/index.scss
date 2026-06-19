@@ -55,12 +55,11 @@ $color-skill-cool: #7c3aed;
     // (not just the DOM/CSS size) to match the export width/height, or
     // the export comes back blank. A 1px × 1px DOM with opacity 0 silently
     // produces a 300x150 default bitmap, which fails at 1080×1920 export.
-    // Position the canvas at the full poster aspect ratio, anchored off-screen.
+    // The native pixel dimensions are supplied inline on the Canvas so Taro's
+    // PostCSS px-to-rpx transform cannot change them.
     position: fixed;
     left: -9999rpx;
     top: 0;
-    width: 750rpx;
-    height: 1334rpx;
     opacity: 0;
     pointer-events: none;
   }
@@ -71,8 +70,6 @@ $color-skill-cool: #7c3aed;
     position: fixed;
     left: -9999rpx;
     top: 0;
-    width: 750rpx;
-    height: 750rpx;
     opacity: 0;
     pointer-events: none;
   }

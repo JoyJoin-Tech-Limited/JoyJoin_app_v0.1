@@ -1486,11 +1486,17 @@ export default function PersonalityTestResultsPage() {
           <Text className='personality-results__skip-text'>跳过动画</Text>
         </View>
       )}
-      <Canvas canvasId={PERSONALITY_SHARE_POSTER_CANVAS_ID} className='personality-results__poster-canvas' aria-hidden='true' />
+      <Canvas
+        canvasId={PERSONALITY_SHARE_POSTER_CANVAS_ID}
+        className='personality-results__poster-canvas'
+        style={{ width: '1080px', height: '1920px' }}
+        aria-hidden='true'
+      />
       {!deviceTier.isDegradation && (
         <Canvas
           canvasId={PERSONALITY_SQUARE_CANVAS_ID}
           className='personality-results__poster-canvas personality-results__poster-canvas--square'
+          style={{ width: '750px', height: '750px' }}
           aria-hidden='true'
         />
       )}

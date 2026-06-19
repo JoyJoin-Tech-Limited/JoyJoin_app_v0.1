@@ -82,6 +82,31 @@ export default function JoyJoinIcon({
     setLoaded(true)
   }, [])
 
+  const resolvedAsset = useMemo(() => {
+    if (!mapping) return { src: '', error: null as unknown }
+
+    try {
+      const assetPath = getLocalIconAssetPath(mapping.assetKey, mapping.tier, 1)
+      return {
+        src: CDN_ICON_TIERS.has(mapping.tier) ? cdnAsset(assetPath) : localAsset(assetPath),
+        error: null as unknown,
+      }
+    } catch (error) {
+      return { src: '', error }
+    }
+  }, [mapping])
+
+  const handleError = useCallback(() => {
+    if (!mapping) return
+    logError('[JoyJoinIcon] Asset failed to load, falling back to emoji', {
+      emoji,
+      tier,
+      assetKey: mapping.assetKey,
+      src: resolvedAsset.src,
+    })
+    setHasError(true)
+  }, [emoji, mapping, resolvedAsset.src, tier])
+
   const transition = useMemo(() => {
     if (REDUCED_MOTION) return 'none'
     return 'opacity 200ms ease-out, transform 300ms cubic-bezier(0.22, 1, 0.36, 1)'
@@ -99,22 +124,14 @@ export default function JoyJoinIcon({
   const displaySize = size ?? mapping.size
   const sizeStr = `${displaySize}rpx`
 
-  let src: string
-  try {
-    const assetPath = getLocalIconAssetPath(mapping.assetKey, mapping.tier, 1)
-    if (CDN_ICON_TIERS.has(mapping.tier)) {
-      src = cdnAsset(assetPath)
-    } else {
-      // Local bundled assets are served from the mini-program root.
-      // Avoid runtime require() of non-JS assets — it crashes in subpackages.
-      src = localAsset(assetPath)
-    }
-  } catch (err) {
+  if (resolvedAsset.error) {
     logError('[JoyJoinIcon] Asset path resolution failed, falling back to emoji', {
       emoji,
       tier,
       assetKey: mapping.assetKey,
-      error: err instanceof Error ? err.message : String(err),
+      error: resolvedAsset.error instanceof Error
+        ? resolvedAsset.error.message
+        : String(resolvedAsset.error),
     })
     return (
       <Text
@@ -125,16 +142,6 @@ export default function JoyJoinIcon({
       </Text>
     )
   }
-
-  const handleError = useCallback(() => {
-    logError('[JoyJoinIcon] Asset failed to load, falling back to emoji', {
-      emoji,
-      tier,
-      assetKey: mapping.assetKey,
-      src,
-    })
-    setHasError(true)
-  }, [emoji, mapping.assetKey, src, tier])
 
   if (hasError) {
     return (
@@ -150,7 +157,7 @@ export default function JoyJoinIcon({
   return (
     <Image
       className={className}
-      src={src}
+      src={resolvedAsset.src}
       style={{
         width: sizeStr,
         height: sizeStr,
