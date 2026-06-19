@@ -110,6 +110,17 @@ import socialIcebreakerGameplayExtraRouter from './socialIcebreakerGameplayExtra
 
 const router = Router();
 
+// ============ TEST-MODE BOT BYPASS ============
+// In APP_MODE=test, allow bot users to impersonate via x-test-user-id header.
+// This lets the SingleTestBotService exercise the real API stack without
+// modifying route handlers or managing session cookies for 5 virtual users.
+router.use((req: any, _res, next) => {
+  if (process.env.APP_MODE === 'test' && req.headers['x-test-user-id']) {
+    req.user = { id: req.headers['x-test-user-id'] };
+  }
+  next();
+});
+
 // ============ TTL / CLEANUP ============
 // Sweep expired sessions from the DB every 5 minutes. Fail open if the store
 // is unavailable so the route module does not take down the server process.

@@ -10,6 +10,7 @@ export {
   socialIcebreakerAiFeedback,
   socialIcebreakerPhasePulseChecks,
   socialIcebreakerPhaseMetrics,
+  socialIcebreakerMiniscriptSecrets,
   momentCardInteractions,
 } from './_definitions_social.js';
 

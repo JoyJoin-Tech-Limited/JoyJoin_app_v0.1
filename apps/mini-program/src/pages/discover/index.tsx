@@ -47,6 +47,7 @@ import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import { getDevMockPools } from '../../lib/dev/devPoolMocks'
 import { logInfo, logWarn } from '../../lib/utils/logger'
 import MiniProgramLandingPage from '../index/LandingPage'
+import SingleTestBanner from '../../components/dev/SingleTestBanner'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import './index.scss'
 
@@ -475,6 +476,10 @@ function AuthenticatedDiscover({
   // ── Render ──
   return (
     <View className={`discover-auth ${tabEntranceClass}`}>
+      {/* Test mode banner — APP_MODE=test only */}
+      {(user as any)?.appMode === 'test' && (
+        <SingleTestBanner className='discover-auth__test-banner' />
+      )}
       {/* Hero promo banner — top of page */}
       <HeroPromoBanner
         className='discover-auth__promo'

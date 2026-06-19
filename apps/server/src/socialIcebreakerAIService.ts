@@ -361,16 +361,26 @@ export async function generateMicroChallenges(params: {
 
   // 1. Always build the deterministic selector baseline
   const selectorSeed = params.seed ?? `default-${params.participantCount}-${params.eventType}`;
-  const selectorResult = selectMicroChallenges({
-    participantCount: params.participantCount,
-    completedIds: params.completedChallengeIds,
-    seed: selectorSeed,
-    scene: inferSceneFromEventType(params.eventType),
-    count: 3,
-  });
+  let selectorResult = [] as MicroChallenge[];
+  try {
+    selectorResult = selectMicroChallenges({
+      participantCount: params.participantCount,
+      completedIds: params.completedChallengeIds,
+      seed: selectorSeed,
+      scene: inferSceneFromEventType(params.eventType),
+      count: 3,
+    });
+  } catch (selectorErr) {
+    logger.warn('[SocialIcebreakerAI] selector fallback unavailable, relying on AI only', {
+      error: selectorErr instanceof Error ? selectorErr.message : String(selectorErr),
+    });
+  }
 
   // 2. If AI is disabled, return selector result immediately
   if (!isMicroChallengeLlmEnabled()) {
+    if (selectorResult.length === 0) {
+      throw new Error(`No micro-challenge templates available for ${params.participantCount} players`);
+    }
     logAITrace({
       traceId: aiCorrelationId,
       domain: 'icebreaker',
@@ -438,6 +448,7 @@ export async function generateMicroChallenges(params: {
     logger.error(`[SocialIcebreakerAI] generateMicroChallenges error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
     const meta = buildFallbackAIMeta('llm_error', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    if (selectorResult.length === 0) throw error;
     return { data: selectorResult, meta };
   }
 }
