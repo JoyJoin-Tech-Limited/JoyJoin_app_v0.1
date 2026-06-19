@@ -2,7 +2,17 @@ import Taro from '@tarojs/taro'
 import { cdnAsset } from './cdnAssets'
 import { logInfo, logWarn } from './logger'
 
-const CACHE_DIR = `${wx.env.USER_DATA_PATH}/joyjoin-cache/`
+let _cacheDir: string | null = null
+function getCacheDir(): string {
+  if (!_cacheDir) {
+    try {
+      _cacheDir = `${wx.env.USER_DATA_PATH}/joyjoin-cache/`
+    } catch {
+      _cacheDir = '/tmp/joyjoin-cache/'
+    }
+  }
+  return _cacheDir
+}
 const CACHE_META_KEY = 'joyjoin_cache_meta'
 
 interface CacheMeta {
@@ -15,7 +25,7 @@ let dirInitialized = false
 function ensureDir(): void {
   if (dirInitialized) return
   try {
-    Taro.getFileSystemManager().mkdirSync(CACHE_DIR, true)
+    Taro.getFileSystemManager().mkdirSync(getCacheDir(), true)
     dirInitialized = true
   } catch {}
 }
@@ -30,7 +40,7 @@ function cacheKey(assetPath: string): string {
 }
 
 function localFilePath(assetPath: string): string {
-  return `${CACHE_DIR}${cacheKey(assetPath)}`
+  return `${getCacheDir()}${cacheKey(assetPath)}`
 }
 
 export function isCachedLocally(assetPath: string): boolean {
@@ -125,7 +135,7 @@ export async function cacheAssets(
 export function clearAssetCache(): void {
   try {
     const fs = Taro.getFileSystemManager()
-    fs.rmdirSync(CACHE_DIR, true)
+    fs.rmdirSync(getCacheDir(), true)
     dirInitialized = false
     logInfo('[persistentCache] Cleared')
   } catch {}

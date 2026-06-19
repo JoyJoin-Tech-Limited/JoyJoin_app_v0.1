@@ -86,13 +86,16 @@ describe('selectMicroChallenges', () => {
   });
 
   it('filters by scene', () => {
-    // c4-hum-song is bar-only
     const barResult = selectMicroChallenges({
       participantCount: 6,
       seed: 'scene-test',
       scene: 'bar',
     });
-    expect(barResult.some((c) => c.id === 'c4-hum-song')).toBe(true);
+    // All bar-scene results must be bar-compatible (bar or both)
+    expect(barResult.every((c) => {
+      const t = MICRO_CHALLENGE_TEMPLATES.find((t) => t.id === c.id);
+      return t && (t.scene === 'bar' || t.scene === 'both');
+    })).toBe(true);
 
     const dinnerResult = selectMicroChallenges({
       participantCount: 6,
