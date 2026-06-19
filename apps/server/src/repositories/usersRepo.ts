@@ -61,7 +61,13 @@ export const usersRepo: UsersRepository = {
   },
 
   async getUserByPhone(phoneNumber: string): Promise<User[]> {
-    return db.select().from(users).where(eq(users.phoneNumber, phoneNumber));
+    const results = await db.select().from(users).where(eq(users.phoneNumber, phoneNumber));
+    if (results.length > 0 || phoneNumber.startsWith('+')) return results;
+    if (/^1\d{10}$/.test(phoneNumber)) {
+      const withPrefix = await db.select().from(users).where(eq(users.phoneNumber, `+86${phoneNumber}`));
+      if (withPrefix.length > 0) return withPrefix;
+    }
+    return results;
   },
 
   async createUserWithPhone(data: { phoneNumber: string; email: string; firstName: string; lastName: string }): Promise<User> {

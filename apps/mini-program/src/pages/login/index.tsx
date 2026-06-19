@@ -52,7 +52,9 @@ export default function LoginPage() {
     try {
       logInfo('[LoginPage] Starting test login')
 
-      await authenticateMiniProgramUserWithPhone({ phone, password })
+      const normalizedPhone = phone.length === 11 && !phone.startsWith('+') ? `+86${phone}` : phone
+
+      await authenticateMiniProgramUserWithPhone({ phone: normalizedPhone, password })
       const userState = await getUserState()
       seedMiniProgramAuthSession(userState, queryClient)
 
@@ -146,7 +148,7 @@ export default function LoginPage() {
                 placeholder='手机号'
                 value={phone}
                 onInput={e => setPhone(e.detail.value)}
-                maxlength={11}
+                maxlength={14}
                 type='text'
               />
             </View>
