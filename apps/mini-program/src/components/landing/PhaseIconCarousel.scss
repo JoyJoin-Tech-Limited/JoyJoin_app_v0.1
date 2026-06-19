@@ -23,6 +23,10 @@
      The carousel is the default landing experience and must always render. */
 }
 
+.phase-carousel__asset-preload {
+  display: none;
+}
+
 .phase-carousel__hint {
   position: absolute;
   top: 0;

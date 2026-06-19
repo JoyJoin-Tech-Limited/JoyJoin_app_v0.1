@@ -19,7 +19,7 @@ const PAGE_FILES = [
   {
     filePath: path.resolve(currentDir, 'personality-test/index.tsx'),
     exitClassToken: 'personality-test--exiting',
-    guardPauseSnippet: 'if (auth.isLoading || isSubmitting || isPageExiting) {',
+    guardPauseSnippet: "if (auth.isLoading || isSubmitting || isPageExiting || phase === 'completing') {",
   },
   {
     filePath: path.resolve(currentDir, 'essential-data/index.tsx'),
@@ -66,6 +66,17 @@ describe('mini-program onboarding page transitions', () => {
     })
   })
 
+  it('keeps personality completion navigation single-shot', () => {
+    const source = readFileSync(
+      path.resolve(currentDir, 'personality-test/index.tsx'),
+      'utf8',
+    )
+
+    expect(source).toContain('const completionNavigationRef = useRef(false)')
+    expect(source).toContain('if (completionNavigationRef.current) return')
+    expect(source).not.toContain('await invalidateAuth()')
+  })
+
   it('generates per-distance stage keyframes so motion matches onboarding-stage distance', () => {
     const source = readFileSync(MIXINS_PATH, 'utf8')
 
@@ -83,4 +94,3 @@ describe('mini-program onboarding page transitions', () => {
     expect(source).toContain('@mixin onboarding-page-enter-transition')
   })
 })
-

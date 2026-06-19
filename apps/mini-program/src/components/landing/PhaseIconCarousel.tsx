@@ -206,6 +206,14 @@ export default function PhaseIconCarousel({ isVisible }: PhaseIconCarouselProps)
       role="button"
       aria-label="破冰玩法轮盘，点击暂停，左右滑动切换"
     >
+      <View className="phase-carousel__asset-preload" aria-hidden>
+        <Image src="/assets/landing-phase-icons/phase-topic-card.webp" />
+        <Image src="/assets/landing-phase-icons/phase-lie-detective.webp" />
+        <Image src="/assets/landing-phase-icons/phase-personality-dice.webp" />
+        <Image src="/assets/landing-phase-icons/phase-auction.webp" />
+        <Image src="/assets/landing-phase-icons/phase-mini-script.webp" />
+        <Image src="/assets/landing-phase-icons/phase-quip-battle.webp" />
+      </View>
       {showHint && hasBorn && (
         <View className="phase-carousel__hint">
           <Text className="phase-carousel__hint-text">点击暂停 · 左右滑动切换</Text>

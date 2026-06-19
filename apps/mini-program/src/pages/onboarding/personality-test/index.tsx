@@ -18,7 +18,7 @@ import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadin
 import XiaoyueSpriteAnimator, {
   type XiaoyueSpriteState,
 } from '../../../components/mascot/XiaoyueSpriteAnimator'
-import { useAuth, useInvalidateAuth } from '../../../hooks/useAuth'
+import { useAuth } from '../../../hooks/useAuth'
 import { apiRequest } from '../../../lib/api/api'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
 import { useOnboardingCheckpoint } from '../../../hooks/onboarding/useOnboardingCheckpoint'
@@ -277,7 +277,6 @@ function getSliderValueFromPreviousAnswer(previousAnswer: string | null, options
 
 export default function PersonalityTestPage() {
   const auth = useAuth()
-  const invalidateAuth = useInvalidateAuth()
   const { saveCheckpoint } = useOnboardingCheckpoint()
 
   const [phase, setPhase] = useState<Phase>('intro')
@@ -380,6 +379,7 @@ export default function PersonalityTestPage() {
     topArchetypes?: AnonymousAssessmentTopMatch[] | null
     finalResult?: AnonymousAssessmentResult | null
   } | null>(null)
+  const completionNavigationRef = useRef(false)
   const backReview = useBackReview()
 
   const isAuthenticated = auth.isAuthenticated
@@ -489,30 +489,31 @@ export default function PersonalityTestPage() {
   }, [currentMatches])
 
   const handleCelebrateReady = useCallback(async () => {
+    if (completionNavigationRef.current) return
     const pending = pendingCompletionRef.current
     if (!pending) return
+    completionNavigationRef.current = true
     pendingCompletionRef.current = null
 
-    // For returning authenticated users (e.g., restart onboarding), persist the
-    // checkpoint so the server knows this step was completed, then refresh auth
-    // state so the result page sees the latest nextStep.
-    if (isAuthenticatedRef.current) {
-      try {
+    try {
+      // Do not invalidate auth before redirecting. That refresh can activate
+      // the page-level auth redirect while the result redirect is in flight.
+      if (isAuthenticatedRef.current) {
         await saveCheckpoint('personality-test')
-        await invalidateAuth()
-      } catch (err) {
-        logWarn('[PersonalityTest] Checkpoint/auth refresh failed during celebrate handoff', {
-          message: err instanceof Error ? err.message : String(err),
-        })
       }
-    }
 
-    await completeAnonymousAssessment(pending.sessionId, pending.topArchetypes, pending.finalResult)
-    anonymousEngineStateRef.current = null
-    // If we reach this line, the navigation was silently rejected (WeChat
-    // runtime quirk). Reset isPageExiting so the user can interact again.
-    setIsPageExiting(false)
-  }, [completeAnonymousAssessment, invalidateAuth, saveCheckpoint])
+      await completeAnonymousAssessment(pending.sessionId, pending.topArchetypes, pending.finalResult)
+      anonymousEngineStateRef.current = null
+    } catch (err) {
+      completionNavigationRef.current = false
+      pendingCompletionRef.current = pending
+      setIsPageExiting(false)
+      setError('结果页打开失败，请点一下重试')
+      logError('[PersonalityTest] Celebrate handoff failed', {
+        message: err instanceof Error ? err.message : String(err),
+      })
+    }
+  }, [completeAnonymousAssessment, saveCheckpoint])
 
   /** Hard guard: refuse to transition if the server returned an incomplete or invalid finalResult. */
   function isValidFinalResult(result: AnonymousAssessmentResult | undefined): boolean {
@@ -523,7 +524,7 @@ export default function PersonalityTestPage() {
   }
 
   useEffect(() => {
-    if (auth.isLoading || isSubmitting || isPageExiting) {
+    if (auth.isLoading || isSubmitting || isPageExiting || phase === 'completing') {
       return
     }
 
@@ -1380,9 +1381,13 @@ export default function PersonalityTestPage() {
               <Button
                 variant='brand'
                 className='personality-test__start-btn'
-                onClick={() => { haptics('medium'); setPhase('testing') }}
+                onClick={() => {
+                  haptics('medium')
+                  setError('')
+                  void handleCelebrateReady()
+                }}
               >
-                返回重试
+                重新打开结果
               </Button>
             </View>
           </View>
@@ -1398,7 +1403,7 @@ export default function PersonalityTestPage() {
         xiaoyueExpression={PERSONALITY_TEST_XIAOYUE_EXPRESSION.completing}
         celebrate
         sparkleCount={6}
-        onCelebrateReady={() => void handleCelebrateReady()}
+        onCelebrateReady={handleCelebrateReady}
       />
     )
   }
@@ -1587,9 +1592,9 @@ export default function PersonalityTestPage() {
                 onSliderSubmit={backReview.isBackReviewMode ? handleBackReviewSliderSubmit : handleSliderSubmit}
                 committedValue={backReview.isBackReviewMode ? backReview.backReviewPreviousAnswer : null}
                 hideSliderSubmit={backReview.isBackReviewMode}
-                onOptionTouchStart={backReview.isBackReviewMode ? undefined : handleOptionTouchStart}
-                onOptionTouchEnd={backReview.isBackReviewMode ? undefined : handleOptionTouchEnd}
-                onOptionTouchMove={backReview.isBackReviewMode ? undefined : handleOptionTouchMove}
+                onOptionTouchStart={undefined}
+                onOptionTouchEnd={undefined}
+                onOptionTouchMove={undefined}
               />
             </QuestionTransition>
           ) : null}
