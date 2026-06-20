@@ -17,12 +17,12 @@ interface PhaseDef {
 }
 
 const PHASES: PhaseDef[] = [
-  { key: "topic-card", label: "话题卡", slogan: "百无禁忌，聊到心底", icon: localAsset("/assets/landing-phase-icons/phase-topic-card.webp") },
-  { key: "lie_detective", label: "谎言侦探", slogan: "真假难辨，谁最会演", icon: localAsset("/assets/landing-phase-icons/phase-lie-detective.webp") },
-  { key: "personality_dice", label: "人格骰子", slogan: "掷出你的隐藏面", icon: localAsset("/assets/landing-phase-icons/phase-personality-dice.webp") },
-  { key: "auction", label: "拍卖", slogan: "敢押上全部筹码吗", icon: localAsset("/assets/landing-phase-icons/phase-auction.webp") },
-  { key: "mini_script", label: "迷你剧本杀", slogan: "5分钟全员入戏", icon: localAsset("/assets/landing-phase-icons/phase-mini-script.webp") },
-  { key: "quip_battle", label: "机智对决", slogan: "妙语连珠，接招吧", icon: localAsset("/assets/landing-phase-icons/phase-quip-battle.webp") },
+  { key: "topic-card", label: "话题卡", slogan: "百无禁忌，聊到心底", icon: localAsset("/assets/landing-phase-icons/phase-topic-card.png") },
+  { key: "lie_detective", label: "谎言侦探", slogan: "真假难辨，谁最会演", icon: localAsset("/assets/landing-phase-icons/phase-lie-detective.png") },
+  { key: "personality_dice", label: "人格骰子", slogan: "掷出你的隐藏面", icon: localAsset("/assets/landing-phase-icons/phase-personality-dice.png") },
+  { key: "auction", label: "拍卖", slogan: "敢押上全部筹码吗", icon: localAsset("/assets/landing-phase-icons/phase-auction.png") },
+  { key: "mini_script", label: "迷你剧本杀", slogan: "5分钟全员入戏", icon: localAsset("/assets/landing-phase-icons/phase-mini-script.png") },
+  { key: "quip_battle", label: "机智对决", slogan: "妙语连珠，接招吧", icon: localAsset("/assets/landing-phase-icons/phase-quip-battle.png") },
 ]
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -207,12 +207,12 @@ export default function PhaseIconCarousel({ isVisible }: PhaseIconCarouselProps)
       aria-label="破冰玩法轮盘，点击暂停，左右滑动切换"
     >
       <View className="phase-carousel__asset-preload" aria-hidden>
-        <Image src="/assets/landing-phase-icons/phase-topic-card.webp" />
-        <Image src="/assets/landing-phase-icons/phase-lie-detective.webp" />
-        <Image src="/assets/landing-phase-icons/phase-personality-dice.webp" />
-        <Image src="/assets/landing-phase-icons/phase-auction.webp" />
-        <Image src="/assets/landing-phase-icons/phase-mini-script.webp" />
-        <Image src="/assets/landing-phase-icons/phase-quip-battle.webp" />
+        <Image src="/assets/landing-phase-icons/phase-topic-card.png" />
+        <Image src="/assets/landing-phase-icons/phase-lie-detective.png" />
+        <Image src="/assets/landing-phase-icons/phase-personality-dice.png" />
+        <Image src="/assets/landing-phase-icons/phase-auction.png" />
+        <Image src="/assets/landing-phase-icons/phase-mini-script.png" />
+        <Image src="/assets/landing-phase-icons/phase-quip-battle.png" />
       </View>
       {showHint && hasBorn && (
         <View className="phase-carousel__hint">
