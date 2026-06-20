@@ -23,6 +23,10 @@ const ROOT = path.resolve(__dirname, '..')
 const DIST_DIR = path.join(ROOT, 'dist')
 
 const MAIN_PACKAGE_MAX_BYTES = 2 * 1024 * 1024
+// WeChat DevTools also rejects the filtered source package before upload.
+// Keep a safety buffer because its dependency scanner adds a small amount of
+// metadata that is not represented by our direct filesystem sum.
+const MAIN_PACKAGE_SOURCE_MAX_BYTES = 1.95 * 1024 * 1024
 // WeChat's hard limit is 2MB. We previously held a 1.8MB guideline buffer, but
 // the project currently ships ~1.88MB and the buffer was causing every build to
 // warn. Treat the hard limit as the gate until an asset-CDN migration creates
@@ -84,6 +88,16 @@ function readAppConfig() {
   }
 }
 
+function readPrivateProjectConfig() {
+  const configPath = path.join(ROOT, 'project.private.config.json')
+  if (!fs.existsSync(configPath)) return null
+  try {
+    return JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+  } catch {
+    return null
+  }
+}
+
 function main() {
   if (!fs.existsSync(DIST_DIR)) {
     console.error(`Missing dist directory: ${DIST_DIR}`)
@@ -92,6 +106,9 @@ function main() {
   }
 
   const appConfig = readAppConfig()
+  const privateProjectConfig = readPrivateProjectConfig()
+  const filtersUnusedFiles =
+    privateProjectConfig?.setting?.ignoreDevUnusedFiles === true
   const subpackageRoots =
     appConfig?.subPackages?.map((pkg) => pkg.root).filter(Boolean) ?? ['pages/onboarding']
   const subpackageDirNames = subpackageRoots.map((root) => root.split('/').filter(Boolean)[1]).filter(Boolean)
@@ -208,6 +225,17 @@ function main() {
     console.log('')
 
     let failed = false
+
+    if (!filtersUnusedFiles && uncompressedSize > MAIN_PACKAGE_SOURCE_MAX_BYTES) {
+      console.error(
+        `FAIL: Main package source exceeds ${formatSize(MAIN_PACKAGE_SOURCE_MAX_BYTES)} safety limit`,
+      )
+      console.error(`      Current raw source: ${formatSize(uncompressedSize)}`)
+      console.error('      Remediation: enable project.private.config.json setting.ignoreDevUnusedFiles.')
+      failed = true
+    } else if (filtersUnusedFiles) {
+      console.log('PASS: WeChat unused-file filtering is enabled for source packaging')
+    }
 
     if (mainPackageSize > MAIN_PACKAGE_MAX_BYTES) {
       console.error(`FAIL: Main package exceeds ${formatSize(MAIN_PACKAGE_MAX_BYTES)} (compressed)`)

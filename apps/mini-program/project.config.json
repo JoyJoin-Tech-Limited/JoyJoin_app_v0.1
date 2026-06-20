@@ -56,7 +56,24 @@
         "value": "assets/icons/rating-faces/.*grid.*\\.png$"
       }
     ],
-    "include": []
+    "include": [
+      {
+        "type": "regexp",
+        "value": "assets/landing-phase-icons/phase-.*\\.png$"
+      },
+      {
+        "type": "file",
+        "value": "assets/xiaoyue-expressions/xiaoyue-home-welcome.png"
+      },
+      {
+        "type": "file",
+        "value": "assets/joyjoin-logo-tab.png"
+      },
+      {
+        "type": "file",
+        "value": "assets/promo-local/banner-hero-lovart-v1.webp"
+      }
+    ]
   },
   "editorSetting": {}
 }

@@ -94,7 +94,7 @@ export function PoolRegistrationAlreadyJoined({
         <Image
           className='pool-reg__already-mascot'
           mode='aspectFit'
-          src={localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')}
+          src={localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.png')}
           ariaLabel='已报名'
         />
         <Text className='pool-reg__already-title'>你已经加入这场{eventType}了</Text>

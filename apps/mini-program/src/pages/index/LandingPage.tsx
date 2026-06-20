@@ -17,7 +17,7 @@ import { logWarn } from "../../lib/utils/logger"
 import "./index.scss"
 
 /** Mascot — bundled locally for guaranteed display. */
-const MASCOT_SRC = localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')
+const MASCOT_SRC = localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.png')
 
 interface MiniProgramLandingPageProps {
   isAuthLoading?: boolean

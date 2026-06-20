@@ -96,11 +96,6 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/tab-bar-notch-bg.png',
           to: 'dist/assets/tab-bar-notch-bg.png',
         },
-        // JoyJoin logo for native custom tab bar center button (critical)
-        {
-          from: 'src/assets/joyjoin-logo.png',
-          to: 'dist/assets/joyjoin-logo.png',
-        },
         // Tab bar center logo — smaller 128×128 variant for custom tab bar (~18KB).
         {
           from: 'src/assets/joyjoin-logo-tab.png',
@@ -168,27 +163,27 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         // all other phase icons remain on CDN. PNG is used here because these
         // first-screen icons must decode reliably across older WeChat clients.
         {
-          from: 'src/assets/icons/phase-icons/phase-topic-card.png',
+          from: 'src/assets/landing-phase-icons/phase-topic-card.png',
           to: 'dist/assets/landing-phase-icons/phase-topic-card.png',
         },
         {
-          from: 'src/assets/icons/phase-icons/phase-lie-detective.png',
+          from: 'src/assets/landing-phase-icons/phase-lie-detective.png',
           to: 'dist/assets/landing-phase-icons/phase-lie-detective.png',
         },
         {
-          from: 'src/assets/icons/phase-icons/phase-personality-dice.png',
+          from: 'src/assets/landing-phase-icons/phase-personality-dice.png',
           to: 'dist/assets/landing-phase-icons/phase-personality-dice.png',
         },
         {
-          from: 'src/assets/icons/phase-icons/phase-auction.png',
+          from: 'src/assets/landing-phase-icons/phase-auction.png',
           to: 'dist/assets/landing-phase-icons/phase-auction.png',
         },
         {
-          from: 'src/assets/icons/phase-icons/phase-mini-script.png',
+          from: 'src/assets/landing-phase-icons/phase-mini-script.png',
           to: 'dist/assets/landing-phase-icons/phase-mini-script.png',
         },
         {
-          from: 'src/assets/icons/phase-icons/phase-quip-battle.png',
+          from: 'src/assets/landing-phase-icons/phase-quip-battle.png',
           to: 'dist/assets/landing-phase-icons/phase-quip-battle.png',
         },
         // Archetype head icons — tiny (~45KB total), used everywhere for avatars.
@@ -207,7 +202,7 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         // NOTE: copied to `promo-local/` because the clean step wipes the CDN
         // `promo/` directory from the package.
         {
-          from: 'src/assets/promo/banner-hero-lovart-v1.webp',
+          from: 'src/assets/promo-local/banner-hero-lovart-v1.webp',
           to: 'dist/assets/promo-local/banner-hero-lovart-v1.webp',
         },
         // Batch C ceremony heroes — 8 WebP files (~310KB total, q=70 600px).
@@ -317,8 +312,8 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           to: 'dist/assets/xiaoyue-expressions/xiaoyue-coach-guide.webp',
         },
         {
-          from: 'src/assets/personality/xiaoyue/xiaoyue-home-welcome.webp',
-          to: 'dist/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp',
+          from: 'src/assets/xiaoyue-expressions/xiaoyue-home-welcome.png',
+          to: 'dist/assets/xiaoyue-expressions/xiaoyue-home-welcome.png',
         },
         // UI icons — info labels across the app (~81KB).
         {
