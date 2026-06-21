@@ -64,10 +64,14 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
+  # CVM tunnel upload: rsync dist → SSH → miniprogram-ci on CVM (fixed IP).
+  # continue-on-error: true — CVM availability is best-effort, not a build gate.
+  # If this fails, re-run from Actions UI or use scripts/cvm-upload.sh locally.
   upload-weapp:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: build-weapp
     runs-on: ubuntu-latest
+    continue-on-error: true
     timeout-minutes: 10
     steps:
       - uses: actions/download-artifact@v4
