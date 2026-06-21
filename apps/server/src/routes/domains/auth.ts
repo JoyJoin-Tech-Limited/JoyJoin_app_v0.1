@@ -179,10 +179,11 @@ export function registerAuthRoutes(app: Express): void {
         });
 
         logger.info("[Test Auth] Login success", { userId: user.id });
+        const fullUser = await buildAuthUserResponse(user.id);
         res.json({
           success: true,
           isNewUser: false,
-          user: sanitizeAuthUser(user),
+          user: fullUser,
           sessionToken: req.sessionID,
         });
       } catch (error: any) {
