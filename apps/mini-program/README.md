@@ -68,7 +68,7 @@ src/
 │   ├── profile/         # Profile-specific components (ProfileArchetypeHero, InterestChipCloud, ProfessionDisplayField)
 │   ├── landing/         # Landing-page-specific components (BondingCloud)
 │   ├── mascot/          # XiaoyueSpriteAnimator, XiaoyueChatBubble, XiaoyueEmptyState, etc.
-│   ├── discover/        # Discover feed components (OracleCard, CompatibilityIndicator, ParticipantPresenceStrip)
+│   ├── discover/        # Discover feed components (OracleCard, CompatibilityIndicator, ParticipantPresenceStrip). Empty-state presence strip uses a breathing accent ring + invitation pill (首座留给你).
 │   └── ContentBlockedError.tsx  # Inline field error for sensitive-word violations; field-aware hints, tap-to-dismiss, haptics, aria-live, reduced-motion. Used in edit-profile and onboarding essential-data forms.
 ├── hooks/               # Custom React hooks
 │   ├── useStaggerMount.ts   # Single RAF mount trigger for CSS-staggered entrances
@@ -165,12 +165,12 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 - `src/pages/pool-registration/assets/` → `dist/pages/pool-registration/assets/` (pool-specific hero backdrops; Batch C ceremony registry is CDN-backed)
 - `src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-*.webp` → `dist/assets/pool-heroes/` (main-package local fallback that survives `clean:cdn-assets`; CDN primary via `assets/ceremony/`)
 
-*Icon tiers (bundled with @1x/@2x retina support via `JoyJoinIcon`; `status`/`semantic`/`ui` @3x stripped at build):*
+*Icon tiers (bundled with @1x/@2x retina support via `JoyJoinIcon`; `status`/`semantic`/`ui` @3x stripped at build; `intent` ships as single 144×144 WebP):*
 - `src/assets/icons/mood-icons` (~16KB raw)
 - `src/assets/icons/chemistry-badges` (~16KB raw)
 - `src/assets/icons/status-icons` (~360KB raw, Lovart 5×5 status grid: alarm/bar-chart/bell/check/close/mirror/sparkle/unlock + legacy crown/info; `@3x` stripped at build)
 - `src/assets/icons/category-icons` (~108KB raw)
-- `src/assets/icons/intent-icons` (~88KB raw)
+- `src/assets/icons/intent-icons` (~51KB raw, single 144×144 WebP; no `@2x`/`@3x` variants — WeChat downscales)
 - `src/assets/icons/rating-faces` (~84KB raw, event-feedback 5-step rating selector)
 - `src/assets/icons/info-labels` (~216KB raw, semantic info labels such as calendar/location/people/target/globe; `@3x` stripped at build)
 - `src/assets/icons/ui` (~204KB raw, profile/settings list icons + gift/search/memo from Lovart 5×5 UI grid; `@3x` stripped at build)
@@ -186,7 +186,7 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 - `src/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2` (~66KB, minimal Chinese display font; full 621KB font loads from CDN)
 
 *First-impression & empty states:*
-- `src/assets/icons/phase-icons/phase-*.webp` → `dist/assets/landing-phase-icons/` (~80KB, 6 landing page icons)
+- `src/assets/landing-phase-icons/phase-*.webp` → `dist/assets/landing-phase-icons/` (~80KB, 6 landing page icons)
 - `src/assets/empty-state` (~16KB)
 - `src/assets/qr` (~12KB)
 

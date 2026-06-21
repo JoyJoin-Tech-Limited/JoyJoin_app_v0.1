@@ -45,7 +45,7 @@ export default function XiaoyueCoachCard({
 
   return (
     <View className={rootClasses}>
-      <View className='xiaoyue-coach-card__mascot-wrap'>
+      <View className='xiaoyue-coach-card__mascot-wrap' aria-hidden='true'>
         <XiaoyueSpriteAnimator
           state='coach'
           size='112rpx'

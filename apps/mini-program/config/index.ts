@@ -163,28 +163,28 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         // all other phase icons remain on CDN. PNG is used here because these
         // first-screen icons must decode reliably across older WeChat clients.
         {
-          from: 'src/assets/landing-phase-icons/phase-topic-card.png',
-          to: 'dist/assets/landing-phase-icons/phase-topic-card.png',
+          from: 'src/assets/landing-phase-icons/phase-topic-card.webp',
+          to: 'dist/assets/landing-phase-icons/phase-topic-card.webp',
         },
         {
-          from: 'src/assets/landing-phase-icons/phase-lie-detective.png',
-          to: 'dist/assets/landing-phase-icons/phase-lie-detective.png',
+          from: 'src/assets/landing-phase-icons/phase-lie-detective.webp',
+          to: 'dist/assets/landing-phase-icons/phase-lie-detective.webp',
         },
         {
-          from: 'src/assets/landing-phase-icons/phase-personality-dice.png',
-          to: 'dist/assets/landing-phase-icons/phase-personality-dice.png',
+          from: 'src/assets/landing-phase-icons/phase-personality-dice.webp',
+          to: 'dist/assets/landing-phase-icons/phase-personality-dice.webp',
         },
         {
-          from: 'src/assets/landing-phase-icons/phase-auction.png',
-          to: 'dist/assets/landing-phase-icons/phase-auction.png',
+          from: 'src/assets/landing-phase-icons/phase-auction.webp',
+          to: 'dist/assets/landing-phase-icons/phase-auction.webp',
         },
         {
-          from: 'src/assets/landing-phase-icons/phase-mini-script.png',
-          to: 'dist/assets/landing-phase-icons/phase-mini-script.png',
+          from: 'src/assets/landing-phase-icons/phase-mini-script.webp',
+          to: 'dist/assets/landing-phase-icons/phase-mini-script.webp',
         },
         {
-          from: 'src/assets/landing-phase-icons/phase-quip-battle.png',
-          to: 'dist/assets/landing-phase-icons/phase-quip-battle.png',
+          from: 'src/assets/landing-phase-icons/phase-quip-battle.webp',
+          to: 'dist/assets/landing-phase-icons/phase-quip-battle.webp',
         },
         // Archetype head icons — tiny (~45KB total), used everywhere for avatars.
         {
@@ -304,16 +304,16 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         // Xiaoyue expressions — loading + welcome + coach-guide are critical
         // first-impression assets. Others remain on CDN to stay within package size limits.
         {
-          from: 'src/assets/personality/xiaoyue/xiaoyue-loading-system.png',
-          to: 'dist/assets/xiaoyue-expressions/xiaoyue-loading-system.png',
+          from: 'src/assets/personality/xiaoyue/xiaoyue-loading-system.webp',
+          to: 'dist/assets/xiaoyue-expressions/xiaoyue-loading-system.webp',
         },
         {
           from: 'src/assets/personality/xiaoyue/xiaoyue-coach-guide.webp',
           to: 'dist/assets/xiaoyue-expressions/xiaoyue-coach-guide.webp',
         },
         {
-          from: 'src/assets/xiaoyue-expressions/xiaoyue-home-welcome.png',
-          to: 'dist/assets/xiaoyue-expressions/xiaoyue-home-welcome.png',
+          from: 'src/assets/personality/xiaoyue/xiaoyue-home-welcome.webp',
+          to: 'dist/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp',
         },
         // UI icons — info labels across the app (~81KB).
         {

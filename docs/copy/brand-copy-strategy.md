@@ -330,3 +330,4 @@ What am I writing?
 | Date | Change |
 |------|--------|
 | 2026-05-15 | Initial version. Merged from strategy deliberation + PM sin-mapper audit. |
+| 2026-06-21 | Discover empty-state presence strip copy updated to invitation frame (`首座留给你`); capacity readout (`0/6`) removed from visible label per Oracle Card "mirror, not menu" principle. |

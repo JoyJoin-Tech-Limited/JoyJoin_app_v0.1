@@ -18,7 +18,7 @@ import TestLoginSheet from "../../components/dev/TestLoginSheet"
 import "./index.scss"
 
 /** Mascot — bundled locally for guaranteed display. */
-const MASCOT_SRC = localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.png')
+const MASCOT_SRC = localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')
 
 interface MiniProgramLandingPageProps {
   isAuthLoading?: boolean

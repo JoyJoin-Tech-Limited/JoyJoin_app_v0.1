@@ -944,19 +944,21 @@ interface TraitSpectrumProps {
 
 ### XiaoyueChatBubble
 
-AI mascot guidance bubble with multiple poses.
+Shared mascot coaching bubble for the mini-program (the web user-client is archived).
 
 ```typescript
 interface XiaoyueChatBubbleProps {
-  content: string;           // Guidance content
-  pose?: 'default' | 'thinking' | 'casual' | 'excited';
-  isLoading?: boolean;       // Show loading state
-  loadingText?: string;      // Loading message
-  animate?: boolean;         // Enable animations
+  content: string;                    // Guidance content
+  tail?: boolean;                     // Show tail pointer (auto-disabled for wide layouts)
+  hideAvatar?: boolean;               // Hide bubble mascot when companion surface owns mascot
+  isLoading?: boolean;                // Show loading state
+  loadingText?: string;               // Loading message
+  animate?: boolean;                  // Enable stagger entrance animation
+  onAnimationComplete?: () => void;   // Callback after entrance finishes
 }
 ```
 
-**Location (archived):** `archived/workspaces/user-client/src/components/XiaoyueChatBubble.tsx`
+**Location:** `apps/mini-program/src/components/mascot/XiaoyueChatBubble.tsx`
 
 ### Other Important Components
 

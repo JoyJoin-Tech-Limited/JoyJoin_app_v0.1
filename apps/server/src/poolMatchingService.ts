@@ -45,6 +45,7 @@ import {
   type ChemistryCalibrationMap,
 } from "./archetypeChemistryCalibration";
 import { assignVenuesToGroups, saveVenueAssignments } from "./venueAssignmentService";
+import { getFeatureFlag } from "./lib/featureFlags";
 import { generateAndSaveEventTheme } from "./eventThemeGeneratorService";
 import { generateEventThemeTitle } from "./services/eventThemeTitleGenerator";
 import {
@@ -1845,7 +1846,7 @@ export async function saveMatchResults(
   }
   
   // 7. 自动分配场地 (Automatic Venue Assignment)
-  const venueAssignmentEnabled = process.env.VENUE_ASSIGNMENT_ENABLED !== 'false';
+  const venueAssignmentEnabled = await getFeatureFlag('venueAssignmentEnabled', true);
   
   if (venueAssignmentEnabled) {
     logger.info(`[Pool Matching] ✅ ${groups.length} groups created, starting venue assignment...`);

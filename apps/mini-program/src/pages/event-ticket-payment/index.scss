@@ -172,6 +172,7 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     font-size: $font-size-base;
     font-weight: $font-weight-bold;
     color: $ticket-text;
+    line-height: $line-height-relaxed;
   }
 
   &__meta-hint {
@@ -317,7 +318,7 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 
   &__coupon-stub-body {
     flex: 1;
-    padding: 22rpx 20rpx;
+    padding: 28rpx 20rpx;
   }
 
   &__coupon-stub-header {

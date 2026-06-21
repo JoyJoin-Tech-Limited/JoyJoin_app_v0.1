@@ -10,7 +10,7 @@ import {
 import JoyJoinIcon from '../ui/JoyJoinIcon'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import { haptics } from '../../lib/utils/haptics'
-import { localAsset } from '../../lib/utils/cdnAssets'
+import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import './LocationFilterDrawer.scss'
 
@@ -144,7 +144,7 @@ export default function LocationFilterDrawer({
           <View className='location-drawer__title-row'>
             <Image
               className='location-drawer__title-mascot'
-              src={localAsset('/assets/xiaoyue-expressions/xiaoyue-coach-guide.webp')}
+              src={getXiaoyueExpressionAsset('coachGuide')}
               mode='aspectFit'
               aria-hidden='true'
             />

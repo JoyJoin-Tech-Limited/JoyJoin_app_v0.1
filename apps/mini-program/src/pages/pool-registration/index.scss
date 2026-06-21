@@ -956,6 +956,26 @@
 
   &__step-coach {
     margin-bottom: $spacing-md;
+
+    &--no-avatar {
+      // When the coach card below already owns the mascot, the reaction bubble
+      // hides its avatar. Give the remaining mascot generous headroom so the
+      // bubble and the coach-card mascot don't feel crowded/overlapping.
+      margin-bottom: $spacing-xl;
+      // Subtle pop-in so the "收到" feedback feels responsive even without the mascot avatar.
+      animation: pool-reg-step-coach-pop 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+  }
+
+  @keyframes pool-reg-step-coach-pop {
+    from {
+      opacity: 0;
+      transform: translateY(-8rpx) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 
   @keyframes pool-reg-step-in {
@@ -1025,6 +1045,9 @@
       animation: none;
     }
     &__step-pill--complete &__step-index {
+      animation: none;
+    }
+    &__step-coach--no-avatar {
       animation: none;
     }
   }

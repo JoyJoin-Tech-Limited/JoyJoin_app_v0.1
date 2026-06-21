@@ -165,6 +165,11 @@ export default function PoolRegistrationPage() {
   const [showIntentReaction, triggerIntentReaction, hideIntentReaction] = useReactionTimer()
   const staggerMounted = useStaggerMount()
 
+  // Gate transient reactions so they only celebrate the first selection per step visit.
+  const budgetReactionShownRef = useRef(false)
+  const intentReactionShownRef = useRef(false)
+  const prevCanSubmitRef = useRef(false)
+
   const reduceMotion = useMemo(() => {
     try {
       return !!(Taro.getSystemInfoSync() as any).reduceMotion
@@ -389,14 +394,38 @@ export default function PoolRegistrationPage() {
   const hasIntentSelection = formState.eventIntent.length > 0
   const canSubmit = hasBudgetSelection && hasIntentSelection
 
+  // Reset per-step reaction gates whenever the user navigates into a step.
+  useEffect(() => {
+    if (step === STEP_BUDGET) {
+      budgetReactionShownRef.current = false
+    }
+    if (step === STEP_INTENT) {
+      intentReactionShownRef.current = false
+    }
+  }, [step])
+
   // Brief celebratory Xiaoyue reaction when the user makes their first intent selection
   useEffect(() => {
     if (!hasIntentSelection) {
       hideIntentReaction()
       return
     }
+    if (intentReactionShownRef.current) return
+    intentReactionShownRef.current = true
     triggerIntentReaction()
-  }, [hasIntentSelection, hideIntentReaction, triggerIntentReaction])
+    discoverAnalytics.track('registration_step_reaction_shown', poolId, {
+      step: 'intent',
+      count: formState.eventIntent.length,
+    })
+  }, [hasIntentSelection, hideIntentReaction, triggerIntentReaction, poolId, formState.eventIntent.length])
+
+  // Reward haptic when the form becomes submittable for the first time.
+  useEffect(() => {
+    if (canSubmit && !prevCanSubmitRef.current) {
+      haptics('success')
+    }
+    prevCanSubmitRef.current = canSubmit
+  }, [canSubmit])
   const advanceDisabled =
     step === STEP_BUDGET
       ? !hasBudgetSelection
@@ -454,9 +483,16 @@ export default function PoolRegistrationPage() {
               barBudgetRange: undefined,
             },
       )
-      triggerBudgetReaction()
+      if (!budgetReactionShownRef.current) {
+        budgetReactionShownRef.current = true
+        triggerBudgetReaction()
+        discoverAnalytics.track('registration_step_reaction_shown', poolId, {
+          step: 'budget',
+          value,
+        })
+      }
     },
-    [eventType, triggerBudgetReaction],
+    [eventType, triggerBudgetReaction, poolId],
   )
 
   const handleIntentToggle = useCallback((value: string) => {
@@ -855,11 +891,12 @@ export default function PoolRegistrationPage() {
 
       {showBudgetReaction && step === 1 ? (
         <XiaoyueChatBubble
-          content='收到！悦仔会按这个预算帮你配对'
+          content={selectedBudget ? `收到！${selectedBudget} 的预算，悦仔按这个区间帮你配对` : '收到！悦仔会按这个预算帮你配对'}
           pose='casual'
           horizontal
           showGlow
-          className='pool-reg__step-coach'
+          hideAvatar
+          className='pool-reg__step-coach pool-reg__step-coach--no-avatar'
         />
       ) : null}
 
@@ -900,11 +937,16 @@ export default function PoolRegistrationPage() {
 
       {showIntentReaction && step === 2 ? (
         <XiaoyueChatBubble
-          content='收到！悦仔会按这些期待帮你匹配'
+          content={
+            formState.eventIntent.length > 0
+              ? `收到！${formState.eventIntent.length} 个期待，悦仔按这个方向帮你匹配`
+              : '收到！悦仔会按这些期待帮你匹配'
+          }
           pose='casual'
           horizontal
           showGlow
-          className='pool-reg__step-coach'
+          hideAvatar
+          className='pool-reg__step-coach pool-reg__step-coach--no-avatar'
         />
       ) : null}
 

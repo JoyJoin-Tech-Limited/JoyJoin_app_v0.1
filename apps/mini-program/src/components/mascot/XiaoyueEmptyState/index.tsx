@@ -2,6 +2,7 @@ import { View, Image, Text } from '@tarojs/components'
 import { useState, useMemo } from 'react'
 import { cdnAsset, localAsset } from '@/lib/utils/cdnAssets'
 import { getArchetypeTokens } from '@shared/archetypeColorTokens'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import ArchetypeHead from '../ArchetypeHead'
 import './index.scss'
 
@@ -33,6 +34,8 @@ export interface XiaoyueEmptyStateProps {
   showCelebrationBadge?: boolean
   /** Render the user's archetype head badge and halo for identity-rich empty states. */
   archetypeId?: string | null
+  /** Use the archetype head icon as the main visual instead of the Xiaoyue mascot. */
+  archetypeAsMainVisual?: boolean
 }
 
 const SIZE_MAP = { sm: 160, md: 200, lg: 240 }
@@ -65,18 +68,22 @@ export default function XiaoyueEmptyState({
   motionReduced = false,
   showCelebrationBadge = false,
   archetypeId,
+  archetypeAsMainVisual = false,
 }: XiaoyueEmptyStateProps) {
   const [imgError, setImgError] = useState(false)
   const dim = SIZE_MAP[size]
+  const hasArchetypeBadge = Boolean(archetypeId)
+  const showArchetypeMain = archetypeAsMainVisual && hasArchetypeBadge
+  const archetypeName = archetypeId ? ARCHETYPE_BY_ID[archetypeId]?.nameCn ?? archetypeId : undefined
   const isActionDisabled = disabled || loading
   const mascotClass = classNames(
     'xiaoyue-empty-state__mascot',
     disableBreathe && 'xiaoyue-empty-state__mascot--no-breathe',
     motionReduced && 'xiaoyue-empty-state__mascot--reduced',
-    showCelebrationBadge && 'xiaoyue-empty-state__mascot--celebrate'
+    showCelebrationBadge && 'xiaoyue-empty-state__mascot--celebrate',
+    showArchetypeMain && 'xiaoyue-empty-state__mascot--archetype-main'
   )
 
-  const hasArchetypeBadge = Boolean(archetypeId)
   const archetypeTokens = useMemo(() => getArchetypeTokens(archetypeId), [archetypeId])
   const haloStyle = useMemo(() => {
     const background = archetypeId
@@ -108,7 +115,16 @@ export default function XiaoyueEmptyState({
           style={haloStyle}
           aria-hidden='true'
         />
-        {!imgError ? (
+        {showArchetypeMain ? (
+          <View
+            className={mascotClass}
+            style={{ width: `${dim}rpx`, height: `${dim}rpx` }}
+            role='img'
+            aria-label={archetypeName ? `${archetypeName}头像` : '原型头像'}
+          >
+            <ArchetypeHead archetype={archetypeId} size={dim} />
+          </View>
+        ) : !imgError ? (
           <Image
             className={mascotClass}
             src={cdnAsset(`/assets/personality/xiaoyue/${EMOTION_MAP[emotion]}.webp`)}
@@ -138,7 +154,7 @@ export default function XiaoyueEmptyState({
             />
           </View>
         )}
-        {hasArchetypeBadge && (
+        {hasArchetypeBadge && !showArchetypeMain && (
           <View className='xiaoyue-empty-state__archetype-badge' aria-hidden='true'>
             <ArchetypeHead archetype={archetypeId} size={76} fallback='none' />
           </View>

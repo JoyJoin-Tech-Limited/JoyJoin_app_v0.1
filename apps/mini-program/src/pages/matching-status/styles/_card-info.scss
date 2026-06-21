@@ -43,6 +43,7 @@
     color: $color-text-primary;
     font-weight: $font-weight-medium;
     text-align: right;
+    line-height: $line-height-relaxed;
 
     &--score {
       @include gradient-text;

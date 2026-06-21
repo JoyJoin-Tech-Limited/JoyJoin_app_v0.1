@@ -152,10 +152,9 @@ export function getPresenceStripCountLabel({
   max,
 }: PresenceStripCountInput): string {
   if (state === 'empty') {
-    const text = typeof max === 'number' && max > 0
-      ? `虚位以待 · 0/${max}`
-      : '虚位以待'
-    return guardBannedWords(text)
+    // Empty pools are invitation moments — frame as an exclusive opening,
+    // not a capacity readout. Never emit "0/max" which turns the card into a menu.
+    return guardBannedWords('首座留给你')
   }
 
   if (state === 'full') {
@@ -190,10 +189,7 @@ export function getPresenceStripAriaLabel({
   hasUserArchetype,
 }: PresenceStripAriaInput): string {
   if (state === 'empty') {
-    const text = typeof max === 'number' && max > 0
-      ? `虚位以待，0/${max}`
-      : '虚位以待'
-    return guardBannedWords(text)
+    return guardBannedWords('虚位以待，首座留给你')
   }
 
   if (state === 'full') {

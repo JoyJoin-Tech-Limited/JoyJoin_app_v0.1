@@ -3,6 +3,7 @@
 
 .squad-unboxing {
   @include page-gradient-bg;
+  min-height: 100vh;
   min-height: 100dvh;
   position: relative;
 
@@ -39,6 +40,7 @@
   }
 
   &__scroll {
+    min-height: 100vh;
     min-height: 100dvh;
     box-sizing: border-box;
     padding: 0 $container-padding;
@@ -543,7 +545,7 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 6rpx;
+    gap: $spacing-xs;
   }
 
   &__member-name {
@@ -644,6 +646,36 @@
     color: $color-text-primary;
     text-align: right;
     line-height: 1.6;
+  }
+
+  &__info-value-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  &__info-sub {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    text-align: right;
+    line-height: 1.5;
+    margin-top: 4rpx;
+  }
+
+  &__info-action {
+    margin-top: 4rpx;
+    padding: 8rpx 0;
+    transition: opacity 0.12s ease;
+
+    &--pressed {
+      opacity: 0.6;
+    }
+  }
+
+  &__info-action-text {
+    font-size: $font-size-xs;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
   }
 
   &__theme-card {
@@ -923,7 +955,7 @@
   &__action-copy {
     display: flex;
     flex-direction: column;
-    gap: 6rpx;
+    gap: $spacing-xs;
   }
 
   &__action-eyebrow {
@@ -1051,12 +1083,12 @@
 }
 
 @keyframes squad-unboxing-shimmer {
-  from {
-    background-position: 200% 0;
+  0%, 100% {
+    opacity: 0.25;
   }
 
-  to {
-    background-position: -200% 0;
+  50% {
+    opacity: 0.65;
   }
 }
 

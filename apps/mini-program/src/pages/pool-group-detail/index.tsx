@@ -1,8 +1,8 @@
 import { Canvas, Image, ScrollView, Text, View } from '@tarojs/components'
 import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import Taro, { useRouter } from '@tarojs/taro'
-import { useQuery } from '@tanstack/react-query'
-import { useState, useCallback } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   getPoolGroupAnalysis,
   getPoolGroupDetails,
@@ -16,6 +16,8 @@ import Card from '../../components/ui/Card'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import Button from '../../components/ui/Button'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import { haptics } from '../../lib/utils/haptics'
+import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/utils/uiConstants'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
@@ -69,6 +71,8 @@ export default function PoolGroupDetailPage() {
     enabled: !!groupId && !authLoading,
   })
 
+  const queryClient = useQueryClient()
+
   const { data: groupAnalysis, isLoading: isAnalysisLoading } = useQuery({
     queryKey: ['mini-program', 'pool-group-analysis', groupId],
     queryFn: () => getPoolGroupAnalysis(apiRequest, groupId),
@@ -76,6 +80,18 @@ export default function PoolGroupDetailPage() {
     staleTime: STALE_TIME_GROUP_ANALYSIS_MS,
     retry: 1,
   })
+
+  const prevVenueStatusRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!poolGroup) return
+    const currentStatus = poolGroup.group.venueAssignmentStatus
+    if (prevVenueStatusRef.current === 'unassigned' && currentStatus === 'assigned' && poolGroup.group.venueName) {
+      haptics('success')
+      Taro.showToast({ title: '场地已确定', icon: 'success', duration: 2000 })
+    }
+    prevVenueStatusRef.current = currentStatus ?? null
+  }, [poolGroup?.group.venueAssignmentStatus, poolGroup?.group.venueName])
 
   const handleShareGroupPoster = useCallback(async () => {
     if (!poolGroup || isGeneratingPoster) return
@@ -110,7 +126,7 @@ export default function PoolGroupDetailPage() {
 
   if (error || !poolGroup) {
     return (
-      <View className='pool-group-detail__error'>
+      <View className='pool-group-detail__error' role='alert' aria-live='polite'>
         <Image
           className='pool-group-detail__error-hero'
           src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
@@ -118,9 +134,20 @@ export default function PoolGroupDetailPage() {
           lazyLoad
         />
         <Text className='pool-group-detail__error-text'>加载小队详情没成功</Text>
-        <Button variant='secondary' onClick={() => Taro.switchTab({ url: '/pages/events/index' })}>
-          返回活动
-        </Button>
+        <View style={{ display: 'flex', gap: '24rpx' }}>
+          <Button variant='primary' onClick={() => {
+            haptics('light')
+            queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-group-detail', groupId] })
+          }}>
+            重试
+          </Button>
+          <Button variant='secondary' onClick={() => {
+            haptics('light')
+            Taro.switchTab({ url: '/pages/events/index' })
+          }}>
+            返回活动
+          </Button>
+        </View>
       </View>
     )
   }
@@ -134,6 +161,7 @@ export default function PoolGroupDetailPage() {
       return
     }
 
+    haptics('light')
     Taro.setClipboardData({
       data: locationText,
       success: () => {
@@ -147,6 +175,7 @@ export default function PoolGroupDetailPage() {
       return
     }
 
+    haptics('light')
     const address = [group.venueName, group.venueAddress].filter(Boolean).join(' ')
     Taro.setClipboardData({
       data: address,
@@ -240,7 +269,7 @@ export default function PoolGroupDetailPage() {
       ) : null}
 
       {group.venueName ? (
-        <Card className='pool-group-detail__card'>
+        <Card className='pool-group-detail__card' aria-label='场地信息'>
           <Text className='pool-group-detail__card-title'>地点信息</Text>
           <View className='pool-group-detail__info-row'>
             <Text className='pool-group-detail__info-label'><JoyJoinIcon emoji='🏠' size={24} /> 地址</Text>
@@ -264,7 +293,18 @@ export default function PoolGroupDetailPage() {
         </Card>
       ) : group.venueAssignmentStatus === 'unassigned' ? (
         <Card className='pool-group-detail__card pool-group-detail__card--tbd'>
-          <Text className='pool-group-detail__card-title'>地点信息</Text>
+          <View className='pool-group-detail__tbd-header'>
+            <Image
+              className='pool-group-detail__tbd-mascot'
+              src={getXiaoyueExpressionAsset('thinking')}
+              mode='aspectFit'
+              lazyLoad
+            />
+            <View className='pool-group-detail__tbd-title-group'>
+              <Text className='pool-group-detail__card-title'>地点信息</Text>
+              <Text className='pool-group-detail__tbd-subtitle'>悦仔还在帮你们锁定最合适的场地</Text>
+            </View>
+          </View>
           <View className='pool-group-detail__info-row'>
             <Text className='pool-group-detail__info-label'><JoyJoinIcon emoji='⏳' size={24} /> 状态</Text>
             <Text className='pool-group-detail__info-value pool-group-detail__info-value--tbd'>
@@ -274,7 +314,7 @@ export default function PoolGroupDetailPage() {
           <View className='pool-group-detail__info-row'>
             <Text className='pool-group-detail__info-label'>&nbsp;</Text>
             <Text className='pool-group-detail__info-value pool-group-detail__info-value--tbd-hint'>
-              我们正在为您协调最佳场地，活动前会通知您具体地点
+              一有消息马上告诉你，活动前会通知具体地点
             </Text>
           </View>
         </Card>

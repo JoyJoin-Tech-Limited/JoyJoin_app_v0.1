@@ -147,6 +147,24 @@ Complexity: O(pools x 12) integer lookups — negligible vs existing DB queries.
 
 ---
 
+### v0.3 Redesign (2026-06-21) — "First Seat Invitation"
+
+The empty-state presence strip was redesigned from a dashed placeholder + capacity readout (`虚位以待 · 0/6`) to a warm invitation moment. Empty pools now render a softly breathing accent ring + a tinted pill reading **首座留给你**.
+
+| Change | Detail |
+|--------|--------|
+| Empty-state copy | `虚位以待 · 0/6` → `首座留给你`; ARIA label reads `虚位以待，首座留给你` |
+| Empty-state visuals | Breathing accent ring (40rpx) with inner glyph + soft accent-color pill |
+| Animation | 1.7s `scale` + `opacity` breathe loop; combined 0–12% entrance fade-in |
+| Motion gating | Disabled on `prefers-reduced-motion`, low-end devices (`useDeviceTier`), and for indices > 5 |
+| Accessibility | Decorative coins/count text `aria-hidden='true'`; aggregate `aria-label` on `role='status'` root |
+| Backend guard | `state === 'empty'` forces `coinsToRender = []` even if `sampleArchetypes` is populated |
+| Files | `ParticipantPresenceStrip.tsx`, `ParticipantPresenceStrip.scss`, `discoverNarrativeCopy.ts` |
+
+**v0.3 audit scores:** Frontend Design 20/20, Completeness 43/44, Performance 58/60
+
+---
+
 ## 6. Implementation Status
 
 **Phase 1 shipped:** 2026-05-13 (5-layer, 384rpx)

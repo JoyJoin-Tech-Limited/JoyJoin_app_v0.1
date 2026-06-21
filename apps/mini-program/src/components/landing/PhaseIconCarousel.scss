@@ -289,3 +289,22 @@
   from { opacity: 1; transform: translateX(-50%) translateY(0); }
   to   { opacity: 0; transform: translateX(-50%) translateY(-8rpx); }
 }
+
+
+@media (prefers-reduced-motion: reduce) {
+  .phase-carousel,
+  .phase-carousel__item,
+  .phase-carousel__dot,
+  .phase-carousel__hint,
+  .phase-carousel__pause-indicator,
+  .phase-carousel--paused .phase-carousel__track {
+    transition: none !important;
+    animation: none !important;
+    will-change: auto !important;
+  }
+
+  .phase-carousel__hint {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+}

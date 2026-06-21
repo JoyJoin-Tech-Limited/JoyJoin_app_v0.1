@@ -30,13 +30,36 @@
     width: 100%;
     height: 480rpx;
     overflow: hidden;
+    background: $color-surface;
+  }
+
+  &__skeleton {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: linear-gradient(135deg, rgba($color-primary-light, 0.18) 0%, rgba($color-secondary, 0.08) 100%);
+    overflow: hidden;
+  }
+
+  &__skeleton-shimmer {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba($color-surface, 0) 0%,
+      rgba($color-surface, 0.35) 50%,
+      rgba($color-surface, 0) 100%
+    );
+    // GPU-safe opacity pulse instead of translateX to avoid paint on every frame.
+    animation: pool-registration-hero-shimmer-pulse 1.5s ease-in-out infinite;
   }
 
   &__image {
-    position: absolute;
-    inset: 0;
+    display: block;
+    position: relative;
     width: 100%;
-    height: 100%;
+    height: auto;
+    z-index: 1;
   }
 
   &__aurora {
@@ -50,7 +73,10 @@
     position: absolute;
     border-radius: 50%;
     opacity: 0.65;
-    animation: pool-registration-hero-aurora-drift 8s ease-in-out infinite;
+
+    .pool-registration-hero:not(.pool-registration-hero--low-end) & {
+      animation: pool-registration-hero-aurora-drift 8s ease-in-out infinite;
+    }
 
     &--1 {
       width: 320rpx;
@@ -59,7 +85,10 @@
       right: -60rpx;
       background: rgba($color-primary, 0.35);
       box-shadow: 0 0 40rpx 24rpx rgba($color-primary, 0.35);
-      animation-duration: 10s;
+
+      .pool-registration-hero:not(.pool-registration-hero--low-end) & {
+        animation-duration: 10s;
+      }
     }
 
     &--2 {
@@ -69,8 +98,11 @@
       left: -40rpx;
       background: rgba($color-secondary, 0.28);
       box-shadow: 0 0 40rpx 24rpx rgba($color-secondary, 0.28);
-      animation-duration: 12s;
-      animation-delay: -3s;
+
+      .pool-registration-hero:not(.pool-registration-hero--low-end) & {
+        animation-duration: 12s;
+        animation-delay: -3s;
+      }
     }
 
     &--3 {
@@ -80,8 +112,11 @@
       left: 40%;
       background: rgba($color-primary-light, 0.6);
       box-shadow: 0 0 40rpx 24rpx rgba($color-primary-light, 0.6);
-      animation-duration: 9s;
-      animation-delay: -5s;
+
+      .pool-registration-hero:not(.pool-registration-hero--low-end) & {
+        animation-duration: 9s;
+        animation-delay: -5s;
+      }
     }
   }
 
@@ -129,12 +164,12 @@
   &__seats-pill {
     display: inline-flex;
     align-items: center;
-    gap: $spacing-xs;
-    padding: $spacing-xs $spacing-sm;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
     border-radius: $radius-pill;
-    background: rgba($color-surface, 0.92);
-    border: 2rpx solid rgba($color-surface, 0.5);
-    box-shadow: $shadow-sm;
+    background: rgba($color-surface, 0.96);
+    border: 2rpx solid rgba($color-surface, 0.6);
+    box-shadow: $shadow-md;
   }
 
   // ─── Bottom meta band: date / location / price ────────────────────
@@ -157,8 +192,7 @@
     align-items: center;
     gap: $spacing-xs;
     min-width: 0;
-    // Optical sizing: slightly tighter than 8rpx rhythm so the pill feels compact against the hero image.
-    padding: 10rpx 18rpx;
+    padding: $spacing-xs $spacing-sm;
     border-radius: $radius-pill;
     background: rgba($color-surface, 0.92);
     border: 2rpx solid rgba($color-primary, 0.12);
@@ -184,6 +218,9 @@
     font-weight: $font-weight-bold;
     color: $color-text-primary;
     line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__seats-heads {
@@ -193,11 +230,11 @@
 
   &__seat-head {
     @include flex-center;
-    width: 44rpx;
-    height: 44rpx;
+    width: 56rpx;
+    height: 56rpx;
     border-radius: 50%;
     border: 2rpx solid;
-    margin-left: -18rpx;
+    margin-left: -24rpx;
     overflow: hidden;
     box-shadow: $shadow-sm;
     opacity: 0;
@@ -225,31 +262,51 @@
 
   &__seat-overflow {
     @include flex-center;
-    width: 44rpx;
-    height: 44rpx;
+    width: 56rpx;
+    height: 56rpx;
     border-radius: 50%;
-    background: $brand-gradient;
-    margin-left: -18rpx;
-    border: 2rpx solid rgba($color-surface, 0.5);
+    background: $color-primary;
+    margin-left: -24rpx;
+    border: 2rpx solid rgba($color-surface, 0.6);
+  }
+
+  &__seat-empty {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 56rpx;
+    padding: 0 $spacing-sm;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.92);
+    border: 2rpx solid rgba($color-primary, 0.12);
+  }
+
+  &__seat-empty-text {
+    @include type-caption;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
   }
 
   &__seat-overflow-text {
-    @include type-micro;
+    @include type-caption;
     font-weight: $font-weight-bold;
     color: $color-text-white;
   }
 
-  &__seat-dot {
-    width: 10rpx;
-    height: 10rpx;
-    border-radius: 50%;
-    background: $color-primary;
-  }
-
   &__seats-text {
-    @include type-caption;
-    font-weight: $font-weight-semibold;
+    @include type-body;
+    font-weight: $font-weight-bold;
     color: $color-text-primary;
+  }
+}
+
+@keyframes pool-registration-hero-shimmer-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.65;
   }
 }
 
@@ -295,12 +352,22 @@
     transform: none;
   }
 
-  .pool-registration-hero__aurora-orb {
+  .pool-registration-hero__aurora-orb,
+  .pool-registration-hero--low-end .pool-registration-hero__aurora-orb {
+    animation: none;
+  }
+
+  .pool-registration-hero--enter .pool-registration-hero__seat-head {
     animation: none;
   }
 
   .pool-registration-hero__seat-head {
     opacity: 1;
     transform: scale(1);
+  }
+
+  .pool-registration-hero__skeleton-shimmer {
+    animation: none;
+    opacity: 0.35;
   }
 }

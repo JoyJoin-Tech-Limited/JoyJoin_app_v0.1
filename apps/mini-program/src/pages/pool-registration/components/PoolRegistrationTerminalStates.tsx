@@ -4,6 +4,7 @@ import type { EventPoolSummary } from '@shared/api'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 
 import { cdnAsset, localAsset } from '../../../lib/utils/cdnAssets'
+import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
@@ -94,7 +95,7 @@ export function PoolRegistrationAlreadyJoined({
         <Image
           className='pool-reg__already-mascot'
           mode='aspectFit'
-          src={localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.png')}
+          src={getXiaoyueExpressionAsset('homeWelcome')}
           ariaLabel='已报名'
         />
         <Text className='pool-reg__already-title'>你已经加入这场{eventType}了</Text>

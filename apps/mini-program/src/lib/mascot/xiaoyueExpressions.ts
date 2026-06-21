@@ -44,7 +44,7 @@ const BASE = cdnAsset('/assets/personality/xiaoyue')
 
 /** Semantic basenames — all 16 expressions, unique assets. */
 const ART = {
-  homeWelcome: `${BASE}/xiaoyue-home-welcome.png`,
+  homeWelcome: `${BASE}/xiaoyue-home-welcome.webp`,
   coachGuide: `${BASE}/xiaoyue-coach-guide.webp`,
   loadingSystem: `${BASE}/xiaoyue-loading-system.webp`,
   loadingReveal: `${BASE}/xiaoyue-loading-reveal.webp`,

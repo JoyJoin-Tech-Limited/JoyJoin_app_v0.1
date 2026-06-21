@@ -53,6 +53,11 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  or share-card entry point. Env fallback: PROFILE_REDESIGN_ENABLED
    *  (default: true). */
   profileRedesignEnabled: "PROFILE_REDESIGN_ENABLED",
+  /** Master kill-switch for venue assignment after pool matching.
+   *  When false, assignVenuesToGroups() marks all groups unassigned
+   *  with reason 'feature_disabled'.
+   *  Env fallback: VENUE_ASSIGNMENT_ENABLED (default: true). */
+  venueAssignmentEnabled: "VENUE_ASSIGNMENT_ENABLED",
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

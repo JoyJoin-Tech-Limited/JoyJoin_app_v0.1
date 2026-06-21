@@ -37,6 +37,10 @@ export interface XiaoyueChatBubbleProps {
   spriteState?: XiaoyueSpriteState
   /** Show speech tail pointing to the mascot avatar */
   tail?: boolean
+  /** Hide the mascot avatar and render only the bubble.
+   *  Useful when another component (e.g. XiaoyueCoachCard) already owns the mascot for the screen section,
+   *  avoiding duplicate mascot crowding. */
+  hideAvatar?: boolean
 }
 
 /**
@@ -62,6 +66,7 @@ export default function XiaoyueChatBubble({
   animate = false,
   spriteState,
   tail = false,
+  hideAvatar = false,
 }: XiaoyueChatBubbleProps) {
   const resolvedExpressionId = isLoading
     ? 'loadingSystem'
@@ -84,32 +89,39 @@ export default function XiaoyueChatBubble({
       : 'xiaoyue-chat-bubble--vertical'
 
   return (
-    <View className={`xiaoyue-chat-bubble ${layoutClass} ${className}`}>
+    <View
+      className={`xiaoyue-chat-bubble ${layoutClass} ${hideAvatar ? 'xiaoyue-chat-bubble--no-avatar' : ''} ${className}`}
+      role='status'
+      aria-live='polite'
+      aria-atomic='true'
+    >
       {/* Avatar with glow */}
-      <View
-        className={`xiaoyue-chat-bubble__avatar-wrap ${showGlow ? 'xiaoyue-chat-bubble__avatar-wrap--glow' : ''} ${isLoading ? 'xiaoyue-chat-bubble__avatar-wrap--loading' : ''}`}
-      >
-        {animate ? (
-          <XiaoyueSpriteAnimator
-            state={spriteState ?? XIAOYUE_EXPRESSION_TO_SPRITE_STATE[resolvedExpressionId] ?? 'neutral'}
-            size={wide ? '120rpx' : '96rpx'}
-            showGlow={false}
-            isLoading={isLoading}
-          />
-        ) : (
-          <Image
-            className='xiaoyue-chat-bubble__avatar'
-            mode='aspectFit'
-            src={getXiaoyueExpressionAsset(resolvedExpressionId)}
-            onError={() => {
-              // Graceful degradation: avatar hides, bubble remains
-            }}
-          />
-        )}
-      </View>
+      {!hideAvatar && (
+        <View
+          className={`xiaoyue-chat-bubble__avatar-wrap ${showGlow ? 'xiaoyue-chat-bubble__avatar-wrap--glow' : ''} ${isLoading ? 'xiaoyue-chat-bubble__avatar-wrap--loading' : ''}`}
+        >
+          {animate ? (
+            <XiaoyueSpriteAnimator
+              state={spriteState ?? XIAOYUE_EXPRESSION_TO_SPRITE_STATE[resolvedExpressionId] ?? 'neutral'}
+              size={wide ? '120rpx' : '96rpx'}
+              showGlow={false}
+              isLoading={isLoading}
+            />
+          ) : (
+            <Image
+              className='xiaoyue-chat-bubble__avatar'
+              mode='aspectFit'
+              src={getXiaoyueExpressionAsset(resolvedExpressionId)}
+              onError={() => {
+                // Graceful degradation: avatar hides, bubble remains
+              }}
+            />
+          )}
+        </View>
+      )}
 
       {/* Bubble */}
-      <View className={`xiaoyue-chat-bubble__bubble ${isLoading ? 'xiaoyue-chat-bubble__bubble--loading' : ''} ${tail && horizontal && !wide ? 'xiaoyue-chat-bubble__bubble--tail' : ''}`}>
+      <View className={`xiaoyue-chat-bubble__bubble ${isLoading ? 'xiaoyue-chat-bubble__bubble--loading' : ''} ${tail && horizontal && !wide && !hideAvatar ? 'xiaoyue-chat-bubble__bubble--tail' : ''}`}>
         {sentences.map((sentence, i) => (
           <Text
             key={i}

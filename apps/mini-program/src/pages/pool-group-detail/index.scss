@@ -2,6 +2,7 @@
 @use '../../styles/mixins' as *;
 
 .pool-group-detail {
+  min-height: 100vh;
   min-height: 100dvh;
   @include page-shell-padding($spacing-lg, $container-padding, $spacing-xl);
   background:
@@ -39,7 +40,7 @@
   &__title {
     display: block;
     font-size: $font-size-xl;
-    line-height: 1.35;
+    line-height: 1.45;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
   }
@@ -99,7 +100,7 @@
     margin-top: $spacing-md;
     padding: 12rpx 24rpx;
     border-radius: 9999rpx;
-    background: rgba(139, 92, 246, 0.12);
+    background: rgba($color-primary, 0.12);
     color: $color-primary-dark;
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
@@ -113,7 +114,7 @@
     margin-left: $spacing-sm;
     padding: 12rpx 28rpx;
     border-radius: 9999rpx;
-    background: rgba(255, 107, 157, 0.12);
+    background: rgba($color-secondary, 0.12);
   }
 
   &__match-score-text {
@@ -185,6 +186,32 @@
     border: 2rpx solid rgba($color-amber, 0.18);
   }
 
+  &__tbd-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    margin-bottom: $spacing-md;
+  }
+
+  &__tbd-mascot {
+    width: 64rpx;
+    height: 64rpx;
+    border-radius: 9999rpx;
+    flex-shrink: 0;
+  }
+
+  &__tbd-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
+  }
+
+  &__tbd-subtitle {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.5;
+  }
+
   &__map-actions {
     display: flex;
     gap: $spacing-md;
@@ -240,12 +267,12 @@
     align-items: flex-start;
     padding: $spacing-md;
     border-radius: $card-radius-sm;
-    background: rgba(255, 255, 255, 0.88);
+    background: rgba($color-surface, 0.88);
     box-shadow: $shadow-sm;
 
     &--current {
-      border: 2rpx solid rgba(139, 92, 246, 0.18);
-      background: rgba(255, 255, 255, 0.98);
+      border: 2rpx solid rgba($color-primary, 0.18);
+      background: rgba($color-surface, 0.98);
     }
   }
 
@@ -300,7 +327,7 @@
 
   &__member-archetype {
     display: block;
-    margin-top: 6rpx;
+    margin-top: $spacing-xs;
     color: $color-primary;
     font-size: $font-size-sm;
     font-weight: $font-weight-medium;
@@ -333,6 +360,7 @@
   }
 
   &__error {
+    min-height: 100vh;
     min-height: 100dvh;
     @include page-shell-padding($spacing-2xl, $container-padding, $spacing-2xl);
     display: flex;
@@ -352,5 +380,16 @@
     margin-bottom: $spacing-lg;
     color: $color-text-secondary;
     font-size: $font-size-base;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pool-group-detail__group-badge,
+  .pool-group-detail__member-card,
+  .pool-group-detail__member-card--current,
+  .pool-group-detail__countdown,
+  .pool-group-detail__match-score {
+    animation: none !important;
+    transition: none !important;
   }
 }

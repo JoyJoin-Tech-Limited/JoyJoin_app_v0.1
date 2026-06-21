@@ -1,6 +1,7 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
-import { useRouter } from '@tarojs/taro'
+import Taro, { useRouter } from '@tarojs/taro'
+import { useEffect, useCallback, useRef } from 'react'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
@@ -14,6 +15,7 @@ import Card from '../../components/ui/Card'
 import ConnectionPointPill from '../../components/ConnectionPointPill'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import Button from '../../components/ui/Button'
+import { haptics } from '../../lib/utils/haptics'
 import { BlindBoxVisual } from './BlindBoxVisual'
 import DragRevealRibbon from './DragRevealRibbon'
 import {
@@ -63,6 +65,29 @@ export default function SquadUnboxingPage() {
   const { isDegradation } = useDeviceTier()
   const { user: currentUser } = useAuthGuard()
   const dragRevealEnabled = currentUser?.features?.squadUnboxingDragRevealEnabled ?? true
+
+  const prevVenueStatusRef = useRef<string | null>(null)
+
+  const handleCopyVenue = useCallback(() => {
+    const address = [group?.venueName, group?.venueAddress].filter(Boolean).join(' ')
+    if (!address) return
+    haptics('light')
+    Taro.setClipboardData({
+      data: address,
+      success: () => {
+        Taro.showToast({ title: '地址已复制', icon: 'success', duration: 1500 })
+      },
+    })
+  }, [group?.venueName, group?.venueAddress])
+
+  useEffect(() => {
+    if (!groupId || !group) return
+    const currentStatus = group.venueAssignmentStatus
+    if (prevVenueStatusRef.current === 'unassigned' && currentStatus === 'assigned' && group.venueName) {
+      Taro.showToast({ title: '场地已确定', icon: 'success', duration: 2000 })
+    }
+    prevVenueStatusRef.current = currentStatus ?? null
+  }, [groupId, group?.venueAssignmentStatus, group?.venueName])
 
   const pageClassName = [rootClassName, isExiting ? 'squad-unboxing--exiting' : ''].filter(Boolean).join(' ')
 
@@ -304,9 +329,23 @@ export default function SquadUnboxingPage() {
                   <JoyJoinIcon emoji='📍' size={24} />
                   <Text>地点</Text>
                 </View>
-                <Text className='squad-unboxing__info-value'>
-                  {group.venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '待公布'}
-                </Text>
+                <View className='squad-unboxing__info-value-wrap'>
+                  <Text className='squad-unboxing__info-value'>
+                    {group.venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '地点待定'}
+                  </Text>
+                  {group.venueAddress ? (
+                    <Text className='squad-unboxing__info-sub'>{group.venueAddress}</Text>
+                  ) : null}
+                  {group.venueName ? (
+                    <View
+                      className='squad-unboxing__info-action'
+                      hoverClass='squad-unboxing__info-action--pressed'
+                      onClick={handleCopyVenue}
+                    >
+                      <Text className='squad-unboxing__info-action-text'>复制地址</Text>
+                    </View>
+                  ) : null}
+                </View>
               </View>
             </Card>
 

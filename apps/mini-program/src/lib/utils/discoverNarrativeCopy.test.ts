@@ -6,12 +6,12 @@ import {
 
 describe('ParticipantPresenceStrip copy helpers', () => {
   describe('getPresenceStripCountLabel', () => {
-    it('renders empty state with denominator', () => {
-      expect(getPresenceStripCountLabel({ state: 'empty', count: 0, max: 6 })).toBe('虚位以待 · 0/6')
+    it('renders empty state with invitation copy', () => {
+      expect(getPresenceStripCountLabel({ state: 'empty', count: 0, max: 6 })).toBe('首座留给你')
     })
 
     it('renders empty state without max', () => {
-      expect(getPresenceStripCountLabel({ state: 'empty', count: 0, max: undefined })).toBe('虚位以待')
+      expect(getPresenceStripCountLabel({ state: 'empty', count: 0, max: undefined })).toBe('首座留给你')
     })
 
     it('renders partial state with denominator', () => {
@@ -41,7 +41,7 @@ describe('ParticipantPresenceStrip copy helpers', () => {
 
   describe('getPresenceStripAriaLabel', () => {
     it('renders empty aggregate label', () => {
-      expect(getPresenceStripAriaLabel({ state: 'empty', count: 0, max: 6, hasUserArchetype: false })).toBe('虚位以待，0/6')
+      expect(getPresenceStripAriaLabel({ state: 'empty', count: 0, max: 6, hasUserArchetype: false })).toBe('虚位以待，首座留给你')
     })
 
     it('renders partial aggregate label with user archetype', () => {

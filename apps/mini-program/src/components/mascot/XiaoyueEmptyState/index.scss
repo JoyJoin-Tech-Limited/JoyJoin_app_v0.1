@@ -55,6 +55,14 @@
     &--celebrate {
       animation: mascot-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
+
+    &--archetype-main {
+      border-radius: 50%;
+      border: 6rpx solid rgba($color-surface, 0.92);
+      box-shadow: 0 8rpx 32rpx rgba($color-text-primary, 0.08);
+      background: $color-surface;
+      animation: mascot-wrap-entrance 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
   }
 
   &__mascot-badge {

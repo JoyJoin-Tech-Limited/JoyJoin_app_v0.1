@@ -660,7 +660,8 @@
   .oracle-card--low-end & {
     &__coin,
     &__empty-coin,
-    &__overflow {
+    &__overflow,
+    &__empty-ring {
       animation: none !important;
       opacity: 1 !important;
       transform: none !important;

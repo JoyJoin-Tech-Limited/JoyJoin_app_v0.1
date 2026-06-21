@@ -340,22 +340,20 @@ export default function MatchingStatusPage() {
           </View>
         ) : null}
 
-        {(effectiveGroupDetails?.group.venueName || currentRegistration.poolCity) ? (
-          <View className='matching-status__info-row'>
-            <View className='matching-status__info-label'>
-              <JoyJoinIcon emoji='📍' size={24} />
-              <Text>地点</Text>
-            </View>
-            <Text className='matching-status__info-value'>
-              {effectiveGroupDetails?.group.venueName ?? currentRegistration.venueName ?? currentRegistration.poolCity}
-              {(effectiveGroupDetails?.group.venueAddress ?? currentRegistration.venueAddress)
-                ? ` · ${effectiveGroupDetails?.group.venueAddress ?? currentRegistration.venueAddress}`
-                : currentRegistration.poolDistrict
-                  ? ` · ${currentRegistration.poolDistrict}`
-                  : ''}
-            </Text>
+        <View className='matching-status__info-row'>
+          <View className='matching-status__info-label'>
+            <JoyJoinIcon emoji='📍' size={24} />
+            <Text>地点</Text>
           </View>
-        ) : null}
+          <Text className='matching-status__info-value'>
+            {effectiveGroupDetails?.group.venueName || currentRegistration.venueName || (effectiveGroupDetails?.group.venueAssignmentStatus === 'unassigned' ? '地点待定' : currentRegistration.poolCity || '地点待定')}
+            {effectiveGroupDetails?.group.venueAddress || currentRegistration.venueAddress
+              ? ` · ${effectiveGroupDetails?.group.venueAddress ?? currentRegistration.venueAddress}`
+              : currentRegistration.poolDistrict && (effectiveGroupDetails?.group.venueName || currentRegistration.venueName)
+                ? ` · ${currentRegistration.poolDistrict}`
+                : ''}
+          </Text>
+        </View>
 
         {currentRegistration.matchScore != null ? (
           <View className='matching-status__info-row'>

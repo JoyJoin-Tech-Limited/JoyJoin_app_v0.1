@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 /**
- * Generate archetype head icons (240×240px) from full-body PNG masters.
+ * Generate archetype head icons (240×240px) from the Lovart 4×3 grid sheet.
  *
  * Extraction strategy:
- *   - Find the bounding box of non-transparent pixels in the source PNG
- *   - Crop to that content region
- *   - Scale with "contain" fit onto a 240×240 transparent canvas so the
- *     full character head stays visible inside a circular badge
+ *   - The source sheet is a 4×3 grid of head/bust portraits.
+ *   - Each cell is cropped, then the non-transparent content bounding box is
+ *     extracted and contain-fitted onto a 240×240 transparent canvas so the
+ *     head stays fully visible inside a circular avatar.
  *   - Output WebP primary to src/assets/icons/archetype/
  *
  * The 240px resolution gives @2x crispness at 120rpx display size and
- * @1.5x acceptable quality at 180rpx (@3x devices). Previous 120×120
- * assets were only @1x, producing visible softness on retina screens.
+ * acceptable quality at 180rpx (@3x devices). WeChat downscales automatically;
+ * no @2x/@3x suffixes are used (avoids the @3x@3x double-suffix bug).
  *
  * Usage (from apps/mini-program):
  *   node scripts/generate-archetype-heads.mjs
@@ -25,24 +25,19 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
-const INPUT_DIR = path.join(ROOT, 'assets-source/personality/archetypes')
+const GRID_PATH = path.join(ROOT, 'assets-source/lovart/archetype/Archetype 4x3 grid.png')
 const OUTPUT_DIR = path.join(ROOT, 'src/assets/icons/archetype')
 
 const HEAD_SIZE = 240
 
-const MANIFEST = [
-  { base: 'archetype-corgi', key: 'corgi' },
-  { base: 'archetype-rooster', key: 'rooster' },
-  { base: 'archetype-hamster_praise', key: 'hamster_praise' },
-  { base: 'archetype-fox', key: 'fox' },
-  { base: 'archetype-dolphin_calm', key: 'dolphin_calm' },
-  { base: 'archetype-spider', key: 'spider' },
-  { base: 'archetype-koala', key: 'koala' },
-  { base: 'archetype-octopus', key: 'octopus' },
-  { base: 'archetype-owl', key: 'owl' },
-  { base: 'archetype-elephant', key: 'elephant' },
-  { base: 'archetype-turtle', key: 'turtle' },
-  { base: 'archetype-cat', key: 'cat' },
+/**
+ * Row-major mapping from the 4×3 grid to canonical archetype keys.
+ * Source of truth for the grid layout: ../../../docs/archive/design/lovart/tier1-grid-prompts-3x4.md
+ */
+const GRID_LAYOUT = [
+  ['fox', 'corgi', 'turtle', 'rooster'],
+  ['cat', 'koala', 'hamster_praise', 'dolphin_calm'],
+  ['octopus', 'elephant', 'owl', 'spider'],
 ]
 
 async function getContentBbox(sharpInstance) {
@@ -87,75 +82,85 @@ async function getContentBbox(sharpInstance) {
 async function main() {
   const { default: sharp } = await import('sharp')
 
+  if (!fs.existsSync(GRID_PATH)) {
+    console.error(`Missing source grid: ${GRID_PATH}`)
+    process.exit(1)
+  }
+
+  fs.mkdirSync(OUTPUT_DIR, { recursive: true })
+
+  const grid = sharp(GRID_PATH)
+  const gridMeta = await grid.metadata()
+  const cellW = gridMeta.width / 4
+  const cellH = gridMeta.height / 3
+
   let totalIn = 0
   let totalOut = 0
 
-  for (const { base, key } of MANIFEST) {
-    const inputPng = path.join(INPUT_DIR, `${base}.png`)
-    const outputWebp = path.join(OUTPUT_DIR, `${base}-head.webp`)
+  for (let row = 0; row < 3; row += 1) {
+    for (let col = 0; col < 4; col += 1) {
+      const key = GRID_LAYOUT[row][col]
+      const outputWebp = path.join(OUTPUT_DIR, `archetype-${key}-head.webp`)
 
-    if (!fs.existsSync(inputPng)) {
-      console.error(`Missing input: ${inputPng}`)
-      process.exitCode = 1
-      continue
+      const left = Math.round(col * cellW)
+      const top = Math.round(row * cellH)
+      const width = Math.round((col + 1) * cellW) - left
+      const height = Math.round((row + 1) * cellH) - top
+
+      const cellBuf = await grid
+        .clone()
+        .extract({ left, top, width, height })
+        .toBuffer()
+
+      const cellSharp = sharp(cellBuf)
+      const bbox = await getContentBbox(cellSharp.clone())
+
+      const croppedBuf = await cellSharp.extract(bbox).toBuffer()
+      const cropped = sharp(croppedBuf)
+      const metadata = await cropped.metadata()
+      const contentW = metadata.width
+      const contentH = metadata.height
+      const scale = Math.min(HEAD_SIZE / contentW, HEAD_SIZE / contentH)
+      const resizeW = Math.round(contentW * scale)
+      const resizeH = Math.round(contentH * scale)
+      const offsetLeft = Math.round((HEAD_SIZE - resizeW) / 2)
+      const offsetTop = Math.round((HEAD_SIZE - resizeH) / 2)
+
+      const resizedBuf = await cropped
+        .resize(resizeW, resizeH, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .toBuffer()
+
+      const webpBuf = await sharp({
+        create: {
+          width: HEAD_SIZE,
+          height: HEAD_SIZE,
+          channels: 4,
+          background: { r: 0, g: 0, b: 0, alpha: 0 },
+        },
+      })
+        .composite([{ input: resizedBuf, left: offsetLeft, top: offsetTop }])
+        .webp({ quality: 85, effort: 6, alphaQuality: 100 })
+        .toBuffer()
+
+      fs.writeFileSync(outputWebp, webpBuf)
+
+      const outStat = fs.statSync(outputWebp)
+      totalOut += outStat.size
+
+      console.log(
+        `${key}: cell ${width}×${height} → content ${contentW}×${contentH} → ` +
+          `${resizeW}×${resizeH} on ${HEAD_SIZE}×${HEAD_SIZE} canvas (${(outStat.size / 1024).toFixed(1)}KB)`,
+      )
     }
-
-    const inputStat = fs.statSync(inputPng)
-    totalIn += inputStat.size
-
-    const inputSharp = sharp(inputPng)
-    const bbox = await getContentBbox(inputSharp.clone())
-
-    // Crop to content bbox, then contain-fit onto a 240x240 transparent canvas
-    const croppedBuf = await inputSharp
-      .extract(bbox)
-      .toBuffer()
-
-    const cropped = sharp(croppedBuf)
-    const metadata = await cropped.metadata()
-    const contentW = metadata.width
-    const contentH = metadata.height
-    const scale = Math.min(HEAD_SIZE / contentW, HEAD_SIZE / contentH)
-    const resizeW = Math.round(contentW * scale)
-    const resizeH = Math.round(contentH * scale)
-    const left = Math.round((HEAD_SIZE - resizeW) / 2)
-    const top = Math.round((HEAD_SIZE - resizeH) / 2)
-
-    const resizedBuf = await cropped
-      .resize(resizeW, resizeH, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .toBuffer()
-
-    const webpBuf = await sharp({
-      create: {
-        width: HEAD_SIZE,
-        height: HEAD_SIZE,
-        channels: 4,
-        background: { r: 0, g: 0, b: 0, alpha: 0 },
-      },
-    })
-      .composite([{ input: resizedBuf, left, top }])
-      .webp({ quality: 85, effort: 6, alphaQuality: 100 })
-      .toBuffer()
-
-    fs.writeFileSync(outputWebp, webpBuf)
-
-    const outStat = fs.statSync(outputWebp)
-    totalOut += outStat.size
-
-    console.log(
-      `${key}: ${metadata.width}×${metadata.height} content → ${resizeW}×${resizeH} ` +
-        `on ${HEAD_SIZE}×${HEAD_SIZE} canvas (${(outStat.size / 1024).toFixed(1)}KB)`,
-    )
   }
+
+  const gridStat = fs.statSync(GRID_PATH)
+  totalIn += gridStat.size
 
   console.log(
-    `\nTotal: ${MANIFEST.length} heads — ` +
-      `${(totalIn / 1024).toFixed(0)}KB raw → ${(totalOut / 1024).toFixed(0)}KB webp`,
+    `\nTotal: ${GRID_LAYOUT.flat().length} heads — ` +
+      `${(totalIn / 1024).toFixed(0)}KB grid → ${(totalOut / 1024).toFixed(0)}KB webp`,
   )
-
-  if (process.exitCode === 1) {
-    process.exit(1)
-  }
 }
 
 main().catch((err) => {

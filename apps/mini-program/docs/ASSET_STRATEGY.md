@@ -98,9 +98,9 @@ Assets copied by `vite-plugin-static-copy` in `config/index.ts`.
 ### Landing Page (critical first impression)
 | Asset | Path | Size | Used in |
 |-------|------|------|---------|
-| Phase icons (6) | `assets/landing-phase-icons/` | ~139KB | Landing page `PhaseIconCarousel` — 3D turntable with auto-rotate, swipe gesture, organic random intervals, direction randomization, and cycle shuffle. The carousel is the mandatory default experience; no reduced-motion or low-end static-grid fallback. Per-icon error placeholders remain. **Performance:** `box-shadow` (not `drop-shadow`) for GPU-composited depth; `backface-visibility: hidden` + `translateZ(0)` forced compositing; `will-change` gated to active playback only. |
-| Xiaoyue welcome | `assets/xiaoyue-expressions/xiaoyue-home-welcome.png` | ~63KB | Landing + center-hub header |
-| Xiaoyue loading | `assets/xiaoyue-expressions/xiaoyue-loading-system.png` | ~47KB | Loading screen fallback |
+| Phase icons (6) | `assets/landing-phase-icons/` | ~139KB | Landing page `PhaseIconCarousel` — 3D turntable with auto-rotate, swipe gesture, organic random intervals, direction randomization, and cycle shuffle. The carousel is the mandatory default experience; reduced-motion media query disables transitions/animations; low-end gating not implemented. Per-icon error placeholders remain. **Performance:** `box-shadow` (not `drop-shadow`) for GPU-composited depth; `backface-visibility: hidden` + `translateZ(0)` forced compositing; `will-change` gated to active playback only. |
+| Xiaoyue welcome | `assets/xiaoyue-expressions/xiaoyue-home-welcome.webp` | ~63KB | Landing + center-hub header |
+| Xiaoyue loading | `assets/xiaoyue-expressions/xiaoyue-loading-system.webp` | ~47KB | Loading screen fallback |
 
 ### Mascot Sprite Fallback
 | Asset | Path | Size | Used in |
@@ -279,25 +279,26 @@ Fallback chain: if `@3x` fails → `@2x` → `@1x` → native emoji.
 | `convert source.png -resize 360x360 -colors 256` | Good quality, smaller size | 63KB | ✅ Good |
 | `convert source.png -resize 360x360 -colors 128` | Slightly softer, acceptable for loading | 47KB | ⚠️ Acceptable |
 
-### Correct workflow for converting source → bundled PNG
+### Correct workflow for converting source → bundled WebP
 
 ```bash
 # 1. Identify the source (must be from assets-source/)
 SOURCE="apps/mini-program/assets-source/personality/xiaoyue/xiaoyue-home-welcome.png"
 
-# 2. Convert with ImageMagick (resize first, then quantize)
-convert "$SOURCE" -resize 360x360 -colors 256 -quality 95 \
-  apps/mini-program/src/assets/personality/xiaoyue/xiaoyue-home-welcome.png
+# 2. Convert with ImageMagick to WebP (resize first, optimize quality/size)
+convert "$SOURCE" -resize 360x360 -quality 80 -define webp:method=6 \
+  apps/mini-program/src/assets/personality/xiaoyue/xiaoyue-home-welcome.webp
 
-# 3. Optional: losslessly compress with oxipng
-oxipng -o 4 --strip all \
-  apps/mini-program/src/assets/personality/xiaoyue/xiaoyue-home-welcome.png
+# 3. VISUALLY VERIFY — open both files and compare
 
-# 4. VISUALLY VERIFY — open both files and compare
+# 4. Add copy entry in config/index.ts if new asset
 
 # 5. Check package size
 npm run build:weapp --workspace=mini-program
 node apps/mini-program/scripts/check-package-size.mjs
+
+# 6. If CDN asset, add to cdn-asset-manifest.json and run:
+npm run upload:cdn-assets
 ```
 
 ## Common Mistakes

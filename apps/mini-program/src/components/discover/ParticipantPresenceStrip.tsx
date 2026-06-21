@@ -97,7 +97,7 @@ export default React.memo(function ParticipantPresenceStrip({
   }, [pool.sampleArchetypes])
 
   const totalPresence = pool.currentParticipants ?? pool.registrationCount ?? sampleArchetypes.length
-  const visibleArchetypes = sampleArchetypes.slice(0, MAX_VISIBLE_COINS)
+  const visibleArchetypes = state === 'empty' ? [] : sampleArchetypes.slice(0, MAX_VISIBLE_COINS)
   const overflowCount = Math.max(0, totalPresence - visibleArchetypes.length)
   const hasCoins = visibleArchetypes.length > 0
   const isFull = state === 'full'
@@ -106,7 +106,13 @@ export default React.memo(function ParticipantPresenceStrip({
   // fall back to the user's own archetype (if known) so the strip never looks
   // empty while the count claims otherwise.
   const fallbackArchetype = userArchetype && !hasCoins && count > 0 ? userArchetype : null
-  const coinsToRender = hasCoins ? visibleArchetypes : fallbackArchetype ? [fallbackArchetype] : []
+  const coinsToRender = state === 'empty'
+    ? []
+    : hasCoins
+      ? visibleArchetypes
+      : fallbackArchetype
+        ? [fallbackArchetype]
+        : []
 
   const countLabel = getPresenceStripCountLabel({ state, count, max })
   const ariaLabel = getPresenceStripAriaLabel({
@@ -131,6 +137,7 @@ export default React.memo(function ParticipantPresenceStrip({
   }, [pool.id, state, count, max, index])
 
   const animateEntrance = shouldAnimateEntrance(index, isDegradation, reduceMotion)
+  const animatePulse = !isDegradation && !reduceMotion
 
   return (
     <View
@@ -138,53 +145,83 @@ export default React.memo(function ParticipantPresenceStrip({
       role='status'
       aria-label={ariaLabel}
     >
-      <View className='participant-presence-strip__coins'>
-        {coinsToRender.length === 0 ? (
+      <View className='participant-presence-strip__coins' aria-hidden='true'>
+        {state === 'empty' ? (
           <View
-            className={`participant-presence-strip__empty-coin${animateEntrance ? ' participant-presence-strip__empty-coin--animated' : ''}`}
-          />
-        ) : (
-          coinsToRender.map((archetype, i) => {
-            const isUser = archetype === userArchetype
-            const token = getArchetypeTokens(archetype)
-            const borderColor = isUser ? accentColor : token.primary
-
-            return (
-              <View
-                key={`${archetype}-${i}`}
-                className={`participant-presence-strip__coin${isUser ? ' participant-presence-strip__coin--user' : ''}${animateEntrance ? ' participant-presence-strip__coin--animated' : ''}`}
-                style={{
-                  borderColor,
-                  animationDelay: animateEntrance ? `${i * ANIMATION_STAGGER_MS}ms` : undefined,
-                }}
-              >
-                <ArchetypeHead
-                  archetype={archetype}
-                  size={COIN_SIZE}
-                  fallback='initial'
-                  fallbackText={archetype.charAt(0).toUpperCase()}
-                />
-              </View>
-            )
-          })
-        )}
-
-        {overflowCount > 0 && !isFull && (
-          <View
-            className={`participant-presence-strip__overflow${animateEntrance ? ' participant-presence-strip__overflow--animated' : ''}`}
-            style={{ animationDelay: animateEntrance ? `${visibleArchetypes.length * ANIMATION_STAGGER_MS}ms` : undefined }}
+            className={`participant-presence-strip__empty-ring${animatePulse ? ' participant-presence-strip__empty-ring--animated' : ''}`}
+            style={{ borderColor: accentColor }}
           >
-            <Text className='participant-presence-strip__overflow-text'>+{overflowCount}</Text>
+            <View
+              className='participant-presence-strip__empty-ring-glyph'
+              style={{ backgroundColor: accentColor }}
+            />
           </View>
+        ) : (
+          <>
+            {coinsToRender.length === 0 ? (
+              <View
+                className={`participant-presence-strip__empty-coin${animateEntrance ? ' participant-presence-strip__empty-coin--animated' : ''}`}
+              />
+            ) : (
+              coinsToRender.map((archetype, i) => {
+                const isUser = archetype === userArchetype
+                const token = getArchetypeTokens(archetype)
+                const borderColor = isUser ? accentColor : token.primary
+
+                return (
+                  <View
+                    key={`${pool.id}-${archetype}-${i}`}
+                    className={`participant-presence-strip__coin${isUser ? ' participant-presence-strip__coin--user' : ''}${animateEntrance ? ' participant-presence-strip__coin--animated' : ''}`}
+                    style={{
+                      borderColor,
+                      animationDelay: animateEntrance ? `${i * ANIMATION_STAGGER_MS}ms` : undefined,
+                    }}
+                  >
+                    <ArchetypeHead
+                      archetype={archetype}
+                      size={COIN_SIZE}
+                      fallback='initial'
+                      fallbackText={archetype.charAt(0).toUpperCase()}
+                    />
+                  </View>
+                )
+              })
+            )}
+
+            {overflowCount > 0 && !isFull && (
+              <View
+                className={`participant-presence-strip__overflow${animateEntrance ? ' participant-presence-strip__overflow--animated' : ''}`}
+                style={{ animationDelay: animateEntrance ? `${visibleArchetypes.length * ANIMATION_STAGGER_MS}ms` : undefined }}
+              >
+                <Text className='participant-presence-strip__overflow-text'>+{overflowCount}</Text>
+              </View>
+            )}
+          </>
         )}
       </View>
 
-      <Text
-        className={`participant-presence-strip__count${state === 'almost_full' ? ' participant-presence-strip__count--urgent' : ''}`}
-        style={state === 'almost_full' ? { color: accentColor } : undefined}
-      >
-        {countLabel}
-      </Text>
+      {state === 'empty' ? (
+        <View
+          className='participant-presence-strip__count-pill participant-presence-strip__count-pill--empty'
+          style={{
+            color: accentColor,
+            backgroundColor: `${accentColor}1A`,
+          }}
+          aria-hidden='true'
+        >
+          <Text className='participant-presence-strip__count participant-presence-strip__count--empty'>
+            {countLabel}
+          </Text>
+        </View>
+      ) : (
+        <Text
+          className={`participant-presence-strip__count${state === 'almost_full' ? ' participant-presence-strip__count--urgent' : ''}`}
+          style={state === 'almost_full' ? { color: accentColor } : undefined}
+          aria-hidden='true'
+        >
+          {countLabel}
+        </Text>
+      )}
 
       {isFull && (
         <View className='participant-presence-strip__full-badge'>

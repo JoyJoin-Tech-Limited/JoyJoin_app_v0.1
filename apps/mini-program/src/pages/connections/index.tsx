@@ -200,13 +200,15 @@ export default function ConnectionsPage() {
   useEffect(() => {
     if (emptyStateViewTrackedRef.current || isLoading || isError || connections.length > 0) return
     emptyStateViewTrackedRef.current = true
+    const displayMode = shell?.user?.primaryArchetype ?? user?.archetype ? 'archetype_head_main' : 'mascot'
     profileAnalytics.track('connection_empty_state_impression', {
       mode: connectionsContext?.mode ?? 'fallback',
       archetype: user?.archetype ?? null,
       has_archetype_badge: Boolean(user?.archetype),
       has_celebration_badge: connectionsContext?.mode === 'feedback-complete',
+      display_mode: displayMode,
     })
-  }, [isLoading, isError, connections.length, connectionsContext, user?.archetype])
+  }, [isLoading, isError, connections.length, connectionsContext, user?.archetype, shell?.user?.primaryArchetype])
 
   const userCity = user?.currentCity
   const userArchetype = user?.archetype
@@ -224,6 +226,7 @@ export default function ConnectionsPage() {
     | {
         emotion: XiaoyueEmptyStateProps['emotion']
         archetypeId?: string | null
+        archetypeAsMainVisual?: boolean
         showCelebrationBadge?: boolean
         title: string
         subtitle: string
@@ -233,6 +236,7 @@ export default function ConnectionsPage() {
     | {
         emotion: XiaoyueEmptyStateProps['emotion']
         archetypeId?: string | null
+        archetypeAsMainVisual?: boolean
         showCelebrationBadge?: boolean
         title: string
         subtitle: string
@@ -240,18 +244,22 @@ export default function ConnectionsPage() {
         onAction?: undefined
       }
 
+  const resolvedArchetype = shell?.user?.primaryArchetype ?? userArchetype ?? null
+
   const emptyStateConfig = useMemo<EmptyStateConfig>(() => {
-    const resolvedArchetype = shell?.user?.primaryArchetype ?? user?.archetype ?? null
     const archetypeName = resolvedArchetype ? ARCHETYPE_BY_ID[resolvedArchetype]?.nameCn ?? null : null
+    const hasArchetype = Boolean(resolvedArchetype)
+
+    const buildSubtitle = (template: string) =>
+      archetypeName ? `作为${archetypeName}的你，${template}` : template
 
     if (!connectionsContext) {
       return {
         emotion: 'curious',
         archetypeId: resolvedArchetype,
+        archetypeAsMainVisual: hasArchetype,
         title: '连接还在路上',
-        subtitle: archetypeName
-          ? `这里会收藏你在活动里互相欣赏的伙伴。先参加一局活动，遇到喜欢的人就互选，连接就会出现在这里。`
-          : '这里会收藏你在活动里互相欣赏的伙伴。先参加一局活动，遇到喜欢的人就互选，连接就会出现在这里。',
+        subtitle: buildSubtitle('先参加一局活动，遇到喜欢的人就互选，连接就会出现在这里。'),
         actionLabel: '去看看活动',
         onAction: () => runEmptyStateAction(() => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover }), MINI_PROGRAM_ROUTES.discover),
       }
@@ -262,8 +270,9 @@ export default function ConnectionsPage() {
         return {
           emotion: 'curious',
           archetypeId: resolvedArchetype,
+          archetypeAsMainVisual: hasArchetype,
           title: '还没有连接呢',
-          subtitle: '连接是在活动里互相选择的人。参加一局活动，结束后提交反馈，和你互相选择的人会出现在这里。',
+          subtitle: buildSubtitle('连接是在活动里互相选择的人。参加一局活动，结束后提交反馈，和你互相选择的人会出现在这里。'),
           actionLabel: '去发现页看看',
           onAction: () => runEmptyStateAction(() => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover }), MINI_PROGRAM_ROUTES.discover),
         }
@@ -272,8 +281,9 @@ export default function ConnectionsPage() {
         return {
           emotion: 'waiting',
           archetypeId: resolvedArchetype,
+          archetypeAsMainVisual: hasArchetype,
           title: '活动还没开始呢',
-          subtitle: `参加「${eventTitle}」后，回来提交反馈。活动中互相选择的伙伴，会成为你的连接并交换联系方式。`,
+          subtitle: buildSubtitle(`参加「${eventTitle}」后，回来提交反馈。活动中互相选择的伙伴，会成为你的连接并交换联系方式。`),
           actionLabel: '查看我的活动',
           onAction: () => runEmptyStateAction(() => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }), MINI_PROGRAM_ROUTES.events),
         }
@@ -284,8 +294,9 @@ export default function ConnectionsPage() {
         return {
           emotion: 'coaching',
           archetypeId: resolvedArchetype,
+          archetypeAsMainVisual: hasArchetype,
           title: '还差一步解锁连接',
-          subtitle: `提交「${eventTitle}」的反馈，告诉悦仔你想和谁继续认识。互相选择的人，会立刻出现在这里。`,
+          subtitle: buildSubtitle(`提交「${eventTitle}」的反馈，告诉悦仔你想和谁继续认识。互相选择的人，会立刻出现在这里。`),
           actionLabel: '去提交反馈',
           onAction: () => runEmptyStateAction(() => Taro.navigateTo({ url: feedbackUrl }), feedbackUrl),
         }
@@ -294,9 +305,10 @@ export default function ConnectionsPage() {
         return {
           emotion: 'celebration',
           archetypeId: resolvedArchetype,
+          archetypeAsMainVisual: hasArchetype,
           showCelebrationBadge: true,
           title: '反馈已收到',
-          subtitle: '悦仔正在把互相选择的人加到你的连接里。过一会儿再来，就能看到新的朋友了。',
+          subtitle: buildSubtitle('悦仔正在把互相选择的人加到你的连接里。过一会儿再来，就能看到新的朋友了。'),
           actionLabel: '先去发现页逛逛',
           onAction: () => runEmptyStateAction(() => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover }), MINI_PROGRAM_ROUTES.discover),
         }
@@ -304,15 +316,14 @@ export default function ConnectionsPage() {
         return {
           emotion: 'curious',
           archetypeId: resolvedArchetype,
+          archetypeAsMainVisual: hasArchetype,
           title: '连接还在路上',
-          subtitle: archetypeName
-            ? `这里会收藏你在活动里互相欣赏的伙伴。先参加一局活动，遇到喜欢的人就互选，连接就会出现在这里。`
-            : '这里会收藏你在活动里互相欣赏的伙伴。先参加一局活动，遇到喜欢的人就互选，连接就会出现在这里。',
+          subtitle: buildSubtitle('先参加一局活动，遇到喜欢的人就互选，连接就会出现在这里。'),
           actionLabel: '去看看活动',
           onAction: () => runEmptyStateAction(() => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover }), MINI_PROGRAM_ROUTES.discover),
         }
     }
-  }, [connectionsContext, shell?.user?.primaryArchetype, user?.archetype, runEmptyStateAction])
+  }, [connectionsContext, resolvedArchetype, runEmptyStateAction])
 
   const emptyWrapperStyle = emptyMinHeightRpx ? { minHeight: `${emptyMinHeightRpx}rpx` } : undefined
 
@@ -440,6 +451,7 @@ export default function ConnectionsPage() {
             <XiaoyueEmptyState
               emotion={emptyStateConfig.emotion}
               archetypeId={emptyStateConfig.archetypeId}
+              archetypeAsMainVisual={emptyStateConfig.archetypeAsMainVisual}
               title={emptyStateConfig.title}
               subtitle={emptyStateConfig.subtitle}
               actionLabel={emptyStateConfig.actionLabel}

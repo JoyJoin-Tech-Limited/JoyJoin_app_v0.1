@@ -140,6 +140,7 @@ function AuthenticatedDiscover({
   const displayName = (user as any)?.displayName || (user as any)?.nickname || '悦聚用户'
   const userArchetype = (user as any)?.primaryArchetype || (user as any)?.archetype || null
   const xiaoyueAsset = useMemo(() => getXiaoyueExpressionAsset('homeWelcome'), [])
+  const localFallback = useMemo(() => localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp'), [])
   const avatarUrl = (user as any)?.profileImageUrl || (user as any)?.wechatAvatarUrl || xiaoyueAsset
 
   const [avatarError, setAvatarError] = useState(false)
@@ -509,7 +510,7 @@ function AuthenticatedDiscover({
         <View className='discover-auth__hero-avatar'>
           <Image
             className='discover-auth__hero-avatar-img'
-            src={avatarError ? xiaoyueAsset : avatarUrl}
+            src={avatarError ? localFallback : avatarUrl}
             mode='aspectFill'
             aria-label={(avatarError || (!(user as any)?.profileImageUrl && !(user as any)?.wechatAvatarUrl)) ? '悦仔' : '用户头像'}
             onError={() => setAvatarError(true)}

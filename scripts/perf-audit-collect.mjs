@@ -121,9 +121,10 @@ function detectListWithoutVirtualList(content, filePath) {
 
 function detectMissingLazyImport(content, filePath) {
   const issues = [];
-  // Only flag page-level files in main package, not components or subpackage pages
+  // Only flag page-level files in main package, not components or subpackage pages.
+  // Keep in sync with MINI_PROGRAM_SUBPACKAGES in apps/mini-program/src/lib/onboarding/onboardingRoutes.ts
   const isPageFile = /\/pages\//.test(filePath) && /index\.(tsx|ts)$/.test(filePath);
-  const isSubpackagePage = /pages\/(onboarding|icebreaker-session|matching-status)\//.test(filePath);
+  const isSubpackagePage = /pages\/(onboarding|icebreaker-session|matching-status|pool-registration|profile-linked)\//.test(filePath);
   const isTabBarPage = /pages\/(index|discover|events|connections|center-hub|profile)\/index\.(tsx|ts)$/.test(filePath);
 
   if (isPageFile && !isSubpackagePage && !isTabBarPage) {
