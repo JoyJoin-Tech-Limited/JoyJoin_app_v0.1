@@ -102,7 +102,7 @@ export async function ensureVirtualUsers(): Promise<void> {
   }
 }
 
-export async function ensureSingleTestPool(): Promise<string> {
+export async function ensureSingleTestPool(createdBy: string): Promise<string> {
   const [existing] = await db
     .select({ id: eventPools.id })
     .from(eventPools)
@@ -126,7 +126,7 @@ export async function ensureSingleTestPool(): Promise<string> {
       minGroupSize: 6,
       maxGroupSize: 6,
       targetGroups: 1,
-      createdBy: "system",
+      createdBy,
     })
     .returning({ id: eventPools.id });
 
@@ -145,9 +145,9 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
   groupId: string;
   botUsers: { userId: string; displayName: string; archetype: string }[];
 }> {
-  // Phase 1: ensure virtual users
+  // Phase 1: ensure virtual users + pool
   await ensureVirtualUsers();
-  const poolId = await ensureSingleTestPool();
+  const poolId = await ensureSingleTestPool(testerUserId);
 
   // Pick 5 bots with diverse archetypes
   const virtualUsers = (await db

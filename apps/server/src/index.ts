@@ -16,7 +16,7 @@ import { validateConfig } from "./lib/configValidation";
 import { globalErrorHandler } from "./lib/errorResponse";
 import { logger } from "./lib/logger";
 import { validateDbSchema } from "./db";
-import { ensureVirtualUsers, ensureSingleTestPool } from "./services/singleTestService";
+import { ensureVirtualUsers } from "./services/singleTestService";
 import { isSingleTestMode } from "./lib/isSingleTestMode";
 import { requestIdMiddleware } from "./middleware/requestId";
 import { metricsMiddleware } from "./middleware/metrics";
@@ -94,12 +94,11 @@ app.use((req, res, next) => {
     // Register all API routes and get HTTP server
     const server = await registerRoutes(app);
 
-    // Auto-seed virtual users + single-test pool in single-test mode
+    // Auto-seed virtual users in single-test mode (pool created on first session start)
     if (isSingleTestMode()) {
       try {
         await ensureVirtualUsers();
-        await ensureSingleTestPool();
-        logger.info('[Startup] Virtual users + single-test pool seeded');
+        logger.info('[Startup] Virtual users seeded for single-test mode');
       } catch (seedErr) {
         logger.warn('[Startup] Failed to auto-seed test data (non-fatal)', {
           error: seedErr instanceof Error ? seedErr.message : String(seedErr),
