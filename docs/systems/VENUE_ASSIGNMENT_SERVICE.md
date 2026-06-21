@@ -135,9 +135,11 @@ When `venueAssignmentStatus === 'unassigned'`, the mini-program shows a "地点�
 
 ## Feature Flag
 
-| Env Var | Default | Description |
-|---------|---------|-------------|
-| `VENUE_ASSIGNMENT_ENABLED` | `true` | When `false`, venue assignment is skipped after matching |
+`venueAssignmentEnabled` is a **DB-backed feature flag** (2026-06-17) registered in `FLAG_ENV_MAP` at `apps/server/src/lib/featureFlags.ts`. The DB row is the source of truth; env var `VENUE_ASSIGNMENT_ENABLED` is the fallback.
+
+| Identifier | Admin toggle key | Default | Description |
+|-----------|-----------------|---------|-------------|
+| `venueAssignmentEnabled` | `venueAssignmentEnabled` | `true` | When `false`, venue assignment is skipped after matching. Server-side only — not exposed in auth response `features`. |
 
 ## Launch Gate Checklist
 

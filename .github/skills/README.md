@@ -92,7 +92,7 @@ Deep expertise for the two core product engines.
 | [`lie-detective-icebreaker`](./lie-detective-icebreaker/SKILL.md) | `lie_detective` secrecy (`isLie`), votes/reveals, routes, `social-lie-detective-v1` |
 | [`personality-dice-icebreaker`](./personality-dice-icebreaker/SKILL.md) | `personality_dice` roster-sized challenges, routes, `social-personality-dice-v1`, tone/safety |
 | [`icebreaker-auction-phase`](./icebreaker-auction-phase/SKILL.md) | `auction` virtual-coin flow, optional `generateAuctionLots` (`social-auction-lots-v1`), bid/close-lot routes, advance guard |
-| [`venue-location-services`](./venue-location-services/SKILL.md) | Venue catalog, assignment, matching, time slots, deals, AMap geocoding, and data quality |
+| [`venue-location-services`](./venue-location-services/SKILL.md) | Venue catalog, assignment, matching, time slots, deals, Tencent Maps geocoding, and data quality |
 | [`wechat-ecosystem-integration`](./wechat-ecosystem-integration/SKILL.md) | WeChat auth (Mini Program / OA OAuth), WeChat Pay v3, Taro patterns, JSAPI/H5 payments, webhooks, and cross-platform WeChat coordination |
 | [`semantic-matching-embeddings`](./semantic-matching-embeddings/SKILL.md) | Semantic similarity 7th scoring dimension, feature-hash vectors, DeepSeek embedding client, async semantic profile pipeline, and dialogue insight storage |
 | [`xiaoyue-writing-craft`](./xiaoyue-writing-craft/SKILL.md) | Canonical Chinese writing craft system — 8 verifiable axioms (rhythm, imagery, concreteness, anti-AI aesthetics), deterministic post-generation scoring (0-100), retry loop integration for all Xiaoyue LLM output |

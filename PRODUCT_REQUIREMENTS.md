@@ -2050,7 +2050,7 @@ venues
 - Data quality summary (missing fields, duplicates)
 
 **Create / Edit:**
-- Basic info: name (internal identifier), brandName (user-facing brand), type, address, city, district, coordinates (AMap picker)
+- Basic info: name (internal identifier), brandName (user-facing brand), type, address, city, district, coordinates (Tencent Maps picker)
 - Matching tags: cuisines, atmosphere tags, decor style, taste intensity
 - Budget categories: multi-select price ranges per venue type
 - Capacity: `seatingCapacity` (people per event) + `maxConcurrentEvents` (simultaneous events)

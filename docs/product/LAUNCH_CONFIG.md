@@ -31,8 +31,7 @@ middleware) may still fail to initialize if required variables like
 | `DEEPSEEK_API_KEY` | DeepSeek AI API key | _unset_ — AI features degrade gracefully |
 | `MINIMAX_API_KEY` | MiniMax TTS API key | _unset_ — TTS cache warmup skipped |
 | `MINIMAX_GROUP_ID` | MiniMax group identifier | _unset_ |
-| `AMAP_API_KEY` | Amap reverse-geocoding API key | _unset_ — local bounding-box fallback used |
-| `AMAP_SECURITY_KEY` | Amap security key | _unset_ |
+| `TENCENT_MAP_KEY` | Tencent Maps SDK key for admin venue geocoding | _unset_ — admin venue picker shows degraded fallback |
 | `COOKIE_DOMAIN` | Cookie domain for cross-subdomain sessions | _unset_ (auto-detected) |
 | `PORT` | Server listen port | `5001` |
 

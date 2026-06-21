@@ -296,7 +296,7 @@ export default function PoolGroupDetailPage() {
           <View className='pool-group-detail__tbd-header'>
             <Image
               className='pool-group-detail__tbd-mascot'
-              src={getXiaoyueExpressionAsset('thinking')}
+              src={getXiaoyueExpressionAsset('neutralInformation')}
               mode='aspectFit'
               lazyLoad
             />

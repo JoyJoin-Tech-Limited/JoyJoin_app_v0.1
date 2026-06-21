@@ -44,7 +44,7 @@ See [references/protocol.md](references/protocol.md) for full delegate role desc
 ## Quick examples
 
 - **Route a cross-domain feature:** "Deliberate real-time icebreaker state sync" → Alpha proposes WS + polling hybrid, Beta insists on animated transitions, Gamma warns about Taro background disconnect. Consensus: polling primary with WS fallback for host actions.
-- **Design a scoring algorithm:** "Deliberate venue assignment scoring" → Alpha proposes weighted 4-dimension score, Beta requests admin radar chart, Gamma requires AMap timeout fallback. Consensus: 4-dimension score + Recharts radar + 3-second AMap timeout with fallback.
+- **Design a scoring algorithm:** "Deliberate venue assignment scoring" → Alpha proposes weighted 4-dimension score, Beta requests admin radar chart, Gamma requires Tencent Maps timeout fallback. Consensus: 4-dimension score + Recharts radar + 3-second Tencent Maps timeout with fallback.
 
 ## Troubleshooting
 

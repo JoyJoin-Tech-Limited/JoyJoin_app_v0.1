@@ -1215,8 +1215,7 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | Variable | Purpose |
 |----------|---------|
 | `ADMIN_CREATE_SECRET_KEY` | Admin CLI bootstrap secret |
-| `AMAP_API_KEY` | Gaode Maps API |
-| `AMAP_SECURITY_KEY` | Gaode Maps security |
+| `TENCENT_MAP_KEY` | Tencent Maps SDK key for admin venue geocoding |
 | `DEEPSEEK_API_KEY` | AI service (via integration); chat/completion only — DeepSeek has no embedding API |
 | `APP_URL` | Base public app URL; used as the fallback source for the WeChat Pay notify URL when `WECHAT_PAY_NOTIFY_URL` is unset |
 

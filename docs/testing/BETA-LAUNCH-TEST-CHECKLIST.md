@@ -44,7 +44,7 @@
 ## Area 2: Location Selection
 
 **Location:** Discover page filter drawer, event registration
-**Current limitation:** Shenzhen-only (南山区 + 福田区), no AMap/Gaode geocoding — purely hardcoded client-side district data
+**Current limitation:** Shenzhen-only (南山区 + 福田区), no in-app map UI — purely hardcoded client-side district data. Admin venue picker uses Tencent Maps (<code>TENCENT_MAP_KEY</code> required).
 
 ### Critical Path
 
@@ -219,7 +219,7 @@
 | Area | Testable | Known Limitation | Action Needed Before Beta |
 |------|----------|------------------|--------------------------|
 | 1. Share Poster | ✅ Fully | None blocker-level | Ensure `PERSONALITY_SHARE_ENABLED=true` in production .env |
-| 2. Location Selection | ⚠️ Partial | Shenzhen-only; no AMap/Gaode integration; hardcoded district data | **Document as v0.1 limitation** — only Shenzhen pools will show correct districts |
+| 2. Location Selection | ⚠️ Partial | Shenzhen-only; no in-app map integration; hardcoded district data | **Document as v0.1 limitation** — only Shenzhen pools will show correct districts. Admin venue picker uses Tencent Maps (TENCENT_MAP_KEY). |
 | 3. Event Registration | ✅ Fully | No admin DELETE endpoint (use status transitions); `projectedGroups` TODO | Document for admin: use status transitions, not delete |
 | 4. WeChat Payment | ✅ Fully | Gated by `PAYMENTS_ENABLED` | Ensure `PAYMENTS_ENABLED=true` in production .env + WeChat Pay merchant credentials configured |
 | 5. Matching Flow | ✅ Fully | Admin-triggered (no auto-schedule); hardcoded path comment in source | Auto-schedule is post-beta feature; path comment cosmetic only |
@@ -236,5 +236,5 @@
 - [ ] At least 1 event pool created with `status=open` + registration window covering today
 - [ ] At least 2 test users with completed onboarding + distinct archetypes + different pools registered
 - [ ] Admin account with `super_admin` role
-- [ ] `AMap/高德 API key` configured if location services needed (not currently used)
+- [ ] `TENCENT_MAP_KEY` configured for admin venue geocoding (optional — venue picker shows degraded fallback without it)
 - [ ] WebSocket server reachable for matching broadcast test (Area 5.7)

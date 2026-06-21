@@ -73,7 +73,7 @@ Each section is one feature area. Within each:
 
 ### Known Gaps
 - **Shenzhen-only district data** — `packages/shared/src/districts.ts` covers only 南山 (6 districts) + 福田 (3 districts). City unlock system is how other cities get added.
-- **No mini-program AMap SDK** — map picker is not available in-app; relies on server-side geocoding REST API
+- **No mini-program map SDK** — in-app map picker not available; relies on server-side geocoding REST API (Tencent Maps)
 - **City normalization differs** — onboarding uses 7-option picker; edit-profile uses free-text with no canonical normalization
 
 ---
