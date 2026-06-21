@@ -50,6 +50,11 @@
   padding-top: 8rpx;
 }
 
+/* Hidden asset preloads — keep out of visual tree but in WeChat package. */
+.landing-page__asset-preload {
+  display: none;
+}
+
 /* ── Brand Watermark ───────────────────────────────────────────────── */
 .brand-mark {
   margin-top: 0;
@@ -78,6 +83,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.hero-mascot-fallback-emoji {
+  font-size: 96rpx;
+  line-height: 1;
 }
 
 .hero-text {

@@ -13,7 +13,7 @@ import { useWeChatLogin } from "../../hooks/auth/useWeChatLogin"
 import { useResetOnShow } from "../../hooks/useResetOnShow"
 import { readAnonymousAssessmentSession, isAnonymousAssessmentSessionCompleted } from "../../lib/auth/anonymousOnboarding"
 import { onboardingAnalytics } from "../../lib/onboarding/onboardingAnalytics"
-import { logWarn } from "../../lib/utils/logger"
+import { logInfo, logWarn } from "../../lib/utils/logger"
 import TestLoginSheet from "../../components/dev/TestLoginSheet"
 import "./index.scss"
 
@@ -64,6 +64,44 @@ export default function MiniProgramLandingPage({
     } catch {
       // Some Taro versions may throw — ignore.
     }
+
+    // Diagnostic probe: verify critical local assets are reachable & decodable.
+    // Logs to vConsole (dev) and WeChat realtime logs (production).
+    const probeAssets = [
+      { name: 'mascot', src: MASCOT_SRC },
+      { name: 'phase-topic-card', src: localAsset('/assets/landing-phase-icons/phase-topic-card.webp') },
+      { name: 'phase-lie-detective', src: localAsset('/assets/landing-phase-icons/phase-lie-detective.webp') },
+      { name: 'phase-personality-dice', src: localAsset('/assets/landing-phase-icons/phase-personality-dice.webp') },
+      { name: 'phase-auction', src: localAsset('/assets/landing-phase-icons/phase-auction.webp') },
+      { name: 'phase-mini-script', src: localAsset('/assets/landing-phase-icons/phase-mini-script.webp') },
+      { name: 'phase-quip-battle', src: localAsset('/assets/landing-phase-icons/phase-quip-battle.webp') },
+    ]
+    void Taro.getNetworkType().then((networkRes) => {
+      probeAssets.forEach((asset) => {
+        Taro.getImageInfo({ src: asset.src })
+          .then((info) => {
+            logInfo('[LandingPage] asset probe ok', {
+              name: asset.name,
+              src: asset.src,
+              width: info.width,
+              height: info.height,
+              type: info.type,
+              networkType: networkRes.networkType,
+            })
+          })
+          .catch((err) => {
+            const ctx = {
+              name: asset.name,
+              src: asset.src,
+              networkType: networkRes.networkType,
+              error: err?.errMsg || String(err),
+            }
+            logWarn('[LandingPage] asset probe failed', ctx)
+            // eslint-disable-next-line no-console
+            console.warn('[LandingPage] asset probe failed', ctx)
+          })
+      })
+    })
   }, [])
 
   // Reset navigation loading state when the user swipes back or foregrounds
@@ -152,6 +190,12 @@ export default function MiniProgramLandingPage({
 
   return (
     <View className={pageClassName}>
+      {/* Hidden preloads force WeChat to keep this critical local asset in the package.
+          Without explicit <Image> tags, DevTools may treat string-only references as unused. */}
+      <View className="landing-page__asset-preload" aria-hidden>
+        <Image src={MASCOT_SRC} />
+      </View>
+
       <View className="content-zone">
         {/* Brand watermark */}
         <View
@@ -171,11 +215,27 @@ export default function MiniProgramLandingPage({
               mode="aspectFit"
               ariaLabel="悦仔"
               lazyLoad={false}
-              onError={() => setMascotError(true)}
+              onLoad={() => {
+                logInfo('[LandingPage] mascot loaded', { src: mascotSrc })
+              }}
+              onError={() => {
+                void Taro.getNetworkType().then((res) => {
+                  const ctx = {
+                    src: mascotSrc,
+                    networkType: res.networkType,
+                    env: process.env.NODE_ENV,
+                    cdnBase: process.env.TARO_APP_CDN_BASE_URL || '(none)',
+                  }
+                  logWarn('[LandingPage] mascot load failed', ctx)
+                  // eslint-disable-next-line no-console
+                  console.warn('[LandingPage] mascot load failed', ctx)
+                })
+                setMascotError(true)
+              }}
             />
           ) : (
             <View className="hero-mascot-fallback">
-              <BrandLogo size="lg" />
+              <Text className="hero-mascot-fallback-emoji" aria-label="悦仔">🐶</Text>
             </View>
           )}
           <View className="hero-text">

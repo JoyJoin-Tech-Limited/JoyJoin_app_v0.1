@@ -2,6 +2,7 @@ import { View, Text, Image } from "@tarojs/components"
 import Taro, { useDidHide } from "@tarojs/taro"
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { localAsset } from "../../lib/utils/cdnAssets"
+import { logInfo, logWarn } from "../../lib/utils/logger"
 import { onboardingAnalytics } from "../../lib/onboarding/onboardingAnalytics"
 import "./PhaseIconCarousel.scss"
 
@@ -228,10 +229,27 @@ export default function PhaseIconCarousel({ isVisible }: PhaseIconCarouselProps)
               {!iconErrors[phase.key] ? (
                 <Image className="phase-carousel__item-img" src={phase.icon} mode="aspectFit" lazyLoad={false}
                   {...{ alt: phase.label } as any}
-                  onError={() => handleIconError(phase.key)} />
+                  onLoad={() => {
+                    logInfo('[PhaseIconCarousel] phase icon loaded', { phase: phase.key, src: phase.icon })
+                  }}
+                  onError={() => {
+                    void Taro.getNetworkType().then((res) => {
+                      const ctx = {
+                        phase: phase.key,
+                        src: phase.icon,
+                        networkType: res.networkType,
+                        env: process.env.NODE_ENV,
+                        cdnBase: process.env.TARO_APP_CDN_BASE_URL || '(none)',
+                      }
+                      logWarn('[PhaseIconCarousel] phase icon load failed', ctx)
+                      // eslint-disable-next-line no-console
+                      console.warn('[PhaseIconCarousel] phase icon load failed', ctx)
+                    })
+                    handleIconError(phase.key)
+                  }} />
               ) : (
                 <View className="phase-carousel__item-fallback">
-                  <Text className="phase-carousel__item-fallback-icon">?</Text>
+                  <Text className="phase-carousel__item-fallback-icon">{phase.label}</Text>
                 </View>
               )}
             </View>

@@ -159,10 +159,13 @@
 }
 
 .phase-carousel__item-fallback-icon {
-  font-family: $font-en-brand;
-  font-size: $font-size-xl;
+  font-family: $font-cn-display;
+  font-size: 28rpx;
   font-weight: $font-weight-bold;
   color: $color-primary;
+  text-align: center;
+  line-height: 1.2;
+  padding: 0 8rpx;
 }
 
 .phase-carousel__info {
