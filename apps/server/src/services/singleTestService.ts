@@ -12,7 +12,6 @@ import {
 import bcrypt from "bcrypt";
 import { logger } from "../lib/logger";
 import { ARCHETYPE_DEFINITIONS } from "@shared/personality/archetypeNames";
-import { matchEventPool, saveMatchResults } from "../poolMatchingService";
 
 const VIRTUAL_PHONE_PREFIX = "+861399999";
 const SINGLE_TEST_POOL_TITLE = "单人调试局";
@@ -172,25 +171,20 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
       .onConflictDoNothing();
   }
 
-  // Run matching
-  const groups = await matchEventPool(poolId);
-
-  const testerGroup = groups.find(g => g.members.some(m => m.userId === testerUserId));
-  if (!testerGroup) {
-    logger.error("[SingleTest] Tester not assigned to any group", { testerUserId, groupCount: groups.length });
-    throw new Error("FAILED_TO_MATCH");
-  }
-
-  // Persist matching results
-  await saveMatchResults(poolId, groups);
-
-  // Query the persisted group to get its DB id
+  // Direct group creation (skip matching — virtual users lack full profiles
+  // for the deterministic scoring engine). The purpose of single-test sessions
+  // is icebreaker testing, not matching verification.
+  const allMemberIds = [testerUserId, ...bots.map(b => b.id)];
   const [groupRecord] = await db
-    .select({ id: eventPoolGroups.id })
-    .from(eventPoolGroups)
-    .where(eq(eventPoolGroups.poolId, poolId))
-    .orderBy(eventPoolGroups.groupNumber)
-    .limit(1);
+    .insert(eventPoolGroups)
+    .values({
+      poolId,
+      groupNumber: 1,
+      memberIds: allMemberIds,
+      overallScore: 85,
+      status: "matched",
+    })
+    .returning({ id: eventPoolGroups.id });
 
   if (!groupRecord) {
     throw new Error("GROUP_NOT_PERSISTED");
@@ -198,15 +192,18 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
 
   const groupId = groupRecord.id;
 
-  // Build bot user info (only bots that ended up in the tester's group)
-  const botUserIds = testerGroup.members.filter(m => m.userId !== testerUserId).map(m => m.userId);
-  const botUsers = bots
-    .filter((b: VirtualUserRow) => botUserIds.includes(b.id))
-    .map((b: VirtualUserRow) => ({
-      userId: b.id,
-      displayName: b.displayName ?? "Bot",
-      archetype: b.primaryArchetype ?? 'corgi',
-    }));
+  // Mark all registrations as matched
+  await db
+    .update(eventPoolRegistrations)
+    .set({ matchStatus: "matched" })
+    .where(and(eq(eventPoolRegistrations.poolId, poolId), eq(eventPoolRegistrations.matchStatus, "pending")));
+
+  // Build bot user info
+  const botUsers = bots.map((b: VirtualUserRow) => ({
+    userId: b.id,
+    displayName: b.displayName ?? "Bot",
+    archetype: b.primaryArchetype ?? 'corgi',
+  }));
 
   const socialSessionId = `social_${groupId}`;
   logger.info("[SingleTest] Session ready", { groupId, socialSessionId, botCount: botUsers.length });
