@@ -67,28 +67,19 @@ jobs:
   upload-weapp:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: build-weapp
-    runs-on: [self-hosted, weapp-upload]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4.3.1
-
       - uses: actions/download-artifact@v4
         with:
           name: taro-weapp-dist
           path: apps/mini-program/dist
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4.4.0
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Upload to WeChat Mini Program
+      - name: Upload to WeChat Mini Program via CVM
         env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
           WECHAT_PRIVATE_KEY: ${{ secrets.WECHAT_PRIVATE_KEY }}
         run: |
           if [ -z "${WECHAT_PRIVATE_KEY:-}" ]; then
@@ -96,20 +87,46 @@ jobs:
             exit 0
           fi
 
-          PRIVATE_KEY_FILE=$(mktemp)
-          printf '%s\n' "$WECHAT_PRIVATE_KEY" > "$PRIVATE_KEY_FILE"
-          chmod 600 "$PRIVATE_KEY_FILE"
+          REMOTE_DIR="/root/joyjoin-upload"
+          CVM="$SERVER_USER@$SERVER_IP"
+
+          # Write SSH key
+          SSH_KEY_FILE=$(mktemp)
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$SSH_KEY_FILE"
+          chmod 600 "$SSH_KEY_FILE"
+          SSH_CMD="ssh -i $SSH_KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+          # Write WeChat private key to temp file for rsync
+          WX_KEY_FILE=$(mktemp)
+          printf '%s\n' "$WECHAT_PRIVATE_KEY" > "$WX_KEY_FILE"
+          chmod 600 "$WX_KEY_FILE"
 
           VERSION="1.0.$(date +%Y%m%d).$(date +%H%M)"
           DESCRIPTION="Auto-deploy: ${GITHUB_SHA:0:7}"
 
-          echo "📱 Uploading mini-program to WeChat from CVM runner..."
-          npx miniprogram-ci upload \
-            --pp apps/mini-program \
-            --pkp "$PRIVATE_KEY_FILE" \
-            --uv "$VERSION" \
-            --ud "$DESCRIPTION" \
-            --rp 1
+          echo "📱 Uploading mini-program v$VERSION via CVM..."
 
-          rm -f "$PRIVATE_KEY_FILE"
+          # Create remote dir
+          $SSH_CMD "$CVM" "mkdir -p $REMOTE_DIR/dist"
+
+          # rsync dist
+          rsync -avz --delete -e "$SSH_CMD" \
+            apps/mini-program/dist/ "$CVM:$REMOTE_DIR/dist/"
+
+          # rsync WeChat key
+          rsync -avz -e "$SSH_CMD" \
+            "$WX_KEY_FILE" "$CVM:$REMOTE_DIR/private.key"
+
+          # SSH + upload
+          $SSH_CMD "$CVM" \
+            "cd $REMOTE_DIR && \
+             NODE_OPTIONS='--dns-result-order=ipv4first' npx --yes miniprogram-ci upload \
+               --appid wx5a038ee6dee12032 \
+               --pp dist \
+               --pkp private.key \
+               --uv '$VERSION' \
+               --ud '$DESCRIPTION' \
+               --rp 1"
+
+          rm -f "$SSH_KEY_FILE" "$WX_KEY_FILE"
           echo "✅ WeChat upload complete!"
