@@ -123,7 +123,7 @@ export async function ensureSingleTestPool(createdBy: string): Promise<string> {
       dateTime: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
       registrationDeadline: new Date(now.getTime() + 29 * 24 * 60 * 60 * 1000),
       status: "active",
-      minGroupSize: 6,
+      minGroupSize: 3,
       maxGroupSize: 6,
       targetGroups: 1,
       createdBy,
