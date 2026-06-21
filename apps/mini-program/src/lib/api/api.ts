@@ -3,7 +3,22 @@ import type { AuthUserResponse, DiscoverShellResponse, ProfileShellResponse, Eve
 import { handleMiniProgramUnauthorized } from './authSession'
 
 const DEFAULT_MINI_PROGRAM_API_BASE_URL = 'http://localhost:5001'
-const API_BASE_URL = (process.env.TARO_APP_API_BASE_URL ?? DEFAULT_MINI_PROGRAM_API_BASE_URL).replace(/\/$/, '')
+const STAGING_API_BASE_URL = 'https://staging.joyjoinapp.com'
+const PRODUCTION_API_BASE_URL = 'https://api.joyjoinapp.com'
+
+function resolveApiBaseUrl(): string {
+  const buildTimeUrl = (process.env.TARO_APP_API_BASE_URL ?? DEFAULT_MINI_PROGRAM_API_BASE_URL).replace(/\/$/, '')
+  try {
+    const accountInfo = Taro.getAccountInfoSync()
+    const envVersion = accountInfo?.miniProgram?.envVersion
+    if (envVersion === 'trial') return STAGING_API_BASE_URL
+    if (envVersion === 'release') return PRODUCTION_API_BASE_URL
+  } catch {
+  }
+  return buildTimeUrl
+}
+
+const API_BASE_URL = resolveApiBaseUrl()
 // Keep requests responsive on mobile networks while still allowing payment and
 // auth calls enough time to complete under normal latency.
 const REQUEST_TIMEOUT_MS =

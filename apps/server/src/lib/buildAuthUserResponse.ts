@@ -16,6 +16,7 @@ import { storage } from "../storage";
 import { logger } from "./logger";
 import { computeOnboardingNextStep } from "./computeOnboardingNextStep";
 import { getFeatureFlag } from "./featureFlags";
+import { isSingleTestMode } from "./isSingleTestMode";
 
 // Module-level cached mascot config (env vars are immutable after startup)
 const mascotConfig = buildMascotConfigFromEnv({
@@ -136,7 +137,7 @@ const [
     getFeatureFlag('profileRedesignEnabled', true),
   ]);
 
-  const appMode: 'production' | 'test' = (process.env.APP_MODE === 'test') ? 'test' : 'production';
+  const appMode: 'production' | 'test' = isSingleTestMode() ? 'test' : 'production';
 
   const authUserResponse: AuthUserResponse = {
     ...sanitizeAuthUser(user),

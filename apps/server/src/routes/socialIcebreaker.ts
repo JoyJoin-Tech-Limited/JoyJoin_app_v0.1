@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { isSingleTestMode } from '../lib/isSingleTestMode';
 import type {
   SocialSessionState,
   SocialIcebreakerPhase,
@@ -111,11 +112,12 @@ import socialIcebreakerGameplayExtraRouter from './socialIcebreakerGameplayExtra
 const router = Router();
 
 // ============ TEST-MODE BOT BYPASS ============
-// In APP_MODE=test, allow bot users to impersonate via x-test-user-id header.
+// In single-test mode (APP_MODE=test or ENABLE_SINGLE_TEST_MODE=true),
+// allow bot users to impersonate via x-test-user-id header.
 // This lets the SingleTestBotService exercise the real API stack without
 // modifying route handlers or managing session cookies for 5 virtual users.
 router.use((req: any, _res, next) => {
-  if (process.env.APP_MODE === 'test' && req.headers['x-test-user-id']) {
+  if (isSingleTestMode() && req.headers['x-test-user-id']) {
     req.user = { id: req.headers['x-test-user-id'] };
   }
   next();

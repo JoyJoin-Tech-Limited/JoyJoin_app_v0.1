@@ -2,11 +2,12 @@ import type { Express } from "express";
 import { logger } from "../../lib/logger";
 import { requireAuthenticatedUserId } from "../../lib/requestAuth";
 import { startSingleTestSession, cleanupSingleTestData } from "../../services/singleTestService";
+import { isSingleTestMode } from "../../lib/isSingleTestMode";
 
 export function registerSingleTestRoutes(app: Express): void {
   app.post("/api/test/single-test/start", async (req: any, res: any) => {
-    if (process.env.APP_MODE !== "test") {
-      return res.status(403).json({ error: "Only available in test mode" });
+    if (!isSingleTestMode()) {
+      return res.status(403).json({ error: "Only available in single test mode" });
     }
 
     const userId = requireAuthenticatedUserId(req, res);
@@ -26,8 +27,8 @@ export function registerSingleTestRoutes(app: Express): void {
   });
 
   app.post("/api/test/single-test/reset", async (_req: any, res: any) => {
-    if (process.env.APP_MODE !== "test") {
-      return res.status(403).json({ error: "Only available in test mode" });
+    if (!isSingleTestMode()) {
+      return res.status(403).json({ error: "Only available in single test mode" });
     }
 
     try {

@@ -17,6 +17,7 @@ import { globalErrorHandler } from "./lib/errorResponse";
 import { logger } from "./lib/logger";
 import { validateDbSchema } from "./db";
 import { ensureVirtualUsers, ensureSingleTestPool } from "./services/singleTestService";
+import { isSingleTestMode } from "./lib/isSingleTestMode";
 import { requestIdMiddleware } from "./middleware/requestId";
 import { metricsMiddleware } from "./middleware/metrics";
 import compression from "compression";
@@ -93,8 +94,8 @@ app.use((req, res, next) => {
     // Register all API routes and get HTTP server
     const server = await registerRoutes(app);
 
-    // Auto-seed virtual users + single-test pool in test mode
-    if (process.env.APP_MODE === 'test') {
+    // Auto-seed virtual users + single-test pool in single-test mode
+    if (isSingleTestMode()) {
       try {
         await ensureVirtualUsers();
         await ensureSingleTestPool();

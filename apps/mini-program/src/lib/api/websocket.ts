@@ -469,15 +469,28 @@ export class MiniProgramWebSocket {
 
 let instance: MiniProgramWebSocket | null = null
 const DEFAULT_MINI_PROGRAM_WS_BASE_URL = 'http://localhost:5001'
+const STAGING_WS_BASE_URL = 'wss://staging.joyjoinapp.com/ws'
+const PRODUCTION_WS_BASE_URL = 'wss://api.joyjoinapp.com/ws'
 
 /**
- * Derive the WebSocket URL from `TARO_APP_API_BASE_URL`.
+ * Derive the WebSocket URL from `TARO_APP_API_BASE_URL` with runtime env detection.
+ *
+ * 体验版 (trial) → wss://staging.joyjoinapp.com/ws
+ * 正式版 (release) → wss://api.joyjoinapp.com/ws
+ * 开发版 (develop) → build-time URL
  *
  * Falls back to the same local default as the API transport so pages that use
  * `useWebSocket()` do not crash during render when the env var is omitted in
  * local builds or runtime smoke bundles.
  */
 function buildWebSocketUrl(): string {
+  try {
+    const accountInfo = Taro.getAccountInfoSync()
+    const envVersion = accountInfo?.miniProgram?.envVersion
+    if (envVersion === 'trial') return STAGING_WS_BASE_URL
+    if (envVersion === 'release') return PRODUCTION_WS_BASE_URL
+  } catch {
+  }
   const base = (process.env.TARO_APP_API_BASE_URL ?? DEFAULT_MINI_PROGRAM_WS_BASE_URL).replace(/\/$/, '')
 
   const wsUrl = base

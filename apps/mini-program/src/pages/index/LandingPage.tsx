@@ -14,6 +14,7 @@ import { useResetOnShow } from "../../hooks/useResetOnShow"
 import { readAnonymousAssessmentSession, isAnonymousAssessmentSessionCompleted } from "../../lib/auth/anonymousOnboarding"
 import { onboardingAnalytics } from "../../lib/onboarding/onboardingAnalytics"
 import { logWarn } from "../../lib/utils/logger"
+import TestLoginSheet from "../../components/dev/TestLoginSheet"
 import "./index.scss"
 
 /** Mascot — bundled locally for guaranteed display. */
@@ -43,6 +44,8 @@ export default function MiniProgramLandingPage({
   const [mascotSrc, setMascotSrc] = useState(MASCOT_SRC)
   const [mascotError, setMascotError] = useState(false)
   const [hasIncompleteSession, setHasIncompleteSession] = useState(false)
+  const [showTestLogin, setShowTestLogin] = useState(false)
+  const [envVersion, setEnvVersion] = useState<string | null>(null)
   const isMounted = useStaggerMount()
 
   const { handleWeChatLogin, isLoggingIn } = useWeChatLogin({
@@ -55,6 +58,12 @@ export default function MiniProgramLandingPage({
     loadBrandDisplayFont()
     const snapshot = readAnonymousAssessmentSession()
     setHasIncompleteSession(!!snapshot && !isAnonymousAssessmentSessionCompleted(snapshot))
+    try {
+      const info = Taro.getAccountInfoSync()
+      setEnvVersion(info?.miniProgram?.envVersion ?? null)
+    } catch {
+      // Some Taro versions may throw — ignore.
+    }
   }, [])
 
   // Reset navigation loading state when the user swipes back or foregrounds
@@ -260,6 +269,26 @@ export default function MiniProgramLandingPage({
           </Button>
         </View>
 
+        {/* Test login entry — visible only on 体验版 (temp) builds */}
+        {envVersion === 'trial' && (
+          <View
+            className={`landing-page__test-login-row ${isMounted ? "stagger-in stagger-in--5" : "stagger-in-hidden"}`}
+          >
+            <View
+              className='landing-page__test-login-link'
+              onClick={() => {
+                hapticLight()
+                setShowTestLogin(true)
+              }}
+              hoverClass='landing-page__test-login-link--hover'
+              role='button'
+              aria-label='测试账号登录'
+            >
+              <Text className='landing-page__test-login-link-text'>测试账号登录</Text>
+            </View>
+          </View>
+        )}
+
         <View className={`landing-page__legal-row ${shakeLegal ? 'shake' : ''}`}>
           <View
             className={
@@ -317,6 +346,11 @@ export default function MiniProgramLandingPage({
           </View>
         </View>
       )}
+
+      <TestLoginSheet
+        visible={showTestLogin}
+        onClose={() => setShowTestLogin(false)}
+      />
     </View>
   )
 }
