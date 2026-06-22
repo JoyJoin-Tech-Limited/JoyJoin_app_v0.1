@@ -104,8 +104,6 @@ export default function JoyJoinIcon({
       assetKey: mapping.assetKey,
       src: resolvedAsset.src,
     })
-    // TEMP DEBUG (remove after icon investigation) — visible in vConsole/真机调试
-    console.error('[JoyJoinIcon][DEBUG] image load FAILED', emoji, tier, resolvedAsset.src)
     setHasError(true)
   }, [emoji, mapping, resolvedAsset.src, tier])
 
@@ -116,8 +114,6 @@ export default function JoyJoinIcon({
 
   if (!mapping) {
     logWarn('[JoyJoinIcon] No icon mapping found for emoji', { emoji, tier })
-    // TEMP DEBUG (remove after icon investigation) — visible in vConsole/真机调试
-    console.warn('[JoyJoinIcon][DEBUG] NO MAPPING', emoji, tier)
     return (
       <Text className={className} style={style}>
         {emoji}
@@ -137,8 +133,6 @@ export default function JoyJoinIcon({
         ? resolvedAsset.error.message
         : String(resolvedAsset.error),
     })
-    // TEMP DEBUG (remove after icon investigation) — visible in vConsole/真机调试
-    console.error('[JoyJoinIcon][DEBUG] path resolution FAILED', emoji, tier)
     return (
       <Text
         className={`${className} ${!loaded ? 'jj-icon-loading' : ''}`}
@@ -178,10 +172,6 @@ export default function JoyJoinIcon({
         ...style,
       }}
       mode='aspectFit'
-      // WeChat WebView does not parse webP unless `webp` is set, and even then
-      // only for network resources (官方文档). CDN icon tiers are network webP;
-      // local tiers ship as PNG. Enable parsing only for webP sources.
-      webp={resolvedAsset.src.endsWith('.webp')}
       lazyLoad={lazyLoad}
       onLoad={handleLoad}
       onError={handleError}

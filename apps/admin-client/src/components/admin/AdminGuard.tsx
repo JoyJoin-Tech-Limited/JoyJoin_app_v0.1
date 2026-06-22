@@ -67,12 +67,6 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  useEffect(() => {
-    if (!isLoading && !user) {
-      setLocation("/admin/login");
-    }
-  }, [isLoading, user, setLocation]);
-
   if (!user) {
     return null;
   }

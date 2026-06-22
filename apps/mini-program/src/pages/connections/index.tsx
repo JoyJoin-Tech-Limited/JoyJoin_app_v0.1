@@ -431,7 +431,7 @@ export default function ConnectionsPage() {
                         <View className='jj-icon-text'>
                           <Image
                             className='connections-page__shared-event-icon'
-                            src={localAsset('/assets/icons/ui/icon-calendar.png')}
+                            src={localAsset('/assets/icons/ui/icon-calendar.webp')}
                             mode='aspectFit'
                           />
                           <Text className='connections-page__shared-event-text'>{conn.sharedEventTitle}</Text>

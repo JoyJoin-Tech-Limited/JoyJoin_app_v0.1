@@ -149,7 +149,7 @@ export default function XiaoyueEmptyState({
           <View className='xiaoyue-empty-state__mascot-badge' aria-label='完成'>
             <Image
               className='xiaoyue-empty-state__mascot-badge-icon'
-              src={localAsset('/assets/icons/ui/icon-check.png')}
+              src={localAsset('/assets/icons/ui/icon-check.webp')}
               mode='aspectFit'
             />
           </View>

@@ -364,7 +364,7 @@ export function WarmupPhaseView({
                     )}
                     {p.isHost && (
                       <Image
-                        src={localAsset('/assets/icons/status-icons/status-crown.png')}
+                        src={localAsset('/assets/icons/status-icons/status-crown.webp')}
                         className='icebreaker__participant-host'
                         lazyLoad
                       />

@@ -168,6 +168,9 @@ export default function PersonalityTestResultsPage() {
   const preResolvedImageRef = useRef<string>('')
   const posterRetryRef = useRef(false)
   const handleGeneratePosterRef = useRef<(() => Promise<void>) | null>(null)
+  // Guards the one-time forward of an authenticated archetype-holder who lands
+  // here with no local anonymous result (prevents an intro<->results loop).
+  const forwardedAuthedRef = useRef(false)
 
   const profileRef = useRef<AnimationProfile>(getAnimationProfile())
 
@@ -439,6 +442,38 @@ export default function PersonalityTestResultsPage() {
       })
     }
   }, [analytics, auth.isAuthenticated, completionMode, displayArchetypeName, flowStage, isDecisive])
+
+  /**
+   * Escape hatch for the intro<->results redirect loop.
+   *
+   * This page renders only the anonymous (pre-login) assessment result read
+   * from device storage. An authenticated user who already has an archetype but
+   * no local anonymous result (storage cleared at login) cannot be served here:
+   * runResultFlow falls into the 'empty' branch, and the personality-test intro
+   * redirects archetype-holders straight back to this page — an infinite bounce.
+   *
+   * When we detect that exact state, forward the user to their real nextStep
+   * instead of stranding them on the empty/error screen.
+   */
+  useEffect(() => {
+    if (auth.isLoading || isLoggingIn) return
+    if (forwardedAuthedRef.current) return
+
+    const existingArchetype = auth.user?.primaryArchetype ?? auth.user?.archetype ?? null
+    if (!auth.isAuthenticated || !existingArchetype) return
+
+    // A displayable local result (replay fast-path or a freshly-saved snapshot)
+    // means the normal flow can render — never forward in that case.
+    if (hasCompletedReplay) return
+    if (buildResolvedResultState(readAnonymousAssessmentSession())) return
+
+    forwardedAuthedRef.current = true
+    logInfo('[PersonalityResults] Authenticated archetype-holder with no local result — forwarding to nextStep', {
+      nextStep: auth.nextStep ?? null,
+    })
+    analytics.interaction('results_forwarded_authenticated', { nextStep: auth.nextStep ?? null })
+    void navigateToMiniProgramNextStep(auth.nextStep, { mode: 'root' })
+  }, [auth.isLoading, auth.isAuthenticated, auth.user, auth.nextStep, isLoggingIn, hasCompletedReplay, analytics])
 
   const fetchResult = useCallback(async (runId: number, forceRefresh = false): Promise<ResolvedResultState | null> => {
     const latestSnapshot = readAnonymousAssessmentSession()
@@ -1085,6 +1120,18 @@ export default function PersonalityTestResultsPage() {
   const handleRestart = useCallback(() => {
     runIdRef.current += 1
     flowInitiatedRef.current = false
+
+    // Authenticated users who already have an archetype cannot retest through the
+    // anonymous device flow — reLaunching to the test intro would bounce them
+    // right back here (the intro redirects archetype-holders to results). Route
+    // them forward to their real destination instead of looping.
+    const existingArchetype = auth.user?.primaryArchetype ?? auth.user?.archetype ?? null
+    if (auth.isAuthenticated && existingArchetype) {
+      analytics.interaction('restart_forwarded_authenticated', { nextStep: auth.nextStep ?? null })
+      void navigateToMiniProgramNextStep(auth.nextStep, { mode: 'root' })
+      return
+    }
+
     analytics.stepAbandoned('restart')
     clearAnonymousAssessmentStorage()
     setSharePosterPath('')
@@ -1093,7 +1140,7 @@ export default function PersonalityTestResultsPage() {
       // User can manually navigate back.
       void Taro.showToast({ title: '请手动返回重新测试', icon: 'none', duration: 2000 })
     })
-  }, [analytics])
+  }, [analytics, auth.isAuthenticated, auth.user, auth.nextStep])
 
   const handleSkipAnimation = useCallback(() => {
     runIdRef.current += 1

@@ -17,9 +17,9 @@ export default function EmptyStage({ onRestart }: EmptyStageProps) {
         mode='aspectFit'
         src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsSlotFallback)}
       />
-      <Text className='personality-results__state-title'>这份结果还没准备好</Text>
+      <Text className='personality-results__state-title'>还没有你的测试结果</Text>
       <Text className='personality-results__state-copy'>
-        悦仔在这台设备上没找到完整的测试结果，重新测一次就好~
+        悦仔在这台设备上还没找到你的氛围原型，我们重新测一次就好~
       </Text>
       <View className='personality-results__stack-actions'>
         <Button onClick={onRestart}>返回重新测试</Button>

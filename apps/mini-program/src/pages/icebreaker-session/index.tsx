@@ -800,7 +800,7 @@ export default function IcebreakerSessionPage() {
         <View className='icebreaker__host-badge-text'>
           <Image
             className='icebreaker__host-badge-icon'
-            src={localAsset('/assets/icons/status-icons/status-crown.png')}
+            src={localAsset('/assets/icons/status-icons/status-crown.webp')}
             lazyLoad
           />
           <Text>你是主持人</Text>
@@ -1166,7 +1166,7 @@ function WaitingPhase({
     <View className='icebreaker__waiting'>
       <Card className='icebreaker__waiting-card'>
         <Image
-          src={localAsset('/assets/icons/status-icons/status-waiting.png')}
+          src={localAsset('/assets/icons/status-icons/status-waiting.webp')}
           style={{ width: '80rpx', height: '80rpx' }}
           lazyLoad
           className='icebreaker__waiting-emoji'

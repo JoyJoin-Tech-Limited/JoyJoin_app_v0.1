@@ -72,6 +72,82 @@
       {
         "type": "file",
         "value": "assets/promo-local/banner-hero-lovart-v1.webp"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/icons/ui/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/icons/intent-icons/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/icons/category-icons/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/icons/status-icons/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/icons/info-labels/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/icons/mood-icons/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/icons/chemistry-badges/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/icons/rating-faces/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/icons/archetype/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/icons/archetype-grid/.*\\.webp$"
+      },
+      {
+        "type": "file",
+        "value": "assets/icons/custom-tier-icon.webp"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/landing-phase-icons/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/mascot/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/xiaoyue-expressions/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/personality/xiaoyue/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/fonts/.*\\.(woff2|woff|ttf|otf)$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/empty-state/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/pool-heroes/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/qr/.*\\.(webp|png)$"
       }
     ]
   },
