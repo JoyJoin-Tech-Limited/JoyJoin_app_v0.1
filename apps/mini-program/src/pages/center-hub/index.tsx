@@ -356,6 +356,17 @@ export default function CenterHubPage() {
     enabled: !authLoading,
   })
 
+  const isLoading = regLoading || eventsLoading
+  const hasError = regError || eventsError
+
+  // Resolve destination in parent so greeting can be gated to content states only.
+  const destination = useMemo(
+    () => resolveCenterTabDestination(registrations, events),
+    [registrations, events]
+  )
+  const hasContent = destination.kind !== 'empty' && destination.kind !== 'discover'
+  const showGreeting = !isLoading && !hasError && hasContent
+
   const handleRetry = useCallback(() => {
     if (retryDebounceRef.current) return
     retryDebounceRef.current = true
@@ -405,15 +416,17 @@ export default function CenterHubPage() {
       loading={<LoadingScreen message='正在加载你的活动…' />}
       content={
         <View className={`center-hub ${tabEntranceClass}`}>
-          <View className='center-hub__header'>
-            <Image
-              className='center-hub__header-mascot'
-              src={getXiaoyueExpressionAsset('homeWelcome')}
-              mode='aspectFit'
-              lazyLoad
-            />
-            <Text className='center-hub__title'>进行中</Text>
-          </View>
+          {showGreeting && (
+            <View className='center-hub__greeting'>
+              <Image
+                className='center-hub__greeting-mascot'
+                src={getXiaoyueExpressionAsset('homeWelcome')}
+                mode='aspectFit'
+                lazyLoad
+              />
+              <Text className='center-hub__greeting-text'>你的活动，都在这了</Text>
+            </View>
+          )}
           <CenterHubContent
             registrations={registrations}
             events={events}

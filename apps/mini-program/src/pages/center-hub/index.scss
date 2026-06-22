@@ -7,26 +7,24 @@
   background: $color-bg;
   padding-bottom: calc($tab-bar-root-height + env(safe-area-inset-bottom));
 
-  &__header {
+  &__greeting {
     display: flex;
     align-items: center;
-    gap: $spacing-md;
-    padding: $spacing-lg $container-padding;
-    padding-top: calc(#{$spacing-lg} + env(safe-area-inset-top));
+    justify-content: center;
+    gap: $spacing-sm;
+    padding: $spacing-md $container-padding $spacing-lg;
   }
 
-  &__header-mascot {
-    width: 80rpx;
-    height: 80rpx;
+  &__greeting-mascot {
+    width: 56rpx;
+    height: 56rpx;
     animation: mascot-bounce-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  &__title {
-    @include font-cn-display;
-    font-size: $font-size-2xl;
-    font-weight: $font-weight-bold;
+  &__greeting-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
     line-height: 1.45;
-    color: $color-text-primary;
   }
 
   &__state {
@@ -131,7 +129,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .center-hub__header-mascot,
+  .center-hub__greeting-mascot,
   .center-hub__loading-mascot,
   .center-hub__error-mascot {
     animation: none !important;

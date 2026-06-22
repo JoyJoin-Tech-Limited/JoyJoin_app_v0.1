@@ -501,25 +501,9 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 
 ## 9. Automations (CI Background Agents)
 
-Five scheduled/event-driven GitHub Actions workflows run autonomously:
+> **⚠️ DISABLED — All auto-* workflows (auto-fix, auto-debug, auto-docs, auto-test, auto-merge, auto-ci-fix) are turned off as of 2026-06-22. They produced zero merges and caused working-tree corruption. Do not re-enable without explicit discussion.**
 
-| Workflow | Schedule | Purpose |
-|----------|----------|---------|
-| **`auto-debug.yml`** | Daily 04:00 UTC | Bug scanning — regex engine (11 patterns) + DeepSeek Flash LLM validation. Opens fix PRs. |
-| **`auto-docs.yml`** | Daily 05:00 UTC | Doc gap detection across 14 mapped source areas. LLM generates READMEs. Opens doc PRs. |
-| **`auto-digest.yml`** | Daily 06:00 UTC | Engineering digest — clusters last 24h commits/PRs into themes via LLM. WeCom only. |
-| **`auto-test.yml`** | Daily 07:00 UTC | Test coverage — finds untested production code, generates tests via LLM, validates with vitest. Opens test PRs. |
-| **`auto-ci-fix.yml`** | On CI failure | CI autofix — deduplicates via lock files, investigates root cause with LLM, skips flaky tests or reports. |
-| **`auto-fix.yml`** | Daily 03:30 UTC | Auto-creates fix PRs for deterministic bugs (empty-catch, missing-await, promise-not-awaited). PR mode only. |
-| **`auto-merge.yml`** | Every 30min + on auto workflow complete | Auto-merges auto-generated PRs when CI passes with blast-radius cooldowns (docs→immediate, test→30min, fix→1hr). |
-| **`auto-prune.yml`** | Weekly Wed 01:00 UTC | Cleans stale branches, old artifacts, expired reports. `--live` flag required for deletions. |
-| **`auto-triage.yml`** | PR/issue open + every 4h | Auto-labels PRs and issues by changed paths, title, and body keywords. Creates missing labels automatically. |
-
-All notify via WeCom when actionable findings are discovered.
-
-Trigger on demand: `gh workflow run <workflow-name>.yml` or via the **WeCom Automation Trigger** workflow.
-
-Full reference: `docs/automations/README.md`
+Full reference: `docs/automations/README.md` (archive only)
 
 ---
 
@@ -539,3 +523,20 @@ Full reference: `docs/automations/README.md`
 - `.github/skills/skill-taxonomy.md` — canonical skill classification (`ai-runtime` vs `internal`)
 - `.opencode/agents/README.md` — OpenCode agent stubs (derived from `.github/agents/`)
 - `.github/agents/README.md` — canonical full agent portfolio (30+ agents)
+
+---
+
+## 11. Surgical Edits Rule — Never Rewrite Entire Files
+
+> **Prefer targeted `edit` tool operations over rewriting entire files.**
+
+When an agent needs to change a subset of logic inside a file, it MUST:
+1. Use the `edit` tool with precise `oldString` → `newString` replacement, scoped to the minimum lines necessary.
+2. **Only** use `write` (full-file overwrite) when:
+   - Creating a brand-new file.
+   - The file's entire content is being replaced with a fundamentally different implementation (requires explicit justification).
+   - Patching-in from a canonical source that must match byte-for-byte (e.g., config template).
+
+**Rationale:** Full-file rewrites overwrite unrelated working-tree changes (uncommitted fixes, WIP experimentation) and break `git blame` continuity. This rule applies regardless of whether the uncommitted changes are from the agent's own session or from the user's editor.
+
+**Enforcement:** If the user says "you rewrote my file" or a fix regresses because an unrelated part of the file was silently changed, the agent should be corrected to use `edit` and restore the original content for unaffected blocks.
