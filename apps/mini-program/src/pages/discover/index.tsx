@@ -651,6 +651,9 @@ export default function DiscoverPage() {
   const windowWidthRef = useRef(375)
   const motionGateRef = useRef({ reduceMotion: false, lowEnd: false })
   const tabBarRef = useRef<{ setCollapsed?: (c: boolean) => void } | null>(null)
+  // Cache last known scroll position so useDidShow can apply the correct
+  // collapse state synchronously, avoiding even a 1-frame expanded flash.
+  const lastScrollTopRpxRef = useRef(0)
 
   const setTabBarCollapsed = useCallback((collapsed: boolean) => {
     try {
@@ -697,6 +700,7 @@ export default function DiscoverPage() {
   usePageScroll(({ scrollTop }) => {
     if (!COLLAPSIBLE_TAB_BAR_ENABLED || motionGateRef.current.reduceMotion || motionGateRef.current.lowEnd) return
     const scrollTopRpx = scrollTop * (750 / windowWidthRef.current)
+    lastScrollTopRpxRef.current = scrollTopRpx
     if (collapsedRef.current) {
       if (scrollTopRpx <= TAB_BAR_EXPAND_THRESHOLD_RPX) {
         collapsedRef.current = false
@@ -713,19 +717,27 @@ export default function DiscoverPage() {
   })
 
   useDidShow(() => {
-    // Recover the correct collapse state when the page becomes visible again
-    // (e.g. swipe-back from a detail page or foregrounding the app). Without
-    // this, the tab bar would flash expanded until the next scroll event.
-    if (motionGateRef.current.reduceMotion || motionGateRef.current.lowEnd) return
+    if (!COLLAPSIBLE_TAB_BAR_ENABLED || motionGateRef.current.reduceMotion || motionGateRef.current.lowEnd) return
+    // Apply the last known scroll position synchronously to avoid even a
+    // 1-frame expanded flash. The async query below refines this.
+    const cachedRpx = lastScrollTopRpxRef.current
+    const shouldCollapse = cachedRpx > TAB_BAR_COLLAPSE_THRESHOLD_RPX
+    if (shouldCollapse !== collapsedRef.current) {
+      collapsedRef.current = shouldCollapse
+      setTabBarCollapsed(shouldCollapse)
+    }
+    // Async refinement: read the actual viewport scroll position and correct
+    // if the cached value was stale.
     try {
       const query = Taro.createSelectorQuery()
       query.selectViewport().scrollOffset((res) => {
         if (!res || typeof res.scrollTop !== 'number') return
         const scrollTopRpx = res.scrollTop * (750 / windowWidthRef.current)
-        const shouldCollapse = scrollTopRpx > TAB_BAR_COLLAPSE_THRESHOLD_RPX
-        if (shouldCollapse !== collapsedRef.current) {
-          collapsedRef.current = shouldCollapse
-          setTabBarCollapsed(shouldCollapse)
+        const refined = scrollTopRpx > TAB_BAR_COLLAPSE_THRESHOLD_RPX
+        if (refined !== collapsedRef.current) {
+          collapsedRef.current = refined
+          setTabBarCollapsed(refined)
+          trackTabBarTransition(refined, scrollTopRpx)
         }
       }).exec()
     } catch {

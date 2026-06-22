@@ -425,17 +425,16 @@ Component({
     /**
      * Discover-only scroll-responsive collapse.
      * Expands/collapses the tab bar surface and center CTA via CSS class.
-     * Returns true when the call was applied (or already in target state),
-     * false when the component instance is no longer attached.
+     * Returns true when the state changed and setData was called.
+     * Returns false when detached, hidden, or already in the target state.
      */
     setCollapsed: function (collapsed) {
       if (!this || this._isDetached) return false
       var next = Boolean(collapsed)
       if (this.data.collapsed === next) return false
-      this.setData({ collapsed: next })
       // Announce state change for screen-reader users, auto-cleared after 1 s.
       var announcement = next ? '标签栏已收起' : '标签栏已展开'
-      this.setData({ announcement: announcement })
+      this.setData({ collapsed: next, announcement: announcement })
       var self = this
       clearTimeout(this._announceTimer)
       this._announceTimer = setTimeout(function () {

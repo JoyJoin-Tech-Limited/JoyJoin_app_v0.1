@@ -49,6 +49,10 @@ export const useReady = vi.fn()
 export const usePullDownRefresh = vi.fn()
 export const useReachBottom = vi.fn()
 export const usePageScroll = vi.fn()
+export const onAppShow = vi.fn()
+export const onAppHide = vi.fn()
+export const offAppShow = vi.fn()
+export const offAppHide = vi.fn()
 export const eventCenter = {
   on: vi.fn(),
   off: vi.fn(),
@@ -82,6 +86,10 @@ const taro = {
   usePullDownRefresh,
   useReachBottom,
   usePageScroll,
+  onAppShow,
+  onAppHide,
+  offAppShow,
+  offAppHide,
   eventCenter,
 }
 

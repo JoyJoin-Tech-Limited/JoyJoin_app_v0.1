@@ -430,6 +430,7 @@
 .joy-custom-tab-bar--collapsed .joy-custom-tab-bar__item-badge {
   opacity: 0;
   pointer-events: none;
+  transition: opacity 220ms ease;
 }
 
 .joy-custom-tab-bar--collapsed .joy-custom-tab-bar__item--active {
@@ -478,6 +479,13 @@
   transition: none !important;
   will-change: auto !important;
 }
+/* Defensive: if collapsed state leaks past the JS gate on low-end devices,
+   force all collapse transforms back to neutral. */
+.joy-custom-tab-bar--low-end .joy-custom-tab-bar--collapsed .joy-custom-tab-bar__surface,
+.joy-custom-tab-bar--low-end .joy-custom-tab-bar--collapsed .joy-custom-tab-bar__center,
+.joy-custom-tab-bar--low-end .joy-custom-tab-bar--collapsed .joy-custom-tab-bar__item-icon-wrap {
+  transform: none !important;
+}
 
 /* Reduced motion: disable all animations, reset transform to avoid
    unnecessary GPU compositor layers when collapse is disabled. */
@@ -521,6 +529,13 @@
   }
   /* Counter-scale icons must not squash under reduced motion. */
   .joy-custom-tab-bar--collapsed .joy-custom-tab-bar__item-icon-wrap {
+    transform: none !important;
+  }
+  /* Defensive: if collapsed state somehow leaks past the JS gate, force expand. */
+  .joy-custom-tab-bar--collapsed .joy-custom-tab-bar__surface {
+    transform: none !important;
+  }
+  .joy-custom-tab-bar--collapsed .joy-custom-tab-bar__center {
     transform: none !important;
   }
   .joy-custom-tab-bar image {

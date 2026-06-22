@@ -606,5 +606,23 @@ describe('native custom tab bar behavior', () => {
       expect(component.setCollapsed(true)).toBe(true)
       expect(component.data.collapsed).toBe(true)
     })
+
+    it('announces collapse state for screen readers and clears after 1 s', async () => {
+      setupMocks()
+      const component = await loadComponent()
+      component.attached()
+
+      component.setCollapsed(true)
+      expect(component.data.announcement).toBe('标签栏已收起')
+
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(component.data.announcement).toBe('')
+
+      component.setCollapsed(false)
+      expect(component.data.announcement).toBe('标签栏已展开')
+
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(component.data.announcement).toBe('')
+    })
   })
 })

@@ -165,6 +165,9 @@ export default function PersonalityTestResultsPage() {
   const isAnimatingRef = useRef(false)
   const analysisRequestedRef = useRef(false)
   const resultPreloadInitiatedRef = useRef(false)
+  const preResolvedImageRef = useRef<string>('')
+  const posterRetryRef = useRef(false)
+  const handleGeneratePosterRef = useRef<(() => Promise<void>) | null>(null)
 
   const profileRef = useRef<AnimationProfile>(getAnimationProfile())
 
@@ -320,7 +323,12 @@ export default function PersonalityTestResultsPage() {
   const archetypeRank = useMemo(() => {
     if (!displayArchetype) return undefined
     const names = Object.keys(archetypeRegistry)
-    return names.indexOf(displayArchetype) + 1
+    const idx = names.indexOf(displayArchetype)
+    if (idx === -1) {
+      logWarn('[PersonalityResults] Archetype not found in registry', { archetype: displayArchetype })
+      return 1
+    }
+    return Math.max(1, idx + 1)
   }, [displayArchetype])
   const serialNumber = useMemo(() => {
     const sessionId = sessionSnapshot?.sessionId ?? 'unknown'
@@ -361,6 +369,28 @@ export default function PersonalityTestResultsPage() {
       getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCelebrate),
     [displayArchetype, visual.asset],
   )
+  // Pre-resolve the archetype image for canvas poster generation.
+  // `Taro.getImageInfo` returns a temp file path that canvas.drawImage
+  // can consume without a redundant network fetch.
+  useEffect(() => {
+    if (!displayAsset || preResolvedImageRef.current) return
+    Taro.getImageInfo({ src: displayAsset })
+      .then((info) => {
+        if (info.path) {
+          preResolvedImageRef.current = info.path
+          logInfo('[PersonalityResults] Archetype image pre-resolved for canvas', {
+            path: info.path.substring(0, 60),
+          })
+        }
+      })
+      .catch((err: unknown) => {
+        logWarn('[PersonalityResults] Failed to pre-resolve archetype image for canvas', {
+          displayAsset,
+          error: String(err),
+        })
+      })
+  }, [displayAsset])
+
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [xiaoyueAnalysis, setXiaoyueAnalysis] = useState<XiaoyueAnalysisResult | null>(null)
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false)
@@ -1278,18 +1308,17 @@ export default function PersonalityTestResultsPage() {
         archetype: displayArchetypeName,
         nickname: cardNickname || visual.nickname || displayArchetypeName,
         tagline: visual.tagline || visual.description || summary,
-        summary,
         shareLine,
         accentColor,
         accentSoft,
         archetypeAsset: canvasArchetypeAsset,
         archetypeAssetPng: visual.assetPng,
+        preResolvedImagePath: preResolvedImageRef.current || undefined,
         confidenceLabel: typicalityLabel ? `${typicalityLabel.prefix}${typicalityLabel.name}` : undefined,
         rarityLabel:
           typeof visual.rarityPercentage === 'number'
             ? `稀有度 ${Math.round(visual.rarityPercentage)}%`
             : undefined,
-        skillAttribute: skillSet?.attribute ?? '气场',
         activeSkillTitle: skillSet?.activeSkill.name ?? '瞬间点亮全场',
         activeSkillEffect: skillSet?.activeSkill.shortEffect ?? '把陌生局迅速带到更舒服的节奏。',
         passiveSkillTitle: skillSet?.passiveSkill.name ?? '气场持续发光',
@@ -1321,6 +1350,7 @@ export default function PersonalityTestResultsPage() {
             rarityPercentage: typeof visual.rarityPercentage === 'number' ? visual.rarityPercentage : 0,
             archetypeAsset: canvasArchetypeAsset,
             archetypeAssetPng: visual.assetPng,
+            preResolvedImagePath: preResolvedImageRef.current || undefined,
             traitEntries: traitEntries.slice(0, 3).map(({ label, value }) => ({ label, value })),
             energyLevel,
             skillSet: skillSet
@@ -1351,6 +1381,26 @@ export default function PersonalityTestResultsPage() {
       await presentShareOptions(nextPosterPath, nextSquarePath)
     } catch (error) {
       const message = error instanceof Error && error.message ? error.message : '海报没生成成功，稍后再试'
+      const isTransientError = error instanceof Error && /timeout|network|offline|abort|failed to fetch/i.test(error.message)
+
+      // Auto-retry once on transient (network/timeout) errors before surfacing to user
+      if (isTransientError && !posterRetryRef.current) {
+        posterRetryRef.current = true
+        logWarn('[PersonalityResults] Poster generation failed with transient error, auto-retrying', {
+          message,
+          primaryArchetype: displayArchetypeName,
+        })
+        void Taro.showToast({ title: '正在重试...', icon: 'loading', duration: 1200 })
+        // Reset state so the retry callback can re-enter generation
+        setIsGeneratingPoster(false)
+        setGenerationPhase('')
+        setTimeout(() => {
+          handleGeneratePosterRef.current?.()
+        }, 1500)
+        return
+      }
+
+      posterRetryRef.current = false
       haptics('warning')
       analytics.errorOccurred('poster_generation_failed', message)
       logError('[PersonalityResults] Failed to generate poster', {
@@ -1382,6 +1432,9 @@ export default function PersonalityTestResultsPage() {
     variants,
     visual,
   ])
+  // Keep a ref to the latest handleGeneratePoster so the retry timeout
+  // can call the most recent closure (with correct isGeneratingPoster state).
+  handleGeneratePosterRef.current = handleGeneratePoster
 
   const content = (() => {
     switch (flowStage) {
@@ -1489,7 +1542,7 @@ export default function PersonalityTestResultsPage() {
       <Canvas
         canvasId={PERSONALITY_SHARE_POSTER_CANVAS_ID}
         className='personality-results__poster-canvas'
-        style={{ width: '1080px', height: '1920px' }}
+        style={{ width: '1080px', height: '1560px' }}
         aria-hidden='true'
       />
       {!deviceTier.isDegradation && (

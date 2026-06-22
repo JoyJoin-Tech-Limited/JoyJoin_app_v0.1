@@ -2,7 +2,7 @@
 
 > Test surface: `apps/mini-program/src/pages/onboarding/personality-test/results/`  
 > Primary client: WeChat Mini Program (iOS + Android)  
-> Last updated: 2026-06-08
+> Last updated: 2026-06-22
 
 ---
 
@@ -22,8 +22,8 @@
 | 1.1 | Tap **"保存我的氛围卡"** button | Button enters loading state with phase text ("准备素材中…", "正在渲染全息卡面…", "正在生成朋友圈卡片…"); haptic medium feedback | |
 | 1.2 | Wait for generation (~1-3s) | Toast "氛围卡已生成"; action sheet appears with options | |
 | 1.3 | Observe generated poster (Preview) | Image is sharp (no blurry text or borders) | |
-| 1.4 | Check poster visual elements | Rainbow sheen visible on card surface; metallic gold border; foil sparkle texture; **"全息限定版"** stamp (Chinese) at bottom; JoyJoin watermark footer "悦聚 · 测测你的氛围命格 · 找到同频的人" | |
-| 1.5 | Check poster resolution | DPR capped at 2 for memory safety (portrait: 2160×3840 max; square: 1500×1500 max) | |
+| 1.4 | Check poster visual elements | Metallic gold border; foil sparkle texture; **"限量氛围版"** stamp (Chinese) at bottom; hero art, rank strip, trait bars, top match chips, energy bar, 2-column skill grid; JoyJoin watermark footer "悦聚 · 测测你的氛围命格 · 找到同频的人" | |
+| 1.5 | Check poster resolution | DPR capped at 2 for memory safety (portrait: 2160×3120 max; square: 1500×1500 max) | |
 | 1.6 | Offline pre-check: enable airplane mode, tap generate | Toast "网络好像断了，请检查连接后再试"; generation not attempted | |
 
 ---
@@ -35,7 +35,7 @@
 | 1b.1 | After poster generation, check action sheet includes "保存朋友圈卡片" | Option is present only when square poster generation succeeded | |
 | 1b.2 | On low-end / degradation-tier device | Square poster generation is skipped entirely; square canvas element not rendered; action sheet shows portrait-only options | |
 | 1b.3 | Tap "保存朋友圈卡片" | Square poster (750×750) is saved to album; toast "朋友圈卡片" with success icon | |
-| 1b.4 | Check square poster visual elements | Archetype name + rarity badge; top 3 traits (compact bars); "悦聚 · 氛围命盘" badge; "全息限定版" stamp; group member avatars (if in session); archetype rank + serial number | |
+| 1b.4 | Check square poster visual elements | Archetype name + rarity badge; top 3 traits (compact bars); "悦聚 · 氛围命盘" badge; "限量氛围版" stamp; group member avatars (if in session); archetype rank + serial number | |
 | 1b.5 | Check square poster resolution | DPR capped at 2 (1500×1500 max) | |
 
 ---
@@ -48,7 +48,7 @@
 | 2.2 | Tilt device gently (gyroscope) | Card rotates in 3D (`rotateX`/`rotateY` ≤ 10°) smoothly with 0.15s transition | |
 | 2.3 | Lay device flat on table | Card returns to neutral rotation within ~0.3s | |
 | 2.4 | Touch and drag on card | Touch-driven tilt activates as fallback; feels responsive | |
-| 2.5 | Observe "全息限定版" stamp | Gold gradient bar visible between skill cards and action buttons | |
+| 2.5 | Observe "限量氛围版" stamp | Gold gradient bar visible between skill cards and action buttons | |
 
 ---
 
@@ -115,7 +115,7 @@
 |---|------|----------|-----------|
 | 8.1 | Trigger save failure (e.g., revoke permission mid-save, or storage full) | Toast: "小悦没能把卡片存进相册，可能需要你授权一下~" | |
 | 8.2 | Verify error analytics | `interaction` event with `action: "share_save_failed"` and error string | |
-| 8.3 | Trigger generation failure (e.g., corrupt archetype asset path) | Toast: "卡片生成遇到小状况，请重试一下~" | |
+| 8.3 | Trigger generation failure (e.g., corrupt archetype asset path) | Transient failures auto-retry once (toast "正在重试…" shown during retry). If retry also fails: toast "卡片生成遇到小状况，请重试一下~" | |
 | 8.4 | Verify error analytics | `error_occurred` event with `errorType: "poster_generation_failed"` | |
 
 ---

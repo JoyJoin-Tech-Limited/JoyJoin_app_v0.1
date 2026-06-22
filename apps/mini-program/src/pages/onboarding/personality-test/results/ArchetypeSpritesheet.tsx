@@ -63,7 +63,7 @@ function ArchetypeSpritesheet({
           width: size,
           height: size,
           borderRadius: '50%',
-          background: 'rgba(139, 92, 246, 0.08)',
+          background: softColor,
         }}
       />
     )
@@ -81,10 +81,10 @@ function ArchetypeSpritesheet({
    */
   const sizeNum = parseInt(size, 10) || 132
   const scale = sizeNum / width
-  const imgW = Math.round(SHEET_W * scale)
-  const imgH = Math.round(SHEET_H * scale)
-  const translateX = Math.round(-x * scale)
-  const translateY = Math.round(-y * scale)
+  const imgW = SHEET_W * scale
+  const imgH = SHEET_H * scale
+  const translateX = -x * scale
+  const translateY = -y * scale
 
   return (
     <View
