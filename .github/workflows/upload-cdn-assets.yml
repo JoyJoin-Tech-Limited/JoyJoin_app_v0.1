@@ -2,6 +2,12 @@ name: Upload CDN Assets
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - apps/mini-program/scripts/cdn-asset-manifest.json
+      - apps/mini-program/src/assets/**
+      - apps/mini-program/scripts/upload-cdn-assets.mjs
 
 jobs:
   upload-assets:
