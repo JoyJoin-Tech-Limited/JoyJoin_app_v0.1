@@ -1,12 +1,13 @@
 import React from 'react'
 import { View, Text } from '@tarojs/components'
+import './index.scss'
 
 interface RichListCardProps {
   title: string
   subtitle?: string
   meta?: string
   ecosystem?: React.ReactNode
-  gradient?: 'warm' | 'cool' | 'fire' | 'premium'
+  gradient?: 'warm' | 'cool' | 'fire' | 'premium' | 'surface'
   children?: React.ReactNode
   onClick?: () => void
   index?: number
@@ -19,7 +20,10 @@ export default React.memo(function RichListCard({
     <View
       className={`rich-list-card rich-list-card--${gradient}`}
       onClick={onClick}
-      style={index > 0 ? { animationDelay: `${index * 60}ms` } : undefined}
+      hoverClass='rich-list-card--pressed'
+      hoverStartTime={0}
+      hoverStayTime={100}
+      style={{ animationDelay: `${Math.min(index * 60, 500)}ms` }}
     >
       {ecosystem && <View className='rich-list-card__ecosystem'>{ecosystem}</View>}
       <Text className='rich-list-card__title'>{title}</Text>

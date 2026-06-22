@@ -90,19 +90,21 @@
 
   &__refresh-indicator {
     height: 4rpx;
-    background: linear-gradient(90deg, transparent, $color-primary, transparent);
-    background-size: 200% 100%;
-    animation: events-refresh-shimmer 1.2s ease-in-out infinite;
-    margin-bottom: $spacing-sm;
+    background: rgba($color-primary, 0.6);
     border-radius: 2rpx;
+    margin-bottom: $spacing-sm;
+    animation: events-refresh-pulse 1.2s ease-in-out infinite;
+    transform-origin: left;
   }
 
-  @keyframes events-refresh-shimmer {
-    0% {
-      background-position: 200% 0;
+  @keyframes events-refresh-pulse {
+    0%, 100% {
+      opacity: 0.35;
+      transform: scaleX(0.85);
     }
-    100% {
-      background-position: -200% 0;
+    50% {
+      opacity: 1;
+      transform: scaleX(1);
     }
   }
 
@@ -128,14 +130,8 @@
 
   &__skeleton-line {
     border-radius: $card-radius-sm;
-    background: linear-gradient(
-      90deg,
-      $color-divider 25%,
-      rgba($color-divider, 0.5) 50%,
-      $color-divider 75%
-    );
-    background-size: 400% 100%;
-    animation: events-skeleton-shimmer 1.5s ease-in-out infinite;
+    background: $color-divider;
+    animation: events-skeleton-pulse 1.5s ease-in-out infinite;
 
     &--title {
       width: 60%;
@@ -149,13 +145,12 @@
     }
   }
 
-  @keyframes events-skeleton-shimmer {
-    0% {
-      background-position: 200% 0;
+  @keyframes events-skeleton-pulse {
+    0%, 100% {
+      opacity: 0.45;
     }
-
-    100% {
-      background-position: -200% 0;
+    50% {
+      opacity: 0.85;
     }
   }
 
@@ -181,18 +176,33 @@
     gap: $spacing-sm;
   }
 
+  &__status-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: $spacing-xs $spacing-sm;
+    background: rgba($color-primary, 0.08);
+    border-radius: 100rpx;
+  }
+
+  &__status-chip-text {
+    font-size: $font-size-xs;
+    color: $color-primary;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-normal;
+  }
+
   &__countdown {
     display: inline-flex;
     align-items: center;
     padding: $spacing-xs $spacing-sm;
-    background: rgba($color-error, 0.08);
+    background: rgba($color-secondary, 0.08);
     border-radius: 100rpx;
     margin-top: $spacing-xs;
   }
 
   &__countdown-text {
     font-size: $font-size-xs;
-    color: $color-error;
+    color: $color-secondary;
     font-weight: $font-weight-semibold;
   }
 
@@ -238,7 +248,7 @@
   .events-page__skeleton-line,
   .events-page__refresh-indicator {
     animation: none;
-    background: $color-divider;
+    opacity: 0.6;
   }
 
   .events-page__first-event-hero-img,

@@ -14,8 +14,10 @@
   &--cool    { background: $card-gradient-cool; }
   &--fire    { background: $card-gradient-fire; }
   &--premium { background: $card-gradient-premium; }
+  &--surface { background: $color-surface; }
 
-  &:active {
+  &:active,
+  &--pressed {
     transform: scale(0.98);
   }
 

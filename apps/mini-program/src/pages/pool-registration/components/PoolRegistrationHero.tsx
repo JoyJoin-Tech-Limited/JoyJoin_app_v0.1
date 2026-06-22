@@ -93,7 +93,7 @@ function SeatHeads({
               zIndex: compactHeads.length - index,
             }}
           >
-            <ArchetypeHead archetype={key} size={SEAT_HEAD_SIZE} />
+            <ArchetypeHead archetype={key} size={SEAT_HEAD_SIZE} variant='grid' />
           </View>
         )
       })}

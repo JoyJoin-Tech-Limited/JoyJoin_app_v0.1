@@ -13,7 +13,9 @@ import './ArchetypeHead.scss'
  * acceptable quality at 180rpx (@3x). WeChat downscales automatically;
  * no @2x/@3x suffixes are used (avoids the @3x@3x double-suffix bug).
  *
- * Assets: assets/icons/archetype/archetype-{key}-head.webp
+ * Assets:
+ *   head variant — assets/icons/archetype/archetype-{key}-head.webp
+ *   grid variant — assets/icons/archetype-grid/archetype-{key}-grid.webp
  */
 
 interface ArchetypeHeadProps {
@@ -22,6 +24,7 @@ interface ArchetypeHeadProps {
   fallback?: 'initial' | 'none'
   fallbackText?: string
   className?: string
+  variant?: 'head' | 'grid'
 }
 
 const HEAD_PATHS: Record<string, string> = {
@@ -39,9 +42,48 @@ const HEAD_PATHS: Record<string, string> = {
   cat: localAsset('/assets/icons/archetype/archetype-cat-head.webp'),
 }
 
-/** CDN fallback for archetype heads — mirrors the bundled file layout. */
+const GRID_PATHS: Record<string, string> = {
+  corgi: localAsset('/assets/icons/archetype-grid/archetype-corgi-grid.webp'),
+  rooster: localAsset('/assets/icons/archetype-grid/archetype-rooster-grid.webp'),
+  hamster_praise: localAsset('/assets/icons/archetype-grid/archetype-hamster_praise-grid.webp'),
+  fox: localAsset('/assets/icons/archetype-grid/archetype-fox-grid.webp'),
+  dolphin_calm: localAsset('/assets/icons/archetype-grid/archetype-dolphin_calm-grid.webp'),
+  spider: localAsset('/assets/icons/archetype-grid/archetype-spider-grid.webp'),
+  koala: localAsset('/assets/icons/archetype-grid/archetype-koala-grid.webp'),
+  octopus: localAsset('/assets/icons/archetype-grid/archetype-octopus-grid.webp'),
+  owl: localAsset('/assets/icons/archetype-grid/archetype-owl-grid.webp'),
+  elephant: localAsset('/assets/icons/archetype-grid/archetype-elephant-grid.webp'),
+  turtle: localAsset('/assets/icons/archetype-grid/archetype-turtle-grid.webp'),
+  cat: localAsset('/assets/icons/archetype-grid/archetype-cat-grid.webp'),
+}
+
 function getCdnHeadPath(archetype: string): string {
   return cdnAsset(`/assets/icons/archetype/archetype-${archetype}-head.webp`)
+}
+
+function getCdnGridPath(archetype: string): string {
+  return cdnAsset(`/assets/icons/archetype-grid/archetype-${archetype}-grid.webp`)
+}
+
+/**
+ * Per-archetype visual-centre correction (source-pixel offsets vs geometric
+ * centre 119.5,119.5 of the 240px canvas). At render time we rescale by
+ * imageSize / 240 and negate so the character's face lands dead-centre in
+ * the circular clip.
+ */
+const VISUAL_CENTRE_SOURCE_OFFSET: Record<string, { dx: number; dy: number }> = {
+  cat:            { dx:   4.8, dy:   9.1 },
+  corgi:          { dx:  -0.6, dy:   3.4 },
+  dolphin_calm:   { dx:  -9.2, dy:  15.6 },
+  elephant:       { dx:   2.2, dy: -11.4 },
+  fox:            { dx:  -3.5, dy:  11.9 },
+  hamster_praise: { dx:   2.4, dy:   3.2 },
+  koala:          { dx:   3.5, dy:  -7.6 },
+  octopus:        { dx:   1.0, dy:  -2.3 },
+  owl:            { dx:   3.7, dy:   0.7 },
+  rooster:        { dx:  -2.9, dy:   6.3 },
+  spider:         { dx:  -0.2, dy:   0.0 },
+  turtle:         { dx:   5.2, dy:  -8.2 },
 }
 
 function getFallbackInitial(text?: string): string {
@@ -55,9 +97,15 @@ export default function ArchetypeHead({
   fallback = 'initial',
   fallbackText,
   className = '',
+  variant = 'head',
 }: ArchetypeHeadProps) {
-  const localSrc = archetype ? HEAD_PATHS[archetype] : undefined
+  const paths = variant === 'grid' ? GRID_PATHS : HEAD_PATHS
+  const localSrc = archetype ? paths[archetype] : undefined
   const sizeStr = `${size}rpx`
+  // Grid icons are circular with safe padding; fill container.
+  // Head crops inset slightly so the circular clip doesn't trim ears/fins.
+  const imageSize = variant === 'grid' ? size : Math.round(size * 0.9)
+  const imageSizeStr = `${imageSize}rpx`
   const [hasLocalError, setHasLocalError] = useState(false)
   const [hasCdnError, setHasCdnError] = useState(false)
 
@@ -81,20 +129,29 @@ export default function ArchetypeHead({
     )
   }
 
-  // Try local bundled WebP first; fall back to CDN WebP if the bundled copy
-  // is missing or stale (e.g. after a subpackage update or cache mismatch).
-  const src = hasLocalError && archetype ? getCdnHeadPath(archetype) : localSrc
+  const getCdnPath = variant === 'grid' ? getCdnGridPath : getCdnHeadPath
+  const src = hasLocalError && archetype ? getCdnPath(archetype) : localSrc
   const onError = hasLocalError ? handleCdnError : handleLocalError
+
+  // Counter the per-asset visual-centre drift so the face lands dead-centre
+  // in the circular clip. Wrapping View owns the transform because WeChat
+  // <Image> style does not reliably accept 'transform'.
+  const correction = variant === 'head' && archetype ? VISUAL_CENTRE_SOURCE_OFFSET[archetype] : undefined
+  const scale = imageSize / 240
+  const tx = correction ? Math.round(-correction.dx * scale) : 0
+  const ty = correction ? Math.round(-correction.dy * scale) : 0
 
   return (
     <View className={`archetype-head ${className}`} style={{ width: sizeStr, height: sizeStr }}>
-      <Image
-        src={src}
-        mode='aspectFit'
-        style={{ width: sizeStr, height: sizeStr }}
-        lazyLoad={false}
-        onError={onError}
-      />
+      <View style={{ transform: `translateX(${tx}rpx) translateY(${ty}rpx)` }}>
+        <Image
+          src={src}
+          mode='aspectFit'
+          style={{ width: imageSizeStr, height: imageSizeStr }}
+          lazyLoad={false}
+          onError={onError}
+        />
+      </View>
     </View>
   )
 }

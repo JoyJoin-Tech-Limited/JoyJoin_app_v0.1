@@ -34,7 +34,7 @@
           hover-class="joy-custom-tab-bar__item--pressed"
           hover-stay-time="150"
           role="button"
-          aria-label="{{item.text}}"
+          aria-label="{{item.text}}{{item.badgeCount > 0 ? (item.badgeCount > 99 ? '，99+条新消息' : '，' + item.badgeCount + '条新消息') : ''}}"
           aria-pressed="{{selected === item.index}}"
         >
           <view class="joy-custom-tab-bar__item-icon-wrap">
@@ -49,6 +49,7 @@
             <view
               wx:if="{{item.badgeCount > 0}}"
               class="joy-custom-tab-bar__item-badge"
+              aria-hidden="true"
             >
               <view class="joy-custom-tab-bar__item-badge-text">
                 {{item.badgeCount > 99 ? '99+' : item.badgeCount}}
@@ -78,7 +79,7 @@
           hover-class="joy-custom-tab-bar__item--pressed"
           hover-stay-time="150"
           role="button"
-          aria-label="{{item.text}}"
+          aria-label="{{item.text}}{{item.badgeCount > 0 ? (item.badgeCount > 99 ? '，99+条新消息' : '，' + item.badgeCount + '条新消息') : ''}}"
           aria-pressed="{{selected === item.index}}"
         >
           <view class="joy-custom-tab-bar__item-icon-wrap">
@@ -93,6 +94,7 @@
             <view
               wx:if="{{item.badgeCount > 0}}"
               class="joy-custom-tab-bar__item-badge"
+              aria-hidden="true"
             >
               <view class="joy-custom-tab-bar__item-badge-text">
                 {{item.badgeCount > 99 ? '99+' : item.badgeCount}}

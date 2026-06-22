@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   appendBrowserPaymentReturnUrl,
   getBrowserPaymentLaunchUrl,
-  getMyBlindBoxEvents,
+  getJoinedEvents,
   getNotificationCounts,
   getPricing,
   getUserCoupons,
@@ -136,15 +136,15 @@ describe('shared API coupon normalization', () => {
     );
   });
 
-  it('uses the shared blind-box and notification endpoints expected by mini-program hooks', async () => {
+  it('uses the shared joined-events and notification endpoints expected by mini-program hooks', async () => {
     const apiMock = vi.fn().mockResolvedValue({ success: true });
     const api = apiMock as unknown as ApiTransport;
 
-    await getMyBlindBoxEvents(api);
+    await getJoinedEvents(api);
     await getNotificationCounts(api);
     await markNotificationsAsRead(api, 'discover');
 
-    expect(apiMock).toHaveBeenNthCalledWith(1, { path: '/api/my-events' });
+    expect(apiMock).toHaveBeenNthCalledWith(1, { path: '/api/events/joined' });
     expect(apiMock).toHaveBeenNthCalledWith(2, { path: '/api/notifications/counts' });
     expect(apiMock).toHaveBeenNthCalledWith(3, {
       path: '/api/notifications/mark-read',

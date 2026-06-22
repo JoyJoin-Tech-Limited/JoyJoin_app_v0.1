@@ -23,18 +23,18 @@ vi.mock('@shared/api', async () => {
   return {
     ...actual,
     getMyPoolRegistrations: vi.fn(),
-    getMyBlindBoxEvents: vi.fn(),
+    getJoinedEvents: vi.fn(),
   }
 })
 
 import { useAuth } from '../../useAuth'
 import { useNotificationCounts } from '../../useNotificationCounts'
-import { getMyPoolRegistrations, getMyBlindBoxEvents } from '@shared/api'
+import { getMyPoolRegistrations, getJoinedEvents } from '@shared/api'
 
 const mockUseAuth = vi.mocked(useAuth)
 const mockUseNotificationCounts = vi.mocked(useNotificationCounts)
 const mockGetMyPoolRegistrations = vi.mocked(getMyPoolRegistrations)
-const mockGetMyBlindBoxEvents = vi.mocked(getMyBlindBoxEvents)
+const mockGetJoinedEvents = vi.mocked(getJoinedEvents)
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -58,7 +58,7 @@ describe('useTabBarStateBridge', () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: true } as any)
     mockUseNotificationCounts.mockReturnValue({ data: { discover: 2, activities: 3, chat: 0 } } as any)
     mockGetMyPoolRegistrations.mockResolvedValue([])
-    mockGetMyBlindBoxEvents.mockResolvedValue([])
+    mockGetJoinedEvents.mockResolvedValue([])
   })
 
   it('publishes notification badges when authenticated', async () => {
@@ -69,11 +69,11 @@ describe('useTabBarStateBridge', () => {
     })
   })
 
-  it('computes center state from pool registrations and blind-box events', async () => {
+  it('computes center state from pool registrations and joined events', async () => {
     mockGetMyPoolRegistrations.mockResolvedValue([
       { id: 'reg-1', poolId: 'pool-1', matchStatus: 'pending' },
     ])
-    mockGetMyBlindBoxEvents.mockResolvedValue([])
+    mockGetJoinedEvents.mockResolvedValue([])
 
     renderHook(() => useTabBarStateBridge(), { wrapper: createWrapper() })
 
@@ -89,7 +89,7 @@ describe('useTabBarStateBridge', () => {
     mockGetMyPoolRegistrations.mockResolvedValue([
       { id: 'reg-1', poolId: 'pool-1', matchStatus: 'pending' },
     ])
-    mockGetMyBlindBoxEvents.mockResolvedValue([{ id: 'event-1', status: 'open' }])
+    mockGetJoinedEvents.mockResolvedValue([{ id: 'event-1', status: 'open' }])
 
     renderHook(() => useTabBarStateBridge(), { wrapper: createWrapper() })
 
@@ -97,7 +97,7 @@ describe('useTabBarStateBridge', () => {
     await new Promise((resolve) => setTimeout(resolve, 50))
 
     expect(mockGetMyPoolRegistrations).not.toHaveBeenCalled()
-    expect(mockGetMyBlindBoxEvents).not.toHaveBeenCalled()
+    expect(mockGetJoinedEvents).not.toHaveBeenCalled()
     expect(getTabBarState().badges).toEqual({ discover: 0, activities: 0, chat: 0 })
     expect(getTabBarState().center.label).toBe('去发现')
   })

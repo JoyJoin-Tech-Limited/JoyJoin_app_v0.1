@@ -191,6 +191,12 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/icons/archetype',
           to: 'dist/assets/icons/archetype',
         },
+        // Archetype grid icons — circular icons cropped from the 3×4 archetype
+        // spritesheet (~43KB total), used for small seat/queue avatars.
+        {
+          from: 'src/assets/icons/archetype-grid',
+          to: 'dist/assets/icons/archetype-grid',
+        },
         // Empty state illustrations — shown when center-hub is empty (~12KB).
         {
           from: 'src/assets/empty-state',
@@ -233,14 +239,6 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         {
           from: 'src/assets/icons/phase-icons/custom-tier-icon.webp',
           to: 'dist/assets/icons/custom-tier-icon.webp',
-        },
-        {
-          from: 'src/assets/icons/phase-icons/custom-tier-icon@2x.webp',
-          to: 'dist/assets/icons/custom-tier-icon@2x.webp',
-        },
-        {
-          from: 'src/assets/icons/phase-icons/custom-tier-icon@3x.webp',
-          to: 'dist/assets/icons/custom-tier-icon@3x.webp',
         },
         // Xiaoyue mascot sprite sheets — bundled locally as CDN fallback.
         // Only the core states that appear during the first session are kept

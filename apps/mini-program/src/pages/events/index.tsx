@@ -14,27 +14,17 @@ import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Card from '../../components/ui/Card'
-import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import StatusCard from '../../components/ui/StatusCard'
 import RichListCard from '../../components/RichListCard'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 import { isLongListRowCount } from '../../lib/utils/longListThreshold'
 import { logWarn } from '../../lib/utils/logger'
+import { formatEventDateTime, getCountdownText, getJoinedEventStatusLabel } from '../../lib/utils/eventDisplay'
+import { eventsAnalytics } from '../../lib/analytics/eventsAnalytics'
 import { partitionJoinedEventsByDateTime } from './eventPartition'
 import './index.scss'
 
 type TabKey = 'upcoming' | 'completed'
-
-function getCountdownText(startTime: string): string {
-  const now = new Date()
-  const start = new Date(startTime)
-  const diff = start.getTime() - now.getTime()
-  if (diff < 0) return '进行中'
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  if (hours < 24) return `${hours}小时后开始`
-  const days = Math.floor(hours / 24)
-  return `${days}天后开始`
-}
 
 function EventCardSkeleton() {
   return (
@@ -71,6 +61,10 @@ export default function EventsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('upcoming')
   const [hasManualTabSelection, setHasManualTabSelection] = useState(false)
 
+  useEffect(() => {
+    eventsAnalytics.track('events_view')
+  }, [])
+
   const { data: events = [], isLoading, isFetching, isError, refetch } = useQuery<JoinedEventSummary[]>({
     queryKey: ['mini-program', 'joined-events'],
     queryFn: async (): Promise<JoinedEventSummary[]> => {
@@ -89,6 +83,7 @@ export default function EventsPage() {
 
   const handleRefresh = useCallback(() => {
     haptics('light')
+    eventsAnalytics.track('events_pull_refresh')
     queryClient.invalidateQueries({ queryKey: ['mini-program', 'joined-events'] })
     queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/events'] })
     evictPersistedQuery(JOINED_EVENTS_QUERY_KEY)
@@ -146,13 +141,20 @@ export default function EventsPage() {
     haptics('light')
     setHasManualTabSelection(true)
     setActiveTab(tab)
+    eventsAnalytics.track('events_tab_switch', { tab })
   }
 
   const handleEventTap = (event: JoinedEventSummary) => {
+    eventsAnalytics.track('events_card_tap', {
+      eventId: event.id,
+      tab: resolvedActiveTab,
+      status: event.status,
+    })
     Taro.navigateTo({ url: `/pages/event-detail/index?id=${event.id}` })
   }
 
   const navigateToDiscover = () => {
+    eventsAnalytics.track('events_empty_state_cta_tap')
     Taro.switchTab({ url: '/pages/discover/index' })
   }
 
@@ -218,7 +220,6 @@ export default function EventsPage() {
           <StatusCard
             className='events-page__empty-state'
             tone='error'
-            icon='😕'
             title='加载失败'
             description='网络有点调皮，再试一次吧'
             action={{
@@ -229,28 +230,34 @@ export default function EventsPage() {
           />
         ) : displayEvents.length > 0 ? (
           <CustomWrapper>
-            {displayEvents.map((event, index) => (
-              <View key={String(event.id)} className='events-page__card'>
-                <RichListCard
-                  title={event.title ?? '悦聚活动'}
-                  subtitle={event.dateTime ?? '时间待定'}
-                  gradient='premium'
-                  onClick={() => handleEventTap(event)}
-                  index={index}
-                >
-                  {typeof event.startTime === 'string' && resolvedActiveTab === 'upcoming' && (
-                    <View className='events-page__countdown'>
-                      <View className='jj-icon-text'>
-                        <JoyJoinIcon emoji='⏰' size={20} />
+            {displayEvents.map((event, index) => {
+              const statusLabel = getJoinedEventStatusLabel(event.status)
+              return (
+                <View key={String(event.id)} className='events-page__card'>
+                  <RichListCard
+                    title={event.title ?? '悦聚活动'}
+                    subtitle={formatEventDateTime(event.dateTime)}
+                    meta={event.location}
+                    ecosystem={statusLabel ? (
+                      <View className='events-page__status-chip'>
+                        <Text className='events-page__status-chip-text'>{statusLabel}</Text>
+                      </View>
+                    ) : undefined}
+                    gradient={resolvedActiveTab === 'completed' ? 'surface' : 'premium'}
+                    onClick={() => handleEventTap(event)}
+                    index={index}
+                  >
+                    {typeof event.dateTime === 'string' && resolvedActiveTab === 'upcoming' && (
+                      <View className='events-page__countdown'>
                         <Text className='events-page__countdown-text'>
-                          {getCountdownText(event.startTime)}
+                          {getCountdownText(event.dateTime)}
                         </Text>
                       </View>
-                    </View>
-                  )}
-                </RichListCard>
-              </View>
-            ))}
+                    )}
+                  </RichListCard>
+                </View>
+              )
+            })}
           </CustomWrapper>
         ) : (
           <StatusCard

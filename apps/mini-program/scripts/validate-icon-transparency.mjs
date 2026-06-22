@@ -42,11 +42,7 @@ const TRANSPARENT_TIERS = new Set([
 // tiers (e.g. circular badge-style icons with solid coloured backgrounds).
 const OPAQUE_EXCEPTIONS = new Set([
   'status-icons/status-crown.webp',
-  'status-icons/status-crown@2x.webp',
-  'status-icons/status-crown@3x.webp',
   'status-icons/status-waiting.webp',
-  'status-icons/status-waiting@2x.webp',
-  'status-icons/status-waiting@3x.webp',
 ])
 
 async function isOpaque(filePath) {
@@ -66,8 +62,42 @@ async function isOpaque(filePath) {
   return true
 }
 
+async function findDensityViolations() {
+  const violations = []
+
+  // Scan ALL icon subdirectories, not just TRANSPARENT_TIERS.
+  // Density violations can occur in any bundled icon tier (mood-icons, rating-faces, etc.).
+  for (const dir of fs.readdirSync(ICONS_DIR)) {
+    const dirPath = path.join(ICONS_DIR, dir)
+    if (!fs.statSync(dirPath).isDirectory()) continue
+
+    const files = fs.readdirSync(dirPath).filter((name) => name.endsWith('.webp'))
+
+    for (const file of files) {
+      if (file.includes('@')) {
+        violations.push(path.posix.join(dir, file))
+      }
+    }
+  }
+
+  return violations
+}
+
 async function main() {
   const failures = []
+
+  const densityViolations = await findDensityViolations()
+  if (densityViolations.length > 0) {
+    console.error('\n❌ Density-suffixed icon files found (bundled icons must use a single bare .webp):')
+    for (const f of densityViolations) {
+      console.error(`   - ${f}`)
+    }
+    console.error(
+      '\nFix: remove @2x/@3x variants and ship one high-resolution bare .webp per asset.\n' +
+        'WeChat auto-resolves density suffixes; mixed naming causes 404 fallbacks to emoji.\n',
+    )
+    process.exit(1)
+  }
 
   for (const tier of TRANSPARENT_TIERS) {
     const tierDir = path.join(ICONS_DIR, tier)

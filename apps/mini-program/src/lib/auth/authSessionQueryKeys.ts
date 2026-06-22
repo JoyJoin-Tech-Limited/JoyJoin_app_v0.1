@@ -7,7 +7,6 @@ export const MINI_PROGRAM_USER_SCOPED_QUERY_KEY_PREFIXES = [
   ['mini-program', 'gamification-history'],
   ['mini-program', 'notification-counts'],
   ['mini-program', 'my-pool-registrations'],
-  ['mini-program', 'my-blind-box-events'],
   ['mini-program', 'joined-events'],
   ['mini-program', 'connections'],
   ['mini-program', 'shell/discover'],

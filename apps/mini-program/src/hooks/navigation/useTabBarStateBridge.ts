@@ -1,14 +1,15 @@
 import { useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  getMyBlindBoxEvents,
+  getJoinedEvents,
   getMyPoolRegistrations,
   type PoolRegistrationSummary,
-  type BlindBoxEventSummary,
+  type JoinedEventSummary,
 } from '@shared/api'
 import { useAuth } from '../useAuth'
 import { apiRequest } from '../../lib/api/api'
 import {
+  JOINED_EVENTS_QUERY_KEY,
   REGISTRATIONS_QUERY_KEY,
 } from '../../lib/prefetchEngine'
 import { getMiniProgramCenterState } from '../../lib/navigation/centerTabRouting'
@@ -19,14 +20,12 @@ import {
 } from '../../lib/navigation/tabBarState'
 import { useNotificationCounts } from '../useNotificationCounts'
 
-const BLIND_BOX_EVENTS_QUERY_KEY = ['mini-program', 'my-blind-box-events'] as const
-
 /**
  * Single source of truth for tab-bar chrome data.
  *
  * Mounted once in App.tsx. It owns:
  * - notification-count polling (one interval for the whole app)
- * - observing the shared pool-registrations / my-events query cache
+ * - observing the shared pool-registrations / joined-events query cache
  * - computing the center button state
  *
  * Per-page `useCustomTabBarSync` only reads the derived state and pushes it
@@ -45,9 +44,9 @@ export function useTabBarStateBridge(): void {
     staleTime: Infinity,
   })
 
-  const { data: events = [] } = useQuery<BlindBoxEventSummary[]>({
-    queryKey: BLIND_BOX_EVENTS_QUERY_KEY,
-    queryFn: () => getMyBlindBoxEvents(apiRequest),
+  const { data: events = [] } = useQuery<JoinedEventSummary[]>({
+    queryKey: JOINED_EVENTS_QUERY_KEY,
+    queryFn: () => getJoinedEvents(apiRequest),
     enabled,
     staleTime: Infinity,
   })

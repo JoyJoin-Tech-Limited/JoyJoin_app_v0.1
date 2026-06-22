@@ -14,25 +14,23 @@ const CONFIG_PATH = resolve(MINI_PROGRAM_ROOT, 'config', 'index.ts')
 
 /**
  * Regression test: rating face assets must exist for every registered mapping
- * and density. The icon registry generates `/assets/icons/rating-faces/...webp`
+ * at 1x. The icon registry generates `/assets/icons/rating-faces/...webp`
  * paths; this test confirms the bundled files are on disk so the component
  * never falls back to emoji due to a missing asset.
  */
 describe('RatingFace asset registry', () => {
-  it('has bundled WebP assets for every rating face at 1x/2x/3x', () => {
+  it('has bundled WebP assets for every rating face at 1x (bare filename)', () => {
     const missing: string[] = []
 
     for (const mapping of RATING_FACES_ORDERED) {
-      for (const density of [1, 2, 3] as const) {
-        const assetPath = getLocalIconAssetPath(
-          mapping.assetKey,
-          mapping.tier,
-          density,
-        )
-        const fullPath = resolve(SRC_ASSETS_ROOT, '.' + assetPath)
-        if (!existsSync(fullPath)) {
-          missing.push(assetPath)
-        }
+      const assetPath = getLocalIconAssetPath(
+        mapping.assetKey,
+        mapping.tier,
+        1,
+      )
+      const fullPath = resolve(SRC_ASSETS_ROOT, '.' + assetPath)
+      if (!existsSync(fullPath)) {
+        missing.push(assetPath)
       }
     }
 

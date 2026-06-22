@@ -114,6 +114,7 @@
     display: block;
     @include type-subheading;
     line-height: 1.6;
+    margin-bottom: $spacing-md;
   }
 
   &__promise {

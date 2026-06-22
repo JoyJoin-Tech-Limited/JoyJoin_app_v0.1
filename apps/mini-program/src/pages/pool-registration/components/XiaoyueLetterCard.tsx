@@ -80,10 +80,10 @@ export default function XiaoyueLetterCard({
             </View>
             <View className='xiaoyue-letter-card__title-block xiaoyue-letter-card__title-block--loading'>
               <View className='xiaoyue-letter-card__skeleton-line xiaoyue-letter-card__skeleton-line--medium' />
-              <View className='xiaoyue-letter-card__skeleton-line xiaoyue-letter-card__skeleton-line--long' />
             </View>
           </View>
           <View className='xiaoyue-letter-card__skeleton-body'>
+            <View className='xiaoyue-letter-card__skeleton-line xiaoyue-letter-card__skeleton-line--long' />
             <View className='xiaoyue-letter-card__skeleton-line xiaoyue-letter-card__skeleton-line--long' />
             <View className='xiaoyue-letter-card__skeleton-line xiaoyue-letter-card__skeleton-line--medium' />
             <View className='xiaoyue-letter-card__skeleton-chips'>
@@ -123,9 +123,10 @@ export default function XiaoyueLetterCard({
             >
               {eyebrowText}
             </Text>
-            <Text className='xiaoyue-letter-card__insight'>{cleanInsight}</Text>
           </View>
         </View>
+
+        <Text className='xiaoyue-letter-card__insight'>{cleanInsight}</Text>
 
         <Text className='xiaoyue-letter-card__promise'>{cleanPromise}</Text>
 

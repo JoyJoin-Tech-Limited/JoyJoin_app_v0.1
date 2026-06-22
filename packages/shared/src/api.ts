@@ -593,6 +593,7 @@ export interface JoinedEventSummary {
   [key: string]: unknown
 }
 
+/** @deprecated Use {@link JoinedEventSummary} + {@link getJoinedEvents} instead — `/api/my-events` has no server handler. */
 export interface BlindBoxEventSummary {
   id: string
   status?: string
@@ -716,6 +717,7 @@ export function getJoinedEvents(api: ApiTransport): Promise<JoinedEventSummary[]
   return api<JoinedEventSummary[]>({ path: '/api/events/joined' })
 }
 
+/** @deprecated Use {@link getJoinedEvents} instead — `/api/my-events` has no server handler. */
 export function getMyBlindBoxEvents(api: ApiTransport): Promise<BlindBoxEventSummary[]> {
   return api<BlindBoxEventSummary[]>({ path: '/api/my-events' })
 }

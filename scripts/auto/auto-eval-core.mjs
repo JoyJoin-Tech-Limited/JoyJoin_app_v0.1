@@ -915,7 +915,7 @@ function runPerformanceModule(changedFiles) {
 function runHarnessModule(repoRoot, changedFiles, timeoutProfile) {
   const key = 'harness-engineering';
 
-  const result = runCommand('node', ['scripts/harness-completion-gate.mjs', '--json'], {
+  const result = runCommand('node', ['scripts/harness/harness-completion-gate.mjs', '--json'], {
     cwd: repoRoot,
     timeoutMs: timeoutProfile.guardrails + 5000,
   });

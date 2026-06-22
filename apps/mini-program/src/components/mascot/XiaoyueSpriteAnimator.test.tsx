@@ -49,68 +49,78 @@ vi.mock('../../assets/mascot/xiaoyue-spritesheet-manifest.json', () => ({
 }))
 
 describe('XiaoyueSpriteAnimator', () => {
-  it('does not use setInterval for frame playback', () => {
+  it('uses setInterval for looping frame playback', () => {
+    vi.useFakeTimers()
     const setIntervalSpy = vi.spyOn(global, 'setInterval')
     const { container } = render(<XiaoyueSpriteAnimator state='coach' />)
     const img = container.querySelector('img')
 
     expect(img).toBeTruthy()
-    expect(setIntervalSpy).not.toHaveBeenCalled()
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1)
 
     const style = img?.getAttribute('style') || ''
-    expect(style).toContain('steps(9)')
-    expect(style).toContain('1200ms')
-    expect(style).toContain('infinite')
+    expect(style).not.toContain('steps(')
+    expect(style).not.toContain('1200ms')
 
     setIntervalSpy.mockRestore()
+    vi.useRealTimers()
   })
 
-  it('drives one-shot states with CSS steps animation and no setInterval', () => {
+  it('drives one-shot states with setInterval', () => {
+    vi.useFakeTimers()
     const setIntervalSpy = vi.spyOn(global, 'setInterval')
     const { container } = render(<XiaoyueSpriteAnimator state='celebrate' />)
     const img = container.querySelector('img')
     const style = img?.getAttribute('style') || ''
 
-    expect(style).toContain('steps(7)')
-    expect(style).toContain('1500ms')
-    expect(style).not.toContain('infinite')
-    expect(style).toContain('forwards')
-    expect(setIntervalSpy).not.toHaveBeenCalled()
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1)
+    expect(style).not.toContain('steps(')
 
     setIntervalSpy.mockRestore()
+    vi.useRealTimers()
   })
 
   it('renders a static first frame when reduced motion is enabled', () => {
+    vi.useFakeTimers()
     vi.mocked(Taro.getSystemInfoSync).mockReturnValueOnce({ reduceMotion: true } as any)
 
+    const setIntervalSpy = vi.spyOn(global, 'setInterval')
     const { container } = render(<XiaoyueSpriteAnimator state='coach' />)
     const img = container.querySelector('img') as HTMLImageElement | null
 
-    expect(img?.style.animation).toBe('')
+    expect(setIntervalSpy).not.toHaveBeenCalled()
     expect(img?.getAttribute('style')).not.toContain('steps(')
+
+    setIntervalSpy.mockRestore()
+    vi.useRealTimers()
   })
 
   it('renders a static frame when staticFrame is provided', () => {
+    vi.useFakeTimers()
+    const setIntervalSpy = vi.spyOn(global, 'setInterval')
     const { container } = render(<XiaoyueSpriteAnimator state='coach' staticFrame={3} />)
     const img = container.querySelector('img') as HTMLImageElement | null
 
-    expect(img?.style.animation).toBe('')
+    expect(setIntervalSpy).not.toHaveBeenCalled()
     expect(img?.getAttribute('style')).not.toContain('steps(')
+
+    setIntervalSpy.mockRestore()
+    vi.useRealTimers()
   })
 
   it('cleans up timers and app lifecycle listeners on unmount', () => {
-    const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout')
+    const clearIntervalSpy = vi.spyOn(global, 'clearInterval')
     const offAppShowSpy = vi.spyOn(Taro, 'offAppShow')
     const offAppHideSpy = vi.spyOn(Taro, 'offAppHide')
 
     const { unmount } = render(<XiaoyueSpriteAnimator state='celebrate' />)
     unmount()
 
-    expect(clearTimeoutSpy).toHaveBeenCalled()
+    expect(clearIntervalSpy).toHaveBeenCalled()
     expect(offAppShowSpy).toHaveBeenCalled()
     expect(offAppHideSpy).toHaveBeenCalled()
 
-    clearTimeoutSpy.mockRestore()
+    clearIntervalSpy.mockRestore()
     offAppShowSpy.mockRestore()
     offAppHideSpy.mockRestore()
   })
