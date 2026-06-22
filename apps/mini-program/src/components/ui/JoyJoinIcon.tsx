@@ -76,6 +76,7 @@ export default function JoyJoinIcon({
   const isCdnTier = mapping ? CDN_ICON_TIERS.has(mapping.tier) : false
   const lazyLoad = lazyLoadProp ?? isCdnTier
   const [hasError, setHasError] = useState(false)
+  const [triedCdn, setTriedCdn] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
   const handleLoad = useCallback(() => {
@@ -83,29 +84,44 @@ export default function JoyJoinIcon({
   }, [])
 
   const resolvedAsset = useMemo(() => {
-    if (!mapping) return { src: '', error: null as unknown }
+    if (!mapping) return { local: '', cdn: '', isCdnTier: false, error: null as unknown }
 
     try {
       const assetPath = getLocalIconAssetPath(mapping.assetKey, mapping.tier, 1)
+      const tierIsCdn = CDN_ICON_TIERS.has(mapping.tier)
       return {
-        src: CDN_ICON_TIERS.has(mapping.tier) ? cdnAsset(assetPath) : localAsset(assetPath),
+        local: tierIsCdn ? cdnAsset(assetPath) : localAsset(assetPath),
+        cdn: cdnAsset(assetPath),
+        isCdnTier: tierIsCdn,
         error: null as unknown,
       }
     } catch (error) {
-      return { src: '', error }
+      return { local: '', cdn: '', isCdnTier: false, error }
     }
   }, [mapping])
 
+  // Active src: local bundle first; on error fall back to CDN. WeChat's upload
+  // unused-file filter can strip bundled assets referenced via dynamic paths,
+  // so we mirror HeroPromoBanner's local→CDN fallback before giving up to emoji.
+  const activeSrc = triedCdn ? resolvedAsset.cdn : resolvedAsset.local
+
   const handleError = useCallback(() => {
     if (!mapping) return
+    // First failure on a non-CDN tier: retry from CDN before giving up to emoji
+    // (the bundled local copy may have been stripped at upload).
+    if (!triedCdn && !resolvedAsset.isCdnTier && resolvedAsset.cdn) {
+      setTriedCdn(true)
+      setLoaded(false)
+      return
+    }
     logError('[JoyJoinIcon] Asset failed to load, falling back to emoji', {
       emoji,
       tier,
       assetKey: mapping.assetKey,
-      src: resolvedAsset.src,
+      src: triedCdn ? resolvedAsset.cdn : resolvedAsset.local,
     })
     setHasError(true)
-  }, [emoji, mapping, resolvedAsset.src, tier])
+  }, [emoji, mapping, tier, triedCdn, resolvedAsset.isCdnTier, resolvedAsset.cdn, resolvedAsset.local])
 
   const transition = useMemo(() => {
     if (REDUCED_MOTION) return 'none'
@@ -157,7 +173,7 @@ export default function JoyJoinIcon({
   return (
     <Image
       className={className}
-      src={resolvedAsset.src}
+      src={activeSrc}
       style={{
         width: sizeStr,
         height: sizeStr,

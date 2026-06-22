@@ -1,7 +1,7 @@
 import { View, Text, Image } from "@tarojs/components"
 import Taro, { useDidHide } from "@tarojs/taro"
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
-import { localAsset } from "../../lib/utils/cdnAssets"
+import { cdnAsset, localAsset } from "../../lib/utils/cdnAssets"
 import { logInfo, logWarn } from "../../lib/utils/logger"
 import { onboardingAnalytics } from "../../lib/onboarding/onboardingAnalytics"
 import "./PhaseIconCarousel.scss"
@@ -15,15 +15,16 @@ interface PhaseDef {
   label: string
   slogan: string
   icon: string
+  cdnIcon: string
 }
 
 const PHASES: PhaseDef[] = [
-  { key: "topic-card", label: "话题卡", slogan: "百无禁忌，聊到心底", icon: localAsset("/assets/landing-phase-icons/phase-topic-card.webp") },
-  { key: "lie_detective", label: "谎言侦探", slogan: "真假难辨，谁最会演", icon: localAsset("/assets/landing-phase-icons/phase-lie-detective.webp") },
-  { key: "personality_dice", label: "人格骰子", slogan: "掷出你的隐藏面", icon: localAsset("/assets/landing-phase-icons/phase-personality-dice.webp") },
-  { key: "auction", label: "拍卖", slogan: "敢押上全部筹码吗", icon: localAsset("/assets/landing-phase-icons/phase-auction.webp") },
-  { key: "mini_script", label: "迷你剧本杀", slogan: "5分钟全员入戏", icon: localAsset("/assets/landing-phase-icons/phase-mini-script.webp") },
-  { key: "quip_battle", label: "机智对决", slogan: "妙语连珠，接招吧", icon: localAsset("/assets/landing-phase-icons/phase-quip-battle.webp") },
+  { key: "topic-card", label: "话题卡", slogan: "百无禁忌，聊到心底", icon: localAsset("/assets/landing-phase-icons/phase-topic-card.webp"), cdnIcon: cdnAsset("/assets/landing-phase-icons/phase-topic-card.webp") },
+  { key: "lie_detective", label: "谎言侦探", slogan: "真假难辨，谁最会演", icon: localAsset("/assets/landing-phase-icons/phase-lie-detective.webp"), cdnIcon: cdnAsset("/assets/landing-phase-icons/phase-lie-detective.webp") },
+  { key: "personality_dice", label: "人格骰子", slogan: "掷出你的隐藏面", icon: localAsset("/assets/landing-phase-icons/phase-personality-dice.webp"), cdnIcon: cdnAsset("/assets/landing-phase-icons/phase-personality-dice.webp") },
+  { key: "auction", label: "拍卖", slogan: "敢押上全部筹码吗", icon: localAsset("/assets/landing-phase-icons/phase-auction.webp"), cdnIcon: cdnAsset("/assets/landing-phase-icons/phase-auction.webp") },
+  { key: "mini_script", label: "迷你剧本杀", slogan: "5分钟全员入戏", icon: localAsset("/assets/landing-phase-icons/phase-mini-script.webp"), cdnIcon: cdnAsset("/assets/landing-phase-icons/phase-mini-script.webp") },
+  { key: "quip_battle", label: "机智对决", slogan: "妙语连珠，接招吧", icon: localAsset("/assets/landing-phase-icons/phase-quip-battle.webp"), cdnIcon: cdnAsset("/assets/landing-phase-icons/phase-quip-battle.webp") },
 ]
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -41,6 +42,7 @@ export default function PhaseIconCarousel({ isVisible }: PhaseIconCarouselProps)
   const [isPlaying, setIsPlaying] = useState(true)
   const [hasBorn, setHasBorn] = useState(false)
   const [iconErrors, setIconErrors] = useState<Record<string, boolean>>({})
+  const [cdnFallbacks, setCdnFallbacks] = useState<Record<string, boolean>>({})
   const [direction, setDirection] = useState<1 | -1>(1)
   const [showHint, setShowHint] = useState(true)
   const [isDragging, setIsDragging] = useState(false)
@@ -227,23 +229,29 @@ export default function PhaseIconCarousel({ isVisible }: PhaseIconCarouselProps)
           return (
             <View key={phase.key} className={`phase-carousel__item ${posClass}`} aria-hidden={pos !== 0}>
               {!iconErrors[phase.key] ? (
-                <Image className="phase-carousel__item-img" src={phase.icon} mode="aspectFit" lazyLoad={false}
+                <Image className="phase-carousel__item-img" src={cdnFallbacks[phase.key] ? phase.cdnIcon : phase.icon} mode="aspectFit" lazyLoad={false}
                   {...{ alt: phase.label } as any}
                   onLoad={() => {
-                    logInfo('[PhaseIconCarousel] phase icon loaded', { phase: phase.key, src: phase.icon })
+                    logInfo('[PhaseIconCarousel] phase icon loaded', { phase: phase.key, src: cdnFallbacks[phase.key] ? phase.cdnIcon : phase.icon })
                   }}
                   onError={() => {
+                    // First failure: the bundled local copy can be stripped by
+                    // WeChat's upload filter — retry from CDN before the text fallback.
+                    if (!cdnFallbacks[phase.key]) {
+                      setCdnFallbacks(prev => ({ ...prev, [phase.key]: true }))
+                      return
+                    }
                     void Taro.getNetworkType().then((res) => {
                       const ctx = {
                         phase: phase.key,
-                        src: phase.icon,
+                        src: phase.cdnIcon,
                         networkType: res.networkType,
                         env: process.env.NODE_ENV,
                         cdnBase: process.env.TARO_APP_CDN_BASE_URL || '(none)',
                       }
-                      logWarn('[PhaseIconCarousel] phase icon load failed', ctx)
+                      logWarn('[PhaseIconCarousel] phase icon load failed (local+cdn)', ctx)
                       // eslint-disable-next-line no-console
-                      console.warn('[PhaseIconCarousel] phase icon load failed', ctx)
+                      console.warn('[PhaseIconCarousel] phase icon load failed (local+cdn)', ctx)
                     })
                     handleIconError(phase.key)
                   }} />

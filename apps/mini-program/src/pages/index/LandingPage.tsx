@@ -1,7 +1,7 @@
 import { View, Text, Image, Navigator } from "@tarojs/components"
 import Taro, { useRouter } from "@tarojs/taro"
 import { useState, useEffect, useRef, useMemo } from "react"
-import { localAsset } from "../../lib/utils/cdnAssets"
+import { cdnAsset, localAsset } from "../../lib/utils/cdnAssets"
 import { loadBrandDisplayFont } from "../../lib/utils/brandFont"
 import Button from "../../components/ui/Button"
 import BrandLogo from "../../components/ui/BrandLogo"
@@ -17,8 +17,9 @@ import { logInfo, logWarn } from "../../lib/utils/logger"
 import TestLoginSheet from "../../components/dev/TestLoginSheet"
 import "./index.scss"
 
-/** Mascot — bundled locally for guaranteed display. */
+/** Mascot — bundled locally; CDN fallback if the bundle is stripped at upload. */
 const MASCOT_SRC = localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')
+const MASCOT_CDN = cdnAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')
 
 interface MiniProgramLandingPageProps {
   isAuthLoading?: boolean
@@ -219,6 +220,11 @@ export default function MiniProgramLandingPage({
                 logInfo('[LandingPage] mascot loaded', { src: mascotSrc })
               }}
               onError={() => {
+                // First failure: bundled copy may be stripped at upload — retry from CDN.
+                if (mascotSrc !== MASCOT_CDN) {
+                  setMascotSrc(MASCOT_CDN)
+                  return
+                }
                 void Taro.getNetworkType().then((res) => {
                   const ctx = {
                     src: mascotSrc,
@@ -226,9 +232,9 @@ export default function MiniProgramLandingPage({
                     env: process.env.NODE_ENV,
                     cdnBase: process.env.TARO_APP_CDN_BASE_URL || '(none)',
                   }
-                  logWarn('[LandingPage] mascot load failed', ctx)
+                  logWarn('[LandingPage] mascot load failed (local+cdn)', ctx)
                   // eslint-disable-next-line no-console
-                  console.warn('[LandingPage] mascot load failed', ctx)
+                  console.warn('[LandingPage] mascot load failed (local+cdn)', ctx)
                 })
                 setMascotError(true)
               }}
