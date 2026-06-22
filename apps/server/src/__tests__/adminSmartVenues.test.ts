@@ -425,6 +425,34 @@ describe("GET /api/admin/smart-venues", () => {
     });
   });
 
+  it("does not query bookings when no time slots match the selected date", async () => {
+    mockVenuesSelect.mockResolvedValue([
+      makeVenue({ id: "v-1", venueType: "bar" }),
+    ]);
+    mockTimeSlotsSelect
+      .mockResolvedValueOnce([makeTimeSlot({ venueId: "v-1" })])
+      .mockResolvedValueOnce([]);
+
+    await withServer(async (baseUrl) => {
+      const setRes = await fetch(`${baseUrl}/__setAdmin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const cookie = cookieHeader(setRes);
+
+      const res = await fetch(
+        `${baseUrl}/api/admin/smart-venues?city=深圳&eventType=酒局&date=2026-07-30`,
+        { headers: { Cookie: cookie } },
+      );
+
+      expect(res.status).toBe(200);
+      const body = await res.json() as any;
+      expect(body[0].hasAvailabilityOnDate).toBe(false);
+      expect(body[0].availableSlotCount).toBe(0);
+      expect(mockBookingsSelect).not.toHaveBeenCalled();
+    });
+  });
+
   it("ignores invalid date format and treats as no date", async () => {
     mockVenuesSelect.mockResolvedValue([
       makeVenue({ id: "v-1", venueType: "bar" }),

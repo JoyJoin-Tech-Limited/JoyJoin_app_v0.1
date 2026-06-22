@@ -940,27 +940,31 @@ export function registerVenueRoutes(app: Express): void {
             )
           );
 
-        // Load confirmed bookings for the date
-        const dateBookings = await db
-          .select()
-          .from(venueTimeSlotBookings)
-          .where(
-            and(
-              eq(venueTimeSlotBookings.bookingDate, date),
-              eq(venueTimeSlotBookings.status, "confirmed"),
-              inArray(venueTimeSlotBookings.venueId, venueIds)
-            )
-          );
+        // Query bookings through the stable time-slot relationship. Some deployed
+        // databases predate venue_time_slot_bookings.venue_id, and querying that
+        // newer denormalized column makes the entire venue picker fail with 500.
+        const dateSlotIds = dateSlots.map((slot: typeof dateSlots[0]) => slot.id);
+        const dateBookings = dateSlotIds.length > 0
+          ? await db
+              .select({ timeSlotId: venueTimeSlotBookings.timeSlotId })
+              .from(venueTimeSlotBookings)
+              .where(
+                and(
+                  eq(venueTimeSlotBookings.bookingDate, date),
+                  eq(venueTimeSlotBookings.status, "confirmed"),
+                  inArray(venueTimeSlotBookings.timeSlotId, dateSlotIds)
+                )
+              )
+          : [];
 
         venuesWithDateAvailability = new Map();
 
         for (const venue of filteredVenues) {
           const slots = dateSlots.filter((s: typeof dateSlots[0]) => s.venueId === venue.id);
-          const bookings = dateBookings.filter((b: typeof dateBookings[0]) => b.venueId === venue.id);
 
           let availableCount = 0;
           for (const slot of slots) {
-            const slotBookings = bookings.filter((b: typeof bookings[0]) => b.timeSlotId === slot.id);
+            const slotBookings = dateBookings.filter((b: typeof dateBookings[0]) => b.timeSlotId === slot.id);
             if (slotBookings.length < (slot.maxConcurrentEvents || 1)) {
               availableCount++;
             }
