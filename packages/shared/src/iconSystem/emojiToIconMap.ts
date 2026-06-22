@@ -335,6 +335,29 @@ export const CDN_ICON_TIERS: ReadonlySet<IconTier> = new Set([
   'achievement',
 ])
 
+/**
+ * Local bundled tiers that ship as PNG instead of WebP.
+ *
+ * WeChat's WebView `<image>` does NOT reliably decode *local* WebP
+ * (官方文档: "默认不解析 webP 格式，只支持网络资源"). Local WebP icons silently
+ * fail to render on real devices and fall back to native emoji, even though
+ * they render fine in DevTools (Chromium). PNG has no such restriction.
+ *
+ * Tiers listed here resolve to `.png`; all other local tiers stay `.webp`
+ * for now and should be migrated as their assets are re-encoded.
+ * CDN tiers (CDN_ICON_TIERS) stay WebP — network WebP is supported.
+ */
+export const LOCAL_PNG_TIERS: ReadonlySet<IconTier> = new Set<IconTier>([
+  'ui',
+  'expression',
+  'semantic',
+  'mood',
+  'chemistry',
+  'status',
+  'category',
+  'intent',
+])
+
 const ICON_FOLDER_MAP: Record<IconTier, string> = {
   expression: 'rating-faces',
   semantic: 'info-labels',
@@ -371,7 +394,8 @@ export function getLocalIconAssetPath(
 ): string {
   const folder = ICON_FOLDER_MAP[tier]
   const suffix = density === 1 ? '' : `@${density}x`
-  return `/assets/icons/${folder}/${assetKey}${suffix}.webp`
+  const ext = LOCAL_PNG_TIERS.has(tier) ? 'png' : 'webp'
+  return `/assets/icons/${folder}/${assetKey}${suffix}.${ext}`
 }
 
 /**

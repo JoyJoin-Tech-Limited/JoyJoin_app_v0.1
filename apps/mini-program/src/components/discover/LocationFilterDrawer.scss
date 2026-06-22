@@ -251,7 +251,8 @@
   &__district-name {
     font-size: $font-size-base;
     line-height: $line-height-tight;
-    font-weight: $font-weight-medium;
+    font-family: $font-cn-display;
+    font-weight: $font-weight-bold;
     color: $color-text-primary;
     text-align: left;
     word-break: normal;

@@ -17,6 +17,7 @@ export {
   getIconAssetPath,
   getLocalIconAssetPath,
   CDN_ICON_TIERS,
+  LOCAL_PNG_TIERS,
 } from './emojiToIconMap.js'
 
 export type { IconTier, IconMapping } from './emojiToIconMap.js'

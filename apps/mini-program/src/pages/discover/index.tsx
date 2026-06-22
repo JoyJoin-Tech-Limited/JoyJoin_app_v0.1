@@ -539,15 +539,15 @@ function AuthenticatedDiscover({
           onClick={onOpenDrawer}
           hoverClass='discover-auth__location-pill--hover'
           role='button'
-          aria-label={`当前区域: ${isGeoUnknown ? '选择你的区域' : '深圳 · ' + locationPillLabel}, 点击切换`}
+          aria-label={`当前区域: ${hasManualFilter ? '深圳 · ' + locationPillLabel : isGeoUnknown ? '选择你的区域' : '深圳 · 切换区域'}, 点击切换`}
         >
           <JoyJoinIcon
             emoji='📍'
-            size={24}
+            size={28}
             className='discover-auth__location-pill-icon'
           />
           <Text className='discover-auth__location-pill-text'>
-            {isGeoUnknown ? '选择你的区域' : `在 深圳 • ${locationPillLabel}`}
+            {hasManualFilter ? `深圳 · ${locationPillLabel}` : isGeoUnknown ? '选择你的区域' : '深圳 · 切换区域'}
           </Text>
           <View className='discover-auth__location-pill-chevron' aria-hidden='true' />
         </View>

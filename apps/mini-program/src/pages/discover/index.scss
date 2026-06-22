@@ -93,19 +93,20 @@
   }
 
   &__location-pill-icon {
-    font-size: 24rpx;
+    font-size: 28rpx;
     line-height: 1;
   }
 
   &__location-pill-text {
-    font-size: 22rpx;
-    font-weight: $font-weight-medium;
+    font-family: $font-cn-display;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
     color: $color-text-white;
     line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 280rpx;
+    max-width: 320rpx;
   }
 
   &__location-pill-chevron {

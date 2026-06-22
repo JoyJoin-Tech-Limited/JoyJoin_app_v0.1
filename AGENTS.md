@@ -540,3 +540,18 @@ When an agent needs to change a subset of logic inside a file, it MUST:
 **Rationale:** Full-file rewrites overwrite unrelated working-tree changes (uncommitted fixes, WIP experimentation) and break `git blame` continuity. This rule applies regardless of whether the uncommitted changes are from the agent's own session or from the user's editor.
 
 **Enforcement:** If the user says "you rewrote my file" or a fix regresses because an unrelated part of the file was silently changed, the agent should be corrected to use `edit` and restore the original content for unaffected blocks.
+
+### 11.1 Verify Every Edit Landed on Disk — No Exceptions
+
+> **The `edit` tool can silently fail.** It may return "success" without actually writing to the file system (observed 2026-06-22: 3 sequential "successful" edits left no trace in `git diff`).
+
+After every `edit` call, **immediately verify** the change landed:
+```bash
+git diff -- <file>          # for existing tracked files
+```
+Or for new files:
+```bash
+grep -n "<key line>" <file>  # confirm the new content exists
+```
+
+**Do not** skip this step, even for trivial one-liners. A false "success" wastes hours on phantom bugs that don't exist in source but appear in the stale build output. **This rule applies to all sessions, all agents, all edit calls — permanent.**

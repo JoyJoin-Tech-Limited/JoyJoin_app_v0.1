@@ -2,9 +2,9 @@ import { View, Image } from '@tarojs/components'
 import { localAsset } from '../../../lib/utils/cdnAssets'
 
 const META_ICON_SRC: Record<string, string> = {
-  calendar: localAsset('/assets/icons/ui/icon-calendar.webp'),
-  location: localAsset('/assets/icons/ui/icon-location.webp'),
-  people: localAsset('/assets/icons/ui/icon-people.webp'),
+  calendar: localAsset('/assets/icons/ui/icon-calendar.png'),
+  location: localAsset('/assets/icons/ui/icon-location.png'),
+  people: localAsset('/assets/icons/ui/icon-people.png'),
 }
 
 /** Proprietary meta icon using bundled UI assets.
