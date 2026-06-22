@@ -124,12 +124,12 @@ export default function EventPoolCreateDialog({
         priceRange: string | null;
         tags: string[] | null;
         cuisines: string[] | null;
-        hasTimeSlots: boolean;
+        hasTimeSlots: boolean | null;
         hasAvailabilityOnDate: boolean | null;
         availableSlotCount: number | null;
       }>;
       return venues
-        .filter((v) => v.hasTimeSlots)
+        .filter((v) => v.hasTimeSlots !== false)
         .map((v) => ({
           venue: {
             id: v.id,
@@ -463,6 +463,12 @@ export default function EventPoolCreateDialog({
                                   <>
                                     <span className="mx-1">·</span>
                                     <span className="text-amber-600">该日已满</span>
+                                  </>
+                                )}
+                                {hasAvailabilityOnDate === null && (
+                                  <>
+                                    <span className="mx-1">·</span>
+                                    <span className="text-amber-600">可用性待确认</span>
                                   </>
                                 )}
                               </div>

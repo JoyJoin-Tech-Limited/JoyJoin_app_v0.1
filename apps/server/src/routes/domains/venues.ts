@@ -903,85 +903,89 @@ export function registerVenueRoutes(app: Express): void {
 
       const venueIds = filteredVenues.map((v: typeof filteredVenues[0]) => v.id);
 
-      // ── Base slot check: does the venue have any active slots at all? ──
-      const activeSlots = await db
-        .select({ venueId: venueTimeSlots.venueId })
-        .from(venueTimeSlots)
-        .where(
-          and(
-            inArray(venueTimeSlots.venueId, venueIds),
-            eq(venueTimeSlots.isActive, true)
-          )
-        )
-        .limit(1000);
-
-      const venuesWithActiveSlots = new Set(
-        activeSlots.map((slot: typeof activeSlots[0]) => slot.venueId)
-      );
-
-      // ── Optional date-level availability check ──
+      // Availability data is supplementary. Keep the base venue list usable if
+      // an older deployment has not yet received the time-slot schema.
+      let venuesWithActiveSlots: Set<string> | undefined;
       let venuesWithDateAvailability: Map<string, { hasAvailability: boolean; slotCount: number }> | undefined;
 
-      if (date && typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        const dayOfWeek = new Date(date).getDay();
-
-        // Load slots that match the date (by dayOfWeek or specificDate)
-        const dateSlots = await db
-          .select()
+      try {
+        const activeSlots = await db
+          .select({ venueId: venueTimeSlots.venueId })
           .from(venueTimeSlots)
           .where(
             and(
               inArray(venueTimeSlots.venueId, venueIds),
-              eq(venueTimeSlots.isActive, true),
-              or(
-                eq(venueTimeSlots.dayOfWeek, dayOfWeek),
-                eq(venueTimeSlots.specificDate, date)
-              )
+              eq(venueTimeSlots.isActive, true)
             )
-          );
+          )
+          .limit(1000);
 
-        // Query bookings through the stable time-slot relationship. Some deployed
-        // databases predate venue_time_slot_bookings.venue_id, and querying that
-        // newer denormalized column makes the entire venue picker fail with 500.
-        const dateSlotIds = dateSlots.map((slot: typeof dateSlots[0]) => slot.id);
-        const dateBookings = dateSlotIds.length > 0
-          ? await db
-              .select({ timeSlotId: venueTimeSlotBookings.timeSlotId })
-              .from(venueTimeSlotBookings)
-              .where(
-                and(
-                  eq(venueTimeSlotBookings.bookingDate, date),
-                  eq(venueTimeSlotBookings.status, "confirmed"),
-                  inArray(venueTimeSlotBookings.timeSlotId, dateSlotIds)
+        venuesWithActiveSlots = new Set(
+          activeSlots.map((slot: typeof activeSlots[0]) => slot.venueId)
+        );
+
+        if (date && typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          const dayOfWeek = new Date(date).getDay();
+          const dateSlots = await db
+            .select()
+            .from(venueTimeSlots)
+            .where(
+              and(
+                inArray(venueTimeSlots.venueId, venueIds),
+                eq(venueTimeSlots.isActive, true),
+                or(
+                  eq(venueTimeSlots.dayOfWeek, dayOfWeek),
+                  eq(venueTimeSlots.specificDate, date)
                 )
               )
-          : [];
+            );
 
-        venuesWithDateAvailability = new Map();
+          const dateSlotIds = dateSlots.map((slot: typeof dateSlots[0]) => slot.id);
+          const dateBookings = dateSlotIds.length > 0
+            ? await db
+                .select({ timeSlotId: venueTimeSlotBookings.timeSlotId })
+                .from(venueTimeSlotBookings)
+                .where(
+                  and(
+                    eq(venueTimeSlotBookings.bookingDate, date),
+                    eq(venueTimeSlotBookings.status, "confirmed"),
+                    inArray(venueTimeSlotBookings.timeSlotId, dateSlotIds)
+                  )
+                )
+            : [];
 
-        for (const venue of filteredVenues) {
-          const slots = dateSlots.filter((s: typeof dateSlots[0]) => s.venueId === venue.id);
+          venuesWithDateAvailability = new Map();
 
-          let availableCount = 0;
-          for (const slot of slots) {
-            const slotBookings = dateBookings.filter((b: typeof dateBookings[0]) => b.timeSlotId === slot.id);
-            if (slotBookings.length < (slot.maxConcurrentEvents || 1)) {
-              availableCount++;
+          for (const venue of filteredVenues) {
+            const slots = dateSlots.filter((s: typeof dateSlots[0]) => s.venueId === venue.id);
+
+            let availableCount = 0;
+            for (const slot of slots) {
+              const slotBookings = dateBookings.filter((b: typeof dateBookings[0]) => b.timeSlotId === slot.id);
+              if (slotBookings.length < (slot.maxConcurrentEvents || 1)) {
+                availableCount++;
+              }
             }
-          }
 
-          venuesWithDateAvailability.set(venue.id, {
-            hasAvailability: availableCount > 0,
-            slotCount: availableCount,
-          });
+            venuesWithDateAvailability.set(venue.id, {
+              hasAvailability: availableCount > 0,
+              slotCount: availableCount,
+            });
+          }
         }
+      } catch (availabilityError) {
+        logger.warn("Smart venue availability query degraded", {
+          error: String(availabilityError),
+        });
       }
 
       const result = filteredVenues.map((venue: typeof filteredVenues[0]) => {
         const dateInfo = venuesWithDateAvailability?.get(venue.id);
         return {
           ...venue,
-          hasTimeSlots: venuesWithActiveSlots.has(venue.id),
+          hasTimeSlots: venuesWithActiveSlots
+            ? venuesWithActiveSlots.has(venue.id)
+            : null,
           hasAvailabilityOnDate: dateInfo?.hasAvailability ?? null,
           availableSlotCount: dateInfo?.slotCount ?? null,
         };
