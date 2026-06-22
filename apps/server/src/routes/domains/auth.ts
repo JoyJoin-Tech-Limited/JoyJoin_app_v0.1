@@ -219,6 +219,7 @@ export function registerAuthRoutes(app: Express): void {
           displayName: displayName || phone,
           ...(gender ? { gender } : {}),
           ...(archetype ? {
+            archetype,
             primaryArchetype: archetype,
             hasCompletedPersonalityTest: true,
           } : {}),

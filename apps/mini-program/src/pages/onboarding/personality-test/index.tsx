@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
-import Taro from '@tarojs/taro'
+// import Taro from '@tarojs/taro'
+import Taro, { useRouter } from '@tarojs/taro'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
@@ -277,6 +278,9 @@ function getSliderValueFromPreviousAnswer(previousAnswer: string | null, options
 
 export default function PersonalityTestPage() {
   const auth = useAuth()
+  // new change
+  const router = useRouter()
+  const isProfileSocialTypeEntry = router.params.source === 'profile'
   const { saveCheckpoint } = useOnboardingCheckpoint()
 
   const [phase, setPhase] = useState<Phase>('intro')
@@ -529,14 +533,31 @@ export default function PersonalityTestPage() {
     }
 
     // If user already has an archetype, they should never be on the test page
-    if (auth.user?.primaryArchetype) {
-      Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover }).catch((err: unknown) => {
-        logError('[PersonalityTest] switchTab failed', { err: err instanceof Error ? err.message : String(err) })
+    // if (auth.user?.primaryArchetype) {
+    //   Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover }).catch((err: unknown) => {
+    //     logError('[PersonalityTest] switchTab failed', { err: err instanceof Error ? err.message : String(err) })
+    //   })
+    //   return
+    // }
+    const existingArchetype = auth.user?.primaryArchetype ?? auth.user?.archetype ?? null
+
+    if (existingArchetype) {
+      Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults }).catch((err: unknown) => {
+        logError('[PersonalityTest] redirectTo results failed', {
+          err: err instanceof Error ? err.message : String(err),
+        })
       })
       return
     }
 
-    if (auth.isAuthenticated && auth.nextStep && auth.nextStep !== 'personality-test' && auth.nextStep !== 'onboarding') {
+    // if (auth.isAuthenticated && auth.nextStep && auth.nextStep !== 'personality-test' && auth.nextStep !== 'onboarding') {
+    if (
+      auth.isAuthenticated &&
+      !isProfileSocialTypeEntry &&
+      auth.nextStep &&
+      auth.nextStep !== 'personality-test' &&
+      auth.nextStep !== 'onboarding'
+    ) {  
       void navigateToMiniProgramNextStep(auth.nextStep, {
         mode: 'replace',
         transition: { beforeNavigate: () => setIsPageExiting(true) },
@@ -552,7 +573,7 @@ export default function PersonalityTestPage() {
         })
       }
     }
-  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, isPageExiting, isSubmitting, phase])
+  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, isPageExiting, isSubmitting, isProfileSocialTypeEntry,phase])
 
   const handleStart = useCallback(async () => {
     haptics('medium')

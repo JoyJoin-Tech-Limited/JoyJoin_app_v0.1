@@ -166,7 +166,8 @@ export default function ProfilePage() {
     const completion = getProfileCompletion(authUser)
     const hasBio = Boolean(authUser?.bio && String(authUser.bio).trim().length > 0)
     profileAnalytics.track('profile_view', {
-      hasArchetype: Boolean(authUser?.archetype),
+      // hasArchetype: Boolean(authUser?.archetype),
+      hasArchetype: Boolean(authUser?.archetype ?? authUser?.primaryArchetype),
       completion,
     })
     profileAnalytics.track('profile_completion', { hasBio })
@@ -393,7 +394,8 @@ export default function ProfilePage() {
   }, [clearRefreshSuccess])
 
   const displayName = authUser?.nickname || authUser?.displayName || '悦聚用户'
-  const archetype = authUser?.archetype
+  // const archetype = authUser?.archetype
+  const archetype = authUser?.archetype ?? authUser?.primaryArchetype ?? null
   const completion = getProfileCompletion(authUser)
   const userAge = authUser?.age != null ? Number(authUser.age) : null
   const userCity = authUser?.currentCity
@@ -882,7 +884,8 @@ export default function ProfilePage() {
                 onClick={() => {
                   haptics('light')
                   profileAnalytics.track('profile_archetype_cta_tap', { hasArchetype: false })
-                  void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.personalityTest })
+                  // void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.personalityTest })
+                  void Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.personalityTest}?source=profile` })
                 }}
               >
                 <Text className='profile-page__unlock-pill-text'>测一测，解锁你的社交原型</Text>

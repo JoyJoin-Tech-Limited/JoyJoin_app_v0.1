@@ -65,7 +65,8 @@ export function getProfileCompletion(user?: AuthUser | null): number {
   if (!user) return 0
   const essential = user.profileEssentialComplete ? 40 : 0
   const extended = user.profileExtendedComplete ? 30 : 0
-  const archetype = user.archetype ? 30 : 0
+  // const archetype = user.archetype ? 30 : 0
+  const archetype = (user.archetype ?? user.primaryArchetype) ? 30 : 0
   const bioBonus =
     typeof user.bio === 'string' && user.bio.trim().length > 0 ? 10 : 0
   return Math.min(100, essential + extended + archetype + bioBonus)
