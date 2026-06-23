@@ -153,23 +153,6 @@ function AuthenticatedDiscover({
 
   // ── Data fetching ──
   const {
-    data: myCityInterests = [],
-  } = useQuery({
-    queryKey: ['my-city-interests'],
-    queryFn: async () => {
-      const res = await apiRequest<{ interests: { city: string }[] }>({
-        method: 'GET',
-        path: '/api/cities/my-interests',
-      })
-      return res.interests ?? []
-    },
-    enabled: process.env.TARO_ENV === 'weapp',
-    staleTime: 5 * 60 * 1000,
-  })
-
-  const hasCityInterest = myCityInterests.length > 0
-
-  const {
     data: pools = [],
     isLoading: poolsLoading,
     isError: poolsError,
@@ -604,10 +587,6 @@ function AuthenticatedDiscover({
               keyExtractor={poolKeyExtractor}
               renderItem={renderPoolCard}
             />
-            {/* City unlock feed card — shown at bottom of pool list for non-Shenzhen users */}
-            {!hasCityInterest && !detectedClusterId && (
-              <CityUnlockFeedCard onSelectCity={onOpenCityPicker} />
-            )}
           </>
         ) : (
           <StatusCard
@@ -631,6 +610,8 @@ function AuthenticatedDiscover({
             }
           />
         )}
+        {/* Keep the city entry as the final section beneath activities/empty state. */}
+        <CityUnlockFeedCard onSelectCity={onOpenCityPicker} />
       </View>
 
       <View className='discover-auth__spacer' />
@@ -785,13 +766,6 @@ export default function DiscoverPage() {
   const handleCloseCityPicker = useCallback(() => setShowCityPicker(false), [])
   const handleCityPickerSuccess = useCallback((city: string) => {
     setShowCityPicker(false)
-    if (city === '深圳市') {
-      setSelectedCluster(ALL_CLUSTER_ID)
-      setSelectedDistrict(ALL_DISTRICT_ID)
-      clearLocation()
-      setDrawerOpen(true)
-      return
-    }
     Taro.navigateTo({ url: '/pages/city-unlock/index' })
   }, [])
 
