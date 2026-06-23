@@ -32,14 +32,34 @@ export default function AdminLoginPage() {
       return await res.json();
     },
     onSuccess: async () => {
-      toast({
-        title: "登录成功",
-        description: "欢迎访问管理后台",
-      });
-      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      setTimeout(() => {
-        setLocation("/admin");
-      }, 500);
+      try {
+        const sessionResponse = await apiRequest("GET", "/api/admin/me");
+        const admin = await sessionResponse.json();
+
+        queryClient.setQueryData(["/api/auth/user"], {
+          id: admin.id,
+          displayName: admin.displayName || admin.username,
+          isAdmin: true,
+          adminRole: admin.role,
+          nextStep: "discover",
+        });
+
+        toast({
+          title: "登录成功",
+          description: "欢迎访问管理后台",
+        });
+        setLocation("/admin/dashboard");
+      } catch (sessionError) {
+        const message = sessionError instanceof Error
+          ? sessionError.message
+          : "管理员会话验证失败";
+        setError(`账号验证成功，但登录会话未能保存：${message}`);
+        toast({
+          title: "登录会话异常",
+          description: "请刷新页面后重试；若仍失败，请检查浏览器 Cookie 设置。",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: Error) => {
       setError(error.message);
