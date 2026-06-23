@@ -98,16 +98,6 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
     )
   }, [searchQuery])
 
-  const handleSelectCity = useCallback((city: string) => {
-    haptics('light')
-    setSelectedCity(city)
-    discoverAnalytics.track('city_picker_select', undefined, { city })
-    // Scroll to selected city in the list when viewing all cities (not searching)
-    if (!searchQuery.trim()) {
-      setScrollToCity(`city-${city}`)
-    }
-  }, [searchQuery])
-
   const handleClose = useCallback(() => {
     discoverAnalytics.track('city_picker_close')
     onClose()
