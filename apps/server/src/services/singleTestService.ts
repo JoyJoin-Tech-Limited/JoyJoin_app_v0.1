@@ -192,10 +192,11 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
 
   const groupId = groupRecord.id;
 
-  // Mark all registrations as matched
+  // Mark all registrations as matched + assign to the group (required for
+  // getSocialIcebreakerAccess which checks assignedGroupId on registration)
   await db
     .update(eventPoolRegistrations)
-    .set({ matchStatus: "matched" })
+    .set({ matchStatus: "matched", assignedGroupId: groupId })
     .where(and(eq(eventPoolRegistrations.poolId, poolId), eq(eventPoolRegistrations.matchStatus, "pending")));
 
   // Build bot user info

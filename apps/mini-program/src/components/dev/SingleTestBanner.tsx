@@ -29,7 +29,7 @@ export default function SingleTestBanner({ className = '' }: SingleTestBannerPro
       })
       Taro.showToast({ title: `局已创建，共${result.botUsers.length + 1}人`, icon: 'none' })
       Taro.navigateTo({
-        url: `/pages/icebreaker/index?sessionId=${result.groupId}`,
+        url: `/pages/icebreaker-session/index?sessionId=${result.groupId}`,
       })
     } catch (err: any) {
       const msg = err?.message || String(err)
