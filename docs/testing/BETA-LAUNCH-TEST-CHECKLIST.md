@@ -186,10 +186,10 @@
 | # | Test Case | Steps | Expected |
 |---|-----------|-------|----------|
 | 6.1 | Discover tab | Launch app | Discover tab selected by default. Tab icon for Discover highlighted with brand pink tint. |
-| 6.2 | Navigate side tabs | Tab Discover → Events → Connections → Profile | Shared active pill translates to the selected tab (GPU transform, 220ms). Optimistic highlight → `wx.switchTab` → page loads. 180ms double-tap debounce. Haptic `light` vibration on each tap. |
+| 6.2 | Navigate side tabs | Tab Discover → Events → Connections → Profile | Selected tab highlights with a rounded background pill. Optimistic highlight → `wx.switchTab` → page loads. In-flight taps are ignored. Haptic `light` vibration on each tap. |
 | 6.3 | Center button | Tap center CTA button | Navigates to CenterHub (`/pages/center-hub/index`). Button shows JoyJoin logo. |
 | 6.4 | Tab sync across pages | Navigate from Discover → pool detail (non-tab page) → tab back | Tab bar state preserved; correct tab highlighted on return |
-| 6.5 | Tab bar layout | Inspect tab bar layout | 4 side tabs (2 left + 2 right) + center floating CTA. Surface height 128rpx, root footprint 182rpx. Center button 148rpx, solid `#FFF4F8` fill. |
+| 6.5 | Tab bar layout | Inspect tab bar layout | 4 side tabs (2 left + 2 right) + center floating CTA. Surface height 128rpx, root footprint 182rpx. Center button 148rpx, premium white-to-soft-pink gradient fill with a badge pulse ring when active. |
 | 6.6 | Swipe-back safety | Navigate to a non-tab page, swipe back | Tab bar resets to last confirmed selection (not optimistic state) after 100ms |
 
 ### Badge & State

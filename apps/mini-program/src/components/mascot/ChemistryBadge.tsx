@@ -1,11 +1,25 @@
 import { Image, Text, View } from '@tarojs/components'
 import { useState, useCallback } from 'react'
-import { localAsset } from '../../lib/utils/cdnAssets'
+import { useCdnFirstSrc } from '../../lib/utils/cdnAssets'
 
 interface ChemistryBadgeProps {
   chemistry: 'fire' | 'warm' | 'cold' | 'mild'
   size?: number
   className?: string
+}
+
+const assetMap: Record<string, string> = {
+  fire: 'chem-fire',
+  warm: 'chem-warm',
+  cold: 'chem-sprout',
+  mild: 'chem-chat',
+}
+
+const labelMap: Record<string, string> = {
+  fire: '高能',
+  warm: '暖场',
+  cold: '慢热',
+  mild: '自然',
 }
 
 /**
@@ -20,30 +34,20 @@ export default function ChemistryBadge({
   size = 32,
   className = '',
 }: ChemistryBadgeProps) {
+  const assetKey = assetMap[chemistry]
+  const fallbackLabel = labelMap[chemistry] ?? '匹配'
+  const { src, onError, isLocal } = useCdnFirstSrc(`/assets/icons/chemistry-badges/${assetKey}.webp`)
   const [hasError, setHasError] = useState(false)
 
   const handleError = useCallback(() => {
-    setHasError(true)
-  }, [])
+    if (isLocal) {
+      setHasError(true)
+    } else {
+      onError()
+    }
+  }, [isLocal, onError])
 
   const sizeStr = `${size}rpx`
-
-  const assetMap: Record<string, string> = {
-    fire: 'chem-fire',
-    warm: 'chem-warm',
-    cold: 'chem-sprout',
-    mild: 'chem-chat',
-  }
-
-  const labelMap: Record<string, string> = {
-    fire: '高能',
-    warm: '暖场',
-    cold: '慢热',
-    mild: '自然',
-  }
-
-  const assetKey = assetMap[chemistry]
-  const fallbackLabel = labelMap[chemistry] ?? '匹配'
 
   if (hasError) {
     return (
@@ -52,8 +56,6 @@ export default function ChemistryBadge({
       </Text>
     )
   }
-
-  const src = localAsset(`/assets/icons/chemistry-badges/${assetKey}.webp`)
 
   return (
     <Image

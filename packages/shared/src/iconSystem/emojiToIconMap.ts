@@ -316,11 +316,14 @@ export function hasIconMapping(emoji: string): boolean {
  *   - expression (rating-faces)
  *   - semantic (info-labels)
  *   - mood
- *   - chemistry
  *   - status
  *   - category
  *   - intent
- *   - ui (profile/settings list icons)
+ *
+ * 'ui' and 'chemistry' are currently CDN-first (2026-06-23): local bundled copies
+ * remain as a fallback, but production builds resolve them via cdnAsset() because
+ * WeChat's upload unused-file filter has been stripping the bundled copies on
+ * some builds.
  *
  * 'phase' is CDN-only: only a curated landing-page subset is bundled locally
  * under /assets/landing-phase-icons/; the full set lives on CDN and the build
@@ -333,6 +336,8 @@ export const CDN_ICON_TIERS: ReadonlySet<IconTier> = new Set([
   // and are copied to dist/assets/icons/category-icons via config/index.ts.
   'reveal',
   'achievement',
+  'ui',
+  'chemistry',
 ])
 
 const ICON_FOLDER_MAP: Record<IconTier, string> = {

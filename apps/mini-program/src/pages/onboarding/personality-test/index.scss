@@ -74,25 +74,30 @@
   @include onboarding-page-enter-transition;
   display: flex;
   flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
 
   &__intro {
     flex: 1;
-  }
-
-  &__intro-scroll {
-    flex: 1;
-    min-height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
   &__intro-shell {
     @include page-shell-padding($spacing-lg, $container-padding, $spacing-2xl, true);
     @include fixed-footer-reserve(220rpx, $spacing-lg);
     position: relative;
+    height: 100%;
+    box-sizing: border-box;
+  }
+
+  &__intro-content {
     display: flex;
     flex-direction: column;
     gap: $spacing-md;
-    overflow-x: hidden;
-    overflow-y: visible;
+    min-height: 0;
   }
 
   &__stage {
@@ -145,7 +150,7 @@
 
   &__intro-title--accent {
     margin-top: 8rpx;
-    font-size: $font-size-4xl;
+    font-size: $font-size-3xl;
     color: $color-primary;
     @include type-display-accent-line;
   }
@@ -153,7 +158,7 @@
   &__intro-subtitle {
     display: block;
     max-width: 620rpx;
-    margin-top: $spacing-md;
+    margin-top: $spacing-sm;
     @include type-body;
     color: $color-text-secondary;
     line-height: $line-height-relaxed;
@@ -161,13 +166,13 @@
 
   &__intro-hero {
     @include card-premium;
-    padding: $spacing-md;
+    padding: $spacing-sm;
     background: $color-surface;
   }
 
   &__intro-hero-visual {
     position: relative;
-    min-height: 336rpx;
+    min-height: 300rpx;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -191,8 +196,8 @@
   }
 
   &__intro-bubble {
-    margin-top: $spacing-md;
-    padding: 24rpx;
+    margin-top: $spacing-sm;
+    padding: 16rpx;
     border-radius: $card-radius;
     border: 2rpx solid rgba($color-border, 0.92);
     background: rgba($color-surface, 0.9);
@@ -224,8 +229,8 @@
   &__intro-mascot {
     position: relative;
     z-index: 1;
-    width: 320rpx;
-    height: 320rpx;
+    width: 260rpx;
+    height: 260rpx;
     flex-shrink: 0;
     border-radius: 50%;
     overflow: hidden;
@@ -273,7 +278,7 @@
 
   &__intro-trust {
     @include card-premium;
-    padding: $spacing-lg;
+    padding: $spacing-md;
   }
 
   &__intro-trust-title {
@@ -287,8 +292,8 @@
   &__intro-trust-list {
     display: flex;
     flex-direction: column;
-    gap: $spacing-md;
-    margin-top: $spacing-md;
+    gap: $spacing-sm;
+    margin-top: $spacing-sm;
   }
 
   &__intro-trust-item {
@@ -333,9 +338,9 @@
   &__intro-tease {
     @include card-premium;
     position: relative;
-    padding: $spacing-lg;
-    padding-top: calc(#{$spacing-lg} + 8rpx);
-    margin-bottom: $spacing-xl;
+    padding: $spacing-md;
+    padding-top: calc(#{$spacing-md} + 8rpx);
+    margin-bottom: $spacing-lg;
     background: $color-surface;
 
     &::before {
@@ -383,10 +388,10 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    width: 240rpx;
-    min-width: 240rpx;
-    min-height: 300rpx;
-    padding: 24rpx;
+    width: 220rpx;
+    min-width: 220rpx;
+    min-height: 260rpx;
+    padding: 20rpx;
     border: 2rpx solid rgba($color-border, 0.92);
     background: rgba($color-surface, 0.96);
     box-shadow: 0 10rpx 28rpx rgba(0, 0, 0, 0.05);
@@ -407,8 +412,8 @@
 
   &__intro-tease-avatar-wrap {
     position: relative;
-    width: 144rpx;
-    height: 144rpx;
+    width: 132rpx;
+    height: 132rpx;
     margin: 0 auto $spacing-sm;
     display: flex;
     align-items: center;
@@ -416,8 +421,8 @@
   }
 
   &__intro-tease-avatar {
-    width: 136rpx;
-    height: 136rpx;
+    width: 124rpx;
+    height: 124rpx;
   }
 
   &__intro-tease-name {
@@ -527,7 +532,10 @@
     @include onboarding-page-exit-transition;
     display: flex;
     flex-direction: column;
+    height: 100dvh;
+    min-height: 100vh;
     min-height: 100dvh;
+    overflow: hidden;
   }
 
   &__preload-layer {
@@ -952,20 +960,21 @@
     font-family: $font-ui;
     font-size: $font-size-md;
     color: $color-text-primary;
-    line-height: 1.5;
+    line-height: 1.6;
     font-weight: $font-weight-medium;
     word-break: break-word;
     overflow-wrap: break-word;
   }
 
   // Answer zone
+  // Explicit ScrollView scroll port: answer lists can exceed the available
+  // viewport height, so they scroll inside the locked page shell.
   &__answer-zone {
     position: relative;
     flex: 1 1 auto;
     min-height: 0;
     padding: 8rpx $container-padding 24rpx;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
     @include safe-area-inline($container-padding);
     @include safe-area-bottom-padding(padding-bottom, 24rpx);
   }

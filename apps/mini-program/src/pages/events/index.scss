@@ -16,6 +16,10 @@
   }
 
   &__tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
     padding: $spacing-sm $spacing-lg;
     border-radius: 40rpx;
     background: $color-surface;
@@ -73,8 +77,8 @@
     margin-bottom: $spacing-md;
     min-height: 140rpx;
 
-    &:active {
-      transform: scale(0.98);
+    &--virtual {
+      margin-bottom: 0;
     }
 
     &--skeleton {
@@ -89,21 +93,45 @@
     }
   }
 
+  &__skeleton-pill {
+    width: 140rpx;
+    height: 40rpx;
+    border-radius: 999rpx;
+    background: $color-divider;
+    margin-bottom: $spacing-sm;
+    animation: events-skeleton-pulse 1.5s ease-in-out infinite;
+  }
+
   &__skeleton-line {
     border-radius: $card-radius-sm;
     background: $color-divider;
     animation: events-skeleton-pulse 1.5s ease-in-out infinite;
 
     &--title {
-      width: 60%;
-      height: 36rpx;
+      width: 70%;
+      height: 40rpx;
+      margin-bottom: $spacing-md;
+    }
+
+    &--date {
+      width: 50%;
+      height: 48rpx;
       margin-bottom: $spacing-sm;
     }
 
-    &--meta {
-      width: 80%;
+    &--location {
+      width: 75%;
       height: 28rpx;
+      margin-bottom: $spacing-md;
     }
+  }
+
+  &__skeleton-footer {
+    width: 40%;
+    height: 24rpx;
+    border-radius: $card-radius-sm;
+    background: $color-divider;
+    animation: events-skeleton-pulse 1.5s ease-in-out infinite;
   }
 
   @keyframes events-skeleton-pulse {
@@ -115,60 +143,13 @@
     }
   }
 
-  &__card-header {
-    margin-bottom: $spacing-xs;
-  }
-
-  &__card-title {
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    line-height: $line-height-relaxed;
-  }
-
-  &__card-date {
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: $line-height-relaxed;
-  }
-
   &__empty-state {
     @include scroll-view-centered-state;
     gap: $spacing-sm;
   }
 
-  &__status-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: $spacing-xs $spacing-sm;
-    background: rgba($color-primary, 0.08);
-    border-radius: 100rpx;
-  }
-
-  &__status-chip-text {
-    font-size: $font-size-xs;
-    color: $color-primary;
-    font-weight: $font-weight-semibold;
-    line-height: $line-height-normal;
-  }
-
-  &__countdown {
-    display: inline-flex;
-    align-items: center;
-    padding: $spacing-xs $spacing-sm;
-    background: rgba($color-secondary, 0.08);
-    border-radius: 100rpx;
-    margin-top: $spacing-xs;
-  }
-
-  &__countdown-text {
-    font-size: $font-size-xs;
-    color: $color-secondary;
-    font-weight: $font-weight-semibold;
-  }
-
   &__spacer {
-    height: calc($tab-bar-root-height + $spacing-lg);
+    height: calc(#{$tab-bar-root-height} + env(safe-area-inset-bottom) + #{$spacing-lg});
   }
 
   // D1 — First event celebration hero (Batch D)
@@ -207,6 +188,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .events-page__skeleton-line,
+  .events-page__skeleton-pill,
+  .events-page__skeleton-footer,
   .events-page__refresh-indicator {
     animation: none;
     opacity: 0.6;

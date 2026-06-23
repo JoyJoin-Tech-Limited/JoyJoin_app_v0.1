@@ -2,6 +2,7 @@ import { CustomWrapper, View, Text, ScrollView, Image } from '@tarojs/components
 import Taro, { usePullDownRefresh } from '@tarojs/taro'
 import { haptics } from '../../lib/utils/haptics'
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { useQuery } from '@tanstack/react-query'
 import { getJoinedEvents, type JoinedEventSummary } from '@shared/api'
 import { apiRequest, fetchEventsShell } from '../../lib/api/api'
@@ -15,11 +16,12 @@ import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Card from '../../components/ui/Card'
 import StatusCard from '../../components/ui/StatusCard'
-import RichListCard from '../../components/RichListCard'
+import JoinedEventCard from '../../components/JoinedEventCard'
+import VirtualList from '../../components/VirtualList'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
-import { isLongListRowCount } from '../../lib/utils/longListThreshold'
+import { isLongListRowCount, MINI_PROGRAM_LONG_LIST_ROW_THRESHOLD } from '../../lib/utils/longListThreshold'
+import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { logWarn } from '../../lib/utils/logger'
-import { formatEventDateTime, getCountdownText, getJoinedEventStatusLabel } from '../../lib/utils/eventDisplay'
 import { eventsAnalytics } from '../../lib/analytics/eventsAnalytics'
 import { partitionJoinedEventsByDateTime } from './eventPartition'
 import './index.scss'
@@ -29,13 +31,17 @@ type TabKey = 'upcoming' | 'completed'
 function EventCardSkeleton() {
   return (
     <Card className='events-page__card events-page__card--skeleton'>
+      <View className='events-page__skeleton-pill' />
       <View className='events-page__skeleton-line events-page__skeleton-line--title' />
-      <View className='events-page__skeleton-line events-page__skeleton-line--meta' />
+      <View className='events-page__skeleton-line events-page__skeleton-line--date' />
+      <View className='events-page__skeleton-line events-page__skeleton-line--location' />
+      <View className='events-page__skeleton-footer' />
     </Card>
   )
 }
 
 export default function EventsPage() {
+  const { isDegradation } = useDeviceTier()
   const { authLoading, renderGate } = useMiniPageGate()
   const markAsRead = useMarkNotificationsAsRead()
   useCustomTabBarSync({
@@ -67,8 +73,11 @@ export default function EventsPage() {
         const shell = await fetchEventsShell()
         injectEventsShellIntoCache(queryClient, shell)
         return shell.joinedEvents
-      } catch {
+      } catch (error) {
         // Composite unavailable — fall back to legacy endpoint.
+        logWarn('[Events] Shell fetch failed, falling back to legacy endpoint', {
+          error: error instanceof Error ? error.message : String(error),
+        })
       }
       return getJoinedEvents(apiRequest)
     },
@@ -138,14 +147,14 @@ export default function EventsPage() {
     eventsAnalytics.track('events_tab_switch', { tab })
   }
 
-  const handleEventTap = (event: JoinedEventSummary) => {
+  const handleEventTap = useCallback((event: JoinedEventSummary) => {
     eventsAnalytics.track('events_card_tap', {
       eventId: event.id,
       tab: resolvedActiveTab,
       status: event.status,
     })
     Taro.navigateTo({ url: `/pages/event-detail/index?id=${event.id}` })
-  }
+  }, [resolvedActiveTab])
 
   const navigateToDiscover = () => {
     eventsAnalytics.track('events_empty_state_cta_tap')
@@ -173,7 +182,7 @@ export default function EventsPage() {
       </View>
 
       {/* D1 — First event celebration hero (Batch D) */}
-      {events.length === 1 && resolvedActiveTab === 'upcoming' && (
+      {events.length === 1 && (
         <View className='events-page__first-event-hero'>
           <Image
             className='events-page__first-event-hero-img'
@@ -186,6 +195,7 @@ export default function EventsPage() {
         </View>
       )}
 
+      {/* ScrollView exception: this is the events feed list port (see viewport-zero-scroll skill). */}
       <ScrollView className='events-page__list' scrollY enhanced showScrollbar={false}>
         {isFetching && !isLoading && (
           <View className='events-page__refresh-indicator' />
@@ -210,40 +220,40 @@ export default function EventsPage() {
           />
         ) : displayEvents.length > 0 ? (
           <CustomWrapper>
-            {displayEvents.map((event, index) => {
-              const statusLabel = getJoinedEventStatusLabel(event.status)
-              return (
+            {displayEvents.length > MINI_PROGRAM_LONG_LIST_ROW_THRESHOLD ? (
+              <VirtualList
+                items={displayEvents}
+                itemHeight={300}
+                keyExtractor={(event) => String(event.id)}
+                renderItem={(event, index) => (
+                  <View className='events-page__card events-page__card--virtual'>
+                    <JoinedEventCard
+                      event={event}
+                      index={index}
+                      onClick={() => handleEventTap(event)}
+                      isDegradation={isDegradation}
+                    />
+                  </View>
+                )}
+              />
+            ) : (
+              displayEvents.map((event, index) => (
                 <View key={String(event.id)} className='events-page__card'>
-                  <RichListCard
-                    title={event.title ?? '悦聚活动'}
-                    subtitle={formatEventDateTime(event.dateTime)}
-                    meta={event.location}
-                    ecosystem={statusLabel ? (
-                      <View className='events-page__status-chip'>
-                        <Text className='events-page__status-chip-text'>{statusLabel}</Text>
-                      </View>
-                    ) : undefined}
-                    gradient={resolvedActiveTab === 'completed' ? 'surface' : 'premium'}
-                    onClick={() => handleEventTap(event)}
+                  <JoinedEventCard
+                    event={event}
                     index={index}
-                  >
-                    {typeof event.dateTime === 'string' && resolvedActiveTab === 'upcoming' && (
-                      <View className='events-page__countdown'>
-                        <Text className='events-page__countdown-text'>
-                          {getCountdownText(event.dateTime)}
-                        </Text>
-                      </View>
-                    )}
-                  </RichListCard>
+                    onClick={() => handleEventTap(event)}
+                    isDegradation={isDegradation}
+                  />
                 </View>
-              )
-            })}
+              ))
+            )}
           </CustomWrapper>
         ) : (
           <StatusCard
             className='events-page__empty-state'
             tone='empty'
-            heroSrc={cdnAsset('/assets/lovart/lovart-generic-empty.webp')}
+            heroSrc={getXiaoyueExpressionAsset('coachGuide')}
             title='还没有活动'
             description='去发现感兴趣的活动吧'
             action={{

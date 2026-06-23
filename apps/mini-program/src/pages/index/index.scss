@@ -2,15 +2,18 @@
 
 // ─── Landing Page ───────────────────────────────────────────────────
 .landing-page {
-  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
   background-color: $color-bg-warm-to;
   background-image: radial-gradient(ellipse at 50% 18%, rgba($color-primary, 0.08) 0%, transparent 70%);
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* Exit animation — Logo shrink + items fall back */
@@ -41,7 +44,9 @@
 
 /* ── Content Zone ──────────────────────────────────────────────────── */
 .content-zone {
-  flex: 1 1 auto;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -67,19 +72,19 @@
   flex-direction: column;
   align-items: center;
   padding: 0 48rpx;
-  margin-top: 12rpx;
+  margin-top: 0;
 }
 
 .hero-mascot {
-  width: 224rpx;
-  height: 224rpx;
+  width: 200rpx;
+  height: 200rpx;
   image-rendering: -webkit-optimize-contrast;
   animation: mascot-bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 .hero-mascot-fallback {
-  width: 224rpx;
-  height: 224rpx;
+  width: 200rpx;
+  height: 200rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -95,7 +100,7 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  margin-top: 24rpx;
+  margin-top: 16rpx;
 }
 
 .headline {
@@ -117,7 +122,7 @@
   font-size: 28rpx;
   font-weight: 400;
   color: rgba($color-text-primary-warm, 0.62);
-  line-height: 1.5;
+  line-height: 1.6;
   max-width: 520rpx;
 }
 
@@ -136,7 +141,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 48rpx;
+  margin-top: 0;
   padding: 0 40rpx;
   width: 100%;
 }
@@ -148,7 +153,7 @@
   align-items: center;
   justify-content: center;
   gap: 10rpx;
-  padding: 18rpx 44rpx;
+  padding: 14rpx 40rpx;
   border-radius: 999rpx;
   background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
   color: $color-text-white;
@@ -156,7 +161,7 @@
   font-size: 28rpx;
   font-weight: 700;
   letter-spacing: 0.04em;
-  margin-bottom: 32rpx;
+  margin-bottom: 24rpx;
   box-shadow:
     0 8rpx 28rpx rgba($color-primary, 0.28),
     inset 0 2rpx 4rpx rgba(255, 255, 255, 0.15);
@@ -274,17 +279,19 @@
 /* ── Bottom Zone ───────────────────────────────────────────────────── */
 .bottom-zone {
   width: 100%;
-  padding: 32rpx 32rpx 56rpx;
-  padding-bottom: calc(56rpx + env(safe-area-inset-bottom));
+  padding: 24rpx 32rpx 40rpx;
+  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16rpx;
+  gap: 12rpx;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .landing-page__cta {
   width: 100%;
-  height: 100rpx;
+  height: 92rpx;
   border-radius: 50rpx;
   font-size: 32rpx;
   font-weight: 600;
@@ -321,9 +328,9 @@
   display: flex;
   align-items: center;
   gap: 16rpx;
-  min-height: 88rpx;
-  padding: 8rpx 0;
-  margin-top: 8rpx;
+  min-height: 72rpx;
+  padding: 0;
+  margin-top: 0;
   position: relative;
 
   &.shake {
@@ -380,7 +387,7 @@
   color: rgba($color-text-primary-warm, 0.55);
   line-height: 1.5;
   // Ensure the text row is also tappable as part of the legal agreement.
-  min-height: 88rpx;
+  min-height: 72rpx;
   align-items: center;
 }
 
@@ -425,7 +432,7 @@
 
 .landing-page .landing-page__login-btn {
   width: 100%;
-  height: 100rpx;
+  height: 92rpx;
   border-radius: 50rpx;
   background: $color-text-primary;
   color: $color-text-white;
@@ -587,6 +594,14 @@
   }
 
   .phase-carousel__dot--active {
+    animation: none !important;
+  }
+
+  .landing-page__cta::after {
+    animation: none !important;
+  }
+
+  .landing-page__auth-hint {
     animation: none !important;
   }
 

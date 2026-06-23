@@ -45,6 +45,8 @@ $color-skill-cool: #7c3aed;
 
 .personality-results {
   @include page-gradient-bg;
+  height: 100dvh;
+  min-height: 100vh;
   min-height: 100dvh;
   position: relative;
   overflow: hidden;
@@ -666,7 +668,8 @@ $color-skill-cool: #7c3aed;
   }
 
   &__scroll {
-    min-height: 100dvh;
+    height: 100%;
+    min-height: 0;
     box-sizing: border-box;
     padding: $spacing-lg 0 $spacing-2xl;
     @include safe-area-bottom-padding(padding-bottom, $spacing-2xl);

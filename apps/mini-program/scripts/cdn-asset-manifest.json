@@ -563,36 +563,36 @@
       "cdnPath": "assets/tab-bar-notch-bg.png"
     },
     {
-      "localPath": "assets/tab-icons/发现 icon_inactive.png",
-      "cdnPath": "assets/tab-icons/发现 icon_inactive.png"
+      "localPath": "assets/tab-icons/\u53d1\u73b0 icon_inactive.png",
+      "cdnPath": "assets/tab-icons/\u53d1\u73b0 icon_inactive.png"
     },
     {
-      "localPath": "assets/tab-icons/发现 icon.png",
-      "cdnPath": "assets/tab-icons/发现 icon.png"
+      "localPath": "assets/tab-icons/\u53d1\u73b0 icon.png",
+      "cdnPath": "assets/tab-icons/\u53d1\u73b0 icon.png"
     },
     {
-      "localPath": "assets/tab-icons/我的 icon_inactive.png",
-      "cdnPath": "assets/tab-icons/我的 icon_inactive.png"
+      "localPath": "assets/tab-icons/\u6211\u7684 icon_inactive.png",
+      "cdnPath": "assets/tab-icons/\u6211\u7684 icon_inactive.png"
     },
     {
-      "localPath": "assets/tab-icons/我的 icon.png",
-      "cdnPath": "assets/tab-icons/我的 icon.png"
+      "localPath": "assets/tab-icons/\u6211\u7684 icon.png",
+      "cdnPath": "assets/tab-icons/\u6211\u7684 icon.png"
     },
     {
-      "localPath": "assets/tab-icons/足迹 icon_inactive.png",
-      "cdnPath": "assets/tab-icons/足迹 icon_inactive.png"
+      "localPath": "assets/tab-icons/\u8db3\u8ff9 icon_inactive.png",
+      "cdnPath": "assets/tab-icons/\u8db3\u8ff9 icon_inactive.png"
     },
     {
-      "localPath": "assets/tab-icons/足迹 icon.png",
-      "cdnPath": "assets/tab-icons/足迹 icon.png"
+      "localPath": "assets/tab-icons/\u8db3\u8ff9 icon.png",
+      "cdnPath": "assets/tab-icons/\u8db3\u8ff9 icon.png"
     },
     {
-      "localPath": "assets/tab-icons/连接 icon_inactive.png",
-      "cdnPath": "assets/tab-icons/连接 icon_inactive.png"
+      "localPath": "assets/tab-icons/\u8fde\u63a5 icon_inactive.png",
+      "cdnPath": "assets/tab-icons/\u8fde\u63a5 icon_inactive.png"
     },
     {
-      "localPath": "assets/tab-icons/连接 icon.png",
-      "cdnPath": "assets/tab-icons/连接 icon.png"
+      "localPath": "assets/tab-icons/\u8fde\u63a5 icon.png",
+      "cdnPath": "assets/tab-icons/\u8fde\u63a5 icon.png"
     },
     {
       "localPath": "assets/miniscript/ancient-chinese-thumb.webp",
@@ -1065,6 +1065,94 @@
     {
       "localPath": "assets/interests/wine.webp",
       "cdnPath": "images/interests/wine.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-calendar.webp",
+      "cdnPath": "assets/icons/ui/icon-calendar.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-check.webp",
+      "cdnPath": "assets/icons/ui/icon-check.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-chemistry.webp",
+      "cdnPath": "assets/icons/ui/icon-chemistry.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-coupon.webp",
+      "cdnPath": "assets/icons/ui/icon-coupon.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-edit.webp",
+      "cdnPath": "assets/icons/ui/icon-edit.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-filter.webp",
+      "cdnPath": "assets/icons/ui/icon-filter.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-footprint.webp",
+      "cdnPath": "assets/icons/ui/icon-footprint.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-gift.webp",
+      "cdnPath": "assets/icons/ui/icon-gift.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-link.webp",
+      "cdnPath": "assets/icons/ui/icon-link.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-location.webp",
+      "cdnPath": "assets/icons/ui/icon-location.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-lock.webp",
+      "cdnPath": "assets/icons/ui/icon-lock.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-memo.webp",
+      "cdnPath": "assets/icons/ui/icon-memo.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-people.webp",
+      "cdnPath": "assets/icons/ui/icon-people.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-price.webp",
+      "cdnPath": "assets/icons/ui/icon-price.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-search.webp",
+      "cdnPath": "assets/icons/ui/icon-search.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-status.webp",
+      "cdnPath": "assets/icons/ui/icon-status.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-ticket.webp",
+      "cdnPath": "assets/icons/ui/icon-ticket.webp"
+    },
+    {
+      "localPath": "assets/icons/ui/icon-trophy.webp",
+      "cdnPath": "assets/icons/ui/icon-trophy.webp"
+    },
+    {
+      "localPath": "assets/icons/chemistry-badges/chem-chat.webp",
+      "cdnPath": "assets/icons/chemistry-badges/chem-chat.webp"
+    },
+    {
+      "localPath": "assets/icons/chemistry-badges/chem-fire.webp",
+      "cdnPath": "assets/icons/chemistry-badges/chem-fire.webp"
+    },
+    {
+      "localPath": "assets/icons/chemistry-badges/chem-sprout.webp",
+      "cdnPath": "assets/icons/chemistry-badges/chem-sprout.webp"
+    },
+    {
+      "localPath": "assets/icons/chemistry-badges/chem-warm.webp",
+      "cdnPath": "assets/icons/chemistry-badges/chem-warm.webp"
     }
   ]
 }

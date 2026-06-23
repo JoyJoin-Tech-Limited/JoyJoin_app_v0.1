@@ -1,14 +1,13 @@
 import { View, Image } from '@tarojs/components'
-import { localAsset } from '../../../lib/utils/cdnAssets'
+import { useCdnFirstSrc } from '../../../lib/utils/cdnAssets'
 
-const META_ICON_SRC: Record<string, string> = {
-  calendar: localAsset('/assets/icons/ui/icon-calendar.webp'),
-  location: localAsset('/assets/icons/ui/icon-location.webp'),
-  people: localAsset('/assets/icons/ui/icon-people.webp'),
+const META_ICON_KEYS: Record<string, string> = {
+  calendar: '/assets/icons/ui/icon-calendar.webp',
+  location: '/assets/icons/ui/icon-location.webp',
+  people: '/assets/icons/ui/icon-people.webp',
 }
 
-/** Proprietary meta icon using bundled UI assets.
- *  Zero emoji fallback — actual crisp WebP icons shipped in the package. */
+/** Proprietary meta icon using CDN-first UI assets with a local fallback. */
 interface EventMetaIconProps {
   kind: 'type' | 'calendar' | 'location' | 'people'
 }
@@ -24,18 +23,16 @@ export default function EventMetaIcon({ kind }: EventMetaIconProps) {
       </View>
     )
   }
+  const { src, onError } = useCdnFirstSrc(META_ICON_KEYS[kind])
   return (
     <Image
       className='pool-reg__meta-icon-img'
-      src={META_ICON_SRC[kind]}
+      src={src}
       mode='aspectFit'
       lazyLoad={false}
       aria-role='img'
       aria-label={kind === 'calendar' ? '时间' : kind === 'location' ? '地区' : '报名人数'}
-      onError={() => {
-        // Silently degrade to blank if bundled asset is missing —
-        // the adjacent label text carries the semantic meaning.
-      }}
+      onError={onError}
     />
   )
 }

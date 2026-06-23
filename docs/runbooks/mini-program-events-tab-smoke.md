@@ -117,9 +117,9 @@ Entry:
 
 Expected result:
 
-- The page shows the `StatusCard` empty state with the Lovart `lovart-generic-empty.webp` hero illustration.
+- The page shows the `StatusCard` empty state with the Xiaoyue `coachGuide` mascot hero illustration.
 - The title and description use warm copy.
-- A primary action CTA is visible (e.g., `去发现活动`).
+- A primary action CTA is visible (e.g., `去发现`).
 
 Entry (error):
 

@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { View, Text, ScrollView, Image } from '@tarojs/components'
-// import Taro from '@tarojs/taro'
 import Taro, { useRouter } from '@tarojs/taro'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
@@ -13,12 +11,8 @@ import {
   MAX_SKIP_COUNT,
 } from '@shared/personality/adaptiveEngine'
 import { questionsV4 } from '@shared/personality/questionsV4'
-import Button from '../../../components/ui/Button'
-import SegmentedProgress from '../../../components/ui/SegmentedProgress'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
-import XiaoyueSpriteAnimator, {
-  type XiaoyueSpriteState,
-} from '../../../components/mascot/XiaoyueSpriteAnimator'
+import type { XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
 import { useAuth } from '../../../hooks/useAuth'
 import { apiRequest } from '../../../lib/api/api'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
@@ -46,56 +40,30 @@ import { logInfo, logWarn, logError } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
-import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
-import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
-import TypewriterText from '../../../components/ui/TypewriterText'
-import MascotQuestionHeader from './MascotQuestionHeader'
-import PersonalityTestAnswerArea, { getNearestSliderOption } from './PersonalityTestAnswerArea'
 import { isMilestoneQuestion, resolveOptionPreviewSpriteState } from './personalityTestLogic'
-import QuestionTransition from './QuestionTransition'
+import { triggerXiaoyueAnalysisPrefetch } from './triggerXiaoyueAnalysisPrefetch'
 import { useBackReview } from './useBackReview'
+import PersonalityTestIntro from './PersonalityTestIntro'
+import PersonalityTestQuestion from './PersonalityTestQuestion'
+import { getNearestSliderOption } from './PersonalityTestAnswerArea'
+import PersonalityTestPreloadLayer from './PersonalityTestPreloadLayer'
+import PersonalityTestCompletingError from './PersonalityTestCompletingError'
 import {
-  getArchetypeVisual,
-  getIntroStaticAsset,
-  getIntroStaticFallbackAsset,
-  getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
-  PERSONALITY_TEST_QUESTION_EXPRESSION,
   ASSET_BASE_WEBP_LOCAL,
 } from './visuals'
 import { preloadImagesWithDiagnostics } from '../../../lib/utils/imagePreload'
 import { preloadRouteAssets } from '../../../lib/utils/routePreloadAssets'
 import './index.scss'
-import { HalfwayMilestone } from './HalfwayMilestone'
-import type { Phase } from './types'
+import type {
+  Phase,
+  AssessmentQuestion,
+  AssessmentOption,
+  AssessmentProgress,
+  AssessmentMatch,
+} from './types'
 
-type AssessmentQuestionType = 'choice' | 'slider' | 'emoji_tap'
-
-interface AssessmentOption {
-  value: string
-  text: string
-  traitScores?: Record<string, number>
-  iconAssetKey?: string
-  commentary?: string
-}
-
-interface AssessmentSliderConfig {
-  leftLabel: string
-  rightLabel: string
-  leftEmoji?: string
-  rightEmoji?: string
-}
-
-interface AssessmentQuestion {
-  id: string
-  scenarioText: string
-  questionText: string
-  options: AssessmentOption[]
-  questionType?: AssessmentQuestionType
-  sliderConfig?: AssessmentSliderConfig
-}
-
-export type { AssessmentQuestion, AssessmentOption, AssessmentSliderConfig, AssessmentQuestionType }
+export type { AssessmentQuestion, AssessmentOption, AssessmentProgress, AssessmentMatch } from './types'
 
 function buildAnonymousEngineState(
   answers: ReturnType<typeof readAnonymousAssessmentAnswers>,
@@ -114,20 +82,6 @@ function buildAnonymousEngineState(
   }
   engineState.skipCount = skipCount ?? skippedQuestionIds.length
   return engineState
-}
-
-interface AssessmentProgress {
-  answered: number
-  estimatedRemaining: number
-  minQuestions: number
-  softMaxQuestions: number
-  hardMaxQuestions: number
-}
-
-interface AssessmentMatch {
-  archetype: string
-  score: number
-  confidence: number
 }
 
 interface AssessmentStartResponse {
@@ -155,130 +109,8 @@ interface AssessmentAnswerResponse {
 // next question appears. Prevents the feedback from flashing by too fast.
 const COMMENTARY_MIN_DISPLAY_MS = 1400
 
-/**
- * Map the testing-phase state to a Xiaoyue sprite state. Read by the
- * mascot avatar in the testing zone; the result is rendered via
- * `<XiaoyueSpriteAnimator state={spriteState} ... />`.
- */
-function resolveMascotState(args: {
-  isLoading: boolean
-  isSubmitting: boolean
-  questionType: AssessmentQuestionType
-  isMilestone: boolean
-  isPostAnswerCommentary: boolean
-  isCelebration: boolean
-}): XiaoyueSpriteState {
-  if (args.isCelebration) return 'celebrate'
-  if (args.isPostAnswerCommentary) return 'nod'
-  if (args.isLoading || args.isSubmitting) return 'listening'
-  if (args.isMilestone) return 'surprised'
-  if (args.questionType === 'emoji_tap') return 'curious'
-  return 'idle'
-}
-
-/**
- * Fire-and-forget prefetch of the Xiaoyue AI analysis. Triggered when
- * the test completes — the slot animation's 3-5s duration gives the
- * LLM enough time to populate the cache so the result page lands
- * on a populated analysis instead of a 400ms skeleton.
- *
- * The server endpoint at /api/xiaoyue/prefetch short-circuits with
- * `{ prefetched: false, reason: 'Not ready yet' }` when `confidence < 0.7`.
- * It is safe to call speculatively; failure is logged and swallowed.
- */
-function triggerXiaoyueAnalysisPrefetch(
-  result: import('../../../lib/auth/anonymousOnboarding').AnonymousAssessmentResult,
-  topMatches: AnonymousAssessmentTopMatch[],
-): void {
-  const archetype = result.primaryArchetype
-  if (!archetype) return
-
-  const traitScores = result.traitScores ?? {}
-  const confidence =
-    result.archetypeConfidence ??
-    topMatches[0]?.confidence ??
-    0
-
-  void apiRequest<{ prefetched: boolean; reason?: string }>({
-    path: '/api/xiaoyue/prefetch',
-    method: 'POST',
-    data: {
-      archetype,
-      secondaryArchetype: result.secondaryArchetype ?? null,
-      topArchetypes: topMatches,
-      traitScores: {
-        affinity: traitScores.A ?? traitScores.affinity ?? 0.5,
-        openness: traitScores.O ?? traitScores.openness ?? 0.5,
-        conscientiousness: traitScores.C ?? traitScores.conscientiousness ?? 0.5,
-        emotionalStability: traitScores.E ?? traitScores.emotionalStability ?? 0.5,
-        extraversion: traitScores.X ?? traitScores.extraversion ?? 0.5,
-        positivity: traitScores.P ?? traitScores.positivity ?? 0.5,
-      },
-      confidence,
-    },
-  })
-    .then((res) => {
-      logInfo('[PersonalityTest] Xiaoyue prefetch', {
-        archetype,
-        prefetched: res.prefetched,
-        reason: res.reason,
-      })
-    })
-    .catch((err: unknown) => {
-      const message = err instanceof Error ? err.message : String(err)
-      logError('[PersonalityTest] Xiaoyue prefetch failed', { message })
-    })
-}
-
-const INTRO_ARCHETYPE_TEASERS: { archetype: string; vibeLine: string }[] = [
-  { archetype: 'corgi', vibeLine: '一进场，就把气氛带热。' },
-  { archetype: 'fox', vibeLine: '普通话题，也能聊出火花。' },
-  { archetype: 'koala', vibeLine: '会让人慢慢放松下来。' },
-]
-
-const INTRO_TRUST_POINTS = [
-  {
-    prefix: '1.',
-    title: '约 3-5 分钟完成',
-    description: '轻量做完，不会把你困在一串冗长题目里。',
-  },
-  {
-    prefix: '2.',
-    title: '题目会跟着你变',
-    description: '越答越准，帮你找到最像自己的氛围命格。',
-  },
-  {
-    prefix: '3.',
-    title: '未登录也能先完成',
-    description: '结果会先保存在这台设备里，准备好时再继续登录。',
-  },
-] as const
-
-const PRELOAD_EXPRESSIONS: XiaoyueExpressionId[] = [
-  PERSONALITY_TEST_QUESTION_EXPRESSION.choice,
-  PERSONALITY_TEST_QUESTION_EXPRESSION.slider,
-  PERSONALITY_TEST_QUESTION_EXPRESSION.emoji_tap,
-  PERSONALITY_TEST_QUESTION_EXPRESSION.loading,
-]
-
-function getQuestionType(question: AssessmentQuestion | null): AssessmentQuestionType {
-  if (!question?.questionType) {
-    return 'choice'
-  }
-  return question.questionType
-}
-
-function getSliderValueFromPreviousAnswer(previousAnswer: string | null, options: AssessmentOption[]): number {
-  if (!previousAnswer) return 50
-  const match = previousAnswer.match(/(\d+)/)
-  const numericValue = match ? Number(match[1]) : 50
-  const option = getNearestSliderOption(options, numericValue)
-  return option ? numericValue : 50
-}
-
 export default function PersonalityTestPage() {
   const auth = useAuth()
-  // new change
   const router = useRouter()
   const isProfileSocialTypeEntry = router.params.source === 'profile'
   const { saveCheckpoint } = useOnboardingCheckpoint()
@@ -416,43 +248,12 @@ export default function PersonalityTestPage() {
     },
   })
 
-  const questionType = getQuestionType(question)
-  const questionStub = useMemo(
-    () => ({ scenarioText: question?.scenarioText, questionText: question?.questionText ?? '' }),
-    [question?.scenarioText, question?.questionText],
-  )
   const estimatedTotal = progress
     ? progress.answered + Math.max(progress.estimatedRemaining, 1)
     : 1
   const progressPercent = progress
     ? Math.round((progress.answered / Math.max(estimatedTotal, 1)) * 100)
     : 0
-
-  const introTeasers = useMemo(
-    () =>
-      INTRO_ARCHETYPE_TEASERS.map((item) => ({
-        ...item,
-        visual: getArchetypeVisual(item.archetype),
-      })),
-    [],
-  )
-
-  const introCoachLine = hasStoredIncompleteSession
-    ? '进度还在，继续答几分钟就能完成。'
-    : '没有标准答案，凭直觉选就好。我会帮你整理出最真实的氛围命格。'
-  const introFooterKicker = hasStoredIncompleteSession
-    ? '再几分钟就能完成，继续吧。'
-    : '先找到你的氛围命格，后面的遇见才会更对味。'
-  const introFooterLine = hasStoredIncompleteSession
-    ? '进度已经留好，从停下的地方继续就行'
-    : '没有标准答案，选最像你的感觉就好'
-  const introPrimaryLabel = isSubmitting
-    ? '准备中…'
-    : error
-      ? '重试'
-      : hasStoredIncompleteSession
-        ? '继续测试'
-        : '开始测试'
 
   const { isDegradation } = useDeviceTier()
 
@@ -1256,123 +1057,19 @@ export default function PersonalityTestPage() {
   // Intro phase
   if (phase === 'intro') {
     return (
-      <View className={getPageClassName('personality-test--intro')}>
-        <View className='personality-test__intro-shell'>
-          <View className='personality-test__stage personality-test__stage--1'>
-            <Text className='personality-test__eyebrow'>
-              <Text className='personality-test__eyebrow-en'>JoyJoin</Text>
-              <Text> · 氛围原型</Text>
-            </Text>
-            <Text className='personality-test__intro-title'>3 分钟，读懂你的</Text>
-            <Text className='personality-test__intro-title personality-test__intro-title--accent'>聚会气场</Text>
-            <Text className='personality-test__intro-subtitle'>
-              找到你的氛围命格，让后面的遇见都更对味。
-            </Text>
-          </View>
-
-          <ResponsiveSpacer heightRpx={16} collapseBelow={700} />
-
-          <View className='personality-test__intro-hero personality-test__stage personality-test__stage--2'>
-            <View className='personality-test__intro-hero-visual'>
-              <View className='personality-test__intro-hero-halo' />
-              <View className='personality-test__intro-mascot'>
-                {!introImgLoaded && (
-                  <View className='personality-test__intro-mascot-placeholder' />
-                )}
-                <Image
-                  src={introReducedMotion || introImgError ? getIntroStaticFallbackAsset() : getIntroStaticAsset()}
-                  mode='aspectFit'
-                  className={`personality-test__intro-mascot-img${introImgLoaded ? ' personality-test__intro-mascot-img--loaded' : ''}`}
-                  aria-hidden='true'
-                  lazyLoad={false}
-                  onLoad={() => setIntroImgLoaded(true)}
-                  onError={() => setIntroImgError(true)}
-                />
-              </View>
-            </View>
-
-            <View className='personality-test__intro-bubble'>
-              <Text className='personality-test__intro-bubble-title'>这一步会带给你什么</Text>
-              <Text className='personality-test__intro-bubble-text'>{introCoachLine}</Text>
-            </View>
-
-          </View>
-
-          <ResponsiveSpacer heightRpx={16} collapseBelow={720} />
-
-          <View className='personality-test__intro-trust personality-test__stage personality-test__stage--3'>
-            <Text className='personality-test__intro-trust-title'>开始前，三件事</Text>
-            <View className='personality-test__intro-trust-list'>
-              {INTRO_TRUST_POINTS.map((item) => (
-                <View key={item.title} className='personality-test__intro-trust-item'>
-                  <View className='personality-test__intro-trust-icon'>
-                    <Text>{item.prefix}</Text>
-                  </View>
-                  <View className='personality-test__intro-trust-copy'>
-                    <Text className='personality-test__intro-trust-item-title'>{item.title}</Text>
-                    <Text className='personality-test__intro-trust-item-description'>{item.description}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          <ResponsiveSpacer heightRpx={16} collapseBelow={780} />
-
-          <View className='personality-test__intro-tease personality-test__stage personality-test__stage--4'>
-            <Text className='personality-test__intro-tease-title'>完成后，你会看到自己的氛围命格</Text>
-            <Text className='personality-test__intro-tease-subtitle'>
-              不是贴标签，而是帮你找到最对味的人。
-            </Text>
-
-            <ScrollView
-              className='personality-test__intro-tease-scroll'
-              scrollX
-              enhanced
-              showScrollbar={false}
-            >
-              <View className='personality-test__intro-tease-list'>
-                {introTeasers.map((item, teaserIndex) => (
-                  <View
-                    key={item.archetype}
-                    className='personality-test__intro-tease-card'
-                  >
-                    <View className='personality-test__intro-tease-avatar-wrap'>
-                      <Image
-                        className='personality-test__intro-tease-avatar'
-                        src={item.visual.asset}
-                        mode='aspectFit'
-                      />
-                    </View>
-                    <Text className='personality-test__intro-tease-name'>
-                      {ARCHETYPE_BY_ID[item.archetype]?.nameCn ?? item.archetype}
-                    </Text>
-                    <Text className='personality-test__intro-tease-vibe'>{item.vibeLine}</Text>
-                  </View>
-                ))}
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-
-        <View className='personality-test__intro-footer'>
-          <Text className='personality-test__intro-footer-kicker'>
-            {introFooterKicker}
-          </Text>
-          {error ? <Text className='personality-test__error personality-test__error--footer'>{error}</Text> : null}
-          <Button
-            variant='brand'
-            className='personality-test__start-btn'
-            onClick={handleStart}
-            disabled={isSubmitting}
-            loading={isSubmitting}
-            hoverClass='personality-test__start-btn--hover'
-          >
-            {introPrimaryLabel}
-          </Button>
-          <Text className='personality-test__intro-footer-note'>{introFooterLine}</Text>
-        </View>
-      </View>
+      <PersonalityTestIntro
+        isPageExiting={isPageExiting}
+        isDegradation={isDegradation}
+        isSubmitting={isSubmitting}
+        error={error}
+        hasStoredIncompleteSession={hasStoredIncompleteSession}
+        introImgError={introImgError}
+        introImgLoaded={introImgLoaded}
+        introReducedMotion={introReducedMotion}
+        onStart={handleStart}
+        onIntroImgLoad={() => setIntroImgLoaded(true)}
+        onIntroImgError={() => setIntroImgError(true)}
+      />
     )
   }
 
@@ -1380,39 +1077,14 @@ export default function PersonalityTestPage() {
   if (phase === 'completing') {
     if (error) {
       return (
-        <View className='personality-test personality-test--intro'>
-          <View className='personality-test__intro-shell'>
-            <View className='personality-test__stage personality-test__stage--1'>
-              <View className='personality-test__intro-hero'>
-                <Image
-                  className='personality-test__intro-mascot'
-                  src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.errorState)}
-                  mode='aspectFit'
-                  style={{ width: '160rpx', height: '160rpx', marginBottom: '24rpx' }}
-                />
-                <Text className='personality-test__intro-title'>同步遇到小状况</Text>
-                <Text className='personality-test__intro-subtitle'>
-                  {typeof error === 'string' && error.includes('服务器')
-                    ? '服务器开小差了，稍后再试'
-                    : error || '悦仔马上帮你重试~'}
-                </Text>
-              </View>
-            </View>
-            <View className='personality-test__intro-footer'>
-              <Button
-                variant='brand'
-                className='personality-test__start-btn'
-                onClick={() => {
-                  haptics('medium')
-                  setError('')
-                  void handleCelebrateReady()
-                }}
-              >
-                重新打开结果
-              </Button>
-            </View>
-          </View>
-        </View>
+        <PersonalityTestCompletingError
+          error={error}
+          onRetry={() => {
+            haptics('medium')
+            setError('')
+            void handleCelebrateReady()
+          }}
+        />
       )
     }
     return (
@@ -1429,307 +1101,60 @@ export default function PersonalityTestPage() {
     )
   }
 
-  // Xiaoyue speech bubble text. Commentary is set immediately from pre-attached
-  // per-option data so the user sees tailored feedback without a network round-trip.
-  const speechText = backReview.isBackReviewMode
-    ? '这是你之前选的答案，可以修改后再确认。'
-    : postAnswerCommentary
-      ? postAnswerCommentary
-      : progress && progress.answered === 4
-        ? '已经一半了！你的命格轮廓越来越清晰，继续凭直觉选。'
-        : progress && progress.answered === 8
-          ? '太棒了！进入精准阶段，接下来的题目会更聚焦，帮你锁定最像自己的氛围命格。'
-          : question?.questionText ?? ''
 
-  const isLoadingSpeech = isSubmitting && !postAnswerCommentary
-
-  // Forces a remount (and typing restart) whenever the speech source changes,
-  // even if two consecutive questions happen to have identical text.
-  const speechKey = backReview.isBackReviewMode
-    ? `backreview-${backReview.backReviewQuestion?.id ?? 'none'}`
-    : postAnswerCommentary
-      ? `commentary-${progress?.answered ?? 0}`
-      : `question-${question?.id ?? 'none'}-${progress?.answered ?? 0}`
-
-  return (
-    <>
-      {/* Asset preloading for mascot expressions */}
-      <View className='personality-test__preload-layer' aria-hidden='true'>
-        {PRELOAD_EXPRESSIONS.map((expr) => (
-          <Image
-            key={expr}
-            className='personality-test__preload-image'
-            src={getXiaoyueExpressionAsset(expr)}
-            mode='aspectFit'
-            lazyLoad={false}
-            aria-hidden='true'
-          />
-        ))}
-      </View>
-
-      {/* ─── Glassmium Question + Mascot Layout ─── */}
-      <View className={getPageClassName('personality-test--mascot-layout')}>
-        {/* Zone A: Segmented progress bar */}
-        <View className='personality-test__progress-bar-shell'>
-          <SegmentedProgress
-            progress={progressPercent}
-            totalSegments={10}
-            variant='duolingo'
-          />
-        </View>
-        <View className='personality-test__progress-meta-row'>
-          <View className='personality-test__progress-label'>
-            <Text className='personality-test__progress-text'>
-              已答 {progress?.answered ?? 0} 题 · 还剩约 {progress?.estimatedRemaining ?? 0} 题
-            </Text>
-          </View>
-          {progress && progress.answered >= 1 && (
-            <View
-              className='personality-test__back-btn personality-test__back-btn--enter'
-              hoverClass='personality-test__back-btn--active'
-              hoverStartTime={0}
-              hoverStayTime={100}
-              onClick={() => {
-                if (isSubmitting || isSkipping || backReview.isBackReviewMode) return
-                handleBack()
-              }}
-              style={{ opacity: isSubmitting || isSkipping || backReview.isBackReviewMode ? 0.4 : 1 }}
-            >
-              <Text className='personality-test__back-btn-icon'>←</Text>
-              <Text className='personality-test__back-btn-text'>返回</Text>
-            </View>
-          )}
-        </View>
-
-        {/* D3 — Quiz halfway cheer badge (Batch D) — appears at >=50% progress */}
-        <HalfwayMilestone
-          progressPercent={progressPercent}
+  // Testing phase
+  if (phase === 'testing') {
+    return (
+      <>
+        <PersonalityTestPreloadLayer />
+        <PersonalityTestQuestion
+          isPageExiting={isPageExiting}
+          isDegradation={isDegradation}
           phase={phase}
-          answered={progress?.answered ?? 0}
+          question={question}
+          progress={progress}
           estimatedTotal={estimatedTotal}
-          onMilestoneReached={({ answered, estimatedTotal }) => {
+          progressPercent={progressPercent}
+          currentMatches={currentMatches}
+          sliderValue={sliderValue}
+          isSubmitting={isSubmitting}
+          isSkipping={isSkipping}
+          skipsRemaining={skipsRemaining}
+          error={error}
+          spriteState={spriteState}
+          mascotAutoPlay={mascotAutoPlay}
+          postAnswerCommentary={postAnswerCommentary}
+          shouldShowEcho={shouldShowEcho}
+          isEchoExiting={isEchoExiting}
+          echoEnabled={echoEnabled}
+          lastAttemptedOptionRef={lastAttemptedOptionRef}
+          backReview={backReview}
+          onAnswer={handleAnswer}
+          onSliderChange={handleSliderChange}
+          onSliderSubmit={handleSliderSubmit}
+          onBack={handleBack}
+          onSkip={handleSkip}
+          onRetry={handleRetry}
+          onBackReviewSelect={handleBackReviewSelect}
+          onBackReviewSliderChange={handleBackReviewSliderChange}
+          onBackReviewSliderSubmit={handleBackReviewSliderSubmit}
+          onCancelBackReview={handleCancelBackReview}
+          onConfirmBackReview={handleConfirmBackReview}
+          onMilestoneReached={({ answered, estimatedTotal: total }) => {
             haptics('medium')
             logInfo('[PersonalityTest] halfway milestone reached', {
               answered,
-              estimatedTotal,
+              estimatedTotal: total,
             })
             analytics.interaction('personality_test_halfway_milestone_reached', {
               answered,
-              estimatedTotal,
+              estimatedTotal: total,
             })
           }}
         />
+      </>
+    )
+  }
 
-        {/* Zone B: Full-width glassmium question banner */}
-        <View className='personality-test__question-zone'>
-          {(backReview.isBackReviewMode ? backReview.backReviewQuestion : question) ? (
-            <QuestionTransition questionId={(backReview.isBackReviewMode ? backReview.backReviewQuestion! : question!).id}>
-              <MascotQuestionHeader
-                question={backReview.isBackReviewMode
-                  ? {
-                      scenarioText: backReview.backReviewQuestion?.scenarioText,
-                      questionText: backReview.backReviewQuestion?.questionText ?? '',
-                    }
-                  : questionStub}
-                isLoading={isSubmitting}
-              />
-            </QuestionTransition>
-          ) : null}
-        </View>
-
-        {/* Zone C: Mascot + speech bubble row */}
-        <View className='personality-test__mascot-zone'>
-          {(backReview.isBackReviewMode ? backReview.backReviewQuestion : question) ? (
-            (() => {
-              const isMilestoneNow = progress ? isMilestoneQuestion(progress.answered) : false
-              const resolvedMascotState = resolveMascotState({
-                isLoading: isSubmitting,
-                isSubmitting,
-                questionType: getQuestionType(
-                  backReview.isBackReviewMode ? backReview.backReviewQuestion : question,
-                ),
-                isMilestone: isMilestoneNow && !!postAnswerCommentary,
-                isPostAnswerCommentary: !!postAnswerCommentary,
-                isCelebration: false,
-              })
-              return (
-            <View className='personality-test__mascot-row'>
-              <View className='personality-test__mascot-avatar'>
-                <XiaoyueSpriteAnimator
-                  state={resolvedMascotState}
-                  size='152rpx'
-                  isLoading={isSubmitting}
-                  showGlow={false}
-                  autoPlay={mascotAutoPlay || resolvedMascotState !== 'idle'}
-                  transitionMs={0}
-                  className='personality-test__mascot-animator'
-                  // Freeze the mascot on passive question states so the user never
-                  // sees an eyes-closed/blink frame. Let reaction states animate.
-                  staticFrame={resolvedMascotState === 'idle' || resolvedMascotState === 'curious' ? 0 : undefined}
-                />
-              </View>
-              <View
-                className={`personality-test__speech-bubble${!backReview.isBackReviewMode && progress && (progress.answered === 4 || progress.answered === 8) ? ' personality-test__speech-bubble--milestone' : ''}`}
-              >
-                {isLoadingSpeech ? (
-                  <Text className='personality-test__speech-bubble-text'>{speechText}</Text>
-                ) : (
-                  <TypewriterText
-                    key={speechKey}
-                    className='personality-test__speech-bubble-text'
-                    text={speechText}
-                    speed={40}
-                    delay={120}
-                    showCursor
-                    numberOfLines={3}
-                  />
-                )}
-              </View>
-            </View>
-              )
-            })()
-          ) : null}
-        </View>
-
-        {/* Zone D: Answers */}
-        <View className='personality-test__answer-zone'>
-          {(backReview.isBackReviewMode ? backReview.backReviewQuestion : question) ? (
-            <QuestionTransition questionId={(backReview.isBackReviewMode ? backReview.backReviewQuestion! : question!).id}>
-              <PersonalityTestAnswerArea
-                questionType={backReview.isBackReviewMode
-                  ? getQuestionType(backReview.backReviewQuestion)
-                  : questionType}
-                options={(backReview.isBackReviewMode ? backReview.backReviewQuestion! : question!).options}
-                sliderConfig={(backReview.isBackReviewMode ? backReview.backReviewQuestion! : question!).sliderConfig}
-                sliderValue={backReview.isBackReviewMode
-                  ? getSliderValueFromPreviousAnswer(
-                      backReview.backReviewPreviousAnswer,
-                      backReview.backReviewQuestion!.options,
-                    )
-                  : sliderValue}
-                isSubmitting={isSubmitting}
-                onAnswer={backReview.isBackReviewMode ? handleBackReviewSelect : handleAnswer}
-                onSliderChange={backReview.isBackReviewMode ? handleBackReviewSliderChange : handleSliderChange}
-                onSliderSubmit={backReview.isBackReviewMode ? handleBackReviewSliderSubmit : handleSliderSubmit}
-                committedValue={backReview.isBackReviewMode ? backReview.backReviewPreviousAnswer : null}
-                hideSliderSubmit={backReview.isBackReviewMode}
-                onOptionTouchStart={undefined}
-                onOptionTouchEnd={undefined}
-                onOptionTouchMove={undefined}
-              />
-            </QuestionTransition>
-          ) : null}
-
-          {/* Echo overlay — renders on top of answer area during submission */}
-          {(shouldShowEcho || isEchoExiting) && echoEnabled && (
-            <View
-              className={`personality-test__answer-echo-overlay${isEchoExiting ? ' personality-test__answer-echo-overlay--exiting' : ''}`}
-              aria-live='polite'
-              role='status'
-              aria-label={`已选择：${lastAttemptedOptionRef.current?.text ?? ''}，正在提交`}
-            >
-              <View className='personality-test__answer-echo-card'>
-                <Text className='personality-test__answer-echo-text' numberOfLines={2}>
-                  {lastAttemptedOptionRef.current?.text ?? '处理中…'}
-                </Text>
-              </View>
-              <View className='personality-test__answer-echo-whisper'>
-                <View className='personality-test__answer-echo-whisper-line' />
-              </View>
-              <View className='personality-test__answer-echo-brand-row'>
-                <Image
-                  className='personality-test__answer-echo-mascot-icon'
-                  src={getXiaoyueExpressionAsset(PERSONALITY_TEST_QUESTION_EXPRESSION.loading)}
-                  mode='aspectFit'
-                  aria-hidden='true'
-                />
-                <Text className='personality-test__answer-echo-caption'>
-                  悦仔收到了，正在分析…
-                </Text>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Back-review actions */}
-        {backReview.isBackReviewMode && (
-          <View className='personality-test__back-review-actions'>
-            <Button
-              variant='secondary'
-              className='personality-test__back-review-btn personality-test__back-review-btn--cancel'
-              onClick={handleCancelBackReview}
-              disabled={isSubmitting}
-              hoverClass='personality-test__back-review-btn--hover'
-            >
-              取消
-            </Button>
-            <Button
-              variant='brand'
-              className='personality-test__back-review-btn personality-test__back-review-btn--confirm'
-              onClick={handleConfirmBackReview}
-              disabled={isSubmitting}
-              loading={isSubmitting}
-              hoverClass='personality-test__back-review-btn--hover'
-            >
-              {isSubmitting ? '提交中…' : '确认修改'}
-            </Button>
-          </View>
-        )}
-
-        {/* Skip button (normal mode only) */}
-        {!backReview.isBackReviewMode && (
-          <View className='personality-test__skip-row'>
-            {skipsRemaining > 0 ? (
-              <View
-                className='personality-test__skip-btn personality-test__skip-btn--enter'
-                hoverClass='personality-test__skip-btn--active'
-                hoverStartTime={0}
-                hoverStayTime={100}
-                onClick={() => {
-                  if (isSubmitting || isSkipping) return
-                  handleSkip()
-                }}
-                style={{ opacity: isSubmitting || isSkipping ? 0.4 : 1 }}
-              >
-                {isSkipping ? (
-                  <View className='personality-test__skip-btn-dots'>
-                    <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--1' />
-                    <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--2' />
-                    <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--3' />
-                  </View>
-                ) : (
-                  <>
-                    <Text className='personality-test__skip-btn-icon'>↻</Text>
-                    <Text className='personality-test__skip-btn-text'>换一题</Text>
-                    <Text className='personality-test__skip-btn-count'>还剩 {skipsRemaining} 次</Text>
-                  </>
-                )}
-              </View>
-            ) : (
-              <View className='personality-test__skip-hint personality-test__skip-hint--enter'>
-                <Text className='personality-test__skip-hint-text'>这些题目都是为你挑选的，试试看～</Text>
-                <Text className='personality-test__skip-hint-subtext'>直觉很准，一题都没跳。</Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {error ? (
-          <View className='personality-test__error-row'>
-            <Text className='personality-test__error'>{error}</Text>
-            {lastAttemptedOptionRef.current && !backReview.isBackReviewMode ? (
-              <Button
-                variant='secondary'
-                className='personality-test__retry-btn'
-                onClick={handleRetry}
-                disabled={isSubmitting}
-              >
-                重试
-              </Button>
-            ) : null}
-          </View>
-        ) : null}
-      </View>
-    </>
-  )
+  return null
 }

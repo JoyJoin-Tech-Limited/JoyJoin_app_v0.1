@@ -1,6 +1,6 @@
 import { View, Image, Text } from '@tarojs/components'
 import { useState, useMemo } from 'react'
-import { cdnAsset, localAsset } from '@/lib/utils/cdnAssets'
+import { cdnAsset, useCdnFirstSrc } from '@/lib/utils/cdnAssets'
 import { getArchetypeTokens } from '@shared/archetypeColorTokens'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import ArchetypeHead from '../ArchetypeHead'
@@ -71,6 +71,7 @@ export default function XiaoyueEmptyState({
   archetypeAsMainVisual = false,
 }: XiaoyueEmptyStateProps) {
   const [imgError, setImgError] = useState(false)
+  const celebrationIcon = useCdnFirstSrc('/assets/icons/ui/icon-check.webp')
   const dim = SIZE_MAP[size]
   const hasArchetypeBadge = Boolean(archetypeId)
   const showArchetypeMain = archetypeAsMainVisual && hasArchetypeBadge
@@ -149,8 +150,9 @@ export default function XiaoyueEmptyState({
           <View className='xiaoyue-empty-state__mascot-badge' aria-label='完成'>
             <Image
               className='xiaoyue-empty-state__mascot-badge-icon'
-              src={localAsset('/assets/icons/ui/icon-check.webp')}
+              src={celebrationIcon.src}
               mode='aspectFit'
+              onError={celebrationIcon.onError}
             />
           </View>
         )}

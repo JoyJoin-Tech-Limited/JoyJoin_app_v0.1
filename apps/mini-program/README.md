@@ -26,7 +26,7 @@ This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 - `src/app.config.ts` — consumes main package pages, subpackages, and `preloadRule` from `lib/onboarding/onboardingRoutes.ts` + tab config from `lib/navigation/tabBarConfig.ts`
 - `src/lib/onboarding/onboardingRoutes.ts` — **register new pages here** (main package list, subpackages under `pages/onboarding`, `pages/pool-registration`, etc., preload rules)
 - `src/lib/api/api.ts` — mini-program auth/API bootstrap surface (`authenticateMiniProgramUser`, `authenticateMiniProgramUserWithTest`, `getUserState`)
-- `src/pages/onboarding/personality-test/` — V4 personality test, results, and post-result auth gate
+- `src/pages/onboarding/personality-test/` — V4 personality test, results, and post-result auth gate (split into focused sub-components: `index.tsx` orchestrator, `PersonalityTestIntro`, `PersonalityTestQuestion`, `PersonalityTestPreloadLayer`, `PersonalityTestCompletingError`, and shared `types.ts`)
 - `src/pages/login/index.tsx` + `src/hooks/auth/useWeChatLogin.ts` — returning-user WeChat login
 - `src/pages/blind-box-payment/`, `src/pages/payment-verification/` — JSAPI payment + post-pay polling
 - `src/pages/event-ticket-payment/` — paid event-ticket registration with ceremony success/verifying states
@@ -309,7 +309,7 @@ The guard normalizes route formats (`pages/discover/index`, `/pages/discover/ind
 | Feature | Implementation |
 |---------|----------------|
 | **Tap feedback** | `hover-class` on side tabs + center button with `hover-stay-time="150"`. Transitions live on base elements (not `hover-class`) for WeChat compatibility |
-| **Active tab pill** | Single shared `.joy-custom-tab-bar__active-pill` positioned with inline `transform: translateX({{pillTranslateX}}rpx)`. 220ms GPU transform transition between tabs; hidden (`opacity: 0`) when center hub is selected. Per-item scale micro-bounce removed |
+| **Active tab highlight** | Per-item active background on `.joy-custom-tab-bar__tab--active` (`rgba(139, 92, 246, 0.08)` + `border-radius: 24rpx`). The previous shared sliding `translateX` pill and `pillTranslateX` data field were removed 2026-06-23. Center-hub selection hides the side-tab highlight instead of animating a pill off-screen |
 | **PageMorphWrapper immediate mode** | If `isLoading` was never true, the loading layer renders with `transition: none` (`page-morph--immediate`) so cached auth does not flash a loading shell on tab switches |
 | **Tab-page entrance** | `.tab-page-enter` animation is gated by `consumeTabEntrance()` in `src/lib/utils/tabEntranceState.ts`; it plays only on the first tab page rendered after app cold start, not on every tab switch |
 | **Haptics** | `wx.vibrateShort({ type: 'light' })` on every side-tab tap |

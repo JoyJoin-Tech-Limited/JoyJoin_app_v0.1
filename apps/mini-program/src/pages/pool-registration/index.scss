@@ -425,15 +425,24 @@
     background: rgba($color-surface, 0.96);
   }
 
-  // Recap strip on Step 3: read-only summary of already-chosen preferences.
-  // Warm-tinted and more compact than the active input panel so the panel
-  // below stays the clear focal point instead of two peer white cards.
+  // Compact recap strip inside Step 3's coach card. Only budget + intent are
+  // shown; editable fields (language, dietary) are omitted so the summary
+  // stays subordinate to the active detail inputs.
   &__summary-card {
-    padding: $spacing-md $spacing-lg;
+    padding: $spacing-sm $spacing-md;
     margin-bottom: $spacing-md;
     border-radius: $card-radius;
-    background: rgba($color-bg-tint-warm, 0.55);
+    background: rgba($color-bg-tint-warm, 0.35);
     border: 1rpx solid rgba($color-primary, 0.08);
+
+    .pool-reg__summary-grid {
+      gap: $spacing-xs;
+      margin-top: $spacing-xs;
+    }
+
+    .pool-reg__summary-item {
+      padding-bottom: $spacing-xs;
+    }
   }
 
   &__brief-card {
@@ -453,7 +462,7 @@
     @include type-caption;
     font-weight: $font-weight-semibold;
     color: rgba($color-primary-dark, 0.82);
-    margin-bottom: 12rpx;
+    margin-bottom: $spacing-xs;
   }
 
   &__section-title {
@@ -730,18 +739,18 @@
     min-height: 88rpx;
     padding: $spacing-sm $spacing-md;
     border-radius: 999rpx;
-    border: 2rpx solid rgba($color-border, 0.92);
+    border: 2rpx solid rgba($color-border, 0.6);
     background: rgba($color-surface, 0.96);
 
     &--active {
       border-color: rgba($color-primary, 0.4);
-      background: rgba($color-primary, 0.08);
+      background: rgba($color-primary, 0.06);
     }
 
     &--disabled {
       opacity: 0.55;
       background: rgba($color-surface, 0.96);
-      border-color: rgba($color-border, 0.92);
+      border-color: rgba($color-border, 0.6);
 
       &:active,
       &--hover {
@@ -952,6 +961,10 @@
 
   &__step-content {
     animation: pool-reg-step-in 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+
+    &--reduce-motion {
+      animation: none;
+    }
   }
 
   &__step-coach {

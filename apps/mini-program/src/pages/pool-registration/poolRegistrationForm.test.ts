@@ -3,6 +3,7 @@ import {
   buildRegistrationPayload,
   getPoolRegistrationAdvanceBlocker,
   getPoolRegistrationSubmitBlocker,
+  hasAnyDetailSelection,
   resolveRegistrationStep,
 } from './poolRegistrationForm'
 
@@ -61,5 +62,42 @@ describe('poolRegistrationForm', () => {
       barBudgetRange: ['80-150'],
       alcoholComfort: ['微醺就好'],
     })
+  })
+
+  it('hasAnyDetailSelection is false when nothing is selected', () => {
+    const empty = {
+      eventIntent: [],
+      preferredLanguages: [],
+      dietaryRestrictions: [],
+      barThemes: [],
+    }
+    expect(hasAnyDetailSelection(empty, '饭局')).toBe(false)
+    expect(hasAnyDetailSelection(empty, '酒局')).toBe(false)
+    expect(hasAnyDetailSelection({ ...empty, alcoholComfort: undefined }, '酒局')).toBe(false)
+  })
+
+  it('hasAnyDetailSelection detects dinner details', () => {
+    const base = {
+      eventIntent: [],
+      preferredLanguages: [],
+      dietaryRestrictions: [],
+      barThemes: [],
+    }
+    expect(hasAnyDetailSelection({ ...base, preferredLanguages: ['粤语'] }, '饭局')).toBe(true)
+    expect(hasAnyDetailSelection({ ...base, dietaryRestrictions: ['vegetarian'] }, '饭局')).toBe(true)
+  })
+
+  it('hasAnyDetailSelection detects drinks details and handles deselect', () => {
+    const base = {
+      eventIntent: [],
+      preferredLanguages: [],
+      dietaryRestrictions: [],
+      barThemes: [],
+    }
+    expect(hasAnyDetailSelection({ ...base, preferredLanguages: ['粤语'] }, '酒局')).toBe(true)
+    expect(hasAnyDetailSelection({ ...base, barThemes: ['清吧'] }, '酒局')).toBe(true)
+    expect(hasAnyDetailSelection({ ...base, alcoholComfort: '微醺就好' }, '酒局')).toBe(true)
+    // Deselecting alcohol comfort returns undefined, not empty string
+    expect(hasAnyDetailSelection({ ...base, alcoholComfort: undefined }, '酒局')).toBe(false)
   })
 })

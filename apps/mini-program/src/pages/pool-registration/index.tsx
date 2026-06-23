@@ -59,6 +59,7 @@ import {
   findLabels,
   getPoolRegistrationAdvanceBlocker,
   getPoolRegistrationSubmitBlocker,
+  hasAnyDetailSelection,
   INITIAL_FORM_STATE,
   resolveRegistrationStep,
   toggleValue,
@@ -163,11 +164,14 @@ export default function PoolRegistrationPage() {
   const [resumeContext, setResumeContext] = useState<MiniProgramPoolRegistrationReturnContext | null>(null)
   const [showBudgetReaction, triggerBudgetReaction] = useReactionTimer()
   const [showIntentReaction, triggerIntentReaction, hideIntentReaction] = useReactionTimer()
+  const [showDetailReaction, triggerDetailReaction] = useReactionTimer()
+  const [detailCelebration, setDetailCelebration] = useState(false)
   const staggerMounted = useStaggerMount()
 
   // Gate transient reactions so they only celebrate the first selection per step visit.
   const budgetReactionShownRef = useRef(false)
   const intentReactionShownRef = useRef(false)
+  const detailCelebrateShownRef = useRef(false)
   const prevCanSubmitRef = useRef(false)
 
   const reduceMotion = useMemo(() => {
@@ -402,6 +406,9 @@ export default function PoolRegistrationPage() {
     if (step === STEP_INTENT) {
       intentReactionShownRef.current = false
     }
+    if (step === STEP_DETAILS) {
+      detailCelebrateShownRef.current = false
+    }
   }, [step])
 
   // Brief celebratory Xiaoyue reaction when the user makes their first intent selection
@@ -451,17 +458,34 @@ export default function PoolRegistrationPage() {
   }, [step, hasBudgetSelection, hasIntentSelection, isRegistering, resumeContext?.paymentStatus])
 
   const summaryItems = useMemo(() => {
-    const languages = findLabels(formState.preferredLanguages, LANGUAGE_OPTIONS)
     const intents = findLabels(formState.eventIntent, INTENT_FLOW_OPTIONS)
-    const dietary = findLabels(formState.dietaryRestrictions, DIETARY_OPTIONS)
 
     return [
       { label: '预算', value: selectedBudget || '未选择' },
       { label: '这次想收获', value: intents.length > 0 ? intents.join('、') : '未选择' },
-      { label: '沟通语言', value: languages.length > 0 ? languages.join('、') : '交给悦仔判断' },
-      ...(dietary.length > 0 ? [{ label: '饮食要求', value: dietary.join('、') }] : []),
     ]
-  }, [formState.eventIntent, formState.preferredLanguages, formState.dietaryRestrictions, selectedBudget])
+  }, [formState.eventIntent, selectedBudget])
+
+  const anyDetailSelected = useMemo(
+    () => hasAnyDetailSelection(formState, eventType),
+    [formState, eventType],
+  )
+
+  const handleDetailCelebrateComplete = useCallback(() => {
+    setDetailCelebration(false)
+  }, [])
+
+  // Celebrate the first detail selection on Step 3 with a brief mascot celebrate state.
+  useEffect(() => {
+    if (step !== STEP_DETAILS) return
+    if (!anyDetailSelected) return
+    if (detailCelebrateShownRef.current) return
+    if (reduceMotion) return
+    detailCelebrateShownRef.current = true
+    setDetailCelebration(true)
+    triggerDetailReaction()
+    discoverAnalytics.track('registration_step_reaction_shown', poolId, { step: 'details' })
+  }, [step, anyDetailSelected, reduceMotion, poolId])
 
   const successHighlights = useMemo(() => {
     const items = [selectedBudget, ...findLabels(formState.eventIntent, INTENT_FLOW_OPTIONS).slice(0, 2)]
@@ -901,7 +925,7 @@ export default function PoolRegistrationPage() {
       ) : null}
 
       {step === 1 ? (
-        <View className={`pool-reg__step-content pool-reg__step-content--${step > prevStep ? 'forward' : 'back'}`}>
+        <View className={`pool-reg__step-content pool-reg__step-content--${step > prevStep ? 'forward' : 'back'}${reduceMotion ? ' pool-reg__step-content--reduce-motion' : ''}`}>
           <XiaoyueCoachCard
             step={1}
             eyebrow='Step 1 · 预算'
@@ -951,7 +975,7 @@ export default function PoolRegistrationPage() {
       ) : null}
 
       {step === 2 ? (
-        <View className={`pool-reg__step-content pool-reg__step-content--${step > prevStep ? 'forward' : 'back'}`}>
+        <View className={`pool-reg__step-content pool-reg__step-content--${step > prevStep ? 'forward' : 'back'}${reduceMotion ? ' pool-reg__step-content--reduce-motion' : ''}`}>
           <XiaoyueCoachCard
             step={2}
             eyebrow='Step 2 · 期待'
@@ -976,33 +1000,51 @@ export default function PoolRegistrationPage() {
         </View>
       ) : null}
 
-      {step === 3 ? (
-        <View className={`pool-reg__step-content pool-reg__step-content--${step > prevStep ? 'forward' : 'back'}`}>
-          <XiaoyueChatBubble
-            content='期待已收到，最后补几项细节让匹配更顺'
-            pose='pointing'
-            horizontal
-            showGlow
-            className='pool-reg__step-coach'
-          />
-          <Card className='pool-reg__summary-card'>
-            <Text className='pool-reg__section-kicker'>匹配会重点参考</Text>
-            <View className='pool-reg__summary-grid'>
-              {summaryItems.map((item) => (
-                <View key={item.label} className='pool-reg__summary-item'>
-                  <Text className='pool-reg__summary-label'>{item.label}</Text>
-                  <Text className='pool-reg__summary-value'>{item.value}</Text>
-                </View>
-              ))}
-            </View>
-          </Card>
+      {showDetailReaction && step === 3 ? (
+        <XiaoyueChatBubble
+          content='收到，悦仔记下了'
+          pose='casual'
+          horizontal
+          showGlow
+          hideAvatar
+          className='pool-reg__step-coach pool-reg__step-coach--no-avatar'
+        />
+      ) : null}
 
-          <Card className='pool-reg__panel'>
-            <Text className='pool-reg__section-kicker'>Step 3 · 细节</Text>
-            <Text className='pool-reg__section-title'>再补几项细节，让匹配更顺</Text>
-            <Text className='pool-reg__section-copy'>
-              语言和具体偏好都可以留空。你填得越清楚，悦仔越容易帮你把这一桌的节奏调顺。
-            </Text>
+      {step === 3 ? (
+        <View className={`pool-reg__step-content pool-reg__step-content--${step > prevStep ? 'forward' : 'back'}${reduceMotion ? ' pool-reg__step-content--reduce-motion' : ''}`}>
+          <XiaoyueCoachCard
+            step={3}
+            eyebrow={`Step 3 · ${stepLabels[2]}`}
+            title='最后补几项细节，让匹配更顺'
+            copy='语言和具体偏好都可以留空。你填得越清楚，悦仔越容易帮你把这一桌的节奏调顺。'
+            userArchetype={user?.primaryArchetype ?? undefined}
+            visible={staggerMounted}
+            reduceMotion={reduceMotion}
+            spriteState={detailCelebration ? 'celebrate' : 'coach'}
+            onSpriteComplete={handleDetailCelebrateComplete}
+            footer={
+              anyDetailSelected ? (
+                <View className='pool-reg__completion-pill'>
+                  <View className='pool-reg__completion-check' aria-hidden='true' />
+                  <Text className='pool-reg__completion-text'>细节已补充，可以提交了</Text>
+                </View>
+              ) : (
+                <Text className='pool-reg__helper'>这些都可以留空，填了会让匹配更精准。</Text>
+              )
+            }
+          >
+            <Card className='pool-reg__summary-card'>
+              <Text className='pool-reg__section-kicker'>已选</Text>
+              <View className='pool-reg__summary-grid'>
+                {summaryItems.map((item) => (
+                  <View key={item.label} className='pool-reg__summary-item'>
+                    <Text className='pool-reg__summary-label'>{item.label}</Text>
+                    <Text className='pool-reg__summary-value'>{item.value}</Text>
+                  </View>
+                ))}
+              </View>
+            </Card>
 
             <View className='pool-reg__field'>
               <Text className='pool-reg__field-title'>愿意用什么语言开聊</Text>
@@ -1067,7 +1109,7 @@ export default function PoolRegistrationPage() {
                 </View>
               </>
             )}
-          </Card>
+          </XiaoyueCoachCard>
         </View>
       ) : null}
 

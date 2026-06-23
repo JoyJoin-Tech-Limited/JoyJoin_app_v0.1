@@ -2,7 +2,7 @@ import { View, Text } from '@tarojs/components'
 import { useMemo } from 'react'
 import { getArchetypeTokens } from '@shared/archetypeColorTokens'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import XiaoyueSpriteAnimator from '../../../components/mascot/XiaoyueSpriteAnimator'
+import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
 import './XiaoyueCoachCard.scss'
 
 interface XiaoyueCoachCardProps {
@@ -16,6 +16,8 @@ interface XiaoyueCoachCardProps {
   className?: string
   visible?: boolean
   reduceMotion?: boolean
+  spriteState?: XiaoyueSpriteState
+  onSpriteComplete?: () => void
 }
 
 export default function XiaoyueCoachCard({
@@ -29,6 +31,8 @@ export default function XiaoyueCoachCard({
   className = '',
   visible = true,
   reduceMotion = false,
+  spriteState = 'coach',
+  onSpriteComplete,
 }: XiaoyueCoachCardProps) {
   const archetypeTokens = useMemo(
     () => (userArchetype ? getArchetypeTokens(userArchetype) : null),
@@ -47,11 +51,12 @@ export default function XiaoyueCoachCard({
     <View className={rootClasses}>
       <View className='xiaoyue-coach-card__mascot-wrap' aria-hidden='true'>
         <XiaoyueSpriteAnimator
-          state='coach'
+          state={spriteState}
           size='112rpx'
           showGlow
           autoPlay
           transitionMs={300}
+          onComplete={onSpriteComplete}
         />
       </View>
 

@@ -67,3 +67,24 @@ export function localAsset(localPath: string): string {
   }
   return localPath
 }
+
+import { useCallback, useState } from 'react'
+
+/**
+ * React hook for CDN-first image loading with a local bundled fallback.
+ *
+ * Use this for assets that are mirrored on the CDN but also copied into the
+ * WeChat package as a safety net. The hook starts with `cdnAsset(localPath)`;
+ * if that fails, `onError` switches to `localAsset(localPath)`.
+ *
+ * @returns `{ src, onError, isLocal }` — `isLocal` is true after the CDN
+ *   attempt has failed and the local fallback is active.
+ */
+export function useCdnFirstSrc(localPath: string) {
+  const [isLocal, setIsLocal] = useState(false)
+  const src = isLocal ? localAsset(localPath) : cdnAsset(localPath)
+  const onError = useCallback(() => {
+    setIsLocal(true)
+  }, [])
+  return { src, onError, isLocal }
+}

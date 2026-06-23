@@ -1,7 +1,7 @@
 import { View, Text, Image } from '@tarojs/components'
 import { useMemo, useState } from 'react'
 import { getArchetypeTokens } from '@shared/archetypeColorTokens'
-import { cdnAsset, localAsset } from '../../../lib/utils/cdnAssets'
+import { cdnAsset, localAsset, useCdnFirstSrc } from '../../../lib/utils/cdnAssets'
 import ArchetypeHead from '../../../components/mascot/ArchetypeHead'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
 import type { PoolEventType } from '../flowConfig'
@@ -116,6 +116,8 @@ export default function PoolRegistrationHero({
   visible,
   reduceMotion,
 }: PoolRegistrationHeroProps) {
+  const calendarIcon = useCdnFirstSrc('/assets/icons/ui/icon-calendar.webp')
+  const locationIcon = useCdnFirstSrc('/assets/icons/ui/icon-location.webp')
   const deviceTier = useDeviceTier()
   // Attempt index: 0 = CDN, 1 = main-package local, 2 = subpackage local, 3+ = failed
   const [imageAttempt, setImageAttempt] = useState(0)
@@ -179,8 +181,9 @@ export default function PoolRegistrationHero({
             <View className='pool-registration-hero__meta-pill' aria-label={`时间：${dateTimeLabel}`}>
               <Image
                 className='pool-registration-hero__meta-icon'
-                src={localAsset('/assets/icons/ui/icon-calendar.webp')}
+                src={calendarIcon.src}
                 mode='aspectFit'
+                onError={calendarIcon.onError}
               />
               <Text className='pool-registration-hero__meta-text'>{dateTimeLabel}</Text>
             </View>
@@ -189,8 +192,9 @@ export default function PoolRegistrationHero({
             <View className='pool-registration-hero__meta-pill' aria-label={`地区：${area}`}>
               <Image
                 className='pool-registration-hero__meta-icon'
-                src={localAsset('/assets/icons/ui/icon-location.webp')}
+                src={locationIcon.src}
                 mode='aspectFit'
+                onError={locationIcon.onError}
               />
               <Text className='pool-registration-hero__meta-text'>{area}</Text>
             </View>

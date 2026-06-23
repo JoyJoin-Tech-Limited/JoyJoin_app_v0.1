@@ -24,7 +24,7 @@ This smoke proves:
 2. The tab bar is **hidden / not attached** on confirmed non-tab pages.
 3. Route-format quirks (leading `/`, Taro timestamp query string) do not
    accidentally hide the bar on a valid tab page.
-4. The active pill and center button render and respond to taps.
+4. The active highlight and center button render and respond to taps.
 
 ---
 
@@ -40,7 +40,7 @@ npm run build:weapp -w mini-program
 
 Expected result:
 
-- All tab-bar behavior tests pass (26 tests as of 2026-06-18).
+- All tab-bar behavior tests pass (31 tests as of 2026-06-23).
 - Mini-program typecheck passes.
 - WeChat build succeeds and refreshes `apps/mini-program/dist`.
 
@@ -124,13 +124,13 @@ pane:
 Navigate to each page and record the result. Use `wx.switchTab` or tap the tab
 bar itself; do not use `wx.navigateTo` for tab pages.
 
-| Page | Expected route | Tab bar `display` | `hidden` attr | Active pill / center |
+| Page | Expected route | Tab bar `display` | `hidden` attr | Active highlight / center |
 | --- | --- | --- | --- | --- |
 | 发现 | `pages/discover/index` | `block` | absent | first tab |
 | 足迹 | `pages/events/index` | `block` | absent | second tab |
 | 连接 | `pages/connections/index` | `block` | absent | third tab |
 | 我的 | `pages/profile/index` | `block` | absent | fourth tab |
-| 中心入口 | `pages/center-hub/index` | `block` | absent | center button selected, pill hidden |
+| 中心入口 | `pages/center-hub/index` | `block` | absent | center button selected, side highlight hidden |
 
 ### Step 4 — Non-tab-page checks
 
@@ -154,9 +154,10 @@ If the tab bar is still visible on a non-tab page, the allow-list lookup or the
 
 On a tab page:
 
-1. Tap a different tab. The active pill should slide to the selected tab.
-2. Tap the center button. The pill should disappear and the center button
-   should highlight.
+1. Tap a different tab. The active tab should highlight with a rounded
+   background pill.
+2. Tap the center button. The side highlight should disappear and the center
+   button should show its selected state.
 3. Rapidly tap two different side tabs. Only one `wx.switchTab` should fire; the
    second tap is ignored while in-flight.
 

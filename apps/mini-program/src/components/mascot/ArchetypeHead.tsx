@@ -70,20 +70,25 @@ function getCdnGridPath(archetype: string): string {
  * centre 119.5,119.5 of the 240px canvas). At render time we rescale by
  * imageSize / 240 and negate so the character's face lands dead-centre in
  * the circular clip.
+ *
+ * Values tuned by opacity-weighted centroid analysis of the 240×240 head
+ * assets plus manual face-centre polish. Positive dx = face sits right of
+ * centre → image is shifted left; positive dy = face sits below centre →
+ * image is shifted up. Rounded to one decimal place.
  */
 const VISUAL_CENTRE_SOURCE_OFFSET: Record<string, { dx: number; dy: number }> = {
-  cat:            { dx:   4.8, dy:   9.1 },
-  corgi:          { dx:  -0.6, dy:   3.4 },
-  dolphin_calm:   { dx:  -9.2, dy:  15.6 },
-  elephant:       { dx:   2.2, dy: -11.4 },
-  fox:            { dx:  -3.5, dy:  11.9 },
-  hamster_praise: { dx:   2.4, dy:   3.2 },
-  koala:          { dx:   3.5, dy:  -7.6 },
-  octopus:        { dx:   1.0, dy:  -2.3 },
-  owl:            { dx:   3.7, dy:   0.7 },
-  rooster:        { dx:  -2.9, dy:   6.3 },
-  spider:         { dx:  -0.2, dy:   0.0 },
-  turtle:         { dx:   5.2, dy:  -8.2 },
+  cat:            { dx:   3.0, dy:   7.0 },
+  corgi:          { dx:   0.0, dy:   2.0 },
+  dolphin_calm:   { dx:  -9.5, dy:  16.0 },
+  elephant:       { dx:   1.5, dy: -12.0 },
+  fox:            { dx:  -2.5, dy:   8.0 },
+  hamster_praise: { dx:   2.0, dy:   2.5 },
+  koala:          { dx:   3.0, dy:  -7.0 },
+  octopus:        { dx:   0.5, dy:  -1.5 },
+  owl:            { dx:   3.0, dy:  -3.0 },
+  rooster:        { dx:  -2.5, dy:   5.5 },
+  spider:         { dx:   0.0, dy:   0.0 },
+  turtle:         { dx:   4.0, dy: -11.0 },
 }
 
 function getFallbackInitial(text?: string): string {

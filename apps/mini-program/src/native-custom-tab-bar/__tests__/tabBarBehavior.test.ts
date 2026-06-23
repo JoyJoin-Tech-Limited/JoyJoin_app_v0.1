@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
+// Mirrors the sentinel in native-custom-tab-bar/index.js.
+const CENTER_TAB_INDEX = 4
+
 // WeChat native component global stubs.
 declare global {
   // eslint-disable-next-line no-var
@@ -174,18 +177,17 @@ describe('native custom tab bar behavior', () => {
     expect(component.data.lowEnd).toBe(true)
   })
 
-  it('computes sliding pill geometry on attach', async () => {
+  it('confirms the current selection on attach', async () => {
     setupMocks()
     const component = await loadComponent()
 
     component.attached()
 
-    expect(component.data.tabItemWidth).toBeGreaterThan(0)
-    expect(component.data.pillWidth).toBe(component.data.tabItemWidth)
-    expect(component.data.pillTranslateX).toBe(0)
+    expect(component.data.selected).toBe(0)
+    expect(component._confirmedSelected).toBe(0)
   })
 
-  it('repositions the sliding pill to match the current selection on re-attach', async () => {
+  it('preserves the current selection when re-attached', async () => {
     setupMocks()
     const component = await loadComponent()
 
@@ -193,31 +195,32 @@ describe('native custom tab bar behavior', () => {
     component.attached()
 
     expect(component.data.selected).toBe(2)
-    expect(component.data.pillTranslateX).toBeGreaterThan(0)
     expect(component._confirmedSelected).toBe(2)
   })
 
-  it('moves the sliding pill when a side tab is tapped', async () => {
+  it('updates the active highlight when a side tab is tapped', async () => {
     setupMocks({ switchTabResult: 'success' })
     const component = await loadComponent()
     component.attached()
 
     component.handleTabTap(makeEvent(1, '/pages/events/index', 'events'))
 
-    expect(component.data.pillTranslateX).toBeGreaterThan(0)
+    expect(component.data.selected).toBe(1)
+    expect(component._confirmedSelected).toBe(1)
   })
 
-  it('hides the sliding pill when the center button is selected', async () => {
+  it('selects the center hub when the center button is tapped', async () => {
     setupMocks({ switchTabResult: 'success' })
     const component = await loadComponent()
     component.attached()
 
     component.handleCenterTap()
 
-    expect(component.data.selected).toBe(4)
+    expect(component.data.selected).toBe(CENTER_TAB_INDEX)
+    expect(component._confirmedSelected).toBe(CENTER_TAB_INDEX)
   })
 
-  it('updates the sliding pill via setSelected', async () => {
+  it('updates the active highlight via setSelected', async () => {
     setupMocks()
     const component = await loadComponent()
     component.attached()
@@ -225,7 +228,7 @@ describe('native custom tab bar behavior', () => {
     component.setSelected(3)
 
     expect(component.data.selected).toBe(3)
-    expect(component.data.pillTranslateX).toBeGreaterThan(0)
+    expect(component._confirmedSelected).toBe(3)
   })
 
   it('switches side tab with optimistic highlight and announces on success', async () => {
@@ -266,7 +269,7 @@ describe('native custom tab bar behavior', () => {
     setupMocks({ switchTabResult: 'success' })
     const component = await loadComponent()
     component.attached()
-    component.setSelected(4)
+    component.setSelected(CENTER_TAB_INDEX)
 
     component.handleCenterTap()
 
@@ -282,14 +285,13 @@ describe('native custom tab bar behavior', () => {
 
     // Optimistic update happens synchronously.
     expect(component.data.selected).toBe(2)
-    expect(component.data.pillTranslateX).toBeGreaterThan(0)
+    expect(component._confirmedSelected).toBe(2)
 
     // Failure callback runs asynchronously.
     await vi.advanceTimersByTimeAsync(0)
 
     expect(component._confirmedSelected).toBe(0)
     expect(component.data.selected).toBe(0)
-    expect(component.data.pillTranslateX).toBe(0)
     expect(global.wx.showToast).toHaveBeenCalledWith(
       expect.objectContaining({ title: '切换失败，请重试', icon: 'none' })
     )
@@ -318,24 +320,6 @@ describe('native custom tab bar behavior', () => {
     expect(component.data.selected).toBe(2)
   })
 
-  it('disables the pill transition during rapid back-to-back taps', async () => {
-    setupMocks({ switchTabResult: 'success' })
-    const component = await loadComponent()
-    component.attached()
-
-    component.handleTabTap(makeEvent(1, '/pages/events/index', 'events'))
-    // First tap keeps transition enabled.
-    expect(component.data.pillTransitionEnabled).toBe(true)
-
-    component.handleTabTap(makeEvent(2, '/pages/connections/index', 'connections'))
-    // The second tap is ignored while in-flight, so transition state stays.
-    // Simulate switchTab completing, then tap again quickly.
-    await vi.advanceTimersByTimeAsync(0)
-    component.handleTabTap(makeEvent(2, '/pages/connections/index', 'connections'))
-
-    // Within the 220 ms transition window, the new tap snaps without animating.
-    expect(component.data.pillTransitionEnabled).toBe(false)
-  })
 
   it('releases a stuck in-flight guard after the safety timeout', async () => {
     setupMocks({ switchTabResult: 'success' })
@@ -352,15 +336,15 @@ describe('native custom tab bar behavior', () => {
     expect(global.wx.switchTab).toHaveBeenCalledTimes(2)
   })
 
-  it('switches to center hub and highlights selected === 4', async () => {
+  it('switches to center hub and highlights the center index', async () => {
     setupMocks({ switchTabResult: 'success' })
     const component = await loadComponent()
     component.attached()
 
     component.handleCenterTap()
 
-    expect(component.data.selected).toBe(4)
-    expect(component._confirmedSelected).toBe(4)
+    expect(component.data.selected).toBe(CENTER_TAB_INDEX)
+    expect(component._confirmedSelected).toBe(CENTER_TAB_INDEX)
     expect(global.wx.switchTab).toHaveBeenCalledWith(
       expect.objectContaining({ url: '/pages/center-hub/index' })
     )
@@ -369,27 +353,24 @@ describe('native custom tab bar behavior', () => {
     expect(component.data.announcement).toBe('已切换到中心入口')
   })
 
-  it('rolls back the sliding pill when center button switchTab fails', async () => {
+  it('rolls back the center selection when switchTab fails', async () => {
     setupMocks({ switchTabResult: 'fail' })
     const component = await loadComponent()
     component.attached()
 
-    // Start on the events tab so we can verify the pill rolls back to it.
+    // Start on the events tab so we can verify selection rolls back to it.
     component.setSelected(1)
-    const previousPill = component.data.pillTranslateX
 
     component.handleCenterTap()
 
-    // Optimistic update hides the pill and highlights the center button.
-    expect(component.data.selected).toBe(4)
-    expect(component.data.pillTranslateX).toBe(0)
+    // Optimistic update highlights the center button.
+    expect(component.data.selected).toBe(CENTER_TAB_INDEX)
 
     // Failure callback runs asynchronously.
     await vi.advanceTimersByTimeAsync(0)
 
     expect(component._confirmedSelected).toBe(1)
     expect(component.data.selected).toBe(1)
-    expect(component.data.pillTranslateX).toBe(previousPill)
   })
 
   it('syncState updates badges and center via path-based setData', async () => {

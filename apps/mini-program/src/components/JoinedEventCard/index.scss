@@ -1,0 +1,221 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.joined-event-card {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 260rpx;
+  padding: $spacing-lg;
+  border-radius: $card-radius-sm;
+  border: 2rpx solid rgba($color-surface, 0.9);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(18rpx);
+  animation: joined-event-card-enter 0.34s ease-out forwards;
+  will-change: transform, opacity;
+  contain: layout style;
+
+  // Family-specific surfaces mirror the Oracle Card gradient system.
+  &--family-warm {
+    background: $card-gradient-warm;
+    box-shadow: 0 8rpx 32rpx rgba($color-archetype-warm, 0.1);
+  }
+
+  &--family-cool {
+    background: $card-gradient-cool;
+    box-shadow: 0 8rpx 32rpx rgba($color-archetype-cool, 0.1);
+  }
+
+  &--family-fire {
+    background: $card-gradient-fire;
+    box-shadow: 0 8rpx 32rpx rgba($color-archetype-fire, 0.1);
+  }
+
+  &--family-calm {
+    background: $card-gradient-premium;
+    box-shadow: 0 8rpx 32rpx rgba($color-archetype-calm, 0.1);
+  }
+
+  &--past {
+    background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-divider, 0.86) 100%);
+    box-shadow: 0 4rpx 16rpx rgba($color-text-primary, 0.04);
+
+    .joined-event-card__title,
+    .joined-event-card__date {
+      color: $color-text-secondary;
+    }
+
+    .joined-event-card__pulse-pill {
+      background: $color-divider;
+    }
+  }
+
+  &--pressed {
+    transform: translateY(-2rpx) scale(0.985);
+  }
+
+  &--static,
+  &--low-end {
+    will-change: auto;
+    contain: none;
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  // ── Topline ─────────────────────────────────────────────────────
+  &__topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__pulse-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.08);
+  }
+
+  &__pulse-dot {
+    width: 10rpx;
+    height: 10rpx;
+    border-radius: 50%;
+
+    &--live {
+      animation: joined-event-pulse-dot 2s ease-in-out infinite;
+    }
+  }
+
+  &__pulse-label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__countdown {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    opacity: 0.9;
+  }
+
+  // ── Title ───────────────────────────────────────────────────────
+  &__title {
+    @include font-cn-display;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-sm;
+    line-height: 1.4;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  // ── Decision facts (when) ──────────────────────────────────────
+  &__facts {
+    margin-bottom: $spacing-xs;
+  }
+
+  &__when-row {
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-sm;
+    line-height: 1.4;
+  }
+
+  &__date {
+    font-family: $font-cn-display;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+    word-break: keep-all;
+    white-space: nowrap;
+  }
+
+  &__weekday {
+    font-family: $font-cn-display;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: $color-text-secondary;
+  }
+
+  &__time {
+    display: block;
+    font-family: $font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-secondary;
+    margin-top: 4rpx;
+  }
+
+  // ── Location ────────────────────────────────────────────────────
+  &__location-row {
+    margin-top: $spacing-xs;
+  }
+
+  &__location {
+    display: block;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-muted;
+    line-height: 1.4;
+    @include text-truncate;
+
+    &::before {
+      content: '地点 · ';
+      color: $color-text-tertiary;
+      font-weight: $font-weight-normal;
+    }
+  }
+
+  // ── Footer hint ─────────────────────────────────────────────────
+  &__footer {
+    margin-top: $spacing-md;
+    padding-top: $spacing-sm;
+    border-top: 1rpx solid rgba($color-border, 0.4);
+  }
+
+  &__footer-hint {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    line-height: 1.4;
+  }
+}
+
+// ─── Keyframes ───────────────────────────────────────────────────
+@keyframes joined-event-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes joined-event-pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+// ─── Reduced motion ──────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .joined-event-card {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .joined-event-card__pulse-dot--live {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

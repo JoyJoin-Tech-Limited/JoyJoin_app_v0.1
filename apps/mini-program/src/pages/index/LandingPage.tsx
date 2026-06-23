@@ -7,6 +7,7 @@ import Button from "../../components/ui/Button"
 import BrandLogo from "../../components/ui/BrandLogo"
 import PhaseIconCarousel from "../../components/landing/PhaseIconCarousel"
 import { useStaggerMount } from "../../hooks/useStaggerMount"
+import { ResponsiveSpacer } from "../../components/ui/ResponsiveSpacer"
 import { runMiniProgramRouteTransition, navigateToMiniProgramNextStep } from "../../lib/onboarding/onboardingNavigation"
 import { MINI_PROGRAM_ROUTES } from "../../lib/onboarding/onboardingRoutes"
 import { useWeChatLogin } from "../../hooks/auth/useWeChatLogin"
@@ -249,6 +250,9 @@ export default function MiniProgramLandingPage({
             <Text className="subtitle">测出你的氛围命格，找到最聊得来的 4-6 人小局</Text>
           </View>
         </View>
+
+        {/* Dynamic spacer: disappears on short phones so the fixed CTA stays reachable */}
+        <ResponsiveSpacer heightRpx={32} collapseBelow={640} />
 
         {/* Game preview */}
         <View

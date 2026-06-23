@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import type { AssessmentQuestion } from './index'
+import type { AssessmentQuestion } from './types'
 
 export interface BackReviewState {
   isBackReviewMode: boolean

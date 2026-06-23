@@ -32,6 +32,17 @@ export function findLabels(values: string[], options: { value: string; label: st
   return options.filter((option) => values.includes(option.value)).map((option) => option.label)
 }
 
+export function hasAnyDetailSelection(
+  formState: RegistrationFormState,
+  eventType: PoolEventType,
+): boolean {
+  const hasLanguage = formState.preferredLanguages.length > 0
+  if (eventType === '酒局') {
+    return hasLanguage || formState.barThemes.length > 0 || !!formState.alcoholComfort
+  }
+  return hasLanguage || formState.dietaryRestrictions.length > 0
+}
+
 export function buildRegistrationPayload(
   formState: RegistrationFormState,
   eventType: PoolEventType,
