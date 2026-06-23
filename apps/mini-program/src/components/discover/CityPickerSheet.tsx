@@ -40,6 +40,7 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
   const [scrollToCity, setScrollToCity] = useState('')
   const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const scrollClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const submittingRef = useRef(false)
 
   // Reset state when sheet opens
   useEffect(() => {
@@ -53,6 +54,7 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
       setLoading(false)
       setCelebrated(false)
       setScrollToCity('')
+      submittingRef.current = false
       discoverAnalytics.track('city_picker_open')
     }
   }, [visible])
@@ -123,18 +125,19 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
     setSearchQuery('')
   }, [])
 
-  const handleConfirm = useCallback(async () => {
-    if (!selectedCity || loading) return
+  const submitCity = useCallback(async (city: string) => {
+    if (submittingRef.current) return
+    submittingRef.current = true
     haptics('medium')
 
     setLoading(true)
-    discoverAnalytics.track('city_picker_confirm', undefined, { city: selectedCity })
+    discoverAnalytics.track('city_picker_confirm', undefined, { city })
     try {
       try {
         const networkRes = await Taro.getNetworkType()
         if (networkRes.networkType === 'none') {
           Taro.showToast({ title: '网络好像断开了，请检查连接', icon: 'none', duration: 2000 })
-          discoverAnalytics.track('city_picker_offline_blocked', undefined, { city: selectedCity })
+          discoverAnalytics.track('city_picker_offline_blocked', undefined, { city })
           return
         }
       } catch {
@@ -144,20 +147,20 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
       await apiRequest({
         method: 'POST',
         path: '/api/cities/interest',
-        data: { city: selectedCity, source: 'floating_banner' },
+        data: { city, source: 'floating_banner' },
       })
 
       haptics('success')
       setCelebrated(true)
-      logInfo('[CityPicker] interest registered', { city: selectedCity })
-      discoverAnalytics.track('city_picker_success', undefined, { city: selectedCity })
+      logInfo('[CityPicker] interest registered', { city })
+      discoverAnalytics.track('city_picker_success', undefined, { city })
       celebrationTimerRef.current = setTimeout(() => {
         celebrationTimerRef.current = null
-        onSuccess(selectedCity)
+        onSuccess(city)
       }, 600)
     } catch (err) {
-      logInfo('[CityPicker] interest register failed', { city: selectedCity, error: String(err) })
-      discoverAnalytics.track('city_picker_error', undefined, { city: selectedCity, error: String(err) })
+      logInfo('[CityPicker] interest register failed', { city, error: String(err) })
+      discoverAnalytics.track('city_picker_error', undefined, { city, error: String(err) })
       Taro.showToast({
         title: '网络开小差了，请重试',
         icon: 'none',
@@ -165,8 +168,25 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
       })
     } finally {
       setLoading(false)
+      submittingRef.current = false
     }
-  }, [selectedCity, loading, onSuccess])
+  }, [onSuccess])
+
+  const handleSelectCity = useCallback((city: string) => {
+    if (submittingRef.current) return
+    haptics('light')
+    setSelectedCity(city)
+    discoverAnalytics.track('city_picker_select', undefined, { city })
+    if (!searchQuery.trim()) {
+      setScrollToCity(`city-${city}`)
+    }
+    void submitCity(city)
+  }, [searchQuery, submitCity])
+
+  const handleConfirm = useCallback(() => {
+    if (!selectedCity) return
+    void submitCity(selectedCity)
+  }, [selectedCity, submitCity])
 
   if (!visible) return null
 
