@@ -53,7 +53,6 @@ export default function ProfilePage() {
   const handleOpenPayment = () => {
     haptics('light')
     void openMiniProgramPaymentPage({
-      paymentsEnabled: authUser?.paymentsEnabled,
       currentUserId: authUser?.id,
     })
   }

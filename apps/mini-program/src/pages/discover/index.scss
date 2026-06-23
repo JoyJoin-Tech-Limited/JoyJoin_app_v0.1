@@ -314,6 +314,7 @@
 //   L6 CTA sub          — 22rpx                          (value prop)
 .oracle-card {
   @include card;
+  position: relative;
   box-sizing: border-box;
   // Calibrated to fit the tallest OracleCard (title + teaser + CTA).
   // VirtualList itemHeight must match this value. Re-measure in DevTools.
@@ -327,6 +328,12 @@
   animation: oracle-card-enter 0.34s ease-out forwards;
   will-change: transform, opacity;
   contain: layout style;
+
+  // Ensure all content layers sit above the decorative corner vignette.
+  > *:not(.oracle-card__type-corner) {
+    position: relative;
+    z-index: 1;
+  }
 
   &--hover {
     transform: translateY(-2rpx) scale(0.985);
@@ -387,6 +394,19 @@
       width: 100%;
       height: 88rpx;
     }
+  }
+
+  // ── Event-type corner vignette ────────────────────────────────
+  &__type-corner {
+    position: absolute;
+    top: 24rpx;
+    right: 40rpx;
+    width: 220rpx;
+    height: 220rpx;
+    opacity: 0.5;
+    z-index: 0;
+    pointer-events: none;
+    border-top-right-radius: 22rpx;
   }
 
   // ── Topline (live pulse + countdown) ──────────────────────────

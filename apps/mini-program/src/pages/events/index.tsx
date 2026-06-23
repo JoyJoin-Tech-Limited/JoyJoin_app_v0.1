@@ -46,7 +46,6 @@ export default function EventsPage() {
   const markAsRead = useMarkNotificationsAsRead()
   useCustomTabBarSync({
     enabled: !authLoading,
-    tabKey: 'events',
   })
 
   const [tabEntranceClass] = useState(() => (consumeTabEntrance() ? 'tab-page-enter' : ''))

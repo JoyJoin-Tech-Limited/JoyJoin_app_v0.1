@@ -1,19 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import Taro from '@tarojs/taro'
 import { useCustomTabBarSync } from '../useCustomTabBarSync'
+import { useNotificationCounts } from '../../useNotificationCounts'
 import {
-  getTabBarState,
-  setTabBarSelected,
   setTabBarBadges,
   setTabBarCenterState,
 } from '../../../lib/navigation/tabBarState'
 import { getMiniProgramCenterState } from '../../../lib/navigation/centerTabRouting'
-import type { MiniProgramCenterState } from '../../../lib/navigation/centerTabRouting'
 
-const mockSetSelected = vi.fn()
 const mockSyncState = vi.fn()
-const mockGetTabBar = vi.fn(() => ({ setSelected: mockSetSelected, syncState: mockSyncState }))
+const mockGetTabBar = vi.fn(() => ({ syncState: mockSyncState }))
 
 let didShowCallback: (() => void) | undefined
 let didHideCallback: (() => void) | undefined
@@ -27,8 +26,22 @@ vi.mock('@tarojs/taro', async () => {
   }
 })
 
+vi.mock('../../useNotificationCounts', () => ({
+  useNotificationCounts: vi.fn(),
+}))
+
+const mockUseNotificationCounts = vi.mocked(useNotificationCounts)
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  }
+}
+
 function resetState() {
-  setTabBarSelected(0)
   setTabBarCenterState(getMiniProgramCenterState([], []))
   setTabBarBadges({ discover: 0, activities: 0, chat: 0 })
 }
@@ -38,9 +51,9 @@ describe('useCustomTabBarSync', () => {
     resetState()
     didShowCallback = undefined
     didHideCallback = undefined
-    mockSetSelected.mockClear()
     mockSyncState.mockClear()
     mockGetTabBar.mockClear()
+    mockUseNotificationCounts.mockReturnValue({ data: { discover: 0, activities: 0, chat: 0 } } as any)
     ;(Taro as any).getCurrentInstance.mockReturnValue({ page: { getTabBar: mockGetTabBar } })
   })
 
@@ -48,59 +61,68 @@ describe('useCustomTabBarSync', () => {
     vi.restoreAllMocks()
   })
 
-  it('always sets the selected index on show, even when disabled', () => {
-    renderHook(() => useCustomTabBarSync({ enabled: false, tabKey: 'events' }))
+  it('syncs center + badges to the native tab bar on show when enabled', async () => {
+    const poolRegistrations = [{ id: 'reg-1', poolId: 'pool-1', matchStatus: 'pending' as const }]
+    const events: any[] = []
+    const center = getMiniProgramCenterState(poolRegistrations, events)
+    mockUseNotificationCounts.mockReturnValue({ data: { discover: 5, activities: 0, chat: 2 } } as any)
+
+    renderHook(
+      () => useCustomTabBarSync({ enabled: true, poolRegistrations, events }),
+      { wrapper: createWrapper() },
+    )
 
     act(() => didShowCallback?.())
 
-    expect(mockSetSelected).toHaveBeenCalledWith(1)
-    expect(getTabBarState().selected).toBe(1)
+    await waitFor(() => {
+      expect(mockSyncState).toHaveBeenCalledWith({ center, badges: { discover: 5, activities: 0, chat: 2 } })
+    })
   })
 
-  it('syncs chrome state only when enabled', () => {
-    const center: MiniProgramCenterState = {
-      label: '匹配中…',
-      showBadge: true,
-      action: { kind: 'pending-registration', navigation: 'switchTab', url: '/pages/center-hub/index' },
-    }
-    setTabBarCenterState(center)
-    setTabBarBadges({ discover: 5, activities: 0, chat: 2 })
-
-    renderHook(() => useCustomTabBarSync({ enabled: true, tabKey: 'discover' }))
+  it('does not sync when disabled', () => {
+    renderHook(() => useCustomTabBarSync({ enabled: false, poolRegistrations: [], events: [] }), { wrapper: createWrapper() })
 
     act(() => didShowCallback?.())
 
-    expect(mockSyncState).toHaveBeenCalledWith({ center, badges: { discover: 5, activities: 0, chat: 2 } })
-  })
-
-  it('does not sync chrome state when disabled', () => {
-    renderHook(() => useCustomTabBarSync({ enabled: false, tabKey: 'connections' }))
-
-    act(() => didShowCallback?.())
-
-    expect(mockSetSelected).toHaveBeenCalled()
     expect(mockSyncState).not.toHaveBeenCalled()
   })
 
-  it('pushes singleton updates to the native tab bar while visible and enabled', () => {
-    renderHook(() => useCustomTabBarSync({ enabled: true, tabKey: 'profile' }))
+  it('pushes badge updates to the native tab bar while visible and enabled', async () => {
+    mockUseNotificationCounts.mockReturnValue({ data: { discover: 0, activities: 0, chat: 0 } } as any)
+
+    const { rerender } = renderHook(
+      () => useCustomTabBarSync({ enabled: true, poolRegistrations: [], events: [] }),
+      { wrapper: createWrapper() },
+    )
 
     act(() => didShowCallback?.())
     mockSyncState.mockClear()
 
-    act(() => setTabBarBadges({ discover: 1, activities: 0, chat: 0 }))
-    expect(mockSyncState).toHaveBeenCalledTimes(1)
+    mockUseNotificationCounts.mockReturnValue({ data: { discover: 1, activities: 0, chat: 0 } } as any)
+    rerender({})
+
+    await waitFor(() => {
+      expect(mockSyncState).toHaveBeenCalledTimes(1)
+    })
   })
 
-  it('ignores singleton updates while hidden', () => {
-    renderHook(() => useCustomTabBarSync({ enabled: true, tabKey: 'profile' }))
+  it('ignores updates while hidden', async () => {
+    mockUseNotificationCounts.mockReturnValue({ data: { discover: 0, activities: 0, chat: 0 } } as any)
+
+    const { rerender } = renderHook(
+      () => useCustomTabBarSync({ enabled: true, poolRegistrations: [], events: [] }),
+      { wrapper: createWrapper() },
+    )
 
     act(() => didShowCallback?.())
     mockSyncState.mockClear()
 
     act(() => didHideCallback?.())
 
-    act(() => setTabBarBadges({ discover: 9, activities: 0, chat: 0 }))
+    mockUseNotificationCounts.mockReturnValue({ data: { discover: 9, activities: 0, chat: 0 } } as any)
+    rerender({})
+
+    await new Promise((resolve) => setTimeout(resolve, 10))
     expect(mockSyncState).not.toHaveBeenCalled()
   })
 })

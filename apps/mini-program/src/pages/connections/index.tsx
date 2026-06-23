@@ -75,7 +75,7 @@ export default function ConnectionsPage() {
         ) : isError ? (
           <View className='connections-page__empty-state'>
             <XiaoyueEmptyState
-              emotion='sad'
+              emotion='reassure'
               title='加载失败'
               subtitle='网络有点调皮，再试一次吧'
               actionLabel='重试'
@@ -149,7 +149,7 @@ export default function ConnectionsPage() {
         ) : (
           <View className='connections-page__empty-state'>
             <XiaoyueEmptyState
-              emotion='sad'
+              emotion='curious'
               title={getEmptyStateMessage('connections', { includeAction: false })}
               subtitle='参加活动后即可与活动伙伴建立连接'
             />

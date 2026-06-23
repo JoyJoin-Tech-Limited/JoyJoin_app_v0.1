@@ -1,6 +1,11 @@
-import { View, Text } from '@tarojs/components'
+import { View, Text, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import React from 'react'
+import {
+  ARCHETYPE_FAMILY_COLORS,
+  ARCHETYPE_FAMILY_GRADIENTS,
+} from '@shared/archetypeColors'
+import type { EventPoolSummary } from '@shared/api'
 import Card from '../ui/Card'
 import ParticipantPresenceStrip from './ParticipantPresenceStrip'
 import CompatibilityIndicator from './CompatibilityIndicator'
@@ -11,13 +16,9 @@ import {
   getCtaLabel,
   getHeroMessage,
 } from '../../lib/utils/discoverNarrativeCopy'
-import {
-  ARCHETYPE_FAMILY_COLORS,
-  ARCHETYPE_FAMILY_GRADIENTS,
-} from '@shared/archetypeColors'
-import type { EventPoolSummary } from '@shared/api'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
+import { getOracleCardCornerAsset } from './oracleCardAssets'
 
 // ─── Constants ─────────────────────────────────────────────────
 
@@ -84,6 +85,8 @@ export default React.memo(function OracleCard({
   const isPoolFull = typeof maxParticipants === 'number' && maxParticipants > 0
     && currentParticipants >= maxParticipants
 
+  const cornerAssetSrc = getOracleCardCornerAsset(pool.eventType)
+
   // ── Memoised chemistry share ─────────────────────────────────
 
   const highChemistryCount = pool.highChemistryCount ?? 0
@@ -104,12 +107,13 @@ export default React.memo(function OracleCard({
       cardVersion: CARD_VARIANT,
       accentFamily,
       highChemistryShare: highChemistryCount,
+      hasEventTypeVignette: Boolean(cornerAssetSrc),
     })
     try {
       if (Taro.vibrateShort) Taro.vibrateShort({ type: 'light' })
     } catch { /* haptic is decorative */ }
     onTap(pool)
-  }, [pool, accentFamily, highChemistryCount, onTap, enabled, isPoolFull])
+  }, [pool, accentFamily, highChemistryCount, cornerAssetSrc, onTap, enabled, isPoolFull])
 
   // ── Once-per-session CTA pulse (ref init, no render mutation) ──
 
@@ -196,6 +200,8 @@ export default React.memo(function OracleCard({
   const shouldShowTitle = titleLabel !== eventTypeLabel
   const cardAriaLabel = `${dateLabel} ${timeLabel} ${eventTypeLabel}${pool.city ? ' ' + pool.city : ''}${isPoolFull ? '，已满员' : ''}，${heroMessage}`
 
+  const showCornerAsset = cornerAssetSrc && !isDegradation
+
   return (
     <Card
       className={cardClass}
@@ -210,6 +216,16 @@ export default React.memo(function OracleCard({
       }}
       onClick={handleTap}
     >
+      {showCornerAsset && (
+        <Image
+          className='oracle-card__type-corner'
+          src={cornerAssetSrc}
+          mode='aspectFill'
+          aria-hidden='true'
+          lazyLoad
+        />
+      )}
+
       {/* L2 Topline: status + urgency */}
       <View className='oracle-card__topline'>
         <View className='oracle-card__pulse-pill'>
