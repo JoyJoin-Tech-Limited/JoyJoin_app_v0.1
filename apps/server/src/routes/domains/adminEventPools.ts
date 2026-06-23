@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { z } from "zod";
 import { db } from "../../db";
 import {
@@ -42,6 +42,41 @@ const updateEventPoolSchema = z.object({
   status: z.string().optional(),
   predictiveRerankEnabledOverride: z.boolean().optional(),
 });
+
+async function findExistingUserId(candidateId: string | null | undefined): Promise<string | null> {
+  if (!candidateId) return null;
+
+  const [user] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, candidateId))
+    .limit(1);
+
+  return user?.id ?? null;
+}
+
+async function resolveEventPoolCreatedBy(req: Request): Promise<string | null> {
+  const sessionUserId = await findExistingUserId(req.session?.userId);
+  if (sessionUserId) return sessionUserId;
+
+  const adminAccountUserId = await findExistingUserId(req.adminAccount?.id);
+  if (adminAccountUserId) return adminAccountUserId;
+
+  const [legacyAdminUser] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.isAdmin, true))
+    .limit(1);
+
+  if (legacyAdminUser?.id) return legacyAdminUser.id;
+
+  const [fallbackUser] = await db
+    .select({ id: users.id })
+    .from(users)
+    .limit(1);
+
+  return fallbackUser?.id ?? null;
+}
 
 export function registerAdminEventPoolRoutes(app: Express): void {
   // Event Pools - Get all event pools (admin view)
@@ -124,15 +159,15 @@ export function registerAdminEventPoolRoutes(app: Express): void {
   // Event Pools - Create new event pool
   app.post("/api/admin/event-pools", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
-      const createdBy = req.adminAccount?.id ?? req.session?.userId ?? null;
+      const createdBy = await resolveEventPoolCreatedBy(req);
 
       if (!createdBy) {
         logger.error(
-          "[EventPools] Missing admin user when creating event pool. Headers:",
+          "[EventPools] Missing users.id creator fallback when creating event pool. Headers:",
           req.headers,
         );
         return res.status(401).json({
-          message: "Unauthorized: admin user not found on request",
+          message: "Unauthorized: no valid user record is available as event pool creator",
         });
       }
 
@@ -154,7 +189,13 @@ export function registerAdminEventPoolRoutes(app: Express): void {
         .values(validatedData)
         .returning();
 
-      logger.info("[EventPools] created pool", { data: { poolId: pool.id } });
+      logger.info("[EventPools] created pool", {
+        data: {
+          poolId: pool.id,
+          createdBy,
+          actingAdminId: getActingAdminId(req),
+        },
+      });
       shellCache.invalidateDiscover();
 
       logAdminAudit({
