@@ -785,6 +785,13 @@ export default function DiscoverPage() {
   const handleCloseCityPicker = useCallback(() => setShowCityPicker(false), [])
   const handleCityPickerSuccess = useCallback((city: string) => {
     setShowCityPicker(false)
+    if (city === '深圳市') {
+      setSelectedCluster(ALL_CLUSTER_ID)
+      setSelectedDistrict(ALL_DISTRICT_ID)
+      clearLocation()
+      setDrawerOpen(true)
+      return
+    }
     Taro.navigateTo({ url: '/pages/city-unlock/index' })
   }, [])
 

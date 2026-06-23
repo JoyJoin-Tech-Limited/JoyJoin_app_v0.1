@@ -120,6 +120,16 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
     submittingRef.current = true
     haptics('medium')
 
+    // Shenzhen is already live. Continue to its district picker instead of
+    // registering it as a city waiting to be unlocked.
+    if (city === '深圳市') {
+      discoverAnalytics.track('city_picker_confirm', undefined, { city, liveCity: true })
+      haptics('success')
+      submittingRef.current = false
+      onSuccess(city)
+      return
+    }
+
     setLoading(true)
     discoverAnalytics.track('city_picker_confirm', undefined, { city })
     try {
