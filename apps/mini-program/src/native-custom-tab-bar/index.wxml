@@ -1,16 +1,4 @@
-<view class="joy-custom-tab-bar {{lowEnd ? 'joy-custom-tab-bar--low-end' : ''}} {{collapsed ? 'joy-custom-tab-bar--collapsed' : ''}}" hidden="{{hidden}}">
-  <!--
-    IMPORTANT: Keep this native custom tab bar as plain <view>/<image>.
-    Do NOT wrap children in <cover-view>/<cover-image>. WeChat's cover-view
-    overlay only reliably renders cover-view/cover-image children; plain
-    <view>/<image> inside a <cover-view> are dropped, causing blank tab icons
-    and labels. See commit 0f3f8361c for the original fix and 2f9a71b3a for
-    the accidental hybrid regression.
-  -->
-  <!-- Screen-reader announcement region (visually hidden, aria-live for tab switches) -->
-  <view class="joy-custom-tab-bar__sr-announce" aria-live="polite" aria-atomic="true">
-    {{announcement}}
-  </view>
+<view class="joy-custom-tab-bar {{lowEnd ? 'joy-custom-tab-bar--low-end' : ''}}">
   <view class="joy-custom-tab-bar__surface">
     <!-- Background with semi-circular notch -->
     <image
@@ -34,7 +22,7 @@
           hover-class="joy-custom-tab-bar__item--pressed"
           hover-stay-time="150"
           role="button"
-          aria-label="{{item.text}}{{item.badgeCount > 0 ? (item.badgeCount > 99 ? '，99+条新消息' : '，' + item.badgeCount + '条新消息') : ''}}"
+          aria-label="{{item.text}}"
           aria-pressed="{{selected === item.index}}"
         >
           <view class="joy-custom-tab-bar__item-icon-wrap">
@@ -42,14 +30,10 @@
               class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--active' : ''}}"
               src="{{selected === item.index ? item.selectedIcon : item.icon}}"
               mode="aspectFit"
-              data-tab="{{item.key}}"
-              data-src="{{selected === item.index ? item.selectedIcon : item.icon}}"
-              binderror="handleIconError"
             />
             <view
               wx:if="{{item.badgeCount > 0}}"
               class="joy-custom-tab-bar__item-badge"
-              aria-hidden="true"
             >
               <view class="joy-custom-tab-bar__item-badge-text">
                 {{item.badgeCount > 99 ? '99+' : item.badgeCount}}
@@ -79,7 +63,7 @@
           hover-class="joy-custom-tab-bar__item--pressed"
           hover-stay-time="150"
           role="button"
-          aria-label="{{item.text}}{{item.badgeCount > 0 ? (item.badgeCount > 99 ? '，99+条新消息' : '，' + item.badgeCount + '条新消息') : ''}}"
+          aria-label="{{item.text}}"
           aria-pressed="{{selected === item.index}}"
         >
           <view class="joy-custom-tab-bar__item-icon-wrap">
@@ -87,14 +71,10 @@
               class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--active' : ''}}"
               src="{{selected === item.index ? item.selectedIcon : item.icon}}"
               mode="aspectFit"
-              data-tab="{{item.key}}"
-              data-src="{{selected === item.index ? item.selectedIcon : item.icon}}"
-              binderror="handleIconError"
             />
             <view
               wx:if="{{item.badgeCount > 0}}"
               class="joy-custom-tab-bar__item-badge"
-              aria-hidden="true"
             >
               <view class="joy-custom-tab-bar__item-badge-text">
                 {{item.badgeCount > 99 ? '99+' : item.badgeCount}}
@@ -113,7 +93,6 @@
 
   <!-- Semi-raised center CTA -->
   <view class="joy-custom-tab-bar__center-wrap">
-    <!-- selected === 4 is MINI_PROGRAM_TAB_INDEX.centerHub; keep in sync with tabBarConfig.ts -->
     <view
       class="joy-custom-tab-bar__center {{selected === 4 ? 'joy-custom-tab-bar__center--selected' : ''}}"
       bindtap="handleCenterTap"
@@ -121,7 +100,6 @@
       hover-stay-time="150"
       role="button"
       aria-label="{{center.label || 'JoyJoin 中心入口'}}"
-      aria-pressed="{{selected === 4}}"
     >
       <view class="joy-custom-tab-bar__center-outer-ring">
         <view class="joy-custom-tab-bar__center-button">
@@ -129,16 +107,11 @@
             class="joy-custom-tab-bar__center-logo"
             src="../assets/joyjoin-logo-tab.png"
             mode="aspectFit"
-            data-tab="center"
-            data-src="../assets/joyjoin-logo-tab.png"
-            binderror="handleIconError"
           />
           <view wx:if="{{center.showBadge}}" class="joy-custom-tab-bar__center-badge"></view>
         </view>
       </view>
-      <view class="joy-custom-tab-bar__center-label-pill">
-        <view class="joy-custom-tab-bar__center-label">{{center.label}}</view>
-      </view>
+      <view class="joy-custom-tab-bar__center-label">{{center.label}}</view>
     </view>
   </view>
 </view>

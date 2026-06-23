@@ -1,62 +1,13 @@
 /* ─── JoyJoin Custom Tab Bar ─────────────────────────────────── */
 
-/*
-  Design tokens — kept in sync with apps/mini-program/src/styles/_variables.scss.
-  These are duplicated here because the native custom tab bar is copied as-is
-  to dist/custom-tab-bar/ and is not processed by Sass.
-
-  Token map:
-    --jj-primary        = $color-primary        #8B5CF6
-    --jj-primary-text   = $color-primary-dark   #7C3AED  (active label, WCAG safe)
-    --jj-secondary      = $color-secondary      #FF6B9D  (accents / outer ring)
-    --jj-badge-bg       = brand primary at 82%  rgba(139, 92, 246, 0.82)  (notification badge fill)
-    --jj-bg-tint-pink   = $color-bg-tint-pink   #FFF4F8
-    --jj-text-inactive  = $color-text-secondary #6B7280  (WCAG 4.6:1 on white)
-    --jj-text-dark      = $color-text-primary   #2D3142
-    --jj-surface        = $color-surface        #FFFFFF
-    --jj-shadow-*       = derived from $color-text-primary
-
-  WXSS custom properties work in WeChat >= 8.0.0 (baseline: 8.0.16, Aug 2022).
-*/
-.joy-custom-tab-bar {
-  --jj-primary: #8B5CF6;
-  --jj-primary-text: #7C3AED;
-  --jj-secondary: #FF6B9D;
-  --jj-badge-bg: rgba(139, 92, 246, 0.82);
-  --jj-bg-tint-pink: #FFF4F8;
-  --jj-text-inactive: #6B7280;
-  --jj-text-dark: #2D3142;
-  --jj-surface: #FFFFFF;
-  --jj-shadow-sm: rgba(45, 49, 66, 0.06);
-  --jj-shadow-md: rgba(45, 49, 66, 0.1);
-  --jj-shadow-lg: rgba(45, 49, 66, 0.14);
-}
-
 .joy-custom-tab-bar {
   position: fixed;
-  /* Prevent repaint on scroll — tab bar is fixed, GPU layer hint */
-  will-change: transform;
-  transform: translateZ(0);
   left: 0;
   right: 0;
   bottom: 0;
   height: calc(182rpx + env(safe-area-inset-bottom));
   pointer-events: auto;
   z-index: 120;
-}
-
-/* Visually hidden aria-live region for screen-reader announcements.
-   Kept in layout (not display:none) so screen readers can access it. */
-.joy-custom-tab-bar__sr-announce {
-  position: absolute;
-  width: 1rpx;
-  height: 1rpx;
-  padding: 0;
-  margin: -1rpx;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }
 
 .joy-custom-tab-bar__surface {
@@ -66,19 +17,13 @@
   bottom: calc(16rpx + env(safe-area-inset-bottom));
   height: 128rpx;
   box-sizing: border-box;
-  background: var(--jj-surface);
-  box-shadow: 0 -4rpx 24rpx var(--jj-shadow-sm),
-              0 16rpx 48rpx var(--jj-shadow-lg);
+  background: #FFFFFF;
+  box-shadow: 0 -4rpx 24rpx rgba(45, 49, 66, 0.06),
+              0 16rpx 48rpx rgba(45, 49, 66, 0.14);
   border-radius: 40rpx;
   border: 1rpx solid rgba(139, 92, 246, 0.06);
   overflow: hidden;
   z-index: 1;
-  /* GPU-composite the pill surface — collapse scales from bottom so the
-     surface shrinks into the safe area rather than pulling away from it. */
-  will-change: transform;
-  transform: translateZ(0);
-  transform-origin: center bottom;
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .joy-custom-tab-bar__bg {
@@ -126,26 +71,12 @@
   height: 100%;
   padding: 0 8rpx;
   box-sizing: border-box;
-  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1), opacity 100ms ease-out, background-color 180ms ease;
-  will-change: transform, opacity;
-}
-
-/* ── Shared sliding active pill ─────────────────────────────── */
-
-.joy-custom-tab-bar__active-pill {
-  display: none;
+  transition: transform 100ms ease-out, opacity 100ms ease-out, background-color 150ms ease;
 }
 
 .joy-custom-tab-bar__item--active {
   background: rgba(139, 92, 246, 0.08);
-  border-radius: 24rpx;
-}
-
-/* Interruptible transition: applied temporarily during rapid back-and-forth
-   taps so the pill snaps to the latest tab instead of sweeping across the
-   bar. The class is removed after the next setData. */
-.joy-custom-tab-bar__active-pill--no-transition {
-  transition: none !important;
+  border-radius: 20rpx;
 }
 
 .joy-custom-tab-bar__item-icon-wrap {
@@ -155,15 +86,13 @@
   height: 48rpx;
   align-items: center;
   justify-content: center;
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .joy-custom-tab-bar__item-icon {
-  width: 40rpx;
-  height: 40rpx;
+  width: 42rpx;
+  height: 42rpx;
   opacity: 0.5;
   transition: opacity 150ms ease;
-  will-change: opacity;
 }
 
 .joy-custom-tab-bar__item-icon--active {
@@ -174,16 +103,14 @@
   margin-top: 8rpx;
   max-width: 96rpx;
   font-size: 22rpx;
-  line-height: 30rpx;
-  color: var(--jj-text-inactive);
+  line-height: 24rpx;
+  color: #9CA3AF;
   text-align: center;
-  /* Cascade delay: labels fade after the surface starts moving, creating a
-     crafted staging effect on expand. Surface (0ms) → labels (30ms) → center pill (60ms). */
-  transition: color 150ms ease, opacity 220ms ease 30ms;
+  transition: color 150ms ease;
 }
 
 .joy-custom-tab-bar__item-label--active {
-  color: var(--jj-primary-text);
+  color: #8B5CF6;
   font-weight: 600;
 }
 
@@ -200,11 +127,11 @@
   top: 0;
   right: -8rpx;
   z-index: 1;
-  min-width: 32rpx;
-  height: 32rpx;
+  min-width: 34rpx;
+  height: 34rpx;
   border-radius: 9999rpx;
-  background: var(--jj-badge-bg);
-  border: 2rpx solid rgba(139, 92, 246, 0.12);
+  background: #FF6B9D;
+  border: 2rpx solid rgba(255, 255, 255, 0.98);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -223,21 +150,23 @@
   font-size: 20rpx;
   line-height: 1;
   font-weight: 700;
-  color: var(--jj-surface);
+  color: #FFFFFF;
   text-align: center;
 }
 
 /* ── Semi-raised center CTA ────────────────────────────────── */
 
 /* Logo settle-in (one-time on first render, transform-only, opacity-safe).
-   Local assets load instantly, so this is a subtle scale settle rather than
-   a fade-in. Settle expands 0.94→1.0 in 400ms.
+   Coexists with the unscoped `cover-fade-in` on the parent cover-image:
+   fade reveals 0→1 in 200ms, settle expands 0.94→1.0 in 400ms.
    Gated by prefers-reduced-motion + .joy-custom-tab-bar--low-end below. */
 .joy-custom-tab-bar__center-logo {
-  /* Enlarged ~20% from the original 114rpx for a more impactful logo/tap target.
-     142rpx leaves the same 4rpx breathing room inside the 150rpx inner button. */
-  width: 142rpx;
-  height: 142rpx;
+  width: 114rpx;
+  height: 114rpx;
+  /* 4rpx padding inside the 122rpx purple pill is deliberate (user spec
+     2026-06-04: "minimal breathing room, impactful logo"). Off the 8rpx
+     grid — do NOT "fix" by bumping to 8rpx; that re-introduces the frame
+     effect the user rejected. 114rpx is the load-bearing number here. */
   transform-origin: 50% 60%;
   animation: logo-settle 400ms cubic-bezier(0.22, 1, 0.36, 1) 1 both;
 }
@@ -248,7 +177,7 @@
 }
 
 /* Flexbox wrapper replaces the fragile left:50% + translateX(-50%)
-   pattern which shifts right during WeChat renderer re-renders. */
+   pattern which shifts right during cover-view re-renders. */
 .joy-custom-tab-bar__center-wrap {
   position: absolute;
   left: 0;
@@ -267,21 +196,14 @@
   flex-direction: column;
   align-items: center;
   pointer-events: auto;
-  /* Raise the center unit so the circle's horizontal midline (the left/right
-     radius points) sits flush with the top edge of the tab-bar surface.
-     Surface top is 38rpx from the root top (182 - 16 - 128); for a 164rpx
-     outer ring the required offset is 38 - 82 = -44rpx. */
-  margin-top: -44rpx;
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 100ms ease-out;
-  will-change: transform, opacity;
+  transition: transform 100ms ease-out, opacity 100ms ease-out;
 }
 
 .joy-custom-tab-bar__center-outer-ring {
   position: relative;
   display: flex;
-  /* Enlarged ~20% from 136rpx for a stronger center CTA presence. */
-  height: 164rpx;
-  width: 164rpx;
+  height: 136rpx;
+  width: 136rpx;
   align-items: center;
   justify-content: center;
   border-radius: 9999rpx;
@@ -289,75 +211,53 @@
   background: rgba(255, 255, 255, 0.96);
   border: 2rpx solid rgba(255, 107, 157, 0.18);
   transition: background-color 150ms ease, border-color 150ms ease;
-  will-change: background-color, border-color;
-  /* Keep the circle visually in front of the label pill so the pill appears
-     to emerge from behind it, creating one integrated center CTA shape. */
-  z-index: 2;
 }
 
 .joy-custom-tab-bar__center-button {
   position: relative;
   display: flex;
-  /* Scaled with the outer ring to keep the same 7rpx gap on each side. */
-  height: 150rpx;
-  width: 150rpx;
+  height: 122rpx;
+  width: 122rpx;
   align-items: center;
   justify-content: center;
   border-radius: 9999rpx;
   box-sizing: border-box;
   /* Token: $color-bg-tint-pink — light pink so the multi-color JoyJoin logo pops
      against the background instead of clashing with the primary purple. */
-  background: var(--jj-bg-tint-pink);
+  background: #FFF4F8;
   box-shadow:
-    0 8rpx 18rpx var(--jj-shadow-md),
+    0 8rpx 18rpx rgba(45, 49, 66, 0.1),
+    /* Token: $color-secondary at 12% opacity */
     0 2rpx 8rpx rgba(255, 107, 157, 0.12);
   border: 4rpx solid rgba(255, 255, 255, 0.96);
   transition: box-shadow 240ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: box-shadow;
 }
 
 .joy-custom-tab-bar__center-badge {
   position: absolute;
-  /* Scaled with the larger button to keep the badge near the top-right corner. */
-  top: 10rpx;
-  right: 10rpx;
-  width: 28rpx;
-  height: 28rpx;
+  top: 8rpx;
+  right: 8rpx;
+  width: 20rpx;
+  height: 20rpx;
   border-radius: 9999rpx;
-  background: var(--jj-badge-bg);
-  border: 2rpx solid rgba(139, 92, 246, 0.12);
-  animation: pulse-dot 3s ease-in-out infinite;
+  /* Token: $color-secondary */
+  background: #FF6B9D;
+  border: 2rpx solid rgba(255, 255, 255, 0.98);
+  animation: pulse-dot 2s ease-in-out infinite;
 }
 
 @keyframes pulse-dot {
   0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.1); opacity: 0.92; }
-}
-
-.joy-custom-tab-bar__center-label-pill {
-  position: relative;
-  z-index: 1;
-  /* Gap below the circle instead of overlapping; keeps pill anchored visually. */
-  margin-top: 4rpx;
-  padding: 6rpx 18rpx;
-  min-width: 72rpx;
-  max-width: 148rpx;
-  border-radius: 16rpx;
-  background: var(--jj-bg-tint-pink);
-  border: 2rpx solid rgba(255, 255, 255, 0.96);
-  box-shadow: 0 4rpx 12rpx var(--jj-shadow-sm);
-  box-sizing: border-box;
-  text-align: center;
-  /* Cascade delay: center pill appears last in the expand cascade. */
-  transition: opacity 220ms ease 60ms;
+  50% { transform: scale(1.2); opacity: 0.8; }
 }
 
 .joy-custom-tab-bar__center-label {
-  max-width: 112rpx;
+  margin-top: 8rpx;
+  max-width: 148rpx;
   font-size: 22rpx;
-  line-height: 30rpx;
+  line-height: 24rpx;
   font-weight: 600;
-  color: var(--jj-text-dark);
+  color: #374151;
   text-align: center;
   transition: color 150ms ease;
 }
@@ -374,12 +274,13 @@
 }
 
 .joy-custom-tab-bar__center--selected .joy-custom-tab-bar__center-label {
-  color: var(--jj-primary-text);
+  /* Token: $color-secondary */
+  color: #FF6B9D;
 }
 
 /* Active-state glow on the center button ("you are here" signal).
    Static, not animated — a 4rpx pink ring + 18rpx pink halo sit
-   inside the 5rpx gap between the 150rpx inner button and the 164rpx
+   inside the 5rpx gap between the 122rpx inner button and the 136rpx
    outer ring, so the white outer ring stays visible. Box-shadow
    transition 240ms keeps the selection feel responsive without being
    attention-grabbing. */
@@ -394,54 +295,10 @@
 /* Cover-image fade-in removed: local assets load instantly and the global
    animation caused re-render flicker every time setData fired. */
 
-/* ── Discover-only scroll-responsive collapse ───────────────────── */
-
-.joy-custom-tab-bar--collapsed .joy-custom-tab-bar__surface {
-  /* 128rpx → 88rpx (0.6875×) — hits the 88rpx minimum touch target. */
-  transform: translateZ(0) scaleY(0.6875);
-}
-
-/* Counter-scale icon wraps so icons stay visually 40rpx when the surface
-   is collapsed. net: 0.6875 × 1.4545 ≈ 1.0. */
-.joy-custom-tab-bar--collapsed .joy-custom-tab-bar__item-icon-wrap {
-  transform: scaleY(1.4545);
-  transform-origin: center center;
-}
-
-.joy-custom-tab-bar--collapsed .joy-custom-tab-bar__center {
-  /* Center CTA tracks the surface top: 128 → 88rpx = 40rpx shift down. */
-  transform: translateY(40rpx);
-}
-
-.joy-custom-tab-bar--collapsed .joy-custom-tab-bar__item-label {
-  opacity: 0;
-}
-
-.joy-custom-tab-bar--collapsed .joy-custom-tab-bar__center-label-pill {
-  opacity: 0;
-}
-
-/* Badges distort under the icon-wrap counter-scale; hide them in
-   collapsed state since the compact surface has no room for them. */
-.joy-custom-tab-bar--collapsed .joy-custom-tab-bar__item-badge {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 220ms ease;
-}
-
-.joy-custom-tab-bar--collapsed .joy-custom-tab-bar__item--active {
-  background-color: transparent;
-}
-
 /* Low-end device (benchmarkLevel <= 15): disable all animations */
-.joy-custom-tab-bar--low-end .joy-custom-tab-bar__surface,
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__item,
-.joy-custom-tab-bar--low-end .joy-custom-tab-bar__active-pill,
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__center {
   transition: none !important;
-  will-change: auto !important;
-  animation: none !important;
-  transform: none !important;
 }
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__item--pressed,
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__center--pressed {
@@ -450,7 +307,6 @@
 }
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__item-icon {
   transition: none !important;
-  will-change: auto !important;
 }
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__item-label {
   transition: none !important;
@@ -473,27 +329,13 @@
 }
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__center-button {
   transition: none !important;
-  will-change: auto !important;
-}
-/* Defensive: if collapsed state leaks past the JS gate on low-end devices,
-   force all collapse transforms back to neutral. */
-.joy-custom-tab-bar--low-end .joy-custom-tab-bar--collapsed .joy-custom-tab-bar__surface,
-.joy-custom-tab-bar--low-end .joy-custom-tab-bar--collapsed .joy-custom-tab-bar__center,
-.joy-custom-tab-bar--low-end .joy-custom-tab-bar--collapsed .joy-custom-tab-bar__item-icon-wrap {
-  transform: none !important;
 }
 
-/* Reduced motion: disable all animations, reset transform to avoid
-   unnecessary GPU compositor layers when collapse is disabled. */
+/* Reduced motion: disable all animations */
 @media (prefers-reduced-motion: reduce) {
-  .joy-custom-tab-bar__surface,
   .joy-custom-tab-bar__item,
-  .joy-custom-tab-bar__active-pill,
   .joy-custom-tab-bar__center {
     transition: none !important;
-    will-change: auto !important;
-    animation: none !important;
-    transform: none !important;
   }
   .joy-custom-tab-bar__item--pressed,
   .joy-custom-tab-bar__center--pressed {
@@ -502,15 +344,12 @@
   }
   .joy-custom-tab-bar__item-icon {
     transition: none !important;
-    will-change: auto !important;
   }
   .joy-custom-tab-bar__item-label {
     transition: none !important;
   }
   .joy-custom-tab-bar__item-badge {
     animation: none !important;
-    transform: scale(1);
-    opacity: 1;
   }
   .joy-custom-tab-bar__center-badge {
     animation: none !important;
@@ -521,20 +360,8 @@
   }
   .joy-custom-tab-bar__center-button {
     transition: none !important;
-    will-change: auto !important;
   }
-  /* Counter-scale icons must not squash under reduced motion. */
-  .joy-custom-tab-bar--collapsed .joy-custom-tab-bar__item-icon-wrap {
-    transform: none !important;
-  }
-  /* Defensive: if collapsed state somehow leaks past the JS gate, force expand. */
-  .joy-custom-tab-bar--collapsed .joy-custom-tab-bar__surface {
-    transform: none !important;
-  }
-  .joy-custom-tab-bar--collapsed .joy-custom-tab-bar__center {
-    transform: none !important;
-  }
-  .joy-custom-tab-bar image {
+  image {
     animation: none !important;
     opacity: 1 !important;
   }

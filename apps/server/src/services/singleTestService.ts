@@ -133,6 +133,14 @@ export async function ensureSingleTestPool(createdBy: string): Promise<string> {
   return pool.id;
 }
 
+/** Like ensureSingleTestPool but cleans existing registrations + groups first. */
+async function ensureCleanSingleTestPool(createdBy: string): Promise<string> {
+  const poolId = await ensureSingleTestPool(createdBy);
+  await db.delete(eventPoolRegistrations).where(eq(eventPoolRegistrations.poolId, poolId));
+  await db.delete(eventPoolGroups).where(eq(eventPoolGroups.poolId, poolId));
+  return poolId;
+}
+
 interface VirtualUserRow {
   id: string;
   displayName: string | null;
@@ -144,9 +152,9 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
   groupId: string;
   botUsers: { userId: string; displayName: string; archetype: string }[];
 }> {
-  // Phase 1: ensure virtual users + pool
+  // Phase 1: ensure virtual users + pool (fresh each time)
   await ensureVirtualUsers();
-  const poolId = await ensureSingleTestPool(testerUserId);
+  const poolId = await ensureCleanSingleTestPool(testerUserId);
 
   // Pick 5 bots with diverse archetypes
   const virtualUsers = (await db
