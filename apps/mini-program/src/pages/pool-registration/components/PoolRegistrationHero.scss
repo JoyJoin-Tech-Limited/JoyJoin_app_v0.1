@@ -28,7 +28,12 @@
   &__frame {
     position: relative;
     width: 100%;
-    height: 560rpx;
+    // The source artwork is 750×560, but the hero sits inside a padded scroll
+    // container, so a fixed 560rpx height leaves blank space below the image
+    // when widthFix scales it down. Use the same aspect ratio so the frame
+    // always matches the rendered image size and the artwork fills it fully.
+    aspect-ratio: 750 / 560;
+    height: auto;
     overflow: hidden;
     background: $color-surface;
   }
