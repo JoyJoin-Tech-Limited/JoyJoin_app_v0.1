@@ -3,6 +3,10 @@ import { act, renderHook } from '@testing-library/react'
 import { useAuthGate, INDEX_GATE_TIMEOUT_MS } from './useAuthGate'
 import type { UseAuthResult } from './useAuth'
 
+import { queryClient } from '../lib/api/queryClient'
+import { haptics } from '../lib/utils/haptics'
+import { logInfo, logWarn } from '../lib/utils/logger'
+
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('../lib/api/queryClient', () => ({
@@ -20,10 +24,6 @@ vi.mock('../lib/utils/logger', () => ({
   logInfo: vi.fn(),
   logWarn: vi.fn(),
 }))
-
-import { queryClient } from '../lib/api/queryClient'
-import { haptics } from '../lib/utils/haptics'
-import { logInfo, logWarn } from '../lib/utils/logger'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

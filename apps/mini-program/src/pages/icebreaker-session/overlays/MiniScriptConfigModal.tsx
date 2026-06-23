@@ -8,7 +8,6 @@ import {
   getStyleGradient,
   getGenreGradient,
   type MiniscriptStyleCard,
-  type MiniscriptGenreCard,
 } from '@shared/miniscriptCatalog'
 import Button from '../../../components/ui/Button'
 
@@ -23,9 +22,6 @@ export type MiniScriptConfigModalProps = {
 
 type PickerStage = 'style' | 'genre'
 
-// Stagger delay per card index (ms) — Beta refined from 80ms to 60ms for tighter sequence
-const STAGGER_MS = 60
-const ENTRANCE_DURATION_MS = 300
 
 export function MiniScriptConfigModal({
   open,
@@ -44,7 +40,6 @@ export function MiniScriptConfigModal({
   const [shuffleIndex, setShuffleIndex] = useState<number | null>(null)
   const [loadedThumbs, setLoadedThumbs] = useState<Set<string>>(new Set())
   const shuffleTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const styleCardsRef = useRef<(MiniscriptStyleCard | typeof SURPRISE_ME_CARD)[]>([])
 
   // Build style cards: 7 styles + 1 Surprise Me
   const styleCards = useMemo(() => {
@@ -231,7 +226,6 @@ export function MiniScriptConfigModal({
                 const gradient = isSurprise
                   ? `linear-gradient(135deg, ${SURPRISE_ME_CARD.gradientFrom}, ${SURPRISE_ME_CARD.gradientTo})`
                   : getStyleGradient(card as MiniscriptStyleCard)
-                const _emoji = isSurprise ? SURPRISE_ME_CARD.emoji : (card as MiniscriptStyleCard).emoji
                 const label = isSurprise ? SURPRISE_ME_CARD.label : card.label
                 const mod = getCardModifier(card.key, index)
 

@@ -1,8 +1,8 @@
 import { View, Text, Image } from '@tarojs/components'
-import { cdnAsset, localAsset } from '../../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
-import { PhaseHeaderIcon, getPhaseLabel, type SessionPhase } from '../phaseUtils'
+import { type SessionPhase } from '../phaseUtils'
 
 export function FallbackPhaseView({
   phase,

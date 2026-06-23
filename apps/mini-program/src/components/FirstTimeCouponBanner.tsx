@@ -1,11 +1,11 @@
 import { Text, View } from '@tarojs/components'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { getArchetypeHSL } from '@shared/archetypeColors'
 import { useMiniRevealMotion } from '../hooks/useMiniRevealMotion'
 import { useStaggerMount } from '../hooks/useStaggerMount'
 import { useDeviceTier } from '../hooks/useDeviceTier'
 import { haptics } from '../lib/utils/haptics'
 import { discoverAnalytics } from '../lib/analytics/discoverAnalytics'
-import { getArchetypeHSL } from '@shared/archetypeColors'
 import './FirstTimeCouponBanner.scss'
 
 interface FirstTimeCouponBannerProps {

@@ -760,25 +760,31 @@ const src = '/assets/icons/archetype/archetype-corgi-head@3x.webp'
 `dvh` is not reliably supported in WeChat WKWebView / Taro. Drawers or containers sized with `70dvh` may collapse or ignore the unit on some devices / WeChat versions.
 
 **Workaround**:
-- Use `rpx` with a fixed approximation (e.g., `1020rpx` is ~75% of a typical device height).
+- Use `rpx` with a fixed approximation (e.g., `1020rpx` is ~75% of a typical device height), or compute the sheet height in JS from `Taro.getSystemInfoSync()` and cap it for short phones.
 - Pair with an explicit `height: 100%` on `<ScrollView>`, `min-height: 0` on the flex parent, and `enableFlex` on the ScrollView.
 - Add `catchMove` to the drawer surface (not just the backdrop) to prevent background page scroll penetration; ScrollView will still consume its own scroll events.
+- For new bottom sheets, prefer the shared `PickerShell` component (`apps/mini-program/src/components/discover/PickerShell.tsx`) which already handles height capping, safe area, backdrop, drag handle, header, reduced motion, and footer slots.
 
 ```scss
-/* LocationFilterDrawer pattern */
-.drawer {
-  max-height: calc(1020rpx - $tab-bar-root-height);
+/* PickerShell pattern (canonical shared bottom sheet) */
+.picker-shell__surface {
+  height: var(--shell-height-rpx); // set via inline style from JS
   display: flex;
   flex-direction: column;
 }
-.drawer__scroll {
+.picker-shell__content {
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 ```
 
 ```tsx
-<ScrollView style={{ height: '100%' }} scrollY enhanced enableFlex>
+<PickerShell visible={open} onClose={handleClose} reduceMotion={reduceMotion}>
+  <ScrollView style={{ height: '100%' }} scrollY enhanced enableFlex>
+    {/* content */}
+  </ScrollView>
+</PickerShell>
 ```
 
 ### 7. CSS `background-image` with remote URLs (2026-06-05)
@@ -797,6 +803,31 @@ WeChat WKWebView/Taro support for CSS custom properties is inconsistent, especia
 - Use inline `style` transforms for per-frame updates (e.g. `transform: translateX(...) scale(...)`).
 - Use SCSS tokens for static theming; compile-time values are safe.
 - If custom properties are required, restrict them to the native `cover-view` layer or to static values that do not change every frame.
+
+### 9. Fixed-height containers with `mode='aspectFit'` (2026-06-23)
+
+`aspectFit` preserves the source aspect ratio and letterboxes inside the container. If the container has a fixed height that does not match the source aspect, the image shrinks and leaves blank bands (or is cropped by a sibling overflow).
+
+**Workaround**:
+- Use `mode='widthFix'` and set the container to `height: auto` when the image should drive its own height.
+- Or keep `aspectFit` but give the container the same aspect ratio as the source asset (e.g., `aspect-ratio: 800 / 531; height: auto;`).
+- Verify source dimensions with `sips -g pixelWidth -g pixelHeight` before choosing a container size.
+
+```scss
+/* Good: widthFix lets the 800×531 art scale naturally */
+.error-hero {
+  width: 320rpx;
+  height: auto;
+}
+```
+
+```tsx
+<Image
+  className='error-hero'
+  src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
+  mode='widthFix'
+/>
+```
 
 ## Testing
 

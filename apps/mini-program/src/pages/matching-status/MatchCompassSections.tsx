@@ -1,12 +1,6 @@
 import { Image, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useRef, useState } from 'react'
-
-const COMPASS_PRELOAD_EXPRESSIONS: Array<'compassScan' | 'compassInsight' | 'compassCelebrate'> = [
-  'compassScan',
-  'compassInsight',
-  'compassCelebrate',
-]
 import type {
   MatchCompassGenderComposition,
   MatchCompassResponse,
@@ -16,6 +10,12 @@ import type {
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
+
+const COMPASS_PRELOAD_EXPRESSIONS: Array<'compassScan' | 'compassInsight' | 'compassCelebrate'> = [
+  'compassScan',
+  'compassInsight',
+  'compassCelebrate',
+]
 
 // ── Constants ─────────────────────────────────────────────────────
 
@@ -48,13 +48,6 @@ const AGE_RANGE_OPTIONS = ['同龄优先', '上下3岁', '上下5岁', '不限']
 const TABLE_VIBE_OPTIONS = ['轻松聊天', '深度交流', '游戏互动', '不限']
 
 // ── Helpers ───────────────────────────────────────────────────────
-
-function resolveTemperatureBand(score: number): MatchCompassTemperatureBand {
-  if (score < 55) return 'cold'
-  if (score < 70) return 'mild'
-  if (score < 85) return 'warm'
-  return 'fire'
-}
 
 function triggerHaptic() {
   if (typeof Taro.vibrateShort === 'function') {

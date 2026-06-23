@@ -1,14 +1,13 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
-import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import Taro from '@tarojs/taro'
-import { haptics } from '../../lib/utils/haptics'
-import { useQuery } from '@tanstack/react-query'
 import { useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { getUserCoupons, getJoinedEvents } from '@shared/api'
 import { getOnboardingStepLabel, nextStepToOnboardingStep } from '@shared/onboarding'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { getArchetypeFamily, ARCHETYPE_FAMILY_GRADIENTS } from '@shared/archetypeColors'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
+import { haptics } from '../../lib/utils/haptics'
 import { apiRequest } from '../../lib/api/api'
 import {
   clearMiniProgramAuthSession,
@@ -17,13 +16,13 @@ import {
 } from '../../lib/api/authSession'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
-import type { AuthUser } from '../../hooks/useAuth'
 import { logError, logInfo } from '../../lib/utils/logger'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 import './index.scss'
 
@@ -161,7 +160,7 @@ export default function ProfilePage() {
                   className='profile-page__milestone'
                   hoverClass='profile-page__milestone--pressed'
                   onClick={() => { haptics('light'); Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
-                  aria-label="已参加 1 场活动"
+                  aria-label='已参加 1 场活动'
                 >
                   <Image
                     className='profile-page__milestone-img'
@@ -177,7 +176,7 @@ export default function ProfilePage() {
                   className='profile-page__milestone'
                   hoverClass='profile-page__milestone--pressed'
                   onClick={() => { haptics('light'); Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
-                  aria-label="已参加 3 场活动"
+                  aria-label='已参加 3 场活动'
                 >
                   <Image
                     className='profile-page__milestone-img'

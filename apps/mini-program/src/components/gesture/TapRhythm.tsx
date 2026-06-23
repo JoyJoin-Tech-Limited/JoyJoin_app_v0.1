@@ -66,7 +66,7 @@ export default function TapRhythm({
       clearAll()
       timeoutsRef.current.push(setTimeout(() => setColorFlash(false), 150))
     }
-  }, [onTap])
+  }, [onTap, isReduced])
 
   useEffect(() => {
     return () => clearAll()

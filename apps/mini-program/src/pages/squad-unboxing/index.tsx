@@ -1,9 +1,9 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useEffect, useCallback, useRef } from 'react'
-import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { useJoyJoinNavigation } from '../../hooks/navigation/useJoyJoinNavigation'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
@@ -87,7 +87,7 @@ export default function SquadUnboxingPage() {
       Taro.showToast({ title: '场地已确定', icon: 'success', duration: 2000 })
     }
     prevVenueStatusRef.current = currentStatus ?? null
-  }, [groupId, group?.venueAssignmentStatus, group?.venueName])
+  }, [groupId, group])
 
   const pageClassName = [rootClassName, isExiting ? 'squad-unboxing--exiting' : ''].filter(Boolean).join(' ')
 
@@ -102,7 +102,7 @@ export default function SquadUnboxingPage() {
           <Image
             className='squad-unboxing__error-hero'
             src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
-            mode='aspectFit'
+            mode='widthFix'
             lazyLoad
             ariaLabel='加载失败'
           />

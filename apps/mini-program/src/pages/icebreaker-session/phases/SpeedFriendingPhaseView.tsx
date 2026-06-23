@@ -107,7 +107,7 @@ export function SpeedFriendingPhaseView({
     return (
       <View className='speed-friending'>
         <View className='speed-friending__burst-container speed-friending__burst-container--summary'>
-          <ParticleBurst trigger={true} type='confetti' count={50} reducedMotion={reducedMotion} />
+          <ParticleBurst trigger type='confetti' count={50} reducedMotion={reducedMotion} />
         </View>
         <Card className='speed-friending__summary-card'>
           <View className='speed-friending__summary-emoji'>

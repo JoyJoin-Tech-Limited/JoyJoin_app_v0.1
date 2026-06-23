@@ -255,7 +255,7 @@ export default function PoolRegistrationPage() {
     })
   }, [pool, authLoading])
 
-  const { data: briefData, isLoading: briefLoading, refetch: refetchBrief } = useQuery<PreJoinVibeBrief | null>({
+  const { data: briefData, isLoading: briefLoading } = useQuery<PreJoinVibeBrief | null>({
     queryKey: ['mini-program', 'pre-join-vibe-brief', poolId, eventType, poolArea],
     enabled: !!poolId && !!pool && !authLoading,
     staleTime: 5 * 60 * 1000,
@@ -301,7 +301,7 @@ export default function PoolRegistrationPage() {
     setError('')
     setIsRegistering(false)
     setResumeContext(null)
-  }, [poolId, resolvedInvitationCode, user?.id])
+  }, [poolId, resolvedInvitationCode, user?.id, user?.intent])
 
   useEffect(() => {
     registeredRef.current = registered
@@ -371,7 +371,7 @@ export default function PoolRegistrationPage() {
     setStep(resolveRegistrationStep(nextContext.resumeStep))
     setResumeContext(nextContext)
     setError('')
-  }, [poolId, user?.id])
+  }, [poolId, user?.id, resolvedInvitationCode])
 
   useEffect(() => {
     if (authLoading || !user?.id) {
@@ -485,7 +485,7 @@ export default function PoolRegistrationPage() {
     setDetailCelebration(true)
     triggerDetailReaction()
     discoverAnalytics.track('registration_step_reaction_shown', poolId, { step: 'details' })
-  }, [step, anyDetailSelected, reduceMotion, poolId])
+  }, [step, anyDetailSelected, reduceMotion, poolId, triggerDetailReaction])
 
   const successHighlights = useMemo(() => {
     const items = [selectedBudget, ...findLabels(formState.eventIntent, INTENT_FLOW_OPTIONS).slice(0, 2)]
@@ -776,6 +776,8 @@ export default function PoolRegistrationPage() {
   }, [
     eventType,
     formState,
+    hasBudgetSelection,
+    hasIntentSelection,
     isRegistering,
     pool?.title,
     poolArea,

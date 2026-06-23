@@ -1,4 +1,5 @@
 <view class="joy-custom-tab-bar {{lowEnd ? 'joy-custom-tab-bar--low-end' : ''}}">
+  <!-- Do NOT wrap children in <cover-view>/<cover-image>: cover-image has independent render layer quirks causing blank tab icons on some devices. -->
   <view class="joy-custom-tab-bar__surface">
     <!-- Background with semi-circular notch -->
     <image

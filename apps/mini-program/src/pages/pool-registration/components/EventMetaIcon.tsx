@@ -13,6 +13,9 @@ interface EventMetaIconProps {
 }
 
 export default function EventMetaIcon({ kind }: EventMetaIconProps) {
+  const iconPath = META_ICON_KEYS[kind] ?? ''
+  const { src, onError } = useCdnFirstSrc(iconPath)
+
   if (kind === 'type') {
     // CSS-only target icon — clean, scalable, no emoji, zero failure surface
     return (
@@ -23,7 +26,6 @@ export default function EventMetaIcon({ kind }: EventMetaIconProps) {
       </View>
     )
   }
-  const { src, onError } = useCdnFirstSrc(META_ICON_KEYS[kind])
   return (
     <Image
       className='pool-reg__meta-icon-img'

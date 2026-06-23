@@ -1,4 +1,4 @@
-import { Image, Text, View } from '@tarojs/components'
+import { Image, Text } from '@tarojs/components'
 import { useState, useCallback } from 'react'
 import { useCdnFirstSrc } from '../../lib/utils/cdnAssets'
 

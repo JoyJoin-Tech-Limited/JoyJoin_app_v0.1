@@ -26,6 +26,7 @@ import { useLoadingDeadline } from '../../hooks/useLoadingDeadline'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import StatusCard from '../../components/ui/StatusCard'
+import IcebreakerInclusionSheet from '../../components/event-ticket-payment/IcebreakerInclusionSheet'
 import './index.scss'
 
 const TOAST_DURATION = 2000
@@ -167,12 +168,14 @@ export default function EventTicketPaymentPage() {
   const [selectedCouponCode, setSelectedCouponCode] = useState<string>('')
   const [couponAppliedAt, setCouponAppliedAt] = useState<number>(0)
   const [pageEnteredAt, setPageEnteredAt] = useState<number>(0)
+  const [showInclusionSheet, setShowInclusionSheet] = useState(false)
 
   const paymentInFlightRef = useRef(false)
   const verifyTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const returnContextRef = useRef<MiniProgramPoolRegistrationReturnContext | null>(null)
   const hasTrackedViewRef = useRef(false)
   const hasTrackedPlanSelectorImpressionRef = useRef(false)
+  const hasTrackedTermsRowImpressionRef = useRef(false)
 
   // Keep ref in sync with state for pollVerification closure safety
   useEffect(() => {
@@ -252,7 +255,6 @@ export default function EventTicketPaymentPage() {
   const pack6Price = pack6Plan?.priceInCents ?? 37000
   const currentPrice = selectedPlan === 'pack_3' ? pack3Price : selectedPlan === 'pack_6' ? pack6Price : singlePrice
   const savings3 = calculateSavings(singlePrice, pack3Price, 3)
-  const savings6 = calculateSavings(singlePrice, pack6Price, 6)
 
   const selectedCoupon = useMemo(() => {
     if (!selectedCouponCode || !couponsData?.coupons) return null
@@ -294,6 +296,16 @@ export default function EventTicketPaymentPage() {
       pack6Price,
     })
   }, [isPageReady, poolId, selectedPlan, singlePrice, pack3Price, pack6Price])
+
+  // Track terms row impression once the ticket card is actually rendered.
+  useEffect(() => {
+    if (!isPageReady || !poolId || poolLoading || !pool || hasTrackedTermsRowImpressionRef.current) return
+    hasTrackedTermsRowImpressionRef.current = true
+    discoverAnalytics.track('ticket_terms_row_impression', undefined, {
+      poolId,
+      hasIcebreakerChip: true,
+    })
+  }, [isPageReady, poolId, poolLoading, pool])
 
   // Reset transient flags on show (swipe-back safety)
   useDidShow(() => {
@@ -709,11 +721,28 @@ export default function EventTicketPaymentPage() {
                 <Text className='ticket-card__terms-chip-text'>报名费含组织与匹配</Text>
               </View>
               <View className='ticket-card__terms-chip'>
+                <Text className='ticket-card__terms-chip-text'>含悦仔多环节破冰</Text>
+              </View>
+              <View className='ticket-card__terms-chip'>
                 <Text className='ticket-card__terms-chip-text'>现场消费 AA</Text>
               </View>
               <View className='ticket-card__terms-chip'>
                 <Text className='ticket-card__terms-chip-text'>精选场地专属折扣</Text>
               </View>
+            </View>
+
+            {/* Inclusion detail link */}
+            <View
+              className='ticket-card__inclusion-link'
+              hoverClass='ticket-card__inclusion-link--pressed'
+              onClick={() => {
+                haptics('light')
+                setShowInclusionSheet(true)
+                discoverAnalytics.track('ticket_inclusion_sheet_open', undefined, { poolId })
+              }}
+            >
+              <Text className='ticket-card__inclusion-link-text'>查看费用包含内容</Text>
+              <Text className='ticket-card__inclusion-link-chevron'>›</Text>
             </View>
           </View>
 
@@ -732,7 +761,8 @@ export default function EventTicketPaymentPage() {
                   couponCode: bestCoupon?.code ?? null,
                   context: 'event-ticket-payment',
                 })
-              }}>
+              }}
+              >
                 <View className='ticket-card__coupon-stub-header'>
                   <Text className='ticket-card__coupon-stub-title'>悦仔见面礼</Text>
                   {couponStampAnimated && (
@@ -762,7 +792,7 @@ export default function EventTicketPaymentPage() {
             </View>
           )}
 
-          {/* Barcode decoration */}
+          {/* Barcode decoration — fixed 28-line visual, not a scrollable list */}
           <View className='ticket-card__barcode' aria-hidden='true'>
             {Array.from({ length: 28 }).map((_, i) => (
               <View
@@ -962,6 +992,16 @@ export default function EventTicketPaymentPage() {
           </View>
         )}
       </View>
+
+      {/* ── Inclusion detail sheet ── */}
+      <IcebreakerInclusionSheet
+        visible={showInclusionSheet}
+        shouldReduceMotion={shouldReduceMotion}
+        onClose={() => {
+          setShowInclusionSheet(false)
+          discoverAnalytics.track('ticket_inclusion_sheet_close', undefined, { poolId })
+        }}
+      />
     </View>
   )
 }

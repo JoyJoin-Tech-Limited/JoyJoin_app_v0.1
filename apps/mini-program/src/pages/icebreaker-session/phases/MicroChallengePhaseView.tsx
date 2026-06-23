@@ -63,7 +63,7 @@ export function MicroChallengePhaseView({
       {challenge ? (
         <Card className='icebreaker__challenge-card icebreaker__challenge-card--micro-challenge'>
           <View className='icebreaker__challenge-emoji icebreaker__challenge-stagger icebreaker__challenge-stagger--delay-0'>
-            <PhaseHeaderIcon phase="micro_challenge" size={80} />
+            <PhaseHeaderIcon phase='micro_challenge' size={80} />
           </View>
           <Text className='icebreaker__challenge-title icebreaker__challenge-stagger icebreaker__challenge-stagger--delay-1'>
             {challenge.title}
@@ -111,9 +111,9 @@ export function MicroChallengePhaseView({
               <ParticleBurst
                 key={burstKey}
                 trigger={showBurst}
-                type="confetti"
+                type='confetti'
                 count={40}
-                spotlightColor="#8B5CF6"
+                spotlightColor='#8B5CF6'
               />
             </View>
           )}
@@ -121,7 +121,7 @@ export function MicroChallengePhaseView({
       ) : (
         <Card className='icebreaker__challenge-card icebreaker__challenge-card--micro-challenge'>
           <View className='icebreaker__challenge-emoji'>
-            <PhaseHeaderIcon phase="micro_challenge" size={80} />
+            <PhaseHeaderIcon phase='micro_challenge' size={80} />
           </View>
           <Text className='icebreaker__challenge-title'>挑战准备中…</Text>
         </Card>
@@ -134,7 +134,7 @@ export function MicroChallengePhaseView({
               onTap={handleTap}
               tapCount={localTapCount}
               targetCount={TAP_TARGET}
-              emoji="🎯"
+              emoji='🎯'
             />
             {isCompleting && (
               <Text className='icebreaker__helper-text'>提交中…</Text>

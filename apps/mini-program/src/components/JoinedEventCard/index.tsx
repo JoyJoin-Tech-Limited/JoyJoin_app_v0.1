@@ -90,18 +90,18 @@ export default React.memo(function JoinedEventCard({
     const now = new Date()
     const includeYear = parsed.getFullYear() !== now.getFullYear()
 
-    const datePart = parsed.toLocaleDateString('zh-CN', {
+    const datePartInner = parsed.toLocaleDateString('zh-CN', {
       year: includeYear ? 'numeric' : undefined,
       month: 'long',
       day: 'numeric',
     })
-    const weekdayPart = parsed.toLocaleDateString('zh-CN', { weekday: 'short' })
-    const timePart = parsed.toLocaleTimeString('zh-CN', {
+    const weekdayPartInner = parsed.toLocaleDateString('zh-CN', { weekday: 'short' })
+    const timePartInner = parsed.toLocaleTimeString('zh-CN', {
       hour: '2-digit',
       minute: '2-digit',
     })
 
-    return { datePart, timePart, weekdayPart }
+    return { datePart: datePartInner, timePart: timePartInner, weekdayPart: weekdayPartInner }
   }, [event.dateTime])
 
   const cardAriaLabel = `${event.title ?? '悦聚活动'}，${dateTimeText}，${event.location ?? '地点待定'}，${statusLabel}`

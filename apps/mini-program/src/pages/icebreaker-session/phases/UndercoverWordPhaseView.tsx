@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import JoyJoinIcon from '../../../components/ui/JoyJoinIcon';
 import { View, Text, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
 import { apiRequest } from '../../../lib/api/api';
@@ -112,7 +112,7 @@ export default function UndercoverWordPhaseView({
       hasAutoFlippedRef.current = false;
       setCardFlipped(false);
     }
-  }, [pair?.civilianWord, pair?.undercoverWord]);
+  }, [pair]);
 
   // Reveal burst
   useEffect(() => {

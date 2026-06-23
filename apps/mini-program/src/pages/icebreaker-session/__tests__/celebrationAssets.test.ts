@@ -9,7 +9,7 @@ describe('CELEBRATION_FRAME_MAP', () => {
   })
 
   it('has non-empty URLs for all frames', () => {
-    for (const [key, url] of Object.entries(CELEBRATION_FRAME_MAP)) {
+    for (const [, url] of Object.entries(CELEBRATION_FRAME_MAP)) {
       expect(url.length).toBeGreaterThan(0)
       expect(typeof url).toBe('string')
     }

@@ -1,6 +1,5 @@
 import { View, Text, ScrollView } from '@tarojs/components'
 import { useRouter } from '@tarojs/taro'
-import { usePageTTI } from '../../../hooks/usePageTTI'
 import {
   JOYJOIN_TERMS_SECTIONS_ZH,
   JOYJOIN_PRIVACY_SECTIONS_ZH,
@@ -9,6 +8,7 @@ import {
   TERMS_ENTRY_META,
   type TermsEntrySection,
 } from '@shared/legal/joyjoinTermsZh'
+import { usePageTTI } from '../../../hooks/usePageTTI'
 import './index.scss'
 
 export default function TermsPage() {

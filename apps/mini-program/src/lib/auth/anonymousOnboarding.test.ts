@@ -1,6 +1,17 @@
 import Taro from '@tarojs/taro'
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 
+import {
+  ANONYMOUS_ASSESSMENT_ANSWERS_STORAGE_KEY,
+  ANONYMOUS_ASSESSMENT_SESSION_STORAGE_KEY,
+  clearAnonymousAssessmentStorage,
+  getAnonymousAssessmentImportGateState,
+  readAnonymousAssessmentAnswers,
+  readAnonymousAssessmentSession,
+  saveAnonymousAssessmentSession,
+  upsertAnonymousAssessmentAnswer,
+} from './anonymousOnboarding'
+
 vi.mock('@tarojs/taro', () => {
   const storage = new Map<string, string>()
 
@@ -16,17 +27,6 @@ vi.mock('@tarojs/taro', () => {
     },
   }
 })
-
-import {
-  ANONYMOUS_ASSESSMENT_ANSWERS_STORAGE_KEY,
-  ANONYMOUS_ASSESSMENT_SESSION_STORAGE_KEY,
-  clearAnonymousAssessmentStorage,
-  getAnonymousAssessmentImportGateState,
-  readAnonymousAssessmentAnswers,
-  readAnonymousAssessmentSession,
-  saveAnonymousAssessmentSession,
-  upsertAnonymousAssessmentAnswer,
-} from './anonymousOnboarding'
 
 const getStorageSyncMock = Taro.getStorageSync as unknown as Mock
 const setStorageSyncMock = Taro.setStorageSync as unknown as Mock

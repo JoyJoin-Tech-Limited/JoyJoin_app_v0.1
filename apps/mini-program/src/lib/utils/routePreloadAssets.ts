@@ -1,6 +1,6 @@
 import { cdnAsset, localAsset } from './cdnAssets'
 import { preloadImagesWithDiagnostics } from './imagePreload'
-import { cacheAssets, clearAssetCacheOnVersionChange } from './persistentAssetCache'
+import { cacheAssets } from './persistentAssetCache'
 import { logInfo } from './logger'
 
 /**

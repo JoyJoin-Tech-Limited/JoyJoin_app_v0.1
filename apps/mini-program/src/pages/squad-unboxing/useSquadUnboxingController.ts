@@ -64,7 +64,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   })
 
   const currentUserId = currentUser?.id
-  const members = poolGroup?.members ?? []
+  const members = useMemo(() => poolGroup?.members ?? [], [poolGroup?.members])
   const group = poolGroup?.group
   const pool = poolGroup?.pool
 

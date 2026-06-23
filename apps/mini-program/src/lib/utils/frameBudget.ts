@@ -26,7 +26,6 @@ export function measureFrameBudget(durationMs = 1000): Promise<FrameBudgetResult
     const frameTimes: number[] = []
     let lastTime = 0
     let rafId: number | undefined
-    let timeoutId: ReturnType<typeof setTimeout>
 
     const collect = (timestamp: number) => {
       if (lastTime > 0) {
@@ -41,7 +40,7 @@ export function measureFrameBudget(durationMs = 1000): Promise<FrameBudgetResult
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rafId = (Taro as any).requestAnimationFrame?.(collect) ?? requestAnimationFrame(collect)
 
-    timeoutId = setTimeout(() => {
+    setTimeout(() => {
       if (rafId !== undefined) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ;(Taro as any).cancelAnimationFrame?.(rafId) ?? cancelAnimationFrame(rafId)

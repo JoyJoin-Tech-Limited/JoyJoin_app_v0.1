@@ -38,7 +38,10 @@
   &__success-hero {
     width: 100%;
     max-width: 600rpx;
-    height: 420rpx;
+    // Source art is 600×450 (4:3). A fixed 420rpx height left blank bands
+    // on the sides under aspectFit. Match the art aspect so it fills fully.
+    aspect-ratio: 4 / 3;
+    height: auto;
     margin: 0 auto;
     display: block;
     opacity: 0;
@@ -948,7 +951,10 @@
 
   &__empty-hero {
     width: 320rpx;
-    height: 240rpx;
+    // Source art is 800×531. Match its aspect so aspectFit doesn't leave
+    // blank bands above/below the image.
+    aspect-ratio: 800 / 531;
+    height: auto;
     margin-bottom: $spacing-sm;
   }
 

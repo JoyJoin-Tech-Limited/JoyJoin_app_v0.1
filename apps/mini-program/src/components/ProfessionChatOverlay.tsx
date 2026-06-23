@@ -1,13 +1,13 @@
 import { View, Text, Input, ScrollView, Image, CustomWrapper } from '@tarojs/components'
-import Chip from './ui/Chip'
 import Taro from '@tarojs/taro'
-import { haptics } from '../lib/utils/haptics'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import Chip from './ui/Chip'
+import { haptics } from '../lib/utils/haptics'
 import { getXiaoyueExpressionAsset, type XiaoyueExpressionId } from '../lib/mascot/xiaoyueExpressions'
 import { apiRequest } from '../lib/api/api'
 import { useOnboardingAnalytics } from '../hooks/onboarding/useOnboardingAnalytics'
 import { useDeviceTier } from '../hooks/useDeviceTier'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import './ProfessionChatOverlay.scss'
 
 export interface ProfessionClassificationData {
@@ -419,7 +419,7 @@ export default function ProfessionChatOverlay({
       if (placeholderTimerRef.current) clearInterval(placeholderTimerRef.current)
       clearThinkingTimers()
     }
-  }, [])
+  }, [clearThinkingTimers])
 
   useEffect(() => {
     const handler = (res: { height: number }) => {
@@ -433,7 +433,7 @@ export default function ProfessionChatOverlay({
     return () => {
       Taro.offKeyboardHeightChange(handler)
     }
-  }, [visible])
+  }, [visible, analytics])
 
   // Rotating placeholders — cycle every 3.5s when input is empty and not submitting
   useEffect(() => {
@@ -643,7 +643,7 @@ export default function ProfessionChatOverlay({
         industryConfidence: 0,
       })
     }
-  }, [inputValue, isOnline, analytics, clearThinkingTimers])
+  }, [inputValue, isOnline, hasSent, analytics, clearThinkingTimers])
 
   const handleSendLegacy = useCallback(() => {
     const text = inputValue.trim()
@@ -771,7 +771,8 @@ export default function ProfessionChatOverlay({
           'profession-overlay__bubble',
           `profession-overlay__bubble--${msg.sender}`,
           msg.isFallback ? 'profession-overlay__bubble--fallback' : '',
-        ].filter(Boolean).join(' ')}>
+        ].filter(Boolean).join(' ')}
+        >
           <Text className='profession-overlay__bubble-text'>{msg.text}</Text>
           {msg.isFallback && msg.id === retryMessageId && (
             <View className='profession-overlay__retry-hint' onClick={handleRetry} hoverClass='profession-overlay__retry-hint--active' hoverStayTime={100}>
@@ -795,7 +796,8 @@ export default function ProfessionChatOverlay({
       isClosing ? 'profession-overlay--closing' : '',
       deviceTier.isDegradation ? 'profession-overlay--low-end' : '',
       reduceMotion ? 'profession-overlay--reduce-motion' : '',
-    ].filter(Boolean).join(' ')}>
+    ].filter(Boolean).join(' ')}
+    >
       <View className='profession-overlay__header'>
         <View className='profession-overlay__step-badge'>
           <Text className='profession-overlay__step-badge-text'>2 / 5</Text>
@@ -853,23 +855,28 @@ export default function ProfessionChatOverlay({
                 <View className={[
                   'profession-overlay__sparkle',
                   `profession-overlay__sparkle--1${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
-                ].filter(Boolean).join(' ')} />
+                ].filter(Boolean).join(' ')}
+                />
                 <View className={[
                   'profession-overlay__sparkle',
                   `profession-overlay__sparkle--2${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
-                ].filter(Boolean).join(' ')} />
+                ].filter(Boolean).join(' ')}
+                />
                 <View className={[
                   'profession-overlay__sparkle',
                   `profession-overlay__sparkle--3${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
-                ].filter(Boolean).join(' ')} />
+                ].filter(Boolean).join(' ')}
+                />
                 <View className={[
                   'profession-overlay__sparkle',
                   `profession-overlay__sparkle--4${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
-                ].filter(Boolean).join(' ')} />
+                ].filter(Boolean).join(' ')}
+                />
                 <View className={[
                   'profession-overlay__sparkle',
                   `profession-overlay__sparkle--5${classificationData?.industrySource?.includes('fallback') ? ' profession-overlay__sparkle--fallback' : ''}`,
-                ].filter(Boolean).join(' ')} />
+                ].filter(Boolean).join(' ')}
+                />
               </View>
               <View className='profession-overlay__reveal-title-row'>
                 {!classificationData?.industrySource?.includes('fallback') ? (

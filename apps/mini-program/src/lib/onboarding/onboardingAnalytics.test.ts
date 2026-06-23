@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { buildMiniProgramOnboardingAnalyticsEvent } from './onboardingAnalytics'
+
 vi.mock('@tarojs/taro', () => ({
   default: {
     getStorageSync: vi.fn(),
@@ -8,8 +10,6 @@ vi.mock('@tarojs/taro', () => ({
     getSystemInfoSync: vi.fn().mockReturnValue({}),
   },
 }))
-
-import { buildMiniProgramOnboardingAnalyticsEvent } from './onboardingAnalytics'
 
 describe('mini-program onboarding analytics event builder', () => {
   it('builds runtime-safe event metadata and durations', () => {

@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { MINI_PROGRAM_ROUTES } from './onboardingRoutes'
+import {
+  getMiniProgramRouteNavigationAction,
+  navigateToMiniProgramRoute,
+} from './onboardingNavigation'
+
 vi.mock('@tarojs/taro', () => ({
   default: {
     switchTab: vi.fn(),
@@ -7,12 +13,6 @@ vi.mock('@tarojs/taro', () => ({
     reLaunch: vi.fn(),
   },
 }))
-
-import { MINI_PROGRAM_ROUTES } from './onboardingRoutes'
-import {
-  getMiniProgramRouteNavigationAction,
-  navigateToMiniProgramRoute,
-} from './onboardingNavigation'
 
 afterEach(() => {
   vi.useRealTimers()

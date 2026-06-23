@@ -1,7 +1,7 @@
 import { View, Text, Slider, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import { memo, useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import type { AnswerOption } from './personalityTestLogic'
 import Button from '../../../components/ui/Button'
 import { COLOR_PRIMARY, COLOR_PRIMARY_LIGHT } from '../../../lib/utils/uiConstants'
@@ -280,15 +280,6 @@ export default memo(function PersonalityTestAnswerArea({
     }
   }, [])
 
-  // Guard: render fallback when no options are available
-  if (options.length === 0) {
-    return (
-      <View className='answer-area__options'>
-        <Text className='answer-area__empty-options'>题目加载中…</Text>
-      </View>
-    )
-  }
-
   const handleSliderChanging = useCallback((event: any) => {
     const val = Number(event.detail.value)
     lastSliderValueRef.current = val
@@ -322,6 +313,15 @@ export default memo(function PersonalityTestAnswerArea({
       onSliderChange(val)
     }
   }, [onSliderChange])
+
+  // Guard: render fallback when no options are available
+  if (options.length === 0) {
+    return (
+      <View className='answer-area__options'>
+        <Text className='answer-area__empty-options'>题目加载中…</Text>
+      </View>
+    )
+  }
 
   if (questionType === 'slider' && sliderConfig) {
     const lean = resolveSliderLean(sliderConfig, sliderValue)

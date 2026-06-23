@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { AtmosphereMood } from '@shared/socialIcebreaker'
 
 import {
   getPhaseLabel,
@@ -6,7 +7,6 @@ import {
   MOOD_OPTIONS,
   type SessionPhase,
 } from '../phaseUtils'
-import type { AtmosphereMood } from '@shared/socialIcebreaker'
 
 // ── getPhaseLabel ──────────────────────────────────────────────────────
 describe('getPhaseLabel', () => {

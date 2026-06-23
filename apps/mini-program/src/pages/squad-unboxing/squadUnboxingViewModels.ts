@@ -2,6 +2,8 @@ import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import type { PoolGroupMemberSummary } from '@shared/api'
 import type { OverallChemistry, PairExplanation } from '@shared/types/groupAnalysis'
 
+import { getVibeLabel as getVibeLabelShared } from '../../lib/matching/groupDisplay'
+
 export type FlowState = 'ready' | 'shaking' | 'revealed'
 export type AnalysisStage = 0 | 1 | 2 | 3 | 4
 export type ActionDockState = 'hidden' | 'ready'
@@ -30,8 +32,6 @@ export function getInitial(name: string): string {
 }
 
 export { formatDateTime } from '../../lib/matching/groupDisplay'
-
-import { getVibeLabel as getVibeLabelShared } from '../../lib/matching/groupDisplay'
 
 export function getVibeLabel(vibe?: string | null): string {
   return getVibeLabelShared(vibe, '今晚成桌')

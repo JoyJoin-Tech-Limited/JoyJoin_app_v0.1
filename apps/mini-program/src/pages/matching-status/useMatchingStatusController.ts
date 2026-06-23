@@ -23,6 +23,26 @@ import type {
 } from '@shared/wsEvents'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
+import {
+  buildWaitingSeats,
+  DEFAULT_MAX_GROUP_SIZE,
+  DEFAULT_MIN_GROUP_SIZE,
+  DEFAULT_REFRESH_INTERVAL_SECONDS,
+  getMatchingStatusScreenState,
+  getChemistryTokens,
+  getCountdownState,
+  getTemperatureCopy,
+  getWaitingStateCopy,
+  isVenueUnlocked,
+  resolveMatchingStatusAuthBootstrap,
+  resolvePersistedThemeSummary,
+  composeUnifiedReveal,
+  type LiveRevealStage,
+  type PoolFillStats,
+  type ThemeSummary,
+  type ViewerPairSpotlight,
+  type UnifiedRevealTokens,
+} from '@shared/features/matching-status'
 import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
@@ -44,26 +64,6 @@ import {
   TOAST_FATAL_MS,
   COLOR_DANGER,
 } from '../../lib/utils/uiConstants'
-import {
-  buildWaitingSeats,
-  DEFAULT_MAX_GROUP_SIZE,
-  DEFAULT_MIN_GROUP_SIZE,
-  DEFAULT_REFRESH_INTERVAL_SECONDS,
-  getMatchingStatusScreenState,
-  getChemistryTokens,
-  getCountdownState,
-  getTemperatureCopy,
-  getWaitingStateCopy,
-  isVenueUnlocked,
-  resolveMatchingStatusAuthBootstrap,
-  resolvePersistedThemeSummary,
-  composeUnifiedReveal,
-  type LiveRevealStage,
-  type PoolFillStats,
-  type ThemeSummary,
-  type ViewerPairSpotlight,
-  type UnifiedRevealTokens,
-} from '@shared/features/matching-status'
 import { generateChemistryPayoff } from '../../lib/matching/chemistryPayoff'
 
 const REGISTRATION_REFETCH_INTERVAL_MS = 30_000

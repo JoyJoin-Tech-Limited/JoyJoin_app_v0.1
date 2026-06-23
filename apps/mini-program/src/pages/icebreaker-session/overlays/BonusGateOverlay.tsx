@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 import Button from '../../../components/ui/Button'
 import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
 import { apiRequest } from '../../../lib/api/api'
 import { logError } from '../../../lib/utils/logger'
-import { getErrorMessage } from '@shared/copy/errorBaselines'
 
 interface BonusGateOverlayProps {
   socialSessionId: string

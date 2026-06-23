@@ -3,7 +3,7 @@ import Taro from '@tarojs/taro'
 import type { EventPoolSummary } from '@shared/api'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 
-import { cdnAsset, localAsset } from '../../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
 import Button from '../../../components/ui/Button'

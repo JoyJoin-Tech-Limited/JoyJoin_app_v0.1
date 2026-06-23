@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { profileAnalytics, type ProfileAnalyticsEventType } from './profileAnalytics'
+
 const { mockApiRequest, mockLogWarn } = vi.hoisted(() => ({
   mockApiRequest: vi.fn().mockResolvedValue({ success: true }),
   mockLogWarn: vi.fn(),
@@ -13,8 +15,6 @@ vi.mock('../utils/logger', () => ({
   logWarn: mockLogWarn,
   logInfo: vi.fn(),
 }))
-
-import { profileAnalytics, type ProfileAnalyticsEventType } from './profileAnalytics'
 
 describe('profileAnalytics', () => {
   it('exports a singleton instance', () => {

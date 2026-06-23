@@ -1,0 +1,209 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+// ─── SelectableTile ───────────────────────────────────────────────
+// Unified tile for single- and multi-select pickers.
+// Selected state: filled primary + white text + white checkmark.
+
+.selectable-tile {
+  position: relative;
+  box-sizing: border-box;
+  background: $color-bg;
+  border: 2rpx solid transparent;
+  color: $color-text-primary-warm;
+  transition: background 150ms ease, border-color 150ms ease, transform 100ms ease-out;
+
+  &__label {
+    color: $color-text-primary-warm;
+    font-size: $font-size-base;
+    line-height: $line-height-normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+  }
+
+  &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__check {
+    position: absolute;
+    top: 16rpx;
+    right: 16rpx;
+    width: 28rpx;
+    height: 28rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: selectable-tile-check-pop 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &-icon {
+      font-size: 28rpx;
+      color: $color-text-white;
+      font-weight: $font-weight-bold;
+      line-height: 1;
+    }
+
+    &--inline {
+      position: static;
+      margin-left: $spacing-sm;
+      flex-shrink: 0;
+    }
+  }
+
+  &__children {
+    position: absolute;
+    top: 16rpx;
+    right: 16rpx;
+    pointer-events: none;
+  }
+
+  &__pending-badge {
+    position: absolute;
+    top: 16rpx;
+    right: 16rpx;
+    display: inline-flex;
+    align-items: center;
+    padding: 6rpx 12rpx;
+    border-radius: 999rpx;
+    background: rgba($color-text-muted, 0.12);
+    pointer-events: none;
+
+    &-text {
+      font-size: $font-size-xs;
+      font-weight: $font-weight-semibold;
+      color: $color-text-muted;
+      line-height: 1;
+      white-space: nowrap;
+    }
+  }
+
+  // ── Variants ────────────────────────────────────────────────────
+  &--compact {
+    min-height: 96rpx;
+    border-radius: $card-radius-sm;
+    padding: 24rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+
+    .selectable-tile__label {
+      font-weight: $font-weight-semibold;
+      text-align: center;
+    }
+  }
+
+  &--large {
+    min-height: 136rpx;
+    border-radius: $card-radius-sm;
+    padding: 24rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: $spacing-xs;
+
+    .selectable-tile__label {
+      font-weight: $font-weight-bold;
+      text-align: left;
+      padding-right: 56rpx; // reserve space for top-right badge/check
+    }
+  }
+
+  &--row {
+    min-height: $cta-min-tap;
+    padding: 24rpx 0;
+    border-radius: 0;
+    background: transparent;
+    border-bottom: 1rpx solid $color-divider;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+
+    &:last-child {
+      border-bottom-color: transparent;
+    }
+
+    .selectable-tile__label {
+      flex: 1;
+      text-align: left;
+    }
+  }
+
+  // ── States ──────────────────────────────────────────────────────
+  &--disabled {
+    opacity: 0.5;
+  }
+
+  &--loading {
+    animation: selectable-tile-loading-pulse 1.2s ease-in-out infinite;
+  }
+
+  &--pending {
+    opacity: 0.55;
+  }
+
+  &--selected {
+    background: $color-primary;
+    border-color: transparent;
+    color: $color-text-white;
+    box-shadow: $shadow-primary-soft;
+    opacity: 1;
+    will-change: transform;
+
+    // Primary tier: animate the shadow for a tactile "lift" on selection.
+    &.selectable-tile--primary {
+      transition: background 150ms ease, border-color 150ms ease, transform 100ms ease-out, box-shadow 150ms ease;
+    }
+
+    // Degradation tier: keep shadow static to avoid paint cost.
+    &.selectable-tile--degradation {
+      transition: background 150ms ease, border-color 150ms ease, transform 100ms ease-out;
+    }
+
+    .selectable-tile__label {
+      color: $color-text-white;
+    }
+
+    &.selectable-tile--row {
+      border-bottom-color: transparent;
+    }
+  }
+
+  &--hover {
+    transform: scale(0.97);
+    opacity: 0.92;
+  }
+}
+
+@keyframes selectable-tile-loading-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes selectable-tile-check-pop {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+// ── Reduced Motion ────────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .selectable-tile {
+    transition: none !important;
+    animation: none !important;
+
+    &--hover {
+      transform: none;
+      opacity: 1;
+    }
+
+    &--loading {
+      animation: none;
+      opacity: 0.7;
+    }
+  }
+}

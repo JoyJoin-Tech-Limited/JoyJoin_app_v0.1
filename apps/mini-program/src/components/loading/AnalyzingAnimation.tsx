@@ -18,6 +18,8 @@ export interface AnalyzingAnimationProps {
   shouldReduceMotion?: boolean
 }
 
+const SPARKLES = [1, 2, 3, 4, 5, 6, 7, 8]
+
 /**
  * AnalyzingAnimation — magical "AI synthesizing your profile" moment.
  *
@@ -55,11 +57,10 @@ export default function AnalyzingAnimation({
   }, [minDuration, onComplete])
 
   const rings = [1, 2, 3, 4, 5]
-  const sparkles = [1, 2, 3, 4, 5, 6, 7, 8]
 
   const sparklePositions = useMemo(
     () =>
-      sparkles.map(() => ({
+      SPARKLES.map(() => ({
         top: `${20 + Math.random() * 60}%`,
         left: `${20 + Math.random() * 60}%`,
       })),
@@ -101,7 +102,7 @@ export default function AnalyzingAnimation({
       </View>
 
       {/* Sparkle particles */}
-      {sparkles.map((i) => (
+      {SPARKLES.map((i) => (
         <View
           key={`sparkle-${i}`}
           className='analyzing-animation__sparkle'

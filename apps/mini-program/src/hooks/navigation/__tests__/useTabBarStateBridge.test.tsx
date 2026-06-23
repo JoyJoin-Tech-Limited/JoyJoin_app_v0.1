@@ -2,9 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { getMyPoolRegistrations, getJoinedEvents } from '@shared/api'
 import { useTabBarStateBridge } from '../useTabBarStateBridge'
 import { getTabBarState, setTabBarBadges, setTabBarCenterState, setTabBarSelected } from '../../../lib/navigation/tabBarState'
 import { getMiniProgramCenterState } from '../../../lib/navigation/centerTabRouting'
+
+import { useAuth } from '../../useAuth'
+import { useNotificationCounts } from '../../useNotificationCounts'
 
 vi.mock('../../useAuth', () => ({
   useAuth: vi.fn(),
@@ -26,10 +30,6 @@ vi.mock('@shared/api', async () => {
     getJoinedEvents: vi.fn(),
   }
 })
-
-import { useAuth } from '../../useAuth'
-import { useNotificationCounts } from '../../useNotificationCounts'
-import { getMyPoolRegistrations, getJoinedEvents } from '@shared/api'
 
 const mockUseAuth = vi.mocked(useAuth)
 const mockUseNotificationCounts = vi.mocked(useNotificationCounts)

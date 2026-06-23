@@ -1,5 +1,4 @@
 import { Canvas, Image, ScrollView, Text, View } from '@tarojs/components'
-import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, useCallback, useEffect, useRef } from 'react'
@@ -9,6 +8,7 @@ import {
   type PoolGroupDetailsResponse,
   type PoolGroupMemberSummary,
 } from '@shared/api'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import LoadingScreen from '../../components/loading/LoadingScreen'
@@ -58,7 +58,7 @@ export default function PoolGroupDetailPage() {
   const router = useRouter()
   const groupId = router.params.groupId ?? ''
   const { user: currentUser, isLoading: authLoading } = useAuthGuard()
-  const [posterPath, setPosterPath] = useState('')
+  const [, setPosterPath] = useState('')
   const [isGeneratingPoster, setIsGeneratingPoster] = useState(false)
 
   const {
@@ -91,7 +91,7 @@ export default function PoolGroupDetailPage() {
       Taro.showToast({ title: '场地已确定', icon: 'success', duration: 2000 })
     }
     prevVenueStatusRef.current = currentStatus ?? null
-  }, [poolGroup?.group.venueAssignmentStatus, poolGroup?.group.venueName])
+  }, [poolGroup])
 
   const handleShareGroupPoster = useCallback(async () => {
     if (!poolGroup || isGeneratingPoster) return
@@ -130,7 +130,7 @@ export default function PoolGroupDetailPage() {
         <Image
           className='pool-group-detail__error-hero'
           src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
-          mode='aspectFit'
+          mode='widthFix'
           lazyLoad
         />
         <Text className='pool-group-detail__error-text'>加载小队详情没成功</Text>
@@ -138,13 +138,15 @@ export default function PoolGroupDetailPage() {
           <Button variant='primary' onClick={() => {
             haptics('light')
             queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-group-detail', groupId] })
-          }}>
+          }}
+          >
             重试
           </Button>
           <Button variant='secondary' onClick={() => {
             haptics('light')
             Taro.switchTab({ url: '/pages/events/index' })
-          }}>
+          }}
+          >
             返回活动
           </Button>
         </View>

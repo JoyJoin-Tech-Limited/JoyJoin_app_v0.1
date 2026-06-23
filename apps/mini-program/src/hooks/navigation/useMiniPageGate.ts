@@ -1,6 +1,6 @@
 import { createElement, useCallback, useEffect, useRef, useState, type ReactElement } from 'react'
-import LoadingScreen from '../../components/loading/LoadingScreen'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
+import LoadingScreen from '../../components/loading/LoadingScreen'
 import { useAuthGuard } from '../useAuthGuard'
 import { useLoadingOrchestrator } from '../useLoadingOrchestrator'
 import type { AuthUser } from '../useAuth'

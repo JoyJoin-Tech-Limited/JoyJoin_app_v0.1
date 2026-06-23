@@ -1,126 +1,76 @@
 @use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
 
-.city-picker-overlay {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background: $color-overlay;
-  z-index: $z-modal;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  animation: city-picker-backdrop-in 200ms ease-out;
+// City picker title override — warm cream-background tone.
+.city-picker-shell .picker-shell__title {
+  color: $color-text-primary-warm;
 }
 
-.city-picker-sheet {
-  background: $color-surface;
-  border-radius: 32rpx 32rpx 0 0;
-  height: 85vh;
-  max-height: 1400rpx;
-  min-height: 900rpx;
+.city-picker {
   display: flex;
   flex-direction: column;
-  box-shadow: 0 -4rpx 24rpx rgba(0, 0, 0, 0.06);
-  will-change: transform;
-  animation: city-picker-slide-up 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  height: 100%;
+  min-height: 0;
 
-  &__handle {
-    width: 56rpx;
-    height: 6rpx;
-    background: rgba($color-border, 0.5);
-    border-radius: 3rpx;
-    margin: 16rpx auto;
+  // ── Search ─────────────────────────────────────────────────────
+  &__search {
+    margin: 8rpx $container-padding 16rpx;
+    padding: 0 24rpx;
+    height: $input-height;
+    min-height: $cta-min-tap;
+    background: $color-bg;
+    border-radius: $radius-md;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    transition: box-shadow 150ms ease, background 150ms ease;
+
+    &--focused {
+      background: $color-surface;
+      box-shadow: 0 0 0 2rpx rgba($color-primary, 0.25);
+    }
   }
 
-  // ── Header ────────────────────────────────────────────────────
-  &__header {
-    padding: 8rpx 40rpx 16rpx;
+  &__search-icon {
+    color: $color-text-secondary;
+    margin-right: $spacing-sm;
     flex-shrink: 0;
   }
 
-  &__header-row {
+  &__search-input {
+    flex: 1;
+    font-size: $font-size-base;
+    color: $color-text-primary-warm;
+    min-height: 0;
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+  }
+
+  &__search-clear {
+    min-width: $cta-min-tap;
+    min-height: $cta-min-tap;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8rpx;
-    margin-bottom: 8rpx;
-  }
-
-  &__mascot {
-    width: 48rpx;
-    height: 48rpx;
     flex-shrink: 0;
-  }
+    border-radius: $radius-circle;
+    margin-left: $spacing-xs;
+    transition: background 120ms ease;
 
-  &__title {
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary-warm;
-    line-height: 1.5;
-    word-break: keep-all;
-    overflow-wrap: break-word;
-  }
-
-  &__subtitle {
-    display: block;
-    text-align: center;
-    font-size: $font-size-xs;
-    color: $color-text-tertiary;
-    line-height: 1.6;
-  }
-
-  // ── Search ────────────────────────────────────────────────────
-  &__search {
-    margin: 8rpx 32rpx 16rpx;
-    padding: 16rpx 24rpx;
-    background: $color-bg;
-    border-radius: 16rpx;
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-
-    &-icon {
-      font-size: $font-size-base;
-      margin-right: 16rpx;
-      color: $color-text-secondary;
-      flex-shrink: 0;
-    }
-
-    &-input {
-      flex: 1;
-      font-size: $font-size-base;
-      color: $color-text-primary-warm;
-      min-height: 0;
-    }
-
-    &-clear {
-      min-width: $cta-min-tap;
-      min-height: $cta-min-tap;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      border-radius: 50%;
-      margin-left: 8rpx;
-      transition: background 120ms ease;
-
-      &--hover {
-        background: $color-divider;
-      }
-    }
-
-    &-clear-icon {
-      font-size: $font-size-sm;
-      color: $color-text-secondary;
-      line-height: 1;
+    &--hover {
+      background: $color-divider;
     }
   }
 
-  // ── Hot cities section ────────────────────────────────────────
+  &__search-clear-icon {
+    color: $color-text-secondary;
+  }
+
+  // ── Hot cities ─────────────────────────────────────────────────
   &__hot-section {
-    padding: 0 32rpx 16rpx;
+    padding: 0 $container-padding 16rpx;
     flex-shrink: 0;
   }
 
@@ -129,93 +79,30 @@
     flex-shrink: 0;
   }
 
-  &__section-label {
-    display: flex;
-    align-items: center;
-    gap: 8rpx;
-    margin-bottom: 8rpx;
-  }
-
   &__section-title {
+    display: block;
     font-size: $font-size-xs;
     color: $color-text-tertiary;
     font-weight: $font-weight-medium;
+    margin-bottom: $spacing-sm;
   }
 
   &__hot-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8rpx;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: $spacing-sm;
   }
 
-  &__hot-item {
-    padding: 24rpx 32rpx;
-    min-height: $cta-min-tap;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: $color-bg;
-    border-radius: 16rpx;
-    border: 2rpx solid transparent;
-    transition: background 150ms ease, border-color 150ms ease, transform 150ms ease-out;
-
-    &--selected {
-      background: $color-primary-light;
-      border-color: $color-primary;
-    }
-
-    &-text {
-      font-size: $font-size-sm;
-      color: $color-text-primary-warm;
-
-      .city-picker-sheet__hot-item--selected & {
-        color: $color-primary;
-        font-weight: $font-weight-semibold;
-      }
-    }
-  }
-
-  &__tile--hover {
-    transform: scale(0.96);
-  }
-
-  // ── City list ─────────────────────────────────────────────────
+  // ── City list ──────────────────────────────────────────────────
   &__list {
     flex: 1;
     min-height: 0;
-    padding: 0 32rpx;
+    padding: 0 $container-padding;
 
-    &-item {
-      padding: 24rpx 0;
-      border-bottom: 1rpx solid $color-divider;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      min-height: $cta-min-tap;
-      transition: background 120ms ease;
-
-      &--selected {
-        background: rgba($color-primary, 0.05);
-        margin: 0 -32rpx;
-        padding: 24rpx 32rpx;
-      }
-
-      &--hover {
-        background: rgba($color-primary, 0.03);
-        margin: 0 -32rpx;
-        padding: 24rpx 32rpx;
-      }
-
-      &-text {
-        font-size: $font-size-base;
-        color: $color-text-primary-warm;
-      }
-
-      &-check {
-        font-size: $font-size-base;
-        color: $color-primary;
-        font-weight: $font-weight-bold;
-      }
+    // Full-bleed selected row within the sheet's horizontal padding.
+    .selectable-tile--row.selectable-tile--selected {
+      margin: 0 -#{$container-padding};
+      padding: $spacing-md $container-padding;
     }
   }
 
@@ -224,53 +111,80 @@
     min-height: 24rpx;
   }
 
-  // ── Empty state ───────────────────────────────────────────────
+  // ── Empty state ────────────────────────────────────────────────
   &__empty {
-    padding: 64rpx 32rpx;
+    padding: 48rpx $spacing-lg;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
+
+    &-mascot {
+      width: 120rpx;
+      height: 120rpx;
+      margin-bottom: $spacing-sm;
+      animation: city-picker-empty-mascot-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
 
     &-text {
+      font-size: $font-size-base;
+      color: $color-text-secondary;
+      font-weight: $font-weight-medium;
+    }
+
+    &-hint {
       font-size: $font-size-sm;
       color: $color-text-tertiary;
     }
+
+    &--enter {
+      animation: city-picker-empty-enter 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
   }
 
-  // ── Celebration overlay ───────────────────────────────────────
+  // ── Celebration overlay ────────────────────────────────────────
   &__celebration {
-    position: absolute;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.96);
+    height: 100%;
+    background: rgba($color-surface, 0.96);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    z-index: 2;
-    border-radius: 32rpx 32rpx 0 0;
     animation: city-picker-celebration-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__celebration-mascot {
+    width: 160rpx;
+    height: 160rpx;
+    margin-bottom: $spacing-sm;
+    animation: city-picker-celebration-mascot-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   &__celebration-check {
     width: 88rpx;
     height: 88rpx;
-    border-radius: 50%;
+    border-radius: $radius-circle;
     background: $color-primary;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 16rpx;
+    margin-bottom: $spacing-sm;
+    animation: city-picker-celebration-check-pop 0.35s cubic-bezier(0.22, 1, 0.36, 1) both 0.15s;
   }
 
   &__celebration-icon {
-    color: $color-surface;
     font-size: 48rpx;
+    color: $color-text-white;
     font-weight: $font-weight-bold;
+    line-height: 1;
   }
 
   &__celebration-text {
     font-size: $font-size-lg;
     font-weight: $font-weight-bold;
     color: $color-text-primary-warm;
-    margin-bottom: 8rpx;
+    margin-bottom: $spacing-xs;
   }
 
   &__celebration-sub {
@@ -279,26 +193,81 @@
     text-align: center;
   }
 
-  // ── Footer ────────────────────────────────────────────────────
+  // ── Footer CTA ─────────────────────────────────────────────────
   &__footer {
-    padding: 16rpx 32rpx;
-    padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
-    border-top: 1rpx solid $color-divider;
-    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__error,
+  &__offline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $card-radius-sm;
+
+    &-text {
+      font-size: $font-size-sm;
+    }
+  }
+
+  &__error {
+    background: rgba($color-error, 0.08);
+
+    &-text {
+      color: $color-error;
+    }
+
+    &-retry {
+      padding: $spacing-xs $spacing-sm;
+      border-radius: $radius-md;
+      background: rgba($color-error, 0.12);
+
+      &--hover {
+        background: rgba($color-error, 0.20);
+      }
+
+      &-text {
+        font-size: $font-size-sm;
+        color: $color-error;
+        font-weight: $font-weight-semibold;
+      }
+    }
+  }
+
+  &__offline {
+    background: rgba($color-warning, 0.08);
+
+    &-text {
+      color: $color-warning;
+    }
+
+    &-retry {
+      padding: $spacing-xs $spacing-sm;
+      border-radius: $radius-md;
+      background: rgba($color-warning, 0.16);
+
+      &--hover {
+        background: rgba($color-warning, 0.24);
+      }
+
+      &-text {
+        font-size: $font-size-sm;
+        color: $color-warning;
+        font-weight: $font-weight-semibold;
+      }
+    }
   }
 
   &__confirm {
-    padding: 24rpx 0;
-    min-height: $cta-min-tap;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: $color-primary;
-    border-radius: 16rpx;
-    transition: opacity 150ms ease, transform 100ms ease-out;
+    @include button-primary;
+    border-radius: $button-radius;
 
     &--disabled {
       background: rgba($color-primary, 0.4);
+      box-shadow: none;
     }
 
     &--loading {
@@ -311,25 +280,10 @@
 
     &-text {
       font-size: $font-size-md;
-      color: $color-surface;
+      color: $color-text-white;
       font-weight: $font-weight-semibold;
     }
   }
-}
-
-@keyframes city-picker-backdrop-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes city-picker-slide-up {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-
-@keyframes city-picker-loading-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
 }
 
 @keyframes city-picker-empty-enter {
@@ -337,38 +291,41 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes city-picker-empty-mascot-pop {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes city-picker-loading-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 @keyframes city-picker-celebration-enter {
   from { opacity: 0; transform: scale(0.9); }
   to { opacity: 1; transform: scale(1); }
 }
 
-.city-picker-sheet__empty--enter {
-  animation: city-picker-empty-enter 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+@keyframes city-picker-celebration-mascot-pop {
+  from { opacity: 0; transform: translateY(20rpx) scale(0.85); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes city-picker-celebration-check-pop {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .city-picker-overlay,
-  .city-picker-sheet {
-    animation: none;
-  }
-
-  .city-picker-sheet__hot-item,
-  .city-picker-sheet__confirm,
-  .city-picker-sheet__list-item,
-  .city-picker-sheet__empty--enter {
-    transition: none !important;
-    animation: none !important;
-  }
-
-  .city-picker-sheet__search-clear {
-    transition: none !important;
-
-    &--hover {
-      background: transparent;
+  .city-picker {
+    &__empty--enter,
+    &__celebration,
+    &__confirm--loading {
+      animation: none !important;
     }
-  }
 
-  .city-picker-sheet__celebration {
-    animation: none;
+    &__search-clear {
+      transition: none !important;
+    }
   }
 }

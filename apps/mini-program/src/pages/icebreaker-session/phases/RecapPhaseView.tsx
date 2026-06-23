@@ -1,12 +1,12 @@
 import { View, Text, Image } from '@tarojs/components'
 import { useState, useEffect, useCallback, useRef } from 'react'
+import type { AIResponseMeta } from '@shared/types/aiMeta'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
 import { PhaseHeaderIcon } from '../phaseUtils'
 import { apiRequest } from '../../../lib/api/api'
 import { buildSocialPath } from '../icebreakerSessionModel'
-import type { AIResponseMeta } from '@shared/types/aiMeta'
 import MomentCardView from '../overlays/MomentCardView'
 import ParticleBurst from '../../../components/reveal/ParticleBurst'
 import IdentityReveal from '../../../components/reveal/IdentityReveal'
@@ -478,7 +478,7 @@ export function RecapPhaseView({
           className='icebreaker__recap-stamp-img'
           mode='aspectFit'
           src={MILESTONE_BADGES.recapStamp}
-          ariaLabel=""
+          ariaLabel=''
           lazyLoad
           onLoad={handleStampSealed}
         />
@@ -491,7 +491,7 @@ export function RecapPhaseView({
           className='icebreaker__recap-ceremony-end-img'
           mode='aspectFit'
           src={CEREMONY_HEROES.seeYouNextTime}
-          ariaLabel=""
+          ariaLabel=''
           lazyLoad
         />
       </View>

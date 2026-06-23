@@ -35,5 +35,4 @@ function tryHydrateAuth(): void {
 
 tryHydrateAuth()
 tryHydratePersistentCache(queryClient)
-const unsubscribePersistentCache = subscribeToPersistentCache(queryClient)
-// unsubscribePersistentCache is available for app-lifecycle cleanup if needed
+subscribeToPersistentCache(queryClient)

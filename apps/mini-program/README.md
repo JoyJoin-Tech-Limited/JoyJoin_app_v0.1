@@ -290,9 +290,11 @@ The guard normalizes route formats (`pages/discover/index`, `/pages/discover/ind
 | **Center CTA** | Floating circular button ("进行中") with **solid `#FFF4F8` fill** (`$color-bg-tint-pink`, via CSS custom property `--jj-bg-tint-pink`), outer ring in `$color-secondary` at ~18% opacity, and shadow. Positioned via a flexbox wrapper (`justify-content: center`) instead of `left:50% + transform` to avoid WeChat `cover-view` compositing bugs during `setData` re-renders. **Not gradient** — solid fill is the mini-program CTA standard |
 | **Center hub page** | `/pages/center-hub/index` — dynamic content: active event card, pending registration status, or empty-state CTA |
 | **Routing model** | Center button always `switchTab` to hub (requires `centerHub` in `tabBar.list` — WeChat validates `switchTab` targets against `tabBar.list` even with `custom: true`); hub CTAs `navigateTo` detail pages or `switchTab` to discover |
-| **State sync** | `useCustomTabBarSync.ts` calls `Taro.getTabBar(page).syncState(...)` on every `useDidShow`. Native side debounces at 50ms with shallow diff to avoid icon flicker. `_confirmedSelected` tracks the authoritative selection for rollback |
+| **State sync** | `useCustomTabBarSync.ts` calls `Taro.getTabBar(page).syncState(...)` on every `useDidShow`. Native side debounces at 50ms with shallow diff to avoid icon flicker. `_confirmedSelected` tracks the authoritative selection for rollback. Offline state is detected via `wx.getNetworkType` / `wx.onNetworkStatusChange`; `syncState` skips updates while offline and replays the latest pending state on reconnect |
 | **Badges** | Notification counts mapped to `discover`, `activities`, `chat` categories. Badge updates use WeChat path syntax (`leftTabs[idx].badgeCount`) to avoid array reconstruction and icon reload flicker |
-| **Device tiering** | `wx.getSystemInfoSync().benchmarkLevel <= 15` gates all animations (badge pop-in, pulse, fade-in, transitions) on low-end devices |
+| **Collapse API** | `setCollapsed(boolean)` toggles `data.collapsed`, returns `true` on change, and no-ops after `detached` or when already in target state. Writes collapse/expand announcements to `data.announcement` |
+| **Visibility** | `data.hidden` defaults to `true`; `setSelected()` reveals the bar only on tab pages. The `_shouldHideOnPage` helper normalizes routes and hides the bar on known non-tab routes |
+| **Device tiering** | `wx.getSystemInfoSync().benchmarkLevel <= 15` or iOS devices without a `benchmarkLevel` value gate all animations (badge pop-in, pulse, fade-in, transitions) via `.joy-custom-tab-bar--low-end` |
 | **Swipe-back safety** | `pageLifetimes.show` resets `selected` to `_confirmedSelected` after 100ms, correcting any stuck optimistic state after swipe-back |
 
 ### Layering & compatibility rules
@@ -317,13 +319,13 @@ The guard normalizes route formats (`pages/discover/index`, `/pages/discover/ind
 | **Center badge pulse** | Continuous `scale` pulse on the center red dot |
 | **Cover-image fade-in** | Scoped 200ms opacity fade on specific elements only (global selector removed to prevent re-trigger on every `setData`) |
 | **Reduced motion** | `@media (prefers-reduced-motion: reduce)` disables all animations, including `will-change` reset to `auto`; respects system setting |
-| **SwitchTab rollback** | Rollback uses `_confirmedSelected` (authoritative, not optimistic) to handle rapid tab switching. Success/fail tracked via `wx.reportAnalytics` (`mini_program_tab_bar_switch_success` / `_fail`). 180ms double-tap debounce on tap handlers |
+| **SwitchTab rollback** | Rollback uses `_confirmedSelected` (authoritative, not optimistic) and shows a `切换失败，请重试` toast on `wx.switchTab` fail. An in-flight guard (`_switchInFlight`) prevents concurrent `switchTab` calls; a 2s safety timeout releases the guard. Success/fail tracked via `wx.reportAnalytics` (`mini_program_tab_bar_switch_success` / `_fail`). 180ms double-tap debounce on tap handlers |
 | **Sync debounce** | 50ms debounce + shallow diff in `syncState`; path-syntax badge updates prevent flicker |
-| **Haptics** | Platform-aware: `type: 'light'` on iOS, plain `wx.vibrateShort()` on Android. Silently fails on unsupported devices |
+| **Announcements** | `data.announcement` carries collapse/expand messages (`标签栏已收起` / `标签栏已展开`) and tab-switch confirmations (`已切换到发现`). Each message is cleared after 1s to keep `aria-live` polite regions usable |
 | **CSS theming** | 8 brand tokens declared as CSS custom properties on root (e.g. `--jj-primary`, `--jj-secondary`, `--jj-bg-tint-pink`). All hardcoded color values reference these tokens |
 | **GPU compositing** | `will-change: transform` / `opacity` / `box-shadow` / `background-color` hints on 7 animated subtrees; reset to `auto` on low-end + reduced-motion |
 | **Accessibility** | Hidden `aria-live="polite"` region announces tab switches ("已切换到发现"). Tab items use `role="button"`, `aria-label`, `aria-pressed` |
-| **Offline resilience** | `wx.getNetworkType` / `wx.onNetworkStatusChange` detection; `syncState` skipped when offline to avoid stale badge counts |
+| **Offline resilience** | `wx.getNetworkType` initial read + `wx.onNetworkStatusChange` listener; `syncState` skipped when offline to avoid stale badge counts and replayed on reconnect |
 
 ---
 

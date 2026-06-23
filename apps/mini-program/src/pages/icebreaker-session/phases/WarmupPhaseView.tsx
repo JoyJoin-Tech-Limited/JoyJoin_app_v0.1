@@ -1,16 +1,16 @@
 import { useMemo, useEffect, useRef, useState, useCallback } from 'react'
 import { View, Text, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { localAsset } from '../../../lib/utils/cdnAssets'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import type { AtmosphereMood, SocialTopic, SocialTopicPromptTiers } from '@shared/socialIcebreaker'
+import { localAsset } from '../../../lib/utils/cdnAssets'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import ArchetypeGlyph from '../../../components/mascot/ArchetypeGlyph'
 import Button from '../../../components/ui/Button'
 import ParticleBurst from '../../../components/reveal/ParticleBurst'
 import CardFlip from '../../../components/reveal/CardFlip'
 import { useTierReveal } from '../../../hooks/useTierReveal'
-import type { AtmosphereMood, SocialTopic, SocialTopicPromptTiers } from '@shared/socialIcebreaker'
 import {
   PhaseHeaderIcon,
   getMoodLabel,

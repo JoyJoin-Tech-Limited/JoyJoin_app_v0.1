@@ -1,16 +1,16 @@
 import Taro from '@tarojs/taro'
+import { INTENT_FLEXIBLE_OPTION, INTENT_OPTIONS } from '@shared/constants'
+import { getIconMapping, getLocalIconAssetPath, CDN_ICON_TIERS } from '@joyjoin/shared/iconSystem'
 import spritesheetManifest from '../../assets/mascot/xiaoyue-spritesheet-manifest.json'
 import { PERSONALITY_EMOJI_ASSETS } from './personalityEmojiAssets'
 import { CEREMONY_HEROES } from '../ceremonyHeroes'
 import { MILESTONE_BADGES } from '../milestoneBadges'
 import { getXiaoyueExpressionAsset } from '../mascot/xiaoyueExpressions'
 import { cdnAsset, localAsset } from './cdnAssets'
-import { logInfo, logWarn } from './logger'
+import { logInfo } from './logger'
 import { preloadImagesWithDiagnostics } from './imagePreload'
 import { cacheAssets, clearAssetCacheOnVersionChange } from './persistentAssetCache'
 import { ONBOARDING_CRITICAL_CDN_ASSETS } from './routePreloadAssets'
-import { INTENT_FLEXIBLE_OPTION, INTENT_OPTIONS } from '@shared/constants'
-import { getIconMapping, getLocalIconAssetPath, CDN_ICON_TIERS } from '@joyjoin/shared/iconSystem'
 
 /**
  * Staggered onboarding asset preloader.

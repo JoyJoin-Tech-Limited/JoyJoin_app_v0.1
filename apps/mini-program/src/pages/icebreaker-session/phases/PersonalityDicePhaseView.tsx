@@ -1,12 +1,12 @@
 import { View, Text } from '@tarojs/components'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { PersonalityDiceChallenge, PersonalityDiceChallengeGroup } from '@shared/socialIcebreaker'
+import { getArchetypeHSL } from '@shared/archetypeColors'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Card from '../../../components/ui/Card'
 import Chip from '../../../components/ui/Chip'
 import Button from '../../../components/ui/Button'
 import { PhaseHeaderIcon } from '../phaseUtils'
-import type { PersonalityDiceChallenge, PersonalityDiceChallengeGroup } from '@shared/socialIcebreaker'
-import { getArchetypeHSL } from '@shared/archetypeColors'
 import { CelebrationOverlay } from '../overlays/CelebrationOverlay'
 import { CardFlip, ParticleBurst } from '../../../components/reveal'
 import { SwipeCard, TapReaction } from '../../../components/gesture'
@@ -254,7 +254,7 @@ export function PersonalityDicePhaseView({
     return (
       <View className='personality-dice'>
         <View className='personality-dice__burst-container personality-dice__burst-container--summary'>
-          <ParticleBurst trigger={true} type='confetti' count={50} />
+          <ParticleBurst trigger type='confetti' count={50} />
         </View>
         <Card className='personality-dice__summary-card'>
           <View className='personality-dice__summary-emoji'>

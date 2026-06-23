@@ -1,9 +1,9 @@
 import { View, Text } from '@tarojs/components'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
+import type { SocialSessionState, SocialIcebreakerPhase, XiaoyueAdaptiveSuggestion } from '@shared/socialIcebreaker'
 import XiaoyueChatBubble from './XiaoyueChatBubble'
 import { ICEBREAKER_XIAOYUE_EXPRESSION } from '../../lib/mascot/xiaoyueExpressions'
 import type { XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
-import type { SocialSessionState, SocialIcebreakerPhase, XiaoyueAdaptiveSuggestion } from '@shared/socialIcebreaker'
 import './XiaoyueSessionShell.scss'
 
 export interface XiaoyueSessionShellProps {

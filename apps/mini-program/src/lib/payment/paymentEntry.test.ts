@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { openMiniProgramPaymentPage } from './paymentEntry'
+
 const mockNavigateTo = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('@tarojs/taro', () => ({
@@ -9,8 +11,6 @@ vi.mock('@tarojs/taro', () => ({
     navigateTo: (...args: unknown[]) => mockNavigateTo(...args),
   },
 }))
-
-import { openMiniProgramPaymentPage } from './paymentEntry'
 
 describe('mini-program payment entry — always navigates', () => {
   beforeEach(() => {

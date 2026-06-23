@@ -1,5 +1,5 @@
 import { View, Text, Image } from '@tarojs/components'
-import { useCallback, useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import type { XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'

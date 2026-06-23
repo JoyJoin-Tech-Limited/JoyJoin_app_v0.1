@@ -224,7 +224,7 @@ joyjoin-monorepo/
 | WeChat login | Returning: `pages/login/index.tsx` + `hooks/useWeChatLogin.ts` → `POST /api/auth/wechat/login`. With assessment import: `authenticateMiniProgramUserWithTest` in `lib/api.ts` → `POST /api/auth/wechat/login-with-test` |
 | Blind-box payment + verification | `pages/blind-box-payment/`, `pages/payment-verification/`; `lib/paymentEntry.ts`, `lib/paymentPendingOrder.ts`, `lib/paymentPendingOrderStorage.ts`; shared intent helper `createMiniProgramPaymentIntent` in `packages/shared/src/api.ts`. **Payment Ritual V2:** `GET /api/payments/ritual-context` (real DB-backed community stats), `POST /api/analytics/payment` (dedicated A/B analytics endpoint). **Mock payment mode:** when `MOCK_PAYMENTS=true`, server creates instantly-paid orders (skips WeChat Pay API); client skips `Taro.requestPayment()` for mock orders. |
 | Auth + API bootstrap | `apps/mini-program/src/lib/api/api.ts` |
-| Custom tab bar (native) | `apps/mini-program/src/native-custom-tab-bar/` (see `apps/mini-program/README.md`). Sliding active pill via GPU `transform` + 180ms tap debounce for tab-switch performance |
+| Custom tab bar (native) | `apps/mini-program/src/native-custom-tab-bar/` (see `apps/mini-program/README.md`). Per-tab active highlight, `_confirmedSelected` rollback, offline `syncState` replay, collapse/announcement APIs, and 180ms tap debounce for tab-switch performance |
 | Tab list + `tabBar.custom` | `apps/mini-program/src/lib/navigation/tabBarConfig.ts` + `app.config.ts` |
 | Shared contracts with web | `packages/shared/src/api.ts`, `centerTabRouting.ts`, `onboarding.ts`, `hongKongTime.ts` |
 | Navigation / exit-transition hook | `apps/mini-program/src/hooks/navigation/useJoyJoinNavigation.ts` |

@@ -1,4 +1,3 @@
-import Taro from '@tarojs/taro'
 import { apiRequest } from '../api/api'
 import { logWarn } from '../utils/logger'
 

@@ -170,14 +170,20 @@ Boundary:
 
 ### Client analytics
 
-Lightweight fire-and-forget endpoints for product analytics.
+Lightweight fire-and-forget endpoints for product analytics. Every endpoint validates against an allowed-event whitelist; mismatched `eventType` values are silently rejected. Rate-limited at 120 req/min per IP.
 
 Primary files:
-- `apps/server/src/routes/domains/analytics.ts` — mounts `POST /api/analytics/profile` and `POST /api/analytics/payment`
+- `apps/server/src/routes/domains/analytics.ts` — mounts `/api/analytics/profile`, `/api/analytics/payment`, `/api/analytics/discover`, `/api/analytics/auth`, `/api/analytics/squad_unboxing`, `/api/analytics/social_icebreaker`, `/api/analytics/personality_result`, and `/api/analytics/participation_experiment`
 
 Key endpoints:
-- `POST /api/analytics/profile` — Profile tab interaction events (`profile_stat_tap`, `profile_archetype_cta_tap`, `profile_menu_tap`, `profile_logout_tap`, `profile_logout_cancel`, `profile_shell_retry`, `profile_share_app_message`, `profile_share_timeline`, `profile_milestone_impression`, `profile_milestone_tap`, `profile_pull_refresh`, `profile_share_card_generated`, `profile_share_card_error`, `profile_view`). Validates against an allowed-event whitelist, rate-limited at 120 req/min, stored in `discoverAnalyticsEvents`.
+- `POST /api/analytics/profile` — Profile tab interaction events (`profile_stat_tap`, `profile_archetype_cta_tap`, `profile_menu_tap`, `profile_logout_tap`, `profile_logout_cancel`, `profile_shell_retry`, `profile_share_app_message`, `profile_share_timeline`, `profile_milestone_impression`, `profile_milestone_tap`, `profile_pull_refresh`, `profile_share_card_generated`, `profile_share_card_error`, `profile_view`). Stored in `discoverAnalyticsEvents`.
+- `POST /api/analytics/discover` — Discover and paid-event-ticket funnel events. Includes `event_ticket_payment_view`, `plan_switch`, `welcome_coupon_auto_applied`, `pay_start`, `pay_success`/`pay_cancel`/`pay_fail`/`pay_timeout`, `refund_policy_viewed`, `event_ticket_payment_abandon`, and the icebreaker-inclusion terms events `ticket_terms_row_impression`, `ticket_inclusion_sheet_open`, `ticket_inclusion_sheet_close`. Stored in `discoverAnalyticsEvents`.
 - `POST /api/analytics/payment` — Payment Ritual V2 funnel events; stored in `paymentRitualEvents`.
+- `POST /api/analytics/auth` — Auth revalidation gate events (`auth_revalidation_started`, `auth_revalidation_succeeded`, `auth_revalidation_failed`, `gate_timeout`, `gate_retry`, `gate_dismiss`). Stored in `discoverAnalyticsEvents`.
+- `POST /api/analytics/squad_unboxing` — Squad-unboxing reveal interaction events. Stored in `discoverAnalyticsEvents`.
+- `POST /api/analytics/social_icebreaker` — Custom-mode and phase-picker in-event events. Stored in `discoverAnalyticsEvents`.
+- `POST /api/analytics/personality_result` — Personality result screen interaction events. Stored in `discoverAnalyticsEvents`.
+- `POST /api/analytics/participation_experiment` — Participation experiment signal events. Stored in `discoverAnalyticsEvents`.
 
 ### Repository and facade boundaries
 

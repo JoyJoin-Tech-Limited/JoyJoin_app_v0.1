@@ -1,8 +1,7 @@
 import { useState, useRef } from 'react'
 import { View, Text, Button, Image, Input } from '@tarojs/components'
-import { useRouter } from '@tarojs/taro'
+import Taro, { useRouter } from '@tarojs/taro'
 import { useQueryClient } from '@tanstack/react-query'
-import Taro from '@tarojs/taro'
 import { useWeChatLogin } from '../../hooks/auth/useWeChatLogin'
 import {
   authenticateMiniProgramUserWithPhone,

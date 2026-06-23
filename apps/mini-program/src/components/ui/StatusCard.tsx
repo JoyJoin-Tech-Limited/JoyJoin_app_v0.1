@@ -68,7 +68,7 @@ export default function StatusCard({
         <Image
           className='status-card__hero'
           src={heroSrc}
-          mode='aspectFit'
+          mode='widthFix'
           onError={() => setHeroError(true)}
         />
       ) : (

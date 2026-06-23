@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { SocialSessionState } from '@shared/socialIcebreaker'
 import {
   normaliseSession,
   getUserDisplayName,
@@ -9,8 +10,6 @@ import {
   buildSocialPath,
   type IcebreakerSession,
 } from '../icebreakerSessionModel'
-import type { SocialSessionState } from '@shared/socialIcebreaker'
-import type { SessionParticipant } from '../phaseUtils'
 
 function mockSession(overrides: Partial<SocialSessionState> = {}): SocialSessionState {
   return {
@@ -188,10 +187,6 @@ describe('getErrorText', () => {
 
 // ── deriveParticipants ─────────────────────────────────────────────────
 describe('deriveParticipants', () => {
-  function makeRoster(overrides: Array<Record<string, unknown>> = []) {
-    return overrides.map((p) => ({ userId: p.userId as string, ...p }))
-  }
-
   it('uses joinedParticipants when present in session', () => {
     const session: IcebreakerSession = {
       ...normaliseSession(mockSession()),

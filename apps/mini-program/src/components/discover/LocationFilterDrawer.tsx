@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { View, Text, ScrollView } from '@tarojs/components'
 import React, { useCallback, useRef, useEffect } from 'react'
 import {
   shenzhenClusters,
@@ -10,8 +10,9 @@ import {
 import JoyJoinIcon from '../ui/JoyJoinIcon'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import { haptics } from '../../lib/utils/haptics'
-import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
+import PickerShell from './PickerShell'
+import SelectableTile from './SelectableTile'
 import './LocationFilterDrawer.scss'
 
 const ALL_CLUSTER_ID = '__all__'
@@ -35,7 +36,10 @@ export default function LocationFilterDrawer({
   const transitioningRef = useRef(false)
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Track drawer open
+  // Track drawer open exactly once per open.
+  // Do NOT include selectedCluster/selectedDistrict in the dependency array;
+  // the area drawer is multi-select/filter-by-cluster and those values change
+  // while the drawer stays open, which would pollute the filter_open funnel.
   useEffect(() => {
     if (open) {
       discoverAnalytics.track('filter_open', undefined, {
@@ -43,7 +47,8 @@ export default function LocationFilterDrawer({
         selectedDistrict,
       })
     }
-  }, [open, selectedCluster, selectedDistrict])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -77,17 +82,6 @@ export default function LocationFilterDrawer({
     [onSelect, onClose]
   )
 
-  const handleBackdropTap = useCallback(() => {
-    if (transitioningRef.current) return
-    haptics('light')
-    discoverAnalytics.track('filter_close', undefined, {
-      didSelect: false,
-      selectedCluster,
-      selectedDistrict,
-    })
-    onClose()
-  }, [onClose, selectedCluster, selectedDistrict])
-
   const handleCloseTap = useCallback(() => {
     if (transitioningRef.current) return
     haptics('light')
@@ -100,7 +94,7 @@ export default function LocationFilterDrawer({
   }, [onClose, selectedCluster, selectedDistrict])
 
   const isAllSelected = selectedCluster === ALL_CLUSTER_ID && selectedDistrict === ALL_DISTRICT_ID
-  const { shouldReduceMotion: reducedMotion } = useMiniRevealMotion()
+  const { shouldReduceMotion: reduceMotion } = useMiniRevealMotion()
 
   const heatBadgeClass = (heat: HeatLevel): string => {
     switch (heat) {
@@ -116,121 +110,81 @@ export default function LocationFilterDrawer({
   }
 
   return (
-    <View
-      className={`location-drawer ${open ? 'location-drawer--open' : ''} ${reducedMotion ? 'location-drawer--reduce-motion' : ''}`}
+    <PickerShell
+      visible={open}
+      onClose={handleCloseTap}
+      mascotExpression='coachGuide'
+      title='偏好区域'
+      showClose
+      reduceMotion={reduceMotion}
+      className='location-drawer'
     >
-      {/* Backdrop */}
-      <View
-        className={`location-drawer__backdrop ${open ? 'location-drawer__backdrop--open' : ''}`}
-        onClick={handleBackdropTap}
-        catchMove
-        role='button'
-        aria-label='关闭区域选择'
-      />
-
-      {/* Drawer Surface — do not catchMove here: parent catchMove cancels the
-          inner ScrollView's native scroll gestures in WeChat. */}
-      <View
-        className={`location-drawer__surface ${open ? 'location-drawer__surface--open' : ''}`}
-        role='dialog'
-        aria-modal='true'
-        aria-label='偏好区域选择'
+      <ScrollView
+        className='location-drawer__scroll'
+        scrollY
+        showScrollbar={false}
+        // VirtualList is intentionally not used: Shenzhen districts max 17 items.
       >
-        {/* Drag handle */}
-        <View className='location-drawer__handle-bar' catchMove />
+        <View className='location-drawer__content'>
+          {/* All Regions tile */}
+          <SelectableTile
+            variant='compact'
+            label='全部区域'
+            selected={isAllSelected}
+            onClick={() => handleSelect(ALL_CLUSTER_ID, ALL_DISTRICT_ID)}
+            icon={
+              <JoyJoinIcon
+                emoji='🌐'
+                size={36}
+                className='location-drawer__all-tile-icon'
+              />
+            }
+            ariaLabel='全部区域'
+          />
 
-        {/* Header */}
-        <View className='location-drawer__header' catchMove>
-          <View className='location-drawer__title-row'>
-            <Image
-              className='location-drawer__title-mascot'
-              src={getXiaoyueExpressionAsset('coachGuide')}
-              mode='aspectFit'
-              aria-hidden='true'
-            />
-            <Text className='location-drawer__title'>偏好区域</Text>
-          </View>
-          <View
-            className='location-drawer__close'
-            onClick={handleCloseTap}
-            hoverClass='location-drawer__close--hover'
-            role='button'
-            aria-label='关闭区域选择'
-          >
-            <JoyJoinIcon emoji='✕' size={24} className='location-drawer__close-icon' />
-          </View>
+          {/* Cluster sections */}
+          {shenzhenClusters.map((cluster: DistrictCluster) => (
+            <View key={cluster.id} className='location-drawer__cluster'>
+              <View className='location-drawer__cluster-header'>
+                <View className='location-drawer__cluster-dot' />
+                <Text className='location-drawer__cluster-name'>{cluster.displayName}</Text>
+              </View>
+              <View className='location-drawer__district-grid'>
+                {cluster.districts.map((district: District) => {
+                  const isActive =
+                    selectedCluster === cluster.id && selectedDistrict === district.id
+                  const heatBadgeModifier = heatBadgeClass(district.heat)
+                  const heatLabel = heatConfig[district.heat].label
+
+                  return (
+                    <SelectableTile
+                      key={district.id}
+                      variant='large'
+                      label={district.name}
+                      selected={isActive}
+                      pending={district.heat === 'pending'}
+                      onClick={() => handleSelect(cluster.id, district.id)}
+                      ariaLabel={`${district.name}${heatLabel ? '，' + heatLabel : ''}`}
+                    >
+                      {!isActive && heatLabel && (
+                        <View
+                          className={`location-drawer__heat-badge ${heatBadgeModifier}`}
+                          aria-hidden='true'
+                        >
+                          <Text>{heatLabel}</Text>
+                        </View>
+                      )}
+                    </SelectableTile>
+                  )
+                })}
+              </View>
+            </View>
+          ))}
         </View>
 
-        {/* Scrollable content — WeChat scroll-y requires a concrete height. */}
-        <ScrollView
-          className='location-drawer__scroll'
-          scrollY
-          showScrollbar={false}
-        >
-          <View className='location-drawer__content'>
-            {/* All Regions tile */}
-            <View
-              className={`location-drawer__all-tile ${isAllSelected ? 'location-drawer__all-tile--active' : ''}`}
-              onClick={() => handleSelect(ALL_CLUSTER_ID, ALL_DISTRICT_ID)}
-              hoverClass='location-drawer__tile--hover'
-              role='button'
-              aria-pressed={isAllSelected}
-              aria-label='全部区域'
-            >
-              <JoyJoinIcon className='location-drawer__all-tile-icon' emoji='🌐' size={36} />
-              <Text className='location-drawer__all-tile-text'>全部区域</Text>
-            </View>
-
-            {/* Cluster sections */}
-            {shenzhenClusters.map((cluster: DistrictCluster) => (
-              <View key={cluster.id} className='location-drawer__cluster'>
-                <View className='location-drawer__cluster-header'>
-                  <View className='location-drawer__cluster-dot' />
-                  <Text className='location-drawer__cluster-name'>{cluster.displayName}</Text>
-                </View>
-                <View className='location-drawer__district-grid'>
-                  {cluster.districts.map((district: District) => {
-                    const isActive =
-                      selectedCluster === cluster.id && selectedDistrict === district.id
-                    const heatBadgeModifier = heatBadgeClass(district.heat)
-                    const heatLabel = heatConfig[district.heat].label
-
-                    return (
-                      <View
-                        key={district.id}
-                        className={`location-drawer__district-tile ${isActive ? 'location-drawer__district-tile--active' : ''} ${district.heat === 'pending' ? 'location-drawer__district-tile--pending' : ''}`}
-                        onClick={() => handleSelect(cluster.id, district.id)}
-                        hoverClass='location-drawer__tile--hover'
-                        role='button'
-                        aria-pressed={isActive}
-                        aria-label={`${district.name}${heatLabel ? '，' + heatLabel : ''}`}
-                      >
-                        {isActive ? (
-                          <View className='location-drawer__check' aria-hidden='true'>
-                            <Text className='location-drawer__check-icon'>✓</Text>
-                          </View>
-                        ) : (
-                          heatLabel && (
-                            <View
-                              className={`location-drawer__heat-badge ${heatBadgeModifier}`}
-                            >
-                              <Text>{heatLabel}</Text>
-                            </View>
-                          )
-                        )}
-                        <Text className='location-drawer__district-name'>{district.name}</Text>
-                      </View>
-                    )
-                  })}
-                </View>
-              </View>
-            ))}
-          </View>
-
-          {/* Safe area bottom padding */}
-          <View className='location-drawer__safe-bottom' />
-        </ScrollView>
-      </View>
-    </View>
+        {/* Safe area bottom padding */}
+        <View className='location-drawer__safe-bottom' />
+      </ScrollView>
+    </PickerShell>
   )
 }

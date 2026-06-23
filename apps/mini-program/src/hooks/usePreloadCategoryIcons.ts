@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react'
 import Taro from '@tarojs/taro'
 import { INTEREST_CATEGORY_EMOJIS } from '@shared/api'
-import { localAsset } from '../lib/utils/cdnAssets'
 import {
   getIconMapping,
   getLocalIconAssetPath,
 } from '@joyjoin/shared/iconSystem'
+import { localAsset } from '../lib/utils/cdnAssets'
 
 /**
  * Pre-warm bundled interest-category icon assets so they render instantly

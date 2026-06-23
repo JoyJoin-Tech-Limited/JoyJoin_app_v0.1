@@ -69,7 +69,7 @@ function ArchetypeSpritesheet({
     )
   }
 
-  const { x, y, width, height } = region
+  const { x, y, width } = region
   const src = imgError ? CDN_SHEET : LOCAL_SHEET
 
   /**

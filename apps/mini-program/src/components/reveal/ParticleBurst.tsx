@@ -226,7 +226,7 @@ export default function ParticleBurst({
       CAF(rafRef.current)
     }
     rafRef.current = RAF(loop)
-  }, [type, clampedCount, origin.x, origin.y, spotlightColor])
+  }, [type, clampedCount, origin.x, origin.y, spotlightColor, isReduced])
 
   useEffect(() => {
     if (trigger) {

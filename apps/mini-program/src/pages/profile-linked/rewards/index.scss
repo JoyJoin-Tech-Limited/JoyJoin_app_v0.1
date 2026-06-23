@@ -390,13 +390,13 @@
   }
 
   &__empty-hero {
-    width: 320rpx;
-    height: 240rpx;
+    width: 240rpx;
+    height: auto;
     margin-bottom: $spacing-sm;
 
     &--compact {
-      width: 240rpx;
-      height: 180rpx;
+      width: 180rpx;
+      height: auto;
     }
   }
 

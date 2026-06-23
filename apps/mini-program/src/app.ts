@@ -1,13 +1,16 @@
+/* eslint-disable import/first */
+// Polyfill must execute before any library imports that may rely on AbortController.
 import "./lib/wechat/abortControllerPolyfill"
 import { PropsWithChildren, createElement, useCallback, useEffect, useRef } from 'react'
 import Taro, { useDidShow, useLaunch } from '@tarojs/taro'
+import { useQueryClient } from '@tanstack/react-query'
+/* eslint-enable import/first */
 import { useAuth } from './hooks/useAuth'
 import { logInfo, logWarn } from './lib/utils/logger'
 import { buildPaymentVerificationUrl, decidePendingOrderAutoResume } from './lib/payment/paymentPendingOrder'
 import { clearPendingOrderStorage, getPendingOrderStorageSnapshot } from './lib/payment/paymentPendingOrderStorage'
 import { authenticateMiniProgramUser, checkReturningMiniProgramWeChatUser, getUserState, type ApiError } from './lib/api/api'
 import { seedMiniProgramAuthSession, isTransportApiError } from './lib/api/authSession'
-import { useQueryClient } from '@tanstack/react-query'
 import AuthProvider from './providers/AuthProvider'
 import { DynamicAccentProvider } from './providers/DynamicAccentProvider'
 import { AchievementProvider } from './providers/AchievementProvider'

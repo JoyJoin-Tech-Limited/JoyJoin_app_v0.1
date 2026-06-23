@@ -56,7 +56,7 @@ export default function TapReaction({
         timeoutRef.current = setTimeout(() => setJustTapped((prev) => (prev === index ? null : prev)), 200)
       }
     },
-    [onReact],
+    [onReact, isReduced],
   )
 
   useEffect(() => {

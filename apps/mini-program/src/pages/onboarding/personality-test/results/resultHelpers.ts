@@ -1,10 +1,11 @@
+
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 import {
   hasAnonymousAssessmentResult,
   type AnonymousAssessmentResult,
   type AnonymousAssessmentSessionSnapshot,
   type AnonymousAssessmentTopMatch,
 } from '../../../../lib/auth/anonymousOnboarding'
-import { getErrorMessage } from '@shared/copy/errorBaselines'
 
 export type FlowStage = 'loading' | 'slot' | 'reveal' | 'bridge' | 'result' | 'error' | 'empty'
 export type SlotPhase = 'anticipation' | 'spinning' | 'holding' | 'slowing' | 'nearMiss' | 'landed'

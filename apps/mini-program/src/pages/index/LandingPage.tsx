@@ -194,16 +194,16 @@ export default function MiniProgramLandingPage({
     <View className={pageClassName}>
       {/* Hidden preloads force WeChat to keep this critical local asset in the package.
           Without explicit <Image> tags, DevTools may treat string-only references as unused. */}
-      <View className="landing-page__asset-preload" aria-hidden>
+      <View className='landing-page__asset-preload' aria-hidden>
         <Image src={MASCOT_SRC} />
       </View>
 
-      <View className="content-zone">
+      <View className='content-zone'>
         {/* Brand watermark */}
         <View
           className={`brand-mark ${isMounted ? "stagger-in stagger-in--0" : "stagger-in-hidden"}`}
         >
-          <BrandLogo size="md" />
+          <BrandLogo size='md' />
         </View>
 
         {/* Hero: mascot + headline */}
@@ -212,10 +212,10 @@ export default function MiniProgramLandingPage({
         >
           {!mascotError ? (
             <Image
-              className="hero-mascot"
+              className='hero-mascot'
               src={mascotSrc}
-              mode="aspectFit"
-              ariaLabel="悦仔"
+              mode='aspectFit'
+              ariaLabel='悦仔'
               lazyLoad={false}
               onLoad={() => {
                 logInfo('[LandingPage] mascot loaded', { src: mascotSrc })
@@ -241,13 +241,13 @@ export default function MiniProgramLandingPage({
               }}
             />
           ) : (
-            <View className="hero-mascot-fallback">
-              <Text className="hero-mascot-fallback-emoji" aria-label="悦仔">🐶</Text>
+            <View className='hero-mascot-fallback'>
+              <Text className='hero-mascot-fallback-emoji' aria-label='悦仔'>🐶</Text>
             </View>
           )}
-          <View className="hero-text">
-            <Text className="headline">你的<Text className="headline--accent">命格</Text>里，藏着谁</Text>
-            <Text className="subtitle">测出你的氛围命格，找到最聊得来的 4-6 人小局</Text>
+          <View className='hero-text'>
+            <Text className='headline'>你的<Text className='headline--accent'>命格</Text>里，藏着谁</Text>
+            <Text className='subtitle'>测出你的氛围命格，找到最聊得来的 4-6 人小局</Text>
           </View>
         </View>
 
@@ -258,12 +258,12 @@ export default function MiniProgramLandingPage({
         <View
           className={`game-preview ${isMounted ? "stagger-in stagger-in--3" : "stagger-in-hidden"}`}
         >
-          <View className="game-preview__title" role="heading" aria-level={3}>
-            <View className="game-preview__title-sheen" />
-            <View className="game-preview__title-star game-preview__title-star--tl">✦</View>
-            <View className="game-preview__title-star game-preview__title-star--tr">✦</View>
-            <View className="game-preview__title-star game-preview__title-star--bl">✦</View>
-            <View className="game-preview__title-star game-preview__title-star--br">✦</View>
+          <View className='game-preview__title' role='heading' aria-level={3}>
+            <View className='game-preview__title-sheen' />
+            <View className='game-preview__title-star game-preview__title-star--tl'>✦</View>
+            <View className='game-preview__title-star game-preview__title-star--tr'>✦</View>
+            <View className='game-preview__title-star game-preview__title-star--bl'>✦</View>
+            <View className='game-preview__title-star game-preview__title-star--br'>✦</View>
             <Text>氛围引擎 · 10+ 种玩法随局定制</Text>
           </View>
           <PhaseIconCarousel isVisible={isMounted} />
@@ -278,18 +278,18 @@ export default function MiniProgramLandingPage({
       >
         {/* Warm auth-hint — tells the user WHY CTAs are briefly disabled */}
         {isAuthLoading && !isAuthTimedOut && (
-          <View className="landing-page__auth-hint">
-            <Text className="landing-page__auth-hint-text">悦仔正在确认你的派对身份</Text>
-            <View className="landing-page__auth-hint-dots">
-              <View className="landing-page__auth-hint-dot" />
-              <View className="landing-page__auth-hint-dot" />
-              <View className="landing-page__auth-hint-dot" />
+          <View className='landing-page__auth-hint'>
+            <Text className='landing-page__auth-hint-text'>悦仔正在确认你的派对身份</Text>
+            <View className='landing-page__auth-hint-dots'>
+              <View className='landing-page__auth-hint-dot' />
+              <View className='landing-page__auth-hint-dot' />
+              <View className='landing-page__auth-hint-dot' />
             </View>
           </View>
         )}
 
         <Button
-          variant="brand"
+          variant='brand'
           className={"landing-page__cta landing-page__cta--primary" + ctaDisabledClass}
           hoverClass={ctaHoverClass}
           loading={isPageExiting}
@@ -325,8 +325,8 @@ export default function MiniProgramLandingPage({
           className={`landing-page__login-row ${isMounted ? "stagger-in stagger-in--5" : "stagger-in-hidden"}`}
         >
           <Button
-            variant="brand"
-            className="landing-page__login-btn"
+            variant='brand'
+            className='landing-page__login-btn'
             disabled={isAuthLoading || isLoggingIn || isPageExiting}
             loading={isLoggingIn}
             onClick={() => {
@@ -365,25 +365,25 @@ export default function MiniProgramLandingPage({
               "landing-page__legal-checkbox" +
               (hasAcceptedLegal ? " landing-page__legal-checkbox--checked" : "")
             }
-            role="checkbox"
+            role='checkbox'
             aria-checked={hasAcceptedLegal}
-            aria-label="同意用户协议和隐私政策"
+            aria-label='同意用户协议和隐私政策'
             onClick={() => {
               hapticLight()
               setHasAcceptedLegal((current) => !current)
             }}
           >
-            {hasAcceptedLegal && <View className="landing-page__legal-checkbox-mark" aria-hidden="true" />}
+            {hasAcceptedLegal && <View className='landing-page__legal-checkbox-mark' aria-hidden='true' />}
           </View>
 
-          <View className="landing-page__legal-text">
+          <View className='landing-page__legal-text'>
             <Text>我已阅读并同意</Text>
-            <Navigator url={MINI_PROGRAM_ROUTES.terms} className="landing-page__legal-link">《用户协议》</Navigator>
+            <Navigator url={MINI_PROGRAM_ROUTES.terms} className='landing-page__legal-link'>《用户协议》</Navigator>
             <Text>和</Text>
-            <Navigator url={`${MINI_PROGRAM_ROUTES.terms}?section=privacy`} className="landing-page__legal-link">《隐私政策》</Navigator>
+            <Navigator url={`${MINI_PROGRAM_ROUTES.terms}?section=privacy`} className='landing-page__legal-link'>《隐私政策》</Navigator>
           </View>
 
-          <Text aria-live="polite" className="landing-page__sr-only">
+          <Text aria-live='polite' className='landing-page__sr-only'>
             {shakeLegal ? '请先阅读并同意用户协议和隐私政策' : ''}
           </Text>
         </View>
@@ -392,26 +392,26 @@ export default function MiniProgramLandingPage({
       {/* Auth timeout banner — rendered outside the gated bottom-zone so it
           remains tappable even when CTAs are locked. */}
       {isAuthTimedOut && (
-        <View className="landing-page__auth-timeout" role="alert" aria-live="polite">
-          <Text className="landing-page__auth-timeout-text">网络有点慢，悦仔帮你再连一次？</Text>
-          <View className="landing-page__auth-timeout-actions">
+        <View className='landing-page__auth-timeout' role='alert' aria-live='polite'>
+          <Text className='landing-page__auth-timeout-text'>网络有点慢，悦仔帮你再连一次？</Text>
+          <View className='landing-page__auth-timeout-actions'>
             <View
-              className="landing-page__auth-timeout-btn landing-page__auth-timeout-btn--primary"
-              hoverClass="landing-page__auth-timeout-btn--hover"
+              className='landing-page__auth-timeout-btn landing-page__auth-timeout-btn--primary'
+              hoverClass='landing-page__auth-timeout-btn--hover'
               onClick={() => onAuthRetry?.()}
-              role="button"
-              aria-label="重试验证"
+              role='button'
+              aria-label='重试验证'
             >
-              <Text className="landing-page__auth-timeout-btn-text">再试一次</Text>
+              <Text className='landing-page__auth-timeout-btn-text'>再试一次</Text>
             </View>
             <View
-              className="landing-page__auth-timeout-btn"
-              hoverClass="landing-page__auth-timeout-btn--hover"
+              className='landing-page__auth-timeout-btn'
+              hoverClass='landing-page__auth-timeout-btn--hover'
               onClick={() => onAuthDismiss?.()}
-              role="button"
-              aria-label="跳过验证继续"
+              role='button'
+              aria-label='跳过验证继续'
             >
-              <Text className="landing-page__auth-timeout-btn-text">先逛逛</Text>
+              <Text className='landing-page__auth-timeout-btn-text'>先逛逛</Text>
             </View>
           </View>
         </View>

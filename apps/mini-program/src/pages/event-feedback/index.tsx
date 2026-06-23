@@ -1,8 +1,9 @@
 import { View, Text, Button, Textarea, Image, ScrollView } from '@tarojs/components'
-import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { apiRequest } from '../../lib/api/api'
 import { queryClient } from '../../lib/api/queryClient'
 import { CONNECTIONS_SHELL_QUERY_KEY } from '../../lib/prefetchEngine'
@@ -17,7 +18,6 @@ import RatingFace from '../../components/ui/RatingFace'
 import JoyJoinLoadingScreen from '../../components/loading/JoyJoinLoadingScreen'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import Card from '../../components/ui/Card'
-import { getErrorMessage } from '@shared/copy/errorBaselines'
 import './index.scss'
 
 interface Participant {
@@ -145,7 +145,7 @@ export default function EventFeedbackPage() {
             className='event-feedback__success-hero'
             mode='aspectFit'
             src={CEREMONY_HEROES.eventFeedbackThanks}
-            ariaLabel=""
+            ariaLabel=''
             lazyLoad
           />
           <Image

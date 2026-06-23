@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react'
 import Taro from '@tarojs/taro'
-import { localAsset } from '../lib/utils/cdnAssets'
-import { logError, logWarn } from '../lib/utils/logger'
 import {
   getIconMapping,
   getLocalIconAssetPath,
 } from '@joyjoin/shared/iconSystem'
+import { localAsset } from '../lib/utils/cdnAssets'
+import { logWarn } from '../lib/utils/logger'
 
 export interface PreloadableIntentOption {
   emoji?: string

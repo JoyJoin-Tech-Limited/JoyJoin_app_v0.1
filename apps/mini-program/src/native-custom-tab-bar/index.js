@@ -1,3 +1,4 @@
+/* globals Component, wx, getCurrentPages */
 Component({
   options: {
     addGlobalClass: true,
@@ -13,10 +14,23 @@ Component({
   _confirmedSelected: 0,
   _platform: '',
   _isLowEnd: false,
+  // Network + lifecycle
+  _isOnline: true,
+  _networkStatusHandler: null,
+  _pendingSyncState: null,
+  _isDetached: false,
+  // Tab switch in-flight guard
+  _switchInFlight: false,
+  _switchTimer: null,
+  // Screen-reader announcement timer
+  _announcementTimer: null,
 
   data: {
     selected: 0,
     lowEnd: false,
+    hidden: true,
+    collapsed: false,
+    announcement: '',
     center: {
       label: '进行中',
       showBadge: false,
@@ -77,14 +91,56 @@ Component({
       var info = wx.getSystemInfoSync ? wx.getSystemInfoSync() : {}
       this._platform = info.platform || 'other'
       // benchmarkLevel: 1–50. <= 15 is low-end (budget Android / old iOS).
-      this._isLowEnd = (info.benchmarkLevel || 50) <= 15
+      // iOS devices without benchmarkLevel are treated as low-end because
+      // modern iPhones reliably expose this field.
+      var hasBenchmark = typeof info.benchmarkLevel === 'number'
+      this._isLowEnd = (hasBenchmark && info.benchmarkLevel <= 15) ||
+        (!hasBenchmark && this._platform === 'ios')
       if (this._isLowEnd) {
         this.setData({ lowEnd: true })
       }
+
+      // Preserve selection across re-attachment (e.g., tab bar re-created).
+      this._confirmedSelected = Number(this.data.selected) || 0
+
+      // Hide by default; setSelected will reveal on tab pages.
+      var shouldHide = this._shouldHideOnPage()
+      if (shouldHide) {
+        this.setData({ hidden: true })
+      }
+
+      // Network awareness for deferred badge updates.
+      var self = this
+      this._isDetached = false
+      this._networkStatusHandler = function (res) {
+        self._isOnline = res.isConnected
+        if (res.isConnected && self._pendingSyncState) {
+          var pending = self._pendingSyncState
+          self._pendingSyncState = null
+          self.syncState(pending)
+        }
+      }
+      if (wx.getNetworkType) {
+        wx.getNetworkType({
+          success: function (res) {
+            self._isOnline = res.networkType !== 'none'
+          },
+        })
+      }
+      if (wx.onNetworkStatusChange) {
+        wx.onNetworkStatusChange(this._networkStatusHandler)
+      }
     },
+
     detached: function () {
+      this._isDetached = true
       clearTimeout(this._syncTimer)
       clearTimeout(this._showTimer)
+      clearTimeout(this._switchTimer)
+      clearTimeout(this._announcementTimer)
+      if (this._networkStatusHandler && wx.offNetworkStatusChange) {
+        wx.offNetworkStatusChange(this._networkStatusHandler)
+      }
     },
   },
 
@@ -115,6 +171,13 @@ Component({
     syncState: function (state) {
       var self = this
       clearTimeout(this._syncTimer)
+
+      // Defer updates while offline; replay on reconnect.
+      if (!this._isOnline) {
+        this._pendingSyncState = state
+        return
+      }
+      this._pendingSyncState = null
 
       this._syncTimer = setTimeout(function () {
         var update = {}
@@ -176,8 +239,9 @@ Component({
     },
 
     setSelected: function (selected) {
-      this._confirmedSelected = selected
-      this.setData({ selected: selected })
+      var n = Number(selected)
+      this._confirmedSelected = n
+      this.setData({ selected: n, hidden: false })
     },
 
     setCenterState: function (center) {
@@ -188,29 +252,66 @@ Component({
       this.syncState({ badges: badges })
     },
 
+    /**
+     * Collapses or expands the tab bar surface.
+     * Returns true when the state changed, false when already in target
+     * state or when the component is detached.
+     */
+    setCollapsed: function (collapsed) {
+      if (this._isDetached) return false
+      if (this.data.collapsed === collapsed) return false
+      this._setAnnouncement(collapsed ? '标签栏已收起' : '标签栏已展开')
+      this.setData({ collapsed: collapsed })
+      return true
+    },
+
     handleTabTap: function (e) {
-      var index = e.currentTarget.dataset.index
+      var index = Number(e.currentTarget.dataset.index)
       var url = e.currentTarget.dataset.url
       var tabKey = e.currentTarget.dataset.tab
       var previousSelected = this._confirmedSelected
       var self = this
 
-      this.trackTabBarEvent('mini_program_tab_bar_tap', {
-        tab: tabKey || 'unknown',
-        index: index,
-      })
+      // Ignore re-taps on the current tab and rapid taps while switching.
+      if (index === this._confirmedSelected || this._switchInFlight) {
+        return
+      }
 
-      // Optimistic update: update _confirmedSelected too so the
-      // pageLifetimes.show safety net (100ms) doesn't revert it.
+      // Optimistic UI update: highlight the tapped tab immediately.
       this._confirmedSelected = index
-      this.setData({ selected: index })
+      this.setData({ selected: index, hidden: false })
+
+      this._switchInFlight = true
+      clearTimeout(this._switchTimer)
+      this._switchTimer = setTimeout(function () {
+        self._switchInFlight = false
+      }, 2000)
+
       wx.switchTab({
         url: url,
+        success: function () {
+          self._releaseSwitchGuard()
+          self._confirmedSelected = index
+          self._setAnnouncement(self._getTabAnnouncement(index))
+        },
         fail: function (err) {
+          self._releaseSwitchGuard()
           console.warn('[TabBar] switchTab failed for tab ' + tabKey + ':', err)
           self._confirmedSelected = previousSelected
           self.setData({ selected: previousSelected })
+          self.trackTabBarEvent('mini_program_tab_bar_switch_fail', {
+            tab: tabKey || 'unknown',
+            index: index,
+          })
+          if (wx.showToast) {
+            wx.showToast({ title: '切换失败，请重试', icon: 'none' })
+          }
         },
+      })
+
+      this.trackTabBarEvent('mini_program_tab_bar_tap', {
+        tab: tabKey || 'unknown',
+        index: index,
       })
 
       this._triggerHaptic()
@@ -221,25 +322,89 @@ Component({
       var previousSelected = this._confirmedSelected
       var self = this
 
+      // Ignore re-taps and rapid taps while switching.
+      if (this._confirmedSelected === 4 || this._switchInFlight) {
+        return
+      }
+
+      // Optimistic UI update.
+      this._confirmedSelected = 4
+      this.setData({ selected: 4, hidden: false })
+
+      this._switchInFlight = true
+      clearTimeout(this._switchTimer)
+      this._switchTimer = setTimeout(function () {
+        self._switchInFlight = false
+      }, 2000)
+
+      wx.switchTab({
+        url: action.url,
+        success: function () {
+          self._releaseSwitchGuard()
+          self._confirmedSelected = 4
+          self._setAnnouncement('已切换到中心入口')
+        },
+        fail: function (err) {
+          self._releaseSwitchGuard()
+          console.warn('[TabBar] switchTab failed for center:', err)
+          self._confirmedSelected = previousSelected
+          self.setData({ selected: previousSelected })
+          self.trackTabBarEvent('mini_program_center_button_switch_fail', {
+            action_kind: action.kind || 'unknown',
+            navigation: action.navigation || 'unknown',
+          })
+          if (wx.showToast) {
+            wx.showToast({ title: '切换失败，请重试', icon: 'none' })
+          }
+        },
+      })
+
       this.trackTabBarEvent('mini_program_center_button_tap', {
         action_kind: action.kind || 'unknown',
         navigation: action.navigation || 'unknown',
       })
 
-      // Optimistic update: update _confirmedSelected too so the
-      // pageLifetimes.show safety net (100ms) doesn't revert it.
-      this._confirmedSelected = 4
-      this.setData({ selected: 4 })
-      wx.switchTab({
-        url: action.url,
-        fail: function (err) {
-          console.warn('[TabBar] switchTab failed for center:', err)
-          self._confirmedSelected = previousSelected
-          self.setData({ selected: previousSelected })
-        },
-      })
-
       this._triggerHaptic()
+    },
+
+    _releaseSwitchGuard: function () {
+      this._switchInFlight = false
+      clearTimeout(this._switchTimer)
+      this._switchTimer = null
+    },
+
+    _setAnnouncement: function (text) {
+      var self = this
+      clearTimeout(this._announcementTimer)
+      this.setData({ announcement: text })
+      this._announcementTimer = setTimeout(function () {
+        self.setData({ announcement: '' })
+      }, 1000)
+    },
+
+    _getTabAnnouncement: function (index) {
+      var names = this._tabNames
+      if (!names) {
+        names = {}
+        this.data.leftTabs.forEach(function (tab) { names[tab.index] = tab.text })
+        this.data.rightTabs.forEach(function (tab) { names[tab.index] = tab.text })
+        names[4] = '中心入口'
+      }
+      return '已切换到' + (names[index] || '')
+    },
+
+    _shouldHideOnPage: function () {
+      var tabRoutes = [
+        'pages/discover/index',
+        'pages/events/index',
+        'pages/connections/index',
+        'pages/profile/index',
+        'pages/center-hub/index',
+      ]
+      var pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
+      var route = (pages[0] && pages[0].route) || ''
+      var normalized = route.replace(/^\//, '').split('?')[0]
+      return tabRoutes.indexOf(normalized) < 0
     },
 
     /**
@@ -268,7 +433,5 @@ Component({
         console.warn('[TabBarAnalytics]', eventType, data)
       }
     },
-
-
   },
 })

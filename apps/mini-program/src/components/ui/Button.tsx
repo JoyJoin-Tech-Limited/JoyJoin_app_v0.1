@@ -1,4 +1,4 @@
-import { Button as TaroButton, type ButtonProps, Text, View } from '@tarojs/components'
+import { Button as TaroButton, type ButtonProps, View } from '@tarojs/components'
 import './Button.scss'
 
 export interface JoyButtonProps extends Omit<ButtonProps, 'variant' | 'size'> {

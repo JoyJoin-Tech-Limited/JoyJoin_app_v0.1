@@ -1,8 +1,8 @@
 import { View, Text } from '@tarojs/components'
-import ArchetypeHead from '../mascot/ArchetypeHead'
-import './ProfileArchetypeHero.scss'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { getArchetypeFamily } from '@shared/archetypeColors'
+import ArchetypeHead from '../mascot/ArchetypeHead'
+import './ProfileArchetypeHero.scss'
 
 export interface ProfileArchetypeHeroProps {
   archetype?: string | null

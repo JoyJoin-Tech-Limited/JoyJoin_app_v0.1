@@ -11,6 +11,8 @@
  * to local paths, but a warning is emitted.
  */
 
+import { useCallback, useState } from 'react'
+
 const DEFAULT_CDN_BASE_URL = ''
 
 export const CDN_BASE_URL = (
@@ -67,8 +69,6 @@ export function localAsset(localPath: string): string {
   }
   return localPath
 }
-
-import { useCallback, useState } from 'react'
 
 /**
  * React hook for CDN-first image loading with a local bundled fallback.

@@ -68,5 +68,5 @@ export function useProfessionRetry(user: AuthUserResponse | null | undefined) {
           message: err instanceof Error ? err.message : String(err),
         })
       })
-  }, [user?.id, user?.features?.smartProfession, user?.industryRawInput, user?.industryNiche])
+  }, [user])
 }

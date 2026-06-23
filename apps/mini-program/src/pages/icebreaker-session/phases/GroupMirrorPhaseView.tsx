@@ -231,9 +231,9 @@ export default function GroupMirrorPhaseView({
             <View className='icebreaker__mirror-identity-wrapper'>
               <IdentityReveal
                 identity={overallWinner.displayName}
-                label="大家眼中的 TA"
+                label='大家眼中的 TA'
                 revealed={showIdentity}
-                spotlightColor="#8B5CF6"
+                spotlightColor='#8B5CF6'
               />
             </View>
           )}
@@ -244,9 +244,9 @@ export default function GroupMirrorPhaseView({
               <ParticleBurst
                 key={burstKey}
                 trigger={showBurst}
-                type="roses"
+                type='roses'
                 count={50}
-                spotlightColor="#FF6B9D"
+                spotlightColor='#FF6B9D'
               />
             </View>
           )}

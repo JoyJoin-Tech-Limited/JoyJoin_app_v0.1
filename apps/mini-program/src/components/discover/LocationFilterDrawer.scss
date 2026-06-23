@@ -2,181 +2,25 @@
 @use '../../styles/mixins' as *;
 
 // ─── Location Filter Drawer ──────────────────────────────────────
-// Premium area selector for Discover page.
-// Design goals:
-//   • Generous spacing and readable type (no microscopic heat labels)
-//   • 2-column district grid for breathable, tappable cards
-//   • Clear hierarchy: all-regions hero → cluster sections → district tiles
-//   • Active state is unmistakable (filled primary + checkmark)
-//   • Scroll events are handled by the inner ScrollView; only chrome/backdrop
-//     catch touchmove so the district list remains scrollable.
+// Premium area selector for the Discover page. Built on PickerShell +
+// SelectableTile. Preserves multi-select/filter-by-cluster behavior,
+// heat badges, and pending-opacity semantics.
+
 .location-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: $z-modal;
-  pointer-events: none;
-
-  &--open {
-    pointer-events: auto;
-  }
-
-  // ── Backdrop ──────────────────────────────────────────────────
-  &__backdrop {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    background: $color-overlay;
-    opacity: 0;
-    pointer-events: none;
-    will-change: opacity;
-    transition: opacity 250ms ease-out;
-
-    &--open {
-      opacity: 1;
-      pointer-events: auto;
-    }
-  }
-
-  // ── Drawer Surface ────────────────────────────────────────────
-  &__surface {
-    position: absolute;
-    right: 0;
-    bottom: $tab-bar-root-height;
-    left: 0;
-    // Fixed height so the flex child (ScrollView) gets a definite pixel value —
-    // WeChat Mini Program requires a concrete height for scroll-y to activate.
-    height: calc(1020rpx - $tab-bar-root-height);
-    min-height: 0;
-    background: $color-surface;
-    border-radius: 40rpx 40rpx 0 0;
-    box-shadow: 0 -12rpx 40rpx rgba(0, 0, 0, 0.1);
-    transform: translateY(100%);
-    opacity: 0;
-    will-change: transform, opacity;
-    transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1),
-                opacity 260ms ease-out;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-
-    &--open {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-
-  // ── Drag Handle ───────────────────────────────────────────────
-  &__handle-bar {
-    width: 48rpx;
-    height: 5rpx;
-    border-radius: 3rpx;
-    background: $color-divider;
-    margin: 20rpx auto 12rpx;
-  }
-
-  // ── Header ────────────────────────────────────────────────────
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16rpx $container-padding 24rpx;
-    flex-shrink: 0;
-  }
-
-  &__title-row {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-  }
-
-  &__title-mascot {
-    width: 48rpx;
-    height: 48rpx;
-    flex-shrink: 0;
-  }
-
-  &__title {
-    @include type-heading;
-  }
-
-  &__close {
-    min-width: 88rpx;
-    min-height: 88rpx;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: $color-bg;
-    transition: background 150ms ease;
-
-    &--hover {
-      background: $color-divider;
-    }
-  }
-
-  &__close-icon {
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    font-weight: $font-weight-bold;
-  }
-
-  // ── Scrollable Content ────────────────────────────────────────
   &__scroll {
-    flex: none;
-    height: calc(1020rpx - $tab-bar-root-height - 165rpx);
-    min-height: 0;
-    overflow: hidden;
+    height: 100%;
   }
 
   &__content {
     padding: 0 $container-padding;
   }
 
-  // ── All Regions Tile ──────────────────────────────────────────
-  &__all-tile {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: $spacing-sm;
-    height: 112rpx;
-    margin-bottom: $spacing-lg;
-    border-radius: $card-radius-sm;
-    background: $color-bg;
-    border: 2rpx solid transparent;
-    transition: background 200ms ease, transform 150ms ease-out, box-shadow 200ms ease;
-
-    &--active {
-      background: $color-primary;
-      border-color: transparent;
-      box-shadow: 0 8rpx 24rpx rgba($color-primary, 0.25);
-
-      .location-drawer__all-tile-icon,
-      .location-drawer__all-tile-text {
-        color: $color-text-white;
-      }
-    }
-  }
-
-  &__tile--hover {
-    transform: scale(0.97);
-  }
-
+  // ── All Regions Tile ────────────────────────────────────────────
   &__all-tile-icon {
     font-size: 36rpx;
   }
 
-  &__all-tile-text {
-    font-size: $font-size-base;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-  }
-
-  // ── Cluster Section ───────────────────────────────────────────
+  // ── Cluster Section ─────────────────────────────────────────────
   &__cluster {
     margin-bottom: $spacing-lg;
 
@@ -207,68 +51,14 @@
     color: $color-text-secondary;
   }
 
-  // ── District Grid ─────────────────────────────────────────────
+  // ── District Grid ───────────────────────────────────────────────
   &__district-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: $spacing-md;
   }
 
-  &__district-tile {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-end;
-    min-height: 136rpx;
-    padding: 20rpx;
-    border-radius: $card-radius-sm;
-    background: $color-bg;
-    border: 2rpx solid transparent;
-    transition: background 200ms ease, border-color 200ms ease, transform 150ms ease-out, box-shadow 200ms ease;
-
-    &--active {
-      background: $color-primary;
-      border-color: transparent;
-      box-shadow: 0 8rpx 24rpx rgba($color-primary, 0.22);
-
-      .location-drawer__district-name {
-        color: $color-text-white;
-      }
-
-      .location-drawer__check {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-
-    &--pending {
-      opacity: 0.55;
-      background: $color-bg;
-    }
-  }
-
-  &__district-name {
-    font-size: $font-size-base;
-    line-height: $line-height-tight;
-    font-family: $font-cn-display;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    text-align: left;
-    word-break: normal;
-    overflow-wrap: break-word;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    // Reserve room for the top-right badge or checkmark.
-    padding-right: 56rpx;
-  }
-
   &__heat-badge {
-    position: absolute;
-    top: 16rpx;
-    right: 16rpx;
     display: inline-flex;
     align-items: center;
     padding: 6rpx 12rpx;
@@ -277,7 +67,6 @@
     font-weight: $font-weight-semibold;
     line-height: 1;
     white-space: nowrap;
-    transition: background 200ms ease, color 200ms ease;
 
     &--hot {
       background: rgba($color-secondary, 0.12);
@@ -295,71 +84,23 @@
     }
   }
 
-  &__check {
-    position: absolute;
-    top: 16rpx;
-    right: 16rpx;
-    width: 32rpx;
-    height: 32rpx;
-    border-radius: 50%;
-    background: $color-text-white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transform: scale(0.8);
-    transition: opacity 200ms ease, transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  &__check-icon {
-    font-size: 20rpx;
-    color: $color-primary;
-    font-weight: $font-weight-bold;
-    line-height: 1;
-  }
-
-  // ── Safe Area ─────────────────────────────────────────────────
+  // ── Safe Area ───────────────────────────────────────────────────
   &__safe-bottom {
     height: env(safe-area-inset-bottom);
     min-height: 24rpx;
   }
 }
 
-// ─── Reduced Motion ──────────────────────────────────────────────
-// JS-driven class (low-end benchmark / storage override / OS preference)
-// plus CSS media query as the canonical accessibility fallback.
-.location-drawer--reduce-motion {
-  .location-drawer__backdrop,
-  .location-drawer__surface,
-  .location-drawer__district-tile,
-  .location-drawer__all-tile,
-  .location-drawer__check {
-    transition-duration: 0.01ms !important;
-  }
-
-  .location-drawer__tile--hover {
-    transform: none;
+// ── Reduced Motion ────────────────────────────────────────────────
+// JS-driven class plus media-query fallback.
+.picker-shell--reduce-motion.location-drawer {
+  .location-drawer__heat-badge {
+    transition: none !important;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .location-drawer {
-    &__backdrop,
-    &__surface {
-      transition-duration: 0.01ms !important;
-    }
-
-    &__district-tile,
-    &__all-tile {
-      transition-duration: 0.01ms !important;
-    }
-
-    &__check {
-      transition-duration: 0.01ms !important;
-    }
-  }
-
-  .location-drawer__tile--hover {
-    transform: none;
+  .location-drawer__heat-badge {
+    transition: none !important;
   }
 }

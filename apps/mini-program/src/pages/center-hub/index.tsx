@@ -1,8 +1,6 @@
-import { CustomWrapper, View, Text, Image } from '@tarojs/components'
+import { View, Text, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { haptics } from '../../lib/utils/haptics'
 import { useMemo } from 'react'
-import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { useQuery } from '@tanstack/react-query'
 import {
   getMyBlindBoxEvents,
@@ -14,11 +12,12 @@ import {
   resolveCenterTabDestination,
   type CenterTabDestination,
 } from '@joyjoin/shared/centerTabRouting'
+import { haptics } from '../../lib/utils/haptics'
+import { localAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { buildPoolGroupDetailUrl } from '../../lib/navigation/matchingNavigation'
-import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import PageMorphWrapper from '../../components/ui/PageMorphWrapper'

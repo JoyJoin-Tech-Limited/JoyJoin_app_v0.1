@@ -275,7 +275,38 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
       font-family: $font-ui;
       font-size: $font-size-xs;
       color: $ticket-text-subtle;
+      white-space: nowrap;
+      word-break: keep-all;
     }
+  }
+
+  // Inclusion detail expand link
+  &__inclusion-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8rpx;
+    margin-top: 8rpx;
+    padding: 0;
+    min-height: 88rpx;
+    transition: opacity 120ms ease;
+
+    &--pressed {
+      opacity: 0.6;
+    }
+  }
+
+  &__inclusion-link-text {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $color-primary;
+    line-height: 1.5;
+  }
+
+  &__inclusion-link-chevron {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $color-primary;
+    line-height: 1;
   }
 
   // Coupon stub

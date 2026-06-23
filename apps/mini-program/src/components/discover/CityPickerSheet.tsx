@@ -1,12 +1,16 @@
-import { View, Text, Input, Image, ScrollView } from '@tarojs/components'
-import JoyJoinIcon from '../ui/JoyJoinIcon'
+import { View, Text, Input, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import SearchIcon from '../ui/SearchIcon'
+import CloseIcon from '../ui/CloseIcon'
 import { apiRequest } from '../../lib/api/api'
 import { haptics } from '../../lib/utils/haptics'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import { logInfo } from '../../lib/utils/logger'
+import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
+import PickerShell from './PickerShell'
+import SelectableTile from './SelectableTile'
 import './CityPickerSheet.scss'
 
 // Static data — define outside component to avoid re-creation on every render
@@ -30,19 +34,31 @@ interface CityPickerSheetProps {
   visible: boolean
   onClose: () => void
   onSuccess: (city: string) => void
+  /** City to re-select when the sheet opens (e.g. previous user choice). */
+  initialSelectedCity?: string | null
 }
 
-export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPickerSheetProps) {
+export default function CityPickerSheet({
+  visible,
+  onClose,
+  onSuccess,
+  initialSelectedCity = null,
+}: CityPickerSheetProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCity, setSelectedCity] = useState<string | null>(null)
+  const [selectedCity, setSelectedCity] = useState<string | null>(initialSelectedCity)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
+  const [offline, setOffline] = useState(false)
+  const [searchFocused, setSearchFocused] = useState(false)
   const [celebrated, setCelebrated] = useState(false)
   const [scrollToCity, setScrollToCity] = useState('')
   const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const scrollClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const submittingRef = useRef(false)
 
-  // Reset state when sheet opens
+  const { shouldReduceMotion: reduceMotion } = useMiniRevealMotion()
+
+  // Reset transient state when the sheet opens; preserve the user's previous selection.
   useEffect(() => {
     if (visible) {
       if (celebrationTimerRef.current) {
@@ -50,13 +66,18 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
         celebrationTimerRef.current = null
       }
       setSearchQuery('')
-      setSelectedCity(null)
       setLoading(false)
+      setError(false)
+      setOffline(false)
+      setSearchFocused(false)
       setCelebrated(false)
       setScrollToCity('')
       submittingRef.current = false
+      // Restore previous selection on reopen so users don't start from scratch.
+      setSelectedCity(initialSelectedCity)
       discoverAnalytics.track('city_picker_open')
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible])
 
   // Cleanup timers on unmount
@@ -105,10 +126,12 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
 
   const handleSearch = useCallback((value: string) => {
     setSearchQuery(value)
+    if (error) setError(false)
+    if (offline) setOffline(false)
     if (value.trim()) {
       discoverAnalytics.track('city_picker_search', undefined, { queryLength: value.trim().length })
     }
-  }, [])
+  }, [error, offline])
 
   const handleClearSearch = useCallback(() => {
     haptics('light')
@@ -121,12 +144,14 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
     haptics('medium')
 
     setLoading(true)
+    setError(false)
+    setOffline(false)
     discoverAnalytics.track('city_picker_confirm', undefined, { city })
     try {
       try {
         const networkRes = await Taro.getNetworkType()
         if (networkRes.networkType === 'none') {
-          Taro.showToast({ title: '网络好像断开了，请检查连接', icon: 'none', duration: 2000 })
+          setOffline(true)
           discoverAnalytics.track('city_picker_offline_blocked', undefined, { city })
           return
         }
@@ -137,7 +162,8 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
       await apiRequest({
         method: 'POST',
         path: '/api/cities/interest',
-        data: { city, source: 'floating_banner' },
+        data: { city, source: 'city_feed_card' },
+        timeout: 10000,
       })
 
       haptics('success')
@@ -151,11 +177,7 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
     } catch (err) {
       logInfo('[CityPicker] interest register failed', { city, error: String(err) })
       discoverAnalytics.track('city_picker_error', undefined, { city, error: String(err) })
-      Taro.showToast({
-        title: '网络开小差了，请重试',
-        icon: 'none',
-        duration: 2000,
-      })
+      setError(true)
     } finally {
       setLoading(false)
       submittingRef.current = false
@@ -163,60 +185,116 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
   }, [onSuccess])
 
   const handleSelectCity = useCallback((city: string) => {
-    if (submittingRef.current) return
+    if (submittingRef.current || loading) return
     haptics('light')
     setSelectedCity(city)
+    if (error) setError(false)
+    if (offline) setOffline(false)
     discoverAnalytics.track('city_picker_select', undefined, { city })
     if (!searchQuery.trim()) {
       setScrollToCity(`city-${city}`)
     }
-    void submitCity(city)
-  }, [searchQuery, submitCity])
+  }, [searchQuery, loading, error, offline])
 
   const handleConfirm = useCallback(() => {
-    if (!selectedCity) return
+    if (!selectedCity || loading) return
     void submitCity(selectedCity)
-  }, [selectedCity, submitCity])
+  }, [selectedCity, loading, submitCity])
 
-  if (!visible) return null
+  const handleRetry = useCallback(() => {
+    if (!selectedCity || loading) return
+    haptics('light')
+    void submitCity(selectedCity)
+  }, [selectedCity, loading, submitCity])
 
   const showHotCities = !searchQuery.trim()
   const displayName = (city: string) => city.replace('市', '')
 
-  return (
-    <View className='city-picker-overlay' onClick={handleClose} catchMove>
-      <View
-        className='city-picker-sheet'
-        role='dialog'
-        aria-modal='true'
-        aria-label='城市选择'
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Drag handle */}
-        <View className='city-picker-sheet__handle' />
-
-        {/* Header with mascot */}
-        <View className='city-picker-sheet__header'>
-          <View className='city-picker-sheet__header-row'>
-            <Image
-              className='city-picker-sheet__mascot'
-              src={getXiaoyueExpressionAsset('homeWelcome')}
-              mode='aspectFit'
-            />
-            <Text className='city-picker-sheet__title'>你想在哪个城市遇到有趣的人？</Text>
+  const footer = (
+    <View className='city-picker__footer'>
+      {offline && (
+        <View className='city-picker__offline'>
+          <Text className='city-picker__offline-text'>网络好像断开了，请检查连接后再试</Text>
+          <View
+            className='city-picker__offline-retry'
+            onClick={handleRetry}
+            hoverClass='city-picker__offline-retry--hover'
+            role='button'
+            aria-label='重试登记'
+          >
+            <Text className='city-picker__offline-retry-text'>重试</Text>
           </View>
-          <Text className='city-picker-sheet__subtitle'>告诉我们你的城市，人数够了悦仔就来安排</Text>
         </View>
+      )}
+      {error && !offline && (
+        <View className='city-picker__error'>
+          <Text className='city-picker__error-text'>网络开小差了，登记没成功</Text>
+          <View
+            className='city-picker__error-retry'
+            onClick={handleRetry}
+            hoverClass='city-picker__error-retry--hover'
+            role='button'
+            aria-label='重试登记'
+          >
+            <Text className='city-picker__error-retry-text'>重试</Text>
+          </View>
+        </View>
+      )}
+      <View
+        className={`city-picker__confirm ${!selectedCity || loading || offline ? 'city-picker__confirm--disabled' : ''} ${loading ? 'city-picker__confirm--loading' : ''}`}
+        onClick={handleConfirm}
+        hoverClass={selectedCity && !loading && !offline ? 'city-picker__confirm--hover' : ''}
+        role='button'
+        aria-label='确认选择城市'
+      >
+        <Text className='city-picker__confirm-text'>
+          {offline ? '网络已断开' : loading ? '登记中...' : selectedCity ? `确认选择 ${displayName(selectedCity)}` : '请选择城市'}
+        </Text>
+      </View>
+    </View>
+  )
 
+  const overlay = celebrated ? (
+    <View className='city-picker__celebration'>
+      <Image
+        className='city-picker__celebration-mascot'
+        src={getXiaoyueExpressionAsset('matchSuccess')}
+        mode='aspectFit'
+        aria-hidden='true'
+      />
+      <View className='city-picker__celebration-check'>
+        <Text className='city-picker__celebration-icon'>✓</Text>
+      </View>
+      <Text className='city-picker__celebration-text'>已登记！</Text>
+      <Text className='city-picker__celebration-sub'>悦仔会第一时间通知你</Text>
+    </View>
+  ) : null
+
+  return (
+    <PickerShell
+      visible={visible}
+      onClose={handleClose}
+      mascotExpression='homeWelcome'
+      title='你想在哪个城市遇到有趣的人？'
+      subtitle='告诉我们你的城市，人数够了悦仔就来安排'
+      showClose
+      reduceMotion={reduceMotion}
+      footer={footer}
+      overlay={overlay}
+      className='city-picker-shell'
+    >
+      <View className='city-picker'>
         {/* Search */}
-        <View className='city-picker-sheet__search'>
-          <JoyJoinIcon emoji='🔍' tier='ui' size={28} className='city-picker-sheet__search-icon' />
+        <View className={`city-picker__search ${searchFocused ? 'city-picker__search--focused' : ''}`}>
+          <SearchIcon size={28} className='city-picker__search-icon' />
           <Input
-            className='city-picker-sheet__search-input'
+            className='city-picker__search-input'
             type='text'
-            placeholder='搜索城市'
+            placeholder='搜索你想解锁的城市'
             value={searchQuery}
             onInput={(e) => handleSearch(e.detail.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             onConfirm={() => {
               if (filteredCities.length === 1) {
                 handleSelectCity(filteredCities[0])
@@ -225,98 +303,74 @@ export default function CityPickerSheet({ visible, onClose, onSuccess }: CityPic
           />
           {searchQuery.trim() && (
             <View
-              className='city-picker-sheet__search-clear'
+              className='city-picker__search-clear'
               onClick={handleClearSearch}
-              hoverClass='city-picker-sheet__search-clear--hover'
+              hoverClass='city-picker__search-clear--hover'
               aria-label='清除搜索'
             >
-              <JoyJoinIcon emoji='✕' size={24} className='city-picker-sheet__search-clear-icon' />
+              <CloseIcon size={24} className='city-picker__search-clear-icon' />
             </View>
           )}
         </View>
 
         {/* Hot cities — shown when search is empty */}
         {showHotCities ? (
-          <View className='city-picker-sheet__hot-section'>
-            <View className='city-picker-sheet__section-label'>
-              <JoyJoinIcon emoji='🔥' size={24} />
-              <Text className='city-picker-sheet__section-title'>热门城市</Text>
-            </View>
-            <View className='city-picker-sheet__hot-grid'>
+          <View className='city-picker__hot-section'>
+            <Text className='city-picker__section-title'>热门城市</Text>
+            <View className='city-picker__hot-grid'>
               {HOT_CITIES.map((city) => (
-                <View
+                <SelectableTile
                   key={city}
-                  className={`city-picker-sheet__hot-item ${selectedCity === city ? 'city-picker-sheet__hot-item--selected' : ''}`}
+                  variant='compact'
+                  label={displayName(city)}
+                  selected={selectedCity === city}
                   onClick={() => handleSelectCity(city)}
-                  hoverClass='city-picker-sheet__tile--hover'
-                  aria-label={`选择 ${displayName(city)}`}
-                >
-                  <Text className='city-picker-sheet__hot-item-text'>{displayName(city)}</Text>
-                </View>
+                  ariaLabel={`选择 ${displayName(city)}`}
+                />
               ))}
             </View>
           </View>
         ) : (
           /* Spacer to prevent layout jump when hot section hides */
-          <View className='city-picker-sheet__hot-section-placeholder' />
+          <View className='city-picker__hot-section-placeholder' />
         )}
 
         {/* City list */}
         <ScrollView
-          className='city-picker-sheet__list'
+          className='city-picker__list'
           scrollY
           scrollWithAnimation
           enableFlex
           scrollIntoView={scrollToCity}
+          // VirtualList is intentionally not used: city list max 41 items.
         >
           {filteredCities.map((city) => (
-            <View
+            <SelectableTile
               key={city}
               id={`city-${city}`}
-              className={`city-picker-sheet__list-item ${selectedCity === city ? 'city-picker-sheet__list-item--selected' : ''}`}
+              variant='row'
+              label={displayName(city)}
+              selected={selectedCity === city}
               onClick={() => handleSelectCity(city)}
-              hoverClass='city-picker-sheet__list-item--hover'
-              aria-label={`选择 ${displayName(city)}`}
-            >
-              <Text className='city-picker-sheet__list-item-text'>{displayName(city)}</Text>
-              {selectedCity === city && (
-                <JoyJoinIcon emoji='✓' size={28} className='city-picker-sheet__list-item-check' />
-              )}
-            </View>
+              ariaLabel={`选择 ${displayName(city)}`}
+            />
           ))}
           {filteredCities.length === 0 && (
-            <View className='city-picker-sheet__empty city-picker-sheet__empty--enter'>
-              <Text className='city-picker-sheet__empty-text'>暂未收录这个城市，试试其他关键词</Text>
+            <View className='city-picker__empty city-picker__empty--enter'>
+              <Image
+                className='city-picker__empty-mascot'
+                src={getXiaoyueExpressionAsset('testCurious')}
+                mode='aspectFit'
+                aria-hidden='true'
+              />
+              <Text className='city-picker__empty-text'>悦仔还没去过这座城市</Text>
+              <Text className='city-picker__empty-hint'>换个关键词试试，或者选一座热门城市</Text>
             </View>
           )}
-          <View className='city-picker-sheet__list-safe-bottom' />
+          <View className='city-picker__list-safe-bottom' />
         </ScrollView>
-
-        {/* Celebration overlay — shown on successful registration */}
-        {celebrated && (
-          <View className='city-picker-sheet__celebration'>
-            <View className='city-picker-sheet__celebration-check'>
-              <JoyJoinIcon emoji='✓' size={48} className='city-picker-sheet__celebration-icon' />
-            </View>
-            <Text className='city-picker-sheet__celebration-text'>已登记！</Text>
-            <Text className='city-picker-sheet__celebration-sub'>悦仔会第一时间通知你</Text>
-          </View>
-        )}
-
-        {/* Confirm button */}
-        <View className='city-picker-sheet__footer'>
-          <View
-            className={`city-picker-sheet__confirm ${!selectedCity || loading ? 'city-picker-sheet__confirm--disabled' : ''} ${loading ? 'city-picker-sheet__confirm--loading' : ''}`}
-            onClick={handleConfirm}
-            hoverClass={selectedCity && !loading ? 'city-picker-sheet__confirm--hover' : ''}
-          >
-            <Text className='city-picker-sheet__confirm-text'>
-              {loading ? '登记中...' : selectedCity ? `确认选择 ${displayName(selectedCity)}` : '请选择城市'}
-            </Text>
-          </View>
-        </View>
       </View>
-    </View>
+    </PickerShell>
   )
 }
 

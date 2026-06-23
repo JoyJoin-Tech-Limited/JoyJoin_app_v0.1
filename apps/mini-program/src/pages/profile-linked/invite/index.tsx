@@ -196,7 +196,7 @@ export default function InvitePage() {
             className='invite-page__share-hero'
             mode='aspectFit'
             src={CEREMONY_HEROES.inviteCoBranded}
-            ariaLabel=""
+            ariaLabel=''
             lazyLoad
           />
           <Text className='invite-page__link-label'>专属邀请链接</Text>

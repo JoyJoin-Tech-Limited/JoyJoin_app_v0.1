@@ -6,7 +6,7 @@
 > **Audience:** Frontend engineers and QA validating `apps/mini-program` in
 > WeChat DevTools or on a real device.
 >
-> **Last updated:** 2026-06-18
+> **Last updated:** 2026-06-23
 
 ---
 
@@ -25,6 +25,7 @@ This smoke proves:
 3. Route-format quirks (leading `/`, Taro timestamp query string) do not
    accidentally hide the bar on a valid tab page.
 4. The active highlight and center button render and respond to taps.
+5. Collapse, screen-reader announcements, and offline replay do not regress.
 
 ---
 
@@ -40,7 +41,7 @@ npm run build:weapp -w mini-program
 
 Expected result:
 
-- All tab-bar behavior tests pass (31 tests as of 2026-06-23).
+- All tab-bar behavior tests pass (37 tests as of 2026-06-23).
 - Mini-program typecheck passes.
 - WeChat build succeeds and refreshes `apps/mini-program/dist`.
 
@@ -160,6 +161,13 @@ On a tab page:
    button should show its selected state.
 3. Rapidly tap two different side tabs. Only one `wx.switchTab` should fire; the
    second tap is ignored while in-flight.
+4. Collapse / expand the bar (e.g., by calling `getTabBar().setCollapsed(true)`
+   from a page that supports it). The bar should animate to a collapsed state,
+   the announcement text should read `标签栏已收起`, and the bar should expand
+   again with `setCollapsed(false)`.
+5. Toggle the device network to **offline** and tap a tab. The bar should remain
+   responsive because tab switches are local; `syncState` calls should be queued
+   and replayed when the network returns.
 
 ---
 
@@ -195,7 +203,8 @@ The smoke passes only when **all** of the following are true:
 5. DevTools shows the tab bar hidden or not attached on at least one non-tab
    page (e.g., `pages/login/index`).
 6. Tab taps and center-button taps animate and switch correctly.
-7. No console errors from the tab bar component (`check_health` or DevTools
+7. Collapse / expand and screen-reader announcements update `data.announcement`.
+8. No console errors from the tab bar component (`check_health` or DevTools
    Console).
 
 ---
@@ -210,6 +219,11 @@ Treat any of the following as a regression:
 - Active pill does not align with the selected tab after navigation.
 - Center button tap does not hide the pill or switch to `pages/center-hub/index`.
 - Rapid tab taps queue multiple `wx.switchTab` calls.
+- `setCollapsed` leaves the bar in a visually inconsistent state or fails to
+  announce the change.
+- Offline reconnect does not replay pending `syncState` updates.
+- `wx.switchTab` failure does not roll back the optimistic selected index or
+  surface a toast.
 
 Common environmental false positives:
 

@@ -41,7 +41,6 @@ export function useLoadingOrchestrator(isLoading: boolean): LoadingOrchestratorR
     }
 
     // Loading resolved
-    const elapsed = Date.now() - startTimeRef.current
     hideTimeRef.current = Date.now()
     if (showTimerRef.current) {
       clearTimeout(showTimerRef.current)

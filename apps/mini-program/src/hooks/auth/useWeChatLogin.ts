@@ -10,7 +10,6 @@ import { seedMiniProgramAuthSession } from '../../lib/api/authSession'
 import { navigateToMiniProgramNextStep } from '../../lib/onboarding/onboardingNavigation'
 import { logInfo, logError } from '../../lib/utils/logger'
 import { TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
-import { getErrorMessage } from '@shared/copy/errorBaselines'
 
 /**
  * useWeChatLogin – Taro WeChat Mini Program login hook.

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { apiRequest } from '../../lib/api/api'
 import type { CouponValidationResponse } from '@shared/api'
 import { isEventPackPlanType } from '@shared/api'
+import { apiRequest } from '../../lib/api/api'
 import type { MiniProgramPaymentPlanKey } from '../../lib/payment/paymentPageModel'
 
 const CENTS_PER_YUAN = 100

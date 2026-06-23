@@ -94,7 +94,6 @@ interface StoredSelection {
 export default function TierSelectorPage() {
   const router = useRouter()
   const sessionId = router.params.sessionId ?? ''
-  const eventId = router.params.eventId ?? ''
   const { user } = useAuth()
   const displayName = getUserDisplayName(user as Record<string, unknown> | undefined)
 

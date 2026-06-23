@@ -1,6 +1,8 @@
 import { CustomWrapper, Image, ScrollView, Text, View } from '@tarojs/components'
 import { useEffect, useRef } from 'react'
 import { useRouter } from '@tarojs/taro'
+import { getStatusLabel } from '@shared/features/matching-status'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
@@ -14,8 +16,6 @@ import {
   MatchingStatusPendingSection,
 } from './MatchingStatusSections'
 import { MatchCompassShell } from './MatchCompassSections'
-import { getStatusLabel } from '@shared/features/matching-status'
-import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { haptics } from '../../lib/utils/haptics'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
 import {

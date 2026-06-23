@@ -72,14 +72,6 @@ function getUtf8ByteLength(str: string): number {
   return byteLength
 }
 
-function getCacheSizeBytes(wrapper: CacheWrapper): number {
-  try {
-    return getUtf8ByteLength(JSON.stringify(wrapper))
-  } catch {
-    return Infinity
-  }
-}
-
 function isValidCacheEntry(entry: unknown): entry is CacheEntry {
   if (!entry || typeof entry !== 'object') return false
   const e = entry as Record<string, unknown>

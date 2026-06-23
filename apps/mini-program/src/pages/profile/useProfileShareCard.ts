@@ -42,19 +42,19 @@ export function useProfileShareCard(options: UseProfileShareCardOptions) {
     }
   }, [isGenerating])
 
-  const generate = useCallback(async () => {
-    const {
-      displayName,
-      archetype,
-      archetypeName,
-      archetypeFamilyName,
-      userCity,
-      userAge,
-      topInterests,
-      referralCode,
-      isDegradation,
-    } = options
+  const {
+    displayName,
+    archetype,
+    archetypeName,
+    archetypeFamilyName,
+    userCity,
+    userAge,
+    topInterests,
+    referralCode,
+    isDegradation,
+  } = options
 
+  const generate = useCallback(async () => {
     if (isGenerating || !archetype) return
 
     haptics('light')
@@ -160,15 +160,15 @@ export function useProfileShareCard(options: UseProfileShareCardOptions) {
     }
   }, [
     isGenerating,
-    options.displayName,
-    options.archetype,
-    options.archetypeName,
-    options.archetypeFamilyName,
-    options.userCity,
-    options.userAge,
-    options.topInterests,
-    options.referralCode,
-    options.isDegradation,
+    displayName,
+    archetype,
+    archetypeName,
+    archetypeFamilyName,
+    userCity,
+    userAge,
+    topInterests,
+    referralCode,
+    isDegradation,
   ])
 
   return {

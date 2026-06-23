@@ -78,7 +78,7 @@ export function useCountUp(target: number, options: UseCountUpOptions = {}): num
         cancelAnimationFrame(rafId)
       }
     }
-  }, [target, duration, enabled, delay])
+  }, [target, duration, enabled, delay, shouldReduceMotion])
 
   return value
 }

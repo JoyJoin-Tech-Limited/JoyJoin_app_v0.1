@@ -206,30 +206,30 @@ export default function PhaseIconCarousel({ isVisible }: PhaseIconCarouselProps)
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchCancel}
-      role="button"
-      aria-label="破冰玩法轮盘，点击暂停，左右滑动切换"
+      role='button'
+      aria-label='破冰玩法轮盘，点击暂停，左右滑动切换'
     >
-      <View className="phase-carousel__asset-preload" aria-hidden>
-        <Image src="/assets/landing-phase-icons/phase-topic-card.webp" />
-        <Image src="/assets/landing-phase-icons/phase-lie-detective.webp" />
-        <Image src="/assets/landing-phase-icons/phase-personality-dice.webp" />
-        <Image src="/assets/landing-phase-icons/phase-auction.webp" />
-        <Image src="/assets/landing-phase-icons/phase-mini-script.webp" />
-        <Image src="/assets/landing-phase-icons/phase-quip-battle.webp" />
+      <View className='phase-carousel__asset-preload' aria-hidden>
+        <Image src='/assets/landing-phase-icons/phase-topic-card.webp' />
+        <Image src='/assets/landing-phase-icons/phase-lie-detective.webp' />
+        <Image src='/assets/landing-phase-icons/phase-personality-dice.webp' />
+        <Image src='/assets/landing-phase-icons/phase-auction.webp' />
+        <Image src='/assets/landing-phase-icons/phase-mini-script.webp' />
+        <Image src='/assets/landing-phase-icons/phase-quip-battle.webp' />
       </View>
       {showHint && hasBorn && (
-        <View className="phase-carousel__hint">
-          <Text className="phase-carousel__hint-text">点击暂停 · 左右滑动切换</Text>
+        <View className='phase-carousel__hint'>
+          <Text className='phase-carousel__hint-text'>点击暂停 · 左右滑动切换</Text>
         </View>
       )}
-      <View className="phase-carousel__track">
+      <View className='phase-carousel__track'>
         {phases.map((phase, i) => {
           const pos = getPosIndex(i)
           const posClass = pos === -1 ? "phase-carousel__item--birth" : `phase-carousel__item--pos-${pos}`
           return (
             <View key={phase.key} className={`phase-carousel__item ${posClass}`} aria-hidden={pos !== 0}>
               {!iconErrors[phase.key] ? (
-                <Image className="phase-carousel__item-img" src={cdnFallbacks[phase.key] ? phase.cdnIcon : phase.icon} mode="aspectFit" lazyLoad={false}
+                <Image className='phase-carousel__item-img' src={cdnFallbacks[phase.key] ? phase.cdnIcon : phase.icon} mode='aspectFit' lazyLoad={false}
                   {...{ alt: phase.label } as any}
                   onLoad={() => {
                     logInfo('[PhaseIconCarousel] phase icon loaded', { phase: phase.key, src: cdnFallbacks[phase.key] ? phase.cdnIcon : phase.icon })
@@ -254,29 +254,30 @@ export default function PhaseIconCarousel({ isVisible }: PhaseIconCarouselProps)
                       console.warn('[PhaseIconCarousel] phase icon load failed (local+cdn)', ctx)
                     })
                     handleIconError(phase.key)
-                  }} />
+                  }}
+                />
               ) : (
-                <View className="phase-carousel__item-fallback">
-                  <Text className="phase-carousel__item-fallback-icon">{phase.label}</Text>
+                <View className='phase-carousel__item-fallback'>
+                  <Text className='phase-carousel__item-fallback-icon'>{phase.label}</Text>
                 </View>
               )}
             </View>
           )
         })}
       </View>
-      <View className="phase-carousel__info" aria-live="polite">
-        <Text className="phase-carousel__label">{currentPhase.label}</Text>
-        <Text className="phase-carousel__slogan">{currentPhase.slogan}</Text>
+      <View className='phase-carousel__info' aria-live='polite'>
+        <Text className='phase-carousel__label'>{currentPhase.label}</Text>
+        <Text className='phase-carousel__slogan'>{currentPhase.slogan}</Text>
       </View>
-      <View className="phase-carousel__dots">
+      <View className='phase-carousel__dots'>
         {phases.map((_, i) => (
           <View key={i} className={`phase-carousel__dot ${i === currentIndex ? "phase-carousel__dot--active" : ""}`} />
         ))}
       </View>
       {!isPlaying && (
-        <View className="phase-carousel__pause-indicator">
-          <View className="phase-carousel__play-circle"><Text className="phase-carousel__play-triangle">▶</Text></View>
-          <Text className="phase-carousel__pause-hint">点击继续</Text>
+        <View className='phase-carousel__pause-indicator'>
+          <View className='phase-carousel__play-circle'><Text className='phase-carousel__play-triangle'>▶</Text></View>
+          <Text className='phase-carousel__pause-hint'>点击继续</Text>
         </View>
       )}
     </View>

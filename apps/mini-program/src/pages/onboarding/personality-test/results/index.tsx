@@ -1002,7 +1002,7 @@ export default function PersonalityTestResultsPage() {
     } finally {
       isAnimatingRef.current = false
     }
-  }, [analytics, auth.isAuthenticated, displayArchetypeName, fetchResult])
+  }, [analytics, auth.isAuthenticated, displayArchetypeName, fetchResult, personalitySlotAnimationEnabled, sessionSnapshot?.result, topMatches])
 
   /**
    * Start the result animation after critical assets are confirmed ready.
@@ -1174,7 +1174,7 @@ export default function PersonalityTestResultsPage() {
 
     // Inline login: import anonymous answers + WeChat login, skip the auth-gate page.
     const answers = readAnonymousAssessmentAnswers()
-    const sessionSnapshot = readAnonymousAssessmentSession()
+    const anonymousSessionSnapshot = readAnonymousAssessmentSession()
 
     // Show explicit confirmation before silent WeChat login so users know auth is happening.
     const { confirm } = await Taro.showModal({
@@ -1192,12 +1192,12 @@ export default function PersonalityTestResultsPage() {
     try {
       logInfo('[PersonalityResults] Importing anonymous assessment before login', {
         answerCount: answers.length,
-        hasSessionId: !!sessionSnapshot?.sessionId,
+        hasSessionId: !!anonymousSessionSnapshot?.sessionId,
       })
 
       await authenticateMiniProgramUserWithTest({
         testAnswers: answers,
-        anonymousSessionId: sessionSnapshot?.sessionId ?? null,
+        anonymousSessionId: anonymousSessionSnapshot?.sessionId ?? null,
       })
 
       const userState = await getUserState()
@@ -1228,7 +1228,7 @@ export default function PersonalityTestResultsPage() {
     } finally {
       setIsLoggingIn(false)
     }
-  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, isLoggingIn, analytics, queryClient])
+  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, displayArchetypeName, isLoggingIn, analytics, queryClient])
 
   /**
    * Present a frictionless action sheet for sharing the generated poster.
@@ -1464,6 +1464,7 @@ export default function PersonalityTestResultsPage() {
     analytics,
     archetypeRank,
     cardNickname,
+    deviceTier.isDegradation,
     displayArchetype,
     displayArchetypeName,
     displayAsset,
@@ -1476,6 +1477,8 @@ export default function PersonalityTestResultsPage() {
     skillSet,
     summary,
     topMatches,
+    traitEntries,
+    typicalityLabel,
     variants,
     visual,
   ])

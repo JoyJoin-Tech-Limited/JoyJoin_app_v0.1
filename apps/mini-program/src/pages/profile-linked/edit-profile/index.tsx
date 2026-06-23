@@ -31,7 +31,6 @@ import { profileAnalytics } from '../../../lib/analytics/profileAnalytics'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 
 import ProfileArchetypeHero from '../../../components/profile/ProfileArchetypeHero'
-import InterestChipCloud from '../../../components/profile/InterestChipCloud'
 import ProfessionDisplayField from '../../../components/profile/ProfessionDisplayField'
 import ProfessionChatOverlay from '../../../components/ProfessionChatOverlay'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
@@ -136,7 +135,7 @@ export default function EditProfilePage() {
 
   // UI state
   const [isSaving, setIsSaving] = useState(false)
-  const [isPageExiting, setIsPageExiting] = useState(false)
+  const [, setIsPageExiting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [contentViolations, setContentViolations] = useState<Record<string, string>>({})
   const [changedFields, setChangedFields] = useState<Record<string, boolean>>({})
@@ -320,7 +319,7 @@ export default function EditProfilePage() {
   const handleBirthYearChange = useCallback((e: any) => {
     const idx = e.detail.value as number
     const year = parseInt(BIRTH_YEAR_RANGE[idx], 10)
-    if (!isNaN(year)) {
+    if (!Number.isNaN(year)) {
       setBirthYear(year)
       setChangedFields((prev) => ({ ...prev, birthYear: true }))
       setFieldErrors((prev) => ({ ...prev, birthYear: '' }))
@@ -494,8 +493,8 @@ export default function EditProfilePage() {
     selectedInterests,
     interestLevels,
     invalidateAuth,
-    contentViolations,
     bio,
+    redesignEnabled,
   ])
 
   const birthYearIndex = birthYear ? BIRTH_YEAR_RANGE.indexOf(String(birthYear)) : -1

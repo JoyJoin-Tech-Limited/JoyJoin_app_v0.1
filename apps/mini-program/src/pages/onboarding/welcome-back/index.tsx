@@ -9,7 +9,6 @@ import {
   navigateToMiniProgramNextStep,
   markWelcomeBackScreenSeen,
 } from '../../../lib/onboarding/onboardingNavigation'
-import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { restartOnboarding } from '../../../lib/api/api'
 import { seedMiniProgramAuthSession } from '../../../lib/api/authSession'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
@@ -123,65 +122,65 @@ export default function WelcomeBackPage() {
 
   if (auth.isLoading) {
     return (
-      <View className="welcome-back">
-        <View className="welcome-back__skeleton">
-          <BrandLogo size="md" />
-          <View className="welcome-back__skeleton-line welcome-back__skeleton-line--title" />
-          <View className="welcome-back__skeleton-line welcome-back__skeleton-line--subtitle" />
+      <View className='welcome-back'>
+        <View className='welcome-back__skeleton'>
+          <BrandLogo size='md' />
+          <View className='welcome-back__skeleton-line welcome-back__skeleton-line--title' />
+          <View className='welcome-back__skeleton-line welcome-back__skeleton-line--subtitle' />
         </View>
       </View>
     )
   }
 
   return (
-    <View className="welcome-back">
+    <View className='welcome-back'>
       {/* C1 — Ceremony hero backdrop behind mascot (Batch C welcome-back-hero) */}
       <Image
-        className="welcome-back__hero"
+        className='welcome-back__hero'
         src={CEREMONY_HEROES.welcomeBack}
-        mode="aspectFit"
-        ariaLabel=""
+        mode='aspectFit'
+        ariaLabel=''
         lazyLoad
       />
-      <View className="welcome-back__content">
+      <View className='welcome-back__content'>
         {/* Mascot */}
-        <View className="welcome-back__mascot-wrap">
+        <View className='welcome-back__mascot-wrap'>
           {mascotSrc !== '' ? (
             <Image
-              className="welcome-back__mascot"
+              className='welcome-back__mascot'
               src={mascotSrc}
-              mode="aspectFit"
-              ariaLabel="悦仔"
+              mode='aspectFit'
+              ariaLabel='悦仔'
               onError={() => setMascotSrc('')}
             />
           ) : (
-            <View className="welcome-back__mascot-fallback">
-              <BrandLogo size="lg" />
+            <View className='welcome-back__mascot-fallback'>
+              <BrandLogo size='lg' />
             </View>
           )}
         </View>
 
         {/* Text content */}
-        <View className="welcome-back__text">
-          <Text className="welcome-back__headline">欢迎回来</Text>
-          <Text className="welcome-back__subtitle">
+        <View className='welcome-back__text'>
+          <Text className='welcome-back__headline'>欢迎回来</Text>
+          <Text className='welcome-back__subtitle'>
             你上次进行到了「{stepName}」，随时可以继续完成
           </Text>
         </View>
 
         {/* Step card */}
-        <View className="welcome-back__step-card">
-          <Text className="welcome-back__step-label">上次进度</Text>
-          <Text className="welcome-back__step-name">{stepName}</Text>
+        <View className='welcome-back__step-card'>
+          <Text className='welcome-back__step-label'>上次进度</Text>
+          <Text className='welcome-back__step-name'>{stepName}</Text>
         </View>
       </View>
 
       {/* CTAs */}
-      <View className="welcome-back__actions">
+      <View className='welcome-back__actions'>
         <Button
-          variant="brand"
-          className="welcome-back__cta welcome-back__cta--primary"
-          hoverClass="welcome-back__cta-hover"
+          variant='brand'
+          className='welcome-back__cta welcome-back__cta--primary'
+          hoverClass='welcome-back__cta-hover'
           loading={isNavigating}
           disabled={isRestarting}
           onClick={handleContinue}
@@ -190,8 +189,8 @@ export default function WelcomeBackPage() {
         </Button>
 
         <Button
-          variant="secondary"
-          className="welcome-back__cta welcome-back__cta--secondary"
+          variant='secondary'
+          className='welcome-back__cta welcome-back__cta--secondary'
           loading={isRestarting}
           disabled={isNavigating}
           onClick={handleRestartClick}

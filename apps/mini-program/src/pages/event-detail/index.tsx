@@ -1,15 +1,13 @@
 import { View, Text, ScrollView, Button, Image } from '@tarojs/components'
-import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { type BlindBoxEventDetail } from '@shared/api'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { useJoyJoinNavigation } from '../../hooks/navigation/useJoyJoinNavigation'
-import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
-import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import { getErrorMessage } from '@shared/copy/errorBaselines'
 import JoyJoinLoadingScreen from '../../components/loading/JoyJoinLoadingScreen'
 import './index.scss'
 
@@ -43,7 +41,7 @@ export default function EventDetailPage() {
           <Image
             className='event-detail__error-hero'
             src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
-            mode='aspectFit'
+            mode='widthFix'
             lazyLoad
           />
           <Text className='event-detail__error-text'>加载活动详情没成功</Text>

@@ -1,7 +1,7 @@
 import { View, Text } from '@tarojs/components'
 import { useEffect, useCallback, useState } from 'react'
-import { useAchievements } from '../providers/AchievementProvider'
 import { getRarityClassName } from '@shared/achievements'
+import { useAchievements } from '../providers/AchievementProvider'
 import JoyJoinIcon from './ui/JoyJoinIcon'
 import './AchievementPopup.scss'
 

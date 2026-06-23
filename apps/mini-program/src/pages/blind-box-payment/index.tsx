@@ -1,10 +1,6 @@
 import { View, Text, Image, ScrollView } from '@tarojs/components'
-import JoyButton from '../../components/ui/Button'
-import Card from '../../components/ui/Card'
-import FirstTimeCouponBanner from '../../components/FirstTimeCouponBanner'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { apiRequest } from '../../lib/api/api'
 import {
   createMiniProgramPaymentIntent,
   getPricing,
@@ -14,6 +10,11 @@ import {
   type PricingPlan,
   type UserCouponSummary,
 } from '@shared/api'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import JoyButton from '../../components/ui/Button'
+import Card from '../../components/ui/Card'
+import FirstTimeCouponBanner from '../../components/FirstTimeCouponBanner'
+import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { logError, logWarn } from '../../lib/utils/logger'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
@@ -39,7 +40,6 @@ import {
   resolveMiniProgramPaymentPlans,
   type MiniProgramPaymentPlanKey,
 } from '../../lib/payment/paymentPageModel'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 
 // ─── Payment Ritual V2 Imports (Sprint 1: Foundation + Sprint 2: Polish) ───
 import RitualActAnticipation from './components/RitualActAnticipation'
@@ -460,7 +460,7 @@ export default function BlindBoxPaymentPage() {
     } finally {
       setIsBootstrapping(false)
     }
-  }, [isRitualEnabled, userArchetype, userCity, user?.id])
+  }, [isRitualEnabled])
 
   useEffect(() => {
     if (authLoading || !user?.id) {
@@ -520,7 +520,7 @@ export default function BlindBoxPaymentPage() {
   const hesitationLine = useMemo(() => {
     if (!ritualContext) return ''
     return getHesitationCopy(ritualContext.archetypeFamily)
-  }, [ritualContext?.archetypeFamily])
+  }, [ritualContext])
 
   useEffect(() => {
     if (ritualStage !== 'act3' || !ritualContext) {
@@ -773,6 +773,8 @@ export default function BlindBoxPaymentPage() {
     selectedPlan,
     user?.id,
     paymentReturnContext,
+    isRitualEnabled,
+    ritualContext?.variant,
   ])
 
   // ─── Render: Ritual V2 ───

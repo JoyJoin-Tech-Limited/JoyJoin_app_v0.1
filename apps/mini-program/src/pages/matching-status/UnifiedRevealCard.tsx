@@ -1,10 +1,10 @@
 import { Text, View, Image } from '@tarojs/components'
 import type { GroupAnalysisResponse } from '@shared/types/groupAnalysis'
+import type { ChemistryTokens, ChemistryType, UnifiedRevealTokens } from '@shared/features/matching-status'
 import ChemistryBadge from '../../components/mascot/ChemistryBadge'
 import ConnectionPointPill from '../../components/ConnectionPointPill'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import { MILESTONE_BADGES, type MilestoneBadgeKey } from '../../lib/milestoneBadges'
-import type { ChemistryTokens, ChemistryType, UnifiedRevealTokens } from '@shared/features/matching-status'
 
 export interface UnifiedRevealCardProps {
   chemistryTokens: ChemistryTokens
@@ -61,7 +61,7 @@ export default function UnifiedRevealCard({
           className='unified-reveal__d4-hero'
           mode='aspectFit'
           src={matchBadgeSrc}
-          ariaLabel=""
+          ariaLabel=''
           lazyLoad
         />
         <Text className='unified-reveal__d4-hero-label'>{matchBadgeLabel}</Text>

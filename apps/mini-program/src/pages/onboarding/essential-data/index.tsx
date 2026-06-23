@@ -40,7 +40,7 @@ import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
 import ProfessionChatOverlay from '../../../components/ProfessionChatOverlay'
 import ContentBlockedError from '../../../components/ContentBlockedError'
 import type { ProfessionClassificationData } from '../../../components/ProfessionChatOverlay'
-import { getArchetypeVisual, getXiaoyueAsset } from '../personality-test/visuals'
+import { getArchetypeVisual } from '../personality-test/visuals'
 import './index.scss'
 
 const MAX_INTENTS = 3
@@ -422,7 +422,7 @@ export default function EssentialDataPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, intent, invalidateAuth, isSubmitting, professionText, professionClassification, relationshipStatus, saveCheckpoint, workMode, contentViolations, currentStep])
+  }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, intent, invalidateAuth, isSubmitting, professionText, professionClassification, relationshipStatus, saveCheckpoint, workMode, currentStep])
 
   const handleProfessionSubmit = useCallback((value: string, classification?: ProfessionClassificationData) => {
     setProfessionText(value)

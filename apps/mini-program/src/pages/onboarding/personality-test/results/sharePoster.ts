@@ -27,7 +27,6 @@ const CARD_Y = OUTER_MARGIN
 const CARD_WIDTH = POSTER_WIDTH - OUTER_MARGIN * 2
 const CARD_HEIGHT = POSTER_HEIGHT - OUTER_MARGIN * 2
 const CARD_RIGHT = CARD_X + CARD_WIDTH
-const CARD_BOTTOM = CARD_Y + CARD_HEIGHT
 
 // Single outer-content grid line (left edge of all major blocks)
 const LEFT_EDGE = 72
@@ -39,8 +38,6 @@ const INNER_EDGE = 104
 
 // ── Spacing scale (4 px grid) ─────────────────────────────────────
 const GAP_TIGHT = 16
-const GAP_STANDARD = 24
-const GAP_MAJOR = 32
 
 // ── Layout constants (top → bottom, all on 4 px grid) ─────────────
 const CHROME_Y = 68
@@ -48,11 +45,9 @@ const CHROME_HEIGHT = 42
 
 const NAME_Y = 132
 const NAME_SIZE = 48
-const NAME_LINE_HEIGHT = 68 // 1.42
 
 const SUBTITLE_Y = 220
 const SUBTITLE_SIZE = 28
-const SUBTITLE_LINE_HEIGHT = 40 // 1.43
 
 const TAGLINE_Y = 276
 const TAGLINE_SIZE = 22
@@ -74,7 +69,6 @@ const TOPMATCHES_Y = 1052
 const TOPMATCHES_ROW_HEIGHT = 42
 
 const ENERGY_Y = 1128
-const ENERGY_HEIGHT = 54
 
 const SKILL_Y = 1200
 const SKILL_CARD_HEIGHT = 140
@@ -87,8 +81,6 @@ const FOOTER_STAMP_HEIGHT = 36
 const FOOTER_LOCKUP_SIZE = 16
 const FOOTER_CTA_SIZE = 20
 const FOOTER_CTA_LINE_HEIGHT = 28 // 1.4
-const FOOTER_WATERMARK_SIZE = 16
-const FOOTER_WATERMARK_LINE_HEIGHT = 24 // 1.5
 
 // ── Inline color tokens (to promote to CANVAS_PALETTE when convenient) ─
 const COLOR_ENERGY_AMBER = '#fbbf24'

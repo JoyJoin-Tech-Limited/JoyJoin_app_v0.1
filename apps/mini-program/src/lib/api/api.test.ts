@@ -1,6 +1,7 @@
 // @vitest-environment node
-import { readFileSync } from 'node:fs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { apiRequest } from './api'
 
 const { handleUnauthorizedMock, taroRequestMock } = vi.hoisted(() => ({
   handleUnauthorizedMock: vi.fn(),
@@ -17,8 +18,6 @@ vi.mock('@tarojs/taro', () => ({
 vi.mock('./authSession', () => ({
   handleMiniProgramUnauthorized: handleUnauthorizedMock,
 }))
-
-import { apiRequest } from './api'
 
 describe('mini-program api bootstrap', () => {
   beforeEach(() => {

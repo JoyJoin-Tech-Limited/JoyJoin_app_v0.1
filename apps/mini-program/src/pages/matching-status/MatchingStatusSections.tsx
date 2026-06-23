@@ -2,13 +2,6 @@ import { Image, ScrollView, Text, View } from '@tarojs/components'
 import type { PoolGroupDetailsResponse } from '@shared/api'
 import type { GroupAnalysisResponse, PairExplanation } from '@shared/types/groupAnalysis'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import ArchetypeHead from '../../components/mascot/ArchetypeHead'
-import Button from '../../components/ui/Button'
-import Card from '../../components/ui/Card'
-import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
-import ChemistryBadge from '../../components/mascot/ChemistryBadge'
-import UnifiedRevealCard from './UnifiedRevealCard'
-import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import {
   type ChemistryTokens,
   type LiveRevealStage,
@@ -19,6 +12,13 @@ import {
   type WaitingStateCopy,
   type UnifiedRevealTokens,
 } from '@shared/features/matching-status'
+import ArchetypeHead from '../../components/mascot/ArchetypeHead'
+import Button from '../../components/ui/Button'
+import Card from '../../components/ui/Card'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import ChemistryBadge from '../../components/mascot/ChemistryBadge'
+import UnifiedRevealCard from './UnifiedRevealCard'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { getVibeLabel } from '../../lib/matching/groupDisplay'
 import { MATCHING_BG_SRC } from './constants'
 

@@ -29,7 +29,10 @@
     // iPhone WKWebView. One shadow tuned to match the brand glow is
     // enough; the gradient overlay (z=2) provides the visual depth.
     box-shadow: 0 8rpx 28rpx rgba($color-primary, 0.1);
-    padding-bottom: 48%;      // 360/750 — WeChat-safe aspect-ratio fallback
+    // Source art is 750×563 (≈75.07 %). Match it so aspectFill doesn't
+    // crop the hero illustration.
+    aspect-ratio: 750 / 563;
+    padding-bottom: 75.07%;
     min-height: 320rpx;
   }
 

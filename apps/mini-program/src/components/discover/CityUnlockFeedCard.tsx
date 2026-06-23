@@ -1,8 +1,8 @@
 import { View, Text, Image } from '@tarojs/components'
+import { useState, useCallback, useMemo } from 'react'
 import JoyJoinIcon from '../ui/JoyJoinIcon'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { haptics } from '../../lib/utils/haptics'
-import { useState, useCallback, useMemo } from 'react'
 import './CityUnlockFeedCard.scss'
 
 interface CityUnlockFeedCardProps {

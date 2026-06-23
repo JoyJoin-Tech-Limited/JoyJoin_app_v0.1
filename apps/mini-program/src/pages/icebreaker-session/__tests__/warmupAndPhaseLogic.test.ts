@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
-import type { SessionParticipant } from '../phaseUtils'
 import type { SocialIcebreakerPhase } from '@shared/socialIcebreaker'
+import type { SessionParticipant } from '../phaseUtils'
 
 /**
  * Pure-logic extraction of buildArchetypeMixText from WarmupPhaseView.tsx

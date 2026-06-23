@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'fs'
-import { resolve, dirname } from 'path'
+import { resolve } from 'path'
 import { describe, it, expect } from 'vitest'
 
 const tabBarDir = resolve(__dirname, '..')

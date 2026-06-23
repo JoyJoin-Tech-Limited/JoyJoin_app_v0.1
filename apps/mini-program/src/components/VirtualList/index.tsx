@@ -3,14 +3,12 @@ import Taro, {
   useReady,
   usePageScroll,
   useDidShow,
-  useDidHide,
 } from '@tarojs/taro'
 import React, {
   useState,
   useRef,
   useCallback,
   useMemo,
-  useEffect,
 } from 'react'
 import {
   MINI_PROGRAM_LONG_LIST_ROW_THRESHOLD,
@@ -24,7 +22,7 @@ const BUFFER_COUNT = 3
 const FIRST_NON_VIRTUAL_COUNT = 6
 const SCROLL_THROTTLE_MS = 50
 const HEALTH_CHECK_GRACE_MS = 500
-const HEALTH_CHECK_ONGOING_MS = 200
+
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -114,13 +112,14 @@ class VirtualListErrorBoundary extends React.Component<
   { children: React.ReactNode; onError: () => void },
   ErrorBoundaryState
 > {
-  constructor(props: { children: React.ReactNode; onError: () => void }) {
-    super(props)
-    this.state = { hasError: false }
-  }
-
   static getDerivedStateFromError(): ErrorBoundaryState {
     return { hasError: true }
+  }
+
+  constructor(props: { children: React.ReactNode; onError: () => void }) {
+    super(props)
+    // eslint-disable-next-line react/no-unused-state
+    this.state = { hasError: false }
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
@@ -179,14 +178,13 @@ function VirtualListInner<T>({
   const mountedRef = useRef(false)
   const graceEndTimeRef = useRef(0)
   const renderedSetRef = useRef<Set<string>>(new Set())
-  const containerRef = useRef<string>('') // selector query ID
 
   // ── State ──
   const [windowState, setWindowState] = useState<WindowState>({
     start: 0,
     end: Math.min(items.length - 1, firstNonVirtualCount + bufferCount * 2),
   })
-  const [hasRuntimeError, setHasRuntimeError] = useState(false)
+  const [hasRuntimeError] = useState(false)
 
   // ── Fallback gate evaluation ──
   const shouldVirtualize = useMemo(() => {
@@ -231,26 +229,6 @@ function VirtualListInner<T>({
     mountedRef.current = true
   })
 
-  // ── Scroll handler ──
-  const handleScroll = useCallback(
-    throttle(({ scrollTop }: { scrollTop: number }) => {
-      scrollTopRef.current = scrollTop
-
-      if (!shouldVirtualize) return
-
-      // Schedule window recalculation via rAF
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current)
-      }
-      rafIdRef.current = requestAnimationFrame(() => {
-        calculateWindow()
-      })
-    }, SCROLL_THROTTLE_MS),
-    [shouldVirtualize, items.length, itemHeight, headerHeight, bufferCount]
-  )
-
-  usePageScroll(handleScroll)
-
   // ── Window calculation ──
   const calculateWindow = useCallback(() => {
     const scrollTop = scrollTopRef.current
@@ -274,6 +252,34 @@ function VirtualListInner<T>({
       return { start, end }
     })
   }, [items.length, itemHeight, headerHeight, bufferCount, firstNonVirtualCount])
+
+  // ── Scroll handler ──
+  const throttledScrollHandler = useMemo(
+    () =>
+      throttle(({ scrollTop }: { scrollTop: number }) => {
+        scrollTopRef.current = scrollTop
+
+        if (!shouldVirtualize) return
+
+        // Schedule window recalculation via rAF
+        if (rafIdRef.current !== null) {
+          cancelAnimationFrame(rafIdRef.current)
+        }
+        rafIdRef.current = requestAnimationFrame(() => {
+          calculateWindow()
+        })
+      }, SCROLL_THROTTLE_MS),
+    [shouldVirtualize, calculateWindow]
+  )
+
+  const handleScroll = useCallback(
+    (event: { scrollTop: number }) => {
+      throttledScrollHandler(event)
+    },
+    [throttledScrollHandler]
+  )
+
+  usePageScroll(handleScroll)
 
   // ── IntersectionObserver as validation safety net ──
   useReady(() => {
@@ -314,28 +320,6 @@ function VirtualListInner<T>({
       calculateWindow()
     }
   })
-
-  // ── Scroll-to-lower detection ──
-  useEffect(() => {
-    if (!onScrollToLower || !shouldVirtualize) return
-
-    const checkLower = () => {
-      const scrollTop = scrollTopRef.current
-      const totalHeight = items.length * itemHeight
-      const viewportHeight = viewportHeightRef.current || 600
-      if (scrollTop + viewportHeight >= totalHeight - lowerThreshold) {
-        onScrollToLower()
-      }
-    }
-
-    const throttledCheck = throttle(checkLower, 200)
-
-    // We can't easily attach to page scroll here since usePageScroll
-    // is already used. The onScrollToLower is best-effort via the
-    // existing scroll handler.
-    // This is a known limitation; callers should not rely on
-    // precise scroll-to-lower timing.
-  }, [onScrollToLower, shouldVirtualize, items.length, itemHeight, lowerThreshold])
 
   // ── Render: fallback mode ──
   if (!shouldVirtualize) {
@@ -436,7 +420,7 @@ function VirtualListInner<T>({
 // ─── Exported VirtualList with Error Boundary ─────────────────────
 
 export default function VirtualList<T>(props: VirtualListProps<T>) {
-  const [hasError, setHasError] = useState(false)
+  const [, setHasError] = useState(false)
 
   return (
     <VirtualListErrorBoundary onError={() => setHasError(true)}>

@@ -51,7 +51,7 @@
 | # | Test Case | Steps | Expected |
 |---|-----------|-------|----------|
 | 2.1 | Open location filter | On Discover page, tap location pill/button | `LocationFilterDrawer` slides up from bottom with backdrop overlay |
-| 2.2 | Drawer layout | Inspect drawer contents | Three cluster sections visible: 南山区 (6 districts), 福田区 (3 districts), 即将开放 (8 districts). District tiles render in a 2-column grid with 28rpx names. Heat shows as compact top-right badges (`热门`/`活跃`/`即将开放`); `normal` has no badge. Pending tiles are at 0.55 opacity. Top bar has Xiaoyue mascot + title + close button. |
+| 2.2 | Drawer layout | Inspect drawer contents | Drawer renders via shared `PickerShell`: drag handle, rounded top, backdrop, Xiaoyue mascot + title + close button, safe-area inset. Three cluster sections visible: 南山区 (6 districts), 福田区 (3 districts), 即将开放 (8 districts). District tiles render in a 2-column grid with 28rpx names. Heat shows as compact top-right badges (`热门`/`活跃`); `normal` has no badge. Pending tiles show a grey "待解锁" badge. |
 | 2.3 | Select a district | Tap a district tile (e.g., 科技园) | Tile shows selected state (`aria-pressed=true`) with filled primary background and white checkmark; haptic fires. Drawer auto-closes; district name shown on discover pill. |
 | 2.4 | Apply/clear filter | Tap the selected district tile again, or tap "全部区域" | Selection cleared; discover shows all districts. Tap "全部区域" also clears any active filter. |
 | 2.5 | Scroll containment | With drawer open, swipe up/down on the drawer content and on the backdrop | Drawer `ScrollView` scrolls its own content; swiping the backdrop (or at scroll edges) does not scroll the background Discover page. |
@@ -65,7 +65,7 @@
 | 2.8 | Single-select behavior | Try selecting districts from different clusters | Only one district (or "全部区域") can be active at a time; previous selection is replaced. |
 | 2.9 | No pools in selected district | Select a district with no active pools | Discover shows empty state (StatusCard with "去发现活动" or "清除筛选") |
 | 2.10 | Scroll within drawer | If many districts, scroll the list | `ScrollView` scrolls smoothly with no layout jump at flex bounds |
-| 2.11 | Verify heat indicators | Compare district heat data vs `packages/shared/src/districts.ts` | `hot` districts show a pink/coral top-right badge "热门"; `active` shows a gold badge "活跃"; `normal` has no badge; `pending` shows a grey badge "即将开放" at 0.55 opacity |
+| 2.11 | Verify heat indicators | Compare district heat data vs `packages/shared/src/districts.ts` | `hot` districts show a pink/coral top-right badge "热门"; `active` shows a gold badge "活跃"; `normal` has no badge; `pending` shows a grey "待解锁" badge (not just opacity) |
 
 ---
 

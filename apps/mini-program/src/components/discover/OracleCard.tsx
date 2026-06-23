@@ -131,6 +131,29 @@ export default React.memo(function OracleCard({
   }
   const shouldPulseCta = pulseInitRef.current && !isPoolFull
 
+  // ── Memoised copy — only recompute when pool data changes ────
+
+  const copyRef = React.useMemo(() => {
+    // Defensive fallback for the skeleton path; the actual render uses this
+    // only when hasEssentialData is true.
+    if (!pool.id || pool.title == null) {
+      return {
+        heroMessage: '',
+        teaser: '',
+        subline: '',
+        cta: { primary: '去看看' },
+        dateTime: { date: '', time: '' },
+      }
+    }
+    return {
+      heroMessage: getHeroMessage(pool, userArchetype),
+      teaser: getTypeDensityTeaser(pool, userArchetype),
+      subline: getTypeDensitySubline(pool),
+      cta: getCtaLabel(pool),
+      dateTime: formatDateTimeParts(pool.dateTime),
+    }
+  }, [pool, userArchetype])
+
   // ── Skeleton fallback ────────────────────────────────────────
 
   const hasEssentialData = pool.id && pool.title != null
@@ -144,16 +167,6 @@ export default React.memo(function OracleCard({
       </Card>
     )
   }
-
-  // ── Memoised copy — only recompute when pool data changes ────
-
-  const copyRef = React.useMemo(() => ({
-    heroMessage: getHeroMessage(pool, userArchetype),
-    teaser: getTypeDensityTeaser(pool, userArchetype),
-    subline: getTypeDensitySubline(pool),
-    cta: getCtaLabel(pool),
-    dateTime: formatDateTimeParts(pool.dateTime),
-  }), [pool, userArchetype])
 
   const { heroMessage, teaser, subline, cta, dateTime: { date: dateLabel, time: timeLabel } } = copyRef
 

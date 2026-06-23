@@ -1,15 +1,15 @@
 import { useState, useCallback } from 'react'
 import { View, Text, Input } from '@tarojs/components'
-import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Taro from '@tarojs/taro'
-import Card from '../../../components/ui/Card'
-import Button from '../../../components/ui/Button'
-import { PhaseHeaderIcon } from '../phaseUtils'
 import type {
   LieDetectivePlayer,
   LieDetectiveReveal,
   LieDetectiveVote,
 } from '@shared/socialIcebreaker'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
+import Card from '../../../components/ui/Card'
+import Button from '../../../components/ui/Button'
+import { PhaseHeaderIcon } from '../phaseUtils'
 
 // ─── Minimal client-side profanity guard (subset of server filter) ──────────
 const SENSITIVE_KEYWORDS = [
@@ -124,7 +124,7 @@ export function LieDetectivePhaseView({
       <View className='icebreaker__detective'>
         <Card className='icebreaker__detective-card'>
           <View className='icebreaker__detective-emoji'>
-            <PhaseHeaderIcon phase="lie_detective" size={80} />
+            <PhaseHeaderIcon phase='lie_detective' size={80} />
           </View>
           <Text className='icebreaker__detective-player'>
             {showTagInput ? '写下关于你的两个标签' : '✅ 已提交，等待悦仔生成…'}
@@ -215,7 +215,7 @@ export function LieDetectivePhaseView({
     return (
       <View className='icebreaker__detective'>
         <Card className='icebreaker__detective-card'>
-          <View className='icebreaker__detective-emoji'><PhaseHeaderIcon phase="lie_detective" size={80} /></View>
+          <View className='icebreaker__detective-emoji'><PhaseHeaderIcon phase='lie_detective' size={80} /></View>
           <Text className='icebreaker__detective-waiting'>
             等待所有玩家提交陈述…
           </Text>
@@ -256,7 +256,7 @@ export function LieDetectivePhaseView({
     return (
       <View className='icebreaker__detective'>
         <Card className='icebreaker__detective-card'>
-          <View className='icebreaker__detective-emoji'><PhaseHeaderIcon phase="lie_detective" size={80} /></View>
+          <View className='icebreaker__detective-emoji'><PhaseHeaderIcon phase='lie_detective' size={80} /></View>
           <Text className='icebreaker__detective-waiting'>等待侦探回合开启…</Text>
         </Card>
       </View>
@@ -276,7 +276,7 @@ export function LieDetectivePhaseView({
   return (
     <View className='icebreaker__detective'>
       <Card className='icebreaker__detective-card'>
-        <View className='icebreaker__detective-emoji'><PhaseHeaderIcon phase="lie_detective" size={80} /></View>
+        <View className='icebreaker__detective-emoji'><PhaseHeaderIcon phase='lie_detective' size={80} /></View>
         <Text className='icebreaker__detective-player'>
           {currentPlayer.displayName} 的回合
         </Text>

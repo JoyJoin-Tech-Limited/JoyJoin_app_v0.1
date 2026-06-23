@@ -1,10 +1,6 @@
 import { View, Text, Image } from '@tarojs/components'
-import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
-import { loadBrandDisplayFont } from '../../lib/utils/brandFont'
-import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
 import Taro, { usePullDownRefresh, usePageScroll, useDidHide, useDidShow } from '@tarojs/taro'
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
-import { haptics } from '../../lib/utils/haptics'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getEventPools,
@@ -20,14 +16,27 @@ import {
   sortPoolsByProximity,
   type District,
 } from '@shared/districts'
-import { apiRequest, fetchDiscoverShell } from '../../lib/api/api'
-import { loadDiscoverPools } from '../../lib/api/discoverPools'
-import { injectDiscoverShellIntoCache, POOLS_QUERY_KEY } from '../../lib/prefetchEngine'
-import { evictPersistedQuery } from '../../lib/api/persistentCache'
 import { useAuth } from '../../hooks/useAuth'
-import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
+import { apiRequest, fetchDiscoverShell } from '../../lib/api/api'
+import { loadDiscoverPools } from '../../lib/api/discoverPools'
+import { evictPersistedQuery } from '../../lib/api/persistentCache'
+import { injectDiscoverShellIntoCache, POOLS_QUERY_KEY } from '../../lib/prefetchEngine'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
+import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
+import { getDevMockPools } from '../../lib/dev/devPoolMocks'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
+import { loadBrandDisplayFont } from '../../lib/utils/brandFont'
+import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
+import { haptics } from '../../lib/utils/haptics'
+import { getTimeGreeting } from '../../lib/utils/timeGreeting'
+import {
+  getDiscoverSubtitle,
+} from '../../lib/utils/discoverHeaderCopy'
+import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
+import { logInfo, logWarn } from '../../lib/utils/logger'
+import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import PageMorphWrapper from '../../components/ui/PageMorphWrapper'
 import StatusCard from '../../components/ui/StatusCard'
@@ -38,17 +47,8 @@ import OracleCard from '../../components/discover/OracleCard'
 import LocationFilterDrawer from '../../components/discover/LocationFilterDrawer'
 import CityUnlockFeedCard from '../../components/discover/CityUnlockFeedCard'
 import CityPickerSheet from '../../components/discover/CityPickerSheet'
-import { getTimeGreeting } from '../../lib/utils/timeGreeting'
-import {
-  getDiscoverSubtitle,
-} from '../../lib/utils/discoverHeaderCopy'
-import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
-import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
-import { getDevMockPools } from '../../lib/dev/devPoolMocks'
-import { logInfo, logWarn } from '../../lib/utils/logger'
-import MiniProgramLandingPage from '../index/LandingPage'
 import SingleTestBanner from '../../components/dev/SingleTestBanner'
-import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
+import MiniProgramLandingPage from '../index/LandingPage'
 import './index.scss'
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -378,9 +378,10 @@ function AuthenticatedDiscover({
     [pools],
   )
 
+  const userId = (user as any)?.id
   const bannerVariant = useMemo(
-    () => resolveVariant((user as any)?.id, !!userArchetype),
-    [(user as any)?.id, userArchetype],
+    () => resolveVariant(userId, !!userArchetype),
+    [userId, userArchetype],
   )
 
   const handlePoolTap = useCallback((pool: EventPoolSummary) => {
@@ -746,6 +747,7 @@ export default function DiscoverPage() {
   )
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [showCityPicker, setShowCityPicker] = useState(false)
+  const [lastSelectedCity, setLastSelectedCity] = useState<string | null>(null)
 
   const handleFilterSelect = useCallback(
     (clusterId: string, districtId: string) => {
@@ -765,13 +767,13 @@ export default function DiscoverPage() {
   const handleOpenCityPicker = useCallback(() => setShowCityPicker(true), [])
   const handleCloseCityPicker = useCallback(() => setShowCityPicker(false), [])
   const handleCityPickerSuccess = useCallback((city: string) => {
+    setLastSelectedCity(city)
     setShowCityPicker(false)
     Taro.navigateTo({ url: '/pages/city-unlock/index' })
   }, [])
 
   useCustomTabBarSync({
     enabled: isAuthenticated,
-    tabKey: 'discover',
   })
 
   // Unauthenticated users should see the dedicated landing page (non-tab)
@@ -822,6 +824,7 @@ export default function DiscoverPage() {
         visible={showCityPicker}
         onClose={handleCloseCityPicker}
         onSuccess={handleCityPickerSuccess}
+        initialSelectedCity={lastSelectedCity}
       />
     </>
   )

@@ -1,8 +1,8 @@
 import { Image, Text, View } from '@tarojs/components'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import Card from '../../../../components/ui/Card'
-import { COLOR_PRIMARY } from '../../../../lib/utils/uiConstants'
 import {
   getArchetypeVisual,
   getXiaoyueExpressionAsset,
@@ -10,7 +10,6 @@ import {
 } from '../visuals'
 import { ARCHETYPE_SEQUENCE, type SlotPhase } from './resultHelpers'
 import ArchetypeSpritesheet from './ArchetypeSpritesheet'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { haptics } from '../../../../lib/utils/haptics'
 
 /* ── constants ─────────────────────────────────────────────────────── */

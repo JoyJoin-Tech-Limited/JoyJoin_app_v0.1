@@ -1,8 +1,6 @@
 import { Image, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState, useCallback, useMemo } from 'react'
-import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
-import { logError, logWarn } from '../../lib/utils/logger'
 import {
   getIconMapping,
   getLocalIconAssetPath,
@@ -10,6 +8,8 @@ import {
   type IconMapping,
   type IconTier,
 } from '@joyjoin/shared/iconSystem'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
+import { logError, logWarn } from '../../lib/utils/logger'
 
 interface JoyJoinIconProps {
   emoji: string

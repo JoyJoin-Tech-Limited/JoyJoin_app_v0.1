@@ -74,23 +74,6 @@ export function getPhaseLabel(phase: SessionPhase): string {
   }
 }
 
-const PHASE_EMOJI_MAP: Record<SessionPhase, string> = {
-  waiting: '',
-  warmup: '',
-  micro_challenge: '',
-  lie_detective: '',
-  personality_dice: '',
-  auction: '',
-  speed_friending: '',
-  mini_script: '',
-  quip_battle: '',
-  undercover_word: '',
-  group_mirror: '',
-  recap: '',
-  ended: '',
-  phase_selection: '',
-}
-
 /** Render a phase icon (Lovart 240px source, Taro downscales)
  *
  * Source assets are 240×240px WebP with transparent background.

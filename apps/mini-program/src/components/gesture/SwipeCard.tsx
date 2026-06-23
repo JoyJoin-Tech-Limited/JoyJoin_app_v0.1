@@ -116,7 +116,7 @@ export default function SwipeCard({
         else onSwipeRight?.()
       }, 280)
     },
-    [onSwipeLeft, onSwipeRight],
+    [onSwipeLeft, onSwipeRight, isReduced],
   )
 
   const handleTouchEnd = useCallback(() => {

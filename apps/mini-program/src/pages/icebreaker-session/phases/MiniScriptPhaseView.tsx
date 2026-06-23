@@ -1,10 +1,10 @@
 import { View, Text, Input } from '@tarojs/components'
-import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Taro from '@tarojs/taro'
-import Card from '../../../components/ui/Card'
-import Button from '../../../components/ui/Button'
 import { type SocialSessionState } from '@shared/socialIcebreaker'
 import { useEffect, useRef, useState, useCallback } from 'react'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
+import Card from '../../../components/ui/Card'
+import Button from '../../../components/ui/Button'
 import { haptics } from '../../../lib/utils/haptics'
 import { CardFlip, IdentityReveal, ParticleBurst } from '../../../components/reveal'
 import { TapReaction } from '../../../components/gesture'
@@ -187,7 +187,7 @@ export function MiniScriptPhaseView({
       setVoteWhat(myVote.what)
       setVoteWhy(myVote.why)
     }
-  }, [myVote?.who, myVote?.what, myVote?.why, voteDirty])
+  }, [myVote, voteDirty])
 
   const handleRevealSolutionConfirm = () => {
     Taro.showModal({
@@ -260,7 +260,7 @@ export function MiniScriptPhaseView({
     return (
       <View className='icebreaker__challenge'>
         <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
-          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={80} /></View>
+          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase='mini_script' size={80} /></View>
           <Text className='icebreaker__challenge-title'>剧本尚未生成</Text>
           <Text className='icebreaker__challenge-desc'>
             {isHost ? '点击上方「迷你剧本杀」配置风格与题材，生成你们的剧本。' : '请等待主持人生成剧本…'}
@@ -275,7 +275,7 @@ export function MiniScriptPhaseView({
     return (
       <View className='icebreaker__challenge'>
         <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
-          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={80} /></View>
+          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase='mini_script' size={80} /></View>
           <Text className='icebreaker__challenge-title'>迷你剧本杀</Text>
           <Text className='icebreaker__challenge-desc'>{framework.premise}</Text>
         </Card>
@@ -406,7 +406,7 @@ export function MiniScriptPhaseView({
       {currentStep >= 0 && <ProgressStepper currentStep={currentStep} />}
 
       <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
-        <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={80} /></View>
+        <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase='mini_script' size={80} /></View>
         <Text className='icebreaker__challenge-title'>迷你剧本杀 · 第 {currentAct} 幕</Text>
         <Text className='icebreaker__challenge-desc'>{framework.premise}</Text>
       </Card>

@@ -465,7 +465,7 @@ export default function MomentCardView({ payload, visible, onClose }: MomentCard
           <Image
             src={canvasUrl}
             style={{ width: `${CARD_WIDTH}rpx`, height: `${CARD_HEIGHT}rpx` }}
-            mode="aspectFit"
+            mode='aspectFit'
             showMenuByLongpress
           />
         ) : (

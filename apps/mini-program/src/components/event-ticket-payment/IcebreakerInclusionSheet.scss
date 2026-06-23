@@ -1,0 +1,210 @@
+@use '../../styles/variables' as *;
+
+.icebreaker-sheet-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: $color-overlay;
+  z-index: $z-modal;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  animation: icebreaker-sheet-backdrop-in 200ms ease-out;
+}
+
+.icebreaker-sheet {
+  background: $color-surface;
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 0 40rpx calc(64rpx + env(safe-area-inset-bottom));
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -4rpx 24rpx rgba(0, 0, 0, 0.06);
+  animation: icebreaker-sheet-slide-up 280ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  &__handle {
+    width: 56rpx;
+    height: 6rpx;
+    background: rgba($color-border, 0.5);
+    border-radius: 3rpx;
+    margin: 16rpx auto 24rpx;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16rpx;
+  }
+
+  &__header-left {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+    min-width: 0;
+    flex: 1;
+  }
+
+  &__mascot {
+    width: 56rpx;
+    height: 56rpx;
+    flex-shrink: 0;
+  }
+
+  &__title {
+    font-family: $font-cn-display;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary-warm;
+    line-height: 1.4;
+  }
+
+  &__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 64rpx;
+    height: 64rpx;
+    margin-right: -16rpx;
+    border-radius: 50%;
+    transition: background 120ms ease;
+    flex-shrink: 0;
+
+    &--pressed {
+      background: $color-bg;
+    }
+  }
+
+  &__close-icon {
+    font-family: $font-ui;
+    font-size: $font-size-xl;
+    color: $color-text-tertiary;
+    line-height: 1;
+  }
+
+  &__subtitle {
+    display: block;
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.6;
+    margin-bottom: 32rpx;
+  }
+
+  &__scroll {
+    flex: 1;
+    min-height: 0;
+  }
+
+  &__phase-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16rpx;
+    margin-bottom: 32rpx;
+  }
+
+  &__phase-item {
+    display: flex;
+    align-items: center;
+    gap: 20rpx;
+    padding: 20rpx 24rpx;
+    background: $color-bg;
+    border-radius: $card-radius-sm;
+  }
+
+  &__phase-number {
+    width: 40rpx;
+    height: 40rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba($color-primary, 0.1);
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    Text {
+      font-family: $font-ui;
+      font-size: $font-size-xs;
+      font-weight: $font-weight-bold;
+      color: $color-primary;
+    }
+  }
+
+  &__phase-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+    min-width: 0;
+    flex: 1;
+  }
+
+  &__phase-name-row {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+  }
+
+  &__phase-dot {
+    width: 12rpx;
+    height: 12rpx;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &--amber { background: $color-amber; }
+    &--pink { background: $color-burst-pink; }
+    &--gold { background: $color-brand-gold; }
+    &--blue { background: $color-info; }
+    &--primary { background: $color-primary; }
+  }
+
+  &__phase-name {
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary-warm;
+    line-height: 1.4;
+  }
+
+  &__phase-desc {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+  }
+
+  &__note {
+    padding: 16rpx 24rpx;
+    background: rgba($color-secondary, 0.06);
+    border-radius: $card-radius-sm;
+
+    &-text {
+      display: block;
+      font-family: $font-ui;
+      font-size: $font-size-xs;
+      color: $color-text-secondary;
+      line-height: 1.6;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icebreaker-sheet-overlay {
+    animation: none;
+  }
+
+  .icebreaker-sheet {
+    animation: none;
+  }
+}
+
+@keyframes icebreaker-sheet-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes icebreaker-sheet-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}

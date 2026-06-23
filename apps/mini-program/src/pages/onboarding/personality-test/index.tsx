@@ -40,7 +40,7 @@ import { logInfo, logWarn, logError } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
-import { isMilestoneQuestion, resolveOptionPreviewSpriteState } from './personalityTestLogic'
+import { isMilestoneQuestion } from './personalityTestLogic'
 import { triggerXiaoyueAnalysisPrefetch } from './triggerXiaoyueAnalysisPrefetch'
 import { useBackReview } from './useBackReview'
 import PersonalityTestIntro from './PersonalityTestIntro'
@@ -123,13 +123,14 @@ export default function PersonalityTestPage() {
   const [sliderValue, setSliderValue] = useState(50)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
+  // Exit modifier passed to child surfaces: personality-test--exiting
   const [error, setError] = useState('')
   const [spriteState, setSpriteState] = useState<XiaoyueSpriteState>('idle')
   const [mascotAutoPlay, setMascotAutoPlay] = useState(false)
   const sliderInteractionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [postAnswerCommentary, setPostAnswerCommentary] = useState<string | null>(null)
   const commentaryReceivedAtRef = useRef<number>(0)
-  const [milestonePulse, setMilestonePulse] = useState(false)
+  const [, setMilestonePulse] = useState(false)
 
   const [skipsRemaining, setSkipsRemaining] = useState(MAX_SKIP_COUNT)
   const [isSkipping, setIsSkipping] = useState(false)
@@ -200,13 +201,6 @@ export default function PersonalityTestPage() {
   } | null>(null)
   // Option-hover preview (P1-2): 200ms touch debounce, cancel on move or early release.
   // Stores the option whose 200ms timer is pending so we can cancel cleanly.
-  const hoverPreviewRef = useRef<{
-    option: AssessmentOption
-    timer: ReturnType<typeof setTimeout>
-  } | null>(null)
-  // Captures the sprite state that was active before the hover preview so we
-  // can restore it on early release (e.g. tap-then-cancel before 200ms).
-  const prePreviewSpriteRef = useRef<XiaoyueSpriteState | null>(null)
   // Holds the server-completed result until the celebrate animation finishes.
   // Navigation is gated by OnboardingLoadingShell's onCelebrateReady so the
   // user sees the full completion beat before the slot/result page appears.
@@ -256,11 +250,6 @@ export default function PersonalityTestPage() {
     : 0
 
   const { isDegradation } = useDeviceTier()
-
-  const getPageClassName = (...extraClasses: string[]) =>
-    ['personality-test', ...extraClasses, isPageExiting ? 'personality-test--exiting' : '', isDegradation ? 'personality-test--low-end' : '']
-      .filter(Boolean)
-      .join(' ')
 
   const completeAnonymousAssessment = useCallback(async (
     targetSessionId: string,
@@ -374,7 +363,7 @@ export default function PersonalityTestPage() {
         })
       }
     }
-  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, isPageExiting, isSubmitting, isProfileSocialTypeEntry,phase])
+  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, auth.user?.archetype, auth.user?.primaryArchetype, isPageExiting, isSubmitting, isProfileSocialTypeEntry, phase])
 
   const handleStart = useCallback(async () => {
     haptics('medium')
@@ -779,62 +768,6 @@ export default function PersonalityTestPage() {
   // to a per-option preview state 200ms later. On touch-end before 200ms, restore
   // the captured state. On commit (handleAnswer runs to completion), the sprite is
   // set to `nod` by the answer flow and the preview is auto-cleared.
-  const cancelHoverPreview = useCallback(() => {
-    if (hoverPreviewRef.current?.timer) {
-      clearTimeout(hoverPreviewRef.current.timer)
-    }
-    hoverPreviewRef.current = null
-    if (prePreviewSpriteRef.current) {
-      setSpriteState(prePreviewSpriteRef.current)
-      prePreviewSpriteRef.current = null
-    }
-  }, [])
-
-  const handleOptionTouchStart = useCallback(
-    (option: AssessmentOption) => {
-      if (isSubmitting) return
-      if (backReview.isBackReviewMode) return
-      setMascotAutoPlay(true)
-      // Cancel any prior pending preview so the latest touch wins
-      if (hoverPreviewRef.current?.timer) {
-        clearTimeout(hoverPreviewRef.current.timer)
-      }
-      if (!prePreviewSpriteRef.current) {
-        prePreviewSpriteRef.current = spriteState
-      }
-      hoverPreviewRef.current = {
-        option,
-        timer: setTimeout(() => {
-          if (hoverPreviewRef.current?.option === option) {
-            setSpriteState(resolveOptionPreviewSpriteState(option))
-          }
-        }, 200),
-      }
-    },
-    [isSubmitting, backReview.isBackReviewMode, spriteState],
-  )
-
-  const handleOptionTouchEnd = useCallback(() => {
-    setMascotAutoPlay(false)
-    cancelHoverPreview()
-  }, [cancelHoverPreview])
-
-  // Move-cancel: if the user scrolls or drags before the 200ms debounce fires,
-  // drop the preview so we don't trap the sprite in a stale state.
-  const handleOptionTouchMove = useCallback(
-    (e: any) => {
-      const touch = e?.touches?.[0]
-      if (!touch) return
-      // We don't have the original touch-start position in this scope; using a
-      // conservative "any move cancels" rule. Acceptable because the preview is
-      // an Easter-egg delight, not a critical affordance.
-      if (hoverPreviewRef.current) {
-        cancelHoverPreview()
-      }
-    },
-    [cancelHoverPreview],
-  )
-
   const handleBack = useCallback(() => {
     if (!previousQuestionRef.current || !previousAnswerRef.current) return
     haptics('light')

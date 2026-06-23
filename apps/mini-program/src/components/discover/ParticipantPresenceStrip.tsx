@@ -1,15 +1,15 @@
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import React from 'react'
+import { getArchetypeTokens } from '@shared/archetypeColorTokens'
+import type { EventPoolSummary } from '@shared/api'
 import ArchetypeHead from '../mascot/ArchetypeHead'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
-import { getArchetypeTokens } from '@shared/archetypeColorTokens'
 import {
   getPresenceStripCountLabel,
   getPresenceStripAriaLabel,
 } from '../../lib/utils/discoverNarrativeCopy'
-import type { EventPoolSummary } from '@shared/api'
 
 import './ParticipantPresenceStrip.scss'
 

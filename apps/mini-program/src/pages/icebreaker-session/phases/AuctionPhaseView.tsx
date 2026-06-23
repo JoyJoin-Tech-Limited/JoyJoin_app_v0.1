@@ -1,15 +1,14 @@
 import { View, Text, Input, Image } from '@tarojs/components'
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
-import { cdnAsset, localAsset } from '../../../lib/utils/cdnAssets'
+import type { SocialSessionState } from '@shared/socialIcebreaker'
+import { localAsset } from '../../../lib/utils/cdnAssets'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
 import { PhaseHeaderIcon } from '../phaseUtils'
-import type { SessionParticipant } from '../phaseUtils'
 import { CelebrationOverlay } from '../overlays/CelebrationOverlay'
 import ParticleBurst from '../../../components/reveal/ParticleBurst'
 import CardFlip from '../../../components/reveal/CardFlip'
 import IdentityReveal from '../../../components/reveal/IdentityReveal'
-import type { SocialSessionState } from '@shared/socialIcebreaker'
 import './AuctionPhaseView.scss'
 
 export interface AuctionBidRecordLocal {
@@ -388,7 +387,7 @@ export function AuctionPhaseView({
       {high && (
         <View className='icebreaker__auction-high-bidder'>
           <IdentityReveal
-            revealed={true}
+            revealed
             identity={`${nameOf(high.userId)} · ${high.amount}币`}
             label='当前领先'
             spotlightColor='#FBBF24'

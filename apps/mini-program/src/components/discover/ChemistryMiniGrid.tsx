@@ -1,3 +1,9 @@
+
+import { View, Text } from '@tarojs/components'
+import { getArchetypeCompatibility } from '@shared/personality/archetypeCompatibility'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { getArchetypeFamily } from '@shared/archetypeColors'
+import type { EventPoolSummary } from '@shared/api'
 /**
  * ChemistryMiniGrid — Post-registration archetype chemistry preview
  *
@@ -6,11 +12,6 @@
  */
 
 import './ChemistryMiniGrid.scss'
-import { View, Text } from '@tarojs/components'
-import { getArchetypeCompatibility } from '@shared/personality/archetypeCompatibility'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
-import { getArchetypeFamily } from '@shared/archetypeColors'
-import type { EventPoolSummary } from '@shared/api'
 
 interface ChemistryMiniGridProps {
   pool: EventPoolSummary

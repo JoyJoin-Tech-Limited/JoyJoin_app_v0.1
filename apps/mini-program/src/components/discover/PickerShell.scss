@@ -1,0 +1,171 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+// ─── PickerShell ─────────────────────────────────────────────────
+// Shared bottom-sheet shell for the city picker and area filter drawer.
+// Owns: backdrop, surface, drag handle, header (mascot + title + close),
+// safe-area footer, reduced-motion gating, and short-phone height capping.
+// Content states (empty/loading/celebration) remain owned by consumers.
+
+.picker-shell {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: $z-modal;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+
+  &--open {
+    pointer-events: auto;
+    opacity: 1;
+  }
+
+  &__backdrop {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: $color-overlay;
+  }
+
+  &__surface {
+    position: relative;
+    width: 100%;
+    background: $color-surface;
+    border-radius: $card-radius-lg $card-radius-lg 0 0;
+    box-shadow: $shadow-sheet;
+    transform: translateY(100%);
+    transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    .picker-shell--open & {
+      transform: translateY(0);
+    }
+  }
+
+  &__handle {
+    width: 56rpx;
+    height: 6rpx;
+    background: $color-divider;
+    border-radius: 3rpx;
+    margin: 16rpx auto;
+    flex-shrink: 0;
+  }
+
+  // ── Header ──────────────────────────────────────────────────────
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16rpx $container-padding 24rpx;
+    flex-shrink: 0;
+  }
+
+  &__title-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    min-width: 0;
+    flex: 1;
+  }
+
+  &__mascot {
+    width: $picker-shell-mascot-size;
+    height: $picker-shell-mascot-size;
+    flex-shrink: 0;
+  }
+
+  &__title {
+    @include type-heading;
+    line-height: $line-height-display; // display text needs ≥1.4 for readable Chinese
+  }
+
+  &__subtitle {
+    display: block;
+    margin: -8rpx $container-padding 0;
+    padding-left: calc(#{$picker-shell-mascot-size} + #{$spacing-sm});
+    padding-bottom: 16rpx;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+    flex-shrink: 0;
+  }
+
+  &__close {
+    min-width: $cta-min-tap;
+    min-height: $cta-min-tap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-circle;
+    background: $color-bg;
+    margin-left: $spacing-sm;
+    transition: background 150ms ease;
+    flex-shrink: 0;
+
+    &--hover {
+      background: $color-divider;
+    }
+  }
+
+  &__close-icon {
+    color: $color-text-secondary;
+  }
+
+  // ── Content / Footer ────────────────────────────────────────────
+  &__content {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  &__footer {
+    flex-shrink: 0;
+    @include fixed-footer-padding($spacing-md, $container-padding, $spacing-md);
+    border-top: 1rpx solid $color-divider;
+  }
+
+  // Consumer-owned full-surface overlay (e.g. city-picker success celebration).
+  // Shell owns the positioning container; content state is owned by the consumer.
+  &__overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 10;
+    border-radius: $card-radius-lg $card-radius-lg 0 0;
+    overflow: hidden;
+  }
+}
+
+// ── Reduced Motion ────────────────────────────────────────────────
+.picker-shell--reduce-motion {
+  transition: none;
+
+  .picker-shell__surface {
+    transition: none;
+  }
+
+  .picker-shell__close {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .picker-shell,
+  .picker-shell__surface,
+  .picker-shell__close {
+    transition: none !important;
+  }
+}

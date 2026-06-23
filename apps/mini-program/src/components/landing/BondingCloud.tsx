@@ -121,7 +121,7 @@ export default function BondingCloud({ compact = false }: { compact?: boolean })
               .join(" ")}
             style={{ animationDelay: `${node.lineDelay}s` }}
           >
-            <View className="bonding-line__traveler-dot" />
+            <View className='bonding-line__traveler-dot' />
           </View>
         </View>
       ))}
@@ -134,9 +134,9 @@ export default function BondingCloud({ compact = false }: { compact?: boolean })
         ]
           .filter(Boolean)
           .join(" ")}
-        aria-hidden="true"
+        aria-hidden='true'
       >
-        <View className="bonding-hub__core" />
+        <View className='bonding-hub__core' />
       </View>
 
       {/* Dimension nodes */}
@@ -159,7 +159,7 @@ export default function BondingCloud({ compact = false }: { compact?: boolean })
           aria-label={node.text}
         >
           <Text
-            className="bonding-node__text"
+            className='bonding-node__text'
             style={{ color: node.color }}
           >
             {node.text}

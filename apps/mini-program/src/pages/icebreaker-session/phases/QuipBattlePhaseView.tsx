@@ -6,8 +6,7 @@ import Card from '../../../components/ui/Card';
 import { apiRequest } from '../../../lib/api/api';
 import { buildSocialPath } from '../icebreakerSessionModel';
 import { CelebrationOverlay } from '../overlays/CelebrationOverlay';
-import { SwipeCard } from '../../../components/gesture';
-import { TapReaction } from '../../../components/gesture';
+import { SwipeCard , TapReaction } from '../../../components/gesture';
 import { ParticleBurst } from '../../../components/reveal';
 import ChallengeCardBgImage from '../components/ChallengeCardBgImage';
 
@@ -449,7 +448,7 @@ export default function QuipBattlePhaseView({
                   <Text className='icebreaker__answer-author'>
                     {answer.displayName} {isWinner ? '(冠军)' : ''}
                   </Text>
-                  <Text className='icebreaker__answer-text'>"{answer.answerText}"</Text>
+                  <Text className='icebreaker__answer-text'>&quot;{answer.answerText}&quot;</Text>
                 </View>
               );
             })}

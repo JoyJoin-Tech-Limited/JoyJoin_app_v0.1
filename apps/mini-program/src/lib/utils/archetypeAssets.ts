@@ -1,4 +1,4 @@
-import { cdnAsset, localAsset } from './cdnAssets'
+import { cdnAsset } from './cdnAssets'
 
 export interface ArchetypeAssetPaths {
   webp: string

@@ -1,6 +1,6 @@
 import { View } from '@tarojs/components'
-import BrandLogo from '../ui/BrandLogo'
 import { useEffect, useState } from 'react'
+import BrandLogo from '../ui/BrandLogo'
 import './BoxLogoEntryScreen.scss'
 
 type Phase = 'entering' | 'exiting' | 'done'

@@ -1,10 +1,10 @@
 import { CustomWrapper, View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { usePullDownRefresh } from '@tarojs/taro'
-import { haptics } from '../../lib/utils/haptics'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { useQuery } from '@tanstack/react-query'
 import { getJoinedEvents, type JoinedEventSummary } from '@shared/api'
+import { haptics } from '../../lib/utils/haptics'
+import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { apiRequest, fetchEventsShell } from '../../lib/api/api'
 import { injectEventsShellIntoCache, JOINED_EVENTS_QUERY_KEY } from '../../lib/prefetchEngine'
 import { evictPersistedQuery } from '../../lib/api/persistentCache'
@@ -13,7 +13,6 @@ import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Card from '../../components/ui/Card'
 import StatusCard from '../../components/ui/StatusCard'
 import JoinedEventCard from '../../components/JoinedEventCard'
@@ -187,7 +186,7 @@ export default function EventsPage() {
             className='events-page__first-event-hero-img'
             mode='aspectFit'
             src={MILESTONE_BADGES.firstEvent}
-            ariaLabel="第一次参加活动"
+            aria-label='第一次参加活动'
             lazyLoad
           />
           <Text className='events-page__first-event-hero-title'>第一次活动，期待与你相遇！</Text>

@@ -1,5 +1,4 @@
 import { Image, Text, View } from '@tarojs/components'
-import { COLOR_PRIMARY } from '../../../../lib/utils/uiConstants'
 import type { ArchetypeVisual } from '../visuals'
 import type { RevealPhase } from './resultHelpers'
 

@@ -2,6 +2,7 @@ import { View, Text, Image } from '@tarojs/components'
 import Taro, { useDidShow, useLoad } from '@tarojs/taro'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import JoyJoinLoadingScreen from '../../components/loading/JoyJoinLoadingScreen'
@@ -18,7 +19,6 @@ import type {
 import { MINI_PROGRAM_PAGE_PATHS, MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { type MiniProgramPaymentVerificationState } from '../../lib/payment/paymentVerificationStatus'
 import type { XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
-import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { CEREMONY_HEROES } from '../../lib/ceremonyHeroes'
 import { haptics } from '../../lib/utils/haptics'
@@ -159,7 +159,7 @@ export default function PaymentVerificationPage() {
             className='verification-page__hero'
             mode='aspectFit'
             src={CEREMONY_HEROES.eventPaidConfirmed}
-            ariaLabel=""
+            ariaLabel=''
             lazyLoad
             onLoad={() => haptics('success')}
           />

@@ -1,5 +1,4 @@
 import { Image, ScrollView, Text, View } from '@tarojs/components'
-import { cdnAsset, localAsset } from '../../../lib/utils/cdnAssets'
 import Taro from '@tarojs/taro'
 import { useCallback, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -14,6 +13,7 @@ import {
   type UserCouponStatus,
   type UserGamificationSummary,
 } from '@shared/api'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import { apiRequest } from '../../../lib/api/api'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
@@ -391,7 +391,7 @@ export default function RewardsPage() {
             <Image
               className='rewards-page__empty-hero'
               src={cdnAsset('/assets/lovart/lovart-rewards-empty-20260423-v1.webp')}
-              mode='aspectFit'
+              mode='widthFix'
               lazyLoad
             />
             <Text className='rewards-page__empty-title'>还没有奖励资产</Text>
@@ -451,7 +451,7 @@ export default function RewardsPage() {
             <Image
               className='rewards-page__empty-hero rewards-page__empty-hero--compact'
               src={cdnAsset('/assets/lovart/lovart-rewards-shop-20260423-v1.webp')}
-              mode='aspectFit'
+              mode='widthFix'
               lazyLoad
             />
             <Text className='rewards-page__empty-text'>兑换商城正在准备中，稍后会开放更多奖励。</Text>
@@ -495,7 +495,7 @@ export default function RewardsPage() {
             <Image
               className='rewards-page__empty-hero rewards-page__empty-hero--compact'
               src={cdnAsset('/assets/lovart/lovart-rewards-history-20260423-v1.webp')}
-              mode='aspectFit'
+              mode='widthFix'
               lazyLoad
             />
             <Text className='rewards-page__empty-text'>还没有奖励记录，继续参与活动就会积累成长值与奖励。</Text>

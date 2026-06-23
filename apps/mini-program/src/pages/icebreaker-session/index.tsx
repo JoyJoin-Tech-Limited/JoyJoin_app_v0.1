@@ -1,8 +1,12 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
-import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
+import type { AtmosphereMood, SocialIcebreakerPhase, SocialSessionState } from '@shared/socialIcebreaker'
+import type { TierMachineId } from '@shared/socialIcebreakerTierManifest'
+import type { MiniScriptGenre, MiniScriptStyle, MiniScriptVoteInput } from '@shared/miniscriptStoryFramework'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
 import { POLL_SOCIAL_SESSION_MS, TOAST_MEDIUM_MS, TOAST_DEFAULT_MS } from '../../lib/utils/uiConstants'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
@@ -14,7 +18,6 @@ import {
   SPRITE_SHEET_ASSETS,
   ICEBREAKER_PHASE_EMBLEM_ASSETS,
 } from '../../hooks/usePreloadCdnIcons'
-import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { getMascotDisplayName } from '../../lib/mascot/mascotDisplay'
 import OnboardingLoadingShell from '../../components/loading/OnboardingLoadingShell'
 import XiaoyueSessionShell from '../../components/mascot/XiaoyueSessionShell'
@@ -35,7 +38,7 @@ import {
   type SessionPhase,
   WarmupPhaseView,
 } from './phaseViews'
-import { apiVibeToClient, VibeId } from '../../lib/vibeMapping'
+import { apiVibeToClient } from '../../lib/vibeMapping'
 import IcebreakerTierSelector from './components/IcebreakerTierSelector'
 import CustomModeSection from './components/CustomModeSection'
 import { PhaseIntroOverlay } from './overlays/PhaseIntroOverlay'
@@ -43,10 +46,6 @@ import { MiniScriptPhaseView } from './phases/MiniScriptPhaseView'
 import { IcebreakerToolSelector } from './overlays/IcebreakerToolSelector'
 import { MiniScriptConfigModal } from './overlays/MiniScriptConfigModal'
 import BonusGateOverlay from './overlays/BonusGateOverlay'
-import type { AtmosphereMood, SocialIcebreakerPhase, SocialSessionState } from '@shared/socialIcebreaker'
-import { PHASE_CONFIG } from '@shared/socialIcebreaker'
-import { resolveTierDisplay, type TierMachineId } from '@shared/socialIcebreakerTierManifest'
-import type { MiniScriptGenre, MiniScriptStyle, MiniScriptVoteInput } from '@shared/miniscriptStoryFramework'
 import {
   buildSocialPath,
   deriveParticipants,
@@ -56,7 +55,6 @@ import {
   getUserInterests,
   normaliseSession,
   type EventSessionDiscovery,
-  type IcebreakerSession,
   type SocialRecapResponse,
   type SocialStartResponse,
 } from './icebreakerSessionModel'
@@ -98,7 +96,6 @@ export default function IcebreakerSessionPage() {
   const [miniScriptSubmitting, setMiniScriptSubmitting] = useState(false)
   const [dismissedSuggestionAt, setDismissedSuggestionAt] = useState<string | null>(null)
   const [showPhaseIntro, setShowPhaseIntro] = useState(false)
-  const [showTierSelector, setShowTierSelector] = useState(false)
   const [phaseToast, setPhaseToast] = useState<{ visible: boolean; text: ReactNode }>({ visible: false, text: '' })
   const startAttemptRef = useRef<string | null>(null)
   const prevPhaseRef = useRef<SessionPhase>('waiting')
@@ -142,7 +139,6 @@ export default function IcebreakerSessionPage() {
   }, [resolvedSessionId])
 
   // Legacy icebreaker session details API removed; use defaults
-  const sessionDetails = null
   const sessionLoading = false
   const sessionError = null
 
@@ -230,6 +226,19 @@ export default function IcebreakerSessionPage() {
 
   const phase: SessionPhase = session?.phase ?? 'waiting'
 
+  // CSS custom properties for challenge-card backgrounds.
+  // Primary rendering is via <ChallengeCardBgImage> inside each card.
+  // These vars act as a secondary fallback if the Image component fails.
+  const bgStyles = useMemo(() => {
+    const p = (path: string) => `url(${cdnAsset(path)})`
+    const phaseBgMap: Record<string, React.CSSProperties> = {
+      undercover_word: { '--bg-undercover-word': p('/assets/lovart/icebreaker/backgrounds/bg-undercover-word.jpg') } as React.CSSProperties,
+      group_mirror: { '--bg-group-mirror': p('/assets/lovart/icebreaker/backgrounds/bg-group-mirror.jpg') } as React.CSSProperties,
+      quip_battle: { '--bg-quip-battle': p('/assets/lovart/icebreaker/backgrounds/bg-quip-battle.jpg') } as React.CSSProperties,
+    }
+    return phaseBgMap[phase]
+  }, [phase])
+
   if (session?.eventTier === 'custom' && (phase === 'recap' || phase === 'ended')) {
     customSessionCompletedRef.current = true
   }
@@ -245,9 +254,10 @@ export default function IcebreakerSessionPage() {
   }, [phase])
   const hostUserId = session?.hostUserId ?? ''
   const isHost = !!currentUserId && currentUserId === hostUserId
-  const participants = session
-    ? deriveParticipants(session, [], hostUserId)
-    : []
+  const participants = useMemo(
+    () => (session ? deriveParticipants(session, [], hostUserId) : []),
+    [session, hostUserId]
+  )
   const playerCount = session?.playerCount ?? participants.length
 
   // Phase intro overlay: trigger when entering a playable phase (not initial load).
@@ -474,7 +484,7 @@ export default function IcebreakerSessionPage() {
         setPendingAction(null)
       }
     },
-    [socialSessionId, session, socialSessionQuery, pendingAction],
+    [socialSessionId, session, socialSessionQuery, pendingAction, playerCount],
   )
 
   const handleEndCustomSession = useCallback(
@@ -747,7 +757,7 @@ export default function IcebreakerSessionPage() {
           <Image
             className='icebreaker__error-hero'
             src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
-            mode='aspectFit'
+            mode='widthFix'
             lazyLoad
           />
           <Text className='icebreaker__error-text'>
@@ -840,19 +850,6 @@ export default function IcebreakerSessionPage() {
     !!currentPlayer &&
     !!session.currentLieDetectiveReveal &&
     (session.currentLieDetectivePlayerIndex ?? 0) < (session.lieDetectivePlayers?.length ?? 0) - 1
-
-  // CSS custom properties for challenge-card backgrounds.
-  // Primary rendering is via <ChallengeCardBgImage> inside each card.
-  // These vars act as a secondary fallback if the Image component fails.
-  const bgStyles = useMemo(() => {
-    const p = (path: string) => `url(${cdnAsset(path)})`
-    const phaseBgMap: Record<string, React.CSSProperties> = {
-      undercover_word: { '--bg-undercover-word': p('/assets/lovart/icebreaker/backgrounds/bg-undercover-word.jpg') } as React.CSSProperties,
-      group_mirror: { '--bg-group-mirror': p('/assets/lovart/icebreaker/backgrounds/bg-group-mirror.jpg') } as React.CSSProperties,
-      quip_battle: { '--bg-quip-battle': p('/assets/lovart/icebreaker/backgrounds/bg-quip-battle.jpg') } as React.CSSProperties,
-    }
-    return phaseBgMap[phase]
-  }, [phase])
 
   return (
     <ScrollView className='icebreaker' scrollY enhanced showScrollbar={false} style={bgStyles}>

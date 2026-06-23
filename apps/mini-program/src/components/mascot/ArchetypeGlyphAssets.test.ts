@@ -4,7 +4,6 @@ import path from 'node:path'
 import fs from 'node:fs'
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url))
-const sourceRoot = path.resolve(currentDir, '../..')
 const componentPath = path.join(currentDir, 'ArchetypeGlyph.tsx')
 
 describe('ArchetypeGlyph asset references', () => {
