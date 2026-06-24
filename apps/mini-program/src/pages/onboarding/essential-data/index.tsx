@@ -29,6 +29,7 @@ import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
 import { logError, logInfo } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
+import { evaluateProfessionInputQuality, isMeaningfulProfessionInput } from '../../../lib/onboarding/professionInputQuality'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
 import IntentCard from '../../../components/intent/IntentCard'
@@ -347,6 +348,8 @@ export default function EssentialDataPage() {
     setError('')
 
     try {
+      const professionForSubmit = professionText.trim()
+      const shouldSubmitProfession = professionForSubmit !== '' && isMeaningfulProfessionInput(professionForSubmit)
       const payload = {
         displayName: displayName.trim(),
         gender,
@@ -355,9 +358,9 @@ export default function EssentialDataPage() {
         ...(hometownRegionCity.trim() !== '' ? { hometownRegionCity: hometownRegionCity.trim() } : {}),
         ...(relationshipStatus ? { relationshipStatus } : {}),
         ...(educationLevel ? { educationLevel } : {}),
-        ...(professionText.trim() !== '' ? {
-          occupationId: professionText.trim(),
-          industryRawInput: professionText.trim(),
+        ...(shouldSubmitProfession ? {
+          occupationId: professionForSubmit,
+          industryRawInput: professionForSubmit,
           ...(workMode ? { workMode } : {}),
           ...(professionClassification?.standardizedOccupationId ? { standardizedOccupationId: professionClassification.standardizedOccupationId } : {}),
           ...(professionClassification?.industryCategoryLabel ? { industryCategoryLabel: professionClassification.industryCategoryLabel } : {}),
@@ -425,9 +428,18 @@ export default function EssentialDataPage() {
   }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, intent, invalidateAuth, isSubmitting, professionText, professionClassification, relationshipStatus, saveCheckpoint, workMode, currentStep])
 
   const handleProfessionSubmit = useCallback((value: string, classification?: ProfessionClassificationData) => {
-    setProfessionText(value)
+    const quality = evaluateProfessionInputQuality(value)
+    if (!quality.valid) {
+      Taro.showToast({ title: '职业身份可以跳过，或写具体一点', icon: 'none', duration: TOAST_DEFAULT_MS })
+      setProfessionText('')
+      setProfessionClassification(null)
+      return
+    }
+    setProfessionText(quality.normalized)
     if (classification) {
       setProfessionClassification(classification)
+    } else {
+      setProfessionClassification(null)
     }
     setIsProfessionOverlayClosing(true)
     setTimeout(() => {

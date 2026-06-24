@@ -21,6 +21,23 @@ const PROFESSION_RATE_LIMIT_MAX = 10;
 const PROFESSION_RATE_LIMIT_WINDOW_MS = 60_000;
 
 const MAX_RATE_LIMIT_ENTRIES = 2000;
+const SHORT_LATIN_PROFESSIONS = new Set([
+  "ai",
+  "bd",
+  "ceo",
+  "cfo",
+  "cto",
+  "dev",
+  "hr",
+  "it",
+  "pm",
+  "pr",
+  "qa",
+  "ui",
+  "ux",
+]);
+const INVALID_PROFESSION_REACTION =
+  "我还没看懂这个职业/身份，可以换成「产品经理」「做设计」「学生」「自由职业」这类描述，或者点跳过。";
 
 function checkProfessionRateLimit(userId: string): { allowed: boolean; retryAfterMs?: number } {
   const now = Date.now();
@@ -45,6 +62,28 @@ function checkProfessionRateLimit(userId: string): { allowed: boolean; retryAfte
   }
   entry.count++;
   return { allowed: true };
+}
+
+function isMeaningfulProfessionDescription(input: string): boolean {
+  const normalized = input.trim().replace(/\s+/g, " ");
+  if (!normalized) return false;
+
+  const compact = normalized.replace(/\s+/g, "");
+  if (![...compact].some((char) => /[A-Za-z\u3400-\u9FFF]/.test(char))) return false;
+  if (compact.length >= 2 && [...compact].every((char) => char === compact[0])) return false;
+
+  const cjkCount = [...compact].filter((char) => /[\u3400-\u9FFF]/.test(char)).length;
+  if (cjkCount > 0) return cjkCount >= 2;
+
+  const latinCompact = compact.toLowerCase().replace(/[^a-z]/g, "");
+  if (SHORT_LATIN_PROFESSIONS.has(latinCompact)) return true;
+
+  const latinCount = [...compact].filter((char) => /[A-Za-z]/.test(char)).length;
+  if (latinCount < 3) return false;
+  if (!normalized.includes(" ") && latinCount <= 3) return false;
+  if (/^[bcdfghjklmnpqrstvwxyz]{3,}$/i.test(latinCompact)) return false;
+
+  return true;
 }
 
 function requireAuth(req: Request, res: any, next: any) {
@@ -459,6 +498,26 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
 
       const { description } = parseResult.data;
       const userId = getAuthenticatedUserId(req) as string;
+
+      if (!isMeaningfulProfessionDescription(description)) {
+        logger.info("[understand-profession] Rejected low-information input", {
+          userId,
+          inputLength: description.trim().length,
+        });
+        return res.json({
+          reaction: INVALID_PROFESSION_REACTION,
+          reactionHint: "",
+          displayTags: [],
+          classification: {
+            category: null,
+            segment: null,
+            niche: null,
+            standardizedOccupationId: null,
+          },
+          source: "fallback",
+          confidence: 0,
+        } satisfies UnderstandProfessionResponse);
+      }
 
       const rateLimit = checkProfessionRateLimit(userId);
       if (!rateLimit.allowed) {

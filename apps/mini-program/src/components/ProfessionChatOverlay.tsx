@@ -8,6 +8,7 @@ import { getXiaoyueExpressionAsset, type XiaoyueExpressionId } from '../lib/masc
 import { apiRequest } from '../lib/api/api'
 import { useOnboardingAnalytics } from '../hooks/onboarding/useOnboardingAnalytics'
 import { useDeviceTier } from '../hooks/useDeviceTier'
+import { evaluateProfessionInputQuality } from '../lib/onboarding/professionInputQuality'
 import './ProfessionChatOverlay.scss'
 
 export interface ProfessionClassificationData {
@@ -46,6 +47,8 @@ const OPENING_MESSAGES_ARCHETYPE = (archetypeName: string): readonly string[] =>
 const SKIP_RESPONSE_GENERIC = '好呀，那我们先跳过这题～等你想说了，随时可以在个人主页里补充'
 
 const SKIP_RESPONSE_MEMORY = '你刚才说的悦仔也记着呢～等你想完善了，随时可以在个人主页里补充'
+
+const INVALID_PROFESSION_MESSAGE = '我还没看懂这个职业/身份，可以换成「产品经理」「做设计」「学生」「自由职业」这类描述，或者点跳过。'
 
 // Profession-specific placeholder examples that rotate
 const ROTATING_PLACEHOLDERS = [
@@ -357,6 +360,33 @@ export default function ProfessionChatOverlay({
   const [removedTags, setRemovedTags] = useState<string[]>([])
   const [tagFeedback, setTagFeedback] = useState<string | null>(null)
   const revealCardViewedRef = useRef(false)
+  const rejectLowQualityProfessionInput = useCallback((rawText: string) => {
+    const quality = evaluateProfessionInputQuality(rawText)
+    if (quality.valid) return false
+
+    const text = quality.normalized
+    setShowShortHint(true)
+    setShowRevealCard(false)
+    setRevealTags([])
+    setClassificationData(null)
+    setRetryMessageId(null)
+    setThinkingLabel(null)
+    clearThinkingTimers()
+    if (text) {
+      setMessages((prev) => [
+        ...prev,
+        { id: generateId(), sender: 'user', text },
+        { id: generateId(), sender: 'xiaoyue', text: INVALID_PROFESSION_MESSAGE, expressionId: 'testListening' },
+      ])
+      setScrollTrigger((c) => c + 1)
+    }
+    analytics.interaction('profession_chat_invalid_input', {
+      reason: quality.reason ?? 'unknown',
+      inputLength: text.length,
+    })
+    Taro.showToast({ title: '再具体一点，或点跳过', icon: 'none', duration: 2000 })
+    return true
+  }, [analytics, clearThinkingTimers])
 
   useEffect(() => {
     if (visible && !isClosing) {
@@ -467,9 +497,7 @@ export default function ProfessionChatOverlay({
     const text = (overrideText ?? inputValue).trim()
     if (!text || isSubmittingRef.current) return
 
-    // Encourage more detail for very short input (single character only)
-    if (text.length < 2 && !hasSent) {
-      setShowShortHint(true)
+    if (rejectLowQualityProfessionInput(text)) {
       return
     }
     setShowShortHint(false)
@@ -568,6 +596,30 @@ export default function ProfessionChatOverlay({
       bubbleStaggerRef.current = setTimeout(() => {
         // Re-check generation inside the stagger timeout too
         if (sendGenerationRef.current !== thisGeneration) return
+        const hasStructuredClassification = !!(
+          data.classification.standardizedOccupationId ||
+          data.classification.category ||
+          data.classification.segment ||
+          data.classification.niche
+        )
+        if (!hasStructuredClassification && data.confidence < 0.35) {
+          setMessages((prev) => [
+            ...prev,
+            { id: generateId(), sender: 'xiaoyue', text: INVALID_PROFESSION_MESSAGE, expressionId: 'testListening' },
+          ])
+          setScrollTrigger((c) => c + 1)
+          setIsSubmitting(false)
+          clearThinkingTimers()
+          setThinkingLabel(null)
+          setRevealTags([])
+          setShowRevealCard(false)
+          setClassificationData(null)
+          analytics.interaction('profession_chat_low_confidence_blocked', {
+            confidence: data.confidence,
+            source: data.source,
+          })
+          return
+        }
         const fullMsg: ChatMessage = {
           id: generateId(),
           sender: 'xiaoyue',
@@ -643,15 +695,13 @@ export default function ProfessionChatOverlay({
         industryConfidence: 0,
       })
     }
-  }, [inputValue, isOnline, hasSent, analytics, clearThinkingTimers])
+  }, [inputValue, isOnline, analytics, clearThinkingTimers, rejectLowQualityProfessionInput])
 
   const handleSendLegacy = useCallback(() => {
     const text = inputValue.trim()
     if (!text || isSubmittingRef.current) return
 
-    // Encourage more detail for very short input (single character only)
-    if (text.length < 2 && !hasSent) {
-      setShowShortHint(true)
+    if (rejectLowQualityProfessionInput(text)) {
       return
     }
     setShowShortHint(false)
@@ -690,7 +740,7 @@ export default function ProfessionChatOverlay({
       setIsSubmitting(false)
       setScrollTrigger((c) => c + 1)
     }, 600)
-  }, [inputValue, isOnline, hasSent, analytics])
+  }, [inputValue, isOnline, analytics, rejectLowQualityProfessionInput])
 
   const handleSend = useCallback(() => {
     if (smartProfession) {
@@ -733,6 +783,9 @@ export default function ProfessionChatOverlay({
   }, [onSkip, analytics, messages])
 
   const handleConfirm = useCallback(() => {
+    if (inputValue.trim() && rejectLowQualityProfessionInput(inputValue)) {
+      return
+    }
     analytics.interaction('profession_chat_confirmed', {
       hasClassification: !!classificationData,
       source: classificationData?.industrySource ?? 'legacy',
@@ -743,7 +796,7 @@ export default function ProfessionChatOverlay({
     } else {
       onSubmit(inputValue.trim())
     }
-  }, [smartProfession, classificationData, inputValue, onSubmit, analytics, revealTags.length])
+  }, [smartProfession, classificationData, inputValue, onSubmit, analytics, revealTags.length, rejectLowQualityProfessionInput])
 
   const canSubmit = inputValue.trim().length > 0 || hasSent
 
