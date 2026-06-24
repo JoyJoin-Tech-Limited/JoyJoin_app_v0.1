@@ -26,6 +26,7 @@ import { loadInterestSignalsByUserIds } from "./helpers";
 import { recordPoolCardCopyCache } from "../../middleware/metrics";
 import { enrichProfileFromRegistration } from "../../lib/profileEnrichment";
 import { logger } from "../../lib/logger";
+import { captureLocationSnapshot } from "../../lib/captureLocationSnapshot";
 import { isSingleTestMode } from "../../lib/isSingleTestMode";
 import { getFeatureFlagSync } from "../../lib/featureFlags";
 import { shellCache } from "../../lib/shellCache";
@@ -693,6 +694,9 @@ export function registerUserEventPoolRoutes(app: Express): void {
         ...registration,
         entitlementMode,
       });
+
+      // Best-effort geolocation capture at pool registration.
+      captureLocationSnapshot(req, "pool_registration", userId).catch(() => {});
     } catch (error: any) {
       logger.error("Failed to register for event pool", {
         route: "/api/event-pools/:id/register",

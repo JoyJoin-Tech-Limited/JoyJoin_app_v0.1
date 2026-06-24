@@ -4,6 +4,7 @@ import { registerAdminRoutes } from "./routes/domains/admin";
 import { registerAdminBillingRoutes } from "./routes/domains/adminBilling";
 import { registerAdminEventManagementRoutes } from "./routes/domains/adminEventManagement";
 import { registerAdminEventPoolRoutes } from "./routes/domains/adminEventPools";
+import { registerAdminGeolocationRoutes } from "./routes/domains/adminGeolocation";
 import { registerAdminOperationsRoutes } from "./routes/domains/adminOperations";
 import { registerAdminUserRoutes } from "./routes/domains/adminUsers";
 import { registerAIServiceRoutes } from "./routes/domains/aiServices";
@@ -42,6 +43,7 @@ import { registerMatchCompassRoutes } from "./routes/domains/matchCompass";
 import { registerProfessionUnderstandingRoutes } from "./routes/domains/professionUnderstanding";
 import { registerTestAdminRoutes } from "./routes/domains/testAdmin";
 import { registerSingleTestRoutes } from "./routes/domains/singleTest";
+import { registerMatchingTestRoutes } from "./routes/domains/matchingTest";
 import { registerMonitoringWebhookRoutes } from "./routes/domains/monitoringWebhooks";
 import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
@@ -162,7 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAdminBillingRoutes(app);
   registerAdminUserRoutes(app);
   registerAdminOperationsRoutes(app);
-  registerMatchingConfigRoutes(app);
+  registerAdminGeolocationRoutes(app);
   registerMatchingAdminRoutes(app);
   registerMatchExplanationRoutes(app);
   registerMatchCompassRoutes(app);
@@ -175,6 +177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   registerTestAdminRoutes(app);
   registerSingleTestRoutes(app);
+  registerMatchingTestRoutes(app);
 
   return httpServer;
 }

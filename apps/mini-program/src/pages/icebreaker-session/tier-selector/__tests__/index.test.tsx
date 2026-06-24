@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import TierSelectorPage, { TIER_OPTIONS, VIBE_OPTIONS } from '../index'
+import TierSelectorPage, { TIER_OPTIONS, VIBE_OPTIONS, TIER_PRESETS } from '../index'
 
 describe('TierSelectorPage', () => {
   it('exports a valid React component', () => {
@@ -7,14 +7,34 @@ describe('TierSelectorPage', () => {
     expect(typeof TierSelectorPage).toBe('function')
   })
 
-  it('grid renders 9 cells (3 tiers × 3 vibes)', () => {
+  it('presets collapse 3 tiers × 3 vibes into 3 human intentions', () => {
+    expect(TIER_PRESETS).toHaveLength(3)
     expect(TIER_OPTIONS).toHaveLength(3)
     expect(VIBE_OPTIONS).toHaveLength(3)
-    expect(TIER_OPTIONS.length * VIBE_OPTIONS.length).toBe(9)
+
+    const combos = TIER_PRESETS.map((p) => `${p.tier}-${p.vibe}`)
+    expect(new Set(combos).size).toBe(3)
   })
 
-  it('selecting a cell updates state via onClick', () => {
-    // Verify the data structure supports 9 unique combos
+  it('each preset maps to a valid tier and vibe', () => {
+    const validTiers = new Set(TIER_OPTIONS.map((t) => t.id))
+    const validVibes = new Set(VIBE_OPTIONS.map((v) => v.id))
+
+    TIER_PRESETS.forEach((preset) => {
+      expect(validTiers.has(preset.tier)).toBe(true)
+      expect(validVibes.has(preset.vibe)).toBe(true)
+      expect(preset.title).toBeTruthy()
+      expect(preset.iconToken).toMatch(/^(sparkle|heart|controller)$/)
+    })
+  })
+
+  it('has exactly one recommended preset', () => {
+    const recommended = TIER_PRESETS.filter((p) => p.recommended)
+    expect(recommended).toHaveLength(1)
+    expect(recommended[0].id).toBe('deep-chat')
+  })
+
+  it('advanced grid data structure supports 9 unique combos', () => {
     const combos = TIER_OPTIONS.flatMap((tier) =>
       VIBE_OPTIONS.map((vibe) => `${tier.id}-${vibe.id}`),
     )
@@ -22,12 +42,8 @@ describe('TierSelectorPage', () => {
     expect(new Set(combos).size).toBe(9)
   })
 
-  it('pressed feedback hoverClass is configured', () => {
-    // Component uses this hover class on every cell; verify via constant shape
-    expect(VIBE_OPTIONS.length).toBeGreaterThan(0)
-    expect(TIER_OPTIONS.length).toBeGreaterThan(0)
-    // The SCSS and component agree on this class name
-    expect('tier-selector__grid-cell--pressed').toBeTruthy()
+  it('preset hover feedback class is configured', () => {
+    expect('tier-selector__preset-card--pressed').toBeTruthy()
   })
 })
 

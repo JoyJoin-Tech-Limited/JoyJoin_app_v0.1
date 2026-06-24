@@ -279,6 +279,7 @@ Active domain modules in `routes/domains/`:
 | `occupationSearch.ts` | `POST /api/occupation/search` — free-text occupation search using Granite embedding (exact + semantic hybrid) |
 | `shell.ts` | Composite Predictive Shell endpoints (`/api/shell/*`) — discover, profile, events, connections |
 | `helpers.ts` | Shared route helpers |
+| `matchingTest.ts` | `/api/test/matching-test/*` — seed matching-test bots, create test pool, trigger match, cleanup. Gated by `isMatchingTestMode()` (2026-06-24) |
 
 ---
 
@@ -1238,6 +1239,7 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | `RUN_PLAN_TEMPLATES_ENABLED` | `true` enables template-driven run plan compiler **and** the 3×3 vibe grid UX (`深聊`/`均衡`/`暢玩`). When `false`, legacy `compileAgentRunPlan()` runs unchanged and clients hide the vibe selector. Server queries DB `run_plan_templates` with `TEMPLATE_DEFAULTS` fallback | `false` |
 | `PERSONALITY_DICE_CHOOSE_MODE_ENABLED` | `true` enables Choose-Your-Prompt variant: 3 difficulty-tiered dares per player, player picks one. `false` retains original single-dare flow |
 | `PROMO_BANNER_ENABLED` | `true` shows the discover hero promo banner; `false` kills the entire surface (zero-height spacer) and stops all `promo_banner_*` analytics. DB override via `/admin/feature-flags` (key `promoBannerEnabled`). Default `true` |
+| `ENABLE_MATCHING_TEST_MODE` | `true` enables `/api/test/matching-test/*` routes for end-to-end matching with seed bots + real tester payment. Requires `ENABLE_SINGLE_TEST_MODE=true`. Returns 403 in `APP_MODE=production`. Default `false` (2026-06-24) |
 
 ### Auto-Populated (via Replit)
 

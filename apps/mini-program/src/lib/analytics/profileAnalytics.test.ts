@@ -60,7 +60,7 @@ describe('profileAnalytics', () => {
     expect(mockLogWarn).toHaveBeenCalled()
   })
 
-  it('accepts all 17 event types without throwing', () => {
+  it('accepts all 21 event types without throwing', () => {
     const types: ProfileAnalyticsEventType[] = [
       'profile_stat_tap',
       'profile_archetype_cta_tap',
@@ -77,8 +77,12 @@ describe('profileAnalytics', () => {
       'profile_share_card_error',
       'profile_view',
       'profile_edit_tap',
+      'profile_edit_save',
       'profile_completion',
+      'profile_avatar_load_error',
       'connection_card_view',
+      'connection_empty_state_cta_tap',
+      'connection_empty_state_impression',
     ]
 
     for (const type of types) {

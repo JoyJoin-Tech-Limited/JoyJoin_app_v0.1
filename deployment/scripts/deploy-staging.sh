@@ -83,6 +83,7 @@ docker compose -f docker-compose.staging.yml down
 docker compose -f docker-compose.staging.yml up -d --build
 
 echo "🗄️  Step 4: Wait for postgres-staging readiness and apply migrations..."
+MIGRATIONS_DIR=apps/server/migrations
 MAX_PG_WAIT_ATTEMPTS=30
 PG_WAIT_DELAY=2
 pg_ready=false
@@ -101,7 +102,11 @@ if [[ "$pg_ready" != "true" ]]; then
     exit 1
 fi
 
-for f in "$REPO_ROOT"/migrations/*.sql; do
+for f in "$REPO_ROOT/$MIGRATIONS_DIR"/*.sql; do
+    if [[ ! -f "$f" ]]; then
+        echo "⚠️  No migration SQL files found in $REPO_ROOT/$MIGRATIONS_DIR"
+        break
+    fi
     echo "  Applying $(basename "$f")..."
     docker exec -i postgres-staging \
         psql "postgresql://joyjoin:${POSTGRES_PASSWORD}@localhost:5432/joyjoin_staging" < "$f"

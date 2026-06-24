@@ -18,6 +18,7 @@ import { logger } from "./lib/logger";
 import { validateDbSchema } from "./db";
 import { ensureVirtualUsers } from "./services/singleTestService";
 import { isSingleTestMode } from "./lib/isSingleTestMode";
+import { detectTestBotRowsInProduction } from "./services/matchingTestService";
 import { requestIdMiddleware } from "./middleware/requestId";
 import { metricsMiddleware } from "./middleware/metrics";
 import compression from "compression";
@@ -86,10 +87,16 @@ app.use((req, res, next) => {
 (async () => {
   try {
     // Validate database schema before accepting traffic.
-    // This is a fail-fast guard: if a migration was skipped and the DB is
-    // missing a column defined in Drizzle schema, we crash immediately with
-    // a clear message instead of serving cryptic 500s to users.
     await validateDbSchema();
+
+    // Production sentinel: abort startup if any test-bot rows are present.
+    if (process.env.APP_MODE === 'production') {
+      const testBotCount = await detectTestBotRowsInProduction();
+      if (testBotCount > 0) {
+        logger.error('[Startup] Production environment contains test-bot rows', { testBotCount });
+        process.exit(1);
+      }
+    }
 
     // Register all API routes and get HTTP server
     const server = await registerRoutes(app);

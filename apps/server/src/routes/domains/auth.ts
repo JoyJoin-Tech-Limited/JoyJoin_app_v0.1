@@ -4,6 +4,7 @@ import { setupWechatAuth } from "../../wechatAuth";
 import { storage } from "../../storage";
 import { authEndpointLimiter } from "../../rateLimiter";
 import { logger } from "../../lib/logger";
+import { captureLocationSnapshot } from "../../lib/captureLocationSnapshot";
 import { sanitizeAuthUser } from "../../auth/sanitizeAuthUser";
 import { isTestMode } from "../../auth/policy";
 import type { AuthUserResponse } from "@shared/api";
@@ -186,6 +187,9 @@ export function registerAuthRoutes(app: Express): void {
           user: fullUser,
           sessionToken: req.sessionID,
         });
+
+        // Best-effort geolocation capture; do not await to avoid delaying auth response.
+        captureLocationSnapshot(req, "login", user.id).catch(() => {});
       } catch (error: any) {
         logger.error("[Test Auth] Login error", { error: String(error) });
         res.status(500).json({ message: "登录失败" });

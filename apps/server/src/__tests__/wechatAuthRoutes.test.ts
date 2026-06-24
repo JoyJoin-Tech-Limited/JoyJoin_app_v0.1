@@ -263,4 +263,159 @@ describe("wechat auth route hardening", () => {
       expect(body).toEqual({ exists: false });
     });
   });
+
+  describe("WeChat nickname and avatar capture (D1)", () => {
+    const nickname = "WeChat Joy";
+    const avatarUrl = "https://thirdwx.qlogo.cn/mmopen/vi_32/test/132";
+
+    it("AC-01: persists wechatNickname and wechatAvatarUrl on /api/auth/wechat/login", async () => {
+      const createdUser = { ...mockUser, wechatNickname: nickname, wechatAvatarUrl: avatarUrl };
+      vi.mocked(usersRepo.createUserWithWechat).mockResolvedValue(createdUser as any);
+      vi.mocked(usersRepo.getUserById).mockResolvedValue(createdUser as any);
+
+      await withServer(async (baseUrl) => {
+        const response = await fetch(`${baseUrl}/api/auth/wechat/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: "wechat_test_profile_capture_ac01", wechatNickname: nickname, wechatAvatarUrl: avatarUrl }),
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(200);
+        expect(body).toMatchObject({ success: true, isNewUser: true });
+        expect(body.user).toMatchObject({ wechatNickname: nickname, wechatAvatarUrl: avatarUrl });
+        expectNoSensitiveAuthFields(body.user);
+
+        expect(usersRepo.createUserWithWechat).toHaveBeenCalledWith(
+          expect.objectContaining({
+            wechatOpenId: expect.stringContaining("mock_openid_"),
+            wechatNickname: nickname,
+            wechatAvatarUrl: avatarUrl,
+          })
+        );
+      });
+    });
+
+    it("AC-01b: persists wechatNickname and wechatAvatarUrl on /api/auth/wechat/login-with-test", async () => {
+      const createdUser = { ...mockUser, wechatNickname: nickname, wechatAvatarUrl: avatarUrl };
+      vi.mocked(usersRepo.createUserWithWechat).mockResolvedValue(createdUser as any);
+      vi.mocked(usersRepo.getUserById).mockResolvedValue(createdUser as any);
+
+      await withServer(async (baseUrl) => {
+        const response = await fetch(`${baseUrl}/api/auth/wechat/login-with-test`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: "wechat_test_profile_capture_ac01b", wechatNickname: nickname, wechatAvatarUrl: avatarUrl }),
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(200);
+        expect(body).toMatchObject({ success: true, isNewUser: true });
+        expect(body.user).toMatchObject({ wechatNickname: nickname, wechatAvatarUrl: avatarUrl });
+      });
+    });
+
+    it("AC-02: GET /api/auth/user returns wechatNickname and wechatAvatarUrl", async () => {
+      const existingUser = { ...mockUser, wechatNickname: nickname, wechatAvatarUrl: avatarUrl };
+      vi.mocked(usersRepo.getUserByWechatOpenId).mockResolvedValue(existingUser as any);
+      vi.mocked(usersRepo.getUserById).mockResolvedValue(existingUser as any);
+      vi.mocked(storage.getUser).mockResolvedValue(existingUser as any);
+
+      await withServer(async (baseUrl) => {
+        const loginResponse = await fetch(`${baseUrl}/api/auth/wechat/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: "wechat_test_profile_capture_ac02" }),
+        });
+        const authenticatedCookie = cookieHeader(loginResponse);
+
+        const authUserResponse = await fetch(`${baseUrl}/api/auth/user`, {
+          headers: { cookie: authenticatedCookie },
+        });
+        const authUserBody = await authUserResponse.json() as any;
+
+        expect(authUserResponse.status).toBe(200);
+        expect(authUserBody).toMatchObject({
+          id: mockUser.id,
+          wechatNickname: nickname,
+          wechatAvatarUrl: avatarUrl,
+        });
+        expectNoSensitiveAuthFields(authUserBody);
+      });
+    });
+
+    it("AC-03: login succeeds and returns a valid session when nickname/avatar are omitted", async () => {
+      const createdUser = { ...mockUser, wechatNickname: null, wechatAvatarUrl: null };
+      vi.mocked(usersRepo.createUserWithWechat).mockResolvedValue(createdUser as any);
+      vi.mocked(usersRepo.getUserById).mockResolvedValue(createdUser as any);
+
+      await withServer(async (baseUrl) => {
+        const response = await fetch(`${baseUrl}/api/auth/wechat/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: "wechat_test_profile_capture_ac03" }),
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(200);
+        expect(body).toMatchObject({ success: true, isNewUser: true });
+        expect(body.user.wechatNickname).toBeFalsy();
+        expect(body.user.wechatAvatarUrl).toBeFalsy();
+        expect(body.sessionToken).toBeTruthy();
+      });
+    });
+
+    it("AC-04: updates nickname/avatar for an existing user when values change", async () => {
+      const existingUser = { ...mockUser, wechatNickname: "Old Name", wechatAvatarUrl: "https://old.example.com/avatar.png" };
+      const updatedUser = { ...existingUser, wechatNickname: nickname, wechatAvatarUrl: avatarUrl };
+      vi.mocked(usersRepo.getUserByWechatOpenId).mockResolvedValue(existingUser as any);
+      vi.mocked(usersRepo.updateUser).mockResolvedValue(updatedUser as any);
+      vi.mocked(usersRepo.getUserById).mockResolvedValue(updatedUser as any);
+
+      await withServer(async (baseUrl) => {
+        const response = await fetch(`${baseUrl}/api/auth/wechat/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: "wechat_test_profile_capture_ac04", wechatNickname: nickname, wechatAvatarUrl: avatarUrl }),
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(200);
+        expect(body).toMatchObject({ success: true, isNewUser: false });
+        expect(body.user).toMatchObject({ wechatNickname: nickname, wechatAvatarUrl: avatarUrl });
+
+        expect(usersRepo.updateUser).toHaveBeenCalledWith(
+          existingUser.id,
+          expect.objectContaining({
+            wechatNickname: nickname,
+            wechatAvatarUrl: avatarUrl,
+          })
+        );
+      });
+    });
+
+    it("AC-04b: existing-user login succeeds even if profile update throws", async () => {
+      const existingUser = { ...mockUser, wechatNickname: "Old Name", wechatAvatarUrl: "https://old.example.com/avatar.png" };
+      vi.mocked(usersRepo.getUserByWechatOpenId).mockResolvedValue(existingUser as any);
+      vi.mocked(usersRepo.updateUser).mockImplementation(async (_id, updates) => {
+        if ("wechatNickname" in updates || "wechatAvatarUrl" in updates) {
+          throw new Error("profile update failed");
+        }
+        return existingUser as any;
+      });
+      vi.mocked(usersRepo.getUserById).mockResolvedValue(existingUser as any);
+
+      await withServer(async (baseUrl) => {
+        const response = await fetch(`${baseUrl}/api/auth/wechat/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: "wechat_test_profile_capture_ac04b", wechatNickname: nickname, wechatAvatarUrl: avatarUrl }),
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(200);
+        expect(body).toMatchObject({ success: true, isNewUser: false });
+      });
+    });
+  });
 });

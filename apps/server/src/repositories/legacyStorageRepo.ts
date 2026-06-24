@@ -155,6 +155,7 @@ export interface LegacyStorage {
     userId: string;
     phase: string;
     currentQuestionIndex: number;
+    totalQuestions: number;
     traitScores: any;
     traitConfidences: any;
     topArchetypes: any;
@@ -1245,6 +1246,7 @@ export class LegacyStorageRepo implements LegacyStorage {
     userId: string;
     phase: string;
     currentQuestionIndex: number;
+    totalQuestions: number;
     traitScores: any;
     traitConfidences: any;
     topArchetypes: any;

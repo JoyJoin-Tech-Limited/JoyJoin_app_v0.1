@@ -838,6 +838,8 @@ export interface EssentialDataPayload {
   intent?: string[]
   /** One-line social signature / bio (≤100 chars). */
   bio?: string
+  /** Custom avatar URL override; null clears any previous override. */
+  profileImageUrl?: string | null
   [key: string]: unknown
 }
 

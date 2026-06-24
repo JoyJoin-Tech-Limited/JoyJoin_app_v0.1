@@ -1574,3 +1574,86 @@ export type InsertCityUnlockProgress = z.infer<typeof insertCityUnlockProgressSc
  * used for explicit TTL enforcement (clients receive a structured expiry
  * error rather than an opaque 404).
  */
+
+// ============ Privacy-Safe IP Geolocation ============
+
+/**
+ * Per-event privacy-safe IP geolocation snapshots.
+ *
+ * Raw IPs are never stored.  A daily rotating salt (`ipSaltDate`) plus SHA-256
+ * hashing produces a stable-but-anonymized identifier for unique-user counting
+ * within a single day.  The last octet of the IP is zeroed before hashing so
+ * the identifier cannot be reversed to an individual address even with the salt.
+ *
+ * Rows are retained for 90 days and then rolled up into
+ * `user_location_aggregates`.  Foreign key to `users` is optional so anonymous
+ * onboarding sessions can still contribute to aggregate heatmaps.
+ */
+export const userLocationSnapshots = pgTable("user_location_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  eventType: varchar("event_type", { length: 32 }).notNull(),
+  // privacy-safe identifiers
+  hashedIp: varchar("hashed_ip", { length: 64 }).notNull(),
+  anonymizedIp: varchar("anonymized_ip", { length: 40 }).notNull(),
+  ipSaltDate: date("ip_salt_date").notNull(),
+  // parsed location (QQwry for mainland China)
+  country: varchar("country", { length: 60 }),
+  province: varchar("province", { length: 60 }),
+  city: varchar("city", { length: 60 }),
+  district: varchar("district", { length: 60 }),
+  isp: varchar("isp", { length: 120 }),
+  isMainland: boolean("is_mainland").notNull().default(false),
+  // metadata
+  lookupSource: varchar("lookup_source", { length: 20 }).notNull().default("qqwry"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index("idx_user_location_snapshots_user").on(table.userId),
+  index("idx_user_location_snapshots_event_type").on(table.eventType),
+  index("idx_user_location_snapshots_created_at").on(table.createdAt),
+  index("idx_user_location_snapshots_city").on(table.city),
+  index("idx_user_location_snapshots_mainland").on(table.isMainland),
+]);
+
+export const insertUserLocationSnapshotSchema = createInsertSchema(userLocationSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type UserLocationSnapshot = typeof userLocationSnapshots.$inferSelect;
+export type InsertUserLocationSnapshot = z.infer<typeof insertUserLocationSnapshotSchema>;
+
+/**
+ * Daily rolled-up location aggregates for the admin heatmap.
+ *
+ * `uniqueHashedIps` counts distinct `hashed_ip` values seen for the day.
+ * `anonymousSnapshots` counts rows where `user_id IS NULL`.
+ *
+ * Aggregates are maintained by a nightly rollup job or incrementally on
+ * capture.  The primary key is (date, province, city, event_type) so the same
+ * city can report multiple event types independently.
+ */
+export const userLocationAggregates = pgTable("user_location_aggregates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  date: date("date").notNull(),
+  province: varchar("province", { length: 60 }).notNull(),
+  city: varchar("city", { length: 60 }).notNull(),
+  eventType: varchar("event_type", { length: 32 }).notNull(),
+  uniqueHashedIps: integer("unique_hashed_ips").notNull().default(0),
+  totalSnapshots: integer("total_snapshots").notNull().default(0),
+  anonymousSnapshots: integer("anonymous_snapshots").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+}, (table) => [
+  uniqueIndex("idx_user_location_aggregates_unique")
+    .on(table.date, table.province, table.city, table.eventType),
+  index("idx_user_location_aggregates_date").on(table.date),
+  index("idx_user_location_aggregates_city").on(table.city),
+]);
+
+export const insertUserLocationAggregateSchema = createInsertSchema(userLocationAggregates).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type UserLocationAggregate = typeof userLocationAggregates.$inferSelect;
+export type InsertUserLocationAggregate = z.infer<typeof insertUserLocationAggregateSchema>;

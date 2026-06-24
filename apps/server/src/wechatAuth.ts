@@ -12,6 +12,7 @@ import { canUseMockWechatAuth, isDebugAuthLoggingEnabled } from "./auth/policy";
 import { sanitizeAuthUser } from "./auth/sanitizeAuthUser";
 import { storage } from "./storage";
 import { logger } from "./lib/logger";
+import { captureLocationSnapshot } from "./lib/captureLocationSnapshot";
 
 /**
  * Minimum number of answers with a valid questionId + selectedOption that must
@@ -298,31 +299,79 @@ export async function getWechatOAuthOpenId(
   return { openid: oauthData.openid, access_token: oauthData.access_token };
 }
 
+export interface WechatProfileData {
+  wechatNickname?: string;
+  wechatAvatarUrl?: string;
+}
+
 /**
  * Find or create a user by WeChat openid.
  * `session_key` is optional: it is present in the Mini Program flow but absent in the
  * OAuth2 web flow. When provided it is persisted so the Mini Program can use it for
  * encrypted-data decryption; when absent the existing value is left unchanged.
+ *
+ * `profileData` is best-effort WeChat profile information (nickname/avatar). It is
+ * captured when the Mini Program obtains user consent via getUserProfile/getUserInfo.
+ * Login never fails because of missing or malformed profile data.
  */
 export async function findOrCreateWechatUser(
   openid: string,
-  session_key?: string
+  session_key?: string,
+  profileData?: WechatProfileData
 ): Promise<{ user: NonNullable<Awaited<ReturnType<typeof usersRepo.getUserByWechatOpenId>>>; isNewUser: boolean }> {
   const existingUser = await usersRepo.getUserByWechatOpenId(openid);
+
+  const profileUpdate: Partial<WechatProfileData> = {};
+  if (profileData?.wechatNickname !== undefined) {
+    profileUpdate.wechatNickname = profileData.wechatNickname;
+  }
+  if (profileData?.wechatAvatarUrl !== undefined) {
+    profileUpdate.wechatAvatarUrl = profileData.wechatAvatarUrl;
+  }
+  const hasProfileUpdate =
+    Object.prototype.hasOwnProperty.call(profileUpdate, "wechatNickname") ||
+    Object.prototype.hasOwnProperty.call(profileUpdate, "wechatAvatarUrl");
 
   if (!existingUser) {
     const newUser = await usersRepo.createUserWithWechat({
       wechatOpenId: openid,
       ...(session_key ? { wechatSessionKey: session_key } : {}),
+      ...profileUpdate,
     });
-    logger.info("[WeChat Auth] Created new user via WeChat", { userId: newUser.id });
+    logger.info("[WeChat Auth] Created new user via WeChat", {
+      userId: newUser.id,
+      hasNickname: Boolean(newUser.wechatNickname),
+      hasAvatar: Boolean(newUser.wechatAvatarUrl),
+    });
     return { user: newUser, isNewUser: true };
   }
 
   if (session_key) {
     await usersRepo.updateUser(existingUser.id, { wechatSessionKey: session_key });
   }
-  logger.info("[WeChat Auth] Updated session for existing user", { userId: existingUser.id });
+
+  // Best-effort profile capture: nickname/avatar update failures must never block login.
+  if (hasProfileUpdate) {
+    try {
+      await usersRepo.updateUser(existingUser.id, {
+        wechatNickname: profileUpdate.wechatNickname,
+        wechatAvatarUrl: profileUpdate.wechatAvatarUrl,
+      });
+    } catch (profileErr) {
+      logger.warn("[WeChat Auth] Failed to update WeChat profile data; continuing login", {
+        userId: existingUser.id,
+        hasNickname: Boolean(profileUpdate.wechatNickname),
+        hasAvatar: Boolean(profileUpdate.wechatAvatarUrl),
+        error: profileErr instanceof Error ? profileErr.message : String(profileErr),
+      });
+    }
+  }
+
+  logger.info("[WeChat Auth] Updated session for existing user", {
+    userId: existingUser.id,
+    hasNickname: Boolean(profileUpdate.wechatNickname ?? existingUser.wechatNickname),
+    hasAvatar: Boolean(profileUpdate.wechatAvatarUrl ?? existingUser.wechatAvatarUrl),
+  });
   const updated = await usersRepo.getUserById(existingUser.id);
   return { user: updated ?? existingUser, isNewUser: false };
 }
@@ -777,29 +826,37 @@ export function setupWechatAuth(app: Express) {
    */
    app.post("/api/auth/wechat/login-with-test", async (req: Request, res) => {
      try {
-       const { code, testAnswers, anonymousSessionId, referralCode } = req.body as {
+       const { code, testAnswers, anonymousSessionId, referralCode, wechatNickname, wechatAvatarUrl } = req.body as {
          code?: string;
          testAnswers?: unknown[];
          anonymousSessionId?: unknown;
          referralCode?: string;
+         wechatNickname?: string;
+         wechatAvatarUrl?: string;
        };
 
-      if (!code) {
-        return res.status(400).json({ error: "WeChat code is required" });
-      }
+       if (!code) {
+         return res.status(400).json({ error: "WeChat code is required" });
+       }
 
-      // Sanitise the optional anonymousSessionId so we only pass a safe string
-      // to storage methods (never an arbitrary object from the request body).
-      const safeAnonSessionId: string | null =
-        typeof anonymousSessionId === "string" && anonymousSessionId.trim().length > 0
-          ? anonymousSessionId.trim()
-          : null;
+       // Sanitise the optional anonymousSessionId so we only pass a safe string
+       // to storage methods (never an arbitrary object from the request body).
+       const safeAnonSessionId: string | null =
+         typeof anonymousSessionId === "string" && anonymousSessionId.trim().length > 0
+           ? anonymousSessionId.trim()
+           : null;
 
-      const { openid, session_key } = await getWechatOpenId(code);
-      const { user, isNewUser } = await findOrCreateWechatUser(
-        openid,
-        session_key
-      );
+       const profileData: WechatProfileData = {
+         ...(typeof wechatNickname === "string" ? { wechatNickname: wechatNickname.trim() } : {}),
+         ...(typeof wechatAvatarUrl === "string" ? { wechatAvatarUrl: wechatAvatarUrl.trim() } : {}),
+       };
+
+       const { openid, session_key } = await getWechatOpenId(code);
+       const { user, isNewUser } = await findOrCreateWechatUser(
+         openid,
+         session_key,
+         profileData
+       );
 
       // Idempotency guard: only import testAnswers the first time.
       // If the user already has a completed personality test we skip the import
@@ -976,16 +1033,22 @@ export function setupWechatAuth(app: Express) {
    */
   app.post("/api/auth/wechat/login", async (req: Request, res) => {
     try {
-      const { code, referralCode } = req.body as { code?: string; referralCode?: string };
+      const { code, referralCode, wechatNickname, wechatAvatarUrl } = req.body as { code?: string; referralCode?: string; wechatNickname?: string; wechatAvatarUrl?: string };
 
       if (!code) {
         return res.status(400).json({ error: "WeChat code is required" });
       }
 
+      const profileData: WechatProfileData = {
+        ...(typeof wechatNickname === "string" ? { wechatNickname: wechatNickname.trim() } : {}),
+        ...(typeof wechatAvatarUrl === "string" ? { wechatAvatarUrl: wechatAvatarUrl.trim() } : {}),
+      };
+
       const { openid, session_key } = await getWechatOpenId(code);
       const { user, isNewUser } = await findOrCreateWechatUser(
         openid,
-        session_key
+        session_key,
+        profileData
       );
 
       const fullUser = (await usersRepo.getUserById(user.id)) ?? user;
@@ -1043,6 +1106,9 @@ export function setupWechatAuth(app: Express) {
         user: sanitizeAuthUser(fullUser),
         sessionToken: req.sessionID,
       });
+
+      // Best-effort geolocation capture; do not await to avoid delaying auth response.
+      captureLocationSnapshot(req, "login", fullUser.id).catch(() => {});
     } catch (error) {
       const err = error as Error & { code?: string; status?: number };
       logger.error("[WeChat Auth] Error during WeChat login", {

@@ -1,7 +1,6 @@
 ---
 description: JoyJoin orchestration brain — route the next specialist, manage delivery lanes (Direct/Kickoff/Harness/Deliberation/Operational), sequence Researcher→Planner for kickoff, consolidate turn reports, enforce Sprint Contract protocol for Tier 2+ work. Use for broad work, multi-agent coordination, midstream rerouting, or when the next move spans multiple specialists. Trigger phrases: orchestrate this, route the next agent, reroute this bug, multi-agent workflow, coordinate these agents, supervisor, delivery lane, which agent should handle this.
 mode: subagent
-model: inherit
 permission:
   edit: deny
   bash:

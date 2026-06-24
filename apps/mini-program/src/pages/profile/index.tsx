@@ -1,11 +1,10 @@
 import { getJoinedEvents, getUserCoupons } from '@shared/api'
-//import { ARCHETYPE_FAMILY_GRADIENTS, getArchetypeFamily } from '@shared/archetypeColors'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { useQuery } from '@tanstack/react-query'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
@@ -19,6 +18,7 @@ import {
   isUnauthorizedApiError,
 } from '../../lib/api/authSession'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
+import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import { haptics } from '../../lib/utils/haptics'
@@ -106,14 +106,13 @@ export default function ProfilePage() {
       logoutLockRef.current = false
     }
   }
-  // update the profile data logic 
-  // const displayName = authUser?.nickname || authUser?.displayName || '悦聚用户'
-  // // const archetype = authUser?.archetype
-  // const archetype = authUser?.archetype ?? authUser?.primaryArchetype ?? null
-  // const nextStep = authUser?.nextStep
   const displayName = authUser?.nickname || authUser?.displayName || '悦聚用户'
   const archetype = authUser?.archetype ?? authUser?.primaryArchetype ?? null
   const archetypeName = archetype ? (ARCHETYPE_BY_ID[archetype]?.nameCn || archetype) : null
+  const redesignEnabled = authUser?.features?.profileRedesignEnabled ?? true
+  const [avatarError, setAvatarError] = useState(false)
+  const avatarUrl = redesignEnabled ? (authUser?.profileImageUrl || authUser?.wechatAvatarUrl) : null
+  const showAvatarImage = Boolean(avatarUrl && !avatarError)
   const nextStep = authUser?.nextStep
   const profileCompletion = getProfileCompletion(authUser)
 
@@ -131,13 +130,30 @@ export default function ProfilePage() {
     })
   }
 
+  const handleAvatarError = () => {
+    setAvatarError(true)
+    profileAnalytics.track('profile_avatar_load_error', {
+      source: authUser?.profileImageUrl ? 'profileImageUrl' : 'wechatAvatarUrl',
+    })
+  }
+
   return renderGate(
     <View className='profile-page tab-page-enter'>
       <ScrollView className='profile-page__scroll' scrollY enhanced showScrollbar={false}>
         {/* Hero section */}
         {/*<View className='profile-page__hero'>
           <View className='profile-page__avatar'>
-            <ArchetypeHead archetype={archetype} size={120} fallbackText={displayName} />
+            {showAvatarImage ? (
+              <Image
+                className='profile-page__avatar-img'
+                src={avatarUrl as string}
+                mode='aspectFill'
+                aria-label='用户头像'
+                onError={handleAvatarError}
+              />
+            ) : (
+              <ArchetypeHead archetype={archetype} size={120} fallbackText={displayNamePrimary} />
+            )}
           </View>
           <Text className='profile-page__name'>{displayName}</Text>
           {/*{archetype ? (
@@ -198,7 +214,7 @@ export default function ProfilePage() {
             style={{ background: ARCHETYPE_FAMILY_GRADIENTS[getArchetypeFamily(archetype)] }}
           >
             <View className='profile-page__archetype-card-inner'>
-              <ArchetypeHead archetype={archetype} size={64} />
+              <ArchetypeHead archetype={archetype} size={64} fallbackText={displayNamePrimary} />
               <View className='profile-page__archetype-card-text'>
                 <Text className='profile-page__archetype-card-label'>你的社交原型</Text>
                 <Text className='profile-page__archetype-card-name'>
@@ -301,7 +317,7 @@ export default function ProfilePage() {
           <View
             className='profile-page__action-row'
             hoverClass='profile-page__action-row--active'
-            onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/edit-profile/index' }) }}
+            onClick={() => { haptics('light'); Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.editProfile }) }}
           >
             <JoyJoinIcon emoji='✏️' size={24} className='profile-page__action-icon' />
             <Text className='profile-page__action-text'>编辑资料</Text>

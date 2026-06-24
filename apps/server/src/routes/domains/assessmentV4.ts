@@ -8,6 +8,7 @@ import type { ArchetypeName } from "../../archetypeConfig";
 import { ARCHETYPE_NAMES } from "../../archetypeConfig";
 import { prefetchAnalysisIfReady } from "../../xiaoyueAnalysisService";
 import { annotateOptionsWithCommentary } from "@shared/personality";
+import { captureLocationSnapshot } from "../../lib/captureLocationSnapshot";
 
 /** Validates that the matcher produced a sane final result before we persist it. */
 function validateFinalResult(finalResult: any): { valid: boolean; primaryArchetype: string; error?: string } {
@@ -174,8 +175,24 @@ export function registerAssessmentV4Routes(app: Express): void {
           // (session complete but user flag false) is harmless because the stale guard
           // will fire again on the next /start and retry the flag sync.
           try {
+            const userSecondaryData = (session.preSignupData as any)?.secondaryData ?? {};
+            const { getFinalResult } = await import('@shared/personality');
+            const finalResult = getFinalResult(engineState, userSecondaryData);
+            const validation = validateFinalResult(finalResult);
+            if (!validation.valid) {
+              finalResult.primaryArchetype = validation.primaryArchetype;
+            }
+
             await storage.updateAssessmentSession(session.id, {
               phase: 'completed',
+              currentQuestionIndex: engineState.answeredQuestionIds.size,
+              totalQuestions: engineState.answeredQuestionIds.size,
+              traitConfidences: engineState.traitConfidences,
+              topArchetypes: engineState.currentMatches,
+              finalResult,
+              traitScores: finalResult.traitScores,
+              primaryArchetype: finalResult.primaryArchetype,
+              isDecisive: finalResult.isDecisive,
               completedAt: new Date(),
             });
             // Also sync the user flag so nextStep doesn't loop back to personality-test
@@ -423,14 +440,19 @@ export function registerAssessmentV4Routes(app: Express): void {
         await storage.updateAssessmentSession(sessionId, {
           phase: 'completed',
           currentQuestionIndex: answers.length,
+          totalQuestions: answers.length,
           traitConfidences: engineState.traitConfidences,
           topArchetypes: engineState.currentMatches,
           finalResult,
+          traitScores: finalResult.traitScores,
           primaryArchetype: finalResult.primaryArchetype,
           isDecisive: finalResult.isDecisive,
           completedAt: new Date(),
         });
-        
+
+        // Best-effort geolocation capture at onboarding completion.
+        captureLocationSnapshot(req, "onboarding_complete", session.userId ?? null).catch(() => {});
+
         // Sync V4 result to role_results table (overwrite any previous results)
         if (session.userId) {
           const primaryArchetype = finalResult.primaryArchetype;
@@ -725,9 +747,11 @@ export function registerAssessmentV4Routes(app: Express): void {
         await storage.updateAssessmentSession(sessionId, {
           phase: 'completed',
           currentQuestionIndex: answers.length,
+          totalQuestions: answers.length,
           traitConfidences: engineState.traitConfidences,
           topArchetypes: engineState.currentMatches,
           finalResult,
+          traitScores: finalResult.traitScores,
           primaryArchetype: finalResult.primaryArchetype,
           isDecisive: finalResult.isDecisive,
           completedAt: new Date(),

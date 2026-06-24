@@ -1,7 +1,6 @@
 ---
 description: Plan auditor for Oh-My-OpenCode — executes individual tasks from Prometheus plans, implements changes, records learnings to notepad, and returns verification evidence. Trigger phrase: sisyphus, boulder.
 mode: subagent
-model: inherit
 permission:
   edit: allow
   bash:

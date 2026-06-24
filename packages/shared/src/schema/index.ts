@@ -18,6 +18,10 @@ export {
   assessmentAnswers,
   insertAssessmentSessionSchema,
   insertAssessmentAnswerSchema,
+  userLocationSnapshots,
+  userLocationAggregates,
+  insertUserLocationSnapshotSchema,
+  insertUserLocationAggregateSchema,
 } from './_definitions_extended.js';
 export type {
   UserCityInterest,
@@ -28,4 +32,8 @@ export type {
   InsertAssessmentSession,
   AssessmentAnswer,
   InsertAssessmentAnswer,
+  UserLocationSnapshot,
+  InsertUserLocationSnapshot,
+  UserLocationAggregate,
+  InsertUserLocationAggregate,
 } from './_definitions_extended.js';

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { View, Text, Input, ScrollView, Picker } from '@tarojs/components'
+import { View, Text, Input, ScrollView, Picker, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import {
   getUserInterests,
@@ -32,6 +32,7 @@ import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { evaluateProfessionInputQuality, isMeaningfulProfessionInput } from '../../../lib/onboarding/professionInputQuality'
 
 import ProfileArchetypeHero from '../../../components/profile/ProfileArchetypeHero'
+import ArchetypeHead from '../../../components/mascot/ArchetypeHead'
 import ProfessionDisplayField from '../../../components/profile/ProfessionDisplayField'
 import ProfessionChatOverlay from '../../../components/ProfessionChatOverlay'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
@@ -125,6 +126,8 @@ export default function EditProfilePage() {
   const [professionText, setProfessionText] = useState('')
   const [bio, setBio] = useState('')
   const [originalBio, setOriginalBio] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState('')
+  const [avatarError, setAvatarError] = useState(false)
   const [professionClassification, setProfessionClassification] = useState<import('../../../components/ProfessionChatOverlay').ProfessionClassificationData | null>(null)
   const [showProfessionOverlay, setShowProfessionOverlay] = useState(false)
   const [isProfessionOverlayClosing, setIsProfessionOverlayClosing] = useState(false)
@@ -185,7 +188,7 @@ export default function EditProfilePage() {
   useEffect(() => {
     if (!user) return
     const u = user as Record<string, any>
-    setDisplayName(u.displayName || u.nickname || '')
+    setDisplayName(u.displayName || u.wechatNickname || u.nickname || '')
     setGender(normalizeGenderValue(u.gender))
 
     let resolvedBirthYear = 0
@@ -204,6 +207,7 @@ export default function EditProfilePage() {
     const initialBio = typeof u.bio === 'string' ? u.bio : ''
     setBio(initialBio)
     setOriginalBio(initialBio)
+    setAvatarUrl((u.profileImageUrl as string | null | undefined) || (u.wechatAvatarUrl as string | null | undefined) || '')
     setProfessionClassification({
       occupationId: typeof u.occupationId === 'string' ? u.occupationId : '',
       standardizedOccupationId: typeof u.standardizedOccupationId === 'string' ? u.standardizedOccupationId : null,
@@ -406,6 +410,7 @@ export default function EditProfilePage() {
         birthYear,
         currentCity: currentCity.trim(),
         ...(redesignEnabled ? { bio: trimmedBio } : {}),
+        profileImageUrl: avatarUrl.trim() || null,
         ...(hometownRegionCity.trim() ? { hometownRegionCity: hometownRegionCity.trim() } : {}),
         ...(educationLevel ? { educationLevel } : {}),
         ...(intent.length > 0 ? { intent } : {}),
@@ -461,6 +466,7 @@ export default function EditProfilePage() {
       setChangedFields({})
       haptics('success')
       logInfo('[EditProfile] Save success', { fieldsChanged })
+      profileAnalytics.track('profile_edit_save', { fieldsChanged })
 
       Taro.showToast({ title: '保存成功', icon: 'success', duration: 2000 })
       setTimeout(() => {
@@ -508,6 +514,7 @@ export default function EditProfilePage() {
     interestLevels,
     invalidateAuth,
     bio,
+    avatarUrl,
     redesignEnabled,
   ])
 
@@ -609,6 +616,54 @@ export default function EditProfilePage() {
                 })}
               />
             </View>
+
+            {/* Avatar */}
+            {redesignEnabled && (
+              <View className='edit-profile__field' id='field-avatar' data-field='avatar'>
+                <Text className='edit-profile__label'>头像</Text>
+                <View className='edit-profile__avatar-row'>
+                  <View className='edit-profile__avatar-preview'>
+                    {avatarUrl.trim() && !avatarError ? (
+                      <Image
+                        className='edit-profile__avatar-img'
+                        src={avatarUrl.trim()}
+                        mode='aspectFill'
+                        aria-label='头像预览'
+                        onError={() => setAvatarError(true)}
+                      />
+                    ) : (
+                      <ArchetypeHead archetype={previewArchetype} size={80} fallbackText={previewName} />
+                    )}
+                  </View>
+                  <Input
+                    className='edit-profile__avatar-input'
+                    value={avatarUrl}
+                    onInput={(e) => {
+                      setAvatarUrl(e.detail.value)
+                      setAvatarError(false)
+                      setChangedFields((prev) => ({ ...prev, avatar: true }))
+                    }}
+                    placeholder='粘贴头像图片链接'
+                    maxlength={500}
+                  />
+                  {avatarUrl.trim() && (
+                    <View
+                      className='edit-profile__avatar-clear'
+                      hoverClass='edit-profile__avatar-clear--pressed'
+                      onClick={() => {
+                        haptics('light')
+                        setAvatarUrl('')
+                        setAvatarError(false)
+                        setChangedFields((prev) => ({ ...prev, avatar: true }))
+                      }}
+                      aria-label='清除头像链接'
+                    >
+                      <Text className='edit-profile__avatar-clear-text'>×</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            )}
 
             {/* Gender */}
             <View className='edit-profile__field' id='field-gender' data-field='gender'>

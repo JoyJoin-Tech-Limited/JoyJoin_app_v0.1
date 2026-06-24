@@ -14,3 +14,16 @@ export function isSingleTestMode(): boolean {
   }
   return (process.env.APP_MODE ?? 'production') === 'test';
 }
+
+/**
+ * Strict gate for matching-test mode.
+ *
+ * Returns true only when single-test mode is active AND the explicit
+ * ENABLE_MATCHING_TEST_MODE flag is set. Production is always false.
+ */
+export function isMatchingTestMode(): boolean {
+  if (process.env.APP_MODE === 'production') {
+    return false;
+  }
+  return isSingleTestMode() && process.env.ENABLE_MATCHING_TEST_MODE === 'true';
+}

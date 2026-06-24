@@ -339,3 +339,83 @@ After logging into the 体验版, start any paid flow (event registration, subsc
 | db:push prompts to reset | Schema drift from prod | Select "No" — don't reset |
 | Type check fails in CI | Missing env vars | Ensure `.env` file is present |
 | Mini-program won't upload | Missing WECHAT_PRIVATE_KEY | Set in GitHub Actions secrets |
+
+---
+
+## H. Matching-Test Mode (End-to-End Matching + Payment)
+
+Matching-test mode lets one real tester pay ¥0.01 (staging) and register alongside full-profile bot users through the **same production matching engine** (`poolMatchingService`, `saveMatchResults`). Designed for pre-launch matching quality validation.
+
+### Architecture
+
+| Layer | How it's isolated |
+|-------|------------------|
+| Gate | `isMatchingTestMode()` — requires both `ENABLE_SINGLE_TEST_MODE=true` AND `ENABLE_MATCHING_TEST_MODE=true`; always returns `false` when `APP_MODE=production` |
+| DB markers | `users.is_test_bot` (boolean, default false), `event_pools.is_test_pool` (boolean, default false). Production queries ignore them |
+| Startup sentinel | Server crashes on boot if any `is_test_bot=true` rows exist in production (`apps/server/src/index.ts`) |
+| Routes | All under `/api/test/matching-test/*` — return 403 when `isMatchingTestMode()` is false |
+| Matching | Calls **deterministic** `matchEventPool` / `saveMatchResults` — no scoring shortcuts |
+
+### Flow from scratch
+
+1. **Enable** — Set both in `.env.staging`:
+   ```ini
+   ENABLE_SINGLE_TEST_MODE=true
+   ENABLE_MATCHING_TEST_MODE=true
+   ```
+2. **Seed** — `POST /api/test/matching-test/start` → creates pool + 5 full-profile bots (includes archetypes, `user_interests`, industry tiers, registration preferences)
+3. **Tester registers** — Real user discovers pool in mini-program Discover, pays ¥0.01 via normal `POST /api/event-pools/:poolId/register-with-payment`
+4. **Matching fires** — Realtime `scanPoolAndMatch` auto-triggers after tester registration, OR manually call `POST /api/test/matching-test/{poolId}/match`
+5. **Group forms** — Tester + bots assigned to groups via production matching engine
+6. **Cleanup** — `POST /api/test/matching-test/cleanup` — deletes test pool registrations (icebreaker data, groups), marks test pool inactive. Payment records preserved.
+
+### API reference
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/api/test/matching-test/start` | Seed matching-test pool + 5 bots. Returns `{ poolId, botUsers, nextStep }` |
+| POST | `/api/test/matching-test/{poolId}/match` | Manually trigger matching on a test pool |
+| POST | `/api/test/matching-test/cleanup` | Delete all test data (idempotent). Preserves payment records |
+
+### Env flags
+
+| Variable | Required | Default | Purpose |
+|----------|----------|---------|---------|
+| `ENABLE_SINGLE_TEST_MODE` | yes | — | Must be `true` for matching-test mode to activate |
+| `ENABLE_MATCHING_TEST_MODE` | yes | `false` | Enables `/api/test/matching-test/*` routes |
+| `TEST_PAYMENT_PRICE_IN_CENTS` | for payments | — | Set to `1` to charge ¥0.01 for test payments |
+
+### Bot profile coverage
+
+Each seed call creates 5 bots with diverse profiles covering all required matching dimensions:
+- Archetype diversity (across 12 V4 archetypes)
+- Industry tiers (niche, segment, category)
+- Full `user_interests` (3-tier selections)
+- Registration preferences (intent, dealbreakers)
+
+Re-seeding resets old bot registrations before inserting new ones.
+
+### Cleanup behavior
+
+- Deletes all `event_pool_registrations` for test pools
+- Deletes associated icebreaker sessions and phase metrics
+- Marks test pool as inactive (`is_test_pool` retained for audit)
+- **Preserves** `payments` table records (tester's real WeChat Pay receipt)
+- Idempotent — safe to run multiple times
+
+### Key files
+
+| File | Purpose |
+|------|---------|
+| `apps/server/src/services/matchingTestService.ts` | Core service: seed bots, create pool, cleanup |
+| `apps/server/src/routes/domains/matchingTest.ts` | Routes with Zod validation and `isMatchingTestMode()` gate |
+| `apps/server/src/lib/isSingleTestMode.ts` | `isMatchingTestMode()` double gate |
+| `apps/server/src/index.ts` | Startup sentinel (crashes if test-bot rows in production) |
+| `apps/server/src/routes.ts` | Route wiring |
+| `apps/server/migrations/0058_matching_test_markers.sql` | Adds `is_test_bot` and `is_test_pool` columns |
+
+### Limitations
+
+- No mini-program UI entry point yet — tester must know the pool ID to find it in Discover
+- Realtime matching may not fire on the fulfillment path (depends on `scanPoolAndMatch` integration)
+- Single tester at a time (not designed for concurrent multi-tester test events)

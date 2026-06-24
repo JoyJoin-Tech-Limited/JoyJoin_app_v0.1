@@ -281,10 +281,26 @@ describe("POST /api/assessment/v4/start", () => {
       // Should be a brand-new session
       expect(body.sessionId).not.toBe(staleSession.id);
 
-      // Stale session should have been marked completed
+      // Stale session should have been marked completed with all canonical fields
       expect(mockStorage.updateAssessmentSession).toHaveBeenCalledWith(
         staleSession.id,
-        expect.objectContaining({ phase: "completed", completedAt: expect.any(Date) })
+        expect.objectContaining({
+          phase: "completed",
+          completedAt: expect.any(Date),
+          totalQuestions: questionsV4.length,
+          traitScores: expect.objectContaining({
+            A: expect.any(Number),
+            C: expect.any(Number),
+            E: expect.any(Number),
+            O: expect.any(Number),
+            X: expect.any(Number),
+            P: expect.any(Number),
+          }),
+          finalResult: expect.objectContaining({
+            primaryArchetype: expect.any(String),
+            traitScores: expect.any(Object),
+          }),
+        })
       );
 
       // User flag should have been synced so nextStep doesn't loop
@@ -613,6 +629,61 @@ describe("PUT /api/assessment/v4/:sessionId/answer", () => {
       } else {
         expect(putBody.nextQuestion).toBeNull();
       }
+    });
+  });
+
+  // ── Completion persistence (AC for totalQuestions/traitScores/finalResult)
+  it("persists totalQuestions, traitScores, and finalResult when PUT answer completes the session", async () => {
+    await withServer(async (baseUrl) => {
+      const session = await mockStorage.createAssessmentSession({
+        phase: "pre_signup",
+        userId: null,
+      });
+
+      // Seed every question so the engine has no next question
+      for (const q of questionsV4) {
+        await mockStorage.createAssessmentAnswer({
+          sessionId: session.id,
+          questionId: q.id,
+          questionLevel: q.level,
+          selectedOption: q.options[0].value,
+          traitScores: {},
+        });
+      }
+
+      const response = await fetch(
+        `${baseUrl}/api/assessment/v4/${session.id}/answer`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ questionId: "Q1", selectedOption: "A" }),
+        }
+      );
+
+      expect(response.status).toBe(200);
+      const body: any = await response.json();
+      expect(body.isComplete).toBe(true);
+
+      expect(mockStorage.updateAssessmentSession).toHaveBeenCalledWith(
+        session.id,
+        expect.objectContaining({
+          phase: "completed",
+          completedAt: expect.any(Date),
+          totalQuestions: questionsV4.length,
+          traitScores: expect.objectContaining({
+            A: expect.any(Number),
+            C: expect.any(Number),
+            E: expect.any(Number),
+            O: expect.any(Number),
+            X: expect.any(Number),
+            P: expect.any(Number),
+          }),
+          finalResult: expect.objectContaining({
+            primaryArchetype: expect.any(String),
+            traitScores: expect.any(Object),
+          }),
+        })
+      );
     });
   });
 

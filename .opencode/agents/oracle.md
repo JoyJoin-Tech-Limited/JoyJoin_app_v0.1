@@ -1,7 +1,6 @@
 ---
 description: Compliance auditor for Oh-My-OpenCode — verifies completed work against plan specifications, checks Must Do / Must NOT Do compliance, and reports per-task APPROVE/REJECT. Trigger phrase: oracle, compliance audit.
 mode: subagent
-model: inherit
 permission:
   edit: deny
   bash:

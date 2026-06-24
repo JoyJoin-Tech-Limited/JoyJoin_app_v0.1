@@ -194,7 +194,10 @@ export const users = pgTable("users", {
   // Admin & Moderation
   isAdmin: boolean("is_admin").default(false),
   isBanned: boolean("is_banned").default(false),
-  
+
+  // Matching-test mode markers (default false; production queries ignore these rows)
+  isTestBot: boolean("is_test_bot").default(false),
+
   // Anti-abuse & Rate Limiting
   violationCount: integer("violation_count").default(0), // 累计违规次数
   dailyTokenUsed: integer("daily_token_used").default(0), // 今日已用token数
@@ -409,7 +412,10 @@ export const eventPools = pgTable("event_pools", {
   totalRegistrations: integer("total_registrations").default(0), // 总报名人数
   successfulMatches: integer("successful_matches").default(0), // 成功匹配人数
   predictiveRerankEnabledOverride: boolean("predictive_rerank_enabled_override"),
-  
+
+  // Matching-test mode marker (default false; production queries ignore these rows)
+  isTestPool: boolean("is_test_pool").default(false),
+
   // 价格（单位：元，null = 免费/未定价）
   price: integer("price"), // null = 免费报名
   

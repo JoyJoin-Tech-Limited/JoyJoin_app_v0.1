@@ -43,6 +43,22 @@ Boundary:
 - Deterministic matching reads canonical user/profile inputs and `user_interests` data.
 - AI explanation layers may enrich output, but must not redefine deterministic scoring rules.
 
+### Matching-Test Mode (test / staging only)
+
+Owns end-to-end matching validation with one real tester + full-profile bot users through the production matching engine. Defense-in-depth isolation via env gates, DB markers, and a startup sentinel.
+
+Primary files:
+- `apps/server/src/services/matchingTestService.ts` — seed bots, create test pool, trigger match, cleanup
+- `apps/server/src/routes/domains/matchingTest.ts` — `/api/test/matching-test/*` routes, gated by `isMatchingTestMode()`
+- `apps/server/src/lib/isSingleTestMode.ts` — `isMatchingTestMode()` double gate
+
+Boundary:
+- Bot profiles include full matching-compatible data (archetypes, `user_interests`, industry tiers) so `poolMatchingService` scores them identically to real users.
+- Cleanup deletes all test pool registrations and icebreaker data but preserves `payments` records.
+- Startup sentinel crashes the server if `is_test_bot=true` rows exist in `APP_MODE=production`.
+
+Full guide: `docs/operations/test-mode-operations.md` §H
+
 ### Social Icebreaker and event-time AI
 
 Owns the active in-event Social Icebreaker flow, session/check-in surfaces, and supporting AI generation.
