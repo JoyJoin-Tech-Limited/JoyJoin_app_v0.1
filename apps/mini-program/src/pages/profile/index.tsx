@@ -1,30 +1,30 @@
-import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { getJoinedEvents, getUserCoupons } from '@shared/api'
+import { ARCHETYPE_FAMILY_GRADIENTS, getArchetypeFamily } from '@shared/archetypeColors'
+import { getErrorMessage } from '@shared/copy/errorBaselines'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { useQuery } from '@tanstack/react-query'
+import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { getUserCoupons, getJoinedEvents } from '@shared/api'
-import { getOnboardingStepLabel, nextStepToOnboardingStep } from '@shared/onboarding'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
-import { getArchetypeFamily, ARCHETYPE_FAMILY_GRADIENTS } from '@shared/archetypeColors'
-import { getErrorMessage } from '@shared/copy/errorBaselines'
-import { haptics } from '../../lib/utils/haptics'
+import ArchetypeHead from '../../components/mascot/ArchetypeHead'
+import Button from '../../components/ui/Button'
+import Card from '../../components/ui/Card'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
+import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { apiRequest } from '../../lib/api/api'
 import {
   clearMiniProgramAuthSession,
   getApiErrorStatusCode,
   isUnauthorizedApiError,
 } from '../../lib/api/authSession'
-import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
-import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
-import { logError, logInfo } from '../../lib/utils/logger'
+import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
-import ArchetypeHead from '../../components/mascot/ArchetypeHead'
-import Card from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
-import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
-import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
+import { haptics } from '../../lib/utils/haptics'
+import { logError, logInfo } from '../../lib/utils/logger'
 import './index.scss'
+import { getProfileCompletion } from './profileConstants'
 
 export default function ProfilePage() {
   const { authLoading, authUser, renderGate } = useMiniPageGate()
@@ -106,17 +106,36 @@ export default function ProfilePage() {
       logoutLockRef.current = false
     }
   }
-
+  // update the profile data logic 
+  // const displayName = authUser?.nickname || authUser?.displayName || '悦聚用户'
+  // // const archetype = authUser?.archetype
+  // const archetype = authUser?.archetype ?? authUser?.primaryArchetype ?? null
+  // const nextStep = authUser?.nextStep
   const displayName = authUser?.nickname || authUser?.displayName || '悦聚用户'
-  // const archetype = authUser?.archetype
   const archetype = authUser?.archetype ?? authUser?.primaryArchetype ?? null
+  const archetypeName = archetype ? (ARCHETYPE_BY_ID[archetype]?.nameCn || archetype) : null
   const nextStep = authUser?.nextStep
+  const profileCompletion = getProfileCompletion(authUser)
+
+  // add function to handle open personality type page correct 
+  const handleOpenPersonalityType = () => {
+    haptics('light')
+  
+    if (archetype) {
+      void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults })
+      return
+    }
+  
+    void Taro.navigateTo({
+      url: `${MINI_PROGRAM_ROUTES.personalityTest}?source=profile`,
+    })
+  }
 
   return renderGate(
     <View className='profile-page tab-page-enter'>
       <ScrollView className='profile-page__scroll' scrollY enhanced showScrollbar={false}>
         {/* Hero section */}
-        <View className='profile-page__hero'>
+        {/*<View className='profile-page__hero'>
           <View className='profile-page__avatar'>
             <ArchetypeHead archetype={archetype} size={120} fallbackText={displayName} />
           </View>
@@ -127,7 +146,7 @@ export default function ProfilePage() {
             </Text>
           ) : null}
            */}
-          <View
+          {/*<View
             className={archetype ? 'profile-page__archetype': 'profile-page__archetype'}
             onClick={handleOpenPersonalityTest}
           >
@@ -137,6 +156,39 @@ export default function ProfilePage() {
                 : '测试你的社交原型'}
             </Text>
           </View>
+        </View>*/}
+        <View className='profile-page__hero profile-page__hero--entered'>
+          <View className='profile-page__avatar-ring'>
+            <ArchetypeHead
+              archetype={archetype}
+              size={120}
+              fallbackText={displayName}
+              className='profile-page__avatar-head'
+            />
+          </View>
+
+          <Text className='profile-page__name'>{displayName}</Text>
+          <Text className='profile-page__subtitle'>
+            {archetypeName ? '其他' : '还没解锁社交原型'}
+          </Text>
+
+          {archetypeName ? (
+            <View
+              className='profile-page__archetype-pill'
+              hoverClass='profile-page__archetype-pill--pressed'
+              onClick={handleOpenPersonalityType}
+            >
+              <Text className='profile-page__archetype-pill-text'>{archetypeName}</Text>
+            </View>
+          ) : (
+            <View
+              className='profile-page__unlock-pill'
+              hoverClass='profile-page__unlock-pill--pressed'
+              onClick={handleOpenPersonalityType}
+            >
+              <Text className='profile-page__unlock-pill-text'>测一测，解锁你的社交原型</Text>
+            </View>
+          )}
         </View>
 
         {/* Archetype Celebration Card */}
@@ -158,7 +210,7 @@ export default function ProfilePage() {
         )}
 
         {/* Quick stats */}
-        <View className='profile-page__stats'>
+        {/* <View className='profile-page__stats'>
           <Card className='profile-page__stat'>
             <Text className='profile-page__stat-value'>
               {isLoadingStats ? '—' : (coupons.count ?? 0)}
@@ -170,6 +222,36 @@ export default function ProfilePage() {
               {isLoadingStats ? '—' : getOnboardingStepLabel(nextStepToOnboardingStep(nextStep))}
             </Text>
             <Text className='profile-page__stat-label'>匹配进度</Text>
+          </Card>
+        </View> */}
+        <View className='profile-page__stats profile-page__stats--entered'>
+          <Card className='profile-page__stat'>
+            <Text className='profile-page__stat-value'>
+              {isLoadingStats ? '—' : joinedEventsCount}
+            </Text>
+            <Text className='profile-page__stat-label'>已参加活动</Text>
+            <Text className='profile-page__stat-caption'>去遇见</Text>
+            <View className='profile-page__chevron profile-page__chevron--stat' />
+          </Card>
+
+          <Card className='profile-page__stat'>
+            <Text className='profile-page__stat-value'>0</Text>
+            <Text className='profile-page__stat-label'>我的连接数</Text>
+            <Text className='profile-page__stat-caption'>活动后解锁</Text>
+            <View className='profile-page__chevron profile-page__chevron--stat' />
+          </Card>
+
+          <Card className='profile-page__stat'>
+            <Text className='profile-page__stat-value'>{profileCompletion}%</Text>
+            <Text className='profile-page__stat-label'>资料完成度</Text>
+            <Text className='profile-page__stat-caption'>去完善</Text>
+            <View className='profile-page__stat-progress'>
+              <View
+                className='profile-page__stat-progress-bar'
+                style={{ transform: `scaleX(${profileCompletion / 100})` }}
+              />
+            </View>
+            <View className='profile-page__chevron profile-page__chevron--stat' />
           </Card>
         </View>
 
@@ -215,7 +297,7 @@ export default function ProfilePage() {
         )}
 
         {/* Action cards */}
-        <View className='profile-page__section'>
+        {/* <View className='profile-page__section'>
           <View
             className='profile-page__action-row'
             hoverClass='profile-page__action-row--active'
@@ -283,12 +365,120 @@ export default function ProfilePage() {
             <Text className='profile-page__action-text'>服务条款</Text>
             <Text className='profile-page__action-arrow'>›</Text>
           </View>
+        </View> */}
+        {/* Action cards */}
+        <View className='profile-page__menu-section profile-page__menu-section--entered'>
+          <Text className='profile-page__menu-title'>常用功能</Text>
+
+          <View className='profile-page__menu'>
+            <View
+              className='profile-page__menu-row'
+              hoverClass='profile-page__menu-row--pressed'
+              onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/edit-profile/index' }) }}
+            >
+              <View className='profile-page__menu-icon-well'>
+                <JoyJoinIcon emoji='✏️' size={24} className='profile-page__menu-icon' />
+              </View>
+              <Text className='profile-page__menu-label'>编辑资料</Text>
+              <View className='profile-page__menu-row-right'>
+                <View className='profile-page__chevron profile-page__chevron--menu' />
+              </View>
+            </View>
+
+            <View
+              className='profile-page__menu-row'
+              hoverClass='profile-page__menu-row--pressed'
+              onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/rewards/index' }) }}
+            >
+              <View className='profile-page__menu-icon-well'>
+                <JoyJoinIcon emoji='🏆' size={24} className='profile-page__menu-icon' />
+              </View>
+              <Text className='profile-page__menu-label'>奖励福利</Text>
+              <View className='profile-page__menu-row-right'>
+                <View className='profile-page__menu-badge'>
+                  <Text className='profile-page__menu-badge-text'>{coupons.count ?? 0}</Text>
+                </View>
+                <View className='profile-page__chevron profile-page__chevron--menu' />
+              </View>
+            </View>
+
+            <View
+              className='profile-page__menu-row'
+              hoverClass='profile-page__menu-row--pressed'
+              onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/invite/index' }) }}
+            >
+              <View className='profile-page__menu-icon-well'>
+                <JoyJoinIcon emoji='🤝' tier='semantic' size={24} className='profile-page__menu-icon' />
+              </View>
+              <Text className='profile-page__menu-label'>邀请好友</Text>
+              <View className='profile-page__menu-row-right'>
+                <View className='profile-page__chevron profile-page__chevron--menu' />
+              </View>
+            </View>
+
+            <View
+              className='profile-page__menu-row'
+              hoverClass='profile-page__menu-row--pressed'
+              onClick={handleOpenPayment}
+            >
+              <View className='profile-page__menu-icon-well'>
+                <JoyJoinIcon emoji='🎁' size={24} className='profile-page__menu-icon' />
+              </View>
+              <Text className='profile-page__menu-label'>我的权益</Text>
+              <View className='profile-page__menu-row-right'>
+                <View className='profile-page__chevron profile-page__chevron--menu' />
+              </View>
+            </View>
+
+            <View
+              className='profile-page__menu-row'
+              hoverClass='profile-page__menu-row--pressed'
+              onClick={() => { haptics('light'); Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
+            >
+              <View className='profile-page__menu-icon-well'>
+                <JoyJoinIcon emoji='🗺️' size={24} className='profile-page__menu-icon' />
+              </View>
+              <Text className='profile-page__menu-label'>我的足迹</Text>
+              <View className='profile-page__menu-row-right'>
+                {joinedEventsCount > 0 && (
+                  <View className='profile-page__menu-badge'>
+                    <Text className='profile-page__menu-badge-text'>{joinedEventsCount}</Text>
+                  </View>
+                )}
+                <View className='profile-page__chevron profile-page__chevron--menu' />
+              </View>
+            </View>
+
+            <View
+              className='profile-page__menu-row'
+              hoverClass='profile-page__menu-row--pressed'
+              onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/terms/index' }) }}
+            >
+              <View className='profile-page__menu-icon-well'>
+                <JoyJoinIcon emoji='📄' size={24} className='profile-page__menu-icon' />
+              </View>
+              <Text className='profile-page__menu-label'>服务条款</Text>
+              <View className='profile-page__menu-row-right'>
+                <View className='profile-page__chevron profile-page__chevron--menu' />
+              </View>
+            </View>
+          </View>
         </View>
 
         {/* Logout */}
-        <View className='profile-page__logout-section'>
+        {/* <View className='profile-page__logout-section'>
           <Button variant='secondary' className='profile-page__logout-btn' hoverClass='profile-page__logout-btn--active' onClick={handleLogout}>
             退出登录
+          </Button>
+        </View> */}
+        <View className='profile-page__logout'>
+          <Button
+            variant='secondary'
+            className='profile-page__logout-btn'
+            hoverClass='profile-page__logout-btn--pressed'
+            onClick={handleLogout}
+          >
+            <Text className='profile-page__logout-text'>退出登录</Text>
           </Button>
         </View>
 
