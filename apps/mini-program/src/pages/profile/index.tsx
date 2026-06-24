@@ -1,5 +1,5 @@
 import { getJoinedEvents, getUserCoupons } from '@shared/api'
-import { ARCHETYPE_FAMILY_GRADIENTS, getArchetypeFamily } from '@shared/archetypeColors'
+//import { ARCHETYPE_FAMILY_GRADIENTS, getArchetypeFamily } from '@shared/archetypeColors'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { useQuery } from '@tanstack/react-query'
@@ -192,7 +192,7 @@ export default function ProfilePage() {
         </View>
 
         {/* Archetype Celebration Card */}
-        {archetype && (
+        {/* {archetype && (
           <View
             className='profile-page__archetype-card profile-page__archetype-card--visible'
             style={{ background: ARCHETYPE_FAMILY_GRADIENTS[getArchetypeFamily(archetype)] }}
@@ -207,7 +207,7 @@ export default function ProfilePage() {
               </View>
             </View>
           </View>
-        )}
+        )} */}
 
         {/* Quick stats */}
         {/* <View className='profile-page__stats'>
