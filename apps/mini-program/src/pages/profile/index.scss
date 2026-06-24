@@ -1023,3 +1023,86 @@
   opacity: 0;
   pointer-events: none;
 }
+
+
+// new update for the profile personality test button 
+.profile-page__hero,
+.profile-page__stats,
+.profile-page__section {
+  opacity: 1;
+  transform: none;
+}
+
+.profile-page__avatar {
+  width: 132px;
+  height: 132px;
+  margin: 24px auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-page__archetype {
+  margin: 12px auto 0;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: #8b5cf6;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  width: fit-content;
+}
+
+.profile-page__section {
+  margin: 20px 16px 0;
+  padding: 8px 0;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(31, 41, 55, 0.08);
+}
+
+.profile-page__action-row {
+  min-height: 56px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-page__action-icon {
+  flex: 0 0 auto;
+}
+
+.profile-page__action-text {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.profile-page__action-arrow {
+  color: #9ca3af;
+  font-size: 22px;
+}
+
+.profile-page__action-badge {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #f3edff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-page__action-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: #7c3aed;
+}
+
+.profile-page__logout-section {
+  margin: 24px 16px 0;
+}

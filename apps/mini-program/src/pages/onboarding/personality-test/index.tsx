@@ -113,6 +113,8 @@ export default function PersonalityTestPage() {
   const auth = useAuth()
   const router = useRouter()
   const isProfileSocialTypeEntry = router.params.source === 'profile'
+  // allow restart mode for the authenticated user result state
+  const isRestartEntry = router.params.mode === 'restart'
   const { saveCheckpoint } = useOnboardingCheckpoint()
 
   const [phase, setPhase] = useState<Phase>('intro')
@@ -331,7 +333,7 @@ export default function PersonalityTestPage() {
     // }
     const existingArchetype = auth.user?.primaryArchetype ?? auth.user?.archetype ?? null
 
-    if (existingArchetype) {
+    if (existingArchetype && ! isRestartEntry) {
       Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults }).catch((err: unknown) => {
         logError('[PersonalityTest] redirectTo results failed', {
           err: err instanceof Error ? err.message : String(err),
@@ -342,8 +344,13 @@ export default function PersonalityTestPage() {
 
     // if (auth.isAuthenticated && auth.nextStep && auth.nextStep !== 'personality-test' && auth.nextStep !== 'onboarding') {
     if (
+      // auth.isAuthenticated &&
+      // !isProfileSocialTypeEntry &&
+      // auth.nextStep &&
+      //change the guard 
       auth.isAuthenticated &&
       !isProfileSocialTypeEntry &&
+      !isRestartEntry &&
       auth.nextStep &&
       auth.nextStep !== 'personality-test' &&
       auth.nextStep !== 'onboarding'
@@ -363,7 +370,7 @@ export default function PersonalityTestPage() {
         })
       }
     }
-  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, auth.user?.archetype, auth.user?.primaryArchetype, isPageExiting, isSubmitting, isProfileSocialTypeEntry, phase])
+  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, auth.user?.archetype, auth.user?.primaryArchetype, isPageExiting, isSubmitting, isProfileSocialTypeEntry, isRestartEntry,phase])
 
   const handleStart = useCallback(async () => {
     haptics('medium')

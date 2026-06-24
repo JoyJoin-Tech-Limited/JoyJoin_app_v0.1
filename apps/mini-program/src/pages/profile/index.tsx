@@ -55,7 +55,18 @@ export default function ProfilePage() {
       currentUserId: authUser?.id,
     })
   }
+  // new update for handle open personality test
+  const handleOpenPersonalityTest = () => {
+    haptics('light')
+    if(archetype) {
+      void Taro.navigateTo({ 
+        url: `${MINI_PROGRAM_ROUTES.personalityTest}?source=profile`,
 
+      })
+      return
+    } 
+    void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.personalityTest })
+  }
   const handleLogout = async () => {
     if (logoutLockRef.current) {
       return
@@ -97,7 +108,8 @@ export default function ProfilePage() {
   }
 
   const displayName = authUser?.nickname || authUser?.displayName || '悦聚用户'
-  const archetype = authUser?.archetype
+  // const archetype = authUser?.archetype
+  const archetype = authUser?.archetype ?? authUser?.primaryArchetype ?? null
   const nextStep = authUser?.nextStep
 
   return renderGate(
@@ -109,11 +121,22 @@ export default function ProfilePage() {
             <ArchetypeHead archetype={archetype} size={120} fallbackText={displayName} />
           </View>
           <Text className='profile-page__name'>{displayName}</Text>
-          {archetype ? (
+          {/*{archetype ? (
             <Text className='profile-page__archetype'>
               {ARCHETYPE_BY_ID[archetype]?.nameCn || archetype}
             </Text>
           ) : null}
+           */}
+          <View
+            className={archetype ? 'profile-page__archetype': 'profile-page__archetype'}
+            onClick={handleOpenPersonalityTest}
+          >
+            <Text>
+              {archetype 
+                ? (ARCHETYPE_BY_ID[archetype]?.nameCn || archetype)
+                : '测试你的社交原型'}
+            </Text>
+          </View>
         </View>
 
         {/* Archetype Celebration Card */}

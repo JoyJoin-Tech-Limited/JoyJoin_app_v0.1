@@ -94,6 +94,27 @@ interface XiaoyueAnalysisResult {
   }
   cached: boolean
 }
+// helper function for the personality test results page
+function buildAuthUserResultState(user: any): ResolvedResultState | null {
+  const archetype = user?.archetype ?? user?.primaryArchetype ?? null
+  if (!archetype) return null
+
+  const topMatches = [{ archetype, score: 100, confidence: 1 }]
+
+  return {
+    sessionId: `profile-${user.id ?? archetype}`,
+    completedAt: new Date().toISOString(),
+    result: {
+      primaryArchetype: archetype,
+      secondaryArchetype: user?.secondaryArchetype ?? undefined,
+      traitScores: {},
+      topMatches,
+      archetypeConfidence: 1,
+      isDecisive: true,
+    },
+    topMatches,
+  }
+}
 
 export default function PersonalityTestResultsPage() {
   const auth = useAuth()
@@ -109,9 +130,17 @@ export default function PersonalityTestResultsPage() {
     mountedRef.current = false
   })
   const initialSnapshot = useMemo(() => readAnonymousAssessmentSession(), [])
-  const initialResolvedResult = useMemo(() => buildResolvedResultState(initialSnapshot), [initialSnapshot])
-  const hasCompletedReplay = Boolean(initialSnapshot?.resultSequenceCompletedAt && initialResolvedResult)
+  // new update to authenticated user result state
+  // const initialResolvedResult = useMemo(() => buildResolvedResultState(initialSnapshot), [initialSnapshot])
+  // const hasCompletedReplay = Boolean(initialSnapshot?.resultSequenceCompletedAt && initialResolvedResult)
+  const authUserResult = useMemo(() => buildAuthUserResultState(auth.user), [auth.user])
 
+  const initialResolvedResult = useMemo(
+    () => buildResolvedResultState(initialSnapshot) ?? authUserResult,
+    [initialSnapshot, authUserResult],
+  )
+
+  const hasCompletedReplay = Boolean(initialResolvedResult)
   const [sessionSnapshot, setSessionSnapshot] = useState<AnonymousAssessmentSessionSnapshot | null>(initialSnapshot)
   const [resultState, setResultState] = useState<ResolvedResultState | null>(initialResolvedResult)
   const [flowStage, setFlowStage] = useState<FlowStage>(hasCompletedReplay ? 'result' : 'loading')
@@ -183,6 +212,15 @@ export default function PersonalityTestResultsPage() {
       isAuthenticated: auth.isAuthenticated,
     },
   })
+  // new update to track completion
+  useEffect(() => {
+    if (!resultState && authUserResult) {
+      resultStateRef.current = authUserResult
+      setResultState(authUserResult)
+      setFlowStage('result')
+      setCompletionMode('replay')
+    }
+  }, [resultState, authUserResult])
 
   useEffect(() => {
     mountedRef.current = true
@@ -297,12 +335,18 @@ export default function PersonalityTestResultsPage() {
   // Use resultStateRef as a synchronous fallback so the slot target and the
   // result page never diverge during the animation flow. React state updates
   // are batched; the ref is updated immediately in runResultFlow.
+  // const displayArchetype = resultState?.result.primaryArchetype
+  //   ?? resultStateRef.current?.result.primaryArchetype
+  //   ?? sessionSnapshot?.result?.primaryArchetype
+  //   ?? topMatches[0]?.archetype
+  //   ?? null
   const displayArchetype = resultState?.result.primaryArchetype
     ?? resultStateRef.current?.result.primaryArchetype
     ?? sessionSnapshot?.result?.primaryArchetype
+    ?? auth.user?.archetype
+    ?? auth.user?.primaryArchetype
     ?? topMatches[0]?.archetype
     ?? null
-
   const isDecisive = resultState?.result.isDecisive ?? sessionSnapshot?.result?.isDecisive
   const secondaryArchetypeId = resultState?.result.secondaryArchetype ?? sessionSnapshot?.result?.secondaryArchetype
   const secondaryDisplayName = secondaryArchetypeId
@@ -465,7 +509,8 @@ export default function PersonalityTestResultsPage() {
     // A displayable local result (replay fast-path or a freshly-saved snapshot)
     // means the normal flow can render — never forward in that case.
     if (hasCompletedReplay) return
-    if (buildResolvedResultState(readAnonymousAssessmentSession())) return
+    // new update for the authenticated user result state
+    if (buildResolvedResultState(readAnonymousAssessmentSession())|| authUserResult) return
 
     forwardedAuthedRef.current = true
     logInfo('[PersonalityResults] Authenticated archetype-holder with no local result — forwarding to nextStep', {
@@ -473,7 +518,7 @@ export default function PersonalityTestResultsPage() {
     })
     analytics.interaction('results_forwarded_authenticated', { nextStep: auth.nextStep ?? null })
     void navigateToMiniProgramNextStep(auth.nextStep, { mode: 'root' })
-  }, [auth.isLoading, auth.isAuthenticated, auth.user, auth.nextStep, isLoggingIn, hasCompletedReplay, analytics])
+  }, [auth.isLoading, auth.isAuthenticated, auth.user, auth.nextStep, isLoggingIn, hasCompletedReplay,authUserResult, analytics])
 
   const fetchResult = useCallback(async (runId: number, forceRefresh = false): Promise<ResolvedResultState | null> => {
     const latestSnapshot = readAnonymousAssessmentSession()
@@ -1125,17 +1170,22 @@ export default function PersonalityTestResultsPage() {
     // anonymous device flow — reLaunching to the test intro would bounce them
     // right back here (the intro redirects archetype-holders to results). Route
     // them forward to their real destination instead of looping.
-    const existingArchetype = auth.user?.primaryArchetype ?? auth.user?.archetype ?? null
-    if (auth.isAuthenticated && existingArchetype) {
-      analytics.interaction('restart_forwarded_authenticated', { nextStep: auth.nextStep ?? null })
-      void navigateToMiniProgramNextStep(auth.nextStep, { mode: 'root' })
-      return
-    }
+    // dont need to check for the authenticated user result state
+    // const existingArchetype = auth.user?.primaryArchetype ?? auth.user?.archetype ?? null
+    // if (auth.isAuthenticated && existingArchetype) {
+    //   analytics.interaction('restart_forwarded_authenticated', { nextStep: auth.nextStep ?? null })
+    //   void navigateToMiniProgramNextStep(auth.nextStep, { mode: 'root' })
+    //   return
+    // }
 
     analytics.stepAbandoned('restart')
     clearAnonymousAssessmentStorage()
     setSharePosterPath('')
-    Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.personalityTest }).catch(() => {
+    // Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.personalityTest })
+    // new relanuch update for the authenticated user result state
+    Taro.reLaunch({
+      url: `${MINI_PROGRAM_ROUTES.personalityTest}?mode=restart`,
+    }).catch(() => {
       // If reLaunch fails, at least storage is already cleared.
       // User can manually navigate back.
       void Taro.showToast({ title: '请手动返回重新测试', icon: 'none', duration: 2000 })
