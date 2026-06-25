@@ -32,11 +32,12 @@ export const EDU_ORDINAL: Partial<Record<EducationLevel, number>> = {
 export const SENIORITY_OPTIONS = ["实习生", "初级", "中级", "高级", "资深", "创始人", "高管"] as const;
 export type Seniority = typeof SENIORITY_OPTIONS[number];
 
-// Work mode options (new standardized occupation system) — also used as 人生阶段 (life stage)
+// Work mode options (legacy standardized occupation system)
+// DEPRECATED: new code should read/write users.lifeStage instead. Kept for one-release fallback.
 export const WORK_MODE_OPTIONS = ["founder", "self_employed", "employed", "student", "transitioning", "caregiver_retired", "successor"] as const;
 export type WorkMode = typeof WORK_MODE_OPTIONS[number];
 
-// Work mode display labels (Chinese) — 人生阶段 framing
+// Work mode display labels (Chinese) — legacy fallback only
 export const WORK_MODE_LABELS: Record<WorkMode, string> = {
   founder: "创业中",
   self_employed: "自由职业",
@@ -47,10 +48,11 @@ export const WORK_MODE_LABELS: Record<WorkMode, string> = {
   successor: "准备继承家业",
 };
 
-// Alias for convenience — same as WORK_MODE_LABELS
-export const LIFE_STAGE_LABELS = WORK_MODE_LABELS;
+// Life stage canonical vocabulary — single source of truth for onboarding / matching / profile
+export const LIFE_STAGE_OPTIONS = ["学生党", "职场新人", "职场老手", "创业中", "自由职业"] as const;
+export type LifeStage = typeof LIFE_STAGE_OPTIONS[number];
 
-// Work mode descriptions (Chinese)
+// Work mode descriptions (Chinese) — legacy fallback only
 export const WORK_MODE_DESCRIPTIONS: Record<WorkMode, string> = {
   founder: "创业中，自己当老板",
   self_employed: "独立工作，灵活接活",

@@ -12,6 +12,7 @@ import {
   EDUCATION_LEVEL_OPTIONS,
   INTENT_OPTIONS,
   INTENT_FLEXIBLE_OPTION,
+  LIFE_STAGE_OPTIONS,
   toggleIntentValue,
 } from '@shared/constants'
 import {
@@ -29,7 +30,6 @@ import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { usePageTTI } from '../../../hooks/usePageTTI'
 import { profileAnalytics } from '../../../lib/analytics/profileAnalytics'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
-import { evaluateProfessionInputQuality, isMeaningfulProfessionInput } from '../../../lib/onboarding/professionInputQuality'
 
 import ProfileArchetypeHero from '../../../components/profile/ProfileArchetypeHero'
 import ArchetypeHead from '../../../components/mascot/ArchetypeHead'
@@ -124,6 +124,7 @@ export default function EditProfilePage() {
 
   // Social profile
   const [professionText, setProfessionText] = useState('')
+  const [lifeStage, setLifeStage] = useState('')
   const [bio, setBio] = useState('')
   const [originalBio, setOriginalBio] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
@@ -204,6 +205,7 @@ export default function EditProfilePage() {
     setHometownRegionCity(u.hometownRegionCity || '')
     setEducationLevel(typeof u.educationLevel === 'string' ? u.educationLevel : '')
     setProfessionText(typeof u.occupationId === 'string' ? u.occupationId : '')
+    setLifeStage(typeof u.lifeStage === 'string' ? u.lifeStage : '')
     const initialBio = typeof u.bio === 'string' ? u.bio : ''
     setBio(initialBio)
     setOriginalBio(initialBio)
@@ -332,21 +334,9 @@ export default function EditProfilePage() {
   }, [])
 
   const handleProfessionSubmit = useCallback((value: string, classification?: import('../../../components/ProfessionChatOverlay').ProfessionClassificationData) => {
-    const quality = evaluateProfessionInputQuality(value)
-    if (!quality.valid) {
-      haptics('warning')
-      Taro.showToast({ title: '职业身份可以跳过，或写具体一点', icon: 'none', duration: 2000 })
-      setProfessionText('')
-      setProfessionClassification(null)
-      return
-    }
     haptics('success')
-    setProfessionText(quality.normalized)
-    if (classification) {
-      setProfessionClassification(classification)
-    } else {
-      setProfessionClassification(null)
-    }
+    setProfessionText(value)
+    if (classification) setProfessionClassification(classification)
     setIsProfessionOverlayClosing(true)
     setChangedFields((prev) => ({ ...prev, profession: true }))
     setTimeout(() => {
@@ -413,13 +403,13 @@ export default function EditProfilePage() {
         profileImageUrl: avatarUrl.trim() || null,
         ...(hometownRegionCity.trim() ? { hometownRegionCity: hometownRegionCity.trim() } : {}),
         ...(educationLevel ? { educationLevel } : {}),
+        ...(lifeStage ? { lifeStage } : {}),
         ...(intent.length > 0 ? { intent } : {}),
       }
 
-      const professionForSubmit = professionText.trim()
-      if (professionForSubmit !== '' && isMeaningfulProfessionInput(professionForSubmit)) {
-        payload.occupationId = professionForSubmit
-        payload.industryRawInput = professionForSubmit
+      if (professionText.trim() !== '') {
+        payload.occupationId = professionText.trim()
+        payload.industryRawInput = professionText.trim()
         if (professionClassification?.standardizedOccupationId) {
           payload.standardizedOccupationId = professionClassification.standardizedOccupationId
         }
@@ -508,6 +498,7 @@ export default function EditProfilePage() {
     hometownRegionCity,
     educationLevel,
     professionText,
+    lifeStage,
     professionClassification,
     intent,
     selectedInterests,
@@ -832,6 +823,31 @@ export default function EditProfilePage() {
                 classification={professionClassification}
                 onEdit={() => setShowProfessionOverlay(true)}
               />
+            </View>
+
+            {/* Life stage */}
+            <View className='edit-profile__field'>
+              <Text className='edit-profile__label'>人生阶段</Text>
+              <View className='edit-profile__choice-row edit-profile__choice-row--wrap'>
+                {LIFE_STAGE_OPTIONS.map((option) => {
+                  const selected = lifeStage === option
+                  return (
+                    <View
+                      key={option}
+                      className={[
+                        'edit-profile__choice-chip',
+                        selected ? 'edit-profile__choice-chip--selected' : '',
+                      ].filter(Boolean).join(' ')}
+                      onClick={() => {
+                        setLifeStage(selected ? '' : option)
+                        setChangedFields((prev) => ({ ...prev, lifeStage: true }))
+                      }}
+                    >
+                      <Text className='edit-profile__choice-chip-text'>{option}</Text>
+                    </View>
+                  )
+                })}
+              </View>
             </View>
 
             {/* Intent */}

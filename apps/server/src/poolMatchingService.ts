@@ -91,7 +91,8 @@ export interface UserWithProfile {
   educationLevel: string | null;
   archetype: string | null;
   secondaryArchetype: string | null;
-  workMode: string | null;  // 人生阶段 ('founder' | 'employed' | 'student' | 'successor' | etc.)
+  lifeStage: string | null; // 人生阶段 (学生党 | 职场新人 | 职场老手 | 创业中 | 自由职业)
+  workMode: string | null;  // DEPRECATED: kept for one-release fallback only
   // ❌ REMOVED: interestsTop - now use getUserInterests() to fetch from user_interests table
   hometown: string | null;  // 家乡（用于同乡亲和力）
   hometownAffinityOptin: boolean;  // 是否启用同乡匹配加分
@@ -600,24 +601,21 @@ function calculateHometownAffinityScore(user1: UserWithProfile, user2: UserWithP
 }
 
 /**
- * 人生阶段 Aspiration Affinity Matrix (7×7)
+ * 人生阶段 Aspiration Affinity Matrix (5×5)
  * Score 0-100: How much person in row WANTS to meet person in column
- * 
- * This is ASYMMETRIC. A student wanting to meet a founder ≠ a founder wanting to meet a student.
+ * Uses the canonical lifeStage vocabulary: 学生党, 职场新人, 职场老手, 创业中, 自由职业.
  * We average both directions for the pair score.
  */
-/** Neutral score returned when a user has no workMode set (neither a boost nor a penalty). */
+/** Neutral score returned when a user has no lifeStage set (neither a boost nor a penalty). */
 const NEUTRAL_LIFE_STAGE_SCORE = 50;
 
 const LIFE_STAGE_AFFINITY: Record<string, Record<string, number>> = {
-  //                       founder  self_emp  employed  student  transition  caregiver  successor
-  founder:           { founder: 90, self_employed: 80, employed: 60, student: 40, transitioning: 70, caregiver_retired: 30, successor: 80 },
-  self_employed:     { founder: 85, self_employed: 70, employed: 55, student: 35, transitioning: 60, caregiver_retired: 40, successor: 55 },
-  employed:          { founder: 75, self_employed: 65, employed: 50, student: 30, transitioning: 45, caregiver_retired: 35, successor: 50 },
-  student:           { founder: 80, self_employed: 60, employed: 70, student: 40, transitioning: 35, caregiver_retired: 20, successor: 45 },
-  transitioning:     { founder: 85, self_employed: 75, employed: 60, student: 40, transitioning: 50, caregiver_retired: 40, successor: 55 },
-  caregiver_retired: { founder: 40, self_employed: 55, employed: 50, student: 30, transitioning: 45, caregiver_retired: 60, successor: 35 },
-  successor:         { founder: 85, self_employed: 50, employed: 55, student: 45, transitioning: 55, caregiver_retired: 35, successor: 90 },
+  //                       学生党  职场新人  职场老手  创业中  自由职业
+  "学生党":   { "学生党": 70, "职场新人": 75, "职场老手": 80, "创业中": 85, "自由职业": 70 },
+  "职场新人": { "学生党": 80, "职场新人": 65, "职场老手": 70, "创业中": 85, "自由职业": 65 },
+  "职场老手": { "学生党": 70, "职场新人": 75, "职场老手": 60, "创业中": 75, "自由职业": 65 },
+  "创业中":   { "学生党": 75, "职场新人": 80, "职场老手": 75, "创业中": 85, "自由职业": 75 },
+  "自由职业": { "学生党": 65, "职场新人": 65, "职场老手": 65, "创业中": 75, "自由职业": 70 },
 };
 
 /**
@@ -626,10 +624,10 @@ const LIFE_STAGE_AFFINITY: Record<string, Record<string, number>> = {
  * Intent modulation: networking boosts cross-stage affinity, fun dampens it.
  */
 function calculateLifeStageAffinity(user1: UserWithProfile, user2: UserWithProfile): number {
-  if (!user1.workMode || !user2.workMode) return NEUTRAL_LIFE_STAGE_SCORE;
+  if (!user1.lifeStage || !user2.lifeStage) return NEUTRAL_LIFE_STAGE_SCORE;
 
-  const baseForward = LIFE_STAGE_AFFINITY[user1.workMode]?.[user2.workMode] ?? NEUTRAL_LIFE_STAGE_SCORE;
-  const baseReverse = LIFE_STAGE_AFFINITY[user2.workMode]?.[user1.workMode] ?? NEUTRAL_LIFE_STAGE_SCORE;
+  const baseForward = LIFE_STAGE_AFFINITY[user1.lifeStage]?.[user2.lifeStage] ?? NEUTRAL_LIFE_STAGE_SCORE;
+  const baseReverse = LIFE_STAGE_AFFINITY[user2.lifeStage]?.[user1.lifeStage] ?? NEUTRAL_LIFE_STAGE_SCORE;
 
   // Intent modulation: networking intent amplifies cross-stage affinity
   const intent1 = getEffectiveIntent(user1);
@@ -726,7 +724,7 @@ function calculateSocialAffinityScore(user1: UserWithProfile, user2: UserWithPro
   let score = 0;
   let factors = 0;
 
-  if (user1.workMode && user2.workMode) {
+  if (user1.lifeStage && user2.lifeStage) {
     score += calculateLifeStageAffinity(user1, user2);
     factors++;
   }
@@ -924,7 +922,7 @@ function calculateGroupDiversity(members: UserWithProfile[]): number {
   const uniqueIndustries = new Set(members.map((m) => m.industryNiche).filter(Boolean)).size;
   const uniqueGenders = new Set(members.map((m) => m.gender).filter(Boolean)).size;
   const uniqueArchetypes = new Set(members.map((m) => m.archetype).filter(Boolean)).size;
-  const uniqueLifeStages = new Set(members.map((m) => m.workMode).filter(Boolean)).size; // 人生阶段
+  const uniqueLifeStages = new Set(members.map((m) => m.lifeStage).filter(Boolean)).size; // 人生阶段
 
   // Normalize to 0-100, each of 4 dimensions contributes 25 points
   const maxDiversity = members.length;
@@ -1472,7 +1470,8 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       educationLevel: users.educationLevel,
       archetype: sql<string>`coalesce(${users.primaryArchetype}, ${users.archetype}, 'koala')`,
       secondaryArchetype: users.secondaryArchetype,
-      workMode: users.workMode,  // 人生阶段 for matching
+      lifeStage: users.lifeStage,  // canonical life stage for matching
+      workMode: users.workMode,    // DEPRECATED: one-release fallback only
       hometown: users.hometownRegionCity,
       hometownAffinityOptin: users.hometownAffinityOptin,
       eventType: eventPools.eventType,

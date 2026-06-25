@@ -87,6 +87,7 @@ function makeUser(
     educationLevel: "本科",
     archetype,
     secondaryArchetype: null,
+    lifeStage: '职场老手',
     workMode: "employed",
     hometown: null,
     hometownAffinityOptin: false,

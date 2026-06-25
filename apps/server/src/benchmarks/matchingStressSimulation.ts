@@ -28,6 +28,7 @@ import {
 const ARCHETYPE_ROTATION = Object.keys(ARCHETYPE_ENERGY) as ArchetypeName[];
 
 const INDUSTRY_NICHES = ['tech_startup', 'finance', 'design', 'education', 'health'];
+const LIFE_STAGES = ['职场老手', '创业中', '学生党', '自由职业', '职场新人'] as const;
 const WORK_MODES = ['founder', 'employed', 'student', 'self_employed'] as const;
 
 function buildSyntheticUsers(count: number): UserWithProfile[] {
@@ -46,6 +47,7 @@ function buildSyntheticUsers(count: number): UserWithProfile[] {
       educationLevel: i % 3 === 0 ? '本科' : i % 3 === 1 ? '硕士' : '大专',
       archetype,
       secondaryArchetype: secondary,
+      lifeStage: LIFE_STAGES[i % LIFE_STAGES.length],
       workMode: WORK_MODES[i % WORK_MODES.length],
       hometown: i % 5 === 0 ? '上海' : '广州',
       hometownAffinityOptin: i % 4 === 0,

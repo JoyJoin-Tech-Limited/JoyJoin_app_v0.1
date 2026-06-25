@@ -455,7 +455,7 @@ The client **never** computes its own onboarding position. `nextStep` is always 
 | Step (`nextStep`) | Page | Route | Collects |
 |---|---|---|---|
 | `personality-test` | 氛围测试 | `/personality-test` | V4 adaptive questions (8–16) → archetype assigned |
-| `essential-data` | 基本资料 | `/onboarding/setup` | displayName, gender, birthYear, currentCity, hometown, education, occupation (chat overlay), workMode, relationshipStatus, intent (up to 3) |
+| `essential-data` | 基本资料 | `/onboarding/setup` | displayName, gender, birthYear, currentCity, hometown, education, occupation (chat overlay), **lifeStage**, relationshipStatus, intent (up to 3) |
 | `extended-data` | 兴趣偏好 | `/onboarding/extended` | 3-tier interest selections (min 3, max 10) across 5 categories |
 | `profile-review` | 资料预览 | `/onboarding/review` | Read-only summary — collects nothing new |
 
@@ -1020,7 +1020,7 @@ pairScore =
   semanticSimilarity  × 0.06;    // 语义相似度 — hash-embedding cosine similarity (bounded 35–100)
 ```
 
-**Semantic similarity:** Built from `archetype`, `workMode`, `educationLevel`, `industryNiche`,
+**Semantic similarity:** Built from `archetype`, `lifeStage`, `educationLevel`, `industryNiche`,
 `preferredLanguages`, `eventIntent`, bar preferences, and top-10 interest topics with heat weighting.
 Reads `user_interests` only — `user_interest_signals` is **never** used in pair scoring.
 See `apps/server/src/matchingSemantic.ts` for the full implementation.
@@ -1029,7 +1029,7 @@ See `apps/server/src/matchingSemantic.ts` for the full implementation.
 **Note — Preference (5%):** 目前酒吧/饭店场景分化有限，保留为轻量场景适配信号。
 
 #### Social Affinity (社交同频度) — same-frequency signals
-- **Life stage affinity** (`workMode` / `LIFE_STAGE_AFFINITY` matrix — asymmetric 7×7, averaged both directions)
+- **Life stage affinity** (`lifeStage` / `LIFE_STAGE_AFFINITY` matrix — 5×5 canonical vocabulary, averaged both directions)
 - **Education affinity** (学历同频度 — ordinal-distance-based; same/nearby levels score higher, NOT a diversity reward)
 - **Hometown affinity** (同乡亲和力 — only when both users opted in)
 
@@ -1040,7 +1040,8 @@ See `apps/server/src/matchingSemantic.ts` for the full implementation.
 
 #### Matrix Distinction
 - **Chemistry Matrix** (`archetypeChemistry.ts`): 12×12 archetype compatibility, scores 0–100
-- **Life Stage Affinity Matrix** (`LIFE_STAGE_AFFINITY`, `poolMatchingService.ts`): 7×7 workMode affinity, asymmetric, averaged forward + reverse for pair score
+- **Life Stage Affinity Matrix** (`LIFE_STAGE_AFFINITY`, `poolMatchingService.ts`): 5×5 `lifeStage` affinity using the canonical vocabulary (学生党, 职场新人, 职场老手, 创业中, 自由职业), averaged forward + reverse for pair score
+- **DEPRECATED:** `workMode` is kept for one-release read-only fallback only. New code must write `users.lifeStage`.
 
 #### Group Overall Score
 
@@ -1055,7 +1056,7 @@ overallScore =
 
 > **Note:** There are two separate matrix concepts in the codebase:
 > - **Archetype chemistry matrix** (`archetypeChemistry.ts`) — 12×12 personality compatibility
-> - **Life stage affinity matrix** (`LIFE_STAGE_AFFINITY` in `poolMatchingService.ts`) — 7×7 asymmetric `workMode` / 人生阶段 compatibility, introduced PR #312
+> - **Life stage affinity matrix** (`LIFE_STAGE_AFFINITY` in `poolMatchingService.ts`) — 5×5 `lifeStage` / 人生阶段 compatibility using the canonical vocabulary. `workMode` is deprecated for writes and kept as a one-release read-only fallback.
 
 ### Temperature Levels
 

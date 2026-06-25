@@ -200,6 +200,25 @@
     line-height: $line-height-normal;
   }
 
+  &__life-stage-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44rpx;
+    padding: $spacing-xs $spacing-md;
+    border-radius: $radius-pill;
+    background: var(--profile-primary-12);
+    margin-top: $spacing-sm;
+  }
+
+  &__life-stage-pill-text {
+    font-size: $font-size-sm;
+    font-family: $font-ui;
+    font-weight: $font-weight-medium;
+    color: var(--profile-text-primary);
+    line-height: $line-height-normal;
+  }
+
   &__unlock-pill {
     display: inline-flex;
     align-items: center;

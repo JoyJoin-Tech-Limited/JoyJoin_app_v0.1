@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { WORK_MODE_LABELS } from "@shared/constants";
 
 export type BotChannel = "ops" | "critical" | "finance";
 
@@ -162,6 +163,7 @@ export function sanitizeUserPayload(user: {
   industryNicheLabel?: string | null;
   intent?: string[] | null;
   lifeStage?: string | null;
+  workMode?: string | null;
   relationshipStatus?: string | null;
   referralSource?: string | null;
 }): {
@@ -182,6 +184,10 @@ export function sanitizeUserPayload(user: {
         (Date.now() - new Date(user.birthdate).getTime()) / (365.25 * 24 * 60 * 60 * 1000),
       )
     : null;
+    const effectiveLifeStage =
+      user.lifeStage ||
+      (user.workMode ? WORK_MODE_LABELS[user.workMode as keyof typeof WORK_MODE_LABELS] : undefined);
+
   return {
     userId: user.id || "unknown",
     displayName: user.displayName || "未知用户",
@@ -192,7 +198,7 @@ export function sanitizeUserPayload(user: {
     education: user.educationLevel || "未设置",
     occupation: user.industryNicheLabel || user.occupationId || "未设置",
     intentList: user.intent?.join("、") || "未设置",
-    lifeStage: user.lifeStage || "未设置",
+    lifeStage: effectiveLifeStage || "未设置",
     relationshipStatus: user.relationshipStatus || "未设置",
   };
 }

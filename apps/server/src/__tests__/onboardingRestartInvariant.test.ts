@@ -35,6 +35,7 @@ describe.skip('onboarding restart invariants', () => {
       'relationshipStatus: null',
       'educationLevel: null',
       'occupationId: null',
+      'lifeStage: null',
       'workMode: null',
       'hometownRegionCity: null',
       'intent: null',

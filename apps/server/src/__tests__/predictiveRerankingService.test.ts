@@ -14,6 +14,7 @@ function makeUser(userId: string): UserWithProfile {
     educationLevel: null,
     archetype: "koala",
     secondaryArchetype: "koala",
+    lifeStage: null,
     workMode: null,
     hometown: null,
     hometownAffinityOptin: false,

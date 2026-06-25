@@ -834,6 +834,9 @@ export interface EssentialDataPayload {
   relationshipStatus?: string
   educationLevel?: string
   occupationId?: string
+  /** Canonical life stage. Prefer this over workMode for new writes. */
+  lifeStage?: string
+  /** @deprecated Use lifeStage instead. Kept for one-release read-only fallback. */
   workMode?: string
   intent?: string[]
   /** One-line social signature / bio (≤100 chars). */

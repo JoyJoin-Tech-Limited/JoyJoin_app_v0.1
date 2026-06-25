@@ -7,13 +7,11 @@ import {
   GENDER_OPTIONS,
   INTENT_FLEXIBLE_OPTION,
   INTENT_OPTIONS,
+  LIFE_STAGE_OPTIONS,
   RELATIONSHIP_STATUS_OPTIONS,
   toggleIntentValue,
 } from '@shared/constants'
-import {
-  getOccupationGuidance,
-  WORK_MODES,
-} from '@shared/occupations'
+import { getOccupationGuidance } from '@shared/occupations'
 import { submitEssentialData, type AuthUserResponse } from '@shared/api'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
@@ -82,6 +80,13 @@ const STEP_CONFIG: StepConfig[] = [
     mascotPose: 'pointing',
   },
   {
+    id: 'lifeStage',
+    title: '你现在处于哪个阶段？',
+    subtitle: '相同人生阶段的人更容易聊到一起',
+    mascotMessage: '告诉我你现在的人生阶段，我帮你匹配同频的朋友~',
+    mascotPose: 'thinking',
+  },
+  {
     id: 'location',
     title: '你从哪来，在哪混？',
     subtitle: '老乡见老乡，两眼泪汪汪',
@@ -111,7 +116,7 @@ interface CachedProgress {
   relationshipStatus: string
   educationLevel: string
   occupationId: string
-  workMode: string
+  lifeStage: string
   intent: string[]
   timestamp: number
 }
@@ -130,6 +135,23 @@ function getBirthYear(user: Record<string, unknown> | undefined): number {
     if (Number.isFinite(year)) return year
   }
   return 0
+}
+
+const WORK_MODE_TO_LIFE_STAGE: Record<string, string> = {
+  founder: '创业中',
+  self_employed: '自由职业',
+  employed: '职场老手',
+  student: '学生党',
+}
+
+function getLifeStage(user: Record<string, unknown> | undefined): string {
+  if (!user) return ''
+  if (typeof user.lifeStage === 'string' && user.lifeStage !== '') {
+    return user.lifeStage
+  }
+  // One-release fallback: existing users with workMode but no lifeStage
+  const legacy = typeof user.workMode === 'string' ? user.workMode : ''
+  return WORK_MODE_TO_LIFE_STAGE[legacy] || ''
 }
 
 function readCachedProgress(): CachedProgress | null {
@@ -168,7 +190,7 @@ export default function EssentialDataPage() {
   const [educationLevel, setEducationLevel] = useState('')
   const [professionText, setProfessionText] = useState('')
   const [isProfessionOverlayClosing, setIsProfessionOverlayClosing] = useState(false)
-  const [workMode, setWorkMode] = useState('')
+  const [lifeStage, setLifeStage] = useState('')
   const [intent, setIntent] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
@@ -219,7 +241,7 @@ export default function EssentialDataPage() {
       }
       return ''
     })
-    setWorkMode((c) => c || cached?.workMode || (typeof source.workMode === 'string' ? source.workMode : '') || '')
+    setLifeStage((c) => c || cached?.lifeStage || getLifeStage(source))
     setIntent((c) => (c.length > 0 ? c : cached?.intent || (Array.isArray(source.intent) ? source.intent.filter((item): item is string => typeof item === 'string') : [])))
     setCurrentStep((c) => (c === 0 && cached?.currentStep ? Math.min(cached.currentStep, TOTAL_STEPS - 1) : c))
   }, [user, isLoading])
@@ -236,11 +258,11 @@ export default function EssentialDataPage() {
       relationshipStatus,
       educationLevel,
       occupationId: professionText,
-      workMode,
+      lifeStage,
       intent,
       timestamp: Date.now(),
     })
-  }, [currentStep, displayName, gender, birthYear, currentCity, hometownRegionCity, relationshipStatus, educationLevel, professionText, workMode, intent])
+  }, [currentStep, displayName, gender, birthYear, currentCity, hometownRegionCity, relationshipStatus, educationLevel, professionText, lifeStage, intent])
 
   const cityOptions = useMemo(() => [...CURRENT_CITY_OPTIONS], [])
   const relationshipOptions = useMemo(() => [...RELATIONSHIP_STATUS_OPTIONS], [])
@@ -249,6 +271,7 @@ export default function EssentialDataPage() {
   const birthYearIndex = birthYear > 0 ? BIRTH_YEAR_RANGE.indexOf(birthYear) : -1
   const currentCityIndex = currentCity ? cityOptions.findIndex((option) => option === currentCity) : -1
   const relationshipIndex = relationshipStatus ? relationshipOptions.findIndex((option) => option === relationshipStatus) : -1
+  const lifeStageIndex = lifeStage ? LIFE_STAGE_OPTIONS.findIndex((option) => option === lifeStage) : -1
   const intentOptions = useMemo(
     () =>
       [...INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION].map((option) => ({
@@ -290,13 +313,15 @@ export default function EssentialDataPage() {
       case 2:
         return true
       case 3:
-        return currentCity !== ''
+        return lifeStage !== ''
       case 4:
+        return currentCity !== ''
+      case 5:
         return intent.length > 0
       default:
         return false
     }
-  }, [currentStep, displayName, gender, birthYear, currentCity, intent.length])
+  }, [currentStep, displayName, gender, birthYear, lifeStage, currentCity, intent.length])
 
   const handleNext = useCallback(() => {
     if (!isStepValid) {
@@ -372,6 +397,7 @@ export default function EssentialDataPage() {
           ...(professionClassification?.industrySource ? { industrySource: professionClassification.industrySource } : {}),
           ...(professionClassification?.industryConfidence !== undefined ? { industryConfidence: professionClassification.industryConfidence } : {}),
         } : {}),
+        ...(lifeStage ? { lifeStage } : {}),
         ...(intent.length > 0 ? { intent } : {}),
       }
 
@@ -425,7 +451,7 @@ export default function EssentialDataPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, intent, invalidateAuth, isSubmitting, professionText, professionClassification, relationshipStatus, saveCheckpoint, workMode, currentStep])
+  }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, intent, invalidateAuth, isSubmitting, professionText, professionClassification, relationshipStatus, saveCheckpoint, lifeStage, currentStep])
 
   const handleProfessionSubmit = useCallback((value: string, classification?: ProfessionClassificationData) => {
     const quality = evaluateProfessionInputQuality(value)
@@ -669,35 +695,6 @@ export default function EssentialDataPage() {
               </View>
 
               <View className='essential-data__field'>
-                <Text className='essential-data__label'>人生阶段</Text>
-                <Picker
-                  mode='selector'
-                  range={WORK_MODES.map((m) => m.label)}
-                  value={workMode ? WORK_MODES.findIndex((m) => m.value === workMode) : -1}
-                  onChange={(e) => {
-                    const mode = WORK_MODES[Number(e.detail.value)]
-                    if (mode) setWorkMode(mode.value)
-                  }}
-                >
-                  <View
-                    className={['essential-data__picker', workMode !== '' ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}
-                    style={workMode !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${accentColor}20` } : undefined}
-                    aria-label={workMode !== '' ? `人生阶段：${WORK_MODES.find((m) => m.value === workMode)?.label ?? ''}` : '请选择人生阶段'}
-                  >
-                    <Text className={['essential-data__picker-text', workMode !== '' ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta'].filter(Boolean).join(' ')}>
-                      {workMode !== '' ? (WORK_MODES.find((m) => m.value === workMode)?.label ?? '选填（点击选择）') : '选填（点击选择）'}
-                    </Text>
-                    {workMode !== '' && (
-                      <View className='essential-data__picker-check' style={accentColor ? { background: accentColor } : undefined}>
-                        <Text className='essential-data__picker-check-icon'>✓</Text>
-                      </View>
-                    )}
-                  </View>
-                </Picker>
-                <Text className='essential-data__hint'>帮助我们更了解你的状态，匹配更合拍的朋友</Text>
-              </View>
-
-              <View className='essential-data__field'>
                 <Text className='essential-data__label'>{occupationGuidance.title}</Text>
                 <View
                   className={[
@@ -766,8 +763,44 @@ export default function EssentialDataPage() {
             </Card>
           )}
 
-          {/* Step 4: Location */}
+          {/* Step 4: Life stage */}
           {currentStep === 3 && (
+            <Card className='essential-data__card essential-data__stage essential-data__stage--2'>
+              <View className='essential-data__field'>
+                <Text className='essential-data__label'>
+                  人生阶段<Text className='essential-data__required'>*</Text>
+                </Text>
+                <View className='essential-data__choice-row essential-data__choice-row--wrap'>
+                  {LIFE_STAGE_OPTIONS.map((option) => {
+                    const selected = lifeStage === option
+                    return (
+                      <View
+                        key={option}
+                        className={['essential-data__choice-chip', selected ? 'essential-data__choice-chip--selected' : ''].filter(Boolean).join(' ')}
+                        onClick={() => {
+                          setLifeStage(option)
+                          const reactions: Record<string, string> = {
+                            '学生党': '校园生活多精彩，来认识新朋友吧~',
+                            '职场新人': '刚起步的旅程，有很多故事可以分享~',
+                            '职场老手': '经验丰富，适合带带新伙伴~',
+                            '创业中': '创业路上不孤单，一起碰撞灵感~',
+                            '自由职业': '自由节奏，也能有高质量社交~',
+                          }
+                          triggerMascotReaction(reactions[option] || '了解！')
+                        }}
+                      >
+                        <Text className='essential-data__choice-chip-text'>{option}</Text>
+                      </View>
+                    )
+                  })}
+                </View>
+                <Text className='essential-data__hint'>相同人生阶段的人更容易聊到一起</Text>
+              </View>
+            </Card>
+          )}
+
+          {/* Step 5: Location */}
+          {currentStep === 4 && (
             <Card className='essential-data__card essential-data__stage essential-data__stage--2'>
               <View className='essential-data__field'>
                 <Text className='essential-data__label'>
@@ -809,8 +842,8 @@ export default function EssentialDataPage() {
             </Card>
           )}
 
-          {/* Step 5: Intent */}
-          {currentStep === 4 && (
+          {/* Step 6: Intent */}
+          {currentStep === 5 && (
             <Card className='essential-data__card essential-data__stage essential-data__stage--2'>
               <View className='essential-data__field'>
                 <Text className='essential-data__label'>这次更想收获什么</Text>

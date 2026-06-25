@@ -10,7 +10,21 @@ import { storage } from "../../storage";
 import { getMatchingMetricsSnapshot } from "../../matchingMetrics";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import { notifyAdminAction } from "../../lib/wecomNotifications";
+import { WORK_MODE_LABELS } from "@shared/constants";
 import { assessmentSessions, eventPoolRegistrations, eventPoolGroups, connections, matchHistory, userInterests, poolMatchingLogs, users, events, payments, subscriptions } from "@shared/schema";
+
+/**
+ * Effective life-stage label for admin surfaces.
+ * Prefers the canonical users.lifeStage; falls back to the legacy workMode
+ * label for one release.
+ */
+function getEffectiveLifeStage(user: any): string | null {
+  if (user.lifeStage) return user.lifeStage;
+  if (user.workMode && WORK_MODE_LABELS[user.workMode as keyof typeof WORK_MODE_LABELS]) {
+    return WORK_MODE_LABELS[user.workMode as keyof typeof WORK_MODE_LABELS];
+  }
+  return null;
+}
 
 function calculateProfileCompletenessSimple(user: any): { score: number; starRating: number; missingFields: string[] } {
   const fields = [
@@ -442,7 +456,10 @@ export function registerAdminUserRoutes(app: Express): void {
       }
 
       const totalUsers = filteredUsers.length;
-      const paginatedUsers = filteredUsers.slice(offset, offset + limit);
+      const paginatedUsers = filteredUsers.slice(offset, offset + limit).map((user: any) => ({
+        ...user,
+        lifeStageDisplay: getEffectiveLifeStage(user),
+      }));
 
       res.json({
         users: paginatedUsers,
@@ -472,9 +489,11 @@ export function registerAdminUserRoutes(app: Express): void {
       
       // Calculate profile completeness
       const profileCompleteness = calculateProfileCompleteness(user);
+      const lifeStageDisplay = getEffectiveLifeStage(user);
       
       res.json({
         ...user,
+        lifeStageDisplay,
         profileCompleteness,
         events,
         subscriptions: [],

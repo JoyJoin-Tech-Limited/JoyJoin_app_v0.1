@@ -61,6 +61,8 @@ export const users = pgTable("users", {
   relationshipStatus: varchar("relationship_status"), // 单身, 恋爱中, 已婚/伴侣, 离异, 丧偶, 不透露
   
   // Registration fields - Life Stage & Age Preferences
+  // Canonical life-stage vocabulary: 学生党, 职场新人, 职场老手, 创业中, 自由职业.
+  // New code should read/write this field. workMode is deprecated for writes.
   lifeStage: varchar("life_stage"), // 学生党, 职场新人, 职场老手, 创业中, 自由职业
   ageMatchPreference: varchar("age_match_preference"), // 同龄人, 偏年轻, 偏成熟, 都可以
   
@@ -71,6 +73,7 @@ export const users = pgTable("users", {
   // Registration fields - Work (New standardized occupation system)
   occupationId: varchar("occupation_id"), // Standardized occupation ID from occupations.ts
   standardizedOccupationId: varchar("standardized_occupation_id"), // Canonical ID matched from catalog/AI (e.g., "diving_instructor")
+  // DEPRECATED: workMode is kept for one-release read-only fallback. New code should write users.lifeStage.
   workMode: varchar("work_mode"), // founder, self_employed, employed, student
   workVisibility: varchar("work_visibility").default("show_industry_only"), // hide_all, show_industry_only
   
@@ -824,6 +827,7 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   occupationId: true,
   standardizedOccupationId: true,
   workMode: true,
+  lifeStage: true,
   hometownRegionCity: true,
   intent: true,
   // ❌ REMOVED DEPRECATED FIELDS:

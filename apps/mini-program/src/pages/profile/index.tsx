@@ -113,6 +113,7 @@ export default function ProfilePage() {
   const [avatarError, setAvatarError] = useState(false)
   const avatarUrl = redesignEnabled ? (authUser?.profileImageUrl || authUser?.wechatAvatarUrl) : null
   const showAvatarImage = Boolean(avatarUrl && !avatarError)
+  const lifeStage = authUser?.lifeStage
   const nextStep = authUser?.nextStep
   const profileCompletion = getProfileCompletion(authUser)
 
@@ -161,17 +162,7 @@ export default function ProfilePage() {
               {ARCHETYPE_BY_ID[archetype]?.nameCn || archetype}
             </Text>
           ) : null}
-           */}
-          {/*<View
-            className={archetype ? 'profile-page__archetype': 'profile-page__archetype'}
-            onClick={handleOpenPersonalityTest}
-          >
-            <Text>
-              {archetype 
-                ? (ARCHETYPE_BY_ID[archetype]?.nameCn || archetype)
-                : '测试你的社交原型'}
-            </Text>
-          </View>
+          */}
         </View>*/}
         <View className='profile-page__hero profile-page__hero--entered'>
           <View className='profile-page__avatar-ring'>
@@ -205,6 +196,11 @@ export default function ProfilePage() {
               <Text className='profile-page__unlock-pill-text'>测一测，解锁你的社交原型</Text>
             </View>
           )}
+          {lifeStage ? (
+            <View className='profile-page__life-stage-pill'>
+              <Text className='profile-page__life-stage-pill-text'>{lifeStage}</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* Archetype Celebration Card */}
