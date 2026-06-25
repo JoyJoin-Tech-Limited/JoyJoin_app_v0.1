@@ -9,6 +9,12 @@ import { apiRequest } from '../lib/api/api'
 import { useOnboardingAnalytics } from '../hooks/onboarding/useOnboardingAnalytics'
 import { useDeviceTier } from '../hooks/useDeviceTier'
 import { evaluateProfessionInputQuality } from '../lib/onboarding/professionInputQuality'
+import {
+  dedupeProfessionTags,
+  isDuplicateProfessionSubmission,
+  isUsableProfessionResponse,
+  isUsableStoredProfessionClassification,
+} from '../lib/onboarding/professionSubmissionGuard'
 import './ProfessionChatOverlay.scss'
 
 export interface ProfessionClassificationData {
@@ -494,13 +500,31 @@ export default function ProfessionChatOverlay({
   }, [showRevealCard, visible, analytics])
 
   const handleSendNew = useCallback(async (overrideText?: string) => {
-    const text = (overrideText ?? inputValue).trim()
+    const rawText = (overrideText ?? inputValue).trim()
+    const quality = evaluateProfessionInputQuality(rawText)
+    const text = quality.normalized
     if (!text || isSubmittingRef.current) return
 
     if (rejectLowQualityProfessionInput(text)) {
       return
     }
     setShowShortHint(false)
+
+    if (
+      smartProfession &&
+      isUsableStoredProfessionClassification(classificationData) &&
+      isDuplicateProfessionSubmission(text, classificationData)
+    ) {
+      setInputValue(text)
+      if (revealTags.length > 0) {
+        setShowRevealCard(true)
+      }
+      Taro.showToast({ title: '这个职业已经分析过啦', icon: 'none', duration: 1800 })
+      analytics.interaction('profession_chat_duplicate_submission_blocked', {
+        inputLength: text.length,
+      })
+      return
+    }
 
     const now = Date.now()
     if (now - lastSendTimeRef.current < DEBOUNCE_MS) return
@@ -596,13 +620,7 @@ export default function ProfessionChatOverlay({
       bubbleStaggerRef.current = setTimeout(() => {
         // Re-check generation inside the stagger timeout too
         if (sendGenerationRef.current !== thisGeneration) return
-        const hasStructuredClassification = !!(
-          data.classification.standardizedOccupationId ||
-          data.classification.category ||
-          data.classification.segment ||
-          data.classification.niche
-        )
-        if (!hasStructuredClassification && data.confidence < 0.35) {
+        if (!isUsableProfessionResponse(data)) {
           setMessages((prev) => [
             ...prev,
             { id: generateId(), sender: 'xiaoyue', text: INVALID_PROFESSION_MESSAGE, expressionId: 'testListening' },
@@ -632,7 +650,12 @@ export default function ProfessionChatOverlay({
         clearThinkingTimers()
         setThinkingLabel(null)
 
-        const tags = data.displayTags.filter(Boolean)
+        const tags = dedupeProfessionTags([
+          ...(data.displayTags ?? []),
+          data.classification.category?.label ?? '',
+          data.classification.segment?.label ?? '',
+          data.classification.niche?.label ?? '',
+        ])
         if (tags.length > 0) {
           setRevealTags(tags)
           setShowRevealCard(true)
@@ -681,21 +704,20 @@ export default function ProfessionChatOverlay({
       setScrollTrigger((c) => c + 1)
       setIsSubmitting(false)
       setThinkingLabel(null)
-
-      setClassificationData({
-        occupationId: text,
-        standardizedOccupationId: null,
-        industryCategoryLabel: null,
-        industrySegmentLabel: null,
-        industryNicheLabel: null,
-        industryCategory: null,
-        industrySegmentNew: null,
-        industryNiche: null,
-        industrySource: didTimeout ? 'timeout_fallback' : 'fallback',
-        industryConfidence: 0,
-      })
+      setClassificationData(null)
+      setRevealTags([])
+      setShowRevealCard(false)
     }
-  }, [inputValue, isOnline, analytics, clearThinkingTimers, rejectLowQualityProfessionInput])
+  }, [
+    inputValue,
+    isOnline,
+    analytics,
+    clearThinkingTimers,
+    rejectLowQualityProfessionInput,
+    smartProfession,
+    classificationData,
+    revealTags.length,
+  ])
 
   const handleSendLegacy = useCallback(() => {
     const text = inputValue.trim()
@@ -786,19 +808,28 @@ export default function ProfessionChatOverlay({
     if (inputValue.trim() && rejectLowQualityProfessionInput(inputValue)) {
       return
     }
+    if (smartProfession && !isUsableStoredProfessionClassification(classificationData)) {
+      Taro.showToast({ title: '先让悦仔识别成功，或点跳过', icon: 'none', duration: 2000 })
+      analytics.interaction('profession_chat_confirm_blocked_without_classification', {
+        hasClassification: !!classificationData,
+        source: classificationData?.industrySource ?? 'none',
+      })
+      return
+    }
     analytics.interaction('profession_chat_confirmed', {
       hasClassification: !!classificationData,
       source: classificationData?.industrySource ?? 'legacy',
       tagCount: revealTags.length,
     })
     if (smartProfession && classificationData) {
-      onSubmit(inputValue.trim(), classificationData)
+      onSubmit(classificationData.occupationId.trim(), classificationData)
     } else {
       onSubmit(inputValue.trim())
     }
   }, [smartProfession, classificationData, inputValue, onSubmit, analytics, revealTags.length, rejectLowQualityProfessionInput])
 
   const canSubmit = inputValue.trim().length > 0 || hasSent
+  const canShowFooterConfirm = !smartProfession && canSubmit
 
   const scrollIntoView = useMemo(() => {
     return scrollTrigger > 0 ? 'bottom-anchor' : ''
@@ -1076,7 +1107,7 @@ export default function ProfessionChatOverlay({
         </View>
       )}
 
-      {canSubmit && !isSubmitting && !showRevealCard && (
+      {canShowFooterConfirm && !isSubmitting && !showRevealCard && (
         <View
           className='profession-overlay__cta'
         >

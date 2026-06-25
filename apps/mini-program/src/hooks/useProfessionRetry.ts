@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { AuthUserResponse } from '@shared/api'
 import { apiRequest } from '../lib/api/api'
 import { logInfo, logWarn } from '../lib/utils/logger'
+import { isUsableProfessionResponse } from '../lib/onboarding/professionSubmissionGuard'
 
 interface UnderstandProfessionResponse {
   reaction: string
@@ -42,6 +43,14 @@ export function useProfessionRetry(user: AuthUserResponse | null | undefined) {
       data: { description: rawInput },
     })
       .then((data) => {
+        if (!isUsableProfessionResponse(data)) {
+          logWarn('[ProfessionRetry] Background classification skipped unusable result', {
+            source: data.source,
+            confidence: data.confidence,
+          })
+          return undefined
+        }
+
         const classification = data.classification
 
         return apiRequest({
@@ -60,7 +69,8 @@ export function useProfessionRetry(user: AuthUserResponse | null | undefined) {
           },
         })
       })
-      .then(() => {
+      .then((result) => {
+        if (result === undefined) return
         logInfo('[ProfessionRetry] Background classification successful')
       })
       .catch((err) => {
