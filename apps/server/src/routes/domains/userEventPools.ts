@@ -19,7 +19,8 @@ import type { User } from "@shared/schema";
 import { formatAge } from "@shared/utils";
 import { getArchetypeFamily } from "@shared/archetypeColors";
 import { storage } from "../../storage";
-import { buildEventPoolRegistrationInsert } from "../../lib/eventPoolRegistration";
+import { buildEventPoolRegistrationInsert, type EventPoolRegistrationPreferenceDNA } from "../../lib/eventPoolRegistration";
+import { resolveEffectivePreferenceDNA } from "../../lib/matchCompass";
 import { describePoolRegistrationAvailability } from "../../lib/poolRegistrationRules";
 import { eventCreditsRepo } from "../../repositories/eventCreditsRepo";
 import { loadInterestSignalsByUserIds } from "./helpers";
@@ -459,20 +460,50 @@ export function registerUserEventPoolRoutes(app: Express): void {
           code: "REGISTRATION_DISABLED",
         });
       }
-      const { invitationCode, values: validatedData } = buildEventPoolRegistrationInsert({
-        poolId,
-        userId,
-        payload: req.body,
-      });
 
-      // Check if pool exists and is active
-      const pool = await db.query.eventPools.findFirst({
-        where: (pools: any, { eq }: any) => eq(pools.id, poolId)
-      });
+      // Check if pool exists and is active, and load user's preference DNA
+      const [pool, user] = await Promise.all([
+        db.query.eventPools.findFirst({
+          where: (pools: any, { eq }: any) => eq(pools.id, poolId)
+        }),
+        db.query.users.findFirst({
+          where: (u: any, { eq }: any) => eq(u.id, userId),
+          columns: {
+            id: true,
+            archetype: true,
+            primaryArchetype: true,
+            defaultPreferenceStrictness: true,
+            defaultAcceptPairs: true,
+            defaultGenderComposition: true,
+            defaultPreferredDistricts: true,
+            defaultKolComfort: true,
+          },
+        }),
+      ]);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
 
       if (!pool) {
         return res.status(404).json({ message: "Event pool not found" });
       }
+
+      const dna = resolveEffectivePreferenceDNA(user);
+      const preferenceDNA: EventPoolRegistrationPreferenceDNA = {
+        strictness: dna.strictness,
+        acceptPairs: dna.acceptPairs,
+        genderComposition: dna.genderComposition,
+        preferredDistricts: dna.preferredDistricts,
+        kolComfort: dna.kolComfort,
+      };
+
+      const { invitationCode, values: validatedData } = buildEventPoolRegistrationInsert({
+        poolId,
+        userId,
+        payload: req.body,
+        preferenceDNA,
+      });
 
       // Check if user already registered
       const existingReg = await db.query.eventPoolRegistrations.findFirst({

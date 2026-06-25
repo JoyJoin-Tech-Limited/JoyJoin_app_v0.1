@@ -1,5 +1,5 @@
 
-import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { View, Text, ScrollView, Image, Textarea } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -104,6 +104,8 @@ export default function ProfileReviewPage() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [error, setError] = useState('')
   const [isRevealReady, setIsRevealReady] = useState(false)
+  const [bio, setBio] = useState('')
+  const [bioError, setBioError] = useState('')
 
   // prefers-reduced-motion gating: skip the ceremonial reveal animation when motion is reduced.
   useEffect(() => {
@@ -119,6 +121,15 @@ export default function ProfileReviewPage() {
   })
   const invalidateAuth = useInvalidateAuth()
   const analytics = useOnboardingAnalytics('profile-review', { enabled: !isLoading })
+
+  // Initialize bio from existing user value once auth loads
+  useEffect(() => {
+    if (isLoading || !user) return
+    const existingBio = user.bio
+    if (typeof existingBio === 'string' && existingBio.length > 0) {
+      setBio((prev) => (prev === '' ? existingBio.slice(0, 100) : prev))
+    }
+  }, [isLoading, user?.bio])
 
   const shouldLoadInterests = !isLoading && Boolean(user?.hasCompletedInterestsCarousel)
   const { data: profileTagline, isLoading: isTaglineLoading, isError: isTaglineError } = useQuery({
@@ -261,10 +272,18 @@ export default function ProfileReviewPage() {
 
     setIsSubmitting(true)
     setError('')
+    setBioError('')
+
+    const trimmedBio = bio.trim()
+    if (trimmedBio.length > 100) {
+      setBioError('一句话介绍不能超过 100 个字符')
+      setIsSubmitting(false)
+      return
+    }
 
     try {
       logInfo('[ProfileReview] Completing profile review')
-      await completeProfileReview(apiRequest)
+      await completeProfileReview(apiRequest, trimmedBio.length > 0 ? trimmedBio : undefined)
 
       setIsCelebrating(true)
       haptics('success')
@@ -491,6 +510,38 @@ export default function ProfileReviewPage() {
                 <Text className='profile-review__archetype-summary'>{visual.summary}</Text>
               </View>
             ) : null}
+
+            {/* Bio / one-liner input */}
+            <View className={`profile-review__section ${getStageClassName(5)}`}>
+              <View className='profile-review__section-label profile-review__section-label--no-icon'>
+                <Text className='profile-review__section-label-text'>一句你的社交签名</Text>
+              </View>
+              <View
+                className={[
+                  'profile-review__bio-field',
+                  bioError ? 'profile-review__bio-field--error' : '',
+                ].filter(Boolean).join(' ')}
+              >
+                <Textarea
+                  className='profile-review__bio-textarea'
+                  value={bio}
+                  placeholder='比如：正在寻找一起探店和看展的搭子'
+                  maxlength={100}
+                  placeholderClass='profile-review__bio-placeholder'
+                  onInput={(event) => {
+                    const value = (event?.detail?.value as string) ?? ''
+                    setBio(value.slice(0, 100))
+                    if (bioError) setBioError('')
+                  }}
+                  disabled={isSubmitting || isCelebrating}
+                />
+                <Text className='profile-review__bio-counter'>{bio.length}/100</Text>
+              </View>
+              {bioError ? (
+                <Text className='profile-review__bio-error'>{bioError}</Text>
+              ) : null}
+              <Text className='profile-review__bio-hint'>这句话会出现在你的个人主页上，让新朋友更快记住你。</Text>
+            </View>
 
             {/* Profile basics */}
             {profileFields.length > 0 ? (

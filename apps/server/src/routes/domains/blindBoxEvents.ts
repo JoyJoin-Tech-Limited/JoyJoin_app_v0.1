@@ -9,6 +9,7 @@ import * as schema from "@shared/schema";
 import { eq, and, sql, gt } from "drizzle-orm";
 import { broadcastAttendanceStatusUpdated, broadcastPoolRegistrationAdded } from "../../eventBroadcast";
 import { logger } from "../../lib/logger";
+import { resolveEffectivePreferenceDNA } from "../../lib/matchCompass";
 
 const patchPreferencesSchema = z.object({
   budget: z.array(z.string()).optional(),
@@ -691,35 +692,61 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       }
 
       // ✅ 在 event_pool_registrations 中插入报名记录（用户付完钱就直接进池子）
-      const registrationData = {
-        poolId: pool.id,
-        userId,
-        budgetRange,
-        preferredLanguages: Array.isArray(selectedLanguages) ? selectedLanguages : [],
-        eventIntent: Array.isArray(eventIntent) ? eventIntent : [],
-        dietaryRestrictions: Array.isArray(dietaryRestrictions) ? dietaryRestrictions : [],
-      };
-
-      logger.info("[BlindBoxPayment] creating eventPoolRegistration with data", { data: { value: registrationData } });
-
-      const [registration] = await db
-        .insert(eventPoolRegistrations)
-        .values(registrationData)
-        .returning();
-
-      logger.info("[BlindBoxPayment] created eventPoolRegistration", { data: { value: registration } });
-
-      // ✅ 更新活动池的 totalRegistrations 计数
-      const [updatedPool] = await db
-        .update(eventPools)
-        .set({
-          totalRegistrations: sql`${eventPools.totalRegistrations} + 1`,
-          updatedAt: new Date(),
+      const [userWithDefaults] = await db
+        .select({
+          archetype: users.archetype,
+          primaryArchetype: users.primaryArchetype,
+          defaultPreferenceStrictness: users.defaultPreferenceStrictness,
+          defaultAcceptPairs: users.defaultAcceptPairs,
+          defaultGenderComposition: users.defaultGenderComposition,
+          defaultPreferredDistricts: users.defaultPreferredDistricts,
+          defaultKolComfort: users.defaultKolComfort,
         })
-        .where(eq(eventPools.id, pool.id))
-        .returning();
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
 
-      logger.info("[BlindBoxPayment] updated eventPool after registration", { data: { value: updatedPool } });
+      const dna = userWithDefaults ? resolveEffectivePreferenceDNA(userWithDefaults) : null;
+
+      const registrationResult = await db.transaction(async (tx: typeof db) => {
+        const registrationData = {
+          poolId: pool.id,
+          userId,
+          budgetRange,
+          preferredLanguages: Array.isArray(selectedLanguages) ? selectedLanguages : [],
+          eventIntent: Array.isArray(eventIntent) ? eventIntent : [],
+          dietaryRestrictions: Array.isArray(dietaryRestrictions) ? dietaryRestrictions : [],
+          matchStatus: "pending" as const,
+          preferenceStrictness: dna?.strictness ?? 50,
+          acceptPairs: dna?.acceptPairs ?? true,
+          genderCompositionPreference: dna?.genderComposition ?? null,
+          preferredDistricts: dna?.preferredDistricts ?? null,
+          kolComfortLevel: dna?.kolComfort ?? null,
+        };
+
+        logger.info("[BlindBoxPayment] creating eventPoolRegistration with data", { data: { value: registrationData } });
+
+        const [registration] = await tx
+          .insert(eventPoolRegistrations)
+          .values(registrationData)
+          .returning();
+
+        logger.info("[BlindBoxPayment] created eventPoolRegistration", { data: { value: registration } });
+
+        // ✅ 更新活动池的 totalRegistrations 计数
+        const [updatedPool] = await tx
+          .update(eventPools)
+          .set({
+            totalRegistrations: sql`${eventPools.totalRegistrations} + 1`,
+            updatedAt: new Date(),
+          })
+          .where(eq(eventPools.id, pool.id))
+          .returning();
+
+        return { registration, updatedPool };
+      });
+
+      const { registration, updatedPool } = registrationResult;
 
       broadcastPoolRegistrationAdded(
         pool.id,
@@ -727,6 +754,8 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         userId,
         updatedPool?.totalRegistrations ?? pool.totalRegistrations + 1,
       );
+
+      logger.info("[BlindBoxPayment] updated eventPool after registration", { data: { value: updatedPool } });
 
       // ✅ 返回报名信息（前端目前只需要知道成功了 & 池子信息）
       return res.json({

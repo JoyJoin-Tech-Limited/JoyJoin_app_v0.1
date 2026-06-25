@@ -114,6 +114,7 @@ export default function ProfilePage() {
   const avatarUrl = redesignEnabled ? (authUser?.profileImageUrl || authUser?.wechatAvatarUrl) : null
   const showAvatarImage = Boolean(avatarUrl && !avatarError)
   const lifeStage = authUser?.lifeStage
+  const bio = typeof authUser?.bio === 'string' ? authUser.bio.trim() : null
   const nextStep = authUser?.nextStep
   const profileCompletion = getProfileCompletion(authUser)
 
@@ -177,6 +178,11 @@ export default function ProfilePage() {
           {lifeStage ? (
             <View className='profile-page__life-stage-pill'>
               <Text className='profile-page__life-stage-pill-text'>{lifeStage}</Text>
+            </View>
+          ) : null}
+          {bio ? (
+            <View className='profile-page__bio-wrap'>
+              <Text className='profile-page__bio-text'>"{bio}"</Text>
             </View>
           ) : null}
         </View>

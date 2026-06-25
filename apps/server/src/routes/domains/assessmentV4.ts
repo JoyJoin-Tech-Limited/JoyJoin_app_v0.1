@@ -9,6 +9,10 @@ import { ARCHETYPE_NAMES } from "../../archetypeConfig";
 import { prefetchAnalysisIfReady } from "../../xiaoyueAnalysisService";
 import { annotateOptionsWithCommentary } from "@shared/personality";
 import { captureLocationSnapshot } from "../../lib/captureLocationSnapshot";
+import { buildDefaultPreferencesFromArchetype } from "../../lib/matchCompass";
+import { db } from "../../db";
+import { users } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 /** Validates that the matcher produced a sane final result before we persist it. */
 function validateFinalResult(finalResult: any): { valid: boolean; primaryArchetype: string; error?: string } {
@@ -484,6 +488,34 @@ export function registerAssessmentV4Routes(app: Express): void {
           
           // Mark personality test as complete
           await storage.markPersonalityTestComplete(session.userId);
+
+          // Write archetype-derived Match Compass default DNA for first-time users
+          try {
+            const dna = buildDefaultPreferencesFromArchetype(primaryArchetype);
+            await db
+              .update(users)
+              .set({
+                defaultPreferenceStrictness: dna.strictness,
+                defaultAcceptPairs: dna.acceptPairs,
+                defaultGenderComposition: dna.genderComposition,
+                defaultPreferredDistricts: dna.preferredDistricts,
+                defaultKolComfort: dna.kolComfort,
+                updatedAt: new Date(),
+              })
+              .where(eq(users.id, session.userId));
+            logger.info("[Assessment V4] Wrote default preference DNA", {
+              userId: session.userId,
+              archetype: primaryArchetype,
+              strictness: dna.strictness,
+            });
+          } catch (dnaError) {
+            logger.error("[Assessment V4] Failed to write default preference DNA", {
+              userId: session.userId,
+              archetype: primaryArchetype,
+              error: dnaError instanceof Error ? dnaError.message : String(dnaError),
+            });
+            // Non-blocking: continue onboarding even if DNA write fails
+          }
 
           // Warm xiaoyue analysis cache for discover page
           const confidenceValues = Object.values(finalResult.confidences ?? {}) as number[];

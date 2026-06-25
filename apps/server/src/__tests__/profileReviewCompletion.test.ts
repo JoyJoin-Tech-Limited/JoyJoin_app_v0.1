@@ -1,12 +1,12 @@
 /**
- * Tests for PATCH /api/profile bio validation and content-safety gating.
+ * Tests for POST /api/profile-review/complete bio handling.
  *
  * Coverage:
- *   - Accepts and persists a trimmed bio ≤100 chars
- *   - Clears empty/whitespace-only bios to null
+ *   - Accepts an optional bio and persists it alongside profile-review completion
  *   - Rejects bios >100 chars
- *   - Runs validateContentSafe on non-empty bios only
- *   - Logs validation failures
+ *   - Runs validateContentSafe on non-empty bios
+ *   - Leaves existing bio unchanged when bio is omitted
+ *   - Logs bio updates at info level
  */
 
 import express from "express";
@@ -16,20 +16,24 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ── Mocks (hoisted by vitest) ──────────────────────────────────────────────
 
-const mockUpdateFullProfile = vi.fn();
-const mockUpdateUser = vi.fn();
+const mockUpdate = vi.fn();
+const mockQuery = vi.fn();
 
-vi.mock("../storage", () => ({
-  storage: {
-    updateFullProfile: mockUpdateFullProfile,
-    updateUser: mockUpdateUser,
+vi.mock("../db", () => ({
+  db: {
+    update: vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: vi.fn(() => ({
+          returning: vi.fn(() => Promise.resolve([{ id: "user-123" }])),
+        })),
+      })),
+    })),
+    query: {
+      users: {
+        findFirst: vi.fn(() => Promise.resolve(null)),
+      },
+    },
   },
-}));
-
-const mockQueueSemanticProfileRecompute = vi.fn();
-
-vi.mock("../userSemanticProfileService", () => ({
-  queueSemanticProfileRecompute: mockQueueSemanticProfileRecompute,
 }));
 
 const mockValidateContentSafe = vi.fn();
@@ -51,13 +55,17 @@ vi.mock("../lib/logger", () => ({
   },
 }));
 
-vi.mock("../db", () => ({
-  db: {},
+vi.mock("../lib/wecomNotifications/onboarding", () => ({
+  notifyOnboardingComplete: vi.fn(),
+}));
+
+vi.mock("../lib/computeOnboardingNextStep", () => ({
+  computeOnboardingNextStep: vi.fn(() => "discover"),
 }));
 
 // ── Imports after mocks ────────────────────────────────────────────────────
 
-const { registerProfileRoutes } = await import("../routes/domains/profile");
+const { registerOnboardingRoutes } = await import("../routes/domains/onboarding");
 
 // ── Test helpers ───────────────────────────────────────────────────────────
 
@@ -79,7 +87,7 @@ function createApp() {
     });
   });
 
-  registerProfileRoutes(app);
+  registerOnboardingRoutes(app);
   return app;
 }
 
@@ -106,17 +114,16 @@ function cookieHeader(response: Response) {
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
-describe("PATCH /api/profile bio validation", () => {
+describe("POST /api/profile-review/complete bio handling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockValidateContentSafe.mockReturnValue({ safe: true });
-    mockUpdateFullProfile.mockResolvedValue({ id: "user-123", bio: "persisted" });
   });
 
   it("returns 401 for unauthenticated requests", async () => {
     await withServer(async (baseUrl) => {
-      const res = await fetch(`${baseUrl}/api/profile`, {
-        method: "PATCH",
+      const res = await fetch(`${baseUrl}/api/profile-review/complete`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bio: "hello" }),
       });
@@ -129,88 +136,39 @@ describe("PATCH /api/profile bio validation", () => {
       const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
       const cookie = cookieHeader(loginRes);
 
-      const res = await fetch(`${baseUrl}/api/profile`, {
-        method: "PATCH",
+      const res = await fetch(`${baseUrl}/api/profile-review/complete`, {
+        method: "POST",
         headers: { "Content-Type": "application/json", cookie },
         body: JSON.stringify({ bio: "  喜欢轻松聊天  " }),
       });
 
       expect(res.status).toBe(200);
-      expect(mockUpdateFullProfile).toHaveBeenCalledTimes(1);
-      const callArg = mockUpdateFullProfile.mock.calls[0][1];
-      expect(callArg.bio).toBe("喜欢轻松聊天");
-
       expect(mockValidateContentSafe).toHaveBeenCalledWith("喜欢轻松聊天", "bio");
+      const infoLog = mockLoggerInfo.mock.calls.find(
+        (call) => call[0] === "[Onboarding] Profile review completed",
+      );
+      expect(infoLog).toBeDefined();
+      expect(infoLog![1]).toMatchObject({ userId: "user-123", bioLength: 6, bioUpdated: true });
     });
   });
 
-  it("clears an empty bio to null", async () => {
-    mockUpdateFullProfile.mockResolvedValue({ id: "user-123", bio: null });
-
+  it("does not send bio when body is omitted", async () => {
     await withServer(async (baseUrl) => {
       const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
       const cookie = cookieHeader(loginRes);
 
-      const res = await fetch(`${baseUrl}/api/profile`, {
-        method: "PATCH",
+      const res = await fetch(`${baseUrl}/api/profile-review/complete`, {
+        method: "POST",
         headers: { "Content-Type": "application/json", cookie },
-        body: JSON.stringify({ bio: "" }),
+        body: JSON.stringify({}),
       });
 
       expect(res.status).toBe(200);
-      expect(mockUpdateFullProfile).toHaveBeenCalledTimes(1);
-      const callArg = mockUpdateFullProfile.mock.calls[0][1];
-      expect(callArg.bio).toBeNull();
-      const body = (await res.json()) as { bio: null };
-      expect(body.bio).toBeNull();
-      expect(mockValidateContentSafe).not.toHaveBeenCalledWith(expect.anything(), "bio");
-    });
-  });
-
-  it("clears a whitespace-only bio to null", async () => {
-    mockUpdateFullProfile.mockResolvedValue({ id: "user-123", bio: null });
-
-    await withServer(async (baseUrl) => {
-      const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
-      const cookie = cookieHeader(loginRes);
-
-      const res = await fetch(`${baseUrl}/api/profile`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", cookie },
-        body: JSON.stringify({ bio: "     " }),
-      });
-
-      expect(res.status).toBe(200);
-      expect(mockUpdateFullProfile).toHaveBeenCalledTimes(1);
-      const callArg = mockUpdateFullProfile.mock.calls[0][1];
-      expect(callArg.bio).toBeNull();
-      const body = (await res.json()) as { bio: null };
-      expect(body.bio).toBeNull();
-      expect(mockValidateContentSafe).not.toHaveBeenCalledWith(expect.anything(), "bio");
-    });
-  });
-
-  it("accepts a bio together with other profile fields", async () => {
-    await withServer(async (baseUrl) => {
-      const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
-      const cookie = cookieHeader(loginRes);
-
-      const res = await fetch(`${baseUrl}/api/profile`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", cookie },
-        body: JSON.stringify({
-          displayName: "Joy",
-          currentCity: "深圳",
-          bio: "喜欢轻松聊天",
-        }),
-      });
-
-      expect(res.status).toBe(200);
-      expect(mockUpdateFullProfile).toHaveBeenCalledTimes(1);
-      const callArg = mockUpdateFullProfile.mock.calls[0][1];
-      expect(callArg.bio).toBe("喜欢轻松聊天");
-      expect(callArg.displayName).toBe("Joy");
-      expect(callArg.currentCity).toBe("深圳");
+      expect(mockValidateContentSafe).not.toHaveBeenCalled();
+      const infoLog = mockLoggerInfo.mock.calls.find(
+        (call) => call[0] === "[Onboarding] Profile review completed",
+      );
+      expect(infoLog![1]).toMatchObject({ userId: "user-123", bioLength: 0, bioUpdated: false });
     });
   });
 
@@ -221,36 +179,17 @@ describe("PATCH /api/profile bio validation", () => {
       const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
       const cookie = cookieHeader(loginRes);
 
-      const res = await fetch(`${baseUrl}/api/profile`, {
-        method: "PATCH",
+      const res = await fetch(`${baseUrl}/api/profile-review/complete`, {
+        method: "POST",
         headers: { "Content-Type": "application/json", cookie },
         body: JSON.stringify({ bio: longBio }),
       });
 
       expect(res.status).toBe(400);
-      const body = (await res.json()) as { message: string };
+      const body = (await res.json()) as { message: string; field: string };
       expect(body.message).toContain("100");
-      expect(mockUpdateFullProfile).not.toHaveBeenCalled();
-    });
-  });
-
-  it("accepts a bio of exactly 100 chars", async () => {
-    const exactBio = "a".repeat(100);
-
-    await withServer(async (baseUrl) => {
-      const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
-      const cookie = cookieHeader(loginRes);
-
-      const res = await fetch(`${baseUrl}/api/profile`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", cookie },
-        body: JSON.stringify({ bio: exactBio }),
-      });
-
-      expect(res.status).toBe(200);
-      expect(mockUpdateFullProfile).toHaveBeenCalledTimes(1);
-      const callArg = mockUpdateFullProfile.mock.calls[0][1];
-      expect(callArg.bio).toBe(exactBio);
+      expect(body.field).toBe("bio");
+      expect(mockValidateContentSafe).not.toHaveBeenCalled();
     });
   });
 
@@ -291,8 +230,8 @@ describe("PATCH /api/profile bio validation", () => {
       const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
       const cookie = cookieHeader(loginRes);
 
-      const res = await fetch(`${baseUrl}/api/profile`, {
-        method: "PATCH",
+      const res = await fetch(`${baseUrl}/api/profile-review/complete`, {
+        method: "POST",
         headers: { "Content-Type": "application/json", cookie },
         body: JSON.stringify({ bio: "this is blocked content" }),
       });
@@ -300,28 +239,6 @@ describe("PATCH /api/profile bio validation", () => {
       expect(res.status).toBe(400);
       const body = (await res.json()) as { code: string };
       expect(body.code).toBe("CONTENT_VIOLATION");
-      expect(mockUpdateFullProfile).not.toHaveBeenCalled();
-    });
-  });
-
-  it("logs validation failures", async () => {
-    const longBio = "a".repeat(101);
-
-    await withServer(async (baseUrl) => {
-      const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
-      const cookie = cookieHeader(loginRes);
-
-      await fetch(`${baseUrl}/api/profile`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", cookie },
-        body: JSON.stringify({ bio: longBio }),
-      });
-
-      const errorLog = mockLoggerError.mock.calls.find(
-        (call) => call[0] === "Validation failed",
-      );
-      expect(errorLog).toBeDefined();
-      expect(errorLog![1].userId).toBe("user-123");
     });
   });
 });

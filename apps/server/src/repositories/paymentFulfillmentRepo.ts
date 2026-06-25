@@ -13,6 +13,8 @@ import { and, desc, eq, ne, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "../db";
 import { eventCreditsRepo } from "./eventCreditsRepo";
+import { resolveEffectivePreferenceDNA } from "../lib/matchCompass"; 
+import { users } from "@shared/schema";
 
 type PaymentRecord = typeof payments.$inferSelect;
 
@@ -246,6 +248,22 @@ export const paymentFulfillmentRepo = {
           throw new Error(`Event pool ${updatedPayment.relatedId} not found`);
         }
 
+        const [user] = await tx
+          .select({
+            archetype: users.archetype,
+            primaryArchetype: users.primaryArchetype,
+            defaultPreferenceStrictness: users.defaultPreferenceStrictness,
+            defaultAcceptPairs: users.defaultAcceptPairs,
+            defaultGenderComposition: users.defaultGenderComposition,
+            defaultPreferredDistricts: users.defaultPreferredDistricts,
+            defaultKolComfort: users.defaultKolComfort,
+          })
+          .from(users)
+          .where(eq(users.id, updatedPayment.userId))
+          .limit(1);
+
+        const dna = user ? resolveEffectivePreferenceDNA(user) : null;
+
         const inserted = await tx
           .insert(eventPoolRegistrations)
           .values({
@@ -261,6 +279,11 @@ export const paymentFulfillmentRepo = {
             alcoholComfort: eventRegistrationPayload?.alcoholComfort ?? [],
             barBudgetRange: eventRegistrationPayload?.barBudgetRange ?? [],
             matchStatus: "pending",
+            preferenceStrictness: dna?.strictness ?? 50,
+            acceptPairs: dna?.acceptPairs ?? true,
+            genderCompositionPreference: dna?.genderComposition ?? null,
+            preferredDistricts: dna?.preferredDistricts ?? null,
+            kolComfortLevel: dna?.kolComfort ?? null,
           })
           .onConflictDoNothing({
             target: [eventPoolRegistrations.poolId, eventPoolRegistrations.userId],

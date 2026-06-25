@@ -32,6 +32,11 @@ describe("event pool registration insert helper", () => {
         barThemes: ["清吧", "精酿"],
         alcoholComfort: ["微醺就好"],
         barBudgetRange: ["80-150"],
+        preferenceStrictness: 50,
+        acceptPairs: true,
+        genderCompositionPreference: null,
+        preferredDistricts: null,
+        kolComfortLevel: null,
       },
     });
   });
@@ -56,6 +61,11 @@ describe("event pool registration insert helper", () => {
         barThemes: [],
         alcoholComfort: [],
         barBudgetRange: [],
+        preferenceStrictness: 50,
+        acceptPairs: true,
+        genderCompositionPreference: null,
+        preferredDistricts: null,
+        kolComfortLevel: null,
       },
     });
   });

@@ -1,5 +1,7 @@
 import type { Express, Request } from "express";
 import { aiEndpointLimiter } from "../../rateLimiter";
+import { logger } from "../../lib/logger";
+import { validateContentSafe, contentViolationResponse } from "../../lib/contentSafety";
 import { db } from "../../db";
 import { eq } from "drizzle-orm";
 import { onboardingAnalytics, userInterests, users } from "@shared/schema";
@@ -56,11 +58,32 @@ export function registerOnboardingRoutes(app: Express): void {
       const userId = req.session.userId;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-      await db.update(users).set({
+      const bioRaw = typeof req.body?.bio === 'string' ? req.body.bio : '';
+      const bio = bioRaw.trim();
+
+      if (bio.length > 100) {
+        return res.status(400).json({ message: "一句话介绍不能超过 100 个字符", field: "bio" });
+      }
+
+      if (bio.length > 0) {
+        const safetyResult = validateContentSafe(bio, "bio");
+        if (!safetyResult.safe) {
+          return res.status(400).json(contentViolationResponse(safetyResult.violation!).body);
+        }
+      }
+
+      const updateValues: Record<string, unknown> = {
         hasSeenProfileReview: true,
         onboardingCheckpoint: 'profile-review',
         onboardingCheckpointTimestamp: new Date(),
-      }).where(eq(users.id, userId));
+      };
+      if (bio.length > 0) {
+        updateValues.bio = bio;
+      }
+
+      await db.update(users).set(updateValues).where(eq(users.id, userId));
+
+      logger.info("[Onboarding] Profile review completed", { userId, bioLength: bio.length, bioUpdated: bio.length > 0 });
 
       const user = await db.query.users.findFirst({
         where: eq(users.id, userId),

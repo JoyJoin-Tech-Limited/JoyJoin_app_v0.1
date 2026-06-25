@@ -127,3 +127,36 @@ export function coerceStrictness(value: number | null | undefined): number {
   if (typeof value !== "number" || !Number.isFinite(value)) return 50;
   return value;
 }
+
+/**
+ * Resolve effective preference DNA for a user.
+ * If the user has persisted defaults, use them; otherwise derive from archetype.
+ */
+export interface UserPreferenceDNASource {
+  primaryArchetype: string | null;
+  archetype: string | null;
+  defaultPreferenceStrictness: number | null;
+  defaultAcceptPairs: boolean | null;
+  defaultGenderComposition: string | null;
+  defaultPreferredDistricts: string[] | null;
+  defaultKolComfort: string | null;
+}
+
+export function resolveEffectivePreferenceDNA(user: UserPreferenceDNASource): PreferenceDNA {
+  const hasPersistedDefaults =
+    typeof user.defaultPreferenceStrictness === "number" && Number.isFinite(user.defaultPreferenceStrictness);
+
+  if (hasPersistedDefaults) {
+    return {
+      strictness: user.defaultPreferenceStrictness as number,
+      acceptPairs: user.defaultAcceptPairs ?? true,
+      genderComposition: (user.defaultGenderComposition as GenderComposition) ?? null,
+      preferredDistricts: user.defaultPreferredDistricts ?? null,
+      kolComfort: (user.defaultKolComfort as KolComfort) ?? null,
+      ageMatchPreference: null,
+      tableVibePreference: null,
+    };
+  }
+
+  return buildDefaultPreferencesFromArchetype(user.primaryArchetype ?? user.archetype);
+}

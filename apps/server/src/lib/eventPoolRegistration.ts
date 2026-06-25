@@ -17,6 +17,11 @@ const EVENT_POOL_REGISTRATION_FIELDS = [
   "barThemes",
   "alcoholComfort",
   "barBudgetRange",
+  "preferenceStrictness",
+  "acceptPairs",
+  "genderCompositionPreference",
+  "preferredDistricts",
+  "kolComfortLevel",
 ] as const;
 
 export type EventPoolRegistrationInsertValues = Pick<
@@ -24,15 +29,25 @@ export type EventPoolRegistrationInsertValues = Pick<
   "poolId" | "userId" | (typeof EVENT_POOL_REGISTRATION_FIELDS)[number]
 >;
 
+export interface EventPoolRegistrationPreferenceDNA {
+  strictness: number;
+  acceptPairs: boolean | null;
+  genderComposition: string | null;
+  preferredDistricts: string[] | null;
+  kolComfort: string | null;
+}
+
 export function buildEventPoolRegistrationInsert(input: {
   poolId: string;
   userId: string;
   payload?: EventPoolRegistrationPayload | null;
+  preferenceDNA?: EventPoolRegistrationPreferenceDNA | null;
 }): {
   invitationCode?: string;
   values: EventPoolRegistrationInsertValues;
 } {
   const normalizedPayload = normalizeEventPoolRegistrationPayload(input.payload);
+  const dna = input.preferenceDNA;
 
   const parseResult = insertEventPoolRegistrationSchema.safeParse({
     poolId: input.poolId,
@@ -46,6 +61,11 @@ export function buildEventPoolRegistrationInsert(input: {
     barThemes: normalizedPayload.barThemes ?? [],
     alcoholComfort: normalizedPayload.alcoholComfort ?? [],
     barBudgetRange: normalizedPayload.barBudgetRange ?? [],
+    preferenceStrictness: dna?.strictness ?? 50,
+    acceptPairs: dna?.acceptPairs ?? true,
+    genderCompositionPreference: dna?.genderComposition ?? null,
+    preferredDistricts: dna?.preferredDistricts ?? null,
+    kolComfortLevel: dna?.kolComfort ?? null,
   });
 
   if (!parseResult.success) {

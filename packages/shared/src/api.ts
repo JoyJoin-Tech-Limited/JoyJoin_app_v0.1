@@ -1051,11 +1051,13 @@ export function submitInterests(
 }
 
 export function completeProfileReview(
-  api: ApiTransport
+  api: ApiTransport,
+  bio?: string,
 ): Promise<{ success: boolean }> {
   return api<{ success: boolean }>({
     path: '/api/profile-review/complete',
     method: 'POST',
+    data: bio !== undefined ? { bio } : undefined,
   })
 }
 

@@ -793,3 +793,59 @@
     opacity: 1;
   }
 }
+
+.profile-review__bio-field {
+  position: relative;
+  box-sizing: border-box;
+  min-height: 160rpx;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-lg;
+  background: rgba($color-surface, 0.6);
+  border: 2rpx solid rgba($color-primary, 0.12);
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  &--error {
+    border-color: $color-error;
+    background: rgba($color-error, 0.04);
+  }
+
+  &:focus-within {
+    border-color: rgba($color-primary, 0.4);
+    background: $color-surface;
+  }
+}
+
+.profile-review__bio-textarea {
+  width: 100%;
+  min-height: 120rpx;
+  font-size: $font-size-base;
+  line-height: 1.6;
+  color: $color-text-primary;
+}
+
+.profile-review__bio-placeholder {
+  color: $color-text-tertiary;
+}
+
+.profile-review__bio-counter {
+  position: absolute;
+  right: $spacing-sm;
+  bottom: $spacing-sm;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.profile-review__bio-error {
+  display: block;
+  margin-top: $spacing-xs;
+  font-size: $font-size-sm;
+  color: $color-error;
+}
+
+.profile-review__bio-hint {
+  display: block;
+  margin-top: $spacing-xs;
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  line-height: 1.5;
+}
