@@ -145,6 +145,7 @@ function AuthenticatedDiscover({
 
   const [avatarError, setAvatarError] = useState(false)
   const [tabEntranceClass] = useState(() => (consumeTabEntrance() ? 'tab-page-enter' : ''))
+  const lastGoodPoolsRef = useRef<EventPoolSummary[]>([])
 
   // ── Geo detection state ──
   const [detectedClusterId, setDetectedClusterId] = useState<string | null>(null)
@@ -174,11 +175,17 @@ function AuthenticatedDiscover({
           },
         })
         logInfo('[Discover] Pools ready', { poolCount: loadedPools.length })
+        if (loadedPools.length > 0) {
+          lastGoodPoolsRef.current = loadedPools
+        }
         return loadedPools
       } catch (e) {
         logWarn('[Discover] Pool loading failed', {
           error: e instanceof Error ? e.message : String(e),
         })
+        if (lastGoodPoolsRef.current.length > 0) {
+          return lastGoodPoolsRef.current
+        }
         // Dev-only mock fallback for UI testing without backend.
         // Gated to development so production never serves fake data (AC-12).
         if (process.env.NODE_ENV === 'development') {

@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef } from 'react'
 import Taro, { useDidShow, useDidHide } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import {
-  getMyBlindBoxEvents,
+  getJoinedEvents,
   getMyPoolRegistrations,
-  type BlindBoxEventSummary,
+  type JoinedEventSummary,
   type PoolRegistrationSummary,
 } from '@shared/api'
 import { STALE_TIME_DEFAULT_MS } from '../../lib/utils/uiConstants'
@@ -26,7 +26,7 @@ interface NativeCustomTabBar {
 interface UseCustomTabBarSyncOptions {
   enabled?: boolean
   poolRegistrations?: PoolRegistrationSummary[]
-  events?: BlindBoxEventSummary[]
+  events?: JoinedEventSummary[]
 }
 
 function getNativeTabBar(page: Taro.PageInstance | null | undefined): NativeCustomTabBar | undefined {
@@ -50,8 +50,8 @@ export function useCustomTabBarSync({
   })
 
   const { data: queriedEvents } = useQuery({
-    queryKey: ['mini-program', 'my-blind-box-events'],
-    queryFn: () => getMyBlindBoxEvents(apiRequest),
+    queryKey: ['mini-program', 'joined-events'],
+    queryFn: () => getJoinedEvents(apiRequest),
     enabled: enabled && providedEvents === undefined,
     staleTime: 30_000,
   })
