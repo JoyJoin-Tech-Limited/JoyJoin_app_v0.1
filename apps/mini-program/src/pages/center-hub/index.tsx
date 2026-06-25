@@ -80,6 +80,12 @@ function getCountdownText(startTime: string): string {
   return `${days}天后开始`
 }
 
+function hasActionableRegistrations(registrations?: PoolRegistrationSummary[]): boolean {
+  return (registrations ?? []).some(
+    (registration) => registration.matchStatus === 'pending' || registration.matchStatus === 'matched'
+  )
+}
+
 function CenterHubContent({
   registrations,
   events,
@@ -133,8 +139,8 @@ function CenterHubContent({
           mode='aspectFit'
           src={getXiaoyueExpressionAsset('actionFailure')}
         />
-        <Text className='center-hub__state-title'>加载没成功</Text>
-        <Text className='center-hub__state-subtitle'>网络不太稳定，下拉刷新试试</Text>
+        <Text className='center-hub__state-title'>暂时没拿到活动状态</Text>
+        <Text className='center-hub__state-subtitle'>可以重新加载，或先去发现页看看可报名的活动</Text>
         <Button className='center-hub__cta' onClick={() => { haptics('light'); Taro.reLaunch({ url: '/pages/center-hub/index' }) }}>
           重新加载
         </Button>
@@ -268,11 +274,16 @@ export default function CenterHubPage() {
   const {
     data: events = [],
     isLoading: eventsLoading,
+    isError: eventsError,
   } = useQuery({
     queryKey: ['mini-program', 'joined-events'],
     queryFn: () => getJoinedEvents(apiRequest),
     enabled: !authLoading,
   })
+
+  const canRenderFromRegistrations = hasActionableRegistrations(registrations)
+  const isHubLoading = regLoading || (eventsLoading && !canRenderFromRegistrations)
+  const isHubError = regError || (eventsError && !canRenderFromRegistrations)
 
   return renderGate(
     <PageMorphWrapper
@@ -293,8 +304,8 @@ export default function CenterHubPage() {
           <CenterHubContent
             registrations={registrations}
             events={events}
-            isLoading={regLoading || eventsLoading}
-            isError={regError}
+            isLoading={isHubLoading}
+            isError={isHubError}
           />
         </View>
       }

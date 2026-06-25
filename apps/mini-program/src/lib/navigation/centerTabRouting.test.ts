@@ -60,4 +60,23 @@ describe('mini-program center tab routing — hub page architecture', () => {
       },
     })
   })
+
+  it('keeps matched registrations without assigned groups in the matching flow', () => {
+    expect(getMiniProgramCenterState([
+      {
+        id: 'registration-awaiting-group',
+        matchStatus: 'matched',
+        assignedGroupId: null,
+        poolDateTime: '2026-07-29T11:32:00.000Z',
+      },
+    ], [], new Date('2026-06-25T12:00:00.000Z'))).toEqual({
+      label: '匹配中…',
+      showBadge: true,
+      action: {
+        kind: 'pending-registration',
+        navigation: 'switchTab',
+        url: '/pages/center-hub/index',
+      },
+    })
+  })
 })

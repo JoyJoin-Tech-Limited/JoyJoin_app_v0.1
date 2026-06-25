@@ -26,6 +26,10 @@ export type CenterTabDestination =
   | { kind: 'pending-registration'; registrationId: string }
   | { kind: 'matched-pool-future'; groupId: string }
 
+function isActivePoolRegistration(registration: CenterTabPoolRegistration): boolean {
+  return registration.matchStatus === 'pending' || registration.matchStatus === 'matched'
+}
+
 function getComparableTime(value?: string) {
   if (!value) {
     return Number.POSITIVE_INFINITY
@@ -109,7 +113,9 @@ export function resolveCenterTabDestination(
       (
         registration
       ): registration is CenterTabPoolRegistration & { poolDateTime: string } =>
-        registration.matchStatus === 'pending' && typeof registration.poolDateTime === 'string'
+        isActivePoolRegistration(registration) &&
+        !registration.assignedGroupId &&
+        typeof registration.poolDateTime === 'string'
     ),
     (registration) => getComparableTime(registration.poolDateTime)
   )
@@ -183,7 +189,7 @@ export function getCenterButtonLabel(
   }
 
   const pendingRegistration = poolRegistrations.find(
-    (registration) => registration.matchStatus === 'pending'
+    (registration) => isActivePoolRegistration(registration) && !registration.assignedGroupId
   )
 
   if (pendingRegistration) {
