@@ -271,7 +271,6 @@ export default function EssentialDataPage() {
   const birthYearIndex = birthYear > 0 ? BIRTH_YEAR_RANGE.indexOf(birthYear) : -1
   const currentCityIndex = currentCity ? cityOptions.findIndex((option) => option === currentCity) : -1
   const relationshipIndex = relationshipStatus ? relationshipOptions.findIndex((option) => option === relationshipStatus) : -1
-  const lifeStageIndex = lifeStage ? LIFE_STAGE_OPTIONS.findIndex((option) => option === lifeStage) : -1
   const intentOptions = useMemo(
     () =>
       [...INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION].map((option) => ({
@@ -386,7 +385,6 @@ export default function EssentialDataPage() {
         ...(shouldSubmitProfession ? {
           occupationId: professionForSubmit,
           industryRawInput: professionForSubmit,
-          ...(workMode ? { workMode } : {}),
           ...(professionClassification?.standardizedOccupationId ? { standardizedOccupationId: professionClassification.standardizedOccupationId } : {}),
           ...(professionClassification?.industryCategoryLabel ? { industryCategoryLabel: professionClassification.industryCategoryLabel } : {}),
           ...(professionClassification?.industrySegmentLabel ? { industrySegmentLabel: professionClassification.industrySegmentLabel } : {}),

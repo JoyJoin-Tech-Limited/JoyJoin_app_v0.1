@@ -142,28 +142,6 @@ export default function ProfilePage() {
     <View className='profile-page tab-page-enter'>
       <ScrollView className='profile-page__scroll' scrollY enhanced showScrollbar={false}>
         {/* Hero section */}
-        {/*<View className='profile-page__hero'>
-          <View className='profile-page__avatar'>
-            {showAvatarImage ? (
-              <Image
-                className='profile-page__avatar-img'
-                src={avatarUrl as string}
-                mode='aspectFill'
-                aria-label='用户头像'
-                onError={handleAvatarError}
-              />
-            ) : (
-              <ArchetypeHead archetype={archetype} size={120} fallbackText={displayNamePrimary} />
-            )}
-          </View>
-          <Text className='profile-page__name'>{displayName}</Text>
-          {/*{archetype ? (
-            <Text className='profile-page__archetype'>
-              {ARCHETYPE_BY_ID[archetype]?.nameCn || archetype}
-            </Text>
-          ) : null}
-          */}
-        </View>*/}
         <View className='profile-page__hero profile-page__hero--entered'>
           <View className='profile-page__avatar-ring'>
             <ArchetypeHead
