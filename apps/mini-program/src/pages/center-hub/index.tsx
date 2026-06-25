@@ -3,9 +3,9 @@ import Taro from '@tarojs/taro'
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  getMyBlindBoxEvents,
+  getJoinedEvents,
   getMyPoolRegistrations,
-  type BlindBoxEventSummary,
+  type JoinedEventSummary,
   type PoolRegistrationSummary,
 } from '@shared/api'
 import {
@@ -87,7 +87,7 @@ function CenterHubContent({
   isError,
 }: {
   registrations?: PoolRegistrationSummary[]
-  events?: BlindBoxEventSummary[]
+  events?: JoinedEventSummary[]
   isLoading: boolean
   isError: boolean
 }) {
@@ -268,10 +268,9 @@ export default function CenterHubPage() {
   const {
     data: events = [],
     isLoading: eventsLoading,
-    isError: eventsError,
   } = useQuery({
-    queryKey: ['mini-program', 'my-blind-box-events'],
-    queryFn: () => getMyBlindBoxEvents(apiRequest),
+    queryKey: ['mini-program', 'joined-events'],
+    queryFn: () => getJoinedEvents(apiRequest),
     enabled: !authLoading,
   })
 
@@ -295,7 +294,7 @@ export default function CenterHubPage() {
             registrations={registrations}
             events={events}
             isLoading={regLoading || eventsLoading}
-            isError={regError || eventsError}
+            isError={regError}
           />
         </View>
       }
