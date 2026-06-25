@@ -528,6 +528,7 @@ export default function ProfileReviewPage() {
                   placeholder='比如：正在寻找一起探店和看展的搭子'
                   maxlength={100}
                   placeholderClass='profile-review__bio-placeholder'
+                  aria-label='一句你的社交签名'
                   onInput={(event) => {
                     const value = (event?.detail?.value as string) ?? ''
                     setBio(value.slice(0, 100))
