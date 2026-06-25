@@ -220,6 +220,8 @@
   }
 
   &__bio-wrap {
+    display: flex;
+    justify-content: center;
     box-sizing: border-box;
     max-width: 80%;
     margin-top: $spacing-sm;
@@ -232,7 +234,7 @@
     color: var(--profile-text-secondary);
     line-height: $line-height-relaxed;
     text-align: center;
-    word-break: break-word;
+    word-break: keep-all;
     overflow-wrap: break-word;
   }
 
@@ -259,60 +261,6 @@
     font-weight: $font-weight-medium;
     color: var(--profile-primary);
     line-height: $line-height-normal;
-  }
-
-  // Bio line / empty-state CTA
-  &__bio-wrap {
-    display: flex;
-    justify-content: center;
-    margin-top: $spacing-sm;
-    max-width: 560rpx;
-  }
-
-  &__bio-text {
-    font-size: $font-size-sm;
-    font-family: $font-ui;
-    color: var(--profile-text-secondary);
-    line-height: $line-height-relaxed;
-    text-align: center;
-    word-break: keep-all;
-    overflow-wrap: break-word;
-  }
-
-  &__bio-cta {
-    display: inline-flex;
-    align-items: center;
-    gap: $spacing-xs;
-    min-height: $cta-min-tap;
-    padding: $spacing-xs $spacing-sm;
-    background: var(--profile-surface);
-    border: 2rpx dashed var(--profile-primary-35);
-    border-radius: $card-radius-sm;
-    transition: transform 0.12s ease, opacity 0.12s ease;
-    box-sizing: border-box;
-
-    &--pressed {
-      transform: scale(0.98);
-      opacity: 0.9;
-      background: var(--profile-primary-04);
-    }
-  }
-
-  &__bio-cta-text {
-    font-size: $font-size-sm;
-    font-family: $font-ui;
-    font-weight: $font-weight-medium;
-    color: var(--profile-primary);
-    line-height: $line-height-normal;
-  }
-
-  &__bio-cta-chevron {
-    width: 12rpx;
-    height: 12rpx;
-    border-top: 2rpx solid var(--profile-primary);
-    border-right: 2rpx solid var(--profile-primary);
-    transform: rotate(45deg);
-    flex-shrink: 0;
   }
 
   // Xiaoyue greeting
@@ -1055,7 +1003,6 @@
 
   .profile-page__archetype-pill,
   .profile-page__unlock-pill,
-  .profile-page__bio-cta,
   .profile-page__error-retry,
   .profile-page__logout-btn {
     transform: none !important;
@@ -1076,68 +1023,4 @@
   height: 1px;
   opacity: 0;
   pointer-events: none;
-}
-
-
-// new update for the profile personality test button 
-.profile-page__hero,
-.profile-page__stats,
-.profile-page__section {
-  opacity: 1;
-  transform: none;
-}
-
-// comment to change the profile page layout
-// .profile-page__avatar {
-//   width: 132px;
-//   height: 132px;
-//   margin: 24px auto 12px;
-//   display: flex;
-//   align-items: center;
-//   justify-content: center;
-// }
-
-// .profile-page__action-row {
-//   min-height: 56px;
-//   padding: 0 18px;
-//   display: flex;
-//   align-items: center;
-//   gap: 12px;
-// }
-
-.profile-page__action-icon {
-  flex: 0 0 auto;
-}
-
-.profile-page__action-text {
-  flex: 1;
-  font-size: 16px;
-  font-weight: 600;
-  color: $color-text-primary;
-}
-
-.profile-page__action-arrow {
-  color: #9ca3af;
-  font-size: 22px;
-}
-
-.profile-page__action-badge {
-  min-width: 22px;
-  height: 22px;
-  padding: 0 7px;
-  border-radius: 999px;
-  background: $color-bg-tint-purple;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.profile-page__action-count {
-  font-size: 12px;
-  font-weight: 700;
-  color: #7c3aed;
-}
-
-.profile-page__logout-section {
-  margin: 48rpx 32rpx 0;
 }

@@ -14,6 +14,37 @@ import { db } from "../../db";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
+/** Writes archetype-derived Match Compass default DNA for a user.
+ *  Best-effort / non-blocking: failures are logged but do not interrupt onboarding.
+ */
+async function writeDefaultPreferenceDNA(userId: string, primaryArchetype: string): Promise<void> {
+  try {
+    const dna = buildDefaultPreferencesFromArchetype(primaryArchetype);
+    await db
+      .update(users)
+      .set({
+        defaultPreferenceStrictness: dna.strictness,
+        defaultAcceptPairs: dna.acceptPairs,
+        defaultGenderComposition: dna.genderComposition,
+        defaultPreferredDistricts: dna.preferredDistricts,
+        defaultKolComfort: dna.kolComfort,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+    logger.info("[Assessment V4] Wrote default preference DNA", {
+      userId,
+      archetype: primaryArchetype,
+      strictness: dna.strictness,
+    });
+  } catch (dnaError) {
+    logger.error("[Assessment V4] Failed to write default preference DNA", {
+      userId,
+      archetype: primaryArchetype,
+      error: dnaError instanceof Error ? dnaError.message : String(dnaError),
+    });
+  }
+}
+
 /** Validates that the matcher produced a sane final result before we persist it. */
 function validateFinalResult(finalResult: any): { valid: boolean; primaryArchetype: string; error?: string } {
   if (!finalResult || typeof finalResult !== 'object') {
@@ -490,32 +521,7 @@ export function registerAssessmentV4Routes(app: Express): void {
           await storage.markPersonalityTestComplete(session.userId);
 
           // Write archetype-derived Match Compass default DNA for first-time users
-          try {
-            const dna = buildDefaultPreferencesFromArchetype(primaryArchetype);
-            await db
-              .update(users)
-              .set({
-                defaultPreferenceStrictness: dna.strictness,
-                defaultAcceptPairs: dna.acceptPairs,
-                defaultGenderComposition: dna.genderComposition,
-                defaultPreferredDistricts: dna.preferredDistricts,
-                defaultKolComfort: dna.kolComfort,
-                updatedAt: new Date(),
-              })
-              .where(eq(users.id, session.userId));
-            logger.info("[Assessment V4] Wrote default preference DNA", {
-              userId: session.userId,
-              archetype: primaryArchetype,
-              strictness: dna.strictness,
-            });
-          } catch (dnaError) {
-            logger.error("[Assessment V4] Failed to write default preference DNA", {
-              userId: session.userId,
-              archetype: primaryArchetype,
-              error: dnaError instanceof Error ? dnaError.message : String(dnaError),
-            });
-            // Non-blocking: continue onboarding even if DNA write fails
-          }
+          await writeDefaultPreferenceDNA(session.userId, primaryArchetype);
 
           // Warm xiaoyue analysis cache for discover page
           const confidenceValues = Object.values(finalResult.confidences ?? {}) as number[];
@@ -816,6 +822,9 @@ export function registerAssessmentV4Routes(app: Express): void {
           });
 
           await storage.markPersonalityTestComplete(session.userId);
+
+          // Write archetype-derived Match Compass default DNA for first-time users
+          await writeDefaultPreferenceDNA(session.userId, primaryArchetype);
 
           const confidenceValues = Object.values(finalResult.confidences ?? {}) as number[];
           const avgConfidence = confidenceValues.length > 0

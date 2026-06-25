@@ -13,6 +13,7 @@ import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import {
   buildDefaultPreferencesFromArchetype,
   coerceStrictness,
+  resolveEffectivePreferenceDNA,
   resolveTemperatureBand,
 } from "../../lib/matchCompass";
 import { pairMeetsDealbreakers } from "../../poolMatchingService";
@@ -450,9 +451,15 @@ export function registerMatchCompassRoutes(app: Express): void {
           .where(eq(users.id, userId))
           .limit(1);
 
-        const dna = buildDefaultPreferencesFromArchetype(
-          user?.primaryArchetype ?? user?.archetype,
-        );
+        const dna = resolveEffectivePreferenceDNA({
+          primaryArchetype: user?.primaryArchetype ?? null,
+          archetype: user?.archetype ?? null,
+          defaultPreferenceStrictness: user?.defaultPreferenceStrictness ?? null,
+          defaultAcceptPairs: user?.defaultAcceptPairs ?? null,
+          defaultGenderComposition: user?.defaultGenderComposition ?? null,
+          defaultPreferredDistricts: user?.defaultPreferredDistricts ?? null,
+          defaultKolComfort: user?.defaultKolComfort ?? null,
+        });
 
         const [updated] = await db
           .update(eventPoolRegistrations)

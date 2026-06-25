@@ -80,6 +80,27 @@ describe("resolveEffectivePreferenceDNA", () => {
     expect(dna.strictness).toBe(50);
     expect(dna.acceptPairs).toBe(true);
   });
+
+  it("preserves legacy default parity when user only persisted strictness=50 with null other fields", () => {
+    const user = {
+      ...baseUser,
+      defaultPreferenceStrictness: 50 as number | null,
+      defaultAcceptPairs: null as boolean | null,
+      defaultGenderComposition: null as string | null,
+      defaultPreferredDistricts: null as string[] | null,
+      defaultKolComfort: null as string | null,
+    };
+
+    const dna = resolveEffectivePreferenceDNA(user);
+    const legacy = buildDefaultPreferencesFromArchetype(undefined);
+
+    expect(dna).toEqual(legacy);
+    expect(dna.strictness).toBe(50);
+    expect(dna.acceptPairs).toBe(true);
+    expect(dna.genderComposition).toBeNull();
+    expect(dna.preferredDistricts).toBeNull();
+    expect(dna.kolComfort).toBeNull();
+  });
 });
 
 describe("buildEventPoolRegistrationInsert with preferenceDNA", () => {
