@@ -799,7 +799,7 @@
   box-sizing: border-box;
   min-height: 160rpx;
   padding: $spacing-sm $spacing-md;
-  border-radius: $radius-lg;
+  border-radius: $card-radius-sm;
   background: rgba($color-surface, 0.6);
   border: 2rpx solid rgba($color-primary, 0.12);
   transition: border-color 0.15s ease, background 0.15s ease;
