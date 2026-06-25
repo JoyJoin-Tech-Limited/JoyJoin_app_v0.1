@@ -10,6 +10,7 @@ import {
 import { STALE_TIME_DEFAULT_MS } from '../../lib/utils/uiConstants'
 import { apiRequest } from '../../lib/api/api'
 import { getMiniProgramCenterState, type CustomTabBarSyncState } from '../../lib/navigation/centerTabRouting'
+import { MINI_PROGRAM_CENTER_HUB_TAB_ITEM, MINI_PROGRAM_TAB_INDEX, MINI_PROGRAM_TAB_ITEMS } from '../../lib/navigation/tabBarConfig'
 import { useNotificationCounts } from '../useNotificationCounts'
 
 export interface TabBadgeCounts {
@@ -20,6 +21,7 @@ export interface TabBadgeCounts {
 
 /** Native WeChat custom-tab-bar component interface (syncState method). */
 interface NativeCustomTabBar {
+  setSelected(selected: number): void
   syncState(state: CustomTabBarSyncState & { badges?: TabBadgeCounts }): void
 }
 
@@ -35,6 +37,20 @@ function getNativeTabBar(page: Taro.PageInstance | null | undefined): NativeCust
   // JoyJoin ships a native WeChat component, so we call getTabBar() directly.
   const tabBar = (page as unknown as { getTabBar(): NativeCustomTabBar | undefined }).getTabBar()
   return tabBar
+}
+
+const TAB_INDEX_BY_PAGE_PATH = new Map<string, number>([
+  ...MINI_PROGRAM_TAB_ITEMS.map((item) => [item.pagePath, MINI_PROGRAM_TAB_INDEX[item.key]] as const),
+  [MINI_PROGRAM_CENTER_HUB_TAB_ITEM.pagePath, MINI_PROGRAM_TAB_INDEX.centerHub],
+])
+
+function normalizeRoute(route: string | undefined): string {
+  return String(route ?? '').replace(/^\//, '').split('?')[0]
+}
+
+function getCurrentTabIndex(page: Taro.PageInstance | null | undefined): number | undefined {
+  const route = normalizeRoute((page as { route?: string } | null | undefined)?.route)
+  return TAB_INDEX_BY_PAGE_PATH.get(route)
 }
 
 export function useCustomTabBarSync({
@@ -84,10 +100,10 @@ export function useCustomTabBarSync({
     if (!enabled) return
     const page = Taro.getCurrentInstance().page
     const tabBar = getNativeTabBar(page)
-    // Only sync center + badges on show — never touch `selected`.
-    // `handleTabTap` in the native component is the sole authority
-    // for the selected highlight, so hidden pages can never race
-    // and overwrite the user's current tab selection.
+    const currentTabIndex = getCurrentTabIndex(page)
+    if (currentTabIndex !== undefined) {
+      tabBar?.setSelected(currentTabIndex)
+    }
     tabBar?.syncState({ center: centerState, badges })
   })
 

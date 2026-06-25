@@ -445,6 +445,7 @@ describe('native custom tab bar behavior', () => {
 
   it('pageLifetimes.show safety net reverts drifted selected state', async () => {
     setupMocks()
+    global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/discover/index' }])
     const component = await loadComponent()
     component.attached()
 
@@ -456,6 +457,36 @@ describe('native custom tab bar behavior', () => {
     await vi.advanceTimersByTimeAsync(100)
 
     expect(component.data.selected).toBe(0)
+  })
+
+  it('pageLifetimes.show syncs the active highlight from the current tab route', async () => {
+    setupMocks()
+    global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/events/index' }])
+    const component = await loadComponent()
+    component.attached()
+
+    component.setData({ selected: 0 })
+    component._confirmedSelected = 0
+
+    component.show()
+
+    expect(component._confirmedSelected).toBe(1)
+    expect(component.data.selected).toBe(1)
+    expect(component.data.hidden).toBe(false)
+  })
+
+  it('uses the top page route when deciding the active tab', async () => {
+    setupMocks()
+    global.getCurrentPages = vi.fn().mockReturnValue([
+      { route: 'pages/discover/index' },
+      { route: 'pages/events/index?$taroTimestamp=123' },
+    ])
+    const component = await loadComponent()
+    component.attached()
+
+    component.show()
+
+    expect(component.data.selected).toBe(1)
   })
 
   it('detached clears timers and unregisters network listener', async () => {

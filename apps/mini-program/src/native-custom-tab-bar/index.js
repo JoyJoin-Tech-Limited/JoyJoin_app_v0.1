@@ -24,6 +24,13 @@ Component({
   _switchTimer: null,
   // Screen-reader announcement timer
   _announcementTimer: null,
+  _routeToIndex: {
+    'pages/discover/index': 0,
+    'pages/events/index': 1,
+    'pages/connections/index': 2,
+    'pages/profile/index': 3,
+    'pages/center-hub/index': 4,
+  },
 
   data: {
     selected: 0,
@@ -151,7 +158,9 @@ Component({
     show: function () {
       var self = this
       clearTimeout(this._showTimer)
+      this._syncSelectionWithCurrentRoute()
       this._showTimer = setTimeout(function () {
+        self._syncSelectionWithCurrentRoute()
         if (self.data.selected !== self._confirmedSelected) {
           self.setData({ selected: self._confirmedSelected })
         }
@@ -393,18 +402,31 @@ Component({
       return '已切换到' + (names[index] || '')
     },
 
-    _shouldHideOnPage: function () {
-      var tabRoutes = [
-        'pages/discover/index',
-        'pages/events/index',
-        'pages/connections/index',
-        'pages/profile/index',
-        'pages/center-hub/index',
-      ]
+    _getCurrentRoute: function () {
       var pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
-      var route = (pages[0] && pages[0].route) || ''
-      var normalized = route.replace(/^\//, '').split('?')[0]
-      return tabRoutes.indexOf(normalized) < 0
+      var currentPage = pages[pages.length - 1] || pages[0]
+      var route = (currentPage && currentPage.route) || ''
+      return route.replace(/^\//, '').split('?')[0]
+    },
+
+    _syncSelectionWithCurrentRoute: function () {
+      var route = this._getCurrentRoute()
+      var nextSelected = this._routeToIndex[route]
+      if (typeof nextSelected !== 'number') {
+        if (this.data.hidden !== true) {
+          this.setData({ hidden: true })
+        }
+        return
+      }
+
+      this._confirmedSelected = nextSelected
+      if (this.data.selected !== nextSelected || this.data.hidden) {
+        this.setData({ selected: nextSelected, hidden: false })
+      }
+    },
+
+    _shouldHideOnPage: function () {
+      return typeof this._routeToIndex[this._getCurrentRoute()] !== 'number'
     },
 
     /**

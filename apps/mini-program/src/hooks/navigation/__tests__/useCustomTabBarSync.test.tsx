@@ -12,7 +12,8 @@ import {
 import { getMiniProgramCenterState } from '../../../lib/navigation/centerTabRouting'
 
 const mockSyncState = vi.fn()
-const mockGetTabBar = vi.fn(() => ({ syncState: mockSyncState }))
+const mockSetSelected = vi.fn()
+const mockGetTabBar = vi.fn(() => ({ setSelected: mockSetSelected, syncState: mockSyncState }))
 
 let didShowCallback: (() => void) | undefined
 let didHideCallback: (() => void) | undefined
@@ -52,9 +53,10 @@ describe('useCustomTabBarSync', () => {
     didShowCallback = undefined
     didHideCallback = undefined
     mockSyncState.mockClear()
+    mockSetSelected.mockClear()
     mockGetTabBar.mockClear()
     mockUseNotificationCounts.mockReturnValue({ data: { discover: 0, activities: 0, chat: 0 } } as any)
-    ;(Taro as any).getCurrentInstance.mockReturnValue({ page: { getTabBar: mockGetTabBar } })
+    ;(Taro as any).getCurrentInstance.mockReturnValue({ page: { route: 'pages/discover/index', getTabBar: mockGetTabBar } })
   })
 
   afterEach(() => {
@@ -79,12 +81,26 @@ describe('useCustomTabBarSync', () => {
     })
   })
 
+  it('syncs selected tab from the current page route on show', async () => {
+    ;(Taro as any).getCurrentInstance.mockReturnValue({ page: { route: 'pages/events/index', getTabBar: mockGetTabBar } })
+
+    renderHook(
+      () => useCustomTabBarSync({ enabled: true, poolRegistrations: [], events: [] }),
+      { wrapper: createWrapper() },
+    )
+
+    act(() => didShowCallback?.())
+
+    expect(mockSetSelected).toHaveBeenCalledWith(1)
+  })
+
   it('does not sync when disabled', () => {
     renderHook(() => useCustomTabBarSync({ enabled: false, poolRegistrations: [], events: [] }), { wrapper: createWrapper() })
 
     act(() => didShowCallback?.())
 
     expect(mockSyncState).not.toHaveBeenCalled()
+    expect(mockSetSelected).not.toHaveBeenCalled()
   })
 
   it('pushes badge updates to the native tab bar while visible and enabled', async () => {
