@@ -61,6 +61,7 @@ import { z } from "zod";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 // ====== Form schema：简化版，只保留我们现在用得到的字段 ======
+
 const createPoolSchema = z
   .object({
     title: z.string().min(1, "活动标题不能为空"),
@@ -302,10 +303,19 @@ export default function AdminEventPoolsPage() {
       });
     },
   });
+  // solve the problem of invalid update payload 
+  const toIsoDateTime = (value?: string) => {
+    if (!value) return value;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : date.toISOString();
+  };
 
   const onSubmit = (data: any) => {
+    // consist the formate of the month date year formate
     const payload = {
       ...data,
+      dateTime: toIsoDateTime(data.dateTime),
+      registrationDeadline: toIsoDateTime(data.registrationDeadline),
       minGroupSize: Number(data.minGroupSize) || 4,
       maxGroupSize: Number(data.maxGroupSize) || 6,
       targetGroups: Number(data.targetGroups) || 1,

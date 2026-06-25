@@ -72,6 +72,8 @@ import type {
 } from "./types";
 import { getArchetypeBadgeStyle, getStuckStatus } from "./adminUserBadges";
 
+// fix the filter white screen 
+const ALL_FILTER_VALUE = "__all__";
 export default function AdminUsersPage() {
   const searchParams = useSearch();
   const [, setLocation] = useLocation();
@@ -329,12 +331,16 @@ export default function AdminUsersPage() {
             <div className="flex flex-wrap gap-4 items-end">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs text-muted-foreground">城市</label>
-                <Select value={cityFilter} onValueChange={setCityFilter}>
+                <Select value={cityFilter|| ALL_FILTER_VALUE}
+                  onValueChange={(value) =>
+                    setCityFilter(value === ALL_FILTER_VALUE ? "" : value)
+                  }
+                >
                   <SelectTrigger className="w-32" data-testid="select-city-filter">
                     <SelectValue placeholder="全部城市" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">全部城市</SelectItem>
+                    <SelectItem value={ALL_FILTER_VALUE}>全部城市</SelectItem>
                     {CURRENT_CITY_OPTIONS.map((city) => (
                       <SelectItem key={city} value={city}>{city}</SelectItem>
                     ))}
@@ -344,12 +350,15 @@ export default function AdminUsersPage() {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs text-muted-foreground">资料完整度</label>
-                <Select value={maxCompleteness} onValueChange={setMaxCompleteness}>
+                <Select value={maxCompleteness||ALL_FILTER_VALUE} onValueChange={(value) =>
+                    setMaxCompleteness(value === ALL_FILTER_VALUE ? "" : value)
+                  }
+                >
                   <SelectTrigger className="w-36" data-testid="select-completeness-filter">
                     <SelectValue placeholder="不限" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">不限</SelectItem>
+                    <SelectItem value={ALL_FILTER_VALUE}>不限</SelectItem>
                     <SelectItem value="35">薄弱 (&lt;35%)</SelectItem>
                     <SelectItem value="50">待提升 (&lt;50%)</SelectItem>
                     <SelectItem value="75">一般 (&lt;75%)</SelectItem>
