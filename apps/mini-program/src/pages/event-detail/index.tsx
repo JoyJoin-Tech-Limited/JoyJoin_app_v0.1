@@ -9,6 +9,7 @@ import { useAuthGuard } from '../../hooks/useAuthGuard'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { useJoyJoinNavigation } from '../../hooks/navigation/useJoyJoinNavigation'
 import JoyJoinLoadingScreen from '../../components/loading/JoyJoinLoadingScreen'
+import { loadEventDetail } from './eventDetailData'
 import './index.scss'
 
 export default function EventDetailPage() {
@@ -21,7 +22,7 @@ export default function EventDetailPage() {
 
   const { data: event, isLoading, error } = useQuery<BlindBoxEventDetail>({
     queryKey: ['mini-program', 'event-detail', eventId],
-    queryFn: () => apiRequest<BlindBoxEventDetail>({ path: `/api/blind-box-events/${encodeURIComponent(eventId)}` }),
+    queryFn: () => loadEventDetail(apiRequest, eventId),
     enabled: !!eventId && !authLoading,
   })
 
