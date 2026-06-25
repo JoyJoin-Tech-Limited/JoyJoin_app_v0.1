@@ -2,7 +2,7 @@ import { Image, ScrollView, Text, View } from '@tarojs/components'
 // Note: ScrollView is also used for detail sheet overflow on small screens
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ARCHETYPE_BY_ID, ARCHETYPE_CANONICAL_ORDER, getArchetypeIndex } from '@shared/personality/archetypeNames'
+import { ARCHETYPE_BY_ID, ARCHETYPE_CANONICAL_ORDER } from '@shared/personality/archetypeNames'
 import { getContrastSafeArchetypeColor } from '@shared/archetypeColors'
 import type { ArchetypeSkillSet } from '@shared/personality/archetypeSkills'
 import Button from '../../../../components/ui/Button'
@@ -255,8 +255,8 @@ export default function FinalStage({
   const cardGlow = activeVariant ? activeVariant.accentGlow : visual.accentGlow
 
   // Collect-them-all: all archetypes with current one unlocked
-  const currentIndex = getArchetypeIndex(displayArchetypeId)
   const allArchetypes = ARCHETYPE_CANONICAL_ORDER
+  const unlockedCount = displayArchetypeId && allArchetypes.includes(displayArchetypeId) ? 1 : 0
 
   // Score-tier colors for partner chemistry. Kept as a named map so the
   // palette can be promoted to design-system tokens without scattering hex
@@ -586,7 +586,7 @@ export default function FinalStage({
           <View className='personality-results__collect-header'>
             <Text className='personality-results__section-label'>命格图鉴</Text>
             <Text className='personality-results__collect-count'>
-              已解锁 {currentIndex ?? 0}/12
+              已解锁 {unlockedCount}/12
             </Text>
           </View>
           <View className='personality-results__collect-grid'>
