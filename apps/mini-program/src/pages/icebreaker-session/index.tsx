@@ -49,6 +49,7 @@ import BonusGateOverlay from './overlays/BonusGateOverlay'
 import {
   buildSocialPath,
   deriveParticipants,
+  getIcebreakerPageErrorText,
   getErrorText,
   getUserArchetype,
   getUserDisplayName,
@@ -125,10 +126,10 @@ export default function IcebreakerSessionPage() {
         method: 'POST',
       })
     },
-    enabled: !!routeEventId && !routeSessionId && !authLoading,
+    enabled: false,
   })
 
-  const resolvedSessionId = routeSessionId || eventSession?.sessionId || ''
+  const resolvedSessionId = routeSessionId || eventSession?.sessionId || routeEventId || ''
 
   useEffect(() => {
     setSocialSessionId(null)
@@ -183,7 +184,7 @@ export default function IcebreakerSessionPage() {
           return
         }
 
-        const message = getErrorText(error, '无法加入破冰会话')
+        const message = getIcebreakerPageErrorText(error)
         logError('[IcebreakerSession] Failed to join social session', {
           icebreakerSessionId: resolvedSessionId,
           message,
@@ -732,9 +733,9 @@ export default function IcebreakerSessionPage() {
 
   const pageError =
     bootstrapError ??
-    (eventSessionError ? getErrorText(eventSessionError, '无法创建破冰会话') : null) ??
-    (sessionError ? getErrorText(sessionError, getErrorMessage('load-failed')) : null) ??
-    (socialSessionQuery.error ? getErrorText(socialSessionQuery.error, getErrorMessage('sync-failed')) : null)
+    (eventSessionError ? getIcebreakerPageErrorText(eventSessionError, '无法创建破冰会话') : null) ??
+    (sessionError ? getIcebreakerPageErrorText(sessionError, getErrorMessage('load-failed')) : null) ??
+    (socialSessionQuery.error ? getIcebreakerPageErrorText(socialSessionQuery.error, getErrorMessage('sync-failed')) : null)
 
   const isBootstrapping = !!resolvedSessionId && !socialSessionId && pendingAction === 'start' && !session
 

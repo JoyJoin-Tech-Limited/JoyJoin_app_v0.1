@@ -6,6 +6,7 @@ import {
   getUserArchetype,
   getUserInterests,
   getErrorText,
+  getIcebreakerPageErrorText,
   deriveParticipants,
   buildSocialPath,
   type IcebreakerSession,
@@ -291,5 +292,27 @@ describe('buildSocialPath', () => {
 
   it('handles empty suffix', () => {
     expect(buildSocialPath('xyz', '')).toBe('/api/social-icebreaker/xyz')
+  })
+})
+
+describe('getIcebreakerPageErrorText', () => {
+  it('hides generic 404 technical messages behind business copy', () => {
+    expect(
+      getIcebreakerPageErrorText({
+        statusCode: 404,
+        isGenericMessage: true,
+        message: 'Request failed with status 404',
+      }),
+    ).toBe('还没有找到这场活动的破冰入口，请从匹配成功的小队详情重新进入。')
+  })
+
+  it('explains forbidden access without exposing raw API text', () => {
+    expect(getIcebreakerPageErrorText({ statusCode: 403 })).toBe(
+      '你还不是这场活动的小队成员，暂时不能进入破冰。',
+    )
+  })
+
+  it('keeps specific non-generic messages when no status mapping applies', () => {
+    expect(getIcebreakerPageErrorText(new Error('服务暂时不可用'))).toBe('服务暂时不可用')
   })
 })

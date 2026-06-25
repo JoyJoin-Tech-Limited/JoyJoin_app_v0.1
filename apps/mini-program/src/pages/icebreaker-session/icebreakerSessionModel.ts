@@ -124,6 +124,28 @@ export function getErrorText(error: unknown, fallback: string): string {
   return fallback
 }
 
+export function getIcebreakerPageErrorText(error: unknown, fallback = '无法加入破冰会话'): string {
+  if (error && typeof error === 'object') {
+    const statusCode = (error as { statusCode?: unknown }).statusCode
+    if (statusCode === 404) {
+      return '还没有找到这场活动的破冰入口，请从匹配成功的小队详情重新进入。'
+    }
+    if (statusCode === 403) {
+      return '你还不是这场活动的小队成员，暂时不能进入破冰。'
+    }
+    if (statusCode === 410) {
+      return '这场活动的破冰已经结束了。'
+    }
+
+    const isGenericMessage = (error as { isGenericMessage?: unknown }).isGenericMessage === true
+    if (isGenericMessage) {
+      return fallback
+    }
+  }
+
+  return getErrorText(error, fallback)
+}
+
 export function deriveParticipants(
   session: IcebreakerSession,
   roster: SessionDetailsParticipant[],
