@@ -97,7 +97,7 @@ describe('useAuthGate', () => {
     })
 
     expect(haptics).toHaveBeenCalledWith('light')
-    expect(logInfo).toHaveBeenCalledWith('[IndexGate] User-initiated retry after gate timeout')
+    expect(logInfo).toHaveBeenCalledWith('[IndexGate] User-initiated retry after gate timeout or offline')
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['mini-program', 'auth-user'] })
     expect(result.current.isTimedOut).toBe(false)
   })

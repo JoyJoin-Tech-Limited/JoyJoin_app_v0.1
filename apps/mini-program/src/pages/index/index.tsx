@@ -69,14 +69,18 @@ export default function Index() {
       // offline banner renders instead of a dead loading screen after
       // redirect. This prevents cached users from being silently dumped
       // into discover/onboarding with no network.
-      Taro.getNetworkType().then(({ networkType }) => {
-        if (networkType === 'none' || hasRedirectedRef.current) return
+      if (typeof Taro.getNetworkType !== 'function') {
         doAuthenticatedRedirect(auth.user!)
-      }).catch(() => {
-        if (hasRedirectedRef.current) return
-        // Fail open — network type unknown, proceed with redirect.
-        doAuthenticatedRedirect(auth.user!)
-      })
+      } else {
+        Taro.getNetworkType().then(({ networkType }) => {
+          if (networkType === 'none' || hasRedirectedRef.current) return
+          doAuthenticatedRedirect(auth.user!)
+        }).catch(() => {
+          if (hasRedirectedRef.current) return
+          // Fail open — network type unknown, proceed with redirect.
+          doAuthenticatedRedirect(auth.user!)
+        })
+      }
       return
     }
 

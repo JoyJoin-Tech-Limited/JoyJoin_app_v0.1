@@ -55,6 +55,7 @@ export function useAuthGate(auth: UseAuthResult | undefined): UseAuthGateResult 
   // gives the LandingPage an explicit signal to show a targeted error UI
   // instead of silently releasing an unguarded CTA.
   useEffect(() => {
+    if (typeof Taro.getNetworkType !== 'function') return
     Taro.getNetworkType().then((res) => {
       if (res.networkType === 'none') {
         setIsOffline(true)
@@ -97,13 +98,15 @@ export function useAuthGate(auth: UseAuthResult | undefined): UseAuthGateResult 
     logInfo('[IndexGate] User-initiated retry after gate timeout or offline')
     authAnalytics.track('gate_retry')
     // Re-check network when user taps retry after offline state
-    Taro.getNetworkType().then((res) => {
-      if (res.networkType !== 'none') {
-        setIsOffline(false)
-      }
-    }).catch(() => {
-      // Fail open
-    })
+    if (typeof Taro.getNetworkType === 'function') {
+      Taro.getNetworkType().then((res) => {
+        if (res.networkType !== 'none') {
+          setIsOffline(false)
+        }
+      }).catch(() => {
+        // Fail open
+      })
+    }
     setDismissed(false)
     setGateTimedOut(false)
     // Re-invalidate the auth query to force a fresh fetch. The gate will
