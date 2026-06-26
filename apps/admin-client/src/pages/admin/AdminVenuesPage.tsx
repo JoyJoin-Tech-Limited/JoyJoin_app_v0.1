@@ -41,10 +41,13 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import AmapPicker from "@/components/discover/AmapPicker";
+import type { VenueFormData } from "./venueConstants";
 import VenueCreateDialog from "./VenueCreateDialog";
 import VenueEditDialog from "./VenueEditDialog";
 import VenueDealsManager from "./VenueDealsManager";
 import VenueTimeSlotsManager from "./VenueTimeSlotsManager";
+
+
 
 interface VenueTimeSlot {
   id: string;
@@ -108,6 +111,53 @@ interface Venue {
   contractStartDate?: string | null;
   contractEndDate?: string | null;
   onboardingStatus?: 'draft' | 'pending_review' | 'active' | 'suspended' | null;
+}
+// add the helper function to 
+const optionalString = (value: string) => value.trim() || undefined;
+const optionalArray = (value: string[]) => (value.length > 0 ? value : undefined);
+
+const optionalNumber = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+function buildVenuePayload(formData: VenueFormData) {
+  return {
+    name: formData.name.trim(),
+    brandName: optionalString(formData.brandName),
+    type: formData.type,
+    address: formData.address.trim(),
+    city: formData.city,
+    district: formData.district,
+    clusterId: optionalString(formData.clusterId),
+    districtId: optionalString(formData.districtId),
+    contactName: optionalString(formData.contactName),
+    contactPhone: optionalString(formData.contactPhone),
+    commissionRate: optionalNumber(formData.commissionRate),
+    priceRange: optionalString(formData.priceRange),
+    budgetCategories: optionalArray(formData.budgetCategories),
+    maxConcurrentEvents: optionalNumber(formData.maxConcurrentEvents),
+    seatingCapacity: optionalNumber(formData.seatingCapacity),
+    tags: optionalArray(formData.tags),
+    cuisines: optionalArray(formData.cuisines),
+    decorStyle: optionalArray(formData.decorStyle),
+    tasteIntensity: optionalArray(formData.tasteIntensity),
+    notes: optionalString(formData.notes),
+    latitude: formData.latitude.trim() ? Number(formData.latitude) : undefined,
+    longitude: formData.longitude.trim() ? Number(formData.longitude) : undefined,
+    barThemes: optionalArray(formData.barThemes),
+    alcoholOptions: optionalArray(formData.alcoholOptions),
+    vibeDescriptor: optionalString(formData.vibeDescriptor),
+    partnerCompanyName: optionalString(formData.partnerCompanyName),
+    businessLicenseNo: optionalString(formData.businessLicenseNo),
+    partnerEmail: optionalString(formData.partnerEmail),
+    bankAccountInfo: optionalString(formData.bankAccountInfo),
+    contractStartDate: optionalString(formData.contractStartDate),
+    contractEndDate: optionalString(formData.contractEndDate),
+    onboardingStatus: formData.onboardingStatus,
+  };
 }
 
 const VENUE_TYPES = [
@@ -482,43 +532,45 @@ export default function AdminVenuesPage() {
       });
       return;
     }
-
-    createMutation.mutate({
-      name: formData.name,
-      brandName: formData.brandName || undefined,
-      type: formData.type,
-      address: formData.address,
-      city: formData.city,
-      district: formData.district,
-      clusterId: formData.clusterId || undefined,
-      districtId: formData.districtId || undefined,
-      contactName: formData.contactName || undefined,
-      contactPhone: formData.contactPhone || undefined,
-      commissionRate: parseInt(formData.commissionRate),
-      priceRange: formData.priceRange || undefined,
-      budgetCategories: formData.budgetCategories.length > 0 ? formData.budgetCategories : undefined,
-      maxConcurrentEvents: parseInt(formData.maxConcurrentEvents),
-      seatingCapacity: parseInt(formData.seatingCapacity),
-      tags: formData.tags.length > 0 ? formData.tags : undefined,
-      cuisines: formData.cuisines.length > 0 ? formData.cuisines : undefined,
-      decorStyle: formData.decorStyle.length > 0 ? formData.decorStyle : undefined,
-      tasteIntensity: formData.tasteIntensity.length > 0 ? formData.tasteIntensity : undefined,
-      notes: formData.notes || undefined,
-      latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-      longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-      // 酒吧特有字段
-      barThemes: formData.barThemes.length > 0 ? formData.barThemes : undefined,
-      alcoholOptions: formData.alcoholOptions.length > 0 ? formData.alcoholOptions : undefined,
-      vibeDescriptor: formData.vibeDescriptor || undefined,
-      partnerCompanyName: formData.partnerCompanyName || undefined,
-      businessLicenseNo: formData.businessLicenseNo || undefined,
-      partnerEmail: formData.partnerEmail || undefined,
-      bankAccountInfo: formData.bankAccountInfo || undefined,
-      contractStartDate: formData.contractStartDate || undefined,
-      contractEndDate: formData.contractEndDate || undefined,
-      onboardingStatus: formData.onboardingStatus || undefined,
-    });
+    // i have build it in the very top so dont need to build again 
+    createMutation.mutate(buildVenuePayload(formData));
   };
+  //   createMutation.mutate({
+  //     name: formData.name,
+  //     brandName: formData.brandName || undefined,
+  //     type: formData.type,
+  //     address: formData.address,
+  //     city: formData.city,
+  //     district: formData.district,
+  //     clusterId: formData.clusterId || undefined,
+  //     districtId: formData.districtId || undefined,
+  //     contactName: formData.contactName || undefined,
+  //     contactPhone: formData.contactPhone || undefined,
+  //     commissionRate: parseInt(formData.commissionRate),
+  //     priceRange: formData.priceRange || undefined,
+  //     budgetCategories: formData.budgetCategories.length > 0 ? formData.budgetCategories : undefined,
+  //     maxConcurrentEvents: parseInt(formData.maxConcurrentEvents),
+  //     seatingCapacity: parseInt(formData.seatingCapacity),
+  //     tags: formData.tags.length > 0 ? formData.tags : undefined,
+  //     cuisines: formData.cuisines.length > 0 ? formData.cuisines : undefined,
+  //     decorStyle: formData.decorStyle.length > 0 ? formData.decorStyle : undefined,
+  //     tasteIntensity: formData.tasteIntensity.length > 0 ? formData.tasteIntensity : undefined,
+  //     notes: formData.notes || undefined,
+  //     latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+  //     longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+  //     // 酒吧特有字段
+  //     barThemes: formData.barThemes.length > 0 ? formData.barThemes : undefined,
+  //     alcoholOptions: formData.alcoholOptions.length > 0 ? formData.alcoholOptions : undefined,
+  //     vibeDescriptor: formData.vibeDescriptor || undefined,
+  //     partnerCompanyName: formData.partnerCompanyName || undefined,
+  //     businessLicenseNo: formData.businessLicenseNo || undefined,
+  //     partnerEmail: formData.partnerEmail || undefined,
+  //     bankAccountInfo: formData.bankAccountInfo || undefined,
+  //     contractStartDate: formData.contractStartDate || undefined,
+  //     contractEndDate: formData.contractEndDate || undefined,
+  //     onboardingStatus: formData.onboardingStatus || undefined,
+  //   });
+  // };
 
   const handleEdit = (venue: Venue) => {
     setSelectedVenue(venue);
@@ -571,44 +623,47 @@ export default function AdminVenuesPage() {
       });
       return;
     }
-
     updateMutation.mutate({
       id: selectedVenue.id,
-      data: {
-        name: formData.name,
-        brandName: formData.brandName || null,
-        type: formData.type,
-        address: formData.address,
-        city: formData.city,
-        district: formData.district,
-        clusterId: formData.clusterId || null,
-        districtId: formData.districtId || null,
-        contactName: formData.contactName || null,
-        contactPhone: formData.contactPhone || null,
-        commissionRate: parseInt(formData.commissionRate),
-        priceRange: formData.priceRange || null,
-        budgetCategories: formData.budgetCategories.length > 0 ? formData.budgetCategories : null,
-        maxConcurrentEvents: parseInt(formData.maxConcurrentEvents),
-        seatingCapacity: parseInt(formData.seatingCapacity),
-        tags: formData.tags.length > 0 ? formData.tags : null,
-        cuisines: formData.cuisines.length > 0 ? formData.cuisines : null,
-        decorStyle: formData.decorStyle.length > 0 ? formData.decorStyle : null,
-        tasteIntensity: formData.tasteIntensity.length > 0 ? formData.tasteIntensity : null,
-        notes: formData.notes || null,
-        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-        // 酒吧特有字段
-        barThemes: formData.barThemes.length > 0 ? formData.barThemes : null,
-        alcoholOptions: formData.alcoholOptions.length > 0 ? formData.alcoholOptions : null,
-        vibeDescriptor: formData.vibeDescriptor || null,
-        partnerCompanyName: formData.partnerCompanyName || null,
-        businessLicenseNo: formData.businessLicenseNo || null,
-        partnerEmail: formData.partnerEmail || null,
-        bankAccountInfo: formData.bankAccountInfo || null,
-        contractStartDate: formData.contractStartDate || null,
-        contractEndDate: formData.contractEndDate || null,
-      },
+      data: buildVenuePayload(formData),
     });
+    // updateMutation.mutate({
+    //   id: selectedVenue.id,
+    //   data: {
+    //     name: formData.name,
+    //     brandName: formData.brandName || null,
+    //     type: formData.type,
+    //     address: formData.address,
+    //     city: formData.city,
+    //     district: formData.district,
+    //     clusterId: formData.clusterId || null,
+    //     districtId: formData.districtId || null,
+    //     contactName: formData.contactName || null,
+    //     contactPhone: formData.contactPhone || null,
+    //     commissionRate: parseInt(formData.commissionRate),
+    //     priceRange: formData.priceRange || null,
+    //     budgetCategories: formData.budgetCategories.length > 0 ? formData.budgetCategories : null,
+    //     maxConcurrentEvents: parseInt(formData.maxConcurrentEvents),
+    //     seatingCapacity: parseInt(formData.seatingCapacity),
+    //     tags: formData.tags.length > 0 ? formData.tags : null,
+    //     cuisines: formData.cuisines.length > 0 ? formData.cuisines : null,
+    //     decorStyle: formData.decorStyle.length > 0 ? formData.decorStyle : null,
+    //     tasteIntensity: formData.tasteIntensity.length > 0 ? formData.tasteIntensity : null,
+    //     notes: formData.notes || null,
+    //     latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+    //     longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+    //     // 酒吧特有字段
+    //     barThemes: formData.barThemes.length > 0 ? formData.barThemes : null,
+    //     alcoholOptions: formData.alcoholOptions.length > 0 ? formData.alcoholOptions : null,
+    //     vibeDescriptor: formData.vibeDescriptor || null,
+    //     partnerCompanyName: formData.partnerCompanyName || null,
+    //     businessLicenseNo: formData.businessLicenseNo || null,
+    //     partnerEmail: formData.partnerEmail || null,
+    //     bankAccountInfo: formData.bankAccountInfo || null,
+    //     contractStartDate: formData.contractStartDate || null,
+    //     contractEndDate: formData.contractEndDate || null,
+    //   },
+    // });
   };
 
   const handleDelete = (venue: Venue) => {
@@ -976,7 +1031,10 @@ export default function AdminVenuesPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredVenues.map((venue) => {
-            const onboardingStatus = (venue as any).onboardingStatus || (venue as any).onboarding_status;
+            //const onboardingStatus = (venue as any).onboardingStatus || (venue as any).onboarding_status;
+            const onboardingStatus = (venue as any).onboardingStatus ?? (venue as any).onboarding_status ?? "draft";
+            const canSuspend = onboardingStatus === "active";
+            const canReactivate = onboardingStatus === "suspended";
             const onboardingStatusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className: string }> = {
               draft: { label: "草稿", variant: "secondary", className: "text-muted-foreground" },
               pending_review: { label: "待审核", variant: "outline", className: "border-amber-400 text-amber-700" },
@@ -1102,13 +1160,13 @@ export default function AdminVenuesPage() {
                         </Button>
                       </>
                     )}
-                    {onboardingStatus === 'active' && (
+                    {canSuspend && (
                       <Button size="sm" variant="outline" className="text-orange-600 border-orange-300 hover:bg-orange-50 text-xs h-7" onClick={() => handleTransition(venue, 'suspend')} disabled={transitionMutation.isPending} data-testid={`button-suspend-${venue.id}`}>
                         {transitionMutation.isPending && transitionMutation.variables?.action === 'suspend' ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
                         暂停
                       </Button>
                     )}
-                    {onboardingStatus === 'suspended' && (
+                    {canReactivate && (
                       <Button size="sm" variant="outline" className="text-green-600 border-green-300 hover:bg-green-50 text-xs h-7" onClick={() => handleTransition(venue, 're-activate')} disabled={transitionMutation.isPending} data-testid={`button-reactivate-${venue.id}`}>
                         {transitionMutation.isPending && transitionMutation.variables?.action === 're-activate' ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
                         重新激活

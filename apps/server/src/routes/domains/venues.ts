@@ -1,20 +1,20 @@
+import { eventPoolGroups, eventPools, venues, venueTimeSlotBookings, venueTimeSlots } from "@shared/schema";
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Express } from "express";
 import { z } from "zod";
-import { db } from "../../db";
-import { venues, venueTimeSlots, venueTimeSlotBookings, eventPoolGroups, eventPools } from "@shared/schema";
-import { eq, and, or, desc, sql, inArray } from "drizzle-orm";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
-import { logger } from "../../lib/logger";
-import { getActingAdminId } from "../../lib/getActingAdminId";
+import { db } from "../../db";
 import { logAdminAudit } from "../../lib/adminAuditLogger";
-import { storage } from "../../storage";
+import { getActingAdminId } from "../../lib/getActingAdminId";
+import { logger } from "../../lib/logger";
 import {
   checkVenueDataQuality,
   normalizeVenueQualityRecord,
 } from "../../lib/venueDataQuality";
-import { venueMatchingService } from "../../venueMatchingService";
-import { requireAuth } from "../../middleware/auth";
 import { notifyVenueOnboardingStatusChange } from "../../lib/wecomNotifier";
+import { requireAuth } from "../../middleware/auth";
+import { storage } from "../../storage";
+import { venueMatchingService } from "../../venueMatchingService";
 
 function buildVenueAuditAfter(body: Record<string, unknown> | undefined): Record<string, unknown> {
   if (!body) return {};
@@ -246,20 +246,75 @@ export function registerVenueRoutes(app: Express): void {
   // Venue Management - Delete venue
   app.delete("/api/admin/venues/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
-      await storage.deleteVenue(req.params.id);
+      const venueId = req.params.id;
+  
+      const [assignedGroup] = await db
+        .select({ id: eventPoolGroups.id })
+        .from(eventPoolGroups)
+        .where(eq(eventPoolGroups.venueId, venueId))
+        .limit(1);
+  
+      const [slot] = await db
+        .select({ id: venueTimeSlots.id })
+        .from(venueTimeSlots)
+        .where(eq(venueTimeSlots.venueId, venueId))
+        .limit(1);
+  
+      const [booking] = await db
+        .select({ id: venueTimeSlotBookings.id })
+        .from(venueTimeSlotBookings)
+        .where(eq(venueTimeSlotBookings.venueId, venueId))
+        .limit(1);
+  
+      if (assignedGroup || slot || booking) {
+        return res.status(409).json({
+          message:
+            "该场地已有活动、时段或预订记录，不能直接删除。请先暂停场地，或由技术团队清理关联数据。",
+        });
+      }
+  
+      // await storage.deleteVenue(venueId);
+      await storage.updateVenue(venueId, {
+        isActive: false,
+        onboardingStatus: "suspended",
+        partnerStatus: "paused",
+      });
+  
       logAdminAudit({
-        action: 'VENUE_DELETED',
+        action: "VENUE_DELETED",
         adminId: getActingAdminId(req),
         adminRole: (req as any).adminRole,
-        targetEntityType: 'venue',
-        targetEntityId: req.params.id,
+        targetEntityType: "venue",
+        targetEntityId: venueId,
+        after: {
+          isActive: false,
+          onboardingStatus: "suspended",
+          partnerStatus: "paused",
+        },
       });
-      res.json({ message: "Venue deleted successfully" });
+  
+      res.status(204).send();
     } catch (error) {
       logger.error("Error deleting venue", { venueId: req.params.id, error: String(error) });
       res.status(500).json({ message: "Failed to delete venue" });
     }
   });
+  // app.delete("/api/admin/venues/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+  //   try {
+  //     await storage.deleteVenue(req.params.id);
+  //     logAdminAudit({
+  //       action: 'VENUE_DELETED',
+  //       adminId: getActingAdminId(req),
+  //       adminRole: (req as any).adminRole,
+  //       targetEntityType: 'venue',
+  //       targetEntityId: req.params.id,
+  //     });
+  //     res.json({ message: "Venue deleted successfully" });
+  //   } catch (error) {
+  //     logger.error("Error deleting venue", { venueId: req.params.id, error: String(error) });
+  //     res.status(500).json({ message: "Failed to delete venue" });
+  //   }
+  // });
 
   // ============ VENUE ONBOARDING TRANSITIONS ============
 

@@ -179,7 +179,7 @@ export default function VenueFormFields({ formData, setFormData, mode, setShowMa
       {formData.city === "深圳" && (
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor={`${prefix}clusterId`} className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />片区</Label>
+            <Label htmlFor={`${prefix}clusterId`} className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />片区 *</Label>
             <Select value={formData.clusterId} onValueChange={(v) => setFormData({ ...formData, clusterId: v, districtId: "" })}>
               <SelectTrigger data-testid={`select-${testIdPrefix}cluster`}><SelectValue placeholder="选择片区" /></SelectTrigger>
               <SelectContent>
@@ -188,7 +188,7 @@ export default function VenueFormFields({ formData, setFormData, mode, setShowMa
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${prefix}districtId`}>商圈</Label>
+            <Label htmlFor={`${prefix}districtId`}>商圈 *</Label>
             <Select value={formData.districtId} onValueChange={(v) => setFormData({ ...formData, districtId: v })} disabled={!formData.clusterId}>
               <SelectTrigger data-testid={`select-${testIdPrefix}district-id`}><SelectValue placeholder={formData.clusterId ? "选择商圈" : "请先选择片区"} /></SelectTrigger>
               <SelectContent>

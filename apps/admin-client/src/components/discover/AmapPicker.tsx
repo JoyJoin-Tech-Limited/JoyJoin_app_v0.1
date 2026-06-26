@@ -40,14 +40,19 @@ export default function AmapPicker({ open, onOpenChange, onSelect, initialCenter
   useEffect(() => {
     if (open) {
       fetch('/api/config/amap', { credentials: 'include' })
-        .then(res => {
+        .then(async res => {
+          const data = await res.json().catch(() => null);
           if (!res.ok) {
             if (res.status === 401 || res.status === 403) {
               throw new Error('请先登录管理员账号');
             }
-            throw new Error('无法加载地图配置');
+            if(res.status === 503){
+              throw new Error("地图配置未设置，请配置 AMAP_API_KEY 和 AMAP_SECURITY_KEY")
+            }
+            throw new Error(data?.message || data?.error || "无法加载地图配置");
           }
-          return res.json();
+          // return res.json();
+          return data;
         })
         .then(data => {
           if (data.error) {
