@@ -2,14 +2,20 @@
 
 ## Tencent Maps geocoding details
 
-- Env var: `TENCENT_MAP_KEY`
-- Admin endpoint: `GET /api/config/map` (returns key; `requireAdmin` gated)
-- Component: `apps/admin-client/src/components/MapPicker.tsx`
+Two separate Tencent Maps keys are required because a single key cannot carry both IP白名单 (server) and 域名白名单 (admin portal) simultaneously:
+
+- `TENCENT_MAP_KEY` — Tencent Maps WebService API key. Used server-side for:
+  - `POST /api/geo/reverse-geocode` — GPS coordinate → city/district (bounds-based fallback when API unreachable)
+  - `POST /api/geo/ip-locate` — client IP → city-level location, used as a fallback when the mini-program denies/times out GPS
+- `TENCENT_MAP_JS_KEY` — Tencent Maps JavaScript API key. Used by the admin portal `MapPicker`.
+
+- Admin config endpoint: `GET /api/config/map` (returns the JS key; `requireAdmin` gated)
+- Component: `apps/admin-client/src/components/discover/MapPicker.tsx`
 - Uses Tencent Maps JavaScript SDK (`TMap`) with `TMap.service.Geocoding` and `TMap.service.PlaceSearch`
 - Default center: Shenzhen (`22.5431, 114.0579`)
 - Place search city is hardcoded to `深圳` — update if expanding to other cities
 
-> **Migration history:** Migrated from AMap (Gaode) to Tencent Maps on 2026-06-17. Old AmapPicker.tsx deleted; `AMAP_API_KEY`/`AMAP_SECURITY_KEY` env vars replaced by `TENCENT_MAP_KEY`. See git history for the pre-migration code.
+> **Migration history:** Migrated from AMap (Gaode) to Tencent Maps on 2026-06-17. Old `AmapPicker.tsx` deleted; `AMAP_API_KEY`/`AMAP_SECURITY_KEY` env vars replaced by `TENCENT_MAP_KEY` and `TENCENT_MAP_JS_KEY`. `POST /api/geo/ip-locate` added on 2026-06-26 for mini-program GPS fallback. See git history for the pre-migration code.
 
 ## Time-slot availability logic
 
@@ -68,5 +74,5 @@ Cross-day events (spanning midnight) are rejected. Returns top 5 venues.
 - `apps/server/src/lib/venueDataQuality.ts` — data quality rules and report
 - `apps/server/src/routes.ts` — venue/deal/booking/time-slot routes
 - `apps/server/src/routes/domains/admin.ts` — `GET /api/config/map` (Tencent Maps key)
-- `apps/admin-client/src/components/MapPicker.tsx` — Tencent Maps geocoding UI
+- `apps/admin-client/src/components/discover/MapPicker.tsx` — Tencent Maps geocoding UI
 - `packages/shared/src/schema.ts` — `venues`, `venueDeals`, `venueTimeSlots`, `venueTimeSlotBookings`

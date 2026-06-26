@@ -131,6 +131,7 @@ Primary files:
 - `apps/server/src/repositories/venuesRepo.ts` — canonical venue data access; maps raw PostgreSQL `snake_case` rows to camelCase API contract
 - `apps/server/src/routes/domains/adminOperations.ts` — content filter log admin endpoint (`GET /api/admin/content-filter/logs`), admin notification broadcast/send with content safety gating
 - `apps/server/src/routes/domains/adminGeolocation.ts` — `GET /api/admin/geolocation/heatmap`, `POST /api/admin/geolocation/rollup` — location snapshot analytics, gated by `requireSuperAdmin`
+- `apps/server/src/routes/domains/geo.ts` — `POST /api/geo/reverse-geocode`, `POST /api/geo/ip-locate` (Tencent Maps WebService), and admin-gated `GET /api/config/map` (returns Tencent Maps JS key)
 - `apps/server/src/adminAuth.ts`
 - `apps/server/src/lib/adminAuditLogger.ts`
 - `apps/server/src/lib/featureFlags.ts` — DB-backed feature flag resolver with env fallback and short-lived cache

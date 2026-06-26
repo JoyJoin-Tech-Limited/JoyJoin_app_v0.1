@@ -44,7 +44,7 @@ STAGING_ADMIN_CREATE_SECRET_KEY
 STAGING_POSTGRES_PASSWORD     # password for postgres-staging container
 ```
 
-Staging reuses production secrets for WeChat (`WECHAT_APPID`, `WECHAT_SECRET`), AI (`DEEPSEEK_API_KEY`, `MINIMAX_API_KEY`), WeChat Pay, and Tencent Maps (`TENCENT_MAP_KEY`) unless isolation is required.
+Staging reuses production secrets for WeChat (`WECHAT_APPID`, `WECHAT_SECRET`), AI (`DEEPSEEK_API_KEY`, `MINIMAX_API_KEY`), WeChat Pay, and Tencent Maps (`TENCENT_MAP_KEY` and `TENCENT_MAP_JS_KEY`) unless isolation is required.
 
 ## Manual Deploy (Bypass CI)
 

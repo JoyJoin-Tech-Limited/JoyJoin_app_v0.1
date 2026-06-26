@@ -24,19 +24,15 @@ export function registerAdminRoutes(app: Express): void {
   registerAdminAuthRoutes(app);
   registerAdminMatchingShadowRoutes(app);
 
-  // Amap config endpoint - provides map API keys for frontend (Admin Portal only)
-  app.get('/api/config/amap', requireAdmin, (_req, res) => {
-    const apiKey = process.env.AMAP_API_KEY;
-    const securityKey = process.env.AMAP_SECURITY_KEY;
+  // Tencent Maps config endpoint - provides map API key for frontend (Admin Portal only)
+  app.get('/api/config/map', requireAdmin, (_req, res) => {
+    const apiKey = process.env.TENCENT_MAP_JS_KEY || process.env.TENCENT_MAP_KEY;
 
-    if (!apiKey || !securityKey) {
-      return res.status(503).json({ error: 'Amap configuration not available' });
+    if (!apiKey) {
+      return res.status(503).json({ error: 'Tencent Maps configuration not available' });
     }
 
-    res.json({
-      apiKey,
-      securityKey,
-    });
+    res.json({ apiKey, provider: 'tencent' });
   });
 
   app.get("/api/admin/matching/chemistry-calibration", requireAdmin, async (req, res) => {

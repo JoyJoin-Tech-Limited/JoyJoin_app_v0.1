@@ -7,6 +7,7 @@ import {
   getMyPoolRegistrations,
   type EventPoolSummary,
   reverseGeocode,
+  ipLocate,
 } from '@shared/api'
 import {
   shenzhenClusters,
@@ -270,6 +271,31 @@ function AuthenticatedDiscover({
           reason: isDenial ? 'denied' : isTimeout ? 'timeout' : 'error',
           errMsg: err?.errMsg,
         })
+
+        // GPS failed — try IP-based fallback for city-level location
+        try {
+          const ipGeo = await ipLocate(apiRequest)
+          if (cancelled) return
+          if (ipGeo.success && ipGeo.city) {
+            // IP locate only gives city-level; find first cluster in that city
+            const cityStr = ipGeo.city
+            const cluster = shenzhenClusters.find((c) =>
+              c.districts.some((d) => d.name.includes(cityStr) || cityStr.includes(d.name.replace(/区$/, '')))
+            )
+            if (cluster) {
+              setDetectedClusterId(cluster.id)
+              setGeoStatus('success')
+              discoverAnalytics.track('geo_detected', undefined, {
+                clusterId: cluster.id,
+                district: ipGeo.city + '(IP)',
+                source: ipGeo.source || 'tencent_ip',
+              })
+              return
+            }
+          }
+        } catch {
+          // IP fallback failed silently — keep current geoStatus
+        }
       }
     }
 

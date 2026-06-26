@@ -96,14 +96,14 @@ const CONFIG_SPECS: ConfigSpec[] = [
     description: "DeepSeek AI API key (AI features will be degraded without it)",
   },
   {
-    key: "AMAP_API_KEY",
+    key: "TENCENT_MAP_KEY",
     required: false,
-    description: "AMap/Gaode Maps API key (admin venue map picker will fail without it)",
+    description: "Tencent Maps WebService API key (server reverse-geocoding)",
   },
   {
-    key: "AMAP_SECURITY_KEY",
+    key: "TENCENT_MAP_JS_KEY",
     required: false,
-    description: "AMap/Gaode Maps JS API security config key (admin venue map picker will fail without it)",
+    description: "Tencent Maps JavaScript API key (admin venue map picker will fail without it)",
   },
   {
     key: "WECOM_OPS_BOT_KEY",

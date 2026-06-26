@@ -70,7 +70,7 @@ Ensure the new value is accepted in the registration/pool form, `venues.budgetCa
 | Symptom | Likely Cause | Fix |
 |---------|--------------|-----|
 | Groups matched but no venue assigned | No time slots cover the event datetime; or no budget overlap | Add time slots; check registration budget options |
-| `MapPicker` shows "地图配置不可用" | Missing `TENCENT_MAP_KEY` | Set `TENCENT_MAP_KEY` env var and restart server; verify `/api/config/map` returns the key |
+| `MapPicker` shows "地图配置不可用" | Missing `TENCENT_MAP_JS_KEY` or `TENCENT_MAP_KEY` | Set the JS key env var and restart server; verify `/api/config/map` returns the key |
 | Venue data quality shows duplicate names | Same venue added twice with slight name differences | Merge duplicates; prefer `brandName` for user-facing identity; add DB unique constraint if product agrees |
 | `venueMatchingService` returns empty for dining event | `dateTime` crosses midnight (not supported) or no slots available | Split cross-day events; add time slots |
 | Admin can't see venue deals on event page | `partnerStatus` is not `active` or deals are expired | Update `partnerStatus` or deal `validUntil` |

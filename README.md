@@ -199,7 +199,8 @@ The repo uses the following environment variables in active local and optional f
 | `ENABLE_SEMANTIC_SIMILARITY` | Enables the optional semantic matching dimension | Both (optional matching experiment) |
 | `ENABLE_EVENT_THEME_TITLE_GENERATION` | Toggles AI-generated event theme titles | Both (optional AI feature) |
 | `DEEPSEEK_TIMEOUT_MS` | Timeout for AI event-title requests in milliseconds | Both (optional AI tuning) |
-| `TENCENT_MAP_KEY` | Tencent Maps SDK key used by admin venue tooling | **Admin Only** (optional venue tooling) |
+| `TENCENT_MAP_KEY` | Tencent Maps WebService API key for server-side reverse geocoding & IP定位 | **Server** (optional geo features) |
+| `TENCENT_MAP_JS_KEY` | Tencent Maps JavaScript API key for admin portal MapPicker | **Admin Only** (optional venue tooling) |
 | `PAYMENTS_ENABLED` | Set to `true` to enable WeChat Pay validation and routes | Both (optional payments) |
 | `WECHAT_PAY_APP_ID` | WeChat Pay app ID | Both (payments only) |
 | `WECHAT_PAY_MCH_ID` | WeChat Pay merchant ID | Both (payments only) |

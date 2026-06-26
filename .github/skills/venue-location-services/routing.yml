@@ -3,7 +3,7 @@ category: internal
 
 primary_ownership: >
   Venue catalog CRUD, automatic venue-to-group assignment, venue matching for event planning,
-  time-slot availability, venue deals and bookings, AMap/Gaode geocoding integration,
+  time-slot availability, venue deals and bookings, Tencent Maps geocoding integration,
   and venue data quality validation.
 
 use_when:
@@ -11,7 +11,7 @@ use_when:
   - changing venue assignment logic after pool matching
   - modifying venue matching scoring or criteria
   - adding or debugging venue time slots or availability checks
-  - integrating AMap/Gaode geocoding, place search, or address resolution
+  - integrating Tencent Maps geocoding, place search, or address resolution
   - working with venue deals, discounts, or redemption flows
   - investigating venue data quality reports or duplicate names
   - adding new API routes under /api/admin/venues or /api/venues
@@ -31,10 +31,9 @@ strong_triggers:
   - selectBestVenue
   - venueAssignmentService
   - venueMatchingService
-  - AmapPicker
-  - AMap_API_KEY
-  - AMAP_SECURITY_KEY
-  - /api/config/amap
+  - MapPicker
+  - TENCENT_MAP_KEY
+  - /api/config/map
   - /api/admin/venues
   - /api/venues
   - venueTimeSlots
@@ -48,7 +47,7 @@ owned_files:
   - apps/server/src/venueAssignmentService.ts
   - apps/server/src/venueMatchingService.ts
   - apps/server/src/lib/venueDataQuality.ts
-  - apps/admin-client/src/components/AmapPicker.tsx
+  - apps/admin-client/src/components/discover/MapPicker.tsx
   - packages/shared/src/schema.ts
 
 owned_paths:
@@ -65,7 +64,7 @@ owned_paths:
   - /api/venues/active-districts
   - /api/venues/check-availability
   - /api/venues/book
-  - /api/config/amap
+  - /api/config/map
 
 owned_symbols:
   - assignVenuesToGroups
@@ -75,7 +74,7 @@ owned_symbols:
   - selectBestVenue
   - checkVenueDataQuality
   - normalizeVenueQualityRecord
-  - AmapPicker
+  - MapPicker
   - getAvailableVenuesForDateTime
   - getAllVenues
   - getVenue

@@ -1219,7 +1219,8 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | Variable | Purpose |
 |----------|---------|
 | `ADMIN_CREATE_SECRET_KEY` | Admin CLI bootstrap secret |
-| `TENCENT_MAP_KEY` | Tencent Maps SDK key for admin venue geocoding |
+| `TENCENT_MAP_KEY` | Tencent Maps WebService API key for reverse geocoding & IP定位 (server-side) |
+| `TENCENT_MAP_JS_KEY` | Tencent Maps JavaScript API key for admin portal MapPicker |
 | `DEEPSEEK_API_KEY` | AI service (via integration); chat/completion only — DeepSeek has no embedding API |
 | `APP_URL` | Base public app URL; used as the fallback source for the WeChat Pay notify URL when `WECHAT_PAY_NOTIFY_URL` is unset |
 

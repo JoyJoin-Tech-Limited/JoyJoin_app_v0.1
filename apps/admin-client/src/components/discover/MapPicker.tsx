@@ -1,64 +1,56 @@
 import { useEffect, useRef, useState } from 'react';
-import AMapLoader from '@amap/amap-jsapi-loader';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, MapPin, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/ui/use-toast';
 
-interface AmapPickerProps {
+interface MapPickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (location: { address: string; lat: number; lng: number }) => void;
   initialCenter?: { lat: number; lng: number };
 }
 
-interface AmapConfig {
-  apiKey: string;
-  securityKey: string;
-}
-
-export default function AmapPicker({ open, onOpenChange, onSelect, initialCenter }: AmapPickerProps) {
+export default function MapPicker({ open, onOpenChange, onSelect, initialCenter }: MapPickerProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const markerRef = useRef<any>(null);
-  const geocoderRef = useRef<any>(null);
   const placeSearchRef = useRef<any>(null);
-  
+
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<{ address: string; lat: number; lng: number } | null>(null);
-  const [config, setConfig] = useState<AmapConfig | null>(null);
-  
+  const [apiKey, setApiKey] = useState<string | null>(null);
+
   const { toast } = useToast();
 
   const defaultCenter = initialCenter || { lat: 22.5431, lng: 114.0579 };
 
   useEffect(() => {
     if (open) {
-      fetch('/api/config/amap', { credentials: 'include' })
+      fetch('/api/config/map', { credentials: 'include' })
         .then(async res => {
           const data = await res.json().catch(() => null);
           if (!res.ok) {
             if (res.status === 401 || res.status === 403) {
               throw new Error('请先登录管理员账号');
             }
-            if(res.status === 503){
-              throw new Error("地图配置未设置，请配置 AMAP_API_KEY 和 AMAP_SECURITY_KEY")
+            if (res.status === 503) {
+              throw new Error('地图配置未设置，请配置 TENCENT_MAP_JS_KEY');
             }
-            throw new Error(data?.message || data?.error || "无法加载地图配置");
+            throw new Error(data?.message || data?.error || '无法加载地图配置');
           }
-          // return res.json();
           return data;
         })
         .then(data => {
           if (data.error) {
             setError('地图配置不可用，请联系管理员');
           } else {
-            setConfig(data);
+            setApiKey(data.apiKey);
           }
         })
         .catch((err) => {
@@ -68,77 +60,83 @@ export default function AmapPicker({ open, onOpenChange, onSelect, initialCenter
   }, [open]);
 
   useEffect(() => {
-    if (!open || !config || !mapRef.current) return;
+    if (!open || !apiKey || !mapRef.current) return;
 
     setIsLoading(true);
     setError(null);
 
-    (window as any)._AMapSecurityConfig = {
-      securityJsCode: config.securityKey
-    };
+    const scriptId = 'tencent-map-sdk';
+    const existing = document.getElementById(scriptId);
 
-    AMapLoader.load({
-      key: config.apiKey,
-      version: '2.0',
-      plugins: ['AMap.Geocoder', 'AMap.PlaceSearch']
-    }).then((AMap) => {
-      const map = new AMap.Map(mapRef.current, {
-        viewMode: '2D',
+    const initMap = () => {
+      const TMap = (window as any).TMap;
+
+      const map = new TMap.Map(mapRef.current, {
+        center: new TMap.LatLng(defaultCenter.lat, defaultCenter.lng),
         zoom: 15,
-        center: [defaultCenter.lng, defaultCenter.lat]
+        mapStyleId: 'style1',
       });
-      
+
       mapInstance.current = map;
 
-      const marker = new AMap.Marker({
-        position: [defaultCenter.lng, defaultCenter.lat],
-        draggable: true
+      const marker = new TMap.Marker({
+        position: new TMap.LatLng(defaultCenter.lat, defaultCenter.lng),
+        map,
+        draggable: true,
       });
-      
-      map.add(marker);
+
       markerRef.current = marker;
 
-      const geocoder = new AMap.Geocoder();
-      geocoderRef.current = geocoder;
-
-      const placeSearch = new AMap.PlaceSearch({
+      const search = new TMap.service.PlaceSearch({
         pageSize: 10,
-        city: '深圳'
+        pageIndex: 1,
+        boundary: new TMap.service.Boundary({ city: '深圳' }),
       });
-      placeSearchRef.current = placeSearch;
+
+      placeSearchRef.current = search;
 
       map.on('click', (e: any) => {
-        const { lng, lat } = e.lnglat;
-        marker.setPosition([lng, lat]);
-        
-        geocoder.getAddress([lng, lat], (status: string, result: any) => {
-          if (status === 'complete' && result.info === 'OK') {
-            const address = result.regeocode.formattedAddress;
-            setSelectedLocation({ lng, lat, address });
-          }
+        const { lat, lng } = e.latLng;
+        marker.setPosition(new TMap.LatLng(lat, lng));
+
+        reverseGeocode(lat, lng).then(address => {
+          setSelectedLocation({ lng, lat, address });
         });
       });
 
-      marker.on('dragend', (e: any) => {
-        const position = marker.getPosition();
-        const lng = position.lng;
-        const lat = position.lat;
-        
-        geocoder.getAddress([lng, lat], (status: string, result: any) => {
-          if (status === 'complete' && result.info === 'OK') {
-            const address = result.regeocode.formattedAddress;
-            setSelectedLocation({ lng, lat, address });
-          }
+      marker.on('dragend', () => {
+        const pos = marker.getPosition();
+        const lat = pos.lat;
+        const lng = pos.lng;
+
+        reverseGeocode(lat, lng).then(address => {
+          setSelectedLocation({ lng, lat, address });
         });
       });
 
       setIsLoading(false);
+    };
 
-    }).catch((e) => {
-      console.error('地图加载失败:', e);
-      setError('地图加载失败，请检查API配置');
-      setIsLoading(false);
-    });
+    const loadScript = () => {
+      const script = document.createElement('script');
+      script.id = scriptId;
+      script.src = `https://map.qq.com/api/gljs?v=1.exp&key=${apiKey}`;
+      script.onload = () => {
+        initMap();
+      };
+      script.onerror = () => {
+        setError('地图 SDK 加载失败');
+        setIsLoading(false);
+      };
+      document.head.appendChild(script);
+    };
+
+    if (existing) {
+      existing.remove();
+      loadScript();
+    } else {
+      loadScript();
+    }
 
     return () => {
       if (mapInstance.current) {
@@ -146,38 +144,54 @@ export default function AmapPicker({ open, onOpenChange, onSelect, initialCenter
         mapInstance.current = null;
       }
     };
-  }, [open, config]);
+  }, [open, apiKey]);
+
+  const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
+    try {
+      const TMap = (window as any).TMap;
+      const geocoder = new TMap.service.Geocoder();
+      const result = await geocoder.getAddress({ location: new TMap.LatLng(lat, lng) });
+      return result?.result?.address || `${lng.toFixed(6)}, ${lat.toFixed(6)}`;
+    } catch {
+      return `${lng.toFixed(6)}, ${lat.toFixed(6)}`;
+    }
+  };
 
   const handleSearch = () => {
     if (!searchKeyword.trim() || !placeSearchRef.current) return;
-    
+
     setIsSearching(true);
-    placeSearchRef.current.search(searchKeyword, (status: string, result: any) => {
+    placeSearchRef.current.search(searchKeyword).then((result: any) => {
       setIsSearching(false);
-      if (status === 'complete' && result.poiList?.pois) {
-        setSearchResults(result.poiList.pois.slice(0, 5));
+      const pois = result?.data || [];
+      if (pois.length > 0) {
+        setSearchResults(pois.slice(0, 5));
       } else {
         setSearchResults([]);
         toast({ title: '未找到结果', description: '请尝试其他关键词' });
       }
+    }).catch(() => {
+      setIsSearching(false);
+      setSearchResults([]);
+      toast({ title: '搜索失败', description: '请重试' });
     });
   };
 
   const handleSelectResult = (poi: any) => {
     if (!mapInstance.current || !markerRef.current) return;
-    
+
     const location = poi.location;
-    const lng = location.lng;
     const lat = location.lat;
-    
-    markerRef.current.setPosition([lng, lat]);
-    mapInstance.current.setCenter([lng, lat]);
+    const lng = location.lng;
+
+    markerRef.current.setPosition(new (window as any).TMap.LatLng(lat, lng));
+    mapInstance.current.setCenter(new (window as any).TMap.LatLng(lat, lng));
     mapInstance.current.setZoom(16);
-    
+
     setSelectedLocation({
       lng,
       lat,
-      address: poi.address || poi.name
+      address: poi.address || poi.title,
     });
     setSearchResults([]);
   };
@@ -232,7 +246,7 @@ export default function AmapPicker({ open, onOpenChange, onSelect, initialCenter
                   onClick={() => handleSelectResult(poi)}
                   data-testid={`search-result-${index}`}
                 >
-                  <div className="font-medium text-sm">{poi.name}</div>
+                  <div className="font-medium text-sm">{poi.title}</div>
                   <div className="text-xs text-muted-foreground">{poi.address}</div>
                 </button>
               ))}
@@ -252,10 +266,10 @@ export default function AmapPicker({ open, onOpenChange, onSelect, initialCenter
                 </div>
               </div>
             )}
-            <div 
-              ref={mapRef} 
+            <div
+              ref={mapRef}
               className="w-full h-[400px] rounded-md border"
-              data-testid="amap-container"
+              data-testid="tencent-map-container"
             />
           </div>
 

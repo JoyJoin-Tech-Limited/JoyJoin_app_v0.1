@@ -1,7 +1,7 @@
 /**
  * GPS城市定位工具
  * 用于检测用户当前所在城市（粤港澳大湾区）
- * 优先使用高德地图逆地理编码API，备用本地边界框检测
+ * 优先使用服务器反向地理编码（Tencent Maps WebService），备用本地边界框检测
  */
 
 export interface GeoLocationResult {

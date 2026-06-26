@@ -40,7 +40,7 @@ import { shenzhenClusters, getDistrictsByCluster, getDistrictById, getClusterByI
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import AmapPicker from "@/components/discover/AmapPicker";
+import MapPicker from "@/components/discover/MapPicker";
 import type { VenueFormData } from "./venueConstants";
 import VenueCreateDialog from "./VenueCreateDialog";
 import VenueEditDialog from "./VenueEditDialog";
@@ -1358,8 +1358,8 @@ export default function AdminVenuesPage() {
 
 
 
-      {/* Amap Picker Dialog */}
-      <AmapPicker
+      {/* Map Picker Dialog */}
+      <MapPicker
         open={showMapPicker}
         onOpenChange={setShowMapPicker}
         onSelect={(location) => {

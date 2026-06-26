@@ -25,7 +25,7 @@ export function registerGeoRoutes(app: Express): void {
         });
       }
 
-      const apiKey = process.env.AMAP_API_KEY;
+      const apiKey = process.env.TENCENT_MAP_KEY;
 
       // Helper function to detect district from coordinates using bounding boxes
       const detectDistrictFromCoords = (lat: number, lng: number): string | null => {
@@ -45,14 +45,7 @@ export function registerGeoRoutes(app: Express): void {
         return null;
       };
 
-      // Helper function to normalize district names
-      const normalizeDistrictName = (district: string): string => {
-        if (!district) return "";
-        return district.replace(/市辖区$/, "").replace(/区区$/, "区");
-      };
-
       if (!apiKey) {
-        // Fallback to local boundary detection (use parsed numeric values)
         const district = detectDistrictFromCoords(lat, lng);
         return res.json({
           success: !!district,
@@ -62,37 +55,31 @@ export function registerGeoRoutes(app: Express): void {
         });
       }
 
-      // Call Amap reverse geocoding API with encoded coordinates
-      const encodedLocation = encodeURIComponent(`${lng.toFixed(6)},${lat.toFixed(6)}`);
-      const amapUrl = `https://restapi.amap.com/v3/geocode/regeo?key=${apiKey}&location=${encodedLocation}&extensions=base`;
+      // Call Tencent Maps reverse geocoding API
+      const tencentUrl = `https://apis.map.qq.com/ws/geocoder/v1/?location=${lat.toFixed(6)},${lng.toFixed(6)}&key=${apiKey}&get_poi=0`;
 
-      const response = await fetch(amapUrl);
+      const response = await fetch(tencentUrl);
       const data: any = await response.json();
 
-      if (data.status === "1" && data.regeocode) {
-        const addressComponent = data.regeocode.addressComponent;
-        const city = addressComponent.city || addressComponent.province;
-        const district = addressComponent.district;
-
-        // Normalize district name to match our clusters
-        const normalizedDistrict = normalizeDistrictName(district);
+      if (data.status === 0 && data.result) {
+        const addrComp = data.result.address_component;
+        const city = addrComp.city || addrComp.province;
+        const district = addrComp.district;
 
         res.json({
           success: true,
           city: city === "深圳市" ? "深圳" : city,
-          district: normalizedDistrict,
-          rawDistrict: district,
-          source: "amap"
+          district: district,
+          source: "tencent"
         });
       } else {
-        // Fallback to local detection (use parsed numeric values)
         const district = detectDistrictFromCoords(lat, lng);
         res.json({
           success: !!district,
           city: district ? "深圳" : undefined,
           district: district,
           source: "local",
-          amapError: data.info
+          tencentError: data.message
         });
       }
     } catch (error) {
@@ -101,6 +88,39 @@ export function registerGeoRoutes(app: Express): void {
         success: false,
         error: "定位服务暂时不可用"
       });
+    }
+  });
+
+  app.post('/api/geo/ip-locate', async (req, res) => {
+    try {
+      const apiKey = process.env.TENCENT_MAP_KEY;
+
+      if (!apiKey) {
+        return res.json({ success: false, source: 'no_key' });
+      }
+
+      // Get client IP from request
+      const forwarded = req.headers['x-forwarded-for'];
+      const clientIp = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(',')[0]?.trim() || req.socket.remoteAddress || '';
+
+      const url = `https://apis.map.qq.com/ws/location/v1/ip?key=${apiKey}${clientIp ? `&ip=${encodeURIComponent(clientIp)}` : ''}`;
+      const response = await fetch(url);
+      const data: any = await response.json();
+
+      if (data.status === 0 && data.result) {
+        const city = data.result.city || data.result.adcode;
+        res.json({
+          success: true,
+          city: city === "深圳市" ? "深圳" : city?.replace(/市$/, ''),
+          province: data.result.province,
+          source: 'tencent_ip',
+        });
+      } else {
+        res.json({ success: false, source: 'tencent_ip', error: data.message });
+      }
+    } catch (error) {
+      logger.error("IP locate error", { error: String(error) });
+      res.json({ success: false, source: 'error' });
     }
   });
 }

@@ -1328,6 +1328,22 @@ export function reverseGeocode(
   })
 }
 
+export interface IpLocateResponse {
+  success: boolean
+  city?: string
+  province?: string
+  source?: string
+}
+
+export function ipLocate(
+  api: ApiTransport
+): Promise<IpLocateResponse> {
+  return api<IpLocateResponse>({
+    path: '/api/geo/ip-locate',
+    method: 'POST',
+  })
+}
+
 export function getEventPools(api: ApiTransport): Promise<EventPoolSummary[]> {
   return api<EventPoolSummary[]>({ path: '/api/event-pools' })
 }
