@@ -6,10 +6,11 @@ export interface BackReviewState {
   backReviewQuestion: AssessmentQuestion | null
   backReviewPreviousAnswer: string | null
   backReviewSelectedOption: string | null
+  backReviewHistoryIndex: number
 }
 
 export interface BackReviewActions {
-  enterBackReview: (question: AssessmentQuestion, previousAnswer: string) => void
+  enterBackReview: (question: AssessmentQuestion, previousAnswer: string, historyIndex?: number) => void
   selectOption: (optionValue: string) => void
   cancelBackReview: () => void
   getConfirmPayload: () => {
@@ -19,10 +20,11 @@ export interface BackReviewActions {
     previousAnswer: string | null
   }
   exitBackReview: () => void
+  setHistoryIndex: (index: number) => void
 }
 
 /**
- * Encapsulates back-review state for the personality test one-step back flow.
+ * Encapsulates back-review state for the personality test multi-step back flow.
  * Back-review state is NOT persisted across sessions (AC-15).
  */
 export function useBackReview(): BackReviewState & BackReviewActions {
@@ -30,18 +32,21 @@ export function useBackReview(): BackReviewState & BackReviewActions {
   const [backReviewQuestion, setBackReviewQuestion] = useState<AssessmentQuestion | null>(null)
   const [backReviewPreviousAnswer, setBackReviewPreviousAnswer] = useState<string | null>(null)
   const [backReviewSelectedOption, setBackReviewSelectedOption] = useState<string | null>(null)
+  const [backReviewHistoryIndex, setBackReviewHistoryIndex] = useState<number>(-1)
 
   const resetBackReviewState = useCallback(() => {
     setIsBackReviewMode(false)
     setBackReviewQuestion(null)
     setBackReviewPreviousAnswer(null)
     setBackReviewSelectedOption(null)
+    setBackReviewHistoryIndex(-1)
   }, [])
 
-  const enterBackReview = useCallback((question: AssessmentQuestion, previousAnswer: string) => {
+  const enterBackReview = useCallback((question: AssessmentQuestion, previousAnswer: string, historyIndex?: number) => {
     setBackReviewQuestion(question)
     setBackReviewPreviousAnswer(previousAnswer)
     setBackReviewSelectedOption(previousAnswer)
+    setBackReviewHistoryIndex(historyIndex ?? -1)
     setIsBackReviewMode(true)
   }, [])
 
@@ -60,15 +65,21 @@ export function useBackReview(): BackReviewState & BackReviewActions {
 
   const exitBackReview = resetBackReviewState
 
+  const setHistoryIndex = useCallback((index: number) => {
+    setBackReviewHistoryIndex(index)
+  }, [])
+
   return {
     isBackReviewMode,
     backReviewQuestion,
     backReviewPreviousAnswer,
     backReviewSelectedOption,
+    backReviewHistoryIndex,
     enterBackReview,
     selectOption,
     cancelBackReview,
     getConfirmPayload,
     exitBackReview,
+    setHistoryIndex,
   }
 }

@@ -75,11 +75,15 @@ interface PersonalityTestQuestionProps {
     isBackReviewMode: boolean
     backReviewQuestion: AssessmentQuestion | null
     backReviewPreviousAnswer: string | null
+    backReviewSelectedOption: string | null
+    backReviewHistoryIndex: number
   }
   onAnswer: (option: AssessmentOption) => void
   onSliderChange: (value: number) => void
   onSliderSubmit: () => void
   onBack: () => void
+  onBackFurther?: () => void
+  canGoFurtherBack?: boolean
   onSkip: () => void
   onRetry: () => void
   onBackReviewSelect: (option: AssessmentOption) => void
@@ -115,6 +119,8 @@ export default function PersonalityTestQuestion({
   onSliderChange,
   onSliderSubmit,
   onBack,
+  onBackFurther,
+  canGoFurtherBack,
   onSkip,
   onRetry,
   onBackReviewSelect,
@@ -144,7 +150,7 @@ export default function PersonalityTestQuestion({
   // Xiaoyue speech bubble text. Commentary is set immediately from pre-attached
   // per-option data so the user sees tailored feedback without a network round-trip.
   const speechText = backReview.isBackReviewMode
-    ? '这是你之前选的答案，可以修改后再确认。'
+    ? (canGoFurtherBack ? '可以继续回退到更早的题目。' : '这是你之前选的答案，可以修改后再确认。')
     : postAnswerCommentary
       ? postAnswerCommentary
       : progress && progress.answered === 4
@@ -186,13 +192,19 @@ export default function PersonalityTestQuestion({
             hoverStartTime={0}
             hoverStayTime={100}
             onClick={() => {
-              if (isSubmitting || isSkipping || backReview.isBackReviewMode) return
+              if (isSubmitting || isSkipping) return
+              if (backReview.isBackReviewMode) {
+                if (canGoFurtherBack && onBackFurther) {
+                  onBackFurther()
+                }
+                return
+              }
               onBack()
             }}
-            style={{ opacity: isSubmitting || isSkipping || backReview.isBackReviewMode ? 0.4 : 1 }}
+            style={{ opacity: isSubmitting || isSkipping ? 0.4 : 1 }}
           >
             <Text className='personality-test__back-btn-icon'>←</Text>
-            <Text className='personality-test__back-btn-text'>返回</Text>
+            <Text className='personality-test__back-btn-text'>{backReview.isBackReviewMode && !canGoFurtherBack ? '当前为最早一题' : '返回'}</Text>
           </View>
         )}
       </View>
@@ -295,7 +307,7 @@ export default function PersonalityTestQuestion({
               onAnswer={backReview.isBackReviewMode ? onBackReviewSelect : onAnswer}
               onSliderChange={backReview.isBackReviewMode ? onBackReviewSliderChange : onSliderChange}
               onSliderSubmit={backReview.isBackReviewMode ? onBackReviewSliderSubmit : onSliderSubmit}
-              committedValue={backReview.isBackReviewMode ? backReview.backReviewPreviousAnswer : null}
+              committedValue={backReview.isBackReviewMode ? (backReview.backReviewSelectedOption ?? backReview.backReviewPreviousAnswer) : null}
               hideSliderSubmit={backReview.isBackReviewMode}
               onOptionTouchStart={undefined}
               onOptionTouchEnd={undefined}

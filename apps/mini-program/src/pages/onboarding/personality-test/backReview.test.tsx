@@ -22,6 +22,7 @@ describe('useBackReview payload logic', () => {
       backReviewQuestion: null,
       backReviewPreviousAnswer: null,
       backReviewSelectedOption: null,
+      backReviewHistoryIndex: -1,
     }
     expect(state.isBackReviewMode).toBe(false)
     expect(state.backReviewQuestion).toBeNull()
@@ -34,6 +35,7 @@ describe('useBackReview payload logic', () => {
       cancelBackReview: () => {},
       getConfirmPayload: () => ({ changed: false, question: null, selectedOption: null, previousAnswer: null }),
       exitBackReview: () => {},
+      setHistoryIndex: () => {},
     }
     expect(typeof actions.enterBackReview).toBe('function')
     expect(typeof actions.selectOption).toBe('function')

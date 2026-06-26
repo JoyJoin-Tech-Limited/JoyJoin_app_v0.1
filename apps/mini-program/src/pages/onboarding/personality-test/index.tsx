@@ -189,9 +189,8 @@ export default function PersonalityTestPage() {
   const activeSessionRef = useRef<string>('')
   // Remember the last attempted option so we can retry on network failure
   const lastAttemptedOptionRef = useRef<AssessmentOption | null>(null)
-  // Track previous question + answer for one-step back
-  const previousQuestionRef = useRef<AssessmentQuestion | null>(null)
-  const previousAnswerRef = useRef<string | null>(null)
+  // Track question history for multi-step back review
+  const questionHistoryRef = useRef<Array<{question: AssessmentQuestion; answer: string}>>([])
   // Anonymous engine state for client-side back + re-answer
   const anonymousEngineStateRef = useRef<ReturnType<typeof initializeEngineState> | null>(null)
   // Pending question update: hold next-question data until echo exit completes
@@ -606,9 +605,11 @@ export default function PersonalityTestPage() {
         return
       }
 
-      // Save previous question + answer for one-step back
-      previousQuestionRef.current = question
-      previousAnswerRef.current = option.value
+      // Push to question history for multi-step back review
+      questionHistoryRef.current = [
+        ...questionHistoryRef.current,
+        { question, answer: option.value },
+      ]
 
       // Abandon if session changed during the async work
       if (activeSessionRef.current !== thisSessionId) return
@@ -776,15 +777,26 @@ export default function PersonalityTestPage() {
   // the captured state. On commit (handleAnswer runs to completion), the sprite is
   // set to `nod` by the answer flow and the preview is auto-cleared.
   const handleBack = useCallback(() => {
-    if (!previousQuestionRef.current || !previousAnswerRef.current) return
+    if (questionHistoryRef.current.length === 0) return
     haptics('light')
     analytics.interaction('personality_test_back_used', {
       questionIndex: progress?.answered ?? 0,
       sessionId: sessionId || 'anonymous',
     })
     lastAttemptedOptionRef.current = null
-    backReview.enterBackReview(previousQuestionRef.current, previousAnswerRef.current)
+    const lastIndex = questionHistoryRef.current.length - 1
+    const entry = questionHistoryRef.current[lastIndex]
+    backReview.enterBackReview(entry.question, entry.answer, lastIndex)
   }, [analytics, backReview, progress, sessionId])
+
+  // Go further back in question history while in back-review mode
+  const handleBackFurther = useCallback(() => {
+    const currentIndex = backReview.backReviewHistoryIndex
+    if (currentIndex <= 0 || questionHistoryRef.current.length === 0) return
+    haptics('light')
+    const prevEntry = questionHistoryRef.current[currentIndex - 1]
+    backReview.enterBackReview(prevEntry.question, prevEntry.answer, currentIndex - 1)
+  }, [backReview])
 
   const handleBackReviewSelect = useCallback((option: AssessmentOption) => {
     backReview.selectOption(option.value)
@@ -819,7 +831,17 @@ export default function PersonalityTestPage() {
         setSliderValue(50)
         setPostAnswerCommentary(null)
 
+        // Truncate history after the modified question; subsequent answers
+        // were based on the old answer path and are now stale.
+        const modifiedIndex = backReview.backReviewHistoryIndex
         backReview.exitBackReview()
+        if (modifiedIndex >= 0) {
+          const safe = questionHistoryRef.current.slice(0, modifiedIndex)
+          questionHistoryRef.current = [
+            ...safe,
+            { question: payload.question, answer: payload.selectedOption },
+          ]
+        }
         return
       }
 
@@ -910,8 +932,17 @@ export default function PersonalityTestPage() {
       })))
       setSliderValue(50)
       setPostAnswerCommentary(null)
-      previousQuestionRef.current = null
-      previousAnswerRef.current = null
+      // Truncate history after the modified question
+      {
+        const modifiedIndex = backReview.backReviewHistoryIndex
+        if (modifiedIndex >= 0) {
+          const safe = questionHistoryRef.current.slice(0, modifiedIndex)
+          questionHistoryRef.current = [
+            ...safe,
+            { question: payload.question, answer: payload.selectedOption },
+          ]
+        }
+      }
       backReview.exitBackReview()
     } catch (err) {
       const rawMessage = err instanceof Error ? err.message : String(err)
@@ -1073,6 +1104,8 @@ export default function PersonalityTestPage() {
           onSliderChange={handleSliderChange}
           onSliderSubmit={handleSliderSubmit}
           onBack={handleBack}
+          onBackFurther={handleBackFurther}
+          canGoFurtherBack={backReview.isBackReviewMode && backReview.backReviewHistoryIndex > 0}
           onSkip={handleSkip}
           onRetry={handleRetry}
           onBackReviewSelect={handleBackReviewSelect}
