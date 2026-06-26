@@ -44,7 +44,7 @@ This package holds contracts and logic that are intentionally shared across mult
 
 ### Shared cross-platform flow helpers
 - `packages/shared/src/onboarding.ts` — `nextStepToOnboardingStep`, `buildOnboardingProgress`, and related step-mapping utilities
-- `packages/shared/src/api.ts` — typed API helpers and DTOs for onboarding/profile, pricing, coupons, payments, notifications, blind-box events, and pool-group details (shared across web and mini-program)
+- `packages/shared/src/api.ts` — typed API helpers and DTOs for onboarding/profile, pricing, coupons, payments, notifications, blind-box events, and pool-group details (shared across web and mini-program). Domain-specific definitions live in `packages/shared/src/api/*.ts`; this file is a thin re-export barrel.
 - `packages/shared/src/centerTabRouting.ts` — shared center CTA label/destination/badge rules used by the web bottom nav and the mini-program custom tab bar
 - `packages/shared/src/hongKongTime.ts` — shared Hong Kong time comparison and formatting helpers used by both clients
 
@@ -70,7 +70,7 @@ Only put UI here when it is reusable across multiple apps without carrying user-
 - **New UI color token or theme definition:** place in `packages/shared/src/archetypeColors.ts` or a new token file under `packages/shared/src/`
 - **New achievement definition:** add to `packages/shared/src/achievements.ts`
 - **New onboarding step-mapping or flow helper shared across platforms:** place in `packages/shared/src/onboarding.ts`
-- **New typed API helper used by both web and mini-program:** place in `packages/shared/src/api.ts`
+- **New typed API helper used by both web and mini-program:** place in the relevant `packages/shared/src/api/<domain>.ts` module and re-export it through `packages/shared/src/api.ts`
 - **New brand-governed copy module or factory function:** place under `packages/shared/src/copy/`
 - **New shared UI primitive:** place under `packages/shared/src/ui/`
 

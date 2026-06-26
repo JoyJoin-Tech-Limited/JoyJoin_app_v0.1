@@ -2,8 +2,9 @@
 name: api-contract-versioning
 description: >
   Shared API contract governance across server, web, and mini-program clients.
-  Covers Zod schemas derived from Drizzle tables, DTOs in packages/shared/src/api.ts,
-  cross-platform type consumption, and the lightweight /api/v1/* versioning rewrite.
+  Covers Zod schemas derived from Drizzle tables, DTOs in packages/shared/src/api.ts
+  (barrel) and domain modules under packages/shared/src/api/*.ts, cross-platform type
+  consumption, and the lightweight /api/v1/* versioning rewrite.
   Use when adding, changing, or reviewing a shared API type, Zod validation schema,
   or route payload shape consumed by more than one surface. Trigger phrases:
   "add a shared DTO", "change API response shape", "Zod schema drift",
@@ -37,7 +38,7 @@ JoyJoin API contracts live in three layers inside `packages/shared`:
 | Layer | Location | Purpose |
 |-------|----------|---------|
 | Database + Zod schemas | `packages/shared/src/schema.ts` | Drizzle tables + runtime validation |
-| API DTOs + transport | `packages/shared/src/api.ts` | TypeScript types, transport contract |
+| API DTOs + transport | `packages/shared/src/api.ts` (barrel) and `packages/shared/src/api/*.ts` | TypeScript types, transport contract, domain modules |
 | Domain types | `packages/shared/src/types/*.ts` | Cross-cutting domain types |
 
 **Versioning:** The server strips `/api/v1/` prefixes and routes identically to `/api/*`. There is no active breaking-version negotiation. Prefer additive fields with feature detection over version bumps.
@@ -50,27 +51,27 @@ For implementation details — Zod/Drizzle examples, DTO patterns, drift detecti
 **Apply this skill by:**
 1. Add the column to `eventPools` in `packages/shared/src/schema.ts` (if persisted)
 2. Update `insertEventPoolRegistrationSchema` in the same file
-3. Add `dietaryNotes?: string[] | null` to `EventPoolRegistrationPayload` in `packages/shared/src/api.ts`
+3. Add `dietaryNotes?: string[] | null` to `EventPoolRegistrationPayload` in `packages/shared/src/api/eventPools.ts` (re-exported through `packages/shared/src/api.ts`)
 4. Run `npm run typecheck` across `@joyjoin/server`, `@joyjoin/user-client`, and `mini-program`
 **Result:** The contract is updated in one place and all consumers type-check together.
 
 ---
 
 **User says:** "The server is returning a new `themeEmoji` field but the mini-program isn't seeing it."
-**Apply this skill by:** Checking `packages/shared/src/api.ts` for `PoolGroupSummary` — if `themeEmoji` is missing from the interface, add it there. Also verify `apps/mini-program/src/lib/api/api.ts` imports the updated type via `@shared/api`.
+**Apply this skill by:** Checking `packages/shared/src/api/eventPools.ts` for `PoolGroupSummary` — if `themeEmoji` is missing from the interface, add it there and re-export it through `packages/shared/src/api.ts`. Also verify `apps/mini-program/src/lib/api/api.ts` imports the updated type via `@shared/api`.
 **Result:** Type drift is caught at the shared boundary, not at runtime in the client.
 
 ## Troubleshooting
 
 - **Type mismatch between server and client after schema change** — Run `npm run typecheck` across all workspaces. Fix `packages/shared/src/api.ts` or `schema.ts` before checking consumers.
 - **Zod validation rejects a payload that looks correct** — Check whether the schema uses `.strict()`, `.omit()`, or `.extend()` in a way that forbids the field.
-- **Client sees `unknown` for an API response field** — The field is likely not declared in `packages/shared/src/api.ts`. Add it and re-export from `packages/shared/src/index.ts` if needed.
+- **Client sees `unknown` for an API response field** — The field is likely not declared in the relevant `packages/shared/src/api/<domain>.ts` module (re-exported through `packages/shared/src/api.ts`). Add it there and re-export from `packages/shared/src/index.ts` if needed.
 - **Adding a required field to a response breaks an older client** — Make the field optional (`?:`) in the shared DTO first, then migrate clients before making it required.
 
 ## Review checklist
 
 - [ ] Zod schema changes in `schema.ts` are reflected in all server `safeParse` consumers
-- [ ] New or changed response fields are added to the corresponding interface in `packages/shared/src/api.ts`
+- [ ] New or changed response fields are added to the corresponding interface in `packages/shared/src/api/<domain>.ts` (and re-exported through `packages/shared/src/api.ts`)
 - [ ] Both web and mini-program clients import the updated type from `@shared/api`
 - [ ] No duplicate local types were created when a shared type already exists
 - [ ] Additive changes use optional fields (`?:`) before making them required across all surfaces

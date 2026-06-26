@@ -43,6 +43,7 @@ Reference for which admin portal pages map to which API endpoints and which role
 | `/admin/users` | Get user detail | GET | `/api/admin/users/:id/detail` | `requireAdmin` |
 | `/admin/users` | Ban user | PATCH | `/api/admin/users/:id/ban` | `requireAdmin` + `requireOperatorOrAbove` |
 | `/admin/users` | Unban user | PATCH | `/api/admin/users/:id/unban` | `requireAdmin` + `requireOperatorOrAbove` |
+| `/admin/users` | Delete all user data | DELETE | `/api/admin/users/:id/data` | `requireAdmin` + `requireOperatorOrAbove` |
 | `/admin/stats` | Platform stats | GET | `/api/admin/stats` | `requireAdmin` |
 
 > Ban/unban are moderation writes and require operator or above on the API.

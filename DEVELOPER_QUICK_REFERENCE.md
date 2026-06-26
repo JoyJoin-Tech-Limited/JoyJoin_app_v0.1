@@ -37,7 +37,7 @@
 ### Guardrails: env files, secrets, and legacy onboarding identifiers
 - Never commit a real `.env` file. The only tracked env templates are `.env.example`, `deployment/.env.production.example`, and `deployment/.env.staging.example`.
 - Run `npm run guardrails` before pushing. CI runs the same check.
-- In active onboarding / auth / CLI code, do not reintroduce these legacy identifiers: `hasCompletedRegistration`, `needsRegistration`, `registration_sessions`, `interestsTop`.
+- In active onboarding / auth / CLI code, do not reintroduce these legacy identifiers: `hasCompletedRegistration`, `needsRegistration`, `registration_sessions`, `interestsTop`, `topicAvoidances`, `hasPets`, or the removed `hometown` column token.
 - If you ever copied values from the removed tracked `.env` or the old hard-coded deployment database URL, rotate `DATABASE_URL`, `JWT_SECRET`, `SESSION_SECRET`, `WECHAT_SECRET`, and `ADMIN_CREATE_SECRET_KEY`.
 
 ### Guardrails: latent-state and multimodal AI work stays planning-only until gates pass

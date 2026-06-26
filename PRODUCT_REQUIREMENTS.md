@@ -3607,10 +3607,12 @@ For full details: `apps/server/src/README.md` and `docs/architecture/current-sta
 
 **Admin Routes** (requires admin role):
 - `GET /api/admin/stats` - Dashboard metrics
-- `GET /api/admin/users` - List users
-- `GET /api/admin/users/:id` - User details
-- `PATCH /api/admin/users/:id` - Update user
-- `DELETE /api/admin/users/:id` - Delete user
+- `GET /api/admin/users` - List/search/filter users (paginated; supports search, city, archetype, intent, completeness)
+- `GET /api/admin/users/:id` - User summary
+- `GET /api/admin/users/:id/detail` - User detail sheet (profile completeness, interests, registrations)
+- `PATCH /api/admin/users/:id/ban` - Ban user
+- `PATCH /api/admin/users/:id/unban` - Unban user
+- `DELETE /api/admin/users/:id/data` - Delete all user data (operator+)
 - `GET /api/admin/subscriptions` - List subscriptions
 - `POST /api/admin/subscriptions/grant` - Grant free subscription
 - `GET /api/admin/payments` - Payment history
@@ -3859,7 +3861,7 @@ CREATE TABLE event_pool_groups (
 | **Feedback System** | ✅ Complete | `EventFeedbackFlow.tsx`, 2-tier | Basic + Deep |
 | **Connection Model** | ✅ Complete | `ChatsPage.tsx`, `SelectConnectionsStep.tsx` | Post-event selection + 连接 tab enrichment |
 | **Admin Dashboard** | ✅ Complete | `AdminDashboard.tsx` | Key metrics |
-| **User Management** | ✅ Complete | `AdminUsersPage.tsx` | CRUD + analytics |
+| **User Management** | ✅ Complete | `AdminUsersPage.tsx` | List, detail sheet, ban/unban, delete all data, CSV export, profile-completeness star rating |
 | **Venue Management** | ✅ Complete | `AdminVenuesPage.tsx`, `venueMatchingService.ts` | Auto-matching |
 | **Matching Lab** | ✅ Complete | `AdminMatchingLabPage.tsx` | Weight tuning |
 | **Content Management** | ✅ Complete | `AdminContentPage.tsx` | CMS for announcements |

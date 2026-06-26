@@ -132,6 +132,7 @@ Primary files:
 - `apps/server/src/routes/domains/adminOperations.ts` — content filter log admin endpoint (`GET /api/admin/content-filter/logs`), admin notification broadcast/send with content safety gating
 - `apps/server/src/routes/domains/adminGeolocation.ts` — `GET /api/admin/geolocation/heatmap`, `POST /api/admin/geolocation/rollup` — location snapshot analytics, gated by `requireSuperAdmin`
 - `apps/server/src/routes/domains/geo.ts` — `POST /api/geo/reverse-geocode`, `POST /api/geo/ip-locate` (Tencent Maps WebService), and admin-gated `GET /api/config/map` (returns Tencent Maps JS key)
+- `apps/server/src/routes/domains/adminUsers.ts` — `GET /api/admin/users`, `GET /api/admin/users/:id`, `GET /api/admin/users/:id/detail`, `PATCH /api/admin/users/:id/ban`, `PATCH /api/admin/users/:id/unban`, `DELETE /api/admin/users/:id/data` — user list/detail, moderation actions (operator+), and GDPR-style data deletion
 - `apps/server/src/adminAuth.ts`
 - `apps/server/src/lib/adminAuditLogger.ts`
 - `apps/server/src/lib/featureFlags.ts` — DB-backed feature flag resolver with env fallback and short-lived cache

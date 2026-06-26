@@ -9,10 +9,10 @@ Clients import DTOs via `@shared/api`:
 
 ### API DTO patterns
 
-`packages/shared/src/api.ts` defines:
-- `ApiTransport` — abstract request function used by all clients
-- Request/response interfaces (e.g., `AuthUserResponse`, `EventPoolSummary`)
-- Normalization helpers (e.g., `normalizeEventPoolRegistrationPayload`)
+`packages/shared/src/api.ts` is a thin barrel that re-exports domain modules from `packages/shared/src/api/*.ts`. Domain modules define:
+- `ApiTransport` — abstract request function used by all clients (`api/core.ts`)
+- Request/response interfaces (e.g., `AuthUserResponse` in `api/auth.ts`, `EventPoolSummary` in `api/eventPools.ts`)
+- Normalization helpers (e.g., `normalizeEventPoolRegistrationPayload` in `api/eventPools.ts`)
 
 ## Versioning rewrite specifics
 
@@ -35,8 +35,8 @@ There is no active breaking-version negotiation. All clients today speak the sam
 - **Additive changes are safe**: adding optional fields to a response does not break existing clients
 - **Renaming is breaking**: both server and all clients must update atomically
 - **Zod `.omit()` / `.pick()` / `.partial()`**: prefer these over redefining schemas to keep the contract close to the DB source of truth
-- **Normalizers live in `packages/shared/src/api.ts`**: when the server sends snake_case or ambiguous shapes, normalize to a strict client contract in the shared package, not inside each client
-- **Never duplicate types**: if a shape is used by both web and mini-program, it belongs in `packages/shared/src/api.ts` or `packages/shared/src/types/`
+- **Normalizers live in `packages/shared/src/api/*.ts`**: when the server sends snake_case or ambiguous shapes, normalize to a strict client contract in the shared package, not inside each client
+- **Never duplicate types**: if a shape is used by both web and mini-program, it belongs in `packages/shared/src/api/<domain>.ts` (re-exported through `packages/shared/src/api.ts`) or `packages/shared/src/types/`
 
 ## Zod schema examples
 
@@ -75,7 +75,8 @@ if (!parsed.success) {
 ## Canonical References
 
 - `packages/shared/src/schema.ts` — Drizzle tables + Zod schemas
-- `packages/shared/src/api.ts` — API DTOs, transport contract, normalization helpers
+- `packages/shared/src/api.ts` — API DTO barrel
+- `packages/shared/src/api/*.ts` — Domain-specific DTOs, transport helpers, and normalization
 - `packages/shared/src/types/` — Domain-specific cross-cutting types
 - `apps/server/src/routes.ts` — Route composition root + `/api/v1/*` rewrite
 - `apps/mini-program/src/lib/api/api.ts` — Mini-program API transport + auth bootstrap

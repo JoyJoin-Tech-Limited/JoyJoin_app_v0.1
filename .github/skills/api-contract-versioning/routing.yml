@@ -3,13 +3,14 @@ category: internal
 
 primary_ownership: >
   Shared API contract governance: Zod schemas in packages/shared/src/schema.ts,
-  DTOs and transport types in packages/shared/src/api.ts, cross-platform type
+  DTOs and transport types in packages/shared/src/api.ts (barrel) and
+  packages/shared/src/api/*.ts (domain modules), cross-platform type
   consumption, and the lightweight /api/v1/* versioning rewrite.
 
 use_when:
   - adding, changing, or removing a field in a shared API request/response type
   - creating or modifying a Zod validation schema for a route payload
-  - changing packages/shared/src/schema.ts or packages/shared/src/api.ts
+  - changing packages/shared/src/schema.ts or packages/shared/src/api.ts or packages/shared/src/api/*.ts
   - reviewing whether a server route response shape matches client expectations
   - diagnosing type mismatches between server and client
   - adding a new API endpoint consumed by both mini-program and web
@@ -51,6 +52,7 @@ strong_triggers:
 owned_files:
   - packages/shared/src/schema.ts
   - packages/shared/src/api.ts
+  - packages/shared/src/api/*.ts
   - packages/shared/src/types/**
   - packages/shared/src/index.ts
 

@@ -478,7 +478,7 @@ Admin portal MapPicker uses Tencent Maps JavaScript API (`TENCENT_MAP_JS_KEY`) v
 - `apps/mini-program/src/lib/prefetchEngine.ts` intentionally omits `paymentsEnabled` from the synthetic auth object it injects into the query cache. The real `GET /api/auth/user` fetch owns `paymentsEnabled`; injecting a hardcoded `false` caused stale "权益维护中" toasts when the server had payments enabled. Pruned Discover/Events/Connections shell auth fragments now only set onboarding completion flags and leave kill-switch values for the live auth fetch.
 
 **Edit-profile design patterns (2026-05-24):**
-- **2-step grouping:** Step 1 "基础档案" = static facts (name, gender, birth, city, hometown, education). Step 2 "社交画像" = expressive choices (profession via AI overlay, intent grid, interests). Maintains cognitive continuity with onboarding.
+- **2-step grouping:** Step 1 "基础档案" = static facts (name, gender, birth, city, hometown region/city via `hometownRegionCity`, education). Step 2 "社交画像" = expressive choices (profession via AI overlay, intent grid, interests). Maintains cognitive continuity with onboarding.
 - **Validation + scroll-to-error:** Inline field validation with `fieldErrors` state. First error field id passed to `ScrollView scrollIntoView`.
 - **Unsaved changes guard:** `Taro.enableAlertBeforeUnload({ message: '…' })` when `hasChanges` is true; `Taro.disableAlertBeforeUnload()` on cleanup.
 - **Skeleton loading:** `isInitializing` gates a skeleton block with shimmer animation; disabled under `prefers-reduced-motion`.
@@ -496,7 +496,7 @@ Admin portal MapPicker uses Tencent Maps JavaScript API (`TENCENT_MAP_JS_KEY`) v
 
 `npm run guardrails` checks:
 - No committed `.env` files with real secrets
-- No legacy onboarding identifiers (`hasCompletedRegistration`, `needsRegistration`, `registration_sessions`, `interestsTop`)
+- No legacy onboarding identifiers (`hasCompletedRegistration`, `needsRegistration`, `registration_sessions`, `interestsTop`, `topicAvoidances`, `hasPets`, or the removed `hometown` column token)
 - No imports from legacy `shared/` root directory
 - No cross-app imports
 - Admin routes must enforce admin middleware

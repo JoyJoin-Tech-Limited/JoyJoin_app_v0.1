@@ -442,7 +442,7 @@ packages/shared/
 
 **Placement rules for shared:**
 - DB schema changes → `src/schema/` (then `db:generate` + `db:rebuild-journal`)
-- Cross-app types → `src/types/` or `src/api.ts` (Zod schemas)
+- Cross-app types → `src/types/` or `src/api/<domain>.ts` (API DTOs, re-exported via `src/api.ts`)
 - Personality engine → `src/personality/`
 - UI primitives/tokens → `src/ui/`
 - Export from `src/index.ts` or add subpath export in `package.json`
@@ -877,7 +877,7 @@ tools/
 | What | Where | Why |
 |------|-------|-----|
 | New shared type | `packages/shared/src/types/` | Cross-platform consumption |
-| New API DTO (Zod) | `packages/shared/src/api.ts` | Contract versioning |
+| New API DTO (Zod) | `packages/shared/src/api/<domain>.ts` (re-exported via `packages/shared/src/api.ts`) | Contract versioning |
 | New personality question | `packages/shared/src/personality/questionsV4*.ts` | V4 question banks |
 | New icebreaker phase | `packages/shared/src/phaseRegistry.ts` + `src/socialIcebreaker*.ts` | Phase system |
 | New copy module/string | `packages/shared/src/copy/` | Brand-governed copy |
