@@ -41,10 +41,19 @@ function shouldShowWelcomeBack(user: NonNullable<ReturnType<typeof useAuth>['use
   return isMidOnboarding && isFeatureEnabled && hasRestarts && !alreadySeen
 }
 
+/**
+ * Timeout for the launch-level network check. If the check takes longer than
+ * this, treat as online (fail-open) so the redirect effect doesn't stall.
+ * WeChat's Taro.getNetworkType usually resolves within 50ms, so this is a
+ * safety ceiling for edge cases (old devices, OS throttling, etc.).
+ */
+const LAUNCH_NETWORK_CHECK_TIMEOUT_MS = 2_000
+
 export default function Index() {
   const auth = useAuth()
   const hasRedirectedRef = useRef(false)
   const [entryDone, setEntryDone] = useState(false)
+  const [launchOffline, setLaunchOffline] = useState<boolean | null>(null)
   const { isTimedOut, isOffline, retry, dismiss } = useAuthGate(auth)
 
   // Unified redirect: authenticated users go to nextStep; guests with an
@@ -59,7 +68,11 @@ export default function Index() {
   }, [])
 
   useEffect(() => {
-    if (auth.isLoading || hasRedirectedRef.current) {
+    // Network gate: wait for launch-level check before deciding redirect so
+    // a cached user isn't sent to nextStep before we know connectivity state.
+    // The authenticated path has its own network check below, but the guest
+    // restore path would fire unchecked.
+    if (auth.isLoading || hasRedirectedRef.current || launchOffline === null) {
       return
     }
 
@@ -85,6 +98,12 @@ export default function Index() {
     }
 
     // Guest restore: only if unauthenticated and has an incomplete session.
+    // Skip when offline — redirecting would dump the user into a personality
+    // test that can't load any questions.
+    if (launchOffline === true) {
+      return
+    }
+
     const snapshot = readAnonymousAssessmentSession()
     if (!snapshot || isAnonymousAssessmentSessionCompleted(snapshot)) {
       return
@@ -106,7 +125,7 @@ export default function Index() {
         error: err instanceof Error ? err.message : String(err),
       })
     })
-  }, [auth.isAuthenticated, auth.isLoading, auth.user])
+  }, [auth.isAuthenticated, auth.isLoading, auth.user, launchOffline])
 
   /** Perform authenticated redirect with all guards applied. Extracted so
       the network check above can share it between success and fail-open paths. */
@@ -151,6 +170,56 @@ export default function Index() {
     })
   }
 
+  // Launch-level network check. Runs independently from the auth-gate check
+  // so offline feedback appears during the BoxLogoEntryScreen animation rather
+  // than only after it completes and LandingPage mounts.
+  useEffect(() => {
+    if (typeof Taro.getNetworkType !== 'function') {
+      setLaunchOffline(false)
+      return
+    }
+
+    const timer = setTimeout(() => {
+      // Fail-open: if the native API hangs, assume online.
+      setLaunchOffline(false)
+    }, LAUNCH_NETWORK_CHECK_TIMEOUT_MS)
+
+    Taro.getNetworkType().then((res) => {
+      clearTimeout(timer)
+      setLaunchOffline(res.networkType === 'none')
+    }).catch(() => {
+      clearTimeout(timer)
+      setLaunchOffline(false)
+    })
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Derived offline state: combines auth-gate offline detection with
+  // launch-level detection. Either layer being offline = combined offline.
+  const combinedOffline = isOffline || launchOffline === true
+
+  // -- BoxLogoEntryScreen props --
+  // When launchLevel check is still in-flight (null), show status text.
+  // When the check resolves to offline, abort the entry animation early.
+  const abortEntry = launchOffline === true
+  const entryStatusText = launchOffline === null ? '正在检查网络…' : undefined
+
+  // Wrapped retry that re-checks launch-level network state in addition to
+  // the auth-gate retry, keeping both layers in sync.
+  const handleRetry = () => {
+    retry()
+    if (typeof Taro.getNetworkType !== 'function') {
+      setLaunchOffline(false)
+      return
+    }
+    Taro.getNetworkType().then((res) => {
+      setLaunchOffline(res.networkType === 'none')
+    }).catch(() => {
+      setLaunchOffline(false)
+    })
+  }
+
   // Stage Discover prefetch 1.5 s after entry animation completes (AC-06).
   // The composite endpoint warms cache for all 3 Discover query keys so the
   // screen renders instantly when navigated to, with ≤1 network request.
@@ -186,7 +255,13 @@ export default function Index() {
   }, [entryDone])
 
   if (!entryDone) {
-    return <BoxLogoEntryScreen onComplete={() => setEntryDone(true)} />
+    return (
+      <BoxLogoEntryScreen
+        onComplete={() => setEntryDone(true)}
+        abort={abortEntry}
+        statusText={entryStatusText}
+      />
+    )
   }
 
   // Auth gate is now expressed as an invisible functional lock on LandingPage
@@ -197,8 +272,8 @@ export default function Index() {
     <MiniProgramLandingPage
       isAuthLoading={auth.isLoading}
       isAuthTimedOut={isTimedOut}
-      isOffline={isOffline}
-      onAuthRetry={retry}
+      isOffline={combinedOffline}
+      onAuthRetry={handleRetry}
       onAuthDismiss={dismiss}
       userNextStep={auth.user?.nextStep ?? null}
     />
