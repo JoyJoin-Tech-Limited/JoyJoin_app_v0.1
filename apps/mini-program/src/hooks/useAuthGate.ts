@@ -69,28 +69,26 @@ export function useAuthGate(auth: UseAuthResult | undefined): UseAuthGateResult 
     })
   }, [])
 
-  // When offline, release the gate immediately (isLoading = false) so the
-  // landing page can render the offline error UI instead of the loading gate.
-  const isLoading = !auth || (!dismissed && !isOffline && auth.isLoading)
+  // `isChecking` captures whether auth verification is actively in progress.
+  // Unlike `auth.isLoading` alone (which is `false` when cached `initialData`
+  // exists), `isChecking` includes background refetches so the gate timer
+  // arms for cached returning users who still need server-side revalidation.
+  // When offline, release the gate immediately — the LandingPage shows its
+  // own offline banner instead of a loading spinner.
+  const isChecking = !auth || (!dismissed && !isOffline && (auth.isLoading || auth.isFetching))
 
-  // Gate timer with sticky timeout: once the timer fires, isTimedOut stays
-  // true until auth resolves successfully (user available) or the user
-  // explicitly retries or dismisses. This gives the user a persistent escape
-  // hatch instead of a banner that auto-disappears when the query fails.
+  // Gate timer: once the timer fires, `isTimedOut` stays `true` (sticky) until
+  // the user explicitly retries or dismisses. The timer does NOT auto-clear
+  // when auth settles — the redirect effect in `index.tsx` handles taking the
+  // user to their nextStep when auth succeeds, and the sticky timeout ensures
+  // the "网络请求超时" banner remains visible on auth failure.
   useEffect(() => {
-    // Once the timer has fired, only clear on auth success or user action.
     if (timerHasFiredRef.current) {
-      if (!isLoading && auth?.user) {
-        // Auth succeeded — clear timeout state and return to normal
-        timerHasFiredRef.current = false
-        setGateTimedOut(false)
-        gateStartedAtRef.current = null
-      }
-      // Otherwise stay timed out — the user must tap retry or dismiss.
+      // Sticky timeout — only user action (retry/dismiss) clears this state.
       return
     }
 
-    if (!isLoading || isOffline) {
+    if (!isChecking || isOffline) {
       setGateTimedOut(false)
       gateStartedAtRef.current = null
       return
@@ -107,7 +105,7 @@ export function useAuthGate(auth: UseAuthResult | undefined): UseAuthGateResult 
     }, INDEX_GATE_TIMEOUT_MS)
 
     return () => clearTimeout(t)
-  }, [isLoading, isOffline, auth?.user])
+  }, [isChecking, isOffline])
 
   const retry = () => {
     haptics('light')
@@ -144,5 +142,5 @@ export function useAuthGate(auth: UseAuthResult | undefined): UseAuthGateResult 
     void queryClient.cancelQueries({ queryKey: AUTH_QUERY_KEY })
   }
 
-  return { isLoading, isTimedOut: gateTimedOut, isOffline, retry, dismiss }
+  return { isLoading: isChecking, isTimedOut: gateTimedOut, isOffline, retry, dismiss }
 }

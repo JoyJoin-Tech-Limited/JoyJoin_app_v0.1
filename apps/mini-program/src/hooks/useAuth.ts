@@ -51,8 +51,9 @@ export type AuthUser = AuthUserResponse
 export interface UseAuthResult {
   user: AuthUser | undefined
   isLoading: boolean
+  isFetching: boolean
   isAuthenticated: boolean
-  nextStep: NextStepType | undefined
+  nextStep: OnboardingStep | undefined
   refetch: () => Promise<unknown>
 }
 
@@ -133,6 +134,7 @@ export function useAuth(): UseAuthResult {
 
   return {
     ...authState,
+    isFetching,
     refetch,
   }
 }

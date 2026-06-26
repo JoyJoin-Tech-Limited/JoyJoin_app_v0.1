@@ -54,7 +54,7 @@ export default function Index() {
   const hasRedirectedRef = useRef(false)
   const [entryDone, setEntryDone] = useState(false)
   const [launchOffline, setLaunchOffline] = useState<boolean | null>(null)
-  const { isTimedOut, isOffline, retry, dismiss } = useAuthGate(auth)
+  const { isTimedOut, isOffline, retry, dismiss, isLoading: isGateChecking } = useAuthGate(auth)
 
   // Unified redirect: authenticated users go to nextStep; guests with an
   // incomplete anonymous assessment go back to the personality test.
@@ -270,7 +270,7 @@ export default function Index() {
   // exceeds INDEX_GATE_TIMEOUT_MS (4s).
   return (
     <MiniProgramLandingPage
-      isAuthLoading={auth.isLoading}
+      isAuthLoading={isGateChecking}
       isAuthTimedOut={isTimedOut}
       isOffline={combinedOffline}
       onAuthRetry={handleRetry}

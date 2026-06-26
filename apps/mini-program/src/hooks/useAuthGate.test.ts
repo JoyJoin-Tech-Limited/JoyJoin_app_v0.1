@@ -33,6 +33,7 @@ function createAuth(overrides: Partial<UseAuthResult> = {}): UseAuthResult {
   return {
     user: undefined,
     isLoading: false,
+    isFetching: false,
     isAuthenticated: false,
     nextStep: undefined,
     refetch: mockRefetch,
