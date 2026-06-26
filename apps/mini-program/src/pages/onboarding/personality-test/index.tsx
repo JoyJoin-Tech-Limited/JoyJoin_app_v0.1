@@ -646,7 +646,13 @@ export default function PersonalityTestPage() {
     }
 
     // Need to submit via API (new answer or history modification)
-    if (!currentSelection) return
+    // For slider questions, resolve sliderValue to the nearest option
+    const option = currentSelection ?? (
+      question.questionType === 'slider'
+        ? (getNearestSliderOption(question.options, sliderValue) ?? null)
+        : null
+    )
+    if (!option) return
 
     const thisSessionId = sessionId
     activeSessionRef.current = thisSessionId
@@ -654,7 +660,6 @@ export default function PersonalityTestPage() {
     setIsSubmitting(true)
     setError('')
     try {
-      const option = currentSelection
       const commentaryStartTime = commentaryReceivedAtRef.current || Date.now()
 
       const apiPromise = apiRequest<AssessmentAnswerResponse>({
