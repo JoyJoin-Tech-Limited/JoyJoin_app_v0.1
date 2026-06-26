@@ -63,11 +63,11 @@ describe('route review follow-ups', () => {
 
   it('returns a stable coupon response object and preserves total-versus-available semantics', () => {
     const assessmentRoutesSource = readRepoFile('apps/server/src/routes/domains/assessment.ts');
-    const sharedApiSource = readRepoFile('packages/shared/src/api.ts');
+    const pricingApiSource = readRepoFile('packages/shared/src/api/pricing.ts');
 
     expect(assessmentRoutesSource).toContain('res.json({ count: coupons.length, coupons });');
-    expect(sharedApiSource).toContain('availableCount');
-    expect(sharedApiSource).toContain('count: explicitCount ?? coupons.length');
+    expect(pricingApiSource).toContain('availableCount');
+    expect(pricingApiSource).toContain('count: explicitCount ?? coupons.length');
   });
 
   it('restores blind-box coupon support through the payment domain and keeps event packs disabled', () => {
@@ -136,16 +136,16 @@ describe('route review follow-ups', () => {
   it('publishes pricing display aliases and explicit browser payment redirect metadata', () => {
     const adminBillingSource = readRepoFile('apps/server/src/routes/domains/adminBilling.ts');
     const paymentsRoutesSource = readRepoFile('apps/server/src/routes/domains/payments.ts');
-    const sharedApiSource = readRepoFile('packages/shared/src/api.ts');
+    const paymentsApiSource = readRepoFile('packages/shared/src/api/payments.ts');
 
     expect(adminBillingSource).toContain('displayName: s.displayName');
     expect(adminBillingSource).toContain('displayNameEn: s.displayNameEn');
     expect(adminBillingSource).toContain('isActive: s.isActive');
     expect(paymentsRoutesSource).toContain('const paymentRedirectUrl = paymentResult.h5Url ?? null;');
     expect(paymentsRoutesSource).toContain('const paymentStatus = paymentRedirectUrl ? "pending" : "completed";');
-    expect(sharedApiSource).toContain("paymentStatus?: 'pending' | 'completed'");
-    expect(sharedApiSource).toContain('paymentRedirectUrl?: string | null');
-    expect(sharedApiSource).toContain('appendBrowserPaymentReturnUrl');
+    expect(paymentsApiSource).toContain("paymentStatus?: 'pending' | 'completed'");
+    expect(paymentsApiSource).toContain('paymentRedirectUrl?: string | null');
+    expect(paymentsApiSource).toContain('appendBrowserPaymentReturnUrl');
   });
 
   it('normalizes event chat read payloads and keeps writes behind the compliance freeze', () => {
