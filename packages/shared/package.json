@@ -22,6 +22,7 @@
     "./atmospherePrediction": "./src/atmospherePrediction.ts",
     "./interests": "./src/interests.ts",
     "./api": "./src/api.ts",
+    "./adminUser": "./src/api/adminUser.ts",
     "./onboarding": "./src/onboarding.ts",
     "./hongKongTime": "./src/hongKongTime.ts",
     "./centerTabRouting": "./src/centerTabRouting.ts",

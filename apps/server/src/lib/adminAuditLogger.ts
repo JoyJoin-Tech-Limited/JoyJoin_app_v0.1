@@ -43,6 +43,7 @@ export const ADMIN_AUDIT_ACTIONS = [
   'USER_BANNED',
   'USER_UNBANNED',
   'USER_DATA_DELETED',
+  'USER_DETAIL_VIEWED',
   // Points / coins
   'ADMIN_POINTS_ADJUSTED',
   // Attendance

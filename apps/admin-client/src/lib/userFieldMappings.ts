@@ -2,7 +2,15 @@
  * User field Chinese mappings for displaying demographic information
  */
 
-import { getIntentLabel, INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION } from "@shared/constants";
+import { type AdminUserDto, getCanonicalDisplayName } from "@joyjoin/shared";
+import {
+  getIntentLabel,
+  INTENT_OPTIONS,
+  INTENT_FLEXIBLE_OPTION,
+  LIFE_STAGE_OPTIONS,
+  getDietaryRestrictionLabel,
+  getLanguagePreferenceLabel,
+} from "@shared/constants";
 
 export const genderMap: Record<string, string> = {
   "Woman": "女",
@@ -21,22 +29,26 @@ export const genderIconMap: Record<string, string> = {
 };
 
 export const educationLevelMap: Record<string, string> = {
-  "High school/below": "高中及以下",
-  "Some college/Associate": "大专",
-  "Bachelor's": "本科",
-  "Master's": "硕士",
-  "Doctorate": "博士",
-  "Trade/Vocational": "职业技术",
-  "Prefer not to say": "不便透露",
+  "高中及以下": "高中及以下",
+  "中专": "中专",
+  "大专": "大专",
+  "本科": "本科",
+  "硕士": "硕士",
+  "博士": "博士",
 };
 
 export const relationshipStatusMap: Record<string, string> = {
-  "Single": "单身",
-  "In a relationship": "恋爱中",
-  "Married/Partnered": "已婚",
-  "It's complicated": "复杂",
-  "Prefer not to say": "不便透露",
+  "单身": "单身",
+  "恋爱中": "恋爱中",
+  "已婚/伴侣": "已婚/伴侣",
+  "离异": "离异",
+  "丧偶": "丧偶",
+  "不透露": "不透露",
 };
+
+export const lifeStageMap: Record<string, string> = Object.fromEntries(
+  LIFE_STAGE_OPTIONS.map((value) => [value, value]),
+);
 
 export const studyLocaleMap: Record<string, string> = {
   "Local": "本地",
@@ -67,6 +79,36 @@ export const intentOptions = [
 ] as const;
 
 /**
+ * CSV column label map for admin user export.
+ * Keys are typed against the shared AdminUserDto so the export header stays in
+ * sync with the server allow-list.
+ */
+export const adminUserCsvLabelMap: Partial<Record<keyof AdminUserDto, string>> = {
+  id: "ID",
+  displayName: "姓名",
+  email: "邮箱",
+  phoneNumber: "手机号",
+  currentCity: "城市",
+  gender: "性别",
+  lifeStage: "人生阶段",
+  relationshipStatus: "感情状态",
+  archetype: "原型",
+  intent: "活动意向",
+  educationLevel: "学历",
+  industryCategoryLabel: "行业",
+  industrySegmentLabel: "行业细分",
+  industryNicheLabel: "行业 niche",
+  industryRawInput: "职业原始输入",
+  bio: "个人签名",
+  wechatContactId: "微信号",
+  preferredLanguages: "语言偏好",
+  dietaryRestrictions: "忌口偏好",
+  profileCompleteness: "资料完整度",
+  createdAt: "注册时间",
+  isBanned: "状态",
+};
+
+/**
  * Format age with Chinese unit
  */
 export function formatAge(age: number | null | undefined): string {
@@ -75,12 +117,12 @@ export function formatAge(age: number | null | undefined): string {
 }
 
 /**
- * Calculate age from birthdate
+ * Calculate age from birthdate (string or Date).
  */
-export function calculateAge(birthdate: string | null | undefined): number {
+export function calculateAge(birthdate: string | Date | null | undefined): number {
   if (!birthdate) return 0;
   const today = new Date();
-  const birth = new Date(birthdate + 'T00:00:00');
+  const birth = typeof birthdate === "string" ? new Date(birthdate + 'T00:00:00') : birthdate;
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
@@ -122,6 +164,45 @@ export function getRelationshipDisplay(relationshipStatus: string | null | undef
 }
 
 /**
+ * Get life stage display text (values are already canonical Chinese, but this
+ * helper provides a stable display interface and legacy-value fallback).
+ */
+export function getLifeStageDisplay(lifeStage: string | null | undefined): string {
+  if (!lifeStage) return "";
+  return lifeStageMap[lifeStage] || lifeStage;
+}
+
+/**
+ * Get dietary restriction display text (supports single string or array).
+ * Normalizes legacy/app-local English machine values to Chinese labels.
+ */
+export function getDietaryRestrictionDisplay(
+  value: string | string[] | null | undefined,
+): string {
+  if (!value) return "";
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "";
+    return value.map((v) => getDietaryRestrictionLabel(v)).join("、");
+  }
+  return getDietaryRestrictionLabel(value);
+}
+
+/**
+ * Get preferred language display text (supports single string or array).
+ * Normalizes simplified variants (e.g. "普通话", "粤语", "English") to canonical labels.
+ */
+export function getLanguagePreferenceDisplay(
+  value: string | string[] | null | undefined,
+): string {
+  if (!value) return "";
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "";
+    return value.map((v) => getLanguagePreferenceLabel(v)).join("、");
+  }
+  return getLanguagePreferenceLabel(value);
+}
+
+/**
  * Get study locale display text
  */
 export function getStudyLocaleDisplay(studyLocale: string | null | undefined): string {
@@ -136,6 +217,8 @@ export function getChildrenDisplay(children: string | null | undefined): string 
   if (!children) return "";
   return childrenMap[children] || children;
 }
+
+export { getCanonicalDisplayName };
 
 /**
  * Get intent display text (supports both single string and array)
@@ -222,8 +305,10 @@ export function getArchetypeNickname(archetype: string | null | undefined): stri
 }
 
 // ============================================
-// 兴趣/话题字段统一访问接口
-// 支持新旧字段的向后兼容
+// 兴趣/话题字段统一访问接口（已废弃）
+// 这些字段（topicAvoidances / topicsHappy / interestsTop）对应已下线的
+// 数据列，仅保留给旧代码做向后兼容；新 admin 代码应使用 interests
+// （user_interests 记录）替代。
 // ============================================
 
 interface UserWithInterests {

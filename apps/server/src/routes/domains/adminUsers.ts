@@ -1,5 +1,6 @@
 import type { Express, Request } from "express";
 import { z } from "zod";
+import { type AdminUserDto, type AdminProfileCompleteness, getCanonicalDisplayName } from "@shared/api/adminUser";
 import { db } from "../../db";
 import { eq, and, or, desc, gt, sql } from "drizzle-orm";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
@@ -10,32 +11,218 @@ import { storage } from "../../storage";
 import { getMatchingMetricsSnapshot } from "../../matchingMetrics";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import { notifyAdminAction } from "../../lib/wecomNotifications";
-import { WORK_MODE_LABELS } from "@shared/constants";
 import { assessmentSessions, eventPoolRegistrations, eventPoolGroups, connections, matchHistory, userInterests, poolMatchingLogs, users, events, payments, subscriptions } from "@shared/schema";
 
-/**
- * Effective life-stage label for admin surfaces.
- * Prefers the canonical users.lifeStage; falls back to the legacy workMode
- * label for one release.
- */
-function getEffectiveLifeStage(user: any): string | null {
-  if (user.lifeStage) return user.lifeStage;
-  if (user.workMode && WORK_MODE_LABELS[user.workMode as keyof typeof WORK_MODE_LABELS]) {
-    return WORK_MODE_LABELS[user.workMode as keyof typeof WORK_MODE_LABELS];
-  }
-  return null;
+type AdminUserInterestSummary = {
+  userId: string;
+  totalSelections: number | null;
+  selections: any[] | null;
+  topPriorities: any[] | null;
+};
+
+function isProfileFieldFilled(value: any, isArray?: boolean): boolean {
+  if (isArray) return Array.isArray(value) && value.length > 0;
+  return value !== null && value !== undefined && value !== "";
 }
 
-function calculateProfileCompletenessSimple(user: any): { score: number; starRating: number; missingFields: string[] } {
-  const fields = [
-    "firstName", "lastName", "displayName", "gender", "birthdate",
-    "currentCity", "profession", "industry", "educationLevel",
-    "profileImageUrl", "aboutMe", "archetype",
+/**
+ * Canonical, deterministic profile-completeness score for admin surfaces.
+ * Uses only fields actively collected in onboarding/profile and the
+ * user_interests join for interest data.
+ */
+export function calculateAdminProfileCompleteness(input: {
+  user: any;
+  interests?: { totalSelections?: number | null; selections?: any[] | null; topPriorities?: any[] | null } | null;
+}): AdminProfileCompleteness {
+  const { user, interests } = input;
+
+  const hasIndustry = !!(
+    user.industryRawInput ||
+    user.industryCategoryLabel ||
+    user.industrySegmentLabel ||
+    user.industryNicheLabel
+  );
+
+  const hasInterests = !!(
+    interests &&
+    ((Array.isArray(interests.selections) && interests.selections.length > 0) ||
+      (typeof interests.totalSelections === "number" && interests.totalSelections > 0))
+  );
+
+  const fields: Array<{
+    key?: string;
+    label: string;
+    weight: number;
+    isArray?: boolean;
+    check?: () => boolean;
+  }> = [
+    { key: "displayName", label: "昵称", weight: 1 },
+    { key: "gender", label: "性别", weight: 1 },
+    { key: "birthdate", label: "生日", weight: 1 },
+    { key: "currentCity", label: "城市", weight: 1 },
+    { key: "intent", label: "活动意向", weight: 1, isArray: true },
+    { label: "社交原型", weight: 1, check: () => !!(user.archetype || user.primaryArchetype) },
+    { key: "relationshipStatus", label: "感情状态", weight: 0.5 },
+    { key: "educationLevel", label: "学历", weight: 0.5 },
+    { key: "lifeStage", label: "人生阶段", weight: 0.5 },
+    { label: "职业", weight: 1, check: () => hasIndustry },
+    { key: "bio", label: "个人签名", weight: 0.5 },
+    { key: "wechatContactId", label: "微信号", weight: 0.5 },
+    { key: "dietaryRestrictions", label: "忌口偏好", weight: 0.5, isArray: true },
+    { key: "preferredLanguages", label: "语言偏好", weight: 0.5, isArray: true },
+    { label: "兴趣", weight: 1, check: () => hasInterests },
   ];
-  const present = fields.filter((f) => user[f] !== null && user[f] !== undefined && user[f] !== "");
-  const score = Math.round((present.length / fields.length) * 100);
-  const starRating = Math.ceil(score / 20);
-  return { score, starRating, missingFields: fields.filter((f) => !present.includes(f)) };
+
+  const totalWeight = fields.reduce((sum, f) => sum + f.weight, 0);
+  let filledWeight = 0;
+  const missingFields: string[] = [];
+
+  for (const field of fields) {
+    const isFilled = field.check
+      ? field.check()
+      : isProfileFieldFilled(user[field.key!], field.isArray);
+    if (isFilled) {
+      filledWeight += field.weight;
+    } else {
+      missingFields.push(field.label);
+    }
+  }
+
+  const score = totalWeight > 0 ? Math.round((filledWeight / totalWeight) * 100) : 0;
+  const starRating =
+    score >= 90 ? 5 : score >= 75 ? 4 : score >= 55 ? 3 : score >= 35 ? 2 : 1;
+
+  return { score, starRating, missingFields };
+}
+
+function deriveInterestsTop(interests: any): string[] | undefined {
+  if (!interests) return undefined;
+  if (Array.isArray(interests.topPriorities) && interests.topPriorities.length > 0) {
+    return interests.topPriorities.map((p: any) => p.label).filter(Boolean);
+  }
+  if (Array.isArray(interests.selections) && interests.selections.length > 0) {
+    return interests.selections.map((s: any) => s.label).filter(Boolean);
+  }
+  return undefined;
+}
+
+/**
+ * Deterministic allow-list DTO for admin user GET endpoints.
+ *
+ * Deny-list of sensitive/internal columns that must never be added:
+ * password, wechatSessionKey, wechatOpenId, wechatId (legacy), dailyTokenUsed,
+ * lastTokenResetDate, aiFrozenUntil, interestsTelemetry, vibeVector,
+ * inferredTraits, inferenceConfidence, conversationMode, primaryLinguisticStyle,
+ * conversationEnergy, negationReliability, insightLedger, personalityTraits,
+ * personalityChallenges, idealMatch, energyLevel, placeOfOrigin, longTermBase.
+ */
+export function toAdminUserDto(
+  user: any,
+  options: {
+    profileCompleteness: AdminProfileCompleteness;
+    interests?: { totalSelections?: number | null; selections?: any[] | null; topPriorities?: any[] | null } | null;
+  },
+): AdminUserDto {
+  const { profileCompleteness, interests } = options;
+  return {
+    id: user.id,
+    email: user.email ?? null,
+    firstName: user.firstName ?? null,
+    lastName: user.lastName ?? null,
+    displayName: user.displayName ?? null,
+    wechatNickname: user.wechatNickname ?? null,
+    phoneNumber: user.phoneNumber ?? null,
+    profileImageUrl: user.profileImageUrl ?? null,
+    birthdate: user.birthdate ?? null,
+    ageVisibility: user.ageVisibility ?? null,
+    gender: user.gender ?? null,
+    pronouns: user.pronouns ?? null,
+    relationshipStatus: user.relationshipStatus ?? null,
+    lifeStage: user.lifeStage ?? null,
+    ageMatchPreference: user.ageMatchPreference ?? null,
+    educationLevel: user.educationLevel ?? null,
+    educationVisibility: user.educationVisibility ?? null,
+    occupationId: user.occupationId ?? null,
+    standardizedOccupationId: user.standardizedOccupationId ?? null,
+    workMode: user.workMode ?? null,
+    workVisibility: user.workVisibility ?? null,
+    hometownRegionCity: user.hometownRegionCity ?? null,
+    hometownAffinityOptin: user.hometownAffinityOptin ?? null,
+    currentCity: user.currentCity ?? null,
+    accessibilityNeeds: user.accessibilityNeeds ?? null,
+    safetyNoteHost: user.safetyNoteHost ?? null,
+    intent: user.intent ?? null,
+    hasCompletedRegistration: user.hasCompletedRegistration ?? null,
+    hasCompletedInterestsTopics: user.hasCompletedInterestsTopics ?? null,
+    hasCompletedPersonalityTest: user.hasCompletedPersonalityTest ?? null,
+    hasSeenProfileReview: user.hasSeenProfileReview ?? null,
+    hasCompletedInterestsCarousel: user.hasCompletedInterestsCarousel ?? null,
+    onboardingCheckpoint: user.onboardingCheckpoint ?? null,
+    onboardingCheckpointTimestamp: user.onboardingCheckpointTimestamp ?? null,
+    interestsDeep: user.interestsDeep ?? null,
+    interestsRankedTop3: user.interestsRankedTop3 ?? null,
+    interestFavorite: user.interestFavorite ?? null,
+    bio: user.bio ?? null,
+    preferredLanguages: user.preferredLanguages ?? null,
+    dietaryRestrictions: user.dietaryRestrictions ?? null,
+    tableVibePreference: user.tableVibePreference ?? null,
+    defaultPreferenceStrictness: user.defaultPreferenceStrictness ?? null,
+    defaultPreferredDistricts: user.defaultPreferredDistricts ?? null,
+    defaultGenderComposition: user.defaultGenderComposition ?? null,
+    defaultAcceptPairs: user.defaultAcceptPairs ?? null,
+    defaultKolComfort: user.defaultKolComfort ?? null,
+    socialStyle: user.socialStyle ?? null,
+    icebreakerRole: user.icebreakerRole ?? null,
+    venueStylePreference: user.venueStylePreference ?? null,
+    cuisinePreference: user.cuisinePreference ?? null,
+    favoriteRestaurant: user.favoriteRestaurant ?? null,
+    favoriteRestaurantReason: user.favoriteRestaurantReason ?? null,
+    archetype: user.archetype ?? null,
+    primaryArchetype: user.primaryArchetype ?? null,
+    secondaryArchetype: user.secondaryArchetype ?? null,
+    roleSubtype: user.roleSubtype ?? null,
+    debateComfort: user.debateComfort ?? null,
+    needsPersonalityRetake: user.needsPersonalityRetake ?? null,
+    eventsAttended: user.eventsAttended ?? null,
+    matchesMade: user.matchesMade ?? null,
+    experiencePoints: user.experiencePoints ?? null,
+    joyCoins: user.joyCoins ?? null,
+    currentLevel: user.currentLevel ?? null,
+    activityStreak: user.activityStreak ?? null,
+    lastActivityDate: user.lastActivityDate ?? null,
+    streakFreezeAvailable: user.streakFreezeAvailable ?? null,
+    eventCredits: user.eventCredits ?? null,
+    eventCreditsExpiry: user.eventCreditsExpiry ?? null,
+    isAdmin: user.isAdmin ?? null,
+    isBanned: user.isBanned ?? null,
+    isTestBot: user.isTestBot ?? null,
+    violationCount: user.violationCount ?? null,
+    lastViolationReason: user.lastViolationReason ?? null,
+    viewedEventAnimations: user.viewedEventAnimations ?? null,
+    registrationMethod: user.registrationMethod ?? null,
+    registrationCompletedAt: user.registrationCompletedAt ?? null,
+    onboardingRestartCount: user.onboardingRestartCount ?? null,
+    industryCategory: user.industryCategory ?? null,
+    industryCategoryLabel: user.industryCategoryLabel ?? null,
+    industrySegmentNew: user.industrySegmentNew ?? null,
+    industrySegmentLabel: user.industrySegmentLabel ?? null,
+    industryNiche: user.industryNiche ?? null,
+    industryNicheLabel: user.industryNicheLabel ?? null,
+    industryRawInput: user.industryRawInput ?? null,
+    industryNormalized: user.industryNormalized ?? null,
+    industrySource: user.industrySource ?? null,
+    industryConfidence: user.industryConfidence ?? null,
+    industryClassifiedAt: user.industryClassifiedAt ?? null,
+    industryLastVerifiedAt: user.industryLastVerifiedAt ?? null,
+    socialTag: user.socialTag ?? null,
+    socialTagSelectedAt: user.socialTagSelectedAt ?? null,
+    wechatContactId: user.wechatContactId ?? null,
+    wechatContactIdSetAt: user.wechatContactIdSetAt ?? null,
+    createdAt: user.createdAt ?? null,
+    updatedAt: user.updatedAt ?? null,
+    interestsTop: deriveInterestsTop(interests),
+    profileCompleteness,
+  };
 }
 
 export function registerAdminUserRoutes(app: Express): void {
@@ -49,49 +236,20 @@ export function registerAdminUserRoutes(app: Express): void {
     next();
   }
 
-  // Simple profile completeness calculator for stats (used before main function is defined)
-  function calculateProfileCompletenessSimple(user: any): { score: number; starRating: number; missingFields: string[] } {
-    const fields = [
-      { key: 'displayName', label: '昵称', weight: 1 },
-      { key: 'gender', label: '性别', weight: 1 },
-      { key: 'birthdate', label: '生日', weight: 1 },
-      { key: 'currentCity', label: '城市', weight: 1 },
-      { key: 'interestsTop', label: '兴趣', weight: 1, isArray: true },
-      { key: 'intent', label: '活动意向', weight: 1, isArray: true },
-      { key: 'archetype', label: '社交原型', weight: 1 },
-      { key: 'relationshipStatus', label: '感情状态', weight: 0.5 },
-      { key: 'educationLevel', label: '学历', weight: 0.5 },
-      { key: 'lifeStage', label: '人生阶段', weight: 0.5 },
-      { key: 'socialStyle', label: '社交风格', weight: 0.5 },
-      { key: 'venueStylePreference', label: '场地偏好', weight: 0.5 },
-      { key: 'cuisinePreference', label: '菜系偏好', weight: 0.5, isArray: true },
-    ];
-    
-    const totalWeight = fields.reduce((sum, f) => sum + f.weight, 0);
-    const missingFields: string[] = [];
-    let filledWeight = 0;
-    
-    for (const field of fields) {
-      const value = user[field.key];
-      const isFilled = (field as any).isArray 
-        ? Array.isArray(value) && value.length > 0
-        : value !== null && value !== undefined && value !== '';
-      
-      if (isFilled) filledWeight += field.weight;
-      else missingFields.push(field.label);
-    }
-    
-    const score = Math.round((filledWeight / totalWeight) * 100);
-    const starRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 55 ? 3 : score >= 35 ? 2 : 1;
-    
-    return { score, starRating, missingFields };
-  }
-
   // Dashboard Statistics
   app.get("/api/admin/stats", requireAdmin, async (req, res) => {
     try {
       const allUsers = await storage.getAllUsers();
-      
+      const allUserInterests = await db
+        .select({
+          userId: userInterests.userId,
+          totalSelections: userInterests.totalSelections,
+          selections: userInterests.selections,
+          topPriorities: userInterests.topPriorities,
+        })
+        .from(userInterests) as Array<AdminUserInterestSummary>;
+      const interestsByUser = new Map(allUserInterests.map((row) => [row.userId, row]));
+
       const totalUsers = allUsers.length;
       const [subscribedUsersResult, newUsersThisWeekResult, monthlyRevenueResult] = await Promise.all([
         db.execute(sql`SELECT COUNT(*)::int as count FROM ${subscriptions} WHERE status = 'active'`),
@@ -131,18 +289,21 @@ export function registerAdminUserRoutes(app: Express): void {
       // Profile completeness distribution
       const completenessStats = { star1: 0, star2: 0, star3: 0, star4: 0, star5: 0, weakUsers: [] as any[] };
       for (const user of allUsers) {
-        const completeness = calculateProfileCompletenessSimple(user);
+        const completeness = calculateAdminProfileCompleteness({
+          user,
+          interests: interestsByUser.get(user.id),
+        });
         if (completeness.starRating === 1) completenessStats.star1++;
         else if (completeness.starRating === 2) completenessStats.star2++;
         else if (completeness.starRating === 3) completenessStats.star3++;
         else if (completeness.starRating === 4) completenessStats.star4++;
         else if (completeness.starRating === 5) completenessStats.star5++;
-        
+
         // Track weak users (< 50% completeness)
         if (completeness.score < 50 && completenessStats.weakUsers.length < 10) {
           completenessStats.weakUsers.push({
             id: user.id,
-            displayName: user.displayName || user.wechatNickname || user.firstName || '未命名',
+            displayName: getCanonicalDisplayName(user),
             score: completeness.score,
             starRating: completeness.starRating,
             missingFields: completeness.missingFields.slice(0, 5),
@@ -319,55 +480,6 @@ export function registerAdminUserRoutes(app: Express): void {
     }
   });
 
-  // Helper function to calculate profile completeness
-  function calculateProfileCompleteness(user: any): { score: number; starRating: number; missingFields: string[] } {
-    const essentialFields = [
-      { key: 'displayName', label: '昵称', weight: 1 },
-      { key: 'gender', label: '性别', weight: 1 },
-      { key: 'birthdate', label: '生日', weight: 1 },
-      { key: 'currentCity', label: '城市', weight: 1 },
-    ];
-    const coreFields = [
-      { key: 'interestsTop', label: '兴趣', weight: 1, isArray: true },
-      { key: 'intent', label: '活动意向', weight: 1, isArray: true },
-      { key: 'archetype', label: '社交原型', weight: 1 },
-    ];
-    const enrichmentFields = [
-      { key: 'relationshipStatus', label: '感情状态', weight: 0.5 },
-      { key: 'educationLevel', label: '学历', weight: 0.5 },
-      { key: 'lifeStage', label: '人生阶段', weight: 0.5 },
-      { key: 'socialStyle', label: '社交风格', weight: 0.5 },
-      { key: 'venueStylePreference', label: '场地偏好', weight: 0.5 },
-      { key: 'cuisinePreference', label: '菜系偏好', weight: 0.5, isArray: true },
-      { key: 'topicAvoidances', label: '避免话题', weight: 0.3, isArray: true },
-      { key: 'hasPets', label: '养宠物', weight: 0.3 },
-      { key: 'hometown', label: '家乡', weight: 0.3 },
-    ];
-    
-    const allFields = [...essentialFields, ...coreFields, ...enrichmentFields];
-    const totalWeight = allFields.reduce((sum, f) => sum + f.weight, 0);
-    const missingFields: string[] = [];
-    
-    let filledWeight = 0;
-    for (const field of allFields) {
-      const value = user[field.key];
-      const isFilled = (field as any).isArray 
-        ? Array.isArray(value) && value.length > 0
-        : value !== null && value !== undefined && value !== '';
-      
-      if (isFilled) {
-        filledWeight += field.weight;
-      } else {
-        missingFields.push(field.label);
-      }
-    }
-    
-    const score = Math.round((filledWeight / totalWeight) * 100);
-    const starRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 55 ? 3 : score >= 35 ? 2 : 1;
-    
-    return { score, starRating, missingFields };
-  }
-
   // User Management - Get all users with filters and pagination
   app.get("/api/admin/users", requireAdmin, async (req, res) => {
     try {
@@ -376,12 +488,23 @@ export function registerAdminUserRoutes(app: Express): void {
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = (page - 1) * limit;
       
-      let users = await storage.getAllUsers();
+      const rawUsers = await storage.getAllUsers();
+      const allUserInterests = await db
+        .select({
+          userId: userInterests.userId,
+          totalSelections: userInterests.totalSelections,
+          selections: userInterests.selections,
+          topPriorities: userInterests.topPriorities,
+        })
+        .from(userInterests) as Array<AdminUserInterestSummary>;
+      const interestsByUser = new Map(allUserInterests.map((row) => [row.userId, row]));
+
+      let users = rawUsers;
 
       // Apply search filter
       if (search && typeof search === "string") {
         const searchLower = search.toLowerCase();
-        users = users.filter((user: any) => 
+        users = users.filter((user: any) =>
           user.firstName?.toLowerCase().includes(searchLower) ||
           user.lastName?.toLowerCase().includes(searchLower) ||
           user.displayName?.toLowerCase().includes(searchLower) ||
@@ -411,55 +534,53 @@ export function registerAdminUserRoutes(app: Express): void {
           return isStale;
         });
       }
-      
+
       // Apply city filter
       if (city && typeof city === "string") {
         users = users.filter((user: any) => user.currentCity === city);
       }
-      
+
       // Apply archetype filter
       if (archetype && typeof archetype === "string") {
         users = users.filter((user: any) => user.archetype === archetype);
       }
-      
+
       // Apply intent filter
       if (intent && typeof intent === "string") {
-        users = users.filter((user: any) => 
+        users = users.filter((user: any) =>
           Array.isArray(user.intent) && user.intent.includes(intent)
         );
       }
-      
-      // Apply interest filter
+
+      // Build deterministic admin DTOs with canonical completeness
+      let userDtos = users.map((user: any) => {
+        const interests = interestsByUser.get(user.id);
+        const profileCompleteness = calculateAdminProfileCompleteness({ user, interests });
+        return toAdminUserDto(user, { profileCompleteness, interests });
+      });
+
+      // Apply interest filter (deprecated interestsTop is derived from user_interests)
       if (interest && typeof interest === "string") {
-        users = users.filter((user: any) => 
-          Array.isArray(user.interestsTop) && user.interestsTop.some((i: string) => 
-            i.toLowerCase().includes(interest.toLowerCase())
+        const interestLower = interest.toLowerCase();
+        userDtos = userDtos.filter((user) =>
+          Array.isArray(user.interestsTop) && user.interestsTop.some((i: string) =>
+            i.toLowerCase().includes(interestLower)
           )
         );
       }
-      
-      // Calculate completeness for each user and apply completeness filter
-      const usersWithCompleteness = users.map((user: any) => {
-        const completeness = calculateProfileCompleteness(user);
-        return { ...user, profileCompleteness: completeness };
-      });
-      
+
       // Apply completeness filters
-      let filteredUsers = usersWithCompleteness;
       if (minCompleteness) {
         const minVal = parseInt(minCompleteness as string);
-        filteredUsers = filteredUsers.filter(u => u.profileCompleteness.score >= minVal);
+        userDtos = userDtos.filter((u) => u.profileCompleteness.score >= minVal);
       }
       if (maxCompleteness) {
         const maxVal = parseInt(maxCompleteness as string);
-        filteredUsers = filteredUsers.filter(u => u.profileCompleteness.score <= maxVal);
+        userDtos = userDtos.filter((u) => u.profileCompleteness.score <= maxVal);
       }
 
-      const totalUsers = filteredUsers.length;
-      const paginatedUsers = filteredUsers.slice(offset, offset + limit).map((user: any) => ({
-        ...user,
-        lifeStageDisplay: getEffectiveLifeStage(user),
-      }));
+      const totalUsers = userDtos.length;
+      const paginatedUsers = userDtos.slice(offset, offset + limit);
 
       res.json({
         users: paginatedUsers,
@@ -486,18 +607,24 @@ export function registerAdminUserRoutes(app: Express): void {
 
       // Get user's events
       const events = await storage.getUserBlindBoxEvents(req.params.id);
-      
-      // Calculate profile completeness
-      const profileCompleteness = calculateProfileCompleteness(user);
-      const lifeStageDisplay = getEffectiveLifeStage(user);
-      
+
+      // Fetch interests and build deterministic DTO
+      const [interests] = await db
+        .select({
+          totalSelections: userInterests.totalSelections,
+          selections: userInterests.selections,
+          topPriorities: userInterests.topPriorities,
+        })
+        .from(userInterests)
+        .where(eq(userInterests.userId, req.params.id))
+        .limit(1) as AdminUserInterestSummary[];
+
+      const profileCompleteness = calculateAdminProfileCompleteness({ user, interests });
+      const userDto = toAdminUserDto(user, { profileCompleteness, interests });
+
       res.json({
-        ...user,
-        lifeStageDisplay,
-        profileCompleteness,
+        ...userDto,
         events,
-        subscriptions: [],
-        payments: [],
       });
     } catch (error) {
       logger.error("Error fetching user details", { error: String(error) });
@@ -513,8 +640,6 @@ export function registerAdminUserRoutes(app: Express): void {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-
-      const profileCompleteness = calculateProfileCompleteness(user);
 
       // Onboarding lifecycle — mirrors /api/auth/user logic including onboardingCheckpoint override
       type OnboardingStep = 'onboarding' | 'personality-test' | 'essential-data' | 'extended-data' | 'profile-review' | 'discover';
@@ -596,25 +721,40 @@ export function registerAdminUserRoutes(app: Express): void {
           .select()
           .from(userInterests)
           .where(eq(userInterests.userId, userId))
-          .limit(1),
+          .limit(1) as AdminUserInterestSummary[],
       ]);
 
       const assessmentSession = assessmentSessionResult[0] || null;
       const interests = interestsResult[0] || null;
 
+      const profileCompleteness = calculateAdminProfileCompleteness({ user, interests });
+
+      // Deterministic allow-list DTO; sensitive columns are stripped by the mapper
+      const userDto = toAdminUserDto(user, { profileCompleteness, interests });
+
+      logAdminAudit({
+        action: 'USER_DETAIL_VIEWED',
+        adminId: getActingAdminId(req),
+        adminRole: (req as any).adminRole,
+        targetEntityType: 'user',
+        targetEntityId: userId,
+        context: {
+          viewedFields: ['fullProfile', 'contact'],
+          profileCompletenessScore: profileCompleteness.score,
+        },
+      });
+
       // Matching readiness
       const blockers: string[] = [];
       if (!user.hasCompletedPersonalityTest) blockers.push('人格测试未完成');
-      if (!user.archetype) blockers.push('原型未确定');
+      if (!(user.archetype || user.primaryArchetype)) blockers.push('原型未确定');
       if (!profileEssentialComplete) blockers.push('基本资料不完整');
       if (!user.hasCompletedInterestsCarousel) blockers.push('兴趣数据未完成');
       if (user.isBanned) blockers.push('用户已被封禁');
       const matchingReadiness = { isReady: blockers.length === 0, blockers };
 
-      // Strip sensitive credential fields before sending to browser
-      const { password, wechatSessionKey, wechatOpenId, ...safeUser } = user as any;
       res.json({
-        user: { ...safeUser, profileCompleteness },
+        user: userDto,
         onboarding: {
           nextStep,
           profileEssentialComplete,

@@ -12,6 +12,7 @@
  */
 
 import type { BadgeProps } from "@/components/ui/badge";
+import type { AdminUserDto, AdminProfileCompleteness } from "@joyjoin/shared";
 
 // ═══════════════════════════════════════════════════════════
 //  Re-export venue types (canonical source is venueConstants.ts)
@@ -30,38 +31,8 @@ export type {
 //  Core entity view models
 // ═══════════════════════════════════════════════════════════
 
-/** User as returned by admin APIs (with flattened/computed fields) */
-export interface AdminUser {
-  id: string;
-  firstName: string;
-  lastName: string;
-  displayName?: string;
-  wechatNickname?: string;
-  email: string;
-  phoneNumber: string;
-  gender?: string;
-  birthdate?: string;
-  primaryArchetype?: string;
-  archetype?: string;
-  currentCity?: string;
-  educationLevel?: string;
-  industryCategory?: string;
-  industryCategoryLabel?: string;
-  industryNicheLabel?: string;
-  hometownRegionCity?: string;
-  interestsTop?: string[];
-  intent?: string[];
-  isAdmin: boolean;
-  isBanned: boolean;
-  hasCompletedRegistration: boolean;
-  hasCompletedPersonalityTest?: boolean;
-  hasCompletedInterestsCarousel?: boolean;
-  hasSeenProfileReview?: boolean;
-  onboardingCheckpoint?: string | null;
-  onboardingCheckpointTimestamp?: string | null;
-  createdAt: string;
-  profileCompleteness?: ProfileCompleteness;
-}
+/** User as returned by admin APIs — derived from the shared allow-list DTO. */
+export type AdminUser = AdminUserDto;
 
 /** Lightweight user reference (for dropdowns / selections) */
 export interface AdminUserRef {
@@ -197,11 +168,8 @@ export interface MatchHistoryEntry {
 //  User detail / onboarding sub-types
 // ═══════════════════════════════════════════════════════════
 
-export interface ProfileCompleteness {
-  score: number;
-  starRating: number;
-  missingFields: string[];
-}
+/** Alias for the shared profile-completeness shape. */
+export type ProfileCompleteness = AdminProfileCompleteness;
 
 export interface OnboardingState {
   nextStep: string;
@@ -263,7 +231,7 @@ export interface Connection {
 
 /** Full user detail payload returned by /api/admin/users/:id */
 export interface UserDetail {
-  user: AdminUser & { profileCompleteness: ProfileCompleteness };
+  user: AdminUser;
   onboarding: OnboardingState;
   assessmentSession: AssessmentSession | null;
   joinedEvents: JoinedEvent[];

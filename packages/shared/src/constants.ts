@@ -143,6 +143,66 @@ export const LANGUAGES_COMFORT_OPTIONS = [
 ] as const;
 export type LanguagesComfort = typeof LANGUAGES_COMFORT_OPTIONS[number];
 
+// Dietary restriction canonical options (DB-stored values)
+// NOTE: Some legacy/app-local surfaces store English machine values (e.g. "vegetarian",
+// "halal", "seafood_allergy", "none"). Use normalizeDietaryRestrictionValue() to coerce.
+export const DIETARY_RESTRICTION_OPTIONS = [
+  { value: "素食", label: "素食", aliases: ["vegetarian", "vegan"] },
+  { value: "不吃辣", label: "不吃辣", aliases: ["no_spicy", "no spicy"] },
+  { value: "清真", label: "清真", aliases: ["halal"] },
+  { value: "海鲜过敏", label: "海鲜过敏", aliases: ["seafood_allergy", "seafood allergy"] },
+  { value: "无限制", label: "无限制", aliases: ["none", "no_restriction", "no restriction"] },
+] as const;
+export type DietaryRestriction = typeof DIETARY_RESTRICTION_OPTIONS[number]["value"];
+
+// Preferred language canonical options (DB-stored values)
+// NOTE: Some surfaces store simplified values like "普通话"/"粤语"/"英语" or locale
+// codes. Use normalizeLanguagePreferenceValue() to coerce to the canonical form.
+export const PREFERRED_LANGUAGE_OPTIONS = [
+  { value: "中文（国语）", label: "中文（国语）", aliases: ["普通话", "国语", "中文", "zh-CN", "Mandarin", " Mandarin"] },
+  { value: "中文（粤语）", label: "中文（粤语）", aliases: ["粤语", "zh-HK", "Cantonese"] },
+  { value: "英语", label: "英语", aliases: ["English", "en", "en-US", "en-GB"] },
+] as const;
+export type PreferredLanguage = typeof PREFERRED_LANGUAGE_OPTIONS[number]["value"];
+
+/** Normalize a dietary restriction value to the canonical DB-stored Chinese value. */
+export function normalizeDietaryRestrictionValue(raw: string): string {
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
+  if (!trimmed) return "";
+  for (const option of DIETARY_RESTRICTION_OPTIONS) {
+    if (option.value === trimmed) return option.value;
+    const normalizedAliases = option.aliases.map((a) => a.toLowerCase().replace(/\s+/g, "_"));
+    const normalizedRaw = trimmed.toLowerCase().replace(/\s+/g, "_");
+    if (normalizedAliases.includes(normalizedRaw)) return option.value;
+  }
+  return trimmed;
+}
+
+/** Normalize a language preference value to the canonical DB-stored Chinese value. */
+export function normalizeLanguagePreferenceValue(raw: string): string {
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
+  if (!trimmed) return "";
+  for (const option of PREFERRED_LANGUAGE_OPTIONS) {
+    if (option.value === trimmed) return option.value;
+    const normalizedAliases = option.aliases.map((a) => a.toLowerCase().replace(/\s+/g, "_"));
+    const normalizedRaw = trimmed.toLowerCase().replace(/\s+/g, "_");
+    if (normalizedAliases.includes(normalizedRaw)) return option.value;
+  }
+  return trimmed;
+}
+
+/** Get the Chinese display label for a canonical dietary restriction value. */
+export function getDietaryRestrictionLabel(value: string): string {
+  const canonical = normalizeDietaryRestrictionValue(value);
+  return DIETARY_RESTRICTION_OPTIONS.find((o) => o.value === canonical)?.label ?? value;
+}
+
+/** Get the Chinese display label for a canonical language preference value. */
+export function getLanguagePreferenceLabel(value: string): string {
+  const canonical = normalizeLanguagePreferenceValue(value);
+  return PREFERRED_LANGUAGE_OPTIONS.find((o) => o.value === canonical)?.label ?? value;
+}
+
 
 // Industry options (shared for onboarding)
 export const INDUSTRY_OPTIONS = [

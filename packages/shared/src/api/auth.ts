@@ -1,0 +1,97 @@
+import type { ApiTransport } from './core.js'
+import type { User } from '../schema.js'
+import type { OnboardingNextStep } from '../onboarding.js'
+import type { MascotBackstory } from '../mascotConfig.js'
+import type { TierDisplayFlags } from '../socialIcebreakerTierManifest.js'
+import type { XiaoyueAnalysisPublicResult } from '../personality/discovery.js'
+
+export const SENSITIVE_AUTH_USER_FIELD_NAMES = [
+  'password',
+  'passwordHash',
+  'wechatOpenId',
+  'wechatSessionKey',
+  'sessionKey',
+  'session_key',
+  'accessToken',
+  'access_token',
+  'refreshToken',
+  'refresh_token',
+  'secretKey',
+  'secret_key',
+  'credential',
+  'credentials',
+] as const
+
+export type SensitiveAuthUserField = (typeof SENSITIVE_AUTH_USER_FIELD_NAMES)[number]
+
+export type SanitizedAuthUser = Omit<User, SensitiveAuthUserField>
+
+export interface AuthUserResponse extends SanitizedAuthUser {
+  /** APP_MODE — 'production' (WeChat OAuth) or 'test' (local phone login). */
+  appMode?: 'production' | 'test'
+  nextStep: OnboardingNextStep
+  profileEssentialComplete: boolean
+  profileExtendedComplete: boolean
+  activeAssessmentSessionId: string | null
+  paymentsEnabled: boolean
+  birthYear?: number | string | null
+  age?: number | string | null
+  nickname?: string | null
+  topInterests?: string[] | null
+  primaryInterests?: string[] | null
+  interests?: unknown[] | null
+  /** Server-resolved mascot display name (China market). */
+  mascotDisplayName?: string
+  /** Server-resolved mascot backstory / lore. */
+  mascotBackstory?: MascotBackstory
+  /** Server-resolved tier display flags. */
+  tierDisplayFlags?: TierDisplayFlags
+  /** Cached Xiaoyue AI analysis (null when not yet computed). */
+  xiaoyueAnalysis?: XiaoyueAnalysisPublicResult | null
+  /** Match Compass v1 kill-switch — false hides the dashboard entirely. */
+  matchCompassEnabled?: boolean
+  /** Number of onboarding restarts remaining (capped at 5). */
+  restartsRemaining?: number
+  /** Referral code stored in session during login; used to pre-fill pool registration. */
+  pendingReferralCode?: string
+  /** Feature flags exposed to the client. */
+  features?: {
+    restartOnboarding?: boolean
+    smartProfession?: boolean
+    onboardingForceSkip?: boolean
+    matchingLiveReveal?: boolean
+    socialIcebreakerClientForceEnd?: boolean
+    personalityDiceChooseMode?: boolean
+    /** When true, the server uses template-driven run plan compilation (3×3 vibe×tier grid +
+     *  deep_chat/play_fun/balanced vibes). When false, legacy compileAgentRunPlan() runs unchanged. */
+    runPlanTemplatesEnabled?: boolean
+    /** When false, disables the personality test share poster generation. */
+    personalityShareEnabled?: boolean
+    /** When false, skips the slot machine reveal animation and shows static result. */
+    personalitySlotAnimationEnabled?: boolean
+    /** When false, hides the Hero Promo Banner entirely. Kill switch for the
+     *  discover hero. Default: true. */
+    promoBannerEnabled?: boolean
+    /** When false, falls back to a simple spinner instead of the answer-echo
+     *  loading state in the personality test. Default: true. */
+    personalityTestEchoEnabled?: boolean
+    /** Master kill-switch for the payment system. When false, payment endpoints return 503.
+     *  Also surfaced as top-level paymentsEnabled on auth response. */
+    paymentsEnabled?: boolean
+    /** When false, falls back to the legacy tap button on squad-unboxing.
+     *  Kill switch for the drag-to-reveal ribbon. Default: true. */
+    squadUnboxingDragRevealEnabled?: boolean
+    /** When false, creation of and tier changes to the custom Social Icebreaker
+     *  mode are rejected. Existing preset-tier sessions are unaffected.
+     *  Default: true. */
+    socialIcebreakerCustomModeEnabled?: boolean
+    /** When true, enables the redesigned profile page UI. Default: true. */
+    profileRedesignEnabled?: boolean
+  }
+}
+
+export type AuthUserSummary = AuthUserResponse
+
+export function getCurrentUser(api: ApiTransport): Promise<AuthUserResponse> {
+  return api<AuthUserResponse>({ path: '/api/auth/user' })
+}

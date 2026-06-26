@@ -21,6 +21,9 @@ const bannedLegacyIdentifiers = [
   'needsRegistration',
   'registration_sessions',
   'interestsTop',
+  'topicAvoidances',
+  'hasPets',
+  'hometown',
 ];
 
 const activeLegacyGuardFiles = [
@@ -81,6 +84,22 @@ for (const file of activeLegacyGuardFiles) {
     const re = new RegExp(`\\b${escaped}\\b`);
     if (re.test(content)) {
       violations.push(`Legacy identifier "${identifier}" is banned in active code: ${file}`);
+    }
+  }
+}
+
+// 2b. Dead admin user column guard: removed columns must not reappear in the
+// canonical adminUsers source. interestsTop is allowed only inside the deprecated
+// DTO property that supports the existing list-page interest filter.
+const deadColumnIdentifiers = ['topicAvoidances', 'hasPets', 'hometown'];
+const adminUsersFile = 'apps/server/src/routes/domains/adminUsers.ts';
+if (fs.existsSync(adminUsersFile)) {
+  const adminUsersContent = fs.readFileSync(adminUsersFile, 'utf8');
+  for (const identifier of deadColumnIdentifiers) {
+    const escaped = identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`\\b${escaped}\\b`);
+    if (re.test(adminUsersContent)) {
+      violations.push(`Dead column identifier "${identifier}" must not appear in ${adminUsersFile}`);
     }
   }
 }
