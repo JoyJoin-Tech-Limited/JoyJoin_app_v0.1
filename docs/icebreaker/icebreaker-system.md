@@ -347,7 +347,7 @@ Sessions expire after 6 hours and expired rows are swept periodically. Missing v
 **Files (mini-program first):**
 - `apps/mini-program/src/pages/icebreaker-session/index.tsx` — Taro session page (primary in-field client)
 - `apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx` — phase UI modules for mini-program
-- `apps/mini-program/src/pages/icebreaker-session/tier-selector/index.tsx` — 3×3 tier+vibe selector grid (`深聊`/`均衡`/`暢玩` × `破冰局`/`畅聊局`/`狂欢局`); feature-flagged via `features.runPlanTemplatesEnabled`
+- `apps/mini-program/src/pages/icebreaker-session/tier-selector/index.tsx` — host-facing tier+vibe selector: 3 opinionated presets (`轻松破冰`, `深度畅聊`, `游戏狂欢`) plus an advanced 3×3 grid and a `自由局` custom mode card; feature-flagged via `features.runPlanTemplatesEnabled` and `features.socialIcebreakerCustomModeEnabled`
 - `apps/mini-program/src/pages/icebreaker-session/phases/WarmupPhaseView.tsx` — Warmup phase with vibe-aware depth badges (golden "深度话题" for 深聊, green "快速暖场" for 暢玩) and 3-tier `TierPromptReveal` for 深聊
 - `apps/mini-program/src/hooks/useTierReveal.ts` — Staggered tier-prompt reveal hook with punctuation-aware delays
 - `apps/user-client/src/pages/IcebreakerSessionPage.tsx` — web session page (parity)

@@ -28,6 +28,7 @@ Primary files:
 Key rule:
 - `/api/auth/user` is the authority for `nextStep`, `profileEssentialComplete`, and `profileExtendedComplete`.
 - Do not move onboarding state calculation into the client.
+- Location snapshots are captured on login (`captureLocationSnapshot(req, "login", userId)`), onboarding completion (`captureLocationSnapshot(req, "onboarding_complete", userId)`), and pool registration (`captureLocationSnapshot(req, "pool_registration", userId)`).
 
 ### Matching and pool formation
 
@@ -129,10 +130,14 @@ Primary files:
 - `apps/server/src/routes/domains/venues.ts` — venue CRUD, onboarding lifecycle, deals, time slots, data quality
 - `apps/server/src/repositories/venuesRepo.ts` — canonical venue data access; maps raw PostgreSQL `snake_case` rows to camelCase API contract
 - `apps/server/src/routes/domains/adminOperations.ts` — content filter log admin endpoint (`GET /api/admin/content-filter/logs`), admin notification broadcast/send with content safety gating
+- `apps/server/src/routes/domains/adminGeolocation.ts` — `GET /api/admin/geolocation/heatmap`, `POST /api/admin/geolocation/rollup` — location snapshot analytics, gated by `requireSuperAdmin`
 - `apps/server/src/adminAuth.ts`
 - `apps/server/src/lib/adminAuditLogger.ts`
 - `apps/server/src/lib/featureFlags.ts` — DB-backed feature flag resolver with env fallback and short-lived cache
 - `apps/server/src/lib/contentSafety.ts` — shared validation helper `validateContentSafe()` for field-level content filtering
+- `apps/server/src/lib/captureLocationSnapshot.ts` — captures IP-based location snapshots on login, onboarding completion, and pool registration
+- `apps/server/src/services/ipGeolocationService.ts` — IP geolocation resolution and admin heatmap rollups
+- `apps/server/src/repositories/userLocationRepo.ts` — domain data access for user location snapshots and aggregation queries
 
 Boundary:
 - All `/api/admin/*` routes must enforce admin middleware.

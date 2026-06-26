@@ -10,8 +10,8 @@ In production, missing required config causes `process.exit(1)`; in non-producti
 Feature flags are server-side truth. The client never invents its own flag state. If the client needs to know a flag, the server exposes it (e.g., `paymentsEnabled` in `/api/auth/user`).
 
 To expose a flag to the client:
-1. Add the boolean to the `AuthUserResponse` in `apps/server/src/routes/domains/auth.ts`
-2. Add it to `packages/shared/src/api.ts`
+1. Add the boolean to the `AuthUserResponse` type in `packages/shared/src/api.ts`
+2. Resolve it in `apps/server/src/lib/buildAuthUserResponse.ts` (the shared auth-user response builder used by `GET /api/auth/user` and all composite shells)
 3. Client hooks (`useAuth.ts`) should read from the server response, never from a local env var
 
 ## Rollout/rollback patterns

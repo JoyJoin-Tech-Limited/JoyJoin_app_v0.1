@@ -6,15 +6,18 @@ import { resolveTierDisplay, type TierMachineId } from '@shared/socialIcebreaker
 import { useAuth } from '../../../hooks/useAuth'
 import { apiRequest } from '../../../lib/api/api'
 import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
-import { localAsset } from '../../../lib/utils/cdnAssets'
+import { logError } from '../../../lib/utils/logger'
 import { TOAST_MEDIUM_MS } from '../../../lib/utils/uiConstants'
+import { haptics } from '../../../lib/utils/haptics'
 import { getUserDisplayName } from '../icebreakerSessionModel'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
-import { TIER_VIBE_BACKDROPS } from '../../../lib/ceremonyHeroes'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import { VibeId, VIBE_TO_API } from '../../../lib/vibeMapping'
 import Button from '../../../components/ui/Button'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
+import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import type { SocialStartResponse } from '../icebreakerSessionModel'
 import './index.scss'
 
@@ -34,19 +37,19 @@ export const TIER_OPTIONS: Array<{
     id: 'breeze',
     duration: '40min',
     gameCount: '2 个游戏',
-    description: '轻松破冰，适合初次见面',
+    description: '轻松开场，让大家慢慢熟络',
   },
   {
     id: 'glow',
     duration: '60min',
     gameCount: '3 个游戏',
-    description: '深度交流，默认推荐',
+    description: '深度交流，适合想要走心的晚上',
   },
   {
     id: 'blaze',
     duration: '90min',
     gameCount: '5-6 个游戏',
-    description: '全量体验，适合熟人群体',
+    description: '全量体验，适合熟到能互损的朋友',
   },
 ]
 
@@ -73,10 +76,7 @@ export interface TierPreset {
   gameCount: string
   description: string
   recommended?: boolean
-  /** Visual token for future Lovart icon asset.
-   *  Replace the placeholder circle with `<Image src={localAsset(`/assets/icons/tier-preset-${iconToken}.webp`)} />`
-   *  once the Lovart icons are commissioned.
-   */
+  /** Visual token retained for analytics/reference. Maps to the full-card background art. */
   iconToken: 'sparkle' | 'heart' | 'controller'
 }
 
@@ -90,7 +90,7 @@ export const TIER_PRESETS: TierPreset[] = [
     subtitle: '对话为主 · 适合初次见面',
     duration: '40min',
     gameCount: '2 个游戏',
-    description: '从轻快小游戏开始，慢慢熟络',
+    description: '从轻快小游戏开始，让大家慢慢熟络',
     iconToken: 'sparkle',
   },
   {
@@ -101,7 +101,7 @@ export const TIER_PRESETS: TierPreset[] = [
     subtitle: '沉浸交流 · 默认推荐',
     duration: '60min',
     gameCount: '3 个游戏',
-    description: '更多走心话题，聊到停不下来',
+    description: '更多走心话题，聊到大家都不想散场',
     recommended: true,
     iconToken: 'heart',
   },
@@ -113,32 +113,91 @@ export const TIER_PRESETS: TierPreset[] = [
     subtitle: '活力互动 · 适合熟人群体',
     duration: '90min',
     gameCount: '5-6 个游戏',
-    description: '全量游戏环节，玩得过瘾',
+    description: '全量游戏环节，大家一起玩过瘾',
     iconToken: 'controller',
   },
 ]
 
+/**
+ * Tier card side-art is served from the CDN, consistent with the rest of the
+ * Lovart icebreaker asset tree. The source files live in
+ * `src/assets/lovart/icebreaker/` and are uploaded via `upload:cdn-assets`.
+ */
+const TIER_CARD_BACKGROUNDS: Record<'breeze' | 'glow' | 'blaze' | 'custom', string> = {
+  breeze: cdnAsset('/assets/lovart/icebreaker/tier-card-breeze.webp'),
+  glow: cdnAsset('/assets/lovart/icebreaker/tier-card-glow.webp'),
+  blaze: cdnAsset('/assets/lovart/icebreaker/tier-card-blaze.webp'),
+  custom: cdnAsset('/assets/lovart/icebreaker/tier-card-custom.webp'),
+}
+
 const YUEZAI_REACTIONS: Record<TierMachineId, Record<VibeId, string>> = {
   breeze: {
-    deep_chat: '轻松开始，慢慢聊～',
-    balanced: '轻松开始，慢慢熟络～',
-    play_fun: '轻松开始，玩得开心～',
+    deep_chat: '先轻后深，是个聪明的节奏～',
+    balanced: '轻松开场，大家很快就能放下拘谨～',
+    play_fun: '从 playful 开始，气氛会升得很快！',
   },
   glow: {
-    deep_chat: '深度交流，畅聊无阻！',
-    balanced: '深度交流，畅聊无阻！',
-    play_fun: '深度体验，玩得尽兴！',
+    deep_chat: '这个深度刚刚好，适合今晚的大家。',
+    balanced: '经典组合，稳妥又有惊喜。',
+    play_fun: '有深度也有游戏，大家会玩得很尽兴。',
   },
   blaze: {
-    deep_chat: '全量体验，聊到心底！',
-    balanced: '全量体验，狂欢到底！',
-    play_fun: '全量体验，狂欢到底！',
+    deep_chat: '全量深聊，适合已经熟悉的朋友们。',
+    balanced: '狂欢局开场，今晚记忆点会很足。',
+    play_fun: '游戏拉满，适合熟到能互损的大家！',
   },
   custom: {
-    deep_chat: '自定义节奏，由你主导～',
-    balanced: '自定义节奏，由你主导～',
-    play_fun: '自定义节奏，由你主导～',
+    deep_chat: '这一局你来搭，全场节奏听你指挥～',
+    balanced: '这一局你来搭，全场节奏听你指挥～',
+    play_fun: '这一局你来搭，全场节奏听你指挥～',
   },
+}
+
+// ─── Start-session retry policy ─────────────────────────────────────
+// POST /api/social-icebreaker/start is idempotent for a given sessionId:
+// the server returns an existing session instead of creating a duplicate.
+// We retry transport errors and 5xx/408/429 responses, but fail fast on
+// auth or validation errors.
+const START_MAX_ATTEMPTS = 3
+const START_RETRY_DELAYS_MS = [300, 800]
+const START_REQUEST_TIMEOUT_MS = 10000
+
+function isRetriableStartError(err: unknown): boolean {
+  if (err === null || err === undefined) return true
+  const e = err as { statusCode?: number; isTransportError?: boolean }
+  if (e.isTransportError) return true
+  if (typeof e.statusCode !== 'number') return true
+  if (e.statusCode >= 500 && e.statusCode < 600) return true
+  if (e.statusCode === 408 || e.statusCode === 429) return true
+  return false
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      clearTimeout(timer)
+      resolve()
+    }, ms)
+  })
+}
+
+/** A small celebration line for the preview area — makes the choice feel seen. */
+function getPreviewAffirmation(tier: TierMachineId, vibe: VibeId): string {
+  if (tier === 'custom') return '自定义节奏，全场听你安排'
+  if (tier === 'breeze') {
+    if (vibe === 'play_fun') return '轻松 playful，最不容易冷场'
+    if (vibe === 'deep_chat') return '先轻后深，聪明的打开方式'
+    return '轻松开场，适合初次见面的大家'
+  }
+  if (tier === 'glow') {
+    if (vibe === 'play_fun') return '有聊有玩，稳妥又有惊喜'
+    if (vibe === 'deep_chat') return '经典深度局，适合今晚的大家'
+    return '经典组合，怎么选都不出错'
+  }
+  // blaze
+  if (vibe === 'play_fun') return '游戏拉满，适合熟到能互损的朋友'
+  if (vibe === 'deep_chat') return '全量深聊，今晚记忆点会很足'
+  return '狂欢到底，适合想要尽兴的晚上'
 }
 
 interface StoredSelection {
@@ -151,11 +210,15 @@ interface StoredSelection {
 export default function TierSelectorPage() {
   const router = useRouter()
   const sessionId = router.params.sessionId ?? ''
+  // Motion gating: CSS @media (prefers-reduced-motion: reduce) + JS-driven class both disable animations.
+  const { shouldReduceMotion } = useMiniRevealMotion(router.params as Record<string, string | undefined>)
   const { user } = useAuth()
   const displayName = getUserDisplayName(user as Record<string, unknown> | undefined)
 
-  const [selectedTier, setSelectedTier] = useState<TierMachineId>('glow')
-  const [selectedVibe, setSelectedVibe] = useState<VibeId>('balanced')
+  // Default to the recommended preset so the UI shows a clear initial selection.
+  const recommendedPreset = TIER_PRESETS.find((p) => p.recommended) ?? TIER_PRESETS[1]
+  const [selectedTier, setSelectedTier] = useState<TierMachineId>(recommendedPreset?.tier ?? 'glow')
+  const [selectedVibe, setSelectedVibe] = useState<VibeId>(recommendedPreset?.vibe ?? 'balanced')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [fadeKey, setFadeKey] = useState(0)
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -190,23 +253,39 @@ export default function TierSelectorPage() {
     }
   }, [runPlanTemplatesEnabled])
 
+  // Reset to a visible tier if custom mode is disabled while custom was selected
+  useEffect(() => {
+    if (!customModeEnabled && selectedTier === 'custom') {
+      setSelectedTier('glow')
+      setSelectedVibe('balanced')
+    }
+  }, [customModeEnabled, selectedTier])
+
   // Trigger fade animation when tier or vibe changes
   const handleSelectCombo = useCallback((tier: TierMachineId, vibe: VibeId) => {
     setSelectedTier(tier)
-    setSelectedVibe(runPlanTemplatesEnabled && tier !== 'custom' ? vibe : 'balanced')
+    const nextVibe = runPlanTemplatesEnabled && tier !== 'custom' ? vibe : 'balanced'
+    setSelectedVibe(nextVibe)
     setFadeKey((k) => k + 1)
-  }, [runPlanTemplatesEnabled])
+    if (!shouldReduceMotion) haptics('light')
+    socialIcebreakerAnalytics.track('combo_selected', sessionId, undefined, undefined, {
+      tier,
+      vibe: nextVibe,
+      source: tier === 'custom' ? 'custom_card' : 'grid',
+    })
+  }, [runPlanTemplatesEnabled, shouldReduceMotion, sessionId])
 
   const handleSelectPreset = useCallback((preset: TierPreset) => {
     setSelectedTier(preset.tier)
     setSelectedVibe(preset.vibe)
     setFadeKey((k) => k + 1)
+    if (!shouldReduceMotion) haptics('light')
     socialIcebreakerAnalytics.track('preset_selected', sessionId, undefined, undefined, {
       presetId: preset.id,
       tier: preset.tier,
       vibe: preset.vibe,
     })
-  }, [sessionId])
+  }, [sessionId, shouldReduceMotion])
 
   const handleToggleAdvanced = useCallback(() => {
     setShowAdvanced((prev) => {
@@ -231,6 +310,23 @@ export default function TierSelectorPage() {
     setIsSubmitting(true)
 
     try {
+      // Surface offline early so the user gets immediate feedback instead of
+      // waiting through the retry loop.
+      try {
+        const { networkType } = await Taro.getNetworkType()
+        if (networkType === 'none') {
+          Taro.showToast({
+            title: '网络开小差了，请检查网络连接',
+            icon: 'none',
+            duration: TOAST_MEDIUM_MS,
+          })
+          return
+        }
+      } catch {
+        // Ignore network-type probe failures; the request timeout will catch
+        // truly offline environments.
+      }
+
       // Persist selection before API call
       Taro.setStorageSync(STORAGE_KEY, {
         tier: selectedTier,
@@ -241,22 +337,41 @@ export default function TierSelectorPage() {
         socialIcebreakerAnalytics.track('custom_mode_selected', undefined, sessionId)
       }
 
-      const response = await apiRequest<SocialStartResponse>({
-        path: '/api/social-icebreaker/start',
-        method: 'POST',
-        data: {
-          sessionId,
-          displayName,
-          eventType: '活动',
-          eventTier: selectedTier,
-          vibe: selectedTier === 'custom' ? undefined : VIBE_TO_API[selectedVibe],
-        },
-      })
+      let lastErr: unknown
+      for (let attempt = 0; attempt < START_MAX_ATTEMPTS; attempt++) {
+        try {
+          const response = await apiRequest<SocialStartResponse>({
+            path: '/api/social-icebreaker/start',
+            method: 'POST',
+            timeout: START_REQUEST_TIMEOUT_MS,
+            data: {
+              sessionId,
+              displayName,
+              eventType: '活动',
+              eventTier: selectedTier,
+              vibe: selectedTier === 'custom' ? undefined : VIBE_TO_API[selectedVibe],
+            },
+          })
 
-      Taro.navigateTo({
-        url: `/pages/icebreaker-session/index?sessionId=${encodeURIComponent(sessionId)}&socialSessionId=${encodeURIComponent(response.socialSessionId)}`,
+          Taro.redirectTo({
+            url: `/pages/icebreaker-session/index?sessionId=${encodeURIComponent(sessionId)}&socialSessionId=${encodeURIComponent(response.socialSessionId)}`,
+          })
+          return
+        } catch (err) {
+          lastErr = err
+          const shouldRetry =
+            isRetriableStartError(err) && attempt < START_MAX_ATTEMPTS - 1
+          if (!shouldRetry) break
+          await sleep(START_RETRY_DELAYS_MS[attempt] ?? 0)
+        }
+      }
+
+      logError('tier-selector:start-session-failed', {
+        sessionId,
+        selectedTier,
+        selectedVibe,
+        error: lastErr,
       })
-    } catch {
       Taro.showToast({
         title: getErrorMessage('create-failed'),
         icon: 'none',
@@ -267,94 +382,157 @@ export default function TierSelectorPage() {
     }
   }, [isSubmitting, sessionId, displayName, selectedTier, selectedVibe])
 
-  const yuezaiReaction = selectedTier === 'custom'
-    ? '这一局，你来搭～'
-    : YUEZAI_REACTIONS[selectedTier][selectedVibe]
+  const yuezaiReaction = YUEZAI_REACTIONS[selectedTier][selectedVibe]
 
   return (
-    <View className='tier-selector'>
+    <View className={`tier-selector ${shouldReduceMotion ? 'tier-selector--reduce-motion' : ''}`}>
       {/* Header */}
       <View className='tier-selector__header'>
-        <Text className='tier-selector__title'>选择环节类型</Text>
-        <Text className='tier-selector__subtitle'>为今晚的活动定制破冰体验</Text>
+        <Text className='tier-selector__title'>
+          {displayName ? `${displayName}，你来定今晚的调调` : '为今晚的大家，选个开场节奏'}
+        </Text>
+        <Text className='tier-selector__subtitle'>环节对了，大家很快就能熟络起来</Text>
       </View>
 
-      {/* Tier Presets */}
+      {/* Tier selection surface */}
       <View className='tier-selector__section'>
         <Text className='tier-selector__section-label'>
-          {runPlanTemplatesEnabled ? '选一个开场节奏' : '环节时长'}
+          {runPlanTemplatesEnabled ? '由你决定今晚的节奏' : '环节时长'}
         </Text>
-        <View className='tier-selector__preset-list'>
-          {TIER_PRESETS.map((preset) => {
-            const isActive = selectedTier === preset.tier && selectedVibe === preset.vibe
-            return (
-              <View
-                key={preset.id}
-                className={`tier-selector__preset-card ${isActive ? 'tier-selector__preset-card--active' : ''}`}
-                onClick={() => handleSelectPreset(preset)}
-                hoverClass='tier-selector__preset-card--pressed'
-                hoverStartTime={0}
-                hoverStayTime={200}
-              >
-                <View className='tier-selector__preset-icon'>
-                  {/* Lovart icon placeholder — replace with Image once assets are ready */}
-                  <View className={`tier-selector__preset-icon-dot tier-selector__preset-icon-dot--${preset.iconToken}`} />
-                </View>
-                <View className='tier-selector__preset-body'>
-                  <View className='tier-selector__preset-header'>
-                    <Text className='tier-selector__preset-title'>{preset.title}</Text>
-                    {preset.recommended && (
-                      <Text className='tier-selector__preset-badge'>推荐</Text>
+
+        {runPlanTemplatesEnabled ? (
+          <>
+            <View className='tier-selector__preset-list'>
+              {TIER_PRESETS.map((preset) => {
+                const isActive = selectedTier === preset.tier && selectedVibe === preset.vibe
+                return (
+                  <View
+                    key={preset.id}
+                    className={`tier-selector__preset-card tier-selector__preset-card--${preset.tier} ${isActive ? 'tier-selector__preset-card--active' : ''}`}
+                    onClick={() => handleSelectPreset(preset)}
+                    hoverClass='tier-selector__preset-card--pressed'
+                    hoverStartTime={0}
+                    hoverStayTime={200}
+                    aria-label={`${preset.title}，${preset.subtitle}，${preset.duration}，${preset.gameCount}`}
+                    role='button'
+                    aria-pressed={isActive}
+                  >
+                    {/* Decorative side illustration — Oracle-card style blending */}
+                    <Image
+                      className='tier-selector__preset-bg'
+                      src={TIER_CARD_BACKGROUNDS[preset.tier]}
+                      mode='scaleToFill'
+                      aria-hidden
+                    />
+
+                    <View className='tier-selector__preset-body'>
+                      <View className='tier-selector__preset-header'>
+                        <Text className='tier-selector__preset-title'>{preset.title}</Text>
+                        {preset.recommended && (
+                          <Text className='tier-selector__preset-badge'>推荐</Text>
+                        )}
+                      </View>
+                      <Text className='tier-selector__preset-subtitle'>{preset.subtitle}</Text>
+                      <View className='tier-selector__preset-meta'>
+                        <Text className='tier-selector__preset-meta-item'>{preset.duration}</Text>
+                        <Text className='tier-selector__preset-meta-item'>{preset.gameCount}</Text>
+                      </View>
+                      <Text className='tier-selector__preset-description'>{preset.description}</Text>
+                    </View>
+                    {isActive && (
+                      <View className='tier-selector__preset-check'>
+                        <JoyJoinIcon emoji='✓' size={24} />
+                      </View>
                     )}
                   </View>
-                  <Text className='tier-selector__preset-subtitle'>{preset.subtitle}</Text>
-                  <View className='tier-selector__preset-meta'>
-                    <Text className='tier-selector__preset-meta-item'>{preset.duration}</Text>
-                    <Text className='tier-selector__preset-meta-item'>{preset.gameCount}</Text>
-                  </View>
-                  <Text className='tier-selector__preset-description'>{preset.description}</Text>
-                </View>
-                {isActive && (
-                  <View className='tier-selector__preset-check'>
-                    <Text className='tier-selector__preset-check-icon'>✓</Text>
-                  </View>
-                )}
-              </View>
-            )
-          })}
-        </View>
-
-        {runPlanTemplatesEnabled && (
-          <View
-            className='tier-selector__advanced-toggle'
-            onClick={handleToggleAdvanced}
-            hoverClass='tier-selector__advanced-toggle--pressed'
-            hoverStartTime={0}
-            hoverStayTime={100}
-          >
-            <Text className='tier-selector__advanced-toggle-text'>
-              {showAdvanced ? '收起自定义' : '自定义时长 / 氛围'}
-            </Text>
-            <Text className={`tier-selector__advanced-toggle-arrow ${showAdvanced ? 'tier-selector__advanced-toggle-arrow--up' : ''}`}>⌄</Text>
-          </View>
-        )}
-
-        {showAdvanced && runPlanTemplatesEnabled && (
-          <View className='tier-selector__advanced-grid'>
-            {/* Header row */}
-            <View className='tier-selector__grid-row tier-selector__grid-row--header'>
-              <View className='tier-selector__grid-corner' />
-              {VIBE_OPTIONS.map((vibe) => (
-                <View key={vibe.id} className='tier-selector__grid-col-header'>
-                  <Text className='tier-selector__grid-col-name'>{vibe.display}</Text>
-                  <Text className='tier-selector__grid-col-hint'>{vibe.hint}</Text>
-                </View>
-              ))}
+                )
+              })}
             </View>
 
-            {/* Rows: one per tier */}
+            <View
+              className='tier-selector__advanced-toggle'
+              onClick={handleToggleAdvanced}
+              hoverClass='tier-selector__advanced-toggle--pressed'
+              hoverStartTime={0}
+              hoverStayTime={100}
+              aria-label={showAdvanced ? '收起自定义选项' : '展开自定义时长和氛围选项'}
+              role='button'
+              aria-expanded={showAdvanced}
+              aria-controls='tier-advanced-grid'
+            >
+              <Text className='tier-selector__advanced-toggle-text'>
+                {showAdvanced ? '收起自定义' : '自定义时长 / 氛围'}
+              </Text>
+              <View className={`tier-selector__advanced-toggle-arrow ${showAdvanced ? 'tier-selector__advanced-toggle-arrow--up' : ''}`} />
+            </View>
+
+            {showAdvanced && (
+              <View id='tier-advanced-grid' className='tier-selector__advanced-grid'>
+                {/* Header row */}
+                <View className='tier-selector__grid-row tier-selector__grid-row--header'>
+                  <View className='tier-selector__grid-corner' />
+                  {VIBE_OPTIONS.map((vibe) => (
+                    <View key={vibe.id} className='tier-selector__grid-col-header'>
+                      <Text className='tier-selector__grid-col-name'>{vibe.display}</Text>
+                      <Text className='tier-selector__grid-col-hint'>{vibe.hint}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                {/* Rows: one per tier */}
+                {TIER_OPTIONS.map((tier) => (
+                  <View key={tier.id} className='tier-selector__grid-row'>
+                    <View className='tier-selector__grid-row-header'>
+                      <Text className='tier-selector__grid-row-name'>
+                        {resolveTierDisplay(tier.id, { glowVariant: 'default' })}
+                      </Text>
+                      <Text className='tier-selector__grid-row-meta'>
+                        {tier.duration} · {tier.gameCount}
+                      </Text>
+                    </View>
+
+                    {VIBE_OPTIONS.map((vibe) => {
+                      const isActive = selectedTier === tier.id && selectedVibe === vibe.id
+                      return (
+                        <View
+                          key={vibe.id}
+                          className={`tier-selector__grid-cell ${isActive ? 'tier-selector__grid-cell--active' : ''}`}
+                          onClick={() => handleSelectCombo(tier.id, vibe.id)}
+                          hoverClass='tier-selector__grid-cell--pressed'
+                          hoverStartTime={0}
+                          hoverStayTime={200}
+                          aria-label={`${resolveTierDisplay(tier.id, { glowVariant: 'default' })} · ${vibe.display}`}
+                          role='button'
+                          aria-pressed={isActive}
+                        >
+                          {isActive && (
+                            <View className='tier-selector__grid-cell-check'>
+                              <JoyJoinIcon emoji='✓' size={20} />
+                            </View>
+                          )}
+                        </View>
+                      )
+                    })}
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        ) : (
+          /* Run-plan templates disabled: show simplified tier rows only */
+          <View className='tier-selector__grid tier-selector__grid--simple'>
             {TIER_OPTIONS.map((tier) => (
-              <View key={tier.id} className='tier-selector__grid-row'>
+              <View
+                key={tier.id}
+                className={`tier-selector__grid-row tier-selector__grid-row--simple ${selectedTier === tier.id ? 'tier-selector__grid-row--simple-active' : ''}`}
+                onClick={() => handleSelectCombo(tier.id, 'balanced')}
+                hoverClass='tier-selector__grid-row--simple-pressed'
+                hoverStartTime={0}
+                hoverStayTime={200}
+                aria-label={`${resolveTierDisplay(tier.id, { glowVariant: 'default' })}，${tier.duration}，${tier.gameCount}`}
+                role='button'
+                aria-pressed={selectedTier === tier.id}
+              >
                 <View className='tier-selector__grid-row-header'>
                   <Text className='tier-selector__grid-row-name'>
                     {resolveTierDisplay(tier.id, { glowVariant: 'default' })}
@@ -362,27 +540,17 @@ export default function TierSelectorPage() {
                   <Text className='tier-selector__grid-row-meta'>
                     {tier.duration} · {tier.gameCount}
                   </Text>
+                  {tier.id === 'glow' && (
+                    <Text className='tier-selector__grid-row-tag'>推荐</Text>
+                  )}
                 </View>
-
-                {VIBE_OPTIONS.map((vibe) => {
-                  const isActive = selectedTier === tier.id && selectedVibe === vibe.id
-                  return (
-                    <View
-                      key={vibe.id}
-                      className={`tier-selector__grid-cell ${isActive ? 'tier-selector__grid-cell--active' : ''}`}
-                      onClick={() => handleSelectCombo(tier.id, vibe.id)}
-                      hoverClass='tier-selector__grid-cell--pressed'
-                      hoverStartTime={0}
-                      hoverStayTime={200}
-                    >
-                      {isActive && (
-                        <View className='tier-selector__grid-cell-check'>
-                          <Text className='tier-selector__grid-cell-check-icon'>✓</Text>
-                        </View>
-                      )}
+                <View className='tier-selector__grid-row-check-area'>
+                  {selectedTier === tier.id && (
+                    <View className='tier-selector__grid-cell-check'>
+                      <JoyJoinIcon emoji='✓' size={20} />
                     </View>
-                  )
-                })}
+                  )}
+                </View>
               </View>
             ))}
           </View>
@@ -398,24 +566,29 @@ export default function TierSelectorPage() {
             hoverClass='tier-selector__custom-card--pressed'
             hoverStartTime={0}
             hoverStayTime={200}
+            aria-label='自由局，时长和环节由你决定'
+            role='button'
+            aria-pressed={selectedTier === 'custom'}
           >
+            {/* Decorative side illustration — Oracle-card style blending */}
             <Image
-              className='tier-selector__custom-card-icon'
-              src={localAsset('/assets/icons/custom-tier-icon.webp')}
-              mode='aspectFit'
-              lazyLoad
+              className='tier-selector__custom-bg'
+              src={TIER_CARD_BACKGROUNDS.custom}
+              mode='scaleToFill'
+              aria-hidden
             />
+
             <View className='tier-selector__custom-card-body'>
               <View className='tier-selector__custom-card-header'>
                 <Text className='tier-selector__custom-card-title'>自由局</Text>
                 <Text className='tier-selector__custom-card-badge'>自由定制</Text>
               </View>
-              <Text className='tier-selector__custom-card-tagline'>想玩哪个，由你决定</Text>
-              <Text className='tier-selector__custom-card-meta'>时长由你决定 · 环节自由组合</Text>
+              <Text className='tier-selector__custom-card-tagline'>全场节奏，由你导演</Text>
+              <Text className='tier-selector__custom-card-meta'>时长和环节，都听你的</Text>
             </View>
             {selectedTier === 'custom' && (
               <View className='tier-selector__custom-card-check'>
-                <Text className='tier-selector__custom-card-check-icon'>✓</Text>
+                <JoyJoinIcon emoji='✓' size={24} />
               </View>
             )}
             <View className='tier-selector__custom-card-sparkle tier-selector__custom-card-sparkle--1' />
@@ -424,28 +597,33 @@ export default function TierSelectorPage() {
         </View>
       )}
 
-      {/* Tier Vibe Backdrop — Batch C ceremony hero for the selected tier */}
+      {/* Tier card background preview for the selected tier */}
       <View className='tier-selector__preview' key={`preview-${fadeKey}`} aria-hidden>
-        <Image
-          className='tier-selector__preview-image'
-          src={TIER_VIBE_BACKDROPS[selectedTier]}
-          mode='aspectFit'
-          lazyLoad
-        />
+        <View className='tier-selector__preview-frame'>
+          <Image
+            className='tier-selector__preview-frame-image'
+            src={TIER_CARD_BACKGROUNDS[selectedTier]}
+            mode='scaleToFill'
+          />
+        </View>
         <Text className='tier-selector__preview-label'>
-          {resolveTierDisplay(selectedTier, { glowVariant: 'default' })} · 氛围预览
+          {resolveTierDisplay(selectedTier, { glowVariant: 'default' })} · 这就是今晚的氛围
+        </Text>
+        <Text className='tier-selector__preview-affirmation'>
+          {getPreviewAffirmation(selectedTier, selectedVibe)}
         </Text>
       </View>
 
       {/* 悦仔 Mascot Line */}
-      <View className='tier-selector__mascot' key={`mascot-${fadeKey}`}>
+      <View className='tier-selector__mascot' aria-live='polite'>
         <Image
           className='tier-selector__mascot-avatar'
           src={getXiaoyueExpressionAsset('coachGuide')}
           mode='aspectFit'
-          lazyLoad
         />
-        <Text className='tier-selector__mascot-text'>{yuezaiReaction}</Text>
+        <View className='tier-selector__mascot-text-wrap' key={`mascot-text-${fadeKey}`}>
+          <Text className='tier-selector__mascot-text'>{yuezaiReaction}</Text>
+        </View>
       </View>
 
       <View className='tier-selector__filler' />
@@ -459,7 +637,7 @@ export default function TierSelectorPage() {
           disabled={isSubmitting}
           loading={isSubmitting}
         >
-          {isSubmitting ? '正在生成环节安排…' : '开始环节'}
+          {isSubmitting ? '正在为大家生成环节安排…' : '就这个了，开始环节'}
         </Button>
       </View>
     </View>

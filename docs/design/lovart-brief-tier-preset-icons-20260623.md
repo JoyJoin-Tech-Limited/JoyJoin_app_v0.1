@@ -1,7 +1,8 @@
 # Lovart Design Brief: Tier Preset Icons
 
-> **Status:** 📝 Ready for commission  
-> **Goal:** Create 3 small, brand-aligned icons for the Social Icebreaker tier-selector preset cards, replacing the current colored placeholder dots.  
+> **Status:** 📝 Superseded by [`lovart-brief-tier-selector-side-art-20260625.md`](./lovart-brief-tier-selector-side-art-20260625.md)  
+> **Goal:** ~~Create 3 small, brand-aligned icons for the Social Icebreaker tier-selector preset cards, replacing the current colored placeholder dots.~~  
+> The design direction has shifted to Oracle-card-style right-side illustrations for all 4 tier cards. This brief is kept for reference only.  
 > **Target:** WeChat Mini Program (Taro)  
 > **Integration:** `apps/mini-program/src/pages/icebreaker-session/tier-selector/index.tsx` via `iconToken` → future `localAsset('/assets/icons/tier-preset-{token}.webp')`
 

@@ -280,6 +280,8 @@ Active domain modules in `routes/domains/`:
 | `shell.ts` | Composite Predictive Shell endpoints (`/api/shell/*`) — discover, profile, events, connections |
 | `helpers.ts` | Shared route helpers |
 | `matchingTest.ts` | `/api/test/matching-test/*` — seed matching-test bots, create test pool, trigger match, cleanup. Gated by `isMatchingTestMode()` (2026-06-24) |
+| `matchCompass.ts` | `GET /api/event-pools/:id/match-compass`, `PATCH /api/event-pool-registrations/:id/preferences`, `POST /api/users/me/preference-dna` — post-registration preference tuning |
+| `adminGeolocation.ts` | `GET /api/admin/geolocation/heatmap`, `POST /api/admin/geolocation/rollup` — admin location analytics, gated by `requireSuperAdmin` |
 
 ---
 
@@ -457,7 +459,7 @@ The client **never** computes its own onboarding position. `nextStep` is always 
 | `personality-test` | 氛围测试 | `/personality-test` | V4 adaptive questions (8–16) → archetype assigned |
 | `essential-data` | 基本资料 | `/onboarding/setup` | displayName, gender, birthYear, currentCity, hometown, education, occupation (chat overlay), **lifeStage**, relationshipStatus, intent (up to 3) |
 | `extended-data` | 兴趣偏好 | `/onboarding/extended` | 3-tier interest selections (min 3, max 10) across 5 categories |
-| `profile-review` | 资料预览 | `/onboarding/review` | Read-only summary — collects nothing new |
+| `profile-review` | 资料预览 | `/onboarding/review` | Read-only summary plus optional 1–100 character bio (content-safety checked); persisted via `POST /api/profile-review/complete` |
 
 Note: Voice quiz is not part of the onboarding flow. Archetype is assigned during `personality-test` results, not re-collected on `essential-data`.
 

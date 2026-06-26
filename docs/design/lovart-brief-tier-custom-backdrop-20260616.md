@@ -1,5 +1,7 @@
 # Lovart Design Brief: Social Icebreaker Custom Tier Backdrop
 
+> **Status:** Superseded 2026-06-25. The tier selector now uses CDN-backed Lovart side-art `tier-card-custom.webp` (see `docs/design/lovart-brief-tier-selector-side-art-20260625.md`). `TIER_VIBE_BACKDROPS` has been removed from `apps/mini-program/src/lib/ceremonyHeroes.ts`. This brief is kept for historical reference only.
+
 ## Goal
 Create a dedicated ceremony backdrop for the `custom` social icebreaker tier, instead of reusing the `glow` hero, giving host-driven free-form sessions their own visual identity.
 
@@ -44,5 +46,7 @@ Upload these reference images to Lovart ChatCanvas before generating:
 - [ ] File size under ~100 KB WebP at 2x
 
 ## Downstream handoff
-- **frontend-component-architecture:** Add `custom` entry to `TIER_VIBE_BACKDROPS` in `apps/mini-program/src/lib/ceremonyHeroes.ts` and wire into the icebreaker tier selector.
-- **design-system-governance:** Update tier backdrop token mapping if needed.
+> No longer required — the custom tier visual identity is now delivered by `tier-card-custom.webp` in `pages/icebreaker-session/tier-selector/index.tsx`.
+
+- **frontend-component-architecture:** Add `custom` entry to `TIER_VIBE_BACKDROPS` in `apps/mini-program/src/lib/ceremonyHeroes.ts` and wire into the icebreaker tier selector. *(Superseded 2026-06-25)*
+- **design-system-governance:** Update tier backdrop token mapping if needed. *(Superseded 2026-06-25)*

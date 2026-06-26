@@ -116,6 +116,8 @@ All endpoints are gated by `requireSuperAdmin`. Call them with a super_admin ses
 | POST | `/api/test/admin/event-pools` | Create a test event pool | `{ title, createdBy, ... }` |
 | POST | `/api/test/admin/registrations` | Register user to pool | `{ userId, poolId }` |
 | POST | `/api/test/admin/reset` | Delete all test data | — |
+| GET | `/api/admin/geolocation/heatmap` | Admin geolocation heatmap | `?city`, `?precision`, `?since`, `?until` |
+| POST | `/api/admin/geolocation/rollup` | Roll up location snapshots | `{ city, precision?, since?, until? }` |
 
 ### Usage Examples
 
@@ -367,7 +369,7 @@ Matching-test mode lets one real tester pay ¥0.01 (staging) and register alongs
 3. **Tester registers** — Real user discovers pool in mini-program Discover, pays ¥0.01 via normal `POST /api/event-pools/:poolId/register-with-payment`
 4. **Matching fires** — Realtime `scanPoolAndMatch` auto-triggers after tester registration, OR manually call `POST /api/test/matching-test/{poolId}/match`
 5. **Group forms** — Tester + bots assigned to groups via production matching engine
-6. **Cleanup** — `POST /api/test/matching-test/cleanup` — deletes test pool registrations (icebreaker data, groups), marks test pool inactive. Payment records preserved.
+6. **Cleanup** — `POST /api/test/matching-test/cleanup` — deletes test pools, groups, registrations, icebreaker data, and bot users. Payment records preserved.
 
 ### API reference
 
@@ -397,9 +399,10 @@ Re-seeding resets old bot registrations before inserting new ones.
 
 ### Cleanup behavior
 
-- Deletes all `event_pool_registrations` for test pools
-- Deletes associated icebreaker sessions and phase metrics
-- Marks test pool as inactive (`is_test_pool` retained for audit)
+- Deletes all test `event_pools` rows (filtered by `is_test_pool = true`)
+- Deletes associated `event_pool_groups` and `event_pool_registrations`
+- Deletes associated icebreaker sessions, participants, and lie-truth rows
+- Deletes bot `users` rows (filtered by `is_test_bot = true` and the matching-test phone prefix)
 - **Preserves** `payments` table records (tester's real WeChat Pay receipt)
 - Idempotent — safe to run multiple times
 
@@ -417,5 +420,4 @@ Re-seeding resets old bot registrations before inserting new ones.
 ### Limitations
 
 - No mini-program UI entry point yet — tester must know the pool ID to find it in Discover
-- Realtime matching may not fire on the fulfillment path (depends on `scanPoolAndMatch` integration)
 - Single tester at a time (not designed for concurrent multi-tester test events)

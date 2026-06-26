@@ -15,6 +15,16 @@
 | Analytics | `routes/domains/analytics.ts` | `repositories/analyticsRepo.ts` | Reporting only |
 | Venues | `routes/domains/venues.ts` | `repositories/venueRepo.ts` | Catalog + assignment |
 | Notifications | `routes/domains/notifications.ts` | `repositories/notificationsRepo.ts` | In-app + WS |
+| Shell (composite tab data) | `routes/domains/shell.ts` | `repositories/shellRepository.ts` | `/api/shell/*` discover/profile/events/connections |
+| Match Compass | `routes/domains/matchCompass.ts` | `lib/matchCompass.ts` | Post-registration preference tuning |
+| Referrals & Invitations | `routes/domains/referrals.ts` | `repositories/referralsRepo.ts` | Referral codes + event invites |
+| City Unlock | `routes/domains/cityUnlock.ts` | `repositories/cityUnlockRepo.ts` | City interest + unlock progress |
+| Profession Understanding | `routes/domains/professionUnderstanding.ts` | — | AI profession classification |
+| Admin Geolocation | `routes/domains/adminGeolocation.ts` | `repositories/userLocationRepo.ts` | Location snapshot analytics |
+| Matching Test | `routes/domains/matchingTest.ts` | `services/matchingTestService.ts` | End-to-end matching validation (test/staging only) |
+| Admin Users | `routes/domains/adminUsers.ts` | `repositories/usersRepo.ts` | User management + moderation |
+| Admin Event Management | `routes/domains/adminEventManagement.ts` | `repositories/eventPoolRepo.ts` | Admin event lifecycle |
+| Monitoring Webhooks | `routes/domains/monitoringWebhooks.ts` | — | External monitoring callbacks |
 
 Add new domains by creating a new row and following the **New Domain Onboarding Checklist** below.
 

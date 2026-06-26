@@ -306,13 +306,13 @@ Average of up to 3 sub-signals (equal weight per present factor):
 | Age preference affinity | `ageMatchPreference` | Same = 100, "都可以" compatible = 75, complementary ("偏年轻"+"偏成熟") = 70, conflicting = 40 |
 | Table vibe affinity | `tableVibePreference` | Same = 100, compatible (light_fun+natural_chat) = 75, deep_talk+natural_chat = 65, clash (deep_talk+light_fun) = 30 |
 
-**Life Stage Matrix keys:** `founder`, `self_employed`, `employed`, `student`, `transitioning`, `caregiver_retired`, `successor`
+**Life Stage Matrix keys:** `学生党`, `职场新人`, `职场老手`, `创业中`, `自由职业`
 
 **Age preference values:** `同龄人`, `偏年轻`, `偏成熟`, `都可以`
 
 **Table vibe values:** `light_fun`, `natural_chat`, `deep_talk`
 
-**Life Stage Matrix keys:** `founder`, `self_employed`, `employed`, `student`, `transitioning`, `caregiver_retired`, `successor`
+**Life Stage Matrix keys:** `学生党`, `职场新人`, `职场老手`, `创业中`, `自由职业`
 
 **Education Ordinal:**
 ```
@@ -383,7 +383,7 @@ will have similar hash-embedded vectors.
 |-------|--------|--------|
 | `archetype` | 2.5 | `users` |
 | `secondaryArchetype` | 1.25 | `users` |
-| `workMode` | 1.5 | `users` |
+| `lifeStage` | 1.5 | `users` |
 | `educationLevel` | 1.25 | `users` |
 | `industryNiche` | 1.25 | `users` |
 | `hometown` | 0.75 | `users` |
@@ -539,7 +539,7 @@ energyBalance = round((avgScore + harmonyScore) / 2)
 
 ```
 1. LOAD pool config + all pending registrations
-2. JOIN user profiles (archetype, interests, workMode, education, etc.)
+2. JOIN user profiles (archetype, interests, lifeStage, education, etc.)
 3. FILTER by hard constraints → eligibleUsers[]
 4. BUILD invitation pairs map (inviter–invitee relationships)
 5. COMPUTE all N×(N-1)/2 pair scores
@@ -845,7 +845,7 @@ After `poolMatchingService.ts` forms groups deterministically, the predictive re
 | **primaryArchetype** | The top-matching archetype for a user (used at 70% weight in chemistry) |
 | **secondaryArchetype** | The second-best archetype (used at 15% weight in chemistry cross-scoring) |
 | **Heat level** | Interest intensity: level 1 (heat=5), level 2 (heat=10), level 3 (heat=25) |
-| **Life stage** | User's `workMode` value — the "人生阶段" used in social affinity scoring |
+| **Life stage** | User's `lifeStage` value — the "人生阶段" used in social affinity scoring. `workMode` is retained as a read-only fallback during the migration period. |
 | **Hard constraint** | Pre-filter rule that excludes a user from a pool entirely (e.g. budget mismatch) |
 | **Soft signal** | Scoring dimension that influences rank but never blocks a match (e.g. language, preference) |
 | **communicationBalance** | Field name in `MatchGroup` interface and DB alias for `energy_balance` column. Currently stores the Energy Balance score (social energy distribution) — name is a legacy alias. |

@@ -46,16 +46,21 @@ These flags are resolved via `apps/server/src/lib/featureFlags.ts` (DB source of
 | `personalityShareEnabled` | `PERSONALITY_SHARE_ENABLED` | Personality test share poster generation |
 | `personalitySlotAnimationEnabled` | `PERSONALITY_SLOT_ANIMATION_ENABLED` | Slot machine reveal animation on personality test results |
 | `promoBannerEnabled` | `PROMO_BANNER_ENABLED` | Discover hero promo banner (full-bleed Lovart illustration + glass copy panel). When `false`, renders a zero-height spacer and stops all `promo_banner_*` analytics |
+| `personalityTestEchoEnabled` | `PERSONALITY_TEST_ECHO_ENABLED` | Answer-echo loading state on personality test (default `true`) |
+| `squadUnboxingDragRevealEnabled` | `SQUAD_UNBOXING_DRAG_REVEAL_ENABLED` | Drag-to-reveal ribbon on squad unboxing (default `true`) |
+| `socialIcebreakerCustomModeEnabled` | `SOCIAL_ICEBREAKER_CUSTOM_MODE_ENABLED` | Custom-mode (`自由局`) icebreaker tier selection (default `true`) |
+| `profileRedesignEnabled` | `PROFILE_REDESIGN_ENABLED` | Redesigned Profile tab UI including milestones and day-0 nudge (default `true`) |
 
 ### Env-only feature gates
 
 | Category | Key flags |
 |----------|-----------|
 | Payments | `PAYMENTS_ENABLED` |
-| Matching | `ENABLE_SEMANTIC_SIMILARITY` |
-| Social Icebreaker | `SOCIAL_ICEBREAKER_ENABLE_AUCTION`, `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT`, `SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE`, `PERSONALITY_DICE_CHOOSE_MODE_ENABLED` |
+| Matching | `ENABLE_SEMANTIC_SIMILARITY`, `MATCH_COMPASS_STRICTNESS_ENABLED` |
+| Social Icebreaker | `SOCIAL_ICEBREAKER_ENABLE_AUCTION`, `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT`, `SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE`, `PERSONALITY_DICE_CHOOSE_MODE_ENABLED`, `SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER`, `SOCIAL_ICEBREAKER_CUSTOM_MODE_ENABLED` |
 | AI / creative | `ENABLE_EVENT_THEME_TITLE_GENERATION`, `AI_USAGE_TRACKING_ENABLED` |
 | Auth / debug | `ENABLE_DEV_AUTH_TOOLS`, `DEBUG_AUTH`, `ALLOW_PRODUCTION_AUTH_DEBUG` (non-production only) |
+| Registration / venue | `REGISTRATION_ENABLED`, `VENUE_ASSIGNMENT_ENABLED` |
 
 **Kill switches** reject requests early with a machine-readable `code` (e.g., `PAYMENTS_DISABLED`) before touching external APIs or the database.
 
@@ -67,7 +72,7 @@ For rollout patterns, startup validation details, client exposure specifics, and
 - **Add a new env-only feature flag:** Add env read → gate logic → document in `docs/LAUNCH_CONFIG.md` → add to `.env.example` → expose via `/api/auth/user` if client needs it → add tests for both paths.
 - **Kill-switch a payment incident:** Set `PAYMENTS_ENABLED=false` → verify `/api/readyz` returns `200` → confirm `POST /api/payments/create` returns `503` with `code: "PAYMENTS_DISABLED"` → confirm client shows maintenance message.
 - **Safely roll out `ENABLE_SEMANTIC_SIMILARITY`:** Enable in staging → run matching stress simulation → monitor `joyjoin_matching_semantic_similarity_score` and `joyjoin_matching_semantic_pair_score_delta` in `/api/metrics` → enable in production during a low-traffic window.
-- **Expose a flag to the client:** Add the boolean to `AuthUserResponse` in `apps/server/src/routes/domains/auth.ts` and to `packages/shared/src/api.ts`. Client hooks should read from the server response, never from a local env var.
+- **Expose a flag to the client:** Add the boolean to `AuthUserResponse` in `packages/shared/src/api.ts` and resolve it in `apps/server/src/lib/buildAuthUserResponse.ts`. Client hooks should read from the server response, never from a local env var.
 
 ## Troubleshooting
 

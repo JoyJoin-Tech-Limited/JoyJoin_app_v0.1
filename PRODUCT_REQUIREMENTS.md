@@ -77,9 +77,18 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-06-18)
+## 🆕 Recent Updates (Last updated: 2026-06-25)
 
 ### 2026 Milestones (June 2026)
+
+**44. End-of-June Docs + Backend Hardening Sync** 🔧 *(2026-06-24 to 2026-06-25)*
+- **Profile-review bio capture:** `pages/onboarding/profile-review/index.tsx` now exposes an optional 1–100 character bio textarea (`一句你的社交签名`). The bio is validated for length, trimmed, and run through `validateContentSafe()` on `POST /api/profile-review/complete`; a non-empty bio contributes +10% to the profile completion score.
+- **Match Compass preference DNA:** Default strictness, dealbreakers, and nice-to-haves are now seeded from the user's primary archetype via `buildDefaultPreferencesFromArchetype()` in `apps/server/src/lib/matchCompass.ts`. Existing persisted preferences still take precedence.
+- **WeChat profile + geolocation capture:** Server-side support for storing `wechatNickname`, `wechatAvatarUrl`, and IP-based location snapshots on login, onboarding completion, and pool registration. New admin geolocation endpoints (`GET /api/admin/geolocation/heatmap`, `POST /api/admin/geolocation/rollup`) provide ops-level location analytics. Location snapshots are written through `apps/server/src/lib/captureLocationSnapshot.ts` and aggregated via `apps/server/src/repositories/userLocationRepo.ts` / `apps/server/src/services/ipGeolocationService.ts`. **Note:** As of 2026-06-25, the mini-program login flow sends only the WeChat `code`; `wechatNickname`/`wechatAvatarUrl` capture on the client side is not yet wired end-to-end.
+- **Life stage signal boundary:** Social-affinity scoring now reads `users.lifeStage` (canonical values: `学生党`, `职场新人`, `职场老手`, `创业中`, `自由职业`) instead of `workMode`. `workMode` is retained as a read-only fallback during the migration period; a backfill script maps legacy values.
+- **Matching-Test Mode:** Added end-to-end matching validation with one real tester + 5 full-profile bots through the production matching engine. Gated by `ENABLE_SINGLE_TEST_MODE` + `ENABLE_MATCHING_TEST_MODE`; blocked in `APP_MODE=production`; DB markers `users.is_test_bot` and `event_pools.is_test_pool`; startup sentinel crashes if test-bot rows exist in production. Cleanup deletes test pools, groups, registrations, icebreaker data, and bot users while preserving payment records.
+- **Social Icebreaker tier selector a11y + assets:** Preset/custom cards now use bundled Lovart WebP backgrounds; added `JoyJoinIcon` checkmarks, CSS chevrons, haptics, and full `aria-label`/`aria-pressed`/`role="button"` coverage; simplified tier-row fallback renders when `runPlanTemplatesEnabled` is false.
+- **Misc mini-program hardening:** Center participation hub unblocked, native custom tab bar selection syncs from the current route on `useDidShow`, Discover activity list stability fallback, profile page layout fixes, assessment persistence fixes.
 
 **40. Interest-Heat Picker Full-Marks Push** 🎯 *(2026-06-15)*
 - **Scope:** Mini-program onboarding step 4 (`pages/onboarding/extended-data/index`) — interest selection and heat signaling.
@@ -526,7 +535,10 @@ LandingPage → /personality-test (anonymous V4 test)
 **Step 4: Optional Background**
 - Education (school, degree, major)
 - Work (company, role, industry)
-- Personal description (bio)
+
+**Step 5: Profile Review**
+- Presents a read-only "admission poster" summary of archetype, profile cards, intent chips, and interest heat map.
+- Captures an optional 1–100 character personal description (bio, `一句你的社交签名`) before completing onboarding; persisted via `POST /api/profile-review/complete` and contributes +10% to profile completion.
 
 ---
 

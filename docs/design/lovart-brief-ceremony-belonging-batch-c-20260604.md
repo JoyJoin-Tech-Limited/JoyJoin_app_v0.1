@@ -1,7 +1,9 @@
 # Lovart Design Brief: Ceremony & Belonging Heroes — Batch C
 
-> **Status:** 📝 Ready for commission
-> **Goal:** Replace mascot-only and abstract surfaces at the highest-emotion transition moments (returning after absence, payment confirmation, tier selection, inviting a friend, post-event thanks, session end) with full-bleed hero illustrations that lift 仪式感 (Ritual) and 归属感 (Belonging) — the two 情绪价值 dimensions currently scoring ~2.5/4 in the app.
+> **Status:** 📝 Ready for commission (partially superseded 2026-06-25)
+> **Goal:** Replace mascot-only and abstract surfaces at the highest-emotion transition moments (returning after absence, payment confirmation, inviting a friend, post-event thanks, session end) with full-bleed hero illustrations that lift 仪式感 (Ritual) and 归属感 (Belonging) — the two 情绪价值 dimensions currently scoring ~2.5/4 in the app.
+>
+> **2026-06-25 update:** The three tier-vibe backdrops (3a/b/c) were superseded by CDN-backed Lovart side-art `tier-card-{breeze,glow,blaze,custom}.webp` in `pages/icebreaker-session/tier-selector/index.tsx` and have been removed from `ceremonyHeroes.ts`. The remaining five heroes (C1, C2, C4, C5, C6) remain active.
 > **Target:** WeChat Mini Program (Taro)
 > **Generation strategy:** **Single grid prompt → crop script.** One 3200×1600 master image containing 8 cells (4 cols × 2 rows × 800×800). Each cell is one independent illustration sharing the same low-poly painterly style lock.
 > **Companion assets:** Batch B (emotional icons), existing xiaoyue mascot expressions, and the speed-friending phase icon. All color accents must stay within the JoyJoin 8-color palette.
@@ -291,9 +293,6 @@ If the team wants a single source of truth for these heroes, add:
 export const CEREMONY_HEROES = {
   welcomeBack: cdnAsset('/assets/ceremony/welcome-back-hero-20260604-v1.webp'),
   eventPaidConfirmed: cdnAsset('/assets/ceremony/event-paid-confirmed-20260604-v1.webp'),
-  tierVibeBreeze: cdnAsset('/assets/ceremony/tier-vibe-breeze-20260604-v1.webp'),
-  tierVibeGlow: cdnAsset('/assets/ceremony/tier-vibe-glow-20260604-v1.webp'),
-  tierVibeBlaze: cdnAsset('/assets/ceremony/tier-vibe-blaze-20260604-v1.webp'),
   inviteCoBranded: cdnAsset('/assets/ceremony/invite-co-branded-20260604-v1.webp'),
   eventFeedbackThanks: cdnAsset('/assets/ceremony/event-feedback-thanks-20260604-v1.webp'),
   seeYouNextTime: cdnAsset('/assets/ceremony/see-you-next-time-20260604-v1.webp'),

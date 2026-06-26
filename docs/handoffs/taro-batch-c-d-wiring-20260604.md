@@ -62,6 +62,8 @@ The placement pattern in every case is: **add the new asset as a hero/backdrop l
 | C5 | `pages/event-feedback/index.tsx` (success state) | `CEREMONY_HEROES.eventFeedbackThanks` | ~240rpx hero above existing `thanksFeedback` Xiaoyue | 仪式感 +4, 归属感 +3 |
 | C6 | `pages/icebreaker-session/phases/RecapPhaseView.tsx` (end overlay) | `CEREMONY_HEROES.seeYouNextTime` | Full-bleed end overlay (~60% viewport height) when session reaches `ended` state | 仪式感 +4, 归属感 +3 |
 
+> **2026-06-25 update:** C3a/b/c tier-selector backdrops were superseded by CDN-backed Lovart side-art `tier-card-{breeze,glow,blaze,custom}.webp` loaded via `TIER_CARD_BACKGROUNDS` in `pages/icebreaker-session/tier-selector/index.tsx`. `TIER_VIBE_BACKDROPS` in `ceremonyHeroes.ts` is now unused.
+
 ### Batch D — Achievement & Milestone (5 surfaces)
 
 | # | Surface | Registry key | Placement hint | WTP lift |
@@ -118,7 +120,7 @@ npm run lint -w @joyjoin/mini-program
 # 5. Visual QA in WeChat DevTools:
 #    - open pages/onboarding/welcome-back → see C1 hero behind mascot
 #    - trigger payment success flow → see C2 hero
-#    - open tier-selector → see C3a/b/c backdrops per card
+#    - open tier-selector → see C3a/b/c backdrops per card (superseded 2026-06-25 by tier-card-{breeze,glow,blaze,custom}.webp side-art)
 #    - open invite → see C4 hero
 #    - submit event feedback → see C5 hero
 #    - end a recap session → see C6 hero

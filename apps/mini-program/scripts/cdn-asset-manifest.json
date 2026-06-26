@@ -231,6 +231,22 @@
       "cdnPath": "assets/lovart/icebreaker/icons/icon-coin-stack.png"
     },
     {
+      "localPath": "assets/lovart/icebreaker/tier-card-breeze.webp",
+      "cdnPath": "assets/lovart/icebreaker/tier-card-breeze.webp"
+    },
+    {
+      "localPath": "assets/lovart/icebreaker/tier-card-glow.webp",
+      "cdnPath": "assets/lovart/icebreaker/tier-card-glow.webp"
+    },
+    {
+      "localPath": "assets/lovart/icebreaker/tier-card-blaze.webp",
+      "cdnPath": "assets/lovart/icebreaker/tier-card-blaze.webp"
+    },
+    {
+      "localPath": "assets/lovart/icebreaker/tier-card-custom.webp",
+      "cdnPath": "assets/lovart/icebreaker/tier-card-custom.webp"
+    },
+    {
       "localPath": "assets/lovart/lovart-generic-empty.webp",
       "cdnPath": "assets/lovart/lovart-generic-empty.webp"
     },

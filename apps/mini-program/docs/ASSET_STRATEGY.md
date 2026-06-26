@@ -128,6 +128,7 @@ These are **NOT** copied to `dist/assets/` by the build. They must exist on the 
 | **Lovart generic** | `assets/lovart/lovart-generic-*.webp` | ~97KB | Empty/error states |
 | **Icebreaker backgrounds** | `assets/lovart/icebreaker/backgrounds/*.jpg` | ~450KB | Challenge card backgrounds |
 | **Celebration images** | `assets/lovart/icebreaker/celebrations/*.png` | ~770KB | Post-phase celebration overlays |
+| **Icebreaker tier cards** | `assets/lovart/icebreaker/tier-card-*.webp` | ~96KB | Tier-selector preset/custom card side-art |
 | **Lovart illustrations** | `assets/lovart/lovart-*.webp` | ~130KB | Empty/error states |
 | **Matching heroes** | `assets/matching/matching-*.webp` | ~157KB | Matching status page |
 | **Promo banners** | `assets/promo/banner-*.webp` | ~175KB | Source copies of promo banners for CDN upload. The active Discover hero banner is bundled locally at `assets/promo-local/banner-hero-lovart-v1.webp` and falls back to this CDN path on `onError`. |

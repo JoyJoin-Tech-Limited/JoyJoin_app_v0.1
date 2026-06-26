@@ -48,6 +48,11 @@
     border: 2rpx solid $color-border;
     padding: $spacing-xs;
     box-shadow: $shadow-sm;
+
+    &--simple {
+      gap: $spacing-sm;
+      padding: $spacing-sm;
+    }
   }
 
   &__grid-row {
@@ -73,6 +78,44 @@
 
       &:nth-child(4) {
         animation-delay: 0.24s;
+      }
+    }
+
+    &--simple {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 96rpx;
+      padding: $spacing-sm $spacing-md;
+      border-radius: $card-radius-sm;
+      border: 2rpx solid $color-border;
+      background: $color-surface;
+      transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 200ms ease,
+        background-color 200ms ease,
+        box-shadow 200ms ease;
+
+      &-active {
+        border-color: $color-primary;
+        background: rgba($color-primary, 0.06);
+        box-shadow: 0 4rpx 24rpx rgba($color-primary, 0.12);
+        transform: scale(1.01);
+      }
+
+      &-pressed {
+        transform: scale(0.98);
+      }
+
+      .tier-selector__grid-row-header {
+        min-height: auto;
+        padding: 0;
+        gap: $spacing-xs;
+      }
+
+      .tier-selector__grid-row-check-area {
+        @include flex-center;
+        width: 40rpx;
+        height: 40rpx;
       }
     }
   }
@@ -189,7 +232,6 @@
     background: rgba($color-primary, 0.05);
     border-radius: $card-radius-sm;
     border: 2rpx solid rgba($color-primary, 0.08);
-    animation: tier-selector-fade-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   &__mascot-avatar {
@@ -199,10 +241,14 @@
     border-radius: 50%;
   }
 
+  &__mascot-text-wrap {
+    flex: 1;
+    animation: tier-selector-fade-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
   &__mascot-text {
     @include type-body;
     color: $color-text-secondary;
-    flex: 1;
   }
 
   // ── Footer / CTA ────────────────────────────────────────────────
@@ -224,11 +270,6 @@
     width: 100%;
   }
 
-  &__cta-hint {
-    @include type-caption;
-    color: $color-text-muted;
-  }
-
   // ── Custom Mode Card ────────────────────────────────────────────
   &__custom-card {
     position: relative;
@@ -236,31 +277,44 @@
     align-items: center;
     gap: $spacing-md;
     padding: $spacing-md;
-    background: linear-gradient(135deg, rgba($color-primary, 0.06) 0%, rgba($color-secondary, 0.06) 100%);
-    border: 2rpx solid rgba($color-primary, 0.18);
+    padding-left: 42%;
+    background: $color-surface;
+    border: 2rpx solid $color-border;
     border-radius: $card-radius-sm;
-    box-shadow: 0 2rpx 16rpx rgba($color-primary, 0.06);
+    box-shadow: $shadow-sm;
     transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
       border-color 200ms ease,
-      background-color 200ms ease,
       box-shadow 200ms ease;
+    overflow: hidden;
+    // Force a compositing layer so WeChat reliably clips the absolute image
+    // to the card's border-radius and avoids 1px edge bleed.
+    will-change: transform;
+
+    // Ensure all content layers sit above the background image.
+    > *:not(.tier-selector__custom-bg) {
+      position: relative;
+      z-index: 1;
+    }
 
     &--active {
       border-color: $color-primary;
-      background: linear-gradient(135deg, rgba($color-primary, 0.10) 0%, rgba($color-secondary, 0.10) 100%);
-      box-shadow: 0 4rpx 24rpx rgba($color-primary, 0.18);
-      transform: scale(1.02);
+      box-shadow: 0 4rpx 24rpx rgba($color-primary, 0.12);
+      transform: scale(1.01);
     }
 
     &--pressed {
-      transform: scale(0.97);
+      transform: scale(0.98);
     }
   }
 
-  &__custom-card-icon {
-    width: 96rpx;
-    height: 96rpx;
-    flex-shrink: 0;
+  &__custom-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    border-radius: $card-radius-sm;
+    backface-visibility: hidden;
   }
 
   &__custom-card-body {
@@ -268,6 +322,7 @@
     flex-direction: column;
     gap: $spacing-xs;
     flex: 1;
+    min-width: 0;
   }
 
   &__custom-card-header {
@@ -312,13 +367,6 @@
     animation: grid-check-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  &__custom-card-check-icon {
-    font-size: $font-size-xs;
-    color: $color-text-white;
-    font-weight: $font-weight-bold;
-    line-height: 1;
-  }
-
   &__custom-card-sparkle {
     position: absolute;
     width: 12rpx;
@@ -327,18 +375,20 @@
     border-radius: 50%;
     opacity: 0;
 
-    &--1 {
-      top: 16rpx;
-      right: 24rpx;
-      animation: custom-sparkle 1.6s ease-in-out infinite 0.2s;
-    }
+    .tier-selector__custom-card--active & {
+      &--1 {
+        top: 16rpx;
+        right: 24rpx;
+        animation: custom-sparkle 1.6s ease-in-out infinite 0.2s;
+      }
 
-    &--2 {
-      bottom: 20rpx;
-      right: 56rpx;
-      width: 8rpx;
-      height: 8rpx;
-      animation: custom-sparkle 1.6s ease-in-out infinite 0.8s;
+      &--2 {
+        bottom: 20rpx;
+        right: 56rpx;
+        width: 8rpx;
+        height: 8rpx;
+        animation: custom-sparkle 1.6s ease-in-out infinite 0.8s;
+      }
     }
   }
 
@@ -355,14 +405,24 @@
     align-items: center;
     gap: $spacing-md;
     padding: $spacing-md;
+    padding-left: 42%;
     background: $color-surface;
     border: 2rpx solid $color-border;
     border-radius: $card-radius-sm;
     box-shadow: $shadow-sm;
     transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
       border-color 200ms ease,
-      background-color 200ms ease,
       box-shadow 200ms ease;
+    overflow: hidden;
+    // Force a compositing layer so WeChat reliably clips the absolute image
+    // to the card's border-radius and avoids 1px edge bleed.
+    will-change: transform;
+
+    // Ensure all content layers sit above the background image.
+    > *:not(.tier-selector__preset-bg) {
+      position: relative;
+      z-index: 1;
+    }
 
     &:nth-child(1) { animation: tier-row-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both; }
     &:nth-child(2) { animation: tier-row-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both; }
@@ -370,7 +430,6 @@
 
     &--active {
       border-color: $color-primary;
-      background: rgba($color-primary, 0.06);
       box-shadow: 0 4rpx 24rpx rgba($color-primary, 0.12);
       transform: scale(1.01);
     }
@@ -380,31 +439,14 @@
     }
   }
 
-  &__preset-icon {
-    width: 96rpx;
-    height: 96rpx;
-    border-radius: 50%;
-    @include flex-center;
-    flex-shrink: 0;
-    background: rgba($color-bg-tint-cream, 0.6);
-  }
-
-  &__preset-icon-dot {
-    width: 48rpx;
-    height: 48rpx;
-    border-radius: 50%;
-
-    &--sparkle {
-      background: rgba($color-primary, 0.5);
-    }
-
-    &--heart {
-      background: rgba($color-secondary, 0.6);
-    }
-
-    &--controller {
-      background: rgba($color-success, 0.6);
-    }
+  &__preset-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    border-radius: $card-radius-sm;
+    backface-visibility: hidden;
   }
 
   &__preset-body {
@@ -460,7 +502,7 @@
   &__preset-description {
     font-size: $font-size-xs;
     color: $color-text-secondary;
-    line-height: 1.5;
+    line-height: 1.6;
   }
 
   &__preset-check {
@@ -473,19 +515,13 @@
     animation: grid-check-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  &__preset-check-icon {
-    font-size: $font-size-xs;
-    color: $color-text-white;
-    font-weight: $font-weight-bold;
-    line-height: 1;
-  }
-
   // ── Advanced mode toggle ────────────────────────────────────────
   &__advanced-toggle {
     @include flex-center;
     gap: $spacing-xs;
     margin-top: $spacing-sm;
-    padding: $spacing-sm;
+    min-height: 88rpx;
+    padding: $spacing-sm $spacing-md;
     border-radius: $card-radius-sm;
     transition: background-color 150ms ease;
 
@@ -501,13 +537,15 @@
   }
 
   &__advanced-toggle-arrow {
-    font-size: $font-size-md;
-    color: $color-primary;
-    line-height: 1;
+    width: 16rpx;
+    height: 16rpx;
+    border-right: 4rpx solid $color-primary;
+    border-bottom: 4rpx solid $color-primary;
+    transform: rotate(45deg);
     transition: transform 200ms ease;
 
     &--up {
-      transform: rotate(180deg);
+      transform: rotate(-135deg);
     }
   }
 
@@ -537,17 +575,38 @@
     overflow: hidden;
   }
 
-  &__preview-image {
+  &__preview-frame {
+    position: relative;
     width: 100%;
-    max-width: 560rpx;
-    height: 320rpx;
+    max-width: 640rpx;
+    padding-bottom: 31.8%;
     border-radius: $card-radius-sm - 8rpx;
+    overflow: hidden;
+    background: $color-bg-warm-mid;
+  }
+
+  &__preview-frame-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
   }
 
   &__preview-label {
     @include type-caption;
     color: $color-text-muted;
     margin-top: $spacing-xs;
+  }
+
+  &__preview-affirmation {
+    @include type-caption;
+    color: $color-primary;
+    font-weight: $font-weight-semibold;
+    margin-top: 4rpx;
+    text-align: center;
+    animation: tier-selector-fade-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 }
 
@@ -593,8 +652,74 @@
   }
 }
 
+// ─── JS-driven reduced-motion override ──────────────────────────────
+.tier-selector--reduce-motion {
+  .tier-selector__mascot,
+  .tier-selector__preview,
+  .tier-selector__advanced-grid {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .tier-selector__grid-row {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .tier-selector__grid-row--simple {
+    transition: none;
+    transform: none;
+
+    &-active {
+      transform: none;
+    }
+  }
+
+  .tier-selector__grid-row--simple-active {
+    transform: none;
+  }
+
+  .tier-selector__grid-cell,
+  .tier-selector__preset-card,
+  .tier-selector__custom-card {
+    transition: none;
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .tier-selector__grid-cell--active,
+  .tier-selector__preset-card--active,
+  .tier-selector__custom-card--active {
+    transform: none;
+  }
+
+  .tier-selector__grid-cell-check,
+  .tier-selector__preset-check,
+  .tier-selector__custom-card-check {
+    animation: none;
+  }
+
+  .tier-selector__mascot-text-wrap {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .tier-selector__advanced-toggle-arrow {
+    transition: none;
+  }
+
+  .tier-selector__custom-card-sparkle {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .tier-selector__mascot {
+  .tier-selector__mascot-text-wrap {
     animation: none;
     opacity: 1;
     transform: none;
@@ -606,12 +731,27 @@
     transform: none;
   }
 
+  .tier-selector__preview-affirmation {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
   .tier-selector__grid-cell {
     transition: none;
   }
 
   .tier-selector__grid-cell-check {
     animation: none;
+  }
+
+  .tier-selector__grid-row--simple {
+    transition: none;
+    transform: none;
+  }
+
+  .tier-selector__grid-row--simple-active {
+    transform: none;
   }
 
   .tier-selector__grid-row {
@@ -648,6 +788,10 @@
 
   .tier-selector__custom-card--active {
     transform: none;
+  }
+
+  .tier-selector__custom-card-check {
+    animation: none;
   }
 
   .tier-selector__custom-card-sparkle {
