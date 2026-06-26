@@ -70,27 +70,17 @@ interface PersonalityTestQuestionProps {
   shouldShowEcho: boolean
   isEchoExiting: boolean
   echoEnabled: boolean
+  currentSelection: AssessmentOption | null
+  canGoNext: boolean
+  canGoPrevious: boolean
   lastAttemptedOptionRef: React.MutableRefObject<AssessmentOption | null>
-  backReview: {
-    isBackReviewMode: boolean
-    backReviewQuestion: AssessmentQuestion | null
-    backReviewPreviousAnswer: string | null
-    backReviewSelectedOption: string | null
-    backReviewHistoryIndex: number
-  }
   onAnswer: (option: AssessmentOption) => void
   onSliderChange: (value: number) => void
   onSliderSubmit: () => void
-  onBack: () => void
-  onBackFurther?: () => void
-  canGoFurtherBack?: boolean
+  onNext: () => void
+  onPrevious: () => void
   onSkip: () => void
   onRetry: () => void
-  onBackReviewSelect: (option: AssessmentOption) => void
-  onBackReviewSliderChange: (value: number) => void
-  onBackReviewSliderSubmit: () => void
-  onCancelBackReview: () => void
-  onConfirmBackReview: () => void
   onMilestoneReached: (info: { answered: number; estimatedTotal: number }) => void
 }
 
@@ -113,24 +103,20 @@ export default function PersonalityTestQuestion({
   shouldShowEcho,
   isEchoExiting,
   echoEnabled,
+  currentSelection,
+  canGoNext,
+  canGoPrevious,
   lastAttemptedOptionRef,
-  backReview,
   onAnswer,
   onSliderChange,
   onSliderSubmit,
-  onBack,
-  onBackFurther,
-  canGoFurtherBack,
+  onNext,
+  onPrevious,
   onSkip,
   onRetry,
-  onBackReviewSelect,
-  onBackReviewSliderChange,
-  onBackReviewSliderSubmit,
-  onCancelBackReview,
-  onConfirmBackReview,
   onMilestoneReached,
 }: PersonalityTestQuestionProps) {
-  const currentQuestion = backReview.isBackReviewMode ? backReview.backReviewQuestion : question
+  const currentQuestion = question
   const questionType = getQuestionType(currentQuestion)
 
   const questionStub = useMemo(
@@ -149,25 +135,21 @@ export default function PersonalityTestQuestion({
 
   // Xiaoyue speech bubble text. Commentary is set immediately from pre-attached
   // per-option data so the user sees tailored feedback without a network round-trip.
-  const speechText = backReview.isBackReviewMode
-    ? (canGoFurtherBack ? '可以继续回退到更早的题目。' : '这是你之前选的答案，可以修改后再确认。')
-    : postAnswerCommentary
-      ? postAnswerCommentary
-      : progress && progress.answered === 4
-        ? '已经一半了！你的命格轮廓越来越清晰，继续凭直觉选。'
-        : progress && progress.answered === 8
-          ? '太棒了！进入精准阶段，接下来的题目会更聚焦，帮你锁定最像自己的氛围命格。'
-          : question?.questionText ?? ''
+  const speechText = postAnswerCommentary
+    ? postAnswerCommentary
+    : progress && progress.answered === 4
+      ? '已经一半了！你的命格轮廓越来越清晰，继续凭直觉选。'
+      : progress && progress.answered === 8
+        ? '太棒了！进入精准阶段，接下来的题目会更聚焦，帮你锁定最像自己的氛围命格。'
+        : question?.questionText ?? ''
 
   const isLoadingSpeech = isSubmitting && !postAnswerCommentary
 
   // Forces a remount (and typing restart) whenever the speech source changes,
   // even if two consecutive questions happen to have identical text.
-  const speechKey = backReview.isBackReviewMode
-    ? `backreview-${backReview.backReviewQuestion?.id ?? 'none'}`
-    : postAnswerCommentary
-      ? `commentary-${progress?.answered ?? 0}`
-      : `question-${question?.id ?? 'none'}-${progress?.answered ?? 0}`
+  const speechKey = postAnswerCommentary
+    ? `commentary-${progress?.answered ?? 0}`
+    : `question-${question?.id ?? 'none'}-${progress?.answered ?? 0}`
 
   return (
     <View className={pageClassName}>
@@ -185,28 +167,6 @@ export default function PersonalityTestQuestion({
             已答 {progress?.answered ?? 0} 题 · 还剩约 {progress?.estimatedRemaining ?? 0} 题
           </Text>
         </View>
-        {progress && progress.answered >= 1 && (
-          <View
-            className='personality-test__back-btn personality-test__back-btn--enter'
-            hoverClass='personality-test__back-btn--active'
-            hoverStartTime={0}
-            hoverStayTime={100}
-            onClick={() => {
-              if (isSubmitting || isSkipping) return
-              if (backReview.isBackReviewMode) {
-                if (canGoFurtherBack && onBackFurther) {
-                  onBackFurther()
-                }
-                return
-              }
-              onBack()
-            }}
-            style={{ opacity: isSubmitting || isSkipping ? 0.4 : 1 }}
-          >
-            <Text className='personality-test__back-btn-icon'>←</Text>
-            <Text className='personality-test__back-btn-text'>{backReview.isBackReviewMode && !canGoFurtherBack ? '当前为最早一题' : '返回'}</Text>
-          </View>
-        )}
       </View>
 
       {/* D3 — Quiz halfway cheer badge (Batch D) — appears at >=50% progress */}
@@ -223,12 +183,7 @@ export default function PersonalityTestQuestion({
         {currentQuestion ? (
           <QuestionTransition questionId={currentQuestion.id}>
             <MascotQuestionHeader
-              question={backReview.isBackReviewMode
-                ? {
-                    scenarioText: backReview.backReviewQuestion?.scenarioText,
-                    questionText: backReview.backReviewQuestion?.questionText ?? '',
-                  }
-                : questionStub}
+              question={questionStub}
               isLoading={isSubmitting}
             />
           </QuestionTransition>
@@ -265,7 +220,7 @@ export default function PersonalityTestQuestion({
                   />
                 </View>
                 <View
-                  className={`personality-test__speech-bubble${!backReview.isBackReviewMode && progress && (progress.answered === 4 || progress.answered === 8) ? ' personality-test__speech-bubble--milestone' : ''}`}
+                  className={`personality-test__speech-bubble${progress && (progress.answered === 4 || progress.answered === 8) ? ' personality-test__speech-bubble--milestone' : ''}`}
                 >
                   {isLoadingSpeech ? (
                     <Text className='personality-test__speech-bubble-text'>{speechText}</Text>
@@ -292,23 +247,16 @@ export default function PersonalityTestQuestion({
         {currentQuestion ? (
           <QuestionTransition questionId={currentQuestion.id}>
             <PersonalityTestAnswerArea
-              questionType={backReview.isBackReviewMode
-                ? getQuestionType(backReview.backReviewQuestion)
-                : questionType}
+              questionType={questionType}
               options={currentQuestion.options}
               sliderConfig={currentQuestion.sliderConfig}
-              sliderValue={backReview.isBackReviewMode
-                ? getSliderValueFromPreviousAnswer(
-                    backReview.backReviewPreviousAnswer,
-                    backReview.backReviewQuestion!.options,
-                  )
-                : sliderValue}
+              sliderValue={sliderValue}
               isSubmitting={isSubmitting}
-              onAnswer={backReview.isBackReviewMode ? onBackReviewSelect : onAnswer}
-              onSliderChange={backReview.isBackReviewMode ? onBackReviewSliderChange : onSliderChange}
-              onSliderSubmit={backReview.isBackReviewMode ? onBackReviewSliderSubmit : onSliderSubmit}
-              committedValue={backReview.isBackReviewMode ? (backReview.backReviewSelectedOption ?? backReview.backReviewPreviousAnswer) : null}
-              hideSliderSubmit={backReview.isBackReviewMode}
+              onAnswer={onAnswer}
+              onSliderChange={onSliderChange}
+              onSliderSubmit={onSliderSubmit}
+              committedValue={currentSelection?.value ?? null}
+              hideSliderSubmit={true}
               onOptionTouchStart={undefined}
               onOptionTouchEnd={undefined}
               onOptionTouchMove={undefined}
@@ -347,73 +295,80 @@ export default function PersonalityTestQuestion({
         )}
       </ScrollView>
 
-      {/* Back-review actions */}
-      {backReview.isBackReviewMode && (
-        <View className='personality-test__back-review-actions'>
+      {/* Navigation row: 上一题 / 下一题 */}
+      <View className='personality-test__nav-row'>
+        {canGoPrevious ? (
           <Button
             variant='secondary'
-            className='personality-test__back-review-btn personality-test__back-review-btn--cancel'
-            onClick={onCancelBackReview}
-            disabled={isSubmitting}
-            hoverClass='personality-test__back-review-btn--hover'
+            className='personality-test__nav-btn personality-test__nav-btn--prev'
+            onClick={() => {
+              if (isSubmitting || isSkipping) return
+              onPrevious()
+            }}
+            disabled={isSubmitting || isSkipping}
+            hoverClass='personality-test__nav-btn--active'
+            style={{ opacity: isSubmitting || isSkipping ? 0.4 : 1 }}
           >
-            取消
+            上一题
           </Button>
-          <Button
-            variant='brand'
-            className='personality-test__back-review-btn personality-test__back-review-btn--confirm'
-            onClick={onConfirmBackReview}
-            disabled={isSubmitting}
-            loading={isSubmitting}
-            hoverClass='personality-test__back-review-btn--hover'
-          >
-            {isSubmitting ? '提交中…' : '确认修改'}
-          </Button>
-        </View>
-      )}
+        ) : (
+          <View className='personality-test__nav-btn personality-test__nav-btn--placeholder' />
+        )}
+        <Button
+          variant='brand'
+          className='personality-test__nav-btn personality-test__nav-btn--next'
+          onClick={() => {
+            if (isSubmitting || isSkipping || !canGoNext) return
+            onNext()
+          }}
+          disabled={isSubmitting || isSkipping || !canGoNext}
+          loading={isSubmitting}
+          hoverClass='personality-test__nav-btn--active'
+        >
+          {isSubmitting ? '提交中…' : '下一题'}
+        </Button>
+      </View>
 
-      {/* Skip button (normal mode only) */}
-      {!backReview.isBackReviewMode && (
-        <View className='personality-test__skip-row'>
-          {skipsRemaining > 0 ? (
-            <View
-              className='personality-test__skip-btn personality-test__skip-btn--enter'
-              hoverClass='personality-test__skip-btn--active'
-              hoverStartTime={0}
-              hoverStayTime={100}
-              onClick={() => {
-                if (isSubmitting || isSkipping) return
-                onSkip()
-              }}
-              style={{ opacity: isSubmitting || isSkipping ? 0.4 : 1 }}
-            >
-              {isSkipping ? (
-                <View className='personality-test__skip-btn-dots'>
-                  <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--1' />
-                  <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--2' />
-                  <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--3' />
-                </View>
-              ) : (
-                <>
-                  <Text className='personality-test__skip-btn-icon'>↻</Text>
-                  <Text className='personality-test__skip-btn-text'>换一题</Text>
-                  <Text className='personality-test__skip-btn-count'>还剩 {skipsRemaining} 次</Text>
-                </>
-              )}
-            </View>
-          ) : (
-            <View className='personality-test__skip-hint personality-test__skip-hint--enter'>
-              <Text className='personality-test__skip-hint-text'>这些题目都是为你挑选的，试试看～</Text>
-              <Text className='personality-test__skip-hint-subtext'>直觉很准，一题都没跳。</Text>
-            </View>
-          )}
-        </View>
-      )}
+      {/* Skip button */}
+      <View className='personality-test__skip-row'>
+        {skipsRemaining > 0 ? (
+          <View
+            className='personality-test__skip-btn personality-test__skip-btn--enter'
+            hoverClass='personality-test__skip-btn--active'
+            hoverStartTime={0}
+            hoverStayTime={100}
+            onClick={() => {
+              if (isSubmitting || isSkipping) return
+              onSkip()
+            }}
+            style={{ opacity: isSubmitting || isSkipping ? 0.4 : 1 }}
+          >
+            {isSkipping ? (
+              <View className='personality-test__skip-btn-dots'>
+                <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--1' />
+                <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--2' />
+                <View className='personality-test__skip-btn-dot personality-test__skip-btn-dot--3' />
+              </View>
+            ) : (
+              <>
+                <Text className='personality-test__skip-btn-icon'>↻</Text>
+                <Text className='personality-test__skip-btn-text'>换一题</Text>
+                <Text className='personality-test__skip-btn-count'>还剩 {skipsRemaining} 次</Text>
+              </>
+            )}
+          </View>
+        ) : (
+          <View className='personality-test__skip-hint personality-test__skip-hint--enter'>
+            <Text className='personality-test__skip-hint-text'>这些题目都是为你挑选的，试试看～</Text>
+            <Text className='personality-test__skip-hint-subtext'>直觉很准，一题都没跳。</Text>
+          </View>
+        )}
+      </View>
 
       {error ? (
         <View className='personality-test__error-row'>
           <Text className='personality-test__error'>{error}</Text>
-          {lastAttemptedOptionRef.current && !backReview.isBackReviewMode ? (
+          {lastAttemptedOptionRef.current ? (
             <Button
               variant='secondary'
               className='personality-test__retry-btn'

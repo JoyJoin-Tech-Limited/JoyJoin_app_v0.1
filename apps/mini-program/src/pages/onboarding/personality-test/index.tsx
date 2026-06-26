@@ -42,7 +42,6 @@ import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
 import { isMilestoneQuestion } from './personalityTestLogic'
 import { triggerXiaoyueAnalysisPrefetch } from './triggerXiaoyueAnalysisPrefetch'
-import { useBackReview } from './useBackReview'
 import PersonalityTestIntro from './PersonalityTestIntro'
 import PersonalityTestQuestion from './PersonalityTestQuestion'
 import { getNearestSliderOption } from './PersonalityTestAnswerArea'
@@ -211,7 +210,13 @@ export default function PersonalityTestPage() {
     finalResult?: AnonymousAssessmentResult | null
   } | null>(null)
   const completionNavigationRef = useRef(false)
-  const backReview = useBackReview()
+  const [currentSelection, setCurrentSelection] = useState<AssessmentOption | null>(null)
+  const [currentHistoryIndex, setCurrentHistoryIndex] = useState(-1)
+  const liveQuestionSnapshotRef = useRef<{
+    question: AssessmentQuestion | null
+    progress: AssessmentProgress | null
+    matches: AssessmentMatch[]
+  } | null>(null)
 
   const isAuthenticated = auth.isAuthenticated
 
@@ -480,17 +485,11 @@ export default function PersonalityTestPage() {
     isAuthenticated,
   ])
 
-  const handleAnswer = useCallback(async (option: AssessmentOption) => {
+  const handleAnswer = useCallback((option: AssessmentOption) => {
     if (!sessionId || !question || isSubmitting) return
 
-    // Clear previous commentary so the speech bubble doesn't show stale feedback
     setPostAnswerCommentary(null)
 
-    // Stale-session guard: remember which session this answer belongs to
-    const thisSessionId = sessionId
-    activeSessionRef.current = thisSessionId
-
-    // Choose reaction based on milestone proximity
     const isMilestone = progress && isMilestoneQuestion(progress.answered)
     const reactionState: XiaoyueSpriteState = isMilestone ? 'celebrate' : 'nod'
 
@@ -499,159 +498,22 @@ export default function PersonalityTestPage() {
     }
 
     setSpriteState(reactionState)
-
     lastAttemptedOptionRef.current = option
+    setCurrentSelection(option)
 
-    // Show pre-attached per-option commentary immediately so Xiaoyue's feedback
-    // is always tailored to the exact option the user chose — no more generic
-    // rotating "收到～" messages that pretend to know the user.
     const immediateCommentary = option.commentary ?? null
     const commentaryStartTime = Date.now()
     setPostAnswerCommentary(immediateCommentary)
     if (immediateCommentary) {
       commentaryReceivedAtRef.current = commentaryStartTime
     }
-
-    setIsSubmitting(true)
-    setError('')
-    try {
-      // Fire the answer API call in parallel with the commentary display timer
-      const apiPromise = apiRequest<AssessmentAnswerResponse>({
-        path: `/api/assessment/v4/${encodeURIComponent(thisSessionId)}/answer`,
-        method: 'POST',
-        data: {
-          questionId: question.id,
-          selectedOption: option.value,
-        },
-      })
-
-      // Ensure commentary is visible for at least COMMENTARY_MIN_DISPLAY_MS so
-      // the user has time to read Xiaoyue's feedback before the next question
-      // appears. The API call runs concurrently with this delay.
-      if (immediateCommentary) {
-        const minDisplayRemaining = Math.max(
-          0,
-          COMMENTARY_MIN_DISPLAY_MS - (Date.now() - commentaryStartTime),
-        )
-        if (minDisplayRemaining > 0) {
-          await new Promise((resolve) => setTimeout(resolve, minDisplayRemaining))
-        }
-      }
-
-      const result = await apiPromise
-
-      // Abandon stale async work if session has changed
-      if (activeSessionRef.current !== thisSessionId) return
-
-      // Fallback: use server commentary if the option didn't have pre-attached
-      // commentary (shouldn't happen, but ensures robustness)
-      if (!immediateCommentary && result.commentary) {
-        setPostAnswerCommentary(result.commentary)
-        commentaryReceivedAtRef.current = Date.now()
-      }
-
-      if (!isAuthenticated) {
-        upsertAnonymousAssessmentAnswer({
-          questionId: question.id,
-          selectedOption: option.value,
-          traitScores: option.traitScores,
-          answeredAt: new Date().toISOString(),
-        })
-      }
-
-      if (result.isComplete || !result.nextQuestion) {
-        const completedAnswerCount = result.progress?.answered ?? ((progress?.answered ?? 0) + 1)
-        logInfo('[PersonalityTest] Assessment complete', {
-          isAuthenticated,
-          sessionId: thisSessionId,
-        })
-
-        // P0-3: prefetch the Xiaoyue AI analysis so the result page lands
-        // on a populated analysis instead of a 400ms skeleton.
-        if (result.result && result.result.primaryArchetype) {
-          triggerXiaoyueAnalysisPrefetch(
-            result.result,
-            result.currentMatches ?? currentMatches,
-          )
-        }
-
-        if (!isValidFinalResult(result.result)) {
-          setIsPageExiting(false)
-          setError('结果同步出了点小问题，请重试一次')
-          analytics.errorOccurred('invalid_final_result', 'primaryArchetype missing or invalid')
-          logError('[PersonalityTest] Invalid finalResult from server', {
-            sessionId: thisSessionId,
-            result: result.result,
-          })
-          return
-        }
-
-        analytics.stepCompleted({
-          isAuthenticated,
-          answerCount: completedAnswerCount,
-          destination: MINI_PROGRAM_ROUTES.personalityTestResults,
-        })
-
-        // Stash the completed result and show the celebration shell. Navigation
-        // to the slot/result page is gated by onCelebrateReady so the user sees
-        // the full completion beat, and *all* users (guests + authenticated)
-        // go through the result page rather than skipping straight to nextStep.
-        pendingCompletionRef.current = {
-          sessionId: thisSessionId,
-          topArchetypes: result.currentMatches ?? currentMatches,
-          finalResult: result.result,
-        }
-        setPhase('completing')
-        return
-      }
-
-      // Push to question history for multi-step back review
-      questionHistoryRef.current = [
-        ...questionHistoryRef.current,
-        { question, answer: option.value },
-      ]
-
-      // Abandon if session changed during the async work
-      if (activeSessionRef.current !== thisSessionId) return
-
-      // Clear the attempted-option ref on successful submit so retry and echo
-      // don't leak stale state across questions.
-      lastAttemptedOptionRef.current = null
-
-      // Stash the next-question data in a ref instead of applying it immediately.
-      // The echo exit animation (220ms) will apply this atomically so the user
-      // never sees new question text overlaid with the fading old answer echo.
-      pendingQuestionUpdateRef.current = {
-        question: result.nextQuestion ?? null,
-        progress: result.progress ?? null,
-        matches: result.currentMatches ?? [],
-      }
-    } catch (err) {
-      setIsPageExiting(false)
-      const rawMessage = err instanceof Error ? err.message : String(err)
-      const message = getErrorMessage('submit-failed')
-      setError(message)
-      analytics.errorOccurred('answer_failed', rawMessage)
-      logError('[PersonalityTest] Failed to submit answer', { rawMessage, userMessage: message })
-      setSpriteState('idle')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }, [
-    analytics,
-    currentMatches,
-    isAuthenticated,
-    isSubmitting,
-    progress,
-    question,
-    sessionId,
-  ])
+  }, [sessionId, question, isSubmitting, progress])
 
   const handleSliderSubmit = useCallback(() => {
     if (!question) return
     const sliderOption = getNearestSliderOption(question.options, sliderValue)
     if (sliderOption) {
-      void handleAnswer(sliderOption)
+      handleAnswer(sliderOption)
       return
     }
     analytics.validationFailed('slider', 'no-option-mapped')
@@ -668,31 +530,6 @@ export default function PersonalityTestPage() {
     }, 400)
   }, [])
 
-  const handleBackReviewSliderChange = useCallback((value: number) => {
-    setSliderValue(value)
-    if (!backReview.isBackReviewMode || !backReview.backReviewQuestion) return
-    const option = getNearestSliderOption(backReview.backReviewQuestion.options, value)
-    if (option) {
-      backReview.selectOption(option.value)
-    }
-  }, [backReview])
-
-  const handleBackReviewSliderSubmit = useCallback(() => {
-    if (!backReview.isBackReviewMode || !backReview.backReviewQuestion) return
-    const option = getNearestSliderOption(backReview.backReviewQuestion.options, sliderValue)
-    if (option) {
-      backReview.selectOption(option.value)
-    }
-  }, [backReview, sliderValue])
-
-  const handleRetry = useCallback(() => {
-    const option = lastAttemptedOptionRef.current
-    if (option) {
-      setError('')
-      void handleAnswer(option)
-    }
-  }, [handleAnswer])
-
   // When submitting ends while sprite is in 'thinking', return to idle and
   // deactivate the interaction-driven mascot animation.
   useEffect(() => {
@@ -704,7 +541,7 @@ export default function PersonalityTestPage() {
 
   // Echo lifecycle: fade-out before unmount so the transition to the next
   // question doesn't feel like a hard cut.
-  const shouldShowEcho = isSubmitting && !backReview.isBackReviewMode
+  const shouldShowEcho = isSubmitting
   useEffect(() => {
     if (shouldShowEcho) {
       // Entering: cancel any pending exit and ensure we're not in exiting state
@@ -771,195 +608,214 @@ export default function PersonalityTestPage() {
     }
   }, [])
 
-  // P1-2: option-hover preview with 200ms debounce.
-  // On touch-start, capture the current sprite state, then schedule a state swap
-  // to a per-option preview state 200ms later. On touch-end before 200ms, restore
-  // the captured state. On commit (handleAnswer runs to completion), the sprite is
-  // set to `nod` by the answer flow and the preview is auto-cleared.
-  const handleBack = useCallback(() => {
-    if (questionHistoryRef.current.length === 0) return
-    haptics('light')
-    analytics.interaction('personality_test_back_used', {
-      questionIndex: progress?.answered ?? 0,
-      sessionId: sessionId || 'anonymous',
-    })
-    lastAttemptedOptionRef.current = null
-    const lastIndex = questionHistoryRef.current.length - 1
-    const entry = questionHistoryRef.current[lastIndex]
-    backReview.enterBackReview(entry.question, entry.answer, lastIndex)
-  }, [analytics, backReview, progress, sessionId])
+  const handleNext = useCallback(async () => {
+    if (!sessionId || !question || isSubmitting) return
 
-  // Go further back in question history while in back-review mode
-  const handleBackFurther = useCallback(() => {
-    const currentIndex = backReview.backReviewHistoryIndex
-    if (currentIndex <= 0 || questionHistoryRef.current.length === 0) return
-    haptics('light')
-    const prevEntry = questionHistoryRef.current[currentIndex - 1]
-    backReview.enterBackReview(prevEntry.question, prevEntry.answer, currentIndex - 1)
-  }, [backReview])
+    // Determine if we need API call or just history navigation
+    // currentHistoryIndex >= 0 means we're viewing a previous answer
+    if (currentHistoryIndex >= 0) {
+      const currentHistoryEntry = questionHistoryRef.current[currentHistoryIndex]
+      const isAnswerUnchanged = currentSelection?.value === currentHistoryEntry?.answer
 
-  const handleBackReviewSelect = useCallback((option: AssessmentOption) => {
-    backReview.selectOption(option.value)
-  }, [backReview])
+      if (isAnswerUnchanged && currentHistoryIndex + 1 < questionHistoryRef.current.length) {
+        const nextIndex = currentHistoryIndex + 1
+        const nextEntry = questionHistoryRef.current[nextIndex]
+        setCurrentHistoryIndex(nextIndex)
+        setQuestion(nextEntry.question)
+        const prevOption = nextEntry.question.options.find(o => o.value === nextEntry.answer) ?? null
+        setCurrentSelection(prevOption)
+        setSliderValue(50)
+        setPostAnswerCommentary(null)
+        return
+      }
 
-  const handleConfirmBackReview = useCallback(async () => {
-    const payload = backReview.getConfirmPayload()
-    if (!payload.changed || !payload.question || !payload.selectedOption) {
-      backReview.cancelBackReview()
-      return
+      if (isAnswerUnchanged && currentHistoryIndex + 1 >= questionHistoryRef.current.length) {
+        const snapshot = liveQuestionSnapshotRef.current
+        if (snapshot) {
+          setQuestion(snapshot.question)
+          setProgress(snapshot.progress)
+          setCurrentMatches(snapshot.matches)
+          liveQuestionSnapshotRef.current = null
+        }
+        setCurrentHistoryIndex(-1)
+        setCurrentSelection(null)
+        setSliderValue(50)
+        setPostAnswerCommentary(null)
+        return
+      }
     }
+
+    // Need to submit via API (new answer or history modification)
+    if (!currentSelection) return
+
+    const thisSessionId = sessionId
+    activeSessionRef.current = thisSessionId
 
     setIsSubmitting(true)
     setError('')
     try {
-      if (isAuthenticated) {
-        const result = await apiRequest<AssessmentAnswerResponse>({
-          path: `/api/assessment/v4/${encodeURIComponent(sessionId)}/answer`,
-          method: 'PUT',
-          data: {
-            questionId: payload.question.id,
-            selectedOption: payload.selectedOption,
-          },
-        })
+      const option = currentSelection
+      const commentaryStartTime = commentaryReceivedAtRef.current || Date.now()
 
-        // If engine re-branched to a different next question, discard stale current
-        if (result.nextQuestion && result.nextQuestion.id !== question?.id) {
-          setQuestion(result.nextQuestion)
-        }
-        setProgress(result.progress ?? null)
-        setCurrentMatches(result.currentMatches ?? [])
-        setSliderValue(50)
-        setPostAnswerCommentary(null)
-
-        // Truncate history after the modified question; subsequent answers
-        // were based on the old answer path and are now stale.
-        const modifiedIndex = backReview.backReviewHistoryIndex
-        backReview.exitBackReview()
-        if (modifiedIndex >= 0) {
-          const safe = questionHistoryRef.current.slice(0, modifiedIndex)
-          questionHistoryRef.current = [
-            ...safe,
-            { question: payload.question, answer: payload.selectedOption },
-          ]
-        }
-        return
-      }
-
-      // Anonymous flow: mutate localStorage and rebuild engine state client-side
-      const answers = readAnonymousAssessmentAnswers()
-      const nextAnswers = answers.filter((a) => a.questionId !== payload.question!.id)
-      nextAnswers.push({
-        questionId: payload.question!.id,
-        selectedOption: payload.selectedOption,
-        traitScores: payload.question!.options.find((o) => o.value === payload.selectedOption)?.traitScores,
-        answeredAt: new Date().toISOString(),
+      const apiPromise = apiRequest<AssessmentAnswerResponse>({
+        path: `/api/assessment/v4/${encodeURIComponent(thisSessionId)}/answer`,
+        method: currentHistoryIndex >= 0 ? 'PUT' : 'POST',
+        data: {
+          questionId: question.id,
+          selectedOption: option.value,
+        },
       })
 
-      // Rebuild engine state, restoring any questions the user previously skipped
-      const skippedState = readAnonymousAssessmentSkipped()
-      const engineState = buildAnonymousEngineState(
-        nextAnswers,
-        skippedState.skippedQuestionIds,
-        skippedState.skipCount,
-      )
-      anonymousEngineStateRef.current = engineState
+      // Ensure commentary is visible for at least COMMENTARY_MIN_DISPLAY_MS
+      if (postAnswerCommentary) {
+        const minDisplayRemaining = Math.max(
+          0,
+          COMMENTARY_MIN_DISPLAY_MS - (Date.now() - commentaryStartTime),
+        )
+        if (minDisplayRemaining > 0) {
+          await new Promise((resolve) => setTimeout(resolve, minDisplayRemaining))
+        }
+      }
 
-      const nextQuestion = selectNextQuestion(engineState)
-      if (!nextQuestion) {
+      const result = await apiPromise
+
+      if (activeSessionRef.current !== thisSessionId) return
+
+      if (!isAuthenticated) {
+        upsertAnonymousAssessmentAnswer({
+          questionId: question.id,
+          selectedOption: option.value,
+          traitScores: option.traitScores,
+          answeredAt: new Date().toISOString(),
+        })
+      }
+
+      if (!result.commentary && postAnswerCommentary) {
+        // Keep the per-option commentary that was set by handleAnswer
+      } else if (result.commentary) {
+        setPostAnswerCommentary(result.commentary)
+        commentaryReceivedAtRef.current = Date.now()
+      }
+
+      if (result.isComplete || !result.nextQuestion) {
+        const completedAnswerCount = result.progress?.answered ?? ((progress?.answered ?? 0) + 1)
+        logInfo('[PersonalityTest] Assessment complete', {
+          isAuthenticated,
+          sessionId: thisSessionId,
+        })
+
+        if (result.result && result.result.primaryArchetype) {
+          triggerXiaoyueAnalysisPrefetch(
+            result.result,
+            result.currentMatches ?? currentMatches,
+          )
+        }
+
+        if (!isValidFinalResult(result.result)) {
+          setIsPageExiting(false)
+          setError('结果同步出了点小问题，请重试一次')
+          analytics.errorOccurred('invalid_final_result', 'primaryArchetype missing or invalid')
+          logError('[PersonalityTest] Invalid finalResult from server', {
+            sessionId: thisSessionId,
+            result: result.result,
+          })
+          return
+        }
+
         analytics.stepCompleted({
-          isAuthenticated: false,
-          answerCount: engineState.answeredQuestionIds.size,
+          isAuthenticated,
+          answerCount: completedAnswerCount,
           destination: MINI_PROGRAM_ROUTES.personalityTestResults,
         })
 
-        // Stash the client-side completion and show the celebration shell.
-        // Navigation is gated by onCelebrateReady so the slot/result page does
-        // not cut the celebration short.
         pendingCompletionRef.current = {
-          sessionId: sessionId || 'anonymous-client',
-          topArchetypes: engineState.currentMatches.slice(0, 3),
-          finalResult: null,
+          sessionId: thisSessionId,
+          topArchetypes: result.currentMatches ?? currentMatches,
+          finalResult: result.result,
         }
         setPhase('completing')
         return
       }
 
-      // If re-branched to a different question, use the new one
-      const mappedNextQuestion: AssessmentQuestion = {
-        id: nextQuestion.id,
-        scenarioText: nextQuestion.scenarioText,
-        questionText: nextQuestion.questionText,
-        options: nextQuestion.options.map((o) => ({
-          value: o.value,
-          text: o.text,
-          traitScores: o.traitScores as Record<string, number>,
-          iconAssetKey: o.iconAssetKey,
-        })),
-        questionType: nextQuestion.questionType ?? 'choice',
-        sliderConfig: nextQuestion.sliderConfig
-          ? {
-              leftLabel: nextQuestion.sliderConfig.leftLabel,
-              rightLabel: nextQuestion.sliderConfig.rightLabel,
-              leftEmoji: nextQuestion.sliderConfig.leftEmoji,
-              rightEmoji: nextQuestion.sliderConfig.rightEmoji,
-            }
-          : undefined,
+      // Push to question history
+      if (currentHistoryIndex >= 0) {
+        const safe = questionHistoryRef.current.slice(0, currentHistoryIndex)
+        questionHistoryRef.current = [
+          ...safe,
+          { question, answer: option.value },
+        ]
+      } else {
+        questionHistoryRef.current = [
+          ...questionHistoryRef.current,
+          { question, answer: option.value },
+        ]
       }
+      setCurrentHistoryIndex(-1)
+      setCurrentSelection(null)
 
-      // Save updated answers
-      saveAnonymousAssessmentSession({
-        sessionId: sessionId || readAnonymousAssessmentSession()?.sessionId || 'anonymous-client',
-        phase: 'pre_signup',
-        timestamp: Date.now(),
-      })
-      // Upsert via localStorage
-      for (const ans of nextAnswers) {
-        upsertAnonymousAssessmentAnswer(ans)
-      }
+      if (activeSessionRef.current !== thisSessionId) return
+      lastAttemptedOptionRef.current = null
 
-      setQuestion(mappedNextQuestion)
-      setProgress({
-        answered: engineState.answeredQuestionIds.size,
-        estimatedRemaining: Math.max(0, engineState.config.minQuestions - engineState.answeredQuestionIds.size),
-        minQuestions: engineState.config.minQuestions,
-        softMaxQuestions: engineState.config.softMaxQuestions,
-        hardMaxQuestions: engineState.config.hardMaxQuestions,
-      })
-      setCurrentMatches(engineState.currentMatches.slice(0, 3).map((m) => ({
-        archetype: m.archetype,
-        score: m.score,
-        confidence: m.confidence,
-      })))
-      setSliderValue(50)
-      setPostAnswerCommentary(null)
-      // Truncate history after the modified question
-      {
-        const modifiedIndex = backReview.backReviewHistoryIndex
-        if (modifiedIndex >= 0) {
-          const safe = questionHistoryRef.current.slice(0, modifiedIndex)
-          questionHistoryRef.current = [
-            ...safe,
-            { question: payload.question, answer: payload.selectedOption },
-          ]
-        }
+      pendingQuestionUpdateRef.current = {
+        question: result.nextQuestion ?? null,
+        progress: result.progress ?? null,
+        matches: result.currentMatches ?? [],
       }
-      backReview.exitBackReview()
     } catch (err) {
+      setIsPageExiting(false)
       const rawMessage = err instanceof Error ? err.message : String(err)
       const message = getErrorMessage('submit-failed')
       setError(message)
-      analytics.errorOccurred('back_review_confirm_failed', rawMessage)
-      logError('[PersonalityTest] Failed to confirm back review', { rawMessage, userMessage: message })
-      // Stay in back-review mode for retry (REL-02)
+      analytics.errorOccurred('answer_failed', rawMessage)
+      logError('[PersonalityTest] Failed to submit answer', { rawMessage, userMessage: message })
+      setSpriteState('idle')
     } finally {
       setIsSubmitting(false)
     }
-  }, [analytics, backReview, isAuthenticated, question, sessionId])
+  }, [
+    analytics,
+    currentHistoryIndex,
+    currentMatches,
+    currentSelection,
+    isAuthenticated,
+    isSubmitting,
+    postAnswerCommentary,
+    progress,
+    question,
+    sessionId,
+  ])
 
-  const handleCancelBackReview = useCallback(() => {
-    backReview.cancelBackReview()
+  const handlePrevious = useCallback(() => {
+    if (questionHistoryRef.current.length === 0) return
+    haptics('light')
+
+    if (currentHistoryIndex === -1 && !liveQuestionSnapshotRef.current) {
+      liveQuestionSnapshotRef.current = {
+        question,
+        progress: progress ?? null,
+        matches: currentMatches,
+      }
+    }
+
+    const targetIndex = currentHistoryIndex < 0
+      ? questionHistoryRef.current.length - 1
+      : currentHistoryIndex - 1
+
+    if (targetIndex < 0) return
+
+    const entry = questionHistoryRef.current[targetIndex]
+    setCurrentHistoryIndex(targetIndex)
+    setQuestion(entry.question)
+    const prevOption = entry.question.options.find(o => o.value === entry.answer) ?? null
+    setCurrentSelection(prevOption)
+    setSliderValue(50)
+    setPostAnswerCommentary(null)
+  }, [currentHistoryIndex, question, progress, currentMatches])
+
+  const handleRetry = useCallback(() => {
     setError('')
-  }, [backReview])
+    void handleNext()
+  }, [handleNext])
 
   const handleSkip = useCallback(async () => {
     if (!sessionId || !question || isSkipping || skipsRemaining <= 0) return
@@ -1098,21 +954,17 @@ export default function PersonalityTestPage() {
           shouldShowEcho={shouldShowEcho}
           isEchoExiting={isEchoExiting}
           echoEnabled={echoEnabled}
+          currentSelection={currentSelection}
+          canGoNext={currentSelection !== null || (question?.questionType === 'slider')}
+          canGoPrevious={currentHistoryIndex === -1 ? questionHistoryRef.current.length > 0 : currentHistoryIndex > 0}
           lastAttemptedOptionRef={lastAttemptedOptionRef}
-          backReview={backReview}
           onAnswer={handleAnswer}
           onSliderChange={handleSliderChange}
           onSliderSubmit={handleSliderSubmit}
-          onBack={handleBack}
-          onBackFurther={handleBackFurther}
-          canGoFurtherBack={backReview.isBackReviewMode && backReview.backReviewHistoryIndex > 0}
+          onNext={handleNext}
+          onPrevious={handlePrevious}
           onSkip={handleSkip}
           onRetry={handleRetry}
-          onBackReviewSelect={handleBackReviewSelect}
-          onBackReviewSliderChange={handleBackReviewSliderChange}
-          onBackReviewSliderSubmit={handleBackReviewSliderSubmit}
-          onCancelBackReview={handleCancelBackReview}
-          onConfirmBackReview={handleConfirmBackReview}
           onMilestoneReached={({ answered, estimatedTotal: total }) => {
             haptics('medium')
             logInfo('[PersonalityTest] halfway milestone reached', {

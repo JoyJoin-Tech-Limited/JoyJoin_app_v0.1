@@ -91,7 +91,7 @@ function EmojiTapOption({
       onTouchEnd={onTouchEnd}
       onTouchMove={onTouchMove}
       onClick={onClick}
-      disabled={isSubmitting || selectedValue !== null}
+      disabled={isSubmitting}
       hoverClass='answer-area__emoji-option--active'
     >
       {showImage ? (
@@ -261,11 +261,6 @@ export default memo(function PersonalityTestAnswerArea({
     }, 400)
 
     onAnswer(option)
-    // Clear selection flash after 300ms
-    selectedTimeoutRef.current = setTimeout(() => {
-      setSelectedValue(null)
-      selectedTimeoutRef.current = null
-    }, 300)
   }, [onAnswer])
 
   // Cleanup timeout on unmount
@@ -462,7 +457,7 @@ export default memo(function PersonalityTestAnswerArea({
               haptics('light')
               handleAnswer(option)
             }}
-            disabled={isSubmitting || selectedValue !== null}
+            disabled={isSubmitting}
             hoverClass='answer-area__option--active'
           >
             <Text className='answer-area__option-text'>{option.text}</Text>

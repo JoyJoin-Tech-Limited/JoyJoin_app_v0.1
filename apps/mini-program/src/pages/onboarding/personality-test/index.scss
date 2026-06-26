@@ -613,26 +613,43 @@
     line-height: 1.2;
   }
 
-  // Back-review action buttons
-  &__back-review-actions {
+  // Navigation row: 上一题 / 下一题
+  &__nav-row {
     display: flex;
     gap: $spacing-md;
-    padding: 0 $container-padding 24rpx;
+    padding: 0 $container-padding 12rpx;
     @include safe-area-inline($container-padding);
-    @include safe-area-bottom-padding(padding-bottom, 24rpx);
   }
 
-  &__back-review-btn {
+  &__nav-btn {
     flex: 1;
+    min-height: $cta-min-tap;
+    border-radius: $button-radius;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    transition: background 0.15s ease, transform 0.12s ease;
 
-    &--cancel {
+    &--prev {
       flex: 0 0 auto;
-      min-width: 120rpx;
+      min-width: 160rpx;
+      background: rgba($color-text-primary, 0.04);
+      color: $color-text-secondary;
     }
-  }
 
-  &__back-review-btn--hover {
-    opacity: 0.85;
+    &--next {
+      flex: 1;
+    }
+
+    &--placeholder {
+      flex: 0 0 auto;
+      min-width: 160rpx;
+      visibility: hidden;
+    }
+
+    &--active {
+      opacity: 0.85;
+      transform: scale(0.98);
+    }
   }
 
   // Skip button
@@ -1012,13 +1029,13 @@
       animation: none;
     }
 
-    &__back-review-actions,
+    &__nav-row,
     &__skip-row {
       opacity: 1;
       transform: none;
     }
 
-    &__back-btn,
+    &__nav-btn,
     &__skip-btn,
     &__skip-hint {
       transition: none;
