@@ -45,7 +45,7 @@ export default function Index() {
   const auth = useAuth()
   const hasRedirectedRef = useRef(false)
   const [entryDone, setEntryDone] = useState(false)
-  const { isTimedOut, retry, dismiss } = useAuthGate(auth)
+  const { isTimedOut, isOffline, retry, dismiss } = useAuthGate(auth)
 
   // Unified redirect: authenticated users go to nextStep; guests with an
   // incomplete anonymous assessment go back to the personality test.
@@ -65,47 +65,17 @@ export default function Index() {
 
     // Authenticated path takes priority over guest restore.
     if (auth.isAuthenticated && auth.user) {
-      hasRedirectedRef.current = true
-
-      // Show welcome-back screen for returning users mid-onboarding so they
-      // can choose to continue or restart. Prevents dumping users directly
-      // into a form they may not remember starting (e.g., after deletion).
-      if (shouldShowWelcomeBack(auth.user)) {
-        logInfo('[Index] Redirecting returning user to welcome-back screen', {
-          nextStep: auth.user.nextStep,
-          restartsRemaining: auth.user.restartsRemaining,
-        })
-        void Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.welcomeBack }).catch((err) => {
-          logWarn('[Index] Redirect to welcome-back failed; falling back to nextStep', {
-            nextStep: auth.user?.nextStep,
-            error: err instanceof Error ? err.message : String(err),
-          })
-          // Fallback so the user is not stranded on the landing page.
-          void navigateToMiniProgramNextStep(auth.user?.nextStep, { mode: 'root' }).catch(
-            (fallbackErr) => {
-              logWarn('[Index] Fallback redirect to nextStep also failed', {
-                nextStep: auth.user?.nextStep,
-                error: fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr),
-              })
-            },
-          )
-        })
-        return
-      }
-
-      logInfo('[Index] Skipping welcome-back (already seen or not eligible)', {
-        nextStep: auth.user.nextStep,
-        restartsRemaining: auth.user.restartsRemaining,
-        featureEnabled: auth.user.features?.restartOnboarding,
-      })
-
-      logInfo('[Index] Redirecting authenticated user to nextStep', { nextStep: auth.user.nextStep })
-      void navigateToMiniProgramNextStep(auth.user.nextStep, { mode: 'root' }).catch((err) => {
-        hasRedirectedRef.current = false
-        logWarn('[Index] Redirect to nextStep failed', {
-          nextStep: auth.user?.nextStep,
-          error: err instanceof Error ? err.message : String(err),
-        })
+      // Network gate: if completely offline, stay on landing page so the
+      // offline banner renders instead of a dead loading screen after
+      // redirect. This prevents cached users from being silently dumped
+      // into discover/onboarding with no network.
+      Taro.getNetworkType().then(({ networkType }) => {
+        if (networkType === 'none' || hasRedirectedRef.current) return
+        doAuthenticatedRedirect(auth.user!)
+      }).catch(() => {
+        if (hasRedirectedRef.current) return
+        // Fail open — network type unknown, proceed with redirect.
+        doAuthenticatedRedirect(auth.user!)
       })
       return
     }
@@ -133,6 +103,49 @@ export default function Index() {
       })
     })
   }, [auth.isAuthenticated, auth.isLoading, auth.user])
+
+  /** Perform authenticated redirect with all guards applied. Extracted so
+      the network check above can share it between success and fail-open paths. */
+  function doAuthenticatedRedirect(user: NonNullable<typeof auth.user>): void {
+    hasRedirectedRef.current = true
+
+    if (shouldShowWelcomeBack(user)) {
+      logInfo('[Index] Redirecting returning user to welcome-back screen', {
+        nextStep: user.nextStep,
+        restartsRemaining: user.restartsRemaining,
+      })
+      void Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.welcomeBack }).catch((err) => {
+        logWarn('[Index] Redirect to welcome-back failed; falling back to nextStep', {
+          nextStep: user?.nextStep,
+          error: err instanceof Error ? err.message : String(err),
+        })
+        void navigateToMiniProgramNextStep(user?.nextStep, { mode: 'root' }).catch(
+          (fallbackErr) => {
+            logWarn('[Index] Fallback redirect to nextStep also failed', {
+              nextStep: user?.nextStep,
+              error: fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr),
+            })
+          },
+        )
+      })
+      return
+    }
+
+    logInfo('[Index] Skipping welcome-back (already seen or not eligible)', {
+      nextStep: user.nextStep,
+      restartsRemaining: user.restartsRemaining,
+      featureEnabled: user.features?.restartOnboarding,
+    })
+
+    logInfo('[Index] Redirecting authenticated user to nextStep', { nextStep: user.nextStep })
+    void navigateToMiniProgramNextStep(user.nextStep, { mode: 'root' }).catch((err) => {
+      hasRedirectedRef.current = false
+      logWarn('[Index] Redirect to nextStep failed', {
+        nextStep: user?.nextStep,
+        error: err instanceof Error ? err.message : String(err),
+      })
+    })
+  }
 
   // Stage Discover prefetch 1.5 s after entry animation completes (AC-06).
   // The composite endpoint warms cache for all 3 Discover query keys so the
@@ -180,6 +193,7 @@ export default function Index() {
     <MiniProgramLandingPage
       isAuthLoading={auth.isLoading}
       isAuthTimedOut={isTimedOut}
+      isOffline={isOffline}
       onAuthRetry={retry}
       onAuthDismiss={dismiss}
       userNextStep={auth.user?.nextStep ?? null}

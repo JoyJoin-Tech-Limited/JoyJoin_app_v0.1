@@ -44,7 +44,7 @@ const CONNECTIONS_QUERY_KEY = ['mini-program', 'connections'] as const
 
 /** Device/network gate thresholds (AC-07). */
 const MIN_BENCHMARK_LEVEL = 20
-const BLOCKED_NETWORK_TYPES = ['2g']
+const BLOCKED_NETWORK_TYPES = ['2g', 'none']
 
 /**
  * Map composite `myRegistrations` shape to `PoolRegistrationSummary[]` so that

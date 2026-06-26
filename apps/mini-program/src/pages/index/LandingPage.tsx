@@ -25,6 +25,7 @@ const MASCOT_CDN = cdnAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.we
 interface MiniProgramLandingPageProps {
   isAuthLoading?: boolean
   isAuthTimedOut?: boolean
+  isOffline?: boolean
   onAuthRetry?: () => void
   onAuthDismiss?: () => void
   /** Server-driven nextStep for authenticated returning users. */
@@ -34,6 +35,7 @@ interface MiniProgramLandingPageProps {
 export default function MiniProgramLandingPage({
   isAuthLoading = false,
   isAuthTimedOut = false,
+  isOffline = false,
   onAuthRetry,
   onAuthDismiss,
   userNextStep = null,
@@ -293,7 +295,7 @@ export default function MiniProgramLandingPage({
           className={"landing-page__cta landing-page__cta--primary" + ctaDisabledClass}
           hoverClass={ctaHoverClass}
           loading={isPageExiting}
-          disabled={isAuthLoading}
+          disabled={isAuthLoading || isOffline}
           onClick={() => {
             if (!hasAcceptedLegal) {
               triggerLegalShake()
@@ -327,7 +329,7 @@ export default function MiniProgramLandingPage({
           <Button
             variant='brand'
             className='landing-page__login-btn'
-            disabled={isAuthLoading || isLoggingIn || isPageExiting}
+            disabled={isAuthLoading || isLoggingIn || isPageExiting || isOffline}
             loading={isLoggingIn}
             onClick={() => {
               hapticLight()
@@ -388,6 +390,27 @@ export default function MiniProgramLandingPage({
           </Text>
         </View>
       </View>
+
+      {/* Offline banner — shown when network is completely unavailable.
+          Rendered outside the gated bottom-zone so the retry CTA stays
+          tappable. Separate from isAuthTimedOut (slow network) because
+          the root cause and remediation are different. */}
+      {isOffline && (
+        <View className='landing-page__auth-timeout' role='alert' aria-live='polite'>
+          <Text className='landing-page__auth-timeout-text'>网络已断开，请检查连接后重试</Text>
+          <View className='landing-page__auth-timeout-actions'>
+            <View
+              className='landing-page__auth-timeout-btn landing-page__auth-timeout-btn--primary'
+              hoverClass='landing-page__auth-timeout-btn--hover'
+              onClick={() => onAuthRetry?.()}
+              role='button'
+              aria-label='重新检查网络'
+            >
+              <Text className='landing-page__auth-timeout-btn-text'>重试</Text>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Auth timeout banner — rendered outside the gated bottom-zone so it
           remains tappable even when CTAs are locked. */}
