@@ -8,13 +8,13 @@ import { authAnalytics } from '../lib/analytics/authAnalytics'
 import type { UseAuthResult } from './useAuth'
 
 /**
- * Hard ceiling on the visible auth-revalidation gate. Below the 8s
- * `AUTH_REQUEST_TIMEOUT_MS` in useAuth.ts so the gate always releases before
- * the query itself does, giving the user a manual escape hatch (the retry CTA)
- * instead of staring at a loader that may be silently retrying in the
- * background (retry × 8s timeout = up to ~27s worst case).
+ * Ceiling on the visible auth-revalidation gate. Reduced to 2.5s so the user
+ * sees timeout feedback sooner than the 8s `AUTH_REQUEST_TIMEOUT_MS` in
+ * useAuth.ts. Once the gate fires, `isTimedOut` stays true until the user
+ * explicitly retries or dismisses — the timeout banner does NOT auto-disappear
+ * when the underlying auth query eventually fails silently.
  */
-export const INDEX_GATE_TIMEOUT_MS = 4_000
+export const INDEX_GATE_TIMEOUT_MS = 2_500
 
 export interface UseAuthGateResult {
   /** Whether auth is still loading (fail-closed: true when auth is undefined). */
@@ -36,9 +36,9 @@ export interface UseAuthGateResult {
  * flag that gates the landing page behind a loading state, preventing users
  * from racing the in-flight revalidation by tapping a CTA.
  *
- * After `INDEX_GATE_TIMEOUT_MS` (4s), `isTimedOut` flips to `true`, allowing
- * the page to surface retry / dismiss CTAs. Both CTAs emit `haptics('light')`
- * and `logInfo` for observability.
+ * After `INDEX_GATE_TIMEOUT_MS` (2.5s), `isTimedOut` flips to `true` and stays
+ * sticky until auth succeeds or the user explicitly retries/dismisses. Both
+ * CTAs emit `haptics('light')` and `logInfo` for observability.
  *
  * @param auth — the return value of `useAuth()`. If `undefined`, treated as
  *   `isLoading: true` (fail-closed, Harness Reliability).
@@ -48,6 +48,10 @@ export function useAuthGate(auth: UseAuthResult | undefined): UseAuthGateResult 
   const [dismissed, setDismissed] = useState(false)
   const [isOffline, setIsOffline] = useState(false)
   const gateStartedAtRef = useRef<number | null>(null)
+  /** Once the gate timer fires, stay in timed-out state until auth succeeds
+   *  or the user explicitly retries/dismisses. This prevents the timeout
+   *  banner from silently disappearing when the auth query fails at 8s. */
+  const timerHasFiredRef = useRef(false)
 
   // Detect offline state on mount. When completely offline the auth query
   // fails instantly (transport error, no retry), which would make isLoading
@@ -69,12 +73,23 @@ export function useAuthGate(auth: UseAuthResult | undefined): UseAuthGateResult 
   // landing page can render the offline error UI instead of the loading gate.
   const isLoading = !auth || (!dismissed && !isOffline && auth.isLoading)
 
-  // Hard timeout for the visible auth gate. The React Query refetch can take
-  // up to ~8s per attempt and retries up to 2x for non-transport errors
-  // (worst case ~27s). Rather than let the user wait that long, release the
-  // gate at INDEX_GATE_TIMEOUT_MS and show a retry CTA. The underlying
-  // refetch continues; the redirect will fire normally if/when it succeeds.
+  // Gate timer with sticky timeout: once the timer fires, isTimedOut stays
+  // true until auth resolves successfully (user available) or the user
+  // explicitly retries or dismisses. This gives the user a persistent escape
+  // hatch instead of a banner that auto-disappears when the query fails.
   useEffect(() => {
+    // Once the timer has fired, only clear on auth success or user action.
+    if (timerHasFiredRef.current) {
+      if (!isLoading && auth?.user) {
+        // Auth succeeded — clear timeout state and return to normal
+        timerHasFiredRef.current = false
+        setGateTimedOut(false)
+        gateStartedAtRef.current = null
+      }
+      // Otherwise stay timed out — the user must tap retry or dismiss.
+      return
+    }
+
     if (!isLoading || isOffline) {
       setGateTimedOut(false)
       gateStartedAtRef.current = null
@@ -87,11 +102,12 @@ export function useAuthGate(auth: UseAuthResult | undefined): UseAuthGateResult 
         timeoutMs: INDEX_GATE_TIMEOUT_MS,
       })
       authAnalytics.track('gate_timeout', { timeoutMs: INDEX_GATE_TIMEOUT_MS })
+      timerHasFiredRef.current = true
       setGateTimedOut(true)
     }, INDEX_GATE_TIMEOUT_MS)
 
     return () => clearTimeout(t)
-  }, [isLoading, isOffline])
+  }, [isLoading, isOffline, auth?.user])
 
   const retry = () => {
     haptics('light')
@@ -107,6 +123,7 @@ export function useAuthGate(auth: UseAuthResult | undefined): UseAuthGateResult 
         // Fail open
       })
     }
+    timerHasFiredRef.current = false
     setDismissed(false)
     setGateTimedOut(false)
     // Re-invalidate the auth query to force a fresh fetch. The gate will
@@ -118,6 +135,7 @@ export function useAuthGate(auth: UseAuthResult | undefined): UseAuthGateResult 
     haptics('light')
     logInfo('[IndexGate] User dismissed gate — proceeding with cached auth state')
     authAnalytics.track('gate_dismiss')
+    timerHasFiredRef.current = false
     setDismissed(true)
     setGateTimedOut(false)
     // Force-resolve the gate: clear the isLoading signal by removing the

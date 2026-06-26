@@ -693,12 +693,33 @@
   }
 }
 
+.landing-page__auth-spinner {
+  width: 24rpx;
+  height: 24rpx;
+  border: 3rpx solid rgba($color-text-primary-warm, 0.15);
+  border-top-color: $color-primary;
+  border-radius: 50%;
+  animation: auth-spinner-rotate 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes auth-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .landing-page__auth-hint {
     animation: none !important;
   }
 
   .landing-page__auth-hint-dot {
+    animation: none !important;
+    opacity: 0.45;
+  }
+
+  .landing-page__auth-spinner {
     animation: none !important;
     opacity: 0.45;
   }

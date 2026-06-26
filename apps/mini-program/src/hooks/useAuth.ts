@@ -56,7 +56,7 @@ export interface UseAuthResult {
   refetch: () => Promise<unknown>
 }
 
-const AUTH_REQUEST_TIMEOUT_MS = 8000
+const AUTH_REQUEST_TIMEOUT_MS = 5000
 
 async function getAuthUser(): Promise<AuthUser | null> {
   try {

@@ -281,12 +281,8 @@ export default function MiniProgramLandingPage({
         {/* Warm auth-hint — tells the user WHY CTAs are briefly disabled */}
         {isAuthLoading && !isAuthTimedOut && (
           <View className='landing-page__auth-hint'>
-            <Text className='landing-page__auth-hint-text'>悦仔正在确认你的派对身份</Text>
-            <View className='landing-page__auth-hint-dots'>
-              <View className='landing-page__auth-hint-dot' />
-              <View className='landing-page__auth-hint-dot' />
-              <View className='landing-page__auth-hint-dot' />
-            </View>
+            <View className='landing-page__auth-spinner' />
+            <Text className='landing-page__auth-hint-text'>正在连接服务器，请稍候...</Text>
           </View>
         )}
 
@@ -416,7 +412,7 @@ export default function MiniProgramLandingPage({
           remains tappable even when CTAs are locked. */}
       {isAuthTimedOut && (
         <View className='landing-page__auth-timeout' role='alert' aria-live='polite'>
-          <Text className='landing-page__auth-timeout-text'>网络有点慢，悦仔帮你再连一次？</Text>
+          <Text className='landing-page__auth-timeout-text'>网络请求超时，请稍后再试</Text>
           <View className='landing-page__auth-timeout-actions'>
             <View
               className='landing-page__auth-timeout-btn landing-page__auth-timeout-btn--primary'
