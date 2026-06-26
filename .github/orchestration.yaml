@@ -254,6 +254,16 @@
           "summary": "Use the launch-readiness lane with security-scan guidance for a daily posture review of auth, observability, and release blockers."
         }
       ]
+    },
+    "post-implementation-review": {
+      "summary_title": "Post-implementation review orchestration",
+      "steps": [
+        {
+          "id": "post-impl-ack",
+          "type": "log",
+          "message": "Post-implementation review artifact uploaded. Orchestration advisory complete."
+        }
+      ]
     }
   },
   "handoff_graph": [
