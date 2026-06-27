@@ -69,6 +69,20 @@ export function isDuplicateProfessionSubmission(
   return normalizeProfessionSubmissionKey(input) === normalizeProfessionSubmissionKey(classification.occupationId)
 }
 
+const INDUSTRY_SOURCE_WHITELIST = new Set(['seed', 'ontology', 'ai', 'fallback', 'manual'])
+
+const INDUSTRY_SOURCE_MAP: Record<string, string> = {
+  fuzzy: 'fallback',
+  user: 'manual',
+}
+
+export function sanitizeIndustrySource(source: string | null | undefined): string | undefined {
+  if (!source) return undefined
+  const mapped = INDUSTRY_SOURCE_MAP[source] ?? source
+  if (INDUSTRY_SOURCE_WHITELIST.has(mapped)) return mapped
+  return 'fallback'
+}
+
 export function dedupeProfessionTags(tags: readonly string[] | null | undefined): string[] {
   const seen = new Set<string>()
   const result: string[] = []

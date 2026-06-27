@@ -28,6 +28,7 @@ import { logError, logInfo } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { evaluateProfessionInputQuality, isMeaningfulProfessionInput } from '../../../lib/onboarding/professionInputQuality'
+import { sanitizeIndustrySource } from '../../../lib/onboarding/professionSubmissionGuard'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
 import IntentCard from '../../../components/intent/IntentCard'
@@ -392,7 +393,7 @@ export default function EssentialDataPage() {
           ...(professionClassification?.industryCategory ? { industryCategory: professionClassification.industryCategory } : {}),
           ...(professionClassification?.industrySegmentNew ? { industrySegmentNew: professionClassification.industrySegmentNew } : {}),
           ...(professionClassification?.industryNiche ? { industryNiche: professionClassification.industryNiche } : {}),
-          ...(professionClassification?.industrySource ? { industrySource: professionClassification.industrySource } : {}),
+          ...(professionClassification?.industrySource ? { industrySource: sanitizeIndustrySource(professionClassification.industrySource) } : {}),
           ...(professionClassification?.industryConfidence !== undefined ? { industryConfidence: professionClassification.industryConfidence } : {}),
         } : {}),
         ...(lifeStage ? { lifeStage } : {}),

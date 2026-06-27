@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { AuthUserResponse } from '@shared/api'
 import { apiRequest } from '../lib/api/api'
 import { logInfo, logWarn } from '../lib/utils/logger'
-import { isUsableProfessionResponse } from '../lib/onboarding/professionSubmissionGuard'
+import { isUsableProfessionResponse, sanitizeIndustrySource } from '../lib/onboarding/professionSubmissionGuard'
 
 interface UnderstandProfessionResponse {
   reaction: string
@@ -64,7 +64,7 @@ export function useProfessionRetry(user: AuthUserResponse | null | undefined) {
             industryCategory: classification.category?.id ?? undefined,
             industrySegmentNew: classification.segment?.id ?? undefined,
             industryNiche: classification.niche?.id ?? undefined,
-            industrySource: data.source,
+            industrySource: sanitizeIndustrySource(data.source),
             industryConfidence: data.confidence,
           },
         })

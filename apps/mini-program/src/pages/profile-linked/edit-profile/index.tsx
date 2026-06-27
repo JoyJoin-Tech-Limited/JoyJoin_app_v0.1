@@ -34,6 +34,7 @@ import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import ProfileArchetypeHero from '../../../components/profile/ProfileArchetypeHero'
 import ArchetypeHead from '../../../components/mascot/ArchetypeHead'
 import ProfessionDisplayField from '../../../components/profile/ProfessionDisplayField'
+import { sanitizeIndustrySource } from '../../../lib/onboarding/professionSubmissionGuard'
 import ProfessionChatOverlay from '../../../components/ProfessionChatOverlay'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
 import Chip from '../../../components/ui/Chip'
@@ -432,7 +433,7 @@ export default function EditProfilePage() {
           payload.industryNiche = professionClassification.industryNiche
         }
         if (professionClassification?.industrySource) {
-          payload.industrySource = professionClassification.industrySource
+          payload.industrySource = sanitizeIndustrySource(professionClassification.industrySource)
         }
         if (professionClassification?.industryConfidence !== undefined) {
           payload.industryConfidence = professionClassification.industryConfidence
