@@ -41,13 +41,16 @@ export interface XiaoyueChatBubbleProps {
    *  Useful when another component (e.g. XiaoyueCoachCard) already owns the mascot for the screen section,
    *  avoiding duplicate mascot crowding. */
   hideAvatar?: boolean
+  /** Override avatar size (e.g. '200rpx'). When set, controls both the avatar wrap container
+   *  and the internal sprite animator size. Falls back to 96rpx (horizontal) / 120rpx (vertical/wide). */
+  avatarSize?: string
 }
 
 /**
  * XiaoyueChatBubble — animated mascot coaching bubble for onboarding.
  *
  * Pixel specs:
- * - Avatar size: 96rpx (horizontal), 120rpx (vertical)
+ * - Avatar size: 96rpx (horizontal), 120rpx (vertical), overridable via avatarSize prop
  * - Bubble radius: 24rpx
  * - Bubble padding: 24rpx
  * - Glow ring: 4rpx border, pulsing opacity 0.3→0.6
@@ -67,6 +70,7 @@ export default function XiaoyueChatBubble({
   spriteState,
   tail = false,
   hideAvatar = false,
+  avatarSize,
 }: XiaoyueChatBubbleProps) {
   const resolvedExpressionId = isLoading
     ? 'loadingSystem'
@@ -81,6 +85,8 @@ export default function XiaoyueChatBubble({
     }
   }, [])
   const effectiveStaggerDelay = prefersReducedMotion ? 0 : staggerDelay
+
+  const resolvedAvatarSize = avatarSize ?? (wide ? '120rpx' : '96rpx')
 
   const layoutClass = wide
     ? 'xiaoyue-chat-bubble--wide'
@@ -99,11 +105,12 @@ export default function XiaoyueChatBubble({
       {!hideAvatar && (
         <View
           className={`xiaoyue-chat-bubble__avatar-wrap ${showGlow ? 'xiaoyue-chat-bubble__avatar-wrap--glow' : ''} ${isLoading ? 'xiaoyue-chat-bubble__avatar-wrap--loading' : ''}`}
+          style={avatarSize ? { width: avatarSize, height: avatarSize } : undefined}
         >
           {animate ? (
             <XiaoyueSpriteAnimator
               state={spriteState ?? XIAOYUE_EXPRESSION_TO_SPRITE_STATE[resolvedExpressionId] ?? 'neutral'}
-              size={wide ? '120rpx' : '96rpx'}
+              size={resolvedAvatarSize}
               showGlow={false}
               isLoading={isLoading}
             />

@@ -13,6 +13,7 @@ import { haptics } from '../../../../lib/utils/haptics'
 import { cdnAsset } from '../../../../lib/utils/cdnAssets'
 import XiaoyueChatBubble from '../../../../components/mascot/XiaoyueChatBubble'
 import { PERSONALITY_TEST_XIAOYUE_EXPRESSION } from '../../../../lib/mascot/xiaoyueExpressions'
+import { ONBOARDING_MASCOT_SIZE } from '../../../../lib/onboarding/onboardingRoutes'
 import type { ArchetypeCardVariant } from '../archetypeVariants'
 import { normalizeMatchScore, type TypicalityLabel } from './resultHelpers'
 
@@ -658,6 +659,7 @@ export default function FinalStage({
                     horizontal
                     showGlow
                     staggerDelay={70}
+                    avatarSize={ONBOARDING_MASCOT_SIZE}
                     className='personality-results__detail-chat'
                   />
                 </View>

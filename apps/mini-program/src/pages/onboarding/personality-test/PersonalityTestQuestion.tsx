@@ -9,6 +9,7 @@ import PersonalityTestAnswerArea, { getNearestSliderOption } from './Personality
 import QuestionTransition from './QuestionTransition'
 import { HalfwayMilestone } from './HalfwayMilestone'
 import { isMilestoneQuestion } from './personalityTestLogic'
+import { ONBOARDING_MASCOT_SIZE } from '../../../lib/onboarding/onboardingRoutes'
 import { getXiaoyueExpressionAsset, PERSONALITY_TEST_QUESTION_EXPRESSION } from './visuals'
 import type {
   Phase,
@@ -209,7 +210,7 @@ export default function PersonalityTestQuestion({
                 <View className='personality-test__mascot-avatar'>
                   <XiaoyueSpriteAnimator
                     state={resolvedMascotState}
-                    size='152rpx'
+                    size={ONBOARDING_MASCOT_SIZE}
                     isLoading={isSubmitting}
                     showGlow={false}
                     autoPlay={mascotAutoPlay || resolvedMascotState !== 'idle'}

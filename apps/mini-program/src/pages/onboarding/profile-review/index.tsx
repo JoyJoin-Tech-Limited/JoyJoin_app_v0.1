@@ -24,6 +24,7 @@ import { useInvalidateAuth } from '../../../hooks/useAuth'
 import { apiRequest, getUserState } from '../../../lib/api/api'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
+import { ONBOARDING_MASCOT_SIZE } from '../../../lib/onboarding/onboardingRoutes'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
 import { logError, logInfo } from '../../../lib/utils/logger'
@@ -412,7 +413,7 @@ export default function ProfileReviewPage() {
           </View>
 
           <View className={`profile-review__mascot ${getStageClassName(2)}`}>
-            <XiaoyueChatBubble content={coachCopy} pose='pointing' horizontal showGlow tail />
+            <XiaoyueChatBubble content={coachCopy} pose='pointing' horizontal showGlow tail avatarSize={ONBOARDING_MASCOT_SIZE} />
           </View>
 
           <Card

@@ -1,5 +1,7 @@
 import type { OnboardingStep } from '../api/api'
 
+export const ONBOARDING_MASCOT_SIZE = '200rpx'
+
 export const MINI_PROGRAM_PAGE_PATHS = {
   discover: 'pages/discover/index',
   centerHub: 'pages/center-hub/index',

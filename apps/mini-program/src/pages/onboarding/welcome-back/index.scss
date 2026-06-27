@@ -42,13 +42,13 @@
   }
 
   &__mascot {
-    width: 240rpx;
-    height: 240rpx;
+    width: 200rpx;
+    height: 200rpx;
     image-rendering: -webkit-optimize-contrast;
   }
 
   &__mascot-fallback {
-    @include mascot-container($mascot-size-xl);
+    @include mascot-container(200rpx);
   }
 
   &__text {

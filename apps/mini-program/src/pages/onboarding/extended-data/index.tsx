@@ -26,6 +26,7 @@ import { useOnboardingCheckpoint } from '../../../hooks/onboarding/useOnboarding
 import { usePreloadCategoryIcons } from '../../../hooks/usePreloadCategoryIcons'
 import { TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../../lib/utils/uiConstants'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
+import { ONBOARDING_MASCOT_SIZE } from '../../../lib/onboarding/onboardingRoutes'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { logError, logInfo } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
@@ -453,6 +454,7 @@ export default function ExtendedDataPage() {
           horizontal
           showGlow
           tail
+          avatarSize={ONBOARDING_MASCOT_SIZE}
         />
       </View>
       <Image

@@ -262,8 +262,8 @@
   &__mascot-static {
     display: block;
     flex-shrink: 0;
-    width: 152rpx;
-    height: 152rpx;
+    width: 200rpx;
+    height: 200rpx;
     border-radius: 50%;
     overflow: hidden;
     background: rgba($color-primary, 0.04);
@@ -954,8 +954,8 @@
 
   &__mascot-avatar {
     flex-shrink: 0;
-    width: 152rpx;
-    height: 152rpx;
+    width: 200rpx;
+    height: 200rpx;
   }
 
   &__speech-bubble {
