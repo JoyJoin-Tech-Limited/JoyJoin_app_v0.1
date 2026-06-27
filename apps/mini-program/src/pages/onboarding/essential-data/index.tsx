@@ -21,6 +21,7 @@ import { apiRequest, getUserState } from '../../../lib/api/api'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
 import { useOnboardingCheckpoint } from '../../../hooks/onboarding/useOnboardingCheckpoint'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
+import { ONBOARDING_MASCOT_SIZE } from '../../../lib/onboarding/onboardingRoutes'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { usePreloadIntentIcons } from '../../../hooks/usePreloadIntentIcons'
 import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
@@ -577,6 +578,7 @@ export default function EssentialDataPage() {
               pose={stepConfig.mascotPose}
               horizontal
               showGlow
+              avatarSize={ONBOARDING_MASCOT_SIZE}
             />
           </View>
 
