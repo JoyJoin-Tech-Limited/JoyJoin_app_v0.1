@@ -9,6 +9,7 @@ import { apiRequest } from '../lib/api/api'
 import { useOnboardingAnalytics } from '../hooks/onboarding/useOnboardingAnalytics'
 import { useDeviceTier } from '../hooks/useDeviceTier'
 import { evaluateProfessionInputQuality } from '../lib/onboarding/professionInputQuality'
+import { getLocalProfessionClassification } from '../lib/onboarding/localProfessionClassification'
 import {
   dedupeProfessionTags,
   isDuplicateProfessionSubmission,
@@ -515,7 +516,7 @@ export default function ProfessionChatOverlay({
       isUsableStoredProfessionClassification(classificationData) &&
       isDuplicateProfessionSubmission(text, classificationData)
     ) {
-      setInputValue(text)
+      setInputValue('')
       if (revealTags.length > 0) {
         setShowRevealCard(true)
       }
@@ -547,6 +548,7 @@ export default function ProfessionChatOverlay({
     lastSendTimeRef.current = now
     previousUserTextRef.current = lastUserTextRef.current
     lastUserTextRef.current = text
+    setInputValue('')
 
     // Generation counter for race-safe stale response suppression.
     // Each new send increments the generation; responses from stale
@@ -580,6 +582,49 @@ export default function ProfessionChatOverlay({
     const userMsg: ChatMessage = { id: generateId(), sender: 'user', text }
     setMessages((prev) => [...prev, userMsg])
     setScrollTrigger((c) => c + 1)
+
+    const localClassification = getLocalProfessionClassification(text)
+    if (localClassification) {
+      if (bubbleStaggerRef.current) clearTimeout(bubbleStaggerRef.current)
+      bubbleStaggerRef.current = setTimeout(() => {
+        if (sendGenerationRef.current !== thisGeneration) return
+
+        const fullMsg: ChatMessage = {
+          id: generateId(),
+          sender: 'xiaoyue',
+          text: localClassification.reaction,
+          expressionId: 'coachGuide',
+        }
+        setMessages((prev) => [...prev, fullMsg])
+        setScrollTrigger((c) => c + 1)
+        setIsSubmitting(false)
+        clearThinkingTimers()
+        setThinkingLabel(null)
+
+        const tags = dedupeProfessionTags(localClassification.displayTags)
+        setRevealTags(tags)
+        setShowRevealCard(tags.length > 0)
+        setClassificationData({
+          occupationId: localClassification.occupationId,
+          standardizedOccupationId: localClassification.standardizedOccupationId,
+          industryCategoryLabel: localClassification.industryCategoryLabel,
+          industrySegmentLabel: localClassification.industrySegmentLabel,
+          industryNicheLabel: localClassification.industryNicheLabel,
+          industryCategory: localClassification.industryCategory,
+          industrySegmentNew: localClassification.industrySegmentNew,
+          industryNiche: localClassification.industryNiche,
+          industrySource: localClassification.industrySource,
+          industryConfidence: localClassification.industryConfidence,
+        })
+        haptics('success')
+        analytics.interaction('profession_chat_local_classification_success', {
+          kind: 'student_identity',
+          tagCount: tags.length,
+          confidence: localClassification.industryConfidence,
+        })
+      }, 400)
+      return
+    }
 
     try {
       const data = await apiRequest<UnderstandProfessionResponse>({
@@ -719,8 +764,8 @@ export default function ProfessionChatOverlay({
     revealTags.length,
   ])
 
-  const handleSendLegacy = useCallback(() => {
-    const text = inputValue.trim()
+  const handleSendLegacy = useCallback((overrideText?: string) => {
+    const text = (overrideText ?? inputValue).trim()
     if (!text || isSubmittingRef.current) return
 
     if (rejectLowQualityProfessionInput(text)) {
@@ -749,6 +794,7 @@ export default function ProfessionChatOverlay({
     lastSendTimeRef.current = now
     previousUserTextRef.current = lastUserTextRef.current
     lastUserTextRef.current = text
+    setInputValue('')
 
     setIsSubmitting(true)
     setHasSent(true)
@@ -784,7 +830,7 @@ export default function ProfessionChatOverlay({
       if (smartProfession) {
         handleSendNew(text)
       } else {
-        handleSendLegacy()
+        handleSendLegacy(text)
       }
     })
   }, [smartProfession, handleSendNew, handleSendLegacy, analytics])
@@ -824,7 +870,7 @@ export default function ProfessionChatOverlay({
     if (smartProfession && classificationData) {
       onSubmit(classificationData.occupationId.trim(), classificationData)
     } else {
-      onSubmit(inputValue.trim())
+      onSubmit(inputValue.trim() || lastUserTextRef.current.trim())
     }
   }, [smartProfession, classificationData, inputValue, onSubmit, analytics, revealTags.length, rejectLowQualityProfessionInput])
 
