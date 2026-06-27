@@ -20,4 +20,10 @@ describe('mini-program landing page styles', () => {
     expect(landingPageSource).not.toContain('className="logo-bg"')
     expect(landingPageStyleSource).not.toContain('background: rgba(255, 255, 255, 0.72);')
   })
+
+  it('keeps a visible spinner in offline and auth-timeout feedback states', () => {
+    expect(landingPageSource.match(/landing-page__auth-timeout-spinner/g)?.length).toBeGreaterThanOrEqual(2)
+    expect(landingPageStyleSource).toContain('.landing-page__auth-timeout-spinner')
+    expect(landingPageStyleSource).toContain('animation: auth-spinner-rotate 0.7s linear infinite;')
+  })
 })

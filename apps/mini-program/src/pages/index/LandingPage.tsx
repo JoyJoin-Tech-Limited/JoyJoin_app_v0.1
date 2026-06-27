@@ -393,7 +393,10 @@ export default function MiniProgramLandingPage({
           the root cause and remediation are different. */}
       {isOffline && (
         <View className='landing-page__auth-timeout' role='alert' aria-live='polite'>
-          <Text className='landing-page__auth-timeout-text'>网络已断开，请检查连接后重试</Text>
+          <View className='landing-page__auth-timeout-status'>
+            <View className='landing-page__auth-timeout-spinner' aria-hidden='true' />
+            <Text className='landing-page__auth-timeout-text'>网络已断开，请检查连接后重试</Text>
+          </View>
           <View className='landing-page__auth-timeout-actions'>
             <View
               className='landing-page__auth-timeout-btn landing-page__auth-timeout-btn--primary'
@@ -412,7 +415,10 @@ export default function MiniProgramLandingPage({
           remains tappable even when CTAs are locked. */}
       {isAuthTimedOut && (
         <View className='landing-page__auth-timeout' role='alert' aria-live='polite'>
-          <Text className='landing-page__auth-timeout-text'>网络请求超时，请稍后再试</Text>
+          <View className='landing-page__auth-timeout-status'>
+            <View className='landing-page__auth-timeout-spinner' aria-hidden='true' />
+            <Text className='landing-page__auth-timeout-text'>网络请求超时，请稍后再试</Text>
+          </View>
           <View className='landing-page__auth-timeout-actions'>
             <View
               className='landing-page__auth-timeout-btn landing-page__auth-timeout-btn--primary'

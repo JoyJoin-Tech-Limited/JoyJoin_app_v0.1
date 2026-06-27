@@ -761,6 +761,23 @@
   text-align: center;
 }
 
+.landing-page__auth-timeout-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+}
+
+.landing-page__auth-timeout-spinner {
+  width: 28rpx;
+  height: 28rpx;
+  border: 3rpx solid rgba($color-primary, 0.16);
+  border-top-color: $color-primary;
+  border-radius: 50%;
+  animation: auth-spinner-rotate 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
 .landing-page__auth-timeout-actions {
   display: flex;
   align-items: center;
@@ -820,6 +837,10 @@
   .landing-page__auth-timeout-btn {
     transition: none !important;
   }
-}
 
+  .landing-page__auth-timeout-spinner {
+    animation: none !important;
+    opacity: 0.65;
+  }
+}
 
