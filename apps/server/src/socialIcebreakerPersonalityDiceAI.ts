@@ -58,6 +58,12 @@ function buildArchetypeFallback(
   };
 }
 
+function isPersonalityDiceLlmEnabled(): boolean {
+  const v = process.env.SOCIAL_PERSONALITY_DICE_LLM_ENABLED;
+  if (v === undefined || v === '') return true; // default: AI enabled for backward compat
+  return v.toLowerCase() === 'true';
+}
+
 export async function generatePersonalityDiceChallenges(params: {
   participants: Array<{
     userId: string;
@@ -75,6 +81,13 @@ export async function generatePersonalityDiceChallenges(params: {
   const sessionContext = buildArchetypeContext(participants);
   if (sessionContext?.mixText) {
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'contextInjector', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: false, fromCache: false, promptVersion: 'context-injector-v1', extra: { mixText: sessionContext.mixText, diversityScore: sessionContext.diversityScore } });
+  }
+
+  // If AI is disabled, return curated fallback immediately
+  if (!isPersonalityDiceLlmEnabled()) {
+    const meta = buildFallbackAIMeta('disabled', PERSONALITY_DICE_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generatePersonalityDiceChallenges', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    return { data: fallbacks, meta };
   }
 
   const { client, model, provider } = getClientForFunction('generatePersonalityDiceChallenges');
@@ -232,6 +245,25 @@ export async function generatePersonalityDiceChallengeGroups(params: {
         diversityScore: sessionContext.diversityScore,
       },
     });
+  }
+
+  // If AI is disabled, return curated fallback immediately
+  if (!isPersonalityDiceLlmEnabled()) {
+    const meta = buildFallbackAIMeta('disabled', PERSONALITY_DICE_CHOOSE_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({
+      traceId: aiCorrelationId,
+      domain: 'icebreaker',
+      feature: 'generatePersonalityDiceChallengeGroups',
+      provider: null,
+      model: 'n/a',
+      latencyMs: 0,
+      success: true,
+      fallbackUsed: true,
+      fromCache: false,
+      promptVersion: meta.promptVersion,
+      errorCode: meta.evaluatorRejectionReason,
+    });
+    return { data: fallbacks, meta };
   }
 
   const { client, model, provider } = getClientForFunction('generatePersonalityDiceChallengeGroups');

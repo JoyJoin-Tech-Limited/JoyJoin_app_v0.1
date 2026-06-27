@@ -5,7 +5,7 @@
 import express from 'express';
 import session from 'express-session';
 import type { AddressInfo } from 'net';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SocialSessionState } from '@shared/socialIcebreaker';
 
 const storeCtx = vi.hoisted(() => {
@@ -247,11 +247,18 @@ async function withServer<T>(fn: (baseUrl: string) => Promise<T>) {
 }
 
 describe('MiniScript generate + social poll', () => {
+  beforeEach(() => {
+    process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'false';
+  });
+
+  afterEach(() => {
+    delete process.env.SOCIAL_MINISCRIPT_LLM_ENABLED;
+  });
+
   it('GET social session includes miniScriptFramework after generate', async () => {
     storeCtx.sessions.clear();
     storeCtx.participants.clear();
     storeCtx.lieTruthsStore.clear();
-    delete process.env.SOCIAL_MINISCRIPT_LLM_ENABLED;
 
     await withServer(async (baseUrl) => {
       const loginRes = await fetch(`${baseUrl}/__test__/login/host-smoke`, { method: 'POST' });

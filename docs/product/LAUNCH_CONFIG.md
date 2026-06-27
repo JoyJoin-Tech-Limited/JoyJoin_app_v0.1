@@ -178,13 +178,34 @@ available at the `/api/metrics` endpoint.
 ## Social Icebreaker Phase Flags
 
 | Variable | Description | Default |
-|---|---|---|---|
-| `SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING` | Enable speed friending phase (round-robin timed 1-on-1 rotations) — backend implemented 2026-05-27 | `false` |
-| `SOCIAL_ICEBREAKER_ENABLE_AUCTION` | Enable auction phase (virtual-coin lots + bidding) | `false` |
-| `SOCIAL_AUCTION_LLM_ENABLED` | When `true`, `generateAuctionLots` calls the model; when unset/false, curated fallback lots only | `false` |
-| `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` | Enable **迷你剧本杀** (`mini_script`) phase | `false` |
+|---|---|---|
+| `SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE` | Enable personality dice phase (roster-sized challenges) | `true` |
+| `PERSONALITY_DICE_CHOOSE_MODE_ENABLED` | When `true`, generates 3 dares per player (easy/medium/hard); player picks one | `true` |
+| `SOCIAL_ICEBREAKER_ENABLE_AUCTION` | Enable auction phase (virtual-coin lots + bidding) | `true` |
+| `SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR` | Enable group mirror phase (群像镜像) | `true` |
+| `SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD` | Enable undercover word phase (谁是卧底) | `true` |
+| `SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE` | Enable quip battle phase (机智对决) | `true` |
+| `SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING` | Enable speed friending phase (round-robin timed 1-on-1 rotations) — backend implemented 2026-05-27 | `true` |
+| `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` | Enable **迷你剧本杀** (`mini_script`) phase | `true` |
 | `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA` | Legacy alias for `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` | `false` |
+| `SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER` | Enable server-rendered moment card PNG (`GET /:id/moment-card.png`) | `true` |
 | `RUN_PLAN_TEMPLATES_ENABLED` | Enable template-driven run plan compiler **and** the 3×3 vibe grid UX (深聊/均衡/暢玩). When `false`, legacy `compileAgentRunPlan()` runs unchanged and clients should hide the vibe selector. When `true`, the server queries DB templates and falls back to the rule engine; clients show the vibe selector. | `false` |
+
+## Social Icebreaker LLM Kill Switches
+
+| Variable | Description | Default |
+|---|---|---|
+| `SOCIAL_WARMUP_LLM_ENABLED` | When `true`, `generateWarmupTopics` calls the model; when `false`, curated fallback topics | `true` |
+| `SOCIAL_MICRO_CHALLENGE_LLM_ENABLED` | When `true`, `generateMicroChallenges` calls the model; when `false`, deterministic selector baseline | `true` |
+| `SOCIAL_LIE_DETECTIVE_LLM_ENABLED` | When `true`, lie-detective statement generation calls the model; when `false`, curated fallback sets | `true` |
+| `SOCIAL_AUCTION_LLM_ENABLED` | When `true`, `generateAuctionLots` calls the model; when `false`, curated fallback lots only | `true` |
+| `SOCIAL_PERSONALITY_DICE_LLM_ENABLED` | When `true`, personality-dice dare generation calls the model; when `false`, archetype dare bank | `true` |
+| `SOCIAL_GROUP_MIRROR_LLM_ENABLED` | When `true`, `generateGroupMirrorQuestions` calls the model; when `false`, curated fallback questions | `true` |
+| `SOCIAL_UNDERCOVER_WORD_LLM_ENABLED` | When `true`, `generateUndercoverWordPair` calls the model; when `false`, curated fallback pair | `true` |
+| `SOCIAL_QUIP_BATTLE_LLM_ENABLED` | When `true`, `generateQuipBattlePrompts` calls the model; when `false`, curated fallback prompts | `true` |
+| `SOCIAL_MINISCRIPT_LLM_ENABLED` | When `true`, mini-script framework generation calls the model; when `false`, catalog/stub fallback | `true` |
+| `SOCIAL_RECAP_LLM_ENABLED` | When `true`, `generateRecapSummary` calls the model; when `false`, deterministic default recap | `true` |
+| `SOCIAL_ICEBREAKER_LLM_GAME_SELECTION` | Enable LLM-enhanced phase ranking in `compileAgentRunPlan()` | `false` |
 
 ---
 

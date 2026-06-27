@@ -103,6 +103,7 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
   });
 
   it('uses catalog fallback when LLM env disabled (no model call)', async () => {
+    process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'false';
     const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
     const { framework, meta } = await generateMiniScriptFrameworkWithMeta({
       playerCount: 4,

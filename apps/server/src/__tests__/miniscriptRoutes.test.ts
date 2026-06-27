@@ -1,7 +1,7 @@
 import express from 'express';
 import session from 'express-session';
 import type { AddressInfo } from 'net';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SocialSessionState } from '@shared/socialIcebreaker';
 
 const { testSessions, testMiniScriptSecrets } = vi.hoisted(() => ({
@@ -73,6 +73,14 @@ function cookieHeader(response: Response) {
 }
 
 describe('POST /api/miniscript/generate', () => {
+  beforeEach(() => {
+    process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'false';
+  });
+
+  afterEach(() => {
+    delete process.env.SOCIAL_MINISCRIPT_LLM_ENABLED;
+  });
+
   it('returns 401 when not logged in', async () => {
     await withServer(async (baseUrl) => {
       const res = await fetch(`${baseUrl}/api/miniscript/generate`, {

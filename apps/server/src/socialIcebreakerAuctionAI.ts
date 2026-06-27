@@ -19,7 +19,7 @@ const FALLBACK_AUCTION_LOTS: AuctionLot[] = [
 
 function isAuctionLlmEnabled(): boolean {
   const v = process.env.SOCIAL_AUCTION_LLM_ENABLED;
-  if (v === undefined || v === '') return false;
+  if (v === undefined || v === '') return true; // default: AI enabled for backward compat
   return v.toLowerCase() === 'true';
 }
 

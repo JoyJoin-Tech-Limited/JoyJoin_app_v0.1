@@ -41,6 +41,7 @@ const PIPELINE_TIMEOUT_MS = 32_000;
 
 function isMiniscriptLlmEnabled(): boolean {
   const v = process.env.SOCIAL_MINISCRIPT_LLM_ENABLED;
+  if (v === undefined || v === '') return true; // default: AI enabled for backward compat
   return v === '1' || v?.toLowerCase() === 'true';
 }
 

@@ -241,6 +241,12 @@ function getPromptVersionForVibe(vibe?: 'chat' | 'balanced' | 'game'): string {
   return vibe === 'chat' ? WARMUP_TOPICS_V3_PROMPT_VERSION : WARMUP_TOPICS_PROMPT_VERSION;
 }
 
+function isWarmupLlmEnabled(): boolean {
+  const v = process.env.SOCIAL_WARMUP_LLM_ENABLED;
+  if (v === undefined || v === '') return true; // default: AI enabled for backward compat
+  return v.toLowerCase() === 'true';
+}
+
 export async function generateWarmupTopics(params: {
   mood: AtmosphereMood;
   eventType: string;
@@ -252,9 +258,17 @@ export async function generateWarmupTopics(params: {
   vibe?: 'chat' | 'balanced' | 'game';
 }): Promise<AIServiceResult<SocialTopic[]>> {
   const aiCorrelationId = createAiCorrelationId();
+  const promptVersion = getPromptVersionForVibe(params.vibe);
+
+  // If AI is disabled, return curated fallback immediately
+  if (!isWarmupLlmEnabled()) {
+    const meta = buildFallbackAIMeta('disabled', promptVersion, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    return { data: getFallbackTopics(params.mood, params.vibe), meta };
+  }
+
   const { client, model, provider } = getClientForFunction('generateWarmupTopics');
   const t0 = Date.now();
-  const promptVersion = getPromptVersionForVibe(params.vibe);
 
   // 3s timeout for warmup generation (LLM safety)
   const controller = new AbortController();
@@ -327,6 +341,12 @@ function getFallbackTopics(mood: AtmosphereMood, vibe?: 'chat' | 'balanced' | 'g
 
 function isMicroChallengeLlmEnabled(): boolean {
   const v = process.env.SOCIAL_MICRO_CHALLENGE_LLM_ENABLED;
+  if (v === undefined || v === '') return true; // default: AI enabled for backward compat
+  return v.toLowerCase() === 'true';
+}
+
+function isLieDetectiveLlmEnabled(): boolean {
+  const v = process.env.SOCIAL_LIE_DETECTIVE_LLM_ENABLED;
   if (v === undefined || v === '') return true; // default: AI enabled for backward compat
   return v.toLowerCase() === 'true';
 }
@@ -519,6 +539,11 @@ export async function generateLieDetectiveStatements(params: {
 }): Promise<AIServiceResult<LieDetectiveStatement[]>> {
   const effectiveMode = params.mode ?? getLieDetectiveMode();
 
+  // If AI is disabled, use deterministic fallback for both V1 and V2
+  if (!isLieDetectiveLlmEnabled()) {
+    return generateLieDetectiveDisabledFallback(params);
+  }
+
   if (effectiveMode === 'v2' && params.tags) {
     return generateLieDetectiveV2Statements({
       userId: params.userId,
@@ -590,6 +615,49 @@ async function generateLieDetectiveV1Statements(params: {
 function getRandomFallbackStatements(): LieDetectiveStatement[] {
   const sets = [...FALLBACK_LIE_DETECTIVE_STATEMENTS].sort(() => Math.random() - 0.5);
   return sets[0];
+}
+
+/**
+ * Deterministic fallback used when SOCIAL_LIE_DETECTIVE_LLM_ENABLED=false.
+ * Ignores tags/AI and returns a shuffled curated statement set.
+ */
+function generateLieDetectiveDisabledFallback(
+  params: {
+    userId: string;
+    displayName: string;
+    archetype?: string;
+    tags?: [string, string];
+  },
+): AIServiceResult<LieDetectiveStatement[]> {
+  const aiCorrelationId = createAiCorrelationId();
+  const meta = buildFallbackAIMeta('disabled', LIE_DETECTIVE_PROMPT_VERSION, aiCorrelationId);
+  logAITrace({
+    traceId: aiCorrelationId,
+    domain: 'icebreaker',
+    feature: 'generateLieDetectiveStatements',
+    provider: null,
+    model: 'n/a',
+    latencyMs: 0,
+    success: true,
+    fallbackUsed: true,
+    fromCache: false,
+    promptVersion: meta.promptVersion,
+    errorCode: meta.evaluatorRejectionReason,
+  });
+  const statements = getRandomFallbackStatements();
+  // V2 callers expect is_ai/source_tag fields when tags were provided.
+  if (params.tags) {
+    return {
+      data: statements.map((s, index) => ({
+        ...s,
+        index,
+        is_ai: s.isLie,
+        source_tag: s.isLie ? undefined : params.tags![index % 2],
+      })),
+      meta,
+    };
+  }
+  return { data: statements.map((s, index) => ({ ...s, index })), meta };
 }
 
 // ─── Lie Detective V2 ───────────────────────────────────────────────────────
@@ -866,6 +934,12 @@ export async function generateXiaoYueComment(params: {
   }
 }
 
+function isRecapLlmEnabled(): boolean {
+  const v = process.env.SOCIAL_RECAP_LLM_ENABLED;
+  if (v === undefined || v === '') return true; // default: AI enabled for backward compat
+  return v.toLowerCase() === 'true';
+}
+
 export async function generateRecapSummary(params: {
   participants: Array<{ displayName: string; archetype?: string }>;
   topicsDiscussed: string[];
@@ -881,6 +955,14 @@ export async function generateRecapSummary(params: {
   durationMinutes: number;
 }): Promise<AIServiceResult<{ headline: string; moments: string[]; closingLine: string }>> {
   const aiCorrelationId = createAiCorrelationId();
+
+  // If AI is disabled, return deterministic default recap immediately
+  if (!isRecapLlmEnabled()) {
+    const meta = buildFallbackAIMeta('disabled', RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    return { data: getDefaultRecap(params), meta };
+  }
+
   const { client, model, provider } = getClientForFunction('generateRecapSummary');
   const t0 = Date.now();
   try {
@@ -1129,6 +1211,12 @@ export async function generateXiaoyueSessionPack(params: {
 
 export const QUIP_BATTLE_PROMPT_VERSION = 'social-quip-battle-v1';
 
+function isQuipBattleLlmEnabled(): boolean {
+  const v = process.env.SOCIAL_QUIP_BATTLE_LLM_ENABLED;
+  if (v === undefined || v === '') return true; // default: AI enabled for backward compat
+  return v.toLowerCase() === 'true';
+}
+
 export async function generateQuipBattlePrompts(params: {
   eventType: string;
   participantCount: number;
@@ -1137,11 +1225,19 @@ export async function generateQuipBattlePrompts(params: {
   roster?: Array<{ archetype?: string }>;
 }): Promise<AIServiceResult<QuipBattlePrompt[]>> {
   const aiCorrelationId = createAiCorrelationId();
-  const { client, model, provider } = getClientForFunction('generateQuipBattlePrompts');
-  const t0 = Date.now();
 
   // Always build fallback first
   const fallbackPrompts = getRandomQuipBattlePrompts(3);
+
+  // If AI is disabled, return curated fallback immediately
+  if (!isQuipBattleLlmEnabled()) {
+    const meta = buildFallbackAIMeta('disabled', QUIP_BATTLE_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateQuipBattlePrompts', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    return { data: fallbackPrompts, meta };
+  }
+
+  const { client, model, provider } = getClientForFunction('generateQuipBattlePrompts');
+  const t0 = Date.now();
 
   try {
     const sessionContext = params.roster ? buildArchetypeContext(params.roster) : undefined;
@@ -1207,6 +1303,12 @@ export async function generateQuipBattlePrompts(params: {
 
 // ─── Undercover Word ─────────────────────────────────────────────────────────
 
+function isUndercoverWordLlmEnabled(): boolean {
+  const v = process.env.SOCIAL_UNDERCOVER_WORD_LLM_ENABLED;
+  if (v === undefined || v === '') return true; // default: AI enabled for backward compat
+  return v.toLowerCase() === 'true';
+}
+
 export async function generateUndercoverWordPair(params: {
   eventType?: string;
   participantCount: number;
@@ -1214,10 +1316,18 @@ export async function generateUndercoverWordPair(params: {
   _refinementHint?: string;
 }): Promise<AIServiceResult<UndercoverWordPair>> {
   const aiCorrelationId = createAiCorrelationId();
-  const { client, model, provider } = getClientForFunction('generateUndercoverWordPair');
-  const t0 = Date.now();
 
   const fallback = getFallbackUndercoverPair();
+
+  // If AI is disabled, return curated fallback immediately
+  if (!isUndercoverWordLlmEnabled()) {
+    const meta = buildFallbackAIMeta('disabled', UNDERCOVER_WORD_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateUndercoverWordPair', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    return { data: fallback, meta };
+  }
+
+  const { client, model, provider } = getClientForFunction('generateUndercoverWordPair');
+  const t0 = Date.now();
 
   try {
     const sessionContext = params.roster ? buildArchetypeContext(params.roster) : undefined;
@@ -1285,6 +1395,12 @@ export async function generateUndercoverWordPair(params: {
 
 // ─── Group Mirror ────────────────────────────────────────────────────────────
 
+function isGroupMirrorLlmEnabled(): boolean {
+  const v = process.env.SOCIAL_GROUP_MIRROR_LLM_ENABLED;
+  if (v === undefined || v === '') return true; // default: AI enabled for backward compat
+  return v.toLowerCase() === 'true';
+}
+
 export async function generateGroupMirrorQuestions(params: {
   eventType?: string;
   participantCount: number;
@@ -1293,10 +1409,18 @@ export async function generateGroupMirrorQuestions(params: {
   _refinementHint?: string;
 }): Promise<AIServiceResult<GroupMirrorQuestion[]>> {
   const aiCorrelationId = createAiCorrelationId();
-  const { client, model, provider } = getClientForFunction('generateGroupMirrorQuestions');
-  const t0 = Date.now();
 
   const fallback = getFallbackGroupMirrorQuestions(5);
+
+  // If AI is disabled, return curated fallback immediately
+  if (!isGroupMirrorLlmEnabled()) {
+    const meta = buildFallbackAIMeta('disabled', GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    return { data: fallback, meta };
+  }
+
+  const { client, model, provider } = getClientForFunction('generateGroupMirrorQuestions');
+  const t0 = Date.now();
 
   try {
     const sessionContext = params.roster ? buildArchetypeContext(params.roster) : undefined;

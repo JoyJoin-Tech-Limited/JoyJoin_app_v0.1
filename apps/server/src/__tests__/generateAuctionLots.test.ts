@@ -7,7 +7,7 @@ describe('generateAuctionLots', () => {
   });
 
   it('returns normalized fallback lots when LLM is disabled', async () => {
-    delete process.env.SOCIAL_AUCTION_LLM_ENABLED;
+    process.env.SOCIAL_AUCTION_LLM_ENABLED = 'false';
     const result = await generateAuctionLots({ participantCount: 4 });
     expect(result.data.length).toBeGreaterThanOrEqual(2);
     expect(result.data[0]).toMatchObject({
