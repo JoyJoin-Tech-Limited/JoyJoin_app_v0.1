@@ -144,6 +144,7 @@ export default function PersonalityTestQuestion({
         : question?.questionText ?? ''
 
   const isLoadingSpeech = isSubmitting && !postAnswerCommentary
+  const isNavLocked = isSubmitting || isSkipping
 
   // Forces a remount (and typing restart) whenever the speech source changes,
   // even if two consecutive questions happen to have identical text.
@@ -297,31 +298,34 @@ export default function PersonalityTestQuestion({
 
       {/* Navigation row: 上一题 / 下一题 */}
       <View className='personality-test__nav-row'>
-        {canGoPrevious ? (
-          <Button
-            variant='secondary'
-            className='personality-test__nav-btn personality-test__nav-btn--prev'
-            onClick={() => {
-              if (isSubmitting || isSkipping) return
-              onPrevious()
-            }}
-            disabled={isSubmitting || isSkipping}
-            hoverClass='personality-test__nav-btn--active'
-            style={{ opacity: isSubmitting || isSkipping ? 0.4 : 1 }}
-          >
-            上一题
-          </Button>
-        ) : (
-          <View className='personality-test__nav-btn personality-test__nav-btn--placeholder' />
-        )}
+        <Button
+          variant='secondary'
+          className={[
+            'personality-test__nav-btn',
+            'personality-test__nav-btn--prev',
+            !canGoPrevious || isNavLocked ? 'personality-test__nav-btn--disabled' : '',
+          ].filter(Boolean).join(' ')}
+          onClick={() => {
+            if (isNavLocked || !canGoPrevious) return
+            onPrevious()
+          }}
+          disabled={isNavLocked || !canGoPrevious}
+          hoverClass='personality-test__nav-btn--active'
+        >
+          上一题
+        </Button>
         <Button
           variant='brand'
-          className='personality-test__nav-btn personality-test__nav-btn--next'
+          className={[
+            'personality-test__nav-btn',
+            'personality-test__nav-btn--next',
+            !canGoNext || isNavLocked ? 'personality-test__nav-btn--disabled' : '',
+          ].filter(Boolean).join(' ')}
           onClick={() => {
-            if (isSubmitting || isSkipping || !canGoNext) return
+            if (isNavLocked || !canGoNext) return
             onNext()
           }}
-          disabled={isSubmitting || isSkipping || !canGoNext}
+          disabled={isNavLocked || !canGoNext}
           loading={isSubmitting}
           hoverClass='personality-test__nav-btn--active'
         >

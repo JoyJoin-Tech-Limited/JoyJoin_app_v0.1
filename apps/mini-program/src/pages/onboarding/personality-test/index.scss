@@ -616,34 +616,41 @@
   // Navigation row: 上一题 / 下一题
   &__nav-row {
     display: flex;
-    gap: $spacing-md;
-    padding: 0 $container-padding 12rpx;
+    align-items: stretch;
+    gap: 20rpx;
+    padding: 0 $container-padding 20rpx;
     @include safe-area-inline($container-padding);
   }
 
   &__nav-btn {
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 0;
     min-height: $cta-min-tap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: $button-radius;
     font-size: $font-size-sm;
     font-weight: $font-weight-medium;
     transition: background 0.15s ease, transform 0.12s ease;
 
     &--prev {
-      flex: 0 0 auto;
-      min-width: 160rpx;
       background: rgba($color-text-primary, 0.04);
       color: $color-text-secondary;
     }
 
     &--next {
-      flex: 1;
+      color: $color-surface;
     }
 
-    &--placeholder {
-      flex: 0 0 auto;
-      min-width: 160rpx;
-      visibility: hidden;
+    &--disabled {
+      opacity: 0.46;
+      box-shadow: none;
+
+      &.personality-test__nav-btn--prev {
+        background: rgba($color-text-primary, 0.035);
+        color: $color-text-muted;
+      }
     }
 
     &--active {
@@ -656,9 +663,9 @@
   &__skip-row {
     display: flex;
     justify-content: center;
-    padding: 0 $container-padding 24rpx;
+    padding: 16rpx $container-padding 28rpx;
     @include safe-area-inline($container-padding);
-    @include safe-area-bottom-padding(padding-bottom, 24rpx);
+    @include safe-area-bottom-padding(padding-bottom, 28rpx);
   }
 
   &__skip-btn {
