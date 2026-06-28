@@ -18,4 +18,16 @@ describe("event registration payment gate", () => {
     expect(source).toContain('(process.env.APP_MODE ?? "production") === "test"');
     expect(source).toContain("Staging single-test mode must still exercise the real payment path.");
   });
+
+  it("counts only active registrations when deciding whether a pool is full", () => {
+    const userEventPoolsSource = readRepoFile("apps/server/src/routes/domains/userEventPools.ts");
+    const paymentsSource = readRepoFile("apps/server/src/routes/domains/payments.ts");
+
+    const activeRegistrationFilters = userEventPoolsSource.match(
+      /inArray\(eventPoolRegistrations\.matchStatus, \["pending", "matched"\]\)/g,
+    ) ?? [];
+
+    expect(activeRegistrationFilters.length).toBeGreaterThanOrEqual(3);
+    expect(paymentsSource).toContain('inArray(eventPoolRegistrations.matchStatus, ["pending", "matched"])');
+  });
 });

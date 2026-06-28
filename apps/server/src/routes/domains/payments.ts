@@ -1,7 +1,7 @@
 import type { Express, Request } from "express";
 import { buildCsvContent, isEventPackPlanType, normalizeSubscriptionPlanType } from "@joyjoin/shared";
 import { eventPoolRegistrations, users, eventPools, discoverAnalyticsEvents } from "@shared/schema";
-import { and, eq, sql, gte, lte } from "drizzle-orm";
+import { and, eq, inArray, sql, gte, lte } from "drizzle-orm";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { paymentEndpointLimiter, webhookEndpointLimiter } from "../../rateLimiter";
 import { logger } from "../../lib/logger";
@@ -371,7 +371,12 @@ async function resolveEventCheckout(
   const [registrationCountRow] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(eventPoolRegistrations)
-    .where(eq(eventPoolRegistrations.poolId, eventRegistrationPayload.poolId));
+    .where(
+      and(
+        eq(eventPoolRegistrations.poolId, eventRegistrationPayload.poolId),
+        inArray(eventPoolRegistrations.matchStatus, ["pending", "matched"]),
+      ),
+    );
 
   const availability = describePoolRegistrationAvailability(
     {

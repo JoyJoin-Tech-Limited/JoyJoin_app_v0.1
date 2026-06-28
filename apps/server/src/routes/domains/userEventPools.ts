@@ -132,7 +132,12 @@ export function registerUserEventPoolRoutes(app: Express): void {
               count: sql<number>`count(*)::int`,
             })
             .from(eventPoolRegistrations)
-            .where(inArray(eventPoolRegistrations.poolId, visiblePoolIds))
+            .where(
+              and(
+                inArray(eventPoolRegistrations.poolId, visiblePoolIds),
+                inArray(eventPoolRegistrations.matchStatus, ["pending", "matched"]),
+              ),
+            )
             .groupBy(eventPoolRegistrations.poolId)
         : [];
 
@@ -325,7 +330,10 @@ export function registerUserEventPoolRoutes(app: Express): void {
 
       // Get registration count + archetype breakdown
       const registrations = await db.query.eventPoolRegistrations.findMany({
-        where: (regs: any, { eq }: any) => eq(regs.poolId, req.params.id)
+        where: and(
+          eq(eventPoolRegistrations.poolId, req.params.id),
+          inArray(eventPoolRegistrations.matchStatus, ["pending", "matched"]),
+        ),
       });
 
       const regUserIds = registrations.map((r: any) => r.userId);
@@ -520,7 +528,12 @@ export function registerUserEventPoolRoutes(app: Express): void {
       const [registrationCountRow] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(eventPoolRegistrations)
-        .where(eq(eventPoolRegistrations.poolId, poolId));
+        .where(
+          and(
+            eq(eventPoolRegistrations.poolId, poolId),
+            inArray(eventPoolRegistrations.matchStatus, ["pending", "matched"]),
+          ),
+        );
 
       const availability = describePoolRegistrationAvailability(
         {
@@ -870,7 +883,12 @@ export function registerUserEventPoolRoutes(app: Express): void {
       const [registrationCountRow] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(eventPoolRegistrations)
-        .where(eq(eventPoolRegistrations.poolId, poolId));
+        .where(
+          and(
+            eq(eventPoolRegistrations.poolId, poolId),
+            inArray(eventPoolRegistrations.matchStatus, ["pending", "matched"]),
+          ),
+        );
 
       const availability = describePoolRegistrationAvailability(
         {
