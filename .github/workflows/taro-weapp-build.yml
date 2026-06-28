@@ -19,6 +19,20 @@ on:
       - 'package-lock.json'
       - '.github/workflows/taro-weapp-build.yml'
   workflow_dispatch:
+    inputs:
+      api_target:
+        description: 'API target environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      should_upload:
+        description: 'Upload to WeChat Mini Program'
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -52,6 +66,7 @@ jobs:
         run: npm run build:weapp -w mini-program
         env:
           TARO_APP_CDN_BASE_URL: ${{ vars.TARO_APP_CDN_BASE_URL || 'https://cdn.joyjoinapp.com/static' }}
+          TARO_APP_API_BASE_URL: ${{ github.event.inputs.api_target == 'staging' && 'https://staging.joyjoinapp.com' || 'https://api.joyjoinapp.com' }}
 
       - name: Check package size
         run: npm run check:package-size -w mini-program
@@ -68,7 +83,7 @@ jobs:
   # continue-on-error: true — CVM availability is best-effort, not a build gate.
   # If this fails, re-run from Actions UI or use scripts/cvm-upload.sh locally.
   upload-weapp:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && github.event.inputs.should_upload == 'true')
     needs: build-weapp
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -105,8 +120,9 @@ jobs:
           printf '%s\n' "$WECHAT_PRIVATE_KEY" > "$WX_KEY_FILE"
           chmod 600 "$WX_KEY_FILE"
 
+          API_TARGET="${{ github.event.inputs.api_target || 'production' }}"
           VERSION="1.0.$(date +%Y%m%d).$(date +%H%M)"
-          DESCRIPTION="Auto-deploy: ${GITHUB_SHA:0:7}"
+          DESCRIPTION="Auto-deploy (${API_TARGET}): ${GITHUB_SHA:0:7}"
 
           echo "📱 Uploading mini-program v$VERSION via CVM..."
 
