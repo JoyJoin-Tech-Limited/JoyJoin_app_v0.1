@@ -328,6 +328,25 @@ The staging admin portal proxies `/api/*` to the staging API, so any event creat
 
 After logging into the 体验版, start any paid flow (event registration, subscription, event pack). The price should show ¥0.01 and create a real WeChat Pay order for ¥0.01. Webhook fulfillment still runs normally against the staging database.
 
+### Local dev mock-payment shortcut (2026-06-28)
+
+For local development you can skip real WeChat Pay entirely:
+
+```bash
+# root .env
+APP_MODE=staging
+PAYMENTS_ENABLED=true
+MOCK_PAYMENTS=true
+TEST_PAYMENT_PRICE_IN_CENTS=1
+```
+
+With `MOCK_PAYMENTS=true`:
+- The server returns instantly-paid orders (`status: completed`, `mock: true`).
+- The mini-program skips `Taro.requestPayment()` and goes straight to payment verification.
+- Prices still show ¥0.01 because `APP_MODE !== production`.
+
+Restart `npm run dev:server` after editing `.env`.
+
 ---
 
 ## F. Troubleshooting

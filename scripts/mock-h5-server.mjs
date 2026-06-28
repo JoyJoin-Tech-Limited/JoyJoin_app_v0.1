@@ -102,6 +102,143 @@ const MOCK_PRICING = {
   ],
 }
 
+// Joined events for 我的足迹
+app.get('/api/events/joined', (req, res) => {
+  res.json([
+    {
+      id: 'event-upcoming-001',
+      title: '周末松弛感饭局 · 南山',
+      dateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000).toISOString(),
+      status: 'upcoming',
+      eventType: '饭局',
+      city: '深圳',
+      district: '南山',
+      venueName: '悦聚小馆',
+      price: 88,
+    },
+    {
+      id: 'event-matched-001',
+      title: '微醺夜话 · 福田',
+      dateTime: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+      status: 'matched',
+      eventType: '酒局',
+      city: '深圳',
+      district: '福田',
+      venueName: 'The Backroom',
+      groupId: 'group-001',
+      finalDateTime: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000).toISOString(),
+      price: 128,
+    },
+    {
+      id: 'event-urgent-001',
+      title: '今晚即兴饭局 · 罗湖',
+      dateTime: new Date(Date.now() + 45 * 60 * 1000).toISOString(),
+      status: 'confirmed',
+      eventType: '饭局',
+      city: '深圳',
+      district: '罗湖',
+      venueName: '老街大排档',
+      price: 66,
+    },
+    {
+      id: 'event-completed-001',
+      title: '上周末天台烧烤 · 宝安',
+      dateTime: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      status: 'completed',
+      eventType: '饭局',
+      city: '深圳',
+      district: '宝安',
+      venueName: '天台烤场',
+      price: 99,
+    },
+    {
+      id: 'event-cancelled-001',
+      title: '已取消的桌游局 · 龙岗',
+      dateTime: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
+      status: 'cancelled',
+      eventType: '桌游',
+      city: '深圳',
+      district: '龙岗',
+      price: 49,
+    },
+  ])
+})
+
+// Events shell composite
+app.get('/api/shell/events', (req, res) => {
+  res.json({
+    user: MOCK_USER,
+    joinedEvents: [
+      {
+        id: 'event-upcoming-001',
+        title: '周末松弛感饭局 · 南山',
+        dateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000).toISOString(),
+        status: 'upcoming',
+        eventType: '饭局',
+        city: '深圳',
+        district: '南山',
+        venueName: '悦聚小馆',
+        price: 88,
+      },
+      {
+        id: 'event-matched-001',
+        title: '微醺夜话 · 福田',
+        dateTime: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'matched',
+        eventType: '酒局',
+        city: '深圳',
+        district: '福田',
+        venueName: 'The Backroom',
+        groupId: 'group-001',
+        finalDateTime: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000).toISOString(),
+        price: 128,
+      },
+      {
+        id: 'event-urgent-001',
+        title: '今晚即兴饭局 · 罗湖',
+        dateTime: new Date(Date.now() + 45 * 60 * 1000).toISOString(),
+        status: 'confirmed',
+        eventType: '饭局',
+        city: '深圳',
+        district: '罗湖',
+        venueName: '老街大排档',
+        price: 66,
+      },
+      {
+        id: 'event-completed-001',
+        title: '上周末天台烧烤 · 宝安',
+        dateTime: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'completed',
+        eventType: '饭局',
+        city: '深圳',
+        district: '宝安',
+        venueName: '天台烤场',
+        price: 99,
+      },
+      {
+        id: 'event-cancelled-001',
+        title: '已取消的桌游局 · 龙岗',
+        dateTime: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'cancelled',
+        eventType: '桌游',
+        city: '深圳',
+        district: '龙岗',
+        price: 49,
+      },
+    ],
+    notificationCounts: { discover: 0, activities: 0, chat: 0, total: 0 },
+  })
+})
+
+// Notifications
+app.get('/api/notifications/counts', (req, res) => {
+  res.json({ discover: 0, activities: 0, chat: 0, total: 0 })
+})
+
+app.post('/api/notifications/mark-read', (req, res) => {
+  res.json({ success: true })
+})
+
 // Auth
 app.get('/api/auth/user', (req, res) => {
   res.json(MOCK_USER)

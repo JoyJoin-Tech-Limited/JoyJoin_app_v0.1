@@ -59,6 +59,7 @@ import {
 import { observeSemanticSimilarityMetrics } from "./matchingMetrics";
 import { matchingWeightsService, type MatchingWeights } from "./matchingWeightsService";
 import { notifyPoolMatched, notifyVenueAssignmentResult } from "./lib/wecomNotifications/matching";
+import { notificationsRepo } from "./repositories/notificationsRepo";
 
 
 
@@ -1817,7 +1818,7 @@ export async function saveMatchResults(
   }
 
   // ── Post-commit side effects ──────────────────────────────────────────────
-  // 3. 发送WebSocket通知 (outside transaction — notifications cannot be rolled back)
+  // 3. 发送WebSocket通知 and persist DB notifications (outside transaction — notifications cannot be rolled back)
   for (const { memberUserIds, notificationData } of notificationQueue) {
     memberUserIds.forEach(userId => {
       wsService.broadcastToUser(userId, {
@@ -1827,6 +1828,27 @@ export async function saveMatchResults(
       });
     });
     logger.info(`[Pool Matching] Sent POOL_MATCHED notification to ${memberUserIds.length} users for group ${notificationData.groupNumber}`);
+
+    // Persist match_success notifications so badge counts update
+    try {
+      await Promise.all(
+        memberUserIds.map(userId =>
+          notificationsRepo.createNotification({
+            userId,
+            category: 'activities',
+            type: 'match_success',
+            title: '匹配成功！',
+            message: `你在「${notificationData.poolTitle}」的桌友匹配已完成，去看看你的新伙伴吧`,
+            relatedResourceId: notificationData.groupId,
+          })
+        )
+      );
+      logger.info(`[Pool Matching] Created match_success notifications for ${memberUserIds.length} users`);
+    } catch (notificationError) {
+      logger.error('[Pool Matching] Failed to create match_success notifications', {
+        error: notificationError instanceof Error ? notificationError.message : String(notificationError),
+      });
+    }
   }
 
   // 1.5 Generate and save event themes (fire-and-forget)

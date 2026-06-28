@@ -32,7 +32,7 @@ Client ──WSS──> wsService.ts (auth, rooms, routing)
                  └── broadcastToKingGameRoom(sessionId, msg)
 ```
 
-**Critical:** `wsService.initialize(server)` exists but is **not currently wired** into the HTTP server bootstrap in `index.ts`.
+**Status:** `wsService.initialize(server)` is wired in `apps/server/src/index.ts` after the HTTP server is created (2026-06-28).
 
 ## Connection lifecycle overview
 
@@ -70,7 +70,7 @@ For auth handshake details, heartbeat/reconnect logic, rate limiting specifics, 
 
 | Symptom | Likely Cause | Fix |
 |---------|-------------|-----|
-| No WS messages at all | `wsService.initialize(server)` not wired | Call it in `index.ts` after HTTP server creation |
+| No WS messages at all | `wsService.initialize(server)` not called, or server failed to start | Verify startup log includes `[WS] WebSocket server initialized`; check `index.ts` bootstrap order |
 | Auth fails on WS upgrade | `SESSION_SECRET` mismatch or missing cookie | Verify cookie is sent on upgrade; check session store |
 | Messages silently ignored | `message.userId` ≠ `ws.userId` | Ensure client sends correct userId; check auth flow |
 | Client reconnects constantly | Heartbeat timeout or rate limit | Check server ping interval; verify client pong response |

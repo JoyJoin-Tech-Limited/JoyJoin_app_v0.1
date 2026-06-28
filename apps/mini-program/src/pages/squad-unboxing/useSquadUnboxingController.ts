@@ -276,12 +276,21 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
       return undefined
     }
 
+    try {
+      Taro.setStorageSync(`jj_revealed_${groupId}`, true)
+    } catch (error) {
+      logError('[SquadUnboxing] Failed to persist reveal flag', {
+        groupId,
+        message: error instanceof Error ? error.message : String(error),
+      })
+    }
+
     const timer = setTimeout(() => {
       setAnalysisStage((stage) => (stage === 0 ? 1 : stage))
     }, shouldReduceMotion ? 120 : 900)
 
     return () => clearTimeout(timer)
-  }, [flowState, shouldReduceMotion])
+  }, [flowState, groupId, shouldReduceMotion])
 
   useEffect(() => {
     if (analysisStage < 1 || analysisStage >= 4) {

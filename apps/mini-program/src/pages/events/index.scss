@@ -77,15 +77,11 @@
     margin-bottom: $spacing-md;
     min-height: 140rpx;
 
-    &--virtual {
-      margin-bottom: 0;
-    }
-
     &--skeleton {
       @include card;
-      padding: $spacing-lg;
+      padding: 32rpx;
       pointer-events: none;
-      min-height: 120rpx;
+      min-height: 280rpx;
 
       &:active {
         transform: none;

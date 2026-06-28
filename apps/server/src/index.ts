@@ -21,6 +21,7 @@ import { isSingleTestMode } from "./lib/isSingleTestMode";
 import { detectTestBotRowsInProduction } from "./services/matchingTestService";
 import { requestIdMiddleware } from "./middleware/requestId";
 import { metricsMiddleware } from "./middleware/metrics";
+import { wsService } from "./wsService";
 import compression from "compression";
 
 // Keep liveness reachable even when config is incomplete; readiness reports the failure.
@@ -101,6 +102,9 @@ app.use((req, res, next) => {
     // Register all API routes and get HTTP server
     const server = await registerRoutes(app);
 
+    // Initialize WebSocket server on the same HTTP server
+    wsService.initialize(server);
+
     // Auto-seed virtual users in single-test mode (pool created on first session start)
     if (isSingleTestMode()) {
       try {
@@ -133,6 +137,14 @@ app.use((req, res, next) => {
         admin_key_configured: Boolean(process.env.ADMIN_CREATE_SECRET_KEY),
         run_plan_templates_enabled: process.env.RUN_PLAN_TEMPLATES_ENABLED === 'true',
       });
+
+      // Non-production warning to help QA discover payment kill-switch
+      if ((process.env.APP_MODE ?? 'production') !== 'production') {
+        const paymentsEnabledEnv = process.env.PAYMENTS_ENABLED?.toLowerCase() === 'true';
+        if (!paymentsEnabledEnv) {
+          logger.warn('[Startup] Payments are disabled in this non-production environment. To enable ¥0.01 staging payments set APP_MODE=staging, PAYMENTS_ENABLED=true, TEST_PAYMENT_PRICE_IN_CENTS=1, and ensure the paymentsEnabled DB flag (feature_flags) is true or absent. See /tmp/payment-staging-config.md.');
+        }
+      }
 
       // Warm TTS cache non-blocking (no-op if MINIMAX keys not configured)
       if (process.env.MINIMAX_API_KEY && process.env.MINIMAX_GROUP_ID) {

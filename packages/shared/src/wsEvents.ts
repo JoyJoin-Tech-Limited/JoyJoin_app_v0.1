@@ -10,6 +10,7 @@ export type WSEventType =
   | "POOL_MATCHED"
   | "EVENT_THEME_TITLE_REVEALED"
   | "POOL_REGISTRATION_ADDED"
+  | "POOL_FULL"
   | "USER_JOINED"
   | "USER_CONFIRMED"
   | "USER_LEFT"
@@ -120,6 +121,14 @@ export interface PoolRegistrationAddedData {
   archetype?: string;
   userId: string;
   totalRegistrations: number;
+}
+
+// 活动池满员
+export interface PoolFullData {
+  poolId: string;
+  poolTitle: string;
+  totalRegistrations: number;
+  capacity: number;
 }
 
 // 频率限制

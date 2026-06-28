@@ -1,0 +1,238 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+// ─── Footprint Oracle Card ──────────────────────────────────────
+// Mirror of Discover's Oracle Card shell, repurposed for "我的足迹".
+// Status-first layout with LED countdown for upcoming/in-progress events.
+// ─────────────────────────────────────────────────────────────────
+
+.footprint-oracle-card {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 280rpx;
+  padding: 24rpx $spacing-lg;
+  border-radius: $card-radius-sm;
+  border: 2rpx solid rgba($color-surface, 0.9);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(18rpx);
+  animation: footprint-oracle-card-enter 0.34s ease-out forwards;
+  will-change: transform, opacity;
+  contain: layout style;
+
+  // Content sits above the decorative corner vignette.
+  &__content {
+    position: relative;
+    z-index: 1;
+  }
+
+  // Family-specific surfaces mirror the Oracle Card gradient system.
+  &--family-warm {
+    background: $card-gradient-warm;
+    box-shadow: 0 8rpx 32rpx rgba($color-archetype-warm, 0.1);
+  }
+
+  &--family-cool {
+    background: $card-gradient-cool;
+    box-shadow: 0 8rpx 32rpx rgba($color-archetype-cool, 0.1);
+  }
+
+  &--family-fire {
+    background: $card-gradient-fire;
+    box-shadow: 0 8rpx 32rpx rgba($color-archetype-fire, 0.1);
+  }
+
+  &--family-calm {
+    background: $card-gradient-premium;
+    box-shadow: 0 8rpx 32rpx rgba($color-archetype-calm, 0.1);
+  }
+
+  // Muted treatment for terminal states (completed / cancelled).
+  &--terminal {
+    .footprint-oracle-card__title,
+    .footprint-oracle-card__date-time,
+    .footprint-oracle-card__location,
+    .footprint-oracle-card__footer-hint {
+      opacity: 0.78;
+    }
+
+    .footprint-oracle-card__pulse-pill {
+      background: rgba($color-text-primary, 0.06);
+    }
+
+    .footprint-oracle-card__pulse-dot {
+      animation: none;
+    }
+  }
+
+  &--pressed {
+    transform: translateY(-2rpx) scale(0.985);
+  }
+
+  &--low-end {
+    will-change: auto;
+    contain: none;
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  // ── Event-type corner vignette ────────────────────────────────
+  &__type-corner {
+    position: absolute;
+    top: 24rpx;
+    right: 40rpx;
+    width: 220rpx;
+    height: 220rpx;
+    opacity: 0.5;
+    z-index: 0;
+    pointer-events: none;
+    border-top-right-radius: 22rpx;
+  }
+
+  // ── Topline (status pill + countdown) ─────────────────────────
+  &__topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__pulse-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.08);
+    max-width: 60%;
+  }
+
+  &__pulse-dot {
+    width: 10rpx;
+    height: 10rpx;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &--live {
+      animation: footprint-oracle-pulse-dot 2s ease-in-out infinite;
+    }
+  }
+
+  &__pulse-label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    @include text-truncate;
+  }
+
+  &__countdown {
+    font-family: $font-en-brand;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: $color-text-secondary;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+    margin-left: $spacing-sm;
+
+    &--urgent {
+      color: $color-error;
+      animation: footprint-oracle-countdown-pulse 1.2s ease-in-out infinite;
+    }
+  }
+
+  // ── Title ─────────────────────────────────────────────────────
+  &__title {
+    @include font-cn-display;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    padding-right: 140rpx;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: 1.4;
+    margin-bottom: $spacing-sm;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+
+  // ── Date / time / location meta ───────────────────────────────
+  &__meta {
+    margin-bottom: $spacing-sm;
+    padding-right: 140rpx;
+  }
+
+  &__date-time {
+    display: block;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    line-height: 1.5;
+    margin-bottom: 4rpx;
+  }
+
+  &__location {
+    display: block;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-muted;
+    line-height: 1.4;
+    @include text-truncate;
+  }
+
+  // ── Footer hint ───────────────────────────────────────────────
+  &__footer {
+    margin-top: $spacing-md;
+    padding-top: $spacing-sm;
+    border-top: 1rpx solid rgba($color-border, 0.4);
+  }
+
+  &__footer-hint {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    line-height: 1.4;
+  }
+}
+
+// ─── Keyframes ───────────────────────────────────────────────────
+@keyframes footprint-oracle-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes footprint-oracle-pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+@keyframes footprint-oracle-countdown-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+// ─── Reduced motion ──────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .footprint-oracle-card {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .footprint-oracle-card__pulse-dot--live {
+    animation: none !important;
+  }
+
+  .footprint-oracle-card__countdown--urgent {
+    animation: none !important;
+  }
+}

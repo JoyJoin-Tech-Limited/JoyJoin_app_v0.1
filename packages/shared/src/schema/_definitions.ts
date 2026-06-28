@@ -490,6 +490,8 @@ export const eventPoolRegistrations = pgTable("event_pool_registrations", {
   index("idx_event_pool_registrations_pool_id").on(table.poolId),
   index("idx_event_pool_registrations_user_id").on(table.userId),
   index("idx_event_pool_registrations_pool_registered_at").on(table.poolId, table.registeredAt),
+  // Index for joined-events query left-joining event_pool_groups via assigned_group_id
+  index("idx_event_pool_registrations_assigned_group_id").on(table.assignedGroupId),
 ]);
 
 // Event Pool Groups table - 匹配成功的小组

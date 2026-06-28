@@ -1,6 +1,6 @@
 import { CustomWrapper, Image, ScrollView, Text, View } from '@tarojs/components'
 import { useEffect, useRef } from 'react'
-import { useRouter } from '@tarojs/taro'
+import { useRouter, useDidShow } from '@tarojs/taro'
 import { getStatusLabel } from '@shared/features/matching-status'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import LoadingScreen from '../../components/loading/LoadingScreen'
@@ -90,6 +90,16 @@ export default function MatchingStatusPage() {
   const handleCancel = () => { haptics('light'); _handleCancel() }
   const handleOpenMatchedJourney = () => { haptics('medium'); _handleOpenMatchedJourney() }
   const handleRefreshWaitingState = () => { haptics('light'); _handleRefreshWaitingState() }
+
+  const hasDidShowRef = useRef(false)
+  useDidShow(() => {
+    // Skip the first show (mount) to avoid duplicating the initial query fetch.
+    if (!hasDidShowRef.current) {
+      hasDidShowRef.current = true
+      return
+    }
+    _handleRefreshWaitingState()
+  })
   const handleRejoinPool = (poolId: string) => { haptics('light'); _handleRejoinPool(poolId) }
   const invalidateRegistrationQuery = () => { haptics('light'); _invalidateRegistrationQuery() }
   const switchToEventsTab = () => { haptics('light'); _switchToEventsTab() }

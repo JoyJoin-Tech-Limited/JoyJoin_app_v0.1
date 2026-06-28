@@ -136,7 +136,7 @@ function AuthenticatedDiscover({
   onOpenDrawer,
   onOpenCityPicker,
 }: AuthenticatedDiscoverProps) {
-  const { user } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const queryClient = useQueryClient()
   const displayName = (user as any)?.displayName || (user as any)?.nickname || '悦聚用户'
   const userArchetype = (user as any)?.primaryArchetype || (user as any)?.archetype || null
@@ -161,7 +161,7 @@ function AuthenticatedDiscover({
     isFetching: poolsFetching,
   } = useQuery({
     queryKey: ['mini-program', 'event-pools'],
-    staleTime: 2 * 60 * 1000,
+    staleTime: 20 * 1000,
     queryFn: async (): Promise<EventPoolSummary[]> => {
       try {
         const loadedPools = await loadDiscoverPools({
@@ -202,7 +202,7 @@ function AuthenticatedDiscover({
     isLoading: isLoadingRegistrations,
   } = useQuery({
     queryKey: ['mini-program', 'my-pool-registrations'],
-    staleTime: 2 * 60 * 1000,
+    staleTime: 20 * 1000,
     queryFn: () => getMyPoolRegistrations(apiRequest),
   })
 
@@ -214,6 +214,20 @@ function AuthenticatedDiscover({
     preloadRouteAssets('pages/discover/index')
     preloadPredictiveAssets('pages/discover/index')
   }, [])
+
+  // Refresh data on foreground so registration/payment changes are reflected
+  // after the user returns from other pages. Skip the first show (mount) to
+  // avoid duplicating the initial query fetch.
+  const hasDidShowRef = useRef(false)
+  useDidShow(() => {
+    if (!hasDidShowRef.current) {
+      hasDidShowRef.current = true
+      return
+    }
+    if (authLoading) return
+    void queryClient.invalidateQueries({ queryKey: ['mini-program', 'event-pools'] })
+    void queryClient.invalidateQueries({ queryKey: ['mini-program', 'my-pool-registrations'] })
+  })
 
   // ── Geo detection effect ──
   // Asynchronously detect user location for proximity sorting.

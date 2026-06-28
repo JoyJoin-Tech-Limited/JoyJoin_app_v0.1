@@ -4,7 +4,7 @@
 
 ## Overview
 
-After an admin triggers pool matching (`POST /api/admin/pools/:poolId/match`), the matching algorithm forms groups. The **Venue Assignment Service** then automatically assigns the optimal partner venue to each matched group based on budget, time slot availability, capacity, and district alignment.
+After an admin triggers pool matching (`POST /api/admin/event-pools/:poolId/match`), the matching algorithm forms groups. The **Venue Assignment Service** then automatically assigns the optimal partner venue to each matched group based on budget, time slot availability, capacity, and district alignment.
 
 **Entry point:** `apps/server/src/venueAssignmentService.ts`
 
@@ -113,9 +113,20 @@ When `venueAssignmentStatus === 'unassigned'`, the mini-program shows a "地点�
 
 ### Admin-facing
 
-`GET /api/admin/pools` and pool detail pages show:
+`GET /api/admin/event-pools` and pool detail pages show:
 - Assigned groups: green "已分配: {venueName}" badge
 - Unassigned groups: "未分配场地" badge + reason chip (预算不匹配 / 容量不足 / 无可用时段 / 时段已满)
+
+#### Manual venue assignment fallback (2026-06-28)
+
+When auto-assignment cannot place a group, admins can manually assign a venue:
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| `GET` | `/api/admin/venue-assignment/groups/:groupId/candidates` | Admin | List eligible venues + available slots for the group |
+| `POST` | `/api/admin/venue-assignment/groups/:groupId/assign` | Operator+ | Atomically assign `venueId` + `timeSlotId` + `bookingDate` to the group |
+
+The admin portal event-pools page exposes these via a **分配场地** button on unassigned group cards. The assignment is logged to `admin_audit_logs` with action `VENUE_ASSIGNED`.
 
 ## Unassigned Reason Codes
 

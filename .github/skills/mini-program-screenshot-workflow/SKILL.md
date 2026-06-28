@@ -8,7 +8,8 @@ description: >
   "capture the mini-program screen". Prevents repeated wasted effort on approaches
   that are known to fail. Trigger phrases: "screenshot mini-program",
   "mini-program preview", "capture UI", "show me the page", "visual check",
-  "mini-program screenshot", "WeChat DevTools screenshot", "page preview".
+  "mini-program screenshot", "WeChat DevTools screenshot", "page preview",
+  "H5 screenshot flow", "playwright screenshot mini-program".
 ---
 
 # Mini-Program Screenshot & Preview Workflow
@@ -16,8 +17,6 @@ description: >
 > **Hard truth:** There is no one-click screenshot for the WeChat Mini Program.
 > The WeChat DevTools MCP provides navigation and DOM inspection, but **no visual
 > capture**. Choose the correct approach based on what you actually need.
-
----
 
 ## Decision tree (read this first)
 
@@ -34,137 +33,46 @@ description: >
 - WeChat CLI `auto-preview --qr-output-dest` — hangs indefinitely, no file written
 - Playwright "screenshot" while connected to WeChat DevTools MCP — captures blank page
 
----
+## Approach overview
 
-## Approach A: Visual Screenshot (H5 Build + Playwright)
+- **Approach A** — H5 build + Playwright for pixel-perfect visual screenshots
+- **Approach B** — WeChat DevTools MCP for structural verification (WXML tree, text, state)
+- **Approach C** — CLI QR code for real-device WeChat runtime preview
+- **Approach D** — `check_health` for quick smoke tests after code changes
 
-Use when you need an actual image of the UI for design review, comparison, or documentation.
+See [references/approaches.md](references/approaches.md) for full step-by-step instructions, reusable scripts, auth bypass pattern, mock server setup, known traps, and detailed code snippets.
 
-### Prerequisites
-- Mock API server running on **port 5001** (or real backend running)
-- Page may need **auth bypass patch** if it gates on `isAuthenticated`
+## When to use this skill
 
-### Steps
+- The user asks to "screenshot the mini-program", "show me the UI", or "preview this page"
+- You need a pixel-perfect visual of a mini-program screen for design review
+- You need to verify structural rendering (DOM, text, state) without visual capture
+- You need to test on a real WeChat runtime device
+- You want to avoid known-failure approaches (Playwright on DevTools, AppleScript capture, etc.)
 
-```bash
-# 1. If the page requires auth, temporarily bypass it in source
-#    Edit: apps/mini-program/src/pages/<page>/index.tsx
-#    Change: isAuthenticated ? <RealComponent /> : <LandingPage />
-#    To:     <RealComponent />
+## Quick examples
 
-# 2. Build H5 with correct API base URL
-cd apps/mini-program
-TARO_APP_API_BASE_URL=http://localhost:5001 npx taro build --type h5
+- **Visual design review:** Use Approach A (H5 build + Playwright) with auth bypass patch → screenshot → `git checkout` to restore. Reusable scripts: `scripts/screenshot-tier-selector.mjs`, `scripts/screenshot-h5.mjs`.
+- **Structural smoke test:** Use Approach B (DevTools MCP) with `get_page_data` after navigating to `/pages/discover/index` to verify text and element presence. For visibility checks (e.g., the native custom tab bar), also inspect the **outer `hidden` attribute and computed `display`** — the WXML tree can contain the element while `hidden=""` makes it invisible.
 
-# 3. Start mock server on EXACT port 5001
-#    Must expose these endpoints:
-#      GET /api/auth/user       → { id, displayName, archetype, ... }
-#      GET /api/event-pools     → EventPoolSummary[] (array, not wrapped)
-#      GET /api/my-pool-registrations → []
-#      GET /api/notifications/unread  → { unreadCounts: {}, totalUnread: 0 }
-#    See: scripts/mock-h5-server.mjs in repo root
+## Troubleshooting
 
-# 4. Playwright navigate and screenshot
-playwright_navigate({ url: "http://localhost:5001/#/pages/<page>/index" })
-playwright_screenshot({ name: "<page>-screenshot", savePng: true })
+- **H5 page is blank after build** → Check `TARO_APP_API_BASE_URL` is `http://localhost:5001`; clear `localStorage` + `sessionStorage`; verify `document.getElementById('app')` has children.
+- **Playwright screenshot shows unauthenticated landing page** → Auth query cached an unauth response; clear storage, bypass auth in source temporarily, or ensure mock server returns a valid user.
+- **Mock server returns 404** → Verify endpoint paths exactly (e.g., `/api/event-pools`, not `/api/pools`) and response shapes (raw array vs wrapped object).
+- **DevTools MCP `get_page_data` returns empty tree** → Confirm navigation succeeded with `check_health`; verify the page path matches the compiled route.
+- **QR code preview never loads** → Use DevTools GUI QR instead of `--qr-output-dest`; the CLI image export flag is broken.
+- **Tab bar appears in WXML but is invisible on a tab page** → Check the computed `display` value and the outer `hidden` attribute. If `display: none`, the visibility guard may have regressed. See [`docs/runbooks/mini-program-tab-bar-smoke.md`](../../docs/runbooks/mini-program-tab-bar-smoke.md).
 
-# 5. CRITICAL: restore the auth bypass patch
-#    git checkout apps/mini-program/src/pages/<page>/index.tsx
-```
+## Review checklist
 
-### Known traps
-- **Wrong API base URL**: Default is `192.168.100.105:5002` (from `.env`). Must override with `TARO_APP_API_BASE_URL=http://localhost:5001`.
-- **React Query cache**: Auth query uses `staleTime: Infinity`. If it cached an unauth response once, it stays unauth forever until cache is cleared. Always clear `localStorage` + `sessionStorage` before reload.
-- **Wrong endpoint paths**: `getEventPools` calls `/api/event-pools`, not `/api/pools`. `getMyPoolRegistrations` calls `/api/my-pool-registrations`.
-- **Response shape**: `getEventPools` expects `EventPoolSummary[]` (raw array), not `{ pools: [...] }`.
-- **Module not loading**: If H5 page is blank after rebuild, the ES module may have failed to load. Check `document.getElementById('app')` has children. If empty, rebuild may have had a syntax error.
-
----
-
-## Approach B: Structural Verification (WeChat DevTools MCP)
-
-Use when you need to verify what's rendered (text, elements, state) but don't need pixels.
-
-```typescript
-// Navigate to page
-navigate_to({ url: "/pages/discover/index" })
-
-// Get full WXML tree (positions, classes, attributes)
-get_page_data({})
-
-// Inspect a specific element
-get_element({ selector: ".discover-auth__greeting", action: "wxml" })
-
-// Tap / trigger events
-get_element({ selector: ".discover-auth__action-card", action: "tap" })
-```
-
-### What you get
-- Full WXML tree with `nn` (node name), `cl` (class), `sid` (stable ID)
-- Text content via `v` fields
-- Image sources via `p4` attributes
-- No colors, fonts, or layout metrics
-
----
-
-## Approach C: Real Device Preview (CLI QR Code)
-
-Use when you need to see the exact WeChat runtime rendering (fonts, native components, safe areas).
-
-```bash
-cd apps/mini-program
-/Applications/wechatwebdevtools.app/Contents/MacOS/cli \
-  auto-preview --project $(pwd)
-```
-
-This generates a preview QR code in the DevTools window. Scan with WeChat to open on a real device.
-
-**Note**: The CLI `--qr-output-dest` and `--qr-format image` flags are **broken** — they hang and produce no file. Use the DevTools GUI QR or the CLI's terminal output.
-
----
-
-## Approach D: Quick "What's On Screen" (Health Check)
-
-```typescript
-// Current page path + console errors
-check_health({})
-// → { pagePath: "pages/discover/index", recentConsoleErrors: [...] }
-```
-
-Use for smoke tests after code changes. Not a substitute for visual verification.
-
----
-
-## Auth bypass pattern (for H5 screenshots only)
-
-Some pages conditionally render based on `useAuth().isAuthenticated`. To screenshot the authenticated variant:
-
-1. Locate the conditional in the page's `index.tsx`:
-   ```tsx
-   content={isAuthenticated ? <AuthenticatedView /> : <LandingPage />}
-   ```
-2. Temporarily hardcode:
-   ```tsx
-   content={<AuthenticatedView />}
-   ```
-3. Build H5, screenshot, then **immediately restore**:
-   ```bash
-   git checkout apps/mini-program/src/pages/<page>/index.tsx
-   ```
-
-**Do not commit auth bypasses.**
-
----
-
-## Mock server reference
-
-A reusable mock server for H5 screenshots lives at `scripts/mock-h5-server.mjs` (create if absent). It must:
-- Listen on port 5001
-- Serve static files from `apps/mini-program/dist`
-- Respond to all API endpoints the page calls
-- Set CORS headers (`Access-Control-Allow-Origin: *`)
-
----
+- [ ] Approach chosen matches the actual goal (visual vs structural vs real device)
+- [ ] Auth bypass patches are restored immediately after screenshot (`git checkout`)
+- [ ] Mock server listens on port 5001 with correct endpoints and CORS headers
+- [ ] H5 build uses `TARO_APP_API_BASE_URL=http://localhost:5001`
+- [ ] No known-failure approach was attempted (Playwright on DevTools WS, AppleScript, CLI QR export)
+- [ ] Screenshot or structural data is saved with a descriptive filename
+- [ ] Sibling platform parity checked if the screen also exists on web
 
 ## Related skills
 

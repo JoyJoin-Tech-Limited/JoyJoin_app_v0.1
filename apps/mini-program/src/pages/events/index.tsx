@@ -1,5 +1,5 @@
 import { CustomWrapper, View, Text, ScrollView, Image } from '@tarojs/components'
-import Taro, { usePullDownRefresh } from '@tarojs/taro'
+import Taro, { usePullDownRefresh, useDidShow } from '@tarojs/taro'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getJoinedEvents, type JoinedEventSummary } from '@shared/api'
@@ -13,17 +13,18 @@ import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Card from '../../components/ui/Card'
 import StatusCard from '../../components/ui/StatusCard'
-import JoinedEventCard from '../../components/JoinedEventCard'
-import VirtualList from '../../components/VirtualList'
+import FootprintOracleCard from '../../components/events/FootprintOracleCard'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 import { isLongListRowCount, MINI_PROGRAM_LONG_LIST_ROW_THRESHOLD } from '../../lib/utils/longListThreshold'
-import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { logWarn } from '../../lib/utils/logger'
 import { eventsAnalytics } from '../../lib/analytics/eventsAnalytics'
 import { partitionJoinedEventsByDateTime } from './eventPartition'
 import './index.scss'
+
+const FIRST_EVENT_HERO_STATUSES = new Set(['upcoming', 'pending', 'registered', 'matched', 'confirmed', 'venue_unlocked'])
 
 type TabKey = 'upcoming' | 'completed'
 
@@ -62,6 +63,16 @@ export default function EventsPage() {
   useEffect(() => {
     eventsAnalytics.track('events_view')
   }, [])
+
+  const hasDidShowRef = useRef(false)
+  useDidShow(() => {
+    if (!hasDidShowRef.current) {
+      hasDidShowRef.current = true
+      return
+    }
+    if (authLoading) return
+    handleRefresh()
+  })
 
   const { data: events = [], isLoading, isFetching, isError, refetch } = useQuery<JoinedEventSummary[]>({
     queryKey: ['mini-program', 'joined-events'],
@@ -146,11 +157,7 @@ export default function EventsPage() {
   }
 
   const handleEventTap = useCallback((event: JoinedEventSummary) => {
-    eventsAnalytics.track('events_card_tap', {
-      eventId: event.id,
-      tab: resolvedActiveTab,
-      status: event.status,
-    })
+    eventsAnalytics.trackCardTap(event, resolvedActiveTab)
     Taro.navigateTo({ url: `/pages/event-detail/index?id=${event.id}` })
   }, [resolvedActiveTab])
 
@@ -179,8 +186,8 @@ export default function EventsPage() {
         </View>
       </View>
 
-      {/* D1 — First event celebration hero (Batch D) */}
-      {events.length === 1 && (
+      {/* D1 — First event celebration hero (Batch D): only for an active first event. */}
+      {events.length === 1 && FIRST_EVENT_HERO_STATUSES.has(events[0]?.status ?? '') && (
         <View className='events-page__first-event-hero'>
           <Image
             className='events-page__first-event-hero-img'
@@ -218,40 +225,22 @@ export default function EventsPage() {
           />
         ) : displayEvents.length > 0 ? (
           <CustomWrapper>
-            {displayEvents.length > MINI_PROGRAM_LONG_LIST_ROW_THRESHOLD ? (
-              <VirtualList
-                items={displayEvents}
-                itemHeight={300}
-                keyExtractor={(event) => String(event.id)}
-                renderItem={(event, index) => (
-                  <View className='events-page__card events-page__card--virtual'>
-                    <JoinedEventCard
-                      event={event}
-                      index={index}
-                      onClick={() => handleEventTap(event)}
-                      isDegradation={isDegradation}
-                    />
-                  </View>
-                )}
-              />
-            ) : (
-              displayEvents.map((event, index) => (
-                <View key={String(event.id)} className='events-page__card'>
-                  <JoinedEventCard
-                    event={event}
-                    index={index}
-                    onClick={() => handleEventTap(event)}
-                    isDegradation={isDegradation}
-                  />
-                </View>
-              ))
-            )}
+            {displayEvents.map((event, index) => (
+              <View key={String(event.id)} className='events-page__card'>
+                <FootprintOracleCard
+                  event={event}
+                  index={index}
+                  onClick={handleEventTap}
+                  isDegradation={isDegradation}
+                />
+              </View>
+            ))}
           </CustomWrapper>
         ) : (
           <StatusCard
             className='events-page__empty-state'
             tone='empty'
-            heroSrc={getXiaoyueExpressionAsset('coachGuide')}
+            heroSrc={cdnAsset('/assets/lovart/lovart-generic-empty.webp')}
             title='还没有活动'
             description='去发现感兴趣的活动吧'
             action={{

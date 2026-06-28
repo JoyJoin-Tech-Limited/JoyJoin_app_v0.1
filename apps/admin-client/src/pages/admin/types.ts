@@ -150,6 +150,40 @@ export interface PairScoreEntry {
   temperatureLevel: string | null;
 }
 
+export interface VenueCandidateSlot {
+  id: string;
+  startTime: string;
+  endTime: string;
+  maxConcurrentEvents: number | null;
+  remainingCapacity: number;
+}
+
+export interface VenueCandidate {
+  venue: {
+    id: string;
+    name: string;
+    brandName: string | null;
+    address: string;
+    city: string;
+    district: string | null;
+    venueType: string;
+    capacity: number | null;
+    seatingCapacity: number | null;
+    budgetCategories: string[] | null;
+    cuisines: string[] | null;
+  };
+  bookingDate: string;
+  slots: VenueCandidateSlot[];
+}
+
+export interface VenueCandidateResponse {
+  groupId: string;
+  poolId: string;
+  memberCount: number | null;
+  eventDateTime: string;
+  candidates: VenueCandidate[];
+}
+
 export interface MatchHistoryEntry {
   id: string;
   user1Id: string;

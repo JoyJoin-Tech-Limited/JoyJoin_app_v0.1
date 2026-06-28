@@ -23,6 +23,29 @@ export function replaceWithPoolGroupDetail(groupId: string): void {
   })
 }
 
+/** Canonical URL for the squad unboxing (blind-box reveal) page. */
+export function buildSquadUnboxingUrl(groupId: string): string {
+  return `/pages/squad-unboxing/index?groupId=${encodeURIComponent(groupId)}`
+}
+
+export function openSquadUnboxing(groupId: string): void {
+  Taro.navigateTo({ url: buildSquadUnboxingUrl(groupId) })
+}
+
+/**
+ * Prefer after live-reveal so the user does not return to matching-status via back.
+ * Squad unboxing is a one-shot reveal; redirectTo keeps the stack clean.
+ */
+export function replaceWithSquadUnboxing(groupId: string): void {
+  const url = buildSquadUnboxingUrl(groupId)
+  Taro.redirectTo({
+    url,
+    fail: () => {
+      Taro.navigateTo({ url })
+    },
+  })
+}
+
 export function switchToEventsTab(): void {
   Taro.switchTab({ url: '/pages/events/index' })
 }

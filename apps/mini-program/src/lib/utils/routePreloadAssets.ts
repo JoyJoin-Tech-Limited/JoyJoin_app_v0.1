@@ -1,4 +1,9 @@
 import { cdnAsset, localAsset } from './cdnAssets'
+import {
+  BLIND_BOX_BODY_ASSET,
+  BLIND_BOX_INTERIOR_ASSET,
+  BLIND_BOX_LID_ASSET,
+} from '../mascot/blindBoxAssets'
 import { preloadImagesWithDiagnostics } from './imagePreload'
 import { cacheAssets } from './persistentAssetCache'
 import { logInfo } from './logger'
@@ -62,6 +67,12 @@ const PERSONALITY_TEST_PRELOADS = [
   cdnAsset('/assets/mascot/xiaoyue-welcome.webp'),
 ]
 
+const SQUAD_UNBOXING_PRELOADS = [
+  BLIND_BOX_BODY_ASSET,
+  BLIND_BOX_LID_ASSET,
+  BLIND_BOX_INTERIOR_ASSET,
+]
+
 const ICEBREAKER_PRELOADS = [
   // Backgrounds (~452KB total)
   cdnAsset('/assets/lovart/icebreaker/backgrounds/bg-auction.jpg'),
@@ -101,6 +112,7 @@ export const ROUTE_PRELOAD_MAP: Record<string, string[]> = {
   'pages/icebreaker-session/index': ICEBREAKER_PRELOADS,
   'pages/profile-linked/rewards/index': REWARDS_PRELOADS,
   'pages/onboarding/personality-test/index': PERSONALITY_TEST_PRELOADS,
+  'pages/squad-unboxing/index': SQUAD_UNBOXING_PRELOADS,
 }
 
 // ─── Predictive (preload next likely page) ───
@@ -110,6 +122,7 @@ export const PREDICTIVE_PRELOAD_MAP: Record<string, string[]> = {
   'pages/discover/index': ['pages/pool-registration/index', 'pages/event-detail/index'],
   'pages/index/index': ['pages/onboarding/personality-test/index'],
   'pages/pool-registration/index': ['pages/matching-status/index'],
+  'pages/matching-status/index': ['pages/squad-unboxing/index'],
   'pages/event-detail/index': ['pages/pool-registration/index'],
   'pages/connections/index': ['pages/event-detail/index'],
   'pages/events/index': ['pages/event-detail/index', 'pages/pool-registration/index'],

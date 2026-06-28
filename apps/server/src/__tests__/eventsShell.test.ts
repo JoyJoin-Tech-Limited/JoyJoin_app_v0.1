@@ -101,7 +101,17 @@ function makeEventsShellResponse() {
         title: "周五夜聊",
         dateTime: "2026-05-20T19:00:00.000Z",
         location: "深圳",
+        city: "深圳",
+        district: "福田区",
         status: "upcoming",
+        eventType: "饭局",
+        venueName: "测试餐厅",
+        venueAddress: "福田区 test 路 1 号",
+        registrationDeadline: "2026-05-19T12:00:00.000Z",
+        price: 188,
+        matchedAt: "2026-05-19T14:00:00.000Z",
+        groupId: "group-1",
+        finalDateTime: "2026-05-20T19:00:00.000Z",
       },
     ],
     notifications: {
@@ -151,6 +161,16 @@ describe("GET /api/shell/events", () => {
       expect(body.user.primaryArchetype).toBe("柯基");
       expect(body.joinedEvents).toHaveLength(1);
       expect(body.joinedEvents[0].title).toBe("周五夜聊");
+      expect(body.joinedEvents[0].eventType).toBe("饭局");
+      expect(body.joinedEvents[0].city).toBe("深圳");
+      expect(body.joinedEvents[0].district).toBe("福田区");
+      expect(body.joinedEvents[0].venueName).toBe("测试餐厅");
+      expect(body.joinedEvents[0].venueAddress).toBe("福田区 test 路 1 号");
+      expect(body.joinedEvents[0].registrationDeadline).toBe("2026-05-19T12:00:00.000Z");
+      expect(body.joinedEvents[0].price).toBe(188);
+      expect(body.joinedEvents[0].matchedAt).toBe("2026-05-19T14:00:00.000Z");
+      expect(body.joinedEvents[0].groupId).toBe("group-1");
+      expect(body.joinedEvents[0].finalDateTime).toBe("2026-05-20T19:00:00.000Z");
       expect(body.notifications.activities).toBe(2);
       expect(body.meta.cacheKey).toBe("shell-events-user-123");
 

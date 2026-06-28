@@ -15,6 +15,7 @@ import { notifyVenueOnboardingStatusChange } from "../../lib/wecomNotifier";
 import { requireAuth } from "../../middleware/auth";
 import { storage } from "../../storage";
 import { venueMatchingService } from "../../venueMatchingService";
+import { checkTimeSlotAvailability, getAvailableTimeSlotsForVenue, parseEventDate } from "../../venueAssignmentService";
 
 function buildVenueAuditAfter(body: Record<string, unknown> | undefined): Record<string, unknown> {
   if (!body) return {};
@@ -1088,6 +1089,231 @@ export function registerVenueRoutes(app: Express): void {
   const venueMigrateSchema = z.object({
     newVenueId: z.string().min(1),
     reason: z.string().optional(),
+  });
+
+  const venueAssignSchema = z.object({
+    venueId: z.string().min(1),
+    timeSlotId: z.string().min(1),
+    bookingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    reason: z.string().optional(),
+  });
+
+  // Venue Assignment Ops — list candidate venues + slots for a manual assignment
+  app.get("/api/admin/venue-assignment/groups/:groupId/candidates", requireAdmin, async (req, res) => {
+    try {
+      const groupId = req.params.groupId;
+      const group = await db.query.eventPoolGroups.findFirst({
+        where: (groups: any, { eq }: any) => eq(groups.id, groupId),
+      });
+      if (!group) {
+        return res.status(404).json({ message: "Group not found" });
+      }
+
+      const pool = await db.query.eventPools.findFirst({
+        where: (pools: any, { eq }: any) => eq(pools.id, group.poolId),
+      });
+      if (!pool) {
+        return res.status(404).json({ message: "Pool not found" });
+      }
+
+      const allowedVenueTypes = pool.eventType === "酒局"
+        ? ["bar", "homebar"]
+        : ["restaurant", "cafe"];
+
+      const baseQuery = and(
+        eq(venues.city, pool.city),
+        eq(venues.isActive, true),
+        eq(venues.onboardingStatus, 'active'),
+        eq(venues.partnerStatus, 'active'),
+        sql`${venues.contractEndDate} IS NULL OR ${venues.contractEndDate} >= CURRENT_DATE`,
+        inArray(venues.venueType, allowedVenueTypes)
+      );
+
+      const venueQuery = pool.district
+        ? and(baseQuery, eq(venues.area, pool.district))
+        : baseQuery;
+
+      const venueRows = await db.select().from(venues).where(venueQuery);
+      const { dateStr: eventDateStr } = parseEventDate(pool.dateTime);
+
+      const candidates = [];
+      for (const venue of venueRows) {
+        const seatingCapacity = venue.seatingCapacity ?? venue.capacity ?? 0;
+        if (seatingCapacity > 0 && seatingCapacity < group.memberCount) {
+          continue;
+        }
+
+        const availableSlots = await getAvailableTimeSlotsForVenue(venue.id, pool.dateTime);
+        if (availableSlots.length === 0) {
+          continue;
+        }
+
+        candidates.push({
+          venue: {
+            id: venue.id,
+            name: venue.name,
+            brandName: venue.brandName,
+            address: venue.address,
+            city: venue.city,
+            district: venue.area,
+            venueType: venue.venueType,
+            capacity: venue.capacity,
+            seatingCapacity: venue.seatingCapacity,
+            budgetCategories: venue.budgetCategories,
+            cuisines: venue.cuisines,
+          },
+          bookingDate: eventDateStr,
+          slots: availableSlots.map(({ slot, remainingCapacity }) => ({
+            id: slot.id,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            maxConcurrentEvents: slot.maxConcurrentEvents,
+            remainingCapacity,
+          })),
+        });
+      }
+
+      res.json({
+        groupId,
+        poolId: pool.id,
+        memberCount: group.memberCount,
+        eventDateTime: pool.dateTime,
+        candidates,
+      });
+    } catch (error) {
+      logger.error("Error fetching venue candidates", { groupId: req.params.groupId, error: String(error) });
+      res.status(500).json({ message: "Failed to fetch venue candidates" });
+    }
+  });
+
+  // Venue Assignment Ops — manually assign a venue to an unassigned group
+  app.post("/api/admin/venue-assignment/groups/:groupId/assign", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    try {
+      const parsed = venueAssignSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid assign data", errors: parsed.error.issues });
+      }
+      const { venueId, timeSlotId, bookingDate: requestedBookingDate, reason } = parsed.data;
+      const groupId = req.params.groupId;
+
+      const group = await db.query.eventPoolGroups.findFirst({
+        where: (groups: any, { eq }: any) => eq(groups.id, groupId),
+      });
+      if (!group) {
+        return res.status(404).json({ message: "Group not found" });
+      }
+
+      const pool = await db.query.eventPools.findFirst({
+        where: (pools: any, { eq }: any) => eq(pools.id, group.poolId),
+      });
+      if (!pool) {
+        return res.status(404).json({ message: "Pool not found" });
+      }
+
+      if (group.venueAssignmentStatus !== 'unassigned') {
+        return res.status(400).json({ message: "Group is not unassigned" });
+      }
+
+      const venue = await db.query.venues.findFirst({
+        where: (v: any, { eq }: any) => eq(v.id, venueId),
+      });
+      if (!venue) {
+        return res.status(404).json({ message: "Venue not found" });
+      }
+      if (!venue.isActive || venue.partnerStatus !== 'active' || venue.onboardingStatus !== 'active') {
+        return res.status(400).json({ message: "Venue is not active" });
+      }
+
+      const seatingCapacity = venue.seatingCapacity ?? venue.capacity ?? 0;
+      if (seatingCapacity > 0 && seatingCapacity < group.memberCount) {
+        return res.status(400).json({ message: "Venue capacity is insufficient for this group" });
+      }
+
+      const slot = await db.query.venueTimeSlots.findFirst({
+        where: (slots: any, { eq }: any) => eq(slots.id, timeSlotId),
+      });
+      if (!slot || !slot.isActive || slot.venueId !== venueId) {
+        return res.status(400).json({ message: "Invalid or inactive time slot" });
+      }
+
+      const { dateStr: eventDateStr, timeStr, dayOfWeek } = parseEventDate(pool.dateTime);
+      const bookingDate = requestedBookingDate || eventDateStr;
+      if (bookingDate !== eventDateStr) {
+        return res.status(400).json({ message: "Booking date must match the pool event date" });
+      }
+
+      const slotCoversEvent = (
+        (slot.dayOfWeek === dayOfWeek || slot.specificDate === eventDateStr) &&
+        slot.startTime <= timeStr &&
+        slot.endTime >= timeStr
+      );
+      if (!slotCoversEvent) {
+        return res.status(400).json({ message: "Time slot does not cover the event time" });
+      }
+
+      const newBooking = await db.transaction(async (tx: typeof db) => {
+        await tx.select().from(venueTimeSlots).where(eq(venueTimeSlots.id, timeSlotId)).for('update');
+        await tx.select().from(venueTimeSlotBookings).where(and(
+          eq(venueTimeSlotBookings.timeSlotId, timeSlotId),
+          sql`${venueTimeSlotBookings.bookingDate} = ${bookingDate}::date`,
+          eq(venueTimeSlotBookings.status, 'confirmed')
+        )).for('update');
+
+        const counts = await tx.select({
+          count: sql<number>`count(*)`,
+        }).from(venueTimeSlotBookings).where(and(
+          eq(venueTimeSlotBookings.timeSlotId, timeSlotId),
+          sql`${venueTimeSlotBookings.bookingDate} = ${bookingDate}::date`,
+          eq(venueTimeSlotBookings.status, 'confirmed')
+        ));
+
+        const currentBookings = counts[0]?.count ?? 0;
+        const maxConcurrent = slot.maxConcurrentEvents ?? 1;
+        if (currentBookings >= maxConcurrent) {
+          throw new Error('Time slot is fully booked');
+        }
+
+        const [booking] = await tx.insert(venueTimeSlotBookings).values({
+          venueId,
+          timeSlotId,
+          eventPoolId: pool.id,
+          eventGroupId: groupId,
+          bookingDate,
+          status: 'confirmed',
+        }).returning();
+
+        await tx.update(eventPoolGroups).set({
+          venueId,
+          venueName: venue.brandName || venue.name,
+          venueAddress: venue.address,
+          venueAssignmentStatus: 'manual_override',
+          venueAssignmentReason: reason || 'admin_assigned',
+        }).where(eq(eventPoolGroups.id, groupId));
+
+        return booking;
+      });
+
+      logAdminAudit({
+        action: 'VENUE_ASSIGNED',
+        adminId: getActingAdminId(req),
+        adminRole: (req as any).adminRole,
+        targetEntityType: 'event_pool_group',
+        targetEntityId: groupId,
+        before: { venueId: group.venueId, venueAssignmentStatus: group.venueAssignmentStatus },
+        after: { venueId, venueAssignmentStatus: 'manual_override' },
+        context: { venueId, timeSlotId, bookingDate, reason, poolId: pool.id },
+      });
+
+      res.json({
+        success: true,
+        message: "Venue assigned successfully",
+        venue: { id: venue.id, name: venue.name, brandName: venue.brandName, address: venue.address },
+        booking: newBooking,
+      });
+    } catch (error: any) {
+      logger.error("Error assigning venue", { groupId: req.params.groupId, error: String(error) });
+      res.status(400).json({ message: error.message || "Failed to assign venue" });
+    }
   });
 
   // Venue Assignment Ops — migrate an auto-assigned group to a new venue

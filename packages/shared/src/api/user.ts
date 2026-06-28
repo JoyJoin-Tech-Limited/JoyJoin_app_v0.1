@@ -54,6 +54,16 @@ export interface JoinedEventSummary {
   location?: string
   status?: string
   description?: string
+  eventType?: string
+  city?: string
+  district?: string
+  venueName?: string
+  venueAddress?: string
+  registrationDeadline?: string
+  price?: number
+  matchedAt?: string
+  groupId?: string
+  finalDateTime?: string
   [key: string]: unknown
 }
 

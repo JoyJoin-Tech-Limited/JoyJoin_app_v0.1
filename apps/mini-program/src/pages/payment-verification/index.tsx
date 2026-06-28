@@ -6,9 +6,7 @@ import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import JoyJoinLoadingScreen from '../../components/loading/JoyJoinLoadingScreen'
-import { AUTH_QUERY_KEY } from '../../lib/api/authSession'
-import { evictPersistedQuery } from '../../lib/api/persistentCache'
-import { JOINED_EVENTS_QUERY_KEY } from '../../lib/prefetchEngine'
+import { bustRegistrationCaches } from '../../lib/api/registrationCacheBust'
 import {
   isPoolRegistrationReturnContext,
   useMiniProgramPaymentFlowController,
@@ -46,16 +44,12 @@ export default function PaymentVerificationPage() {
   const [incomingOrderId, setIncomingOrderId] = useState('')
 
   const invalidatePaidCaches = useCallback(async () => {
+    await bustRegistrationCaches(queryClient)
     await Promise.allSettled([
-      queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY }),
       queryClient.invalidateQueries({ queryKey: ['mini-program', 'coupons'] }),
-      queryClient.invalidateQueries({ queryKey: ['mini-program', 'my-pool-registrations'] }),
-      queryClient.invalidateQueries({ queryKey: JOINED_EVENTS_QUERY_KEY }),
       queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-registration'] }),
-      queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/discover'] }),
       queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/profile'] }),
     ])
-    evictPersistedQuery(JOINED_EVENTS_QUERY_KEY)
   }, [queryClient])
 
   const navigateToPoolRegistration = useCallback(async (context: MiniProgramPoolRegistrationReturnContext) => {

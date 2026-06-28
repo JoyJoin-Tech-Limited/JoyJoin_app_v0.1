@@ -65,6 +65,10 @@ The mini-program uses **composite shell endpoints** to reduce tab-switch latency
 
 **Cache invalidation:** Server-side `shellCache.invalidateUser(userId)` is called on mutations (payment fulfillment, pool registration, connection creation, assessment completion, event-feedback submission). This clears all cached shells for the user.
 
+**Registration success cache bust (2026-06-28):** The mini-program now uses a single shared helper (`apps/mini-program/src/lib/api/registrationCacheBust.ts`) called from `pool-registration`, `event-ticket-payment`, and `payment-verification` success paths. It invalidates `event-pools`, `event-pool/${id}`, `my-pool-registrations`, `joined-events`, Discover/Events/Connections shells, and `auth-user`, and evicts the persisted `event-pools` + `joined-events` cache entries. Tab pages (`events`, `profile`, `discover`) refresh on `useDidShow` so users see updated registration state when returning from the registration/payment flow.
+
+**WebSocket room join (2026-06-28):** The mini-program `useWebSocket` hook now sends `USER_JOINED` after connecting, using the authenticated `userId` (and current `eventId` when on a registration-specific page). This lets the server route per-user broadcasts such as `POOL_MATCHED` to the correct socket.
+
 **Fallback behavior:** Events and Connections pages fall back to legacy endpoints (`/api/events/joined`, `/api/my-connections`) if the composite endpoint returns 500.
 
 **Discover diagnostics (2026-06-18):** The Discover page logs structured diagnostics via `logInfo`/`logWarn` to distinguish a successful but empty shell (`shell-empty`) from a shell fetch failure (`shell-failed`) and from a legacy fallback fetch failure. This makes staging/data-empty issues easier to triage without confusing client bugs for missing data.

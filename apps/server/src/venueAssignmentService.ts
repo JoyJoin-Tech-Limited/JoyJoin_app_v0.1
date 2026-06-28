@@ -30,7 +30,7 @@ interface VenueWithSlot {
  * wall-clock time as the intended local time. Parsing from the ISO string
  * avoids local timezone shift on Date methods.
  */
-function parseEventDate(eventDateTime: Date): { dateStr: string; timeStr: string; dayOfWeek: number } {
+export function parseEventDate(eventDateTime: Date): { dateStr: string; timeStr: string; dayOfWeek: number } {
   const iso = eventDateTime.toISOString(); // e.g. "2026-06-05T19:30:00.000Z"
   const [datePart, timePart] = iso.split('T');
   const timeStr = timePart.substring(0, 5); // "HH:MM"
@@ -111,7 +111,7 @@ function calculateCuisineMatch(
  * respecting maxConcurrentEvents and existing bookings.
  * Returns the available time slot record, or null if fully booked.
  */
-async function checkTimeSlotAvailability(
+export async function checkTimeSlotAvailability(
   venueId: string,
   eventDateTime: Date
 ): Promise<typeof venueTimeSlots.$inferSelect | null> {
@@ -176,6 +176,72 @@ async function checkTimeSlotAvailability(
   }
   
   return null; // All matching slots are fully booked
+}
+
+export interface AvailableSlotInfo {
+  slot: typeof venueTimeSlots.$inferSelect;
+  remainingCapacity: number;
+}
+
+/**
+ * Return all available time slots for a venue at event time,
+ * each with remaining capacity. Used by admin manual-assignment fallback.
+ */
+export async function getAvailableTimeSlotsForVenue(
+  venueId: string,
+  eventDateTime: Date
+): Promise<AvailableSlotInfo[]> {
+  const { dateStr, timeStr, dayOfWeek } = parseEventDate(eventDateTime);
+
+  const weeklySlots = await db
+    .select()
+    .from(venueTimeSlots)
+    .where(and(
+      eq(venueTimeSlots.venueId, venueId),
+      eq(venueTimeSlots.dayOfWeek, dayOfWeek),
+      eq(venueTimeSlots.isActive, true),
+      sql`${venueTimeSlots.startTime} <= ${timeStr}`,
+      sql`${venueTimeSlots.endTime} >= ${timeStr}`
+    ));
+
+  const specificSlots = await db
+    .select()
+    .from(venueTimeSlots)
+    .where(and(
+      eq(venueTimeSlots.venueId, venueId),
+      sql`${venueTimeSlots.specificDate} = ${dateStr}::date`,
+      eq(venueTimeSlots.isActive, true),
+      sql`${venueTimeSlots.startTime} <= ${timeStr}`,
+      sql`${venueTimeSlots.endTime} >= ${timeStr}`
+    ));
+
+  const allSlots = [...weeklySlots, ...specificSlots];
+  if (allSlots.length === 0) return [];
+
+  const slotIds = allSlots.map(s => s.id);
+  const bookingCounts = await db
+    .select({
+      timeSlotId: venueTimeSlotBookings.timeSlotId,
+      count: sql<number>`count(*)`,
+    })
+    .from(venueTimeSlotBookings)
+    .where(and(
+      inArray(venueTimeSlotBookings.timeSlotId, slotIds),
+      sql`${venueTimeSlotBookings.bookingDate} = ${dateStr}::date`,
+      eq(venueTimeSlotBookings.status, 'confirmed')
+    ))
+    .groupBy(venueTimeSlotBookings.timeSlotId);
+
+  const countMap = new Map(bookingCounts.map((b: { timeSlotId: string; count: number }) => [b.timeSlotId, b.count]));
+
+  return allSlots
+    .map((slot) => {
+      const bookingCount = Number(countMap.get(slot.id) ?? 0);
+      const maxConcurrent = Number(slot.maxConcurrentEvents ?? 1);
+      const remainingCapacity = maxConcurrent - bookingCount;
+      return { slot, remainingCapacity };
+    })
+    .filter(({ remainingCapacity }) => remainingCapacity > 0);
 }
 
 /**

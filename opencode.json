@@ -65,6 +65,10 @@
             "context": 262144,
             "output": 32768
           },
+          "modalities": {
+            "input": ["text", "image", "video"],
+            "output": ["text"]
+          },
           "options": {
             "maxTokens": 32768
           }

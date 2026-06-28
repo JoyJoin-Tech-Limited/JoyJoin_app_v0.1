@@ -11,7 +11,7 @@ import { useStaggerMount } from '../../hooks/useStaggerMount'
 import { useReactionTimer } from '../../hooks/useReactionTimer'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { apiRequest, type ApiError } from '../../lib/api/api'
-import { evictPersistedQuery } from '../../lib/api/persistentCache'
+import { bustRegistrationCaches } from '../../lib/api/registrationCacheBust'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
 import {
@@ -24,7 +24,7 @@ import {
   persistPaymentReturnContext,
   readStoredPaymentReturnContext,
 } from '../../lib/payment/paymentPendingOrderStorage'
-import { POOLS_QUERY_KEY, JOINED_EVENTS_QUERY_KEY } from '../../lib/prefetchEngine'
+
 import { haptics } from '../../lib/utils/haptics'
 import { logInfo, logError } from '../../lib/utils/logger'
 import { usePreloadIntentIcons } from '../../hooks/usePreloadIntentIcons'
@@ -722,14 +722,7 @@ export default function PoolRegistrationPage() {
         hasDietary: payload.dietaryRestrictions && payload.dietaryRestrictions.length > 0,
       })
       await registerForPool(apiRequest, poolId, payload)
-      await Promise.allSettled([
-        queryClient.invalidateQueries({ queryKey: ['mini-program', 'event-pool', poolId] }),
-        queryClient.invalidateQueries({ queryKey: ['mini-program', 'event-pools'] }),
-        queryClient.invalidateQueries({ queryKey: ['mini-program', 'my-pool-registrations'] }),
-        queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/discover'] }),
-      ])
-      evictPersistedQuery(POOLS_QUERY_KEY)
-      evictPersistedQuery(JOINED_EVENTS_QUERY_KEY)
+      await bustRegistrationCaches(queryClient, { poolId })
       clearPaymentReturnContextStorage()
       setResumeContext(null)
       setRegistered(true)

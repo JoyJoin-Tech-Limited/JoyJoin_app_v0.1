@@ -13,7 +13,7 @@
 
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { events, eventAttendance, eventPools, eventPoolRegistrations } from "@shared/schema";
+import { events, eventAttendance, eventPools, eventPoolRegistrations, eventPoolGroups } from "@shared/schema";
 import type { JoinedEventSummary } from "@shared/api";
 
 /**
@@ -21,8 +21,6 @@ import type { JoinedEventSummary } from "@shared/api";
  * N+1-free: exactly 2 DB round-trips in parallel.
  */
 export async function getUserJoinedEventsSummary(userId: string): Promise<JoinedEventSummary[]> {
-  const now = new Date();
-
   // 1. Legacy events via eventAttendance (1 round-trip)
   const legacyRows = await db
     .select({
@@ -30,6 +28,7 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
       title: events.title,
       dateTime: events.dateTime,
       location: events.location,
+      area: events.area,
       status: events.status,
       description: events.description,
       attendanceStatus: eventAttendance.status,
@@ -48,10 +47,21 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
       location: eventPools.city,
       status: eventPools.status,
       description: eventPools.description,
+      eventType: eventPools.eventType,
+      city: eventPools.city,
+      district: eventPools.district,
+      registrationDeadline: eventPools.registrationDeadline,
+      price: eventPools.price,
+      matchedAt: eventPools.matchedAt,
       matchStatus: eventPoolRegistrations.matchStatus,
+      assignedGroupId: eventPoolRegistrations.assignedGroupId,
+      venueName: eventPoolGroups.venueName,
+      venueAddress: eventPoolGroups.venueAddress,
+      finalDateTime: eventPoolGroups.finalDateTime,
     })
     .from(eventPoolRegistrations)
     .innerJoin(eventPools, eq(eventPoolRegistrations.poolId, eventPools.id))
+    .leftJoin(eventPoolGroups, eq(eventPoolRegistrations.assignedGroupId, eventPoolGroups.id))
     .where(
       and(
         eq(eventPoolRegistrations.userId, userId),
@@ -66,6 +76,7 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
     title: row.title ?? undefined,
     dateTime: row.dateTime?.toISOString?.() ?? String(row.dateTime),
     location: row.location ?? undefined,
+    district: row.area ?? undefined,
     status: row.attendanceStatus ?? row.status ?? undefined,
     description: row.description ?? undefined,
   }));
@@ -77,6 +88,16 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
     location: row.location ?? undefined,
     status: row.matchStatus ?? row.status ?? undefined,
     description: row.description ?? undefined,
+    eventType: row.eventType ?? undefined,
+    city: row.city ?? undefined,
+    district: row.district ?? undefined,
+    venueName: row.venueName ?? undefined,
+    venueAddress: row.venueAddress ?? undefined,
+    registrationDeadline: row.registrationDeadline?.toISOString?.() ?? undefined,
+    price: row.price ?? undefined,
+    matchedAt: row.matchedAt?.toISOString?.() ?? undefined,
+    groupId: row.assignedGroupId ?? undefined,
+    finalDateTime: row.finalDateTime?.toISOString?.() ?? undefined,
   }));
 
   // 4. Merge and sort by dateTime descending

@@ -35,7 +35,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-import { Users, Eye, MapPin, Clock, Store, Copy, Check, Pencil, UserPlus, ChevronDown } from "lucide-react";
+import { Users, Eye, MapPin, Clock, Store, Copy, Check, Pencil, UserPlus, ChevronDown, MapPinned } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
 import EventPoolCreateDialog from "./EventPoolCreateDialog";
@@ -51,6 +51,7 @@ import type {
   PoolGroup,
   PoolGroupMember,
   PairScoreEntry,
+  VenueCandidateResponse,
 } from "./types";
 import { fmtDateTime, fmtDateTimeLocal, safeFormat } from "@/lib/dateUtils";
 import { CITY_DISTRICTS } from "@/lib/cityDistricts";
@@ -59,6 +60,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 // ====== Form schema：简化版，只保留我们现在用得到的字段 ======
 
@@ -132,6 +134,9 @@ export default function AdminEventPoolsPage() {
   const [copiedPoolId, setCopiedPoolId] = useState<string | null>(null);
   // 手动添加用户弹出层
   const [addMemberGroupId, setAddMemberGroupId] = useState<string | null>(null);
+  // 手动分配场地
+  const [assignGroup, setAssignGroup] = useState<PoolGroup | null>(null);
+  const [selectedVenueSlot, setSelectedVenueSlot] = useState<string | null>(null);
 
   const { toast } = useToast();
 
@@ -219,6 +224,65 @@ export default function AdminEventPoolsPage() {
       } catch {
         return [];
       }
+    },
+  });
+
+  const { data: venueCandidates, isLoading: isLoadingCandidates } = useQuery<VenueCandidateResponse | null>({
+    queryKey: ["/api/admin/venue-assignment/groups", assignGroup?.id, "candidates"],
+    enabled: !!assignGroup,
+    queryFn: async () => {
+      if (!assignGroup) return null;
+      const res = await apiRequest(
+        "GET",
+        `/api/admin/venue-assignment/groups/${assignGroup.id}/candidates`,
+      );
+      return (await res.json()) as VenueCandidateResponse;
+    },
+  });
+
+  const assignVenueMutation = useMutation({
+    mutationFn: async ({
+      groupId,
+      venueId,
+      timeSlotId,
+      bookingDate,
+    }: {
+      groupId: string;
+      venueId: string;
+      timeSlotId: string;
+      bookingDate: string;
+    }) => {
+      return apiRequest("POST", `/api/admin/venue-assignment/groups/${groupId}/assign`, {
+        venueId,
+        timeSlotId,
+        bookingDate,
+      });
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/event-pools", selectedPool?.id, "groups"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/venue-assignment/groups", variables.groupId, "candidates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/venue-assignment/unassigned"] });
+      setAssignGroup(null);
+      setSelectedVenueSlot(null);
+      toast({ title: "分配成功", description: "场地已手动分配给该小组。" });
+    },
+    onError: (error: any) => {
+      console.error("Error assigning venue:", error);
+      let description = "无法分配场地，请重试";
+      if (error?.message) {
+        const jsonMatch = error.message.match(/\{.*\}/s);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            description = parsed.error || parsed.message || description;
+          } catch {
+            description = error.message;
+          }
+        } else {
+          description = error.message;
+        }
+      }
+      toast({ title: "分配失败", description, variant: "destructive" });
     },
   });
 
@@ -942,6 +1006,19 @@ export default function AdminEventPoolsPage() {
                                 {group.venueAssignmentReason && (
                                   <ReasonBadge reason={group.venueAssignmentReason} />
                                 )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => {
+                                    setAssignGroup(group);
+                                    setSelectedVenueSlot(null);
+                                  }}
+                                  disabled={assignVenueMutation.isPending}
+                                >
+                                  <MapPinned className="h-3 w-3 mr-1" />
+                                  分配场地
+                                </Button>
                               </div>
                             </div>
                           )}
@@ -1025,6 +1102,122 @@ export default function AdminEventPoolsPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Venue Assignment Dialog */}
+      <Dialog open={!!assignGroup} onOpenChange={(open) => {
+        if (!open) {
+          setAssignGroup(null);
+          setSelectedVenueSlot(null);
+        }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>手动分配场地</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+            {assignGroup && (
+              <div className="text-sm text-muted-foreground mb-2">
+                第{assignGroup.groupNumber}组 · {assignGroup.members.length}人
+                {venueCandidates?.eventDateTime && (
+                  <span className="ml-2">· {formatDateTime(venueCandidates.eventDateTime)}</span>
+                )}
+              </div>
+            )}
+            <ScrollArea className="flex-1 pr-2">
+              {isLoadingCandidates ? (
+                <div className="text-sm text-muted-foreground py-8 text-center">加载候选场地中...</div>
+              ) : !venueCandidates || venueCandidates.candidates.length === 0 ? (
+                <div className="text-sm text-muted-foreground py-8 text-center">
+                  暂无可用场地。请检查场地库存、时段容量与城市/区域配置。
+                </div>
+              ) : (
+                <RadioGroup
+                  value={selectedVenueSlot ?? undefined}
+                  onValueChange={(value) => setSelectedVenueSlot(value)}
+                  className="space-y-3"
+                >
+                  {venueCandidates.candidates.map(({ venue, bookingDate, slots }) => (
+                    <div key={venue.id} className="border rounded-md p-3">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                          <div className="font-medium">
+                            {venue.brandName || venue.name}
+                            <span className="text-xs text-muted-foreground ml-2 font-normal">
+                              {venue.venueType === "bar" ? "酒吧" : venue.venueType === "homebar" ? "Homebar" : venue.venueType === "cafe" ? "咖啡" : "餐厅"}
+                            </span>
+                          </div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <MapPin className="h-3 w-3" />
+                            {venue.address}
+                          </div>
+                        </div>
+                        <div className="text-xs text-right text-muted-foreground">
+                          <div>容量 {venue.seatingCapacity ?? venue.capacity ?? "-"}</div>
+                          {venue.cuisines && venue.cuisines.length > 0 && (
+                            <div>{venue.cuisines.slice(0, 3).join(" · ")}</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {slots.map((slot) => {
+                          const value = `${venue.id}:${slot.id}:${bookingDate}`;
+                          return (
+                            <label
+                              key={slot.id}
+                              className="flex items-start gap-2 rounded-md border p-2 cursor-pointer hover:bg-muted/50"
+                            >
+                              <RadioGroupItem value={value} id={value} className="mt-0.5" />
+                              <div className="flex-1 text-sm">
+                                <div className="flex items-center justify-between">
+                                  <span>{slot.startTime} - {slot.endTime}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    剩余 {slot.remainingCapacity}
+                                  </Badge>
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-0.5">
+                                  预订日期 {bookingDate}
+                                </div>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </RadioGroup>
+              )}
+            </ScrollArea>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAssignGroup(null);
+                setSelectedVenueSlot(null);
+              }}
+              disabled={assignVenueMutation.isPending}
+            >
+              取消
+            </Button>
+            <Button
+              disabled={!selectedVenueSlot || assignVenueMutation.isPending}
+              onClick={() => {
+                if (!assignGroup || !selectedVenueSlot) return;
+                const [venueId, timeSlotId, bookingDate] = selectedVenueSlot.split(":");
+                if (!venueId || !timeSlotId || !bookingDate) return;
+                assignVenueMutation.mutate({
+                  groupId: assignGroup.id,
+                  venueId,
+                  timeSlotId,
+                  bookingDate,
+                });
+              }}
+            >
+              {assignVenueMutation.isPending ? "分配中..." : "确认分配"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

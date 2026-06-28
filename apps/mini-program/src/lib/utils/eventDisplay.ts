@@ -5,6 +5,27 @@
  * Center Hub, and any future surfaces stay consistent.
  */
 
+// Statuses eligible to use the finalized group time as the displayed datetime.
+const FINAL_DATE_TARGET_STATUSES = new Set(['upcoming', 'pending', 'registered', 'matched', 'confirmed', 'venue_unlocked'])
+
+/**
+ * Returns the datetime that should be displayed on a joined-event card,
+ * matching the countdown target precedence.
+ *
+ * For active events that have been assigned to a group and received a finalized
+ * time, `finalDateTime` is preferred. Otherwise fall back to the top-level
+ * `dateTime`. This keeps partition logic, card display, and countdown in sync.
+ */
+export function getJoinedEventDisplayDateTime(event: { status?: string | null; dateTime?: string | null; finalDateTime?: string | null; groupId?: string | null }): string | undefined {
+  const status = event.status ?? 'upcoming'
+
+  if (event.groupId && event.finalDateTime && FINAL_DATE_TARGET_STATUSES.has(status)) {
+    return event.finalDateTime
+  }
+
+  return event.dateTime ?? undefined
+}
+
 export function formatEventDateTime(dateTime?: string | null): string {
   if (!dateTime) return '时间待定'
   const parsed = new Date(dateTime)
@@ -57,6 +78,12 @@ export function getJoinedEventStatusLabel(status?: string | null): string {
       return '已匹配'
     case 'pending':
       return '匹配中'
+    case 'registered':
+      return '已报名'
+    case 'confirmed':
+      return '已确认'
+    case 'venue_unlocked':
+      return '场地已解锁'
     case 'completed':
     case 'attended':
       return '已完成'

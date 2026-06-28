@@ -172,7 +172,7 @@ export default function AdminEventsPage() {
   );
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showMatchDialog, setShowMatchDialog] = useState(false);
-  const [matchEventId, setMatchEventId] = useState<string | null>(null);
+  const [matchPoolId, setMatchPoolId] = useState<string | null>(null);
 
   const { toast } = useToast();
 
@@ -208,13 +208,13 @@ export default function AdminEventsPage() {
   });
 
   const startMatchMutation = useMutation({
-    mutationFn: async (id: string) => {
-      console.log("[AdminEvents] manual start matching for event:", id);
-      // 后端建议实现 POST /api/admin/events/:id/match 来触发一次匹配
-      return apiRequest("POST", `/api/admin/events/${id}/match`, {});
+    mutationFn: async (poolId: string) => {
+      console.log("[AdminEvents] manual start matching for pool:", poolId);
+      return apiRequest("POST", `/api/admin/event-pools/${poolId}/match`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/event-pools"] });
       toast({
         title: "已触发匹配",
         description: "已发送匹配请求，如已接好算法将开始从活动池中捞人。",
@@ -226,14 +226,22 @@ export default function AdminEventsPage() {
         title: "触发匹配失败",
         description:
           error?.message ||
-          "无法触发匹配，请稍后重试或检查后端路由 /api/admin/events/:id/match",
+          "无法触发匹配，请稍后重试或检查后端路由 /api/admin/event-pools/:id/match",
         variant: "destructive",
       });
     },
   });
 
-  const handleStartMatching = (eventId: string) => {
-    setMatchEventId(eventId);
+  const handleStartMatching = (poolId: string | null | undefined) => {
+    if (!poolId) {
+      toast({
+        title: "无法触发匹配",
+        description: "该活动没有关联的活动池，请先从活动池页面触发匹配。",
+        variant: "destructive",
+      });
+      return;
+    }
+    setMatchPoolId(poolId);
     setShowMatchDialog(true);
   };
 
@@ -697,7 +705,7 @@ export default function AdminEventsPage() {
                         <Button
                           size="sm"
                           className="w-full"
-                          onClick={() => handleStartMatching(event.id)}
+                          onClick={() => handleStartMatching(event.poolId)}
                           disabled={startMatchMutation.isPending}
                           data-testid={`button-start-match-${event.id}`}
                         >
@@ -920,13 +928,13 @@ export default function AdminEventsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setMatchEventId(null)}>取消</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setMatchPoolId(null)}>取消</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (matchEventId) {
-                  startMatchMutation.mutate(matchEventId);
+                if (matchPoolId) {
+                  startMatchMutation.mutate(matchPoolId);
                 }
-                setMatchEventId(null);
+                setMatchPoolId(null);
               }}
               disabled={startMatchMutation.isPending}
               data-testid="button-confirm-start-match"

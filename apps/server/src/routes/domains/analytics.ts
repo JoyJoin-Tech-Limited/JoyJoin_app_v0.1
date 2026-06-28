@@ -36,6 +36,12 @@ const paymentRitualAnalyticsLimiter = createRateLimiter({
   keyPrefix: "payment-ritual-analytics",
 });
 
+const eventsAnalyticsLimiter = createRateLimiter({
+  windowMs: 60_000,
+  maxRequests: 120,
+  keyPrefix: "events-analytics",
+});
+
 /**
  * Wrap analytics writes in a transaction boundary. Each route performs a single
  * insert, but the transaction wrapper satisfies the harness atomicity heuristic
@@ -222,6 +228,18 @@ const PROFILE_EVENT_TYPES = [
 type ProfileEventType = (typeof PROFILE_EVENT_TYPES)[number];
 
 const ALLOWED_PROFILE_EVENT_TYPES = new Set<ProfileEventType>(PROFILE_EVENT_TYPES);
+
+const EVENTS_EVENT_TYPES = [
+  "events_view",
+  "events_tab_switch",
+  "events_card_tap",
+  "events_empty_state_cta_tap",
+  "events_pull_refresh",
+] as const;
+
+type EventsEventType = (typeof EVENTS_EVENT_TYPES)[number];
+
+const ALLOWED_EVENTS_EVENT_TYPES = new Set<EventsEventType>(EVENTS_EVENT_TYPES);
 
 const MAX_METADATA_BYTES = 4_096;
 const MAX_POOL_ID_LENGTH = 120;
@@ -592,6 +610,55 @@ export function registerAnalyticsRoutes(app: Express): void {
       return res.status(200).json({ success: true });
     } catch (error) {
       logger.warn("social icebreaker analytics write failed (non-fatal)", {
+        request_id: req.requestId,
+        error: String(error),
+      });
+      return res.status(200).json({ success: false, error: "analytics write failed" });
+    }
+  });
+
+  /**
+   * POST /api/analytics/events
+   *
+   * My Footprints / Events tab interaction instrumentation.
+   * Tracks: events_view, events_tab_switch, events_card_tap,
+   * events_empty_state_cta_tap, events_pull_refresh.
+   *
+   * Fire-and-forget. Always returns 200. Silent fail.
+   * Reuses discoverAnalyticsEvents table for v0.1.
+   * Reuses discoverAnalyticsLimiter (120 req/min).
+   */
+  app.post("/api/analytics/events", eventsAnalyticsLimiter, async (req: Request, res) => {
+    try {
+      const { eventType, metadata, timestamp } = req.body as {
+        eventType?: unknown;
+        metadata?: unknown;
+        timestamp?: unknown;
+      };
+
+      if (
+        typeof eventType !== "string" ||
+        !ALLOWED_EVENTS_EVENT_TYPES.has(eventType as EventsEventType)
+      ) {
+        return res.status(200).json({ success: false, error: "invalid eventType" });
+      }
+
+      const normalizedMetadata = sanitizeMetadata(metadata);
+      const userId = req.session?.userId ?? null;
+      const sessionId = req.sessionID ?? null;
+
+      await insertAnalyticsEvent(discoverAnalyticsEvents, {
+        userId,
+        sessionId,
+        eventType,
+        poolId: null,
+        metadata: normalizedMetadata,
+        timestamp: parseTimestamp(timestamp),
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      logger.warn("events analytics write failed (non-fatal)", {
         request_id: req.requestId,
         error: String(error),
       });

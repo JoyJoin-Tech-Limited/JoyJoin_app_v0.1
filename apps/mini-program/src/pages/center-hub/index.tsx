@@ -17,7 +17,10 @@ import { localAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
-import { buildPoolGroupDetailUrl } from '../../lib/navigation/matchingNavigation'
+import {
+  buildPoolGroupDetailUrl,
+  buildSquadUnboxingUrl,
+} from '../../lib/navigation/matchingNavigation'
 import Button from '../../components/ui/Button'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import PageMorphWrapper from '../../components/ui/PageMorphWrapper'
@@ -41,11 +44,20 @@ function buildHubNavigationAction(
         method: 'navigateTo',
       }
     case 'matched-pool-unlocked':
-    case 'matched-pool-future':
+    case 'matched-pool-future': {
+      let hasRevealed = false
+      try {
+        hasRevealed = Boolean(Taro.getStorageSync<boolean>(`jj_revealed_${destination.groupId}`))
+      } catch {
+        hasRevealed = false
+      }
       return {
-        url: buildPoolGroupDetailUrl(destination.groupId),
+        url: hasRevealed
+          ? buildPoolGroupDetailUrl(destination.groupId)
+          : buildSquadUnboxingUrl(destination.groupId),
         method: 'navigateTo',
       }
+    }
     case 'pending-registration':
       return {
         url: `/pages/matching-status/index?registrationId=${encodeURIComponent(destination.registrationId)}`,

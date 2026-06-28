@@ -36,7 +36,7 @@ Trigger (event status, match, admin action)
   └──► wsService.broadcastToUser() / broadcastToEvent() ──► WebSocket (best-effort)
 ```
 
-**Categories:** `discover`, `activities`, `chat`. **Types:** `event_reminder`, `system_alert`, `mutual_match`, `match_success`, `new_message`, `admin_announcement`, etc.
+**Categories:** `discover`, `activities`, `chat`. **Types:** `event_reminder`, `system_alert`, `mutual_match`, `match_success`, `pool_full`, `new_message`, `admin_announcement`, etc. **2026-06-28 additions:** `match_success` is created for every group member after `poolMatchingService` commits groups; `pool_full` is created for all registered users when a pool reaches capacity.
 
 **Key invariant:** Unread counts are computed from the database (`isRead = false`), not WebSocket state. Clients poll `/api/notifications/counts` every 30s as fallback.
 ## API Endpoints

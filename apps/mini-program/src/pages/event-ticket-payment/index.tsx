@@ -19,8 +19,7 @@ import {
   markPaymentReturnContextPaid,
 } from '../../lib/payment/paymentPendingOrder'
 import type { MiniProgramPoolRegistrationReturnContext } from '../../lib/payment/paymentPendingOrder'
-import { evictPersistedQuery } from '../../lib/api/persistentCache'
-import { POOLS_QUERY_KEY, JOINED_EVENTS_QUERY_KEY } from '../../lib/prefetchEngine'
+import { bustRegistrationCaches } from '../../lib/api/registrationCacheBust'
 import { CEREMONY_HEROES } from '../../lib/ceremonyHeroes'
 import { useLoadingDeadline } from '../../hooks/useLoadingDeadline'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
@@ -363,14 +362,7 @@ export default function EventTicketPaymentPage() {
           }
 
           // Invalidate caches
-          Promise.allSettled([
-            queryClient.invalidateQueries({ queryKey: ['mini-program', 'event-pools'] }),
-            queryClient.invalidateQueries({ queryKey: ['mini-program', 'my-pool-registrations'] }),
-            queryClient.invalidateQueries({ queryKey: ['mini-program', 'event-pool', poolId] }),
-            queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/discover'] }),
-          ]).catch(() => {})
-          evictPersistedQuery(POOLS_QUERY_KEY)
-          evictPersistedQuery(JOINED_EVENTS_QUERY_KEY)
+          void bustRegistrationCaches(queryClient, { poolId })
           clearPaymentReturnContextStorage()
 
           logInfo('[EventTicketPayment] Payment confirmed, registration created', { orderId, paymentId })

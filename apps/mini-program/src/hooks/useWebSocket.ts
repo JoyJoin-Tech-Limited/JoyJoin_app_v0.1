@@ -5,6 +5,7 @@ import {
   getWebSocket,
   type ConnectionState,
 } from '../lib/api/websocket'
+import { useAuth } from './useAuth'
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -30,6 +31,18 @@ export interface UseWebSocketOptions {
    * messages that carry this `eventId` AND one of the given `eventTypes`.
    */
   eventId?: string
+
+  /**
+   * Optional user id to send in the `USER_JOINED` handshake after the socket
+   * connects. When omitted, the hook reads the current auth user automatically.
+   */
+  userId?: string
+
+  /**
+   * Optional event id to send in the `USER_JOINED` handshake. Useful when the
+   * consumer wants the server to scope per-user broadcasts to a specific event.
+   */
+  joinEventId?: string
 
   /**
    * Callback invoked for every message that matches the subscription filters.
@@ -61,7 +74,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRes
     eventTypes,
     eventId,
     onMessage,
+    userId: userIdProp,
+    joinEventId,
   } = options
+
+  const { user } = useAuth()
+  const effectiveUserId = userIdProp ?? user?.id
 
   // -- State ----------------------------------------------------------------
   const [state, setState] = useState<WebSocketState>(() => getWebSocket().getState())
@@ -74,6 +92,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRes
   // Track whether the socket was connected when the mini-program hid, so we
   // can decide whether to reconnect on `useDidShow`.
   const wasConnectedRef = useRef(false)
+
+  // Track whether USER_JOINED has been sent for the current connection so we
+  // only send the handshake once per connection.
+  const userJoinedSentRef = useRef(false)
 
   // -- Stable callbacks -----------------------------------------------------
 
@@ -99,6 +121,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRes
 
     const unsub = ws.onStateChange((next) => {
       setState(next)
+      if (next !== 'connected') {
+        userJoinedSentRef.current = false
+      }
     })
 
     return unsub
@@ -122,6 +147,25 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRes
       ws.disconnect()
     }
   }, [autoConnect])
+
+  // -- USER_JOINED handshake --------------------------------------------------
+
+  useEffect(() => {
+    if (state !== 'connected' || userJoinedSentRef.current || !effectiveUserId) {
+      return
+    }
+
+    const ws = getWebSocket()
+    const message: Record<string, unknown> = {
+      type: 'USER_JOINED',
+      userId: effectiveUserId,
+    }
+    if (joinEventId) {
+      message.eventId = joinEventId
+    }
+    ws.send(message)
+    userJoinedSentRef.current = true
+  }, [state, effectiveUserId, joinEventId])
 
   // -- Mini-program foreground / background ---------------------------------
 

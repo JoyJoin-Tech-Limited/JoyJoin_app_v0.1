@@ -64,6 +64,7 @@ Ensure the new value is accepted in the registration/pool form, `venues.budgetCa
 3. Verify `venues.venueType` matches event type
 4. Check group budget consensus — zero overlap means score = 0
 5. Check `venues.isActive = true` and `partnerStatus != 'ended'`
+6. If auto-assignment cannot find a match, use the admin fallback: `GET /api/admin/venue-assignment/groups/:groupId/candidates` then `POST /api/admin/venue-assignment/groups/:groupId/assign` (operator+).
 
 ## Troubleshooting
 
@@ -74,6 +75,7 @@ Ensure the new value is accepted in the registration/pool form, `venues.budgetCa
 | Venue data quality shows duplicate names | Same venue added twice with slight name differences | Merge duplicates; prefer `brandName` for user-facing identity; add DB unique constraint if product agrees |
 | `venueMatchingService` returns empty for dining event | `dateTime` crosses midnight (not supported) or no slots available | Split cross-day events; add time slots |
 | Admin can't see venue deals on event page | `partnerStatus` is not `active` or deals are expired | Update `partnerStatus` or deal `validUntil` |
+| Admin can't manually assign a venue | Manual venue assignment UI not used or endpoint not called | Use **分配场地** on the event-pools admin page; it calls `GET /api/admin/venue-assignment/groups/:groupId/candidates` + `POST /api/admin/venue-assignment/groups/:groupId/assign` |
 
 ## Review checklist
 

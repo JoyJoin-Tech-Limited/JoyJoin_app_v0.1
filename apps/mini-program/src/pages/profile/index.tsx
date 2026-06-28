@@ -3,7 +3,7 @@ import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { useQuery } from '@tanstack/react-query'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
-import Taro from '@tarojs/taro'
+import Taro, { useDidShow } from '@tarojs/taro'
 import { useRef, useState } from 'react'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import Button from '../../components/ui/Button'
@@ -19,6 +19,7 @@ import {
 } from '../../lib/api/authSession'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
+import { queryClient } from '../../lib/api/queryClient'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import { haptics } from '../../lib/utils/haptics'
@@ -32,6 +33,18 @@ export default function ProfilePage() {
 
   useCustomTabBarSync({
     enabled: !authLoading,
+  })
+
+  const hasDidShowRef = useRef(false)
+  useDidShow(() => {
+    if (!hasDidShowRef.current) {
+      hasDidShowRef.current = true
+      return
+    }
+    if (authLoading || !authUser) return
+    void queryClient.invalidateQueries({ queryKey: ['mini-program', 'joined-events'] })
+    void queryClient.invalidateQueries({ queryKey: ['mini-program', 'coupons'] })
+    void queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/profile'] })
   })
 
   const { data: coupons = { count: 0, availableCount: 0, coupons: [] }, isLoading: isLoadingCoupons } = useQuery({

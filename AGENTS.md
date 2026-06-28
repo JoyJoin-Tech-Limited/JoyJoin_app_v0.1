@@ -165,6 +165,11 @@ npm run simulate:gate                 # CI gate: generate + run centroids
 - Staging does **not** auto-run migrations; apply `.sql` files manually against `postgres-staging`.
 - Full guide: `deployment/README.md` and `docs/operations/test-mode-operations.md` §G.
 
+**Local dev payment smoke testing (2026-06-28):**
+- Set `APP_MODE=staging`, `PAYMENTS_ENABLED=true`, `TEST_PAYMENT_PRICE_IN_CENTS=1`, and `MOCK_PAYMENTS=true` in root `.env` to test paid flows without real WeChat Pay charges.
+- `MOCK_PAYMENTS=true` makes the server return instantly-paid orders (`status: completed`, `mock: true`) and the mini-program skips `Taro.requestPayment()`.
+- Restart `npm run dev:server` after changing `.env`.
+
 ---
 
 ## 4. First-Time Setup

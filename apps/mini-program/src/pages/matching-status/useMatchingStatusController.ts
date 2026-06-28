@@ -50,8 +50,8 @@ import { useWebSocket } from '../../hooks/useWebSocket'
 import { logError, logInfo, logWarn } from '../../lib/utils/logger'
 import {
   navigateBackOrEventsTab,
-  openPoolGroupDetail,
   replaceWithPoolGroupDetail,
+  replaceWithSquadUnboxing,
   switchToDiscoverTab,
   switchToEventsTab,
 } from '../../lib/navigation/matchingNavigation'
@@ -67,6 +67,7 @@ import {
 import { generateChemistryPayoff } from '../../lib/matching/chemistryPayoff'
 
 const REGISTRATION_REFETCH_INTERVAL_MS = 30_000
+const POOL_GROUP_FILL_REFETCH_INTERVAL_MS = 20_000
 const GROUP_DETAILS_STALE_TIME_MS = 60_000
 const GROUP_ANALYSIS_STALE_TIME_MS = STALE_TIME_BRIEF_MS
 const CANCEL_NAVIGATION_DELAY_MS = 1500
@@ -175,6 +176,7 @@ export function useMatchingStatusController({
         path: `/api/event-pools/${encodeURIComponent(registration?.poolId ?? '')}/group-fill`,
       }),
     enabled: hasResolvedAuthBootstrap && matchStatus === 'pending' && Boolean(registration?.poolId),
+    refetchInterval: POOL_GROUP_FILL_REFETCH_INTERVAL_MS,
     staleTime: 0,
   })
 
@@ -427,8 +429,12 @@ export function useMatchingStatusController({
 
   const navigateToMatchedDestination = useCallback((groupId: string) => {
     setLiveStage('idle')
-    replaceWithPoolGroupDetail(groupId)
-  }, [])
+    if (hasRevealed) {
+      replaceWithPoolGroupDetail(groupId)
+    } else {
+      replaceWithSquadUnboxing(groupId)
+    }
+  }, [hasRevealed])
 
   const finishLiveJourney = useCallback(() => {
     const nextGroupId = themeRevealData?.groupId ?? matchedData?.groupId ?? registration?.assignedGroupId ?? null
@@ -488,8 +494,8 @@ export function useMatchingStatusController({
 
   const handleOpenMatchedJourney = useCallback(() => {
     if (!resolvedGroupId) return
-    openPoolGroupDetail(resolvedGroupId)
-  }, [resolvedGroupId])
+    navigateToMatchedDestination(resolvedGroupId)
+  }, [resolvedGroupId, navigateToMatchedDestination])
 
   const handleBrowsePools = useCallback(() => {
     switchToDiscoverTab()
@@ -570,21 +576,6 @@ export function useMatchingStatusController({
       setHasRevealed(false)
     }
   }, [resolvedGroupId])
-
-  // Save hasRevealed when user proceeds past members stage
-  useEffect(() => {
-    if (liveStage === 'theme' && resolvedGroupId && !hasRevealed) {
-      try {
-        Taro.setStorageSync(`jj_revealed_${resolvedGroupId}`, true)
-        setHasRevealed(true)
-      } catch (error) {
-        logWarn('[MatchingStatus] Failed to save hasRevealed flag', {
-          groupId: resolvedGroupId,
-          message: error instanceof Error ? error.message : String(error),
-        })
-      }
-    }
-  }, [liveStage, resolvedGroupId, hasRevealed])
 
   useEffect(() => {
     if (liveStage !== 'match' || isLoadingLiveGroupDetails) {

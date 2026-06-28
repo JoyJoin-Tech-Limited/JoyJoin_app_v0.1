@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { JoinedEventSummary } from '@shared/api'
 import { apiRequest } from '../api/api'
 import { logWarn } from '../utils/logger'
 
@@ -41,7 +42,7 @@ class EventsAnalytics {
     }
 
     void apiRequest<{ success?: boolean }>({
-      path: '/api/analytics/profile',
+      path: '/api/analytics/events',
       method: 'POST',
       data: parsed.data,
       handleUnauthorized: false,
@@ -51,6 +52,17 @@ class EventsAnalytics {
         eventType,
         message,
       })
+    })
+  }
+
+  /** Convenience helper for card taps — always includes card version, tab, and event type. */
+  trackCardTap(event: JoinedEventSummary, tab: 'upcoming' | 'completed'): void {
+    this.track('events_card_tap', {
+      eventId: event.id,
+      tab,
+      status: event.status,
+      eventType: event.eventType,
+      cardVersion: 'footprint_oracle_v1',
     })
   }
 }

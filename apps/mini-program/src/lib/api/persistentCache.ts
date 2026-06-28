@@ -23,7 +23,7 @@ import { POOLS_QUERY_KEY, JOINED_EVENTS_QUERY_KEY } from '../prefetchEngine'
 // - Hydration passes original timestamp so RQ knows true data age (P0)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const CACHE_SCHEMA_VERSION = 1
+const CACHE_SCHEMA_VERSION = 2
 const STORAGE_KEY_PREFIX = 'jj_cache_v1_'
 const MAX_CACHE_AGE_MS = 4 * 60 * 60 * 1000 // 4 hours
 const MAX_CACHE_SIZE_BYTES = 75 * 1024 // 75 KB total (P0 perf: halved from 150KB)

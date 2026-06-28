@@ -114,6 +114,7 @@ describe("GET /api/events/joined", () => {
         title: "周五夜聊",
         dateTime: "2026-05-20T19:00:00.000Z",
         location: "深圳",
+        district: "南山区",
         status: "upcoming",
       },
       {
@@ -121,7 +122,17 @@ describe("GET /api/events/joined", () => {
         title: "周三饭局",
         dateTime: "2026-05-18T19:00:00.000Z",
         location: "深圳",
+        city: "深圳",
+        district: "福田区",
         status: "pending",
+        eventType: "饭局",
+        venueName: "测试餐厅",
+        venueAddress: "福田区 test 路 1 号",
+        registrationDeadline: "2026-05-17T12:00:00.000Z",
+        price: 188,
+        matchedAt: "2026-05-17T14:00:00.000Z",
+        groupId: "group-1",
+        finalDateTime: "2026-05-18T19:00:00.000Z",
       },
     ]);
 
@@ -140,8 +151,20 @@ describe("GET /api/events/joined", () => {
       expect(result).toHaveLength(2);
       expect(result[0].id).toBe("event-1");
       expect(result[0].title).toBe("周五夜聊");
+      expect(result[0].district).toBe("南山区");
+      expect(result[0].eventType).toBeUndefined();
       expect(result[1].id).toBe("pool-1");
       expect(result[1].status).toBe("pending");
+      expect(result[1].eventType).toBe("饭局");
+      expect(result[1].city).toBe("深圳");
+      expect(result[1].district).toBe("福田区");
+      expect(result[1].venueName).toBe("测试餐厅");
+      expect(result[1].venueAddress).toBe("福田区 test 路 1 号");
+      expect(result[1].registrationDeadline).toBe("2026-05-17T12:00:00.000Z");
+      expect(result[1].price).toBe(188);
+      expect(result[1].matchedAt).toBe("2026-05-17T14:00:00.000Z");
+      expect(result[1].groupId).toBe("group-1");
+      expect(result[1].finalDateTime).toBe("2026-05-18T19:00:00.000Z");
 
       expect(mockGetUserJoinedEventsSummary).toHaveBeenCalledWith("user-123");
 

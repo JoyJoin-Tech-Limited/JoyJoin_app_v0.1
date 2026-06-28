@@ -33,6 +33,7 @@ import { getFeatureFlagSync } from "../../lib/featureFlags";
 import { shellCache } from "../../lib/shellCache";
 import { computeOracleCardFields } from "../../lib/oracleCardComputation";
 import { broadcastAttendanceStatusUpdated } from "../../eventBroadcast";
+import { wsService } from "../../wsService";
 import { aiEndpointLimiter } from "../../rateLimiter";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
@@ -725,6 +726,61 @@ export function registerUserEventPoolRoutes(app: Express): void {
         ...registration,
         entitlementMode,
       });
+
+      // Fire-and-forget: if the pool just reached capacity, notify registered users
+      (async () => {
+        try {
+          const [{ count }] = await db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(eventPoolRegistrations)
+            .where(eq(eventPoolRegistrations.poolId, poolId));
+
+          const capacity = resolvePoolCapacity(pool);
+          if (count >= capacity) {
+            const registeredUserRows = await db
+              .select({ userId: eventPoolRegistrations.userId })
+              .from(eventPoolRegistrations)
+              .where(eq(eventPoolRegistrations.poolId, poolId));
+
+            const registeredUserIds: string[] = registeredUserRows.map((r: { userId: string }) => r.userId);
+
+            await Promise.all(
+              registeredUserIds.map((registeredUserId: string) =>
+                storage.createNotification({
+                  userId: registeredUserId,
+                  category: 'activities',
+                  type: 'pool_full',
+                  title: '活动池已满员',
+                  message: `「${pool.title}」报名已满，匹配即将开始`,
+                  relatedResourceId: poolId,
+                })
+              )
+            );
+
+            wsService.broadcastToUsers(registeredUserIds, {
+              type: 'POOL_FULL',
+              data: {
+                poolId,
+                poolTitle: pool.title,
+                totalRegistrations: count,
+                capacity,
+              },
+              timestamp: new Date().toISOString(),
+            });
+
+            logger.info("Pool reached capacity; pool_full notifications sent", {
+              poolId,
+              capacity,
+              totalRegistrations: count,
+            });
+          }
+        } catch (poolFullErr) {
+          logger.error("Failed to send pool_full notifications", {
+            poolId,
+            error: poolFullErr instanceof Error ? poolFullErr.message : String(poolFullErr),
+          });
+        }
+      })();
 
       // Best-effort geolocation capture at pool registration.
       captureLocationSnapshot(req, "pool_registration", userId).catch(() => {});
