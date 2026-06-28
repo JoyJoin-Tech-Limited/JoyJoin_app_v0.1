@@ -12,6 +12,7 @@ import type { PairExplanation } from '@shared/types/groupAnalysis'
 import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
+import { haptics } from '../../lib/utils/haptics'
 import { logError, logInfo } from '../../lib/utils/logger'
 import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, COLOR_DANGER } from '../../lib/utils/uiConstants'
 import { navigateBackOrEventsTab, openPoolGroupDetail, switchToEventsTab } from '../../lib/navigation/matchingNavigation'
@@ -76,6 +77,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
         blindBoxEventId: response.blindBoxEventId,
       })
 
+      haptics('success')
       await Taro.showToast({
         title: '已确认出席',
         icon: 'success',
@@ -264,7 +266,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     }
 
     const timer = setTimeout(() => {
-      triggerLightHaptic()
+      haptics('medium')
       setFlowState('revealed')
     }, shouldReduceMotion ? 220 : 1450)
 
