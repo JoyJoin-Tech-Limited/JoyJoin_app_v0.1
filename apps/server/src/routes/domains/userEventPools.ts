@@ -29,7 +29,7 @@ import { enrichProfileFromRegistration } from "../../lib/profileEnrichment";
 import { logger } from "../../lib/logger";
 import { captureLocationSnapshot } from "../../lib/captureLocationSnapshot";
 import { isSingleTestMode } from "../../lib/isSingleTestMode";
-import { getFeatureFlagSync } from "../../lib/featureFlags";
+import { getFeatureFlag, getFeatureFlagSync } from "../../lib/featureFlags";
 import { shellCache } from "../../lib/shellCache";
 import { computeOracleCardFields } from "../../lib/oracleCardComputation";
 import { broadcastAttendanceStatusUpdated } from "../../eventBroadcast";
@@ -834,7 +834,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
         });
       }
 
-      if (!getFeatureFlagSync("paymentsEnabled", false)) {
+      if (!(await getFeatureFlag("paymentsEnabled", false))) {
         return res.status(503).json({
           message: "支付功能暂不可用，请稍后重试",
           code: "PAYMENTS_DISABLED",
