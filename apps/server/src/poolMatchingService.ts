@@ -24,6 +24,7 @@ import {
   eventPoolGroups,
   events,
   eventAttendance,
+  blindBoxEvents,
   users, 
   userInterests,
   invitationUses,
@@ -1759,6 +1760,27 @@ export async function saveMatchResults(
             status: "confirmed",
           });
         }
+
+        // 2.7 创建blind_box_events记录（确保确认出席流程可用）
+        await tx.insert(blindBoxEvents).values({
+          poolId,
+          userId: memberUserIds[0] || pool.createdBy || "",
+          title: pool?.title ?? "盲盒匹配活动",
+          eventType: pool?.eventType ?? "饭局",
+          city: pool?.city ?? "",
+          district: pool?.district ?? "",
+          dateTime: pool?.dateTime ?? new Date(),
+          budgetTier: pool?.budgetTier ?? "",
+          status: "matched",
+          progress: 100,
+          currentParticipants: group.members.length,
+          totalParticipants: group.members.length,
+          matchedAttendees: group.members.map((m) => ({
+            userId: m.userId,
+            archetype: m.archetype,
+          })),
+          matchExplanation: group.explanation ?? null,
+        });
 
         logger.info(`[Pool Matching] Created event ${eventRecord.id} for group ${i + 1} with ${memberUserIds.length} attendees`);
 
