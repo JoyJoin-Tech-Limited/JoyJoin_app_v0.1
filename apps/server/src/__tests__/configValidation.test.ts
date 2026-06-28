@@ -25,6 +25,7 @@ describe("validateConfig", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     delete process.env.PAYMENTS_ENABLED;
+    delete process.env.MOCK_PAYMENTS;
     delete process.env.WECHAT_PAY_APP_ID;
     delete process.env.WECHAT_PAY_MCH_ID;
     delete process.env.WECHAT_PAY_SERIAL_NO;
@@ -107,6 +108,21 @@ describe("validateConfig", () => {
     delete process.env.WECHAT_PAY_PLATFORM_CERT;
 
     expect(() => validateConfig()).toThrow("process.exit(1)");
+  });
+
+  it("does NOT require WeChat Pay credentials when MOCK_PAYMENTS is enabled", () => {
+    process.env.NODE_ENV = "production";
+    process.env.PAYMENTS_ENABLED = "true";
+    process.env.MOCK_PAYMENTS = "true";
+    delete process.env.WECHAT_PAY_APP_ID;
+    delete process.env.WECHAT_PAY_MCH_ID;
+    delete process.env.WECHAT_PAY_SERIAL_NO;
+    delete process.env.WECHAT_PAY_PRIVATE_KEY;
+    delete process.env.WECHAT_PAY_APIV3_KEY;
+    delete process.env.WECHAT_PAY_PLATFORM_CERT;
+
+    expect(() => validateConfig()).not.toThrow();
+    expect(exitSpy).not.toHaveBeenCalled();
   });
 
   it("calls process.exit(1) in production when mini-program auth and payment app ids differ", () => {

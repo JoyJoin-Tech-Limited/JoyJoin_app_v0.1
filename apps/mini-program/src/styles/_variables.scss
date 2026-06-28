@@ -70,6 +70,10 @@ $font-brand: $font-cn-display;
 // Aligns with web `--font-en-brand`; Outfit omitted in mini-program to avoid an extra load.
 $font-en-brand: 'Quicksand', system-ui, sans-serif;
 
+// Monospace data face for countdowns, segmented readouts, and instrument-style labels.
+// Quicksand has tabular numerals; system monospace is the final fallback for true fixed-width.
+$font-mono: 'Quicksand', 'SF Mono', 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
+
 // ─── Typography Scale ─────────────────────────────────────────────
 // Semantic hierarchy: each tier has an intended content role.
 // Use the tier that matches the message importance, not just the pixel value.

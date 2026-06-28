@@ -71,8 +71,6 @@ Open the URL in a browser. Every refresh re-runs Playwright and returns a fresh 
 
 If port 9000 is occupied, override it: `SCREENSHOT_PORT=9003 node scripts/screenshot-server.mjs`, then use `http://localhost:9003/...`.
 
-Visit `http://localhost:9000/` (or your `$SCREENSHOT_PORT`) to see the live list of registered URLs.
-
 ### Adding a new on-demand screenshot
 
 Edit `scripts/screenshot-server.mjs`:

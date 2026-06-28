@@ -35,7 +35,7 @@ description: >
 
 ## Approach overview
 
-- **Approach A** — H5 build + Playwright for pixel-perfect visual screenshots
+- **Approach A** — H5 build + Playwright, served on-demand as a PNG URL (`http://localhost:9000/<name>.png`)
 - **Approach B** — WeChat DevTools MCP for structural verification (WXML tree, text, state)
 - **Approach C** — CLI QR code for real-device WeChat runtime preview
 - **Approach D** — `check_health` for quick smoke tests after code changes
@@ -52,7 +52,7 @@ See [references/approaches.md](references/approaches.md) for full step-by-step i
 
 ## Quick examples
 
-- **Visual design review:** Use Approach A (H5 build + Playwright) with auth bypass patch → screenshot → `git checkout` to restore. Reusable scripts: `scripts/screenshot-tier-selector.mjs`, `scripts/screenshot-h5.mjs`.
+- **Visual design review:** Run `npm run screenshot:events` from the repo root. It builds H5, starts the mock + screenshot servers on free ports, and opens the browser automatically. Other pages: `npm run screenshot:tier-selector`, `npm run screenshot:pool-registration`, `npm run screenshot:event-ticket-payment`. The PNG is generated on every request — no files are saved to the repo.
 - **Structural smoke test:** Use Approach B (DevTools MCP) with `get_page_data` after navigating to `/pages/discover/index` to verify text and element presence. For visibility checks (e.g., the native custom tab bar), also inspect the **outer `hidden` attribute and computed `display`** — the WXML tree can contain the element while `hidden=""` makes it invisible.
 
 ## Troubleshooting
@@ -69,9 +69,10 @@ See [references/approaches.md](references/approaches.md) for full step-by-step i
 - [ ] Approach chosen matches the actual goal (visual vs structural vs real device)
 - [ ] Auth bypass patches are restored immediately after screenshot (`git checkout`)
 - [ ] Mock server listens on port 5001 with correct endpoints and CORS headers
+- [ ] Screenshot server listens on port 9000 (or `$SCREENSHOT_PORT`) and page generator is registered
 - [ ] H5 build uses `TARO_APP_API_BASE_URL=http://localhost:5001`
 - [ ] No known-failure approach was attempted (Playwright on DevTools WS, AppleScript, CLI QR export)
-- [ ] Screenshot or structural data is saved with a descriptive filename
+- [ ] Screenshot is viewed via URL, not saved as a committed file
 - [ ] Sibling platform parity checked if the screen also exists on web
 
 ## Related skills

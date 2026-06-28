@@ -296,6 +296,15 @@ The script reloads Nginx, rebuilds the staging API + admin containers, applies m
 
 Once the initial manual deploy is done, every push to `main` automatically triggers `.github/workflows/deploy-staging.yml`, which re-runs the same steps from CI. Staging secrets are kept in sync from GitHub (`STAGING_DATABASE_URL`, `STAGING_SESSION_SECRET`, `STAGING_ADMIN_CREATE_SECRET_KEY`, `STAGING_POSTGRES_PASSWORD`) while app secrets (WeChat, AI, WeChat Pay) are reused from production secrets.
 
+Staging payment mode is controlled by two variables written from GitHub repository variables:
+
+| Variable | Value for real ¥0.01 payments | Value for mock (no charge) |
+|---|---|---|
+| `PAYMENTS_ENABLED` | `true` | `true` |
+| `MOCK_PAYMENTS` | `false` | `true` |
+
+Set `MOCK_PAYMENTS=false` to charge the real WeChat Pay test amount of ¥0.01. Set `MOCK_PAYMENTS=true` to skip `Taro.requestPayment()` and receive instantly-paid mock orders.
+
 ### Mini-program build
 
 Set the staging origin before building:
@@ -326,7 +335,7 @@ The staging admin portal proxies `/api/*` to the staging API, so any event creat
 
 ### Verifying test pricing
 
-After logging into the 体验版, start any paid flow (event registration, subscription, event pack). The price should show ¥0.01 and create a real WeChat Pay order for ¥0.01. Webhook fulfillment still runs normally against the staging database.
+After logging into the 体验版, start any paid flow (event registration, subscription, event pack). With `MOCK_PAYMENTS=false`, the price should show ¥0.01 and create a real WeChat Pay order for ¥0.01; webhook fulfillment still runs normally against the staging database. With `MOCK_PAYMENTS=true`, the flow completes instantly without a real WeChat Pay call.
 
 ### Local dev mock-payment shortcut (2026-06-28)
 

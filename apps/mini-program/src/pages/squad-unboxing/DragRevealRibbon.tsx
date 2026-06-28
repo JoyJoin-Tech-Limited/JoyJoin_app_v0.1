@@ -1,6 +1,7 @@
 import { View, Text } from '@tarojs/components'
 import { useRef, useState, useCallback, useEffect } from 'react'
 import Taro from '@tarojs/taro'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { BlindBoxVisual } from './BlindBoxVisual'
 import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
 import './DragRevealRibbon.scss'
@@ -206,9 +207,11 @@ export default function DragRevealRibbon({
             .join(' ')}
           style={{ left: thumbLeft }}
         >
-          <Text className='drag-reveal-ribbon__thumb-icon'>
-            {isRevealing ? '✓' : '→'}
-          </Text>
+          {isRevealing ? (
+            <Text className='drag-reveal-ribbon__thumb-icon'>✓</Text>
+          ) : (
+            <JoyJoinIcon emoji='🎁' size={28} />
+          )}
         </View>
         {!isRevealing && (
           <Text className='drag-reveal-ribbon__track-label'>

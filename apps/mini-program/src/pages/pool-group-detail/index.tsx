@@ -14,11 +14,13 @@ import { useAuthGuard } from '../../hooks/useAuthGuard'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import Card from '../../components/ui/Card'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
+import MissingArchetypePlaceholder from '../../components/mascot/MissingArchetypePlaceholder'
 import Button from '../../components/ui/Button'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { haptics } from '../../lib/utils/haptics'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/utils/uiConstants'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
 import {
@@ -158,7 +160,7 @@ export default function PoolGroupDetailPage() {
   const currentUserId = currentUser?.id
   const locationText = [group.venueName, group.venueAddress].filter(Boolean).join(' ')
 
-  const handleCopyLocation = () => {
+  const handleCopyAddressForNavigation = () => {
     if (!locationText) {
       return
     }
@@ -167,22 +169,7 @@ export default function PoolGroupDetailPage() {
     Taro.setClipboardData({
       data: locationText,
       success: () => {
-        Taro.showToast({ title: '地点已复制', icon: 'success', duration: TOAST_SHORT_MS })
-      },
-    })
-  }
-
-  const handleOpenMap = () => {
-    if (!group.venueName) {
-      return
-    }
-
-    haptics('light')
-    const address = [group.venueName, group.venueAddress].filter(Boolean).join(' ')
-    Taro.setClipboardData({
-      data: address,
-      success: () => {
-        Taro.showToast({ title: '地址已复制，请打开地图搜索', icon: 'none', duration: TOAST_MEDIUM_MS })
+        Taro.showToast({ title: '地址已复制，请到地图应用导航', icon: 'none', duration: TOAST_MEDIUM_MS })
       },
     })
   }
@@ -289,8 +276,7 @@ export default function PoolGroupDetailPage() {
             </View>
           ) : null}
           <View className='pool-group-detail__map-actions'>
-            <Button onClick={handleOpenMap}><JoyJoinIcon emoji='🗺️' size={24} /> 到这去</Button>
-            <Button variant='secondary' onClick={handleCopyLocation}>复制地址</Button>
+            <Button onClick={handleCopyAddressForNavigation}><JoyJoinIcon emoji='🗺️' size={24} /> 复制地址去导航</Button>
           </View>
         </Card>
       ) : group.venueAssignmentStatus === 'unassigned' ? (
@@ -339,11 +325,11 @@ export default function PoolGroupDetailPage() {
                 }
               >
                 <View className='pool-group-detail__member-avatar'>
-                  <ArchetypeHead
-                    archetype={member.archetype}
-                    size={72}
-                    fallbackText={name}
-                  />
+                  {member.archetype ? (
+                    <ArchetypeHead archetype={member.archetype} size={72} />
+                  ) : (
+                    <MissingArchetypePlaceholder size={72} />
+                  )}
                 </View>
 
                 <View className='pool-group-detail__member-content'>
@@ -360,7 +346,9 @@ export default function PoolGroupDetailPage() {
                   </View>
 
                   {member.archetype ? (
-                    <Text className='pool-group-detail__member-archetype'>{member.archetype}</Text>
+                    <Text className='pool-group-detail__member-archetype'>
+                      {ARCHETYPE_BY_ID[member.archetype]?.nameCn || member.archetype}
+                    </Text>
                   ) : null}
 
                   {member.industryNicheLabel ? (

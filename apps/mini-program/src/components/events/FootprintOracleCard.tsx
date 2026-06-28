@@ -8,7 +8,7 @@ import {
 import type { JoinedEventSummary } from '@shared/api'
 import { haptics } from '../../lib/utils/haptics'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
-import { useEventCountdown } from '../../hooks/useEventCountdown'
+import { useEventCountdown, type CountdownSegments } from '../../hooks/useEventCountdown'
 import { getOracleCardCornerAsset } from '../discover/oracleCardAssets'
 import {
   formatEventDateTime,
@@ -20,6 +20,7 @@ import './FootprintOracleCard.scss'
 // ─── Constants ─────────────────────────────────────────────────
 
 const FALLBACK_FAMILY_COLOR = ARCHETYPE_FAMILY_COLORS.calm
+const CLOCK_TOTAL_BLOCKS = 12
 
 // Status → accent family mapping for Oracle Card shell consistency.
 const STATUS_FAMILY_MAP: Record<string, 'fire' | 'calm' | 'warm' | 'cool'> = {
@@ -38,7 +39,7 @@ const STATUS_FAMILY_MAP: Record<string, 'fire' | 'calm' | 'warm' | 'cool'> = {
 const STATUS_MOMENTUM_COPY: Record<string, string> = {
   matched: '匹配成功，期待见面',
   venue_unlocked: '场地已解锁',
-  confirmed: '报名成功',
+  confirmed: '已确认',
   upcoming: '即将开始',
   pending: '匹配中',
   registered: '报名成功',
@@ -47,8 +48,19 @@ const STATUS_MOMENTUM_COPY: Record<string, string> = {
   cancelled: '已取消',
 }
 
+// Explicit "what you are waiting for" copy. Empty means no extra waiting hint.
+const STATUS_WAITING_COPY: Record<string, string> = {
+  pending: '系统正在撮合本场成员，请耐心等待',
+  registered: '报名成功，等待系统匹配',
+  upcoming: '报名成功，活动即将开始',
+  confirmed: '已确认，期待见面',
+}
+
 // Statuses that should never show a countdown.
 const TERMINAL_STATUSES = new Set(['completed', 'attended', 'cancelled'])
+
+// Venue is only disclosed once matching has succeeded and a group exists.
+const VENUE_VISIBLE_STATUSES = new Set(['matched', 'confirmed', 'venue_unlocked'])
 
 // ─── Helpers ───────────────────────────────────────────────────
 
@@ -82,6 +94,132 @@ function buildLocationLine(event: JoinedEventSummary): string | null {
   return parts.length > 0 ? parts.join('  ·  ') : null
 }
 
+function pad2(value: number): string {
+  return value.toString().padStart(2, '0')
+}
+
+function formatClockPair(value: number): string {
+  return pad2(Math.max(0, value))
+}
+
+function prefersReducedMotion(): boolean {
+  try {
+    return Boolean((Taro.getSystemInfoSync() as unknown as { reduceMotion?: boolean }).reduceMotion)
+  } catch {
+    return false
+  }
+}
+
+// ─── Segmented Clock Component ─────────────────────────────────
+// Self-contained: owns its countdown hook so the parent card does not
+// re-render every second.
+
+interface EventCountdownClockProps {
+  target: string | null
+  enabled: boolean
+  accentColor: string
+  clockId: string
+}
+
+const EventCountdownClock = React.memo(function EventCountdownClock({
+  target,
+  enabled,
+  accentColor,
+  clockId,
+}: EventCountdownClockProps) {
+  const { display, segments, isUrgent, hasStarted, isLive } = useEventCountdown({
+    target,
+    enabled,
+    urgentThresholdMinutes: 60,
+    elementId: clockId,
+  })
+
+  if (!display) {
+    return null
+  }
+
+  if (hasStarted) {
+    return (
+      <View
+        id={clockId}
+        className='footprint-oracle-card__clock footprint-oracle-card__clock--started'
+        style={{ '--clock-accent': accentColor } as React.CSSProperties}
+        aria-label={display}
+      >
+        <View className='footprint-oracle-card__clock-started-dot' />
+        <Text className='footprint-oracle-card__clock-started-label'>{display}</Text>
+      </View>
+    )
+  }
+
+  if (!segments) {
+    return null
+  }
+
+  const { days, hours, minutes, seconds, progress } = segments
+  const filledBlocks = Math.max(
+    0,
+    Math.min(CLOCK_TOTAL_BLOCKS, Math.round(progress * CLOCK_TOTAL_BLOCKS)),
+  )
+
+  return (
+    <View
+      id={clockId}
+      className='footprint-oracle-card__clock'
+      style={{ '--clock-accent': accentColor } as React.CSSProperties}
+      aria-label={`倒计时 ${display}`}
+      aria-live={isLive ? 'polite' : undefined}
+      aria-atomic='true'
+    >
+      <View className='footprint-oracle-card__clock-digits'>
+        {days > 0 && (
+          <>
+            <View className='footprint-oracle-card__clock-cell'>
+              <Text className='footprint-oracle-card__clock-value'>{formatClockPair(days)}</Text>
+              <Text className='footprint-oracle-card__clock-unit'>天</Text>
+            </View>
+            <Text className='footprint-oracle-card__clock-separator'>:</Text>
+          </>
+        )}
+        <View className='footprint-oracle-card__clock-cell'>
+          <Text className='footprint-oracle-card__clock-value'>{formatClockPair(hours)}</Text>
+          <Text className='footprint-oracle-card__clock-unit'>时</Text>
+        </View>
+        <Text className='footprint-oracle-card__clock-separator'>:</Text>
+        <View className='footprint-oracle-card__clock-cell'>
+          <Text className='footprint-oracle-card__clock-value'>{formatClockPair(minutes)}</Text>
+          <Text className='footprint-oracle-card__clock-unit'>分</Text>
+        </View>
+        <Text className='footprint-oracle-card__clock-separator'>:</Text>
+        <View className='footprint-oracle-card__clock-cell'>
+          <Text className='footprint-oracle-card__clock-value'>{formatClockPair(seconds)}</Text>
+          <Text className='footprint-oracle-card__clock-unit'>秒</Text>
+        </View>
+      </View>
+
+      <View className='footprint-oracle-card__clock-progress' aria-hidden='true'>
+        {Array.from({ length: CLOCK_TOTAL_BLOCKS }, (_, i) => {
+          const filled = i < filledBlocks
+          return (
+            <View
+              key={i}
+              className={[
+                'footprint-oracle-card__clock-progress-block',
+                filled ? 'footprint-oracle-card__clock-progress-block--filled' : '',
+                filled && isUrgent && isLive
+                  ? 'footprint-oracle-card__clock-progress-block--urgent'
+                  : '',
+              ].filter(Boolean).join(' ')}
+            />
+          )
+        })}
+      </View>
+    </View>
+  )
+})
+
+// ─── Main Card Component ───────────────────────────────────────
+
 export interface FootprintOracleCardProps {
   event: JoinedEventSummary
   index?: number
@@ -97,6 +235,7 @@ export default React.memo(function FootprintOracleCard({
 }: FootprintOracleCardProps) {
   const { isDegradation: deviceIsDegradation } = useDeviceTier()
   const effectiveDegradation = isDegradation || deviceIsDegradation
+  const reduceMotion = useMemo(() => prefersReducedMotion(), [])
   const uid = useMemo(() => `footprint-card-${event.id}`, [event.id])
 
   const status = event.status ?? 'upcoming'
@@ -107,15 +246,11 @@ export default React.memo(function FootprintOracleCard({
   const statusLabel = getJoinedEventStatusLabel(status)
   const momentumLabel = STATUS_MOMENTUM_COPY[status] ?? statusLabel
   const isTerminal = isTerminalStatus(status)
-  const isLive = status === 'matched' || status === 'venue_unlocked'
+  const isLiveStatus = status === 'matched' || status === 'venue_unlocked'
+  const showVenue = VENUE_VISIBLE_STATUSES.has(status)
+  const isMatched = status === 'matched'
 
   const countdownTarget = getCountdownTarget(event)
-  const { display: countdownDisplay, isUrgent } = useEventCountdown({
-    target: countdownTarget,
-    enabled: !isTerminal && Boolean(countdownTarget),
-    urgentThresholdMinutes: 60,
-    elementId: uid,
-  })
 
   const shouldAnimate = !effectiveDegradation && index < 6
   const animDelay = shouldAnimate ? String(Math.min(index, 4) * 60) + 'ms' : undefined
@@ -127,7 +262,7 @@ export default React.memo(function FootprintOracleCard({
 
   const displayDateTime = getJoinedEventDisplayDateTime(event)
   const dateTimeText = formatEventDateTime(displayDateTime)
-  const locationLine = buildLocationLine(event)
+  const locationLine = showVenue ? buildLocationLine(event) : null
   const cornerAssetSrc = getOracleCardCornerAsset(event.eventType)
   const showCornerAsset = cornerAssetSrc && !effectiveDegradation && !isTerminal
 
@@ -136,7 +271,6 @@ export default React.memo(function FootprintOracleCard({
   const cardAriaLabel = [
     event.title ?? '悦聚活动',
     statusLabel,
-    countdownDisplay ? `倒计时 ${countdownDisplay}` : undefined,
     dateTimeText,
     locationLine ?? undefined,
     isTerminal ? '点击查看详情与回顾' : '点击查看活动详情',
@@ -145,15 +279,20 @@ export default React.memo(function FootprintOracleCard({
     .join('，')
 
   const footerHint = isTerminal ? '点击查看详情与回顾' : '点击查看活动详情'
+  const waitingCopy = STATUS_WAITING_COPY[status]
 
   const cardClass = [
     'footprint-oracle-card',
     `footprint-oracle-card--family-${family}`,
     isTerminal ? 'footprint-oracle-card--terminal' : '',
+    isMatched ? 'footprint-oracle-card--matched' : '',
     effectiveDegradation ? 'footprint-oracle-card--low-end' : '',
+    reduceMotion ? 'footprint-oracle-card--reduced-motion' : '',
   ]
     .filter(Boolean)
     .join(' ')
+
+  const clockEnabled = !isTerminal && Boolean(countdownTarget)
 
   return (
     <View
@@ -186,7 +325,7 @@ export default React.memo(function FootprintOracleCard({
         <View className='footprint-oracle-card__topline'>
           <View className='footprint-oracle-card__pulse-pill'>
             <View
-              className={`footprint-oracle-card__pulse-dot${isLive ? ' footprint-oracle-card__pulse-dot--live' : ''}`}
+              className={`footprint-oracle-card__pulse-dot${isLiveStatus ? ' footprint-oracle-card__pulse-dot--live' : ''}`}
               style={{ backgroundColor: familyColor }}
             />
             <Text
@@ -196,16 +335,12 @@ export default React.memo(function FootprintOracleCard({
               {momentumLabel}
             </Text>
           </View>
-          {countdownDisplay && (
-            <Text
-              className={[
-                'footprint-oracle-card__countdown',
-                isUrgent ? 'footprint-oracle-card__countdown--urgent' : '',
-              ].filter(Boolean).join(' ')}
-            >
-              {countdownDisplay}
-            </Text>
-          )}
+          <EventCountdownClock
+            target={countdownTarget}
+            enabled={clockEnabled}
+            accentColor={familyColor}
+            clockId={`${uid}-clock`}
+          />
         </View>
 
         {/* L1 Title */}
@@ -218,6 +353,9 @@ export default React.memo(function FootprintOracleCard({
           <Text className='footprint-oracle-card__date-time'>{dateTimeText}</Text>
           {locationLine && (
             <Text className='footprint-oracle-card__location'>{locationLine}</Text>
+          )}
+          {waitingCopy && (
+            <Text className='footprint-oracle-card__waiting-hint'>{waitingCopy}</Text>
           )}
         </View>
 

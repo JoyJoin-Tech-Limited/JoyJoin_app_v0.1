@@ -136,6 +136,7 @@ describe("mini-program payment route openid handling", () => {
     vi.clearAllMocks();
 
     process.env.PAYMENTS_ENABLED = "true";
+    delete process.env.MOCK_PAYMENTS;
 
     vi.mocked(usersRepo.getUser).mockResolvedValue(mockSessionUser as any);
     vi.mocked(storage.getActivePricingSettings).mockResolvedValue([] as any);

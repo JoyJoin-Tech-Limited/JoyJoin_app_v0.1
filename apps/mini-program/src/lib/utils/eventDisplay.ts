@@ -34,14 +34,30 @@ export function formatEventDateTime(dateTime?: string | null): string {
   const now = new Date()
   const includeYear = parsed.getFullYear() !== now.getFullYear()
 
-  return parsed.toLocaleDateString('zh-CN', {
+  // Friendly relative labels for today / tomorrow / day after tomorrow.
+  const dateMidnight = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate())
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const diffDays = Math.round((dateMidnight.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24))
+
+  let datePrefix: string | undefined
+  if (diffDays === 0) datePrefix = '今天'
+  else if (diffDays === 1) datePrefix = '明天'
+  else if (diffDays === 2) datePrefix = '后天'
+
+  const datePart = parsed.toLocaleDateString('zh-CN', {
     year: includeYear ? 'numeric' : undefined,
     month: 'long',
     day: 'numeric',
     weekday: 'short',
+  })
+
+  const timePart = parsed.toLocaleTimeString('zh-CN', {
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   })
+
+  return datePrefix ? `${datePrefix} ${timePart}` : `${datePart} ${timePart}`
 }
 
 export function formatEventDateShort(dateTime?: string | null): string {
@@ -52,13 +68,25 @@ export function formatEventDateShort(dateTime?: string | null): string {
   const now = new Date()
   const includeYear = parsed.getFullYear() !== now.getFullYear()
 
+  const dateMidnight = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate())
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const diffDays = Math.round((dateMidnight.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 0) return `今天 ${formatTimePart(parsed)}`
+  if (diffDays === 1) return `明天 ${formatTimePart(parsed)}`
+
   return parsed.toLocaleDateString('zh-CN', {
     year: includeYear ? 'numeric' : undefined,
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   })
+}
+
+function formatTimePart(date: Date): string {
+  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
 export function getCountdownText(startTime: string): string {

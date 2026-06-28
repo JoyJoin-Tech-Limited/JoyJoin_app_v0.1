@@ -70,6 +70,7 @@ describe("GET /api/readyz", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     delete process.env.PAYMENTS_ENABLED;
+    delete process.env.MOCK_PAYMENTS;
     delete process.env.WECHAT_PAY_APP_ID;
     delete process.env.WECHAT_PAY_MCH_ID;
     delete process.env.WECHAT_PAY_SERIAL_NO;

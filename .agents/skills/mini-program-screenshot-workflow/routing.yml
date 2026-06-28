@@ -2,8 +2,10 @@ skill: mini-program-screenshot-workflow
 category: internal
 
 primary_ownership: >
-  Capturing screenshots, previews, and visual verification of the JoyJoin WeChat
-  Mini Program. Documents what works, what does not, and the exact steps for each approach.
+  Canonical workflow for capturing screenshots, previews, and visual verification
+  of the JoyJoin WeChat Mini Program (apps/mini-program). Documents what works,
+  what does not, and exact steps for each approach, including the reusable H5 +
+  Playwright flow that serves PNGs on demand at `http://localhost:9000/:name.png`.
 
 use_when:
   - user asks to screenshot the mini-program
@@ -11,6 +13,7 @@ use_when:
   - user asks to capture the mini-program screen
   - visual verification needed after UI changes
   - design audit requires a pixel reference
+  - setting up H5 screenshot flow for a new page
 
 do_not_use_when:
   - task is editing mini-program code (use mini-program-frontend-excellence)
@@ -28,11 +31,18 @@ strong_triggers:
   - page preview
   - how do I screenshot
   - show me the mini-program
+  - H5 screenshot flow
+  - playwright screenshot mini-program
+  - mock h5 server screenshot
 
 owned_files:
   - apps/mini-program/src/pages/**
+  - scripts/mock-h5-server.mjs
+  - scripts/screenshot-server.mjs
+  - docs/mini-program-screenshot-flow.md
 
-owned_paths: []
+owned_paths:
+  - /.github/skills/mini-program-screenshot-workflow/
 
 owned_symbols: []
 

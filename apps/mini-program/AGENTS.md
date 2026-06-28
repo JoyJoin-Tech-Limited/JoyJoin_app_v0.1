@@ -1,6 +1,6 @@
 # Mini-Program — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-06-18
+> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-06-28
 
 ---
 
@@ -52,6 +52,7 @@
 - API client: `lib/api/api.ts` + `lib/api/authSession.ts` (single source of truth)
 - Brand logo: `components/ui/BrandLogo.tsx` (NOT raw `<Image src="/assets/joyjoin-logo.webp" />`)
 - Icon renderer: `components/ui/JoyJoinIcon.tsx` (NOT raw emoji on primary UI)
+- Missing-archetype placeholder: `components/mascot/MissingArchetypePlaceholder.tsx` (JoyJoin logo mark; no initials fallback)
 - Tag/pill: `components/ui/Chip.tsx` (L1/L2/L3 levels)
 - Mascot: `components/mascot/XiaoyueChatBubble.tsx` (chat-based onboarding removed 2026-05)
 - Welcome coupon banner: `components/FirstTimeCouponBanner.tsx` — payment-flow banner for `WELCOME50`/`WELCOME40`; zero external assets, CSS-only (cream bg + decorative circle), counter animation + confetti burst. See root `AGENTS.md` §2 for full spec.
@@ -139,6 +140,7 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 - **Interest taxonomy v2.0 illustrations (2026-06-18)**: 48 active interests across 6 macro categories are CDN-only. Canonical `imageUrl` lives in `packages/shared/src/interests.ts`; mini-program resolves via `getInterestAssetUrl()` → `cdnAsset()`. 4 refreshed category icon sets are bundled locally with CDN fallback copies.
 - **Never** bundle local PNG archetype art. If canvas needs PNG, use `cdnAsset('/assets/personality/archetypes')`.
 - **Archetype images must not have text overlays** — no archetype-name initials or watermarks on hero art.
+- **`MissingArchetypePlaceholder`** (`apps/mini-program/src/components/mascot/MissingArchetypePlaceholder.tsx`) is the canonical fallback for missing/failed archetype images: it renders the JoyJoin logo mark via `BrandLogo` and must not show initials or text overlays.
 - **Batch C + D ceremony/badges (2026-06-04 Path B local-bundle → 2026-06-16 CDN)**: 8 ceremony WebP in `src/assets/ceremony/` + 9 badge WebP in `src/assets/badges/` (q=55, 600px) are uploaded to CDN; they are no longer copied to `dist/`. Registries in `src/lib/ceremonyHeroes.ts` + `src/lib/milestoneBadges.ts` use `cdnAsset()` (NOT `localAsset()`). PNG masters live in `assets-source/lovart/batch-{c,d}/` and are NOT bundled. Re-encode via `node scripts/optimize-ceremony-batch-c.mjs` / `node scripts/optimize-badges-batch-d.mjs` before committing new tiles, then upload via the CDN workflow.
 
 ---
@@ -159,6 +161,7 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 - **Haptics are mandatory** on non-onboarding interactive surfaces. Intensity: `light` (secondary), `medium` (primary CTA), `success` (emotional peaks).
 - **Completion celebration micro-interaction**: After a final onboarding step API call succeeds, set `isCelebrating` state → `haptics('success')` → wait 500ms → navigate. During the delay, disable the CTA and change text (e.g., "入场卡已确认") for a brief emotional peak before transitioning. Reset `isCelebrating` via `useResetOnShow` for swipe-back safety. See `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` `handleComplete` (2026-06-10).
 - **hoverClass on View-based interactive elements** — `transition: background 0.12s ease` + `rgba($color-primary, 0.06–0.08)` tint.
+- **`$font-mono` token (2026-06-28):** Added to `src/styles/_variables.scss` for monospace numeric readouts (e.g., segmented countdown clocks). Use it for any numeric display that needs tabular alignment.
 
 ---
 
@@ -227,3 +230,14 @@ npx miniprogram-ci upload \
 ## 11. Shared animation hooks
 
 - **`useMiniRevealMotion.ts`** (`src/hooks/useMiniRevealMotion.ts`) — shared reveal-animation hook consumed by `AnalyzingAnimation` (results page), profile-review stagger entries, personality-test card tilt, and squad-unboxing drag-reveal. Provides `shouldReduceMotion` boolean. **Honors only the OS-level `Taro.getSystemInfoSync().reduceMotion` accessibility setting.** The previous benchmark-based low-end gate (`LOW_MOTION_BENCHMARK_LEVEL`) was removed in 2026-06-18 because product defaults now mandate carousel and slot animations; `useDeviceTier()` remains available for surfaces that still need degradation-aware gating.
+
+---
+
+## 12. Events / Footprint tab
+
+- **`FootprintOracleCard`** (`src/components/events/FootprintOracleCard.tsx`) — event card for the "足迹" tab. Renders a segmented Nothing-design-inspired countdown clock, venue-disclosure gating, and status-aware waiting copy. Completed/cancelled/no-show/declined cards are muted with no countdown.
+- **`EventCountdownClock`** (colocated in `FootprintOracleCard.tsx`) — memoized segmented clock sub-component so the parent card does not re-render every second.
+- **`useEventCountdown`** (`src/hooks/useEventCountdown.ts`) — visibility-aware countdown hook returning `display`, structured `segments`, `isUrgent`, `hasStarted`, and `isLive`. Ticks are gated by in-viewport IntersectionObserver state, app hide/show lifecycle, `prefers-reduced-motion`, and `useDeviceTier().isDegradation`.
+- **Venue disclosure rule:** Venue location is hidden when status is `registered`/`pending`/`upcoming`; disclosed only for `matched`/`confirmed`/`venue_unlocked`.
+- **`formatEventDateTime`** (`src/lib/utils/eventDisplay.ts`) — renders `今天`/`明天`/`后天` prefixes for near-term event dates.
+- **Accessibility:** The countdown clock uses `aria-live="polite"` for screen-reader announcements.

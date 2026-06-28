@@ -1,0 +1,211 @@
+import express from 'express'
+import { chromium, devices } from 'playwright'
+
+const app = express()
+const PORT = process.env.SCREENSHOT_PORT || 9000
+const H5_BASE_URL = process.env.H5_BASE_URL || 'http://localhost:5001'
+
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  if (req.method === 'OPTIONS') {
+    res.status(204).end()
+    return
+  }
+  next()
+})
+
+const generators = new Map()
+
+function register(name, generator) {
+  generators.set(name, generator)
+}
+
+app.get('/:name.png', async (req, res) => {
+  const name = req.params.name
+  const generator = generators.get(name)
+  if (!generator) {
+    const available = Array.from(generators.keys()).map(k => `  - ${k}.png`).join('\n')
+    res.status(404).json({
+      error: `No generator registered for "${name}.png"`,
+      available: available || 'none',
+    })
+    return
+  }
+  try {
+    const buffer = await generator()
+    res.setHeader('Content-Type', 'image/png')
+    res.setHeader('Cache-Control', 'no-store')
+    res.send(buffer)
+  } catch (err) {
+    console.error(`[screenshot] ${name} failed`, err)
+    res.status(500).json({ error: String(err.message || err) })
+  }
+})
+
+app.get('/', (req, res) => {
+  const links = Array.from(generators.keys())
+    .map(k => `<li><a href="/${k}.png">/${k}.png</a></li>`)
+    .join('')
+  res.setHeader('Content-Type', 'text/html; charset=utf-8')
+  res.send(`<h1>Screenshot server</h1><ul>${links || '<li>No generators registered</li>'}</ul>`)
+})
+
+// ─── Helpers ─────────────────────────────────────────────────────
+
+async function clearAndSeedStorage(page, extra = {}) {
+  await page.evaluate(() => {
+    localStorage.clear()
+    sessionStorage.clear()
+  })
+  if (Object.keys(extra).length > 0) {
+    await page.evaluate((data) => {
+      Object.entries(data).forEach(([k, v]) => {
+        localStorage.setItem(k, JSON.stringify(v))
+      })
+    }, extra)
+  }
+}
+
+async function waitForContent(page, selector, timeout = 10000) {
+  await page.waitForSelector(selector, { state: 'visible', timeout })
+  await page.waitForTimeout(800)
+}
+
+async function screenshotPage(page) {
+  return page.screenshot({ fullPage: true })
+}
+
+async function withBrowserPage(viewport, fn) {
+  const browser = await chromium.launch({ headless: true })
+  const context = await browser.newContext(viewport)
+  const page = await context.newPage()
+  try {
+    return await fn(page)
+  } finally {
+    await browser.close()
+  }
+}
+
+const DEFAULT_VIEWPORT = {
+  viewport: { width: 375, height: 812 },
+  deviceScaleFactor: 2,
+}
+
+// ─── Generators ──────────────────────────────────────────────────
+
+async function captureEventsPage() {
+  return withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
+    await page.goto(`${H5_BASE_URL}/#/pages/events/index`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+    await page.waitForSelector('.events-page__list', { timeout: 10000 })
+    await page.waitForTimeout(1500)
+    return screenshotPage(page)
+  })
+}
+
+async function captureTierSelector() {
+  return withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
+    await page.goto(
+      `${H5_BASE_URL}/#/pages/icebreaker-session/tier-selector/index?sessionId=test-screenshot-123`,
+      { waitUntil: 'domcontentloaded', timeout: 60000 }
+    )
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+    await page.waitForSelector('.tier-selector__preset-list', { timeout: 10000 })
+    await page.waitForTimeout(1000)
+    return screenshotPage(page)
+  })
+}
+
+const POOL_ID = 'pool-screenshot-001'
+
+async function capturePoolRegistration() {
+  return withBrowserPage(
+    { ...devices['iPhone 13'], viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      const returnContext = {
+        kind: 'pool-registration',
+        userId: 'user-screenshot-001',
+        poolId: POOL_ID,
+        poolTitle: '周末松弛感饭局 · 南山',
+        poolArea: '南山',
+        poolEventType: '饭局',
+        draft: {
+          budgetRange: ['150-200'],
+          eventIntent: ['friends', 'discussion'],
+          preferredLanguages: ['普通话'],
+          dietaryRestrictions: [],
+        },
+        resumeStep: 3,
+        handoffCode: 'NO_ACTIVE_ENTITLEMENT',
+        paymentStatus: 'payment-required',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      }
+
+      await page.goto(`${H5_BASE_URL}/#/pages/pool-registration/index?id=${POOL_ID}`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000,
+      })
+      await clearAndSeedStorage(page, { payment_return_context: returnContext })
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+      await waitForContent(page, '.pool-reg__title')
+      return screenshotPage(page)
+    }
+  )
+}
+
+async function captureEventTicketPayment() {
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      const returnContext = {
+        kind: 'pool-registration',
+        userId: 'user-screenshot-001',
+        poolId: POOL_ID,
+        poolTitle: '周末松弛感饭局 · 南山',
+        poolArea: '南山',
+        poolEventType: '饭局',
+        draft: {},
+        resumeStep: 3,
+        handoffCode: 'NO_ACTIVE_ENTITLEMENT',
+        paymentStatus: 'payment-required',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      }
+
+      await page.goto(`${H5_BASE_URL}/#/pages/event-ticket-payment/index?poolId=${POOL_ID}`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000,
+      })
+      await clearAndSeedStorage(page, { payment_return_context: returnContext })
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+      await waitForContent(page, '.ticket-card')
+      return screenshotPage(page)
+    }
+  )
+}
+
+register('events-footprint-oracle-card', captureEventsPage)
+register('tier-selector-preset-cards', captureTierSelector)
+register('pool-registration-step-0-brief', capturePoolRegistration)
+register('event-ticket-payment', captureEventTicketPayment)
+
+const server = app.listen(PORT, () => {
+  console.log(`[screenshot-server] listening on http://localhost:${PORT}`)
+  console.log(`[screenshot-server] available URLs:`)
+  Array.from(generators.keys()).forEach(k => {
+    console.log(`  http://localhost:${PORT}/${k}.png`)
+  })
+})
+
+process.on('SIGTERM', () => server.close())
+process.on('SIGINT', () => server.close())

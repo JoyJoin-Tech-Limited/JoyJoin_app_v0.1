@@ -1,7 +1,7 @@
 # JoyJoin Developer Quick Reference Guide
 
 **Version:** 2.3
-**Last Updated:** 2026-06-17
+**Last Updated:** 2026-06-28
 **For:** Tech Team Onboarding & Codebase Navigation
 
 ---
@@ -234,6 +234,9 @@ joyjoin-monorepo/
 | Hero promo banner (discover top surface) | `apps/mini-program/src/components/HeroPromoBanner.tsx` — full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles. The hero image is bundled locally (`assets/promo-local/banner-hero-lovart-v1.webp`) with CDN fallback on `onError`. CTA always wired so it never silently disables; `margin-bottom: 8rpx` prevents boundary clipping. Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`, default `true`). Promo copy must not fabricate social-proof metrics. |
 | Status card (empty/error) | `apps/mini-program/src/components/ui/StatusCard.tsx` — unified status surface with Lovart hero illustration (WebP + PNG fallback), title, description, and optional action. Used on Discover and Events for empty states and on Discover for list-fetch error states. |
 | Profile tab (redesign) | `apps/mini-program/src/pages/profile/index.tsx` — social-passport hero with age/city/bio chips, stat cards, milestone badges, menu grid, profile-card share, and one-time 100% completion ceremony. Consumes `GET /api/shell/profile` via `getProfileShell()` with offline-first React Query config and cached-shell fallback; `PrefetchEngine` warms Events/Connections shells after data stabilizes. Feature-flagged by `user.features.profileRedesignEnabled` (env `PROFILE_REDESIGN_ENABLED`, default `true`). Bio adds +10% completion bonus; `PATCH /api/profile` persists the optional 100-character bio. |
+| Footprint event card | `apps/mini-program/src/components/events/FootprintOracleCard.tsx` — event card for the "足迹" tab with a segmented Nothing-design-inspired countdown clock, venue-disclosure gating, and status-aware waiting copy. Completed/cancelled cards are muted with no countdown. Venue location is hidden until registration reaches `matched`/`confirmed`/`venue_unlocked`. |
+| Countdown hook | `apps/mini-program/src/hooks/useEventCountdown.ts` — visibility-aware countdown that returns `display`, structured `segments` (`days/hours/minutes/seconds/progress`), `isUrgent`, `hasStarted`, and `isLive`. Ticks are gated by in-viewport state, app background state, `prefers-reduced-motion`, and degradation-tier devices. |
+| Event display helpers | `apps/mini-program/src/lib/utils/eventDisplay.ts` — `formatEventDateTime` with relative near-term prefixes (`今天`/`明天`/`后天`) and `getJoinedEventDisplayDateTime` for display vs matching-time precedence. |
 
 ```bash
 npm run dev:weapp --workspace=mini-program

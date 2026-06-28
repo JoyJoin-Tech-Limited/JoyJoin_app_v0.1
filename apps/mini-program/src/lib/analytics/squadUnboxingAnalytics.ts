@@ -5,6 +5,7 @@ export type SquadUnboxingEventType =
   | 'squad_unboxing_reveal'
   | 'squad_unboxing_reveal_drag'
   | 'squad_unboxing_reveal_tap'
+  | 'squad_unboxing_card_focus'
 
 export interface SquadUnboxingAnalyticsEvent {
   eventType: SquadUnboxingEventType

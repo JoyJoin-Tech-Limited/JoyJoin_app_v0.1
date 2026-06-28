@@ -92,6 +92,11 @@
     "simulate:personas:retest": "tsx scripts/simulate/run-test-retest.ts --n=5 --personas=all",
     "simulate:expert-packet": "tsx scripts/simulate/generate-expert-packet.ts",
     "simulate:full": "npm run simulate:personas:generate && npm run simulate:personas:run:all && npm run simulate:personas:retest",
-    "simulate:gate": "npm run simulate:personas:generate && npm run simulate:personas:run:ci"
+    "simulate:gate": "npm run simulate:personas:generate && npm run simulate:personas:run:ci",
+    "screenshot:events": "node scripts/screenshot-open.mjs events",
+    "screenshot:tier-selector": "node scripts/screenshot-open.mjs tier-selector",
+    "screenshot:pool-registration": "node scripts/screenshot-open.mjs pool-registration",
+    "screenshot:event-ticket-payment": "node scripts/screenshot-open.mjs event-ticket-payment",
+    "screenshot:help": "node scripts/screenshot-open.mjs --help"
   }
 }

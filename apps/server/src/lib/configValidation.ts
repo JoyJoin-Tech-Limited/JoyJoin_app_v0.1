@@ -126,10 +126,14 @@ function isPaymentsEnabled(env: NodeJS.ProcessEnv): boolean {
   return (env.PAYMENTS_ENABLED ?? "false").toLowerCase() === "true";
 }
 
+function isMockPaymentsEnabled(env: NodeJS.ProcessEnv): boolean {
+  return (env.MOCK_PAYMENTS ?? "false").toLowerCase() === "true";
+}
+
 export function getDirectMiniProgramAppIdConsistencyIssue(
   env: NodeJS.ProcessEnv = process.env,
 ): string | null {
-  if (!isPaymentsEnabled(env)) {
+  if (!isPaymentsEnabled(env) || isMockPaymentsEnabled(env)) {
     return null;
   }
 
@@ -206,6 +210,11 @@ function collectPaymentConfigIssues(
   const warnings: string[] = [];
 
   if (!isPaymentsEnabled(env)) {
+    return { errors, warnings };
+  }
+
+  // Mock payment mode skips real WeChat Pay credentials — used for staging smoke tests.
+  if (isMockPaymentsEnabled(env)) {
     return { errors, warnings };
   }
 

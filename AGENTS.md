@@ -1,6 +1,6 @@
 # JoyJoin — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents. Last updated: 2026-06-17
+> Compact instructions for AI coding agents. Last updated: 2026-06-28
 
 ---
 
@@ -160,6 +160,7 @@ npm run simulate:gate                 # CI gate: generate + run centroids
 - Use `deployment/docker-compose.staging.yml` to run an isolated staging API + Postgres + admin portal on the production host (API port `5001`, admin port `3002`).
 - `deployment/nginx/joyjoin.conf` already includes the `staging.joyjoinapp.com` and `staging.admin.joyjoinapp.com` server blocks.
 - Set `APP_MODE=staging` and `TEST_PAYMENT_PRICE_IN_CENTS=1` in `deployment/.env.staging` to charge ¥0.01.
+- Set `PAYMENTS_ENABLED=true` and `MOCK_PAYMENTS=false` (from GitHub repository variables) to run real WeChat Pay test charges; set `MOCK_PAYMENTS=true` to skip real payment and receive instantly-paid mock orders.
 - Build the mini-program with `TARO_APP_API_BASE_URL=https://staging.joyjoinapp.com`.
 - Manage staging events and feature flags via `https://staging.admin.joyjoinapp.com`.
 - Staging does **not** auto-run migrations; apply `.sql` files manually against `postgres-staging`.
@@ -276,6 +277,8 @@ Admin portal MapPicker uses Tencent Maps JavaScript API (`TENCENT_MAP_JS_KEY`) v
 
 **Mini-program is launch-primary:** `apps/mini-program` is the primary and only shipping user-facing client. The web sandbox (`archived/workspaces/user-client/`) exists for historical reference. Cross-surface rules: `docs/reference/PLATFORM_COORDINATION.md`.
 
+**Squad unboxing card-deck reveal (2026-06-28):** `pages/squad-unboxing/index` renders revealed members as a fanned `SquadDeckStage` of collectible `TeammateCard` components, not a member grid. Tap-to-focus drives `TeammateCardDetail`. Full-body archetype images load from CDN via `ARCHETYPE_ASSET_MAP`; missing archetypes use `MissingArchetypePlaceholder` (JoyJoin logo mark, no initials fallback). A stacked card-back pattern (`/assets/lovart/squad/squad-card-back-pattern-20260628-v1.webp`) decorates the deck; it is preloaded during the `shaking` state. Xiaoyue `coachGuide` cue appears above the deck until the first card tap. `DragRevealRibbon` thumb uses `JoyJoinIcon` (`🎁`) instead of a text arrow. Analytics: `squad_unboxing_card_focus`.
+
 **City Unlock v0.1 (2026-05-19, updated 2026-06-23):** Server-owned city expansion tracking via `user_city_interests` + `city_unlock_progress`. Threshold: 50 interested users triggers `collecting` → `researching` status transition + WeCom ops notification. Atomic count updates via Drizzle `sql` expressions (race-safe). Frontend: GPS auto-filter handles Shenzhen silently; `CityUnlockFeedCard` (bottom of pool list, with Xiaoyue mascot) is the sole entry point for city interest; `CityPickerSheet` and `LocationFilterDrawer` now share a unified `PickerShell` + `SelectableTile` design language (filled-primary selected state, consistent header, spacing, motion, and safe-area handling). City picker keeps search + hot-city grid + full city list + scroll-to-selected + inline celebration; area drawer keeps cluster sections + 2-column district grid + heat badges + pending "待解锁" badge. Analytics source for city interest is `city_feed_card`. Progress page at `pages/city-unlock/index`. Admin report: `GET /api/admin/cities/unlock-report`. `CityUnlockBanner` was removed 2026-06-10 and is dead code — do not reintroduce.
 
 **Archetype asset loading (2026-06-05):**
@@ -388,6 +391,15 @@ Admin portal MapPicker uses Tencent Maps JavaScript API (`TENCENT_MAP_JS_KEY`) v
 - **Profile page layout guard:** `profile-page__scroll` uses `overflow-y: auto` (not `overflow: hidden`) to allow content scrolling. Hero, archetype card, stats, and action rows each have dedicated SCSS blocks; removing any block without updating JSX causes layout collapse. Stats show `—` placeholder while loading (no `0` flash). Archetype card has staggered entrance animation with `prefers-reduced-motion` fallback.
 - **Profile tab wow-elements polish (2026-06-17):** Menu rows use `hoverClass` press feedback with a brand-tinted background transition; primary CTA applies an active `scale(0.98)` transform; the archetype avatar / Xiaoyue greeting use a spring entrance; the share-card action shows a shimmer placeholder while the dynamically-imported poster generator loads. All motion is gated by `prefers-reduced-motion` and `useDeviceTier().isDegradation`.
 - **`usePageTTI` (2026-06-17):** `apps/mini-program/src/hooks/usePageTTI.ts` measures time-to-first-interactive on mini-program pages. Budgets: cold start ≤ 2000 ms, warm/preloaded start ≤ 800 ms. Reports via `logInfo` with `wx.reportAnalytics` fallback; non-blocking and safe to add to any page. Used on the migrated `pages/profile-linked/*` screens.
+
+**Events / Footprint tab — FootprintOracleCard (2026-06-28):**
+- **`FootprintOracleCard`** (`apps/mini-program/src/components/events/FootprintOracleCard.tsx`) — event card for the "足迹" tab. Renders a segmented Nothing-design-inspired countdown clock (monospace digits, Chinese units, 12-block progress bar), venue-disclosure gating, and status-aware waiting copy (`pending`/`registered`/`upcoming`/`confirmed`). Completed (`completed`/`cancelled`/`no_show`/`declined`) cards are muted and show no countdown.
+- **`EventCountdownClock`** (`apps/mini-program/src/components/events/FootprintOracleCard.tsx`) — memoized segmented clock sub-component so the parent card does not re-render every second.
+- **`useEventCountdown`** (`apps/mini-program/src/hooks/useEventCountdown.ts`) — visibility-aware countdown hook returning `display`, structured `segments` (`days/hours/minutes/seconds/progress`), `isUrgent`, `hasStarted`, and `isLive`. Ticks are gated by in-viewport IntersectionObserver state, app hide/show lifecycle, `prefers-reduced-motion`, and `useDeviceTier().isDegradation`. The timer stops once `hasStarted` is true.
+- **Venue disclosure rule:** Venue location is hidden after `报名成功`; it is disclosed only when the registration status is `matched`, `confirmed`, or `venue_unlocked`. Before disclosure the card shows only event type + city/district.
+- **`$font-mono` token (2026-06-28):** Added to `apps/mini-program/src/styles/_variables.scss` for monospace countdown digits. Use it for any numeric readout that needs tabular alignment.
+- **`formatEventDateTime` enhancement:** Now renders `今天`/`明天`/`后天` prefixes for near-term event dates.
+- **Accessibility:** The countdown clock uses `aria-live="polite"` so screen readers announce updates without overwhelming the user.
 
 **Mini-program button styling (2026-05-23):**
 - **CTA buttons use solid brand purple (`$color-primary`, `#8B5CF6`) — no gradient.** Gradient was purged from all mini-program CTAs to avoid "AI-generated" aesthetic. The web client's `docs/design/button-design.md` retains gradient specs for archived user-client; mini-program (launch-primary) uses solid fill exclusively.

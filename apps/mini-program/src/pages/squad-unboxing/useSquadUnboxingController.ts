@@ -14,6 +14,7 @@ import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { haptics } from '../../lib/utils/haptics'
 import { logError, logInfo } from '../../lib/utils/logger'
+import { preloadImage } from '../../lib/utils/imagePreload'
 import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, COLOR_DANGER } from '../../lib/utils/uiConstants'
 import { navigateBackOrEventsTab, openPoolGroupDetail, switchToEventsTab } from '../../lib/navigation/matchingNavigation'
 import {
@@ -24,6 +25,7 @@ import {
   type FlowState,
   type ViewerSpotlight,
 } from './squadUnboxingViewModels'
+import { SQUAD_CARD_BACK_PATTERN_URL } from './SquadDeckStage'
 
 function triggerLightHaptic() {
   if (typeof Taro.vibrateShort === 'function') {
@@ -272,6 +274,11 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
 
     return () => clearTimeout(timer)
   }, [flowState, shouldReduceMotion])
+
+  useEffect(() => {
+    if (flowState !== 'shaking') return
+    void preloadImage(SQUAD_CARD_BACK_PATTERN_URL)
+  }, [flowState])
 
   useEffect(() => {
     if (flowState !== 'revealed') {

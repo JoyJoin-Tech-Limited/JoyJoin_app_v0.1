@@ -1,7 +1,7 @@
 # JoyJoin (悦聚·Joy) - Product Requirements Document
 
 **Version:** 1.6  
-**Last Updated:** 2026-06-15  
+**Last Updated:** 2026-06-28  
 **Platform:** WeChat Mini Program (Taro) — launch-primary  
 **Reference Surface:** Web (React + Vite) — development sandbox / parity reference only, not shipping  
 **Target Market:** Hong Kong & Shenzhen  
@@ -80,6 +80,18 @@ See §1.10 Connection Feedback Flow for full documentation.
 ## 🆕 Recent Updates (Last updated: 2026-06-25)
 
 ### 2026 Milestones (June 2026)
+
+**45. Footprint Tab — Nothing-Design Countdown & Venue Gating** 🕐 *(2026-06-28)*
+- **Scope:** Mini-program "足迹" tab event cards (`apps/mini-program/src/components/events/FootprintOracleCard.tsx`) and the Events page.
+- **Segmented countdown clock:** Nothing-design-inspired segmented clock with monospace digits, Chinese units, and a 12-block progress bar. Memoized `EventCountdownClock` sub-component isolates per-second re-renders from the parent card.
+- **Visibility-aware ticking:** `useEventCountdown` pauses off-screen (IntersectionObserver), on app background (`Taro.onAppHide`/`onAppShow`), under `prefers-reduced-motion`, and on degradation-tier devices (`useDeviceTier().isDegradation`). Returns `display`, structured `segments`, `isUrgent`, `hasStarted`, and `isLive`.
+- **Venue disclosure gating:** Event location is hidden while registration status is `pending`/`registered`/`upcoming` ("报名成功" phase). Venue is disclosed only after successful matching: `matched`/`confirmed`/`venue_unlocked`.
+- **Status-aware waiting copy:** Each pre-event state shows explicit waiting hints — `pending` → "系统正在撮合本场成员，请耐心等待", `registered` → "报名成功，等待系统匹配", `upcoming` → "报名成功，活动即将开始", `confirmed` → "已确认，期待见面".
+- **Completed-state muting:** Cards with `completed`/`cancelled`/`no_show`/`declined` status are muted, show no countdown, and surface a subtle final-state marker.
+- **Date formatting:** `formatEventDateTime` now prefixes near-term dates with `今天`/`明天`/`后天`.
+- **Design token:** Added `$font-mono` to `apps/mini-program/src/styles/_variables.scss` for tabular numeric readouts.
+- **Accessibility:** Countdown clock uses `aria-live="polite"` so screen readers announce updates without overwhelming the user.
+- **Tests:** Added `useEventCountdown.test.ts` (10 tests) and `eventDisplay.test.ts` (14 tests).
 
 **44. End-of-June Docs + Backend Hardening Sync** 🔧 *(2026-06-24 to 2026-06-25)*
 - **Profile-review bio capture:** `pages/onboarding/profile-review/index.tsx` now exposes an optional 1–100 character bio textarea (`一句你的社交签名`). The bio is validated for length, trimmed, and run through `validateContentSafe()` on `POST /api/profile-review/complete`; a non-empty bio contributes +10% to the profile completion score.

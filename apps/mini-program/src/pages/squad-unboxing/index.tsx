@@ -1,13 +1,12 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect, useCallback, useRef, useState } from 'react'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { useJoyJoinNavigation } from '../../hooks/navigation/useJoyJoinNavigation'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
-import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import ChemistryBadge from '../../components/mascot/ChemistryBadge'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import LoadingScreen from '../../components/loading/LoadingScreen'
@@ -17,8 +16,11 @@ import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHin
 import Button from '../../components/ui/Button'
 import { haptics } from '../../lib/utils/haptics'
 import { CosmicBackground } from '../../components/decorative/CosmicBackground'
+import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
 import { BlindBoxVisual } from './BlindBoxVisual'
 import DragRevealRibbon from './DragRevealRibbon'
+import SquadDeckStage from './SquadDeckStage'
+import TeammateCardDetail from './TeammateCardDetail'
 import {
   formatDateTime,
   getMemberName,
@@ -66,6 +68,26 @@ export default function SquadUnboxingPage() {
   const { isDegradation } = useDeviceTier()
   const { user: currentUser } = useAuthGuard()
   const dragRevealEnabled = currentUser?.features?.squadUnboxingDragRevealEnabled ?? true
+
+  const [focusedCardIndex, setFocusedCardIndex] = useState(0)
+  const [hasTappedCard, setHasTappedCard] = useState(false)
+
+  const handleCardFocus = useCallback((index: number) => {
+    setFocusedCardIndex(index)
+    setHasTappedCard(true)
+    const member = members[index]
+    squadUnboxingAnalytics.track('squad_unboxing_card_focus', {
+      index,
+      userId: member?.userId,
+      isCurrentUser: member?.userId === currentUserId,
+      hasArchetype: Boolean(member?.archetype),
+    })
+  }, [members, currentUserId])
+
+  const focusedMember = members[focusedCardIndex] ?? null
+  const focusedViewerPair = focusedMember
+    ? (viewerPairByMemberId.get(focusedMember.userId) ?? null)
+    : null
 
   const prevVenueStatusRef = useRef<string | null>(null)
 
@@ -231,69 +253,34 @@ export default function SquadUnboxingPage() {
               </Card>
 
               <Text className='squad-unboxing__section-label'>今晚同桌的是</Text>
-              <View className='squad-unboxing__member-grid'>
-                {members.map((member, index) => {
-                  const name = getMemberName(member)
-                  const isCurrentUser = member.userId === currentUserId
-                  const industryLabel = member.industryNicheLabel || member.industryCategoryLabel
-                  const visibleInterests = (member.topInterests ?? []).slice(0, 3)
-                  const viewerPair = viewerPairByMemberId.get(member.userId)
-
-                  return (
-                    <Card
-                      key={member.userId}
-                      className={`squad-unboxing__member-card${isCurrentUser ? ' squad-unboxing__member-card--current' : ''}`}
-                      style={{ animationDelay: shouldReduceMotion ? '0ms' : `${index * 120}ms` }}
-                    >
-                      <View className='squad-unboxing__member-top'>
-                        <View className='squad-unboxing__member-avatar-wrap'>
-                          <View className='squad-unboxing__member-avatar squad-unboxing__member-avatar--placeholder'>
-                            <ArchetypeHead
-                              archetype={member.archetype}
-                              size={72}
-                              fallbackText={name}
-                            />
-                          </View>
-                          {isCurrentUser ? (
-                            <View className='squad-unboxing__member-badge'>
-                              <Text className='squad-unboxing__member-badge-text'>我</Text>
-                            </View>
-                          ) : null}
-                        </View>
-
-                        <View className='squad-unboxing__member-copy'>
-                          <Text className='squad-unboxing__member-name'>{name}</Text>
-
-                          {member.ageLabel || industryLabel ? (
-                            <Text className='squad-unboxing__member-meta'>
-                              {[member.ageLabel, industryLabel].filter(Boolean).join(' · ')}
-                            </Text>
-                          ) : null}
-                          {viewerPair?.connectionPointsWithRarity?.[0]?.text ?? viewerPair?.connectionPoints?.[0] ? (
-                            <Text className='squad-unboxing__member-signal'>
-                              {viewerPair.connectionPointsWithRarity?.[0]?.text ?? viewerPair.connectionPoints?.[0]}
-                            </Text>
-                          ) : viewerPair ? (
-                            <Text className='squad-unboxing__member-signal'>
-                              默契度 {viewerPair.chemistryScore}
-                            </Text>
-                          ) : null}
-                        </View>
-                      </View>
-
-                      {visibleInterests.length > 0 ? (
-                        <View className='squad-unboxing__member-interests'>
-                          {visibleInterests.map((interest) => (
-                            <View key={interest} className='squad-unboxing__member-interest-tag'>
-                              <Text className='squad-unboxing__member-interest-text'>{interest}</Text>
-                            </View>
-                          ))}
-                        </View>
-                      ) : null}
-                    </Card>
-                  )
-                })}
-              </View>
+              {!hasTappedCard ? (
+                <View className='squad-unboxing__deck-cue'>
+                  <Image
+                    className='squad-unboxing__deck-cue-mascot'
+                    mode='aspectFit'
+                    src={getXiaoyueExpressionAsset('coachGuide')}
+                    aria-hidden='true'
+                  />
+                  <Text className='squad-unboxing__deck-cue-text'>
+                    点击卡片，看看你和这桌的连接
+                  </Text>
+                </View>
+              ) : null}
+              <SquadDeckStage
+                members={members}
+                currentUserId={currentUserId}
+                viewerPairByMemberId={viewerPairByMemberId}
+                focusedIndex={focusedCardIndex}
+                reduceMotion={shouldReduceMotion}
+                isDegradation={isDegradation}
+                onFocusChange={handleCardFocus}
+              />
+              <Text className='squad-unboxing__deck-hint'>点击任意卡片，看看你们的连接</Text>
+              <TeammateCardDetail
+                member={focusedMember}
+                viewerPair={focusedViewerPair}
+                visible={flowState === 'revealed'}
+              />
             </View>
 
             <Card className='squad-unboxing__info-card'>

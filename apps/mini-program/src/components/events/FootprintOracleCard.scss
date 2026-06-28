@@ -3,21 +3,21 @@
 
 // ─── Footprint Oracle Card ──────────────────────────────────────
 // Mirror of Discover's Oracle Card shell, repurposed for "我的足迹".
-// Status-first layout with LED countdown for upcoming/in-progress events.
+// Status-first layout with Nothing-design-inspired segmented countdown.
 // ─────────────────────────────────────────────────────────────────
 
 .footprint-oracle-card {
   position: relative;
   box-sizing: border-box;
   width: 100%;
-  min-height: 280rpx;
-  padding: 24rpx $spacing-lg;
+  min-height: 288rpx;
+  padding: 28rpx $spacing-lg;
   border-radius: $card-radius-sm;
   border: 2rpx solid rgba($color-surface, 0.9);
   overflow: hidden;
   opacity: 0;
   transform: translateY(18rpx);
-  animation: footprint-oracle-card-enter 0.34s ease-out forwards;
+  animation: footprint-oracle-card-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   will-change: transform, opacity;
   contain: layout style;
 
@@ -48,11 +48,34 @@
     box-shadow: 0 8rpx 32rpx rgba($color-archetype-calm, 0.1);
   }
 
+  // Matched-state celebration micro-moment: warmer shadow + subtle shimmer.
+  &--matched {
+    box-shadow: 0 12rpx 40rpx rgba($color-archetype-fire, 0.16);
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background: linear-gradient(
+        105deg,
+        transparent 40%,
+        rgba($color-text-white, 0.18) 50%,
+        transparent 60%
+      );
+      background-size: 220% 100%;
+      animation: footprint-oracle-matched-shimmer 2.6s ease-in-out infinite;
+      opacity: 0.6;
+    }
+  }
+
   // Muted treatment for terminal states (completed / cancelled).
   &--terminal {
     .footprint-oracle-card__title,
     .footprint-oracle-card__date-time,
     .footprint-oracle-card__location,
+    .footprint-oracle-card__waiting-hint,
     .footprint-oracle-card__footer-hint {
       opacity: 0.78;
     }
@@ -63,6 +86,14 @@
 
     .footprint-oracle-card__pulse-dot {
       animation: none;
+    }
+
+    .footprint-oracle-card__clock-progress-block {
+      background: rgba($color-text-primary, 0.08);
+    }
+
+    &::after {
+      display: none;
     }
   }
 
@@ -76,6 +107,35 @@
     animation: none;
     opacity: 1;
     transform: none;
+
+    &::after {
+      display: none;
+    }
+
+    .footprint-oracle-card__clock-progress-block {
+      transition: none;
+    }
+  }
+
+  &--reduced-motion {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+
+    &::after {
+      display: none;
+    }
+
+    .footprint-oracle-card__pulse-dot--live,
+    .footprint-oracle-card__clock-progress-block--urgent,
+    .footprint-oracle-card__clock-started-dot {
+      animation: none !important;
+    }
+
+    .footprint-oracle-card__clock-progress-block {
+      transition: none !important;
+    }
   }
 
   // ── Event-type corner vignette ────────────────────────────────
@@ -94,19 +154,22 @@
   // ── Topline (status pill + countdown) ─────────────────────────
   &__topline {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     margin-bottom: $spacing-sm;
+    gap: $spacing-sm;
   }
 
   &__pulse-pill {
     display: inline-flex;
     align-items: center;
     gap: $spacing-xs;
-    padding: $spacing-xs $spacing-sm;
+    padding: 10rpx $spacing-sm;
     border-radius: 999rpx;
     background: rgba($color-primary, 0.08);
-    max-width: 60%;
+    flex-shrink: 0;
+    max-width: 52%;
+    min-height: 44rpx;
   }
 
   &__pulse-dot {
@@ -126,18 +189,107 @@
     @include text-truncate;
   }
 
-  &__countdown {
-    font-family: $font-en-brand;
+  // ── Nothing-design-inspired segmented clock ───────────────────
+  &__clock {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+    gap: 10rpx;
+    max-width: 48%;
+
+    &--started {
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: $spacing-xs;
+      min-height: 56rpx;
+      padding: 0 $spacing-md;
+      border-radius: 999rpx;
+      background: rgba($color-text-primary, 0.06);
+    }
+  }
+
+  &__clock-started-dot {
+    width: 10rpx;
+    height: 10rpx;
+    border-radius: 50%;
+    background: var(--clock-accent, $color-primary);
+    animation: footprint-oracle-started-pulse 1.8s ease-in-out infinite;
+  }
+
+  &__clock-started-label {
+    font-family: $font-mono;
     font-size: $font-size-sm;
     font-weight: $font-weight-bold;
-    color: $color-text-secondary;
+    color: var(--clock-accent, $color-text-secondary);
     letter-spacing: 0.04em;
-    flex-shrink: 0;
-    margin-left: $spacing-sm;
+    line-height: 1;
+  }
+
+  &__clock-digits {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 4rpx;
+  }
+
+  &__clock-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 40rpx;
+  }
+
+  &__clock-value {
+    font-family: $font-mono;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    font-variant-numeric: tabular-nums;
+    color: $color-text-primary;
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+
+  &__clock-unit {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-muted;
+    line-height: 1.2;
+    margin-top: 4rpx;
+  }
+
+  &__clock-separator {
+    font-family: $font-mono;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: $color-text-tertiary;
+    line-height: 1;
+    padding: 0 2rpx;
+    transform: translateY(-2rpx);
+  }
+
+  &__clock-progress {
+    display: flex;
+    gap: 4rpx;
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  &__clock-progress-block {
+    width: 12rpx;
+    height: 5rpx;
+    border-radius: 1rpx;
+    background: rgba($color-text-primary, 0.1);
+    transition: background 0.25s ease;
+
+    &--filled {
+      background: var(--clock-accent, $color-primary);
+    }
 
     &--urgent {
-      color: $color-error;
-      animation: footprint-oracle-countdown-pulse 1.2s ease-in-out infinite;
+      animation: footprint-oracle-clock-block-pulse 1.2s ease-in-out infinite;
     }
   }
 
@@ -167,7 +319,7 @@
   &__date-time {
     display: block;
     font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
+    font-weight: $font-weight-semibold;
     color: $color-text-secondary;
     line-height: 1.5;
     margin-bottom: 4rpx;
@@ -180,6 +332,15 @@
     color: $color-text-muted;
     line-height: 1.4;
     @include text-truncate;
+  }
+
+  &__waiting-hint {
+    display: block;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    line-height: 1.5;
+    margin-top: 6rpx;
   }
 
   // ── Footer hint ───────────────────────────────────────────────
@@ -214,9 +375,19 @@
   50% { opacity: 0.5; transform: scale(1.3); }
 }
 
-@keyframes footprint-oracle-countdown-pulse {
+@keyframes footprint-oracle-started-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(1.25); }
+}
+
+@keyframes footprint-oracle-clock-block-pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.55; }
+  50% { opacity: 0.45; }
+}
+
+@keyframes footprint-oracle-matched-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 // ─── Reduced motion ──────────────────────────────────────────────
@@ -226,13 +397,19 @@
     opacity: 1 !important;
     transform: none !important;
     transition: none !important;
+
+    &::after {
+      display: none !important;
+    }
   }
 
-  .footprint-oracle-card__pulse-dot--live {
+  .footprint-oracle-card__pulse-dot--live,
+  .footprint-oracle-card__clock-started-dot,
+  .footprint-oracle-card__clock-progress-block--urgent {
     animation: none !important;
   }
 
-  .footprint-oracle-card__countdown--urgent {
-    animation: none !important;
+  .footprint-oracle-card__clock-progress-block {
+    transition: none !important;
   }
 }

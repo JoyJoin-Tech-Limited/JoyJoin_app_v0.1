@@ -31,6 +31,9 @@ This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 - `src/pages/blind-box-payment/`, `src/pages/payment-verification/` — JSAPI payment + post-pay polling
 - `src/pages/event-ticket-payment/` — paid event-ticket registration with ceremony success/verifying states
 - `src/components/HeroPromoBanner.tsx` — top-of-discover hero promo banner (full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles). Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`)
+- `src/components/events/FootprintOracleCard.tsx` — "足迹" tab event card with segmented Nothing-design-inspired countdown clock, venue gating, and status-aware waiting copy. Completed/cancelled states are muted; venue location is disclosed only after `matched`/`confirmed`/`venue_unlocked`.
+- `src/hooks/useEventCountdown.ts` — visibility-aware countdown hook returning `display`, `segments`, `isUrgent`, `hasStarted`, `isLive`. Gated by viewport visibility, app background, reduced-motion, and device tier.
+- `src/lib/utils/eventDisplay.ts` — `formatEventDateTime` (with `今天`/`明天`/`后天` relative prefixes) and `getJoinedEventDisplayDateTime` for display-time vs matching-time precedence.
 - `src/pages/profile/index.tsx` — redesigned "我的" profile tab (social-passport hero with age/city/bio chips, stats, milestones, menu grid, profile-card share, one-time 100% completion ceremony). Uses `GET /api/shell/profile` via `getProfileShell()` with offline-first query config and cached-shell fallback. Feature-flagged by `user.features.profileRedesignEnabled` (env `PROFILE_REDESIGN_ENABLED`, default `true`). Bio contributes +10% completion bonus; empty bio shows a dashed CTA to edit. Share-card generation lives in `src/pages/profile/profilePoster.ts` and `src/pages/profile/useProfileShareCard.ts`; `generateProfileSharePoster` is dynamically imported on first tap, with `ShareCardShimmer` providing reduced-motion/degradation-gated feedback. **2026-06-24 hardening note:** some intended polish (avatar image rendering, dynamic subtitle, connection-count stat, profile-linked navigation routes) is actively being aligned in follow-up passes.
 
 ---
@@ -69,8 +72,10 @@ src/
 │   ├── landing/         # Landing-page-specific components (BondingCloud)
 │   ├── mascot/          # XiaoyueSpriteAnimator, XiaoyueChatBubble, XiaoyueEmptyState, etc.
 │   ├── discover/        # Discover feed components (OracleCard, CompatibilityIndicator, ParticipantPresenceStrip). Empty-state presence strip uses a breathing accent ring + invitation pill (首座留给你).
+│   ├── events/          # Events / footprint components (FootprintOracleCard, EventCountdownClock)
 │   └── ContentBlockedError.tsx  # Inline field error for sensitive-word violations; field-aware hints, tap-to-dismiss, haptics, aria-live, reduced-motion. Used in edit-profile and onboarding essential-data forms.
 ├── hooks/               # Custom React hooks
+│   ├── useEventCountdown.ts # Visibility-aware countdown with segments/progress; gates ticking by viewport, app background, reduced-motion, and degradation tier
 │   ├── useStaggerMount.ts   # Single RAF mount trigger for CSS-staggered entrances
 │   ├── useResetOnShow.ts    # Resets transient navigation/submit flags on page re-show (swipe-back safety)
 │   ├── useUnload.ts         # Page unload lifecycle cleanup (timer leaks, refs, subscriptions)
