@@ -32,6 +32,44 @@ if [[ -z "${POSTGRES_PASSWORD:-}" ]]; then
     exit 1
 fi
 
+PAYMENTS_ENABLED_NORMALIZED="$(printf '%s' "${PAYMENTS_ENABLED:-false}" | tr '[:upper:]' '[:lower:]')"
+MOCK_PAYMENTS_NORMALIZED="$(printf '%s' "${MOCK_PAYMENTS:-false}" | tr '[:upper:]' '[:lower:]')"
+
+if [[ "$PAYMENTS_ENABLED_NORMALIZED" == "true" && "$MOCK_PAYMENTS_NORMALIZED" != "true" ]]; then
+    REQUIRED_WECHAT_PAY_VARS=(
+        WECHAT_PAY_APP_ID
+        WECHAT_PAY_MCH_ID
+        WECHAT_PAY_SERIAL_NO
+        WECHAT_PAY_PRIVATE_KEY
+        WECHAT_PAY_APIV3_KEY
+    )
+
+    MISSING_WECHAT_PAY_VARS=()
+    for var_name in "${REQUIRED_WECHAT_PAY_VARS[@]}"; do
+        if [[ -z "${!var_name:-}" ]]; then
+            MISSING_WECHAT_PAY_VARS+=("$var_name")
+        fi
+    done
+
+    if [[ ${#MISSING_WECHAT_PAY_VARS[@]} -gt 0 ]]; then
+        echo "❌ Real staging payments are enabled but required WeChat Pay env vars are missing:"
+        printf '   - %s\n' "${MISSING_WECHAT_PAY_VARS[@]}"
+        echo "   Set these GitHub secrets before deploying real ¥0.01 payments, or set MOCK_PAYMENTS=true for mock QA."
+        exit 1
+    fi
+
+    APIV3_KEY_BYTES="$(printf '%s' "${WECHAT_PAY_APIV3_KEY:-}" | wc -c | tr -d ' ')"
+    if [[ "$APIV3_KEY_BYTES" != "32" ]]; then
+        echo "❌ WECHAT_PAY_APIV3_KEY must be exactly 32 bytes for WeChat Pay API v3; got ${APIV3_KEY_BYTES} bytes"
+        exit 1
+    fi
+
+    if [[ "${WECHAT_PAY_APP_ID:-}" != "${WECHAT_APPID:-}" ]]; then
+        echo "❌ WECHAT_PAY_APP_ID must match WECHAT_APPID for mini-program JSAPI payments"
+        exit 1
+    fi
+fi
+
 # Safety guard: ensure a staging deploy never targets the production database.
 # CI writes .env.staging from STAGING_* secrets; this assertion catches drift.
 if [[ "${DATABASE_URL:-}" != *"joyjoin_staging"* ]] && \
@@ -111,6 +149,31 @@ for f in "$REPO_ROOT/$MIGRATIONS_DIR"/*.sql; do
     docker exec -i postgres-staging \
         psql "postgresql://joyjoin:${POSTGRES_PASSWORD}@localhost:5432/joyjoin_staging" < "$f"
 done
+
+echo "💳 Step 4.5: Sync staging payment feature flag with runtime env..."
+docker exec -i postgres-staging \
+    psql "postgresql://joyjoin:${POSTGRES_PASSWORD}@localhost:5432/joyjoin_staging" <<SQL
+INSERT INTO feature_flags (key, value, description, updated_at, updated_by)
+VALUES (
+  'paymentsEnabled',
+  '${PAYMENTS_ENABLED_NORMALIZED}',
+  'Staging payment kill switch synced from PAYMENTS_ENABLED during deploy',
+  now(),
+  'deploy-staging'
+)
+ON CONFLICT (key)
+DO UPDATE SET
+  value = EXCLUDED.value,
+  description = EXCLUDED.description,
+  updated_at = now(),
+  updated_by = 'deploy-staging';
+SQL
+
+if [[ "$PAYMENTS_ENABLED_NORMALIZED" == "true" ]]; then
+    echo "✅ Staging paymentsEnabled feature flag set to true"
+else
+    echo "⚠️  Staging paymentsEnabled feature flag set to false"
+fi
 
 echo "🏥 Step 5: Verify staging runtime health..."
 MAX_HEALTH_CHECK_ATTEMPTS="${MAX_HEALTH_CHECK_ATTEMPTS:-10}"

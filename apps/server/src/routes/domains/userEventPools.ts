@@ -28,7 +28,6 @@ import { recordPoolCardCopyCache } from "../../middleware/metrics";
 import { enrichProfileFromRegistration } from "../../lib/profileEnrichment";
 import { logger } from "../../lib/logger";
 import { captureLocationSnapshot } from "../../lib/captureLocationSnapshot";
-import { isSingleTestMode } from "../../lib/isSingleTestMode";
 import { getFeatureFlag, getFeatureFlagSync } from "../../lib/featureFlags";
 import { shellCache } from "../../lib/shellCache";
 import { computeOracleCardFields } from "../../lib/oracleCardComputation";
@@ -541,12 +540,11 @@ export function registerUserEventPoolRoutes(app: Express): void {
         });
       }
 
-      // ── Single-test mode bypass ──────────────────────────────────────
-      // In single-test mode (APP_MODE=test or ENABLE_SINGLE_TEST_MODE=true),
-      // the `subscriptions` and `event_credit_grants` tables may not exist
-      // in the test database. Skip the DB queries entirely and treat all
-      // registrations as entitled.
-      const isTestMode = isSingleTestMode();
+      // ── Unit/integration test bypass ─────────────────────────────────
+      // Only APP_MODE=test may bypass entitlement storage because local test
+      // databases may omit `subscriptions` and `event_credit_grants`.
+      // Staging single-test mode must still exercise the real payment path.
+      const isTestMode = (process.env.APP_MODE ?? "production") === "test";
       let subscription: any;
       let availableEventCredits: number;
       let entitlementMode: string | null;
