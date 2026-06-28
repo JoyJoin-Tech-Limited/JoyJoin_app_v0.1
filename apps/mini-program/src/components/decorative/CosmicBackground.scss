@@ -1,0 +1,7 @@
+.cosmic-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, #1E1B4B 0%, #2E1065 50%, #23123D 100%);
+}

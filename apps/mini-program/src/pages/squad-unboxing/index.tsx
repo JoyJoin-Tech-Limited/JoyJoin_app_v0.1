@@ -16,6 +16,7 @@ import ConnectionPointPill from '../../components/ConnectionPointPill'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import Button from '../../components/ui/Button'
 import { haptics } from '../../lib/utils/haptics'
+import { CosmicBackground } from '../../components/decorative/CosmicBackground'
 import { BlindBoxVisual } from './BlindBoxVisual'
 import DragRevealRibbon from './DragRevealRibbon'
 import {
@@ -119,6 +120,7 @@ export default function SquadUnboxingPage() {
 
   return (
     <View className={pageClassName}>
+      {flowState === 'revealed' && <CosmicBackground />}
       <ScrollView className='squad-unboxing__scroll' scrollY enhanced showScrollbar={false}>
         <View className='squad-unboxing__header'>
           <Image
