@@ -9,6 +9,7 @@ import { ARCHETYPE_NAMES } from "../../archetypeConfig";
 import { prefetchAnalysisIfReady } from "../../xiaoyueAnalysisService";
 import { annotateOptionsWithCommentary } from "@shared/personality";
 import { captureLocationSnapshot } from "../../lib/captureLocationSnapshot";
+import { shellCache } from "../../lib/shellCache";
 import { buildDefaultPreferencesFromArchetype } from "../../lib/matchCompass";
 import { db } from "../../db";
 import { users } from "@shared/schema";
@@ -42,6 +43,30 @@ async function writeDefaultPreferenceDNA(userId: string, primaryArchetype: strin
       archetype: primaryArchetype,
       error: dnaError instanceof Error ? dnaError.message : String(dnaError),
     });
+  }
+}
+
+/** Awards welcome coupon (WELCOME50 / WELCOME40) to user after first test completion, if not already awarded. */
+async function awardWelcomeCouponIfNeeded(userId: string, s: typeof storage): Promise<void> {
+  try {
+    const welcomeCoupon50 = await s.getCouponByCode('WELCOME50');
+    const welcomeCoupon40 = await s.getCouponByCode('WELCOME40');
+    const welcomeCoupon = welcomeCoupon50 ?? welcomeCoupon40;
+    if (welcomeCoupon) {
+      const existingCoupons = await s.getUserCoupons(userId);
+      const alreadyHas = existingCoupons.some((uc: any) => uc.coupon_id === welcomeCoupon.id);
+      if (!alreadyHas) {
+        await s.createUserCoupon({
+          userId,
+          couponId: welcomeCoupon.id,
+          source: 'registration_complete',
+        });
+        shellCache.invalidateUser(userId);
+        logger.info(`[Registration] Awarded welcome coupon ${welcomeCoupon.code} to user ${userId}`);
+      }
+    }
+  } catch (couponError) {
+    logger.error("Error awarding welcome coupon:", { error: couponError instanceof Error ? couponError.message : String(couponError) });
   }
 }
 
@@ -233,6 +258,7 @@ export function registerAssessmentV4Routes(app: Express): void {
             // Also sync the user flag so nextStep doesn't loop back to personality-test
             if (userId) {
               await storage.markPersonalityTestComplete(userId);
+              await awardWelcomeCouponIfNeeded(userId, storage);
             }
           } catch (syncErr) {
             logger.error('[V4 Start] Stale session cleanup failed', {
@@ -519,6 +545,8 @@ export function registerAssessmentV4Routes(app: Express): void {
           
           // Mark personality test as complete
           await storage.markPersonalityTestComplete(session.userId);
+          // Award welcome coupon after first test completion
+          await awardWelcomeCouponIfNeeded(session.userId, storage);
 
           // Write archetype-derived Match Compass default DNA for first-time users
           await writeDefaultPreferenceDNA(session.userId, primaryArchetype);
@@ -822,6 +850,8 @@ export function registerAssessmentV4Routes(app: Express): void {
           });
 
           await storage.markPersonalityTestComplete(session.userId);
+          // Award welcome coupon after first test completion
+          await awardWelcomeCouponIfNeeded(session.userId, storage);
 
           // Write archetype-derived Match Compass default DNA for first-time users
           await writeDefaultPreferenceDNA(session.userId, primaryArchetype);
