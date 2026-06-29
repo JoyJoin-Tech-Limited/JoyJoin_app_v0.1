@@ -14,8 +14,8 @@ import Card from '../../components/ui/Card'
 import ConnectionPointPill from '../../components/ConnectionPointPill'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import Button from '../../components/ui/Button'
+import TypewriterText from '../../components/ui/TypewriterText'
 import { haptics } from '../../lib/utils/haptics'
-import { CosmicBackground } from '../../components/decorative/CosmicBackground'
 import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
 import { BlindBoxVisual } from './BlindBoxVisual'
 import DragRevealRibbon from './DragRevealRibbon'
@@ -59,30 +59,42 @@ export default function SquadUnboxingPage() {
     rootClassName,
     shouldReduceMotion,
     confirmAttendanceMutation,
+    isSubmitting,
+    showSuccessOverlay,
+    archetypeMixCopy,
     handleOpenBox,
     handleConfirmAttendance,
     handleOpenGroupDetail,
+    handleSharePosterTap,
     handleSkip,
+    refetch,
   } = useSquadUnboxingController({ groupId, routerParams: router.params })
 
   const { isDegradation } = useDeviceTier()
   const { user: currentUser } = useAuthGuard()
   const dragRevealEnabled = currentUser?.features?.squadUnboxingDragRevealEnabled ?? true
 
-  const [focusedCardIndex, setFocusedCardIndex] = useState(0)
+  const [focusedCardIndex, setFocusedCardIndex] = useState(-1)
   const [hasTappedCard, setHasTappedCard] = useState(false)
 
   const handleCardFocus = useCallback((index: number) => {
-    setFocusedCardIndex(index)
-    setHasTappedCard(true)
-    const member = members[index]
-    squadUnboxingAnalytics.track('squad_unboxing_card_focus', {
-      index,
-      userId: member?.userId,
-      isCurrentUser: member?.userId === currentUserId,
-      hasArchetype: Boolean(member?.archetype),
+    setFocusedCardIndex((current) => {
+      const next = current === index ? -1 : index
+      if (next !== -1) {
+        setHasTappedCard(true)
+      }
+      const member = members[next >= 0 ? next : index]
+      squadUnboxingAnalytics.track('squad_unboxing_card_focus', {
+        source: 'deck_tap',
+        cardIndex: next >= 0 ? next : index,
+        focusedUserId: member?.userId,
+        previousIndex: current,
+        groupId,
+        screen: 'squad-unboxing',
+      })
+      return next
     })
-  }, [members, currentUserId])
+  }, [members, groupId])
 
   const focusedMember = members[focusedCardIndex] ?? null
   const focusedViewerPair = focusedMember
@@ -132,9 +144,16 @@ export default function SquadUnboxingPage() {
           <Text className='squad-unboxing__error-text'>
             {fetchError ? '加载小队信息没成功' : '没有找到小队信息'}
           </Text>
-          <Button variant='secondary' className='squad-unboxing__error-btn' onClick={() => navigateBack()}>
-            返回
-          </Button>
+          <View className='squad-unboxing__error-actions'>
+            {fetchError ? (
+              <Button variant='primary' className='squad-unboxing__error-btn' onClick={() => refetch()} loading={isLoading}>
+                重试
+              </Button>
+            ) : null}
+            <Button variant='secondary' className='squad-unboxing__error-btn' onClick={() => navigateBack()}>
+              返回
+            </Button>
+          </View>
         </View>
       </View>
     )
@@ -142,7 +161,6 @@ export default function SquadUnboxingPage() {
 
   return (
     <View className={pageClassName}>
-      {flowState === 'revealed' && <CosmicBackground />}
       <ScrollView className='squad-unboxing__scroll' scrollY enhanced showScrollbar={false}>
         <View className='squad-unboxing__header'>
           <Image
@@ -166,6 +184,46 @@ export default function SquadUnboxingPage() {
             ) : null}
           </View>
         </View>
+
+        {flowState === 'revealed' ? (
+          <View className='squad-unboxing__analysis-bubble'>
+            <View className='squad-unboxing__analysis-bubble-inner'>
+              <Image
+                className='squad-unboxing__analysis-bubble-mascot'
+                mode='aspectFit'
+                src={getXiaoyueExpressionAsset('matchSuccess')}
+                aria-hidden='true'
+              />
+              <View className='squad-unboxing__analysis-bubble-bubble'>
+                <TypewriterText
+                  className='squad-unboxing__analysis-bubble-text'
+                  text={
+                    [
+                      '盒子打开了！',
+                      archetypeMixCopy,
+                      groupAnalysis?.groupThemeCompanion ||
+                        group.matchExplanation ||
+                        `${DEFAULT_MASCOT_DISPLAY_NAME}觉得这桌会聊得很自然。`,
+                    ]
+                      .filter(Boolean)
+                      .join('')
+                  }
+                  speed={45}
+                  delay={180}
+                  maxDuration={3000}
+                  enabled={!shouldReduceMotion}
+                  showCursor={false}
+                  onComplete={() => {
+                    squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
+                      groupId,
+                      screen: 'squad-unboxing',
+                    })
+                  }}
+                />
+              </View>
+            </View>
+          </View>
+        ) : null}
 
         {flowState === 'ready' ? (
           <Card className='squad-unboxing__blind-box-card'>
@@ -271,6 +329,7 @@ export default function SquadUnboxingPage() {
                 currentUserId={currentUserId}
                 viewerPairByMemberId={viewerPairByMemberId}
                 focusedIndex={focusedCardIndex}
+                hasTappedCard={hasTappedCard}
                 reduceMotion={shouldReduceMotion}
                 isDegradation={isDegradation}
                 onFocusChange={handleCardFocus}
@@ -550,22 +609,53 @@ export default function SquadUnboxingPage() {
           <Button
             className='squad-unboxing__confirm-btn'
             onClick={handleConfirmAttendance}
-            disabled={confirmAttendanceMutation.isPending}
-            loading={confirmAttendanceMutation.isPending}
+            disabled={isSubmitting || confirmAttendanceMutation.isPending}
+            loading={isSubmitting || confirmAttendanceMutation.isPending}
           >
-            {confirmAttendanceMutation.isPending ? '确认中…' : '确认出席'}
+            {showSuccessOverlay ? '座位已锁定' : isSubmitting ? '确认中…' : '确认出席'}
           </Button>
 
-          <Button
-            variant='secondary'
-            className='squad-unboxing__detail-btn'
-            onClick={handleOpenGroupDetail}
-          >
-            查看活动详情
-          </Button>
+          <View className='squad-unboxing__action-row'>
+            <Button
+              variant='secondary'
+              className='squad-unboxing__share-btn'
+              onClick={handleSharePosterTap}
+            >
+              生成队伍海报
+            </Button>
 
-          <View className='squad-unboxing__skip-link' onClick={handleSkip}>
+            <Button
+              variant='secondary'
+              className='squad-unboxing__detail-btn'
+              onClick={handleOpenGroupDetail}
+            >
+              查看活动详情
+            </Button>
+          </View>
+
+          <View
+            className='squad-unboxing__skip-link'
+            hoverClass='squad-unboxing__skip-link--pressed'
+            onClick={handleSkip}
+            role='button'
+            aria-label='稍后再看'
+          >
             <Text>稍后再看</Text>
+          </View>
+        </View>
+      ) : null}
+
+      {showSuccessOverlay ? (
+        <View className='squad-unboxing__success-overlay' role='status' aria-live='polite'>
+          <View className='squad-unboxing__success-card'>
+            <Image
+              className='squad-unboxing__success-mascot'
+              mode='aspectFit'
+              src={getXiaoyueExpressionAsset('actionSuccess')}
+              aria-hidden='true'
+            />
+            <Text className='squad-unboxing__success-title'>座位已锁定</Text>
+            <Text className='squad-unboxing__success-subtitle'>解锁新羁绊 · 准备见面吧</Text>
           </View>
         </View>
       ) : null}

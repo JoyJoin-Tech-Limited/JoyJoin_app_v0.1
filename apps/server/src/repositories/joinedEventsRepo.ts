@@ -17,6 +17,71 @@ import { events, eventAttendance, eventPools, eventPoolRegistrations, eventPoolG
 import type { JoinedEventSummary } from "@shared/api";
 
 /**
+ * Derive a user-facing status for pool events from the matching + venue lifecycle.
+ *
+ * Matching flow:
+ *   1. User registers → eventPoolRegistrations.matchStatus = 'pending'
+ *   2. Matching runs → matchStatus = 'matched', assignedGroupId set
+ *   3. Venue assignment runs → eventPoolGroups.venueAssignmentStatus becomes 'assigned'
+ *      and venueName/venueAddress are populated
+ *   4. Only once the venue is assigned do we disclose it as 'venue_unlocked'.
+ *
+ * The pool-level `eventPools.status` can override the registration-level state
+ * when the pool itself is terminal (`completed` or `cancelled`). This prevents a
+ * matched registration from still appearing as "matched" after the event has
+ * finished or the pool has been cancelled by the organizer.
+ */
+export function derivePoolDisplayStatus(
+  matchStatus: string | null | undefined,
+  venueAssignmentStatus: string | null | undefined,
+  venueName: string | null | undefined,
+  poolStatus: string | null | undefined,
+): JoinedEventSummary["displayStatus"] {
+  if (poolStatus === "cancelled") return "cancelled";
+  if (poolStatus === "completed") return "attended";
+
+  if (matchStatus === "pending") return "pending";
+  if (matchStatus === "matched") {
+    const venueReady = venueAssignmentStatus === "assigned" || venueAssignmentStatus === "manual_override";
+    if (venueReady && venueName) {
+      return "venue_unlocked";
+    }
+    return "matched";
+  }
+  if (matchStatus === "unmatched") return "cancelled";
+  return undefined;
+}
+
+/**
+ * Derive a user-facing status for legacy events from eventAttendance.status.
+ */
+export function deriveLegacyDisplayStatus(
+  attendanceStatus: string | null | undefined,
+  eventStatus: string | null | undefined,
+): JoinedEventSummary["displayStatus"] {
+  const status = attendanceStatus ?? eventStatus;
+  switch (status) {
+    case "confirmed":
+      return "confirmed";
+    case "pending":
+      return "registered";
+    case "completed":
+    case "attended":
+      return "attended";
+    case "cancelled":
+      return "cancelled";
+    case "no_show":
+      return "no_show";
+    case "declined":
+      return "declined";
+    case "upcoming":
+      return "upcoming";
+    default:
+      return "upcoming";
+  }
+}
+
+/**
  * Fetch all events a user has joined (legacy + pool) as JoinedEventSummary[].
  * N+1-free: exactly 2 DB round-trips in parallel.
  */
@@ -58,6 +123,7 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
       venueName: eventPoolGroups.venueName,
       venueAddress: eventPoolGroups.venueAddress,
       finalDateTime: eventPoolGroups.finalDateTime,
+      venueAssignmentStatus: eventPoolGroups.venueAssignmentStatus,
     })
     .from(eventPoolRegistrations)
     .innerJoin(eventPools, eq(eventPoolRegistrations.poolId, eventPools.id))
@@ -79,6 +145,7 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
     district: row.area ?? undefined,
     status: row.attendanceStatus ?? row.status ?? undefined,
     description: row.description ?? undefined,
+    displayStatus: deriveLegacyDisplayStatus(row.attendanceStatus, row.status),
   }));
 
   const poolEvents: JoinedEventSummary[] = poolRows.map((row: typeof poolRows[number]) => ({
@@ -98,6 +165,13 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
     matchedAt: row.matchedAt?.toISOString?.() ?? undefined,
     groupId: row.assignedGroupId ?? undefined,
     finalDateTime: row.finalDateTime?.toISOString?.() ?? undefined,
+    venueAssignmentStatus: row.venueAssignmentStatus ?? undefined,
+    displayStatus: derivePoolDisplayStatus(
+      row.matchStatus,
+      row.venueAssignmentStatus,
+      row.venueName,
+      row.status,
+    ),
   }));
 
   // 4. Merge and sort by dateTime descending

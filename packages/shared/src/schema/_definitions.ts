@@ -77,7 +77,7 @@ export const users = pgTable("users", {
   workMode: varchar("work_mode"), // founder, self_employed, employed, student
   workVisibility: varchar("work_visibility").default("show_industry_only"), // hide_all, show_industry_only
   
-  // ❌ REMOVED DEPRECATED FIELDS (not collected in onboarding):
+  // [REMOVED] DEPRECATED FIELDS (not collected in onboarding):
   // - industry: varchar (legacy field, replaced by 3-tier classification)
   // - roleTitleShort: varchar (deprecated, use occupationId)
   // - seniority: varchar (never collected, removed from matching)
@@ -120,9 +120,9 @@ export const users = pgTable("users", {
   onboardingCheckpointTimestamp: timestamp("onboarding_checkpoint_timestamp"), // When checkpoint was saved
   
   // Interests & Topics (Step 2)
-  // ❌ REMOVED: Legacy interest fields - now managed by user_interests table
+  // [REMOVED] Legacy interest fields - now managed by user_interests table
   // - interestsTop, primaryInterests, topicAvoidances, topicsHappy, topicsAvoid
-  // ✅ Use user_interests table for all interest data (Interest Carousel system)
+  // [OK] Use user_interests table for all interest data (Interest Carousel system)
   interestFavorite: text("interest_favorite"), // Deprecated: Single favorite interest - use primaryInterests
   interestsRankedTop3: text("interests_ranked_top3").array(), // Deprecated: Top 3 ranked interests
   interestsDeep: text("interests_deep").array(), // 深度兴趣（AI对话收集的更详细兴趣描述，语义描述，不含遥测数据）
@@ -520,8 +520,8 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   // Event Theme (Mystery Box 盲盒主题)
   theme: varchar("theme", { length: 50 }), // Main theme (12-18 chars): "高能充电站：柯基×狐狸的周末探险"
   subtitle: varchar("subtitle", { length: 80 }), // Subtitle (15-25 chars): "广州老乡的咖啡×人脉派对"
-  vibe: varchar("vibe", { length: 30 }), // Vibe: "🔥 超高能 (88分)"
-  themeEmoji: varchar("theme_emoji", { length: 10 }), // Single emoji: "⚡"
+  vibe: varchar("vibe", { length: 30 }), // Vibe: "[HIGH] 超高能 (88分)"
+  themeEmoji: varchar("theme_emoji", { length: 10 }), // Single emoji: "[BOLT]"
   themeHighlights: jsonb("theme_highlights").$type<string[]>().notNull().default([]), // Persisted reveal highlights
   themeReasoning: text("theme_reasoning"), // Full reasoning with data provenance
   themeGeneratedAt: timestamp("theme_generated_at"), // Theme generation timestamp
@@ -832,7 +832,7 @@ export const updateFullProfileSchema = createInsertSchema(users).pick({
   lifeStage: true,
   hometownRegionCity: true,
   intent: true,
-  // ❌ REMOVED DEPRECATED FIELDS:
+  // [REMOVED] DEPRECATED FIELDS:
   // - industry: true (legacy field, replaced by 3-tier classification)
   // - roleTitleShort: true (deprecated, use occupationId)
   // - seniority: true (never collected, removed from matching)
@@ -1433,16 +1433,18 @@ export const userCoupons = pgTable("user_coupons", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
   couponId: varchar("coupon_id").notNull().references(() => coupons.id),
-  
+
   // How user obtained this coupon
   source: varchar("source").notNull(), // "invitation_reward", "promotion", "admin_grant", etc.
-  sourceId: varchar("source_id"), // e.g., invitation_id for invitation rewards
-  
+  sourceId: varchar("source_id"), // e.g. invitation_id for invitation rewards
+
   isUsed: boolean("is_used").default(false),
   usedAt: timestamp("used_at"),
-  
+
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("idx_user_coupons_user_id_coupon_id").on(table.userId, table.couponId),
+]);
 
 export const eventCreditGrants = pgTable("event_credit_grants", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

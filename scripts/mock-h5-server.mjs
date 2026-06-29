@@ -287,6 +287,208 @@ app.get('/api/payments/status/:orderId', (req, res) => {
   res.json({ status: 'pending' })
 })
 
+// Pool group details (squad unboxing)
+const MOCK_SQUAD_MEMBERS = [
+  {
+    userId: 'user-screenshot-001',
+    displayName: '悦仔测试',
+    archetype: 'corgi',
+    topInterests: ['徒步', '咖啡', '电影'],
+    ageLabel: '28',
+    industryNicheLabel: '互联网产品',
+    industryCategoryLabel: '互联网',
+    ageVisible: true,
+    industryVisible: true,
+    gender: 'female',
+    educationLevel: '本科',
+    hometownRegionCity: '广东 · 广州',
+    hometownAffinityOptin: true,
+    educationVisible: true,
+    relationshipStatus: 'single',
+    intent: ['deep_chat', 'fun'],
+  },
+  {
+    userId: 'user-screenshot-002',
+    displayName: '阿泽',
+    archetype: 'fox',
+    topInterests: ['脱口秀', '精酿', '旅行'],
+    ageLabel: '30',
+    industryNicheLabel: '品牌策划',
+    industryCategoryLabel: '广告营销',
+    ageVisible: true,
+    industryVisible: true,
+    gender: 'male',
+    educationLevel: '硕士',
+    hometownRegionCity: '湖南 · 长沙',
+    hometownAffinityOptin: false,
+    educationVisible: true,
+    relationshipStatus: 'single',
+    intent: ['fun', 'expand_circle'],
+  },
+  {
+    userId: 'user-screenshot-003',
+    displayName: '小鹿',
+    archetype: 'dolphin',
+    topInterests: ['瑜伽', '阅读', '烘焙'],
+    ageLabel: '27',
+    industryNicheLabel: '心理咨询',
+    industryCategoryLabel: '教育科研',
+    ageVisible: true,
+    industryVisible: true,
+    gender: 'female',
+    educationLevel: '硕士',
+    hometownRegionCity: '四川 · 成都',
+    hometownAffinityOptin: true,
+    educationVisible: true,
+    relationshipStatus: 'single',
+    intent: ['deep_chat', 'new_experience'],
+  },
+  {
+    userId: 'user-screenshot-004',
+    displayName: '大熊',
+    archetype: 'panda',
+    topInterests: ['游戏', '火锅', '露营'],
+    ageLabel: '29',
+    industryNicheLabel: '后端开发',
+    industryCategoryLabel: '互联网',
+    ageVisible: true,
+    industryVisible: true,
+    gender: 'male',
+    educationLevel: '本科',
+    hometownRegionCity: '湖北 · 武汉',
+    hometownAffinityOptin: false,
+    educationVisible: true,
+    relationshipStatus: 'single',
+    intent: ['fun', 'friends'],
+  },
+]
+
+const MOCK_SQUAD_GROUP = {
+  id: 'group-screenshot-001',
+  groupNumber: 3,
+  memberCount: 4,
+  matchScore: 87,
+  avgPairScore: 82,
+  diversityScore: 74,
+  energyBalance: 79,
+  matchExplanation: '这一桌有喜欢深挖话题的倾听者，也有能把场子带起来的气氛担当，互补得刚刚好。',
+  theme: '轻松有料的周末饭局',
+  subtitle: '适合想认真聊聊，也想笑出声的人',
+  vibe: 'balanced',
+  themeEmoji: '🍲',
+  highlights: ['话题有料', '氛围松弛', '匹配精准'],
+  venueName: '悦聚小馆',
+  venueAddress: '深圳市南山区粤海街道科苑路 15 号',
+  venueAssignmentStatus: 'assigned',
+  finalDateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 18 * 60 * 60 * 1000).toISOString(),
+  status: 'matched',
+}
+
+const MOCK_SQUAD_POOL = {
+  id: 'pool-screenshot-001',
+  title: '周末松弛感饭局 · 南山',
+  description: '一场轻松有料的周末饭局，悦仔会根据你的社交画像和预算偏好帮你匹配一桌合拍的人。',
+  eventType: '饭局',
+  city: '深圳',
+  district: '南山',
+  dateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 18 * 60 * 60 * 1000).toISOString(),
+}
+
+app.get('/api/pool-groups/:id', (req, res) => {
+  res.json({
+    group: { ...MOCK_SQUAD_GROUP, id: req.params.id },
+    pool: MOCK_SQUAD_POOL,
+    members: MOCK_SQUAD_MEMBERS,
+  })
+})
+
+app.get('/api/pool-groups/:id/analysis', (req, res) => {
+  const currentUserId = MOCK_USER.id
+  const pairExplanations = [
+    {
+      pairKey: ['user-screenshot-001', 'user-screenshot-002'].sort().join('-'),
+      explanation: '你们都是那种先观察再开口的人，但一旦被点燃，话题能走很深。',
+      chemistryScore: 88,
+      sharedInterests: ['咖啡'],
+      connectionPoints: ['都爱在咖啡馆里发呆', '聊天节奏偏慢热'],
+      connectionPointsWithRarity: [
+        { text: '都爱在咖啡馆里发呆', rarity: 'common' },
+        { text: '聊天节奏偏慢热', rarity: 'rare' },
+      ],
+      introAngle: '最近有喝到让你惊喜的咖啡吗？',
+    },
+    {
+      pairKey: ['user-screenshot-001', 'user-screenshot-003'].sort().join('-'),
+      explanation: '一个喜欢把感受说出来，一个擅长接住情绪，这对组合很容易聊出共鸣。',
+      chemistryScore: 85,
+      sharedInterests: ['阅读'],
+      connectionPoints: ['都偏内向细腻', '阅读习惯相似'],
+      connectionPointsWithRarity: [
+        { text: '都偏内向细腻', rarity: 'rare' },
+        { text: '阅读习惯相似', rarity: 'common' },
+      ],
+      introAngle: '最近在读什么书？',
+    },
+    {
+      pairKey: ['user-screenshot-001', 'user-screenshot-004'].sort().join('-'),
+      explanation: '一个爱想，一个爱玩，刚好能互相带出新体验。',
+      chemistryScore: 76,
+      sharedInterests: ['电影'],
+      connectionPoints: ['都爱看电影', '生活节奏互补'],
+      connectionPointsWithRarity: [
+        { text: '都爱看电影', rarity: 'common' },
+        { text: '生活节奏互补', rarity: 'common' },
+      ],
+      introAngle: '最近有看到想二刷的电影吗？',
+    },
+    {
+      pairKey: ['user-screenshot-002', 'user-screenshot-003'].sort().join('-'),
+      explanation: '两个人都擅长倾听，但风格不同，一个是毒舌式幽默，一个是温柔式接话。',
+      chemistryScore: 72,
+      sharedInterests: ['旅行'],
+      connectionPoints: ['旅行风格都偏随性'],
+      introAngle: '最近一次说走就走的旅行去了哪？',
+    },
+    {
+      pairKey: ['user-screenshot-002', 'user-screenshot-004'].sort().join('-'),
+      explanation: '都是能把场子热起来的人，聊到游戏和精酿会特别起劲。',
+      chemistryScore: 81,
+      sharedInterests: ['精酿', '游戏'],
+      connectionPoints: ['都爱探索小酒馆', '游戏口味接近'],
+      introAngle: '最近有发现什么好喝的精酿？',
+    },
+    {
+      pairKey: ['user-screenshot-003', 'user-screenshot-004'].sort().join('-'),
+      explanation: '一个治愈系，一个开心果，组合起来会让饭局很舒服。',
+      chemistryScore: 78,
+      sharedInterests: ['烘焙'],
+      connectionPoints: ['都喜欢动手做东西'],
+      introAngle: '有没有试过露营时自己烤东西吃？',
+    },
+  ]
+
+  const myPairs = pairExplanations.filter((pair) => pair.pairKey.includes(currentUserId))
+
+  res.json({
+    groupId: req.params.id,
+    overallChemistry: 'warm',
+    groupDynamics: '这一桌有倾听者、有气氛组、有细腻派，整体互补，容易自然破冰。',
+    iceBreakers: ['最近最上头的一件事', '如果周末必须出门，你会去哪？', '今年最想尝试的新体验'],
+    pairExplanations,
+    myPairs,
+    fromCache: true,
+    generatedAt: new Date().toISOString(),
+    groupThemeTags: ['轻松有料', '互补成桌', '慢热也能深聊'],
+    groupThemeCompanion: '像老朋友的客厅，舒服又不乏惊喜。',
+    provider: null,
+    fallbackUsed: false,
+  })
+})
+
+app.post('/api/pool-groups/:id/confirm-attendance', (req, res) => {
+  res.json({ success: true, blindBoxEventId: null, attendanceStatus: 'confirmed' })
+})
+
 // Analytics sink
 app.post('/api/analytics/:event', (req, res) => {
   res.json({ success: true })

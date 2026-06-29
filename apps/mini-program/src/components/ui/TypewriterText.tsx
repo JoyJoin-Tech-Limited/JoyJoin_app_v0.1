@@ -12,6 +12,8 @@ interface TypewriterTextProps {
   delay?: number
   /** Set false to show full text immediately (reduced-motion fallback) */
   enabled?: boolean
+  /** Max total duration in ms. If base typing time would exceed this, full text is shown instantly. */
+  maxDuration?: number
   /** Show a blinking cursor while typing */
   showCursor?: boolean
   /** Fired once when every character is visible */
@@ -54,6 +56,7 @@ export default function TypewriterText({
   speed = 40,
   delay = 120,
   enabled = true,
+  maxDuration,
   showCursor = false,
   onComplete,
   numberOfLines,
@@ -64,6 +67,12 @@ export default function TypewriterText({
   const onCompleteRef = useRef(onComplete)
 
   const resolvedSpeed = Math.max(speed, MIN_SPEED)
+
+  // If a maxDuration is set and the base typing time would exceed it, show full text instantly.
+  // This guarantees the reveal completes within the requested ceiling regardless of copy length.
+  const shouldFastForward = Boolean(
+    maxDuration && text.length > 0 && text.length * resolvedSpeed > maxDuration,
+  )
 
   // Keep callback fresh without re-triggering the effect
   onCompleteRef.current = onComplete
@@ -76,7 +85,7 @@ export default function TypewriterText({
   }, [])
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || shouldFastForward) {
       clearTimers()
       setVisibleLength(text.length)
       setDone(true)
@@ -116,7 +125,7 @@ export default function TypewriterText({
       clearTimeout(startTimer)
       clearTimers()
     }
-  }, [text, enabled, resolvedSpeed, delay, clearTimers])
+  }, [text, enabled, resolvedSpeed, delay, clearTimers, shouldFastForward])
 
   if (!enabled) {
     return <Text className={className} numberOfLines={numberOfLines}>{text}</Text>

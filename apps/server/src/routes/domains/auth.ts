@@ -7,11 +7,13 @@ import { logger } from "../../lib/logger";
 import { captureLocationSnapshot } from "../../lib/captureLocationSnapshot";
 import { sanitizeAuthUser } from "../../auth/sanitizeAuthUser";
 import { isTestMode } from "../../auth/policy";
+import { paymentsRepo } from "../../repositories/paymentsRepo";
 import type { AuthUserResponse } from "@shared/api";
 import type { User } from "@shared/schema";
 import { buildAuthUserResponse } from "../../lib/buildAuthUserResponse";
 import { computeOnboardingNextStep } from "../../lib/computeOnboardingNextStep";
 import { getFeatureFlag } from "../../lib/featureFlags";
+import { normalizeCouponTimestamp } from "../../lib/couponUtils";
 export function registerAuthRoutes(app: Express): void {
   // WeChat auth setup — skipped in test mode (phone+password login instead)
   if (!isTestMode()) {
@@ -471,6 +473,88 @@ export function registerAuthRoutes(app: Express): void {
     } catch (error) {
       logger.error("Error during onboarding force skip", { error: String(error) });
       res.status(500).json({ message: "Failed to skip onboarding step" });
+    }
+  });
+
+  app.get('/api/user/welcome-coupon', requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const welcomeCoupon50 = await paymentsRepo.getCouponByCode("WELCOME50");
+      const welcomeCoupon40 = await paymentsRepo.getCouponByCode("WELCOME40");
+      const coupon = welcomeCoupon50 ?? welcomeCoupon40;
+
+      if (!coupon) {
+        return res.status(404).json({ code: "WELCOME_COUPON_NOT_FOUND", message: "Welcome coupon not configured" });
+      }
+
+      const existingCoupons = await paymentsRepo.getUserCoupons(userId);
+      const existing = existingCoupons.find(
+        (uc: any) => (uc.coupon_id ?? uc.couponId) === coupon.id
+      );
+
+      if (existing) {
+        return res.json({
+          id: String(existing.id ?? existing.user_coupon_id ?? ''),
+          code: coupon.code,
+          discountType: coupon.discount_type ?? coupon.discountType ?? 'percentage',
+          discountValue: Number(coupon.discount_value ?? coupon.discountValue ?? 0),
+          source: existing.source ?? 'profile_review_first_view',
+          isNewlyAwarded: false,
+          createdAt: normalizeCouponTimestamp(existing.created_at ?? existing.createdAt),
+        });
+      }
+
+      let userCoupon: any;
+      try {
+        userCoupon = await paymentsRepo.createUserCoupon({
+          userId,
+          couponId: coupon.id,
+          source: "profile_review_first_view",
+        });
+      } catch (createError: any) {
+        // Race-safe fallback: if another request created the row first, refetch it.
+        if (createError?.code === '23505') {
+          const refetched = await paymentsRepo.getUserCoupons(userId);
+          const raced = refetched.find((uc: any) => (uc.coupon_id ?? uc.couponId) === coupon.id);
+          if (raced) {
+            return res.json({
+              id: String(raced.id ?? raced.user_coupon_id ?? ''),
+              code: coupon.code,
+              discountType: coupon.discount_type ?? coupon.discountType ?? 'percentage',
+              discountValue: Number(coupon.discount_value ?? coupon.discountValue ?? 0),
+              source: raced.source ?? 'profile_review_first_view',
+              isNewlyAwarded: false,
+              createdAt: normalizeCouponTimestamp(raced.created_at ?? raced.createdAt),
+            });
+          }
+        }
+        throw createError;
+      }
+
+      logger.info("[WelcomeCoupon] Awarded on profile-review first view", {
+        userId,
+        couponCode: coupon.code,
+      });
+
+      return res.json({
+        id: String(userCoupon.id ?? userCoupon.user_coupon_id ?? ''),
+        code: coupon.code,
+        discountType: coupon.discount_type ?? coupon.discountType ?? 'percentage',
+        discountValue: Number(coupon.discount_value ?? coupon.discountValue ?? 0),
+        source: "profile_review_first_view",
+        isNewlyAwarded: true,
+        createdAt: normalizeCouponTimestamp(userCoupon.created_at ?? userCoupon.createdAt),
+      });
+    } catch (error) {
+      logger.error("[WelcomeCoupon] Failed to claim welcome coupon", {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({ message: "Failed to claim welcome coupon" });
     }
   });
 

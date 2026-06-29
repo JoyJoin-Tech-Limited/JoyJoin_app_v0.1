@@ -64,6 +64,26 @@ export interface JoinedEventSummary {
   matchedAt?: string
   groupId?: string
   finalDateTime?: string
+  /**
+   * Derived user-facing status that reflects the full matching + venue lifecycle.
+   * Prefer this over `status` when rendering event cards.
+   */
+  displayStatus?:
+    | 'pending'
+    | 'registered'
+    | 'upcoming'
+    | 'matched'
+    | 'confirmed'
+    | 'venue_unlocked'
+    | 'completed'
+    | 'attended'
+    | 'cancelled'
+    | 'declined'
+    | 'no_show'
+  /**
+   * Venue assignment state for pool events. Only meaningful when `groupId` is set.
+   */
+  venueAssignmentStatus?: 'pending' | 'assigned' | 'unassigned' | 'manual_override'
   [key: string]: unknown
 }
 
@@ -163,6 +183,21 @@ export function redeemGamificationItem(
     method: 'POST',
     data: { itemId },
   })
+}
+
+export interface WelcomeCouponResponse {
+  id: string
+  code: string
+  discountType: string
+  discountValue: number
+  source: string
+  isNewlyAwarded: boolean
+  createdAt: string
+}
+
+/** Claim (or re-fetch) the lifetime welcome coupon awarded on first 入场卡 view. */
+export function claimWelcomeCoupon(api: ApiTransport): Promise<WelcomeCouponResponse> {
+  return api<WelcomeCouponResponse>({ path: '/api/user/welcome-coupon' })
 }
 
 /** Composite profile shell — user, coupons, and stats in one request. */

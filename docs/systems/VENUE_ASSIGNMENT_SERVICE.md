@@ -1,6 +1,6 @@
 # Venue Assignment Service
 
-> Canonical reference for automatic venue-to-group assignment after pool matching. Last updated: 2026-06-16
+> Canonical reference for automatic venue-to-group assignment after pool matching. Last updated: 2026-06-29
 
 ## Overview
 
@@ -110,6 +110,24 @@ idx_event_pool_groups_venue_status (venue_assignment_status)
 `venueName` is resolved as `COALESCE(brand_name, name)` so the public brand name is shown when populated, falling back to the internal venue name otherwise.
 
 When `venueAssignmentStatus === 'unassigned'`, the mini-program shows a "地点待定" state.
+
+### User-facing status derivation (2026-06-29)
+
+`GET /api/users/me/events` and shell endpoints return `JoinedEventSummary` with a server-derived `displayStatus`:
+
+| `matchStatus` | `poolStatus` | `venueAssignmentStatus` | `venueName` | `displayStatus` | Meaning shown to user |
+|---------------|--------------|------------------------|-------------|-----------------|-----------------------|
+| `pending` | `active`/`matching` | — | — | `pending` | 匹配中 |
+| `matched` | `active`/`matching`/`matched` | `pending` / `unassigned` | any | `matched` | 已匹配，场地安排中 |
+| `matched` | `matched` | `assigned` / `manual_override` | `NULL` | `matched` | 已匹配，场地安排中 |
+| `matched` | `matched` | `assigned` / `manual_override` | non-empty | `venue_unlocked` | 场地已解锁 |
+| any | `cancelled` | — | — | `cancelled` | 已取消 |
+| any | `completed` | — | — | `attended` | 已完成 |
+| `unmatched` | any | — | — | `cancelled` | 已取消 |
+
+The `poolStatus` terminal overrides (`completed`/`cancelled`) ensure a matched registration does not keep showing as "matched" after the pool is cancelled or the event has finished.
+
+Venue location (name + address) is disclosed in the mini-program only when `displayStatus` is `confirmed` or `venue_unlocked`. The raw `status` field is preserved for backwards compatibility.
 
 ### Admin-facing
 

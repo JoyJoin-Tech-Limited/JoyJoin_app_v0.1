@@ -194,10 +194,57 @@ async function captureEventTicketPayment() {
   )
 }
 
+async function captureSquadUnboxingRevealed() {
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      await page.goto(
+        `${H5_BASE_URL}/#/pages/squad-unboxing/index?groupId=group-screenshot-001&motion=reduce`,
+        { waitUntil: 'domcontentloaded', timeout: 60000 }
+      )
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+      // Wait for the blind-box card / drag ribbon to render in ready state.
+      await page.waitForSelector('#drag-reveal-track', { timeout: 10000 })
+      await page.waitForTimeout(600)
+
+      // Tap fallback is active because motion=reduce. Click the track to reveal.
+      await page.click('#drag-reveal-track')
+
+      // With reduced motion, shaking -> revealed takes ~220ms; wait for deck.
+      await page.waitForSelector('.squad-unboxing__deck-stage', { timeout: 10000 })
+      await page.waitForTimeout(1200)
+
+      // Wait for analysis cards to unfold (progressive reveal in stages).
+      await page.waitForSelector('.squad-unboxing__analysis-stack', { timeout: 10000 })
+      // Give archetype images time to load over the CDN.
+      await page.waitForTimeout(2500)
+
+      // The action zone is fixed-position; hide it so the viewport shot isn't
+      // blocked by the bottom dock when we scroll to the deck.
+      await page.addStyleTag({ content: '.squad-unboxing__action-zone { display: none !important; }' })
+      await page.waitForTimeout(200)
+
+      // Scroll to the card deck so the screenshot centers on the new UI.
+      await page.evaluate(() => {
+        const deck = document.querySelector('.squad-unboxing__deck-stage')
+        if (deck) {
+          deck.scrollIntoView({ behavior: 'instant', block: 'start', inline: 'nearest' })
+        }
+      })
+      await page.waitForTimeout(400)
+
+      return page.screenshot({ fullPage: false })
+    }
+  )
+}
+
 register('events-footprint-oracle-card', captureEventsPage)
 register('tier-selector-preset-cards', captureTierSelector)
 register('pool-registration-step-0-brief', capturePoolRegistration)
 register('event-ticket-payment', captureEventTicketPayment)
+register('squad-unboxing-revealed', captureSquadUnboxingRevealed)
 
 const server = app.listen(PORT, () => {
   console.log(`[screenshot-server] listening on http://localhost:${PORT}`)

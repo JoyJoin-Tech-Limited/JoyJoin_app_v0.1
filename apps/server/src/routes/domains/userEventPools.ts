@@ -1348,7 +1348,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
             archetype: users.archetype,
             topInterests: users.interestsRankedTop3,
             birthdate: users.birthdate,
-            // ✅ UPDATED: Use 3-tier industry classification
+            // UPDATED: Use 3-tier industry classification
             industryNicheLabel: users.industryNicheLabel,
             industryCategoryLabel: users.industryCategoryLabel,
             ageVisible: users.ageVisibility,
@@ -1426,10 +1426,10 @@ export function registerUserEventPoolRoutes(app: Express): void {
 
     // Get AI-generated group analysis for a pool group
     app.get('/api/pool-groups/:groupId/analysis', requireAuth, aiEndpointLimiter, async (req, res) => {
-      try {
-        const { groupId } = req.params;
-        const userId = (req.session as any).userId as string;
+      const { groupId } = req.params;
+      const userId = (req.session as any).userId as string;
 
+      try {
         // Load group from DB
         const group = await db.query.eventPoolGroups.findFirst({
           where: eq(eventPoolGroups.id, groupId),
@@ -1576,17 +1576,18 @@ export function registerUserEventPoolRoutes(app: Express): void {
 
         return res.json(response);
       } catch (error) {
-        console.error('[analysis] Error generating group analysis:', error);
-        return res.status(500).json({ error: 'Failed to generate analysis' });
+        logger.error("Error generating group analysis:", { error: String(error), groupId });
+        return res.status(500).json({ error: "Failed to generate analysis" });
       }
     });
 
     // Confirm attendance for a pool group
     app.post("/api/pool-groups/:groupId/confirm-attendance", requireAuth, async (req, res) => {
+      const groupId = req.params.groupId;
+      const session = req.session as any;
+      const userId = session?.userId;
+
       try {
-        const groupId = req.params.groupId;
-        const session = req.session as any;
-        const userId = session?.userId;
 
         if (!userId) {
           return res.status(401).json({ message: "Unauthorized" });
@@ -1623,6 +1624,12 @@ export function registerUserEventPoolRoutes(app: Express): void {
           return res.status(409).json({ message: "Blind box event is not ready for attendance confirmation" });
         }
 
+        // Idempotency: if already confirmed, return clean 200 without DB write or re-broadcast.
+        const currentAttendance = await storage.getAttendanceStatus(blindBoxEventId, userId);
+        if (currentAttendance?.status === 'confirmed') {
+          return res.json({ success: true, blindBoxEventId, attendanceStatus: 'confirmed' });
+        }
+
         await storage.updateAttendanceStatus(blindBoxEventId, userId, 'confirmed');
 
         const user = await storage.getUser(userId);
@@ -1631,7 +1638,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
 
         res.json({ success: true, blindBoxEventId, attendanceStatus: 'confirmed' });
       } catch (error) {
-        console.error("Error confirming pool group attendance:", error);
+        logger.error("Error confirming pool group attendance:", { error: String(error), groupId, userId });
         res.status(500).json({ message: "Failed to confirm attendance" });
       }
     });

@@ -163,6 +163,10 @@ export default function DragRevealRibbon({
     ? '点击拆盒'
     : '向右滑动，拆开惊喜'
 
+  const ariaValueText = useTapFallback
+    ? '点击拆盒'
+    : `已拖动 ${Math.round(dragProgress * 100)}%`
+
   return (
     <View className='drag-reveal-ribbon'>
       <View className='drag-reveal-ribbon__box-area'>
@@ -181,7 +185,6 @@ export default function DragRevealRibbon({
         ]
           .filter(Boolean)
           .join(' ')}
-        catchMove
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -190,6 +193,7 @@ export default function DragRevealRibbon({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(dragProgress * 100)}
+        aria-valuetext={ariaValueText}
         aria-label={trackLabel}
         aria-live='polite'
       >
@@ -208,7 +212,7 @@ export default function DragRevealRibbon({
           style={{ left: thumbLeft }}
         >
           {isRevealing ? (
-            <Text className='drag-reveal-ribbon__thumb-icon'>✓</Text>
+            <JoyJoinIcon emoji='✓' size={28} />
           ) : (
             <JoyJoinIcon emoji='🎁' size={28} />
           )}

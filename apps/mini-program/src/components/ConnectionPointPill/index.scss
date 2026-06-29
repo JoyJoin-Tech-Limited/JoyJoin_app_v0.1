@@ -1,31 +1,33 @@
+@use '../../styles/variables' as *;
+
 .connection-point-pill {
   display: inline-flex;
   align-items: center;
-  padding: 8rpx 20rpx;
+  padding: $spacing-xs $spacing-sm;
   border-radius: 24rpx;
-  font-size: 24rpx;
+  font-size: $font-size-sm;
   line-height: 1.4;
 }
 
 .pill--common {
-  background-color: #F3F4F6;
-  color: #6B7280;
-  border: 1rpx solid #E2E5ED;
+  background-color: $color-bg-tint-warm;
+  color: $color-text-secondary;
+  border: 1rpx solid $color-border;
 }
 
 .pill--rare {
-  background-color: #F5F3FF;
-  color: #7C3AED;
-  border: 1rpx solid #DDD6FE;
-  border-left: 4rpx solid #8B5CF6;
+  background-color: $color-bg-tint-purple;
+  color: $color-primary-dark;
+  border: 1rpx solid $color-primary-light;
+  border-left: 4rpx solid $color-primary;
   animation: pillPulse 2.5s ease-in-out infinite;
 }
 
 .pill--epic {
-  background-color: #FFFBEB;
-  color: #92400E;
-  border: 1rpx solid #FDE68A;
-  border-left: 4rpx solid #F59E0B;
+  background-color: $color-bg-tint-warm;
+  color: $color-amber-700;
+  border: 1rpx solid rgba($color-amber, 0.3);
+  border-left: 4rpx solid $color-amber;
   animation: pillPulse 2s ease-in-out infinite;
 }
 
@@ -41,5 +43,5 @@
 }
 
 .pill-text {
-  font-size: 24rpx;
+  font-size: $font-size-sm;
 }

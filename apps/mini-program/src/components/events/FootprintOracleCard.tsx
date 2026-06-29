@@ -14,6 +14,7 @@ import {
   formatEventDateTime,
   getJoinedEventDisplayDateTime,
   getJoinedEventStatusLabel,
+  isJoinedEventTerminal,
 } from '../../lib/utils/eventDisplay'
 import './FootprintOracleCard.scss'
 
@@ -33,11 +34,13 @@ const STATUS_FAMILY_MAP: Record<string, 'fire' | 'calm' | 'warm' | 'cool'> = {
   completed: 'warm',
   attended: 'warm',
   cancelled: 'cool',
+  declined: 'cool',
+  no_show: 'cool',
 }
 
 // Human, playful momentum copy for each status.
 const STATUS_MOMENTUM_COPY: Record<string, string> = {
-  matched: '匹配成功，期待见面',
+  matched: '匹配成功',
   venue_unlocked: '场地已解锁',
   confirmed: '已确认',
   upcoming: '即将开始',
@@ -46,6 +49,8 @@ const STATUS_MOMENTUM_COPY: Record<string, string> = {
   completed: '圆满结束',
   attended: '已参加',
   cancelled: '已取消',
+  declined: '已取消',
+  no_show: '未出席',
 }
 
 // Explicit "what you are waiting for" copy. Empty means no extra waiting hint.
@@ -53,20 +58,15 @@ const STATUS_WAITING_COPY: Record<string, string> = {
   pending: '系统正在撮合本场成员，请耐心等待',
   registered: '报名成功，等待系统匹配',
   upcoming: '报名成功，活动即将开始',
+  matched: '匹配成功，场地安排中',
   confirmed: '已确认，期待见面',
+  venue_unlocked: '场地已解锁，期待见面',
 }
 
-// Statuses that should never show a countdown.
-const TERMINAL_STATUSES = new Set(['completed', 'attended', 'cancelled'])
-
-// Venue is only disclosed once matching has succeeded and a group exists.
-const VENUE_VISIBLE_STATUSES = new Set(['matched', 'confirmed', 'venue_unlocked'])
+// Venue is only disclosed once the group has been assigned a venue.
+const VENUE_VISIBLE_STATUSES = new Set(['confirmed', 'venue_unlocked'])
 
 // ─── Helpers ───────────────────────────────────────────────────
-
-function isTerminalStatus(status?: string | null): boolean {
-  return !status || TERMINAL_STATUSES.has(status)
-}
 
 function getCountdownTarget(event: JoinedEventSummary): string | null {
   // The countdown target must always match the displayed datetime.
@@ -74,7 +74,7 @@ function getCountdownTarget(event: JoinedEventSummary): string | null {
   return display ?? null
 }
 
-function buildLocationLine(event: JoinedEventSummary): string | null {
+function buildLocationLine(event: JoinedEventSummary, showVenue: boolean): string | null {
   const parts: string[] = []
 
   if (event.eventType) {
@@ -84,7 +84,7 @@ function buildLocationLine(event: JoinedEventSummary): string | null {
   const locationParts: string[] = []
   if (event.city) locationParts.push(event.city)
   if (event.district) locationParts.push(event.district)
-  if (event.venueName) locationParts.push(event.venueName)
+  if (showVenue && event.venueName) locationParts.push(event.venueName)
   if (locationParts.length > 0) {
     parts.push(locationParts.join(' · '))
   } else if (event.location) {
@@ -238,14 +238,14 @@ export default React.memo(function FootprintOracleCard({
   const reduceMotion = useMemo(() => prefersReducedMotion(), [])
   const uid = useMemo(() => `footprint-card-${event.id}`, [event.id])
 
-  const status = event.status ?? 'upcoming'
+  const status = event.displayStatus ?? event.status ?? 'upcoming'
   const family = STATUS_FAMILY_MAP[status] ?? 'calm'
   const familyColor = ARCHETYPE_FAMILY_COLORS[family] ?? FALLBACK_FAMILY_COLOR
   const gradient = ARCHETYPE_FAMILY_GRADIENTS[family] ?? ARCHETYPE_FAMILY_GRADIENTS.calm
 
   const statusLabel = getJoinedEventStatusLabel(status)
   const momentumLabel = STATUS_MOMENTUM_COPY[status] ?? statusLabel
-  const isTerminal = isTerminalStatus(status)
+  const isTerminal = isJoinedEventTerminal(status)
   const isLiveStatus = status === 'matched' || status === 'venue_unlocked'
   const showVenue = VENUE_VISIBLE_STATUSES.has(status)
   const isMatched = status === 'matched'
@@ -262,7 +262,7 @@ export default React.memo(function FootprintOracleCard({
 
   const displayDateTime = getJoinedEventDisplayDateTime(event)
   const dateTimeText = formatEventDateTime(displayDateTime)
-  const locationLine = showVenue ? buildLocationLine(event) : null
+  const locationLine = buildLocationLine(event, showVenue)
   const cornerAssetSrc = getOracleCardCornerAsset(event.eventType)
   const showCornerAsset = cornerAssetSrc && !effectiveDegradation && !isTerminal
 

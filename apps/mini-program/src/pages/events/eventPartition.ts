@@ -1,12 +1,10 @@
 import type { JoinedEventSummary } from '@shared/api'
-import { getJoinedEventDisplayDateTime } from '../../lib/utils/eventDisplay'
+import { getJoinedEventDisplayDateTime, isJoinedEventTerminal } from '../../lib/utils/eventDisplay'
 
 export interface JoinedEventBuckets {
   upcoming: JoinedEventSummary[]
   completed: JoinedEventSummary[]
 }
-
-const TERMINAL_STATUSES = new Set(['cancelled', 'completed', 'attended'])
 
 function getJoinedEventTime(event: JoinedEventSummary): number | null {
   const displayDateTime = getJoinedEventDisplayDateTime(event)
@@ -27,7 +25,8 @@ export function partitionJoinedEventsByDateTime(
   return events.reduce<JoinedEventBuckets>(
     (buckets, event) => {
       // Terminal statuses always belong to the completed bucket, regardless of dateTime.
-      if (TERMINAL_STATUSES.has(event.status ?? '')) {
+      const canonicalStatus = event.displayStatus ?? event.status ?? ''
+      if (isJoinedEventTerminal(canonicalStatus)) {
         buckets.completed.push(event)
         return buckets
       }

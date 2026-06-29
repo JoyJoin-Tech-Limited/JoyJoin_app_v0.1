@@ -2,10 +2,10 @@
 @use '../../styles/mixins' as *;
 
 .squad-unboxing {
-  @include page-gradient-bg;
   min-height: 100vh;
   min-height: 100dvh;
   position: relative;
+  background: linear-gradient(180deg, $color-bg-tint-cream 0%, $color-bg-tint-pink 52%, $color-bg-tint-purple 100%);
 
   &--reduce-motion {
     .squad-unboxing__blind-box-visual,
@@ -18,7 +18,10 @@
     .squad-unboxing__pair-card,
     .squad-unboxing__topic-chip,
     .squad-unboxing__skeleton,
-    .squad-unboxing__blind-box-card--shaking {
+    .squad-unboxing__blind-box-card--shaking,
+    .squad-unboxing__success-overlay,
+    .squad-unboxing__bubble,
+    .squad-unboxing__reveal-hero {
       animation: none !important;
     }
 
@@ -28,7 +31,8 @@
     .squad-unboxing__deck-card,
     .squad-unboxing__member-card,
     .squad-unboxing__pair-card,
-    .squad-unboxing__topic-chip {
+    .squad-unboxing__topic-chip,
+    .squad-unboxing__success-card {
       transition-duration: 0s !important;
     }
   }
@@ -48,46 +52,45 @@
     min-height: 100vh;
     min-height: 100dvh;
     box-sizing: border-box;
-    padding: 0 $container-padding;
+    padding: $spacing-xl $container-padding 0;
+    @include safe-area-top(padding-top, $spacing-xl);
     @include safe-area-inline($container-padding);
-    @include fixed-footer-reserve($button-height + 260rpx, $spacing-xl);
+    @include fixed-footer-reserve(440rpx, $spacing-md);
   }
 
   &__error {
     @include flex-center;
     flex-direction: column;
     gap: $spacing-md;
-    min-height: 80vh;
+    min-height: 100vh;
+    min-height: 100dvh;
     padding: 0 $container-padding;
     text-align: center;
   }
 
-  &__error-hero {
-    width: 320rpx;
-    height: auto;
-  }
-
-  &__error-text {
-    font-size: $font-size-base;
-    color: $color-text-secondary;
-    line-height: 1.6;
+  &__error-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
+    min-height: 120rpx;
+    margin-top: $spacing-sm;
   }
 
   &__error-btn {
     width: 240rpx;
-    margin-top: $spacing-sm;
   }
 
   &__header {
     @include flex-center;
     flex-direction: column;
     gap: $spacing-sm;
-    padding: $spacing-xl 0 $spacing-lg;
+    padding: 0 0 $spacing-lg;
   }
 
   &__header-mascot {
-    width: 160rpx;
-    height: 160rpx;
+    width: 144rpx;
+    height: 144rpx;
     margin: 0 auto;
     display: block;
   }
@@ -98,6 +101,8 @@
     font-size: $font-size-2xl;
     color: $color-text-primary;
     text-align: center;
+    line-height: 1.4;
+    word-break: keep-all;
   }
 
   &__header-tagline {
@@ -137,6 +142,40 @@
     background: rgba($color-secondary, 0.14);
   }
 
+  &__analysis-bubble {
+    margin-bottom: $spacing-lg;
+  }
+
+  &__analysis-bubble-inner {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    border-radius: $card-radius;
+    background: rgba($color-surface, 0.96);
+    box-shadow: 0 12rpx 32rpx rgba($color-primary, 0.1), inset 0 0 0 1rpx rgba($color-primary, 0.08);
+    animation: squad-unboxing-card-rise 0.34s ease both;
+  }
+
+  &__analysis-bubble-mascot {
+    width: 96rpx;
+    height: 96rpx;
+    flex-shrink: 0;
+  }
+
+  &__analysis-bubble-bubble {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__analysis-bubble-text {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    line-height: 1.7;
+    word-break: keep-all;
+  }
+
   &__blind-box-card,
   &__info-card,
   &__theme-card,
@@ -152,7 +191,7 @@
     text-align: center;
     border: 2rpx solid rgba($color-primary, 0.14);
     background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.86) 100%);
-    box-shadow: 0 22rpx 56rpx rgba(0, 0, 0, 0.12);
+    box-shadow: $shadow-lg;
   }
 
   &__blind-box-card--shaking {
@@ -201,7 +240,7 @@
     position: absolute;
     width: 16rpx;
     height: 16rpx;
-    border-radius: 6rpx;
+    border-radius: 8rpx;
     background: rgba($color-surface, 0.94);
     box-shadow: 0 8rpx 18rpx rgba($color-primary, 0.16);
     opacity: 0;
@@ -258,13 +297,12 @@
     width: 228rpx;
     height: 30rpx;
     border-radius: 999rpx;
-    background: rgba(0, 0, 0, 0.12);
+    background: rgba($color-text-primary, 0.08);
     transform: translateX(-50%);
     opacity: 0.6;
     pointer-events: none;
   }
 
-  /* Fallback box — shown when CDN images fail to load */
   &__blind-box-fallback {
     position: absolute;
     left: 50%;
@@ -283,17 +321,17 @@
     width: 200rpx;
     height: 160rpx;
     border-radius: 24rpx;
-    background: linear-gradient(145deg, $color-primary-light 0%, #a78bfa 100%);
-    box-shadow: 0 8rpx 32rpx rgba(139, 92, 246, 0.3);
+    background: linear-gradient(145deg, $color-primary-light 0%, rgba($color-primary, 0.72) 100%);
+    box-shadow: $shadow-primary-soft;
   }
 
   &__blind-box-fallback-lid {
     width: 220rpx;
     height: 60rpx;
     border-radius: 24rpx 24rpx 0 0;
-    background: linear-gradient(145deg, #ddd6fe 0%, $color-primary-light 100%);
+    background: linear-gradient(145deg, rgba($color-primary-light, 0.96) 0%, $color-primary-light 100%);
     margin-bottom: -20rpx;
-    box-shadow: 0 4rpx 16rpx rgba(139, 92, 246, 0.2);
+    box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.2);
   }
 
   &__blind-box-visual--opening {
@@ -349,6 +387,7 @@
     font-size: $font-size-xl;
     color: $color-text-primary;
     word-break: keep-all;
+    line-height: 1.4;
   }
 
   &__blind-box-copy {
@@ -389,7 +428,8 @@
   &__reveal-hero {
     padding: $spacing-lg;
     margin-bottom: $spacing-lg;
-    background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.82) 100%);
+    background: rgba($color-surface, 0.96);
+    box-shadow: 0 16rpx 40rpx rgba($color-primary, 0.1), inset 0 0 0 1rpx rgba($color-primary, 0.08);
     animation: squad-unboxing-card-rise 0.34s ease both;
   }
 
@@ -401,6 +441,7 @@
     color: $color-text-primary;
     text-align: center;
     word-break: keep-all;
+    line-height: 1.4;
   }
 
   &__reveal-copy {
@@ -416,7 +457,7 @@
     margin-top: $spacing-lg;
     padding: $spacing-md;
     border-radius: $card-radius-sm;
-    background: rgba($color-surface, 0.86);
+    background: rgba($color-primary-light, 0.42);
     box-shadow: inset 0 0 0 1rpx rgba($color-primary, 0.08);
   }
 
@@ -471,7 +512,7 @@
     justify-content: center;
     padding: $spacing-xs $spacing-sm;
     border-radius: 999rpx;
-    background: rgba($color-primary-light, 0.92);
+    background: rgba($color-surface, 0.92);
   }
 
   &__viewer-spotlight-pill-text {
@@ -519,6 +560,25 @@
     width: 100%;
     height: 520rpx;
     margin-bottom: $spacing-lg;
+
+    &--empty {
+      @include flex-center;
+      flex-direction: column;
+      gap: $spacing-md;
+    }
+  }
+
+  &__deck-empty-mascot {
+    width: 160rpx;
+    height: 160rpx;
+  }
+
+  &__deck-empty-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    text-align: center;
+    line-height: 1.7;
+    word-break: keep-all;
   }
 
   &__deck-shadow {
@@ -528,7 +588,7 @@
     width: 480rpx;
     height: 60rpx;
     border-radius: 50%;
-    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0) 72%);
+    background: radial-gradient(ellipse at center, rgba($color-primary, 0.08) 0%, rgba($color-primary, 0) 72%);
     transform: translateX(-50%);
     pointer-events: none;
   }
@@ -551,7 +611,7 @@
     margin-left: -120rpx;
     border-radius: $card-radius;
     background: $color-primary-light;
-    box-shadow: 0 14rpx 36rpx rgba(0, 0, 0, 0.12);
+    box-shadow: $shadow-lg;
     overflow: hidden;
     z-index: 0;
     pointer-events: none;
@@ -572,9 +632,10 @@
     margin-left: -120rpx;
     border-radius: $card-radius;
     background: $color-surface;
-    box-shadow: 0 16rpx 40rpx rgba(0, 0, 0, 0.14);
+    border: 2rpx solid transparent;
+    box-shadow: $shadow-lg;
     transform-origin: bottom center;
-    transition-property: transform, box-shadow;
+    transition-property: transform, opacity, box-shadow;
     transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
     overflow: hidden;
     display: flex;
@@ -585,7 +646,11 @@
     }
 
     &--focused {
-      box-shadow: 0 28rpx 64rpx rgba(0, 0, 0, 0.2);
+      box-shadow: 0 28rpx 64rpx var(--jj-card-shadow-color, rgba($color-primary, 0.18));
+    }
+
+    &--dimmed {
+      opacity: 0.5;
     }
 
     &--pressed {
@@ -620,7 +685,7 @@
   }
 
   &__deck-card-current-badge-text {
-    font-size: 22rpx;
+    font-size: $font-size-xs;
     font-weight: $font-weight-bold;
     color: $color-text-white;
   }
@@ -701,17 +766,6 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-  }
-
-  &__deck-hint {
-    display: block;
-    margin-top: $spacing-sm;
-    margin-bottom: $spacing-md;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    text-align: center;
-    line-height: 1.6;
-    word-break: keep-all;
   }
 
   &__deck-detail {
@@ -829,7 +883,7 @@
   }
 
   &__member-badge-text {
-    font-size: 20rpx;
+    font-size: $font-size-2xs;
     font-weight: $font-weight-bold;
     color: $color-text-white;
   }
@@ -892,7 +946,8 @@
 
   &__info-card {
     padding: $spacing-lg;
-    background: linear-gradient(135deg, $color-bg-tint-warm 0%, $color-bg-tint-pink 100%);
+    background: rgba($color-surface, 0.96);
+    box-shadow: 0 12rpx 32rpx rgba($color-primary, 0.08), inset 0 0 0 1rpx rgba($color-primary, 0.06);
   }
 
   &__info-copy {
@@ -974,7 +1029,8 @@
 
   &__theme-card {
     padding: $spacing-lg;
-    background: linear-gradient(135deg, $color-bg-tint-pink 0%, $color-bg-tint-purple 100%);
+    background: rgba($color-surface, 0.96);
+    box-shadow: 0 12rpx 32rpx rgba($color-secondary, 0.1), inset 0 0 0 1rpx rgba($color-secondary, 0.08);
   }
 
   &__theme-header {
@@ -1046,12 +1102,13 @@
 
   &__analysis-card {
     padding: $spacing-lg;
-    background: linear-gradient(145deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.62) 100%);
+    background: rgba($color-surface, 0.96);
+    box-shadow: 0 12rpx 32rpx rgba($color-primary, 0.08), inset 0 0 0 1rpx rgba($color-primary, 0.06);
     animation: squad-unboxing-card-rise 0.34s ease both;
   }
 
   &__analysis-card--chemistry {
-    background: linear-gradient(145deg, rgba($color-primary-light, 0.96) 0%, rgba($color-surface, 0.98) 100%);
+    background: linear-gradient(145deg, rgba($color-primary-light, 0.62) 0%, rgba($color-surface, 0.98) 100%);
   }
 
   &__analysis-text {
@@ -1183,8 +1240,8 @@
   &__pair-card {
     padding: $spacing-md;
     border-radius: $card-radius;
-    background: linear-gradient(145deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.78) 100%);
-    box-shadow: 0 12rpx 28rpx rgba(0, 0, 0, 0.07);
+    background: rgba($color-surface, 0.98);
+    box-shadow: 0 12rpx 28rpx rgba($color-primary, 0.08);
     animation: squad-unboxing-card-rise 0.34s ease both;
   }
 
@@ -1238,8 +1295,8 @@
     padding: $spacing-md $container-padding;
     @include safe-area-inline($container-padding);
     @include safe-area-bottom-padding(padding-bottom, $spacing-md);
-    background: rgba($color-surface, 0.96);
-    box-shadow: 0 -18rpx 42rpx rgba(0, 0, 0, 0.12);
+    background: rgba($color-surface, 0.98);
+    box-shadow: 0 -8rpx 32rpx rgba($color-primary, 0.08);
     border-top: 2rpx solid rgba($color-border, 0.8);
     display: flex;
     flex-direction: column;
@@ -1280,9 +1337,15 @@
     border: 0;
   }
 
+  &__action-row {
+    display: flex;
+    gap: $spacing-sm;
+  }
+
+  &__share-btn,
   &__detail-btn {
-    width: 100%;
-    margin-top: $spacing-sm;
+    flex: 1;
+    min-height: 88rpx;
   }
 
   &__skip-link {
@@ -1294,10 +1357,55 @@
     text-align: center;
     font-size: $font-size-xs;
     color: $color-text-muted;
+    transition: color 0.12s ease;
+
+    &--pressed {
+      color: $color-text-secondary;
+    }
   }
 
   &__spacer {
     height: $spacing-xl;
+  }
+
+  &__success-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: $z-modal;
+    @include flex-center;
+    background: rgba($color-text-primary, 0.42);
+    animation: squad-unboxing-fade-in 0.24s ease both;
+  }
+
+  &__success-card {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-md;
+    width: 560rpx;
+    padding: $spacing-xl $spacing-lg;
+    border-radius: $card-radius;
+    background: rgba($color-surface, 0.98);
+    box-shadow: 0 24rpx 64rpx rgba($color-primary, 0.2);
+    animation: squad-unboxing-success-pop 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__success-mascot {
+    width: 200rpx;
+    height: 200rpx;
+  }
+
+  &__success-title {
+    @include type-display-page-title;
+    font-size: $font-size-xl;
+    color: $color-text-primary;
+    text-align: center;
+  }
+
+  &__success-subtitle {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    text-align: center;
+    line-height: 1.7;
   }
 }
 
@@ -1400,6 +1508,28 @@
   }
 }
 
+@keyframes squad-unboxing-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes squad-unboxing-success-pop {
+  from {
+    opacity: 0;
+    transform: translateY(24rpx) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .squad-unboxing__deck-card,
   .squad-unboxing__deck-detail,
@@ -1411,7 +1541,10 @@
   .squad-unboxing__pair-card,
   .squad-unboxing__topic-chip,
   .squad-unboxing__skeleton,
-  .squad-unboxing__blind-box-card--shaking {
+  .squad-unboxing__blind-box-card--shaking,
+  .squad-unboxing__success-overlay,
+  .squad-unboxing__bubble,
+  .squad-unboxing__reveal-hero {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

@@ -1,0 +1,139 @@
+@use '../../styles/variables' as *;
+
+$gift-card-aspect-w: 1810;
+$gift-card-aspect-h: 869;
+$gift-card-aspect-ratio: calc(#{$gift-card-aspect-h} / #{$gift-card-aspect-w} * 100%);
+
+.welcome-gift-card {
+  position: relative;
+  border-radius: $card-radius;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(24rpx) scale(0.98);
+  transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  // Soft lift so the illustrated card reads as a premium surface above the page.
+  box-shadow: 0 16rpx 48rpx rgba($color-primary, 0.08), 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+  // Fallback for WeChat runtimes that don't support aspect-ratio:
+  // padding-bottom establishes the 2.08:1 height, and absolute children fill it.
+  height: 0;
+  padding-bottom: $gift-card-aspect-ratio;
+  // Modern runtimes use aspect-ratio and ignore the padding-bottom height.
+  aspect-ratio: #{$gift-card-aspect-w} / #{$gift-card-aspect-h};
+
+  &--visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+
+    // Pressed must preserve the visible translateY so the card doesn't jump.
+    &.welcome-gift-card--pressed {
+      transform: translateY(0) scale(0.98);
+    }
+  }
+
+  &--reduce-motion {
+    transition: none;
+    opacity: 1;
+    transform: none;
+
+    &.welcome-gift-card--pressed {
+      transform: none;
+    }
+  }
+}
+
+.welcome-gift-card__placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  // Matches the warm cream wash of the Lovart illustration so text is readable
+  // while the image loads or if it ultimately fails.
+  background: linear-gradient(
+    135deg,
+    $color-bg-tint-cream 0%,
+    $color-bg-tint-warm 60%,
+    $color-bg-tint-pink 100%
+  );
+  border-radius: $card-radius;
+}
+
+.welcome-gift-card__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: $card-radius;
+  z-index: 1;
+}
+
+.welcome-gift-card__overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 60%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: $spacing-lg $spacing-lg $spacing-lg $spacing-md;
+  // The right-hand framed area is cream; text uses the standard dark palette.
+}
+
+.welcome-gift-card__eyebrow {
+  font-size: $font-size-xs;
+  line-height: $line-height-display;
+  color: $color-primary;
+  font-family: $font-cn-display;
+  margin-bottom: $spacing-xs;
+}
+
+.welcome-gift-card__title {
+  font-size: $font-size-lg;
+  line-height: $line-height-display;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  font-family: $font-cn-display;
+  margin-bottom: $spacing-sm;
+  // Prevent a lone character (孤字) on the last line of the headline.
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.welcome-gift-card__body {
+  font-size: $font-size-sm;
+  line-height: $line-height-relaxed;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-md;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.welcome-gift-card__hint {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  align-self: flex-start;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: 9999rpx;
+  background: rgba($color-primary, 0.08);
+}
+
+.welcome-gift-card__hint-text {
+  font-size: $font-size-xs;
+  line-height: $line-height-display;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-gift-card {
+    transition: none;
+    opacity: 1;
+    transform: none;
+
+    &.welcome-gift-card--pressed {
+      transform: none;
+    }
+  }
+}

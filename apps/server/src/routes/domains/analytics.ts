@@ -183,6 +183,13 @@ const SQUAD_UNBOXING_EVENT_TYPES = [
   "squad_unboxing_reveal",
   "squad_unboxing_reveal_drag",
   "squad_unboxing_reveal_tap",
+  "squad_unboxing_card_focus",
+  "squad_unboxing_confirm_attendance_tap",
+  "squad_unboxing_confirm_attendance_success",
+  "squad_unboxing_confirm_attendance_error",
+  "squad_unboxing_share_poster_tap",
+  "squad_unboxing_bubble_reveal_complete",
+  "squad_unboxing_box_open_milestone",
 ] as const;
 
 type SquadUnboxingEventType = (typeof SQUAD_UNBOXING_EVENT_TYPES)[number];

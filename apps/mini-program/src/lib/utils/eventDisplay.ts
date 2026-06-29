@@ -16,8 +16,8 @@ const FINAL_DATE_TARGET_STATUSES = new Set(['upcoming', 'pending', 'registered',
  * time, `finalDateTime` is preferred. Otherwise fall back to the top-level
  * `dateTime`. This keeps partition logic, card display, and countdown in sync.
  */
-export function getJoinedEventDisplayDateTime(event: { status?: string | null; dateTime?: string | null; finalDateTime?: string | null; groupId?: string | null }): string | undefined {
-  const status = event.status ?? 'upcoming'
+export function getJoinedEventDisplayDateTime(event: { status?: string | null; displayStatus?: string | null; dateTime?: string | null; finalDateTime?: string | null; groupId?: string | null }): string | undefined {
+  const status = event.displayStatus ?? event.status ?? 'upcoming'
 
   if (event.groupId && event.finalDateTime && FINAL_DATE_TARGET_STATUSES.has(status)) {
     return event.finalDateTime
@@ -89,6 +89,20 @@ function formatTimePart(date: Date): string {
   return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
+// Statuses that represent a finished or withdrawn event. Used by card UI and
+// event partitioning to suppress countdowns and move items to the past bucket.
+export const JOINED_EVENT_TERMINAL_STATUSES = new Set([
+  'completed',
+  'attended',
+  'cancelled',
+  'declined',
+  'no_show',
+])
+
+export function isJoinedEventTerminal(status?: string | null): boolean {
+  return !!status && JOINED_EVENT_TERMINAL_STATUSES.has(status)
+}
+
 export function getCountdownText(startTime: string): string {
   const now = new Date()
   const start = new Date(startTime)
@@ -104,19 +118,22 @@ export function getJoinedEventStatusLabel(status?: string | null): string {
   switch (status) {
     case 'matched':
       return '已匹配'
+    case 'venue_unlocked':
+      return '场地已解锁'
     case 'pending':
       return '匹配中'
     case 'registered':
       return '已报名'
     case 'confirmed':
       return '已确认'
-    case 'venue_unlocked':
-      return '场地已解锁'
     case 'completed':
     case 'attended':
       return '已完成'
     case 'cancelled':
+    case 'declined':
       return '已取消'
+    case 'no_show':
+      return '未出席'
     case 'upcoming':
       return '待参加'
     default:

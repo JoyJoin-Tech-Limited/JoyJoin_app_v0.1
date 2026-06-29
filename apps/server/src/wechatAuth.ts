@@ -15,41 +15,6 @@ import { logger } from "./lib/logger";
 import { captureLocationSnapshot } from "./lib/captureLocationSnapshot";
 
 /**
- * Award the highest-value welcome coupon to a brand-new user.
- * Idempotent: skips if the user already has the coupon. Never blocks auth.
- */
-async function awardWelcomeCoupon(userId: string): Promise<void> {
-  try {
-    const welcomeCoupon50 = await storage.getCouponByCode("WELCOME50");
-    const welcomeCoupon40 = await storage.getCouponByCode("WELCOME40");
-    const welcomeCoupon = welcomeCoupon50 ?? welcomeCoupon40;
-    if (!welcomeCoupon) return;
-
-    const existingCoupons = await storage.getUserCoupons(userId);
-    const alreadyHas = existingCoupons.some(
-      (uc: any) => (uc.coupon_id ?? uc.couponId) === welcomeCoupon.id
-    );
-    if (alreadyHas) return;
-
-    await storage.createUserCoupon({
-      userId,
-      couponId: welcomeCoupon.id,
-      source: "wechat_first_login",
-    });
-
-    logger.info("[WeChat Auth] Awarded welcome coupon to new user", {
-      userId,
-      couponCode: welcomeCoupon.code,
-    });
-  } catch (couponError) {
-    logger.error("[WeChat Auth] Failed to award welcome coupon", {
-      userId,
-      error: couponError instanceof Error ? couponError.message : String(couponError),
-    });
-  }
-}
-
-/**
  * Minimum number of answers with a valid questionId + selectedOption that must
  * be present in a testAnswers payload before we attempt to create a completed
  * assessment session. Payloads with fewer valid items are rejected to prevent
@@ -378,9 +343,6 @@ export async function findOrCreateWechatUser(
       hasNickname: Boolean(newUser.wechatNickname),
       hasAvatar: Boolean(newUser.wechatAvatarUrl),
     });
-
-    // Best-effort welcome coupon for every first-time WeChat auth user.
-    await awardWelcomeCoupon(newUser.id);
 
     return { user: newUser, isNewUser: true };
   }

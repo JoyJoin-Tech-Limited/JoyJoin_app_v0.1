@@ -219,6 +219,10 @@
       "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.webp"
     },
     {
+      "localPath": "assets/lovart/gift-card/coupon.webp",
+      "cdnPath": "assets/lovart/gift-card/coupon.webp"
+    },
+    {
       "localPath": "assets/lovart/icebreaker/icons/icon-coin-empty.png",
       "cdnPath": "assets/lovart/icebreaker/icons/icon-coin-empty.png"
     },

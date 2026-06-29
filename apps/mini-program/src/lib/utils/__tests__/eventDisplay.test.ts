@@ -4,6 +4,7 @@ import {
   formatEventDateTime,
   getJoinedEventDisplayDateTime,
   getJoinedEventStatusLabel,
+  isJoinedEventTerminal,
 } from '../eventDisplay'
 
 describe('eventDisplay', () => {
@@ -17,6 +18,30 @@ describe('eventDisplay', () => {
         finalDateTime: '2026-04-14T19:30:00+08:00',
       }
       expect(getJoinedEventDisplayDateTime(event)).toBe('2026-04-14T19:30:00+08:00')
+    })
+
+    it('prefers displayStatus over raw status when choosing finalDateTime', () => {
+      const event: JoinedEventSummary = {
+        id: '1',
+        status: 'closed',
+        displayStatus: 'venue_unlocked',
+        groupId: 'g1',
+        dateTime: '2026-04-12T19:30:00+08:00',
+        finalDateTime: '2026-04-14T19:30:00+08:00',
+      }
+      expect(getJoinedEventDisplayDateTime(event)).toBe('2026-04-14T19:30:00+08:00')
+    })
+
+    it('falls back to dateTime when displayStatus is terminal', () => {
+      const event: JoinedEventSummary = {
+        id: '1',
+        status: 'completed',
+        displayStatus: 'attended',
+        groupId: 'g1',
+        dateTime: '2026-04-12T19:30:00+08:00',
+        finalDateTime: '2026-04-14T19:30:00+08:00',
+      }
+      expect(getJoinedEventDisplayDateTime(event)).toBe('2026-04-12T19:30:00+08:00')
     })
 
     it('falls back to dateTime when groupId is missing', () => {
@@ -94,6 +119,9 @@ describe('eventDisplay', () => {
       expect(getJoinedEventStatusLabel('registered')).toBe('已报名')
       expect(getJoinedEventStatusLabel('confirmed')).toBe('已确认')
       expect(getJoinedEventStatusLabel('venue_unlocked')).toBe('场地已解锁')
+      expect(getJoinedEventStatusLabel('cancelled')).toBe('已取消')
+      expect(getJoinedEventStatusLabel('declined')).toBe('已取消')
+      expect(getJoinedEventStatusLabel('no_show')).toBe('未出席')
     })
 
     it('treats completed and attended as completed', () => {
@@ -103,6 +131,31 @@ describe('eventDisplay', () => {
 
     it('returns empty string for unknown status', () => {
       expect(getJoinedEventStatusLabel('unknown')).toBe('')
+    })
+  })
+
+  describe('isJoinedEventTerminal', () => {
+    it('returns true for terminal statuses', () => {
+      expect(isJoinedEventTerminal('completed')).toBe(true)
+      expect(isJoinedEventTerminal('attended')).toBe(true)
+      expect(isJoinedEventTerminal('cancelled')).toBe(true)
+      expect(isJoinedEventTerminal('declined')).toBe(true)
+      expect(isJoinedEventTerminal('no_show')).toBe(true)
+    })
+
+    it('returns false for null, undefined, or empty status', () => {
+      expect(isJoinedEventTerminal(null)).toBe(false)
+      expect(isJoinedEventTerminal(undefined)).toBe(false)
+      expect(isJoinedEventTerminal('')).toBe(false)
+    })
+
+    it('returns false for active statuses', () => {
+      expect(isJoinedEventTerminal('pending')).toBe(false)
+      expect(isJoinedEventTerminal('registered')).toBe(false)
+      expect(isJoinedEventTerminal('matched')).toBe(false)
+      expect(isJoinedEventTerminal('confirmed')).toBe(false)
+      expect(isJoinedEventTerminal('venue_unlocked')).toBe(false)
+      expect(isJoinedEventTerminal('upcoming')).toBe(false)
     })
   })
 })

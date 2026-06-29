@@ -125,6 +125,7 @@ describe("GET /api/events/joined", () => {
         city: "深圳",
         district: "福田区",
         status: "pending",
+        displayStatus: "pending",
         eventType: "饭局",
         venueName: "测试餐厅",
         venueAddress: "福田区 test 路 1 号",
@@ -133,6 +134,7 @@ describe("GET /api/events/joined", () => {
         matchedAt: "2026-05-17T14:00:00.000Z",
         groupId: "group-1",
         finalDateTime: "2026-05-18T19:00:00.000Z",
+        venueAssignmentStatus: "assigned",
       },
     ]);
 
@@ -155,6 +157,8 @@ describe("GET /api/events/joined", () => {
       expect(result[0].eventType).toBeUndefined();
       expect(result[1].id).toBe("pool-1");
       expect(result[1].status).toBe("pending");
+      expect(result[1].displayStatus).toBe("pending");
+      expect(result[1].venueAssignmentStatus).toBe("assigned");
       expect(result[1].eventType).toBe("饭局");
       expect(result[1].city).toBe("深圳");
       expect(result[1].district).toBe("福田区");

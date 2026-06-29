@@ -9,14 +9,17 @@ import {
   type PoolGroupMemberSummary,
 } from '@shared/api'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
+import { useResetOnShow } from '../../hooks/useResetOnShow'
 import { haptics } from '../../lib/utils/haptics'
 import { logError, logInfo } from '../../lib/utils/logger'
 import { preloadImage } from '../../lib/utils/imagePreload'
 import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, COLOR_DANGER } from '../../lib/utils/uiConstants'
 import { navigateBackOrEventsTab, openPoolGroupDetail, switchToEventsTab } from '../../lib/navigation/matchingNavigation'
+import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
 import {
   computeActionDockState,
   getSquadChemistryTokens,
@@ -33,6 +36,29 @@ function triggerLightHaptic() {
   }
 }
 
+function getRevealFlagKey(groupId: string): string {
+  return `jj_revealed_${groupId}`
+}
+
+function readRevealFlag(groupId: string): boolean {
+  try {
+    return Taro.getStorageSync(getRevealFlagKey(groupId)) === true
+  } catch {
+    return false
+  }
+}
+
+function writeRevealFlag(groupId: string): void {
+  try {
+    Taro.setStorageSync(getRevealFlagKey(groupId), true)
+  } catch (error) {
+    logError('[SquadUnboxing] Failed to persist reveal flag', {
+      groupId,
+      message: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
 export interface UseSquadUnboxingControllerArgs {
   groupId: string
   routerParams: Record<string, string | undefined>
@@ -42,13 +68,19 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   const { user: currentUser, isLoading: authLoading } = useAuthGuard()
   const { shouldReduceMotion } = useMiniRevealMotion(routerParams)
 
-  const [flowState, setFlowState] = useState<FlowState>('ready')
-  const [analysisStage, setAnalysisStage] = useState<AnalysisStage>(0)
+  const [flowState, setFlowState] = useState<FlowState>(() => (groupId ? (readRevealFlag(groupId) ? 'revealed' : 'ready') : 'ready'))
+  const [analysisStage, setAnalysisStage] = useState<AnalysisStage>(() => (groupId ? (readRevealFlag(groupId) ? 4 : 0) : 0))
+  const [isPageExiting, setIsPageExiting] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false)
+
+  useResetOnShow(setIsPageExiting, setIsSubmitting, setShowSuccessOverlay)
 
   const {
     data: poolGroup,
     isLoading,
     error: fetchError,
+    refetch,
   } = useQuery<PoolGroupDetailsResponse>({
     queryKey: ['mini-program', 'pool-group', groupId],
     queryFn: () => getPoolGroupDetails(apiRequest, groupId),
@@ -79,26 +111,44 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
         blindBoxEventId: response.blindBoxEventId,
       })
 
+      squadUnboxingAnalytics.track('squad_unboxing_confirm_attendance_success', {
+        groupId,
+        screen: 'squad-unboxing',
+        blindBoxEventId: response.blindBoxEventId,
+      })
+
       haptics('success')
+      setShowSuccessOverlay(true)
+
       await Taro.showToast({
-        title: '已确认出席',
+        title: '座位已锁定 · 解锁新羁绊',
         icon: 'success',
         duration: TOAST_SHORT_MS,
       })
 
-      if (response.blindBoxEventId) {
-        Taro.redirectTo({ url: `/pages/event-detail/index?id=${response.blindBoxEventId}` })
-        return
-      }
-
-      openPoolGroupDetail(groupId)
+      // Allow the success overlay/toast to register before redirecting.
+      setTimeout(() => {
+        if (response.blindBoxEventId) {
+          Taro.redirectTo({ url: `/pages/event-detail/index?id=${response.blindBoxEventId}` })
+          return
+        }
+        openPoolGroupDetail(groupId)
+      }, 900)
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : '确认出席没成功'
+      const errorCode = (error as any)?.code ?? (error as any)?.response?.data?.code ?? 'UNKNOWN'
       logError('[SquadUnboxing] Attendance confirmation failed', {
         groupId,
         message,
+        errorCode,
       })
+      squadUnboxingAnalytics.track('squad_unboxing_confirm_attendance_error', {
+        groupId,
+        screen: 'squad-unboxing',
+        errorCode,
+      })
+      setIsSubmitting(false)
       Taro.showToast({ title: message, icon: 'none', duration: TOAST_MEDIUM_MS })
     },
   })
@@ -219,6 +269,24 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     [analysisStage, flowState],
   )
 
+  const archetypeMixCopy = useMemo(() => {
+    const archetypes = members
+      .map((member) => member.archetype)
+      .filter((archetype): archetype is string => Boolean(archetype))
+    const uniqueArchetypes = Array.from(new Set(archetypes))
+    if (uniqueArchetypes.length === 0) return ''
+
+    const names = uniqueArchetypes
+      .slice(0, 3)
+      .map((id) => ARCHETYPE_BY_ID[id]?.nameCn || id)
+    const suffix = uniqueArchetypes.length > 3 ? '等多种能量' : '三种能量'
+    const label = uniqueArchetypes.length >= 3 ? suffix : uniqueArchetypes.length === 2 ? '两种能量' : '一种能量'
+
+    if (names.length === 1) return `这一桌凝聚了${names[0]}的${label}`
+    const last = names.pop()
+    return `这一桌集齐了${names.join('、')}和${last}${label}`
+  }, [members])
+
   const rootClassName = ['squad-unboxing', shouldReduceMotion ? 'squad-unboxing--reduce-motion' : '']
     .filter(Boolean)
     .join(' ')
@@ -230,18 +298,35 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   }, [])
 
   const handleConfirmAttendance = useCallback(() => {
-    if (confirmAttendanceMutation.isPending) {
+    if (confirmAttendanceMutation.isPending || isSubmitting) {
       return
     }
 
+    setIsSubmitting(true)
+    haptics('medium')
+    squadUnboxingAnalytics.track('squad_unboxing_confirm_attendance_tap', {
+      groupId,
+      screen: 'squad-unboxing',
+    })
     confirmAttendanceMutation.mutate()
-  }, [confirmAttendanceMutation])
+  }, [confirmAttendanceMutation, groupId, isSubmitting])
+
+  const handleSharePosterTap = useCallback(() => {
+    squadUnboxingAnalytics.track('squad_unboxing_share_poster_tap', {
+      groupId,
+      screen: 'squad-unboxing',
+    })
+    haptics('light')
+    Taro.showToast({ title: '海报生成 coming soon', icon: 'none', duration: TOAST_SHORT_MS })
+  }, [groupId])
 
   const handleOpenGroupDetail = useCallback(() => {
+    haptics('light')
     openPoolGroupDetail(groupId)
   }, [groupId])
 
   const handleSkip = useCallback(async () => {
+    haptics('light')
     if (analysisStage < 4) {
       setAnalysisStage(4)
     }
@@ -270,10 +355,14 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     const timer = setTimeout(() => {
       haptics('medium')
       setFlowState('revealed')
+      squadUnboxingAnalytics.track('squad_unboxing_box_open_milestone', {
+        groupId,
+        screen: 'squad-unboxing',
+      })
     }, shouldReduceMotion ? 220 : 1450)
 
     return () => clearTimeout(timer)
-  }, [flowState, shouldReduceMotion])
+  }, [flowState, groupId, shouldReduceMotion])
 
   useEffect(() => {
     if (flowState !== 'shaking') return
@@ -285,14 +374,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
       return undefined
     }
 
-    try {
-      Taro.setStorageSync(`jj_revealed_${groupId}`, true)
-    } catch (error) {
-      logError('[SquadUnboxing] Failed to persist reveal flag', {
-        groupId,
-        message: error instanceof Error ? error.message : String(error),
-      })
-    }
+    writeRevealFlag(groupId)
 
     const timer = setTimeout(() => {
       setAnalysisStage((stage) => (stage === 0 ? 1 : stage))
@@ -344,10 +426,16 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     rootClassName,
     shouldReduceMotion,
     confirmAttendanceMutation,
+    isPageExiting,
+    isSubmitting,
+    showSuccessOverlay,
+    archetypeMixCopy,
     handleOpenBox,
     handleConfirmAttendance,
     handleOpenGroupDetail,
+    handleSharePosterTap,
     handleSkip,
+    refetch,
     navigateBackOrEventsTab,
   }
 }

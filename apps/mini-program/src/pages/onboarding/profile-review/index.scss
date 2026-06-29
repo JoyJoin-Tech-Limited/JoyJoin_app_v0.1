@@ -849,3 +849,52 @@
   color: $color-text-tertiary;
   line-height: 1.5;
 }
+
+.profile-review__gift-card {
+  margin-top: $spacing-sm;
+}
+
+.profile-review__coupon-error {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-top: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+  border-radius: $card-radius;
+  background: rgba($color-error, 0.06);
+  border: 2rpx solid rgba($color-error, 0.12);
+  min-height: 120rpx;
+  transition: transform 0.12s ease, background 0.12s ease;
+
+  &--pressed {
+    background: rgba($color-error, 0.1);
+    transform: scale(0.98);
+  }
+}
+
+.profile-review__coupon-error-icon {
+  margin-right: $spacing-md;
+  flex-shrink: 0;
+}
+
+.profile-review__coupon-error-copy {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-review__coupon-error-title {
+  font-size: $font-size-base;
+  line-height: $line-height-display;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-xs;
+}
+
+.profile-review__coupon-error-subtitle {
+  font-size: $font-size-sm;
+  line-height: $line-height-relaxed;
+  color: $color-text-secondary;
+}
+

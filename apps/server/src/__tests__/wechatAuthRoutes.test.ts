@@ -52,8 +52,17 @@ vi.mock("../repositories/usersRepo", () => ({
   },
 }));
 
+vi.mock("../repositories/paymentsRepo", () => ({
+  paymentsRepo: {
+    getCouponByCode: vi.fn(),
+    getUserCoupons: vi.fn().mockResolvedValue([]),
+    createUserCoupon: vi.fn(),
+  },
+}));
+
 const { storage } = await import("../storage");
 const { usersRepo } = await import("../repositories/usersRepo");
+const { paymentsRepo } = await import("../repositories/paymentsRepo");
 const { registerAuthRoutes } = await import("../routes/domains/auth");
 
 function createApp() {
@@ -418,6 +427,154 @@ describe("wechat auth route hardening", () => {
 
         expect(response.status).toBe(200);
         expect(body).toMatchObject({ success: true, isNewUser: false });
+      });
+    });
+  });
+
+  describe("GET /api/user/welcome-coupon", () => {
+    beforeEach(() => {
+      vi.mocked(paymentsRepo.getCouponByCode).mockReset();
+      vi.mocked(paymentsRepo.getUserCoupons).mockReset().mockResolvedValue([]);
+      vi.mocked(paymentsRepo.createUserCoupon).mockReset();
+    });
+
+    async function loginAndGetCookie(baseUrl: string): Promise<string> {
+      const loginResponse = await fetch(`${baseUrl}/api/auth/wechat/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: "wechat_test_welcome_coupon" }),
+      });
+      expect(loginResponse.status).toBe(200);
+      return cookieHeader(loginResponse);
+    }
+
+    it("awards WELCOME50 when no existing coupon", async () => {
+      vi.mocked(paymentsRepo.getCouponByCode).mockImplementation(async (code: string) => {
+        if (code === "WELCOME50") {
+          return { id: "coupon-50", code: "WELCOME50", discount_type: "percentage", discount_value: 50 };
+        }
+        return undefined;
+      });
+      vi.mocked(paymentsRepo.createUserCoupon).mockResolvedValue({ id: "uc-1", created_at: new Date("2026-06-29T00:00:00Z") });
+
+      await withServer(async (baseUrl) => {
+        const cookie = await loginAndGetCookie(baseUrl);
+
+        const response = await fetch(`${baseUrl}/api/user/welcome-coupon`, {
+          headers: { cookie },
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(200);
+        expect(body).toMatchObject({
+          code: "WELCOME50",
+          discountType: "percentage",
+          discountValue: 50,
+          source: "profile_review_first_view",
+          isNewlyAwarded: true,
+        });
+        expect(paymentsRepo.createUserCoupon).toHaveBeenCalledWith(
+          expect.objectContaining({ userId: mockUser.id, couponId: "coupon-50", source: "profile_review_first_view" })
+        );
+      });
+    });
+
+    it("returns existing coupon without creating a new one", async () => {
+      vi.mocked(paymentsRepo.getCouponByCode).mockResolvedValue({ id: "coupon-40", code: "WELCOME40", discount_type: "percentage", discount_value: 40 });
+      vi.mocked(paymentsRepo.getUserCoupons).mockResolvedValue([
+        { id: "uc-2", coupon_id: "coupon-40", source: "profile_review_first_view", created_at: "2026-06-28T00:00:00Z" },
+      ]);
+
+      await withServer(async (baseUrl) => {
+        const cookie = await loginAndGetCookie(baseUrl);
+
+        const response = await fetch(`${baseUrl}/api/user/welcome-coupon`, {
+          headers: { cookie },
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(200);
+        expect(body).toMatchObject({
+          code: "WELCOME40",
+          discountValue: 40,
+          isNewlyAwarded: false,
+        });
+        expect(paymentsRepo.createUserCoupon).not.toHaveBeenCalled();
+      });
+    });
+
+    it("returns 404 when no welcome coupon is configured", async () => {
+      vi.mocked(paymentsRepo.getCouponByCode).mockResolvedValue(undefined);
+
+      await withServer(async (baseUrl) => {
+        const cookie = await loginAndGetCookie(baseUrl);
+
+        const response = await fetch(`${baseUrl}/api/user/welcome-coupon`, {
+          headers: { cookie },
+        });
+        expect(response.status).toBe(404);
+      });
+    });
+
+    it("falls back to WELCOME40 when WELCOME50 is missing", async () => {
+      vi.mocked(paymentsRepo.getCouponByCode).mockImplementation(async (code: string) => {
+        if (code === "WELCOME50") return undefined;
+        return { id: "coupon-40", code: "WELCOME40", discount_type: "percentage", discount_value: 40 };
+      });
+      vi.mocked(paymentsRepo.createUserCoupon).mockResolvedValue({ id: "uc-40", created_at: new Date("2026-06-29T00:00:00Z") });
+
+      await withServer(async (baseUrl) => {
+        const cookie = await loginAndGetCookie(baseUrl);
+
+        const response = await fetch(`${baseUrl}/api/user/welcome-coupon`, {
+          headers: { cookie },
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(200);
+        expect(body).toMatchObject({
+          code: "WELCOME40",
+          discountValue: 40,
+          isNewlyAwarded: true,
+        });
+        expect(paymentsRepo.createUserCoupon).toHaveBeenCalledWith(
+          expect.objectContaining({ userId: mockUser.id, couponId: "coupon-40" })
+        );
+      });
+    });
+
+    it("returns 401 for unauthenticated requests", async () => {
+      vi.mocked(paymentsRepo.getCouponByCode).mockResolvedValue({ id: "coupon-50", code: "WELCOME50", discount_type: "percentage", discount_value: 50 });
+
+      await withServer(async (baseUrl) => {
+        const response = await fetch(`${baseUrl}/api/user/welcome-coupon`);
+        expect(response.status).toBe(401);
+      });
+    });
+
+    it("refetches the existing coupon on unique-violation race", async () => {
+      vi.mocked(paymentsRepo.getCouponByCode).mockResolvedValue({ id: "coupon-50", code: "WELCOME50", discount_type: "percentage", discount_value: 50 });
+      vi.mocked(paymentsRepo.getUserCoupons)
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { id: "uc-race", coupon_id: "coupon-50", source: "profile_review_first_view", created_at: "2026-06-29T00:00:00Z" },
+        ]);
+
+      const duplicateError: any = new Error("duplicate key value violates unique constraint");
+      duplicateError.code = "23505";
+      vi.mocked(paymentsRepo.createUserCoupon).mockRejectedValueOnce(duplicateError);
+
+      await withServer(async (baseUrl) => {
+        const cookie = await loginAndGetCookie(baseUrl);
+
+        const response = await fetch(`${baseUrl}/api/user/welcome-coupon`, {
+          headers: { cookie },
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(200);
+        expect(body.isNewlyAwarded).toBe(false);
+        expect(paymentsRepo.createUserCoupon).toHaveBeenCalledTimes(1);
       });
     });
   });

@@ -1,6 +1,7 @@
 import { View, Text, Image } from '@tarojs/components'
 import { useState, useCallback, useMemo } from 'react'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { getArchetypeHSL, formatHSLAsRGBA } from '@shared/archetypeColors'
 import type { PoolGroupMemberSummary } from '@shared/api'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
@@ -14,6 +15,7 @@ export interface TeammateCardProps {
   index: number
   total: number
   focused: boolean
+  anyFocused: boolean
   isCurrentUser: boolean
   reduceMotion: boolean
   isDegradation: boolean
@@ -51,6 +53,7 @@ export default function TeammateCard({
   index,
   total,
   focused,
+  anyFocused,
   isCurrentUser,
   reduceMotion,
   isDegradation,
@@ -76,27 +79,39 @@ export default function TeammateCard({
   }, [onFocus])
 
   // Fan geometry: center card is 0°, step size shrinks as group grows.
+  // Upward circular arc: cards at the edges are slightly higher than the center.
   const step = total <= 1 ? 0 : Math.min(14, 48 / total)
   const baseRotation = (index - (total - 1) / 2) * step
-  const baseTranslateX = (index - (total - 1) / 2) * (total <= 3 ? 28 : 18)
-  const baseTranslateY = Math.abs(baseRotation) * 1.4
+  const baseTranslateX = (index - (total - 1) / 2) * (total <= 3 ? 32 : 22)
+  const baseTranslateY = -Math.abs(baseRotation) * 2.0
 
-  // Focused state lifts the card and centers it.
+  // Focused state lifts the card and centers it; non-focused cards dim when any card is focused.
   const focusRotation = focused ? 0 : baseRotation
   const focusTranslateX = focused ? 0 : baseTranslateX
   const focusTranslateY = focused ? (isDegradation ? -8 : -24) : baseTranslateY
-  const focusScale = focused ? (isDegradation ? 1.02 : 1.06) : 1
+  const focusScale = focused ? (isDegradation ? 1.04 : 1.08) : 1
   const focusZIndex = focused ? 50 : total - Math.abs(index - Math.floor(total / 2))
+  const isDimmed = anyFocused && !focused
 
   const transform = `translate3d(${focusTranslateX}rpx, ${focusTranslateY}rpx, 0) rotate(${focusRotation}deg) scale(${focusScale})`
 
   const transitionDuration = reduceMotion ? '0ms' : isDegradation ? '180ms' : '320ms'
+
+  const archetypeAccent = useMemo(() => {
+    const hsl = getArchetypeHSL(member.archetype)
+    return {
+      borderColor: formatHSLAsRGBA(hsl, 0.28),
+      background: formatHSLAsRGBA(hsl, 0.08),
+      shadow: formatHSLAsRGBA(hsl, 0.18),
+    }
+  }, [member.archetype])
 
   return (
     <View
       className={[
         'squad-unboxing__deck-card',
         focused ? 'squad-unboxing__deck-card--focused' : '',
+        isDimmed ? 'squad-unboxing__deck-card--dimmed' : '',
         isCurrentUser ? 'squad-unboxing__deck-card--current' : '',
         reduceMotion ? 'squad-unboxing__deck-card--reduce-motion' : '',
         isDegradation ? 'squad-unboxing__deck-card--degradation' : '',
@@ -105,6 +120,9 @@ export default function TeammateCard({
         transform,
         zIndex: focusZIndex,
         transitionDuration,
+        borderColor: archetypeAccent.borderColor,
+        backgroundColor: archetypeAccent.background,
+        ['--jj-card-shadow-color' as string]: archetypeAccent.shadow,
       }}
       onClick={handleTap}
       hoverClass='squad-unboxing__deck-card--pressed'

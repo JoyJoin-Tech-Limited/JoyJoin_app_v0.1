@@ -10,12 +10,14 @@ function createJoinedEvent(
   status?: string,
   groupId?: string,
   finalDateTime?: string,
+  displayStatus?: JoinedEventSummary['displayStatus'],
 ): JoinedEventSummary {
   return {
     id,
     title: id,
     dateTime,
     status,
+    displayStatus,
     groupId,
     finalDateTime,
   }
@@ -78,6 +80,47 @@ describe('partitionJoinedEventsByDateTime', () => {
       'completed-future',
       'attended-future',
       'matched-past',
+    ])
+  })
+
+  it('uses displayStatus over raw status for terminal classification', () => {
+    const buckets = partitionJoinedEventsByDateTime(
+      [
+        // Pool status is 'matched' but derived displayStatus says cancelled → completed bucket.
+        createJoinedEvent(
+          'pool-matched-but-cancelled',
+          '2026-04-14T19:30:00+08:00',
+          'matched',
+          'group-1',
+          '2026-04-14T19:30:00+08:00',
+          'cancelled',
+        ),
+        // Pool status is 'completed' but displayStatus says attended → completed bucket.
+        createJoinedEvent(
+          'pool-completed-attended',
+          '2026-04-14T19:30:00+08:00',
+          'completed',
+          'group-2',
+          '2026-04-14T19:30:00+08:00',
+          'attended',
+        ),
+        // displayStatus is active even though raw status is unknown → upcoming bucket.
+        createJoinedEvent(
+          'display-active',
+          '2026-04-14T19:30:00+08:00',
+          'weird',
+          undefined,
+          undefined,
+          'matched',
+        ),
+      ],
+      REFERENCE_TIME,
+    )
+
+    expect(buckets.upcoming.map((event) => event.id)).toEqual(['display-active'])
+    expect(buckets.completed.map((event) => event.id)).toEqual([
+      'pool-matched-but-cancelled',
+      'pool-completed-attended',
     ])
   })
 

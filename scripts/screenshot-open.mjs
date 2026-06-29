@@ -24,6 +24,10 @@ const PAGES = {
     url: 'http://localhost:9000/event-ticket-payment.png',
     altPort: 9003,
   },
+  'squad-unboxing': {
+    url: 'http://localhost:9000/squad-unboxing-revealed.png',
+    altPort: 9003,
+  },
 }
 
 const page = process.argv[2] || 'events'

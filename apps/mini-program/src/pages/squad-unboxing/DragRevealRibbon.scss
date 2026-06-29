@@ -6,6 +6,7 @@
   flex-direction: column;
   gap: $spacing-lg;
   width: 100%;
+  touch-action: pan-y;
 
   &__box-area {
     position: relative;
@@ -21,7 +22,6 @@
     border-radius: 44rpx;
     background: rgba($color-primary, 0.08);
     border: 2rpx solid rgba($color-primary, 0.14);
-    touch-action: pan-y;
     cursor: pointer;
     transition: opacity 0.22s ease, background 0.15s ease;
 
@@ -58,13 +58,11 @@
     background: $color-surface;
     border: 4rpx solid $color-secondary;
     @include flex-center;
-    box-shadow: 0 4rpx 20rpx rgba($color-primary, 0.25);
+    box-shadow: $shadow-md;
     z-index: 2;
-    transition: left 0.28s cubic-bezier(0.22, 1, 0.36, 1);
     animation: drag-reveal-pulse 2s ease-in-out infinite;
 
     &--dragging {
-      transition: none;
       animation: none;
       transform: scale(1.06);
     }
@@ -73,12 +71,11 @@
       animation: none;
       background: $color-success;
       border-color: $color-success;
-      transition: left 0.28s cubic-bezier(0.22, 1, 0.36, 1);
     }
   }
 
   &__thumb-icon {
-    font-size: 32rpx;
+    font-size: $font-size-md;
     color: $color-primary;
     line-height: 1;
     font-weight: $font-weight-bold;
@@ -104,10 +101,22 @@
 @keyframes drag-reveal-pulse {
   0%,
   100% {
-    box-shadow: 0 4rpx 20rpx rgba($color-primary, 0.25);
+    opacity: 1;
+    transform: scale(1);
   }
 
   50% {
-    box-shadow: 0 4rpx 28rpx rgba($color-primary, 0.45);
+    opacity: 0.92;
+    transform: scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drag-reveal-ribbon__thumb {
+    animation: none;
+  }
+
+  .drag-reveal-ribbon__thumb--dragging {
+    transform: none;
   }
 }

@@ -1,13 +1,15 @@
 
 import { View, Text, ScrollView, Image, Textarea } from '@tarojs/components'
-import Taro from '@tarojs/taro'
+import Taro, { useDidShow } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   completeProfileReview,
   getProfileTagline,
   getUserInterests,
+  claimWelcomeCoupon,
   type UserInterestsResponse,
+  type WelcomeCouponResponse,
 } from '@shared/api'
 import { GENERIC_PROFILE_TAGLINE_FALLBACK } from '@shared/ai/onboarding'
 import { getIntentEmoji, getIntentLabel } from '@shared/constants'
@@ -33,6 +35,7 @@ import Card from '../../../components/ui/Card'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
+import WelcomeGiftCard from '../../../components/onboarding/WelcomeGiftCard'
 import { getArchetypeVisual, getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
@@ -107,6 +110,11 @@ export default function ProfileReviewPage() {
   const [isRevealReady, setIsRevealReady] = useState(false)
   const [bio, setBio] = useState('')
   const [bioError, setBioError] = useState('')
+  const [welcomeCoupon, setWelcomeCoupon] = useState<WelcomeCouponResponse | null>(null)
+  const [isCouponLoading, setIsCouponLoading] = useState(false)
+  const [isCouponCardVisible, setIsCouponCardVisible] = useState(false)
+  const [couponError, setCouponError] = useState(false)
+  const [couponAttempt, setCouponAttempt] = useState(0)
 
   // prefers-reduced-motion gating: skip the ceremonial reveal animation when motion is reduced.
   useEffect(() => {
@@ -115,7 +123,7 @@ export default function ProfileReviewPage() {
     }
   }, [shouldReduceMotion])
 
-  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating, setIsRevealReady)
+  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating, setIsRevealReady, setIsCouponCardVisible)
   const queryClient = useQueryClient()
   const { user, isLoading } = useAuthGuard({
     suspendOnboardingRedirect: isSubmitting || isPageExiting,
@@ -131,6 +139,58 @@ export default function ProfileReviewPage() {
       setBio((prev) => (prev === '' ? existingBio.slice(0, 100) : prev))
     }
   }, [isLoading, user?.bio])
+
+  // Claim (or re-fetch) the lifetime welcome coupon once the reveal animation finishes.
+  useEffect(() => {
+    if (!isRevealReady || !user || isCouponLoading || welcomeCoupon) return
+
+    let cancelled = false
+    let visibilityTimer: ReturnType<typeof setTimeout> | null = null
+    setIsCouponLoading(true)
+    setCouponError(false)
+
+    withTimeout(claimWelcomeCoupon(apiRequest), QUERY_TIMEOUT_MS)
+      .then((coupon) => {
+        if (cancelled) return
+        setWelcomeCoupon(coupon)
+        analytics.interaction('welcome_gift_card_impression', {
+          code: coupon.code,
+          discountValue: coupon.discountValue,
+          isNewlyAwarded: coupon.isNewlyAwarded,
+        })
+        // Small delay so the card enters after the profile card stagger.
+        visibilityTimer = setTimeout(() => {
+          if (!cancelled) setIsCouponCardVisible(true)
+        }, 200)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setCouponError(true)
+        analytics.errorOccurred('welcome_gift_card_claim_failed', err instanceof Error ? err.message : String(err))
+        logError('[ProfileReview] Failed to claim welcome coupon', {
+          message: err instanceof Error ? err.message : String(err),
+        })
+      })
+      .finally(() => {
+        if (!cancelled) setIsCouponLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+      if (visibilityTimer) clearTimeout(visibilityTimer)
+    }
+  }, [isRevealReady, user, analytics, isCouponLoading, welcomeCoupon, couponAttempt])
+
+  // Replay the gift-card entrance animation when the user swipes back to this page.
+  useDidShow(() => {
+    if (!welcomeCoupon) return
+    if (shouldReduceMotion) {
+      setIsCouponCardVisible(true)
+      return
+    }
+    const timer = setTimeout(() => setIsCouponCardVisible(true), 100)
+    return () => clearTimeout(timer)
+  })
 
   const shouldLoadInterests = !isLoading && Boolean(user?.hasCompletedInterestsCarousel)
   const { data: profileTagline, isLoading: isTaglineLoading, isError: isTaglineError } = useQuery({
@@ -712,6 +772,41 @@ export default function ProfileReviewPage() {
             >
               <Text className='profile-review__error-text'>{error}</Text>
               <Text className='profile-review__error-retry'>点击重试</Text>
+            </View>
+          ) : null}
+
+          {welcomeCoupon ? (
+            <WelcomeGiftCard
+              discountValue={welcomeCoupon.discountValue}
+              visible={isCouponCardVisible}
+              reduceMotion={shouldReduceMotion}
+              onTap={() => {
+                analytics.interaction('welcome_gift_card_tap', {
+                  code: welcomeCoupon.code,
+                  discountValue: welcomeCoupon.discountValue,
+                  isNewlyAwarded: welcomeCoupon.isNewlyAwarded,
+                })
+              }}
+              className='profile-review__gift-card'
+            />
+          ) : couponError ? (
+            <View
+              className='profile-review__coupon-error'
+              onClick={() => {
+                haptics('light')
+                analytics.interaction('welcome_gift_card_retry_tap')
+                setCouponError(false)
+                setCouponAttempt((prev) => prev + 1)
+              }}
+              hoverClass='profile-review__coupon-error--pressed'
+              role='button'
+              aria-label='见面礼领取失败，点击重试'
+            >
+              <JoyJoinIcon emoji='🎁' tier='ui' size={40} className='profile-review__coupon-error-icon' />
+              <View className='profile-review__coupon-error-copy'>
+                <Text className='profile-review__coupon-error-title'>见面礼领取遇到小状况</Text>
+                <Text className='profile-review__coupon-error-subtitle'>点我重新收下悦仔的见面礼</Text>
+              </View>
             </View>
           ) : null}
 
