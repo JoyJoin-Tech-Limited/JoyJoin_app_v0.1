@@ -11,6 +11,7 @@
 @use 'styles/overlay';
 @use 'styles/actions';
 @use 'styles/match-compass';
+@use 'styles/match-history';
 
 // Spring entrance for special states (error, cancelled, no-match)
 .matching-status__special-state--enter {
@@ -48,6 +49,7 @@
   @include theme-and-special.matching-status-theme-and-special;
   @include overlay.matching-status-overlay;
   @include actions.matching-status-actions;
+  @include match-history.matching-status-match-history;
 }
 
 .matching-status__loading-shake {

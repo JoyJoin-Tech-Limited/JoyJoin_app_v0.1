@@ -1,0 +1,149 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+@mixin matching-status-match-history {
+  &__history-section {
+    margin-top: $spacing-lg;
+  }
+
+  &__history-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-md;
+  }
+
+  &__history-header-icon {
+    flex-shrink: 0;
+    font-size: 28rpx;
+  }
+
+  &__history-title {
+    @include type-display-section-title;
+    display: block;
+    font-size: $font-size-lg;
+    color: $color-text-primary;
+  }
+
+  &__history-count {
+    margin-left: auto;
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+  }
+
+  &__history-card {
+    @include card;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: $spacing-md;
+    margin-bottom: $spacing-sm;
+    position: relative;
+
+    &--enter {
+      animation: card-slide-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    &:active {
+      transform: scale(0.98);
+      background: rgba($color-primary, 0.04);
+    }
+  }
+
+  &__history-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $spacing-md;
+  }
+
+  &__history-card-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__history-card-title {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__history-card-date {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+  }
+
+  &__history-card-date-icon {
+    flex-shrink: 0;
+    font-size: 16rpx;
+  }
+
+  &__history-card-meta {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+  }
+
+  &__history-card-right {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4rpx;
+    flex-shrink: 0;
+  }
+
+  &__history-status-icon {
+    flex-shrink: 0;
+    font-size: 20rpx;
+  }
+
+  &__history-status-label {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+
+    &--matched {
+      color: $color-success;
+    }
+
+    &--completed {
+      color: $color-info;
+    }
+  }
+
+  &__history-card-score {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__history-score-value {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+  }
+
+  &__history-score-label {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+  }
+
+  &__history-card-arrow {
+    position: absolute;
+    right: $spacing-md;
+    bottom: $spacing-md;
+  }
+
+  &__history-arrow {
+    font-size: $font-size-md;
+    color: $color-text-tertiary;
+    font-weight: $font-weight-bold;
+  }
+}

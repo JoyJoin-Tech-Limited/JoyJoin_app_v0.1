@@ -1,6 +1,8 @@
 import { CustomWrapper, Image, ScrollView, Text, View } from '@tarojs/components'
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useRouter, useDidShow } from '@tarojs/taro'
+import { useQuery } from '@tanstack/react-query'
+import { getMyPoolRegistrations } from '@shared/api'
 import { getStatusLabel } from '@shared/features/matching-status'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import LoadingScreen from '../../components/loading/LoadingScreen'
@@ -22,8 +24,11 @@ import {
   MATCHING_NO_MATCH_HERO_SRC,
   MATCHING_WAITING_HERO_SRC,
 } from './constants'
+import MatchHistorySection from './MatchHistorySection'
 import { useMatchingStatusController } from './useMatchingStatusController'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
+import { apiRequest } from '../../lib/api/api'
+import { REGISTRATIONS_QUERY_KEY } from '../../lib/prefetchEngine'
 import './index.scss'
 
 export default function MatchingStatusPage() {
@@ -104,6 +109,23 @@ export default function MatchingStatusPage() {
   const invalidateRegistrationQuery = () => { haptics('light'); _invalidateRegistrationQuery() }
   const switchToEventsTab = () => { haptics('light'); _switchToEventsTab() }
   const navigateBackOrEventsTab = () => { haptics('light'); _navigateBackOrEventsTab() }
+
+  const { data: allRegistrations } = useQuery({
+    queryKey: [...REGISTRATIONS_QUERY_KEY],
+    queryFn: () => getMyPoolRegistrations(apiRequest),
+    enabled: screenState.kind === 'ready' || screenState.kind === 'no-match' || screenState.kind === 'cancelled',
+    staleTime: 60_000,
+  })
+
+  const historicalMatches = useMemo(() => {
+    if (!allRegistrations) return []
+    return allRegistrations.filter(
+      (r) =>
+        r.id !== registrationId &&
+        r.assignedGroupId != null &&
+        (r.matchStatus === 'matched' || r.matchStatus === 'completed'),
+    )
+  }, [allRegistrations, registrationId])
 
   const { isPrimary } = useDeviceTier()
   const enableAnimations = isPrimary && !shouldReduceMotion
@@ -474,6 +496,13 @@ export default function MatchingStatusPage() {
           </Button>
         ) : null}
       </View>
+
+      {historicalMatches.length > 0 ? (
+        <MatchHistorySection
+          matches={historicalMatches}
+          shouldReduceMotion={shouldReduceMotion}
+        />
+      ) : null}
 
       <View className='matching-status__spacer' />
 
