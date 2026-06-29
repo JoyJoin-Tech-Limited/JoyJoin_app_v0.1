@@ -280,8 +280,11 @@ interface MatchingStatusLiveOverlayProps {
   hasRevealed: boolean
   persistedThemeSummary: ThemeSummary | null
   resolvedGroupId: string
+  liveRevealError: string | null
   onContinueFromMembers: () => void
   onFinishLiveJourney: () => void
+  onRetryLiveReveal: () => void
+  onDismissLiveReveal: () => void
 }
 
 export function MatchingStatusLiveOverlay({
@@ -297,8 +300,11 @@ export function MatchingStatusLiveOverlay({
   hasRevealed,
   persistedThemeSummary,
   resolvedGroupId,
+  liveRevealError,
   onContinueFromMembers,
   onFinishLiveJourney,
+  onRetryLiveReveal,
+  onDismissLiveReveal,
 }: MatchingStatusLiveOverlayProps) {
   if (liveStage === 'idle') {
     return null
@@ -310,7 +316,7 @@ export function MatchingStatusLiveOverlay({
     <View className='matching-status__overlay'>
       <View className='matching-status__overlay-backdrop' />
 
-      {liveStage === 'match' ? (
+      {liveStage === 'match' && !liveRevealError ? (
         <View className='matching-status__overlay-card' key='match'>
           <Text className='matching-status__overlay-eyebrow'>{`${DEFAULT_MASCOT_DISPLAY_NAME}来报喜`}</Text>
           <Text className='matching-status__overlay-emoji'>
@@ -321,6 +327,27 @@ export function MatchingStatusLiveOverlay({
           <Text className='matching-status__overlay-loading'>
             {isLoadingLiveGroupDetails ? '正在同步桌友卡片…' : '准备开始揭晓'}
           </Text>
+        </View>
+      ) : null}
+
+      {liveStage === 'match' && liveRevealError ? (
+        <View className='matching-status__overlay-card matching-status__overlay-card--error' key='match-error'>
+          <Text className='matching-status__overlay-eyebrow'>揭晓遇到小状况</Text>
+          <Text className='matching-status__overlay-emoji'>😅</Text>
+          <Text className='matching-status__overlay-title'>桌友卡片还在路上</Text>
+          <Text className='matching-status__overlay-copy'>{liveRevealError}</Text>
+          <View className='matching-status__overlay-actions'>
+            <Button className='matching-status__overlay-button' onClick={onRetryLiveReveal}>
+              重新加载
+            </Button>
+            <Button
+              variant='secondary'
+              className='matching-status__overlay-dismiss-btn'
+              onClick={onDismissLiveReveal}
+            >
+              先看其他信息
+            </Button>
+          </View>
         </View>
       ) : null}
 

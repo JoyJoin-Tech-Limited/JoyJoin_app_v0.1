@@ -57,6 +57,8 @@ export default function MatchingStatusPage() {
     handleRefreshWaitingState: _handleRefreshWaitingState,
     handleRejoinPool: _handleRejoinPool,
     invalidateRegistrationQuery: _invalidateRegistrationQuery,
+    handleRetryLiveReveal: _handleRetryLiveReveal,
+    handleDismissLiveReveal: _handleDismissLiveReveal,
     isCancelling,
     isLoadingLiveGroupDetails,
     leadIceBreaker,
@@ -107,6 +109,8 @@ export default function MatchingStatusPage() {
   })
   const handleRejoinPool = (poolId: string) => { haptics('light'); _handleRejoinPool(poolId) }
   const invalidateRegistrationQuery = () => { haptics('light'); _invalidateRegistrationQuery() }
+  const handleRetryLiveReveal = () => { haptics('light'); _handleRetryLiveReveal() }
+  const handleDismissLiveReveal = () => { haptics('light'); _handleDismissLiveReveal() }
   const switchToEventsTab = () => { haptics('light'); _switchToEventsTab() }
   const navigateBackOrEventsTab = () => { haptics('light'); _navigateBackOrEventsTab() }
 
@@ -163,6 +167,15 @@ export default function MatchingStatusPage() {
                 variant: 'secondary',
               }}
             />
+            <View className='matching-status__error-actions'>
+              <Button
+                variant='primary'
+                className='matching-status__error-retry-btn'
+                onClick={invalidateRegistrationQuery}
+              >
+                重试
+              </Button>
+            </View>
           </View>
         </View>
       )
@@ -414,13 +427,22 @@ export default function MatchingStatusPage() {
       {liveRevealError ? (
         <Card className='matching-status__notice-card'>
           <Text className='matching-status__notice-text'>{liveRevealError}</Text>
-          <Button
-            variant='secondary'
-            className='matching-status__notice-btn'
-            onClick={invalidateRegistrationQuery}
-          >
-            刷新
-          </Button>
+          <View className='matching-status__notice-actions'>
+            <Button
+              variant='secondary'
+              className='matching-status__notice-btn'
+              onClick={handleRetryLiveReveal}
+            >
+              刷新
+            </Button>
+            <Button
+              variant='secondary'
+              className='matching-status__notice-dismiss-btn'
+              onClick={handleDismissLiveReveal}
+            >
+              关闭
+            </Button>
+          </View>
         </Card>
       ) : null}
 
@@ -522,8 +544,11 @@ export default function MatchingStatusPage() {
             hasRevealed={hasRevealed}
             persistedThemeSummary={persistedThemeSummary}
             resolvedGroupId={resolvedGroupId}
+            liveRevealError={liveRevealError}
             onContinueFromMembers={handleContinueFromMembers}
             onFinishLiveJourney={finishLiveJourney}
+            onRetryLiveReveal={handleRetryLiveReveal}
+            onDismissLiveReveal={handleDismissLiveReveal}
           />
         </CustomWrapper>
       )}

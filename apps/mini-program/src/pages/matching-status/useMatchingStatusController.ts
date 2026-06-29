@@ -408,15 +408,19 @@ export function useMatchingStatusController({
       setLiveRevealError(null)
 
       try {
+        if (!mountedRef.current) return null
+
         const details = await queryClient.fetchQuery({
           queryKey: ['mini-program', 'pool-group', groupId],
           queryFn: () => getPoolGroupDetails(apiRequest, groupId),
           staleTime: 60_000,
         })
 
+        if (!mountedRef.current) return null
         setLiveGroupDetails(details)
         return details
       } catch (error) {
+        if (!mountedRef.current) return null
         logError('[MatchingStatus] Failed to fetch live group details', {
           groupId,
           message: error instanceof Error ? error.message : 'Unknown error',
@@ -425,7 +429,9 @@ export function useMatchingStatusController({
         setLiveRevealError('桌友卡片还在路上，点击刷新或稍后再来')
         return null
       } finally {
-        setIsLoadingLiveGroupDetails(false)
+        if (mountedRef.current) {
+          setIsLoadingLiveGroupDetails(false)
+        }
       }
     },
     [queryClient],
@@ -513,6 +519,19 @@ export function useMatchingStatusController({
     void queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-registration', registrationId] })
   }, [queryClient, registrationId])
 
+  const handleRetryLiveReveal = useCallback(() => {
+    setLiveRevealError(null)
+    void queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-registration', registrationId] })
+    if (matchedData?.groupId) {
+      void fetchLiveGroupDetails(matchedData.groupId)
+    }
+  }, [queryClient, registrationId, matchedData, fetchLiveGroupDetails])
+
+  const handleDismissLiveReveal = useCallback(() => {
+    setLiveRevealError(null)
+    setLiveStage('idle')
+  }, [])
+
   useEffect(() => {
     mountedRef.current = true
     return () => {
@@ -591,7 +610,7 @@ export function useMatchingStatusController({
   }, [resolvedGroupId])
 
   useEffect(() => {
-    if (liveStage !== 'match' || isLoadingLiveGroupDetails) {
+    if (liveStage !== 'match' || isLoadingLiveGroupDetails || liveRevealError) {
       return undefined
     }
 
@@ -646,6 +665,11 @@ export function useMatchingStatusController({
       if (message.type === 'POOL_MATCHED') {
         const data = message.data as PoolMatchedData
         if (data.poolId !== registration.poolId) {
+          return
+        }
+
+        if (matchedData?.groupId === data.groupId) {
+          logInfo('[MatchingStatus] Duplicate POOL_MATCHED ignored', { groupId: data.groupId })
           return
         }
 
@@ -811,6 +835,8 @@ export function useMatchingStatusController({
     finishLiveJourney,
     similarPools,
     invalidateRegistrationQuery,
+    handleRetryLiveReveal,
+    handleDismissLiveReveal,
     switchToEventsTab,
     navigateBackOrEventsTab,
     stageTemperature,

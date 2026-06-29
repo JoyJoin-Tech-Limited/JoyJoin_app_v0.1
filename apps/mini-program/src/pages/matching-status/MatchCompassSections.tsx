@@ -544,6 +544,8 @@ export interface MatchCompassShellProps {
   availableDistricts?: string[]
 }
 
+const COMPASS_TIMEOUT_MS = 10_000
+
 export function MatchCompassShell({
   data,
   onUpdate,
@@ -553,24 +555,47 @@ export function MatchCompassShell({
 }: MatchCompassShellProps) {
   const [showSkeleton, setShowSkeleton] = useState(!data)
   const [dashboardEntered, setDashboardEntered] = useState(false)
+  const [timedOut, setTimedOut] = useState(false)
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (data) {
       setDashboardEntered(true)
+      setTimedOut(false)
       if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
       fadeTimerRef.current = setTimeout(() => {
         setShowSkeleton(false)
       }, shouldReduceMotion ? 0 : 200)
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
     } else {
       setShowSkeleton(true)
       setDashboardEntered(false)
+      setTimedOut(false)
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      timeoutRef.current = setTimeout(() => {
+        setTimedOut(true)
+      }, COMPASS_TIMEOUT_MS)
     }
 
     return () => {
       if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
   }, [data, shouldReduceMotion])
+
+  if (timedOut) {
+    return (
+      <Card className='match-compass__error'>
+        <JoyJoinIcon emoji='🔍' size={32} />
+        <Text className='match-compass__error-title'>偏好数据暂时不可用</Text>
+        <Text className='match-compass__error-text'>匹配偏好加载超时，正在重试中</Text>
+      </Card>
+    )
+  }
 
   return (
     <View className='match-compass__shell'>
