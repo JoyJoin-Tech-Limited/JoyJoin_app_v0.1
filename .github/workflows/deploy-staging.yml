@@ -113,7 +113,7 @@ jobs:
           CORS_ORIGINS: https://staging.joyjoinapp.com,https://staging.admin.joyjoinapp.com
           ALLOWED_ORIGINS: https://staging.joyjoinapp.com,https://staging.admin.joyjoinapp.com
           PAYMENTS_ENABLED: ${{ vars.PAYMENTS_ENABLED }}
-          MOCK_PAYMENTS: 'true'
+          MOCK_PAYMENTS: ${{ vars.MOCK_PAYMENTS }}
           MINIMAX_BASE_URL: ${{ vars.MINIMAX_BASE_URL }}
           MINIMAX_MODEL: ${{ vars.MINIMAX_MODEL }}
           MINIMAX_TIMEOUT_MS: ${{ vars.MINIMAX_TIMEOUT_MS }}
