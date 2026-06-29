@@ -32,6 +32,9 @@ vi.mock("../storage", () => ({
     updateUser: vi.fn(),
     getUserById: vi.fn(),
     clearPreSignupData: vi.fn(),
+    getCouponByCode: vi.fn(),
+    getUserCoupons: vi.fn().mockResolvedValue([]),
+    createUserCoupon: vi.fn(),
   },
 }));
 
