@@ -562,6 +562,15 @@ export function useMatchingStatusController({
     }
   })
 
+  // Clear transient local state when live overlay exits,
+  // so the React Query cache becomes the source of truth.
+  useEffect(() => {
+    if (liveStage !== 'idle') return
+    setLiveGroupDetails(null)
+    setThemeRevealData(null)
+    setLiveRevealError(null)
+  }, [liveStage])
+
   // Check hasRevealed flag when resolvedGroupId changes
   useEffect(() => {
     if (!resolvedGroupId) {
