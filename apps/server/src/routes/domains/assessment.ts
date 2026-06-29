@@ -412,29 +412,6 @@ export function registerAssessmentRoutes(app: Express): void {
 
       await storage.markPersonalityTestComplete(userId);
 
-      try {
-        // Award welcome coupon: prefer WELCOME50 (50% off), fallback to WELCOME40.
-        // Admin controls the actual discount value via the coupon record.
-        const welcomeCoupon50 = await storage.getCouponByCode('WELCOME50');
-        const welcomeCoupon40 = await storage.getCouponByCode('WELCOME40');
-        const welcomeCoupon = welcomeCoupon50 ?? welcomeCoupon40;
-        if (welcomeCoupon) {
-          const existingCoupons = await storage.getUserCoupons(userId);
-          const alreadyHas = existingCoupons.some((uc: any) => uc.coupon_id === welcomeCoupon.id);
-          if (!alreadyHas) {
-            await storage.createUserCoupon({
-              userId,
-              couponId: welcomeCoupon.id,
-              source: 'registration_complete',
-            });
-            shellCache.invalidateUser(userId);
-            logger.info(`[Registration] Awarded welcome coupon ${welcomeCoupon.code} to user ${userId}`);
-          }
-        }
-      } catch (couponError) {
-        logger.error("Error awarding welcome coupon:", { error: couponError instanceof Error ? couponError.message : String(couponError) });
-      }
-
       res.json({
         ...roleResult,
         matchDetails: {
@@ -442,7 +419,6 @@ export function registerAssessmentRoutes(app: Express): void {
           secondaryDistance: matchResult.secondaryDistance,
           userTraits: matchResult.userTraits,
         },
-        welcomeCouponAwarded: true,
       });
     } catch (error) {
       logger.error("Error submitting V2 personality test:", { error: error instanceof Error ? error.message : String(error) });
