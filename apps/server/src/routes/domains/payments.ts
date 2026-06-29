@@ -1166,17 +1166,21 @@ export function registerPaymentRoutes(app: Express): void {
           archetype: userArchetype,
           city: userCity,
         },
-        plans: plans.map((p) => ({
-          id: p.id,
-          planType: p.planType,
-          displayName: p.displayName,
-          displayNameEn: p.displayNameEn,
-          description: p.description,
-          priceInCents: p.priceInCents,
-          originalPriceInCents: p.originalPriceInCents,
-          durationDays: p.durationDays,
-          isFeatured: p.isFeatured,
-        })),
+        plans: plans.map((p) => {
+          const testPrice = getTestPriceCents();
+          const overridePrice = testPrice !== null ? testPrice : p.priceInCents;
+          return {
+            id: p.id,
+            planType: p.planType,
+            displayName: p.displayName,
+            displayNameEn: p.displayNameEn,
+            description: p.description,
+            priceInCents: overridePrice,
+            originalPriceInCents: testPrice !== null ? p.priceInCents : p.originalPriceInCents,
+            durationDays: p.durationDays,
+            isFeatured: p.isFeatured,
+          };
+        }),
         coupons: coupons.map((c: any) => ({
           id: c.id,
           code: c.code,
