@@ -8,7 +8,7 @@ import { getErrorMessage } from '@shared/copy/errorBaselines'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
-import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import StatusCard from '../../components/ui/StatusCard'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import {
@@ -200,7 +200,7 @@ export default function MatchingStatusPage() {
       return (
         <View className={rootClassName}>
           <Card className={`matching-status__special-card ${enableAnimations ? 'matching-status__special-state--enter' : ''}`}>
-            <JoyJoinIcon emoji='😕' size={88} className='matching-status__special-icon' />
+            <ArchetypeHead archetype='corgi' size={88} className='matching-status__special-icon' variant='head' />
             <Text className='matching-status__special-title'>这场活动已取消</Text>
             <Text className='matching-status__special-text'>
               很抱歉，这场活动未能按计划进行。你可以回到发现页，重新挑一场更适合你的局。
@@ -315,12 +315,8 @@ export default function MatchingStatusPage() {
         <View
           className={`matching-status__status-dot matching-status__status-dot--${matchStatus}`}
         />
-        {matchStatus === 'pending' ? (
-          <JoyJoinIcon emoji='⏳' size={44} className='matching-status__header-icon' />
-        ) : matchStatus === 'matched' ? (
-          <JoyJoinIcon emoji='🎉' size={44} className='matching-status__header-icon' />
-        ) : matchStatus === 'completed' ? (
-          <JoyJoinIcon emoji='✅' size={44} className='matching-status__header-icon' />
+        {matchStatus === 'pending' || matchStatus === 'matched' || matchStatus === 'completed' ? (
+          <ArchetypeHead archetype='corgi' size={44} className='matching-status__header-icon' variant='head' />
         ) : null}
         <Text className='matching-status__status-title'>
           {getStatusLabel(matchStatus)}
@@ -368,14 +364,14 @@ export default function MatchingStatusPage() {
 
       <Card className='matching-status__card'>
         <View className='matching-status__card-title-row'>
-          <JoyJoinIcon emoji='📋' size={28} className='matching-status__card-title-icon' />
+          <ArchetypeHead archetype='corgi' size={28} className='matching-status__card-title-icon' variant='head' />
           <Text className='matching-status__card-title'>{currentRegistration.poolTitle ?? '活动信息'}</Text>
         </View>
 
         {currentRegistration.poolEventType ? (
           <View className='matching-status__info-row'>
             <View className='matching-status__info-label'>
-              <JoyJoinIcon emoji='🎯' size={24} />
+              <ArchetypeHead archetype='corgi' size={24} className='matching-status__info-icon' variant='head' />
               <Text>类型</Text>
             </View>
             <Text className='matching-status__info-value'>{currentRegistration.poolEventType}</Text>
@@ -385,7 +381,7 @@ export default function MatchingStatusPage() {
         {(effectiveEventDateTime ?? currentRegistration.poolDateTime) ? (
           <View className='matching-status__info-row'>
             <View className='matching-status__info-label'>
-              <JoyJoinIcon emoji='📅' size={24} />
+              <ArchetypeHead archetype='corgi' size={24} className='matching-status__info-icon' variant='head' />
               <Text>时间</Text>
             </View>
             <Text className='matching-status__info-value'>
@@ -398,7 +394,7 @@ export default function MatchingStatusPage() {
 
         <View className='matching-status__info-row'>
           <View className='matching-status__info-label'>
-            <JoyJoinIcon emoji='📍' size={24} />
+            <ArchetypeHead archetype='corgi' size={24} className='matching-status__info-icon' variant='head' />
             <Text>地点</Text>
           </View>
           <Text className='matching-status__info-value'>
@@ -414,7 +410,7 @@ export default function MatchingStatusPage() {
         {currentRegistration.matchScore != null ? (
           <View className='matching-status__info-row'>
             <View className='matching-status__info-label'>
-              <JoyJoinIcon emoji='👥' size={24} />
+              <ArchetypeHead archetype='corgi' size={24} className='matching-status__info-icon' variant='head' />
               <Text>匹配分</Text>
             </View>
             <Text className='matching-status__info-value matching-status__info-value--score'>

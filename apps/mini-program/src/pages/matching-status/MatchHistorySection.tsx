@@ -2,7 +2,7 @@ import Taro from '@tarojs/taro'
 import { Text, View } from '@tarojs/components'
 import type { PoolRegistrationSummary } from '@shared/api'
 import Card from '../../components/ui/Card'
-import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
 
 interface MatchHistorySectionProps {
@@ -25,13 +25,12 @@ export default function MatchHistorySection({
   return (
     <View className='matching-status__history-section'>
       <View className='matching-status__history-header'>
-        <JoyJoinIcon emoji='📜' size={28} className='matching-status__history-header-icon' />
+        <ArchetypeHead archetype='corgi' size={28} className='matching-status__history-header-icon' variant='head' />
         <Text className='matching-status__history-title'>过往匹配</Text>
         <Text className='matching-status__history-count'>共 {matches.length} 次</Text>
       </View>
 
       {matches.map((match) => {
-        const statusIcon = match.matchStatus === 'completed' ? '✅' : '🎉'
         const statusLabel = match.matchStatus === 'completed' ? '已完成' : '已匹配'
         const dateLabel = match.finalDateTime ?? match.poolDateTime ?? ''
 
@@ -58,7 +57,7 @@ export default function MatchHistorySection({
                 ) : null}
               </View>
               <View className='matching-status__history-card-right'>
-                <JoyJoinIcon emoji={statusIcon} size={20} className='matching-status__history-status-icon' />
+                <ArchetypeHead archetype='corgi' size={20} className='matching-status__history-status-icon' variant='head' />
                 <Text className={`matching-status__history-status-label matching-status__history-status-label--${match.matchStatus}`}>
                   {statusLabel}
                 </Text>
