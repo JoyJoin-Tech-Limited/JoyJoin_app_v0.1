@@ -163,6 +163,17 @@
     min-width: 0;
   }
 
+  &__title-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__title-icon {
+    flex-shrink: 0;
+    font-size: 28rpx;
+  }
+
   &__title {
     @include type-display-section-title;
     font-size: $font-size-lg;
@@ -275,9 +286,20 @@
   }
 
   // ── Section Labels ──────────────────────────────────────────────
+  &__section-label-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin: $spacing-md 0 $spacing-sm;
+  }
+
+  &__section-label-icon {
+    flex-shrink: 0;
+    font-size: 20rpx;
+  }
+
   &__section-label {
     display: block;
-    margin: $spacing-md 0 $spacing-sm;
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
     color: $color-text-tertiary;
@@ -328,6 +350,17 @@
     gap: 4rpx;
     flex: 1;
     min-width: 0;
+  }
+
+  &__pref-title-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__pref-title-icon {
+    flex-shrink: 0;
+    font-size: 20rpx;
   }
 
   &__pref-title {
@@ -419,6 +452,11 @@
     border-top: 1rpx solid rgba($color-primary, 0.08);
   }
 
+  &__temp-strip-icon {
+    flex-shrink: 0;
+    font-size: 20rpx;
+  }
+
   &__temp-pill {
     padding: 6rpx 16rpx;
     border-radius: 999rpx;
@@ -476,11 +514,22 @@
     text-align: left !important;
   }
 
+  &__modal-title-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-md;
+  }
+
+  &__modal-title-icon {
+    flex-shrink: 0;
+    font-size: 24rpx;
+  }
+
   &__modal-title {
     @include type-display-section-title;
     font-size: $font-size-lg;
     color: $color-text-primary;
-    margin-bottom: $spacing-md;
   }
 
   &__modal-options {

@@ -9,12 +9,23 @@
     margin-bottom: $spacing-md;
   }
 
+  &__card-title-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-md;
+  }
+
+  &__card-title-icon {
+    flex-shrink: 0;
+    font-size: 28rpx;
+  }
+
   &__card-title {
     @include type-display-section-title;
     display: block;
     font-size: $font-size-lg;
     color: $color-text-primary;
-    margin-bottom: $spacing-md;
   }
 
   &__info-row {

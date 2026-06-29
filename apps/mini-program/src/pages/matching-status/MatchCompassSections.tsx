@@ -9,6 +9,7 @@ import type {
 } from '@shared/api'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 
 const COMPASS_PRELOAD_EXPRESSIONS: Array<'compassScan' | 'compassInsight' | 'compassCelebrate'> = [
@@ -195,6 +196,7 @@ interface TemperatureStripProps {
 function TemperatureStrip({ band, eligibleUserCount }: TemperatureStripProps) {
   return (
     <View className='match-compass__temp-strip'>
+      <JoyJoinIcon emoji='🌡️' size={20} className='match-compass__temp-strip-icon' />
       <View className={`match-compass__temp-pill match-compass__temp-pill--${band}`}>
         <Text className='match-compass__temp-label'>{TEMPERATURE_LABEL_MAP[band]}</Text>
       </View>
@@ -237,7 +239,10 @@ function DealbreakerCards({
     <View className='match-compass__dealbreakers'>
       {/* District */}
       <View className='match-compass__pref-card'>
-        <Text className='match-compass__pref-title'>活动区域</Text>
+        <View className='match-compass__pref-title-row'>
+          <JoyJoinIcon emoji='📍' size={20} className='match-compass__pref-title-icon' />
+          <Text className='match-compass__pref-title'>活动区域</Text>
+        </View>
         <View className='match-compass__pref-chips'>
           {availableDistricts.map((district) => {
             const isSelected = (districts ?? []).includes(district)
@@ -259,7 +264,10 @@ function DealbreakerCards({
 
       {/* Gender Composition */}
       <View className='match-compass__pref-card'>
-        <Text className='match-compass__pref-title'>同桌氛围</Text>
+        <View className='match-compass__pref-title-row'>
+          <JoyJoinIcon emoji='👥' size={20} className='match-compass__pref-title-icon' />
+          <Text className='match-compass__pref-title'>同桌氛围</Text>
+        </View>
         <View className='match-compass__pref-chips'>
           {GENDER_COMPOSITION_OPTIONS.map((option) => {
             const isSelected = genderComposition === option.value
@@ -281,7 +289,10 @@ function DealbreakerCards({
 
       {/* Pair Acceptance */}
       <View className='match-compass__pref-card match-compass__pref-card--inline'>
-        <Text className='match-compass__pref-title'>接受带朋友</Text>
+        <View className='match-compass__pref-title-row'>
+          <JoyJoinIcon emoji='🤝' size={20} className='match-compass__pref-title-icon' />
+          <Text className='match-compass__pref-title'>接受带朋友</Text>
+        </View>
         <View
           className={[
             'match-compass__toggle',
@@ -312,7 +323,10 @@ function NiceToHaveCards({ ageMatchPreference, tableVibePreference, onOpenModal 
         onClick={() => onOpenModal('age')}
       >
         <View className='match-compass__pref-card-left'>
-          <Text className='match-compass__pref-title'>年龄范围</Text>
+          <View className='match-compass__pref-title-row'>
+            <JoyJoinIcon emoji='🎂' size={20} className='match-compass__pref-title-icon' />
+            <Text className='match-compass__pref-title'>年龄范围</Text>
+          </View>
           <Text className='match-compass__pref-value'>
             {ageMatchPreference ?? '未设置'}
           </Text>
@@ -325,7 +339,10 @@ function NiceToHaveCards({ ageMatchPreference, tableVibePreference, onOpenModal 
         onClick={() => onOpenModal('vibe')}
       >
         <View className='match-compass__pref-card-left'>
-          <Text className='match-compass__pref-title'>桌面氛围</Text>
+          <View className='match-compass__pref-title-row'>
+            <JoyJoinIcon emoji='🎨' size={20} className='match-compass__pref-title-icon' />
+            <Text className='match-compass__pref-title'>桌面氛围</Text>
+          </View>
           <Text className='match-compass__pref-value'>
             {tableVibePreference ?? '未设置'}
           </Text>
@@ -366,6 +383,7 @@ function DetailModal({ mode, initialValue, onSave, onClose, shouldReduceMotion }
   if (!mode) return null
 
   const options = mode === 'age' ? AGE_RANGE_OPTIONS : TABLE_VIBE_OPTIONS
+  const modalIcon = mode === 'age' ? '🎂' : '🎨'
   const title = mode === 'age' ? '选择年龄范围' : '选择桌面氛围'
 
   const scheduleClose = (callback: () => void) => {
@@ -411,7 +429,10 @@ function DetailModal({ mode, initialValue, onSave, onClose, shouldReduceMotion }
           transition: shouldReduceMotion ? 'none' : 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
         }}
       >
-        <Text className='match-compass__modal-title'>{title}</Text>
+        <View className='match-compass__modal-title-row'>
+          <JoyJoinIcon emoji={modalIcon} size={24} className='match-compass__modal-title-icon' />
+          <Text className='match-compass__modal-title'>{title}</Text>
+        </View>
         <View className='match-compass__modal-options'>
           {options.map((option) => (
             <View
@@ -650,7 +671,10 @@ function MatchCompassDashboard({
       <Card className='match-compass__card'>
         <View className='match-compass__header'>
           <View className='match-compass__header-left'>
-            <Text className='match-compass__title'>匹配罗盘</Text>
+            <View className='match-compass__title-row'>
+              <JoyJoinIcon emoji='🧭' size={28} className='match-compass__title-icon' />
+              <Text className='match-compass__title'>匹配罗盘</Text>
+            </View>
             <Text className='match-compass__subtitle'>
               调整偏好，让{data.primaryArchetype ? `「${data.primaryArchetype}」` : '你'}遇到更对味的人
             </Text>
@@ -668,7 +692,10 @@ function MatchCompassDashboard({
           shouldReduceMotion={shouldReduceMotion}
         />
 
-        <Text className='match-compass__section-label'>必须满足</Text>
+        <View className='match-compass__section-label-row'>
+          <JoyJoinIcon emoji='📌' size={20} className='match-compass__section-label-icon' />
+          <Text className='match-compass__section-label'>必须满足</Text>
+        </View>
         <DealbreakerCards
           districts={data.preferredDistricts}
           genderComposition={data.genderComposition}
@@ -677,7 +704,10 @@ function MatchCompassDashboard({
           onChange={onUpdate}
         />
 
-        <Text className='match-compass__section-label'>加分项</Text>
+        <View className='match-compass__section-label-row'>
+          <JoyJoinIcon emoji='⭐' size={20} className='match-compass__section-label-icon' />
+          <Text className='match-compass__section-label'>加分项</Text>
+        </View>
         <NiceToHaveCards
           ageMatchPreference={data.ageMatchPreference}
           tableVibePreference={data.tableVibePreference}

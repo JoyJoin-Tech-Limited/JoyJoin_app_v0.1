@@ -279,6 +279,13 @@ export default function MatchingStatusPage() {
         <View
           className={`matching-status__status-dot matching-status__status-dot--${matchStatus}`}
         />
+        {matchStatus === 'pending' ? (
+          <JoyJoinIcon emoji='⏳' size={44} className='matching-status__header-icon' />
+        ) : matchStatus === 'matched' ? (
+          <JoyJoinIcon emoji='🎉' size={44} className='matching-status__header-icon' />
+        ) : matchStatus === 'completed' ? (
+          <JoyJoinIcon emoji='✅' size={44} className='matching-status__header-icon' />
+        ) : null}
         <Text className='matching-status__status-title'>
           {getStatusLabel(matchStatus)}
         </Text>
@@ -324,7 +331,10 @@ export default function MatchingStatusPage() {
       ) : null}
 
       <Card className='matching-status__card'>
-        <Text className='matching-status__card-title'>{currentRegistration.poolTitle ?? '活动信息'}</Text>
+        <View className='matching-status__card-title-row'>
+          <JoyJoinIcon emoji='📋' size={28} className='matching-status__card-title-icon' />
+          <Text className='matching-status__card-title'>{currentRegistration.poolTitle ?? '活动信息'}</Text>
+        </View>
 
         {currentRegistration.poolEventType ? (
           <View className='matching-status__info-row'>

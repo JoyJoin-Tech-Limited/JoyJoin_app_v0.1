@@ -409,6 +409,17 @@
     margin-bottom: $spacing-md;
   }
 
+  &__squad-header-left {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__squad-title-icon {
+    flex-shrink: 0;
+    font-size: 28rpx;
+  }
+
   &__squad-title {
     @include type-display-section-title;
     display: block;

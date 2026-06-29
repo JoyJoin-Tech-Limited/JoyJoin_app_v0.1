@@ -179,7 +179,10 @@ export function MatchingStatusDetailSections({
       {showMatchedDetails && effectiveGroupDetails?.members.length ? (
         <Card className='matching-status__squad-card'>
           <View className='matching-status__squad-header'>
-            <Text className='matching-status__squad-title'>你的桌友已就位</Text>
+            <View className='matching-status__squad-header-left'>
+              <JoyJoinIcon emoji='👋' size={28} className='matching-status__squad-title-icon' />
+              <Text className='matching-status__squad-title'>你的桌友已就位</Text>
+            </View>
             <Text className='matching-status__squad-meta'>
               {effectiveGroupDetails.group.memberCount || effectiveGroupDetails.members.length} 人同桌
             </Text>

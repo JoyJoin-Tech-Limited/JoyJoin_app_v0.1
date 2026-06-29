@@ -116,6 +116,13 @@
     }
   }
 
+  &__header-icon {
+    display: block;
+    margin: 0 auto $spacing-xs;
+    font-size: 44rpx;
+    line-height: 1;
+  }
+
   &__status-title {
     @include type-display-page-title;
     display: block;
