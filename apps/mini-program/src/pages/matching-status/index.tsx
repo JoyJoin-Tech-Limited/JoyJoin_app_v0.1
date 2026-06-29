@@ -115,6 +115,7 @@ export default function MatchingStatusPage() {
     queryFn: () => getMyPoolRegistrations(apiRequest),
     enabled: screenState.kind === 'ready' || screenState.kind === 'no-match' || screenState.kind === 'cancelled',
     staleTime: 60_000,
+    refetchInterval: 30_000,
   })
 
   const historicalMatches = useMemo(() => {

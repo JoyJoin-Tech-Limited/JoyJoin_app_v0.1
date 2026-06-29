@@ -69,7 +69,9 @@ import { generateChemistryPayoff } from '../../lib/matching/chemistryPayoff'
 const REGISTRATION_REFETCH_INTERVAL_MS = 30_000
 const POOL_GROUP_FILL_REFETCH_INTERVAL_MS = 20_000
 const GROUP_DETAILS_STALE_TIME_MS = 60_000
+const GROUP_DETAILS_REFETCH_INTERVAL_MS = 30_000
 const GROUP_ANALYSIS_STALE_TIME_MS = STALE_TIME_BRIEF_MS
+const GROUP_ANALYSIS_REFETCH_INTERVAL_MS = 60_000
 const CANCEL_NAVIGATION_DELAY_MS = 1500
 const NEW_MEMBER_BADGE_DURATION_MS = TOAST_DEFAULT_MS
 const LIVE_STAGE_DELAY_MS = 950
@@ -190,6 +192,7 @@ export function useMatchingStatusController({
       Boolean(resolvedGroupId) &&
       (registration?.matchStatus === 'matched' || Boolean(matchedData?.groupId)),
     staleTime: GROUP_DETAILS_STALE_TIME_MS,
+    refetchInterval: GROUP_DETAILS_REFETCH_INTERVAL_MS,
   })
 
   const { data: groupAnalysis } = useQuery({
@@ -200,6 +203,7 @@ export function useMatchingStatusController({
       Boolean(resolvedGroupId) &&
       (registration?.matchStatus === 'matched' || Boolean(matchedData?.groupId)),
     staleTime: GROUP_ANALYSIS_STALE_TIME_MS,
+    refetchInterval: GROUP_ANALYSIS_REFETCH_INTERVAL_MS,
     retry: 1,
   })
 
@@ -645,9 +649,15 @@ export function useMatchingStatusController({
         void queryClient.invalidateQueries({
           queryKey: ['mini-program', 'pool-registration', registrationId],
         })
+        void queryClient.invalidateQueries({
+          queryKey: ['mini-program', 'my-pool-registrations'],
+        })
 
         if (data.groupId) {
           void fetchLiveGroupDetails(data.groupId)
+          void queryClient.invalidateQueries({
+            queryKey: ['mini-program', 'pool-group-analysis', data.groupId],
+          })
         }
 
         return
