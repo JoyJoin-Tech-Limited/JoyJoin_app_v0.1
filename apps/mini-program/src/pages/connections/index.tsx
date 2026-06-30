@@ -1,9 +1,9 @@
-import { View, Text, ScrollView } from '@tarojs/components'
+import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
-import { getEmptyStateMessage } from '@shared/copy/emptyStates'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest, fetchConnectionsShell } from '../../lib/api/api'
 import { injectConnectionsShellIntoCache } from '../../lib/prefetchEngine'
 import { queryClient } from '../../lib/api/queryClient'
@@ -147,12 +147,72 @@ export default function ConnectionsPage() {
             </Card>
           ))
         ) : (
-          <View className='connections-page__empty-state'>
-            <XiaoyueEmptyState
-              emotion='curious'
-              title={getEmptyStateMessage('connections', { includeAction: false })}
-              subtitle='参加活动后即可与活动伙伴建立连接'
-            />
+          <View className='connections-page__empty-state connections-page__empty-state--no-data'>
+            <View className='connections-page__empty-hero'>
+              <View className='connections-page__empty-deco' aria-hidden='true'>
+                <View className='connections-page__empty-deco-dot connections-page__empty-deco-dot--1' />
+                <View className='connections-page__empty-deco-dot connections-page__empty-deco-dot--2' />
+                <View className='connections-page__empty-deco-dot connections-page__empty-deco-dot--3' />
+              </View>
+              <View className='connections-page__empty-glow'>
+                <Image
+                  className='connections-page__empty-mascot'
+                  src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-connections-empty.webp')}
+                  mode='aspectFit'
+                  lazyLoad={false}
+                  aria-label='悦仔'
+                />
+              </View>
+              <Text className='connections-page__empty-title'>
+                悦仔在等你带新朋友回来
+              </Text>
+              <Text className='connections-page__empty-subtitle'>
+                参加活动并完成互动后，
+                {'\n'}你与活动伙伴的连接会出现在这里。
+              </Text>
+              <View
+                className='connections-page__empty-cta'
+                hoverClass='connections-page__empty-cta--active'
+                onClick={() => Taro.switchTab({ url: '/pages/discover/index' })}
+                role='button'
+                aria-label='去探索活动'
+              >
+                <Text className='connections-page__empty-cta-text'>去探索活动</Text>
+              </View>
+            </View>
+
+            <View className='connections-page__flow-card'>
+              <Text className='connections-page__flow-title'>连接建立流程</Text>
+              <View className='connections-page__flow-steps'>
+                <View className='connections-page__flow-step'>
+                  <View className='connections-page__flow-step-icon'>
+                    <Text className='connections-page__flow-step-number'>1</Text>
+                  </View>
+                  <View className='connections-page__flow-step-content'>
+                    <Text className='connections-page__flow-step-title'>参加活动</Text>
+                    <Text className='connections-page__flow-step-desc'>参与感兴趣的活动</Text>
+                  </View>
+                </View>
+                <View className='connections-page__flow-step'>
+                  <View className='connections-page__flow-step-icon'>
+                    <Text className='connections-page__flow-step-number'>2</Text>
+                  </View>
+                  <View className='connections-page__flow-step-content'>
+                    <Text className='connections-page__flow-step-title'>完成互动</Text>
+                    <Text className='connections-page__flow-step-desc'>扫码互动或交流</Text>
+                  </View>
+                </View>
+                <View className='connections-page__flow-step'>
+                  <View className='connections-page__flow-step-icon'>
+                    <Text className='connections-page__flow-step-number'>3</Text>
+                  </View>
+                  <View className='connections-page__flow-step-content'>
+                    <Text className='connections-page__flow-step-title'>建立连接</Text>
+                    <Text className='connections-page__flow-step-desc'>成为活动伙伴</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
           </View>
         )}
         <View className='connections-page__spacer' />
