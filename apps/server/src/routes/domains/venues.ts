@@ -150,7 +150,7 @@ export function registerVenueRoutes(app: Express): void {
         latitude, longitude,
         onboardingStatus, partnerCompanyName, businessLicenseNo, partnerEmail,
         bankAccountInfo, contractStartDate, contractEndDate,
-      } = req.body;
+      } = parsed.data;
       
       if (!name || !type || !address || !city || !district) {
         return res.status(400).json({ message: "Missing required fields" });
@@ -248,6 +248,10 @@ export function registerVenueRoutes(app: Express): void {
   app.delete("/api/admin/venues/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const venueId = req.params.id;
+      const venue = await storage.getVenue(venueId);
+      if (!venue) {
+        return res.status(404).json({ message: "场地不存在" });
+      }
   
       const [assignedGroup] = await db
         .select({ id: eventPoolGroups.id })
@@ -274,15 +278,14 @@ export function registerVenueRoutes(app: Express): void {
         });
       }
   
-      // await storage.deleteVenue(venueId);
-      await storage.updateVenue(venueId, {
+      const updatedVenue = await storage.updateVenue(venueId, {
         isActive: false,
         onboardingStatus: "suspended",
         partnerStatus: "paused",
       });
   
       logAdminAudit({
-        action: "VENUE_DELETED",
+        action: "VENUE_UPDATED",
         adminId: getActingAdminId(req),
         adminRole: (req as any).adminRole,
         targetEntityType: "venue",
@@ -293,11 +296,15 @@ export function registerVenueRoutes(app: Express): void {
           partnerStatus: "paused",
         },
       });
-  
-      res.status(204).send();
+
+      return res.status(200).json({
+        message: "场地已暂停，不再显示为可用场地。",
+        venueId,
+        venue: updatedVenue,
+      });
     } catch (error) {
       logger.error("Error deleting venue", { venueId: req.params.id, error: String(error) });
-      res.status(500).json({ message: "Failed to delete venue" });
+      res.status(500).json({ message: "删除场地失败，请稍后重试" });
     }
   });
   // app.delete("/api/admin/venues/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
@@ -385,12 +392,14 @@ export function registerVenueRoutes(app: Express): void {
 
     const updates: Record<string, any> = { onboardingStatus: toStatus };
     if (toStatus === 'active') {
+      updates.isActive = true;
       updates.partnerStatus = 'active';
       if (!venue.partner_since && !venue.partnerSince) {
         updates.partnerSince = new Date().toISOString().split('T')[0];
       }
     }
     if (toStatus === 'suspended') {
+      updates.isActive = false;
       updates.partnerStatus = 'paused';
     }
 

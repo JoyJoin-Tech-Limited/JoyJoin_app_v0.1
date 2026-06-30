@@ -15,7 +15,7 @@ function AdminRouter() {
   // 登出mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await fetch("/api/auth/logout", {
+      await fetch("/api/admin/logout", {
         method: "POST",
         credentials: "include",
       });

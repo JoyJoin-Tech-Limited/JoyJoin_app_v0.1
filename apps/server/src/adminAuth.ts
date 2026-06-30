@@ -277,6 +277,18 @@ export function registerAdminAuthRoutes(app: Express) {
     return res.status(401).json({ message: "Unauthorized" });
   });
 
+  app.post("/api/admin/logout", requireAdmin, (req: Request, res) => {
+    req.session.destroy((error) => {
+      if (error) {
+        console.error("Error during admin logout:", error);
+        return res.status(500).json({ message: "退出登录失败" });
+      }
+
+      res.clearCookie("connect.sid");
+      return res.status(204).send();
+    });
+  });
+
   app.get("/api/admin/accounts", requireAdmin, requireSuperAdmin, async (_req: Request, res) => {
     try {
       const accounts = await storage.listAdminAccounts();

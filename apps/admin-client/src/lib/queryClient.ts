@@ -22,10 +22,39 @@ export function resolveApiUrl(url: string, apiBaseUrl = API_BASE_URL): string {
   return `${apiBaseUrl}${normalizedUrl}`;
 }
 
+async function readErrorMessage(res: Response): Promise<string> {
+  const text = await res.text().catch(() => "");
+  if (!text) {
+    return res.statusText || "请求失败";
+  }
+
+  try {
+    const data = JSON.parse(text);
+    return data?.message ?? data?.error ?? text;
+  } catch {
+    return text;
+  }
+}
+
+function maybeRedirectExpiredAdminSession(res: Response) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const pathname = window.location.pathname;
+  const isAdminPath = pathname.startsWith("/admin");
+  const isLoginPath = pathname === "/admin/login" || pathname === "/login";
+
+  if (isAdminPath && !isLoginPath && (res.status === 401 || res.status === 403)) {
+    window.location.href = "/admin/login";
+  }
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    maybeRedirectExpiredAdminSession(res);
+    const message = await readErrorMessage(res);
+    throw new Error(`${res.status}: ${message}`);
   }
 }
 
@@ -55,7 +84,7 @@ export const getQueryFn: <T>(options: {
       credentials: "include",
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+    if (unauthorizedBehavior === "returnNull" && (res.status === 401 || res.status === 403)) {
       return null;
     }
 

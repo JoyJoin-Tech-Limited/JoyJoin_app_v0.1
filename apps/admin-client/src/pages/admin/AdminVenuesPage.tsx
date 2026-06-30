@@ -112,9 +112,8 @@ interface Venue {
   contractEndDate?: string | null;
   onboardingStatus?: 'draft' | 'pending_review' | 'active' | 'suspended' | null;
 }
-// add the helper function to 
-const optionalString = (value: string) => value.trim() || undefined;
-const optionalArray = (value: string[]) => (value.length > 0 ? value : undefined);
+const optionalString = (value?: string | null) => value?.trim() || undefined;
+const optionalArray = (value?: string[] | null) => (value && value.length > 0 ? value : undefined);
 
 const optionalNumber = (value: string) => {
   const trimmed = value.trim();
@@ -123,8 +122,11 @@ const optionalNumber = (value: string) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
-function buildVenuePayload(formData: VenueFormData) {
-  return {
+function buildVenuePayload(
+  formData: VenueFormData,
+  options: { includeOnboardingStatus?: boolean } = {},
+) {
+  const payload: Record<string, unknown> = {
     name: formData.name.trim(),
     brandName: optionalString(formData.brandName),
     type: formData.type,
@@ -156,8 +158,13 @@ function buildVenuePayload(formData: VenueFormData) {
     bankAccountInfo: optionalString(formData.bankAccountInfo),
     contractStartDate: optionalString(formData.contractStartDate),
     contractEndDate: optionalString(formData.contractEndDate),
-    onboardingStatus: formData.onboardingStatus,
   };
+
+  if (options.includeOnboardingStatus ?? true) {
+    payload.onboardingStatus = formData.onboardingStatus;
+  }
+
+  return payload;
 }
 
 const VENUE_TYPES = [
@@ -361,10 +368,10 @@ export default function AdminVenuesPage() {
         description: "场地已成功添加到系统",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "创建失败",
-        description: "无法创建场地，请重试",
+        description: error.message || "无法创建场地，请重试",
         variant: "destructive",
       });
     },
@@ -388,10 +395,10 @@ export default function AdminVenuesPage() {
         description: "场地信息已更新",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "更新失败",
-        description: "无法更新场地，请重试",
+        description: error.message || "无法更新场地，请重试",
         variant: "destructive",
       });
     },
@@ -399,30 +406,22 @@ export default function AdminVenuesPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/admin/venues/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
-        throw new Error(err.message || `Failed to delete venue: ${res.status}`);
-      }
-      // 204 No Content — return nothing
+      const res = await apiRequest("DELETE", `/api/admin/venues/${id}`);
       return res.status === 204 ? null : await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (result: { message?: string } | null) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/venues"] });
       setShowDeleteDialog(false);
       setSelectedVenue(null);
       toast({
         title: "删除成功",
-        description: "场地已从系统中删除",
+        description: result?.message ?? "场地已从系统中删除",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "删除失败",
-        description: "无法删除场地，请重试",
+        description: error.message || "无法删除场地，请重试",
         variant: "destructive",
       });
     },
@@ -625,7 +624,7 @@ export default function AdminVenuesPage() {
     }
     updateMutation.mutate({
       id: selectedVenue.id,
-      data: buildVenuePayload(formData),
+      data: buildVenuePayload(formData, { includeOnboardingStatus: false }),
     });
     // updateMutation.mutate({
     //   id: selectedVenue.id,
@@ -685,19 +684,14 @@ export default function AdminVenuesPage() {
   };
 
   const transitionMutation = useMutation({
-    mutationFn: ({ id, action, reason }: { id: string; action: string; reason?: string }) =>
-      fetch(`/api/admin/venues/${id}/${action}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: reason ? JSON.stringify({ reason }) : undefined,
-      }).then(async (r) => {
-        if (!r.ok) {
-          const err = await r.json().catch(() => ({ message: `HTTP ${r.status}` }));
-          throw new Error(err.message || `Failed to ${action} venue`);
-        }
-        return r.json();
-      }),
+    mutationFn: async ({ id, action, reason }: { id: string; action: string; reason?: string }) => {
+      const res = await apiRequest(
+        "POST",
+        `/api/admin/venues/${id}/${action}`,
+        reason ? { reason } : undefined,
+      );
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/venues"] });
       setShowRejectDialog(false);
@@ -1161,14 +1155,37 @@ export default function AdminVenuesPage() {
                       </>
                     )}
                     {canSuspend && (
-                      <Button size="sm" variant="outline" className="text-orange-600 border-orange-300 hover:bg-orange-50 text-xs h-7" onClick={() => handleTransition(venue, 'suspend')} disabled={transitionMutation.isPending} data-testid={`button-suspend-${venue.id}`}>
-                        {transitionMutation.isPending && transitionMutation.variables?.action === 'suspend' ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-orange-600 border-orange-300 hover:bg-orange-50 text-xs h-7"
+                        onClick={() => handleTransition(venue, "suspend")}
+                        disabled={transitionMutation.isPending}
+                        data-testid={`button-suspend-${venue.id}`}
+                      >
+                        {transitionMutation.isPending
+                          && transitionMutation.variables?.id === venue.id
+                          && transitionMutation.variables?.action === "suspend" ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : null}
                         暂停
                       </Button>
                     )}
+
                     {canReactivate && (
-                      <Button size="sm" variant="outline" className="text-green-600 border-green-300 hover:bg-green-50 text-xs h-7" onClick={() => handleTransition(venue, 're-activate')} disabled={transitionMutation.isPending} data-testid={`button-reactivate-${venue.id}`}>
-                        {transitionMutation.isPending && transitionMutation.variables?.action === 're-activate' ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-green-600 border-green-300 hover:bg-green-50 text-xs h-7"
+                        onClick={() => handleTransition(venue, "re-activate")}
+                        disabled={transitionMutation.isPending}
+                        data-testid={`button-reactivate-${venue.id}`}
+                      >
+                        {transitionMutation.isPending
+                          && transitionMutation.variables?.id === venue.id
+                          && transitionMutation.variables?.action === "re-activate" ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : null}
                         重新激活
                       </Button>
                     )}
