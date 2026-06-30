@@ -2,7 +2,7 @@
 import { View, Text, ScrollView, Image, Textarea } from '@tarojs/components'
 import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   completeProfileReview,
   getProfileTagline,
@@ -23,7 +23,8 @@ import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { haptics } from '../../../lib/utils/haptics'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import { useInvalidateAuth } from '../../../hooks/useAuth'
-import { apiRequest, getUserState } from '../../../lib/api/api'
+import { apiRequest, fetchDiscoverShell, getUserState } from '../../../lib/api/api'
+import { getPrefetchEngine, injectDiscoverShellIntoCache } from '../../../lib/prefetchEngine'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
 import { ONBOARDING_MASCOT_SIZE } from '../../../lib/onboarding/onboardingRoutes'
@@ -36,6 +37,7 @@ import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
 import WelcomeGiftCard from '../../../components/onboarding/WelcomeGiftCard'
+import ProfileReviewInviteCard from '../../../components/onboarding/ProfileReviewInviteCard'
 import { getArchetypeVisual, getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
@@ -116,6 +118,10 @@ export default function ProfileReviewPage() {
   const [isCouponCardVisible, setIsCouponCardVisible] = useState(false)
   const [couponError, setCouponError] = useState(false)
   const [couponAttempt, setCouponAttempt] = useState(0)
+  const [isInviteCardVisible, setIsInviteCardVisible] = useState(false)
+  const hasTrackedInviteImpressionRef = useRef(false)
+  const hasStagedDiscoverPrefetchRef = useRef(false)
+  const isScrolledRef = useRef(false)
 
   // prefers-reduced-motion gating: skip the ceremonial reveal animation when motion is reduced.
   useEffect(() => {
@@ -124,7 +130,14 @@ export default function ProfileReviewPage() {
     }
   }, [shouldReduceMotion])
 
-  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating, setIsRevealReady, setIsCouponCardVisible)
+  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating, setIsRevealReady, setIsCouponCardVisible, setIsInviteCardVisible)
+
+  // Reset invite-card impression tracking when the user returns via swipe-back
+  // so analytics accurately reflect each visit.
+  useDidShow(() => {
+    hasTrackedInviteImpressionRef.current = false
+    hasStagedDiscoverPrefetchRef.current = false
+  })
   const queryClient = useQueryClient()
   const { user, isLoading } = useAuthGuard({
     suspendOnboardingRedirect: isSubmitting || isPageExiting,
@@ -199,6 +212,45 @@ export default function ProfileReviewPage() {
       setIsCouponCardVisible(true)
     }
   }, [shouldReduceMotion, welcomeCoupon])
+
+  // Reveal the Xiaoyue invitation teaser after the coupon request has settled
+  // (success or error) so the card never slides in above a still-loading gift.
+  useEffect(() => {
+    if (shouldReduceMotion) {
+      if (isRevealReady && !isCouponLoading) {
+        setIsInviteCardVisible(true)
+      }
+      return
+    }
+    if (!isRevealReady || isCouponLoading) return
+    const timer = setTimeout(() => {
+      setIsInviteCardVisible(true)
+    }, 900)
+    return () => clearTimeout(timer)
+  }, [isRevealReady, shouldReduceMotion, isCouponLoading])
+
+  // Track invite-card impression each time it becomes visible.
+  useEffect(() => {
+    if (!isInviteCardVisible || hasTrackedInviteImpressionRef.current) return
+    hasTrackedInviteImpressionRef.current = true
+    analytics.interaction('profile_review_invite_impression')
+  }, [isInviteCardVisible, analytics])
+
+  // Predictive Discover shell prefetch: the invite card is the strongest signal
+  // that the user will enter Discover next. Warm the composite shell so the tab
+  // renders from cache instead of cold-fetching on navigation.
+  useEffect(() => {
+    if (!isInviteCardVisible || hasStagedDiscoverPrefetchRef.current) return
+    hasStagedDiscoverPrefetchRef.current = true
+
+    void getPrefetchEngine(queryClient).run('profile-review-discover', async () => {
+      const shell = await fetchDiscoverShell()
+      injectDiscoverShellIntoCache(queryClient, shell)
+      analytics.interaction('profile_review_discover_prefetch_hit', {
+        poolCount: shell.pools.items.length,
+      })
+    })
+  }, [isInviteCardVisible, queryClient, analytics])
 
   const shouldLoadInterests = !isLoading && Boolean(user?.hasCompletedInterestsCarousel)
   const { data: profileTagline, isLoading: isTaglineLoading, isError: isTaglineError } = useQuery({
@@ -406,7 +458,12 @@ export default function ProfileReviewPage() {
     if (shouldReduceMotion) {
       return
     }
-    setIsScrolled((event?.detail?.scrollTop ?? 0) > 24)
+    const next = (event?.detail?.scrollTop ?? 0) > 24
+    // Guard setState to avoid re-render churn on every scroll event.
+    if (next !== isScrolledRef.current) {
+      isScrolledRef.current = next
+      setIsScrolled(next)
+    }
   }, [shouldReduceMotion])
 
   const profileFields = useMemo(
@@ -815,6 +872,18 @@ export default function ProfileReviewPage() {
               </View>
             </View>
           ) : null}
+
+          <ProfileReviewInviteCard
+            visible={isInviteCardVisible}
+            reduceMotion={shouldReduceMotion}
+            disabled={isSubmitting || isCelebrating}
+            busy={isSubmitting}
+            onTap={() => {
+              analytics.interaction('profile_review_invite_tap')
+              handleComplete()
+            }}
+            className='profile-review__invite-card'
+          />
 
           {/* Reserve space for the floating CTA */}
           <View className='profile-review__footer-reserve' />

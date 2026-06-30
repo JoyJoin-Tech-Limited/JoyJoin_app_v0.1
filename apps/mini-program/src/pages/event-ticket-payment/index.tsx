@@ -177,14 +177,16 @@ export default function EventTicketPaymentPage() {
   const [showInclusionSheet, setShowInclusionSheet] = useState(false)
   const [tailImageError, setTailImageError] = useState(false)
   const [tailImageLoaded, setTailImageLoaded] = useState(false)
+  const [tailLoadTimedOut, setTailLoadTimedOut] = useState(false)
 
   const paymentInFlightRef = useRef(false)
   const verifyTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const returnContextRef = useRef<MiniProgramPoolRegistrationReturnContext | null>(null)
+  const tailErrorHandledRef = useRef(false)
+  const tailTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasTrackedViewRef = useRef(false)
   const hasTrackedPlanSelectorImpressionRef = useRef(false)
   const hasTrackedTermsRowImpressionRef = useRef(false)
-  const hasTrackedTailImpressionRef = useRef(false)
 
   // Keep ref in sync with state for pollVerification closure safety
   useEffect(() => {
@@ -327,18 +329,22 @@ export default function EventTicketPaymentPage() {
 
   // Derived event-type label used for event-type-aware UI and analytics.
   const eventType = pool?.eventType === '酒局' ? '酒局' : '饭局'
-  const eventEmoji = eventType === '酒局' ? '\u{1F377}' : '\u{1F35C}'
 
-  // Track tail image impression once it is actually renderable.
+  // Tail image load timeout: if the CDN asset has not loaded within 4s,
+  // fall back to the barcode decoration so users never see a blank band.
   useEffect(() => {
-    if (!isPageReady || !poolId || !pool || hasTrackedTailImpressionRef.current) return
-    if (deviceTier.isDegradation || tailImageError) return
-    hasTrackedTailImpressionRef.current = true
-    discoverAnalytics.track('ticket_tail_image_impression', undefined, {
-      poolId,
-      eventType,
-    })
-  }, [isPageReady, poolId, pool, deviceTier.isDegradation, tailImageError, eventType])
+    if (deviceTier.isDegradation || tailImageLoaded || tailImageError || tailLoadTimedOut) return
+    tailTimeoutRef.current = setTimeout(() => {
+      setTailLoadTimedOut(true)
+      logInfo('[EventTicketPayment] Tail image load timed out, falling back to barcode', { eventType, poolId })
+    }, 4000)
+    return () => {
+      if (tailTimeoutRef.current) {
+        clearTimeout(tailTimeoutRef.current)
+        tailTimeoutRef.current = null
+      }
+    }
+  }, [deviceTier.isDegradation, tailImageLoaded, tailImageError, tailLoadTimedOut, eventType, poolId])
 
   // Reset transient flags on show (swipe-back safety)
   useDidShow(() => {
@@ -750,13 +756,9 @@ export default function EventTicketPaymentPage() {
             />
             <View className='ticket-card__banner-scrim' />
             <View className='ticket-card__type-badge'>
-              {eventType === '饭局' ? (
-                <View className='ticket-card__type-badge-icon'>
-                  <JoyJoinIcon emoji='🍜' tier='category' size={40} />
-                </View>
-              ) : (
-                <Text className='ticket-card__type-badge-emoji'>{eventEmoji}</Text>
-              )}
+              <View className='ticket-card__type-badge-icon'>
+                <JoyJoinIcon emoji={eventType === '饭局' ? '🍜' : '🍷'} tier='category' size={40} />
+              </View>
               <Text className='ticket-card__type-badge-text'>{eventType}</Text>
             </View>
             <View className='ticket-card__banner-title-wrap'>
@@ -887,8 +889,8 @@ export default function EventTicketPaymentPage() {
             </View>
           )}
 
-          {/* Event-type tail illustration or barcode fallback */}
-          {deviceTier.isDegradation || tailImageError ? (
+          {/* Event-type full-bleed footer vignette or barcode fallback */}
+          {deviceTier.isDegradation || tailImageError || tailLoadTimedOut ? (
             <View className='ticket-card__barcode' aria-hidden='true'>
               {Array.from({ length: 28 }).map((_, i) => (
                 <View
@@ -899,16 +901,32 @@ export default function EventTicketPaymentPage() {
               ))}
             </View>
           ) : (
-            <View className='ticket-card__tail-wrap'>
+            <View className='ticket-card__tail-wrap' aria-hidden='true'>
               <Image
                 className={`ticket-card__tail-image ${tailImageLoaded ? 'ticket-card__tail-image--loaded' : ''}`}
                 src={getEventTicketTailAsset(eventType)}
-                mode='widthFix'
+                mode='aspectFill'
                 lazyLoad={false}
                 aria-hidden='true'
-                onLoad={() => setTailImageLoaded(true)}
+                onLoad={() => {
+                  if (tailImageLoaded) return
+                  setTailImageLoaded(true)
+                  if (tailTimeoutRef.current) {
+                    clearTimeout(tailTimeoutRef.current)
+                    tailTimeoutRef.current = null
+                  }
+                  discoverAnalytics.track('ticket_tail_image_impression', undefined, {
+                    poolId,
+                    eventType,
+                  })
+                }}
                 onError={() => {
-                  if (tailImageError) return
+                  if (tailErrorHandledRef.current) return
+                  tailErrorHandledRef.current = true
+                  if (tailTimeoutRef.current) {
+                    clearTimeout(tailTimeoutRef.current)
+                    tailTimeoutRef.current = null
+                  }
                   logError('[EventTicketPayment] Tail image failed to load', { eventType, poolId })
                   discoverAnalytics.track('ticket_tail_image_load_error', undefined, {
                     poolId,
@@ -918,6 +936,7 @@ export default function EventTicketPaymentPage() {
                   setTailImageError(true)
                 }}
               />
+              <View className='ticket-card__tail-fade' aria-hidden='true' />
             </View>
           )}
         </View>

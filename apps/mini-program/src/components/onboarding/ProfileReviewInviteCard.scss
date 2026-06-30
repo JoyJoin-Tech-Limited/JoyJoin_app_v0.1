@@ -1,0 +1,201 @@
+@use '../../styles/variables' as *;
+
+.profile-review-invite-card {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  border-radius: $card-radius;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(24rpx) scale(0.98);
+  transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  // Single warm tint keeps the card quiet below the archetype-themed poster.
+  background: $color-bg-tint-cream;
+  box-shadow: 0 12rpx 36rpx rgba($color-primary, 0.06), 0 4rpx 12rpx rgba(0, 0, 0, 0.03);
+  border: 2rpx solid rgba($color-secondary, 0.12);
+  padding: $spacing-sm $spacing-md;
+  min-height: 176rpx;
+
+  &--visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+
+    &.profile-review-invite-card--pressed {
+      transform: translateY(0) scale(0.98);
+    }
+  }
+
+  &--reduce-motion {
+    transition: none;
+    opacity: 1;
+    transform: none;
+
+    &.profile-review-invite-card--pressed {
+      transform: none;
+    }
+  }
+
+  &--disabled {
+    opacity: 0.55;
+  }
+}
+
+.profile-review-invite-card__art {
+  position: relative;
+  flex: 0 0 auto;
+  width: 176rpx;
+  height: 144rpx;
+  border-radius: $card-radius-sm;
+  overflow: hidden;
+  background: rgba($color-surface, 0.72);
+  margin-right: $spacing-md;
+}
+
+.profile-review-invite-card__art-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    rgba($color-secondary, 0.06) 25%,
+    rgba($color-secondary, 0.18) 50%,
+    rgba($color-secondary, 0.06) 75%
+  );
+  animation: invite-art-shimmer 1.6s ease-in-out infinite;
+}
+
+.profile-review-invite-card__art-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba($color-bg-tint-pink, 0.35);
+}
+
+.profile-review-invite-card__image {
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+
+  &--loaded {
+    opacity: 1;
+  }
+}
+
+.profile-review-invite-card__copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-review-invite-card__voice-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-xs;
+}
+
+.profile-review-invite-card__spark-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: $color-secondary;
+  flex-shrink: 0;
+}
+
+.profile-review-invite-card__title {
+  font-size: $font-size-base;
+  line-height: $line-height-display;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  font-family: $font-cn-display;
+  word-break: keep-all;
+}
+
+.profile-review-invite-card__body {
+  font-size: $font-size-sm;
+  line-height: $line-height-relaxed;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-xs;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.profile-review-invite-card__hint {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  align-self: flex-start;
+  padding: 4rpx $spacing-sm;
+  border-radius: $radius-pill;
+  background: rgba($color-primary, 0.08);
+}
+
+.profile-review-invite-card__hint-text {
+  font-size: $font-size-xs;
+  line-height: $line-height-display;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+@keyframes invite-art-shimmer {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: translateX(-100%);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-review-invite-card {
+    transition: none;
+    opacity: 1;
+    transform: none;
+
+    &.profile-review-invite-card--pressed {
+      transform: none;
+    }
+  }
+
+  .profile-review-invite-card__art-shimmer {
+    animation: none;
+    opacity: 0.6;
+  }
+
+  .profile-review-invite-card__image {
+    opacity: 1;
+    transition: none;
+  }
+}
+
+// Tight fallback for narrow screens.
+@media (max-width: 360px) {
+  .profile-review-invite-card {
+    padding: $spacing-xs $spacing-sm;
+  }
+
+  .profile-review-invite-card__art {
+    width: 144rpx;
+    height: 120rpx;
+    margin-right: $spacing-sm;
+  }
+
+  .profile-review-invite-card__title {
+    font-size: $font-size-sm;
+  }
+
+  .profile-review-invite-card__body {
+    font-size: $font-size-xs;
+  }
+}

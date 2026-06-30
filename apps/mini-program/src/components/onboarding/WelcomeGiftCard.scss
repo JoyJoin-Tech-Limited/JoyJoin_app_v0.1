@@ -181,7 +181,7 @@ $gift-card-aspect-ratio: calc(#{$gift-card-aspect-h} / #{$gift-card-aspect-w} * 
 .welcome-gift-card__skeleton-pill {
   width: 128rpx;
   height: 36rpx;
-  border-radius: 9999rpx;
+  border-radius: $radius-pill;
   background: rgba($color-primary, 0.12);
   animation: gift-card-shimmer 1.6s ease-in-out infinite;
   margin-top: $spacing-xs;
@@ -244,7 +244,7 @@ $gift-card-aspect-ratio: calc(#{$gift-card-aspect-h} / #{$gift-card-aspect-w} * 
   align-items: center;
   align-self: flex-start;
   padding: 4rpx $spacing-sm;
-  border-radius: 9999rpx;
+  border-radius: $radius-pill;
   background: rgba($color-primary, 0.08);
 }
 

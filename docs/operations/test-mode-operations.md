@@ -375,6 +375,7 @@ With `MOCK_PAYMENTS=true`:
 - The server returns instantly-paid orders (`status: completed`, `mock: true`).
 - The mini-program skips `Taro.requestPayment()` and goes straight to payment verification.
 - Prices still show ¥0.01 because `APP_MODE !== production`.
+- **Zero-discount coupons are skipped (2026-06-30):** percentage coupons such as `WELCOME50` that would compute a zero-cent discount under ¥0.01 pricing are dropped from the payment payload; the server would otherwise reject a 0-cent discount.
 
 Restart `npm run dev:server` after editing `.env`.
 

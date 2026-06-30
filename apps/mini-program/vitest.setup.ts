@@ -1,5 +1,6 @@
 // Mock WeChat Mini Program globals for test environment
 import { vi } from 'vitest';
+import '@testing-library/jest-dom';
 
 // Required by @tarojs/components (Taro web-components use these globals)
 (globalThis as any).ENABLE_INNER_HTML = false;

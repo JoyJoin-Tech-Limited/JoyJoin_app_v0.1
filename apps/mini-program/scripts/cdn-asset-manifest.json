@@ -219,6 +219,10 @@
       "cdnPath": "assets/lovart/icebreaker/celebrations/celebration-undercover-secret.webp"
     },
     {
+      "localPath": "assets/lovart/profile-review/invite-teaser.webp",
+      "cdnPath": "assets/lovart/profile-review/invite-teaser.webp"
+    },
+    {
       "localPath": "assets/lovart/gift-card/coupon.webp",
       "cdnPath": "assets/lovart/gift-card/coupon.webp"
     },
@@ -279,12 +283,12 @@
       "cdnPath": "assets/lovart/oraclecard-corner-drinks-20260623-v1.webp"
     },
     {
-      "localPath": "assets/lovart/lovart-event-ticket-tail-dining-20260630-v1.webp",
-      "cdnPath": "assets/lovart/lovart-event-ticket-tail-dining-20260630-v1.webp"
+      "localPath": "assets/lovart/lovart-event-ticket-tail-dining-20260630-v2.webp",
+      "cdnPath": "assets/lovart/lovart-event-ticket-tail-dining-20260630-v2.webp"
     },
     {
-      "localPath": "assets/lovart/lovart-event-ticket-tail-drinks-20260630-v1.webp",
-      "cdnPath": "assets/lovart/lovart-event-ticket-tail-drinks-20260630-v1.webp"
+      "localPath": "assets/lovart/lovart-event-ticket-tail-drinks-20260630-v2.webp",
+      "cdnPath": "assets/lovart/lovart-event-ticket-tail-drinks-20260630-v2.webp"
     },
     {
       "localPath": "assets/lovart/squad/squad-card-back-pattern-20260628-v1.webp",

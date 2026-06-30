@@ -81,6 +81,18 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ### 2026 Milestones (June 2026)
 
+**48. Event Ticket Payment v2 Tail + Zero-Discount Coupon Guard** *(2026-06-30)*
+- **Scope:** Mini-program event-ticket payment page (`apps/mini-program/src/pages/event-ticket-payment/index.tsx`) and paid event registration checkout.
+- **Tail illustration v2:** full-bleed footer vignette (`750 × 280 px`) for `饭局` and `酒局` event types. Rendered with `aspectFill`, CSS top-fade overlay, 4 s load-timeout fallback to the barcode decoration, and degradation-tier gating. Assets: `apps/mini-program/src/assets/lovart/lovart-event-ticket-tail-dining-20260630-v2.webp` and `lovart-event-ticket-tail-drinks-20260630-v2.webp`; resolved via `apps/mini-program/src/lib/eventTicketTailAssets.ts` and uploaded to CDN via `apps/mini-program/scripts/cdn-asset-manifest.json`.
+- **Zero-discount guard:** percentage coupons (e.g., `WELCOME50`) that would compute a zero-cent discount under `TEST_PAYMENT_PRICE_IN_CENTS=1` pricing are dropped from the payment payload before `POST /api/event-pools/:id/register-with-payment`, preventing server-side rejection of the order.
+- **Analytics:** `ticket_tail_image_impression`, `ticket_tail_image_load_error`.
+
+**47. ProfileReviewInviteCard — Discover Invitation Teaser on Profile Review** *(2026-06-30)*
+- **Scope:** Mini-program onboarding final step (`apps/mini-program/src/pages/onboarding/profile-review/index.tsx`).
+- **Component:** `apps/mini-program/src/components/onboarding/ProfileReviewInviteCard.tsx` renders a warm invitation teaser below the welcome gift card after the coupon request settles. Uses Lovart illustration `apps/mini-program/src/assets/lovart/profile-review/invite-teaser.webp` with CDN-first loading, local fallback, and `BrandLogo` final fallback. Supports reduced-motion, disabled/busy states, and `haptics('heavy')` on tap.
+- **Behavior:** Tapping the card calls the same completion path as the primary CTA and routes to Discover. Card reveal triggers a predictive `GET /api/shell/discover` prefetch via the existing `PrefetchEngine`, warming the Discover tab cache before navigation.
+- **Analytics:** `profile_review_invite_impression`, `profile_review_invite_tap`, and `profile_review_discover_prefetch_hit` (with `poolCount`).
+
 **46. WelcomeGiftCard — Lifetime Welcome Coupon on Profile Review** 🎁 *(2026-06-30)*
 - **Scope:** Mini-program onboarding final step (`apps/mini-program/src/pages/onboarding/profile-review/index.tsx`) and server coupon award.
 - **Welcome coupon endpoint:** `GET /api/user/welcome-coupon` claims (or re-fetches) a lifetime welcome coupon on first profile-review view. Server prefers `WELCOME50`, falls back to `WELCOME40`; if the coupon is not configured, returns 404 with `WELCOME_COUPON_NOT_FOUND`. Response includes `id`, `code`, `discountType`, `discountValue`, `source: "profile_review_first_view"`, `isNewlyAwarded`, and `createdAt`. Race-safe against double-claim via unique-constraint fallback.

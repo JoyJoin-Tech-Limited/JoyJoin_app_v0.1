@@ -1,4 +1,5 @@
 /// <reference types="@tarojs/taro" />
+/// <reference types="@testing-library/jest-dom" />
 
 declare module '*.png';
 declare module '*.gif';

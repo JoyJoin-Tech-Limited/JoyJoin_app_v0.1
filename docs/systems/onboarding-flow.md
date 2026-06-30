@@ -303,6 +303,7 @@ await fetch('/api/auth/wechat/login-with-test', {
   - **Profile mini-cards** —家乡、关系状态、学历、职业、行业 rendered with brand-colored dot indicators.
   - **Intent chips** — top social intents labeled with `JoyJoinIcon` (`tier='intent'`) and Chinese text. Intent icons are pre-warmed by `usePreloadIntentIcons` before grids render.
   - **Interest heat map** — `InterestHeatMap` stats + `InterestChipCloud` dominant-category chips.
+- **Invite teaser card** — after the welcome-coupon request settles (success or error), a warm secondary card (`ProfileReviewInviteCard`) appears below the gift card with Lovart `invite-teaser.webp` art, Xiaoyue copy, and a tap CTA to Discover. Tapping completes onboarding. Card reveal also triggers a predictive `GET /api/shell/discover` prefetch via `PrefetchEngine` so the Discover tab renders from cache. Analytics: `profile_review_invite_impression`, `profile_review_invite_tap`, `profile_review_discover_prefetch_hit`.
 - **Floating CTA** — pill-shaped "确认并进入发现" button anchored above the safe area; gains elevation when the page is scrolled.
 - **Motion gating** — all entrance animations, shimmer, and CTA transitions respect `@media (prefers-reduced-motion: reduce)`; the JS `useMiniRevealMotion().shouldReduceMotion` flag suppresses the poster shimmer at runtime.
 

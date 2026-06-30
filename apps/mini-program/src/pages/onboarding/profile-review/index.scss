@@ -122,7 +122,7 @@
   }
 
   &__mascot {
-    margin-bottom: $spacing-sm;
+    margin-bottom: $spacing-md;
   }
 
   // ─── Single playful admission poster ───────────────────────────────────────
@@ -130,7 +130,7 @@
     position: relative;
     @include card-premium;
     padding: 0;
-    margin-bottom: $spacing-md;
+    margin-bottom: $spacing-lg;
     border-radius: $card-radius-lg;
     border: 3rpx solid rgba($color-primary, 0.18);
     overflow: hidden;
@@ -157,7 +157,9 @@
       transparent 75%
     );
     transform: translateX(-150%);
-    animation: profile-review-shimmer 3.2s ease-in-out infinite;
+    // Run the sheen twice after reveal, then stop. Continuous shimmer feels
+    // decorative/AI-generated and wastes GPU cycles.
+    animation: profile-review-shimmer 3.2s ease-in-out 2;
   }
 
   &__stamp {
@@ -168,8 +170,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 104rpx;
-    height: 104rpx;
+    width: 120rpx;
+    height: 120rpx;
     border-radius: 50%;
     background: rgba($color-amber, 0.12);
     border: 2rpx dashed rgba($color-amber, 0.45);
@@ -178,13 +180,14 @@
 
   &__stamp-text {
     display: block;
-    width: 88rpx;
+    width: 100rpx;
+    padding: 0 $spacing-xs;
     font-size: $font-size-2xs;
     font-weight: $font-weight-bold;
     color: $color-amber-700;
-    line-height: 1.25;
+    line-height: 1.4;
     text-align: center;
-    word-break: break-word;
+    word-break: keep-all;
     overflow-wrap: break-word;
   }
 
@@ -212,7 +215,7 @@
     font-weight: $font-weight-black;
     color: $color-text-primary;
     line-height: 1.4;
-    word-break: break-word;
+    word-break: keep-all;
     overflow-wrap: break-word;
   }
 
@@ -333,7 +336,9 @@
     font-weight: $font-weight-bold;
     color: rgba($color-primary, 0.35);
     line-height: 1;
-    font-family: Georgia, serif;
+    // Use the brand display font for decorative quote marks so they feel
+    // intentional rather than falling back to a system serif.
+    font-family: $font-cn-display;
 
     &--top {
       margin-bottom: -$spacing-xs;
@@ -368,9 +373,9 @@
     align-items: center;
     justify-content: center;
     min-width: 88rpx;
-    min-height: 44rpx;
+    min-height: 88rpx;
     margin-top: $spacing-sm;
-    padding: 4rpx $spacing-sm;
+    padding: $spacing-xs $spacing-md;
     border-radius: $radius-pill;
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
@@ -438,7 +443,7 @@
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
-    line-height: $line-height-normal;
+    line-height: $line-height-relaxed;
     word-break: break-word;
     overflow-wrap: break-word;
     overflow: hidden;
@@ -651,7 +656,6 @@
     min-height: 88rpx;
     border-radius: $radius-pill;
     background: rgba($color-primary, 0.08);
-    cursor: pointer;
 
     &--hover {
       background: rgba($color-primary, 0.14);
@@ -855,7 +859,7 @@
   margin-top: $spacing-xs;
   font-size: $font-size-sm;
   color: $color-text-tertiary;
-  line-height: 1.5;
+  line-height: $line-height-relaxed;
 }
 
 .profile-review__gift-card {
@@ -906,3 +910,9 @@
   color: $color-text-secondary;
 }
 
+
+.profile-review__invite-card {
+  // Extra space before the illustrated invite card so it does not feel stacked
+  // directly on top of the gift card (both are heavy visual surfaces).
+  margin-top: $spacing-lg;
+}

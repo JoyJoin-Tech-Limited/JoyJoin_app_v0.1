@@ -141,16 +141,18 @@
   }
 
   // ── Event-type corner vignette ────────────────────────────────
+  // Bleed the illustration to the card’s content edge so it sits flush
+  // with the shell instead of floating inside the padding.
   &__type-corner {
     position: absolute;
-    top: 24rpx;
-    right: 40rpx;
+    top: 0;
+    right: 0;
     width: 220rpx;
     height: 220rpx;
     opacity: 0.5;
     z-index: 0;
     pointer-events: none;
-    border-top-right-radius: 22rpx;
+    border-top-right-radius: $card-radius-sm;
   }
 
   // ── Topline (status pill + countdown) ─────────────────────────
