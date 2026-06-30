@@ -254,14 +254,48 @@ function CenterHubContent({
 
   // State D: No context — empty
   return (
-    <View className='center-hub__state'>
-      <XiaoyueEmptyState
-        emotion='curious'
-        title='去发现'
-        subtitle='还没有进行中的活动'
-        actionLabel='去探索活动'
-        onAction={() => Taro.switchTab({ url: '/pages/discover/index' })}
-      />
+    <View className='center-hub__state center-hub__state--empty'>
+      <View className='center-hub__empty-mascot-wrap'>
+        <View className='center-hub__empty-halo' />
+        <Image
+          className='center-hub__empty-mascot'
+          src={localAsset('/assets/mascot/xiaoyue-waiting.webp')}
+          mode='aspectFit'
+        />
+        <View className='center-hub__empty-sparkle center-hub__empty-sparkle--1' />
+        <View className='center-hub__empty-sparkle center-hub__empty-sparkle--2' />
+        <View className='center-hub__empty-sparkle center-hub__empty-sparkle--3' />
+      </View>
+      <Text className='center-hub__empty-title'>暂无进行中的活动</Text>
+      <Text className='center-hub__empty-subtitle'>报名成功后，你的匹配进度和小队揭晓会出现在这里。</Text>
+      <View
+        className='center-hub__empty-cta'
+        hoverClass='center-hub__empty-cta--pressed'
+        onClick={() => { haptics('light'); Taro.switchTab({ url: '/pages/discover/index' }) }}
+      >
+        <Text className='center-hub__empty-cta-text'>去探索活动</Text>
+      </View>
+      <View className='center-hub__empty-steps'>
+        <View className='center-hub__empty-step'>
+          <View className='center-hub__empty-step-dot center-hub__empty-step-dot--active' />
+          <Text className='center-hub__empty-step-label'>报名成功</Text>
+        </View>
+        <View className='center-hub__empty-step-arrow' />
+        <View className='center-hub__empty-step'>
+          <View className='center-hub__empty-step-dot' />
+          <Text className='center-hub__empty-step-label'>等待匹配</Text>
+        </View>
+        <View className='center-hub__empty-step-arrow' />
+        <View className='center-hub__empty-step'>
+          <View className='center-hub__empty-step-dot' />
+          <Text className='center-hub__empty-step-label'>小队揭晓</Text>
+        </View>
+        <View className='center-hub__empty-step-arrow' />
+        <View className='center-hub__empty-step'>
+          <View className='center-hub__empty-step-dot center-hub__empty-step-dot--active' />
+          <Text className='center-hub__empty-step-label'>确认出席</Text>
+        </View>
+      </View>
     </View>
   )
 }
