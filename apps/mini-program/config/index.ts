@@ -143,6 +143,11 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/icons/intent-icons',
           to: 'dist/assets/icons/intent-icons',
         },
+        // Flow icons — activity process indicators for center-hub and connections (~60KB).
+        {
+          from: 'src/assets/icons/flow-icons',
+          to: 'dist/assets/icons/flow-icons',
+        },
         // NOTE: reaction, reveal, and achievement icons are CDN tiers
         // (CDN_ICON_TIERS in packages/shared/src/iconSystem/emojiToIconMap.ts).
         // Do NOT copy them into the main package — JoyJoinIcon resolves them

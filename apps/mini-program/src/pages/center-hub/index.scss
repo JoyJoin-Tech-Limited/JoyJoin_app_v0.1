@@ -118,10 +118,10 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: flex-start;
     gap: $spacing-md;
-    padding: $spacing-md 32rpx;
+    padding: 120rpx 32rpx $spacing-md;
     min-height: 85vh;
-    padding-top: 6vh;
   }
 
   // ─── Hero card (white card with mascot, copy, CTA) ────────────────
