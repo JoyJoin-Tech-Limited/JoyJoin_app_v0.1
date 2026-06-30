@@ -298,23 +298,23 @@
   }
 
   &__flow-connector {
-    width: 36rpx;
+    width: 46rpx;
     height: 2rpx;
     flex-shrink: 0;
     position: relative;
     margin-top: 40rpx;
-    background: rgba($color-primary, 0.15);
+    background: rgba($color-primary, 0.25);
 
     &::after {
       content: '';
       position: absolute;
       right: -2rpx;
-      top: -4rpx;
+      top: -5rpx;
       width: 0;
       height: 0;
-      border-top: 5rpx solid transparent;
-      border-bottom: 5rpx solid transparent;
-      border-left: 6rpx solid rgba($color-primary, 0.15);
+      border-top: 7rpx solid transparent;
+      border-bottom: 7rpx solid transparent;
+      border-left: 8rpx solid rgba($color-primary, 0.25);
     }
   }
 }
