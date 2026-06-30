@@ -230,6 +230,7 @@
   }
 
   &__empty-title {
+    @include font-cn-display;
     display: block;
     font-size: $font-size-lg;
     font-weight: $font-weight-bold;
