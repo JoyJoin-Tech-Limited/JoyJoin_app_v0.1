@@ -58,7 +58,6 @@ export default function ConnectionsPage() {
   return renderGate(
     <View className='connections-page tab-page-enter'>
       <View className='connections-page__header'>
-        <Text className='connections-page__title'>我的连接</Text>
         <Text className='connections-page__subtitle'>活动后建立的联系</Text>
       </View>
 
@@ -185,8 +184,8 @@ export default function ConnectionsPage() {
               <Text className='connections-page__flow-title'>连接建立流程</Text>
               <View className='connections-page__flow-steps'>
                 <View className='connections-page__flow-step'>
-                  <View className='connections-page__flow-step-icon'>
-                    <JoyJoinIcon emoji='🎉' size={36} />
+                  <View className='connections-page__flow-step-icon connections-page__flow-step-icon--active'>
+                    <Text className='connections-page__flow-step-num'>1</Text>
                   </View>
                   <View className='connections-page__flow-step-content'>
                     <Text className='connections-page__flow-step-title'>参加活动</Text>
@@ -196,7 +195,7 @@ export default function ConnectionsPage() {
                 <View className='connections-page__flow-connector' aria-hidden='true' />
                 <View className='connections-page__flow-step'>
                   <View className='connections-page__flow-step-icon'>
-                    <JoyJoinIcon emoji='💬' size={36} />
+                    <Text className='connections-page__flow-step-num'>2</Text>
                   </View>
                   <View className='connections-page__flow-step-content'>
                     <Text className='connections-page__flow-step-title'>完成互动</Text>
@@ -206,7 +205,7 @@ export default function ConnectionsPage() {
                 <View className='connections-page__flow-connector' aria-hidden='true' />
                 <View className='connections-page__flow-step'>
                   <View className='connections-page__flow-step-icon'>
-                    <JoyJoinIcon emoji='🤝' size={36} />
+                    <Text className='connections-page__flow-step-num'>3</Text>
                   </View>
                   <View className='connections-page__flow-step-content'>
                     <Text className='connections-page__flow-step-title'>建立连接</Text>

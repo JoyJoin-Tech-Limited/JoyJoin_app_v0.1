@@ -118,10 +118,10 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     gap: $spacing-md;
-    padding: $spacing-lg $container-padding;
-    min-height: 100vh;
+    padding: $spacing-md 32rpx;
+    min-height: 85vh;
+    padding-top: 10vh;
   }
 
   // ─── Hero card (white card with mascot, copy, CTA) ────────────────
@@ -129,7 +129,7 @@
   &__empty-hero {
     background: $color-surface;
     border-radius: $card-radius;
-    padding: $spacing-lg $spacing-lg;
+    padding: $spacing-lg $spacing-xl;
     width: 100%;
     box-shadow: $shadow-md;
     display: flex;
@@ -247,7 +247,7 @@
   &__flow-card {
     background: $color-surface;
     border-radius: $card-radius;
-    padding: $spacing-lg $spacing-md;
+    padding: $spacing-lg $spacing-xl;
     width: 100%;
     box-shadow: $shadow-sm;
     box-sizing: border-box;
@@ -278,8 +278,8 @@
   }
 
   &__flow-step-indicator {
-    width: 56rpx;
-    height: 56rpx;
+    width: 60rpx;
+    height: 60rpx;
     border-radius: 50%;
     background: rgba($color-primary, 0.08);
     display: flex;
@@ -294,7 +294,7 @@
   }
 
   &__flow-step-num {
-    font-size: $font-size-sm;
+    font-size: $font-size-md;
     font-weight: $font-weight-semibold;
     color: $color-primary;
     line-height: 1;
@@ -312,11 +312,24 @@
   }
 
   &__flow-connector {
-    flex-shrink: 0;
-    width: 40rpx;
+    width: 36rpx;
     height: 2rpx;
-    background: $color-border;
-    margin-top: 28rpx;
+    flex-shrink: 0;
+    position: relative;
+    margin-top: 30rpx;
+    background: rgba($color-primary, 0.15);
+
+    &::after {
+      content: '';
+      position: absolute;
+      right: -2rpx;
+      top: -4rpx;
+      width: 0;
+      height: 0;
+      border-top: 5rpx solid transparent;
+      border-bottom: 5rpx solid transparent;
+      border-left: 6rpx solid rgba($color-primary, 0.15);
+    }
   }
 }
 
