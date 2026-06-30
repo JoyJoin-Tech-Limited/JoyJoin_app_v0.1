@@ -42,6 +42,7 @@ if [[ "$PAYMENTS_ENABLED_NORMALIZED" == "true" && "$MOCK_PAYMENTS_NORMALIZED" !=
         WECHAT_PAY_SERIAL_NO
         WECHAT_PAY_PRIVATE_KEY
         WECHAT_PAY_APIV3_KEY
+        WECHAT_PAY_PLATFORM_CERT
     )
 
     MISSING_WECHAT_PAY_VARS=()
@@ -67,6 +68,22 @@ if [[ "$PAYMENTS_ENABLED_NORMALIZED" == "true" && "$MOCK_PAYMENTS_NORMALIZED" !=
     if [[ "${WECHAT_PAY_APP_ID:-}" != "${WECHAT_APPID:-}" ]]; then
         echo "❌ WECHAT_PAY_APP_ID must match WECHAT_APPID for mini-program JSAPI payments"
         exit 1
+    fi
+
+    if ! openssl x509 -in <(printf '%s' "${WECHAT_PAY_PLATFORM_CERT}") -noout >/dev/null 2>&1 && \
+       ! openssl rsa -pubin -in <(printf '%s' "${WECHAT_PAY_PLATFORM_CERT}") -noout >/dev/null 2>&1; then
+        # Value may be base64-encoded (avoids docker-compose env_file multi-line corruption).
+        decoded_cert="$(printf '%s' "${WECHAT_PAY_PLATFORM_CERT}" | base64 -d 2>/dev/null || true)"
+        if [[ -n "${decoded_cert}" ]] && \
+           (openssl x509 -in <(printf '%s' "${decoded_cert}") -noout >/dev/null 2>&1 || \
+            openssl rsa -pubin -in <(printf '%s' "${decoded_cert}") -noout >/dev/null 2>&1); then
+            echo "✅ WECHAT_PAY_PLATFORM_CERT is valid (base64-encoded)"
+        else
+            echo "❌ WECHAT_PAY_PLATFORM_CERT is not a valid X.509 certificate or RSA public key"
+            echo "   WeChat Pay now uses 微信支付公钥 (public key) mode. Download the public key from"
+            echo "   商户平台 → 账户中心 → API安全 → 微信支付公钥, and paste the PEM contents into the GitHub secret."
+            exit 1
+        fi
     fi
 fi
 

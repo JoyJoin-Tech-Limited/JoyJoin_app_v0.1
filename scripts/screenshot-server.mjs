@@ -240,11 +240,49 @@ async function captureSquadUnboxingRevealed() {
   )
 }
 
+async function captureProfileReview() {
+  const fs = await import('node:fs')
+  fs.appendFileSync('/tmp/profile-review-screenshot-debug.log', '[captureProfileReview] invoked\n')
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      const log = (msg) => {
+        const line = `[screenshot] profile-review: ${JSON.stringify(msg)}\n`
+        fs.appendFileSync('/tmp/profile-review-screenshot-debug.log', line)
+      }
+      log({ step: 'enter' })
+      const url = `${H5_BASE_URL}/#/pages/onboarding/profile-review/index?motion=reduce`
+      log({ step: 'goto', url })
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+      log({ step: 'reloaded' })
+
+      // Wait for the profile-review shell and the welcome gift card to render.
+      await page.waitForSelector('.profile-review__shell', { timeout: 10000 })
+      await page.waitForTimeout(800)
+      log({ step: 'shell-visible' })
+
+      // Debug: capture page state before waiting for gift card.
+      const hasGiftCard = await page.locator('.welcome-gift-card').count()
+      const hasCouponError = await page.locator('.profile-review__error').count()
+      const html = await page.content()
+      log({ hasGiftCard, hasCouponError, htmlLength: html.length })
+
+      await page.waitForSelector('.welcome-gift-card', { timeout: 10000 })
+      await page.waitForTimeout(1200)
+
+      return page.screenshot({ fullPage: true })
+    }
+  )
+}
+
 register('events-footprint-oracle-card', captureEventsPage)
 register('tier-selector-preset-cards', captureTierSelector)
 register('pool-registration-step-0-brief', capturePoolRegistration)
 register('event-ticket-payment', captureEventTicketPayment)
 register('squad-unboxing-revealed', captureSquadUnboxingRevealed)
+register('profile-review-welcome-coupon', captureProfileReview)
 
 const server = app.listen(PORT, () => {
   console.log(`[screenshot-server] listening on http://localhost:${PORT}`)

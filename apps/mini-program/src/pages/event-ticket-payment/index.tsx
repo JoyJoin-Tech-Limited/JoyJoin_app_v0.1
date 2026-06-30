@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { registerForPoolWithPayment, getEventPool, getUserCoupons, type UserCouponSummary } from '@shared/api'
+import { registerForPoolWithPayment, getEventPool, getUserCoupons, type UserCouponSummary, reconcilePayment } from '@shared/api'
 import { getIntentLabel } from '@shared/constants'
 import { useAuth } from '../../hooks/useAuth'
 import { apiRequest } from '../../lib/api/api'
@@ -25,6 +25,7 @@ import { useLoadingDeadline } from '../../hooks/useLoadingDeadline'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import StatusCard from '../../components/ui/StatusCard'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import IcebreakerInclusionSheet from '../../components/event-ticket-payment/IcebreakerInclusionSheet'
 import './index.scss'
 
@@ -50,6 +51,11 @@ interface PricingPlan {
 
 function formatPrice(cents: number): string {
   return `¥${(cents / 100).toFixed(0)}`
+}
+
+function formatBudgetLabel(budget: string): string {
+  if (!budget || budget.startsWith('¥')) return budget
+  return `¥${budget}`
 }
 
 function calculateSavings(singlePrice: number, packPrice: number, count: number): number {
@@ -326,9 +332,22 @@ export default function EventTicketPaymentPage() {
   const pollVerification = useCallback((orderId: string, paymentId: string) => {
     setPayment({ status: 'verifying', paymentId, wechatOrderId: orderId })
     let attempts = 0
-    const maxAttempts = 20
+    const maxAttempts = 24 // 24 * 1500ms = 36s base polling window
 
     if (verifyTimerRef.current) clearInterval(verifyTimerRef.current)
+
+    const finish = (status: 'success' | 'failed', error?: string) => {
+      if (verifyTimerRef.current) {
+        clearInterval(verifyTimerRef.current)
+        verifyTimerRef.current = null
+      }
+      if (status === 'success') {
+        setPayment({ status: 'success', paymentId, wechatOrderId: orderId })
+        haptics('success')
+      } else {
+        setPayment({ status: 'failed', error: error || '支付未成功，请重试' })
+      }
+    }
 
     verifyTimerRef.current = setInterval(async () => {
       attempts++
@@ -337,11 +356,15 @@ export default function EventTicketPaymentPage() {
           path: `/api/payments/status/${encodeURIComponent(orderId)}`,
         })
 
+        logInfo('[EventTicketPayment] Poll status', {
+          orderId,
+          paymentId,
+          attempt: attempts,
+          status: statusResp.status,
+        })
+
         if (statusResp.status === 'completed') {
-          if (verifyTimerRef.current) clearInterval(verifyTimerRef.current)
-          verifyTimerRef.current = null
-          setPayment({ status: 'success', paymentId, wechatOrderId: orderId })
-          haptics('success')
+          finish('success')
           discoverAnalytics.track('pay_success', undefined, {
             poolId,
             plan: selectedPlan,
@@ -370,9 +393,7 @@ export default function EventTicketPaymentPage() {
         }
 
         if (statusResp.status === 'failed' || statusResp.status === 'closed') {
-          if (verifyTimerRef.current) clearInterval(verifyTimerRef.current)
-          verifyTimerRef.current = null
-          setPayment({ status: 'failed', error: '支付未成功，请重试' })
+          finish('failed', '支付未成功，请重试')
           discoverAnalytics.track('pay_fail', undefined, {
             poolId,
             plan: selectedPlan,
@@ -385,14 +406,59 @@ export default function EventTicketPaymentPage() {
           })
           return
         }
-      } catch {
+      } catch (err) {
+        logError('[EventTicketPayment] Poll status error', {
+          message: err instanceof Error ? err.message : String(err),
+        })
         // Continue polling on transient errors
       }
 
       if (attempts >= maxAttempts) {
-        if (verifyTimerRef.current) clearInterval(verifyTimerRef.current)
-        verifyTimerRef.current = null
-        setPayment({ status: 'failed', error: '支付确认超时，请稍后查看活动列表' })
+        // Last-resort server-side reconciliation before giving up.
+        try {
+          logInfo('[EventTicketPayment] Polling window exhausted, requesting server reconciliation', {
+            orderId,
+            paymentId,
+            attempts,
+          })
+          const reconcileResp = await reconcilePayment(apiRequest, orderId)
+          logInfo('[EventTicketPayment] Reconcile response', {
+            orderId,
+            paymentId,
+            status: reconcileResp.status,
+            fulfilled: reconcileResp.fulfilled,
+          })
+
+          if (reconcileResp.status === 'completed') {
+            finish('success')
+            discoverAnalytics.track('pay_success', undefined, {
+              poolId,
+              plan: selectedPlan,
+              couponCode: bestCoupon?.code ?? null,
+              originalAmount: currentPrice,
+              finalAmount: finalPrice,
+              paymentId,
+              wechatOrderId: orderId,
+              via: 'reconcile',
+            })
+
+            const ctx = returnContextRef.current
+            if (ctx) {
+              const paid = markPaymentReturnContextPaid(ctx)
+              await persistPaymentReturnContext(paid)
+              setReturnContext(paid)
+              returnContextRef.current = paid
+            }
+
+            void bustRegistrationCaches(queryClient, { poolId })
+            clearPaymentReturnContextStorage()
+            return
+          }
+        } catch (reconcileErr) {
+          logError('[EventTicketPayment] Reconcile request failed', { error: String(reconcileErr) })
+        }
+
+        finish('failed', '支付确认超时，请稍后查看活动列表')
         discoverAnalytics.track('pay_timeout', undefined, {
           poolId,
           plan: selectedPlan,
@@ -626,7 +692,7 @@ export default function EventTicketPaymentPage() {
   const choiceChips: Array<{ label: string; category: 'budget' | 'intent' | 'language' | 'theme' | 'dietary' | 'alcohol' | 'other' }> = []
   if (draft && Object.keys(draft).length > 0) {
     const budgets = eventType === '酒局' ? draft.barBudgetRange : draft.budgetRange
-    budgets?.forEach((b: string) => choiceChips.push({ label: b, category: 'budget' }))
+    budgets?.forEach((b: string) => choiceChips.push({ label: formatBudgetLabel(b), category: 'budget' }))
     draft.eventIntent?.forEach((i: string) => choiceChips.push({ label: getDisplayLabel(i, 'intent'), category: 'intent' }))
     draft.preferredLanguages?.forEach((l: string) => choiceChips.push({ label: getDisplayLabel(l, 'language'), category: 'language' }))
     draft.barThemes?.forEach((t: string) => choiceChips.push({ label: t, category: 'theme' }))
@@ -654,7 +720,14 @@ export default function EventTicketPaymentPage() {
             />
             <View className='ticket-card__banner-scrim' />
             <View className='ticket-card__type-badge'>
-              <Text className='ticket-card__type-badge-text'>{eventEmoji} {eventType}</Text>
+              {eventType === '饭局' ? (
+                <View className='ticket-card__type-badge-icon'>
+                  <JoyJoinIcon emoji='🍜' tier='category' size={40} />
+                </View>
+              ) : (
+                <Text className='ticket-card__type-badge-emoji'>{eventEmoji}</Text>
+              )}
+              <Text className='ticket-card__type-badge-text'>{eventType}</Text>
             </View>
             <View className='ticket-card__banner-title-wrap'>
               <Text className='ticket-card__banner-title'>{pool.title}</Text>

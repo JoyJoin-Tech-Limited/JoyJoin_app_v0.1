@@ -26,6 +26,7 @@ Component({
   _announcementTimer: null,
   _routeToIndex: {
     'pages/discover/index': 0,
+    'pages/pool-registration/index': 0,
     'pages/events/index': 1,
     'pages/connections/index': 2,
     'pages/profile/index': 3,
@@ -95,6 +96,20 @@ Component({
 
   lifetimes: {
     attached: function () {
+      // Some WeChat runtimes do not copy top-level non-data properties to the
+      // instance before attached fires. Re-initialize the route map here as a
+      // defensive fallback to prevent `_shouldHideOnPage` crashes.
+      if (!this._routeToIndex) {
+        this._routeToIndex = {
+          'pages/discover/index': 0,
+          'pages/pool-registration/index': 0,
+          'pages/events/index': 1,
+          'pages/connections/index': 2,
+          'pages/profile/index': 3,
+          'pages/center-hub/index': 4,
+        }
+      }
+
       var info = wx.getSystemInfoSync ? wx.getSystemInfoSync() : {}
       this._platform = info.platform || 'other'
       // benchmarkLevel: 1–50. <= 15 is low-end (budget Android / old iOS).

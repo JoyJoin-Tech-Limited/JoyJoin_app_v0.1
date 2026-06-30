@@ -937,6 +937,44 @@ export function registerPaymentRoutes(app: Express): void {
   app.get("/api/payments/:wechatOrderId/status", requireAuth, respondWithPaymentStatus);
   app.get("/api/payments/status/:wechatOrderId", requireAuth, respondWithPaymentStatus);
 
+  // Reconcile a payment by querying WeChat Pay directly. Useful when webhooks
+  // are delayed or when the client polling window times out before confirmation.
+  app.post("/api/payments/:wechatOrderId/reconcile", paymentEndpointLimiter, requireAuth, checkPaymentsEnabled, async (req, res) => {
+    const reqLogger = logger.child({ request_id: req.requestId });
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { wechatOrderId } = req.params as { wechatOrderId: string };
+      const payment = await paymentsRepo.getPaymentByWechatOrderId(wechatOrderId);
+
+      if (!payment || payment.userId !== userId) {
+        reqLogger.warn("Rejected payment reconciliation for non-owned payment", {
+          order_id: wechatOrderId,
+          user_id: userId,
+        });
+        return res.status(404).json({ message: "Payment not found" });
+      }
+
+      const result = await paymentService.reconcilePayment(wechatOrderId);
+
+      // Invalidate caches so the events tab reflects a newly-created registration.
+      if (result.fulfilled) {
+        shellCache.invalidateUser(userId);
+      }
+
+      res.json(result);
+    } catch (error) {
+      reqLogger.error("Failed to reconcile payment", {
+        order_id: req.params.wechatOrderId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({ message: "Failed to reconcile payment" });
+    }
+  });
+
   app.get("/api/admin/payments", requireAdmin, async (req, res) => {
     const reqLogger = logger.child({ request_id: req.requestId });
     try {

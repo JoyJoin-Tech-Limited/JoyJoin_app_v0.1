@@ -232,7 +232,9 @@ jobs:
             write_if_nonempty "WECHAT_PAY_SERIAL_NO" "$WECHAT_PAY_SERIAL_NO"
             write_if_nonempty "WECHAT_PAY_PRIVATE_KEY" "$WECHAT_PAY_PRIVATE_KEY"
             write_if_nonempty "WECHAT_PAY_APIV3_KEY" "$WECHAT_PAY_APIV3_KEY"
-            write_if_nonempty "WECHAT_PAY_PLATFORM_CERT" "$WECHAT_PAY_PLATFORM_CERT"
+            # Store as base64 to avoid docker-compose env_file multi-line corruption.
+            # paymentService.ts decodes this automatically.
+            write_if_nonempty "WECHAT_PAY_PLATFORM_CERT" "$WECHAT_PAY_PLATFORM_CERT_B64"
             write_if_nonempty "PAYMENTS_ENABLED" "$PAYMENTS_ENABLED"
             write_if_nonempty "MOCK_PAYMENTS" "$MOCK_PAYMENTS"
             write_if_nonempty "MINIMAX_BASE_URL" "$MINIMAX_BASE_URL"

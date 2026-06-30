@@ -69,7 +69,8 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     left: 24rpx;
     display: inline-flex;
     align-items: center;
-    padding: 10rpx 20rpx;
+    gap: 10rpx;
+    padding: 14rpx 26rpx;
     // Near-opaque so the badge stays legible over the banner image without
     // backdrop-filter (WKWebView compositor cost — see AGENTS.md promo banner note).
     background: rgba($color-surface, 0.96);
@@ -77,11 +78,25 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
   }
 
+  &__type-badge-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40rpx;
+    height: 40rpx;
+  }
+
+  &__type-badge-emoji {
+    font-size: $font-size-lg;
+    line-height: 1;
+  }
+
   &__type-badge-text {
-    font-family: $font-ui;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-bold;
+    font-family: $font-cn-display;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-black;
     color: $color-primary;
+    letter-spacing: 1rpx;
   }
 
   &__banner-title-wrap {
@@ -102,38 +117,38 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     text-shadow: 0 2rpx 8rpx rgba($color-surface, 0.8);
   }
 
-  // Perforation divider with notched cutouts
+  // Perforation divider with real concave semicircular cutouts
   &__perforation {
     position: relative;
     display: flex;
     align-items: center;
-    height: 24rpx;
+    height: 80rpx;
     background: $color-surface;
   }
 
   &__notch {
     position: absolute;
     top: 50%;
-    width: 32rpx;
-    height: 32rpx;
-    margin-top: -16rpx;
+    width: 80rpx;
+    height: 80rpx;
+    margin-top: -40rpx;
     background: $color-bg;
     border-radius: 50%;
     z-index: 2;
 
     &--left {
-      left: -16rpx;
+      left: -40rpx;
     }
 
     &--right {
-      right: -16rpx;
+      right: -40rpx;
     }
   }
 
   &__dash-line {
     flex: 1;
     height: 0;
-    margin: 0 24rpx;
+    margin: 0 56rpx;
     border-bottom: 2rpx dashed rgba($color-border, 0.85);
   }
 
@@ -322,7 +337,7 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   &__coupon-stub-left,
   &__coupon-stub-right {
     position: relative;
-    width: 20rpx;
+    width: 28rpx;
     flex-shrink: 0;
     background: $color-surface;
   }
@@ -330,20 +345,18 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   &__coupon-stub-notch {
     position: absolute;
     top: 50%;
-    width: 24rpx;
-    height: 24rpx;
-    margin-top: -12rpx;
+    width: 48rpx;
+    height: 48rpx;
+    margin-top: -24rpx;
     background: $color-surface;
     border-radius: 50%;
 
     &--left {
-      left: -12rpx;
-      box-shadow: inset -2rpx 0 4rpx rgba(0, 0, 0, 0.04);
+      right: -24rpx;
     }
 
     &--right {
-      right: -12rpx;
-      box-shadow: inset 2rpx 0 4rpx rgba(0, 0, 0, 0.04);
+      left: -24rpx;
     }
   }
 

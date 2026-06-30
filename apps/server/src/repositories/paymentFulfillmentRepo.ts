@@ -13,7 +13,8 @@ import { and, desc, eq, ne, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "../db";
 import { eventCreditsRepo } from "./eventCreditsRepo";
-import { resolveEffectivePreferenceDNA } from "../lib/matchCompass"; 
+import { resolveEffectivePreferenceDNA } from "../lib/matchCompass";
+import { logger } from "../lib/logger"; 
 import { users } from "@shared/schema";
 
 type PaymentRecord = typeof payments.$inferSelect;
@@ -116,6 +117,11 @@ export const paymentFulfillmentRepo = {
     params: FinalizeConfirmedPaymentParams
   ): Promise<FinalizeConfirmedPaymentResult> {
     return db.transaction(async (tx: NodePgDatabase<typeof schema>) => {
+      logger.info("Starting payment fulfillment transaction", {
+        wechat_order_id: params.wechatOrderId,
+        transaction_id: params.transactionId,
+      });
+
       const [payment] = await tx
         .select()
         .from(payments)
@@ -123,10 +129,17 @@ export const paymentFulfillmentRepo = {
         .limit(1);
 
       if (!payment) {
+        logger.warn("Payment fulfillment: order not found", {
+          wechat_order_id: params.wechatOrderId,
+        });
         return { payment: null, alreadyCompleted: false };
       }
 
       if (payment.status === "completed") {
+        logger.info("Payment fulfillment: already completed", {
+          payment_id: payment.id,
+          wechat_order_id: params.wechatOrderId,
+        });
         return { payment, alreadyCompleted: true };
       }
 
@@ -148,6 +161,10 @@ export const paymentFulfillmentRepo = {
           .limit(1);
 
         if (latestPayment?.status === "completed") {
+          logger.info("Payment fulfillment: completed concurrently", {
+            payment_id: payment.id,
+            wechat_order_id: params.wechatOrderId,
+          });
           return {
             payment: {
               ...payment,
@@ -159,8 +176,19 @@ export const paymentFulfillmentRepo = {
           };
         }
 
+        logger.error("Payment fulfillment: failed to update payment status", {
+          payment_id: payment.id,
+          wechat_order_id: params.wechatOrderId,
+        });
         throw new Error(`Failed to update payment ${payment.id}`);
       }
+
+      logger.info("Payment status updated to completed", {
+        payment_id: updatedPayment.id,
+        payment_type: updatedPayment.paymentType,
+        related_id: updatedPayment.relatedId,
+        wechat_order_id: params.wechatOrderId,
+      });
 
       if (updatedPayment.couponId) {
         await tx.insert(couponUsage).values({
@@ -238,6 +266,13 @@ export const paymentFulfillmentRepo = {
         const eventRegistrationPayload = normalizeEventRegistrationPayload(
           updatedPayment.eventRegistrationPayload,
         );
+        logger.info("Fulfilling event payment registration", {
+          payment_id: updatedPayment.id,
+          pool_id: updatedPayment.relatedId,
+          user_id: updatedPayment.userId,
+          has_event_registration_payload: !!updatedPayment.eventRegistrationPayload,
+          budget_range: eventRegistrationPayload?.budgetRange,
+        });
         const [pool] = await tx
           .select({ id: eventPools.id })
           .from(eventPools)
@@ -245,6 +280,10 @@ export const paymentFulfillmentRepo = {
           .limit(1);
 
         if (!pool) {
+          logger.error("Event pool not found during payment fulfillment", {
+            payment_id: updatedPayment.id,
+            pool_id: updatedPayment.relatedId,
+          });
           throw new Error(`Event pool ${updatedPayment.relatedId} not found`);
         }
 
@@ -291,6 +330,12 @@ export const paymentFulfillmentRepo = {
           .returning({ id: eventPoolRegistrations.id });
 
         if (inserted.length > 0) {
+          logger.info("Event registration created from payment fulfillment", {
+            payment_id: updatedPayment.id,
+            registration_id: inserted[0].id,
+            pool_id: updatedPayment.relatedId,
+            user_id: updatedPayment.userId,
+          });
           await tx
             .update(eventPools)
             .set({
@@ -298,6 +343,12 @@ export const paymentFulfillmentRepo = {
               updatedAt: new Date(),
             })
             .where(eq(eventPools.id, updatedPayment.relatedId));
+        } else {
+          logger.warn("Event registration insert skipped by conflict; payment fulfilled without incrementing pool count", {
+            payment_id: updatedPayment.id,
+            pool_id: updatedPayment.relatedId,
+            user_id: updatedPayment.userId,
+          });
         }
       }
 

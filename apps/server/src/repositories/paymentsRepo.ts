@@ -337,21 +337,17 @@ export const paymentsRepo: PaymentsRepository = {
   },
 
   async getPaymentById(id: string): Promise<any | undefined> {
-    const result = await db.execute(sql`
-      SELECT * FROM payments
-      WHERE id = ${id}
-      LIMIT 1
-    `);
-    return result.rows[0];
+    const [result] = await db.select().from(payments).where(eq(payments.id, id)).limit(1);
+    return result;
   },
 
   async getPaymentByWechatOrderId(wechatOrderId: string): Promise<any | undefined> {
-    const result = await db.execute(sql`
-      SELECT * FROM payments
-      WHERE wechat_order_id = ${wechatOrderId}
-      LIMIT 1
-    `);
-    return result.rows[0];
+    const [result] = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.wechatOrderId, wechatOrderId))
+      .limit(1);
+    return result;
   },
 
   async getPaymentsByType(paymentType: string): Promise<any[]> {

@@ -41,7 +41,7 @@ npm run build:weapp -w mini-program
 
 Expected result:
 
-- All tab-bar behavior tests pass (37 tests as of 2026-06-23).
+- All tab-bar behavior tests pass (35 tests as of 2026-06-30).
 - Mini-program typecheck passes.
 - WeChat build succeeds and refreshes `apps/mini-program/dist`.
 
@@ -241,9 +241,10 @@ Common environmental false positives:
 
 - Active component: `apps/mini-program/src/native-custom-tab-bar/index.js`
 - Component tests: `apps/mini-program/src/native-custom-tab-bar/__tests__/tabBarBehavior.test.ts`
+- Hook tests: `apps/mini-program/src/hooks/navigation/__tests__/useCustomTabBarSync.test.tsx`
 - Allow-list source of truth: `apps/mini-program/src/lib/navigation/tabBarConfig.ts`
 - App registration: `apps/mini-program/src/app.config.ts`
-- Page sync hook: `apps/mini-program/src/hooks/useCustomTabBarSync.ts`
+- Page sync hook: `apps/mini-program/src/hooks/navigation/useCustomTabBarSync.ts`
 - Runtime docs: `apps/mini-program/README.md` §Native Custom Tab Bar
 
 ---

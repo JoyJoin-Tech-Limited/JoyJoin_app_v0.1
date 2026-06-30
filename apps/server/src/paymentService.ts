@@ -35,6 +35,36 @@ import { db } from "./db";
 const WECHAT_PAY_API_BASE = "https://api.mch.weixin.qq.com";
 const WEBHOOK_TOLERANCE_SECONDS = 300;
 
+/**
+ * Resolve the WeChat Pay platform certificate / public key PEM.
+ *
+ * Supports:
+ *   - Raw PEM (-----BEGIN PUBLIC KEY----- / -----BEGIN CERTIFICATE-----)
+ *   - Base64-encoded PEM (useful when the env file cannot safely hold multi-line values)
+ *
+ * Returns undefined if no key material is configured.
+ */
+function resolvePlatformCert(): string | undefined {
+  const raw = process.env.WECHAT_PAY_PLATFORM_CERT ?? process.env.WECHAT_PAY_PLATFORM_PUBLIC_KEY;
+  if (!raw) return undefined;
+
+  const trimmed = raw.trim();
+  if (trimmed.includes("-----BEGIN ")) {
+    return trimmed;
+  }
+
+  try {
+    const decoded = Buffer.from(trimmed, "base64").toString("utf8");
+    if (decoded.includes("-----BEGIN ")) {
+      return decoded.trim();
+    }
+  } catch {
+    // fall through
+  }
+
+  return trimmed;
+}
+
 // Hard ceiling for WeChat Pay API calls. WeChat Pay normally responds in <1s;
 // if it stalls (DNS/TLS/network), fail fast instead of holding the request forever.
 function getWechatPayTimeoutMs(): number {
@@ -530,7 +560,7 @@ export class PaymentService {
     const message = `${timestamp}\n${nonce}\n${rawBody}\n`;
 
     // ── RSA-SHA256 path (required outside development) ────────────────────
-    const platformCert = process.env.WECHAT_PAY_PLATFORM_CERT ?? process.env.WECHAT_PAY_PLATFORM_PUBLIC_KEY;
+    const platformCert = resolvePlatformCert();
     try {
       if (!platformCert) {
         logger.warn("Payment webhook signature verification unavailable because platform cert is missing");
@@ -552,28 +582,99 @@ export class PaymentService {
    * Query payment status from WeChat Pay
    */
   async queryPaymentStatus(wechatOrderId: string): Promise<string> {
+    const reqLogger = logger.child({ wechat_order_id: wechatOrderId });
     const existingPayment = await paymentsRepo.getPaymentByWechatOrderId(wechatOrderId);
     if (existingPayment?.status === "completed") {
+      reqLogger.info("Payment status query returned cached completed");
       return "completed";
     }
     if (existingPayment?.status === "refunded") {
+      reqLogger.info("Payment status query returned cached refunded");
       return "refunded";
     }
     if (existingPayment?.status === "failed") {
+      reqLogger.info("Payment status query returned cached failed");
       return "failed";
     }
 
-    const response = await this.wechatRequest<{ trade_state: string; transaction_id?: string }>({
-      method: "GET",
-      path: `/v3/pay/transactions/out-trade-no/${encodeURIComponent(wechatOrderId)}?mchid=${encodeURIComponent(this.getWechatPayConfig().mchId)}`,
-    });
+    try {
+      const response = await this.wechatRequest<{ trade_state: string; transaction_id?: string }>({
+        method: "GET",
+        path: `/v3/pay/transactions/out-trade-no/${encodeURIComponent(wechatOrderId)}?mchid=${encodeURIComponent(this.getWechatPayConfig().mchId)}`,
+      });
 
-    if (response.trade_state === "SUCCESS" && response.transaction_id) {
-      await this.handlePaymentSuccess(wechatOrderId, response.transaction_id);
-      return "completed";
+      reqLogger.info("WeChat Pay order query response", {
+        trade_state: response.trade_state,
+        has_transaction_id: Boolean(response.transaction_id),
+      });
+
+      if (response.trade_state === "SUCCESS" && response.transaction_id) {
+        await this.handlePaymentSuccess(wechatOrderId, response.transaction_id);
+        return "completed";
+      }
+
+      return this.mapTradeState(response.trade_state);
+    } catch (error) {
+      reqLogger.error("WeChat Pay order query failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Reconcile a payment by querying WeChat Pay and fulfilling it if paid.
+   * Idempotent: safe to call multiple times for the same order.
+   * Returns whether the payment was newly fulfilled by this call.
+   */
+  async reconcilePayment(wechatOrderId: string): Promise<{ status: string; fulfilled: boolean }> {
+    const reqLogger = logger.child({ wechat_order_id: wechatOrderId });
+    const existingPayment = await paymentsRepo.getPaymentByWechatOrderId(wechatOrderId);
+
+    if (!existingPayment) {
+      reqLogger.warn("Reconciliation requested for unknown order");
+      throw new Error("Payment not found");
     }
 
-    return this.mapTradeState(response.trade_state);
+    if (existingPayment.status === "completed") {
+      reqLogger.info("Reconciliation skipped: payment already completed");
+      return { status: "completed", fulfilled: false };
+    }
+    if (existingPayment.status === "refunded") {
+      reqLogger.info("Reconciliation skipped: payment already refunded");
+      return { status: "refunded", fulfilled: false };
+    }
+    if (existingPayment.status === "failed") {
+      reqLogger.info("Reconciliation skipped: payment already failed");
+      return { status: "failed", fulfilled: false };
+    }
+
+    try {
+      const response = await this.wechatRequest<{ trade_state: string; transaction_id?: string }>({
+        method: "GET",
+        path: `/v3/pay/transactions/out-trade-no/${encodeURIComponent(wechatOrderId)}?mchid=${encodeURIComponent(this.getWechatPayConfig().mchId)}`,
+      });
+
+      reqLogger.info("Reconciliation WeChat Pay query response", {
+        trade_state: response.trade_state,
+        has_transaction_id: Boolean(response.transaction_id),
+      });
+
+      if (response.trade_state === "SUCCESS" && response.transaction_id) {
+        const result = await paymentFulfillmentRepo.finalizeConfirmedPayment({
+          wechatOrderId,
+          transactionId: response.transaction_id,
+        });
+        return { status: "completed", fulfilled: !result.alreadyCompleted };
+      }
+
+      return { status: this.mapTradeState(response.trade_state), fulfilled: false };
+    } catch (error) {
+      reqLogger.error("Payment reconciliation failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
 
   /**

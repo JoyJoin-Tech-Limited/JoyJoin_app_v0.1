@@ -28,6 +28,10 @@ const PAGES = {
     url: 'http://localhost:9000/squad-unboxing-revealed.png',
     altPort: 9003,
   },
+  'profile-review': {
+    url: 'http://localhost:9000/profile-review-welcome-coupon.png',
+    altPort: 9003,
+  },
 }
 
 const page = process.argv[2] || 'events'

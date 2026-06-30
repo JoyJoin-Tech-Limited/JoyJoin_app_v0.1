@@ -201,3 +201,18 @@ export function getPaymentStatus(
     path: `/api/payments/status/${encodeURIComponent(wechatOrderId)}`,
   })
 }
+
+export interface PaymentReconcileResponse {
+  status: string
+  fulfilled: boolean
+}
+
+export function reconcilePayment(
+  api: ApiTransport,
+  wechatOrderId: string
+): Promise<PaymentReconcileResponse> {
+  return api<PaymentReconcileResponse>({
+    path: `/api/payments/${encodeURIComponent(wechatOrderId)}/reconcile`,
+    method: 'POST',
+  })
+}

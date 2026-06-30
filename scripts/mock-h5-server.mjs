@@ -26,8 +26,8 @@ const MOCK_USER = {
   nickname: '悦仔测试',
   archetype: 'corgi',
   primaryArchetype: 'corgi',
-  nextStep: 'discover',
-  hasCompletedOnboarding: true,
+  nextStep: 'profile-review',
+  hasCompletedOnboarding: false,
   profileEssentialComplete: true,
   profileExtendedComplete: true,
   activeAssessmentSessionId: null,
@@ -275,6 +275,43 @@ app.get('/api/ai/pre-join-vibe-brief', (req, res) => {
 // User coupons
 app.get('/api/user-coupons', (req, res) => {
   res.json(MOCK_COUPONS)
+})
+
+// Welcome coupon awarded on first 入场卡 view
+app.get('/api/user/welcome-coupon', (req, res) => {
+  res.json({
+    id: 'user-coupon-welcome-001',
+    code: 'WELCOME50',
+    discountType: 'percentage',
+    discountValue: 50,
+    source: 'profile_review_first_view',
+    isNewlyAwarded: true,
+    createdAt: new Date().toISOString(),
+  })
+})
+
+// Profile review tagline
+app.get('/api/onboarding/profile-tagline', (req, res) => {
+  res.json({
+    tagline: '你身上有让人想靠近的松弛感，像周末午后的一杯热咖啡。',
+  })
+})
+
+// User interests (read-only)
+app.get('/api/user/interests', (req, res) => {
+  res.json({
+    topInterests: [
+      { id: 'hiking', name: '徒步', level: 2 },
+      { id: 'coffee', name: '咖啡', level: 3 },
+      { id: 'movie', name: '电影', level: 2 },
+      { id: 'standup', name: '脱口秀', level: 1 },
+    ],
+  })
+})
+
+// Complete profile review
+app.post('/api/onboarding/profile-review/complete', (req, res) => {
+  res.json({ success: true, nextStep: 'discover' })
 })
 
 // Pricing plans
