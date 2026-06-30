@@ -10,6 +10,7 @@ import { ALL_INTENT_VALUES, INTENT_FLEXIBLE_OPTION } from '@shared/constants'
 import { useStaggerMount } from '../../hooks/useStaggerMount'
 import { useReactionTimer } from '../../hooks/useReactionTimer'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { apiRequest, type ApiError } from '../../lib/api/api'
 import { bustRegistrationCaches } from '../../lib/api/registrationCacheBust'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
@@ -158,6 +159,8 @@ export default function PoolRegistrationPage() {
   const [formState, setFormState] = useState<RegistrationFormState>(INITIAL_FORM_STATE)
   const [isRegistering, setIsRegistering] = useState(false)
   const [registered, setRegistered] = useState(false)
+  const [isEnablingNotifications, setIsEnablingNotifications] = useState(false)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [error, setError] = useState('')
   // Scroll-to-error anchor — set when error appears, cleared so it doesn't re-scroll on re-render
   const [scrollErrorId, setScrollErrorId] = useState('')
@@ -209,6 +212,9 @@ export default function PoolRegistrationPage() {
     if (!myRegistrations || !poolId) return false
     return myRegistrations.some((reg) => reg.poolId === poolId)
   }, [myRegistrations, poolId])
+
+  // Keep the custom tab bar visible on this screen and highlight Discover.
+  useCustomTabBarSync({ poolRegistrations: myRegistrations })
 
   const eventType = useMemo<PoolEventType>(
     () => resolvePoolEventType([pool?.eventType, pool?.title].filter(Boolean).join(' ')),
@@ -675,9 +681,16 @@ export default function PoolRegistrationPage() {
     setStep((currentStep) => ((currentStep + 1) as RegistrationStep))
   }, [hasBudgetSelection, hasIntentSelection, step])
 
-  const handleEnableMatchNotifications = useCallback(() => {
-    void requestPoolMatchSubscribeMessage()
-  }, [])
+  const handleEnableMatchNotifications = useCallback(async () => {
+    if (isEnablingNotifications || notificationsEnabled) return
+    setIsEnablingNotifications(true)
+    try {
+      await requestPoolMatchSubscribeMessage()
+      setNotificationsEnabled(true)
+    } finally {
+      setIsEnablingNotifications(false)
+    }
+  }, [isEnablingNotifications, notificationsEnabled])
 
   const handleBack = useCallback(() => {
     if (step === STEP_BRIEF) {
@@ -814,8 +827,9 @@ export default function PoolRegistrationPage() {
   if (alreadyRegistered) {
     return (
       <PoolRegistrationAlreadyJoined
+        poolId={pool.id}
+        poolTitle={pool.title}
         eventType={eventType}
-        poolDateTimeLabel={poolDateTimeLabel}
         poolArea={poolArea}
         poolDateTime={pool.dateTime}
       />
@@ -825,11 +839,14 @@ export default function PoolRegistrationPage() {
   if (registered) {
     return (
       <PoolRegistrationSuccess
+        poolId={pool.id}
         eventType={eventType}
         highlights={successHighlights}
         pool={pool}
         userArchetype={user?.primaryArchetype ?? null}
         onEnableNotifications={handleEnableMatchNotifications}
+        isEnablingNotifications={isEnablingNotifications}
+        notificationsEnabled={notificationsEnabled}
       />
     )
   }

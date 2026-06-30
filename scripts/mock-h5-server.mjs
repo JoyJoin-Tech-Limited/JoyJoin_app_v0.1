@@ -342,7 +342,7 @@ const MOCK_SQUAD_MEMBERS = [
     hometownAffinityOptin: true,
     educationVisible: true,
     relationshipStatus: 'single',
-    intent: ['deep_chat', 'fun'],
+    intent: ['discussion', 'fun'],
   },
   {
     userId: 'user-screenshot-002',
@@ -360,7 +360,7 @@ const MOCK_SQUAD_MEMBERS = [
     hometownAffinityOptin: false,
     educationVisible: true,
     relationshipStatus: 'single',
-    intent: ['fun', 'expand_circle'],
+    intent: ['fun', 'networking'],
   },
   {
     userId: 'user-screenshot-003',
@@ -378,7 +378,7 @@ const MOCK_SQUAD_MEMBERS = [
     hometownAffinityOptin: true,
     educationVisible: true,
     relationshipStatus: 'single',
-    intent: ['deep_chat', 'new_experience'],
+    intent: ['discussion', 'friends'],
   },
   {
     userId: 'user-screenshot-004',

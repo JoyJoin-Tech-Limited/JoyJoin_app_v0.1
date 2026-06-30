@@ -94,6 +94,21 @@ describe('useCustomTabBarSync', () => {
     expect(mockSetSelected).toHaveBeenCalledWith(1)
   })
 
+  it('highlights Discover for the pool-registration page', async () => {
+    ;(Taro as any).getCurrentInstance.mockReturnValue({
+      page: { route: 'pages/pool-registration/index', getTabBar: mockGetTabBar },
+    })
+
+    renderHook(
+      () => useCustomTabBarSync({ enabled: true, poolRegistrations: [], events: [] }),
+      { wrapper: createWrapper() },
+    )
+
+    act(() => didShowCallback?.())
+
+    expect(mockSetSelected).toHaveBeenCalledWith(0)
+  })
+
   it('does not sync when disabled', () => {
     renderHook(() => useCustomTabBarSync({ enabled: false, poolRegistrations: [], events: [] }), { wrapper: createWrapper() })
 
@@ -101,6 +116,24 @@ describe('useCustomTabBarSync', () => {
 
     expect(mockSyncState).not.toHaveBeenCalled()
     expect(mockSetSelected).not.toHaveBeenCalled()
+  })
+
+  it('does not set selected for non-tab routes such as event-detail and event-ticket-payment', async () => {
+    for (const route of ['pages/event-detail/index', 'pages/event-ticket-payment/index']) {
+      mockSetSelected.mockClear()
+      mockSyncState.mockClear()
+      ;(Taro as any).getCurrentInstance.mockReturnValue({ page: { route, getTabBar: mockGetTabBar } })
+
+      renderHook(
+        () => useCustomTabBarSync({ enabled: true, poolRegistrations: [], events: [] }),
+        { wrapper: createWrapper() },
+      )
+
+      act(() => didShowCallback?.())
+
+      expect(mockSetSelected).not.toHaveBeenCalled()
+      expect(mockSyncState).toHaveBeenCalledTimes(1)
+    }
   })
 
   it('pushes badge updates to the native tab bar while visible and enabled', async () => {

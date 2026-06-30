@@ -72,12 +72,141 @@ $gift-card-aspect-ratio: calc(#{$gift-card-aspect-h} / #{$gift-card-aspect-w} * 
   right: 0;
   bottom: 0;
   z-index: 2;
-  width: 60%;
+  width: 58%;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  // The right-hand framed area is cream; text uses the standard dark palette.
+}
+
+.welcome-gift-card__copy-col {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: $spacing-lg $spacing-lg $spacing-lg $spacing-md;
-  // The right-hand framed area is cream; text uses the standard dark palette.
+  flex: 1 1 0;
+  min-width: 160rpx;
+  padding-right: $spacing-sm;
+}
+
+.welcome-gift-card__discount {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  flex: 0 0 auto;
+  padding: 4rpx $spacing-sm;
+  border-radius: $card-radius-sm;
+  background: rgba($color-surface, 0.86);
+  border: 2rpx solid rgba($color-surface, 0.95);
+  // Soft backdrop so the bold brand discount sits cleanly above the illustration.
+  box-shadow: 0 8rpx 24rpx rgba($color-primary, 0.12);
+}
+
+.welcome-gift-card__discount-value {
+  font-size: $font-size-3xl;
+  line-height: 1;
+  font-weight: $font-weight-black;
+  color: $color-primary;
+  font-family: $font-cn-display;
+  // Slight text lift so the number stays legible over the busy Lovart background.
+  text-shadow: 0 2rpx 0 rgba($color-surface, 0.8);
+}
+
+.welcome-gift-card__discount-unit {
+  font-size: $font-size-base;
+  line-height: 1;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+  font-family: $font-cn-display;
+  margin-left: 4rpx;
+  text-shadow: 0 2rpx 0 rgba($color-surface, 0.8);
+}
+
+.welcome-gift-card__skeleton {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 58%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: $spacing-sm $spacing-md;
+  gap: $spacing-xs;
+}
+
+.welcome-gift-card__skeleton-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+}
+
+.welcome-gift-card__skeleton-text {
+  height: 28rpx;
+  border-radius: 8rpx;
+  background: rgba($color-text-tertiary, 0.14);
+  animation: gift-card-shimmer 1.6s ease-in-out infinite;
+
+  &--short {
+    width: 40%;
+    height: 24rpx;
+  }
+
+  &--medium {
+    width: 65%;
+    height: 36rpx;
+  }
+
+  &--long {
+    width: 85%;
+    height: 24rpx;
+  }
+}
+
+.welcome-gift-card__skeleton-discount {
+  width: 96rpx;
+  height: 64rpx;
+  border-radius: $card-radius-sm;
+  background: rgba($color-text-tertiary, 0.14);
+  animation: gift-card-shimmer 1.6s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.welcome-gift-card__skeleton-pill {
+  width: 128rpx;
+  height: 36rpx;
+  border-radius: 9999rpx;
+  background: rgba($color-primary, 0.12);
+  animation: gift-card-shimmer 1.6s ease-in-out infinite;
+  margin-top: $spacing-xs;
+}
+
+.welcome-gift-card__placeholder--shimmer {
+  animation: gift-card-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes gift-card-shimmer {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-gift-card__skeleton-text,
+  .welcome-gift-card__skeleton-pill,
+  .welcome-gift-card__placeholder--shimmer {
+    animation: none;
+  }
 }
 
 .welcome-gift-card__eyebrow {
@@ -85,26 +214,26 @@ $gift-card-aspect-ratio: calc(#{$gift-card-aspect-h} / #{$gift-card-aspect-w} * 
   line-height: $line-height-display;
   color: $color-primary;
   font-family: $font-cn-display;
-  margin-bottom: $spacing-xs;
+  margin-bottom: 4rpx;
 }
 
 .welcome-gift-card__title {
-  font-size: $font-size-lg;
+  font-size: $font-size-base;
   line-height: $line-height-display;
   font-weight: $font-weight-bold;
   color: $color-text-primary;
   font-family: $font-cn-display;
-  margin-bottom: $spacing-sm;
+  margin-bottom: 4rpx;
   // Prevent a lone character (孤字) on the last line of the headline.
   word-break: keep-all;
   overflow-wrap: break-word;
 }
 
 .welcome-gift-card__body {
-  font-size: $font-size-sm;
+  font-size: $font-size-xs;
   line-height: $line-height-relaxed;
   color: $color-text-secondary;
-  margin-bottom: $spacing-md;
+  margin-bottom: $spacing-sm;
   word-break: break-word;
   overflow-wrap: break-word;
 }
@@ -114,7 +243,7 @@ $gift-card-aspect-ratio: calc(#{$gift-card-aspect-h} / #{$gift-card-aspect-w} * 
   flex-direction: row;
   align-items: center;
   align-self: flex-start;
-  padding: $spacing-xs $spacing-sm;
+  padding: 4rpx $spacing-sm;
   border-radius: 9999rpx;
   background: rgba($color-primary, 0.08);
 }
@@ -124,6 +253,38 @@ $gift-card-aspect-ratio: calc(#{$gift-card-aspect-h} / #{$gift-card-aspect-w} * 
   line-height: $line-height-display;
   color: $color-primary;
   font-weight: $font-weight-medium;
+}
+
+// Extra-tight fallback for very narrow screens so copy never collides with the illustration.
+@media (max-width: 360px) {
+  .welcome-gift-card__overlay {
+    width: 62%;
+    padding: $spacing-xs $spacing-sm;
+  }
+
+  .welcome-gift-card__copy-col {
+    padding-right: $spacing-xs;
+  }
+
+  .welcome-gift-card__discount {
+    padding: 4rpx $spacing-xs;
+  }
+
+  .welcome-gift-card__discount-value {
+    font-size: $font-size-2xl;
+  }
+
+  .welcome-gift-card__discount-unit {
+    font-size: $font-size-sm;
+  }
+
+  .welcome-gift-card__title {
+    font-size: $font-size-sm;
+  }
+
+  .welcome-gift-card__body {
+    font-size: $font-size-2xs;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

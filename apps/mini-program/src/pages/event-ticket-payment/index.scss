@@ -447,6 +447,41 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     background: $color-text-primary;
     border-radius: 1rpx;
   }
+
+  // Event-type tail illustration
+  &__tail-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 24rpx 48rpx 32rpx;
+  }
+
+  &__tail-image {
+    width: 240rpx;
+    height: auto;
+    // Asset dimensions are 500×250; reserve the 2:1 footprint so the ticket
+    // card does not collapse before the image decodes (widthFix mode).
+    aspect-ratio: 500 / 250;
+    min-height: 120rpx;
+    opacity: 0;
+    transition: opacity 300ms ease;
+
+    &--loaded {
+      opacity: 1;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket-card--entrance {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  .ticket-card__tail-image {
+    opacity: 1;
+    transition: none;
+  }
 }
 
 

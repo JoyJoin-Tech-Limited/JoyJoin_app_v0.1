@@ -1,0 +1,1 @@
+{"error":"page.waitForSelector: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('.welcome-gift-card') to be visible\n"}

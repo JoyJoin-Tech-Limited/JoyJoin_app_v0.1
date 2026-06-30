@@ -551,6 +551,38 @@ describe('native custom tab bar behavior', () => {
     expect(component.data.hidden).toBe(true)
   })
 
+  it.each([
+    'pages/event-detail/index',
+    'pages/event-ticket-payment/index',
+  ])('keeps the tab bar hidden on %s', async (route) => {
+    setupMocks()
+    const component = await loadComponent()
+
+    global.getCurrentPages = vi.fn().mockReturnValue([{ route }])
+    component.attached()
+    expect(component.data.hidden).toBe(true)
+
+    component.show()
+    expect(component.data.hidden).toBe(true)
+  })
+
+  it('shows the Discover tab for pool-registration and keeps the bar visible on swipe-back', async () => {
+    setupMocks()
+    global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/pool-registration/index' }])
+    const component = await loadComponent()
+
+    component.attached()
+    expect(component.data.hidden).toBe(true)
+
+    component.setSelected(0)
+    expect(component.data.hidden).toBe(false)
+    expect(component.data.selected).toBe(0)
+
+    component.show()
+    expect(component.data.hidden).toBe(false)
+    expect(component.data.selected).toBe(0)
+  })
+
   describe('setCollapsed', () => {
     it('collapses and expands the tab bar', async () => {
       setupMocks()

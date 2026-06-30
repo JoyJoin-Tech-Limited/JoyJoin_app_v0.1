@@ -44,6 +44,9 @@ function getNativeTabBar(page: Taro.PageInstance | null | undefined): NativeCust
 const TAB_INDEX_BY_PAGE_PATH = new Map<string, number>([
   ...MINI_PROGRAM_TAB_ITEMS.map((item) => [item.pagePath, MINI_PROGRAM_TAB_INDEX[item.key]] as const),
   [MINI_PROGRAM_CENTER_HUB_TAB_ITEM.pagePath, MINI_PROGRAM_TAB_INDEX.centerHub],
+  // Pool registration is a child of Discover; keep the tab bar visible and
+  // highlight the Discover tab so users retain top-level navigation context.
+  ['pages/pool-registration/index', MINI_PROGRAM_TAB_INDEX.discover],
 ])
 
 function normalizeRoute(route: string | undefined): string {

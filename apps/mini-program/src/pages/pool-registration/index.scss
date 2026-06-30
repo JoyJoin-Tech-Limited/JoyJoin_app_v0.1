@@ -28,11 +28,19 @@
     @include flex-center;
     flex-direction: column;
     gap: $spacing-md;
-    // design-audit:intentional — dvh fallback for WeChat WKWebView (see AGENTS.md §4)
-    min-height: 80vh;
-    min-height: 80dvh;
     text-align: center;
-    padding: $spacing-lg 0;
+    padding: $spacing-lg;
+    background: linear-gradient(180deg, rgba($color-surface, 0.98) 0%, rgba($color-primary, 0.04) 100%);
+    border: 2rpx solid rgba($color-primary, 0.08);
+  }
+
+  &__terminal-center {
+    // design-audit:intentional — dvh fallback for WeChat WKWebView (see AGENTS.md §4)
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
   &__success-hero {
@@ -51,6 +59,7 @@
   &__success-title {
     display: block;
     @include type-heading;
+    line-height: 1.4;
     margin-top: $spacing-xs;
   }
 
@@ -1092,6 +1101,11 @@
     border: 2rpx solid rgba($color-primary, 0.08);
   }
 
+  &__terminal-card {
+    width: 100%;
+    align-self: stretch;
+  }
+
   &__already-mascot {
     width: 160rpx;
     height: 160rpx;
@@ -1103,7 +1117,7 @@
     display: block;
     @include type-subheading;
     color: $color-text-primary;
-    line-height: 1.5;
+    line-height: 1.4;
   }
 
   &__already-text {
@@ -1114,28 +1128,14 @@
     max-width: 560rpx;
   }
 
-  &__already-meta {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-sm;
-    padding: $spacing-md;
-    border-radius: $card-radius-sm;
-    background: rgba($color-surface, 0.8);
-    border: 1rpx solid $color-divider;
-    align-self: stretch;
-  }
-
-  &__already-meta-row {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    @include type-label;
-    color: $color-text-secondary;
+  &__back-btn {
+    width: 100%;
+    max-width: 520rpx;
   }
 
   &__already-cta {
     width: 100%;
-    max-width: 480rpx;
+    max-width: 520rpx;
   }
 
   .joy-button--secondary {

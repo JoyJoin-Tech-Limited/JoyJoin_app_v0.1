@@ -1,6 +1,6 @@
 
 import { View, Text, ScrollView, Image, Textarea } from '@tarojs/components'
-import Taro, { useDidShow } from '@tarojs/taro'
+import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
@@ -101,7 +101,8 @@ function getAgeLabel(user: Record<string, unknown> | undefined): string {
 }
 
 export default function ProfileReviewPage() {
-  const { shouldReduceMotion } = useMiniRevealMotion()
+  const router = useRouter()
+  const { shouldReduceMotion } = useMiniRevealMotion(router?.params)
   const [isCelebrating, setIsCelebrating] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
@@ -179,7 +180,7 @@ export default function ProfileReviewPage() {
       cancelled = true
       if (visibilityTimer) clearTimeout(visibilityTimer)
     }
-  }, [isRevealReady, user, analytics, isCouponLoading, welcomeCoupon, couponAttempt])
+  }, [isRevealReady, user, analytics, welcomeCoupon, couponAttempt])
 
   // Replay the gift-card entrance animation when the user swipes back to this page.
   useDidShow(() => {
@@ -191,6 +192,13 @@ export default function ProfileReviewPage() {
     const timer = setTimeout(() => setIsCouponCardVisible(true), 100)
     return () => clearTimeout(timer)
   })
+
+  // Reduced-motion users should see the card immediately without waiting for animation.
+  useEffect(() => {
+    if (shouldReduceMotion && welcomeCoupon) {
+      setIsCouponCardVisible(true)
+    }
+  }, [shouldReduceMotion, welcomeCoupon])
 
   const shouldLoadInterests = !isLoading && Boolean(user?.hasCompletedInterestsCarousel)
   const { data: profileTagline, isLoading: isTaglineLoading, isError: isTaglineError } = useQuery({
@@ -262,6 +270,7 @@ export default function ProfileReviewPage() {
     ? user.intent
         .filter((item): item is string => typeof item === 'string')
         .map((item) => ({ value: item, label: getIntentLabel(item), emoji: getIntentEmoji(item) }))
+        .filter((item) => item.label !== item.value)
         .slice(0, 3)
     : []
 
@@ -309,10 +318,10 @@ export default function ProfileReviewPage() {
   }, [interestsData?.categoryHeat])
 
   const coachCopy = isCelebrating
-    ? '入场卡已确认！准备好去遇见对味的人和局了。'
+    ? '入场卡已确认！去遇见对味的人和局吧。'
     : topInterestLabels.length > 0
-      ? `收下这张入场卡，${getMascotDisplayName(user)}会按你的热量地图，把最对味的人和局带到你面前。`
-      : '收下这张入场卡，你现在确认好的资料会先帮你筛出更合适的活动。'
+      ? `${getMascotDisplayName(user)}会按这张卡上的兴趣热量，挑最对味的局给你。`
+      : '先确认这张卡，悦仔再帮你筛合适的局。'
 
   const aiInsightLine =
     !isTaglineLoading && isTaglineError
@@ -495,23 +504,25 @@ export default function ProfileReviewPage() {
 
             {/* Header: name + archetype + basic tags */}
             <View className='profile-review__poster-header'>
-              <Text className='profile-review__poster-name'>{displayName}</Text>
-              {archetype && visual ? (
-                <View
-                  className='profile-review__poster-archetype'
-                  style={{
-                    background: visual.accentSoft,
-                    borderColor: visual.accentBorder,
-                  }}
-                >
-                  <Text
-                    className='profile-review__poster-archetype-text'
-                    style={{ color: visual.accentText }}
+              <View className='profile-review__poster-header-row'>
+                <Text className='profile-review__poster-name'>{displayName}</Text>
+                {archetype && visual ? (
+                  <View
+                    className='profile-review__poster-archetype'
+                    style={{
+                      background: visual.accentSoft,
+                      borderColor: visual.accentBorder,
+                    }}
                   >
-                    {visual.name}
-                  </Text>
-                </View>
-              ) : null}
+                    <Text
+                      className='profile-review__poster-archetype-text'
+                      style={{ color: visual.accentText }}
+                    >
+                      {visual.name}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
               {profileTags.length > 0 ? (
                 <View className='profile-review__poster-tags'>
                   {profileTags.map((item) => (
@@ -564,13 +575,6 @@ export default function ProfileReviewPage() {
                 </View>
               )}
             </View>
-
-            {/* Archetype summary */}
-            {visual?.summary ? (
-              <View className={`profile-review__section ${getStageClassName(5)}`}>
-                <Text className='profile-review__archetype-summary'>{visual.summary}</Text>
-              </View>
-            ) : null}
 
             {/* Bio / one-liner input */}
             <View className={`profile-review__section ${getStageClassName(5)}`}>
@@ -789,6 +793,8 @@ export default function ProfileReviewPage() {
               }}
               className='profile-review__gift-card'
             />
+          ) : isCouponLoading ? (
+            <WelcomeGiftCard isLoading className='profile-review__gift-card' />
           ) : couponError ? (
             <View
               className='profile-review__coupon-error'

@@ -110,6 +110,20 @@ async function main() {
     })
   })
 
+  // Profile-review screenshot needs the Lovart coupon image bundled in the H5
+  // dist so the gift card renders; the default H5 build does not copy it.
+  if (page === 'profile-review') {
+    const fs = await import('node:fs')
+    const path = await import('node:path')
+    const src = path.join(ROOT, 'apps/mini-program/src/assets/lovart/gift-card/coupon.webp')
+    const dest = path.join(ROOT, 'apps/mini-program/dist/assets/lovart/gift-card/coupon.webp')
+    if (fs.existsSync(src)) {
+      fs.mkdirSync(path.dirname(dest), { recursive: true })
+      fs.copyFileSync(src, dest)
+      console.log('[screenshot-open] copied coupon image to H5 dist')
+    }
+  }
+
   console.log('[screenshot-open] starting mock server on port 5001...')
   const mockServer = run('node', ['scripts/mock-h5-server.mjs'], {
     cwd: ROOT,

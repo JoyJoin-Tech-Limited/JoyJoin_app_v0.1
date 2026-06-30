@@ -20,7 +20,7 @@ relatedPaths:
   - apps/mini-program/src/app.config.ts
   - apps/mini-program/src/app.ts
   - apps/mini-program/src/providers/AuthProvider.tsx
-  - apps/mini-program/src/lib/tabBarConfig.ts
+  - apps/mini-program/src/lib/navigation/tabBarConfig.ts
   - docs/reference/perf.md
   - .github/skills/frontend-performance-and-loading/SKILL.md
   - .github/skills/performance-benchmark/SKILL.md

@@ -1,17 +1,20 @@
-import { View, Text, Image } from '@tarojs/components'
+import { useEffect } from 'react'
+import { View, Text, Image, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import type { EventPoolSummary } from '@shared/api'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
+import { haptics } from '../../../lib/utils/haptics'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
+import { discoverAnalytics } from '../../../lib/analytics/discoverAnalytics'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
 import StatusCard from '../../../components/ui/StatusCard'
 import ChemistryMiniGrid from '../../../components/discover/ChemistryMiniGrid'
+import EventSummaryCard from '../../../components/events/EventSummaryCard'
 import type { PoolEventType } from '../flowConfig'
-import EventMetaIcon from './EventMetaIcon'
 
 interface LoadingStateProps {
   isStale: boolean
@@ -77,113 +80,173 @@ export function PoolRegistrationEmpty({ errorMessage, onRetry, onBack }: EmptySt
 }
 
 interface AlreadyJoinedStateProps {
+  poolId: string
+  poolTitle?: string
   eventType: PoolEventType
-  poolDateTimeLabel: string
   poolArea: string
   poolDateTime?: string | null
 }
 
 export function PoolRegistrationAlreadyJoined({
+  poolId,
+  poolTitle,
   eventType,
-  poolDateTimeLabel,
   poolArea,
   poolDateTime,
 }: AlreadyJoinedStateProps) {
+  useEffect(() => {
+    discoverAnalytics.track('registration_terminal_state_view', poolId, {
+      variant: 'already-joined',
+    })
+  }, [poolId])
+
+  const handleGoToFootprint = () => {
+    haptics('medium')
+    discoverAnalytics.track('registration_terminal_cta_tap', poolId, {
+      variant: 'already-joined',
+      target: 'footprint',
+    })
+    Taro.switchTab({ url: '/pages/events/index' })
+  }
+
   return (
     <View className='pool-reg'>
-      <Card className='pool-reg__already-joined'>
-        <Image
-          className='pool-reg__already-mascot'
-          mode='aspectFit'
-          src={getXiaoyueExpressionAsset('homeWelcome')}
-          ariaLabel='已报名'
-        />
-        <Text className='pool-reg__already-title'>你已经加入这场{eventType}了</Text>
-        <Text className='pool-reg__already-text'>
-          你的预算和社交期待已经在匹配引擎里跑着了，有结果会第一时间通知你。
-        </Text>
-        <View className='pool-reg__already-meta'>
-          <View className='pool-reg__already-meta-row'>
-            <EventMetaIcon kind='type' />
-            <Text>{eventType}</Text>
-          </View>
-          {poolDateTime ? (
-            <View className='pool-reg__already-meta-row'>
-              <EventMetaIcon kind='calendar' />
-              <Text>{poolDateTimeLabel}</Text>
-            </View>
-          ) : null}
-          {poolArea ? (
-            <View className='pool-reg__already-meta-row'>
-              <EventMetaIcon kind='location' />
-              <Text>{poolArea}</Text>
-            </View>
-          ) : null}
+      <ScrollView className='pool-reg__scroll' scrollY enhanced showScrollbar={false}>
+        <View className='pool-reg__terminal-center'>
+          <Card className='pool-reg__already-joined'>
+            <Image
+              className='pool-reg__already-mascot'
+              mode='aspectFit'
+              src={getXiaoyueExpressionAsset('homeWelcome')}
+              ariaLabel='已报名'
+            />
+            <Text className='pool-reg__already-title'>你已经加入这场{eventType}了</Text>
+            <Text className='pool-reg__already-text'>
+              你的预算和社交期待已经在匹配引擎里跑着了，有结果会第一时间通知你。
+            </Text>
+            <EventSummaryCard
+              className='pool-reg__terminal-card'
+              title={poolTitle}
+              eventType={eventType}
+              dateTime={poolDateTime}
+              district={poolArea}
+              status='registered'
+            />
+            <Button
+              variant='primary'
+              className='pool-reg__already-cta'
+              onClick={handleGoToFootprint}
+            >
+              去我的足迹查看状态
+            </Button>
+          </Card>
         </View>
-        <Button
-          variant='primary'
-          className='pool-reg__already-cta'
-          onClick={() => Taro.switchTab({ url: '/pages/events/index' })}
-        >
-          去我的足迹查看状态
-        </Button>
-      </Card>
+      </ScrollView>
     </View>
   )
 }
 
 interface SuccessStateProps {
+  poolId: string
   eventType: PoolEventType
   highlights: string[]
   pool: EventPoolSummary
   userArchetype: string | null
   onEnableNotifications: () => void
+  isEnablingNotifications?: boolean
+  notificationsEnabled?: boolean
 }
 
 export function PoolRegistrationSuccess({
+  poolId,
   eventType,
   highlights,
   pool,
   userArchetype,
   onEnableNotifications,
+  isEnablingNotifications = false,
+  notificationsEnabled = false,
 }: SuccessStateProps) {
+  useEffect(() => {
+    discoverAnalytics.track('registration_terminal_state_view', poolId, {
+      variant: 'success',
+    })
+  }, [poolId])
+
+  const handleEnableNotifications = () => {
+    if (isEnablingNotifications || notificationsEnabled) return
+    haptics('light')
+    discoverAnalytics.track('registration_terminal_notify_tap', poolId, {
+      variant: 'success',
+    })
+    onEnableNotifications()
+  }
+
+  const handleGoToFootprint = () => {
+    haptics('medium')
+    discoverAnalytics.track('registration_terminal_cta_tap', poolId, {
+      variant: 'success',
+      target: 'footprint',
+    })
+    Taro.switchTab({ url: '/pages/events/index' })
+  }
+
   return (
     <View className='pool-reg'>
-      <Card className='pool-reg__success'>
-        <Image
-          className='pool-reg__success-hero'
-          mode='aspectFit'
-          src={CEREMONY_HEROES.poolRegistrationSuccess}
-          ariaLabel='已加入活动池'
-        />
-        <Text className='pool-reg__success-title'>已加入这场{eventType}</Text>
-        <Text className='pool-reg__success-text'>
-          我们会按照你刚刚填写的预算、社交期待和偏好完成匹配，有结果会第一时间通知你。
-        </Text>
-        <Text className='pool-reg__success-notify-hint'>
-          {`想在${DEFAULT_MASCOT_DISPLAY_NAME}帮你匹配成功时收到微信提醒？点一下授权（可在微信授权弹窗中选择）。`}
-        </Text>
-        <Button variant='secondary' className='pool-reg__notify-btn' onClick={onEnableNotifications}>
-          开启匹配结果通知
-        </Button>
-        {highlights.length > 0 ? (
-          <View className='pool-reg__success-pills'>
-            {highlights.map((item) => (
-              <Text key={item} className='pool-reg__success-pill'>
-                {item}
-              </Text>
-            ))}
-          </View>
-        ) : null}
-        <Button
-          variant='primary'
-          className='pool-reg__back-btn'
-          onClick={() => Taro.switchTab({ url: '/pages/events/index' })}
-        >
-          去看我的足迹
-        </Button>
-        <ChemistryMiniGrid pool={pool} userArchetype={userArchetype} />
-      </Card>
+      <ScrollView className='pool-reg__scroll' scrollY enhanced showScrollbar={false}>
+        <View className='pool-reg__terminal-center'>
+          <Card className='pool-reg__success'>
+            <Image
+              className='pool-reg__success-hero'
+              mode='aspectFit'
+              src={CEREMONY_HEROES.poolRegistrationSuccess}
+              ariaLabel='已加入活动池'
+            />
+            <Text className='pool-reg__success-title'>已加入这场{eventType}</Text>
+            <Text className='pool-reg__success-text'>
+              我们会按照你刚刚填写的预算、社交期待和偏好完成匹配，有结果会第一时间通知你。
+            </Text>
+            <Text className='pool-reg__success-notify-hint'>
+              {`想在${DEFAULT_MASCOT_DISPLAY_NAME}帮你匹配成功时收到微信提醒？点一下授权（可在微信授权弹窗中选择）。`}
+            </Text>
+            <Button
+              variant='secondary'
+              className='pool-reg__notify-btn'
+              onClick={handleEnableNotifications}
+              loading={isEnablingNotifications}
+              disabled={notificationsEnabled}
+            >
+              {notificationsEnabled ? '已开启提醒' : '开启匹配结果通知'}
+            </Button>
+            {highlights.length > 0 ? (
+              <View className='pool-reg__success-pills'>
+                {highlights.map((item) => (
+                  <Text key={item} className='pool-reg__success-pill'>
+                    {item}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
+            <EventSummaryCard
+              className='pool-reg__terminal-card'
+              title={pool.title}
+              eventType={eventType}
+              dateTime={pool.dateTime}
+              city={pool.city}
+              district={pool.district}
+              status='registered'
+            />
+            <Button
+              variant='primary'
+              className='pool-reg__back-btn'
+              onClick={handleGoToFootprint}
+            >
+              去我的足迹查看状态
+            </Button>
+            <ChemistryMiniGrid pool={pool} userArchetype={userArchetype} />
+          </Card>
+        </View>
+      </ScrollView>
     </View>
   )
 }

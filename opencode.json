@@ -138,6 +138,15 @@
       "args": [
         "{env:PWD}"
       ]
+    },
+    "agentMemory": {
+      "type": "local",
+      "command": [
+        "/Users/vincentlai/.npm-global/bin/agent-memory-mcp"
+      ],
+      "environment": {
+        "MEMORY_DB_PATH": "/Users/vincentlai/GitHub/JoyJoin_app_v0.1/.joyjoin/agent-memory-db"
+      }
     }
   },
   "permission": {
