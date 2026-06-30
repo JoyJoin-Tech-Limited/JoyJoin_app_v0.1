@@ -140,8 +140,21 @@
 
   // Empty state (State D)
   &__state--empty {
-    gap: $spacing-sm;
-    padding-top: $spacing-xl;
+    padding: 0;
+  }
+
+  &__empty-card {
+    background: $color-surface;
+    border-radius: 32rpx;
+    margin: 0 $container-padding;
+    padding: 60rpx $spacing-lg 48rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: calc(100% - 2 * $container-padding);
+    box-sizing: border-box;
+    box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.04);
   }
 
   &__empty-mascot-wrap {
@@ -163,8 +176,8 @@
   }
 
   &__empty-mascot {
-    width: 140rpx;
-    height: 140rpx;
+    width: 160rpx;
+    height: 160rpx;
     z-index: 1;
   }
 
@@ -211,7 +224,6 @@
     color: $color-text-muted;
     line-height: 1.6;
     margin-top: $spacing-xs;
-    padding: 0 $container-padding;
   }
 
   &__empty-cta {
@@ -244,8 +256,7 @@
     justify-content: center;
     flex-wrap: wrap;
     gap: $spacing-xs;
-    margin-top: $spacing-xl;
-    padding: 0 $container-padding;
+    margin-top: $spacing-lg;
   }
 
   &__empty-step {
