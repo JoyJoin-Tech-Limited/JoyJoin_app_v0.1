@@ -289,7 +289,8 @@
 
   &__flow-title {
     display: block;
-    font-size: $font-size-base;
+    @include font-cn-display;
+    font-size: $font-size-md;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
     text-align: center;
@@ -332,9 +333,8 @@
 
   &__flow-step-title {
     display: block;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
+    font-size: $font-size-2xs;
+    color: $color-text-muted;
     margin-bottom: 4rpx;
   }
 
