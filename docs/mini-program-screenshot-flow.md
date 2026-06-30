@@ -30,6 +30,8 @@ Other available pages:
 npm run screenshot:tier-selector
 npm run screenshot:pool-registration
 npm run screenshot:event-ticket-payment
+npm run screenshot:squad-unboxing
+npm run screenshot:profile-review
 ```
 
 Run `npm run screenshot:help` to list them.
@@ -59,6 +61,8 @@ Then open the URL in a browser (do not paste the URL into the terminal):
 | `http://localhost:9000/tier-selector-preset-cards.png` | Icebreaker tier selector |
 | `http://localhost:9000/pool-registration-step-0-brief.png` | Pool registration brief |
 | `http://localhost:9000/event-ticket-payment.png` | Event ticket payment |
+| `http://localhost:9000/squad-unboxing-revealed.png` | Squad unboxing revealed |
+| `http://localhost:9000/profile-review-welcome-coupon.png` | Profile review welcome coupon |
 
 If port 9000 is occupied, the screenshot server will use the next free port; use `SCREENSHOT_PORT=9003 node scripts/screenshot-server.mjs` to force a specific port.
 

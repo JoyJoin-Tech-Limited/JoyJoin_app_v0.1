@@ -212,6 +212,8 @@ cp deployment/.env.production.example deployment/.env.production
 4. 执行 `deployment/scripts/deploy-staging.sh`
 5. 健康检查 `staging.joyjoinapp.com` 和 `staging.admin.joyjoinapp.com`
 
+> 2026-06-30：server Dockerfile 的 HEALTHCHECK 已改为 `http://127.0.0.1:${PORT:-5000}/api/health`，因此 staging 容器（PORT=5001）不再被误判为 unhealthy。
+
 #### 手动部署（服务器内执行）
 
 如需绕过 CI，从本机 SSH 到远程服务器（示例，使用你保存的 key）：
@@ -284,6 +286,8 @@ APP_URL=https://staging.joyjoinapp.com
 ---
 
 ## 发布后检查
+
+> 2026-06-30：容器 HEALTHCHECK 使用 `http://127.0.0.1:${PORT:-5000}/api/health`。生产默认端口 5000；staging 端口 5001，不会再因硬编码 5000 而报 unhealthy。
 
 ```bash
 curl -fsS http://127.0.0.1:5000/api/health

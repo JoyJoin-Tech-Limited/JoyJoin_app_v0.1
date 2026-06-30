@@ -1,6 +1,6 @@
 # JoyJoin Monorepo Folder Structure Blueprint
 
-> **Living document.** Last updated: 2026-06-17  
+> **Living document.** Last updated: 2026-06-30  
 > **Purpose:** Single source of truth for "where does this go?" Eliminates guesswork for agents and humans navigating the codebase.  
 > **Scope:** Covers all top-level directories, workspace internals, and cross-cutting concerns. Excludes `node_modules/`, `.git/`, build artifacts.
 
@@ -563,7 +563,6 @@ scripts/
 │   ├── design-audit.mjs
 │   ├── measure-mini-program-cold-entry.sh
 │   ├── mock-h5-server.mjs
-│   ├── screenshot-mini-program-page.mjs
 │   └── upload-miniscript-assets-to-cdn.sh
 ├── analysis/                      # One-off analysis scripts
 │   ├── analyze-matching-issues.ts
@@ -596,6 +595,8 @@ scripts/
 │   ├── guardrails-app-sources.mjs # Shared guardrail paths (used by check/)
 │   └── [root scripts]
 │       ├── wecom-notify.mjs
+│       ├── screenshot-open.mjs        # One-command screenshot launcher (used by npm run screenshot:*)
+│       ├── screenshot-server.mjs      # Playwright screenshot generator served as PNG URLs
 │       ├── rebuild-journal.mjs
 │       ├── skill-router.mjs
 │       ├── skill-routing-metadata.mjs

@@ -20,6 +20,7 @@ Reference for which admin portal pages map to which API endpoints and which role
 |--------|--------|----------|---------------------|-------|
 | Admin login | POST | `/api/admin/login` | *(public)* | Only public admin endpoint |
 | Get current admin | GET | `/api/admin/me` | `requireAdmin` | Returns own profile |
+| Admin logout | POST | `/api/admin/logout` | `requireAdmin` + `requireOperatorOrAbove` | Destroys session and clears cookie |
 
 ---
 
@@ -110,7 +111,7 @@ Reference for which admin portal pages map to which API endpoints and which role
 | `/admin/venues` | Create venue | POST | `/api/admin/venues` | `requireAdmin` + `requireOperatorOrAbove` |
 | `/admin/venues` | Get venue detail | GET | `/api/admin/venues/:id` | `requireAdmin` |
 | `/admin/venues` | Update venue | PATCH | `/api/admin/venues/:id` | `requireAdmin` + `requireOperatorOrAbove` |
-| `/admin/venues` | Delete venue | DELETE | `/api/admin/venues/:id` | `requireAdmin` + `requireOperatorOrAbove` |
+| `/admin/venues` | Delete venue (soft-delete / suspend) | DELETE | `/api/admin/venues/:id` | `requireAdmin` + `requireOperatorOrAbove` |
 | `/admin/venues` | Submit for review | POST | `/api/admin/venues/:id/submit-for-review` | `requireAdmin` + `requireOperatorOrAbove` |
 | `/admin/venues` | Approve venue | POST | `/api/admin/venues/:id/approve` | `requireAdmin` + `requireOperatorOrAbove` |
 | `/admin/venues` | Reject venue | POST | `/api/admin/venues/:id/reject` | `requireAdmin` + `requireOperatorOrAbove` |
@@ -123,6 +124,8 @@ Reference for which admin portal pages map to which API endpoints and which role
 | `/admin/subscriptions` | List/create/update | GET/POST/PATCH | `/api/admin/subscriptions*` | `requireAdmin` |
 | `/admin/coupons` | Coupon management | GET/POST/PATCH | `/api/admin/coupons*` | `requireAdmin` |
 
+> **Delete behavior:** `DELETE /api/admin/venues/:id` performs a soft-delete / suspend: it sets `onboardingStatus: suspended`, `partnerStatus: paused`, and `isActive: false`, then returns `200` JSON with the updated venue. The action is logged to `admin_audit_logs` as `VENUE_UPDATED`.
+>
 > **API contract:** Venue GET/POST/PATCH responses return camelCase keys (`type`, `isActive`, `onboardingStatus`, `maxConcurrentEvents`, `bookingCount`, `brandName`, etc.) mapped from the underlying PostgreSQL `snake_case` columns by `venuesRepo.ts`. Admin client pages should use `apiRequest` or the default React Query `queryFn` (both check `res.ok`) instead of raw `fetch(...).then(r => r.json())`.
 
 ---

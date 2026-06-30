@@ -1,7 +1,7 @@
 # JoyJoin (悦聚·Joy) - Product Requirements Document
 
 **Version:** 1.6  
-**Last Updated:** 2026-06-28  
+**Last Updated:** 2026-06-30  
 **Platform:** WeChat Mini Program (Taro) — launch-primary  
 **Reference Surface:** Web (React + Vite) — development sandbox / parity reference only, not shipping  
 **Target Market:** Hong Kong & Shenzhen  
@@ -77,9 +77,16 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-06-25)
+## 🆕 Recent Updates (Last updated: 2026-06-30)
 
 ### 2026 Milestones (June 2026)
+
+**46. WelcomeGiftCard — Lifetime Welcome Coupon on Profile Review** 🎁 *(2026-06-30)*
+- **Scope:** Mini-program onboarding final step (`apps/mini-program/src/pages/onboarding/profile-review/index.tsx`) and server coupon award.
+- **Welcome coupon endpoint:** `GET /api/user/welcome-coupon` claims (or re-fetches) a lifetime welcome coupon on first profile-review view. Server prefers `WELCOME50`, falls back to `WELCOME40`; if the coupon is not configured, returns 404 with `WELCOME_COUPON_NOT_FOUND`. Response includes `id`, `code`, `discountType`, `discountValue`, `source: "profile_review_first_view"`, `isNewlyAwarded`, and `createdAt`. Race-safe against double-claim via unique-constraint fallback.
+- **`WelcomeGiftCard` component (`apps/mini-program/src/components/onboarding/WelcomeGiftCard.tsx`):** premium full-bleed coupon card using the Lovart coupon illustration (`/assets/lovart/gift-card/coupon.webp`), dynamic discount badge (e.g., `5折`), `悦仔见面礼` eyebrow, `首单立减` title, and a tap CTA to Discover. Supports skeleton loading state, reduced-motion entrance, and `haptics('light')` on tap.
+- **Analytics:** `welcome_gift_card_impression` and `welcome_gift_card_tap` events are tracked via profile-review analytics.
+- **Placement:** the card renders above the admission poster on profile-review once the coupon response resolves.
 
 **45. Footprint Tab — Nothing-Design Countdown & Venue Gating** 🕐 *(2026-06-28)*
 - **Scope:** Mini-program "足迹" tab event cards (`apps/mini-program/src/components/events/FootprintOracleCard.tsx`) and the Events page.

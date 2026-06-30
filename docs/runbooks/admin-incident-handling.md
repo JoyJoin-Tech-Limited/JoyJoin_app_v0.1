@@ -2,7 +2,7 @@
 
 **Audience:** JoyJoin internal support staff and on-call engineers  
 **Environment:** Internal beta (`admin.joyjoinapp.com`)  
-**Last updated:** 2026-04-01
+**Last updated:** 2026-06-30
 
 ---
 
@@ -26,10 +26,16 @@
 
 **Session issues:** Admin sessions are stored in PostgreSQL and normally survive server restarts. Sessions can drop if the session has expired, cookies were cleared/blocked, or the database is temporarily unavailable. In most cases, log out and log in again; if this keeps happening, check database status and browser cookie settings.
 
+**Admin logout:**
+```
+POST /api/admin/logout
+```
+Requires an active admin session with `operator` or `super_admin` role. The endpoint destroys the session and clears the session cookie.
+
 **Forgot password / reset:**
 - Only a `super_admin` can reset another admin's password.
 - In the admin portal: **Admin Accounts → ⋮ → Reset Password**.
-- API: `POST /api/admin/accounts/:id/reset-password` with `{ "newPassword": "<min 8 chars>" }`.
+- API: `POST /api/admin/accounts/:id/reset-password` with `{ "newPassword": "<secure-password>" }`.
 - The reset is audit-logged (`ADMIN_PASSWORD_RESET`); the new password itself is **not** logged.
 
 **Create a new admin account:**
@@ -132,6 +138,24 @@ POST /api/admin/payments/:paymentId/refund
 
 Refunds are audit-logged (`PAYMENT_REFUND_INITIATED`) with `paymentId` and `reason`.
 
+### 1.7 Deleting / Suspending a Venue
+
+The admin portal **Delete** action on `/admin/venues` does not hard-delete the record. Instead, the venue is suspended:
+
+**API:**
+```
+DELETE /api/admin/venues/:id
+```
+
+**Behavior:**
+- Sets `onboardingStatus` to `suspended`.
+- Sets `partnerStatus` to `paused`.
+- Sets `isActive` to `false`.
+- Returns `200` JSON with the updated venue.
+- Audit action is `VENUE_UPDATED` (not `VENUE_DELETED`).
+
+The venue will no longer appear as available for new events, but historical references and past event data remain intact.
+
 ---
 
 ## 2. Incident Triage
@@ -188,6 +212,7 @@ Refunds are audit-logged (`PAYMENT_REFUND_INITIATED`) with `paymentId` and `reas
    npm test -w @joyjoin/server -- src/__tests__/adminRbacCoverage.test.ts
    ```
 6. Refer to `docs/admin/admin/admin-rbac-matrix.md` for the full role requirement per endpoint.
+7. The admin client globally redirects to `/admin/login` on `401`/`403` responses for any `/admin/*` route (handled by `apps/admin-client/src/lib/queryClient.ts`).
 
 ---
 

@@ -31,9 +31,12 @@ This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 - `src/pages/blind-box-payment/`, `src/pages/payment-verification/` — JSAPI payment + post-pay polling
 - `src/pages/event-ticket-payment/` — paid event-ticket registration with ceremony success/verifying states
 - `src/components/HeroPromoBanner.tsx` — top-of-discover hero promo banner (full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles). Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`)
-- `src/components/events/FootprintOracleCard.tsx` — "足迹" tab event card with segmented Nothing-design-inspired countdown clock, venue gating, and status-aware waiting copy. Completed/cancelled states are muted; venue location is disclosed only after the server-derived `displayStatus` becomes `confirmed`/`venue_unlocked` (raw `matched` means group formed, venue still being assigned). The card always renders event type + city/district and only appends the venue name once unlocked. Terminal pool states override the registration-level status.
+- `src/components/onboarding/WelcomeGiftCard.tsx` — premium welcome-coupon card rendered on first profile-review view; calls `GET /api/user/welcome-coupon`, displays the Lovart coupon illustration + dynamic discount badge (`悦仔见面礼`), and routes to Discover on tap. Reduced-motion and skeleton loading states supported.
+- `src/components/events/FootprintOracleCard.tsx` — interactive "足迹" tab event card (wraps `EventSummaryCard` with list affordances).
+- `src/components/events/EventSummaryCard.tsx` — shared presentational event-card shell used by `FootprintOracleCard` and read-only confirmation surfaces such as pool-registration terminal states. Renders the same gradient shell, status pulse pill, segmented countdown, title, date/time/location meta, and corner vignette. Supports an `interactive` prop to toggle tap affordances; title clamps to 2 lines with `keep-all` word breaking.
 - `src/hooks/useEventCountdown.ts` — visibility-aware countdown hook returning `display`, `segments`, `isUrgent`, `hasStarted`, `isLive`. Gated by viewport visibility, app background, reduced-motion, and device tier.
-- `src/lib/utils/eventDisplay.ts` — `formatEventDateTime` (with `今天`/`明天`/`后天` relative prefixes) and `getJoinedEventDisplayDateTime` for display-time vs matching-time precedence.
+- `src/lib/utils/eventDisplay.ts` — `formatEventDateTime` (with `今天`/`明天`/`后天` relative prefixes), `getJoinedEventDisplayDateTime` for display-time vs matching-time precedence, and `isJoinedEventTerminal()` for terminal-state detection.
+- `src/lib/utils/accessibility.ts` — `getSystemReducedMotion()` canonical helper for reading the OS-level reduced-motion preference.
 - `src/pages/profile/index.tsx` — redesigned "我的" profile tab (social-passport hero with age/city/bio chips, stats, milestones, menu grid, profile-card share, one-time 100% completion ceremony). Uses `GET /api/shell/profile` via `getProfileShell()` with offline-first query config and cached-shell fallback. Feature-flagged by `user.features.profileRedesignEnabled` (env `PROFILE_REDESIGN_ENABLED`, default `true`). Bio contributes +10% completion bonus; empty bio shows a dashed CTA to edit. Share-card generation lives in `src/pages/profile/profilePoster.ts` and `src/pages/profile/useProfileShareCard.ts`; `generateProfileSharePoster` is dynamically imported on first tap, with `ShareCardShimmer` providing reduced-motion/degradation-gated feedback. **2026-06-24 hardening note:** some intended polish (avatar image rendering, dynamic subtitle, connection-count stat, profile-linked navigation routes) is actively being aligned in follow-up passes.
 
 ---
@@ -45,13 +48,15 @@ src/
 ├── pages/               # Mini-program pages (one folder per route)
 │   ├── discover/        # Tab 0: "发现" — event pool discovery feed
 │   ├── events/          # Tab 1: "足迹" — user's event history
-│   ├── connections/     # Tab 2: "连接" — matched group & social connections
+│   ├── connections/     # Tab 2: "连接" — matched group & social connections. Empty state (2026-06-30): hero card with Xiaoyue mascot + 3-step flow card using `JoyJoinIcon` dashed connectors.
 │   ├── profile/         # Tab 3: "我的" — user profile & settings
-│   ├── center-hub/      # Tab 4 (center): "进行中" — dynamic hub for active events, pending registrations, and empty state
+│   ├── center-hub/      # Tab 4 (center): "进行中" — dynamic hub for active events, pending registrations, and empty state. Empty state (2026-06-30): hero card with Xiaoyue mascot + 4-step activity flow card.
 │   ├── index/           # Landing / splash page (cold entry). Renders `AutoLoginBridge` silent re-auth; unified redirect effect routes authenticated users → `nextStep` and guests with incomplete anonymous assessment → personality test. Continue-mode CTA shows context-aware labels (`进入发现页` / `继续完善档案` / `继续完成测试`). Returning authenticated users with `nextStep='discover'` route to the Discover tab. `useResetOnShow` clears the navigation loading state on swipe-back/foreground so the CTA never stays stuck on the ellipsis spinner. 5s navigation safety timeout prevents stuck CTA on subpackage download hang.
 │   ├── login/           # WeChat login entry for returning users
 │   ├── onboarding/      # Subpackage: onboarding flow
-│   ├── pool-registration/  # Subpackage: pool sign-up flow (success uses CDN ceremony hero)
+│   ├── pool-registration/  # Subpackage: pool sign-up flow; terminal states reuse EventSummaryCard
+│   │   └── components/
+│   │       └── PoolRegistrationTerminalStates.tsx  # loading / empty / already-joined / success states
 │   ├── blind-box-payment/
 │   ├── payment-verification/
 │   ├── event-detail/
@@ -72,7 +77,7 @@ src/
 │   ├── landing/         # Landing-page-specific components (BondingCloud)
 │   ├── mascot/          # XiaoyueSpriteAnimator, XiaoyueChatBubble, XiaoyueEmptyState, etc.
 │   ├── discover/        # Discover feed components (OracleCard, CompatibilityIndicator, ParticipantPresenceStrip). Empty-state presence strip uses a breathing accent ring + invitation pill (首座留给你).
-│   ├── events/          # Events / footprint components (FootprintOracleCard, EventCountdownClock)
+│   ├── events/          # Events / footprint components (FootprintOracleCard, EventSummaryCard, EventCountdownClock)
 │   └── ContentBlockedError.tsx  # Inline field error for sensitive-word violations; field-aware hints, tap-to-dismiss, haptics, aria-live, reduced-motion. Used in edit-profile and onboarding essential-data forms.
 ├── hooks/               # Custom React hooks
 │   ├── useEventCountdown.ts # Visibility-aware countdown with segments/progress; gates ticking by viewport, app background, reduced-motion, and degradation tier
@@ -116,6 +121,8 @@ npm run test --workspace=mini-program
 ### Asset pipeline scripts
 
 Assets are **CDN-first** in production, with a curated set of critical assets bundled locally for instant display and offline resilience. The build inlines `TARO_APP_CDN_BASE_URL` from `apps/mini-program/.env.local`.
+
+**CI build target (2026-06-30):** `.github/workflows/taro-weapp-build.yml` now defaults `TARO_APP_API_BASE_URL` to `https://staging.joyjoinapp.com`; production API builds require an explicit `workflow_dispatch` `api_target=production` selection. Local dev (`npm run dev:weapp`) still defaults to `http://localhost:5001`.
 
 **Shared CDN strategy:** both production and staging mini-program builds load large assets from the same production CDN path (`https://joyjoinapp.com/static`). This avoids maintaining duplicate staging asset directories and ensures a single source of truth for ceremony heroes, badges, icons, and other CDN-backed assets. Run `npm run upload:cdn-assets` against `/var/www/cdn` after adding or updating CDN assets.
 
@@ -298,7 +305,7 @@ The guard normalizes route formats (`pages/discover/index`, `/pages/discover/ind
 | **State sync** | `useCustomTabBarSync.ts` calls `Taro.getTabBar(page).syncState(...)` on every `useDidShow`. Native side debounces at 50ms with shallow diff to avoid icon flicker. `_confirmedSelected` tracks the authoritative selection for rollback. Offline state is detected via `wx.getNetworkType` / `wx.onNetworkStatusChange`; `syncState` skips updates while offline and replays the latest pending state on reconnect |
 | **Badges** | Notification counts mapped to `discover`, `activities`, `chat` categories. Badge updates use WeChat path syntax (`leftTabs[idx].badgeCount`) to avoid array reconstruction and icon reload flicker |
 | **Collapse API** | `setCollapsed(boolean)` toggles `data.collapsed`, returns `true` on change, and no-ops after `detached` or when already in target state. Writes collapse/expand announcements to `data.announcement` |
-| **Visibility** | `data.hidden` defaults to `true`; `setSelected()` reveals the bar only on tab pages. The `_shouldHideOnPage` helper normalizes routes and hides the bar on known non-tab routes |
+| **Visibility** | `data.hidden` defaults to `true`; `setSelected()` reveals the bar only on tab pages. The `_shouldHideOnPage` helper normalizes routes and hides the bar on known non-tab routes. Top-level conversion flows such as `pages/pool-registration/index` can opt into the tab bar by adding their route to the allow-lists in `src/native-custom-tab-bar/index.js` and `src/hooks/navigation/useCustomTabBarSync.ts` and calling `useCustomTabBarSync()` from the page. Detail, checkout, and session pages (e.g. `event-detail`, `event-ticket-payment`, `matching-status`, `icebreaker-session`, `profile-linked`) remain hidden to preserve focus and avoid ambiguous tab highlights. |
 | **Device tiering** | `wx.getSystemInfoSync().benchmarkLevel <= 15` or iOS devices without a `benchmarkLevel` value gate all animations (badge pop-in, pulse, fade-in, transitions) via `.joy-custom-tab-bar--low-end` |
 | **Swipe-back safety** | `pageLifetimes.show` resets `selected` to `_confirmedSelected` after 100ms, correcting any stuck optimistic state after swipe-back |
 

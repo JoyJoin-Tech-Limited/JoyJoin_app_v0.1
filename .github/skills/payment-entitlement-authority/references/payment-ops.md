@@ -2,13 +2,20 @@
 
 ## Webhook handling specifics
 
-WeChat-facing payment creation, status queries, webhook verification, and refund initiation live in `apps/server/src/paymentService.ts`. Keep H5 and JSAPI request construction, webhook signature checks, and `REFUND.SUCCESS` handling there instead of duplicating them in routes or clients.
+WeChat-facing payment creation, status queries, webhook verification, refund initiation, and reconciliation live in `apps/server/src/paymentService.ts`. Keep H5 and JSAPI request construction, webhook signature checks, `REFUND.SUCCESS` handling, and `reconcilePayment()` there instead of duplicating them in routes or clients.
+
+`resolvePlatformCert()` accepts:
+- raw PEM public key (微信支付公钥 mode),
+- raw PEM platform certificate (legacy),
+- base64-encoded PEM (recommended for docker-compose `env_file` to avoid multi-line corruption).
 
 On webhook verification failure, return 400 and log the failure — do not silently ignore.
 
 ## Verification polling
 
 Shared client contracts and pure verification helpers live in `packages/shared/src/api.ts`. Safe extractions include payment DTOs, plan normalization, and `getPaymentVerificationStatusDecision()` / `getPaymentVerificationErrorDecision()`. Do not move WeChat SDK calls, storage, redirect launch, or toast logic there.
+
+If a webhook is delayed or a client polling window times out, call `POST /api/payments/:wechatOrderId/reconcile` to query WeChat Pay directly and fulfill the order. The endpoint is idempotent and returns `{ status, fulfilled }`.
 
 ## Refund procedures
 

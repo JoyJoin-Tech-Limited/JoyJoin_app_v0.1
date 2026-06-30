@@ -12,6 +12,10 @@ Treat [`docs/admin-rbac-matrix.md`](../../docs/admin-rbac-matrix.md) as the curr
 
 `viewer` exists in the role model but is not yet fully enforced as a read-only runtime role across all routes.
 
+| Endpoint | Required Middleware | Notes |
+|----------|---------------------|-------|
+| `POST /api/admin/logout` | `requireAdmin` + `requireOperatorOrAbove` | Destroys session and clears cookie |
+
 ## Sensitive actions vocabulary
 
 Keep action names aligned with `ADMIN_AUDIT_ACTIONS` whenever possible:
@@ -26,6 +30,7 @@ Keep action names aligned with `ADMIN_AUDIT_ACTIONS` whenever possible:
 - `ATTENDANCE_OVERRIDE`
 - `PAYMENT_REFUND_INITIATED`
 - `EVENT_POOL_STATUS_CHANGED`
+- `VENUE_UPDATED` (emitted when an admin "deletes" a venue because the operation is a soft-delete/suspend)
 
 If a new sensitive admin action does not fit the current vocabulary, extend the action list rather than hiding the action under a vague context bag.
 

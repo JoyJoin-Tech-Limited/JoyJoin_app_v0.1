@@ -1,6 +1,6 @@
 # Mini-Program — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-06-28
+> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-06-30
 
 ---
 
@@ -56,6 +56,7 @@
 - Tag/pill: `components/ui/Chip.tsx` (L1/L2/L3 levels)
 - Mascot: `components/mascot/XiaoyueChatBubble.tsx` (chat-based onboarding removed 2026-05)
 - Welcome coupon banner: `components/FirstTimeCouponBanner.tsx` — payment-flow banner for `WELCOME50`/`WELCOME40`; zero external assets, CSS-only (cream bg + decorative circle), counter animation + confetti burst. See root `AGENTS.md` §2 for full spec.
+- Welcome gift card: `components/onboarding/WelcomeGiftCard.tsx` — premium coupon card shown on first profile-review view; calls `GET /api/user/welcome-coupon`, displays Lovart coupon illustration + dynamic discount badge, reduced-motion/skeleton states supported.
 
 **Legacy — never use:**
 - Chat-based onboarding (Xiaoyue chat UI, registration inline handlers) — only mascot visuals remain
@@ -111,12 +112,12 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 - **Canvas `drawImage` requires a network-resolvable URL** — local bundled paths (e.g., `/pages/onboarding/assets/...`) work for `<Image>` but NOT for canvas. Pass `visual.asset` (CDN URL) to canvas.
 - **`miniprogram-ci` rejects empty `iconPath`** on `tabBarConfig.ts` centerHub with `800059`. Use a placeholder; the custom tab bar component renders the center button independently.
 - **Tab bar geometry**: `$tab-bar-height: 128rpx`; root footprint: `$tab-bar-root-height: 182rpx`; center CTA is a **root sibling** of `.joy-custom-tab-bar__surface`, not nested inside.
-- **Tab bar route guard:** the native custom tab bar keeps an explicit `TAB_BAR_PAGE_PATHS` allow-list sourced from `src/lib/navigation/tabBarConfig.ts` and hides itself when attached to a non-tab route (e.g., the landing page), preventing the tab bar from leaking onto non-tab pages.
+- **Tab bar route guard:** the native custom tab bar keeps an explicit `TAB_BAR_PAGE_PATHS` allow-list sourced from `src/lib/navigation/tabBarConfig.ts` and hides itself when attached to a non-tab route (e.g., the landing page), preventing the tab bar from leaking onto non-tab pages. To opt a top-level conversion page (e.g., `pool-registration`) into the tab bar, add its route to `_routeToIndex` in `src/native-custom-tab-bar/index.js` and to `TAB_INDEX_BY_PAGE_PATH` in `src/hooks/navigation/useCustomTabBarSync.ts`, then call `useCustomTabBarSync()` from the page. Detail, checkout, and session pages stay hidden to avoid ambiguous highlights.
 - **`<ChallengeCardBgImage>`** (WeChat-safe `<Image>` component) must be used for challenge-card backgrounds — CSS `background-image` with CDN URLs is flaky in WeChat runtime.
 - **ArchetypeSpritesheet** uses the same `<Image>` + `overflow:hidden` + `transform: translate()` pattern for spritesheet region crops — CSS `backgroundImage: url()` is unreliable in WeChat. See `apps/mini-program/src/pages/onboarding/personality-test/results/ArchetypeSpritesheet.tsx`.
 - **WeChat WXSS silently drops `hsla()`** — all color values emitted from shared `@shared/archetypeColors` must use `rgba()` via `formatHSLAsRGBA()`. Canvas calls use `toCanvasRGBA()` from `canvasHelpers.ts` at `apps/mini-program/src/lib/utils/canvasHelpers.ts` (shared by both portrait and square poster renderers).
 - **Page-level loading/empty/error state blocks** must use `min-height: 100dvh` + flex centering. `@include scroll-view-centered-state` from `_mixins.scss` is the canonical helper for states inside `<ScrollView>`.
-- **Shimmer animations should use GPU-safe `opacity` pulse** instead of `background-position` on linear gradients. The `background-position` approach triggers paint on every frame, while opacity pulse only composites. Pattern: `animation: shimmer-pulse 1.5s ease-in-out infinite` with keyframes `0%/100% { opacity: 0.25; } 50% { opacity: 0.65; }`. See `apps/mini-program/src/pages/onboarding/profile-review/index.scss` for a canonical example replacing a `background-position` shimmer with `opacity` pulse (2026-06-10).
+- **Shimmer animations should use GPU-safe `opacity` pulse** instead of `background-position` on linear gradients. The `background-position` approach triggers paint on every frame, while opacity pulse only composites. Pattern: `animation: shimmer-pulse 1.5s ease-in-out infinite` with keyframes `0%/100% { opacity: 0.25; } 50% { opacity: 0.65; }`. See `apps/mini-program/src/pages/onboarding/profile-review/index.scss` for a canonical example replacing a `background-position` shimmer with `opacity` pulse (2026-06-10). **The `FootprintOracleCard` matched-state shimmer was migrated to opacity-only in 2026-06-30.**
 - **Hero-card flex-wrap layout for text overflow prevention**: When a card has avatar + text side-by-side + tags below, use `flex-wrap: wrap` on the row container. Put copy in a `flex: 1` element (left), avatar in a fixed-width element (right), and tags in a `width: 100%` element below. All text-bearing children must have `overflow: hidden; text-overflow: ellipsis` (single-line) or `word-break: break-word; overflow-wrap: break-word` (multi-line). See `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` hero-card section (2026-06-11).
 - **`AnalyzingAnimation` must be the sole owner of reveal timing**: Do not set reveal-ready state (`isRevealReady`) in a separate `useEffect` with a hardcoded timeout — this creates a race where the animation is still running but the content is already shown. `AnalyzingAnimation` exposes `minDuration` (1200ms) and `onComplete` callback; set `isRevealReady = true` only inside `onComplete`. User skip is handled by AnalyzingAnimation's internal skip button (enabled after 600ms). See `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` (2026-06-11).
 - **`useResetOnShow` must include animation-related state for swipe-back safety**: When using a reveal animation (`AnalyzingAnimation.onComplete` sets `isRevealReady`), add `setIsRevealReady` as an argument to `useResetOnShow(setIsSubmitting, setIsPageExiting, setIsCelebrating, setIsRevealReady)`. Without this, a user who swipes back and re-enters will see the content already revealed (no animation replay). See `apps/mini-program/src/hooks/useResetOnShow.ts` and `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` (2026-06-11).
@@ -235,9 +236,21 @@ npx miniprogram-ci upload \
 
 ## 12. Events / Footprint tab
 
-- **`FootprintOracleCard`** (`src/components/events/FootprintOracleCard.tsx`) — event card for the "足迹" tab. Renders a segmented Nothing-design-inspired countdown clock, venue-disclosure gating, and status-aware waiting copy. Completed/cancelled/no-show/declined cards are muted with no countdown.
-- **`EventCountdownClock`** (colocated in `FootprintOracleCard.tsx`) — memoized segmented clock sub-component so the parent card does not re-render every second.
+- **`FootprintOracleCard`** (`src/components/events/FootprintOracleCard.tsx`) — interactive event card for the "足迹" tab list. Wraps `EventSummaryCard` with list affordances (tap, hover, footer hint, index-based entrance delay). Haptic feedback on tap; reduced-motion/degradation tier disables entrance delay.
+- **`EventSummaryCard`** (`src/components/events/EventSummaryCard.tsx`) — shared presentational base for `FootprintOracleCard` and any read-only confirmation surfaces (e.g. pool-registration terminal states). Renders the same gradient shell, status pulse pill, segmented countdown, title, date/time/location meta, and corner vignette. Supports `interactive` prop to toggle tap affordances. Title clamps to 2 lines with `keep-all` word breaking to avoid 孤字.
+- **`EventCountdownClock`** (colocated in `EventSummaryCard.tsx`) — memoized segmented clock sub-component so the parent card does not re-render every second.
 - **`useEventCountdown`** (`src/hooks/useEventCountdown.ts`) — visibility-aware countdown hook returning `display`, structured `segments`, `isUrgent`, `hasStarted`, and `isLive`. Ticks are gated by in-viewport IntersectionObserver state, app hide/show lifecycle, `prefers-reduced-motion`, and `useDeviceTier().isDegradation`.
 - **Venue disclosure rule:** Venue location is hidden when status is `registered`/`pending`/`upcoming`; disclosed only for `confirmed` or `venue_unlocked`. The raw `matched` status means the group has been formed but the venue is still being assigned, and the server derives the user-facing `displayStatus` from `matchStatus`, `poolStatus`, `venueAssignmentStatus`, and `venueName`. Terminal pool states (`completed`/`cancelled`) override the registration-level status. The card always renders event type + city/district and only appends the venue name once unlocked.
 - **`formatEventDateTime`** (`src/lib/utils/eventDisplay.ts`) — renders `今天`/`明天`/`后天` prefixes for near-term event dates.
+- **`getSystemReducedMotion()`** (`src/lib/utils/accessibility.ts`) — canonical helper for reading the OS-level reduced-motion preference. Prefer this over duplicating `Taro.getSystemInfoSync()` reads.
 - **Accessibility:** The countdown clock uses `aria-live="polite"` for screen-reader announcements.
+
+## 13. Pool-registration terminal states
+
+- **`PoolRegistrationTerminalStates.tsx`** (`src/pages/pool-registration/components/PoolRegistrationTerminalStates.tsx`) owns the loading, empty/error, already-joined, and success states for pool registration.
+- **Already-joined and success screens** reuse `EventSummaryCard` so the event summary is visually identical to the "我的足迹" card.
+- **Read-only card mode:** terminal-state cards do not pass `interactive`, so they have no hover state, tap hint, or navigation.
+- **Scroll safety:** both terminal states wrap the centered card in `<ScrollView className='pool-reg__scroll'>` so the CTA and any follow-up content (e.g. `ChemistryMiniGrid`) remain reachable on short phones.
+- **Haptics:** primary CTAs (`去我的足迹查看状态`) use `haptics('medium')`; the secondary "开启匹配结果通知" button uses `haptics('light')`.
+- **Analytics:** terminal states emit `registration_terminal_state_view` on mount and `registration_terminal_cta_tap` / `registration_terminal_notify_tap` on tap.
+- **Notification button state:** the parent page (`pool-registration/index.tsx`) tracks `isEnablingNotifications` / `notificationsEnabled`; the button shows a loading spinner during the WeChat subscribe request and becomes disabled with "已开启提醒" after success.

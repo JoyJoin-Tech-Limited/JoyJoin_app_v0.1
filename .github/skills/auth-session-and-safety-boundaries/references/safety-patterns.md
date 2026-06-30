@@ -53,6 +53,7 @@ Do not relax `secure: true` for any production codepath.
 
 - WeChat Pay webhooks must verify the signature before processing
 - Never process webhook payload data before signature verification
+- `WECHAT_PAY_PLATFORM_CERT` may be supplied as a raw PEM public key (微信支付公钥 mode), a raw PEM platform certificate (legacy), or a base64-encoded PEM string
 - On verification failure, return 400 and log the failure — do not silently ignore
 
 ## Common mistakes to avoid

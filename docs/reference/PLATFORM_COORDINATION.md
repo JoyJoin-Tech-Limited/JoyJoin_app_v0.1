@@ -14,6 +14,7 @@
 | Anonymous assessment keys | `apps/mini-program/src/lib/auth/anonymousOnboarding.ts` (uses `joyjoin_v4_presignup_answers` local-storage semantics) |
 | WeChat login — **returning** users | `apps/mini-program/src/pages/login/index.tsx`, `apps/mini-program/src/hooks/auth/useWeChatLogin.ts` → `authenticateMiniProgramUser()` → `POST /api/auth/wechat/login` (`Taro.login` → code2Session) |
 | WeChat login — **with test import** | `authenticateMiniProgramUserWithTest()` in `apps/mini-program/src/lib/api/api.ts` → `POST /api/auth/wechat/login-with-test` (inline from personality-test results page) |
+| Welcome coupon award | `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` → `claimWelcomeCoupon()` in `packages/shared/src/api/user.ts` → `GET /api/user/welcome-coupon` (awards or re-fetches the lifetime welcome coupon on first profile-review view) |
 | Blind-box payment (JSAPI) | `apps/mini-program/src/pages/blind-box-payment/index.tsx` → `createMiniProgramPaymentIntent()` in `packages/shared/src/api.ts` → `POST /api/payments/miniprogram/create` → `Taro.requestPayment` (skipped for mock orders when `MOCK_PAYMENTS=true`) |
 | Payment Ritual V2 context | `apps/mini-program/src/pages/blind-box-payment/index.tsx` → `fetchRitualCommunityData()` → `GET /api/payments/ritual-context` (real DB-backed community stats, plans, coupons) |
 | Payment Ritual V2 analytics | `apps/mini-program/src/pages/blind-box-payment/lib/paymentRitualAnalytics.ts` → `POST /api/analytics/payment` (A/B test funnel instrumentation) |
@@ -210,6 +211,7 @@ Keep the codebases separate, but enforce strong contracts.
 
 - Both clients should point to the **same local backend** during development.
 - In this repo, use the backend started by `npm run dev:server` as the shared local target, and keep both clients aligned to that same origin.
+- **CI build alignment (2026-06-30):** the mini-program CI workflow (`.github/workflows/taro-weapp-build.yml`) now defaults `TARO_APP_API_BASE_URL` to the staging API (`https://staging.joyjoinapp.com`). Production API builds require an explicit `workflow_dispatch` `api_target=production` selection; this prevents accidental production uploads from the default CI path.
 - Practical rule:
   - **Breaks on Mini Program** → backend or shared business logic issue
   - **Works in admin client but breaks on Mini Program** → Mini Program adapter/runtime issue

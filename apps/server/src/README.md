@@ -115,6 +115,9 @@ Payment Ritual V2 endpoints:
 - `GET /api/payments/ritual-context` — Returns user archetype, active pricing plans, user coupons, and real community stats (total members, weekly new, monthly events, recent activity) scoped by user's city. Requires auth. Gated by `checkPaymentsEnabled`.
 - Analytics: `POST /api/analytics/payment` (defined in `routes/domains/analytics.ts`) — Fire-and-forget A/B test funnel instrumentation. Events stored in `paymentRitualEvents` table.
 
+Reconciliation endpoint:
+- `POST /api/payments/:wechatOrderId/reconcile` — Queries WeChat Pay directly for the order state and fulfills it if paid. Idempotent; invalidates the user's predictive shell cache on fulfillment. Requires auth and `checkPaymentsEnabled`. Used by the mini-program event-ticket-payment page as a fallback when webhooks are delayed.
+
 Mock payment mode:
 - When `MOCK_PAYMENTS=true`, `POST /api/payments/miniprogram/create` creates orders with `status: "completed"` and `mock: true` without calling WeChat Pay API.
 - Client receives `mock: true` in the response and skips `Taro.requestPayment()`, navigating directly to verification.
@@ -200,7 +203,7 @@ Primary files:
 
 Key endpoints:
 - `POST /api/analytics/profile` — Profile tab interaction events (`profile_stat_tap`, `profile_archetype_cta_tap`, `profile_menu_tap`, `profile_logout_tap`, `profile_logout_cancel`, `profile_shell_retry`, `profile_share_app_message`, `profile_share_timeline`, `profile_milestone_impression`, `profile_milestone_tap`, `profile_pull_refresh`, `profile_share_card_generated`, `profile_share_card_error`, `profile_view`). Stored in `discoverAnalyticsEvents`.
-- `POST /api/analytics/discover` — Discover and paid-event-ticket funnel events. Includes `event_ticket_payment_view`, `plan_switch`, `welcome_coupon_auto_applied`, `pay_start`, `pay_success`/`pay_cancel`/`pay_fail`/`pay_timeout`, `refund_policy_viewed`, `event_ticket_payment_abandon`, and the icebreaker-inclusion terms events `ticket_terms_row_impression`, `ticket_inclusion_sheet_open`, `ticket_inclusion_sheet_close`. Stored in `discoverAnalyticsEvents`.
+- `POST /api/analytics/discover` — Discover and paid-event-ticket funnel events. Includes `event_ticket_payment_view`, `plan_switch`, `welcome_coupon_auto_applied`, `pay_start`, `pay_success`/`pay_cancel`/`pay_fail`/`pay_timeout`, `refund_policy_viewed`, `event_ticket_payment_abandon`, the icebreaker-inclusion terms events `ticket_terms_row_impression`, `ticket_inclusion_sheet_open`, `ticket_inclusion_sheet_close`, and the ticket-tail asset events `ticket_tail_image_impression`, `ticket_tail_image_load_error`. Stored in `discoverAnalyticsEvents`.
 - `POST /api/analytics/payment` — Payment Ritual V2 funnel events; stored in `paymentRitualEvents`.
 - `POST /api/analytics/auth` — Auth revalidation gate events (`auth_revalidation_started`, `auth_revalidation_succeeded`, `auth_revalidation_failed`, `gate_timeout`, `gate_retry`, `gate_dismiss`). Stored in `discoverAnalyticsEvents`.
 - `POST /api/analytics/squad_unboxing` — Squad-unboxing reveal interaction events. Stored in `discoverAnalyticsEvents`.

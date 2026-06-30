@@ -235,6 +235,8 @@ Every push to `main` triggers `.github/workflows/taro-weapp-build.yml`:
 2. Uploads as **开发版** via `miniprogram-ci` (robot 1)
 3. Version: `1.0.YYYYMMDD.HHMM`
 
+> 2026-06-30：CI 默认将 `TARO_APP_API_BASE_URL` 指向 `https://staging.joyjoinapp.com`。因此自动上传的**开发版默认连接 staging API**；如需指生产 API，必须在手动触发 workflow 时选择 `api_target=production`。
+
 The 体验版 assignment is **manual** — no CI step automatically sets it. A human picks which development version becomes the trial version.
 
 ### Test Users for Experience Version
@@ -296,6 +298,8 @@ The script reloads Nginx, rebuilds the staging API + admin containers, applies m
 
 Once the initial manual deploy is done, every push to `main` automatically triggers `.github/workflows/deploy-staging.yml`, which re-runs the same steps from CI. Staging secrets are kept in sync from GitHub (`STAGING_DATABASE_URL`, `STAGING_SESSION_SECRET`, `STAGING_ADMIN_CREATE_SECRET_KEY`, `STAGING_POSTGRES_PASSWORD`) while app secrets (WeChat, AI, WeChat Pay) are reused from production secrets.
 
+> 2026-06-30：staging 部署流程从 GitHub Secret `WECHAT_PAY_PLATFORM_CERT` 读取微信支付平台证书/公钥，base64 编码后写入 `deployment/.env.staging` 的 `WECHAT_PAY_PLATFORM_CERT`。后端 `resolvePlatformCert()` 会自动解码并同时支持 PEM 证书和 RSA 公钥，用于 webhook 签名验证。若需要真实 ¥0.01 支付测试，请确保该 secret 已配置。
+
 Staging payment mode is controlled by two variables written from GitHub repository variables:
 
 | Variable | Value for real ¥0.01 payments | Value for mock (no charge) |
@@ -313,6 +317,8 @@ Set the staging origin before building:
 # apps/mini-program/.env.local
 TARO_APP_API_BASE_URL=https://staging.joyjoinapp.com
 ```
+
+> 2026-06-30：`.github/workflows/taro-weapp-build.yml` 已默认使用 `https://staging.joyjoinapp.com`，因此 CI 自动上传的开发版默认指向 staging。手动本地构建时仍需显式设置上述环境变量。
 
 ```bash
 npm run build:weapp --workspace=mini-program
@@ -336,6 +342,22 @@ The staging admin portal proxies `/api/*` to the staging API, so any event creat
 ### Verifying test pricing
 
 After logging into the 体验版, start any paid flow (event registration, subscription, event pack). With `MOCK_PAYMENTS=false`, the price should show ¥0.01 and create a real WeChat Pay order for ¥0.01; webhook fulfillment still runs normally against the staging database. With `MOCK_PAYMENTS=true`, the flow completes instantly without a real WeChat Pay call.
+
+### Webhook verification and reconciliation
+
+Real WeChat Pay test charges rely on `WECHAT_PAY_PLATFORM_CERT` for webhook RSA signature verification:
+
+- `WECHAT_PAY_PLATFORM_CERT` can be either the raw public-key PEM or a base64-encoded PEM. Base64 encoding is preferred in CI/staging env files to avoid multi-line value corruption.
+- The value must match the current 微信支付公钥 downloaded from 商户平台 → 账户中心 → API安全 → 微信支付公钥.
+- `deployment/scripts/deploy-staging.sh` validates the cert/public key on every deploy and aborts if it is not a valid PEM.
+
+If a user pays successfully but the registration/entitlement is not created (e.g., webhook delayed or dropped), the mini-program's event-ticket-payment page falls back to server-side reconciliation:
+
+- Client polling window: 20 attempts × 1 second.
+- If polling times out, the client calls `POST /api/payments/:wechatOrderId/reconcile`.
+- The server queries WeChat Pay directly and fulfills the order if paid, then invalidates the user's shell cache so the events/footprint tab reflects the new registration.
+
+Operations can also backfill a stuck order manually by calling the same reconcile endpoint as the payment owner (requires auth).
 
 ### Local dev mock-payment shortcut (2026-06-28)
 

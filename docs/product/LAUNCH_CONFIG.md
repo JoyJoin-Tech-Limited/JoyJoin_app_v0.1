@@ -111,7 +111,7 @@ For the **wider open beta** cohort, product requires **`PAYMENTS_ENABLED=true`**
 | `WECHAT_PAY_SERIAL_NO` | WeChat Pay certificate serial number |
 | `WECHAT_PAY_PRIVATE_KEY` | WeChat Pay API v3 private key (PEM) |
 | `WECHAT_PAY_APIV3_KEY` | WeChat Pay API v3 key (exactly 32 bytes). Used for AES-256-GCM webhook decryption. |
-| `WECHAT_PAY_PLATFORM_CERT` | WeChat Pay platform certificate/public key PEM. Required for spec-compliant RSA-SHA256 webhook signature verification outside development. |
+| `WECHAT_PAY_PLATFORM_CERT` | WeChat Pay platform certificate or public-key PEM for webhook signature verification. Supports raw PEM public key (微信支付公钥 mode), raw PEM platform certificate (legacy), and base64-encoded PEM. |
 | `WECHAT_PAY_NOTIFY_URL` | Optional override for WeChat Pay webhook notify URL. Defaults to `APP_URL/api/webhooks/wechat-pay` if unset. |
 
 When `PAYMENTS_ENABLED=true`, startup validation fails in production if `WECHAT_PAY_APP_ID`
@@ -123,11 +123,18 @@ setup where the login appid and payment appid are the same mini-program subject.
 The `/api/webhooks/wechat-pay` endpoint verifies incoming webhook signatures:
 
 1. **RSA-SHA256** (production-grade): set `WECHAT_PAY_PLATFORM_CERT` to the PEM
-   contents of the WeChat Pay platform certificate downloaded from the merchant
-   console. See: https://pay.weixin.qq.com/wiki/doc/apiv3/wechatpay/wechatpay4_1.shtml
+   contents of the WeChat Pay platform certificate or public key downloaded from the merchant
+   console. The value may be supplied as raw PEM (beginning with `-----BEGIN PUBLIC KEY-----` or
+   `-----BEGIN CERTIFICATE-----`) or as a base64-encoded PEM string, which is recommended for
+   docker-compose `env_file` values to avoid multi-line corruption. See:
+   https://pay.weixin.qq.com/wiki/doc/apiv3/wechatpay/wechatpay4_1.shtml
 
 2. **Development mode** (`NODE_ENV=development`): signature verification is
    skipped entirely to simplify local testing.
+
+If a payment confirmation is delayed or a webhook is missed, clients can call
+`POST /api/payments/:wechatOrderId/reconcile` to query WeChat Pay directly and
+fulfill the order. The endpoint is idempotent and returns `{ status, fulfilled }`.
 
 In non-development environments, webhooks with stale timestamps (> 5 minutes
 old) are rejected alongside signature verification. In
@@ -249,8 +256,9 @@ header.
 | `GET /readyz` | Redirects to `/api/readyz`. |
 
 Use `/api/readyz` in deployment orchestrators (for example the current SSH + Docker Compose + Nginx deployment, Kubernetes, or Railway) to
-gate traffic. The `HEALTHCHECK` in `apps/server/Dockerfile` already points at
-`/api/health`.
+gate traffic. The `HEALTHCHECK` in `apps/server/Dockerfile` points at
+`/api/health` and now respects the `PORT` environment variable (default `5000`);
+it uses `127.0.0.1` to avoid IPv6 `localhost` ambiguity.
 
 ---
 

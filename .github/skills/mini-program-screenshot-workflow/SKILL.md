@@ -52,7 +52,7 @@ See [references/approaches.md](references/approaches.md) for full step-by-step i
 
 ## Quick examples
 
-- **Visual design review:** Run `npm run screenshot:events` from the repo root. It builds H5, starts the mock + screenshot servers on free ports, and opens the browser automatically. Other pages: `npm run screenshot:tier-selector`, `npm run screenshot:pool-registration`, `npm run screenshot:event-ticket-payment`. The PNG is generated on every request — no files are saved to the repo.
+- **Visual design review:** Run `npm run screenshot:events` from the repo root. It builds H5, starts the mock + screenshot servers on free ports, and opens the browser automatically. Other pages: `npm run screenshot:tier-selector`, `npm run screenshot:pool-registration`, `npm run screenshot:event-ticket-payment`, `npm run screenshot:squad-unboxing`, `npm run screenshot:profile-review`. The PNG is generated on every request — no files are saved to the repo.
 - **Structural smoke test:** Use Approach B (DevTools MCP) with `get_page_data` after navigating to `/pages/discover/index` to verify text and element presence. For visibility checks (e.g., the native custom tab bar), also inspect the **outer `hidden` attribute and computed `display`** — the WXML tree can contain the element while `hidden=""` makes it invisible.
 
 ## Troubleshooting

@@ -123,6 +123,8 @@ An isolated staging API can run on the same production host:
 - Build the mini-program with `TARO_APP_API_BASE_URL=https://staging.joyjoinapp.com`
 - Set `APP_MODE=staging` and `TEST_PAYMENT_PRICE_IN_CENTS=1` to charge ¥0.01 in 体验版
 - Set `PAYMENTS_ENABLED=true` and `MOCK_PAYMENTS=false` for real WeChat Pay test charges, or `MOCK_PAYMENTS=true` for instantly-paid mock orders
+- `WECHAT_PAY_PLATFORM_CERT` supports raw PEM or base64-encoded PEM; staging deploy validates it and aborts on invalid keys
+- If a paid order is not fulfilled by webhook, the client falls back to `POST /api/payments/:wechatOrderId/reconcile`
 
 See `deployment/README.md` and `docs/operations/test-mode-operations.md` §G for full setup.
 
@@ -266,13 +268,13 @@ Active domain modules in `routes/domains/`:
 
 | Module | Owns |
 |--------|------|
-| `auth.ts` | WeChat auth, session, admin-login, `nextStep` computation |
+| `auth.ts` | WeChat auth, session, admin-login, `nextStep` computation, and `GET /api/user/welcome-coupon` (welcome-coupon claim) |
 | `onboarding.ts` | Onboarding completion endpoints |
 | `assessment.ts` | Personality assessment endpoints |
 | `admin.ts` | Admin management API |
 | `adminEventPools.ts` | Admin event pool CRUD, venue hints, time slot validation |
 | `analytics.ts` | Analytics and KPI endpoints |
-| `payments.ts` | WeChat Pay v3 JSAPI (primary, mini-program) + H5 (reference, web), coupon validation, webhook verification, and `GET /api/payments/ritual-context` (Payment Ritual V2 real DB-backed context) |
+| `payments.ts` | WeChat Pay v3 JSAPI (primary, mini-program) + H5 (reference, web), coupon validation, webhook verification, `POST /api/payments/:wechatOrderId/reconcile`, and `GET /api/payments/ritual-context` (Payment Ritual V2 real DB-backed context) |
 | `eventPools.ts` | Event pool discovery, registration, and `GET /api/event-pools/:poolId/stats` (`estimatedGroups`, archetype breakdown, historical group themes) |
 | `icebreaker.ts` | Mounts **`/api/social-icebreaker`** (Social Icebreaker router from `routes/socialIcebreaker.ts`) and **`/api/tts`** — not the legacy toolkit; legacy random topics live under monolithic `routes.ts` `/api/icebreakers/*` |
 | `icebreakerSessions.ts` | Icebreaker session discovery and access endpoints |
@@ -1215,7 +1217,7 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | `WECHAT_PAY_SERIAL_NO` | WeChat Pay v3 certificate serial |
 | `WECHAT_PAY_PRIVATE_KEY` | WeChat Pay v3 RSA private key |
 | `WECHAT_PAY_APIV3_KEY` | WeChat Pay v3 API key (must be exactly 32 bytes) |
-| `WECHAT_PAY_PLATFORM_CERT` | WeChat Pay platform certificate/public key PEM for non-development webhook signature verification |
+| `WECHAT_PAY_PLATFORM_CERT` | WeChat Pay platform certificate or public-key PEM for webhook signature verification. Supports raw PEM public key (微信支付公钥 mode), raw PEM platform certificate (legacy), and base64-encoded PEM |
 | `WECHAT_PAY_NOTIFY_URL` | Public payment webhook URL; if absent, the server derives it from `APP_URL`, so one of the two must be set when payments are enabled |
 
 ### Operational / optional env vars
