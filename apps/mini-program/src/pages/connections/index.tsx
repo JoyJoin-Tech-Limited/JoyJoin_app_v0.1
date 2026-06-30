@@ -186,25 +186,27 @@ export default function ConnectionsPage() {
               <View className='connections-page__flow-steps'>
                 <View className='connections-page__flow-step'>
                   <View className='connections-page__flow-step-icon'>
-                    <Text className='connections-page__flow-step-number'>1</Text>
+                    <JoyJoinIcon emoji='🎉' size={36} />
                   </View>
                   <View className='connections-page__flow-step-content'>
                     <Text className='connections-page__flow-step-title'>参加活动</Text>
                     <Text className='connections-page__flow-step-desc'>参与感兴趣的活动</Text>
                   </View>
                 </View>
+                <View className='connections-page__flow-connector' aria-hidden='true' />
                 <View className='connections-page__flow-step'>
                   <View className='connections-page__flow-step-icon'>
-                    <Text className='connections-page__flow-step-number'>2</Text>
+                    <JoyJoinIcon emoji='💬' size={36} />
                   </View>
                   <View className='connections-page__flow-step-content'>
                     <Text className='connections-page__flow-step-title'>完成互动</Text>
                     <Text className='connections-page__flow-step-desc'>扫码互动或交流</Text>
                   </View>
                 </View>
+                <View className='connections-page__flow-connector' aria-hidden='true' />
                 <View className='connections-page__flow-step'>
                   <View className='connections-page__flow-step-icon'>
-                    <Text className='connections-page__flow-step-number'>3</Text>
+                    <JoyJoinIcon emoji='🤝' size={36} />
                   </View>
                   <View className='connections-page__flow-step-content'>
                     <Text className='connections-page__flow-step-title'>建立连接</Text>

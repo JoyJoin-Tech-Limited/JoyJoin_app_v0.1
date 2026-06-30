@@ -161,7 +161,7 @@
   &__empty-hero {
     background: $color-surface;
     border-radius: $card-radius;
-    padding: $spacing-lg $spacing-lg $spacing-xl;
+    padding: $spacing-lg $spacing-lg;
     width: 100%;
     box-shadow: $shadow-md;
     display: flex;
@@ -214,20 +214,20 @@
   }
 
   &__empty-glow {
-    width: 200rpx;
-    height: 200rpx;
+    width: 280rpx;
+    height: 280rpx;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba($color-bg-tint-purple, 1) 0%, rgba($color-bg-tint-purple, 0.3) 50%, transparent 70%);
+    background: radial-gradient(circle, rgba($color-bg-tint-purple, 1) 0%, rgba($color-bg-tint-purple, 0.4) 45%, transparent 72%);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: $spacing-md;
+    margin-bottom: $spacing-sm;
     flex-shrink: 0;
   }
 
   &__empty-mascot {
-    width: 160rpx;
-    height: 160rpx;
+    width: 224rpx;
+    height: 224rpx;
   }
 
   &__empty-title {
@@ -236,7 +236,7 @@
     font-weight: $font-weight-bold;
     color: $color-text-primary;
     line-height: $line-height-display;
-    margin-bottom: $spacing-sm;
+    margin-bottom: $spacing-xs;
     padding: 0 $spacing-sm;
   }
 
@@ -245,7 +245,7 @@
     font-size: $font-size-base;
     color: $color-text-secondary;
     line-height: $line-height-normal;
-    margin-bottom: $spacing-lg;
+    margin-bottom: $spacing-md;
     white-space: pre-line;
     padding: 0 $spacing-sm;
   }
@@ -258,7 +258,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 320rpx;
+    min-width: 360rpx;
     transition: opacity 0.2s ease;
 
     &:active {
@@ -299,8 +299,8 @@
 
   &__flow-steps {
     display: flex;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: $spacing-sm;
   }
 
   &__flow-step {
@@ -313,21 +313,15 @@
   }
 
   &__flow-step-icon {
-    width: 48rpx;
-    height: 48rpx;
+    width: 72rpx;
+    height: 72rpx;
     border-radius: 50%;
-    background: rgba($color-primary, 0.1);
+    background: rgba($color-primary, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: $spacing-sm;
     flex-shrink: 0;
-  }
-
-  &__flow-step-number {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-bold;
-    color: $color-primary;
   }
 
   &__flow-step-content {
@@ -349,6 +343,36 @@
     font-size: $font-size-2xs;
     color: $color-text-muted;
     line-height: $line-height-snug;
+    padding: 0 $spacing-xs;
+  }
+
+  &__flow-connector {
+    width: 32rpx;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 36rpx;
+    position: relative;
+
+    &::before {
+      content: '';
+      width: 2rpx;
+      height: 20rpx;
+      border-left: 2rpx dashed rgba($color-primary, 0.2);
+      display: block;
+    }
+
+    &::after {
+      content: '';
+      width: 0;
+      height: 0;
+      border-left: 6rpx solid transparent;
+      border-right: 6rpx solid transparent;
+      border-top: 8rpx solid rgba($color-primary, 0.25);
+      display: block;
+      margin-top: 2rpx;
+    }
   }
 
   &__spacer {
