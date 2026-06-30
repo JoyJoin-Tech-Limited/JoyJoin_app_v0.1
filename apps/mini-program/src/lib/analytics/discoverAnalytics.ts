@@ -34,6 +34,8 @@ export type DiscoverAnalyticsEventType =
   | 'coupon_detail_collapse'
   | 'event_ticket_payment_view'
   | 'event_ticket_payment_abandon'
+  | 'event_ticket_payment_success_view'
+  | 'event_ticket_payment_success_cta_tap'
   | 'refund_policy_viewed'
   | 'ticket_terms_row_impression'
   | 'ticket_inclusion_sheet_open'

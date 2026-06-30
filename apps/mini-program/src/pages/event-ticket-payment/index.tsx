@@ -24,9 +24,11 @@ import { CEREMONY_HEROES } from '../../lib/ceremonyHeroes'
 import { getEventTicketTailAsset } from '../../lib/eventTicketTailAssets'
 import { useLoadingDeadline } from '../../hooks/useLoadingDeadline'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
+import { useResetOnShow } from '../../hooks/useResetOnShow'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import StatusCard from '../../components/ui/StatusCard'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import TicketSuccessView from './components/TicketSuccessView'
 import IcebreakerInclusionSheet from '../../components/event-ticket-payment/IcebreakerInclusionSheet'
 import './index.scss'
 
@@ -163,6 +165,8 @@ export default function EventTicketPaymentPage() {
   const queryClient = useQueryClient()
   const deviceTier = useDeviceTier()
   const { shouldReduceMotion } = useMiniRevealMotion()
+
+  const motionEnabled = useMemo(() => !shouldReduceMotion && !deviceTier.isDegradation, [shouldReduceMotion, deviceTier.isDegradation])
 
   const [poolId, setPoolId] = useState<string>('')
   const [returnContext, setReturnContext] = useState<MiniProgramPoolRegistrationReturnContext | null>(null)
@@ -608,10 +612,22 @@ export default function EventTicketPaymentPage() {
     setPayment({ status: 'idle' })
   }, [])
 
+  const [isNavigating, setIsNavigating] = useState(false)
+  useResetOnShow(setIsNavigating)
+
   const handleBackToEvents = useCallback(() => {
+    if (isNavigating) return
+    setIsNavigating(true)
     haptics('medium')
-    Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events })
-  }, [])
+    discoverAnalytics.track('event_ticket_payment_success_cta_tap', undefined, { poolId })
+    Taro.switchTab({
+      url: MINI_PROGRAM_ROUTES.events,
+      fail: () => {
+        setIsNavigating(false)
+        Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
+      },
+    })
+  }, [isNavigating, poolId])
 
   const handleBack = useCallback(() => {
     const dwellTimeMs = pageEnteredAt > 0 ? Date.now() - pageEnteredAt : 0
@@ -683,19 +699,14 @@ export default function EventTicketPaymentPage() {
   // Success state
   if (payment.status === 'success') {
     return (
-      <View className='ticket-success' role='status' aria-live='polite'>
-        <Image
-          className='ticket-success__hero'
-          src={CEREMONY_HEROES.eventTicketSuccess}
-          mode='aspectFit'
-          ariaLabel='报名成功'
-        />
-        <Text className='ticket-success__title'>报名成功！</Text>
-        <Text className='ticket-success__subtitle'>你已成功报名 {pool.title}</Text>
-        <View className='ticket-success__cta' hoverClass='ticket-success__cta--pressed' onClick={handleBackToEvents}>
-          <Text className='ticket-success__cta-text'>查看我的活动</Text>
-        </View>
-      </View>
+      <TicketSuccessView
+        pool={pool}
+        eventType={eventType}
+        motionEnabled={motionEnabled}
+        onCtaClick={handleBackToEvents}
+        ctaDisabled={isNavigating}
+        poolId={poolId}
+      />
     )
   }
 

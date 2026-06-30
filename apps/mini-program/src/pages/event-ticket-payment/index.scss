@@ -642,20 +642,76 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 .ticket-success {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
   // design-audit:intentional — vh fallback required for WeChat WKWebView (AGENTS.md §4)
   min-height: 100vh;
   min-height: 100dvh;
-  padding: 48rpx;
+  background: $color-bg-warm-to;
+
+  &__hero-wrap {
+    position: relative;
+    width: 100%;
+    // Taller than the rendered image to keep the faded-bottom characters
+    // visible and emotionally present on the screen.
+    min-height: 560rpx;
+    // Cap the hero so a tall asset cannot push the non-scrollable success
+    // surface beyond the viewport on small devices.
+    max-height: 640rpx;
+    overflow: hidden;
+  }
 
   &__hero {
-    width: 600rpx;
-    height: 450rpx;
-    max-width: 100%;
-    margin-bottom: $spacing-lg;
-    opacity: 0;
-    animation: ticket-success-hero-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  &__hero-bridge {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    // Taller bridge for the soft-faded rooster/corgi asset so the transition
+    // into the solid page background is imperceptible.
+    height: 180rpx;
+    background: linear-gradient(
+      180deg,
+      rgba($color-bg-warm-to, 0) 0%,
+      rgba($color-bg-warm-to, 0.35) 50%,
+      rgba($color-bg-warm-to, 0.85) 80%,
+      $color-bg-warm-to 100%
+    );
+    pointer-events: none;
+  }
+
+  &__confetti {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  &__confetti-particle {
+    position: absolute;
+    border-radius: 2rpx;
+    opacity: 1;
+    transition-property: transform, opacity;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1), ease;
+    will-change: transform, opacity;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 $container-padding;
+    // Pull the text block up into the hero's faded bottom so the
+    // illustration and message read as one continuous scene.
+    margin-top: -48rpx;
+    text-align: center;
+    position: relative;
+    z-index: 2;
   }
 
   &__title {
@@ -663,6 +719,7 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     font-size: $font-size-2xl;
     font-weight: $font-weight-black;
     color: $ticket-text;
+    line-height: $line-height-display;
     margin-bottom: $spacing-sm;
     text-align: center;
   }
@@ -673,8 +730,32 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     color: $ticket-text-subtle;
     text-align: center;
     line-height: $line-height-relaxed;
-    margin-bottom: 56rpx;
     max-width: 560rpx;
+  }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 12rpx;
+    margin-top: $spacing-md;
+    padding: 14rpx 24rpx;
+    background: rgba($ticket-text, 0.05);
+    border-radius: $radius-pill;
+
+    &-text {
+      font-family: $font-ui;
+      font-size: $font-size-sm;
+      color: $ticket-text-subtle;
+      white-space: nowrap;
+    }
+  }
+
+  &__footer {
+    position: relative;
+    z-index: 3;
+    margin-top: auto;
+    padding: $spacing-md $container-padding;
+    padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
   }
 
   &__cta {
@@ -682,15 +763,18 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     align-items: center;
     justify-content: center;
     min-height: $cta-min-tap;
-    padding: 0 64rpx;
     background: $color-primary;
     border-radius: $button-radius;
-    box-shadow: 0 8rpx 32rpx rgba($color-primary, 0.35);
     transition: opacity 0.12s ease, transform 0.12s ease;
 
     &--pressed {
       opacity: 0.9;
       transform: scale(0.97);
+    }
+
+    &--disabled {
+      opacity: 0.55;
+      pointer-events: none;
     }
   }
 
@@ -699,6 +783,41 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     font-size: $font-size-md;
     font-weight: $font-weight-bold;
     color: $color-text-white;
+  }
+
+  // Stagger entrance — only when motion is enabled.
+  &--motion {
+    .ticket-success__hero {
+      opacity: 0;
+      animation: ticket-success-hero-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0s forwards;
+    }
+
+    .ticket-success__title,
+    .ticket-success__subtitle {
+      opacity: 0;
+      animation: ticket-success-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
+    }
+
+    .ticket-success__chip {
+      opacity: 0;
+      animation: ticket-success-fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.25s forwards;
+    }
+
+    .ticket-success__cta {
+      opacity: 0;
+      animation: ticket-success-fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.35s forwards;
+    }
+  }
+}
+
+@keyframes ticket-success-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -815,6 +934,18 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   .ticket-verifying__hero {
     animation: none;
     opacity: 1;
+  }
+
+  .ticket-success--motion {
+    .ticket-success__hero,
+    .ticket-success__title,
+    .ticket-success__subtitle,
+    .ticket-success__chip,
+    .ticket-success__cta {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
   }
 
   .ticket-card__stamp--animated,

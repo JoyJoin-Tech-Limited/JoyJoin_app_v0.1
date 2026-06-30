@@ -45,3 +45,10 @@ Upload these reference images to Lovart ChatCanvas before generating:
 ## Downstream handoff
 - **frontend-component-architecture:** Wire into `apps/mini-program/src/pages/event-ticket-payment/index.tsx` success state (around line 323).
 - **wow-elements:** Pair with the existing CSS checkmark animation; hero appears above the checkmark or replaces it.
+
+## Implementation Update (2026-07-01)
+A warmer rework (`eventTicketSuccessV2`) is now wired into the success state.
+- **New asset:** `event-ticket-success-20260701-v2.webp` + `.png` fallback under `/assets/ceremony/`.
+- **Integration:** full-bleed hero at `width: 100%` with `mode='widthFix'`, page background `#F5F1E8` (`$color-bg-warm-to`), and a CSS `linear-gradient` bridge (transparent → `#F5F1E8`) over the hero bottom edge. No blur / backdrop-filter.
+- **Motion:** stagger entrance for hero (0 ms), title/subtitle (150 ms), event chip (250 ms), CTA (350 ms) using only `opacity` + `transform` with `cubic-bezier(0.22, 1, 0.36, 1)`; total ≤ 900 ms. One-shot confetti (≤ 16 pieces, 2–2.5 s) is gated by OS reduced-motion and `useDeviceTier().isDegradation`.
+- **Copy:** state-aware subtitle that switches on pool `matching` status, using `DEFAULT_MASCOT_DISPLAY_NAME` instead of hardcoded "悦仔".

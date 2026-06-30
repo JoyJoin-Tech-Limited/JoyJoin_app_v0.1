@@ -45,8 +45,17 @@ export const CEREMONY_HEROES = {
 
   /** v0.1 — `/pages/event-ticket-payment` ticket hero banner */
   eventTicketHero: cdnAsset(`${BASE}/lovart-event-ticket-payment-hero-20260617-v1.webp`),
-  /** v0.1 — `/pages/event-ticket-payment` success state */
+  /** v0.1 — `/pages/event-ticket-payment` success state (legacy; use eventTicketSuccessV2) */
   eventTicketSuccess: cdnAsset(`${BASE}/event-ticket-success-20260616-v1.webp`),
+  /**
+   * v0.2 — `/pages/event-ticket-payment` success state (2026-07-01 rework).
+   * Warmer full-bleed ceremony scene with Xiaoyue + 小太阳鸡 co-celebrating.
+   * Primary WebP + PNG fallback for WeChat runtime compatibility.
+   */
+  eventTicketSuccessV2: {
+    webp: cdnAsset(`${BASE}/event-ticket-success-20260701-v2.webp`),
+    png: cdnAsset(`${BASE}/event-ticket-success-20260701-v2.png`),
+  },
   /** v0.1 — `/pages/event-ticket-payment` verifying state */
   paymentVerifying: cdnAsset(`${BASE}/payment-verifying-20260616-v1.webp`),
   /** v0.1 — `/pages/pool-registration` free-registration success state */
