@@ -332,7 +332,11 @@ export default function EventTicketPaymentPage() {
   const pollVerification = useCallback((orderId: string, paymentId: string) => {
     setPayment({ status: 'verifying', paymentId, wechatOrderId: orderId })
     let attempts = 0
-    const maxAttempts = 24 // 24 * 1500ms = 36s base polling window
+    // Responsive fallback polling: 20 attempts × 1 second = 20 seconds total.
+    // The primary confirmation path is the WeChat Pay webhook, which typically
+    // arrives in under 5 seconds. Polling only covers delayed webhook delivery.
+    const maxAttempts = 20
+    const pollIntervalMs = 1000
 
     if (verifyTimerRef.current) clearInterval(verifyTimerRef.current)
 
@@ -470,7 +474,7 @@ export default function EventTicketPaymentPage() {
           attempts,
         })
       }
-    }, 1500)
+    }, pollIntervalMs)
   }, [queryClient, poolId, selectedPlan, currentPrice, finalPrice, bestCoupon?.code])
 
   const handlePay = useCallback(async () => {
