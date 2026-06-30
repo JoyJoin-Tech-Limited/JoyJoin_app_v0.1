@@ -13,7 +13,7 @@ import {
   type CenterTabDestination,
 } from '@joyjoin/shared/centerTabRouting'
 import { haptics } from '../../lib/utils/haptics'
-import { localAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
@@ -24,7 +24,6 @@ import {
 import Button from '../../components/ui/Button'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import PageMorphWrapper from '../../components/ui/PageMorphWrapper'
-import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import RichListCard from '../../components/RichListCard'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
@@ -255,17 +254,19 @@ function CenterHubContent({
   // State D: No context — empty
   return (
     <View className='center-hub__state center-hub__state--empty'>
-      <View className='center-hub__empty-card'>
-        <View className='center-hub__empty-mascot-wrap'>
-          <View className='center-hub__empty-halo' />
+      <View className='center-hub__empty-hero'>
+        <View className='center-hub__empty-deco' aria-hidden='true'>
+          <View className='center-hub__empty-deco-dot center-hub__empty-deco-dot--1' />
+          <View className='center-hub__empty-deco-dot center-hub__empty-deco-dot--2' />
+          <View className='center-hub__empty-deco-dot center-hub__empty-deco-dot--3' />
+        </View>
+        <View className='center-hub__empty-glow'>
           <Image
             className='center-hub__empty-mascot'
-            src={localAsset('/assets/xiaoyue-expressions/xiaoyue-coach-guide.webp')}
+            src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
             mode='aspectFit'
+            aria-label='悦仔'
           />
-          <View className='center-hub__empty-sparkle center-hub__empty-sparkle--1' />
-          <View className='center-hub__empty-sparkle center-hub__empty-sparkle--2' />
-          <View className='center-hub__empty-sparkle center-hub__empty-sparkle--3' />
         </View>
         <Text className='center-hub__empty-title'>暂无进行中的活动</Text>
         <Text className='center-hub__empty-subtitle'>报名成功后，你的匹配进度和小队揭晓会出现在这里。</Text>
@@ -273,28 +274,42 @@ function CenterHubContent({
           className='center-hub__empty-cta'
           hoverClass='center-hub__empty-cta--pressed'
           onClick={() => { haptics('light'); Taro.switchTab({ url: '/pages/discover/index' }) }}
+          role='button'
+          aria-label='去探索活动'
         >
           <Text className='center-hub__empty-cta-text'>去探索活动</Text>
         </View>
-        <View className='center-hub__empty-steps'>
-          <View className='center-hub__empty-step'>
-            <View className='center-hub__empty-step-dot center-hub__empty-step-dot--active' />
-            <Text className='center-hub__empty-step-label'>报名成功</Text>
+      </View>
+
+      <View className='center-hub__flow-card'>
+        <Text className='center-hub__flow-title'>活动流程</Text>
+        <View className='center-hub__flow-steps'>
+          <View className='center-hub__flow-step'>
+            <View className='center-hub__flow-step-indicator center-hub__flow-step-indicator--active'>
+              <Text className='center-hub__flow-step-num'>1</Text>
+            </View>
+            <Text className='center-hub__flow-step-label'>报名成功</Text>
           </View>
-          <View className='center-hub__empty-step-arrow' />
-          <View className='center-hub__empty-step'>
-            <View className='center-hub__empty-step-dot' />
-            <Text className='center-hub__empty-step-label'>等待匹配</Text>
+          <View className='center-hub__flow-connector' aria-hidden='true' />
+          <View className='center-hub__flow-step'>
+            <View className='center-hub__flow-step-indicator'>
+              <Text className='center-hub__flow-step-num'>2</Text>
+            </View>
+            <Text className='center-hub__flow-step-label'>等待匹配</Text>
           </View>
-          <View className='center-hub__empty-step-arrow' />
-          <View className='center-hub__empty-step'>
-            <View className='center-hub__empty-step-dot' />
-            <Text className='center-hub__empty-step-label'>小队揭晓</Text>
+          <View className='center-hub__flow-connector' aria-hidden='true' />
+          <View className='center-hub__flow-step'>
+            <View className='center-hub__flow-step-indicator'>
+              <Text className='center-hub__flow-step-num'>3</Text>
+            </View>
+            <Text className='center-hub__flow-step-label'>小队揭晓</Text>
           </View>
-          <View className='center-hub__empty-step-arrow' />
-          <View className='center-hub__empty-step'>
-            <View className='center-hub__empty-step-dot center-hub__empty-step-dot--active' />
-            <Text className='center-hub__empty-step-label'>确认出席</Text>
+          <View className='center-hub__flow-connector' aria-hidden='true' />
+          <View className='center-hub__flow-step'>
+            <View className='center-hub__flow-step-indicator center-hub__flow-step-indicator--active'>
+              <Text className='center-hub__flow-step-num'>4</Text>
+            </View>
+            <Text className='center-hub__flow-step-label'>确认出席</Text>
           </View>
         </View>
       </View>
@@ -339,15 +354,6 @@ export default function CenterHubPage() {
       loading={<LoadingScreen message='正在加载你的活动…' />}
       content={
         <View className='center-hub tab-page-enter'>
-          <View className='center-hub__header'>
-            <Image
-              className='center-hub__header-mascot'
-              /* change the photo type from png to webp */
-              src={localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')}
-              mode='aspectFit'
-              lazyLoad
-            />
-          </View>
           <CenterHubContent
             registrations={registrations}
             events={events}

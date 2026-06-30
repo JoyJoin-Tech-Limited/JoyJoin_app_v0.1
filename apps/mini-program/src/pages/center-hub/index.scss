@@ -6,37 +6,11 @@
   50% { opacity: 1; transform: scale(1.06); }
 }
 
-@keyframes center-hub-sparkle {
-  0%, 100% { opacity: 0; transform: scale(0.4); }
-  30% { opacity: 1; transform: scale(1); }
-  70% { opacity: 0.6; transform: scale(0.8); }
-}
-
 .center-hub {
   @include viewport-min-height;
   box-sizing: border-box;
   background: $color-bg;
   padding-bottom: calc($tab-bar-root-height + env(safe-area-inset-bottom));
-
-  &__greeting {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: $spacing-sm;
-    padding: $spacing-md $container-padding $spacing-lg;
-  }
-
-  &__greeting-mascot {
-    width: 56rpx;
-    height: 56rpx;
-    animation: mascot-bounce-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-
-  &__greeting-text {
-    font-size: $font-size-base;
-    color: $color-text-secondary;
-    line-height: 1.45;
-  }
 
   &__state {
     padding: 0 $container-padding;
@@ -140,74 +114,87 @@
 
   // Empty state (State D)
   &__state--empty {
-    padding: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-md;
+    padding: $spacing-lg $container-padding;
+    min-height: 100vh;
   }
 
-  &__empty-card {
+  // ─── Hero card (white card with mascot, copy, CTA) ────────────────
+
+  &__empty-hero {
     background: $color-surface;
-    border-radius: 32rpx;
-    margin: 0 $container-padding;
-    padding: 60rpx $spacing-lg 48rpx;
+    border-radius: $card-radius;
+    padding: $spacing-lg $spacing-lg;
+    width: 100%;
+    box-shadow: $shadow-md;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    width: calc(100% - 2 * $container-padding);
-    box-sizing: border-box;
-    box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.04);
-  }
-
-  &__empty-mascot-wrap {
     position: relative;
-    width: 220rpx;
-    height: 220rpx;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    overflow: hidden;
   }
 
-  &__empty-halo {
+  &__empty-deco {
     position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 200rpx;
+    pointer-events: none;
+  }
+
+  &__empty-deco-dot {
+    position: absolute;
+    width: 12rpx;
+    height: 12rpx;
+    border-radius: 50%;
+
+    &--1 {
+      top: 48rpx;
+      right: 80rpx;
+      width: 16rpx;
+      height: 16rpx;
+      background: rgba($color-primary, 0.06);
+    }
+
+    &--2 {
+      top: 72rpx;
+      left: 100rpx;
+      width: 10rpx;
+      height: 10rpx;
+      background: rgba($color-secondary, 0.08);
+    }
+
+    &--3 {
+      top: 36rpx;
+      right: 180rpx;
+      width: 8rpx;
+      height: 8rpx;
+      background: rgba($color-primary, 0.04);
+    }
+  }
+
+  &__empty-glow {
     width: 200rpx;
     height: 200rpx;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba($color-primary, 0.25) 0%, rgba($color-primary, 0.08) 50%, transparent 72%);
-    animation: center-hub-halo-pulse 2s ease-in-out infinite;
+    background: radial-gradient(circle, rgba($color-bg-tint-purple, 1) 0%, rgba($color-bg-tint-purple, 0.4) 45%, transparent 72%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: $spacing-sm;
+    flex-shrink: 0;
   }
 
   &__empty-mascot {
     width: 160rpx;
     height: 160rpx;
-    z-index: 1;
-  }
-
-  &__empty-sparkle {
-    position: absolute;
-    width: 12rpx;
-    height: 12rpx;
-    border-radius: 50%;
-    animation: center-hub-sparkle 2.4s ease-in-out infinite;
-
-    &--1 {
-      top: 12rpx;
-      right: 20rpx;
-      background: rgba($color-secondary, 0.7);
-      animation-delay: 0.3s;
-    }
-
-    &--2 {
-      top: 50rpx;
-      left: 8rpx;
-      background: rgba($color-primary, 0.6);
-      animation-delay: 0.9s;
-    }
-
-    &--3 {
-      bottom: 30rpx;
-      right: 8rpx;
-      background: rgba($color-secondary, 0.5);
-      animation-delay: 1.6s;
-    }
   }
 
   &__empty-title {
@@ -215,28 +202,33 @@
     font-size: $font-size-lg;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
-    line-height: 1.45;
-    margin-top: $spacing-md;
+    line-height: $line-height-display;
+    margin-bottom: $spacing-xs;
+    padding: 0 $spacing-sm;
   }
 
   &__empty-subtitle {
     font-size: $font-size-base;
-    color: $color-text-muted;
-    line-height: 1.6;
-    margin-top: $spacing-xs;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+    margin-bottom: $spacing-md;
+    padding: 0 $spacing-sm;
   }
 
   &__empty-cta {
-    display: flex;
+    background: $color-primary;
+    border-radius: $radius-pill;
+    height: $button-height;
+    padding: 0 $spacing-xl;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 70%;
-    min-width: 400rpx;
-    height: 96rpx;
-    border-radius: 100rpx;
-    background: $color-primary;
-    margin-top: $spacing-lg;
-    transition: opacity 0.12s ease, transform 0.12s ease;
+    min-width: 360rpx;
+    transition: opacity 0.2s ease;
+
+    &:active {
+      opacity: 0.88;
+    }
   }
 
   &__empty-cta--pressed {
@@ -245,69 +237,103 @@
   }
 
   &__empty-cta-text {
-    color: $color-surface;
-    font-size: $font-size-base;
+    color: $color-text-white;
+    font-size: $font-size-md;
     font-weight: $font-weight-semibold;
   }
 
-  &__empty-steps {
+  // ─── Flow card (4-step activity process) ──────────────────────────
+
+  &__flow-card {
+    background: $color-surface;
+    border-radius: $card-radius;
+    padding: $spacing-lg $spacing-md;
+    width: 100%;
+    box-shadow: $shadow-sm;
+    box-sizing: border-box;
+  }
+
+  &__flow-title {
+    @include font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    text-align: center;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__flow-steps {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  &__flow-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    min-width: 0;
+  }
+
+  &__flow-step-indicator {
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-wrap: wrap;
-    gap: $spacing-xs;
-    margin-top: $spacing-lg;
-  }
-
-  &__empty-step {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-  }
-
-  &__empty-step-dot {
-    width: 16rpx;
-    height: 16rpx;
-    border-radius: 50%;
-    background: $color-border;
+    margin-bottom: $spacing-sm;
     flex-shrink: 0;
 
     &--active {
-      background: $color-secondary;
+      background: $color-primary;
     }
   }
 
-  &__empty-step-label {
-    font-size: $font-size-xs;
-    color: $color-text-muted;
-    white-space: nowrap;
+  &__flow-step-num {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+    line-height: 1;
+
+    .center-hub__flow-step-indicator--active & {
+      color: $color-surface;
+    }
   }
 
-  &__empty-step-arrow {
-    width: 24rpx;
+  &__flow-step-label {
+    font-size: $font-size-2xs;
+    color: $color-text-muted;
+    white-space: nowrap;
+    line-height: $line-height-snug;
+  }
+
+  &__flow-connector {
+    flex-shrink: 0;
+    width: 40rpx;
     height: 2rpx;
     background: $color-border;
-    margin: 0 $spacing-xs;
+    margin-top: 28rpx;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .center-hub__greeting-mascot,
   .center-hub__loading-mascot,
-  .center-hub__error-mascot,
-  .center-hub__empty-halo {
+  .center-hub__error-mascot {
     animation: none !important;
     opacity: 0.5 !important;
     transform: none !important;
   }
 
-  .center-hub__empty-sparkle {
-    animation: none !important;
-    opacity: 0.4 !important;
-  }
-
   .center-hub__empty-cta--pressed {
     opacity: 0.85;
     transform: none;
+  }
+
+  .center-hub__flow-step-indicator--active {
+    animation: none;
   }
 }
