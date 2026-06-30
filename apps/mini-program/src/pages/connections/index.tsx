@@ -57,9 +57,6 @@ export default function ConnectionsPage() {
 
   return renderGate(
     <View className='connections-page tab-page-enter'>
-      <View className='connections-page__header'>
-        <Text className='connections-page__subtitle'>活动后建立的联系</Text>
-      </View>
 
       <ScrollView className='connections-page__list' scrollY enhanced showScrollbar={false}>
         {isLoading ? (
