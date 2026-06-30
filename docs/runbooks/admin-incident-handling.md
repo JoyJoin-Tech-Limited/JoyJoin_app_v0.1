@@ -35,7 +35,7 @@ Requires an active admin session with `operator` or `super_admin` role. The endp
 **Forgot password / reset:**
 - Only a `super_admin` can reset another admin's password.
 - In the admin portal: **Admin Accounts → ⋮ → Reset Password**.
-- API: `POST /api/admin/accounts/:id/reset-password` with `{ "newPassword": "<secure-password>" }`.
+- API: `POST /api/admin/accounts/:id/reset-password` with `{ "newPassword": "<pwd>" }` (must be at least 8 characters).
 - The reset is audit-logged (`ADMIN_PASSWORD_RESET`); the new password itself is **not** logged.
 
 **Create a new admin account:**
