@@ -21,6 +21,7 @@ import {
 import type { MiniProgramPoolRegistrationReturnContext } from '../../lib/payment/paymentPendingOrder'
 import { bustRegistrationCaches } from '../../lib/api/registrationCacheBust'
 import { CEREMONY_HEROES } from '../../lib/ceremonyHeroes'
+import { getEventTicketTailAsset } from '../../lib/eventTicketTailAssets'
 import { useLoadingDeadline } from '../../hooks/useLoadingDeadline'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
@@ -174,6 +175,7 @@ export default function EventTicketPaymentPage() {
   const [couponAppliedAt, setCouponAppliedAt] = useState<number>(0)
   const [pageEnteredAt, setPageEnteredAt] = useState<number>(0)
   const [showInclusionSheet, setShowInclusionSheet] = useState(false)
+  const [tailImageError, setTailImageError] = useState(false)
 
   const paymentInFlightRef = useRef(false)
   const verifyTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -181,6 +183,7 @@ export default function EventTicketPaymentPage() {
   const hasTrackedViewRef = useRef(false)
   const hasTrackedPlanSelectorImpressionRef = useRef(false)
   const hasTrackedTermsRowImpressionRef = useRef(false)
+  const hasTrackedTailImpressionRef = useRef(false)
 
   // Keep ref in sync with state for pollVerification closure safety
   useEffect(() => {
@@ -303,6 +306,10 @@ export default function EventTicketPaymentPage() {
   }, [isPageReady, poolId, selectedPlan, singlePrice, pack3Price, pack6Price])
 
   // Track terms row impression once the ticket card is actually rendered.
+  // Derived event-type label used for event-type-aware UI and analytics.
+  const eventType = pool?.eventType === '酒局' ? '酒局' : '饭局'
+  const eventEmoji = eventType === '酒局' ? '\u{1F377}' : '\u{1F35C}'
+
   useEffect(() => {
     if (!isPageReady || !poolId || poolLoading || !pool || hasTrackedTermsRowImpressionRef.current) return
     hasTrackedTermsRowImpressionRef.current = true
@@ -311,6 +318,17 @@ export default function EventTicketPaymentPage() {
       hasIcebreakerChip: true,
     })
   }, [isPageReady, poolId, poolLoading, pool])
+
+  // Track tail image impression once it is actually renderable.
+  useEffect(() => {
+    if (!isPageReady || !poolId || !pool || hasTrackedTailImpressionRef.current) return
+    if (deviceTier.isDegradation || tailImageError) return
+    hasTrackedTailImpressionRef.current = true
+    discoverAnalytics.track('ticket_tail_image_impression', undefined, {
+      poolId,
+      eventType,
+    })
+  }, [isPageReady, poolId, pool, deviceTier.isDegradation, tailImageError, eventType])
 
   // Reset transient flags on show (swipe-back safety)
   useDidShow(() => {
@@ -332,7 +350,11 @@ export default function EventTicketPaymentPage() {
   const pollVerification = useCallback((orderId: string, paymentId: string) => {
     setPayment({ status: 'verifying', paymentId, wechatOrderId: orderId })
     let attempts = 0
-    const maxAttempts = 24 // 24 * 1500ms = 36s base polling window
+    // Responsive fallback polling: 20 attempts × 1 second = 20 seconds total.
+    // The primary confirmation path is the WeChat Pay webhook, which typically
+    // arrives in under 5 seconds. Polling only covers delayed webhook delivery.
+    const maxAttempts = 20
+    const pollIntervalMs = 1000
 
     if (verifyTimerRef.current) clearInterval(verifyTimerRef.current)
 
@@ -470,7 +492,7 @@ export default function EventTicketPaymentPage() {
           attempts,
         })
       }
-    }, 1500)
+    }, pollIntervalMs)
   }, [queryClient, poolId, selectedPlan, currentPrice, finalPrice, bestCoupon?.code])
 
   const handlePay = useCallback(async () => {
@@ -682,8 +704,6 @@ export default function EventTicketPaymentPage() {
   }
 
   const isPaying = payment.status === 'creating' || payment.status === 'paying'
-  const eventType = pool.eventType === '酒局' ? '酒局' : '饭局'
-  const eventEmoji = eventType === '酒局' ? '\u{1F377}' : '\u{1F35C}'
   const dateLabel = formatDateTimeLabel(pool.dateTime)
   const areaLabel = pool.district || pool.city || ''
 
@@ -857,16 +877,37 @@ export default function EventTicketPaymentPage() {
             </View>
           )}
 
-          {/* Barcode decoration — fixed 28-line visual, not a scrollable list */}
-          <View className='ticket-card__barcode' aria-hidden='true'>
-            {Array.from({ length: 28 }).map((_, i) => (
-              <View
-                key={i}
-                className='ticket-card__barcode-line'
-                style={{ width: `${2 + (i % 3) * 2}rpx` }}
+          {/* Event-type tail illustration or barcode fallback */}
+          {deviceTier.isDegradation || tailImageError ? (
+            <View className='ticket-card__barcode' aria-hidden='true'>
+              {Array.from({ length: 28 }).map((_, i) => (
+                <View
+                  key={i}
+                  className='ticket-card__barcode-line'
+                  style={{ width: `${2 + (i % 3) * 2}rpx` }}
+                />
+              ))}
+            </View>
+          ) : (
+            <View className='ticket-card__tail-wrap'>
+              <Image
+                className='ticket-card__tail-image'
+                src={getEventTicketTailAsset(eventType)}
+                mode='widthFix'
+                lazyLoad={false}
+                aria-hidden='true'
+                onError={() => {
+                  logError('[EventTicketPayment] Tail image failed to load', { eventType, poolId })
+                  discoverAnalytics.track('ticket_tail_image_load_error', undefined, {
+                    poolId,
+                    eventType,
+                    error: 'image_load_failed',
+                  })
+                  setTailImageError(true)
+                }}
               />
-            ))}
-          </View>
+            </View>
+          )}
         </View>
 
         {/* ── Plan Selector ── */}
