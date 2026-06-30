@@ -312,30 +312,16 @@
   }
 
   &__flow-step-icon {
-    width: 60rpx;
-    height: 60rpx;
-    border-radius: 50%;
-    background: rgba($color-primary, 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 80rpx;
+    height: 80rpx;
     margin-bottom: $spacing-sm;
     flex-shrink: 0;
-
-    &--active {
-      background: $color-primary;
-    }
   }
 
-  &__flow-step-num {
-    font-size: $font-size-md;
-    font-weight: $font-weight-semibold;
-    color: $color-primary;
-    line-height: 1;
-
-    .connections-page__flow-step-icon--active & {
-      color: $color-surface;
-    }
+  &__flow-step-img {
+    width: 80rpx;
+    height: 80rpx;
+    display: block;
   }
 
   &__flow-step-content {
@@ -365,7 +351,7 @@
     height: 2rpx;
     flex-shrink: 0;
     position: relative;
-    margin-top: 30rpx;
+    margin-top: 40rpx;
     background: rgba($color-primary, 0.15);
 
     &::after {

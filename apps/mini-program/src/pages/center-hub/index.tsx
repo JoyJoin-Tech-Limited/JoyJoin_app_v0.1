@@ -13,7 +13,7 @@ import {
   type CenterTabDestination,
 } from '@joyjoin/shared/centerTabRouting'
 import { haptics } from '../../lib/utils/haptics'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
@@ -286,28 +286,28 @@ function CenterHubContent({
         <View className='center-hub__flow-steps'>
           <View className='center-hub__flow-step'>
             <View className='center-hub__flow-step-indicator center-hub__flow-step-indicator--active'>
-              <Text className='center-hub__flow-step-num'>1</Text>
+              <Image className='center-hub__flow-step-img' src={localAsset('/assets/icons/flow-icons/flow-1.png')} mode='aspectFit' />
             </View>
             <Text className='center-hub__flow-step-label'>报名成功</Text>
           </View>
           <View className='center-hub__flow-connector' aria-hidden='true' />
           <View className='center-hub__flow-step'>
             <View className='center-hub__flow-step-indicator'>
-              <Text className='center-hub__flow-step-num'>2</Text>
+              <Image className='center-hub__flow-step-img' src={localAsset('/assets/icons/flow-icons/flow-2.png')} mode='aspectFit' />
             </View>
             <Text className='center-hub__flow-step-label'>等待匹配</Text>
           </View>
           <View className='center-hub__flow-connector' aria-hidden='true' />
           <View className='center-hub__flow-step'>
             <View className='center-hub__flow-step-indicator'>
-              <Text className='center-hub__flow-step-num'>3</Text>
+              <Image className='center-hub__flow-step-img' src={localAsset('/assets/icons/flow-icons/flow-3.png')} mode='aspectFit' />
             </View>
             <Text className='center-hub__flow-step-label'>小队揭晓</Text>
           </View>
           <View className='center-hub__flow-connector' aria-hidden='true' />
           <View className='center-hub__flow-step'>
             <View className='center-hub__flow-step-indicator center-hub__flow-step-indicator--active'>
-              <Text className='center-hub__flow-step-num'>4</Text>
+              <Image className='center-hub__flow-step-img' src={localAsset('/assets/icons/flow-icons/flow-4.png')} mode='aspectFit' />
             </View>
             <Text className='center-hub__flow-step-label'>确认出席</Text>
           </View>
