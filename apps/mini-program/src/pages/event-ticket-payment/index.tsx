@@ -278,6 +278,15 @@ export default function EventTicketPaymentPage() {
   const discountAmount = calculateDiscount(bestCoupon, currentPrice)
   const finalPrice = Math.max(0, currentPrice - discountAmount)
 
+  // If the selected/auto-selected coupon yields zero discount for the current price,
+  // don't send it to the server. This prevents the server from rejecting the order
+  // with "此优惠码不可用或已过期" when the test price is below the coupon's effective
+  // minimum (e.g. 1 cent with a percentage coupon).
+  const effectiveCouponCode = useMemo(() => {
+    if (discountAmount > 0) return bestCoupon?.code
+    return undefined
+  }, [discountAmount, bestCoupon?.code])
+
   // Track page view once the screen is ready and pool is known.
   useEffect(() => {
     if (!isPageReady || !poolId || hasTrackedViewRef.current) return
@@ -517,7 +526,7 @@ export default function EventTicketPaymentPage() {
       })
 
       const payload = returnContext?.draft ?? {}
-      const couponCode = bestCoupon?.code
+      const couponCode = effectiveCouponCode
 
       const result = await registerForPoolWithPayment(apiRequest, poolId, {
         ...payload,
