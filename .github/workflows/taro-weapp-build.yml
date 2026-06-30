@@ -66,7 +66,7 @@ jobs:
         run: npm run build:weapp -w mini-program
         env:
           TARO_APP_CDN_BASE_URL: ${{ vars.TARO_APP_CDN_BASE_URL || 'https://cdn.joyjoinapp.com/static' }}
-          TARO_APP_API_BASE_URL: ${{ github.event.inputs.api_target == 'staging' && 'https://staging.joyjoinapp.com' || 'https://api.joyjoinapp.com' }}
+          TARO_APP_API_BASE_URL: ${{ github.event.inputs.api_target == 'production' && 'https://api.joyjoinapp.com' || 'https://staging.joyjoinapp.com' }}
 
       - name: Check package size
         run: npm run check:package-size -w mini-program
