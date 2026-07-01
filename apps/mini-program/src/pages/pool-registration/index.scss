@@ -24,6 +24,42 @@
     @include safe-area-inline($container-padding);
   }
 
+  &__persona-banner {
+    margin: 0 $spacing-md $spacing-xs;
+    padding: $spacing-xs $spacing-md;
+    border-radius: 24rpx;
+    background: rgba($color-primary, 0.08);
+    border: 1rpx solid rgba($color-primary, 0.12);
+  }
+
+  &__persona-banner-text {
+    font-size: 24rpx;
+    color: $color-primary;
+    font-weight: 500;
+    text-align: center;
+    display: block;
+  }
+
+  &__persona-error {
+    margin: 0 $spacing-md $spacing-xs;
+    padding: $spacing-xs $spacing-md;
+    border-radius: 24rpx;
+    background: rgba($color-text-tertiary, 0.06);
+    border: 1rpx solid rgba($color-text-tertiary, 0.12);
+    transition: background 0.12s ease;
+
+    &--active {
+      background: rgba($color-text-tertiary, 0.1);
+    }
+  }
+
+  &__persona-error-text {
+    font-size: 24rpx;
+    color: $color-text-tertiary;
+    text-align: center;
+    display: block;
+  }
+
   &__success {
     @include flex-center;
     flex-direction: column;

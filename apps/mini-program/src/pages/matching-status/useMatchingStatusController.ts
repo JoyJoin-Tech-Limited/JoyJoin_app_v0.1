@@ -108,6 +108,7 @@ export function useMatchingStatusController({
   const queryClient = useQueryClient()
   const { user, isLoading: authLoading } = useAuthGuard()
   const matchingLiveRevealEnabled = user?.features?.matchingLiveReveal ?? true
+  const matchingPuzzlePreludeEnabled = user?.features?.matchingPuzzlePreludeEnabled ?? false
   const { shouldReduceMotion } = useMiniRevealMotion(routerParams)
   const cachedAuthUser = queryClient.getQueryData<AuthUserResponse | null>(AUTH_QUERY_KEY)
   const { effectiveAuthUser, isAuthBootstrapPending } = resolveMatchingStatusAuthBootstrap({
@@ -845,5 +846,6 @@ export function useMatchingStatusController({
     isMatchCompassFetching,
     handleUpdateMatchCompass,
     matchingLiveRevealEnabled,
+    matchingPuzzlePreludeEnabled,
   }
 }

@@ -2,7 +2,7 @@ import { View, Text, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getEventPool, getMyPoolRegistrations, registerForPool, type EventPoolSummary, type PoolRegistrationSummary } from '@shared/api'
+import { getEventPool, getMyPoolRegistrations, registerForPool, getPoolPersonaSnapshot, type EventPoolSummary, type PoolRegistrationSummary, type PoolPersonaSnapshotResponse } from '@shared/api'
 import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
 import { getErrorMessage, type ErrorCode } from '@shared/copy/errorBaselines'
 import { ALL_INTENT_VALUES, INTENT_FLEXIBLE_OPTION } from '@shared/constants'
@@ -71,6 +71,7 @@ import ChoiceCard from './components/ChoiceCard'
 import ChoiceChip from './components/ChoiceChip'
 import { getIntentFeedback } from './components/intentFeedback'
 import PoolRegistrationHero from './components/PoolRegistrationHero'
+import PersonaSnapshotCard from './components/PersonaSnapshotCard'
 import StepPill from './components/StepPill'
 import XiaoyueCoachCard from './components/XiaoyueCoachCard'
 import XiaoyueLetterCard from './components/XiaoyueLetterCard'
@@ -207,6 +208,86 @@ export default function PoolRegistrationPage() {
     enabled: !!poolId && !authLoading,
     staleTime: 30_000,
   })
+
+  // Aggregate persona snapshot for the pool (feature-flagged, kill-switch can disable)
+  const personaSnapshotEnabled = user?.features?.personaSnapshotEnabled ?? true
+  const [personaSnapshotError, setPersonaSnapshotError] = useState(false)
+  const {
+    data: personaSnapshot,
+    isLoading: isLoadingPersonaSnapshot,
+    refetch: refetchPersonaSnapshot,
+  } = useQuery<PoolPersonaSnapshotResponse | null>({
+    queryKey: ['mini-program', 'pool-persona-snapshot', poolId],
+    queryFn: async () => {
+      if (!poolId || !personaSnapshotEnabled) return null
+      try {
+        setPersonaSnapshotError(false)
+        return await getPoolPersonaSnapshot(apiRequest, poolId)
+      } catch (err) {
+        setPersonaSnapshotError(true)
+        logError('[PoolRegistration] Failed to load persona snapshot', {
+          poolId,
+          message: resolveMessage(err, 'load-failed'),
+        })
+        discoverAnalytics.track('persona_snapshot_load_error', poolId, {
+          message: resolveMessage(err, 'load-failed'),
+        })
+        return null
+      }
+    },
+    enabled: !!poolId && !authLoading && personaSnapshotEnabled,
+    staleTime: 30_000,
+  })
+
+  // Track persona snapshot impression once
+  const hasTrackedPersonaImpressionRef = useRef(false)
+  useEffect(() => {
+    if (!personaSnapshot || hasTrackedPersonaImpressionRef.current) return
+    hasTrackedPersonaImpressionRef.current = true
+    discoverAnalytics.track('persona_snapshot_impression', poolId, {
+      stateBand: personaSnapshot.stateBand,
+      totalRegistrants: personaSnapshot.totalRegistrants,
+    })
+    discoverAnalytics.track('persona_snapshot_state_band', poolId, {
+      stateBand: personaSnapshot.stateBand,
+      totalRegistrants: personaSnapshot.totalRegistrants,
+      dimensionCount: personaSnapshot.dimensions.filter((d) => d.disclosed).length,
+    })
+  }, [personaSnapshot, poolId])
+
+  // Surface a "new registrant" micro-banner when count grew meaningfully since last view
+  const MIN_BANNER_DELTA = 3
+  const BANNER_COOLDOWN_MS = 24 * 60 * 60 * 1000
+  const [showNewRegistrantBanner, setShowNewRegistrantBanner] = useState(false)
+  const [newRegistrantDelta, setNewRegistrantDelta] = useState(0)
+  useEffect(() => {
+    if (!personaSnapshot || personaSnapshot.totalRegistrants === 0) return
+    try {
+      const storageKey = `jj_pool_persona_seen_${poolId}`
+      const raw = Taro.getStorageSync(storageKey)
+      const parsed = typeof raw === 'object' && raw !== null ? raw : { count: 0 }
+      const lastCount = typeof parsed.count === 'number' ? parsed.count : 0
+      const lastBannerAt = typeof parsed.lastBannerAt === 'number' ? parsed.lastBannerAt : 0
+      const delta = personaSnapshot.totalRegistrants - lastCount
+      const now = Date.now()
+      const canShowBanner = delta >= MIN_BANNER_DELTA && now - lastBannerAt > BANNER_COOLDOWN_MS
+      if (canShowBanner) {
+        setShowNewRegistrantBanner(true)
+        setNewRegistrantDelta(delta)
+        discoverAnalytics.track('persona_snapshot_new_registrant_banner_shown', poolId, {
+          previousCount: lastCount,
+          currentCount: personaSnapshot.totalRegistrants,
+          delta,
+        })
+      }
+      Taro.setStorageSync(storageKey, {
+        count: personaSnapshot.totalRegistrants,
+        lastBannerAt: canShowBanner ? now : lastBannerAt,
+      })
+    } catch {
+      // non-blocking
+    }
+  }, [personaSnapshot, poolId])
 
   const alreadyRegistered = useMemo(() => {
     if (!myRegistrations || !poolId) return false
@@ -873,6 +954,36 @@ export default function PoolRegistrationPage() {
             visible={staggerMounted}
             reduceMotion={reduceMotion}
           />
+          {personaSnapshotEnabled && (
+            <>
+              {showNewRegistrantBanner && !isLoadingPersonaSnapshot && personaSnapshot ? (
+                <View className='pool-reg__persona-banner'>
+                  <Text className='pool-reg__persona-banner-text'>
+                    最近又新增了 {newRegistrantDelta} 位伙伴，画像已更新
+                  </Text>
+                </View>
+              ) : null}
+              {personaSnapshotError && !isLoadingPersonaSnapshot ? (
+                <View
+                  className='pool-reg__persona-error'
+                  onClick={() => refetchPersonaSnapshot()}
+                  hoverClass='pool-reg__persona-error--active'
+                  role='button'
+                  aria-label='画像加载失败，点击重试'
+                >
+                  <Text className='pool-reg__persona-error-text'>画像加载失败，点击重试</Text>
+                </View>
+              ) : null}
+              <PersonaSnapshotCard
+                poolId={poolId}
+                eventType={eventType}
+                snapshot={personaSnapshot}
+                isLoading={isLoadingPersonaSnapshot}
+                userArchetype={user?.primaryArchetype ?? null}
+                visible={staggerMounted}
+              />
+            </>
+          )}
           <XiaoyueLetterCard
             insight={brief.insight}
             matchingPromise={brief.matchingPromise}

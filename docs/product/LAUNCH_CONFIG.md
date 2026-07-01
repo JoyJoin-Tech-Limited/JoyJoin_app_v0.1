@@ -228,6 +228,61 @@ available at the `/api/metrics` endpoint.
 
 ---
 
+## Discover UI Feature Flag
+
+### `ORACLE_CARD_CORNER_STAT_ENABLED`
+
+Controls whether the Discover `OracleCard` shows a **top-right registration-count badge** (`X 人已报名` and event-type-aware variants) on each pool card.
+
+| Value | Behaviour |
+|---|---|
+| `true` (default) | Badge renders when `currentParticipants > 0` and the pool is not full. Copy adapts to event type: `饭局` → "X 人入座中", `酒局` → "X 人已入席", others → "X 位伙伴已加入". |
+| `false` | Badge is hidden; cards revert to the pre-badge visual layout. |
+
+```bash
+# Show the corner participant-count badge (default)
+ORACLE_CARD_CORNER_STAT_ENABLED=true
+
+# Hide the corner participant-count badge (kill switch)
+ORACLE_CARD_CORNER_STAT_ENABLED=false
+```
+
+**Client exposure:** The flag is exposed via `/api/auth/user` as `features.oracleCardCornerStatEnabled` and consumed by `pages/discover/index.tsx`, which forwards it to `OracleCard`. The component defaults to `true` if the flag is absent.
+
+**Analytics:** When enabled, the card emits `corner_badge_impression` once per mount (if count > 0) and `corner_badge_live_update` whenever the count changes while the card is mounted. The `pool_card_tap` event includes `hasCornerCount` and `cornerCount` context.
+
+---
+
+## Pool Registration Persona Snapshot
+
+| Env var | `PERSONA_SNAPSHOT_ENABLED` |
+|---|---|
+| **Default** | `true` |
+| **Flag key** | `personaSnapshotEnabled` |
+| **Type** | Client-facing kill switch |
+| **Exposed in** | `GET /api/auth/user` → `features.personaSnapshotEnabled` |
+
+Controls whether the aggregate "persona 拼图卡" preview card is rendered on the first screen of pool registration. When enabled, the card shows a live, algorithmically-sorted puzzle metaphor of current registrants across five dimensions (social archetype, industry background, event intent, age distribution, gender ratio). When disabled, the card is not rendered and no snapshot request is made.
+
+| Value | Behavior |
+|---|---|
+| `true` (default) | Card renders on pool-registration step 0; `GET /api/event-pools/:id/persona-snapshot` is available. |
+| `false` | Card is hidden; registration flow unchanged. |
+
+```bash
+# Show the persona snapshot preview card (default)
+PERSONA_SNAPSHOT_ENABLED=true
+
+# Hide the persona snapshot preview card
+PERSONA_SNAPSHOT_ENABLED=false
+```
+
+**Client exposure:** The flag is exposed via `/api/auth/user` as `features.personaSnapshotEnabled` and consumed by `pages/pool-registration/index.tsx`. The component defaults to `true` if the flag is absent.
+
+**Analytics:** When enabled, the card emits `persona_snapshot_impression` on first view, `persona_snapshot_expand_sheet` when the bottom sheet opens, `persona_snapshot_dimension_tap` when a dimension pill is tapped, `persona_snapshot_new_registrant_banner_shown` when the registrant count grew since the last view, `persona_snapshot_refresh_tap` on explicit refresh (future), and `persona_snapshot_state_band` carrying the computed `stateBand`.
+
+---
+
 ## Rate Limiting
 
 All rate limits are applied per user ID (or IP for anonymous requests) using an

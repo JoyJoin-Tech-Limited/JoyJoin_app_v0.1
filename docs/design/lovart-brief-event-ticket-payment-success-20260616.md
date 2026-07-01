@@ -1,5 +1,7 @@
 # Lovart Design Brief: Event Ticket Payment Success Hero
 
+> **Superseded by [`lovart-brief-event-ticket-payment-success-v2-20260701.md`](./lovart-brief-event-ticket-payment-success-v2-20260701.md)** (2026-07-01). The v1 Corgi-only asset and dimensions below are retained for historical reference only; the active implementation uses `eventTicketSuccessV2`.
+
 ## Goal
 Create a full-bleed ceremony illustration for the WeChat Mini Program event-ticket payment success screen, making the "报名成功！" moment feel warm, celebratory, and distinctly JoyJoin.
 

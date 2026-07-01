@@ -1,6 +1,6 @@
 # Mini-Program — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-06-30
+> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-07-01
 
 ---
 
@@ -255,3 +255,15 @@ npx miniprogram-ci upload \
 - **Haptics:** primary CTAs (`去我的足迹查看状态`) use `haptics('medium')`; the secondary "开启匹配结果通知" button uses `haptics('light')`.
 - **Analytics:** terminal states emit `registration_terminal_state_view` on mount and `registration_terminal_cta_tap` / `registration_terminal_notify_tap` on tap.
 - **Notification button state:** the parent page (`pool-registration/index.tsx`) tracks `isEnablingNotifications` / `notificationsEnabled`; the button shows a loading spinner during the WeChat subscribe request and becomes disabled with "已开启提醒" after success.
+
+## 14. Discover / OracleCard
+
+- **`OracleCard`** (`src/components/discover/OracleCard.tsx`) — primary pool card on `pages/discover/index`. 6-layer visual hierarchy: L1 hero message, L2 topline (pulse + countdown), L3 decision facts, L4 title, L5 social-proof teaser, L6 progress bar + CTA. Per-pool 4-branch narrative pivot (empty/rare/present/dominant). Full-pool disabled state with grey CTA + "已满员". High-chemistry celebration badge when ≥3 high-match archetypes.
+- **Corner registration-count badge (2026-07-01):** Top-right warm beige pill that overlaps the Lovart event-type vignette. Shows real participant count when `currentParticipants > 0` and the pool is not full. Event-type-aware copy: `饭局` → "X 人入座中", `酒局` → "X 人已入席", others → "X 位伙伴已加入". Count capped at `999+` for predictable pill width.
+- **Badge color:** Number uses `getContrastSafeArchetypeColor(userArchetype)` when the user's archetype is known; otherwise falls back to the card's `accentFamily` color. No artificial urgency colors (red/orange) — signal is factual, not scarcity-driven.
+- **Feature flag:** Kill-switched via `user.features.oracleCardCornerStatEnabled` (env `ORACLE_CARD_CORNER_STAT_ENABLED`, default `true`). The page passes the flag into `OracleCard`; the component defaults to `true` when absent.
+- **Animation / performance:** Badge entrance is a single pop-in (`transform + opacity`). Count-up animation is intentionally omitted to reduce noise and paint cost. Animation is suppressed under `prefers-reduced-motion` or on degradation-tier devices via `getSystemReducedMotion()` + `useDeviceTier().isDegradation`.
+- **Layout safety:** All card text layers reserve vertical space so the badge never overlaps readable copy. The badge sits inside the vignette's safe zone; vignette remains visible behind the translucent pill.
+- **Skeleton state:** A shimmer placeholder pill renders while pool data is loading, gated by the same reduced-motion / degradation rules.
+- **Analytics:** `corner_badge_impression` once per mount (if count > 0), `corner_badge_live_update` when count changes while mounted, and `pool_card_tap` carries `hasCornerCount` + `cornerCount`.
+- **Accessibility / ARIA:** Card keeps `role='button'`, `aria-label` includes the participant count when badge is shown, and `aria-disabled` is set when full or disabled. Tap target remains ≥88rpx.

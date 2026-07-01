@@ -41,6 +41,10 @@
     text-align: left;
   }
 
+  &__puzzle-bubble {
+    margin-bottom: $spacing-md;
+  }
+
   &__overlay-eyebrow {
     display: block;
     font-size: $font-size-xs;

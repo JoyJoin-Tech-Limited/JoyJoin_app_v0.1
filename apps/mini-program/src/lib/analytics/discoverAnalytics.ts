@@ -50,6 +50,8 @@ export type DiscoverAnalyticsEventType =
   | 'geo_auto_filter'
   | 'filter_auto_relax'
   | 'presence_strip_impression'
+  | 'corner_badge_impression'
+  | 'corner_badge_live_update'
   | 'city_picker_open'
   | 'city_picker_close'
   | 'city_picker_select'
@@ -58,6 +60,12 @@ export type DiscoverAnalyticsEventType =
   | 'city_picker_success'
   | 'city_picker_offline_blocked'
   | 'city_picker_error'
+  | 'persona_snapshot_impression'
+  | 'persona_snapshot_expand_sheet'
+  | 'persona_snapshot_dimension_tap'
+  | 'persona_snapshot_new_registrant_banner_shown'
+  | 'persona_snapshot_state_band'
+  | 'persona_snapshot_load_error'
 
 export interface DiscoverAnalyticsEvent {
   eventType: DiscoverAnalyticsEventType

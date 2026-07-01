@@ -292,7 +292,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     .join(' ')
 
   const handleOpenBox = useCallback(() => {
-    triggerLightHaptic()
+    haptics('medium')
     setAnalysisStage(0)
     setFlowState('shaking')
   }, [])
@@ -353,6 +353,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     }
 
     const timer = setTimeout(() => {
+      haptics('cardReveal')
       haptics('medium')
       setFlowState('revealed')
       squadUnboxingAnalytics.track('squad_unboxing_box_open_milestone', {

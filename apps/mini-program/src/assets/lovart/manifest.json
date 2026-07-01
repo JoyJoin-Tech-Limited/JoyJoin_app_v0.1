@@ -12,15 +12,40 @@
       "outputDimensions": { "width": 800, "height": 800 },
       "outputSizes": { "webp": 0, "png": 0 }
     },
-    "lovart-profile-incomplete": {
+    "lovart-pool-persona-base-20260701-v1": {
       "sourceChecksum": "sha256:pending",
-      "outputDimensions": { "width": 800, "height": 800 },
-      "outputSizes": { "webp": 0, "png": 0 }
+      "outputDimensions": { "width": 750, "height": 398 },
+      "outputSizes": { "webp": 27684, "png": 208004 }
     },
-    "lovart-test-incomplete": {
+    "lovart-pool-persona-cluster-texture-20260701-v1": {
       "sourceChecksum": "sha256:pending",
       "outputDimensions": { "width": 800, "height": 800 },
-      "outputSizes": { "webp": 0, "png": 0 }
+      "outputSizes": { "webp": 42260, "png": 196233 }
+    },
+    "lovart-pool-persona-paw-nudge-20260701-v1": {
+      "sourceChecksum": "sha256:pending",
+      "outputDimensions": { "width": 184, "height": 200 },
+      "outputSizes": { "webp": 10420, "png": 15694 }
+    },
+    "lovart-particle-purple-20260701-v1": {
+      "sourceChecksum": "sha256:pending",
+      "outputDimensions": { "width": 256, "height": 256 },
+      "outputSizes": { "webp": 12574, "png": 19670 }
+    },
+    "lovart-particle-coral-20260701-v1": {
+      "sourceChecksum": "sha256:pending",
+      "outputDimensions": { "width": 256, "height": 256 },
+      "outputSizes": { "webp": 10964, "png": 21954 }
+    },
+    "lovart-particle-blue-20260701-v1": {
+      "sourceChecksum": "sha256:pending",
+      "outputDimensions": { "width": 256, "height": 256 },
+      "outputSizes": { "webp": 13034, "png": 24217 }
+    },
+    "lovart-particle-green-20260701-v1": {
+      "sourceChecksum": "sha256:pending",
+      "outputDimensions": { "width": 256, "height": 256 },
+      "outputSizes": { "webp": 15362, "png": 25803 }
     }
   }
 }

@@ -87,6 +87,16 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     socialIcebreakerCustomModeEnabled?: boolean
     /** When true, enables the redesigned profile page UI. Default: true. */
     profileRedesignEnabled?: boolean
+    /** When false, hides the corner participant-count badge on Discover OracleCards.
+     *  Default: true. */
+    oracleCardCornerStatEnabled?: boolean
+    /** When false, hides the aggregate persona puzzle preview card on pool
+     *  registration. Default: true. */
+    personaSnapshotEnabled?: boolean
+    /** When true, the matching-status live-reveal members stage shows an
+     *  abstract puzzle-piece prelude instead of the member identity grid.
+     *  Default: false. */
+    matchingPuzzlePreludeEnabled?: boolean
   }
 }
 

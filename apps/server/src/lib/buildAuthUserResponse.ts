@@ -120,6 +120,9 @@ const [
     squadUnboxingDragRevealEnabled,
     socialIcebreakerCustomModeEnabled,
     profileRedesignEnabled,
+    oracleCardCornerStatEnabled,
+    personaSnapshotEnabled,
+    matchingPuzzlePreludeEnabled,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
     getFeatureFlag('smartProfession', true),
@@ -135,6 +138,9 @@ const [
     getFeatureFlag('squadUnboxingDragRevealEnabled', true),
     getFeatureFlag('socialIcebreakerCustomModeEnabled', true),
     getFeatureFlag('profileRedesignEnabled', true),
+    getFeatureFlag('oracleCardCornerStatEnabled', true),
+    getFeatureFlag('personaSnapshotEnabled', true),
+    getFeatureFlag('matchingPuzzlePreludeEnabled', false),
   ]);
 
   const appMode: 'production' | 'test' = isSingleTestMode() ? 'test' : 'production';
@@ -167,6 +173,9 @@ const [
       squadUnboxingDragRevealEnabled,
       socialIcebreakerCustomModeEnabled,
       profileRedesignEnabled,
+      oracleCardCornerStatEnabled,
+      personaSnapshotEnabled,
+      matchingPuzzlePreludeEnabled,
     },
   };
 

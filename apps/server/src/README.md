@@ -177,6 +177,19 @@ Primary files:
 - `apps/server/src/wechatAuth.ts` — both login endpoints accept `referralCode` for attribution
 - `apps/server/src/routes/domains/userEventPools.ts` — invitation code lookup, self-referral guard, dedup guard, referral conversion recording
 
+### Pool Persona Snapshot
+
+Aggregate, anonymized preview of current registrants rendered as a "persona 拼图卡" on the first screen of pool registration.
+
+Primary files:
+- `apps/server/src/routes/domains/userEventPools.ts` — mounts `GET /api/event-pools/:id/persona-snapshot`
+- `apps/server/src/repositories/eventPoolPersonaRepo.ts` — computes dimensions, thresholds, and state band
+- `packages/shared/src/api/eventPools.ts` — `PoolPersonaSnapshotResponse` DTO
+
+Boundary:
+- Returns only `matchStatus='pending'` registrants; no PII is exposed.
+- Client kill-switch via `personaSnapshotEnabled` feature flag (default `true`).
+
 ### Predictive Shell (composite tab data)
 
 Owns composite endpoints that bundle tab-specific data to reduce client round-trips.
@@ -203,7 +216,7 @@ Primary files:
 
 Key endpoints:
 - `POST /api/analytics/profile` — Profile tab interaction events (`profile_stat_tap`, `profile_archetype_cta_tap`, `profile_menu_tap`, `profile_logout_tap`, `profile_logout_cancel`, `profile_shell_retry`, `profile_share_app_message`, `profile_share_timeline`, `profile_milestone_impression`, `profile_milestone_tap`, `profile_pull_refresh`, `profile_share_card_generated`, `profile_share_card_error`, `profile_view`). Stored in `discoverAnalyticsEvents`.
-- `POST /api/analytics/discover` — Discover and paid-event-ticket funnel events. Includes `event_ticket_payment_view`, `plan_switch`, `welcome_coupon_auto_applied`, `pay_start`, `pay_success`/`pay_cancel`/`pay_fail`/`pay_timeout`, `refund_policy_viewed`, `event_ticket_payment_abandon`, the icebreaker-inclusion terms events `ticket_terms_row_impression`, `ticket_inclusion_sheet_open`, `ticket_inclusion_sheet_close`, and the ticket-tail asset events `ticket_tail_image_impression`, `ticket_tail_image_load_error`. Stored in `discoverAnalyticsEvents`.
+- `POST /api/analytics/discover` — Discover, paid-event-ticket funnel, and pool-registration persona-snapshot events. Includes `event_ticket_payment_view`, `plan_switch`, `welcome_coupon_auto_applied`, `pay_start`, `pay_success`/`pay_cancel`/`pay_fail`/`pay_timeout`, `refund_policy_viewed`, `event_ticket_payment_abandon`, the icebreaker-inclusion terms events `ticket_terms_row_impression`, `ticket_inclusion_sheet_open`, `ticket_inclusion_sheet_close`, the ticket-tail asset events `ticket_tail_image_impression`, `ticket_tail_image_load_error`, and `persona_snapshot_*` events (`persona_snapshot_impression`, `persona_snapshot_expand_sheet`, `persona_snapshot_dimension_tap`, `persona_snapshot_new_registrant_banner_shown`, `persona_snapshot_state_band`, `persona_snapshot_load_error`). Stored in `discoverAnalyticsEvents`.
 - `POST /api/analytics/payment` — Payment Ritual V2 funnel events; stored in `paymentRitualEvents`.
 - `POST /api/analytics/auth` — Auth revalidation gate events (`auth_revalidation_started`, `auth_revalidation_succeeded`, `auth_revalidation_failed`, `gate_timeout`, `gate_retry`, `gate_dismiss`). Stored in `discoverAnalyticsEvents`.
 - `POST /api/analytics/squad_unboxing` — Squad-unboxing reveal interaction events. Stored in `discoverAnalyticsEvents`.

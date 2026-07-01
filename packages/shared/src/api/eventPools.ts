@@ -74,6 +74,42 @@ export type EventThemeVibe = 'playful' | 'professional' | 'creative' | 'adventur
 export type PoolMatchStatus = 'pending' | 'matched' | 'completed' | 'unmatched'
 export type PoolInvitationRole = 'inviter' | 'invitee'
 export type PoolGroupStatus = 'confirmed' | 'completed' | 'cancelled'
+export type PoolPersonaStateBand = 'seed' | 'glimmer' | 'outline' | 'clear' | 'full'
+
+export interface PoolPersonaDimensionCluster {
+  label: string
+  count: number
+  percentage: number
+}
+
+export interface PoolPersonaDimension {
+  key: 'archetype' | 'industry' | 'intent' | 'age' | 'gender'
+  label: string
+  total: number
+  disclosed: boolean
+  clusters: PoolPersonaDimensionCluster[]
+}
+
+export interface PoolPersonaSnapshotResponse {
+  stateBand: PoolPersonaStateBand
+  totalRegistrants: number
+  dimensions: PoolPersonaDimension[]
+  thresholds: {
+    archetypeTotal: number
+    archetypeTopCount: number
+    industryTotal: number
+    industryClusterMin: number
+    intentTotal: number
+    intentClusterMin: number
+    demographicTotal: number
+    demographicClusterMin: number
+    fullSheetTotal: number
+  }
+  latestRegistrationAt: string | null
+  snapshotComputedAt: string
+  /** The requesting user's archetype, if known, for client-side personalization. */
+  userArchetype?: string | null
+}
 
 export interface PoolRegistrationSummary {
   id: string
@@ -349,5 +385,14 @@ export function confirmPoolGroupAttendance(
   return api<ConfirmPoolGroupAttendanceResponse>({
     path: `/api/pool-groups/${encodeURIComponent(groupId)}/confirm-attendance`,
     method: 'POST',
+  })
+}
+
+export function getPoolPersonaSnapshot(
+  api: ApiTransport,
+  poolId: string
+): Promise<PoolPersonaSnapshotResponse> {
+  return api<PoolPersonaSnapshotResponse>({
+    path: `/api/event-pools/${encodeURIComponent(poolId)}/persona-snapshot`,
   })
 }

@@ -53,11 +53,25 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  or share-card entry point. Env fallback: PROFILE_REDESIGN_ENABLED
    *  (default: true). */
   profileRedesignEnabled: "PROFILE_REDESIGN_ENABLED",
+  /** Discover OracleCard corner participant-count badge kill-switch. When false,
+   *  the mini-program hides the top-right registration-count badge on pool cards.
+   *  Env fallback: ORACLE_CARD_CORNER_STAT_ENABLED (default: true). */
+  oracleCardCornerStatEnabled: "ORACLE_CARD_CORNER_STAT_ENABLED",
   /** Master kill-switch for venue assignment after pool matching.
    *  When false, assignVenuesToGroups() marks all groups unassigned
    *  with reason 'feature_disabled'.
    *  Env fallback: VENUE_ASSIGNMENT_ENABLED (default: true). */
   venueAssignmentEnabled: "VENUE_ASSIGNMENT_ENABLED",
+  /** Pool registration persona snapshot card kill-switch. When false, the
+   *  mini-program hides the aggregate persona puzzle preview on the first
+   *  screen of pool registration. Env fallback: PERSONA_SNAPSHOT_ENABLED
+   *  (default: true). */
+  personaSnapshotEnabled: "PERSONA_SNAPSHOT_ENABLED",
+  /** When true, the matching-status live-reveal members stage shows an
+   *  abstract puzzle-piece prelude instead of the member identity grid.
+   *  Real identity reveal remains in squad-unboxing. Env fallback:
+   *  MATCHING_PUZZLE_PRELUDE_ENABLED (default: false). */
+  matchingPuzzlePreludeEnabled: "MATCHING_PUZZLE_PRELUDE_ENABLED",
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

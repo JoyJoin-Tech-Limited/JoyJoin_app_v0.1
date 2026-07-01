@@ -91,6 +91,7 @@ export default function MatchingStatusPage() {
     isMatchCompassFetching,
     handleUpdateMatchCompass,
     matchingLiveRevealEnabled,
+    matchingPuzzlePreludeEnabled,
   } = controller
 
   const handleBrowsePools = () => { haptics('light'); _handleBrowsePools() }
@@ -538,6 +539,7 @@ export default function MatchingStatusPage() {
             matchedGroupNumber={matchedData?.groupNumber}
             shouldReduceMotion={shouldReduceMotion}
             hasRevealed={hasRevealed}
+            puzzlePreludeEnabled={matchingPuzzlePreludeEnabled}
             persistedThemeSummary={persistedThemeSummary}
             resolvedGroupId={resolvedGroupId}
             liveRevealError={liveRevealError}

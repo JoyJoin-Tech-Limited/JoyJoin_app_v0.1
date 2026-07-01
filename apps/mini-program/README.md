@@ -35,6 +35,7 @@ This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 - `src/components/onboarding/ProfileReviewInviteCard.tsx` — invitation teaser card rendered after the welcome-coupon state settles on profile-review. Uses Lovart `invite-teaser.webp` with CDN-first loading and local/BrandLogo fallback, disabled/busy states, and haptics. Tapping completes onboarding and routes to Discover; reveal triggers a predictive `GET /api/shell/discover` prefetch via `PrefetchEngine`.
 - `src/components/events/FootprintOracleCard.tsx` — interactive "足迹" tab event card (wraps `EventSummaryCard` with list affordances).
 - `src/components/events/EventSummaryCard.tsx` — shared presentational event-card shell used by `FootprintOracleCard` and read-only confirmation surfaces such as pool-registration terminal states. Renders the same gradient shell, status pulse pill, segmented countdown, title, date/time/location meta, and corner vignette. Supports an `interactive` prop to toggle tap affordances; title clamps to 2 lines with `keep-all` word breaking.
+- `src/pages/pool-registration/components/PersonaSnapshotCard.tsx` — aggregate "persona 拼图卡" preview rendered on pool-registration step 0. Gated by `user.features.personaSnapshotEnabled`; uses CDN Lovart art with subpackage fallback and `usePersonaSnapshotAnimation.ts`.
 - `src/hooks/useEventCountdown.ts` — visibility-aware countdown hook returning `display`, `segments`, `isUrgent`, `hasStarted`, `isLive`. Gated by viewport visibility, app background, reduced-motion, and device tier.
 - `src/lib/utils/eventDisplay.ts` — `formatEventDateTime` (with `今天`/`明天`/`后天` relative prefixes), `getJoinedEventDisplayDateTime` for display-time vs matching-time precedence, and `isJoinedEventTerminal()` for terminal-state detection.
 - `src/lib/utils/accessibility.ts` — `getSystemReducedMotion()` canonical helper for reading the OS-level reduced-motion preference.
@@ -57,6 +58,10 @@ src/
 │   ├── onboarding/      # Subpackage: onboarding flow
 │   ├── pool-registration/  # Subpackage: pool sign-up flow; terminal states reuse EventSummaryCard
 │   │   └── components/
+│   │       ├── PersonaSnapshotCard.tsx          # aggregate persona puzzle preview card
+│   │       ├── PersonaSnapshotSheet.tsx         # detail bottom sheet for the preview card
+│   │       ├── usePersonaSnapshotAnimation.ts   # entrance/resolve animation orchestration
+│   │       ├── poolPersonaAssets.ts             # CDN + subpackage asset paths
 │   │       └── PoolRegistrationTerminalStates.tsx  # loading / empty / already-joined / success states
 │   ├── blind-box-payment/
 │   ├── payment-verification/
@@ -177,6 +182,7 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 *Pool-registration subpackage:*
 - `src/pages/pool-registration/assets/` → `dist/pages/pool-registration/assets/` (pool-specific hero backdrops; Batch C ceremony registry is CDN-backed)
 - `src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-*.webp` → `dist/assets/pool-heroes/` (main-package local fallback that survives `clean:cdn-assets`; CDN primary via `assets/ceremony/`)
+- `src/pages/pool-registration/assets/pool-persona/` → `dist/pages/pool-registration/assets/pool-persona/` (persona snapshot card CDN fallbacks)
 
 *Icon tiers (bundled with @1x/@2x retina support via `JoyJoinIcon`; `status`/`semantic`/`ui` @3x stripped at build; `intent` ships as single 144×144 WebP):*
 - `src/assets/icons/mood-icons` (~16KB raw)

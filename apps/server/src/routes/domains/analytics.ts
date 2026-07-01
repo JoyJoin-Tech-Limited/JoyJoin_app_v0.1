@@ -136,6 +136,12 @@ const DISCOVER_EVENT_TYPES = [
   "city_picker_success",
   "city_picker_offline_blocked",
   "city_picker_error",
+  "persona_snapshot_impression",
+  "persona_snapshot_expand_sheet",
+  "persona_snapshot_dimension_tap",
+  "persona_snapshot_new_registrant_banner_shown",
+  "persona_snapshot_state_band",
+  "persona_snapshot_load_error",
 ] as const;
 
 type DiscoverEventType = (typeof DISCOVER_EVENT_TYPES)[number];
@@ -190,6 +196,10 @@ const SQUAD_UNBOXING_EVENT_TYPES = [
   "squad_unboxing_share_poster_tap",
   "squad_unboxing_bubble_reveal_complete",
   "squad_unboxing_box_open_milestone",
+  "match_reveal_prelude_started",
+  "match_reveal_prelude_completed",
+  "match_reveal_prelude_skipped",
+  "match_reveal_prelude_cta_tapped",
 ] as const;
 
 type SquadUnboxingEventType = (typeof SQUAD_UNBOXING_EVENT_TYPES)[number];

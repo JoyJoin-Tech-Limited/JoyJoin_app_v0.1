@@ -4,6 +4,8 @@ import React from 'react'
 import {
   ARCHETYPE_FAMILY_COLORS,
   ARCHETYPE_FAMILY_GRADIENTS,
+  BRAND_PRIMARY_HEX,
+  getContrastSafeArchetypeColor,
 } from '@shared/archetypeColors'
 import type { EventPoolSummary } from '@shared/api'
 import Card from '../ui/Card'
@@ -18,6 +20,7 @@ import {
 } from '../../lib/utils/discoverNarrativeCopy'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
+import { getSystemReducedMotion } from '../../lib/utils/accessibility'
 import { getOracleCardCornerAsset } from './oracleCardAssets'
 
 // ─── Constants ─────────────────────────────────────────────────
@@ -28,12 +31,22 @@ const CARD_VARIANT = 'oracle_v1'
 const URGENT_HOURS = 24
 const CRITICAL_HOURS = 6
 const HIGH_CHEMISTRY_CELEBRATION_THRESHOLD = 3
+/** Cap the displayed participant count to keep the pill width predictable. */
+const CORNER_STAT_CAP = 999
 
-const FALLBACK_COLOR = '#8B5CF6'
+const FALLBACK_COLOR = BRAND_PRIMARY_HEX
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   '饭局': '饭局', '酒局': '酒局', '其他': '其他',
   dinner: '饭局', dining: '饭局', drinks: '酒局', bar: '酒局', other: '其他',
+}
+
+/** Event-type-aware social copy for the corner participant count. */
+function getCornerStatLabel(eventType?: string): string {
+  const label = EVENT_TYPE_LABELS[eventType ?? ''] ?? '其他'
+  if (label === '饭局') return '人入座中'
+  if (label === '酒局') return '人已入席'
+  return '位伙伴已加入'
 }
 
 // ─── Helpers ───────────────────────────────────────────────────
@@ -43,14 +56,9 @@ function getEventTypeLabel(eventType?: string): string {
   return EVENT_TYPE_LABELS[eventType] ?? '其他'
 }
 
-/** Append a 2-char hex alpha channel to a hex colour (e.g. `#C79450` + `1A` → `#C794501A`). */
-function hexWithAlpha(hex: string, alphaHex: string): string {
-  return hex.startsWith('#') ? hex + alphaHex : hex
-}
-
 /** Render-safe alpha accessor — returns the rgba value from a hex for inline styles. */
-function familyAlphaHex(hex: string, alpha: string): string {
-  return hexWithAlpha(hex, alpha)
+function familyAlphaHex(hex: string, alphaHex: string): string {
+  return hex.startsWith('#') ? hex + alphaHex : hex
 }
 
 interface OracleCardProps {
@@ -60,6 +68,8 @@ interface OracleCardProps {
   onTap: (pool: EventPoolSummary) => void
   /** Kill switch — when false renders a simplified card without interactivity. Default true. */
   enabled?: boolean
+  /** Feature flag — when false hides the corner registration-count badge. Default true. */
+  cornerStatEnabled?: boolean
 }
 
 export default React.memo(function OracleCard({
@@ -68,8 +78,26 @@ export default React.memo(function OracleCard({
   index,
   onTap,
   enabled = true,
+  cornerStatEnabled = true,
 }: OracleCardProps) {
   const { isDegradation } = useDeviceTier()
+  const reduceMotion = React.useMemo(() => getSystemReducedMotion() || isDegradation, [isDegradation])
+
+  // Track impression analytics for the corner stat once per mount.
+  const hasTrackedCornerStatImpressionRef = React.useRef(false)
+  React.useEffect(() => {
+    if (hasTrackedCornerStatImpressionRef.current) return
+    const count = pool.currentParticipants ?? pool.registrationCount ?? 0
+    if (count > 0) {
+      hasTrackedCornerStatImpressionRef.current = true
+      discoverAnalytics.track('corner_badge_impression', pool.id, {
+        cardVersion: CARD_VARIANT,
+        cornerCount: count,
+        isCapped: count >= CORNER_STAT_CAP,
+        eventType: pool.eventType,
+      })
+    }
+  }, [pool])
 
   // ── Derived pool state ───────────────────────────────────────
 
@@ -84,6 +112,16 @@ export default React.memo(function OracleCard({
 
   const isPoolFull = typeof maxParticipants === 'number' && maxParticipants > 0
     && currentParticipants >= maxParticipants
+
+  const showCornerStat = cornerStatEnabled && !isPoolFull && currentParticipants > 0
+  const cornerStatDisplayCount = Math.min(currentParticipants, CORNER_STAT_CAP)
+  const cornerStatLabel = getCornerStatLabel(pool.eventType)
+  const cornerStatColor = React.useMemo(() => {
+    // Prefer a contrast-safe archetype color when we know the user's archetype.
+    // Fall back to the card's family color, then brand primary.
+    if (userArchetype) return getContrastSafeArchetypeColor(userArchetype)
+    return ARCHETYPE_FAMILY_COLORS[accentFamily] ?? FALLBACK_COLOR
+  }, [userArchetype, accentFamily])
 
   const cornerAssetSrc = getOracleCardCornerAsset(pool.eventType)
 
@@ -108,12 +146,30 @@ export default React.memo(function OracleCard({
       accentFamily,
       highChemistryShare: highChemistryCount,
       hasEventTypeVignette: Boolean(cornerAssetSrc),
+      hasCornerCount: showCornerStat,
+      cornerCount: currentParticipants,
     })
     try {
       if (Taro.vibrateShort) Taro.vibrateShort({ type: 'light' })
     } catch { /* haptic is decorative */ }
     onTap(pool)
-  }, [pool, accentFamily, highChemistryCount, cornerAssetSrc, onTap, enabled, isPoolFull])
+  }, [pool, accentFamily, highChemistryCount, cornerAssetSrc, showCornerStat, currentParticipants, onTap, enabled, isPoolFull])
+
+  // ── Corner-stat live-update tracking ─────────────────────────
+
+  const prevCountRef = React.useRef(currentParticipants)
+  React.useEffect(() => {
+    if (currentParticipants === prevCountRef.current) return
+    const prev = prevCountRef.current
+    prevCountRef.current = currentParticipants
+    if (currentParticipants > 0 && prev > 0) {
+      discoverAnalytics.track('corner_badge_live_update', pool.id, {
+        previousCount: prev,
+        newCount: currentParticipants,
+        delta: currentParticipants - prev,
+      })
+    }
+  }, [currentParticipants, pool.id])
 
   // ── Once-per-session CTA pulse (ref init, no render mutation) ──
 
@@ -154,12 +210,16 @@ export default React.memo(function OracleCard({
     }
   }, [pool, userArchetype])
 
-  // ── Skeleton fallback ────────────────────────────────────────
+  // Skeleton fallback — mirrors the corner-stat footprint so the badge does
+  // not pop in abruptly when data hydrates.
 
   const hasEssentialData = pool.id && pool.title != null
   if (!hasEssentialData || !enabled) {
     return (
       <Card className='oracle-card oracle-card--skeleton'>
+        <View className='oracle-card__corner-stat oracle-card__corner-stat--skeleton'>
+          <View className='oracle-card__corner-stat-pill' />
+        </View>
         <View className='oracle-card__skeleton-line oracle-card__skeleton-line--hero' />
         <View className='oracle-card__skeleton-line oracle-card__skeleton-line--meta' />
         <View className='oracle-card__skeleton-line oracle-card__skeleton-line--teaser' />
@@ -206,12 +266,13 @@ export default React.memo(function OracleCard({
     `oracle-card--accent-${accentFamily}`,
     isPoolFull ? 'oracle-card--full' : '',
     isDegradation ? 'oracle-card--low-end' : '',
+    showCornerStat ? 'oracle-card--has-corner-stat' : '',
   ].filter(Boolean).join(' ')
 
   const eventTypeLabel = getEventTypeLabel(pool.eventType)
   const titleLabel = (pool.title || '悦聚活动').trim()
   const shouldShowTitle = titleLabel !== eventTypeLabel
-  const cardAriaLabel = `${dateLabel} ${timeLabel} ${eventTypeLabel}${pool.city ? ' ' + pool.city : ''}${isPoolFull ? '，已满员' : ''}，${heroMessage}`
+  const cardAriaLabel = `${dateLabel} ${timeLabel} ${eventTypeLabel}${pool.city ? ' ' + pool.city : ''}${isPoolFull ? '，已满员' : currentParticipants > 0 ? `，已有 ${cornerStatDisplayCount}${currentParticipants >= CORNER_STAT_CAP ? ' 多位' : ' 人'}报名` : ''}，${heroMessage}`
 
   const showCornerAsset = cornerAssetSrc && !isDegradation
 
@@ -237,6 +298,29 @@ export default React.memo(function OracleCard({
           aria-hidden='true'
           lazyLoad
         />
+      )}
+
+      {showCornerStat && (
+        <View
+          className='oracle-card__corner-stat'
+          aria-hidden='true'
+          style={{ animationDelay: isDegradation ? undefined : animDelay }}
+        >
+          <View
+            className={[
+              'oracle-card__corner-stat-pill',
+              !showCornerAsset ? 'oracle-card__corner-stat-pill--no-vignette' : '',
+            ].filter(Boolean).join(' ')}
+          >
+            <Text
+              className='oracle-card__corner-stat-number'
+              style={{ color: cornerStatColor }}
+            >
+              {String(cornerStatDisplayCount)}{currentParticipants >= CORNER_STAT_CAP ? '+' : ''}
+            </Text>
+            <Text className='oracle-card__corner-stat-label'>{cornerStatLabel}</Text>
+          </View>
+        </View>
       )}
 
       {/* L2 Topline: status + urgency */}

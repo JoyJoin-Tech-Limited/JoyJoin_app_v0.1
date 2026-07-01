@@ -1,7 +1,7 @@
 # JoyJoin Mini-Program Asset Strategy
 
 > Canonical reference for how static assets are managed in the mini-program build.
-> Last updated: 2026-06-18
+> Last updated: 2026-07-01
 
 ---
 
@@ -95,6 +95,11 @@ Assets copied by `vite-plugin-static-copy` in `config/index.ts`.
 |-------|------|------|---------|
 | Archetype spritesheet | `pages/onboarding/assets/archetypes/` | ~20KB | Personality test slot animation |
 
+### Pool-registration subpackage
+| Asset | Path | Size | Used in |
+|-------|------|------|---------|
+| Persona snapshot art | `pages/pool-registration/assets/pool-persona/` | varies | `PersonaSnapshotCard` CDN fallback copies (base, cluster texture, paw nudge, particles) |
+
 ### Landing Page (critical first impression)
 | Asset | Path | Size | Used in |
 |-------|------|------|---------|
@@ -130,6 +135,7 @@ These are **NOT** copied to `dist/assets/` by the build. They must exist on the 
 | **Celebration images** | `assets/lovart/icebreaker/celebrations/*.png` | ~770KB | Post-phase celebration overlays |
 | **Icebreaker tier cards** | `assets/lovart/icebreaker/tier-card-*.webp` | ~96KB | Tier-selector preset/custom card side-art |
 | **Lovart illustrations** | `assets/lovart/lovart-*.webp` | ~130KB | Empty/error states |
+| **Lovart pool persona / particles** | `assets/lovart/lovart-pool-persona-*`, `assets/lovart/lovart-particle-*` | — | Pool-registration persona snapshot card art and animated particles. Subpackage fallback copies are bundled under `pages/pool-registration/assets/pool-persona/`. |
 | **Matching heroes** | `assets/matching/matching-*.webp` | ~157KB | Matching status page |
 | **Promo banners** | `assets/promo/banner-*.webp` | ~175KB | Source copies of promo banners for CDN upload. The active Discover hero banner is bundled locally at `assets/promo-local/banner-hero-lovart-v1.webp` and falls back to this CDN path on `onError`. |
 | **Personality emojis** | `assets/lovart/personality-emojis/*.png` | ~170KB | Personality test emoji choices |

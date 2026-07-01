@@ -1,6 +1,7 @@
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import type { PoolGroupDetailsResponse } from '@shared/api'
 import type { GroupAnalysisResponse, PairExplanation } from '@shared/types/groupAnalysis'
+import { useEffect, useState } from 'react'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import {
   type ChemistryTokens,
@@ -13,12 +14,15 @@ import {
   type UnifiedRevealTokens,
 } from '@shared/features/matching-status'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
+import XiaoyueChatBubble from '../../components/mascot/XiaoyueChatBubble'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import ChemistryBadge from '../../components/mascot/ChemistryBadge'
 import UnifiedRevealCard from './UnifiedRevealCard'
+import AbstractPuzzleTable from './components/AbstractPuzzleTable'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
 import { getVibeLabel } from '../../lib/matching/groupDisplay'
 import { MATCHING_BG_SRC } from './constants'
 
@@ -278,6 +282,7 @@ interface MatchingStatusLiveOverlayProps {
   matchedGroupNumber?: number | null
   shouldReduceMotion: boolean
   hasRevealed: boolean
+  puzzlePreludeEnabled: boolean
   persistedThemeSummary: ThemeSummary | null
   resolvedGroupId: string
   liveRevealError: string | null
@@ -298,6 +303,7 @@ export function MatchingStatusLiveOverlay({
   matchedGroupNumber,
   shouldReduceMotion,
   hasRevealed,
+  puzzlePreludeEnabled,
   persistedThemeSummary,
   resolvedGroupId,
   liveRevealError,
@@ -311,6 +317,20 @@ export function MatchingStatusLiveOverlay({
   }
 
   const resolvedGroupNumber = matchedGroupNumber ?? effectiveGroupDetails?.group.groupNumber ?? null
+  const [isPuzzleComplete, setIsPuzzleComplete] = useState(shouldReduceMotion || puzzlePreludeEnabled === false)
+  const showPuzzlePrelude = puzzlePreludeEnabled && !hasRevealed && effectiveGroupDetails != null
+  const memberCount = effectiveGroupDetails?.members.length ?? 0
+
+  useEffect(() => {
+    if (showPuzzlePrelude) {
+      squadUnboxingAnalytics.track('match_reveal_prelude_started', {
+        groupId: resolvedGroupId,
+        screen: 'matching-status',
+        variant: 'puzzle_prelude',
+        memberCount,
+      })
+    }
+  }, [memberCount, resolvedGroupId, showPuzzlePrelude])
 
   return (
     <View className='matching-status__overlay'>
@@ -353,53 +373,114 @@ export function MatchingStatusLiveOverlay({
 
       {liveStage === 'members' && effectiveGroupDetails ? (
         <View className='matching-status__overlay-card matching-status__overlay-card--members' key='members'>
-          <Text className='matching-status__overlay-eyebrow'>先看桌友</Text>
-          <Text className='matching-status__overlay-title'>这一桌已经为你留好位置</Text>
-          <Text className='matching-status__overlay-copy'>
-            {unifiedReveal?.spotlight
-              ? `第 ${resolvedGroupNumber} 组已锁定。${unifiedReveal.body}`
-              : unifiedReveal?.headline
-                ? `第 ${resolvedGroupNumber} 组已锁定。${unifiedReveal.headline}`
-                : `第 ${resolvedGroupNumber} 组已锁定，先认识一下今晚会同桌的人。`}
-          </Text>
+          {showPuzzlePrelude ? (
+            <>
+              <XiaoyueChatBubble
+                content={
+                  isPuzzleComplete
+                    ? `第 ${resolvedGroupNumber} 组碎片归位，你的队伍成型了`
+                    : `第 ${resolvedGroupNumber} 组碎片正在飞来…`
+                }
+                hideAvatar
+                tail={false}
+                wide
+                className='matching-status__puzzle-bubble'
+              />
 
-          <View className='matching-status__overlay-member-grid'>
-            {effectiveGroupDetails.members.map((member, index) => {
-              const pairSummary = viewerPairSummaryByMemberId.get(member.userId)
+              <AbstractPuzzleTable
+                pieceCount={Math.max(4, Math.min(memberCount, 6))}
+                shouldReduceMotion={shouldReduceMotion}
+                onPhaseChange={(phase) => {
+                  if (phase === 'complete') {
+                    setIsPuzzleComplete(true)
+                    squadUnboxingAnalytics.track('match_reveal_prelude_completed', {
+                      groupId: resolvedGroupId,
+                      screen: 'matching-status',
+                      variant: 'puzzle_prelude',
+                      memberCount,
+                    })
+                  }
+                }}
+                onSkip={() => {
+                  setIsPuzzleComplete(true)
+                  squadUnboxingAnalytics.track('match_reveal_prelude_skipped', {
+                    groupId: resolvedGroupId,
+                    screen: 'matching-status',
+                    variant: 'puzzle_prelude',
+                    memberCount,
+                  })
+                }}
+              />
 
-              return (
-                <View
-                  key={member.userId}
-                  className='matching-status__overlay-member-card'
-                  style={{ animationDelay: (shouldReduceMotion || hasRevealed) ? '0ms' : `${index * 120}ms` }}
-                >
-                  <View className='matching-status__overlay-member-avatar'>
-                    <ArchetypeHead
-                      archetype={member.archetype}
-                      size={52}
-                      fallbackText={member.displayName ?? undefined}
-                    />
-                  </View>
-                  <Text className='matching-status__overlay-member-name'>
-                    {member.displayName ?? '神秘嘉宾'}
-                  </Text>
-                  {pairSummary?.connectionPointsWithRarity?.[0]?.text ?? pairSummary?.connectionPoints?.[0] ? (
-                    <Text className='matching-status__overlay-member-note'>
-                      {pairSummary.connectionPointsWithRarity?.[0]?.text ?? pairSummary.connectionPoints?.[0]}
-                    </Text>
-                  ) : pairSummary ? (
-                    <Text className='matching-status__overlay-member-note'>
-                      默契度 {pairSummary.chemistryScore}
-                    </Text>
-                  ) : null}
-                </View>
-              )
-            })}
-          </View>
+              <Button
+                className='matching-status__overlay-button'
+                onClick={() => {
+                  squadUnboxingAnalytics.track('match_reveal_prelude_cta_tapped', {
+                    groupId: resolvedGroupId,
+                    screen: 'matching-status',
+                    variant: 'puzzle_prelude',
+                    memberCount,
+                    completed: isPuzzleComplete,
+                  })
+                  onContinueFromMembers()
+                }}
+                disabled={!isPuzzleComplete}
+                loading={!isPuzzleComplete}
+              >
+                揭开我的队伍
+              </Button>
+            </>
+          ) : (
+            <>
+              <Text className='matching-status__overlay-eyebrow'>先看桌友</Text>
+              <Text className='matching-status__overlay-title'>这一桌已经为你留好位置</Text>
+              <Text className='matching-status__overlay-copy'>
+                {unifiedReveal?.spotlight
+                  ? `第 ${resolvedGroupNumber} 组已锁定。${unifiedReveal.body}`
+                  : unifiedReveal?.headline
+                    ? `第 ${resolvedGroupNumber} 组已锁定。${unifiedReveal.headline}`
+                    : `第 ${resolvedGroupNumber} 组已锁定，先认识一下今晚会同桌的人。`}
+              </Text>
 
-          <Button className='matching-status__overlay-button' onClick={onContinueFromMembers}>
-            {persistedThemeSummary ? '看看今晚主题' : '前往完整详情'}
-          </Button>
+              <View className='matching-status__overlay-member-grid'>
+                {effectiveGroupDetails.members.map((member, index) => {
+                  const pairSummary = viewerPairSummaryByMemberId.get(member.userId)
+
+                  return (
+                    <View
+                      key={member.userId}
+                      className='matching-status__overlay-member-card'
+                      style={{ animationDelay: (shouldReduceMotion || hasRevealed) ? '0ms' : `${index * 120}ms` }}
+                    >
+                      <View className='matching-status__overlay-member-avatar'>
+                        <ArchetypeHead
+                          archetype={member.archetype}
+                          size={52}
+                          fallbackText={member.displayName ?? undefined}
+                        />
+                      </View>
+                      <Text className='matching-status__overlay-member-name'>
+                        {member.displayName ?? '神秘嘉宾'}
+                      </Text>
+                      {pairSummary?.connectionPointsWithRarity?.[0]?.text ?? pairSummary?.connectionPoints?.[0] ? (
+                        <Text className='matching-status__overlay-member-note'>
+                          {pairSummary.connectionPointsWithRarity?.[0]?.text ?? pairSummary.connectionPoints?.[0]}
+                        </Text>
+                      ) : pairSummary ? (
+                        <Text className='matching-status__overlay-member-note'>
+                          默契度 {pairSummary.chemistryScore}
+                        </Text>
+                      ) : null}
+                    </View>
+                  )
+                })}
+              </View>
+
+              <Button className='matching-status__overlay-button' onClick={onContinueFromMembers}>
+                {persistedThemeSummary ? '看看今晚主题' : '前往完整详情'}
+              </Button>
+            </>
+          )}
         </View>
       ) : null}
 

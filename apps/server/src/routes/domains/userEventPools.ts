@@ -23,6 +23,7 @@ import { buildEventPoolRegistrationInsert, type EventPoolRegistrationPreferenceD
 import { resolveEffectivePreferenceDNA } from "../../lib/matchCompass";
 import { describePoolRegistrationAvailability } from "../../lib/poolRegistrationRules";
 import { eventCreditsRepo } from "../../repositories/eventCreditsRepo";
+import { buildPoolPersonaSnapshot } from "../../repositories/eventPoolPersonaRepo";
 import { loadInterestSignalsByUserIds } from "./helpers";
 import { recordPoolCardCopyCache } from "../../middleware/metrics";
 import { enrichProfileFromRegistration } from "../../lib/profileEnrichment";
@@ -461,6 +462,27 @@ export function registerUserEventPoolRoutes(app: Express): void {
     } catch (error) {
       logger.error("Error fetching event pool", { error: String(error), poolId: req.params.id });
       res.status(500).json({ message: "Failed to fetch event pool" });
+    }
+  });
+
+  // Aggregate persona snapshot for pool registration preview card
+  app.get("/api/event-pools/:id/persona-snapshot", requireAuth, async (req: any, res) => {
+    try {
+      const poolId = req.params.id;
+      if (!poolId || typeof poolId !== "string" || poolId.trim() === "") {
+        return res.status(400).json({ message: "Invalid pool ID" });
+      }
+      const userId = req.session?.userId;
+      const snapshot = await buildPoolPersonaSnapshot(poolId, userId);
+
+      if (!snapshot) {
+        return res.status(404).json({ message: "Event pool not found" });
+      }
+
+      res.json(snapshot);
+    } catch (error) {
+      logger.error("Error fetching persona snapshot", { error: String(error), poolId: req.params.id });
+      res.status(500).json({ message: "Failed to fetch persona snapshot" });
     }
   });
 

@@ -173,7 +173,7 @@ export default function SquadUnboxingPage() {
             你的{pool.eventType === 'bar' ? '酒局' : '饭局'}桌友来了
           </Text>
           <Text className='squad-unboxing__header-tagline'>
-            {group.matchExplanation || pool.description || `${DEFAULT_MASCOT_DISPLAY_NAME}已经把这一桌锁定，准备让你看看今晚会和谁同桌。`}
+            {group.matchExplanation || pool.description || `${DEFAULT_MASCOT_DISPLAY_NAME}已经把拼图聚齐，准备让你看看今晚会和谁同桌。`}
           </Text>
           <View className='squad-unboxing__header-meta'>
             {group.groupNumber ? (
@@ -199,7 +199,7 @@ export default function SquadUnboxingPage() {
                   className='squad-unboxing__analysis-bubble-text'
                   text={
                     [
-                      '盒子打开了！',
+                      '拼图完整了！',
                       archetypeMixCopy,
                       groupAnalysis?.groupThemeCompanion ||
                         group.matchExplanation ||
@@ -233,9 +233,9 @@ export default function SquadUnboxingPage() {
               enabled={dragRevealEnabled}
               onReveal={handleOpenBox}
             />
-            <Text className='squad-unboxing__blind-box-title'>你的桌友来了</Text>
+            <Text className='squad-unboxing__blind-box-title'>拼图已经聚齐</Text>
             <Text className='squad-unboxing__blind-box-copy'>
-              这一桌 {members.length} 位桌友已经就位。先开盒，再看为什么你们会被放在同一桌。
+              上一页的每一块拼图，都会在这里变成一个真实的队友。轻轻拉开，看看是谁和你坐在同一桌。
             </Text>
             {group.theme || group.themeEmoji ? (
               <View className='squad-unboxing__blind-box-theme-pill'>

@@ -140,6 +140,7 @@ function AuthenticatedDiscover({
   const queryClient = useQueryClient()
   const displayName = (user as any)?.displayName || (user as any)?.nickname || '悦聚用户'
   const userArchetype = (user as any)?.primaryArchetype || (user as any)?.archetype || null
+  const cornerStatEnabled = (user as any)?.features?.oracleCardCornerStatEnabled !== false
   const xiaoyueAsset = useMemo(() => getXiaoyueExpressionAsset('homeWelcome'), [])
   const localFallback = useMemo(() => localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp'), [])
   const avatarUrl = (user as any)?.profileImageUrl || (user as any)?.wechatAvatarUrl || xiaoyueAsset
@@ -504,11 +505,12 @@ function AuthenticatedDiscover({
           pool={pool}
           index={index}
           userArchetype={userArchetype}
+          cornerStatEnabled={cornerStatEnabled}
           onTap={handlePoolTap}
         />
       )
     },
-    [handlePoolTap, userArchetype]
+    [handlePoolTap, userArchetype, cornerStatEnabled]
   )
 
   const poolKeyExtractor = useCallback(

@@ -77,9 +77,18 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-06-30)
+## 🆕 Recent Updates (Last updated: 2026-07-01)
 
 ### 2026 Milestones (June 2026)
+
+**49. Event Ticket Payment Success Hero v2** *(2026-07-01)*
+- **Scope:** Mini-program event-ticket payment success state (`apps/mini-program/src/pages/event-ticket-payment/index.tsx` and `components/TicketSuccessView.tsx`).
+- **Ceremony illustration:** full-bleed warm scene (`750 × 604 px`, WebP primary + PNG fallback) featuring Xiaoyue and 小太阳鸡 co-celebrating around a glowing golden event ticket. Bottom third dissolves into Warm Beige `#F5F1E8` so the page background, message text, and CTA read as a continuous scene. No `backdrop-filter` or edge blur — blending is achieved via exact color match + 180rpx CSS `linear-gradient` bridge.
+- **Motion:** staggered entrance for hero, title, subtitle, event chip, and CTA (total ≤900ms) using `opacity` + `transform` only; one-shot confetti (≤16 pieces, 2–2.5s) gated by `prefers-reduced-motion` and degradation-tier devices.
+- **Copy:** state-aware subtitle uses `DEFAULT_MASCOT_DISPLAY_NAME`; shows matching-in-progress copy when `pool.status === 'matching'`, otherwise expectation-setting copy. Default is concise one-line; a three-line craft variant is reserved for future A/B test.
+- **Interaction:** primary CTA routes to the Events tab (`switchTab`); double-tap guard, disabled visual state, failure rollback, and `useResetOnShow` prevent stuck-CTA after swipe-back or foreground recovery.
+- **Analytics:** `event_ticket_payment_success_view`, `event_ticket_payment_success_cta_tap`.
+- **Assets:** `apps/mini-program/src/assets/ceremony/event-ticket-success-20260701-v2.webp` + `.png`; registry `eventTicketSuccessV2` in `apps/mini-program/src/lib/ceremonyHeroes.ts`; CDN upload via `apps/mini-program/scripts/cdn-asset-manifest.json`.
 
 **48. Event Ticket Payment v2 Tail + Zero-Discount Coupon Guard** *(2026-06-30)*
 - **Scope:** Mini-program event-ticket payment page (`apps/mini-program/src/pages/event-ticket-payment/index.tsx`) and paid event registration checkout.

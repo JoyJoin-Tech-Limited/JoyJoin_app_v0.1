@@ -12,6 +12,10 @@ export type SquadUnboxingEventType =
   | 'squad_unboxing_share_poster_tap'
   | 'squad_unboxing_bubble_reveal_complete'
   | 'squad_unboxing_box_open_milestone'
+  | 'match_reveal_prelude_started'
+  | 'match_reveal_prelude_completed'
+  | 'match_reveal_prelude_skipped'
+  | 'match_reveal_prelude_cta_tapped'
 
 export interface SquadUnboxingAnalyticsEvent {
   eventType: SquadUnboxingEventType
