@@ -1,75 +1,50 @@
 import { View, Text, Image } from '@tarojs/components'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import Taro from '@tarojs/taro'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PoolPersonaSnapshotResponse } from '@shared/api'
 import { haptics } from '../../../lib/utils/haptics'
-import { useDeviceTier } from '../../../hooks/useDeviceTier'
-import { getSystemReducedMotion } from '../../../lib/utils/accessibility'
-import { getContrastSafeArchetypeColor } from '@shared/archetypeColors'
+import { getContrastSafeArchetypeColor, getArchetypeHSL, formatHSLAsRGBA } from '@shared/archetypeColors'
+import { resolveArchetype } from '@shared/personality/archetypeNames'
 import ArchetypeHead from '../../../components/mascot/ArchetypeHead'
+import MissingArchetypePlaceholder from '../../../components/mascot/MissingArchetypePlaceholder'
 import { POOL_PERSONA_ASSETS, getParticleSrc } from './poolPersonaAssets'
 import { usePersonaSnapshotAnimation } from './usePersonaSnapshotAnimation'
-import PersonaSnapshotSheet from './PersonaSnapshotSheet'
 import { discoverAnalytics } from '../../../lib/analytics/discoverAnalytics'
-import type { PoolEventType } from '../flowConfig'
 import './PersonaSnapshotCard.scss'
 
 interface PersonaSnapshotCardProps {
   poolId: string
-  eventType: PoolEventType
   snapshot?: PoolPersonaSnapshotResponse | null
   isLoading: boolean
+  hasError?: boolean
+  onRetry?: () => void
   userArchetype?: string | null
   visible: boolean
+  reduceMotion: boolean
+  isDegradation: boolean
+  onDimensionTap?: (key: string) => void
 }
 
 export default function PersonaSnapshotCard({
   poolId,
-  eventType,
   snapshot,
   isLoading,
+  hasError,
+  onRetry,
   userArchetype,
   visible,
+  reduceMotion,
+  isDegradation,
+  onDimensionTap,
 }: PersonaSnapshotCardProps) {
-  const deviceTier = useDeviceTier()
-  const reduceMotion = useMemo(() => getSystemReducedMotion(), [])
-  const [imageAttempt, setImageAttempt] = useState({ base: 0, texture: 0, paw: 0 })
+  const hasTrackedUserArchetypeImpressionRef = useRef(false)
   const [particleAttempts, setParticleAttempts] = useState<Record<number, number>>({})
-  const [showSheet, setShowSheet] = useState(false)
 
-  const returnStorageKey = useMemo(() => `jj_pool_persona_return_${poolId}`, [poolId])
+  const shouldDisableMotion = reduceMotion || isDegradation
 
-  const isReturnView = useMemo(() => {
-    try {
-      const raw = Taro.getStorageSync(returnStorageKey)
-      if (!raw) return false
-      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
-      const ts = typeof parsed?.ts === 'number' ? parsed.ts : null
-      if (!ts) return false
-      if (Date.now() - ts > 7 * 24 * 60 * 60 * 1000) {
-        Taro.removeStorageSync(returnStorageKey)
-        return false
-      }
-      return true
-    } catch {
-      return false
-    }
-  }, [returnStorageKey])
-
-  // Mark this pool as visited so future entries within 7 days get the compressed animation.
-  useEffect(() => {
-    try {
-      Taro.setStorageSync(returnStorageKey, JSON.stringify({ ts: Date.now() }))
-    } catch {
-      // non-blocking
-    }
-  }, [returnStorageKey])
-
-  const { phase, particles, stateBandCopy, stateBandSubcopy, ctaReady } =
+  const { phase, particles, stateBandCopy, stateBandSubcopy, ctaReady, dropDurationMs } =
     usePersonaSnapshotAnimation({
       snapshot,
-      reduceMotion: reduceMotion || deviceTier.isDegradation,
-      isReturnView,
+      reduceMotion: shouldDisableMotion,
     })
 
   const accentColor = useMemo(() => {
@@ -83,166 +58,149 @@ export default function PersonaSnapshotCard({
     return '#8B5CF6'
   }, [userArchetype])
 
-  const primaryArchetype = useMemo(() => {
-    if (!snapshot) return null
-    return snapshot.dimensions.find((d) => d.key === 'archetype')?.clusters[0]?.label ?? null
-  }, [snapshot])
+  const accentSoftBg = useMemo(() => {
+    const hsl = getArchetypeHSL(userArchetype)
+    return formatHSLAsRGBA(hsl, 0.08)
+  }, [userArchetype])
 
-  const handleBaseError = useCallback(() => {
-    setImageAttempt((prev) => ({ ...prev, base: prev.base + 1 }))
-  }, [])
+  const userArchetypeDisplay = useMemo(() => {
+    if (!userArchetype) return null
+    const resolved = resolveArchetype(userArchetype)
+    return resolved?.nameCn ?? null
+  }, [userArchetype])
 
-  const handleTextureError = useCallback(() => {
-    setImageAttempt((prev) => ({ ...prev, texture: prev.texture + 1 }))
-  }, [])
-
-  const handlePawError = useCallback(() => {
-    setImageAttempt((prev) => ({ ...prev, paw: prev.paw + 1 }))
-  }, [])
-
-  const handleExpand = useCallback(() => {
-    if (!snapshot || !ctaReady) return
-    haptics('light')
-    setShowSheet(true)
-    discoverAnalytics.track('persona_snapshot_expand_sheet', poolId, {
-      stateBand: snapshot.stateBand,
-      totalRegistrants: snapshot.totalRegistrants,
+  useEffect(() => {
+    if (!visible || !userArchetype || hasTrackedUserArchetypeImpressionRef.current) return
+    hasTrackedUserArchetypeImpressionRef.current = true
+    discoverAnalytics.track('persona_snapshot_user_archetype_impression', poolId, {
+      archetype: userArchetype,
+      hasSnapshot: !!snapshot,
     })
-  }, [snapshot, ctaReady, poolId])
+  }, [visible, userArchetype, poolId, snapshot])
 
   const handleDimensionTap = useCallback(
     (key: string) => {
-      discoverAnalytics.track('persona_snapshot_dimension_tap', poolId, {
-        dimension: key,
-        stateBand: snapshot?.stateBand,
-      })
+      if (!snapshot || !ctaReady) return
+      haptics('light')
+      onDimensionTap?.(key)
     },
-    [poolId, snapshot?.stateBand]
+    [snapshot, ctaReady, onDimensionTap],
   )
 
-  if (!visible || isLoading || !snapshot) {
+  const handleRetry = useCallback(
+    (e: unknown) => {
+      ;(e as { stopPropagation?: () => void }).stopPropagation?.()
+      haptics('light')
+      onRetry?.()
+    },
+    [onRetry],
+  )
+
+  const disclosedDimensions = useMemo(() => {
+    if (!snapshot) return []
+    return snapshot.dimensions.filter((d) => d.disclosed).slice(0, 3)
+  }, [snapshot])
+
+  if (!visible) {
     return null
   }
 
-  const baseSrc =
-    imageAttempt.base === 0
-      ? POOL_PERSONA_ASSETS.base.webp
-      : imageAttempt.base === 1
-        ? POOL_PERSONA_ASSETS.base.png
-        : POOL_PERSONA_ASSETS.base.subpackage
+  if (isLoading) {
+    return (
+      <View className='persona-snapshot-card persona-snapshot-card--loading'>
+        <View className='persona-snapshot-card__row'>
+          <View className='persona-snapshot-card__avatar-column'>
+            <View className='persona-snapshot-card__avatar-ring persona-snapshot-card__avatar-ring--skeleton' />
+            <View className='persona-snapshot-card__skeleton-text persona-snapshot-card__skeleton-text--short' />
+          </View>
+          <View className='persona-snapshot-card__content-column'>
+            <View className='persona-snapshot-card__skeleton-badge' />
+            <View className='persona-snapshot-card__skeleton-text persona-snapshot-card__skeleton-text--medium' />
+            <View className='persona-snapshot-card__skeleton-text persona-snapshot-card__skeleton-text--long' />
+            <View className='persona-snapshot-card__dimension-pills'>
+              <View className='persona-snapshot-card__pill persona-snapshot-card__pill--skeleton' />
+              <View className='persona-snapshot-card__pill persona-snapshot-card__pill--skeleton' />
+            </View>
+            <View className='persona-snapshot-card__footer'>
+              <View className='persona-snapshot-card__skeleton-text persona-snapshot-card__skeleton-text--short' />
+              <View className='persona-snapshot-card__skeleton-text persona-snapshot-card__skeleton-text--tiny' />
+            </View>
+          </View>
+        </View>
+      </View>
+    )
+  }
 
-  const textureSrc =
-    imageAttempt.texture === 0
-      ? POOL_PERSONA_ASSETS.clusterTexture.webp
-      : imageAttempt.texture === 1
-        ? POOL_PERSONA_ASSETS.clusterTexture.png
-        : POOL_PERSONA_ASSETS.clusterTexture.subpackage
+  if (hasError) {
+    return (
+      <View
+        className='persona-snapshot-card persona-snapshot-card--error'
+        onClick={handleRetry}
+        hoverClass='persona-snapshot-card--error-active'
+        role='button'
+        aria-label='画像加载失败，点击重试'
+      >
+        <View className='persona-snapshot-card__error-row'>
+          <Image
+            className='persona-snapshot-card__error-icon'
+            src={POOL_PERSONA_ASSETS.pawNudge.webp}
+            mode='aspectFit'
+            lazyLoad={false}
+            onError={() => {
+              // Fallback handled by keeping the text label visible.
+            }}
+          />
+          <View className='persona-snapshot-card__error-copy'>
+            <Text className='persona-snapshot-card__error-title'>画像加载失败</Text>
+            <Text className='persona-snapshot-card__error-hint'>点击重试</Text>
+          </View>
+        </View>
+      </View>
+    )
+  }
 
-  const pawSrc =
-    imageAttempt.paw === 0
-      ? POOL_PERSONA_ASSETS.pawNudge.webp
-      : imageAttempt.paw === 1
-        ? POOL_PERSONA_ASSETS.pawNudge.png
-        : POOL_PERSONA_ASSETS.pawNudge.subpackage
+  const totalRegistrants = snapshot?.totalRegistrants ?? 0
 
   return (
-    <>
-      <View
-        className={[
-          'persona-snapshot-card',
-          `persona-snapshot-card--${phase}`,
-          deviceTier.isDegradation ? 'persona-snapshot-card--low-end' : '',
-          reduceMotion ? 'persona-snapshot-card--reduce-motion' : '',
-          ctaReady ? 'persona-snapshot-card--ready' : '',
-        ].join(' ')}
-        onClick={handleExpand}
-        hoverClass='persona-snapshot-card--active'
-        role='button'
-        aria-label={`${stateBandCopy}，${stateBandSubcopy}`}
-      >
-        <Image
-          className='persona-snapshot-card__base'
-          src={baseSrc}
-          mode='widthFix'
-          lazyLoad={false}
-          onError={handleBaseError}
-        />
-
-        <Image
-          className='persona-snapshot-card__texture'
-          src={textureSrc}
-          mode='aspectFill'
-          lazyLoad={false}
-          onError={handleTextureError}
-        />
-
-        <View className='persona-snapshot-card__particles' aria-hidden='true'>
-          {particles.map((particle) => {
-            const attempt = particleAttempts[particle.id] ?? 0
-            const src =
-              attempt === 0
-                ? getParticleSrc(particle.colorKey, 'cdn')
-                : getParticleSrc(particle.colorKey, 'subpackage')
-            const isChaos = phase === 'chaos'
-            const isResolve = phase === 'resolve'
-            const x = isChaos ? particle.startX : particle.endX
-            const y = isChaos ? particle.startY : particle.endY
-            const opacity = isResolve ? 0.85 : 0.65
-            const scale = isResolve ? 1 : isChaos ? 0.6 : 0.85
-            const rotation = isChaos ? particle.rotation : 0
-
-            return (
-              <Image
-                key={particle.id}
-                className='persona-snapshot-card__particle'
-                src={src}
-                mode='aspectFit'
-                lazyLoad={false}
-                style={{
-                  width: `${particle.sizeRpx}rpx`,
-                  height: `${particle.sizeRpx}rpx`,
-                  opacity,
-                  transform: `translate(${x}rpx, ${y}rpx) rotate(${rotation}deg) scale(${scale})`,
-                  transitionDelay: `${particle.delayMs}ms`,
-                  zIndex: particles.length - particle.id,
-                }}
-                onError={() => {
-                  setParticleAttempts((prev) => ({
-                    ...prev,
-                    [particle.id]: (prev[particle.id] ?? 0) + 1,
-                  }))
-                }}
-              />
-            )
-          })}
+    <View
+      className={[
+        'persona-snapshot-card',
+        `persona-snapshot-card--${phase}`,
+        shouldDisableMotion ? 'persona-snapshot-card--reduce-motion' : '',
+        ctaReady ? 'persona-snapshot-card--ready' : '',
+      ].join(' ')}
+    >
+      <View className='persona-snapshot-card__row'>
+        <View className='persona-snapshot-card__avatar-column'>
+          <View
+            className='persona-snapshot-card__avatar-ring'
+            style={{ borderColor: accentColor, backgroundColor: accentSoftBg }}
+          >
+            {userArchetype ? (
+              <ArchetypeHead archetype={userArchetype} size={112} variant='grid' />
+            ) : (
+              <MissingArchetypePlaceholder size={112} />
+            )}
+          </View>
+          <Text className='persona-snapshot-card__avatar-label' style={{ color: accentColor }}>
+            你的原型
+          </Text>
+          {userArchetypeDisplay ? (
+            <Text className='persona-snapshot-card__avatar-name'>{userArchetypeDisplay}</Text>
+          ) : null}
         </View>
 
-        <Image
-          className='persona-snapshot-card__paw'
-          src={pawSrc}
-          mode='heightFix'
-          lazyLoad={false}
-          onError={handlePawError}
-        />
-
-        <View className='persona-snapshot-card__content'>
+        <View className='persona-snapshot-card__content-column'>
           <View className='persona-snapshot-card__topline'>
-            <Text className='persona-snapshot-card__badge'>算法分拣中</Text>
-            {primaryArchetype ? (
-              <View className='persona-snapshot-card__primary-head'>
-                <ArchetypeHead archetype={primaryArchetype} size={28} variant='grid' />
-              </View>
-            ) : null}
+            <Text className='persona-snapshot-card__badge'>已报名伙伴画像</Text>
           </View>
 
           <Text className='persona-snapshot-card__headline'>{stateBandCopy}</Text>
           <Text className='persona-snapshot-card__subheadline'>{stateBandSubcopy}</Text>
 
-          <View className='persona-snapshot-card__dimension-pills' role='list'>
-            {snapshot.dimensions
-              .filter((d) => d.disclosed)
-              .slice(0, 3)
-              .map((dimension) => (
+          {disclosedDimensions.length > 0 ? (
+            <View className='persona-snapshot-card__dimension-pills' role='list'>
+              {disclosedDimensions.map((dimension) => (
                 <View
                   key={dimension.key}
                   className='persona-snapshot-card__pill'
@@ -253,6 +211,7 @@ export default function PersonaSnapshotCard({
                     handleDimensionTap(dimension.key)
                   }}
                   style={{ borderColor: accentColor }}
+                  aria-label={`${dimension.label}：${dimension.clusters[0]?.label}`}
                 >
                   <Text className='persona-snapshot-card__pill-label'>{dimension.label}</Text>
                   <Text className='persona-snapshot-card__pill-value' style={{ color: accentColor }}>
@@ -260,24 +219,63 @@ export default function PersonaSnapshotCard({
                   </Text>
                 </View>
               ))}
-          </View>
+            </View>
+          ) : null}
 
           <View className='persona-snapshot-card__footer'>
             <Text className='persona-snapshot-card__count'>
-              {snapshot.totalRegistrants} 位伙伴已报名
+              {totalRegistrants > 0 ? `${totalRegistrants} 位伙伴已报名` : '等你加入'}
             </Text>
-            <Text className='persona-snapshot-card__cta'>{ctaReady ? '点击查看详情' : '画像生成中…'}</Text>
+            <Text className='persona-snapshot-card__cta'>
+              {ctaReady ? '查看完整画像' : '画像生成中…'}
+            </Text>
           </View>
         </View>
       </View>
 
-      {showSheet && snapshot ? (
-        <PersonaSnapshotSheet
-          snapshot={snapshot}
-          eventType={eventType}
-          onClose={() => setShowSheet(false)}
-        />
+      {!shouldDisableMotion && particles.length > 0 && snapshot ? (
+        <View className='persona-snapshot-card__particles' aria-hidden='true'>
+          {particles.map((particle) => {
+            const attempt = particleAttempts[particle.id] ?? 0
+            const src = attempt === 0 ? getParticleSrc(particle.colorKey, 'cdn') : getParticleSrc(particle.colorKey, 'subpackage')
+            return (
+              <View
+                key={particle.id}
+                className='persona-snapshot-card__particle-wrap'
+                style={{
+                  width: `${particle.sizeRpx}rpx`,
+                  height: `${particle.sizeRpx}rpx`,
+                  left: `${particle.xPercent}%`,
+                  top: `${particle.yPercent}%`,
+                  transform: `rotate(${particle.rotation}deg)`,
+                }}
+              >
+                <Image
+                  className={[
+                    'persona-snapshot-card__particle',
+                    phase === 'ready' ? 'persona-snapshot-card__particle--dropped' : '',
+                  ].join(' ')}
+                  src={src}
+                  mode='aspectFit'
+                  lazyLoad={false}
+                  style={{
+                    width: `${particle.sizeRpx}rpx`,
+                    height: `${particle.sizeRpx}rpx`,
+                    animationDelay: `${particle.delayMs}ms`,
+                    animationDuration: `${dropDurationMs}ms`,
+                  }}
+                  onError={() => {
+                    setParticleAttempts((prev) => ({
+                      ...prev,
+                      [particle.id]: (prev[particle.id] ?? 0) + 1,
+                    }))
+                  }}
+                />
+              </View>
+            )
+          })}
+        </View>
       ) : null}
-    </>
+    </View>
   )
 }

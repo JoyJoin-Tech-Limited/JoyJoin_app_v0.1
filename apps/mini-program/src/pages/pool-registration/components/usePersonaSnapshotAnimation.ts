@@ -1,34 +1,33 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PoolPersonaSnapshotResponse, PoolPersonaStateBand } from '@shared/api'
-import { useDeviceTier } from '../../../hooks/useDeviceTier'
 
-export type AnimationPhase = 'idle' | 'chaos' | 'snap' | 'resolve'
+export type AnimationPhase = 'idle' | 'ready'
 
-interface ParticleSpec {
+export interface ParticleSpec {
   id: number
   colorKey: 'purple' | 'coral' | 'blue' | 'green'
   sizeRpx: number
-  startX: number
-  startY: number
-  endX: number
-  endY: number
+  xPercent: number
+  yPercent: number
   rotation: number
   delayMs: number
 }
 
-const FIRST_VIEW_TOTAL_MS = 2900
-const RETURN_VIEW_TOTAL_MS = 950
-const PARTICLE_COUNT_DEFAULT = 16
-const PARTICLE_COUNT_DEGRADATION = 8
+// CTA becomes available quickly (≤600ms) so users can act even if the
+// decorative drop sequence is still finishing.
+const DROP_ANIMATION_DURATION_MS = 520
+const STAGGER_MS = 120
+const CTA_READY_MS = 600
+const MAX_PARTICLES = 5
 
 function getStateBandCopy(band: PoolPersonaStateBand, totalRegistrants: number): string {
   switch (band) {
     case 'seed':
-      return totalRegistrants > 0 ? '第一颗拼图已经落下' : '等你落下第一颗拼图'
+      return totalRegistrants > 0 ? `已有 ${totalRegistrants} 位伙伴报名` : '等你落下第一颗拼图'
     case 'glimmer':
-      return '拼图开始有了微光'
+      return `${totalRegistrants} 位伙伴，画像开始成形`
     case 'outline':
-      return '轮廓渐显，画像在成形'
+      return '这一桌的画像渐显轮廓'
     case 'clear':
       return '这一桌的画像越来越清晰'
     case 'full':
@@ -38,47 +37,64 @@ function getStateBandCopy(band: PoolPersonaStateBand, totalRegistrants: number):
   }
 }
 
-function getStateBandSubcopy(band: PoolPersonaStateBand): string {
-  switch (band) {
-    case 'seed':
-      return '报名伙伴越多，画像越清晰'
-    case 'glimmer':
-      return '再等等，更多伙伴正在加入'
-    case 'outline':
-      return '已有足够信号，悦仔正在归类'
-    case 'clear':
-      return '点击卡片查看聚合画像'
-    case 'full':
-      return '点击卡片查看完整画像'
-    default:
-      return ''
-  }
+function getStateBandSubcopy(): string {
+  return '报名伙伴越多，悦仔拼出的画像越清晰'
 }
 
-function generateParticles(count: number, widthRpx: number, heightRpx: number): ParticleSpec[] {
-  const colors: Array<ParticleSpec['colorKey']> = ['purple', 'coral', 'blue', 'green']
-  const particles: ParticleSpec[] = []
-  for (let i = 0; i < count; i++) {
-    const sizeRpx = 28 + Math.random() * 36
-    particles.push({
-      id: i,
-      colorKey: colors[i % colors.length],
-      sizeRpx,
-      startX: Math.random() * widthRpx,
-      startY: Math.random() * heightRpx,
-      endX: 32 + Math.random() * Math.max(0, widthRpx - 64),
-      endY: 40 + Math.random() * Math.max(0, heightRpx - 80),
-      rotation: Math.random() * 360,
-      delayMs: Math.random() * 400,
-    })
-  }
-  return particles
+function generateDroppingParticles(): ParticleSpec[] {
+  // Puzzle-piece decorations scattered across the persona zone.
+  // Positions are percentages so they adapt to the right-column width.
+  const specs: Omit<ParticleSpec, 'delayMs'>[] = [
+    {
+      id: 0,
+      colorKey: 'purple',
+      sizeRpx: 28,
+      xPercent: 78,
+      yPercent: 18,
+      rotation: 12,
+    },
+    {
+      id: 1,
+      colorKey: 'coral',
+      sizeRpx: 24,
+      xPercent: 92,
+      yPercent: 48,
+      rotation: -18,
+    },
+    {
+      id: 2,
+      colorKey: 'blue',
+      sizeRpx: 32,
+      xPercent: 70,
+      yPercent: 72,
+      rotation: 34,
+    },
+    {
+      id: 3,
+      colorKey: 'green',
+      sizeRpx: 22,
+      xPercent: 58,
+      yPercent: 34,
+      rotation: -8,
+    },
+    {
+      id: 4,
+      colorKey: 'purple',
+      sizeRpx: 20,
+      xPercent: 88,
+      yPercent: 12,
+      rotation: 22,
+    },
+  ]
+  return specs.slice(0, MAX_PARTICLES).map((s, i) => ({
+    ...s,
+    delayMs: i * STAGGER_MS,
+  }))
 }
 
 interface UsePersonaSnapshotAnimationOptions {
   snapshot?: PoolPersonaSnapshotResponse | null
   reduceMotion: boolean
-  isReturnView: boolean
 }
 
 interface UsePersonaSnapshotAnimationResult {
@@ -87,23 +103,21 @@ interface UsePersonaSnapshotAnimationResult {
   stateBandCopy: string
   stateBandSubcopy: string
   ctaReady: boolean
+  dropDurationMs: number
 }
 
 export function usePersonaSnapshotAnimation({
   snapshot,
   reduceMotion,
-  isReturnView,
 }: UsePersonaSnapshotAnimationOptions): UsePersonaSnapshotAnimationResult {
-  const deviceTier = useDeviceTier()
   const [phase, setPhase] = useState<AnimationPhase>('idle')
   const ctaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [ctaReady, setCtaReady] = useState(false)
 
-  const particleCount = deviceTier.isDegradation ? PARTICLE_COUNT_DEGRADATION : PARTICLE_COUNT_DEFAULT
-
   const particles = useMemo(() => {
-    return generateParticles(particleCount, 686, 272)
-  }, [particleCount, snapshot?.stateBand, snapshot?.totalRegistrants])
+    if (reduceMotion) return []
+    return generateDroppingParticles()
+  }, [reduceMotion, snapshot?.stateBand, snapshot?.totalRegistrants])
 
   const stateBandCopy = useMemo(() => {
     if (!snapshot) return '拼图正在加载…'
@@ -112,35 +126,30 @@ export function usePersonaSnapshotAnimation({
 
   const stateBandSubcopy = useMemo(() => {
     if (!snapshot) return ''
-    return getStateBandSubcopy(snapshot.stateBand)
+    return getStateBandSubcopy()
   }, [snapshot])
 
   useEffect(() => {
     if (!snapshot) return
 
     if (reduceMotion) {
-      setPhase('resolve')
+      setPhase('ready')
       setCtaReady(true)
       return
     }
 
-    setPhase('chaos')
+    setPhase('idle')
     setCtaReady(false)
 
-    const totalDuration = isReturnView ? RETURN_VIEW_TOTAL_MS : FIRST_VIEW_TOTAL_MS
-    const snapAt = isReturnView ? 300 : 900
-    const resolveAt = isReturnView ? 700 : 2300
-
-    const snapTimer = setTimeout(() => setPhase('snap'), snapAt)
-    const resolveTimer = setTimeout(() => setPhase('resolve'), resolveAt)
-    ctaTimerRef.current = setTimeout(() => setCtaReady(true), Math.min(600, snapAt))
+    ctaTimerRef.current = setTimeout(() => {
+      setPhase('ready')
+      setCtaReady(true)
+    }, CTA_READY_MS)
 
     return () => {
-      clearTimeout(snapTimer)
-      clearTimeout(resolveTimer)
       if (ctaTimerRef.current) clearTimeout(ctaTimerRef.current)
     }
-  }, [snapshot, reduceMotion, isReturnView])
+  }, [snapshot, reduceMotion])
 
   useEffect(() => {
     return () => {
@@ -154,5 +163,6 @@ export function usePersonaSnapshotAnimation({
     stateBandCopy,
     stateBandSubcopy,
     ctaReady,
+    dropDurationMs: DROP_ANIMATION_DURATION_MS,
   }
 }

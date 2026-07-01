@@ -2,36 +2,24 @@
 @use '../../../styles/mixins' as *;
 
 .pool-registration-hero {
-  margin-bottom: $spacing-md;
-  border-radius: $card-radius;
-  overflow: hidden;
-  background: $color-surface;
-  box-shadow: $shadow-md;
+  // Frame-only when embedded inside the merged hero+persona card.
+  // The outer card chrome (radius/shadow/margin) lives in the wrapper.
+  width: 100%;
   contain: layout style;
 
   &--hidden {
     opacity: 0;
-    transform: translateY(24rpx) scale(0.985);
-  }
-
-  &--enter {
-    opacity: 0;
-    transform: translateY(24rpx) scale(0.985);
-    animation: pool-registration-hero-enter 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 
   &--visible {
     opacity: 1;
-    transform: none;
   }
 
   &__frame {
     position: relative;
     width: 100%;
-    // The source artwork is 750×560, but the hero sits inside a padded scroll
-    // container, so a fixed 560rpx height leaves blank space below the image
-    // when widthFix scales it down. Use the same aspect ratio so the frame
-    // always matches the rendered image size and the artwork fills it fully.
+    // Source artwork is 750×560 (and 1500×1120 CDN). Keep the frame at the
+    // same aspect ratio so widthFix fills it exactly with no blank bands.
     aspect-ratio: 750 / 560;
     height: auto;
     overflow: hidden;
@@ -136,6 +124,20 @@
       rgba(0, 0, 0, 0.36) 100%
     );
     pointer-events: none;
+    z-index: 2;
+  }
+
+  &__scrim-left {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.18) 0%,
+      rgba(0, 0, 0, 0.06) 28%,
+      rgba(0, 0, 0, 0) 48%
+    );
+    pointer-events: none;
+    z-index: 2;
   }
 
   // ─── Top chrome: event badge + seats mini-pill ────────────────────
@@ -149,7 +151,7 @@
     align-items: flex-start;
     gap: $spacing-sm;
     padding: $spacing-md;
-    z-index: 2;
+    z-index: 3;
   }
 
   &__badge {
@@ -189,7 +191,7 @@
     gap: $spacing-xs;
     row-gap: $spacing-xs;
     padding: $spacing-md;
-    z-index: 2;
+    z-index: 3;
   }
 
   &__meta-pill {
@@ -245,13 +247,8 @@
     opacity: 0;
     transform: scale(0);
 
-    .pool-registration-hero--enter & {
-      animation: pool-registration-hero-seat-pop 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    }
-
     .pool-registration-hero--visible & {
-      opacity: 1;
-      transform: scale(1);
+      animation: pool-registration-hero-seat-pop 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
     }
 
     &--delay-0 { animation-delay: 0.2s; }
@@ -315,17 +312,6 @@
   }
 }
 
-@keyframes pool-registration-hero-enter {
-  from {
-    opacity: 0;
-    transform: translateY(24rpx) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 @keyframes pool-registration-hero-seat-pop {
   from {
     opacity: 0;
@@ -351,18 +337,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pool-registration-hero--enter {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-
   .pool-registration-hero__aurora-orb,
   .pool-registration-hero--low-end .pool-registration-hero__aurora-orb {
     animation: none;
   }
 
-  .pool-registration-hero--enter .pool-registration-hero__seat-head {
+  .pool-registration-hero--visible .pool-registration-hero__seat-head {
     animation: none;
   }
 

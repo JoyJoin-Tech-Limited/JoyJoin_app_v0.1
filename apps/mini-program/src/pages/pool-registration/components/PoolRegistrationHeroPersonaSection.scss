@@ -1,0 +1,65 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.hero-persona-section {
+  width: 100%;
+  margin-bottom: $spacing-md;
+
+  &__card {
+    width: 100%;
+    border-radius: $card-radius;
+    overflow: hidden;
+    background: $color-surface;
+    box-shadow: $shadow-md;
+    contain: layout style;
+
+    &--hidden {
+      opacity: 0;
+      transform: translateY(24rpx) scale(0.985);
+    }
+
+    &--enter {
+      opacity: 0;
+      transform: translateY(24rpx) scale(0.985);
+      animation: hero-persona-section-enter 0.46s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    &--low-end {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  &__persona-zone {
+    position: relative;
+    // Warm cream/pink gradient that continues from the hero image without a seam.
+    background: linear-gradient(
+      180deg,
+      $color-bg-tint-cream 0%,
+      $color-bg-tint-pink 55%,
+      rgba($color-bg-tint-pink, 0.96) 100%
+    );
+    padding: $spacing-md;
+    overflow: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-persona-section__card--enter {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+@keyframes hero-persona-section-enter {
+  from {
+    opacity: 0;
+    transform: translateY(24rpx) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

@@ -229,14 +229,14 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         },
         // Pool-registration hero fallback — also copied to a main-package directory
         // that survives clean:cdn-assets so the hero can load locally if the CDN
-        // or subpackage path fails. (~50KB total for both dining + drinks heroes).
+        // or subpackage path fails. (~180KB total for both dining + drinks heroes).
         {
-          from: 'src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp',
-          to: 'dist/assets/pool-heroes/lovart-pool-registration-hero-dining-20260613-v1.webp',
+          from: 'src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v1.webp',
+          to: 'dist/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v1.webp',
         },
         {
-          from: 'src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp',
-          to: 'dist/assets/pool-heroes/lovart-pool-registration-hero-drinks-20260613-v1.webp',
+          from: 'src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v1.webp',
+          to: 'dist/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v1.webp',
         },
         // Custom-tier icon — bundled locally for the icebreaker tier selector.
         // Lives in the phase-icons source folder but is copied out so it is not

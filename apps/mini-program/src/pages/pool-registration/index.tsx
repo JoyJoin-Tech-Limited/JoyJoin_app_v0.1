@@ -70,8 +70,7 @@ import {
 import ChoiceCard from './components/ChoiceCard'
 import ChoiceChip from './components/ChoiceChip'
 import { getIntentFeedback } from './components/intentFeedback'
-import PoolRegistrationHero from './components/PoolRegistrationHero'
-import PersonaSnapshotCard from './components/PersonaSnapshotCard'
+import PoolRegistrationHeroPersonaSection from './components/PoolRegistrationHeroPersonaSection'
 import StepPill from './components/StepPill'
 import XiaoyueCoachCard from './components/XiaoyueCoachCard'
 import XiaoyueLetterCard from './components/XiaoyueLetterCard'
@@ -915,46 +914,30 @@ export default function PoolRegistrationPage() {
             <Text className='pool-reg__title pool-reg__title--headline'>{pool?.title ?? '活动报名'}</Text>
           </View>
 
-          <PoolRegistrationHero
+          {personaSnapshotEnabled && showNewRegistrantBanner && !isLoadingPersonaSnapshot && personaSnapshot ? (
+            <View className='pool-reg__persona-banner'>
+              <Text className='pool-reg__persona-banner-text'>
+                最近又新增了 {newRegistrantDelta} 位伙伴，画像已更新
+              </Text>
+            </View>
+          ) : null}
+
+          <PoolRegistrationHeroPersonaSection
             eventType={eventType}
             dateTimeLabel={poolDateTimeLabel}
             area={poolArea}
             price={pool?.price}
             registrationTotal={registrationTotal}
             sampleArchetypes={pool?.sampleArchetypes}
+            poolId={poolId}
+            snapshot={personaSnapshot}
+            isLoadingPersonaSnapshot={isLoadingPersonaSnapshot}
+            personaSnapshotError={personaSnapshotError}
+            onRetryPersonaSnapshot={() => refetchPersonaSnapshot()}
+            userArchetype={user?.primaryArchetype ?? null}
             visible={staggerMounted}
-            reduceMotion={reduceMotion}
+            personaSnapshotEnabled={personaSnapshotEnabled}
           />
-          {personaSnapshotEnabled && (
-            <>
-              {showNewRegistrantBanner && !isLoadingPersonaSnapshot && personaSnapshot ? (
-                <View className='pool-reg__persona-banner'>
-                  <Text className='pool-reg__persona-banner-text'>
-                    最近又新增了 {newRegistrantDelta} 位伙伴，画像已更新
-                  </Text>
-                </View>
-              ) : null}
-              {personaSnapshotError && !isLoadingPersonaSnapshot ? (
-                <View
-                  className='pool-reg__persona-error'
-                  onClick={() => refetchPersonaSnapshot()}
-                  hoverClass='pool-reg__persona-error--active'
-                  role='button'
-                  aria-label='画像加载失败，点击重试'
-                >
-                  <Text className='pool-reg__persona-error-text'>画像加载失败，点击重试</Text>
-                </View>
-              ) : null}
-              <PersonaSnapshotCard
-                poolId={poolId}
-                eventType={eventType}
-                snapshot={personaSnapshot}
-                isLoading={isLoadingPersonaSnapshot}
-                userArchetype={user?.primaryArchetype ?? null}
-                visible={staggerMounted}
-              />
-            </>
-          )}
           <XiaoyueLetterCard
             insight={brief.insight}
             matchingPromise={brief.matchingPromise}

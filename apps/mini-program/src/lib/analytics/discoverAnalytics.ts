@@ -63,6 +63,7 @@ export type DiscoverAnalyticsEventType =
   | 'persona_snapshot_impression'
   | 'persona_snapshot_expand_sheet'
   | 'persona_snapshot_dimension_tap'
+  | 'persona_snapshot_user_archetype_impression'
   | 'persona_snapshot_new_registrant_banner_shown'
   | 'persona_snapshot_state_band'
   | 'persona_snapshot_load_error'

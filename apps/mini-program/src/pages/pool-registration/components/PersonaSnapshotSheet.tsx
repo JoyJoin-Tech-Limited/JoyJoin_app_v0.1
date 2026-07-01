@@ -1,4 +1,5 @@
 import { View, Text, ScrollView } from '@tarojs/components'
+import { useEffect, useState } from 'react'
 import type { PoolPersonaSnapshotResponse } from '@shared/api'
 import type { PoolEventType } from '../flowConfig'
 import './PersonaSnapshotSheet.scss'
@@ -6,6 +7,7 @@ import './PersonaSnapshotSheet.scss'
 interface PersonaSnapshotSheetProps {
   snapshot: PoolPersonaSnapshotResponse
   eventType: PoolEventType
+  initialDimension?: string
   onClose: () => void
 }
 
@@ -17,8 +19,20 @@ const DIMENSION_LABELS: Record<string, string> = {
   gender: '性别比例',
 }
 
-export default function PersonaSnapshotSheet({ snapshot, eventType, onClose }: PersonaSnapshotSheetProps) {
+export default function PersonaSnapshotSheet({ snapshot, eventType, initialDimension, onClose }: PersonaSnapshotSheetProps) {
   const disclosedDimensions = snapshot.dimensions.filter((d) => d.disclosed)
+  const [scrollIntoView, setScrollIntoView] = useState<string | undefined>(undefined)
+
+  useEffect(() => {
+    if (!initialDimension) return
+    const exists = disclosedDimensions.some((d) => d.key === initialDimension)
+    if (!exists) return
+    // Defer scroll until the sheet has rendered and layout is stable.
+    const timer = setTimeout(() => {
+      setScrollIntoView(`persona-dim-${initialDimension}`)
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [initialDimension, disclosedDimensions])
 
   return (
     <View className='persona-snapshot-sheet' onClick={onClose}>
@@ -38,7 +52,13 @@ export default function PersonaSnapshotSheet({ snapshot, eventType, onClose }: P
           </Text>
         </View>
 
-        <ScrollView className='persona-snapshot-sheet__scroll' scrollY enhanced showScrollbar={false}>
+        <ScrollView
+          className='persona-snapshot-sheet__scroll'
+          scrollY
+          enhanced
+          showScrollbar={false}
+          scrollIntoView={scrollIntoView}
+        >
           {disclosedDimensions.length === 0 ? (
             <View className='persona-snapshot-sheet__empty'>
               <Text className='persona-snapshot-sheet__empty-title'>画像还在聚合中</Text>
@@ -48,7 +68,11 @@ export default function PersonaSnapshotSheet({ snapshot, eventType, onClose }: P
             </View>
           ) : (
             disclosedDimensions.map((dimension) => (
-              <View key={dimension.key} className='persona-snapshot-sheet__dimension'>
+              <View
+                key={dimension.key}
+                id={`persona-dim-${dimension.key}`}
+                className='persona-snapshot-sheet__dimension'
+              >
                 <View className='persona-snapshot-sheet__dimension-header'>
                   <Text className='persona-snapshot-sheet__dimension-label'>
                     {DIMENSION_LABELS[dimension.key] || dimension.label}

@@ -11,12 +11,12 @@ import './PoolRegistrationHero.scss'
 // Fallback source: main-package local copy that survives clean:cdn-assets.
 // Subpackage local copy is kept as a tertiary fallback for offline resilience.
 const HERO_BASE_PATH = '/assets/ceremony/lovart-pool-registration-hero'
-const DINING_HERO_CDN = cdnAsset(`${HERO_BASE_PATH}-dining-20260613-v1.webp`)
-const DRINKS_HERO_CDN = cdnAsset(`${HERO_BASE_PATH}-drinks-20260613-v1.webp`)
-const DINING_HERO_LOCAL = localAsset('/assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp')
-const DRINKS_HERO_LOCAL = localAsset('/assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp')
-const DINING_HERO_SUBPACKAGE = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp'
-const DRINKS_HERO_SUBPACKAGE = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp'
+const DINING_HERO_CDN = cdnAsset(`${HERO_BASE_PATH}-dining-20260702-v1.webp`)
+const DRINKS_HERO_CDN = cdnAsset(`${HERO_BASE_PATH}-drinks-20260702-v1.webp`)
+const DINING_HERO_LOCAL = localAsset('/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v1.webp')
+const DRINKS_HERO_LOCAL = localAsset('/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v1.webp')
+const DINING_HERO_SUBPACKAGE = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v1.webp'
+const DRINKS_HERO_SUBPACKAGE = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v1.webp'
 
 const HERO_ATTEMPTS = [
   (eventType: PoolEventType) => (eventType === '酒局' ? DRINKS_HERO_CDN : DINING_HERO_CDN),
@@ -127,7 +127,7 @@ export default function PoolRegistrationHero({
   const showAurora = imageAttempt >= HERO_ATTEMPTS.length
   const rootClasses = [
     'pool-registration-hero',
-    visible ? (reduceMotion ? 'pool-registration-hero--visible' : 'pool-registration-hero--enter') : 'pool-registration-hero--hidden',
+    visible ? 'pool-registration-hero--visible' : 'pool-registration-hero--hidden',
     deviceTier.isDegradation ? 'pool-registration-hero--low-end' : '',
   ].join(' ')
 
@@ -162,6 +162,7 @@ export default function PoolRegistrationHero({
         )}
 
         <View className='pool-registration-hero__scrim' />
+        <View className='pool-registration-hero__scrim-left' />
 
         <View className='pool-registration-hero__top-chrome'>
           <View className='pool-registration-hero__badge'>
