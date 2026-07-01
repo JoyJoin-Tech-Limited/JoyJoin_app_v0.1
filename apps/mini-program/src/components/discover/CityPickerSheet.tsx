@@ -162,7 +162,7 @@ export default function CityPickerSheet({
       await apiRequest({
         method: 'POST',
         path: '/api/cities/interest',
-        data: { city, source: 'city_feed_card' },
+        data: { city, source: 'feed_card' },
         timeout: 10000,
       })
 
