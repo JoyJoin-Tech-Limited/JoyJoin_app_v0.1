@@ -20,7 +20,9 @@ export interface PickerShellProps {
 }
 
 const DEFAULT_SHELL_HEIGHT_RPX = 1100
-const SHELL_BOTTOM_CLEARANCE_RPX = 160
+// Tab bar is hidden when bottom sheet is open, so no clearance needed.
+// Small breathing room for safe-area bottom.
+const SHELL_BOTTOM_CLEARANCE_RPX = 0
 
 export default function PickerShell({
   visible,

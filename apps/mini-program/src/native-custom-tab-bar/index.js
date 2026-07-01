@@ -38,6 +38,7 @@ Component({
     lowEnd: false,
     hidden: true,
     collapsed: false,
+    sheetOpen: false,
     announcement: '',
     center: {
       label: '进行中',
@@ -274,6 +275,19 @@ Component({
 
     setBadges: function (badges) {
       this.syncState({ badges: badges })
+    },
+
+    /**
+     * Hides or shows the entire tab bar. Used by the Discover page to
+     * hide the tab bar when a bottom sheet (area filter / city picker)
+     * is open. Independent of the page-route logic so sheets fully
+     * cover the viewport without native-layer bleed-through.
+     * When the page re-shows (tab switch), _syncSelectionWithCurrentRoute
+     * may set hidden:false but does not touch sheetOpen, so the bar
+     * stays hidden until the sheet closes.
+     */
+    setSheetOpen: function (open) {
+      this.setData({ sheetOpen: !!open })
     },
 
     /**

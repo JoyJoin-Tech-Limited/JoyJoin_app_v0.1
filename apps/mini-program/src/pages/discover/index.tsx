@@ -695,6 +695,18 @@ export default function DiscoverPage() {
     }
   }, [])
 
+  /** Hide/show the native tab bar when a bottom sheet is open. */
+  const setTabBarSheetOpen = useCallback((open: boolean) => {
+    try {
+      const tabBar = tabBarRef.current ?? (Taro.getCurrentInstance().page as any)?.getTabBar?.()
+      if (tabBar && typeof tabBar.setSheetOpen === 'function') {
+        tabBar.setSheetOpen(open)
+      }
+    } catch {
+      // Gracefully ignore if the tab bar instance is detached or unavailable.
+    }
+  }, [])
+
   /** Track collapse/expand transitions for operational visibility. */
   const trackTabBarTransition = useCallback((collapsed: boolean, scrollTopRpx: number) => {
     try {
@@ -782,6 +794,13 @@ export default function DiscoverPage() {
     // never inherit a collapsed bar.
     collapsedRef.current = false
     setTabBarCollapsed(false)
+    // Also restore tab bar if a sheet was left open (e.g. switchTab while
+    // a bottom sheet was visible). The sheet state persists across tab
+    // switches via React state; closing the sheets here ensures clean
+    // re-entry.
+    setTabBarSheetOpen(false)
+    setDrawerOpen(false)
+    setShowCityPicker(false)
   })
 
   // ── Location filter state (lifted from AuthenticatedDiscover to render modals at root level) ──
@@ -809,15 +828,29 @@ export default function DiscoverPage() {
     []
   )
 
-  const handleOpenDrawer = useCallback(() => { haptics('light'); setDrawerOpen(true) }, [])
-  const handleCloseDrawer = useCallback(() => setDrawerOpen(false), [])
-  const handleOpenCityPicker = useCallback(() => setShowCityPicker(true), [])
-  const handleCloseCityPicker = useCallback(() => setShowCityPicker(false), [])
+  const handleOpenDrawer = useCallback(() => {
+    haptics('light')
+    setDrawerOpen(true)
+    setTabBarSheetOpen(true)
+  }, [setTabBarSheetOpen])
+  const handleCloseDrawer = useCallback(() => {
+    setDrawerOpen(false)
+    setTabBarSheetOpen(false)
+  }, [setTabBarSheetOpen])
+  const handleOpenCityPicker = useCallback(() => {
+    setShowCityPicker(true)
+    setTabBarSheetOpen(true)
+  }, [setTabBarSheetOpen])
+  const handleCloseCityPicker = useCallback(() => {
+    setShowCityPicker(false)
+    setTabBarSheetOpen(false)
+  }, [setTabBarSheetOpen])
   const handleCityPickerSuccess = useCallback((city: string) => {
     setLastSelectedCity(city)
     setShowCityPicker(false)
+    setTabBarSheetOpen(false)
     Taro.navigateTo({ url: '/pages/city-unlock/index' })
-  }, [])
+  }, [setTabBarSheetOpen])
 
   useCustomTabBarSync({
     enabled: isAuthenticated,
