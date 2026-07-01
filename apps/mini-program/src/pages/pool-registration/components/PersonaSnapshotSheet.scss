@@ -123,7 +123,7 @@
     width: 160rpx;
     font-size: 26rpx;
     color: $color-text-secondary;
-    @include ellipsis;
+    @include text-truncate;
   }
 
   &__cluster-bar-wrap {
