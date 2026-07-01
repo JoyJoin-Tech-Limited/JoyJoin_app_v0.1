@@ -11,6 +11,7 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  overflow: hidden;
 
   // ── Search ─────────────────────────────────────────────────────
   &__search {
@@ -71,7 +72,6 @@
   // ── Hot cities ─────────────────────────────────────────────────
   &__hot-section {
     padding: 0 $container-padding 16rpx;
-    flex-shrink: 0;
   }
 
   &__hot-section-placeholder {
@@ -93,11 +93,17 @@
     gap: $spacing-sm;
   }
 
-  // ── City list ──────────────────────────────────────────────────
-  &__list {
-    flex: 1;
-    min-height: 0;
-    padding: 0 $container-padding;
+  // ── Unified scroll area — wrapper constrains the scroll-view ──
+}
+
+.city-picker-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+
+  &__view {
+    height: 100%;
+    padding: 0 $container-padding 60rpx;
 
     // Full-bleed selected row within the sheet's horizontal padding.
     .selectable-tile--row.selectable-tile--selected {
@@ -105,12 +111,10 @@
       padding: $spacing-md $container-padding;
     }
   }
+}
 
-  &__list-safe-bottom {
-    height: env(safe-area-inset-bottom);
-    min-height: 24rpx;
-  }
-
+// ── Remaining .city-picker descendants ──────────────────────────────
+.city-picker {
   // ── Empty state ────────────────────────────────────────────────
   &__empty {
     padding: 48rpx $spacing-lg;

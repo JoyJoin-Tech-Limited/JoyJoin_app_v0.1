@@ -313,62 +313,63 @@ export default function CityPickerSheet({
           )}
         </View>
 
-        {/* Hot cities — shown when search is empty */}
-        {showHotCities ? (
-          <View className='city-picker__hot-section'>
-            <Text className='city-picker__section-title'>热门城市</Text>
-            <View className='city-picker__hot-grid'>
-              {HOT_CITIES.map((city) => (
-                <SelectableTile
-                  key={city}
-                  variant='compact'
-                  label={displayName(city)}
-                  selected={selectedCity === city}
-                  onClick={() => handleSelectCity(city)}
-                  ariaLabel={`选择 ${displayName(city)}`}
-                />
-              ))}
-            </View>
-          </View>
-        ) : (
-          /* Spacer to prevent layout jump when hot section hides */
-          <View className='city-picker__hot-section-placeholder' />
-        )}
+        {/* Unified scrollable area: hot cities + city list in one ScrollView */}
+        <View className='city-picker-scroll'>
+          <ScrollView
+            className='city-picker-scroll__view'
+            scrollY
+            scrollWithAnimation
+            enableFlex
+            scrollIntoView={scrollToCity}
+          >
+            {/* Hot cities — shown when search is empty */}
+            {showHotCities ? (
+              <View className='city-picker__hot-section'>
+                <Text className='city-picker__section-title'>热门城市</Text>
+                <View className='city-picker__hot-grid'>
+                  {HOT_CITIES.map((city) => (
+                    <SelectableTile
+                      key={city}
+                      variant='compact'
+                      label={displayName(city)}
+                      selected={selectedCity === city}
+                      onClick={() => handleSelectCity(city)}
+                      ariaLabel={`选择 ${displayName(city)}`}
+                    />
+                  ))}
+                </View>
+              </View>
+            ) : (
+              /* Spacer to prevent layout jump when hot section hides */
+              <View className='city-picker__hot-section-placeholder' />
+            )}
 
-        {/* City list */}
-        <ScrollView
-          className='city-picker__list'
-          scrollY
-          scrollWithAnimation
-          enableFlex
-          scrollIntoView={scrollToCity}
-          // VirtualList is intentionally not used: city list max 41 items.
-        >
-          {filteredCities.map((city) => (
-            <SelectableTile
-              key={city}
-              id={`city-${city}`}
-              variant='row'
-              label={displayName(city)}
-              selected={selectedCity === city}
-              onClick={() => handleSelectCity(city)}
-              ariaLabel={`选择 ${displayName(city)}`}
-            />
-          ))}
-          {filteredCities.length === 0 && (
-            <View className='city-picker__empty city-picker__empty--enter'>
-              <Image
-                className='city-picker__empty-mascot'
-                src={getXiaoyueExpressionAsset('testCurious')}
-                mode='aspectFit'
-                aria-hidden='true'
+            {/* City list */}
+            {filteredCities.map((city) => (
+              <SelectableTile
+                key={city}
+                id={`city-${city}`}
+                variant='row'
+                label={displayName(city)}
+                selected={selectedCity === city}
+                onClick={() => handleSelectCity(city)}
+                ariaLabel={`选择 ${displayName(city)}`}
               />
-              <Text className='city-picker__empty-text'>悦仔还没去过这座城市</Text>
-              <Text className='city-picker__empty-hint'>换个关键词试试，或者选一座热门城市</Text>
-            </View>
-          )}
-          <View className='city-picker__list-safe-bottom' />
-        </ScrollView>
+            ))}
+            {filteredCities.length === 0 && (
+              <View className='city-picker__empty city-picker__empty--enter'>
+                <Image
+                  className='city-picker__empty-mascot'
+                  src={getXiaoyueExpressionAsset('testCurious')}
+                  mode='aspectFit'
+                  aria-hidden='true'
+                />
+                <Text className='city-picker__empty-text'>悦仔还没去过这座城市</Text>
+                <Text className='city-picker__empty-hint'>换个关键词试试，或者选一座热门城市</Text>
+              </View>
+            )}
+          </ScrollView>
+        </View>
       </View>
     </PickerShell>
   )
