@@ -161,8 +161,8 @@
    fade reveals 0→1 in 200ms, settle expands 0.94→1.0 in 400ms.
    Gated by prefers-reduced-motion + .joy-custom-tab-bar--low-end below. */
 .joy-custom-tab-bar__center-logo {
-  width: 114rpx;
-  height: 114rpx;
+  width: 148rpx;
+  height: 148rpx;
   /* 4rpx padding inside the 122rpx purple pill is deliberate (user spec
      2026-06-04: "minimal breathing room, impactful logo"). Off the 8rpx
      grid — do NOT "fix" by bumping to 8rpx; that re-introduces the frame
@@ -192,7 +192,7 @@
 
 .joy-custom-tab-bar__center {
   display: flex;
-  width: 148rpx;
+  width: 178rpx;
   flex-direction: column;
   align-items: center;
   pointer-events: auto;
@@ -202,8 +202,8 @@
 .joy-custom-tab-bar__center-outer-ring {
   position: relative;
   display: flex;
-  height: 136rpx;
-  width: 136rpx;
+  height: 164rpx;
+  width: 164rpx;
   align-items: center;
   justify-content: center;
   border-radius: 9999rpx;
@@ -216,8 +216,8 @@
 .joy-custom-tab-bar__center-button {
   position: relative;
   display: flex;
-  height: 122rpx;
-  width: 122rpx;
+  height: 154rpx;
+  width: 154rpx;
   align-items: center;
   justify-content: center;
   border-radius: 9999rpx;
@@ -252,8 +252,8 @@
 }
 
 .joy-custom-tab-bar__center-label {
-  margin-top: 8rpx;
-  max-width: 148rpx;
+  margin-top: -28rpx;
+  max-width: 178rpx;
   font-size: 22rpx;
   line-height: 24rpx;
   font-weight: 600;
