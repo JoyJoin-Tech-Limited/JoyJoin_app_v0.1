@@ -260,8 +260,9 @@ export function getIntentEmoji(intent: string): string {
 }
 
 /**
- * Toggles an intent value in the current selection, respecting the max-explicit
- * cap and the special "flexible" option which is never blocked by the cap.
+ * Toggles an intent value in the current selection, respecting the max selection
+ * cap and the special "flexible" option. Flexible means no strong preference, so
+ * it is mutually exclusive with explicit intents.
  *
  * Returns `null` when the toggle is blocked by the cap (caller should show
  * feedback). Returns the updated array on success.
@@ -278,17 +279,18 @@ export function toggleIntentValue(
     return current.filter((item) => item !== value);
   }
 
-  // Flexible can always be added.
+  // Flexible means "no strong preference"; selecting it clears explicit intents.
   if (value === flexibleValue) {
-    return [...current, value];
+    return [flexibleValue];
   }
 
+  const withoutFlexible = current.filter((item) => item !== flexibleValue);
   const explicitCount = current.filter((item) => item !== flexibleValue).length;
   if (explicitCount >= maxExplicit) {
     return null;
   }
 
-  return [...current, value];
+  return [...withoutFlexible, value];
 }
 
 // ============ 契合点系统 ============

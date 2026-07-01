@@ -30,4 +30,13 @@ describe("event registration payment gate", () => {
     expect(activeRegistrationFilters.length).toBeGreaterThanOrEqual(3);
     expect(paymentsSource).toContain('inArray(eventPoolRegistrations.matchStatus, ["pending", "matched"])');
   });
+
+  it("keeps legacy user event-credit caches valid for entitlement registration", () => {
+    const creditsRepoSource = readRepoFile("apps/server/src/repositories/eventCreditsRepo.ts");
+    const userEventPoolsSource = readRepoFile("apps/server/src/routes/domains/userEventPools.ts");
+
+    expect(creditsRepoSource).toContain("consumeLegacyUserCreditForPoolRegistration");
+    expect(creditsRepoSource).toContain("coalesce(${users.eventCredits}, 0)");
+    expect(userEventPoolsSource).toContain("consumeLegacyUserCreditForPoolRegistration");
+  });
 });

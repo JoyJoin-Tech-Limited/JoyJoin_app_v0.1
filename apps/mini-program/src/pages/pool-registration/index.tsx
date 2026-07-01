@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getEventPool, getMyPoolRegistrations, registerForPool, getPoolPersonaSnapshot, type EventPoolSummary, type PoolRegistrationSummary, type PoolPersonaSnapshotResponse } from '@shared/api'
 import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
 import { getErrorMessage, type ErrorCode } from '@shared/copy/errorBaselines'
-import { ALL_INTENT_VALUES, INTENT_FLEXIBLE_OPTION } from '@shared/constants'
+import { ALL_INTENT_VALUES, INTENT_FLEXIBLE_OPTION, toggleIntentValue } from '@shared/constants'
 
 import { useStaggerMount } from '../../hooks/useStaggerMount'
 import { useReactionTimer } from '../../hooks/useReactionTimer'
@@ -607,39 +607,9 @@ export default function PoolRegistrationPage() {
   )
 
   const handleIntentToggle = useCallback((value: string) => {
-    if (value === INTENT_FLEXIBLE_OPTION.value) {
-      setFormState((currentState) => {
-        discoverAnalytics.track('registration_intent_toggled', poolId, { value, flexible: true })
-        return {
-          ...currentState,
-          eventIntent: currentState.eventIntent.includes(value)
-            ? currentState.eventIntent.filter((item) => item !== value)
-            : [...currentState.eventIntent, value],
-        }
-      })
-      return
-    }
-
     setFormState((currentState) => {
-      // Explicit intents (excluding flexible)
-      const explicitIntents = currentState.eventIntent.filter(
-        (item) => item !== INTENT_FLEXIBLE_OPTION.value,
-      )
-
-      // Deselecting
-      if (currentState.eventIntent.includes(value)) {
-        discoverAnalytics.track('registration_intent_toggled', poolId, {
-          value,
-          action: 'deselect',
-        })
-        return {
-          ...currentState,
-          eventIntent: currentState.eventIntent.filter((item) => item !== value),
-        }
-      }
-
-      // Selecting: enforce MAX_INTENTS cap on explicit intents only
-      if (explicitIntents.length >= MAX_INTENTS) {
+      const nextIntent = toggleIntentValue(currentState.eventIntent, value, { maxExplicit: MAX_INTENTS })
+      if (!nextIntent) {
         Taro.showToast({
           title: `最多选择 ${MAX_INTENTS} 个期待`,
           icon: 'none',
@@ -650,11 +620,12 @@ export default function PoolRegistrationPage() {
 
       discoverAnalytics.track('registration_intent_toggled', poolId, {
         value,
-        action: 'select',
+        flexible: value === INTENT_FLEXIBLE_OPTION.value,
+        action: currentState.eventIntent.includes(value) ? 'deselect' : 'select',
       })
       return {
         ...currentState,
-        eventIntent: [...currentState.eventIntent, value],
+        eventIntent: nextIntent,
       }
     })
   }, [poolId])

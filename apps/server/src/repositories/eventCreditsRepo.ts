@@ -113,7 +113,26 @@ async function getAvailableCreditCountInternal(tx: DatabaseLike, userId: string)
       ),
     );
 
-  return summary?.totalCredits ?? 0;
+  const grantCredits = summary?.totalCredits ?? 0;
+  if (grantCredits > 0) {
+    return grantCredits;
+  }
+
+  const [legacySummary] = await tx
+    .select({
+      totalCredits: sql<number>`coalesce(${users.eventCredits}, 0)::int`,
+    })
+    .from(users)
+    .where(
+      and(
+        eq(users.id, userId),
+        gt(sql<number>`coalesce(${users.eventCredits}, 0)`, 0),
+        or(isNull(users.eventCreditsExpiry), gt(users.eventCreditsExpiry, now)),
+      ),
+    )
+    .limit(1);
+
+  return legacySummary?.totalCredits ?? 0;
 }
 
 export const eventCreditsRepo = {
@@ -207,6 +226,29 @@ export const eventCreditsRepo = {
     }
 
     throw new Error("No available event-pack credits remain");
+  },
+
+  async consumeLegacyUserCreditForPoolRegistration(
+    tx: DatabaseLike,
+    params: { userId: string },
+  ): Promise<boolean> {
+    const now = getNow();
+    const [updatedUser] = await tx
+      .update(users)
+      .set({
+        eventCredits: sql`GREATEST(COALESCE(${users.eventCredits}, 0) - 1, 0)`,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(users.id, params.userId),
+          gt(sql<number>`coalesce(${users.eventCredits}, 0)`, 0),
+          or(isNull(users.eventCreditsExpiry), gt(users.eventCreditsExpiry, now)),
+        ),
+      )
+      .returning({ id: users.id });
+
+    return Boolean(updatedUser);
   },
 
   async getRefundBlockerCount(tx: DatabaseLike, paymentId: string): Promise<number> {

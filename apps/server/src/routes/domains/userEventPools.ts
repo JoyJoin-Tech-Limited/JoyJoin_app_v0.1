@@ -717,11 +717,20 @@ export function registerUserEventPoolRoutes(app: Express): void {
           .returning();
 
         if (entitlementMode === "event_pack") {
-          await eventCreditsRepo.consumeCreditForPoolRegistration(tx, {
-            userId,
-            poolId,
-            registrationId: createdRegistration.id,
-          });
+          try {
+            await eventCreditsRepo.consumeCreditForPoolRegistration(tx, {
+              userId,
+              poolId,
+              registrationId: createdRegistration.id,
+            });
+          } catch (error) {
+            const legacyCreditConsumed = await eventCreditsRepo.consumeLegacyUserCreditForPoolRegistration(tx, {
+              userId,
+            });
+            if (!legacyCreditConsumed) {
+              throw error;
+            }
+          }
         }
 
         if (invitationId && inviterId) {
@@ -1700,7 +1709,10 @@ export function registerUserEventPoolRoutes(app: Express): void {
         }
 
         if (!blindBoxEventId) {
-          return res.status(409).json({ message: "Blind box event is not ready for attendance confirmation" });
+          return res.status(409).json({
+            message: "当前活动暂未开放确认出席，请稍后再试",
+            code: "ATTENDANCE_NOT_READY",
+          });
         }
 
         // Idempotency: if already confirmed, return clean 200 without DB write or re-broadcast.

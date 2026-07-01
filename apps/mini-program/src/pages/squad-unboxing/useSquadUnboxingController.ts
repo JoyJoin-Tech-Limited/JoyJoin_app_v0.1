@@ -136,8 +136,11 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
       }, 900)
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : '确认出席没成功'
+      const rawMessage = error instanceof Error ? error.message : '确认出席没成功'
       const errorCode = (error as any)?.code ?? (error as any)?.response?.data?.code ?? 'UNKNOWN'
+      const message = errorCode === 'ATTENDANCE_NOT_READY' || rawMessage.includes('not ready for attendance')
+        ? '当前活动暂未开放确认出席，请稍后再试'
+        : rawMessage
       logError('[SquadUnboxing] Attendance confirmation failed', {
         groupId,
         message,

@@ -18,14 +18,17 @@ describe('toggleIntentValue', () => {
     expect(toggleIntentValue(current, 'fun', { maxExplicit: 3 })).toBeNull()
   })
 
-  it('allows adding flexible regardless of the explicit cap', () => {
+  it('treats flexible as mutually exclusive with explicit intents', () => {
     const current = ['friends', 'networking', 'discussion']
-    expect(toggleIntentValue(current, flexible)).toEqual([...current, flexible])
+    expect(toggleIntentValue(current, flexible)).toEqual([flexible])
   })
 
-  it('allows removing flexible even when explicit cap is reached', () => {
-    const current = ['friends', 'networking', 'discussion', flexible]
-    expect(toggleIntentValue(current, flexible)).toEqual(['friends', 'networking', 'discussion'])
+  it('allows removing flexible', () => {
+    expect(toggleIntentValue([flexible], flexible)).toEqual([])
+  })
+
+  it('selecting an explicit intent clears flexible', () => {
+    expect(toggleIntentValue([flexible], 'friends')).toEqual(['friends'])
   })
 
   it('respects a custom cap', () => {
@@ -36,10 +39,10 @@ describe('toggleIntentValue', () => {
     ])
   })
 
-  it('ignores the cap when the flexible value is customized', () => {
+  it('keeps custom flexible values mutually exclusive', () => {
     expect(
       toggleIntentValue(['a', 'b', 'c'], 'flex', { maxExplicit: 3, flexibleValue: 'flex' }),
-    ).toEqual(['a', 'b', 'c', 'flex'])
+    ).toEqual(['flex'])
   })
 
   it('does not mutate the input array', () => {

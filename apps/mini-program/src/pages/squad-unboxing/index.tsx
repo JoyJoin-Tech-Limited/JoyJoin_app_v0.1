@@ -381,6 +381,9 @@ export default function SquadUnboxingPage() {
                   <Text className='squad-unboxing__info-value'>
                     {group.venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '地点待定'}
                   </Text>
+                  <Text className={`squad-unboxing__info-status ${group.venueName ? 'squad-unboxing__info-status--assigned' : 'squad-unboxing__info-status--pending'}`}>
+                    {group.venueName ? '场地已确定，可复制地址导航' : '场地待定，悦仔会在确认后提醒你'}
+                  </Text>
                   {group.venueAddress ? (
                     <Text className='squad-unboxing__info-sub'>{group.venueAddress}</Text>
                   ) : null}

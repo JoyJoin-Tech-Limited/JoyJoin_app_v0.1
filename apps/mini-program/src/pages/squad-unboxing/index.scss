@@ -650,7 +650,8 @@
     }
 
     &--dimmed {
-      opacity: 0.5;
+      opacity: 0;
+      pointer-events: none;
     }
 
     &--pressed {
@@ -1009,6 +1010,26 @@
     text-align: right;
     line-height: 1.5;
     margin-top: $spacing-xs;
+  }
+
+  &__info-status {
+    display: inline-flex;
+    margin-top: $spacing-xs;
+    padding: 4rpx 12rpx;
+    border-radius: $radius-full;
+    font-size: $font-size-xs;
+    line-height: 1.5;
+    text-align: right;
+
+    &--assigned {
+      color: #16a34a;
+      background: rgba(154, 205, 50, 0.16);
+    }
+
+    &--pending {
+      color: $color-primary;
+      background: rgba($color-primary, 0.1);
+    }
   }
 
   &__info-action {
