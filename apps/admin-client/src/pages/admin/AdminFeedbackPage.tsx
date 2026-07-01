@@ -16,6 +16,9 @@ import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Responsi
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import EmptyState from "@/components/admin/EmptyState";
+import { apiRequest } from "@/lib/queryClient";
+
+const ALL_FILTER_VALUE = "__all__";
 
 interface FeedbackStats {
   totalFeedbacks: number;
@@ -117,7 +120,13 @@ export default function AdminFeedbackPage() {
   });
 
   // Fetch all feedbacks with filters
-  const { data: feedbacks = [], isLoading } = useQuery<FeedbackListItem[]>({
+  const {
+    data: feedbacks = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery<FeedbackListItem[]>({
     queryKey: [
       "/api/admin/feedback",
       filters.eventId,
@@ -136,8 +145,8 @@ export default function AdminFeedbackPage() {
       if (filters.endDate) params.append("endDate", filters.endDate);
       if (filters.hasDeepFeedback !== undefined) params.append("hasDeepFeedback", String(filters.hasDeepFeedback));
 
-      const response = await fetch(`/api/admin/feedback?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch feedbacks");
+      const query = params.toString();
+      const response = await apiRequest("GET", `/api/admin/feedback${query ? `?${query}` : ""}`);
       return response.json();
     },
   });
@@ -236,14 +245,16 @@ export default function AdminFeedbackPage() {
             <div className="space-y-2">
               <Label htmlFor="filter-event">活动</Label>
               <Select
-                value={filters.eventId}
-                onValueChange={(value) => setFilters({ ...filters, eventId: value })}
+                value={filters.eventId || ALL_FILTER_VALUE}
+                onValueChange={(value) =>
+                  setFilters({ ...filters, eventId: value === ALL_FILTER_VALUE ? "" : value })
+                }
               >
                 <SelectTrigger id="filter-event" data-testid="select-filter-event">
                   <SelectValue placeholder="全部活动" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">全部活动</SelectItem>
+                  <SelectItem value={ALL_FILTER_VALUE}>全部活动</SelectItem>
                   {events.map((event: any) => (
                     <SelectItem key={event.id} value={event.id}>
                       {event.title}
@@ -256,14 +267,16 @@ export default function AdminFeedbackPage() {
             <div className="space-y-2">
               <Label htmlFor="filter-min-rating">最低评分</Label>
               <Select
-                value={filters.minRating}
-                onValueChange={(value) => setFilters({ ...filters, minRating: value })}
+                value={filters.minRating || ALL_FILTER_VALUE}
+                onValueChange={(value) =>
+                  setFilters({ ...filters, minRating: value === ALL_FILTER_VALUE ? "" : value })
+                }
               >
                 <SelectTrigger id="filter-min-rating" data-testid="select-min-rating">
                   <SelectValue placeholder="不限" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">不限</SelectItem>
+                  <SelectItem value={ALL_FILTER_VALUE}>不限</SelectItem>
                   {[1, 2, 3, 4, 5].map((rating) => (
                     <SelectItem key={rating} value={String(rating)}>
                       {rating} 分
@@ -276,14 +289,16 @@ export default function AdminFeedbackPage() {
             <div className="space-y-2">
               <Label htmlFor="filter-max-rating">最高评分</Label>
               <Select
-                value={filters.maxRating}
-                onValueChange={(value) => setFilters({ ...filters, maxRating: value })}
+                value={filters.maxRating || ALL_FILTER_VALUE}
+                onValueChange={(value) =>
+                  setFilters({ ...filters, maxRating: value === ALL_FILTER_VALUE ? "" : value })
+                }
               >
                 <SelectTrigger id="filter-max-rating" data-testid="select-max-rating">
                   <SelectValue placeholder="不限" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">不限</SelectItem>
+                  <SelectItem value={ALL_FILTER_VALUE}>不限</SelectItem>
                   {[1, 2, 3, 4, 5].map((rating) => (
                     <SelectItem key={rating} value={String(rating)}>
                       {rating} 分
@@ -383,6 +398,19 @@ export default function AdminFeedbackPage() {
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8">加载中...</div>
+          ) : isError ? (
+            <div className="flex flex-col items-center gap-3 py-10 text-center">
+              <AlertCircle className="h-10 w-10 text-destructive" />
+              <div>
+                <h3 className="text-lg font-semibold">加载反馈失败</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {error instanceof Error ? error.message : "请稍后重试"}
+                </p>
+              </div>
+              <Button variant="outline" onClick={() => refetch()}>
+                重试
+              </Button>
+            </div>
           ) : feedbacks.length === 0 ? (
             <EmptyState title="暂无反馈数据" />
           ) : (

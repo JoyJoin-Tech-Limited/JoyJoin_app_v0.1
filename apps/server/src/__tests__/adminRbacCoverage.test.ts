@@ -27,6 +27,8 @@
  * - `POST /api/admin/login`  — public; intentional; no session exists yet.
  * - `GET  /api/admin/me`     — protected by `requireAdmin`; returns the
  *   caller's own profile and is therefore safe at `requireAdmin` level.
+ * - `POST /api/admin/logout` — protected by `requireAdmin`; users must always
+ *   be able to end their own admin session.
  */
 
 import { readFileSync } from 'node:fs';
@@ -64,6 +66,7 @@ const ADMIN_ROUTE_FILES = [
 ] as const;
 
 const MUTATING_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
+const REQUIRE_ADMIN_ONLY_MUTATION_EXCEPTIONS = new Set(['POST /api/admin/logout']);
 
 const SUPER_ADMIN_REQUIRED: Array<{ method: string; pathPattern: RegExp }> = [
   { method: 'GET', pathPattern: /^\/api\/admin\/accounts$/ },
@@ -167,6 +170,7 @@ describe('Admin RBAC coverage audit', () => {
     const missing = adminRoutes.filter((route) => {
       if (!MUTATING_METHODS.has(route.method)) return false;
       if (route.method === 'POST' && route.path === '/api/admin/login') return false;
+      if (REQUIRE_ADMIN_ONLY_MUTATION_EXCEPTIONS.has(`${route.method} ${route.path}`)) return false;
       if (!route.path.startsWith('/api/admin')) return false;
       const names = route.middlewareNames;
       return !names.includes('requireOperatorOrAbove') && !names.includes('requireSuperAdmin');

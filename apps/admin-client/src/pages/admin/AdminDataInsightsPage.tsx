@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -84,6 +85,8 @@ interface InsightsData {
     };
     monthlyRevenue: number;
   };
+  isFallback?: boolean;
+  warning?: string;
 }
 
 const COLORS = {
@@ -148,7 +151,7 @@ function StarRating({ rating }: { rating: number }) {
 
 export default function AdminDataInsightsPage() {
   const [activeTab, setActiveTab] = useState("operations");
-  const { data: insights, isLoading, error } = useQuery<InsightsData>({
+  const { data: insights, isLoading, error, refetch } = useQuery<InsightsData>({
     queryKey: ["/api/admin/insights"],
   });
 
@@ -171,16 +174,32 @@ export default function AdminDataInsightsPage() {
           </TabsTrigger>
         </TabsList>
 
+        {insights?.isFallback && (
+          <Card className="mt-4 border-yellow-200 bg-yellow-50 text-yellow-900">
+            <CardContent className="flex items-start gap-3 p-4 text-sm">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{insights.warning || "部分数据暂不可用，当前显示为空状态。"}</span>
+            </CardContent>
+          </Card>
+        )}
+
         <TabsContent value="registration" className="mt-6">
           <RegistrationFunnelDashboard />
         </TabsContent>
 
         <TabsContent value="operations" className="mt-6 space-y-6">
           {error ? (
-            <div className="text-center py-12">
+            <div className="flex flex-col items-center gap-3 py-12 text-center">
               <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">加载失败</h3>
-              <p className="text-muted-foreground">无法加载数据洞察，请稍后重试</p>
+              <div>
+                <h3 className="text-lg font-semibold mb-2">加载失败</h3>
+                <p className="text-muted-foreground">
+                  {error instanceof Error ? error.message : "无法加载数据洞察，请稍后重试"}
+                </p>
+              </div>
+              <Button variant="outline" onClick={() => refetch()}>
+                重试
+              </Button>
             </div>
           ) : (
             <>

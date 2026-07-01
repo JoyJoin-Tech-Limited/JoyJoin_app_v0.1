@@ -46,6 +46,63 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 const SAMPLE_ARCHETYPE_COUNT = 5;
 type DbTransaction = NodePgDatabase<typeof schema>;
 
+function createEmptyInsightsData() {
+  return {
+    engagementMetrics: {
+      totalUsers: 0,
+      activeUsers: 0,
+      totalEvents: 0,
+      avgEventsPerUser: 0,
+      newUsers7Days: 0,
+      newUsersPrevious7Days: 0,
+    },
+    userGrowth: [],
+    eventTrends: [],
+    personalityDistribution: [],
+    matchingEfficiency: {
+      successRate: 0,
+      avgMatchTime: 0,
+      attemptsPerUser: 0,
+    },
+    retention: {
+      weeklyRetention: [],
+      userSegments: {
+        new: 0,
+        active: 0,
+        dormant: 0,
+        churned: 0,
+      },
+      superUsers: {
+        count: 0,
+        topArchetypes: [],
+      },
+    },
+    eventQuality: {
+      completionRate: 0,
+      avgRating: 0,
+      complaintRate: 0,
+      lowRatedEvents: [],
+    },
+    monetization: {
+      conversionRate: 0,
+      revenueBreakdown: {
+        subscription: 0,
+        singleEvent: 0,
+      },
+      arpu: 0,
+      conversionFunnel: {
+        registered: 0,
+        browsedEvents: 0,
+        signedUp: 0,
+        paid: 0,
+      },
+      monthlyRevenue: 0,
+    },
+    isFallback: true,
+    warning: "部分数据源暂不可用，已显示空状态。请稍后重试或联系技术团队检查数据洞察查询。",
+  };
+}
+
 function resolvePoolCapacity(pool: {
   minGroupSize?: number | null;
   maxGroupSize?: number | null;
@@ -1750,7 +1807,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
         res.json(insights);
       } catch (error) {
         console.error("Error fetching insights:", error);
-        res.status(500).json({ message: "Failed to fetch insights" });
+        res.json(createEmptyInsightsData());
       }
     });
 

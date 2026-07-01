@@ -1,11 +1,12 @@
 import { createHash } from "crypto";
 import { existsSync } from "fs";
+import { createRequire } from "module";
 import { join } from "path";
 import { fileURLToPath } from "url";
-import { QQwry } from "qqwry-lite";
 import { logger } from "../lib/logger.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const require = createRequire(import.meta.url);
 
 export const MAINLAND_PROVINCES = [
   "北京",
@@ -65,7 +66,19 @@ export interface PrivacySafeIpIdentifiers {
   saltDate: string;
 }
 
-let qqwryInstance: QQwry | null = null;
+interface QqwryLookupResult {
+  addr: string;
+  info?: string | null;
+}
+
+interface QqwryReader {
+  searchIP(ip: string): QqwryLookupResult;
+}
+
+type QqwryConstructor = new (dataPath: string) => QqwryReader;
+
+let qqwryCtor: QqwryConstructor | null | undefined;
+let qqwryInstance: QqwryReader | null = null;
 let qqwryLoadError: Error | null = null;
 
 function resolveDatPath(): string {
@@ -75,7 +88,32 @@ function resolveDatPath(): string {
   return join(__dirname, "..", "..", "data", "qqwry.dat");
 }
 
-export function loadQqwry(): QQwry | null {
+function loadQqwryConstructor(): QqwryConstructor | null {
+  if (qqwryCtor !== undefined) return qqwryCtor;
+
+  try {
+    const module = require("qqwry-lite") as {
+      QQwry?: QqwryConstructor;
+      default?: QqwryConstructor;
+    };
+    qqwryCtor = module.QQwry ?? module.default ?? null;
+
+    if (!qqwryCtor) {
+      throw new Error("qqwry-lite did not export a QQwry constructor");
+    }
+
+    return qqwryCtor;
+  } catch (err) {
+    qqwryLoadError = err instanceof Error ? err : new Error(String(err));
+    qqwryCtor = null;
+    logger.warn("[IpGeolocation] qqwry-lite package unavailable; geolocation will degrade gracefully", {
+      err: qqwryLoadError.message,
+    });
+    return null;
+  }
+}
+
+export function loadQqwry(): QqwryReader | null {
   if (qqwryInstance) return qqwryInstance;
   if (qqwryLoadError) return null;
 
@@ -87,6 +125,9 @@ export function loadQqwry(): QQwry | null {
   }
 
   try {
+    const QQwry = loadQqwryConstructor();
+    if (!QQwry) return null;
+
     qqwryInstance = new QQwry(path);
     logger.info("[IpGeolocation] QQwry data file loaded", { path });
     return qqwryInstance;
@@ -98,6 +139,7 @@ export function loadQqwry(): QQwry | null {
 }
 
 export function resetQqwryForTests(): void {
+  qqwryCtor = undefined;
   qqwryInstance = null;
   qqwryLoadError = null;
 }
