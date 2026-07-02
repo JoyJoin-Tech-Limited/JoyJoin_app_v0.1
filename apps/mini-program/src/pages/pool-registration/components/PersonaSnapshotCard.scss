@@ -8,8 +8,8 @@
   min-height: 176rpx;
 
   &--reduce-motion {
-    .persona-snapshot-card__particle {
-      display: none;
+    .persona-snapshot-card__particle-wrap--static {
+      display: block;
     }
   }
 
@@ -247,6 +247,20 @@
     transform: translateX(0);
   }
 
+  // ─── Pile caption (explicit social proof) ─────────────────────────
+  &__pile-caption {
+    position: relative;
+    z-index: 2;
+    margin-top: $spacing-xs;
+    padding-top: $spacing-xs;
+    text-align: right;
+  }
+
+  &__pile-caption-text {
+    font-size: $font-size-2xs;
+    color: $color-text-tertiary;
+  }
+
   // ─── Decorative dropping puzzle particles ─────────────────────────
   &__particles {
     position: absolute;
@@ -254,10 +268,18 @@
     z-index: 0;
     pointer-events: none;
     overflow: hidden;
+
+    &--static {
+      opacity: 0.5;
+    }
   }
 
   &__particle-wrap {
     position: absolute;
+
+    &--static {
+      opacity: 0.5;
+    }
   }
 
   &__particle {
@@ -270,6 +292,10 @@
       animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
       animation-fill-mode: forwards;
     }
+
+    &--static {
+      opacity: 0.5;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -279,7 +305,7 @@
       animation: none !important;
     }
 
-    .persona-snapshot-card__particle-wrap {
+    .persona-snapshot-card__particle-wrap:not(.persona-snapshot-card__particle-wrap--static) {
       display: none;
     }
 
@@ -317,7 +343,7 @@
     transform: translateY(-6rpx) scale(0.97) rotate(-3deg);
   }
   100% {
-    opacity: 0.62;
+    opacity: 0.5;
     transform: translateY(0) scale(1) rotate(0deg);
   }
 }

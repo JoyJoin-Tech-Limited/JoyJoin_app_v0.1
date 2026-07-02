@@ -92,8 +92,10 @@ const POOL_REGISTRATION_PRELOADS = [
   ...MATCHING_PRELOADS,
   // Pool-registration Step 0 hero — CDN primary with local fallback. Preload both
   // variants since eventType is not known until the page renders.
-  cdnAsset('/assets/ceremony/lovart-pool-registration-hero-dining-20260613-v1.webp'),
-  cdnAsset('/assets/ceremony/lovart-pool-registration-hero-drinks-20260613-v1.webp'),
+  cdnAsset('/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v1.webp'),
+  cdnAsset('/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v1.webp'),
+  // Puzzle-pile particle — single tinted asset used for the persona pile animation.
+  cdnAsset('/assets/lovart/lovart-particle-purple-20260701-v1.webp'),
 ]
 
 const REWARDS_PRELOADS = [

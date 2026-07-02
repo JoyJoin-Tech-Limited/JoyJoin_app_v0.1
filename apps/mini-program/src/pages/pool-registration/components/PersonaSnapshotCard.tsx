@@ -41,11 +41,21 @@ export default function PersonaSnapshotCard({
 
   const shouldDisableMotion = reduceMotion || isDegradation
 
-  const { phase, particles, stateBandCopy, stateBandSubcopy, ctaReady, dropDurationMs } =
-    usePersonaSnapshotAnimation({
-      snapshot,
-      reduceMotion: shouldDisableMotion,
-    })
+  const {
+    phase,
+    particles,
+    staticMoundParticles,
+    stateBandCopy,
+    stateBandSubcopy,
+    pileCaption,
+    ctaReady,
+    dropDurationMs,
+  } = usePersonaSnapshotAnimation({
+    poolId,
+    snapshot,
+    userArchetype,
+    reduceMotion: shouldDisableMotion,
+  })
 
   const accentColor = useMemo(() => {
     if (userArchetype) {
@@ -100,6 +110,39 @@ export default function PersonaSnapshotCard({
     if (!snapshot) return []
     return snapshot.dimensions.filter((d) => d.disclosed).slice(0, 3)
   }, [snapshot])
+
+  const renderParticleImage = useCallback(
+    (particle: { id: number; colorKey: string; tint?: string; sizeRpx: number; delayMs: number }, dropped: boolean) => {
+      const attempt = particleAttempts[particle.id] ?? 0
+      const src = attempt === 0 ? getParticleSrc('purple', 'cdn') : getParticleSrc('purple', 'subpackage')
+      return (
+        <Image
+          key={particle.id}
+          className={[
+            'persona-snapshot-card__particle',
+            dropped ? 'persona-snapshot-card__particle--dropped' : '',
+          ].join(' ')}
+          src={src}
+          mode='aspectFit'
+          lazyLoad={false}
+          style={{
+            width: `${particle.sizeRpx}rpx`,
+            height: `${particle.sizeRpx}rpx`,
+            animationDelay: `${particle.delayMs}ms`,
+            animationDuration: `${dropDurationMs}ms`,
+            ...(particle.tint ? { filter: `drop-shadow(0 0 0 ${particle.tint})` } : {}),
+          }}
+          onError={() => {
+            setParticleAttempts((prev) => ({
+              ...prev,
+              [particle.id]: (prev[particle.id] ?? 0) + 1,
+            }))
+          }}
+        />
+      )
+    },
+    [dropDurationMs, particleAttempts],
+  )
 
   if (!visible) {
     return null
@@ -160,6 +203,8 @@ export default function PersonaSnapshotCard({
   }
 
   const totalRegistrants = snapshot?.totalRegistrants ?? 0
+  const showStaticMound = shouldDisableMotion || staticMoundParticles.length > 0
+  const showAnimatedParticles = !shouldDisableMotion && particles.length > 0
 
   return (
     <View
@@ -233,47 +278,57 @@ export default function PersonaSnapshotCard({
         </View>
       </View>
 
-      {!shouldDisableMotion && particles.length > 0 && snapshot ? (
+      {<View className='persona-snapshot-card__pile-caption' aria-live='polite'>
+        <Text className='persona-snapshot-card__pile-caption-text'>{pileCaption}</Text>
+      </View>}
+
+      {showAnimatedParticles ? (
         <View className='persona-snapshot-card__particles' aria-hidden='true'>
-          {particles.map((particle) => {
-            const attempt = particleAttempts[particle.id] ?? 0
-            const src = attempt === 0 ? getParticleSrc(particle.colorKey, 'cdn') : getParticleSrc(particle.colorKey, 'subpackage')
-            return (
-              <View
-                key={particle.id}
-                className='persona-snapshot-card__particle-wrap'
+          {particles.map((particle) => (
+            <View
+              key={particle.id}
+              className='persona-snapshot-card__particle-wrap'
+              style={{
+                width: `${particle.sizeRpx}rpx`,
+                height: `${particle.sizeRpx}rpx`,
+                left: `${particle.xPercent}%`,
+                top: `${particle.yPercent}%`,
+                transform: `rotate(${particle.rotation}deg)`,
+              }}
+            >
+              {renderParticleImage(particle, phase === 'ready')}
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {showStaticMound ? (
+        <View className='persona-snapshot-card__particles persona-snapshot-card__particles--static' aria-hidden='true'>
+          {staticMoundParticles.map((particle) => (
+            <View
+              key={`static-${particle.id}`}
+              className='persona-snapshot-card__particle-wrap persona-snapshot-card__particle-wrap--static'
+              style={{
+                width: `${particle.sizeRpx}rpx`,
+                height: `${particle.sizeRpx}rpx`,
+                left: `${particle.xPercent}%`,
+                top: `${particle.yPercent}%`,
+                transform: `rotate(${particle.rotation}deg)`,
+              }}
+            >
+              <Image
+                className='persona-snapshot-card__particle persona-snapshot-card__particle--static'
+                src={getParticleSrc('purple', 'cdn')}
+                mode='aspectFit'
+                lazyLoad={false}
                 style={{
                   width: `${particle.sizeRpx}rpx`,
                   height: `${particle.sizeRpx}rpx`,
-                  left: `${particle.xPercent}%`,
-                  top: `${particle.yPercent}%`,
-                  transform: `rotate(${particle.rotation}deg)`,
+                  ...(particle.tint ? { filter: `drop-shadow(0 0 0 ${particle.tint})` } : {}),
                 }}
-              >
-                <Image
-                  className={[
-                    'persona-snapshot-card__particle',
-                    phase === 'ready' ? 'persona-snapshot-card__particle--dropped' : '',
-                  ].join(' ')}
-                  src={src}
-                  mode='aspectFit'
-                  lazyLoad={false}
-                  style={{
-                    width: `${particle.sizeRpx}rpx`,
-                    height: `${particle.sizeRpx}rpx`,
-                    animationDelay: `${particle.delayMs}ms`,
-                    animationDuration: `${dropDurationMs}ms`,
-                  }}
-                  onError={() => {
-                    setParticleAttempts((prev) => ({
-                      ...prev,
-                      [particle.id]: (prev[particle.id] ?? 0) + 1,
-                    }))
-                  }}
-                />
-              </View>
-            )
-          })}
+              />
+            </View>
+          ))}
         </View>
       ) : null}
     </View>
