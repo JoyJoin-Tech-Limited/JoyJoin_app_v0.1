@@ -26,6 +26,7 @@ interface PoolRegistrationHeroPersonaSectionProps {
   personaSnapshotError: boolean
   onRetryPersonaSnapshot: () => void
   userArchetype?: string | null
+  userId?: string | null
   // Shared
   visible: boolean
   personaSnapshotEnabled: boolean
@@ -44,6 +45,7 @@ export default function PoolRegistrationHeroPersonaSection({
   personaSnapshotError,
   onRetryPersonaSnapshot,
   userArchetype,
+  userId,
   visible,
   personaSnapshotEnabled,
 }: PoolRegistrationHeroPersonaSectionProps) {
@@ -96,9 +98,7 @@ export default function PoolRegistrationHeroPersonaSection({
       <View
         className={cardClasses}
         onClick={handleCardClick}
-        {...(isReadyForSheet
-          ? { role: 'button', 'aria-label': '查看已报名伙伴画像' }
-          : {})}
+        hoverClass='hero-persona-section__card--active'
       >
         <PoolRegistrationHero
           eventType={eventType}
@@ -115,6 +115,7 @@ export default function PoolRegistrationHeroPersonaSection({
           <View className='hero-persona-section__persona-zone'>
             <PersonaSnapshotCard
               poolId={poolId}
+              userId={userId}
               snapshot={snapshot}
               isLoading={isLoadingPersonaSnapshot}
               hasError={personaSnapshotError}

@@ -262,7 +262,8 @@ export default function PoolRegistrationPage() {
   useEffect(() => {
     if (!personaSnapshot || personaSnapshot.totalRegistrants === 0) return
     try {
-      const storageKey = `jj_pool_persona_seen_${poolId}`
+      const identity = user?.id ?? 'guest'
+      const storageKey = `jj_pool_persona_seen_${identity}_${poolId}`
       const raw = Taro.getStorageSync(storageKey)
       const parsed = typeof raw === 'object' && raw !== null ? raw : { count: 0 }
       const lastCount = typeof parsed.count === 'number' ? parsed.count : 0
@@ -286,7 +287,7 @@ export default function PoolRegistrationPage() {
     } catch {
       // non-blocking
     }
-  }, [personaSnapshot, poolId])
+  }, [personaSnapshot, poolId, user?.id])
 
   const alreadyRegistered = useMemo(() => {
     if (!myRegistrations || !poolId) return false
@@ -919,6 +920,17 @@ export default function PoolRegistrationPage() {
               <Text className='pool-reg__persona-banner-text'>
                 最近又新增了 {newRegistrantDelta} 位伙伴，画像已更新
               </Text>
+              <View
+                className='pool-reg__persona-banner-close'
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowNewRegistrantBanner(false)
+                }}
+                hoverClass='pool-reg__persona-banner-close--active'
+                aria-label='关闭提示'
+              >
+                <Text className='pool-reg__persona-banner-close-text'>×</Text>
+              </View>
             </View>
           ) : null}
 
@@ -935,6 +947,7 @@ export default function PoolRegistrationPage() {
             personaSnapshotError={personaSnapshotError}
             onRetryPersonaSnapshot={() => refetchPersonaSnapshot()}
             userArchetype={user?.primaryArchetype ?? null}
+            userId={user?.id ?? null}
             visible={staggerMounted}
             personaSnapshotEnabled={personaSnapshotEnabled}
           />

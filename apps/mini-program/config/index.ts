@@ -29,6 +29,9 @@ const MINI_PROGRAM_XIAOYUE_CONNECTION_REACTIONS_ENABLED =
   process.env.TARO_APP_XIAOYUE_CONNECTION_REACTIONS_ENABLED ??
   process.env.XIAOYUE_CONNECTION_REACTIONS_ENABLED ??
   ''
+/** Build-time flag to enable H5 screenshot story modes (dev/preview only). */
+const MINI_PROGRAM_ENABLE_STORY_MODE =
+  process.env.TARO_APP_ENABLE_STORY_MODE ?? ''
 
 /** Inlined at build time — WeChat runtime has no `process` global. */
 const PRODUCTION_CDN_BASE_URL = 'https://cdn.joyjoinapp.com/static'
@@ -73,6 +76,9 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
       ),
       'process.env.TARO_APP_XIAOYUE_CONNECTION_REACTIONS_ENABLED': JSON.stringify(
         MINI_PROGRAM_XIAOYUE_CONNECTION_REACTIONS_ENABLED,
+      ),
+      'process.env.TARO_APP_ENABLE_STORY_MODE': JSON.stringify(
+        MINI_PROGRAM_ENABLE_STORY_MODE,
       ),
       'process.env.TARO_APP_CDN_BASE_URL': JSON.stringify(MINI_PROGRAM_CDN_BASE_URL),
       'process.env.TARO_ENV': JSON.stringify(MINI_PROGRAM_TARO_ENV),
@@ -231,12 +237,19 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         // that survives clean:cdn-assets so the hero can load locally if the CDN
         // or subpackage path fails. (~180KB total for both dining + drinks heroes).
         {
-          from: 'src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v1.webp',
-          to: 'dist/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v1.webp',
+          from: 'src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v2.webp',
+          to: 'dist/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v2.webp',
         },
         {
-          from: 'src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v1.webp',
-          to: 'dist/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v1.webp',
+          from: 'src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v2.webp',
+          to: 'dist/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v2.webp',
+        },
+        // Matching-status puzzle prelude pieces — bundled locally (~130KB total)
+        // so the live-reveal prelude paints instantly even if CDN is slow.
+        // Only WebP is bundled; PNG fallback is stripped by clean:cdn-assets.
+        {
+          from: 'src/assets/lovart/puzzle',
+          to: 'dist/assets/lovart/puzzle',
         },
         // Custom-tier icon — bundled locally for the icebreaker tier selector.
         // Lives in the phase-icons source folder but is copied out so it is not

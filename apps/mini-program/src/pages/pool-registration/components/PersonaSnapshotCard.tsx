@@ -6,13 +6,14 @@ import { getContrastSafeArchetypeColor, getArchetypeHSL, formatHSLAsRGBA } from 
 import { resolveArchetype } from '@shared/personality/archetypeNames'
 import ArchetypeHead from '../../../components/mascot/ArchetypeHead'
 import MissingArchetypePlaceholder from '../../../components/mascot/MissingArchetypePlaceholder'
-import { POOL_PERSONA_ASSETS, getParticleSrc } from './poolPersonaAssets'
+import { POOL_PERSONA_ASSETS, getParticleSrc, type PoolPersonaParticleKey } from './poolPersonaAssets'
 import { usePersonaSnapshotAnimation } from './usePersonaSnapshotAnimation'
 import { discoverAnalytics } from '../../../lib/analytics/discoverAnalytics'
 import './PersonaSnapshotCard.scss'
 
 interface PersonaSnapshotCardProps {
   poolId: string
+  userId?: string | null
   snapshot?: PoolPersonaSnapshotResponse | null
   isLoading: boolean
   hasError?: boolean
@@ -26,6 +27,7 @@ interface PersonaSnapshotCardProps {
 
 export default function PersonaSnapshotCard({
   poolId,
+  userId,
   snapshot,
   isLoading,
   hasError,
@@ -52,25 +54,31 @@ export default function PersonaSnapshotCard({
     dropDurationMs,
   } = usePersonaSnapshotAnimation({
     poolId,
+    userId,
     snapshot,
     userArchetype,
     reduceMotion: shouldDisableMotion,
   })
 
   const accentColor = useMemo(() => {
-    if (userArchetype) {
-      try {
-        return getContrastSafeArchetypeColor(userArchetype)
-      } catch {
-        // fall through
-      }
+    if (!userArchetype) return undefined
+    try {
+      return getContrastSafeArchetypeColor(userArchetype)
+    } catch {
+      // fall through
     }
-    return '#8B5CF6'
+    return undefined
   }, [userArchetype])
 
   const accentSoftBg = useMemo(() => {
-    const hsl = getArchetypeHSL(userArchetype)
-    return formatHSLAsRGBA(hsl, 0.08)
+    if (!userArchetype) return undefined
+    try {
+      const hsl = getArchetypeHSL(userArchetype)
+      return formatHSLAsRGBA(hsl, 0.08)
+    } catch {
+      // fall through
+    }
+    return undefined
   }, [userArchetype])
 
   const userArchetypeDisplay = useMemo(() => {
@@ -112,9 +120,9 @@ export default function PersonaSnapshotCard({
   }, [snapshot])
 
   const renderParticleImage = useCallback(
-    (particle: { id: number; colorKey: string; tint?: string; sizeRpx: number; delayMs: number }, dropped: boolean) => {
+    (particle: { id: number; colorKey: PoolPersonaParticleKey; sizeRpx: number; delayMs: number }, dropped: boolean) => {
       const attempt = particleAttempts[particle.id] ?? 0
-      const src = attempt === 0 ? getParticleSrc('purple', 'cdn') : getParticleSrc('purple', 'subpackage')
+      const src = attempt === 0 ? getParticleSrc(particle.colorKey, 'cdn') : getParticleSrc(particle.colorKey, 'subpackage')
       return (
         <Image
           key={particle.id}
@@ -130,13 +138,15 @@ export default function PersonaSnapshotCard({
             height: `${particle.sizeRpx}rpx`,
             animationDelay: `${particle.delayMs}ms`,
             animationDuration: `${dropDurationMs}ms`,
-            ...(particle.tint ? { filter: `drop-shadow(0 0 0 ${particle.tint})` } : {}),
           }}
           onError={() => {
-            setParticleAttempts((prev) => ({
-              ...prev,
-              [particle.id]: (prev[particle.id] ?? 0) + 1,
-            }))
+            // Cap at one retry (cdn → subpackage) to avoid infinite loops if
+            // both sources fail.
+            setParticleAttempts((prev) => {
+              const current = prev[particle.id] ?? 0
+              if (current >= 1) return prev
+              return { ...prev, [particle.id]: current + 1 }
+            })
           }}
         />
       )
@@ -219,7 +229,10 @@ export default function PersonaSnapshotCard({
         <View className='persona-snapshot-card__avatar-column'>
           <View
             className='persona-snapshot-card__avatar-ring'
-            style={{ borderColor: accentColor, backgroundColor: accentSoftBg }}
+            style={{
+              ...(accentColor ? { borderColor: accentColor } : {}),
+              ...(accentSoftBg ? { backgroundColor: accentSoftBg } : {}),
+            }}
           >
             {userArchetype ? (
               <ArchetypeHead archetype={userArchetype} size={112} variant='grid' />
@@ -227,7 +240,10 @@ export default function PersonaSnapshotCard({
               <MissingArchetypePlaceholder size={112} />
             )}
           </View>
-          <Text className='persona-snapshot-card__avatar-label' style={{ color: accentColor }}>
+          <Text
+            className='persona-snapshot-card__avatar-label'
+            style={accentColor ? { color: accentColor } : undefined}
+          >
             你的原型
           </Text>
           {userArchetypeDisplay ? (
@@ -244,22 +260,28 @@ export default function PersonaSnapshotCard({
           <Text className='persona-snapshot-card__subheadline'>{stateBandSubcopy}</Text>
 
           {disclosedDimensions.length > 0 ? (
-            <View className='persona-snapshot-card__dimension-pills' role='list'>
+            <View className='persona-snapshot-card__dimension-pills'>
               {disclosedDimensions.map((dimension) => (
                 <View
                   key={dimension.key}
-                  className='persona-snapshot-card__pill'
-                  role='listitem'
-                  hoverClass='persona-snapshot-card__pill--active'
+                  className={[
+                    'persona-snapshot-card__pill',
+                    ctaReady ? '' : 'persona-snapshot-card__pill--muted',
+                  ].join(' ')}
+                  hoverClass={ctaReady ? 'persona-snapshot-card__pill--active' : ''}
                   onClick={(e) => {
                     e.stopPropagation()
                     handleDimensionTap(dimension.key)
                   }}
-                  style={{ borderColor: accentColor }}
+                  style={accentColor ? { borderColor: accentColor } : undefined}
+                  aria-disabled={!ctaReady}
                   aria-label={`${dimension.label}：${dimension.clusters[0]?.label}`}
                 >
                   <Text className='persona-snapshot-card__pill-label'>{dimension.label}</Text>
-                  <Text className='persona-snapshot-card__pill-value' style={{ color: accentColor }}>
+                  <Text
+                    className='persona-snapshot-card__pill-value'
+                    style={accentColor ? { color: accentColor } : undefined}
+                  >
                     {dimension.clusters[0]?.label}
                   </Text>
                 </View>
@@ -278,9 +300,9 @@ export default function PersonaSnapshotCard({
         </View>
       </View>
 
-      {<View className='persona-snapshot-card__pile-caption' aria-live='polite'>
+      <View className='persona-snapshot-card__pile-caption' aria-live='polite'>
         <Text className='persona-snapshot-card__pile-caption-text'>{pileCaption}</Text>
-      </View>}
+      </View>
 
       {showAnimatedParticles ? (
         <View className='persona-snapshot-card__particles' aria-hidden='true'>
@@ -318,13 +340,12 @@ export default function PersonaSnapshotCard({
             >
               <Image
                 className='persona-snapshot-card__particle persona-snapshot-card__particle--static'
-                src={getParticleSrc('purple', 'cdn')}
+                src={getParticleSrc(particle.colorKey, 'cdn')}
                 mode='aspectFit'
                 lazyLoad={false}
                 style={{
                   width: `${particle.sizeRpx}rpx`,
                   height: `${particle.sizeRpx}rpx`,
-                  ...(particle.tint ? { filter: `drop-shadow(0 0 0 ${particle.tint})` } : {}),
                 }}
               />
             </View>

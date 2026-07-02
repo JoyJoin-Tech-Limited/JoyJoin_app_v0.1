@@ -21,6 +21,8 @@
     // Source artwork is 750×560 (and 1500×1120 CDN). Keep the frame at the
     // same aspect ratio so widthFix fills it exactly with no blank bands.
     aspect-ratio: 750 / 560;
+    // Fallback for runtimes where aspect-ratio is not honored (older WeChat).
+    min-height: 280rpx;
     height: auto;
     overflow: hidden;
     background: $color-surface;

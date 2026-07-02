@@ -29,6 +29,10 @@
       opacity: 1;
       transform: none;
     }
+
+    &--active {
+      background: rgba($color-primary, 0.04);
+    }
   }
 
   &__persona-zone {

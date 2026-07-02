@@ -1,5 +1,5 @@
 import { View, Text, Image } from '@tarojs/components'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { getArchetypeTokens } from '@shared/archetypeColorTokens'
 import { cdnAsset, localAsset, useCdnFirstSrc } from '../../../lib/utils/cdnAssets'
 import ArchetypeHead from '../../../components/mascot/ArchetypeHead'
@@ -11,12 +11,12 @@ import './PoolRegistrationHero.scss'
 // Fallback source: main-package local copy that survives clean:cdn-assets.
 // Subpackage local copy is kept as a tertiary fallback for offline resilience.
 const HERO_BASE_PATH = '/assets/ceremony/lovart-pool-registration-hero'
-const DINING_HERO_CDN = cdnAsset(`${HERO_BASE_PATH}-dining-20260702-v1.webp`)
-const DRINKS_HERO_CDN = cdnAsset(`${HERO_BASE_PATH}-drinks-20260702-v1.webp`)
-const DINING_HERO_LOCAL = localAsset('/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v1.webp')
-const DRINKS_HERO_LOCAL = localAsset('/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v1.webp')
-const DINING_HERO_SUBPACKAGE = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v1.webp'
-const DRINKS_HERO_SUBPACKAGE = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v1.webp'
+const DINING_HERO_CDN = cdnAsset(`${HERO_BASE_PATH}-dining-20260702-v2.webp`)
+const DRINKS_HERO_CDN = cdnAsset(`${HERO_BASE_PATH}-drinks-20260702-v2.webp`)
+const DINING_HERO_LOCAL = localAsset('/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v2.webp')
+const DRINKS_HERO_LOCAL = localAsset('/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v2.webp')
+const DINING_HERO_SUBPACKAGE = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v2.webp'
+const DRINKS_HERO_SUBPACKAGE = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v2.webp'
 
 const HERO_ATTEMPTS = [
   (eventType: PoolEventType) => (eventType === '酒局' ? DRINKS_HERO_CDN : DINING_HERO_CDN),
@@ -133,6 +133,10 @@ export default function PoolRegistrationHero({
 
   const seatsText = registrationTotal > 0 ? `${registrationTotal} 人已报名` : '等你加入'
 
+  const handleImageError = useCallback(() => {
+    setImageAttempt((prev) => Math.min(prev + 1, HERO_ATTEMPTS.length))
+  }, [])
+
   return (
     <View className={rootClasses}>
       <View className='pool-registration-hero__frame'>
@@ -157,7 +161,7 @@ export default function PoolRegistrationHero({
             lazyLoad={false}
             aria-label={`${eventType}邀请图`}
             onLoad={() => setImageLoaded(true)}
-            onError={() => setImageAttempt((prev) => prev + 1)}
+            onError={handleImageError}
           />
         )}
 

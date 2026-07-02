@@ -25,6 +25,10 @@
   }
 
   &__persona-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
     margin: 0 $spacing-md $spacing-xs;
     padding: $spacing-xs $spacing-md;
     border-radius: 24rpx;
@@ -33,11 +37,32 @@
   }
 
   &__persona-banner-text {
+    flex: 1;
     font-size: 24rpx;
     color: $color-primary;
     font-weight: 500;
     text-align: center;
     display: block;
+  }
+
+  &__persona-banner-close {
+    @include flex-center;
+    width: 48rpx;
+    height: 48rpx;
+    border-radius: 50%;
+    margin: -$spacing-xs 0;
+    margin-right: -$spacing-sm;
+    transition: background 0.12s ease;
+
+    &--active {
+      background: rgba($color-primary, 0.1);
+    }
+  }
+
+  &__persona-banner-close-text {
+    font-size: 28rpx;
+    color: $color-primary;
+    line-height: 1;
   }
 
   &__persona-error {
