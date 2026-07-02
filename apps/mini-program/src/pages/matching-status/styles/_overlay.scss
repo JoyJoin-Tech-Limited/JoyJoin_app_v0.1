@@ -16,7 +16,7 @@
   &__overlay-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.76);
+    background: rgba(0, 0, 0, 0.86);
   }
 
   &__overlay-card {
@@ -43,6 +43,34 @@
 
   &__puzzle-bubble {
     margin-bottom: $spacing-md;
+  }
+
+  &__prelude-eyebrow {
+    display: block;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  &__prelude-title {
+    @include type-display-page-title;
+    display: block;
+    margin-top: $spacing-sm;
+    font-size: $font-size-xl;
+    color: $color-text-primary;
+    text-align: center;
+  }
+
+  &__prelude-copy {
+    display: block;
+    margin-top: $spacing-sm;
+    font-size: $font-size-base;
+    line-height: 1.7;
+    color: $color-text-secondary;
+    text-align: center;
   }
 
   &__overlay-eyebrow {

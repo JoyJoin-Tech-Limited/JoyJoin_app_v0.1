@@ -277,12 +277,33 @@ async function captureProfileReview() {
   )
 }
 
+async function captureMatchingStatusPuzzlePrelude() {
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      const url =
+        `${H5_BASE_URL}/#/pages/matching-status/index` +
+        '?registrationId=reg-screenshot-001&__story=puzzle&motion=reduce'
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+      await page.waitForSelector('.abstract-puzzle-table__grid', { timeout: 10000 })
+      // Allow the overlay card and puzzle pieces to settle (reduced motion => static grid).
+      await page.waitForTimeout(1200)
+
+      return page.screenshot({ fullPage: true })
+    }
+  )
+}
+
 register('events-footprint-oracle-card', captureEventsPage)
 register('tier-selector-preset-cards', captureTierSelector)
 register('pool-registration-step-0-brief', capturePoolRegistration)
 register('event-ticket-payment', captureEventTicketPayment)
 register('squad-unboxing-revealed', captureSquadUnboxingRevealed)
 register('profile-review-welcome-coupon', captureProfileReview)
+register('matching-status-puzzle-prelude', captureMatchingStatusPuzzlePrelude)
 
 const server = app.listen(PORT, () => {
   console.log(`[screenshot-server] listening on http://localhost:${PORT}`)

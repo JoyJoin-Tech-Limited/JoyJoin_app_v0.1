@@ -4,82 +4,109 @@
 .abstract-puzzle-table {
   position: relative;
   width: 100%;
-  height: 320rpx;
-  margin-top: $spacing-lg;
+  height: 440rpx;
+  margin-top: $spacing-md;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
 
-  &__table-surface {
+  &__plate {
     position: relative;
     width: 560rpx;
-    height: 240rpx;
-    border-radius: $card-radius;
-    background: rgba($color-primary, 0.06);
-    box-shadow: inset 0 0 0 1rpx rgba($color-primary, 0.1);
-    overflow: visible;
+    height: 374rpx;
+    border-radius: 32rpx;
+    background: linear-gradient(
+      180deg,
+      rgba(139, 92, 246, 0.14) 0%,
+      rgba(124, 58, 237, 0.22) 100%
+    );
+    box-shadow:
+      inset 0 0 0 1rpx rgba(255, 255, 255, 0.18),
+      0 16rpx 48rpx rgba($color-primary, 0.18);
+    overflow: hidden;
   }
 
-  &__texture {
+  &__plate-glow {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0.55;
-    border-radius: $card-radius;
+    left: 50%;
+    top: 50%;
+    width: 420rpx;
+    height: 280rpx;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    opacity: 0.26;
+    filter: blur(48rpx);
     pointer-events: none;
   }
 
-  &__piece {
-    position: absolute;
-    left: 0;
-    top: 50%;
+  &__grid {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    padding: 16rpx;
+    box-sizing: border-box;
+  }
+
+  &__piece,
+  &__cell {
+    width: 100%;
+    height: 100%;
     transition-property: transform, opacity;
     transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
     will-change: transform, opacity;
+  }
 
-    &--fallback {
-      border-radius: 16rpx;
-      box-shadow: 0 8rpx 24rpx rgba($color-primary, 0.18);
-    }
+  &__piece {
+    display: block;
+  }
+
+  &__cell--fallback {
+    border-radius: 16rpx;
   }
 
   &__complete-glow {
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 320rpx;
-    height: 160rpx;
+    width: 360rpx;
+    height: 240rpx;
     transform: translate(-50%, -50%);
     border-radius: 50%;
-    opacity: 0.28;
+    opacity: 0.24;
     filter: blur(40rpx);
-    animation: abstract-puzzle-glow-pulse 1.2s ease-in-out infinite;
+    animation: abstract-puzzle-glow-pulse 1.4s ease-in-out infinite;
+    pointer-events: none;
   }
 
   &__hint {
     position: absolute;
-    bottom: 0;
+    bottom: 8rpx;
     font-size: $font-size-xs;
     color: $color-text-muted;
-    opacity: 0.7;
+    opacity: 0.72;
   }
 }
 
 @keyframes abstract-puzzle-glow-pulse {
   0%, 100% {
-    opacity: 0.22;
+    opacity: 0.18;
     transform: translate(-50%, -50%) scale(0.96);
   }
 
   50% {
-    opacity: 0.34;
-    transform: translate(-50%, -50%) scale(1.04);
+    opacity: 0.32;
+    transform: translate(-50%, -50%) scale(1.06);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .abstract-puzzle-table__piece,
+  .abstract-puzzle-table__cell,
   .abstract-puzzle-table__complete-glow {
     animation: none !important;
     transition: none !important;

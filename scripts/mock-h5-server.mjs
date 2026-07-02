@@ -50,6 +50,7 @@ const MOCK_USER = {
     squadUnboxingDragRevealEnabled: true,
     socialIcebreakerCustomModeEnabled: true,
     profileRedesignEnabled: true,
+    matchingPuzzlePreludeEnabled: true,
   },
 }
 
@@ -251,7 +252,23 @@ app.get('/api/event-pools/:id', (req, res) => {
 
 // My registrations
 app.get('/api/my-pool-registrations', (req, res) => {
-  res.json([])
+  res.json([
+    {
+      id: 'reg-screenshot-001',
+      poolId: 'pool-screenshot-001',
+      matchStatus: 'matched',
+      poolStatus: 'matched',
+      assignedGroupId: 'group-screenshot-001',
+      poolTitle: '周末松弛感饭局 · 南山',
+      poolEventType: '饭局',
+      poolCity: '深圳',
+      poolDistrict: '南山',
+      poolDateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 18 * 60 * 60 * 1000).toISOString(),
+      finalDateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 18 * 60 * 60 * 1000).toISOString(),
+      matchScore: 87,
+      createdAt: new Date().toISOString(),
+    },
+  ])
 })
 
 // Pre-join vibe brief (fallback path)

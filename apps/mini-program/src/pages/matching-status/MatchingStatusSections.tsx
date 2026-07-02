@@ -14,7 +14,6 @@ import {
   type UnifiedRevealTokens,
 } from '@shared/features/matching-status'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
-import XiaoyueChatBubble from '../../components/mascot/XiaoyueChatBubble'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
@@ -22,6 +21,8 @@ import ChemistryBadge from '../../components/mascot/ChemistryBadge'
 import UnifiedRevealCard from './UnifiedRevealCard'
 import AbstractPuzzleTable from './components/AbstractPuzzleTable'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { haptics } from '../../lib/utils/haptics'
+import { PUZZLE_PIECE_COUNT } from '../../lib/utils/matchingPuzzleAssets'
 import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
 import { getVibeLabel } from '../../lib/matching/groupDisplay'
 import { MATCHING_BG_SRC } from './constants'
@@ -375,20 +376,20 @@ export function MatchingStatusLiveOverlay({
         <View className='matching-status__overlay-card matching-status__overlay-card--members' key='members'>
           {showPuzzlePrelude ? (
             <>
-              <XiaoyueChatBubble
-                content={
-                  isPuzzleComplete
-                    ? `第 ${resolvedGroupNumber} 组碎片归位，你的队伍成型了`
-                    : `第 ${resolvedGroupNumber} 组碎片正在飞来…`
-                }
-                hideAvatar
-                tail={false}
-                wide
-                className='matching-status__puzzle-bubble'
-              />
+              <Text className='matching-status__prelude-eyebrow'>碎片归位</Text>
+              <Text className='matching-status__prelude-title'>
+                {isPuzzleComplete
+                  ? `第 ${resolvedGroupNumber} 组已经成型`
+                  : `第 ${resolvedGroupNumber} 组正在成型`}
+              </Text>
+              <Text className='matching-status__prelude-copy'>
+                {isPuzzleComplete
+                  ? '这桌的伙伴已经到齐，准备好揭晓了吗？'
+                  : '悦仔正在把这一桌的碎片拼起来…'}
+              </Text>
 
               <AbstractPuzzleTable
-                pieceCount={Math.max(4, Math.min(memberCount, 6))}
+                pieceCount={PUZZLE_PIECE_COUNT}
                 shouldReduceMotion={shouldReduceMotion}
                 onPhaseChange={(phase) => {
                   if (phase === 'complete') {
@@ -415,6 +416,7 @@ export function MatchingStatusLiveOverlay({
               <Button
                 className='matching-status__overlay-button'
                 onClick={() => {
+                  haptics('medium')
                   squadUnboxingAnalytics.track('match_reveal_prelude_cta_tapped', {
                     groupId: resolvedGroupId,
                     screen: 'matching-status',
@@ -427,7 +429,7 @@ export function MatchingStatusLiveOverlay({
                 disabled={!isPuzzleComplete}
                 loading={!isPuzzleComplete}
               >
-                揭开我的队伍
+                揭晓我的桌友
               </Button>
             </>
           ) : (

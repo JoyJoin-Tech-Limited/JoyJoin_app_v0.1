@@ -551,6 +551,21 @@ export function useMatchingStatusController({
     }
   }, [])
 
+  // H5 screenshot story mode: force the members-stage puzzle prelude when
+  // `__story=puzzle` is present. Only active in builds that opt in via
+  // `TARO_APP_ENABLE_STORY_MODE=true`.
+  useEffect(() => {
+    const storyMode = process.env.TARO_APP_ENABLE_STORY_MODE === 'true'
+    const storyName = routerParams['__story']
+    if (!storyMode || storyName !== 'puzzle') return
+    if (!hasResolvedAuthBootstrap) return
+    if (!resolvedGroupId) return
+
+    setHasRevealed(false)
+    setLiveStage('members')
+    void fetchLiveGroupDetails(resolvedGroupId)
+  }, [fetchLiveGroupDetails, hasResolvedAuthBootstrap, resolvedGroupId, routerParams])
+
   useEffect(() => {
     if (matchStatus !== 'pending' || !registration?.poolId) {
       return undefined

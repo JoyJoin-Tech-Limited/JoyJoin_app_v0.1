@@ -1,7 +1,7 @@
 # JoyJoin Mini-Program Asset Strategy
 
 > Canonical reference for how static assets are managed in the mini-program build.
-> Last updated: 2026-07-01
+> Last updated: 2026-07-02
 
 ---
 
@@ -99,6 +99,7 @@ Assets copied by `vite-plugin-static-copy` in `config/index.ts`.
 | Asset | Path | Size | Used in |
 |-------|------|------|---------|
 | Persona snapshot art | `pages/pool-registration/assets/pool-persona/` | varies | `PersonaSnapshotCard` CDN fallback copies (base, cluster texture, paw nudge, particles) |
+| **Pool-registration hero v2** | `pages/pool-registration/assets/ceremony/` | ~40 KB WebP each | Offline fallback for `PoolRegistrationHero` dining/drinks hero art (CDN primary served from `assets/ceremony/`) |
 
 ### Landing Page (critical first impression)
 | Asset | Path | Size | Used in |
