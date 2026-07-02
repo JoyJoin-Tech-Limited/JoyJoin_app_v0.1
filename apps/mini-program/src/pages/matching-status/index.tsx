@@ -94,6 +94,8 @@ export default function MatchingStatusPage() {
     matchCompass,
     isMatchCompassFetching,
     handleUpdateMatchCompass,
+    isFullPoolBannerVisible,
+    handleDismissFullPoolBanner,
     matchingLiveRevealEnabled,
     matchingPuzzlePreludeEnabled,
   } = controller
@@ -341,6 +343,27 @@ export default function MatchingStatusPage() {
               : '桌友已经锁定，活动详情会在下一页继续逐步揭晓。'}
         </Text>
       </View>
+
+        {isFullPoolBannerVisible ? (
+          <Card className='matching-status__full-pool-banner'>
+            <View className='matching-status__full-pool-copy'>
+              <View className='matching-status__full-pool-title-row'>
+                <JoyJoinIcon emoji='✨' size={24} className='matching-status__full-pool-icon' />
+                <Text className='matching-status__full-pool-title'>这一桌已经满员</Text>
+              </View>
+              <Text className='matching-status__full-pool-text'>
+                名额已满，悦仔正在完成最后的成桌确认，匹配结果会第一时间通知你。
+              </Text>
+            </View>
+            <Button
+              size='sm'
+              className='matching-status__full-pool-dismiss'
+              onClick={handleDismissFullPoolBanner}
+            >
+              知道了
+            </Button>
+          </Card>
+        ) : null}
 
         {matchStatus === 'pending' && matchCompassEnabled ? (
           <MatchCompassShell

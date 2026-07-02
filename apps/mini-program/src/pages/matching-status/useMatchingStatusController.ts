@@ -183,6 +183,48 @@ export function useMatchingStatusController({
     staleTime: 0,
   })
 
+  const fullPoolDismissKey = registration?.poolId
+    ? `jj_full_pool_banner_dismissed_${registration.poolId}_${effectiveAuthUser?.id ?? 'anonymous'}`
+    : null
+  const [isFullPoolBannerDismissed, setIsFullPoolBannerDismissed] = useState(false)
+
+  useEffect(() => {
+    if (!fullPoolDismissKey) {
+      setIsFullPoolBannerDismissed(false)
+      return
+    }
+
+    try {
+      setIsFullPoolBannerDismissed(Boolean(Taro.getStorageSync<boolean>(fullPoolDismissKey)))
+    } catch (error) {
+      logWarn('[MatchingStatus] Failed to read full pool banner dismiss state', {
+        key: fullPoolDismissKey,
+        message: error instanceof Error ? error.message : String(error),
+      })
+      setIsFullPoolBannerDismissed(false)
+    }
+  }, [fullPoolDismissKey])
+
+  const isFullPoolBannerVisible =
+    matchStatus === 'pending' &&
+    Boolean(poolFillStats?.isFull) &&
+    !isFullPoolBannerDismissed
+
+  const handleDismissFullPoolBanner = useCallback(() => {
+    if (fullPoolDismissKey) {
+      try {
+        Taro.setStorageSync(fullPoolDismissKey, true)
+      } catch (error) {
+        logWarn('[MatchingStatus] Failed to persist full pool banner dismiss state', {
+          key: fullPoolDismissKey,
+          message: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
+
+    setIsFullPoolBannerDismissed(true)
+  }, [fullPoolDismissKey])
+
   const resolvedGroupId = matchedData?.groupId ?? registration?.assignedGroupId ?? ''
 
   const { data: matchedGroupDetails } = useQuery<PoolGroupDetailsResponse>({
@@ -701,6 +743,9 @@ export function useMatchingStatusController({
         void queryClient.invalidateQueries({
           queryKey: ['mini-program', 'my-pool-registrations'],
         })
+        void queryClient.invalidateQueries({
+          queryKey: ['mini-program', 'notification-counts'],
+        })
 
         if (data.groupId) {
           void fetchLiveGroupDetails(data.groupId)
@@ -787,16 +832,19 @@ export function useMatchingStatusController({
   const handleUpdateMatchCompass = useCallback(
     async (patch: UpdateMatchCompassPreferencesRequest) => {
       if (!registration?.poolId || !matchCompass || matchCompass.isLocked) {
-        Taro.showToast({ title: '偏好已锁定，无法修改', icon: 'none', duration: TOAST_DEFAULT_MS })
+        Taro.showToast({
+          title: '偏好已锁定，距离活动开始不足 24 小时，可在「足迹」查看最新状态',
+          icon: 'none',
+          duration: TOAST_DEFAULT_MS,
+        })
         return
       }
 
       try {
-        const updated = await updateMatchCompassPreferences(apiRequest, registration.poolId, patch)
-        queryClient.setQueryData(
-          ['mini-program', 'match-compass', registration.poolId],
-          updated
-        )
+        await updateMatchCompassPreferences(apiRequest, registration.id, patch)
+        void queryClient.invalidateQueries({
+          queryKey: ['mini-program', 'match-compass', registration.poolId],
+        })
         triggerLightHaptic()
       } catch (error) {
         const message = error instanceof Error ? error.message : '保存失败'
@@ -860,6 +908,8 @@ export function useMatchingStatusController({
     matchCompass,
     isMatchCompassFetching,
     handleUpdateMatchCompass,
+    isFullPoolBannerVisible,
+    handleDismissFullPoolBanner,
     matchingLiveRevealEnabled,
     matchingPuzzlePreludeEnabled,
   }

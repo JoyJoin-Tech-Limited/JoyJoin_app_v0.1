@@ -77,8 +77,12 @@ export function resolvePersistedThemeSummary(params: {
 
 export interface PoolFillStats {
   currentFill: number
+  totalFill?: number
+  capacity?: number
+  isFull?: boolean
   minGroupSize: number
   maxGroupSize: number
+  targetGroups?: number
   progress: number
 }
 

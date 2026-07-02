@@ -17,6 +17,53 @@
     animation: card-slide-in 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  &__full-pool-banner {
+    @include card;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    padding: $spacing-md;
+    margin-bottom: $spacing-md;
+    background: linear-gradient(135deg, rgba($color-secondary, 0.12) 0%, rgba($color-surface, 0.96) 100%);
+    border: 2rpx solid rgba($color-secondary, 0.18);
+    box-shadow: 0 14rpx 32rpx rgba($color-secondary, 0.1);
+  }
+
+  &__full-pool-copy {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__full-pool-title-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-bottom: 6rpx;
+  }
+
+  &__full-pool-icon {
+    flex-shrink: 0;
+  }
+
+  &__full-pool-title {
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__full-pool-text {
+    display: block;
+    font-size: $font-size-sm;
+    line-height: 1.55;
+    color: $color-text-secondary;
+  }
+
+  &__full-pool-dismiss {
+    flex-shrink: 0;
+    min-width: 132rpx;
+  }
+
   &__waiting-top {
     display: flex;
     flex-direction: column;

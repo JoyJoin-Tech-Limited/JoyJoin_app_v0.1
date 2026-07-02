@@ -491,7 +491,9 @@ export function registerUserEventPoolRoutes(app: Express): void {
     try {
       const { poolId } = req.params;
 
-      // Count pending registrations in this pool
+      // Count active registrations in this pool. Pending users drive the waiting
+      // seat visual, while pending + matched determines whether the whole pool
+      // has reached capacity.
       const pendingRegs = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(eventPoolRegistrations)
@@ -502,10 +504,20 @@ export function registerUserEventPoolRoutes(app: Express): void {
           )
         );
 
+      const activeRegs = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(eventPoolRegistrations)
+        .where(
+          and(
+            eq(eventPoolRegistrations.poolId, poolId),
+            sql`${eventPoolRegistrations.matchStatus} in ('pending', 'matched')`
+          )
+        );
+
       // Get pool config for min/max group size
       const pool = await db.query.eventPools.findFirst({
         where: (pools: any, { eq }: any) => eq(pools.id, poolId),
-        columns: { minGroupSize: true, maxGroupSize: true },
+        columns: { minGroupSize: true, maxGroupSize: true, targetGroups: true },
       });
 
       if (!pool) {
@@ -514,15 +526,23 @@ export function registerUserEventPoolRoutes(app: Express): void {
 
       const minSize = pool.minGroupSize || 4;
       const maxSize = pool.maxGroupSize || 6;
-      const currentFill = Math.min(pendingRegs[0]?.count || 0, maxSize);
+      const targetGroups = Math.max(pool.targetGroups || 1, 1);
+      const capacity = maxSize * targetGroups;
+      const pendingFill = pendingRegs[0]?.count || 0;
+      const totalFill = activeRegs[0]?.count || 0;
+      const currentFill = Math.min(pendingFill, maxSize);
       
       // Progress is based on reaching minSize, capped at 100%
       const progress = Math.min((currentFill / minSize) * 100, 100);
 
       res.json({
         currentFill,
+        totalFill,
+        capacity,
+        isFull: totalFill >= capacity,
         minGroupSize: minSize,
         maxGroupSize: maxSize,
+        targetGroups,
         progress,
       });
     } catch (error) {
