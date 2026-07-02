@@ -15,10 +15,22 @@ export interface ParticleSpec {
 
 // CTA becomes available quickly (≤600ms) so users can act even if the
 // decorative drop sequence is still finishing.
-const DROP_ANIMATION_DURATION_MS = 520
-const STAGGER_MS = 120
+const DROP_ANIMATION_DURATION_MS = 560
+const STAGGER_MS = 90
 const CTA_READY_MS = 600
-const MAX_PARTICLES = 5
+const MIN_PILE_PIECES = 4
+const MAX_PILE_PIECES = 18
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value))
+}
+
+// Deterministic pseudo-random so pile layout is stable across renders
+// and does not trigger SSR/hydration mismatches or flicker.
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453
+  return x - Math.floor(x)
+}
 
 function getStateBandCopy(band: PoolPersonaStateBand, totalRegistrants: number): string {
   switch (band) {
@@ -41,55 +53,54 @@ function getStateBandSubcopy(): string {
   return '报名伙伴越多，悦仔拼出的画像越清晰'
 }
 
-function generateDroppingParticles(): ParticleSpec[] {
-  // Puzzle-piece decorations scattered across the persona zone.
-  // Positions are percentages so they adapt to the right-column width.
-  const specs: Omit<ParticleSpec, 'delayMs'>[] = [
-    {
-      id: 0,
-      colorKey: 'purple',
-      sizeRpx: 28,
-      xPercent: 78,
-      yPercent: 18,
-      rotation: 12,
-    },
-    {
-      id: 1,
-      colorKey: 'coral',
-      sizeRpx: 24,
-      xPercent: 92,
-      yPercent: 48,
-      rotation: -18,
-    },
-    {
-      id: 2,
-      colorKey: 'blue',
-      sizeRpx: 32,
-      xPercent: 70,
-      yPercent: 72,
-      rotation: 34,
-    },
-    {
-      id: 3,
-      colorKey: 'green',
-      sizeRpx: 22,
-      xPercent: 58,
-      yPercent: 34,
-      rotation: -8,
-    },
-    {
-      id: 4,
-      colorKey: 'purple',
-      sizeRpx: 20,
-      xPercent: 88,
-      yPercent: 12,
-      rotation: 22,
-    },
-  ]
-  return specs.slice(0, MAX_PARTICLES).map((s, i) => ({
-    ...s,
-    delayMs: i * STAGGER_MS,
-  }))
+function generatePileParticles(totalRegistrants: number): ParticleSpec[] {
+  // The puzzle pieces pile up like a small mountain at the bottom-right of
+  // the persona zone. Count scales with real registrants but is capped so
+  // the DOM/decoding cost stays bounded.
+  const count = clamp(totalRegistrants, MIN_PILE_PIECES, MAX_PILE_PIECES)
+  const colors: ParticleSpec['colorKey'][] = ['purple', 'coral', 'blue', 'green']
+  const pieces: ParticleSpec[] = []
+
+  // Pyramid base sits in the bottom-right, mostly behind the footer/CTA
+  // so text stays readable while the pile still reads as a mound.
+  const baseY = 86
+  const centerX = 80
+  let pieceIndex = 0
+  let row = 0
+
+  while (pieceIndex < count) {
+    // Bottom rows are wider → classic堆积如山 silhouette.
+    const maxInRow = Math.max(5 - row, 1)
+    const remaining = count - pieceIndex
+    const piecesInRow = Math.min(maxInRow, remaining)
+    const rowWidth = piecesInRow * 6.5
+    const startX = centerX - rowWidth / 2
+
+    for (let i = 0; i < piecesInRow; i++) {
+      const id = pieceIndex
+      const rand1 = seededRandom(id)
+      const rand2 = seededRandom(id + 1000)
+      const progress = piecesInRow > 1 ? i / (piecesInRow - 1) : 0.5
+      const x = startX + progress * rowWidth + (rand1 - 0.5) * 3.5
+      const y = baseY - row * 6.5 + (rand2 - 0.5) * 2.5
+      const size = 20 + Math.floor(rand1 * 14)
+      const rotation = (rand2 - 0.5) * 55
+
+      pieces.push({
+        id,
+        colorKey: colors[id % colors.length],
+        sizeRpx: size,
+        xPercent: clamp(x, 64, 96),
+        yPercent: clamp(y, 58, 92),
+        rotation,
+        delayMs: id * STAGGER_MS,
+      })
+      pieceIndex++
+    }
+    row++
+  }
+
+  return pieces
 }
 
 interface UsePersonaSnapshotAnimationOptions {
@@ -115,8 +126,8 @@ export function usePersonaSnapshotAnimation({
   const [ctaReady, setCtaReady] = useState(false)
 
   const particles = useMemo(() => {
-    if (reduceMotion) return []
-    return generateDroppingParticles()
+    if (reduceMotion || !snapshot) return []
+    return generatePileParticles(snapshot.totalRegistrants)
   }, [reduceMotion, snapshot?.stateBand, snapshot?.totalRegistrants])
 
   const stateBandCopy = useMemo(() => {
