@@ -160,7 +160,7 @@ export default function ProfilePage() {
           <View className='profile-page__avatar-ring'>
             <ArchetypeHead
               archetype={archetype}
-              size={120}
+              size={144}
               fallbackText={displayName}
               className='profile-page__avatar-head'
             />
@@ -386,7 +386,7 @@ export default function ProfilePage() {
               onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/edit-profile/index' }) }}
             >
               <View className='profile-page__menu-icon-well'>
-                <JoyJoinIcon emoji='✏️' size={24} className='profile-page__menu-icon' />
+                <JoyJoinIcon emoji='✏️' size={44} className='profile-page__menu-icon' />
               </View>
               <Text className='profile-page__menu-label'>编辑资料</Text>
               <View className='profile-page__menu-row-right'>
@@ -400,7 +400,7 @@ export default function ProfilePage() {
               onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/rewards/index' }) }}
             >
               <View className='profile-page__menu-icon-well'>
-                <JoyJoinIcon emoji='🏆' size={24} className='profile-page__menu-icon' />
+                <JoyJoinIcon emoji='🏆' size={44} className='profile-page__menu-icon' />
               </View>
               <Text className='profile-page__menu-label'>奖励福利</Text>
               <View className='profile-page__menu-row-right'>
@@ -417,7 +417,7 @@ export default function ProfilePage() {
               onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/invite/index' }) }}
             >
               <View className='profile-page__menu-icon-well'>
-                <JoyJoinIcon emoji='🤝' tier='semantic' size={24} className='profile-page__menu-icon' />
+                <JoyJoinIcon emoji='🤝' tier='semantic' size={44} className='profile-page__menu-icon' />
               </View>
               <Text className='profile-page__menu-label'>邀请好友</Text>
               <View className='profile-page__menu-row-right'>
@@ -431,7 +431,7 @@ export default function ProfilePage() {
               onClick={handleOpenPayment}
             >
               <View className='profile-page__menu-icon-well'>
-                <JoyJoinIcon emoji='🎁' size={24} className='profile-page__menu-icon' />
+                <JoyJoinIcon emoji='🎁' size={44} className='profile-page__menu-icon' />
               </View>
               <Text className='profile-page__menu-label'>我的权益</Text>
               <View className='profile-page__menu-row-right'>
@@ -445,7 +445,7 @@ export default function ProfilePage() {
               onClick={() => { haptics('light'); Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
             >
               <View className='profile-page__menu-icon-well'>
-                <JoyJoinIcon emoji='🗺️' size={24} className='profile-page__menu-icon' />
+                <JoyJoinIcon emoji='🗺️' size={44} className='profile-page__menu-icon' />
               </View>
               <Text className='profile-page__menu-label'>我的足迹</Text>
               <View className='profile-page__menu-row-right'>
@@ -464,7 +464,7 @@ export default function ProfilePage() {
               onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/terms/index' }) }}
             >
               <View className='profile-page__menu-icon-well'>
-                <JoyJoinIcon emoji='📄' size={24} className='profile-page__menu-icon' />
+                <JoyJoinIcon emoji='📄' size={44} className='profile-page__menu-icon' />
               </View>
               <Text className='profile-page__menu-label'>服务条款</Text>
               <View className='profile-page__menu-row-right'>
