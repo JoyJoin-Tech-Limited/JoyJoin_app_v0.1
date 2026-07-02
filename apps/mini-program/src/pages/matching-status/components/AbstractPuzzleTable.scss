@@ -18,11 +18,11 @@
     border-radius: 32rpx;
     background: linear-gradient(
       180deg,
-      rgba(139, 92, 246, 0.14) 0%,
-      rgba(124, 58, 237, 0.22) 100%
+      #f3efff 0%,
+      #ede8ff 100%
     );
     box-shadow:
-      inset 0 0 0 1rpx rgba(255, 255, 255, 0.18),
+      inset 0 0 0 1rpx rgba(139, 92, 246, 0.12),
       0 16rpx 48rpx rgba($color-primary, 0.18);
     overflow: hidden;
   }
@@ -35,7 +35,7 @@
     height: 280rpx;
     transform: translate(-50%, -50%);
     border-radius: 50%;
-    opacity: 0.26;
+    opacity: 0.22;
     filter: blur(48rpx);
     pointer-events: none;
   }
@@ -63,10 +63,91 @@
 
   &__piece {
     display: block;
+    filter: drop-shadow(0 4rpx 12rpx rgba($color-primary, 0.12)) brightness(0.85);
   }
 
   &__cell--fallback {
     border-radius: 16rpx;
+  }
+
+  /* Unifying overlay that makes the pieces feel like one constellation */
+  &__unify-layer {
+    position: absolute;
+    inset: 16rpx;
+    z-index: 2;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__constellation {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    opacity: 0.45;
+    background-image:
+      radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 3.5%),
+      radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 3.5%),
+      radial-gradient(circle at 28% 78%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 3.5%),
+      radial-gradient(circle at 72% 82%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 3.5%),
+      radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0) 4.5%),
+      radial-gradient(circle at 42% 35%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 3%),
+      radial-gradient(circle at 64% 42%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 3%),
+      radial-gradient(circle at 35% 58%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 3%),
+      linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(255, 155, 133, 0.05) 100%);
+  }
+
+  &__constellation::before,
+  &__constellation::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  &__constellation::before {
+    background:
+      linear-gradient(115deg, transparent 47%, rgba(255, 255, 255, 0.5) 49%, rgba(255, 255, 255, 0.5) 51%, transparent 53%),
+      linear-gradient(160deg, transparent 47%, rgba(255, 255, 255, 0.4) 49%, rgba(255, 255, 255, 0.4) 51%, transparent 53%),
+      linear-gradient(45deg, transparent 47%, rgba(255, 255, 255, 0.45) 49%, rgba(255, 255, 255, 0.45) 51%, transparent 53%),
+      linear-gradient(80deg, transparent 47%, rgba(255, 255, 255, 0.34) 49%, rgba(255, 255, 255, 0.34) 51%, transparent 53%),
+      linear-gradient(130deg, transparent 47%, rgba(255, 255, 255, 0.3) 49%, rgba(255, 255, 255, 0.3) 51%, transparent 53%);
+    background-size:
+      160rpx 160rpx,
+      180rpx 180rpx,
+      140rpx 140rpx,
+      200rpx 200rpx,
+      170rpx 170rpx;
+    background-position:
+      10% 10%,
+      70% 20%,
+      30% 70%,
+      80% 75%,
+      45% 45%;
+    background-repeat: no-repeat;
+  }
+
+  &__constellation::after {
+    background: radial-gradient(ellipse at 50% 50%, rgba(139, 92, 246, 0.14) 0%, rgba(139, 92, 246, 0) 70%);
+  }
+
+  &__twinkle {
+    position: absolute;
+    width: 10rpx;
+    height: 10rpx;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 16rpx 6rpx rgba(255, 255, 255, 0.55);
+    animation: abstract-puzzle-twinkle 1.8s ease-in-out infinite;
+
+    &--1 { left: 18%; top: 22%; animation-delay: 0s; }
+    &--2 { left: 82%; top: 18%; animation-delay: 0.35s; }
+    &--3 { left: 28%; top: 78%; animation-delay: 0.7s; }
+    &--4 { left: 72%; top: 82%; animation-delay: 1.05s; }
+    &--5 { left: 50%; top: 50%; animation-delay: 1.4s; }
+    &--6 { left: 42%; top: 35%; animation-delay: 0.55s; }
+    &--7 { left: 64%; top: 58%; animation-delay: 0.9s; }
   }
 
   &__complete-glow {
@@ -104,10 +185,23 @@
   }
 }
 
+@keyframes abstract-puzzle-twinkle {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(0.6);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .abstract-puzzle-table__piece,
   .abstract-puzzle-table__cell,
-  .abstract-puzzle-table__complete-glow {
+  .abstract-puzzle-table__complete-glow,
+  .abstract-puzzle-table__twinkle {
     animation: none !important;
     transition: none !important;
   }

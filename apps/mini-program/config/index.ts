@@ -235,14 +235,16 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         },
         // Pool-registration hero fallback — also copied to a main-package directory
         // that survives clean:cdn-assets so the hero can load locally if the CDN
-        // or subpackage path fails. (~180KB total for both dining + drinks heroes).
+        // or subpackage path fails. (~80KB total for both dining + drinks heroes).
+        // Uses `assets/pool-heroes/` instead of `assets/ceremony/` because
+        // clean:cdn-assets wipes the entire ceremony/ directory.
         {
           from: 'src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v2.webp',
-          to: 'dist/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v2.webp',
+          to: 'dist/assets/pool-heroes/lovart-pool-registration-hero-dining-20260702-v2.webp',
         },
         {
           from: 'src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v2.webp',
-          to: 'dist/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v2.webp',
+          to: 'dist/assets/pool-heroes/lovart-pool-registration-hero-drinks-20260702-v2.webp',
         },
         // Matching-status puzzle prelude pieces — bundled locally (~130KB total)
         // so the live-reveal prelude paints instantly even if CDN is slow.

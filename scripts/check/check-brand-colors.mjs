@@ -104,6 +104,11 @@ const ALLOWED_HEX_COLORS = new Set([
   '#8B7AAD',   // soft purple
   '#111111',   // near-black (checked state)
   '#6B5B8D',   // dusty purple
+
+  // Matching-status puzzle prelude gradient tints
+  '#F3EFFF',   // puzzle table gradient start
+  '#EDE8FF',   // puzzle table gradient end
+  '#F5F0FF',   // puzzle overlay fade
 ])
 
 // Regex to find hex colors in SCSS

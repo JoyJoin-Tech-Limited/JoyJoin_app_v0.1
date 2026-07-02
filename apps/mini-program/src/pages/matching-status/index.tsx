@@ -10,6 +10,7 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import StatusCard from '../../components/ui/StatusCard'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import {
   MatchingHero,
@@ -20,6 +21,7 @@ import {
 import { MatchCompassShell } from './MatchCompassSections'
 import { haptics } from '../../lib/utils/haptics'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
+import { useAuth } from '../../hooks/useAuth'
 import {
   MATCHING_NO_MATCH_HERO_SRC,
   MATCHING_WAITING_HERO_SRC,
@@ -33,6 +35,8 @@ import './index.scss'
 
 export default function MatchingStatusPage() {
   const router = useRouter()
+  const { user: authUser } = useAuth()
+  const viewerArchetype = authUser?.primaryArchetype ?? authUser?.archetype ?? 'corgi'
   const registrationId = router.params.registrationId ?? ''
   const controller = useMatchingStatusController({
     registrationId,
@@ -200,8 +204,8 @@ export default function MatchingStatusPage() {
     case 'cancelled':
       return (
         <View className={rootClassName}>
-          <Card className={`matching-status__special-card ${enableAnimations ? 'matching-status__special-state--enter' : ''}`}>
-            <ArchetypeHead archetype='corgi' size={88} className='matching-status__special-icon' variant='head' />
+        <Card className={`matching-status__special-card ${enableAnimations ? 'matching-status__special-state--enter' : ''}`}>
+          <ArchetypeHead archetype={viewerArchetype} size={88} className='matching-status__special-icon' variant='head' />
             <Text className='matching-status__special-title'>这场活动已取消</Text>
             <Text className='matching-status__special-text'>
               很抱歉，这场活动未能按计划进行。你可以回到发现页，重新挑一场更适合你的局。
@@ -317,7 +321,7 @@ export default function MatchingStatusPage() {
           className={`matching-status__status-dot matching-status__status-dot--${matchStatus}`}
         />
         {matchStatus === 'pending' || matchStatus === 'matched' || matchStatus === 'completed' ? (
-          <ArchetypeHead archetype='corgi' size={44} className='matching-status__header-icon' variant='head' />
+          <ArchetypeHead archetype={viewerArchetype} size={44} className='matching-status__header-icon' variant='head' />
         ) : null}
         <Text className='matching-status__status-title'>
           {getStatusLabel(matchStatus)}
@@ -338,14 +342,15 @@ export default function MatchingStatusPage() {
         </Text>
       </View>
 
-      {matchStatus === 'pending' && matchCompassEnabled ? (
-        <MatchCompassShell
-          data={matchCompass}
-          onUpdate={handleUpdateMatchCompass}
-          shouldReduceMotion={shouldReduceMotion}
-          isUpdating={isMatchCompassFetching}
-        />
-      ) : null}
+        {matchStatus === 'pending' && matchCompassEnabled ? (
+          <MatchCompassShell
+            data={matchCompass}
+            onUpdate={handleUpdateMatchCompass}
+            shouldReduceMotion={shouldReduceMotion}
+            isUpdating={isMatchCompassFetching}
+            viewerArchetype={viewerArchetype}
+          />
+        ) : null}
 
       {matchStatus === 'pending' ? (
         <MatchingStatusPendingSection
@@ -365,14 +370,14 @@ export default function MatchingStatusPage() {
 
       <Card className='matching-status__card'>
         <View className='matching-status__card-title-row'>
-          <ArchetypeHead archetype='corgi' size={28} className='matching-status__card-title-icon' variant='head' />
+          <JoyJoinIcon emoji='🎟️' size={28} className='matching-status__card-title-icon' />
           <Text className='matching-status__card-title'>{currentRegistration.poolTitle ?? '活动信息'}</Text>
         </View>
 
         {currentRegistration.poolEventType ? (
           <View className='matching-status__info-row'>
             <View className='matching-status__info-label'>
-              <ArchetypeHead archetype='corgi' size={24} className='matching-status__info-icon' variant='head' />
+              <JoyJoinIcon emoji='🍽️' size={24} className='matching-status__info-icon' />
               <Text>类型</Text>
             </View>
             <Text className='matching-status__info-value'>{currentRegistration.poolEventType}</Text>
@@ -382,7 +387,7 @@ export default function MatchingStatusPage() {
         {(effectiveEventDateTime ?? currentRegistration.poolDateTime) ? (
           <View className='matching-status__info-row'>
             <View className='matching-status__info-label'>
-              <ArchetypeHead archetype='corgi' size={24} className='matching-status__info-icon' variant='head' />
+              <JoyJoinIcon emoji='📅' size={24} className='matching-status__info-icon' />
               <Text>时间</Text>
             </View>
             <Text className='matching-status__info-value'>
@@ -395,7 +400,7 @@ export default function MatchingStatusPage() {
 
         <View className='matching-status__info-row'>
           <View className='matching-status__info-label'>
-            <ArchetypeHead archetype='corgi' size={24} className='matching-status__info-icon' variant='head' />
+            <JoyJoinIcon emoji='📍' size={24} className='matching-status__info-icon' />
             <Text>地点</Text>
           </View>
           <Text className='matching-status__info-value'>
@@ -411,7 +416,7 @@ export default function MatchingStatusPage() {
         {currentRegistration.matchScore != null ? (
           <View className='matching-status__info-row'>
             <View className='matching-status__info-label'>
-              <ArchetypeHead archetype='corgi' size={24} className='matching-status__info-icon' variant='head' />
+              <JoyJoinIcon emoji='💫' size={24} className='matching-status__info-icon' />
               <Text>匹配分</Text>
             </View>
             <Text className='matching-status__info-value matching-status__info-value--score'>
@@ -455,6 +460,7 @@ export default function MatchingStatusPage() {
         unifiedReveal={unifiedReveal}
         leadIceBreaker={leadIceBreaker}
         persistedThemeSummary={persistedThemeSummary}
+        viewerArchetype={viewerArchetype}
         groupAnalysisDebugMeta={groupAnalysisDebugMeta}
       />
 
@@ -521,6 +527,7 @@ export default function MatchingStatusPage() {
         <MatchHistorySection
           matches={historicalMatches}
           shouldReduceMotion={shouldReduceMotion}
+          viewerArchetype={viewerArchetype}
         />
       ) : null}
 

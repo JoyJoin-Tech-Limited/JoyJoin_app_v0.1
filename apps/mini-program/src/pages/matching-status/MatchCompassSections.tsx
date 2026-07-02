@@ -10,6 +10,7 @@ import type {
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 
 const COMPASS_PRELOAD_EXPRESSIONS: Array<'compassScan' | 'compassInsight' | 'compassCelebrate'> = [
@@ -193,10 +194,16 @@ interface TemperatureStripProps {
   eligibleUserCount: number
 }
 
-function TemperatureStrip({ band, eligibleUserCount }: TemperatureStripProps) {
+interface TemperatureStripProps {
+  band: MatchCompassTemperatureBand
+  eligibleUserCount: number
+  viewerArchetype?: string | null
+}
+
+function TemperatureStrip({ band, eligibleUserCount, viewerArchetype }: TemperatureStripProps) {
   return (
     <View className='match-compass__temp-strip'>
-      <ArchetypeHead archetype='corgi' size={20} className='match-compass__temp-strip-icon' variant='head' />
+      <ArchetypeHead archetype={viewerArchetype ?? 'corgi'} size={20} className='match-compass__temp-strip-icon' variant='head' />
       <View className={`match-compass__temp-pill match-compass__temp-pill--${band}`}>
         <Text className='match-compass__temp-label'>{TEMPERATURE_LABEL_MAP[band]}</Text>
       </View>
@@ -240,7 +247,7 @@ function DealbreakerCards({
       {/* District */}
       <View className='match-compass__pref-card'>
         <View className='match-compass__pref-title-row'>
-          <ArchetypeHead archetype='corgi' size={20} className='match-compass__pref-title-icon' variant='head' />
+          <JoyJoinIcon emoji='📋' size={20} className='match-compass__pref-title-icon' />
           <Text className='match-compass__pref-title'>活动区域</Text>
         </View>
         <View className='match-compass__pref-chips'>
@@ -265,7 +272,7 @@ function DealbreakerCards({
       {/* Gender Composition */}
       <View className='match-compass__pref-card'>
         <View className='match-compass__pref-title-row'>
-          <ArchetypeHead archetype='corgi' size={20} className='match-compass__pref-title-icon' variant='head' />
+          <JoyJoinIcon emoji='📋' size={20} className='match-compass__pref-title-icon' />
           <Text className='match-compass__pref-title'>同桌氛围</Text>
         </View>
         <View className='match-compass__pref-chips'>
@@ -290,7 +297,7 @@ function DealbreakerCards({
       {/* Pair Acceptance */}
       <View className='match-compass__pref-card match-compass__pref-card--inline'>
         <View className='match-compass__pref-title-row'>
-          <ArchetypeHead archetype='corgi' size={20} className='match-compass__pref-title-icon' variant='head' />
+          <JoyJoinIcon emoji='📋' size={20} className='match-compass__pref-title-icon' />
           <Text className='match-compass__pref-title'>接受带朋友</Text>
         </View>
         <View
@@ -324,7 +331,7 @@ function NiceToHaveCards({ ageMatchPreference, tableVibePreference, onOpenModal 
       >
         <View className='match-compass__pref-card-left'>
           <View className='match-compass__pref-title-row'>
-            <ArchetypeHead archetype='corgi' size={20} className='match-compass__pref-title-icon' variant='head' />
+            <JoyJoinIcon emoji='📋' size={20} className='match-compass__pref-title-icon' />
             <Text className='match-compass__pref-title'>年龄范围</Text>
           </View>
           <Text className='match-compass__pref-value'>
@@ -340,7 +347,7 @@ function NiceToHaveCards({ ageMatchPreference, tableVibePreference, onOpenModal 
       >
         <View className='match-compass__pref-card-left'>
           <View className='match-compass__pref-title-row'>
-            <ArchetypeHead archetype='corgi' size={20} className='match-compass__pref-title-icon' variant='head' />
+            <JoyJoinIcon emoji='📋' size={20} className='match-compass__pref-title-icon' />
             <Text className='match-compass__pref-title'>桌面氛围</Text>
           </View>
           <Text className='match-compass__pref-value'>
@@ -429,7 +436,7 @@ function DetailModal({ mode, initialValue, onSave, onClose, shouldReduceMotion }
         }}
       >
         <View className='match-compass__modal-title-row'>
-          <ArchetypeHead archetype='corgi' size={24} className='match-compass__modal-title-icon' variant='head' />
+          <JoyJoinIcon emoji='🧭' size={24} className='match-compass__modal-title-icon' />
           <Text className='match-compass__modal-title'>{title}</Text>
         </View>
         <View className='match-compass__modal-options'>
@@ -541,6 +548,7 @@ export interface MatchCompassShellProps {
   shouldReduceMotion: boolean
   isUpdating: boolean
   availableDistricts?: string[]
+  viewerArchetype?: string | null
 }
 
 const COMPASS_TIMEOUT_MS = 10_000
@@ -551,6 +559,7 @@ export function MatchCompassShell({
   shouldReduceMotion,
   isUpdating,
   availableDistricts = DEFAULT_DISTRICTS,
+  viewerArchetype,
 }: MatchCompassShellProps) {
   const [showSkeleton, setShowSkeleton] = useState(!data)
   const [dashboardEntered, setDashboardEntered] = useState(false)
@@ -589,7 +598,7 @@ export function MatchCompassShell({
   if (timedOut) {
     return (
       <Card className='match-compass__error'>
-        <ArchetypeHead archetype='corgi' size={32} className='match-compass__error-icon' variant='head' />
+        <ArchetypeHead archetype={viewerArchetype ?? 'corgi'} size={32} className='match-compass__error-icon' variant='head' />
         <Text className='match-compass__error-title'>偏好数据暂时不可用</Text>
         <Text className='match-compass__error-text'>匹配偏好加载超时，正在重试中</Text>
       </Card>
@@ -629,6 +638,7 @@ export function MatchCompassShell({
             shouldReduceMotion={shouldReduceMotion}
             isUpdating={isUpdating}
             availableDistricts={availableDistricts}
+            viewerArchetype={viewerArchetype}
           />
         </View>
       )}
@@ -644,6 +654,7 @@ export interface MatchCompassDashboardProps {
   shouldReduceMotion: boolean
   isUpdating: boolean
   availableDistricts?: string[]
+  viewerArchetype?: string | null
 }
 
 function MatchCompassDashboard({
@@ -652,6 +663,7 @@ function MatchCompassDashboard({
   shouldReduceMotion,
   isUpdating,
   availableDistricts = DEFAULT_DISTRICTS,
+  viewerArchetype,
 }: MatchCompassDashboardProps) {
   const [modalMode, setModalMode] = useState<'age' | 'vibe' | null>(null)
 
@@ -696,7 +708,7 @@ function MatchCompassDashboard({
         <View className='match-compass__header'>
           <View className='match-compass__header-left'>
             <View className='match-compass__title-row'>
-              <ArchetypeHead archetype='corgi' size={28} className='match-compass__title-icon' variant='head' />
+              <JoyJoinIcon emoji='🧭' size={28} className='match-compass__title-icon' />
               <Text className='match-compass__title'>匹配罗盘</Text>
             </View>
             <Text className='match-compass__subtitle'>
@@ -717,7 +729,7 @@ function MatchCompassDashboard({
         />
 
         <View className='match-compass__section-label-row'>
-          <ArchetypeHead archetype='corgi' size={20} className='match-compass__section-label-icon' variant='head' />
+          <JoyJoinIcon emoji='📋' size={20} className='match-compass__section-label-icon' />
           <Text className='match-compass__section-label'>必须满足</Text>
         </View>
         <DealbreakerCards
@@ -729,7 +741,7 @@ function MatchCompassDashboard({
         />
 
         <View className='match-compass__section-label-row'>
-          <ArchetypeHead archetype='corgi' size={20} className='match-compass__section-label-icon' variant='head' />
+          <JoyJoinIcon emoji='📋' size={20} className='match-compass__section-label-icon' />
           <Text className='match-compass__section-label'>加分项</Text>
         </View>
         <NiceToHaveCards

@@ -163,6 +163,7 @@ interface MatchingStatusDetailSectionsProps {
   unifiedReveal: UnifiedRevealTokens | null
   leadIceBreaker: string | null
   persistedThemeSummary: ThemeSummary | null
+  viewerArchetype?: string | null
   /** WP4: optional; when set, dev/beta may show cache vs fresh for group analysis */
   groupAnalysisDebugMeta?: Pick<GroupAnalysisResponse, 'fromCache' | 'generatedAt'> | null
 }
@@ -177,6 +178,7 @@ export function MatchingStatusDetailSections({
   unifiedReveal,
   leadIceBreaker,
   persistedThemeSummary,
+  viewerArchetype,
   groupAnalysisDebugMeta,
 }: MatchingStatusDetailSectionsProps) {
   return (
@@ -185,7 +187,7 @@ export function MatchingStatusDetailSections({
         <Card className='matching-status__squad-card'>
           <View className='matching-status__squad-header'>
             <View className='matching-status__squad-header-left'>
-              <ArchetypeHead archetype='corgi' size={28} className='matching-status__squad-title-icon' variant='head' />
+              <ArchetypeHead archetype={viewerArchetype ?? 'corgi'} size={28} className='matching-status__squad-title-icon' variant='head' />
               <Text className='matching-status__squad-title'>你的桌友已就位</Text>
             </View>
             <Text className='matching-status__squad-meta'>

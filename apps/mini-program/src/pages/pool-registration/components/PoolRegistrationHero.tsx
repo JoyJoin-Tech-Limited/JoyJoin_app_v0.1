@@ -13,8 +13,8 @@ import './PoolRegistrationHero.scss'
 const HERO_BASE_PATH = '/assets/ceremony/lovart-pool-registration-hero'
 const DINING_HERO_CDN = cdnAsset(`${HERO_BASE_PATH}-dining-20260702-v2.webp`)
 const DRINKS_HERO_CDN = cdnAsset(`${HERO_BASE_PATH}-drinks-20260702-v2.webp`)
-const DINING_HERO_LOCAL = localAsset('/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v2.webp')
-const DRINKS_HERO_LOCAL = localAsset('/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v2.webp')
+const DINING_HERO_LOCAL = localAsset('/assets/pool-heroes/lovart-pool-registration-hero-dining-20260702-v2.webp')
+const DRINKS_HERO_LOCAL = localAsset('/assets/pool-heroes/lovart-pool-registration-hero-drinks-20260702-v2.webp')
 const DINING_HERO_SUBPACKAGE = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v2.webp'
 const DRINKS_HERO_SUBPACKAGE = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v2.webp'
 

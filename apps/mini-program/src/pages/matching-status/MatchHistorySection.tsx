@@ -3,16 +3,19 @@ import { Text, View } from '@tarojs/components'
 import type { PoolRegistrationSummary } from '@shared/api'
 import Card from '../../components/ui/Card'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
 
 interface MatchHistorySectionProps {
   matches: PoolRegistrationSummary[]
   shouldReduceMotion: boolean
+  viewerArchetype?: string | null
 }
 
 export default function MatchHistorySection({
   matches,
   shouldReduceMotion,
+  viewerArchetype,
 }: MatchHistorySectionProps) {
   const handleTapMatch = (registrationId: string) => {
     Taro.navigateTo({
@@ -25,7 +28,7 @@ export default function MatchHistorySection({
   return (
     <View className='matching-status__history-section'>
       <View className='matching-status__history-header'>
-        <ArchetypeHead archetype='corgi' size={28} className='matching-status__history-header-icon' variant='head' />
+        <ArchetypeHead archetype={viewerArchetype ?? 'corgi'} size={28} className='matching-status__history-header-icon' variant='head' />
         <Text className='matching-status__history-title'>过往匹配</Text>
         <Text className='matching-status__history-count'>共 {matches.length} 次</Text>
       </View>
@@ -57,7 +60,7 @@ export default function MatchHistorySection({
                 ) : null}
               </View>
               <View className='matching-status__history-card-right'>
-                <ArchetypeHead archetype='corgi' size={20} className='matching-status__history-status-icon' variant='head' />
+                <JoyJoinIcon emoji='✅' size={20} className='matching-status__history-status-icon' />
                 <Text className={`matching-status__history-status-label matching-status__history-status-label--${match.matchStatus}`}>
                   {statusLabel}
                 </Text>

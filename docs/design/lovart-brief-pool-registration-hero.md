@@ -37,8 +37,10 @@ If the hero image fails to load, the component renders a CSS aurora gradient so 
 
 ## Local paths
 
-- CDN primary + main-package fallback: `apps/mini-program/src/assets/ceremony/`
+- CDN source (uploaded to CDN, not bundled in main package): `apps/mini-program/src/assets/ceremony/`
+- Main-package local fallback (survives `clean:cdn-assets`): copied to `dist/assets/pool-heroes/`
 - Subpackage fallback (for offline resilience): `apps/mini-program/src/pages/pool-registration/assets/ceremony/`
 
 ## Build wiring
-`apps/mini-program/config/index.ts` copies the ceremony hero files to `dist/assets/ceremony/` so they survive the `clean:cdn-assets` step. Both the main-package and subpackage copies are registered in `apps/mini-program/scripts/cdn-asset-manifest.json` for CDN upload. The `PersonaSnapshotCard` particle set (`lovart-particle-*`) is CDN-only with subpackage fallback under `pages/pool-registration/assets/pool-persona/`.
+
+`apps/mini-program/config/index.ts` copies the ceremony hero files to `dist/assets/pool-heroes/` so they survive the `clean:cdn-assets` step, which wipes the `dist/assets/ceremony/` CDN-source directory. The subpackage copy is also registered in `apps/mini-program/scripts/cdn-asset-manifest.json` for completeness. The `PersonaSnapshotCard` particle set (`lovart-particle-*`) is CDN-only with subpackage fallback under `pages/pool-registration/assets/pool-persona/`.
