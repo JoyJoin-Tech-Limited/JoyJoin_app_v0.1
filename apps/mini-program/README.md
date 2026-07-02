@@ -58,10 +58,12 @@ src/
 │   ├── onboarding/      # Subpackage: onboarding flow
 │   ├── pool-registration/  # Subpackage: pool sign-up flow; terminal states reuse EventSummaryCard
 │   │   └── components/
-│   │       ├── PersonaSnapshotCard.tsx          # aggregate persona puzzle preview card
-│   │       ├── PersonaSnapshotSheet.tsx         # detail bottom sheet for the preview card
-│   │       ├── usePersonaSnapshotAnimation.ts   # entrance/resolve animation orchestration
-│   │       ├── poolPersonaAssets.ts             # CDN + subpackage asset paths
+│   │       ├── PoolRegistrationHero.tsx            # frame-only hero image with meta pills (used inside merged card)
+│   │       ├── PoolRegistrationHeroPersonaSection.tsx  # merged hero + persona snapshot card wrapper
+│   │       ├── PersonaSnapshotCard.tsx             # aggregate persona puzzle preview card
+│   │       ├── PersonaSnapshotSheet.tsx            # detail bottom sheet for the preview card
+│   │       ├── usePersonaSnapshotAnimation.ts      # entrance/resolve animation orchestration (stable snapshot, user-scoped played-state)
+│   │       ├── poolPersonaAssets.ts                # CDN + subpackage asset paths
 │   │       └── PoolRegistrationTerminalStates.tsx  # loading / empty / already-joined / success states
 │   ├── blind-box-payment/
 │   ├── payment-verification/

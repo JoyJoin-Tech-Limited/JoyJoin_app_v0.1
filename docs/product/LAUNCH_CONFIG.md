@@ -279,7 +279,7 @@ PERSONA_SNAPSHOT_ENABLED=false
 
 **Client exposure:** The flag is exposed via `/api/auth/user` as `features.personaSnapshotEnabled` and consumed by `pages/pool-registration/index.tsx`. The component defaults to `true` if the flag is absent.
 
-**Analytics:** When enabled, the card emits `persona_snapshot_impression` on first view, `persona_snapshot_expand_sheet` when the bottom sheet opens, `persona_snapshot_dimension_tap` when a dimension pill is tapped, `persona_snapshot_new_registrant_banner_shown` when the registrant count grew since the last view, `persona_snapshot_refresh_tap` on explicit refresh (future), and `persona_snapshot_state_band` carrying the computed `stateBand`.
+**Analytics:** When enabled, the card emits `persona_snapshot_impression` on first view, `persona_snapshot_expand_sheet` when the bottom sheet opens, `persona_snapshot_dimension_tap` when a dimension pill is tapped, `persona_snapshot_new_registrant_banner_shown` when the registrant count grew since the last view, `persona_snapshot_refresh_tap` on explicit refresh (future), `persona_snapshot_state_band` carrying the computed `stateBand`, `persona_snapshot_load_error` when the snapshot fails to load, and `persona_snapshot_user_archetype_impression` when the user's own archetype is shown in the preview.
 
 ---
 

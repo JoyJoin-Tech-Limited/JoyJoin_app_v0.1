@@ -189,6 +189,8 @@ Primary files:
 Boundary:
 - Returns only `matchStatus='pending'` registrants; no PII is exposed.
 - Client kill-switch via `personaSnapshotEnabled` feature flag (default `true`).
+- State band (`seed` → `glimmer` → `outline` → `clear` → `full`) controls the preview copy; each band has distinct Xiaoyue subcopy on the client.
+- Analytics: `persona_snapshot_impression`, `persona_snapshot_expand_sheet`, `persona_snapshot_dimension_tap`, `persona_snapshot_new_registrant_banner_shown`, `persona_snapshot_state_band`, `persona_snapshot_load_error`, and `persona_snapshot_user_archetype_impression`.
 
 ### Predictive Shell (composite tab data)
 
