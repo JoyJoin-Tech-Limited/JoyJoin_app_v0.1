@@ -290,12 +290,6 @@
     // to the card's border-radius and avoids 1px edge bleed.
     will-change: transform;
 
-    // Ensure all content layers sit above the background image.
-    > *:not(.tier-selector__custom-bg) {
-      position: relative;
-      z-index: 1;
-    }
-
     &--active {
       border-color: $color-primary;
       box-shadow: 0 4rpx 24rpx rgba($color-primary, 0.12);
@@ -318,6 +312,8 @@
   }
 
   &__custom-card-body {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     gap: $spacing-xs;
@@ -358,6 +354,8 @@
   }
 
   &__custom-card-check {
+    position: relative;
+    z-index: 1;
     @include flex-center;
     width: 40rpx;
     height: 40rpx;
@@ -418,12 +416,6 @@
     // to the card's border-radius and avoids 1px edge bleed.
     will-change: transform;
 
-    // Ensure all content layers sit above the background image.
-    > *:not(.tier-selector__preset-bg) {
-      position: relative;
-      z-index: 1;
-    }
-
     &:nth-child(1) { animation: tier-row-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both; }
     &:nth-child(2) { animation: tier-row-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both; }
     &:nth-child(3) { animation: tier-row-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both; }
@@ -450,6 +442,8 @@
   }
 
   &__preset-body {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     gap: $spacing-xs;
@@ -506,6 +500,8 @@
   }
 
   &__preset-check {
+    position: relative;
+    z-index: 1;
     @include flex-center;
     width: 40rpx;
     height: 40rpx;
