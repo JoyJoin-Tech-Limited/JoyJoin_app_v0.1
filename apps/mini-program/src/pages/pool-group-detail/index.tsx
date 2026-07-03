@@ -394,7 +394,7 @@ export default function PoolGroupDetailPage() {
       </Card>
 
       <View className='pool-group-detail__actions'>
-        <Button onClick={() => Taro.navigateTo({ url: `/pages/icebreaker-session/index?sessionId=${encodeURIComponent(group.id)}` })}>
+        <Button onClick={() => Taro.navigateTo({ url: `/pages/icebreaker-session/tier-selector/index?sessionId=${encodeURIComponent(group.id)}` })}>
           开始破冰
         </Button>
         <Button
