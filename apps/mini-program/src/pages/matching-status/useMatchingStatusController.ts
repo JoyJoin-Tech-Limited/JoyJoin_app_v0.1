@@ -667,6 +667,27 @@ export function useMatchingStatusController({
     }
   }, [resolvedGroupId])
 
+  // Polling fallback: if registration data shows matchStatus=matched but WS
+  // never fired (user was on another page or WS was disconnected), trigger
+  // the live overlay when the controller mounts or registration updates.
+  useEffect(() => {
+    if (liveStage !== 'idle') return
+    if (registration?.matchStatus !== 'matched') return
+    if (hasRevealed) return
+
+    triggerLightHaptic()
+    setLiveStage('match')
+    if (resolvedGroupId) {
+      void fetchLiveGroupDetails(resolvedGroupId)
+    }
+  }, [
+    liveStage,
+    registration?.matchStatus,
+    hasRevealed,
+    resolvedGroupId,
+    fetchLiveGroupDetails,
+  ])
+
   useEffect(() => {
     if (liveStage !== 'match' || isLoadingLiveGroupDetails || liveRevealError) {
       return undefined
