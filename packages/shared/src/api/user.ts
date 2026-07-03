@@ -64,6 +64,8 @@ export interface JoinedEventSummary {
   matchedAt?: string
   groupId?: string
   finalDateTime?: string
+  /** Pool registration ID, present only for pool-based events. */
+  registrationId?: string
   /**
    * Derived user-facing status that reflects the full matching + venue lifecycle.
    * Prefer this over `status` when rendering event cards.

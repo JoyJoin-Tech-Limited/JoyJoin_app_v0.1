@@ -107,6 +107,7 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
   const poolRows = await db
     .select({
       id: eventPools.id,
+      registrationId: eventPoolRegistrations.id,
       title: eventPools.title,
       dateTime: eventPools.dateTime,
       location: eventPools.city,
@@ -150,6 +151,7 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
 
   const poolEvents: JoinedEventSummary[] = poolRows.map((row: typeof poolRows[number]) => ({
     id: row.id,
+    registrationId: row.registrationId,
     title: row.title ?? undefined,
     dateTime: row.dateTime?.toISOString?.() ?? String(row.dateTime),
     location: row.location ?? undefined,

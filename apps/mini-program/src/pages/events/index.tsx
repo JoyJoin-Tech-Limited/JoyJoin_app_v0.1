@@ -158,7 +158,19 @@ export default function EventsPage() {
 
   const handleEventTap = useCallback((event: JoinedEventSummary) => {
     eventsAnalytics.trackCardTap(event, resolvedActiveTab)
-    Taro.navigateTo({ url: `/pages/event-detail/index?id=${event.id}` })
+    const isTerminal =
+      event.displayStatus === 'completed' ||
+      event.displayStatus === 'attended' ||
+      event.displayStatus === 'cancelled' ||
+      event.displayStatus === 'declined' ||
+      event.displayStatus === 'no_show'
+    if (event.registrationId && !isTerminal) {
+      Taro.navigateTo({
+        url: `/pages/matching-status/index?registrationId=${encodeURIComponent(event.registrationId)}`,
+      })
+    } else {
+      Taro.navigateTo({ url: `/pages/event-detail/index?id=${event.id}` })
+    }
   }, [resolvedActiveTab])
 
   const navigateToDiscover = () => {
