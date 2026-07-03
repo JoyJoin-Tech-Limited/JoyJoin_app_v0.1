@@ -8,6 +8,7 @@ const {
   mockMatchEventPool,
   mockSaveMatchResults,
   mockPlanPredictiveRerank,
+  mockFillBotsForTesting,
   mockGetPredictiveRerankAutoDisableReason,
   mockGetOutcomeCalibrationSnapshot,
   mockCountMatchingShadowExperimentPools,
@@ -27,6 +28,7 @@ const {
   mockMatchEventPool: vi.fn(),
   mockSaveMatchResults: vi.fn(),
   mockPlanPredictiveRerank: vi.fn(),
+  mockFillBotsForTesting: vi.fn(),
   mockGetPredictiveRerankAutoDisableReason: vi.fn(),
   mockGetOutcomeCalibrationSnapshot: vi.fn(),
   mockCountMatchingShadowExperimentPools: vi.fn(),
@@ -147,6 +149,13 @@ vi.mock('../poolMatchingService', async () => ({
 }));
 
 // ============================================================
+// ../services/botFillService mock
+// ============================================================
+vi.mock('../services/botFillService', () => ({
+  fillBotsForTesting: mockFillBotsForTesting,
+}));
+
+// ============================================================
 // ../predictiveRerankingService mock
 // ============================================================
 vi.mock('../predictiveRerankingService', () => ({
@@ -256,6 +265,8 @@ describe('poolRealtimeMatchingService', () => {
     mockMatchEventPool.mockReset();
     mockSaveMatchResults.mockReset();
     mockPlanPredictiveRerank.mockReset();
+    mockFillBotsForTesting.mockReset();
+    mockFillBotsForTesting.mockResolvedValue({ filledCount: 0, botUserIds: [] });
     mockGetPredictiveRerankAutoDisableReason.mockReset();
     mockGetOutcomeCalibrationSnapshot.mockReset();
     mockCountMatchingShadowExperimentPools.mockReset();
@@ -327,6 +338,61 @@ describe('poolRealtimeMatchingService', () => {
       expect(mockState.logInsertCalls[0].decision).toBe('insufficient');
       expect(mockState.logInsertCalls[0].scanType).toBe('realtime');
       expect(mockState.logInsertCalls[0].triggeredBy).toBe('user_registration');
+    });
+
+    it('fills test bots and continues normal matching when pending users reach min group size', async () => {
+      mockState.poolRows = [makePool({ isTestPool: true })];
+      setupDefaultConfig();
+      mockState.registrationRows = [
+        makeRegistration(),
+        makeRegistration({ id: 'reg-2', userId: 'user-2' }),
+      ];
+      const filledGroup = makeMatchGroup({
+        overallScore: 91,
+        members: Array.from({ length: 4 }, (_, i) => ({ id: `user-${i}`, profile: {} })),
+      });
+      mockFillBotsForTesting.mockImplementationOnce(async () => {
+        mockState.registrationRows.push(
+          makeRegistration({ id: 'bot-reg-1', userId: 'bot-user-1' }),
+          makeRegistration({ id: 'bot-reg-2', userId: 'bot-user-2' }),
+        );
+        return { filledCount: 2, botUserIds: ['bot-user-1', 'bot-user-2'] };
+      });
+      mockMatchEventPool.mockResolvedValueOnce([filledGroup]);
+      mockSaveMatchResults.mockResolvedValueOnce(undefined);
+
+      const result = await scanPoolAndMatch('pool-1', 'realtime', 'user_registration');
+
+      expect(mockFillBotsForTesting).toHaveBeenCalledWith({
+        pool: expect.objectContaining({ id: 'pool-1', isTestPool: true }),
+        pendingRegistrations: expect.arrayContaining([
+          expect.objectContaining({ userId: 'user-1' }),
+          expect.objectContaining({ userId: 'user-2' }),
+        ]),
+        minGroupSize: 4,
+      });
+      expect(mockMatchEventPool).toHaveBeenCalledWith('pool-1');
+      expect(mockSaveMatchResults).toHaveBeenCalledWith('pool-1', [filledGroup]);
+      expect(result.decision).toBe('matched');
+      expect(result.usersMatched).toBe(4);
+    });
+
+    it('falls back to insufficient result when bot fill throws', async () => {
+      mockState.poolRows = [makePool({ isTestPool: true })];
+      setupDefaultConfig();
+      mockState.registrationRows = [
+        makeRegistration(),
+        makeRegistration({ id: 'reg-2', userId: 'user-2' }),
+      ];
+      mockFillBotsForTesting.mockRejectedValueOnce(new Error('bot fill failed'));
+
+      const result = await scanPoolAndMatch('pool-1', 'realtime', 'user_registration');
+
+      expect(result.decision).toBe('insufficient');
+      expect(result.reason).toContain('2/4');
+      expect(mockMatchEventPool).not.toHaveBeenCalled();
+      expect(mockState.logInsertCalls).toHaveLength(1);
+      expect(mockState.logInsertCalls[0].decision).toBe('insufficient');
     });
 
     it('returns insufficient when zero pending users', async () => {

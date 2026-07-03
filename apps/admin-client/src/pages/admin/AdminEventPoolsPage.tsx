@@ -76,6 +76,7 @@ const createPoolSchema = z
     minGroupSize: z.number().min(2).max(10).default(4),
     maxGroupSize: z.number().min(2).max(10).default(6),
     targetGroups: z.number().min(1).default(1),
+    isTestPool: z.boolean().default(false),
   })
   .refine(
     (data) => {
@@ -159,6 +160,7 @@ export default function AdminEventPoolsPage() {
       minGroupSize: 4,
       maxGroupSize: 6,
       targetGroups: 1,
+      isTestPool: false,
     },
   });
 
@@ -383,6 +385,7 @@ export default function AdminEventPoolsPage() {
       minGroupSize: Number(data.minGroupSize) || 4,
       maxGroupSize: Number(data.maxGroupSize) || 6,
       targetGroups: Number(data.targetGroups) || 1,
+      isTestPool: Boolean(data.isTestPool),
     };
     
     if (editingPoolId) {
@@ -424,6 +427,7 @@ export default function AdminEventPoolsPage() {
       minGroupSize: pool.minGroupSize,
       maxGroupSize: pool.maxGroupSize,
       targetGroups: pool.targetGroups,
+      isTestPool: Boolean(pool.isTestPool),
     });
     setEditingPoolId(pool.id);
     setShowCreateDialog(true);
@@ -504,6 +508,7 @@ export default function AdminEventPoolsPage() {
       minGroupSize: pool.minGroupSize,
       maxGroupSize: pool.maxGroupSize,
       targetGroups: pool.targetGroups,
+      isTestPool: Boolean(pool.isTestPool),
     });
     setShowCreateDialog(true);
     setCopiedPoolId(pool.id);

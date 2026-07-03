@@ -54,6 +54,7 @@ export interface AdminEventPool {
   dateTime: string;
   registrationDeadline: string;
   status: string;
+  isTestPool?: boolean | null;
   totalRegistrations: number;
   successfulMatches: number;
   minGroupSize: number;

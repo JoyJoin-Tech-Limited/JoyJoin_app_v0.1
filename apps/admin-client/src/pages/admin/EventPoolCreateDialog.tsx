@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -563,6 +564,28 @@ export default function EventPoolCreateDialog({
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="isTestPool"
+                render={({ field }) => (
+                  <FormItem className="mt-4 flex flex-row items-start gap-3 rounded-md border border-dashed p-3">
+                    <FormControl>
+                      <Checkbox
+                        checked={Boolean(field.value)}
+                        onCheckedChange={(checked) => field.onChange(checked === true)}
+                        data-testid="checkbox-is-test-pool"
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>测试活动池</FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        仅用于 staging/测试环境触发 BotFill，不影响普通活动池。
+                      </p>
+                    </div>
+                  </FormItem>
+                )}
+              />
             </div>
 
             <DialogFooter>

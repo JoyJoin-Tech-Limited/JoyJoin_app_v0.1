@@ -30,6 +30,7 @@ import {
   getPredictiveRerankAutoDisableReason,
   planPredictiveRerank,
 } from "./predictiveRerankingService";
+import { fillBotsForTesting } from "./services/botFillService";
 
 interface ScanResult {
   decision: "matched" | "waiting" | "insufficient";
@@ -183,7 +184,7 @@ export async function scanPoolAndMatch(
   }
 
   // 2. 统计待匹配用户数
-  const pendingRegistrations = await db
+  let pendingRegistrations = await db
     .select()
     .from(eventPoolRegistrations)
     .where(
@@ -193,7 +194,7 @@ export async function scanPoolAndMatch(
       )
     );
 
-  const pendingUsersCount = pendingRegistrations.length;
+  let pendingUsersCount = pendingRegistrations.length;
 
   // 3. 获取当前匹配配置
   let config = await getActiveThresholds();
@@ -216,29 +217,56 @@ export async function scanPoolAndMatch(
   // 6. 检查是否有足够的人数
   const minGroupSize = config.minGroupSizeForMatch || pool.minGroupSize || 4;
   if (pendingUsersCount < minGroupSize) {
-    // 记录日志
-    await db.insert(poolMatchingLogs).values({
-      poolId,
-      scanType,
-      pendingUsersCount,
-      currentThreshold,
-      timeUntilEvent: hoursUntilEvent,
-      groupsFormed: 0,
-      usersMatched: 0,
-      avgGroupScore: 0,
-      decision: "insufficient",
-      reason: `人数不足（${pendingUsersCount}/${minGroupSize}）`,
-      triggeredBy,
-    });
+    try {
+      const botFillResult = await fillBotsForTesting({ pool, pendingRegistrations, minGroupSize });
+      if (botFillResult.filledCount > 0) {
+        pendingRegistrations = await db
+          .select()
+          .from(eventPoolRegistrations)
+          .where(
+            and(
+              eq(eventPoolRegistrations.poolId, poolId),
+              eq(eventPoolRegistrations.matchStatus, "pending")
+            )
+          );
+        pendingUsersCount = pendingRegistrations.length;
+      }
+    } catch (error) {
+      logger.error("[BotFill] failed; continuing with insufficient-user result", {
+        data: { poolId, pendingUsersCount, minGroupSize },
+        error: String(error),
+      });
+    }
 
-    return {
-      decision: "insufficient",
-      reason: `人数不足（${pendingUsersCount}/${minGroupSize}）`,
-      groupsFormed: 0,
-      usersMatched: 0,
-      avgGroupScore: 0,
-      currentThreshold,
-    };
+    if (pendingUsersCount >= minGroupSize) {
+      logger.info("[BotFill] pool reached minimum group size; continuing normal matching flow", {
+        data: { poolId, pendingUsersCount, minGroupSize },
+      });
+    } else {
+      // 记录日志
+      await db.insert(poolMatchingLogs).values({
+        poolId,
+        scanType,
+        pendingUsersCount,
+        currentThreshold,
+        timeUntilEvent: hoursUntilEvent,
+        groupsFormed: 0,
+        usersMatched: 0,
+        avgGroupScore: 0,
+        decision: "insufficient",
+        reason: `人数不足（${pendingUsersCount}/${minGroupSize}）`,
+        triggeredBy,
+      });
+
+      return {
+        decision: "insufficient",
+        reason: `人数不足（${pendingUsersCount}/${minGroupSize}）`,
+        groupsFormed: 0,
+        usersMatched: 0,
+        avgGroupScore: 0,
+        currentThreshold,
+      };
+    }
   }
 
   // Low registration alert for scheduled scans with approaching deadline

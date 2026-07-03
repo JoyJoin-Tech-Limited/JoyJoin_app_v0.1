@@ -27,3 +27,10 @@ export function isMatchingTestMode(): boolean {
   }
   return isSingleTestMode() && process.env.ENABLE_MATCHING_TEST_MODE === 'true';
 }
+
+/**
+ * Staging-only gate for lightweight bot fill on admin-marked test pools.
+ */
+export function isBotFillForTestingEnabled(): boolean {
+  return process.env.APP_MODE !== 'production' && process.env.ENABLE_BOT_FILL_FOR_TESTING === 'true';
+}

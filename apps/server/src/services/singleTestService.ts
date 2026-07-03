@@ -12,6 +12,7 @@ import {
 import bcrypt from "bcrypt";
 import { logger } from "../lib/logger";
 import { ARCHETYPE_DEFINITIONS } from "@shared/personality/archetypeNames";
+import { cleanupBotFillUsers } from "./botFillService";
 
 const VIRTUAL_PHONE_PREFIX = "+861399999";
 const SINGLE_TEST_POOL_TITLE = "单人调试局";
@@ -220,6 +221,8 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
 }
 
 export async function cleanupSingleTestData(): Promise<void> {
+  await cleanupBotFillUsers();
+
   const [pool] = await db
     .select({ id: eventPools.id })
     .from(eventPools)

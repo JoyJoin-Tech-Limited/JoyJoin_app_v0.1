@@ -40,6 +40,7 @@ const updateEventPoolSchema = z.object({
   maxGroupSize: z.number().int().optional(),
   targetGroups: z.number().int().optional(),
   status: z.string().optional(),
+  isTestPool: z.boolean().optional(),
   predictiveRerankEnabledOverride: z.boolean().optional(),
 });
 
@@ -105,6 +106,7 @@ export function registerAdminEventPoolRoutes(app: Express): void {
           maxGroupSize: eventPools.maxGroupSize,
           targetGroups: eventPools.targetGroups,
           status: eventPools.status,
+          isTestPool: eventPools.isTestPool,
           totalRegistrations: eventPools.totalRegistrations,
           successfulMatches: eventPools.successfulMatches,
           predictiveRerankEnabledOverride: eventPools.predictiveRerankEnabledOverride,
@@ -204,7 +206,7 @@ export function registerAdminEventPoolRoutes(app: Express): void {
         adminRole: (req as any).adminRole,
         targetEntityType: "event_pool",
         targetEntityId: pool.id,
-        after: { title: pool.title, city: pool.city, dateTime: pool.dateTime?.toISOString?.() ?? pool.dateTime },
+        after: { title: pool.title, city: pool.city, dateTime: pool.dateTime?.toISOString?.() ?? pool.dateTime, isTestPool: pool.isTestPool },
       });
 
       const { generateAndSavePoolCardCopy } = await import("../../ai/workers/poolCardCopyWorker");
