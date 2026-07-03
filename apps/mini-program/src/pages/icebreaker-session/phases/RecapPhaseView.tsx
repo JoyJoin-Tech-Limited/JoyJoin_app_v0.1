@@ -18,6 +18,19 @@ import { MILESTONE_BADGES } from '../../../lib/milestoneBadges'
 import { haptics } from '../../../lib/utils/haptics'
 import './RecapPhaseView.scss'
 
+function MedalIcon({ title, emoji }: { title: string; emoji: string }) {
+  switch (title) {
+    case '最佳侦探':
+      return <PhaseHeaderIcon phase='lie_detective' size={48} />
+    case '挑战先锋':
+      return <PhaseHeaderIcon phase='micro_challenge' size={48} />
+    case '话题王':
+      return <PhaseHeaderIcon phase='warmup' size={48} />
+    default:
+      return <JoyJoinIcon emoji={emoji} size={48} />
+  }
+}
+
 function RecapAiFeedbackBar({
   socialSessionId,
   recapMeta,
@@ -265,17 +278,17 @@ export function RecapPhaseView({
 
       {/* Medals section */}
       {medals.length > 0 && (
-        <View className='icebreaker__recap-medals'>
+        <Card className='icebreaker__recap-section'>
           <Text className='icebreaker__recap-section-title icebreaker__recap-section-title--center'>
             <JoyJoinIcon emoji='🏆' size={28} /> 今晚奖项
           </Text>
-          <View className='icebreaker__recap-medals-grid'>
+          <View className={`icebreaker__recap-medals-grid${medals.length === 1 ? ' icebreaker__recap-medals-grid--single' : ''}`}>
             {medals.map((medal, idx) => (
               <View
                 key={`${medal.title}-${medal.recipientDisplayName}`}
                 className='icebreaker__recap-medal'
               >
-                <Text className='icebreaker__recap-medal-emoji'>{medal.emoji}</Text>
+                <MedalIcon title={medal.title} emoji={medal.emoji} />
                 <Text className='icebreaker__recap-medal-title'>{medal.title}</Text>
                 <Text className='icebreaker__recap-medal-recipient'>
                   {medal.recipientDisplayName}
@@ -284,7 +297,7 @@ export function RecapPhaseView({
               </View>
             ))}
           </View>
-        </View>
+        </Card>
       )}
 
       {/* V2 Data cards */}

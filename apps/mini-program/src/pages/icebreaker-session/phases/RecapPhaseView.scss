@@ -92,27 +92,21 @@
 }
 
 // ── Medals section ───────────────────────────────────────────────
-.icebreaker__recap-medals {
-  width: 100%;
-  padding: 0 $container-padding;
-}
-
 .icebreaker__recap-medals-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: $spacing-sm;
   margin-top: $spacing-sm;
+
+  &--single {
+    grid-template-columns: 1fr;
+  }
 }
 
 .icebreaker__recap-medal {
   @include flex-center;
   flex-direction: column;
   gap: 6rpx;
-  padding: $spacing-md $spacing-sm;
-  background: $color-surface;
-  border-radius: $card-radius-sm;
-  border: 2rpx solid $color-divider;
-  box-shadow: $shadow-sm;
   animation: recap-medal-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   opacity: 0;
 
@@ -132,11 +126,6 @@
     opacity: 1;
     transform: translateY(0) scale(1);
   }
-}
-
-.icebreaker__recap-medal-emoji {
-  font-size: $font-size-2xl;
-  line-height: 1;
 }
 
 .icebreaker__recap-medal-title {
