@@ -129,7 +129,7 @@ const [
     getFeatureFlag('onboardingForceSkip', false),
     getFeatureFlag('matchingLiveReveal', true),
     getFeatureFlag('socialIcebreakerClientForceEnd', false),
-    getFeatureFlag('runPlanTemplatesEnabled', false),
+    getFeatureFlag('runPlanTemplatesEnabled', true),
     getFeatureFlag('promoBannerEnabled', true),
     getFeatureFlag('personalitySlotAnimationEnabled', true),
     getFeatureFlag('personalityShareEnabled', true),

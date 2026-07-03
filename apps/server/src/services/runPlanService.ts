@@ -85,7 +85,7 @@ export async function compileForSession(
   const enabledPhases: SocialIcebreakerPhase[] = basePhases.includes('recap') ? basePhases : [...basePhases, 'recap'];
   const playerCount = state.playerCount ?? 1;
 
-  const flagEnabled = await getFeatureFlag('runPlanTemplatesEnabled', false);
+  const flagEnabled = await getFeatureFlag('runPlanTemplatesEnabled', true);
 
   if (flagEnabled) {
     try {

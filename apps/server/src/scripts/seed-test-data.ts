@@ -117,7 +117,7 @@ const BETA_FEATURE_FLAGS: Array<{ key: string; value: string; label: string }> =
   { key: "restartOnboarding", value: "false", label: "Onboarding restart (off by default)" },
   { key: "onboardingForceSkip", value: "false", label: "Onboarding force skip (off by default)" },
   { key: "socialIcebreakerClientForceEnd", value: "false", label: "Icebreaker force-end kill-switch (off by default)" },
-  { key: "runPlanTemplatesEnabled", value: "false", label: "Run plan templates (off by default)" },
+  { key: "runPlanTemplatesEnabled", value: "true", label: "Run plan templates (on by default)" },
   { key: "paymentsEnabled", value: "false", label: "Payments (set true + WeChat Pay creds for payment flow)" },
 ];
 

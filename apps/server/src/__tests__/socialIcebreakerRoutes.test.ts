@@ -93,6 +93,11 @@ vi.mock('../lib/socialIcebreakerStore', () => {
   };
 });
 
+vi.mock('../lib/featureFlags', () => ({
+  getFeatureFlag: vi.fn(async (_key: string, fallback = false) => fallback),
+  getFeatureFlagSync: vi.fn((_key: string, fallback = false) => fallback),
+}));
+
 vi.mock('../socialIcebreakerAIService', () => ({
   getLieDetectiveMode: vi.fn().mockReturnValue('v1'),
   getDynamicDifficulty: vi.fn().mockReturnValue('medium'),
@@ -575,11 +580,12 @@ describe('social icebreaker routes', () => {
           headers: { 'Content-Type': 'application/json', cookie },
         });
       }
-      await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/advance`, {
+      const advanceResponse2 = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/advance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', cookie: hostCookie },
         body: JSON.stringify({ currentPhase: 'micro_challenge' }),
       });
+      await advanceResponse2.json();
 
       const statementResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/lie-detective/generate`, {
         method: 'POST',

@@ -18,9 +18,10 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   matchingLiveReveal: "MATCHING_LIVE_REVEAL_ENABLED",
   socialIcebreakerClientForceEnd: "SOCIAL_ICEBREAKER_CLIENT_FORCE_END",
   /** Controls BOTH the template-driven run plan compiler (server) AND the 3×3 vibe grid UX (client).
-   *  When false: legacy compileAgentRunPlan() runs unchanged; client should hide vibe selector.
+   *  When false: legacy compileAgentRunPlan() runs unchanged; client hides vibe selector.
    *  When true: compileForSession() queries DB templates + falls back to compileAgentRunPlan();
-   *            client shows the deep_chat / balanced / play_fun vibe selector. */
+   *            client shows the deep_chat / balanced / play_fun vibe selector.
+   *  Default fallback is true: the preset-card UI is the active shipped experience. */
   runPlanTemplatesEnabled: "RUN_PLAN_TEMPLATES_ENABLED",
   personalityShareEnabled: "PERSONALITY_SHARE_ENABLED",
   personalitySlotAnimationEnabled: "PERSONALITY_SLOT_ANIMATION_ENABLED",

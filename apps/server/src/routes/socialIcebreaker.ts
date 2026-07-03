@@ -182,13 +182,46 @@ router.post('/start', async (req: any, res) => {
     const rosterCount = await getRosterCount(existing.socialSessionId);
     const activeCount = await getActiveParticipantCount(existing.socialSessionId);
 
+    const previousPlayerCount = state.playerCount ?? 1;
     state.playerCount = rosterCount;
     state.activePlayerCount = activeCount;
+
     // ensureSessionEnabledPhases mutates `state` in place for older persisted
     // sessions; only persist when that backfill actually changed the payload.
     const enabledPhasesBefore = JSON.stringify(state.enabledPhases ?? []);
     ensureSessionEnabledPhases(state);
-    if (JSON.stringify(state.enabledPhases ?? []) !== enabledPhasesBefore) {
+    let shouldPersist = JSON.stringify(state.enabledPhases ?? []) !== enabledPhasesBefore;
+
+    // Recompile the run plan when the roster grows during warmup so that
+    // phases with higher minPlayers (e.g. lie_detective) are included once
+    // enough participants have joined. The first caller created the session
+    // with playerCount=1, so the initial plan may have excluded those phases.
+    if (
+      state.eventTier &&
+      state.eventTier !== 'custom' &&
+      state.currentPhase === 'warmup' &&
+      rosterCount > previousPlayerCount
+    ) {
+      try {
+        const newRunPlan = await compileForSession(state, state.eventTier);
+        const oldPhases = state.runPlan?.segments?.map((s) => s.phase).join(',') ?? '';
+        const newPhases = newRunPlan.segments.map((s) => s.phase).join(',');
+        if (oldPhases !== newPhases) {
+          state.runPlan = newRunPlan;
+          shouldPersist = true;
+        }
+      } catch (err) {
+        logger.warn('[SocialIcebreaker] Run plan recompilation failed on rejoin', {
+          socialSessionId: existing.socialSessionId,
+          playerCount: rosterCount,
+          eventTier: state.eventTier,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        // Leave existing runPlan in place.
+      }
+    }
+
+    if (shouldPersist) {
       await updateSession(existing.socialSessionId, state);
     }
 
