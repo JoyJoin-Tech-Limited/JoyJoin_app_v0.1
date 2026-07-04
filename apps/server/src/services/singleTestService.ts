@@ -156,7 +156,6 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
   // Phase 1: ensure virtual users + pool (fresh each time)
   await ensureVirtualUsers();
   const poolId = await ensureCleanSingleTestPool(testerUserId);
-
   // Pick 5 bots with diverse archetypes
   const virtualUsers = (await db
     .select({ id: users.id, displayName: users.displayName, primaryArchetype: users.primaryArchetype })
@@ -189,9 +188,9 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
     .values({
       poolId,
       groupNumber: 1,
-      memberIds: allMemberIds,
+      memberCount: allMemberIds.length,
       overallScore: 85,
-      status: "matched",
+      status: "confirmed",
     })
     .returning({ id: eventPoolGroups.id });
 
