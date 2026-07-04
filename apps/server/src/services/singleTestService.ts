@@ -151,6 +151,8 @@ interface VirtualUserRow {
 export async function startSingleTestSession(testerUserId: string): Promise<{
   socialSessionId: string;
   groupId: string;
+  testerRegistrationId: string;
+  registrationId: string;
   botUsers: { userId: string; displayName: string; archetype: string }[];
 }> {
   // Phase 1: ensure virtual users + pool (fresh each time)
@@ -169,9 +171,22 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
   const bots = shuffle(virtualUsers).slice(0, BOT_COUNT);
 
   // Register tester + bots
-  await db.insert(eventPoolRegistrations)
+  const [insertedTesterRegistration] = await db.insert(eventPoolRegistrations)
     .values({ userId: testerUserId, poolId, matchStatus: "pending" })
-    .onConflictDoNothing();
+    .onConflictDoNothing()
+    .returning({ id: eventPoolRegistrations.id });
+
+  const [testerRegistration] = insertedTesterRegistration
+    ? [insertedTesterRegistration]
+    : await db
+      .select({ id: eventPoolRegistrations.id })
+      .from(eventPoolRegistrations)
+      .where(and(eq(eventPoolRegistrations.userId, testerUserId), eq(eventPoolRegistrations.poolId, poolId)))
+      .limit(1);
+
+  if (!testerRegistration) {
+    throw new Error("TESTER_REGISTRATION_NOT_PERSISTED");
+  }
 
   for (const bot of bots) {
     await db.insert(eventPoolRegistrations)
@@ -215,8 +230,8 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
   }));
 
   const socialSessionId = `social_${groupId}`;
-  logger.info("[SingleTest] Session ready", { groupId, socialSessionId, botCount: botUsers.length });
-  return { socialSessionId, groupId, botUsers };
+  logger.info("[SingleTest] Session ready", { groupId, socialSessionId, registrationId: testerRegistration.id, botCount: botUsers.length });
+  return { socialSessionId, groupId, testerRegistrationId: testerRegistration.id, registrationId: testerRegistration.id, botUsers };
 }
 
 export async function cleanupSingleTestData(): Promise<void> {

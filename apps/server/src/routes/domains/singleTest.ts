@@ -18,6 +18,8 @@ export function registerSingleTestRoutes(app: Express): void {
       res.json({
         socialSessionId: result.socialSessionId,
         groupId: result.groupId,
+        testerRegistrationId: result.testerRegistrationId,
+        registrationId: result.registrationId,
         botUsers: result.botUsers,
       });
     } catch (error: any) {

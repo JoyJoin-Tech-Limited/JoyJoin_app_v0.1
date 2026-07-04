@@ -12,6 +12,8 @@ interface SingleTestBannerProps {
 interface StartResult {
   socialSessionId: string
   groupId: string
+  testerRegistrationId: string
+  registrationId: string
   botUsers: Array<{ userId: string; displayName: string; archetype: string | null }>
 }
 
@@ -29,7 +31,7 @@ export default function SingleTestBanner({ className = '' }: SingleTestBannerPro
       })
       Taro.showToast({ title: `局已创建，共${result.botUsers.length + 1}人`, icon: 'none' })
       Taro.navigateTo({
-        url: `/pages/icebreaker-session/index?sessionId=${result.groupId}`,
+        url: `/pages/matching-status/index?registrationId=${encodeURIComponent(result.registrationId)}`,
       })
     } catch (err: any) {
       const msg = err?.message || String(err)
