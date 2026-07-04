@@ -16,12 +16,9 @@ export function registerSingleTestRoutes(app: Express): void {
     try {
       const result = await startSingleTestSession(userId);
       res.json({
-        registrationId: result.registrationId,
-        poolId: result.poolId,
-        poolTitle: result.poolTitle,
-        eventType: result.eventType,
-        isQATestPool: result.isQATestPool,
-        isTestPool: result.isTestPool,
+        socialSessionId: result.socialSessionId,
+        groupId: result.groupId,
+        botUsers: result.botUsers,
       });
     } catch (error: any) {
       logger.error("[SingleTest] start error", { error: String(error) });
