@@ -10,9 +10,12 @@ interface SingleTestBannerProps {
 }
 
 interface StartResult {
-  socialSessionId: string
-  groupId: string
-  botUsers: Array<{ userId: string; displayName: string; archetype: string | null }>
+  registrationId: string
+  poolId: string
+  poolTitle: string
+  eventType: string
+  isQATestPool: boolean
+  isTestPool: boolean
 }
 
 export default function SingleTestBanner({ className = '' }: SingleTestBannerProps) {
@@ -27,9 +30,21 @@ export default function SingleTestBanner({ className = '' }: SingleTestBannerPro
         method: 'POST',
         path: '/api/test/single-test/start',
       })
-      Taro.showToast({ title: `局已创建，共${result.botUsers.length + 1}人`, icon: 'none' })
+      console.info('[SingleTest] Confirmation:', {
+        poolId: result.poolId,
+        poolTitle: result.poolTitle,
+        eventType: result.eventType,
+        registrationId: result.registrationId,
+        isTestPool: result.isTestPool,
+        isQATestPool: result.isQATestPool,
+      })
+      Taro.showToast({
+        title: `已进入「${result.poolTitle}」${result.isQATestPool ? '(QA测试局)' : ''}`,
+        icon: 'none',
+        duration: 2000,
+      })
       Taro.navigateTo({
-        url: `/pages/icebreaker-session/index?sessionId=${result.groupId}`,
+        url: `/pages/matching-status/index?registrationId=${encodeURIComponent(result.registrationId)}`,
       })
     } catch (err: any) {
       const msg = err?.message || String(err)
@@ -59,7 +74,7 @@ export default function SingleTestBanner({ className = '' }: SingleTestBannerPro
     <View className={`single-test-banner ${className}`}>
       <View className='single-test-banner__content'>
         <Text className='single-test-banner__title'>🧪 单人调试模式</Text>
-        <Text className='single-test-banner__desc'>启动 5 个 AI bot，测试冰 breaker 全流程</Text>
+        <Text className='single-test-banner__desc'>启动真实匹配流程，自动补 Bot，测试全流程</Text>
       </View>
       <View className='single-test-banner__actions'>
         <View

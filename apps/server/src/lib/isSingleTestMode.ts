@@ -29,8 +29,14 @@ export function isMatchingTestMode(): boolean {
 }
 
 /**
- * Staging-only gate for lightweight bot fill on admin-marked test pools.
+ * Gate for lightweight bot fill on admin-marked test pools.
+ *
+ * In single test mode (APP_MODE=test or ENABLE_SINGLE_TEST_MODE=true),
+ * bot fill is implicitly enabled for test pools so devs don't need to
+ * set a separate env var. In staging, it requires explicit opt-in via
+ * ENABLE_BOT_FILL_FOR_TESTING=true.
  */
 export function isBotFillForTestingEnabled(): boolean {
+  if (isSingleTestMode()) return true;
   return process.env.APP_MODE !== 'production' && process.env.ENABLE_BOT_FILL_FOR_TESTING === 'true';
 }

@@ -1,4 +1,4 @@
-import { and, eq, inArray, like } from "drizzle-orm";
+import { and, desc, eq, inArray, like } from "drizzle-orm";
 import { db } from "../db";
 import {
   users,
@@ -12,10 +12,11 @@ import {
 import bcrypt from "bcrypt";
 import { logger } from "../lib/logger";
 import { ARCHETYPE_DEFINITIONS } from "@shared/personality/archetypeNames";
-import { cleanupBotFillUsers } from "./botFillService";
+import { cleanupBotFillUsers, fillBotsForTesting } from "./botFillService";
+import { matchEventPool, saveMatchResults } from "../poolMatchingService";
 
+const QA_TEST_POOL_TITLE = "QA 测试饭局 — 周五夜聊";
 const VIRTUAL_PHONE_PREFIX = "+861399999";
-const SINGLE_TEST_POOL_TITLE = "单人调试局";
 const COMMON_PASSWORD = "test123456";
 const VIRTUAL_USER_COUNT = 100;
 const BOT_COUNT = 5;
@@ -102,44 +103,78 @@ export async function ensureVirtualUsers(): Promise<void> {
   }
 }
 
-export async function ensureSingleTestPool(createdBy: string): Promise<string> {
-  const [existing] = await db
-    .select({ id: eventPools.id })
+/**
+ * Find or create a test pool with the following priority:
+ * 1. Exact match "QA 测试饭局 — 周五夜聊" (seed-test-data pool)
+ * 2. Latest active 饭局+深圳 pool
+ * 3. Create new pool with QA test title
+ *
+ * Always sets isTestPool=true on the resolved pool so bot fill + matching work.
+ */
+async function findOrCreateTestPool(createdBy: string): Promise<{
+  poolId: string;
+  poolTitle: string;
+  eventType: string;
+  isQATestPool: boolean;
+}> {
+  // Priority 1: Find "QA 测试饭局 — 周五夜聊"
+  const qaPool = await db
+    .select({ id: eventPools.id, title: eventPools.title, eventType: eventPools.eventType })
     .from(eventPools)
-    .where(eq(eventPools.title, SINGLE_TEST_POOL_TITLE))
+    .where(eq(eventPools.title, QA_TEST_POOL_TITLE))
     .limit(1);
 
-  if (existing) return existing.id;
+  if (qaPool.length > 0) {
+    await db.update(eventPools).set({ isTestPool: true }).where(eq(eventPools.id, qaPool[0].id));
+    await db.delete(eventPoolRegistrations).where(eq(eventPoolRegistrations.poolId, qaPool[0].id));
+    await db.delete(eventPoolGroups).where(eq(eventPoolGroups.poolId, qaPool[0].id));
+    logger.info("[SingleTest] Using QA test dinner pool", { poolId: qaPool[0].id, title: qaPool[0].title });
+    return { poolId: qaPool[0].id, poolTitle: qaPool[0].title, eventType: qaPool[0].eventType, isQATestPool: true };
+  }
 
+  // Priority 2: Latest active 饭局+深圳 pool
+  const latestPool = await db
+    .select({ id: eventPools.id, title: eventPools.title, eventType: eventPools.eventType })
+    .from(eventPools)
+    .where(and(
+      eq(eventPools.eventType, "饭局"),
+      eq(eventPools.city, "深圳"),
+      eq(eventPools.status, "active"),
+    ))
+    .orderBy(desc(eventPools.createdAt))
+    .limit(1);
+
+  if (latestPool.length > 0) {
+    await db.update(eventPools).set({ isTestPool: true }).where(eq(eventPools.id, latestPool[0].id));
+    await db.delete(eventPoolRegistrations).where(eq(eventPoolRegistrations.poolId, latestPool[0].id));
+    await db.delete(eventPoolGroups).where(eq(eventPoolGroups.poolId, latestPool[0].id));
+    logger.info("[SingleTest] Using latest active 饭局 pool", { poolId: latestPool[0].id, title: latestPool[0].title });
+    return { poolId: latestPool[0].id, poolTitle: latestPool[0].title, eventType: latestPool[0].eventType, isQATestPool: false };
+  }
+
+  // Priority 3: Create new pool with QA test title
   const now = new Date();
   const [pool] = await db
     .insert(eventPools)
     .values({
-      title: SINGLE_TEST_POOL_TITLE,
-      description: "单人调试用活动池 — 仅限测试模式",
+      title: QA_TEST_POOL_TITLE,
+      description: "这是一个用于 QA 测试的饭局活动池。",
       eventType: "饭局",
       city: "深圳",
       district: "南山区",
-      dateTime: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
-      registrationDeadline: new Date(now.getTime() + 29 * 24 * 60 * 60 * 1000),
+      dateTime: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
+      registrationDeadline: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000),
       status: "active",
-      minGroupSize: 3,
+      minGroupSize: 2,
       maxGroupSize: 6,
       targetGroups: 1,
       createdBy,
+      isTestPool: true,
     })
-    .returning({ id: eventPools.id });
+    .returning({ id: eventPools.id, title: eventPools.title, eventType: eventPools.eventType });
 
-  logger.info("[SingleTest] Created pool", { poolId: pool.id });
-  return pool.id;
-}
-
-/** Like ensureSingleTestPool but cleans existing registrations + groups first. */
-async function ensureCleanSingleTestPool(createdBy: string): Promise<string> {
-  const poolId = await ensureSingleTestPool(createdBy);
-  await db.delete(eventPoolRegistrations).where(eq(eventPoolRegistrations.poolId, poolId));
-  await db.delete(eventPoolGroups).where(eq(eventPoolGroups.poolId, poolId));
-  return poolId;
+  logger.info("[SingleTest] Created new test pool", { poolId: pool.id, title: pool.title });
+  return { poolId: pool.id, poolTitle: pool.title, eventType: pool.eventType, isQATestPool: false };
 }
 
 interface VirtualUserRow {
@@ -149,75 +184,96 @@ interface VirtualUserRow {
 }
 
 export async function startSingleTestSession(testerUserId: string): Promise<{
-  socialSessionId: string;
-  groupId: string;
-  botUsers: { userId: string; displayName: string; archetype: string }[];
+  registrationId: string;
+  poolId: string;
+  poolTitle: string;
+  eventType: string;
+  isQATestPool: boolean;
+  isTestPool: boolean;
 }> {
-  // Phase 1: ensure virtual users + pool (fresh each time)
+  // Ensure virtual users exist for manual testing
   await ensureVirtualUsers();
-  const poolId = await ensureCleanSingleTestPool(testerUserId);
 
-  // Pick 5 bots with diverse archetypes
-  const virtualUsers = (await db
-    .select({ id: users.id, displayName: users.displayName, primaryArchetype: users.primaryArchetype })
-    .from(users)
-    .where(like(users.phoneNumber, `${VIRTUAL_PHONE_PREFIX}%`))) as VirtualUserRow[];
+  // Find or create test pool (QA test dinner pool preferred)
+  const { poolId, poolTitle, eventType, isQATestPool } = await findOrCreateTestPool(testerUserId);
 
-  if (virtualUsers.length < BOT_COUNT) {
-    throw new Error("INSUFFICIENT_VIRTUAL_USERS");
-  }
-
-  const bots = shuffle(virtualUsers).slice(0, BOT_COUNT);
-
-  // Register tester + bots
+  // Register tester as pending
   await db.insert(eventPoolRegistrations)
     .values({ userId: testerUserId, poolId, matchStatus: "pending" })
     .onConflictDoNothing();
 
-  for (const bot of bots) {
-    await db.insert(eventPoolRegistrations)
-      .values({ userId: bot.id, poolId, matchStatus: "pending" })
-      .onConflictDoNothing();
+  // Fetch full pool row (needed by bot fill + matching)
+  const pool = await db.query.eventPools.findFirst({
+    where: eq(eventPools.id, poolId),
+  });
+  if (!pool) throw new Error("POOL_NOT_FOUND");
+
+  // Fetch pending registrations (tester only at this point)
+  let pendingRegistrations = await db
+    .select()
+    .from(eventPoolRegistrations)
+    .where(and(
+      eq(eventPoolRegistrations.poolId, poolId),
+      eq(eventPoolRegistrations.matchStatus, "pending"),
+    ));
+
+  // Fill bots via real bot fill service (creates users + registrations)
+  const fillResult = await fillBotsForTesting({
+    pool,
+    pendingRegistrations,
+    minGroupSize: 2,
+  });
+  logger.info("[SingleTest] Bot fill result", { filledCount: fillResult.filledCount });
+
+  // Re-fetch pending registrations after bot fill
+  pendingRegistrations = await db
+    .select()
+    .from(eventPoolRegistrations)
+    .where(and(
+      eq(eventPoolRegistrations.poolId, poolId),
+      eq(eventPoolRegistrations.matchStatus, "pending"),
+    ));
+
+  if (pendingRegistrations.length < 2) {
+    throw new Error("INSUFFICIENT_USERS_AFTER_BOT_FILL");
   }
 
-  // Direct group creation (skip matching — virtual users lack full profiles
-  // for the deterministic scoring engine). The purpose of single-test sessions
-  // is icebreaker testing, not matching verification.
-  const allMemberIds = [testerUserId, ...bots.map(b => b.id)];
-  const [groupRecord] = await db
-    .insert(eventPoolGroups)
-    .values({
-      poolId,
-      groupNumber: 1,
-      memberIds: allMemberIds,
-      overallScore: 85,
-      status: "matched",
-    })
-    .returning({ id: eventPoolGroups.id });
-
-  if (!groupRecord) {
-    throw new Error("GROUP_NOT_PERSISTED");
+  // Run real matching engine
+  const groups = await matchEventPool(poolId);
+  if (groups.length === 0) {
+    throw new Error("MATCHING_FAILED_NO_GROUPS");
   }
 
-  const groupId = groupRecord.id;
+  await saveMatchResults(poolId, groups);
 
-  // Mark all registrations as matched + assign to the group (required for
-  // getSocialIcebreakerAccess which checks assignedGroupId on registration)
-  await db
-    .update(eventPoolRegistrations)
-    .set({ matchStatus: "matched", assignedGroupId: groupId })
-    .where(and(eq(eventPoolRegistrations.poolId, poolId), eq(eventPoolRegistrations.matchStatus, "pending")));
+  // Get tester's registration ID for frontend navigation to matching-status page
+  const [reg] = await db
+    .select({ id: eventPoolRegistrations.id })
+    .from(eventPoolRegistrations)
+    .where(and(
+      eq(eventPoolRegistrations.poolId, poolId),
+      eq(eventPoolRegistrations.userId, testerUserId),
+    ))
+    .limit(1);
 
-  // Build bot user info
-  const botUsers = bots.map((b: VirtualUserRow) => ({
-    userId: b.id,
-    displayName: b.displayName ?? "Bot",
-    archetype: b.primaryArchetype ?? 'corgi',
-  }));
+  logger.info("[SingleTest] Session started via real matching flow", {
+    poolId,
+    poolTitle,
+    eventType,
+    isQATestPool,
+    registrationId: reg?.id,
+    groupsFormed: groups.length,
+    usersMatched: groups.reduce((s, g) => s + g.members.length, 0),
+  });
 
-  const socialSessionId = `social_${groupId}`;
-  logger.info("[SingleTest] Session ready", { groupId, socialSessionId, botCount: botUsers.length });
-  return { socialSessionId, groupId, botUsers };
+  return {
+    registrationId: reg?.id ?? "",
+    poolId,
+    poolTitle,
+    eventType,
+    isQATestPool,
+    isTestPool: true,
+  };
 }
 
 export async function cleanupSingleTestData(): Promise<void> {
@@ -226,7 +282,7 @@ export async function cleanupSingleTestData(): Promise<void> {
   const [pool] = await db
     .select({ id: eventPools.id })
     .from(eventPools)
-    .where(eq(eventPools.title, SINGLE_TEST_POOL_TITLE))
+    .where(eq(eventPools.title, QA_TEST_POOL_TITLE))
     .limit(1);
 
   if (pool) {
