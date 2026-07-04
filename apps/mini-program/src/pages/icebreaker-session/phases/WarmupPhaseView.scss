@@ -89,6 +89,21 @@
   &__sub {
     @include type-caption;
     color: $color-text-muted;
+    max-width: 360rpx;
+    line-height: 1.45;
+  }
+
+  &--interactive {
+    cursor: pointer;
+
+    .warmup-card-front__label {
+      color: $color-primary;
+    }
+
+    .warmup-card-front__sub {
+      color: $color-text-secondary;
+      font-weight: $font-weight-semibold;
+    }
   }
 }
 
@@ -261,6 +276,71 @@
   }
 }
 
+// ── Turn status ─────────────────────────────────────────────────
+.icebreaker__warmup-turn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  width: 100%;
+  max-width: 640rpx;
+  padding: $spacing-sm $spacing-md;
+  border-radius: 20rpx;
+  background: #ffffff;
+  border: 2rpx solid rgba($color-primary, 0.16);
+  box-shadow: 0 8rpx 24rpx rgba(31, 41, 55, 0.06);
+}
+
+.icebreaker__warmup-turn-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  min-width: 0;
+}
+
+.icebreaker__warmup-turn-label {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  font-weight: $font-weight-semibold;
+}
+
+.icebreaker__warmup-turn-name {
+  font-size: $font-size-lg;
+  color: $color-text-primary;
+  font-weight: $font-weight-bold;
+  @include text-truncate;
+}
+
+.icebreaker__warmup-timer {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2rpx;
+  min-width: 96rpx;
+  padding: 8rpx 14rpx;
+  border-radius: $radius-pill;
+  background: rgba($color-primary, 0.1);
+  color: $color-primary;
+  font-variant-numeric: tabular-nums;
+
+  &--urgent {
+    background: rgba($color-error, 0.1);
+    color: $color-error;
+  }
+}
+
+.icebreaker__warmup-timer-number {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  line-height: 1;
+}
+
+.icebreaker__warmup-timer-unit {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+}
+
 // ── Ready status bar ─────────────────────────────────────────────
 .icebreaker__warmup-status {
   display: flex;
@@ -349,6 +429,13 @@
       opacity: 1;
       transform: scale(1);
     }
+  }
+
+  &--current {
+    border-color: rgba($color-primary, 0.45);
+    background: rgba($color-primary, 0.06);
+    box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.12);
+    transform: translateY(-2rpx);
   }
 }
 

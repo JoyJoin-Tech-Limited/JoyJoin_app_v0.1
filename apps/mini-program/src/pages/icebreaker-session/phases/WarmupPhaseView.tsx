@@ -27,6 +27,10 @@ interface WarmupPhaseViewProps {
   participants: SessionParticipant[]
   currentUserId: string
   selectedMood?: AtmosphereMood
+  turnUserId?: string
+  turnStartedAt?: number
+  topicRevealed?: boolean
+  turnDurationSeconds?: number
   isHost: boolean
   vibe?: VibeId
   /** Server-computed archetype mix text; falls back to client-side computation if absent. */
@@ -35,6 +39,7 @@ interface WarmupPhaseViewProps {
   isCustomMode?: boolean
   onGenerateTopics: (mood: AtmosphereMood) => void
   onToggleReady: () => void
+  onRevealTopic: () => void
   onNextTopic: () => void
   onAdvance: () => void
   isGeneratingTopics: boolean
@@ -134,12 +139,17 @@ export function WarmupPhaseView({
   participants,
   currentUserId,
   selectedMood,
+  turnUserId,
+  turnStartedAt,
+  topicRevealed = false,
+  turnDurationSeconds = 30,
   isHost,
   vibe,
   archetypeMixText: propArchetypeMixText,
   isCustomMode,
   onGenerateTopics,
   onToggleReady,
+  onRevealTopic,
   onNextTopic,
   onAdvance,
   isGeneratingTopics,
@@ -149,8 +159,14 @@ export function WarmupPhaseView({
   topicsError,
 }: WarmupPhaseViewProps) {
   const currentTopic = topics[currentIndex]
-  const isReady = readyUserIds.includes(currentUserId)
+  const resolvedTurnUserId =
+    turnUserId || participants[currentIndex % Math.max(participants.length, 1)]?.userId || ''
+  const currentTurnParticipant = participants.find((participant) => participant.userId === resolvedTurnUserId)
+  const currentTurnName = currentTurnParticipant?.displayName || '当前玩家'
+  const isCurrentTurn = !!resolvedTurnUserId && resolvedTurnUserId === currentUserId
+  const isReady = !!resolvedTurnUserId && readyUserIds.includes(resolvedTurnUserId)
   const everyoneReady = participants.length > 0 && readyUserIds.length >= participants.length
+  const canRevealTopic = !!currentTopic && !topicRevealed && (isCurrentTurn || isHost)
   const moodLabel = getMoodLabel(selectedMood)
 
   // ── Reduced motion detection ─────────────────────────────────
@@ -173,7 +189,8 @@ export function WarmupPhaseView({
   const [topicFlipped, setTopicFlipped] = useState(false)
   const prevIndexRef = useRef(currentIndex)
   const indexChangeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const autoFlipTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const autoAdvanceKeyRef = useRef('')
+  const [secondsLeft, setSecondsLeft] = useState(turnDurationSeconds)
 
   useEffect(() => {
     if (currentIndex !== prevIndexRef.current) {
@@ -190,19 +207,50 @@ export function WarmupPhaseView({
     }
   }, [currentIndex])
 
-  // Auto-flip on first topic load
   useEffect(() => {
-    if (currentTopic && !topicFlipped) {
-      if (autoFlipTimerRef.current) clearTimeout(autoFlipTimerRef.current)
-      autoFlipTimerRef.current = setTimeout(() => setTopicFlipped(true), 320)
+    setTopicFlipped(!!topicRevealed)
+  }, [currentTopic?.id, topicRevealed])
+
+  useEffect(() => {
+    if (!turnStartedAt) {
+      setSecondsLeft(turnDurationSeconds)
+      return
     }
+
+    const tick = () => {
+      const elapsed = Math.floor((Date.now() - turnStartedAt) / 1000)
+      setSecondsLeft(Math.max(0, turnDurationSeconds - elapsed))
+    }
+
+    tick()
+    const timer = setInterval(tick, 1000)
     return () => {
-      if (autoFlipTimerRef.current) {
-        clearTimeout(autoFlipTimerRef.current)
-        autoFlipTimerRef.current = undefined
-      }
+      clearInterval(timer)
     }
-  }, [currentTopic]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [turnStartedAt, turnDurationSeconds])
+
+  useEffect(() => {
+    if (!isHost || !currentTopic || isReady || isAdvancingTopic || isAdvancing) return
+    if (secondsLeft > 0) return
+
+    const key = `${currentTopic.id}:${currentIndex}`
+    if (autoAdvanceKeyRef.current === key) return
+    autoAdvanceKeyRef.current = key
+
+    if (currentIndex < topics.length - 1) {
+      onNextTopic()
+    }
+  }, [
+    isHost,
+    currentTopic,
+    isReady,
+    isAdvancingTopic,
+    isAdvancing,
+    secondsLeft,
+    currentIndex,
+    topics.length,
+    onNextTopic,
+  ])
 
   // ── Everyone-ready celebration (ParticleBurst) ───────────────
   const [showCelebration, setShowCelebration] = useState(false)
@@ -245,15 +293,22 @@ export function WarmupPhaseView({
   // ── Topic card render helpers ────────────────────────────────
   const TopicFront = useCallback(
     () => (
-      <View className='warmup-card-front'>
+      <View
+        className={`warmup-card-front${canRevealTopic ? ' warmup-card-front--interactive' : ''}`}
+        onClick={() => {
+          if (canRevealTopic) onRevealTopic()
+        }}
+      >
         <View className='warmup-card-front__icon'>
           <PhaseHeaderIcon phase='warmup' size={80} />
         </View>
         <Text className='warmup-card-front__label'>话题卡</Text>
-        <Text className='warmup-card-front__sub'>轻轻一点，开启今晚的聊天</Text>
+        <Text className='warmup-card-front__sub'>
+          {canRevealTopic ? '轮到你了，轻点翻开' : `等待 ${currentTurnName} 翻开`}
+        </Text>
       </View>
     ),
-    [],
+    [canRevealTopic, currentTurnName, onRevealTopic],
   )
 
   const TopicBack = useCallback(
@@ -324,11 +379,24 @@ export function WarmupPhaseView({
         />
       </View>
 
+      {currentTopic ? (
+        <View className='icebreaker__warmup-turn'>
+          <View className='icebreaker__warmup-turn-main'>
+            <Text className='icebreaker__warmup-turn-label'>当前轮到</Text>
+            <Text className='icebreaker__warmup-turn-name'>{currentTurnName}</Text>
+          </View>
+          <View className={`icebreaker__warmup-timer${secondsLeft <= 5 ? ' icebreaker__warmup-timer--urgent' : ''}`}>
+            <Text className='icebreaker__warmup-timer-number'>{secondsLeft}</Text>
+            <Text className='icebreaker__warmup-timer-unit'>秒</Text>
+          </View>
+        </View>
+      ) : null}
+
       {/* ── Ready status bar ───────────────────────────────── */}
       <View className='icebreaker__warmup-status'>
         <View className='icebreaker__warmup-ready-bar'>
           <Text className='icebreaker__warmup-ready-count'>
-            {readyUserIds.length} / {participants.length} 人已准备
+            {isReady ? `${currentTurnName} 已完成` : `等待 ${currentTurnName} 回答`}
           </Text>
           {everyoneReady && (
             <View className='icebreaker__warmup-ready-all-wrap'>
@@ -353,6 +421,7 @@ export function WarmupPhaseView({
                   key={p.userId}
                   className={
                     'icebreaker__participant' +
+                    (p.userId === resolvedTurnUserId ? ' icebreaker__participant--current' : '') +
                     (pReady ? ' icebreaker__participant--ready' : '')
                   }
                 >
@@ -459,13 +528,21 @@ export function WarmupPhaseView({
               variant={isReady ? 'secondary' : 'primary'}
               className='icebreaker__action-btn'
               onClick={onToggleReady}
-              disabled={isUpdatingReady}
+              disabled={isUpdatingReady || !isCurrentTurn || !topicRevealed || isReady}
               loading={isUpdatingReady}
             >
-              {isUpdatingReady ? '提交中…' : isReady ? '取消准备' : '我准备好了'}
+              {isUpdatingReady
+                ? '提交中…'
+                : isReady
+                  ? '本轮已完成'
+                  : isCurrentTurn
+                    ? topicRevealed
+                      ? '我回答好了'
+                      : '先翻开话题卡'
+                    : `等待 ${currentTurnName}`}
             </Button>
 
-            {isHost && everyoneReady && currentIndex < topics.length - 1 ? (
+            {isHost && (isReady || secondsLeft <= 0 || everyoneReady) && currentIndex < topics.length - 1 ? (
               <Button
                 variant='secondary'
                 className='icebreaker__action-btn'
@@ -477,7 +554,7 @@ export function WarmupPhaseView({
               </Button>
             ) : null}
 
-            {isHost && everyoneReady && currentIndex >= topics.length - 1 ? (
+            {isHost && (isReady || secondsLeft <= 0 || everyoneReady) && currentIndex >= topics.length - 1 ? (
               <Button
                 variant='primary'
                 className='icebreaker__action-btn'
@@ -489,9 +566,9 @@ export function WarmupPhaseView({
               </Button>
             ) : null}
 
-            {!isHost && !everyoneReady ? (
+            {!isHost && !isCurrentTurn && !isReady ? (
               <Text className='icebreaker__helper-text'>
-                大家都准备好后，主持人才可以推进下一步。
+                现在听 {currentTurnName} 分享，倒计时结束后会进入下一位。
               </Text>
             ) : null}
           </>

@@ -43,6 +43,19 @@ import { requireAuthenticatedUserId } from '../lib/requestAuth';
 import { generatePhaseSelectionId } from '../services/customModeService';
 
 export function registerExtendedRoutes(router: Router): void {
+  const WARMUP_TURN_DURATION_SECONDS = 30;
+
+  function hasWarmupTurnCompleted(state: SocialSessionState): boolean {
+    return !!state.warmupTurnUserId && (state.warmupReadyUserIds || []).includes(state.warmupTurnUserId);
+  }
+
+  function isWarmupTurnExpired(state: SocialSessionState): boolean {
+    const turnStartedAt = state.warmupTurnStartedAt;
+    if (!turnStartedAt) return false;
+    const durationSeconds = state.warmupTurnDurationSeconds ?? WARMUP_TURN_DURATION_SECONDS;
+    return Date.now() - turnStartedAt >= durationSeconds * 1000;
+  }
+
 // ---------------------------------------------------------------------------
 // POST /api/social-icebreaker/:socialSessionId/advance
 // ---------------------------------------------------------------------------
@@ -75,8 +88,9 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   }
 
   if (currentPhase === 'warmup') {
-    if (!hasAllRosterParticipantsResponded(state.warmupReadyUserIds, state.playerCount)) {
-      return res.status(400).json({ error: 'All participants must be ready before advancing warmup' });
+    const everyoneReady = hasAllRosterParticipantsResponded(state.warmupReadyUserIds, state.playerCount);
+    if (!everyoneReady && !hasWarmupTurnCompleted(state) && !isWarmupTurnExpired(state)) {
+      return res.status(400).json({ error: 'Current speaker must finish or the timer must expire before advancing warmup' });
     }
 
     if ((state.warmupTopics || []).length === 0) {

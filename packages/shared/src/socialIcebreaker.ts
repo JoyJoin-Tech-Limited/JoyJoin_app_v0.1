@@ -453,6 +453,14 @@ export interface SocialSessionState {
   warmupTopicsMeta?: AIResponseMeta;
   currentTopicIndex?: number;
   warmupReadyUserIds?: string[];
+  /** Current warmup speaker. Used for turn-based card reveal and timeout flow. */
+  warmupTurnUserId?: string;
+  /** Timestamp (ms) when the current warmup turn started. */
+  warmupTurnStartedAt?: number;
+  /** Whether the current warmup topic card has been revealed to the table. */
+  warmupTopicRevealed?: boolean;
+  /** Per-turn warmup timeout in seconds. Defaults to 30. */
+  warmupTurnDurationSeconds?: number;
   selectedMood?: AtmosphereMood;
   commonGroundCount?: number;
   currentChallenge?: MicroChallenge;

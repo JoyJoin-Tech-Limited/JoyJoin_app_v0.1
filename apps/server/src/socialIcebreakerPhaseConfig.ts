@@ -155,6 +155,10 @@ export function cleanupPhaseStateForNextPhase(
   switch (completedPhase) {
     case 'warmup':
       state.warmupReadyUserIds = undefined;
+      state.warmupTurnUserId = undefined;
+      state.warmupTurnStartedAt = undefined;
+      state.warmupTopicRevealed = undefined;
+      state.warmupTurnDurationSeconds = undefined;
       return;
     case 'micro_challenge':
       state.currentChallenge = undefined;

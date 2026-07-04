@@ -405,6 +405,10 @@ export default function IcebreakerSessionPage() {
     void performSocialAction('warmup-ready', '/warmup/ready', { ready: !isReady })
   }, [performSocialAction, session?.warmupReadyUserIds, currentUserId])
 
+  const handleRevealWarmupTopic = useCallback(() => {
+    void performSocialAction('warmup-reveal-topic', '/warmup/reveal-topic', {})
+  }, [performSocialAction])
+
   const handleNextWarmupTopic = useCallback(() => {
     void performSocialAction('warmup-next-topic', '/warmup/next-topic', {})
   }, [performSocialAction])
@@ -921,12 +925,17 @@ export default function IcebreakerSessionPage() {
             participants={participants}
             currentUserId={currentUserId}
             selectedMood={session.selectedMood}
+            turnUserId={session.warmupTurnUserId}
+            turnStartedAt={session.warmupTurnStartedAt}
+            topicRevealed={session.warmupTopicRevealed}
+            turnDurationSeconds={session.warmupTurnDurationSeconds}
             isHost={isHost}
             vibe={apiVibeToClient(session.vibe)}
             archetypeMixText={session.archetypeMixText}
             isCustomMode={session.eventTier === 'custom'}
             onGenerateTopics={handleGenerateTopics}
             onToggleReady={handleToggleWarmupReady}
+            onRevealTopic={handleRevealWarmupTopic}
             onNextTopic={handleNextWarmupTopic}
             onAdvance={handleAdvancePhase}
             isGeneratingTopics={pendingAction === 'topics'}
