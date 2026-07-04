@@ -2729,11 +2729,70 @@ $__gold-accent:  $color-landed-gold;
   flex-direction: column;
   gap: $spacing-md;
 
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $spacing-md;
+    margin-bottom: $spacing-xs;
+  }
+
   &__title {
+    display: block;
     font-size: $font-size-lg;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
-    margin-bottom: $spacing-xs;
+  }
+
+  &__subtitle {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    line-height: 1.5;
+  }
+
+  &__host-badge {
+    flex-shrink: 0;
+    padding: 8rpx 16rpx;
+    border-radius: 999rpx;
+    color: #ffffff;
+    background: $color-primary;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    line-height: 1.2;
+  }
+
+  &__role-card {
+    padding: $spacing-lg;
+    border-radius: 20rpx;
+    background: #ffffff;
+    border: 2rpx solid rgba($color-primary, 0.22);
+    box-shadow: 0 12rpx 30rpx rgba(31, 41, 55, 0.08);
+  }
+
+  &__role-kicker {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__role-name {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-xl;
+    color: $color-text-primary;
+    font-weight: $font-weight-bold;
+  }
+
+  &__role-copy {
+    display: block;
+    margin-top: $spacing-sm;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.55;
   }
 
   &__waiting {
@@ -2750,29 +2809,30 @@ $__gold-accent:  $color-landed-gold;
     width: 100%;
     padding: $spacing-md $spacing-lg;
     border-radius: 16rpx;
-    background: $color-bg-tint-purple;
-    border: 2rpx solid $color-border;
-    transition: background 0.12s ease, border-color 0.12s ease;
+    background: #ffffff;
+    border: 2rpx solid rgba($color-primary, 0.28);
+    box-shadow: 0 8rpx 24rpx rgba(31, 41, 55, 0.06);
+    transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
     min-height: 88rpx;
     box-sizing: border-box;
 
     &--pressed {
-      background: $color-primary-light;
-      border-color: rgba($color-primary, 0.3);
+      background: rgba($color-primary, 0.1);
+      border-color: rgba($color-primary, 0.55);
+      transform: scale(0.99);
     }
 
     &--disabled {
-      background: rgba($color-text-primary, 0.04);
-      border-color: rgba($color-text-primary, 0.1);
-      opacity: 0.7;
+      background: rgba($color-text-primary, 0.045);
+      border-color: rgba($color-text-primary, 0.16);
+      box-shadow: none;
     }
 
     &--end {
       justify-content: center;
       margin-top: $spacing-sm;
       background: $color-surface;
-      border-color: $color-error;
-      color: $color-error;
+      border-color: rgba($color-error, 0.5);
 
       &--pressed {
         background: rgba($color-error, 0.1);
@@ -2789,15 +2849,28 @@ $__gold-accent:  $color-landed-gold;
 
   &__btn-label {
     font-size: $font-size-base;
-    font-weight: $font-weight-semibold;
+    font-weight: $font-weight-bold;
     color: $color-text-primary;
     flex: 1;
   }
 
+  &__btn--disabled &__btn-label,
+  &__btn--disabled &__btn-emoji {
+    color: $color-text-secondary;
+  }
+
+  &__btn--end &__btn-label,
+  &__btn--end &__btn-emoji {
+    color: $color-error;
+  }
+
   &__btn-hint {
-    font-size: $font-size-xs;
-    color: $color-text-muted;
     flex-shrink: 0;
+    max-width: 220rpx;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    font-weight: $font-weight-semibold;
+    text-align: right;
   }
 }
 

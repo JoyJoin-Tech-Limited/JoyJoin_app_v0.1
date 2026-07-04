@@ -7,15 +7,16 @@ import {
   socialIcebreakerEndSessionSchema,
 } from '@shared/api';
 import { getPhaseModule } from '@shared/phaseRegistry';
-import { updateSession } from '../lib/socialIcebreakerStore';
-import { getFeatureFlag } from '../lib/featureFlags';
 import { logger } from '../lib/logger';
+import { generateMicroChallenges } from '../socialIcebreakerAIService';
 import {
   resolveSession,
   isHostAuthorized,
   buildClientState,
   ensureRecapSnapshot,
+  generateSpeedFriendingPairs,
 } from './socialIcebreakerHelpers';
+import { listParticipants, updateSession } from '../lib/socialIcebreakerStore';
 import { cleanupPhaseStateForNextPhase } from '../socialIcebreakerPhaseConfig';
 
 const router = Router();
@@ -67,10 +68,50 @@ router.post('/:socialSessionId/select-phase', async (req: Request, res: Response
     return res.status(400).json({ error: 'Unknown phase' });
   }
 
+  if (state.playerCount < phaseModule.minPlayers) {
+    return res.status(400).json({ error: `This phase requires at least ${phaseModule.minPlayers} players` });
+  }
+
   state.currentPhase = phase as SocialIcebreakerPhase;
   state.phaseStartedAt = Date.now();
   state.phaseSelectionId = undefined;
   state.pulseChecks = [];
+  state.autoAdvanceScheduledAt = undefined;
+
+  if (phase === 'micro_challenge') {
+    state.challengeCompletedBy = [];
+    if (!state.currentChallenge) {
+      const roster = await listParticipants(socialSessionId);
+      const challengeResult = await generateMicroChallenges({
+        participantCount: roster.length || state.playerCount || 1,
+        eventType: state.eventType || '活动',
+        roster: roster.map((p) => ({ archetype: p.archetype })),
+        seed: socialSessionId,
+      });
+      state.currentChallenge = challengeResult.data[0];
+      state.currentChallengeMeta = challengeResult.meta;
+    }
+  }
+
+  if (phase === 'auction') {
+    state.auctionAllLotsClosed = false;
+    state.auctionCurrentLotIndex = 0;
+    state.auctionHighBid = null;
+    state.auctionRecapLines = [];
+    state.auctionBidHistory = [];
+  }
+
+  if (phase === 'speed_friending') {
+    const roster = await listParticipants(socialSessionId);
+    const playerIds = roster.map((p) => p.userId);
+    const displayNames = new Map(roster.map((p) => [p.userId, p.displayName]));
+    const rounds = generateSpeedFriendingPairs(playerIds, displayNames);
+    state.speedFriendingPairs = rounds.flat();
+    state.speedFriendingTotalRounds = rounds.length;
+    state.speedFriendingCurrentRound = 0;
+    state.speedFriendingAllRoundsComplete = false;
+    state.speedFriendingRoundStartedAt = Date.now();
+  }
 
   await updateSession(socialSessionId, state);
 

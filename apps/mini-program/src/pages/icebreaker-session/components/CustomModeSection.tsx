@@ -20,11 +20,16 @@ export function CustomModeSection({
   onEndSession,
 }: CustomModeSectionProps) {
   const phases = session?.selectablePhases ?? []
+  const hostName = session?.hostDisplayName || '主持人'
 
   if (!isHost) {
     return (
       <View className='custom-mode-section'>
-        <Text className='custom-mode-section__waiting'>等待主持人选择下一个环节</Text>
+        <View className='custom-mode-section__role-card'>
+          <Text className='custom-mode-section__role-kicker'>当前由主持人推进</Text>
+          <Text className='custom-mode-section__role-name'>{hostName}</Text>
+          <Text className='custom-mode-section__role-copy'>请稍等，主持人选择后会自动进入下一个玩法。</Text>
+        </View>
       </View>
     )
   }
@@ -40,7 +45,13 @@ export function CustomModeSection({
 
   return (
     <View className='custom-mode-section'>
-      <Text className='custom-mode-section__title'>选择下一个环节</Text>
+      <View className='custom-mode-section__header'>
+        <View>
+          <Text className='custom-mode-section__title'>选择下一个环节</Text>
+          <Text className='custom-mode-section__subtitle'>你是主持人，选择后全员同步进入玩法</Text>
+        </View>
+        <Text className='custom-mode-section__host-badge'>主持人</Text>
+      </View>
       {phases.map((phase) => (
         <View
           key={phase.phase}
@@ -60,6 +71,7 @@ export function CustomModeSection({
         hoverClass='custom-mode-section__btn--pressed'
         onClick={() => !pendingAction && onEndSession?.()}
       >
+        <Text className='custom-mode-section__btn-emoji'>✓</Text>
         <Text className='custom-mode-section__btn-label'>结束派对</Text>
       </View>
     </View>

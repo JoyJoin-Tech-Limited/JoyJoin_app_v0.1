@@ -41,9 +41,12 @@ export function computeSelectablePhases(state: SocialSessionState): SelectablePh
 
     const module = getPhaseModule(phase);
     const completedAlready = completed.has(phase);
+    const lacksPlayers = playerCount < module.minPlayers;
 
     let disabledReason: string | undefined;
-    if (completedAlready) {
+    if (lacksPlayers) {
+      disabledReason = `至少 ${module.minPlayers} 人`;
+    } else if (completedAlready) {
       disabledReason = '已经玩过';
     }
 
@@ -53,7 +56,7 @@ export function computeSelectablePhases(state: SocialSessionState): SelectablePh
       nameEn: module.nameEn,
       emoji: module.emoji,
       minPlayers: module.minPlayers,
-      disabled: completedAlready,
+      disabled: lacksPlayers || completedAlready,
       disabledReason,
     });
   }
