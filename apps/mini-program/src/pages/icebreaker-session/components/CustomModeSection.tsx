@@ -1,4 +1,5 @@
-import { View, Text, Button } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
+import Taro from '@tarojs/taro'
 import type { SocialIcebreakerPhase, SocialSessionState } from '@shared/socialIcebreaker'
 
 interface CustomModeSectionProps {
@@ -23,26 +24,44 @@ export function CustomModeSection({
   if (!isHost) {
     return (
       <View className='custom-mode-section'>
-        <Text>等待主持人选择下一个环节</Text>
+        <Text className='custom-mode-section__waiting'>等待主持人选择下一个环节</Text>
       </View>
     )
+  }
+
+  const handlePhaseTap = (phase: SocialIcebreakerPhase, disabled: boolean, disabledReason?: string) => {
+    if (pendingAction) return
+    if (disabled) {
+      Taro.showToast({ title: disabledReason || '该玩法暂未开放', icon: 'none', duration: 2000 })
+      return
+    }
+    onSelectPhase?.(phase)
   }
 
   return (
     <View className='custom-mode-section'>
       <Text className='custom-mode-section__title'>选择下一个环节</Text>
       {phases.map((phase) => (
-        <Button
+        <View
           key={phase.phase}
-          disabled={!!pendingAction || phase.disabled}
-          onClick={() => onSelectPhase?.(phase.phase)}
+          className={`custom-mode-section__btn${phase.disabled ? ' custom-mode-section__btn--disabled' : ''}`}
+          hoverClass={phase.disabled ? 'none' : 'custom-mode-section__btn--pressed'}
+          onClick={() => handlePhaseTap(phase.phase, phase.disabled, phase.disabledReason)}
         >
-          {phase.emoji} {phase.name}
-        </Button>
+          <Text className='custom-mode-section__btn-emoji'>{phase.emoji}</Text>
+          <Text className='custom-mode-section__btn-label'>{phase.name}</Text>
+          {phase.disabledReason && (
+            <Text className='custom-mode-section__btn-hint'>{phase.disabledReason}</Text>
+          )}
+        </View>
       ))}
-      <Button disabled={!!pendingAction} onClick={onEndSession}>
-        结束派对
-      </Button>
+      <View
+        className='custom-mode-section__btn custom-mode-section__btn--end'
+        hoverClass='custom-mode-section__btn--pressed'
+        onClick={() => !pendingAction && onEndSession?.()}
+      >
+        <Text className='custom-mode-section__btn-label'>结束派对</Text>
+      </View>
     </View>
   )
 }

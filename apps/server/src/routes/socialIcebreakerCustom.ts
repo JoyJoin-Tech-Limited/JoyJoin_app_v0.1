@@ -67,12 +67,6 @@ router.post('/:socialSessionId/select-phase', async (req: Request, res: Response
     return res.status(400).json({ error: 'Unknown phase' });
   }
 
-  if (state.playerCount < phaseModule.minPlayers) {
-    return res.status(400).json({
-      error: `Phase ${phaseModule.name} requires at least ${phaseModule.minPlayers} players`,
-    });
-  }
-
   state.currentPhase = phase as SocialIcebreakerPhase;
   state.phaseStartedAt = Date.now();
   state.phaseSelectionId = undefined;

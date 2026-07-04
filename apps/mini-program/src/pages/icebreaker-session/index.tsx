@@ -464,6 +464,7 @@ export default function IcebreakerSessionPage() {
         })
         await socialSessionQuery.refetch()
       } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : '选择没成功，再试试'
         logError('[IcebreakerSession] Select custom phase failed', { socialSessionId, selectedPhase, err })
         socialIcebreakerAnalytics.track(
           'select_phase_failed',
@@ -473,11 +474,11 @@ export default function IcebreakerSessionPage() {
           {
             phaseSelectionId: session?.phaseSelectionId,
             playerCount,
-            error: err instanceof Error ? err.message : 'unknown',
+            error: errMsg,
           },
         )
         void Taro.showToast({
-          title: '选择没成功，再试试',
+          title: errMsg.length > 14 ? '选择没成功，再试试' : errMsg,
           icon: 'none',
           duration: 2000,
         })
