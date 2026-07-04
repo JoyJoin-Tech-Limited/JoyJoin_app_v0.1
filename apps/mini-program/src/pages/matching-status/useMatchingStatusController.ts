@@ -550,6 +550,17 @@ export function useMatchingStatusController({
     navigateToMatchedDestination(resolvedGroupId)
   }, [resolvedGroupId, navigateToMatchedDestination])
 
+  const handleStartSquadUnboxing = useCallback(() => {
+    if (!resolvedGroupId) {
+      Taro.showToast({ title: '小队信息还在同步，请稍后再试', icon: 'none', duration: TOAST_DEFAULT_MS })
+      void queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-registration', registrationId] })
+      return
+    }
+
+    setLiveStage('idle')
+    replaceWithSquadUnboxing(resolvedGroupId)
+  }, [queryClient, registrationId, resolvedGroupId])
+
   const handleBrowsePools = useCallback(() => {
     switchToDiscoverTab()
   }, [])
@@ -697,6 +708,10 @@ export function useMatchingStatusController({
       clearTimeout(liveStageTimerRef.current)
     }
 
+    if (!hasRevealed && resolvedGroupId) {
+      return undefined
+    }
+
     liveStageTimerRef.current = setTimeout(() => {
       if (!mountedRef.current) return
 
@@ -723,9 +738,12 @@ export function useMatchingStatusController({
   }, [
     effectiveGroupDetails,
     finishLiveJourney,
+    hasRevealed,
     isLoadingLiveGroupDetails,
+    liveRevealError,
     liveStage,
     persistedThemeSummary,
+    resolvedGroupId,
     shouldReduceMotion,
   ])
 
@@ -916,6 +934,7 @@ export function useMatchingStatusController({
     handleRejoinPool,
     handleCancel,
     isCancelling,
+    handleStartSquadUnboxing,
     handleContinueFromMembers,
     finishLiveJourney,
     similarPools,

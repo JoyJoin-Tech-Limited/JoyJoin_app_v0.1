@@ -33,6 +33,14 @@ describe('matching-status page composition', () => {
     expect(pageSource).not.toContain("queryKey: ['mini-program', 'pool-registration'")
   })
 
+  it('routes unrevealed match CTA into the squad unboxing flow', () => {
+    expect(pageSource).toContain('onStartSquadUnboxing={handleStartSquadUnboxing}')
+    expect(sectionsSource).toContain('onStartSquadUnboxing()')
+    expect(controllerSource).toContain('const handleStartSquadUnboxing = useCallback')
+    expect(controllerSource).toContain('replaceWithSquadUnboxing(resolvedGroupId)')
+    expect(controllerSource).toContain('if (!hasRevealed && resolvedGroupId)')
+  })
+
   it('keeps top-level screen-state ownership in the controller', () => {
     expect(pageSource).toContain('screenState')
     expect(pageSource).not.toContain('authLoading || isLoading')

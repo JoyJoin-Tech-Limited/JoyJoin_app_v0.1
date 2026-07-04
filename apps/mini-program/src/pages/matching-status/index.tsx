@@ -63,6 +63,7 @@ export default function MatchingStatusPage() {
     invalidateRegistrationQuery: _invalidateRegistrationQuery,
     handleRetryLiveReveal: _handleRetryLiveReveal,
     handleDismissLiveReveal: _handleDismissLiveReveal,
+    handleStartSquadUnboxing,
     isCancelling,
     isLoadingLiveGroupDetails,
     leadIceBreaker,
@@ -573,6 +574,7 @@ export default function MatchingStatusPage() {
             persistedThemeSummary={persistedThemeSummary}
             resolvedGroupId={resolvedGroupId}
             liveRevealError={liveRevealError}
+            onStartSquadUnboxing={handleStartSquadUnboxing}
             onContinueFromMembers={handleContinueFromMembers}
             onFinishLiveJourney={finishLiveJourney}
             onRetryLiveReveal={handleRetryLiveReveal}

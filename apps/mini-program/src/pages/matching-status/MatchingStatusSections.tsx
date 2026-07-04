@@ -289,6 +289,7 @@ interface MatchingStatusLiveOverlayProps {
   persistedThemeSummary: ThemeSummary | null
   resolvedGroupId: string
   liveRevealError: string | null
+  onStartSquadUnboxing: () => void
   onContinueFromMembers: () => void
   onFinishLiveJourney: () => void
   onRetryLiveReveal: () => void
@@ -310,6 +311,7 @@ export function MatchingStatusLiveOverlay({
   persistedThemeSummary,
   resolvedGroupId,
   liveRevealError,
+  onStartSquadUnboxing,
   onContinueFromMembers,
   onFinishLiveJourney,
   onRetryLiveReveal,
@@ -347,9 +349,21 @@ export function MatchingStatusLiveOverlay({
           </Text>
           <Text className='matching-status__overlay-title'>{stageTemperature.label}</Text>
           <Text className='matching-status__overlay-copy'>{stageTemperature.body}</Text>
-          <Text className='matching-status__overlay-loading'>
-            {isLoadingLiveGroupDetails ? '正在同步桌友卡片…' : '准备开始揭晓'}
-          </Text>
+          {isLoadingLiveGroupDetails ? (
+            <Text className='matching-status__overlay-loading'>正在同步桌友卡片…</Text>
+          ) : resolvedGroupId ? (
+            <Button
+              className='matching-status__overlay-button'
+              onClick={() => {
+                haptics('medium')
+                onStartSquadUnboxing()
+              }}
+            >
+              准备开始揭晓
+            </Button>
+          ) : (
+            <Text className='matching-status__overlay-loading'>正在确认小队信息…</Text>
+          )}
         </View>
       ) : null}
 
