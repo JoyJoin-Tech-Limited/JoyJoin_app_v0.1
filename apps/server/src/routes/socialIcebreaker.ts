@@ -70,10 +70,7 @@ import {
   getPreGenerationResult,
   invalidatePreGenerationForSession,
 } from '../lib/socialIcebreakerStore';
-import { getSocialIcebreakerAccess } from '../lib/socialIcebreakerAccess';
-import { db } from '../db';
-import { eq } from 'drizzle-orm';
-import { eventPoolGroups, eventPools } from '@shared/schema';
+import { getSocialIcebreakerAccess, resolveIcebreakerDefaultTier } from '../lib/socialIcebreakerAccess';
 import { buildMomentCardPayload } from '../lib/momentCardPayload';
 import { renderMomentCardToPng } from '../lib/momentCardRenderer';
 import { curateMedals } from '../lib/medalCuration';
@@ -276,16 +273,7 @@ router.post('/start', async (req: any, res) => {
   const now = Date.now();
   const mappedTier = eventTier ? (LEGACY_TIER_MAP[eventTier] ?? eventTier) : undefined;
   const VALID_TIERS: TierMachineId[] = ['breeze', 'glow', 'blaze', 'custom'];
-  let defaultTier: TierMachineId = 'breeze';
-  if (!mappedTier) {
-    const [poolRow] = await db
-      .select({ isTestPool: eventPools.isTestPool })
-      .from(eventPoolGroups)
-      .innerJoin(eventPools, eq(eventPoolGroups.poolId, eventPools.id))
-      .where(eq(eventPoolGroups.id, sessionId))
-      .limit(1);
-    if (poolRow?.isTestPool) defaultTier = 'custom';
-  }
+  let defaultTier: TierMachineId = !mappedTier ? await resolveIcebreakerDefaultTier(sessionId) : 'breeze';
   const resolvedTier: TierMachineId = mappedTier && VALID_TIERS.includes(mappedTier as TierMachineId) ? mappedTier as TierMachineId : defaultTier;
   const resolvedVibe: 'chat' | 'balanced' | 'game' = vibe && ['chat', 'balanced', 'game'].includes(vibe as string) ? vibe as 'chat' | 'balanced' | 'game' : 'balanced';
 

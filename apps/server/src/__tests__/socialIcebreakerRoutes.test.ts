@@ -285,6 +285,7 @@ vi.mock('../lib/socialIcebreakerAccess', () => ({
     }
     return { allowed: true };
   }),
+  resolveIcebreakerDefaultTier: vi.fn(async () => 'breeze'),
 }));
 
 vi.mock('../jobs/preGenerationQueue', () => ({

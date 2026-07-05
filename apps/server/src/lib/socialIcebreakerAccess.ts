@@ -1,4 +1,4 @@
-import { blindBoxEvents, eventAttendance, eventPoolGroups, eventPoolRegistrations } from "@shared/schema";
+import { blindBoxEvents, eventAttendance, eventPoolGroups, eventPoolRegistrations, eventPools } from "@shared/schema";
 import { and, eq } from "drizzle-orm";
 import { db } from "../db";
 
@@ -110,4 +110,24 @@ export async function getSocialIcebreakerAccess(
     status: 404,
     body: { message: "Icebreaker session not found" },
   };
+}
+
+/**
+ * Determine default icebreaker tier for a session.
+ * Returns 'custom' when the session's group belongs to a test pool (isTestPool=true),
+ * otherwise 'breeze'.
+ */
+export async function resolveIcebreakerDefaultTier(sessionId: string): Promise<'breeze' | 'custom'> {
+  const [group] = await db
+    .select({ poolId: eventPoolGroups.poolId })
+    .from(eventPoolGroups)
+    .where(eq(eventPoolGroups.id, sessionId))
+    .limit(1);
+  if (!group) return 'breeze';
+  const [pool] = await db
+    .select({ isTestPool: eventPools.isTestPool })
+    .from(eventPools)
+    .where(eq(eventPools.id, group.poolId))
+    .limit(1);
+  return pool?.isTestPool ? 'custom' : 'breeze';
 }
