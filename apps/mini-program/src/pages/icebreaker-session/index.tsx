@@ -81,6 +81,7 @@ export default function IcebreakerSessionPage() {
   const router = useRouter()
   const routeSessionId = router.params.sessionId ?? ''
   const routeEventId = router.params.eventId ?? ''
+  const routeSocialSessionId = router.params.socialSessionId ?? ''
   const { isLoading: authLoading } = useAuthGuard()
   const { user } = useAuth()
   const currentUser = (user ?? undefined) as Record<string, unknown> | undefined
@@ -152,6 +153,14 @@ export default function IcebreakerSessionPage() {
       return
     }
 
+    // When the URL carries a socialSessionId (from tier-selector redirect),
+    // skip the bare /start call which lacks eventTier and would default to
+    // breeze. The tier-selector already created/populated the session.
+    if (routeSocialSessionId) {
+      setSocialSessionId(routeSocialSessionId)
+      return
+    }
+
     let cancelled = false
     startAttemptRef.current = resolvedSessionId
     setBootstrapError(null)
@@ -210,6 +219,7 @@ export default function IcebreakerSessionPage() {
     sessionError,
     socialSessionId,
     currentUserDisplayName,
+    routeSocialSessionId,
   ])
 
   const socialSessionQuery = useQuery<SocialSessionState>({
