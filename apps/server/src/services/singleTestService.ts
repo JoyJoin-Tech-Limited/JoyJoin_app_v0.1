@@ -109,7 +109,10 @@ export async function ensureSingleTestPool(createdBy: string): Promise<string> {
     .where(eq(eventPools.title, SINGLE_TEST_POOL_TITLE))
     .limit(1);
 
-  if (existing) return existing.id;
+  if (existing) {
+    await db.update(eventPools).set({ isTestPool: true }).where(eq(eventPools.id, existing.id));
+    return existing.id;
+  }
 
   const now = new Date();
   const [pool] = await db
@@ -117,6 +120,7 @@ export async function ensureSingleTestPool(createdBy: string): Promise<string> {
     .values({
       title: SINGLE_TEST_POOL_TITLE,
       description: "单人调试用活动池 — 仅限测试模式",
+      isTestPool: true,
       eventType: "饭局",
       city: "深圳",
       district: "南山区",
