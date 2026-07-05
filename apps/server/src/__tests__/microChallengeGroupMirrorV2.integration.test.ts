@@ -100,6 +100,7 @@ vi.mock('../socialIcebreakerAIService', () => ({
 
 vi.mock('../lib/socialIcebreakerAccess', () => ({
   getSocialIcebreakerAccess: vi.fn().mockResolvedValue({ allowed: true }),
+  resolveIcebreakerDefaultTier: vi.fn().mockResolvedValue('breeze'),
 }));
 
 vi.mock('../jobs/preGenerationQueue', () => ({

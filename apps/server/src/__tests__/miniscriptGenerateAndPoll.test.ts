@@ -202,6 +202,7 @@ vi.mock('../lib/socialIcebreakerAccess', () => ({
     }
     return { allowed: true };
   }),
+  resolveIcebreakerDefaultTier: vi.fn().mockResolvedValue('breeze'),
 }));
 
 const { default: socialIcebreakerRouter } = await import('../routes/socialIcebreaker');
