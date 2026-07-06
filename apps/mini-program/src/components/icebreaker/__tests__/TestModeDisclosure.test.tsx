@@ -22,6 +22,7 @@ vi.mock('@tarojs/components', () => ({
   View: (props: Record<string, unknown>) => <div {...props} />,
   Text: (props: Record<string, unknown>) => <span {...props} />,
   Button: (props: Record<string, unknown>) => <button {...props} />,
+  Image: ({ lazyLoad: _lazyLoad, ...rest }: Record<string, unknown>) => <img {...rest} />,
 }))
 
 describe('TestModeDisclosure', () => {
@@ -76,11 +77,53 @@ describe('TestModeDisclosure', () => {
     expect(screen.getByRole('button')).toBeDisabled()
   })
 
-  it('exposes dialog accessibility attributes', () => {
+  it('renders a mascot image for brand warmth', () => {
     render(<TestModeDisclosure onContinue={() => {}} />)
 
-    const dialog = screen.getByRole('dialog')
-    expect(dialog).toHaveAttribute('aria-modal', 'true')
-    expect(dialog).toHaveAttribute('aria-label', '测试模式说明')
+    const mascot = screen.getByRole('img', { name: '小悦' })
+    expect(mascot).toBeInTheDocument()
+    const img = mascot.querySelector('img')
+    expect(img).toHaveAttribute('src', expect.stringContaining('xiaoyue-coach-guide'))
+  })
+
+  it('renders an inline error message and retry CTA when error is provided', () => {
+    render(
+      <TestModeDisclosure
+        onContinue={() => {}}
+        error='网络开小差了'
+      />,
+    )
+
+    expect(screen.getByRole('alert')).toHaveTextContent('网络开小差了')
+    expect(screen.getByText('重试')).toBeInTheDocument()
+  })
+
+  it('fires onRetry when error is shown and CTA is tapped', () => {
+    const onRetry = vi.fn()
+    const onContinue = vi.fn()
+    render(
+      <TestModeDisclosure
+        onContinue={onContinue}
+        onRetry={onRetry}
+        error='继续失败'
+      />,
+    )
+
+    fireEvent.click(screen.getByText('重试'))
+    expect(onRetry).toHaveBeenCalledTimes(1)
+    expect(onContinue).not.toHaveBeenCalled()
+  })
+
+  it('falls back to onContinue for retry when onRetry is omitted', () => {
+    const onContinue = vi.fn()
+    render(
+      <TestModeDisclosure
+        onContinue={onContinue}
+        error='继续失败'
+      />,
+    )
+
+    fireEvent.click(screen.getByText('重试'))
+    expect(onContinue).toHaveBeenCalledTimes(1)
   })
 })

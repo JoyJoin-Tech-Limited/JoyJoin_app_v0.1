@@ -104,6 +104,7 @@ export default function IcebreakerSessionPage() {
   const [isTierSheetOpen, setIsTierSheetOpen] = useState(false)
   const [pendingTierSwitch, setPendingTierSwitch] = useState<TierSheetSelection | null>(null)
   const [showTestModeDisclosure, setShowTestModeDisclosure] = useState(false)
+  const [testModeAdvanceError, setTestModeAdvanceError] = useState<string | null>(null)
   const startAttemptRef = useRef<string | null>(null)
   const prevPhaseRef = useRef<SessionPhase>('waiting')
   const customSessionCompletedRef = useRef(false)
@@ -447,6 +448,7 @@ export default function IcebreakerSessionPage() {
 
     // Single-test sessions pause at the test-mode disclosure before recap.
     if (session.isTestModeSkip && session.currentPhase === 'warmup') {
+      setTestModeAdvanceError(null)
       setShowTestModeDisclosure(true)
       socialIcebreakerAnalytics.track(
         'icebreaker_test_mode_disclosure_shown',
@@ -466,16 +468,20 @@ export default function IcebreakerSessionPage() {
     })
   }, [performSocialAction, session, socialSessionId, playerCount])
 
-  const handleTestModeContinue = useCallback(() => {
+  const handleTestModeContinue = useCallback(async () => {
     if (!session) {
       return
     }
 
-    setShowTestModeDisclosure(false)
-
-    void performSocialAction('advance', '/advance', {
+    setTestModeAdvanceError(null)
+    const result = await performSocialAction('advance', '/advance', {
       currentPhase: session.currentPhase,
     })
+    if (result === null) {
+      setTestModeAdvanceError('继续时遇到小问题，点重试再试一次')
+    } else {
+      setShowTestModeDisclosure(false)
+    }
   }, [performSocialAction, session])
 
   const handleSelectCustomPhase = useCallback(
@@ -917,20 +923,24 @@ export default function IcebreakerSessionPage() {
     />
   )
 
+  const HOST_CONTROL_HIDDEN_PHASES: SessionPhase[] = [
+    'recap',
+    'ended',
+    'waiting',
+    'phase_selection',
+    'auction',
+    'mini_script',
+    'warmup',
+    'lie_detective',
+    'quip_battle',
+    'undercover_word',
+    'group_mirror',
+    'speed_friending',
+  ]
+
   const hostControls =
     isHost &&
-    phase !== 'recap' &&
-    phase !== 'ended' &&
-    phase !== 'waiting' &&
-    phase !== 'phase_selection' &&
-    phase !== 'auction' &&
-    phase !== 'mini_script' &&
-    phase !== 'warmup' &&
-    phase !== 'lie_detective' &&
-    phase !== 'quip_battle' &&
-    phase !== 'undercover_word' &&
-    phase !== 'group_mirror' &&
-    phase !== 'speed_friending' && (
+    !HOST_CONTROL_HIDDEN_PHASES.includes(phase) && (
     <View className='icebreaker__host-controls'>
       <View className='icebreaker__host-badge'>
         <View className='icebreaker__host-badge-text'>
@@ -1294,7 +1304,9 @@ export default function IcebreakerSessionPage() {
             socialSessionId={socialSessionId ?? undefined}
             icebreakerSessionId={session?.icebreakerSessionId}
             onContinue={handleTestModeContinue}
+            onRetry={handleTestModeContinue}
             isLoading={pendingAction === 'advance'}
+            error={testModeAdvanceError}
           />
         </View>
       )}

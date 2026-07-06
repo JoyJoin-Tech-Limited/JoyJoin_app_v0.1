@@ -74,7 +74,8 @@ function generateBirthdate(): string {
 }
 
 /** Simple deterministic string hash (non-cryptographic). Used to derive a stable
- *  archetype mix from a groupId without adding DB state. */
+ *  archetype mix from a groupId without adding DB state. Returns an unsigned
+ *  32-bit integer so modulo selection never sees a negative value. */
 function simpleHash(input: string): number {
   let hash = 0;
   for (let i = 0; i < input.length; i++) {
@@ -82,7 +83,7 @@ function simpleHash(input: string): number {
     hash = (hash << 5) - hash + char;
     hash |= 0;
   }
-  return Math.abs(hash);
+  return hash >>> 0;
 }
 
 /** Pick BOT_COUNT bots with distinct archetypes when possible, deterministically

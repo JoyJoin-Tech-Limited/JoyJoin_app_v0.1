@@ -1,13 +1,9 @@
-import { View, Text, Image } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import { useEffect, useCallback, useState } from 'react'
 import type { PoolGroupMemberSummary } from '@shared/api'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
-import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import TeammateCard from './TeammateCard'
-
-export const SQUAD_CARD_BACK_PATTERN_URL = cdnAsset('/assets/lovart/squad/squad-card-back-pattern-20260628-v1.webp')
 
 export interface SquadDeckStageProps {
   members: PoolGroupMemberSummary[]
@@ -30,20 +26,27 @@ export default function SquadDeckStage({
   isDegradation,
   onFocusChange,
 }: SquadDeckStageProps) {
-  const [isRevealed, setIsRevealed] = useState(false)
+  const [isRevealed, setIsRevealed] = useState(() => reduceMotion || isDegradation)
+  const [emergeComplete, setEmergeComplete] = useState(() => reduceMotion || isDegradation)
 
   useEffect(() => {
-    if (reduceMotion) {
+    if (reduceMotion || isDegradation) {
       setIsRevealed(true)
+      setEmergeComplete(true)
       return
     }
 
-    const timer = setTimeout(() => {
-      setIsRevealed(true)
-    }, 80)
+    // Yield one frame so the initial (hidden, inside-box) transform is committed
+    // before the final fanned transform is applied, triggering the transition.
+    const revealTimer = setTimeout(() => setIsRevealed(true), 0)
+    const maxStaggerMs = 280 + Math.max(0, members.length - 1) * 50
+    const completeTimer = setTimeout(() => setEmergeComplete(true), maxStaggerMs + 550)
 
-    return () => clearTimeout(timer)
-  }, [reduceMotion])
+    return () => {
+      clearTimeout(revealTimer)
+      clearTimeout(completeTimer)
+    }
+  }, [reduceMotion, isDegradation, members.length])
 
   const handleFocus = useCallback((index: number) => {
     onFocusChange(index)
@@ -52,12 +55,6 @@ export default function SquadDeckStage({
   if (members.length === 0) {
     return (
       <View className='squad-unboxing__deck-stage squad-unboxing__deck-stage--empty' role='list' aria-label='桌友卡组'>
-        <Image
-          className='squad-unboxing__deck-empty-mascot'
-          mode='aspectFit'
-          src={getXiaoyueExpressionAsset('actionFailure')}
-          aria-hidden='true'
-        />
         <Text className='squad-unboxing__deck-empty-text'>
           {`${DEFAULT_MASCOT_DISPLAY_NAME}还没收到这桌的名单，稍后再来看看～`}
         </Text>
@@ -66,19 +63,21 @@ export default function SquadDeckStage({
   }
 
   return (
-    <View className='squad-unboxing__deck-stage' role='list' aria-label='桌友卡组'>
+    <View
+      className={[
+        'squad-unboxing__deck-stage',
+        isRevealed ? 'squad-unboxing__deck-stage--revealed' : '',
+        reduceMotion ? 'squad-unboxing__deck-stage--reduce-motion' : '',
+        isDegradation ? 'squad-unboxing__deck-stage--degradation' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      role='list'
+      aria-label={`桌友卡组，共 ${members.length} 张`}
+    >
       <View className='squad-unboxing__deck-shadow' />
 
       <View className='squad-unboxing__deck-cards'>
-        <View className='squad-unboxing__deck-back-pattern' aria-hidden='true'>
-          <Image
-            className='squad-unboxing__deck-back-pattern-img'
-            src={SQUAD_CARD_BACK_PATTERN_URL}
-            mode='aspectFill'
-            lazyLoad={false}
-          />
-        </View>
-
         {members.map((member, index) => {
           const isCurrentUser = member.userId === currentUserId
           const viewerPair = viewerPairByMemberId.get(member.userId) ?? null
@@ -93,6 +92,8 @@ export default function SquadDeckStage({
               focused={focusedIndex === index}
               anyFocused={hasTappedCard}
               isCurrentUser={isCurrentUser}
+              isRevealed={isRevealed}
+              emergeComplete={emergeComplete}
               reduceMotion={reduceMotion}
               isDegradation={isDegradation}
               onFocus={() => handleFocus(index)}
@@ -100,8 +101,6 @@ export default function SquadDeckStage({
           )
         })}
       </View>
-
-      {!isRevealed ? <View className='squad-unboxing__deck-deal-cover' /> : null}
     </View>
   )
 }

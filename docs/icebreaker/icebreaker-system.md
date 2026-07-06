@@ -230,13 +230,13 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
   GET .../recap → AI-generated { headline, moments[], closingLine, medals[], lieDetectiveV2Stats?, personalityDiceHighlights?, undercoverWordResult?, microChallengeHighlights?, groupMirrorHighlights? } (`social-recap-summary-v2`; includes lie highlights, dice, MiniScript premise excerpt, auction lines when present). V2 recap snapshot is built once during phase advance and persisted in `recapSnapshot`.
 ```
 
-### Single-Player Test Mode & Tier Reset (2026-07-06)
+### Single-Player Test Mode & Tier Reset (2026-07-06; updated 2026-07-07)
 
 A **single-player test flow** lets staff/internal users start a Social Icebreaker session without a full matched group, primarily for QA and demo. It is gated by server-side `isMatchingTestMode()` (requires `ENABLE_SINGLE_TEST_MODE=true` and is disabled in `APP_MODE=production`).
 
 **Client components**
-- `TestModeDisclosure` (`apps/mini-program/src/pages/icebreaker-session/components/TestModeDisclosure.tsx`) — renders a dismissible banner at the top of the session page when `session.isTestMode === true`. Explains that the session is a single-player test, shows the active tier/vibe, and offers a **重置环节** action that lets the host re-pick tier/vibe while still in `warmup`.
-- `IcebreakerTierSheet` (`apps/mini-program/src/pages/icebreaker-session/components/IcebreakerTierSheet.tsx`) — the tier/vibe selector sheet surfaced by the disclosure (and also used during initial session setup).
+- `TestModeDisclosure` (`apps/mini-program/src/components/icebreaker/TestModeDisclosure.tsx`) — renders a full-screen disclosure overlay when `session.isTestModeSkip === true` and the session is still in `warmup`. Explains that multi-player phases have been skipped, shows the active tier/vibe, and offers a primary **查看总结** CTA that explicitly advances the host from `warmup` to `recap`. If the advance fails, an inline error message is shown and the CTA becomes a **重试** action.
+- `IcebreakerTierSheet` (`apps/mini-program/src/pages/icebreaker-session/components/IcebreakerTierSheet.tsx`) — the tier/vibe selector sheet surfaced by the in-session host menu and during initial session setup.
 
 **Server authority**
 - `POST /api/social-icebreaker/start` accepts `eventTier`/`vibe` from the client. When the caller is the original host and the session is still in `warmup`, a changed tier/vibe triggers `resetSocialIcebreakerTier()` (`apps/server/src/services/socialIcebreakerTierReset.ts`) rather than reusing the previous plan.
@@ -245,12 +245,14 @@ A **single-player test flow** lets staff/internal users start a Social Icebreake
   - the caller is not the host,
   - the session has already left `warmup`,
   - the requested tier is `custom` and `SOCIAL_ICEBREAKER_CUSTOM_MODE_ENABLED` is false.
+- Auto-advance is intentionally disabled for single-test sessions (`state.singleTest.isTestModeSkip === true`) so the test-mode disclosure gate is not bypassed.
 
 **UX rules**
 - The disclosure is **not** shown to normal matched-group players (`isTestMode === false`).
 - Tier reset is only actionable while `currentPhase === 'warmup'`; once the host advances past warmup the reset CTA is hidden.
 - Custom mode remains host-driven free-form; switching from a preset tier to `custom` clears the fixed run plan and enters `phase_selection`.
-- Analytics: `test_mode_disclosure_view`, `test_mode_reset_tap`, `test_mode_reset_success`, `test_mode_reset_error`.
+- Preset ↔ custom mode switches in the in-session tier sheet require a double-confirm `Taro.showModal`.
+- Analytics: `test_mode_disclosure_view`, `test_mode_reset_tap`, `test_mode_reset_success`, `test_mode_reset_error`, `icebreaker_test_mode_disclosure_shown`, `icebreaker_session_tier_changed`.
 
 ### Session State (`SocialSessionState`)
 

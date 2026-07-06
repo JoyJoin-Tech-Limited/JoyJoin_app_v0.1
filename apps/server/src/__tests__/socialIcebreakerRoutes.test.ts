@@ -368,7 +368,7 @@ async function login(baseUrl: string, userId: string) {
   return cookieHeader(response);
 }
 
-describe('social icebreaker routes', () => {
+describe.sequential('social icebreaker routes', () => {
   it('returns the joined participant roster in social session state responses', async () => {
     await withServer(async (baseUrl) => {
       const hostCookie = await login(baseUrl, 'roster-host');
@@ -3112,6 +3112,54 @@ describe('social icebreaker routes', () => {
         expect(rejoinResponse.status).toBe(200);
         expect(rejoinBody.state.isTestModeSkip).toBe(true);
         expect(rejoinBody.state.testModeBots).toHaveLength(1);
+      });
+    });
+
+    it('does not auto-advance a single-test session past the disclosure gate', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'single-test-auto-advance-host');
+        const sessionId = `session-single-test-auto-advance-${Date.now()}`;
+
+        vi.mocked(isSingleTestMode).mockReturnValue(true);
+        vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue({
+          version: 1,
+          groupId: sessionId,
+          isTestModeSkip: true,
+          bots: [{ botId: 'bot-1', displayName: 'Bot One', archetype: '社牛柯基' }],
+        });
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const startBody = await startResponse.json() as any;
+        expect(startResponse.status).toBe(200);
+
+        const socialSessionId = startBody.socialSessionId;
+
+        // Mark host ready so completion rate is 100%.
+        const readyResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/warmup/ready`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ ready: true }),
+        });
+        expect(readyResponse.status).toBe(200);
+
+        // Simulate enough elapsed time for auto-advance to otherwise fire.
+        const state = await getSession(socialSessionId) as any;
+        state.phaseStartedAt = Date.now() - 3 * 60 * 1000;
+        await updateSession(socialSessionId, state);
+
+        // GET triggers processAutoAdvance; single-test sessions must stay in warmup.
+        const pollResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}`, {
+          headers: { cookie: hostCookie },
+        });
+        const pollBody = await pollResponse.json() as any;
+
+        expect(pollResponse.status).toBe(200);
+        expect(pollBody.currentPhase).toBe('warmup');
+        expect(pollBody.isTestModeSkip).toBe(true);
       });
     });
 

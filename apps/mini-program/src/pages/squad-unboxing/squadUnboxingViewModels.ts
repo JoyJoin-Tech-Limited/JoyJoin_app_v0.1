@@ -5,9 +5,11 @@ import type { OverallChemistry, PairExplanation } from '@shared/types/groupAnaly
 import { getVibeLabel as getVibeLabelShared } from '../../lib/matching/groupDisplay'
 
 export type FlowState = 'ready' | 'shaking' | 'revealed'
-export type AnalysisStage = 0 | 1 | 2 | 3 | 4
 export type ActionDockState = 'hidden' | 'ready'
 export type BlindBoxVisualState = 'ready' | 'opening' | 'open'
+
+// Legacy type kept for backward compatibility in persisted analytics; UI now uses a single expandable panel.
+export type AnalysisStage = 0 | 1 | 2 | 3 | 4
 
 export type ChemistryType = 'fire' | 'warm' | 'cold' | 'mild'
 
@@ -82,17 +84,6 @@ export function getSquadChemistryTokens(
   }
 }
 
-export function computeActionDockState(
-  flowState: FlowState,
-  analysisStage: AnalysisStage,
-): ActionDockState {
-  if (flowState !== 'revealed') {
-    return 'hidden'
-  }
-
-  if (analysisStage >= 3) {
-    return 'ready'
-  }
-
-  return 'hidden'
+export function computeActionDockState(flowState: FlowState): ActionDockState {
+  return flowState === 'revealed' ? 'ready' : 'hidden'
 }

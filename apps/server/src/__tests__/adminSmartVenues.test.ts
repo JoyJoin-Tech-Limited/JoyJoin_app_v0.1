@@ -203,7 +203,7 @@ const makeBooking = (overrides?: Partial<any>) => ({
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
-describe("GET /api/admin/smart-venues", () => {
+describe.sequential("GET /api/admin/smart-venues", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockVenuesSelect.mockReset().mockResolvedValue([]);

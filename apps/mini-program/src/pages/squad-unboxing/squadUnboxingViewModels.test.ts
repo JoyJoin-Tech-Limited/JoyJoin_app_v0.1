@@ -2,11 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { computeActionDockState, getSquadChemistryTokens } from './squadUnboxingViewModels'
 
 describe('squadUnboxingViewModels', () => {
-  it('computeActionDockState follows reveal + stage ladder', () => {
-    expect(computeActionDockState('ready', 0)).toBe('hidden')
-    expect(computeActionDockState('revealed', 2)).toBe('hidden')
-    expect(computeActionDockState('revealed', 3)).toBe('ready')
-    expect(computeActionDockState('revealed', 4)).toBe('ready')
+  it('computeActionDockState follows reveal state only', () => {
+    expect(computeActionDockState('ready')).toBe('hidden')
+    expect(computeActionDockState('shaking')).toBe('hidden')
+    expect(computeActionDockState('revealed')).toBe('ready')
   })
 
   it('getSquadChemistryTokens maps overall chemistry', () => {

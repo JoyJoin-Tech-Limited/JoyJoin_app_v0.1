@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
-import Taro, { useRouter } from '@tarojs/taro'
+import Taro, { useRouter, useDidShow } from '@tarojs/taro'
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
@@ -18,6 +18,8 @@ import TypewriterText from '../../components/ui/TypewriterText'
 import { haptics } from '../../lib/utils/haptics'
 import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
 import { BlindBoxVisual } from './BlindBoxVisual'
+import { BlindBoxLid } from './BlindBoxLid'
+import { useResetOnShow } from '../../hooks/useResetOnShow'
 import DragRevealRibbon from './DragRevealRibbon'
 import SquadDeckStage from './SquadDeckStage'
 import TeammateCardDetail from './TeammateCardDetail'
@@ -26,8 +28,35 @@ import {
   getMemberName,
   getVibeLabel,
 } from './squadUnboxingViewModels'
+
 import { useSquadUnboxingController } from './useSquadUnboxingController'
 import './index.scss'
+
+const SCROLL_DEPTH_BUCKETS = ['tonights_table', 'connection_story', 'actions'] as const
+
+type ScrollDepthBucket = typeof SCROLL_DEPTH_BUCKETS[number]
+
+function useScrollDepthTracking(groupId: string) {
+  const reportedRef = useRef<Set<ScrollDepthBucket>>(new Set())
+
+  const reportDepth = useCallback((bucket: ScrollDepthBucket) => {
+    if (reportedRef.current.has(bucket)) return
+    reportedRef.current.add(bucket)
+    squadUnboxingAnalytics.track('squad_unboxing_scroll_depth', {
+      groupId,
+      screen: 'squad-unboxing',
+      bucket,
+    })
+  }, [groupId])
+
+  return reportDepth
+}
+
+function getPageTitle(eventType?: string | null): string {
+  if (eventType === 'bar') return '你的酒局桌友来了'
+  if (eventType === 'dining') return '你的饭局桌友来了'
+  return '你的桌友来了'
+}
 
 export default function SquadUnboxingPage() {
   const router = useRouter()
@@ -50,11 +79,11 @@ export default function SquadUnboxingPage() {
     pairKeyMemberMap,
     viewerPairs,
     viewerPairByMemberId,
-    viewerSpotlight,
     groupThemeHighlights,
     analysisThemeTags,
     flowState,
-    analysisStage,
+    isAnalysisExpanded,
+    setIsAnalysisExpanded,
     actionDockState,
     rootClassName,
     shouldReduceMotion,
@@ -76,30 +105,94 @@ export default function SquadUnboxingPage() {
 
   const [focusedCardIndex, setFocusedCardIndex] = useState(-1)
   const [hasTappedCard, setHasTappedCard] = useState(false)
+  const [announcement, setAnnouncement] = useState('')
+  const [scrollToDetailId, setScrollToDetailId] = useState('')
+  const [headerReady, setHeaderReady] = useState(false)
+
+  const reportScrollDepth = useScrollDepthTracking(groupId)
+
+  useResetOnShow(() => setHasTappedCard(false))
+  useDidShow(() => {
+    setFocusedCardIndex(-1)
+    setHeaderReady(false)
+  })
+
+  useEffect(() => {
+    if (flowState !== 'revealed' || members.length === 0) return
+    const message = `礼盒打开，发现 ${members.length} 张队友卡片`
+    setAnnouncement(message)
+    const timer = setTimeout(() => setAnnouncement(''), 1200)
+    return () => clearTimeout(timer)
+  }, [flowState, members.length])
+
+  useEffect(() => {
+    if (authLoading || isLoading) return
+    const timer = setTimeout(() => setHeaderReady(true), 120)
+    return () => clearTimeout(timer)
+  }, [authLoading, isLoading])
 
   const handleCardFocus = useCallback((index: number) => {
     setFocusedCardIndex((current) => {
       const next = current === index ? -1 : index
-      if (next !== -1) {
+      const member = members[index]
+
+      if (next === -1) {
+        squadUnboxingAnalytics.track('squad_unboxing_card_detail_dismiss', {
+          source: 'deck_tap',
+          cardIndex: index,
+          focusedUserId: member?.userId,
+          previousIndex: current,
+          groupId,
+          screen: 'squad-unboxing',
+        })
+      } else {
         setHasTappedCard(true)
+        squadUnboxingAnalytics.track('squad_unboxing_card_focus', {
+          source: 'deck_tap',
+          cardIndex: next,
+          focusedUserId: member?.userId,
+          previousIndex: current,
+          groupId,
+          screen: 'squad-unboxing',
+        })
       }
-      const member = members[next >= 0 ? next : index]
-      squadUnboxingAnalytics.track('squad_unboxing_card_focus', {
-        source: 'deck_tap',
-        cardIndex: next >= 0 ? next : index,
-        focusedUserId: member?.userId,
-        previousIndex: current,
-        groupId,
-        screen: 'squad-unboxing',
-      })
+
       return next
     })
   }, [members, groupId])
+
+  const handleDismissDetail = useCallback(() => {
+    setFocusedCardIndex(-1)
+    squadUnboxingAnalytics.track('squad_unboxing_card_detail_dismiss', {
+      source: 'inline_bar',
+      groupId,
+      screen: 'squad-unboxing',
+    })
+  }, [groupId])
+
+  const toggleAnalysis = useCallback(() => {
+    setIsAnalysisExpanded((prev) => {
+      const next = !prev
+      squadUnboxingAnalytics.track(
+        next ? 'squad_unboxing_connection_story_expand' : 'squad_unboxing_connection_story_collapse',
+        { groupId, screen: 'squad-unboxing' },
+      )
+      return next
+    })
+    haptics('light')
+  }, [groupId, setIsAnalysisExpanded])
 
   const focusedMember = members[focusedCardIndex] ?? null
   const focusedViewerPair = focusedMember
     ? (viewerPairByMemberId.get(focusedMember.userId) ?? null)
     : null
+
+  useEffect(() => {
+    if (!focusedMember) return
+    setScrollToDetailId('inline-detail')
+    const timer = setTimeout(() => setScrollToDetailId(''), 600)
+    return () => clearTimeout(timer)
+  }, [focusedMember])
 
   const prevVenueStatusRef = useRef<string | null>(null)
 
@@ -123,6 +216,13 @@ export default function SquadUnboxingPage() {
     }
     prevVenueStatusRef.current = currentStatus ?? null
   }, [groupId, group])
+
+  const handleScroll = useCallback((event: { detail?: { scrollTop?: number; scrollHeight?: number } }) => {
+    const scrollTop = event.detail?.scrollTop ?? 0
+    if (scrollTop > 120) reportScrollDepth('tonights_table')
+    if (scrollTop > 320) reportScrollDepth('connection_story')
+    if (scrollTop > 520) reportScrollDepth('actions')
+  }, [reportScrollDepth])
 
   const pageClassName = [rootClassName, isExiting ? 'squad-unboxing--exiting' : ''].filter(Boolean).join(' ')
 
@@ -161,8 +261,15 @@ export default function SquadUnboxingPage() {
 
   return (
     <View className={pageClassName}>
-      <ScrollView className='squad-unboxing__scroll' scrollY enhanced showScrollbar={false}>
-        <View className='squad-unboxing__header'>
+      <ScrollView
+        className='squad-unboxing__scroll'
+        scrollY
+        enhanced
+        showScrollbar={false}
+        onScroll={handleScroll}
+        scrollIntoView={scrollToDetailId}
+      >
+        <View className={['squad-unboxing__header', headerReady ? 'squad-unboxing__header--ready' : ''].filter(Boolean).join(' ')}>
           <Image
             className='squad-unboxing__header-mascot'
             mode='aspectFit'
@@ -170,10 +277,10 @@ export default function SquadUnboxingPage() {
             ariaLabel='欢迎'
           />
           <Text className='squad-unboxing__header-title'>
-            你的{pool.eventType === 'bar' ? '酒局' : '饭局'}桌友来了
+            {getPageTitle(pool.eventType)}
           </Text>
           <Text className='squad-unboxing__header-tagline'>
-            {group.matchExplanation || pool.description || `${DEFAULT_MASCOT_DISPLAY_NAME}已经把拼图聚齐，准备让你看看今晚会和谁同桌。`}
+            {group.matchExplanation || `${DEFAULT_MASCOT_DISPLAY_NAME}已经把拼图聚齐，准备让你看看今晚会和谁同桌。`}
           </Text>
           <View className='squad-unboxing__header-meta'>
             {group.groupNumber ? (
@@ -187,9 +294,16 @@ export default function SquadUnboxingPage() {
 
         {flowState === 'revealed' ? (
           <View className='squad-unboxing__analysis-bubble'>
-            <View className='squad-unboxing__analysis-bubble-inner'>
+            <View
+              className={[
+                'squad-unboxing__analysis-bubble-inner',
+                headerReady ? 'squad-unboxing__analysis-bubble-inner--ready' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
               <Image
-                className='squad-unboxing__analysis-bubble-mascot'
+                className={['squad-unboxing__analysis-bubble-mascot', headerReady ? 'squad-unboxing__analysis-bubble-mascot--ready' : ''].filter(Boolean).join(' ')}
                 mode='aspectFit'
                 src={getXiaoyueExpressionAsset('matchSuccess')}
                 aria-hidden='true'
@@ -226,7 +340,7 @@ export default function SquadUnboxingPage() {
         ) : null}
 
         {flowState === 'ready' ? (
-          <Card className='squad-unboxing__blind-box-card'>
+          <Card className='squad-unboxing__blind-box-card squad-unboxing__blind-box-card--copy-only'>
             <DragRevealRibbon
               shouldReduceMotion={shouldReduceMotion}
               isDegradation={isDegradation}
@@ -249,14 +363,7 @@ export default function SquadUnboxingPage() {
         ) : null}
 
         {flowState === 'shaking' ? (
-          <Card className='squad-unboxing__blind-box-card squad-unboxing__blind-box-card--shaking'>
-            <Image
-              className='squad-unboxing__reveal-mascot'
-              mode='aspectFit'
-              src={getXiaoyueExpressionAsset('loadingReveal')}
-              ariaLabel='正在揭晓'
-            />
-            <BlindBoxVisual state='opening' shouldReduceMotion={shouldReduceMotion} />
+          <Card className='squad-unboxing__blind-box-card squad-unboxing__blind-box-card--copy-only squad-unboxing__blind-box-card--shaking'>
             <Text className='squad-unboxing__blind-box-title'>盒子正在打开…</Text>
             <Text className='squad-unboxing__blind-box-copy'>
               {`${DEFAULT_MASCOT_DISPLAY_NAME}正在把盒盖掀开，把今晚最值得期待的那一页翻给你看。`}
@@ -266,126 +373,88 @@ export default function SquadUnboxingPage() {
 
         {flowState === 'revealed' ? (
           <>
-            <View className='squad-unboxing__reveal-shell'>
-              <Card className='squad-unboxing__reveal-hero'>
-                <Text className='squad-unboxing__section-label'>盒子打开了</Text>
-                <BlindBoxVisual state='open' shouldReduceMotion={shouldReduceMotion} />
-                <Text className='squad-unboxing__reveal-title'>这一桌已经为你留好位置</Text>
-                <Text className='squad-unboxing__reveal-copy'>
-                  先认一眼桌友，再看看你会先和谁聊开。
-                </Text>
+            <View className='squad-unboxing__stage-spacer' />
 
-                <View className='squad-unboxing__viewer-spotlight'>
-                  <View className='squad-unboxing__viewer-spotlight-top'>
-                    <Text className='squad-unboxing__viewer-spotlight-eyebrow'>先给你看</Text>
-                    {viewerSpotlight ? (
-                      <Text className='squad-unboxing__viewer-spotlight-score'>
-                        默契 {viewerSpotlight.pair.chemistryScore}
-                      </Text>
-                    ) : null}
+            {focusedMember ? (
+              <View
+                id='inline-detail'
+                className={[
+                  'squad-unboxing__inline-detail-shell',
+                  'squad-unboxing__inline-detail-shell--ready',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                <View
+                  className='squad-unboxing__inline-detail-dismiss'
+                  onClick={handleDismissDetail}
+                  hoverClass='squad-unboxing__inline-detail-dismiss--pressed'
+                  role='button'
+                  aria-label='收起卡片详情'
+                >
+                  <Text className='squad-unboxing__inline-detail-dismiss-text'>收起</Text>
+                  <View className='squad-unboxing__inline-detail-dismiss-chevron' />
+                </View>
+                <TeammateCardDetail
+                  member={focusedMember}
+                  viewerPair={focusedViewerPair}
+                  visible={flowState === 'revealed'}
+                />
+              </View>
+            ) : null}
+
+            <View className={[
+              'squad-unboxing__chapter',
+              'squad-unboxing__chapter--meta',
+              headerReady ? 'squad-unboxing__chapter--ready' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}>
+              <View className='squad-unboxing__chapter-title-row'>
+                <Text className='squad-unboxing__chapter-title'>今晚这桌</Text>
+                {group.matchScore != null ? (
+                  <View className='squad-unboxing__chapter-badge'>
+                    <Text className='squad-unboxing__chapter-badge-text'>
+                      默契度 {Math.round(group.matchScore)}%
+                    </Text>
                   </View>
-                  <Text className='squad-unboxing__viewer-spotlight-title'>
-                    {viewerSpotlight
-                      ? `你会先和 ${getMemberName(viewerSpotlight.otherMember)} 聊开`
-                      : isLoadingAnalysis
-                        ? `${DEFAULT_MASCOT_DISPLAY_NAME}正在替你挑出最先聊开的桌友`
-                        : '先看看这一桌为什么会把你放在这里'}
-                  </Text>
-                  <Text className='squad-unboxing__viewer-spotlight-copy'>
-                    {viewerSpotlight?.pair.connectionPointsWithRarity?.[0]?.text ?? viewerSpotlight?.pair.connectionPoints?.[0]
-                      ? `第一句很可能会从「${viewerSpotlight.pair.connectionPointsWithRarity?.[0]?.text ?? viewerSpotlight.pair.connectionPoints?.[0]}」开始。`
-                      : viewerSpotlight
-                        ? viewerSpotlight.pair.explanation
-                        : isLoadingAnalysis
-                          ? '分析正在补齐，下面会先把桌友和整体氛围揭晓给你。'
-                          : group.matchExplanation || `往下看，${DEFAULT_MASCOT_DISPLAY_NAME}会把这桌的连接点慢慢揭晓给你。`}
-                  </Text>
-                  {(viewerSpotlight?.pair.connectionPointsWithRarity?.length ?? viewerSpotlight?.pair.connectionPoints?.length) ? (
-                    <View className='squad-unboxing__viewer-spotlight-pills'>
-                      {(viewerSpotlight.pair.connectionPointsWithRarity ?? viewerSpotlight.pair.connectionPoints.slice(0, 2).map((text) => ({ text, rarity: 'common' as const }))).slice(0, 2).map((point) => (
-                        <ConnectionPointPill key={point.text} text={point.text} rarity={point.rarity} />
-                      ))}
-                    </View>
-                  ) : null}
-                </View>
-              </Card>
-
-              <Text className='squad-unboxing__section-label'>今晚同桌的是</Text>
-              {!hasTappedCard ? (
-                <View className='squad-unboxing__deck-cue'>
-                  <Image
-                    className='squad-unboxing__deck-cue-mascot'
-                    mode='aspectFit'
-                    src={getXiaoyueExpressionAsset('coachGuide')}
-                    aria-hidden='true'
-                  />
-                  <Text className='squad-unboxing__deck-cue-text'>
-                    点击卡片，看看你和这桌的连接
-                  </Text>
-                </View>
-              ) : null}
-              <SquadDeckStage
-                members={members}
-                currentUserId={currentUserId}
-                viewerPairByMemberId={viewerPairByMemberId}
-                focusedIndex={focusedCardIndex}
-                hasTappedCard={hasTappedCard}
-                reduceMotion={shouldReduceMotion}
-                isDegradation={isDegradation}
-                onFocusChange={handleCardFocus}
-              />
-              <Text className='squad-unboxing__deck-hint'>点击任意卡片，看看你们的连接</Text>
-              <TeammateCardDetail
-                member={focusedMember}
-                viewerPair={focusedViewerPair}
-                visible={flowState === 'revealed'}
-              />
-            </View>
-
-            <Card className='squad-unboxing__info-card'>
-              <View className='squad-unboxing__info-copy'>
-                <Text className='squad-unboxing__info-title'>为什么是这桌？</Text>
-                <Text className='squad-unboxing__info-description'>
-                  {group.matchExplanation || '这桌的组合已经锁定，下面会把更细的分析慢慢揭晓给你。'}
-                </Text>
+                ) : null}
               </View>
 
-              {pool.eventType ? (
-                <View className='squad-unboxing__info-row'>
-                  <View className='squad-unboxing__info-label'>
-                    <JoyJoinIcon emoji='🎯' size={24} />
-                    <Text>活动类型</Text>
-                  </View>
-                  <Text className='squad-unboxing__info-value'>{pool.eventType}</Text>
+              <View className='squad-unboxing__meta-row'>
+                <View className='squad-unboxing__meta-label'>
+                  <JoyJoinIcon emoji='🎯' size={24} />
+                  <Text>类型</Text>
                 </View>
-              ) : null}
+                <Text className='squad-unboxing__meta-value'>{getPageTitle(pool.eventType)}</Text>
+              </View>
 
               {group.finalDateTime || pool.dateTime ? (
-                <View className='squad-unboxing__info-row'>
-                  <View className='squad-unboxing__info-label'>
+                <View className='squad-unboxing__meta-row'>
+                  <View className='squad-unboxing__meta-label'>
                     <JoyJoinIcon emoji='📅' size={24} />
                     <Text>时间</Text>
                   </View>
-                  <Text className='squad-unboxing__info-value'>
+                  <Text className='squad-unboxing__meta-value'>
                     {formatDateTime(group.finalDateTime ?? pool.dateTime)}
                   </Text>
                 </View>
               ) : null}
 
-              <View className='squad-unboxing__info-row'>
-                <View className='squad-unboxing__info-label'>
+              <View className='squad-unboxing__meta-row'>
+                <View className='squad-unboxing__meta-label'>
                   <JoyJoinIcon emoji='📍' size={24} />
                   <Text>地点</Text>
                 </View>
-                <View className='squad-unboxing__info-value-wrap'>
-                  <Text className='squad-unboxing__info-value'>
+                <View className='squad-unboxing__meta-value-wrap'>
+                  <Text className='squad-unboxing__meta-value'>
                     {group.venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '地点待定'}
                   </Text>
-                  <Text className={`squad-unboxing__info-status ${group.venueName ? 'squad-unboxing__info-status--assigned' : 'squad-unboxing__info-status--pending'}`}>
+                  <Text className={`squad-unboxing__meta-status ${group.venueName ? 'squad-unboxing__meta-status--assigned' : 'squad-unboxing__meta-status--pending'}`}>
                     {group.venueName ? '场地已确定，可复制地址导航' : '场地待定，悦仔会在确认后提醒你'}
                   </Text>
                   {group.venueAddress ? (
-                    <Text className='squad-unboxing__info-sub'>{group.venueAddress}</Text>
+                    <Text className='squad-unboxing__meta-sub'>{group.venueAddress}</Text>
                   ) : null}
                   {group.venueName ? (
                     <View
@@ -398,42 +467,79 @@ export default function SquadUnboxingPage() {
                   ) : null}
                 </View>
               </View>
-            </Card>
 
-            {group.theme || group.themeEmoji ? (
-              <Card className='squad-unboxing__theme-card'>
-                <View className='squad-unboxing__theme-header'>
-                  {group.themeEmoji ? (
-                    <JoyJoinIcon emoji={group.themeEmoji} size={32} className='squad-unboxing__theme-emoji' />
-                  ) : null}
-                  <Text className='squad-unboxing__theme-title'>{group.theme || '今晚的主题'}</Text>
-                </View>
-                {group.subtitle ? (
-                  <Text className='squad-unboxing__theme-subtitle'>{group.subtitle}</Text>
-                ) : null}
-                {group.vibe ? (
-                  <View className='squad-unboxing__theme-vibe'>
-                    <Text className='squad-unboxing__theme-vibe-label'>氛围：</Text>
-                    <Text className='squad-unboxing__theme-vibe-value'>{getVibeLabel(group.vibe)}</Text>
+              {group.theme || group.themeEmoji || group.vibe ? (
+                <View className='squad-unboxing__meta-row squad-unboxing__meta-row--theme'>
+                  <View className='squad-unboxing__meta-label'>
+                    {group.themeEmoji ? (
+                      <JoyJoinIcon emoji={group.themeEmoji} size={24} />
+                    ) : (
+                      <JoyJoinIcon emoji='✨' size={24} />
+                    )}
+                    <Text>主题</Text>
                   </View>
-                ) : null}
-                {groupThemeHighlights.length > 0 ? (
-                  <View className='squad-unboxing__theme-highlights'>
-                    {groupThemeHighlights.map((highlight) => (
-                      <View key={highlight} className='squad-unboxing__theme-highlight'>
-                        <Text className='squad-unboxing__theme-highlight-text'>· {highlight}</Text>
+                  <View className='squad-unboxing__meta-value-wrap'>
+                    <Text className='squad-unboxing__meta-value'>
+                      {group.theme || '今晚的主题'}
+                      {group.vibe ? ` · ${getVibeLabel(group.vibe)}` : ''}
+                    </Text>
+                    {group.subtitle ? (
+                      <Text className='squad-unboxing__meta-sub'>{group.subtitle}</Text>
+                    ) : null}
+                    {groupThemeHighlights.length > 0 ? (
+                      <View className='squad-unboxing__meta-highlights'>
+                        {groupThemeHighlights.map((highlight) => (
+                          <View key={highlight} className='squad-unboxing__meta-highlight'>
+                            <Text className='squad-unboxing__meta-highlight-text'>{highlight}</Text>
+                          </View>
+                        ))}
                       </View>
-                    ))}
+                    ) : null}
                   </View>
-                ) : null}
-              </Card>
-            ) : null}
+                </View>
+              ) : null}
+            </View>
 
-            {analysisStage > 0 ? (
-              <View className='squad-unboxing__analysis-stack'>
-                {analysisStage >= 1 ? (
-                  <Card className='squad-unboxing__analysis-card squad-unboxing__analysis-card--chemistry'>
-                    <Text className='squad-unboxing__section-label'>这桌的火花</Text>
+            <View className={[
+              'squad-unboxing__chapter',
+              'squad-unboxing__chapter--analysis',
+              headerReady ? 'squad-unboxing__chapter--ready' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}>
+              <View
+                className='squad-unboxing__expand-header'
+                onClick={toggleAnalysis}
+                hoverClass='squad-unboxing__expand-header--pressed'
+                role='button'
+                aria-expanded={isAnalysisExpanded}
+                aria-label={isAnalysisExpanded ? '收起连接解读' : '展开连接解读'}
+              >
+                <View className='squad-unboxing__expand-title-group'>
+                  <Text className='squad-unboxing__chapter-title'>连接解读</Text>
+                  <Text className='squad-unboxing__expand-subtitle'>悦仔怎么看这桌的化学反应</Text>
+                </View>
+                <View
+                  className={[
+                    'squad-unboxing__expand-chevron',
+                    isAnalysisExpanded ? 'squad-unboxing__expand-chevron--open' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  aria-hidden='true'
+                />
+              </View>
+
+              {isAnalysisExpanded ? (
+                <View className={[
+                  'squad-unboxing__expand-body',
+                  isAnalysisExpanded ? 'squad-unboxing__expand-body--open' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                >
+                  <View className='squad-unboxing__analysis-section squad-unboxing__analysis-section--chemistry'>
+                    <Text className='squad-unboxing__analysis-section-title'>这桌的火花</Text>
                     {isLoadingAnalysis ? (
                       <View className='squad-unboxing__skeleton squad-unboxing__skeleton--banner' />
                     ) : (
@@ -449,12 +555,10 @@ export default function SquadUnboxingPage() {
                         <Text className='squad-unboxing__analysis-text'>{chemistryTokens.description}</Text>
                       </>
                     )}
-                  </Card>
-                ) : null}
+                  </View>
 
-                {analysisStage >= 2 ? (
-                  <Card className='squad-unboxing__analysis-card'>
-                    <Text className='squad-unboxing__section-label'>这桌的整体氛围</Text>
+                  <View className='squad-unboxing__analysis-section'>
+                    <Text className='squad-unboxing__analysis-section-title'>整体氛围</Text>
                     {isLoadingAnalysis ? (
                       <View className='squad-unboxing__skeleton-list'>
                         <View className='squad-unboxing__skeleton squad-unboxing__skeleton--line' />
@@ -482,12 +586,10 @@ export default function SquadUnboxingPage() {
                     ) : (
                       <Text className='squad-unboxing__analysis-text'>{group.matchExplanation}</Text>
                     )}
-                  </Card>
-                ) : null}
+                  </View>
 
-                {analysisStage >= 3 ? (
-                  <Card className='squad-unboxing__analysis-card'>
-                    <Text className='squad-unboxing__section-label'>你和这桌最容易从哪里聊开？</Text>
+                  <View className='squad-unboxing__analysis-section'>
+                    <Text className='squad-unboxing__analysis-section-title'>你最容易从哪里聊开？</Text>
                     {isLoadingAnalysis ? (
                       <View className='squad-unboxing__skeleton-list'>
                         {[0, 1].map((item) => (
@@ -496,7 +598,7 @@ export default function SquadUnboxingPage() {
                       </View>
                     ) : viewerPairs.length > 0 ? (
                       <View className='squad-unboxing__pair-list'>
-                        {viewerPairs.slice(0, 2).map((pair, index) => {
+                        {viewerPairs.slice(0, 2).map((pair) => {
                           const pairMembers = pairKeyMemberMap.get(pair.pairKey)
                           const otherMember = pairMembers?.find((member) => member.userId !== currentUserId)
                           const pairLabel = otherMember
@@ -508,8 +610,10 @@ export default function SquadUnboxingPage() {
                           return (
                             <View
                               key={pair.pairKey}
-                              className='squad-unboxing__pair-card'
-                              style={{ animationDelay: shouldReduceMotion ? '0ms' : `${index * 140}ms` }}
+                              className={[
+                                'squad-unboxing__pair-card',
+                                headerReady ? 'squad-unboxing__pair-card--ready' : '',
+                              ].filter(Boolean).join(' ')}
                             >
                               <View className='squad-unboxing__pair-top'>
                                 <Text className='squad-unboxing__pair-label'>{pairLabel}</Text>
@@ -532,7 +636,7 @@ export default function SquadUnboxingPage() {
                       </View>
                     ) : sortedPairExplanations.length > 0 ? (
                       <View className='squad-unboxing__pair-list'>
-                        {sortedPairExplanations.slice(0, 2).map((pair, index) => {
+                        {sortedPairExplanations.slice(0, 2).map((pair) => {
                           const pairMembers = pairKeyMemberMap.get(pair.pairKey)
                           const pairLabel = pairMembers
                             ? `${getMemberName(pairMembers[0])} × ${getMemberName(pairMembers[1])}`
@@ -541,8 +645,10 @@ export default function SquadUnboxingPage() {
                           return (
                             <View
                               key={pair.pairKey}
-                              className='squad-unboxing__pair-card'
-                              style={{ animationDelay: shouldReduceMotion ? '0ms' : `${index * 140}ms` }}
+                              className={[
+                                'squad-unboxing__pair-card',
+                                headerReady ? 'squad-unboxing__pair-card--ready' : '',
+                              ].filter(Boolean).join(' ')}
                             >
                               <View className='squad-unboxing__pair-top'>
                                 <Text className='squad-unboxing__pair-label'>{pairLabel}</Text>
@@ -561,12 +667,10 @@ export default function SquadUnboxingPage() {
                         {group.matchExplanation || '这桌有不少潜在共同点，见面后会更快找到节奏。'}
                       </Text>
                     )}
-                  </Card>
-                ) : null}
+                  </View>
 
-                {analysisStage >= 4 ? (
-                  <Card className='squad-unboxing__analysis-card'>
-                    <Text className='squad-unboxing__section-label'>今晚聊什么？</Text>
+                  <View className='squad-unboxing__analysis-section squad-unboxing__analysis-section--last'>
+                    <Text className='squad-unboxing__analysis-section-title'>今晚聊什么？</Text>
                     {isLoadingAnalysis ? (
                       <View className='squad-unboxing__topic-row'>
                         {[0, 1, 2].map((item) => (
@@ -579,7 +683,6 @@ export default function SquadUnboxingPage() {
                           <View
                             key={`${topic}-${index}`}
                             className='squad-unboxing__topic-chip'
-                            style={{ animationDelay: shouldReduceMotion ? '0ms' : `${index * 120}ms` }}
                           >
                             <Text className='squad-unboxing__topic-chip-text'>{topic}</Text>
                           </View>
@@ -590,29 +693,89 @@ export default function SquadUnboxingPage() {
                         先从彼此最近最上头的一件事聊起，通常都能很快破冰。
                       </Text>
                     )}
-                  </Card>
-                ) : null}
-              </View>
-            ) : null}
+                  </View>
+                </View>
+              ) : null}
+            </View>
           </>
         ) : null}
 
         <View className='squad-unboxing__spacer' />
       </ScrollView>
 
-      {flowState === 'revealed' && actionDockState === 'ready' ? (
-        <View className='squad-unboxing__action-zone squad-unboxing__action-zone--ready'>
-          <View className='squad-unboxing__action-copy'>
-            <Text className='squad-unboxing__action-eyebrow'>揭晓完成</Text>
-            <Text className='squad-unboxing__action-title'>
-              如果这桌感觉对味，就把今晚定下来。
-            </Text>
+      <View
+        className={[
+          'squad-unboxing__stage',
+          `squad-unboxing__stage--${flowState}`,
+          isDegradation ? 'squad-unboxing__stage--degradation' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        aria-hidden={flowState === 'ready' || flowState === 'shaking' ? 'true' : undefined}
+        aria-live={flowState === 'revealed' ? 'polite' : undefined}
+        aria-atomic={flowState === 'revealed' ? 'true' : undefined}
+      >
+        {announcement ? (
+          <View className='squad-unboxing__stage-announcement' role='status' aria-live='polite' aria-atomic='true'>
+            {announcement}
           </View>
+        ) : null}
+        <View className='squad-unboxing__stage-body'>
+          <BlindBoxVisual
+            state={flowState === 'shaking' ? 'opening' : flowState === 'revealed' ? 'open' : 'ready'}
+          />
+        </View>
+        {flowState === 'revealed' ? (
+          <SquadDeckStage
+            members={members}
+            currentUserId={currentUserId}
+            viewerPairByMemberId={viewerPairByMemberId}
+            focusedIndex={focusedCardIndex}
+            hasTappedCard={hasTappedCard}
+            reduceMotion={shouldReduceMotion}
+            isDegradation={isDegradation}
+            onFocusChange={handleCardFocus}
+          />
+        ) : null}
+        <View className='squad-unboxing__stage-lid'>
+          <BlindBoxLid
+            state={flowState === 'shaking' ? 'opening' : flowState === 'revealed' ? 'open' : 'ready'}
+          />
+        </View>
+        {flowState === 'revealed' ? (
+          <>
+            {!hasTappedCard ? (
+              <View className={[
+                'squad-unboxing__deck-cue',
+                headerReady ? 'squad-unboxing__deck-cue--ready' : '',
+              ].filter(Boolean).join(' ')}>
+                <Image
+                  className='squad-unboxing__deck-cue-mascot'
+                  mode='aspectFit'
+                  src={getXiaoyueExpressionAsset('coachGuide')}
+                  aria-hidden='true'
+                />
+                <Text className='squad-unboxing__deck-cue-text'>
+                  点击卡片，看看你和这桌的连接
+                </Text>
+              </View>
+            ) : null}
+          </>
+        ) : null}
+      </View>
 
-          <Button
+      {flowState === 'revealed' && actionDockState === 'ready' ? (
+        <View
+          className={[
+            'squad-unboxing__action-zone',
+            headerReady ? 'squad-unboxing__action-zone--ready' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >          <Button
             className='squad-unboxing__confirm-btn'
             onClick={handleConfirmAttendance}
-            disabled={isSubmitting || confirmAttendanceMutation.isPending}
+            disabled={isSubmitting || confirmAttendanceMutation.isPending || showSuccessOverlay}
             loading={isSubmitting || confirmAttendanceMutation.isPending}
           >
             {showSuccessOverlay ? '座位已锁定' : isSubmitting ? '确认中…' : '确认出席'}
@@ -623,6 +786,7 @@ export default function SquadUnboxingPage() {
               variant='secondary'
               className='squad-unboxing__share-btn'
               onClick={handleSharePosterTap}
+              disabled={showSuccessOverlay}
             >
               生成队伍海报
             </Button>
@@ -631,6 +795,7 @@ export default function SquadUnboxingPage() {
               variant='secondary'
               className='squad-unboxing__detail-btn'
               onClick={handleOpenGroupDetail}
+              disabled={showSuccessOverlay}
             >
               查看活动详情
             </Button>

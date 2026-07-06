@@ -16,25 +16,15 @@ import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { useResetOnShow } from '../../hooks/useResetOnShow'
 import { haptics } from '../../lib/utils/haptics'
 import { logError, logInfo } from '../../lib/utils/logger'
-import { preloadImage } from '../../lib/utils/imagePreload'
 import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, COLOR_DANGER } from '../../lib/utils/uiConstants'
-import { navigateBackOrEventsTab, openPoolGroupDetail, switchToEventsTab } from '../../lib/navigation/matchingNavigation'
+import { openPoolGroupDetail, switchToEventsTab } from '../../lib/navigation/matchingNavigation'
 import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
 import {
   computeActionDockState,
   getSquadChemistryTokens,
   type ActionDockState,
-  type AnalysisStage,
   type FlowState,
-  type ViewerSpotlight,
 } from './squadUnboxingViewModels'
-import { SQUAD_CARD_BACK_PATTERN_URL } from './SquadDeckStage'
-
-function triggerLightHaptic() {
-  if (typeof Taro.vibrateShort === 'function') {
-    void Taro.vibrateShort({ type: 'light' }).catch(() => undefined)
-  }
-}
 
 function getRevealFlagKey(groupId: string): string {
   return `jj_revealed_${groupId}`
@@ -69,12 +59,11 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   const { shouldReduceMotion } = useMiniRevealMotion(routerParams)
 
   const [flowState, setFlowState] = useState<FlowState>(() => (groupId ? (readRevealFlag(groupId) ? 'revealed' : 'ready') : 'ready'))
-  const [analysisStage, setAnalysisStage] = useState<AnalysisStage>(() => (groupId ? (readRevealFlag(groupId) ? 4 : 0) : 0))
-  const [isPageExiting, setIsPageExiting] = useState(false)
+  const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false)
 
-  useResetOnShow(setIsPageExiting, setIsSubmitting, setShowSuccessOverlay)
+  useResetOnShow(setIsSubmitting, setShowSuccessOverlay)
 
   const {
     data: poolGroup,
@@ -193,11 +182,6 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     return map
   }, [members])
 
-  const strongConnectionCount = useMemo(() => {
-    const highChemistryPairs = sortedPairExplanations.filter((pair) => pair.chemistryScore >= 70)
-    return highChemistryPairs.length > 0 ? highChemistryPairs.length : sortedPairExplanations.length
-  }, [sortedPairExplanations])
-
   const viewerPairs = useMemo<PairExplanation[]>(() => {
     if (Array.isArray(groupAnalysis?.myPairs) && groupAnalysis.myPairs.length > 0) {
       return groupAnalysis.myPairs
@@ -231,26 +215,6 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     return map
   }, [currentUserId, pairKeyMemberMap, viewerPairs])
 
-  const viewerSpotlight = useMemo<ViewerSpotlight | null>(() => {
-    if (!currentUserId) {
-      return null
-    }
-
-    for (const pair of viewerPairs) {
-      const pairMembers = pairKeyMemberMap.get(pair.pairKey)
-      const otherMember = pairMembers?.find((member) => member.userId !== currentUserId)
-
-      if (otherMember) {
-        return {
-          pair,
-          otherMember,
-        }
-      }
-    }
-
-    return null
-  }, [currentUserId, pairKeyMemberMap, viewerPairs])
-
   const groupThemeHighlights = useMemo(
     () =>
       Array.isArray(group?.highlights)
@@ -268,8 +232,8 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   }, [groupAnalysis?.groupThemeTags, groupThemeHighlights])
 
   const actionDockState = useMemo<ActionDockState>(
-    () => computeActionDockState(flowState, analysisStage),
-    [analysisStage, flowState],
+    () => computeActionDockState(flowState),
+    [flowState],
   )
 
   const archetypeMixCopy = useMemo(() => {
@@ -296,7 +260,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
 
   const handleOpenBox = useCallback(() => {
     haptics('medium')
-    setAnalysisStage(0)
+    setIsAnalysisExpanded(false)
     setFlowState('shaking')
   }, [])
 
@@ -330,16 +294,9 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
 
   const handleSkip = useCallback(async () => {
     haptics('light')
-    if (analysisStage < 4) {
-      setAnalysisStage(4)
-    }
-
     const { confirm } = await Taro.showModal({
       title: '先离开这桌？',
-      content:
-        strongConnectionCount > 0
-          ? `悦仔已经看出这桌至少有 ${strongConnectionCount} 组潜在连接点，真的要先离开吗？`
-          : '你稍后仍然可以从活动页回来看这桌的揭晓内容。',
+      content: '确认后可以在「我的足迹」随时回看这桌的揭晓内容。',
       confirmText: '先离开',
       cancelText: '再看看',
       confirmColor: COLOR_DANGER,
@@ -348,7 +305,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     if (confirm) {
       switchToEventsTab()
     }
-  }, [analysisStage, strongConnectionCount])
+  }, [])
 
   useEffect(() => {
     if (flowState !== 'shaking') {
@@ -363,15 +320,11 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
         groupId,
         screen: 'squad-unboxing',
       })
-    }, shouldReduceMotion ? 220 : 1450)
+    }, shouldReduceMotion ? 220 : 850)
 
     return () => clearTimeout(timer)
   }, [flowState, groupId, shouldReduceMotion])
 
-  useEffect(() => {
-    if (flowState !== 'shaking') return
-    void preloadImage(SQUAD_CARD_BACK_PATTERN_URL)
-  }, [flowState])
 
   useEffect(() => {
     if (flowState !== 'revealed') {
@@ -381,29 +334,11 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     writeRevealFlag(groupId)
 
     const timer = setTimeout(() => {
-      setAnalysisStage((stage) => (stage === 0 ? 1 : stage))
+      squadUnboxingAnalytics.track('squad_unboxing_tonights_table_view', { groupId, screen: 'squad-unboxing' })
     }, shouldReduceMotion ? 120 : 900)
 
     return () => clearTimeout(timer)
   }, [flowState, groupId, shouldReduceMotion])
-
-  useEffect(() => {
-    if (analysisStage < 1 || analysisStage >= 4) {
-      return undefined
-    }
-
-    const timer = setTimeout(() => {
-      setAnalysisStage((stage) => (stage < 4 ? ((stage + 1) as AnalysisStage) : stage))
-    }, shouldReduceMotion ? 420 : 1650)
-
-    return () => clearTimeout(timer)
-  }, [analysisStage, shouldReduceMotion])
-
-  useEffect(() => {
-    if (analysisStage > 0) {
-      triggerLightHaptic()
-    }
-  }, [analysisStage])
 
   return {
     authLoading,
@@ -421,16 +356,15 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     pairKeyMemberMap,
     viewerPairs,
     viewerPairByMemberId,
-    viewerSpotlight,
     groupThemeHighlights,
     analysisThemeTags,
     flowState,
-    analysisStage,
+    isAnalysisExpanded,
+    setIsAnalysisExpanded,
     actionDockState,
     rootClassName,
     shouldReduceMotion,
     confirmAttendanceMutation,
-    isPageExiting,
     isSubmitting,
     showSuccessOverlay,
     archetypeMixCopy,
@@ -440,6 +374,5 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     handleSharePosterTap,
     handleSkip,
     refetch,
-    navigateBackOrEventsTab,
   }
 }

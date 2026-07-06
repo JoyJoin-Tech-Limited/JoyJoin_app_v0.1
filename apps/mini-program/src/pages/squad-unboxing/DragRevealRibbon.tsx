@@ -2,7 +2,6 @@ import { View, Text } from '@tarojs/components'
 import { useRef, useState, useCallback, useEffect } from 'react'
 import Taro from '@tarojs/taro'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
-import { BlindBoxVisual } from './BlindBoxVisual'
 import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
 import './DragRevealRibbon.scss'
 
@@ -169,14 +168,6 @@ export default function DragRevealRibbon({
 
   return (
     <View className='drag-reveal-ribbon'>
-      <View className='drag-reveal-ribbon__box-area'>
-        <BlindBoxVisual
-          state='ready'
-          shouldReduceMotion={shouldReduceMotion}
-          dragProgress={dragProgress}
-        />
-      </View>
-
       <View
         id='drag-reveal-track'
         className={[

@@ -33,6 +33,7 @@ description: >
 POST /start     → create or rejoin (first caller becomes host)
 GET /:id (poll) → 3s interval
 POST /advance   → host-driven phase transition
+POST /:id/set-tier → host changes tier/vibe while still in warmup
 GET /recap      → AI summary + medals
 GET /:id/moment-card.png → server-rendered shareable PNG (feature-flagged)
 POST /:id/bonus/respond  → host accepts/declines mini_script bonus gate
@@ -42,15 +43,18 @@ TTL sweep (5m)  → deletes expired sessions (6h lifetime)
 
 **Key semantics:** `socialSessionId` = `social_${icebreakerSessionId}`; rejoin is an `upsertParticipant`; expiry returns **410 SESSION_EXPIRED**. Race-condition safety is handled by unique-constraint catch-and-resolve.
 
+**Single-test sessions:** When `state.singleTest.isTestModeSkip === true`, auto-advance is disabled and the client surfaces a `TestModeDisclosure` overlay in `warmup`; the host must explicitly confirm to advance to `recap`.
+
 ## Host vs Player Authority
 
 | Action | Authority |
 |--------|-----------|
 | Start session | First caller (becomes host) |
 | Advance phase / generate content | **Host only** |
+| Change tier/vibe during warmup | **Host only** (locked to `waiting`/`warmup`; preset ↔ custom switch requires double confirmation) |
 | Ready / complete / vote / bid | **Any player** (self-state) |
 
-**Pattern:** Host owns **phase transitions** and **generative triggers**; players own **self-state mutations**. See [references/session-spec.md](references/session-spec.md) for routes, schema, parity, AI boundaries, and advance guards.
+**Pattern:** Host owns **phase transitions**, **generative triggers**, and **tier/vibe selection**; players own **self-state mutations**. See [references/session-spec.md](references/session-spec.md) for routes, schema, parity, AI boundaries, and advance guards.
 
 ## Grill-me stress-test
 

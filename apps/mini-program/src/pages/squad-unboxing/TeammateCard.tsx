@@ -1,3 +1,4 @@
+import { useDidShow } from '@tarojs/taro'
 import { View, Text, Image } from '@tarojs/components'
 import { useState, useCallback, useMemo } from 'react'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
@@ -17,6 +18,8 @@ export interface TeammateCardProps {
   focused: boolean
   anyFocused: boolean
   isCurrentUser: boolean
+  isRevealed: boolean
+  emergeComplete: boolean
   reduceMotion: boolean
   isDegradation: boolean
   onFocus: () => void
@@ -55,12 +58,16 @@ export default function TeammateCard({
   focused,
   anyFocused,
   isCurrentUser,
+  isRevealed,
+  emergeComplete,
   reduceMotion,
   isDegradation,
   onFocus,
 }: TeammateCardProps) {
   const [imageError, setImageError] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [isFlipped, setIsFlipped] = useState(false)
+  useDidShow(() => setIsFlipped(false))
 
   const handleImageError = useCallback(() => setImageError(true), [])
   const handleImageLoad = useCallback(() => setImageLoaded(true), [])
@@ -74,18 +81,26 @@ export default function TeammateCard({
   const showPlaceholder = !member.archetype || imageError
 
   const handleTap = useCallback(() => {
-    haptics('light')
-    onFocus()
-  }, [onFocus])
+    if (isRevealed) {
+      haptics('light')
+      setIsFlipped((prev) => !prev)
+      onFocus()
+    }
+  }, [isRevealed, onFocus])
 
-  // Fan geometry: center card is 0°, step size shrinks as group grows.
-  // Upward circular arc: cards at the edges are slightly higher than the center.
+  const handleLongPress = useCallback(() => {
+    if (isRevealed) {
+      haptics('medium')
+      setIsFlipped(true)
+      onFocus()
+    }
+  }, [isRevealed, onFocus])
+
   const step = total <= 1 ? 0 : Math.min(14, 48 / total)
   const baseRotation = (index - (total - 1) / 2) * step
   const baseTranslateX = (index - (total - 1) / 2) * (total <= 3 ? 32 : 22)
   const baseTranslateY = -Math.abs(baseRotation) * 2.0
 
-  // Focused state lifts the card and centers it; non-focused cards dim when any card is focused.
   const focusRotation = focused ? 0 : baseRotation
   const focusTranslateX = focused ? 0 : baseTranslateX
   const focusTranslateY = focused ? (isDegradation ? -8 : -24) : baseTranslateY
@@ -93,9 +108,12 @@ export default function TeammateCard({
   const focusZIndex = focused ? 50 : total - Math.abs(index - Math.floor(total / 2))
   const isDimmed = anyFocused && !focused
 
-  const transform = `translate3d(${focusTranslateX}rpx, ${focusTranslateY}rpx, 0) rotate(${focusRotation}deg) scale(${focusScale})`
-
-  const transitionDuration = reduceMotion ? '0ms' : isDegradation ? '180ms' : '320ms'
+  const startTransform = 'translate3d(-50%, 120rpx, 0) scale(0.5) rotate(0deg)'
+  const restTransform = `translate3d(${focusTranslateX}rpx, ${focusTranslateY}rpx, 0) rotate(${focusRotation}deg) scale(${focusScale})`
+  const transform = isRevealed ? restTransform : startTransform
+  const opacity = isRevealed ? (isDimmed ? 0.28 : 1) : 0
+  const emergeDelayMs = reduceMotion ? 0 : 280 + index * 50
+  const transitionDuration = reduceMotion ? 0 : emergeComplete ? 320 : 550
 
   const archetypeAccent = useMemo(() => {
     const hsl = getArchetypeHSL(member.archetype)
@@ -103,8 +121,21 @@ export default function TeammateCard({
       borderColor: formatHSLAsRGBA(hsl, 0.28),
       background: formatHSLAsRGBA(hsl, 0.08),
       shadow: formatHSLAsRGBA(hsl, 0.18),
+      radialStart: formatHSLAsRGBA(hsl, 0.92),
+      radialEnd: formatHSLAsRGBA(hsl, 0.62),
+      edgeHighlight: formatHSLAsRGBA({ ...hsl, l: Math.min(100, hsl.l + 18) }, 0.45),
     }
   }, [member.archetype])
+
+  const backFaceStyle = useMemo(
+    () => ({
+      background: `radial-gradient(140% 140% at 30% 20%, ${archetypeAccent.radialStart} 0%, ${archetypeAccent.radialEnd} 100%)`,
+      boxShadow: `inset 0 0 0 1rpx ${archetypeAccent.edgeHighlight}`,
+    }),
+    [archetypeAccent],
+  )
+
+  const focusBoxShadow = focused ? `0 28rpx 64rpx ${archetypeAccent.shadow}` : undefined
 
   return (
     <View
@@ -113,69 +144,89 @@ export default function TeammateCard({
         focused ? 'squad-unboxing__deck-card--focused' : '',
         isDimmed ? 'squad-unboxing__deck-card--dimmed' : '',
         isCurrentUser ? 'squad-unboxing__deck-card--current' : '',
+        isFlipped ? 'squad-unboxing__deck-card--flipped' : '',
         reduceMotion ? 'squad-unboxing__deck-card--reduce-motion' : '',
         isDegradation ? 'squad-unboxing__deck-card--degradation' : '',
       ].filter(Boolean).join(' ')}
       style={{
         transform,
+        opacity,
         zIndex: focusZIndex,
-        transitionDuration,
+        transitionDuration: `${transitionDuration}ms`,
+        transitionDelay: `${emergeDelayMs}ms`,
         borderColor: archetypeAccent.borderColor,
         backgroundColor: archetypeAccent.background,
-        ['--jj-card-shadow-color' as string]: archetypeAccent.shadow,
+        boxShadow: focusBoxShadow,
       }}
       onClick={handleTap}
+      onLongPress={handleLongPress}
       hoverClass='squad-unboxing__deck-card--pressed'
       role='listitem'
       aria-label={`${name}${archetypeName ? `，${archetypeName}` : ''}${isCurrentUser ? '（我）' : ''}`}
     >
       <View className='squad-unboxing__deck-card-inner'>
-        {isCurrentUser ? (
-          <View className='squad-unboxing__deck-card-current-badge'>
-            <Text className='squad-unboxing__deck-card-current-badge-text'>我</Text>
+        <View
+          className='squad-unboxing__deck-card-face squad-unboxing__deck-card-face--back'
+          style={backFaceStyle}
+        >
+          {isCurrentUser ? (
+            <View className='squad-unboxing__deck-card-current-badge'>
+              <Text className='squad-unboxing__deck-card-current-badge-text'>我</Text>
+            </View>
+          ) : null}
+          <View className='squad-unboxing__deck-card-back-art'>
+            <View className='squad-unboxing__deck-card-back-shine' />
           </View>
-        ) : null}
-
-        <View className='squad-unboxing__deck-card-art-wrap'>
-          {showPlaceholder ? (
-            <MissingArchetypePlaceholder size={180} className='squad-unboxing__deck-card-placeholder' />
-          ) : (
-            <>
-              {!imageLoaded ? (
-                <View className='squad-unboxing__deck-card-art-skeleton' />
-              ) : null}
-              {assetUrl ? (
-                <Image
-                  className='squad-unboxing__deck-card-art'
-                  src={assetUrl}
-                  mode='aspectFit'
-                  lazyLoad={false}
-                  onError={handleImageError}
-                  onLoad={handleImageLoad}
-                  aria-hidden='true'
-                />
-              ) : null}
-            </>
-          )}
         </View>
 
-        <View className='squad-unboxing__deck-card-content'>
-          <Text className='squad-unboxing__deck-card-name'>{name}</Text>
-          {archetypeName ? (
-            <Text className='squad-unboxing__deck-card-archetype'>{archetypeName}</Text>
+        <View className='squad-unboxing__deck-card-face squad-unboxing__deck-card-face--front'>
+          {isCurrentUser ? (
+            <View className='squad-unboxing__deck-card-current-badge'>
+              <Text className='squad-unboxing__deck-card-current-badge-text'>我</Text>
+            </View>
           ) : null}
 
-          {connectionPoints.length > 0 ? (
-            <View className='squad-unboxing__deck-card-pills'>
-              {connectionPoints.map((point) => (
-                <ConnectionPointPill key={point.text} text={point.text} rarity={point.rarity} />
-              ))}
-            </View>
-          ) : hasConnectionReason ? (
-            <Text className='squad-unboxing__deck-card-reason' numberOfLines={2}>
-              {viewerPair?.explanation}
-            </Text>
-          ) : null}
+          <View className='squad-unboxing__deck-card-art-wrap'>
+            {showPlaceholder ? (
+              <MissingArchetypePlaceholder size={180} className='squad-unboxing__deck-card-placeholder' />
+            ) : (
+              <>
+                {!imageLoaded ? (
+                  <View className='squad-unboxing__deck-card-art-skeleton' />
+                ) : null}
+                {assetUrl ? (
+                  <Image
+                    className='squad-unboxing__deck-card-art'
+                    src={assetUrl}
+                    mode='aspectFit'
+                    lazyLoad={false}
+                    onError={handleImageError}
+                    onLoad={handleImageLoad}
+                    aria-hidden='true'
+                  />
+                ) : null}
+              </>
+            )}
+          </View>
+
+          <View className='squad-unboxing__deck-card-content'>
+            <Text className='squad-unboxing__deck-card-name'>{name}</Text>
+            {archetypeName ? (
+              <Text className='squad-unboxing__deck-card-archetype'>{archetypeName}</Text>
+            ) : null}
+
+            {connectionPoints.length > 0 ? (
+              <View className='squad-unboxing__deck-card-pills'>
+                {connectionPoints.map((point) => (
+                  <ConnectionPointPill key={point.text} text={point.text} rarity={point.rarity} />
+                ))}
+              </View>
+            ) : hasConnectionReason ? (
+              <Text className='squad-unboxing__deck-card-reason' numberOfLines={2}>
+                {viewerPair?.explanation}
+              </Text>
+            ) : null}
+          </View>
         </View>
       </View>
     </View>
