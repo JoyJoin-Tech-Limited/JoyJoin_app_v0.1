@@ -97,7 +97,7 @@ export function MicroChallengePhaseView({
             <View className='icebreaker__challenge-progress-track'>
               <View
                 className='icebreaker__challenge-progress-fill'
-                style={{ width: `${completionPercent}%` }}
+                style={{ transform: `scaleX(${completionPercent / 100})` }}
               />
             </View>
             <Text className='icebreaker__challenge-progress-text'>

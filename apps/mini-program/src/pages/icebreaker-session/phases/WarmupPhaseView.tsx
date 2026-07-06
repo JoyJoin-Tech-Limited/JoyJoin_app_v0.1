@@ -12,6 +12,8 @@ import Button from '../../../components/ui/Button'
 import ParticleBurst from '../../../components/reveal/ParticleBurst'
 import CardFlip from '../../../components/reveal/CardFlip'
 import { useTierReveal } from '../../../hooks/useTierReveal'
+import IcebreakerTierSelector from '../components/IcebreakerTierSelector'
+import type { TierMachineId } from '@shared/socialIcebreakerTierManifest'
 import {
   PhaseHeaderIcon,
   getMoodLabel,
@@ -34,6 +36,9 @@ interface WarmupPhaseViewProps {
   archetypeMixText?: string
   /** True when the session is in custom tier mode; changes the final warmup CTA label. */
   isCustomMode?: boolean
+  currentTier?: TierMachineId
+  canChangeTier?: boolean
+  onChangeTier?: () => void
   onGenerateTopics: (mood: AtmosphereMood) => void
   onToggleReady: () => void
   onNextTopic: () => void
@@ -139,6 +144,9 @@ export function WarmupPhaseView({
   vibe,
   archetypeMixText: propArchetypeMixText,
   isCustomMode,
+  currentTier = 'glow',
+  canChangeTier = false,
+  onChangeTier,
   onGenerateTopics,
   onToggleReady,
   onNextTopic,
@@ -305,6 +313,18 @@ export function WarmupPhaseView({
           <ParticleBurst trigger={showCelebration} type='confetti' count={50} reducedMotion={reduceMotion} />
         </View>
       )}
+
+      {/* ── Tier chip (host-editable during warmup) ─────────── */}
+      <View className='icebreaker__warmup-tier'>
+        <IcebreakerTierSelector
+          currentTier={currentTier}
+          currentVibe={vibe}
+          isHost={isHost}
+          canChange={canChangeTier}
+          disabledHint='热身已开始，模式不可更换'
+          onChangeRequest={onChangeTier}
+        />
+      </View>
 
       {/* ── Archetype mix badge ────────────────────────────── */}
       {archetypeMixText ? (

@@ -12,6 +12,7 @@ import { POLL_SOCIAL_SESSION_MS, TOAST_MEDIUM_MS, TOAST_DEFAULT_MS } from '../..
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useAuth } from '../../hooks/useAuth'
 import { logInfo, logError } from '../../lib/utils/logger'
+import { haptics } from '../../lib/utils/haptics'
 import { socialIcebreakerAnalytics } from '../../lib/analytics/socialIcebreakerAnalytics'
 import {
   usePreloadCdnIcons,
@@ -590,7 +591,7 @@ export default function IcebreakerSessionPage() {
 
   const [topicsError, setTopicsError] = useState(false)
 
-  const canChangeTier = phase === 'waiting' && isHost
+  const canChangeTier = (phase === 'waiting' || phase === 'warmup') && isHost
 
   const executeTierSwitch = useCallback(
     async (tier: TierMachineId, vibe: VibeId) => {
@@ -699,6 +700,23 @@ export default function IcebreakerSessionPage() {
       },
     })
   }, [pendingTierSwitch, handleAcceptCustomConfirm, handleDismissCustomConfirm])
+
+  const handleHostMenuTap = useCallback(async () => {
+    if (!isHost || !(phase === 'waiting' || phase === 'warmup')) {
+      return
+    }
+    haptics('light')
+    try {
+      const { tapIndex } = await Taro.showActionSheet({
+        itemList: ['更换模式'],
+      })
+      if (tapIndex === 0) {
+        setIsTierSheetOpen(true)
+      }
+    } catch {
+      // User cancelled the action sheet
+    }
+  }, [isHost, phase])
 
   const handleCompleteChallenge = useCallback(() => {
     void performSocialAction('micro-complete', '/micro-challenge/complete', {})
@@ -961,7 +979,15 @@ export default function IcebreakerSessionPage() {
 
   return (
     <ScrollView className='icebreaker' scrollY enhanced showScrollbar={false} style={bgStyles}>
-      {phaseHeader}
+      <View className='icebreaker__header-wrap'>
+        {phaseHeader}
+
+        {isHost && (phase === 'waiting' || phase === 'warmup') && (
+          <View className='icebreaker__host-menu' onClick={handleHostMenuTap}>
+            <Text className='icebreaker__host-menu-icon'>⋯</Text>
+          </View>
+        )}
+      </View>
 
       <PhaseIntroOverlay phase={phase} visible={showPhaseIntro} />
 
@@ -1026,6 +1052,9 @@ export default function IcebreakerSessionPage() {
             vibe={apiVibeToClient(session.vibe)}
             archetypeMixText={session.archetypeMixText}
             isCustomMode={session.eventTier === 'custom'}
+            currentTier={session.eventTier ?? 'glow'}
+            canChangeTier={canChangeTier}
+            onChangeTier={() => setIsTierSheetOpen(true)}
             onGenerateTopics={handleGenerateTopics}
             onToggleReady={handleToggleWarmupReady}
             onNextTopic={handleNextWarmupTopic}
@@ -1259,7 +1288,7 @@ export default function IcebreakerSessionPage() {
       />
 
       {showTestModeDisclosure && (
-        <View className='icebreaker__test-mode-overlay'>
+        <View className='icebreaker__test-mode-overlay' catchMove>
           <TestModeDisclosure
             bots={session?.testModeBots}
             socialSessionId={socialSessionId ?? undefined}

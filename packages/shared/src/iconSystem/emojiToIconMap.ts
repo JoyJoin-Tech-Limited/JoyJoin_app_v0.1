@@ -313,12 +313,17 @@ export function hasIconMapping(emoji: string): boolean {
  *
  * NOTE: The following tiers are bundled locally and must be kept OUT of this
  * set so subpackage pages never block on a network path:
- *   - expression (rating-faces)
  *   - semantic (info-labels)
  *   - mood
  *   - status
  *   - category
  *   - intent
+ *
+ * 'expression' (rating faces) is CDN-only as of 2026-07-07: source WebPs remain
+ * in the repo so the CDN upload pipeline can serve them, but WeChat's upload
+ * unused-file filter strips them from the main package. JoyJoinIcon falls back
+ * to the CDN copy if a local load fails, but marking the tier CDN-primary avoids
+ * the extra local round-trip for rating faces.
  *
  * 'ui' and 'chemistry' are currently CDN-first (2026-06-23): local bundled copies
  * remain as a fallback, but production builds resolve them via cdnAsset() because
@@ -338,7 +343,7 @@ export const CDN_ICON_TIERS: ReadonlySet<IconTier> = new Set([
   'achievement',
   'ui',
   'chemistry',
-  // 'expression' (rating faces) is bundled locally; see src/assets/icons/rating-faces.
+  'expression',
 ])
 
 const ICON_FOLDER_MAP: Record<IconTier, string> = {

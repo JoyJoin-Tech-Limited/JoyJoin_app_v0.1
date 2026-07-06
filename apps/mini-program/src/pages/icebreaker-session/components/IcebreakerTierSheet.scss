@@ -53,8 +53,12 @@
   }
 
   &__close {
-    width: 48rpx;
-    height: 48rpx;
+    width: 88rpx;
+    height: 88rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: -$spacing-sm;
     position: relative;
 
     &::before,

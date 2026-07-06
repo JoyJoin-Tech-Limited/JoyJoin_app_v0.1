@@ -25,6 +25,13 @@
   pointer-events: none;
 }
 
+// ── Tier chip (host-editable during warmup) ──────────────────────
+.icebreaker__warmup-tier {
+  display: flex;
+  justify-content: center;
+  margin-bottom: $spacing-md;
+}
+
 // ── Archetype mix badge ──────────────────────────────────────────
 .icebreaker__archetype-mix {
   display: inline-flex;

@@ -5,6 +5,7 @@
   display: inline-flex;
   align-items: center;
   gap: $spacing-xs;
+  min-height: 88rpx;
   padding: $spacing-xs $spacing-md;
   border-radius: 100rpx;
   background: rgba($color-primary, 0.08);

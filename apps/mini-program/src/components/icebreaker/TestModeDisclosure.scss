@@ -33,6 +33,14 @@
     border-radius: $radius-circle;
     background: rgba($color-primary, 0.08);
     margin-bottom: $spacing-xs;
+    border: 2rpx solid rgba($color-primary, 0.12);
+  }
+
+  &__icon-text {
+    font-size: 40rpx;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+    line-height: 1;
   }
 
   &__title {
@@ -83,6 +91,14 @@
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
+  }
+
+  &__bot-dot {
+    width: 12rpx;
+    height: 12rpx;
+    border-radius: $radius-circle;
+    background: $color-primary;
+    flex-shrink: 0;
   }
 
   &__bot-archetype {

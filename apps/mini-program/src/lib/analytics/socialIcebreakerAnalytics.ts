@@ -9,6 +9,8 @@ type EventType =
   | 'end_party_failed'
   | 'custom_mode_selected'
   | 'icebreaker_session_tier_changed'
+  | 'icebreaker_test_mode_disclosure_rendered'
+  | 'icebreaker_test_mode_disclosure_shown'
   | string
 
 function track(

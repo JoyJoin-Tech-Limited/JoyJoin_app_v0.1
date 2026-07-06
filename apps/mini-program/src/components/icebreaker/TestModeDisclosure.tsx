@@ -6,7 +6,6 @@ import { getSystemReducedMotion } from '../../lib/utils/accessibility'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { haptics } from '../../lib/utils/haptics'
 import Button from '../ui/Button'
-import JoyJoinIcon from '../ui/JoyJoinIcon'
 
 import './TestModeDisclosure.scss'
 
@@ -69,7 +68,7 @@ export function TestModeDisclosure({
     >
       <View className='test-mode-disclosure__card'>
         <View className='test-mode-disclosure__icon'>
-          <JoyJoinIcon emoji='🧪' size={80} />
+          <Text className='test-mode-disclosure__icon-text'>测试</Text>
         </View>
         <Text className='test-mode-disclosure__title'>测试模式：多人环节已跳过</Text>
         <Text className='test-mode-disclosure__body'>
@@ -82,7 +81,7 @@ export function TestModeDisclosure({
             <View className='test-mode-disclosure__roster-list' role='list'>
               {bots.map((bot) => (
                 <View key={bot.botId} className='test-mode-disclosure__bot-chip' role='listitem'>
-                  <JoyJoinIcon emoji='🤖' size={28} />
+                  <View className='test-mode-disclosure__bot-dot' aria-hidden='true' />
                   <Text className='test-mode-disclosure__bot-name'>{bot.displayName}</Text>
                   <Text className='test-mode-disclosure__bot-archetype'>{bot.archetype}</Text>
                 </View>

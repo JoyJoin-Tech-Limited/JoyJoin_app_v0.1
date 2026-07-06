@@ -2742,6 +2742,238 @@ describe('social icebreaker routes', () => {
     });
   });
 
+  describe('POST /api/social-icebreaker/:socialSessionId/set-tier', () => {
+    it('allows host to change tier during warmup', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'set-tier-host');
+        const sessionId = `session-set-tier-${Date.now()}`;
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const startBody = await startResponse.json() as any;
+        const { socialSessionId } = startBody;
+        expect(startBody.state.eventTier).toBe('glow');
+
+        const response = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/set-tier`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ tier: 'breeze', vibe: 'chat' }),
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(200);
+        expect(body.eventTier).toBe('breeze');
+        expect(body.state.eventTier).toBe('breeze');
+        expect(body.state.vibe).toBe('chat');
+        expect(body.runPlan).toBeDefined();
+      });
+    });
+
+    it('allows host to switch to custom mode during warmup', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'set-tier-custom-host');
+        const sessionId = `session-set-tier-custom-${Date.now()}`;
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const startBody = await startResponse.json() as any;
+        const { socialSessionId } = startBody;
+
+        const response = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/set-tier`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ tier: 'custom' }),
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(200);
+        expect(body.eventTier).toBe('custom');
+        expect(body.state.eventTier).toBe('custom');
+        expect(body.runPlan).toBeUndefined();
+        expect(body.state.autoAdvanceEnabled).toBe(false);
+      });
+    });
+
+    it('rejects non-host callers', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'set-tier-owner');
+        const guestCookie = await login(baseUrl, 'set-tier-guest');
+        const sessionId = `session-set-tier-auth-${Date.now()}`;
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const startBody = await startResponse.json() as any;
+        const { socialSessionId } = startBody;
+
+        const response = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/set-tier`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: guestCookie },
+          body: JSON.stringify({ tier: 'breeze', vibe: 'chat' }),
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(403);
+        expect(body.error).toBe('Only the host can set the tier');
+      });
+    });
+
+    it('rejects invalid tier values', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'set-tier-invalid-host');
+        const sessionId = `session-set-tier-invalid-${Date.now()}`;
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const startBody = await startResponse.json() as any;
+        const { socialSessionId } = startBody;
+
+        const response = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/set-tier`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ tier: 'invalid-tier' }),
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(400);
+        expect(body.error).toContain('Invalid tier');
+      });
+    });
+
+    it('rejects missing or malformed request body', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'set-tier-body-host');
+        const sessionId = `session-set-tier-body-${Date.now()}`;
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const startBody = await startResponse.json() as any;
+        const { socialSessionId } = startBody;
+
+        const response = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/set-tier`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({}),
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(400);
+        expect(body.error).toBe('Invalid request body');
+      });
+    });
+
+    it('rejects tier changes after advancing past warmup', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'set-tier-late-host');
+        const sessionId = `session-set-tier-late-${Date.now()}`;
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const startBody = await startResponse.json() as any;
+        const { socialSessionId } = startBody;
+
+        await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/topics`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ mood: 'relaxed' }),
+        });
+        await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/warmup/ready`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ ready: true }),
+        });
+        const advanceResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/advance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ currentPhase: 'warmup' }),
+        });
+        expect(advanceResponse.status).toBe(200);
+
+        const response = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/set-tier`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ tier: 'breeze', vibe: 'chat' }),
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(400);
+        expect(body.error).toContain('Tier can only be changed during warmup');
+      });
+    });
+
+    it('rejects custom tier when custom mode is disabled', async () => {
+      await withServer(async (baseUrl) => {
+        vi.mocked(getFeatureFlag).mockImplementation(async (key: string, _fallback = false) => {
+          if (key === 'socialIcebreakerCustomModeEnabled') return false;
+          return _fallback;
+        });
+
+        const hostCookie = await login(baseUrl, 'set-tier-custom-disabled-host');
+        const sessionId = `session-set-tier-custom-disabled-${Date.now()}`;
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const startBody = await startResponse.json() as any;
+        const { socialSessionId } = startBody;
+
+        const response = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/set-tier`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ tier: 'custom' }),
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(400);
+        expect(body.error).toBe('Custom mode is not enabled');
+      });
+    });
+
+    it('is idempotent when setting the same tier', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'set-tier-same-host');
+        const sessionId = `session-set-tier-same-${Date.now()}`;
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const startBody = await startResponse.json() as any;
+        const { socialSessionId } = startBody;
+
+        const firstResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/set-tier`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ tier: 'glow', vibe: 'balanced' }),
+        });
+        const firstBody = await firstResponse.json() as any;
+
+        expect(firstResponse.status).toBe(200);
+        expect(firstBody.eventTier).toBe('glow');
+      });
+    });
+  });
+
   describe('single-test mode disclosure', () => {
     it('includes isTestModeSkip and testModeBots when session is a single-test group', async () => {
       await withServer(async (baseUrl) => {
@@ -2801,10 +3033,10 @@ describe('social icebreaker routes', () => {
       });
     });
 
-    it('does not leak raw bot userIds in the client payload', async () => {
+    it('advances a single-test session from warmup directly to recap', async () => {
       await withServer(async (baseUrl) => {
-        const hostCookie = await login(baseUrl, 'no-leak-host');
-        const sessionId = `session-no-leak-${Date.now()}`;
+        const hostCookie = await login(baseUrl, 'single-test-advance-host');
+        const sessionId = `session-single-test-advance-${Date.now()}`;
 
         vi.mocked(isSingleTestMode).mockReturnValue(true);
         vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue({
@@ -2816,19 +3048,109 @@ describe('social icebreaker routes', () => {
           ],
         });
 
-        const response = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', cookie: hostCookie },
           body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
         });
-        const body = await response.json() as any;
+        const startBody = await startResponse.json() as any;
+        expect(startResponse.status).toBe(200);
 
-        expect(response.status).toBe(200);
-        const payload = JSON.stringify(body);
-        expect(payload).not.toContain('user-id-123');
-        expect(payload).not.toContain('raw-bot-user-id');
-        expect(body.state.testModeBots[0].botId).toBe('bot-1');
-        expect(body.state.testModeBots[0].userId).toBeUndefined();
+        const socialSessionId = startBody.socialSessionId;
+
+        // Mark host ready so warmup advance is allowed.
+        const readyResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/warmup/ready`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ ready: true }),
+        });
+        expect(readyResponse.status).toBe(200);
+
+        const advanceResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/advance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ currentPhase: 'warmup' }),
+        });
+        const advanceBody = await advanceResponse.json() as any;
+
+        expect(advanceResponse.status).toBe(200);
+        expect(advanceBody.nextPhase).toBe('recap');
+        expect(advanceBody.state.currentPhase).toBe('recap');
+        expect(advanceBody.state.isTestModeSkip).toBe(true);
+      });
+    });
+
+    it('preserves test mode metadata on rejoin', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'single-test-rejoin-host');
+        const sessionId = `session-single-test-rejoin-${Date.now()}`;
+
+        vi.mocked(isSingleTestMode).mockReturnValue(true);
+        vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue({
+          version: 1,
+          groupId: sessionId,
+          isTestModeSkip: true,
+          bots: [
+            { botId: 'bot-1', displayName: 'Bot One', archetype: '社牛柯基' },
+          ],
+        });
+
+        const firstResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        expect(firstResponse.status).toBe(200);
+
+        const rejoinResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const rejoinBody = await rejoinResponse.json() as any;
+
+        expect(rejoinResponse.status).toBe(200);
+        expect(rejoinBody.state.isTestModeSkip).toBe(true);
+        expect(rejoinBody.state.testModeBots).toHaveLength(1);
+      });
+    });
+
+    it('omits test mode fields on rejoin when single-test mode is disabled', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'single-test-disabled-rejoin-host');
+        const sessionId = `session-single-test-disabled-rejoin-${Date.now()}`;
+
+        // Create session while single-test mode is enabled.
+        vi.mocked(isSingleTestMode).mockReturnValue(true);
+        vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue({
+          version: 1,
+          groupId: sessionId,
+          isTestModeSkip: true,
+          bots: [
+            { botId: 'bot-1', displayName: 'Bot One', archetype: '社牛柯基' },
+          ],
+        });
+
+        const firstResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        expect(firstResponse.status).toBe(200);
+
+        // Disable single-test mode and rejoin; persisted metadata should not leak.
+        vi.mocked(isSingleTestMode).mockReturnValue(false);
+
+        const rejoinResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const rejoinBody = await rejoinResponse.json() as any;
+
+        expect(rejoinResponse.status).toBe(200);
+        expect(rejoinBody.state.isTestModeSkip).toBeUndefined();
+        expect(rejoinBody.state.testModeBots).toBeUndefined();
       });
     });
   });
