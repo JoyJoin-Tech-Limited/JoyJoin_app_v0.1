@@ -1,7 +1,8 @@
 import type { Router } from 'express';
 import type { SocialSessionState, SocialIcebreakerPhase, LieDetectivePlayer, LieDetectiveVote, LieDetectiveReveal } from '@shared/socialIcebreaker';
 import { z } from 'zod';
-import { getNextEligiblePhase, AUCTION_STARTING_COINS } from '@shared/socialIcebreaker';
+import { AUCTION_STARTING_COINS } from '@shared/socialIcebreaker';
+import { getNextEligiblePhase } from '../socialIcebreakerPhaseConfig';
 import {
   generateMicroChallenges,
   generateXiaoYueComment,
