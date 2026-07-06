@@ -1,7 +1,7 @@
 # JoyJoin 性能优化指南
 
-> **Last updated:** 2026-06-17 (Profile-linked subpackage migration + `usePageTTI` instrumentation with cold ≤2000 ms / warm ≤800 ms budgets)
-> **Previous:** 2026-06-16 (Profile page predictive prefetch + offline-first shell + share-card degradation)
+> **Last updated:** 2026-07-07 (Phase 2 asset/CDN migration: `flow-icons` + `rating-faces` moved to CDN-only; main package 1.73 MB / 276 KB buffer)
+> **Previous:** 2026-06-17 (Profile-linked subpackage migration + `usePageTTI` instrumentation with cold ≤2000 ms / warm ≤800 ms budgets)
 > **Previous:** 2026-05-13 (device baseline tiering: tier-1 Gen Z 8GB+/120Hz/5G primary, degradation path secondary)
 > **Previous:** 2026-05-22 (archetype asset optimization: local spritesheet, WebP-first canvas, PNG moved to CDN, onboarding subpackage 1.4M → 788K)
 
@@ -201,12 +201,14 @@ apps/user-client/src/assets/matching/
 
 `apps/mini-program` 是当前 **launch-primary** WeChat 客户端；性能预算与分包决策优先在这里验证，再对照 web。权威策略说明见 [`apps/mini-program/README.md`](../apps/mini-program/README.md) 的 *Package Loading Strategy*。
 
-**当前主包预算与资产策略（2026-06-18）：**
+**当前主包预算与资产策略（2026-07-07）：**
 
-- 压缩后主包约为 **1.88 MB**，保留约 120 KB 的余量（WeChat 主包硬上限 2 MB）。
-- 仅 6 个核心 Xiaoyue  mascot 精灵状态（`welcome`/`idle`/`coach`/`loading`/`listening`/`thinking`）作为本地兜底打包；其余 14 个状态走 CDN。
-- `status-icons`、`info-labels`（semantic）、`ui` 三个 icon tier 在构建时剔除 `@3x`，以 `@1x`/`@2x` 打包；3x 设备回退到 `@2x`。
+- 压缩后主包约为 **1.73 MB**，保留约 **276 KB** 的余量（WeChat 主包硬上限 2 MB）。
+- 仅 6 个核心 Xiaoyue mascot 精灵状态（`welcome`/`idle`/`coach`/`loading`/`listening`/`thinking`）作为本地兜底打包；其余 14 个状态走 CDN。
+- 所有本地打包的 icon tier 均以单张高分辨率 bare `.webp` 形式出货（无 `@2x`/`@3x` 后缀）。WeChat 运行时会自动解析密度后缀；混用 `@` 命名会导致 404 并回退到 emoji，因此 `validate:icon-transparency` 会在任何 `src/assets/icons/**/*.webp` 包含 `@` 时失败构建。
+- `flow-icons`（center-hub / connections）与 `rating-faces`（event-feedback）于 2026-07-07 改为 CDN-only，依赖 emoji fallback。
 - 48 个兴趣插画（taxonomy v2.0）全部走 CDN，统一通过 `packages/shared/src/interests.ts` 中的 `imageUrl` + `cdnAsset()` 解析。
+- Discover 首页 Hero 横幅于 2026-07-06 改为 CDN-only，首屏以渐变骨架屏兜底。
 - `TARO_APP_CDN_BASE_URL` 在 `apps/mini-program/config/index.ts` 与 CI workflow 中均默认回退到 `https://joyjoinapp.com/static`，确保生产构建不会丢失 CDN 前缀。
 
 **代码中的真实配置（与文档同步）：**

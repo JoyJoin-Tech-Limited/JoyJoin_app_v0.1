@@ -57,23 +57,24 @@ Assets copied by `vite-plugin-static-copy` in `config/index.ts`.
 
 | Tier | Path | Resolution | Hosting | Used in |
 |------|------|------------|---------|---------|
-| **Mood** | `icons/mood-icons/` | @1x/@2x/@3x | Bundled locally | Icebreaker atmosphere selector |
-| **Chemistry** | `icons/chemistry-badges/` | @1x/@2x/@3x | Bundled locally | Matching status indicators |
-| **Status** | `icons/status-icons/` | @1x/@2x (bundled); @3x CDN fallback | Bundled locally | Host crown, waiting spinner, notification bell, check/close states, alarm/bar-chart meta labels |
-| **Category** | `icons/category-icons/` | @1x/@2x/@3x | Bundled locally | Interest category headers |
-| **Intent** | `icons/intent-icons/` | @1x/@2x/@3x | Bundled locally | Social intent selection grid |
-| **Expression / rating faces** | `icons/rating-faces/` | @1x/@2x/@3x | Bundled locally | Event-feedback 5-step rating selector |
-| **Semantic / info labels** | `icons/info-labels/` | @1x/@2x (bundled); @3x CDN fallback | Bundled locally | Calendar, location, people, target inline labels |
-| **UI** | `icons/ui/` | @1x/@2x (bundled); @3x CDN fallback | Bundled locally | Profile/settings list icons, event meta icons |
-| **Archetype heads** | `icons/archetype/` | bare `.webp` (@1x implicit) | Bundled locally + CDN fallback | Profile avatars (`ArchetypeHead.tsx`) |
-| **Reaction** | `icons/reaction-icons/` | @1x/@2x/@3x | **CDN** | Icebreaker phase reactions |
-| **Reveal** | `icons/reveal-icons/` | @1x/@2x/@3x | **CDN** | Matching common-ground reveals |
-| **Achievement** | `icons/achievement-badges/` | @1x/@2x/@3x | **CDN** | Personality test milestones |
-| **Phase emblems** | `icons/phase-icons/` | @1x/@2x/@3x | **CDN** (full set) + 6 bundled landing variants | Phase toasts, icebreaker session |
+| **Mood** | `icons/mood-icons/` | bare `.webp` | Bundled locally | Icebreaker atmosphere selector |
+| **Chemistry** | `icons/chemistry-badges/` | bare `.webp` | Bundled locally | Matching status indicators |
+| **Status** | `icons/status-icons/` | bare `.webp` | Bundled locally | Host crown, waiting spinner, notification bell, check/close states, alarm/bar-chart meta labels |
+| **Category** | `icons/category-icons/` | bare `.webp` | Bundled locally | Interest category headers |
+| **Intent** | `icons/intent-icons/` | bare `.webp` | Bundled locally | Social intent selection grid |
+| **Expression / rating faces** | `icons/rating-faces/` | bare `.webp` | **CDN-only** (emoji fallback) | Event-feedback 5-step rating selector |
+| **Flow icons** | `icons/flow-icons/` | bare `.webp` | **CDN-only** (emoji fallback) | Center-hub / connections empty-state flow diagrams |
+| **Semantic / info labels** | `icons/info-labels/` | bare `.webp` | Bundled locally | Calendar, location, people, target inline labels |
+| **UI** | `icons/ui/` | bare `.webp` | Bundled locally | Profile/settings list icons, event meta icons |
+| **Archetype heads** | `icons/archetype/` | bare `.webp` | Bundled locally + CDN fallback | Profile avatars (`ArchetypeHead.tsx`) |
+| **Reaction** | `icons/reaction-icons/` | bare `.webp` | **CDN** | Icebreaker phase reactions |
+| **Reveal** | `icons/reveal-icons/` | bare `.webp` | **CDN** | Matching common-ground reveals |
+| **Achievement** | `icons/achievement-badges/` | bare `.webp` | **CDN** | Personality test milestones |
+| **Phase emblems** | `icons/phase-icons/` | bare `.webp` | **CDN** (full set) + 6 bundled landing variants | Phase toasts, icebreaker session |
 
-> **Retina strategy:** `JoyJoinIcon` always requests the bare `@1x` filename; WeChat's runtime auto-resolves `@2x`/`@3x` variants based on device `pixelRatio`. Hardcoding `@3x` in `src` causes the `@3x@3x` double-suffix 404 bug (see Common Mistakes).
+> **Density strategy (2026-07-07):** All bundled icon tiers ship as a single high-resolution bare `.webp` per asset (no `@2x`/`@3x` variants). WeChat's runtime auto-resolves density suffixes; mixed naming causes 404 fallbacks to emoji. `validate:icon-transparency` fails the build if any `src/assets/icons/**/*.webp` contains `@`.
 >
-> **CDN resolution:** Tiers in `CDN_ICON_TIERS` (`phase`, `reaction`, `reveal`, `achievement`) are wrapped with `cdnAsset()` by `JoyJoinIcon`. All other tiers are wrapped with `localAsset()` and must have a copy pattern in `config/index.ts`.
+> **CDN resolution:** Tiers in `CDN_ICON_TIERS` (`phase`, `reaction`, `reveal`, `achievement`, `expression`) are wrapped with `cdnAsset()` by `JoyJoinIcon`. All other tiers are wrapped with `localAsset()` and must have a copy pattern in `config/index.ts`. `flow-icons` are resolved directly via `cdnAsset()` in page components and are not part of `JoyJoinIcon`.
 >
 > **2026-06-18 Lovart 5×5 integration:** A single 2048×2048 Lovart status/UI grid was cropped into `status-icons` (⏰📣📊⚠️🚫🪞🔓🌟✕✓🔔), `ui` (🎁🔍📝), and `info-labels` (✈️🌆🌏🌐🗺️), plus six new `reaction-icons` (💰😏😎💜😅😈). The new mappings are registered in `packages/shared/src/iconSystem/emojiToIconMap.ts`. `status`/`ui`/`semantic` tiers are bundled locally; `reaction` remains CDN-primary with the same `reaction-icons/` folder mirrored locally so `cdnAsset()` can fall back when `TARO_APP_CDN_BASE_URL` is unset.
 
@@ -138,7 +139,9 @@ These are **NOT** copied to `dist/assets/` by the build. They must exist on the 
 | **Lovart illustrations** | `assets/lovart/lovart-*.webp` | ~130KB | Empty/error states |
 | **Lovart pool persona / particles** | `assets/lovart/lovart-pool-persona-*`, `assets/lovart/lovart-particle-*` | — | Pool-registration persona snapshot card art and animated particles. Subpackage fallback copies are bundled under `pages/pool-registration/assets/pool-persona/`. |
 | **Matching heroes** | `assets/matching/matching-*.webp` | ~157KB | Matching status page |
-| **Promo banners** | `assets/promo/banner-*.webp` | ~175KB | Source copies of promo banners for CDN upload. The active Discover hero banner is bundled locally at `assets/promo-local/banner-hero-lovart-v1.webp` and falls back to this CDN path on `onError`. |
+| **Promo banners** | `assets/promo/banner-*.webp` | ~175KB | Source copies of promo banners for CDN upload. The active Discover hero banner is **CDN-only**; a gradient skeleton preserves first paint while loading. The previous `promo-local/` bundled copy was removed in 2026-07-06. |
+| **Rating faces** | `assets/icons/rating-faces/*.webp` | ~84KB | Event-feedback 5-step selector; emoji fallback when CDN fails. |
+| **Flow icons** | `assets/icons/flow-icons/*.webp` | ~60KB | Center-hub / connections empty-state flow diagrams; emoji fallback when CDN fails. |
 | **Personality emojis** | `assets/lovart/personality-emojis/*.png` | ~170KB | Personality test emoji choices |
 | **Phase emblems** | `assets/icons/phase-icons/phase-*.webp` | ~120KB | Phase toasts, icebreaker session (full set; 6 landing variants are bundled) |
 | **Reaction icons** | `assets/icons/reaction-icons/*.webp` | ~120KB | Icebreaker phase reactions |
@@ -163,7 +166,7 @@ These are **NOT** copied to `dist/assets/` by the build. They must exist on the 
 4. miniprogram-ci upload → compresses and uploads to WeChat
 ```
 
-**Local-first promo banner exception:** `promo-local/` is copied into the package by `config/index.ts` and is **not** removed by `clean:cdn-assets`. The original `promo/` source directory remains CDN-only.
+**Promo banner (2026-07-06 update):** `promo-local/` was removed; the Discover hero banner is now CDN-only. The original `promo/` source directory remains CDN-only.
 
 ### Clean step (`npm run clean:cdn-assets`)
 Removes these directories from `dist/assets/` to keep package small:
@@ -172,23 +175,20 @@ personality/       # Xiaoyue expressions (CDN)
 lovart/            # Lovart illustrations (CDN)
 matching/          # Matching heroes (CDN)
 promo/             # Promo banner sources for CDN upload (NOT bundled)
-promo-local/       # Discover hero banner bundled locally; CDN fallback stays in promo/
+promo-local/       # Removed 2026-07-06; Discover hero banner is now CDN-only
 icons/phase-icons/ # Phase icons (CDN, except landing-phase-icons)
+icons/rating-faces/# Rating faces (CDN-only since 2026-07-07)
+icons/flow-icons/  # Flow icons (CDN-only since 2026-07-07)
 ```
 
-The `clean:cdn-assets` step also strips `@3x` variants from bundled `status-icons`, `info-labels`, and `ui` directories to save package size. The source `@3x` files remain in `src/assets/` for CDN upload / fallback purposes.
+The `clean:cdn-assets` step also rejects any bundled `.webp` filename containing `@` and fails the build. Source `@3x` files were removed in 2026-07-07; all bundled icons ship as a single bare `.webp` per asset.
 
 **Do NOT add copy patterns for these directories** unless you also update the clean step.
 
 ### Icon density resolution (`JoyJoinIcon`)
-```
-Taro.getSystemInfoSync().pixelRatio
-  ≈ 1 → load @1x (e.g., reaction-celebrate.webp)
-  ≈ 2 → load @2x (e.g., reaction-celebrate@2x.webp)
-  ≈ 3 → load @3x (e.g., reaction-celebrate@3x.webp)
-```
+All bundled icon tiers ship as a single high-resolution bare `.webp` filename (no `@2x`/`@3x` variants). WeChat's runtime handles device scaling automatically. CDN tiers still receive the bare filename and rely on the CDN or local mirrored fallback.
 
-Fallback chain: if `@3x` fails → `@2x` → `@1x` → native emoji.
+Fallback chain: if asset resolve fails → native emoji (for `JoyJoinIcon`) or the component's dedicated error placeholder.
 
 ### App-launch preloading
 `apps/mini-program/src/lib/utils/onboardingPreload.ts` runs once at app launch and warms onboarding-critical raster assets in staggered tiers so the first paint never blocks:
@@ -335,14 +335,15 @@ src/assets/
 │   ├── archetype/             ✅ bundled (local) + CDN fallback copies
 │   ├── category-icons/        ✅ bundled (local)
 │   ├── chemistry-badges/      ✅ bundled (local)
-│   ├── info-labels/           ✅ bundled (local) [semantic / info labels]; @3x stripped at build
+│   ├── info-labels/           ✅ bundled (local) [semantic / info labels]
 │   ├── intent-icons/          ✅ bundled (local)
 │   ├── phase-icons/           ❌ CDN (full set); 6 landing variants + custom-tier-icon bundled
-│   ├── rating-faces/          ✅ bundled (local) [expression / rating faces]
+│   ├── rating-faces/          ❌ CDN (source kept for upload, not bundled) [expression / rating faces]
+│   ├── flow-icons/            ❌ CDN (source kept for upload, not bundled) [center-hub / connections flow diagrams]
 │   ├── reaction-icons/        ❌ CDN (source kept for upload, not bundled)
 │   ├── reveal-icons/          ❌ CDN (source kept for upload, not bundled)
-│   ├── status-icons/          ✅ bundled (local); @3x stripped at build
-│   └── ui/                    ✅ bundled (local); @3x stripped at build
+│   ├── status-icons/          ✅ bundled (local)
+│   └── ui/                    ✅ bundled (local)
 ├── personality/
 │   ├── archetypes/            ❌ CDN (WebP + PNG; source kept for upload, not bundled)
 │   └── xiaoyue/               ❌ CDN (except loading-system + home-welcome + coach-guide)

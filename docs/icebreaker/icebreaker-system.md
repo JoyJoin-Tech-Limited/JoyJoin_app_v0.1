@@ -1,6 +1,6 @@
 # Icebreaker System — Complete Reference
 
-**Last Updated:** 2026-05-27
+**Last Updated:** 2026-07-07
 
 > ⭐ **CANONICAL FLOW:** The Social Icebreaker is the **primary and default in-event icebreaking experience** for JoyJoin matched groups. When building any feature that relates to icebreaking or in-event social facilitation, you MUST integrate with or extend the Social Icebreaker. Do NOT build new standalone icebreaking UIs.
 
@@ -74,9 +74,9 @@
 ### Overview
 The Social Icebreaker is a **multi-phase, real-time group experience** backed by a PostgreSQL session store. It is the **primary and default in-event icebreaking experience** for all JoyJoin matched groups. It is session-keyed, host-driven, and designed for small groups. Each phase enforces its own minimum: most phases require ≥2 players; `lie_detective` requires ≥3 (auto-skipped otherwise). There is no enforced upper cap on player count.
 
-### Client implementation priority (mini-program first)
+### Client implementation priority (mini-program only)
 
-**WeChat mini-program (Taro) is the core ship target** for in-event Social Icebreaker UX: implement phase behaviour, polish, and regressions in **`apps/mini-program/src/pages/icebreaker-session/`** (including `phaseViews`) first, then align **`apps/user-client`** for web parity. Server contracts (`/api/social-icebreaker`, `SocialSessionState`) are shared; both clients must stay consistent, but **mini-program smoothness takes precedence** when scheduling or scoping work.
+**WeChat mini-program (Taro) is the only shipping user-facing client** for in-event Social Icebreaker UX. Implement phase behaviour, polish, and regressions in **`apps/mini-program/src/pages/icebreaker-session/`** (including `phaseViews`). Server contracts (`/api/social-icebreaker`, `SocialSessionState`) are shared with the admin portal and any future surfaces, but **mini-program smoothness is the authoritative target**. (The legacy `apps/user-client` web sandbox was archived to `archived/workspaces/user-client/` in 2026-05 and must not be treated as an active parity surface.)
 
 ### Shared Types
 **File:** `shared/socialIcebreaker.ts` (also `packages/shared/src/socialIcebreaker.ts`)
@@ -229,6 +229,28 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
 [RECAP]
   GET .../recap → AI-generated { headline, moments[], closingLine, medals[], lieDetectiveV2Stats?, personalityDiceHighlights?, undercoverWordResult?, microChallengeHighlights?, groupMirrorHighlights? } (`social-recap-summary-v2`; includes lie highlights, dice, MiniScript premise excerpt, auction lines when present). V2 recap snapshot is built once during phase advance and persisted in `recapSnapshot`.
 ```
+
+### Single-Player Test Mode & Tier Reset (2026-07-06)
+
+A **single-player test flow** lets staff/internal users start a Social Icebreaker session without a full matched group, primarily for QA and demo. It is gated by server-side `isMatchingTestMode()` (requires `ENABLE_SINGLE_TEST_MODE=true` and is disabled in `APP_MODE=production`).
+
+**Client components**
+- `TestModeDisclosure` (`apps/mini-program/src/pages/icebreaker-session/components/TestModeDisclosure.tsx`) — renders a dismissible banner at the top of the session page when `session.isTestMode === true`. Explains that the session is a single-player test, shows the active tier/vibe, and offers a **重置环节** action that lets the host re-pick tier/vibe while still in `warmup`.
+- `IcebreakerTierSheet` (`apps/mini-program/src/pages/icebreaker-session/components/IcebreakerTierSheet.tsx`) — the tier/vibe selector sheet surfaced by the disclosure (and also used during initial session setup).
+
+**Server authority**
+- `POST /api/social-icebreaker/start` accepts `eventTier`/`vibe` from the client. When the caller is the original host and the session is still in `warmup`, a changed tier/vibe triggers `resetSocialIcebreakerTier()` (`apps/server/src/services/socialIcebreakerTierReset.ts`) rather than reusing the previous plan.
+- The reset clears `runPlan`, `completedPhases`, `phaseSelectionId`, and phase-specific ephemeral state, then re-advances from `waiting` into `warmup` (or `phase_selection` for `custom`).
+- Reset is blocked when:
+  - the caller is not the host,
+  - the session has already left `warmup`,
+  - the requested tier is `custom` and `SOCIAL_ICEBREAKER_CUSTOM_MODE_ENABLED` is false.
+
+**UX rules**
+- The disclosure is **not** shown to normal matched-group players (`isTestMode === false`).
+- Tier reset is only actionable while `currentPhase === 'warmup'`; once the host advances past warmup the reset CTA is hidden.
+- Custom mode remains host-driven free-form; switching from a preset tier to `custom` clears the fixed run plan and enters `phase_selection`.
+- Analytics: `test_mode_disclosure_view`, `test_mode_reset_tap`, `test_mode_reset_success`, `test_mode_reset_error`.
 
 ### Session State (`SocialSessionState`)
 

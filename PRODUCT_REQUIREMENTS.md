@@ -801,7 +801,7 @@ WHERE id = user_id;
 #### Discover Hero Promo Banner (top-of-page)
 
 - **Component:** `HeroPromoBanner` (`apps/mini-program/src/components/HeroPromoBanner.tsx`) — single hero surface, not a carousel
-- **Visual:** Full-bleed Lovart illustration. The banner is bundled locally (`banner-hero-lovart-v1.webp` under `assets/promo-local/`) for instant first paint and falls back to the CDN copy on `onError`; PNG fallback is available via CDN if the runtime rejects WebP. Copy-side purple/pink wash, glass copy panel (eyebrow + title + subtitle + CTA), breathing CTA pill with circular arrow, 5 sparkles drifting on negative-delay loop
+- **Visual:** Full-bleed Lovart illustration. The banner is **CDN-only** (`/assets/promo/banner-hero-lovart-v1.webp`); a gradient overlay skeleton preserves first paint while the asset loads. PNG fallback is available via CDN if the runtime rejects WebP. Copy-side purple/pink wash, glass copy panel (eyebrow + title + subtitle + CTA), breathing CTA pill with circular arrow, 5 sparkles drifting on negative-delay loop
 - **Variant selection:**
   - No archetype → variant C ("先测再玩" — nudges personality test)
   - Has archetype → variant A ("本周推荐" — this weekend) by default

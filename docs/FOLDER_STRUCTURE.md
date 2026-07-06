@@ -319,7 +319,7 @@ apps/mini-program/
 │       │   ├── reveal-icons/      # Squad-unboxing reveal emblems (CDN)
 │       │   ├── achievement-badges/ # Gamification achievement toasts (CDN)
 │       │   ├── info-labels/       # Semantic / info label icons (bundled locally; calendar/location/people/target inline labels)
-│       │   ├── rating-faces/      # Rating / evaluation faces (bundled locally)
+│       │   ├── rating-faces/      # Rating / evaluation faces (CDN-only; emoji fallback)
 │       │   ├── phase-icons/       # Icebreaker phase emblems (CDN)
 │       │   └── ui/                # Profile / settings list icons (bundled locally)
 │       ├── fonts/                 # Brand fonts (partially bundled, partially CDN)

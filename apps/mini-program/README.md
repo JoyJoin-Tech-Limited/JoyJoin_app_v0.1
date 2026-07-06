@@ -186,18 +186,19 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 - `src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-*.webp` → `dist/assets/pool-heroes/` (main-package local fallback that survives `clean:cdn-assets`; CDN primary via `assets/ceremony/`)
 - `src/pages/pool-registration/assets/pool-persona/` → `dist/pages/pool-registration/assets/pool-persona/` (persona snapshot card CDN fallbacks)
 
-*Icon tiers (bundled with @1x/@2x retina support via `JoyJoinIcon`; `status`/`semantic`/`ui` @3x stripped at build; `intent` ships as single 144×144 WebP):*
+*Icon tiers (bundled as single high-resolution bare `.webp` files; no `@2x`/`@3x` variants; WeChat downscales automatically. `validate:icon-transparency` fails the build if any bundled `src/assets/icons/**/*.webp` contains `@`):*
 - `src/assets/icons/mood-icons` (~16KB raw)
 - `src/assets/icons/chemistry-badges` (~16KB raw)
-- `src/assets/icons/status-icons` (~360KB raw, Lovart 5×5 status grid: alarm/bar-chart/bell/check/close/mirror/sparkle/unlock + legacy crown/info; `@3x` stripped at build)
+- `src/assets/icons/status-icons` (~360KB raw, Lovart 5×5 status grid: alarm/bar-chart/bell/check/close/mirror/sparkle/unlock + legacy crown/info)
 - `src/assets/icons/category-icons` (~108KB raw)
-- `src/assets/icons/intent-icons` (~51KB raw, single 144×144 WebP; no `@2x`/`@3x` variants — WeChat downscales)
-- `src/assets/icons/rating-faces` (~84KB raw, event-feedback 5-step rating selector)
-- `src/assets/icons/info-labels` (~216KB raw, semantic info labels such as calendar/location/people/target/globe; `@3x` stripped at build)
-- `src/assets/icons/ui` (~204KB raw, profile/settings list icons + gift/search/memo from Lovart 5×5 UI grid; `@3x` stripped at build)
+- `src/assets/icons/intent-icons` (~51KB raw, single 144×144 WebP)
+- `src/assets/icons/info-labels` (~216KB raw, semantic info labels such as calendar/location/people/target/globe)
+- `src/assets/icons/ui` (~204KB raw, profile/settings list icons + gift/search/memo from Lovart 5×5 UI grid)
 - `src/assets/icons/archetype` (~108KB raw, head icons for avatars)
 
 *Source-only icon tiers (uploaded to CDN, not copied to `dist`):*
+- `src/assets/icons/flow-icons` (~60KB source, center-hub / connections empty-state flow diagrams)
+- `src/assets/icons/rating-faces` (~84KB source, event-feedback 5-step rating selector)
 - `src/assets/icons/reaction-icons` (~120KB source)
 - `src/assets/icons/reveal-icons` (~156KB source)
 - `src/assets/icons/achievement-badges` (~144KB source)
@@ -235,10 +236,10 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 - Re-encode via `node scripts/optimize-ceremony-batch-c.mjs` / `node scripts/optimize-badges-batch-d.mjs` (q=55, 600px) before committing new tiles, then upload via the CDN workflow.
 
 *CDN-only assets (too large for bundle or non-critical):*
-Archetype full-body images (WebP primary + PNG fallback for canvas), matching heroes, Lovart illustrations (Batches A + B), Lovart ceremony & milestone heroes (Batches C + D), **phase-emblem** icon tier, reaction/reveal/achievement icon tiers, icebreaker backgrounds, celebration images, extra Xiaoyue expressions, mini-script heroes, ceremony heroes, milestone badges, **interest taxonomy v2.0 illustrations** (`images/interests/*.webp`). Loaded via `cdnAsset()` with route-based preloading via `routePreloadAssets.ts`. The icebreaker session also preloads `ICEBREAKER_PHASE_EMBLEM_ASSETS` on entry.
+Archetype full-body images (WebP primary + PNG fallback for canvas), matching heroes, Lovart illustrations (Batches A + B), Lovart ceremony & milestone heroes (Batches C + D), **phase-emblem** icon tier, **expression / rating-faces** icon tier (event-feedback 5-step selector), **flow-icons** (center-hub / connections empty-state flow diagrams), reaction/reveal/achievement icon tiers, icebreaker backgrounds, celebration images, extra Xiaoyue expressions, mini-script heroes, ceremony heroes, milestone badges, **interest taxonomy v2.0 illustrations** (`images/interests/*.webp`). Loaded via `cdnAsset()` with route-based preloading via `routePreloadAssets.ts`. The icebreaker session also preloads `ICEBREAKER_PHASE_EMBLEM_ASSETS` on entry.
 
-*Local-first with CDN fallback:*
-- Discover promo banner (`src/assets/promo/banner-hero-lovart-v1.webp`) is copied to `dist/assets/promo-local/` and loaded locally; `onError` falls back to the CDN copy under `assets/promo/`. This keeps the Discover hero instant on first paint.
+*CDN-only with local skeleton first paint:*
+- Discover promo banner (`src/assets/promo/banner-hero-lovart-v1.webp`) is uploaded to CDN and loaded via `cdnAsset('/assets/promo/banner-hero-lovart-v1.webp')`; a gradient overlay skeleton preserves first paint while the asset loads. The local `promo-local/` copy was removed in 2026-07-06 to keep the main package under the 2 MB ceiling.
 
 *CDN fallbacks for locally bundled assets:*
 - `ArchetypeHead` head icons (`src/assets/icons/archetype/archetype-*-head.webp`) are bundled locally; CDN fallback copies exist at the same path under `https://joyjoinapp.com/static/` for subpackage/cache-miss robustness.
