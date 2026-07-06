@@ -125,6 +125,7 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
       venueAddress: eventPoolGroups.venueAddress,
       finalDateTime: eventPoolGroups.finalDateTime,
       venueAssignmentStatus: eventPoolGroups.venueAssignmentStatus,
+      memberCount: eventPoolGroups.memberCount,
     })
     .from(eventPoolRegistrations)
     .innerJoin(eventPools, eq(eventPoolRegistrations.poolId, eventPools.id))
@@ -168,6 +169,7 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
     groupId: row.assignedGroupId ?? undefined,
     finalDateTime: row.finalDateTime?.toISOString?.() ?? undefined,
     venueAssignmentStatus: row.venueAssignmentStatus ?? undefined,
+    groupSize: row.memberCount ?? undefined,
     displayStatus: derivePoolDisplayStatus(
       row.matchStatus,
       row.venueAssignmentStatus,

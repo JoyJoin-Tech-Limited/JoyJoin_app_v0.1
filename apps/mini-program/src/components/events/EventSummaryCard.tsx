@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react'
+import React, { useMemo, useRef, useEffect } from 'react'
 import { View, Text, Image } from '@tarojs/components'
 import {
   ARCHETYPE_FAMILY_COLORS,
@@ -80,8 +80,11 @@ function formatClockPair(value: number): string {
 interface EventCountdownClockProps {
   target: string | null
   enabled: boolean
-  accentColor: string
+  /** When omitted the clock falls back to the primary brand color via CSS. */
+  accentColor?: string
   clockId: string
+  /** Compact vertical layout for the right info rail. */
+  compact?: boolean
 }
 
 const EventCountdownClock = React.memo(function EventCountdownClock({
@@ -89,6 +92,7 @@ const EventCountdownClock = React.memo(function EventCountdownClock({
   enabled,
   accentColor,
   clockId,
+  compact = false,
 }: EventCountdownClockProps) {
   const { display, segments, isUrgent, hasStarted, isLive } = useEventCountdown({
     target,
@@ -97,16 +101,50 @@ const EventCountdownClock = React.memo(function EventCountdownClock({
     elementId: clockId,
   })
 
+  // Track previous segment values to pulse only the digit group that changed.
+  const prevSegmentsRef = useRef(segments)
+  const [pulseSegment, setPulseSegment] = React.useState<'days' | 'hours' | 'minutes' | 'seconds' | null>(null)
+  const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (!segments || !prevSegmentsRef.current) {
+      prevSegmentsRef.current = segments
+      return
+    }
+
+    const prev = prevSegmentsRef.current
+    let changed: typeof pulseSegment = null
+    if (segments.seconds !== prev.seconds) changed = 'seconds'
+    else if (segments.minutes !== prev.minutes) changed = 'minutes'
+    else if (segments.hours !== prev.hours) changed = 'hours'
+    else if (segments.days !== prev.days) changed = 'days'
+
+    if (changed) {
+      setPulseSegment(changed)
+      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current)
+      pulseTimerRef.current = setTimeout(() => setPulseSegment(null), 160)
+    }
+    prevSegmentsRef.current = segments
+
+    return () => {
+      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current)
+    }
+  }, [segments])
+
   if (!display) {
     return null
   }
+
+  const clockStyle = accentColor
+    ? ({ '--clock-accent': accentColor } as React.CSSProperties)
+    : undefined
 
   if (hasStarted) {
     return (
       <View
         id={clockId}
         className='footprint-oracle-card__clock footprint-oracle-card__clock--started'
-        style={{ '--clock-accent': accentColor } as React.CSSProperties}
+        style={clockStyle}
         aria-label={display}
       >
         <View className='footprint-oracle-card__clock-started-dot' />
@@ -128,8 +166,11 @@ const EventCountdownClock = React.memo(function EventCountdownClock({
   return (
     <View
       id={clockId}
-      className='footprint-oracle-card__clock'
-      style={{ '--clock-accent': accentColor } as React.CSSProperties}
+      className={[
+        'footprint-oracle-card__clock',
+        compact ? 'footprint-oracle-card__clock--compact' : '',
+      ].filter(Boolean).join(' ')}
+      style={clockStyle}
       aria-label={`倒计时 ${display}`}
       aria-live={isLive ? 'polite' : undefined}
       aria-atomic='true'
@@ -138,24 +179,24 @@ const EventCountdownClock = React.memo(function EventCountdownClock({
         {days > 0 && (
           <>
             <View className='footprint-oracle-card__clock-cell'>
-              <Text className='footprint-oracle-card__clock-value'>{formatClockPair(days)}</Text>
+              <Text className={['footprint-oracle-card__clock-value', pulseSegment === 'days' ? 'footprint-oracle-card__clock-value--pulse' : ''].filter(Boolean).join(' ')}>{formatClockPair(days)}</Text>
               <Text className='footprint-oracle-card__clock-unit'>天</Text>
             </View>
             <Text className='footprint-oracle-card__clock-separator'>:</Text>
           </>
         )}
         <View className='footprint-oracle-card__clock-cell'>
-          <Text className='footprint-oracle-card__clock-value'>{formatClockPair(hours)}</Text>
+          <Text className={['footprint-oracle-card__clock-value', pulseSegment === 'hours' ? 'footprint-oracle-card__clock-value--pulse' : ''].filter(Boolean).join(' ')}>{formatClockPair(hours)}</Text>
           <Text className='footprint-oracle-card__clock-unit'>时</Text>
         </View>
         <Text className='footprint-oracle-card__clock-separator'>:</Text>
         <View className='footprint-oracle-card__clock-cell'>
-          <Text className='footprint-oracle-card__clock-value'>{formatClockPair(minutes)}</Text>
+          <Text className={['footprint-oracle-card__clock-value', pulseSegment === 'minutes' ? 'footprint-oracle-card__clock-value--pulse' : ''].filter(Boolean).join(' ')}>{formatClockPair(minutes)}</Text>
           <Text className='footprint-oracle-card__clock-unit'>分</Text>
         </View>
         <Text className='footprint-oracle-card__clock-separator'>:</Text>
         <View className='footprint-oracle-card__clock-cell'>
-          <Text className='footprint-oracle-card__clock-value'>{formatClockPair(seconds)}</Text>
+          <Text className={['footprint-oracle-card__clock-value', pulseSegment === 'seconds' ? 'footprint-oracle-card__clock-value--pulse' : ''].filter(Boolean).join(' ')}>{formatClockPair(seconds)}</Text>
           <Text className='footprint-oracle-card__clock-unit'>秒</Text>
         </View>
       </View>
@@ -208,9 +249,18 @@ export interface EventSummaryCardProps {
   role?: string
   ariaLabel?: string
   animationDelay?: string
+  /**
+   * Right-side info rail. When provided, the card renders a two-rail layout
+   * with `rightRail` pinned to the right. Used by FootprintOracleCard.
+   */
+  rightRail?: React.ReactNode
+  /** When true, the card renders in a two-rail layout mode. */
+  railMode?: boolean
+  /** Accessible description for the right rail contents (e.g. countdown, group size, price). */
+  railAriaLabel?: string
 }
 
-export default React.memo(function EventSummaryCard({
+function EventSummaryCard({
   id,
   title,
   eventType,
@@ -231,6 +281,9 @@ export default React.memo(function EventSummaryCard({
   role,
   ariaLabel,
   animationDelay,
+  rightRail,
+  railMode = false,
+  railAriaLabel,
 }: EventSummaryCardProps) {
   const { isDegradation: deviceIsDegradation } = useDeviceTier()
   const effectiveDegradation = isDegradationProp || deviceIsDegradation
@@ -286,10 +339,11 @@ export default React.memo(function EventSummaryCard({
         dateTimeText,
         locationLine ?? undefined,
         footerHint,
+        railAriaLabel,
       ]
         .filter(Boolean)
         .join('，'),
-    [title, statusLabel, dateTimeText, locationLine, footerHint],
+    [title, statusLabel, dateTimeText, locationLine, footerHint, railAriaLabel],
   )
 
   const waitingCopy = STATUS_WAITING_COPY[status]
@@ -299,6 +353,7 @@ export default React.memo(function EventSummaryCard({
     `footprint-oracle-card--family-${family}`,
     isTerminal ? 'footprint-oracle-card--terminal' : '',
     isMatched ? 'footprint-oracle-card--matched' : '',
+    railMode ? 'footprint-oracle-card--rail' : '',
     effectiveDegradation ? 'footprint-oracle-card--low-end' : '',
     reduceMotion ? 'footprint-oracle-card--reduced-motion' : '',
     className,
@@ -335,51 +390,73 @@ export default React.memo(function EventSummaryCard({
       )}
 
       <View className='footprint-oracle-card__content'>
-        {/* L2 Topline: status pill + LED countdown */}
-        <View className='footprint-oracle-card__topline'>
-          <View className='footprint-oracle-card__pulse-pill'>
-            <View
-              className={`footprint-oracle-card__pulse-dot${isLiveStatus ? ' footprint-oracle-card__pulse-dot--live' : ''}`}
-              style={{ backgroundColor: familyColor }}
-            />
-            <Text
-              className='footprint-oracle-card__pulse-label'
-              style={{ color: familyColor }}
-            >
-              {momentumLabel}
-            </Text>
+        <View className='footprint-oracle-card__main'>
+          <View className='footprint-oracle-card__body'>
+            {/* L2 Topline: status pill only when railMode (clock lives in right rail) */}
+            <View className='footprint-oracle-card__topline'>
+              <View className='footprint-oracle-card__pulse-pill'>
+                <View
+                  className={`footprint-oracle-card__pulse-dot${isLiveStatus ? ' footprint-oracle-card__pulse-dot--live' : ''}`}
+                  style={{ backgroundColor: familyColor }}
+                />
+                <Text
+                  className='footprint-oracle-card__pulse-label'
+                  style={{ color: familyColor }}
+                >
+                  {momentumLabel}
+                </Text>
+              </View>
+              {!railMode && (
+                <EventCountdownClock
+                  target={dateTime ?? null}
+                  enabled={clockEnabled}
+                  accentColor={familyColor}
+                  clockId={`${uid}-clock`}
+                />
+              )}
+            </View>
+
+            {/* L1 Title */}
+            <View className='footprint-oracle-card__title'>
+              {title ?? '悦聚活动'}
+            </View>
+
+            {/* L3 Date / time / location line */}
+            <View className='footprint-oracle-card__meta'>
+              <Text className='footprint-oracle-card__date-time'>{dateTimeText}</Text>
+              {locationLine && (
+                <Text className='footprint-oracle-card__location'>{locationLine}</Text>
+              )}
+              {waitingCopy && (
+                <Text className='footprint-oracle-card__waiting-hint'>{waitingCopy}</Text>
+              )}
+            </View>
+
+            {/* L4 Footer hint (kept for non-rail consumers) */}
+            {footerHint && (
+              <View className='footprint-oracle-card__footer'>
+                <Text className='footprint-oracle-card__footer-hint'>{footerHint}</Text>
+              </View>
+            )}
           </View>
-          <EventCountdownClock
-            target={dateTime ?? null}
-            enabled={clockEnabled}
-            accentColor={familyColor}
-            clockId={`${uid}-clock`}
-          />
-        </View>
 
-        {/* L1 Title */}
-        <View className='footprint-oracle-card__title'>
-          {title ?? '悦聚活动'}
-        </View>
-
-        {/* L3 Date / time / location line */}
-        <View className='footprint-oracle-card__meta'>
-          <Text className='footprint-oracle-card__date-time'>{dateTimeText}</Text>
-          {locationLine && (
-            <Text className='footprint-oracle-card__location'>{locationLine}</Text>
-          )}
-          {waitingCopy && (
-            <Text className='footprint-oracle-card__waiting-hint'>{waitingCopy}</Text>
+          {railMode && rightRail && (
+            <View className='footprint-oracle-card__rail'>
+              {rightRail}
+            </View>
           )}
         </View>
-
-        {/* L4 Footer hint */}
-        {footerHint && (
-          <View className='footprint-oracle-card__footer'>
-            <Text className='footprint-oracle-card__footer-hint'>{footerHint}</Text>
-          </View>
-        )}
       </View>
     </View>
   )
-})
+}
+
+// Expose the countdown clock as a static sub-component so the right-rail
+// layout in FootprintOracleCard can reuse it without duplicating logic.
+type EventSummaryCardComponent = React.NamedExoticComponent<EventSummaryCardProps> & {
+  CountdownClock: typeof EventCountdownClock
+}
+const MemoEventSummaryCard = React.memo(EventSummaryCard) as unknown as EventSummaryCardComponent
+MemoEventSummaryCard.CountdownClock = EventCountdownClock
+
+export default MemoEventSummaryCard

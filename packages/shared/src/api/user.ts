@@ -67,6 +67,11 @@ export interface JoinedEventSummary {
   /** Pool registration ID, present only for pool-based events. */
   registrationId?: string
   /**
+   * Group size for pool events. Only meaningful when the user has been matched
+   * into a group (i.e. groupId is set).
+   */
+  groupSize?: number
+  /**
    * Derived user-facing status that reflects the full matching + venue lifecycle.
    * Prefer this over `status` when rendering event cards.
    */
