@@ -11,8 +11,8 @@ import { TOAST_MEDIUM_MS } from '../../../lib/utils/uiConstants'
 import { haptics } from '../../../lib/utils/haptics'
 import { getUserDisplayName } from '../icebreakerSessionModel'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
-import { cdnAsset } from '../../../lib/utils/cdnAssets'
-import { VibeId, VIBE_TO_API } from '../../../lib/vibeMapping'
+import { VIBE_TO_API, type VibeId } from '../../../lib/vibeMapping'
+import { TIER_PRESETS, TIER_CARD_BACKGROUNDS, type TierPreset } from '../tierPresets'
 import Button from '../../../components/ui/Button'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 
@@ -63,72 +63,6 @@ export const VIBE_OPTIONS: Array<{
   { id: 'balanced', display: '均衡', hint: '灵活混搭', description: '均衡搭配，默认推荐' },
   { id: 'play_fun', display: '暢玩', hint: '游戏为主', description: '活力互动，轻松畅玩' },
 ]
-
-export type TierPresetId = 'easy-start' | 'deep-chat' | 'play-fun'
-
-export interface TierPreset {
-  id: TierPresetId
-  tier: TierMachineId
-  vibe: VibeId
-  title: string
-  subtitle: string
-  duration: string
-  gameCount: string
-  description: string
-  recommended?: boolean
-  /** Visual token retained for analytics/reference. Maps to the full-card background art. */
-  iconToken: 'sparkle' | 'heart' | 'controller'
-}
-
-/** Opinionated tier+vibe presets. Reduces the 3×3 grid to 3 human intentions. */
-export const TIER_PRESETS: TierPreset[] = [
-  {
-    id: 'easy-start',
-    tier: 'breeze',
-    vibe: 'balanced',
-    title: '轻松破冰',
-    subtitle: '对话为主 · 适合初次见面',
-    duration: '40min',
-    gameCount: '2 个游戏',
-    description: '从轻快小游戏开始，让大家慢慢熟络',
-    iconToken: 'sparkle',
-  },
-  {
-    id: 'deep-chat',
-    tier: 'glow',
-    vibe: 'deep_chat',
-    title: '深度畅聊',
-    subtitle: '沉浸交流 · 默认推荐',
-    duration: '60min',
-    gameCount: '3 个游戏',
-    description: '更多走心话题，聊到大家都不想散场',
-    recommended: true,
-    iconToken: 'heart',
-  },
-  {
-    id: 'play-fun',
-    tier: 'blaze',
-    vibe: 'play_fun',
-    title: '游戏狂欢',
-    subtitle: '活力互动 · 适合熟人群体',
-    duration: '90min',
-    gameCount: '5-6 个游戏',
-    description: '全量游戏环节，大家一起玩过瘾',
-    iconToken: 'controller',
-  },
-]
-
-/**
- * Tier card side-art is served from the CDN, consistent with the rest of the
- * Lovart icebreaker asset tree. The source files live in
- * `src/assets/lovart/icebreaker/` and are uploaded via `upload:cdn-assets`.
- */
-const TIER_CARD_BACKGROUNDS: Record<'breeze' | 'glow' | 'blaze' | 'custom', string> = {
-  breeze: cdnAsset('/assets/lovart/icebreaker/tier-card-breeze.webp'),
-  glow: cdnAsset('/assets/lovart/icebreaker/tier-card-glow.webp'),
-  blaze: cdnAsset('/assets/lovart/icebreaker/tier-card-blaze.webp'),
-  custom: cdnAsset('/assets/lovart/icebreaker/tier-card-custom.webp'),
-}
 
 const YUEZAI_REACTIONS: Record<TierMachineId, Record<VibeId, string>> = {
   breeze: {
@@ -223,7 +157,6 @@ export default function TierSelectorPage() {
   const [fadeKey, setFadeKey] = useState(0)
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  const runPlanTemplatesEnabled = user?.features?.runPlanTemplatesEnabled ?? false
   const customModeEnabled = user?.features?.socialIcebreakerCustomModeEnabled ?? true
 
   // Reset transient flags on swipe-back / foreground
@@ -245,14 +178,6 @@ export default function TierSelectorPage() {
     }
   }, [])
 
-  // Force vibe to balanced when run-plan template flag is off
-  useEffect(() => {
-    if (!runPlanTemplatesEnabled) {
-      setSelectedVibe('balanced')
-      setShowAdvanced(false)
-    }
-  }, [runPlanTemplatesEnabled])
-
   // Reset to a visible tier if custom mode is disabled while custom was selected
   useEffect(() => {
     if (!customModeEnabled && selectedTier === 'custom') {
@@ -264,7 +189,7 @@ export default function TierSelectorPage() {
   // Trigger fade animation when tier or vibe changes
   const handleSelectCombo = useCallback((tier: TierMachineId, vibe: VibeId) => {
     setSelectedTier(tier)
-    const nextVibe = runPlanTemplatesEnabled && tier !== 'custom' ? vibe : 'balanced'
+    const nextVibe = tier !== 'custom' ? vibe : 'balanced'
     setSelectedVibe(nextVibe)
     setFadeKey((k) => k + 1)
     if (!shouldReduceMotion) haptics('light')
@@ -273,7 +198,7 @@ export default function TierSelectorPage() {
       vibe: nextVibe,
       source: tier === 'custom' ? 'custom_card' : 'grid',
     })
-  }, [runPlanTemplatesEnabled, shouldReduceMotion, sessionId])
+  }, [shouldReduceMotion, sessionId])
 
   const handleSelectPreset = useCallback((preset: TierPreset) => {
     setSelectedTier(preset.tier)
@@ -396,13 +321,9 @@ export default function TierSelectorPage() {
 
       {/* Tier selection surface */}
       <View className='tier-selector__section'>
-        <Text className='tier-selector__section-label'>
-          {runPlanTemplatesEnabled ? '由你决定今晚的节奏' : '环节时长'}
-        </Text>
+        <Text className='tier-selector__section-label'>由你决定今晚的节奏</Text>
 
-        {runPlanTemplatesEnabled ? (
-          <>
-            <View className='tier-selector__preset-list'>
+        <View className='tier-selector__preset-list'>
               {TIER_PRESETS.map((preset) => {
                 const isActive = selectedTier === preset.tier && selectedVibe === preset.vibe
                 return (
@@ -517,44 +438,6 @@ export default function TierSelectorPage() {
                 ))}
               </View>
             )}
-          </>
-        ) : (
-          /* Run-plan templates disabled: show simplified tier rows only */
-          <View className='tier-selector__grid tier-selector__grid--simple'>
-            {TIER_OPTIONS.map((tier) => (
-              <View
-                key={tier.id}
-                className={`tier-selector__grid-row tier-selector__grid-row--simple ${selectedTier === tier.id ? 'tier-selector__grid-row--simple-active' : ''}`}
-                onClick={() => handleSelectCombo(tier.id, 'balanced')}
-                hoverClass='tier-selector__grid-row--simple-pressed'
-                hoverStartTime={0}
-                hoverStayTime={200}
-                aria-label={`${resolveTierDisplay(tier.id, { glowVariant: 'default' })}，${tier.duration}，${tier.gameCount}`}
-                role='button'
-                aria-pressed={selectedTier === tier.id}
-              >
-                <View className='tier-selector__grid-row-header'>
-                  <Text className='tier-selector__grid-row-name'>
-                    {resolveTierDisplay(tier.id, { glowVariant: 'default' })}
-                  </Text>
-                  <Text className='tier-selector__grid-row-meta'>
-                    {tier.duration} · {tier.gameCount}
-                  </Text>
-                  {tier.id === 'glow' && (
-                    <Text className='tier-selector__grid-row-tag'>推荐</Text>
-                  )}
-                </View>
-                <View className='tier-selector__grid-row-check-area'>
-                  {selectedTier === tier.id && (
-                    <View className='tier-selector__grid-cell-check'>
-                      <JoyJoinIcon emoji='✓' size={20} />
-                    </View>
-                  )}
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
       </View>
 
       {/* Custom mode card */}

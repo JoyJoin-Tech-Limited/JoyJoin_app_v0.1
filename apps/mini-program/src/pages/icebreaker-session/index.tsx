@@ -38,8 +38,9 @@ import {
   type SessionPhase,
   WarmupPhaseView,
 } from './phaseViews'
-import { apiVibeToClient } from '../../lib/vibeMapping'
+import { apiVibeToClient, VIBE_TO_API, type VibeId } from '../../lib/vibeMapping'
 import IcebreakerTierSelector from './components/IcebreakerTierSelector'
+import IcebreakerTierSheet, { type TierSheetSelection } from './components/IcebreakerTierSheet'
 import CustomModeSection from './components/CustomModeSection'
 import { PhaseIntroOverlay } from './overlays/PhaseIntroOverlay'
 import { MiniScriptPhaseView } from './phases/MiniScriptPhaseView'
@@ -99,6 +100,8 @@ export default function IcebreakerSessionPage() {
   const [dismissedSuggestionAt, setDismissedSuggestionAt] = useState<string | null>(null)
   const [showPhaseIntro, setShowPhaseIntro] = useState(false)
   const [phaseToast, setPhaseToast] = useState<{ visible: boolean; text: ReactNode }>({ visible: false, text: '' })
+  const [isTierSheetOpen, setIsTierSheetOpen] = useState(false)
+  const [pendingTierSwitch, setPendingTierSwitch] = useState<TierSheetSelection | null>(null)
   const startAttemptRef = useRef<string | null>(null)
   const prevPhaseRef = useRef<SessionPhase>('waiting')
   const customSessionCompletedRef = useRef(false)
@@ -567,8 +570,8 @@ export default function IcebreakerSessionPage() {
 
   const [topicsError, setTopicsError] = useState(false)
 
-  const handleSetTier = useCallback(
-    (tier: TierMachineId) => {
+  const executeTierSwitch = useCallback(
+    async (tier: TierMachineId, vibe: VibeId) => {
       if (!socialSessionId || !session || pendingAction !== null) {
         return
       }
@@ -576,32 +579,104 @@ export default function IcebreakerSessionPage() {
       logInfo('[IcebreakerSession] Setting tier', {
         socialSessionId,
         tier,
+        vibe,
       })
 
       setPendingAction('set-tier')
 
-      void apiRequest({
-        path: `/api/social-icebreaker/${socialSessionId}/set-tier`,
-        method: 'POST',
-        data: { tier, vibe: session.vibe },
-      })
-        .then(() => {
-          void socialSessionQuery.refetch()
+      try {
+        await apiRequest({
+          path: `/api/social-icebreaker/${socialSessionId}/set-tier`,
+          method: 'POST',
+          data: {
+            tier,
+            vibe: tier === 'custom' ? undefined : VIBE_TO_API[vibe],
+          },
         })
-        .catch((err: unknown) => {
-          logError('[IcebreakerSession] Set tier failed', { error: err })
-          void Taro.showToast({
-            title: '切换没成功，再试试',
-            icon: 'none',
-            duration: 2000,
-          })
+
+        socialIcebreakerAnalytics.track(
+          'icebreaker_session_tier_changed',
+          socialSessionId,
+          session.icebreakerSessionId,
+          phase,
+          {
+            fromTier: session.eventTier,
+            toTier: tier,
+            fromMode: session.eventTier === 'custom' ? 'custom' : 'preset',
+            toMode: tier === 'custom' ? 'custom' : 'preset',
+            playerCount,
+          },
+        )
+
+        await socialSessionQuery.refetch()
+        Taro.showToast({
+          title: `已切换为${tier === 'custom' ? '自由局' : '新模式'}`,
+          icon: 'success',
+          duration: TOAST_DEFAULT_MS,
         })
-        .finally(() => {
-          setPendingAction(null)
+      } catch (err: unknown) {
+        logError('[IcebreakerSession] Set tier failed', { error: err })
+        void Taro.showToast({
+          title: '切换没成功，再试试',
+          icon: 'none',
+          duration: 2000,
         })
+      } finally {
+        setPendingAction(null)
+      }
     },
-    [socialSessionId, session, socialSessionQuery, pendingAction],
+    [socialSessionId, session, socialSessionQuery, pendingAction, phase, playerCount],
   )
+
+  const handleConfirmTierSwitch = useCallback(
+    (selection: TierSheetSelection) => {
+      const currentMode = session?.eventTier === 'custom' ? 'custom' : 'preset'
+      const nextMode = selection.tier === 'custom' ? 'custom' : 'preset'
+      const needsCustomConfirm = currentMode !== nextMode
+
+      if (needsCustomConfirm) {
+        setPendingTierSwitch(selection)
+        setIsTierSheetOpen(false)
+        return
+      }
+
+      setIsTierSheetOpen(false)
+      void executeTierSwitch(selection.tier, selection.vibe)
+    },
+    [session?.eventTier, executeTierSwitch],
+  )
+
+  const handleDismissCustomConfirm = useCallback(() => {
+    setPendingTierSwitch(null)
+  }, [])
+
+  const handleAcceptCustomConfirm = useCallback(() => {
+    if (!pendingTierSwitch) return
+    const selection = pendingTierSwitch
+    setPendingTierSwitch(null)
+    void executeTierSwitch(selection.tier, selection.vibe)
+  }, [pendingTierSwitch, executeTierSwitch])
+
+  useEffect(() => {
+    if (!pendingTierSwitch) return
+
+    const isSwitchingToCustom = pendingTierSwitch.tier === 'custom'
+    void Taro.showModal({
+      title: isSwitchingToCustom ? '切换为自由局？' : '切换为预设模式？',
+      content: isSwitchingToCustom
+        ? '切换后将由你手动选择每个环节，当前已生成的环节顺序不会保留。'
+        : '切换后系统会自动生成完整环节，自由局下已选择的环节不会保留。',
+      confirmText: '确认切换',
+      cancelText: '取消',
+      success: (res) => {
+        if (res.confirm) {
+          handleAcceptCustomConfirm()
+        } else {
+          handleDismissCustomConfirm()
+        }
+      },
+    })
+  }, [pendingTierSwitch, handleAcceptCustomConfirm, handleDismissCustomConfirm])
 
   const handleCompleteChallenge = useCallback(() => {
     void performSocialAction('micro-complete', '/micro-challenge/complete', {})
@@ -890,7 +965,17 @@ export default function IcebreakerSessionPage() {
         />
       )}
 
-      <View className='icebreaker__phase-shell' key={phase}>
+      {showTestModeDisclosure && session?.isTestModeSkip ? (
+        <TestModeDisclosure
+          bots={session.testModeBots}
+          socialSessionId={socialSessionId ?? undefined}
+          icebreakerSessionId={session.icebreakerSessionId}
+          onContinue={handleTestModeContinue}
+          isLoading={pendingAction === 'advance'}
+        />
+      ) : (
+        <>
+          <View className='icebreaker__phase-shell' key={phase}>
         {phase === 'waiting' && (
           <>
             <WaitingPhase
@@ -913,13 +998,16 @@ export default function IcebreakerSessionPage() {
           </>
         )}
 
-        {(phase === 'waiting' || phase === 'warmup') && isHost && session && (
-          <IcebreakerTierSelector
-            activeTier={session.eventTier}
-            customEnabled={features?.socialIcebreakerCustomModeEnabled !== false}
-            isBusy={pendingAction === 'set-tier'}
-            onSetTier={handleSetTier}
-          />
+        {phase === 'warmup' && session && (
+          <View className='icebreaker__warmup-tier-wrap'>
+            <IcebreakerTierSelector
+              currentTier={session?.eventTier ?? 'glow'}
+              currentVibe={apiVibeToClient(session?.vibe)}
+              isHost={isHost}
+              canChange={false}
+              disabledHint='热身已开始，模式不可更换'
+            />
+          </View>
         )}
 
         {phase === 'warmup' && session && (
@@ -1160,6 +1248,18 @@ export default function IcebreakerSessionPage() {
       {hostControls}
 
       <View className='icebreaker__spacer' />
+    </>
+  )}
+
+      <IcebreakerTierSheet
+        isOpen={isTierSheetOpen}
+        currentTier={session?.eventTier ?? 'glow'}
+        currentVibe={apiVibeToClient(session?.vibe)}
+        customEnabled={features?.socialIcebreakerCustomModeEnabled !== false}
+        isBusy={pendingAction === 'set-tier'}
+        onClose={() => setIsTierSheetOpen(false)}
+        onConfirm={handleConfirmTierSwitch}
+      />
     </ScrollView>
   )
 }

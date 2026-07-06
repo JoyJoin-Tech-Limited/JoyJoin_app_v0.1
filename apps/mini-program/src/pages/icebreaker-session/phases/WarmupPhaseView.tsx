@@ -5,6 +5,7 @@ import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import type { AtmosphereMood, SocialTopic, SocialTopicPromptTiers } from '@shared/socialIcebreaker'
 import { localAsset } from '../../../lib/utils/cdnAssets'
+import { stripEmojis } from '../../../lib/utils/emojiGuard'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import ArchetypeGlyph from '../../../components/mascot/ArchetypeGlyph'
 import Button from '../../../components/ui/Button'
@@ -165,6 +166,7 @@ export function WarmupPhaseView({
   const currentTurnName = currentTurnParticipant?.displayName || '当前玩家'
   const isCurrentTurn = !!resolvedTurnUserId && resolvedTurnUserId === currentUserId
   const isReady = !!resolvedTurnUserId && readyUserIds.includes(resolvedTurnUserId)
+  const isTimerExpired = secondsLeft <= 0
   const everyoneReady = participants.length > 0 && readyUserIds.length >= participants.length
   const canRevealTopic = !!currentTopic && !topicRevealed && (isCurrentTurn || isHost)
   const moodLabel = getMoodLabel(selectedMood)
@@ -312,8 +314,9 @@ export function WarmupPhaseView({
   )
 
   const TopicBack = useCallback(
-    () =>
-      currentTopic ? (
+    () => {
+      const sanitizedQuestion = currentTopic ? stripEmojis(currentTopic.question) : ''
+      return currentTopic ? (
         <View className='warmup-card-back'>
           {depthBadge && (
             <View
@@ -325,7 +328,7 @@ export function WarmupPhaseView({
           <View className='warmup-card-back__emoji'>
             <JoyJoinIcon emoji={currentTopic.emoji ?? ''} size={56} />
           </View>
-          <Text className='warmup-card-back__question'>{currentTopic.question}</Text>
+          <Text className='warmup-card-back__question'>{sanitizedQuestion}</Text>
 
           {vibe === 'deep_chat' && currentTopic.promptTiers ? (
             <TierPromptReveal promptTiers={currentTopic.promptTiers} reduceMotion={reduceMotion} />
@@ -347,7 +350,8 @@ export function WarmupPhaseView({
           </View>
           <Text className='warmup-card-back__question'>话题卡准备中…</Text>
         </View>
-      ),
+      )
+    },
     [currentTopic, currentIndex, topics.length, selectedMood, moodLabel, depthBadge, vibe, reduceMotion],
   )
 

@@ -102,6 +102,8 @@ import {
 import { registerExtendedRoutes } from './socialIcebreakerExtended';
 import { enqueueRunPlanPreGeneration, shouldSkipOnDemandGeneration } from '../jobs/preGenerationQueue';
 import { recordVoteOptimistically } from '../lib/optimisticSync';
+import { resetSocialIcebreakerTier } from '../services/socialIcebreakerTierReset';
+import { getSingleTestMetaForSessionStart } from '../services/singleTestService';
 
 import socialIcebreakerTierRouter from './socialIcebreakerTier';
 import socialIcebreakerCustomRouter from './socialIcebreakerCustom';
@@ -177,6 +179,22 @@ const startBodySchema = z.object({
   eventTier: z.string().optional(),
   vibe: z.string().optional(),
 });
+
+const VALID_START_TIERS: TierMachineId[] = ['breeze', 'glow', 'blaze', 'custom'];
+const VALID_START_VIBES: Array<'chat' | 'balanced' | 'game'> = ['chat', 'balanced', 'game'];
+
+function resolveIncomingTier(eventTier: string | undefined): TierMachineId | undefined {
+  if (!eventTier) return undefined;
+  const mapped = LEGACY_TIER_MAP[eventTier] ?? eventTier;
+  return VALID_START_TIERS.includes(mapped as TierMachineId) ? (mapped as TierMachineId) : undefined;
+}
+
+function resolveIncomingVibe(vibe: string | undefined): 'chat' | 'balanced' | 'game' | undefined {
+  if (!vibe) return undefined;
+  return VALID_START_VIBES.includes(vibe as 'chat' | 'balanced' | 'game')
+    ? (vibe as 'chat' | 'balanced' | 'game')
+    : undefined;
+}
 
 router.post('/start', async (req: any, res) => {
   const parsedBody = startBodySchema.safeParse(req.body);
@@ -266,11 +284,35 @@ router.post('/start', async (req: any, res) => {
     ensureSessionEnabledPhases(state);
     let shouldPersist = isResetSession || JSON.stringify(state.enabledPhases ?? []) !== enabledPhasesBefore;
 
+    // Detect a tier/vibe change from the mini-program tier-selector and reset
+    // the session accordingly. This fixes the case where a single-player test
+    // session is created as `glow` and later switched to `custom`.
+    let tierResetOccurred = false;
+    const resolvedIncomingTier = resolveIncomingTier(eventTier);
+    if (resolvedIncomingTier) {
+      const resolvedIncomingVibe = resolveIncomingVibe(vibe);
+      const customModeEnabled = await getFeatureFlag('socialIcebreakerCustomModeEnabled', true);
+      const resetResult = await resetSocialIcebreakerTier({
+        state,
+        newTier: resolvedIncomingTier,
+        newVibe: resolvedIncomingVibe,
+        userId,
+        resetSource: '/start',
+        customModeEnabled,
+      });
+      if (resetResult.reset) {
+        tierResetOccurred = true;
+        shouldPersist = true;
+      }
+    }
+
     // Recompile the run plan when the roster grows during warmup so that
     // phases with higher minPlayers (e.g. lie_detective) are included once
     // enough participants have joined. The first caller created the session
     // with playerCount=1, so the initial plan may have excluded those phases.
+    // Skip this when a tier reset just recompiled the plan.
     if (
+      !tierResetOccurred &&
       state.eventTier &&
       state.eventTier !== 'custom' &&
       state.currentPhase === 'warmup' &&
@@ -312,11 +354,8 @@ router.post('/start', async (req: any, res) => {
   // Create new social session — first caller becomes host.
   const socialSessionId = getSocialSessionId(sessionId);
   const now = Date.now();
-  const mappedTier = eventTier ? (LEGACY_TIER_MAP[eventTier] ?? eventTier) : undefined;
-  const VALID_TIERS: TierMachineId[] = ['breeze', 'glow', 'blaze', 'custom'];
-  let defaultTier: TierMachineId = !mappedTier ? await resolveIcebreakerDefaultTier(sessionId) : 'breeze';
-  const resolvedTier: TierMachineId = mappedTier && VALID_TIERS.includes(mappedTier as TierMachineId) ? mappedTier as TierMachineId : defaultTier;
-  const resolvedVibe: 'chat' | 'balanced' | 'game' = vibe && ['chat', 'balanced', 'game'].includes(vibe as string) ? vibe as 'chat' | 'balanced' | 'game' : 'balanced';
+  const resolvedTier: TierMachineId = resolveIncomingTier(eventTier) ?? 'breeze';
+  const resolvedVibe: 'chat' | 'balanced' | 'game' = resolveIncomingVibe(vibe) ?? 'balanced';
 
   if (resolvedTier === 'custom') {
     const customModeEnabled = await getFeatureFlag('socialIcebreakerCustomModeEnabled', true);
@@ -363,6 +402,23 @@ router.post('/start', async (req: any, res) => {
   } else {
     runPlan = await compileForSession(newState, resolvedTier);
     newState.runPlan = runPlan;
+  }
+
+  // Single-test mode: attach client-safe bot roster so the host sees a
+  // disclosure and read-only bot roster. Double-gated by isSingleTestMode()
+  // and a per-session flag so production phase engines never branch on this.
+  if (isSingleTestMode()) {
+    const singleTestMeta = await getSingleTestMetaForSessionStart(sessionId);
+    if (singleTestMeta) {
+      newState.singleTest = singleTestMeta;
+      logger.info('social_icebreaker_test_mode_session_created', {
+        sessionId,
+        socialSessionId,
+        groupId: singleTestMeta.groupId,
+        botCount: singleTestMeta.bots.length,
+        botArchetypes: singleTestMeta.bots.map((b) => b.archetype),
+      });
+    }
   }
 
   try {

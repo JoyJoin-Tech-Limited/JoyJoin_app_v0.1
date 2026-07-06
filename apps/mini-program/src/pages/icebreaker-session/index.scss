@@ -517,10 +517,20 @@ $__gold-accent:  $color-landed-gold;
     color: $color-text-muted;
   }
 
+  &__waiting-tier {
+    margin-top: $spacing-md;
+  }
+
   &__start-btn {
     @include button-primary;
     width: 100%;
     border: 0;
+  }
+
+  &__warmup-tier-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: $spacing-md;
   }
 
   // ═══════════════════════════════════════════════════════════════

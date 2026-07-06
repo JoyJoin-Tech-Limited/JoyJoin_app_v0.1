@@ -1,0 +1,58 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.tier-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-md;
+  border-radius: 100rpx;
+  background: rgba($color-primary, 0.08);
+  border: 2rpx solid rgba($color-primary, 0.12);
+  transition: background-color 150ms ease, transform 150ms ease;
+
+  &--editable {
+    cursor: pointer;
+
+    &:active {
+      background: rgba($color-primary, 0.12);
+      transform: scale(0.98);
+    }
+  }
+
+  &--readonly {
+    opacity: 0.9;
+  }
+
+  &__prefix {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+  }
+
+  &__value {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+  }
+
+  &__duration {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    font-family: $font-mono, monospace;
+  }
+
+  &__chevron {
+    width: 16rpx;
+    height: 16rpx;
+    border-right: 4rpx solid $color-primary;
+    border-bottom: 4rpx solid $color-primary;
+    transform: rotate(-45deg);
+    margin-left: 4rpx;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tier-chip {
+    transition: none;
+  }
+}
