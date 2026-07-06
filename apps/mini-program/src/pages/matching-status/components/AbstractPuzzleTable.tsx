@@ -146,10 +146,8 @@ export default function AbstractPuzzleTable({
             const src =
               attempt === 0
                 ? getPuzzlePieceSrc(piece.id, 'cdn')
-                : attempt === 1
-                  ? getPuzzlePieceSrc(piece.id, 'png')
-                  : getPuzzlePieceSrc(piece.id, 'local')
-            const fallback = attempt >= 3
+                : getPuzzlePieceSrc(piece.id, 'local')
+            const fallback = attempt >= 2
 
             const transform = isComplete
               ? `translate(0, 0) rotate(0deg) scale(1)`

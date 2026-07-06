@@ -17,7 +17,6 @@ export const MATCHING_PUZZLE_ASSETS = {
     return {
       id,
       webp: cdnAsset(`${base}.webp`),
-      png: cdnAsset(`${base}.png`),
       local: `${base}.webp`,
     }
   }),
@@ -50,12 +49,11 @@ export type PuzzleParticleColor = keyof typeof MATCHING_PUZZLE_ASSETS.particles
 
 export function getPuzzlePieceSrc(
   pieceId: number,
-  attempt: 'cdn' | 'png' | 'local'
+  attempt: 'cdn' | 'local'
 ): string {
   const asset = MATCHING_PUZZLE_ASSETS.pieces[pieceId - 1]
   if (!asset) return ''
   if (attempt === 'cdn') return asset.webp
-  if (attempt === 'png') return asset.png
   return localAsset(asset.local)
 }
 

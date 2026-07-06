@@ -23,7 +23,7 @@
  *
  * Environment variables:
  *   CDN_BACKEND          — rsync | s3 | oss | cos  (default: rsync)
- *   CDN_BASE_URL         — e.g. https://cdn.joyjoinapp.com/static
+ *   CDN_BASE_URL         — e.g. https://joyjoinapp.com/static
  *   CDN_RSYNC_HOST       — SSH host for rsync
  *   CDN_RSYNC_USER       — SSH user (default: current user)
  *   CDN_RSYNC_PATH       — Remote directory path (default: /var/www/cdn)

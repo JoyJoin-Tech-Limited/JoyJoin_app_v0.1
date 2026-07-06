@@ -1,6 +1,6 @@
 {
   "_comment": "Assets to upload to CDN for JoyJoin Mini Program. Run this after each build that changes assets.",
-  "cdnBaseUrl": "https://cdn.joyjoinapp.com/static",
+  "cdnBaseUrl": "https://joyjoinapp.com/static",
   "assets": [
     {
       "localPath": "assets/joyjoin-logo.webp",
@@ -261,6 +261,30 @@
     {
       "localPath": "assets/lovart/lovart-generic-error.webp",
       "cdnPath": "assets/lovart/lovart-generic-error.webp"
+    },
+    {
+      "localPath": "assets/lovart/puzzle/lovart-puzzle-piece-01-20260701-v1.webp",
+      "cdnPath": "assets/lovart/puzzle/lovart-puzzle-piece-01-20260701-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/puzzle/lovart-puzzle-piece-02-20260701-v1.webp",
+      "cdnPath": "assets/lovart/puzzle/lovart-puzzle-piece-02-20260701-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/puzzle/lovart-puzzle-piece-03-20260701-v1.webp",
+      "cdnPath": "assets/lovart/puzzle/lovart-puzzle-piece-03-20260701-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/puzzle/lovart-puzzle-piece-04-20260701-v1.webp",
+      "cdnPath": "assets/lovart/puzzle/lovart-puzzle-piece-04-20260701-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/puzzle/lovart-puzzle-piece-05-20260701-v1.webp",
+      "cdnPath": "assets/lovart/puzzle/lovart-puzzle-piece-05-20260701-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/puzzle/lovart-puzzle-piece-06-20260701-v1.webp",
+      "cdnPath": "assets/lovart/puzzle/lovart-puzzle-piece-06-20260701-v1.webp"
     },
     {
       "localPath": "assets/lovart/lovart-rewards-empty-20260423-v1.webp",

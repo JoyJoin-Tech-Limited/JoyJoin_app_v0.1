@@ -562,7 +562,7 @@ function AuthenticatedDiscover({
         <View className='discover-auth__explore-title-row'>
           <Image
             className='discover-auth__explore-mascot'
-            src={localAsset('/assets/xiaoyue-expressions/xiaoyue-coach-guide.webp')}
+            src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
             mode='aspectFit'
           />
           <Text className='discover-auth__explore-title'>探索体验</Text>

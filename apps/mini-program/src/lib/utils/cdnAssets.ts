@@ -5,7 +5,7 @@
  * assets from CDN instead of bundling them into the WeChat package.
  *
  * Example:
- *   TARO_APP_CDN_BASE_URL=https://cdn.joyjoinapp.com/static
+ *   TARO_APP_CDN_BASE_URL=https://joyjoinapp.com/static
  *
  * Production builds MUST have a CDN base URL set. Local dev may fall back
  * to local paths, but a warning is emitted.

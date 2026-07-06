@@ -1,26 +1,22 @@
 import { View, Text, Image } from '@tarojs/components'
 import { useCallback, useMemo, useState } from 'react'
 import { getArchetypeTokens } from '@shared/archetypeColorTokens'
-import { cdnAsset, localAsset, useCdnFirstSrc } from '../../../lib/utils/cdnAssets'
+import { cdnAsset, useCdnFirstSrc } from '../../../lib/utils/cdnAssets'
 import ArchetypeHead from '../../../components/mascot/ArchetypeHead'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
 import type { PoolEventType } from '../flowConfig'
 import './PoolRegistrationHero.scss'
 
 // Primary source: CDN (fast once Tencent Cloud CDN is enabled).
-// Fallback source: main-package local copy that survives clean:cdn-assets.
-// Subpackage local copy is kept as a tertiary fallback for offline resilience.
+// Fallback source: subpackage local copy for offline resilience.
 const HERO_BASE_PATH = '/assets/ceremony/lovart-pool-registration-hero'
 const DINING_HERO_CDN = cdnAsset(`${HERO_BASE_PATH}-dining-20260702-v2.webp`)
 const DRINKS_HERO_CDN = cdnAsset(`${HERO_BASE_PATH}-drinks-20260702-v2.webp`)
-const DINING_HERO_LOCAL = localAsset('/assets/pool-heroes/lovart-pool-registration-hero-dining-20260702-v2.webp')
-const DRINKS_HERO_LOCAL = localAsset('/assets/pool-heroes/lovart-pool-registration-hero-drinks-20260702-v2.webp')
 const DINING_HERO_SUBPACKAGE = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v2.webp'
 const DRINKS_HERO_SUBPACKAGE = '/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v2.webp'
 
 const HERO_ATTEMPTS = [
   (eventType: PoolEventType) => (eventType === '酒局' ? DRINKS_HERO_CDN : DINING_HERO_CDN),
-  (eventType: PoolEventType) => (eventType === '酒局' ? DRINKS_HERO_LOCAL : DINING_HERO_LOCAL),
   (eventType: PoolEventType) => (eventType === '酒局' ? DRINKS_HERO_SUBPACKAGE : DINING_HERO_SUBPACKAGE),
 ]
 
@@ -119,7 +115,7 @@ export default function PoolRegistrationHero({
   const calendarIcon = useCdnFirstSrc('/assets/icons/ui/icon-calendar.webp')
   const locationIcon = useCdnFirstSrc('/assets/icons/ui/icon-location.webp')
   const deviceTier = useDeviceTier()
-  // Attempt index: 0 = CDN, 1 = main-package local, 2 = subpackage local, 3+ = failed
+  // Attempt index: 0 = CDN, 1 = subpackage local, 2+ = failed
   const [imageAttempt, setImageAttempt] = useState(0)
   const [imageLoaded, setImageLoaded] = useState(false)
   const heroSrc = resolveHeroSrc(eventType, imageAttempt)
