@@ -51,7 +51,9 @@ $__gold-accent:  $color-landed-gold;
     flex-direction: column;
     gap: $spacing-sm;
     width: 100%;
+    min-height: 100dvh;
     padding: 0 $spacing-lg;
+    justify-content: center;
   }
 
   // ── Phase Progress ────────────────────────────────────────────
@@ -382,7 +384,7 @@ $__gold-accent:  $color-landed-gold;
   }
 
   &__pulse-option-emoji {
-    font-size: 48rpx;
+    font-size: $font-size-2xl;
   }
 
   &__mood-option-emoji {
@@ -1820,7 +1822,7 @@ $__gold-accent:  $color-landed-gold;
 }
 
 &__ms-role-front-emoji {
-  font-size: 80rpx;
+  font-size: $font-size-4xl;
   line-height: 1;
 }
 
@@ -2489,14 +2491,14 @@ $__gold-accent:  $color-landed-gold;
 }
 
 .icebreaker__skill-role-label {
-  font-size: 28rpx;
+  font-size: $font-size-base;
   font-weight: 600;
   color: #8B5CF6;
   margin-bottom: 4rpx;
 }
 
 .icebreaker__skill-role-blurb {
-  font-size: 24rpx;
+  font-size: $font-size-sm;
   color: #6B7280;
   line-height: 1.4;
 }
@@ -2504,7 +2506,7 @@ $__gold-accent:  $color-landed-gold;
 // ─── Mini-script secret agenda ───────────────────────────────────────────────
 
 .icebreaker__ms-secret-label {
-  font-size: 26rpx;
+  font-size: $font-size-sm;
   color: $color-semantic-secret;
   font-weight: 500;
 }
@@ -2514,7 +2516,7 @@ $__gold-accent:  $color-landed-gold;
 }
 
 .icebreaker__ms-new-clue-badge {
-  font-size: 20rpx;
+  font-size: $font-size-2xs;
   color: $color-text-white;
   background: #8B5CF6;
   padding: 2rpx 10rpx;
@@ -2547,7 +2549,7 @@ $__gold-accent:  $color-landed-gold;
   }
 
   &__label {
-    font-size: 40rpx;
+    font-size: $font-size-xl;
     font-weight: 700;
     color: $color-bg-tint-cream;
     text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.3);
@@ -2627,7 +2629,7 @@ $__gold-accent:  $color-landed-gold;
   }
 
   &__title {
-    font-size: 48rpx;
+    font-size: $font-size-2xl;
     font-weight: 700;
     color: $color-bg-tint-cream;
     text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.4);
@@ -2636,7 +2638,7 @@ $__gold-accent:  $color-landed-gold;
   }
 
   &__subtitle {
-    font-size: 30rpx;
+    font-size: $font-size-md;
     color: rgba(255, 255, 255, 0.9);
     text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.3);
     line-height: 1.4;

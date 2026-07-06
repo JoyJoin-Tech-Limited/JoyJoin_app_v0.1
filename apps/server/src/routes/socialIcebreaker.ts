@@ -70,7 +70,7 @@ import {
   getPreGenerationResult,
   invalidatePreGenerationForSession,
 } from '../lib/socialIcebreakerStore';
-import { getSocialIcebreakerAccess, resolveIcebreakerDefaultTier } from '../lib/socialIcebreakerAccess';
+import { getSocialIcebreakerAccess } from '../lib/socialIcebreakerAccess';
 import { buildMomentCardPayload } from '../lib/momentCardPayload';
 import { renderMomentCardToPng } from '../lib/momentCardRenderer';
 import { curateMedals } from '../lib/medalCuration';
@@ -112,39 +112,6 @@ import socialIcebreakerGameplayCoreRouter from './socialIcebreakerGameplayCore';
 import socialIcebreakerGameplayExtraRouter from './socialIcebreakerGameplayExtra';
 
 const router = Router();
-const WARMUP_TURN_DURATION_SECONDS = 30;
-
-function getWarmupTurnDurationMs(state: SocialSessionState): number {
-  return (state.warmupTurnDurationSeconds ?? WARMUP_TURN_DURATION_SECONDS) * 1000;
-}
-
-function isWarmupTurnExpired(state: SocialSessionState): boolean {
-  if (!state.warmupTurnStartedAt) return false;
-  return Date.now() - state.warmupTurnStartedAt >= getWarmupTurnDurationMs(state);
-}
-
-function hasWarmupTurnCompleted(state: SocialSessionState): boolean {
-  return !!state.warmupTurnUserId && (state.warmupReadyUserIds || []).includes(state.warmupTurnUserId);
-}
-
-function beginWarmupTurn(
-  state: SocialSessionState,
-  roster: Array<{ userId: string }>,
-  topicIndex = state.currentTopicIndex ?? 0,
-): void {
-  const playerIds = roster.map((participant) => participant.userId).filter(Boolean);
-  const fallbackId = state.hostUserId || playerIds[0] || '';
-  const nextTurnUserId = playerIds.length > 0
-    ? playerIds[Math.max(0, topicIndex) % playerIds.length]
-    : fallbackId;
-
-  state.currentTopicIndex = Math.max(0, topicIndex);
-  state.warmupReadyUserIds = [];
-  state.warmupTurnUserId = nextTurnUserId;
-  state.warmupTurnStartedAt = Date.now();
-  state.warmupTopicRevealed = false;
-  state.warmupTurnDurationSeconds = WARMUP_TURN_DURATION_SECONDS;
-}
 
 // ============ TEST-MODE BOT BYPASS ============
 // In single-test mode (APP_MODE=test or ENABLE_SINGLE_TEST_MODE=true),
@@ -223,47 +190,6 @@ router.post('/start', async (req: any, res) => {
     }
 
     const state = existing.state;
-
-    // ── Custom/test session reset on re-entry ──
-    // No hostUserId check (consistent with set-tier which allows any participant).
-    // When the incoming eventTier is 'custom', always apply it — the session may
-    // have been created by a different caller (e.g. test script / default preset)
-    // and needs to be overridden to custom mode.
-    let isResetSession = false;
-    const isCustomReEntry = eventTier === 'custom' || state.eventTier === 'custom';
-    if (isCustomReEntry) {
-      logger.info('[SocialIcebreaker] Resetting custom session on re-entry', {
-        icebreakerSessionId: sessionId,
-        socialSessionId: existing.socialSessionId,
-        wasPhase: state.currentPhase,
-        wasCompletedCount: state.completedPhases?.length ?? 0,
-        callerUserId: userId,
-        hostUserId: state.hostUserId,
-      });
-      state.eventTier = 'custom';
-      state.currentPhase = 'warmup';
-      state.completedPhases = [];
-      state.autoAdvanceEnabled = false;
-      state.phaseStartedAt = Date.now();
-      state.phaseSelectionId = undefined;
-      state.selectablePhases = undefined;
-      state.runPlan = undefined;
-      state.warmupReadyUserIds = [];
-      state.warmupTopicRevealed = false;
-      state.warmupTurnUserId = undefined;
-      state.warmupTurnStartedAt = undefined;
-      state.pulseChecks = [];
-      state.commonGroundCount = 0;
-      state.bonusGateOffered = undefined;
-      state.bonusGateAccepted = undefined;
-      state.bonusGateDeclined = undefined;
-      state.recapData = undefined;
-      state.lieDetectiveCompletedUserIds = [];
-      state.challengeCompletedBy = undefined;
-      state.currentChallenge = undefined;
-      isResetSession = true;
-    }
-
     const existingParticipant = await getParticipant(existing.socialSessionId, userId);
     const participantDisplayName =
       displayName || existingParticipant?.displayName || state.hostDisplayName;
@@ -282,7 +208,7 @@ router.post('/start', async (req: any, res) => {
     // sessions; only persist when that backfill actually changed the payload.
     const enabledPhasesBefore = JSON.stringify(state.enabledPhases ?? []);
     ensureSessionEnabledPhases(state);
-    let shouldPersist = isResetSession || JSON.stringify(state.enabledPhases ?? []) !== enabledPhasesBefore;
+    let shouldPersist = JSON.stringify(state.enabledPhases ?? []) !== enabledPhasesBefore;
 
     // Detect a tier/vibe change from the mini-program tier-selector and reset
     // the session accordingly. This fixes the case where a single-player test
@@ -438,7 +364,6 @@ router.post('/start', async (req: any, res) => {
       });
       newState.warmupTopics = topicResult.data;
       newState.warmupTopicsMeta = topicResult.meta;
-      beginWarmupTurn(newState, roster, 0);
       await updateSession(socialSessionId, newState);
       logger.info('Warmup topics pre-compiled at session creation', {
         socialSessionId,
@@ -622,7 +547,8 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
     state.warmupTopics = topicResult.data;
     state.warmupTopicsMeta = topicResult.meta;
     state.selectedMood = mood;
-    beginWarmupTurn(state, participants, 0);
+    state.currentTopicIndex = 0;
+    state.warmupReadyUserIds = [];
     await updateSession(socialSessionId, state);
 
     return res.json({ topics: topicResult.data, meta: topicResult.meta });
@@ -630,57 +556,6 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
     logger.error('[SocialIcebreaker] topics error:', { error });
     return res.status(500).json({ error: 'Failed to generate topics' });
   }
-});
-
-// ---------------------------------------------------------------------------
-// POST /api/social-icebreaker/:socialSessionId/warmup/reveal-topic
-// ---------------------------------------------------------------------------
-router.post('/:socialSessionId/warmup/reveal-topic', async (req: any, res) => {
-  const { socialSessionId } = req.params;
-  const userId: string = req.session?.userId;
-
-  if (!userId) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-
-  const state = await resolveSession(socialSessionId, res);
-  if (!state) return;
-
-  const participant = await getParticipant(socialSessionId, userId);
-  if (!participant) {
-    return res.status(403).json({ error: 'Not a participant in this session' });
-  }
-
-  if (state.currentPhase !== 'warmup') {
-    return res.status(400).json({ error: 'Not in warmup phase' });
-  }
-
-  if (!state.warmupTopics?.length) {
-    return res.status(400).json({ error: 'No warmup topics available' });
-  }
-
-  const isHost = await isHostAuthorized(state, userId, socialSessionId);
-  const isTurnPlayer = !state.warmupTurnUserId || state.warmupTurnUserId === userId;
-  if (!isHost && !isTurnPlayer) {
-    return res.status(403).json({ error: 'Only the current speaker or host can reveal this topic' });
-  }
-
-  if (!state.warmupTurnUserId) {
-    beginWarmupTurn(state, await listParticipants(socialSessionId), state.currentTopicIndex ?? 0);
-  }
-
-  state.warmupTopicRevealed = true;
-  state.warmupTurnStartedAt = state.warmupTurnStartedAt ?? Date.now();
-  state.warmupTurnDurationSeconds = state.warmupTurnDurationSeconds ?? WARMUP_TURN_DURATION_SECONDS;
-  await updateSession(socialSessionId, state);
-
-  return res.json({
-    warmupTopicRevealed: state.warmupTopicRevealed,
-    warmupTurnUserId: state.warmupTurnUserId,
-    warmupTurnStartedAt: state.warmupTurnStartedAt,
-    warmupTurnDurationSeconds: state.warmupTurnDurationSeconds,
-    state: await buildClientState(state, userId),
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -707,10 +582,6 @@ router.post('/:socialSessionId/warmup/ready', async (req: any, res) => {
     return res.status(400).json({ error: 'Not in warmup phase' });
   }
 
-  if (!state.warmupTurnUserId) {
-    beginWarmupTurn(state, await listParticipants(socialSessionId), state.currentTopicIndex ?? 0);
-  }
-
   const readyUserIds = new Set(state.warmupReadyUserIds || []);
   if (ready) {
     readyUserIds.add(userId);
@@ -727,10 +598,6 @@ router.post('/:socialSessionId/warmup/ready', async (req: any, res) => {
     allReady: hasAllRosterParticipantsResponded(state.warmupReadyUserIds, state.playerCount),
     currentTopicIndex: state.currentTopicIndex ?? 0,
     commonGroundCount: state.commonGroundCount ?? 0,
-    warmupTurnUserId: state.warmupTurnUserId,
-    warmupTurnStartedAt: state.warmupTurnStartedAt,
-    warmupTopicRevealed: state.warmupTopicRevealed,
-    warmupTurnDurationSeconds: state.warmupTurnDurationSeconds,
   });
 });
 
@@ -761,12 +628,8 @@ router.post('/:socialSessionId/warmup/next-topic', async (req: any, res) => {
     return res.status(400).json({ error: 'No warmup topics available' });
   }
 
-  const turnCompleted = hasWarmupTurnCompleted(state);
-  const timerExpired = isWarmupTurnExpired(state);
-  const everyoneReady = hasAllRosterParticipantsResponded(state.warmupReadyUserIds, state.playerCount);
-
-  if (!turnCompleted && !timerExpired && !everyoneReady) {
-    return res.status(400).json({ error: 'Current speaker must finish or the timer must expire before changing topics' });
+  if (!hasAllRosterParticipantsResponded(state.warmupReadyUserIds, state.playerCount)) {
+    return res.status(400).json({ error: 'All participants must be ready before changing topics' });
   }
 
   const currentTopicIndex = state.currentTopicIndex ?? 0;
@@ -775,12 +638,13 @@ router.post('/:socialSessionId/warmup/next-topic', async (req: any, res) => {
   }
 
   incrementCommonGround(state);
-  beginWarmupTurn(state, await listParticipants(socialSessionId), currentTopicIndex + 1);
+  state.currentTopicIndex = currentTopicIndex + 1;
+  state.warmupReadyUserIds = [];
   await updateSession(socialSessionId, state);
 
   return res.json({
     currentTopicIndex: state.currentTopicIndex,
-    currentTopic: state.warmupTopics?.[state.currentTopicIndex ?? 0] ?? null,
+    currentTopic: state.warmupTopics?.[state.currentTopicIndex] ?? null,
     commonGroundCount: state.commonGroundCount ?? 0,
     state: await buildClientState(state, userId),
   });
@@ -862,3 +726,4 @@ router.post('/:socialSessionId/moment-card-event', async (req: any, res) => {
 registerExtendedRoutes(router);
 
 export default router;
+
