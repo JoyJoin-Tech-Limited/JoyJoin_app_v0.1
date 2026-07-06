@@ -144,7 +144,10 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 - **Archetype images must not have text overlays** — no archetype-name initials or watermarks on hero art.
 - **`MissingArchetypePlaceholder`** (`apps/mini-program/src/components/mascot/MissingArchetypePlaceholder.tsx`) is the canonical fallback for missing/failed archetype images: it renders the JoyJoin logo mark via `BrandLogo` and must not show initials or text overlays.
 - **Batch C + D ceremony/badges (2026-06-04 Path B local-bundle → 2026-06-16 CDN)**: 8 ceremony WebP in `src/assets/ceremony/` + 9 badge WebP in `src/assets/badges/` (q=55, 600px) are uploaded to CDN; they are no longer copied to `dist/`. Registries in `src/lib/ceremonyHeroes.ts` + `src/lib/milestoneBadges.ts` use `cdnAsset()` (NOT `localAsset()`). PNG masters live in `assets-source/lovart/batch-{c,d}/` and are NOT bundled. Re-encode via `node scripts/optimize-ceremony-batch-c.mjs` / `node scripts/optimize-badges-batch-d.mjs` before committing new tiles, then upload via the CDN workflow.
-- **Phase 1 asset/CDN migration (2026-07-06)**: matching-status puzzle prelude pieces are bundled as WebP only; source PNGs + `_contact-sheet.png` live in `assets-source/lovart/puzzle/`. `xiaoyue-coach-guide.webp`, pool-registration ceremony heroes, and the Discover hero promo banner are CDN-only (subpackage copy remains for pool-registration offline resilience). CDN base URL canonical value is `https://joyjoinapp.com/static`.
+- **Phase 1 asset/CDN migration (2026-07-06)**: matching-status puzzle prelude pieces are bundled as WebP only; source PNGs + `_contact-sheet.png` live in `assets-source/lovart/puzzle/`. `xiaoyue-coach-guide.webp`, pool-registration ceremony heroes, and the Discover hero promo banner are CDN-only (subpackage copy remains for pool-registration offline resilience).
+- **Phase 2 asset/CDN migration (2026-07-07)**: `flow-icons` (center-hub / connections) and `rating-faces` (event feedback) are CDN-only; the bundled local copies were removed from `dist/` via `clean:cdn-assets` and the `config/index.ts` copy patterns were dropped. Emoji fallback remains for both. Main package compressed size after Phase 2: **1.73 MB**.
+
+Canonical CDN base URL for all phases: `https://joyjoinapp.com/static`.
 
 ---
 

@@ -21,6 +21,7 @@ import {
 import { getMascotDisplayName } from '../../lib/mascot/mascotDisplay'
 import OnboardingLoadingShell from '../../components/loading/OnboardingLoadingShell'
 import XiaoyueSessionShell from '../../components/mascot/XiaoyueSessionShell'
+import TestModeDisclosure from '../../components/icebreaker/TestModeDisclosure'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
@@ -82,7 +83,6 @@ export default function IcebreakerSessionPage() {
   const router = useRouter()
   const routeSessionId = router.params.sessionId ?? ''
   const routeEventId = router.params.eventId ?? ''
-  const routeSocialSessionId = router.params.socialSessionId ?? ''
   const { isLoading: authLoading } = useAuthGuard()
   const { user } = useAuth()
   const currentUser = (user ?? undefined) as Record<string, unknown> | undefined
@@ -102,6 +102,7 @@ export default function IcebreakerSessionPage() {
   const [phaseToast, setPhaseToast] = useState<{ visible: boolean; text: ReactNode }>({ visible: false, text: '' })
   const [isTierSheetOpen, setIsTierSheetOpen] = useState(false)
   const [pendingTierSwitch, setPendingTierSwitch] = useState<TierSheetSelection | null>(null)
+  const [showTestModeDisclosure, setShowTestModeDisclosure] = useState(false)
   const startAttemptRef = useRef<string | null>(null)
   const prevPhaseRef = useRef<SessionPhase>('waiting')
   const customSessionCompletedRef = useRef(false)
@@ -153,14 +154,6 @@ export default function IcebreakerSessionPage() {
     }
 
     if (socialSessionId || startAttemptRef.current === resolvedSessionId) {
-      return
-    }
-
-    // When the URL carries a socialSessionId (from tier-selector redirect),
-    // skip the bare /start call which lacks eventTier and would default to
-    // breeze. The tier-selector already created/populated the session.
-    if (routeSocialSessionId) {
-      setSocialSessionId(routeSocialSessionId)
       return
     }
 
@@ -222,7 +215,6 @@ export default function IcebreakerSessionPage() {
     sessionError,
     socialSessionId,
     currentUserDisplayName,
-    routeSocialSessionId,
   ])
 
   const socialSessionQuery = useQuery<SocialSessionState>({
@@ -418,10 +410,6 @@ export default function IcebreakerSessionPage() {
     void performSocialAction('warmup-ready', '/warmup/ready', { ready: !isReady })
   }, [performSocialAction, session?.warmupReadyUserIds, currentUserId])
 
-  const handleRevealWarmupTopic = useCallback(() => {
-    void performSocialAction('warmup-reveal-topic', '/warmup/reveal-topic', {})
-  }, [performSocialAction])
-
   const handleNextWarmupTopic = useCallback(() => {
     void performSocialAction('warmup-next-topic', '/warmup/next-topic', {})
   }, [performSocialAction])
@@ -451,10 +439,43 @@ export default function IcebreakerSessionPage() {
       return
     }
 
-    void performSocialAction<{ nextPhase?: string }>('advance', '/advance', {
+    logInfo('[IcebreakerSession] Advancing phase', {
+      socialSessionId,
+      phase: session.currentPhase,
+    })
+
+    // Single-test sessions pause at the test-mode disclosure before recap.
+    if (session.isTestModeSkip && session.currentPhase === 'warmup') {
+      setShowTestModeDisclosure(true)
+      socialIcebreakerAnalytics.track(
+        'icebreaker_test_mode_disclosure_shown',
+        socialSessionId ?? undefined,
+        session.icebreakerSessionId,
+        undefined,
+        {
+          botCount: session.testModeBots?.length ?? 0,
+          playerCount,
+        },
+      )
+      return
+    }
+
+    void performSocialAction('advance', '/advance', {
       currentPhase: session.currentPhase,
     })
-  }, [performSocialAction, session, socialSessionId])
+  }, [performSocialAction, session, socialSessionId, playerCount])
+
+  const handleTestModeContinue = useCallback(() => {
+    if (!session) {
+      return
+    }
+
+    setShowTestModeDisclosure(false)
+
+    void performSocialAction('advance', '/advance', {
+      currentPhase: session.currentPhase,
+    })
+  }, [performSocialAction, session])
 
   const handleSelectCustomPhase = useCallback(
     async (selectedPhase: SocialIcebreakerPhase) => {
@@ -476,7 +497,6 @@ export default function IcebreakerSessionPage() {
         })
         await socialSessionQuery.refetch()
       } catch (err: unknown) {
-        const errMsg = err instanceof Error ? err.message : '选择没成功，再试试'
         logError('[IcebreakerSession] Select custom phase failed', { socialSessionId, selectedPhase, err })
         socialIcebreakerAnalytics.track(
           'select_phase_failed',
@@ -486,11 +506,11 @@ export default function IcebreakerSessionPage() {
           {
             phaseSelectionId: session?.phaseSelectionId,
             playerCount,
-            error: errMsg,
+            error: err instanceof Error ? err.message : 'unknown',
           },
         )
         void Taro.showToast({
-          title: errMsg.length > 14 ? '选择没成功，再试试' : errMsg,
+          title: '选择没成功，再试试',
           icon: 'none',
           duration: 2000,
         })
@@ -569,6 +589,8 @@ export default function IcebreakerSessionPage() {
   )
 
   const [topicsError, setTopicsError] = useState(false)
+
+  const canChangeTier = phase === 'waiting' && isHost
 
   const executeTierSwitch = useCallback(
     async (tier: TierMachineId, vibe: VibeId) => {
@@ -965,23 +987,17 @@ export default function IcebreakerSessionPage() {
         />
       )}
 
-      {showTestModeDisclosure && session?.isTestModeSkip ? (
-        <TestModeDisclosure
-          bots={session.testModeBots}
-          socialSessionId={socialSessionId ?? undefined}
-          icebreakerSessionId={session.icebreakerSessionId}
-          onContinue={handleTestModeContinue}
-          isLoading={pendingAction === 'advance'}
-        />
-      ) : (
-        <>
-          <View className='icebreaker__phase-shell' key={phase}>
+      <View className='icebreaker__phase-shell' key={phase}>
         {phase === 'waiting' && (
           <>
             <WaitingPhase
               playerCount={playerCount}
               hostName={session?.hostDisplayName}
               isHost={isHost}
+              currentTier={session?.eventTier ?? 'glow'}
+              currentVibe={apiVibeToClient(session?.vibe)}
+              canChangeTier={canChangeTier}
+              onChangeTier={() => setIsTierSheetOpen(true)}
               onAdvance={handleAdvancePhase}
             />
             {isHost && !session?.xiaoyueSessionPack && (
@@ -999,18 +1015,6 @@ export default function IcebreakerSessionPage() {
         )}
 
         {phase === 'warmup' && session && (
-          <View className='icebreaker__warmup-tier-wrap'>
-            <IcebreakerTierSelector
-              currentTier={session?.eventTier ?? 'glow'}
-              currentVibe={apiVibeToClient(session?.vibe)}
-              isHost={isHost}
-              canChange={false}
-              disabledHint='热身已开始，模式不可更换'
-            />
-          </View>
-        )}
-
-        {phase === 'warmup' && session && (
           <WarmupPhaseView
             topics={session.warmupTopics ?? []}
             currentIndex={session.currentTopicIndex ?? 0}
@@ -1018,17 +1022,12 @@ export default function IcebreakerSessionPage() {
             participants={participants}
             currentUserId={currentUserId}
             selectedMood={session.selectedMood}
-            turnUserId={session.warmupTurnUserId}
-            turnStartedAt={session.warmupTurnStartedAt}
-            topicRevealed={session.warmupTopicRevealed}
-            turnDurationSeconds={session.warmupTurnDurationSeconds}
             isHost={isHost}
             vibe={apiVibeToClient(session.vibe)}
             archetypeMixText={session.archetypeMixText}
             isCustomMode={session.eventTier === 'custom'}
             onGenerateTopics={handleGenerateTopics}
             onToggleReady={handleToggleWarmupReady}
-            onRevealTopic={handleRevealWarmupTopic}
             onNextTopic={handleNextWarmupTopic}
             onAdvance={handleAdvancePhase}
             isGeneratingTopics={pendingAction === 'topics'}
@@ -1248,8 +1247,6 @@ export default function IcebreakerSessionPage() {
       {hostControls}
 
       <View className='icebreaker__spacer' />
-    </>
-  )}
 
       <IcebreakerTierSheet
         isOpen={isTierSheetOpen}
@@ -1260,6 +1257,18 @@ export default function IcebreakerSessionPage() {
         onClose={() => setIsTierSheetOpen(false)}
         onConfirm={handleConfirmTierSwitch}
       />
+
+      {showTestModeDisclosure && (
+        <View className='icebreaker__test-mode-overlay'>
+          <TestModeDisclosure
+            bots={session?.testModeBots}
+            socialSessionId={socialSessionId ?? undefined}
+            icebreakerSessionId={session?.icebreakerSessionId}
+            onContinue={handleTestModeContinue}
+            isLoading={pendingAction === 'advance'}
+          />
+        </View>
+      )}
     </ScrollView>
   )
 }
@@ -1268,11 +1277,19 @@ function WaitingPhase({
   playerCount,
   hostName,
   isHost,
+  currentTier,
+  currentVibe,
+  canChangeTier,
+  onChangeTier,
   onAdvance,
 }: {
   playerCount: number
   hostName?: string
   isHost: boolean
+  currentTier: TierMachineId
+  currentVibe?: VibeId
+  canChangeTier: boolean
+  onChangeTier: () => void
   onAdvance: () => void
 }) {
   return (
@@ -1293,6 +1310,16 @@ function WaitingPhase({
             主持人：{hostName}
           </Text>
         )}
+        <View className='icebreaker__waiting-tier'>
+          <IcebreakerTierSelector
+            currentTier={currentTier}
+            currentVibe={currentVibe}
+            isHost={isHost}
+            canChange={canChangeTier}
+            disabledHint='热身已开始，模式不可更换'
+            onChangeRequest={onChangeTier}
+          />
+        </View>
       </Card>
       {isHost && (
         <Button variant='primary' className='icebreaker__start-btn' onClick={onAdvance}>

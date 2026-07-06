@@ -32,6 +32,11 @@ const MINI_PROGRAM_XIAOYUE_CONNECTION_REACTIONS_ENABLED =
 /** Build-time flag to enable H5 screenshot story modes (dev/preview only). */
 const MINI_PROGRAM_ENABLE_STORY_MODE =
   process.env.TARO_APP_ENABLE_STORY_MODE ?? ''
+/** vConsole is only allowed in local development builds. Production, staging,
+ *  and 体验版 builds must ship with vConsole disabled. */
+const MINI_PROGRAM_VCONSOLE_ENABLED =
+  process.env.TARO_APP_VCONSOLE_ENABLED === 'true' &&
+  process.env.NODE_ENV !== 'production'
 
 /** Inlined at build time — WeChat runtime has no `process` global. */
 const PRODUCTION_CDN_BASE_URL = 'https://joyjoinapp.com/static'
@@ -79,6 +84,9 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
       ),
       'process.env.TARO_APP_ENABLE_STORY_MODE': JSON.stringify(
         MINI_PROGRAM_ENABLE_STORY_MODE,
+      ),
+      'process.env.TARO_APP_VCONSOLE_ENABLED': JSON.stringify(
+        MINI_PROGRAM_VCONSOLE_ENABLED ? 'true' : 'false',
       ),
       'process.env.TARO_APP_CDN_BASE_URL': JSON.stringify(MINI_PROGRAM_CDN_BASE_URL),
       'process.env.TARO_ENV': JSON.stringify(MINI_PROGRAM_TARO_ENV),
@@ -134,11 +142,6 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/icons/info-labels',
           to: 'dist/assets/icons/info-labels',
         },
-        // Rating faces — event-feedback 5-step rating selector (~15KB @1x / ~60KB all).
-        {
-          from: 'src/assets/icons/rating-faces',
-          to: 'dist/assets/icons/rating-faces',
-        },
         // Category icons — interest category labels in onboarding (~13KB @1x / ~38KB all).
         {
           from: 'src/assets/icons/category-icons',
@@ -149,15 +152,12 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/icons/intent-icons',
           to: 'dist/assets/icons/intent-icons',
         },
-        // Flow icons — activity process indicators for center-hub and connections (~60KB).
-        {
-          from: 'src/assets/icons/flow-icons',
-          to: 'dist/assets/icons/flow-icons',
-        },
-        // NOTE: reaction, reveal, and achievement icons are CDN tiers
-        // (CDN_ICON_TIERS in packages/shared/src/iconSystem/emojiToIconMap.ts).
-        // Do NOT copy them into the main package — JoyJoinIcon resolves them
-        // via cdnAsset() and they are preloaded from the CDN at runtime.
+        // NOTE: reaction, reveal, achievement, expression (rating-faces), and
+        // flow-icons are CDN tiers (CDN_ICON_TIERS in
+        // packages/shared/src/iconSystem/emojiToIconMap.ts, and direct cdnAsset()
+        // usage for flow-icons).
+        // Do NOT copy them into the main package — JoyJoinIcon / cdnAsset()
+        // resolves them from the CDN at runtime.
         // Quicksand English brand font (~124KB).
         {
           from: 'src/assets/fonts/Quicksand',

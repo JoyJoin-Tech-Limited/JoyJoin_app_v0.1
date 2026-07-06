@@ -3,7 +3,7 @@ import Taro from '@tarojs/taro'
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
-import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest, fetchConnectionsShell } from '../../lib/api/api'
 import { injectConnectionsShellIntoCache } from '../../lib/prefetchEngine'
 import { queryClient } from '../../lib/api/queryClient'
@@ -182,7 +182,7 @@ export default function ConnectionsPage() {
               <View className='connections-page__flow-steps'>
                 <View className='connections-page__flow-step'>
                   <View className='connections-page__flow-step-icon connections-page__flow-step-icon--active'>
-                    <Image className='connections-page__flow-step-img' src={localAsset('/assets/icons/flow-icons/flow-5.png')} mode='aspectFit' />
+                    <Image className='connections-page__flow-step-img' src={cdnAsset('/assets/icons/flow-icons/flow-5.webp')} mode='aspectFit' />
                   </View>
                   <View className='connections-page__flow-step-content'>
                     <Text className='connections-page__flow-step-title'>参加活动</Text>
@@ -192,7 +192,7 @@ export default function ConnectionsPage() {
                 <View className='connections-page__flow-connector' aria-hidden='true' />
                 <View className='connections-page__flow-step'>
                   <View className='connections-page__flow-step-icon'>
-                    <Image className='connections-page__flow-step-img' src={localAsset('/assets/icons/flow-icons/flow-6.png')} mode='aspectFit' />
+                    <Image className='connections-page__flow-step-img' src={cdnAsset('/assets/icons/flow-icons/flow-6.webp')} mode='aspectFit' />
                   </View>
                   <View className='connections-page__flow-step-content'>
                     <Text className='connections-page__flow-step-title'>完成互动</Text>
@@ -202,7 +202,7 @@ export default function ConnectionsPage() {
                 <View className='connections-page__flow-connector' aria-hidden='true' />
                 <View className='connections-page__flow-step'>
                   <View className='connections-page__flow-step-icon'>
-                    <Image className='connections-page__flow-step-img' src={localAsset('/assets/icons/flow-icons/flow-7.png')} mode='aspectFit' />
+                    <Image className='connections-page__flow-step-img' src={cdnAsset('/assets/icons/flow-icons/flow-7.webp')} mode='aspectFit' />
                   </View>
                   <View className='connections-page__flow-step-content'>
                     <Text className='connections-page__flow-step-title'>建立连接</Text>

@@ -456,6 +456,18 @@ $__gold-accent:  $color-landed-gold;
     color: $color-text-secondary;
   }
 
+  // ── Test-mode disclosure overlay ──────────────────────────────
+  &__test-mode-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba($color-bg-tint-cream, 0.96);
+    padding: $container-padding;
+  }
+
   // ── Spacer ────────────────────────────────────────────────────
   &__spacer {
     height: $spacing-2xl;
@@ -525,12 +537,6 @@ $__gold-accent:  $color-landed-gold;
     @include button-primary;
     width: 100%;
     border: 0;
-  }
-
-  &__warmup-tier-wrap {
-    display: flex;
-    justify-content: center;
-    margin-bottom: $spacing-md;
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -2729,159 +2735,6 @@ $__gold-accent:  $color-landed-gold;
   border-radius: 50%;
   background: rgba($color-primary, 0.08);
   animation: skeleton-pulse 1.5s ease-in-out infinite;
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  Custom Mode Section (Phase Selection)
-// ═══════════════════════════════════════════════════════════════
-.custom-mode-section {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-md;
-
-  &__header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: $spacing-md;
-    margin-bottom: $spacing-xs;
-  }
-
-  &__title {
-    display: block;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-  }
-
-  &__subtitle {
-    display: block;
-    margin-top: $spacing-xs;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
-    color: $color-text-secondary;
-    line-height: 1.5;
-  }
-
-  &__host-badge {
-    flex-shrink: 0;
-    padding: 8rpx 16rpx;
-    border-radius: 999rpx;
-    color: #ffffff;
-    background: $color-primary;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-bold;
-    line-height: 1.2;
-  }
-
-  &__role-card {
-    padding: $spacing-lg;
-    border-radius: 20rpx;
-    background: #ffffff;
-    border: 2rpx solid rgba($color-primary, 0.22);
-    box-shadow: 0 12rpx 30rpx rgba(31, 41, 55, 0.08);
-  }
-
-  &__role-kicker {
-    display: block;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    font-weight: $font-weight-semibold;
-  }
-
-  &__role-name {
-    display: block;
-    margin-top: $spacing-xs;
-    font-size: $font-size-xl;
-    color: $color-text-primary;
-    font-weight: $font-weight-bold;
-  }
-
-  &__role-copy {
-    display: block;
-    margin-top: $spacing-sm;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: 1.55;
-  }
-
-  &__waiting {
-    font-size: $font-size-base;
-    color: $color-text-secondary;
-    text-align: center;
-    padding: $spacing-xl 0;
-  }
-
-  &__btn {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    width: 100%;
-    padding: $spacing-md $spacing-lg;
-    border-radius: 16rpx;
-    background: #ffffff;
-    border: 2rpx solid rgba($color-primary, 0.28);
-    box-shadow: 0 8rpx 24rpx rgba(31, 41, 55, 0.06);
-    transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
-    min-height: 88rpx;
-    box-sizing: border-box;
-
-    &--pressed {
-      background: rgba($color-primary, 0.1);
-      border-color: rgba($color-primary, 0.55);
-      transform: scale(0.99);
-    }
-
-    &--disabled {
-      background: rgba($color-text-primary, 0.045);
-      border-color: rgba($color-text-primary, 0.16);
-      box-shadow: none;
-    }
-
-    &--end {
-      justify-content: center;
-      margin-top: $spacing-sm;
-      background: $color-surface;
-      border-color: rgba($color-error, 0.5);
-
-      &--pressed {
-        background: rgba($color-error, 0.1);
-        border-color: $color-error;
-      }
-    }
-  }
-
-  &__btn-emoji {
-    font-size: 40rpx;
-    line-height: 1;
-    flex-shrink: 0;
-  }
-
-  &__btn-label {
-    font-size: $font-size-base;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    flex: 1;
-  }
-
-  &__btn--disabled &__btn-label,
-  &__btn--disabled &__btn-emoji {
-    color: $color-text-secondary;
-  }
-
-  &__btn--end &__btn-label,
-  &__btn--end &__btn-emoji {
-    color: $color-error;
-  }
-
-  &__btn-hint {
-    flex-shrink: 0;
-    max-width: 220rpx;
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    font-weight: $font-weight-semibold;
-    text-align: right;
-  }
 }
 
 @keyframes skeleton-pulse {

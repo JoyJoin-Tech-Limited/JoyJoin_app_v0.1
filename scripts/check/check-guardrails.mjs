@@ -141,7 +141,7 @@ for (const file of modifiedFiles) {
 // Inline emoji in UI text must be replaced with JoyJoinIcon proprietary icons or CSS/text.
 // Lines that intentionally pass emoji to the icon system (emoji=, icon=, fallbackEmoji) are allowed.
 const emojiPattern = /[\u{1F300}-\u{1F9FF}\u{2300}-\u{23FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-const allowedEmojiContextPattern = /emoji\s*=\s*['"]|icon\s*=\s*['"]|fallbackEmoji/;
+const allowedEmojiContextPattern = /emoji\s*[:=]\s*['"]|icon\s*=\s*['"]|fallbackEmoji/;
 const allowedEmojiFiles = new Set([
   'packages/shared/src/iconSystem/emojiToIconMap.ts',
   'packages/shared/src/constants.ts',

@@ -338,6 +338,7 @@ export const CDN_ICON_TIERS: ReadonlySet<IconTier> = new Set([
   'achievement',
   'ui',
   'chemistry',
+  // 'expression' (rating faces) is bundled locally; see src/assets/icons/rating-faces.
 ])
 
 const ICON_FOLDER_MAP: Record<IconTier, string> = {

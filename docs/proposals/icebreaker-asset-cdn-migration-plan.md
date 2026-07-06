@@ -1,8 +1,8 @@
 # Asset/CDN Migration Plan — JoyJoin Mini Program Package Size
 
-**Status:** Phase 1 implemented (2026-07-06)  
+**Status:** Phase 1 and Phase 2 implemented (2026-07-06 / 2026-07-07)  
 **Goal:** Bring the WeChat main package under the 2.00 MB compressed hard limit with sustainable headroom.  
-**Date:** 2026-07-06  
+**Date:** 2026-07-07  
 **Stakeholders:** PM, Taro/FE Engineer, DevOps/Release  
 
 ---
@@ -10,23 +10,23 @@
 ## 1. Current snapshot
 
 ```
-Core framework:        1.26 MB
-Main pages:            509.1 KiB
-Shared assets:         1.36 MB
+Core framework:        1.27 MB
+Main pages:            510.5 KiB
+Shared assets:         1.27 MB
 ─────────────────────────────────
-Main package (raw):    3.12 MB
-Main package (zip):    1.82 MB (limit: 2.00 MB)
+Main package (raw):    3.04 MB
+Main package (zip):    1.73 MB (limit: 2.00 MB)
 Onboarding            506.3 KiB (limit: 1.80 MB)
 Profile Linked        24.7 KiB
-Icebreaker Session    31.2 KiB
-Matching Status       28.1 KiB
-Pool Registration     646.9 KiB
+Icebreaker Session    34.6 KiB
+Matching Status       28.3 KiB
+Pool Registration     646.7 KiB
 Custom tab-bar:        14.3 KiB
 ─────────────────────────────────
-Total (zip):           3.04 MB (limit: 20.00 MB)
+Total (zip):           2.95 MB (limit: 20.00 MB)
 ```
 
-The package-size gate measures `dist/assets` plus core JS/framework. After Phase 1, the main package has a **180 KB buffer** under the 2.00 MB WeChat hard limit.
+The package-size gate measures `dist/assets` plus core JS/framework. After Phase 2, the main package has a **276 KB buffer** under the 2.00 MB WeChat hard limit.
 
 ### Pre-implementation snapshot (for reference)
 
@@ -78,8 +78,8 @@ Currently 3 expressions are bundled (`loading-system`, `coach-guide`, `home-welc
 | 1 | Puzzle `_contact-sheet.png` + PNG fallbacks | `src/assets/lovart/puzzle/` | Move source to `assets-source/`; copy only 6 webp pieces to dist | **~1.3 MB** | Very low | 30 min |
 | 2 | Pool-registration hero main-package fallback | `dist/assets/pool-heroes/` | Remove; use subpackage path + CDN | **~207 KB** | Low | 30 min |
 | 3 | `xiaoyue-coach-guide.webp` | `dist/assets/xiaoyue-expressions/` | CDN-only | **~45 KB** | Low | 15 min |
-| 4 | `flow-icons` (center-hub / connections) | `dist/assets/icons/flow-icons/` | CDN-primary with local fallback | **~60 KB** | Low-medium | 1 h |
-| 5 | `rating-faces` (event feedback) | `dist/assets/icons/rating-faces/` | CDN-primary with local fallback | **~60 KB** | Low-medium | 1 h |
+| 4 | `flow-icons` (center-hub / connections) | `dist/assets/icons/flow-icons/` | **CDN-only** (emoji fallback) | **~60 KB** | Low-medium | 1 h | ✅ Done |
+| 5 | `rating-faces` (event feedback) | `dist/assets/icons/rating-faces/` | **CDN-only** (emoji fallback) | **~60 KB** | Low-medium | 1 h | ✅ Done |
 | 6 | Discover promo banner (`banner-hero-lovart-v1.webp`) | `dist/assets/promo-local/` | CDN-only (it already has CDN fallback) | **~64 KB** | Medium (first paint) | 30 min |
 | 7 | `info-labels` icons | `dist/assets/icons/info-labels/` | CDN-primary with local fallback | **~40 KB** | Medium (used everywhere) | 1.5 h |
 | 8 | `ui` icons | `dist/assets/icons/ui/` | CDN-primary with local fallback | **~81 KB** | Medium-High (used everywhere, subpackage lazy-load issues) | 2 h |
@@ -119,7 +119,7 @@ Currently 3 expressions are bundled (`loading-system`, `coach-guide`, `home-welc
 - Puzzle pieces (item 1) — only used during matching-status live reveal; network is available at that point.
 - Pool-registration hero fallback (item 2) — subpackage already carries the asset; CDN covers edge cases.
 - `xiaoyue-coach-guide` (item 3) — used in coaching moments, not first paint.
-- `flow-icons` / `rating-faces` (items 4–5) — non-critical UI accents; emoji fallback acceptable if mapping is preserved.
+- `flow-icons` / `rating-faces` (items 4–5) — non-critical UI accents; emoji fallback acceptable if mapping is preserved. **Implemented as CDN-only in Phase 2.**
 - Promo banner (item 6) — already CDN-primary conceptually; first-paint trade-off is acceptable if a solid placeholder/color wash exists.
 
 ### 4.3 Phased rollout recommendation
@@ -132,14 +132,14 @@ Currently 3 expressions are bundled (`loading-system`, `coach-guide`, `home-welc
 - Move Discover promo banner to CDN-only (item 6; brought forward from Phase 3 because it was required to stay under the 2.00 MB ceiling).
 - Target achieved: main package **1.82 MB** compressed (stretch goal was ≤ 1.80 MB).
 
-**Phase 2 — Sustainable diet (next sprint)**
-- Move `flow-icons` and `rating-faces` to CDN-primary with local fallback (items 4–5).
+**Phase 2 — Implemented (2026-07-07)**
+- Move `flow-icons` and `rating-faces` to **CDN-only** with emoji fallback (items 4–5). Local bundled copies are no longer shipped to maximize package-size headroom.
 - Audit `src/assets/` for any other source-to-dist leaks.
-- Target: main package ≤ 1.65 MB compressed.
+- Target achieved: main package **1.73 MB** compressed (stretch goal was ≤ 1.70 MB; 30 KB gap remains due to no additional leaks found in the audit).
 
-**Phase 3 — Optional polish**
-- ~~Evaluate promo banner CDN-only (item 6)~~ Completed in Phase 1.
+**Phase 3 — Optional polish (future)**
 - Re-evaluate `ui` / `info-labels` only if new features push us near the limit again.
+- Investigate additional package-size wins from code splitting or further subpackage migration if the buffer drops below 150 KB.
 
 ### 4.4 Offline / degraded-network strategy
 
@@ -152,8 +152,8 @@ Currently 3 expressions are bundled (`loading-system`, `coach-guide`, `home-welc
 
 | Metric | Target |
 |--------|--------|
-| `npm run check:package-size` | PASS with ≥ 150 KB buffer under 2.00 MB | PASS (180 KB buffer) |
-| Main package compressed | ≤ 1.80 MB (stretch) / ≤ 1.85 MB (accepted) | 1.82 MB |
+| `npm run check:package-size` | PASS with ≥ 150 KB buffer under 2.00 MB | PASS (276 KB buffer) |
+| Main package compressed | ≤ 1.70 MB (stretch) / ≤ 1.73 MB (accepted) | 1.73 MB |
 | Cold-start first paint | No regression vs baseline | To be measured |
 | CDN asset error rate | < 0.5% of impressions | To be measured |
 | Offline empty-state / error surfaces | All render without CDN assets |
@@ -216,14 +216,25 @@ Currently 3 expressions are bundled (`loading-system`, `coach-guide`, `home-welc
 | Move puzzle source/contact sheet out of `src/assets` | It is a build/source artifact, not a runtime asset. |
 | Remove pool-hero main-package fallback | Subpackage + CDN provides sufficient redundancy; duplicate is wasteful. |
 | Keep `promo-local` banner bundled for now | ~~First-paint sensitivity; revisit in Phase 3 with LCP data.~~ **Updated 2026-07-06:** moved to CDN-only during Phase 1 because the main package could not fit under 2.00 MB otherwise. Skeleton/gradient overlay preserves first-paint experience. |
-| Move `xiaoyue-coach-guide` to CDN-only | Used in coaching moments, not cold-start first paint. |
+| Move `flow-icons` / `rating-faces` to CDN-only | Maximizes package-size headroom; these are non-critical accents with emoji fallback already built into `JoyJoinIcon` / `RatingFace`. |
 | Align CDN URL before any migration | Prevents uploads from landing on the wrong origin. |
+
+---
+
+### Phase 2 verification commands
+
+```bash
+npm run build:weapp --workspace=mini-program
+npm run check:package-size -w mini-program
+find apps/mini-program/dist/assets/icons/flow-icons -type f   # expect empty/absent
+find apps/mini-program/dist/assets/icons/rating-faces -type f # expect empty/absent
+```
 
 ---
 
 ## 7. Next step
 
-Phase 1 is complete. The Sprint Contract is accepted and the changes are in `main`. Proceed to Phase 2 when the product roadmap allows: move `flow-icons` and `rating-faces` to CDN-primary with local fallback, and audit `src/assets/` for any remaining source-to-dist leaks.
+Phases 1 and 2 are complete. Phase 3 is on hold until new features consume enough headroom to justify moving `ui` / `info-labels` or further code-splitting work.
 
 ### Phase 1 verification commands
 

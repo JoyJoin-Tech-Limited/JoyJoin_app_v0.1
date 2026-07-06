@@ -5,7 +5,7 @@ import {
   RATING_FACES_ORDERED,
   getLocalIconAssetPath,
 } from '@joyjoin/shared/iconSystem'
-import { localAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { BRAND_COLORS } from '../../styles/colors'
 
 import './RatingFace.scss'
@@ -90,13 +90,12 @@ export default function RatingFace({
         const sizeRpx = 64
         const sizeStr = `${sizeRpx}rpx`
 
-        // Resolve asset path. Use root-relative local path so the asset works
-        // from any compiled JS chunk (require('../../assets/...') resolves
-        // incorrectly when the module is hoisted into a subpackage chunk).
+        // Resolve asset path. Rating faces are CDN-only in production; the
+        // bundled local copies are no longer shipped to save package size.
         let src = ''
         try {
           const path1x = getLocalIconAssetPath(mapping.assetKey, mapping.tier, 1)
-          src = localAsset(path1x)
+          src = cdnAsset(path1x)
         } catch {
           src = ''
         }

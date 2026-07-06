@@ -1285,6 +1285,54 @@
     {
       "localPath": "assets/icons/chemistry-badges/chem-warm.webp",
       "cdnPath": "assets/icons/chemistry-badges/chem-warm.webp"
+    },
+    {
+      "localPath": "assets/icons/rating-faces/rating-1-disappointed.webp",
+      "cdnPath": "assets/icons/rating-faces/rating-1-disappointed.webp"
+    },
+    {
+      "localPath": "assets/icons/rating-faces/rating-2-sad.webp",
+      "cdnPath": "assets/icons/rating-faces/rating-2-sad.webp"
+    },
+    {
+      "localPath": "assets/icons/rating-faces/rating-3-neutral.webp",
+      "cdnPath": "assets/icons/rating-faces/rating-3-neutral.webp"
+    },
+    {
+      "localPath": "assets/icons/rating-faces/rating-4-happy.webp",
+      "cdnPath": "assets/icons/rating-faces/rating-4-happy.webp"
+    },
+    {
+      "localPath": "assets/icons/rating-faces/rating-5-ecstatic.webp",
+      "cdnPath": "assets/icons/rating-faces/rating-5-ecstatic.webp"
+    },
+    {
+      "localPath": "assets/icons/flow-icons/flow-1.webp",
+      "cdnPath": "assets/icons/flow-icons/flow-1.webp"
+    },
+    {
+      "localPath": "assets/icons/flow-icons/flow-2.webp",
+      "cdnPath": "assets/icons/flow-icons/flow-2.webp"
+    },
+    {
+      "localPath": "assets/icons/flow-icons/flow-3.webp",
+      "cdnPath": "assets/icons/flow-icons/flow-3.webp"
+    },
+    {
+      "localPath": "assets/icons/flow-icons/flow-4.webp",
+      "cdnPath": "assets/icons/flow-icons/flow-4.webp"
+    },
+    {
+      "localPath": "assets/icons/flow-icons/flow-5.webp",
+      "cdnPath": "assets/icons/flow-icons/flow-5.webp"
+    },
+    {
+      "localPath": "assets/icons/flow-icons/flow-6.webp",
+      "cdnPath": "assets/icons/flow-icons/flow-6.webp"
+    },
+    {
+      "localPath": "assets/icons/flow-icons/flow-7.webp",
+      "cdnPath": "assets/icons/flow-icons/flow-7.webp"
     }
   ]
 }

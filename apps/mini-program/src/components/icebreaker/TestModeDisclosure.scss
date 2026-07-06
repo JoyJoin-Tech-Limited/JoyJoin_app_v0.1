@@ -1,0 +1,116 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.test-mode-disclosure {
+  @include flex-center;
+  flex-direction: column;
+  width: 100%;
+  min-height: 70dvh;
+  padding: $spacing-lg $container-padding;
+  animation: test-mode-fade-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  &--static {
+    animation: none;
+  }
+
+  &__card {
+    @include card-premium;
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-md;
+    width: 100%;
+    max-width: 640rpx;
+    padding: $spacing-xl $spacing-lg;
+    text-align: center;
+    background: $color-bg-tint-purple;
+    border: 2rpx solid rgba($color-primary, 0.12);
+  }
+
+  &__icon {
+    width: 120rpx;
+    height: 120rpx;
+    @include flex-center;
+    border-radius: $radius-circle;
+    background: rgba($color-primary, 0.08);
+    margin-bottom: $spacing-xs;
+  }
+
+  &__title {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: $line-height-display;
+    word-break: keep-all;
+  }
+
+  &__body {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+  }
+
+  &__roster {
+    width: 100%;
+    margin-top: $spacing-xs;
+  }
+
+  &__roster-label {
+    display: block;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__roster-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: $spacing-sm;
+  }
+
+  &__bot-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-md;
+    background: $color-surface;
+    border: 2rpx solid rgba($color-primary, 0.1);
+    border-radius: $radius-pill;
+  }
+
+  &__bot-name {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__bot-archetype {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+  }
+
+  &__cta {
+    width: 100%;
+    max-width: 480rpx;
+    margin-top: $spacing-sm;
+  }
+}
+
+@keyframes test-mode-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .test-mode-disclosure {
+    animation: none;
+  }
+}

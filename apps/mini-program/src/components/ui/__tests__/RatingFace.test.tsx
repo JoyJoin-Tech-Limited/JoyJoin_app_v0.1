@@ -10,16 +10,16 @@ import {
 // then into src/assets.
 const MINI_PROGRAM_ROOT = resolve(__dirname, '../../../..')
 const SRC_ASSETS_ROOT = resolve(MINI_PROGRAM_ROOT, 'src')
-const CONFIG_PATH = resolve(MINI_PROGRAM_ROOT, 'config', 'index.ts')
+const MANIFEST_PATH = resolve(MINI_PROGRAM_ROOT, 'scripts', 'cdn-asset-manifest.json')
 
 /**
  * Regression test: rating face assets must exist for every registered mapping
  * at 1x. The icon registry generates `/assets/icons/rating-faces/...webp`
- * paths; this test confirms the bundled files are on disk so the component
- * never falls back to emoji due to a missing asset.
+ * paths; this test confirms the source files are on disk so the CDN upload
+ * pipeline can serve them.
  */
 describe('RatingFace asset registry', () => {
-  it('has bundled WebP assets for every rating face at 1x (bare filename)', () => {
+  it('has source WebP assets for every rating face at 1x (bare filename)', () => {
     const missing: string[] = []
 
     for (const mapping of RATING_FACES_ORDERED) {
@@ -37,11 +37,13 @@ describe('RatingFace asset registry', () => {
     expect(missing).toEqual([])
   })
 
-  it('is declared as a bundled copy pattern in config/index.ts', () => {
-    const config = readFileSync(CONFIG_PATH, 'utf-8')
-    const hasCopyPattern =
-      config.includes("from: 'src/assets/icons/rating-faces'") &&
-      config.includes("to: 'dist/assets/icons/rating-faces'")
-    expect(hasCopyPattern).toBe(true)
+  it('is declared in the CDN asset manifest', () => {
+    const manifest = JSON.parse(readFileSync(MANIFEST_PATH, 'utf-8'))
+    const assetPaths = new Set(manifest.assets.map((a: { cdnPath: string }) => a.cdnPath))
+
+    for (const mapping of RATING_FACES_ORDERED) {
+      const assetPath = getLocalIconAssetPath(mapping.assetKey, mapping.tier, 1)
+      expect(assetPaths.has(assetPath.slice(1))).toBe(true)
+    }
   })
 })
