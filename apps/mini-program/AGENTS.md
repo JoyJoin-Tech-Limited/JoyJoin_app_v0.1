@@ -134,7 +134,7 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 - **Slot machine archetype spritesheet** (`archetype-spritesheet.webp`) — bundled at `/pages/onboarding/assets/archetypes/` (subpackage, preloaded at landing).
 - **Full-size archetype images** — served from CDN as WebP. Preload during idle time.
 - **Canvas poster** — WebP primary with **CDN PNG fallback**. Local PNGs are NOT bundled.
-- **Promo banner**: full-bleed Lovart illustration + WebP→PNG fallback. Kill switch: `PROMO_BANNER_ENABLED` (default `true`).
+- **Promo banner** (`HeroPromoBanner`): CDN-only (`/assets/promo/banner-hero-lovart-v1.webp`) to keep the main package under the 2 MB ceiling; persistent asset cache reduces repeat network reads. Gradient overlay still renders while the image loads. Kill switch: `PROMO_BANNER_ENABLED` (default `true`).
 - **Welcome coupon banner** (`FirstTimeCouponBanner`): zero external assets, zero package weight. Solid cream bg + CSS decorative circle. Archetype-tinted via inline `hsla()`. Analytics: `welcome_coupon_banner_impression` + `welcome_coupon_banner_tap` via `discoverAnalytics`.
 - **Tab bar logo**: dedicated 128×128 `joyjoin-logo-tab.png` (19KB) — NOT the full `joyjoin-logo.png` (596KB).
 - **Mascot sprite bundle policy (2026-06-18)**: only 6 core Xiaoyue sprite states (`welcome`, `idle`, `coach`, `loading`, `listening`, `thinking`) are bundled locally (~235KB); the remaining 14 states are CDN-primary. `XiaoyueSpriteAnimator` tries CDN first and falls back to the local bundled `.webp` on `onError`.
@@ -144,6 +144,7 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 - **Archetype images must not have text overlays** — no archetype-name initials or watermarks on hero art.
 - **`MissingArchetypePlaceholder`** (`apps/mini-program/src/components/mascot/MissingArchetypePlaceholder.tsx`) is the canonical fallback for missing/failed archetype images: it renders the JoyJoin logo mark via `BrandLogo` and must not show initials or text overlays.
 - **Batch C + D ceremony/badges (2026-06-04 Path B local-bundle → 2026-06-16 CDN)**: 8 ceremony WebP in `src/assets/ceremony/` + 9 badge WebP in `src/assets/badges/` (q=55, 600px) are uploaded to CDN; they are no longer copied to `dist/`. Registries in `src/lib/ceremonyHeroes.ts` + `src/lib/milestoneBadges.ts` use `cdnAsset()` (NOT `localAsset()`). PNG masters live in `assets-source/lovart/batch-{c,d}/` and are NOT bundled. Re-encode via `node scripts/optimize-ceremony-batch-c.mjs` / `node scripts/optimize-badges-batch-d.mjs` before committing new tiles, then upload via the CDN workflow.
+- **Phase 1 asset/CDN migration (2026-07-06)**: matching-status puzzle prelude pieces are bundled as WebP only; source PNGs + `_contact-sheet.png` live in `assets-source/lovart/puzzle/`. `xiaoyue-coach-guide.webp`, pool-registration ceremony heroes, and the Discover hero promo banner are CDN-only (subpackage copy remains for pool-registration offline resilience). CDN base URL canonical value is `https://joyjoinapp.com/static`.
 
 ---
 

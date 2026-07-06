@@ -45,10 +45,9 @@ export const ARCHETYPE_GLYPH_CDN_ASSETS: string[] = [
 // ─── Per-route asset lists ───
 
 const DISCOVER_PRELOADS: string[] = [
-  // Discover hero banner is bundled locally so the first tab paint is not
-  // blocked by CDN latency. Empty/error illustrations stay CDN-only because
-  // they are only shown when there are no pools or an error.
-  localAsset('/assets/promo-local/banner-hero-lovart-v1.webp'),
+  // Discover hero banner is CDN-only; local bundle removed to keep main package
+  // under 2 MB. Persistent asset cache reduces repeat network reads.
+  cdnAsset('/assets/promo/banner-hero-lovart-v1.webp'),
 ]
 
 const MATCHING_PRELOADS: string[] = [

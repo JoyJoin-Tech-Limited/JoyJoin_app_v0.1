@@ -173,9 +173,11 @@ Export each piece as a separate transparent WebP and PNG with square aspect rati
 
 ## Export Requirements
 - **File naming:** `lovart-puzzle-piece-{01..06}-20260701-v1.{webp,png}`
-- **Save location:** `apps/mini-program/src/assets/lovart/puzzle/`
+- **Save location:**
+  - Shipped WebP pieces: `apps/mini-program/src/assets/lovart/puzzle/`
+  - Source PNG masters + `_contact-sheet.png`: `assets-source/lovart/puzzle/` (moved 2026-07-06 to avoid source-to-dist leakage)
 - **Lazy loading:** yes — loaded inside matching-status subpackage
-- **Bundle location:** main package only if total compressed set < 60 KB; otherwise place in matching-status subpackage
+- **Bundle location:** main package, WebP-only (6 pieces ≈ 130 KB); PNG fallbacks are not bundled
 - **Companion preview:** `lovart-puzzle-table-glow-20260701-v1.{webp,png}` — optional soft table glow overlay
 
 ## Review Checklist

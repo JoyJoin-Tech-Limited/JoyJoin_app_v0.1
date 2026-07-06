@@ -34,7 +34,7 @@ const MINI_PROGRAM_ENABLE_STORY_MODE =
   process.env.TARO_APP_ENABLE_STORY_MODE ?? ''
 
 /** Inlined at build time — WeChat runtime has no `process` global. */
-const PRODUCTION_CDN_BASE_URL = 'https://cdn.joyjoinapp.com/static'
+const PRODUCTION_CDN_BASE_URL = 'https://joyjoinapp.com/static'
 const MINI_PROGRAM_CDN_BASE_URL =
   process.env.TARO_APP_CDN_BASE_URL ||
   (process.env.NODE_ENV === 'production' ? PRODUCTION_CDN_BASE_URL : '')
@@ -45,7 +45,7 @@ if (MINI_PROGRAM_NODE_ENV === 'production' && !MINI_PROGRAM_CDN_BASE_URL) {
   throw new Error(
     '[mini-program build] TARO_APP_CDN_BASE_URL is required in production builds.\n' +
       '  Set it in apps/mini-program/.env.local or as an environment variable, then rebuild.\n' +
-      '  Example: TARO_APP_CDN_BASE_URL=https://cdn.joyjoinapp.com/static',
+      '  Example: TARO_APP_CDN_BASE_URL=https://joyjoinapp.com/static',
   )
 }
 
@@ -213,45 +213,48 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/empty-state',
           to: 'dist/assets/empty-state',
         },
-        // Discover hero promo banner — first-impression asset, bundled locally
-        // (~65KB) so it paints instantly on cold entry. CDN fallback is still
-        // available if the local copy fails to load.
-        // NOTE: copied to `promo-local/` because the clean step wipes the CDN
-        // `promo/` directory from the package.
-        {
-          from: 'src/assets/promo-local/banner-hero-lovart-v1.webp',
-          to: 'dist/assets/promo-local/banner-hero-lovart-v1.webp',
-        },
+        // Discover hero promo banner — now CDN-only to keep the main package
+        // under the 2 MB ceiling. The asset is served from `/assets/promo/`
+        // via cdnAsset(). Do NOT copy it into the package.
+        // (source remains in src/assets/promo-local/ for the CDN upload pipeline).
         // Batch C ceremony heroes — 8 WebP files (~310KB total, q=70 600px).
         // Served from CDN; source stays in src/assets/ceremony for upload via
         // `npm run upload:cdn-assets`. Local copies are no longer bundled so
         // the main package stays under WeChat's 2MB ceiling.
         // PNG masters live in `assets-source/lovart/batch-c/` (not bundled).
-        // Pool-registration ceremony heroes now travel with the subpackage so
+        // Pool-registration ceremony heroes travel with the subpackage so
         // the main package stays under the 2 MB ceiling.
         {
           from: 'src/pages/pool-registration/assets',
           to: 'dist/pages/pool-registration/assets',
         },
-        // Pool-registration hero fallback — also copied to a main-package directory
-        // that survives clean:cdn-assets so the hero can load locally if the CDN
-        // or subpackage path fails. (~80KB total for both dining + drinks heroes).
-        // Uses `assets/pool-heroes/` instead of `assets/ceremony/` because
-        // clean:cdn-assets wipes the entire ceremony/ directory.
-        {
-          from: 'src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-dining-20260702-v2.webp',
-          to: 'dist/assets/pool-heroes/lovart-pool-registration-hero-dining-20260702-v2.webp',
-        },
-        {
-          from: 'src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v2.webp',
-          to: 'dist/assets/pool-heroes/lovart-pool-registration-hero-drinks-20260702-v2.webp',
-        },
         // Matching-status puzzle prelude pieces — bundled locally (~130KB total)
         // so the live-reveal prelude paints instantly even if CDN is slow.
-        // Only WebP is bundled; PNG fallback is stripped by clean:cdn-assets.
+        // Source PNG masters and the contact sheet live in
+        // assets-source/lovart/puzzle/ (not bundled).
         {
-          from: 'src/assets/lovart/puzzle',
-          to: 'dist/assets/lovart/puzzle',
+          from: 'src/assets/lovart/puzzle/lovart-puzzle-piece-01-20260701-v1.webp',
+          to: 'dist/assets/lovart/puzzle/lovart-puzzle-piece-01-20260701-v1.webp',
+        },
+        {
+          from: 'src/assets/lovart/puzzle/lovart-puzzle-piece-02-20260701-v1.webp',
+          to: 'dist/assets/lovart/puzzle/lovart-puzzle-piece-02-20260701-v1.webp',
+        },
+        {
+          from: 'src/assets/lovart/puzzle/lovart-puzzle-piece-03-20260701-v1.webp',
+          to: 'dist/assets/lovart/puzzle/lovart-puzzle-piece-03-20260701-v1.webp',
+        },
+        {
+          from: 'src/assets/lovart/puzzle/lovart-puzzle-piece-04-20260701-v1.webp',
+          to: 'dist/assets/lovart/puzzle/lovart-puzzle-piece-04-20260701-v1.webp',
+        },
+        {
+          from: 'src/assets/lovart/puzzle/lovart-puzzle-piece-05-20260701-v1.webp',
+          to: 'dist/assets/lovart/puzzle/lovart-puzzle-piece-05-20260701-v1.webp',
+        },
+        {
+          from: 'src/assets/lovart/puzzle/lovart-puzzle-piece-06-20260701-v1.webp',
+          to: 'dist/assets/lovart/puzzle/lovart-puzzle-piece-06-20260701-v1.webp',
         },
         // Custom-tier icon — bundled locally for the icebreaker tier selector.
         // Lives in the phase-icons source folder but is copied out so it is not
@@ -319,15 +322,12 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/qr',
           to: 'dist/assets/qr',
         },
-        // Xiaoyue expressions — loading + welcome + coach-guide are critical
-        // first-impression assets. Others remain on CDN to stay within package size limits.
+        // Xiaoyue expressions — loading + welcome are critical first-impression
+        // assets. Coach-guide and the remaining expressions are CDN-only to stay
+        // within package size limits.
         {
           from: 'src/assets/personality/xiaoyue/xiaoyue-loading-system.webp',
           to: 'dist/assets/xiaoyue-expressions/xiaoyue-loading-system.webp',
-        },
-        {
-          from: 'src/assets/personality/xiaoyue/xiaoyue-coach-guide.webp',
-          to: 'dist/assets/xiaoyue-expressions/xiaoyue-coach-guide.webp',
         },
         {
           from: 'src/assets/personality/xiaoyue/xiaoyue-home-welcome.webp',
