@@ -202,6 +202,11 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   }
 
   let effectiveNextPhase = getNextEligiblePhase(currentPhase, state);
+  logger.info('[ADV_DIAG] phase resolve', {
+    socialSessionId, currentPhase, eventTier: state.eventTier,
+    isCustom: isCustomMode(state), hasRunPlan: !!state.runPlan,
+    completedPhases: state.completedPhases?.length, effectiveNextPhase,
+  });
 
   // Close out the current phase bookkeeping before any transition logic
   if (!state.completedPhases.includes(currentPhase)) {
