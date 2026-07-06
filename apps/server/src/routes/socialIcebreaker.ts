@@ -205,6 +205,41 @@ router.post('/start', async (req: any, res) => {
     }
 
     const state = existing.state;
+
+    // ── Custom/test session reset on host re-entry ──
+    let isResetSession = false;
+    const isCustomReEntry = eventTier === 'custom' || state.eventTier === 'custom';
+    if (isCustomReEntry && state.hostUserId === userId) {
+      logger.info('[SocialIcebreaker] Resetting custom session for host re-entry', {
+        icebreakerSessionId: sessionId,
+        socialSessionId: existing.socialSessionId,
+        wasPhase: state.currentPhase,
+        wasCompletedCount: state.completedPhases?.length ?? 0,
+      });
+      state.eventTier = 'custom';
+      state.currentPhase = 'warmup';
+      state.completedPhases = [];
+      state.autoAdvanceEnabled = false;
+      state.phaseStartedAt = Date.now();
+      state.phaseSelectionId = undefined;
+      state.selectablePhases = undefined;
+      state.runPlan = undefined;
+      state.warmupReadyUserIds = [];
+      state.warmupTopicRevealed = false;
+      state.warmupTurnUserId = undefined;
+      state.warmupTurnStartedAt = undefined;
+      state.pulseChecks = [];
+      state.commonGroundCount = 0;
+      state.bonusGateOffered = undefined;
+      state.bonusGateAccepted = undefined;
+      state.bonusGateDeclined = undefined;
+      state.recapData = undefined;
+      state.lieDetectiveCompletedUserIds = [];
+      state.challengeCompletedBy = undefined;
+      state.currentChallenge = undefined;
+      isResetSession = true;
+    }
+
     const existingParticipant = await getParticipant(existing.socialSessionId, userId);
     const participantDisplayName =
       displayName || existingParticipant?.displayName || state.hostDisplayName;
@@ -223,7 +258,7 @@ router.post('/start', async (req: any, res) => {
     // sessions; only persist when that backfill actually changed the payload.
     const enabledPhasesBefore = JSON.stringify(state.enabledPhases ?? []);
     ensureSessionEnabledPhases(state);
-    let shouldPersist = JSON.stringify(state.enabledPhases ?? []) !== enabledPhasesBefore;
+    let shouldPersist = isResetSession || JSON.stringify(state.enabledPhases ?? []) !== enabledPhasesBefore;
 
     // Recompile the run plan when the roster grows during warmup so that
     // phases with higher minPlayers (e.g. lie_detective) are included once
