@@ -206,15 +206,21 @@ router.post('/start', async (req: any, res) => {
 
     const state = existing.state;
 
-    // ── Custom/test session reset on host re-entry ──
+    // ── Custom/test session reset on re-entry ──
+    // No hostUserId check (consistent with set-tier which allows any participant).
+    // When the incoming eventTier is 'custom', always apply it — the session may
+    // have been created by a different caller (e.g. test script / default preset)
+    // and needs to be overridden to custom mode.
     let isResetSession = false;
     const isCustomReEntry = eventTier === 'custom' || state.eventTier === 'custom';
-    if (isCustomReEntry && state.hostUserId === userId) {
-      logger.info('[SocialIcebreaker] Resetting custom session for host re-entry', {
+    if (isCustomReEntry) {
+      logger.info('[SocialIcebreaker] Resetting custom session on re-entry', {
         icebreakerSessionId: sessionId,
         socialSessionId: existing.socialSessionId,
         wasPhase: state.currentPhase,
         wasCompletedCount: state.completedPhases?.length ?? 0,
+        callerUserId: userId,
+        hostUserId: state.hostUserId,
       });
       state.eventTier = 'custom';
       state.currentPhase = 'warmup';

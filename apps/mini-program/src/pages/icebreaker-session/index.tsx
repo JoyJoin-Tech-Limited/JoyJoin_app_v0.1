@@ -448,20 +448,8 @@ export default function IcebreakerSessionPage() {
       return
     }
 
-    console.log('[ADV_DIAG] advance before', {
-      currentPhase: session.currentPhase,
-      eventTier: session.eventTier,
-      runPlan: !!session.runPlan,
-      hasSelectionId: !!session.phaseSelectionId,
-      completedPhases: session.completedPhases?.length,
-    })
-
     void performSocialAction<{ nextPhase?: string }>('advance', '/advance', {
       currentPhase: session.currentPhase,
-    }).then((resp) => {
-      console.log('[ADV_DIAG] advance after', {
-        nextPhase: resp?.nextPhase,
-      })
     })
   }, [performSocialAction, session, socialSessionId])
 
