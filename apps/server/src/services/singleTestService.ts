@@ -10,8 +10,19 @@ import {
   socialIcebreakerLieTruths,
 } from "@shared/schema";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { logger } from "../lib/logger";
-import { ARCHETYPE_DEFINITIONS } from "@shared/personality/archetypeNames";
+import {
+  ARCHETYPE_DEFINITIONS,
+  ARCHETYPE_CANONICAL_ORDER,
+  ARCHETYPE_BY_ID,
+} from "@shared/personality/archetypeNames";
+import {
+  singleTestStateSchema,
+  type SingleTestState,
+  type SingleTestBot,
+} from "@shared/socialIcebreaker";
+import { isSingleTestMode } from "../lib/isSingleTestMode";
 
 const VIRTUAL_PHONE_PREFIX = "+861399999";
 const SINGLE_TEST_POOL_TITLE = "单人调试局";
@@ -61,6 +72,56 @@ function generateBirthdate(): string {
   return `${year}-${month}-${day}`;
 }
 
+/** Simple deterministic string hash (non-cryptographic). Used to derive a stable
+ *  archetype mix from a groupId without adding DB state. */
+function simpleHash(input: string): number {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    const char = input.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+/** Pick BOT_COUNT bots with distinct archetypes when possible, deterministically
+ *  keyed by groupId so the same test group always gets the same archetype mix. */
+export function pickDiverseBots(virtualUsers: VirtualUserRow[], groupId: string): VirtualUserRow[] {
+  const byArchetype = new Map<string, VirtualUserRow[]>();
+  for (const u of virtualUsers) {
+    const archetypeId = u.primaryArchetype ?? 'corgi';
+    if (!byArchetype.has(archetypeId)) byArchetype.set(archetypeId, []);
+    byArchetype.get(archetypeId)!.push(u);
+  }
+
+  const archetypeIds = ARCHETYPE_CANONICAL_ORDER;
+  const startIndex = simpleHash(groupId) % archetypeIds.length;
+  const selected: VirtualUserRow[] = [];
+  const usedIds = new Set<string>();
+
+  for (let i = 0; i < BOT_COUNT; i++) {
+    const archetypeId = archetypeIds[(startIndex + i) % archetypeIds.length];
+    const candidates = byArchetype.get(archetypeId) ?? [];
+    const pickIndex = simpleHash(`${groupId}:${archetypeId}`) % Math.max(candidates.length, 1);
+    const candidate = candidates[pickIndex];
+    if (candidate && !usedIds.has(candidate.id)) {
+      selected.push(candidate);
+      usedIds.add(candidate.id);
+    }
+  }
+
+  // Fill any remaining slots (e.g. not enough virtual users for full diversity)
+  if (selected.length < BOT_COUNT) {
+    const remaining = shuffle(virtualUsers).filter((u) => !usedIds.has(u.id));
+    for (const u of remaining.slice(0, BOT_COUNT - selected.length)) {
+      selected.push(u);
+      usedIds.add(u.id);
+    }
+  }
+
+  return selected;
+}
+
 export async function ensureVirtualUsers(): Promise<void> {
   const existing = await db
     .select({ id: users.id })
@@ -78,6 +139,8 @@ export async function ensureVirtualUsers(): Promise<void> {
 
   const values = [];
   for (let i = existing.length; i < VIRTUAL_USER_COUNT && (i - existing.length) < namesToUse.length; i++) {
+    const primaryArchetype = pick(archetypeIds);
+    const archetypeDef = ARCHETYPE_BY_ID[primaryArchetype];
     values.push({
       phoneNumber: `${VIRTUAL_PHONE_PREFIX}${String(i).padStart(4, '0')}`,
       password: passwordHash,
@@ -85,7 +148,8 @@ export async function ensureVirtualUsers(): Promise<void> {
       gender: pick(GENDERS),
       currentCity: pick(CITIES),
       birthdate: generateBirthdate(),
-      primaryArchetype: pick(archetypeIds),
+      primaryArchetype,
+      archetype: archetypeDef?.nameCn ?? primaryArchetype,
       educationLevel: pick(EDUCATION_LEVELS),
       lifeStage: pick(LIFE_STAGES),
       intent: [pick(INTENTS), pick(INTENTS)],
@@ -145,6 +209,7 @@ interface VirtualUserRow {
   id: string;
   displayName: string | null;
   primaryArchetype: string | null;
+  archetype: string | null;
 }
 
 export async function startSingleTestSession(testerUserId: string): Promise<{
@@ -156,9 +221,17 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
   await ensureVirtualUsers();
   const poolId = await ensureCleanSingleTestPool(testerUserId);
 
-  // Pick 5 bots with diverse archetypes
+  // Generate the group id up-front so bot selection can be deterministic by groupId.
+  const groupId = crypto.randomUUID();
+
+  // Pick 5 bots with diverse archetypes (deterministic by groupId)
   const virtualUsers = (await db
-    .select({ id: users.id, displayName: users.displayName, primaryArchetype: users.primaryArchetype })
+    .select({
+      id: users.id,
+      displayName: users.displayName,
+      primaryArchetype: users.primaryArchetype,
+      archetype: users.archetype,
+    })
     .from(users)
     .where(like(users.phoneNumber, `${VIRTUAL_PHONE_PREFIX}%`))) as VirtualUserRow[];
 
@@ -166,7 +239,13 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
     throw new Error("INSUFFICIENT_VIRTUAL_USERS");
   }
 
-  const bots = shuffle(virtualUsers).slice(0, BOT_COUNT);
+  const bots = pickDiverseBots(virtualUsers, groupId);
+
+  logger.info("social_icebreaker_test_mode_bot_roster_seeded", {
+    groupId,
+    botCount: bots.length,
+    botArchetypes: bots.map((b) => b.archetype ?? ARCHETYPE_BY_ID[b.primaryArchetype ?? "corgi"]?.nameCn),
+  });
 
   // Register tester + bots
   await db.insert(eventPoolRegistrations)
@@ -186,6 +265,7 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
   const [groupRecord] = await db
     .insert(eventPoolGroups)
     .values({
+      id: groupId,
       poolId,
       groupNumber: 1,
       memberIds: allMemberIds,
@@ -198,8 +278,6 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
     throw new Error("GROUP_NOT_PERSISTED");
   }
 
-  const groupId = groupRecord.id;
-
   // Mark all registrations as matched + assign to the group (required for
   // getSocialIcebreakerAccess which checks assignedGroupId on registration)
   await db
@@ -207,16 +285,94 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
     .set({ matchStatus: "matched", assignedGroupId: groupId })
     .where(and(eq(eventPoolRegistrations.poolId, poolId), eq(eventPoolRegistrations.matchStatus, "pending")));
 
-  // Build bot user info
+  // Build bot user info (internal; clients receive opaque botIds via state.singleTest)
   const botUsers = bots.map((b: VirtualUserRow) => ({
     userId: b.id,
     displayName: b.displayName ?? "Bot",
-    archetype: b.primaryArchetype ?? 'corgi',
+    archetype: b.archetype ?? ARCHETYPE_BY_ID[b.primaryArchetype ?? "corgi"]?.nameCn ?? "社牛柯基",
   }));
 
   const socialSessionId = `social_${groupId}`;
-  logger.info("[SingleTest] Session ready", { groupId, socialSessionId, botCount: botUsers.length });
+  logger.info("social_icebreaker_test_mode_session_ready", {
+    groupId,
+    socialSessionId,
+    botCount: botUsers.length,
+    botArchetypes: botUsers.map((b) => b.archetype),
+  });
   return { socialSessionId, groupId, botUsers };
+}
+
+/** Build a client-safe roster for a single-test group.
+ *  Returns null if the group is not a single-test group or not in test mode. */
+export async function getSingleTestBotRosterForClient(groupId: string): Promise<SingleTestBot[] | null> {
+  if (!isSingleTestMode()) return null;
+
+  const [group] = await db
+    .select({ poolId: eventPoolGroups.poolId })
+    .from(eventPoolGroups)
+    .where(eq(eventPoolGroups.id, groupId))
+    .limit(1);
+
+  if (!group) return null;
+
+  const [pool] = await db
+    .select({ title: eventPools.title })
+    .from(eventPools)
+    .where(eq(eventPools.id, group.poolId))
+    .limit(1);
+
+  if (pool?.title !== SINGLE_TEST_POOL_TITLE) return null;
+
+  const registrationRows: Array<{ userId: string | null }> = await db
+    .select({ userId: eventPoolRegistrations.userId })
+    .from(eventPoolRegistrations)
+    .where(eq(eventPoolRegistrations.assignedGroupId, groupId));
+
+  const botUserIds = registrationRows
+    .map((r: { userId: string | null }) => r.userId)
+    .filter((id: string | null): id is string => typeof id === "string");
+
+  if (botUserIds.length === 0) return [];
+
+  const botRows: Array<{
+    id: string;
+    displayName: string | null;
+    archetype: string | null;
+    primaryArchetype: string | null;
+  }> = await db
+    .select({
+      id: users.id,
+      displayName: users.displayName,
+      archetype: users.archetype,
+      primaryArchetype: users.primaryArchetype,
+    })
+    .from(users)
+    .where(and(inArray(users.id, botUserIds), like(users.phoneNumber, `${VIRTUAL_PHONE_PREFIX}%`)));
+
+  return botRows.map((b: { id: string; displayName: string | null; archetype: string | null; primaryArchetype: string | null }, index: number): SingleTestBot => ({
+    botId: `bot-${index + 1}`,
+    displayName: b.displayName ?? "Bot",
+    archetype: b.archetype ?? ARCHETYPE_BY_ID[b.primaryArchetype ?? "corgi"]?.nameCn ?? "社牛柯基",
+  }));
+}
+
+/** Returns validated single-test metadata for a new social session, or null if
+ *  the group is not a single-test group or the server is not in test mode. */
+export async function getSingleTestMetaForSessionStart(groupId: string): Promise<SingleTestState | null> {
+  if (!isSingleTestMode()) return null;
+
+  const bots = await getSingleTestBotRosterForClient(groupId);
+  if (!bots) return null;
+
+  const payload = {
+    version: 1 as const,
+    groupId,
+    isTestModeSkip: true,
+    bots,
+  };
+
+  // Validate on write so persisted state_json is always schema-compliant.
+  return singleTestStateSchema.parse(payload);
 }
 
 export async function cleanupSingleTestData(): Promise<void> {

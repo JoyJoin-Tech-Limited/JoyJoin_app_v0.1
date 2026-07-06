@@ -375,6 +375,28 @@ export function parseXiaoyueSessionPack(input: unknown): XiaoyueSessionPackPaylo
   return xiaoyueSessionPackSchema.parse(input);
 }
 
+// ─── Single-Test Mode Metadata ─────────────────────────────────────────────
+
+export const singleTestBotSchema = z.object({
+  botId: z.string().min(1),
+  displayName: z.string().min(1),
+  archetype: z.string().min(1),
+});
+
+export const singleTestStateSchema = z.object({
+  version: z.literal(1),
+  groupId: z.string().min(1),
+  isTestModeSkip: z.boolean(),
+  bots: z.array(singleTestBotSchema).max(12),
+});
+
+export type SingleTestBot = z.infer<typeof singleTestBotSchema>;
+export type SingleTestState = z.infer<typeof singleTestStateSchema>;
+
+export function parseSingleTestState(input: unknown): SingleTestState {
+  return singleTestStateSchema.parse(input);
+}
+
 export interface RecapSummary {
   headline: string;
   closingLine: string;
@@ -614,6 +636,13 @@ export interface SocialSessionState {
   /** Pre-formatted archetype mix text for the current roster (e.g. "社牛柯基×2、小太阳鸡×1").
    *  Computed server-side so the client does not need to rebuild it. */
   archetypeMixText?: string;
+  /** Single-test debug metadata: versioned, Zod-validated, and only populated
+   *  when the session was created from /api/test/single-test/start. */
+  singleTest?: SingleTestState;
+  /** Client-only: when true, the host sees a test-mode disclosure (warmup→recap skip). */
+  isTestModeSkip?: boolean;
+  /** Client-only: read-only bot roster for single-test visual realism. */
+  testModeBots?: SingleTestBot[];
 }
 
 // Phase config

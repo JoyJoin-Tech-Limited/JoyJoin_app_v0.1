@@ -27,7 +27,7 @@ Base: `/api/social-icebreaker`
 
 | Method | Path | Purpose | Authority |
 |--------|------|---------|-----------|
-| `POST` | `/start` | Create or rejoin | Any |
+| `POST` | `/start` | Create or rejoin; also resets tier/vibe on an existing session when the caller is the original host and the session is still in `warmup` | Any |
 | `GET` | `/:id` | Poll full state | Any participant |
 | `POST` | `/:id/heartbeat` | Presence ping | Any participant |
 | `POST` | `/:id/advance` | Next phase | Host |

@@ -8,6 +8,7 @@ type EventType =
   | 'custom_session_completed'
   | 'end_party_failed'
   | 'custom_mode_selected'
+  | 'icebreaker_session_tier_changed'
   | string
 
 function track(

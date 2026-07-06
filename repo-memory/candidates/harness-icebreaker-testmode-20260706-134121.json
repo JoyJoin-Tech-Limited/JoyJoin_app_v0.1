@@ -1,0 +1,50 @@
+{
+  "source": "harness-deliberation-hrc-icebreaker-testmode-20260706-134121",
+  "topic": "Social Icebreaker single-test mode boundaries",
+  "promoteTo": "repo-memory",
+  "rationale": "These constraints emerged from a full pge-council Harness deliberation on how to safely handle single-test mode phase skips without leaking test logic into production sessions or exposing internal identifiers.",
+  "constraints": [
+    {
+      "id": "icebreaker-testmode-no-raw-userid-to-client",
+      "severity": "hard",
+      "statement": "In single-test Social Icebreaker sessions, raw bot users.id values must never be sent to the mini-program client. The client-facing roster must use opaque, session-scoped bot identifiers.",
+      "rationale": "Prevents user-id enumeration and potential impersonation if an endpoint fails to validate ownership.",
+      "enforcement": ["Zod schema on response DTO", "server test asserting absence of userId in client payload", "code-review checklist"]
+    },
+    {
+      "id": "icebreaker-testmode-namespaced-state",
+      "severity": "hard",
+      "statement": "All single-test metadata persisted in social_icebreaker_sessions.state must live under a single top-level namespace (e.g., state.singleTest), must be versioned, and must be validated by Zod on read and write.",
+      "rationale": "Avoids key collisions with production session state, makes intent explicit, and enables fail-fast validation if the shape drifts.",
+      "enforcement": ["Zod schema for state.singleTest", "regression test rejecting unexpected top-level keys", "lint rule"]
+    },
+    {
+      "id": "icebreaker-testmode-no-phase-engine-branching",
+      "severity": "hard",
+      "statement": "getNextEligiblePhase, phase-advance guards, host-authority checks, and all phase gameplay engines must never branch on isTestModeSkip or any test-mode flag.",
+      "rationale": "The phase skip must remain a natural consequence of playerCount=1, not a special-case branch, so production sessions cannot be accidentally affected.",
+      "enforcement": ["invariant/regression test searching for isTestModeSkip references outside serialization", "code-review gate"]
+    },
+    {
+      "id": "icebreaker-testmode-double-gate",
+      "severity": "hard",
+      "statement": "Test-mode fields in API responses must be included only when both isSingleTestMode() is true at the server AND the session's own state.singleTest.isTestModeSkip flag is true.",
+      "rationale": "Defense-in-depth: even if one gate is bypassed or misconfigured, the other prevents production exposure.",
+      "enforcement": ["centralized serialization function", "server tests for both gates"]
+    },
+    {
+      "id": "icebreaker-testmode-no-new-durable-table-for-ephemeral-bots",
+      "severity": "guideline",
+      "statement": "Avoid introducing new durable tables or columns for transient single-test bot metadata; prefer reusing existing session-state JSONB with namespaced, validated keys unless the metadata needs cross-session querying or long-term retention.",
+      "rationale": "Single-test state is ephemeral and deleted with the session; a dedicated table creates migration, indexing, and cleanup overhead for data that is never queried relationally.",
+      "enforcement": ["schema-change review", "migration safety skill sign-off if table/column proposed"]
+    },
+    {
+      "id": "icebreaker-testmode-deterministic-seeding",
+      "severity": "guideline",
+      "statement": "Bot archetype rosters in single-test mode should be generated deterministically from a stable seed so that retries, rejoins, and tests produce the same cohort without duplicate inserts or race conditions.",
+      "rationale": "Determinism gives idempotency for free and makes tests stable.",
+      "enforcement": ["unit test asserting same groupId yields same roster", "unit test asserting different groupIds yield different rosters"]
+    }
+  ]
+}

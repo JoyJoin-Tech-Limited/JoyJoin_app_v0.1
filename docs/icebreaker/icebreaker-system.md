@@ -149,12 +149,22 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
   or legacy `compileAgentRunPlan()` (when `false`).
   Tier can only be changed during `waiting` or `warmup` phase.
 
+  **Re-selecting tier on an existing session** — since 2026-07-06, `POST /api/social-icebreaker/start`
+  honors a changed `eventTier`/`vibe` when the caller is the original host and the session is still in
+  `warmup`. This fixes the single-player test flow where selecting `custom` after an initial `glow`
+  session used to reuse the old glow plan and advance straight to `recap`. The reset is handled by
+  `resetSocialIcebreakerTier()` in `apps/server/src/services/socialIcebreakerTierReset.ts`, which is
+  shared with `/set-tier`.
+
   **Custom mode (`custom`)** — host-driven free-form flow (feature flag `SOCIAL_ICEBREAKER_CUSTOM_MODE_ENABLED`, default `true`):
   - Available as a fourth tier option. No fixed run plan; host picks phases one-by one from a carousel.
   - `autoAdvanceEnabled` is set to `false`; only the host can advance/end.
   - Server enters `phase_selection` between phases. Host chooses next phase via `POST /api/social-icebreaker/:socialSessionId/select-phase { phase, phaseSelectionId }`.
   - Host can end early from `phase_selection` or `recap` via `POST /api/social-icebreaker/:socialSessionId/end-session { phaseSelectionId? }`, generating a recap snapshot identical to normal advance.
   - Preset tiers can be re-selected from custom mode; custom data (selected phases, completed phases) is preserved but the fixed run plan takes over.
+  - When switching from a preset tier to `custom`, the server clears `runPlan`, `completedPhases`,
+    `phaseSelectionId`, and phase-specific ephemeral state, then advances from `warmup` into
+    `phase_selection`.
         │
         ▼
 [WARMUP PHASE]

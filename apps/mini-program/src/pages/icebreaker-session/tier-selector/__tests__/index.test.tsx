@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import TierSelectorPage, { TIER_OPTIONS, VIBE_OPTIONS, TIER_PRESETS } from '../index'
+import TierSelectorPage, { TIER_OPTIONS, VIBE_OPTIONS } from '../index'
+import { TIER_PRESETS } from '../../tierPresets'
 
 describe('TierSelectorPage', () => {
   it('exports a valid React component', () => {

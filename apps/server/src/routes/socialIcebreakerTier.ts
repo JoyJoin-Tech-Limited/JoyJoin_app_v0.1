@@ -2,19 +2,14 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { type TierMachineId, resolveTierDisplay } from '@shared/socialIcebreakerTierManifest';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
-import { compileForSession } from '../services/runPlanService';
-import {
-  updateSession,
-  listParticipants,
-  invalidatePreGenerationForSession,
-} from '../lib/socialIcebreakerStore';
+import { listParticipants } from '../lib/socialIcebreakerStore';
 import {
   resolveSession,
-  isHostAuthorized,
   buildClientState,
 } from './socialIcebreakerHelpers';
 import { enqueueRunPlanPreGeneration } from '../jobs/preGenerationQueue';
 import { getFeatureFlag } from '../lib/featureFlags';
+import { resetSocialIcebreakerTier } from '../services/socialIcebreakerTierReset';
 import { logger } from '../lib/logger';
 
 const router = Router();
@@ -50,37 +45,46 @@ router.post('/:socialSessionId/set-tier', async (req: Request, res: Response) =>
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
-    return res.status(403).json({ error: 'Only the host can set the tier' });
-  }
-
-  // Changing runPlan after warmup would desync currentPhase from the new segment order
-  // (getNextEligiblePhase uses runPlan.segments); only allow while still in warmup.
-  if (state.currentPhase !== 'warmup') {
-    return res.status(400).json({
-      error: 'Tier can only be changed during warmup (before advancing past the first phase)',
-    });
-  }
-
   const VALID_TIERS: TierMachineId[] = ['breeze', 'glow', 'blaze', 'custom'];
   if (!tier || !VALID_TIERS.includes(tier as TierMachineId)) {
     return res.status(400).json({ error: 'Invalid tier. Must be one of: breeze, glow, blaze, custom' });
   }
 
   const newTier = tier as TierMachineId;
+  const customModeEnabled = await getFeatureFlag('socialIcebreakerCustomModeEnabled', true);
+
+  const resetResult = await resetSocialIcebreakerTier({
+    state,
+    newTier,
+    newVibe: vibe,
+    userId,
+    resetSource: '/set-tier',
+    customModeEnabled,
+  });
+
+  if (!resetResult.reset) {
+    switch (resetResult.reason) {
+      case 'not_host':
+        return res.status(403).json({ error: 'Only the host can set the tier' });
+      case 'not_warmup':
+        return res.status(400).json({
+          error: 'Tier can only be changed during warmup (before advancing past the first phase)',
+        });
+      case 'custom_disabled':
+        return res.status(400).json({ error: 'Custom mode is not enabled' });
+      case 'same_tier':
+      default:
+        return res.json({
+          socialSessionId,
+          eventTier: state.eventTier,
+          tierDisplayName: resolveTierDisplay(state.eventTier ?? 'breeze', { glowVariant: 'default' }),
+          runPlan: state.runPlan,
+          state: await buildClientState(state, userId),
+        });
+    }
+  }
 
   if (newTier === 'custom') {
-    const customModeEnabled = await getFeatureFlag('socialIcebreakerCustomModeEnabled', true);
-    if (!customModeEnabled) {
-      return res.status(400).json({ error: 'Custom mode is not enabled' });
-    }
-    state.eventTier = newTier;
-    state.vibe = vibe && ['chat', 'balanced', 'game'].includes(vibe) ? vibe : state.vibe || 'balanced';
-    state.runPlan = undefined;
-    state.autoAdvanceEnabled = false;
-    await updateSession(socialSessionId, state);
-    await invalidatePreGenerationForSession(socialSessionId);
-    logger.info('Social icebreaker tier updated to custom', { socialSessionId, userId });
     return res.json({
       socialSessionId,
       eventTier: newTier,
@@ -90,19 +94,8 @@ router.post('/:socialSessionId/set-tier', async (req: Request, res: Response) =>
     });
   }
 
-  if (vibe && ['chat', 'balanced', 'game'].includes(vibe)) {
-    state.vibe = vibe;
-  }
-  const runPlan = await compileForSession(state, newTier);
-
-  state.eventTier = newTier;
-  state.runPlan = runPlan;
-  state.autoAdvanceEnabled = true;
-  await updateSession(socialSessionId, state);
-
-  await invalidatePreGenerationForSession(socialSessionId);
-
-  // Re-enqueue pre-generation for the new run plan (best-effort)
+  // Re-enqueue pre-generation for the new preset run plan (best-effort)
+  const runPlan = state.runPlan!;
   const rosterAfterTierChange = await listParticipants(socialSessionId);
   try {
     await enqueueRunPlanPreGeneration(
@@ -124,12 +117,6 @@ router.post('/:socialSessionId/set-tier', async (req: Request, res: Response) =>
       error: preGenErr instanceof Error ? preGenErr.message : String(preGenErr),
     });
   }
-
-  logger.info('Social icebreaker tier updated', {
-    socialSessionId,
-    userId,
-    tier: newTier,
-  });
 
   return res.json({
     socialSessionId,

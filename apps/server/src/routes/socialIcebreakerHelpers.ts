@@ -15,6 +15,7 @@ import { shouldAutoAdvance } from '../xiaoyueAdaptiveEngine';
 import { logger } from '../lib/logger';
 import { buildArchetypeContext } from '../lib/contextInjector';
 import { isCustomMode, computeSelectablePhases } from '../services/customModeService';
+import { isSingleTestMode } from '../lib/isSingleTestMode';
 import { curateMedals } from '../lib/medalCuration';
 import { generateRecapSummary, buildLieDetectiveV2RecapData } from '../socialIcebreakerAIService';
 
@@ -138,11 +139,18 @@ export async function buildClientState(
   const withCustomExtras = isCustomMode(state)
     ? { ...state, selectablePhases: computeSelectablePhases(state) }
     : state;
+  const isTestMode = isSingleTestMode() && state.singleTest?.isTestModeSkip === true;
   return sanitizeStateForClient(
     {
       ...withCustomExtras,
       joinedParticipants,
       archetypeMixText: archetypeCtx.mixText || undefined,
+      ...(isTestMode
+        ? {
+            isTestModeSkip: true,
+            testModeBots: state.singleTest!.bots,
+          }
+        : {}),
     },
     requestingUserId,
   );
