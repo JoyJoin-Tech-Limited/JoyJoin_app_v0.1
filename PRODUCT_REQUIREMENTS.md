@@ -119,6 +119,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Date formatting:** `formatEventDateTime` now prefixes near-term dates with `今天`/`明天`/`后天`.
 - **Design token:** Added `$font-mono` to `apps/mini-program/src/styles/_variables.scss` for tabular numeric readouts.
 - **Accessibility:** Countdown clock uses `aria-live="polite"` so screen readers announce updates without overwhelming the user.
+- **Two-rail layout (2026-07-07):** the card renders a left body (status pulse, title, date/time/location) and a 168rpx right rail (compact countdown, group-size hint, price, or a "待公布" placeholder). The right rail is not `aria-hidden`; only the decorative `›` cue is hidden, and `FootprintOracleCard` supplies a `railAriaLabel` so the card's accessible name includes the rail contents.
 - **Tests:** Added `useEventCountdown.test.ts` (10 tests) and `eventDisplay.test.ts` (14 tests).
 
 **44. End-of-June Docs + Backend Hardening Sync** 🔧 *(2026-06-24 to 2026-06-25)*
