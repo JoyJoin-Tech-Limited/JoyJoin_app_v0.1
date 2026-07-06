@@ -108,6 +108,7 @@ export default function SquadUnboxingPage() {
   const [announcement, setAnnouncement] = useState('')
   const [scrollToDetailId, setScrollToDetailId] = useState('')
   const [headerReady, setHeaderReady] = useState(false)
+  const [deckEmergeComplete, setDeckEmergeComplete] = useState(false)
 
   const reportScrollDepth = useScrollDepthTracking(groupId)
 
@@ -115,6 +116,7 @@ export default function SquadUnboxingPage() {
   useDidShow(() => {
     setFocusedCardIndex(-1)
     setHeaderReady(false)
+    setDeckEmergeComplete(false)
   })
 
   useEffect(() => {
@@ -147,6 +149,7 @@ export default function SquadUnboxingPage() {
         })
       } else {
         setHasTappedCard(true)
+        haptics('light')
         squadUnboxingAnalytics.track('squad_unboxing_card_focus', {
           source: 'deck_tap',
           cardIndex: next,
@@ -598,7 +601,7 @@ export default function SquadUnboxingPage() {
                       </View>
                     ) : viewerPairs.length > 0 ? (
                       <View className='squad-unboxing__pair-list'>
-                        {viewerPairs.slice(0, 2).map((pair) => {
+                        {viewerPairs.slice(0, 2).map((pair, pairIndex) => {
                           const pairMembers = pairKeyMemberMap.get(pair.pairKey)
                           const otherMember = pairMembers?.find((member) => member.userId !== currentUserId)
                           const pairLabel = otherMember
@@ -614,6 +617,9 @@ export default function SquadUnboxingPage() {
                                 'squad-unboxing__pair-card',
                                 headerReady ? 'squad-unboxing__pair-card--ready' : '',
                               ].filter(Boolean).join(' ')}
+                              style={{
+                                transitionDelay: headerReady ? `${pairIndex * 80}ms` : '0ms',
+                              }}
                             >
                               <View className='squad-unboxing__pair-top'>
                                 <Text className='squad-unboxing__pair-label'>{pairLabel}</Text>
@@ -636,7 +642,7 @@ export default function SquadUnboxingPage() {
                       </View>
                     ) : sortedPairExplanations.length > 0 ? (
                       <View className='squad-unboxing__pair-list'>
-                        {sortedPairExplanations.slice(0, 2).map((pair) => {
+                        {sortedPairExplanations.slice(0, 2).map((pair, pairIndex) => {
                           const pairMembers = pairKeyMemberMap.get(pair.pairKey)
                           const pairLabel = pairMembers
                             ? `${getMemberName(pairMembers[0])} × ${getMemberName(pairMembers[1])}`
@@ -649,6 +655,9 @@ export default function SquadUnboxingPage() {
                                 'squad-unboxing__pair-card',
                                 headerReady ? 'squad-unboxing__pair-card--ready' : '',
                               ].filter(Boolean).join(' ')}
+                              style={{
+                                transitionDelay: headerReady ? `${pairIndex * 80}ms` : '0ms',
+                              }}
                             >
                               <View className='squad-unboxing__pair-top'>
                                 <Text className='squad-unboxing__pair-label'>{pairLabel}</Text>
@@ -682,7 +691,13 @@ export default function SquadUnboxingPage() {
                         {groupAnalysis.iceBreakers.map((topic, index) => (
                           <View
                             key={`${topic}-${index}`}
-                            className='squad-unboxing__topic-chip'
+                            className={[
+                              'squad-unboxing__topic-chip',
+                              headerReady ? 'squad-unboxing__topic-chip--ready' : '',
+                            ].filter(Boolean).join(' ')}
+                            style={{
+                              transitionDelay: headerReady ? `${index * 60}ms` : '0ms',
+                            }}
                           >
                             <Text className='squad-unboxing__topic-chip-text'>{topic}</Text>
                           </View>
@@ -735,6 +750,7 @@ export default function SquadUnboxingPage() {
             reduceMotion={shouldReduceMotion}
             isDegradation={isDegradation}
             onFocusChange={handleCardFocus}
+            onEmergeComplete={() => setDeckEmergeComplete(true)}
           />
         ) : null}
         <View className='squad-unboxing__stage-lid'>
@@ -747,7 +763,7 @@ export default function SquadUnboxingPage() {
             {!hasTappedCard ? (
               <View className={[
                 'squad-unboxing__deck-cue',
-                headerReady ? 'squad-unboxing__deck-cue--ready' : '',
+                deckEmergeComplete ? 'squad-unboxing__deck-cue--ready' : '',
               ].filter(Boolean).join(' ')}>
                 <Image
                   className='squad-unboxing__deck-cue-mascot'
@@ -772,7 +788,8 @@ export default function SquadUnboxingPage() {
           ]
             .filter(Boolean)
             .join(' ')}
-        >          <Button
+        >
+          <Button
             className='squad-unboxing__confirm-btn'
             onClick={handleConfirmAttendance}
             disabled={isSubmitting || confirmAttendanceMutation.isPending || showSuccessOverlay}

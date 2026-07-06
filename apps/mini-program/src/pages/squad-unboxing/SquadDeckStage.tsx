@@ -14,6 +14,7 @@ export interface SquadDeckStageProps {
   reduceMotion: boolean
   isDegradation: boolean
   onFocusChange: (index: number) => void
+  onEmergeComplete?: () => void
 }
 
 export default function SquadDeckStage({
@@ -25,6 +26,7 @@ export default function SquadDeckStage({
   reduceMotion,
   isDegradation,
   onFocusChange,
+  onEmergeComplete,
 }: SquadDeckStageProps) {
   const [isRevealed, setIsRevealed] = useState(() => reduceMotion || isDegradation)
   const [emergeComplete, setEmergeComplete] = useState(() => reduceMotion || isDegradation)
@@ -47,6 +49,12 @@ export default function SquadDeckStage({
       clearTimeout(completeTimer)
     }
   }, [reduceMotion, isDegradation, members.length])
+
+  useEffect(() => {
+    if (emergeComplete) {
+      onEmergeComplete?.()
+    }
+  }, [emergeComplete, onEmergeComplete])
 
   const handleFocus = useCallback((index: number) => {
     onFocusChange(index)
