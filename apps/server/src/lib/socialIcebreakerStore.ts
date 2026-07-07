@@ -156,6 +156,7 @@ export async function createSession(state: SocialSessionState): Promise<void> {
     sessionStartedAt: new Date(state.sessionStartedAt),
     expiresAt,
     stateJson: state as unknown as Record<string, unknown>,
+    isTestSession: Boolean(state.singleTest),
   });
 }
 
@@ -187,17 +188,18 @@ export async function upsertParticipant(
   socialSessionId: string,
   userId: string,
   displayName: string,
+  isTestBot = false,
 ): Promise<void> {
   const now = new Date();
   await db
     .insert(socialIcebreakerParticipants)
-    .values({ socialSessionId, userId, displayName, lastSeenAt: now })
+    .values({ socialSessionId, userId, displayName, isTestBot, lastSeenAt: now })
     .onConflictDoUpdate({
       target: [
         socialIcebreakerParticipants.socialSessionId,
         socialIcebreakerParticipants.userId,
       ],
-      set: { displayName, lastSeenAt: now },
+      set: { displayName, isTestBot, lastSeenAt: now },
     });
 }
 

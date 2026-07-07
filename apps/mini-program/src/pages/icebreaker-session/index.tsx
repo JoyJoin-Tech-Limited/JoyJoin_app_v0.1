@@ -1301,6 +1301,7 @@ export default function IcebreakerSessionPage() {
         <View className='icebreaker__test-mode-overlay' catchMove>
           <TestModeDisclosure
             bots={session?.testModeBots}
+            runBots={session?.runBots}
             socialSessionId={socialSessionId ?? undefined}
             icebreakerSessionId={session?.icebreakerSessionId}
             onContinue={handleTestModeContinue}

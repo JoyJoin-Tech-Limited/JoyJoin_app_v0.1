@@ -1,6 +1,6 @@
 import express from "express";
 import session from "express-session";
-import type { AddressInfo } from "net";
+import { createWithServerAndCookie } from '../test-utils/withServer';
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../repositories/userLocationRepo", () => ({
@@ -51,26 +51,7 @@ function createApp() {
   return app;
 }
 
-async function withServer<T>(fn: (baseUrl: string, cookie?: string) => Promise<T>) {
-  const app = createApp();
-  const server = await new Promise<ReturnType<typeof app.listen>>((resolve) => {
-    const instance = app.listen(0, () => resolve(instance));
-  });
-
-  try {
-    const { port } = server.address() as AddressInfo;
-    const baseUrl = `http://127.0.0.1:${port}`;
-
-    const sessionResponse = await fetch(`${baseUrl}/__test__/super-session`, { method: "POST" });
-    const cookie = sessionResponse.headers.get("set-cookie")?.split(";")[0] ?? "";
-
-    return await fn(baseUrl, cookie);
-  } finally {
-    await new Promise<void>((resolve, reject) => {
-      server.close((err) => (err ? reject(err) : resolve()));
-    });
-  }
-}
+const withServer = createWithServerAndCookie(createApp, '/__test__/super-session');
 
 beforeEach(() => {
   vi.clearAllMocks();

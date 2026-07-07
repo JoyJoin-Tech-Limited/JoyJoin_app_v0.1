@@ -14,7 +14,7 @@ interface StartResult {
   groupId: string
   testerRegistrationId: string
   registrationId: string
-  botUsers: Array<{ userId: string; displayName: string; archetype: string | null }>
+  bots: Array<{ botId: string; displayName: string; archetype: string | null }>
 }
 
 export default function SingleTestBanner({ className = '' }: SingleTestBannerProps) {
@@ -29,7 +29,7 @@ export default function SingleTestBanner({ className = '' }: SingleTestBannerPro
         method: 'POST',
         path: '/api/test/single-test/start',
       })
-      Taro.showToast({ title: `局已创建，共${result.botUsers.length + 1}人`, icon: 'none' })
+      Taro.showToast({ title: `局已创建，共${result.bots.length + 1}人`, icon: 'none' })
       Taro.navigateTo({
         url: `/pages/matching-status/index?registrationId=${encodeURIComponent(result.registrationId)}`,
       })

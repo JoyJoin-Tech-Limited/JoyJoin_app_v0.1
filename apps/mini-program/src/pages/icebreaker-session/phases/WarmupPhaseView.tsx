@@ -8,6 +8,7 @@ import { localAsset } from '../../../lib/utils/cdnAssets'
 import { stripEmojis } from '../../../lib/utils/emojiGuard'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import ArchetypeGlyph from '../../../components/mascot/ArchetypeGlyph'
+import MissingArchetypePlaceholder from '../../../components/mascot/MissingArchetypePlaceholder'
 import Button from '../../../components/ui/Button'
 import ParticleBurst from '../../../components/reveal/ParticleBurst'
 import CardFlip from '../../../components/reveal/CardFlip'
@@ -70,6 +71,21 @@ function buildArchetypeMixText(participants: SessionParticipant[]): string {
     segments.push(count > 1 ? `${name}×${count}` : name)
   }
   return segments.join('、')
+}
+
+/**
+ * Mood → canonical emoji mapping for proprietary icon lookup.
+ *
+ * Warmup topics carry a server-generated `emoji`, but many of those emoji
+ * are not in our icon registry and fall back to native emoji rendering.
+ * Using the topic's `mood` guarantees a designed JoyJoin icon on every
+ * topic card while preserving the intended atmosphere.
+ */
+const TOPIC_MOOD_EMOJI: Record<AtmosphereMood, string> = {
+  funny: '😂',
+  life: '☕',
+  relaxed: '✨',
+  emotional: '💫',
 }
 
 /**
@@ -277,7 +293,7 @@ export function WarmupPhaseView({
             </View>
           )}
           <View className='warmup-card-back__emoji'>
-            <JoyJoinIcon emoji={currentTopic.emoji ?? ''} size={56} />
+            <JoyJoinIcon emoji={TOPIC_MOOD_EMOJI[currentTopic.mood] ?? currentTopic.emoji ?? ''} tier='mood' size={56} />
           </View>
           <Text className='warmup-card-back__question'>{stripEmojis(currentTopic.question)}</Text>
 
@@ -381,7 +397,7 @@ export function WarmupPhaseView({
                     {p.archetype ? (
                       <ArchetypeGlyph archetype={p.archetype} size={28} />
                     ) : (
-                      <Text className='icebreaker__participant-avatar-fallback'>?</Text>
+                      <MissingArchetypePlaceholder size={40} />
                     )}
                     {p.isHost && (
                       <Image

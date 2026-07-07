@@ -21,8 +21,10 @@ import {
   singleTestStateSchema,
   type SingleTestState,
   type SingleTestBot,
+  type SingleTestBotPersona,
 } from "@shared/socialIcebreaker";
 import { isSingleTestMode } from "../lib/isSingleTestMode";
+import { isSocialIcebreakerTestMode } from "../lib/isSocialIcebreakerTestMode";
 import { cleanupBotFillUsers } from "./botFillService";
 
 const VIRTUAL_PHONE_PREFIX = "+861399999";
@@ -155,9 +157,10 @@ export async function ensureVirtualUsers(): Promise<void> {
       educationLevel: pick(EDUCATION_LEVELS),
       lifeStage: pick(LIFE_STAGES),
       intent: [pick(INTENTS), pick(INTENTS)],
-      hasCompletedProfileSetup: true,
-      hasCompletedPersonalityTest: true,
-      hasCompletedRegistration: true,
+    hasCompletedProfileSetup: true,
+    hasCompletedPersonalityTest: true,
+    hasCompletedRegistration: true,
+    isTestBot: true,
     });
   }
 
@@ -223,7 +226,8 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
   groupId: string;
   testerRegistrationId: string;
   registrationId: string;
-  botUsers: { userId: string; displayName: string; archetype: string }[];
+  bots: SingleTestBot[];
+  botPersonas: SingleTestBotPersona[];
 }> {
   // Phase 1: ensure virtual users + pool (fresh each time)
   await ensureVirtualUsers();
@@ -306,8 +310,16 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
     .set({ matchStatus: "matched", assignedGroupId: groupId })
     .where(and(eq(eventPoolRegistrations.poolId, poolId), eq(eventPoolRegistrations.matchStatus, "pending")));
 
-  // Build bot user info (internal; clients receive opaque botIds via state.singleTest)
-  const botUsers = bots.map((b: VirtualUserRow) => ({
+  // Build client-safe bot roster and server-side persona mapping.
+  // Raw users.id must never leave the server boundary.
+  const selectedBots = bots;
+  const clientBots: SingleTestBot[] = selectedBots.map((b: VirtualUserRow, index: number) => ({
+    botId: `bot-${index + 1}`,
+    displayName: b.displayName ?? "Bot",
+    archetype: b.archetype ?? ARCHETYPE_BY_ID[b.primaryArchetype ?? "corgi"]?.nameCn ?? "社牛柯基",
+  }));
+  const botPersonas: SingleTestBotPersona[] = selectedBots.map((b: VirtualUserRow, index: number) => ({
+    botId: `bot-${index + 1}`,
     userId: b.id,
     displayName: b.displayName ?? "Bot",
     archetype: b.archetype ?? ARCHETYPE_BY_ID[b.primaryArchetype ?? "corgi"]?.nameCn ?? "社牛柯基",
@@ -318,15 +330,15 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
     groupId,
     socialSessionId,
     registrationId: testerRegistration.id,
-    botCount: botUsers.length,
-    botArchetypes: botUsers.map((b) => b.archetype),
+    botCount: clientBots.length,
+    botArchetypes: clientBots.map((b) => b.archetype),
   });
-  return { socialSessionId, groupId, testerRegistrationId: testerRegistration.id, registrationId: testerRegistration.id, botUsers };
+  return { socialSessionId, groupId, testerRegistrationId: testerRegistration.id, registrationId: testerRegistration.id, bots: clientBots, botPersonas };
 }
 
 /** Build a client-safe roster for a single-test group.
  *  Returns null if the group is not a single-test group or not in test mode. */
-export async function getSingleTestBotRosterForClient(groupId: string): Promise<SingleTestBot[] | null> {
+export async function getSingleTestBotRosterForClient(groupId: string): Promise<{ bots: SingleTestBot[]; personas: SingleTestBotPersona[] } | null> {
   if (!isSingleTestMode()) return null;
 
   const [group] = await db
@@ -345,16 +357,17 @@ export async function getSingleTestBotRosterForClient(groupId: string): Promise<
 
   if (pool?.title !== SINGLE_TEST_POOL_TITLE) return null;
 
-  const registrationRows: Array<{ userId: string | null }> = await db
-    .select({ userId: eventPoolRegistrations.userId })
+  const registrationRows: Array<{ userId: string | null; registeredAt: Date }> = await db
+    .select({ userId: eventPoolRegistrations.userId, registeredAt: eventPoolRegistrations.registeredAt })
     .from(eventPoolRegistrations)
-    .where(eq(eventPoolRegistrations.assignedGroupId, groupId));
+    .where(eq(eventPoolRegistrations.assignedGroupId, groupId))
+    .orderBy(eventPoolRegistrations.registeredAt);
 
   const botUserIds = registrationRows
-    .map((r: { userId: string | null }) => r.userId)
+    .map((r: { userId: string | null; registeredAt: Date }) => r.userId)
     .filter((id: string | null): id is string => typeof id === "string");
 
-  if (botUserIds.length === 0) return [];
+  if (botUserIds.length === 0) return { bots: [], personas: [] };
 
   const botRows: Array<{
     id: string;
@@ -371,11 +384,22 @@ export async function getSingleTestBotRosterForClient(groupId: string): Promise<
     .from(users)
     .where(and(inArray(users.id, botUserIds), like(users.phoneNumber, `${VIRTUAL_PHONE_PREFIX}%`)));
 
-  return botRows.map((b: { id: string; displayName: string | null; archetype: string | null; primaryArchetype: string | null }, index: number): SingleTestBot => ({
+  const botById = new Map(botRows.map((b) => [b.id, b]));
+  const orderedBots = botUserIds.map((id) => botById.get(id)).filter((b): b is typeof botRows[number] => !!b);
+
+  const bots: SingleTestBot[] = orderedBots.map((b: { id: string; displayName: string | null; archetype: string | null; primaryArchetype: string | null }, index: number) => ({
     botId: `bot-${index + 1}`,
     displayName: b.displayName ?? "Bot",
     archetype: b.archetype ?? ARCHETYPE_BY_ID[b.primaryArchetype ?? "corgi"]?.nameCn ?? "社牛柯基",
   }));
+  const personas: SingleTestBotPersona[] = orderedBots.map((b: { id: string; displayName: string | null; archetype: string | null; primaryArchetype: string | null }, index: number) => ({
+    botId: `bot-${index + 1}`,
+    userId: b.id,
+    displayName: b.displayName ?? "Bot",
+    archetype: b.archetype ?? ARCHETYPE_BY_ID[b.primaryArchetype ?? "corgi"]?.nameCn ?? "社牛柯基",
+  }));
+
+  return { bots, personas };
 }
 
 /** Returns validated single-test metadata for a new social session, or null if
@@ -383,14 +407,19 @@ export async function getSingleTestBotRosterForClient(groupId: string): Promise<
 export async function getSingleTestMetaForSessionStart(groupId: string): Promise<SingleTestState | null> {
   if (!isSingleTestMode()) return null;
 
-  const bots = await getSingleTestBotRosterForClient(groupId);
-  if (!bots) return null;
+  const result = await getSingleTestBotRosterForClient(groupId);
+  if (!result) return null;
+  const { bots, personas } = result;
+
+  const runBots = isSocialIcebreakerTestMode();
 
   const payload = {
-    version: 1 as const,
+    version: 2 as const,
     groupId,
     isTestModeSkip: true,
+    runBots,
     bots,
+    botPersonas: personas,
   };
 
   // Validate on write so persisted state_json is always schema-compliant.

@@ -498,24 +498,59 @@
     background: rgba($color-surface, 0.96);
   }
 
-  // Compact recap strip inside Step 3's coach card. Only budget + intent are
-  // shown; editable fields (language, dietary) are omitted so the summary
-  // stays subordinate to the active detail inputs.
+  // Premium read-only recap of locked-in preferences from Steps 1–2.
+  // Uses icon-led rows + muted pills to mirror the detail inputs below.
   &__summary-card {
-    padding: $spacing-sm $spacing-md;
+    padding: $spacing-md;
     margin-bottom: $spacing-md;
     border-radius: $card-radius;
-    background: rgba($color-bg-tint-warm, 0.35);
-    border: 1rpx solid rgba($color-primary, 0.08);
+    background: $color-bg-tint-cream;
+    border: 1rpx solid rgba($color-primary, 0.06);
+    box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.04);
+  }
 
-    .pool-reg__summary-grid {
-      gap: $spacing-xs;
-      margin-top: $spacing-xs;
-    }
+  &__summary-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-md;
+  }
 
-    .pool-reg__summary-item {
-      padding-bottom: $spacing-xs;
-    }
+  &__summary-header-accent {
+    width: 8rpx;
+    height: 24rpx;
+    border-radius: 4rpx;
+    background: $color-primary;
+  }
+
+  &__summary-title {
+    flex: 1;
+    @include type-caption;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__summary-completed {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.06);
+    border: 1rpx solid rgba($color-primary, 0.12);
+  }
+
+  &__summary-completed-dot {
+    width: 10rpx;
+    height: 10rpx;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.6);
+  }
+
+  &__summary-completed-text {
+    @include type-micro;
+    color: rgba($color-primary, 0.72);
+    font-weight: $font-weight-semibold;
   }
 
   &__brief-card {
@@ -528,14 +563,6 @@
     height: 88rpx;
     display: block;
     margin: 0 auto $spacing-sm;
-  }
-
-  &__section-kicker {
-    display: block;
-    @include type-caption;
-    font-weight: $font-weight-semibold;
-    color: rgba($color-primary-dark, 0.82);
-    margin-bottom: $spacing-xs;
   }
 
   &__section-title {
@@ -858,38 +885,77 @@
     font-weight: $font-weight-medium;
   }
 
-  &__summary-grid {
+  &__summary-body {
     display: flex;
     flex-direction: column;
     gap: $spacing-sm;
-    margin-top: $spacing-sm;
   }
 
-  &__summary-item {
+  &__summary-row {
     display: flex;
-    justify-content: space-between;
-    gap: $spacing-md;
-    padding-bottom: $spacing-sm;
-    border-bottom: 1rpx solid rgba($color-divider, 0.96);
-
-    &:last-child {
-      padding-bottom: 0;
-      border-bottom: none;
-    }
+    align-items: flex-start;
+    gap: $spacing-sm;
   }
 
-  &__summary-label {
-    @include type-label;
+  &__summary-row-icon {
+    flex-shrink: 0;
+    width: 48rpx;
+    height: 48rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.04);
+    margin-top: 2rpx;
+  }
+
+  &__summary-row-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__summary-row-label {
+    @include type-caption;
     color: $color-text-secondary;
   }
 
-  &__summary-value {
-    flex: 1;
-    text-align: right;
+  &__summary-row-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-xs;
+  }
+
+  &__summary-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.08);
+    border: 1rpx solid rgba($color-primary, 0.2);
+
+    &--empty {
+      background: rgba($color-surface, 0.72);
+      border-color: $color-border;
+      border-style: dashed;
+    }
+  }
+
+  &__summary-chip-text {
     @include type-label;
-    color: $color-text-primary;
-    font-weight: $font-weight-semibold;
-    line-height: 1.6;
+    color: $color-primary;
+
+    .pool-reg__summary-chip--empty & {
+      color: $color-text-muted;
+    }
+  }
+
+  &__summary-divider {
+    height: 1rpx;
+    background: rgba($color-primary, 0.06);
+    margin-left: 64rpx;
   }
 
   &__helper {

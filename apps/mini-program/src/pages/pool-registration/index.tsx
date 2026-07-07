@@ -37,6 +37,7 @@ import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscri
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import StatusCard from '../../components/ui/StatusCard'
 import IntentCard from '../../components/intent/IntentCard'
 import XiaoyueChatBubble from '../../components/mascot/XiaoyueChatBubble'
@@ -57,6 +58,7 @@ import {
 import {
   buildFormStateFromDraft,
   buildRegistrationPayload,
+  buildSummaryItems,
   findLabels,
   getPoolRegistrationAdvanceBlocker,
   getPoolRegistrationSubmitBlocker,
@@ -544,14 +546,7 @@ export default function PoolRegistrationPage() {
     return '继续填写'
   }, [step, hasBudgetSelection, hasIntentSelection, isRegistering, resumeContext?.paymentStatus])
 
-  const summaryItems = useMemo(() => {
-    const intents = findLabels(formState.eventIntent, INTENT_FLOW_OPTIONS)
-
-    return [
-      { label: '预算', value: selectedBudget || '未选择' },
-      { label: '这次想收获', value: intents.length > 0 ? intents.join('、') : '未选择' },
-    ]
-  }, [formState.eventIntent, selectedBudget])
+  const summaryItems = useMemo(() => buildSummaryItems(formState, eventType), [formState, eventType])
 
   const anyDetailSelected = useMemo(
     () => hasAnyDetailSelection(formState, eventType),
@@ -1124,15 +1119,57 @@ export default function PoolRegistrationPage() {
               )
             }
           >
-            <Card className='pool-reg__summary-card'>
-              <Text className='pool-reg__section-kicker'>已选</Text>
-              <View className='pool-reg__summary-grid'>
-                {summaryItems.map((item) => (
-                  <View key={item.label} className='pool-reg__summary-item'>
-                    <Text className='pool-reg__summary-label'>{item.label}</Text>
-                    <Text className='pool-reg__summary-value'>{item.value}</Text>
-                  </View>
-                ))}
+            <Card className='pool-reg__summary-card' role='group' aria-label='已选偏好（已锁定）'>
+              <View className='pool-reg__summary-header'>
+                <View className='pool-reg__summary-header-accent' aria-hidden='true' />
+                <Text className='pool-reg__summary-title'>已选好的偏好</Text>
+                <View className='pool-reg__summary-completed' aria-hidden='true'>
+                  <View className='pool-reg__summary-completed-dot' />
+                  <Text className='pool-reg__summary-completed-text'>已锁定</Text>
+                </View>
+              </View>
+
+              <View className='pool-reg__summary-body'>
+                {summaryItems.map((item, index) => {
+                  const showChips =
+                    item.intentLabels && item.intentLabels.length > 0
+                      ? item.intentLabels
+                      : [item.value]
+
+                  return (
+                    <View key={item.label}>
+                      <View className='pool-reg__summary-row'>
+                        <View className='pool-reg__summary-row-icon' aria-hidden='true'>
+                          <JoyJoinIcon emoji={item.icon} tier={item.tier} size={28} />
+                        </View>
+                        <View className='pool-reg__summary-row-content'>
+                          <Text className='pool-reg__summary-row-label'>{item.label}</Text>
+                          <View className='pool-reg__summary-row-chips'>
+                            {showChips.map((label) => {
+                              const isEmpty = label === '未选择'
+                              return (
+                                <View
+                                  key={label}
+                                  className={[
+                                    'pool-reg__summary-chip',
+                                    isEmpty ? 'pool-reg__summary-chip--empty' : '',
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' ')}
+                                >
+                                  <Text className='pool-reg__summary-chip-text'>{label}</Text>
+                                </View>
+                              )
+                            })}
+                          </View>
+                        </View>
+                      </View>
+                      {index < summaryItems.length - 1 && (
+                        <View className='pool-reg__summary-divider' aria-hidden='true' />
+                      )}
+                    </View>
+                  )
+                })}
               </View>
             </Card>
 

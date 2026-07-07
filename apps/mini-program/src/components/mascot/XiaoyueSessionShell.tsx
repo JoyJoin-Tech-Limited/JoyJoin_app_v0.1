@@ -2,6 +2,7 @@ import { View, Text } from '@tarojs/components'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import type { SocialSessionState, SocialIcebreakerPhase, XiaoyueAdaptiveSuggestion } from '@shared/socialIcebreaker'
 import XiaoyueChatBubble from './XiaoyueChatBubble'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { ICEBREAKER_XIAOYUE_EXPRESSION } from '../../lib/mascot/xiaoyueExpressions'
 import type { XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
 import './XiaoyueSessionShell.scss'
@@ -136,12 +137,15 @@ export default function XiaoyueSessionShell({
       {/* ─── Host suggestion trigger ─── */}
       {isHost && !adaptiveSuggestion && phase !== 'waiting' && phase !== 'ended' && phase !== 'recap' && onRequestSuggestion && (
         <View className='xiaoyue-session-shell__ask'>
-          <Text
+          <View
             className='xiaoyue-session-shell__ask-text'
             onClick={onRequestSuggestion}
           >
-            {`💡 ${DEFAULT_MASCOT_DISPLAY_NAME}，给点建议？`}
-          </Text>
+            <JoyJoinIcon emoji='💡' size={20} className='xiaoyue-session-shell__ask-icon' />
+            <Text className='xiaoyue-session-shell__ask-label'>
+              {`${DEFAULT_MASCOT_DISPLAY_NAME}，给点建议？`}
+            </Text>
+          </View>
         </View>
       )}
 

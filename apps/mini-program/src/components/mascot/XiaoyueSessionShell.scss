@@ -95,10 +95,16 @@
 }
 
 .xiaoyue-session-shell__ask-text {
-  font-size: 24rpx;
-  color: $color-primary;
-  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
   padding: 8rpx 16rpx;
   background: rgba(139, 92, 246, 0.08);
   border-radius: 24rpx;
+}
+
+.xiaoyue-session-shell__ask-label {
+  font-size: 24rpx;
+  color: $color-primary;
+  font-weight: 500;
 }

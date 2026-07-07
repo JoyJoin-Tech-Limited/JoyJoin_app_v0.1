@@ -46,7 +46,7 @@ export const DRINKS_BUDGET_OPTIONS: FlowOption[] = [
 ]
 
 export const DIETARY_OPTIONS: FlowOption[] = [
-  { value: 'none', label: '无限制' },
+  { value: 'none', label: '无特殊要求' },
   { value: 'vegetarian', label: '素食' },
   { value: 'halal', label: '清真' },
   { value: 'seafood_allergy', label: '海鲜过敏' },

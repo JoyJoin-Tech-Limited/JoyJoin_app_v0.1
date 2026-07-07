@@ -20,7 +20,7 @@ export function registerSingleTestRoutes(app: Express): void {
         groupId: result.groupId,
         testerRegistrationId: result.testerRegistrationId,
         registrationId: result.registrationId,
-        botUsers: result.botUsers,
+        bots: result.bots,
       });
     } catch (error: any) {
       logger.error("[SingleTest] start error", { error: String(error) });

@@ -238,6 +238,7 @@ Use these folders by responsibility:
 - `/middleware` — cross-cutting HTTP concerns
 - `/lib` — focused helpers and invariants used across domains (includes `contentSafety.ts` — `validateContentSafe()` for field-level content filtering)
 - `/services`, `/ai`, `/analytics`, `/inference`, `/gossip`, `/utils` — domain support modules
+- `/test-utils` — shared test helpers and fixtures (e.g., `withServer` lifecycle helper for integration tests)
 - `/__tests__` — automated tests
 
 ## Where new server files go

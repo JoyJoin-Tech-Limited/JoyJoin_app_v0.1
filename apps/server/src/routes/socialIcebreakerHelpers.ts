@@ -15,6 +15,7 @@ import { shouldAutoAdvance } from '../xiaoyueAdaptiveEngine';
 import { logger } from '../lib/logger';
 import { buildArchetypeContext } from '../lib/contextInjector';
 import { isCustomMode, computeSelectablePhases } from '../services/customModeService';
+import { mapBotUserIdsToBotIds, buildBotIdByUserId } from '../lib/socialIcebreakerClientIdMapper';
 import { isSingleTestMode } from '../lib/isSingleTestMode';
 import { curateMedals } from '../lib/medalCuration';
 import { generateRecapSummary, buildLieDetectiveV2RecapData } from '../socialIcebreakerAIService';
@@ -140,7 +141,7 @@ export async function buildClientState(
     ? { ...state, selectablePhases: computeSelectablePhases(state) }
     : state;
   const isTestMode = isSingleTestMode() && state.singleTest?.isTestModeSkip === true;
-  return sanitizeStateForClient(
+  const clientState = sanitizeStateForClient(
     {
       ...withCustomExtras,
       joinedParticipants,
@@ -149,11 +150,20 @@ export async function buildClientState(
         ? {
             isTestModeSkip: true,
             testModeBots: state.singleTest!.bots,
+            runBots: state.singleTest!.runBots ?? false,
           }
         : {}),
     },
     requestingUserId,
   );
+
+  // Mask any bot userIds in the client state before it leaves the server.
+  if (isTestMode && state.singleTest?.botPersonas?.length) {
+    const botIdByUserId = buildBotIdByUserId(state.singleTest.botPersonas);
+    return mapBotUserIdsToBotIds(clientState, botIdByUserId);
+  }
+
+  return clientState;
 }
 
 export function hydrateDerivedState(state: SocialSessionState): SocialSessionState {

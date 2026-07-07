@@ -1,6 +1,7 @@
 import express from "express";
+import { createWithServer } from '../test-utils/withServer';
 import session from "express-session";
-import type { AddressInfo } from "net";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 process.env.DATABASE_URL ??= "postgres://postgres:postgres@127.0.0.1:5432/joyjoin_test";
@@ -109,22 +110,7 @@ function createApp() {
   registerPaymentRoutes(app);
   return app;
 }
-
-async function withServer<T>(fn: (baseUrl: string) => Promise<T>) {
-  const app = createApp();
-  const server = await new Promise<ReturnType<typeof app.listen>>((resolve) => {
-    const instance = app.listen(0, () => resolve(instance));
-  });
-
-  try {
-    const { port } = server.address() as AddressInfo;
-    return await fn(`http://127.0.0.1:${port}`);
-  } finally {
-    await new Promise<void>((resolve, reject) => {
-      server.close((err) => (err ? reject(err) : resolve()));
-    });
-  }
-}
+const withServer = createWithServer(createApp);
 
 function cookieHeader(response: Response) {
   const raw = response.headers.get("set-cookie");

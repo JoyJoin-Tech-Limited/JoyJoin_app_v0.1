@@ -1,6 +1,6 @@
 # JoyJoin Monorepo Folder Structure Blueprint
 
-> **Living document.** Last updated: 2026-06-30  
+> **Living document.** Last updated: 2026-07-07  
 > **Purpose:** Single source of truth for "where does this go?" Eliminates guesswork for agents and humans navigating the codebase.  
 > **Scope:** Covers all top-level directories, workspace internals, and cross-cutting concerns. Excludes `node_modules/`, `.git/`, build artifacts.
 
@@ -151,6 +151,7 @@ apps/server/
 │   ├── types/                     # TypeScript declarations
 │   │   └── express-session.d.ts
 │   ├── benchmarks/                # Performance benchmarks
+│   ├── test-utils/                # Shared test helpers and fixtures (e.g., withServer lifecycle helper)
 │   └── __tests__/                 # Vitest test suites
 ├── migrations/                    # Drizzle migration files
 ├── drizzle.config.cjs             # Drizzle ORM configuration
@@ -164,6 +165,7 @@ apps/server/
 - DB queries → `src/repositories/` (**not** `storage.ts` — legacy facade)
 - Middleware → `src/middleware/`
 - Helpers → `src/lib/` or `src/utils/`
+- Shared test helpers/fixtures → `src/test-utils/`
 - LLM prompts → `src/prompts/` or `src/ai/`
 
 ---

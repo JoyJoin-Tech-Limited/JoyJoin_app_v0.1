@@ -1,6 +1,7 @@
 import express from 'express';
+import { createWithServer } from '../test-utils/withServer';
 import session from 'express-session';
-import type { AddressInfo } from 'net';
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── In-memory socialIcebreakerStore mock (replaces the PostgreSQL-backed store) ──
@@ -341,22 +342,7 @@ function createApp() {
   app.use('/api/social-icebreaker', socialIcebreakerRouter);
   return app;
 }
-
-async function withServer<T>(fn: (baseUrl: string) => Promise<T>) {
-  const app = createApp();
-  const server = await new Promise<ReturnType<typeof app.listen>>((resolve) => {
-    const instance = app.listen(0, () => resolve(instance));
-  });
-
-  try {
-    const { port } = server.address() as AddressInfo;
-    return await fn(`http://127.0.0.1:${port}`);
-  } finally {
-    await new Promise<void>((resolve, reject) => {
-      server.close((err) => (err ? reject(err) : resolve()));
-    });
-  }
-}
+const withServer = createWithServer(createApp);
 
 function cookieHeader(response: Response) {
   const raw = response.headers.get('set-cookie');
@@ -410,7 +396,6 @@ describe.sequential('social icebreaker routes', () => {
       ]);
     });
   });
-
 
   it('returns normalized AI metadata for warmup topics', async () => {
     await withServer(async (baseUrl) => {
@@ -956,7 +941,6 @@ describe.sequential('social icebreaker routes', () => {
       await expect(response.json()).resolves.toMatchObject({ message: 'Forbidden' });
     });
   });
-
 
   describe('Lie Detective V2 — route integration', () => {
     async function advanceToLieDetective(baseUrl: string, hostCookie: string, ...guestCookies: string[]) {
@@ -2982,9 +2966,11 @@ describe.sequential('social icebreaker routes', () => {
 
         vi.mocked(isSingleTestMode).mockReturnValue(true);
         vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue({
-          version: 1,
+          version: 2,
           groupId: sessionId,
           isTestModeSkip: true,
+          runBots: false,
+          botPersonas: [],
           bots: [
             { botId: 'bot-1', displayName: 'Bot One', archetype: '社牛柯基' },
             { botId: 'bot-2', displayName: 'Bot Two', archetype: '小太阳鸡' },
@@ -3040,9 +3026,11 @@ describe.sequential('social icebreaker routes', () => {
 
         vi.mocked(isSingleTestMode).mockReturnValue(true);
         vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue({
-          version: 1,
+          version: 2,
           groupId: sessionId,
           isTestModeSkip: true,
+          runBots: false,
+          botPersonas: [],
           bots: [
             { botId: 'bot-1', displayName: 'Bot One', archetype: '社牛柯基' },
           ],
@@ -3087,9 +3075,11 @@ describe.sequential('social icebreaker routes', () => {
 
         vi.mocked(isSingleTestMode).mockReturnValue(true);
         vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue({
-          version: 1,
+          version: 2,
           groupId: sessionId,
           isTestModeSkip: true,
+          runBots: false,
+          botPersonas: [],
           bots: [
             { botId: 'bot-1', displayName: 'Bot One', archetype: '社牛柯基' },
           ],
@@ -3122,9 +3112,11 @@ describe.sequential('social icebreaker routes', () => {
 
         vi.mocked(isSingleTestMode).mockReturnValue(true);
         vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue({
-          version: 1,
+          version: 2,
           groupId: sessionId,
           isTestModeSkip: true,
+          runBots: false,
+          botPersonas: [],
           bots: [{ botId: 'bot-1', displayName: 'Bot One', archetype: '社牛柯基' }],
         });
 
@@ -3171,9 +3163,11 @@ describe.sequential('social icebreaker routes', () => {
         // Create session while single-test mode is enabled.
         vi.mocked(isSingleTestMode).mockReturnValue(true);
         vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue({
-          version: 1,
+          version: 2,
           groupId: sessionId,
           isTestModeSkip: true,
+          runBots: false,
+          botPersonas: [],
           bots: [
             { botId: 'bot-1', displayName: 'Bot One', archetype: '社牛柯基' },
           ],

@@ -3,8 +3,9 @@
  * Regression: unauthenticated callers could mutate session state and burn LLM quota.
  */
 import express from 'express';
+import { createWithServer } from '../test-utils/withServer';
 import session from 'express-session';
-import type { AddressInfo } from 'net';
+
 import { describe, it, expect, vi } from 'vitest';
 import type { SocialSessionState } from '@shared/socialIcebreaker';
 import { BLAZE_RUN_PLAN, GLOW_RUN_PLAN } from '@shared/socialIcebreakerRunPlans';
@@ -152,6 +153,7 @@ function createApp() {
   app.use('/api/social-icebreaker', socialIcebreakerRouter);
   return app;
 }
+const withServer = createWithServer(createApp);
 
 function cookieHeader(response: Response): string {
   const raw = response.headers.get('set-cookie');
@@ -161,22 +163,6 @@ function cookieHeader(response: Response): string {
 async function login(baseUrl: string, userId: string): Promise<string> {
   const response = await fetch(`${baseUrl}/__test__/login/${userId}`, { method: 'POST' });
   return cookieHeader(response);
-}
-
-async function withServer<T>(fn: (baseUrl: string) => Promise<T>) {
-  const app = createApp();
-  const server = await new Promise<ReturnType<typeof app.listen>>((resolve) => {
-    const instance = app.listen(0, () => resolve(instance));
-  });
-  try {
-    const addr = server.address() as AddressInfo;
-    const baseUrl = `http://127.0.0.1:${addr.port}`;
-    return await fn(baseUrl);
-  } finally {
-    await new Promise<void>((resolve, reject) => {
-      server.close((err) => (err ? reject(err) : resolve()));
-    });
-  }
 }
 
 function seedParticipants(socialSessionId: string): void {

@@ -383,12 +383,23 @@ export const singleTestBotSchema = z.object({
   archetype: z.string().min(1),
 });
 
+export const singleTestBotPersonaSchema = z.object({
+  botId: z.string().min(1),
+  userId: z.string().min(1),
+  displayName: z.string().min(1),
+  archetype: z.string().min(1),
+});
+
 export const singleTestStateSchema = z.object({
-  version: z.literal(1),
+  version: z.literal(2),
   groupId: z.string().min(1),
   isTestModeSkip: z.boolean(),
+  runBots: z.boolean().default(false),
   bots: z.array(singleTestBotSchema).max(12),
+  botPersonas: z.array(singleTestBotPersonaSchema).max(12).default([]),
 });
+
+export type SingleTestBotPersona = z.infer<typeof singleTestBotPersonaSchema>;
 
 export type SingleTestBot = z.infer<typeof singleTestBotSchema>;
 export type SingleTestState = z.infer<typeof singleTestStateSchema>;
@@ -651,6 +662,8 @@ export interface SocialSessionState {
   isTestModeSkip?: boolean;
   /** Client-only: read-only bot roster for single-test visual realism. */
   testModeBots?: SingleTestBot[];
+  /** Client-only: when true, bots will participate in the multi-player phases. */
+  runBots?: boolean;
 }
 
 // Phase config

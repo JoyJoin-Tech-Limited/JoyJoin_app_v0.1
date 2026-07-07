@@ -3,7 +3,7 @@
  */
 
 import express from "express";
-import type { AddressInfo } from "net";
+import { withServerForApp as withServer } from '../test-utils/withServer';
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ── DB mock ───────────────────────────────────────────────────────────────────
@@ -31,21 +31,6 @@ async function buildTestApp() {
   });
   registerAnalyticsRoutes(app);
   return app;
-}
-
-async function withServer(
-  app: express.Express,
-  fn: (baseUrl: string) => Promise<void>,
-): Promise<void> {
-  const server = await new Promise<ReturnType<typeof app.listen>>((resolve) => {
-    const instance = app.listen(0, () => resolve(instance));
-  });
-  const { port } = server.address() as AddressInfo;
-  try {
-    await fn(`http://127.0.0.1:${port}`);
-  } finally {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
-  }
 }
 
 describe("POST /api/analytics/profile", () => {

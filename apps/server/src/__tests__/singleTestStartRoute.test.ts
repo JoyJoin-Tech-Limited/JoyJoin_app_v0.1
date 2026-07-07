@@ -1,6 +1,7 @@
 import express from "express";
+import { createWithServer } from '../test-utils/withServer';
 import session from "express-session";
-import type { AddressInfo } from "net";
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../lib/isSingleTestMode", () => ({
@@ -11,9 +12,13 @@ vi.mock("../services/singleTestService", () => ({
   startSingleTestSession: vi.fn().mockResolvedValue({
     socialSessionId: "social_test_group_123",
     groupId: "test_group_123",
-    botUsers: [
-      { userId: "bot_user_1", displayName: "Bot One", archetype: "社牛柯基" },
-      { userId: "bot_user_2", displayName: "Bot Two", archetype: "小太阳鸡" },
+    bots: [
+      { botId: "bot-1", displayName: "Bot One", archetype: "社牛柯基" },
+      { botId: "bot-2", displayName: "Bot Two", archetype: "小太阳鸡" },
+    ],
+    botPersonas: [
+      { botId: "bot-1", userId: "bot_user_1", displayName: "Bot One", archetype: "社牛柯基" },
+      { botId: "bot-2", userId: "bot_user_2", displayName: "Bot Two", archetype: "小太阳鸡" },
     ],
   }),
   cleanupSingleTestData: vi.fn().mockResolvedValue(undefined),
@@ -41,22 +46,7 @@ function createApp() {
   registerSingleTestRoutes(app);
   return app;
 }
-
-async function withServer<T>(fn: (baseUrl: string) => Promise<T>) {
-  const app = createApp();
-  const server = await new Promise<ReturnType<typeof app.listen>>((resolve) => {
-    const instance = app.listen(0, () => resolve(instance));
-  });
-
-  try {
-    const { port } = server.address() as AddressInfo;
-    return await fn(`http://127.0.0.1:${port}`);
-  } finally {
-    await new Promise<void>((resolve, reject) => {
-      server.close((err) => (err ? reject(err) : resolve()));
-    });
-  }
-}
+const withServer = createWithServer(createApp);
 
 function cookieHeader(response: Response) {
   const raw = response.headers.get("set-cookie");
@@ -73,7 +63,7 @@ describe("POST /api/test/single-test/start", () => {
     vi.mocked(startSingleTestSession).mockClear();
   });
 
-  it("returns the expected bot roster", async () => {
+  it("returns the expected masked bot roster", async () => {
     await withServer(async (baseUrl) => {
       const cookie = await login(baseUrl, "tester-1");
 
@@ -86,12 +76,14 @@ describe("POST /api/test/single-test/start", () => {
       expect(response.status).toBe(200);
       expect(body.socialSessionId).toBe("social_test_group_123");
       expect(body.groupId).toBe("test_group_123");
-      expect(body.botUsers).toHaveLength(2);
-      expect(body.botUsers[0]).toEqual({
-        userId: "bot_user_1",
+      expect(body.botUsers).toBeUndefined();
+      expect(body.bots).toHaveLength(2);
+      expect(body.bots[0]).toEqual({
+        botId: "bot-1",
         displayName: "Bot One",
         archetype: "社牛柯基",
       });
+      expect(body.bots[0].userId).toBeUndefined();
       expect(startSingleTestSession).toHaveBeenCalledWith("tester-1");
     });
   });

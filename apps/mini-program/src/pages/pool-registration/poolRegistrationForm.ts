@@ -3,6 +3,7 @@ import type {
   NormalizedEventPoolRegistrationPayload,
 } from '@shared/api'
 import type { PoolEventType } from './flowConfig'
+import { INTENT_FLOW_OPTIONS } from './flowConfig'
 
 export type RegistrationStep = 0 | 1 | 2 | 3
 
@@ -24,12 +25,46 @@ export const INITIAL_FORM_STATE: RegistrationFormState = {
   barThemes: [],
 }
 
+export interface PoolRegistrationSummaryItem {
+  label: string
+  value: string
+  icon: string
+  tier: 'ui' | 'semantic'
+  intentLabels?: string[]
+}
+
 export function toggleValue(values: string[], value: string): string[] {
   return values.includes(value) ? values.filter((item) => item !== value) : [...values, value]
 }
 
 export function findLabels(values: string[], options: { value: string; label: string }[]): string[] {
   return options.filter((option) => values.includes(option.value)).map((option) => option.label)
+}
+
+export function buildSummaryItems(
+  formState: RegistrationFormState,
+  eventType: PoolEventType,
+): PoolRegistrationSummaryItem[] {
+  const selectedBudget =
+    eventType === '酒局' ? formState.barBudgetRange?.[0] ?? '' : formState.budgetRange?.[0] ?? ''
+  const intentLabels = findLabels(formState.eventIntent, INTENT_FLOW_OPTIONS)
+
+  return [
+    {
+      label: '你的预算',
+      value: selectedBudget || '未选择',
+      icon: '👑',
+      tier: 'ui',
+      intentLabels: [],
+    },
+    {
+      label: '这次想收获',
+      value: intentLabels.length > 0 ? intentLabels.join('、') : '未选择',
+      icon: '🎯',
+      tier: 'semantic',
+      intentLabels,
+    },
+  ]
 }
 
 export function hasAnyDetailSelection(

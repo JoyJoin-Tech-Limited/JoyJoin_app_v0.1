@@ -13,11 +13,13 @@ import './TestModeDisclosure.scss'
 interface TestModeDisclosureProps {
   /** Client-safe bot roster returned by the server for single-test sessions. */
   bots?: SingleTestBot[]
+  /** When true, bots will participate in the full multi-player phases. */
+  runBots?: boolean
   /** Current social session id for analytics. */
   socialSessionId?: string
   /** Icebreaker session id for analytics. */
   icebreakerSessionId?: string
-  /** Called when the user taps the primary CTA to continue to recap. */
+  /** Called when the user taps the primary CTA to continue. */
   onContinue: () => void
   /** Called when the user taps the CTA while an error is displayed. Defaults to onContinue if omitted. */
   onRetry?: () => void
@@ -30,12 +32,14 @@ interface TestModeDisclosureProps {
 /**
  * Single-test mode disclosure.
  *
- * Warm, on-brand explanation that single-test sessions only preview the warmup
- * and skip the multiplayer phases. Shown before advancing to recap so the
- * previewer understands why the session is short.
+ * Warm, on-brand explanation for single-test sessions. When runBots is false,
+ * it explains that multiplayer phases are skipped and offers a skip-to-recap CTA.
+ * When runBots is true, it explains that virtual bots will play through the
+ * multi-player phases with the host.
  */
 export function TestModeDisclosure({
   bots,
+  runBots,
   socialSessionId,
   icebreakerSessionId,
   onContinue,
@@ -61,6 +65,7 @@ export function TestModeDisclosure({
       undefined,
       {
         botCount: bots?.length ?? 0,
+        runBots: Boolean(runBots),
         hasError: Boolean(error),
         reduceMotion,
         isDegradationTier: deviceTier.isDegradation,
@@ -69,7 +74,20 @@ export function TestModeDisclosure({
   }, [bots?.length, socialSessionId, icebreakerSessionId, error, reduceMotion, deviceTier.isDegradation])
 
   const isErrorState = Boolean(error)
-  const ctaLabel = isLoading ? '加载中' : isErrorState ? '重试' : '查看总结'
+  const ctaLabel = isLoading
+    ? '加载中'
+    : isErrorState
+      ? '重试'
+      : runBots
+        ? '开始多人环节'
+        : '查看总结'
+
+  const title = runBots
+    ? '测试模式：虚拟伙伴一起玩'
+    : '测试模式：多人环节已跳过'
+  const body = runBots
+    ? '在单人调试局中，虚拟伙伴会陪你完整体验多人游戏环节。他们的反应是固定剧本，方便你预览流程。'
+    : '在单人调试局中，只有热身话题卡可以预览；完整游戏环节需要至少 3 位真实玩家一起参与。'
 
   const handleContinue = () => {
     haptics('medium')
@@ -101,10 +119,8 @@ export function TestModeDisclosure({
         <View className='test-mode-disclosure__icon' aria-hidden='true'>
           <Text className='test-mode-disclosure__icon-text'>测试</Text>
         </View>
-        <Text className='test-mode-disclosure__title'>测试模式：多人环节已跳过</Text>
-        <Text className='test-mode-disclosure__body'>
-          在单人调试局中，只有热身话题卡可以预览；完整游戏环节需要至少 3 位真实玩家一起参与。
-        </Text>
+        <Text className='test-mode-disclosure__title'>{title}</Text>
+        <Text className='test-mode-disclosure__body'>{body}</Text>
 
         {bots && bots.length > 0 && (
           <View className='test-mode-disclosure__roster'>

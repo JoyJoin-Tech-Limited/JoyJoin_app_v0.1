@@ -24,11 +24,14 @@ export const socialIcebreakerSessions = pgTable("social_icebreaker_sessions", {
   sessionStartedAt: timestamp("session_started_at").notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   stateJson: jsonb("state_json").notNull().$type<Record<string, unknown>>(),
+  /** True when this session was created from /api/test/single-test/start. */
+  isTestSession: boolean("is_test_session").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   index("idx_social_icebreaker_sessions_icebreaker_session_id").on(table.icebreakerSessionId),
   index("idx_social_icebreaker_sessions_expires_at").on(table.expiresAt),
+  index("idx_social_icebreaker_sessions_is_test_session_created_at").on(table.isTestSession, table.createdAt),
 ]);
 
 export type SocialIcebreakerSessionRow = typeof socialIcebreakerSessions.$inferSelect;
@@ -46,11 +49,14 @@ export const socialIcebreakerParticipants = pgTable("social_icebreaker_participa
   socialSessionId: varchar("social_session_id").notNull().references(() => socialIcebreakerSessions.id, { onDelete: "cascade" }),
   userId: varchar("user_id").notNull(),
   displayName: varchar("display_name").notNull(),
+  /** True when this participant is a virtual bot in a single-test session. */
+  isTestBot: boolean("is_test_bot").default(false).notNull(),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
   lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("idx_social_icebreaker_participants_session_user").on(table.socialSessionId, table.userId),
   index("idx_social_icebreaker_participants_last_seen").on(table.lastSeenAt),
+  index("idx_social_icebreaker_participants_is_test_bot").on(table.isTestBot),
 ]);
 
 export type SocialIcebreakerParticipantRow = typeof socialIcebreakerParticipants.$inferSelect;

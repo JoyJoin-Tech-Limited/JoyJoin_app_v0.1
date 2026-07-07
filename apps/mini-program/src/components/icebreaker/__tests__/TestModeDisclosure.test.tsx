@@ -71,6 +71,25 @@ describe('TestModeDisclosure', () => {
     expect(onContinue).toHaveBeenCalledTimes(1)
   })
 
+  it('renders bot-simulation copy and CTA when runBots is true', () => {
+    const onContinue = vi.fn()
+    render(
+      <TestModeDisclosure
+        onContinue={onContinue}
+        runBots
+        bots={[
+          { botId: 'bot-1', displayName: 'Bot One', archetype: '社牛柯基' },
+        ]}
+      />,
+    )
+
+    expect(screen.getByText('测试模式：虚拟伙伴一起玩')).toBeInTheDocument()
+    expect(
+      screen.getByText(/虚拟伙伴会陪你完整体验多人游戏环节/),
+    ).toBeInTheDocument()
+    expect(screen.getByText('开始多人环节')).toBeInTheDocument()
+  })
+
   it('shows loading state when isLoading is true', () => {
     render(<TestModeDisclosure onContinue={() => {}} isLoading />)
 

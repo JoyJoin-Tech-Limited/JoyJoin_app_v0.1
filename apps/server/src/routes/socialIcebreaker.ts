@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { eq } from 'drizzle-orm';
 import { isSingleTestMode } from '../lib/isSingleTestMode';
+import { db } from '../db';
+import { users } from '@shared/schema';
 import type {
   SocialSessionState,
   SocialIcebreakerPhase,
@@ -114,13 +117,38 @@ import socialIcebreakerGameplayExtraRouter from './socialIcebreakerGameplayExtra
 const router = Router();
 
 // ============ TEST-MODE BOT BYPASS ============
-// In single-test mode (APP_MODE=test or ENABLE_SINGLE_TEST_MODE=true),
-// allow bot users to impersonate via x-test-user-id header.
-// This lets the SingleTestBotService exercise the real API stack without
-// modifying route handlers or managing session cookies for 5 virtual users.
-router.use((req: any, _res, next) => {
-  if (isSingleTestMode() && req.headers['x-test-user-id']) {
-    req.user = { id: req.headers['x-test-user-id'] };
+// In non-production single-test mode, allow only users tagged as virtual
+// test bots to impersonate via x-test-user-id header. This prevents the
+// bypass from being used to impersonate real users.
+router.use(async (req: any, _res, next) => {
+  const testUserId = req.headers['x-test-user-id'];
+  if (!testUserId || typeof testUserId !== 'string') {
+    return next();
+  }
+  if (process.env.APP_MODE === 'production') {
+    logger.warn('[SocialIcebreaker] x-test-user-id bypass rejected in production', { testUserId });
+    return next();
+  }
+  if (!isSingleTestMode()) {
+    return next();
+  }
+  try {
+    const [user] = await db
+      .select({ isTestBot: users.isTestBot })
+      .from(users)
+      .where(eq(users.id, testUserId))
+      .limit(1);
+    if (user?.isTestBot) {
+      req.user = { id: testUserId };
+      logger.info('[SocialIcebreaker] x-test-user-id bot impersonation', { testUserId });
+    } else {
+      logger.warn('[SocialIcebreaker] x-test-user-id rejected for non-test user', { testUserId });
+    }
+  } catch (err) {
+    logger.error('[SocialIcebreaker] x-test-user-id bypass lookup failed', {
+      testUserId,
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
   next();
 });
@@ -290,6 +318,16 @@ router.post('/start', async (req: any, res) => {
     }
   }
 
+  // Single-test mode: reject custom tier for bot-simulation sessions.
+  let singleTestMeta: import('@shared/socialIcebreaker').SingleTestState | null = null;
+  if (isSingleTestMode()) {
+    singleTestMeta = await getSingleTestMetaForSessionStart(sessionId);
+  }
+  const isBotSimulation = Boolean(singleTestMeta?.runBots);
+  if (isBotSimulation && resolvedTier === 'custom') {
+    return res.status(400).json({ error: 'Custom mode is not available in bot simulation' });
+  }
+
   if (!eventTier || !vibe) {
     logger.warn('Social icebreaker /start received missing tier/vibe, using defaults', {
       sessionId,
@@ -307,8 +345,8 @@ router.post('/start', async (req: any, res) => {
     currentPhase: 'warmup',
     hostUserId: userId,
     hostDisplayName: displayName || '主持人',
-    playerCount: 1,
-    activePlayerCount: 1,
+    playerCount: 1 + (isBotSimulation ? (singleTestMeta?.botPersonas?.length ?? 0) : 0),
+    activePlayerCount: 1 + (isBotSimulation ? (singleTestMeta?.botPersonas?.length ?? 0) : 0),
     phaseStartedAt: now,
     sessionStartedAt: now,
     completedPhases: [],
@@ -320,6 +358,7 @@ router.post('/start', async (req: any, res) => {
     warmupReadyUserIds: [],
     lieDetectiveCompletedUserIds: [],
     autoAdvanceEnabled: resolvedTier !== 'custom',
+    ...(singleTestMeta ? { singleTest: singleTestMeta } : {}),
   };
 
   let runPlan: IcebreakerRunPlan | undefined;
@@ -330,26 +369,23 @@ router.post('/start', async (req: any, res) => {
     newState.runPlan = runPlan;
   }
 
-  // Single-test mode: attach client-safe bot roster so the host sees a
-  // disclosure and read-only bot roster. Double-gated by isSingleTestMode()
-  // and a per-session flag so production phase engines never branch on this.
-  if (isSingleTestMode()) {
-    const singleTestMeta = await getSingleTestMetaForSessionStart(sessionId);
-    if (singleTestMeta) {
-      newState.singleTest = singleTestMeta;
-      logger.info('social_icebreaker_test_mode_session_created', {
-        sessionId,
-        socialSessionId,
-        groupId: singleTestMeta.groupId,
-        botCount: singleTestMeta.bots.length,
-        botArchetypes: singleTestMeta.bots.map((b) => b.archetype),
-      });
-    }
-  }
-
   try {
     await createSession(newState);
     await upsertParticipant(socialSessionId, userId, displayName || '主持人');
+
+    // Single-test bot simulation: add virtual bots as participants.
+    if (isBotSimulation && singleTestMeta?.botPersonas) {
+      for (const persona of singleTestMeta.botPersonas) {
+        await upsertParticipant(socialSessionId, persona.userId, persona.displayName, true);
+      }
+      logger.info('social_icebreaker_test_mode_bots_joined', {
+        sessionId,
+        socialSessionId,
+        groupId: singleTestMeta.groupId,
+        botCount: singleTestMeta.botPersonas.length,
+        botArchetypes: singleTestMeta.bots.map((b) => b.archetype),
+      });
+    }
 
     // Pre-compile warmup topics at session creation (best-effort, 3s timeout)
     const roster = await listParticipants(socialSessionId);
