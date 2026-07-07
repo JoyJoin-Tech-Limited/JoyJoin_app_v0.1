@@ -31,32 +31,50 @@ export default function MapPicker({ open, onOpenChange, onSelect, initialCenter 
   const defaultCenter = initialCenter || { lat: 22.5431, lng: 114.0579 };
 
   useEffect(() => {
-    if (open) {
-      fetch('/api/config/map', { credentials: 'include' })
-        .then(async res => {
-          const data = await res.json().catch(() => null);
-          if (!res.ok) {
-            if (res.status === 401 || res.status === 403) {
-              throw new Error('请先登录管理员账号');
-            }
-            if (res.status === 503) {
-              throw new Error('地图配置未设置，请配置 TENCENT_MAP_JS_KEY');
-            }
-            throw new Error(data?.message || data?.error || '无法加载地图配置');
-          }
-          return data;
-        })
-        .then(data => {
-          if (data.error) {
-            setError('地图配置不可用，请联系管理员');
-          } else {
-            setApiKey(data.apiKey);
-          }
-        })
-        .catch((err) => {
-          setError(err.message || '无法加载地图配置');
-        });
+    if (!open) {
+      setIsLoading(false);
+      return;
     }
+
+    let cancelled = false;
+    setIsLoading(true);
+    setError(null);
+    setApiKey(null);
+    setSelectedLocation(null);
+    setSearchResults([]);
+
+    fetch('/api/config/map', { credentials: 'include' })
+      .then(async res => {
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            throw new Error('请先登录管理员账号');
+          }
+          if (res.status === 503) {
+            throw new Error('地图配置未设置，请配置 TENCENT_MAP_JS_KEY');
+          }
+          throw new Error(data?.message || data?.error || '无法加载地图配置');
+        }
+        return data;
+      })
+      .then(data => {
+        if (cancelled) return;
+        if (data?.error || !data?.apiKey) {
+          setError(data?.message || data?.error || '地图配置不可用，请联系管理员');
+          setIsLoading(false);
+        } else {
+          setApiKey(data.apiKey);
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err.message || '无法加载地图配置');
+        setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [open]);
 
   useEffect(() => {
@@ -69,52 +87,60 @@ export default function MapPicker({ open, onOpenChange, onSelect, initialCenter 
     const existing = document.getElementById(scriptId);
 
     const initMap = () => {
-      const TMap = (window as any).TMap;
+      try {
+        const TMap = (window as any).TMap;
+        if (!TMap) {
+          throw new Error('地图 SDK 未加载完成');
+        }
 
-      const map = new TMap.Map(mapRef.current, {
-        center: new TMap.LatLng(defaultCenter.lat, defaultCenter.lng),
-        zoom: 15,
-        mapStyleId: 'style1',
-      });
-
-      mapInstance.current = map;
-
-      const marker = new TMap.Marker({
-        position: new TMap.LatLng(defaultCenter.lat, defaultCenter.lng),
-        map,
-        draggable: true,
-      });
-
-      markerRef.current = marker;
-
-      const search = new TMap.service.PlaceSearch({
-        pageSize: 10,
-        pageIndex: 1,
-        boundary: new TMap.service.Boundary({ city: '深圳' }),
-      });
-
-      placeSearchRef.current = search;
-
-      map.on('click', (e: any) => {
-        const { lat, lng } = e.latLng;
-        marker.setPosition(new TMap.LatLng(lat, lng));
-
-        reverseGeocode(lat, lng).then(address => {
-          setSelectedLocation({ lng, lat, address });
+        const map = new TMap.Map(mapRef.current, {
+          center: new TMap.LatLng(defaultCenter.lat, defaultCenter.lng),
+          zoom: 15,
+          mapStyleId: 'style1',
         });
-      });
 
-      marker.on('dragend', () => {
-        const pos = marker.getPosition();
-        const lat = pos.lat;
-        const lng = pos.lng;
+        mapInstance.current = map;
 
-        reverseGeocode(lat, lng).then(address => {
-          setSelectedLocation({ lng, lat, address });
+        const marker = new TMap.Marker({
+          position: new TMap.LatLng(defaultCenter.lat, defaultCenter.lng),
+          map,
+          draggable: true,
         });
-      });
 
-      setIsLoading(false);
+        markerRef.current = marker;
+
+        const search = new TMap.service.PlaceSearch({
+          pageSize: 10,
+          pageIndex: 1,
+          boundary: new TMap.service.Boundary({ city: '深圳' }),
+        });
+
+        placeSearchRef.current = search;
+
+        map.on('click', (e: any) => {
+          const { lat, lng } = e.latLng;
+          marker.setPosition(new TMap.LatLng(lat, lng));
+
+          reverseGeocode(lat, lng).then(address => {
+            setSelectedLocation({ lng, lat, address });
+          });
+        });
+
+        marker.on('dragend', () => {
+          const pos = marker.getPosition();
+          const lat = pos.lat;
+          const lng = pos.lng;
+
+          reverseGeocode(lat, lng).then(address => {
+            setSelectedLocation({ lng, lat, address });
+          });
+        });
+
+        setIsLoading(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '地图初始化失败');
+        setIsLoading(false);
+      }
     };
 
     const loadScript = () => {

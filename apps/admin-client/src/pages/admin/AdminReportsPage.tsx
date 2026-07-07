@@ -70,7 +70,17 @@ export default function AdminReportsPage() {
   const [actionTaken, setActionTaken] = useState("none");
 
   const { data: reports = [], isLoading, isError, error, refetch } = useQuery<ChatReport[]>({
-    queryKey: ["/api/admin/chat-reports", filterStatus === "all" ? undefined : { status: filterStatus }],
+    queryKey: ["/api/admin/chat-reports", filterStatus],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filterStatus !== "all") {
+        params.set("status", filterStatus);
+      }
+      const query = params.toString();
+      const response = await apiRequest("GET", `/api/admin/chat-reports${query ? `?${query}` : ""}`);
+      const data = await response.json();
+      return Array.isArray(data) ? data : data?.reports ?? [];
+    },
     retry: 2,
   });
 

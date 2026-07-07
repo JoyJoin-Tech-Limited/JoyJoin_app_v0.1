@@ -1,5 +1,5 @@
 import { Switch, Route, useLocation, Redirect } from "wouter";
-import { queryClient } from "./lib/queryClient";
+import { apiRequest, queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useMutation } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,25 +15,22 @@ function AdminRouter() {
   // 登出mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await fetch("/api/admin/logout", {
-        method: "POST",
-        credentials: "include",
-      });
+      await apiRequest("POST", "/api/admin/logout");
     },
     onSuccess: () => {
       queryClient.clear();
-      setLocation("/login");
+      setLocation("/admin/login");
     },
     onError: () => {
       // 即使登出失败，也清除本地状态并跳转
       queryClient.clear();
-      setLocation("/login");
+      setLocation("/admin/login");
     },
   });
 
   const handleBackToLogin = () => {
     queryClient.clear();
-    setLocation("/login");
+    setLocation("/admin/login");
   };
 
   if (location === "/login" || location === "/admin/login") {

@@ -38,13 +38,9 @@ export default function AdminFeatureFlagsPage() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ key, value }: { key: string; value: boolean }) => {
-      const res = await apiRequest("/api/admin/feature-flags/" + key, "PUT", {
+      await apiRequest("PUT", `/api/admin/feature-flags/${encodeURIComponent(key)}`, {
         value: String(value),
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.message || `Failed to update ${key}`);
-      }
       return { key, value };
     },
     onSuccess: ({ key }) => {

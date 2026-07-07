@@ -21,8 +21,8 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Crown, Calendar, TrendingUp, DollarSign, Users, Plus } from "lucide-react";
-import { queryClient } from "@/lib/queryClient";
+import { Crown, TrendingUp, DollarSign, Users, Plus, AlertCircle, RefreshCw } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format, differenceInDays } from "date-fns";
 import { useToast } from "@/hooks/ui/use-toast";
 
@@ -49,8 +49,27 @@ export default function AdminSubscriptionsPage() {
   const [durationMonths, setDurationMonths] = useState("1");
   const { toast } = useToast();
 
-  const { data: subscriptions = [], isLoading } = useQuery<Subscription[]>({
-    queryKey: ["/api/admin/subscriptions", { filter: filterStatus === "all" ? undefined : filterStatus }],
+  const {
+    data: subscriptions = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery<Subscription[]>({
+    queryKey: ["/api/admin/subscriptions", filterStatus],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filterStatus !== "all") {
+        params.set("filter", filterStatus);
+      }
+      const query = params.toString();
+      const response = await apiRequest(
+        "GET",
+        `/api/admin/subscriptions${query ? `?${query}` : ""}`,
+      );
+      const data = await response.json();
+      return Array.isArray(data) ? data : data?.subscriptions ?? [];
+    },
   });
 
   const { data: users = [] } = useQuery<any[]>({
@@ -58,13 +77,10 @@ export default function AdminSubscriptionsPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) =>
-      fetch("/api/admin/subscriptions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(data),
-      }).then((r) => r.json()),
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", "/api/admin/subscriptions", data);
+      return await response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/subscriptions"] });
       setShowCreateDialog(false);
@@ -76,10 +92,10 @@ export default function AdminSubscriptionsPage() {
         description: "用户订阅已成功创建",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "创建失败",
-        description: "无法创建订阅，请重试",
+        description: error.message || "无法创建订阅，请重试",
         variant: "destructive",
       });
     },
@@ -198,7 +214,27 @@ export default function AdminSubscriptionsPage() {
         </TabsList>
       </Tabs>
 
-      {isLoading ? (
+      {isError ? (
+        <Card>
+          <CardContent className="py-12 text-center space-y-4">
+            <AlertCircle className="mx-auto h-10 w-10 text-destructive" />
+            <div>
+              <p className="font-medium">订阅数据加载失败</p>
+              <p className="text-sm text-muted-foreground">
+                {error instanceof Error ? error.message : "请稍后重试"}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => refetch()}
+              data-testid="button-retry-subscriptions"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              重试
+            </Button>
+          </CardContent>
+        </Card>
+      ) : isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="animate-pulse">

@@ -277,7 +277,7 @@ export function registerAdminAuthRoutes(app: Express) {
     return res.status(401).json({ message: "Unauthorized" });
   });
 
-  app.post("/api/admin/logout", requireAdmin, requireOperatorOrAbove, (req: Request, res) => {
+  app.post("/api/admin/logout", requireAdmin, (req: Request, res) => {
     req.session.destroy((error) => {
       if (error) {
         console.error("Error during admin logout:", error);

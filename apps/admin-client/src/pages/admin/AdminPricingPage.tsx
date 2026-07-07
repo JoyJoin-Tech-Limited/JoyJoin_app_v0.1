@@ -15,8 +15,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { DollarSign, Edit, Star, Clock, Package } from "lucide-react";
-import { queryClient } from "@/lib/queryClient";
+import { DollarSign, Edit, Star, Clock, Package, AlertCircle, RefreshCw } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
 
 interface PricingSetting {
@@ -53,18 +53,21 @@ export default function AdminPricingPage() {
 
   const { toast } = useToast();
 
-  const { data: pricingSettings = [], isLoading } = useQuery<PricingSetting[]>({
+  const {
+    data: pricingSettings = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery<PricingSetting[]>({
     queryKey: ["/api/admin/pricing"],
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      fetch(`/api/admin/pricing/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(data),
-      }).then((r) => r.json()),
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await apiRequest("PATCH", `/api/admin/pricing/${id}`, data);
+      return await response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pricing"] });
       setShowEditDialog(false);
@@ -74,10 +77,10 @@ export default function AdminPricingPage() {
         description: "定价设置已更新",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "更新失败",
-        description: "无法更新定价设置，请重试",
+        description: error.message || "无法更新定价设置，请重试",
         variant: "destructive",
       });
     },
@@ -147,6 +150,28 @@ export default function AdminPricingPage() {
     );
   }
 
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center h-64" data-testid="error-pricing">
+        <Card className="w-full max-w-md">
+          <CardContent className="py-10 text-center space-y-4">
+            <AlertCircle className="mx-auto h-10 w-10 text-destructive" />
+            <div>
+              <p className="font-medium">定价数据加载失败</p>
+              <p className="text-sm text-muted-foreground">
+                {error instanceof Error ? error.message : "请稍后重试"}
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => refetch()} data-testid="button-retry-pricing">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              重试
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6" data-testid="admin-pricing-page">
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -156,8 +181,15 @@ export default function AdminPricingPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {pricingSettings.map((setting) => {
+      {pricingSettings.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            暂无定价配置
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {pricingSettings.map((setting) => {
           const Icon = getPlanIcon(setting.plan_type);
           const savings = setting.original_price_in_cents && setting.price_in_cents 
             ? setting.original_price_in_cents - setting.price_in_cents 
@@ -244,8 +276,9 @@ export default function AdminPricingPage() {
               </CardContent>
             </Card>
           );
-        })}
-      </div>
+          })}
+        </div>
+      )}
 
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="max-w-md" data-testid="dialog-edit-pricing">

@@ -71,7 +71,7 @@ export default function AdminMatchingConfigPage() {
   // Update config mutation
   const updateConfigMutation = useMutation({
     mutationFn: async (data: MatchingThresholds) => {
-      return apiRequest("/api/admin/matching-thresholds", "PUT", data);
+      return apiRequest("PUT", "/api/admin/matching-thresholds", data);
     },
     onSuccess: () => {
       toast({

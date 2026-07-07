@@ -21,11 +21,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { DollarSign, CreditCard, TrendingUp, Receipt, Store, RotateCcw, HelpCircle, Download } from "lucide-react";
+import { DollarSign, CreditCard, TrendingUp, Receipt, Store, RotateCcw, HelpCircle, Download, AlertCircle, RefreshCw } from "lucide-react";
 import { downloadCsv } from "@/lib/csvExport";
 import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
 import { fmtDateTimeShort, safeFormat } from "@/lib/dateUtils";
-import { queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
 import EmptyState from "@/components/admin/EmptyState";
 
@@ -40,7 +40,7 @@ interface Payment {
   id: string;
   user_id: string;
   amount: number;
-  payment_type: "subscription" | "event" | "event_bundle";
+  payment_type: "subscription" | "event" | "event_bundle" | "event_pack";
   status: "completed" | "pending" | "failed" | "refunded";
   payment_method: string;
   created_at: string;
@@ -71,6 +71,7 @@ const PAYMENT_TYPE_MAP: Record<string, { label: string; variant: "default" | "ou
   subscription: { label: "会员", variant: "default" },
   event: { label: "活动", variant: "outline" },
   event_bundle: { label: "活动套餐", variant: "outline" },
+  event_pack: { label: "活动套餐", variant: "outline" },
 };
 
 interface RefundAttempt {
@@ -109,8 +110,23 @@ export default function AdminFinancePage() {
     queryKey: ["/api/admin/finance/stats"],
   });
 
-  const { data: payments = [], isLoading: paymentsLoading } = useQuery<Payment[]>({
-    queryKey: paymentFilter === "all" ? ["/api/admin/finance/payments"] : ["/api/admin/finance/payments", paymentFilter],
+  const {
+    data: payments = [],
+    isLoading: paymentsLoading,
+    isError: paymentsError,
+    error: paymentsQueryError,
+    refetch: refetchPayments,
+  } = useQuery<Payment[]>({
+    queryKey: ["/api/admin/finance/payments", paymentFilter],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/admin/finance/payments");
+      const data = await response.json();
+      const rows: Payment[] = Array.isArray(data) ? data : data?.payments ?? [];
+      if (paymentFilter === "all") {
+        return rows;
+      }
+      return rows.filter((payment) => payment.payment_type === paymentFilter);
+    },
   });
 
   const { data: commissions = [], isLoading: commissionsLoading } = useQuery<VenueCommission[]>({
@@ -123,16 +139,7 @@ export default function AdminFinancePage() {
 
   const refundMutation = useMutation({
     mutationFn: async ({ paymentId, reason }: { paymentId: string; reason: string }) => {
-      const res = await fetch(`/api/admin/payments/${paymentId}/refund`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ reason }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: "退款失败" }));
-        throw new Error(err.message || "退款失败");
-      }
+      const res = await apiRequest("POST", `/api/admin/payments/${paymentId}/refund`, { reason });
       return res.json();
     },
     onSuccess: () => {
@@ -316,7 +323,27 @@ export default function AdminFinancePage() {
                 </Button>
               </div>
 
-              {paymentsLoading ? (
+              {paymentsError ? (
+                <Card>
+                  <CardContent className="py-12 text-center space-y-4">
+                    <AlertCircle className="mx-auto h-10 w-10 text-destructive" />
+                    <div>
+                      <p className="font-medium">支付记录加载失败</p>
+                      <p className="text-sm text-muted-foreground">
+                        {paymentsQueryError instanceof Error ? paymentsQueryError.message : "请稍后重试"}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => refetchPayments()}
+                      data-testid="button-retry-payments"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      重试
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : paymentsLoading ? (
                 <div className="py-12 text-center text-muted-foreground" data-testid="text-loading-payments">
                   加载中...
                 </div>
