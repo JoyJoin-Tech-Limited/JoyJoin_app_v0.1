@@ -48,9 +48,14 @@ jobs:
             fi
 
       - name: Upload deployment workspace via rsync
-        uses: burnett01/rsync-deployments@7.1.0
-        with:
-          switches: >-
+        env:
+          SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
+        run: |
+          SSH_KEY_FILE=$(mktemp)
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > "$SSH_KEY_FILE"
+          chmod 600 "$SSH_KEY_FILE"
+
+          RSYNC_OPTS=(
             -az --delete
             --exclude=.git/
             --exclude=.github/
@@ -67,12 +72,18 @@ jobs:
             --exclude=reports/
             --exclude=attached_assets/
             --exclude=archived/
-          path: ./
-          remote_path: ~/JoyJoin/
-          remote_host: ${{ secrets.SERVER_IP }}
-          remote_user: ${{ secrets.SERVER_USER }}
-          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
-          remote_key_pass: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          )
+
+          if [ -n "${SSH_KEY_PASSPHRASE:-}" ]; then
+            eval "$(ssh-agent -s)"
+            echo "$SSH_KEY_PASSPHRASE" | ssh-add "$SSH_KEY_FILE"
+          fi
+
+          rsync "${RSYNC_OPTS[@]}" \
+            -e "ssh -i $SSH_KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
+            ./ "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:~/JoyJoin/"
+
+          rm -f "$SSH_KEY_FILE"
 
       - name: Encode multiline secrets for SSH transport
         env:
