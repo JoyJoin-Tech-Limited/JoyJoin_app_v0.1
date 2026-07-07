@@ -67,7 +67,7 @@ const MOCK_POOL = {
   currentParticipants: 5,
   registrationCount: 5,
   spotsLeft: 3,
-  sampleArchetypes: ['corgi', 'dolphin', 'fox'],
+  sampleArchetypes: ['corgi', 'dolphin_calm', 'fox'],
   accentFamily: 'warm',
   aiHeadline: '这一桌的氛围，适合想认真聊聊的人',
   hasUserArchetypeMatch: true,
@@ -382,7 +382,7 @@ const MOCK_SQUAD_MEMBERS = [
   {
     userId: 'user-screenshot-003',
     displayName: '小鹿',
-    archetype: 'dolphin',
+    archetype: 'dolphin_calm',
     topInterests: ['瑜伽', '阅读', '烘焙'],
     ageLabel: '27',
     industryNicheLabel: '心理咨询',
@@ -400,7 +400,7 @@ const MOCK_SQUAD_MEMBERS = [
   {
     userId: 'user-screenshot-004',
     displayName: '大熊',
-    archetype: 'panda',
+    archetype: 'elephant',
     topInterests: ['游戏', '火锅', '露营'],
     ageLabel: '29',
     industryNicheLabel: '后端开发',

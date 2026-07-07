@@ -17,7 +17,7 @@ function getMemberName(member?: PoolGroupMemberSummary | null): string {
 
 function getArchetypeDisplayName(archetype?: string | null): string {
   if (!archetype) return ''
-  return ARCHETYPE_BY_ID[archetype]?.nameCn || archetype
+  return ARCHETYPE_BY_ID[archetype]?.nameCn || '神秘伙伴'
 }
 
 function getConnectionPoints(pair?: PairExplanation | null) {

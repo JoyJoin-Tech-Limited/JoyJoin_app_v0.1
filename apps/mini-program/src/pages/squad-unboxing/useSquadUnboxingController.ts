@@ -58,12 +58,33 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   const { user: currentUser, isLoading: authLoading } = useAuthGuard()
   const { shouldReduceMotion } = useMiniRevealMotion(routerParams)
 
+  const storyMode = process.env.TARO_APP_ENABLE_STORY_MODE === 'true'
+  const storyName = routerParams['__story']
+
   const [flowState, setFlowState] = useState<FlowState>(() => (groupId ? (readRevealFlag(groupId) ? 'revealed' : 'ready') : 'ready'))
   const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false)
 
   useResetOnShow(setIsSubmitting, setShowSuccessOverlay)
+
+  // H5 screenshot story mode: force specific flow states when `__story` is
+  // present. Only active in builds that opt in via `TARO_APP_ENABLE_STORY_MODE=true`.
+  useEffect(() => {
+    if (!storyMode) return
+    if (storyName === 'ready') {
+      setFlowState('ready')
+      return
+    }
+    if (storyName === 'shaking') {
+      setFlowState('shaking')
+      return
+    }
+    if (storyName === 'focused' || storyName === 'revealed') {
+      setFlowState('revealed')
+      return
+    }
+  }, [storyMode, storyName])
 
   const {
     data: poolGroup,
@@ -245,7 +266,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
 
     const names = uniqueArchetypes
       .slice(0, 3)
-      .map((id) => ARCHETYPE_BY_ID[id]?.nameCn || id)
+      .map((id) => ARCHETYPE_BY_ID[id]?.nameCn || '小伙伴')
     const suffix = uniqueArchetypes.length > 3 ? '等多种能量' : '三种能量'
     const label = uniqueArchetypes.length >= 3 ? suffix : uniqueArchetypes.length === 2 ? '两种能量' : '一种能量'
 
@@ -309,6 +330,11 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
 
   useEffect(() => {
     if (flowState !== 'shaking') {
+      return undefined
+    }
+
+    // In story mode, keep the shaking state frozen for screenshots.
+    if (storyMode && storyName === 'shaking') {
       return undefined
     }
 

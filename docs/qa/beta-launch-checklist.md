@@ -37,7 +37,7 @@
 | M-04 | Matching pending → matched state transition | 🔴 Critical | `poolMatchingService.test.ts` + `poolRealtimeMatchingService.test.ts` (42 tests) + mock env |
 | M-05 | Group formation — correct sizes (4–6), no orphans, valid scores | 🔴 Critical | Mock env stress mode |
 | M-06 | Match explanation display — chemistry, interests, archetypes | 🟠 High | `matchExplanationService.test.ts` |
-| M-07 | Squad Unboxing reveal — animation, group cards, chemistry scores | 🟠 High | `squadUnboxingViewModels.test.ts` + manual |
+| M-07 | Squad Unboxing reveal — animation, group cards, chemistry scores, no overlap between fixed stage and scroll content | 🟠 High | `squadUnboxingViewModels.test.ts` + `docs/runbooks/mini-program-squad-unboxing-smoke.md` (DevTools preview mandatory) |
 | M-08 | Match Compass lock 24h before event | 🟡 Medium | Existing test coverage |
 | M-09 | No matching if pool below minimum fill | 🟠 High | Existing test coverage |
 | M-10 | Predictive Shell — discover/profiles/events/connections bundled response | 🟡 Medium | `shellDiscover.test.ts` |

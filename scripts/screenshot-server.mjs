@@ -194,6 +194,61 @@ async function captureEventTicketPayment() {
   )
 }
 
+async function captureSquadUnboxingReady() {
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      await page.goto(
+        `${H5_BASE_URL}/#/pages/squad-unboxing/index?groupId=group-screenshot-001&__story=ready&motion=reduce`,
+        { waitUntil: 'domcontentloaded', timeout: 60000 }
+      )
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+      await page.waitForSelector('#drag-reveal-track', { timeout: 10000 })
+      await page.waitForTimeout(1200)
+      return page.screenshot({ fullPage: false })
+    }
+  )
+}
+
+async function captureSquadUnboxingShaking() {
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      await page.goto(
+        `${H5_BASE_URL}/#/pages/squad-unboxing/index?groupId=group-screenshot-001&__story=shaking&motion=reduce`,
+        { waitUntil: 'domcontentloaded', timeout: 60000 }
+      )
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+      await page.waitForSelector('.squad-unboxing__blind-box-card', { timeout: 10000 })
+      await page.waitForTimeout(1200)
+      return page.screenshot({ fullPage: false })
+    }
+  )
+}
+
+async function captureSquadUnboxingFocused() {
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      await page.goto(
+        `${H5_BASE_URL}/#/pages/squad-unboxing/index?groupId=group-screenshot-001&__story=focused&motion=reduce`,
+        { waitUntil: 'domcontentloaded', timeout: 60000 }
+      )
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+      // Wait for the focused inline detail to render.
+      await page.waitForSelector('#inline-detail', { timeout: 10000 })
+      await page.waitForTimeout(1200)
+      return page.screenshot({ fullPage: true })
+    }
+  )
+}
+
 async function captureSquadUnboxingRevealed() {
   return withBrowserPage(
     { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
@@ -301,6 +356,9 @@ register('events-footprint-oracle-card', captureEventsPage)
 register('tier-selector-preset-cards', captureTierSelector)
 register('pool-registration-step-0-brief', capturePoolRegistration)
 register('event-ticket-payment', captureEventTicketPayment)
+register('squad-unboxing-ready', captureSquadUnboxingReady)
+register('squad-unboxing-shaking', captureSquadUnboxingShaking)
+register('squad-unboxing-focused', captureSquadUnboxingFocused)
 register('squad-unboxing-revealed', captureSquadUnboxingRevealed)
 register('profile-review-welcome-coupon', captureProfileReview)
 register('matching-status-puzzle-prelude', captureMatchingStatusPuzzlePrelude)

@@ -28,6 +28,14 @@ const PAGES = {
     url: 'http://localhost:9000/squad-unboxing-revealed.png',
     altPort: 9003,
   },
+  'squad-unboxing-ready': {
+    url: 'http://localhost:9000/squad-unboxing-ready.png',
+    altPort: 9003,
+  },
+  'squad-unboxing-shaking': {
+    url: 'http://localhost:9000/squad-unboxing-shaking.png',
+    altPort: 9003,
+  },
   'profile-review': {
     url: 'http://localhost:9000/profile-review-welcome-coupon.png',
     altPort: 9003,
@@ -100,7 +108,11 @@ async function main() {
     ['run', 'build:h5', '--workspace=mini-program'],
     {
       cwd: ROOT,
-      env: { ...process.env, TARO_APP_API_BASE_URL: 'http://localhost:5001' },
+      env: {
+        ...process.env,
+        TARO_APP_API_BASE_URL: 'http://localhost:5001',
+        TARO_APP_ENABLE_STORY_MODE: 'true',
+      },
     }
   )
   await new Promise((resolve, reject) => {

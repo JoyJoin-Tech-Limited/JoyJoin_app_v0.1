@@ -47,7 +47,7 @@ function getMemberName(member: PoolGroupMemberSummary): string {
 
 function getArchetypeDisplayName(archetype?: string | null): string {
   if (!archetype) return ''
-  return ARCHETYPE_BY_ID[archetype]?.nameCn || archetype
+  return ARCHETYPE_BY_ID[archetype]?.nameCn || '神秘伙伴'
 }
 
 export default function TeammateCard({
@@ -99,7 +99,7 @@ export default function TeammateCard({
   const step = total <= 1 ? 0 : Math.min(14, 48 / total)
   const baseRotation = (index - (total - 1) / 2) * step
   const baseTranslateX = (index - (total - 1) / 2) * (total <= 3 ? 32 : 22)
-  const baseTranslateY = -Math.abs(baseRotation) * 2.0
+  const baseTranslateY = -Math.abs(baseRotation) * 1.0
 
   const focusRotation = focused ? 0 : baseRotation
   const focusTranslateX = focused ? 0 : baseTranslateX

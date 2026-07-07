@@ -31,10 +31,12 @@ export default function Button({
   const sizeClass = size === 'sm' ? ' joy-button--sm' : ''
   const loadingClass = loading ? ' joy-button--loading' : ''
 
+  const isDisabled = disabled || loading
+
   return (
     <TaroButton
       className={`joy-button ${variantClass}${sizeClass}${loadingClass}${className ? ` ${className}` : ''}`}
-      disabled={disabled || loading}
+      disabled={isDisabled ? true : undefined}
       {...props}
     >
       {loading ? (

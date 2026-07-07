@@ -51,16 +51,20 @@
     position: fixed;
     left: 0;
     right: 0;
-    top: clamp(200rpx, 34vh, 340rpx);
-    bottom: clamp(420rpx, 54vh, 560rpx);
-    min-height: 220rpx;
+    top: 0;
     z-index: 10;
     pointer-events: none;
     display: flex;
     align-items: center;
     justify-content: center;
 
+    &--ready,
+    &--shaking {
+      height: clamp(420rpx, 54vh, 560rpx);
+    }
+
     &--revealed {
+      height: clamp(560rpx, 66vh, 760rpx);
       pointer-events: auto;
     }
 
@@ -68,6 +72,15 @@
       .squad-unboxing__blind-box-visual--ready {
         animation: none;
       }
+    }
+  }
+
+  &__stage-spacer {
+    height: clamp(420rpx, 54vh, 560rpx);
+    pointer-events: none;
+
+    &--revealed {
+      height: clamp(560rpx, 66vh, 760rpx);
     }
   }
 
@@ -106,14 +119,12 @@
   &__scroll {
     position: relative;
     z-index: 2;
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: 100dvh;
     box-sizing: border-box;
-    padding: $spacing-xl $container-padding 0;
-    padding-top: clamp(420rpx, 54vh, 560rpx);
-    @include safe-area-top(padding-top, $spacing-xl);
+    padding-inline: $container-padding;
+    padding-bottom: 0;
     @include safe-area-inline($container-padding);
-    @include fixed-footer-reserve(440rpx, $spacing-md);
+    @include fixed-footer-reserve(580rpx, $spacing-md);
   }
 
   &__error {
@@ -214,7 +225,17 @@
   }
 
   &__analysis-bubble {
-    margin-bottom: $spacing-lg;
+    margin-bottom: $spacing-xl;
+  }
+
+  &__analysis-bubble--in-dock {
+    margin-bottom: 0;
+  }
+
+  &__analysis-bubble-inner--in-dock {
+    background: rgba($color-bg-tint-cream, 0.92);
+    box-shadow: none;
+    padding: $spacing-sm $spacing-md;
   }
 
   &__analysis-bubble-inner {
@@ -274,16 +295,16 @@
     @include type-body;
     display: block;
     color: $color-text-primary;
-    word-break: keep-all;
-  }
-
-
-  // Spacer that reserves the fixed stage area in scroll flow.
-  &__stage-spacer {
-    height: clamp(520rpx, 62vh, 680rpx);
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 
   // Inline card detail bridges the fixed stage and the scroll story.
+  &__inline-detail-anchor {
+    height: 0;
+    pointer-events: none;
+  }
+
   &__inline-detail-shell {
     margin-bottom: $spacing-lg;
     border-radius: $card-radius;
@@ -821,7 +842,7 @@
   &__deck-cue {
     position: absolute;
     left: 50%;
-    bottom: 12rpx;
+    bottom: 360rpx;
     transform: translateX(-50%);
     display: flex;
     align-items: center;
@@ -829,6 +850,7 @@
     gap: $spacing-sm;
     z-index: 5;
     opacity: 0;
+    pointer-events: none;
     transition: opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1) 0.24s;
 
     &--ready {
@@ -913,9 +935,9 @@
     position: absolute;
     left: 50%;
     bottom: 0;
-    width: 240rpx;
-    height: 360rpx;
-    margin-left: -120rpx;
+    width: 220rpx;
+    height: 300rpx;
+    margin-left: -110rpx;
     border-radius: $card-radius;
     background: $color-surface;
     border: 2rpx solid transparent;
@@ -1043,7 +1065,7 @@
   &__deck-card-art-wrap {
     position: relative;
     width: 100%;
-    height: 200rpx;
+    height: 170rpx;
     border-radius: $card-radius-sm;
     background: rgba($color-primary, 0.04);
     overflow: hidden;
@@ -1063,8 +1085,8 @@
   }
 
   &__deck-card-placeholder {
-    width: 180rpx;
-    height: 180rpx;
+    width: 150rpx;
+    height: 150rpx;
   }
 
   &__deck-card-content {
@@ -1403,14 +1425,14 @@
     transition: none;
   }
 
-  &__action-zone {
+  &__bottom-dock {
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 100;
-    padding: $spacing-md $spacing-lg;
-    padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
     background: $color-surface;
     box-shadow: 0 -8rpx 32rpx rgba($color-text-primary, 0.06);
     transform: translateY(100%);
@@ -1419,6 +1441,12 @@
     &--ready {
       transform: translateY(0);
     }
+  }
+
+  &__action-zone {
+    padding: $spacing-md $spacing-lg;
+    padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+    background: $color-surface;
   }
 
   &__confirm-btn {
@@ -1644,7 +1672,8 @@
   .squad-unboxing__chapter,
   .squad-unboxing__expand-body,
   .squad-unboxing__inline-detail-shell,
-  .squad-unboxing__analysis-bubble-inner {
+  .squad-unboxing__analysis-bubble-inner,
+  .squad-unboxing__bottom-dock {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

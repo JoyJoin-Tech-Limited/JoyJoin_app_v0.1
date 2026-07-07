@@ -102,18 +102,31 @@ export default function SquadUnboxingPage() {
   const { isDegradation } = useDeviceTier()
   const { user: currentUser } = useAuthGuard()
   const dragRevealEnabled = currentUser?.features?.squadUnboxingDragRevealEnabled ?? true
+  const storyName = router.params['__story']
+  const isStoryFocused = storyName === 'focused'
 
   const [focusedCardIndex, setFocusedCardIndex] = useState(-1)
   const [hasTappedCard, setHasTappedCard] = useState(false)
   const [announcement, setAnnouncement] = useState('')
-  const [scrollToDetailId, setScrollToDetailId] = useState('')
   const [headerReady, setHeaderReady] = useState(false)
   const [deckEmergeComplete, setDeckEmergeComplete] = useState(false)
+  const [programmaticScrollTop, setProgrammaticScrollTop] = useState(0)
 
   const reportScrollDepth = useScrollDepthTracking(groupId)
 
-  useResetOnShow(() => setHasTappedCard(false))
+  useEffect(() => {
+    if (isStoryFocused && members.length > 0 && focusedCardIndex === -1) {
+      const index = Math.min(2, members.length - 1)
+      setFocusedCardIndex(index)
+      setHasTappedCard(true)
+    }
+  }, [isStoryFocused, members.length, focusedCardIndex])
+
+  useResetOnShow(() => {
+    if (!isStoryFocused) setHasTappedCard(false)
+  })
   useDidShow(() => {
+    if (isStoryFocused) return
     setFocusedCardIndex(-1)
     setHeaderReady(false)
     setDeckEmergeComplete(false)
@@ -192,8 +205,22 @@ export default function SquadUnboxingPage() {
 
   useEffect(() => {
     if (!focusedMember) return
-    setScrollToDetailId('inline-detail')
-    const timer = setTimeout(() => setScrollToDetailId(''), 600)
+    const timer = setTimeout(() => {
+      Taro.createSelectorQuery()
+        .select('.squad-unboxing__scroll')
+        .scrollOffset()
+        .select('#inline-detail-anchor')
+        .boundingClientRect()
+        .select('.squad-unboxing__stage')
+        .boundingClientRect()
+        .exec((res) => {
+          const [scrollOffset, anchorRect, stageRect] = res
+          if (!scrollOffset || !anchorRect || !stageRect) return
+          const desiredScrollTop =
+            scrollOffset.scrollTop + (anchorRect.top - stageRect.bottom)
+          setProgrammaticScrollTop(Math.max(0, desiredScrollTop))
+        })
+    }, 100)
     return () => clearTimeout(timer)
   }, [focusedMember])
 
@@ -227,7 +254,11 @@ export default function SquadUnboxingPage() {
     if (scrollTop > 520) reportScrollDepth('actions')
   }, [reportScrollDepth])
 
-  const pageClassName = [rootClassName, isExiting ? 'squad-unboxing--exiting' : ''].filter(Boolean).join(' ')
+  const pageClassName = [
+    rootClassName,
+    `squad-unboxing--${flowState}`,
+    isExiting ? 'squad-unboxing--exiting' : '',
+  ].filter(Boolean).join(' ')
 
   if (authLoading || isLoading) {
     return <LoadingScreen message='揭晓小队中…' />
@@ -270,8 +301,13 @@ export default function SquadUnboxingPage() {
         enhanced
         showScrollbar={false}
         onScroll={handleScroll}
-        scrollIntoView={scrollToDetailId}
+        scrollTop={programmaticScrollTop}
       >
+        <View className={[
+          'squad-unboxing__stage-spacer',
+          flowState === 'revealed' ? 'squad-unboxing__stage-spacer--revealed' : '',
+        ].filter(Boolean).join(' ')} />
+
         <View className={['squad-unboxing__header', headerReady ? 'squad-unboxing__header--ready' : ''].filter(Boolean).join(' ')}>
           <Image
             className='squad-unboxing__header-mascot'
@@ -295,52 +331,6 @@ export default function SquadUnboxingPage() {
           </View>
         </View>
 
-        {flowState === 'revealed' ? (
-          <View className='squad-unboxing__analysis-bubble'>
-            <View
-              className={[
-                'squad-unboxing__analysis-bubble-inner',
-                headerReady ? 'squad-unboxing__analysis-bubble-inner--ready' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            >
-              <Image
-                className={['squad-unboxing__analysis-bubble-mascot', headerReady ? 'squad-unboxing__analysis-bubble-mascot--ready' : ''].filter(Boolean).join(' ')}
-                mode='aspectFit'
-                src={getXiaoyueExpressionAsset('matchSuccess')}
-                aria-hidden='true'
-              />
-              <View className='squad-unboxing__analysis-bubble-bubble'>
-                <TypewriterText
-                  className='squad-unboxing__analysis-bubble-text'
-                  text={
-                    [
-                      '拼图完整了！',
-                      archetypeMixCopy,
-                      groupAnalysis?.groupThemeCompanion ||
-                        group.matchExplanation ||
-                        `${DEFAULT_MASCOT_DISPLAY_NAME}觉得这桌会聊得很自然。`,
-                    ]
-                      .filter(Boolean)
-                      .join('')
-                  }
-                  speed={45}
-                  delay={180}
-                  maxDuration={3000}
-                  enabled={!shouldReduceMotion}
-                  showCursor={false}
-                  onComplete={() => {
-                    squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
-                      groupId,
-                      screen: 'squad-unboxing',
-                    })
-                  }}
-                />
-              </View>
-            </View>
-          </View>
-        ) : null}
 
         {flowState === 'ready' ? (
           <Card className='squad-unboxing__blind-box-card squad-unboxing__blind-box-card--copy-only'>
@@ -376,34 +366,38 @@ export default function SquadUnboxingPage() {
 
         {flowState === 'revealed' ? (
           <>
-            <View className='squad-unboxing__stage-spacer' />
-
             {focusedMember ? (
-              <View
-                id='inline-detail'
-                className={[
-                  'squad-unboxing__inline-detail-shell',
-                  'squad-unboxing__inline-detail-shell--ready',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-              >
+              <>
                 <View
-                  className='squad-unboxing__inline-detail-dismiss'
-                  onClick={handleDismissDetail}
-                  hoverClass='squad-unboxing__inline-detail-dismiss--pressed'
-                  role='button'
-                  aria-label='收起卡片详情'
-                >
-                  <Text className='squad-unboxing__inline-detail-dismiss-text'>收起</Text>
-                  <View className='squad-unboxing__inline-detail-dismiss-chevron' />
-                </View>
-                <TeammateCardDetail
-                  member={focusedMember}
-                  viewerPair={focusedViewerPair}
-                  visible={flowState === 'revealed'}
+                  id='inline-detail-anchor'
+                  className='squad-unboxing__inline-detail-anchor'
                 />
-              </View>
+                <View
+                  id='inline-detail'
+                  className={[
+                    'squad-unboxing__inline-detail-shell',
+                    'squad-unboxing__inline-detail-shell--ready',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  <View
+                    className='squad-unboxing__inline-detail-dismiss'
+                    onClick={handleDismissDetail}
+                    hoverClass='squad-unboxing__inline-detail-dismiss--pressed'
+                    role='button'
+                    aria-label='收起卡片详情'
+                  >
+                    <Text className='squad-unboxing__inline-detail-dismiss-text'>收起</Text>
+                    <View className='squad-unboxing__inline-detail-dismiss-chevron' />
+                  </View>
+                  <TeammateCardDetail
+                    member={focusedMember}
+                    viewerPair={focusedViewerPair}
+                    visible={flowState === 'revealed'}
+                  />
+                </View>
+              </>
             ) : null}
 
             <View className={[
@@ -783,49 +777,95 @@ export default function SquadUnboxingPage() {
       {flowState === 'revealed' && actionDockState === 'ready' ? (
         <View
           className={[
-            'squad-unboxing__action-zone',
-            headerReady ? 'squad-unboxing__action-zone--ready' : '',
+            'squad-unboxing__bottom-dock',
+            headerReady ? 'squad-unboxing__bottom-dock--ready' : '',
           ]
             .filter(Boolean)
             .join(' ')}
         >
-          <Button
-            className='squad-unboxing__confirm-btn'
-            onClick={handleConfirmAttendance}
-            disabled={isSubmitting || confirmAttendanceMutation.isPending || showSuccessOverlay}
-            loading={isSubmitting || confirmAttendanceMutation.isPending}
-          >
-            {showSuccessOverlay ? '座位已锁定' : isSubmitting ? '确认中…' : '确认出席'}
-          </Button>
-
-          <View className='squad-unboxing__action-row'>
-            <Button
-              variant='secondary'
-              className='squad-unboxing__share-btn'
-              onClick={handleSharePosterTap}
-              disabled={showSuccessOverlay}
+          <View className='squad-unboxing__analysis-bubble squad-unboxing__analysis-bubble--in-dock'>
+            <View
+              className={[
+                'squad-unboxing__analysis-bubble-inner',
+                'squad-unboxing__analysis-bubble-inner--in-dock',
+                headerReady ? 'squad-unboxing__analysis-bubble-inner--ready' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
             >
-              生成队伍海报
-            </Button>
-
-            <Button
-              variant='secondary'
-              className='squad-unboxing__detail-btn'
-              onClick={handleOpenGroupDetail}
-              disabled={showSuccessOverlay}
-            >
-              查看活动详情
-            </Button>
+              <Image
+                className={['squad-unboxing__analysis-bubble-mascot', headerReady ? 'squad-unboxing__analysis-bubble-mascot--ready' : ''].filter(Boolean).join(' ')}
+                mode='aspectFit'
+                src={getXiaoyueExpressionAsset('matchSuccess')}
+                aria-hidden='true'
+              />
+              <View className='squad-unboxing__analysis-bubble-bubble'>
+                <TypewriterText
+                  className='squad-unboxing__analysis-bubble-text'
+                  text={(() => {
+                    const mix = archetypeMixCopy
+                    const companion =
+                      groupAnalysis?.groupThemeCompanion ||
+                      group.matchExplanation ||
+                      `${DEFAULT_MASCOT_DISPLAY_NAME}觉得这桌会聊得很自然。`
+                    const normalizedCompanion = companion.replace(/[。！？，\s]*$/, '')
+                    return `拼图完整了！${mix}，${normalizedCompanion}。`
+                  })()}
+                  speed={45}
+                  delay={180}
+                  maxDuration={3000}
+                  enabled={!shouldReduceMotion}
+                  showCursor={false}
+                  onComplete={() => {
+                    squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
+                      groupId,
+                      screen: 'squad-unboxing',
+                    })
+                  }}
+                />
+              </View>
+            </View>
           </View>
 
-          <View
-            className='squad-unboxing__skip-link'
-            hoverClass='squad-unboxing__skip-link--pressed'
-            onClick={handleSkip}
-            role='button'
-            aria-label='稍后再看'
-          >
-            <Text>稍后再看</Text>
+          <View className='squad-unboxing__action-zone'>
+            <Button
+              className='squad-unboxing__confirm-btn'
+              onClick={handleConfirmAttendance}
+              disabled={isSubmitting || confirmAttendanceMutation.isPending || showSuccessOverlay}
+              loading={isSubmitting || confirmAttendanceMutation.isPending}
+            >
+              {showSuccessOverlay ? '座位已锁定' : isSubmitting ? '确认中…' : '确认出席'}
+            </Button>
+
+            <View className='squad-unboxing__action-row'>
+              <Button
+                variant='secondary'
+                className='squad-unboxing__share-btn'
+                onClick={handleSharePosterTap}
+                disabled={showSuccessOverlay}
+              >
+                生成队伍海报
+              </Button>
+
+              <Button
+                variant='secondary'
+                className='squad-unboxing__detail-btn'
+                onClick={handleOpenGroupDetail}
+                disabled={showSuccessOverlay}
+              >
+                查看活动详情
+              </Button>
+            </View>
+
+            <View
+              className='squad-unboxing__skip-link'
+              hoverClass='squad-unboxing__skip-link--pressed'
+              onClick={handleSkip}
+              role='button'
+              aria-label='稍后再看'
+            >
+              <Text>稍后再看</Text>
+            </View>
           </View>
         </View>
       ) : null}
