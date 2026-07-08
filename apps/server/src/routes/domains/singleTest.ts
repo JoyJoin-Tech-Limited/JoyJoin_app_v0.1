@@ -34,11 +34,15 @@ export function registerSingleTestRoutes(app: Express): void {
     }
 
     try {
-      await cleanupSingleTestData();
-      res.json({ ok: true });
+      const result = await cleanupSingleTestData();
+      res.json({ ok: true, ...result });
     } catch (error: any) {
-      logger.error("[SingleTest] reset error", { error: String(error) });
-      res.status(500).json({ error: "FAILED_TO_RESET" });
+      logger.error("[SingleTest] reset error", {
+        error: String(error),
+        message: error?.message,
+        code: error?.code,
+      });
+      res.status(500).json({ error: "FAILED_TO_RESET", message: error?.message });
     }
   });
 }

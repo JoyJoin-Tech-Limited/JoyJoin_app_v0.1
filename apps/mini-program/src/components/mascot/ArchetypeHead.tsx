@@ -148,8 +148,12 @@ export default function ArchetypeHead({
 
   return (
     <View className={`archetype-head ${className}`} style={{ width: sizeStr, height: sizeStr }}>
-      <View style={{ transform: `translateX(${tx}rpx) translateY(${ty}rpx)` }}>
+      <View
+        className='archetype-head__inner'
+        style={{ transform: `translateX(${tx}rpx) translateY(${ty}rpx)` }}
+      >
         <Image
+          className='archetype-head__image'
           src={src}
           mode='aspectFit'
           style={{ width: imageSizeStr, height: imageSizeStr }}

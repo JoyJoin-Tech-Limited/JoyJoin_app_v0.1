@@ -1,13 +1,24 @@
-import { and, eq, inArray, like } from "drizzle-orm";
+import { and, eq, inArray, like, or } from "drizzle-orm";
 import { db } from "../db";
 import {
+  eventAttendance,
+  eventCreditRedemptions,
+  eventGroupOutcomes,
   users,
   eventPools,
   eventPoolGroups,
   eventPoolRegistrations,
+  invitationUses,
+  matchHistory,
   socialIcebreakerSessions,
   socialIcebreakerParticipants,
   socialIcebreakerLieTruths,
+  socialIcebreakerAiFeedback,
+  socialIcebreakerPhasePulseChecks,
+  socialIcebreakerPhaseMetrics,
+  socialIcebreakerMiniscriptSecrets,
+  momentCardInteractions,
+  userInterests,
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
@@ -26,6 +37,8 @@ import {
 import { isSingleTestMode } from "../lib/isSingleTestMode";
 import { isSocialIcebreakerTestMode } from "../lib/isSocialIcebreakerTestMode";
 import { cleanupBotFillUsers } from "./botFillService";
+
+type IdRow = { id: string };
 
 const VIRTUAL_PHONE_PREFIX = "+861399999";
 const SINGLE_TEST_POOL_TITLE = "单人调试局";
@@ -209,8 +222,7 @@ export async function ensureSingleTestPool(createdBy: string): Promise<string> {
 /** Like ensureSingleTestPool but cleans existing registrations + groups first. */
 async function ensureCleanSingleTestPool(createdBy: string): Promise<string> {
   const poolId = await ensureSingleTestPool(createdBy);
-  await db.delete(eventPoolRegistrations).where(eq(eventPoolRegistrations.poolId, poolId));
-  await db.delete(eventPoolGroups).where(eq(eventPoolGroups.poolId, poolId));
+  await cleanupSingleTestPoolRows(poolId, { deletePool: false });
   return poolId;
 }
 
@@ -426,8 +438,105 @@ export async function getSingleTestMetaForSessionStart(groupId: string): Promise
   return singleTestStateSchema.parse(payload);
 }
 
-export async function cleanupSingleTestData(): Promise<void> {
-  await cleanupBotFillUsers();
+async function cleanupSingleTestPoolRows(
+  poolId: string,
+  { deletePool }: { deletePool: boolean },
+): Promise<{
+  deletedRegistrations: number;
+  deletedGroups: number;
+  deletedSocialSessions: number;
+}> {
+  const registrationRows = await db
+    .select({ id: eventPoolRegistrations.id })
+    .from(eventPoolRegistrations)
+    .where(eq(eventPoolRegistrations.poolId, poolId));
+  const registrationIds = registrationRows.map((row: IdRow) => row.id);
+
+  const groupRows = await db
+    .select({ id: eventPoolGroups.id })
+    .from(eventPoolGroups)
+    .where(eq(eventPoolGroups.poolId, poolId));
+  const groupIds = groupRows.map((row: IdRow) => row.id);
+
+  let deletedSocialSessions = 0;
+
+  if (groupIds.length > 0) {
+    const socialSessionRows = await db
+      .select({ id: socialIcebreakerSessions.id })
+      .from(socialIcebreakerSessions)
+      .where(inArray(socialIcebreakerSessions.icebreakerSessionId, groupIds));
+    const socialSessionIds = socialSessionRows.map((row: IdRow) => row.id);
+
+    if (socialSessionIds.length > 0) {
+      await db
+        .delete(socialIcebreakerMiniscriptSecrets)
+        .where(inArray(socialIcebreakerMiniscriptSecrets.socialSessionId, socialSessionIds));
+      await db
+        .delete(socialIcebreakerPhaseMetrics)
+        .where(inArray(socialIcebreakerPhaseMetrics.socialSessionId, socialSessionIds));
+      await db
+        .delete(socialIcebreakerPhasePulseChecks)
+        .where(inArray(socialIcebreakerPhasePulseChecks.socialSessionId, socialSessionIds));
+      await db
+        .delete(momentCardInteractions)
+        .where(inArray(momentCardInteractions.socialSessionId, socialSessionIds));
+      await db
+        .delete(socialIcebreakerAiFeedback)
+        .where(inArray(socialIcebreakerAiFeedback.socialSessionId, socialSessionIds));
+      await db
+        .delete(socialIcebreakerLieTruths)
+        .where(inArray(socialIcebreakerLieTruths.socialSessionId, socialSessionIds));
+      await db
+        .delete(socialIcebreakerParticipants)
+        .where(inArray(socialIcebreakerParticipants.socialSessionId, socialSessionIds));
+      const deleted = await db
+        .delete(socialIcebreakerSessions)
+        .where(inArray(socialIcebreakerSessions.id, socialSessionIds))
+        .returning({ id: socialIcebreakerSessions.id });
+      deletedSocialSessions = deleted.length;
+    }
+
+    await db.delete(eventGroupOutcomes).where(inArray(eventGroupOutcomes.groupId, groupIds));
+  }
+
+  if (registrationIds.length > 0) {
+    await db.delete(eventCreditRedemptions).where(inArray(eventCreditRedemptions.registrationId, registrationIds));
+    await db.delete(invitationUses).where(inArray(invitationUses.poolRegistrationId, registrationIds));
+  }
+
+  const deletedRegistrations = await db
+    .delete(eventPoolRegistrations)
+    .where(eq(eventPoolRegistrations.poolId, poolId))
+    .returning({ id: eventPoolRegistrations.id });
+  const deletedGroups = await db
+    .delete(eventPoolGroups)
+    .where(eq(eventPoolGroups.poolId, poolId))
+    .returning({ id: eventPoolGroups.id });
+
+  if (deletePool) {
+    await db.delete(eventPools).where(eq(eventPools.id, poolId));
+  }
+
+  return {
+    deletedRegistrations: deletedRegistrations.length,
+    deletedGroups: deletedGroups.length,
+    deletedSocialSessions,
+  };
+}
+
+export async function cleanupSingleTestData(): Promise<{
+  deletedRegistrations: number;
+  deletedGroups: number;
+  deletedSocialSessions: number;
+  deletedVirtualUsers: number;
+  deletedBotFillUsers: number;
+}> {
+  const botFillCleanup = await cleanupBotFillUsers();
+  let poolCleanup = {
+    deletedRegistrations: 0,
+    deletedGroups: 0,
+    deletedSocialSessions: 0,
+  };
 
   const [pool] = await db
     .select({ id: eventPools.id })
@@ -436,23 +545,31 @@ export async function cleanupSingleTestData(): Promise<void> {
     .limit(1);
 
   if (pool) {
-    const groupRows = await db
-      .select({ id: eventPoolGroups.id })
-      .from(eventPoolGroups)
-      .where(eq(eventPoolGroups.poolId, pool.id));
-
-    for (const g of groupRows) {
-      const sid = `social_${g.id}`;
-      await db.delete(socialIcebreakerParticipants).where(eq(socialIcebreakerParticipants.socialSessionId, sid));
-      await db.delete(socialIcebreakerLieTruths).where(eq(socialIcebreakerLieTruths.socialSessionId, sid));
-      await db.delete(socialIcebreakerSessions).where(eq(socialIcebreakerSessions.icebreakerSessionId, g.id));
-    }
-
-    await db.delete(eventPoolRegistrations).where(eq(eventPoolRegistrations.poolId, pool.id));
-    await db.delete(eventPoolGroups).where(eq(eventPoolGroups.poolId, pool.id));
-    await db.delete(eventPools).where(eq(eventPools.id, pool.id));
+    poolCleanup = await cleanupSingleTestPoolRows(pool.id, { deletePool: true });
   }
 
-  await db.delete(users).where(like(users.phoneNumber, `${VIRTUAL_PHONE_PREFIX}%`));
-  logger.info("[SingleTest] Cleanup complete");
+  const virtualUserRows = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(like(users.phoneNumber, `${VIRTUAL_PHONE_PREFIX}%`));
+  const virtualUserIds = virtualUserRows.map((row: IdRow) => row.id);
+
+  let deletedVirtualUsers = 0;
+  if (virtualUserIds.length > 0) {
+    await db
+      .delete(matchHistory)
+      .where(or(inArray(matchHistory.user1Id, virtualUserIds), inArray(matchHistory.user2Id, virtualUserIds)));
+    await db.delete(eventAttendance).where(inArray(eventAttendance.userId, virtualUserIds));
+    await db.delete(userInterests).where(inArray(userInterests.userId, virtualUserIds));
+    const deleted = await db.delete(users).where(inArray(users.id, virtualUserIds)).returning({ id: users.id });
+    deletedVirtualUsers = deleted.length;
+  }
+
+  const result = {
+    ...poolCleanup,
+    deletedVirtualUsers,
+    deletedBotFillUsers: botFillCleanup.deletedBots,
+  };
+  logger.info("[SingleTest] Cleanup complete", result);
+  return result;
 }
