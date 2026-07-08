@@ -190,7 +190,7 @@ export interface XiaoyueCollectedInfo {
   socialStyle?: string;
   additionalNotes?: string;
   // 新增字段：与传统问卷对齐
-  intent?: string[]; // networking/friends/discussion/fun/romance/flexible
+  intent?: string[]; // networking/friends/discussion/fun/explore/flexible
   hasPets?: boolean;
   petTypes?: string[]; // 猫/狗/仓鼠/鱼等
   hasSiblings?: boolean;

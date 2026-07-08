@@ -6,6 +6,9 @@
  * Two exports:
  *   JOYJOIN_TERMS_SECTIONS_ZH   — full user agreement (shown by default)
  *   JOYJOIN_PRIVACY_SECTIONS_ZH — standalone privacy policy (shown on ?section=privacy)
+ *
+ * TODO(AC-14): Legal review required before merge. The AIGC clauses below are
+ * drafted for compliance review and must be signed off by legal before shipping.
  */
 
 export interface TermsSectionZh {
@@ -27,7 +30,7 @@ export const JOYJOIN_TERMS_SECTIONS_ZH: TermsSectionZh[] = [
     heading: "一、服务说明",
     paragraphs: [
       "悦聚（JoyJoin）是一个面向都市青年的社交活动平台，致力于通过精心设计的线下活动帮助用户结识志趣相投的新朋友。",
-      "平台提供活动报名、智能配对、破冰工具及活动回顾等服务，旨在以轻松自然的方式促进真实的人际连接。",
+      "平台提供活动报名、兴趣分组、破冰工具及活动回顾等服务，旨在以轻松自然的方式促进真实的人际连接。",
     ],
   },
   {
@@ -73,8 +76,17 @@ export const JOYJOIN_TERMS_SECTIONS_ZH: TermsSectionZh[] = [
     ],
   },
   {
+    id: "ts-aigc",
+    heading: "七、人工智能生成内容（AIGC）说明",
+    paragraphs: [
+      "为提升活动氛围与破冰体验，平台部分文案、标签或建议由生成式人工智能技术辅助生成。",
+      "若你发现某条内容由 AI 生成且存在不当、错误或不妥之处，可通过 App 内举报入口选择「AI 生成内容」进行反馈，平台将在收到举报后依规审核与处理。",
+      "平台保留对 AI 生成或 AI 辅助生成内容进行人工复核、调整、下架或替换的权利，以确保符合法律法规及社区准则。",
+    ],
+  },
+  {
     id: "ts-contact",
-    heading: "七、联系我们",
+    heading: "八、联系我们",
     paragraphs: [
       "如您对本政策或用户协议有任何疑问，或需要行使个人信息相关权利（查阅、复制、更正、删除、撤回同意、投诉举报等），欢迎通过以下方式联系我们：",
       "邮箱：support@joyjoinapp.com\n我们将在 15 个工作日内答复您的请求（复杂情形可能依法适当延长并告知原因）。",
@@ -82,7 +94,7 @@ export const JOYJOIN_TERMS_SECTIONS_ZH: TermsSectionZh[] = [
   },
   {
     id: "ts-legal-basis",
-    heading: "八、法律依据与规则索引",
+    heading: "九、法律依据与规则索引",
     paragraphs: [
       "下列法律、行政法规为我们在中华人民共和国境内提供网络服务与处理个人信息的主要依据（条文以国家立法机关及主管部门公布的正式文本为准）：",
       "《中华人民共和国个人信息保护法》（2021年11月1日起施行）",

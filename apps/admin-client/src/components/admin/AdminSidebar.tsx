@@ -23,6 +23,7 @@ import {
   Database,
   Sparkles,
   ChevronDown,
+  ClipboardCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -65,6 +66,7 @@ const dailyOpsItems: NavItem[] = [
  *  TIER 2: Review & Tune — weekly rituals, collapsed by default
  *  ═══════════════════════════════════════════════════════════ */
 const reviewTuneItems: NavItem[] = [
+  { title: "匹配审核", url: "/admin/matching-reviews", icon: ClipboardCheck, roles: SUPER_OPERATOR },
   { title: "反馈管理", url: "/admin/feedback", icon: MessageSquare, roles: SUPER_OPERATOR },
   { title: "用户举报", url: "/admin/moderation", icon: Flag, roles: SUPER_OPERATOR },
   { title: "聊天举报", url: "/admin/reports", icon: ReceiptText, roles: SUPER_OPERATOR },

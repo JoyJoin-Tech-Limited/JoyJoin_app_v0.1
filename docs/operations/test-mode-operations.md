@@ -472,3 +472,50 @@ Re-seeding resets old bot registrations before inserting new ones.
 
 - No mini-program UI entry point yet — tester must know the pool ID to find it in Discover
 - Single tester at a time (not designed for concurrent multi-tester test events)
+
+---
+
+## I. Social Icebreaker Test Mode (Single-Player + Bot Simulation)
+
+Social Icebreaker test mode lets staff/internal users start a Social Icebreaker session without a full matched group, so QA can validate the session flow, phase UIs, and recap end-to-end. It is gated by `isMatchingTestMode()` (requires `ENABLE_SINGLE_TEST_MODE=true`; disabled in `APP_MODE=production`).
+
+### How it works
+
+- The mini-program starts a single-test session via `POST /api/social-icebreaker/start` with the `singleTest` option; the session is marked `state.singleTest.isTestModeSkip = true`.
+- The disclosure overlay (`TestModeDisclosure`) pauses the host in `warmup` and explains that multi-player phases are skipped. The host must tap **查看总结** to advance to `recap` (or **重试** if the advance fails).
+- When `runBots: true` is passed, the server runs deterministic, seeded, LLM-free bot simulation for every multiplayer phase (`warmup`, `micro_challenge`, `lie_detective`, `auction`, `personality_dice`, `quip_battle`, `undercover_word`, `group_mirror`, `speed_friending`, `mini_script`) so the host sees populated phase state before the recap.
+- When `runBots: false` (or unset), the session skips directly to `recap` with empty phase state.
+
+### Architecture
+
+| Layer | How it's isolated |
+|-------|------------------|
+| Gate | `isSingleTestMode()` + `isSocialIcebreakerTestMode()` + `state.singleTest.runBots === true`; always returns `false` in `APP_MODE=production` |
+| Determinism | Seeded PRNG (`seedrandom`) per session; bot actions are stable across reruns |
+| LLM-free | No AI calls during simulation; only deterministic phase-specific payloads |
+| Fail-closed | `runBotSimulationSafely()` swallows errors and logs them so a simulation bug never blocks the host |
+
+### Key files
+
+| File | Purpose |
+|------|---------|
+| `apps/server/src/services/socialIcebreakerBotService.ts` | Core deterministic bot simulation for all phases |
+| `apps/server/src/services/singleTestService.ts` | Decides `runBots`, propagates it to client state, logs decision |
+| `apps/server/src/services/socialIcebreakerSessionState.ts` | Session state shape and helpers |
+| `apps/mini-program/src/components/icebreaker/TestModeDisclosure.tsx` | Dismissible test-mode disclosure UI with ready hint, empty roster, error retry |
+| `apps/mini-program/src/pages/icebreaker-session/phases/WarmupPhaseView.tsx` | Warmup view with persistent test-mode badge |
+
+### Regression tests
+
+- `apps/server/src/services/__tests__/socialIcebreakerBotService.test.ts`
+- `apps/server/src/routes/__tests__/singleTestMetaRunBots.test.ts`
+- `apps/server/src/routes/__tests__/socialIcebreakerClientState.test.ts`
+
+### UX / a11y notes
+
+- Disclosure overlay is `position: fixed` with `min-height: 70vh` and `70dvh` fallback.
+- Close button is 88rpx × 88rpx; overlay has `role="dialog"` and `aria-modal="true"`.
+- Reduced-motion and degradation-tier classes suppress mascot pop-in animation.
+- Warm ready hint: "悦仔和 N 位伙伴已就位，准备好开始了吗？" appears when `runBots` is enabled.
+
+---

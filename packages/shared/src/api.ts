@@ -3,6 +3,7 @@
 
 export * from './api/core.js'
 export * from './api/auth.js'
+export * from './api/aigc.js'
 export * from './api/pricing.js'
 export * from './api/payments.js'
 export * from './api/user.js'

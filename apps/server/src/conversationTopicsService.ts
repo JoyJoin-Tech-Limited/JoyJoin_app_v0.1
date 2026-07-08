@@ -2,6 +2,8 @@ import { callSocialAI } from './ai/socialModelRouter';
 import { DISCUSSION_STYLE_LABELS } from '@shared/constants';
 import { logAITrace } from './lib/aiTraceLogger';
 import { logger } from './lib/logger';
+import { buildAIGCMeta, buildFallbackAIMeta, buildLiveAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
+import { moderateGeneratedContent } from './lib/aiContentModeration';
 
 const CONVERSATION_TOPICS_PROMPT_VERSION = 'conversation-topics-v1';
 
@@ -31,6 +33,7 @@ export interface ConversationTopicsResponse {
   topics: TopicSuggestion[];
   commonInterests: string[];
   generatedAt: string;
+  meta: AIResponseMeta;
 }
 
 const CONVERSATION_TOPICS_PROMPT = `你是"悦仔"，JoyJoin平台的社交氛围助手。你需要为一群即将见面的用户生成可以聊的话题建议。
@@ -147,6 +150,19 @@ ${eventType ? `活动类型：${eventType}` : ''}
       socialFunction: 'generateConversationTopics',
     });
 
+    const meta = buildLiveAIMeta(result.provider, CONVERSATION_TOPICS_PROMPT_VERSION);
+    logAITrace({
+      domain: 'match_explanation',
+      feature: 'generateConversationTopics',
+      provider: result.provider,
+      model: result.model,
+      latencyMs: result.latencyMs,
+      success: true,
+      fallbackUsed: result.fallbackUsed,
+      fromCache: false,
+      promptVersion: CONVERSATION_TOPICS_PROMPT_VERSION,
+    });
+
     const jsonMatch = result.content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       logAITrace({
@@ -161,7 +177,7 @@ ${eventType ? `活动类型：${eventType}` : ''}
         promptVersion: CONVERSATION_TOPICS_PROMPT_VERSION,
         errorCode: 'parse_error',
       });
-      return getDefaultTopics(participants);
+      return getDefaultTopics(participants, 'parse_error');
     }
 
     let parsed: {
@@ -186,25 +202,35 @@ ${eventType ? `活动类型：${eventType}` : ''}
         promptVersion: CONVERSATION_TOPICS_PROMPT_VERSION,
         errorCode: 'parse_error',
       });
-      return getDefaultTopics(participants);
+      return getDefaultTopics(participants, 'parse_error');
     }
 
-    logAITrace({
+    const topics = (parsed.topics || []).slice(0, 5);
+    const moderationChecks = topics.flatMap((t, i) => [
+      { field: `topic_${i}`, text: t.topic },
+      { field: `reason_${i}`, text: t.reason },
+      { field: `icebreaker_${i}`, text: t.icebreaker },
+    ]);
+    const moderation = moderateGeneratedContent(moderationChecks, {
       domain: 'match_explanation',
       feature: 'generateConversationTopics',
-      provider: result.provider,
+      provider: meta.provider,
       model: result.model,
       latencyMs: result.latencyMs,
-      success: true,
-      fallbackUsed: result.fallbackUsed,
-      fromCache: false,
       promptVersion: CONVERSATION_TOPICS_PROMPT_VERSION,
     });
+    if (!moderation.safe) {
+      return getDefaultTopics(participants, 'content_safety');
+    }
 
     return {
-      topics: parsed.topics || [],
+      topics,
       commonInterests: parsed.commonInterests || commonInterests,
       generatedAt: new Date().toISOString(),
+      meta: {
+        ...meta,
+        aigc: buildAIGCMeta({ fallbackUsed: meta.fallbackUsed, labelType: 'ai-generated' }),
+      },
     };
   } catch (error) {
     logger.error('Conversation topics generation error', { operation: 'generateConversationTopics', error: error instanceof Error ? error.message : String(error) });
@@ -219,11 +245,14 @@ ${eventType ? `活动类型：${eventType}` : ''}
       promptVersion: CONVERSATION_TOPICS_PROMPT_VERSION,
       errorCode: 'llm_error',
     });
-    return getDefaultTopics(participants);
+    return getDefaultTopics(participants, 'llm_error');
   }
 }
 
-function getDefaultTopics(participants: ParticipantProfile[]): ConversationTopicsResponse {
+function getDefaultTopics(
+  participants: ParticipantProfile[],
+  reason: 'insufficient_participants' | 'parse_error' | 'llm_error' | 'content_safety' = 'insufficient_participants',
+): ConversationTopicsResponse {
   const allInterests = participants.flatMap(p => p.interests || []);
   const uniqueInterests = [...new Set(allInterests)].slice(0, 3);
 
@@ -257,5 +286,6 @@ function getDefaultTopics(participants: ParticipantProfile[]): ConversationTopic
     topics: defaultTopics.slice(0, 4),
     commonInterests: uniqueInterests,
     generatedAt: new Date().toISOString(),
+    meta: buildFallbackAIMeta(reason, CONVERSATION_TOPICS_PROMPT_VERSION),
   };
 }

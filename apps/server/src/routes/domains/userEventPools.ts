@@ -1159,6 +1159,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
           poolDistrict: eventPools.district,
           poolDateTime: eventPools.dateTime,
           poolStatus: eventPools.status,
+          poolOperatorReviewStatus: eventPools.operatorReviewStatus,
           theme: eventPoolGroups.theme,
           subtitle: eventPoolGroups.subtitle,
           vibe: eventPoolGroups.vibe,
@@ -1167,6 +1168,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
           venueName: eventPoolGroups.venueName,
           venueAddress: eventPoolGroups.venueAddress,
           finalDateTime: eventPoolGroups.finalDateTime,
+          groupOperatorReviewStatus: eventPoolGroups.operatorReviewStatus,
         })
         .from(eventPoolRegistrations)
         .innerJoin(eventPools, eq(eventPoolRegistrations.poolId, eventPools.id))

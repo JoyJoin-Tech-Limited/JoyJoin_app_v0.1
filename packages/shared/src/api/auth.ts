@@ -97,6 +97,12 @@ export interface AuthUserResponse extends SanitizedAuthUser {
      *  abstract puzzle-piece prelude instead of the member identity grid.
      *  Default: false. */
     matchingPuzzlePreludeEnabled?: boolean
+    /** When true, AIGC labels are rendered on AI-generated surfaces.
+     *  The server always returns AIGC meta; the client gates rendering. */
+    aigcLabelsEnabled?: boolean
+    /** When true, formed matching groups are held for operator approval
+     *  before users are notified and venues are assigned. Default false. */
+    matchingOperatorReviewEnabled?: boolean
   }
 }
 

@@ -230,12 +230,12 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
   GET .../recap → AI-generated { headline, moments[], closingLine, medals[], lieDetectiveV2Stats?, personalityDiceHighlights?, undercoverWordResult?, microChallengeHighlights?, groupMirrorHighlights? } (`social-recap-summary-v2`; includes lie highlights, dice, MiniScript premise excerpt, auction lines when present). V2 recap snapshot is built once during phase advance and persisted in `recapSnapshot`.
 ```
 
-### Single-Player Test Mode & Tier Reset (2026-07-06; updated 2026-07-07)
+### Single-Player Test Mode & Tier Reset (2026-07-06; updated 2026-07-08)
 
 A **single-player test flow** lets staff/internal users start a Social Icebreaker session without a full matched group, primarily for QA and demo. It is gated by server-side `isMatchingTestMode()` (requires `ENABLE_SINGLE_TEST_MODE=true` and is disabled in `APP_MODE=production`).
 
 **Client components**
-- `TestModeDisclosure` (`apps/mini-program/src/components/icebreaker/TestModeDisclosure.tsx`) — renders a full-screen disclosure overlay when `session.isTestModeSkip === true` and the session is still in `warmup`. Explains that multi-player phases have been skipped, shows the active tier/vibe, and offers a primary **查看总结** CTA that explicitly advances the host from `warmup` to `recap`. If the advance fails, an inline error message is shown and the CTA becomes a **重试** action.
+- `TestModeDisclosure` (`apps/mini-program/src/components/icebreaker/TestModeDisclosure.tsx`) — renders a full-screen disclosure overlay when `session.isTestModeSkip === true` and the session is still in `warmup`. Explains that multi-player phases have been skipped, shows the active tier/vibe, displays a warm mascot "ready" hint when bot simulation is enabled, and offers a primary **查看总结** CTA that explicitly advances the host from `warmup` to `recap`. If the advance fails, an inline error message is shown and the CTA becomes a **重试** action. The overlay is dismissible via an 88rpx close button; `min-height` includes a `vh` fallback before `dvh`. Empty-roster and loading states are handled gracefully.
 - `IcebreakerTierSheet` (`apps/mini-program/src/pages/icebreaker-session/components/IcebreakerTierSheet.tsx`) — the tier/vibe selector sheet surfaced by the in-session host menu and during initial session setup.
 
 **Server authority**
@@ -246,6 +246,15 @@ A **single-player test flow** lets staff/internal users start a Social Icebreake
   - the session has already left `warmup`,
   - the requested tier is `custom` and `SOCIAL_ICEBREAKER_CUSTOM_MODE_ENABLED` is false.
 - Auto-advance is intentionally disabled for single-test sessions (`state.singleTest.isTestModeSkip === true`) so the test-mode disclosure gate is not bypassed.
+- `getSingleTestMetaForSessionStart` propagates `runBots` to the client state so the disclosure can surface the correct copy and the server knows whether to simulate bot actions.
+
+**Bot simulation for single-test sessions (2026-07-08)**
+- `apps/server/src/services/socialIcebreakerBotService.ts` provides deterministic, seeded, LLM-free bot simulation for single-test sessions when `runBots === true`.
+- Covered phases: `warmup`, `micro_challenge`, `lie_detective`, `auction`, `personality_dice`, `quip_battle`, `undercover_word`, `group_mirror`, `speed_friending`, and `mini_script`.
+- Wired into `socialIcebreaker.ts`, `socialIcebreakerCustom.ts`, `socialIcebreakerGameplayCore.ts`, `socialIcebreakerGameplayExtra.ts`, `socialIcebreakerExtended.ts`, and `routes/domains/miniscript.ts` via `runBotSimulationSafely()`.
+- All bot actions are gated by `isSingleTestMode() && isSocialIcebreakerTestMode() && state.singleTest.runBots === true` so they never run in production or normal sessions.
+- Logs the `runBots` decision in `singleTestService.ts` for observability.
+- Regression tests: `socialIcebreakerBotService.test.ts`, `singleTestMetaRunBots.test.ts`, `socialIcebreakerClientState.test.ts`.
 
 **UX rules**
 - The disclosure is **not** shown to normal matched-group players (`isTestMode === false`).

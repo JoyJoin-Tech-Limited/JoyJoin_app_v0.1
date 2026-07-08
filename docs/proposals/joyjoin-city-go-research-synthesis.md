@@ -41,9 +41,9 @@ Across the better-performing concepts (A and C), the top motivators were:
    - “先免费试试 vibe，再决定要不要花钱。”
    - Users wanted to know what a Blind Box feels like before paying ¥68.
 
-2. **Real-world landmark anchor made meeting strangers feel safer.**
+2. **Real-world landmark anchor made joining a platform-organized small interest group feel safer.**
    - “地点就在商场门口，不用找半天。”
-   - Familiar public places reduced the anxiety of meeting strangers.
+   - Familiar public places reduced the anxiety of joining a 同好小组 / 线下兴趣局.
 
 3. **Serendipity and spontaneity.**
    - “像开盲盒一样，不知道会遇到谁。”

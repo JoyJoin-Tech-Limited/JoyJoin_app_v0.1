@@ -14,6 +14,9 @@ import Card from '../../components/ui/Card'
 import ConnectionPointPill from '../../components/ConnectionPointPill'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import Button from '../../components/ui/Button'
+import AIGCLabel from '../../components/ai-content/AIGCLabel'
+import AIContentReportButton from '../../components/ai-content/AIContentReportButton'
+import { useAIGCLabelsEnabled } from '../../hooks/useAIGCLabelsEnabled'
 import TypewriterText from '../../components/ui/TypewriterText'
 import { haptics } from '../../lib/utils/haptics'
 import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
@@ -74,6 +77,7 @@ export default function SquadUnboxingPage() {
     currentUserId,
     groupAnalysis,
     isLoadingAnalysis,
+    analysisError,
     chemistryTokens,
     sortedPairExplanations,
     pairKeyMemberMap,
@@ -97,10 +101,12 @@ export default function SquadUnboxingPage() {
     handleSharePosterTap,
     handleSkip,
     refetch,
+    refetchAnalysis,
   } = useSquadUnboxingController({ groupId, routerParams: router.params })
 
   const { isDegradation } = useDeviceTier()
   const { user: currentUser } = useAuthGuard()
+  const aigcEnabled = useAIGCLabelsEnabled()
   const dragRevealEnabled = currentUser?.features?.squadUnboxingDragRevealEnabled ?? true
   const storyName = router.params['__story']
   const isStoryFocused = storyName === 'focused'
@@ -186,6 +192,14 @@ export default function SquadUnboxingPage() {
     })
   }, [groupId])
 
+  const handleAnalysisRetry = useCallback(() => {
+    squadUnboxingAnalytics.track('squad_unboxing_analysis_retry_tap', {
+      groupId,
+      screen: 'squad-unboxing',
+    })
+    void refetchAnalysis()
+  }, [groupId, refetchAnalysis])
+
   const toggleAnalysis = useCallback(() => {
     setIsAnalysisExpanded((prev) => {
       const next = !prev
@@ -211,16 +225,42 @@ export default function SquadUnboxingPage() {
         .scrollOffset()
         .select('#inline-detail-anchor')
         .boundingClientRect()
+        .select('.squad-unboxing__deck-card--focused')
+        .boundingClientRect()
+        .select('.squad-unboxing__inline-detail-shell')
+        .boundingClientRect()
+        .select('.squad-unboxing__bottom-dock')
+        .boundingClientRect()
         .select('.squad-unboxing__stage')
         .boundingClientRect()
         .exec((res) => {
-          const [scrollOffset, anchorRect, stageRect] = res
-          if (!scrollOffset || !anchorRect || !stageRect) return
-          const desiredScrollTop =
-            scrollOffset.scrollTop + (anchorRect.top - stageRect.bottom)
+          const [scrollOffset, anchorRect, cardRect, detailRect, dockRect, stageRect] = res
+          if (!scrollOffset || !anchorRect || !cardRect || !detailRect || !stageRect) return
+
+          const sys = Taro.getSystemInfoSync() as { windowWidth?: number; windowHeight?: number }
+          const windowHeight = sys.windowHeight || 0
+          const pxPerRpx = sys.windowWidth ? sys.windowWidth / 750 : 0.5
+          const fallbackReserve = Math.round(580 * pxPerRpx)
+          const bottomReserve = dockRect?.height
+            ? Math.max(dockRect.height, fallbackReserve)
+            : fallbackReserve
+          const availableHeight = Math.max(0, windowHeight - stageRect.bottom - bottomReserve)
+
+          // Prefer positioning the detail just below the fixed stage,
+          // centered in the available viewport, so it never overlaps the
+          // focused card or the bottom dock.
+          let targetTop = stageRect.bottom + availableHeight / 2 - detailRect.height / 2;
+          if (targetTop < stageRect.bottom) {
+            targetTop = stageRect.bottom;
+          }
+          if (targetTop + detailRect.height > windowHeight - bottomReserve) {
+            targetTop = windowHeight - bottomReserve - detailRect.height;
+          }
+
+          const desiredScrollTop = scrollOffset.scrollTop + anchorRect.top - targetTop
           setProgrammaticScrollTop(Math.max(0, desiredScrollTop))
         })
-    }, 100)
+    }, 150)
     return () => clearTimeout(timer)
   }, [focusedMember])
 
@@ -395,6 +435,9 @@ export default function SquadUnboxingPage() {
                     member={focusedMember}
                     viewerPair={focusedViewerPair}
                     visible={flowState === 'revealed'}
+                    groupId={groupId}
+                    aigcMeta={groupAnalysis?.meta?.aigc}
+                    aigcEnabled={aigcEnabled}
                   />
                 </View>
               </>
@@ -561,6 +604,19 @@ export default function SquadUnboxingPage() {
                         <View className='squad-unboxing__skeleton squad-unboxing__skeleton--line' />
                         <View className='squad-unboxing__skeleton squad-unboxing__skeleton--line squad-unboxing__skeleton--line-short' />
                       </View>
+                    ) : analysisError ? (
+                      <View className='squad-unboxing__analysis-retry'>
+                        <Text className='squad-unboxing__analysis-retry-text'>
+                          连接解读加载失败了，重试一下让悦仔再帮你分析
+                        </Text>
+                        <Button
+                          variant='secondary'
+                          className='squad-unboxing__analysis-retry-btn'
+                          onClick={handleAnalysisRetry}
+                        >
+                          重试
+                        </Button>
+                      </View>
                     ) : groupAnalysis ? (
                       <>
                         {analysisThemeTags.length > 0 ? (
@@ -579,6 +635,11 @@ export default function SquadUnboxingPage() {
                         ) : null}
                         <Text className='squad-unboxing__analysis-text'>{groupAnalysis.groupDynamics}</Text>
                         <GroupAnalysisSourceHint analysis={groupAnalysis} />
+                        <AIGCLabel
+                          meta={groupAnalysis.meta?.aigc}
+                          className='squad-unboxing__analysis-aigc-label'
+                          reduceMotion={shouldReduceMotion}
+                        />
                       </>
                     ) : (
                       <Text className='squad-unboxing__analysis-text'>{group.matchExplanation}</Text>
@@ -587,6 +648,11 @@ export default function SquadUnboxingPage() {
 
                   <View className='squad-unboxing__analysis-section'>
                     <Text className='squad-unboxing__analysis-section-title'>你最容易从哪里聊开？</Text>
+                    <AIGCLabel
+                      meta={groupAnalysis?.meta?.aigc}
+                      className='squad-unboxing__analysis-aigc-label'
+                      reduceMotion={shouldReduceMotion}
+                    />
                     {isLoadingAnalysis ? (
                       <View className='squad-unboxing__skeleton-list'>
                         {[0, 1].map((item) => (
@@ -674,6 +740,11 @@ export default function SquadUnboxingPage() {
 
                   <View className='squad-unboxing__analysis-section squad-unboxing__analysis-section--last'>
                     <Text className='squad-unboxing__analysis-section-title'>今晚聊什么？</Text>
+                    <AIGCLabel
+                      meta={groupAnalysis?.meta?.aigc}
+                      className='squad-unboxing__analysis-aigc-label'
+                      reduceMotion={shouldReduceMotion}
+                    />
                     {isLoadingAnalysis ? (
                       <View className='squad-unboxing__topic-row'>
                         {[0, 1, 2].map((item) => (
@@ -703,6 +774,18 @@ export default function SquadUnboxingPage() {
                       </Text>
                     )}
                   </View>
+
+                  {aigcEnabled && groupAnalysis?.meta?.aigc?.aiGenerated ? (
+                    <View className='squad-unboxing__analysis-report-wrap'>
+                      <AIContentReportButton
+                        options={{
+                          reason: '举报 AI 生成的连接解读内容',
+                          relatedEventId: groupId,
+                        }}
+                        label='举报此内容'
+                      />
+                    </View>
+                  ) : null}
                 </View>
               ) : null}
             </View>
@@ -823,6 +906,11 @@ export default function SquadUnboxingPage() {
                     })
                   }}
                 />
+                <AIGCLabel
+                  meta={groupAnalysis?.meta?.aigc}
+                  className='squad-unboxing__analysis-bubble-aigc'
+                  reduceMotion={shouldReduceMotion}
+                />
               </View>
             </View>
           </View>
@@ -844,7 +932,7 @@ export default function SquadUnboxingPage() {
                 onClick={handleSharePosterTap}
                 disabled={showSuccessOverlay}
               >
-                生成队伍海报
+                保存这桌记忆
               </Button>
 
               <Button

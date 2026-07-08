@@ -492,7 +492,7 @@ function validateAndNormalizeInfo(
     "friends",
     "discussion",
     "fun",
-    "romance",
+    "explore",
     "flexible",
   ];
   if (info.intent && Array.isArray(info.intent)) {

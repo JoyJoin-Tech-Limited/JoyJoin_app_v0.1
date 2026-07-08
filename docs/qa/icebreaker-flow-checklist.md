@@ -33,6 +33,11 @@
 | 9i | **切换权限限制** | 非主机用户尝试切换模式 | 无切换入口；服务端拒绝并返回 403 |
 | 9j | **自定义模式切换** | 切到「自由局」再切回预设模式 | 自由局数据保留，但选择预设后按固定流程继续 |
 | 9k | **测试模式标识透传** | 看 `SocialSessionState` | `isTestModeSkip: true` 仅对测试会话生效，生产环境关闭 |
+| 9l | **披露页可关闭** | 在 `TestModeDisclosure` 点右上角关闭按钮 | 88rpx 关闭按钮可点， disclosure 收起并显示暖场（含测试模式 badge） |
+| 9m | **空 roster/加载态** | 刚进入测试模式，bot 列表未加载 | 显示加载 CTA 或空 roster 占位，不崩溃、不白屏 |
+| 9n | **就绪提示** | `runBots: true` 进入测试模式 | 显示暖场提示：「悦仔和 N 位伙伴已就位，准备好开始了吗？」 |
+| 9o | **bot 模拟填充阶段** | 点「查看总结」推进 | 若 `runBots=true`，回顾页应能看到各多人环节（warmup、lie_detective、personality_dice 等）的模拟数据摘要；若 `runBots=false` 或失败，则直接跳到回顾 |
+| 9p | **暖场持续测试 badge** | 关闭 disclosure 后停留在暖场 | `WarmupPhaseView` 顶部或角落持续显示测试模式标识，直到进入回顾 |
 
 ## 🎮 第二阶段：游戏环节
 

@@ -1,9 +1,12 @@
 import { View, Text, Image } from '@tarojs/components'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import type { AIResponseMeta } from '@shared/types/aiMeta'
+import type { AIResponseMeta, AIGCMeta } from '@shared/types/aiMeta'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
+import AIGCLabel from '../../../components/ai-content/AIGCLabel'
+import AIContentReportButton from '../../../components/ai-content/AIContentReportButton'
+import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
 import { PhaseHeaderIcon } from '../phaseUtils'
 import { apiRequest } from '../../../lib/api/api'
 import { buildSocialPath } from '../icebreakerSessionModel'
@@ -212,6 +215,9 @@ export function RecapPhaseView({
     setShareFlipped((prev) => !prev)
   }, [])
 
+  const aigcEnabled = useAIGCLabelsEnabled()
+  const recapAigcMeta: AIGCMeta = recapMeta?.aigc ?? { aiGenerated: true, labelType: 'ai-generated' }
+
   // Build dynamic share card lines
   const shareLines = useCallback(() => {
     const lines: string[] = []
@@ -270,6 +276,30 @@ export function RecapPhaseView({
         {summary?.closingLine ? (
           <Text className='icebreaker__recap-closing'>{summary.closingLine}</Text>
         ) : null}
+
+        {aigcEnabled && (
+          <View
+            className='icebreaker__recap-aigc-row'
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12rpx',
+              marginTop: '16rpx',
+            }}
+          >
+            <AIGCLabel meta={recapAigcMeta} />
+            {socialSessionId && (
+              <AIContentReportButton
+                options={{
+                  reason: 'AI 生成回顾内容',
+                  relatedEventId: socialSessionId,
+                }}
+                label='反馈这段内容'
+              />
+            )}
+          </View>
+        )}
       </View>
 
       {socialSessionId ? (

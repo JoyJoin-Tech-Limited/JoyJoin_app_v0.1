@@ -49,7 +49,7 @@ A lightweight, Xiaoyue-hosted free trial of JoyJoin’s matched social format at
    > “先不花钱体验一次盲盒的氛围，再决定要不要买，比较安心。”
    > — Segment A, 25, Shenzhen
 
-2. **Landmark anchor made meeting strangers safer.**
+2. **Landmark anchor made joining a platform-organized small interest group safer.**
    > “在海岸城门口集合，至少我知道那是哪里，找不到也能问人。”
    > — Segment B, 28, Shenzhen
 

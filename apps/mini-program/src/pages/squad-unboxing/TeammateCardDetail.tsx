@@ -3,12 +3,18 @@ import { useMemo } from 'react'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import type { PoolGroupMemberSummary } from '@shared/api'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
+import type { AIGCMeta } from '@shared/types/aiMeta'
 import ConnectionPointPill from '../../components/ConnectionPointPill'
+import AIGCLabel from '../../components/ai-content/AIGCLabel'
+import AIContentReportButton from '../../components/ai-content/AIContentReportButton'
 
 export interface TeammateCardDetailProps {
   member?: PoolGroupMemberSummary | null
   viewerPair?: PairExplanation | null
   visible: boolean
+  groupId: string
+  aigcMeta?: AIGCMeta
+  aigcEnabled?: boolean
 }
 
 function getMemberName(member?: PoolGroupMemberSummary | null): string {
@@ -35,6 +41,9 @@ export default function TeammateCardDetail({
   member,
   viewerPair,
   visible,
+  groupId,
+  aigcMeta,
+  aigcEnabled,
 }: TeammateCardDetailProps) {
   const name = getMemberName(member)
   const archetypeName = getArchetypeDisplayName(member?.archetype)
@@ -56,6 +65,7 @@ export default function TeammateCardDetail({
       {viewerPair?.explanation ? (
         <View className='squad-unboxing__deck-detail-section'>
           <Text className='squad-unboxing__deck-detail-section-title'>{name} 和你的连接感</Text>
+          <AIGCLabel meta={aigcMeta} className='squad-unboxing__deck-detail-aigc' />
           <Text className='squad-unboxing__deck-detail-reason'>{viewerPair.explanation}</Text>
         </View>
       ) : null}
@@ -74,7 +84,21 @@ export default function TeammateCardDetail({
       {viewerPair?.introAngle ? (
         <View className='squad-unboxing__deck-detail-section'>
           <Text className='squad-unboxing__deck-detail-section-title'>开场可以这样聊</Text>
+          <AIGCLabel meta={aigcMeta} className='squad-unboxing__deck-detail-aigc' />
           <Text className='squad-unboxing__deck-detail-intro'>{viewerPair.introAngle}</Text>
+        </View>
+      ) : null}
+
+      {aigcEnabled && aigcMeta?.aiGenerated ? (
+        <View className='squad-unboxing__deck-detail-report-wrap'>
+          <AIContentReportButton
+            options={{
+              reason: '举报 AI 生成的队友连接解读内容',
+              relatedEventId: groupId,
+              reportedUserId: member?.userId,
+            }}
+            label='举报此内容'
+          />
         </View>
       ) : null}
 

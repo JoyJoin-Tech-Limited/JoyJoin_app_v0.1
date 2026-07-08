@@ -117,6 +117,12 @@ vi.mock('../db', () => ({
 vi.mock('../wsService', () => ({
   wsService: { broadcastToUser: vi.fn() },
 }));
+vi.mock('../lib/featureFlags', () => ({
+  getFeatureFlag: vi.fn(),
+}));
+vi.mock('../lib/matchingPostMatchEffects', () => ({
+  executePostMatchCommitSideEffects: vi.fn(),
+}));
 vi.mock('../venueAssignmentService', () => ({
   assignVenuesToGroups: vi.fn().mockResolvedValue({ assignments: new Map(), unassigned: new Map() }),
   saveVenueAssignments: vi.fn(),
@@ -142,6 +148,8 @@ vi.mock('../archetypeChemistryCalibration', () => ({
 }));
 
 const { calculateInterestScoreAsync, preloadUserInterests, saveMatchResults } = await import('../poolMatchingService');
+const { getFeatureFlag } = await import('../lib/featureFlags');
+const { executePostMatchCommitSideEffects } = await import('../lib/matchingPostMatchEffects');
 
 describe('poolMatchingService', () => {
   beforeEach(() => {
@@ -155,6 +163,11 @@ describe('poolMatchingService', () => {
     mockState.poolRow = { id: 'pool-1', title: 'Test Pool', eventType: '饭局', city: '上海', district: '徐汇', dateTime: new Date(), createdBy: 'host-1' };
     mockState.throwCouponsSelect = false;
     mockState.transactionImpl.mockReset();
+    (getFeatureFlag as ReturnType<typeof vi.fn>).mockImplementation((key: string, defaultValue: boolean) => {
+      if (key === 'matchingOperatorReviewEnabled') return Promise.resolve(false);
+      return Promise.resolve(defaultValue);
+    });
+    (executePostMatchCommitSideEffects as ReturnType<typeof vi.fn>).mockClear();
   });
 
   it('returns the same interest score with preloaded cache as without cache', async () => {
@@ -199,5 +212,32 @@ describe('poolMatchingService', () => {
     await expect(saveMatchResults('pool-1', [])).resolves.toBeUndefined();
 
     expect(mockState.updateSetCalls[0]).toMatchObject({ status: 'matching' });
+  });
+
+  it('skips post-match side effects when operator review is enabled', async () => {
+    mockState.updateReturningQueue.push([{ id: 'pool-1' }]); // guard acquisition
+    mockState.transactionImpl.mockResolvedValueOnce(undefined);
+    (getFeatureFlag as ReturnType<typeof vi.fn>).mockImplementation((key: string, defaultValue: boolean) => {
+      if (key === 'matchingOperatorReviewEnabled') return Promise.resolve(true);
+      return Promise.resolve(defaultValue);
+    });
+
+    await expect(saveMatchResults('pool-1', [])).resolves.toBeUndefined();
+
+    expect(executePostMatchCommitSideEffects).not.toHaveBeenCalled();
+  });
+
+  it('runs post-match side effects when operator review is disabled', async () => {
+    mockState.updateReturningQueue.push([{ id: 'pool-1' }]); // guard acquisition
+    mockState.transactionImpl.mockResolvedValueOnce(undefined);
+
+    await expect(saveMatchResults('pool-1', [])).resolves.toBeUndefined();
+
+    expect(executePostMatchCommitSideEffects).toHaveBeenCalledWith(
+      'pool-1',
+      [],
+      expect.any(Array),
+      expect.any(Object),
+    );
   });
 });

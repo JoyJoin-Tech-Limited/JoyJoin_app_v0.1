@@ -1,6 +1,10 @@
 import { Text, View, Image } from '@tarojs/components'
 import type { GroupAnalysisResponse } from '@shared/types/groupAnalysis'
+import type { AIGCMeta } from '@shared/types/aiMeta'
 import type { ChemistryTokens, ChemistryType, UnifiedRevealTokens } from '@shared/features/matching-status'
+import AIGCLabel from '../../components/ai-content/AIGCLabel'
+import AIContentReportButton from '../../components/ai-content/AIContentReportButton'
+import { useAIGCLabelsEnabled } from '../../hooks/useAIGCLabelsEnabled'
 import ChemistryBadge from '../../components/mascot/ChemistryBadge'
 import ConnectionPointPill from '../../components/ConnectionPointPill'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
@@ -12,6 +16,8 @@ export interface UnifiedRevealCardProps {
   leadIceBreaker: string | null
   introAngle?: string | null
   groupAnalysisDebugMeta?: Pick<GroupAnalysisResponse, 'fromCache' | 'generatedAt'> | null
+  aigcMeta?: AIGCMeta
+  relatedEventId?: string
 }
 
 // D4 — Map the 4 ChemistryType buckets to the 5 Batch D match-reason heroes.
@@ -41,12 +47,17 @@ export default function UnifiedRevealCard({
   leadIceBreaker,
   introAngle,
   groupAnalysisDebugMeta,
+  aigcMeta,
+  relatedEventId,
 }: UnifiedRevealCardProps) {
+  const aigcLabelsEnabled = useAIGCLabelsEnabled()
+
   if (!unifiedReveal) {
     return null
   }
 
   const { headline, body, subtitle, groupTags, spotlight } = unifiedReveal
+  const effectiveMeta = aigcMeta ?? { aiGenerated: true, labelType: 'ai-generated' as const }
 
   // D4 — Pick the Batch D match-reason hero that matches the overall chemistry bucket
   const matchBadgeKey = CHEMISTRY_TYPE_TO_MATCH_BADGE[chemistryTokens.iconRef]
@@ -79,6 +90,7 @@ export default function UnifiedRevealCard({
         {spotlight?.chemistryScore ? (
           <Text className='unified-reveal__score'>默契 {spotlight.chemistryScore}</Text>
         ) : null}
+        <AIGCLabel meta={effectiveMeta} />
       </View>
 
       <Text className='unified-reveal__headline'>
@@ -111,6 +123,13 @@ export default function UnifiedRevealCard({
 
       {leadIceBreaker ? (
         <Text className='unified-reveal__prompt'>破冰建议：{leadIceBreaker}</Text>
+      ) : null}
+
+      {aigcLabelsEnabled ? (
+        <AIContentReportButton
+          options={{ reason: '举报匹配解读内容', relatedEventId }}
+          className='unified-reveal__report-button'
+        />
       ) : null}
 
       <GroupAnalysisSourceHint analysis={groupAnalysisDebugMeta ?? undefined} />

@@ -1,6 +1,6 @@
 # JoyJoin Matching Algorithm Reference
 
-> **Status:** Living document — last updated 2026-04-29  
+> **Status:** Living document — last updated 2026-07-09  
 > **Scope:** Covers all three matching layers: (1) Personality archetype assignment, (2) Pair compatibility scoring, (3) Group formation.
 
 ---
@@ -604,6 +604,26 @@ After the greedy formation completes, some users may remain unmatched (stranded)
 
 **Rationale:** The adaptive-weights path can produce different group boundaries than the static-weight path, sometimes leaving high-quality users stranded. The redistribution pass is a safety net — it does not lower the quality threshold (min score 50) but allows flexible group sizing to capture good matches that the initial greedy pass missed.
 
+### 4.6 Operator Review Gate (Feature-Flagged)
+
+> Active only when `matchingOperatorReviewEnabled` is `true`. Disabled path preserves the existing auto-match behavior.
+
+When the operator-review gate is enabled, `poolMatchingService.ts` holds algorithmically formed groups in a pending operator-review state instead of immediately committing post-match side effects:
+
+- `event_pools.operatorReviewStatus` is set to `pending`
+- `event_pool_groups.operatorReviewStatus` is set to `pending`
+- Registrations stay in `matchStatus = "pending"`; users continue to see the normal waiting flow
+- No venue assignment, no notifications, no blind-box event creation side effects are triggered
+
+An operator (or super_admin) reviews the formed groups in the admin portal (`/admin/matching-reviews`) and chooses to approve or reject:
+
+- **Approve** (`POST /api/admin/matching-reviews/pools/:id/approve`): marks the pool and groups as `approved`, runs `executePostMatchCommitSideEffects`, creates events/blind-box events, assigns venues (if enabled), and notifies users.
+- **Reject** (`POST /api/admin/matching-reviews/pools/:id/reject`): marks the pool and groups as `rejected`, deletes any events/eventAttendance/blindBoxEvents created during the match run, and leaves users in the waiting state for a future match run.
+
+Race-condition guards: both endpoints use conditional DB updates that require the current `operatorReviewStatus = 'pending'`. If the state changed concurrently, the request returns the current state without duplicating side effects or deleting approved groups.
+
+This feature intentionally keeps the user-facing mini-program unchanged; users see the standard matching-status pending flow until operator approval.
+
 ---
 
 ## 5. Supporting Matrices & Data
@@ -826,7 +846,10 @@ After `poolMatchingService.ts` forms groups deterministically, the predictive re
 | `apps/server/src/userMatchingService.ts` | Legacy 6-dimensional user matching (used for admin lab / older flows) |
 | `apps/server/src/personalityMatchingV2.ts` | V8 hybrid (Euclidean + cosine) scoring utilities |
 | `apps/admin-client/src/pages/admin/AdminMatchingLabPage.tsx` | Admin UI for testing matching weights |
-| `apps/admin-client/src/pages/PoolGroupDetailPage.tsx` | Group result visualization |
+| `apps/admin-client/src/pages/admin/PoolGroupDetailPage.tsx` | Group result visualization |
+| `apps/admin-client/src/pages/admin/AdminMatchingReviewsPage.tsx` | Admin operator review queue for formed groups |
+| `apps/server/src/routes/domains/adminMatchingReview.ts` | Admin matching review endpoints (list, approve, reject) |
+| `apps/server/src/lib/matchingPostMatchEffects.ts` | Shared post-match side-effect runner used by approve and auto-match |
 | `docs/architecture/connection-points-system.md` | Unified architecture doc for 契合点系统 (connection points + spark predictions) |
 
 ---
@@ -860,3 +883,6 @@ After `poolMatchingService.ts` forms groups deterministically, the predictive re
 | **empirical chemistry calibration** | Post-event feedback-bounded correction applied to archetype-pair chemistry scores. Delta is capped to ±2 points with a 0.05 dampening factor; only applied when ≥30 outcome samples are available for a pair. |
 | **predictive reranking** | A/B experiment that always computes an alternate ordering, persists audit metadata with matched groups, and can apply bounded live reordering only when the feature is enabled, the pool is eligible, and the pool falls into the treatment arm. |
 | **event_group_outcomes** | DB table capturing per-member post-event outcome submissions (`wouldMeetAgain`, `atmosphereScore`, `connectionRadar`). Feeds admin outcome analytics directly and informs downstream outcome datasets used by chemistry calibration. |
+| **operatorReviewStatus** | State column on `event_pools` and `event_pool_groups`: `none` (auto-match path), `pending` (awaiting operator review), `approved` (operator approved; side effects committed), `rejected` (operator rejected; artifacts cleaned up). |
+| **matchingOperatorReviewEnabled** | DB-backed feature flag (env `MATCHING_OPERATOR_REVIEW_ENABLED`, default `false`) that gates the operator-review flow. |
+| **executePostMatchCommitSideEffects** | Shared helper that creates events, assigns venues, and sends notifications after a match run is approved. |

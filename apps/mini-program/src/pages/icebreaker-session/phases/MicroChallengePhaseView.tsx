@@ -1,14 +1,19 @@
 import { useState, useEffect, useCallback } from 'react'
 import { View, Text } from '@tarojs/components'
+import type { AIResponseMeta } from '@shared/types/aiMeta'
 import Card from '../../../components/ui/Card'
 import { PhaseHeaderIcon } from '../phaseUtils'
 import { TapRhythm } from '../../../components/gesture'
 import { ParticleBurst } from '../../../components/reveal'
+import AIGCLabel from '../../../components/ai-content/AIGCLabel'
+import AIContentReportButton from '../../../components/ai-content/AIContentReportButton'
+import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
 
 const TAP_TARGET = 5
 
 export function MicroChallengePhaseView({
   challenge,
+  challengeMeta,
   completedBy,
   currentUserId,
   playerCount,
@@ -16,6 +21,7 @@ export function MicroChallengePhaseView({
   isCompleting,
 }: {
   challenge: { title: string; description: string; durationSeconds: number; completionCTA: string; visualHint?: string } | null
+  challengeMeta?: AIResponseMeta
   completedBy: string[]
   currentUserId: string
   playerCount: number
@@ -40,6 +46,8 @@ export function MicroChallengePhaseView({
 
   const hasCompleted = optimisticCompletedBy.includes(currentUserId)
   const completionPercent = playerCount > 0 ? (optimisticCompletedBy.length / playerCount) * 100 : 0
+  const aigcEnabled = useAIGCLabelsEnabled()
+  const challengeAigcMeta = challengeMeta?.aigc ?? { aiGenerated: true, labelType: 'ai-generated' as const }
 
   const handleTap = useCallback(() => {
     if (hasCompleted || isCompleting) return
@@ -84,6 +92,26 @@ export function MicroChallengePhaseView({
               {optimisticCompletedBy.length} 人已完成
             </Text>
           </View>
+
+          {aigcEnabled && challenge && (
+            <View
+              className='icebreaker__challenge-aigc-row'
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12rpx',
+                marginTop: '16rpx',
+              }}
+            >
+              <AIGCLabel meta={challengeAigcMeta} />
+              <AIContentReportButton
+                options={{ reason: 'AI 生成微挑战' }}
+                label='反馈这段内容'
+              />
+            </View>
+          )}
+
           {hasCompleted && (
             <View className='icebreaker__challenge-done-badge icebreaker__challenge-stagger icebreaker__challenge-stagger--delay-3'>
               <Text className='icebreaker__challenge-done-text'>

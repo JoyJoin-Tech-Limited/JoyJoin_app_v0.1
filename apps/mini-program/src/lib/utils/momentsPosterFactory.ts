@@ -621,7 +621,7 @@ export async function generatePersonalitySquarePoster(
   }
 
   // Rarity badge — keep a safe margin from bottom CTA
-  const rarityText = `缘分稀有度 ${Math.round(input.rarityPercentage)}%`
+  const rarityText = `氛围契合度 ${Math.round(input.rarityPercentage)}%`
   const rarityY = Math.min(cursorY, S - M - 100)
   drawBadge(ctx, rarityText, S / 2 - 120, rarityY, 240, 32, 16, PALETTE.badgePurpleFill, PALETTE.badgePurpleText)
 
@@ -718,7 +718,7 @@ export async function generateGroupRevealPoster(
   ctx.setFontSize(40)
   ctx.setTextAlign('center')
   ctx.setTextBaseline('top')
-  ctx.fillText('缘分小分队集结完毕', W / 2, M + 96)
+  ctx.fillText('同好小组集结完毕', W / 2, M + 96)
   ctx.restore()
 
   // Subtitle: group number + event type
@@ -815,7 +815,7 @@ export async function generateGroupRevealPoster(
 
   // Tagline
   drawTextBlock(ctx, {
-    text: '这一局，是缘分把你们聚在一起',
+    text: '这一局，是共同的兴趣把你们聚在一起',
     x: W / 2,
     y: infoY + 44,
     maxChars: 24,
@@ -828,7 +828,7 @@ export async function generateGroupRevealPoster(
 
   // Bottom branding
   drawTextBlock(ctx, {
-    text: 'JoyJoin · 悦聚 — 测测你的社交命格',
+    text: 'JoyJoin · 悦聚 — 测测你的氛围命格',
     x: W / 2,
     y: H - M - 56,
     maxChars: 26,

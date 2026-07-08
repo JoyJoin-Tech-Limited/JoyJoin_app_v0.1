@@ -4,6 +4,8 @@ import { XIAOYUE_PERSONA, GENDER_NEUTRAL, XIAOYUE_PERSONA_PROMPT_VERSION, XIAOYU
 import { getDeepseekClient, getDeepseekModel } from './ai/deepseekClient';
 import { generateWithCraftQuality } from './lib/craftQualityGate';
 import { logger } from './lib/logger';
+import { buildAIGCMeta, buildFallbackAIMeta, buildLiveAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
+import { moderateGeneratedContent } from './lib/aiContentModeration';
 
 export interface ArchetypeAnalysisInput {
   archetype: string;
@@ -44,6 +46,8 @@ export interface XiaoyueAnalysisResult {
   expressionTags: string[];
   shareVariants: XiaoyueShareVariants;
   cached: boolean;
+  /** Standard AI observability metadata with AIGC compliance flags. */
+  meta: AIResponseMeta;
 }
 
 type ConfidenceBand = 'high' | 'medium' | 'low';
@@ -513,6 +517,7 @@ function buildFallbackAnalysisPayload(input: ArchetypeAnalysisInput): Omit<Xiaoy
     blendLine: buildBlendLine(input, snapshot),
     expressionTags: buildExpressionTags(input, snapshot),
     shareVariants: buildShareVariants(input, snapshot),
+    meta: buildFallbackAIMeta('template_fallback', XIAOYUE_CRAFT_PROMPT_VERSION),
   };
 }
 
@@ -533,6 +538,7 @@ export function parseAnalysisResponse(
     return {
       ...result.data,
       stateLabel: deriveSocialSnapshot(input).stateLabel,
+      meta: buildLiveAIMeta('deepseek', XIAOYUE_CRAFT_PROMPT_VERSION),
     };
   } catch {
     return fallback;
@@ -547,14 +553,19 @@ export async function generateXiaoyueAnalysis(
 
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     logger.info('[XiaoyueAnalysis] Cache hit', { archetype: input.archetype });
-    return { ...cached.result, cached: true };
+    const hit = { ...cached.result, cached: true };
+    if (!hit.meta) {
+      hit.meta = buildFallbackAIMeta('cache_missing_meta', XIAOYUE_CRAFT_PROMPT_VERSION);
+      hit.meta.aigc = buildAIGCMeta({ fallbackUsed: hit.meta.fallbackUsed, labelType: 'ai-generated' });
+    }
+    return hit;
   }
 
   const systemBase = `${XIAOYUE_PERSONA}\n\n${GENDER_NEUTRAL}`;
   const fallback = buildFallbackAnalysisPayload(input);
 
   try {
-    const result = await generateWithCraftQuality({
+    const craftResult = await generateWithCraftQuality({
       buildPrompt: () => ({
         system: systemBase,
         user: buildAnalysisPrompt(input),
@@ -581,28 +592,75 @@ export async function generateXiaoyueAnalysis(
       fallback,
     });
 
-    if (result.passed) {
-      analysisCache.set(cacheKey, { result: result.result, timestamp: Date.now() });
-      logger.info('[XiaoyueAnalysis] Generated + craft passed', {
-        archetype: input.archetype,
-        craftScore: result.craftScore,
-        retries: result.retries,
-      });
-    } else if (result.exhausted) {
-      logger.warn('[XiaoyueAnalysis] Craft max retries exhausted, using best effort', {
-        archetype: input.archetype,
-        craftScore: result.craftScore,
-        issues: result.unresolvedIssues,
-      });
-      analysisCache.set(cacheKey, { result: result.result, timestamp: Date.now() });
+    let result = craftResult.result;
+
+    // Parsed AI responses do not yet carry observability metadata; attach it now.
+    if (!result.meta) {
+      result.meta = buildLiveAIMeta('deepseek', XIAOYUE_CRAFT_PROMPT_VERSION);
     }
 
-    return { ...result.result, cached: false };
+    // Post-generation content safety check before returning to users.
+    const moderation = moderateGeneratedContent(
+      [
+        { field: 'headline', text: result.headline },
+        { field: 'analysis', text: result.analysis },
+        { field: 'socialRole', text: result.socialRole },
+        { field: 'bestScene', text: result.bestScene },
+        { field: 'microAction', text: result.microAction },
+        { field: 'shareLine', text: result.shareLine },
+        { field: 'whyThisFits', text: result.whyThisFits },
+        { field: 'blendLine', text: result.blendLine },
+        ...result.expressionTags.map((t, i) => ({ field: `expressionTag_${i}`, text: t })),
+        { field: 'shareVariant_selfIntro', text: result.shareVariants.selfIntro },
+        { field: 'shareVariant_friendCallout', text: result.shareVariants.friendCallout },
+        { field: 'shareVariant_socialInvite', text: result.shareVariants.socialInvite },
+      ],
+      {
+        domain: 'xiaoyue_analysis',
+        feature: 'generateXiaoyueAnalysis',
+        provider: 'deepseek',
+        model: getDeepseekModel('flash'),
+        latencyMs: 0,
+        promptVersion: XIAOYUE_CRAFT_PROMPT_VERSION,
+      }
+    );
+
+    if (!moderation.safe) {
+      logger.warn('[XiaoyueAnalysis] Content safety moderation failed, using fallback', {
+        archetype: input.archetype,
+        field: moderation.field,
+      });
+      result = fallback;
+    }
+
+    result.meta.aigc = buildAIGCMeta({
+      fallbackUsed: result.meta.fallbackUsed,
+      labelType: 'ai-generated',
+    });
+
+    if (craftResult.passed) {
+      analysisCache.set(cacheKey, { result, timestamp: Date.now() });
+      logger.info('[XiaoyueAnalysis] Generated + craft passed', {
+        archetype: input.archetype,
+        craftScore: craftResult.craftScore,
+        retries: craftResult.retries,
+      });
+    } else if (craftResult.exhausted) {
+      logger.warn('[XiaoyueAnalysis] Craft max retries exhausted, using best effort', {
+        archetype: input.archetype,
+        craftScore: craftResult.craftScore,
+        issues: craftResult.unresolvedIssues,
+      });
+      analysisCache.set(cacheKey, { result, timestamp: Date.now() });
+    }
+
+    return { ...result, cached: false };
   } catch (error) {
     if (error instanceof Error && error.message.includes('DEEPSEEK_API_KEY')) {
       logger.warn('[XiaoyueAnalysis] DeepSeek disabled, using fallback copy because API key is missing');
     }
     logger.error('[XiaoyueAnalysis] API error', { error: error instanceof Error ? error.message : String(error) });
+    fallback.meta.aigc = buildAIGCMeta({ fallbackUsed: true });
     return { ...fallback, cached: false };
   }
 }

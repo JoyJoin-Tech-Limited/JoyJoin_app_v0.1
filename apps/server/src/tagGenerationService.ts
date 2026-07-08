@@ -19,6 +19,8 @@ import { getTagGenerationProvider, isProviderAvailable, type AIProvider } from '
 import { getDeepseekClient, getDeepseekModel } from './ai/deepseekClient';
 import { logAITrace } from './lib/aiTraceLogger';
 import { logger } from "./lib/logger";
+import { buildAIGCMeta, buildFallbackAIMeta, buildLiveAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
+import { moderateGeneratedContent } from './lib/aiContentModeration';
 
 const TAG_GENERATION_PROMPT_VERSION = 'social-tags-v1';
 
@@ -65,6 +67,7 @@ export interface GeneratedTag {
 export interface TagGenerationResult {
   tags: GeneratedTag[];
   isFallback: boolean;
+  meta: AIResponseMeta;
 }
 
 // Blacklist for content moderation (normalized to lowercase)
@@ -111,7 +114,7 @@ export async function generateSocialTags(input: TagGenerationInput): Promise<Tag
       promptVersion: TAG_GENERATION_PROMPT_VERSION,
       errorCode: 'provider_unavailable',
     });
-    return { tags: generateFallbackTags(input), isFallback: true };
+    return { tags: generateFallbackTags(input), isFallback: true, meta: buildFallbackAIMeta('provider_unavailable', TAG_GENERATION_PROMPT_VERSION) };
   }
 
   // Get archetype info
@@ -129,7 +132,7 @@ export async function generateSocialTags(input: TagGenerationInput): Promise<Tag
       promptVersion: TAG_GENERATION_PROMPT_VERSION,
       errorCode: 'unknown_archetype',
     });
-    return { tags: generateFallbackTags(input), isFallback: true };
+    return { tags: generateFallbackTags(input), isFallback: true, meta: buildFallbackAIMeta('unknown_archetype', TAG_GENERATION_PROMPT_VERSION) };
   }
 
   const archetypeNickname = archetypeData.narrative.nickname;
@@ -210,7 +213,7 @@ ${JSON.stringify(userProfile, null, 2)}
         promptVersion: TAG_GENERATION_PROMPT_VERSION,
         errorCode: 'empty_response',
       });
-      return { tags: generateFallbackTags(input), isFallback: true };
+      return { tags: generateFallbackTags(input), isFallback: true, meta: buildFallbackAIMeta('empty_response', TAG_GENERATION_PROMPT_VERSION) };
     }
 
     // Parse JSON with specific error handling
@@ -231,7 +234,7 @@ ${JSON.stringify(userProfile, null, 2)}
         promptVersion: TAG_GENERATION_PROMPT_VERSION,
         errorCode: 'parse_error',
       });
-      return { tags: generateFallbackTags(input), isFallback: true };
+      return { tags: generateFallbackTags(input), isFallback: true, meta: buildFallbackAIMeta('parse_error', TAG_GENERATION_PROMPT_VERSION) };
     }
 
     const tags: GeneratedTag[] = parsed.tags || [];
@@ -253,7 +256,7 @@ ${JSON.stringify(userProfile, null, 2)}
         promptVersion: TAG_GENERATION_PROMPT_VERSION,
         errorCode: 'validation_failed',
       });
-      return { tags: generateFallbackTags(input), isFallback: true };
+      return { tags: generateFallbackTags(input), isFallback: true, meta: buildFallbackAIMeta('validation_failed', TAG_GENERATION_PROMPT_VERSION) };
     }
 
     // Ensure we have at least 2 tags
@@ -276,9 +279,29 @@ ${JSON.stringify(userProfile, null, 2)}
         promptVersion: TAG_GENERATION_PROMPT_VERSION,
         errorCode: 'partial_valid_output',
       });
-      return { tags: combinedTags, isFallback: true };
+      return { tags: combinedTags, isFallback: true, meta: buildFallbackAIMeta('partial_valid_output', TAG_GENERATION_PROMPT_VERSION) };
     }
 
+    // Post-generation moderation: check descriptor and fullTag of each tag
+    const moderationChecks = validTags.map((t, i) => [
+      { field: `tag_${i}_descriptor`, text: t.descriptor },
+      { field: `tag_${i}_fullTag`, text: t.fullTag },
+      { field: `tag_${i}_reasoning`, text: t.reasoning },
+    ]).flat();
+    const moderation = moderateGeneratedContent(moderationChecks, {
+      domain: 'creative_identity',
+      feature: 'generateSocialTags',
+      provider,
+      model,
+      latencyMs: durationMs,
+      promptVersion: TAG_GENERATION_PROMPT_VERSION,
+    });
+    if (!moderation.safe) {
+      return { tags: generateFallbackTags(input), isFallback: true, meta: buildFallbackAIMeta('content_safety', TAG_GENERATION_PROMPT_VERSION) };
+    }
+
+    const finalTags = validTags.slice(0, 3);
+    const meta = buildLiveAIMeta(provider, TAG_GENERATION_PROMPT_VERSION);
     logger.info(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=true`);
     logAITrace({
       domain: 'creative_identity',
@@ -292,7 +315,7 @@ ${JSON.stringify(userProfile, null, 2)}
       promptVersion: TAG_GENERATION_PROMPT_VERSION,
     });
 
-    return { tags: validTags.slice(0, 3), isFallback: false };
+    return { tags: finalTags, isFallback: false, meta: { ...meta, aigc: buildAIGCMeta({ fallbackUsed: false, labelType: 'ai-generated' }) } };
   } catch (error) {
     const durationMs = Date.now() - startTime;
     logger.error(`[TagGeneration] provider=${provider} error after ${durationMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
@@ -308,7 +331,7 @@ ${JSON.stringify(userProfile, null, 2)}
       promptVersion: TAG_GENERATION_PROMPT_VERSION,
       errorCode: 'llm_error',
     });
-    return { tags: generateFallbackTags(input), isFallback: true };
+    return { tags: generateFallbackTags(input), isFallback: true, meta: buildFallbackAIMeta('llm_error', TAG_GENERATION_PROMPT_VERSION) };
   }
 }
 

@@ -507,7 +507,7 @@ export const PERSONALITY_TEST_VALUE_MESSAGES = [
   },
   {
     timing: 'during_test',
-    message: '每个问题都没有对错，选择最接近你真实反应的就好～这些答案会帮助算法找到和你气场相合的小伙伴。',
+    message: '每个问题都没有对错，选择最接近你真实反应的就好～这些答案会帮助悦仔找到和你气场相合的小伙伴。',
     emoji: '✨',
   },
   {

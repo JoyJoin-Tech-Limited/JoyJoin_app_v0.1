@@ -26,6 +26,8 @@ import { WORK_MODE_LABELS, RELATIONSHIP_MATCH_LABELS, DISCUSSION_STYLE_LABELS, g
 import type { MatchExplanationContract, GroupAnalysisContract, OverallChemistry } from '@shared/groupAnalysis';
 import type { ConnectionPointWithRarity } from '@shared/types/groupAnalysis';
 import type { AIProvider } from '@shared/types/aiMeta';
+import { buildAIGCMeta, buildFallbackAIMeta, buildLiveAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
+import { moderateGeneratedContent } from './lib/aiContentModeration';
 import { getInterestById } from '@shared/interests';
 import { logAITrace } from './lib/aiTraceLogger';
 import { logger } from './lib/logger';
@@ -166,6 +168,8 @@ export interface GroupAnalysis extends GroupAnalysisContract {
    * Response-level prompt version for the group analysis contract.
    */
   promptVersion?: string;
+  /** Standard AI observability metadata with AIGC compliance flags. */
+  meta?: AIResponseMeta;
 }
 
 // ============ 缓存类型 ============
@@ -758,6 +762,44 @@ explanation 为正文；introAngle 为两人见面时如何开口的一句提示
       });
     }
 
+    // Post-generation content safety moderation before returning to users.
+    const moderation = moderateGeneratedContent(
+      [
+        { field: 'explanation', text: parsed.explanation },
+        { field: 'introAngle', text: parsed.introAngle },
+      ],
+      {
+        domain: 'match_explanation',
+        feature: 'generatePairExplanation',
+        provider,
+        model,
+        latencyMs,
+        promptVersion: PAIR_EXPLANATION_PROMPT_VERSION,
+      }
+    );
+
+    if (!moderation.safe) {
+      logger.warn('[MatchExplanation] Content safety moderation failed, using fallback pair copy', {
+        pairKey: getPairKey(member1.userId, member2.userId),
+        field: moderation.field,
+      });
+      const fb = generateFallbackPairCopy(chemistryScore, sharedInterests);
+      return {
+        explanation: {
+          pairKey: getPairKey(member1.userId, member2.userId),
+          explanation: fb.explanation,
+          chemistryScore,
+          sharedInterests,
+          connectionPoints,
+          connectionPointsWithRarity,
+          ...(fb.introAngle ? { introAngle: fb.introAngle } : {}),
+        },
+        providerUsed: null,
+        fallbackUsed: true,
+        promptVersion: PAIR_EXPLANATION_PROMPT_VERSION,
+      };
+    }
+
     return {
       explanation: {
         pairKey: getPairKey(member1.userId, member2.userId),
@@ -814,6 +856,44 @@ explanation 为正文；introAngle 为两人见面时如何开口的一句提示
             craftScore: fbCraftDiag.craftScore,
           });
         }
+
+        const fbModeration = moderateGeneratedContent(
+          [
+            { field: 'explanation', text: fbParsed.explanation },
+            { field: 'introAngle', text: fbParsed.introAngle },
+          ],
+          {
+            domain: 'match_explanation',
+            feature: 'generatePairExplanation',
+            provider: 'deepseek',
+            model: fbModel,
+            latencyMs: Date.now() - t0,
+            promptVersion: PAIR_EXPLANATION_PROMPT_VERSION,
+          }
+        );
+
+        if (!fbModeration.safe) {
+          logger.warn('[MatchExplanation] Content safety moderation failed on deepseek fallback, using deterministic fallback', {
+            pairKey: getPairKey(member1.userId, member2.userId),
+            field: fbModeration.field,
+          });
+          const fb = generateFallbackPairCopy(chemistryScore, sharedInterests);
+          return {
+            explanation: {
+              pairKey: getPairKey(member1.userId, member2.userId),
+              explanation: fb.explanation,
+              chemistryScore,
+              sharedInterests,
+              connectionPoints,
+              connectionPointsWithRarity,
+              ...(fb.introAngle ? { introAngle: fb.introAngle } : {}),
+            },
+            providerUsed: null,
+            fallbackUsed: true,
+            promptVersion: PAIR_EXPLANATION_PROMPT_VERSION,
+          };
+        }
+
         return {
           explanation: {
             pairKey: getPairKey(member1.userId, member2.userId),
@@ -1048,14 +1128,14 @@ export async function generateGroupAnalysis(
   const totalChemistry = pairExplanations.reduce((sum, exp) => sum + exp.chemistryScore, 0);
   const pairCount = pairExplanations.length;
   const avgChemistry = pairCount > 0 ? totalChemistry / pairCount : 50;
-  
+
   // 确定化学反应等级
   let overallChemistry: OverallChemistry;
   if (avgChemistry >= 85) overallChemistry = 'fire';
   else if (avgChemistry >= 70) overallChemistry = 'warm';
   else if (avgChemistry >= 55) overallChemistry = 'mild';
   else overallChemistry = 'cold';
-  
+
   // 生成小组动态描述
   const groupDynamics = generateGroupDynamics(members, avgChemistry, eventType);
 
@@ -1063,20 +1143,91 @@ export async function generateGroupAnalysis(
   const groupThemeTags = generateGroupThemeTags(members, overallChemistry, eventType);
   const groupThemeCompanion = generateGroupThemeCompanion(members, overallChemistry, eventType);
 
+  // Final post-generation safety check — also defends against stale cache content
+  // that may not have been moderated by earlier code versions.
+  let pairExplanationsSafe = pairExplanations;
+  let iceBreakersSafe = iceBreakers;
+  let anyModerationFailure = false;
+
+  for (let i = 0; i < pairExplanationsSafe.length; i++) {
+    const exp = pairExplanationsSafe[i];
+    const moderation = moderateGeneratedContent(
+      [
+        { field: `pair_${i}_explanation`, text: exp.explanation },
+        { field: `pair_${i}_introAngle`, text: exp.introAngle },
+      ],
+      {
+        domain: 'match_explanation',
+        feature: 'generateGroupAnalysis',
+        provider,
+        latencyMs: Date.now() - startedAt,
+        promptVersion,
+      }
+    );
+    if (!moderation.safe) {
+      anyModerationFailure = true;
+      const fb = generateFallbackPairCopy(exp.chemistryScore, exp.sharedInterests);
+      pairExplanationsSafe[i] = {
+        ...exp,
+        explanation: fb.explanation,
+        introAngle: fb.introAngle,
+      };
+    }
+  }
+
+  const iceBreakerModeration = moderateGeneratedContent(
+    iceBreakersSafe.map((topic, i) => ({ field: `iceBreaker_${i}`, text: topic })),
+    {
+      domain: 'match_explanation',
+      feature: 'generateGroupAnalysis',
+      provider,
+      latencyMs: Date.now() - startedAt,
+      promptVersion,
+    }
+  );
+  if (!iceBreakerModeration.safe) {
+    anyModerationFailure = true;
+    const interestCounts = new Map<string, number>();
+    members.forEach(m => {
+      (m.interestsTop || []).forEach(i => {
+        interestCounts.set(i, (interestCounts.get(i) || 0) + 1);
+      });
+    });
+    const commonInterests = Array.from(interestCounts.entries())
+      .filter(([_, count]) => count >= 2)
+      .map(([interest]) => interest)
+      .slice(0, 3);
+    iceBreakersSafe = getFallbackIceBreakers(eventType, commonInterests);
+  }
+
+  if (anyModerationFailure) {
+    fallbackUsed = true;
+    logger.warn('[MatchExplanation] Final group-analysis moderation failed for some components; using deterministic fallback for those components');
+  }
+
+  const generatedAt = fromCache && cacheGeneratedAt ? cacheGeneratedAt : new Date().toISOString();
+
   return {
     groupId,
     overallChemistry,
     groupDynamics,
-    pairExplanations,
-    iceBreakers,
+    pairExplanations: pairExplanationsSafe,
+    iceBreakers: iceBreakersSafe,
     groupThemeTags,
     groupThemeCompanion,
     fromCache,
-    // On cache hit, use the original generation timestamp so clients can tell when data was last refreshed
-    generatedAt: fromCache && cacheGeneratedAt ? cacheGeneratedAt : new Date().toISOString(),
+    generatedAt,
     provider,
     fallbackUsed,
     promptVersion,
+    meta: {
+      generatedAt,
+      fromCache,
+      provider,
+      fallbackUsed,
+      promptVersion,
+      aigc: buildAIGCMeta({ fallbackUsed, labelType: 'ai-generated' }),
+    },
   };
 }
 
@@ -1346,6 +1497,30 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
       .slice(0, 5);
     
     if (iceBreakers.length >= 2) { // Lowered threshold from 3 to 2
+      const moderation = moderateGeneratedContent(
+        iceBreakers.map((topic, i) => ({ field: `iceBreaker_${i}`, text: topic })),
+        {
+          domain: 'match_explanation',
+          feature: 'generateIceBreakers',
+          provider,
+          model,
+          latencyMs,
+          promptVersion: GROUP_ICEBREAKERS_PROMPT_VERSION,
+        }
+      );
+
+      if (!moderation.safe) {
+        logger.warn('[IceBreakers] Content safety moderation failed, using fallback topics', {
+          field: moderation.field,
+        });
+        return {
+          iceBreakers: getFallbackIceBreakers(eventType, commonInterests),
+          providerUsed: null,
+          fallbackUsed: true,
+          promptVersion: GROUP_ICEBREAKERS_PROMPT_VERSION,
+        };
+      }
+
       return {
         iceBreakers,
         providerUsed: provider,
@@ -1385,6 +1560,30 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
           .filter(line => line.length > 5 && line.length < 100)
           .slice(0, 5);
         if (iceBreakers.length >= 2) {
+          const moderation = moderateGeneratedContent(
+            iceBreakers.map((topic, i) => ({ field: `iceBreaker_${i}`, text: topic })),
+            {
+              domain: 'match_explanation',
+              feature: 'generateIceBreakers',
+              provider: 'deepseek',
+              model: fbModel,
+              latencyMs: Date.now() - t0,
+              promptVersion: GROUP_ICEBREAKERS_PROMPT_VERSION,
+            }
+          );
+
+          if (!moderation.safe) {
+            logger.warn('[IceBreakers] Content safety moderation failed on deepseek fallback, using fallback topics', {
+              field: moderation.field,
+            });
+            return {
+              iceBreakers: getFallbackIceBreakers(eventType, commonInterests),
+              providerUsed: null,
+              fallbackUsed: true,
+              promptVersion: GROUP_ICEBREAKERS_PROMPT_VERSION,
+            };
+          }
+
           return {
             iceBreakers,
             providerUsed: 'deepseek',

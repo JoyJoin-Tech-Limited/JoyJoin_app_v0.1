@@ -27,6 +27,7 @@ import { ensureSessionEnabledPhases, cleanupPhaseStateForNextPhase } from '../..
 import { logger } from '../../lib/logger';
 import { aiEndpointLimiter } from '../../rateLimiter';
 import { buildClientState, isHostAuthorized } from '../socialIcebreakerHelpers';
+import { runBotSimulationSafely } from '../../services/socialIcebreakerBotService';
 
 const router = Router();
 
@@ -388,6 +389,8 @@ router.post('/vote', async (req: any, res) => {
     return res.status(404).json({ error: 'Social session not found' });
   }
 
+  await runBotSimulationSafely(socialSessionId, state, 'mini-script-vote');
+
   if (state.currentPhase !== 'mini_script') {
     return res.status(400).json({ error: 'WRONG_PHASE' });
   }
@@ -495,6 +498,8 @@ router.post('/ready', async (req: any, res) => {
     if (expired) return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
     return res.status(404).json({ error: 'Social session not found' });
   }
+
+  await runBotSimulationSafely(socialSessionId, state, 'mini-script-ready');
 
   if (state.currentPhase !== 'mini_script') {
     return res.status(400).json({ error: 'WRONG_PHASE' });

@@ -1,7 +1,7 @@
 # JoyJoin Developer Quick Reference Guide
 
 **Version:** 2.3
-**Last Updated:** 2026-06-28
+**Last Updated:** 2026-07-09
 **For:** Tech Team Onboarding & Codebase Navigation
 
 ---
@@ -281,6 +281,7 @@ Active domain modules in `routes/domains/`:
 | `referrals.ts` | Referral & invitation routes — `GET /api/referral/stats` (referral code + invite stats), `GET /api/referral/invites-received` (incoming invites), invite link generation (mini-program deep link format) |
 | `eventGroupOutcomes.ts` | Protected `POST /api/event-pools/:poolId/group-outcome` outcome submission endpoint |
 | `adminMatchingShadow.ts` | Admin shadow matching experiments, predictive rerank status and controls |
+| `adminMatchingReview.ts` | Operator review queue for formed match groups (list, approve, reject) |
 | `matchingShadowErrors.ts` | Shadow-matching error inspection endpoints |
 | `occupationSearch.ts` | `POST /api/occupation/search` — free-text occupation search using Granite embedding (exact + semantic hybrid) |
 | `shell.ts` | Composite Predictive Shell endpoints (`/api/shell/*`) — discover, profile, events, connections |
@@ -545,6 +546,7 @@ These are commented out in schema but kept for backward compatibility.
 | `/admin/matching` | AdminMatchingLabPage | Real-time matching lab |
 | `/admin/matching-config` | AdminMatchingConfigPage | Threshold tuning |
 | `/admin/matching-logs` | AdminMatchingLogsPage | Match history |
+| `/admin/matching-reviews` | AdminMatchingReviewsPage | Review and approve/reject formed match groups before users are revealed |
 | `/admin/feedback` | AdminFeedbackPage | User feedback |
 | `/admin/subscriptions` | AdminSubscriptionsPage | Subscription management |
 | `/admin/coupons` | AdminCouponsPage | Coupon management |

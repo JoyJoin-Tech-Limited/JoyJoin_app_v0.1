@@ -14,9 +14,11 @@ import type {
 import { auctionLotsLlmPayloadSchema, parseXiaoyueSessionPack } from '@shared/socialIcebreaker';
 import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework';
 import {
+  buildAIGCMeta,
   buildFallbackAIMeta,
   buildLiveAIMeta,
   type AIResponseMeta,
+  type AIProvider,
 } from '@shared/types/aiMeta';
 import { extractJsonPayloadForParse } from './ai/extractLlmJson';
 import { getClientForFunction, getDeepseekSelection } from './ai/socialModelRouter';
@@ -60,6 +62,7 @@ import { buildArchetypeContext } from './lib/contextInjector';
 import { getFallbackGroupMirrorQuestions, type GroupMirrorQuestion } from '@shared/groupMirror';
 import { getRandomFallbackSet, type LieDetectiveV2FallbackStatement } from '@shared/lieDetectiveFallback';
 import { logger } from "./lib/logger";
+import { moderateGeneratedContent, type ModerationCheck } from './lib/aiContentModeration';
 import { XIAOYUE_PERSONA } from './prompts';
 import { validateContentSafe } from './lib/contentSafety';
 import { AIServiceResult, fireAndForgetQualityGate } from './socialIcebreakerAICore';
@@ -109,6 +112,126 @@ function normalizeSocialTopic(topic: Partial<SocialTopic>, fallbackMood: Atmosph
     };
   }
   return base;
+}
+
+function warmupTopicsChecks(topics: SocialTopic[]): ModerationCheck[] {
+  return topics.flatMap((t, i) => {
+    const checks: ModerationCheck[] = [
+      { field: `topic[${i}].question`, text: t.question },
+      { field: `topic[${i}].category`, text: t.category },
+    ];
+    if (t.promptTiers) {
+      checks.push(
+        { field: `topic[${i}].promptTiers.opener`, text: t.promptTiers.opener },
+        { field: `topic[${i}].promptTiers.followUp`, text: t.promptTiers.followUp },
+        { field: `topic[${i}].promptTiers.reflection`, text: t.promptTiers.reflection },
+      );
+    }
+    return checks;
+  });
+}
+
+function microChallengesChecks(challenges: MicroChallenge[]): ModerationCheck[] {
+  return challenges.flatMap((c, i) => [
+    { field: `challenge[${i}].title`, text: c.title },
+    { field: `challenge[${i}].description`, text: c.description },
+    { field: `challenge[${i}].completionCTA`, text: c.completionCTA },
+    { field: `challenge[${i}].visualHint`, text: c.visualHint },
+  ]);
+}
+
+function lieDetectiveStatementsChecks(statements: LieDetectiveStatement[]): ModerationCheck[] {
+  return statements.map((s, i) => ({ field: `statement[${i}].text`, text: s.text }));
+}
+
+function xiaoYueCommentChecks(comment: string): ModerationCheck[] {
+  return [{ field: 'comment', text: comment }];
+}
+
+function recapChecks(recap: { headline: string; moments: string[]; closingLine: string }): ModerationCheck[] {
+  const checks: ModerationCheck[] = [
+    { field: 'headline', text: recap.headline },
+    { field: 'closingLine', text: recap.closingLine },
+  ];
+  recap.moments.forEach((moment, i) => checks.push({ field: `moment[${i}]`, text: moment }));
+  return checks;
+}
+
+function xiaoyueSessionPackChecks(pack: XiaoyueSessionPack): ModerationCheck[] {
+  const checks: ModerationCheck[] = [{ field: 'opener', text: pack.opener }];
+  for (const [phase, coaching] of Object.entries(pack.phaseCoaching)) {
+    checks.push({ field: `phaseCoaching.${phase}.toneLine`, text: coaching.toneLine });
+    if (coaching.hostHint) checks.push({ field: `phaseCoaching.${phase}.hostHint`, text: coaching.hostHint });
+    if (coaching.energyRescue) checks.push({ field: `phaseCoaching.${phase}.energyRescue`, text: coaching.energyRescue });
+  }
+  pack.backupPrompts.forEach((prompt, i) => checks.push({ field: `backupPrompts[${i}]`, text: prompt }));
+  checks.push({ field: 'recapFraming.open', text: pack.recapFraming.open });
+  checks.push({ field: 'recapFraming.highlightTemplate', text: pack.recapFraming.highlightTemplate });
+  checks.push({ field: 'recapFraming.close', text: pack.recapFraming.close });
+  return checks;
+}
+
+function quipBattlePromptsChecks(prompts: QuipBattlePrompt[]): ModerationCheck[] {
+  return prompts.flatMap((p, i) => [
+    { field: `prompt[${i}].promptText`, text: p.promptText },
+    { field: `prompt[${i}].category`, text: p.category },
+  ]);
+}
+
+function undercoverWordPairChecks(pair: UndercoverWordPair): ModerationCheck[] {
+  return [
+    { field: 'civilianWord', text: pair.civilianWord },
+    { field: 'undercoverWord', text: pair.undercoverWord },
+    { field: 'category', text: pair.category },
+  ];
+}
+
+function groupMirrorQuestionsChecks(questions: GroupMirrorQuestion[]): ModerationCheck[] {
+  return questions.map((q, i) => ({ field: `question[${i}].questionText`, text: q.questionText }));
+}
+
+function attachAIGC<T>(result: AIServiceResult<T>): AIServiceResult<T> {
+  return {
+    data: result.data,
+    meta: {
+      ...result.meta,
+      aigc: buildAIGCMeta({ fallbackUsed: result.meta.fallbackUsed, labelType: 'ai-generated' }),
+    },
+  };
+}
+
+function moderateAndAttachAIGC<T>(
+  result: AIServiceResult<T>,
+  options: {
+    provider: AIProvider | null;
+    model?: string;
+    latencyMs: number;
+    promptVersion?: string;
+    aiCorrelationId: string;
+    feature: string;
+    fallbackData: T;
+    checks: ModerationCheck[];
+  },
+): AIServiceResult<T> {
+  if (result.meta.fallbackUsed) {
+    return attachAIGC(result);
+  }
+  const moderation = moderateGeneratedContent(options.checks, {
+    domain: 'icebreaker',
+    feature: options.feature,
+    provider: options.provider,
+    model: options.model,
+    latencyMs: options.latencyMs,
+    promptVersion: options.promptVersion,
+    traceId: options.aiCorrelationId,
+  });
+  if (!moderation.safe) {
+    return attachAIGC({
+      data: options.fallbackData,
+      meta: buildFallbackAIMeta('content_safety', options.promptVersion ?? 'unknown', options.aiCorrelationId),
+    });
+  }
+  return attachAIGC(result);
 }
 
 // ============ CURATED FALLBACK CONTENT ============
@@ -264,7 +387,7 @@ export async function generateWarmupTopics(params: {
   if (!isWarmupLlmEnabled()) {
     const meta = buildFallbackAIMeta('disabled', promptVersion, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: getFallbackTopics(params.mood, params.vibe), meta };
+    return attachAIGC({ data: getFallbackTopics(params.mood, params.vibe), meta });
   }
 
   const { client, model, provider } = getClientForFunction('generateWarmupTopics');
@@ -292,7 +415,7 @@ export async function generateWarmupTopics(params: {
     if (!content) {
       const meta = buildFallbackAIMeta('empty_response', promptVersion, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return { data: getFallbackTopics(params.mood, params.vibe), meta };
+      return attachAIGC({ data: getFallbackTopics(params.mood, params.vibe), meta });
     }
 
     const parsed = JSON.parse(content);
@@ -303,23 +426,33 @@ export async function generateWarmupTopics(params: {
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
       fireAndForgetQualityGate(content, 'icebreaker_warmup', aiCorrelationId, 'warmup', params.eventType);
       const targetCount = getTargetTopicCount(params.vibe);
-      return {
-        data: parsed.slice(0, targetCount + 1).map((topic, index) => normalizeSocialTopic(topic, params.mood, index)),
-        meta,
-      };
+      const liveTopics: SocialTopic[] = parsed.slice(0, targetCount + 1).map((topic, index) => normalizeSocialTopic(topic, params.mood, index));
+      return moderateAndAttachAIGC(
+        { data: liveTopics, meta },
+        {
+          provider,
+          model,
+          latencyMs,
+          promptVersion: meta.promptVersion,
+          aiCorrelationId,
+          feature: 'generateWarmupTopics',
+          fallbackData: getFallbackTopics(params.mood, params.vibe),
+          checks: warmupTopicsChecks(liveTopics),
+        },
+      );
     }
     const latencyMs = Date.now() - t0;
     logger.warn(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${latencyMs}ms: invalid response shape, using fallback`);
     const meta = buildFallbackAIMeta('parse_error', promptVersion, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: getFallbackTopics(params.mood, params.vibe), meta };
+    return attachAIGC({ data: getFallbackTopics(params.mood, params.vibe), meta });
   } catch (error) {
     const latencyMs = Date.now() - t0;
     const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message?.includes('abort'));
     logger.error(`[SocialIcebreakerAI] generateWarmupTopics error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error), isTimeout });
     const meta = buildFallbackAIMeta(isTimeout ? 'timeout' : 'llm_error', promptVersion, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: getFallbackTopics(params.mood, params.vibe), meta };
+    return attachAIGC({ data: getFallbackTopics(params.mood, params.vibe), meta });
   } finally {
     clearTimeout(timeoutId);
   }
@@ -413,7 +546,7 @@ export async function generateMicroChallenges(params: {
       fromCache: false,
       promptVersion: 'selector-v1',
     });
-    return { data: selectorResult, meta: buildSelectorMeta() };
+    return attachAIGC({ data: selectorResult, meta: buildSelectorMeta() });
   }
 
   // 3. AI path (backward-compatible primary)
@@ -437,7 +570,7 @@ export async function generateMicroChallenges(params: {
     if (!content) {
       const meta = buildFallbackAIMeta('empty_response', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return { data: selectorResult, meta };
+      return attachAIGC({ data: selectorResult, meta });
     }
 
     let parsed: unknown;
@@ -448,7 +581,7 @@ export async function generateMicroChallenges(params: {
       logger.warn(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${latencyMs}ms: JSON parse failed, using selector fallback`);
       const meta = buildFallbackAIMeta('parse_error', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return { data: selectorResult, meta };
+      return attachAIGC({ data: selectorResult, meta });
     }
     if (Array.isArray(parsed) && parsed.length > 0) {
       const latencyMs = Date.now() - t0;
@@ -456,20 +589,33 @@ export async function generateMicroChallenges(params: {
       const meta = buildLiveAIMeta(provider, MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
       fireAndForgetQualityGate(content, 'icebreaker_micro_challenge', aiCorrelationId, 'micro_challenge', params.eventType);
-      return { data: parsed.slice(0, 3), meta };
+      const liveChallenges: MicroChallenge[] = parsed.slice(0, 3);
+      return moderateAndAttachAIGC(
+        { data: liveChallenges, meta },
+        {
+          provider,
+          model,
+          latencyMs,
+          promptVersion: MICRO_CHALLENGES_PROMPT_VERSION,
+          aiCorrelationId,
+          feature: 'generateMicroChallenges',
+          fallbackData: selectorResult,
+          checks: microChallengesChecks(liveChallenges),
+        },
+      );
     }
     const latencyMs = Date.now() - t0;
     logger.warn(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${latencyMs}ms: invalid response shape, using selector fallback`);
     const meta = buildFallbackAIMeta('parse_error', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: selectorResult, meta };
+    return attachAIGC({ data: selectorResult, meta });
   } catch (error) {
     const latencyMs = Date.now() - t0;
     logger.error(`[SocialIcebreakerAI] generateMicroChallenges error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
     const meta = buildFallbackAIMeta('llm_error', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
     if (selectorResult.length === 0) throw error;
-    return { data: selectorResult, meta };
+    return attachAIGC({ data: selectorResult, meta });
   }
 }
 
@@ -582,7 +728,7 @@ async function generateLieDetectiveV1Statements(params: {
     if (!content) {
       const meta = buildFallbackAIMeta('empty_response', LIE_DETECTIVE_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveStatements', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return { data: getRandomFallbackStatements(), meta };
+      return attachAIGC({ data: getRandomFallbackStatements(), meta });
     }
 
     const parsed = JSON.parse(content);
@@ -596,7 +742,20 @@ async function generateLieDetectiveV1Statements(params: {
       const meta = buildLiveAIMeta(provider, LIE_DETECTIVE_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveStatements', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
       fireAndForgetQualityGate(content, 'icebreaker_lie_detective', aiCorrelationId, 'lie_detective');
-      return { data: parsed, meta };
+      const liveStatements: LieDetectiveStatement[] = parsed;
+      return moderateAndAttachAIGC(
+        { data: liveStatements, meta },
+        {
+          provider,
+          model,
+          latencyMs,
+          promptVersion: LIE_DETECTIVE_PROMPT_VERSION,
+          aiCorrelationId,
+          feature: 'generateLieDetectiveStatements',
+          fallbackData: getRandomFallbackStatements(),
+          checks: lieDetectiveStatementsChecks(liveStatements),
+        },
+      );
     }
     const latencyMs = Date.now() - t0;
     logger.warn(`[SocialIcebreakerAI] generateLieDetectiveStatements provider=${provider} latency=${latencyMs}ms: invalid response shape (expected 3 items with exactly 1 lie), using fallback`);
@@ -647,7 +806,7 @@ function generateLieDetectiveDisabledFallback(
   const statements = getRandomFallbackStatements();
   // V2 callers expect is_ai/source_tag fields when tags were provided.
   if (params.tags) {
-    return {
+    return attachAIGC({
       data: statements.map((s, index) => ({
         ...s,
         index,
@@ -655,9 +814,9 @@ function generateLieDetectiveDisabledFallback(
         source_tag: s.isLie ? undefined : params.tags![index % 2],
       })),
       meta,
-    };
+    });
   }
-  return { data: statements.map((s, index) => ({ ...s, index })), meta };
+  return attachAIGC({ data: statements.map((s, index) => ({ ...s, index })), meta });
 }
 
 // ─── Lie Detective V2 ───────────────────────────────────────────────────────
@@ -763,7 +922,22 @@ async function tryV2Prompt(
     const meta = buildLiveAIMeta(provider, LIE_DETECTIVE_V2_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveV2Statements', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
     fireAndForgetQualityGate(content, 'icebreaker_lie_detective', aiCorrelationId, 'lie_detective');
-    return { success: true, result: { data: statements, meta } };
+    return {
+      success: true,
+      result: moderateAndAttachAIGC(
+        { data: statements, meta },
+        {
+          provider,
+          model,
+          latencyMs,
+          promptVersion: LIE_DETECTIVE_V2_PROMPT_VERSION,
+          aiCorrelationId,
+          feature: 'generateLieDetectiveV2Statements',
+          fallbackData: getRandomFallbackStatements(),
+          checks: lieDetectiveStatementsChecks(statements),
+        },
+      ),
+    };
   } catch (error) {
     const latencyMs = Date.now() - t0;
     logger.error(`[SocialIcebreakerAI] V2 prompt error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
@@ -790,7 +964,7 @@ function tryV2Fallback(
     const meta = buildFallbackAIMeta('v2_fallback_pool', LIE_DETECTIVE_V2_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveV2Statements', provider: null, model: 'v2-fallback-pool', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
     logger.info('[SocialIcebreakerAI] V2 fallback set used');
-    return { success: true, result: { data: statements, meta } };
+    return { success: true, result: attachAIGC({ data: statements, meta }) };
   } catch (error) {
     logger.error('[SocialIcebreakerAI] V2 fallback set error:', { error: error instanceof Error ? error.message : String(error) });
     return { success: false };
@@ -810,7 +984,7 @@ async function tryV1PromptAsFallback(
       promptVersion: `${v1Result.meta.promptVersion}-v1-degrade`,
     };
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveV2Statements', provider: v1Result.meta.provider, model: 'v1-degrade', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion });
-    return { success: true, result: { data: v1Result.data, meta } };
+    return { success: true, result: attachAIGC({ data: v1Result.data, meta }) };
   } catch {
     return { success: false };
   }
@@ -821,7 +995,7 @@ function tier4HardcodedFallback(aiCorrelationId: string): AIServiceResult<LieDet
   const meta = buildFallbackAIMeta('v1_hardcoded_fallback', LIE_DETECTIVE_PROMPT_VERSION, aiCorrelationId);
   logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveV2Statements', provider: null, model: 'v1-hardcoded', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
   logger.info('[SocialIcebreakerAI] V1 hardcoded fallback used (tier 4)');
-  return { data: statements, meta };
+  return attachAIGC({ data: statements, meta });
 }
 
 export async function generateXiaoYueComment(params: {
@@ -854,13 +1028,8 @@ export async function generateXiaoYueComment(params: {
 
   const phaseComments = defaultComments[params.phase];
   if (phaseComments?.[params.event]) {
-    const meta: AIResponseMeta = {
-      generatedAt: new Date().toISOString(),
-      fromCache: false,
-      provider: null,
-      fallbackUsed: false,
-    };
-    return { data: phaseComments[params.event], meta };
+    const meta = buildFallbackAIMeta('default_comment', XIAOYUE_COMMENT_PROMPT_VERSION);
+    return attachAIGC({ data: phaseComments[params.event], meta });
   }
 
   const aiCorrelationId = createAiCorrelationId();
@@ -896,7 +1065,19 @@ export async function generateXiaoYueComment(params: {
         fromCache: false,
         promptVersion: XIAOYUE_COMMENT_PROMPT_VERSION,
       });
-      return { data: content, meta };
+      return moderateAndAttachAIGC(
+        { data: content, meta },
+        {
+          provider,
+          model,
+          latencyMs,
+          promptVersion: XIAOYUE_COMMENT_PROMPT_VERSION,
+          aiCorrelationId,
+          feature: 'generateXiaoYueComment',
+          fallbackData: '继续加油，破冰进行中！✨',
+          checks: xiaoYueCommentChecks(content),
+        },
+      );
     }
     const metaFb = buildFallbackAIMeta('empty_response', XIAOYUE_COMMENT_PROMPT_VERSION, aiCorrelationId);
     logAITrace({
@@ -912,7 +1093,7 @@ export async function generateXiaoYueComment(params: {
       promptVersion: XIAOYUE_COMMENT_PROMPT_VERSION,
       errorCode: 'empty_response',
     });
-    return { data: '继续加油，破冰进行中！✨', meta: metaFb };
+    return attachAIGC({ data: '继续加油，破冰进行中！✨', meta: metaFb });
   } catch (error) {
     const latencyMs = Date.now() - t0;
     logger.error(`[SocialIcebreakerAI] generateXiaoYueComment error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
@@ -930,7 +1111,7 @@ export async function generateXiaoYueComment(params: {
       promptVersion: XIAOYUE_COMMENT_PROMPT_VERSION,
       errorCode: 'llm_error',
     });
-    return { data: '继续加油，破冰进行中！✨', meta: metaFb };
+    return attachAIGC({ data: '继续加油，破冰进行中！✨', meta: metaFb });
   }
 }
 
@@ -960,7 +1141,7 @@ export async function generateRecapSummary(params: {
   if (!isRecapLlmEnabled()) {
     const meta = buildFallbackAIMeta('disabled', RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: getDefaultRecap(params), meta };
+    return attachAIGC({ data: getDefaultRecap(params), meta });
   }
 
   const { client, model, provider } = getClientForFunction('generateRecapSummary');
@@ -984,7 +1165,7 @@ export async function generateRecapSummary(params: {
     if (!content) {
       const meta = buildFallbackAIMeta('empty_response', RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return { data: getDefaultRecap(params), meta };
+      return attachAIGC({ data: getDefaultRecap(params), meta });
     }
 
     const parsed = JSON.parse(content);
@@ -994,19 +1175,32 @@ export async function generateRecapSummary(params: {
       const meta = buildLiveAIMeta(provider, RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
       fireAndForgetQualityGate(content, 'icebreaker_recap', aiCorrelationId, 'recap');
-      return { data: parsed, meta };
+      const liveRecap: { headline: string; moments: string[]; closingLine: string } = parsed;
+      return moderateAndAttachAIGC(
+        { data: liveRecap, meta },
+        {
+          provider,
+          model,
+          latencyMs,
+          promptVersion: RECAP_SUMMARY_PROMPT_VERSION,
+          aiCorrelationId,
+          feature: 'generateRecapSummary',
+          fallbackData: getDefaultRecap(params),
+          checks: recapChecks(liveRecap),
+        },
+      );
     }
     const latencyMs = Date.now() - t0;
     logger.warn(`[SocialIcebreakerAI] generateRecapSummary provider=${provider} latency=${latencyMs}ms: invalid response shape, using fallback`);
     const meta = buildFallbackAIMeta('parse_error', RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: getDefaultRecap(params), meta };
+    return attachAIGC({ data: getDefaultRecap(params), meta });
   } catch (error) {
     const latencyMs = Date.now() - t0;
     logger.error(`[SocialIcebreakerAI] generateRecapSummary error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
     const meta = buildFallbackAIMeta('llm_error', RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: getDefaultRecap(params), meta };
+    return attachAIGC({ data: getDefaultRecap(params), meta });
   }
 }
 
@@ -1092,7 +1286,7 @@ export async function generateXiaoyueSessionPack(params: {
       promptVersion: meta.promptVersion,
       errorCode: meta.evaluatorRejectionReason,
     });
-    return { data: FALLBACK_SESSION_PACK, meta };
+    return attachAIGC({ data: FALLBACK_SESSION_PACK, meta });
   }
 
   const { client, model, provider } = getClientForFunction('generateXiaoyueSessionPack');
@@ -1126,7 +1320,7 @@ export async function generateXiaoyueSessionPack(params: {
         promptVersion: meta.promptVersion,
         errorCode: meta.evaluatorRejectionReason,
       });
-      return { data: FALLBACK_SESSION_PACK, meta };
+      return attachAIGC({ data: FALLBACK_SESSION_PACK, meta });
     }
 
     let parsed: unknown;
@@ -1147,7 +1341,7 @@ export async function generateXiaoyueSessionPack(params: {
         promptVersion: meta.promptVersion,
         errorCode: meta.evaluatorRejectionReason,
       });
-      return { data: FALLBACK_SESSION_PACK, meta };
+      return attachAIGC({ data: FALLBACK_SESSION_PACK, meta });
     }
 
     try {
@@ -1166,7 +1360,20 @@ export async function generateXiaoyueSessionPack(params: {
         fromCache: false,
         promptVersion: meta.promptVersion,
       });
-      return { data: validated as XiaoyueSessionPack, meta };
+      const livePack = validated as XiaoyueSessionPack;
+      return moderateAndAttachAIGC(
+        { data: livePack, meta },
+        {
+          provider,
+          model,
+          latencyMs,
+          promptVersion: SESSION_PACK_PROMPT_VERSION,
+          aiCorrelationId,
+          feature: 'generateXiaoyueSessionPack',
+          fallbackData: FALLBACK_SESSION_PACK,
+          checks: xiaoyueSessionPackChecks(livePack),
+        },
+      );
     } catch {
       const meta = buildFallbackAIMeta('parse_error', SESSION_PACK_PROMPT_VERSION, aiCorrelationId);
       logAITrace({
@@ -1182,7 +1389,7 @@ export async function generateXiaoyueSessionPack(params: {
         promptVersion: meta.promptVersion,
         errorCode: meta.evaluatorRejectionReason,
       });
-      return { data: FALLBACK_SESSION_PACK, meta };
+      return attachAIGC({ data: FALLBACK_SESSION_PACK, meta });
     }
   } catch (error) {
     const latencyMs = Date.now() - t0;
@@ -1201,7 +1408,7 @@ export async function generateXiaoyueSessionPack(params: {
       promptVersion: meta.promptVersion,
       errorCode: meta.evaluatorRejectionReason,
     });
-    return { data: FALLBACK_SESSION_PACK, meta };
+    return attachAIGC({ data: FALLBACK_SESSION_PACK, meta });
   }
 }
 
@@ -1233,7 +1440,7 @@ export async function generateQuipBattlePrompts(params: {
   if (!isQuipBattleLlmEnabled()) {
     const meta = buildFallbackAIMeta('disabled', QUIP_BATTLE_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateQuipBattlePrompts', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: fallbackPrompts, meta };
+    return attachAIGC({ data: fallbackPrompts, meta });
   }
 
   const { client, model, provider } = getClientForFunction('generateQuipBattlePrompts');
@@ -1257,7 +1464,7 @@ export async function generateQuipBattlePrompts(params: {
     if (!content) {
       const meta = buildFallbackAIMeta('empty_response', QUIP_BATTLE_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateQuipBattlePrompts', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return { data: fallbackPrompts, meta };
+      return attachAIGC({ data: fallbackPrompts, meta });
     }
 
     let parsed: unknown;
@@ -1268,7 +1475,7 @@ export async function generateQuipBattlePrompts(params: {
       logger.warn(`[SocialIcebreakerAI] generateQuipBattlePrompts provider=${provider} latency=${latencyMs}ms: JSON parse failed, using fallback`);
       const meta = buildFallbackAIMeta('parse_error', QUIP_BATTLE_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateQuipBattlePrompts', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return { data: fallbackPrompts, meta };
+      return attachAIGC({ data: fallbackPrompts, meta });
     }
 
     if (Array.isArray(parsed) && parsed.length >= 3) {
@@ -1277,27 +1484,37 @@ export async function generateQuipBattlePrompts(params: {
       const meta = buildLiveAIMeta(provider, QUIP_BATTLE_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateQuipBattlePrompts', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
       fireAndForgetQualityGate(content, 'icebreaker_warmup', aiCorrelationId, 'quip_battle', params.eventType);
-      return {
-        data: parsed.slice(0, 3).map((p: QuipBattlePrompt, i: number) => ({
-          id: p.id || `qb_${i + 1}`,
-          promptText: p.promptText || fallbackPrompts[i].promptText,
-          category: p.category || fallbackPrompts[i].category,
-        })),
-        meta,
-      };
+      const livePrompts: QuipBattlePrompt[] = parsed.slice(0, 3).map((p: QuipBattlePrompt, i: number) => ({
+        id: p.id || `qb_${i + 1}`,
+        promptText: p.promptText || fallbackPrompts[i].promptText,
+        category: p.category || fallbackPrompts[i].category,
+      }));
+      return moderateAndAttachAIGC(
+        { data: livePrompts, meta },
+        {
+          provider,
+          model,
+          latencyMs,
+          promptVersion: QUIP_BATTLE_PROMPT_VERSION,
+          aiCorrelationId,
+          feature: 'generateQuipBattlePrompts',
+          fallbackData: fallbackPrompts,
+          checks: quipBattlePromptsChecks(livePrompts),
+        },
+      );
     }
 
     const latencyMs = Date.now() - t0;
     logger.warn(`[SocialIcebreakerAI] generateQuipBattlePrompts provider=${provider} latency=${latencyMs}ms: invalid response shape, using fallback`);
     const meta = buildFallbackAIMeta('parse_error', QUIP_BATTLE_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateQuipBattlePrompts', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: fallbackPrompts, meta };
+    return attachAIGC({ data: fallbackPrompts, meta });
   } catch (error) {
     const latencyMs = Date.now() - t0;
     logger.error(`[SocialIcebreakerAI] generateQuipBattlePrompts error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
     const meta = buildFallbackAIMeta('llm_error', QUIP_BATTLE_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateQuipBattlePrompts', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: fallbackPrompts, meta };
+    return attachAIGC({ data: fallbackPrompts, meta });
   }
 }
 
@@ -1323,7 +1540,7 @@ export async function generateUndercoverWordPair(params: {
   if (!isUndercoverWordLlmEnabled()) {
     const meta = buildFallbackAIMeta('disabled', UNDERCOVER_WORD_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateUndercoverWordPair', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: fallback, meta };
+    return attachAIGC({ data: fallback, meta });
   }
 
   const { client, model, provider } = getClientForFunction('generateUndercoverWordPair');
@@ -1354,7 +1571,7 @@ export async function generateUndercoverWordPair(params: {
     if (!content) {
       const meta = buildFallbackAIMeta('empty_response', UNDERCOVER_WORD_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateUndercoverWordPair', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return { data: fallback, meta };
+      return attachAIGC({ data: fallback, meta });
     }
 
     let parsed: unknown;
@@ -1363,7 +1580,7 @@ export async function generateUndercoverWordPair(params: {
     } catch {
       const meta = buildFallbackAIMeta('parse_error', UNDERCOVER_WORD_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateUndercoverWordPair', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return { data: fallback, meta };
+      return attachAIGC({ data: fallback, meta });
     }
 
     const pair = parsed as Record<string, unknown>;
@@ -1371,25 +1588,35 @@ export async function generateUndercoverWordPair(params: {
       const meta = buildLiveAIMeta(provider, UNDERCOVER_WORD_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateUndercoverWordPair', provider, model, latencyMs: Date.now() - t0, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
       fireAndForgetQualityGate(content, 'icebreaker_warmup', aiCorrelationId, 'undercover_word', params.eventType);
-      return {
-        data: {
-          civilianWord: String(pair.civilianWord),
-          undercoverWord: String(pair.undercoverWord),
-          category: String(pair.category),
-        },
-        meta,
+      const livePair: UndercoverWordPair = {
+        civilianWord: String(pair.civilianWord),
+        undercoverWord: String(pair.undercoverWord),
+        category: String(pair.category),
       };
+      return moderateAndAttachAIGC(
+        { data: livePair, meta },
+        {
+          provider,
+          model,
+          latencyMs: Date.now() - t0,
+          promptVersion: meta.promptVersion,
+          aiCorrelationId,
+          feature: 'generateUndercoverWordPair',
+          fallbackData: fallback,
+          checks: undercoverWordPairChecks(livePair),
+        },
+      );
     }
 
     const meta = buildFallbackAIMeta('parse_error', UNDERCOVER_WORD_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateUndercoverWordPair', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: fallback, meta };
+    return attachAIGC({ data: fallback, meta });
   } catch (error) {
     const latencyMs = Date.now() - t0;
     logger.error(`[SocialIcebreakerAI] generateUndercoverWordPair error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
     const meta = buildFallbackAIMeta('llm_error', UNDERCOVER_WORD_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateUndercoverWordPair', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: fallback, meta };
+    return attachAIGC({ data: fallback, meta });
   }
 }
 
@@ -1416,7 +1643,7 @@ export async function generateGroupMirrorQuestions(params: {
   if (!isGroupMirrorLlmEnabled()) {
     const meta = buildFallbackAIMeta('disabled', GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: fallback, meta };
+    return attachAIGC({ data: fallback, meta });
   }
 
   const { client, model, provider } = getClientForFunction('generateGroupMirrorQuestions');
@@ -1439,7 +1666,7 @@ export async function generateGroupMirrorQuestions(params: {
     if (!content) {
       const meta = buildFallbackAIMeta('empty_response', GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return { data: fallback, meta };
+      return attachAIGC({ data: fallback, meta });
     }
 
     let parsed: unknown;
@@ -1448,32 +1675,42 @@ export async function generateGroupMirrorQuestions(params: {
     } catch {
       const meta = buildFallbackAIMeta('parse_error', GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return { data: fallback, meta };
+      return attachAIGC({ data: fallback, meta });
     }
 
     if (Array.isArray(parsed) && parsed.length >= 3) {
       const meta = buildLiveAIMeta(provider, GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider, model, latencyMs: Date.now() - t0, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
       fireAndForgetQualityGate(content, 'icebreaker_warmup', aiCorrelationId, 'group_mirror', params.eventType);
-      return {
-        data: parsed.slice(0, 5).map((q: GroupMirrorQuestion, i: number) => ({
-          id: q.id || `gm_${i + 1}`,
-          questionText: q.questionText || fallback[i]?.questionText || '谁最有趣？',
-          category: q.category || 'perception',
-        })),
-        meta,
-      };
+      const liveQuestions: GroupMirrorQuestion[] = parsed.slice(0, 5).map((q: GroupMirrorQuestion, i: number) => ({
+        id: q.id || `gm_${i + 1}`,
+        questionText: q.questionText || fallback[i]?.questionText || '谁最有趣？',
+        category: q.category || 'perception',
+      }));
+      return moderateAndAttachAIGC(
+        { data: liveQuestions, meta },
+        {
+          provider,
+          model,
+          latencyMs: Date.now() - t0,
+          promptVersion: meta.promptVersion,
+          aiCorrelationId,
+          feature: 'generateGroupMirrorQuestions',
+          fallbackData: fallback,
+          checks: groupMirrorQuestionsChecks(liveQuestions),
+        },
+      );
     }
 
     const meta = buildFallbackAIMeta('parse_error', GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: fallback, meta };
+    return attachAIGC({ data: fallback, meta });
   } catch (error) {
     const latencyMs = Date.now() - t0;
     logger.error(`[SocialIcebreakerAI] generateGroupMirrorQuestions error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
     const meta = buildFallbackAIMeta('llm_error', GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: fallback, meta };
+    return attachAIGC({ data: fallback, meta });
   }
 }
 

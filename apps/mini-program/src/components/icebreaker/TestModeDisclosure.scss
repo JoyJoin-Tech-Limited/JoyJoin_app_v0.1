@@ -5,6 +5,7 @@
   @include flex-center;
   flex-direction: column;
   width: 100%;
+  min-height: 70vh;
   min-height: 70dvh;
   padding: $spacing-lg $container-padding;
   animation: test-mode-fade-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -16,6 +17,7 @@
   &__card {
     @include card-premium;
     @include flex-center;
+    position: relative;
     flex-direction: column;
     gap: $spacing-md;
     width: 100%;
@@ -26,27 +28,61 @@
     border: 2rpx solid rgba($color-primary, 0.12);
   }
 
+  &__close {
+    position: absolute;
+    top: $spacing-sm;
+    right: $spacing-sm;
+    width: 88rpx;
+    height: 88rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-circle;
+    background: rgba($color-text-primary, 0.04);
+    z-index: 2;
+
+    &--pressed {
+      background: rgba($color-text-primary, 0.08);
+    }
+  }
+
+  &__close-icon {
+    font-size: 36rpx;
+    color: $color-text-secondary;
+    line-height: 1;
+  }
+
   &__mascot {
     width: 120rpx;
     height: 120rpx;
     display: block;
     margin-bottom: $spacing-xs;
+    animation: test-mode-mascot-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: 0.12s;
   }
 
-  &__icon {
-    width: 120rpx;
-    height: 120rpx;
-    @include flex-center;
+  &__brand-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: 6rpx $spacing-md;
+    border-radius: $radius-pill;
+    background: rgba($color-secondary, 0.12);
+    border: 1rpx solid rgba($color-secondary, 0.25);
+  }
+
+  &__brand-badge-dot {
+    width: 12rpx;
+    height: 12rpx;
     border-radius: $radius-circle;
-    background: rgba($color-primary, 0.08);
-    margin-bottom: $spacing-xs;
-    border: 2rpx solid rgba($color-primary, 0.12);
+    background: $color-secondary;
+    flex-shrink: 0;
   }
 
-  &__icon-text {
-    font-size: 40rpx;
-    font-weight: $font-weight-bold;
-    color: $color-primary;
+  &__brand-badge-text {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-secondary;
     line-height: 1;
   }
 
@@ -67,6 +103,17 @@
   &__roster {
     width: 100%;
     margin-top: $spacing-xs;
+
+    &--empty {
+      @include flex-center;
+      padding: $spacing-md 0;
+    }
+  }
+
+  &__roster-empty-text {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
   }
 
   &__roster-label {
@@ -121,6 +168,12 @@
     border-radius: $card-radius-sm;
   }
 
+  &__ready-hint {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+  }
+
   &__error-text {
     font-size: $font-size-sm;
     color: $color-error;
@@ -147,8 +200,24 @@
   }
 }
 
+@keyframes test-mode-mascot-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.84) translateY(12rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .test-mode-disclosure {
+    animation: none;
+  }
+
+  .test-mode-disclosure__mascot {
     animation: none;
   }
 }

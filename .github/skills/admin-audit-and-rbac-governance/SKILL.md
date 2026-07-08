@@ -42,6 +42,7 @@ After implementing or changing an admin action, verify the route guard, the audi
 ## Quick examples
 
 - **Add an admin refund route**: apply the correct admin middleware, emit `PAYMENT_REFUND_INITIATED`, and log only safe refund context such as `paymentId` and `reason`.
+- **Add a matching review approve/reject route**: gate behind `requireAdmin` + `requireOperatorOrAbove`, emit `MATCHING_REVIEW_APPROVED` / `MATCHING_REVIEW_REJECTED`, and include only safe context such as `poolId`, `groupCount`, and `reason`.
 - **Add an attendance override button**: keep the route behind the documented admin middleware and emit `ATTENDANCE_OVERRIDE` with the new status, not a full user record dump.
 - **Debug a `403` in admin accounts**: check whether the route requires `requireSuperAdmin` and whether the acting admin is using the expected RBAC session path.
 - **Extend the audit action list**: when a new sensitive action does not fit the current vocabulary, add it to `ADMIN_AUDIT_ACTIONS` rather than hiding it under a vague context bag.

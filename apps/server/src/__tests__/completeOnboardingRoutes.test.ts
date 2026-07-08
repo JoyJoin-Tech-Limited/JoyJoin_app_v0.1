@@ -30,7 +30,7 @@ const baseUser: Pick<User, 'id' | 'hasCompletedPersonalityTest' | 'hasCompletedR
   displayName: 'TestUser',
   gender: 'male',
   currentCity: 'Shenzhen',
-  intent: ['dating'],
+  intent: ['explore'],
   hasCompletedRegistration: false,
   hasCompletedPersonalityTest: false,
   hasCompletedInterestsCarousel: false,
@@ -96,7 +96,7 @@ describe('POST /api/auth/complete-onboarding', () => {
           displayName: 'TestUser',
           gender: 'male',
           currentCity: 'Shenzhen',
-          intent: ['dating'],
+          intent: ['explore'],
         }),
       });
       expect(response.status).toBe(401);
@@ -114,7 +114,7 @@ describe('POST /api/auth/complete-onboarding', () => {
       const response = await fetch(`${baseUrl}/api/auth/complete-onboarding`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', cookie },
-        body: JSON.stringify({ gender: 'male', currentCity: 'Shenzhen', intent: ['dating'] }),
+        body: JSON.stringify({ gender: 'male', currentCity: 'Shenzhen', intent: ['explore'] }),
       });
       expect(response.status).toBe(400);
     });
@@ -129,7 +129,7 @@ describe('POST /api/auth/complete-onboarding', () => {
         body: JSON.stringify({
           displayName: 'TestUser',
           currentCity: 'Shenzhen',
-          intent: ['dating'],
+          intent: ['explore'],
         }),
       });
       expect(response.status).toBe(400);
@@ -145,7 +145,7 @@ describe('POST /api/auth/complete-onboarding', () => {
         body: JSON.stringify({
           displayName: 'TestUser',
           gender: 'male',
-          intent: ['dating'],
+          intent: ['explore'],
         }),
       });
       expect(response.status).toBe(400);
@@ -193,7 +193,7 @@ describe('POST /api/auth/complete-onboarding', () => {
       displayName: 'TestUser',
       gender: 'male',
       currentCity: 'Shenzhen',
-      intent: ['dating'],
+      intent: ['explore'],
       hasCompletedRegistration: true,
       hasCompletedInterestsTopics: true,
     };
@@ -208,7 +208,7 @@ describe('POST /api/auth/complete-onboarding', () => {
           displayName: 'TestUser',
           gender: 'male',
           currentCity: 'Shenzhen',
-          intent: ['dating'],
+          intent: ['explore'],
         }),
       });
       expect(response.status).toBe(200);
@@ -222,7 +222,7 @@ describe('POST /api/auth/complete-onboarding', () => {
       expect(callArg.displayName).toBe('TestUser');
       expect(callArg.gender).toBe('male');
       expect(callArg.currentCity).toBe('Shenzhen');
-      expect(callArg.intent).toEqual(['dating']);
+      expect(callArg.intent).toEqual(['explore']);
       expect(callArg.hasCompletedRegistration).toBe(true);
       expect(callArg.hasCompletedInterestsTopics).toBe(true);
     });
@@ -302,7 +302,7 @@ describe('POST /api/auth/complete-onboarding', () => {
       displayName: 'TestUser',
       gender: 'male',
       currentCity: 'Shenzhen',
-      intent: ['dating'],
+      intent: ['explore'],
       hasCompletedRegistration: true,
       hasCompletedInterestsTopics: true,
       password: 'secret-hash',
@@ -320,7 +320,7 @@ describe('POST /api/auth/complete-onboarding', () => {
           displayName: 'TestUser',
           gender: 'male',
           currentCity: 'Shenzhen',
-          intent: ['dating'],
+          intent: ['explore'],
         }),
       });
 
@@ -367,7 +367,7 @@ describe('POST /api/auth/complete-onboarding', () => {
       displayName: 'Specific',
       gender: 'female',
       currentCity: 'Chengdu',
-      intent: ['dating'],
+      intent: ['explore'],
       hasCompletedRegistration: true,
       hasCompletedInterestsTopics: true,
     };
@@ -382,7 +382,7 @@ describe('POST /api/auth/complete-onboarding', () => {
           displayName: 'Specific',
           gender: 'female',
           currentCity: 'Chengdu',
-          intent: ['dating'],
+          intent: ['explore'],
         }),
       });
 

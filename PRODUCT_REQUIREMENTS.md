@@ -1,7 +1,7 @@
 # JoyJoin (悦聚·Joy) - Product Requirements Document
 
 **Version:** 1.6  
-**Last Updated:** 2026-06-30  
+**Last Updated:** 2026-07-09  
 **Platform:** WeChat Mini Program (Taro) — launch-primary  
 **Reference Surface:** Web (React + Vite) — development sandbox / parity reference only, not shipping  
 **Target Market:** Hong Kong & Shenzhen  
@@ -77,9 +77,19 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-07-01)
+## 🆕 Recent Updates (Last updated: 2026-07-09)
 
 ### 2026 Milestones (June 2026)
+
+**50. Operator Review Gate for Matching** *(2026-07-09)*
+- **Scope:** Server-side matching review gate and admin review queue.
+- **Feature flag:** `matchingOperatorReviewEnabled` (DB-backed, env `MATCHING_OPERATOR_REVIEW_ENABLED`, default `false`). When enabled, `poolMatchingService.ts` holds formed groups in a pending operator-review state instead of immediately revealing matches to users.
+- **User-facing behavior:** No mini-program UI changes; users remain in the normal `MatchingWaitingScreen` while groups are under review. After operator approval, the standard matched/reveal flow proceeds exactly as before.
+- **Admin UI:** New `/admin/matching-reviews` page (`AdminMatchingReviewsPage.tsx`) lists pools with pending/approved/rejected status, shows formed groups and member details, and provides approve/reject dialogs.
+- **Admin endpoints:** `GET /api/admin/matching-reviews/pools`, `GET /api/admin/matching-reviews/pools/:id/groups`, `POST /api/admin/matching-reviews/pools/:id/approve`, `POST /api/admin/matching-reviews/pools/:id/reject`.
+- **Race-safety:** approve/reject use conditional DB updates on `operatorReviewStatus = 'pending'`; concurrent state changes return the current state without duplicate side effects or unsafe cleanup.
+- **Schema:** `event_pools.operatorReviewStatus` and `event_pool_groups.operatorReviewStatus` added (`none | pending | approved | rejected`, default `none`). `eventPoolGroups` gained `eventId` and `blindBoxEventId` columns to link generated events for cleanup on reject.
+- **Tests:** server route tests (`adminMatchingReview.test.ts`) and `poolMatchingService.test.ts` operator-review gate tests.
 
 **49. Event Ticket Payment Success Hero v2** *(2026-07-01)*
 - **Scope:** Mini-program event-ticket payment success state (`apps/mini-program/src/pages/event-ticket-payment/index.tsx` and `components/TicketSuccessView.tsx`).
@@ -131,6 +141,11 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Social Icebreaker tier selector a11y + assets:** Preset/custom cards now use CDN-backed Lovart WebP backgrounds with local bundled fallbacks; added `JoyJoinIcon` checkmarks, CSS chevrons, haptics, and full `aria-label`/`aria-pressed`/`role="button"` coverage. **In-session tier management (2026-07-07):** during `warmup`, the host sees a status chip and can open a `⋯` host menu → "更换模式" to change tier/vibe; changes are host-only, locked to `warmup`, and require a double-confirm `Taro.showModal` when switching between preset and `custom` mode. Analytics: `icebreaker_session_tier_changed`.
 - **Social Icebreaker single-test disclosure gate (2026-07-07):** Single-player test sessions (`state.singleTest.isTestModeSkip === true`) now pause at a `TestModeDisclosure` overlay in `warmup` instead of auto-advancing. The host must explicitly tap **查看总结** to advance to `recap` (or **重试** on failure). Server `processAutoAdvance` skips these sessions so the gate cannot be bypassed.
 - **Misc mini-program hardening:** Center participation hub unblocked, native custom tab bar selection syncs from the current route on `useDidShow`, Discover activity list stability fallback, profile page layout fixes, assessment persistence fixes.
+
+**45. Squad Unboxing + Icebreaker Test Mode Full-Marks Push** 🎯 *(2026-07-08)*
+- **Squad Unboxing:** Fixed inline-detail scroll math so the focused `TeammateCard` never overlaps its detail; added `calc(100vh)` fallback before `100dvh` for the ScrollView container; changed share-poster CTA copy to the non-placeholder "保存这桌记忆". Completeness audit now 44/44.
+- **Icebreaker Test Mode UI:** `TestModeDisclosure` is now dismissible via an 88rpx close button; `min-height` has `vh` fallback before `dvh`; added empty-roster fallback, Xiaoyue mascot pop-in animation, and a warm "ready" hint ("悦仔和 N 位伙伴已就位，准备好开始了吗？") when bot simulation is enabled. Warmup phase shows a persistent test-mode badge. Completeness audit now 44/44.
+- **Server-side bot simulation:** Added deterministic, seeded, LLM-free `apps/server/src/services/socialIcebreakerBotService.ts` that simulates bot actions across all multiplayer phases (`warmup`, `micro_challenge`, `lie_detective`, `auction`, `personality_dice`, `quip_battle`, `undercover_word`, `group_mirror`, `speed_friending`, `mini_script`). Wired into all relevant route handlers via `runBotSimulationSafely()` and fail-closed behind `isSingleTestMode() && isSocialIcebreakerTestMode() && state.singleTest.runBots === true`. Added `runBots` propagation/logging in `singleTestService.ts` and regression tests (`socialIcebreakerBotService.test.ts`, `singleTestMetaRunBots.test.ts`, `socialIcebreakerClientState.test.ts`).
 
 **40. Interest-Heat Picker Full-Marks Push** 🎯 *(2026-06-15)*
 - **Scope:** Mini-program onboarding step 4 (`pages/onboarding/extended-data/index`) — interest selection and heat signaling.
@@ -461,15 +476,15 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ## 🎯 Executive Summary
 
-JoyJoin is an AI-powered social networking platform that connects individuals locally through small, curated micro-events (4-6 attendees per group). The platform uses sophisticated personality-based matching algorithms to create meaningful connections while emphasizing psychological safety and inclusivity.
+JoyJoin is an interest-first light social platform (兴趣活动驱动的轻社交) that brings people together through small, curated offline activity groups (4-6 attendees per group). Activities are the primary container; natural connection is the valued outcome. The platform emphasizes psychological safety, inclusivity, and real-world shared experiences.
 
 ### Key Value Propositions
 
-- **AI-Driven Matching:** 12 personality archetypes (V4 animal system) with 7-dimensional pool compatibility scoring
-- **Micro-Event Format:** Small group sizes (4-6 people) for meaningful interactions
+- **Activity-First Groups:** Small, curated offline activity groups where shared interests lower the pressure of meeting new people
+- **Personality-Aware Grouping:** 12 personality archetypes (V4 animal system) help shape group chemistry and in-event facilitation
 - **Blind Box Experience:** Gamified event discovery with surprise reveals
 - **In-Event Social Experience:** Social Icebreaker multi-phase group facilitation (话题卡 → 挑战 → 侦探 → 回顾) as the core in-event engagement tool
-- **Data-Driven Insights:** Comprehensive feedback system to refine matching algorithms
+- **Data-Driven Insights:** Comprehensive feedback system to refine group composition and event quality
 - **权益 (Membership Benefits) System:** ¥98/month or ¥294/3-month 权益方案 with WeChat Pay integration (user-facing copy must use `权益`, not `会员`)
 
 ---
@@ -477,7 +492,12 @@ JoyJoin is an AI-powered social networking platform that connects individuals lo
 ## 🌟 Product Vision
 
 ### Mission Statement
-Foster meaningful local connections through AI-powered matching that understands personality, interests, and social compatibility.
+
+Create joyful, low-pressure offline activity groups where shared interests naturally lead to real human connection.
+
+### Product Positioning
+
+JoyJoin is **兴趣活动驱动的轻社交** — not a pure signup tool, not a romance-seeking app. Activities are the primary container; natural connection is the valued outcome.
 
 ### Target Users
 
@@ -983,6 +1003,8 @@ A shared `MatchingStateLayout` abstraction provides a canonical dark-background,
 | `MatchRevealSequenceV2` | Match formed — active cinematic reveal orchestrator |
 | `SurpriseMatchReveal` | Legacy rarity-first reveal overlay preserved in the repo but superseded in the active flow |
 | `MatchPointsDisplay` | Post-reveal match score breakdown |
+
+> **Operator review mode:** When `matchingOperatorReviewEnabled` is enabled, formed groups are held in a pending operator-review state before users are notified. The mini-program continues to show the normal `MatchingWaitingScreen` during this period; once an operator approves, the standard reveal/matched flow proceeds unchanged.
 
 ##### Unified Connection Reveal *(Mini-Program, 2026-04-29)*
 
@@ -1528,8 +1550,8 @@ Examples:
 
 **Trigger:** After basic feedback submission
 ```
-Prompt: "愿意花2分钟帮助我们优化匹配算法吗？
-        您的反馈将匿名处理，用于改进未来的匹配质量。"
+Prompt: "愿意花2分钟帮助我们优化活动分组体验吗？
+        您的反馈将匿名处理，用于改进未来的活动匹配质量。"
 ```
 
 **Deep Feedback Questions:**
@@ -1564,10 +1586,10 @@ Prompt: "愿意花2分钟帮助我们优化匹配算法吗？
    - 其他 (请说明)
    ```
 
-4. **算法建议 (Algorithm Suggestions)**
+4. **分组建议 (Group Suggestions)**
    ```
    Free text:
-   "对我们的匹配算法有什么建议？"
+   "对我们的活动分组有什么建议？"
    ```
 
 **Data Storage:**
@@ -1669,7 +1691,7 @@ Options:
   - 寻找兴趣伙伴 (Find hobby partners)
   - 行业交流 (Professional networking)
   - 探索城市生活 (Explore city life)
-  - 脱单交友 (Dating - not primary focus)
+  - 尝鲜体验 (Try something new — activity-first)
 ```
 
 #### Privacy Settings
@@ -2605,6 +2627,27 @@ Insights:
   - "探索者 + 挑战者 pairings consistently score 4.5+ atmosphere"
   - "Increasing background weight from 15% → 20% improved connection depth by 12%"
 ```
+
+#### 2.7.6 Matching Review Queue
+
+**File:** `apps/admin-client/src/pages/admin/AdminMatchingReviewsPage.tsx`
+
+**Purpose:** Allow operators (and super_admins) to review and approve or reject algorithmically formed match groups before users are revealed as matched.
+
+**Workflow:**
+1. When `matchingOperatorReviewEnabled` is `true`, `poolMatchingService.ts` marks formed groups and the pool as `operatorReviewStatus = 'pending'`.
+2. Operators open `/admin/matching-reviews` and see pools with pending/approved/rejected groups.
+3. Selecting a pool shows each group, its members, and key group scores.
+4. Operator chooses **Approve** or **Reject**.
+   - Approve: runs `executePostMatchCommitSideEffects`, creates events/blind-box events, assigns venues, and transitions users to the normal matched flow.
+   - Reject: deletes generated events/attendance/blind-box events and leaves the pool ready for a future match run.
+5. Race-safety: conditional DB updates require the pool/groups to still be `pending`; concurrent state changes return the current state without duplicating side effects.
+
+**API endpoints:**
+- `GET /api/admin/matching-reviews/pools` — list pools with operator-review status
+- `GET /api/admin/matching-reviews/pools/:id/groups` — list groups and members for a pool
+- `POST /api/admin/matching-reviews/pools/:id/approve` — approve pending groups
+- `POST /api/admin/matching-reviews/pools/:id/reject` — reject pending groups
 
 ---
 
@@ -3685,6 +3728,10 @@ For full details: `apps/server/src/README.md` and `docs/architecture/current-sta
 - `PUT /api/admin/matching-thresholds/:poolId` - Update thresholds
 - `POST /api/admin/trigger-matching/:poolId` - Manually trigger matching
 - `GET /api/admin/matching-logs` - Get matching decision history
+- `GET /api/admin/matching-reviews/pools` - List pools in operator-review state
+- `GET /api/admin/matching-reviews/pools/:id/groups` - List groups and members for a pool
+- `POST /api/admin/matching-reviews/pools/:id/approve` - Approve pending formed groups
+- `POST /api/admin/matching-reviews/pools/:id/reject` - Reject pending formed groups
 
 **Route architecture:** `apps/server/src/routes.ts` is the composition root that mounts domain routers from `apps/server/src/routes/domains/` (auth, onboarding, assessment, analytics, admin, payments, icebreaker). See `apps/server/src/README.md` for the active domain ownership map.
 
@@ -3858,6 +3905,11 @@ CREATE TABLE event_pool_groups (
   energy_balance INTEGER,       -- Communication balance score (0-100) — formerly energy balance
   temperature_level VARCHAR,    -- Visual indicator: "fire", "warm", "mild", "cold"
 
+  -- operator-review gate (added 2026-07-09)
+  operator_review_status VARCHAR DEFAULT 'none', -- none | pending | approved | rejected
+  event_id VARCHAR,              -- linked event (for cleanup on reject)
+  blind_box_event_id VARCHAR,    -- linked blind_box_event (for cleanup on reject)
+
   created_at TIMESTAMP DEFAULT NOW()
 );
 ```
@@ -3896,6 +3948,7 @@ CREATE TABLE event_pool_groups (
 | **Matching-State UI** | ✅ Complete | `components/matching/` | 7-screen family: waiting, no-match, join-error, test-incomplete, extended-data-empty, reveal, points |
 | **Center-Tab Empty State** | ✅ Complete | `CenterTabEmptyStatePage.tsx` | No-activity users via center nav tab |
 | **Match Scoring** | ✅ Complete | `apps/server/src/poolMatchingService.ts` | 6-dimensional pair + group scoring; interest signals excluded from deterministic scoring |
+| **Matching Operator Review** | ✅ Complete | `apps/server/src/routes/domains/adminMatchingReview.ts`, `apps/admin-client/src/pages/admin/AdminMatchingReviewsPage.tsx` | Feature-flagged operator-review gate; no user-facing UI change |
 | **Payment Integration** | ✅ Complete | `apps/server/src/paymentService.ts`, `routes/domains/payments.ts` | WeChat Pay v3 signed, verified webhook, kill switch |
 | **Subscription Management** | ✅ Complete | `subscriptionService.ts` | Auto-expiry |
 | **Chat System** | ✅ Complete | `EventChatDetailPage.tsx`, WebSocket | Real-time |

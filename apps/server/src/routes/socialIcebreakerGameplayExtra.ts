@@ -48,6 +48,7 @@ import { requireAuthenticatedUserId } from '../lib/requestAuth';
 import { momentCardLimiter } from '../rateLimiter';
 import { shouldSkipOnDemandGeneration } from '../jobs/preGenerationQueue';
 import { recordVoteOptimistically } from '../lib/optimisticSync';
+import { runBotSimulationSafely } from '../services/socialIcebreakerBotService';
 import {
   sanitizeStateForClient,
   buildClientState,
@@ -279,6 +280,10 @@ router.post('/:socialSessionId/undercover-word/generate', async (req: any, res) 
     state.undercoverWordResults = undefined;
     await updateSession(socialSessionId, state);
 
+    // Bots submit descriptions for the first round.
+    await runBotSimulationSafely(socialSessionId, state, 'undercover-word-generate');
+    await updateSession(socialSessionId, state);
+
     return res.json({ pair: result.data, undercoverAssigned: !!undercoverUserId });
   } catch (error) {
     logger.error('[SocialIcebreaker] generateUndercoverWordPair error:', { error: String(error) });
@@ -296,6 +301,8 @@ router.post('/:socialSessionId/undercover-word/describe', async (req: any, res) 
 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
+
+  await runBotSimulationSafely(socialSessionId, state, 'undercover-word-describe');
 
   if (operationId) {
     const result = await recordVoteOptimistically(
@@ -375,6 +382,8 @@ router.post('/:socialSessionId/undercover-word/vote', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
+  await runBotSimulationSafely(socialSessionId, state, 'undercover-word-vote');
+
   if (operationId) {
     const result = await recordVoteOptimistically(
       {
@@ -448,6 +457,8 @@ router.post('/:socialSessionId/undercover-word/reveal', async (req: any, res) =>
 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
+
+  await runBotSimulationSafely(socialSessionId, state, 'undercover-word-reveal');
 
   if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only host can reveal' });
@@ -597,6 +608,10 @@ router.post('/:socialSessionId/group-mirror/generate', async (req: any, res) => 
     state.groupMirrorResults = undefined;
     await updateSession(socialSessionId, state);
 
+    // Bots submit their group mirror answers.
+    await runBotSimulationSafely(socialSessionId, state, 'group-mirror-generate');
+    await updateSession(socialSessionId, state);
+
     return res.json({ questions: result.data, meta: result.meta });
   } catch (error) {
     logger.error('[SocialIcebreaker] generateGroupMirrorQuestions error:', { error: String(error) });
@@ -614,6 +629,8 @@ router.post('/:socialSessionId/group-mirror/submit', async (req: any, res) => {
 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
+
+  await runBotSimulationSafely(socialSessionId, state, 'group-mirror-submit');
 
   if (state.currentPhase !== 'group_mirror') {
     return res.status(400).json({ error: 'Not in group_mirror phase' });
@@ -724,6 +741,8 @@ router.post('/:socialSessionId/group-mirror/reveal', async (req: any, res) => {
 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
+
+  await runBotSimulationSafely(socialSessionId, state, 'group-mirror-reveal');
 
   if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only host can reveal' });

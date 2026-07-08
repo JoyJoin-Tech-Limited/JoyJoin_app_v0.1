@@ -22,7 +22,7 @@ const DISTRICTS: Record<string, string[]> = {
 };
 const GENDERS = ["女性", "男性", "不透露"];
 const EVENT_TYPES = ["饭局", "咖啡", "桌游", "户外", "艺术", "运动", "KTV", "品酒"];
-const INTENTS = ["networking", "friends", "discussion", "fun", "romance", "flexible"];
+const INTENTS = ["networking", "friends", "discussion", "fun", "explore", "flexible"];
 
 const COMMON_PASSWORD = "test123456";
 

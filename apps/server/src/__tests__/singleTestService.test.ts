@@ -1,12 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  pickDiverseBots,
-  getSingleTestBotRosterForClient,
-  getSingleTestMetaForSessionStart,
-} from "../services/singleTestService";
+import * as singleTestService from "../services/singleTestService";
 import { isSingleTestMode } from "../lib/isSingleTestMode";
+import { isSocialIcebreakerTestMode } from "../lib/isSocialIcebreakerTestMode";
 
 vi.mock("../lib/isSingleTestMode");
+vi.mock("../lib/isSocialIcebreakerTestMode");
 
 function makeVirtualUser(id: string, primaryArchetype: string, archetype?: string) {
   return {
@@ -35,8 +33,8 @@ describe("pickDiverseBots", () => {
     ];
 
     const groupId = "test-group-123";
-    const run1 = pickDiverseBots(users, groupId);
-    const run2 = pickDiverseBots(users, groupId);
+    const run1 = singleTestService.pickDiverseBots(users, groupId);
+    const run2 = singleTestService.pickDiverseBots(users, groupId);
 
     expect(run1).toHaveLength(5);
     expect(run2).toHaveLength(5);
@@ -55,7 +53,7 @@ describe("pickDiverseBots", () => {
       makeVirtualUser("u5", "rooster", "小太阳鸡"),
     ];
 
-    const result = pickDiverseBots(users, "small-pool-group");
+    const result = singleTestService.pickDiverseBots(users, "small-pool-group");
     expect(result).toHaveLength(5);
   });
 });
@@ -78,7 +76,7 @@ describe("getSingleTestBotRosterForClient", () => {
   });
 
   it("returns null when not in single-test mode", async () => {
-    const result = await getSingleTestBotRosterForClient("any-group");
+    const result = await singleTestService.getSingleTestBotRosterForClient("any-group");
     expect(result).toBeNull();
   });
 });
@@ -101,7 +99,7 @@ describe("getSingleTestMetaForSessionStart", () => {
   });
 
   it("returns null when not in single-test mode", async () => {
-    const result = await getSingleTestMetaForSessionStart("any-group");
+    const result = await singleTestService.getSingleTestMetaForSessionStart("any-group");
     expect(result).toBeNull();
   });
 });

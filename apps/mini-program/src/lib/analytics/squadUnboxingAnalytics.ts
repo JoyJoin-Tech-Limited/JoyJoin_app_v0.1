@@ -17,6 +17,7 @@ export type SquadUnboxingEventType =
   | 'squad_unboxing_connection_story_expand'
   | 'squad_unboxing_connection_story_collapse'
   | 'squad_unboxing_tonights_table_view'
+  | 'squad_unboxing_analysis_retry_tap'
   | 'match_reveal_prelude_started'
   | 'match_reveal_prelude_completed'
   | 'match_reveal_prelude_skipped'

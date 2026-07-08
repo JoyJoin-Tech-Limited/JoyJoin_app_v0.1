@@ -23,6 +23,8 @@ import {
   type ProfileTaglineResponse,
 } from '@shared/ai/onboarding';
 import { logAITrace } from './lib/aiTraceLogger';
+import { moderateGeneratedContent } from './lib/aiContentModeration';
+import { buildAIGCMeta } from '@shared/types/aiMeta';
 import { XIAOYUE_CRAFT_LITE } from './prompts/craft';
 import { INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION } from '@shared/constants';
 import { MACRO_CATEGORY_LABELS } from '@shared/interests';
@@ -141,7 +143,10 @@ export async function generateProfileTagline(
     });
     return {
       insightLine: getFallbackLine(archetype),
-      meta,
+      meta: {
+        ...meta,
+        aigc: buildAIGCMeta({ fallbackUsed: true, labelType: 'ai-generated' }),
+      },
     };
   }
 
@@ -191,10 +196,13 @@ ${XIAOYUE_CRAFT_LITE}
         promptVersion: meta.promptVersion,
         errorCode: meta.evaluatorRejectionReason,
       });
-      return {
-        insightLine: getFallbackLine(archetype),
-        meta,
-      };
+    return {
+      insightLine: getFallbackLine(archetype),
+      meta: {
+        ...meta,
+        aigc: buildAIGCMeta({ fallbackUsed: true, labelType: 'ai-generated' }),
+      },
+    };
     }
 
     const meta = buildLiveAIMeta(result.provider, PROMPT_VERSION);
@@ -208,9 +216,35 @@ ${XIAOYUE_CRAFT_LITE}
       fromCache: meta.fromCache,
       promptVersion: meta.promptVersion,
     });
+
+    const moderation = moderateGeneratedContent(
+      [{ field: 'insightLine', text: raw }],
+      {
+        domain: 'onboarding',
+        feature: 'generateProfileTagline',
+        provider: meta.provider,
+        model: result.model,
+        latencyMs: result.latencyMs,
+        promptVersion: meta.promptVersion,
+      },
+    );
+    if (!moderation.safe) {
+      return {
+        insightLine: getFallbackLine(archetype),
+        meta: {
+          ...meta,
+          fallbackUsed: true,
+          aigc: buildAIGCMeta({ fallbackUsed: true, labelType: 'ai-generated' }),
+        },
+      };
+    }
+
     return {
       insightLine: raw,
-      meta,
+      meta: {
+        ...meta,
+        aigc: buildAIGCMeta({ fallbackUsed: meta.fallbackUsed, labelType: 'ai-generated' }),
+      },
     };
   } catch (err) {
     logger.error('LLM call failed, using fallback', { feature: 'profileTagline', error: err instanceof Error ? err.message : String(err) });
@@ -228,7 +262,10 @@ ${XIAOYUE_CRAFT_LITE}
     });
     return {
       insightLine: getFallbackLine(archetype),
-      meta,
+      meta: {
+        ...meta,
+        aigc: buildAIGCMeta({ fallbackUsed: true, labelType: 'ai-generated' }),
+      },
     };
   }
 }

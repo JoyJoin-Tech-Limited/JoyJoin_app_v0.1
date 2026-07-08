@@ -130,6 +130,19 @@ Reference for which admin portal pages map to which API endpoints and which role
 
 ---
 
+## Matching Reviews
+
+| Admin Page | Action | Method | Endpoint | Required Middleware |
+|------------|--------|--------|----------|---------------------|
+| `/admin/matching-reviews` | List review pools | GET | `/api/admin/matching-reviews/pools` | `requireAdmin` |
+| `/admin/matching-reviews` | List pool groups | GET | `/api/admin/matching-reviews/pools/:id/groups` | `requireAdmin` |
+| `/admin/matching-reviews` | Approve formed groups | POST | `/api/admin/matching-reviews/pools/:id/approve` | `requireAdmin` + `requireOperatorOrAbove` |
+| `/admin/matching-reviews` | Reject formed groups | POST | `/api/admin/matching-reviews/pools/:id/reject` | `requireAdmin` + `requireOperatorOrAbove` |
+
+> Approve/reject are operational writes and require operator or above. Both endpoints log to `admin_audit_logs` with action `MATCHING_REVIEW_APPROVED` or `MATCHING_REVIEW_REJECTED`.
+
+---
+
 ## Analytics & Matching Lab
 
 | Admin Page | Action | Method | Endpoint | Required Middleware |

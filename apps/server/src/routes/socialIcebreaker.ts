@@ -107,6 +107,7 @@ import { enqueueRunPlanPreGeneration, shouldSkipOnDemandGeneration } from '../jo
 import { recordVoteOptimistically } from '../lib/optimisticSync';
 import { resetSocialIcebreakerTier } from '../services/socialIcebreakerTierReset';
 import { getSingleTestMetaForSessionStart } from '../services/singleTestService';
+import { runBotSimulationSafely } from '../services/socialIcebreakerBotService';
 
 import socialIcebreakerTierRouter from './socialIcebreakerTier';
 import socialIcebreakerCustomRouter from './socialIcebreakerCustom';
@@ -626,6 +627,10 @@ router.post('/:socialSessionId/warmup/ready', async (req: any, res) => {
   }
 
   state.warmupReadyUserIds = [...readyUserIds];
+
+  // In single-test bot sessions, bots are always ready alongside the real user.
+  await runBotSimulationSafely(socialSessionId, state, 'warmup-ready');
+
   await updateSession(socialSessionId, state);
 
   return res.json({

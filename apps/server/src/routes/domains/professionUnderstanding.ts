@@ -10,6 +10,9 @@ import { classifyIndustryUnified, classifyIndustry } from "../../inference/indus
 import type { IndustryClassificationResult } from "../../inference/industryClassifier";
 import { archetypeRegistry } from "@shared/personality";
 import { XIAOYUE_CRAFT_PRINCIPLES } from "../../prompts/craft";
+import { buildAIGCMeta, buildFallbackAIMeta, buildLiveAIMeta, type AIResponseMeta } from "@shared/types/aiMeta";
+import { moderateGeneratedContent } from "../../lib/aiContentModeration";
+import type { AIProvider } from "@shared/types/aiMeta";
 
 const AI_TIMEOUT_MS = 6000;
 const REACTION_TIMEOUT_MS = 4000;
@@ -113,6 +116,8 @@ interface UnderstandProfessionResponse {
     primaryArchetype: string | null;
     traits: string[];
   };
+  /** Standard AI observability metadata with AIGC compliance flags. */
+  meta: AIResponseMeta;
 }
 
 /**
@@ -516,6 +521,10 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
           },
           source: "fallback",
           confidence: 0,
+          meta: {
+            ...buildFallbackAIMeta('invalid_input', REACTION_PROMPT_VERSION),
+            aigc: buildAIGCMeta({ fallbackUsed: true, labelType: 'ai-assisted' }),
+          },
         } satisfies UnderstandProfessionResponse);
       }
 
@@ -570,6 +579,8 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
 
       let reaction: string;
       let displayTags: string[];
+      let reactionFallbackUsed = false;
+      let reactionProvider: AIProvider = 'deepseek';
       if (classificationTimedOut || reactionBudgetMs <= 2000) {
         logger.info("[understand-profession] Skipping AI reaction due to budget", {
           classificationTimedOut,
@@ -578,6 +589,8 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
         });
         reaction = buildFallbackReaction(description, classification, archetypeContext.traits);
         displayTags = buildFallbackTags(classification, archetypeContext.traits);
+        reactionFallbackUsed = true;
+        reactionProvider = null;
       } else {
         const reactionAbort = new AbortController();
         try {
@@ -597,6 +610,8 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
           });
           reaction = buildFallbackReaction(description, classification, archetypeContext.traits);
           displayTags = buildFallbackTags(classification, archetypeContext.traits);
+          reactionFallbackUsed = true;
+          reactionProvider = null;
         }
       }
 
@@ -608,9 +623,36 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
         archetypeContext
       );
 
+      // Post-generation content safety moderation on AI-generated reaction and hint.
+      const moderation = moderateGeneratedContent(
+        [
+          { field: 'reaction', text: reaction },
+          { field: 'reactionHint', text: reactionHint },
+        ],
+        {
+          domain: 'profession_understanding',
+          feature: 'understandProfession',
+          provider: reactionProvider,
+          latencyMs: Date.now() - startTime,
+          promptVersion: REACTION_PROMPT_VERSION,
+        }
+      );
+
+      if (!moderation.safe) {
+        logger.warn('[understand-profession] Content safety moderation failed, using fallback reaction', {
+          field: moderation.field,
+        });
+        reaction = buildFallbackReaction(description, classification, archetypeContext.traits);
+        displayTags = buildFallbackTags(classification, archetypeContext.traits);
+        reactionFallbackUsed = true;
+        reactionProvider = null;
+      }
+
+      const finalHint = (!moderation.safe || reactionFallbackUsed) ? '' : reactionHint;
+
       const response: UnderstandProfessionResponse = {
         reaction,
-        reactionHint,
+        reactionHint: finalHint,
         displayTags,
         classification: {
           category: classification.category
@@ -626,6 +668,19 @@ export function registerProfessionUnderstandingRoutes(app: Express): void {
         },
         source,
         confidence: classification.confidence,
+        archetypeContext: {
+          primaryArchetype: archetypeContext.primaryArchetype,
+          traits: archetypeContext.traits,
+        },
+        meta: reactionFallbackUsed
+          ? {
+              ...buildFallbackAIMeta('content_safety_or_budget', REACTION_PROMPT_VERSION),
+              aigc: buildAIGCMeta({ fallbackUsed: true, labelType: 'ai-assisted' }),
+            }
+          : {
+              ...buildLiveAIMeta('deepseek', REACTION_PROMPT_VERSION),
+              aigc: buildAIGCMeta({ fallbackUsed: false, labelType: 'ai-assisted' }),
+            },
       };
 
       logger.info("[understand-profession] Classification complete", {

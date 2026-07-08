@@ -17,6 +17,9 @@ import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import AIGCLabel from '../../components/ai-content/AIGCLabel'
+import AIContentReportButton from '../../components/ai-content/AIContentReportButton'
+import { useAIGCLabelsEnabled } from '../../hooks/useAIGCLabelsEnabled'
 import ChemistryBadge from '../../components/mascot/ChemistryBadge'
 import UnifiedRevealCard from './UnifiedRevealCard'
 import AbstractPuzzleTable from './components/AbstractPuzzleTable'
@@ -166,6 +169,8 @@ interface MatchingStatusDetailSectionsProps {
   viewerArchetype?: string | null
   /** WP4: optional; when set, dev/beta may show cache vs fresh for group analysis */
   groupAnalysisDebugMeta?: Pick<GroupAnalysisResponse, 'fromCache' | 'generatedAt'> | null
+  groupAnalysis?: GroupAnalysisResponse | null
+  relatedEventId?: string
 }
 
 export function MatchingStatusDetailSections({
@@ -180,7 +185,10 @@ export function MatchingStatusDetailSections({
   persistedThemeSummary,
   viewerArchetype,
   groupAnalysisDebugMeta,
+  groupAnalysis,
+  relatedEventId,
 }: MatchingStatusDetailSectionsProps) {
+  const aigcLabelsEnabled = useAIGCLabelsEnabled()
   return (
     <>
       {showMatchedDetails && effectiveGroupDetails?.members.length ? (
@@ -232,6 +240,8 @@ export function MatchingStatusDetailSections({
             leadIceBreaker={leadIceBreaker}
             introAngle={viewerSpotlight?.pair.introAngle ?? null}
             groupAnalysisDebugMeta={groupAnalysisDebugMeta ?? undefined}
+            aigcMeta={groupAnalysis?.meta?.aigc}
+            relatedEventId={relatedEventId}
           />
         </Card>
       ) : null}
@@ -243,6 +253,7 @@ export function MatchingStatusDetailSections({
               <JoyJoinIcon emoji={persistedThemeSummary.emoji} size={32} className='matching-status__theme-emoji' />
             ) : null}
             <Text className='matching-status__theme-title'>{persistedThemeSummary.title}</Text>
+            <AIGCLabel meta={{ aiGenerated: true, labelType: 'ai-generated' }} />
           </View>
 
           {persistedThemeSummary.subtitle ? (
@@ -268,6 +279,13 @@ export function MatchingStatusDetailSections({
               ))}
             </View>
           ) : null}
+
+          {aigcLabelsEnabled ? (
+            <AIContentReportButton
+              options={{ reason: '举报桌面主题内容', relatedEventId }}
+              className='matching-status__theme-report-button'
+            />
+          ) : null}
         </Card>
       ) : null}
     </>
@@ -289,6 +307,7 @@ interface MatchingStatusLiveOverlayProps {
   persistedThemeSummary: ThemeSummary | null
   resolvedGroupId: string
   liveRevealError: string | null
+  relatedEventId?: string
   onStartSquadUnboxing: () => void
   onContinueFromMembers: () => void
   onFinishLiveJourney: () => void
@@ -311,12 +330,15 @@ export function MatchingStatusLiveOverlay({
   persistedThemeSummary,
   resolvedGroupId,
   liveRevealError,
+  relatedEventId,
   onStartSquadUnboxing,
   onContinueFromMembers,
   onFinishLiveJourney,
   onRetryLiveReveal,
   onDismissLiveReveal,
 }: MatchingStatusLiveOverlayProps) {
+  const aigcLabelsEnabled = useAIGCLabelsEnabled()
+
   if (liveStage === 'idle') {
     return null
   }
@@ -508,6 +530,7 @@ export function MatchingStatusLiveOverlay({
           {persistedThemeSummary.emoji ? (
             <JoyJoinIcon emoji={persistedThemeSummary.emoji} size={32} className='matching-status__overlay-emoji' />
           ) : null}
+          <AIGCLabel meta={{ aiGenerated: true, labelType: 'ai-generated' }} className='matching-status__overlay-aigc-label' />
           <Text className='matching-status__overlay-title'>{persistedThemeSummary.title}</Text>
           {persistedThemeSummary.subtitle ? (
             <Text className='matching-status__overlay-copy'>{persistedThemeSummary.subtitle}</Text>
@@ -525,6 +548,12 @@ export function MatchingStatusLiveOverlay({
                 </Text>
               ))}
             </View>
+          ) : null}
+          {aigcLabelsEnabled ? (
+            <AIContentReportButton
+              options={{ reason: '举报桌面主题内容', relatedEventId }}
+              className='matching-status__overlay-report-button'
+            />
           ) : null}
           <Text className='matching-status__overlay-next-step'>
             主题已经落定，下一页继续看完整时间、地点和这桌的出席安排。

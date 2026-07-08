@@ -13,9 +13,13 @@ import { extractJsonPayloadForParse } from './ai/extractLlmJson';
 import { getClientForFunction } from './ai/socialModelRouter';
 import { createAiCorrelationId, logAITrace } from './lib/aiTraceLogger';
 import {
+  buildAIGCMeta,
   buildFallbackAIMeta,
   buildLiveAIMeta,
+  type AIResponseMeta,
+  type AIProvider,
 } from '@shared/types/aiMeta';
+import { moderateGeneratedContent, toModerationChecksFromArray, type ModerationCheck } from './lib/aiContentModeration';
 import { buildArchetypeContext } from './lib/contextInjector';
 import { logger } from './lib/logger';
 import { fireAndForgetQualityGate, type AIServiceResult } from './socialIcebreakerAICore';
@@ -35,6 +39,76 @@ function getDominantTrait(traitScores?: Record<string, number>): DominantTrait {
     }
   }
   return best;
+}
+
+function personalityDiceChallengeChecks(c: PersonalityDiceChallenge): ModerationCheck[] {
+  return [
+    { field: 'challengeTitle', text: c.challengeTitle },
+    { field: 'challengeBody', text: c.challengeBody },
+    { field: 'passLine', text: c.passLine },
+    { field: 'passConsequence', text: c.passConsequence },
+  ];
+}
+
+function personalityDiceChallengesChecks(challenges: PersonalityDiceChallenge[]): ModerationCheck[] {
+  return challenges.flatMap((c, i) =>
+    personalityDiceChallengeChecks(c).map((check) => ({ ...check, field: `[${i}].${check.field}` })),
+  );
+}
+
+function personalityDiceChallengeGroupsChecks(groups: PersonalityDiceChallengeGroup[]): ModerationCheck[] {
+  return groups.flatMap((g, gi) =>
+    g.options.flatMap((option, oi) =>
+      personalityDiceChallengeChecks(option).map((check) => ({
+        ...check,
+        field: `[${gi}].options[${oi}].${check.field}`,
+      })),
+    ),
+  );
+}
+
+function attachAIGC<T>(result: AIServiceResult<T>): AIServiceResult<T> {
+  return {
+    data: result.data,
+    meta: {
+      ...result.meta,
+      aigc: buildAIGCMeta({ fallbackUsed: result.meta.fallbackUsed, labelType: 'ai-generated' }),
+    },
+  };
+}
+
+function moderateAndAttachAIGC<T>(
+  result: AIServiceResult<T>,
+  options: {
+    provider: AIProvider | null;
+    model?: string;
+    latencyMs: number;
+    promptVersion: string;
+    aiCorrelationId: string;
+    feature: string;
+    fallbackData: T;
+    checks: ModerationCheck[];
+  },
+): AIServiceResult<T> {
+  if (result.meta.fallbackUsed) {
+    return attachAIGC(result);
+  }
+  const moderation = moderateGeneratedContent(options.checks, {
+    domain: 'icebreaker',
+    feature: options.feature,
+    provider: options.provider,
+    model: options.model,
+    latencyMs: options.latencyMs,
+    promptVersion: options.promptVersion,
+    traceId: options.aiCorrelationId,
+  });
+  if (!moderation.safe) {
+    return attachAIGC({
+      data: options.fallbackData,
+      meta: buildFallbackAIMeta('content_safety', options.promptVersion, options.aiCorrelationId),
+    });
+  }
+  return attachAIGC(result);
 }
 
 /** Build archetype-specific fallback using the v2 curated dare bank. */
@@ -87,7 +161,7 @@ export async function generatePersonalityDiceChallenges(params: {
   if (!isPersonalityDiceLlmEnabled()) {
     const meta = buildFallbackAIMeta('disabled', PERSONALITY_DICE_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generatePersonalityDiceChallenges', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: fallbacks, meta };
+    return attachAIGC({ data: fallbacks, meta });
   }
 
   const { client, model, provider } = getClientForFunction('generatePersonalityDiceChallenges');
@@ -112,7 +186,7 @@ export async function generatePersonalityDiceChallenges(params: {
     if (!content) {
       const meta = buildFallbackAIMeta('empty_response', PERSONALITY_DICE_PROMPT_VERSION);
       logAITrace({ domain: 'icebreaker', feature: 'generatePersonalityDiceChallenges', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return { data: fallbacks, meta };
+      return attachAIGC({ data: fallbacks, meta });
     }
 
     let parsed: unknown;
@@ -123,7 +197,7 @@ export async function generatePersonalityDiceChallenges(params: {
       logger.warn(`[SocialIcebreakerAI] generatePersonalityDiceChallenges provider=${provider} latency=${latencyMs}ms: JSON parse failed, using fallback`);
       const meta = buildFallbackAIMeta('parse_error', PERSONALITY_DICE_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generatePersonalityDiceChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return { data: fallbacks, meta };
+      return attachAIGC({ data: fallbacks, meta });
     }
     if (Array.isArray(parsed) && parsed.length === participants.length) {
       const latencyMs = Date.now() - t0;
@@ -131,7 +205,7 @@ export async function generatePersonalityDiceChallenges(params: {
       const meta = buildLiveAIMeta(provider, PERSONALITY_DICE_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generatePersonalityDiceChallenges', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
       fireAndForgetQualityGate(content, 'icebreaker_personality_dice', aiCorrelationId, 'personality_dice');
-      return { data: participants.map((p, i) => ({
+      const liveChallenges: PersonalityDiceChallenge[] = participants.map((p, i) => ({
         userId: p.userId,
         displayName: p.displayName,
         archetype: p.archetype,
@@ -142,19 +216,32 @@ export async function generatePersonalityDiceChallenges(params: {
         difficulty: parsed[i].difficulty || fallbacks[i].difficulty,
         passLine: parsed[i].passLine || fallbacks[i].passLine,
         passConsequence: parsed[i].passConsequence || fallbacks[i].passConsequence,
-      })), meta };
+      }));
+      return moderateAndAttachAIGC(
+        { data: liveChallenges, meta },
+        {
+          provider,
+          model,
+          latencyMs,
+          promptVersion: PERSONALITY_DICE_PROMPT_VERSION,
+          aiCorrelationId,
+          feature: 'generatePersonalityDiceChallenges',
+          fallbackData: fallbacks,
+          checks: personalityDiceChallengesChecks(liveChallenges),
+        },
+      );
     }
     const latencyMs = Date.now() - t0;
     logger.warn(`[SocialIcebreakerAI] generatePersonalityDiceChallenges provider=${provider} latency=${latencyMs}ms: invalid response shape (expected ${participants.length} items), using fallback`);
     const meta = buildFallbackAIMeta('parse_error', PERSONALITY_DICE_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generatePersonalityDiceChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: fallbacks, meta };
+    return attachAIGC({ data: fallbacks, meta });
   } catch (error) {
     const latencyMs = Date.now() - t0;
     logger.error(`[SocialIcebreakerAI] generatePersonalityDiceChallenges error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
     const meta = buildFallbackAIMeta('llm_error', PERSONALITY_DICE_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generatePersonalityDiceChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: fallbacks, meta };
+    return attachAIGC({ data: fallbacks, meta });
   }
 }
 
@@ -263,7 +350,7 @@ export async function generatePersonalityDiceChallengeGroups(params: {
       promptVersion: meta.promptVersion,
       errorCode: meta.evaluatorRejectionReason,
     });
-    return { data: fallbacks, meta };
+    return attachAIGC({ data: fallbacks, meta });
   }
 
   const { client, model, provider } = getClientForFunction('generatePersonalityDiceChallengeGroups');
@@ -303,7 +390,7 @@ export async function generatePersonalityDiceChallengeGroups(params: {
         promptVersion: meta.promptVersion,
         errorCode: meta.evaluatorRejectionReason,
       });
-      return { data: fallbacks, meta };
+      return attachAIGC({ data: fallbacks, meta });
     }
 
     let parsed: unknown;
@@ -328,7 +415,7 @@ export async function generatePersonalityDiceChallengeGroups(params: {
         promptVersion: meta.promptVersion,
         errorCode: meta.evaluatorRejectionReason,
       });
-      return { data: fallbacks, meta };
+      return attachAIGC({ data: fallbacks, meta });
     }
 
     // Validate: correct number of groups, each with exactly 3 diff-ordered options
@@ -382,7 +469,19 @@ export async function generatePersonalityDiceChallengeGroups(params: {
           })),
         };
       });
-      return { data: result, meta };
+      return moderateAndAttachAIGC(
+        { data: result, meta },
+        {
+          provider,
+          model,
+          latencyMs,
+          promptVersion: PERSONALITY_DICE_CHOOSE_PROMPT_VERSION,
+          aiCorrelationId,
+          feature: 'generatePersonalityDiceChallengeGroups',
+          fallbackData: fallbacks,
+          checks: personalityDiceChallengeGroupsChecks(result),
+        },
+      );
     }
 
     const latencyMs = Date.now() - t0;
@@ -403,7 +502,7 @@ export async function generatePersonalityDiceChallengeGroups(params: {
       promptVersion: meta.promptVersion,
       errorCode: meta.evaluatorRejectionReason,
     });
-    return { data: fallbacks, meta };
+    return attachAIGC({ data: fallbacks, meta });
   } catch (error) {
     const latencyMs = Date.now() - t0;
     logger.error(
@@ -424,6 +523,6 @@ export async function generatePersonalityDiceChallengeGroups(params: {
       promptVersion: meta.promptVersion,
       errorCode: meta.evaluatorRejectionReason,
     });
-    return { data: fallbacks, meta };
+    return attachAIGC({ data: fallbacks, meta });
   }
 }

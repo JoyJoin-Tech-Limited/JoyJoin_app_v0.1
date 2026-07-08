@@ -5,11 +5,66 @@ import { extractJsonPayloadForParse } from './ai/extractLlmJson';
 import { getClientForFunction } from './ai/socialModelRouter';
 import { createAiCorrelationId, logAITrace } from './lib/aiTraceLogger';
 import {
+  buildAIGCMeta,
   buildFallbackAIMeta,
   buildLiveAIMeta,
+  type AIResponseMeta,
+  type AIProvider,
 } from '@shared/types/aiMeta';
+import { moderateGeneratedContent, type ModerationCheck } from './lib/aiContentModeration';
 import { logger } from './lib/logger';
 import { fireAndForgetQualityGate, type AIServiceResult } from './socialIcebreakerAICore';
+
+function auctionLotsChecks(lots: AuctionLot[]): ModerationCheck[] {
+  return lots.flatMap((lot, index) => [
+    { field: `lot[${index}].title`, text: lot.title },
+    { field: `lot[${index}].teaser`, text: lot.teaser },
+  ]);
+}
+
+function attachAIGC<T>(result: AIServiceResult<T>): AIServiceResult<T> {
+  return {
+    data: result.data,
+    meta: {
+      ...result.meta,
+      aigc: buildAIGCMeta({ fallbackUsed: result.meta.fallbackUsed, labelType: 'ai-generated' }),
+    },
+  };
+}
+
+function moderateAndAttachAIGC<T>(
+  result: AIServiceResult<T>,
+  options: {
+    provider: AIProvider | null;
+    model?: string;
+    latencyMs: number;
+    promptVersion: string;
+    aiCorrelationId: string;
+    feature: string;
+    fallbackData: T;
+    checks: ModerationCheck[];
+  },
+): AIServiceResult<T> {
+  if (result.meta.fallbackUsed) {
+    return attachAIGC(result);
+  }
+  const moderation = moderateGeneratedContent(options.checks, {
+    domain: 'icebreaker',
+    feature: options.feature,
+    provider: options.provider,
+    model: options.model,
+    latencyMs: options.latencyMs,
+    promptVersion: options.promptVersion,
+    traceId: options.aiCorrelationId,
+  });
+  if (!moderation.safe) {
+    return attachAIGC({
+      data: options.fallbackData,
+      meta: buildFallbackAIMeta('content_safety', options.promptVersion, options.aiCorrelationId),
+    });
+  }
+  return attachAIGC(result);
+}
 
 const FALLBACK_AUCTION_LOTS: AuctionLot[] = [
   { id: 'lot_fb_1', title: '分享一个无伤大雅的社死瞬间', teaser: '越离谱越好，反正大家都不认识', emoji: '😅' },
@@ -56,7 +111,7 @@ export async function generateAuctionLots(params: {
       promptVersion: meta.promptVersion,
       errorCode: meta.evaluatorRejectionReason,
     });
-    return { data: normalizeAuctionLots(FALLBACK_AUCTION_LOTS), meta };
+    return attachAIGC({ data: normalizeAuctionLots(FALLBACK_AUCTION_LOTS), meta });
   }
 
   const { client, model, provider } = getClientForFunction('generateAuctionLots');
@@ -91,7 +146,7 @@ export async function generateAuctionLots(params: {
         promptVersion: meta.promptVersion,
         errorCode: meta.evaluatorRejectionReason,
       });
-      return { data: normalizeAuctionLots(FALLBACK_AUCTION_LOTS), meta };
+      return attachAIGC({ data: normalizeAuctionLots(FALLBACK_AUCTION_LOTS), meta });
     }
 
     let parsed: unknown;
@@ -112,7 +167,7 @@ export async function generateAuctionLots(params: {
         promptVersion: meta.promptVersion,
         errorCode: meta.evaluatorRejectionReason,
       });
-      return { data: normalizeAuctionLots(FALLBACK_AUCTION_LOTS), meta };
+      return attachAIGC({ data: normalizeAuctionLots(FALLBACK_AUCTION_LOTS), meta });
     }
 
     const validated = auctionLotsLlmPayloadSchema.safeParse(parsed);
@@ -131,7 +186,7 @@ export async function generateAuctionLots(params: {
         promptVersion: meta.promptVersion,
         errorCode: meta.evaluatorRejectionReason,
       });
-      return { data: normalizeAuctionLots(FALLBACK_AUCTION_LOTS), meta };
+      return attachAIGC({ data: normalizeAuctionLots(FALLBACK_AUCTION_LOTS), meta });
     }
 
     const latencyMs = Date.now() - t0;
@@ -149,7 +204,20 @@ export async function generateAuctionLots(params: {
       promptVersion: meta.promptVersion,
     });
     fireAndForgetQualityGate(content, 'icebreaker_auction', aiCorrelationId, 'auction', params.eventType);
-    return { data: normalizeAuctionLots(validated.data.lots), meta };
+    const liveLots = normalizeAuctionLots(validated.data.lots);
+    return moderateAndAttachAIGC(
+      { data: liveLots, meta },
+      {
+        provider,
+        model,
+        latencyMs,
+        promptVersion: AUCTION_LOTS_PROMPT_VERSION,
+        aiCorrelationId,
+        feature: 'generateAuctionLots',
+        fallbackData: normalizeAuctionLots(FALLBACK_AUCTION_LOTS),
+        checks: auctionLotsChecks(liveLots),
+      },
+    );
   } catch (error) {
     const latencyMs = Date.now() - t0;
     logger.error(`[SocialIcebreakerAI] generateAuctionLots error latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
@@ -167,6 +235,6 @@ export async function generateAuctionLots(params: {
       promptVersion: meta.promptVersion,
       errorCode: meta.evaluatorRejectionReason,
     });
-    return { data: normalizeAuctionLots(FALLBACK_AUCTION_LOTS), meta };
+    return attachAIGC({ data: normalizeAuctionLots(FALLBACK_AUCTION_LOTS), meta });
   }
 }

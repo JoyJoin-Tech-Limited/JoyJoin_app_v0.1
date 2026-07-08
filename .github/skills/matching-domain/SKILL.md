@@ -72,6 +72,7 @@ Only users passing all hard constraints are scored.
 - Pool matching must not run concurrently for the same pool — use an execution guard
 - The matching result is persisted before notifications fire
 - On error, the execution guard must always be released (`finally` block)
+- When `matchingOperatorReviewEnabled` is true, post-match side effects are deferred until an operator approves; `executePostMatchCommitSideEffects` is invoked from both the normal auto-match path and the admin approval path
 
 ## Quick examples
 

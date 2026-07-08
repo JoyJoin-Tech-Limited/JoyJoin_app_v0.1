@@ -7,15 +7,15 @@ const COMBO_FEEDBACK: Record<string, string> = {
   'friends,networking': '新朋友 + 新人脉，双管齐下最容易碰撞出意外收获。',
   'friends,discussion': '认识新朋友，也准备好一场走心的对话。',
   'friends,fun': '轻松认识有趣的人，这一局不会冷场。',
-  'friends,romance': '在认识新朋友的过程里，悄悄留一点心动的可能。',
+  'friends,explore': '认识新朋友之余，也想试试不一样的玩法。',
   'networking,discussion': '把人脉聊成真正的连接，而不只是交换名片。',
   'networking,fun': '拓展人脉也可以很轻松，边玩边聊更自然。',
-  'networking,romance': '扩大圈子的同时，也许还会遇见那个让你心动的人。',
+  'networking,explore': '拓展圈子的同时，保持对新玩法的好奇。',
   'discussion,fun': '既能聊得深，也能笑得开，这种平衡感刚刚好。',
-  'discussion,romance': '走心的对话里，最容易酝酿出温柔的默契。',
-  'fun,romance': '轻松氛围里遇见心动，悦仔会帮你留一点浪漫的呼吸空间。',
+  'discussion,explore': '走心对话之外，也想体验一下新鲜节奏。',
+  'fun,explore': '轻松氛围里尝鲜，悦仔会帮你安排有趣的互动。',
   'friends,networking,discussion': '认识人、聊得深、还能拓展圈子，这一局信息量会很大。',
-  'friends,fun,romance': '轻松社交 + 心动可能，适合想要一点惊喜的你。',
+  'friends,fun,explore': '轻松认识人、开心体验新玩法，这一局会很丰富。',
 }
 
 const SINGLE_FEEDBACK: Record<string, string> = {
@@ -23,7 +23,7 @@ const SINGLE_FEEDBACK: Record<string, string> = {
   networking: '悦仔会优先帮你匹配能互相增值的圈子。',
   discussion: '悦仔会优先帮你匹配也愿意深聊的桌友。',
   fun: '先别想太多，开心就是这次最重要的 KPI。',
-  romance: '浪漫邂逅需要一点默契，悦仔会悄悄把氛围调柔。',
+  explore: '尝鲜体验，悦仔会帮你挑一个有趣的方向。',
   flexible: FLEXIBLE_ONLY_FEEDBACK,
 }
 
@@ -49,5 +49,5 @@ export function getIntentFeedback(selectedValues: string[]): string {
     return EMPTY_FEEDBACK
   }
 
-  return `看起来你想${labels.join('、')}，悦仔会把这个方向写进匹配公式。`
+  return `看起来你想${labels.join('、')}，悦仔会把这个方向记进你的匹配偏好。`
 }

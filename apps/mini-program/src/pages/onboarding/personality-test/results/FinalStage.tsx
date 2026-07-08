@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ARCHETYPE_BY_ID, ARCHETYPE_CANONICAL_ORDER } from '@shared/personality/archetypeNames'
 import { getContrastSafeArchetypeColor } from '@shared/archetypeColors'
 import type { ArchetypeSkillSet } from '@shared/personality/archetypeSkills'
+import type { AIGCMeta } from '@joyjoin/shared/api'
 import Button from '../../../../components/ui/Button'
 import Card from '../../../../components/ui/Card'
 import type { ArchetypeVisual } from '../visuals'
@@ -13,6 +14,9 @@ import { haptics } from '../../../../lib/utils/haptics'
 import { cdnAsset } from '../../../../lib/utils/cdnAssets'
 import XiaoyueChatBubble from '../../../../components/mascot/XiaoyueChatBubble'
 import { PERSONALITY_TEST_XIAOYUE_EXPRESSION } from '../../../../lib/mascot/xiaoyueExpressions'
+import AIGCLabel from '../../../../components/ai-content/AIGCLabel'
+import AIContentReportButton from '../../../../components/ai-content/AIContentReportButton'
+import { useAIGCLabelsEnabled } from '../../../../hooks/useAIGCLabelsEnabled'
 import { ONBOARDING_MASCOT_SIZE } from '../../../../lib/onboarding/onboardingRoutes'
 import type { ArchetypeCardVariant } from '../archetypeVariants'
 import { normalizeMatchScore, type TypicalityLabel } from './resultHelpers'
@@ -58,6 +62,7 @@ interface FinalStageProps {
     expressionTags: string[]
     whyThisFits: string
     blendLine: string
+    meta?: { aigc?: AIGCMeta }
   } | null
   isLoadingAnalysis?: boolean
   personalityShareEnabled?: boolean
@@ -119,6 +124,7 @@ export default function FinalStage({
   const detailCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const rafPendingRef = useRef(false)
   const pendingTiltRef = useRef({ rotateX: 0, rotateY: 0 })
+  const aigcLabelsEnabled = useAIGCLabelsEnabled()
 
   // Stagger badge entrance after mount
   useEffect(() => {
@@ -393,9 +399,12 @@ export default function FinalStage({
                     src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
                   />
                   <View className='personality-results__xiaoyue-bubble'>
-                    <Text className='personality-results__xiaoyue-bubble-headline'>
-                      「{xiaoyueAnalysis.headline}」
-                    </Text>
+                    <View className='personality-results__xiaoyue-bubble-head'>
+                      <Text className='personality-results__xiaoyue-bubble-headline'>
+                        「{xiaoyueAnalysis.headline}」
+                      </Text>
+                      <AIGCLabel meta={xiaoyueAnalysis.meta?.aigc} />
+                    </View>
                     <Text className='personality-results__xiaoyue-bubble-analysis'>
                       {xiaoyueAnalysis.analysis}
                     </Text>
@@ -652,6 +661,10 @@ export default function FinalStage({
               {/* ── 悦仔的完整解读 — mascot reads aloud, sentence-staggered ── */}
               {xiaoyueAnalysis?.analysis && (
                 <View className='personality-results__detail-section personality-results__detail-section--chat'>
+                  <View className='personality-results__detail-section-label-row'>
+                    <Text className='personality-results__detail-section-label'>悦仔的完整解读</Text>
+                    <AIGCLabel meta={xiaoyueAnalysis.meta?.aigc} />
+                  </View>
                   <XiaoyueChatBubble
                     content={xiaoyueAnalysis.analysis}
                     pose='casual'
@@ -662,6 +675,14 @@ export default function FinalStage({
                     avatarSize={ONBOARDING_MASCOT_SIZE}
                     className='personality-results__detail-chat'
                   />
+                  {aigcLabelsEnabled && (
+                    <AIContentReportButton
+                      className='personality-results__detail-report'
+                      options={{
+                        reason: '举报“人格测试结果解读”AI 生成内容',
+                      }}
+                    />
+                  )}
                 </View>
               )}
 

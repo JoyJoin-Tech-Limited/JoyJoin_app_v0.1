@@ -71,7 +71,7 @@ function getPhaseToastText(phase: string): ReactNode {
     personality_dice: <>人格骰子，看看今天的运势！<JoyJoinIcon emoji='🎲' tier='phase' size={24} /></>,
     quip_battle: <>接梗大战，接得住吗？<JoyJoinIcon emoji='😏' size={24} /></>,
     undercover_word: <>谁是卧底？小心别暴露！<JoyJoinIcon emoji='🕵️' tier='phase' size={24} /></>,
-    speed_friending: <>快速交友，认识新朋友！<JoyJoinIcon emoji='🤝' size={24} /></>,
+    speed_friending: <>快速破冰，认识新伙伴！<JoyJoinIcon emoji='🤝' size={24} /></>,
     group_mirror: <>团队镜像，看看大家的默契！<JoyJoinIcon emoji='🪞' size={24} /></>,
     recap: <>精彩回顾，今天真开心！<JoyJoinIcon emoji='🎉' tier='reaction' size={24} /></>,
   }
@@ -481,8 +481,20 @@ export default function IcebreakerSessionPage() {
       setTestModeAdvanceError('继续时遇到小问题，点重试再试一次')
     } else {
       setShowTestModeDisclosure(false)
+      if (session.runBots) {
+        socialIcebreakerAnalytics.track(
+          'icebreaker_test_mode_bot_advance',
+          socialSessionId ?? undefined,
+          session.icebreakerSessionId,
+          session.currentPhase,
+          {
+            playerCount,
+            botCount: session.testModeBots?.length ?? 0,
+          },
+        )
+      }
     }
-  }, [performSocialAction, session])
+  }, [performSocialAction, session, socialSessionId, playerCount])
 
   const handleSelectCustomPhase = useCallback(
     async (selectedPhase: SocialIcebreakerPhase) => {
@@ -913,6 +925,7 @@ export default function IcebreakerSessionPage() {
     <XiaoyueSessionShell
       phase={phase}
       sessionPack={session?.xiaoyueSessionPack}
+      sessionPackMeta={session?.xiaoyueSessionPackMeta}
       adaptiveSuggestion={adaptiveSuggestion}
       playerCount={playerCount}
       isHost={isHost}
@@ -1064,6 +1077,9 @@ export default function IcebreakerSessionPage() {
             isCustomMode={session.eventTier === 'custom'}
             currentTier={session.eventTier ?? 'glow'}
             canChangeTier={canChangeTier}
+            isTestMode={session.isTestModeSkip ?? false}
+            runBots={session.runBots ?? false}
+            warmupTopicsMeta={session.warmupTopicsMeta}
             onChangeTier={() => setIsTierSheetOpen(true)}
             onGenerateTopics={handleGenerateTopics}
             onToggleReady={handleToggleWarmupReady}
@@ -1092,6 +1108,7 @@ export default function IcebreakerSessionPage() {
         {phase === 'micro_challenge' && session && (
           <MicroChallengePhaseView
             challenge={session.currentChallenge ?? null}
+            challengeMeta={session.currentChallengeMeta}
             completedBy={session.challengeCompletedBy ?? []}
             currentUserId={currentUserId}
             playerCount={playerCount}
@@ -1306,6 +1323,19 @@ export default function IcebreakerSessionPage() {
             icebreakerSessionId={session?.icebreakerSessionId}
             onContinue={handleTestModeContinue}
             onRetry={handleTestModeContinue}
+            onDismiss={() => {
+              socialIcebreakerAnalytics.track(
+                'icebreaker_test_mode_disclosure_dismissed',
+                socialSessionId ?? undefined,
+                session?.icebreakerSessionId,
+                undefined,
+                {
+                  botCount: session?.testModeBots?.length ?? 0,
+                  runBots: session?.runBots ?? false,
+                },
+              )
+              setShowTestModeDisclosure(false)
+            }}
             isLoading={pendingAction === 'advance'}
             error={testModeAdvanceError}
           />

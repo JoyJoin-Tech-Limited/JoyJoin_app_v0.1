@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { View, Text, Image } from '@tarojs/components'
 import type { SingleTestBot } from '@shared/socialIcebreaker'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { socialIcebreakerAnalytics } from '../../lib/analytics/socialIcebreakerAnalytics'
 import { getSystemReducedMotion } from '../../lib/utils/accessibility'
@@ -23,6 +24,8 @@ interface TestModeDisclosureProps {
   onContinue: () => void
   /** Called when the user taps the CTA while an error is displayed. Defaults to onContinue if omitted. */
   onRetry?: () => void
+  /** Called when the user dismisses the disclosure via the close button. */
+  onDismiss?: () => void
   /** True while the advance action is in flight. */
   isLoading?: boolean
   /** Optional inline error message; when present the CTA becomes a retry action. */
@@ -44,6 +47,7 @@ export function TestModeDisclosure({
   icebreakerSessionId,
   onContinue,
   onRetry,
+  onDismiss,
   isLoading,
   error,
 }: TestModeDisclosureProps) {
@@ -93,10 +97,32 @@ export function TestModeDisclosure({
     haptics('medium')
     if (isErrorState) {
       setShowError(false)
+      socialIcebreakerAnalytics.track(
+        'icebreaker_test_mode_advance_retry',
+        socialSessionId,
+        icebreakerSessionId,
+        undefined,
+        { runBots: Boolean(runBots) },
+      )
       ;(onRetry ?? onContinue)()
     } else {
       onContinue()
     }
+  }
+
+  const handleDismiss = () => {
+    haptics('light')
+    socialIcebreakerAnalytics.track(
+      'icebreaker_test_mode_disclosure_dismissed',
+      socialSessionId,
+      icebreakerSessionId,
+      undefined,
+      {
+        botCount: bots?.length ?? 0,
+        runBots: Boolean(runBots),
+      },
+    )
+    onDismiss?.()
   }
 
   return (
@@ -107,22 +133,34 @@ export function TestModeDisclosure({
       aria-label='测试模式说明'
     >
       <View className='test-mode-disclosure__card'>
-      <View className='test-mode-disclosure__mascot-wrap' role='img' aria-label='小悦'>
-        <Image
-          className='test-mode-disclosure__mascot'
-          src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
-          mode='aspectFit'
-          lazyLoad
-          aria-hidden='true'
-        />
-      </View>
-        <View className='test-mode-disclosure__icon' aria-hidden='true'>
-          <Text className='test-mode-disclosure__icon-text'>测试</Text>
+        {onDismiss ? (
+          <View
+            className='test-mode-disclosure__close'
+            onClick={handleDismiss}
+            hoverClass='test-mode-disclosure__close--pressed'
+            role='button'
+            aria-label='关闭测试模式说明'
+          >
+            <Text className='test-mode-disclosure__close-icon'>×</Text>
+          </View>
+        ) : null}
+        <View className='test-mode-disclosure__mascot-wrap' role='img' aria-label='小悦'>
+          <Image
+            className='test-mode-disclosure__mascot'
+            src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+            mode='aspectFit'
+            lazyLoad
+            aria-hidden='true'
+          />
+        </View>
+        <View className='test-mode-disclosure__brand-badge' aria-hidden='true'>
+          <View className='test-mode-disclosure__brand-badge-dot' />
+          <Text className='test-mode-disclosure__brand-badge-text'>测试模式</Text>
         </View>
         <Text className='test-mode-disclosure__title'>{title}</Text>
         <Text className='test-mode-disclosure__body'>{body}</Text>
 
-        {bots && bots.length > 0 && (
+        {bots && bots.length > 0 ? (
           <View className='test-mode-disclosure__roster'>
             <Text className='test-mode-disclosure__roster-label'>本场调试伙伴</Text>
             <View className='test-mode-disclosure__roster-list' role='list'>
@@ -135,6 +173,18 @@ export function TestModeDisclosure({
               ))}
             </View>
           </View>
+        ) : (
+          <View className='test-mode-disclosure__roster test-mode-disclosure__roster--empty'>
+            <Text className='test-mode-disclosure__roster-empty-text'>
+              虚拟伙伴名单加载中，稍后再来看看～
+            </Text>
+          </View>
+        )}
+
+        {runBots && bots && bots.length > 0 && (
+          <Text className='test-mode-disclosure__ready-hint'>
+            {DEFAULT_MASCOT_DISPLAY_NAME}和 {bots.length} 位伙伴已就位，准备好开始了吗？
+          </Text>
         )}
 
         {isErrorState && (

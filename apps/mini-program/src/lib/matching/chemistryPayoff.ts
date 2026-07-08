@@ -58,10 +58,10 @@ function localiseInterest(key: string): string {
 
 const GENERIC_HEADLINES = [
   `${DEFAULT_MASCOT_DISPLAY_NAME}凑齐了这一桌有趣的灵魂`,
-  '这次，命运把你们安排在了同一桌',
-  '你们之间，有种说不清的默契',
+  '这次，共同的兴趣把你们安排在了同一桌',
+  '你们之间，有种聊得来的默契',
   `${DEFAULT_MASCOT_DISPLAY_NAME}觉得，这一桌注定要相聚`,
-  '有些缘分，就该发生在今晚',
+  '有些同好局，就该发生在今晚',
 ]
 
 /** Pick a headline seeded on the groupSize so it's stable across re-renders. */
@@ -155,7 +155,7 @@ const CHEMISTRY_LINE_TEMPLATES_WITH_ARCHETYPES = [
 ]
 
 const CHEMISTRY_LINE_FALLBACKS = [
-  `气质相近，${DEFAULT_MASCOT_DISPLAY_NAME}已替你找好今晚的陌生人`,
+  `气质相近，${DEFAULT_MASCOT_DISPLAY_NAME}已替你凑齐今晚的同桌`,
   '这一桌的默契，只有你们自己会懂',
   '风格相投，今晚可以放开聊',
 ]

@@ -733,10 +733,10 @@ export function getOccupationGuidance(intent: string): { title: string; subtitle
         subtitle: "悦仔会根据你的职业背景，找到同频的社交搭子",
         matchPreview: "悦仔会根据你的背景和性格，匹配聊得来的人"
       };
-    case "romance":
+    case "explore":
       return {
         title: "你是做什么的？",
-        subtitle: "悦仔会综合考虑职业背景和生活方式",
+        subtitle: "悦仔会结合你的职业背景，推荐有意思的新玩法",
         matchPreview: "悦仔会综合考虑，帮你找到聊得来的人"
       };
     case "fun":

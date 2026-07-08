@@ -42,6 +42,7 @@ import { logger } from '../lib/logger';
 import { getFeatureFlag } from '../lib/featureFlags';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
 import { generatePhaseSelectionId } from '../services/customModeService';
+import { simulateBotsForSession, runBotSimulationSafely } from '../services/socialIcebreakerBotService';
 
 export function registerExtendedRoutes(router: Router): void {
   const WARMUP_TURN_DURATION_SECONDS = 30;
@@ -79,6 +80,16 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can advance phases' });
   }
+
+  // Fill any missing bot submissions before evaluating advance guards so that
+  // single-test sessions with runBots can progress with only one real user.
+  await simulateBotsForSession(socialSessionId, state).catch((err) => {
+    logger.warn('[SocialIcebreaker] Bot simulation failed during advance', {
+      socialSessionId,
+      phase: state.currentPhase,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
 
   if (state.currentPhase !== currentPhase) {
     return res.status(400).json({ error: 'Phase mismatch' });
@@ -447,6 +458,8 @@ router.post('/:socialSessionId/lie-detective/vote', async (req: any, res) => {
   if (state.currentPhase !== 'lie_detective') {
     return res.status(400).json({ error: 'Not in lie_detective phase' });
   }
+
+  await runBotSimulationSafely(socialSessionId, state, 'lie-detective-vote');
 
   if (voterId === targetUserId) {
     return res.status(400).json({ error: 'Players cannot vote on their own statements' });

@@ -123,6 +123,8 @@ const [
     oracleCardCornerStatEnabled,
     personaSnapshotEnabled,
     matchingPuzzlePreludeEnabled,
+    aigcLabelsEnabled,
+    matchingOperatorReviewEnabled,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
     getFeatureFlag('smartProfession', true),
@@ -141,6 +143,8 @@ const [
     getFeatureFlag('oracleCardCornerStatEnabled', true),
     getFeatureFlag('personaSnapshotEnabled', true),
     getFeatureFlag('matchingPuzzlePreludeEnabled', false),
+    getFeatureFlag('aigcLabelsEnabled', false),
+    getFeatureFlag('matchingOperatorReviewEnabled', false),
   ]);
 
   const appMode: 'production' | 'test' = isSingleTestMode() ? 'test' : 'production';
@@ -176,6 +180,8 @@ const [
       oracleCardCornerStatEnabled,
       personaSnapshotEnabled,
       matchingPuzzlePreludeEnabled,
+      aigcLabelsEnabled,
+      matchingOperatorReviewEnabled,
     },
   };
 

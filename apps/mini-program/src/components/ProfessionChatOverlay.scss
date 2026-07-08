@@ -440,6 +440,16 @@
     align-items: center;
     gap: $spacing-xs;
     margin-bottom: $spacing-md;
+    flex-wrap: wrap;
+  }
+
+  &__reveal-aigc {
+    margin-left: auto;
+  }
+
+  &__reveal-report {
+    margin-top: $spacing-md;
+    align-self: flex-start;
   }
 
   &__reveal-checkmark {

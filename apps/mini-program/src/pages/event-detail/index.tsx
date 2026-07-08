@@ -128,7 +128,7 @@ export default function EventDetailPage() {
 
       <View className='event-detail__card event-detail__support-card' onClick={handlePreviewSupportQr}>
         <View className='event-detail__support-copy'>
-          <Text className='event-detail__support-title'>加入我们的智能客服</Text>
+          <Text className='event-detail__support-title'>加入我们的客服</Text>
           <Text className='event-detail__support-subtitle'>使用微信扫描二维码联系客服</Text>
           <Text className='event-detail__support-helper'>长按保存二维码</Text>
         </View>

@@ -25,9 +25,11 @@ import { registerIcebreakerRoutes } from "./routes/domains/icebreaker";
 import { registerMatchExplanationRoutes } from "./routes/domains/matchExplanations";
 import { registerMatchingAdminRoutes } from "./routes/domains/matchingAdmin";
 import { registerMatchingConfigRoutes } from "./routes/domains/matchingConfig";
+import { registerAdminMatchingReviewRoutes } from "./routes/domains/adminMatchingReview";
 import { registerOnboardingRoutes } from "./routes/domains/onboarding";
 import { registerPaymentRoutes } from "./routes/domains/payments";
 import { registerProfileRoutes } from "./routes/domains/profile";
+import { registerReportRoutes } from "./routes/domains/reports";
 import { registerReferralRoutes } from "./routes/domains/referrals";
 import { registerSocialRoutes } from "./routes/domains/social";
 import { registerTelemetryRoutes } from "./routes/domains/telemetry";
@@ -146,6 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerProfileRoutes(app);
   registerSocialRoutes(app);
   registerReferralRoutes(app);
+  registerReportRoutes(app);
   registerEventPoolRoutes(app);
   registerUserEventPoolRoutes(app);
   registerAdminEventPoolRoutes(app);
@@ -166,6 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAdminOperationsRoutes(app);
   registerAdminGeolocationRoutes(app);
   registerMatchingAdminRoutes(app);
+  registerAdminMatchingReviewRoutes(app);
   registerMatchExplanationRoutes(app);
   registerMatchCompassRoutes(app);
   registerAIServiceRoutes(app);

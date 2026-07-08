@@ -106,7 +106,7 @@ export const users = pgTable("users", {
   safetyNoteHost: text("safety_note_host"), // Private note to host
   
   // Default event intent (can be overridden per event) - multiple selections allowed
-  intent: text("intent").array(), // Can include: networking, friends, discussion, fun, romance, flexible
+  intent: text("intent").array(), // Can include: networking, friends, discussion, fun, explore, flexible
   
   // Onboarding progress
   // Legacy compatibility flag only. Do not use this for new onboarding logic;
@@ -219,7 +219,7 @@ export const users = pgTable("users", {
   onboardingRestartCount: integer("onboarding_restart_count").notNull().default(0),
   
   // ============ AI对话签名 (Conversation Signature) ============
-  // 用于增强匹配算法的第6维度
+  // 用于增强成桌匹配的第6维度
   conversationMode: varchar("conversation_mode"), // 对话模式: express, standard, deep, allinone
   primaryLinguisticStyle: varchar("primary_linguistic_style"), // 主要语言风格: direct, implicit, negative, dialect, mixed
   conversationEnergy: integer("conversation_energy"), // 社交能量值 0-100
@@ -363,7 +363,7 @@ export const eventAttendance = pgTable("event_attendance", {
   userId: varchar("user_id").notNull().references(() => users.id),
   joinedAt: timestamp("joined_at").defaultNow(),
   status: varchar("status").default("confirmed"), // confirmed, cancelled, attended
-  intent: text("intent").array(), // Event-specific intent: networking, friends, discussion, fun, romance, flexible
+  intent: text("intent").array(), // Event-specific intent: networking, friends, discussion, fun, explore, flexible
   attendanceStatus: varchar("attendance_status").default("pending"), // pending | confirmed | late | absent
   estimatedLateMinutes: integer("estimated_late_minutes"), // 10 | 20 | 30
   absentReason: varchar("absent_reason"), // '突发事情' | '身体不适' | '其他'
@@ -416,6 +416,12 @@ export const eventPools = pgTable("event_pools", {
   successfulMatches: integer("successful_matches").default(0), // 成功匹配人数
   predictiveRerankEnabledOverride: boolean("predictive_rerank_enabled_override"),
 
+  // Operator-review gate for formed groups (default-off feature)
+  operatorReviewStatus: varchar("operator_review_status").default("none"), // none | pending | approved | rejected
+  operatorReviewReason: text("operator_review_reason"),
+  operatorReviewedBy: varchar("operator_reviewed_by"),
+  operatorReviewedAt: timestamp("operator_reviewed_at"),
+
   // Matching-test mode marker (default false; production queries ignore these rows)
   isTestPool: boolean("is_test_pool").default(false),
 
@@ -433,6 +439,8 @@ export const eventPools = pgTable("event_pools", {
   index("idx_event_pools_status_deadline_datetime").on(
     table.status, table.registrationDeadline, table.dateTime, table.id
   ),
+  // Operator-review queue index
+  index("idx_event_pools_operator_review_status").on(table.operatorReviewStatus),
 ]);
 
 // Event Pool Registrations table - 用户报名记录 + 个性化偏好（软约束）
@@ -538,12 +546,23 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   
   // 状态
   status: varchar("status").default("confirmed"), // confirmed | completed | cancelled
-  
+
+  // Links to the generated events so they can be cleaned up if the review is rejected
+  eventId: varchar("event_id").references(() => events.id),
+  blindBoxEventId: varchar("blind_box_event_id").references(() => blindBoxEvents.id),
+
+  // Operator-review gate for formed groups
+  operatorReviewStatus: varchar("operator_review_status").default("none"), // none | pending | approved | rejected
+  operatorReviewReason: text("operator_review_reason"),
+  operatorReviewedBy: varchar("operator_reviewed_by"),
+  operatorReviewedAt: timestamp("operator_reviewed_at"),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("idx_event_pool_groups_pool").on(table.poolId),
   index("idx_event_pool_groups_venue_status").on(table.venueAssignmentStatus),
+  index("idx_event_pool_groups_operator_review_status").on(table.operatorReviewStatus),
 ]);
 
 export const eventGroupOutcomes = pgTable("event_group_outcomes", {
@@ -1135,7 +1154,7 @@ export const registerUserSchema = z.object({
   seniority: z.enum(SENIORITY_OPTIONS).optional(), // Deprecated
   
   // Event intent (default, can be overridden per event) - multiple selections allowed
-  intent: z.array(z.enum(["networking", "friends", "discussion", "fun", "romance", "flexible"])).min(1, "请至少选择一个活动意图"),
+  intent: z.array(z.enum(["networking", "friends", "discussion", "fun", "explore", "flexible"])).min(1, "请至少选择一个活动意图"),
   
   // Culture & Language - Required for matching algorithm
   hometownRegionCity: z.string().min(1, "请选择家乡"),
@@ -1502,20 +1521,22 @@ export const reports = pgTable("reports", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   reporterId: varchar("reporter_id").notNull().references(() => users.id),
   reportedUserId: varchar("reported_user_id").references(() => users.id), // null if reporting content
-  
+
   // Report details
-  category: varchar("category").notNull(), // harassment, inappropriate_content, fake_profile, other
+  category: varchar("category").notNull(), // harassment, inappropriate_content, fake_profile, ai_content, other
   description: text("description").notNull(),
   relatedEventId: varchar("related_event_id").references(() => events.id),
-  
+
   // Moderation
   status: varchar("status").default("pending"), // pending, reviewing, resolved, dismissed
   reviewedBy: varchar("reviewed_by").references(() => users.id), // Admin user ID
   reviewedAt: timestamp("reviewed_at"),
   resolution: text("resolution"), // Admin's resolution notes
-  
+
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_reports_category_status_created_at").on(table.category, table.status, table.createdAt),
+]);
 
 // Moderation Logs table - Track admin actions
 export const moderationLogs = pgTable("moderation_logs", {
@@ -1878,7 +1899,7 @@ export const matchingResults = pgTable("matching_results", {
   overallMatchQuality: integer("overall_match_quality"), // 整体匹配质量 (0-100)
   
   // 性能指标
-  executionTimeMs: integer("execution_time_ms"), // 匹配算法执行时间（毫秒）
+  executionTimeMs: integer("execution_time_ms"), // 成桌匹配执行时间（毫秒）
   
   // 元数据
   isTestRun: boolean("is_test_run").default(false), // 是否为测试运行

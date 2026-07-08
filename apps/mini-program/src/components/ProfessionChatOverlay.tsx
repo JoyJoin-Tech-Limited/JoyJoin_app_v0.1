@@ -8,6 +8,9 @@ import { getXiaoyueExpressionAsset, type XiaoyueExpressionId } from '../lib/masc
 import { apiRequest } from '../lib/api/api'
 import { useOnboardingAnalytics } from '../hooks/onboarding/useOnboardingAnalytics'
 import { useDeviceTier } from '../hooks/useDeviceTier'
+import { useAIGCLabelsEnabled } from '../hooks/useAIGCLabelsEnabled'
+import AIGCLabel from './ai-content/AIGCLabel'
+import AIContentReportButton from './ai-content/AIContentReportButton'
 import { evaluateProfessionInputQuality } from '../lib/onboarding/professionInputQuality'
 import { getLocalProfessionClassification } from '../lib/onboarding/localProfessionClassification'
 import {
@@ -344,6 +347,7 @@ export default function ProfessionChatOverlay({
   }, [])
   const analytics = useOnboardingAnalytics('essential-data', { enabled: true, autoTrackStart: false })
   const deviceTier = useDeviceTier()
+  const aigcLabelsEnabled = useAIGCLabelsEnabled()
   const reduceMotion = useMemo(() => {
     try {
       const mq = (Taro.getApp() as any).config?.window?.prefersReducedMotion
@@ -1035,6 +1039,10 @@ export default function ProfessionChatOverlay({
                 <Text className='profession-overlay__reveal-title'>
                   {classificationData?.industrySource?.includes('fallback') ? '已收进档案，悦仔正在细品' : '你的匹配画像已更新'}
                 </Text>
+                <AIGCLabel
+                  meta={{ aiGenerated: true, labelType: 'ai-assisted' }}
+                  className='profession-overlay__reveal-aigc'
+                />
               </View>
               <View className='profession-overlay__reveal-tags'>
                 {revealTags.filter((t) => !removedTags.includes(t)).map((tag) => (
@@ -1078,6 +1086,14 @@ export default function ProfessionChatOverlay({
               <View className='profession-overlay__reveal-confirm' onClick={() => { haptics('success'); handleConfirm() }} aria-label='确认并继续' hoverClass='profession-overlay__reveal-confirm--active' hoverStartTime={0} hoverStayTime={100}>
                 <Text className='profession-overlay__reveal-confirm-text'>确认并继续</Text>
               </View>
+              {aigcLabelsEnabled && (
+                <AIContentReportButton
+                  className='profession-overlay__reveal-report'
+                  options={{
+                    reason: '举报“职业解读”AI 辅助生成内容',
+                  }}
+                />
+              )}
             </View>
           )}
           <View id='bottom-anchor' style={{ height: 1, width: '100%' }} />

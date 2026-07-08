@@ -156,7 +156,7 @@ export default function EventFeedbackPage() {
           {hasMatches ? (
             <View style={{ display: 'flex', alignItems: 'center', gap: '8rpx' }}>
               <JoyJoinIcon emoji='🎉' tier='reaction' size={32} />
-              <Text className='event-feedback__success-title'>缘分双向奔赴！</Text>
+              <Text className='event-feedback__success-title'>互选成功！</Text>
             </View>
           ) : (
             <Text className='event-feedback__success-title'>感谢你的反馈！</Text>

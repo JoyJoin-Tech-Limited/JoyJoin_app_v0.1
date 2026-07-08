@@ -20,6 +20,9 @@ import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { haptics } from '../../lib/utils/haptics'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
+import AIGCLabel from '../../components/ai-content/AIGCLabel'
+import AIContentReportButton from '../../components/ai-content/AIContentReportButton'
+import { useAIGCLabelsEnabled } from '../../hooks/useAIGCLabelsEnabled'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/utils/uiConstants'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
@@ -83,6 +86,7 @@ export default function PoolGroupDetailPage() {
     retry: 1,
   })
 
+  const aigcLabelsEnabled = useAIGCLabelsEnabled()
   const prevVenueStatusRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -194,13 +198,25 @@ export default function PoolGroupDetailPage() {
         ) : null}
         {groupAnalysis?.groupDynamics ? (
           <Card className='pool-group-detail__analysis-card'>
-            <Text className='pool-group-detail__analysis-label'>悦仔 · 这桌氛围</Text>
+            <View className='pool-group-detail__analysis-header'>
+              <Text className='pool-group-detail__analysis-label'>悦仔 · 这桌氛围</Text>
+              <AIGCLabel meta={groupAnalysis.meta?.aigc} />
+            </View>
             <Text className='pool-group-detail__analysis-body'>{groupAnalysis.groupDynamics}</Text>
             {groupAnalysis.iceBreakers && groupAnalysis.iceBreakers.length > 0 ? (
               <Text className='pool-group-detail__analysis-ice'>
                 开场灵感：{groupAnalysis.iceBreakers[0]}
               </Text>
             ) : null}
+            {aigcLabelsEnabled && (
+              <AIContentReportButton
+                className='pool-group-detail__analysis-report'
+                options={{
+                  reason: '举报“这桌氛围”AI 生成内容',
+                  relatedEventId: poolGroup?.group.id ?? poolGroup?.pool.id,
+                }}
+              />
+            )}
             <GroupAnalysisSourceHint analysis={groupAnalysis} />
           </Card>
         ) : null}

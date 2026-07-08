@@ -111,7 +111,7 @@ function normalizeInterests(interests?: string[]): string {
 function normalizeIntent(intent?: string[]): string {
   if (!intent || intent.length === 0) return 'flexible';
   
-  const intentOrder = ['networking', 'friends', 'discussion', 'fun', 'romance'];
+  const intentOrder = ['networking', 'friends', 'discussion', 'fun', 'explore'];
   const sorted = intent
     .filter(i => intentOrder.includes(i))
     .sort((a, b) => intentOrder.indexOf(a) - intentOrder.indexOf(b));

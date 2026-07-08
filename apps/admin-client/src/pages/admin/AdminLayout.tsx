@@ -35,6 +35,7 @@ const AdminInteractionLogsPage = lazy(() => import("@/pages/admin/AdminInteracti
 const AdminFeedbackPage = lazy(() => import("@/pages/admin/AdminFeedbackPage"));
 const AdminMatchingConfigPage = lazy(() => import("@/pages/admin/AdminMatchingConfigPage"));
 const AdminMatchingLogsPage = lazy(() => import("@/pages/admin/AdminMatchingLogsPage"));
+const AdminMatchingReviewsPage = lazy(() => import("@/pages/admin/AdminMatchingReviewsPage"));
 const AdminPricingPage = lazy(() => import("@/pages/admin/AdminPricingPage"));
 const AdminEvolutionPage = lazy(() => import("@/pages/admin/AdminEvolutionPage"));
 const AdminAccountsPage = lazy(() => import("@/pages/admin/AdminAccountsPage"));
@@ -110,6 +111,7 @@ export default function AdminLayout() {
                 <Route path="/admin/matching" component={AdminMatchingLabPage} />
                 <Route path="/admin/matching-config" component={AdminMatchingConfigPage} />
                 <Route path="/admin/matching-logs" component={AdminMatchingLogsPage} />
+                <Route path="/admin/matching-reviews" component={AdminMatchingReviewsPage} />
                 <Route path="/admin/evolution" component={AdminEvolutionPage} />
                 <Route path="/admin/accounts" component={AdminAccountsPage} />
                 <Route path="/admin/audit-logs" component={AdminAuditLogsPage} />

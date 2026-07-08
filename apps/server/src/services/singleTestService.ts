@@ -57,7 +57,7 @@ const CITIES = ["深圳", "香港", "广州", "北京", "上海"];
 const GENDERS = ["女性", "男性", "不透露"];
 const EDUCATION_LEVELS = ["博士", "硕士", "本科", "大专", "高中及以下"];
 const LIFE_STAGES = ["学生党", "职场新人", "职场老手", "创业中", "自由职业"];
-const INTENTS = ["networking", "friends", "discussion", "fun", "romance", "flexible"];
+const INTENTS = ["networking", "friends", "discussion", "fun", "explore", "flexible"];
 
 const VIRTUAL_NAMES = [
   "艾米丽", "小王子", "星星", "月光", "云朵", "清风", "晨曦", "晚霞",
@@ -433,6 +433,12 @@ export async function getSingleTestMetaForSessionStart(groupId: string): Promise
 
   const runBots = isSocialIcebreakerTestMode();
 
+  logger.info("social_icebreaker_test_mode_runBots_decision", {
+    groupId,
+    isSingleTestMode: isSingleTestMode(),
+    isSocialIcebreakerTestMode: isSocialIcebreakerTestMode(),
+    runBots,
+  });
   const payload = {
     version: 2 as const,
     groupId,

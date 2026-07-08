@@ -48,6 +48,11 @@ onboarding checklist, and MCP integration guidance, see
   `repositories/paymentsRepo.ts`, mount the router in `routes.ts`, keep
   `storage.ts` unchanged.
 
+**"Add an admin review queue for formed match groups"**
+→ Create `routes/domains/adminMatchingReview.ts`, keep business logic in
+  `lib/matchingPostMatchEffects.ts` if shared with auto-match, and mount the
+  router in `routes.ts`.
+
 **"Modify a legacy helper in `storage.ts`"**
 → Move logic into `repositories/paymentsRepo.ts`, update `storage.ts` to
   delegate, and make the change there. Do not add new code to `storage.ts`.

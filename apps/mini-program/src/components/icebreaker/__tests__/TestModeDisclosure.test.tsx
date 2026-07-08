@@ -71,6 +71,20 @@ describe('TestModeDisclosure', () => {
     expect(onContinue).toHaveBeenCalledTimes(1)
   })
 
+  it('fires onDismiss when the close button is tapped', () => {
+    const onDismiss = vi.fn()
+    render(<TestModeDisclosure onContinue={() => {}} onDismiss={onDismiss} />)
+
+    fireEvent.click(screen.getByLabelText('关闭测试模式说明'))
+    expect(onDismiss).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders the JoyJoin-native test-mode badge', () => {
+    render(<TestModeDisclosure onContinue={() => {}} />)
+
+    expect(screen.getByText('测试模式')).toBeInTheDocument()
+  })
+
   it('renders bot-simulation copy and CTA when runBots is true', () => {
     const onContinue = vi.fn()
     render(

@@ -67,7 +67,7 @@ Primary files:
 ### 2. Matching, events, and post-match experience
 
 **Deterministic matching**
-- `apps/server/src/poolMatchingService.ts`
+- `apps/server/src/poolMatchingService.ts` — also implements the feature-flagged operator-review gate (`matchingOperatorReviewEnabled`)
 - `apps/server/src/poolRealtimeMatchingService.ts`
 - `apps/server/src/matchingSemantic.ts` — optional 7th pair dimension when `ENABLE_SEMANTIC_SIMILARITY=true` (weights redistribute; see `poolMatchingService.ts` comments)
 - `packages/shared/src/personality/`
@@ -155,7 +155,7 @@ Boundary:
 
 **Routes**
 - `apps/server/src/routes.ts` is the composition root that mounts domain routers from `apps/server/src/routes/domains/`
-- Domain modules currently include auth, onboarding, assessment, analytics, admin, payments, icebreaker, and shell routing
+- Domain modules currently include auth, onboarding, assessment, analytics, admin, payments, icebreaker, shell, and matching-review routing
 
 **Predictive Shell**
 - `apps/server/src/routes/domains/shell.ts` mounts `/api/shell/discover`, `/api/shell/profile`, `/api/shell/events`, `/api/shell/connections`

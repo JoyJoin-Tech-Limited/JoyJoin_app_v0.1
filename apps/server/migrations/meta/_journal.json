@@ -96,350 +96,366 @@
     {
       "idx": 13,
       "version": "7",
+      "when": 1782743007158,
+      "tag": "0061_condemned_phil_sheldon",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1783518657076,
+      "tag": "0063_orange_gambit",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1783519633453,
+      "tag": "0064_operator_review_gate",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1783526808835,
+      "tag": "0065_event_pool_group_event_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
       "when": 1768384044000,
       "tag": "20260114094724_add_industry_normalized",
       "breakpoints": true
     },
     {
-      "idx": 15,
+      "idx": 18,
       "version": "7",
       "when": 1768780800000,
       "tag": "20260119000000_rename_role_to_archetype",
       "breakpoints": true
     },
     {
-      "idx": 16,
+      "idx": 19,
       "version": "7",
       "when": 1768855800000,
       "tag": "20260119205000_fix_assessment_answer_unique_constraint",
       "breakpoints": true
     },
     {
-      "idx": 17,
+      "idx": 20,
       "version": "7",
       "when": 1768887600000,
       "tag": "20260120054000_add_primary_archetype_column",
       "breakpoints": true
     },
     {
-      "idx": 18,
+      "idx": 21,
       "version": "7",
       "when": 1768898880000,
       "tag": "20260120084800_data_model_unification",
       "breakpoints": true
     },
     {
-      "idx": 19,
+      "idx": 22,
       "version": "7",
       "when": 1769385600000,
       "tag": "20260126000000_backfill_languages_comfort",
       "breakpoints": true
     },
     {
-      "idx": 20,
+      "idx": 23,
       "version": "7",
       "when": 1769503428000,
       "tag": "20260127084348_add_budget_restrictions_to_event_pools",
       "breakpoints": true
     },
     {
-      "idx": 21,
+      "idx": 24,
       "version": "7",
       "when": 1769507016000,
       "tag": "20260127094336_add_social_tags",
       "breakpoints": true
     },
     {
-      "idx": 22,
+      "idx": 25,
       "version": "7",
       "when": 1770012172000,
       "tag": "20260202060252_add_onboarding_checkpoint_fields",
       "breakpoints": true
     },
     {
-      "idx": 23,
+      "idx": 26,
       "version": "7",
       "when": 1770076800000,
       "tag": "20260203000000_add_venue_budget_categories",
       "breakpoints": true
     },
     {
-      "idx": 24,
+      "idx": 27,
       "version": "7",
       "when": 1770076801000,
       "tag": "20260203000001_add_onboarding_analytics_table",
       "breakpoints": true
     },
     {
-      "idx": 25,
+      "idx": 28,
       "version": "7",
       "when": 1770076802000,
       "tag": "20260203000002_add_carousel_and_guide_fields",
       "breakpoints": true
     },
     {
-      "idx": 26,
+      "idx": 29,
       "version": "7",
       "when": 1770422400000,
       "tag": "20260207000000_add_event_theme_fields",
       "breakpoints": true
     },
     {
-      "idx": 27,
+      "idx": 30,
       "version": "7",
       "when": 1770447190000,
       "tag": "20260207065310_team_names_and_remove_deprecated",
       "breakpoints": true
     },
     {
-      "idx": 28,
+      "idx": 31,
       "version": "7",
       "when": 1770681600000,
       "tag": "20260210000000_add_profile_review_seen_field",
       "breakpoints": true
     },
     {
-      "idx": 29,
+      "idx": 32,
       "version": "7",
       "when": 1771804800000,
       "tag": "20260223000000_drop_deprecated_columns",
       "breakpoints": true
     },
     {
-      "idx": 30,
+      "idx": 33,
       "version": "7",
       "when": 1773187200000,
       "tag": "20260311000000_remove_deprecated_user_fields",
       "breakpoints": true
     },
     {
-      "idx": 31,
+      "idx": 34,
       "version": "7",
       "when": 1773273600000,
       "tag": "20260312000000_drop_direct_message_tables",
       "breakpoints": true
     },
     {
-      "idx": 32,
+      "idx": 35,
       "version": "7",
       "when": 1773360000000,
       "tag": "20260313000000_add_connection_feedback_columns",
       "breakpoints": true
     },
     {
-      "idx": 33,
+      "idx": 36,
       "version": "7",
       "when": 1775088000000,
       "tag": "20260402000000_add_matching_shadow_experiments",
       "breakpoints": true
     },
     {
-      "idx": 34,
+      "idx": 37,
       "version": "7",
       "when": 1775128800000,
       "tag": "20260402112000_add_matching_weight_shadow_metadata",
       "breakpoints": true
     },
     {
-      "idx": 35,
+      "idx": 38,
       "version": "7",
       "when": 1775131800000,
       "tag": "20260402121000_add_user_semantic_profiles",
       "breakpoints": true
     },
     {
-      "idx": 36,
+      "idx": 39,
       "version": "7",
       "when": 1775132100000,
       "tag": "20260402121500_add_archetype_pair_feedback_stats",
       "breakpoints": true
     },
     {
-      "idx": 37,
+      "idx": 40,
       "version": "7",
       "when": 1775136600000,
       "tag": "20260402133000_add_predictive_rerank_experiment_controls",
       "breakpoints": true
     },
     {
-      "idx": 38,
+      "idx": 41,
       "version": "7",
       "when": 1775160000000,
       "tag": "20260402200000_rename_matching_weights_vocabulary",
       "breakpoints": true
     },
     {
-      "idx": 39,
+      "idx": 42,
       "version": "7",
       "when": 1775550900000,
       "tag": "20260407083500_add_participation_experiment_events",
       "breakpoints": true
     },
     {
-      "idx": 40,
+      "idx": 43,
       "version": "7",
       "when": 1775707200000,
       "tag": "20260409040000_add_wechat_prepay_id_to_payments",
       "breakpoints": true
     },
     {
-      "idx": 41,
+      "idx": 44,
       "version": "7",
       "when": 1776038460000,
       "tag": "20260413000100_add_event_registration_payload_to_payments",
       "breakpoints": true
     },
     {
-      "idx": 42,
+      "idx": 45,
       "version": "7",
       "when": 1776039600000,
       "tag": "20260413002000_add_event_pack_credit_accounting",
       "breakpoints": true
     },
     {
-      "idx": 43,
+      "idx": 46,
       "version": "7",
       "when": 1776297600000,
       "tag": "20260416000000_add_theme_highlights_to_event_pool_groups",
       "breakpoints": true
     },
     {
-      "idx": 44,
+      "idx": 47,
       "version": "7",
       "when": 1776301200000,
       "tag": "20260416010000_add_missing_user_profile_columns_for_wechat_auth",
       "breakpoints": true
     },
     {
-      "idx": 45,
+      "idx": 48,
       "version": "7",
       "when": 1776776400000,
       "tag": "20260421130000_add_social_icebreaker_ai_feedback",
       "breakpoints": true
     },
     {
-      "idx": 46,
+      "idx": 49,
       "version": "7",
       "when": 1776958962129,
       "tag": "20260423000000_reconcile_legacy_cleanup",
       "breakpoints": true
     },
     {
-      "idx": 47,
+      "idx": 50,
       "version": "7",
       "when": 1777939200000,
       "tag": "20260505000000_drop_has_seen_guide",
       "breakpoints": true
     },
     {
-      "idx": 48,
+      "idx": 51,
       "version": "7",
       "when": 1778112000000,
       "tag": "20260507000000_add_venue_location_and_admin_fields",
       "breakpoints": true
     },
     {
-      "idx": 49,
+      "idx": 52,
       "version": "7",
       "when": 1778141820000,
       "tag": "20260507081700_add_lie_truths_ai_columns",
       "breakpoints": true
     },
     {
-      "idx": 50,
+      "idx": 53,
       "version": "7",
       "when": 1778544000000,
       "tag": "20260512000000_add_peer_feedback_fields",
       "breakpoints": true
     },
     {
-      "idx": 51,
+      "idx": 54,
       "version": "7",
       "when": 1779027456884,
       "tag": "20260517_discover_shell_indexes",
       "breakpoints": true
     },
     {
-      "idx": 52,
+      "idx": 55,
       "version": "7",
       "when": 1779123358540,
       "tag": "20260518_match_compass_preferences",
       "breakpoints": true
     },
     {
-      "idx": 53,
+      "idx": 56,
       "version": "7",
       "when": 1750702200000,
       "tag": "20260523_add_onboarding_restart_count",
       "breakpoints": true
     },
     {
-      "idx": 54,
+      "idx": 57,
       "version": "7",
       "when": 1758850603000,
       "tag": "20260602_add_venue_onboarding_fields",
       "breakpoints": true
     },
     {
-      "idx": 55,
+      "idx": 58,
       "version": "7",
       "when": 20260610002700,
       "tag": "20260610002700_drop_event_pools_created_by_fk",
       "breakpoints": true
     },
     {
-      "idx": 56,
+      "idx": 59,
       "version": "7",
       "when": 1750076467000,
       "tag": "20260616134100_add_venue_brand_name",
       "breakpoints": true
     },
     {
-      "idx": 57,
+      "idx": 60,
+      "version": "7",
+      "when": 1783437309070,
+      "tag": "20260707_add_is_test_session",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
       "version": "7",
       "when": 1778141820001,
       "tag": "add_attendance_status",
       "breakpoints": true
     },
     {
-      "idx": 58,
+      "idx": 62,
       "version": "7",
       "when": 1780992000000,
       "tag": "seed_venue_batch_and_co_20260608",
       "breakpoints": true
     },
     {
-      "idx": 59,
+      "idx": 63,
       "version": "7",
       "when": 1780395567634,
       "tag": "seed_venue_partners_20260602",
       "breakpoints": true
     },
     {
-      "idx": 60,
+      "idx": 64,
       "version": "7",
       "when": 1780395567634,
       "tag": "seed_venue_time_slots_20260602",
       "breakpoints": true
-    },
-    {
-      "idx": 61,
-      "version": "7",
-      "when": 1782743007158,
-      "tag": "0061_condemned_phil_sheldon",
-      "breakpoints": true
-    },
-    {
-      "idx": 62,
-      "version": "9",
-      "when": 1783437309070,
-      "tag": "20260707_add_is_test_session",
-      "breakdown": [
-        {
-          "type": "custom",
-          "kwargs": {}
-        }
-      ]
     }
   ]
 }

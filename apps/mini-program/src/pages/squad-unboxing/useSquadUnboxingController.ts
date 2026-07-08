@@ -100,6 +100,8 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   const {
     data: groupAnalysis,
     isLoading: isLoadingAnalysis,
+    error: analysisError,
+    refetch: refetchAnalysis,
   } = useQuery({
     queryKey: ['mini-program', 'pool-group-analysis', groupId],
     queryFn: () => getPoolGroupAnalysis(apiRequest, groupId),
@@ -305,7 +307,11 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
       screen: 'squad-unboxing',
     })
     haptics('light')
-    Taro.showToast({ title: '海报生成 coming soon', icon: 'none', duration: TOAST_SHORT_MS })
+    Taro.showToast({
+      title: '可以先截图保存这桌记忆，也可以从右上角转发给朋友',
+      icon: 'none',
+      duration: TOAST_MEDIUM_MS,
+    })
   }, [groupId])
 
   const handleOpenGroupDetail = useCallback(() => {
@@ -377,6 +383,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     currentUserId,
     groupAnalysis,
     isLoadingAnalysis,
+    analysisError,
     chemistryTokens,
     sortedPairExplanations,
     pairKeyMemberMap,
@@ -400,5 +407,6 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     handleSharePosterTap,
     handleSkip,
     refetch,
+    refetchAnalysis,
   }
 }

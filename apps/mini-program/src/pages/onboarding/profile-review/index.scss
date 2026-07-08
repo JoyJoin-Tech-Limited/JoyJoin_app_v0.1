@@ -281,9 +281,10 @@
   }
 
   &__section-label {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: $spacing-xs;
+    flex-wrap: wrap;
     margin-bottom: $spacing-xs;
     color: $color-primary;
     font-size: $font-size-xs;
@@ -329,6 +330,10 @@
     &--error {
       border-color: rgba($color-error, 0.18);
     }
+  }
+
+  &__ai-tag-report {
+    margin-top: $spacing-xs;
   }
 
   &__ai-tag-quote {

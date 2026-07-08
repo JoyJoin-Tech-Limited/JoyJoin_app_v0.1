@@ -78,6 +78,16 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  Real identity reveal remains in squad-unboxing. Env fallback:
    *  MATCHING_PUZZLE_PRELUDE_ENABLED (default: false). */
   matchingPuzzlePreludeEnabled: "MATCHING_PUZZLE_PRELUDE_ENABLED",
+  /** When true, AIGC labels ("AI 生成内容" / "AI 辅助生成") are rendered on
+   *  AI-generated surfaces in the mini-program. The server always returns
+   *  AIGC meta; the client gates rendering with this flag.
+   *  Env fallback: AIGC_LABELS_ENABLED (default: false). */
+  aigcLabelsEnabled: "AIGC_LABELS_ENABLED",
+  /** When true, matching results are held in a pending operator-review state
+   *  instead of immediately notifying users and assigning venues. Admin must
+   *  approve or reject the formed groups. Default false preserves existing
+   *  auto-match behavior. Env fallback: MATCHING_OPERATOR_REVIEW_ENABLED. */
+  matchingOperatorReviewEnabled: "MATCHING_OPERATOR_REVIEW_ENABLED",
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

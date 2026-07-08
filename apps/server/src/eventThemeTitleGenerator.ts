@@ -24,6 +24,8 @@ import { getEventThemeTitleProvider, isProviderAvailable, type AIProvider } from
 import { getDeepseekClient, getDeepseekModel } from './ai/deepseekClient';
 import { logAITrace } from './lib/aiTraceLogger';
 import { logger } from './lib/logger';
+import { buildAIGCMeta, buildFallbackAIMeta, buildLiveAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
+import { moderateGeneratedContent } from './lib/aiContentModeration';
 
 // Validate API keys at module initialization
 if (!process.env.DEEPSEEK_API_KEY && !process.env.MINIMAX_API_KEY) {
@@ -73,6 +75,8 @@ export interface EventThemeTitleResult {
   themeEmoji: string;
   themeHighlights: string[];
   themeVibe: 'playful' | 'professional' | 'creative' | 'adventurous';
+  /** Standard AI observability metadata with AIGC compliance flags. */
+  meta: AIResponseMeta;
 }
 
 function sanitizeThemeHighlights(input: unknown): string[] {
@@ -161,30 +165,60 @@ export async function generateAndAssignEventThemeTitle(
         
         if (result && validateEventThemeTitleResult(result)) {
           result.themeHighlights = sanitizeThemeHighlights(result.themeHighlights);
-          const duration = Date.now() - startTime;
-          logger.info('Event theme title generated', { component: 'EventThemeTitleGen', provider: aiSelection.provider, latencyMs: duration });
-          logger.info('Event theme title result', { component: 'EventThemeTitleGen', emoji: result.themeEmoji, title: result.eventThemeTitle });
-          logAITrace({
+
+          const moderationChecks = [
+            { field: 'eventThemeTitle', text: result.eventThemeTitle },
+            { field: 'themeTagline', text: result.themeTagline },
+            ...result.themeHighlights.map((h, i) => ({ field: `themeHighlight_${i}`, text: h })),
+          ];
+          const moderation = moderateGeneratedContent(moderationChecks, {
             domain: 'theme_generation',
             feature: 'generateEventThemeTitle',
             provider: aiSelection.provider,
             model: aiSelection.model,
-            latencyMs: duration,
-            success: true,
-            fallbackUsed: false,
-            fromCache: false,
+            latencyMs: Date.now() - startTime,
             promptVersion: EVENT_THEME_TITLE_PROMPT_VERSION,
           });
-          
-          await saveGroupTheme(groupId, result);
+          if (!moderation.safe) {
+            logger.warn('Content safety moderation failed, using fallback', { component: 'EventThemeTitleGen', field: moderation.field });
+            fallbackErrorCode = 'content_safety';
+            trackAIUsage({
+              groupId,
+              success: false,
+              latencyMs: Date.now() - startTime,
+              errorMessage: 'content_safety',
+            });
+          } else {
+            const duration = Date.now() - startTime;
+            const meta = buildLiveAIMeta(aiSelection.provider, EVENT_THEME_TITLE_PROMPT_VERSION);
+            result.meta = {
+              ...meta,
+              aigc: buildAIGCMeta({ fallbackUsed: false, labelType: 'ai-generated' }),
+            };
+            logger.info('Event theme title generated', { component: 'EventThemeTitleGen', provider: aiSelection.provider, latencyMs: duration });
+            logger.info('Event theme title result', { component: 'EventThemeTitleGen', emoji: result.themeEmoji, title: result.eventThemeTitle });
+            logAITrace({
+              domain: 'theme_generation',
+              feature: 'generateEventThemeTitle',
+              provider: aiSelection.provider,
+              model: aiSelection.model,
+              latencyMs: duration,
+              success: true,
+              fallbackUsed: false,
+              fromCache: false,
+              promptVersion: EVENT_THEME_TITLE_PROMPT_VERSION,
+            });
 
-          trackAIUsage({
-            groupId,
-            success: true,
-            latencyMs: duration,
-          });
+            await saveGroupTheme(groupId, result);
 
-          return result;
+            trackAIUsage({
+              groupId,
+              success: true,
+              latencyMs: duration,
+            });
+
+            return result;
+          }
         } else {
           logger.warn('Validation failed, using fallback', { component: 'EventThemeTitleGen' });
           fallbackErrorCode = 'validation_failed';
@@ -214,6 +248,10 @@ export async function generateAndAssignEventThemeTitle(
     // Fallback to template-based generation
     result = generateFallbackEventThemeTitle(context);
     result.themeHighlights = sanitizeThemeHighlights(result.themeHighlights);
+    result.meta = {
+      ...buildFallbackAIMeta(fallbackErrorCode, EVENT_THEME_TITLE_PROMPT_VERSION),
+      aigc: buildAIGCMeta({ fallbackUsed: true, labelType: 'ai-generated' }),
+    };
     logAITrace({
       domain: 'theme_generation',
       feature: 'generateEventThemeTitle',
@@ -307,7 +345,8 @@ async function generateEventThemeTitleWithAI(
       themeTagline: parsed.themeTagline || parsed.theme_tagline || parsed.teamTagline || parsed.tagline,
       themeEmoji: parsed.themeEmoji || parsed.theme_emoji || parsed.teamEmoji || parsed.emoji,
       themeHighlights: parsed.themeHighlights || parsed.theme_highlights || parsed.teamSuperpowers || parsed.superpowers || [],
-      themeVibe: parsed.themeVibe || parsed.theme_vibe || parsed.teamVibe || parsed.vibe || 'playful'
+      themeVibe: parsed.themeVibe || parsed.theme_vibe || parsed.teamVibe || parsed.vibe || 'playful',
+      meta: buildLiveAIMeta(selection.provider, EVENT_THEME_TITLE_PROMPT_VERSION),
     };
 
   } catch (error) {
@@ -473,7 +512,8 @@ function generateFallbackEventThemeTitle(context: EventThemeTitleContext): Event
     themeTagline: taglines[Math.floor(Math.random() * taglines.length)],
     themeEmoji: emojis[Math.floor(Math.random() * emojis.length)],
     themeHighlights: highlights.slice(0, 3),
-    themeVibe: vibes[Math.floor(Math.random() * vibes.length)]
+    themeVibe: vibes[Math.floor(Math.random() * vibes.length)],
+    meta: buildFallbackAIMeta('template_fallback', EVENT_THEME_TITLE_PROMPT_VERSION),
   };
 }
 

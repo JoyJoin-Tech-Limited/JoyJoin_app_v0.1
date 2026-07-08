@@ -159,7 +159,7 @@ export default function MatchingStatusPage() {
     case 'loading':
       return (
         <View className='matching-status__loading-shake'>
-          <LoadingScreen message='正在编织你的缘分线…' />
+          <LoadingScreen message='正在拼合你的同好桌…' />
         </View>
       )
     case 'error':
@@ -486,6 +486,8 @@ export default function MatchingStatusPage() {
         persistedThemeSummary={persistedThemeSummary}
         viewerArchetype={viewerArchetype}
         groupAnalysisDebugMeta={groupAnalysisDebugMeta}
+        groupAnalysis={groupAnalysis}
+        relatedEventId={currentRegistration.poolId ?? currentRegistration.id ?? undefined}
       />
 
       <View className='matching-status__actions'>
@@ -574,6 +576,7 @@ export default function MatchingStatusPage() {
             persistedThemeSummary={persistedThemeSummary}
             resolvedGroupId={resolvedGroupId}
             liveRevealError={liveRevealError}
+            relatedEventId={currentRegistration.poolId ?? currentRegistration.id ?? undefined}
             onStartSquadUnboxing={handleStartSquadUnboxing}
             onContinueFromMembers={handleContinueFromMembers}
             onFinishLiveJourney={finishLiveJourney}

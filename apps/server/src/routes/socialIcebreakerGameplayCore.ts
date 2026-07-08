@@ -55,6 +55,7 @@ import {
 } from './socialIcebreakerHelpers';
 import { shouldSkipOnDemandGeneration } from '../jobs/preGenerationQueue';
 import { recordVoteOptimistically } from '../lib/optimisticSync';
+import { runBotSimulationSafely } from '../services/socialIcebreakerBotService';
 
 const router = Router();
 
@@ -72,6 +73,8 @@ router.post('/:socialSessionId/micro-challenge/complete', async (req: any, res) 
 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
+
+  await runBotSimulationSafely(socialSessionId, state, 'micro-challenge-complete');
 
   if (state.currentPhase !== 'micro_challenge') {
     return res.status(400).json({ error: 'Not in micro_challenge phase' });
@@ -193,6 +196,10 @@ router.post('/:socialSessionId/micro-challenge/generate', async (req: any, res) 
   state.currentChallengeMeta = result.meta;
   await updateSession(socialSessionId, state);
 
+  // Bots complete the freshly generated challenge.
+  await runBotSimulationSafely(socialSessionId, state, 'micro-challenge-generate');
+  await updateSession(socialSessionId, state);
+
   return res.json({
     challenge: state.currentChallenge,
     meta: result.meta,
@@ -233,6 +240,9 @@ router.post('/:socialSessionId/lie-detective/submit-tags', async (req: any, res)
   state.lieDetectiveV2Tags = state.lieDetectiveV2Tags || {};
   state.lieDetectiveV2Tags[userId] = validation.tags;
 
+  // Fill missing bot tags so the real user can proceed with statement generation.
+  await runBotSimulationSafely(socialSessionId, state, 'lie-detective-submit-tags');
+
   // If all players have submitted tags, optionally trigger statement generation
   const roster = await listParticipants(socialSessionId);
   const allSubmitted = roster.every((p) => state.lieDetectiveV2Tags?.[p.userId]);
@@ -260,6 +270,8 @@ router.post('/:socialSessionId/lie-detective/next-player', async (req: any, res)
 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
+
+  await runBotSimulationSafely(socialSessionId, state, 'lie-detective-next-player');
 
   if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can advance to the next player' });
@@ -379,6 +391,10 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
       state.dicePassedBy = [];
       await updateSession(socialSessionId, state);
 
+      // Bots choose their dares.
+      await runBotSimulationSafely(socialSessionId, state, 'personality-dice-generate');
+      await updateSession(socialSessionId, state);
+
       return res.json({ groups: enrichedGroups, meta: groupResult.meta });
     } catch (error) {
       logger.error('[SocialIcebreaker] personality-dice/generate (choose-mode) error:', { error });
@@ -445,6 +461,10 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
     state.dicePassedBy = [];
     await updateSession(socialSessionId, state);
 
+    // Bots complete their challenges.
+    await runBotSimulationSafely(socialSessionId, state, 'personality-dice-generate');
+    await updateSession(socialSessionId, state);
+
     return res.json({ challenges: enrichedChallenges, meta: challengeResult.meta });
   } catch (error) {
     logger.error('[SocialIcebreaker] personality-dice/generate error:', { error });
@@ -484,6 +504,8 @@ router.post('/:socialSessionId/personality-dice/choose', async (req: any, res) =
 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
+
+  await runBotSimulationSafely(socialSessionId, state, 'personality-dice-choose');
 
   if (state.currentPhase !== 'personality_dice') {
     return res.status(400).json({ error: 'Not in personality_dice phase' });
@@ -610,6 +632,8 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
+
+  await runBotSimulationSafely(socialSessionId, state, 'personality-dice-complete');
 
   if (state.currentPhase !== 'personality_dice') {
     return res.status(400).json({ error: 'Not in personality_dice phase' });
@@ -822,6 +846,10 @@ router.post('/:socialSessionId/quip-battle/generate', async (req: any, res) => {
     state.quipBattlePromptsMeta = result.meta;
     await updateSession(socialSessionId, state);
 
+    // Bots submit answers and votes for the generated prompts.
+    await runBotSimulationSafely(socialSessionId, state, 'quip-battle-generate');
+    await updateSession(socialSessionId, state);
+
     return res.json({ prompts: result.data, meta: result.meta });
   } catch (error) {
     logger.error('[SocialIcebreaker] generateQuipBattlePrompts error:', { error: String(error) });
@@ -847,6 +875,8 @@ router.post('/:socialSessionId/quip-battle/submit', async (req: any, res) => {
 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
+
+  await runBotSimulationSafely(socialSessionId, state, 'quip-battle-submit');
 
   if (state.currentPhase !== 'quip_battle') {
     return res.status(400).json({ error: 'Not in quip_battle phase' });
@@ -956,6 +986,8 @@ router.post('/:socialSessionId/quip-battle/vote', async (req: any, res) => {
 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
+
+  await runBotSimulationSafely(socialSessionId, state, 'quip-battle-vote');
 
   if (state.currentPhase !== 'quip_battle') {
     return res.status(400).json({ error: 'Not in quip_battle phase' });

@@ -10,6 +10,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/admin/matching": "匹配实验室",
   "/admin/matching-config": "匹配配置",
   "/admin/matching-logs": "匹配日志",
+  "/admin/matching-reviews": "匹配审核",
   "/admin/feedback": "反馈管理",
   "/admin/moderation": "用户举报",
   "/admin/interaction-logs": "连接日志",

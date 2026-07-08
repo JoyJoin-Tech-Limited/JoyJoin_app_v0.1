@@ -113,12 +113,12 @@ export function SpeedFriendingPhaseView({
           <View className='speed-friending__summary-emoji'>
             <PhaseHeaderIcon phase='speed_friending' size={80} />
           </View>
-          <Text className='speed-friending__summary-title'>快速交友完成</Text>
+          <Text className='speed-friending__summary-title'>快速破冰完成</Text>
           <Text className='speed-friending__summary-subtitle'>
             共 {totalRounds} 轮，{pairs.length} 次配对
           </Text>
           <Text className='speed-friending__summary-hint'>
-            大家都认识了新朋友，真棒！
+            大家都认识了新伙伴，真棒！
           </Text>
         </Card>
       </View>
@@ -281,7 +281,7 @@ export function SpeedFriendingPhaseView({
               disabled={isLoading}
               loading={isLoading}
             >
-              {isLoading ? '提交中…' : '完成交友'}
+              {isLoading ? '提交中…' : '完成互动'}
             </Button>
           )}
         </View>

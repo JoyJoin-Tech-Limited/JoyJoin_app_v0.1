@@ -65,7 +65,7 @@ export function registerAIServiceRoutes(app: Express): void {
 
   /** Fallback copy used when no profile data is available. */
   const VIBE_BRIEF_FALLBACK = {
-    insight: '我们的算法已初步读懂你的社交画像',
+    insight: '悦仔已经初步读懂你的社交画像',
     matchingPromise: '我们会以此为基础，为你匹配更对 vibe 的小组',
   } as const;
 
@@ -96,7 +96,7 @@ export function registerAIServiceRoutes(app: Express): void {
   // Archetype-keyed fit reasons per event type (饭局 / 酒局)
   const ARCHETYPE_FIT_REASONS: Record<string, { 饭局: string; 酒局: string }> = {
     '社牛柯基':    { 饭局: '你的暖场感很适合围桌聊天', 酒局: '你的活力能自然带热气氛' },
-    '小太阳鸡':     { 饭局: '你的感染力很适合带动全桌', 酒局: '你的热情能帮陌生人快些破冰' },
+    '小太阳鸡':     { 饭局: '你的感染力很适合带动全桌', 酒局: '你的热情能自然带动全场破冰' },
     '夸夸仓鼠':     { 饭局: '轻松饭局最能发挥你的共情力', 酒局: '你的温柔让酒局不只热闹' },
     '寻宝狐':     { 饭局: '话题型饭局很适合你的机智', 酒局: '自由节奏给你更多即兴空间' },
     '机灵海豚':   { 饭局: '你的真实感很适合轻松饭局', 酒局: '你的松弛感在酒局里很加分' },

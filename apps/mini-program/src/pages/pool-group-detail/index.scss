@@ -75,7 +75,17 @@
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
     color: $color-primary;
+  }
+
+  &__analysis-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     margin-bottom: $spacing-xs;
+  }
+
+  &__analysis-report {
+    margin-top: $spacing-sm;
   }
 
   &__analysis-body {

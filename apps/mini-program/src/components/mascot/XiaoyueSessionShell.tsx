@@ -1,8 +1,12 @@
 import { View, Text } from '@tarojs/components'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import type { SocialSessionState, SocialIcebreakerPhase, XiaoyueAdaptiveSuggestion } from '@shared/socialIcebreaker'
+import type { AIResponseMeta } from '@shared/types/aiMeta'
 import XiaoyueChatBubble from './XiaoyueChatBubble'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import AIGCLabel from '../../components/ai-content/AIGCLabel'
+import AIContentReportButton from '../../components/ai-content/AIContentReportButton'
+import { useAIGCLabelsEnabled } from '../../hooks/useAIGCLabelsEnabled'
 import { ICEBREAKER_XIAOYUE_EXPRESSION } from '../../lib/mascot/xiaoyueExpressions'
 import type { XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
 import './XiaoyueSessionShell.scss'
@@ -10,7 +14,9 @@ import './XiaoyueSessionShell.scss'
 export interface XiaoyueSessionShellProps {
   phase: SocialIcebreakerPhase | 'waiting' | 'ended';
   sessionPack?: SocialSessionState['xiaoyueSessionPack'];
+  sessionPackMeta?: AIResponseMeta;
   adaptiveSuggestion?: XiaoyueAdaptiveSuggestion;
+  adaptiveSuggestionMeta?: AIResponseMeta;
   playerCount: number;
   isHost: boolean;
   isSyncing: boolean;
@@ -82,7 +88,9 @@ function getSuggestionExpression(type: XiaoyueAdaptiveSuggestion['type']): Xiaoy
 export default function XiaoyueSessionShell({
   phase,
   sessionPack,
+  sessionPackMeta,
   adaptiveSuggestion,
+  adaptiveSuggestionMeta,
   playerCount,
   isHost,
   isSyncing,
@@ -92,6 +100,9 @@ export default function XiaoyueSessionShell({
 }: XiaoyueSessionShellProps) {
   const expressionId = ICEBREAKER_XIAOYUE_EXPRESSION[phase] ?? 'coachGuide'
   const { main, hint } = getPhaseCoachingLine(phase, sessionPack, isHost)
+  const aigcEnabled = useAIGCLabelsEnabled()
+  const sessionPackAigcMeta = sessionPackMeta?.aigc ?? { aiGenerated: true, labelType: 'ai-generated' as const }
+  const adaptiveAigcMeta = adaptiveSuggestionMeta?.aigc ?? { aiGenerated: true, labelType: 'ai-generated' as const }
 
   return (
     <View className='xiaoyue-session-shell'>
@@ -106,6 +117,26 @@ export default function XiaoyueSessionShell({
       {hint && (
         <View className='xiaoyue-session-shell__hint'>
           <Text className='xiaoyue-session-shell__hint-text'>{hint}</Text>
+        </View>
+      )}
+
+      {sessionPack && aigcEnabled && (
+        <View
+          className='xiaoyue-session-shell__aigc-row'
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            gap: '12rpx',
+            marginTop: '12rpx',
+            paddingLeft: '24rpx',
+          }}
+        >
+          <AIGCLabel meta={sessionPackAigcMeta} />
+          <AIContentReportButton
+            options={{ reason: 'AI 生成开场包/主持提示' }}
+            label='反馈这段内容'
+          />
         </View>
       )}
 
@@ -131,6 +162,24 @@ export default function XiaoyueSessionShell({
               </Text>
             )}
           </View>
+          {aigcEnabled && (
+            <View
+              className='xiaoyue-session-shell__nudge-aigc-row'
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                gap: '12rpx',
+                marginTop: '12rpx',
+              }}
+            >
+              <AIGCLabel meta={adaptiveAigcMeta} />
+              <AIContentReportButton
+                options={{ reason: 'AI 生成自适应建议' }}
+                label='反馈这段内容'
+              />
+            </View>
+          )}
         </View>
       )}
 

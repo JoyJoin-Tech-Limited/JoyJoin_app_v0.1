@@ -6,6 +6,8 @@
 
 import { getArchetype } from './archetypeRegistry';
 
+import type { AIResponseMeta } from '../types/aiMeta';
+
 export interface XiaoyueAnalysisPublicResult {
   headline: string;
   analysis: string;
@@ -22,6 +24,8 @@ export interface XiaoyueAnalysisPublicResult {
     friendCallout: string;
     socialInvite: string;
   };
+  /** Standard AI observability metadata with AIGC compliance flags. */
+  meta?: AIResponseMeta;
 }
 
 export interface DiscoveryPayload {

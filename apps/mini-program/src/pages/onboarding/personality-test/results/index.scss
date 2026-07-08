@@ -911,6 +911,13 @@ $color-skill-cool: #7c3aed;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
     line-height: 1.5;
+  }
+
+  &__xiaoyue-bubble-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-xs;
     margin-bottom: 8rpx;
   }
 
@@ -1791,7 +1798,17 @@ $color-skill-cool: #7c3aed;
     font-weight: $font-weight-bold;
     color: rgba($color-primary-dark, 0.78);
     letter-spacing: 2rpx;
+  }
+
+  &__detail-section-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     margin-bottom: $spacing-sm;
+  }
+
+  &__detail-report {
+    margin-top: $spacing-sm;
   }
 
   &__detail-partner-scroll {

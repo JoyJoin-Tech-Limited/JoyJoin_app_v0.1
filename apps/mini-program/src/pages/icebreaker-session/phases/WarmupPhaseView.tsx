@@ -4,6 +4,7 @@ import Taro from '@tarojs/taro'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import type { AtmosphereMood, SocialTopic, SocialTopicPromptTiers } from '@shared/socialIcebreaker'
+import type { AIResponseMeta } from '@shared/types/aiMeta'
 import { localAsset } from '../../../lib/utils/cdnAssets'
 import { stripEmojis } from '../../../lib/utils/emojiGuard'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
@@ -12,6 +13,9 @@ import MissingArchetypePlaceholder from '../../../components/mascot/MissingArche
 import Button from '../../../components/ui/Button'
 import ParticleBurst from '../../../components/reveal/ParticleBurst'
 import CardFlip from '../../../components/reveal/CardFlip'
+import AIGCLabel from '../../../components/ai-content/AIGCLabel'
+import AIContentReportButton from '../../../components/ai-content/AIContentReportButton'
+import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
 import { useTierReveal } from '../../../hooks/useTierReveal'
 import IcebreakerTierSelector from '../components/IcebreakerTierSelector'
 import type { TierMachineId } from '@shared/socialIcebreakerTierManifest'
@@ -39,6 +43,9 @@ interface WarmupPhaseViewProps {
   isCustomMode?: boolean
   currentTier?: TierMachineId
   canChangeTier?: boolean
+  isTestMode?: boolean
+  runBots?: boolean
+  warmupTopicsMeta?: AIResponseMeta
   onChangeTier?: () => void
   onGenerateTopics: (mood: AtmosphereMood) => void
   onToggleReady: () => void
@@ -162,6 +169,9 @@ export function WarmupPhaseView({
   isCustomMode,
   currentTier = 'glow',
   canChangeTier = false,
+  isTestMode = false,
+  runBots = false,
+  warmupTopicsMeta,
   onChangeTier,
   onGenerateTopics,
   onToggleReady,
@@ -177,6 +187,8 @@ export function WarmupPhaseView({
   const isReady = readyUserIds.includes(currentUserId)
   const everyoneReady = participants.length > 0 && readyUserIds.length >= participants.length
   const moodLabel = getMoodLabel(selectedMood)
+  const aigcEnabled = useAIGCLabelsEnabled()
+  const topicAigcMeta = warmupTopicsMeta?.aigc ?? { aiGenerated: true, labelType: 'ai-generated' as const }
 
   // ── Reduced motion detection ─────────────────────────────────
   const reduceMotion = useMemo(() => {
@@ -309,6 +321,25 @@ export function WarmupPhaseView({
               <Text className='warmup-card-back__mood'>今晚氛围 · {moodLabel}</Text>
             ) : null}
           </View>
+
+          {aigcEnabled && currentTopic && (
+            <View
+              className='warmup-card-back__aigc-row'
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12rpx',
+                marginTop: '16rpx',
+              }}
+            >
+              <AIGCLabel meta={topicAigcMeta} />
+              <AIContentReportButton
+                options={{ reason: 'AI 生成话题卡' }}
+                label='反馈这段内容'
+              />
+            </View>
+          )}
         </View>
       ) : (
         <View className='warmup-card-back warmup-card-back--empty'>
@@ -318,7 +349,7 @@ export function WarmupPhaseView({
           <Text className='warmup-card-back__question'>话题卡准备中…</Text>
         </View>
       ),
-    [currentTopic, currentIndex, topics.length, selectedMood, moodLabel, depthBadge, vibe, reduceMotion],
+    [currentTopic, currentIndex, topics.length, selectedMood, moodLabel, depthBadge, vibe, reduceMotion, aigcEnabled, topicAigcMeta],
   )
 
   return (
@@ -341,6 +372,16 @@ export function WarmupPhaseView({
           onChangeRequest={onChangeTier}
         />
       </View>
+
+      {/* ── Persistent test-mode badge ─────────────────────── */}
+      {isTestMode && (
+        <View className='icebreaker__test-mode-badge'>
+          <View className='icebreaker__test-mode-badge-dot' />
+          <Text className='icebreaker__test-mode-badge-text'>
+            {runBots ? '测试模式 · 虚拟伙伴陪玩' : '测试模式 · 多人环节已跳过'}
+          </Text>
+        </View>
+      )}
 
       {/* ── Archetype mix badge ────────────────────────────── */}
       {archetypeMixText ? (

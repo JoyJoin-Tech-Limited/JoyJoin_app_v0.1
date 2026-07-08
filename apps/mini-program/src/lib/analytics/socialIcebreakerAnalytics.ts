@@ -11,6 +11,9 @@ type EventType =
   | 'icebreaker_session_tier_changed'
   | 'icebreaker_test_mode_disclosure_rendered'
   | 'icebreaker_test_mode_disclosure_shown'
+  | 'icebreaker_test_mode_disclosure_dismissed'
+  | 'icebreaker_test_mode_advance_retry'
+  | 'icebreaker_test_mode_bot_advance'
   | string
 
 function track(

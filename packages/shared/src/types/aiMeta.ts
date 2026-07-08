@@ -49,6 +49,55 @@ export type AIProvider = 'minimax' | 'deepseek' | null;
 export type LiveAIProvider = Exclude<AIProvider, null>;
 
 /**
+ * AIGC compliance metadata for AI-generated or AI-assisted content surfaces.
+ *
+ * Carried in AIResponseMeta so clients can render an AIGC label when the
+ * AIGC_LABELS_ENABLED feature flag is on. The meta itself is always present;
+ * label rendering is gated client-side by the feature flag.
+ */
+export interface AIGCMeta {
+  /**
+   * true  → content is AI-generated or AI-assisted and should carry a label
+   *         when AIGC labels are enabled.
+   * false → deterministic fallback content (no AI generated this text), so no
+   *         AIGC label is needed.
+   */
+  aiGenerated: boolean;
+
+  /**
+   * Which label variant the client should render when `aiGenerated` is true.
+   *   - 'ai-generated' → primary label "AI 生成内容"
+   *   - 'ai-assisted'  → allowed secondary label "AI 辅助生成" (only where output
+   *                      clearly augments user-provided content, e.g. profession
+   *                      reaction built on the user's profession text).
+   * Omit when `aiGenerated` is false (deterministic fallback).
+   */
+  labelType?: 'ai-generated' | 'ai-assisted';
+}
+
+/**
+ * Build a consistent AIGCMeta object.
+ *
+ * Note: when `fallbackUsed` is true, `labelType` is intentionally ignored.
+ * Deterministic fallback content (curated templates, rule-based output) is
+ * not considered AI-generated for AIGC-labeling purposes, so the returned
+ * meta is always `{ aiGenerated: false }` in that case. Pass `labelType`
+ * only when `fallbackUsed` is false.
+ */
+export function buildAIGCMeta({
+  fallbackUsed,
+  labelType,
+}: {
+  fallbackUsed: boolean;
+  labelType?: 'ai-generated' | 'ai-assisted';
+}): AIGCMeta {
+  if (fallbackUsed) {
+    return { aiGenerated: false };
+  }
+  return { aiGenerated: true, labelType: labelType ?? 'ai-generated' };
+}
+
+/**
  * Standard observability metadata for AI-backed service responses.
  *
  * Embed in response types or pass alongside responses for structured
@@ -109,6 +158,12 @@ export interface AIResponseMeta {
    * Omit when no model call was made (e.g. canned copy) or correlation is unavailable.
    */
   aiCorrelationId?: string;
+
+  /**
+   * AIGC compliance metadata. Always present so clients can render labels
+   * when the AIGC_LABELS_ENABLED feature flag is enabled.
+   */
+  aigc?: AIGCMeta;
 
   /**
    * AI Quality Gate scores (optional — populated when the quality judge ran).

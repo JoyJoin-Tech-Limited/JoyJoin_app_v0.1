@@ -488,7 +488,7 @@ export default function EssentialDataPage() {
       networking: '拓展人脉，悦仔会帮你找能互相增值的圈子。',
       discussion: '想深聊？我会帮你匹配也愿意倾听的人。',
       fun: '开心优先，别想太多。',
-      romance: '心动模式开启，悦仔会悄悄留意默契。',
+      explore: '尝鲜体验，悦仔会帮你挑一个有趣的方向。',
       flexible: '交给悦仔安排，放心。',
     }),
     [],

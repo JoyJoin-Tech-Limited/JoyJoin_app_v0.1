@@ -18,6 +18,7 @@ import {
 } from './socialIcebreakerHelpers';
 import { listParticipants, updateSession } from '../lib/socialIcebreakerStore';
 import { cleanupPhaseStateForNextPhase } from '../socialIcebreakerPhaseConfig';
+import { runBotSimulationSafely } from '../services/socialIcebreakerBotService';
 
 const router = Router();
 
@@ -113,6 +114,10 @@ router.post('/:socialSessionId/select-phase', async (req: Request, res: Response
     state.speedFriendingRoundStartedAt = Date.now();
   }
 
+  await updateSession(socialSessionId, state);
+
+  // Fill missing bot submissions for the selected custom phase.
+  await runBotSimulationSafely(socialSessionId, state, 'custom-select-phase');
   await updateSession(socialSessionId, state);
 
   logger.info('Custom mode phase selected', {

@@ -36,6 +36,9 @@ import Card from '../../../components/ui/Card'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
+import AIGCLabel from '../../../components/ai-content/AIGCLabel'
+import AIContentReportButton from '../../../components/ai-content/AIContentReportButton'
+import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
 import WelcomeGiftCard from '../../../components/onboarding/WelcomeGiftCard'
 import ProfileReviewInviteCard from '../../../components/onboarding/ProfileReviewInviteCard'
 import { getArchetypeVisual, getXiaoyueAsset } from '../personality-test/visuals'
@@ -122,6 +125,7 @@ export default function ProfileReviewPage() {
   const hasTrackedInviteImpressionRef = useRef(false)
   const hasStagedDiscoverPrefetchRef = useRef(false)
   const isScrolledRef = useRef(false)
+  const aigcLabelsEnabled = useAIGCLabelsEnabled()
 
   // prefers-reduced-motion gating: skip the ceremonial reveal animation when motion is reduced.
   useEffect(() => {
@@ -596,6 +600,7 @@ export default function ProfileReviewPage() {
               <View className='profile-review__section-label'>
                 <JoyJoinIcon emoji='✨' tier='mood' size={24} className='profile-review__section-label-icon' />
                 <Text className='profile-review__section-label-text'>悦仔的观察</Text>
+                <AIGCLabel meta={profileTagline?.meta?.aigc} />
               </View>
 
               {isTaglineLoading ? (
@@ -629,6 +634,14 @@ export default function ProfileReviewPage() {
                       重试
                     </Text>
                   ) : null}
+                  {aigcLabelsEnabled && !isTaglineError && (
+                    <AIContentReportButton
+                      className='profile-review__ai-tag-report'
+                      options={{
+                        reason: '举报“悦仔的观察”AI 生成内容',
+                      }}
+                    />
+                  )}
                 </View>
               )}
             </View>

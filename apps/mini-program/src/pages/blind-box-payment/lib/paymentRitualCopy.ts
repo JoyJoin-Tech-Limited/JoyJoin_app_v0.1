@@ -71,15 +71,15 @@ export function getActICopy(
     const opening = ARCHETYPE_OPENING_LINES[archetype!] || `嘿，${trait}的${name}。悦仔给你留了个前排位置。`
 
     return {
-      title: '准备好了吗？下一场相遇在等你',
+      title: '准备好了吗？下一场局在等你',
       subtitle: hasContextActivity
         ? '聚光灯已经就位，该你上场了'
         : `${name}的局，从来不会无聊`,
       xiaoyueLine: opening,
       progressHint: '第一步：认识同频的人',
       communitySubline: weeklyEvents > 0
-        ? `本周${weeklyEvents}场局，有人和你一样，在等一个对的开始`
-        : '有人和你一样，在等一个对的开始',
+        ? `本周${weeklyEvents}场局，有人和你一样，在等一个对的活动`
+        : '有人和你一样，在等一个对的活动',
     }
   }
 
@@ -111,7 +111,7 @@ export function getActIICopy(
 
   const familyInvitations: Record<ArchetypeFamily, string> = {
     warm: '这里有和你一样热情的人，在等一个发光的机会',
-    cool: '这里有和你一样洒脱的人，在等一场不刻意的相遇',
+    cool: '这里有和你一样洒脱的人，在等一场不刻意的局',
     fire: '这里有和你一样明亮的人，在等一个被看见的舞台',
     calm: '这里有和你一样从容的人，在等一次走心的对话',
   }
@@ -165,7 +165,7 @@ export function getActIIICopy(archetype: string | null): ActIIICopy {
       vip_monthly: '这个月去发光吧，小太阳',
       vip_quarterly: '三个月，足够你照亮整个社群',
       pack_3: '三次机会，三次被看见的时刻',
-      pack_6: '六次约会，六次让更多人认识你的机会',
+      pack_6: '六次活动，六次让更多人认识你的机会',
     },
     rooster: {
       vip_monthly: '这一个月，舞台是你的',
@@ -181,15 +181,15 @@ export function getActIIICopy(archetype: string | null): ActIIICopy {
     },
     dolphin_calm: {
       vip_monthly: '一个月，慢慢认识，不赶时间',
-      vip_quarterly: '三个月，足够让陌生人变成朋友',
-      pack_3: '三次机会，三次深度的连接',
-      pack_6: '六次约会，六次静水流深的相遇',
+      vip_quarterly: '三个月，足够让同好变成朋友',
+      pack_3: '三次机会，三次深度的交流',
+      pack_6: '六次活动，六次静水流深的交流',
     },
     default: {
-      vip_monthly: '这个月，去遇见对的人',
-      vip_quarterly: '三个月，慢慢认识，不赶时间',
+      vip_monthly: '这个月，去遇见合拍的活动伙伴',
+      vip_quarterly: '三个月，慢慢认识同频的人',
       pack_3: '三次机会，三场不一样的故事',
-      pack_6: '六次约会，足够遇见心动',
+      pack_6: '六次活动，足够遇见合拍',
     },
   }
 
@@ -203,9 +203,9 @@ export function getActIIICopy(archetype: string | null): ActIIICopy {
     progressLabel: '第二步：选择你的参与方式',
     planDescriptions: {
       vip_monthly: '三十天，随心的局。想走就走。',
-      vip_quarterly: '一季陪伴，慢慢认识对的人',
+      vip_quarterly: '一季陪伴，慢慢认识同频的人',
       pack_3: '三次机会，三场不一样的故事',
-      pack_6: '六次约会，足够遇见心动',
+      pack_6: '六次活动，足够遇见合拍',
     },
     planReasons: reasons,
     xiaoyueReactions: {
@@ -214,7 +214,7 @@ export function getActIIICopy(archetype: string | null): ActIIICopy {
         : '好选择。这一个月，去发光吧。',
       vip_quarterly: '三个月的陪伴，慢慢认识，不赶时间。',
       pack_3: '先试试看？悦仔猜你会回来选月的。',
-      pack_6: '六次机会，足够找到那个对的人。',
+      pack_6: '六次机会，足够找到合拍的活动伙伴。',
     },
     valueAnchorLabels: {
       perSession: '每次仅需',
@@ -351,7 +351,7 @@ export function getArchetypeValueProposition(archetype: string | null): string |
     octopus: '你的多面性会让这个局充满惊喜',
     owl: '你的智慧会让这个对话升维',
     elephant: '你的靠谱会让这个局稳如磐石',
-    turtle: '你的耐心会让你遇见真正对的人',
+    turtle: '你的耐心会让你遇见合拍的活动伙伴',
     cat: '你的独立视角会让所有人耳目一新',
   }
 
