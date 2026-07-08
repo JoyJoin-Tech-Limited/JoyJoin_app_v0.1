@@ -2,7 +2,7 @@ import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback, useState } from 'react'
 import { haptics } from '../../lib/utils/haptics'
-import { apiRequest } from '../../lib/api/api'
+import { apiRequest, type ApiError } from '../../lib/api/api'
 import './SingleTestBanner.scss'
 
 interface SingleTestBannerProps {
@@ -47,6 +47,17 @@ async function requestWithRetry<T>(request: () => Promise<T>): Promise<T> {
   throw lastError
 }
 
+function logSingleTestError(action: string, err: unknown) {
+  const apiError = err as ApiError
+  console.error(`[SingleTest] ${action} failed`, {
+    message: err instanceof Error ? err.message : String(err),
+    statusCode: apiError?.statusCode,
+    data: apiError?.data,
+    requestUrl: apiError?.requestUrl,
+    debugMessage: apiError?.debugMessage,
+  })
+}
+
 export default function SingleTestBanner({ className = '' }: SingleTestBannerProps) {
   const [loading, setLoading] = useState(false)
   const [resetting, setResetting] = useState(false)
@@ -71,6 +82,7 @@ export default function SingleTestBanner({ className = '' }: SingleTestBannerPro
         url: `/pages/matching-status/index?registrationId=${encodeURIComponent(result.registrationId)}`,
       })
     } catch (err: unknown) {
+      logSingleTestError('start', err)
       Taro.showToast({ title: getErrorTitle('启动失败', err), icon: 'none' })
     } finally {
       setLoading(false)
@@ -93,6 +105,7 @@ export default function SingleTestBanner({ className = '' }: SingleTestBannerPro
       )
       Taro.showToast({ title: '测试数据已重置', icon: 'success' })
     } catch (err: unknown) {
+      logSingleTestError('reset', err)
       Taro.showToast({ title: getErrorTitle('重置失败', err), icon: 'none' })
     } finally {
       setResetting(false)

@@ -1,9 +1,13 @@
 import { and, eq, inArray, like, or } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import * as schema from "@shared/schema";
 import { db } from "../db";
 import {
   eventAttendance,
   eventCreditRedemptions,
   eventGroupOutcomes,
+  poolAICopy,
+  poolMatchingLogs,
   users,
   eventPools,
   eventPoolGroups,
@@ -17,6 +21,8 @@ import {
   socialIcebreakerPhasePulseChecks,
   socialIcebreakerPhaseMetrics,
   socialIcebreakerMiniscriptSecrets,
+  preGenerationJobs,
+  preGenerationResults,
   momentCardInteractions,
   userInterests,
 } from "@shared/schema";
@@ -39,6 +45,7 @@ import { isSocialIcebreakerTestMode } from "../lib/isSocialIcebreakerTestMode";
 import { cleanupBotFillUsers } from "./botFillService";
 
 type IdRow = { id: string };
+type DbTransaction = NodePgDatabase<typeof schema>;
 
 const VIRTUAL_PHONE_PREFIX = "+861399999";
 const SINGLE_TEST_POOL_TITLE = "单人调试局";
@@ -155,13 +162,14 @@ export async function ensureVirtualUsers(): Promise<void> {
   const namesToUse = shuffle(VIRTUAL_NAMES);
 
   const values = [];
-  for (let i = existing.length; i < VIRTUAL_USER_COUNT && (i - existing.length) < namesToUse.length; i++) {
+  for (let i = existing.length; i < VIRTUAL_USER_COUNT; i++) {
+    const nameIndex = i - existing.length;
     const primaryArchetype = pick(archetypeIds);
     const archetypeDef = ARCHETYPE_BY_ID[primaryArchetype];
     values.push({
       phoneNumber: `${VIRTUAL_PHONE_PREFIX}${String(i).padStart(4, '0')}`,
       password: passwordHash,
-      displayName: namesToUse[i - existing.length] ?? `虚拟用户${i}`,
+      displayName: namesToUse[nameIndex % namesToUse.length] ?? `虚拟用户${i}`,
       gender: pick(GENDERS),
       currentCity: pick(CITIES),
       birthdate: generateBirthdate(),
@@ -170,10 +178,10 @@ export async function ensureVirtualUsers(): Promise<void> {
       educationLevel: pick(EDUCATION_LEVELS),
       lifeStage: pick(LIFE_STAGES),
       intent: [pick(INTENTS), pick(INTENTS)],
-    hasCompletedProfileSetup: true,
-    hasCompletedPersonalityTest: true,
-    hasCompletedRegistration: true,
-    isTestBot: true,
+      hasCompletedProfileSetup: true,
+      hasCompletedPersonalityTest: true,
+      hasCompletedRegistration: true,
+      isTestBot: true,
     });
   }
 
@@ -441,18 +449,20 @@ export async function getSingleTestMetaForSessionStart(groupId: string): Promise
 async function cleanupSingleTestPoolRows(
   poolId: string,
   { deletePool }: { deletePool: boolean },
+  tx?: DbTransaction,
 ): Promise<{
   deletedRegistrations: number;
   deletedGroups: number;
   deletedSocialSessions: number;
 }> {
-  const registrationRows = await db
+  const conn = tx ?? db;
+  const registrationRows = await conn
     .select({ id: eventPoolRegistrations.id })
     .from(eventPoolRegistrations)
     .where(eq(eventPoolRegistrations.poolId, poolId));
   const registrationIds = registrationRows.map((row: IdRow) => row.id);
 
-  const groupRows = await db
+  const groupRows = await conn
     .select({ id: eventPoolGroups.id })
     .from(eventPoolGroups)
     .where(eq(eventPoolGroups.poolId, poolId));
@@ -461,60 +471,69 @@ async function cleanupSingleTestPoolRows(
   let deletedSocialSessions = 0;
 
   if (groupIds.length > 0) {
-    const socialSessionRows = await db
+    const socialSessionRows = await conn
       .select({ id: socialIcebreakerSessions.id })
       .from(socialIcebreakerSessions)
       .where(inArray(socialIcebreakerSessions.icebreakerSessionId, groupIds));
     const socialSessionIds = socialSessionRows.map((row: IdRow) => row.id);
 
     if (socialSessionIds.length > 0) {
-      await db
+      await conn
+        .delete(preGenerationResults)
+        .where(inArray(preGenerationResults.socialSessionId, socialSessionIds));
+      await conn
+        .delete(preGenerationJobs)
+        .where(inArray(preGenerationJobs.socialSessionId, socialSessionIds));
+      await conn
         .delete(socialIcebreakerMiniscriptSecrets)
         .where(inArray(socialIcebreakerMiniscriptSecrets.socialSessionId, socialSessionIds));
-      await db
+      await conn
         .delete(socialIcebreakerPhaseMetrics)
         .where(inArray(socialIcebreakerPhaseMetrics.socialSessionId, socialSessionIds));
-      await db
+      await conn
         .delete(socialIcebreakerPhasePulseChecks)
         .where(inArray(socialIcebreakerPhasePulseChecks.socialSessionId, socialSessionIds));
-      await db
+      await conn
         .delete(momentCardInteractions)
         .where(inArray(momentCardInteractions.socialSessionId, socialSessionIds));
-      await db
+      await conn
         .delete(socialIcebreakerAiFeedback)
         .where(inArray(socialIcebreakerAiFeedback.socialSessionId, socialSessionIds));
-      await db
+      await conn
         .delete(socialIcebreakerLieTruths)
         .where(inArray(socialIcebreakerLieTruths.socialSessionId, socialSessionIds));
-      await db
+      await conn
         .delete(socialIcebreakerParticipants)
         .where(inArray(socialIcebreakerParticipants.socialSessionId, socialSessionIds));
-      const deleted = await db
+      const deleted = await conn
         .delete(socialIcebreakerSessions)
         .where(inArray(socialIcebreakerSessions.id, socialSessionIds))
         .returning({ id: socialIcebreakerSessions.id });
       deletedSocialSessions = deleted.length;
     }
 
-    await db.delete(eventGroupOutcomes).where(inArray(eventGroupOutcomes.groupId, groupIds));
+    await conn.delete(eventGroupOutcomes).where(inArray(eventGroupOutcomes.groupId, groupIds));
   }
+
+  await conn.delete(poolAICopy).where(eq(poolAICopy.poolId, poolId));
+  await conn.delete(poolMatchingLogs).where(eq(poolMatchingLogs.poolId, poolId));
 
   if (registrationIds.length > 0) {
-    await db.delete(eventCreditRedemptions).where(inArray(eventCreditRedemptions.registrationId, registrationIds));
-    await db.delete(invitationUses).where(inArray(invitationUses.poolRegistrationId, registrationIds));
+    await conn.delete(eventCreditRedemptions).where(inArray(eventCreditRedemptions.registrationId, registrationIds));
+    await conn.delete(invitationUses).where(inArray(invitationUses.poolRegistrationId, registrationIds));
   }
 
-  const deletedRegistrations = await db
+  const deletedRegistrations = await conn
     .delete(eventPoolRegistrations)
     .where(eq(eventPoolRegistrations.poolId, poolId))
     .returning({ id: eventPoolRegistrations.id });
-  const deletedGroups = await db
+  const deletedGroups = await conn
     .delete(eventPoolGroups)
     .where(eq(eventPoolGroups.poolId, poolId))
     .returning({ id: eventPoolGroups.id });
 
   if (deletePool) {
-    await db.delete(eventPools).where(eq(eventPools.id, poolId));
+    await conn.delete(eventPools).where(eq(eventPools.id, poolId));
   }
 
   return {
@@ -532,44 +551,42 @@ export async function cleanupSingleTestData(): Promise<{
   deletedBotFillUsers: number;
 }> {
   const botFillCleanup = await cleanupBotFillUsers();
-  let poolCleanup = {
-    deletedRegistrations: 0,
-    deletedGroups: 0,
-    deletedSocialSessions: 0,
-  };
 
-  const [pool] = await db
-    .select({ id: eventPools.id })
-    .from(eventPools)
-    .where(eq(eventPools.title, SINGLE_TEST_POOL_TITLE))
-    .limit(1);
+  const result = await db.transaction(async (tx: DbTransaction) => {
+    const [pool] = await tx
+      .select({ id: eventPools.id })
+      .from(eventPools)
+      .where(eq(eventPools.title, SINGLE_TEST_POOL_TITLE))
+      .limit(1);
 
-  if (pool) {
-    poolCleanup = await cleanupSingleTestPoolRows(pool.id, { deletePool: true });
-  }
+    const poolCleanup = pool
+      ? await cleanupSingleTestPoolRows(pool.id, { deletePool: true }, tx)
+      : { deletedRegistrations: 0, deletedGroups: 0, deletedSocialSessions: 0 };
 
-  const virtualUserRows = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(like(users.phoneNumber, `${VIRTUAL_PHONE_PREFIX}%`));
-  const virtualUserIds = virtualUserRows.map((row: IdRow) => row.id);
+    const virtualUserRows = await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(like(users.phoneNumber, `${VIRTUAL_PHONE_PREFIX}%`));
+    const virtualUserIds = virtualUserRows.map((row: IdRow) => row.id);
 
-  let deletedVirtualUsers = 0;
-  if (virtualUserIds.length > 0) {
-    await db
-      .delete(matchHistory)
-      .where(or(inArray(matchHistory.user1Id, virtualUserIds), inArray(matchHistory.user2Id, virtualUserIds)));
-    await db.delete(eventAttendance).where(inArray(eventAttendance.userId, virtualUserIds));
-    await db.delete(userInterests).where(inArray(userInterests.userId, virtualUserIds));
-    const deleted = await db.delete(users).where(inArray(users.id, virtualUserIds)).returning({ id: users.id });
-    deletedVirtualUsers = deleted.length;
-  }
+    let deletedVirtualUsers = 0;
+    if (virtualUserIds.length > 0) {
+      await tx
+        .delete(matchHistory)
+        .where(or(inArray(matchHistory.user1Id, virtualUserIds), inArray(matchHistory.user2Id, virtualUserIds)));
+      await tx.delete(eventAttendance).where(inArray(eventAttendance.userId, virtualUserIds));
+      await tx.delete(userInterests).where(inArray(userInterests.userId, virtualUserIds));
+      const deleted = await tx.delete(users).where(inArray(users.id, virtualUserIds)).returning({ id: users.id });
+      deletedVirtualUsers = deleted.length;
+    }
 
-  const result = {
-    ...poolCleanup,
-    deletedVirtualUsers,
-    deletedBotFillUsers: botFillCleanup.deletedBots,
-  };
+    return {
+      ...poolCleanup,
+      deletedVirtualUsers,
+      deletedBotFillUsers: botFillCleanup.deletedBots,
+    };
+  });
+
   logger.info("[SingleTest] Cleanup complete", result);
   return result;
 }
