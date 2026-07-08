@@ -23,11 +23,11 @@ on:
       api_target:
         description: 'API target environment'
         required: true
-        default: 'production'
+        default: 'staging'
         type: choice
         options:
-          - production
           - staging
+          - production
       should_upload:
         description: 'Upload to WeChat Mini Program'
         required: true
@@ -120,7 +120,7 @@ jobs:
           printf '%s\n' "$WECHAT_PRIVATE_KEY" > "$WX_KEY_FILE"
           chmod 600 "$WX_KEY_FILE"
 
-          API_TARGET="${{ github.event.inputs.api_target || 'production' }}"
+          API_TARGET="${{ github.event.inputs.api_target || 'staging' }}"
           VERSION="1.0.$(date +%Y%m%d).$(date +%H%M)"
           DESCRIPTION="Auto-deploy (${API_TARGET}): ${GITHUB_SHA:0:7}"
 
