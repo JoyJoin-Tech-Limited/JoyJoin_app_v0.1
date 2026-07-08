@@ -1,6 +1,10 @@
 @import '../../styles/variables';
 
 .xiaoyue-session-shell {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100vw;
+  overflow: hidden;
   padding: 24rpx 32rpx 16rpx;
   background: linear-gradient(180deg, rgba(139, 92, 246, 0.06) 0%, transparent 100%);
 }

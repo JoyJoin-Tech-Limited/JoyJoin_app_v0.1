@@ -60,6 +60,10 @@
       opacity: 0.6;
     }
 
+    &--disabled {
+      pointer-events: none;
+    }
+
     &--hover {
       opacity: 0.8;
     }
