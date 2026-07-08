@@ -223,7 +223,7 @@ export default function IcebreakerSessionPage() {
     queryKey: ['mini-program', 'social-icebreaker-session', socialSessionId],
     queryFn: () => apiRequest<SocialSessionState>({ path: buildSocialPath(socialSessionId ?? '') }),
     enabled: !!socialSessionId && !authLoading,
-    refetchInterval: POLL_SOCIAL_SESSION_MS,
+    refetchInterval: pendingAction ? false : POLL_SOCIAL_SESSION_MS,
     staleTime: 0,
   })
 

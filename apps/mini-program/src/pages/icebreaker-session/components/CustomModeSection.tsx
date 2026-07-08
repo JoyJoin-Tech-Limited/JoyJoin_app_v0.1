@@ -1,5 +1,6 @@
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { useEffect, useState } from 'react'
 import type { SocialIcebreakerPhase, SocialSessionState } from '@shared/socialIcebreaker'
 
 interface CustomModeSectionProps {
@@ -21,6 +22,14 @@ export function CustomModeSection({
 }: CustomModeSectionProps) {
   const phases = session?.selectablePhases ?? []
   const hostName = session?.hostDisplayName || '主持人'
+  const [selectedPhase, setSelectedPhase] = useState<SocialIcebreakerPhase | null>(null)
+  const isSelecting = pendingAction === 'select-phase'
+
+  useEffect(() => {
+    if (!isSelecting) {
+      setSelectedPhase(null)
+    }
+  }, [isSelecting])
 
   if (!isHost) {
     return (
@@ -40,6 +49,7 @@ export function CustomModeSection({
       Taro.showToast({ title: disabledReason || '该玩法暂未开放', icon: 'none', duration: 2000 })
       return
     }
+    setSelectedPhase(phase)
     onSelectPhase?.(phase)
   }
 
@@ -55,20 +65,22 @@ export function CustomModeSection({
       {phases.map((phase) => (
         <View
           key={phase.phase}
-          className={`custom-mode-section__btn${phase.disabled ? ' custom-mode-section__btn--disabled' : ''}`}
-          hoverClass={phase.disabled ? 'none' : 'custom-mode-section__btn--pressed'}
+          className={`custom-mode-section__btn${phase.disabled || isSelecting ? ' custom-mode-section__btn--disabled' : ''}${selectedPhase === phase.phase ? ' custom-mode-section__btn--selected' : ''}`}
+          hoverClass={phase.disabled || isSelecting ? 'none' : 'custom-mode-section__btn--pressed'}
           onClick={() => handlePhaseTap(phase.phase, phase.disabled, phase.disabledReason)}
         >
           <Text className='custom-mode-section__btn-emoji'>{phase.emoji}</Text>
           <Text className='custom-mode-section__btn-label'>{phase.name}</Text>
-          {phase.disabledReason && (
-            <Text className='custom-mode-section__btn-hint'>{phase.disabledReason}</Text>
+          {(phase.disabledReason || selectedPhase === phase.phase) && (
+            <Text className='custom-mode-section__btn-hint'>
+              {selectedPhase === phase.phase ? '同步中…' : phase.disabledReason}
+            </Text>
           )}
         </View>
       ))}
       <View
-        className='custom-mode-section__btn custom-mode-section__btn--end'
-        hoverClass='custom-mode-section__btn--pressed'
+        className={`custom-mode-section__btn custom-mode-section__btn--end${pendingAction ? ' custom-mode-section__btn--disabled' : ''}`}
+        hoverClass={pendingAction ? 'none' : 'custom-mode-section__btn--pressed'}
         onClick={() => !pendingAction && onEndSession?.()}
       >
         <Text className='custom-mode-section__btn-emoji'>✓</Text>

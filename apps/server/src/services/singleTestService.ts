@@ -1,13 +1,30 @@
-import { and, eq, inArray, like } from "drizzle-orm";
+import { and, eq, inArray, like, or } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import * as schema from "@shared/schema";
 import { db } from "../db";
 import {
+  eventAttendance,
+  eventCreditRedemptions,
+  eventGroupOutcomes,
+  poolAICopy,
+  poolMatchingLogs,
   users,
   eventPools,
   eventPoolGroups,
   eventPoolRegistrations,
+  invitationUses,
+  matchHistory,
   socialIcebreakerSessions,
   socialIcebreakerParticipants,
   socialIcebreakerLieTruths,
+  socialIcebreakerAiFeedback,
+  socialIcebreakerPhasePulseChecks,
+  socialIcebreakerPhaseMetrics,
+  socialIcebreakerMiniscriptSecrets,
+  preGenerationJobs,
+  preGenerationResults,
+  momentCardInteractions,
+  userInterests,
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
@@ -26,6 +43,9 @@ import {
 import { isSingleTestMode } from "../lib/isSingleTestMode";
 import { isSocialIcebreakerTestMode } from "../lib/isSocialIcebreakerTestMode";
 import { cleanupBotFillUsers } from "./botFillService";
+
+type IdRow = { id: string };
+type DbTransaction = NodePgDatabase<typeof schema>;
 
 const VIRTUAL_PHONE_PREFIX = "+861399999";
 const SINGLE_TEST_POOL_TITLE = "单人调试局";
@@ -142,13 +162,14 @@ export async function ensureVirtualUsers(): Promise<void> {
   const namesToUse = shuffle(VIRTUAL_NAMES);
 
   const values = [];
-  for (let i = existing.length; i < VIRTUAL_USER_COUNT && (i - existing.length) < namesToUse.length; i++) {
+  for (let i = existing.length; i < VIRTUAL_USER_COUNT; i++) {
+    const nameIndex = i - existing.length;
     const primaryArchetype = pick(archetypeIds);
     const archetypeDef = ARCHETYPE_BY_ID[primaryArchetype];
     values.push({
       phoneNumber: `${VIRTUAL_PHONE_PREFIX}${String(i).padStart(4, '0')}`,
       password: passwordHash,
-      displayName: namesToUse[i - existing.length] ?? `虚拟用户${i}`,
+      displayName: namesToUse[nameIndex % namesToUse.length] ?? `虚拟用户${i}`,
       gender: pick(GENDERS),
       currentCity: pick(CITIES),
       birthdate: generateBirthdate(),
@@ -157,10 +178,10 @@ export async function ensureVirtualUsers(): Promise<void> {
       educationLevel: pick(EDUCATION_LEVELS),
       lifeStage: pick(LIFE_STAGES),
       intent: [pick(INTENTS), pick(INTENTS)],
-    hasCompletedProfileSetup: true,
-    hasCompletedPersonalityTest: true,
-    hasCompletedRegistration: true,
-    isTestBot: true,
+      hasCompletedProfileSetup: true,
+      hasCompletedPersonalityTest: true,
+      hasCompletedRegistration: true,
+      isTestBot: true,
     });
   }
 
@@ -209,8 +230,7 @@ export async function ensureSingleTestPool(createdBy: string): Promise<string> {
 /** Like ensureSingleTestPool but cleans existing registrations + groups first. */
 async function ensureCleanSingleTestPool(createdBy: string): Promise<string> {
   const poolId = await ensureSingleTestPool(createdBy);
-  await db.delete(eventPoolRegistrations).where(eq(eventPoolRegistrations.poolId, poolId));
-  await db.delete(eventPoolGroups).where(eq(eventPoolGroups.poolId, poolId));
+  await cleanupSingleTestPoolRows(poolId, { deletePool: false });
   return poolId;
 }
 
@@ -426,33 +446,147 @@ export async function getSingleTestMetaForSessionStart(groupId: string): Promise
   return singleTestStateSchema.parse(payload);
 }
 
-export async function cleanupSingleTestData(): Promise<void> {
-  await cleanupBotFillUsers();
+async function cleanupSingleTestPoolRows(
+  poolId: string,
+  { deletePool }: { deletePool: boolean },
+  tx?: DbTransaction,
+): Promise<{
+  deletedRegistrations: number;
+  deletedGroups: number;
+  deletedSocialSessions: number;
+}> {
+  const conn = tx ?? db;
+  const registrationRows = await conn
+    .select({ id: eventPoolRegistrations.id })
+    .from(eventPoolRegistrations)
+    .where(eq(eventPoolRegistrations.poolId, poolId));
+  const registrationIds = registrationRows.map((row: IdRow) => row.id);
 
-  const [pool] = await db
-    .select({ id: eventPools.id })
-    .from(eventPools)
-    .where(eq(eventPools.title, SINGLE_TEST_POOL_TITLE))
-    .limit(1);
+  const groupRows = await conn
+    .select({ id: eventPoolGroups.id })
+    .from(eventPoolGroups)
+    .where(eq(eventPoolGroups.poolId, poolId));
+  const groupIds = groupRows.map((row: IdRow) => row.id);
 
-  if (pool) {
-    const groupRows = await db
-      .select({ id: eventPoolGroups.id })
-      .from(eventPoolGroups)
-      .where(eq(eventPoolGroups.poolId, pool.id));
+  let deletedSocialSessions = 0;
 
-    for (const g of groupRows) {
-      const sid = `social_${g.id}`;
-      await db.delete(socialIcebreakerParticipants).where(eq(socialIcebreakerParticipants.socialSessionId, sid));
-      await db.delete(socialIcebreakerLieTruths).where(eq(socialIcebreakerLieTruths.socialSessionId, sid));
-      await db.delete(socialIcebreakerSessions).where(eq(socialIcebreakerSessions.icebreakerSessionId, g.id));
+  if (groupIds.length > 0) {
+    const socialSessionRows = await conn
+      .select({ id: socialIcebreakerSessions.id })
+      .from(socialIcebreakerSessions)
+      .where(inArray(socialIcebreakerSessions.icebreakerSessionId, groupIds));
+    const socialSessionIds = socialSessionRows.map((row: IdRow) => row.id);
+
+    if (socialSessionIds.length > 0) {
+      await conn
+        .delete(preGenerationResults)
+        .where(inArray(preGenerationResults.socialSessionId, socialSessionIds));
+      await conn
+        .delete(preGenerationJobs)
+        .where(inArray(preGenerationJobs.socialSessionId, socialSessionIds));
+      await conn
+        .delete(socialIcebreakerMiniscriptSecrets)
+        .where(inArray(socialIcebreakerMiniscriptSecrets.socialSessionId, socialSessionIds));
+      await conn
+        .delete(socialIcebreakerPhaseMetrics)
+        .where(inArray(socialIcebreakerPhaseMetrics.socialSessionId, socialSessionIds));
+      await conn
+        .delete(socialIcebreakerPhasePulseChecks)
+        .where(inArray(socialIcebreakerPhasePulseChecks.socialSessionId, socialSessionIds));
+      await conn
+        .delete(momentCardInteractions)
+        .where(inArray(momentCardInteractions.socialSessionId, socialSessionIds));
+      await conn
+        .delete(socialIcebreakerAiFeedback)
+        .where(inArray(socialIcebreakerAiFeedback.socialSessionId, socialSessionIds));
+      await conn
+        .delete(socialIcebreakerLieTruths)
+        .where(inArray(socialIcebreakerLieTruths.socialSessionId, socialSessionIds));
+      await conn
+        .delete(socialIcebreakerParticipants)
+        .where(inArray(socialIcebreakerParticipants.socialSessionId, socialSessionIds));
+      const deleted = await conn
+        .delete(socialIcebreakerSessions)
+        .where(inArray(socialIcebreakerSessions.id, socialSessionIds))
+        .returning({ id: socialIcebreakerSessions.id });
+      deletedSocialSessions = deleted.length;
     }
 
-    await db.delete(eventPoolRegistrations).where(eq(eventPoolRegistrations.poolId, pool.id));
-    await db.delete(eventPoolGroups).where(eq(eventPoolGroups.poolId, pool.id));
-    await db.delete(eventPools).where(eq(eventPools.id, pool.id));
+    await conn.delete(eventGroupOutcomes).where(inArray(eventGroupOutcomes.groupId, groupIds));
   }
 
-  await db.delete(users).where(like(users.phoneNumber, `${VIRTUAL_PHONE_PREFIX}%`));
-  logger.info("[SingleTest] Cleanup complete");
+  await conn.delete(poolAICopy).where(eq(poolAICopy.poolId, poolId));
+  await conn.delete(poolMatchingLogs).where(eq(poolMatchingLogs.poolId, poolId));
+
+  if (registrationIds.length > 0) {
+    await conn.delete(eventCreditRedemptions).where(inArray(eventCreditRedemptions.registrationId, registrationIds));
+    await conn.delete(invitationUses).where(inArray(invitationUses.poolRegistrationId, registrationIds));
+  }
+
+  const deletedRegistrations = await conn
+    .delete(eventPoolRegistrations)
+    .where(eq(eventPoolRegistrations.poolId, poolId))
+    .returning({ id: eventPoolRegistrations.id });
+  const deletedGroups = await conn
+    .delete(eventPoolGroups)
+    .where(eq(eventPoolGroups.poolId, poolId))
+    .returning({ id: eventPoolGroups.id });
+
+  if (deletePool) {
+    await conn.delete(eventPools).where(eq(eventPools.id, poolId));
+  }
+
+  return {
+    deletedRegistrations: deletedRegistrations.length,
+    deletedGroups: deletedGroups.length,
+    deletedSocialSessions,
+  };
+}
+
+export async function cleanupSingleTestData(): Promise<{
+  deletedRegistrations: number;
+  deletedGroups: number;
+  deletedSocialSessions: number;
+  deletedVirtualUsers: number;
+  deletedBotFillUsers: number;
+}> {
+  const botFillCleanup = await cleanupBotFillUsers();
+
+  const result = await db.transaction(async (tx: DbTransaction) => {
+    const [pool] = await tx
+      .select({ id: eventPools.id })
+      .from(eventPools)
+      .where(eq(eventPools.title, SINGLE_TEST_POOL_TITLE))
+      .limit(1);
+
+    const poolCleanup = pool
+      ? await cleanupSingleTestPoolRows(pool.id, { deletePool: true }, tx)
+      : { deletedRegistrations: 0, deletedGroups: 0, deletedSocialSessions: 0 };
+
+    const virtualUserRows = await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(like(users.phoneNumber, `${VIRTUAL_PHONE_PREFIX}%`));
+    const virtualUserIds = virtualUserRows.map((row: IdRow) => row.id);
+
+    let deletedVirtualUsers = 0;
+    if (virtualUserIds.length > 0) {
+      await tx
+        .delete(matchHistory)
+        .where(or(inArray(matchHistory.user1Id, virtualUserIds), inArray(matchHistory.user2Id, virtualUserIds)));
+      await tx.delete(eventAttendance).where(inArray(eventAttendance.userId, virtualUserIds));
+      await tx.delete(userInterests).where(inArray(userInterests.userId, virtualUserIds));
+      const deleted = await tx.delete(users).where(inArray(users.id, virtualUserIds)).returning({ id: users.id });
+      deletedVirtualUsers = deleted.length;
+    }
+
+    return {
+      ...poolCleanup,
+      deletedVirtualUsers,
+      deletedBotFillUsers: botFillCleanup.deletedBots,
+    };
+  });
+
+  logger.info("[SingleTest] Cleanup complete", result);
+  return result;
 }

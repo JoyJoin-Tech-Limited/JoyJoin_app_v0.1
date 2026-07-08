@@ -136,6 +136,7 @@
     box-shadow: inset 0 0 0 1rpx rgba($color-primary, 0.08);
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 10rpx;
     animation: matching-overlay-rise 0.45s ease both;
   }
@@ -148,6 +149,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
     overflow: hidden;
   }
 
@@ -156,6 +158,7 @@
     font-size: $font-size-base;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
+    text-align: center;
   }
 
   &__overlay-member-note {
@@ -163,6 +166,7 @@
     font-size: $font-size-xs;
     color: $color-text-secondary;
     line-height: 1.5;
+    text-align: center;
   }
 
   &__overlay-button {

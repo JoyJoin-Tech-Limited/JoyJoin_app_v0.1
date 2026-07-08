@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "NODE_ENV=development node --env-file=../../.env --import tsx/esm src/index.ts",
+    "dev": "node --env-file=../../.env --import tsx/esm src/index.ts",
     "build": "NODE_ENV=production esbuild ./src/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --external:vite --external:nanoid --define:process.env.NODE_ENV=\\\"production\\\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "npm run typecheck",

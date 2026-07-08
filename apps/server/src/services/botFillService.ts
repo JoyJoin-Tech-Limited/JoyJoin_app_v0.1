@@ -2,8 +2,10 @@ import { inArray, like, or } from "drizzle-orm";
 import { db } from "../db";
 import {
   eventAttendance,
+  eventCreditRedemptions,
   eventPoolRegistrations,
   eventPools,
+  invitationUses,
   matchHistory,
   userInterests,
   users,
@@ -229,7 +231,17 @@ export async function cleanupBotFillUsers(): Promise<{ deletedBots: number }> {
     return { deletedBots: 0 };
   }
 
-  await db.delete(eventPoolRegistrations).where(inArray(eventPoolRegistrations.userId, botIds));
+  const registrationRows = await db
+    .select({ id: eventPoolRegistrations.id })
+    .from(eventPoolRegistrations)
+    .where(inArray(eventPoolRegistrations.userId, botIds));
+  const registrationIds = registrationRows.map((row: { id: string }) => row.id);
+
+  if (registrationIds.length > 0) {
+    await db.delete(eventCreditRedemptions).where(inArray(eventCreditRedemptions.registrationId, registrationIds));
+    await db.delete(invitationUses).where(inArray(invitationUses.poolRegistrationId, registrationIds));
+    await db.delete(eventPoolRegistrations).where(inArray(eventPoolRegistrations.id, registrationIds));
+  }
   await db.delete(matchHistory).where(or(inArray(matchHistory.user1Id, botIds), inArray(matchHistory.user2Id, botIds)));
   await db.delete(eventAttendance).where(inArray(eventAttendance.userId, botIds));
   await db.delete(userInterests).where(inArray(userInterests.userId, botIds));

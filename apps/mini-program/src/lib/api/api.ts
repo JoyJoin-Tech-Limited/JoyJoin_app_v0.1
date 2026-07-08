@@ -77,6 +77,16 @@ function getApiErrorDetails(statusCode: number, data: unknown): {
   if (typeof data === 'object' && data !== null) {
     const errorData = data as Record<string, unknown>
 
+    if (
+      'error' in errorData &&
+      typeof errorData.error === 'string' &&
+      'message' in errorData &&
+      typeof errorData.message === 'string' &&
+      errorData.message.trim() !== ''
+    ) {
+      return { message: `${errorData.error}: ${errorData.message}`, isGenericMessage: false }
+    }
+
     if ('error' in errorData && typeof errorData.error === 'string') {
       return { message: errorData.error, isGenericMessage: false }
     }
@@ -489,5 +499,4 @@ export async function fetchEventsShell(): Promise<EventsShellResponse> {
 export async function fetchConnectionsShell(): Promise<ConnectionsShellResponse> {
   return apiRequest<ConnectionsShellResponse>({ path: '/api/shell/connections' })
 }
-
 
