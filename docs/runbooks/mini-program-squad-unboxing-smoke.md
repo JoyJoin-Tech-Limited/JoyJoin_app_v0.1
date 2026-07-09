@@ -4,7 +4,7 @@
 >
 > **Audience:** Frontend engineers and QA validating `apps/mini-program/src/pages/squad-unboxing` in WeChat DevTools or on a real device.
 >
-> **Last updated:** 2026-07-07
+> **Last updated:** 2026-07-09
 
 ---
 
@@ -42,7 +42,7 @@ Expected result:
 
 - TypeScript passes.
 - Guardrails pass.
-- Mini-program tests pass (516 as of 2026-07-07).
+- Mini-program tests pass (550 as of 2026-07-09).
 - Main package is under 2.00 MB.
 - WeChat build succeeds and refreshes `apps/mini-program/dist`.
 
@@ -60,8 +60,8 @@ These checks catch type, import, and regression issues. The manual DevTools smok
 
 | State | How to reach | What to look for |
 | --- | --- | --- |
-| `ready` | Land on `pages/squad-unboxing/index` for a matched group that has not been revealed. | White instruction card sits **below** the gift box; no text is covered; drag ribbon is reachable. |
-| `shaking` | Drag the ribbon past 50% or tap to open. | Gift box shakes; white card stays below; no overlap. |
+| `ready` | Land on `pages/squad-unboxing/index` for a matched group that has not been revealed. | Gift box is tappable (`role="button"`, pressed state) and triggers reveal; white instruction card sits **below** the gift box; `DragRevealRibbon` is anchored below the box (not inside the card) and is reachable; vertical scroll works in tap-fallback / low-end mode. |
+| `shaking` | Tap the gift box or drag the ribbon past 50%. | Gift box shakes; white card stays below; no overlap; ribbon is no longer mounted. |
 | `revealed` | After shake completes. | Fanned deck is visible; header + analysis bubble are below the deck; scroll down to see chapters and action dock. |
 | `error` | Force a failed group fetch (e.g., disconnect network or use a bad group ID). | Full-screen error state centered; CTA reachable. |
 | `empty deck` | Matched group with zero members. | Empty-deck state with Xiaoyue `actionFailure` mascot; copy readable. |
@@ -75,6 +75,9 @@ Use the WeChat DevTools **Inspect** panel (or real-device screenshot) and confir
 
 - [ ] No fixed-stage element overlaps any text, card, or tappable surface in the scrollable area.
 - [ ] The gift box bottom edge aligns with the top of the scrollable story; the white card is fully below the stage.
+- [ ] Tapping the gift box in `ready` state triggers the `shaking` → `revealed` flow.
+- [ ] The `DragRevealRibbon` is anchored below the gift box, not inside the white copy card, and remains reachable on all screen heights.
+- [ ] Drag mode blocks parent `ScrollView` scroll; tap-fallback / low-end mode allows vertical scroll.
 - [ ] The fanned deck is fully inside the revealed stage; no card is clipped by the stage or the viewport.
 - [ ] All tap targets (cards, drag ribbon, dismiss button, action dock buttons) are ≥ 88rpx tall and not overlapped.
 - [ ] Reduced-motion preference suppresses entrance animations but preserves layout.

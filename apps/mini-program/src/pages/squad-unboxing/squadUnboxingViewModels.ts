@@ -87,3 +87,18 @@ export function getSquadChemistryTokens(
 export function computeActionDockState(flowState: FlowState): ActionDockState {
   return flowState === 'revealed' ? 'ready' : 'hidden'
 }
+
+export function buildPairKeyMemberMap(
+  members: PoolGroupMemberSummary[],
+): Map<string, [PoolGroupMemberSummary, PoolGroupMemberSummary]> {
+  const map = new Map<string, [PoolGroupMemberSummary, PoolGroupMemberSummary]>()
+
+  for (let index = 0; index < members.length; index += 1) {
+    for (let nextIndex = index + 1; nextIndex < members.length; nextIndex += 1) {
+      const pairKey = [members[index].userId, members[nextIndex].userId].sort().join('-')
+      map.set(pairKey, [members[index], members[nextIndex]])
+    }
+  }
+
+  return map
+}

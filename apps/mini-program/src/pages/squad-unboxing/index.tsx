@@ -322,6 +322,17 @@ export default function SquadUnboxingPage() {
           flowState === 'revealed' ? 'squad-unboxing__stage-spacer--revealed' : '',
         ].filter(Boolean).join(' ')} />
 
+        {flowState === 'ready' ? (
+          <View className='squad-unboxing__ribbon-wrap'>
+            <DragRevealRibbon
+              shouldReduceMotion={shouldReduceMotion}
+              isDegradation={isDegradation}
+              enabled={dragRevealEnabled}
+              onReveal={() => handleOpenBox('ribbon')}
+            />
+          </View>
+        ) : null}
+
         <View className={['squad-unboxing__header', headerReady ? 'squad-unboxing__header--ready' : ''].filter(Boolean).join(' ')}>
           <Image
             className='squad-unboxing__header-mascot'
@@ -348,12 +359,6 @@ export default function SquadUnboxingPage() {
 
         {flowState === 'ready' ? (
           <Card className='squad-unboxing__blind-box-card squad-unboxing__blind-box-card--copy-only'>
-            <DragRevealRibbon
-              shouldReduceMotion={shouldReduceMotion}
-              isDegradation={isDegradation}
-              enabled={dragRevealEnabled}
-              onReveal={handleOpenBox}
-            />
             <Text className='squad-unboxing__blind-box-title'>拼图已经聚齐</Text>
             <Text className='squad-unboxing__blind-box-copy'>
               上一页的每一块拼图，都会在这里变成一个真实的队友。轻轻拉开，看看是谁和你坐在同一桌。
@@ -777,7 +782,7 @@ export default function SquadUnboxingPage() {
         ]
           .filter(Boolean)
           .join(' ')}
-        aria-hidden={flowState === 'ready' || flowState === 'shaking' ? 'true' : undefined}
+        aria-hidden={flowState === 'shaking' ? 'true' : undefined}
         aria-live={flowState === 'revealed' ? 'polite' : undefined}
         aria-atomic={flowState === 'revealed' ? 'true' : undefined}
       >
@@ -786,7 +791,16 @@ export default function SquadUnboxingPage() {
             {announcement}
           </View>
         ) : null}
-        <View className='squad-unboxing__stage-body'>
+        <View
+          className={[
+            'squad-unboxing__stage-body',
+            flowState === 'ready' ? 'squad-unboxing__stage-body--ready' : '',
+          ].filter(Boolean).join(' ')}
+          onClick={flowState === 'ready' ? () => handleOpenBox('box') : undefined}
+          hoverClass={flowState === 'ready' ? 'squad-unboxing__stage-body--pressed' : ''}
+          role={flowState === 'ready' ? 'button' : undefined}
+          aria-label={flowState === 'ready' ? '点击拆开礼盒' : undefined}
+        >
           <BlindBoxVisual
             state={flowState === 'shaking' ? 'opening' : flowState === 'revealed' ? 'open' : 'ready'}
           />

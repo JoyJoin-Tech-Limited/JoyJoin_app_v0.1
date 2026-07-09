@@ -34,6 +34,7 @@ export default function DragRevealRibbon({
   const pendingProgressRef = useRef<number>(0)
   const hasDraggedRef = useRef(false)
   const isRevealingRef = useRef(false)
+  const hasTrackedTapRef = useRef(false)
   const snapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [dragProgress, setDragProgress] = useState(0)
@@ -99,11 +100,16 @@ export default function DragRevealRibbon({
 
   const handleTouchEnd = useCallback(() => {
     if (useTapFallback) {
-      if (!isRevealing && !hasDraggedRef.current) {
-        squadUnboxingAnalytics.track('squad_unboxing_reveal_tap', {
-          method: 'tap',
-          fallbackReason: shouldReduceMotion ? 'reducedMotion' : isDegradation ? 'degradation' : 'featureFlag',
-        })
+      if (!isRevealing && !hasDraggedRef.current && !isRevealingRef.current) {
+        if (!hasTrackedTapRef.current) {
+          hasTrackedTapRef.current = true
+          squadUnboxingAnalytics.track('squad_unboxing_reveal_tap', {
+            method: 'tap',
+            fallbackReason: shouldReduceMotion ? 'reducedMotion' : isDegradation ? 'degradation' : 'featureFlag',
+          })
+        }
+        isRevealingRef.current = true
+        setIsRevealing(true)
         onReveal()
       }
       return
@@ -133,10 +139,13 @@ export default function DragRevealRibbon({
 
   const handleTap = useCallback(() => {
     if (useTapFallback && !isRevealingRef.current && !isRevealing) {
-      squadUnboxingAnalytics.track('squad_unboxing_reveal_tap', {
-        method: 'tap',
-        fallbackReason: shouldReduceMotion ? 'reducedMotion' : isDegradation ? 'degradation' : 'featureFlag',
-      })
+      if (!hasTrackedTapRef.current) {
+        hasTrackedTapRef.current = true
+        squadUnboxingAnalytics.track('squad_unboxing_reveal_tap', {
+          method: 'tap',
+          fallbackReason: shouldReduceMotion ? 'reducedMotion' : isDegradation ? 'degradation' : 'featureFlag',
+        })
+      }
       isRevealingRef.current = true
       setIsRevealing(true)
       onReveal()
@@ -167,7 +176,7 @@ export default function DragRevealRibbon({
     : `已拖动 ${Math.round(dragProgress * 100)}%`
 
   return (
-    <View className='drag-reveal-ribbon'>
+    <View className='drag-reveal-ribbon' catchMove={!useTapFallback}>
       <View
         id='drag-reveal-track'
         className={[
@@ -186,7 +195,6 @@ export default function DragRevealRibbon({
         aria-valuenow={Math.round(dragProgress * 100)}
         aria-valuetext={ariaValueText}
         aria-label={trackLabel}
-        aria-live='polite'
       >
         <View
           className='drag-reveal-ribbon__fill'

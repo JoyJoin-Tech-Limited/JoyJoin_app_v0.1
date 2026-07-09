@@ -1,12 +1,11 @@
 import Taro from '@tarojs/taro'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   confirmPoolGroupAttendance,
   getPoolGroupAnalysis,
   getPoolGroupDetails,
   type PoolGroupDetailsResponse,
-  type PoolGroupMemberSummary,
 } from '@shared/api'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
@@ -20,6 +19,7 @@ import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, COLOR_DA
 import { openPoolGroupDetail, switchToEventsTab } from '../../lib/navigation/matchingNavigation'
 import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
 import {
+  buildPairKeyMemberMap,
   computeActionDockState,
   getSquadChemistryTokens,
   type ActionDockState,
@@ -62,6 +62,14 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   const storyName = routerParams['__story']
 
   const [flowState, setFlowState] = useState<FlowState>(() => (groupId ? (readRevealFlag(groupId) ? 'revealed' : 'ready') : 'ready'))
+  const prevGroupIdRef = useRef<string>(groupId)
+  useEffect(() => {
+    if (!groupId) return
+    if (prevGroupIdRef.current === groupId) return
+    prevGroupIdRef.current = groupId
+    setFlowState(readRevealFlag(groupId) ? 'revealed' : 'ready')
+  }, [groupId])
+
   const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false)
@@ -192,18 +200,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     })
   }, [currentUserId, groupAnalysis?.pairExplanations])
 
-  const pairKeyMemberMap = useMemo(() => {
-    const map = new Map<string, [PoolGroupMemberSummary, PoolGroupMemberSummary]>()
-
-    for (let index = 0; index < members.length; index += 1) {
-      for (let nextIndex = index + 1; nextIndex < members.length; nextIndex += 1) {
-        const pairKey = [members[index].userId, members[nextIndex].userId].sort().join('-')
-        map.set(pairKey, [members[index], members[nextIndex]])
-      }
-    }
-
-    return map
-  }, [members])
+  const pairKeyMemberMap = useMemo(() => buildPairKeyMemberMap(members), [members])
 
   const viewerPairs = useMemo<PairExplanation[]>(() => {
     if (Array.isArray(groupAnalysis?.myPairs) && groupAnalysis.myPairs.length > 0) {
@@ -281,11 +278,18 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     .filter(Boolean)
     .join(' ')
 
-  const handleOpenBox = useCallback(() => {
+  const handleOpenBox = useCallback((source: 'box' | 'ribbon' = 'box') => {
+    if (flowState !== 'ready') return
     haptics('medium')
+    if (source === 'box') {
+      squadUnboxingAnalytics.track('squad_unboxing_box_tap', {
+        groupId,
+        screen: 'squad-unboxing',
+      })
+    }
     setIsAnalysisExpanded(false)
     setFlowState('shaking')
-  }, [])
+  }, [flowState, groupId])
 
   const handleConfirmAttendance = useCallback(() => {
     if (confirmAttendanceMutation.isPending || isSubmitting) {

@@ -5,6 +5,7 @@ export type SquadUnboxingEventType =
   | 'squad_unboxing_reveal'
   | 'squad_unboxing_reveal_drag'
   | 'squad_unboxing_reveal_tap'
+  | 'squad_unboxing_box_tap'
   | 'squad_unboxing_card_focus'
   | 'squad_unboxing_card_detail_dismiss'
   | 'squad_unboxing_confirm_attendance_tap'

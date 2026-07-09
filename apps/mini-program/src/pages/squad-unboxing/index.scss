@@ -96,6 +96,20 @@
     transform: translateX(-50%);
     z-index: 1;
     pointer-events: none;
+
+    &--ready {
+      pointer-events: auto;
+      cursor: pointer;
+      transition: transform 0.12s ease;
+
+      &--pressed {
+        transform: translateX(-50%) scale(0.96);
+      }
+    }
+  }
+
+  .squad-unboxing--reduce-motion &__stage-body--ready {
+    transition: none;
   }
 
   &__stage-lid {
@@ -632,6 +646,12 @@
     display: flex;
     justify-content: flex-end;
     padding-top: $spacing-md;
+  }
+
+  &__ribbon-wrap {
+    margin-top: 0;
+    margin-bottom: $spacing-lg;
+    padding: 0 $spacing-md;
   }
 
   &__blind-box-card {
