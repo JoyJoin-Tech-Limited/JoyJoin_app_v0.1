@@ -1,5 +1,5 @@
 import { CustomWrapper, Image, ScrollView, Text, View } from '@tarojs/components'
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useRouter, useDidShow } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { getMyPoolRegistrations } from '@shared/api'
@@ -11,6 +11,7 @@ import Card from '../../components/ui/Card'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import StatusCard from '../../components/ui/StatusCard'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import EventSummaryCard from '../../components/events/EventSummaryCard'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import {
   MatchingHero,
@@ -103,7 +104,7 @@ export default function MatchingStatusPage() {
 
   const handleBrowsePools = () => { haptics('light'); _handleBrowsePools() }
   const handleCancel = () => { haptics('light'); _handleCancel() }
-  const handleOpenMatchedJourney = () => { haptics('medium'); _handleOpenMatchedJourney() }
+  const handleOpenMatchedJourney = useCallback(() => { haptics('medium'); _handleOpenMatchedJourney() }, [_handleOpenMatchedJourney])
   const handleRefreshWaitingState = () => { haptics('light'); _handleRefreshWaitingState() }
 
   const hasDidShowRef = useRef(false)
@@ -395,63 +396,20 @@ export default function MatchingStatusPage() {
         />
       ) : null}
 
-      <Card className='matching-status__card'>
-        <View className='matching-status__card-title-row'>
-          <JoyJoinIcon emoji='🎟️' size={28} className='matching-status__card-title-icon' />
-          <Text className='matching-status__card-title'>{currentRegistration.poolTitle ?? '活动信息'}</Text>
-        </View>
-
-        {currentRegistration.poolEventType ? (
-          <View className='matching-status__info-row'>
-            <View className='matching-status__info-label'>
-              <JoyJoinIcon emoji='🍽️' size={24} className='matching-status__info-icon' />
-              <Text>类型</Text>
-            </View>
-            <Text className='matching-status__info-value'>{currentRegistration.poolEventType}</Text>
-          </View>
-        ) : null}
-
-        {(effectiveEventDateTime ?? currentRegistration.poolDateTime) ? (
-          <View className='matching-status__info-row'>
-            <View className='matching-status__info-label'>
-              <JoyJoinIcon emoji='📅' size={24} className='matching-status__info-icon' />
-              <Text>时间</Text>
-            </View>
-            <Text className='matching-status__info-value'>
-              {formatDateTime(
-                effectiveEventDateTime ?? currentRegistration.poolDateTime,
-              )}
-            </Text>
-          </View>
-        ) : null}
-
-        <View className='matching-status__info-row'>
-          <View className='matching-status__info-label'>
-            <JoyJoinIcon emoji='📍' size={24} className='matching-status__info-icon' />
-            <Text>地点</Text>
-          </View>
-          <Text className='matching-status__info-value'>
-            {effectiveGroupDetails?.group.venueName || currentRegistration.venueName || (effectiveGroupDetails?.group.venueAssignmentStatus === 'unassigned' ? '地点待定' : currentRegistration.poolCity || '地点待定')}
-            {effectiveGroupDetails?.group.venueAddress || currentRegistration.venueAddress
-              ? ` · ${effectiveGroupDetails?.group.venueAddress ?? currentRegistration.venueAddress}`
-              : currentRegistration.poolDistrict && (effectiveGroupDetails?.group.venueName || currentRegistration.venueName)
-                ? ` · ${currentRegistration.poolDistrict}`
-                : ''}
-          </Text>
-        </View>
-
-        {currentRegistration.matchScore != null ? (
-          <View className='matching-status__info-row'>
-            <View className='matching-status__info-label'>
-              <JoyJoinIcon emoji='💫' size={24} className='matching-status__info-icon' />
-              <Text>匹配分</Text>
-            </View>
-            <Text className='matching-status__info-value matching-status__info-value--score'>
-              {currentRegistration.matchScore}
-            </Text>
-          </View>
-        ) : null}
-      </Card>
+      <View className='matching-status__event-card'>
+        <EventSummaryCard
+          title={currentRegistration.poolTitle ?? '活动信息'}
+          eventType={currentRegistration.poolEventType ?? undefined}
+          dateTime={effectiveEventDateTime ?? currentRegistration.poolDateTime}
+          city={currentRegistration.poolCity ?? undefined}
+          district={currentRegistration.poolDistrict ?? undefined}
+          venueName={effectiveGroupDetails?.group.venueName || currentRegistration.venueName || undefined}
+          status={currentRegistration.matchStatus ?? undefined}
+          footerHint={currentRegistration.matchScore != null ? `匹配分 ${currentRegistration.matchScore}` : undefined}
+          reduceMotion={shouldReduceMotion}
+          animationDelay={shouldReduceMotion ? undefined : '120ms'}
+        />
+      </View>
 
       {liveRevealError ? (
         <Card className='matching-status__notice-card'>
