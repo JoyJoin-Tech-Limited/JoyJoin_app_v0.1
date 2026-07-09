@@ -22,7 +22,6 @@ import {
 import { getMascotDisplayName } from '../../lib/mascot/mascotDisplay'
 import OnboardingLoadingShell from '../../components/loading/OnboardingLoadingShell'
 import XiaoyueSessionShell from '../../components/mascot/XiaoyueSessionShell'
-import TestModeDisclosure from '../../components/icebreaker/TestModeDisclosure'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
@@ -103,8 +102,6 @@ export default function IcebreakerSessionPage() {
   const [phaseToast, setPhaseToast] = useState<{ visible: boolean; text: ReactNode }>({ visible: false, text: '' })
   const [isTierSheetOpen, setIsTierSheetOpen] = useState(false)
   const [pendingTierSwitch, setPendingTierSwitch] = useState<TierSheetSelection | null>(null)
-  const [showTestModeDisclosure, setShowTestModeDisclosure] = useState(false)
-  const [testModeAdvanceError, setTestModeAdvanceError] = useState<string | null>(null)
   const startAttemptRef = useRef<string | null>(null)
   const prevPhaseRef = useRef<SessionPhase>('waiting')
   const customSessionCompletedRef = useRef(false)
@@ -446,55 +443,10 @@ export default function IcebreakerSessionPage() {
       phase: session.currentPhase,
     })
 
-    // Single-test sessions pause at the test-mode disclosure before recap.
-    if (session.isTestModeSkip && session.currentPhase === 'warmup') {
-      setTestModeAdvanceError(null)
-      setShowTestModeDisclosure(true)
-      socialIcebreakerAnalytics.track(
-        'icebreaker_test_mode_disclosure_shown',
-        socialSessionId ?? undefined,
-        session.icebreakerSessionId,
-        undefined,
-        {
-          botCount: session.testModeBots?.length ?? 0,
-          playerCount,
-        },
-      )
-      return
-    }
-
     void performSocialAction('advance', '/advance', {
       currentPhase: session.currentPhase,
     })
-  }, [performSocialAction, session, socialSessionId, playerCount])
-
-  const handleTestModeContinue = useCallback(async () => {
-    if (!session) {
-      return
-    }
-
-    setTestModeAdvanceError(null)
-    const result = await performSocialAction('advance', '/advance', {
-      currentPhase: session.currentPhase,
-    })
-    if (result === null) {
-      setTestModeAdvanceError('继续时遇到小问题，点重试再试一次')
-    } else {
-      setShowTestModeDisclosure(false)
-      if (session.runBots) {
-        socialIcebreakerAnalytics.track(
-          'icebreaker_test_mode_bot_advance',
-          socialSessionId ?? undefined,
-          session.icebreakerSessionId,
-          session.currentPhase,
-          {
-            playerCount,
-            botCount: session.testModeBots?.length ?? 0,
-          },
-        )
-      }
-    }
-  }, [performSocialAction, session, socialSessionId, playerCount])
+  }, [performSocialAction, session, socialSessionId])
 
   const handleSelectCustomPhase = useCallback(
     async (selectedPhase: SocialIcebreakerPhase) => {
@@ -1313,34 +1265,6 @@ export default function IcebreakerSessionPage() {
         onClose={() => setIsTierSheetOpen(false)}
         onConfirm={handleConfirmTierSwitch}
       />
-
-      {showTestModeDisclosure && (
-        <View className='icebreaker__test-mode-overlay' catchMove>
-          <TestModeDisclosure
-            bots={session?.testModeBots}
-            runBots={session?.runBots}
-            socialSessionId={socialSessionId ?? undefined}
-            icebreakerSessionId={session?.icebreakerSessionId}
-            onContinue={handleTestModeContinue}
-            onRetry={handleTestModeContinue}
-            onDismiss={() => {
-              socialIcebreakerAnalytics.track(
-                'icebreaker_test_mode_disclosure_dismissed',
-                socialSessionId ?? undefined,
-                session?.icebreakerSessionId,
-                undefined,
-                {
-                  botCount: session?.testModeBots?.length ?? 0,
-                  runBots: session?.runBots ?? false,
-                },
-              )
-              setShowTestModeDisclosure(false)
-            }}
-            isLoading={pendingAction === 'advance'}
-            error={testModeAdvanceError}
-          />
-        </View>
-      )}
     </ScrollView>
   )
 }

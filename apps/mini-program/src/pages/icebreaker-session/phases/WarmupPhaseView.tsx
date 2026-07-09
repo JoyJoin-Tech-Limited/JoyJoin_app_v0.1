@@ -373,12 +373,12 @@ export function WarmupPhaseView({
         />
       </View>
 
-      {/* ── Persistent test-mode badge ─────────────────────── */}
+      {/* Test sessions use the same phase engine; this badge is informational only. */}
       {isTestMode && (
         <View className='icebreaker__test-mode-badge'>
           <View className='icebreaker__test-mode-badge-dot' />
           <Text className='icebreaker__test-mode-badge-text'>
-            {runBots ? '测试模式 · 虚拟伙伴陪玩' : '测试模式 · 多人环节已跳过'}
+            {runBots ? '调试局 · 虚拟伙伴参与完整流程' : '调试局 · 完整多人流程'}
           </Text>
         </View>
       )}

@@ -59,13 +59,13 @@
 
     &--ready,
     &--shaking {
-      height: clamp(420rpx, 52vh, 540rpx);
-      height: clamp(420rpx, 52dvh, 540rpx);
+      height: clamp(420rpx, 54vh, 560rpx);
+      height: clamp(420rpx, 54dvh, 560rpx);
     }
 
     &--revealed {
-      height: clamp(480rpx, 56vh, 620rpx);
-      height: clamp(480rpx, 56dvh, 620rpx);
+      height: clamp(560rpx, 66vh, 760rpx);
+      height: clamp(560rpx, 66dvh, 760rpx);
       pointer-events: auto;
     }
 
@@ -77,13 +77,13 @@
   }
 
   &__stage-spacer {
-    height: clamp(420rpx, 52vh, 540rpx);
-    height: clamp(420rpx, 52dvh, 540rpx);
+    height: clamp(420rpx, 54vh, 560rpx);
+    height: clamp(420rpx, 54dvh, 560rpx);
     pointer-events: none;
 
     &--revealed {
-      height: clamp(480rpx, 56vh, 620rpx);
-      height: clamp(480rpx, 56dvh, 620rpx);
+      height: clamp(560rpx, 66vh, 760rpx);
+      height: clamp(560rpx, 66dvh, 760rpx);
     }
   }
 

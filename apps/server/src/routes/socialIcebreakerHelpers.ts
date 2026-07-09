@@ -439,11 +439,6 @@ export async function processAutoAdvance(state: SocialSessionState): Promise<Soc
   if (state.currentPhase === 'recap') return state;
   if (isCustomMode(state)) return state;
 
-  // Single-test sessions intentionally pause at the test-mode disclosure before
-  // advancing from warmup to recap. Auto-advancing would bypass that UX and the
-  // host's explicit acknowledgement, so we never auto-advance them.
-  if (state.singleTest?.isTestModeSkip === true) return state;
-
   // If auto-advance is not yet scheduled, check if we should schedule it
   if (!state.autoAdvanceScheduledAt) {
     if (shouldAutoAdvance(state)) {

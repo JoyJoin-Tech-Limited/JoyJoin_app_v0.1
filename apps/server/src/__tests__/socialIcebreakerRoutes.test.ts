@@ -3019,9 +3019,10 @@ describe.sequential('social icebreaker routes', () => {
       });
     });
 
-    it('advances a single-test session from warmup directly to recap', async () => {
+    it('keeps a single-test session on the normal multiplayer phase sequence', async () => {
       await withServer(async (baseUrl) => {
         const hostCookie = await login(baseUrl, 'single-test-advance-host');
+        const guestCookie = await login(baseUrl, 'single-test-advance-guest');
         const sessionId = `session-single-test-advance-${Date.now()}`;
 
         vi.mocked(isSingleTestMode).mockReturnValue(true);
@@ -3045,14 +3046,27 @@ describe.sequential('social icebreaker routes', () => {
         expect(startResponse.status).toBe(200);
 
         const socialSessionId = startBody.socialSessionId;
+        const guestStartResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: guestCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Guest', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        expect(guestStartResponse.status).toBe(200);
 
-        // Mark host ready so warmup advance is allowed.
+        // All real participants must be ready before normal multiplayer advance.
         const readyResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/warmup/ready`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', cookie: hostCookie },
           body: JSON.stringify({ ready: true }),
         });
         expect(readyResponse.status).toBe(200);
+
+        const guestReadyResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/warmup/ready`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: guestCookie },
+          body: JSON.stringify({ ready: true }),
+        });
+        expect(guestReadyResponse.status).toBe(200);
 
         const advanceResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/advance`, {
           method: 'POST',
@@ -3062,8 +3076,8 @@ describe.sequential('social icebreaker routes', () => {
         const advanceBody = await advanceResponse.json() as any;
 
         expect(advanceResponse.status).toBe(200);
-        expect(advanceBody.nextPhase).toBe('recap');
-        expect(advanceBody.state.currentPhase).toBe('recap');
+        expect(advanceBody.nextPhase).toBe('micro_challenge');
+        expect(advanceBody.state.currentPhase).toBe('micro_challenge');
         expect(advanceBody.state.isTestModeSkip).toBe(true);
       });
     });

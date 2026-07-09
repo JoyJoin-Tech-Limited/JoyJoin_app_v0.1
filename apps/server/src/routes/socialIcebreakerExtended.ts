@@ -212,18 +212,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     }
   }
 
-  let effectiveNextPhase = getNextEligiblePhase(currentPhase, state);
-
-  // Single-test skip-to-recap mode: after the host acknowledges the disclosure
-  // in warmup, jump directly to recap. This is route-level orchestration, not a
-  // phase-engine branch.
-  if (
-    state.singleTest?.isTestModeSkip === true &&
-    state.singleTest?.runBots !== true &&
-    currentPhase === 'warmup'
-  ) {
-    effectiveNextPhase = 'recap';
-  }
+  const effectiveNextPhase = getNextEligiblePhase(currentPhase, state);
 
   // Close out the current phase bookkeeping before any transition logic
   if (!state.completedPhases.includes(currentPhase)) {

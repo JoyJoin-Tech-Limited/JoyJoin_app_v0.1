@@ -225,42 +225,16 @@ export default function SquadUnboxingPage() {
         .scrollOffset()
         .select('#inline-detail-anchor')
         .boundingClientRect()
-        .select('.squad-unboxing__deck-card--focused')
-        .boundingClientRect()
-        .select('.squad-unboxing__inline-detail-shell')
-        .boundingClientRect()
-        .select('.squad-unboxing__bottom-dock')
-        .boundingClientRect()
         .select('.squad-unboxing__stage')
         .boundingClientRect()
         .exec((res) => {
-          const [scrollOffset, anchorRect, cardRect, detailRect, dockRect, stageRect] = res
-          if (!scrollOffset || !anchorRect || !cardRect || !detailRect || !stageRect) return
-
-          const sys = Taro.getSystemInfoSync() as { windowWidth?: number; windowHeight?: number }
-          const windowHeight = sys.windowHeight || 0
-          const pxPerRpx = sys.windowWidth ? sys.windowWidth / 750 : 0.5
-          const fallbackReserve = Math.round(580 * pxPerRpx)
-          const bottomReserve = dockRect?.height
-            ? Math.max(dockRect.height, fallbackReserve)
-            : fallbackReserve
-          const availableHeight = Math.max(0, windowHeight - stageRect.bottom - bottomReserve)
-
-          // Prefer positioning the detail just below the fixed stage,
-          // centered in the available viewport, so it never overlaps the
-          // focused card or the bottom dock.
-          let targetTop = stageRect.bottom + availableHeight / 2 - detailRect.height / 2;
-          if (targetTop < stageRect.bottom) {
-            targetTop = stageRect.bottom;
-          }
-          if (targetTop + detailRect.height > windowHeight - bottomReserve) {
-            targetTop = windowHeight - bottomReserve - detailRect.height;
-          }
-
-          const desiredScrollTop = scrollOffset.scrollTop + anchorRect.top - targetTop
+          const [scrollOffset, anchorRect, stageRect] = res
+          if (!scrollOffset || !anchorRect || !stageRect) return
+          const desiredScrollTop =
+            scrollOffset.scrollTop + (anchorRect.top - stageRect.bottom)
           setProgrammaticScrollTop(Math.max(0, desiredScrollTop))
         })
-    }, 150)
+    }, 100)
     return () => clearTimeout(timer)
   }, [focusedMember])
 
