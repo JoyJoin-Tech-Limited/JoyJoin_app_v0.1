@@ -85,9 +85,19 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   aigcLabelsEnabled: "AIGC_LABELS_ENABLED",
   /** When true, matching results are held in a pending operator-review state
    *  instead of immediately notifying users and assigning venues. Admin must
-   *  approve or reject the formed groups. Default false preserves existing
-   *  auto-match behavior. Env fallback: MATCHING_OPERATOR_REVIEW_ENABLED. */
+   *  approve or reject the formed groups. Default: true. Env fallback:
+   *  MATCHING_OPERATOR_REVIEW_ENABLED. */
   matchingOperatorReviewEnabled: "MATCHING_OPERATOR_REVIEW_ENABLED",
+};
+
+/**
+ * Default values for flags when neither the DB row nor the env var is set.
+ * Any flag not listed here defaults to false. Prefer this map for stable,
+ * code-defined defaults rather than relying on every caller to pass the
+ * same fallback value.
+ */
+export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
+  matchingOperatorReviewEnabled: true,
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();
@@ -147,8 +157,9 @@ export async function getFeatureFlag(
   }
 
   const dbRow = await fetchFromDb(flagKey);
+  const effectiveFallback = DEFAULT_FLAG_VALUES[flagKey] ?? fallback;
   const resolved =
-    dbRow !== null ? dbRow.value : envToBool(FLAG_ENV_MAP[flagKey] ?? "", fallback);
+    dbRow !== null ? dbRow.value : envToBool(FLAG_ENV_MAP[flagKey] ?? "", effectiveFallback);
 
   if (!isTest) {
     cache.set(flagKey, { value: resolved, ts: Date.now() });
@@ -165,7 +176,8 @@ export function getFeatureFlagSync(flagKey: string, fallback = false): boolean {
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
     return cached.value;
   }
-  const resolved = envToBool(FLAG_ENV_MAP[flagKey] ?? "", fallback);
+  const effectiveFallback = DEFAULT_FLAG_VALUES[flagKey] ?? fallback;
+  const resolved = envToBool(FLAG_ENV_MAP[flagKey] ?? "", effectiveFallback);
   cache.set(flagKey, { value: resolved, ts: Date.now() });
   return resolved;
 }
@@ -209,10 +221,11 @@ export async function listFeatureFlags(): Promise<
         updatedBy: dbRow.updatedBy,
       });
     } else {
+      const fallbackValue = DEFAULT_FLAG_VALUES[key] ?? false;
       const envVal = process.env[envKey];
       results.push({
         key,
-        value: envToBool(envKey),
+        value: envToBool(envKey, fallbackValue),
         source: envVal !== undefined ? "env" : "fallback",
         updatedAt: null,
         updatedBy: null,

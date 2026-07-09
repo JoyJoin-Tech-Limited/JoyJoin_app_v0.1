@@ -884,5 +884,5 @@ After `poolMatchingService.ts` forms groups deterministically, the predictive re
 | **predictive reranking** | A/B experiment that always computes an alternate ordering, persists audit metadata with matched groups, and can apply bounded live reordering only when the feature is enabled, the pool is eligible, and the pool falls into the treatment arm. |
 | **event_group_outcomes** | DB table capturing per-member post-event outcome submissions (`wouldMeetAgain`, `atmosphereScore`, `connectionRadar`). Feeds admin outcome analytics directly and informs downstream outcome datasets used by chemistry calibration. |
 | **operatorReviewStatus** | State column on `event_pools` and `event_pool_groups`: `none` (auto-match path), `pending` (awaiting operator review), `approved` (operator approved; side effects committed), `rejected` (operator rejected; artifacts cleaned up). |
-| **matchingOperatorReviewEnabled** | DB-backed feature flag (env `MATCHING_OPERATOR_REVIEW_ENABLED`, default `false`) that gates the operator-review flow. |
+| **matchingOperatorReviewEnabled** | DB-backed feature flag (env `MATCHING_OPERATOR_REVIEW_ENABLED`, default `true`) that gates the operator-review flow. |
 | **executePostMatchCommitSideEffects** | Shared helper that creates events, assigns venues, and sends notifications after a match run is approved. |

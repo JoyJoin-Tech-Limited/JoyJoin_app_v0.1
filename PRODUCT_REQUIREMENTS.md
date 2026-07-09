@@ -83,7 +83,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 **50. Operator Review Gate for Matching** *(2026-07-09)*
 - **Scope:** Server-side matching review gate and admin review queue.
-- **Feature flag:** `matchingOperatorReviewEnabled` (DB-backed, env `MATCHING_OPERATOR_REVIEW_ENABLED`, default `false`). When enabled, `poolMatchingService.ts` holds formed groups in a pending operator-review state instead of immediately revealing matches to users.
+- **Feature flag:** `matchingOperatorReviewEnabled` (DB-backed, env `MATCHING_OPERATOR_REVIEW_ENABLED`, default `true`). When enabled, `poolMatchingService.ts` holds formed groups in a pending operator-review state instead of immediately revealing matches to users.
 - **User-facing behavior:** No mini-program UI changes; users remain in the normal `MatchingWaitingScreen` while groups are under review. After operator approval, the standard matched/reveal flow proceeds exactly as before.
 - **Admin UI:** New `/admin/matching-reviews` page (`AdminMatchingReviewsPage.tsx`) lists pools with pending/approved/rejected status, shows formed groups and member details, and provides approve/reject dialogs.
 - **Admin endpoints:** `GET /api/admin/matching-reviews/pools`, `GET /api/admin/matching-reviews/pools/:id/groups`, `POST /api/admin/matching-reviews/pools/:id/approve`, `POST /api/admin/matching-reviews/pools/:id/reject`.
