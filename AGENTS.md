@@ -30,6 +30,8 @@ Use the `skill` tool to load the skill that owns the boundary you're touching. T
 | New feature flag, kill switch, rollout config | `feature-flags-launch-config` |
 | Xiaoyue text quality, craft validation, AI-generated Chinese copy | `xiaoyue-writing-craft` |
 
+> **Windows developers:** The `.agents/skills/` directory mirrors `.github/skills/` via symlinks. On Windows these may check out as plain text files and OpenCode won't discover them. If a skill reports "not found", run `npm run setup:agent-skills` to recreate the links as directory junctions.
+
 > Other skills are available. If your task doesn't match this table, describe the task and ask which skill applies.
 
 ### Step 2: Read the canonical doc
