@@ -31,7 +31,7 @@
     "design:audit": "node scripts/devtools/design-audit.mjs",
     "dep-check": "node scripts/check/check-workspace-dependency-ownership.mjs",
     "setup:agent-skills": "node scripts/setup-agent-skills.mjs",
-    "postinstall": "npm run setup:agent-skills",
+    "postinstall": "node -e \"const fs = require('fs'); const cp = require('child_process'); if (fs.existsSync('scripts/setup-agent-skills.mjs')) { const result = cp.spawnSync('npm', ['run', 'setup:agent-skills'], { stdio: 'inherit', shell: true }); process.exit(result.status || 0); }\"",
     "doc-mapping:check": "node scripts/check/check-doc-mapping.mjs",
     "memory:validate": "node scripts/memory/memory-validate.mjs",
     "memory:draft-candidate": "node scripts/memory/memory-draft-candidate.mjs",

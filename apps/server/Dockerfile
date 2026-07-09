@@ -12,14 +12,8 @@ COPY apps/server/package.json ./apps/server/
 RUN npm config set maxsockets 5
 RUN npm config set prefer-offline true
 
-# Copy .github for postinstall step (setup:agent-skills needs .github/skills/)
-COPY .github ./.github
-
 # Install all dependencies
 RUN npm ci
-
-# Clean up .github from build stage (not needed at runtime)
-RUN rm -rf .github
 
 # Copy shared package source
 COPY packages/shared ./packages/shared
