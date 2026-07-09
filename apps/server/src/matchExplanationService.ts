@@ -649,6 +649,42 @@ const DEFAULT_PAIR_EXPLANATION =
   '这两位都是有趣的人，期待你们在活动中发现彼此的闪光点！';
 
 /**
+ * Unwrap a possibly nested explanation value into a plain string.
+ * Handles double-serialized JSON and object-wrapped explanations.
+ */
+function unwrapExplanation(value: unknown, fallback: string): string {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return fallback;
+    // Defend against double-serialized JSON: "{\"explanation\":\"...\"}"
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed) as { explanation?: unknown } | unknown[];
+        if (parsed && typeof parsed === 'object' && 'explanation' in parsed) {
+          return unwrapExplanation(parsed.explanation, fallback);
+        }
+      } catch {
+        // Not valid JSON, treat as plain text.
+      }
+    }
+    return trimmed || fallback;
+  }
+
+  if (value && typeof value === 'object') {
+    const obj = value as { explanation?: unknown };
+    if ('explanation' in obj) {
+      return unwrapExplanation(obj.explanation, fallback);
+    }
+    // Fallback: if object has a single string property, use it.
+    const values = Object.values(obj);
+    const firstString = values.find((v): v is string => typeof v === 'string');
+    if (firstString) return firstString.trim() || fallback;
+  }
+
+  return fallback;
+}
+
+/**
  * Parse pair-explanation LLM output: `pair-explanation-v2` expects a single JSON object;
  * legacy plain-text responses remain supported.
  */
@@ -659,8 +695,8 @@ function parsePairExplanationContent(raw: string): { explanation: string; introA
   }
   try {
     const parsed = JSON.parse(trimmed) as { explanation?: unknown; introAngle?: unknown };
-    if (parsed && typeof parsed.explanation === 'string') {
-      const explanation = parsed.explanation.trim() || trimmed;
+    if (parsed && typeof parsed === 'object') {
+      const explanation = unwrapExplanation(parsed.explanation, trimmed);
       const introAngle =
         typeof parsed.introAngle === 'string'
           ? parsed.introAngle.trim().slice(0, 48)

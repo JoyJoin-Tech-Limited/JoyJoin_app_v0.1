@@ -456,6 +456,14 @@
       "when": 1780395567634,
       "tag": "seed_venue_time_slots_20260602",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "dialect": "postgresql",
+      "when": 1752032040000,
+      "tag": "20260709_add_social_icebreaker_miniscript_secrets",
+      "breakpoints": true
     }
   ]
 }

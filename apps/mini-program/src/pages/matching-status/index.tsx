@@ -320,9 +320,12 @@ export default function MatchingStatusPage() {
       <View
         className={`matching-status__header${matchStatus === 'pending' ? ' matching-status__header--with-hero' : ''}`}
       >
-        <View
-          className={`matching-status__status-dot matching-status__status-dot--${matchStatus}`}
-        />
+        <View className={`matching-status__status-chip matching-status__status-chip--${matchStatus}`}>
+          <View
+            className={`matching-status__status-dot matching-status__status-dot--${matchStatus}`}
+          />
+          <Text className='matching-status__status-chip-label'>{getStatusLabel(matchStatus)}</Text>
+        </View>
         {matchStatus === 'pending' || matchStatus === 'matched' || matchStatus === 'completed' ? (
           <ArchetypeHead archetype={viewerArchetype} size={44} className='matching-status__header-icon' variant='head' />
         ) : null}

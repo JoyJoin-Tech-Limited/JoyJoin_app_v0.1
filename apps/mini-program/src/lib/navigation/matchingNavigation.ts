@@ -18,7 +18,12 @@ export function replaceWithPoolGroupDetail(groupId: string): void {
   Taro.redirectTo({
     url,
     fail: () => {
-      Taro.navigateTo({ url })
+      Taro.navigateTo({
+        url,
+        fail: () => {
+          Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
+        },
+      })
     },
   })
 }
@@ -41,7 +46,12 @@ export function replaceWithSquadUnboxing(groupId: string): void {
   Taro.redirectTo({
     url,
     fail: () => {
-      Taro.navigateTo({ url })
+      Taro.navigateTo({
+        url,
+        fail: () => {
+          Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
+        },
+      })
     },
   })
 }

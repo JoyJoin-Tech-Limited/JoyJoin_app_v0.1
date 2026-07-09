@@ -546,9 +546,13 @@ export function useMatchingStatusController({
   }, [isCancelling, registrationId])
 
   const handleOpenMatchedJourney = useCallback(() => {
-    if (!resolvedGroupId) return
+    if (!resolvedGroupId) {
+      Taro.showToast({ title: '小队信息还在同步，请稍后再试', icon: 'none', duration: TOAST_DEFAULT_MS })
+      void queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-registration', registrationId] })
+      return
+    }
     navigateToMatchedDestination(resolvedGroupId)
-  }, [resolvedGroupId, navigateToMatchedDestination])
+  }, [resolvedGroupId, navigateToMatchedDestination, queryClient, registrationId])
 
   const handleStartSquadUnboxing = useCallback(() => {
     if (!resolvedGroupId) {

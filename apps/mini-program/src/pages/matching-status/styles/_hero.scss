@@ -81,11 +81,40 @@
     margin-bottom: 10rpx;
   }
 
+  &__status-chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: 999rpx;
+    margin-bottom: $spacing-sm;
+    background: rgba($color-surface, 0.72);
+    backdrop-filter: blur(8rpx);
+
+    &--pending {
+      background: rgba($color-warning, 0.08);
+    }
+
+    &--matched {
+      background: rgba($color-success, 0.08);
+    }
+
+    &--completed {
+      background: rgba($color-info, 0.08);
+    }
+  }
+
+  &__status-chip-label {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.4;
+  }
+
   &__status-dot {
     width: 16rpx;
     height: 16rpx;
     border-radius: 50%;
-    margin-bottom: $spacing-sm;
 
     &--matched {
       background: $color-success;

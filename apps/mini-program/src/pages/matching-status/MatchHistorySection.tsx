@@ -18,8 +18,12 @@ export default function MatchHistorySection({
   viewerArchetype,
 }: MatchHistorySectionProps) {
   const handleTapMatch = (registrationId: string) => {
-    Taro.navigateTo({
-      url: `/pages/matching-status/index?registrationId=${encodeURIComponent(registrationId)}`,
+    const url = `/pages/matching-status/index?registrationId=${encodeURIComponent(registrationId)}`
+    Taro.redirectTo({
+      url,
+      fail: () => {
+        Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
+      },
     })
   }
 

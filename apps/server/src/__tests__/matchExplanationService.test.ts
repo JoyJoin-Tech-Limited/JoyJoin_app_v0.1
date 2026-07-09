@@ -427,6 +427,82 @@ describe('matchExplanationService', () => {
     });
   });
 
+  describe('generatePairExplanation JSON parsing resilience', () => {
+    it('should unwrap a double-serialized explanation string', async () => {
+      const { getClientForFunction } = await import('../ai/socialModelRouter');
+      vi.mocked(getClientForFunction).mockReturnValue({
+        client: {
+          chat: {
+            completions: {
+              create: vi.fn().mockResolvedValue({
+                choices: [{ message: { content: '{"explanation":"{\\"explanation\\":\\"你和孔雀最容易先聊开\\"}"}' } }],
+              }),
+            },
+          },
+        } as any,
+        model: 'deepseek-v4-flash',
+        provider: 'deepseek',
+      } as any);
+
+      const explanation = await matchExplanationService.generatePairExplanation(
+        mockMember1,
+        mockMember2
+      );
+
+      expect(explanation.explanation).toBe('你和孔雀最容易先聊开');
+      expect(explanation.explanation).not.toContain('{');
+    });
+
+    it('should extract explanation from nested object', async () => {
+      const { getClientForFunction } = await import('../ai/socialModelRouter');
+      vi.mocked(getClientForFunction).mockReturnValue({
+        client: {
+          chat: {
+            completions: {
+              create: vi.fn().mockResolvedValue({
+                choices: [{ message: { content: '{"explanation":{"explanation":"同乡和同行业让你们的对话自然起步"}}' } }],
+              }),
+            },
+          },
+        } as any,
+        model: 'deepseek-v4-flash',
+        provider: 'deepseek',
+      } as any);
+
+      const explanation = await matchExplanationService.generatePairExplanation(
+        mockMember1,
+        mockMember2
+      );
+
+      expect(explanation.explanation).toBe('同乡和同行业让你们的对话自然起步');
+      expect(explanation.explanation).not.toContain('{"explanation"');
+    });
+
+    it('should handle valid plain string explanation', async () => {
+      const { getClientForFunction } = await import('../ai/socialModelRouter');
+      vi.mocked(getClientForFunction).mockReturnValue({
+        client: {
+          chat: {
+            completions: {
+              create: vi.fn().mockResolvedValue({
+                choices: [{ message: { content: '这两位性格互补，会有很多话题聊！' } }],
+              }),
+            },
+          },
+        } as any,
+        model: 'deepseek-v4-flash',
+        provider: 'deepseek',
+      } as any);
+
+      const explanation = await matchExplanationService.generatePairExplanation(
+        mockMember1,
+        mockMember2
+      );
+
+      expect(explanation.explanation).toBe('这两位性格互补，会有很多话题聊！');
+    });
+  });
+
   describe('generateGroupAnalysis', () => {
     it('should generate analysis for a group', async () => {
       const members = [mockMember1, mockMember2, mockMember3];
