@@ -4,15 +4,14 @@
 // Cross-platform fix for OpenCode skill discovery.
 //
 // OpenCode auto-discovers skills under `.agents/skills/`. In this repo, the
-// canonical skill definitions live in `.github/skills/`. The `.agents/skills/`
-// entries are meant to be symlinks/junctions pointing to `.github/skills/...`.
+// canonical skill definitions live in `.github/skills/`. This script mirrors
+// the canonical skills into `.agents/skills/` as real files (not symlinks or
+// directory junctions), because some Windows tooling — including OpenCode's
+// skill scanner — does not follow directory junctions when reading skill
+// manifests.
 //
-// On macOS/Linux, Git symlinks work out of the box. On Windows, Git often
-// checks symlinks out as plain text files containing the target path (unless the
-// repo was cloned with `core.symlinks=true` and Developer Mode / admin rights).
-// This script recreates the links correctly on every platform:
-//   - Windows: directory junctions (no admin required)
-//   - macOS/Linux: relative symbolic links
+// Run automatically after `npm install` via the `postinstall` script, or
+// manually with `npm run setup:agent-skills`.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -23,45 +22,50 @@ const rootDir = path.resolve(path.dirname(__filename), '..');
 const githubSkillsDir = path.join(rootDir, '.github', 'skills');
 const agentsSkillsDir = path.join(rootDir, '.agents', 'skills');
 
-const isWindows = process.platform === 'win32';
-
-function relativeSkillTarget(skillName) {
-  return path.relative(agentsSkillsDir, path.join(githubSkillsDir, skillName));
-}
-
-function createLink(skillName, absoluteTarget) {
-  const linkPath = path.join(agentsSkillsDir, skillName);
-
-  if (isWindows) {
-    // Directory junctions do not require elevated privileges on Windows.
-    fs.symlinkSync(absoluteTarget, linkPath, 'junction');
-  } else {
-    // Use relative symlinks on Unix so the repo remains relocatable.
-    const relativeTarget = relativeSkillTarget(skillName);
-    fs.symlinkSync(relativeTarget, linkPath, 'dir');
-  }
-}
-
-function linkExists(linkPath) {
+function isBrokenTextFile(filePath) {
   try {
-    const stats = fs.lstatSync(linkPath);
-    return stats.isSymbolicLink() || stats.isDirectory() || stats.isFile();
-  } catch {
-    return false;
-  }
-}
-
-function isBrokenTextFile(linkPath) {
-  try {
-    const stats = fs.lstatSync(linkPath);
+    const stats = fs.lstatSync(filePath);
     if (!stats.isFile()) return false;
-    const content = fs.readFileSync(linkPath, 'utf8').trim();
-    // Broken Git symlinks on Windows are text files that contain a relative path
-    // like "../../.github/skills/..." or a directory-like path.
+    const content = fs.readFileSync(filePath, 'utf8').trim();
+    // Broken Git symlinks on Windows are text files that contain a relative path.
     return content.startsWith('../../.github/skills/') || content.startsWith('.github/skills/');
   } catch {
     return false;
   }
+}
+
+function isSymlinkOrJunction(filePath) {
+  try {
+    const stats = fs.lstatSync(filePath);
+    return stats.isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
+function removeEntry(filePath) {
+  const stats = fs.lstatSync(filePath);
+  if (stats.isDirectory()) {
+    fs.rmSync(filePath, { recursive: true, force: true });
+  } else {
+    fs.unlinkSync(filePath);
+  }
+}
+
+function copySkill(skillName) {
+  const source = path.join(githubSkillsDir, skillName);
+  const dest = path.join(agentsSkillsDir, skillName);
+
+  let replaced = false;
+  if (fs.existsSync(dest)) {
+    if (isBrokenTextFile(dest) || isSymlinkOrJunction(dest)) {
+      removeEntry(dest);
+      replaced = true;
+    }
+  }
+
+  fs.cpSync(source, dest, { recursive: true, force: true });
+  return replaced ? 'replaced' : fs.existsSync(dest) ? 'updated' : 'created';
 }
 
 function main() {
@@ -79,61 +83,29 @@ function main() {
 
   let created = 0;
   let replaced = 0;
-  let skipped = 0;
+  let updated = 0;
   let errors = 0;
 
   for (const skill of githubSkills) {
-    const linkPath = path.join(agentsSkillsDir, skill);
-    const absoluteTarget = path.join(githubSkillsDir, skill);
-
-    if (!linkExists(linkPath)) {
-      try {
-        createLink(skill, absoluteTarget);
-        console.log(`[created] ${skill} → ${isWindows ? absoluteTarget : relativeSkillTarget(skill)}`);
+    try {
+      const result = copySkill(skill);
+      if (result === 'created') {
+        console.log(`[created] ${skill}`);
         created += 1;
-      } catch (err) {
-        console.error(`[error] Failed to create link for ${skill}: ${err.message}`);
-        errors += 1;
-      }
-    } else if (isBrokenTextFile(linkPath)) {
-      try {
-        fs.unlinkSync(linkPath);
-        createLink(skill, absoluteTarget);
-        console.log(`[replaced] ${skill} (broken text file → ${isWindows ? 'junction' : 'symlink'})`);
+      } else if (result === 'replaced') {
+        console.log(`[replaced] ${skill} (broken link → copy)`);
         replaced += 1;
-      } catch (err) {
-        console.error(`[error] Failed to replace broken link for ${skill}: ${err.message}`);
-        errors += 1;
-      }
-    } else if (fs.lstatSync(linkPath).isSymbolicLink()) {
-      const currentTarget = fs.readlinkSync(linkPath);
-      const expectedTarget = isWindows ? absoluteTarget : relativeSkillTarget(skill);
-      if (currentTarget !== expectedTarget) {
-        try {
-          fs.unlinkSync(linkPath);
-          createLink(skill, absoluteTarget);
-          console.log(`[fixed] ${skill} → ${expectedTarget}`);
-          replaced += 1;
-        } catch (err) {
-          console.error(`[error] Failed to fix link for ${skill}: ${err.message}`);
-          errors += 1;
-        }
       } else {
-        console.log(`[ok] ${skill}`);
-        skipped += 1;
+        console.log(`[updated] ${skill}`);
+        updated += 1;
       }
-    } else if (fs.lstatSync(linkPath).isDirectory()) {
-      // A real directory already exists; leave it alone (could be a copy or a
-      // symlink that was already resolved by the OS).
-      console.log(`[skip] ${skill} (real directory, not a symlink)`);
-      skipped += 1;
-    } else {
-      console.log(`[skip] ${skill} (unknown entry)`);
-      skipped += 1;
+    } catch (err) {
+      console.error(`[error] ${skill}: ${err.message}`);
+      errors += 1;
     }
   }
 
-  console.log(`\n[setup-agent-skills] created=${created}, replaced=${replaced}, skipped=${skipped}, errors=${errors}`);
+  console.log(`\n[setup-agent-skills] created=${created}, replaced=${replaced}, updated=${updated}, errors=${errors}`);
   process.exit(errors > 0 ? 1 : 0);
 }
 

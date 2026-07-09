@@ -31,6 +31,7 @@
     "design:audit": "node scripts/devtools/design-audit.mjs",
     "dep-check": "node scripts/check/check-workspace-dependency-ownership.mjs",
     "setup:agent-skills": "node scripts/setup-agent-skills.mjs",
+    "postinstall": "npm run setup:agent-skills",
     "doc-mapping:check": "node scripts/check/check-doc-mapping.mjs",
     "memory:validate": "node scripts/memory/memory-validate.mjs",
     "memory:draft-candidate": "node scripts/memory/memory-draft-candidate.mjs",
