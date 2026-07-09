@@ -551,6 +551,7 @@ export function useMatchingStatusController({
       void queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-registration', registrationId] })
       return
     }
+    logInfo('[MatchingStatus] CTA tapped, opening matched destination', { groupId: resolvedGroupId })
     navigateToMatchedDestination(resolvedGroupId)
   }, [resolvedGroupId, navigateToMatchedDestination, queryClient, registrationId])
 

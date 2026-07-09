@@ -4,7 +4,6 @@
 @use 'styles/error-state';
 @use 'styles/hero';
 @use 'styles/animations';
-@use 'styles/card-info';
 @use 'styles/waiting-card';
 @use 'styles/chemistry-card';
 @use 'styles/theme-and-special';
@@ -43,13 +42,17 @@
   @include error-state.matching-status-error-state;
   @include hero.matching-status-hero;
   @include animations.matching-status-animations;
-  @include card-info.matching-status-card-info;
   @include waiting-card.matching-status-waiting-card;
   @include chemistry-card.matching-status-chemistry-card;
   @include theme-and-special.matching-status-theme-and-special;
   @include overlay.matching-status-overlay;
   @include actions.matching-status-actions;
   @include match-history.matching-status-match-history;
+}
+
+// Premium event-info card wrapper (replaces the legacy icon-row card).
+.matching-status__event-card {
+  margin-bottom: $spacing-md;
 }
 
 .matching-status__loading-shake {
