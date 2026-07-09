@@ -883,7 +883,7 @@
     width: 680rpx;
     height: 480rpx;
     transform: translateX(-50%);
-    z-index: 2;
+    z-index: 4;
     pointer-events: none;
 
     &--empty {
@@ -1065,7 +1065,7 @@
   &__deck-card-art-wrap {
     position: relative;
     width: 100%;
-    height: 170rpx;
+    height: 180rpx;
     border-radius: $card-radius-sm;
     background: rgba($color-primary, 0.04);
     overflow: hidden;
