@@ -13,8 +13,14 @@ COPY packages/shared/package.json ./packages/shared/
 # Copy app package file
 COPY apps/admin-client/package.json ./apps/admin-client/
 
+# Copy .github for postinstall step (setup:agent-skills needs .github/skills/)
+COPY .github ./.github
+
 # Install all dependencies
 RUN npm ci
+
+# Clean up .github from build stage (not needed at runtime)
+RUN rm -rf .github
 
 # Copy shared package source
 COPY packages/shared ./packages/shared
