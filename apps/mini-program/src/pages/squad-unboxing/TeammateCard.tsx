@@ -100,20 +100,37 @@ export default function TeammateCard({
 
   const step = total <= 1 ? 0 : Math.min(14, 48 / total)
   const baseRotation = (index - (total - 1) / 2) * step
-  const baseTranslateX = (index - (total - 1) / 2) * (total <= 3 ? 32 : 22)
+  // Count-responsive fan: spread cards so every card exposes a tappable leading
+  // edge (>= FAN_STEP_MIN_RPX) without overflowing the ~600rpx deck for up to 8
+  // members. The previous fixed step (total<=3 ? 32 : 22) left cards ~85%
+  // overlapped, so only the top card was reachable (Bug 3).
+  const CARD_WIDTH_RPX = 220
+  const USABLE_FAN_WIDTH_RPX = 560
+  const FAN_STEP_MIN_RPX = 48
+  const FAN_STEP_MAX_RPX = 90
+  const fanStep = total <= 1
+    ? 0
+    : Math.max(
+        FAN_STEP_MIN_RPX,
+        Math.min(
+          FAN_STEP_MAX_RPX,
+          (USABLE_FAN_WIDTH_RPX - CARD_WIDTH_RPX) / Math.max(1, total - 1),
+        ),
+      )
+  const baseTranslateX = (index - (total - 1) / 2) * fanStep
   const baseTranslateY = -Math.abs(baseRotation) * 1.0
 
   const focusRotation = focused ? 0 : baseRotation
   const focusTranslateX = focused ? 0 : baseTranslateX
-  const focusTranslateY = focused ? (isDegradation ? -8 : -24) : baseTranslateY
-  const focusScale = focused ? (isDegradation ? 1.04 : 1.08) : 1
+  const focusTranslateY = focused ? (isDegradation ? -10 : -32) : baseTranslateY
+  const focusScale = focused ? (isDegradation ? 1.04 : 1.07) : 1
   const focusZIndex = focused ? 50 : total - Math.abs(index - Math.floor(total / 2))
   const isDimmed = anyFocused && !focused
 
   const startTransform = 'translate3d(-50%, 120rpx, 0) scale(0.5) rotate(0deg)'
   const restTransform = `translate3d(${focusTranslateX}rpx, ${focusTranslateY}rpx, 0) rotate(${focusRotation}deg) scale(${focusScale})`
   const transform = isRevealed ? restTransform : startTransform
-  const opacity = isRevealed ? (isDimmed ? 0.28 : 1) : 0
+  const opacity = isRevealed ? (isDimmed ? 0.55 : 1) : 0
   const emergeDelayMs = reduceMotion ? 0 : 280 + index * 50
   const transitionDuration = reduceMotion ? 0 : emergeComplete ? 320 : 550
 

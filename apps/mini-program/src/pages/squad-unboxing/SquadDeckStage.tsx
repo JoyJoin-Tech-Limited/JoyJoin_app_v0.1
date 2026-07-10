@@ -10,7 +10,7 @@ export interface SquadDeckStageProps {
   currentUserId?: string | null
   viewerPairByMemberId: Map<string, PairExplanation | null>
   focusedIndex: number
-  hasTappedCard: boolean
+  anyFocused: boolean
   reduceMotion: boolean
   isDegradation: boolean
   onFocusChange: (index: number) => void
@@ -22,7 +22,7 @@ export default function SquadDeckStage({
   currentUserId,
   viewerPairByMemberId,
   focusedIndex,
-  hasTappedCard,
+  anyFocused,
   reduceMotion,
   isDegradation,
   onFocusChange,
@@ -98,7 +98,7 @@ export default function SquadDeckStage({
               index={index}
               total={members.length}
               focused={focusedIndex === index}
-              anyFocused={hasTappedCard}
+              anyFocused={anyFocused}
               isCurrentUser={isCurrentUser}
               isRevealed={isRevealed}
               emergeComplete={emergeComplete}

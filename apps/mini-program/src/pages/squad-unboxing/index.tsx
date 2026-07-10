@@ -804,38 +804,42 @@ export default function SquadUnboxingPage() {
             {announcement}
           </View>
         ) : null}
-        <View
-          className={[
-            'squad-unboxing__stage-body',
-            flowState === 'ready' ? 'squad-unboxing__stage-body--ready' : '',
-          ].filter(Boolean).join(' ')}
-          onClick={flowState === 'ready' ? () => handleOpenBox('box') : undefined}
-          hoverClass={flowState === 'ready' ? 'squad-unboxing__stage-body--pressed' : ''}
-          role={flowState === 'ready' ? 'button' : undefined}
-          aria-label={flowState === 'ready' ? '点击拆开礼盒' : undefined}
-        >
-          <BlindBoxVisual
-            state={flowState === 'shaking' ? 'opening' : flowState === 'revealed' ? 'open' : 'ready'}
-          />
-        </View>
+        {flowState !== 'revealed' ? (
+          <View
+            className={[
+              'squad-unboxing__stage-body',
+              flowState === 'ready' ? 'squad-unboxing__stage-body--ready' : '',
+            ].filter(Boolean).join(' ')}
+            onClick={flowState === 'ready' ? () => handleOpenBox('box') : undefined}
+            hoverClass={flowState === 'ready' ? 'squad-unboxing__stage-body--pressed' : ''}
+            role={flowState === 'ready' ? 'button' : undefined}
+            aria-label={flowState === 'ready' ? '点击拆开礼盒' : undefined}
+          >
+            <BlindBoxVisual
+              state={flowState === 'shaking' ? 'opening' : 'ready'}
+            />
+          </View>
+        ) : null}
         {flowState === 'revealed' ? (
           <SquadDeckStage
             members={members}
             currentUserId={currentUserId}
             viewerPairByMemberId={viewerPairByMemberId}
             focusedIndex={focusedCardIndex}
-            hasTappedCard={hasTappedCard}
+            anyFocused={focusedCardIndex >= 0}
             reduceMotion={shouldReduceMotion}
             isDegradation={isDegradation}
             onFocusChange={handleCardFocus}
             onEmergeComplete={() => setDeckEmergeComplete(true)}
           />
         ) : null}
-        <View className='squad-unboxing__stage-lid'>
-          <BlindBoxLid
-            state={flowState === 'shaking' ? 'opening' : flowState === 'revealed' ? 'open' : 'ready'}
-          />
-        </View>
+        {flowState !== 'revealed' ? (
+          <View className='squad-unboxing__stage-lid'>
+            <BlindBoxLid
+              state={flowState === 'shaking' ? 'opening' : 'ready'}
+            />
+          </View>
+        ) : null}
         {flowState === 'revealed' ? (
           <>
             {!hasTappedCard ? (

@@ -60,13 +60,17 @@
 
     &--ready,
     &--shaking {
-      height: clamp(420rpx, 54vh, 560rpx);
-      height: clamp(420rpx, 54dvh, 560rpx);
+      // Top-anchored (was clamp(420,54dvh,560) flex-centered) so the ready stack
+      // shifts up and loses the excess top whitespace called out in Bug 2.
+      height: clamp(360rpx, 42vh, 460rpx);
+      height: clamp(360rpx, 42dvh, 460rpx);
     }
 
     &--revealed {
-      height: clamp(560rpx, 66vh, 760rpx);
-      height: clamp(560rpx, 66dvh, 760rpx);
+      // Trimmed (was clamp(560,66dvh,760)) now that the gift box/lid no longer
+      // share the stage; keeps the deck high and the hero directly beneath.
+      height: clamp(500rpx, 56vh, 620rpx);
+      height: clamp(500rpx, 56dvh, 620rpx);
       pointer-events: auto;
     }
 
@@ -79,14 +83,14 @@
   }
 
   &__stage-spacer {
-    height: clamp(420rpx, 54vh, 560rpx);
-    height: clamp(420rpx, 54dvh, 560rpx);
+    height: clamp(360rpx, 42vh, 460rpx);
+    height: clamp(360rpx, 42dvh, 460rpx);
     pointer-events: none;
     flex-shrink: 0;
 
     &--revealed {
-      height: clamp(560rpx, 66vh, 760rpx);
-      height: clamp(560rpx, 66dvh, 760rpx);
+      height: clamp(500rpx, 56vh, 620rpx);
+      height: clamp(500rpx, 56dvh, 620rpx);
     }
   }
 
@@ -1052,8 +1056,9 @@
     }
 
     &--dimmed {
-      pointer-events: none;
-      filter: grayscale(0.45);
+      // Dimmed siblings stay tappable so the user can switch focus to any card
+      // (Bug 3: pointer-events:none here locked the deck after the first tap).
+      filter: grayscale(0.3);
     }
 
     &--pressed {
