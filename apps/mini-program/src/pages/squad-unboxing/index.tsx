@@ -2,6 +2,7 @@ import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useRouter, useDidShow } from '@tarojs/taro'
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
+import { normalizeMatchingCopy } from '@shared/features/matching-status'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
@@ -117,6 +118,7 @@ export default function SquadUnboxingPage() {
   const [headerReady, setHeaderReady] = useState(false)
   const [deckEmergeComplete, setDeckEmergeComplete] = useState(false)
   const [programmaticScrollTop, setProgrammaticScrollTop] = useState(0)
+  const matchExplanationCopy = normalizeMatchingCopy(group?.matchExplanation)
 
   const reportScrollDepth = useScrollDepthTracking(groupId)
 
@@ -344,7 +346,7 @@ export default function SquadUnboxingPage() {
             {getPageTitle(pool.eventType)}
           </Text>
           <Text className='squad-unboxing__header-tagline'>
-            {group.matchExplanation || `${DEFAULT_MASCOT_DISPLAY_NAME}已经把拼图聚齐，准备让你看看今晚会和谁同桌。`}
+            {matchExplanationCopy || `${DEFAULT_MASCOT_DISPLAY_NAME}已经把拼图聚齐，准备让你看看今晚会和谁同桌。`}
           </Text>
           <View className='squad-unboxing__header-meta'>
             {group.groupNumber ? (
@@ -621,7 +623,7 @@ export default function SquadUnboxingPage() {
                         />
                       </>
                     ) : (
-                      <Text className='squad-unboxing__analysis-text'>{group.matchExplanation}</Text>
+                      <Text className='squad-unboxing__analysis-text'>{matchExplanationCopy}</Text>
                     )}
                   </View>
 
@@ -671,7 +673,7 @@ export default function SquadUnboxingPage() {
                                   ))}
                                 </View>
                               ) : null}
-                              <Text className='squad-unboxing__pair-copy'>{pair.explanation}</Text>
+                              <Text className='squad-unboxing__pair-copy'>{normalizeMatchingCopy(pair.explanation)}</Text>
                               {pair.introAngle ? (
                                 <Text className='squad-unboxing__pair-intro'>开场：{pair.introAngle}</Text>
                               ) : null}
@@ -702,7 +704,7 @@ export default function SquadUnboxingPage() {
                                 <Text className='squad-unboxing__pair-label'>{pairLabel}</Text>
                                 <Text className='squad-unboxing__pair-score'>{pair.chemistryScore}</Text>
                               </View>
-                              <Text className='squad-unboxing__pair-copy'>{pair.explanation}</Text>
+                              <Text className='squad-unboxing__pair-copy'>{normalizeMatchingCopy(pair.explanation)}</Text>
                               {pair.introAngle ? (
                                 <Text className='squad-unboxing__pair-intro'>开场：{pair.introAngle}</Text>
                               ) : null}
@@ -712,7 +714,7 @@ export default function SquadUnboxingPage() {
                       </View>
                     ) : (
                       <Text className='squad-unboxing__analysis-text'>
-                        {group.matchExplanation || '这桌有不少潜在共同点，见面后会更快找到节奏。'}
+                        {matchExplanationCopy || '这桌有不少潜在共同点，见面后会更快找到节奏。'}
                       </Text>
                     )}
                   </View>
@@ -877,7 +879,7 @@ export default function SquadUnboxingPage() {
                     const mix = archetypeMixCopy
                     const companion =
                       groupAnalysis?.groupThemeCompanion ||
-                      group.matchExplanation ||
+                      matchExplanationCopy ||
                       `${DEFAULT_MASCOT_DISPLAY_NAME}觉得这桌会聊得很自然。`
                     const normalizedCompanion = companion.replace(/[。！？，\s]*$/, '')
                     return `拼图完整了！${mix}，${normalizedCompanion}。`

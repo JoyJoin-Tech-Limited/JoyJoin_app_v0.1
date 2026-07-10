@@ -4,6 +4,7 @@ import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import type { PoolGroupMemberSummary } from '@shared/api'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
 import type { AIGCMeta } from '@shared/types/aiMeta'
+import { normalizeMatchingCopy } from '@shared/features/matching-status'
 import ConnectionPointPill from '../../components/ConnectionPointPill'
 import AIGCLabel from '../../components/ai-content/AIGCLabel'
 import AIContentReportButton from '../../components/ai-content/AIContentReportButton'
@@ -48,6 +49,7 @@ export default function TeammateCardDetail({
   const name = getMemberName(member)
   const archetypeName = getArchetypeDisplayName(member?.archetype)
   const connectionPoints = useMemo(() => getConnectionPoints(viewerPair), [viewerPair])
+  const connectionReason = useMemo(() => normalizeMatchingCopy(viewerPair?.explanation), [viewerPair?.explanation])
   const metaParts = [member?.ageLabel, member?.industryNicheLabel || member?.industryCategoryLabel].filter(Boolean)
 
   if (!visible || !member) return null
@@ -62,11 +64,11 @@ export default function TeammateCardDetail({
         ) : null}
       </View>
 
-      {viewerPair?.explanation ? (
+      {connectionReason ? (
         <View className='squad-unboxing__deck-detail-section'>
           <Text className='squad-unboxing__deck-detail-section-title'>{name} 和你的连接感</Text>
           <AIGCLabel meta={aigcMeta} className='squad-unboxing__deck-detail-aigc' />
-          <Text className='squad-unboxing__deck-detail-reason'>{viewerPair.explanation}</Text>
+          <Text className='squad-unboxing__deck-detail-reason'>{connectionReason}</Text>
         </View>
       ) : null}
 
@@ -102,7 +104,7 @@ export default function TeammateCardDetail({
         </View>
       ) : null}
 
-      {!viewerPair?.explanation && connectionPoints.length === 0 ? (
+      {!connectionReason && connectionPoints.length === 0 ? (
         <Text className='squad-unboxing__deck-detail-empty'>
           悦仔还在分析你们之间的连接点，稍后会更新更详细的解读。
         </Text>

@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import type { PairExplanation } from '../../types/groupAnalysis'
-import { composeUnifiedReveal } from './viewModels'
+import { composeUnifiedReveal, normalizeMatchingCopy } from './viewModels'
+
+describe('normalizeMatchingCopy', () => {
+  it('extracts readable explanation from backend JSON text', () => {
+    expect(normalizeMatchingCopy('{"explanation":"你们都喜欢轻松饭局，可以从美食聊开"}')).toBe(
+      '你们都喜欢轻松饭局，可以从美食聊开',
+    )
+  })
+
+  it('keeps regular copy unchanged', () => {
+    expect(normalizeMatchingCopy('这一桌很容易聊起来')).toBe('这一桌很容易聊起来')
+  })
+})
 
 describe('composeUnifiedReveal', () => {
   const baseChemistryPayoff = {
@@ -35,6 +47,22 @@ describe('composeUnifiedReveal', () => {
     expect(result.body).toBe(baseSpotlight.pair.explanation)
     expect(result.subtitle).toBe(baseChemistryPayoff.chemistryLine)
     expect(result.headline).toBe(baseChemistryPayoff.headline)
+  })
+
+  it('normalizes serialized JSON spotlight explanation before rendering', () => {
+    const result = composeUnifiedReveal({
+      chemistryPayoff: baseChemistryPayoff,
+      viewerSpotlight: {
+        ...baseSpotlight,
+        pair: {
+          ...baseSpotlight.pair,
+          explanation: '{"explanation":"你们都喜欢轻松饭局，可以从美食聊开"}',
+        },
+      },
+    })
+
+    expect(result.body).toBe('你们都喜欢轻松饭局，可以从美食聊开')
+    expect(result.body).not.toContain('{"explanation"')
   })
 
   it('uses chemistryPayoff body when spotlight has no explanation', () => {

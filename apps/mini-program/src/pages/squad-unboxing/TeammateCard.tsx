@@ -5,6 +5,7 @@ import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { getArchetypeHSL, formatHSLAsRGBA } from '@shared/archetypeColors'
 import type { PoolGroupMemberSummary } from '@shared/api'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
+import { normalizeMatchingCopy } from '@shared/features/matching-status'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import MissingArchetypePlaceholder from '../../components/mascot/MissingArchetypePlaceholder'
 import ConnectionPointPill from '../../components/ConnectionPointPill'
@@ -75,7 +76,8 @@ export default function TeammateCard({
   const name = getMemberName(member)
   const archetypeName = getArchetypeDisplayName(member.archetype)
   const connectionPoints = useMemo(() => getConnectionPoints(viewerPair), [viewerPair])
-  const hasConnectionReason = Boolean(viewerPair?.explanation)
+  const connectionReason = useMemo(() => normalizeMatchingCopy(viewerPair?.explanation), [viewerPair?.explanation])
+  const hasConnectionReason = connectionReason.length > 0
 
   const assetUrl = getArchetypeAssetUrl(member.archetype)
   const showPlaceholder = !member.archetype || imageError
@@ -223,7 +225,7 @@ export default function TeammateCard({
               </View>
             ) : hasConnectionReason ? (
               <Text className='squad-unboxing__deck-card-reason' numberOfLines={2}>
-                {viewerPair?.explanation}
+                {connectionReason}
               </Text>
             ) : null}
           </View>

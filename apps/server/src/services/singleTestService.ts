@@ -1,4 +1,4 @@
-import { and, eq, inArray, like, or } from "drizzle-orm";
+import { and, eq, inArray, like, or, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "@shared/schema";
 import { db } from "../db";
@@ -46,12 +46,26 @@ import { cleanupBotFillUsers } from "./botFillService";
 
 type IdRow = { id: string };
 type DbTransaction = NodePgDatabase<typeof schema>;
+type DbConnection = DbTransaction | typeof db;
 
 const VIRTUAL_PHONE_PREFIX = "+861399999";
 const SINGLE_TEST_POOL_TITLE = "单人调试局";
 const COMMON_PASSWORD = "test123456";
 const VIRTUAL_USER_COUNT = 100;
 const BOT_COUNT = 5;
+
+const OPTIONAL_SINGLE_TEST_TABLES = {
+  socialIcebreakerSessions: "social_icebreaker_sessions",
+  preGenerationResults: "pre_generation_results",
+  preGenerationJobs: "pre_generation_jobs",
+  socialIcebreakerMiniscriptSecrets: "social_icebreaker_miniscript_secrets",
+  socialIcebreakerPhaseMetrics: "social_icebreaker_phase_metrics",
+  socialIcebreakerPhasePulseChecks: "social_icebreaker_phase_pulse_checks",
+  momentCardInteractions: "moment_card_interactions",
+  socialIcebreakerAiFeedback: "social_icebreaker_ai_feedback",
+  socialIcebreakerLieTruths: "social_icebreaker_lie_truths",
+  socialIcebreakerParticipants: "social_icebreaker_participants",
+} as const;
 
 const CITIES = ["深圳", "香港", "广州", "北京", "上海"];
 const GENDERS = ["女性", "男性", "不透露"];
@@ -86,6 +100,33 @@ function shuffle<T>(arr: T[]): T[] {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+function getSqlRows<T extends Record<string, unknown>>(result: unknown): T[] {
+  if (Array.isArray(result)) return result as T[];
+  const rows = (result as { rows?: T[] } | undefined)?.rows;
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function tableExists(conn: DbConnection, tableName: string): Promise<boolean> {
+  const result = await conn.execute(
+    sql`select to_regclass(${`public.${tableName}`}) as table_name`,
+  );
+  const [row] = getSqlRows<{ table_name: string | null }>(result);
+  return Boolean(row?.table_name);
+}
+
+async function deleteIfTableExists(
+  conn: DbConnection,
+  tableName: string,
+  deleteRows: () => Promise<unknown>,
+): Promise<void> {
+  if (await tableExists(conn, tableName)) {
+    await deleteRows();
+    return;
+  }
+
+  logger.warn("[SingleTest] Skipping cleanup for missing optional table", { tableName });
 }
 
 function generateBirthdate(): string {
@@ -477,45 +518,70 @@ async function cleanupSingleTestPoolRows(
   let deletedSocialSessions = 0;
 
   if (groupIds.length > 0) {
-    const socialSessionRows = await conn
-      .select({ id: socialIcebreakerSessions.id })
-      .from(socialIcebreakerSessions)
-      .where(inArray(socialIcebreakerSessions.icebreakerSessionId, groupIds));
-    const socialSessionIds = socialSessionRows.map((row: IdRow) => row.id);
+    if (await tableExists(conn, OPTIONAL_SINGLE_TEST_TABLES.socialIcebreakerSessions)) {
+      const socialSessionRows = await conn
+        .select({ id: socialIcebreakerSessions.id })
+        .from(socialIcebreakerSessions)
+        .where(inArray(socialIcebreakerSessions.icebreakerSessionId, groupIds));
+      const socialSessionIds = socialSessionRows.map((row: IdRow) => row.id);
 
-    if (socialSessionIds.length > 0) {
-      await conn
-        .delete(preGenerationResults)
-        .where(inArray(preGenerationResults.socialSessionId, socialSessionIds));
-      await conn
-        .delete(preGenerationJobs)
-        .where(inArray(preGenerationJobs.socialSessionId, socialSessionIds));
-      await conn
-        .delete(socialIcebreakerMiniscriptSecrets)
-        .where(inArray(socialIcebreakerMiniscriptSecrets.socialSessionId, socialSessionIds));
-      await conn
-        .delete(socialIcebreakerPhaseMetrics)
-        .where(inArray(socialIcebreakerPhaseMetrics.socialSessionId, socialSessionIds));
-      await conn
-        .delete(socialIcebreakerPhasePulseChecks)
-        .where(inArray(socialIcebreakerPhasePulseChecks.socialSessionId, socialSessionIds));
-      await conn
-        .delete(momentCardInteractions)
-        .where(inArray(momentCardInteractions.socialSessionId, socialSessionIds));
-      await conn
-        .delete(socialIcebreakerAiFeedback)
-        .where(inArray(socialIcebreakerAiFeedback.socialSessionId, socialSessionIds));
-      await conn
-        .delete(socialIcebreakerLieTruths)
-        .where(inArray(socialIcebreakerLieTruths.socialSessionId, socialSessionIds));
-      await conn
-        .delete(socialIcebreakerParticipants)
-        .where(inArray(socialIcebreakerParticipants.socialSessionId, socialSessionIds));
-      const deleted = await conn
-        .delete(socialIcebreakerSessions)
-        .where(inArray(socialIcebreakerSessions.id, socialSessionIds))
-        .returning({ id: socialIcebreakerSessions.id });
-      deletedSocialSessions = deleted.length;
+      if (socialSessionIds.length > 0) {
+        await deleteIfTableExists(conn, OPTIONAL_SINGLE_TEST_TABLES.preGenerationResults, () =>
+          conn
+            .delete(preGenerationResults)
+            .where(inArray(preGenerationResults.socialSessionId, socialSessionIds)),
+        );
+        await deleteIfTableExists(conn, OPTIONAL_SINGLE_TEST_TABLES.preGenerationJobs, () =>
+          conn
+            .delete(preGenerationJobs)
+            .where(inArray(preGenerationJobs.socialSessionId, socialSessionIds)),
+        );
+        await deleteIfTableExists(conn, OPTIONAL_SINGLE_TEST_TABLES.socialIcebreakerMiniscriptSecrets, () =>
+          conn
+            .delete(socialIcebreakerMiniscriptSecrets)
+            .where(inArray(socialIcebreakerMiniscriptSecrets.socialSessionId, socialSessionIds)),
+        );
+        await deleteIfTableExists(conn, OPTIONAL_SINGLE_TEST_TABLES.socialIcebreakerPhaseMetrics, () =>
+          conn
+            .delete(socialIcebreakerPhaseMetrics)
+            .where(inArray(socialIcebreakerPhaseMetrics.socialSessionId, socialSessionIds)),
+        );
+        await deleteIfTableExists(conn, OPTIONAL_SINGLE_TEST_TABLES.socialIcebreakerPhasePulseChecks, () =>
+          conn
+            .delete(socialIcebreakerPhasePulseChecks)
+            .where(inArray(socialIcebreakerPhasePulseChecks.socialSessionId, socialSessionIds)),
+        );
+        await deleteIfTableExists(conn, OPTIONAL_SINGLE_TEST_TABLES.momentCardInteractions, () =>
+          conn
+            .delete(momentCardInteractions)
+            .where(inArray(momentCardInteractions.socialSessionId, socialSessionIds)),
+        );
+        await deleteIfTableExists(conn, OPTIONAL_SINGLE_TEST_TABLES.socialIcebreakerAiFeedback, () =>
+          conn
+            .delete(socialIcebreakerAiFeedback)
+            .where(inArray(socialIcebreakerAiFeedback.socialSessionId, socialSessionIds)),
+        );
+        await deleteIfTableExists(conn, OPTIONAL_SINGLE_TEST_TABLES.socialIcebreakerLieTruths, () =>
+          conn
+            .delete(socialIcebreakerLieTruths)
+            .where(inArray(socialIcebreakerLieTruths.socialSessionId, socialSessionIds)),
+        );
+        await deleteIfTableExists(conn, OPTIONAL_SINGLE_TEST_TABLES.socialIcebreakerParticipants, () =>
+          conn
+            .delete(socialIcebreakerParticipants)
+            .where(inArray(socialIcebreakerParticipants.socialSessionId, socialSessionIds)),
+        );
+        const deleted = await conn
+          .delete(socialIcebreakerSessions)
+          .where(inArray(socialIcebreakerSessions.id, socialSessionIds))
+          .returning({ id: socialIcebreakerSessions.id });
+        deletedSocialSessions = deleted.length;
+      }
+    } else {
+      logger.warn("[SingleTest] Skipping social icebreaker cleanup because sessions table is missing", {
+        poolId,
+        groupCount: groupIds.length,
+      });
     }
 
     await conn.delete(eventGroupOutcomes).where(inArray(eventGroupOutcomes.groupId, groupIds));

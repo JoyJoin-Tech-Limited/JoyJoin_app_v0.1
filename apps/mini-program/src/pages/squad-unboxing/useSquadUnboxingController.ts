@@ -142,7 +142,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
 
       await Taro.showToast({
         title: '座位已锁定 · 解锁新羁绊',
-        icon: 'success',
+        icon: 'none',
         duration: TOAST_SHORT_MS,
       })
 
@@ -319,6 +319,11 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   }, [groupId])
 
   const handleOpenGroupDetail = useCallback(() => {
+    if (!groupId) {
+      Taro.showToast({ title: '小队信息还在同步，请稍后再试', icon: 'none', duration: TOAST_MEDIUM_MS })
+      return
+    }
+
     haptics('light')
     openPoolGroupDetail(groupId)
   }, [groupId])

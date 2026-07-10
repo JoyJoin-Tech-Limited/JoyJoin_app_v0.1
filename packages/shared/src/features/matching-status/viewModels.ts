@@ -145,6 +145,51 @@ export const DEFAULT_MIN_GROUP_SIZE = 4
 export const DEFAULT_MAX_GROUP_SIZE = 6
 export const DEFAULT_REFRESH_INTERVAL_SECONDS = 20
 
+function extractReadableText(value: unknown): string | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed.length > 0 ? trimmed : null
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const text = extractReadableText(item)
+      if (text) return text
+    }
+    return null
+  }
+
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+  const preferredKeys = ['explanation', 'text', 'reason', 'summary', 'content', 'message']
+  for (const key of preferredKeys) {
+    const text = extractReadableText(record[key])
+    if (text) return text
+  }
+
+  return null
+}
+
+export function normalizeMatchingCopy(value?: string | null): string {
+  const raw = typeof value === 'string' ? value.trim() : ''
+  if (!raw) return ''
+
+  const firstChar = raw[0]
+  if (firstChar !== '{' && firstChar !== '[') {
+    return raw
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    return extractReadableText(parsed) ?? raw
+  } catch {
+    return raw
+  }
+}
+
 export function resolveMatchingStatusAuthBootstrap<TUser>(params: {
   authUser: TUser | null | undefined
   cachedAuthUser: TUser | null | undefined
@@ -347,7 +392,7 @@ export function composeUnifiedReveal(params: {
   const rarityTier = hasEpic ? 'epic' : hasRare ? 'rare' : 'common'
 
   // Priority rule: spotlight pair explanation wins over group chemistry line
-  const spotlightExplanation = viewerSpotlight?.pair.explanation?.trim()
+  const spotlightExplanation = normalizeMatchingCopy(viewerSpotlight?.pair.explanation)
   const spotlightBody = spotlightExplanation && spotlightExplanation.length > 0
     ? spotlightExplanation
     : null
