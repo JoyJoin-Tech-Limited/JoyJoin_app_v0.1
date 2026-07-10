@@ -309,6 +309,31 @@ export default function SquadUnboxingPage() {
     )
   }
 
+  const header = (
+    <View className={['squad-unboxing__header', headerReady ? 'squad-unboxing__header--ready' : ''].filter(Boolean).join(' ')}>
+      <Image
+        className='squad-unboxing__header-mascot'
+        mode='aspectFit'
+        src={getXiaoyueExpressionAsset('homeWelcome')}
+        ariaLabel='欢迎'
+      />
+      <Text className='squad-unboxing__header-title'>
+        {getPageTitle(pool.eventType)}
+      </Text>
+      <Text className='squad-unboxing__header-tagline'>
+        {matchExplanationCopy || `${DEFAULT_MASCOT_DISPLAY_NAME}已经把拼图聚齐，准备让你看看今晚会和谁同桌。`}
+      </Text>
+      <View className='squad-unboxing__header-meta'>
+        {group.groupNumber ? (
+          <Text className='squad-unboxing__header-group-num'>第 {group.groupNumber} 组</Text>
+        ) : null}
+        {group.matchScore != null ? (
+          <Text className='squad-unboxing__header-score'>默契度 {Math.round(group.matchScore)}%</Text>
+        ) : null}
+      </View>
+    </View>
+  )
+
   return (
     <View className={pageClassName}>
       <ScrollView
@@ -319,10 +344,16 @@ export default function SquadUnboxingPage() {
         onScroll={handleScroll}
         scrollTop={programmaticScrollTop}
       >
-        <View className={[
-          'squad-unboxing__stage-spacer',
-          flowState === 'revealed' ? 'squad-unboxing__stage-spacer--revealed' : '',
-        ].filter(Boolean).join(' ')} />
+        <View className='squad-unboxing__scroll-inner'>
+          <View className={[
+            'squad-unboxing__stage-spacer',
+            flowState === 'revealed' ? 'squad-unboxing__stage-spacer--revealed' : '',
+          ].filter(Boolean).join(' ')} />
+
+          <View className={[
+            'squad-unboxing__scroll-content',
+            flowState === 'revealed' ? '' : 'squad-unboxing__scroll-content--ready',
+          ].filter(Boolean).join(' ')}>
 
         {flowState === 'ready' ? (
           <View className='squad-unboxing__ribbon-wrap'>
@@ -335,28 +366,7 @@ export default function SquadUnboxingPage() {
           </View>
         ) : null}
 
-        <View className={['squad-unboxing__header', headerReady ? 'squad-unboxing__header--ready' : ''].filter(Boolean).join(' ')}>
-          <Image
-            className='squad-unboxing__header-mascot'
-            mode='aspectFit'
-            src={getXiaoyueExpressionAsset('homeWelcome')}
-            ariaLabel='欢迎'
-          />
-          <Text className='squad-unboxing__header-title'>
-            {getPageTitle(pool.eventType)}
-          </Text>
-          <Text className='squad-unboxing__header-tagline'>
-            {matchExplanationCopy || `${DEFAULT_MASCOT_DISPLAY_NAME}已经把拼图聚齐，准备让你看看今晚会和谁同桌。`}
-          </Text>
-          <View className='squad-unboxing__header-meta'>
-            {group.groupNumber ? (
-              <Text className='squad-unboxing__header-group-num'>第 {group.groupNumber} 组</Text>
-            ) : null}
-            {group.matchScore != null ? (
-              <Text className='squad-unboxing__header-score'>默契度 {Math.round(group.matchScore)}%</Text>
-            ) : null}
-          </View>
-        </View>
+        {header}
 
 
         {flowState === 'ready' ? (
@@ -770,10 +780,11 @@ export default function SquadUnboxingPage() {
                 </View>
               ) : null}
             </View>
+            <View className='squad-unboxing__spacer' />
           </>
         ) : null}
-
-        <View className='squad-unboxing__spacer' />
+        </View>
+      </View>
       </ScrollView>
 
       <View
