@@ -448,6 +448,14 @@ router.post('/start', async (req: any, res) => {
     });
   } catch (error) {
     if (!isUniqueConstraintError(error)) {
+      logger.error('Failed to create social icebreaker session', {
+        sessionId,
+        userId,
+        tier: resolvedTier,
+        vibe: newState.vibe,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       throw error;
     }
 

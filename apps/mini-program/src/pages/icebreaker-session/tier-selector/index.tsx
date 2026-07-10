@@ -9,7 +9,7 @@ import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreak
 import { logError } from '../../../lib/utils/logger'
 import { TOAST_MEDIUM_MS } from '../../../lib/utils/uiConstants'
 import { haptics } from '../../../lib/utils/haptics'
-import { getUserDisplayName } from '../icebreakerSessionModel'
+import { getUserDisplayName, getIcebreakerPageErrorText } from '../icebreakerSessionModel'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import { VIBE_TO_API, type VibeId } from '../../../lib/vibeMapping'
 import { TIER_PRESETS, TIER_CARD_BACKGROUNDS, type TierPreset } from '../tierPresets'
@@ -291,14 +291,25 @@ export default function TierSelectorPage() {
         }
       }
 
+      const fallbackMessage = getErrorMessage('create-failed')
+      const statusCode =
+        lastErr && typeof lastErr === 'object'
+          ? (lastErr as { statusCode?: unknown }).statusCode
+          : undefined
+      const serverMessage =
+        lastErr instanceof Error && lastErr.message.trim() !== ''
+          ? lastErr.message
+          : undefined
       logError('tier-selector:start-session-failed', {
         sessionId,
         selectedTier,
         selectedVibe,
+        statusCode,
+        serverMessage,
         error: lastErr,
       })
       Taro.showToast({
-        title: getErrorMessage('create-failed'),
+        title: getIcebreakerPageErrorText(lastErr, fallbackMessage),
         icon: 'none',
         duration: TOAST_MEDIUM_MS,
       })

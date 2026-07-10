@@ -136,7 +136,8 @@ export default function EventDetailPage() {
       </View>
 
       <View className='event-detail__actions'>
-        {event.status === 'started' || event.status === 'active' || event.status === 'ongoing' ? (
+        {(event.status === 'started' || event.status === 'active' || event.status === 'ongoing') &&
+        event.source !== 'event_pool' ? (
           <Button
             className='event-detail__icebreaker-btn'
             onClick={() => Taro.navigateTo({ url: `/pages/icebreaker-session/index?eventId=${event.id}` })}
