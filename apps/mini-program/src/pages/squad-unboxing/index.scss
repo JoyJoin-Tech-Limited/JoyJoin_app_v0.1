@@ -10,6 +10,7 @@
     .squad-unboxing__blind-box-visual,
     .squad-unboxing__blind-box-aura,
     .squad-unboxing__blind-box-spark,
+    .squad-unboxing__blind-box-lid,
     .squad-unboxing__deck-card,
     .squad-unboxing__deck-detail,
     .squad-unboxing__pair-card,
@@ -142,6 +143,9 @@
     padding-inline: $container-padding;
     padding-bottom: 0;
     @include safe-area-inline($container-padding);
+  }
+
+  &__scroll--revealed {
     @include fixed-footer-reserve(580rpx, $spacing-md);
   }
 
@@ -705,8 +709,14 @@
     transform: translateX(-50%);
     transform-origin: bottom center;
 
+    &--ready {
+      animation: squad-unboxing-float 3.2s ease-in-out infinite;
+    }
+
     &--opening,
     &--open {
+      animation: none;
+
       .squad-unboxing__blind-box-lid-img {
         animation: squad-unboxing-lid-lift-open 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
       }
@@ -940,7 +950,7 @@
     width: 680rpx;
     height: 480rpx;
     transform: translateX(-50%);
-    z-index: 2;
+    z-index: 4;
     pointer-events: none;
 
     &--empty {
@@ -1122,7 +1132,7 @@
   &__deck-card-art-wrap {
     position: relative;
     width: 100%;
-    height: 170rpx;
+    height: 180rpx;
     border-radius: $card-radius-sm;
     background: rgba($color-primary, 0.04);
     overflow: hidden;
@@ -1730,6 +1740,7 @@
   .squad-unboxing__deck-card,
   .squad-unboxing__deck-detail,
   .squad-unboxing__blind-box-visual,
+  .squad-unboxing__blind-box-lid,
   .squad-unboxing__blind-box-aura,
   .squad-unboxing__blind-box-spark,
   .squad-unboxing__pair-card,

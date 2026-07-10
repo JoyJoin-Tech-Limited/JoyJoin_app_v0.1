@@ -312,7 +312,7 @@ export default function SquadUnboxingPage() {
   return (
     <View className={pageClassName}>
       <ScrollView
-        className='squad-unboxing__scroll'
+        className={['squad-unboxing__scroll', flowState === 'revealed' ? 'squad-unboxing__scroll--revealed' : ''].filter(Boolean).join(' ')}
         scrollY
         enhanced
         showScrollbar={false}
