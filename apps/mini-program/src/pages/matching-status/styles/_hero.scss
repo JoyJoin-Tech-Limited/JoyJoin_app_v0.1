@@ -7,7 +7,7 @@
     @include flex-center;
     flex-direction: column;
     gap: $spacing-sm;
-    padding: $spacing-xl 0 $spacing-lg;
+    padding: $spacing-md 0 $spacing-lg;
 
     &--with-hero {
       padding-top: 0;
