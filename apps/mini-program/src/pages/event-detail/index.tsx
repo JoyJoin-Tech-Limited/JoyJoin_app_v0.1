@@ -1,7 +1,7 @@
 import { View, Text, ScrollView, Button, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
-import { type BlindBoxEventDetail } from '@shared/api'
+import { type BlindBoxEventDetail, getJoinedEvents } from '@shared/api'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
@@ -24,6 +24,20 @@ export default function EventDetailPage() {
     queryKey: ['mini-program', 'event-detail', eventId],
     queryFn: () => loadEventDetail(apiRequest, eventId),
     enabled: !!eventId && !authLoading,
+  })
+
+  const isPoolEvent = event?.source === 'event_pool'
+  const isActiveEvent =
+    event?.status === 'started' || event?.status === 'active' || event?.status === 'ongoing'
+
+  // Pool events must enter the icebreaker via the user's assigned group id
+  // (eventPoolGroups.id), not the pool id. Resolve the group from joined events
+  // so the "进入破冰" button can route to the working tier-selector flow.
+  const { data: joinedEvents } = useQuery({
+    queryKey: ['mini-program', 'joined-events'],
+    queryFn: () => getJoinedEvents(apiRequest),
+    enabled: isPoolEvent && isActiveEvent,
+    staleTime: 60_000,
   })
 
   if (authLoading || isLoading) {
@@ -53,6 +67,20 @@ export default function EventDetailPage() {
       </View>
     )
   }
+
+  const matchedGroupId = isPoolEvent
+    ? joinedEvents?.find((joined) => joined.id === eventId)?.groupId ?? undefined
+    : undefined
+
+  // Pool events route to the proven tier-selector flow with the group id;
+  // blind-box events keep the direct session link (server Path2).
+  const icebreakerTarget = !isActiveEvent
+    ? undefined
+    : isPoolEvent
+      ? matchedGroupId
+        ? `/pages/icebreaker-session/tier-selector/index?sessionId=${encodeURIComponent(matchedGroupId)}`
+        : undefined
+      : `/pages/icebreaker-session/index?eventId=${encodeURIComponent(event.id)}`
 
   const handlePreviewSupportQr = () => {
     void Taro.previewImage({
@@ -136,11 +164,10 @@ export default function EventDetailPage() {
       </View>
 
       <View className='event-detail__actions'>
-        {(event.status === 'started' || event.status === 'active' || event.status === 'ongoing') &&
-        event.source !== 'event_pool' ? (
+        {icebreakerTarget ? (
           <Button
             className='event-detail__icebreaker-btn'
-            onClick={() => Taro.navigateTo({ url: `/pages/icebreaker-session/index?eventId=${event.id}` })}
+            onClick={() => Taro.navigateTo({ url: icebreakerTarget })}
           >
             进入破冰
           </Button>
