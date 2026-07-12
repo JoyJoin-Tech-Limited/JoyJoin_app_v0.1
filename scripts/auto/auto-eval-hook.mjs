@@ -259,7 +259,7 @@ if (mode === 'pre-tool-use') {
     }
 
     if (result.status === 'fail') {
-      const detail = `Auto-Eval: dirty worktree ${result.fingerprintShort} has not passed. Top finding: ${summarizeTopFinding(result)}. Run \`node scripts/auto-eval.mjs\` after fixes. Recommended: ${recoveryAgents}.`;
+      const detail = `Auto-Eval: dirty worktree ${result.fingerprintShort} has not passed. Top finding: ${summarizeTopFinding(result)}. Run \`node scripts/auto/auto-eval.mjs\` after fixes. Recommended: ${recoveryAgents}.`;
       if (STRICT_AUTO_EVAL) {
         output(
           denyResponse(
