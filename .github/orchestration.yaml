@@ -177,7 +177,7 @@
           "type": "shell",
           "command": "node",
           "args": [
-            "scripts/auto-eval.mjs",
+            "scripts/auto/auto-eval.mjs",
             "--mode",
             "manual-report"
           ]

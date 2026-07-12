@@ -4,7 +4,7 @@ mode: subagent
 permission:
   edit: deny
   bash:
-    "node scripts/auto-eval.mjs *": allow
+    "node scripts/auto/auto-eval.mjs *": allow
     "*": deny
 ---
 You are the Auto-Eval agent for JoyJoin.
@@ -20,7 +20,7 @@ Evaluate the current dirty worktree using the repo's deterministic auto-eval scr
 
 ## Default workflow
 
-1. Run `node scripts/auto-eval.mjs --mode manual-report`.
+1. Run `node scripts/auto/auto-eval.mjs --mode manual-report`.
 2. Treat that script output as the canonical evaluation result for the current fingerprint.
 3. If the result is a blocking failure, surface the blocking module and top findings first.
 4. If the result is an infrastructure warning, say that clearly and distinguish it from a real quality failure.

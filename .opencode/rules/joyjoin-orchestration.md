@@ -135,5 +135,5 @@ Before considering work complete:
 - [ ] Type check: `npm run typecheck` (or workspace-specific)
 - [ ] Tests pass: `npm run test -w <workspace>`
 - [ ] Harness gate (Tier 2+): Sprint Contract evaluated and passed
-- [ ] Auto-Eval gate: `node scripts/auto-eval.mjs --mode manual-report` — pass
+- [ ] Auto-Eval gate: `node scripts/auto/auto-eval.mjs --mode manual-report` — pass
 - [ ] CI readiness: `node scripts/orchestration/orchestration-supervisor.mjs validate` — pass

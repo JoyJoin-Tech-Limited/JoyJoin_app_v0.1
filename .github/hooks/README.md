@@ -26,7 +26,7 @@ This workspace uses hooks for deterministic auto-eval enforcement and for lightw
 
 The shared evaluator lives in `scripts/auto-eval-core.mjs`.
 
-- `scripts/auto-eval.mjs --mode manual-report` prints the human-readable report.
+- `scripts/auto/auto-eval.mjs --mode manual-report` prints the human-readable report.
 - `scripts/auto-eval-hook.mjs` translates evaluator results into the hook input and output contract.
 - `scripts/orchestration/orchestration-supervisor.mjs` is the runtime entrypoint for Copilot hooks, local git hooks, and the GitHub orchestration workflow.
 - `scripts/orchestration/orchestration-supervisor.mjs record-summary` is the explicit recorder path for agent and supervisor turn summaries, and it accepts stdin, `--json`, or `--file` payload input.
@@ -64,7 +64,7 @@ Any file change invalidates the pass for guarded tools until auto-eval passes ag
 If a guarded tool is blocked, rerun Auto-Eval manually and fix the reported findings:
 
 ```bash
-node scripts/auto-eval.mjs --mode manual-report
+node scripts/auto/auto-eval.mjs --mode manual-report
 ```
 
 You can also invoke the `Auto-Eval` custom agent from the workspace agent picker.

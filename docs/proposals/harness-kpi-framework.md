@@ -140,7 +140,7 @@ Each sub-criterion is tagged with one or more measurement methods. Evaluators mu
 | **Static Analysis** | SA | Pattern detection without execution: imports, file size, logger usage, secret grep, auth middleware presence | `npm run guardrails`, `grep`, `wc -l`, `eslint`, `ripgrep`, `tsc --noEmit` |
 | **Code Review** | CR | Human or agent review of logic, design decisions, edge cases, abstraction quality | File diff review, architecture fit check, pattern consistency |
 | **Runtime Test** | RT | Executed tests: unit, integration, API, Playwright, load | `npm run test -w @joyjoin/server`, `curl`, Playwright MCP, Vitest, `k6` |
-| **Automated Gate** | AG | Deterministic script that runs the Harness Completion Gate | `npm run harness:gate`, `scripts/auto-eval.mjs --mode=manual-report` |
+| **Automated Gate** | AG | Deterministic script that runs the Harness Completion Gate | `npm run harness:gate`, `scripts/auto/auto-eval.mjs --mode=manual-report` |
 
 ### Method selection heuristic
 

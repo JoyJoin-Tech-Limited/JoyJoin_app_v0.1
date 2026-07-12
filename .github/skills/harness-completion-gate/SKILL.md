@@ -107,7 +107,7 @@ node scripts/evaluate-sprint-contract.mjs --contract=.git/.orchestration/sprints
 The Harness gate is also available as an auto-eval module:
 
 ```bash
-node scripts/auto-eval.mjs --mode=manual-report
+node scripts/auto/auto-eval.mjs --mode=manual-report
 ```
 
 When the `harness-engineering` module is enabled, it runs the same checks as `npm run harness:gate`.

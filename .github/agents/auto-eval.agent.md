@@ -27,7 +27,7 @@ Your job is to evaluate the current dirty worktree using the repo's deterministi
 
 ## Default workflow
 
-1. Run `node scripts/auto-eval.mjs --mode manual-report`.
+1. Run `node scripts/auto/auto-eval.mjs --mode manual-report`.
 2. Treat that script output as the canonical evaluation result for the current fingerprint.
 3. **GitHub MCP:** If evaluating a PR or branch, use the **GitHub MCP server** (`github`) to check CI workflow status, PR checks, and mergeability. Cross-reference local findings against actual CI execution.
 4. **Observability MCP:** For backend changes, use the **JoyJoin Observability MCP server** (`observability`) to run health checks and the synthetic probe against the local API before reporting pass/fail.

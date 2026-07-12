@@ -122,7 +122,7 @@ Run these commands and verify all pass:
 npm run guardrails              # Env, secrets, legacy, import checks
 npm run check:full              # guardrails + lint + tests + build
 npm run harness:gate            # 5-pillar quality gate
-node scripts/auto-eval.mjs --mode manual-report  # Auto-eval gate
+node scripts/auto/auto-eval.mjs --mode manual-report  # Auto-eval gate
 ```
 
 ## 8. Known Risks Not Fully Mitigated (post-beta follow-up)

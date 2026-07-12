@@ -11,7 +11,7 @@ By default this repo’s **Cursor** `hooks.json` **does not register `preToolUse
 
 ### Optional: strict Auto-Eval on every tool (Cursor)
 
-Add a `preToolUse` entry to [`hooks.json`](../hooks.json) pointing at `node .cursor/hooks/cursor-hook-adapter.mjs preToolUse`, and only if you really want gating. Prefer relying on CI and `node scripts/auto-eval.mjs` for quality checks instead of blocking the agent locally.
+Add a `preToolUse` entry to [`hooks.json`](../hooks.json) pointing at `node .cursor/hooks/cursor-hook-adapter.mjs preToolUse`, and only if you really want gating. Prefer relying on CI and `node scripts/auto/auto-eval.mjs` for quality checks instead of blocking the agent locally.
 
 ## Event mapping
 

@@ -104,7 +104,7 @@ Before sign-off on any implementation:
 npm run guardrails          # Env, secrets, legacy, import checks
 npm run typecheck           # Full workspace type check
 npm run test -w @joyjoin/server  # Server tests
-node scripts/auto-eval.mjs --mode manual-report  # Auto-Eval gate
+node scripts/auto/auto-eval.mjs --mode manual-report  # Auto-Eval gate
 node scripts/orchestration/orchestration-supervisor.mjs validate  # Orchestration contract
 ```
 

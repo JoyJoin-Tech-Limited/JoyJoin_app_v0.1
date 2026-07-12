@@ -129,7 +129,7 @@ npm run orchestration:validate
 env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration/orchestration-supervisor.mjs record-summary --json '{"type":"agent_turn_summary","agentName":"Supervisor","done":["example"],"filesChanged":[],"decisions":[],"blockers":[],"learned":["example"],"nextTurnImprovements":["tighten scope"],"nextSteps":{"bugFix":[],"enhancement":[],"validation":[]},"confidence":{"score":0.5,"reason":"example"},"unresolvedAssumptions":[]}'
 env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Add a new API endpoint with caching"}'
 node scripts/orchestration/orchestration-supervisor.mjs workflow pull-request
-node scripts/auto-eval.mjs --mode manual-report
+node scripts/auto/auto-eval.mjs --mode manual-report
 ```
 
 Add targeted tests when the change affects persisted context, hook behavior, or cross-registry invariants.

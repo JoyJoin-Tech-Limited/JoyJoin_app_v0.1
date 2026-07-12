@@ -184,7 +184,7 @@ Common checks:
 npm run orchestration:validate
 node scripts/validate-skill-routing.mjs
 node scripts/test-skill-routing.mjs
-node scripts/auto-eval.mjs --mode manual-report
+node scripts/auto/auto-eval.mjs --mode manual-report
 ```
 
 Memory should only be proposed when:

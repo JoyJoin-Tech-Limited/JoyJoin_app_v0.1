@@ -227,7 +227,7 @@ Branding and crafted interaction polish remain skill boundaries on the frontend 
 - `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration/orchestration-supervisor.mjs record-summary --json '{"type":"agent_turn_summary","agentName":"Supervisor","done":["Example"],"filesChanged":[],"decisions":[],"blockers":[],"learned":["Example"],"nextTurnImprovements":["Example improvement"],"nextSteps":{"bugFix":[],"enhancement":[],"validation":[]},"confidence":{"score":0.5,"reason":"example"},"unresolvedAssumptions":[]}'` should validate the summary payload without mutating runtime files.
 - `node scripts/orchestration/orchestration-supervisor.mjs workflow pull-request` should generate a workflow summary without failing.
 - `node scripts/orchestration/orchestration-supervisor.mjs tooling-report` should expose the current tooling sufficiency audit.
-- `node scripts/auto-eval.mjs --mode manual-report` should continue to work, and `.github/orchestration.yaml` is now part of its syntax preflight.
+- `node scripts/auto/auto-eval.mjs --mode manual-report` should continue to work, and `.github/orchestration.yaml` is now part of its syntax preflight.
 - `npm run orchestration:validate` should fail if `.github/agents/manifest.json` drifts from agent frontmatter subagent allowlists, if `.vscode/settings.json` stops enabling authored nested delegation, or if orchestration skill references drift from active `.github/skills/` directories.
 
 ## Next expansion points

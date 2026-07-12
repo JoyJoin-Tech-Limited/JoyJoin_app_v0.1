@@ -5,7 +5,7 @@ permission:
   edit: deny
   bash:
     "node scripts/orchestration/orchestration-supervisor.mjs *": allow
-    "node scripts/auto-eval.mjs *": allow
+    "node scripts/auto/auto-eval.mjs *": allow
     "node scripts/harness-auto-trigger.mjs *": allow
     "npm run guardrails": allow
     "npm run typecheck": allow
