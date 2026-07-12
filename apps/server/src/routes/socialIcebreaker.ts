@@ -394,55 +394,75 @@ router.post('/start', async (req: any, res) => {
       });
     }
 
-    // Pre-compile warmup topics at session creation (best-effort, 3s timeout)
     const roster = await listParticipants(socialSessionId);
+
+    // The session and participant writes above are the only work required for
+    // /start to succeed. Keep the warmup pre-compile within a strict budget so
+    // topics are normally ready for the first advance, but never let a stalled
+    // provider exhaust the client's 10s request timeout. A late result is
+    // intentionally discarded, preventing it from overwriting newer state.
+    const warmupBudgetMs = process.env.NODE_ENV === 'test' ? 50 : 3000;
+    let warmupBudgetTimer: ReturnType<typeof setTimeout> | undefined;
     try {
       const vibeMoodMap: Record<string, AtmosphereMood> = { chat: 'life', balanced: 'relaxed', game: 'funny' };
-      const topicResult = await generateWarmupTopics({
-        mood: vibeMoodMap[newState.vibe ?? 'balanced'] ?? 'relaxed',
-        eventType: newState.eventType || '活动',
-        participantCount: roster.length || 1,
-        roster: roster.map((p) => ({ archetype: p.archetype })),
-        vibe: newState.vibe,
-      });
-      newState.warmupTopics = topicResult.data;
-      newState.warmupTopicsMeta = topicResult.meta;
-      await updateSession(socialSessionId, newState);
-      logger.info('Warmup topics pre-compiled at session creation', {
-        socialSessionId,
-        source: topicResult.meta.fallbackUsed ? 'curated' : 'ai',
-        topicCount: topicResult.data.length,
-        vibe: newState.vibe,
-      });
+      const topicResult = await Promise.race([
+        generateWarmupTopics({
+          mood: vibeMoodMap[newState.vibe ?? 'balanced'] ?? 'relaxed',
+          eventType: newState.eventType || '活动',
+          participantCount: roster.length || 1,
+          roster: roster.map((p) => ({ archetype: p.archetype })),
+          vibe: newState.vibe,
+        }),
+        new Promise<null>((resolve) => {
+          warmupBudgetTimer = setTimeout(() => resolve(null), warmupBudgetMs);
+        }),
+      ]);
+
+      if (topicResult) {
+        newState.warmupTopics = topicResult.data;
+        newState.warmupTopicsMeta = topicResult.meta;
+        await updateSession(socialSessionId, newState);
+        logger.info('Warmup topics pre-compiled at session creation', {
+          socialSessionId,
+          source: topicResult.meta.fallbackUsed ? 'curated' : 'ai',
+          topicCount: topicResult.data.length,
+          vibe: newState.vibe,
+        });
+      } else {
+        logger.warn('Warmup pre-compilation exceeded start budget; continuing without cached topics', {
+          socialSessionId,
+          budgetMs: warmupBudgetMs,
+        });
+      }
     } catch (warmupErr) {
       logger.warn('Warmup pre-compilation failed, session starts without cached topics', {
         socialSessionId,
         error: warmupErr instanceof Error ? warmupErr.message : String(warmupErr),
       });
+    } finally {
+      if (warmupBudgetTimer) clearTimeout(warmupBudgetTimer);
     }
 
-    // Pre-generate AI content for phases in the run plan (best-effort)
+    // Queue pre-generation uses its own persistence, so it is safe to detach.
     if (runPlan) {
-      try {
-        await enqueueRunPlanPreGeneration(
-          socialSessionId,
-          runPlan,
-          {
-            participantCount: roster.length,
-            eventType,
-            participants: roster.map((p) => ({
-              userId: p.userId,
-              displayName: p.displayName,
-              archetype: p.archetype,
-            })),
-          },
-        );
-      } catch (preGenErr) {
+      void enqueueRunPlanPreGeneration(
+        socialSessionId,
+        runPlan,
+        {
+          participantCount: roster.length,
+          eventType,
+          participants: roster.map((p) => ({
+            userId: p.userId,
+            displayName: p.displayName,
+            archetype: p.archetype,
+          })),
+        },
+      ).catch((preGenErr) => {
         logger.warn('Failed to enqueue run plan pre-generation on start', {
           socialSessionId,
           error: preGenErr instanceof Error ? preGenErr.message : String(preGenErr),
         });
-      }
+      });
     }
 
     logger.info('Started social icebreaker session', {
@@ -781,4 +801,3 @@ router.post('/:socialSessionId/moment-card-event', async (req: any, res) => {
 registerExtendedRoutes(router);
 
 export default router;
-
