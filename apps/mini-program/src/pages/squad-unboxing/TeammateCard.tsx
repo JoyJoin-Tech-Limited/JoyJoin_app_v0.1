@@ -1,6 +1,5 @@
-import { useDidShow } from '@tarojs/taro'
 import { View, Text, Image } from '@tarojs/components'
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { getArchetypeHSL, formatHSLAsRGBA } from '@shared/archetypeColors'
 import type { PoolGroupMemberSummary } from '@shared/api'
@@ -51,6 +50,14 @@ function getArchetypeDisplayName(archetype?: string | null): string {
   return ARCHETYPE_BY_ID[archetype]?.nameCn || '神秘伙伴'
 }
 
+/**
+ * Max age of the trailing-tap flag: a tap within 3s of a longpress is the
+ * release-tap WeChat fires after `longpress` and is swallowed; a later tap is
+ * a genuinely new intentional tap. The bound stops a stale flag from eating
+ * an unrelated future tap.
+ */
+const TRAILING_TAP_MAX_AGE_MS = 3000
+
 export default function TeammateCard({
   member,
   viewerPair,
@@ -67,8 +74,12 @@ export default function TeammateCard({
 }: TeammateCardProps) {
   const [imageError, setImageError] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
-  const [isFlipped, setIsFlipped] = useState(false)
-  useDidShow(() => setIsFlipped(false))
+  // WeChat fires `tap` on release after `longpress`. `pendingTrailingTapRef`
+  // marks the next tap as that trailing release-tap; handleTap consumes the
+  // flag exactly once, so a long-press cannot immediately toggle focus back
+  // off and the guard can never double-swallow.
+  const lastLongPressAtRef = useRef(0)
+  const pendingTrailingTapRef = useRef(false)
 
   const handleImageError = useCallback(() => setImageError(true), [])
   const handleImageLoad = useCallback(() => setImageLoaded(true), [])
@@ -83,19 +94,26 @@ export default function TeammateCard({
   const showPlaceholder = !member.archetype || imageError
 
   const handleTap = useCallback(() => {
-    if (isRevealed) {
-      haptics('light')
-      setIsFlipped((prev) => !prev)
-      onFocus()
+    if (!isRevealed) return
+    // Swallow exactly the first tap following a longpress (within 3s): the
+    // flag is consumed by that first tap whether or not it is swallowed, so
+    // the guard can never double-swallow, and the 3s max-age means a stale
+    // flag cannot eat an unrelated future tap — an expired flag falls
+    // through and the tap is processed normally. Focus (and the per-tap
+    // haptic) is owned by the parent — flip is derived from `focused`.
+    if (pendingTrailingTapRef.current) {
+      pendingTrailingTapRef.current = false
+      if (Date.now() - lastLongPressAtRef.current < TRAILING_TAP_MAX_AGE_MS) return
     }
+    onFocus()
   }, [isRevealed, onFocus])
 
   const handleLongPress = useCallback(() => {
-    if (isRevealed) {
-      haptics('medium')
-      setIsFlipped(true)
-      onFocus()
-    }
+    if (!isRevealed) return
+    lastLongPressAtRef.current = Date.now()
+    pendingTrailingTapRef.current = true
+    haptics('medium')
+    onFocus()
   }, [isRevealed, onFocus])
 
   const step = total <= 1 ? 0 : Math.min(14, 48 / total)
@@ -163,7 +181,10 @@ export default function TeammateCard({
         focused ? 'squad-unboxing__deck-card--focused' : '',
         isDimmed ? 'squad-unboxing__deck-card--dimmed' : '',
         isCurrentUser ? 'squad-unboxing__deck-card--current' : '',
-        isFlipped ? 'squad-unboxing__deck-card--flipped' : '',
+        // Flip is derived solely from focus (single source of truth in the
+        // parent) — a focused card always shows its front, an unfocused card
+        // always its back, no matter the tap sequence.
+        focused ? 'squad-unboxing__deck-card--flipped' : '',
         reduceMotion ? 'squad-unboxing__deck-card--reduce-motion' : '',
         isDegradation ? 'squad-unboxing__deck-card--degradation' : '',
       ].filter(Boolean).join(' ')}

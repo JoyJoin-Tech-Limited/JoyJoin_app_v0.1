@@ -57,6 +57,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    // Smoothly yields the pinned band when the user scrolls past the collapse
+    // threshold (see --deck-collapsed). Snapped off while a card is focused
+    // (--card-focused) and under reduced-motion / degradation tiers below.
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 
     &--ready,
     &--shaking {
@@ -69,12 +73,17 @@
     &--revealed {
       // Trimmed (was clamp(560,66dvh,760)) now that the gift box/lid no longer
       // share the stage; keeps the deck high and the hero directly beneath.
+      // Parent-none / child-auto pointer events (same as the ready-state box):
+      // the stage must NOT capture touch across the full width, or the deck
+      // band touch-locks the top half of the screen and scroll never starts.
+      // Card taps survive via &__deck-stage--revealed (pointer-events: auto).
       height: clamp(500rpx, 56vh, 620rpx);
       height: clamp(500rpx, 56dvh, 620rpx);
-      pointer-events: auto;
     }
 
     &--degradation {
+      transition: none;
+
       .squad-unboxing__blind-box-visual--ready,
       .squad-unboxing__blind-box-lid--ready {
         animation: none;
@@ -88,6 +97,26 @@
         height: clamp(560rpx, 62dvh, 700rpx);
       }
     }
+  }
+
+  // Scroll-aware collapse: once the reader scrolls past the threshold, the
+  // pinned deck band scales down toward the top, restoring reading room.
+  // The stage spacer intentionally does NOT change — it reserves the
+  // uncollapsed scroll-0 layout, so there is no jump/clip at scroll 0.
+  &--deck-collapsed &__stage--revealed {
+    transform: scale(0.72);
+    transform-origin: top center;
+  }
+
+  // While a card is focused the deck snaps back to full size without a
+  // transition so the 100ms selector-query measurement sees final geometry
+  // (a mid-flight transform would misalign the inline detail).
+  &--card-focused &__stage--revealed {
+    transition: none;
+  }
+
+  &--reduce-motion &__stage {
+    transition: none;
   }
 
   &__stage-spacer {

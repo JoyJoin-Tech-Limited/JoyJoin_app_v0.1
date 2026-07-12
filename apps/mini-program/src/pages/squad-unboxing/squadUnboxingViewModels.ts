@@ -39,6 +39,35 @@ export function getVibeLabel(vibe?: string | null): string {
   return getVibeLabelShared(vibe, '今晚成桌')
 }
 
+// Canonical event-type → label mapping, matching EVENT_TYPE_LABELS used on
+// the events surfaces (see components/discover/OracleCard.tsx).
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  '饭局': '饭局', '酒局': '酒局', '其他': '其他',
+  dinner: '饭局', dining: '饭局', drinks: '酒局', bar: '酒局', other: '其他',
+}
+
+export function getEventTypeLabel(eventType?: string | null): string {
+  if (!eventType) return '其他'
+  return EVENT_TYPE_LABELS[eventType] ?? '其他'
+}
+
+/**
+ * 团魂 bubble copy. The archetype-mix clause is only inserted when non-empty,
+ * so the bubble never renders a stranded `！，` when no member archetypes are
+ * known. Trailing punctuation on the companion line is stripped before the
+ * final `。` to avoid doubled sentence endings.
+ */
+export function buildSquadSoulBubbleText(mix: string, companion?: string | null): string {
+  const normalizedCompanion = (companion ?? '')
+    .trim()
+    .replace(/[。！？，\s]*$/, '')
+  const resolvedCompanion = normalizedCompanion || `${DEFAULT_MASCOT_DISPLAY_NAME}觉得这桌会聊得很自然`
+  const trimmedMix = mix.trim()
+  return trimmedMix
+    ? `拼图完整了！${trimmedMix}，${resolvedCompanion}。`
+    : `拼图完整了！${resolvedCompanion}。`
+}
+
 const CHEMISTRY_TITLES: Record<ChemistryType, string> = {
   fire: '超级火花',
   warm: '暖意融融',

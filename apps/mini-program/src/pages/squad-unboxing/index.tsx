@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useRouter, useDidShow } from '@tarojs/taro'
-import { useEffect, useCallback, useRef, useState } from 'react'
+import { useEffect, useCallback, useMemo, useRef, useState } from 'react'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { normalizeMatchingCopy } from '@shared/features/matching-status'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
@@ -29,8 +29,10 @@ import XiaoyueHostImage from './XiaoyueHostImage'
 import SquadDeckStage from './SquadDeckStage'
 import TeammateCardDetail from './TeammateCardDetail'
 import {
+  buildSquadSoulBubbleText,
   formatDateTime,
   getChemistryWord,
+  getEventTypeLabel,
   getMemberName,
   getPairChemistryWord,
   getVibeLabel,
@@ -40,6 +42,10 @@ import { useSquadUnboxingController } from './useSquadUnboxingController'
 import './index.scss'
 
 const SCROLL_DEPTH_BUCKETS = ['tonights_table', 'connection_story', 'actions'] as const
+
+// Scroll distance (rpx) after which the pinned revealed deck yields reading
+// room to the story content below. Converted to px per device at runtime.
+const DECK_COLLAPSE_SCROLL_THRESHOLD_RPX = 240
 
 type ScrollDepthBucket = typeof SCROLL_DEPTH_BUCKETS[number]
 
@@ -127,9 +133,33 @@ export default function SquadUnboxingPage() {
   const [headerReady, setHeaderReady] = useState(false)
   const [deckEmergeComplete, setDeckEmergeComplete] = useState(false)
   const [programmaticScrollTop, setProgrammaticScrollTop] = useState(0)
+  // Mirror of focusedCardIndex so handleCardFocus can compute the next focus
+  // synchronously without running side effects inside a state updater.
+  const focusedCardIndexRef = useRef(-1)
+  const [isDeckScrolled, setIsDeckScrolled] = useState(false)
+  const isDeckScrolledRef = useRef(false)
   const matchExplanationCopy = normalizeMatchingCopy(group?.matchExplanation)
 
   const reportScrollDepth = useScrollDepthTracking(groupId)
+
+  useEffect(() => {
+    focusedCardIndexRef.current = focusedCardIndex
+  }, [focusedCardIndex])
+
+  // rpx→px conversion for the collapse threshold (750rpx = screen width).
+  const deckCollapseThresholdPx = useMemo(() => {
+    try {
+      const { screenWidth } = Taro.getSystemInfoSync()
+      return Math.round((DECK_COLLAPSE_SCROLL_THRESHOLD_RPX * (screenWidth || 375)) / 750)
+    } catch {
+      return 120
+    }
+  }, [])
+
+  // Render-derived: a focused card always expands the deck back to full size
+  // so the selector-query detail math measures stable full-size geometry and
+  // the inline detail lands flush — no collapse/scroll oscillation.
+  const isDeckCollapsed = flowState === 'revealed' && focusedCardIndex === -1 && isDeckScrolled
 
   useEffect(() => {
     if (isStoryFocused && members.length > 0 && focusedCardIndex === -1) {
@@ -164,34 +194,36 @@ export default function SquadUnboxingPage() {
   }, [authLoading, isLoading])
 
   const handleCardFocus = useCallback((index: number) => {
-    setFocusedCardIndex((current) => {
-      const next = current === index ? -1 : index
-      const member = members[index]
+    // Compute the next focus synchronously from the mirrored ref so all side
+    // effects (haptic, hasTappedCard, analytics) live outside the state
+    // updater — React may replay updaters, which previously double-fired them.
+    const current = focusedCardIndexRef.current
+    const next = current === index ? -1 : index
+    focusedCardIndexRef.current = next
+    setFocusedCardIndex(next)
+    const member = members[index]
 
-      if (next === -1) {
-        squadUnboxingAnalytics.track('squad_unboxing_card_detail_dismiss', {
-          source: 'deck_tap',
-          cardIndex: index,
-          focusedUserId: member?.userId,
-          previousIndex: current,
-          groupId,
-          screen: 'squad-unboxing',
-        })
-      } else {
-        setHasTappedCard(true)
-        haptics('light')
-        squadUnboxingAnalytics.track('squad_unboxing_card_focus', {
-          source: 'deck_tap',
-          cardIndex: next,
-          focusedUserId: member?.userId,
-          previousIndex: current,
-          groupId,
-          screen: 'squad-unboxing',
-        })
-      }
-
-      return next
-    })
+    if (next === -1) {
+      squadUnboxingAnalytics.track('squad_unboxing_card_detail_dismiss', {
+        source: 'deck_tap',
+        cardIndex: index,
+        focusedUserId: member?.userId,
+        previousIndex: current,
+        groupId,
+        screen: 'squad-unboxing',
+      })
+    } else {
+      setHasTappedCard(true)
+      haptics('light')
+      squadUnboxingAnalytics.track('squad_unboxing_card_focus', {
+        source: 'deck_tap',
+        cardIndex: next,
+        focusedUserId: member?.userId,
+        previousIndex: current,
+        groupId,
+        screen: 'squad-unboxing',
+      })
+    }
   }, [members, groupId])
 
   const handleDismissDetail = useCallback(() => {
@@ -277,12 +309,19 @@ export default function SquadUnboxingPage() {
     if (scrollTop > 120) reportScrollDepth('tonights_table')
     if (scrollTop > 320) reportScrollDepth('connection_story')
     if (scrollTop > 520) reportScrollDepth('actions')
-  }, [reportScrollDepth])
+    const nextScrolled = flowState === 'revealed' && scrollTop > deckCollapseThresholdPx
+    if (nextScrolled !== isDeckScrolledRef.current) {
+      isDeckScrolledRef.current = nextScrolled
+      setIsDeckScrolled(nextScrolled)
+    }
+  }, [reportScrollDepth, flowState, deckCollapseThresholdPx])
 
   const pageClassName = [
     rootClassName,
     `squad-unboxing--${flowState}`,
     isExiting ? 'squad-unboxing--exiting' : '',
+    isDeckCollapsed ? 'squad-unboxing--deck-collapsed' : '',
+    flowState === 'revealed' && focusedCardIndex >= 0 ? 'squad-unboxing--card-focused' : '',
   ].filter(Boolean).join(' ')
 
   if (authLoading || isLoading) {
@@ -336,9 +375,8 @@ export default function SquadUnboxingPage() {
         {group.groupNumber ? (
           <Text className='squad-unboxing__header-group-num'>第 {group.groupNumber} 组</Text>
         ) : null}
-        {flowState === 'revealed' ? (
-          <Text className='squad-unboxing__header-score'>{getChemistryWord(groupAnalysis?.overallChemistry)}</Text>
-        ) : null}
+        {/* Chemistry signal renders once in revealed state — the chapter badge
+            below ("今晚这桌") owns it; the header pill was removed as a dup. */}
       </View>
     </View>
   )
@@ -493,7 +531,7 @@ export default function SquadUnboxingPage() {
                   <JoyJoinIcon emoji='🎯' size={24} />
                   <Text>类型</Text>
                 </View>
-                <Text className='squad-unboxing__meta-value'>{getPageTitle(pool.eventType)}</Text>
+                <Text className='squad-unboxing__meta-value'>{getEventTypeLabel(pool.eventType)}</Text>
               </View>
 
               {group.finalDateTime || pool.dateTime ? (
@@ -940,15 +978,10 @@ export default function SquadUnboxingPage() {
               <View className='squad-unboxing__analysis-bubble-bubble'>
                 <TypewriterText
                   className='squad-unboxing__analysis-bubble-text'
-                  text={(() => {
-                    const mix = archetypeMixCopy
-                    const companion =
-                      groupAnalysis?.groupThemeCompanion ||
-                      matchExplanationCopy ||
-                      `${DEFAULT_MASCOT_DISPLAY_NAME}觉得这桌会聊得很自然。`
-                    const normalizedCompanion = companion.replace(/[。！？，\s]*$/, '')
-                    return `拼图完整了！${mix}，${normalizedCompanion}。`
-                  })()}
+                  text={buildSquadSoulBubbleText(
+                    archetypeMixCopy,
+                    groupAnalysis?.groupThemeCompanion || matchExplanationCopy,
+                  )}
                   speed={45}
                   delay={180}
                   maxDuration={3000}
