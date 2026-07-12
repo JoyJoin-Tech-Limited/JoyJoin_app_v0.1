@@ -263,6 +263,14 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/icons/phase-icons/custom-tier-icon.webp',
           to: 'dist/assets/icons/custom-tier-icon.webp',
         },
+        // Squad-unboxing composed-hero fallback — bundled locally (~19KB) so the
+        // ready-state Xiaoyue host never paints a blank skeleton when the CDN is
+        // unreachable. The CDN-primary hero (squad-host-xiaoyue.webp) stays
+        // CDN-only and is wiped by the clean:cdn-assets step.
+        {
+          from: 'src/assets/lovart/squad/squad-host-xiaoyue-fallback.webp',
+          to: 'dist/assets/lovart/squad/squad-host-xiaoyue-fallback.webp',
+        },
         // Xiaoyue mascot sprite sheets — bundled locally as CDN fallback.
         // Only the core states that appear during the first session are kept
         // in the main package; the rest are CDN-only to stay under the 2 MB

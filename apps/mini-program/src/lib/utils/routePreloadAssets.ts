@@ -70,6 +70,8 @@ const SQUAD_UNBOXING_PRELOADS = [
   BLIND_BOX_BODY_ASSET,
   BLIND_BOX_LID_ASSET,
   BLIND_BOX_INTERIOR_ASSET,
+  // Composed-hero host (flag-gated in the page; preloading is harmless when off).
+  cdnAsset('/assets/lovart/squad/squad-host-xiaoyue.webp'),
 ]
 
 const ICEBREAKER_PRELOADS = [

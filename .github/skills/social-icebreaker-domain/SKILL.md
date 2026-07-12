@@ -41,7 +41,7 @@ POST /:id/bonus/sentiment → player votes want/pass on bonus gate
 TTL sweep (5m)  → deletes expired sessions (6h lifetime)
 ```
 
-**Key semantics:** `socialSessionId` = `social_${icebreakerSessionId}`; rejoin is an `upsertParticipant`; expiry returns **410 SESSION_EXPIRED**. Race-condition safety is handled by unique-constraint catch-and-resolve.
+**Key semantics:** `socialSessionId` = `social_${icebreakerSessionId}`; rejoin is an `upsertParticipant`; expiry returns **410 SESSION_EXPIRED**. On `POST /start`, access denial returns a structured `{ code }` (2026-07-11): `410 GROUP_EXPIRED`/`EVENT_EXPIRED`, `403 NOT_MEMBER_OF_GROUP`/`NOT_MEMBER_OF_EVENT`, `404 SESSION_NOT_FOUND` (distinct from polling `410 SESSION_EXPIRED`); logged as `[SocialIcebreaker] /start access denied`. Race-condition safety is handled by unique-constraint catch-and-resolve.
 
 **Single-test sessions:** When `state.singleTest.isTestModeSkip === true`, auto-advance is disabled and the client surfaces a `TestModeDisclosure` overlay in `warmup`; the host must explicitly confirm to advance to `recap`.
 

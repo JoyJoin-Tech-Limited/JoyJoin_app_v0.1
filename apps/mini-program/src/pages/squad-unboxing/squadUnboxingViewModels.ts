@@ -39,45 +39,70 @@ export function getVibeLabel(vibe?: string | null): string {
   return getVibeLabelShared(vibe, '今晚成桌')
 }
 
-export function getSquadChemistryTokens(
-  chemistry?: OverallChemistry,
-  matchScore?: number | null,
-): SquadChemistryTokens {
-  const fallbackScore = typeof matchScore === 'number' ? Math.round(matchScore) : null
+const CHEMISTRY_TITLES: Record<ChemistryType, string> = {
+  fire: '超级火花',
+  warm: '暖意融融',
+  mild: '相聊甚欢',
+  cold: '慢慢发现',
+}
 
+const CHEMISTRY_FALLBACK_WORD = '今晚有戏'
+
+export function getChemistryWord(chemistry?: OverallChemistry | ChemistryType | null): string {
+  if (chemistry && chemistry in CHEMISTRY_TITLES) {
+    return CHEMISTRY_TITLES[chemistry as ChemistryType]
+  }
+  return CHEMISTRY_FALLBACK_WORD
+}
+
+function scoreToChemistryType(score: number): ChemistryType {
+  // Mirrors server `getTemperatureLevel` thresholds (poolMatchingService.ts):
+  // fire >= 85, warm >= 70, mild >= 55, else cold.
+  if (score >= 85) return 'fire'
+  if (score >= 70) return 'warm'
+  if (score >= 55) return 'mild'
+  return 'cold'
+}
+
+export function getPairChemistryWord(score?: number | null): string {
+  if (typeof score !== 'number' || Number.isNaN(score)) return CHEMISTRY_FALLBACK_WORD
+  return CHEMISTRY_TITLES[scoreToChemistryType(score)]
+}
+
+export function getSquadChemistryTokens(chemistry?: OverallChemistry): SquadChemistryTokens {
   switch (chemistry) {
     case 'fire':
       return {
         iconRef: 'fire',
-        title: '超级火花',
+        title: CHEMISTRY_TITLES.fire,
         description: '这桌的聊天温度很高，基本不会冷场。',
         chipClassName: 'squad-unboxing__chemistry-chip--fire',
       }
     case 'warm':
       return {
         iconRef: 'warm',
-        title: '暖意融融',
+        title: CHEMISTRY_TITLES.warm,
         description: '同频感很稳定，适合边吃边慢慢聊开。',
         chipClassName: 'squad-unboxing__chemistry-chip--warm',
       }
     case 'cold':
       return {
         iconRef: 'cold',
-        title: '慢慢发现',
+        title: CHEMISTRY_TITLES.cold,
         description: '这桌是耐聊型组合，越往后越容易找到共同节奏。',
         chipClassName: 'squad-unboxing__chemistry-chip--cold',
       }
     case 'mild':
       return {
         iconRef: 'mild',
-        title: '相聊甚欢',
+        title: CHEMISTRY_TITLES.mild,
         description: '这桌的风格平衡又自然，很适合从小话题慢慢热起来。',
         chipClassName: 'squad-unboxing__chemistry-chip--mild',
       }
     default:
       return {
         iconRef: 'mild',
-        title: fallbackScore !== null ? `默契度 ${fallbackScore}%` : '今晚有戏',
+        title: CHEMISTRY_FALLBACK_WORD,
         description: `${DEFAULT_MASCOT_DISPLAY_NAME}已经替你把这一桌锁定，接下来看看你们为什么会聊得来。`,
         chipClassName: 'squad-unboxing__chemistry-chip--fallback',
       }

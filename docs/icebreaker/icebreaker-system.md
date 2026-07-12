@@ -156,6 +156,8 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
   `resetSocialIcebreakerTier()` in `apps/server/src/services/socialIcebreakerTierReset.ts`, which is
   shared with `/set-tier`.
 
+  **`/start` failure diagnostics (2026-07-11):** access denial returns a machine-readable `code` (`GROUP_EXPIRED`/`EVENT_EXPIRED` → 410, `NOT_MEMBER_OF_GROUP`/`NOT_MEMBER_OF_EVENT` → 403, `SESSION_NOT_FOUND` → 404) and the server emits `logger.warn('[SocialIcebreaker] /start access denied', { code, status, sessionId, userId })`. The mini-program tier selector (`pages/icebreaker-session/tier-selector`) writes `tier-selector:start-session-failed` (with `statusCode`/`code`/`isTransportError`) to the WeChat realtime log and shows a scenario-specific toast, replacing the previous silent `创建没成功，再试试` fallback.
+
   **Custom mode (`custom`)** — host-driven free-form flow (feature flag `SOCIAL_ICEBREAKER_CUSTOM_MODE_ENABLED`, default `true`):
   - Available as a fourth tier option. No fixed run plan; host picks phases one-by one from a carousel.
   - `autoAdvanceEnabled` is set to `false`; only the host can advance/end.

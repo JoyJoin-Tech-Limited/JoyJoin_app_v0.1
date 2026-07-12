@@ -25,11 +25,14 @@ import { BlindBoxVisual } from './BlindBoxVisual'
 import { BlindBoxLid } from './BlindBoxLid'
 import { useResetOnShow } from '../../hooks/useResetOnShow'
 import DragRevealRibbon from './DragRevealRibbon'
+import XiaoyueHostImage from './XiaoyueHostImage'
 import SquadDeckStage from './SquadDeckStage'
 import TeammateCardDetail from './TeammateCardDetail'
 import {
   formatDateTime,
+  getChemistryWord,
   getMemberName,
+  getPairChemistryWord,
   getVibeLabel,
 } from './squadUnboxingViewModels'
 
@@ -109,8 +112,14 @@ export default function SquadUnboxingPage() {
   const { user: currentUser } = useAuthGuard()
   const aigcEnabled = useAIGCLabelsEnabled()
   const dragRevealEnabled = currentUser?.features?.squadUnboxingDragRevealEnabled ?? true
+  const composedHeroEnabled = currentUser?.features?.socialSquadComposedHeroEnabled ?? false
   const storyName = router.params['__story']
   const isStoryFocused = storyName === 'focused'
+  const isComposedHeroActive = composedHeroEnabled && (flowState === 'ready' || flowState === 'shaking')
+  // In composed mode the Xiaoyue host floats above the box, so the whole stage
+  // (host + box) becomes one tap target via a dedicated layer; the stage body
+  // drops its own handlers to avoid double-firing.
+  const isStageTap = composedHeroEnabled && flowState === 'ready'
 
   const [focusedCardIndex, setFocusedCardIndex] = useState(-1)
   const [hasTappedCard, setHasTappedCard] = useState(false)
@@ -309,7 +318,7 @@ export default function SquadUnboxingPage() {
     )
   }
 
-  const header = (
+  const legacyHeader = (
     <View className={['squad-unboxing__header', headerReady ? 'squad-unboxing__header--ready' : ''].filter(Boolean).join(' ')}>
       <Image
         className='squad-unboxing__header-mascot'
@@ -327,12 +336,39 @@ export default function SquadUnboxingPage() {
         {group.groupNumber ? (
           <Text className='squad-unboxing__header-group-num'>第 {group.groupNumber} 组</Text>
         ) : null}
-        {group.matchScore != null ? (
-          <Text className='squad-unboxing__header-score'>默契度 {Math.round(group.matchScore)}%</Text>
+        {flowState === 'revealed' ? (
+          <Text className='squad-unboxing__header-score'>{getChemistryWord(groupAnalysis?.overallChemistry)}</Text>
         ) : null}
       </View>
     </View>
   )
+
+  const composedReadyHeader = (
+    <View className={['squad-unboxing__hero-copy', headerReady ? 'squad-unboxing__hero-copy--ready' : ''].filter(Boolean).join(' ')}>
+      {group.groupNumber ? (
+        <Text className='squad-unboxing__hero-eyebrow'>第 {group.groupNumber} 组</Text>
+      ) : null}
+      <Text className='squad-unboxing__hero-title'>盒子里的，是今晚的同桌</Text>
+      <Text className='squad-unboxing__hero-supporting'>
+        {`${DEFAULT_MASCOT_DISPLAY_NAME}把对的人悄悄装好了，等你亲手打开。`}
+      </Text>
+      <View
+        className='squad-unboxing__hero-gesture'
+        onClick={() => handleOpenBox('box')}
+        hoverClass='squad-unboxing__hero-gesture--pressed'
+        role='button'
+        aria-label='轻点打开礼盒，查看今晚的同桌'
+      >
+        <Text className='squad-unboxing__hero-gesture-text'>轻点打开</Text>
+      </View>
+    </View>
+  )
+
+  const header = composedHeroEnabled && flowState === 'ready'
+    ? composedReadyHeader
+    : composedHeroEnabled && flowState === 'shaking'
+      ? null
+      : legacyHeader
 
   return (
     <View className={pageClassName}>
@@ -348,14 +384,16 @@ export default function SquadUnboxingPage() {
           <View className={[
             'squad-unboxing__stage-spacer',
             flowState === 'revealed' ? 'squad-unboxing__stage-spacer--revealed' : '',
+            isComposedHeroActive ? 'squad-unboxing__stage-spacer--composed' : '',
           ].filter(Boolean).join(' ')} />
 
           <View className={[
             'squad-unboxing__scroll-content',
             flowState === 'revealed' ? '' : 'squad-unboxing__scroll-content--ready',
+            isComposedHeroActive ? 'squad-unboxing__scroll-content--composed' : '',
           ].filter(Boolean).join(' ')}>
 
-        {flowState === 'ready' ? (
+        {flowState === 'ready' && !composedHeroEnabled ? (
           <View className='squad-unboxing__ribbon-wrap'>
             <DragRevealRibbon
               shouldReduceMotion={shouldReduceMotion}
@@ -369,7 +407,7 @@ export default function SquadUnboxingPage() {
         {header}
 
 
-        {flowState === 'ready' ? (
+        {flowState === 'ready' && !composedHeroEnabled ? (
           <Card className='squad-unboxing__blind-box-card squad-unboxing__blind-box-card--copy-only'>
             <Text className='squad-unboxing__blind-box-title'>拼图已经聚齐</Text>
             <Text className='squad-unboxing__blind-box-copy'>
@@ -443,13 +481,11 @@ export default function SquadUnboxingPage() {
               .join(' ')}>
               <View className='squad-unboxing__chapter-title-row'>
                 <Text className='squad-unboxing__chapter-title'>今晚这桌</Text>
-                {group.matchScore != null ? (
-                  <View className='squad-unboxing__chapter-badge'>
-                    <Text className='squad-unboxing__chapter-badge-text'>
-                      默契度 {Math.round(group.matchScore)}%
-                    </Text>
-                  </View>
-                ) : null}
+                <View className='squad-unboxing__chapter-badge'>
+                  <Text className='squad-unboxing__chapter-badge-text'>
+                    {getChemistryWord(groupAnalysis?.overallChemistry)}
+                  </Text>
+                </View>
               </View>
 
               <View className='squad-unboxing__meta-row'>
@@ -674,7 +710,7 @@ export default function SquadUnboxingPage() {
                             >
                               <View className='squad-unboxing__pair-top'>
                                 <Text className='squad-unboxing__pair-label'>{pairLabel}</Text>
-                                <Text className='squad-unboxing__pair-score'>{pair.chemistryScore}</Text>
+                                <Text className='squad-unboxing__pair-score'>{getPairChemistryWord(pair.chemistryScore)}</Text>
                               </View>
                               {(pair.connectionPointsWithRarity?.length ?? pair.connectionPoints.length) > 0 ? (
                                 <View className='squad-unboxing__pair-pill-row'>
@@ -712,7 +748,7 @@ export default function SquadUnboxingPage() {
                             >
                               <View className='squad-unboxing__pair-top'>
                                 <Text className='squad-unboxing__pair-label'>{pairLabel}</Text>
-                                <Text className='squad-unboxing__pair-score'>{pair.chemistryScore}</Text>
+                                <Text className='squad-unboxing__pair-score'>{getPairChemistryWord(pair.chemistryScore)}</Text>
                               </View>
                               <Text className='squad-unboxing__pair-copy'>{normalizeMatchingCopy(pair.explanation)}</Text>
                               {pair.introAngle ? (
@@ -791,6 +827,7 @@ export default function SquadUnboxingPage() {
         className={[
           'squad-unboxing__stage',
           `squad-unboxing__stage--${flowState}`,
+          isComposedHeroActive ? 'squad-unboxing__stage--composed' : '',
           isDegradation ? 'squad-unboxing__stage--degradation' : '',
         ]
           .filter(Boolean)
@@ -804,16 +841,29 @@ export default function SquadUnboxingPage() {
             {announcement}
           </View>
         ) : null}
+        {isComposedHeroActive ? (
+          <XiaoyueHostImage groupId={groupId} shouldReduceMotion={shouldReduceMotion} />
+        ) : null}
+        {isStageTap ? (
+          <View
+            className='squad-unboxing__stage-tap-layer'
+            onClick={() => handleOpenBox('box')}
+            hoverClass='squad-unboxing__stage-tap-layer--pressed'
+            role='button'
+            aria-label='轻点打开礼盒，查看今晚的同桌'
+          />
+        ) : null}
         {flowState !== 'revealed' ? (
           <View
             className={[
               'squad-unboxing__stage-body',
-              flowState === 'ready' ? 'squad-unboxing__stage-body--ready' : '',
+              flowState === 'ready' && !isStageTap ? 'squad-unboxing__stage-body--ready' : '',
+              isStageTap ? 'squad-unboxing__stage-body--tap-target' : '',
             ].filter(Boolean).join(' ')}
-            onClick={flowState === 'ready' ? () => handleOpenBox('box') : undefined}
-            hoverClass={flowState === 'ready' ? 'squad-unboxing__stage-body--pressed' : ''}
-            role={flowState === 'ready' ? 'button' : undefined}
-            aria-label={flowState === 'ready' ? '点击拆开礼盒' : undefined}
+            onClick={flowState === 'ready' && !isStageTap ? () => handleOpenBox('box') : undefined}
+            hoverClass={flowState === 'ready' && !isStageTap ? 'squad-unboxing__stage-body--pressed' : ''}
+            role={flowState === 'ready' && !isStageTap ? 'button' : undefined}
+            aria-label={flowState === 'ready' && !isStageTap ? '轻点打开礼盒，查看今晚的同桌' : undefined}
           >
             <BlindBoxVisual
               state={flowState === 'shaking' ? 'opening' : 'ready'}

@@ -71,10 +71,13 @@ await Promise.all(
   ].map(removePath),
 )
 
-await removeMatching('lovart', (name) => name !== 'puzzle')
+await removeMatching('lovart', (name) => name !== 'puzzle' && name !== 'squad')
 await Promise.all([
   removePath('lovart/puzzle/_contact-sheet.png'),
   removeMatching('lovart/puzzle', (name) => name.endsWith('.png')),
+  // Keep only the bundled composed-hero fallback; the CDN-primary hero and the
+  // card-back pattern stay CDN-only.
+  removeMatching('lovart/squad', (name) => name !== 'squad-host-xiaoyue-fallback.webp'),
   removeMatching('icons/archetype', (name) => name.includes('grid')),
   removeMatching('icons/archetype', (name) => /^archetype-.*-head(@2x)?\.png$/.test(name)),
   removeMatching('icons/archetype-glyphs', (name) => name.includes('grid')),

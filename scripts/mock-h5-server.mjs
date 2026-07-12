@@ -48,6 +48,7 @@ const MOCK_USER = {
     personalityTestEchoEnabled: true,
     paymentsEnabled: true,
     squadUnboxingDragRevealEnabled: true,
+    socialSquadComposedHeroEnabled: false,
     socialIcebreakerCustomModeEnabled: true,
     profileRedesignEnabled: true,
     matchingPuzzlePreludeEnabled: true,

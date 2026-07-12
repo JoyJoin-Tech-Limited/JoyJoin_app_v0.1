@@ -207,6 +207,12 @@ router.post('/start', async (req: any, res) => {
 
   const access = await getSocialIcebreakerAccess(sessionId, userId);
   if (!access.allowed) {
+    logger.warn('[SocialIcebreaker] /start access denied', {
+      sessionId,
+      userId,
+      status: access.status,
+      code: access.code,
+    });
     return res.status(access.status).json(access.body);
   }
 

@@ -115,6 +115,40 @@ function sleep(ms: number): Promise<void> {
   })
 }
 
+/** Extract the server-issued machine code (e.g. NOT_MEMBER_OF_GROUP) from an
+ *  ApiError thrown by apiRequest. The access layer returns { code } in the body. */
+function extractStartErrorCode(err: unknown): string | undefined {
+  if (!err || typeof err !== 'object') return undefined
+  const data = (err as { data?: unknown }).data
+  if (data && typeof data === 'object') {
+    const code = (data as { code?: unknown }).code
+    if (typeof code === 'string') return code
+  }
+  return undefined
+}
+
+/** Map a start-session failure to a warm, actionable toast. The generic
+ *  "创建没成功，再试试" is the fallback; auth/membership/expiry get specific copy
+ *  so the user (and support) can tell what actually happened. */
+function getStartFailureToast(err: unknown): string {
+  const code = extractStartErrorCode(err)
+  const statusCode = (err as { statusCode?: number } | undefined)?.statusCode
+  const isTransport = (err as { isTransportError?: boolean } | undefined)?.isTransportError === true
+
+  if (isTransport) return '网络开小差了，检查网络后再试试'
+  if (code === 'GROUP_EXPIRED' || code === 'EVENT_EXPIRED' || statusCode === 410) {
+    return '这场破冰已经结束了，看看别的局吧'
+  }
+  if (code === 'NOT_MEMBER_OF_GROUP' || code === 'NOT_MEMBER_OF_EVENT' || statusCode === 403) {
+    return '需要先加入这场局，才能开始破冰哦'
+  }
+  if (code === 'SESSION_NOT_FOUND' || statusCode === 404) {
+    return '没找到这场破冰，返回上一页重试'
+  }
+  if (statusCode === 401) return '登录状态失效了，重新进入试试'
+  return getErrorMessage('create-failed')
+}
+
 /** A small celebration line for the preview area — makes the choice feel seen. */
 function getPreviewAffirmation(tier: TierMachineId, vibe: VibeId): string {
   if (tier === 'custom') return '自定义节奏，全场听你安排'
@@ -304,12 +338,13 @@ export default function TierSelectorPage() {
         sessionId,
         selectedTier,
         selectedVibe,
-        statusCode,
-        serverMessage,
-        error: lastErr,
+        statusCode: (lastErr as { statusCode?: number })?.statusCode,
+        code: extractStartErrorCode(lastErr),
+        message: lastErr instanceof Error ? lastErr.message : String(lastErr),
+        isTransportError: (lastErr as { isTransportError?: boolean })?.isTransportError === true,
       })
       Taro.showToast({
-        title: getIcebreakerPageErrorText(lastErr, fallbackMessage),
+        title: getStartFailureToast(lastErr),)
         icon: 'none',
         duration: TOAST_MEDIUM_MS,
       })

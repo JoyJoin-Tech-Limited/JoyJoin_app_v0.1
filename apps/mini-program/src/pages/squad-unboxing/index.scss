@@ -80,6 +80,14 @@
         animation: none;
       }
     }
+
+    &--composed {
+      &.squad-unboxing__stage--ready,
+      &.squad-unboxing__stage--shaking {
+        height: clamp(560rpx, 62vh, 700rpx);
+        height: clamp(560rpx, 62dvh, 700rpx);
+      }
+    }
   }
 
   &__stage-spacer {
@@ -91,6 +99,11 @@
     &--revealed {
       height: clamp(500rpx, 56vh, 620rpx);
       height: clamp(500rpx, 56dvh, 620rpx);
+    }
+
+    &--composed {
+      height: clamp(560rpx, 62vh, 700rpx);
+      height: clamp(560rpx, 62dvh, 700rpx);
     }
   }
 
@@ -113,9 +126,74 @@
         transform: translateX(-50%) scale(0.96);
       }
     }
+
+    // Composed mode: the box is decorative — the tap layer owns interaction —
+    // but it still needs the press transition so the sibling-selector feedback
+    // animates smoothly.
+    &--tap-target {
+      transition: transform 0.12s ease;
+    }
   }
 
-  .squad-unboxing--reduce-motion &__stage-body--ready {
+  // Composed mode only: covers the whole stage (host + box) so a tap anywhere
+  // on Xiaoyue or the box opens the gift. Sits above the host (z4) and lid (z3).
+  &__stage-tap-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: auto;
+    cursor: pointer;
+
+    &--pressed {
+      background: rgba($color-primary, 0.04);
+    }
+
+    // The tap layer is rendered immediately before the stage body, so the
+    // adjacent sibling gives the box its press feedback.
+    &--pressed + .squad-unboxing__stage-body {
+      transform: translateX(-50%) scale(0.96);
+    }
+  }
+
+  &__host-xiaoyue {
+    position: absolute;
+    left: 50%;
+    bottom: 248rpx;
+    width: 300rpx;
+    height: 300rpx;
+    transform: translateX(-50%);
+    z-index: 4;
+    pointer-events: none;
+    opacity: 1;
+    transition:
+      transform 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.36s ease;
+
+    &--skeleton {
+      border-radius: 48rpx;
+      background: linear-gradient(135deg, rgba($color-primary, 0.10), rgba($color-secondary, 0.14));
+      opacity: 0.72;
+    }
+  }
+
+  &__stage--shaking &__host-xiaoyue {
+    transform: translateX(-50%) translateY(-48rpx) scale(0.9);
+    opacity: 0;
+  }
+
+  // Reduced motion: duck-away transform is replaced by a 150ms opacity
+  // crossfade (movement suppressed, haptics preserved by the caller).
+  .squad-unboxing--reduce-motion &__host-xiaoyue {
+    transition: opacity 0.15s ease;
+  }
+
+  .squad-unboxing--reduce-motion &__stage--shaking &__host-xiaoyue {
+    transform: translateX(-50%);
+    opacity: 0;
+  }
+
+  .squad-unboxing--reduce-motion &__stage-body--ready,
+  .squad-unboxing--reduce-motion &__stage-body--tap-target {
     transition: none;
   }
 
@@ -177,6 +255,11 @@
     padding-bottom: $spacing-xl;
   }
 
+  &__scroll-content--composed {
+    justify-content: flex-start;
+    padding-top: 0;
+  }
+
   &__error {
     @include flex-center;
     flex-direction: column;
@@ -219,6 +302,21 @@
   &--reduce-motion .squad-unboxing__header {
     opacity: 1;
     transform: none;
+    transition: none;
+  }
+
+  &--reduce-motion .squad-unboxing__hero-eyebrow,
+  &--reduce-motion .squad-unboxing__hero-title,
+  &--reduce-motion .squad-unboxing__hero-supporting {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  // Gesture keeps its press scale under reduce-motion — applied instantly
+  // (transition: none), matching the stage-body press pattern.
+  &--reduce-motion .squad-unboxing__hero-gesture {
+    opacity: 1;
     transition: none;
   }
 
@@ -271,6 +369,106 @@
   &__header-score {
     color: $color-primary-dark;
     background: rgba($color-secondary, 0.14);
+  }
+
+  &__hero-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-md 0 $spacing-lg;
+    text-align: center;
+
+    // Staggered entrance: each child owns its reveal so the beat reads
+    // eyebrow → title → supporting → gesture (0/60/120/180ms).
+    &--ready {
+      .squad-unboxing__hero-eyebrow,
+      .squad-unboxing__hero-title,
+      .squad-unboxing__hero-supporting {
+        opacity: 1;
+        transform: none;
+      }
+
+      // Gesture keeps its transform free for the press scale.
+      .squad-unboxing__hero-gesture {
+        opacity: 1;
+      }
+    }
+  }
+
+  &__hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: 999rpx;
+    color: $color-primary;
+    background: rgba($color-primary, 0.12);
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    opacity: 0;
+    transform: translateY(8rpx);
+    transition:
+      opacity 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  // 56rpx (not type-hero 64rpx): the 11-glyph title measures ~616rpx and must
+  // stay single-line inside the 670rpx content column — at 64rpx it wraps and
+  // orphans "同桌" on its own line (孤字).
+  &__hero-title {
+    @include type-headline;
+    display: block;
+    color: $color-text-primary;
+    word-break: keep-all;
+    opacity: 0;
+    transform: translateY(8rpx);
+    transition:
+      opacity 0.24s cubic-bezier(0.22, 1, 0.36, 1) 60ms,
+      transform 0.24s cubic-bezier(0.22, 1, 0.36, 1) 60ms;
+  }
+
+  &__hero-supporting {
+    @include type-body;
+    display: block;
+    max-width: 560rpx;
+    padding: 0 $spacing-md;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+    opacity: 0;
+    transform: translateY(8rpx);
+    transition:
+      opacity 0.24s cubic-bezier(0.22, 1, 0.36, 1) 120ms,
+      transform 0.24s cubic-bezier(0.22, 1, 0.36, 1) 120ms;
+  }
+
+  &__hero-gesture {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 240rpx;
+    min-height: $cta-min-tap;
+    margin-top: $spacing-sm;
+    padding: 0 $spacing-lg;
+    border-radius: 999rpx;
+    background: $color-primary;
+    color: $color-text-white;
+    box-shadow: $shadow-primary-soft;
+    opacity: 0;
+    transition:
+      opacity 0.24s cubic-bezier(0.22, 1, 0.36, 1) 180ms,
+      transform 0.12s ease,
+      background-color 0.12s ease;
+
+    &--pressed {
+      transform: scale(0.96);
+      background: $color-primary-dark;
+    }
+  }
+
+  &__hero-gesture-text {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
   }
 
   &__analysis-bubble {

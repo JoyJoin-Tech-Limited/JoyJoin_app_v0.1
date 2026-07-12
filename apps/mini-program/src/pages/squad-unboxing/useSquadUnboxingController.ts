@@ -177,8 +177,8 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   })
 
   const chemistryTokens = useMemo(
-    () => getSquadChemistryTokens(groupAnalysis?.overallChemistry, group?.matchScore),
-    [group?.matchScore, groupAnalysis?.overallChemistry],
+    () => getSquadChemistryTokens(groupAnalysis?.overallChemistry),
+    [groupAnalysis?.overallChemistry],
   )
 
   const sortedPairExplanations = useMemo<PairExplanation[]>(() => {

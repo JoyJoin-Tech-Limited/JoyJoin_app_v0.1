@@ -14,6 +14,7 @@ export type SquadUnboxingEventType =
   | 'squad_unboxing_share_poster_tap'
   | 'squad_unboxing_bubble_reveal_complete'
   | 'squad_unboxing_box_open_milestone'
+  | 'squad_unboxing_ready_hero_fallback'
   | 'squad_unboxing_scroll_depth'
   | 'squad_unboxing_connection_story_expand'
   | 'squad_unboxing_connection_story_collapse'

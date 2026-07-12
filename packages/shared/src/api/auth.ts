@@ -81,6 +81,9 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     /** When false, falls back to the legacy tap button on squad-unboxing.
      *  Kill switch for the drag-to-reveal ribbon. Default: true. */
     squadUnboxingDragRevealEnabled?: boolean
+    /** When true, renders the composed-hero ready state on squad-unboxing
+     *  (redesign). Default: false (keeps existing layout). */
+    socialSquadComposedHeroEnabled?: boolean
     /** When false, creation of and tier changes to the custom Social Icebreaker
      *  mode are rejected. Existing preset-tier sessions are unaffected.
      *  Default: true. */

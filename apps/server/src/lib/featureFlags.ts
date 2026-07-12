@@ -41,6 +41,12 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  When false: falls back to the legacy "揭晓桌友" button.
    *  Default: true. */
   squadUnboxingDragRevealEnabled: "SQUAD_UNBOXING_DRAG_REVEAL_ENABLED",
+  /** Squad-unboxing ready-state redesign. When true, renders the composed
+   *  Xiaoyue+gift hero with a single tap gesture and a hidden drag delight.
+   *  When false (default), keeps the existing header + gift + drag-ribbon
+   *  layout. Safe to ship off in production while the composed hero asset is
+   *  finalised. Env fallback: SOCIAL_SQUAD_COMPOSED_HERO_ENABLED (default: false). */
+  socialSquadComposedHeroEnabled: "SOCIAL_SQUAD_COMPOSED_HERO_ENABLED",
   /** Master kill-switch for event pool registration.
    *  When false, POST /api/event-pools/:id/register returns 503.
    *  Env fallback: REGISTRATION_ENABLED (default: true). */

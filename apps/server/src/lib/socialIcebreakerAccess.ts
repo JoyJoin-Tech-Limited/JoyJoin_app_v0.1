@@ -2,9 +2,23 @@ import { blindBoxEvents, eventAttendance, eventPoolGroups, eventPoolRegistration
 import { and, eq } from "drizzle-orm";
 import { db } from "../db";
 
+/** Machine-readable reason codes for access denial. Surfaced to clients so
+ *  failures ("创建没成功，再试试") can be diagnosed instead of swallowed. */
+export type SocialIcebreakerAccessCode =
+  | "GROUP_EXPIRED"
+  | "NOT_MEMBER_OF_GROUP"
+  | "EVENT_EXPIRED"
+  | "NOT_MEMBER_OF_EVENT"
+  | "SESSION_NOT_FOUND";
+
 type SocialIcebreakerAccessResult =
   | { allowed: true }
-  | { allowed: false; status: 403 | 404 | 410; body: Record<string, unknown> };
+  | {
+      allowed: false;
+      status: 403 | 404 | 410;
+      code: SocialIcebreakerAccessCode;
+      body: Record<string, unknown>;
+    };
 
 /**
  * Authorize a user for a social icebreaker session.
@@ -37,7 +51,8 @@ export async function getSocialIcebreakerAccess(
       return {
         allowed: false,
         status: 410,
-        body: { message: "Icebreaker session has expired" },
+        code: "GROUP_EXPIRED",
+        body: { code: "GROUP_EXPIRED", message: "Icebreaker session has expired" },
       };
     }
 
@@ -53,7 +68,12 @@ export async function getSocialIcebreakerAccess(
       .limit(1);
 
     if (!registration) {
-      return { allowed: false, status: 403, body: { message: "Forbidden" } };
+      return {
+        allowed: false,
+        status: 403,
+        code: "NOT_MEMBER_OF_GROUP",
+        body: { code: "NOT_MEMBER_OF_GROUP", message: "Forbidden" },
+      };
     }
 
     return { allowed: true };
@@ -71,7 +91,8 @@ export async function getSocialIcebreakerAccess(
       return {
         allowed: false,
         status: 410,
-        body: { message: "Event session has expired" },
+        code: "EVENT_EXPIRED",
+        body: { code: "EVENT_EXPIRED", message: "Event session has expired" },
       };
     }
 
@@ -83,7 +104,12 @@ export async function getSocialIcebreakerAccess(
     );
 
     if (!isParticipant) {
-      return { allowed: false, status: 403, body: { message: "Forbidden" } };
+      return {
+        allowed: false,
+        status: 403,
+        code: "NOT_MEMBER_OF_EVENT",
+        body: { code: "NOT_MEMBER_OF_EVENT", message: "Forbidden" },
+      };
     }
 
     return { allowed: true };
@@ -108,7 +134,8 @@ export async function getSocialIcebreakerAccess(
   return {
     allowed: false,
     status: 404,
-    body: { message: "Icebreaker session not found" },
+    code: "SESSION_NOT_FOUND",
+    body: { code: "SESSION_NOT_FOUND", message: "Icebreaker session not found" },
   };
 }
 

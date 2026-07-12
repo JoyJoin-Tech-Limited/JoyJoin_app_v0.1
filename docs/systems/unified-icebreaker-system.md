@@ -86,7 +86,7 @@ GET /recap      → AI summary + medals
 TTL sweep (5m)  → deletes expired sessions (6h lifetime)
 ```
 
-**Key semantics:** `socialSessionId` = `social_${icebreakerSessionId}`; rejoin is an `upsertParticipant`; expiry returns **410 SESSION_EXPIRED**.
+**Key semantics:** `socialSessionId` = `social_${icebreakerSessionId}`; rejoin is an `upsertParticipant`; expiry returns **410 SESSION_EXPIRED**. On `POST /start`, access denial (joining via a pool group or blind-box event) returns a structured `{ code }` (2026-07-11): `410 GROUP_EXPIRED` / `EVENT_EXPIRED`, `403 NOT_MEMBER_OF_GROUP` / `NOT_MEMBER_OF_EVENT`, `404 SESSION_NOT_FOUND` — distinct from the polling/direct-access `410 SESSION_EXPIRED`; the server also logs `[SocialIcebreaker] /start access denied`.
 
 ### Host vs Player Authority
 
