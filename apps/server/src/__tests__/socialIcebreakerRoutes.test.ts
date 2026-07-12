@@ -315,7 +315,7 @@ vi.mock('../services/singleTestService', () => ({
 const { default: socialIcebreakerRouter } = await import('../routes/socialIcebreaker');
 
 // Import mocked AI service functions so tests can modify V1/V2 behaviour per-test.
-import { generateLieDetectiveStatements, getLieDetectiveMode } from '../socialIcebreakerAIService';
+import { generateLieDetectiveStatements, generateWarmupTopics, getLieDetectiveMode } from '../socialIcebreakerAIService';
 import { getSession, updateSession, getPreGenerationResult } from '../lib/socialIcebreakerStore';
 import { shouldSkipOnDemandGeneration } from '../jobs/preGenerationQueue';
 import { recordVoteOptimistically } from '../lib/optimisticSync';
@@ -355,6 +355,38 @@ async function login(baseUrl: string, userId: string) {
 }
 
 describe.sequential('social icebreaker routes', () => {
+  it('returns a created session within its budget when warmup generation stalls', async () => {
+    vi.mocked(generateWarmupTopics).mockImplementationOnce(
+      () => new Promise(() => {}),
+    );
+
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'nonblocking-start-host');
+      const sessionId = `session-nonblocking-start-${Date.now()}`;
+
+      const response = await Promise.race([
+        fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({
+            sessionId,
+            displayName: 'Host',
+            eventTier: 'breeze',
+            vibe: 'balanced',
+          }),
+        }),
+        new Promise<never>((_resolve, reject) => {
+          setTimeout(() => reject(new Error('/start exceeded its warmup budget')), 500);
+        }),
+      ]);
+      const body = await response.json() as any;
+
+      expect(response.status).toBe(200);
+      expect(body.socialSessionId).toBe(`social_${sessionId}`);
+      expect(body.currentPhase).toBe('warmup');
+    });
+  });
+
   it('returns the joined participant roster in social session state responses', async () => {
     await withServer(async (baseUrl) => {
       const hostCookie = await login(baseUrl, 'roster-host');
@@ -3211,4 +3243,3 @@ describe.sequential('social icebreaker routes', () => {
     });
   });
 });
-
