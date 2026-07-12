@@ -325,15 +325,6 @@ export default function TierSelectorPage() {
         }
       }
 
-      const fallbackMessage = getErrorMessage('create-failed')
-      const statusCode =
-        lastErr && typeof lastErr === 'object'
-          ? (lastErr as { statusCode?: unknown }).statusCode
-          : undefined
-      const serverMessage =
-        lastErr instanceof Error && lastErr.message.trim() !== ''
-          ? lastErr.message
-          : undefined
       logError('tier-selector:start-session-failed', {
         sessionId,
         selectedTier,
@@ -344,7 +335,7 @@ export default function TierSelectorPage() {
         isTransportError: (lastErr as { isTransportError?: boolean })?.isTransportError === true,
       })
       Taro.showToast({
-        title: getStartFailureToast(lastErr),)
+        title: getStartFailureToast(lastErr),
         icon: 'none',
         duration: TOAST_MEDIUM_MS,
       })
