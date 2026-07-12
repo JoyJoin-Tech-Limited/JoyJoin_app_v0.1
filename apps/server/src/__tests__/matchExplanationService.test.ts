@@ -57,15 +57,27 @@ vi.mock('../lib/aiTraceLogger', () => ({
   logAITrace: vi.fn(),
 }));
 
+vi.mock('../lib/logger', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })),
+  },
+}));
+
 import { 
   matchExplanationService,
   getPairExplanationForUser,
+  normalizePairExplanationText,
   type MatchMember,
   type GroupAnalysis,
 } from '../matchExplanationService';
 import { db } from '../db';
 import { getClientForFunction, getDeepseekSelection } from '../ai/socialModelRouter';
 import { logAITrace } from '../lib/aiTraceLogger';
+import { logger } from '../lib/logger';
 
 describe('matchExplanationService', () => {
   const freshCacheTimestamp = () => new Date(Date.now() - 60_000).toISOString();
@@ -500,6 +512,220 @@ describe('matchExplanationService', () => {
       );
 
       expect(explanation.explanation).toBe('这两位性格互补，会有很多话题聊！');
+    });
+  });
+
+  describe('normalizePairExplanationText (persist boundary guarantee)', () => {
+    it('(a) passes plain text through unchanged', () => {
+      expect(normalizePairExplanationText('这两位性格互补，会有很多话题聊！')).toBe(
+        '这两位性格互补，会有很多话题聊！',
+      );
+    });
+
+    it('(b) unwraps a JSON-wrapped string to its inner explanation', () => {
+      expect(normalizePairExplanationText('{"explanation":"樱花 和你的连接感很自然"}')).toBe(
+        '樱花 和你的连接感很自然',
+      );
+    });
+
+    it('(c) extracts .explanation from an object input', () => {
+      expect(
+        normalizePairExplanationText({ explanation: '同乡和同行业让对话自然起步' }),
+      ).toBe('同乡和同行业让对话自然起步');
+    });
+
+    it('(d) recovers inner text from a truncated JSON string (max_tokens cut-off)', () => {
+      const recovered = normalizePairExplanationText(
+        '{"explanation":"樱花 和你的连接感很自然，可以从美食聊开',
+      );
+      expect(recovered).toBe('樱花 和你的连接感很自然，可以从美食聊开');
+      expect(recovered.startsWith('{')).toBe(false);
+    });
+
+    it('(e) unwraps markdown-fenced JSON when the model ignores "no code block"', () => {
+      expect(
+        normalizePairExplanationText('```json\n{"explanation":"fenced copy"}\n```'),
+      ).toBe('fenced copy');
+    });
+
+    it('never returns a string beginning with { or [ for any malformed input', () => {
+      const cases: unknown[] = [
+        '{"explanation":"樱花 和你的连接感…"',
+        '{"foo":"bar"',
+        '{"explanation":',
+        '```json\n{"explanation":"fenced copy"}\n```',
+        '{"explanation":"{\\"explanation\\":\\"nested\\"}"}',
+        { explanation: { explanation: 'deep object' } },
+        '',
+        '   ',
+        null,
+        undefined,
+        42,
+      ];
+      for (const c of cases) {
+        const out = normalizePairExplanationText(c);
+        expect(out.startsWith('{')).toBe(false);
+        expect(out.startsWith('[')).toBe(false);
+        expect(out).not.toContain('{"explanation"');
+      }
+    });
+
+    it('falls back to a safe empty string when nothing usable can be recovered', () => {
+      expect(normalizePairExplanationText('{"foo":"bar"')).toBe('');
+      expect(normalizePairExplanationText(null)).toBe('');
+      expect(normalizePairExplanationText(undefined)).toBe('');
+    });
+
+    it('is idempotent over already-clean text', () => {
+      const once = normalizePairExplanationText('{"explanation":"干净文本"}');
+      expect(normalizePairExplanationText(once)).toBe(once);
+    });
+  });
+
+  describe('pair explanation persist path', () => {
+    const captureCacheWrites = () => {
+      const setCalls: any[] = [];
+      vi.mocked(db.update).mockImplementation(
+        () =>
+          ({
+            set: vi.fn((payload: any) => {
+              setCalls.push(payload);
+              return { where: vi.fn().mockResolvedValue(undefined) };
+            }),
+          }) as any,
+      );
+      return setCalls;
+    };
+
+    const mockPairLlm = (content: string) => {
+      vi.mocked(getClientForFunction).mockImplementation(((fn: string) => {
+        const body =
+          fn === 'generateIceBreakers'
+            ? '["先聊聊各自最喜欢的餐厅吧","分享一下最近看的一部电影"]'
+            : content;
+        return {
+          client: {
+            chat: {
+              completions: {
+                create: vi.fn().mockResolvedValue({ choices: [{ message: { content: body } }] }),
+              },
+            },
+          },
+          model: 'deepseek-v4-flash',
+          provider: 'deepseek',
+        } as any;
+      }) as any);
+    };
+
+    it.each([
+      ['plain text', '这两位性格互补，会有很多话题聊！', '这两位性格互补，会有很多话题聊！'],
+      ['JSON-wrapped string', '{"explanation":"樱花 和你的连接感很自然"}', '樱花 和你的连接感很自然'],
+      ['object input', '{"explanation":{"explanation":"同乡让对话自然起步"}}', '同乡让对话自然起步'],
+      [
+        'truncated JSON string',
+        '{"explanation":"樱花 和你的连接感很自然，可以从美食聊开',
+        '樱花 和你的连接感很自然，可以从美食聊开',
+      ],
+    ])(
+      'stores plain text (never starting with "{") for %s',
+      async (_label, llmContent, expected) => {
+        const setCalls = captureCacheWrites();
+        mockPairLlm(llmContent);
+
+        await matchExplanationService.generateGroupAnalysis(
+          'group-persist',
+          [mockMember1, mockMember2],
+          '饭局',
+          true,
+        );
+
+        const pairWrite = setCalls.find((c) => c && c.pairExplanationsCache);
+        expect(pairWrite).toBeTruthy();
+        const stored = pairWrite.pairExplanationsCache.explanations as Array<{
+          explanation: string;
+        }>;
+        expect(stored.length).toBeGreaterThan(0);
+        for (const exp of stored) {
+          expect(typeof exp.explanation).toBe('string');
+          expect(exp.explanation.startsWith('{')).toBe(false);
+          expect(exp.explanation).not.toContain('{"explanation"');
+          expect(exp.explanation).toBe(expected);
+        }
+      },
+    );
+  });
+
+  describe('malformed LLM output recovery logging', () => {
+    const RECOVERY_MESSAGE = '[MatchExplanation] recovered malformed explanation payload';
+
+    const recoveryWarns = () =>
+      vi.mocked(logger.warn).mock.calls.filter(([msg]) => msg === RECOVERY_MESSAGE);
+
+    const mockPairLlm = (content: string) => {
+      vi.mocked(getClientForFunction).mockImplementation(((fn: string) => {
+        const body =
+          fn === 'generateIceBreakers'
+            ? '["先聊聊各自最喜欢的餐厅吧","分享一下最近看的一部电影"]'
+            : content;
+        return {
+          client: {
+            chat: {
+              completions: {
+                create: vi.fn().mockResolvedValue({ choices: [{ message: { content: body } }] }),
+              },
+            },
+          },
+          model: 'deepseek-v4-flash',
+          provider: 'deepseek',
+        } as any;
+      }) as any);
+    };
+
+    it.each([
+      ['truncated', '{"explanation":"樱花 和你的连接感很自然，可以从美食聊开'],
+      ['fenced', '```json\n{"explanation":"围栏里的温暖解释"}\n```'],
+      ['nested', '{"explanation":"{\\"explanation\\":\\"双层包裹的解释\\"}"}'],
+    ])(
+      'logs one recovery warn with kind=%s at the generation boundary',
+      async (kind, llmContent) => {
+        mockPairLlm(llmContent);
+
+        await matchExplanationService.generateGroupAnalysis(
+          'group-recovery-log',
+          [mockMember1, mockMember2],
+          '饭局',
+          true,
+        );
+
+        // Generation logs once; the serve-path re-normalization of the already
+        // clean text must not log again.
+        expect(recoveryWarns()).toHaveLength(1);
+        expect(logger.warn).toHaveBeenCalledWith(
+          RECOVERY_MESSAGE,
+          expect.objectContaining({
+            promptVersion: 'pair-explanation-v2',
+            kind,
+            recoveredLength: expect.any(Number),
+          }),
+        );
+      },
+    );
+
+    it('stays silent for clean output and for serve-path (unflagged) normalization', async () => {
+      // Clean generation: valid JSON with plain-text explanation — the 99% path.
+      mockPairLlm('{"explanation":"这两位性格互补，会有很多话题聊！"}');
+      await matchExplanationService.generateGroupAnalysis(
+        'group-clean-log',
+        [mockMember1, mockMember2],
+        '饭局',
+        true,
+      );
+      expect(recoveryWarns()).toHaveLength(0);
+
+      // Serve-path normalization (legacy-row cleanup) recovers silently by design.
+      const recovered = normalizePairExplanationText('{"explanation":"缓存里的截断文本');
+      expect(recovered).toBe('缓存里的截断文本');
+      expect(recoveryWarns()).toHaveLength(0);
     });
   });
 

@@ -12,6 +12,76 @@ describe('normalizeMatchingCopy', () => {
   it('keeps regular copy unchanged', () => {
     expect(normalizeMatchingCopy('这一桌很容易聊起来')).toBe('这一桌很容易聊起来')
   })
+
+  it('unwraps a truncated wrapper missing the closing quote and brace', () => {
+    expect(normalizeMatchingCopy('{"explanation":"你们都喜欢轻松饭局，可以从美食聊开')).toBe(
+      '你们都喜欢轻松饭局，可以从美食聊开',
+    )
+  })
+
+  it('cuts a truncated wrapper at the next-field boundary', () => {
+    expect(normalizeMatchingCopy('{"explanation":"大家好","introAngle":"聊聊')).toBe('大家好')
+  })
+
+  it('strips a dangling closing quote without the brace', () => {
+    expect(normalizeMatchingCopy('{"explanation":"今晚聊得很开"')).toBe('今晚聊得很开')
+  })
+
+  it('unescapes common sequences in salvaged copy', () => {
+    expect(normalizeMatchingCopy('{"explanation":"他说\\"你好\\"呢')).toBe('他说"你好"呢')
+  })
+
+  it('returns empty string for an unsalvageable wrapper fragment', () => {
+    expect(normalizeMatchingCopy('{"explanation":')).toBe('')
+  })
+
+  it('returns empty string for a valid wrapper with empty text (no JSON leak)', () => {
+    expect(normalizeMatchingCopy('{"explanation":""}')).toBe('')
+  })
+
+  it('returns empty string for empty or missing input', () => {
+    expect(normalizeMatchingCopy('')).toBe('')
+    expect(normalizeMatchingCopy('   ')).toBe('')
+    expect(normalizeMatchingCopy(null)).toBe('')
+    expect(normalizeMatchingCopy(undefined)).toBe('')
+  })
+
+  it('never returns a string beginning with "{"', () => {
+    const samples = [
+      '{"explanation":"你们都喜欢轻松饭局',
+      '{"explanation":',
+      '{"explanation":""}',
+      '{"weird":true',
+      '{"explanation":"ok","other":"',
+      '[{"explanation":"x"',
+    ]
+    for (const sample of samples) {
+      expect(normalizeMatchingCopy(sample).startsWith('{')).toBe(false)
+    }
+  })
+
+  it('unwraps a nested valid wrapper (double-encoded payload)', () => {
+    expect(normalizeMatchingCopy('{"explanation":"{\\"explanation\\":\\"nested\\"}"}')).toBe('nested')
+  })
+
+  it('never returns a "{"-leading string for nested-wrapper input, at any depth', () => {
+    const inner = JSON.stringify({ explanation: 'deep' })
+    const mid = JSON.stringify({ explanation: inner })
+    const outer = JSON.stringify({ explanation: mid })
+    const samples = [
+      '{"explanation":"{\\"explanation\\":\\"nested\\"}"}',
+      '{"explanation":"{"}',
+      mid,
+      outer,
+    ]
+    for (const sample of samples) {
+      const result = normalizeMatchingCopy(sample)
+      expect(result.startsWith('{')).toBe(false)
+      expect(result.startsWith('[')).toBe(false)
+    }
+    expect(normalizeMatchingCopy(mid)).toBe('deep')
+    expect(normalizeMatchingCopy(outer)).toBe('deep')
+  })
 })
 
 describe('composeUnifiedReveal', () => {

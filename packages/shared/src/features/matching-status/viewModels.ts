@@ -148,7 +148,18 @@ export const DEFAULT_REFRESH_INTERVAL_SECONDS = 20
 function extractReadableText(value: unknown): string | null {
   if (typeof value === 'string') {
     const trimmed = value.trim()
-    return trimmed.length > 0 ? trimmed : null
+    if (trimmed.length === 0) return null
+    // A string value can itself be a serialized wrapper (double-encoded
+    // payload). Route `{`/`[` candidates back through normalizeMatchingCopy
+    // so the "never returns a `{`-leading string" guarantee holds for this
+    // input class too. Terminates without a depth cap: every recursion
+    // unwraps exactly one JSON layer and the inner candidate is strictly
+    // shorter than the outer string (it was embedded as a JSON string
+    // value), so recursion depth is bounded by wrapper nesting.
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      return normalizeMatchingCopy(trimmed) || null
+    }
+    return trimmed
   }
 
   if (Array.isArray(value)) {
@@ -173,6 +184,48 @@ function extractReadableText(value: unknown): string | null {
   return null
 }
 
+const WRAPPER_TEXT_KEYS = ['explanation', 'text', 'reason', 'summary', 'content', 'message']
+
+/**
+ * Defense-in-depth for truncated/malformed serialized wrappers, e.g.
+ * `{"explanation":"你们都喜欢轻松饭局` (closing quote/brace lost to
+ * truncation or a bad transport write). Only runs after JSON.parse has
+ * failed, so heuristic boundary-cutting here can never corrupt valid JSON.
+ * Guaranteed to never return a string beginning with `{`.
+ */
+function unwrapTruncatedJsonWrapper(raw: string): string {
+  for (const key of WRAPPER_TEXT_KEYS) {
+    const prefix = `{"${key}":"`
+    if (!raw.startsWith(prefix)) continue
+
+    let inner = raw.slice(prefix.length)
+    // Cut at the next-field boundary when truncation happened later in the
+    // object (`...","otherKey":"...`), then strip trailing wrapper artifacts.
+    inner = inner.replace(/",\s*".*$/, '')
+    inner = inner.replace(/"\s*\}\s*$/, '')
+    inner = inner.replace(/"\s*$/, '')
+
+    const unescaped = inner
+      .replace(/\\"/g, '"')
+      .replace(/\\n/g, '\n')
+      .replace(/\\t/g, '\t')
+      .replace(/\\\\/g, '\\')
+      .replace(/\\$/, '')
+      .trim()
+
+    if (unescaped.length > 0 && !unescaped.startsWith('{')) {
+      return unescaped
+    }
+  }
+
+  return ''
+}
+
+/**
+ * Normalize match-copy payloads to guaranteed plain text: unwraps serialized
+ * JSON wrappers (including nested / double-encoded ones), salvages truncated
+ * wrappers, and NEVER returns a string beginning with `{` or `[`.
+ */
 export function normalizeMatchingCopy(value?: string | null): string {
   const raw = typeof value === 'string' ? value.trim() : ''
   if (!raw) return ''
@@ -184,9 +237,11 @@ export function normalizeMatchingCopy(value?: string | null): string {
 
   try {
     const parsed = JSON.parse(raw) as unknown
-    return extractReadableText(parsed) ?? raw
+    // Never fall back to `raw`: a parseable wrapper with no readable text
+    // (e.g. `{"explanation":""}`) must not leak JSON into the UI.
+    return extractReadableText(parsed) ?? ''
   } catch {
-    return raw
+    return unwrapTruncatedJsonWrapper(raw)
   }
 }
 
