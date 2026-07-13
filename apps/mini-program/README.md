@@ -31,6 +31,7 @@ This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 - `src/pages/blind-box-payment/`, `src/pages/payment-verification/` — JSAPI payment + post-pay polling
 - `src/pages/event-ticket-payment/` — paid event-ticket registration with ceremony success/verifying states; event-type tail illustration v2 full-bleed footer vignette with 4 s load-timeout fallback to barcode; zero-discount coupon skip when test price is ¥0.01
 - `src/components/HeroPromoBanner.tsx` — top-of-discover hero promo banner (full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles). Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`)
+- `src/pages/alang/` + `src/lib/alang/` — 闪现 NPC｜阿浪 V1.5 subpackage and runtime. Server `myProgress`/archive owns recovery; search Map only shows the user; walking routes are requested only after companion-stage disclosure and an explicit tap. Internal config/debug is strict single-test only. Visual execution uses ACTIVE 03/05/06/07 only; no multi-NPC, equipment, or removed exploration-map surface. Formal Alang art remains `awaiting-approved-art`; labelled bundled placeholders are not production art.
 - `src/components/onboarding/WelcomeGiftCard.tsx` — premium welcome-coupon card rendered on first profile-review view; calls `GET /api/user/welcome-coupon`, displays the Lovart coupon illustration + dynamic discount badge (`悦仔见面礼`), and routes to Discover on tap. Reduced-motion and skeleton loading states supported.
 - `src/components/onboarding/ProfileReviewInviteCard.tsx` — invitation teaser card rendered after the welcome-coupon state settles on profile-review. Uses Lovart `invite-teaser.webp` with CDN-first loading and local/BrandLogo fallback, disabled/busy states, and haptics. Tapping completes onboarding and routes to Discover; reveal triggers a predictive `GET /api/shell/discover` prefetch via `PrefetchEngine`.
 - `src/components/events/FootprintOracleCard.tsx` — interactive "足迹" tab event card. Wraps `EventSummaryCard` in a two-rail layout: left body (status, title, date/time/location) and right rail (compact countdown, group size, price, or "待公布" placeholder). Supports list affordances (tap, hover, haptics, entrance delay). The right rail contents are included in the card's accessible name; only the decorative `›` cue is `aria-hidden`.
@@ -74,6 +75,7 @@ src/
 │   ├── squad-unboxing/
 │   ├── pool-group-detail/
 │   ├── icebreaker-session/
+│   ├── alang/               # Subpackage: event, search, dialogue, companion, result/archive; config/debug test-only
 │   └── profile-linked/      # Subpackage: edit-profile, rewards, invite, terms (preloaded from profile)
 │       ├── edit-profile/
 │       ├── rewards/
@@ -147,7 +149,7 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 2. Production builds **guarantee** a CDN base URL: `config/index.ts` defaults to `https://joyjoinapp.com/static`, and the CI workflow falls back to the same value. Override `TARO_APP_CDN_BASE_URL` only for a custom CDN or staging origin.
 3. Run `npm run validate:assets` before committing to catch orphan references.
 4. Add new CDN assets to `src/assets/` **and** `scripts/cdn-asset-manifest.json` so the CDN uploader discovers them.
-5. Run `npm run check:package-size` after build to verify the compressed main package stays under the 2MB WeChat limit.
+5. Run `npm run check:package-size` after build, then confirm the result with WeChat DevTools or `miniprogram-ci`. The current script needs a system `zip` executable for compressed measurement; without it, it falls back to raw bytes. See `docs/package-size/main-package-audit.md` for the audited boundary and remediation plan.
 6. **Mascot bundle policy:** only 6 core Xiaoyue sprite states (`welcome`, `idle`, `coach`, `loading`, `listening`, `thinking`) are bundled locally; the remaining 14 states are CDN-primary with local fallback via `XiaoyueSpriteAnimator.onError`.
 7. **Bundled icon density policy:** `status-icons`, `info-labels` (semantic), and `ui` tiers ship at `@1x`/`@2x` only; `@3x` variants are stripped by `clean:cdn-assets` to save package size. Source `@3x` files remain for CDN fallback.
 
@@ -167,7 +169,7 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 | `npm run optimize:lovart` | Generate Lovart-designed image assets |
 | `npm run check:lovart-assets` | Validate Lovart asset sizes |
 | `npm run upload:cdn-assets` | Upload manifest assets to CDN (`--dry-run` for preview). For production, trigger `gh workflow run "Upload CDN Assets"` which builds + uploads via GitHub Actions. **Symlink resolution:** the uploader resolves symlinks (e.g. `src/assets/archetypes/` → `src/pages/onboarding/assets/archetypes/`) before rsync so the remote host receives real files, not broken symlinks. |
-| `npm run check:package-size` | Audit mini-program bundle size against 2MB WeChat limit (measures actual zip-compressed size) |
+| `npm run check:package-size` | Audit mini-program bundle size against the 2MB WeChat limit; compressed measurement currently requires a system `zip`, so verify the reported mode and use WeChat tooling as authority |
 
 **Active copy patterns** (`config/index.ts`) — bundled assets:
 
@@ -442,4 +444,3 @@ For **matched** flows, `GET /api/pool-groups/:groupId/analysis` returns `fromCac
 | [`.github/skills/mini-program-frontend-excellence/SKILL.md`](../../.github/skills/mini-program-frontend-excellence/SKILL.md) | Skill: UI quality, pixel precision, 8rpx rhythm |
 | [`docs/DEVICE_QA_CHECKLIST.md`](./docs/DEVICE_QA_CHECKLIST.md) | Pre-release device QA checklist |
 | [`docs/LIST_VIRTUALIZATION.md`](./docs/LIST_VIRTUALIZATION.md) | Long-list thresholds and animation budget |
-

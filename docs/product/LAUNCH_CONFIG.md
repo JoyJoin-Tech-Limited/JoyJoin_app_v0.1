@@ -31,7 +31,7 @@ middleware) may still fail to initialize if required variables like
 | `DEEPSEEK_API_KEY` | DeepSeek AI API key | _unset_ — AI features degrade gracefully |
 | `MINIMAX_API_KEY` | MiniMax TTS API key | _unset_ — TTS cache warmup skipped |
 | `MINIMAX_GROUP_ID` | MiniMax group identifier | _unset_ |
-| `TENCENT_MAP_KEY` | Tencent Maps WebService API key for server-side reverse geocoding and IP定位 | _unset_ — geo endpoints return degraded fallback |
+| `TENCENT_MAP_KEY` | Tencent Maps WebService API key for server-side reverse geocoding, IP定位, POI suggestion/search, and walking routes | _unset_ — reverse geocode keeps local bounds fallback; POI/routes return stable degraded errors |
 | `TENCENT_MAP_JS_KEY` | Tencent Maps JavaScript API key for admin portal MapPicker | _unset_ — admin venue picker shows degraded fallback |
 | `COOKIE_DOMAIN` | Cookie domain for cross-subdomain sessions | _unset_ (auto-detected) |
 | `PORT` | Server listen port | `5001` |
@@ -228,14 +228,17 @@ available at the `/api/metrics` endpoint.
 
 ---
 
-## Internal Alang NPC Prototype
+## 闪现 NPC｜阿浪 V1.5
 
 `ALANG_ENABLED` is the environment fallback for the DB-backed `alangEnabled`
 feature flag. Its safe default is `false`. When enabled, every authenticated
 tester in that environment receives `features.alangEnabled=true`; entry points
 do not depend on a special local account or on `APP_MODE=test`.
 
-For staging validation, apply the Alang migration first, then set:
+The three Alang tables are introduced by the existing `0062_military_spirit.sql`
+migration and must already be present in the target environment. The 2026-07-13
+V1.5 map/coordinate update adds no DDL and requires no new migration. For staging
+validation, set:
 
 ```bash
 APP_MODE=staging
@@ -247,6 +250,11 @@ ENABLE_SINGLE_TEST_MODE=true
 and coordinate overrides. Those capabilities are hard-disabled when
 `APP_MODE=production`. To roll back immediately, set the DB flag (preferred) or
 `ALANG_ENABLED=false`; the server and mini-program entry points fail closed.
+
+`TENCENT_MAP_KEY` stays server-only. Do not reuse `TENCENT_MAP_JS_KEY` in the
+mini-program: Alang renders the native WeChat Map and calls the existing
+`/api/geo` proxy. If Tencent POI/routes are unavailable, search GPS and the
+JoyJoin 5 m arrival gate continue independently.
 
 ---
 

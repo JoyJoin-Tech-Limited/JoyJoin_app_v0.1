@@ -40,24 +40,25 @@ const cleanupInterval = setInterval(() => {
   }
 }, CLEANUP_INTERVAL_MS);
 
-// Register cleanup on process exit
-if (typeof process !== 'undefined') {
-  process.on('beforeExit', () => clearInterval(cleanupInterval));
-}
+// Do not keep the Node process alive solely for cache cleanup. This also
+// avoids accumulating process-level listeners under test/hot module reloads.
+cleanupInterval.unref?.();
 
 interface RateLimitConfig {
   windowMs: number;
   maxRequests: number;
   keyPrefix?: string;
+  keyResolver?: (req: Request) => string;
 }
 
 export function createRateLimiter(config: RateLimitConfig) {
-  const { windowMs, maxRequests, keyPrefix = 'rl' } = config;
+  const { windowMs, maxRequests, keyPrefix = 'rl', keyResolver } = config;
 
   return (req: Request, res: Response, next: NextFunction) => {
-    const userId = (req as any).session?.userId || 
-                   (req as any).user?.id || 
-                   req.ip || 
+    const userId = keyResolver?.(req) ||
+                   (req as any).session?.userId ||
+                   (req as any).user?.id ||
+                   req.ip ||
                    'anonymous';
     
     const key = `${keyPrefix}:${userId}`;
@@ -119,6 +120,30 @@ export const paymentEndpointLimiter = createRateLimiter({
   windowMs: 60000,
   maxRequests: 10,
   keyPrefix: 'pay',
+});
+
+/**
+ * Tencent Maps proxy limiter. These endpoints consume a metered upstream
+ * service, so keep the budget per authenticated user instead of per keyword
+ * or coordinate.
+ */
+export const geoEndpointLimiter = createRateLimiter({
+  windowMs: 60000,
+  maxRequests: 60,
+  keyPrefix: 'geo',
+});
+
+/**
+ * Login-free location bootstrap limiter. Reverse geocoding and IP lookup are
+ * intentionally public so the landing/onboarding flow can establish a city,
+ * but they still consume the metered Tencent Maps key. Always budget these by
+ * client IP, even when an optional session happens to be present.
+ */
+export const publicGeoEndpointLimiter = createRateLimiter({
+  windowMs: 60000,
+  maxRequests: 60,
+  keyPrefix: 'geo-public',
+  keyResolver: (req) => req.ip || req.socket.remoteAddress || 'anonymous',
 });
 
 /**

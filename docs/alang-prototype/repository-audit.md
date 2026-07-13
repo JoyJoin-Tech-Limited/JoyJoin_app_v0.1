@@ -1,196 +1,52 @@
-# 闪现 NPC｜阿浪内部 Prototype — 仓库审计报告
+# 闪现 NPC｜阿浪 V1.5 — 当前实现差异审计
 
-> 审计范围：JoyJoin 全仓库（mini-program / server / shared / schema）
-> 审计日期：2026-07-11
-> 约束：仅调查与报告，零代码修改
+> 审计日期：2026-07-13
+> 产品基准：`JoyJoin_Master_PRD_V1.5_Codex执行版_已清理过时功能参考.docx`
+> Scope ID：`ALANG-V15-PHASE-B`
+> 代码范围：Mini Program、Server、Shared；不改盲盒、匹配、支付、现有 Tab 架构
 
----
+## 结论
 
-## 1. 真实文件路径确认
+阿浪已不是“待从零实现”的 Prototype。当前代码具备服务端剧情状态机、5 米稳定到达、故事归档、Discover/Profile 入口和单人测试门禁。V1.5 本轮在此基础上补齐腾讯地图 POI/逆解析/步行路线、阶段级坐标保密、服务端断点恢复，并只按 ACTIVE 03/05/06/07 校正对应页面。没有 ACTIVE Reference 的页面以仓库现有 UI 和正文规范为准。
 
-### 1.1 去发现 / Discover 页面
-- **主页面**：`apps/mini-program/src/pages/discover/index.tsx`（913 行，主 orchestrator）
-- **样式**：`apps/mini-program/src/pages/discover/index.scss`
-- **配置**：`apps/mini-program/src/pages/discover/index.config.ts`
-- **依赖组件**：
-  - `apps/mini-program/src/components/discover/OracleCard.tsx` — 活动卡片
-  - `apps/mini-program/src/components/discover/LocationFilterDrawer.tsx` — 区域筛选抽屉
-  - `apps/mini-program/src/components/discover/CityPickerSheet.tsx` — 城市选择器
-  - `apps/mini-program/src/components/discover/CityUnlockFeedCard.tsx` — 城市解锁入口
-  - `apps/mini-program/src/components/HeroPromoBanner.tsx` — 顶部横幅
-  - `apps/mini-program/src/components/VirtualList/index.tsx` — 虚拟列表
-  - `apps/mini-program/src/components/ui/StatusCard.tsx` — 空态/错误态卡片
+正式人物/场景插画尚未获批；页面当前只显示明确标注的占位图，不能对外宣称视觉资产完成。
 
-### 1.2 “我的”页面（Profile Tab）
-- **主页面**：`apps/mini-program/src/pages/profile/index.tsx`（498 行）
-- **样式**：`apps/mini-program/src/pages/profile/index.scss`
-- **子页面（subpackage）**：
-  - `apps/mini-program/src/pages/profile-linked/edit-profile/index.tsx`
-  - `apps/mini-program/src/pages/profile-linked/rewards/index.tsx`
-  - `apps/mini-program/src/pages/profile-linked/invite/index.tsx`
-  - `apps/mini-program/src/pages/profile-linked/terms/index.tsx`
-- **共享组件**：
-  - `apps/mini-program/src/components/profile/ProfileArchetypeHero.tsx`
-  - `apps/mini-program/src/components/profile/InterestChipCloud.tsx`
-  - `apps/mini-program/src/components/profile/ProfessionDisplayField.tsx`
+## Current → Target Delta Matrix
 
-### 1.3 “我的故事”入口与详情页
-- **搜索结果**：仓库中不存在任何名为 `story`、`stories`、`我的故事`、`narrative`、`剧情` 的页面或组件。
-- **结论**：该功能不存在，需从零新建。
+| 范围 | 修改前 | Word V1.5 目标 | 2026-07-13 状态 |
+| --- | --- | --- | --- |
+| Discover 入口 | 已有基础入口卡，视觉和任务选择不稳定 | ACTIVE 03；沿用现有 Discover 结构，优先继续进行中任务 | 已完成：进行中优先、单 CTA、Beta/隐私说明；未重做 Discover 或新增 Tab |
+| 事件列表/详情 | 基础列表；普通用户可能进入内部点位配置 | 无 ACTIVE Mockup；复用仓库 UI；正式用户直接进入寻找 | 已完成：普通用户逐条合法推进服务端节点后进入搜索；只有单人测试可进配置页 |
+| 搜索 | 距离 + 基础地图；本地调试坐标可能残留 | ACTIVE 05；距离为主；地图只显示用户本人 | 已完成：无阿浪 marker/circle/polyline；旧测试缓存仅在严格测试模式生效 |
+| 对话 | 通用聊天气泡 | 无 ACTIVE Mockup；角色与文字优先、固定选项、不得成为通用聊天机器人 | 已完成：移除通用聊天气泡；服务端进度恢复；未引入自由 AI 对话 |
+| 陪伴 | 只显示终点区域，无真实步行路线 | 无 ACTIVE Mockup；复用现有页面，用户点击后才显示路线、距离、ETA | 已完成：仅 companion 及以后阶段返回终点；点击后调用腾讯步行路线；失败不阻断 5 米判断 |
+| 结果/归档 | 结果与归档存在，但完成态恢复依赖档案列表 | 先看结果卡，再主动收录；未收录结果可恢复 | 已完成：`stage=result` 不自动归档；完成响应返回 `archiveId`；刷新继续服务端进度；结果日期取服务端到达/完成时间 |
+| 状态权威 | 多数页面读服务端进度，搜索页存在陈旧 URL 风险 | `myProgress`/archive 是唯一权威 | 已完成：搜索、对话、陪伴、结果均用服务端阶段纠正陈旧页面 |
+| 地图服务 | 逆解析 + IP 定位 | 复用腾讯地图，补 POI/联想/步行路线 | 已完成：沿用 `TENCENT_MAP_KEY` 与 `/api/geo`，未新增 SDK/provider/Key；POI/路线按用户限流，登录前逆解析/IP 定位共享按 IP 限流 |
+| 坐标契约 | Alang JSON 混用 `lat/lng` 与 `latitude/longitude` | GCJ-02；统一 `latitude/longitude` | 已完成：运行时/API 统一；持久化旧 JSON 在解析边界兼容归一化 |
+| 调试安全 | Debug API 已有测试门禁，客户端配置仍需 fail-closed | 普通用户不可到达内部点位配置 | 已完成：`APP_MODE` 未设置也按 production；生产残留 single-test env 不下发 test marker；非测试 Debug API 返回 404 |
+| 我的 / 我的故事 | 已有入口与阿浪故事详情 | ACTIVE 06/07；保留导航与成长档案结构，只接真实数据 | 已完成：复用既有 Profile/故事入口；未重做“我的”，未修改伙伴/装备完整页 |
+| 视觉参考治理 | 历史图混有当前、未来和废弃概念 | 只有 ACTIVE 03/05/06/07 可执行；04/08 FUTURE，09 REMOVED | 已完成：未新增多 NPC 地图、伙伴装备页或探索地图；无 ACTIVE 图的页面不再标成 Reference 延展 |
+| 视觉资产 | 三张通用占位图 | 按 manifest 接入获批资产；placeholder 不算完成 | **未完成**：已有 manifest、安全区与 Reference 状态，但批准状态仍为 `awaiting-approved-art` |
 
-### 1.4 地图组件
-- **搜索结果**：仓库中不存在任何 WeChat `<map>` 组件、腾讯地图 JS SDK 封装、或高德地图封装。
-- **已有地理能力**：
-  - `apps/mini-program/src/components/discover/LocationFilterDrawer.tsx` — 纯文本区域筛选（无地图）
-  - `apps/server/src/routes/domains/geo.ts` — 服务端反地理编码（腾讯地图 WebService API）
-  - `apps/server/src/services/ipGeolocationService.ts` — IP 定位服务
-- **结论**：无地图组件，需新建。
+## 复用与不变项
 
-### 1.5 定位权限与实时定位逻辑
-- **客户端**：
-  - `apps/mini-program/src/pages/discover/index.tsx:247` — `Taro.getLocation({ type: 'gcj02' })` 单次获取
-  - 权限拒绝处理：第 268–289 行，区分 `deny` / `timeout` / `error`
-  - IP 回退：`ipLocate(apiRequest)` 第 291–313 行
-- **服务端**：
-  - `apps/server/src/routes/domains/geo.ts` — `/api/geo/reverse-geocode` 与 `/api/geo/ip-locate`
-- **结论**：仅有单次 GPS 获取（非实时），无后台持续定位或 watch 逻辑。
+- 复用原生 Taro/WeChat `<Map>` 渲染，不引入腾讯地图 Mini Program SDK。
+- 复用服务端腾讯 WebService Key：`TENCENT_MAP_KEY`。
+- JoyJoin 的 5 米、连续稳定点位判断仍是到达真值；腾讯路线只负责展示路线、距离和 ETA。
+- 搜索阶段不会向客户端发送搜索目标、剧情 GPS trigger 或陪伴终点。
+- 剧情进度与档案继续持久化在 `alang_mission_progress`、`alang_story_archives`。
+- 未修改 Blind Box、Center、Profile 主架构、Tab、匹配算法、支付或数据库 DDL。
+- 明确排除 FUTURE 04 多 NPC 地图、FUTURE 08 伙伴/装备完整页与 REMOVED 09 探索地图。
 
-### 1.6 距离计算逻辑
-- **客户端**：无 haversine 或任何距离计算代码。
-- **服务端**：无距离计算代码。
-- **已有地理数据**：`packages/shared/src/districts.ts` 包含深圳各区的 bounding box（用于区域归属判断，非距离）。
-- **结论**：无距离计算能力，需新建。
+## 尚待外部验收
 
-### 1.7 内部测试账号或 Feature Flag
-- **Feature Flag 系统**：
-  - `apps/server/src/lib/featureFlags.ts` — DB-backed + env fallback，17 个已知 flag
-  - 客户端读取：`authUser.features.*`（由 `buildAuthUserResponse.ts` 注入）
-- **测试模式**：
-  - `apps/server/src/lib/isSingleTestMode.ts` — `ENABLE_SINGLE_TEST_MODE` / `APP_MODE=test`
-  - `apps/server/src/services/singleTestService.ts` — 虚拟用户 + 单人调试局
-  - `apps/server/src/services/matchingTestService.ts` — 匹配测试（bot 填充）
-  - `apps/mini-program/src/components/dev/SingleTestBanner.tsx` — Discover 页调试横幅（`appMode === 'test'`）
-- **Dev 工具路由**：`apps/server/src/routes/domains/devTools.ts` — `/api/dev/*`（创建 admin/用户、绕过测试等）
-- **结论**：已有完善的测试账号与 feature flag 基础设施，可直接复用。
+1. 设计团队提供并批准四类正式 WebP 资产；批准前保留“场景示意”标签。
+2. 在微信开发者工具和至少一台 iOS、一台 Android 真机验证定位授权、实时定位、原生 Map polyline、弱网和后台恢复。
+3. 部署环境确认 `TENCENT_MAP_KEY` 的 WebService 白名单/配额；不得把 Key 下发到小程序。
 
-### 1.8 Server 路由入口
-- **注册中心**：`apps/server/src/routes.ts` — 所有路由注册于此
-- **已有路由列表**（与 Alang 可能相关）：
-  - `registerGeoRoutes(app)` — 地理
-  - `registerDevToolRoutes(app)` — 开发工具
-  - `registerTestAdminRoutes(app)` — 测试管理
-  - `registerSingleTestRoutes(app)` — 单人测试
-  - `registerMatchingTestRoutes(app)` — 匹配测试
-  - `registerAnalyticsRoutes(app)` — 埋点
-  - `registerAuthRoutes(app)` — 认证
-- **结论**：新增 Alang 路由需在此注册。
+## 仓库级已知门禁
 
-### 1.9 数据库 Schema / Migration
-- **Schema 定义**：`packages/shared/src/schema/_definitions.ts`（1910 行，主表）
-- **扩展定义**：`packages/shared/src/schema/_definitions_extended.ts`（1659 行，扩展表）
-- **导出索引**：`packages/shared/src/schema/index.ts`
-- **已有相关表**：
-  - `users` — 用户主表（含 `isTestBot`, `appMode` 等）
-  - `eventPools`, `eventPoolGroups`, `eventPoolRegistrations` — 活动池
-  - `userLocationSnapshots`, `userLocationAggregates` — 用户位置快照（已有，但未用于实时追踪）
-  - `featureFlags` — 功能开关
-  - `socialIcebreakerSessions` — 破冰会话
-- **Migration 目录**：`apps/server/migrations/`（阿浪迁移为 `0062_military_spirit.sql`）
-- **结论**：Prototype 新增 `alangMissions`, `alangMissionProgress`, `alangStoryArchives` 三张表。
-
-### 1.10 Session 或任务状态保存机制
-- **客户端状态**：
-  - `Taro.setStorageSync` / `Taro.getStorageSync` — 本地存储（如 `discover_last_location`）
-  - TanStack Query + `persistentCache.ts` — 查询缓存持久化（4h TTL，75KB cap）
-- **服务端状态**：
-  - `express-session` + `connect-pg-simple` — 会话存储于 PostgreSQL
-  - 各业务表自有状态字段（如 `eventPoolRegistrations.matchStatus`）
-- **结论**：无专门的任务/剧情状态机表，需新建。
-
-### 1.11 现有 JSON 配置加载机制
-- **客户端**：
-  - `apps/mini-program/src/pages/onboarding/assets/archetypes/archetype-spritesheet.json` — 精灵图配置
-  - `apps/mini-program/src/lib/utils/routePreloadAssets.ts` — 路由级 CDN 预加载配置
-  - `apps/mini-program/src/lib/utils/onboardingPreload.ts` —  onboarding 资源预加载
-- **服务端**：
-  - 无独立 JSON 配置文件加载机制；数据均来自 DB 或 env var
-  - `packages/shared/src/districts.ts` — 深圳区域数据（TS 模块，非 JSON）
-  - `packages/shared/src/interests.ts` — 兴趣分类（TS 模块）
-- **结论**：服务端无动态 JSON 配置加载器，需新建或复用现有 TS 模块模式。
-
----
-
-## 2. 能力存在性判断
-
-| 能力 | 状态 | 证据 |
-|------|------|------|
-| 内部账号可见入口 | ✅ 已存在 | `SingleTestBanner`（`appMode === 'test'`）+ `isSingleTestMode()` |
-| 地图拖动选点 | ❌ 不存在 | 无 `<map>` 组件、无腾讯地图 JS SDK 封装 |
-| 实时 GPS 更新 | ❌ 不存在 | 仅单次 `Taro.getLocation`，无 `wx.onLocationChange` |
-| 5 米到达判定 | ❌ 不存在 | 无距离计算逻辑 |
-| 中途退出恢复 | ⚠️ 部分存在 | 客户端有 `persistentCache.ts`（查询缓存），但无任务级状态恢复 |
-| 故事完整回看 | ❌ 不存在 | 无故事/剧情相关页面或数据模型 |
-| 测试重置 | ✅ 已存在 | `cleanupSingleTestData()` + `/api/test/single-test/reset` |
-| 调试手动推进 | ✅ 已存在 | `/api/test/social-icebreaker/:id/force-phase`（TestAdmin） |
-| 内容 JSON 驱动 | ⚠️ 部分存在 | 客户端有 JSON 配置（spritesheet、preload），服务端无动态 JSON 内容驱动 |
-| 现有埋点与日志机制 | ✅ 已存在 | `discoverAnalytics.ts`（前端）+ `logger.ts`（后端）+ `telemetry` 路由 |
-
----
-
-## 3. 风险识别
-
-### 3.1 禁止重做的现有 UI
-- **Discover 页面**（`pages/discover/index.tsx`）：已高度工程化（913 行），含虚拟列表、区域筛选、城市解锁、Promo Banner、GPS 自动检测。Alang 入口应作为新增卡片/横幅插入，禁止重写页面框架。
-- **Profile 页面**（`pages/profile/index.tsx`）：已 redesign（2026-06-16），含 hero、成就、菜单行。Alang 入口应作为新增菜单行插入，禁止重写。
-- **Custom Tab Bar**（`native-custom-tab-bar/index.js`）：已历经 10+ 轮 hardening，任何改动需极度谨慎。
-- **LocationFilterDrawer / CityPickerSheet**：已稳定，可直接复用样式语言（`PickerShell` + `SelectableTile`）。
-
-### 3.2 只能接数据、不能改版的页面
-- **Event Detail**（`pages/event-detail/index.tsx`）：只读展示，Alang 不应介入。
-- **Pool Registration**（`pages/pool-registration/index.tsx`）：注册流程，Alang 不应介入。
-- **Matching Status**（`pages/matching-status/index.tsx`）：匹配状态机，Alang 不应介入。
-- **Icebreaker Session**（`pages/icebreaker-session/index.tsx`）：核心破冰流程，Alang 不应介入。
-- **Squad Unboxing**（`pages/squad-unboxing/index.tsx`）：揭晓流程，Alang 不应介入。
-
-### 3.3 可能被影响的现有流程
-- **Auth / Login**：若 Alang 需要独立登录态（如内部测试账号），需评估与现有 WeChat 登录的冲突。
-- **Feature Flags**：新增 `alangEnabled` flag 需加入 `FLAG_ENV_MAP` 和 `buildAuthUserResponse.ts` 的并行解析。
-- **Analytics**：新增 Alang 事件需加入 `discoverAnalytics.ts` 或新建 `alangAnalytics.ts`，避免污染现有事件命名空间。
-- **Database Migrations**：新增表使用显式 migration。Staging 不会自动执行 DDL；部署前必须对 `postgres-staging` 手动执行 `psql "$DATABASE_URL" -f apps/server/migrations/0062_military_spirit.sql`。
-- **Package Size**：WeChat 主包 2MB 限制。新增页面需评估是否放入 subpackage。
-
-### 3.4 是否需要新增数据库表或 Migration
-- **是**。至少需要：
-  - `alang_missions` — 任务定义（JSON 驱动内容）
-  - `alang_mission_progress` — 用户任务进度（状态机、GPS 坐标、完成时间）
-  - `alang_story_archives` — 完成后的故事档案（路径、选择、收尾文案）
-
-### 3.5 跨平台问题
-- **macOS 路径**：仓库使用 Windows 路径（`D:/Projects/...`），但代码中使用 Unix 路径（`/assets/...`）。无已知跨平台问题。
-- **环境变量**：
-  - `TENCENT_MAP_KEY` — 腾讯地图 WebService Key（已有）
-  - 若新增地图组件，需确认是否需要 **腾讯地图 JavaScript Key**（`TENCENT_MAP_JS_KEY`）— 目前仅 admin portal 使用，mini-program 未使用。
-- **WeChat 地图组件**：`<map>` 组件需要 `MapContext` 和 `getCenterLocation`，与现有 Taro 版本兼容需验证。
-- **旧配置**：无遗留 `hometown` 等已删除字段的引用风险。
-
----
-
-## 4. 不确定项（标记为 unknown）
-
-| 项 | 说明 |
-|----|------|
-| 阿浪内容创作流程 | 无文档或代码提及“阿浪”或“Alang”，内容生产流程未知 |
-| 目标用户规模 | 内部 Prototype 的预期并发/用户量未知 |
-| 是否需独立 Admin 后台 | 阿浪任务配置是否需要 Admin UI 未知 |
-| 与现有 Social Icebreaker 的交集 | 阿浪是否作为 icebreaker 的前置/后置环节未知 |
-| 地图组件精确坐标系 | 是否使用 `gcj02`（国测局）或 `wgs84` 未知；现有代码使用 `gcj02` |
-| 离线模式需求 | 阿浪是否需支持无网络场景未知 |
-
----
-
-## 5. 审计总结
-
-- **复用基础强**：测试账号体系、feature flag、埋点、GPS 单次获取、区域筛选 UI 均已成熟。
-- **缺失核心能力**：地图组件、实时 GPS、距离计算、故事状态机、JSON 内容驱动 均需新建。
-- **侵入性可控**：通过新增菜单行/卡片入口、新增 subpackage 页面、新增 DB 表实现，不改动现有核心流程。
-- **最大风险**：WeChat 包体积（2MB 限制）和地图组件在低端机上的性能表现。
+- 微信生产编译已成功完成 864 个模块；Alang 子包为 135.6KiB，低于 1.8MB 门禁。
+- 当前主包仍为 3.27MB，超过 2MB；最大来源是 1.46MB 的共享 assets。该问题早于本次 Alang 改动，需要单独进行跨功能 CDN/主包瘦身，不能通过删除 Alang 子包规避。
+- `check-package-size.mjs` 已修正为逐个子包比较上限，不再把所有子包的合计体积误报为单个子包超限。

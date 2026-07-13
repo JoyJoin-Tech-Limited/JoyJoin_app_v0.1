@@ -25,6 +25,7 @@
 - The **`圈子`** nav label — replaced by `连接`
 - **`会员 / VIP会员`** user-facing copy — replaced by `权益`
 - Any reference to the **`shared/` root folder** as the import source — use `packages/shared/src/` instead
+- The removed Alang **“探索地图” / Reference 09** surface. V1.5 allows ACTIVE 03/05/06/07 only; Reference 04/08 are future context and must not trigger implementation.
 - The **`/guide` page** as a core onboarding step — **removed**; the active onboarding steps after WeChat login are `/onboarding/setup`, `/onboarding/extended`, and `/onboarding/review`, then directly to `/discover`
 - **Demo code `666666`** — legacy phone-based login. Mini-program uses WeChat auth (`微信一键登录`) exclusively. Dev API testing uses `POST /api/auth/dev-login` (development-only). `createDemoDataForUser` in production — gated on `NODE_ENV !== 'production'`
 
@@ -288,6 +289,8 @@ Active domain modules in `routes/domains/`:
 | `helpers.ts` | Shared route helpers |
 | `matchingTest.ts` | `/api/test/matching-test/*` — seed matching-test bots, create test pool, trigger match, cleanup. Gated by `isMatchingTestMode()` (2026-06-24) |
 | `matchCompass.ts` | `GET /api/event-pools/:id/match-compass`, `PATCH /api/event-pool-registrations/:id/preferences`, `POST /api/users/me/preference-dna` — post-registration preference tuning |
+| `geo.ts` | `POST /api/geo/reverse-geocode`, `/ip-locate`, `/places/suggest`, `/places/search`, `/walking-route` — server-side Tencent Maps WebService proxy; GCJ-02 `latitude/longitude`, 4s timeout, bounded cache, stable `MAP_*` errors |
+| `alang.ts` | `/api/alang/*` mission/progress/GPS/archive API plus `/api/alang/debug/*` strict single-test routes. Search coordinates are redacted; `routeDestination` is companion-stage-only |
 | `adminGeolocation.ts` | `GET /api/admin/geolocation/heatmap`, `POST /api/admin/geolocation/rollup` — admin location analytics, gated by `requireSuperAdmin` |
 
 ---
@@ -1227,7 +1230,7 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | Variable | Purpose |
 |----------|---------|
 | `ADMIN_CREATE_SECRET_KEY` | Admin CLI bootstrap secret |
-| `TENCENT_MAP_KEY` | Tencent Maps WebService API key for reverse geocoding & IP定位 (server-side) |
+| `TENCENT_MAP_KEY` | Tencent Maps WebService API key for reverse geocoding, IP定位, POI suggestion/search, and walking routes (server-side only; never expose to mini-program) |
 | `TENCENT_MAP_JS_KEY` | Tencent Maps JavaScript API key for admin portal MapPicker |
 | `DEEPSEEK_API_KEY` | AI service (via integration); chat/completion only — DeepSeek has no embedding API |
 | `APP_URL` | Base public app URL; used as the fallback source for the WeChat Pay notify URL when `WECHAT_PAY_NOTIFY_URL` is unset |
@@ -1252,6 +1255,8 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | `PERSONALITY_DICE_CHOOSE_MODE_ENABLED` | `true` enables Choose-Your-Prompt variant: 3 difficulty-tiered dares per player, player picks one. `false` retains original single-dare flow |
 | `PROMO_BANNER_ENABLED` | `true` shows the discover hero promo banner; `false` kills the entire surface (zero-height spacer) and stops all `promo_banner_*` analytics. DB override via `/admin/feature-flags` (key `promoBannerEnabled`). Default `true` |
 | `ENABLE_MATCHING_TEST_MODE` | `true` enables `/api/test/matching-test/*` routes for end-to-end matching with seed bots + real tester payment. Requires `ENABLE_SINGLE_TEST_MODE=true`. Returns 403 in `APP_MODE=production`. Default `false` (2026-06-24) |
+| `ALANG_ENABLED` | Environment fallback for DB-backed `alangEnabled`; gates the Alang entry and `/api/alang/*`. Default `false` |
+| `ENABLE_SINGLE_TEST_MODE` | Enables non-production single-test surfaces. Alang internal point config/debug routes require this marker (or `APP_MODE=test`); production Alang debug routes stay 404 and auth fails client test mode closed |
 
 ### Auto-Populated (via Replit)
 

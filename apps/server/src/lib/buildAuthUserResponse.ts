@@ -151,7 +151,12 @@ const [
     getFeatureFlag('alangEnabled', false),
   ]);
 
-  const appMode: 'production' | 'test' = isSingleTestMode() ? 'test' : 'production';
+  // Never expose client debug surfaces in production, even if a stale
+  // ENABLE_SINGLE_TEST_MODE variable is accidentally present.
+  const appMode: 'production' | 'test' =
+    (process.env.APP_MODE ?? 'production') !== 'production' && isSingleTestMode()
+      ? 'test'
+      : 'production';
 
   const authUserResponse: AuthUserResponse = {
     ...sanitizeAuthUser(user),

@@ -195,6 +195,7 @@ function main() {
 
     // Subpackages
     let subpackageTotal = 0
+    const oversizedSubpackages = []
     for (const root of subpackageRoots) {
       const dirName = root.split('/').filter(Boolean)[1]
       if (!dirName) continue
@@ -205,6 +206,9 @@ function main() {
       const subSize = getZipSize(tmpSub)
       const displayName = dirName.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
       console.log(`${displayName.padEnd(21)} ${formatSize(subSize)} (limit: ${formatSize(SUBPACKAGE_MAX_BYTES)})`)
+      if (subSize > SUBPACKAGE_MAX_BYTES) {
+        oversizedSubpackages.push({ displayName, size: subSize })
+      }
       subpackageTotal += subSize
       fs.rmSync(tmpSub, { recursive: true, force: true })
     }
@@ -251,8 +255,11 @@ function main() {
       console.log(`PASS: Main package within ${formatSize(MAIN_PACKAGE_MAX_BYTES)}`)
     }
 
-    if (subpackageTotal > SUBPACKAGE_MAX_BYTES) {
-      console.error(`FAIL: Subpackage(s) exceed ${formatSize(SUBPACKAGE_MAX_BYTES)}`)
+    if (oversizedSubpackages.length > 0) {
+      const details = oversizedSubpackages
+        .map(({ displayName, size }) => `${displayName} (${formatSize(size)})`)
+        .join(', ')
+      console.error(`FAIL: Subpackage(s) exceed ${formatSize(SUBPACKAGE_MAX_BYTES)}: ${details}`)
       failed = true
     }
 

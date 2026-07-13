@@ -120,6 +120,29 @@ export async function updateMissionProgress(
   return row ?? null;
 }
 
+/**
+ * Compare-and-set transition for dialogue choices. Only the first request
+ * observing the expected node may advance it; concurrent stale choices fail.
+ */
+export async function updateMissionProgressIfCurrent(
+  progressId: string,
+  expectedNodeId: string,
+  updates: Partial<AlangMissionProgress>,
+): Promise<AlangMissionProgress | null> {
+  const [row] = await db
+    .update(alangMissionProgress)
+    .set({ ...updates, updatedAt: new Date() })
+    .where(
+      and(
+        eq(alangMissionProgress.id, progressId),
+        eq(alangMissionProgress.currentNodeId, expectedNodeId),
+        eq(alangMissionProgress.status, "in_progress"),
+      ),
+    )
+    .returning();
+  return row ?? null;
+}
+
 export async function archiveStory(
   data: InsertAlangStoryArchive
 ): Promise<{ archive: AlangStoryArchive; created: boolean }> {

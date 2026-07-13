@@ -2,93 +2,314 @@
 
 .alang-event-detail {
   min-height: 100dvh;
-  background: $color-bg;
+  padding-bottom: calc(196rpx + env(safe-area-inset-bottom));
+  background: $color-bg-warm-from;
+  box-sizing: border-box;
 
   &__hero {
     position: relative;
-    height: 420rpx;
+    height: 500rpx;
+    overflow: hidden;
+    background: $color-bg-tint-purple;
   }
 
   &__hero-image {
     width: 100%;
     height: 100%;
-  }
-
-  &__hero-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 32rpx;
-    background: linear-gradient(transparent, rgba(0,0,0,0.6));
-  }
-
-  &__hero-label {
-    color: rgba(255,255,255,0.8);
-    font-size: $font-size-sm;
     display: block;
-    margin-bottom: 8rpx;
+    transform: scale(1.015);
+  }
+
+  &__hero-wash {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba($color-primary-dark, 0.03) 18%, rgba($color-primary-dark, 0.76) 100%),
+      linear-gradient(90deg, rgba($color-primary-dark, 0.18), rgba($color-secondary, 0.05));
+    pointer-events: none;
+  }
+
+  &__hero-copy {
+    position: absolute;
+    right: $container-padding;
+    bottom: 46rpx;
+    left: $container-padding;
+  }
+
+  &__placeholder-label {
+    position: absolute;
+    right: 18rpx;
+    bottom: 16rpx;
+    z-index: 3;
+    padding: 7rpx 13rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.84);
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+  }
+
+  &__label-row {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+    margin-bottom: 14rpx;
+  }
+
+  &__hero-label,
+  &__beta {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42rpx;
+    padding: 3rpx 14rpx;
+    border: 1rpx solid rgba($color-surface, 0.4);
+    border-radius: $radius-pill;
+    background: rgba($color-primary-dark, 0.7);
+    color: $color-text-white;
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    line-height: 1;
+    box-sizing: border-box;
+  }
+
+  &__beta {
+    background: rgba($color-surface, 0.82);
+    color: $color-primary-dark;
+    font-family: $font-en-brand;
   }
 
   &__hero-title {
+    display: -webkit-box;
+    max-width: 620rpx;
+    overflow: hidden;
     color: $color-text-white;
-    font-size: $font-size-xl;
-    font-weight: 700;
+    font-family: $font-cn-display;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    line-height: 1.38;
+    text-shadow: 0 3rpx 14rpx rgba($color-text-primary, 0.35);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  &__hero-status {
     display: block;
+    margin-top: 14rpx;
+    color: rgba($color-surface, 0.9);
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    line-height: 1.4;
   }
 
   &__body {
-    padding: 32rpx;
+    position: relative;
+    margin-top: -24rpx;
+    padding: 38rpx $container-padding 52rpx;
+    border-radius: $card-radius $card-radius 0 0;
+    background: $color-bg-warm-from;
+  }
+
+  &__chapter {
+    display: block;
+    color: $color-primary-dark;
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    line-height: 1.4;
   }
 
   &__desc {
+    display: block;
+    margin-top: 12rpx;
+    color: $color-text-primary-warm;
+    font-family: $font-ui;
     font-size: $font-size-base;
+    line-height: 1.75;
+  }
+
+  &__facts {
+    display: flex;
+    align-items: stretch;
+    margin-top: 30rpx;
+    padding: 24rpx 26rpx;
+    border: 1rpx solid rgba($color-primary, 0.1);
+    border-radius: $card-radius-sm;
+    background: $color-surface;
+    box-shadow: $shadow-sm;
+  }
+
+  &__fact {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__fact-divider {
+    width: 1rpx;
+    margin: 0 24rpx;
+    background: $color-divider;
+  }
+
+  &__fact-label,
+  &__fact-value {
+    display: block;
+    font-family: $font-ui;
+  }
+
+  &__fact-label {
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+    line-height: 1.35;
+  }
+
+  &__fact-value {
+    margin-top: 7rpx;
+    overflow: hidden;
     color: $color-text-primary;
-    line-height: 1.6;
-    display: block;
-  }
-
-  &__meta {
-    margin-top: 24rpx;
-    padding: 24rpx;
-    background: rgba($color-primary, 0.06);
-    border-radius: 16rpx;
-  }
-
-  &__meta-item {
     font-size: $font-size-base;
-    color: $color-text-secondary;
+    font-weight: $font-weight-bold;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__privacy-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 20rpx;
+    margin-top: $spacing-md;
+    padding: 26rpx;
+    border-radius: $card-radius-sm;
+    background: $color-bg-tint-purple;
+  }
+
+  &__privacy-icon {
+    display: flex;
+    flex: 0 0 54rpx;
+    align-items: center;
+    justify-content: center;
+    width: 54rpx;
+    height: 54rpx;
+    border-radius: $radius-circle;
+    background: rgba($color-primary, 0.12);
+  }
+
+  &__privacy-icon-glyph {
+    color: $color-primary-dark;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    line-height: 1;
+  }
+
+  &__privacy-copy {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__privacy-title,
+  &__privacy-desc {
     display: block;
-    margin-bottom: 8rpx;
+    font-family: $font-ui;
+  }
+
+  &__privacy-title {
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    line-height: 1.4;
+  }
+
+  &__privacy-desc {
+    margin-top: 7rpx;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    line-height: 1.6;
   }
 
   &__action-bar {
     position: fixed;
+    z-index: 10;
+    right: 0;
     bottom: 0;
     left: 0;
-    right: 0;
-    padding: 24rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
+    padding: 20rpx $container-padding calc(18rpx + env(safe-area-inset-bottom));
+    border-top: 1rpx solid rgba($color-primary, 0.08);
     background: $color-surface;
-    box-shadow: 0 -4rpx 24rpx rgba(0,0,0,0.06);
+    box-shadow: $shadow-sheet;
   }
 
   &__cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14rpx;
+    min-height: $cta-min-tap;
+    padding: 14rpx 28rpx;
+    border-radius: $radius-pill;
     background: $color-primary;
-    border-radius: 48rpx;
-    padding: 28rpx 0;
+    box-shadow: $shadow-primary-soft;
+    box-sizing: border-box;
+    transition: transform 0.18s ease-out, box-shadow 0.18s ease-out;
+
+    &--pressed {
+      transform: scale(0.98);
+      box-shadow: 0 4rpx 16rpx rgba($color-primary-dark, 0.22);
+    }
+
+    &--disabled {
+      background: rgba($color-primary, 0.56);
+      box-shadow: none;
+    }
+  }
+
+  &__cta-text,
+  &__cta-arrow {
+    color: $color-text-white;
+    font-family: $font-ui;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    line-height: 1;
+  }
+
+  &__cta-arrow {
+    font-size: $font-size-lg;
+  }
+
+  &__action-note {
+    display: block;
+    margin-top: 10rpx;
+    color: $color-text-muted;
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    line-height: 1.4;
     text-align: center;
   }
 
-  &__cta-text {
-    color: $color-text-white;
-    font-size: $font-size-md;
-    font-weight: 600;
-  }
-
-  &__loading {
+  &__loading,
+  &__status-shell {
     min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: $container-padding;
+    background: $color-bg-warm-from;
+    box-sizing: border-box;
+  }
+
+  &__loading-text {
+    color: $color-text-secondary;
+    font-family: $font-ui;
+    font-size: $font-size-base;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alang-event-detail {
+    &__hero-image {
+      transform: none;
+    }
+
+    &__cta {
+      transition: none;
+    }
   }
 }

@@ -1,92 +1,228 @@
 @import '../../../styles/variables';
 
 .alang-companion {
-  min-height: 100dvh;
-  background: linear-gradient(180deg, $color-bg 0%, rgba($color-bg-tint-pink, 0.3) 100%);
-  display: flex;
-  flex-direction: column;
-  padding: 48rpx 32rpx;
+  height: 100dvh;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at 88% 3%, rgba($color-primary, 0.1), transparent 36%),
+    linear-gradient(180deg, $color-bg 0%, rgba($color-bg-tint-pink, 0.34) 100%);
+
+  &__content {
+    min-height: 100%;
+    box-sizing: border-box;
+    padding: 28rpx 28rpx calc(48rpx + env(safe-area-inset-bottom));
+  }
+
+  &__loading,
+  &__status-shell {
+    min-height: 100dvh;
+    box-sizing: border-box;
+    padding: 96rpx 32rpx;
+    background: $color-bg;
+    color: $color-text-secondary;
+  }
+
+  &__visual {
+    position: relative;
+    height: 330rpx;
+    overflow: hidden;
+    border-radius: 32rpx;
+    background: rgba($color-primary, 0.08);
+    box-shadow: 0 20rpx 56rpx rgba($color-text-primary, 0.1);
+  }
+
+  &__visual-image,
+  &__visual-wash {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__visual-wash {
+    background: linear-gradient(180deg, transparent 44%, rgba($color-text-primary, 0.42) 100%);
+  }
+
+  &__placeholder-label {
+    position: absolute;
+    right: 18rpx;
+    bottom: 16rpx;
+    padding: 8rpx 14rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.82);
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+  }
 
   &__atmosphere {
-    flex: 1;
+    padding: 36rpx 8rpx 8rpx;
+  }
+
+  &__eyebrow {
+    display: block;
+    margin-bottom: 10rpx;
+    color: $color-primary;
+    font-size: $font-size-sm;
+    font-weight: 600;
+    letter-spacing: 2rpx;
   }
 
   &__title {
-    font-size: $font-size-lg;
-    font-weight: 700;
-    color: $color-text-primary;
     display: block;
-    margin-bottom: 32rpx;
+    margin-bottom: 28rpx;
+    color: $color-text-primary;
+    font-size: $font-size-xl;
+    font-weight: 700;
+    line-height: 1.35;
   }
 
   &__line-wrap {
-    margin-bottom: 24rpx;
-    padding: 20rpx 24rpx;
-    background: rgba($color-primary, 0.06);
-    border-radius: 16rpx;
-    border-left: 4rpx solid $color-primary;
+    margin-bottom: 16rpx;
+    padding: 20rpx 22rpx;
+    border-left: 4rpx solid rgba($color-primary, 0.72);
+    border-radius: 6rpx 20rpx 20rpx 6rpx;
+    background: rgba($color-surface, 0.72);
   }
 
   &__line {
-    font-size: $font-size-base;
-    color: $color-text-primary;
-    line-height: 1.5;
     display: block;
+    color: $color-text-primary;
+    font-size: $font-size-base;
+    line-height: 1.7;
   }
 
   &__status {
-    margin: 32rpx 0;
+    margin-top: 24rpx;
+    padding: 30rpx 24rpx;
+    border: 2rpx solid rgba($color-primary, 0.1);
+    border-radius: 28rpx;
+    background: rgba($color-surface, 0.82);
     text-align: center;
   }
 
+  &__status-label,
+  &__status-note,
   &__distance {
-    font-size: $font-size-2xl;
-    font-weight: 700;
-    color: $color-primary;
     display: block;
   }
 
+  &__status-label,
+  &__status-note {
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+  }
+
+  &__distance {
+    margin: 8rpx 0;
+    color: $color-primary;
+    font-size: 54rpx;
+    font-weight: 700;
+    letter-spacing: -2rpx;
+  }
+
+  &__recovery {
+    margin-top: 20rpx;
+    padding: 24rpx;
+    border-radius: 24rpx;
+    background: rgba($color-warning, 0.1);
+  }
+
+  &__recovery-title,
+  &__recovery-copy {
+    display: block;
+  }
+
+  &__recovery-title {
+    color: $color-text-primary;
+    font-size: $font-size-base;
+    font-weight: 600;
+  }
+
+  &__recovery-copy {
+    margin-top: 8rpx;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+    line-height: 1.55;
+  }
+
+  &__recovery-btn {
+    display: inline-flex;
+    min-height: $cta-min-tap;
+    box-sizing: border-box;
+    margin-top: 18rpx;
+    padding: 14rpx 20rpx;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16rpx;
+    background: $color-primary;
+    color: $color-text-white;
+    font-size: $font-size-sm;
+    font-weight: 600;
+  }
+
   &__actions {
-    margin-bottom: 32rpx;
+    margin-top: 24rpx;
   }
 
   &__map-btn {
-    background: $color-surface;
-    border: 2rpx solid rgba($color-primary, 0.2);
-    border-radius: 48rpx;
+    display: flex;
+    min-height: $cta-min-tap;
+    box-sizing: border-box;
     padding: 24rpx 0;
+    align-items: center;
+    justify-content: center;
+    border: 2rpx solid rgba($color-primary, 0.24);
+    border-radius: 48rpx;
+    background: $color-surface;
     text-align: center;
   }
 
   &__map-btn-text {
-    font-size: $font-size-base;
     color: $color-primary;
-    font-weight: 500;
+    font-size: $font-size-base;
+    font-weight: 600;
   }
 
   &__arrival {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 48rpx 32rpx calc(48rpx + env(safe-area-inset-bottom));
+    margin: 26rpx -28rpx calc(-48rpx - env(safe-area-inset-bottom));
+    padding: 34rpx 32rpx calc(40rpx + env(safe-area-inset-bottom));
     background: $color-surface;
-    box-shadow: 0 -8rpx 48rpx rgba(0,0,0,0.1);
+    box-shadow: 0 -12rpx 52rpx rgba($color-text-primary, 0.08);
     text-align: center;
+    animation: alang-companion-arrival-enter 260ms ease-out both;
+  }
+
+  &__arrival-text,
+  &__arrival-note {
+    display: block;
   }
 
   &__arrival-text {
+    color: $color-text-primary;
     font-size: $font-size-xl;
     font-weight: 700;
-    color: $color-primary;
-    display: block;
-    margin-bottom: 24rpx;
+  }
+
+  &__arrival-note {
+    margin: 8rpx 0 22rpx;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
   }
 
   &__arrival-cta {
-    background: $color-primary;
+    display: flex;
+    min-height: $button-height;
+    box-sizing: border-box;
+    padding: 26rpx 0;
+    align-items: center;
+    justify-content: center;
     border-radius: 48rpx;
-    padding: 28rpx 0;
+    background: $color-primary;
+
+    &--disabled {
+      opacity: 0.58;
+      pointer-events: none;
+    }
   }
 
   &__arrival-cta-text {
@@ -97,8 +233,9 @@
 
   &__map-full {
     position: fixed;
-    inset: 0;
     z-index: 100;
+    inset: 0;
+    background: $color-bg;
   }
 
   &__map-full-map {
@@ -106,12 +243,76 @@
     height: 100%;
   }
 
+  &__map-panel {
+    position: absolute;
+    right: 24rpx;
+    bottom: calc(34rpx + env(safe-area-inset-bottom));
+    left: 24rpx;
+    padding: 24rpx 26rpx;
+    border-radius: 26rpx;
+    background: rgba($color-surface, 0.94);
+    box-shadow: 0 14rpx 48rpx rgba($color-text-primary, 0.14);
+  }
+
+  &__map-title,
+  &__map-detail,
+  &__map-warning {
+    display: block;
+  }
+
+  &__map-title {
+    color: $color-text-primary;
+    font-size: $font-size-md;
+    font-weight: 700;
+  }
+
+  &__map-detail {
+    margin-top: 8rpx;
+    color: $color-primary;
+    font-size: $font-size-base;
+    font-weight: 600;
+  }
+
+  &__map-warning {
+    margin-top: 8rpx;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+    line-height: 1.5;
+  }
+
   &__map-back {
     position: absolute;
-    top: 48rpx;
+    top: calc(36rpx + env(safe-area-inset-top));
     left: 24rpx;
-    background: rgba(0,0,0,0.6);
-    padding: 16rpx 32rpx;
+    display: flex;
+    min-height: $cta-min-tap;
+    box-sizing: border-box;
+    padding: 16rpx 24rpx;
+    align-items: center;
+    justify-content: center;
     border-radius: 32rpx;
+    background: rgba($color-text-primary, 0.72);
+    color: $color-text-white;
+    font-size: $font-size-sm;
+    font-weight: 600;
+  }
+}
+
+@keyframes alang-companion-arrival-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alang-companion * {
+    animation: none !important;
+    transition: none !important;
   }
 }

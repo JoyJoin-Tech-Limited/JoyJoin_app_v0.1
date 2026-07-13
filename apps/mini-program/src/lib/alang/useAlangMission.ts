@@ -51,6 +51,7 @@ export function useStartMission() {
                 choicesMade: data.choicesMade,
                 status: data.completed ? 'completed' : 'in_progress',
                 isDebugSession: false,
+                archiveId: data.archiveId,
               },
             }
           : current

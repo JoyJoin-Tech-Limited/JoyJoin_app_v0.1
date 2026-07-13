@@ -39,8 +39,8 @@
         "body": "阿浪就在附近。移动起来，距离会告诉你答案。"
       },
       "gpsTrigger": {
-        "lat": 22.518,
-        "lng": 113.944,
+        "latitude": 22.518,
+        "longitude": 113.944,
         "radiusMeters": 5
       },
       "nextNodeId": "found_alang"
@@ -166,8 +166,8 @@
         ]
       },
       "gpsTrigger": {
-        "lat": 22.519,
-        "lng": 113.945,
+        "latitude": 22.519,
+        "longitude": 113.945,
         "radiusMeters": 5
       },
       "nextNodeId": "arrival_gate"
@@ -234,13 +234,13 @@
     "npcName": "阿浪",
     "searchRadiusMeters": 100,
     "defaultTargetLocation": {
-      "lat": 22.518,
-      "lng": 113.944,
+      "latitude": 22.518,
+      "longitude": 113.944,
       "radiusMeters": 5
     },
     "defaultCompanionEndLocation": {
-      "lat": 22.519,
-      "lng": 113.945,
+      "latitude": 22.519,
+      "longitude": 113.945,
       "radiusMeters": 5
     }
   }

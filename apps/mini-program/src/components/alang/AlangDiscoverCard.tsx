@@ -5,6 +5,7 @@ import { useAlangMissions } from '../../lib/alang/useAlangMission'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { alangEvents } from '../../lib/alang/alangAnalytics'
 import { shouldShowAlangEntry } from '../../lib/alang/alangAccess'
+import { useAlangAssetSource } from '../../lib/alang/alangAssets'
 import { haptics } from '../../lib/utils/haptics'
 import './AlangDiscoverCard.scss'
 
@@ -12,53 +13,83 @@ export default function AlangDiscoverCard() {
   const { user } = useAuth()
   const isEnabled = shouldShowAlangEntry(user)
   const { data: missions, isLoading, isError } = useAlangMissions(isEnabled)
+  const artwork = useAlangAssetSource('eventHero')
 
   if (!isEnabled) return null
 
-  const mission = missions?.[0]
-  const title = mission?.title ?? '闪现 NPC｜阿浪'
-  const description = mission?.description
-    ?? (isError ? '阿浪暂时没回消息，点进来再试一次。' : '有人在等你，线索正在路上。')
-  const footerText = isLoading
-    ? '正在准备阿浪的线索…'
-    : mission?.status === 'in_progress'
-      ? '继续寻找阿浪 →'
-      : mission
-        ? '出发去找阿浪 →'
-        : '进入阿浪故事 →'
+  const mission = missions?.find(({ status }) => status === 'in_progress')
+    ?? missions?.find(({ status }) => status === 'not_started')
+    ?? missions?.[0]
+  const isContinuing = mission?.status === 'in_progress'
+  const storyTitle = mission?.title
+    ?? (isError ? '今晚的角色还没回信' : '附近有个角色，正等你出发')
+  const storyLine = mission?.description
+    ?? (isError
+      ? '先逛逛别处，稍后再回来看看。'
+      : '跟着接近提示，去遇见一段正在发生的城市故事。')
+  const ctaText = isLoading
+    ? '正在看看谁出现了…'
+    : isContinuing
+      ? '继续这段故事'
+      : mission?.status === 'completed'
+        ? '重温这段故事'
+        : '进入闪现'
 
   const handleTap = () => {
+    if (isLoading) return
     haptics('light')
     alangEvents.discoverCardTap()
     const url = mission
-      ? `${MINI_PROGRAM_ROUTES.alangEventDetail}?slug=${mission.slug}`
+      ? `${MINI_PROGRAM_ROUTES.alangEventDetail}?slug=${encodeURIComponent(mission.slug)}`
       : MINI_PROGRAM_ROUTES.alangEvent
     Taro.navigateTo({ url })
   }
 
   return (
-    <View
-      className='alang-discover-card'
-      hoverClass='alang-discover-card--pressed'
-      onClick={handleTap}
-      role='button'
-      aria-label={`${title}，${footerText}`}
-    >
-      <View className='alang-discover-card__visual'>
+    <View className='alang-discover-card' role='region' aria-label='闪现 Beta 城市探索体验'>
+      <View className='alang-discover-card__art' aria-hidden='true'>
         <Image
           className='alang-discover-card__image'
-          src='/assets/lovart/alang-event-card-placeholder.webp'
+          src={artwork.src}
           mode='aspectFill'
+          onError={artwork.onError}
         />
-        <View className='alang-discover-card__overlay'>
-          <Text className='alang-discover-card__badge'>内部测试</Text>
+        <View className='alang-discover-card__art-wash' />
+        <View className='alang-discover-card__character-beacon'>
+          <Text className='alang-discover-card__character-beacon-glyph'>✦</Text>
         </View>
+        {artwork.usingFallback && (
+          <Text className='alang-discover-card__placeholder-label'>活动场景示意</Text>
+        )}
       </View>
-      <View className='alang-discover-card__body'>
-        <Text className='alang-discover-card__title'>{title}</Text>
-        <Text className='alang-discover-card__desc'>{description}</Text>
-        <View className='alang-discover-card__footer'>
-          <Text className='alang-discover-card__footer-text'>{footerText}</Text>
+
+      <View className='alang-discover-card__content'>
+        <View className='alang-discover-card__brand-row'>
+          <View className='alang-discover-card__bolt' aria-hidden='true'>
+            <Text className='alang-discover-card__bolt-glyph'>⚡</Text>
+          </View>
+          <Text className='alang-discover-card__brand'>闪现</Text>
+          <Text className='alang-discover-card__beta'>Beta</Text>
+        </View>
+
+        <Text className='alang-discover-card__title'>{storyTitle}</Text>
+        <Text className='alang-discover-card__desc'>{storyLine}</Text>
+
+        <View className='alang-discover-card__privacy'>
+          <Text className='alang-discover-card__privacy-dot'>●</Text>
+          <Text className='alang-discover-card__privacy-text'>到达前只给接近提示，精确位置保持神秘</Text>
+        </View>
+
+        <View
+          className={`alang-discover-card__cta${isLoading ? ' alang-discover-card__cta--disabled' : ''}`}
+          hoverClass={isLoading ? '' : 'alang-discover-card__cta--pressed'}
+          onClick={handleTap}
+          role='button'
+          aria-label={ctaText}
+          aria-disabled={isLoading}
+        >
+          <Text className='alang-discover-card__cta-text'>{ctaText}</Text>
+          {!isLoading && <Text className='alang-discover-card__cta-arrow'>›</Text>}
         </View>
       </View>
     </View>

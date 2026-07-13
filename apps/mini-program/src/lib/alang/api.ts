@@ -70,8 +70,8 @@ export async function callDebugReset(slug: string) {
   return alangDebugReset(apiRequest, slug)
 }
 
-export async function callDebugMockGps(slug: string, lat: number, lng: number) {
-  return alangDebugMockGps(apiRequest, slug, lat, lng)
+export async function callDebugMockGps(slug: string, latitude: number, longitude: number) {
+  return alangDebugMockGps(apiRequest, slug, latitude, longitude)
 }
 
 // GPS helpers
@@ -109,14 +109,19 @@ export function startLocationChange(
   }
 }
 
-export function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
+export function haversine(
+  latitude1: number,
+  longitude1: number,
+  latitude2: number,
+  longitude2: number
+): number {
   const R = 6371000
-  const dLat = ((lat2 - lat1) * Math.PI) / 180
-  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const dLat = ((latitude2 - latitude1) * Math.PI) / 180
+  const dLng = ((longitude2 - longitude1) * Math.PI) / 180
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
+    Math.cos((latitude1 * Math.PI) / 180) *
+      Math.cos((latitude2 * Math.PI) / 180) *
       Math.sin(dLng / 2) ** 2
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
   return R * c

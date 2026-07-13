@@ -5,6 +5,7 @@ import type {
   AlangChoiceRequest,
   AlangArrivalResponse,
   AlangStoryArchiveSummary,
+  AlangCoordinate,
 } from "../alang/missionTypes.js";
 
 // API DTO types (mirrored from server route responses)
@@ -26,6 +27,12 @@ export interface AlangMissionDetail {
   title: string;
   description: string;
   content: unknown;
+  /**
+   * Companion destination is deliberately absent before the companion stage.
+   * The server owns that disclosure boundary; clients must not derive it from
+   * story content during search.
+   */
+  routeDestination?: AlangCoordinate;
   myProgress: {
     progressId: string;
     stage: string;
@@ -34,6 +41,9 @@ export interface AlangMissionDetail {
     choicesMade: Array<{ nodeId: string; choiceIndex: number; label: string }>;
     status: string;
     isDebugSession: boolean;
+    arrivedAt?: string;
+    completedAt?: string;
+    archiveId?: string;
   } | null;
 }
 
@@ -130,10 +140,15 @@ export function alangDebugReset(api: ApiTransport, slug: string): Promise<{ ok: 
   });
 }
 
-export function alangDebugMockGps(api: ApiTransport, slug: string, lat: number, lng: number): Promise<AlangArrivalResponse> {
+export function alangDebugMockGps(
+  api: ApiTransport,
+  slug: string,
+  latitude: number,
+  longitude: number,
+): Promise<AlangArrivalResponse> {
   return api<AlangArrivalResponse>({
     path: `/api/alang/debug/missions/${slug}/mock-gps`,
     method: "POST",
-    data: { lat, lng },
+    data: { latitude, longitude },
   });
 }

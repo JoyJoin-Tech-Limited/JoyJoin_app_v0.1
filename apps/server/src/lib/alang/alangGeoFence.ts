@@ -26,13 +26,20 @@ export function haversine(lat1: number, lng1: number, lat2: number, lng2: number
 }
 
 export function checkGpsArrival(
-  userLat: number,
-  userLng: number,
-  target: { lat: number; lng: number; radiusMeters?: number },
+  userLatitude: number,
+  userLongitude: number,
+  target: { latitude: number; longitude: number; radiusMeters?: number },
   history: AlangGpsPoint[]
 ): GpsArrivalResult {
-  const radiusMeters = target.radiusMeters ?? ALANG_ARRIVAL_RADIUS_METERS;
-  const distanceMeters = haversine(userLat, userLng, target.lat, target.lng);
+  // PRD invariant: story content and debug payloads may never widen the
+  // server-authoritative arrival fence.
+  const radiusMeters = ALANG_ARRIVAL_RADIUS_METERS;
+  const distanceMeters = haversine(
+    userLatitude,
+    userLongitude,
+    target.latitude,
+    target.longitude,
+  );
 
   if (distanceMeters > radiusMeters) {
     return { arrived: false, distanceMeters, radiusMeters, stableCount: 0 };
@@ -43,7 +50,12 @@ export function checkGpsArrival(
   let stableCount = 0;
   for (let i = recent.length - 1; i >= 0; i--) {
     const p = recent[i];
-    const d = haversine(p.lat, p.lng, target.lat, target.lng);
+    const d = haversine(
+      p.latitude,
+      p.longitude,
+      target.latitude,
+      target.longitude,
+    );
     const accuracyIsStable = p.accuracy === undefined || p.accuracy <= ALANG_GPS_DESIRED_ACCURACY;
     if (d <= radiusMeters && accuracyIsStable) {
       stableCount++;

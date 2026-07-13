@@ -29,6 +29,16 @@ const MINI_PROGRAM_PRELOAD_RULE_CONFIG = Object.fromEntries(
 
 export default defineAppConfig({
   lazyCodeLoading: 'requiredComponents',
+  permission: {
+    'scope.userLocation': {
+      desc: '用于寻找附近的城市人物、判断到达状态和规划陪伴路线',
+    },
+  },
+  requiredPrivateInfos: [
+    'getLocation',
+    'startLocationUpdate',
+    'onLocationChange',
+  ],
   pages: [...MINI_PROGRAM_MAIN_PACKAGE_PAGES],
   subPackages: MINI_PROGRAM_SUBPACKAGES_CONFIG,
   preloadRule: MINI_PROGRAM_PRELOAD_RULE_CONFIG,

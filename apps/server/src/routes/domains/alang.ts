@@ -11,6 +11,7 @@ import {
   getMissionProgresses,
   createMissionProgress,
   updateMissionProgress,
+  updateMissionProgressIfCurrent,
   archiveStory,
   getStoryArchivesByUser,
   getStoryArchiveById,
@@ -27,9 +28,16 @@ import {
   computeStageFromNodeType,
   isGpsNode,
 } from "../../lib/alang/alangGeoFence";
-import type { AlangGpsPoint } from "@shared/alang/missionTypes";
+import {
+  canRevealCompanionDestination,
+  redactMissionCoordinates,
+} from "../../lib/alang/alangDisclosure";
+import { resolveAlangArrivalTarget } from "../../lib/alang/alangTargetResolver";
+import {
+  alangGpsPointSchema,
+  type AlangGpsPoint,
+} from "@shared/alang/missionTypes";
 import type { AlangMission, AlangMissionProgress } from "@shared/schema";
-import type { MissionContent } from "@shared/alang/contentSchema";
 import {
   ALANG_ARRIVAL_MIN_STABLE_COUNT,
   ALANG_ARRIVAL_RADIUS_METERS,
@@ -45,7 +53,7 @@ async function gateAlangEnabled(res: Response): Promise<boolean> {
 }
 
 export function isAlangDebugMode(): boolean {
-  return process.env.APP_MODE !== "production" && isSingleTestMode();
+  return (process.env.APP_MODE ?? "production") !== "production" && isSingleTestMode();
 }
 
 async function gateAlangDebug(res: Response): Promise<boolean> {
@@ -65,21 +73,12 @@ function requestLogger(req: Request) {
   return logger.child({ request_id: req.requestId });
 }
 
-function redactMissionCoordinates(content: MissionContent): MissionContent {
-  const meta = content.meta ? { ...content.meta } : undefined;
-  if (meta) {
-    delete meta.defaultTargetLocation;
-    delete meta.defaultCompanionEndLocation;
-  }
-  return {
-    ...content,
-    meta,
-    nodes: content.nodes.map((node) => {
-      const safeNode = { ...node };
-      delete safeNode.gpsTrigger;
-      return safeNode;
-    }),
-  };
+function normalizeGpsHistory(value: unknown): AlangGpsPoint[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((point) => {
+    const parsed = alangGpsPointSchema.safeParse(point);
+    return parsed.success ? [parsed.data] : [];
+  });
 }
 
 export function registerAlangRoutes(app: Express): void {
@@ -145,6 +144,12 @@ export function registerAlangRoutes(app: Express): void {
 
       const content = await loadMissionContent(slug);
       const progress = await getMissionProgress(userId, mission.id);
+      const completedArchive = progress?.status === "completed"
+        ? await getStoryArchiveByProgressId(progress.id)
+        : null;
+      const routeDestination = canRevealCompanionDestination(progress) && content
+        ? resolveAlangArrivalTarget({ mission, content, kind: "companion" })
+        : null;
 
       res.json({
         id: mission.id,
@@ -152,6 +157,12 @@ export function registerAlangRoutes(app: Express): void {
         title: mission.title,
         description: mission.description,
         content: content ? redactMissionCoordinates(content) : null,
+        routeDestination: routeDestination
+          ? {
+              latitude: routeDestination.latitude,
+              longitude: routeDestination.longitude,
+            }
+          : undefined,
         myProgress: progress
           ? {
               progressId: progress.id,
@@ -161,6 +172,9 @@ export function registerAlangRoutes(app: Express): void {
               choicesMade: progress.choicesMade ?? [],
               status: progress.status,
               isDebugSession: progress.isDebugSession,
+              arrivedAt: progress.arrivedAt?.toISOString(),
+              completedAt: progress.completedAt?.toISOString(),
+              archiveId: completedArchive?.id,
             }
           : null,
       });
@@ -346,9 +360,9 @@ export function registerAlangRoutes(app: Express): void {
         accuracy: z.number().nonnegative().optional(),
         timestamp: z.number(),
         targetOverride: z.object({
-          lat: z.number().min(-90).max(90),
-          lng: z.number().min(-180).max(180),
-          radiusMeters: z.number().min(1).max(500),
+          latitude: z.number().min(-90).max(90),
+          longitude: z.number().min(-180).max(180),
+          radiusMeters: z.literal(ALANG_ARRIVAL_RADIUS_METERS),
         }).optional(),
       })
       .safeParse(req.body);
@@ -383,34 +397,38 @@ export function registerAlangRoutes(app: Express): void {
       }
 
       const gpsPoint: AlangGpsPoint = {
-        lat: parse.data.latitude,
-        lng: parse.data.longitude,
+        latitude: parse.data.latitude,
+        longitude: parse.data.longitude,
         ts: parse.data.timestamp,
         accuracy: parse.data.accuracy,
       };
 
       // Arrival only needs the latest stability window; never retain a route trace.
       const gpsHistory = [
-        ...(progress.gpsHistory ?? []).slice(-(ALANG_ARRIVAL_MIN_STABLE_COUNT - 1)),
+        ...normalizeGpsHistory(progress.gpsHistory)
+          .slice(-(ALANG_ARRIVAL_MIN_STABLE_COUNT - 1)),
         gpsPoint,
       ];
       // Test-point overrides are never trusted outside strict single-test mode.
       const debugTargetOverride = isAlangDebugMode() && parse.data.targetOverride
-        ? { ...parse.data.targetOverride, radiusMeters: ALANG_ARRIVAL_RADIUS_METERS }
-        : undefined;
-      const target = debugTargetOverride
-        ?? currentNode.gpsTrigger
-        ?? mission.targetLocation;
+        ? parse.data.targetOverride
+        : null;
+      const target = debugTargetOverride ?? resolveAlangArrivalTarget({
+        mission,
+        content,
+        kind: currentNode.type === "companion_move" ? "companion" : "search",
+        currentNode,
+      });
       if (!target) {
         res.status(500).json({ error: "NO_TARGET_LOCATION" });
         return;
       }
 
       const arrival = checkGpsArrival(
-        gpsPoint.lat,
-        gpsPoint.lng,
-        target as { lat: number; lng: number; radiusMeters?: number },
-        gpsHistory as AlangGpsPoint[]
+        gpsPoint.latitude,
+        gpsPoint.longitude,
+        target,
+        gpsHistory,
       );
 
       let updates: Partial<typeof progress> = {
@@ -528,12 +546,20 @@ export function registerAlangRoutes(app: Express): void {
       const nextNode = getNodeById(content, choice.nextNodeId);
       const stage = computeStageFromNodeType(nextNode?.type ?? "unknown");
 
-      await updateMissionProgress(progress.id, {
+      const updated = await updateMissionProgressIfCurrent(
+        progress.id,
+        parse.data.nodeId,
+        {
         currentNodeId: choice.nextNodeId,
         nodeHistory,
         choicesMade,
         stage,
-      });
+        },
+      );
+      if (!updated) {
+        res.status(409).json({ error: "CHOICE_UPDATE_CONFLICT" });
+        return;
+      }
 
       res.json({
         nextNodeId: choice.nextNodeId,
@@ -675,7 +701,7 @@ export function registerAlangRoutes(app: Express): void {
         archiveId: archive.id,
         created,
       });
-      res.json({ archiveId: archive.id, completed: !created });
+      res.json({ archiveId: archive.id, completed: true });
     } catch (error: any) {
       requestLogger(req).error("[Alang] complete error", { slug, error: error?.message });
       res.status(500).json({ error: "FAILED_TO_COMPLETE" });
@@ -869,7 +895,10 @@ export function registerAlangRoutes(app: Express): void {
     if (!userId) return;
 
     const { slug } = req.params;
-    const parse = z.object({ lat: z.number(), lng: z.number() }).safeParse(req.body);
+    const parse = z.object({
+      latitude: z.number().min(-90).max(90),
+      longitude: z.number().min(-180).max(180),
+    }).safeParse(req.body);
     if (!parse.success) {
       res.status(400).json({ error: "INVALID_INPUT" });
       return;
@@ -900,28 +929,34 @@ export function registerAlangRoutes(app: Express): void {
         return;
       }
 
-      const target = currentNode.gpsTrigger ?? mission.targetLocation;
+      const target = resolveAlangArrivalTarget({
+        mission,
+        content,
+        kind: currentNode.type === "companion_move" ? "companion" : "search",
+        currentNode,
+      });
       if (!target) {
         res.status(500).json({ error: "NO_TARGET_LOCATION" });
         return;
       }
 
       const gpsPoint: AlangGpsPoint = {
-        lat: parse.data.lat,
-        lng: parse.data.lng,
+        latitude: parse.data.latitude,
+        longitude: parse.data.longitude,
         ts: Date.now(),
         accuracy: 1,
       };
 
       const gpsHistory = [
-        ...(progress.gpsHistory ?? []).slice(-(ALANG_ARRIVAL_MIN_STABLE_COUNT - 1)),
+        ...normalizeGpsHistory(progress.gpsHistory)
+          .slice(-(ALANG_ARRIVAL_MIN_STABLE_COUNT - 1)),
         gpsPoint,
       ];
       const arrival = checkGpsArrival(
-        gpsPoint.lat,
-        gpsPoint.lng,
-        target as { lat: number; lng: number; radiusMeters?: number },
-        gpsHistory as AlangGpsPoint[]
+        gpsPoint.latitude,
+        gpsPoint.longitude,
+        target,
+        gpsHistory,
       );
 
       let updates: Partial<typeof progress> = {

@@ -1,7 +1,7 @@
 # JoyJoin (悦聚·Joy) - Product Requirements Document
 
-**Version:** 1.6  
-**Last Updated:** 2026-07-09  
+**Version:** 1.7
+**Last Updated:** 2026-07-13
 **Platform:** WeChat Mini Program (Taro) — launch-primary  
 **Reference Surface:** Web (React + Vite) — development sandbox / parity reference only, not shipping  
 **Target Market:** Hong Kong & Shenzhen  
@@ -77,9 +77,20 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-07-09)
+## 🆕 Recent Updates (Last updated: 2026-07-13)
 
 ### 2026 Milestones (June 2026)
+
+**51. 闪现 NPC｜阿浪 V1.5 — 腾讯地图复用、服务端恢复与视觉参考治理** *(2026-07-13)*
+- **Scope:** Mini Program `pages/alang` subpackage、Discover/Profile 入口、Alang 服务端状态机与现有 `/api/geo` 腾讯地图代理。
+- **Flow:** Discover/我的故事 → 事件详情 → 距离搜索 → 非聊天气泡叙事选择 → 陪伴步行 → 5 米稳定到达 → 结果卡 → 用户主动收录。搜索、对话、陪伴和结果页均以服务端 `myProgress` 纠正陈旧 URL；未收录的 `stage=result` 刷新后仍回到结果卡。
+- **Location secrecy:** 搜索阶段不向客户端返回任务目标、剧情 `gpsTrigger`、陪伴终点或路线；辅助 Map 只显示用户本人。`routeDestination` 只在 `companion` 及以后阶段披露，且路线仅在用户点击后请求。
+- **Tencent Maps reuse:** 沿用 `TENCENT_MAP_KEY` 和原生 WeChat/Taro Map；`/api/geo` 新增 POI 联想、附近搜索和步行路线，含登录态、每用户限流、4 秒超时、受限 TTL/LRU 缓存、polyline 点数上限及稳定错误码。腾讯路线只负责 polyline/距离/ETA；JoyJoin 服务端固定 5 米连续稳定判断仍是到达权威。
+- **Coordinate contract:** GCJ-02，API/运行时只使用 `latitude/longitude`。旧 JSONB `{lat,lng}` 在解析边界兼容归一化；本轮无数据库 DDL 或 migration。
+- **Debug safety:** 内部点位配置只对严格 single-test 客户端开放；非测试 Debug API 返回 404；`APP_MODE` 缺失按 production 处理，生产环境即使误留 single-test env 也不会下发客户端 test marker。
+- **Visual governance:** 只以 ACTIVE 03 Discover、05 寻找阿浪、06 我的、07 我的故事作为当前视觉依据。FUTURE 04 多 NPC 地图、08 伙伴/装备完整页不实现；REMOVED 09 探索地图不得新增、恢复或引用。无 ACTIVE 图的页面沿用仓库现有 UI。
+- **Visual status:** 四类正式人物/场景图仍为 `awaiting-approved-art`，当前 bundled 图均明确标注“场景示意”，不得宣称视觉资产完成。
+- **Canonical implementation docs:** `docs/alang-prototype/repository-audit.md`、`implementation-map.md`、`assets-required.md`。
 
 **50. Operator Review Gate for Matching** *(2026-07-09)*
 - **Scope:** Server-side matching review gate and admin review queue.

@@ -1,9 +1,11 @@
 @import '../../../styles/variables';
 
 .alang-result {
+  min-height: 100vh;
   min-height: 100dvh;
+  box-sizing: border-box;
   background: $color-bg;
-  padding: 32rpx 24rpx;
+  padding: 32rpx 24rpx calc(env(safe-area-inset-bottom) + 40rpx);
 
   &__card {
     background: $color-surface;
@@ -32,12 +34,24 @@
   }
 
   &__card-visual {
+    position: relative;
     height: 300rpx;
   }
 
   &__card-image {
     width: 100%;
     height: 100%;
+  }
+
+  &__placeholder-label {
+    position: absolute;
+    right: 16rpx;
+    bottom: 14rpx;
+    padding: 7rpx 13rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.84);
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
   }
 
   &__card-body {
@@ -71,10 +85,22 @@
   }
 
   &__cta {
+    display: flex;
+    min-height: 88rpx;
+    align-items: center;
+    justify-content: center;
     background: $color-primary;
     border-radius: 48rpx;
-    padding: 28rpx 0;
     text-align: center;
+    transition: opacity 180ms ease-out, transform 180ms ease-out;
+
+    &--pressed {
+      transform: scale(0.985);
+    }
+
+    &--disabled {
+      opacity: 0.58;
+    }
   }
 
   &__cta-text {
@@ -84,12 +110,16 @@
   }
 
   &__completed {
+    min-height: 100vh;
     min-height: 100dvh;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 48rpx;
+    padding: calc(env(safe-area-inset-top) + 48rpx) 48rpx calc(env(safe-area-inset-bottom) + 48rpx);
+    background: $color-bg;
+    animation: alang-result-archive 280ms ease-out both;
   }
 
   &__completed-title {
@@ -114,20 +144,69 @@
   }
 
   &__completed-btn {
+    display: flex;
+    min-height: 88rpx;
+    align-items: center;
+    justify-content: center;
     background: $color-primary;
     border-radius: 48rpx;
     padding: 24rpx 48rpx;
+    transition: transform 180ms ease-out;
+
+    &--pressed {
+      transform: scale(0.98);
+    }
 
     &--secondary {
       background: $color-surface;
       border: 2rpx solid rgba($color-primary, 0.2);
+
+      .alang-result__completed-btn-text {
+        color: $color-primary;
+      }
     }
   }
 
+  &__completed-btn-text {
+    color: $color-text-white;
+    font-size: 28rpx;
+    font-weight: 600;
+  }
+
   &__loading {
+    min-height: 100vh;
     min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  &__status-shell {
+    min-height: 100vh;
+    min-height: 100dvh;
+    box-sizing: border-box;
+    padding: 96rpx 32rpx calc(env(safe-area-inset-bottom) + 48rpx);
+    background: $color-bg;
+  }
+}
+
+@keyframes alang-result-archive {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alang-result__completed,
+  .alang-result__cta,
+  .alang-result__completed-btn {
+    animation: none;
+    transition: none;
   }
 }

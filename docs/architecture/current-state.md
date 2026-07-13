@@ -99,6 +99,23 @@ Boundary:
 - Mini-program payment verification remains separate under `apps/mini-program/src/pages/payment-verification/index.tsx`; keep the JSAPI in-program payment flow there as the canonical launch-primary flow. The browser H5 confirmation path is reference-only.
 - Mini-program personality-test results live in `apps/mini-program/src/pages/onboarding/personality-test/results/index.tsx`; keep reveal replay, native share hooks, and the poster composition helper in `apps/mini-program/src/pages/onboarding/personality-test/results/sharePoster.ts` inside that Taro onboarding surface rather than moving them into server or shared runtime modules.
 
+### 2a. 闪现 NPC｜阿浪 V1.5
+
+**Authority chain**
+1. `apps/server/src/routes/domains/alang.ts` owns mission transitions, GPS reports, completion, and archive identity.
+2. `apps/server/src/lib/alang/alangDisclosure.ts` removes all search/trigger coordinates and releases `routeDestination` only from the companion stage onward; `alangTargetResolver.ts` supplies the same canonical endpoint to route display and GPS.
+3. `packages/shared/src/alang/` and `packages/shared/src/api/alang.ts` own the GCJ-02 `latitude/longitude` contract and legacy JSON normalization.
+4. `apps/mini-program/src/pages/alang/` reads `myProgress` on foreground recovery and replaces stale pages according to the server stage.
+
+**Map boundary**
+- Native Taro/WeChat Map renders the client view; `apps/server/src/routes/domains/geo.ts` reuses `TENCENT_MAP_KEY` for reverse geocoding, POI suggestion/search, and walking routes.
+- Search Map receives only the user's current location. The companion route is fetched only after explicit user action.
+- Tencent walking distance/ETA is presentational. `alangGeoFence.ts` (5 m + consecutive stable reports) remains arrival authority.
+- Alang config/debug pages and target overrides are strict non-production single-test surfaces.
+- Visual implementation is limited to ACTIVE 03/05/06/07. FUTURE 04/08 and REMOVED 09 are not active code surfaces.
+
+Canonical implementation and rollback notes: `docs/alang-prototype/implementation-map.md`.
+
 ### 3. Social Icebreaker
 
 **Shared contract**
@@ -197,7 +214,7 @@ Boundary:
 
 ### Mini Program (Taro — launch-primary)
 
-- **Page registration:** `apps/mini-program/src/lib/onboarding/onboardingRoutes.ts` defines `MINI_PROGRAM_MAIN_PACKAGE_PAGES`, the subpackages (`root: pages/onboarding`, `pages/pool-registration`, `pages/matching-status`, `pages/icebreaker-session`), and `preloadRule` entries; `app.config.ts` imports these — edit onboardingRoutes when adding routes or changing package splits.
+- **Page registration:** `apps/mini-program/src/lib/onboarding/onboardingRoutes.ts` defines `MINI_PROGRAM_MAIN_PACKAGE_PAGES`, the subpackages (`root: pages/onboarding`, `pages/pool-registration`, `pages/matching-status`, `pages/icebreaker-session`, `pages/alang`), and `preloadRule` entries; `app.config.ts` imports these — edit onboardingRoutes when adding routes or changing package splits.
 - Taro page implementations: `apps/mini-program/src/pages/`
 - Mini Program runtime helpers: `apps/mini-program/src/lib/` — domain subdirectories: `api/`, `auth/`, `payment/`, `onboarding/`, `navigation/`, `wechat/`, `matching/`, `mascot/`, `analytics/`, `utils/`
 - Mini Program hook: `apps/mini-program/src/hooks/`

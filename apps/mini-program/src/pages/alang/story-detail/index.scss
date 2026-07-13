@@ -1,12 +1,22 @@
 @import '../../../styles/variables';
 
 .alang-story-detail {
+  min-height: 100vh;
   min-height: 100dvh;
+  box-sizing: border-box;
   background: $color-bg;
-  padding: 32rpx 24rpx;
+  padding: 32rpx 24rpx calc(env(safe-area-inset-bottom) + 40rpx);
 
   &__header {
     margin-bottom: 32rpx;
+  }
+
+  &__status-shell {
+    min-height: 100vh;
+    min-height: 100dvh;
+    box-sizing: border-box;
+    padding: 96rpx 32rpx calc(env(safe-area-inset-bottom) + 48rpx);
+    background: $color-bg;
   }
 
   &__title {
@@ -34,10 +44,22 @@
   }
 
   &__hero {
+    position: relative;
     height: 300rpx;
     border-radius: 24rpx;
     overflow: hidden;
     margin-bottom: 32rpx;
+  }
+
+  &__placeholder-label {
+    position: absolute;
+    right: 16rpx;
+    bottom: 14rpx;
+    padding: 7rpx 13rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.84);
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
   }
 
   &__hero-image {
@@ -105,6 +127,7 @@
   }
 
   &__loading {
+    min-height: 100vh;
     min-height: 100dvh;
     display: flex;
     align-items: center;

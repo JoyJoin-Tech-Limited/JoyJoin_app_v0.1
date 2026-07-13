@@ -136,7 +136,8 @@ Primary files:
 - `apps/server/src/routes/domains/adminMatchingReview.ts` — operator review queue for formed match groups: list pools, list groups, approve, reject
 - `apps/server/src/lib/matchingPostMatchEffects.ts` — shared post-match side-effect runner used by auto-match and admin approval
 - `apps/server/src/routes/domains/adminGeolocation.ts` — `GET /api/admin/geolocation/heatmap`, `POST /api/admin/geolocation/rollup` — location snapshot analytics, gated by `requireSuperAdmin`
-- `apps/server/src/routes/domains/geo.ts` — `POST /api/geo/reverse-geocode`, `POST /api/geo/ip-locate` (Tencent Maps WebService), and admin-gated `GET /api/config/map` (returns Tencent Maps JS key)
+- `apps/server/src/routes/domains/geo.ts` — Tencent Maps WebService proxy: `POST /api/geo/reverse-geocode`, `/ip-locate`, `/places/suggest`, `/places/search`, `/walking-route`; GCJ-02 `latitude/longitude`, authenticated + rate-limited metered proxies, stable `MAP_*` errors, 4 s upstream timeout, bounded cache/polyline. Also owns admin-gated `GET /api/config/map` for the separate Admin MapPicker JS key.
+- `apps/server/src/routes/domains/alang.ts` — `/api/alang/*` mission/progress/GPS/archive state machine and strict single-test debug routes. `lib/alang/alangDisclosure.ts` removes search coordinates; `lib/alang/alangTargetResolver.ts` gives route display and GPS one canonical endpoint; `lib/alang/alangGeoFence.ts` enforces the fixed 5 m arrival authority.
 - `apps/server/src/routes/domains/adminUsers.ts` — `GET /api/admin/users`, `GET /api/admin/users/:id`, `GET /api/admin/users/:id/detail`, `PATCH /api/admin/users/:id/ban`, `PATCH /api/admin/users/:id/unban`, `DELETE /api/admin/users/:id/data` — user list/detail, moderation actions (operator+), and GDPR-style data deletion
 - `apps/server/src/adminAuth.ts`
 - `apps/server/src/lib/adminAuditLogger.ts`

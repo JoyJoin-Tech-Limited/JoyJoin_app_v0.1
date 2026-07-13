@@ -82,4 +82,28 @@ describe("buildAuthUserResponse Alang feature exposure", () => {
       expect(mockGetRoleResult).not.toHaveBeenCalled();
     }
   );
+
+  it("fails client debug mode closed in production even when the single-test flag is stale", async () => {
+    process.env.APP_MODE = "production";
+    process.env.ENABLE_SINGLE_TEST_MODE = "true";
+    mockGetFeatureFlag.mockImplementation(
+      async (_key: string, defaultValue: boolean) => defaultValue
+    );
+
+    const response = await buildAuthUserResponse(mockUser.id);
+
+    expect(response?.appMode).toBe("production");
+  });
+
+  it("fails client debug mode closed when APP_MODE is unset", async () => {
+    delete process.env.APP_MODE;
+    process.env.ENABLE_SINGLE_TEST_MODE = "true";
+    mockGetFeatureFlag.mockImplementation(
+      async (_key: string, defaultValue: boolean) => defaultValue
+    );
+
+    const response = await buildAuthUserResponse(mockUser.id);
+
+    expect(response?.appMode).toBe("production");
+  });
 });

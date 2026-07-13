@@ -1,14 +1,20 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import Taro from '@tarojs/taro'
 import { callReportGps, getCurrentPosition, startLocationChange, haversine } from './api'
-import { ALANG_GPS_INTERVAL_MS } from '@shared/alang/constants'
-import type { AlangArrivalResponse } from '@shared/alang/missionTypes'
+import {
+  ALANG_ARRIVAL_RADIUS_METERS,
+  ALANG_GPS_INTERVAL_MS,
+} from '@shared/alang/constants'
+import type { AlangCoordinate } from '@shared/alang/missionTypes'
+import {
+  EMPTY_ALANG_DISTANCE_SMOOTHING_STATE,
+  smoothAlangDistance,
+  type AlangDistanceSmoothingState,
+} from './distanceSmoothing'
 
 export interface UseAlangGpsOptions {
   slug: string
-  targetLat?: number
-  targetLng?: number
-  radiusMeters?: number
+  target?: AlangCoordinate
   enabled: boolean
   onArrival?: () => void
   onError?: (err: unknown) => void
@@ -16,9 +22,7 @@ export interface UseAlangGpsOptions {
 
 export function useAlangGps({
   slug,
-  targetLat,
-  targetLng,
-  radiusMeters = 5,
+  target,
   enabled,
   onArrival,
   onError,
@@ -27,11 +31,20 @@ export function useAlangGps({
   const [arrived, setArrived] = useState(false)
   const [accuracy, setAccuracy] = useState<number | null>(null)
   const [nodeId, setNodeId] = useState<string | null>(null)
-  const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null)
+  const [position, setPosition] = useState<AlangCoordinate | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
   const lastReportRef = useRef(0)
   const reportingRef = useRef(false)
   const lastErrorNoticeRef = useRef(0)
+  const distanceSmoothingRef = useRef<AlangDistanceSmoothingState>({
+    ...EMPTY_ALANG_DISTANCE_SMOOTHING_STATE,
+  })
+
+  const updateDisplayDistance = useCallback((sampleMeters: number, force = false) => {
+    const next = smoothAlangDistance(distanceSmoothingRef.current, sampleMeters, force)
+    distanceSmoothingRef.current = next
+    setDistance(next.displayMeters)
+  }, [])
 
   const reportError = useCallback((error: unknown) => {
     const now = Date.now()
@@ -41,24 +54,31 @@ export function useAlangGps({
   }, [onError])
 
   const reportGps = useCallback(
-    async (lat: number, lng: number, acc: number) => {
+    async (latitude: number, longitude: number, acc: number) => {
       if (reportingRef.current) return
       const now = Date.now()
       if (now - lastReportRef.current < ALANG_GPS_INTERVAL_MS) return
       reportingRef.current = true
       lastReportRef.current = now
       try {
-        const targetOverride = targetLat !== undefined && targetLng !== undefined
-          ? { lat: targetLat, lng: targetLng, radiusMeters }
+        const targetOverride: {
+          latitude: number
+          longitude: number
+          radiusMeters: typeof ALANG_ARRIVAL_RADIUS_METERS
+        } | undefined = target
+          ? { ...target, radiusMeters: ALANG_ARRIVAL_RADIUS_METERS }
           : undefined
         const res = await callReportGps(slug, {
-          latitude: lat,
-          longitude: lng,
+          latitude,
+          longitude,
           accuracy: acc,
           timestamp: now,
           targetOverride,
         })
-        setDistance(res.distanceMeters)
+        updateDisplayDistance(
+          res.arrived ? Math.min(res.distanceMeters, res.radiusMeters) : res.distanceMeters,
+          res.arrived,
+        )
         if (res.nodeId) {
           setNodeId(res.nodeId)
         }
@@ -72,8 +92,15 @@ export function useAlangGps({
         reportingRef.current = false
       }
     },
-    [slug, targetLat, targetLng, radiusMeters, arrived, onArrival, reportError]
+    [slug, target, arrived, onArrival, reportError, updateDisplayDistance]
   )
+
+  useEffect(() => {
+    distanceSmoothingRef.current = { ...EMPTY_ALANG_DISTANCE_SMOOTHING_STATE }
+    setDistance(null)
+    setArrived(false)
+    setNodeId(null)
+  }, [slug, target?.latitude, target?.longitude])
 
   useEffect(() => {
     let cancelled = false
@@ -87,9 +114,9 @@ export function useAlangGps({
     getCurrentPosition()
       .then((res) => {
         if (cancelled) return
-        setPosition({ lat: res.latitude, lng: res.longitude })
-        if (targetLat !== undefined && targetLng !== undefined) {
-          setDistance(haversine(res.latitude, res.longitude, targetLat, targetLng))
+        setPosition({ latitude: res.latitude, longitude: res.longitude })
+        if (target && !arrived) {
+          updateDisplayDistance(haversine(res.latitude, res.longitude, target.latitude, target.longitude))
         }
         setAccuracy(res.accuracy ?? null)
         reportGps(res.latitude, res.longitude, res.accuracy ?? 50)
@@ -102,9 +129,9 @@ export function useAlangGps({
     cleanupRef.current = startLocationChange(
       (res) => {
         if (cancelled) return
-        setPosition({ lat: res.latitude, lng: res.longitude })
-        if (targetLat !== undefined && targetLng !== undefined) {
-          setDistance(haversine(res.latitude, res.longitude, targetLat, targetLng))
+        setPosition({ latitude: res.latitude, longitude: res.longitude })
+        if (target && !arrived) {
+          updateDisplayDistance(haversine(res.latitude, res.longitude, target.latitude, target.longitude))
         }
         setAccuracy(res.accuracy ?? null)
         reportGps(res.latitude, res.longitude, res.accuracy ?? 50)
@@ -119,13 +146,13 @@ export function useAlangGps({
       cleanupRef.current?.()
       cleanupRef.current = null
     }
-  }, [enabled, targetLat, targetLng, reportGps, reportError])
+  }, [enabled, target, arrived, reportGps, reportError, updateDisplayDistance])
 
   return { distance, arrived, accuracy, nodeId, position }
 }
 
 export function useAlangGpsOnce() {
-  const [position, setPosition] = useState<{ lat: number; lng: number; accuracy: number } | null>(null)
+  const [position, setPosition] = useState<(AlangCoordinate & { accuracy: number }) | null>(null)
   const [error, setError] = useState<unknown>(null)
   const [loading, setLoading] = useState(false)
 
@@ -134,7 +161,11 @@ export function useAlangGpsOnce() {
     setError(null)
     try {
       const res = await getCurrentPosition()
-      const pos = { lat: res.latitude, lng: res.longitude, accuracy: res.accuracy ?? 50 }
+      const pos = {
+        latitude: res.latitude,
+        longitude: res.longitude,
+        accuracy: res.accuracy ?? 50,
+      }
       setPosition(pos)
       setLoading(false)
       return pos

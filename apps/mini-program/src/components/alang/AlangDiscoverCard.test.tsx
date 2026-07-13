@@ -34,6 +34,18 @@ vi.mock('@tarojs/components', () => ({
   Image: ({ mode: _mode, ...props }: any) => <img {...props} />,
 }))
 
+const mission = (overrides: Record<string, unknown> = {}) => ({
+  id: 'mission-1',
+  slug: 'alang-demo',
+  title: '阿浪今晚想去吹吹风',
+  description: '他在城市里留了一段没有说完的话。',
+  status: 'not_started',
+  stage: 'not_started',
+  progressPercent: 0,
+  isDebugSession: false,
+  ...overrides,
+})
+
 describe('AlangDiscoverCard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -47,27 +59,31 @@ describe('AlangDiscoverCard', () => {
     })
   })
 
-  it('stays visible in staging while mission data is loading', () => {
+  it('keeps the Reference 03 entry visible while mission data is loading', () => {
     render(<AlangDiscoverCard />)
 
-    expect(screen.getByText('闪现 NPC｜阿浪')).toBeInTheDocument()
-    expect(screen.getByText('正在准备阿浪的线索…')).toBeInTheDocument()
+    expect(screen.getByText('闪现')).toBeInTheDocument()
+    expect(screen.getByText('Beta')).toBeInTheDocument()
+    expect(screen.getByText('附近有个角色，正等你出发')).toBeInTheDocument()
+    expect(screen.getByText('正在看看谁出现了…')).toBeInTheDocument()
+    expect(screen.getByText('到达前只给接近提示，精确位置保持神秘')).toBeInTheDocument()
     expect(mockUseAlangMissions).toHaveBeenCalledWith(true)
   })
 
-  it('stays visible when the enabled mission query is empty', () => {
+  it('keeps a single usable CTA when the enabled mission query is empty', () => {
     mockUseAlangMissions.mockReturnValue({ data: [], isLoading: false, isError: false })
     render(<AlangDiscoverCard />)
 
-    expect(screen.getByText('闪现 NPC｜阿浪')).toBeInTheDocument()
-    expect(screen.getByText('进入阿浪故事 →')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '进入闪现' })).toBeInTheDocument()
+    expect(screen.getAllByRole('button')).toHaveLength(1)
   })
 
-  it('stays visible when the enabled mission query fails', () => {
+  it('uses warm recovery copy when the enabled mission query fails', () => {
     mockUseAlangMissions.mockReturnValue({ data: undefined, isLoading: false, isError: true })
     render(<AlangDiscoverCard />)
 
-    expect(screen.getByText('阿浪暂时没回消息，点进来再试一次。')).toBeInTheDocument()
+    expect(screen.getByText('今晚的角色还没回信')).toBeInTheDocument()
+    expect(screen.getByText('先逛逛别处，稍后再回来看看。')).toBeInTheDocument()
   })
 
   it('hides when alangEnabled is false', () => {
@@ -76,15 +92,42 @@ describe('AlangDiscoverCard', () => {
     })
     render(<AlangDiscoverCard />)
 
-    expect(screen.queryByText('闪现 NPC｜阿浪')).not.toBeInTheDocument()
+    expect(screen.queryByText('闪现')).not.toBeInTheDocument()
     expect(mockUseAlangMissions).toHaveBeenCalledWith(false)
   })
 
-  it('opens the Alang list fallback before mission data is available', () => {
+  it('opens the Alang list fallback when no mission is available', () => {
+    mockUseAlangMissions.mockReturnValue({ data: [], isLoading: false, isError: false })
     render(<AlangDiscoverCard />)
 
-    fireEvent.click(screen.getByText('闪现 NPC｜阿浪'))
+    fireEvent.click(screen.getByRole('button', { name: '进入闪现' }))
     expect(mockHaptics).toHaveBeenCalledWith('light')
     expect(Taro.navigateTo).toHaveBeenCalledWith({ url: '/pages/alang/event/index' })
+  })
+
+  it('prioritizes an in-progress story over the first mission', () => {
+    mockUseAlangMissions.mockReturnValue({
+      data: [
+        mission({ id: 'new', slug: 'new-story', title: '一段新故事' }),
+        mission({
+          id: 'active',
+          slug: 'active-story',
+          title: '还没说完的那一晚',
+          status: 'in_progress',
+          stage: 'searching',
+          progressPercent: 35,
+        }),
+      ],
+      isLoading: false,
+      isError: false,
+    })
+    render(<AlangDiscoverCard />)
+
+    expect(screen.getByText('还没说完的那一晚')).toBeInTheDocument()
+    expect(screen.queryByText('一段新故事')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '继续这段故事' }))
+    expect(Taro.navigateTo).toHaveBeenCalledWith({
+      url: '/pages/alang/event-detail/index?slug=active-story',
+    })
   })
 })

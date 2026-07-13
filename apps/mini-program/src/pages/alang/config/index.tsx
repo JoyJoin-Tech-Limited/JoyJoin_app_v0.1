@@ -1,75 +1,244 @@
 import Taro from '@tarojs/taro'
-import { useState, useCallback } from 'react'
-import { View, Text, Map, Button } from '@tarojs/components'
+import { useEffect, useMemo, useState, useCallback } from 'react'
+import { View, Text, Map, Button, Input } from '@tarojs/components'
 import type { MapProps } from '@tarojs/components'
+import type { AlangCoordinate } from '@shared/alang/missionTypes'
+import type { GeoPlace, WalkingRouteSuccessResponse } from '@shared/api'
+import {
+  getWalkingRoute,
+  reverseGeocode,
+  searchNearbyGeoPlaces,
+  suggestGeoPlaces,
+} from '@shared/api'
+import {
+  ALANG_ARRIVAL_RADIUS_METERS,
+  ALANG_DEFAULT_SEARCH_RADIUS_METERS,
+} from '@shared/alang/constants'
 import { useAlangMissionDetail } from '../../../lib/alang/useAlangMission'
 import { useAuth } from '../../../hooks/useAuth'
-import { haversine } from '../../../lib/alang/api'
+import { shouldShowAlangDebugTools } from '../../../lib/alang/alangAccess'
+import { haversine, callReportProgress } from '../../../lib/alang/api'
 import { useAlangGpsOnce } from '../../../lib/alang/useAlangGps'
-import { callReportProgress } from '../../../lib/alang/api'
+import { apiRequest } from '../../../lib/api/api'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
-import { ALANG_ARRIVAL_RADIUS_METERS, ALANG_DEFAULT_SEARCH_RADIUS_METERS } from '@shared/alang/constants'
+import StatusCard from '../../../components/ui/StatusCard'
 import './index.scss'
 
+type PointKind = 'target' | 'end'
+
+type PointLabel = {
+  name?: string
+  address?: string
+}
+
+const SHENZHEN_FALLBACK: AlangCoordinate = {
+  latitude: 22.5431,
+  longitude: 114.0579,
+}
+
 export default function AlangConfigPage() {
-  const { user } = useAuth()
+  const { user, isLoading: isAuthLoading } = useAuth()
   const slug = Taro.getCurrentInstance().router?.params?.slug ?? ''
-  const { data: mission } = useAlangMissionDetail(slug, !!slug && !!user?.features?.alangEnabled)
+  const canUseDebugTools = shouldShowAlangDebugTools(user)
+  const { data: mission } = useAlangMissionDetail(
+    slug,
+    !!slug && canUseDebugTools,
+  )
   const { position, request, loading } = useAlangGpsOnce()
 
   const content = mission?.content as any
   const nodes: Array<any> = content?.nodes ?? []
 
-  const [target, setTarget] = useState<{ lat: number; lng: number } | null>(null)
-  const [endPoint, setEndPoint] = useState<{ lat: number; lng: number } | null>(null)
+  const [target, setTarget] = useState<AlangCoordinate | null>(null)
+  const [endPoint, setEndPoint] = useState<AlangCoordinate | null>(null)
+  const [targetLabel, setTargetLabel] = useState<PointLabel>({})
+  const [endPointLabel, setEndPointLabel] = useState<PointLabel>({})
+  const [selectedKind, setSelectedKind] = useState<PointKind>('target')
+  const [keyword, setKeyword] = useState('')
+  const [places, setPlaces] = useState<GeoPlace[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [routeEstimate, setRouteEstimate] = useState<WalkingRouteSuccessResponse | null>(null)
+  const [routeUnavailable, setRouteUnavailable] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const describePoint = useCallback(async (
+    point: AlangCoordinate,
+    setter: (value: PointLabel) => void,
+  ) => {
+    try {
+      const result = await reverseGeocode(
+        apiRequest,
+        point.latitude,
+        point.longitude,
+      )
+      setter({
+        name: result.poi?.name ?? result.name,
+        address: result.poi?.address ?? result.address,
+      })
+    } catch {
+      setter({})
+    }
+  }, [])
+
+  const setPoint = useCallback((kind: PointKind, point: AlangCoordinate, label?: PointLabel) => {
+    setRouteEstimate(null)
+    setRouteUnavailable(false)
+    if (kind === 'target') {
+      setTarget(point)
+      setTargetLabel(label ?? {})
+      if (!label) void describePoint(point, setTargetLabel)
+      setSelectedKind('end')
+    } else {
+      setEndPoint(point)
+      setEndPointLabel(label ?? {})
+      if (!label) void describePoint(point, setEndPointLabel)
+    }
+  }, [describePoint])
+
   const handleGetLocation = useCallback(async () => {
-    const pos = await request()
-    if (pos) {
-      setTarget({ lat: pos.lat, lng: pos.lng })
-      setEndPoint({ lat: pos.lat + 0.00135, lng: pos.lng })
+    try {
+      const current = await request()
+      if (!current) return
+      const firstPoint = {
+        latitude: current.latitude,
+        longitude: current.longitude,
+      }
+      const companionPoint = {
+        latitude: current.latitude + 0.00135,
+        longitude: current.longitude,
+      }
+      setPoint('target', firstPoint)
+      setPoint('end', companionPoint)
+    } catch {
+      Taro.showToast({ title: '没有拿到定位，请检查微信定位权限', icon: 'none' })
     }
-  }, [request])
+  }, [request, setPoint])
 
-  const handleMapTap = useCallback((e: any) => {
-    const { latitude, longitude } = e.detail
-    if (!target) {
-      setTarget({ lat: latitude, lng: longitude })
-    } else if (!endPoint) {
-      setEndPoint({ lat: latitude, lng: longitude })
+  useEffect(() => {
+    if (!canUseDebugTools || keyword.trim().length < 2) {
+      setPlaces([])
+      setIsSearching(false)
+      return
     }
-  }, [target, endPoint])
 
-  // WeChat Map marker does not support native drag.
-  // Provide arrow buttons for fine-tuning position.
+    let active = true
+    setIsSearching(true)
+    const timer = setTimeout(() => {
+      void suggestGeoPlaces(apiRequest, {
+        keyword: keyword.trim(),
+        region: '深圳',
+        location: position
+          ? { latitude: position.latitude, longitude: position.longitude }
+          : undefined,
+        limit: 6,
+      }).then((result) => {
+        if (active) setPlaces(result.success ? result.places : [])
+      }).catch(() => {
+        if (active) setPlaces([])
+      }).finally(() => {
+        if (active) setIsSearching(false)
+      })
+    }, 350)
+
+    return () => {
+      active = false
+      clearTimeout(timer)
+    }
+  }, [canUseDebugTools, keyword, position])
+
+  const handleNearbySearch = useCallback(async () => {
+    if (isSearching) return
+    if (!position || keyword.trim().length < 2) {
+      Taro.showToast({ title: '先获取当前位置，再输入地点关键词', icon: 'none' })
+      return
+    }
+    setIsSearching(true)
+    try {
+      const result = await searchNearbyGeoPlaces(apiRequest, {
+        keyword: keyword.trim(),
+        location: {
+          latitude: position.latitude,
+          longitude: position.longitude,
+        },
+        radiusMeters: 5000,
+        limit: 8,
+      })
+      setPlaces(result.success ? result.places : [])
+      if (!result.success) {
+        Taro.showToast({ title: '地点服务暂时不可用，也可以直接点地图', icon: 'none' })
+      }
+    } catch {
+      setPlaces([])
+      Taro.showToast({ title: '地点服务暂时不可用，也可以直接点地图', icon: 'none' })
+    } finally {
+      setIsSearching(false)
+    }
+  }, [isSearching, keyword, position])
+
+  const handleMapTap = useCallback((event: any) => {
+    const latitude = event.detail?.latitude
+    const longitude = event.detail?.longitude
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') return
+    setPoint(selectedKind, { latitude, longitude })
+  }, [selectedKind, setPoint])
+
   const ADJUST_STEP_METERS = 10
-  const adjustPoint = (point: 'target' | 'end', dx: number, dy: number) => {
-    const setter = point === 'target' ? setTarget : setEndPoint
-    const current = point === 'target' ? target : endPoint
+  const adjustPoint = (kind: PointKind, dx: number, dy: number) => {
+    const current = kind === 'target' ? target : endPoint
     if (!current) return
-    // Approx: 1 deg lat ~ 111km, 1 deg lng ~ 111km * cos(lat)
-    const latDelta = dy / 111000
-    const lngDelta = dx / (111000 * Math.cos(current.lat * Math.PI / 180))
-    setter({ lat: current.lat + latDelta, lng: current.lng + lngDelta })
+    const latitudeDelta = dy / 111000
+    const longitudeDelta = dx / (
+      111000 * Math.cos(current.latitude * Math.PI / 180)
+    )
+    setPoint(kind, {
+      latitude: current.latitude + latitudeDelta,
+      longitude: current.longitude + longitudeDelta,
+    })
   }
 
-  const handleMarkerTap = useCallback<NonNullable<MapProps['onMarkerTap']>>((e) => {
-    const markerId = e.detail.markerId
+  const handleMarkerTap = useCallback<NonNullable<MapProps['onMarkerTap']>>((event) => {
+    const kind = Number(event.detail.markerId) === 1 ? 'target' : 'end'
+    setSelectedKind(kind)
     Taro.showToast({
-      title: Number(markerId) === 1 ? '已选择阿浪出现点' : '已选择陪伴终点',
+      title: kind === 'target' ? '正在调整阿浪出现点' : '正在调整陪伴终点',
       icon: 'none',
     })
   }, [])
 
-  const distance = target && endPoint ? haversine(target.lat, target.lng, endPoint.lat, endPoint.lng) : 0
-  const walkMinutes = Math.round((distance / 80) * 60)
+  const straightDistance = target && endPoint
+    ? haversine(
+        target.latitude,
+        target.longitude,
+        endPoint.latitude,
+        endPoint.longitude,
+      )
+    : 0
+
+  const handleEstimateRoute = useCallback(async () => {
+    if (!target || !endPoint) return
+    setRouteUnavailable(false)
+    try {
+      const result = await getWalkingRoute(apiRequest, {
+        from: target,
+        to: endPoint,
+      })
+      if (result.success) {
+        setRouteEstimate(result)
+      } else {
+        setRouteEstimate(null)
+        setRouteUnavailable(true)
+      }
+    } catch {
+      setRouteEstimate(null)
+      setRouteUnavailable(true)
+    }
+  }, [endPoint, target])
 
   const handleConfirm = async () => {
     if (!target || !endPoint || !mission?.myProgress || isSubmitting) return
     const searchNode = nodes.find((node) => node.type === 'search_gate')
     if (!searchNode) {
-      Taro.showToast({ title: '故事配置暂不可用', icon: 'none' })
+      Taro.showToast({ title: '故事配置暂时不可用', icon: 'none' })
       return
     }
 
@@ -92,68 +261,157 @@ export default function AlangConfigPage() {
         endPoint,
         radius: ALANG_ARRIVAL_RADIUS_METERS,
       })
-      Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangSearch}?slug=${slug}&nodeId=${searchNode.id}` })
+      Taro.redirectTo({
+        url: `${MINI_PROGRAM_ROUTES.alangSearch}?slug=${encodeURIComponent(slug)}&nodeId=${encodeURIComponent(searchNode.id)}`,
+      })
     } catch {
-      Taro.showToast({ title: '没成功，再试一次即可', icon: 'none' })
+      Taro.showToast({ title: '没有准备好，再试一次即可', icon: 'none' })
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const markers: NonNullable<MapProps['markers']> = []
-  if (target) {
-    markers.push({
-      id: 1,
-      latitude: target.lat,
-      longitude: target.lng,
-      title: '阿浪出现点',
-      iconPath: '/assets/icons/ui/icon-location.webp',
-      width: 32,
-      height: 32,
-    })
-  }
-  if (endPoint) {
-    markers.push({
-      id: 2,
-      latitude: endPoint.lat,
-      longitude: endPoint.lng,
-      title: '陪伴终点',
-      iconPath: '/assets/icons/ui/icon-location.webp',
-      width: 32,
-      height: 32,
-    })
+  const markers = useMemo<NonNullable<MapProps['markers']>>(() => {
+    const items: NonNullable<MapProps['markers']> = []
+    if (target) {
+      items.push({
+        id: 1,
+        latitude: target.latitude,
+        longitude: target.longitude,
+        title: '阿浪出现点',
+        iconPath: '/assets/icons/ui/icon-location.webp',
+        width: 32,
+        height: 32,
+      })
+    }
+    if (endPoint) {
+      items.push({
+        id: 2,
+        latitude: endPoint.latitude,
+        longitude: endPoint.longitude,
+        title: '陪伴终点',
+        iconPath: '/assets/icons/ui/icon-location.webp',
+        width: 32,
+        height: 32,
+      })
+    }
+    return items
+  }, [endPoint, target])
+
+  if (isAuthLoading) {
+    return <View className='alang-config__gate'><Text>正在确认测试权限…</Text></View>
   }
 
-  const mapLat = target?.lat ?? position?.lat ?? 22.5431
-  const mapLng = target?.lng ?? position?.lng ?? 114.0579
+  if (!canUseDebugTools) {
+    return (
+      <View className='alang-config__gate'>
+        <StatusCard
+          tone='info'
+          title='这个页面只在单人测试中开放'
+          description='正式故事会直接进入寻找阶段，不需要设置内部点位。'
+          action={{ label: '返回故事', onClick: () => Taro.navigateBack() }}
+        />
+      </View>
+    )
+  }
+
+  const mapCenter = target
+    ?? (position
+      ? { latitude: position.latitude, longitude: position.longitude }
+      : SHENZHEN_FALLBACK)
 
   return (
     <View className='alang-config'>
       <View className='alang-config__header'>
+        <Text className='alang-config__eyebrow'>单人测试工具</Text>
         <Text className='alang-config__title'>配置测试点位</Text>
-        <Text className='alang-config__hint'>拖动地图或点击设置两个点</Text>
+        <Text className='alang-config__hint'>正式用户不会看到本页或任何内部坐标。</Text>
+      </View>
+
+      <View className='alang-config__selector'>
+        <View
+          className={`alang-config__selector-item ${selectedKind === 'target' ? 'alang-config__selector-item--active' : ''}`}
+          onClick={() => setSelectedKind('target')}
+          role='button'
+          aria-label='设置阿浪出现点'
+          aria-pressed={selectedKind === 'target'}
+        >
+          <Text>设置出现点</Text>
+        </View>
+        <View
+          className={`alang-config__selector-item ${selectedKind === 'end' ? 'alang-config__selector-item--active' : ''}`}
+          onClick={() => setSelectedKind('end')}
+          role='button'
+          aria-label='设置陪伴终点'
+          aria-pressed={selectedKind === 'end'}
+        >
+          <Text>设置陪伴终点</Text>
+        </View>
+      </View>
+
+      <View className='alang-config__search'>
+        <Input
+          className='alang-config__search-input'
+          value={keyword}
+          placeholder='输入深圳地点或 POI'
+          onInput={(event) => setKeyword(event.detail.value)}
+        />
+        <View
+          className='alang-config__nearby-btn'
+          onClick={() => { void handleNearbySearch() }}
+          role='button'
+          aria-label={isSearching ? '正在搜索附近地点' : '搜索附近地点'}
+          aria-disabled={isSearching}
+        >
+          <Text>{isSearching ? '搜索中' : '搜附近'}</Text>
+        </View>
+        {places.length > 0 && (
+          <View className='alang-config__places'>
+            {places.map((place) => (
+              <View
+                key={place.id}
+                className='alang-config__place'
+                role='button'
+                aria-label={`选择地点：${place.name}`}
+                onClick={() => {
+                  setPoint(selectedKind, place.location, {
+                    name: place.name,
+                    address: place.address,
+                  })
+                  setPlaces([])
+                  setKeyword(place.name)
+                }}
+              >
+                <Text className='alang-config__place-name'>{place.name}</Text>
+                <Text className='alang-config__place-address'>{place.address || '深圳'}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
 
       <View className='alang-config__map-wrap'>
         <Map
           className='alang-config__map'
-          latitude={mapLat}
-          longitude={mapLng}
-          onError={() => {}}
+          latitude={mapCenter.latitude}
+          longitude={mapCenter.longitude}
           showLocation
+          onError={() => {
+            Taro.showToast({ title: '地图暂时没有加载，也可以用地点搜索', icon: 'none' })
+          }}
           onTap={handleMapTap}
           onMarkerTap={handleMarkerTap}
           markers={markers}
           circles={target ? [{
-            latitude: target.lat,
-            longitude: target.lng,
+            latitude: target.latitude,
+            longitude: target.longitude,
             radius: ALANG_DEFAULT_SEARCH_RADIUS_METERS,
             fillColor: '#8B5CF620',
             color: '#8B5CF680',
             strokeWidth: 2,
           }] : []}
         />
-        {!target && (
+        {!position && (
           <View className='alang-config__map-overlay'>
             <Button className='alang-config__loc-btn' onClick={handleGetLocation} loading={loading}>
               使用当前位置
@@ -164,49 +422,42 @@ export default function AlangConfigPage() {
 
       <View className='alang-config__info'>
         {target && (
-          <>
-            <View className='alang-config__info-row'>
-              <Text className='alang-config__info-label'>阿浪出现点</Text>
-              <Text className='alang-config__info-value'>
-                {target.lat.toFixed(5)}, {target.lng.toFixed(5)}
-              </Text>
-            </View>
-            <View className='alang-config__adjust-row'>
-              <View className='alang-config__adjust-btn' onClick={() => adjustPoint('target', 0, ADJUST_STEP_METERS)}><Text>↑</Text></View>
-              <View className='alang-config__adjust-btn' onClick={() => adjustPoint('target', -ADJUST_STEP_METERS, 0)}><Text>←</Text></View>
-              <View className='alang-config__adjust-btn' onClick={() => adjustPoint('target', 0, -ADJUST_STEP_METERS)}><Text>↓</Text></View>
-              <View className='alang-config__adjust-btn' onClick={() => adjustPoint('target', ADJUST_STEP_METERS, 0)}><Text>→</Text></View>
-              <Text className='alang-config__adjust-hint'>微调阿浪出现点 (10m)</Text>
-            </View>
-          </>
+          <PointSummary
+            title='阿浪出现点'
+            point={target}
+            label={targetLabel}
+            onAdjust={(dx, dy) => adjustPoint('target', dx, dy)}
+          />
         )}
         {endPoint && (
-          <>
-            <View className='alang-config__info-row'>
-              <Text className='alang-config__info-label'>陪伴终点</Text>
+          <PointSummary
+            title='陪伴终点'
+            point={endPoint}
+            label={endPointLabel}
+            onAdjust={(dx, dy) => adjustPoint('end', dx, dy)}
+          />
+        )}
+        {target && endPoint && (
+          <View className='alang-config__route-row'>
+            <View>
+              <Text className='alang-config__info-label'>路线估算</Text>
               <Text className='alang-config__info-value'>
-                {endPoint.lat.toFixed(5)}, {endPoint.lng.toFixed(5)}
+                {routeEstimate
+                  ? `${Math.round(routeEstimate.distanceMeters)} 米 · 约 ${Math.max(1, Math.ceil(routeEstimate.durationSeconds / 60))} 分钟`
+                  : `直线 ${Math.round(straightDistance)} 米`}
               </Text>
+              {routeUnavailable && (
+                <Text className='alang-config__route-note'>路线服务暂时不可用，不影响点位测试</Text>
+              )}
             </View>
-            <View className='alang-config__adjust-row'>
-              <View className='alang-config__adjust-btn' onClick={() => adjustPoint('end', 0, ADJUST_STEP_METERS)}><Text>↑</Text></View>
-              <View className='alang-config__adjust-btn' onClick={() => adjustPoint('end', -ADJUST_STEP_METERS, 0)}><Text>←</Text></View>
-              <View className='alang-config__adjust-btn' onClick={() => adjustPoint('end', 0, -ADJUST_STEP_METERS)}><Text>↓</Text></View>
-              <View className='alang-config__adjust-btn' onClick={() => adjustPoint('end', ADJUST_STEP_METERS, 0)}><Text>→</Text></View>
-              <Text className='alang-config__adjust-hint'>微调陪伴终点 (10m)</Text>
+            <View
+              className='alang-config__route-btn'
+              onClick={() => { void handleEstimateRoute() }}
+              role='button'
+              aria-label='估算步行路线'
+            >
+              <Text>估算步行路线</Text>
             </View>
-          </>
-        )}
-        {target && endPoint && (
-          <View className='alang-config__info-row'>
-            <Text className='alang-config__info-label'>直线距离</Text>
-            <Text className='alang-config__info-value'>{Math.round(distance)} 米</Text>
-          </View>
-        )}
-        {target && endPoint && (
-          <View className='alang-config__info-row'>
-            <Text className='alang-config__info-label'>预计步行</Text>
-            <Text className='alang-config__info-value'>约 {Math.max(1, walkMinutes)} 分钟</Text>
           </View>
         )}
       </View>
@@ -214,10 +465,48 @@ export default function AlangConfigPage() {
       <View className='alang-config__actions'>
         <View
           className={`alang-config__confirm ${!target || !endPoint || isSubmitting ? 'alang-config__confirm--disabled' : ''}`}
-          onClick={handleConfirm}
+          onClick={() => { void handleConfirm() }}
+          role='button'
+          aria-label={isSubmitting ? '正在准备测试' : '开始测试'}
+          aria-disabled={!target || !endPoint || isSubmitting}
         >
           <Text className='alang-config__confirm-text'>{isSubmitting ? '正在准备…' : '开始测试'}</Text>
         </View>
+      </View>
+    </View>
+  )
+}
+
+function PointSummary({
+  title,
+  point,
+  label,
+  onAdjust,
+}: {
+  title: string
+  point: AlangCoordinate
+  label: PointLabel
+  onAdjust: (dx: number, dy: number) => void
+}) {
+  const step = 10
+  return (
+    <View className='alang-config__point'>
+      <View className='alang-config__info-row'>
+        <View>
+          <Text className='alang-config__info-label'>{title}</Text>
+          {label.name && <Text className='alang-config__point-name'>{label.name}</Text>}
+          {label.address && <Text className='alang-config__point-address'>{label.address}</Text>}
+        </View>
+        <Text className='alang-config__coordinate'>
+          {point.latitude.toFixed(5)}, {point.longitude.toFixed(5)}
+        </Text>
+      </View>
+      <View className='alang-config__adjust-row'>
+        <View className='alang-config__adjust-btn' onClick={() => onAdjust(0, step)} role='button' aria-label={`${title}向北微调 10 米`}><Text>↑</Text></View>
+        <View className='alang-config__adjust-btn' onClick={() => onAdjust(-step, 0)} role='button' aria-label={`${title}向西微调 10 米`}><Text>←</Text></View>
+        <View className='alang-config__adjust-btn' onClick={() => onAdjust(0, -step)} role='button' aria-label={`${title}向南微调 10 米`}><Text>↓</Text></View>
+        <View className='alang-config__adjust-btn' onClick={() => onAdjust(step, 0)} role='button' aria-label={`${title}向东微调 10 米`}><Text>→</Text></View>
+        <Text className='alang-config__adjust-hint'>每次微调 10 米</Text>
       </View>
     </View>
   )

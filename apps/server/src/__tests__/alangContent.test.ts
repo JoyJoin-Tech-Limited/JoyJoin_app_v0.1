@@ -14,6 +14,63 @@ describe("Alang demo story", () => {
     expect(parsed.success, parsed.success ? undefined : JSON.stringify(parsed.error.flatten())).toBe(true);
   });
 
+  it("normalizes persisted legacy lat/lng JSON at the content boundary", () => {
+    const legacy = structuredClone(story);
+    const target = legacy.meta.defaultTargetLocation;
+    const companion = legacy.meta.defaultCompanionEndLocation;
+    legacy.meta.defaultTargetLocation = {
+      lat: target.latitude,
+      lng: target.longitude,
+      radiusMeters: target.radiusMeters,
+    };
+    legacy.meta.defaultCompanionEndLocation = {
+      lat: companion.latitude,
+      lng: companion.longitude,
+      radiusMeters: companion.radiusMeters,
+    };
+    for (const node of legacy.nodes) {
+      if (!node.gpsTrigger) continue;
+      node.gpsTrigger = {
+        lat: node.gpsTrigger.latitude,
+        lng: node.gpsTrigger.longitude,
+        radiusMeters: node.gpsTrigger.radiusMeters,
+      };
+    }
+
+    const parsed = missionContentSchema.parse(legacy);
+    expect(parsed.meta?.defaultTargetLocation).toMatchObject({
+      latitude: target.latitude,
+      longitude: target.longitude,
+    });
+    expect(parsed.meta?.defaultCompanionEndLocation).toMatchObject({
+      latitude: companion.latitude,
+      longitude: companion.longitude,
+    });
+    for (const node of parsed.nodes.filter((item) => item.gpsTrigger)) {
+      expect(node.gpsTrigger).toHaveProperty("latitude");
+      expect(node.gpsTrigger).toHaveProperty("longitude");
+      expect(node.gpsTrigger).not.toHaveProperty("lat");
+      expect(node.gpsTrigger).not.toHaveProperty("lng");
+    }
+  });
+
+  it("normalizes every configured arrival radius to the fixed five metres", () => {
+    const widened = structuredClone(story);
+    widened.meta.defaultTargetLocation.radiusMeters = 500;
+    widened.meta.defaultCompanionEndLocation.radiusMeters = 250;
+    for (const node of widened.nodes) {
+      if (node.gpsTrigger) node.gpsTrigger.radiusMeters = 100;
+    }
+
+    const parsed = missionContentSchema.parse(widened);
+
+    expect(parsed.meta?.defaultTargetLocation?.radiusMeters).toBe(5);
+    expect(parsed.meta?.defaultCompanionEndLocation?.radiusMeters).toBe(5);
+    for (const node of parsed.nodes.filter((item) => item.gpsTrigger)) {
+      expect(node.gpsTrigger?.radiusMeters).toBe(5);
+    }
+  });
+
   it("has a closed node graph and exactly three dialogue rounds", () => {
     const nodeIds = new Set(story.nodes.map((node: { id: string }) => node.id));
     expect(nodeIds.has(story.startNodeId)).toBe(true);

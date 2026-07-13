@@ -16,6 +16,7 @@ vi.mock("../repositories/alangRepo", () => ({
   getMissionProgresses: mockAlangRepositoryCall,
   createMissionProgress: mockAlangRepositoryCall,
   updateMissionProgress: mockAlangRepositoryCall,
+  updateMissionProgressIfCurrent: mockAlangRepositoryCall,
   archiveStory: mockAlangRepositoryCall,
   getStoryArchivesByUser: mockAlangRepositoryCall,
   getStoryArchiveById: mockAlangRepositoryCall,
@@ -64,6 +65,13 @@ describe("Alang debug route gate", () => {
     expect(isAlangDebugMode()).toBe(false);
   });
 
+  it("fails closed when APP_MODE is unset even if single-test mode is enabled", () => {
+    delete process.env.APP_MODE;
+    process.env.ENABLE_SINGLE_TEST_MODE = "true";
+
+    expect(isAlangDebugMode()).toBe(false);
+  });
+
   it("returns NOT_FOUND for every Alang debug mutation before feature or data access", async () => {
     const requests = [
       {
@@ -76,7 +84,7 @@ describe("Alang debug route gate", () => {
       },
       {
         path: "/api/alang/debug/missions/demo/mock-gps",
-        body: { lat: 31.2304, lng: 121.4737 },
+        body: { latitude: 31.2304, longitude: 121.4737 },
       },
     ];
 

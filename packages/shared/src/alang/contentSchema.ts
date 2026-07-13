@@ -1,4 +1,19 @@
 import { z } from "zod";
+import {
+  alangCoordinateSchema,
+  normalizeAlangCoordinate,
+} from "./missionTypes.js";
+import { ALANG_ARRIVAL_RADIUS_METERS } from "./constants.js";
+
+const fixedArrivalCoordinateSchema = alangCoordinateSchema.extend({
+  // Accept legacy content at the read boundary, but normalize every runtime
+  // target to the fixed server-authoritative PRD fence.
+  radiusMeters: z.number().optional(),
+}).transform(({ latitude, longitude }) => ({
+  latitude,
+  longitude,
+  radiusMeters: ALANG_ARRIVAL_RADIUS_METERS,
+}));
 
 export const storyNodeChoiceSchema = z.object({
   label: z.string(),
@@ -42,16 +57,12 @@ export const storyNodeSchema = z.object({
     eventLog: z.array(z.string()).optional(),
     companionStyle: z.string().optional(),
   }),
-  gpsTrigger: z.object({
-    lat: z.number(),
-    lng: z.number(),
-    radiusMeters: z.number().default(5),
-  }).optional(),
+  gpsTrigger: fixedArrivalCoordinateSchema.optional(),
   choices: z.array(storyNodeChoiceSchema).optional(),
   nextNodeId: z.string().optional(),
 });
 
-export const missionContentSchema = z.object({
+const missionContentObjectSchema = z.object({
   version: z.literal("1.0"),
   title: z.string(),
   description: z.string(),
@@ -63,18 +74,62 @@ export const missionContentSchema = z.object({
     tags: z.array(z.string()).optional(),
     npcName: z.string().optional(),
     searchRadiusMeters: z.number().optional(),
-    defaultTargetLocation: z.object({
-      lat: z.number(),
-      lng: z.number(),
-      radiusMeters: z.number(),
-    }).optional(),
-    defaultCompanionEndLocation: z.object({
-      lat: z.number(),
-      lng: z.number(),
-      radiusMeters: z.number(),
-    }).optional(),
+    defaultTargetLocation: fixedArrivalCoordinateSchema.optional(),
+    defaultCompanionEndLocation: fixedArrivalCoordinateSchema.optional(),
   }).optional(),
-}).superRefine((mission, ctx) => {
+});
+
+function normalizeCoordinateValue(value: unknown): unknown {
+  if (!value || typeof value !== "object") return value;
+  const coordinate = normalizeAlangCoordinate(value);
+  if (!coordinate) return value;
+  const rest = { ...(value as Record<string, unknown>) };
+  delete rest.lat;
+  delete rest.lng;
+  return { ...rest, ...coordinate };
+}
+
+function normalizeLegacyMissionCoordinates(value: unknown): unknown {
+  if (!value || typeof value !== "object") return value;
+  const mission = value as Record<string, unknown>;
+  const rawNodes = Array.isArray(mission.nodes) ? mission.nodes : undefined;
+  const rawMeta = mission.meta && typeof mission.meta === "object"
+    ? mission.meta as Record<string, unknown>
+    : undefined;
+
+  return {
+    ...mission,
+    ...(rawNodes
+      ? {
+          nodes: rawNodes.map((rawNode) => {
+            if (!rawNode || typeof rawNode !== "object") return rawNode;
+            const node = rawNode as Record<string, unknown>;
+            return {
+              ...node,
+              ...(node.gpsTrigger
+                ? { gpsTrigger: normalizeCoordinateValue(node.gpsTrigger) }
+                : {}),
+            };
+          }),
+        }
+      : {}),
+    ...(rawMeta
+      ? {
+          meta: {
+            ...rawMeta,
+            ...(rawMeta.defaultTargetLocation
+              ? { defaultTargetLocation: normalizeCoordinateValue(rawMeta.defaultTargetLocation) }
+              : {}),
+            ...(rawMeta.defaultCompanionEndLocation
+              ? { defaultCompanionEndLocation: normalizeCoordinateValue(rawMeta.defaultCompanionEndLocation) }
+              : {}),
+          },
+        }
+      : {}),
+  };
+}
+
+const validatedMissionContentSchema = missionContentObjectSchema.superRefine((mission, ctx) => {
   const nodeIds = new Set<string>();
   for (const [index, node] of mission.nodes.entries()) {
     if (nodeIds.has(node.id)) {
@@ -123,6 +178,11 @@ export const missionContentSchema = z.object({
     }
   }
 });
+
+export const missionContentSchema = z.preprocess(
+  normalizeLegacyMissionCoordinates,
+  validatedMissionContentSchema,
+);
 
 export type StoryNodeChoice = z.infer<typeof storyNodeChoiceSchema>;
 export type StoryNode = z.infer<typeof storyNodeSchema>;
