@@ -47,6 +47,7 @@ import { registerTestAdminRoutes } from "./routes/domains/testAdmin";
 import { registerSingleTestRoutes } from "./routes/domains/singleTest";
 import { registerMatchingTestRoutes } from "./routes/domains/matchingTest";
 import { registerMonitoringWebhookRoutes } from "./routes/domains/monitoringWebhooks";
+import { registerAlangRoutes } from "./routes/domains/alang";
 import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
 import { isTestMode } from "./auth/getAuthStrategy";
@@ -182,6 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerTestAdminRoutes(app);
   registerSingleTestRoutes(app);
   registerMatchingTestRoutes(app);
+  registerAlangRoutes(app);
 
   return httpServer;
 }

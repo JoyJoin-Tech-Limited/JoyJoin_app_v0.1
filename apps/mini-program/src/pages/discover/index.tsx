@@ -49,6 +49,7 @@ import LocationFilterDrawer from '../../components/discover/LocationFilterDrawer
 import CityUnlockFeedCard from '../../components/discover/CityUnlockFeedCard'
 import CityPickerSheet from '../../components/discover/CityPickerSheet'
 import SingleTestBanner from '../../components/dev/SingleTestBanner'
+import AlangDiscoverCard from '../../components/alang/AlangDiscoverCard'
 import MiniProgramLandingPage from '../index/LandingPage'
 import './index.scss'
 
@@ -594,6 +595,9 @@ function AuthenticatedDiscover({
           </Text>
         </View>
       )}
+
+      {/* Alang NPC prototype card — test mode only */}
+      <AlangDiscoverCard />
 
       {/* Pool listing */}
       <View className={`discover-auth__section${!poolsLoading && (poolsError || visiblePools.length === 0) ? ' discover-auth__section--empty' : ''}`}>

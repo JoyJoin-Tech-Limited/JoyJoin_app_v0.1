@@ -22,6 +22,12 @@ export {
   userLocationAggregates,
   insertUserLocationSnapshotSchema,
   insertUserLocationAggregateSchema,
+  alangMissions,
+  alangMissionProgress,
+  alangStoryArchives,
+  insertAlangMissionSchema,
+  insertAlangMissionProgressSchema,
+  insertAlangStoryArchiveSchema,
 } from './_definitions_extended.js';
 export type {
   UserCityInterest,
@@ -36,4 +42,10 @@ export type {
   InsertUserLocationSnapshot,
   UserLocationAggregate,
   InsertUserLocationAggregate,
+  AlangMission,
+  InsertAlangMission,
+  AlangMissionProgress,
+  InsertAlangMissionProgress,
+  AlangStoryArchive,
+  InsertAlangStoryArchive,
 } from './_definitions_extended.js';

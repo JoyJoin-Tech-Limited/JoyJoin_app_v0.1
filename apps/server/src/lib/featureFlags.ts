@@ -94,6 +94,9 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  approve or reject the formed groups. Default: true. Env fallback:
    *  MATCHING_OPERATOR_REVIEW_ENABLED. */
   matchingOperatorReviewEnabled: "MATCHING_OPERATOR_REVIEW_ENABLED",
+  /** Alang NPC prototype kill-switch. When false, hides all Alang entry
+   *  points and routes. Env fallback: ALANG_ENABLED (default: false). */
+  alangEnabled: "ALANG_ENABLED",
 };
 
 /**

@@ -1,0 +1,247 @@
+{
+  "version": "1.0",
+  "title": "阿浪的傍晚",
+  "description": "在深圳湾公园，你会遇见一个正在等人的人。",
+  "startNodeId": "event_card",
+  "nodes": [
+    {
+      "id": "event_card",
+      "type": "event_card",
+      "content": {
+        "title": "阿浪的傍晚",
+        "subtitle": "有人在等你",
+        "body": "傍晚六点半，深圳湾公园。一个穿蓝色外套的人坐在长椅上，看着海面发呆。他好像在等待什么。",
+        "imageKey": "alang-event-card-placeholder",
+        "moodTag": "安静 / 等待 / 海"
+      },
+      "nextNodeId": "event_detail"
+    },
+    {
+      "id": "event_detail",
+      "type": "event_detail",
+      "content": {
+        "title": "阿浪的傍晚",
+        "body": "阿浪今天提前到了。他说：『我习惯等人，不习惯被等。』",
+        "imageKey": "alang-event-card-placeholder",
+        "hints": [
+          "阿浪不会主动找你",
+          "他在你附近 100 米内",
+          "走到他身边，他会抬头"
+        ]
+      },
+      "nextNodeId": "search_start"
+    },
+    {
+      "id": "search_start",
+      "type": "search_gate",
+      "content": {
+        "title": "出发去找他",
+        "body": "阿浪就在附近。移动起来，距离会告诉你答案。"
+      },
+      "gpsTrigger": {
+        "lat": 22.518,
+        "lng": 113.944,
+        "radiusMeters": 5
+      },
+      "nextNodeId": "found_alang"
+    },
+    {
+      "id": "found_alang",
+      "type": "found_scene",
+      "content": {
+        "title": "他抬起头",
+        "body": "你走近时，阿浪正好抬起头。他没有惊讶，只是轻轻笑了一下。『你来了。』",
+        "imageKey": "alang-found-scene-placeholder",
+        "narration": "海风吹过来，带着傍晚的凉意。阿浪把外套拉链往上拉了一点。"
+      },
+      "nextNodeId": "dialogue_1"
+    },
+    {
+      "id": "dialogue_1",
+      "type": "dialogue",
+      "content": {
+        "speaker": "阿浪",
+        "body": "『你平时等人吗？』",
+        "imageKey": "alang-found-scene-placeholder"
+      },
+      "choices": [
+        {
+          "label": "等过，但很少被人等",
+          "response": "阿浪点点头：『我也是。所以今天我提前来了。』",
+          "nextNodeId": "dialogue_2",
+          "moodShift": "共鸣"
+        },
+        {
+          "label": "不习惯等，习惯被等",
+          "response": "阿浪笑了一下：『那今天我们换换位置。』",
+          "nextNodeId": "dialogue_2",
+          "moodShift": "轻松"
+        },
+        {
+          "label": "我不等人，我找人",
+          "response": "阿浪愣了一下，然后笑了：『那你找到了。』",
+          "nextNodeId": "dialogue_2",
+          "moodShift": "俏皮"
+        }
+      ]
+    },
+    {
+      "id": "dialogue_2",
+      "type": "dialogue",
+      "content": {
+        "speaker": "阿浪",
+        "body": "『如果今天没有遇到我，你本来打算做什么？』",
+        "imageKey": "alang-found-scene-placeholder"
+      },
+      "choices": [
+        {
+          "label": "沿着海边走一圈",
+          "response": "『那现在有人陪你走了。』阿浪站起来，拍了拍裤子上的沙。",
+          "nextNodeId": "dialogue_3",
+          "moodShift": "温暖"
+        },
+        {
+          "label": "找个地方坐着发呆",
+          "response": "『那现在有人陪你发呆了。』阿浪没有动，但往旁边挪了挪，让出半个长椅。",
+          "nextNodeId": "dialogue_3",
+          "moodShift": "安静"
+        },
+        {
+          "label": "本来没打算来",
+          "response": "『那现在来了。』阿浪站起来，『走吧，既然来了。』",
+          "nextNodeId": "dialogue_3",
+          "moodShift": "随性"
+        }
+      ]
+    },
+    {
+      "id": "dialogue_3",
+      "type": "dialogue",
+      "content": {
+        "speaker": "阿浪",
+        "body": "『你觉得，两个人一起走，和一个人走，最大的区别是什么？』",
+        "imageKey": "alang-found-scene-placeholder"
+      },
+      "choices": [
+        {
+          "label": "有人可以说话",
+          "response": "『说话很重要。』阿浪说，『但有时候，一起不说话也很好。』",
+          "nextNodeId": "companion_start",
+          "moodShift": "温和"
+        },
+        {
+          "label": "节奏会变慢",
+          "response": "『对。』阿浪说，『一个人走得快，两个人走得远。』",
+          "nextNodeId": "companion_start",
+          "moodShift": "深沉"
+        },
+        {
+          "label": "没什么区别",
+          "response": "阿浪看了你一眼，没说话，只是笑了笑。",
+          "nextNodeId": "companion_start",
+          "moodShift": "淡然"
+        }
+      ]
+    },
+    {
+      "id": "companion_start",
+      "type": "companion_start",
+      "content": {
+        "title": "一起走走",
+        "body": "阿浪站起来，把外套拉链拉到顶。『走吧，海边的路很长。』",
+        "imageKey": "alang-found-scene-placeholder"
+      },
+      "nextNodeId": "companion_move"
+    },
+    {
+      "id": "companion_move",
+      "type": "companion_move",
+      "content": {
+        "title": "海边步道",
+        "body": "你们沿着海边走。阿浪走得不快，偶尔停下来看看水面。",
+        "companionLines": [
+          "『这里的海不蓝，但很安静。』",
+          "『我以前常来，后来不来了。』",
+          "『今天是因为你，才来的。』"
+        ]
+      },
+      "gpsTrigger": {
+        "lat": 22.519,
+        "lng": 113.945,
+        "radiusMeters": 5
+      },
+      "nextNodeId": "arrival_gate"
+    },
+    {
+      "id": "arrival_gate",
+      "type": "arrival_gate",
+      "content": {
+        "title": "到了",
+        "body": "阿浪停下脚步。『我们到了。』",
+        "imageKey": "alang-found-scene-placeholder"
+      },
+      "nextNodeId": "user_confirm"
+    },
+    {
+      "id": "user_confirm",
+      "type": "user_confirm",
+      "content": {
+        "title": "我们到了",
+        "body": "阿浪看着你，没有说话。",
+        "confirmLabel": "嗯，到了"
+      },
+      "nextNodeId": "closing"
+    },
+    {
+      "id": "closing",
+      "type": "closing",
+      "content": {
+        "title": "收束",
+        "body": "阿浪从口袋里掏出一张折叠的纸，递给你。『下次，你可以提前来。』",
+        "closingLines": [
+          "『等人是一种练习。』",
+          "『被等是一种幸运。』",
+          "『今天，我们都有。』"
+        ],
+        "imageKey": "alang-result-placeholder"
+      },
+      "nextNodeId": "result_card"
+    },
+    {
+      "id": "result_card",
+      "type": "result_card",
+      "content": {
+        "title": "阿浪的傍晚",
+        "body": "你们一起走过了一段海边的路。",
+        "dateLabel": "今天",
+        "locationLabel": "深圳湾公园",
+        "finalMood": "安静 / 完成",
+        "summaryLine": "你们一起走过了一段海边的路。",
+        "eventLog": [
+          "遇见阿浪",
+          "三段对话",
+          "海边陪伴",
+          "到达终点"
+        ],
+        "companionStyle": "安静陪伴"
+      }
+    }
+  ],
+  "meta": {
+    "estimatedDurationMinutes": 15,
+    "difficulty": "easy",
+    "tags": ["深圳湾", "阿浪", "初次体验"],
+    "npcName": "阿浪",
+    "searchRadiusMeters": 100,
+    "defaultTargetLocation": {
+      "lat": 22.518,
+      "lng": 113.944,
+      "radiusMeters": 5
+    },
+    "defaultCompanionEndLocation": {
+      "lat": 22.519,
+      "lng": 113.945,
+      "radiusMeters": 5
+    }
+  }
+}

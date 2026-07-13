@@ -106,6 +106,8 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     /** When true, formed matching groups are held for operator approval
      *  before users are notified and venues are assigned. Default false. */
     matchingOperatorReviewEnabled?: boolean
+    /** When true, enables the Alang NPC prototype system. Default: false. */
+    alangEnabled?: boolean
   }
 }
 

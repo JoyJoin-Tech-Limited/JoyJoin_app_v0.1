@@ -228,6 +228,28 @@ available at the `/api/metrics` endpoint.
 
 ---
 
+## Internal Alang NPC Prototype
+
+`ALANG_ENABLED` is the environment fallback for the DB-backed `alangEnabled`
+feature flag. Its safe default is `false`. When enabled, every authenticated
+tester in that environment receives `features.alangEnabled=true`; entry points
+do not depend on a special local account or on `APP_MODE=test`.
+
+For staging validation, apply the Alang migration first, then set:
+
+```bash
+APP_MODE=staging
+ALANG_ENABLED=true
+ENABLE_SINGLE_TEST_MODE=true
+```
+
+`ENABLE_SINGLE_TEST_MODE=true` is required only for the Alang debug endpoints
+and coordinate overrides. Those capabilities are hard-disabled when
+`APP_MODE=production`. To roll back immediately, set the DB flag (preferred) or
+`ALANG_ENABLED=false`; the server and mini-program entry points fail closed.
+
+---
+
 ## Discover UI Feature Flag
 
 ### `ORACLE_CARD_CORNER_STAT_ENABLED`

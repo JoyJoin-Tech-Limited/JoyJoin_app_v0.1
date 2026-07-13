@@ -126,6 +126,7 @@ const [
     matchingPuzzlePreludeEnabled,
     aigcLabelsEnabled,
     matchingOperatorReviewEnabled,
+    alangEnabled,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
     getFeatureFlag('smartProfession', true),
@@ -147,6 +148,7 @@ const [
     getFeatureFlag('matchingPuzzlePreludeEnabled', false),
     getFeatureFlag('aigcLabelsEnabled', false),
     getFeatureFlag('matchingOperatorReviewEnabled', false),
+    getFeatureFlag('alangEnabled', false),
   ]);
 
   const appMode: 'production' | 'test' = isSingleTestMode() ? 'test' : 'production';
@@ -185,6 +187,7 @@ const [
       matchingPuzzlePreludeEnabled,
       aigcLabelsEnabled,
       matchingOperatorReviewEnabled,
+      alangEnabled,
     },
   };
 

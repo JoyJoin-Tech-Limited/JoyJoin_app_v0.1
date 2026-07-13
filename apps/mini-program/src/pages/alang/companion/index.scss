@@ -1,0 +1,117 @@
+@import '../../../styles/variables';
+
+.alang-companion {
+  min-height: 100dvh;
+  background: linear-gradient(180deg, $color-bg 0%, rgba($color-bg-tint-pink, 0.3) 100%);
+  display: flex;
+  flex-direction: column;
+  padding: 48rpx 32rpx;
+
+  &__atmosphere {
+    flex: 1;
+  }
+
+  &__title {
+    font-size: $font-size-lg;
+    font-weight: 700;
+    color: $color-text-primary;
+    display: block;
+    margin-bottom: 32rpx;
+  }
+
+  &__line-wrap {
+    margin-bottom: 24rpx;
+    padding: 20rpx 24rpx;
+    background: rgba($color-primary, 0.06);
+    border-radius: 16rpx;
+    border-left: 4rpx solid $color-primary;
+  }
+
+  &__line {
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    line-height: 1.5;
+    display: block;
+  }
+
+  &__status {
+    margin: 32rpx 0;
+    text-align: center;
+  }
+
+  &__distance {
+    font-size: $font-size-2xl;
+    font-weight: 700;
+    color: $color-primary;
+    display: block;
+  }
+
+  &__actions {
+    margin-bottom: 32rpx;
+  }
+
+  &__map-btn {
+    background: $color-surface;
+    border: 2rpx solid rgba($color-primary, 0.2);
+    border-radius: 48rpx;
+    padding: 24rpx 0;
+    text-align: center;
+  }
+
+  &__map-btn-text {
+    font-size: $font-size-base;
+    color: $color-primary;
+    font-weight: 500;
+  }
+
+  &__arrival {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 48rpx 32rpx calc(48rpx + env(safe-area-inset-bottom));
+    background: $color-surface;
+    box-shadow: 0 -8rpx 48rpx rgba(0,0,0,0.1);
+    text-align: center;
+  }
+
+  &__arrival-text {
+    font-size: $font-size-xl;
+    font-weight: 700;
+    color: $color-primary;
+    display: block;
+    margin-bottom: 24rpx;
+  }
+
+  &__arrival-cta {
+    background: $color-primary;
+    border-radius: 48rpx;
+    padding: 28rpx 0;
+  }
+
+  &__arrival-cta-text {
+    color: $color-text-white;
+    font-size: $font-size-md;
+    font-weight: 600;
+  }
+
+  &__map-full {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+  }
+
+  &__map-full-map {
+    width: 100%;
+    height: 100%;
+  }
+
+  &__map-back {
+    position: absolute;
+    top: 48rpx;
+    left: 24rpx;
+    background: rgba(0,0,0,0.6);
+    padding: 16rpx 32rpx;
+    border-radius: 32rpx;
+  }
+}

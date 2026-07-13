@@ -71,7 +71,16 @@ await Promise.all(
   ].map(removePath),
 )
 
-await removeMatching('lovart', (name) => name !== 'puzzle' && name !== 'squad')
+const bundledAlangAssets = new Set([
+  'alang-event-card-placeholder.webp',
+  'alang-found-scene-placeholder.webp',
+  'alang-result-placeholder.webp',
+])
+
+await removeMatching(
+  'lovart',
+  (name) => name !== 'puzzle' && name !== 'squad' && !bundledAlangAssets.has(name),
+)
 await Promise.all([
   removePath('lovart/puzzle/_contact-sheet.png'),
   removeMatching('lovart/puzzle', (name) => name.endsWith('.png')),

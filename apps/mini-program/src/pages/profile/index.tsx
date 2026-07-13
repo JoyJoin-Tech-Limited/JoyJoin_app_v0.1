@@ -458,6 +458,22 @@ export default function ProfilePage() {
               </View>
             </View>
 
+            {authUser?.features?.alangEnabled && (
+              <View
+                className='profile-page__menu-row'
+                hoverClass='profile-page__menu-row--pressed'
+                onClick={() => { haptics('light'); Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangEvent}?view=stories` }) }}
+              >
+                <View className='profile-page__menu-icon-well'>
+                  <JoyJoinIcon emoji='📖' size={44} className='profile-page__menu-icon' />
+                </View>
+                <Text className='profile-page__menu-label'>我的故事</Text>
+                <View className='profile-page__menu-row-right'>
+                  <View className='profile-page__chevron profile-page__chevron--menu' />
+                </View>
+              </View>
+            )}
+
             <View
               className='profile-page__menu-row'
               hoverClass='profile-page__menu-row--pressed'

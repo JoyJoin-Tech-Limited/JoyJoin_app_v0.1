@@ -1657,3 +1657,92 @@ export const insertUserLocationAggregateSchema = createInsertSchema(userLocation
 
 export type UserLocationAggregate = typeof userLocationAggregates.$inferSelect;
 export type InsertUserLocationAggregate = z.infer<typeof insertUserLocationAggregateSchema>;
+
+// ============ Alang NPC Prototype System ============
+
+export const alangMissions = pgTable("alang_missions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  slug: varchar("slug").notNull().unique(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  contentJson: jsonb("content_json").notNull(),
+  targetLocation: jsonb("target_location").$type<{ lat: number; lng: number; radiusMeters: number }>(),
+  companionEndLocation: jsonb("companion_end_location").$type<{ lat: number; lng: number; radiusMeters: number }>(),
+  status: varchar("status").notNull().default("draft"),
+  isInternalOnly: boolean("is_internal_only").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAlangMissionSchema = createInsertSchema(alangMissions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AlangMission = typeof alangMissions.$inferSelect;
+export type InsertAlangMission = z.infer<typeof insertAlangMissionSchema>;
+
+export const alangMissionProgress = pgTable("alang_mission_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  missionId: varchar("mission_id").notNull().references(() => alangMissions.id),
+  currentNodeId: varchar("current_node_id"),
+  nodeHistory: jsonb("node_history").$type<string[]>(),
+  choicesMade: jsonb("choices_made").$type<Array<{ nodeId: string; choiceIndex: number; label: string }>>(),
+  gpsHistory: jsonb("gps_history").$type<Array<{ lat: number; lng: number; ts: number; accuracy?: number }>>(),
+  status: varchar("status").notNull().default("in_progress"),
+  stage: varchar("stage").notNull().default("not_started"),
+  arrivedAt: timestamp("arrived_at"),
+  completedAt: timestamp("completed_at"),
+  abandonedAt: timestamp("abandoned_at"),
+  isDebugSession: boolean("is_debug_session").default(false),
+  debugMarkers: jsonb("debug_markers").$type<string[]>(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_alang_progress_user").on(table.userId),
+  index("idx_alang_progress_mission").on(table.missionId),
+  index("idx_alang_progress_status").on(table.status),
+  uniqueIndex("uq_alang_progress_user_mission").on(table.userId, table.missionId),
+]);
+
+export const insertAlangMissionProgressSchema = createInsertSchema(alangMissionProgress).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AlangMissionProgress = typeof alangMissionProgress.$inferSelect;
+export type InsertAlangMissionProgress = z.infer<typeof insertAlangMissionProgressSchema>;
+
+export const alangStoryArchives = pgTable("alang_story_archives", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  missionId: varchar("mission_id").notNull().references(() => alangMissions.id),
+  progressId: varchar("progress_id").notNull().references(() => alangMissionProgress.id),
+  title: varchar("title").notNull(),
+  locationName: varchar("location_name"),
+  completedAt: timestamp("completed_at").notNull(),
+  finalMood: varchar("final_mood"),
+  closingLine: text("closing_line"),
+  summaryLine: text("summary_line"),
+  nodeHistory: jsonb("node_history").notNull().$type<string[]>(),
+  choicesMade: jsonb("choices_made").notNull().$type<Array<{ nodeId: string; choiceIndex: number; label: string }>>(),
+  companionLines: jsonb("companion_lines").$type<string[]>(),
+  isDebugSession: boolean("is_debug_session").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_alang_archive_user").on(table.userId),
+  index("idx_alang_archive_mission").on(table.missionId),
+  uniqueIndex("uq_alang_archive_progress").on(table.progressId),
+]);
+
+export const insertAlangStoryArchiveSchema = createInsertSchema(alangStoryArchives).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type AlangStoryArchive = typeof alangStoryArchives.$inferSelect;
+export type InsertAlangStoryArchive = z.infer<typeof insertAlangStoryArchiveSchema>;

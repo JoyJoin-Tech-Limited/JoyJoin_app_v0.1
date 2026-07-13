@@ -36,6 +36,15 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   rewards: 'pages/profile-linked/rewards/index',
   invite: 'pages/profile-linked/invite/index',
   cityUnlock: 'pages/city-unlock/index',
+  alangEvent: 'pages/alang/event/index',
+  alangEventDetail: 'pages/alang/event-detail/index',
+  alangConfig: 'pages/alang/config/index',
+  alangSearch: 'pages/alang/search/index',
+  alangDialogue: 'pages/alang/dialogue/index',
+  alangCompanion: 'pages/alang/companion/index',
+  alangResult: 'pages/alang/result/index',
+  alangStoryDetail: 'pages/alang/story-detail/index',
+  alangDebug: 'pages/alang/debug/index',
 } as const
 
 export const MINI_PROGRAM_ROUTES = {
@@ -68,6 +77,15 @@ export const MINI_PROGRAM_ROUTES = {
   invite: `/${MINI_PROGRAM_PAGE_PATHS.invite}`,
   terms: `/${MINI_PROGRAM_PAGE_PATHS.terms}`,
   cityUnlock: `/${MINI_PROGRAM_PAGE_PATHS.cityUnlock}`,
+  alangEvent: `/${MINI_PROGRAM_PAGE_PATHS.alangEvent}`,
+  alangEventDetail: `/${MINI_PROGRAM_PAGE_PATHS.alangEventDetail}`,
+  alangConfig: `/${MINI_PROGRAM_PAGE_PATHS.alangConfig}`,
+  alangSearch: `/${MINI_PROGRAM_PAGE_PATHS.alangSearch}`,
+  alangDialogue: `/${MINI_PROGRAM_PAGE_PATHS.alangDialogue}`,
+  alangCompanion: `/${MINI_PROGRAM_PAGE_PATHS.alangCompanion}`,
+  alangResult: `/${MINI_PROGRAM_PAGE_PATHS.alangResult}`,
+  alangStoryDetail: `/${MINI_PROGRAM_PAGE_PATHS.alangStoryDetail}`,
+  alangDebug: `/${MINI_PROGRAM_PAGE_PATHS.alangDebug}`,
   index: `/${MINI_PROGRAM_PAGE_PATHS.index}`,
 } as const
 
@@ -145,7 +163,19 @@ export const MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT = 'pages/icebreaker-session' 
 
 export const MINI_PROGRAM_MATCHING_SUBPACKAGE_ROOT = 'pages/matching-status' as const
 
-export const MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT = 'pages/pool-registration' as const
+export const MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT = 'pages/alang' as const
+
+export const MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES = [
+  'event/index',
+  'event-detail/index',
+  'config/index',
+  'search/index',
+  'dialogue/index',
+  'companion/index',
+  'result/index',
+  'story-detail/index',
+  'debug/index',
+] as const
 
 export const MINI_PROGRAM_MATCHING_SUBPACKAGE_PAGES = [
   'index',
@@ -155,6 +185,8 @@ export const MINI_PROGRAM_FEATURES_SUBPACKAGE_PAGES = [
   'index',
   'tier-selector/index',
 ] as const
+
+export const MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT = 'pages/pool-registration' as const
 
 export const MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_PAGES = [
   'index',
@@ -181,6 +213,10 @@ export const MINI_PROGRAM_SUBPACKAGES = [
     root: MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
     pages: MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_PAGES,
   },
+  {
+    root: MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES,
+  },
 ] as const
 
 export const MINI_PROGRAM_PRELOAD_RULES = {
@@ -202,7 +238,7 @@ export const MINI_PROGRAM_PRELOAD_RULES = {
   },
   [MINI_PROGRAM_PAGE_PATHS.discover]: {
     network: 'all',
-    packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT],
+    packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT, MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT],
   },
   [MINI_PROGRAM_PAGE_PATHS.profile]: {
     network: 'all',

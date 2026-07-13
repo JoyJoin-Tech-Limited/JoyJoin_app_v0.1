@@ -228,6 +228,20 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/pages/pool-registration/assets',
           to: 'dist/pages/pool-registration/assets',
         },
+        // Alang internal-prototype placeholders — bundled locally so the
+        // GPS/story flow remains testable even when the CDN is unavailable.
+        {
+          from: 'src/assets/lovart/alang-event-card-placeholder.webp',
+          to: 'dist/assets/lovart/alang-event-card-placeholder.webp',
+        },
+        {
+          from: 'src/assets/lovart/alang-found-scene-placeholder.webp',
+          to: 'dist/assets/lovart/alang-found-scene-placeholder.webp',
+        },
+        {
+          from: 'src/assets/lovart/alang-result-placeholder.webp',
+          to: 'dist/assets/lovart/alang-result-placeholder.webp',
+        },
         // Matching-status puzzle prelude pieces — bundled locally (~130KB total)
         // so the live-reveal prelude paints instantly even if CDN is slow.
         // Source PNG masters and the contact sheet live in
