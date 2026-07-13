@@ -596,7 +596,7 @@ function AuthenticatedDiscover({
         </View>
       )}
 
-      {/* Alang NPC prototype card — test mode only */}
+      {/* Alang NPC prototype card — server feature flag only */}
       <AlangDiscoverCard />
 
       {/* Pool listing */}

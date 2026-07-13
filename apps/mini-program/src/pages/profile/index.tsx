@@ -19,6 +19,7 @@ import {
 } from '../../lib/api/authSession'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
+import { shouldShowAlangEntry } from '../../lib/alang/alangAccess'
 import { queryClient } from '../../lib/api/queryClient'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
@@ -458,7 +459,7 @@ export default function ProfilePage() {
               </View>
             </View>
 
-            {authUser?.features?.alangEnabled && (
+            {shouldShowAlangEntry(authUser) && (
               <View
                 className='profile-page__menu-row'
                 hoverClass='profile-page__menu-row--pressed'

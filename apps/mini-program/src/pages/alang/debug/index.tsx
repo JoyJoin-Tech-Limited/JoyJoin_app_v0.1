@@ -5,6 +5,7 @@ import { View, Text, Input, ScrollView } from '@tarojs/components'
 import { useAuth } from '../../../hooks/useAuth'
 import { callDebugReset, callDebugMockGps, callDebugForceNode } from '../../../lib/alang/api'
 import { alangEvents } from '../../../lib/alang/alangAnalytics'
+import { shouldShowAlangDebugTools } from '../../../lib/alang/alangAccess'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import './index.scss'
 
@@ -58,6 +59,8 @@ export default function AlangDebugPage() {
   const handleGoTo = (page: string) => {
     Taro.navigateTo({ url: `${page}?slug=${slug}` })
   }
+
+  if (!shouldShowAlangDebugTools(user)) return null
 
   return (
     <ScrollView className='alang-debug' scrollY>

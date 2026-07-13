@@ -6,6 +6,15 @@
   border-radius: 24rpx;
   overflow: hidden;
   box-shadow: 0 4rpx 24rpx rgba(0,0,0,0.06);
+  transition: background 0.12s ease;
+
+  &--pressed {
+    background: rgba($color-primary, 0.06);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 
   &__visual {
     position: relative;
