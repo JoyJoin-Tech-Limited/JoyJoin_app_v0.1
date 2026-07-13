@@ -94,7 +94,7 @@ const YUEZAI_REACTIONS: Record<TierMachineId, Record<VibeId, string>> = {
 // auth or validation errors.
 const START_MAX_ATTEMPTS = 3
 const START_RETRY_DELAYS_MS = [300, 800]
-const START_REQUEST_TIMEOUT_MS = 10000
+const START_REQUEST_TIMEOUT_MS = 20000
 
 function isRetriableStartError(err: unknown): boolean {
   if (err === null || err === undefined) return true

@@ -136,6 +136,25 @@ describe('compileForSession — feature flag integration', () => {
     expect(plan.compilerId).toContain('compiler-rule-v1');
   });
 
+  it('returns a static fallback plan when template lookup stalls', async () => {
+    vi.spyOn(featureFlags, 'getFeatureFlag').mockResolvedValue(true);
+    vi.spyOn(runPlanTemplatesRepo, 'getTemplateByVibeAndTier').mockImplementation(
+      () => new Promise(() => {}),
+    );
+
+    const state = makeState('blaze', 'game', 4);
+    const plan = await Promise.race([
+      compileForSession(state, 'blaze'),
+      new Promise<never>((_resolve, reject) => {
+        setTimeout(() => reject(new Error('compileForSession exceeded fallback budget')), 200);
+      }),
+    ]);
+
+    expect(plan.compilerId).toBe('blaze-v1');
+    expect(plan.segments[0]?.phase).toBe('warmup');
+    expect(plan.segments[plan.segments.length - 1]?.phase).toBe('recap');
+  });
+
   it('all 9 vibe-tier combos produce valid plans when flag=true', async () => {
     vi.spyOn(featureFlags, 'getFeatureFlag').mockResolvedValue(true);
     vi.spyOn(runPlanTemplatesRepo, 'getTemplateByVibeAndTier').mockResolvedValue(undefined);

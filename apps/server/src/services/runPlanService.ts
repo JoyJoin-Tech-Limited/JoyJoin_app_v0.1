@@ -14,6 +14,28 @@ import { getFeatureFlag } from '../lib/featureFlags';
 import { getTemplateByVibeAndTier } from '../repositories/runPlanTemplatesRepo';
 import { logger } from '../lib/logger';
 
+const RUN_PLAN_COMPILE_BUDGET_MS =
+  process.env.NODE_ENV === 'test' ? 25 : 2500;
+
+function getFallbackRunPlan(tier: TierMachineId): IcebreakerRunPlan {
+  return getRunPlanForTier(tier) ?? BREEZE_RUN_PLAN;
+}
+
+function withCompileBudget<T>(
+  promise: Promise<T>,
+  budgetMs: number,
+): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([
+    promise,
+    new Promise<null>((resolve) => {
+      timer = setTimeout(() => resolve(null), budgetMs);
+    }),
+  ]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
 function mapVibeToTemplateVibe(vibe: SocialSessionState['vibe']): TemplateVibeId {
   switch (vibe) {
     case 'chat':
@@ -85,6 +107,45 @@ export async function compileForSession(
   const enabledPhases: SocialIcebreakerPhase[] = basePhases.includes('recap') ? basePhases : [...basePhases, 'recap'];
   const playerCount = state.playerCount ?? 1;
 
+  return compileForSessionWithinBudget(state, tier, {
+    enabledPhases,
+    playerCount,
+  });
+}
+
+async function compileForSessionWithinBudget(
+  state: SocialSessionState,
+  tier: TierMachineId,
+  context: {
+    enabledPhases: SocialIcebreakerPhase[];
+    playerCount: number;
+  },
+): Promise<IcebreakerRunPlan> {
+  const plan = await withCompileBudget(
+    compileForSessionUnsafe(state, tier, context),
+    RUN_PLAN_COMPILE_BUDGET_MS,
+  );
+
+  if (plan) return plan;
+
+  logger.warn('Run plan compilation exceeded start budget, using static fallback', {
+    socialSessionId: state.socialSessionId,
+    tier,
+    vibe: state.vibe,
+    budgetMs: RUN_PLAN_COMPILE_BUDGET_MS,
+  });
+  return getFallbackRunPlan(tier);
+}
+
+async function compileForSessionUnsafe(
+  state: SocialSessionState,
+  tier: TierMachineId,
+  context: {
+    enabledPhases: SocialIcebreakerPhase[];
+    playerCount: number;
+  },
+): Promise<IcebreakerRunPlan> {
+  const { enabledPhases, playerCount } = context;
   const flagEnabled = await getFeatureFlag('runPlanTemplatesEnabled', true);
 
   if (flagEnabled) {
@@ -145,6 +206,6 @@ export async function compileForSession(
       tier,
       error: error instanceof Error ? error.message : String(error),
     });
-    return getRunPlanForTier(tier) ?? BREEZE_RUN_PLAN;
+    return getFallbackRunPlan(tier);
   }
 }
