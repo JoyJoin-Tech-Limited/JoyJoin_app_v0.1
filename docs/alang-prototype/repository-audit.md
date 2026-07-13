@@ -156,7 +156,7 @@
 - **Auth / Login**：若 Alang 需要独立登录态（如内部测试账号），需评估与现有 WeChat 登录的冲突。
 - **Feature Flags**：新增 `alangEnabled` flag 需加入 `FLAG_ENV_MAP` 和 `buildAuthUserResponse.ts` 的并行解析。
 - **Analytics**：新增 Alang 事件需加入 `discoverAnalytics.ts` 或新建 `alangAnalytics.ts`，避免污染现有事件命名空间。
-- **Database Migrations**：新增表使用显式 migration。当前 staging 部署脚本会按 journal 自动执行未应用的 SQL；绕过该脚本部署时，才需手动 `psql` 应用 `0062_military_spirit.sql`。
+- **Database Migrations**：新增表使用显式 migration。Staging 不会自动执行 DDL；部署前必须对 `postgres-staging` 手动执行 `psql "$DATABASE_URL" -f apps/server/migrations/0062_military_spirit.sql`。
 - **Package Size**：WeChat 主包 2MB 限制。新增页面需评估是否放入 subpackage。
 
 ### 3.4 是否需要新增数据库表或 Migration
