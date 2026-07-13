@@ -4,7 +4,7 @@
 >
 > **Audience:** Frontend engineers and QA validating `apps/mini-program/src/pages/squad-unboxing` in WeChat DevTools or on a real device.
 >
-> **Last updated:** 2026-07-09
+> **Last updated:** 2026-07-13
 
 ---
 
@@ -78,9 +78,15 @@ Use the WeChat DevTools **Inspect** panel (or real-device screenshot) and confir
 - [ ] Tapping the gift box in `ready` state triggers the `shaking` → `revealed` flow.
 - [ ] The `DragRevealRibbon` is anchored below the gift box, not inside the white copy card, and remains reachable on all screen heights.
 - [ ] Drag mode blocks parent `ScrollView` scroll; tap-fallback / low-end mode allows vertical scroll.
-- [ ] The fanned deck is fully inside the revealed stage; no card is clipped by the stage or the viewport.
+- [ ] **Cascading fan deal:** after the box opens, cards deal one-by-one (staggered slide-up + flip face-up) and settle into a rotated hand-fan pose (rotation per position, 28rpx overlap); the whole deal finishes within ~600ms + a ~200ms anticipation beat.
+- [ ] 4–6 members render on a single fanned row; 7–8 members wrap to two fanned rows and both rows stay fully inside the revealed stage (no clipping top or bottom).
+- [ ] In `revealed` state, tapping a card lifts it (scale 1.1 + translateY) and dims siblings to 35%; every dealt card already shows its front face (flip is derived from the deal, not from focus).
+- [ ] The detail panel lives in reserved normal-flow space below the fan: focusing a card causes NO scroll jump/reflow; the idle invite hint shows before the first tap and returns after dismiss.
+- [ ] A longpress on a card fires once and swallows exactly one trailing tap (no double action); a tap more than ~3 s after the longpress behaves as a normal tap.
+- [ ] In `revealed` state, vertical scroll can initiate over the margins around the fan while card taps still register (parent-none/child-auto pointer-events).
+- [ ] The covered band on each non-rightmost card is art/padding only — no name, archetype, meta, or pill text is hidden by the overlapping card to its right. The center card of the first row plays a one-shot peek after the deal; a single holo sweep fires once per reveal.
 - [ ] All tap targets (cards, drag ribbon, dismiss button, action dock buttons) are ≥ 88rpx tall and not overlapped.
-- [ ] Reduced-motion preference suppresses entrance animations but preserves layout.
+- [ ] Reduced-motion preference suppresses entrance animations (deal becomes an opacity fade) but preserves layout.
 - [ ] Degradation-tier device (or simulated low-end) shortens transitions but preserves layout.
 - [ ] On the smallest target device (iPhone SE / 375 × 667), the white card and action dock are still visible without needing to scroll.
 
@@ -91,7 +97,7 @@ Use the WeChat DevTools **Inspect** panel (or real-device screenshot) and confir
 | Symptom | Likely cause |
 | --- | --- |
 | Gift box covers the white card text | Scroll `padding-top` is too small (often overriden by `safe-area-top` mixin) or the stage `height` is too small. |
-| Fanned deck is clipped at the top or bottom | `revealed` stage height is smaller than the 480rpx deck. |
+| Fanned deck is clipped at the top or bottom | `revealed` stage height `clamp(500rpx, 56dvh, 660rpx)` is smaller than the fanned deck (two 284rpx rows + 8rpx row gap + title bar). |
 | Header or analysis bubble appears behind the stage | Root `squad-unboxing--${flowState}` class is missing, so `padding-top` for that state is not applied. |
 | White card is off-screen at the bottom | Stage height is too large for the ready state; reduce `clamp(420rpx, 54vh, 560rpx)` minimum. |
 | Action dock overlaps content | `fixed-footer-reserve` is missing or the wrong value is used. |

@@ -112,6 +112,8 @@ node scripts/auto/auto-eval.mjs --mode=manual-report
 
 When the `harness-engineering` module is enabled, it runs the same checks as `npm run harness:gate`.
 
+Auto-eval's status mapping mirrors the gate's own blocking semantics (fail-safe): gate verdict `pass` **or `concern`** (exit 2 — non-blocking by the gate's design, e.g. a pre-existing >1500-line file-size warning on a touched file) maps to an auto-eval module **pass** with concerns surfaced as minor findings; `fail` maps to **fail**; an unknown/unparseable verdict maps to **fail**. Concerns never hard-fail auto-eval, but they stay visible in the report.
+
 ## Agent Workflow
 
 At the end of every implementation turn:

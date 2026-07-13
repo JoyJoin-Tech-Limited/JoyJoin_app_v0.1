@@ -241,20 +241,27 @@ async function captureSquadUnboxingFocused() {
       await clearAndSeedStorage(page)
       await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
 
-      // Wait for the focused inline detail to render.
-      await page.waitForSelector('#inline-detail', { timeout: 10000 })
+      // Wait for the focused detail panel to expand (on-demand panel:
+      // --open modifier replaces the old reserved --ready shell).
+      await page.waitForSelector('.squad-unboxing__detail-panel--open', { timeout: 10000 })
       await page.waitForTimeout(1200)
-      return page.screenshot({ fullPage: true })
+
+      // The on-demand panel sits directly below the fixed stage in normal
+      // flow, so at scroll 0 it is already inside the viewport; the fixed
+      // bottom dock would overlay its tail, so hide the dock only.
+      await page.addStyleTag({ content: '.squad-unboxing__bottom-dock { display: none !important; }' })
+      await page.waitForTimeout(400)
+      return page.screenshot({ fullPage: false })
     }
   )
 }
 
-async function captureSquadUnboxingRevealed() {
+async function captureSquadUnboxingRevealed(groupId = 'group-screenshot-001') {
   return withBrowserPage(
     { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
     async (page) => {
       await page.goto(
-        `${H5_BASE_URL}/#/pages/squad-unboxing/index?groupId=group-screenshot-001&motion=reduce`,
+        `${H5_BASE_URL}/#/pages/squad-unboxing/index?groupId=${groupId}&motion=reduce`,
         { waitUntil: 'domcontentloaded', timeout: 60000 }
       )
       await clearAndSeedStorage(page)
@@ -271,8 +278,8 @@ async function captureSquadUnboxingRevealed() {
       await page.waitForSelector('.squad-unboxing__deck-stage', { timeout: 10000 })
       await page.waitForTimeout(1200)
 
-      // Wait for analysis cards to unfold (progressive reveal in stages).
-      await page.waitForSelector('.squad-unboxing__analysis-stack', { timeout: 10000 })
+      // Wait for the analysis chapter to render (progressive reveal in stages).
+      await page.waitForSelector('.squad-unboxing__chapter--analysis', { timeout: 10000 })
       // Give archetype images time to load over the CDN.
       await page.waitForTimeout(2500)
 
@@ -359,7 +366,8 @@ register('event-ticket-payment', captureEventTicketPayment)
 register('squad-unboxing-ready', captureSquadUnboxingReady)
 register('squad-unboxing-shaking', captureSquadUnboxingShaking)
 register('squad-unboxing-focused', captureSquadUnboxingFocused)
-register('squad-unboxing-revealed', captureSquadUnboxingRevealed)
+register('squad-unboxing-revealed', () => captureSquadUnboxingRevealed())
+register('squad-unboxing-revealed-6', () => captureSquadUnboxingRevealed('group-screenshot-006'))
 register('profile-review-welcome-coupon', captureProfileReview)
 register('matching-status-puzzle-prelude', captureMatchingStatusPuzzlePrelude)
 

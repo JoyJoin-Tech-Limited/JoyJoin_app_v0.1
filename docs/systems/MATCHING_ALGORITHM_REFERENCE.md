@@ -768,6 +768,7 @@ Authorization: requireAuth
 
 - Returns `GroupAnalysisResponse` immediately from cache after the first generation (7-day TTL per group roster)
 - On cache miss: calls `generateGroupAnalysis()` in `matchExplanationService.ts`, which fans out pair explanation calls and generates icebreakers in parallel via `socialModelRouter` (MiniMax preferred, DeepSeek fallback)
+- All stored and served pair explanations are normalized plain text via `normalizePairExplanationText`, applied at the generation (`parsePairExplanationContent`), persist (`savePairExplanationsCache`), and serve (`generateGroupAnalysis` — legacy cached rows cleaned on read) boundaries; malformed LLM JSON never reaches the client, and generation-boundary salvage is logged via `logger.warn('[MatchExplanation] recovered malformed explanation payload', { kind, recoveredLength })` (2026-07-13)
 - Rate limited via `aiEndpointLimiter`
 
 ### 6.5.3 Client Surfaces

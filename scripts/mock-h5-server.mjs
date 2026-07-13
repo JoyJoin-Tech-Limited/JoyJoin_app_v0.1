@@ -418,6 +418,47 @@ const MOCK_SQUAD_MEMBERS = [
   },
 ]
 
+// Six-member variant for two-row fan visual verification (group-screenshot-006).
+const MOCK_SQUAD_MEMBERS_6 = [
+  ...MOCK_SQUAD_MEMBERS,
+  {
+    userId: 'user-screenshot-005',
+    displayName: '小禾',
+    archetype: 'koala',
+    topInterests: ['插画', '咖啡', '猫'],
+    ageLabel: '26',
+    industryNicheLabel: '自由插画师',
+    industryCategoryLabel: '设计创意',
+    ageVisible: true,
+    industryVisible: true,
+    gender: 'female',
+    educationLevel: '本科',
+    hometownRegionCity: '浙江 · 杭州',
+    hometownAffinityOptin: true,
+    educationVisible: true,
+    relationshipStatus: 'single',
+    intent: ['fun', 'friends'],
+  },
+  {
+    userId: 'user-screenshot-006',
+    displayName: '阿鸣',
+    archetype: 'rooster',
+    topInterests: ['创业', '跑步', '播客'],
+    ageLabel: '31',
+    industryNicheLabel: '连续创业者',
+    industryCategoryLabel: '商业管理',
+    ageVisible: false,
+    industryVisible: true,
+    gender: 'male',
+    educationLevel: '硕士',
+    hometownRegionCity: '福建 · 厦门',
+    hometownAffinityOptin: false,
+    educationVisible: true,
+    relationshipStatus: 'single',
+    intent: ['networking', 'discussion'],
+  },
+]
+
 const MOCK_SQUAD_GROUP = {
   id: 'group-screenshot-001',
   groupNumber: 3,
@@ -450,10 +491,15 @@ const MOCK_SQUAD_POOL = {
 }
 
 app.get('/api/pool-groups/:id', (req, res) => {
+  const isSix = req.params.id === 'group-screenshot-006'
   res.json({
-    group: { ...MOCK_SQUAD_GROUP, id: req.params.id },
+    group: {
+      ...MOCK_SQUAD_GROUP,
+      id: req.params.id,
+      memberCount: isSix ? 6 : MOCK_SQUAD_GROUP.memberCount,
+    },
     pool: MOCK_SQUAD_POOL,
-    members: MOCK_SQUAD_MEMBERS,
+    members: isSix ? MOCK_SQUAD_MEMBERS_6 : MOCK_SQUAD_MEMBERS,
   })
 })
 
@@ -521,6 +567,38 @@ app.get('/api/pool-groups/:id/analysis', (req, res) => {
       introAngle: '有没有试过露营时自己烤东西吃？',
     },
   ]
+
+  // Six-member fixture: add viewer pairs for the two extra members (also
+  // exercises the privacy-omission path — user-screenshot-006 has
+  // ageVisible: false) and an epic-rarity connection for the holo sweep.
+  if (req.params.id === 'group-screenshot-006') {
+    pairExplanations.push(
+      {
+        pairKey: ['user-screenshot-001', 'user-screenshot-005'].sort().join('-'),
+        explanation: '都喜欢慢慢把生活过出细节，聊到咖啡和猫会停不下来。',
+        chemistryScore: 83,
+        sharedInterests: ['咖啡', '猫'],
+        connectionPoints: ['都爱在咖啡馆里画画', '都是猫系人格'],
+        connectionPointsWithRarity: [
+          { text: '都爱在咖啡馆里画画', rarity: 'common' },
+          { text: '都是猫系人格', rarity: 'rare' },
+        ],
+        introAngle: '最近有画什么让你满意的小东西吗？',
+      },
+      {
+        pairKey: ['user-screenshot-001', 'user-screenshot-006'].sort().join('-'),
+        explanation: '一个深耕产品，一个冲在创业一线，聊起用户和增长会火花四溅。',
+        chemistryScore: 91,
+        sharedInterests: ['播客'],
+        connectionPoints: ['都相信长期主义', '都爱听商业播客'],
+        connectionPointsWithRarity: [
+          { text: '都相信长期主义', rarity: 'epic' },
+          { text: '都爱听商业播客', rarity: 'common' },
+        ],
+        introAngle: '最近哪一期播客让你印象最深？',
+      }
+    )
+  }
 
   const myPairs = pairExplanations.filter((pair) => pair.pairKey.includes(currentUserId))
 
