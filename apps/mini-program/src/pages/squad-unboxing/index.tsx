@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useRouter, useDidShow } from '@tarojs/taro'
-import { useEffect, useCallback, useMemo, useRef, useState } from 'react'
+import { useEffect, useCallback, useRef, useState } from 'react'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { normalizeMatchingCopy } from '@shared/features/matching-status'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
@@ -23,34 +23,38 @@ import { haptics } from '../../lib/utils/haptics'
 import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
 import { BlindBoxVisual } from './BlindBoxVisual'
 import { BlindBoxLid } from './BlindBoxLid'
-import { useResetOnShow } from '../../hooks/useResetOnShow'
 import DragRevealRibbon from './DragRevealRibbon'
 import XiaoyueHostImage from './XiaoyueHostImage'
 import SquadDeckStage from './SquadDeckStage'
 import TeammateCardDetail from './TeammateCardDetail'
 import {
+  buildEventBriefDate,
   buildSquadSoulBubbleText,
-  formatDateTime,
   getChemistryWord,
   getEventTypeLabel,
   getMemberName,
   getPairChemistryWord,
   getVibeLabel,
 } from './squadUnboxingViewModels'
+import { getOracleCardCornerAsset } from '../../components/discover/oracleCardAssets'
+import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
+import { preloadImagesWithDiagnostics } from '../../lib/utils/imagePreload'
 
 import { useSquadUnboxingController } from './useSquadUnboxingController'
 import './index.scss'
 
 const SCROLL_DEPTH_BUCKETS = ['tonights_table', 'connection_story', 'actions'] as const
 
-// Scroll distance (rpx) after which the pinned revealed deck yields reading
-// room to the story content below. Converted to px per device at runtime.
-const DECK_COLLAPSE_SCROLL_THRESHOLD_RPX = 240
-
 type ScrollDepthBucket = typeof SCROLL_DEPTH_BUCKETS[number]
 
 function useScrollDepthTracking(groupId: string) {
   const reportedRef = useRef<Set<ScrollDepthBucket>>(new Set())
+
+  // New group (or re-entry with a different id) re-arms the buckets so depth
+  // is reported once per group, not once per page lifetime.
+  useEffect(() => {
+    reportedRef.current = new Set()
+  }, [groupId])
 
   const reportDepth = useCallback((bucket: ScrollDepthBucket) => {
     if (reportedRef.current.has(bucket)) return
@@ -128,16 +132,16 @@ export default function SquadUnboxingPage() {
   const isStageTap = composedHeroEnabled && flowState === 'ready'
 
   const [focusedCardIndex, setFocusedCardIndex] = useState(-1)
-  const [hasTappedCard, setHasTappedCard] = useState(false)
   const [announcement, setAnnouncement] = useState('')
   const [headerReady, setHeaderReady] = useState(false)
-  const [deckEmergeComplete, setDeckEmergeComplete] = useState(false)
-  const [programmaticScrollTop, setProgrammaticScrollTop] = useState(0)
+  const [briefVignetteFailed, setBriefVignetteFailed] = useState(false)
+  // Bump on swipe-back re-entry to reset transient deal/focus/peek state in
+  // the deck stage. First mount is excluded so the initial deal can animate.
+  const [resetSignal, setResetSignal] = useState(0)
+  const hasShownRef = useRef(false)
   // Mirror of focusedCardIndex so handleCardFocus can compute the next focus
   // synchronously without running side effects inside a state updater.
   const focusedCardIndexRef = useRef(-1)
-  const [isDeckScrolled, setIsDeckScrolled] = useState(false)
-  const isDeckScrolledRef = useRef(false)
   const matchExplanationCopy = normalizeMatchingCopy(group?.matchExplanation)
 
   const reportScrollDepth = useScrollDepthTracking(groupId)
@@ -146,37 +150,29 @@ export default function SquadUnboxingPage() {
     focusedCardIndexRef.current = focusedCardIndex
   }, [focusedCardIndex])
 
-  // rpx→px conversion for the collapse threshold (750rpx = screen width).
-  const deckCollapseThresholdPx = useMemo(() => {
-    try {
-      const { screenWidth } = Taro.getSystemInfoSync()
-      return Math.round((DECK_COLLAPSE_SCROLL_THRESHOLD_RPX * (screenWidth || 375)) / 750)
-    } catch {
-      return 120
-    }
-  }, [])
-
-  // Render-derived: a focused card always expands the deck back to full size
-  // so the selector-query detail math measures stable full-size geometry and
-  // the inline detail lands flush — no collapse/scroll oscillation.
-  const isDeckCollapsed = flowState === 'revealed' && focusedCardIndex === -1 && isDeckScrolled
-
   useEffect(() => {
     if (isStoryFocused && members.length > 0 && focusedCardIndex === -1) {
       const index = Math.min(2, members.length - 1)
       setFocusedCardIndex(index)
-      setHasTappedCard(true)
     }
   }, [isStoryFocused, members.length, focusedCardIndex])
 
-  useResetOnShow(() => {
-    if (!isStoryFocused) setHasTappedCard(false)
-  })
   useDidShow(() => {
     if (isStoryFocused) return
     setFocusedCardIndex(-1)
-    setHeaderReady(false)
-    setDeckEmergeComplete(false)
+    if (hasShownRef.current) {
+      // Re-entry (swipe-back / foreground): the reveal already played — keep
+      // the chapters, 团魂 bubble, and action dock VISIBLE (headerReady stays
+      // true; the [authLoading, isLoading] arm effect won't re-fire on a warm
+      // re-entry, so without this the dock would stick at translateY(100%)
+      // and the bubble/pair cards at opacity:0). Only transient deck state
+      // resets so the fan settles without replaying the flight.
+      setResetSignal((signal) => signal + 1)
+      setHeaderReady(true)
+    } else {
+      setHeaderReady(false)
+    }
+    hasShownRef.current = true
   })
 
   useEffect(() => {
@@ -195,8 +191,8 @@ export default function SquadUnboxingPage() {
 
   const handleCardFocus = useCallback((index: number) => {
     // Compute the next focus synchronously from the mirrored ref so all side
-    // effects (haptic, hasTappedCard, analytics) live outside the state
-    // updater — React may replay updaters, which previously double-fired them.
+    // effects (haptic, analytics) live outside the state updater — React may
+    // replay updaters, which previously double-fired them.
     const current = focusedCardIndexRef.current
     const next = current === index ? -1 : index
     focusedCardIndexRef.current = next
@@ -213,8 +209,9 @@ export default function SquadUnboxingPage() {
         screen: 'squad-unboxing',
       })
     } else {
-      setHasTappedCard(true)
-      haptics('light')
+      // Focus haptic is tactile feedback for an explicit tap; suppressed under
+      // reduce-motion / degradation per the fallback contract.
+      if (!shouldReduceMotion && !isDegradation) haptics('light')
       squadUnboxingAnalytics.track('squad_unboxing_card_focus', {
         source: 'deck_tap',
         cardIndex: next,
@@ -224,7 +221,7 @@ export default function SquadUnboxingPage() {
         screen: 'squad-unboxing',
       })
     }
-  }, [members, groupId])
+  }, [members, groupId, shouldReduceMotion, isDegradation])
 
   const handleDismissDetail = useCallback(() => {
     setFocusedCardIndex(-1)
@@ -260,26 +257,22 @@ export default function SquadUnboxingPage() {
     ? (viewerPairByMemberId.get(focusedMember.userId) ?? null)
     : null
 
+  // Event-brief card: structured date block + shared OracleCard corner vignette.
+  const briefDate = buildEventBriefDate(group?.finalDateTime ?? pool?.dateTime)
+  const briefVignetteSrc = getOracleCardCornerAsset(pool?.eventType ?? undefined)
+
+  // Warm the fan's archetype art during the reveal so cards never paint blank
+  // frames on 4G (skeleton covers first paint; this shrinks the decode gap).
   useEffect(() => {
-    if (!focusedMember) return
-    const timer = setTimeout(() => {
-      Taro.createSelectorQuery()
-        .select('.squad-unboxing__scroll')
-        .scrollOffset()
-        .select('#inline-detail-anchor')
-        .boundingClientRect()
-        .select('.squad-unboxing__stage')
-        .boundingClientRect()
-        .exec((res) => {
-          const [scrollOffset, anchorRect, stageRect] = res
-          if (!scrollOffset || !anchorRect || !stageRect) return
-          const desiredScrollTop =
-            scrollOffset.scrollTop + (anchorRect.top - stageRect.bottom)
-          setProgrammaticScrollTop(Math.max(0, desiredScrollTop))
-        })
-    }, 100)
-    return () => clearTimeout(timer)
-  }, [focusedMember])
+    if (flowState !== 'revealed' || members.length === 0) return
+    const urls = members
+      .slice(0, 8)
+      .map((member) => (member.archetype ? ARCHETYPE_ASSET_MAP[member.archetype]?.webp : undefined))
+      .filter((url): url is string => Boolean(url))
+    if (urls.length > 0) {
+      void preloadImagesWithDiagnostics(urls, 'squad-unboxing:fan-archetypes')
+    }
+  }, [flowState, members])
 
   const prevVenueStatusRef = useRef<string | null>(null)
 
@@ -309,19 +302,12 @@ export default function SquadUnboxingPage() {
     if (scrollTop > 120) reportScrollDepth('tonights_table')
     if (scrollTop > 320) reportScrollDepth('connection_story')
     if (scrollTop > 520) reportScrollDepth('actions')
-    const nextScrolled = flowState === 'revealed' && scrollTop > deckCollapseThresholdPx
-    if (nextScrolled !== isDeckScrolledRef.current) {
-      isDeckScrolledRef.current = nextScrolled
-      setIsDeckScrolled(nextScrolled)
-    }
-  }, [reportScrollDepth, flowState, deckCollapseThresholdPx])
+  }, [reportScrollDepth])
 
   const pageClassName = [
     rootClassName,
     `squad-unboxing--${flowState}`,
     isExiting ? 'squad-unboxing--exiting' : '',
-    isDeckCollapsed ? 'squad-unboxing--deck-collapsed' : '',
-    flowState === 'revealed' && focusedCardIndex >= 0 ? 'squad-unboxing--card-focused' : '',
   ].filter(Boolean).join(' ')
 
   if (authLoading || isLoading) {
@@ -331,7 +317,7 @@ export default function SquadUnboxingPage() {
   if (fetchError || !poolGroup || !group || !pool) {
     return (
       <View className={pageClassName}>
-        <View className='squad-unboxing__error'>
+        <View className='squad-unboxing__error' role='alert' aria-live='polite'>
           <Image
             className='squad-unboxing__error-hero'
             src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
@@ -402,11 +388,29 @@ export default function SquadUnboxingPage() {
     </View>
   )
 
-  const header = composedHeroEnabled && flowState === 'ready'
-    ? composedReadyHeader
-    : composedHeroEnabled && flowState === 'shaking'
-      ? null
-      : legacyHeader
+  // The mascot + tagline header is retired in the revealed state — the slim
+  // fixed title bar (below) owns it there; Xiaoyue lives in the 团魂 bubble.
+  const header = flowState === 'revealed'
+    ? null
+    : composedHeroEnabled && flowState === 'ready'
+      ? composedReadyHeader
+      : composedHeroEnabled && flowState === 'shaking'
+        ? null
+        : legacyHeader
+
+  const revealedTitleBar = flowState === 'revealed' ? (
+    <View className='squad-unboxing__title-bar'>
+      {group.groupNumber ? (
+        <Text className='squad-unboxing__title-bar-group'>第 {group.groupNumber} 组</Text>
+      ) : null}
+      <View className='squad-unboxing__title-bar-chem'>
+        <Text className='squad-unboxing__title-bar-chem-text'>
+          {getChemistryWord(groupAnalysis?.overallChemistry)}
+        </Text>
+      </View>
+      <Text className='squad-unboxing__title-bar-title'>{getPageTitle(pool.eventType)}</Text>
+    </View>
+  ) : null
 
   return (
     <View className={pageClassName}>
@@ -416,7 +420,6 @@ export default function SquadUnboxingPage() {
         enhanced
         showScrollbar={false}
         onScroll={handleScroll}
-        scrollTop={programmaticScrollTop}
       >
         <View className='squad-unboxing__scroll-inner'>
           <View className={[
@@ -449,12 +452,14 @@ export default function SquadUnboxingPage() {
           <Card className='squad-unboxing__blind-box-card squad-unboxing__blind-box-card--copy-only'>
             <Text className='squad-unboxing__blind-box-title'>拼图已经聚齐</Text>
             <Text className='squad-unboxing__blind-box-copy'>
-              上一页的每一块拼图，都会在这里变成一个真实的队友。轻轻拉开，看看是谁和你坐在同一桌。
+              上一页的每一块拼图，都会在这里变成一个真实的队友。轻点打开，看看是谁和你坐在同一桌。
             </Text>
             {group.theme || group.themeEmoji ? (
               <View className='squad-unboxing__blind-box-theme-pill'>
+                {group.themeEmoji ? (
+                  <JoyJoinIcon emoji={group.themeEmoji} size={28} className='squad-unboxing__blind-box-theme-icon' />
+                ) : null}
                 <Text className='squad-unboxing__blind-box-theme-text'>
-                  {group.themeEmoji ? `${group.themeEmoji} ` : ''}
                   {group.theme || '今晚成桌'}
                 </Text>
               </View>
@@ -473,30 +478,32 @@ export default function SquadUnboxingPage() {
 
         {flowState === 'revealed' ? (
           <>
-            {focusedMember ? (
-              <>
+            {/* On-demand card detail — zero height when idle, expands
+                (max-height 0→520rpx + opacity) when a card is focused. Reuses
+                TeammateCardDetail, keyed by userId so switching cards replays
+                the cross-fade. Tap-again or 收起 collapses it. */}
+            <View
+              className={[
+                'squad-unboxing__detail-panel',
+                focusedMember ? 'squad-unboxing__detail-panel--open' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              {focusedMember ? (
                 <View
-                  id='inline-detail-anchor'
-                  className='squad-unboxing__inline-detail-anchor'
-                />
-                <View
-                  id='inline-detail'
-                  className={[
-                    'squad-unboxing__inline-detail-shell',
-                    'squad-unboxing__inline-detail-shell--ready',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
+                  key={focusedMember.userId}
+                  className='squad-unboxing__detail-panel-inner'
                 >
                   <View
-                    className='squad-unboxing__inline-detail-dismiss'
+                    className='squad-unboxing__detail-panel-dismiss'
                     onClick={handleDismissDetail}
-                    hoverClass='squad-unboxing__inline-detail-dismiss--pressed'
+                    hoverClass='squad-unboxing__detail-panel-dismiss--pressed'
                     role='button'
                     aria-label='收起卡片详情'
                   >
-                    <Text className='squad-unboxing__inline-detail-dismiss-text'>收起</Text>
-                    <View className='squad-unboxing__inline-detail-dismiss-chevron' />
+                    <Text className='squad-unboxing__detail-panel-dismiss-text'>收起</Text>
+                    <View className='squad-unboxing__detail-panel-dismiss-chevron' />
                   </View>
                   <TeammateCardDetail
                     member={focusedMember}
@@ -507,8 +514,8 @@ export default function SquadUnboxingPage() {
                     aigcEnabled={aigcEnabled}
                   />
                 </View>
-              </>
-            ) : null}
+              ) : null}
+            </View>
 
             <View className={[
               'squad-unboxing__chapter',
@@ -517,58 +524,69 @@ export default function SquadUnboxingPage() {
             ]
               .filter(Boolean)
               .join(' ')}>
-              <View className='squad-unboxing__chapter-title-row'>
-                <Text className='squad-unboxing__chapter-title'>今晚这桌</Text>
-                <View className='squad-unboxing__chapter-badge'>
-                  <Text className='squad-unboxing__chapter-badge-text'>
-                    {getChemistryWord(groupAnalysis?.overallChemistry)}
-                  </Text>
+              {/* Event-brief header: date-led. Big day numeral + month/weekday·time
+                  on the left; event-type pill + the shared OracleCard corner
+                  vignette (dining/drinks) on the right. Collapses gracefully —
+                  with no dateTime the date block drops and the pill stays. */}
+              <View className='squad-unboxing__brief-header'>
+                <View className='squad-unboxing__brief-header-main'>
+                  <Text className='squad-unboxing__chapter-title'>今晚这桌</Text>
+                  {briefDate ? (
+                    <View className='squad-unboxing__brief-date'>
+                      <Text className='squad-unboxing__brief-date-day'>{briefDate.day}</Text>
+                      <View className='squad-unboxing__brief-date-side'>
+                        <Text className='squad-unboxing__brief-date-month'>{briefDate.month}</Text>
+                        <Text className='squad-unboxing__brief-date-weekday'>
+                          {briefDate.weekday} · {briefDate.time}
+                        </Text>
+                      </View>
+                    </View>
+                  ) : null}
                 </View>
-              </View>
-
-              <View className='squad-unboxing__meta-row'>
-                <View className='squad-unboxing__meta-label'>
-                  <JoyJoinIcon emoji='🎯' size={24} />
-                  <Text>类型</Text>
-                </View>
-                <Text className='squad-unboxing__meta-value'>{getEventTypeLabel(pool.eventType)}</Text>
-              </View>
-
-              {group.finalDateTime || pool.dateTime ? (
-                <View className='squad-unboxing__meta-row'>
-                  <View className='squad-unboxing__meta-label'>
-                    <JoyJoinIcon emoji='📅' size={24} />
-                    <Text>时间</Text>
+                <View className='squad-unboxing__brief-header-aside'>
+                  <View className='squad-unboxing__brief-type-pill'>
+                    <Text className='squad-unboxing__brief-type-pill-text'>{getEventTypeLabel(pool.eventType)}</Text>
                   </View>
-                  <Text className='squad-unboxing__meta-value'>
-                    {formatDateTime(group.finalDateTime ?? pool.dateTime)}
-                  </Text>
+                  {briefVignetteSrc && !briefVignetteFailed ? (
+                    <Image
+                      className='squad-unboxing__brief-vignette'
+                      src={briefVignetteSrc}
+                      mode='aspectFit'
+                      lazyLoad
+                      aria-hidden='true'
+                      onError={() => setBriefVignetteFailed(true)}
+                    />
+                  ) : null}
                 </View>
-              ) : null}
+              </View>
 
               <View className='squad-unboxing__meta-row'>
                 <View className='squad-unboxing__meta-label'>
-                  <JoyJoinIcon emoji='📍' size={24} />
+                  <JoyJoinIcon emoji='📍' size={24} className='squad-unboxing__meta-icon' />
                   <Text>地点</Text>
                 </View>
                 <View className='squad-unboxing__meta-value-wrap'>
-                  <Text className='squad-unboxing__meta-value'>
-                    {group.venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '地点待定'}
-                  </Text>
+                  <View className='squad-unboxing__meta-value-line'>
+                    <Text className='squad-unboxing__meta-value'>
+                      {group.venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '地点待定'}
+                    </Text>
+                    {group.venueName ? (
+                      <View
+                        className='squad-unboxing__copy-chip'
+                        hoverClass='squad-unboxing__copy-chip--pressed'
+                        role='button'
+                        aria-label='复制地址'
+                        onClick={handleCopyVenue}
+                      >
+                        <Text className='squad-unboxing__copy-chip-text'>复制</Text>
+                      </View>
+                    ) : null}
+                  </View>
                   <Text className={`squad-unboxing__meta-status ${group.venueName ? 'squad-unboxing__meta-status--assigned' : 'squad-unboxing__meta-status--pending'}`}>
-                    {group.venueName ? '场地已确定，可复制地址导航' : '场地待定，悦仔会在确认后提醒你'}
+                    {group.venueName ? '场地已确定' : '场地待定，悦仔会在确认后提醒你'}
                   </Text>
                   {group.venueAddress ? (
                     <Text className='squad-unboxing__meta-sub'>{group.venueAddress}</Text>
-                  ) : null}
-                  {group.venueName ? (
-                    <View
-                      className='squad-unboxing__info-action'
-                      hoverClass='squad-unboxing__info-action--pressed'
-                      onClick={handleCopyVenue}
-                    >
-                      <Text className='squad-unboxing__info-action-text'>复制地址</Text>
-                    </View>
                   ) : null}
                 </View>
               </View>
@@ -577,9 +595,9 @@ export default function SquadUnboxingPage() {
                 <View className='squad-unboxing__meta-row squad-unboxing__meta-row--theme'>
                   <View className='squad-unboxing__meta-label'>
                     {group.themeEmoji ? (
-                      <JoyJoinIcon emoji={group.themeEmoji} size={24} />
+                      <JoyJoinIcon emoji={group.themeEmoji} size={24} className='squad-unboxing__meta-icon' />
                     ) : (
-                      <JoyJoinIcon emoji='✨' size={24} />
+                      <JoyJoinIcon emoji='✨' size={24} className='squad-unboxing__meta-icon' />
                     )}
                     <Text>主题</Text>
                   </View>
@@ -908,6 +926,7 @@ export default function SquadUnboxingPage() {
             />
           </View>
         ) : null}
+        {flowState === 'revealed' ? revealedTitleBar : null}
         {flowState === 'revealed' ? (
           <SquadDeckStage
             members={members}
@@ -917,8 +936,8 @@ export default function SquadUnboxingPage() {
             anyFocused={focusedCardIndex >= 0}
             reduceMotion={shouldReduceMotion}
             isDegradation={isDegradation}
+            resetSignal={resetSignal}
             onFocusChange={handleCardFocus}
-            onEmergeComplete={() => setDeckEmergeComplete(true)}
           />
         ) : null}
         {flowState !== 'revealed' ? (
@@ -927,26 +946,6 @@ export default function SquadUnboxingPage() {
               state={flowState === 'shaking' ? 'opening' : 'ready'}
             />
           </View>
-        ) : null}
-        {flowState === 'revealed' ? (
-          <>
-            {!hasTappedCard ? (
-              <View className={[
-                'squad-unboxing__deck-cue',
-                deckEmergeComplete ? 'squad-unboxing__deck-cue--ready' : '',
-              ].filter(Boolean).join(' ')}>
-                <Image
-                  className='squad-unboxing__deck-cue-mascot'
-                  mode='aspectFit'
-                  src={getXiaoyueExpressionAsset('coachGuide')}
-                  aria-hidden='true'
-                />
-                <Text className='squad-unboxing__deck-cue-text'>
-                  点击卡片，看看你和这桌的连接
-                </Text>
-              </View>
-            ) : null}
-          </>
         ) : null}
       </View>
 
@@ -981,6 +980,7 @@ export default function SquadUnboxingPage() {
                   text={buildSquadSoulBubbleText(
                     archetypeMixCopy,
                     groupAnalysis?.groupThemeCompanion || matchExplanationCopy,
+                    groupAnalysis?.groupDynamics,
                   )}
                   speed={45}
                   delay={180}
@@ -1020,7 +1020,7 @@ export default function SquadUnboxingPage() {
                 onClick={handleSharePosterTap}
                 disabled={showSuccessOverlay}
               >
-                保存这桌记忆
+                截图保存记忆
               </Button>
 
               <Button

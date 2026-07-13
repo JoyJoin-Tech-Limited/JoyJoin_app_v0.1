@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildEventBriefDate,
   buildPairKeyMemberMap,
   buildSquadSoulBubbleText,
   computeActionDockState,
@@ -74,27 +75,70 @@ describe('squadUnboxingViewModels', () => {
 
   it('buildSquadSoulBubbleText inserts the mix clause with a comma when mix is present', () => {
     expect(buildSquadSoulBubbleText('这一桌集齐了开心柯基和太阳鸡两种能量', '今晚这桌会聊得很开')).toBe(
-      '拼图完整了！这一桌集齐了开心柯基和太阳鸡两种能量，今晚这桌会聊得很开。',
+      '人到齐了！这一桌集齐了开心柯基和太阳鸡两种能量，今晚这桌会聊得很开。',
     )
   })
 
   it('buildSquadSoulBubbleText omits the mix clause when mix is empty (no stranded ！，)', () => {
-    expect(buildSquadSoulBubbleText('', '今晚这桌会聊得很开')).toBe('拼图完整了！今晚这桌会聊得很开。')
-    expect(buildSquadSoulBubbleText('   ', '今晚这桌会聊得很开')).toBe('拼图完整了！今晚这桌会聊得很开。')
+    expect(buildSquadSoulBubbleText('', '今晚这桌会聊得很开')).toBe('人到齐了！今晚这桌会聊得很开。')
+    expect(buildSquadSoulBubbleText('   ', '今晚这桌会聊得很开')).toBe('人到齐了！今晚这桌会聊得很开。')
   })
 
   it('buildSquadSoulBubbleText strips trailing punctuation on the companion line', () => {
     expect(buildSquadSoulBubbleText('', '悦仔觉得这桌会聊得很自然。')).toBe(
-      '拼图完整了！悦仔觉得这桌会聊得很自然。',
+      '人到齐了！悦仔觉得这桌会聊得很自然。',
     )
     expect(buildSquadSoulBubbleText('这一桌凝聚了开心柯基的一种能量', '今晚超期待！')).toBe(
-      '拼图完整了！这一桌凝聚了开心柯基的一种能量，今晚超期待。',
+      '人到齐了！这一桌凝聚了开心柯基的一种能量，今晚超期待。',
     )
   })
 
   it('buildSquadSoulBubbleText falls back to mascot copy when companion is empty', () => {
-    expect(buildSquadSoulBubbleText('', '')).toBe('拼图完整了！悦仔觉得这桌会聊得很自然。')
-    expect(buildSquadSoulBubbleText('', null)).toBe('拼图完整了！悦仔觉得这桌会聊得很自然。')
-    expect(buildSquadSoulBubbleText('', undefined)).toBe('拼图完整了！悦仔觉得这桌会聊得很自然。')
+    expect(buildSquadSoulBubbleText('', '')).toBe('人到齐了！悦仔觉得这桌会聊得很自然。')
+    expect(buildSquadSoulBubbleText('', null)).toBe('人到齐了！悦仔觉得这桌会聊得很自然。')
+    expect(buildSquadSoulBubbleText('', undefined)).toBe('人到齐了！悦仔觉得这桌会聊得很自然。')
+  })
+
+  it('buildSquadSoulBubbleText folds group dynamics in as a follow-on beat', () => {
+    expect(buildSquadSoulBubbleText('', '今晚这桌会聊得很开', '两个内向三个外向，节奏会很舒服')).toBe(
+      '人到齐了！今晚这桌会聊得很开。两个内向三个外向，节奏会很舒服。',
+    )
+  })
+
+  it('buildSquadSoulBubbleText dedupes dynamics identical to the companion line', () => {
+    expect(buildSquadSoulBubbleText('', '今晚这桌会聊得很开', '今晚这桌会聊得很开')).toBe(
+      '人到齐了！今晚这桌会聊得很开。',
+    )
+  })
+
+  it('buildSquadSoulBubbleText omits dynamics when empty or null', () => {
+    expect(buildSquadSoulBubbleText('', '今晚这桌会聊得很开', '')).toBe('人到齐了！今晚这桌会聊得很开。')
+    expect(buildSquadSoulBubbleText('', '今晚这桌会聊得很开', null)).toBe('人到齐了！今晚这桌会聊得很开。')
+    expect(buildSquadSoulBubbleText('', '今晚这桌会聊得很开', undefined)).toBe('人到齐了！今晚这桌会聊得很开。')
+  })
+
+  it('buildSquadSoulBubbleText strips trailing punctuation on the dynamics beat', () => {
+    expect(buildSquadSoulBubbleText('', '今晚这桌会聊得很开', '气氛会很松弛！')).toBe(
+      '人到齐了！今晚这桌会聊得很开。气氛会很松弛。',
+    )
+  })
+
+  describe('buildEventBriefDate', () => {
+    it('breaks a valid datetime into day / month / weekday / time', () => {
+      // 2026-07-18 is a Saturday.
+      const brief = buildEventBriefDate('2026-07-18T19:30:00+08:00')
+      expect(brief).not.toBeNull()
+      expect(brief?.day).toBe('18')
+      expect(brief?.month).toBe('7月')
+      expect(brief?.time).toMatch(/^\d{2}:\d{2}$/)
+      expect(brief?.weekday).toMatch(/^周[一二三四五六日]$/)
+    })
+
+    it('returns null for missing or invalid input (sparse-state collapse)', () => {
+      expect(buildEventBriefDate(null)).toBeNull()
+      expect(buildEventBriefDate(undefined)).toBeNull()
+      expect(buildEventBriefDate('')).toBeNull()
+      expect(buildEventBriefDate('not-a-date')).toBeNull()
+    })
   })
 })

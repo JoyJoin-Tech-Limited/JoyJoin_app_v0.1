@@ -66,7 +66,7 @@ export default function TeammateCardDetail({
 
       {connectionReason ? (
         <View className='squad-unboxing__deck-detail-section'>
-          <Text className='squad-unboxing__deck-detail-section-title'>{name} 和你的连接感</Text>
+          <Text className='squad-unboxing__deck-detail-section-title'>{name}和你的连接感</Text>
           <AIGCLabel meta={aigcMeta} className='squad-unboxing__deck-detail-aigc' />
           <Text className='squad-unboxing__deck-detail-reason'>{connectionReason}</Text>
         </View>

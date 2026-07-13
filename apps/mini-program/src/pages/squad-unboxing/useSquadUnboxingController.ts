@@ -74,6 +74,12 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false)
 
+  // Tracked so the post-confirm redirect never fires after unmount.
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => {
+    if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current)
+  }, [])
+
   useResetOnShow(setIsSubmitting, setShowSuccessOverlay)
 
   // H5 screenshot story mode: force specific flow states when `__story` is
@@ -103,6 +109,12 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     queryKey: ['mini-program', 'pool-group', groupId],
     queryFn: () => getPoolGroupDetails(apiRequest, groupId),
     enabled: !!groupId && (!!currentUser || !authLoading),
+    // While the venue is unassigned, poll gently so the "场地已确定" toast and
+    // the 地点 row can flip without forcing the user to re-enter the page.
+    // Stops as soon as a venue lands (or the page backgrounds — React Query
+    // pauses interval refetches when the window is unfocused).
+    refetchInterval: (query) =>
+      query.state.data?.group?.venueAssignmentStatus === 'unassigned' ? 30_000 : false,
   })
 
   const {
@@ -146,8 +158,12 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
         duration: TOAST_SHORT_MS,
       })
 
-      // Allow the success overlay/toast to register before redirecting.
-      setTimeout(() => {
+      // Allow the success overlay/toast to register before redirecting. The
+      // timer is tracked so a backgrounded/unmounted page never fires a stale
+      // redirect.
+      if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current)
+      redirectTimerRef.current = setTimeout(() => {
+        redirectTimerRef.current = null
         if (response.blindBoxEventId) {
           Taro.redirectTo({ url: `/pages/event-detail/index?id=${response.blindBoxEventId}` })
           return

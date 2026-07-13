@@ -35,7 +35,19 @@ export function getInitial(name: string): string {
 
 export { formatDateTime } from '../../lib/matching/groupDisplay'
 
+// Icebreaker vibe ids (run-plan system) — the shared getVibeLabel only maps
+// legacy event vibes and falls through to the raw id for these, so the squad
+// surface owns the mapping. Keys include the legacy compiler aliases.
+const SQUAD_VIBE_LABELS: Record<string, string> = {
+  deep_chat: '深聊',
+  balanced: '均衡',
+  play_fun: '畅玩',
+  chat: '深聊',
+  game: '畅玩',
+}
+
 export function getVibeLabel(vibe?: string | null): string {
+  if (vibe && SQUAD_VIBE_LABELS[vibe]) return SQUAD_VIBE_LABELS[vibe]
   return getVibeLabelShared(vibe, '今晚成桌')
 }
 
@@ -52,20 +64,57 @@ export function getEventTypeLabel(eventType?: string | null): string {
 }
 
 /**
+ * Structured date breakdown for the event-brief card header (big day numeral
+ * + month/weekday/time side column). Returns null for missing/invalid input
+ * so the header can collapse gracefully (sparse-state rule).
+ */
+export interface EventBriefDate {
+  day: string
+  month: string
+  weekday: string
+  time: string
+}
+
+const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+
+export function buildEventBriefDate(dateTime?: string | null): EventBriefDate | null {
+  if (!dateTime) return null
+  const parsed = new Date(dateTime)
+  if (Number.isNaN(parsed.getTime())) return null
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return {
+    day: String(parsed.getDate()),
+    month: `${parsed.getMonth() + 1}月`,
+    weekday: WEEKDAY_LABELS[parsed.getDay()],
+    time: `${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`,
+  }
+}
+
+/**
  * 团魂 bubble copy. The archetype-mix clause is only inserted when non-empty,
  * so the bubble never renders a stranded `！，` when no member archetypes are
- * known. Trailing punctuation on the companion line is stripped before the
- * final `。` to avoid doubled sentence endings.
+ * known. Trailing punctuation on each line is stripped before the final `。`
+ * to avoid doubled sentence endings.
+ *
+ * The group-analysis dynamic is folded in as a short follow-on beat (the
+ * "Cascading Hand Fan" revamp retires the standalone group-analysis header) —
+ * but only when it adds something the companion line didn't already say.
  */
-export function buildSquadSoulBubbleText(mix: string, companion?: string | null): string {
-  const normalizedCompanion = (companion ?? '')
-    .trim()
-    .replace(/[。！？，\s]*$/, '')
+export function buildSquadSoulBubbleText(
+  mix: string,
+  companion?: string | null,
+  dynamics?: string | null,
+): string {
+  const normalize = (value?: string | null) => (value ?? '').trim().replace(/[。！？，\s]*$/, '')
+  const normalizedCompanion = normalize(companion)
   const resolvedCompanion = normalizedCompanion || `${DEFAULT_MASCOT_DISPLAY_NAME}觉得这桌会聊得很自然`
   const trimmedMix = mix.trim()
-  return trimmedMix
-    ? `拼图完整了！${trimmedMix}，${resolvedCompanion}。`
-    : `拼图完整了！${resolvedCompanion}。`
+  const head = trimmedMix
+    ? `人到齐了！${trimmedMix}，${resolvedCompanion}。`
+    : `人到齐了！${resolvedCompanion}。`
+  const normalizedDynamics = normalize(dynamics)
+  const extra = normalizedDynamics && normalizedDynamics !== normalizedCompanion ? normalizedDynamics : ''
+  return extra ? `${head}${extra}。` : head
 }
 
 const CHEMISTRY_TITLES: Record<ChemistryType, string> = {
