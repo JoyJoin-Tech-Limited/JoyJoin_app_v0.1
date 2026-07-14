@@ -60,6 +60,11 @@ export interface AdminEventPool {
   minGroupSize: number;
   maxGroupSize: number;
   targetGroups: number;
+  /** Gender-balance controls (Sprint 2026-07-14 gender ratio enforcement). Admin-only, never user-facing. */
+  genderBalanceMode?: "none" | "soft" | "hard" | null;
+  genderBalanceBonusPoints?: number | null;
+  minFemaleCount?: number | null;
+  minMaleCount?: number | null;
   createdAt: string;
   registrationCount?: number;
   matchedCount?: number;

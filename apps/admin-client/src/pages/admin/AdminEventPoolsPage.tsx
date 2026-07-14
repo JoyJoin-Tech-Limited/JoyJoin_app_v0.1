@@ -77,6 +77,12 @@ const createPoolSchema = z
     maxGroupSize: z.number().min(2).max(10).default(6),
     targetGroups: z.number().min(1).default(1),
     isTestPool: z.boolean().default(false),
+    // Gender-balance controls (Sprint 2026-07-14 gender ratio enforcement).
+    // Ranges mirror the server's updateEventPoolSchema (SEC-02).
+    genderBalanceMode: z.enum(["none", "soft", "hard"]).default("soft"),
+    genderBalanceBonusPoints: z.number().int().min(0).max(100).default(15),
+    minFemaleCount: z.number().int().min(0).max(20).default(0),
+    minMaleCount: z.number().int().min(0).max(20).default(0),
   })
   .refine(
     (data) => {
@@ -161,6 +167,10 @@ export default function AdminEventPoolsPage() {
       maxGroupSize: 6,
       targetGroups: 1,
       isTestPool: false,
+      genderBalanceMode: "soft" as const,
+      genderBalanceBonusPoints: 15,
+      minFemaleCount: 0,
+      minMaleCount: 0,
     },
   });
 
@@ -376,6 +386,13 @@ export default function AdminEventPoolsPage() {
     return Number.isNaN(date.getTime()) ? value : date.toISOString();
   };
 
+  // Coerce a form value to a finite integer. 0 is a valid gender-floor value, so
+  // `|| fallback` (which would clobber 0) is deliberately avoided here.
+  const toBoundedInt = (value: unknown, fallback: number) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
   const onSubmit = (data: any) => {
     // consist the formate of the month date year formate
     const payload = {
@@ -386,6 +403,10 @@ export default function AdminEventPoolsPage() {
       maxGroupSize: Number(data.maxGroupSize) || 6,
       targetGroups: Number(data.targetGroups) || 1,
       isTestPool: Boolean(data.isTestPool),
+      genderBalanceMode: data.genderBalanceMode ?? "soft",
+      genderBalanceBonusPoints: toBoundedInt(data.genderBalanceBonusPoints, 15),
+      minFemaleCount: toBoundedInt(data.minFemaleCount, 0),
+      minMaleCount: toBoundedInt(data.minMaleCount, 0),
     };
     
     if (editingPoolId) {
@@ -428,6 +449,10 @@ export default function AdminEventPoolsPage() {
       maxGroupSize: pool.maxGroupSize,
       targetGroups: pool.targetGroups,
       isTestPool: Boolean(pool.isTestPool),
+      genderBalanceMode: (pool.genderBalanceMode ?? "soft") as any,
+      genderBalanceBonusPoints: pool.genderBalanceBonusPoints ?? 15,
+      minFemaleCount: pool.minFemaleCount ?? 0,
+      minMaleCount: pool.minMaleCount ?? 0,
     });
     setEditingPoolId(pool.id);
     setShowCreateDialog(true);
@@ -509,6 +534,10 @@ export default function AdminEventPoolsPage() {
       maxGroupSize: pool.maxGroupSize,
       targetGroups: pool.targetGroups,
       isTestPool: Boolean(pool.isTestPool),
+      genderBalanceMode: (pool.genderBalanceMode ?? "soft") as any,
+      genderBalanceBonusPoints: pool.genderBalanceBonusPoints ?? 15,
+      minFemaleCount: pool.minFemaleCount ?? 0,
+      minMaleCount: pool.minMaleCount ?? 0,
     });
     setShowCreateDialog(true);
     setCopiedPoolId(pool.id);

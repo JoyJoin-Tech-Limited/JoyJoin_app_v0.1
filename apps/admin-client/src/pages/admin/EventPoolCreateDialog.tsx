@@ -83,6 +83,7 @@ export default function EventPoolCreateDialog({
   const currentDistrict = form.watch("district");
   const currentDateTime = form.watch("dateTime");
   const currentEventType = form.watch("eventType");
+  const currentGenderBalanceMode = form.watch("genderBalanceMode");
   const currentCityDistricts = CITY_DISTRICTS[currentCity] ?? [];
 
   // Extract YYYY-MM-DD from the datetime-local input for date-level availability checking
@@ -586,6 +587,119 @@ export default function EventPoolCreateDialog({
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* 性别平衡 (Sprint 2026-07-14 gender ratio enforcement, AC-08) */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="font-semibold mb-1">性别平衡</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                软约束 = 男女比例均衡的小组获得匹配加分；硬约束 = 每组必须满足最少男/女人数。
+              </p>
+
+              <FormField
+                control={form.control}
+                name="genderBalanceMode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>平衡模式</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-gender-balance-mode">
+                          <SelectValue placeholder="选择平衡模式" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">不考虑</SelectItem>
+                        <SelectItem value="soft">软约束 · 平衡加分</SelectItem>
+                        <SelectItem value="hard">硬约束 · 人数下限</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {currentGenderBalanceMode === "soft" && (
+                <FormField
+                  control={form.control}
+                  name="genderBalanceBonusPoints"
+                  render={({ field }) => (
+                    <FormItem className="mt-4">
+                      <FormLabel>平衡加分（0–100，默认 15）</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(parseInt(e.target.value || "15"))
+                          }
+                          data-testid="input-gender-balance-bonus"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {currentGenderBalanceMode === "hard" && (
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <FormField
+                    control={form.control}
+                    name="minFemaleCount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>每组最少女性人数</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={20}
+                            {...field}
+                            onChange={(e) =>
+                              field.onChange(parseInt(e.target.value || "0"))
+                            }
+                            data-testid="input-min-female-count"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="minMaleCount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>每组最少男性人数</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={20}
+                            {...field}
+                            onChange={(e) =>
+                              field.onChange(parseInt(e.target.value || "0"))
+                            }
+                            data-testid="input-min-male-count"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <p className="col-span-2 text-xs text-muted-foreground">
+                    每组最少人数，0 = 不限制。
+                  </p>
+                </div>
+              )}
             </div>
 
             <DialogFooter>

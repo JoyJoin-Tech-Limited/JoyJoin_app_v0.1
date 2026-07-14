@@ -19,6 +19,11 @@ const insertEventPoolSchema = z.object({
   maxGroupSize: z.number().min(2).max(10).default(6),
   targetGroups: z.number().min(1).default(1),
   createdBy: z.string().min(1),
+  // SEC-02 (Sprint 2026-07-14): mirrors the extend() block in _definitions.ts
+  genderBalanceMode: z.enum(["none", "soft", "hard"]).optional(),
+  genderBalanceBonusPoints: z.number().int().min(0).max(100).optional(),
+  minFemaleCount: z.number().int().min(0).max(20).optional(),
+  minMaleCount: z.number().int().min(0).max(20).optional(),
 });
 
 // ── updateEventPoolSchema (inline definition matching adminEventPools.ts) ──
@@ -679,5 +684,70 @@ describe("gender-balance schema drift guards (AC-01)", () => {
     expect(omitBlock).not.toContain("genderBalanceBonusPoints");
     expect(omitBlock).not.toContain("minFemaleCount");
     expect(omitBlock).not.toContain("minMaleCount");
+  });
+
+  it("insertEventPoolSchema extend() block in _definitions.ts tightens the four fields (SEC-02)", () => {
+    const sourcePath = path.resolve(
+      import.meta.dirname,
+      "../../../../packages/shared/src/schema/_definitions.ts",
+    );
+    const source = fs.readFileSync(sourcePath, "utf-8");
+
+    // The extend() block attached to insertEventPoolSchema must carry the same
+    // validators as updateEventPoolSchema — otherwise POST accepts values PATCH rejects.
+    const schemaMatch = source.match(
+      /insertEventPoolSchema\s*=\s*createInsertSchema\(eventPools\)[\s\S]*?\.extend\(\{([\s\S]*?)\}\);/,
+    );
+    expect(schemaMatch).toBeTruthy();
+    const extendBlock = schemaMatch![1];
+    expect(extendBlock).toMatch(/genderBalanceMode:\s*z\.enum\(\["none",\s*"soft",\s*"hard"\]\)\.optional\(\)/);
+    expect(extendBlock).toMatch(/genderBalanceBonusPoints:\s*z\.number\(\)\.int\(\)\.min\(0\)\.max\(100\)\.optional\(\)/);
+    expect(extendBlock).toMatch(/minFemaleCount:\s*z\.number\(\)\.int\(\)\.min\(0\)\.max\(20\)\.optional\(\)/);
+    expect(extendBlock).toMatch(/minMaleCount:\s*z\.number\(\)\.int\(\)\.min\(0\)\.max\(20\)\.optional\(\)/);
+  });
+});
+
+describe("insertEventPoolSchema — gender-balance runtime validation (SEC-02)", () => {
+  const validBase = {
+    title: "测试活动",
+    eventType: "饭局" as const,
+    city: "深圳" as const,
+    dateTime: new Date(Date.now() + 86_400_000),
+    registrationDeadline: new Date(),
+    createdBy: "admin-1",
+  };
+
+  it("accepts a valid hard-mode creation payload", () => {
+    const result = insertEventPoolSchema.safeParse({
+      ...validBase,
+      genderBalanceMode: "hard",
+      genderBalanceBonusPoints: 15,
+      minFemaleCount: 2,
+      minMaleCount: 2,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts creation with gender fields omitted (DB defaults apply)", () => {
+    expect(insertEventPoolSchema.safeParse(validBase).success).toBe(true);
+  });
+
+  it("rejects an invalid genderBalanceMode on creation", () => {
+    const result = insertEventPoolSchema.safeParse({
+      ...validBase,
+      genderBalanceMode: "banana",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].path).toContain("genderBalanceMode");
+    }
+  });
+
+  it("rejects out-of-range floors and bonus on creation", () => {
+    expect(insertEventPoolSchema.safeParse({ ...validBase, minFemaleCount: 999 }).success).toBe(false);
+    expect(insertEventPoolSchema.safeParse({ ...validBase, minFemaleCount: -1 }).success).toBe(false);
+    expect(insertEventPoolSchema.safeParse({ ...validBase, minMaleCount: 21 }).success).toBe(false);
+    expect(insertEventPoolSchema.safeParse({ ...validBase, genderBalanceBonusPoints: 101 }).success).toBe(false);
+    expect(insertEventPoolSchema.safeParse({ ...validBase, genderBalanceBonusPoints: 15.5 }).success).toBe(false);
   });
 });
