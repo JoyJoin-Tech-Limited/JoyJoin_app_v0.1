@@ -44,7 +44,6 @@ $fan-rotations: (
     .squad-unboxing__success-overlay,
     .squad-unboxing__chapter,
     .squad-unboxing__expand-body,
-    .squad-unboxing__detail-panel-inner,
     .squad-unboxing__analysis-bubble-inner {
       animation: none !important;
     }
@@ -57,8 +56,6 @@ $fan-rotations: (
     .squad-unboxing__pair-card,
     .squad-unboxing__topic-chip,
     .squad-unboxing__success-card,
-    .squad-unboxing__detail-panel,
-    .squad-unboxing__detail-panel-inner,
     .squad-unboxing__expand-chevron {
       transition-duration: 0s !important;
       transition-delay: 0s !important;
@@ -652,67 +649,6 @@ $fan-rotations: (
     color: $color-text-primary;
     word-break: keep-all;
     @include text-truncate;
-  }
-
-  // On-demand card detail — zero height when idle, expands when a card is
-  // focused. Only max-height + opacity transition: margin-bottom and
-  // box-shadow flip instantly with the open state so a focus tap never
-  // animates layout and paint in the same frame (per-tap reflow audit).
-  // 720rpx fits the worst-case TeammateCardDetail (连接感 + 3 pills + 开场
-  // angle + AIGC rows) without silent clipping.
-  &__detail-panel {
-    overflow: hidden;
-    max-height: 0;
-    opacity: 0;
-    margin-bottom: 0;
-    border-radius: $card-radius;
-    background: rgba($color-surface, 0.96);
-    box-shadow: none;
-    transition:
-      max-height 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-      opacity 0.2s ease;
-
-    &--open {
-      max-height: 720rpx;
-      opacity: 1;
-      margin-bottom: $spacing-lg;
-      box-shadow: $shadow-lg;
-    }
-  }
-
-  // Focused detail content: slides up + fades in. Keyed by userId in the page
-  // so switching focus replays this entrance (cross-fade per card).
-  &__detail-panel-inner {
-    animation: squad-unboxing-detail-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-
-  &__detail-panel-dismiss {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: $spacing-xs;
-    min-height: 88rpx;
-    padding: $spacing-xs $spacing-sm;
-    background: rgba($color-primary, 0.04);
-    border-bottom: 1rpx solid rgba($color-primary, 0.08);
-
-    &--pressed {
-      background: rgba($color-primary, 0.08);
-    }
-  }
-
-  &__detail-panel-dismiss-text {
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-  }
-
-  &__detail-panel-dismiss-chevron {
-    width: 10rpx;
-    height: 10rpx;
-    border-top: 2rpx solid $color-text-secondary;
-    border-right: 2rpx solid $color-text-secondary;
-    transform: rotate(-45deg);
-    opacity: 0.6;
   }
 
   // Chapter cards: fewer, grouped surfaces with surface tints.
@@ -2396,18 +2332,6 @@ $fan-rotations: (
   }
 }
 
-@keyframes squad-unboxing-detail-in {
-  from {
-    opacity: 0;
-    transform: translateY(16rpx);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @keyframes squad-unboxing-success-pop {
   from {
     opacity: 0;
@@ -2436,7 +2360,6 @@ $fan-rotations: (
   .squad-unboxing__success-overlay,
   .squad-unboxing__chapter,
   .squad-unboxing__expand-body,
-  .squad-unboxing__detail-panel-inner,
   .squad-unboxing__analysis-bubble-inner,
   .squad-unboxing__bottom-dock,
   .squad-unboxing__deck-holo {
@@ -2455,8 +2378,7 @@ $fan-rotations: (
   .squad-unboxing__chapter,
   .squad-unboxing__expand-body,
   .squad-unboxing__analysis-bubble-inner,
-  .squad-unboxing__bottom-dock,
-  .squad-unboxing__detail-panel-inner {
+  .squad-unboxing__bottom-dock {
     opacity: 1 !important;
   }
 

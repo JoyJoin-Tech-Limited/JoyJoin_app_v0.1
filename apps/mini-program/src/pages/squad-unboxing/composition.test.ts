@@ -53,4 +53,11 @@ describe('squad-unboxing page composition', () => {
   it('keeps the legacy ready ribbon and copy card available only when the composed hero flag is off', () => {
     expect(pageSource).toContain("flowState === 'ready' && !composedHeroEnabled")
   })
+
+  it('routes focused member explanations into the Xiaoyue dock without mounting a blank detail frame', () => {
+    expect(pageSource).toContain('buildFocusedMemberBubbleText(')
+    expect(pageSource).toContain('text={focusedMemberBubbleText || buildSquadSoulBubbleText(')
+    expect(pageSource).not.toContain('squad-unboxing__detail-panel')
+    expect(pageSource).not.toContain("import TeammateCardDetail from './TeammateCardDetail'")
+  })
 })

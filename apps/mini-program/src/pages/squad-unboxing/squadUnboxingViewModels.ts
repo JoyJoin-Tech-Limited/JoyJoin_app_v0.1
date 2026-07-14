@@ -117,6 +117,31 @@ export function buildSquadSoulBubbleText(
   return extra ? `${head}${extra}。` : head
 }
 
+/**
+ * Card-focus narration for the fixed Xiaoyue dock. Pair explanations are
+ * already generated from both members' profiles by matchExplanationService;
+ * this formatter only gives that governed copy a concise mascot voice.
+ */
+export function buildFocusedMemberBubbleText(
+  memberName: string,
+  explanation?: string | null,
+  connectionPoints: string[] = [],
+  introAngle?: string | null,
+): string {
+  const normalize = (value?: string | null) => (value ?? '').trim().replace(/[。！？，\s]*$/, '')
+  const name = memberName.trim() || '这位桌友'
+  const reason = normalize(explanation)
+  if (reason) return `悦仔发现，你和${name}之间有个连接点：${reason}。`
+
+  const points = connectionPoints.map((point) => normalize(point)).filter(Boolean).slice(0, 2)
+  if (points.length > 0) return `悦仔发现，你和${name}都对${points.join('、')}感兴趣，见面可以从这里聊起。`
+
+  const intro = normalize(introAngle)
+  if (intro) return `悦仔给你和${name}留了个开场：${intro}。`
+
+  return `悦仔还在整理你和${name}的连接线索，见面后也许会有新的惊喜。`
+}
+
 const CHEMISTRY_TITLES: Record<ChemistryType, string> = {
   fire: '超级火花',
   warm: '暖意融融',

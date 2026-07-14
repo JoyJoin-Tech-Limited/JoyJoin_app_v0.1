@@ -158,10 +158,9 @@ describe('SquadUnboxingPage fan orchestration', () => {
     expect(source).toContain('squad-unboxing__title-bar-chem-text')
   })
 
-  it('renders the on-demand detail panel (max-height expand)', () => {
-    expect(source).toContain('squad-unboxing__detail-panel')
-    expect(source).toContain('squad-unboxing__detail-panel--open')
-    expect(source).toContain('squad-unboxing__detail-panel-dismiss')
+  it('keeps focused member copy in the Xiaoyue dock without a blank inline panel', () => {
+    expect(source).toContain('focusedMemberBubbleText')
+    expect(source).not.toContain('squad-unboxing__detail-panel')
   })
 
   it('drives the deck stage with resetSignal (not a collapse flag)', () => {

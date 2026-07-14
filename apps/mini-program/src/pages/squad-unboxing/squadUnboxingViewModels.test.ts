@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildEventBriefDate,
+  buildFocusedMemberBubbleText,
   buildPairKeyMemberMap,
   buildSquadSoulBubbleText,
   computeActionDockState,
@@ -120,6 +121,24 @@ describe('squadUnboxingViewModels', () => {
   it('buildSquadSoulBubbleText strips trailing punctuation on the dynamics beat', () => {
     expect(buildSquadSoulBubbleText('', '今晚这桌会聊得很开', '气氛会很松弛！')).toBe(
       '人到齐了！今晚这桌会聊得很开。气氛会很松弛。',
+    )
+  })
+
+  it('buildFocusedMemberBubbleText gives the pair explanation a concise Xiaoyue voice', () => {
+    expect(buildFocusedMemberBubbleText('豆沙', '你们都喜欢从不同视角理解一件事。')).toBe(
+      '悦仔发现，你和豆沙之间有个连接点：你们都喜欢从不同视角理解一件事。',
+    )
+  })
+
+  it('buildFocusedMemberBubbleText degrades through connection points, intro angle, and a safe fallback', () => {
+    expect(buildFocusedMemberBubbleText('豆沙', '', ['独立电影', '城市漫步'])).toBe(
+      '悦仔发现，你和豆沙都对独立电影、城市漫步感兴趣，见面可以从这里聊起。',
+    )
+    expect(buildFocusedMemberBubbleText('豆沙', null, [], '问问最近看过的好电影！')).toBe(
+      '悦仔给你和豆沙留了个开场：问问最近看过的好电影。',
+    )
+    expect(buildFocusedMemberBubbleText('豆沙')).toBe(
+      '悦仔还在整理你和豆沙的连接线索，见面后也许会有新的惊喜。',
     )
   })
 

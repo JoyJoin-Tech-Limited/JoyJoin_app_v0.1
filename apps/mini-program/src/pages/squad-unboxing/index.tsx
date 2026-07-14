@@ -26,9 +26,9 @@ import { BlindBoxLid } from './BlindBoxLid'
 import DragRevealRibbon from './DragRevealRibbon'
 import XiaoyueHostImage from './XiaoyueHostImage'
 import SquadDeckStage from './SquadDeckStage'
-import TeammateCardDetail from './TeammateCardDetail'
 import {
   buildEventBriefDate,
+  buildFocusedMemberBubbleText,
   buildSquadSoulBubbleText,
   getChemistryWord,
   getEventTypeLabel,
@@ -223,15 +223,6 @@ export default function SquadUnboxingPage() {
     }
   }, [members, groupId, shouldReduceMotion, isDegradation])
 
-  const handleDismissDetail = useCallback(() => {
-    setFocusedCardIndex(-1)
-    squadUnboxingAnalytics.track('squad_unboxing_card_detail_dismiss', {
-      source: 'inline_bar',
-      groupId,
-      screen: 'squad-unboxing',
-    })
-  }, [groupId])
-
   const handleAnalysisRetry = useCallback(() => {
     squadUnboxingAnalytics.track('squad_unboxing_analysis_retry_tap', {
       groupId,
@@ -255,6 +246,16 @@ export default function SquadUnboxingPage() {
   const focusedMember = members[focusedCardIndex] ?? null
   const focusedViewerPair = focusedMember
     ? (viewerPairByMemberId.get(focusedMember.userId) ?? null)
+    : null
+  const focusedMemberBubbleText = focusedMember
+    ? focusedMember.userId === currentUserId
+      ? '这张是你的桌友卡。悦仔把你放进这桌，也把属于你的视角带进了今晚。'
+      : buildFocusedMemberBubbleText(
+        getMemberName(focusedMember),
+        normalizeMatchingCopy(focusedViewerPair?.explanation),
+        focusedViewerPair?.connectionPoints ?? [],
+        focusedViewerPair?.introAngle,
+      )
     : null
 
   // Event-brief card: structured date block + shared OracleCard corner vignette.
@@ -478,45 +479,6 @@ export default function SquadUnboxingPage() {
 
         {flowState === 'revealed' ? (
           <>
-            {/* On-demand card detail — zero height when idle, expands
-                (max-height 0→520rpx + opacity) when a card is focused. Reuses
-                TeammateCardDetail, keyed by userId so switching cards replays
-                the cross-fade. Tap-again or 收起 collapses it. */}
-            <View
-              className={[
-                'squad-unboxing__detail-panel',
-                focusedMember ? 'squad-unboxing__detail-panel--open' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            >
-              {focusedMember ? (
-                <View
-                  key={focusedMember.userId}
-                  className='squad-unboxing__detail-panel-inner'
-                >
-                  <View
-                    className='squad-unboxing__detail-panel-dismiss'
-                    onClick={handleDismissDetail}
-                    hoverClass='squad-unboxing__detail-panel-dismiss--pressed'
-                    role='button'
-                    aria-label='收起卡片详情'
-                  >
-                    <Text className='squad-unboxing__detail-panel-dismiss-text'>收起</Text>
-                    <View className='squad-unboxing__detail-panel-dismiss-chevron' />
-                  </View>
-                  <TeammateCardDetail
-                    member={focusedMember}
-                    viewerPair={focusedViewerPair}
-                    visible={flowState === 'revealed'}
-                    groupId={groupId}
-                    aigcMeta={groupAnalysis?.meta?.aigc}
-                    aigcEnabled={aigcEnabled}
-                  />
-                </View>
-              ) : null}
-            </View>
-
             <View className={[
               'squad-unboxing__chapter',
               'squad-unboxing__chapter--meta',
@@ -977,7 +939,7 @@ export default function SquadUnboxingPage() {
               <View className='squad-unboxing__analysis-bubble-bubble'>
                 <TypewriterText
                   className='squad-unboxing__analysis-bubble-text'
-                  text={buildSquadSoulBubbleText(
+                  text={focusedMemberBubbleText || buildSquadSoulBubbleText(
                     archetypeMixCopy,
                     groupAnalysis?.groupThemeCompanion || matchExplanationCopy,
                     groupAnalysis?.groupDynamics,
