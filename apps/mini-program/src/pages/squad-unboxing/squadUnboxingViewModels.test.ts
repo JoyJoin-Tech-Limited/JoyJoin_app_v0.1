@@ -125,20 +125,45 @@ describe('squadUnboxingViewModels', () => {
   })
 
   it('buildFocusedMemberBubbleText gives the pair explanation a concise Xiaoyue voice', () => {
-    expect(buildFocusedMemberBubbleText('豆沙', '你们都喜欢从不同视角理解一件事。')).toBe(
-      '悦仔发现，你和豆沙之间有个连接点：你们都喜欢从不同视角理解一件事。',
+    expect(buildFocusedMemberBubbleText('豆沙', '你们都喜欢从不同视角理解一件事。', [], null, {
+      userId: 'bot-1',
+      industryNicheLabel: '纪录片摄影',
+      topInterests: ['城市摄影', '独立电影'],
+    })).toBe(
+      '先认识一下豆沙：在纪录片摄影领域，喜欢城市摄影、独立电影。你们之间还有个连接点：你们都喜欢从不同视角理解一件事。',
     )
   })
 
   it('buildFocusedMemberBubbleText degrades through connection points, intro angle, and a safe fallback', () => {
     expect(buildFocusedMemberBubbleText('豆沙', '', ['独立电影', '城市漫步'])).toBe(
-      '悦仔发现，你和豆沙都对独立电影、城市漫步感兴趣，见面可以从这里聊起。',
+      '先认识一下豆沙：这是今晚会和你同桌的新伙伴。你们都对独立电影、城市漫步感兴趣，见面可以从这里聊起。',
     )
     expect(buildFocusedMemberBubbleText('豆沙', null, [], '问问最近看过的好电影！')).toBe(
-      '悦仔给你和豆沙留了个开场：问问最近看过的好电影。',
+      '先认识一下豆沙：这是今晚会和你同桌的新伙伴。悦仔也给你们留了个开场：问问最近看过的好电影。',
     )
     expect(buildFocusedMemberBubbleText('豆沙')).toBe(
-      '悦仔还在整理你和豆沙的连接线索，见面后也许会有新的惊喜。',
+      '先认识一下豆沙：这是今晚会和你同桌的新伙伴。你们的共同点还没显出来，不妨先聊聊最近各自遇到的一件有趣小事。',
+    )
+  })
+
+  it('buildFocusedMemberBubbleText introduces a rich member even when viewer data is empty', () => {
+    expect(buildFocusedMemberBubbleText('雪花', null, [], null, {
+      userId: 'bot-4',
+      archetype: 'octopus',
+      industryNicheLabel: '服务机器人研发',
+      topInterests: ['攀岩', '科幻小说', '硬件制作'],
+      hometownRegionCity: '陕西西安',
+    })).toBe(
+      '先认识一下雪花：在服务机器人研发领域，喜欢攀岩、科幻小说、硬件制作，来自陕西西安。你们的共同点还没显出来，不妨先问问攀岩背后的故事。',
+    )
+  })
+
+  it('buildFocusedMemberBubbleText replaces an unhelpful connection-search explanation', () => {
+    expect(buildFocusedMemberBubbleText('草原', '悦仔还在整理你和草原的连接线索，见面后也许会有新的惊喜。', [], null, {
+      userId: 'bot-5',
+      topInterests: ['社区营造'],
+    })).toBe(
+      '先认识一下草原：喜欢社区营造。你们的共同点还没显出来，不妨先问问社区营造背后的故事。',
     )
   })
 

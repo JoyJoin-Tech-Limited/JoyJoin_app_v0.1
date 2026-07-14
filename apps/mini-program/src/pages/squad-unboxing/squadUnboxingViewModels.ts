@@ -1,5 +1,6 @@
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import type { PoolGroupMemberSummary } from '@shared/api'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import type { OverallChemistry, PairExplanation } from '@shared/types/groupAnalysis'
 
 import { getVibeLabel as getVibeLabelShared } from '../../lib/matching/groupDisplay'
@@ -127,19 +128,40 @@ export function buildFocusedMemberBubbleText(
   explanation?: string | null,
   connectionPoints: string[] = [],
   introAngle?: string | null,
+  member?: PoolGroupMemberSummary | null,
 ): string {
   const normalize = (value?: string | null) => (value ?? '').trim().replace(/[。！？，\s]*$/, '')
   const name = memberName.trim() || '这位桌友'
+  const industry = member?.industryVisible === false
+    ? ''
+    : normalize(member?.industryNicheLabel ?? member?.industryCategoryLabel)
+  const interests = (member?.topInterests ?? []).map((interest) => normalize(interest)).filter(Boolean).slice(0, 3)
+  const hometown = member?.hometownAffinityOptin === false ? '' : normalize(member?.hometownRegionCity)
+  const archetype = member?.archetype ? ARCHETYPE_BY_ID[member.archetype]?.nameCn : ''
+  const profileBeats = [
+    industry ? `在${industry}领域` : '',
+    interests.length > 0 ? `喜欢${interests.join('、')}` : '',
+    hometown ? `来自${hometown}` : '',
+    archetype ? `带着${archetype}的社交气质` : '',
+  ].filter(Boolean)
+  const introduction = profileBeats.length > 0
+    ? `先认识一下${name}：${profileBeats.slice(0, 3).join('，')}`
+    : `先认识一下${name}：这是今晚会和你同桌的新伙伴`
   const reason = normalize(explanation)
-  if (reason) return `悦仔发现，你和${name}之间有个连接点：${reason}。`
+  if (reason && !/还在.{0,8}(整理|寻找).{0,8}连接线索/.test(reason)) {
+    return `${introduction}。你们之间还有个连接点：${reason}。`
+  }
 
   const points = connectionPoints.map((point) => normalize(point)).filter(Boolean).slice(0, 2)
-  if (points.length > 0) return `悦仔发现，你和${name}都对${points.join('、')}感兴趣，见面可以从这里聊起。`
+  if (points.length > 0) return `${introduction}。你们都对${points.join('、')}感兴趣，见面可以从这里聊起。`
 
   const intro = normalize(introAngle)
-  if (intro) return `悦仔给你和${name}留了个开场：${intro}。`
+  if (intro) return `${introduction}。悦仔也给你们留了个开场：${intro}。`
 
-  return `悦仔还在整理你和${name}的连接线索，见面后也许会有新的惊喜。`
+  const opener = interests[0]
+    ? `你们的共同点还没显出来，不妨先问问${interests[0]}背后的故事。`
+    : '你们的共同点还没显出来，不妨先聊聊最近各自遇到的一件有趣小事。'
+  return `${introduction}。${opener}`
 }
 
 const CHEMISTRY_TITLES: Record<ChemistryType, string> = {

@@ -255,6 +255,7 @@ export default function SquadUnboxingPage() {
         normalizeMatchingCopy(focusedViewerPair?.explanation),
         focusedViewerPair?.connectionPoints ?? [],
         focusedViewerPair?.introAngle,
+        focusedMember,
       )
     : null
 
