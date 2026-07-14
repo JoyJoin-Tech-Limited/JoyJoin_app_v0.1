@@ -60,4 +60,11 @@ describe('squad-unboxing page composition', () => {
     expect(pageSource).not.toContain('squad-unboxing__detail-panel')
     expect(pageSource).not.toContain("import TeammateCardDetail from './TeammateCardDetail'")
   })
+
+  it('types each member narration once and lets a second tap fast-forward it', () => {
+    expect(pageSource).toContain('seenMemberNarrationsRef')
+    expect(pageSource).toContain('resolveCardFocusInteraction(')
+    expect(pageSource).toContain('maxDuration={focusedMember ? undefined : 3000}')
+    expect(pageSource).toContain("interaction: 'narration_fast_forward'")
+  })
 })

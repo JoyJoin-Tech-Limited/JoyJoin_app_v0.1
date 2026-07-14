@@ -9,9 +9,33 @@ import {
   getEventTypeLabel,
   getPairChemistryWord,
   getSquadChemistryTokens,
+  resolveCardFocusInteraction,
 } from './squadUnboxingViewModels'
 
 describe('squadUnboxingViewModels', () => {
+  it('resolves first tap, fast-forward tap, dismissal, and revisits consistently', () => {
+    expect(resolveCardFocusInteraction(-1, 2, false, false)).toEqual({
+      nextIndex: 2,
+      animateNarration: true,
+      action: 'focus',
+    })
+    expect(resolveCardFocusInteraction(2, 2, true, true)).toEqual({
+      nextIndex: 2,
+      animateNarration: false,
+      action: 'complete',
+    })
+    expect(resolveCardFocusInteraction(2, 2, true, false)).toEqual({
+      nextIndex: -1,
+      animateNarration: false,
+      action: 'dismiss',
+    })
+    expect(resolveCardFocusInteraction(1, 2, true, false)).toEqual({
+      nextIndex: 2,
+      animateNarration: false,
+      action: 'focus',
+    })
+  })
+
   it('computeActionDockState follows reveal state only', () => {
     expect(computeActionDockState('ready')).toBe('hidden')
     expect(computeActionDockState('shaking')).toBe('hidden')

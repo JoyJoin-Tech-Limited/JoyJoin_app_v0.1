@@ -26,6 +26,41 @@ export interface ViewerSpotlight {
   otherMember: PoolGroupMemberSummary
 }
 
+export interface CardFocusResolution {
+  nextIndex: number
+  animateNarration: boolean
+  action: 'focus' | 'complete' | 'dismiss'
+}
+
+export function resolveCardFocusInteraction(
+  currentIndex: number,
+  tappedIndex: number,
+  hasBeenSeen: boolean,
+  isNarrationAnimating: boolean,
+): CardFocusResolution {
+  if (currentIndex !== tappedIndex) {
+    return {
+      nextIndex: tappedIndex,
+      animateNarration: !hasBeenSeen,
+      action: 'focus',
+    }
+  }
+
+  if (isNarrationAnimating) {
+    return {
+      nextIndex: tappedIndex,
+      animateNarration: false,
+      action: 'complete',
+    }
+  }
+
+  return {
+    nextIndex: -1,
+    animateNarration: false,
+    action: 'dismiss',
+  }
+}
+
 export function getMemberName(member: PoolGroupMemberSummary): string {
   return member.displayName || '匿名'
 }

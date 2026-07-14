@@ -35,6 +35,7 @@ import {
   getMemberName,
   getPairChemistryWord,
   getVibeLabel,
+  resolveCardFocusInteraction,
 } from './squadUnboxingViewModels'
 import { getOracleCardCornerAsset } from '../../components/discover/oracleCardAssets'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
@@ -132,6 +133,7 @@ export default function SquadUnboxingPage() {
   const isStageTap = composedHeroEnabled && flowState === 'ready'
 
   const [focusedCardIndex, setFocusedCardIndex] = useState(-1)
+  const [animateFocusedNarration, setAnimateFocusedNarration] = useState(false)
   const [announcement, setAnnouncement] = useState('')
   const [headerReady, setHeaderReady] = useState(false)
   const [briefVignetteFailed, setBriefVignetteFailed] = useState(false)
@@ -142,6 +144,8 @@ export default function SquadUnboxingPage() {
   // Mirror of focusedCardIndex so handleCardFocus can compute the next focus
   // synchronously without running side effects inside a state updater.
   const focusedCardIndexRef = useRef(-1)
+  const animateFocusedNarrationRef = useRef(false)
+  const seenMemberNarrationsRef = useRef<Set<string>>(new Set())
   const matchExplanationCopy = normalizeMatchingCopy(group?.matchExplanation)
 
   const reportScrollDepth = useScrollDepthTracking(groupId)
@@ -149,6 +153,16 @@ export default function SquadUnboxingPage() {
   useEffect(() => {
     focusedCardIndexRef.current = focusedCardIndex
   }, [focusedCardIndex])
+
+  useEffect(() => {
+    animateFocusedNarrationRef.current = animateFocusedNarration
+  }, [animateFocusedNarration])
+
+  useEffect(() => {
+    seenMemberNarrationsRef.current = new Set()
+    animateFocusedNarrationRef.current = false
+    setAnimateFocusedNarration(false)
+  }, [groupId])
 
   useEffect(() => {
     if (isStoryFocused && members.length > 0 && focusedCardIndex === -1) {
@@ -194,12 +208,22 @@ export default function SquadUnboxingPage() {
     // effects (haptic, analytics) live outside the state updater — React may
     // replay updaters, which previously double-fired them.
     const current = focusedCardIndexRef.current
-    const next = current === index ? -1 : index
-    focusedCardIndexRef.current = next
-    setFocusedCardIndex(next)
     const member = members[index]
+    const memberKey = member?.userId ?? `index:${index}`
+    const resolution = resolveCardFocusInteraction(
+      current,
+      index,
+      seenMemberNarrationsRef.current.has(memberKey),
+      animateFocusedNarrationRef.current,
+    )
+    const next = resolution.nextIndex
+    if (resolution.action === 'focus') seenMemberNarrationsRef.current.add(memberKey)
+    focusedCardIndexRef.current = next
+    animateFocusedNarrationRef.current = resolution.animateNarration
+    setFocusedCardIndex(next)
+    setAnimateFocusedNarration(resolution.animateNarration)
 
-    if (next === -1) {
+    if (resolution.action === 'dismiss') {
       squadUnboxingAnalytics.track('squad_unboxing_card_detail_dismiss', {
         source: 'deck_tap',
         cardIndex: index,
@@ -208,7 +232,7 @@ export default function SquadUnboxingPage() {
         groupId,
         screen: 'squad-unboxing',
       })
-    } else {
+    } else if (resolution.action === 'focus') {
       // Focus haptic is tactile feedback for an explicit tap; suppressed under
       // reduce-motion / degradation per the fallback contract.
       if (!shouldReduceMotion && !isDegradation) haptics('light')
@@ -217,6 +241,15 @@ export default function SquadUnboxingPage() {
         cardIndex: next,
         focusedUserId: member?.userId,
         previousIndex: current,
+        groupId,
+        screen: 'squad-unboxing',
+      })
+    } else {
+      squadUnboxingAnalytics.track('squad_unboxing_card_focus', {
+        source: 'deck_tap',
+        interaction: 'narration_fast_forward',
+        cardIndex: index,
+        focusedUserId: member?.userId,
         groupId,
         screen: 'squad-unboxing',
       })
@@ -946,8 +979,8 @@ export default function SquadUnboxingPage() {
                   )}
                   speed={45}
                   delay={180}
-                  maxDuration={3000}
-                  enabled={!shouldReduceMotion}
+                  maxDuration={focusedMember ? undefined : 3000}
+                  enabled={!shouldReduceMotion && (!focusedMember || animateFocusedNarration)}
                   showCursor={false}
                   onComplete={() => {
                     squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
