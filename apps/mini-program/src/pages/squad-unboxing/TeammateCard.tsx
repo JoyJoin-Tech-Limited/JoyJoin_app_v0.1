@@ -152,7 +152,7 @@ export default function TeammateCard({
   // Industry moved off the card: on fan-covered cards the 48rpx safe inset
   // leaves ~126rpx of text width, so `28·女 · 互联网产品` truncated to a
   // broken-looking single character. Industry still reaches the user via the
-  // aria-label below and the focus detail panel (`age · industry`), where it
+  // aria-label below and the focused narration bubble (`在{industry}领域`), where it
   // renders in full.
   const ageGender = [agePart, genderPart].filter(Boolean).join('·')
   const industry = member.industryVisible === false
@@ -384,7 +384,7 @@ export default function TeammateCard({
           {/* Info zone — strict 4-row grid (round-3 restructure): name,
               accent archetype, grey meta line (age·gender), one
               connection-point pill. Every row is one line, ellipsis-safe; the
-              full industry + connection list lives in the detail panel. */}
+              full industry + connection list feeds the focused narration bubble. */}
           <View className='squad-unboxing__deck-card-info'>
             <Text className='squad-unboxing__deck-card-name' numberOfLines={1}>{name}</Text>
             {archetypeName ? (

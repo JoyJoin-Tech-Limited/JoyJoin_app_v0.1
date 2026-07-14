@@ -1072,6 +1072,10 @@ overallScore =
 > - **Archetype chemistry matrix** (`archetypeChemistry.ts`) — 12×12 personality compatibility
 > - **Life stage affinity matrix** (`LIFE_STAGE_AFFINITY` in `poolMatchingService.ts`) — 5×5 `lifeStage` / 人生阶段 compatibility using the canonical vocabulary. `workMode` is deprecated for writes and kept as a one-release read-only fallback.
 
+#### Per-Pool Gender Balance (wired 2026-07-14)
+
+Four `event_pools` columns are now live (previously inert): `genderBalanceMode` (`none`/`soft`/`hard`, default `soft`), `genderBalanceBonusPoints` (0–100), `minFemaleCount` / `minMaleCount` (0–20, default 0). Soft mode adds a post-clamp bonus in `calculateGroupDiversity` for exact male/female balance and never blocks formation. Hard mode applies the floors as a group-commit gate and in all redistribution phases; a group failing its pool's floor is discarded and members returned to the candidate pool. Floors are hard-mode-only; `genderRestriction="女性"` implies mode `none`. Admin portal create/edit exposes the fields (`性别平衡` section); POST and PATCH enforce identical validation, and PATCH changes are audit-logged. Full spec: `docs/systems/MATCHING_ALGORITHM_REFERENCE.md` §4.2.1.
+
 ### Temperature Levels
 
 ```typescript

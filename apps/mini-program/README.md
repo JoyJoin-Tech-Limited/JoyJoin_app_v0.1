@@ -72,7 +72,7 @@ src/
 │   ├── event-feedback/
 │   ├── event-ticket-payment/
 │   ├── matching-status/
-│   ├── squad-unboxing/
+│   ├── squad-unboxing/    # Subpackage: match reveal (subpackage since 2026-07-14)
 │   ├── pool-group-detail/
 │   ├── icebreaker-session/
 │   ├── alang/               # Subpackage: event, search, dialogue, companion, result/archive; config/debug test-only

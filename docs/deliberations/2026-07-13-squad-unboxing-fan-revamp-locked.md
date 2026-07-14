@@ -6,6 +6,8 @@
 **Supersedes:** Direction A "Sequential Deal → flat row" (sprint-contract.squad-deal-a.md); flat row is deleted, not flag-gated
 
 > **Postscript (2026-07-14):** Sibling dimming on focus was subsequently removed in commit `13b51fcb6` ("Preserve squad card layers on focus"). Unfocused cards now keep their full-opacity fan pose — no opacity drop and no `×0.97` settle — so the layered deck stays legible. The `anyFocused` prop and `--dimmed` SCSS class were dropped from `TeammateCard`/`SquadDeckStage`. The §3 Interaction block below retains the original locked strategy for historical context; treat the dim/settle clauses as superseded by the 2026-07-14 change.
+>
+> **Postscript 2 (2026-07-15):** The tap-to-reveal revamp (commit `a6a160dc8`) further supersedes the deal/focus model below: cards now deal **face-down** and flip up via controller-owned `squadFlipState.ts` (`auto_me` / `tap` / `reveal_all`); the inline `TeammateCardDetail` panel, the center-card auto-peek, and the session-level front holo are retired (focused-card narration moved to the Xiaoyue dock bubble; a one-time shimmer sweep plays across the face-down backs); `squad_unboxing_card_detail_dismiss` was reinstated as the resolver dismiss action (`a6ea57284`). Canonical behavior: `AGENTS.md` squad-unboxing section + `docs/systems/squad-unboxing-analytics-funnels.md`.
 
 ---
 

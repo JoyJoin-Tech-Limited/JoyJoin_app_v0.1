@@ -202,7 +202,7 @@ category/intent icons 主要服务 onboarding，但经 `JoyJoinIcon` 动态注�
 
 以下非 tab 页面可按领域重划：payment-verification、blind-box-payment、event-ticket-payment、event-detail、event-feedback、event-coordination、squad-unboxing、pool-group-detail、center-tab-empty、city-unlock。`login` 需要单独验证冷启动与认证回跳。
 
-页面迁移会改变 app 配置、路由/深链、预加载和共享 chunk，必须分批完成。组队揭晓当前已有用户未提交改动与已知类型/测试问题，本轮不触碰；这里只记录未来包划分建议。
+页面迁移会改变 app 配置、路由/深链、预加载和共享 chunk，必须分批完成。组队揭晓的未提交改动已于 2026-07-15 收口（commit `a6a160dc8`）：squad-unboxing 已迁入独立子包 `pages/squad-unboxing`，主包 zip 1.94 → 1.92MB；下列建议中涉及 squad 的部分已完成。
 
 ## 8. 三档优化方案
 
@@ -225,7 +225,7 @@ category/intent icons 主要服务 onboarding，但经 `JoyJoinIcon` 动态注�
 1. 移除 Discover 对完整 `LandingPage` 的重复静态链，保留轻量认证过渡态。
 2. 把 `@shared/api` 和 `lib/api/api.ts` 改为领域 subpath/import；用构建 metafile 对比 `common.js`，只保留有量化收益的拆分。
 3. 建立 payment/event-flow 子包；将支付页、活动详情/反馈/协调页成组迁移。
-4. 将 squad-unboxing、pool-group-detail 归入 matching 领域子包；等用户现有组队揭晓改动独立收口后再做。
+4. 将 pool-group-detail 归入 matching 领域子包（squad-unboxing 已于 2026-07-15 迁入独立子包 `pages/squad-unboxing`，见 §7.3 更新）。
 5. 审查共享 UI：只有被两个以上主包入口使用的组件留 common；页面专用组件和样式跟随页面。
 
 ### C. 深度优化：CDN、按需加载与组件拆分

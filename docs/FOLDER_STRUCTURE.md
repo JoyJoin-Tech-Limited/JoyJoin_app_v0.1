@@ -275,7 +275,7 @@ apps/mini-program/
 │   │   ├── connections/           # Connection list (replaced /chats)
 │   │   ├── blind-box-payment/     # Payment flow
 │   │   ├── payment-verification/  # Payment status check
-│   │   ├── squad-unboxing/        # Match reveal animation
+│   │   ├── squad-unboxing/        # Subpackage: match reveal (moved to subpackage 2026-07-14)
 │   │   └── center-hub/            # Center tab hub page: active events, pending registrations, empty state
 │   ├── components/                # Shared Taro components
 │   │   ├── ui/                    # UI primitives (Button, Card, FormStepper, etc.)

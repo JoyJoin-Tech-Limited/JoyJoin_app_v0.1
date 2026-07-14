@@ -905,6 +905,12 @@ export const insertEventPoolSchema = createInsertSchema(eventPools).omit({
   minGroupSize: z.number().min(2).max(10).default(4),
   maxGroupSize: z.number().min(2).max(10).default(6),
   targetGroups: z.number().min(1).default(1),
+  // SEC-02 (Sprint 2026-07-14): tighten gender-balance fields on pool creation —
+  // mirrors updateEventPoolSchema in adminEventPools.ts. Optional so DB defaults apply.
+  genderBalanceMode: z.enum(["none", "soft", "hard"]).optional(),
+  genderBalanceBonusPoints: z.number().int().min(0).max(100).optional(),
+  minFemaleCount: z.number().int().min(0).max(20).optional(),
+  minMaleCount: z.number().int().min(0).max(20).optional(),
 });
 
 export const insertEventPoolRegistrationSchema = createInsertSchema(eventPoolRegistrations).omit({

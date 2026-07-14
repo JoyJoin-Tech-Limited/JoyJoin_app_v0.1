@@ -148,6 +148,7 @@ const allowedEmojiFiles = new Set([
 ]);
 for (const file of modifiedFiles) {
   if (!file.endsWith('.ts') && !file.endsWith('.tsx')) continue;
+  if (!file.startsWith('apps/mini-program/')) continue; // mini-program UI copy only — server/admin logger strings are exempt
   if (allowedEmojiFiles.has(file)) continue;
   const content = fs.readFileSync(file, 'utf8');
   const lines = content.split(/\r?\n/);

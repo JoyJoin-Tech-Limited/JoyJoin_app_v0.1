@@ -67,7 +67,7 @@ Primary files:
 ### 2. Matching, events, and post-match experience
 
 **Deterministic matching**
-- `apps/server/src/poolMatchingService.ts` — also implements the feature-flagged operator-review gate (`matchingOperatorReviewEnabled`)
+- `apps/server/src/poolMatchingService.ts` — also implements the feature-flagged operator-review gate (`matchingOperatorReviewEnabled`) and per-pool gender-balance enforcement (soft bonus / hard floors at the commit gate and in all redistribution phases, wired 2026-07-14; see `docs/systems/MATCHING_ALGORITHM_REFERENCE.md` §4.2.1)
 - `apps/server/src/poolRealtimeMatchingService.ts`
 - `apps/server/src/matchingSemantic.ts` — optional 7th pair dimension when `ENABLE_SEMANTIC_SIMILARITY=true` (weights redistribute; see `poolMatchingService.ts` comments)
 - `packages/shared/src/personality/`

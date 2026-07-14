@@ -558,6 +558,23 @@ energyBalance = round((avgScore + harmonyScore) / 2)
 10. PROCESS invitation rewards for matched pairs
 ```
 
+### 4.2.1 Per-Pool Gender-Balance Enforcement (wired 2026-07-14)
+
+Four previously inert `event_pools` columns are now live. `genderRestriction="女性"` (all-female) remains the strongest control; it implies balance mode `none` and disables the fields below.
+
+| Mode (`genderBalanceMode`) | Effect |
+|---|---|
+| `none` | No gender logic (default for non-mixed pools) |
+| `soft` (default) | Post-clamp bonus in `calculateGroupDiversity` for exact male/female balance, capped by `genderBalanceBonusPoints` (0–100). Group formation is never blocked. |
+| `hard` | Floor gate: every committed group must contain ≥ `minFemaleCount` disclosed females and ≥ `minMaleCount` disclosed males (each 0–20, default 0). A group that fails its pool's floor is discarded and its members returned to the candidate pool. |
+
+- Floors are **hard-mode-only**; soft mode never rejects a group.
+- The floor is checked at the commit gate (step 6d) and again in **all three** redistribution phases (§4.5).
+- Undisclosed gender (`preferNotToSay` / `保密`) counts toward **neither** floor and does not block exact-balance detection.
+- Bonus is symmetric (1:1 target); there is no "reject for perfect balance" path.
+- Operator surface: admin portal pool create/edit (`性别平衡` section). POST (`insertEventPoolSchema.extend`) and PATCH (`updateEventPoolSchema`) enforce identical enum/int-range validation; PATCH changes are audit-logged (`admin_audit_logs`).
+- Decision trail: Sprint Contract `sprint_20260714_gender_ratio_enforcement` (`.git/.orchestration/sprints/`).
+
 ### 4.3 Pool Configuration Parameters
 
 | Parameter | Field | Description |
@@ -566,6 +583,9 @@ energyBalance = round((avgScore + harmonyScore) / 2)
 | Minimum group size | `pool.minGroupSize` | Default: 4 |
 | Target group count | `pool.targetGroups` | Stops formation when reached |
 | Member quality gate | hardcoded `≥ 60` | Minimum avg pair score to add candidate |
+| Gender balance mode | `pool.genderBalanceMode` | `none` / `soft` (default) / `hard` — see §4.2.1 |
+| Gender bonus cap | `pool.genderBalanceBonusPoints` | Soft-mode bonus points, 0–100 |
+| Gender floors | `pool.minFemaleCount` / `pool.minMaleCount` | Hard-mode minimums per group, 0–20 (default 0) |
 
 ### 4.4 MatchGroup Output Shape
 

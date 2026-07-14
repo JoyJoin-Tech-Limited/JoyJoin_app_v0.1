@@ -170,7 +170,7 @@
 | 5.9 | Not-found state | Unregistered user visits matching-status page with invalid pool ID | `not-found` state: StatusCard "没有找到报名记录" |
 | 5.10 | Cancelled pool | Admin cancels pool after user registered | `cancelled` state: "这场活动已取消" + browse other pools CTA |
 | 5.11 | Matching with < min group size | Pool has too few participants to form groups | Matching completes but some users unmatched. Server logs warning. Unmatched users see comfort state. |
-| 5.12 | Gender ratio hard constraint | Matching respects gender ratio filters | Groups maintain configured gender balance |
+| 5.12 | Gender ratio hard constraint | Admin sets pool `genderBalanceMode=hard` + `minFemaleCount`/`minMaleCount` (admin portal 性别平衡 section), then runs matching | Every committed group meets the configured floors; groups failing the floor are discarded and members returned to the candidate pool. Soft-mode pools get the exact-balance bonus without blocking formation |
 | 5.13 | Match compass strictness tuning | User adjusts compass before reg lock time | Match compass strictness affects group formation (not pair scores) |
 | 5.14 | Re-match | Admin runs matching again after first run | ⚠️ Verify idempotency — second match run does not create duplicate groups or orphan users |
 

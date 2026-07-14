@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { listGuardrailsAppSourcePaths, isPlaceholder } from '../guardrails-app-sources.mjs';
 
 const emojiPattern = /[\u{1F300}-\u{1F9FF}\u{2300}-\u{23FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
@@ -36,6 +37,17 @@ test('allowedEmojiContextPattern permits icon system usages', () => {
   assert.ok(allowedEmojiContextPattern.test('icon="😕"'), 'should allow icon prop');
   assert.ok(allowedEmojiContextPattern.test('fallbackEmoji'), 'should allow fallbackEmoji identifier');
   assert.ok(!allowedEmojiContextPattern.test('Hello 🎉 world'), 'should not match plain text');
+});
+
+// --- Emoji check scope regression guard ---
+// The emoji commit blocker is documented as "for mini-program TS/TSX" — it must
+// stay scoped to apps/mini-program/ so server/admin logger strings stay exempt.
+test('emoji check stays scoped to mini-program sources', () => {
+  const source = readFileSync(new URL('./check-guardrails.mjs', import.meta.url), 'utf8');
+  assert.ok(
+    source.includes("if (!file.startsWith('apps/mini-program/')) continue;"),
+    'check-guardrails.mjs emoji check must keep the apps/mini-program/ path filter',
+  );
 });
 
 // --- Centering safety heuristic tests ---

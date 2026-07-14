@@ -67,6 +67,16 @@ Applied before scoring:
 
 Only users passing all hard constraints are scored.
 
+## Group-level gender balance (wired 2026-07-14)
+
+Distinct from L1 user filters — these are per-pool group-formation controls on `event_pools`:
+
+- `genderBalanceMode` — `none` / `soft` (default) / `hard`. `genderRestriction="女性"` implies `none`.
+- Soft mode: post-clamp bonus in `calculateGroupDiversity` for exact male/female balance (capped by `genderBalanceBonusPoints`, 0–100). Never blocks formation; bonus default-ON is the intended 1:1 nudge.
+- Hard mode: `minFemaleCount`/`minMaleCount` (0–20) floors gate every group commit **and** all redistribution phases; failing groups are discarded, members returned to the candidate pool.
+- Floors are hard-mode-only. Undisclosed gender counts toward neither floor.
+- Full spec: `docs/systems/MATCHING_ALGORITHM_REFERENCE.md` §4.2.1. Decision trail: Sprint Contract `sprint_20260714_gender_ratio_enforcement`.
+
 ## Execution safety
 
 - Pool matching must not run concurrently for the same pool — use an execution guard

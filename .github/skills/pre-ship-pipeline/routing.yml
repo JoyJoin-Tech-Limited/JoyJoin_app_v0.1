@@ -1,0 +1,54 @@
+skill: pre-ship-pipeline
+category: internal
+
+primary_ownership: >
+  End-to-end pre-ship quality orchestration — sequences the existing audit skills
+  (code review, review swarm, design/completeness/performance audits, fix, polish)
+  and runs a single consolidated grill-me gate. Owns ORDER and handoff only, not
+  the audits themselves.
+
+use_when:
+  - before calling a non-trivial change "done" or merging a PR
+  - manually chaining code review → QA → design/completeness/perf audits → fix → polish
+  - pre-launch readiness on a new page, flow, or feature
+  - user asks for a full quality pipeline or ship-readiness pass
+
+do_not_use_when:
+  - one-line typo fix (run harness-completion-gate only)
+  - a single-skill audit is enough (load that skill directly; its own grill-me applies)
+  - the task has no shippable artifact yet (still in research/planning)
+
+strong_triggers:
+  - pre-ship pipeline
+  - full quality pipeline
+  - run the whole review chain
+  - ship readiness pipeline
+  - review then fix then polish
+  - end-to-end quality gate
+  - ready to ship
+
+owned_files: []
+
+owned_paths: []
+
+owned_symbols: []
+
+related_skills:
+  - skill: code-review
+    when: step 1 — correctness and 5-pillar review of the diff
+  - skill: post-implementation-review
+    when: step 2 — deterministic review swarm with blocking-only fix loop
+  - skill: ui-layout-audit
+    when: step 3 — first leg of the design-audit Pipeline Mode
+  - skill: frontend-design-audit
+    when: step 3 — second leg of the design-audit Pipeline Mode
+  - skill: completeness-audit
+    when: step 3 — final leg; consumes the prior two scores
+  - skill: performance-audit
+    when: step 4 — mini-program performance PASS/WARN/BLOCK gate
+  - skill: process-systematic-debugging
+    when: step 5 — root-causing non-obvious blocking bugs
+  - skill: wow-elements
+    when: step 6 — polishing the key emotional moment (completeness dim 5 ≤2)
+  - skill: harness-completion-gate
+    when: step 7 — final npm run harness:gate before declaring done
