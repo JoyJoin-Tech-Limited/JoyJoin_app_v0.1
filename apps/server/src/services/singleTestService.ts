@@ -54,6 +54,104 @@ const COMMON_PASSWORD = "test123456";
 const VIRTUAL_USER_COUNT = 100;
 const BOT_COUNT = 5;
 
+export interface SingleTestBotBackground {
+  interestsRankedTop3: string[];
+  industryCategory: string;
+  industryCategoryLabel: string;
+  industrySegmentNew: string;
+  industrySegmentLabel: string;
+  industryNiche: string;
+  industryNicheLabel: string;
+  hometownRegionCity: string;
+  socialStyle: string;
+  educationLevel: string;
+  relationshipStatus: string;
+  lifeStage: string;
+  bio: string;
+}
+
+const SINGLE_TEST_BOT_BACKGROUNDS: readonly SingleTestBotBackground[] = [
+  {
+    interestsRankedTop3: ["城市摄影", "独立电影", "周末徒步"],
+    industryCategory: "media",
+    industryCategoryLabel: "文化传媒",
+    industrySegmentNew: "visual_content",
+    industrySegmentLabel: "视觉内容",
+    industryNiche: "documentary_photography",
+    industryNicheLabel: "纪录片摄影",
+    hometownRegionCity: "云南大理",
+    socialStyle: "慢热但很会观察，熟悉后喜欢分享旅途中遇到的小故事",
+    educationLevel: "本科",
+    relationshipStatus: "single",
+    lifeStage: "自由职业",
+    bio: "常背着相机走街串巷，正在记录深圳凌晨四点的城市故事。",
+  },
+  {
+    interestsRankedTop3: ["人工智能", "桌游推理", "手冲咖啡"],
+    industryCategory: "tech",
+    industryCategoryLabel: "科技互联网",
+    industrySegmentNew: "ai_ml",
+    industrySegmentLabel: "AI与机器学习",
+    industryNiche: "ai_product",
+    industryNicheLabel: "AI产品设计",
+    hometownRegionCity: "湖北武汉",
+    socialStyle: "理性直接，喜欢从一个好问题开始深入聊天，也乐于帮大家梳理思路",
+    educationLevel: "硕士",
+    relationshipStatus: "single",
+    lifeStage: "职场老手",
+    bio: "白天研究AI产品，晚上组织推理桌游，最近在练习辨认咖啡产区。",
+  },
+  {
+    interestsRankedTop3: ["爵士乐", "自然酒", "旧书店"],
+    industryCategory: "finance",
+    industryCategoryLabel: "金融",
+    industrySegmentNew: "sustainable_investment",
+    industrySegmentLabel: "可持续投资",
+    industryNiche: "impact_investing",
+    industryNicheLabel: "影响力投资",
+    hometownRegionCity: "四川成都",
+    socialStyle: "温和健谈，擅长照顾安静的人，常用音乐和美食打开话题",
+    educationLevel: "硕士",
+    relationshipStatus: "in_relationship",
+    lifeStage: "职场老手",
+    bio: "关注有社会价值的小生意，收藏爵士黑胶，也爱在旧书页里找城市记忆。",
+  },
+  {
+    interestsRankedTop3: ["攀岩", "科幻小说", "硬件制作"],
+    industryCategory: "manufacturing",
+    industryCategoryLabel: "先进制造",
+    industrySegmentNew: "robotics",
+    industrySegmentLabel: "机器人",
+    industryNiche: "service_robotics",
+    industryNicheLabel: "服务机器人研发",
+    hometownRegionCity: "陕西西安",
+    socialStyle: "行动派，刚见面话不多，但聊到动手项目或户外挑战会立刻来劲",
+    educationLevel: "博士",
+    relationshipStatus: "single",
+    lifeStage: "职场新人",
+    bio: "在做能进家庭的服务机器人，周末不是在攀岩馆，就是在修自己的小装置。",
+  },
+  {
+    interestsRankedTop3: ["社区营造", "粤菜研究", "即兴喜剧"],
+    industryCategory: "social_services",
+    industryCategoryLabel: "社会服务",
+    industrySegmentNew: "community_development",
+    industrySegmentLabel: "社区发展",
+    industryNiche: "community_program_design",
+    industryNicheLabel: "社区活动策划",
+    hometownRegionCity: "广东潮州",
+    socialStyle: "外向有感染力，擅长把陌生人拉进同一个话题，也会主动给别人留表达空间",
+    educationLevel: "本科",
+    relationshipStatus: "married",
+    lifeStage: "创业中",
+    bio: "在城中村做青年社区项目，认真研究一桌粤菜怎样让陌生人自然熟起来。",
+  },
+] as const;
+
+export function getSingleTestBotBackground(index: number): SingleTestBotBackground {
+  return SINGLE_TEST_BOT_BACKGROUNDS[index % SINGLE_TEST_BOT_BACKGROUNDS.length];
+}
+
 const OPTIONAL_SINGLE_TEST_TABLES = {
   socialIcebreakerSessions: "social_icebreaker_sessions",
   preGenerationResults: "pre_generation_results",
@@ -282,6 +380,20 @@ interface VirtualUserRow {
   archetype: string | null;
 }
 
+async function enrichSelectedBotBackgrounds(bots: VirtualUserRow[]): Promise<void> {
+  await Promise.all(
+    bots.map((bot, index) =>
+      db
+        .update(users)
+        .set({
+          ...getSingleTestBotBackground(index),
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, bot.id)),
+    ),
+  );
+}
+
 export async function startSingleTestSession(testerUserId: string): Promise<{
   socialSessionId: string;
   groupId: string;
@@ -313,6 +425,7 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
   }
 
   const bots = pickDiverseBots(virtualUsers, groupId);
+  await enrichSelectedBotBackgrounds(bots);
 
   logger.info("social_icebreaker_test_mode_bot_roster_seeded", {
     groupId,

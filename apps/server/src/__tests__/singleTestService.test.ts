@@ -58,6 +58,26 @@ describe("pickDiverseBots", () => {
   });
 });
 
+describe("getSingleTestBotBackground", () => {
+  it("gives each visible test bot a distinct, explanation-ready background", () => {
+    const backgrounds = Array.from({ length: 5 }, (_, index) =>
+      singleTestService.getSingleTestBotBackground(index),
+    );
+
+    expect(new Set(backgrounds.map((profile) => profile.industryNicheLabel)).size).toBe(5);
+    expect(new Set(backgrounds.map((profile) => profile.hometownRegionCity)).size).toBe(5);
+    expect(new Set(backgrounds.map((profile) => profile.socialStyle)).size).toBe(5);
+    expect(backgrounds.every((profile) => profile.interestsRankedTop3.length === 3)).toBe(true);
+    expect(backgrounds.every((profile) => profile.bio.length >= 20)).toBe(true);
+  });
+
+  it("cycles safely if a future test roster requests more than five profiles", () => {
+    expect(singleTestService.getSingleTestBotBackground(5)).toEqual(
+      singleTestService.getSingleTestBotBackground(0),
+    );
+  });
+});
+
 describe("getSingleTestBotRosterForClient", () => {
   const originalAppMode = process.env.APP_MODE;
 
