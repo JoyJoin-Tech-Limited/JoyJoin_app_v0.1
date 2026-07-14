@@ -288,7 +288,7 @@ describe('SCSS fan poses + anti-collision (Direction: Cascading Hand Fan)', () =
     expect(scss).toContain('squad-unboxing__deck-card--focused-lift')
     expect(scss).toContain('squad-unboxing__deck-card--focused-lift-deg')
     expect(scss).toContain('squad-unboxing__deck-card--peek')
-    expect(scss).toContain('squad-unboxing__deck-card--dimmed')
+    expect(scss).not.toContain('squad-unboxing__deck-card--dimmed')
   })
 
   it('keeps the 最佳拍档 stamp out of the covered band on non-rightmost cards', () => {

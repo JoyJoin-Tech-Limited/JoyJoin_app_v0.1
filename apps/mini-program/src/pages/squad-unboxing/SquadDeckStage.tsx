@@ -18,7 +18,6 @@ export interface SquadDeckStageProps {
   currentUserId?: string | null
   viewerPairByMemberId: Map<string, PairExplanation | null>
   focusedIndex: number
-  anyFocused: boolean
   reduceMotion: boolean
   isDegradation: boolean
   /** Bump to reset transient deal/focus/peek state (swipe-back re-entry). */
@@ -76,7 +75,6 @@ export default function SquadDeckStage({
   currentUserId,
   viewerPairByMemberId,
   focusedIndex,
-  anyFocused,
   reduceMotion,
   isDegradation,
   resetSignal,
@@ -194,8 +192,7 @@ export default function SquadDeckStage({
 
   const handleFocus = useCallback((index: number) => {
     // A deliberate tap cancels the one-shot auto-peek so the centre card's
-    // peek lift can never fight a sibling's dim (specificity tie on the
-    // --peek/--dimmed compound rules).
+    // peek lift can never compete with a deliberate card focus.
     peekTimersRef.current.forEach(clearTimeout)
     peekTimersRef.current = []
     setPeekActive(false)
@@ -272,7 +269,6 @@ export default function SquadDeckStage({
                     viewerPair={viewerPair}
                     index={rosterIndex}
                     focused={focusedIndex === rosterIndex}
-                    anyFocused={anyFocused}
                     isCurrentUser={isCurrentUser}
                     isBestPartner={member.userId === bestPartnerUserId}
                     isPeek={peekActive && rosterIndex === layout.peekIndex}

@@ -895,7 +895,6 @@ export default function SquadUnboxingPage() {
             currentUserId={currentUserId}
             viewerPairByMemberId={viewerPairByMemberId}
             focusedIndex={focusedCardIndex}
-            anyFocused={focusedCardIndex >= 0}
             reduceMotion={shouldReduceMotion}
             isDegradation={isDegradation}
             resetSignal={resetSignal}

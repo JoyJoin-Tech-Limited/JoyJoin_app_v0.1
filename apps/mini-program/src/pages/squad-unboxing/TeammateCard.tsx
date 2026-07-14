@@ -17,7 +17,6 @@ export interface TeammateCardProps {
   /** Flattened roster index (0-based) — drives the deal stagger + aria. */
   index: number
   focused: boolean
-  anyFocused: boolean
   isCurrentUser: boolean
   /** This tablemate is the viewer's highest-chemistryScore partner. */
   isBestPartner: boolean
@@ -84,7 +83,6 @@ export default function TeammateCard({
   member,
   viewerPair,
   focused,
-  anyFocused,
   isCurrentUser,
   isBestPartner,
   isPeek,
@@ -161,11 +159,10 @@ export default function TeammateCard({
   // runtimes).
   // - Not dealt: SCSS start pose (below, scaled down, transparent).
   // - Dealt: parent --dealt gates the per-index fan pose; --flipped shows front.
-  // - Focused: --focused-lift straightens + rises + scales; siblings --dimmed.
+  // - Focused: --focused-lift straightens + rises + scales; siblings preserve
+  //   their original opaque fan pose so the layered deck stays legible.
   // - Peek: --peek lifts the centre card once after settle.
-  const isDimmed = anyFocused && !focused
-
-  const opacity = isRevealed ? (isDimmed ? 0.5 : 1) : 0
+  const opacity = isRevealed ? 1 : 0
   // z-index ascends left→right via the SCSS per-index rules; a focused card
   // jumps to the top. Undefined lets the SCSS value stand for non-focused.
   const zIndex = focused ? 50 : undefined
@@ -221,7 +218,6 @@ export default function TeammateCard({
         'squad-unboxing__deck-card',
         focused ? 'squad-unboxing__deck-card--focused' : '',
         focused ? ((reduceMotion || isDegradation) ? 'squad-unboxing__deck-card--focused-lift-deg' : 'squad-unboxing__deck-card--focused-lift') : '',
-        isDimmed ? 'squad-unboxing__deck-card--dimmed' : '',
         isPeek ? 'squad-unboxing__deck-card--peek' : '',
         isCurrentUser ? 'squad-unboxing__deck-card--current' : '',
         isBestPartner ? 'squad-unboxing__deck-card--best-partner' : '',

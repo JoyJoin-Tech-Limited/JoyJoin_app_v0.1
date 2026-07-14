@@ -21,7 +21,7 @@ describe('TeammateCard longpress trailing-tap guard', () => {
   )
   const handleLongPressBody = source.slice(
     source.indexOf('const handleLongPress = useCallback'),
-    source.indexOf('const isDimmed'),
+    source.indexOf('const opacity'),
   )
 
   it('arms a pending-trailing-tap flag on longpress (timestamp kept too)', () => {
@@ -101,7 +101,7 @@ describe('TeammateCard fan template + deal geometry (Cascading Hand Fan)', () =>
     expect(source).toContain('squad-unboxing__deck-card--focused-lift')
     expect(source).toContain('squad-unboxing__deck-card--focused-lift-deg')
     expect(source).toContain('squad-unboxing__deck-card--peek')
-    expect(source).toContain('squad-unboxing__deck-card--dimmed')
+    expect(source).not.toContain('squad-unboxing__deck-card--dimmed')
     expect(source).not.toContain('focusScale')
     expect(source).not.toContain('focusLiftRpx')
     // Flat-row compact mode is gone.
@@ -117,8 +117,10 @@ describe('TeammateCard fan template + deal geometry (Cascading Hand Fan)', () =>
     expect(styleBlock).toContain('borderColor')
   })
 
-  it('dims unfocused siblings via inline opacity', () => {
-    expect(source).toContain('isDimmed ? 0.5 : 1')
+  it('keeps unfocused siblings fully opaque while another card is focused', () => {
+    expect(source).toContain('const opacity = isRevealed ? 1 : 0')
+    expect(source).not.toContain('isDimmed')
+    expect(source).not.toContain('anyFocused')
   })
 
   it('renders the 我 badge and the 最佳拍档 stamp', () => {

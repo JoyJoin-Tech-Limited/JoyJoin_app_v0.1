@@ -1424,7 +1424,7 @@ $fan-rotations: (
   //   rest   .deck-fan--dealt .row--len-L .deck-card:nth-child(i)           (0,4,0)
   //   state  .deck-fan--dealt .row--len-L .deck-card.<state>:nth-child(i)   (0,5,0)
   // The compound `.deck-card.<state>` adds the 5th class so a state always wins
-  // over the rest pose; focused-lift is listed last so it beats peek/dim.
+  // over the rest pose; focused-lift is listed last so it beats peek.
   &__deck-fan--dealt {
     @each $len, $rots in $fan-rotations {
       .squad-unboxing__deck-fan-row--len-#{$len} {
@@ -1434,10 +1434,6 @@ $fan-rotations: (
           .squad-unboxing__deck-card:nth-child(#{$i}) {
             z-index: $i;
             transform: translateY(0) rotate(#{$rot}deg) scale(1);
-          }
-
-          .squad-unboxing__deck-card.squad-unboxing__deck-card--dimmed:nth-child(#{$i}) {
-            transform: translateY(0) rotate(#{$rot}deg) scale(0.97);
           }
 
           .squad-unboxing__deck-card.squad-unboxing__deck-card--peek:nth-child(#{$i}) {
