@@ -1,5 +1,5 @@
 import { View, Text, Image } from '@tarojs/components'
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { getArchetypeHSL, formatHSLAsRGBA, getContrastSafeArchetypeColor } from '@shared/archetypeColors'
 import type { PoolGroupMemberSummary } from '@shared/api'
@@ -96,6 +96,13 @@ export default function TeammateCard({
 }: TeammateCardProps) {
   const [imageError, setImageError] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [avatarFailed, setAvatarFailed] = useState(false)
+
+  useEffect(() => {
+    setAvatarFailed(false)
+    setImageError(false)
+    setImageLoaded(false)
+  }, [member.avatarUrl, member.archetype])
   // WeChat fires `tap` on release after `longpress`. `pendingTrailingTapRef`
   // marks the next tap as that trailing release-tap; handleTap consumes the
   // flag exactly once, so a long-press cannot immediately toggle focus back
@@ -103,7 +110,14 @@ export default function TeammateCard({
   const lastLongPressAtRef = useRef(0)
   const pendingTrailingTapRef = useRef(false)
 
-  const handleImageError = useCallback(() => setImageError(true), [])
+  const handleImageError = useCallback(() => {
+    if (member.avatarUrl && !avatarFailed) {
+      setAvatarFailed(true)
+      setImageLoaded(false)
+      return
+    }
+    setImageError(true)
+  }, [member.avatarUrl, avatarFailed])
   const handleImageLoad = useCallback(() => setImageLoaded(true), [])
 
   const name = getMemberName(member)
@@ -125,8 +139,9 @@ export default function TeammateCard({
     : (member.industryNicheLabel ?? member.industryCategoryLabel ?? '')
   const metaLine = ageGender
 
-  const assetUrl = getArchetypeAssetUrl(member.archetype)
-  const showPlaceholder = !member.archetype || imageError
+  const usingAvatar = Boolean(member.avatarUrl && !avatarFailed)
+  const assetUrl = usingAvatar ? member.avatarUrl ?? undefined : getArchetypeAssetUrl(member.archetype)
+  const showPlaceholder = !assetUrl || imageError
 
   const handleTap = useCallback(() => {
     if (!isRevealed) return
@@ -296,9 +311,12 @@ export default function TeammateCard({
                   ) : null}
                   {assetUrl ? (
                     <Image
-                      className='squad-unboxing__deck-card-art-img'
+                      className={[
+                        'squad-unboxing__deck-card-art-img',
+                        usingAvatar ? 'squad-unboxing__deck-card-art-img--avatar' : '',
+                      ].filter(Boolean).join(' ')}
                       src={assetUrl}
-                      mode='aspectFit'
+                      mode={usingAvatar ? 'aspectFill' : 'aspectFit'}
                       lazyLoad={false}
                       onError={handleImageError}
                       onLoad={handleImageLoad}

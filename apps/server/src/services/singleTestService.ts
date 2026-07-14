@@ -53,6 +53,7 @@ const SINGLE_TEST_POOL_TITLE = "单人调试局";
 const COMMON_PASSWORD = "test123456";
 const VIRTUAL_USER_COUNT = 100;
 const BOT_COUNT = 5;
+const TEST_AVATAR_CDN_BASE = "https://joyjoinapp.com/static/assets/icons/archetype";
 
 export interface SingleTestBotBackground {
   interestsRankedTop3: string[];
@@ -247,6 +248,12 @@ function simpleHash(input: string): number {
   return hash >>> 0;
 }
 
+export function buildSingleTestBotAvatarUrl(groupId: string, index: number): string {
+  const avatarIndex = (simpleHash(groupId) + index) % ARCHETYPE_CANONICAL_ORDER.length;
+  const avatarId = ARCHETYPE_CANONICAL_ORDER[avatarIndex] ?? "corgi";
+  return `${TEST_AVATAR_CDN_BASE}/archetype-${avatarId}-head.webp`;
+}
+
 /** Pick BOT_COUNT bots with distinct archetypes when possible, deterministically
  *  keyed by groupId so the same test group always gets the same archetype mix. */
 export function pickDiverseBots(virtualUsers: VirtualUserRow[], groupId: string): VirtualUserRow[] {
@@ -380,13 +387,14 @@ interface VirtualUserRow {
   archetype: string | null;
 }
 
-async function enrichSelectedBotBackgrounds(bots: VirtualUserRow[]): Promise<void> {
+async function enrichSelectedBotBackgrounds(bots: VirtualUserRow[], groupId: string): Promise<void> {
   await Promise.all(
     bots.map((bot, index) =>
       db
         .update(users)
         .set({
           ...getSingleTestBotBackground(index),
+          wechatAvatarUrl: buildSingleTestBotAvatarUrl(groupId, index),
           updatedAt: new Date(),
         })
         .where(eq(users.id, bot.id)),
@@ -425,7 +433,7 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
   }
 
   const bots = pickDiverseBots(virtualUsers, groupId);
-  await enrichSelectedBotBackgrounds(bots);
+  await enrichSelectedBotBackgrounds(bots, groupId);
 
   logger.info("social_icebreaker_test_mode_bot_roster_seeded", {
     groupId,

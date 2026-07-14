@@ -74,6 +74,13 @@ describe('TeammateCard fan template + deal geometry (Cascading Hand Fan)', () =>
     expect(source).not.toContain('squad-unboxing__deck-card-industry')
   })
 
+  it('prefers member avatars and falls back to archetype art after an avatar error', () => {
+    expect(source).toContain('member.avatarUrl && !avatarFailed')
+    expect(source).toContain('setAvatarFailed(true)')
+    expect(source).toContain("mode={usingAvatar ? 'aspectFill' : 'aspectFit'}")
+    expect(source).toContain('squad-unboxing__deck-card-art-img--avatar')
+  })
+
   it('shows exactly one connection-point pill on the card (full list in detail)', () => {
     // Visual-fit lock: two 2-line pills overflow the info zone at fan widths
     // and clip at the card bottom (verified in the 2026-07-13 smoke).

@@ -78,6 +78,24 @@ describe("getSingleTestBotBackground", () => {
   });
 });
 
+describe("buildSingleTestBotAvatarUrl", () => {
+  it("assigns five distinct first-party HTTPS avatars within a test group", () => {
+    const avatars = Array.from({ length: 5 }, (_, index) =>
+      singleTestService.buildSingleTestBotAvatarUrl("group-avatar-test", index),
+    );
+
+    expect(new Set(avatars).size).toBe(5);
+    expect(avatars.every((url) => url.startsWith("https://joyjoinapp.com/static/"))).toBe(true);
+    expect(avatars.every((url) => url.endsWith("-head.webp"))).toBe(true);
+  });
+
+  it("varies the avatar rotation between group ids", () => {
+    expect(singleTestService.buildSingleTestBotAvatarUrl("group-a", 0)).not.toBe(
+      singleTestService.buildSingleTestBotAvatarUrl("group-b", 0),
+    );
+  });
+});
+
 describe("getSingleTestBotRosterForClient", () => {
   const originalAppMode = process.env.APP_MODE;
 

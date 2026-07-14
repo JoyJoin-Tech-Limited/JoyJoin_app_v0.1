@@ -1684,6 +1684,10 @@ $fan-rotations: (
   &__deck-card-art-img {
     width: 100%;
     height: 100%;
+
+    &--avatar {
+      background: rgba($color-primary, 0.06);
+    }
   }
 
   &__deck-card-placeholder {

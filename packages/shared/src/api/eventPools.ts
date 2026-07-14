@@ -142,6 +142,7 @@ export interface PoolRegistrationSummary {
 export interface PoolGroupMemberSummary {
   userId: string
   displayName?: string | null
+  avatarUrl?: string | null
   archetype?: string | null
   topInterests?: string[] | null
   ageLabel?: string | null

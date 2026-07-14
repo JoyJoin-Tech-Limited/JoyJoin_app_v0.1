@@ -1455,6 +1455,9 @@ export function registerUserEventPoolRoutes(app: Express): void {
           .select({
             userId: users.id,
             displayName: users.displayName,
+            profileImageUrl: users.profileImageUrl,
+            wechatAvatarUrl: users.wechatAvatarUrl,
+            isTestBot: users.isTestBot,
             archetype: users.archetype,
             topInterests: users.interestsRankedTop3,
             birthdate: users.birthdate,
@@ -1479,6 +1482,9 @@ export function registerUserEventPoolRoutes(app: Express): void {
         const memberSummaries = members.map((member: (typeof members)[number]) => ({
           userId: member.userId,
           displayName: member.displayName,
+          avatarUrl: member.isTestBot
+            ? member.profileImageUrl || member.wechatAvatarUrl
+            : null,
           archetype: member.archetype,
           topInterests: member.topInterests,
           ageLabel: formatAge(member.birthdate, member.ageVisible ?? 'hide_all'),
