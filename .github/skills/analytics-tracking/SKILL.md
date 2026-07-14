@@ -36,6 +36,8 @@ KPIs (CSAT, NPS, engagement), trigger performance (38 triggers with Bayesian tun
 
 See [references/implementation.md](references/implementation.md) for full event taxonomy, funnel details, KPI service functions, trigger performance specifics, and matching benchmark parameters.
 
+**Squad-unboxing funnel:** the `pages/squad-unboxing` tap-to-reveal event taxonomy and server whitelist are documented separately in `docs/systems/squad-unboxing-analytics-funnels.md` (canonical funnel reference, locked by `apps/server/src/__tests__/squadUnboxingAnalyticsRoutes.test.ts`).
+
 ## Quick examples
 
 **User says:** "Add a new analytics event when users tap the 'remind me' button on the pool card."

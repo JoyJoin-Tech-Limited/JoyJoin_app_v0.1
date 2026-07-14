@@ -101,4 +101,4 @@ Use this checklist to verify a documentation and memory update is complete and c
 - [ ] All Required updates are applied; Recommended updates were either applied or explicitly deferred
 - [ ] Commit message follows `docs: sync [area] after [change]` pattern
 - [ ] No secrets, credentials, or environment-specific values were committed to any documentation file
-- [ ] If orchestration or skill `routing.yml` changed, `npm run orchestration:validate` and `node scripts/validate-skill-routing.mjs` were run
+- [ ] If orchestration or skill `routing.yml` changed, `npm run orchestration:validate` and `node scripts/verify/validate-skill-routing.mjs` were run

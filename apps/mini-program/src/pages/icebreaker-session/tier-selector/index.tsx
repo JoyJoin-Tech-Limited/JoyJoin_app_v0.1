@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { View, Text, Image } from '@tarojs/components'
+import { View, Text, Image, ScrollView } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { resolveTierDisplay, type TierMachineId } from '@shared/socialIcebreakerTierManifest'
@@ -348,6 +348,9 @@ export default function TierSelectorPage() {
 
   return (
     <View className={`tier-selector ${shouldReduceMotion ? 'tier-selector--reduce-motion' : ''}`}>
+      {/* Scrollable content region — keeps the page itself from scrolling
+          (no onPageScroll) while every card stays reachable on short phones. */}
+      <ScrollView className='tier-selector__scroll' scrollY enhanced showScrollbar={false}>
       {/* Header */}
       <View className='tier-selector__header'>
         <Text className='tier-selector__title'>
@@ -546,9 +549,9 @@ export default function TierSelectorPage() {
         </View>
       </View>
 
-      <View className='tier-selector__filler' />
+      </ScrollView>
 
-      {/* CTA */}
+      {/* CTA — pinned bottom bar, a flex sibling of the ScrollView */}
       <View className='tier-selector__footer'>
         <Button
           variant='primary'

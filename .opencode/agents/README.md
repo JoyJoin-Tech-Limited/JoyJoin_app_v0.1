@@ -18,6 +18,7 @@ These agents are migrated from the Kimi Code agent portfolio (`.github/agents/`)
 | `qa-agent.md` | qa-agent | Verification checklists, test gap analysis |
 | `product-manager.md` | product-manager | PRDs, user stories, scope |
 | `debug.md` | debug | Bug investigation and resolution |
+| `user-satisfaction-auditor.md` | user-satisfaction-auditor | First-person user-perspective critical audit of frontend changes |
 
 ### Oh-My-OpenCode workflow agents (boulder / plans)
 

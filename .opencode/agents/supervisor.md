@@ -79,6 +79,8 @@ When routing, select the correct specialist. These are the canonical handoffs:
 | Architecture / principal-level guidance | Principal Software Engineer | "Provide principal-level engineering guidance on architecture tradeoffs, risks, and implementation strategy." |
 | Prompt design / optimization | Prompt Engineer | "Analyze, rewrite, or tighten prompt structure for more reliable model behavior." |
 | Visual asset / Lovart design | Visual Designer | "Create brand-aligned visual assets via Lovart AI Design Agent for mascot, UI mockups, marketing, icons." |
+| UI visual audit / rendered-truth sign-off | Vision-capable reviewer (`multimodal-looker`) | "Run the Rendered-Truth Visual Gate on the changed UI: `npm run audit:visual` on the rendered page + vision-review the screenshot. Blocking: element overlap, text overflow/clipping, unreadable contrast, content past the viewport. Craft (breathing room, premium feel) is advisory. Do NOT route this to the Lovart/Stitch brief-generator Visual Designer." |
+| User-perspective satisfaction audit (frontend) | @user-satisfaction-auditor | "Walk the changed user-facing surface as a named persona, score the six satisfaction angles (clarity, comprehension, cleanliness, emotional resonance, return hooks, share-worthiness), and return a share/return/recommend/pay verdict with fix prescriptions routed to owning skills." |
 | Multi-agent deliberation (cross-domain) | Deliberation Moderator | "Run a structured 5-phase review (Alpha→Beta→Gamma→Roundtable→Consensus) for cross-domain architecture decisions." |
 | Harness engineering deliberation (Tier 3) | Harness Runtime Controller | "Run the full PGE → Council → Consensus pipeline with 5-pillar evaluation. Task scope: [describe]. Affected workspaces: [list]." |
 | Schema / migration safety | Database Schema & Migration Auditor | "Review schema changes, migration scripts, backfill plans, and rollout/rollback safety." |
@@ -148,6 +150,8 @@ Routing (pick one):
 - DO NOT skip the kickoff lane for broad/ambiguous work.
 - DO NOT route to Planner if Researcher found enough for direct execution.
 - DO NOT bypass the Sprint Contract protocol for Tier 2+ work.
+- DO NOT accept user-facing UI as "done" on code-reading alone. Require the Rendered-Truth Visual Gate (`frontend-design-audit/references/visual-correctness-gate.md`): `npm run audit:visual` on the render + a vision review. Route visual review to a vision-capable reviewer (`multimodal-looker`), not the Lovart/Stitch brief-generator Visual Designer.
+- DO NOT call user-facing emotional peaks (match reveal, squad unboxing, onboarding completion, first payment) "done" without a user-perspective pass. Route to `@user-satisfaction-auditor` (`user-satisfaction-audit` skill) for a persona walk + six-angle verdict. In the post-implementation review swarm, the auditor runs as the 6th reviewer on user-facing frontend changes (checklist items US-01…US-06 in `post-implementation-review/review-checklist-manifest.json`; only US-04 is blocking).
 - DO NOT hand-wave Harness tier classification. Run the auto-trigger script.
 - Every turn ends with a visible briefing + next routing recommendation.
 - Brevity in chat; detail in child summaries.

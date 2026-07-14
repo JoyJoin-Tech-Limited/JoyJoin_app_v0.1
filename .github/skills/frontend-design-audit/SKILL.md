@@ -23,6 +23,7 @@ description: >
 
 | Prerequisite | Feeds | Mapping |
 |---|---|---|
+| [`references/visual-correctness-gate.md`](./references/visual-correctness-gate.md) | Step 0 + Dim 4 (Responsive & Safety) | Scanner blocking violations = Class A correctness defects (auto-P0). Craft findings feed Dim 1. A surface with any Class A defect is not shippable regardless of dimension scores. |
 | [`docs/reference/emotional-value-rubric.md`](../../../docs/reference/emotional-value-rubric.md) | Dim 1 (Brand Fidelity) emotional depth | Score 6 sub-dimensions → 0–24. A screen can be token-correct and emotionally vacant. Low 归属感 or 身份认同 scores override any Brand Fidelity score. |
 
 ## Do not use when
@@ -32,23 +33,30 @@ description: >
 
 ## Grill-me stress-test
 
-After scoring all 5 dimensions, run [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — a one-question-per-turn interview that defends every score. If you scored Brand Fidelity 3, prove it. If you scored Motion Hygiene 4, show the evidence. Converts vibe-based scoring into defendable audit results.
+After scoring all 5 dimensions, run [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — a one-question-per-turn interview that defends every score with evidence. Converts vibe-based scoring into defendable audit results.
 
 ## How to run an audit
 
+### Step 0 — Render & Inspect (mandatory for user-facing surfaces)
+
+Code-reading is blind to overlap, overflow, clipping, and cramped spacing — those only exist in the render. Run the **Rendered-Truth Visual Gate** (full two-class rubric, scanner + vision layers, and the Step 0 procedure: [`references/visual-correctness-gate.md`](./references/visual-correctness-gate.md)):
+
+1. **Render + scan:** `npm run audit:visual -- --url "<h5 route>" --wait "<selector>" --screenshot /tmp/<page>.png --pretty`; record Class A (correctness) violations.
+2. **Vision review** the screenshot (`multimodal-looker`) with the gate's rubric.
+3. **Merge + classify** each finding **correctness (blocking)** / **craft (advisory)**, labelled **Seen-in-render** vs **Read-in-code**. Non-renderable surfaces: note why — never claim visual sign-off without a render.
+
 ### Agent-mode (during implementation / PR review)
-1. Identify the target: specific page, component, or flow
-2. Score all 5 dimensions below (0–4 each)
-3. List specific anti-patterns with file paths / line numbers
-4. Generate a ranked fix list (P0 = ship-blocking, P1 = should fix, P2 = polish)
-5. Report health score and rating band
+1. **Step 0 first** (above): render, scan, vision-inspect, classify.
+2. Identify the target (page/component/flow) and score all 5 dimensions below (0–4 each), using scanner output as evidence for Dimension 4
+3. List specific anti-patterns with file paths / line numbers, each tagged Seen-in-render or Read-in-code
+4. Generate a ranked fix list (P0 = ship-blocking, P1 = should fix, P2 = polish; **Class A defect = automatic P0**) and report health score + rating band
 
 ### Human-mode (CLI)
 ```bash
 npm run design:audit apps/mini-program/src/pages/discover
 ```
 
-> CLI catches obvious violations but cannot judge hierarchy, emotional resonance, or copy quality — those require agent-mode visual review.
+> `design:audit` catches source-level violations but cannot see the render; pair with `npm run audit:visual` (rendered correctness) + a vision review (hierarchy, copy, resonance) — see Step 0.
 
 ## The 5 Dimensions
 
@@ -78,29 +86,15 @@ See [`references/audit-framework.md`](./references/audit-framework.md) for full 
 
 ## Review checklist
 
-- [ ] All 5 dimensions scored with specific evidence
-- [ ] Anti-patterns linked to file paths / line numbers
-- [ ] Fix list ranked P0/P1/P2
-- [ ] Health score and rating band stated
-- [ ] Mini-program screens checked against Taro-specific constraints
-- [ ] Web screens checked against token and accessibility constraints
-- [ ] 情绪价值 scored via `docs/reference/emotional-value-rubric.md` if screen is user-facing (not admin/ops)
+- [ ] **Step 0 done:** page rendered, `npm run audit:visual` scan read, screenshot vision-reviewed (user-facing surfaces)
+- [ ] Every finding classified **correctness (blocking)** or **craft (advisory)** and labelled Seen-in-render / Read-in-code
+- [ ] All Class A (correctness) defects listed as P0 — surface is not shippable until fixed
+- [ ] All 5 dimensions scored with specific evidence; anti-patterns linked to file paths/lines
+- [ ] Fix list ranked P0/P1/P2; health score + rating band stated
+- [ ] Mini-program checked vs Taro constraints; web checked vs token + accessibility
+- [ ] 情绪价值 scored via `docs/reference/emotional-value-rubric.md` if user-facing (not admin/ops)
 - [ ] Grill-me interview completed for any dimension scoring < 4 (see `references/grill-me-checklist.md`)
 
-## Quick examples
+## Quick example
 
-**Auditing a mini-program profile screen:**
-1. Dimension 1: Mascot placement feels random → Score 2
-2. Dimension 2: Missing error state for photo upload failure → Score 2
-3. Dimension 3: Four hard-coded colors instead of tokens → Score 2
-4. Dimension 4: Touch targets below 44×44 rpx on action row → Score 2
-5. Dimension 5: Heavy blur filter on scroll → Score 1
-**Health Score: 9/20 (Poor)** → P0: fix touch targets and upload error state before merge.
-
-**Auditing a web onboarding step:**
-1. Dimension 1: Warm beige background, mascot present, copy is conversational → Score 4
-2. Dimension 2: Loading, empty, and error states all handled → Score 4
-3. Dimension 3: All colors from tokens, no hard-coded values → Score 4
-4. Dimension 4: Works down to 320 px without horizontal scroll → Score 3
-5. Dimension 5: No layout thrashing, modest entrance animation → Score 4
-**Health Score: 19/20 (Excellent)** → Minor polish only; safe to ship.
+**Auditing a web onboarding step:** Dim 1 mascot + conversational copy → 4; Dim 2 all states handled → 4; Dim 3 all tokens → 4; Dim 4 works at 320px → 3; Dim 5 modest motion → 4. **19/20 (Excellent)** → minor polish, safe to ship. A contrasting poor-score example (mini-program profile, 9/20) and the full breakdown live in [`references/examples.md`](references/examples.md).

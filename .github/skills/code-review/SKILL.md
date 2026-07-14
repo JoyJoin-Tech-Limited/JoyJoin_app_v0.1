@@ -47,7 +47,7 @@ Every review must consider:
 1. **Understand the change** — Read the PR description and diff fully before forming opinions.
 2. **Identify impacted domains and load relevant skills** — Determine which areas of the codebase are affected and load the relevant repo skills from `.github/skills/`.
 3. **Review correctness and code quality** — Verify the change does what it claims; check edge cases, error paths, readability, and repo conventions.
-4. **Evaluate Harness Engineering Framework pillars** — Work through each pillar. This is mandatory. See [`references/reviewer-guide.md`](./references/reviewer-guide.md) for full questions and verdict format.
+4. **Evaluate Harness Engineering Framework pillars** — Work through each pillar against the canonical checklist in [`harness-completion-gate/references/harness-pillars.md`](../harness-completion-gate/references/harness-pillars.md) (single source of truth). This is mandatory. See [`references/reviewer-guide.md`](./references/reviewer-guide.md) for full questions and verdict format.
 5. **Verify tests and guardrails** — Are tests present and adequate? Do CI guardrails still pass?
 
 ## Reviewer guidelines

@@ -24,8 +24,10 @@ describe("life stage signal boundary", () => {
   });
 
   it("calculateGroupDiversity reads lifeStage, not workMode", () => {
+    // Signature gained optional genderBalanceMode/genderBalanceBonusPoints params
+    // (Sprint 2026-07-14 D8) — regex tolerates the extended parameter list.
     const match = source.match(
-      /function calculateGroupDiversity\(members:\s*UserWithProfile\[\]\):\s*number\s*\{([\s\S]*?)\n\}/
+      /function calculateGroupDiversity\([^)]*\):\s*number\s*\{([\s\S]*?)\n\}/
     );
     expect(match).toBeTruthy();
     const body = match![1];

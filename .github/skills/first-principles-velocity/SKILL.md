@@ -85,5 +85,5 @@ rules, and model-tier routing tables, see
 ## Related files
 
 - `.github/agents/MODEL_CATALOG.md`
-- `docs/ai-workflow-documentation-refresh.md`
+- `docs/ai/ai-workflow-documentation-refresh.md`
 - [`references/velocity-patterns.md`](./references/velocity-patterns.md)

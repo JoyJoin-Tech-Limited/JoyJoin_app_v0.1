@@ -47,10 +47,14 @@ Start here when reviewing a pull request or auditing code changes.
 
 | Skill | What it covers |
 |-------|---------------|
-| [`code-review`](./code-review/SKILL.md) | Structured PR review using the Harness Engineering Framework — correctness, reliability, scalability, security, observability, and architecture fit. **Start here for all PR reviews.** Load domain-specific skills below for deeper review in affected areas. |
+| [`pre-ship-pipeline`](./pre-ship-pipeline/SKILL.md) | **Orchestrator for the full pre-ship chain.** Sequences the skills below (code review → review swarm → design/completeness/perf audits → fix → polish) and replaces their five separate grill-me interviews with one consolidated end-of-pipeline stress-test. Start here to run the whole quality gate. |
+| [`code-review`](./code-review/SKILL.md) | Structured PR review using the Harness Engineering Framework — correctness, reliability, scalability, security, observability, and architecture fit. **Start here for single-PR reviews.** Load domain-specific skills below for deeper review in affected areas. |
+| [`post-implementation-review`](./post-implementation-review/SKILL.md) | Blanket post-implementation review swarm (Auto-Eval + QA + Verifier + PM + conditional Visual Designer) over a deterministic checklist. Converges to PASS / PARTIAL / FAIL; only BLOCKING items trigger fix loops. |
 | [`ui-layout-audit`](./ui-layout-audit/SKILL.md) | Pixel-level UI/UX audit: spacing hierarchy, typography comfort, emoji discipline, visual coherence (孤字 guard), and emotional craft. Use before shipping UI-heavy PRs or when a screen feels cheap / crowded / unbalanced. |
 | [`completeness-audit`](./completeness-audit/SKILL.md) | 11-dimension 完成度 audit (0–44) for mini-program implementations: functional, state, copy, interaction, delight, flow, accessibility, Taro discipline, visual finish, brand soul, and operational completeness. Produces ROI-ranked gap register via 2-axis scatter (User Impact × Engineering Hours). Pipeline Mode auto-sequences `ui-layout-audit → frontend-design-audit → completeness-audit`. |
 | [`performance-audit`](./performance-audit/SKILL.md) | Post-implementation performance audit — 6 dimensions (流畅度, 速度, 设备适配, 内存安全, 网络韧性, 包体积) scored on Gen Z device baselines (8GB+/120Hz/5G primary tier). Incorporates grill-me stress-test interview. Produces PASS/WARN/BLOCK gate. |
+| [`user-satisfaction-audit`](./user-satisfaction-audit/SKILL.md) | First-person user-perspective critical audit: persona walkthroughs, six-angle satisfaction scoring (3-second clarity, cognitive smoothness, holistic cleanliness, emotional resonance, return hooks, share-worthiness), and a share/return/recommend/pay verdict. Use after UI implementation or when a screen is complete but not lovable. |
+| [`harness-completion-gate`](./harness-completion-gate/SKILL.md) | Mandatory end-of-task 5-pillar verification gate (`npm run harness:gate`). Canonical pillar checklist lives in `references/harness-pillars.md`; Sprint-Contract-aware; integrates with auto-eval. |
 
 ---
 
@@ -128,7 +132,7 @@ Guidance for adding crafted, brand-aligned micro-interactions and premium emotio
 
 Keep docs aligned with the active codebase. Use after significant code changes or when docs are visibly stale.
 
-**Large refresh across `docs/`, `.github/skills/`, and `.github/agents/`:** Use scope tiers, pick the right lane (kickoff vs `docs-sync` vs governance), and run `npm run orchestration:validate` when orchestration or skill routing changes—see [`docs/ai-workflow-documentation-refresh.md`](../../docs/ai-workflow-documentation-refresh.md). **Workflow Governance Reviewer** (`self-iteration.agent.md`) is for governance reviewer packets, not a substitute for [`docs-sync`](./docs-sync/SKILL.md).
+**Large refresh across `docs/`, `.github/skills/`, and `.github/agents/`:** Use scope tiers, pick the right lane (kickoff vs `docs-sync` vs governance), and run `npm run orchestration:validate` when orchestration or skill routing changes—see [`docs/ai/ai-workflow-documentation-refresh.md`](../../docs/ai/ai-workflow-documentation-refresh.md). **Workflow Governance Reviewer** (`self-iteration.agent.md`) is for governance reviewer packets, not a substitute for [`docs-sync`](./docs-sync/SKILL.md).
 
 | Skill | What it covers |
 |-------|---------------|
@@ -245,7 +249,7 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | How do I assign venues or handle location/geocoding? | `venue-location-services` |
 | How do I work with WeChat auth, Taro, or Mini Program APIs? | `wechat-ecosystem-integration` |
 | How does semantic similarity matching work? | `semantic-matching-embeddings` |
-| How do I plan a cross-cutting refresh of product docs, skills, and agents? | [`docs/ai-workflow-documentation-refresh.md`](../../docs/ai-workflow-documentation-refresh.md) + `docs-sync` where applicable |
+| How do I plan a cross-cutting refresh of product docs, skills, and agents? | [`docs/ai/ai-workflow-documentation-refresh.md`](../../docs/ai/ai-workflow-documentation-refresh.md) + `docs-sync` where applicable |
 | How do I stress-test a plan or design with relentless questioning? | `grill-me` |
 | How do I run a structured multi-agent review or architecture consensus? | `multi-agent-deliberation` |
 | How do I get a mentor-style breakdown of what we just built? | `cto-mentor` |

@@ -3,9 +3,29 @@
 
 // ─── Root ───────────────────────────────────────────────────────────
 .tier-selector {
-  @include no-scroll-page-shell;
-  @include page-shell-padding($spacing-lg, $container-padding, $spacing-lg);
+  // Zero-page-scroll shell: the ScrollView takes the remaining space above the
+  // pinned footer (canonical pattern — see pool-registration). We intentionally
+  // use min-height (not no-scroll-page-shell's height:100%) because the global
+  // `page` has no fixed height, so height:100% collapsed to auto and the page
+  // itself scrolled — firing onPageScroll and pushing the CTA off-screen.
+  display: flex;
+  flex-direction: column;
+  // design-audit:intentional — vh fallback required for WeChat WKWebView (AGENTS.md §4)
+  min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
   background: $color-bg-gradient;
+
+  // Scrollable content region. Inner scroll keeps the page from scrolling while
+  // keeping every tier card reachable; flex:1 + min-height:0 is the WeChat-safe
+  // way to give a ScrollView a bounded height inside a flex column.
+  &__scroll {
+    flex: 1;
+    min-height: 0;
+    box-sizing: border-box;
+    padding: $spacing-lg $container-padding $spacing-md;
+    @include safe-area-inline($container-padding);
+  }
 
   // ── Header ──────────────────────────────────────────────────────
   &__header {
@@ -252,18 +272,17 @@
   }
 
   // ── Footer / CTA ────────────────────────────────────────────────
-  &__filler {
-    flex: 1;
-    min-height: 0;
-  }
-
+  // Pinned bottom bar — a flex sibling of the ScrollView (not position:fixed),
+  // so the CTA stays reachable without fixed-in-scrollview quirks.
   &__footer {
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: $spacing-sm;
-    padding-top: $spacing-md;
-    padding-bottom: calc($spacing-md + env(safe-area-inset-bottom));
+    padding: $spacing-md $container-padding;
+    @include safe-area-inline($container-padding);
+    @include safe-area-bottom-padding(padding-bottom, $spacing-md);
   }
 
   &__cta {

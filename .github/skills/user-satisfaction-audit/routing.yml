@@ -1,0 +1,45 @@
+skill: user-satisfaction-audit
+category: internal
+
+primary_ownership: >
+  First-person user-perspective critical audit for user-facing frontend surfaces
+  (mini-program and web). Scores six satisfaction angles (3-second clarity,
+  cognitive smoothness, holistic cleanliness, emotional resonance, return hooks,
+  share-worthiness), narrates the journey as a named persona, and issues a user
+  verdict on share / return / recommend / pay.
+
+use_when:
+  - post-implementation review of a user-facing frontend change
+  - PR review where the diff touches a screen real users see
+  - a screen is functionally complete but feels fine-not-great
+  - before shipping an emotional peak (reveal, completion, first payment)
+  - drop-off or churn signals point at a specific screen
+
+do_not_use_when:
+  - pixel-level spacing or typography issues (use ui-layout-audit)
+  - brand-craft or token scoring (use frontend-design-audit)
+  - functional or state gaps (use completeness-audit)
+  - speed, jank, or package size (use performance-audit)
+  - interaction diagnosis or CTA hierarchy (use frontend-hook-engine)
+  - product strategy or funnel direction (use pm-sin-mapper)
+  - task is purely backend with no user-facing surface
+
+strong_triggers:
+  - user satisfaction audit
+  - user perspective review
+  - walk the screen as a user
+  - would users love this
+  - is this delightful enough
+  - will users come back
+  - does this trigger sentimental value
+  - user experience audit
+  - 用户视角审计
+  - would I screenshot this
+
+owned_files:
+  - apps/mini-program/src/pages/**
+  - archived/workspaces/user-client/src/pages/**
+
+owned_paths: []
+
+owned_symbols: []

@@ -202,4 +202,4 @@ Never silently create new doc files. New docs require intentional decision, not 
 - Documentation impact summary was presented for confirmation before changes were applied
 - All Required updates are applied; Recommended updates were either applied or explicitly deferred
 - Commit message follows `docs: sync [area] after [change]` pattern
-- If orchestration or skill `routing.yml` changed, `npm run orchestration:validate` and `node scripts/validate-skill-routing.mjs` were run
+- If orchestration or skill `routing.yml` changed, `npm run orchestration:validate` and `node scripts/verify/validate-skill-routing.mjs` were run

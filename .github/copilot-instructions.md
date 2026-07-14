@@ -12,7 +12,7 @@
 - **Ambiguous or cross-cutting tasks:** Run `node scripts/skill-router.mjs "your question"` and follow the suggested skill; routing metadata lives in `.github/skills/*/routing.yml`.
 - **Library and framework APIs (Taro, React, Prisma, etc.):** Prefer **Context7 via MCP** for current docs instead of relying on stale training data—after configuring MCP (`.vscode/mcp.json` for VS Code / Copilot; root `.mcp.json` for Cursor), use the Context7 tools when the task depends on accurate API or config details.
 - **Secrets:** Never commit API keys. Use `.env` (gitignored) for `CONTEXT7_API_KEY` where your IDE passes env to MCP, or VS Code `inputs` in `.vscode/mcp.json`. See `.env.example`.
-- **Cross-cutting documentation refresh:** When updating canonical docs, skills, and agents together, follow `docs/ai-workflow-documentation-refresh.md` (scope tiers, kickoff vs `docs-sync` vs Workflow Governance Reviewer, `npm run orchestration:validate` when orchestration or skill routing changes). Do not treat **Workflow Governance Reviewer** as a bulk documentation sync.
+- **Cross-cutting documentation refresh:** When updating canonical docs, skills, and agents together, follow `docs/ai/ai-workflow-documentation-refresh.md` (scope tiers, kickoff vs `docs-sync` vs Workflow Governance Reviewer, `npm run orchestration:validate` when orchestration or skill routing changes). Do not treat **Workflow Governance Reviewer** as a bulk documentation sync.
 
 ### Skills
 

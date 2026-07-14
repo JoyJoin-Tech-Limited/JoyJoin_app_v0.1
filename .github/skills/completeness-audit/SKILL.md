@@ -32,15 +32,13 @@ After scoring all 11 dimensions, run [`references/grill-me-checklist.md`](refere
 
 ## Prerequisites
 
-Run these first (or Pipeline Mode auto-sequences them):
+Run these first (or Pipeline Mode auto-sequences them); if not run, score dims 9–10 manually via `references/dimension-rubric.md`:
 
 | Prerequisite | Feeds dimension | Mapping |
 |---|---|---|
 | `ui-layout-audit` | #9 Visual finish | Checklist score ÷ 17 × 4 → 0–4 |
 | `frontend-design-audit` | #10 Brand soul | Dim 1 (Brand Fidelity) score → 0–4 |
 | [`docs/reference/emotional-value-rubric.md`](../../../docs/reference/emotional-value-rubric.md) | #5 Delight completeness | 情绪价值 composite ÷ 6 → 0–4. A screen with polished animations but low 归属感 or 身份认同 scores is decorated, not delightful. |
-
-If not run, score manually via `references/dimension-rubric.md`.
 
 ## The 11 Dimensions (0–4 each, total 0–44)
 
@@ -56,11 +54,13 @@ Full scoring criteria per dimension in [`references/dimension-rubric.md`](refere
 | 6 | Flow completeness | Journey smooth entry→action→result→aftermath? | Manual |
 | 7 | Accessibility completeness | Touch ≥88rpx, reduced-motion, safe areas | Manual |
 | 8 | Taro discipline | ScrollView, subpackage, runtime safety | Manual |
-| 9 | Visual finish | Spacing, typography, tokens, alignment | `ui-layout-audit` |
+| 9 | Visual finish | Spacing, typography, tokens, alignment — **grounded in render via the Visual Gate** | `ui-layout-audit` |
 | 10 | Brand soul | Feels like JoyJoin? Mascot? Voice? | `frontend-design-audit` |
 | 11 | Operational completeness | Blast radius, admin wiring, audit trail, kill switch | Manual |
 
 **Scoring:** 4=Exceptional, 3=Solid, 2=Partial gaps, 1=Significant gaps, 0=Absent/broken · **Bands:** 完美 39–44 · 坚稳 29–38 · 可行 18–28 · 不足 9–17 · 残缺 0–8
+
+> **Visual Gate override (dim 9):** if the Rendered-Truth Visual Gate (`frontend-design-audit/references/visual-correctness-gate.md`) reports any **Class A correctness** defect (overlap, text overflow/clipping, unreadable contrast), cap dim 9 at **1** and mark the overall verdict **no-ship** until fixed — regardless of the other ten dimensions. Craft findings feed dim 9 normally.
 
 ## ROI Prioritization Layer
 
@@ -79,28 +79,22 @@ For every gap flagged (scores ≤2), assign two values:
 
 Use [`references/report-card-template.md`](references/report-card-template.md). Output must include: dimension scores, gap register ranked by quadrant, ROI scatter, band, and ship/no-ship verdict. For delight gaps (dim 5 ≤2), explicitly recommend running `wow-elements` to implement the missing emotional moments.
 
-## Quick examples
+## Quick example
 
-- **Pipeline on onboarding step:** Trigger `"完成度全流程"`. Agent chains all three. Dim 9 auto-derived 3.0, dim 10 auto 3. Flag "no loading state on submit" (dim 2, impact 4, effort 1 → Do first). Total 31/44 (坚稳) → fix 1 item, ship.
-
-- **Ad-hoc on discover page:** Prerequisites run. Dim 10 scores 1 (no mascot) → Schedule. Dim 11 scores 2 (no kill switch) → Do first. Total 28/44 (可行) → fix dim 11, ship, schedule dim 10.
+- **Pipeline on onboarding step:** Trigger `"完成度全流程"` → chains all three. Dim 9 auto-derived 3.0, dim 10 auto 3. Flag "no loading state on submit" (dim 2, impact 4, effort 1 → Do first). Total 31/44 (坚稳) → fix 1 item, ship. A second ad-hoc example (discover page, 28/44 可行) lives in [`references/examples.md`](references/examples.md).
 
 ## Troubleshooting
 
-- **Prerequisites not run** → Score dims 9–10 manually using `references/dimension-rubric.md`. Note in report.
-- **Too many gaps** → Strictly prioritize by quadrant. Q1 items are non-negotiable; Q2 is next sprint; Q3/Q4 deferred.
-- **Score feels harsh** → 0–4 is about completeness, not aesthetics. Functioning-but-unpolished surfaces score 2–3, not 0–1.
-- **All 4s but feels off** → Run user test. The audit covers known dimensions; it can't replace real human feedback.
-- **Delight gaps found (dim 5 ≤2)** → Run `wow-elements` to implement the missing moments. Completeness-audit finds the gap; wow-elements fills it.
+- **Prerequisites not run** → Score dims 9–10 manually via `references/dimension-rubric.md`; note in report.
+- **Too many gaps** → Prioritize strictly by quadrant. Q1 non-negotiable; Q2 next sprint; Q3/Q4 deferred.
+- **Score feels harsh, or all 4s but feels off** → 0–4 measures completeness, not aesthetics (functioning-but-unpolished = 2–3). If all 4s yet it feels off, run a user test — the audit can't replace human feedback. For delight gaps (dim 5 ≤2), run `wow-elements` to fill the missing moments.
 
 ## Review checklist
 
 - [ ] `ui-layout-audit` and `frontend-design-audit` scores collected (or manual fallback noted)
 - [ ] 情绪价值 scored via `docs/reference/emotional-value-rubric.md` (feeds dim 5 Delight)
-- [ ] All 11 dimensions scored with specific evidence per gap
-- [ ] Gaps linked to file paths or component names
+- [ ] All 11 dimensions scored with specific evidence; gaps linked to file paths/components
 - [ ] Each gap has User Impact + Engineering Hours assigned
 - [ ] Gap register ranked by quadrant (Do first → Schedule → Low-hanging → Skip)
-- [ ] Rating band stated
-- [ ] Verdict includes explicit ship/no-ship recommendation
+- [ ] Rating band + explicit ship/no-ship verdict stated
 - [ ] Grill-me interview completed for all dimensions scoring ≤ 2 (see `references/grill-me-checklist.md`)

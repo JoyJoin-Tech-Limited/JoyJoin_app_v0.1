@@ -45,7 +45,7 @@ This is a governance document, not a runtime-product AI architecture document. F
 | Workspace subagent setting | `.vscode/settings.json` | Enables nested subagent invocation when the repo intentionally authors second-level delegation. |
 | Durable repo memory | `repo-memory/README.md`, `repo-memory/candidates/README.md`, `repo-memory/promoted/`, `repo-memory/generated/` | Reviewable memory plane outside `.git`; publication remains explicit and fail-closed. |
 | Shared contributor instructions | `.github/copilot-instructions.md` | Entry-point guidance for contributors and Copilot. |
-| Coordinated documentation refresh | [`../docs/ai-workflow-documentation-refresh.md`](../docs/ai-workflow-documentation-refresh.md) | Scope tiers and validation when changing `docs/`, skills, agents, and orchestration together—not a substitute for incremental `ORCHESTRATION_GOVERNANCE` checks per change. |
+| Coordinated documentation refresh | [`../docs/ai/ai-workflow-documentation-refresh.md`](../docs/ai/ai-workflow-documentation-refresh.md) | Scope tiers and validation when changing `docs/`, skills, agents, and orchestration together—not a substitute for incremental `ORCHESTRATION_GOVERNANCE` checks per change. |
 | Runtime implementation | `scripts/orchestration/orchestration-supervisor.mjs`, `scripts/orchestration/orchestration-lib.mjs`, `scripts/memory/memory-*.mjs`, `scripts/auto-eval*.mjs` | Deterministic behavior must match the documented contract. |
 | Regression coverage | orchestration-related tests in `apps/server/src/__tests__/` and `scripts/` validators | Lock in behavior that contributors depend on. |
 

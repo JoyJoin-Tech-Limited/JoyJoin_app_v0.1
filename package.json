@@ -29,6 +29,7 @@
     "guardrails": "node scripts/check/check-guardrails.mjs && node --test scripts/check/check-guardrails.test.mjs && node scripts/check/check-brand-colors.mjs && node scripts/devtools/design-audit.mjs && node scripts/check/check-doc-mapping.mjs",
     "bundle-size:check": "node scripts/check/check-bundle-size.mjs",
     "design:audit": "node scripts/devtools/design-audit.mjs",
+    "audit:visual": "node scripts/visual-correctness-scan.mjs",
     "dep-check": "node scripts/check/check-workspace-dependency-ownership.mjs",
     "setup:agent-skills": "node scripts/setup-agent-skills.mjs",
     "postinstall": "node -e \"const fs = require('fs'); const cp = require('child_process'); if (fs.existsSync('scripts/setup-agent-skills.mjs')) { const result = cp.spawnSync('npm', ['run', 'setup:agent-skills'], { stdio: 'inherit', shell: true }); process.exit(result.status || 0); }\"",

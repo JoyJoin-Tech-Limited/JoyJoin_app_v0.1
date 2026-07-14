@@ -168,6 +168,7 @@
         "Launch Readiness Agent",
         "debug",
         "Mini-Program Parity Auditor",
+        "User Satisfaction Auditor",
         "Expert React Frontend Engineer",
         "Taro Mini-Program Frontend Engineer",
         "Taro Migration Specialist",
@@ -461,6 +462,34 @@
         "first-principles-velocity",
         "platform-coordination-protocol",
         "frontend-component-architecture"
+      ],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "User Satisfaction Auditor",
+      "file": "user-satisfaction-auditor.agent.md",
+      "description": "Use when reviewing frontend changes or implementations from the end user's seat — first-person persona walkthroughs, six-angle satisfaction scoring (clarity, comprehension smoothness, cleanliness, emotional resonance, return hooks, share-worthiness), and a share/return/recommend/pay verdict that pushes for maximum user satisfaction and longer customer lifecycle. Trigger phrases: user satisfaction audit, user perspective review, walk the screen as a user, would users love this, will users come back, does this trigger sentimental value, 用户视角审计.",
+      "tools": [
+        "read",
+        "search",
+        "execute"
+      ],
+      "argumentHint": "Describe the page, component, or flow to audit (route or file path), the target persona if known (first-time / returning / invited guest / power user), and whether you want a single-screen audit or a multi-screen flow walk.",
+      "subagents": [],
+      "portfolioRole": "user-experience-audit",
+      "orchestrationPhase": "support-audited",
+      "handoffs": [
+        "Taro Mini-Program Frontend Engineer",
+        "Expert React Frontend Engineer",
+        "SE: Product Manager",
+        "Supervisor"
+      ],
+      "skills": [
+        "orchestration-turn-reporting",
+        "first-principles-velocity",
+        "user-satisfaction-audit",
+        "frontend-design-audit",
+        "wow-elements"
       ],
       "toolingStatus": "sufficient"
     },

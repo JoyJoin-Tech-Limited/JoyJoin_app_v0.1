@@ -18,7 +18,7 @@ description: >-
 
 - Creating a brand-new skill from scratch
 - Revising or extending an existing skill
-- Updating **many** skills in one effort — also follow [`docs/ai-workflow-documentation-refresh.md`](../../../docs/ai-workflow-documentation-refresh.md) for scope tiers, PR splitting, and validation alongside this skill
+- Updating **many** skills in one effort — also follow [`docs/ai/ai-workflow-documentation-refresh.md`](../../../docs/ai/ai-workflow-documentation-refresh.md) for scope tiers, PR splitting, and validation alongside this skill
 - Auditing one or more skills against the repo's standard
 - Normalizing inconsistent frontmatter, structure, examples, or checklists
 - Reviewing a PR that adds or changes skill docs
@@ -89,7 +89,7 @@ Before merging a skill PR, verify:
 
 ## Related files
 
-- [`docs/ai-workflow-documentation-refresh.md`](../../../docs/ai-workflow-documentation-refresh.md) — coordinated refresh of docs + skills + agents (lanes, `docs-sync`, orchestration validation)
+- [`docs/ai/ai-workflow-documentation-refresh.md`](../../../docs/ai/ai-workflow-documentation-refresh.md) — coordinated refresh of docs + skills + agents (lanes, `docs-sync`, orchestration validation)
 - [`.github/skills/README.md`](../README.md) — skill index and authoring conventions
 - [`.github/copilot-instructions.md`](../../copilot-instructions.md) — repo-wide Copilot instructions
 - [`references/checklist.md`](./references/checklist.md) — full golden standard checklist

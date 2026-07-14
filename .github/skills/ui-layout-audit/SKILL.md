@@ -51,29 +51,25 @@ After scoring a screen, run [`references/grill-me-checklist.md`](references/gril
 
 ## Audit workflow
 
-1. **Layer inventory**: List every visual layer from top to bottom
-2. **Spacing map**: Measure vertical gaps between layers. Flag gaps <16rpx (too tight) or >80rpx without structural purpose (too loose). Compare against **Standard spacing values** above.
+**Step 0 — Render & Inspect (mandatory for user-facing screens).** Spacing, alignment, and reading comfort are rendered properties — `$spacing-md = 24rpx` in code says nothing about the *actual* gap once line-height and font metrics apply. Ground the audit in rendered truth via the **Rendered-Truth Visual Gate** (full Class A rubric: [`../frontend-design-audit/references/visual-correctness-gate.md`](../frontend-design-audit/references/visual-correctness-gate.md)):
+
+- Run `npm run audit:visual -- --url "<h5 route>" --wait "<selector>" --screenshot /tmp/<page>.png --pretty`; read the JSON.
+- Vision-review the screenshot (`multimodal-looker`); tag each finding **correctness (blocking)** or **craft (advisory)** — Class A defects (overlap, text overflow, clipping, unreadable contrast, off-screen control) block the screen.
+- Perform the steps below **against the render**, citing measured rpx (not code estimates); label Seen-in-render vs Read-in-code.
+
+1. **Layer inventory**: List every visual layer from top to bottom (confirm against the screenshot)
+2. **Spacing map**: Measure vertical gaps between layers **from the render**. Flag gaps <16rpx (too tight) or >80rpx without structural purpose (too loose). Compare against **Standard spacing values** above.
 3. **Typography hierarchy**: Verify heading/body/meta have at least 8rpx size difference and distinct weight/color
 4. **Emoji scan**: Primary questions, headings, and CTA labels must be emoji-free. Emojis allowed only in: mascot speech, decorative badges, result celebration states
-5. **Alignment check**: Left edges of text blocks must share a 4rpx grid
+5. **Alignment check**: Left edges of text blocks must share a 4rpx grid (verify on the render; the scanner flags right-edge bleed)
 6. **Safe area & compression**: On 375×667 (iPhone SE), no interactive element should be <88rpx tall or <200rpx from bottom without scroll
 7. **Reading experience** (the treat test): Chinese body text line-height ≥1.6, display text ≥1.4. No paragraph >10 lines without visual relief. Text should invite the eye, not exhaust it
 8. **Visual coherence (孤字 guard)**: No headline or button text should produce a lone word/character on its own row. Use `word-break: keep-all` for short display text; ensure container width ≥ font-size × 8. English words in Chinese copy must never break mid-word
 9. **Emotional craft**: Every element should feel intentional, not assembled. Flag placeholder-like spacing, default-looking borders, or "that'll do" visual decisions. Cross-reference with `docs/reference/emotional-value-rubric.md`: does this layout feel generous (归属感) or cramped (transactional)?
 
-## Reading experience rules
+## Detailed reading & coherence rules
 
-- Chinese body text: line-height ≥1.6, measure (line length) ≤30 Chinese characters
-- Display/headline text: line-height ≥1.4. 1.28 or lower feels suffocating
-- Paragraph spacing should be ≥0.8× font-size. Tight paragraphs feel like a wall of text
-- Two heavy visual elements (large text + large image) back-to-back need breathing room (≥32rpx)
-
-## Visual coherence rules
-
-- Headlines, banners, buttons: `word-break: keep-all` + ensure container ≥ font-size × 8 wide. If the text is longer, the container must be wider — never let a headline break into a 2-character orphan line
-- English words inside Chinese copy: wrap in `nowrap` or use `word-break: keep-all` so "Livehouse" never becomes "Liveh-ouse"
-- Narrow cards (e.g., 240rpx wide): labels must be ≤6 characters at 32rpx, or the card will force 孤字
-- `overflow-wrap: anywhere` is banned on display text — it treats all break points as equal and produces visual chaos
+The full numeric rules for reading experience (line-height, measure) and visual coherence (孤字 guard, English-in-CJK wrapping) live in [`references/reading-and-coherence.md`](references/reading-and-coherence.md). Audit-workflow steps 7–8 above summarize them.
 
 ## Quick examples
 
@@ -89,13 +85,14 @@ After scoring a screen, run [`references/grill-me-checklist.md`](references/gril
 
 ## Review checklist
 
+- [ ] **Step 0 done:** screen rendered, `npm run audit:visual` scan read, screenshot vision-reviewed
+- [ ] Spacing/alignment findings measured **from the render** (rpx), not estimated from code
+- [ ] Every finding classified correctness (blocking) or craft (advisory); Class A defects block the screen
 - [ ] Every layer has a documented vertical gap to its neighbor
 - [ ] Primary questions, headings, CTAs contain zero emojis
 - [ ] Heading/body/meta sizes differ by ≥8rpx and ≥100 font-weight
-- [ ] Chinese body text line-height ≥1.6; display text ≥1.4
-- [ ] No dense text wall >10 lines without visual relief
-- [ ] No headline/button produces a lone character on its own row
-- [ ] English words in Chinese copy do not break mid-word
+- [ ] Chinese body text line-height ≥1.6 / display ≥1.4; no dense text wall >10 lines without relief
+- [ ] No headline/button lone-character orphan row; English words in Chinese copy never break mid-word
 - [ ] No orphan elements <8rpx from screen edge or sibling
 - [ ] Interactive hit areas ≥88rpx tall (mini-program) or ≥44px (web)
 - [ ] Reduced-motion fallback is considered for animation-heavy layouts

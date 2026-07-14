@@ -12,7 +12,7 @@ This guide maps areas of the JoyJoin codebase to the documentation files and age
 5. Workspace-level READMEs (`apps/server/src/README.md`, `packages/shared/src/README.md`, etc.)
 6. Agent memory (via MCP `agentMemory`) — last, after docs are authoritative
 
-**Coordinated multi-tier refresh:** When the task is explicitly to align **product docs, skills, and agents** (not a single feature PR), read [`docs/ai-workflow-documentation-refresh.md`](../../../../docs/ai-workflow-documentation-refresh.md) first for scope tiers, lane choice (kickoff vs this skill vs Workflow Governance Reviewer), and validation commands. Prefer **one PR per tier** when diffs are large.
+**Coordinated multi-tier refresh:** When the task is explicitly to align **product docs, skills, and agents** (not a single feature PR), read [`docs/ai/ai-workflow-documentation-refresh.md`](../../../../docs/ai/ai-workflow-documentation-refresh.md) first for scope tiers, lane choice (kickoff vs this skill vs Workflow Governance Reviewer), and validation commands. Prefer **one PR per tier** when diffs are large.
 
 **Anti-legacy rule:** Never propagate a legacy identifier, deprecated route, or removed component into any documentation target or agent memory, even a supplementary one.
 

@@ -911,8 +911,19 @@ function calculateGroupChemistryScore(
 /**
  * Calculate group diversity score
  * Evaluates diversity across industries, genders, archetypes, and life stages
+ *
+ * D8 (soft mode): when the group achieves exact gender balance (equal disclosed
+ * male/female counts), `genderBalanceBonusPoints` is added POST-CLAMP so the
+ * bonus stays observable for high-diversity groups — a pre-clamp bonus would be
+ * eaten by the [0,100] clamp. The bonus may push the result beyond 100;
+ * downstream overall-score math and temperature tiers tolerate that.
+ * Defaults (`"none"`, 0) preserve pre-change behavior for legacy call sites.
  */
-function calculateGroupDiversity(members: UserWithProfile[]): number {
+export function calculateGroupDiversity(
+  members: UserWithProfile[],
+  genderBalanceMode: GenderBalanceMode = "none",
+  genderBalanceBonusPoints = 0,
+): number {
   if (members.length === 0) return 0;
 
   const uniqueIndustries = new Set(members.map((m) => m.industryNiche).filter(Boolean)).size;
@@ -929,7 +940,17 @@ function calculateGroupDiversity(members: UserWithProfile[]): number {
     (uniqueLifeStages / maxDiversity) * 25;
 
   // Clamp to [0, 100] to avoid any floating point drift
-  return Math.round(Math.max(0, Math.min(100, diversityScore)));
+  const clamped = Math.round(Math.max(0, Math.min(100, diversityScore)));
+
+  if (
+    genderBalanceMode === "soft" &&
+    genderBalanceBonusPoints > 0 &&
+    groupHasExactGenderBalance(members)
+  ) {
+    return clamped + genderBalanceBonusPoints;
+  }
+
+  return clamped;
 }
 
 /**
@@ -1058,7 +1079,65 @@ export type GreedyPoolMatchingConfig = {
   minGroupSize?: number | null;
   maxGroupSize?: number | null;
   targetGroups?: number | null;
+  // Gender-balance controls (Sprint 2026-07-14 — gender ratio enforcement, D1–D9).
+  // Defaults mirror the eventPools schema: mode "soft", bonus 15, floors 0.
+  genderBalanceMode?: string | null;
+  genderBalanceBonusPoints?: number | null;
+  minFemaleCount?: number | null;
+  minMaleCount?: number | null;
+  // D5: when set (single-gender pool), ALL gender-balance logic is skipped.
+  genderRestriction?: string | null;
 };
+
+export type GenderBalanceMode = "none" | "soft" | "hard";
+
+/**
+ * Classify a stored gender value for floor/balance math.
+ * Only disclosed male/female values count; `null`, `不透露`, and any unknown
+ * value count toward NEITHER floor (REL-01).
+ */
+export function classifyDisclosedGender(gender: string | null | undefined): "male" | "female" | null {
+  if (!gender) return null;
+  const g = gender.trim().toLowerCase();
+  if (g === "女性" || g === "女" || g === "female" || g === "f") return "female";
+  if (g === "男性" || g === "男" || g === "male" || g === "m") return "male";
+  return null;
+}
+
+/** Count disclosed male/female members of a candidate group (REL-01 safe). */
+export function countDisclosedGenders(members: UserWithProfile[]): { male: number; female: number } {
+  let male = 0;
+  let female = 0;
+  for (const m of members) {
+    const g = classifyDisclosedGender(m.gender);
+    if (g === "male") male++;
+    else if (g === "female") female++;
+  }
+  return { male, female };
+}
+
+/**
+ * D3/D4: commit-time gender floor check — authoritative in `hard` mode.
+ * Undisclosed genders (null / 不透露) count toward neither floor.
+ */
+export function groupSatisfiesGenderFloor(
+  members: UserWithProfile[],
+  minFemaleCount: number,
+  minMaleCount: number,
+): boolean {
+  const { male, female } = countDisclosedGenders(members);
+  return female >= minFemaleCount && male >= minMaleCount;
+}
+
+/**
+ * D8: exact gender balance = equal disclosed male/female counts with at least
+ * one disclosed male. Single-gender groups (0 males or 0 females) are never
+ * "balanced" — which naturally satisfies D5's bonus-skip for restricted pools.
+ */
+export function groupHasExactGenderBalance(members: UserWithProfile[]): boolean {
+  const { male, female } = countDisclosedGenders(members);
+  return male > 0 && male === female;
+}
 
 /**
  * In-memory greedy pool matching (same algorithm as `matchEventPool` after eligibility + caches).
@@ -1083,6 +1162,30 @@ export async function runGreedyPoolMatchingCore(
   const targetGroupSize = pool.maxGroupSize || 6;
   const minGroupSize = pool.minGroupSize || 4;
   const maxGroupSize = pool.maxGroupSize || 6;
+
+  // ── Gender-balance configuration (Sprint 2026-07-14, D1–D9) ──
+  // D1: defaults mirror the schema — mode "soft", bonus 15, floors 0.
+  // D4: floors enforced only in `hard` mode; `soft` = bonus only; `none` = off.
+  // D5: single-gender pools (genderRestriction set) skip ALL balance logic.
+  // D9: no special-casing for test pools — logic applies uniformly.
+  const rawGenderBalanceMode = (pool.genderBalanceMode ?? "soft") as GenderBalanceMode;
+  const genderBalanceBonusPoints = pool.genderBalanceBonusPoints ?? 15;
+  const minFemaleCount = pool.minFemaleCount ?? 0;
+  const minMaleCount = pool.minMaleCount ?? 0;
+  const genderBalanceMode: GenderBalanceMode =
+    pool.genderRestriction || rawGenderBalanceMode === "none" ? "none" : rawGenderBalanceMode;
+  const hardFloorActive = genderBalanceMode === "hard" && (minFemaleCount > 0 || minMaleCount > 0);
+  const poolIdForLog = (pool as GreedyPoolMatchingConfig & { id?: string | null }).id ?? null;
+
+  if (hardFloorActive) {
+    // AC-10(a): hard-mode activation logged once per run.
+    logger.info("[Pool Matching] hard gender-balance mode active", {
+      poolId: poolIdForLog,
+      mode: genderBalanceMode,
+      minFemaleCount,
+      minMaleCount,
+    });
+  }
 
   const isStrictnessEnabled = process.env.MATCH_COMPASS_STRICTNESS_ENABLED !== "false";
   const effectiveStrictness = isStrictnessEnabled ? strictness : 50;
@@ -1207,8 +1310,25 @@ export async function runGreedyPoolMatchingCore(
       }
     }
 
-    // 只保留达到最小人数的小组
-    if (groupMembers.length >= minGroupSize) {
+    // D3/D4: commit-time gender floor check (hard mode only) — authoritative.
+    // Floors are per-group and non-monotonic (a partial [M,M] group violates
+    // minFemaleCount=2 at size 2 yet becomes valid at size 4), so the check
+    // runs only on the FINAL composition, never mid-loop.
+    const genderFloorSatisfied =
+      !hardFloorActive || groupSatisfiesGenderFloor(groupMembers, minFemaleCount, minMaleCount);
+    if (!genderFloorSatisfied) {
+      // AC-10(c): floor rejections at debug level to avoid log spam at scale.
+      logger.debug("[Pool Matching] group rejected by gender floor at commit gate", {
+        poolId: poolIdForLog,
+        memberCount: groupMembers.length,
+        ...countDisclosedGenders(groupMembers),
+        minFemaleCount,
+        minMaleCount,
+      });
+    }
+
+    // 只保留达到最小人数且满足性别下限的小组
+    if (groupMembers.length >= minGroupSize && genderFloorSatisfied) {
       const avgPairScore = await calculateGroupPairScore(
         groupMembers,
         interestsCache,
@@ -1221,7 +1341,7 @@ export async function runGreedyPoolMatchingCore(
       );
       // E: Compute true chemistry-only average (distinct from avgPairScore)
       const avgChemistryScore = calculateGroupChemistryScore(groupMembers, chemistryCalibrationMap);
-      const diversity = calculateGroupDiversity(groupMembers);
+      const diversity = calculateGroupDiversity(groupMembers, genderBalanceMode, genderBalanceBonusPoints);
       const communicationBalance = calculateEnergyBalance(groupMembers);
       const overall = Math.round((avgPairScore * 0.6) + (diversity * 0.25) + (communicationBalance * 0.15));
       const temperatureLevel = getTemperatureLevel(overall);
@@ -1293,6 +1413,19 @@ export async function runGreedyPoolMatchingCore(
         }
 
         if (bestGroup && bestScore >= 50) {
+          // D6 Phase-1 defensive floor check: under commit-time floors gender
+          // counts only grow, so this can only fail if a group was committed in
+          // violation (should never happen) — defense-in-depth.
+          if (hardFloorActive && !groupSatisfiesGenderFloor([...bestGroup.members, stranded], minFemaleCount, minMaleCount)) {
+            logger.debug("[Pool Matching] H4 phase-1 absorption blocked by gender floor", {
+              poolId: poolIdForLog,
+              strandedUserId: stranded.userId,
+              groupSize: bestGroup.members.length,
+              minFemaleCount,
+              minMaleCount,
+            });
+            continue;
+          }
           bestGroup.members.push(stranded);
           used.add(stranded.userId);
           // Recalculate group stats
@@ -1307,7 +1440,7 @@ export async function runGreedyPoolMatchingCore(
           matchHistoryLookup,
           );
           bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap);
-          bestGroup.diversityScore = calculateGroupDiversity(bestGroup.members);
+          bestGroup.diversityScore = calculateGroupDiversity(bestGroup.members, genderBalanceMode, genderBalanceBonusPoints);
           bestGroup.communicationBalance = calculateEnergyBalance(bestGroup.members);
           bestGroup.overallScore = Math.round(
             (bestGroup.avgPairScore * 0.6) +
@@ -1323,36 +1456,53 @@ export async function runGreedyPoolMatchingCore(
       // from the remainders (only if enough to meet minGroupSize).
       let stillStranded = eligibleUsers.filter(u => !used.has(u.userId));
       if (stillStranded.length >= minGroupSize) {
-        const avgPairScore = await calculateGroupPairScore(
-          stillStranded,
-          interestsCache,
-          pairScoreCache,
-          semanticProfileCache,
-          semanticSimilarityEnabled,
-          chemistryCalibrationMap,
-          formationWeights,
-        matchHistoryLookup,
-        );
-        const avgChemistryScore = calculateGroupChemistryScore(stillStranded, chemistryCalibrationMap);
-        const diversity = calculateGroupDiversity(stillStranded);
-        const communicationBalance = calculateEnergyBalance(stillStranded);
-        const overall = Math.round((avgPairScore * 0.6) + (diversity * 0.25) + (communicationBalance * 0.15));
-        const temperatureLevel = getTemperatureLevel(overall);
+        // D6 Phase-2 floor check: a remainder group that cannot satisfy the
+        // hard-mode floor is NOT formed — members stay unmatched (per D2).
+        const phase2FloorSatisfied =
+          !hardFloorActive || groupSatisfiesGenderFloor(stillStranded, minFemaleCount, minMaleCount);
+        if (!phase2FloorSatisfied) {
+          // Floor-blocked: skip BOTH the push and the used-marking below so
+          // Phase-3 absorption can still place these members into existing
+          // floor-satisfying groups (Verifier implementation note).
+          logger.debug("[Pool Matching] H4 phase-2 remainder group blocked by gender floor", {
+            poolId: poolIdForLog,
+            memberCount: stillStranded.length,
+            ...countDisclosedGenders(stillStranded),
+            minFemaleCount,
+            minMaleCount,
+          });
+        } else {
+          const avgPairScore = await calculateGroupPairScore(
+            stillStranded,
+            interestsCache,
+            pairScoreCache,
+            semanticProfileCache,
+            semanticSimilarityEnabled,
+            chemistryCalibrationMap,
+            formationWeights,
+          matchHistoryLookup,
+          );
+          const avgChemistryScore = calculateGroupChemistryScore(stillStranded, chemistryCalibrationMap);
+          const diversity = calculateGroupDiversity(stillStranded, genderBalanceMode, genderBalanceBonusPoints);
+          const communicationBalance = calculateEnergyBalance(stillStranded);
+          const overall = Math.round((avgPairScore * 0.6) + (diversity * 0.25) + (communicationBalance * 0.15));
+          const temperatureLevel = getTemperatureLevel(overall);
 
-        const newGroup: MatchGroup = {
-          members: stillStranded,
-          avgPairScore,
-          avgChemistryScore,
-          diversityScore: diversity,
-          communicationBalance,
-          overallScore: overall,
-          temperatureLevel,
-          explanation: "",
-        };
-        newGroup.explanation = generateGroupExplanation(newGroup);
-        groups.push(newGroup);
-        stillStranded.forEach(u => used.add(u.userId));
-        logger.info(`[Pool Matching] Formed remainder group with ${stillStranded.length} users`);
+          const newGroup: MatchGroup = {
+            members: stillStranded,
+            avgPairScore,
+            avgChemistryScore,
+            diversityScore: diversity,
+            communicationBalance,
+            overallScore: overall,
+            temperatureLevel,
+            explanation: "",
+          };
+          newGroup.explanation = generateGroupExplanation(newGroup);
+          groups.push(newGroup);
+          stillStranded.forEach(u => used.add(u.userId));
+          logger.info(`[Pool Matching] Formed remainder group with ${stillStranded.length} users`);
+        }
       }
 
       // Phase 3: Absorption — if stranded users remain after Phase 1+2,
@@ -1393,6 +1543,18 @@ export async function runGreedyPoolMatchingCore(
           }
 
           if (bestGroup && bestScore >= 50) {
+            // D6 Phase-3 defensive floor check (same rationale as Phase 1 —
+            // vacuous under commit-time floors, kept as defense-in-depth).
+            if (hardFloorActive && !groupSatisfiesGenderFloor([...bestGroup.members, stranded], minFemaleCount, minMaleCount)) {
+              logger.debug("[Pool Matching] H4 phase-3 absorption blocked by gender floor", {
+                poolId: poolIdForLog,
+                strandedUserId: stranded.userId,
+                groupSize: bestGroup.members.length,
+                minFemaleCount,
+                minMaleCount,
+              });
+              continue;
+            }
             bestGroup.members.push(stranded);
             used.add(stranded.userId);
             bestGroup.avgPairScore = await calculateGroupPairScore(
@@ -1406,7 +1568,7 @@ export async function runGreedyPoolMatchingCore(
             matchHistoryLookup,
             );
             bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap);
-            bestGroup.diversityScore = calculateGroupDiversity(bestGroup.members);
+            bestGroup.diversityScore = calculateGroupDiversity(bestGroup.members, genderBalanceMode, genderBalanceBonusPoints);
             bestGroup.communicationBalance = calculateEnergyBalance(bestGroup.members);
             bestGroup.overallScore = Math.round(
               (bestGroup.avgPairScore * 0.6) +
@@ -1424,6 +1586,20 @@ export async function runGreedyPoolMatchingCore(
         logger.info(`[Pool Matching] ${stillStranded.length} users remain unmatched after redistribution`);
       }
     }
+  }
+
+  // AC-10(b): post-match gender-balance summary — single info line per run,
+  // computed from the formed groups without extra DB reads (OBS-02).
+  if (genderBalanceMode !== "none") {
+    logger.info("[Pool Matching] gender-balance summary", {
+      poolId: poolIdForLog,
+      mode: genderBalanceMode,
+      groupsFormed: groups.length,
+      groupsSatisfyingExactBalance: groups.filter((g) => groupHasExactGenderBalance(g.members)).length,
+      groupsSatisfyingFloor: hardFloorActive
+        ? groups.filter((g) => groupSatisfiesGenderFloor(g.members, minFemaleCount, minMaleCount)).length
+        : groups.length,
+    });
   }
 
   return groups;

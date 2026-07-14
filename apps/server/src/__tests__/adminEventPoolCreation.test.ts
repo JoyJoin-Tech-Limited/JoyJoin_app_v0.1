@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import fs from "fs";
+import path from "path";
 import { z } from "zod";
 import {
   assertValidTransition,
@@ -40,6 +42,11 @@ const updateEventPoolSchema = z.object({
   targetGroups: z.number().int().optional(),
   status: z.string().optional(),
   predictiveRerankEnabledOverride: z.boolean().optional(),
+  // Gender-balance controls (Sprint 2026-07-14 — mirrors adminEventPools.ts)
+  genderBalanceMode: z.enum(["none", "soft", "hard"]).optional(),
+  genderBalanceBonusPoints: z.number().int().min(0).max(100).optional(),
+  minFemaleCount: z.number().int().min(0).max(20).optional(),
+  minMaleCount: z.number().int().min(0).max(20).optional(),
 });
 
 // =============================================================================
@@ -567,5 +574,110 @@ describe("isValidTransition event_pool", () => {
   it("returns true for same-state transitions", () => {
     expect(isValidTransition("event_pool", "active", "active")).toBe(true);
     expect(isValidTransition("event_pool", "completed", "completed")).toBe(true);
+  });
+});
+
+// =============================================================================
+// Section 5: Gender-balance fields (Sprint 2026-07-14 — AC-01, SEC-02)
+// =============================================================================
+
+describe("updateEventPoolSchema — gender-balance fields (AC-01, SEC-02)", () => {
+  it("accepts a valid hard-mode payload with all four fields", () => {
+    const result = updateEventPoolSchema.safeParse({
+      genderBalanceMode: "hard",
+      genderBalanceBonusPoints: 15,
+      minFemaleCount: 2,
+      minMaleCount: 2,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.genderBalanceMode).toBe("hard");
+      expect(result.data.genderBalanceBonusPoints).toBe(15);
+      expect(result.data.minFemaleCount).toBe(2);
+      expect(result.data.minMaleCount).toBe(2);
+    }
+  });
+
+  it("accepts every enum value for genderBalanceMode", () => {
+    for (const mode of ["none", "soft", "hard"] as const) {
+      const result = updateEventPoolSchema.safeParse({ genderBalanceMode: mode });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("rejects an invalid genderBalanceMode enum value", () => {
+    const result = updateEventPoolSchema.safeParse({ genderBalanceMode: "strict" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].path).toContain("genderBalanceMode");
+    }
+  });
+
+  it("rejects out-of-range and non-integer floor counts", () => {
+    expect(updateEventPoolSchema.safeParse({ minFemaleCount: -1 }).success).toBe(false);
+    expect(updateEventPoolSchema.safeParse({ minFemaleCount: 21 }).success).toBe(false);
+    expect(updateEventPoolSchema.safeParse({ minFemaleCount: 1.5 }).success).toBe(false);
+    expect(updateEventPoolSchema.safeParse({ minMaleCount: -1 }).success).toBe(false);
+    expect(updateEventPoolSchema.safeParse({ minMaleCount: 21 }).success).toBe(false);
+    expect(updateEventPoolSchema.safeParse({ minMaleCount: 2.5 }).success).toBe(false);
+  });
+
+  it("rejects out-of-range and non-integer bonus points", () => {
+    expect(updateEventPoolSchema.safeParse({ genderBalanceBonusPoints: -1 }).success).toBe(false);
+    expect(updateEventPoolSchema.safeParse({ genderBalanceBonusPoints: 101 }).success).toBe(false);
+    expect(updateEventPoolSchema.safeParse({ genderBalanceBonusPoints: 15.5 }).success).toBe(false);
+  });
+
+  it("accepts boundary values (0 floors, 0 and 100 bonus)", () => {
+    const result = updateEventPoolSchema.safeParse({
+      genderBalanceBonusPoints: 0,
+      minFemaleCount: 0,
+      minMaleCount: 0,
+    });
+    expect(result.success).toBe(true);
+    expect(updateEventPoolSchema.safeParse({ genderBalanceBonusPoints: 100 }).success).toBe(true);
+    expect(updateEventPoolSchema.safeParse({ minFemaleCount: 20 }).success).toBe(true);
+  });
+
+  it("still accepts payloads with the gender fields omitted", () => {
+    const result = updateEventPoolSchema.safeParse({ title: "仅改标题" });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("gender-balance schema drift guards (AC-01)", () => {
+  it("updateEventPoolSchema mirror stays in sync with adminEventPools.ts source", () => {
+    const sourcePath = path.resolve(import.meta.dirname, "../routes/domains/adminEventPools.ts");
+    const source = fs.readFileSync(sourcePath, "utf-8");
+    expect(source).toMatch(/genderBalanceMode:\s*z\.enum\(\["none",\s*"soft",\s*"hard"\]\)\.optional\(\)/);
+    expect(source).toMatch(/genderBalanceBonusPoints:\s*z\.number\(\)\.int\(\)\.min\(0\)\.max\(100\)\.optional\(\)/);
+    expect(source).toMatch(/minFemaleCount:\s*z\.number\(\)\.int\(\)\.min\(0\)\.max\(20\)\.optional\(\)/);
+    expect(source).toMatch(/minMaleCount:\s*z\.number\(\)\.int\(\)\.min\(0\)\.max\(20\)\.optional\(\)/);
+  });
+
+  it("insertEventPoolSchema (Drizzle-derived) does not omit the four gender-balance columns", () => {
+    const sourcePath = path.resolve(
+      import.meta.dirname,
+      "../../../../packages/shared/src/schema/_definitions.ts",
+    );
+    const source = fs.readFileSync(sourcePath, "utf-8");
+
+    // Table definition must carry the four columns.
+    expect(source).toMatch(/genderBalanceMode:\s*varchar\("gender_balance_mode"\)/);
+    expect(source).toMatch(/genderBalanceBonusPoints:\s*integer\("gender_balance_bonus_points"\)/);
+    expect(source).toMatch(/minFemaleCount:\s*integer\("min_female_count"\)/);
+    expect(source).toMatch(/minMaleCount:\s*integer\("min_male_count"\)/);
+
+    // The insertEventPoolSchema .omit({...}) block must NOT exclude any of them,
+    // otherwise POST /api/admin/event-pools would silently strip the values.
+    const omitMatch = source.match(
+      /insertEventPoolSchema\s*=\s*createInsertSchema\(eventPools\)\.omit\(\{([\s\S]*?)\}\)/,
+    );
+    expect(omitMatch).toBeTruthy();
+    const omitBlock = omitMatch![1];
+    expect(omitBlock).not.toContain("genderBalanceMode");
+    expect(omitBlock).not.toContain("genderBalanceBonusPoints");
+    expect(omitBlock).not.toContain("minFemaleCount");
+    expect(omitBlock).not.toContain("minMaleCount");
   });
 });

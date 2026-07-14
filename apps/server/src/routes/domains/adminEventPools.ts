@@ -42,7 +42,19 @@ const updateEventPoolSchema = z.object({
   status: z.string().optional(),
   isTestPool: z.boolean().optional(),
   predictiveRerankEnabledOverride: z.boolean().optional(),
+  // Gender-balance controls (Sprint 2026-07-14 — gender ratio enforcement, SEC-02)
+  genderBalanceMode: z.enum(["none", "soft", "hard"]).optional(),
+  genderBalanceBonusPoints: z.number().int().min(0).max(100).optional(),
+  minFemaleCount: z.number().int().min(0).max(20).optional(),
+  minMaleCount: z.number().int().min(0).max(20).optional(),
 });
+
+const GENDER_BALANCE_FIELDS = [
+  "genderBalanceMode",
+  "genderBalanceBonusPoints",
+  "minFemaleCount",
+  "minMaleCount",
+] as const;
 
 async function findExistingUserId(candidateId: string | null | undefined): Promise<string | null> {
   if (!candidateId) return null;
@@ -110,6 +122,10 @@ export function registerAdminEventPoolRoutes(app: Express): void {
           totalRegistrations: eventPools.totalRegistrations,
           successfulMatches: eventPools.successfulMatches,
           predictiveRerankEnabledOverride: eventPools.predictiveRerankEnabledOverride,
+          genderBalanceMode: eventPools.genderBalanceMode,
+          genderBalanceBonusPoints: eventPools.genderBalanceBonusPoints,
+          minFemaleCount: eventPools.minFemaleCount,
+          minMaleCount: eventPools.minMaleCount,
           createdBy: eventPools.createdBy,
           createdAt: eventPools.createdAt,
           updatedAt: eventPools.updatedAt,
@@ -206,7 +222,16 @@ export function registerAdminEventPoolRoutes(app: Express): void {
         adminRole: (req as any).adminRole,
         targetEntityType: "event_pool",
         targetEntityId: pool.id,
-        after: { title: pool.title, city: pool.city, dateTime: pool.dateTime?.toISOString?.() ?? pool.dateTime, isTestPool: pool.isTestPool },
+        after: {
+          title: pool.title,
+          city: pool.city,
+          dateTime: pool.dateTime?.toISOString?.() ?? pool.dateTime,
+          isTestPool: pool.isTestPool,
+          genderBalanceMode: pool.genderBalanceMode,
+          genderBalanceBonusPoints: pool.genderBalanceBonusPoints,
+          minFemaleCount: pool.minFemaleCount,
+          minMaleCount: pool.minMaleCount,
+        },
       });
 
       const { generateAndSavePoolCardCopy } = await import("../../ai/workers/poolCardCopyWorker");
@@ -298,6 +323,27 @@ export function registerAdminEventPoolRoutes(app: Express): void {
         }
       }
 
+      // AC-09: capture before-state when gender-balance fields are being mutated
+      // so the audit record carries changed-field detail.
+      const touchedGenderBalance = GENDER_BALANCE_FIELDS.some((f) => updates[f] !== undefined);
+      let genderBalanceBefore: Record<string, unknown> | undefined;
+      if (touchedGenderBalance) {
+        const [currentPoolGender] = await db
+          .select({
+            genderBalanceMode: eventPools.genderBalanceMode,
+            genderBalanceBonusPoints: eventPools.genderBalanceBonusPoints,
+            minFemaleCount: eventPools.minFemaleCount,
+            minMaleCount: eventPools.minMaleCount,
+          })
+          .from(eventPools)
+          .where(eq(eventPools.id, req.params.id));
+
+        if (!currentPoolGender) {
+          return res.status(404).json({ message: "Event pool not found" });
+        }
+        genderBalanceBefore = currentPoolGender;
+      }
+
       const whereClause = updates.status && oldStatus
         ? and(
             eq(eventPools.id, req.params.id),
@@ -335,6 +381,23 @@ export function registerAdminEventPoolRoutes(app: Express): void {
       }
 
       shellCache.invalidateDiscover();
+
+      if (touchedGenderBalance) {
+        logAdminAudit({
+          action: "EVENT_POOL_UPDATED",
+          adminId: getActingAdminId(req),
+          adminRole: (req as any).adminRole,
+          targetEntityType: "event_pool",
+          targetEntityId: pool.id,
+          before: genderBalanceBefore,
+          after: {
+            genderBalanceMode: pool.genderBalanceMode,
+            genderBalanceBonusPoints: pool.genderBalanceBonusPoints,
+            minFemaleCount: pool.minFemaleCount,
+            minMaleCount: pool.minMaleCount,
+          },
+        });
+      }
 
       if (updates.status && updates.status !== oldStatus) {
         logAdminAudit({

@@ -17,7 +17,7 @@ do_not_use_when:
   - writing new product requirements from scratch (use draft-prd)
   - purely internal refactor with no API/flow impact
   - docs are already accurate
-  - the task is a coordinated multi-tier refresh across docs, skills, and agents (use docs/ai-workflow-documentation-refresh.md for scope tiers and lane choice)
+  - the task is a coordinated multi-tier refresh across docs, skills, and agents (use docs/ai/ai-workflow-documentation-refresh.md for scope tiers and lane choice)
 
 strong_triggers:
   - update docs
@@ -44,7 +44,7 @@ owned_files:
   - README.md
   - docs/README.md
   - docs/architecture/skill-routing.md
-  - docs/ai-workflow-documentation-refresh.md
+  - docs/ai/ai-workflow-documentation-refresh.md
   - PRODUCT_REQUIREMENTS.md
   - DEVELOPER_QUICK_REFERENCE.md
   - .github/skills/README.md

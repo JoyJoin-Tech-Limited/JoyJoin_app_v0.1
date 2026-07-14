@@ -128,13 +128,13 @@
       ]
     },
     "Visual Designer": {
-      "description": "Design audit for UI-affecting changes only. Strict thresholds to prevent nit-chasing.",
+      "description": "UI visual audit for UI-affecting changes only. Runs the Rendered-Truth Visual Gate (render + npm run audit:visual + vision review). Filled by a VISION-CAPABLE reviewer (OpenCode: multimodal-looker), NOT the Lovart/Stitch brief-generator agent. Rendered correctness defects (VD-05/06/07) are BLOCKING; craft (spacing, AI slop, tokens) stays concern to prevent nit-chasing.",
       "items": [
         {
           "id": "VD-01",
-          "description": "Spacing follows 8rpx rhythm (mini-program) or 8px grid (web)",
+          "description": "Spacing follows 8rpx rhythm (mini-program) or 8px grid (web) — craft",
           "severity": "concern",
-          "verification": "agent: inspect changed CSS/styled-components for irregular spacing",
+          "verification": "agent: measure rendered gaps against ui-layout-audit spacing table",
           "auto": false
         },
         {
@@ -153,9 +153,77 @@
         },
         {
           "id": "VD-04",
-          "description": "No AI-generated visual slop (inconsistent borders, misaligned elements, generic layouts)",
+          "description": "No AI-generated visual slop (inconsistent borders, misaligned elements, generic layouts) — craft",
           "severity": "concern",
-          "verification": "agent: inspect for visual inconsistencies per frontend-design-audit skill",
+          "verification": "agent: vision-review the screenshot per frontend-design-audit Anti-Slop Checklist",
+          "auto": false
+        },
+        {
+          "id": "VD-05",
+          "description": "RENDERED CORRECTNESS: no text overflow / truncation (without ellipsis) / unreachable clipping",
+          "severity": "blocking",
+          "verification": "agent: npm run audit:visual → text-clip-horizontal/text-clip-vertical blocking violations; confirm on screenshot",
+          "auto": false
+        },
+        {
+          "id": "VD-06",
+          "description": "RENDERED CORRECTNESS: no element overlap, no page horizontal overflow, nothing bleeding past the viewport edge",
+          "severity": "blocking",
+          "verification": "agent: npm run audit:visual → text-on-text-overlap/page-horizontal-overflow/element-off-right-edge; confirm on screenshot",
+          "auto": false
+        },
+        {
+          "id": "VD-07",
+          "description": "RENDERED CORRECTNESS: body text contrast ≥4.5:1, large text ≥3:1",
+          "severity": "blocking",
+          "verification": "agent: npm run audit:visual → low-contrast-text blocking band; confirm on screenshot",
+          "auto": false
+        }
+      ]
+    },
+    "User Satisfaction Auditor": {
+      "description": "User-perspective satisfaction audit for user-facing frontend changes only (apps/mini-program/src/pages/**, web client pages). Runs ONLY when the diff touches a user-facing surface; skipped for backend/admin-only changes. Loads user-satisfaction-audit: picks a named persona, walks the RENDERED surface in first person, scores the six angles. All items are concern-level to prevent nit-chasing EXCEPT US-04: an emotional peak delivered without ceremony is blocking because it burns the product's strongest retention asset.",
+      "items": [
+        {
+          "id": "US-01",
+          "description": "Persona walk performed on the RENDERED surface (named persona, first-person narration with friction/delight beats) — not code-only review",
+          "severity": "concern",
+          "verification": "agent: run npm run audit:visual or capture a screenshot, then narrate the journey per user-satisfaction-audit references/journey-narration-template.md",
+          "auto": false
+        },
+        {
+          "id": "US-02",
+          "description": "Angle 1 — 3-second clarity: purpose and next action obvious within 3 seconds; one dominant CTA",
+          "severity": "concern",
+          "verification": "agent: first-glance test on the render; identify the element the eye lands on and the CTA's relative weight",
+          "auto": false
+        },
+        {
+          "id": "US-03",
+          "description": "Angle 2 — cognitive smoothness: new/changed copy parses on first read; no server vocabulary (matched, venue_unlocked, status enums) or compound status+instruction sentences",
+          "severity": "concern",
+          "verification": "agent: read every new user-facing string aloud as the persona; flag re-reads and decoding moments",
+          "auto": false
+        },
+        {
+          "id": "US-04",
+          "description": "Angle 4 — emotional peaks (match reveal, squad unboxing, onboarding completion, first payment) must have a ceremony arc (build-up → reveal → celebration); a peak delivered as a data table, instant redirect, or unframed toast is a retention-killing defect",
+          "severity": "blocking",
+          "verification": "agent: if the diff touches an emotional peak surface, walk that moment as the persona and confirm the arc exists; skip (N/A) when no peak surface changed",
+          "auto": false
+        },
+        {
+          "id": "US-05",
+          "description": "Angle 5 — return hooks: the flow's terminal screen leaves something pending (identity, progress, people, scheduled reveal) or explicitly justifies closure",
+          "severity": "concern",
+          "verification": "agent: inspect the last screen of the changed flow; name the concrete reason the persona returns within 7 days",
+          "auto": false
+        },
+        {
+          "id": "US-06",
+          "description": "Angle 6 — share-worthiness: changed share surfaces (posters, result cards, reveals) survive thumbnail scale, flatter the user, and carry natural attribution",
+          "severity": "concern",
+          "verification": "agent: squint/thumbnail test on the render; write the caption the persona would send; skip (N/A) when no share surface changed",
           "auto": false
         }
       ]

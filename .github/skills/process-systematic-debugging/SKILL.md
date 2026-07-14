@@ -13,9 +13,7 @@ description: >
 
 ## Purpose
 
-Prevent "fix-and-hope" debugging. When a bug is non-obvious, force a structured protocol that isolates the root cause before any code change. This skill is the cross-tool equivalent of systematic debugging discipline.
-
----
+Prevent "fix-and-hope" debugging: when a bug is non-obvious, force a structured protocol that isolates the root cause before any code change.
 
 ## When to use this skill
 
@@ -30,13 +28,9 @@ Prevent "fix-and-hope" debugging. When a bug is non-obvious, force a structured 
 - The bug was already isolated and just needs a one-line change
 - You need general code review rather than bug diagnosis (use `code-review`)
 
----
-
 ## The debugging protocol
 
-### Phase 1: Reproduce
-
-**Goal:** Make the bug deterministic.
+### Phase 1: Reproduce — make the bug deterministic
 
 1. **Identify the exact trigger** — user action, API call, state condition, or timing
 2. **Document reproduction steps** — numbered, minimal, no ambiguity
@@ -45,32 +39,23 @@ Prevent "fix-and-hope" debugging. When a bug is non-obvious, force a structured 
 
 > If you cannot reproduce: add targeted logging, narrow the scope, or ask the user for more context. Do not proceed to Phase 2 without at least one reproduction path.
 
-### Phase 2: Isolate
-
-**Goal:** Find the narrowest code path that triggers the bug.
+### Phase 2: Isolate — find the narrowest triggering code path
 
 1. **Binary search the stack** — add logging at layer boundaries (client → API → service → DB)
 2. **Identify the last known good state** — git commit, deployed version, or feature flag state
 3. **Create a minimal reproduction** — strip unrelated code, data, or UI until the bug still triggers
 4. **Check recent changes** — `git log --oneline --since="1 week ago" -- <affected-files>`
 
-### Phase 3: Hypothesize
-
-**Goal:** Form 2–3 testable explanations.
+### Phase 3: Hypothesize — form 2–3 testable explanations
 
 For each hypothesis, specify:
 - **Mechanism:** What code path or state transition causes the symptom?
 - **Evidence:** What logging or test would confirm or refute this?
 - **Fix scope:** One file, one function, or architectural change?
 
-Example hypotheses:
-1. *Race condition in icebreaker advance guard* → evidence: concurrent `advance` calls from host + reconnect
-2. *Cache TTL mismatch* → evidence: `pool_ai_copy.expires_at` is older than the cron interval
-3. *Missing null check in archetype aggregation* → evidence: `GROUP BY` returns `null` for users without archetype
+For worked hypothesis examples (mechanism + evidence + fix scope), see [`references/examples.md`](references/examples.md).
 
-### Phase 4: Verify
-
-**Goal:** Confirm the root cause before fixing.
+### Phase 4: Verify — confirm the root cause before fixing
 
 1. **Write the smallest failing test** that captures the bug (if feasible)
 2. **Add targeted logging** to confirm the hypothesis
@@ -87,35 +72,11 @@ Example hypotheses:
 4. **Run the full reproduction path** end-to-end
 5. **Add a regression test** if one does not exist
 
----
-
-## Integration with the `debug` agent
-
-When the `debug` agent is spawned, it loads this skill automatically. The agent should:
-
-1. Follow Phases 1–4 before proposing any fix
-2. End Phase 4 with a structured hypothesis + evidence summary
-3. Only enter Phase 5 after the user or Supervisor confirms the hypothesis
-
----
+The `debug` agent loads this skill automatically and follows Phases 1–4 before proposing a fix, ending Phase 4 with a hypothesis + evidence summary and entering Phase 5 only after user/Supervisor confirmation — see [`references/debug-agent.md`](references/debug-agent.md).
 
 ## Examples
 
-### Example 1: Intermittent API failure
-
-**Symptom:** `GET /api/event-pools` returns 500 for ~5% of requests.
-
-**Phase 1:** Reproduce with high-volume load test; failure correlates with pools that have >20 registrations.
-
-**Phase 2:** Isolate to `GROUP BY` archetype aggregation query; fails when `users.primaryArchetype` is null for some registrants.
-
-**Phase 3:** Hypothesis — `coalesce` in aggregation returns null, causing downstream mapping to throw.
-
-**Phase 4:** Verify by adding null-check logging; confirmed.
-
-**Phase 5:** Fix: `coalesce(users.primaryArchetype, users.archetype, '未设置')`; add regression test with null archetype data.
-
----
+A full worked example (intermittent API failure walked through all 5 phases) and a sample hypothesis set live in [`references/examples.md`](references/examples.md).
 
 ## Troubleshooting
 
@@ -127,8 +88,6 @@ When the `debug` agent is spawned, it loads this skill automatically. The agent 
 
 **Bug disappears after adding logging (Heisenbug)**
 > Switch to non-invasive tracing: database query logs, network timestamps, or external request recording. Avoid `console.log` that changes timing.
-
----
 
 ## Review checklist
 

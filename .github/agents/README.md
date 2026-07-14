@@ -4,7 +4,7 @@
 
 These agents are the orchestration layer that sits above the repo's reusable skills. Each agent should have a narrow role, a minimal tool set, and a keyword-rich description so both humans and parent agents can discover it reliably.
 
-Read [`../AI_WORKFLOW_POLICY.md`](../AI_WORKFLOW_POLICY.md) when deciding whether a task belongs in direct delivery, the kickoff lane, or the operational lane. Read [`../ORCHESTRATION_GOVERNANCE.md`](../ORCHESTRATION_GOVERNANCE.md) before changing the portfolio, handoffs, or agent-governance surfaces. For a coordinated refresh of product docs, skills, and agents, see [`../../docs/ai-workflow-documentation-refresh.md`](../../docs/ai-workflow-documentation-refresh.md).
+Read [`../AI_WORKFLOW_POLICY.md`](../AI_WORKFLOW_POLICY.md) when deciding whether a task belongs in direct delivery, the kickoff lane, or the operational lane. Read [`../ORCHESTRATION_GOVERNANCE.md`](../ORCHESTRATION_GOVERNANCE.md) before changing the portfolio, handoffs, or agent-governance surfaces. For a coordinated refresh of product docs, skills, and agents, see [`../../docs/ai/ai-workflow-documentation-refresh.md`](../../docs/ai/ai-workflow-documentation-refresh.md).
 
 ## How to use these agents
 
@@ -54,6 +54,7 @@ These agents are still part of the active portfolio, but they are not in the v1 
 | `Admin Operations Advisor` | Admin incident triage, RBAC or audit troubleshooting, and runbook-guided remediation | [`admin-operations-advisor.agent.md`](./admin-operations-advisor.agent.md) |
 | `Database Schema & Migration Auditor` | Schema evolution, migration planning, and rollout safety | [`database-schema-migration-auditor.agent.md`](./database-schema-migration-auditor.agent.md) |
 | `Mini-Program Parity Auditor` | Web versus mini-program parity audits and migration backlog creation | [`mini-program-parity-auditor.agent.md`](./mini-program-parity-auditor.agent.md) |
+| `User Satisfaction Auditor` | First-person user-perspective critical audit of frontend changes — persona walkthroughs, six-angle satisfaction scoring (clarity, comprehension, cleanliness, emotional resonance, return hooks, share-worthiness), share/return/recommend/pay verdict; 6th reviewer in the post-implementation-review swarm for user-facing frontend changes | [`user-satisfaction-auditor.agent.md`](./user-satisfaction-auditor.agent.md) |
 | `Taro Mini-Program Frontend Engineer` | Direct Taro UI implementation and refinement in `apps/mini-program` with premium, brand-governed, native-quality execution | [`taro-mini-program-frontend-engineer.agent.md`](./taro-mini-program-frontend-engineer.agent.md) |
 | `Taro Migration Specialist` | Broad web-to-mini-program migration and parity restoration | [`taro-migration-specialist.agent.md`](./taro-migration-specialist.agent.md) |
 | `Expert React Frontend Engineer` | Browser-first React work in `apps/user-client` | [`frontend-engineer.agent.md`](./frontend-engineer.agent.md) |
@@ -61,7 +62,7 @@ These agents are still part of the active portfolio, but they are not in the v1 
 | `Principal Software Engineer` | Architecture review, tradeoff analysis, and senior implementation guidance | [`principal-swe.agent.md`](./principal-swe.agent.md) |
 | `Prompt Engineer` | Prompt review, repo-resident prompt maintenance, safety-aware structure tightening, and example cleanup | [`prompt-engineer.agent.md`](./prompt-engineer.agent.md) |
 | `Repo Memory Steward` | Semi-automated **candidate** notes (`memory:draft-candidate`, `memory:query`, `memory:validate`); does not promote without explicit human approval | [`repo-memory-steward.agent.md`](./repo-memory-steward.agent.md) |
-| `Workflow Governance Reviewer` | Proposal-only portfolio review, orchestration drift triage, reviewer-packet drafting, and reviewed memory-candidate drafts (not a bulk doc-sync substitute—see [`docs/ai-workflow-documentation-refresh.md`](../../docs/ai-workflow-documentation-refresh.md)) | [`self-iteration.agent.md`](./self-iteration.agent.md) |
+| `Workflow Governance Reviewer` | Proposal-only portfolio review, orchestration drift triage, reviewer-packet drafting, and reviewed memory-candidate drafts (not a bulk doc-sync substitute—see [`docs/ai/ai-workflow-documentation-refresh.md`](../../docs/ai/ai-workflow-documentation-refresh.md)) | [`self-iteration.agent.md`](./self-iteration.agent.md) |
 | `Verifier` | Skeptical completion check after “done” claims — targeted tests/commands, verified vs claimed | [`verifier.agent.md`](./verifier.agent.md) |
 | `Game Design Agent` | Post-match, pre-event **IcebreakerRunPlan** compilation, safety/energy-curve curation, and dev-ready handoff artifacts | [`game-design-agent.agent.md`](./game-design-agent.agent.md) |
 | `Game Development Agent` | Bind plans to **shipped phase templates** (`socialIcebreakerPhaseRegistry`), server advance rules, parity, and tests | [`game-development-agent.agent.md`](./game-development-agent.agent.md) |

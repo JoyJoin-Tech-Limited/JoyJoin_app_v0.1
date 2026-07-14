@@ -9,7 +9,7 @@ The machine-readable orchestration contract is `.github/orchestration.yaml`. The
 - [`AI_TOOLING_UNIFIED_BRAIN.md`](./AI_TOOLING_UNIFIED_BRAIN.md) describes the shared Cursor / Copilot policy surface (skills, agents), MCP (Context7), and what stays IDE-specific.
 - [`AI_WORKFLOW_POLICY.md`](./AI_WORKFLOW_POLICY.md) defines when to use direct delivery, the `Researcher` -> `Planner` kickoff lane (or **`Supervisor` first** to sequence that kickoff), and the operational review lane.
 - [`ORCHESTRATION_GOVERNANCE.md`](./ORCHESTRATION_GOVERNANCE.md) defines how to change agents, skills, hooks, runtime scripts, and validation surfaces safely.
-- [`../docs/ai-workflow-documentation-refresh.md`](../docs/ai-workflow-documentation-refresh.md) defines scope tiers, routing lanes for large refreshes, and **Workflow Governance Reviewer** vs full doc sync.
+- [`../docs/ai/ai-workflow-documentation-refresh.md`](../docs/ai/ai-workflow-documentation-refresh.md) defines scope tiers, routing lanes for large refreshes, and **Workflow Governance Reviewer** vs full doc sync.
 - [`../docs/ai-agent-harness-separation-strategy.md`](../docs/ai-agent-harness-separation-strategy.md) remains the source of truth for runtime product AI architecture and invariants.
 
 ## Execution discipline
@@ -131,6 +131,7 @@ These native exits now cover kickoff re-entry, core execution or validation, and
 - `Supervisor` -> `Launch Readiness Agent` when release risk or operational readiness becomes the next gating question.
 - `Supervisor` -> `debug` for isolated bug investigation, failure reproduction, root-cause analysis, or the narrowest safe fix before another specialist takes over.
 - `Supervisor` -> `Mini-Program Parity Auditor` for compare-only parity review or migration backlog work.
+- `Supervisor` -> `User Satisfaction Auditor` for first-person user-perspective audits of user-facing frontend changes (persona walk, six-angle satisfaction scoring, share/return/recommend/pay verdict); automatic 6th reviewer in the post-implementation-review swarm for frontend diffs (US-01…US-06).
 - `Supervisor` -> `Expert React Frontend Engineer` for web UI implementation in `apps/user-client`, including branding-sensitive UI work that should stay attached to frontend skills rather than a standalone branding agent.
 - `Supervisor` -> `Taro Mini-Program Frontend Engineer` for direct Taro UI implementation or refinement in `apps/mini-program`.
 - `Supervisor` -> `Taro Migration Specialist` for parity-first migration from `apps/user-client` into `apps/mini-program`.
@@ -171,6 +172,7 @@ Useful audited support bindings:
 - `Admin Operations Advisor` -> `admin-audit-and-rbac-governance`, `auth-session-and-safety-boundaries`, `platform-observability-and-ops`
 - `Database Schema & Migration Auditor` -> `first-principles-velocity`, `database-migration-safety`, `backend-models-standards`, `reliability-and-state-integrity`
 - `Mini-Program Parity Auditor` -> `orchestration-turn-reporting`, `first-principles-velocity`, `platform-coordination-protocol`, `frontend-component-architecture`
+- `User Satisfaction Auditor` -> `orchestration-turn-reporting`, `first-principles-velocity`, `user-satisfaction-audit`, `frontend-design-audit`, `wow-elements`
 - `Taro Mini-Program Frontend Engineer` -> `orchestration-turn-reporting`, `first-principles-velocity`, `mini-program-frontend-excellence`, `frontend-component-architecture`, `design-system-governance`, `joyjoin-brand-guidelines`, `wow-elements`, `frontend-performance-and-loading`, `platform-coordination-protocol`
 - `Taro Migration Specialist` -> `orchestration-turn-reporting`, `first-principles-velocity`, `platform-coordination-protocol`, `frontend-component-architecture`, `design-system-governance`
 - `Expert React Frontend Engineer` -> `orchestration-turn-reporting`, `first-principles-velocity`, `frontend-component-architecture`, `design-system-governance`, `frontend-performance-and-loading`, `joyjoin-brand-guidelines`, `wow-elements`, `platform-coordination-protocol`
@@ -207,6 +209,7 @@ Branding and crafted interaction polish remain skill boundaries on the frontend 
 | `Admin Operations Advisor` | `partial` | Runbook triage is covered, but live incidents are weaker without logs and audit evidence. | Add observability access and a read-only audit-log or admin-ops API integration. |
 | `Database Schema & Migration Auditor` | `sufficient` | Code-first migration work is covered. | Optional read-only schema introspection for live drift analysis. |
 | `Mini-Program Parity Auditor` | `sufficient` | Read-only parity audits and build checks are supported. | Optional screenshot or image-diff tooling for visual parity. |
+| `User Satisfaction Auditor` | `sufficient` | Read-only persona walkthroughs plus execute for rendered-truth audit scripts (`audit:visual`, `design:audit`) are covered. | Optional vision/screenshot capture so the persona walk can run against WeChat DevTools renders directly. |
 | `Taro Mini-Program Frontend Engineer` | `sufficient` | Taro implementation and delegated parity review are covered. | Optional visual-diff tooling for UI polish validation. |
 | `Taro Migration Specialist` | `sufficient` | Migration work already has the right combination of edit, execute, and subagents. | Optional screenshot capture for source-versus-target visual comparison. |
 | `Expert React Frontend Engineer` | `sufficient` | Browser-first frontend implementation is covered by the normalized tool surface. | Add explicit subagent support only if cross-platform coordination should originate directly from this agent. |

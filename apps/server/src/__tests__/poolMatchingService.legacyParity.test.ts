@@ -278,6 +278,114 @@ describe("Legacy group-roster parity (REL-08)", () => {
   });
 });
 
+describe("Gender-balance default parity (AC-07 — Sprint 2026-07-14)", () => {
+  const rosterSignature = (groups: Awaited<ReturnType<typeof runGreedyPoolMatchingCore>>) =>
+    groups.map((g) => g.members.map((m) => m.userId).sort());
+
+  it("all-male fixture: default config produces byte-identical output to gender logic disabled", async () => {
+    const users: UserWithProfile[] = [
+      makeUser("a1", "corgi"),
+      makeUser("a2", "corgi"),
+      makeUser("a3", "koala"),
+      makeUser("a4", "koala"),
+      makeUser("a5", "fox"),
+      makeUser("a6", "fox"),
+    ];
+    const config = { minGroupSize: 4, maxGroupSize: 6, targetGroups: 1 };
+
+    const runWith = async (poolConfig: Record<string, unknown>) =>
+      runGreedyPoolMatchingCore(
+        users,
+        { ...config, ...poolConfig },
+        new Map(),
+        buildPairScoreCache(users),
+        undefined,
+        false,
+        undefined,
+        [],
+        undefined,
+        undefined,
+        50,
+      );
+
+    const legacy = await runWith({}); // pre-change behavior: no gender fields at all
+    const schemaDefaults = await runWith({
+      genderBalanceMode: "soft",
+      genderBalanceBonusPoints: 15,
+      minFemaleCount: 0,
+      minMaleCount: 0,
+    });
+    const disabled = await runWith({ genderBalanceMode: "none" });
+    const hardZeroFloors = await runWith({
+      genderBalanceMode: "hard",
+      minFemaleCount: 0,
+      minMaleCount: 0,
+    });
+
+    // Single-gender groups are never "balanced", so the soft-mode bonus cannot
+    // fire: every configuration yields identical rosters AND scores.
+    for (const variant of [schemaDefaults, disabled, hardZeroFloors]) {
+      expect(rosterSignature(variant)).toEqual(rosterSignature(legacy));
+      expect(variant.map((g) => g.diversityScore)).toEqual(legacy.map((g) => g.diversityScore));
+      expect(variant.map((g) => g.overallScore)).toEqual(legacy.map((g) => g.overallScore));
+    }
+  });
+
+  it("mixed fixture: default soft mode preserves rosters; diversity delta is exactly the bonus for balanced groups", async () => {
+    const users: UserWithProfile[] = [
+      makeUser("m1", "corgi", { gender: "男性" }),
+      makeUser("m2", "corgi", { gender: "男性" }),
+      makeUser("f1", "corgi", { gender: "女性" }),
+      makeUser("f2", "corgi", { gender: "女性" }),
+    ];
+    const config = { minGroupSize: 4, maxGroupSize: 4, targetGroups: 1 };
+
+    const runWith = async (poolConfig: Record<string, unknown>) =>
+      runGreedyPoolMatchingCore(
+        users,
+        { ...config, ...poolConfig },
+        new Map(),
+        buildPairScoreCache(users),
+        undefined,
+        false,
+        undefined,
+        [],
+        undefined,
+        undefined,
+        50,
+      );
+
+    const legacy = await runWith({}); // defaults resolve to soft/15 — same as schema defaults
+    const explicitSoft = await runWith({
+      genderBalanceMode: "soft",
+      genderBalanceBonusPoints: 15,
+      minFemaleCount: 0,
+      minMaleCount: 0,
+    });
+    const disabled = await runWith({ genderBalanceMode: "none" });
+    const hardZeroFloors = await runWith({
+      genderBalanceMode: "hard",
+      minFemaleCount: 0,
+      minMaleCount: 0,
+    });
+
+    // Group membership is driven by pair scores only — the bonus never feeds
+    // back into formation, so rosters are identical across all configurations.
+    for (const variant of [explicitSoft, disabled, hardZeroFloors]) {
+      expect(rosterSignature(variant)).toEqual(rosterSignature(legacy));
+    }
+
+    // The 2M/2F group is exactly balanced: soft mode adds exactly +15 (D8);
+    // none/hard modes do not.
+    expect(legacy).toHaveLength(1);
+    expect(explicitSoft[0].diversityScore).toBe(legacy[0].diversityScore);
+    expect(disabled[0].diversityScore).toBe(legacy[0].diversityScore - 15);
+    expect(hardZeroFloors[0].diversityScore).toBe(legacy[0].diversityScore - 15);
+    // avgPairScore (deterministic scoring) is untouched by the bonus arm.
+    expect(disabled[0].avgPairScore).toBe(legacy[0].avgPairScore);
+  });
+});
+
 describe("Strictness behaviors", () => {
   it("strictness=0 applies user dealbreakers as L1 filters", async () => {
     const users: UserWithProfile[] = [

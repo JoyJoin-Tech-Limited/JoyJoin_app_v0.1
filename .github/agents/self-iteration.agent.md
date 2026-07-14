@@ -17,7 +17,7 @@ Your job is to turn repeated workflow problems into the smallest reviewable prop
 
 ## Constraints
 
-- For **coordinated documentation work** across product docs, skills, and agents, contributors should follow [`../../docs/ai-workflow-documentation-refresh.md`](../../docs/ai-workflow-documentation-refresh.md) and [`docs-sync`](../skills/docs-sync/SKILL.md)—this agent does **not** replace that sync; it produces **governance packets** for orchestration and portfolio issues.
+- For **coordinated documentation work** across product docs, skills, and agents, contributors should follow [`../../docs/ai/ai-workflow-documentation-refresh.md`](../../docs/ai/ai-workflow-documentation-refresh.md) and [`docs-sync`](../skills/docs-sync/SKILL.md)—this agent does **not** replace that sync; it produces **governance packets** for orchestration and portfolio issues.
 - DO NOT merge or claim approval for your own proposals.
 - DO NOT publish durable memory into `repo-memory/promoted/` and DO NOT treat `repo-memory/candidates/` as an authority surface you may publish to without review.
 - DO NOT change your own approval boundaries, orchestration status, or tool surface autonomously.

@@ -37,7 +37,8 @@
       "Personality Dice Icebreaker Agent",
       "Deliberation Moderator",
       "Harness Runtime Controller",
-      "Visual Designer"
+      "Visual Designer",
+      "User Satisfaction Auditor"
     ]
   },
   "copilot_hooks": {
@@ -338,6 +339,12 @@
       "to": "Mini-Program Parity Auditor",
       "label": "Audit sibling platform parity",
       "prompt": "Check cross-platform parity and identify required sibling updates when web and mini-program flows must stay aligned."
+    },
+    {
+      "from": "Supervisor",
+      "to": "User Satisfaction Auditor",
+      "label": "Audit user satisfaction of UI changes",
+      "prompt": "Walk the changed user-facing surface as a named persona, score the six satisfaction angles, and return a share/return/recommend/pay verdict with fix prescriptions."
     },
     {
       "from": "Supervisor",
@@ -1080,6 +1087,27 @@
         ]
       }
     },
+    "User Satisfaction Auditor": {
+      "file": ".github/agents/user-satisfaction-auditor.agent.md",
+      "portfolio_role": "user-experience-audit",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "execute"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Read-only persona walkthroughs plus execute for rendered-truth audit scripts (audit:visual, design:audit) are covered by the normalized read, search, and execute surface.",
+        "recommended_extensions": [
+          {
+            "type": "optional-tool",
+            "label": "Add vision/screenshot capture so the persona walk can run against WeChat DevTools renders directly.",
+            "reason": "The audit is render-first; today the agent relies on the H5 build and audit:visual screenshots rather than native mini-program capture."
+          }
+        ]
+      }
+    },
     "Taro Mini-Program Frontend Engineer": {
       "file": ".github/agents/taro-mini-program-frontend-engineer.agent.md",
       "portfolio_role": "implementation",
@@ -1603,6 +1631,13 @@
       "platform-coordination-protocol",
       "frontend-component-architecture",
       "process-parity"
+    ],
+    "User Satisfaction Auditor": [
+      "orchestration-turn-reporting",
+      "first-principles-velocity",
+      "user-satisfaction-audit",
+      "frontend-design-audit",
+      "wow-elements"
     ],
     "Taro Mini-Program Frontend Engineer": [
       "orchestration-turn-reporting",

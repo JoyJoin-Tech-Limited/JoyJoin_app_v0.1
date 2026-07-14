@@ -288,6 +288,11 @@ APP_URL=https://staging.joyjoinapp.com
 ## 发布后检查
 
 > 2026-06-30：容器 HEALTHCHECK 使用 `http://127.0.0.1:${PORT:-5000}/api/health`。生产默认端口 5000；staging 端口 5001，不会再因硬编码 5000 而报 unhealthy。
+>
+> 2026-07-14 运维补充（健康检查与 unhealthy 判定）：
+> - 用 `127.0.0.1` 而非 `localhost` 的另一原因：容器内 `localhost` 会解析到 IPv6 `::1`，而 compose 将端口绑定在 IPv4（`127.0.0.1:5000:5000`），健康检查打 `::1:5000` 被拒，误报 unhealthy。
+> - **`unhealthy` ≠ 服务宕机**：`restart: unless-stopped` 不会因 unhealthy 标签自动重启容器；应用可能正常对外服务却仍被标记 unhealthy。判断真实可用性以 `curl /api/health` 与业务日志为准，勿只看 `docker ps` 的 STATUS 列。
+> - 该修复**只在镜像重建后生效**：2026-06-30 之前构建的镜像（仍带旧 `localhost` 健康检查）在重新部署前会持续误报 unhealthy。
 
 ```bash
 curl -fsS http://127.0.0.1:5000/api/health

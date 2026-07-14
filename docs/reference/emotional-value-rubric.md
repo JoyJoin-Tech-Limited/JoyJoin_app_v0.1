@@ -169,6 +169,7 @@ Are key transitions treated as meaningful ceremonies, not mechanical state chang
 | `frontend-design-audit` | Run as a prerequisite before scoring dim 1 (Brand Fidelity). Brand decisions should be evaluated against their 情绪价值 impact, not just token compliance. |
 | `ui-layout-audit` | Reference in step 9 (Emotional craft). Spacing and typography decisions should be evaluated for their emotional impact: does this layout feel generous (归属感) or cramped (transactional)? |
 | `mini-program-frontend-excellence` | Screen-level emotional audit: after passing the 17-point review, score the screen against this rubric. A technically perfect screen with 0 情绪价值 is a failure. |
+| `user-satisfaction-audit` | This rubric is the scoring source for Angle 4 (Emotional resonance): composite ÷ 6 → 0–4. The audit extends the rubric into a full user-perspective walk — first-person persona narration, five more angles (clarity, comprehension, cleanliness, return hooks, share-worthiness), and a share/return/recommend/pay verdict. |
 
 ## Related Files
 
@@ -177,6 +178,7 @@ Are key transitions treated as meaningful ceremonies, not mechanical state chang
 - `../.github/skills/frontend-design-audit/SKILL.md` — Design quality scoring
 - `../.github/skills/ui-layout-audit/SKILL.md` — Layout and emotional craft
 - `../.github/skills/mini-program-frontend-excellence/SKILL.md` — Taro implementation quality
+- `../.github/skills/user-satisfaction-audit/SKILL.md` — User-perspective audit (Angle 4 consumes this rubric)
 - `../.github/skills/xiaoyue-writing-craft/SKILL.md` — Copy craft (被理解感, 身份认同)
 - `../.github/skills/joyjoin-brand-guidelines/SKILL.md` — Brand identity (身份认同)
 

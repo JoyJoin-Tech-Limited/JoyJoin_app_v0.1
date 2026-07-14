@@ -33,42 +33,9 @@ Prevent "it works on my machine" shipping. Before any task is marked complete, r
 
 ## The verification protocol
 
-Run all 5 Harness pillars. For each, mark **PASS**, **CONCERN**, or **FAIL**.
+Run all 5 Harness pillars. The canonical checklist lives in [`harness-completion-gate/references/harness-pillars.md`](../harness-completion-gate/references/harness-pillars.md) — the single source of truth shared with `code-review`, so the criteria are maintained once. For each pillar (Reliability, Scalability, Security, Observability, Maintainability) mark **PASS**, **CONCERN**, or **FAIL** with a one-line justification.
 
-### Pillar 1: Reliability
-
-- [ ] Partial failures are handled (retries, fallbacks, graceful degradation)
-- [ ] State-machine transitions are idempotent where applicable
-- [ ] No race conditions in concurrent paths
-- [ ] Database writes use transactions where multi-step
-
-### Pillar 2: Scalability
-
-- [ ] No N+1 queries introduced
-- [ ] Pagination or bounded result sets for list routes
-- [ ] No unbounded memory growth (caches have TTL, loops terminate)
-- [ ] LLM calls are fire-and-forget or cached, not on hot paths
-
-### Pillar 3: Security
-
-- [ ] Auth checks present on new routes (`requireAuthenticatedUserId`, `requireAdmin`)
-- [ ] No secrets logged or exposed in error messages
-- [ ] Input validated (Zod schemas, SQL injection safe via Drizzle)
-- [ ] Fail-closed defaults (deny access if unsure)
-
-### Pillar 4: Observability
-
-- [ ] New failure paths have structured logging (`logger.error/warn`)
-- [ ] Metrics added for new high-traffic surfaces (Prometheus counters/histograms)
-- [ ] Request correlation IDs propagate through new async paths
-- [ ] Admin audit logs for sensitive mutations
-
-### Pillar 5: Maintainability
-
-- [ ] Correct layer placement (routes → services → repositories)
-- [ ] Shared code lives in `packages/shared`, not copied across apps
-- [ ] No cross-app imports
-- [ ] New code follows existing naming and structure conventions
+If a check does not apply, write a quick "N/A — no auth surface touched" note rather than skipping silently.
 
 ---
 
@@ -95,33 +62,9 @@ Add these checks based on the lane used for the task:
 
 ---
 
-## Examples
+## Quick example
 
-### Example 1: Direct delivery — new metric
-
-**Task:** Add Prometheus counter for pool card cache hit/miss.
-
-**Verification:**
-- Reliability: PASS — counter is additive only, no failure path
-- Scalability: PASS — no query changes
-- Security: PASS — no auth surface
-- Observability: PASS — this IS the observability
-- Maintainability: PASS — follows existing metric pattern
-- Lane (Direct): Micro-plan matched diff
-- **Verdict: SHIP**
-
-### Example 2: HRC — payment flow change
-
-**Task:** Add refund webhook handler.
-
-**Verification:**
-- Reliability: CONCERN — no idempotency key on webhook processing
-- Scalability: PASS
-- Security: PASS — signature verification present
-- Observability: PASS — audit log + structured logging present
-- Maintainability: PASS
-- Lane (HRC): Sprint Contract AC #3 not fully met (retry policy missing)
-- **Verdict: BLOCK** — add idempotency check + retry policy before merge
+**Direct delivery — new Prometheus counter:** Reliability PASS (additive only), Scalability PASS (no query change), Security PASS (no auth surface), Observability PASS (this IS the metric), Maintainability PASS → **SHIP**. A contrasting HRC payment-flow example (BLOCK on missing idempotency + retry policy) lives in [`references/examples.md`](references/examples.md).
 
 ---
 
