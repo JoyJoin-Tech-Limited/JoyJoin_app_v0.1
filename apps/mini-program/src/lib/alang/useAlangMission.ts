@@ -1,4 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import Taro from '@tarojs/taro'
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query'
 import {
   fetchAlangMissions,
   fetchAlangMissionDetail,
@@ -6,6 +12,7 @@ import {
   callRecoverMission,
   callCompleteMission,
   callAbandonMission,
+  callDebugReset,
   fetchStoryArchives,
   fetchArchiveDetail,
 } from './api'
@@ -15,6 +22,33 @@ const ALANG_MISSIONS_KEY = ['alang', 'missions']
 const ALANG_MISSION_DETAIL_KEY = (slug: string) => ['alang', 'mission', slug]
 const ALANG_ARCHIVES_KEY = ['alang', 'archives']
 const ALANG_ARCHIVE_DETAIL_KEY = (id: string) => ['alang', 'archive', id]
+const ALANG_QUERY_ROOT = ['alang']
+const ALANG_RECOVER_MUTATION_KEY = ['alang', 'recover']
+
+/**
+ * Removes every client-side snapshot that can resurrect a pre-reset Alang run.
+ * The server reset remains authoritative; this only clears the current device's
+ * mission/archive queries, recover mutation result and internal point config.
+ */
+export async function clearAlangRetestClientState(
+  queryClient: QueryClient,
+  slug: string,
+): Promise<void> {
+  await queryClient.cancelQueries({ queryKey: ALANG_QUERY_ROOT })
+  queryClient.removeQueries({ queryKey: ALANG_QUERY_ROOT })
+
+  const mutationCache = queryClient.getMutationCache()
+  mutationCache
+    .findAll({ mutationKey: ALANG_RECOVER_MUTATION_KEY })
+    .forEach((mutation) => mutationCache.remove(mutation))
+
+  try {
+    Taro.removeStorageSync(`jj_alang_config_${slug}`)
+  } catch {
+    // Storage cleanup is best-effort. The reset flow always relaunches the
+    // config page, which cannot start until fresh points are selected again.
+  }
+}
 
 export function useAlangMissions(enabled = true) {
   return useQuery({
@@ -66,7 +100,20 @@ export function useStartMission() {
 
 export function useRecoverMission() {
   return useMutation({
+    mutationKey: ALANG_RECOVER_MUTATION_KEY,
     mutationFn: callRecoverMission,
+  })
+}
+
+export function useResetAlangMission() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationKey: ['alang', 'debug', 'reset'],
+    mutationFn: callDebugReset,
+    onSuccess: async (_result, slug) => {
+      await clearAlangRetestClientState(queryClient, slug)
+    },
   })
 }
 

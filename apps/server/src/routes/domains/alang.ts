@@ -42,6 +42,7 @@ import {
   ALANG_ARRIVAL_MIN_STABLE_COUNT,
   ALANG_ARRIVAL_RADIUS_METERS,
 } from "@shared/alang/constants";
+import type { AlangDebugResetResponse } from "@shared/api/alang";
 
 async function gateAlangEnabled(res: Response): Promise<boolean> {
   const enabled = await getFeatureFlag("alangEnabled", false);
@@ -59,6 +60,15 @@ export function isAlangDebugMode(): boolean {
 async function gateAlangDebug(res: Response): Promise<boolean> {
   if (!isAlangDebugMode()) {
     res.status(404).json({ error: "NOT_FOUND" });
+    return false;
+  }
+  if (!(await gateAlangEnabled(res))) return false;
+  return true;
+}
+
+async function gateAlangRetest(res: Response): Promise<boolean> {
+  if (!isAlangDebugMode()) {
+    res.status(403).json({ error: "ALANG_RETEST_FORBIDDEN" });
     return false;
   }
   if (!(await gateAlangEnabled(res))) return false;
@@ -868,7 +878,7 @@ export function registerAlangRoutes(app: Express): void {
 
   // ─── Debug: Reset ───
   app.post("/api/alang/debug/missions/:slug/reset", async (req: Request, res: Response) => {
-    if (!(await gateAlangDebug(res))) return;
+    if (!(await gateAlangRetest(res))) return;
     const userId = requireAlangUserId(req, res);
     if (!userId) return;
 
@@ -880,8 +890,17 @@ export function registerAlangRoutes(app: Express): void {
         return;
       }
 
-      await deleteMissionProgress(userId, mission.id);
-      res.json({ ok: true });
+      const resetResult = await deleteMissionProgress(userId, mission.id);
+      requestLogger(req).info("[Alang] internal retest reset", {
+        actingUserId: userId,
+        missionSlug: slug,
+        deletedProgressCount: resetResult.deletedProgressCount,
+        deletedArchiveCount: resetResult.deletedArchiveCount,
+        resetAt: new Date().toISOString(),
+        environment: process.env.APP_MODE ?? "unset",
+      });
+      const response: AlangDebugResetResponse = { reset: true, ...resetResult };
+      res.json(response);
     } catch (error: any) {
       requestLogger(req).error("[Alang] debug reset error", { slug, error: error?.message });
       res.status(500).json({ error: "FAILED_TO_RESET" });

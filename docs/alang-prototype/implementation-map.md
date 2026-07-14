@@ -90,7 +90,7 @@ Discover 卡 / 我的故事
 3. 搜索页的原生 Map 只接收用户当前位置；不得传目标 marker、搜索圈或 polyline。
 4. 本地 `jj_alang_config_*` 只在 `appMode=test` 时读取；生产/普通 staging 忽略旧调试缓存。
 5. Public GPS 的 `targetOverride` 只在服务端严格 single-test gate 下生效。
-6. 生产环境即使误留 `ENABLE_SINGLE_TEST_MODE=true`，`/api/auth/user` 也不会下发客户端 test marker；Alang Debug API 仍返回 404。
+6. 生产环境即使误留 `ENABLE_SINGLE_TEST_MODE=true`，`/api/auth/user` 也不会下发客户端 test marker；复测 Reset 返回 403，其他 Alang Debug API 继续按安全策略隐藏为 404。
 7. `APP_MODE` 未配置时按 production 处理，不允许 debug fail-open。
 
 ## 6. 到达判定与路线分工
@@ -117,18 +117,55 @@ Discover 卡 / 我的故事
 2. Geo 新接口是现有 `/api/geo` 的增量扩展；回滚应用版本不需要回滚数据库。
 3. 旧 JSON 兼容读取必须保留到确认生产数据完成自然更新后，不能先删除。
 
-## 8. 验证基线
+## 8. 内部重复测试（P0）
+
+同一内部测试账号可以在故事收录后清除当前阿浪任务的本轮测试数据，再从点位配置重新走完整流程。该能力不是普通用户功能，也不提供批量重置、跨用户重置或多轮历史列表。
+
+### 权限与接口
+
+- API：`POST /api/alang/debug/missions/:slug/reset`。
+- 必须同时满足服务端 `alangEnabled=true`、非 production 环境和 `isSingleTestMode()=true`；缺失 `APP_MODE` 按 production 处理。
+- 非 single-test 或 production 调用返回 403；mission 不存在/不可见返回 404；空状态重复调用仍返回 200。
+- 用户身份只来自登录 session，不接受客户端 `userId`。响应固定为：`{ reset: true, deletedProgressCount, deletedArchiveCount }`。
+
+### 事务与删除边界
+
+`deleteMissionProgress()` 在单个数据库事务内先锁定并确认当前用户与指定 mission 的唯一 progress，再删除同时匹配 `progressId + userId + missionId` 的 archive，最后删除 progress。Archive 外键不级联，因此删除顺序不可交换；任一步失败都会整体回滚。没有 progress 时返回 `0/0`，不会扫描或删除孤儿 archive。
+
+删除范围仅包含当前 progress 的 `nodeHistory`、`choicesMade`、`gpsHistory`、阶段/状态/debugMarkers 及其对应 archive。其他用户、其他 mission、Blind Box、连接、足迹、正式活动和其他故事不在事务谓词内。不能仅按 `isDebugSession=true` 过滤，因为未使用 Mock GPS/Force Node 的正常内部复测也会生成需要清理的 archive。
+
+### 客户端恢复为初始态
+
+- 结果页仅在 `alangEnabled + appMode=test + completed + archiveId` 时显示次级操作“重新测试阿浪”。
+- Debug 页显示 progress 状态、archive 是否存在和当前 story version；重置成功后显示“开始新一轮测试”。
+- Reset 成功会取消并移除全部 `['alang', ...]` Query Cache、recover mutation、archive detail，并精确删除 `jj_alang_config_${slug}`。
+- 结果页使用 `reLaunch` 进入阿浪配置页；Debug 页由“开始新一轮测试”进入同一配置页。旧页面栈、旧点位、选择、GPS 和最终情绪不会继承。
+- Reset 期间用同步 ref + mutation pending 双重防重；失败保留当前页面并显示明确错误，不伪造成功。
+
+### P0 需求追踪
+
+| ID | 要求 | 实现证据 | 自动验证 | 状态 |
+| --- | --- | --- | --- | --- |
+| `RETEST-01` | 结果页快捷复测 | `pages/alang/result/` | result tests | PASS |
+| `RETEST-02` | Debug 页完整重置/状态/version/重新开始 | `pages/alang/debug/` | debug tests | PASS |
+| `RETEST-03` | 服务端 feature + single-test + production 权限 | `routes/domains/alang.ts` | debug gate/reset route tests | PASS |
+| `RETEST-04` | 事务删除、归属限制、幂等和回滚 | `repositories/alangRepo.ts` | reset repository tests | PASS |
+| `RETEST-05` | Query/mutation/local config 缓存清理 | `lib/alang/useAlangMission.ts` | cache helper tests | PASS |
+| `RETEST-06` | 重置后重新配置并可再次 start/complete | Reset route + config reLaunch | route/result/debug tests | PASS |
+| `RETEST-07` | 自动化测试覆盖 P0 安全与交互清单 | server/mini Alang test suites | Server 58 + Mini 52 tests；Shared/Server/Mini 定向 typecheck；Taro 864 modules | PASS |
+
+## 9. 验证基线
 
 ```bash
 npm run typecheck -w @joyjoin/shared
 npm run typecheck -w @joyjoin/server
-npm run test -w @joyjoin/server -- --run src/__tests__/geoRoutes.test.ts src/__tests__/alangContent.test.ts src/__tests__/alangGeoFence.test.ts src/__tests__/alangDisclosure.test.ts src/__tests__/alangTargetResolver.test.ts src/__tests__/alangDebugRoutesGate.test.ts src/__tests__/buildAuthUserResponseAlang.test.ts
+npm run test -w @joyjoin/server -- --run src/__tests__/geoRoutes.test.ts src/__tests__/alangContent.test.ts src/__tests__/alangGeoFence.test.ts src/__tests__/alangDisclosure.test.ts src/__tests__/alangTargetResolver.test.ts src/__tests__/alangDebugRoutesGate.test.ts src/__tests__/alangResetRepo.test.ts src/__tests__/alangResetRoute.test.ts src/__tests__/buildAuthUserResponseAlang.test.ts
 npm run test -w mini-program -- --run src/pages/alang
 ```
 
 必须额外在微信开发者工具/真机检查：定位首次授权、拒绝后设置恢复、iOS swipe-back、前后台恢复、polyline、弱网/超时、短屏安全区和 reduced motion。
 
-## 9. V1.5 本地需求追踪矩阵
+## 10. V1.5 本地需求追踪矩阵
 
 > 下列 ID 是仓库内追踪编号，用于把 Word 条款、实现证据和验收状态放在同一处，不替代 Word 原文。
 

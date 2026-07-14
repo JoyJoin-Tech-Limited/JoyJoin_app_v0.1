@@ -53,7 +53,13 @@
   }
 
   &__btn {
+    display: flex;
+    min-height: 88rpx;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
     background: $color-primary;
+    color: $color-text-white;
     border-radius: 16rpx;
     padding: 20rpx 0;
     text-align: center;
@@ -62,6 +68,39 @@
     &--danger {
       background: $color-secondary;
     }
+
+    &--success {
+      background: $color-success;
+    }
+
+    &--disabled {
+      opacity: 0.58;
+    }
+  }
+
+  &__status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24rpx;
+    padding: 14rpx 0;
+    border-bottom: 1rpx solid rgba($color-text-primary, 0.06);
+
+    &:last-child {
+      border-bottom: 0;
+    }
+  }
+
+  &__status-label {
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+  }
+
+  &__status-value {
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+    font-weight: 600;
+    text-align: right;
   }
 
   &__input-row {

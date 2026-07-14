@@ -199,26 +199,70 @@ export async function getStoryArchiveById(
 export async function deleteMissionProgress(
   userId: string,
   missionId: string
-): Promise<void> {
-  await db.transaction(async (tx: typeof db) => {
-    await tx
-      .delete(alangStoryArchives)
-      .where(
-        and(
-          eq(alangStoryArchives.userId, userId),
-          eq(alangStoryArchives.missionId, missionId)
-        )
-      );
-    await tx
-      .delete(alangMissionProgress)
+): Promise<{ deletedProgressCount: number; deletedArchiveCount: number }> {
+  const result = await db.transaction(async (tx: typeof db) => {
+    // Lock and confirm both record sets inside the same transaction before
+    // deleting anything. Every predicate is derived from the authenticated
+    // acting user; callers cannot supply a progress/archive id to broaden it.
+    const [progress] = await tx
+      .select({ id: alangMissionProgress.id })
+      .from(alangMissionProgress)
       .where(
         and(
           eq(alangMissionProgress.userId, userId),
           eq(alangMissionProgress.missionId, missionId)
         )
-      );
+      )
+      .limit(1)
+      .for("update");
+    if (!progress) {
+      return { deletedProgressCount: 0, deletedArchiveCount: 0 };
+    }
+
+    await tx
+      .select({ id: alangStoryArchives.id })
+      .from(alangStoryArchives)
+      .where(
+        and(
+          eq(alangStoryArchives.userId, userId),
+          eq(alangStoryArchives.missionId, missionId),
+          eq(alangStoryArchives.progressId, progress.id)
+        )
+      )
+      .for("update");
+
+    const deletedArchives = await tx
+      .delete(alangStoryArchives)
+      .where(
+        and(
+          eq(alangStoryArchives.userId, userId),
+          eq(alangStoryArchives.missionId, missionId),
+          eq(alangStoryArchives.progressId, progress.id)
+        )
+      )
+      .returning({ id: alangStoryArchives.id });
+    const deletedProgresses = await tx
+      .delete(alangMissionProgress)
+      .where(
+        and(
+          eq(alangMissionProgress.id, progress.id),
+          eq(alangMissionProgress.userId, userId),
+          eq(alangMissionProgress.missionId, missionId)
+        )
+      )
+      .returning({ id: alangMissionProgress.id });
+
+    return {
+      deletedProgressCount: deletedProgresses.length,
+      deletedArchiveCount: deletedArchives.length,
+    };
   });
-  logger.info("[AlangRepo] Reset mission progress and archives", { userId, missionId });
+  logger.info("[AlangRepo] Reset mission progress and archives", {
+    userId,
+    missionId,
+    ...result,
+  });
+  return result;
 }
 
 export async function seedDemoMissionIfNeeded(): Promise<void> {

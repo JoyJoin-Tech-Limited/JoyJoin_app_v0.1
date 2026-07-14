@@ -140,7 +140,10 @@
 
   &__completed-actions {
     display: flex;
+    flex-direction: column;
     gap: 24rpx;
+    width: 100%;
+    max-width: 520rpx;
   }
 
   &__completed-btn {
@@ -151,6 +154,7 @@
     background: $color-primary;
     border-radius: 48rpx;
     padding: 24rpx 48rpx;
+    box-sizing: border-box;
     transition: transform 180ms ease-out;
 
     &--pressed {
@@ -164,6 +168,10 @@
       .alang-result__completed-btn-text {
         color: $color-primary;
       }
+    }
+
+    &--disabled {
+      opacity: 0.58;
     }
   }
 

@@ -72,7 +72,7 @@ describe("Alang debug route gate", () => {
     expect(isAlangDebugMode()).toBe(false);
   });
 
-  it("returns NOT_FOUND for every Alang debug mutation before feature or data access", async () => {
+  it("fails every Alang debug mutation closed before feature or data access", async () => {
     const requests = [
       {
         path: "/api/alang/debug/missions/demo/force-node",
@@ -96,8 +96,13 @@ describe("Alang debug route gate", () => {
           body: JSON.stringify(debugRequest.body),
         });
 
-        expect(response.status).toBe(404);
-        await expect(response.json()).resolves.toEqual({ error: "NOT_FOUND" });
+        if (debugRequest.path.endsWith("/reset")) {
+          expect(response.status).toBe(403);
+          await expect(response.json()).resolves.toEqual({ error: "ALANG_RETEST_FORBIDDEN" });
+        } else {
+          expect(response.status).toBe(404);
+          await expect(response.json()).resolves.toEqual({ error: "NOT_FOUND" });
+        }
       }
     });
 

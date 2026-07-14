@@ -1,7 +1,12 @@
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useEffect, useState, useRef } from 'react'
 import { View, Text, Image, ScrollView } from '@tarojs/components'
-import { useAlangMissionDetail, useCompleteMission, useStoryArchives } from '../../../lib/alang/useAlangMission'
+import {
+  useAlangMissionDetail,
+  useCompleteMission,
+  useResetAlangMission,
+  useStoryArchives,
+} from '../../../lib/alang/useAlangMission'
 import { useAuth } from '../../../hooks/useAuth'
 import { alangEvents } from '../../../lib/alang/alangAnalytics'
 import { callReportProgress } from '../../../lib/alang/api'
@@ -9,6 +14,7 @@ import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import StatusCard from '../../../components/ui/StatusCard'
 import { useAlangAssetSource } from '../../../lib/alang/alangAssets'
 import { haptics } from '../../../lib/utils/haptics'
+import { shouldShowAlangDebugTools } from '../../../lib/alang/alangAccess'
 import './index.scss'
 
 export default function AlangResultPage() {
@@ -20,11 +26,14 @@ export default function AlangResultPage() {
     refetch: refetchArchives,
   } = useStoryArchives(!!slug && !!user?.features?.alangEnabled)
   const completeMutation = useCompleteMission()
+  const resetMutation = useResetAlangMission()
   const resultHero = useAlangAssetSource('resultHero')
   const [completed, setCompleted] = useState(false)
   const [archiveId, setArchiveId] = useState('')
+  const [isConfirmingRetest, setIsConfirmingRetest] = useState(false)
   const closingAdvanceRef = useRef(false)
   const navigationKeyRef = useRef('')
+  const retestActionRef = useRef(false)
 
   const progress = mission?.myProgress
 
@@ -121,6 +130,42 @@ export default function AlangResultPage() {
     }
   }
 
+  const canRetest = shouldShowAlangDebugTools(user) && completed && !!archiveId
+  const isRetestBusy = isConfirmingRetest || resetMutation.isPending
+
+  const handleRetest = async () => {
+    if (!slug || !canRetest || retestActionRef.current) return
+
+    retestActionRef.current = true
+    setIsConfirmingRetest(true)
+    try {
+      const modal = await Taro.showModal({
+        title: '重新测试阿浪',
+        content: '将清除当前账号本次阿浪测试的进度与测试故事，是否重新开始？',
+        confirmText: '重新开始',
+        cancelText: '取消',
+        confirmColor: '#8B5CF6',
+      })
+      setIsConfirmingRetest(false)
+
+      if (!modal.confirm) {
+        retestActionRef.current = false
+        return
+      }
+
+      await resetMutation.mutateAsync(slug)
+      haptics('success')
+      void Taro.showToast({ title: '已重置，可以重新测试', icon: 'success' })
+      await Taro.reLaunch({
+        url: `${MINI_PROGRAM_ROUTES.alangConfig}?slug=${encodeURIComponent(slug)}`,
+      })
+    } catch {
+      setIsConfirmingRetest(false)
+      retestActionRef.current = false
+      Taro.showToast({ title: '重置没成功，请稍后再试', icon: 'none' })
+    }
+  }
+
   const handleRefreshArchive = () => {
     void Promise.all([refetch(), refetchArchives()])
   }
@@ -172,6 +217,20 @@ export default function AlangResultPage() {
           >
             <Text className='alang-result__completed-btn-text'>返回发现</Text>
           </View>
+          {canRetest && (
+            <View
+              className={`alang-result__completed-btn alang-result__completed-btn--secondary${isRetestBusy ? ' alang-result__completed-btn--disabled' : ''}`}
+              onClick={() => { void handleRetest() }}
+              hoverClass={isRetestBusy ? '' : 'alang-result__completed-btn--pressed'}
+              role='button'
+              aria-label={resetMutation.isPending ? '正在重置阿浪测试' : '重新测试阿浪'}
+              aria-disabled={isRetestBusy}
+            >
+              <Text className='alang-result__completed-btn-text'>
+                {resetMutation.isPending ? '正在重置…' : '重新测试阿浪'}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     )

@@ -57,6 +57,12 @@ export interface AlangProgressSnapshot {
   archiveId?: string;
 }
 
+export interface AlangDebugResetResponse {
+  reset: true;
+  deletedProgressCount: number;
+  deletedArchiveCount: number;
+}
+
 export function getAlangMissions(api: ApiTransport): Promise<AlangMissionSummary[]> {
   return api<AlangMissionSummary[]>({ path: "/api/alang/missions", method: "GET" });
 }
@@ -133,8 +139,8 @@ export function alangDebugForceNode(api: ApiTransport, slug: string, nodeId: str
   });
 }
 
-export function alangDebugReset(api: ApiTransport, slug: string): Promise<{ ok: boolean }> {
-  return api<{ ok: boolean }>({
+export function alangDebugReset(api: ApiTransport, slug: string): Promise<AlangDebugResetResponse> {
+  return api<AlangDebugResetResponse>({
     path: `/api/alang/debug/missions/${slug}/reset`,
     method: "POST",
   });
