@@ -1,15 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildEventBriefDate,
+  buildFaceDownCardAriaLabel,
   buildFocusedMemberBubbleText,
   buildPairKeyMemberMap,
+  buildRevealChipLabel,
   buildSquadSoulBubbleText,
   computeActionDockState,
+  computeBestPartnerUserId,
   getChemistryWord,
   getEventTypeLabel,
   getPairChemistryWord,
   getSquadChemistryTokens,
   resolveCardFocusInteraction,
+  SQUAD_BURST_COMPLETION_BUBBLE_TEXT,
+  SQUAD_SELF_CARD_BUBBLE_TEXT,
+  SQUAD_TEASE_BUBBLE_TEXT,
+  stripConnectionPointParens,
 } from './squadUnboxingViewModels'
 
 describe('squadUnboxingViewModels', () => {
@@ -207,6 +214,74 @@ describe('squadUnboxingViewModels', () => {
       expect(buildEventBriefDate(undefined)).toBeNull()
       expect(buildEventBriefDate('')).toBeNull()
       expect(buildEventBriefDate('not-a-date')).toBeNull()
+    })
+  })
+
+  describe('tap-to-reveal copy builders (AC-01/04/05/11/18)', () => {
+    it('ships a fixed self-card narration for the auto-flipped 我 card', () => {
+      expect(SQUAD_SELF_CARD_BUBBLE_TEXT).toBe(
+        '这张是你的桌友卡。悦仔把你放进这桌，也把属于你的视角带进了今晚。',
+      )
+    })
+
+    it('ships a single group-completion line for the reveal-all burst', () => {
+      expect(SQUAD_BURST_COMPLETION_BUBBLE_TEXT).toBe('全员揭晓，今晚这桌，慢慢认识。')
+    })
+
+    it('ships the resting tease line shown while face-down cards remain (C1)', () => {
+      expect(SQUAD_TEASE_BUBBLE_TEXT).toBe('桌友卡都扣好了，轻点翻开，看看今晚和谁一桌。')
+    })
+
+    it('builds the hint-chip label with the live unflipped count + explicit tap verb', () => {
+      expect(buildRevealChipLabel(3)).toBe('还有 3 位桌友未揭晓 · 轻点全部翻开')
+      expect(buildRevealChipLabel(1)).toBe('还有 1 位桌友未揭晓 · 轻点全部翻开')
+    })
+
+    it('labels face-down cards with reveal-invitation semantics, self without a name', () => {
+      expect(buildFaceDownCardAriaLabel('豆沙', false)).toBe('豆沙的桌友卡，还未翻开，轻点揭晓')
+      expect(buildFaceDownCardAriaLabel('豆沙', true)).toBe('我的桌友卡，还未翻开')
+      expect(buildFaceDownCardAriaLabel('', false)).toBe('这位桌友的桌友卡，还未翻开，轻点揭晓')
+    })
+
+    it('computeBestPartnerUserId picks the highest viewer pair score with a strict roster tie-break', () => {
+      const members = [
+        { userId: 'me' },
+        { userId: 'a' },
+        { userId: 'b' },
+      ] as never
+      const pairs = new Map<string, { chemistryScore: number } | null>([
+        ['a', { chemistryScore: 88 }],
+        ['b', { chemistryScore: 88 }],
+      ])
+      // Strict `>` keeps the first (roster-order) member on ties.
+      expect(computeBestPartnerUserId(members, 'me', pairs as never)).toBe('a')
+      pairs.set('b', { chemistryScore: 92 })
+      expect(computeBestPartnerUserId(members, 'me', pairs as never)).toBe('b')
+      expect(computeBestPartnerUserId(members, 'me', new Map())).toBeNull()
+      expect(computeBestPartnerUserId(members, null, pairs as never)).toBe('b')
+    })
+  })
+
+  describe('stripConnectionPointParens (A3)', () => {
+    it('strips one pair of wrapping full-width parens', () => {
+      expect(stripConnectionPointParens('（都偏内向细腻）')).toBe('都偏内向细腻')
+      expect(stripConnectionPointParens('（都偏内向细腻，但聊到兴头会很投入）')).toBe('都偏内向细腻，但聊到兴头会很投入')
+    })
+
+    it('leaves unwrapped text untouched (trim only)', () => {
+      expect(stripConnectionPointParens('都爱在咖啡馆里发呆')).toBe('都爱在咖啡馆里发呆')
+      expect(stripConnectionPointParens('  聊天节奏偏慢热  ')).toBe('聊天节奏偏慢热')
+    })
+
+    it('leaves inner parens and unbalanced pairs untouched', () => {
+      expect(stripConnectionPointParens('都爱看展（尤其当代）')).toBe('都爱看展（尤其当代）')
+      expect(stripConnectionPointParens('（只开了头')).toBe('（只开了头')
+      expect(stripConnectionPointParens('没收尾）')).toBe('没收尾）')
+    })
+
+    it('handles empty and degenerate input safely', () => {
+      expect(stripConnectionPointParens('')).toBe('')
+      expect(stripConnectionPointParens('（）')).toBe('')
     })
   })
 })

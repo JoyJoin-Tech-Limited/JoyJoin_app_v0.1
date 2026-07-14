@@ -7,6 +7,9 @@ export type SquadUnboxingEventType =
   | 'squad_unboxing_reveal_tap'
   | 'squad_unboxing_box_tap'
   | 'squad_unboxing_card_focus'
+  | 'squad_unboxing_card_flip'
+  | 'squad_unboxing_reveal_all_tap'
+  | 'squad_unboxing_all_revealed'
   | 'squad_unboxing_card_detail_dismiss'
   | 'squad_unboxing_confirm_attendance_tap'
   | 'squad_unboxing_confirm_attendance_success'
@@ -24,6 +27,11 @@ export type SquadUnboxingEventType =
   | 'match_reveal_prelude_completed'
   | 'match_reveal_prelude_skipped'
   | 'match_reveal_prelude_cta_tapped'
+
+// NOTE: `squad_unboxing_card_detail_dismiss` was reinstated upstream
+// (a6ea57284, 2026-07-14) as the `resolveCardFocusInteraction` dismiss action
+// — tapping the focused card a second time unfocuses and returns the bubble
+// to the resting voice. See docs/systems/squad-unboxing-analytics-funnels.md.
 
 export interface SquadUnboxingAnalyticsEvent {
   eventType: SquadUnboxingEventType

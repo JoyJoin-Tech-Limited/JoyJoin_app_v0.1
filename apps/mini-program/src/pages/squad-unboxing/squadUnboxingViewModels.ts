@@ -127,6 +127,21 @@ export function buildEventBriefDate(dateTime?: string | null): EventBriefDate | 
 }
 
 /**
+ * Server-side connection copy sometimes arrives wrapped in full-width parens
+ * (e.g. （都偏内向细腻）). Inside the pill's 1-line nowrap+ellipsis the leading
+ * （ made the truncated text read as a severed fragment (`（都偏内向…`). Strip
+ * one pair of WRAPPING full-width parens so the pill starts with content.
+ * Inner parens and unbalanced pairs are left untouched.
+ */
+export function stripConnectionPointParens(text: string): string {
+  const value = (text ?? '').trim()
+  if (value.length >= 2 && value.startsWith('（') && value.endsWith('）')) {
+    return value.slice(1, -1).trim()
+  }
+  return value
+}
+
+/**
  * 团魂 bubble copy. The archetype-mix clause is only inserted when non-empty,
  * so the bubble never renders a stranded `！，` when no member archetypes are
  * known. Trailing punctuation on each line is stripped before the final `。`
@@ -197,6 +212,78 @@ export function buildFocusedMemberBubbleText(
     ? `你们的共同点还没显出来，不妨先问问${interests[0]}背后的故事。`
     : '你们的共同点还没显出来，不妨先聊聊最近各自遇到的一件有趣小事。'
   return `${introduction}。${opener}`
+}
+
+// ── Tap-to-reveal copy set (2026-07-14) ─────────────────────────────────────
+// Wording is craft-owned (xiaoyue-writing-craft, AC-20) — the strings live
+// here so the copy review has exactly one place to edit. Exclamations stay
+// restrained; the chip carries an explicit tap verb so tappability reads
+// without motion cues.
+
+/**
+ * The 我 card's own narration line (moved from the page for the copy review).
+ * Plays when the user deliberately focuses their own card — never auto-fired.
+ */
+export const SQUAD_SELF_CARD_BUBBLE_TEXT =
+  '这张是你的桌友卡。悦仔把你放进这桌，也把属于你的视角带进了今晚。'
+
+/**
+ * Single group-completion bubble line after a reveal-all burst finishes
+ * (AC-05). Replaces any per-member narration; chip = progress, bubble = voice.
+ */
+export const SQUAD_BURST_COMPLETION_BUBBLE_TEXT = '全员揭晓，今晚这桌，慢慢认识。'
+
+/**
+ * Resting bubble while the deck still holds face-down cards in an interactive
+ * session (C1). The soul line is earned once every card is face-up — until
+ * then the bubble explains the game, not the group. No exclamation: the chip
+ * already carries the call to act.
+ */
+export const SQUAD_TEASE_BUBBLE_TEXT = '桌友卡都扣好了，轻点翻开，看看今晚和谁一桌。'
+
+/**
+ * Hint-chip label — live unflipped count plus an explicit tap verb, since the
+ * chip doubles as the reveal-all trigger (AC-04). Absent when N = 0.
+ */
+export function buildRevealChipLabel(unflippedCount: number): string {
+  return `还有 ${unflippedCount} 位桌友未揭晓 · 轻点全部翻开`
+}
+
+/**
+ * Screen-reader label for a face-down card (AC: labelled tap targets with
+ * reveal-invitation semantics). Names are already visible on the front; the
+ * back itself carries no identity text.
+ */
+export function buildFaceDownCardAriaLabel(memberName: string, isCurrentUser: boolean): string {
+  const name = memberName.trim() || '这位桌友'
+  return isCurrentUser ? '我的桌友卡，还未翻开' : `${name}的桌友卡，还未翻开，轻点揭晓`
+}
+
+/**
+ * The viewer's highest-chemistryScore tablemate. Deterministic roster-order
+ * tie-break: the first member in roster order with the max score wins (strict
+ * `>` keeps the earliest on ties). Returns null when no viewer pairs exist.
+ * Moved from SquadDeckStage so the controller can reuse it for flip
+ * analytics payloads (isBestPartner).
+ */
+export function computeBestPartnerUserId(
+  members: PoolGroupMemberSummary[],
+  currentUserId: string | null | undefined,
+  viewerPairByMemberId: Map<string, PairExplanation | null>,
+): string | null {
+  let bestUserId: string | null = null
+  let bestScore = Number.NEGATIVE_INFINITY
+  for (const member of members) {
+    if (member.userId === currentUserId) continue
+    const pair = viewerPairByMemberId.get(member.userId)
+    if (!pair) continue
+    const score = typeof pair.chemistryScore === 'number' ? pair.chemistryScore : Number.NEGATIVE_INFINITY
+    if (score > bestScore) {
+      bestScore = score
+      bestUserId = member.userId
+    }
+  }
+  return bestUserId
 }
 
 const CHEMISTRY_TITLES: Record<ChemistryType, string> = {

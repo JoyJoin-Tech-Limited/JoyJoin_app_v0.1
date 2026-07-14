@@ -1,5 +1,5 @@
 import { View, Text } from '@tarojs/components'
-import { useEffect, useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PoolGroupMemberSummary } from '@shared/api'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
@@ -8,10 +8,11 @@ import TeammateCard from './TeammateCard'
 import {
   DEAL_ANTICIPATION_MS,
   DEAL_CARD_ENTER_MS,
+  DEAL_HAPTIC_MIN_STAGGER_MS,
   computeDealStaggerMs,
   computeDealTotalMs,
 } from './squadDealTiming'
-import { computeFanLayout } from './computeFanLayout'
+import { computeFanLayout, MAX_FAN_CARDS } from './computeFanLayout'
 
 export interface SquadDeckStageProps {
   members: PoolGroupMemberSummary[]
@@ -20,9 +21,22 @@ export interface SquadDeckStageProps {
   focusedIndex: number
   reduceMotion: boolean
   isDegradation: boolean
-  /** Bump to reset transient deal/focus/peek state (swipe-back re-entry). */
+  /** Bump to reset transient deal/focus state (swipe-back re-entry). */
   resetSignal: number
-  onFocusChange: (index: number) => void
+  /** Controller-owned flip state (AC-13): ids currently face-up. */
+  flippedIds: ReadonlySet<string>
+  /** Per-card flip transition delay (ms) — burst stagger; 0 for single flips. */
+  flipDelayById: ReadonlyMap<string, number>
+  /** The viewer's highest-chemistry tablemate (controller-computed). */
+  bestPartnerUserId: string | null
+  /** Re-entry arrival (reveal flag present): every card renders face-up. */
+  allRevealed: boolean
+  /** First-visit interactive session: backs shimmer once after the deal. */
+  interactive: boolean
+  /** Fired when the deal flight fully settles (drives the 我 auto-flip). */
+  onDealSettled: (instant: boolean) => void
+  onCardTap: (index: number) => void
+  onCardLongPress: (index: number) => void
 }
 
 // Re-export the pure deal budget helpers so existing consumers/tests that
@@ -36,40 +50,6 @@ export {
   computeDealTotalMs,
 } from './squadDealTiming'
 
-/** Auto-peek: fires this long after the deal settles, holds, then releases. */
-const PEEK_DELAY_MS = 400
-const PEEK_HOLD_MS = 600
-
-/** The fan layout caps at two rows of four — members beyond that collapse
- *  into a "+N" overflow badge on the last visible card instead of being
- *  silently dropped. */
-const MAX_FAN_CARDS = 8
-
-/**
- * The viewer's highest-chemistryScore tablemate. Deterministic roster-order
- * tie-break: the first member in roster order with the max score wins (strict
- * `>` keeps the earliest on ties). Returns null when no viewer pairs exist.
- */
-function computeBestPartnerUserId(
-  members: PoolGroupMemberSummary[],
-  currentUserId: string | null | undefined,
-  viewerPairByMemberId: Map<string, PairExplanation | null>,
-): string | null {
-  let bestUserId: string | null = null
-  let bestScore = Number.NEGATIVE_INFINITY
-  for (const member of members) {
-    if (member.userId === currentUserId) continue
-    const pair = viewerPairByMemberId.get(member.userId)
-    if (!pair) continue
-    const score = typeof pair.chemistryScore === 'number' ? pair.chemistryScore : Number.NEGATIVE_INFINITY
-    if (score > bestScore) {
-      bestScore = score
-      bestUserId = member.userId
-    }
-  }
-  return bestUserId
-}
-
 export default function SquadDeckStage({
   members,
   currentUserId,
@@ -78,18 +58,32 @@ export default function SquadDeckStage({
   reduceMotion,
   isDegradation,
   resetSignal,
-  onFocusChange,
+  flippedIds,
+  flipDelayById,
+  bestPartnerUserId,
+  allRevealed,
+  interactive,
+  onDealSettled,
+  onCardTap,
+  onCardLongPress,
 }: SquadDeckStageProps) {
   const instant = reduceMotion || isDegradation
   const [dealt, setDealt] = useState(() => instant)
   const [dealComplete, setDealComplete] = useState(() => instant)
-  const [peekActive, setPeekActive] = useState(false)
 
   const dealStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dealDoneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hapticTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
-  const peekTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const prevResetSignalRef = useRef(resetSignal)
+  // Fresh ref for the deal-settle callback so the deal timers never fire a
+  // stale closure (the effect deps key on the stable roster id sequence).
+  const onDealSettledRef = useRef(onDealSettled)
+  onDealSettledRef.current = onDealSettled
+  // Tracks whether the controller was notified of the deal settle. The
+  // swipe-back recovery path (A1) must notify exactly once if the flight was
+  // interrupted — otherwise the flip session never seeds (chip no-ops,
+  // all_revealed never fires, 我 auto-flip skipped).
+  const dealSettledRef = useRef(false)
 
   // Overflow: the fan shows at most MAX_FAN_CARDS; the rest collapse into a
   // "+N" badge on the last visible card so nobody is silently dropped.
@@ -107,10 +101,20 @@ export default function SquadDeckStage({
   // array identity is not guaranteed). Keyed on the id sequence.
   const memberKey = useMemo(() => displayMembers.map((m) => m.userId).join(','), [displayMembers])
 
-  const bestPartnerUserId = useMemo(
-    () => computeBestPartnerUserId(members, currentUserId, viewerPairByMemberId),
-    [members, currentUserId, viewerPairByMemberId],
-  )
+  // Per-card flip sheen arming: a card sheens when its id transitions INTO
+  // the controller-owned flipped set. Mount-time sets (all-up re-entry,
+  // story seeds) never sheen — the class only appears on a live transition.
+  const prevFlippedRef = useRef<ReadonlySet<string>>(flippedIds)
+  const justFlippedIds = useMemo(() => {
+    const fresh = new Set<string>()
+    flippedIds.forEach((id) => {
+      if (!prevFlippedRef.current.has(id)) fresh.add(id)
+    })
+    return fresh
+  }, [flippedIds])
+  useEffect(() => {
+    prevFlippedRef.current = flippedIds
+  }, [flippedIds])
 
   // Split the roster into rows (top row first) per the fan layout.
   const memberRows = useMemo(() => {
@@ -130,28 +134,44 @@ export default function SquadDeckStage({
     dealDoneTimerRef.current = null
     hapticTimersRef.current.forEach(clearTimeout)
     hapticTimersRef.current = []
-    peekTimersRef.current.forEach(clearTimeout)
-    peekTimersRef.current = []
   }, [])
 
-  // Deal: anticipation beat, then a staggered slide-up + flip per card, with a
-  // per-card landing haptic near the end of each entrance.
+  // Deal: anticipation beat, then a staggered slide-up per card (landing
+  // FACE-DOWN — the deal-flight flip-up was retired with tap-to-reveal), with
+  // a per-card landing haptic near the end of each entrance. The controller
+  // is notified when the flight settles so it can arm the 我 auto-flip.
   useEffect(() => {
     if (instant) {
       setDealt(true)
       setDealComplete(true)
+      if (!dealSettledRef.current) {
+        dealSettledRef.current = true
+        onDealSettledRef.current(true)
+      }
       return undefined
     }
 
     dealStartTimerRef.current = setTimeout(() => setDealt(true), DEAL_ANTICIPATION_MS)
-    dealDoneTimerRef.current = setTimeout(() => setDealComplete(true), dealTotalMs)
+    dealDoneTimerRef.current = setTimeout(() => {
+      setDealComplete(true)
+      dealSettledRef.current = true
+      onDealSettledRef.current(false)
+    }, dealTotalMs)
 
-    hapticTimersRef.current = displayMembers.map((_, index) =>
-      setTimeout(
-        () => haptics('light'),
-        DEAL_ANTICIPATION_MS + index * staggerMs + Math.round(DEAL_CARD_ENTER_MS * 0.7),
-      ),
-    )
+    // Per-card landing haptic — only when the stagger leaves room between
+    // landings. Below DEAL_HAPTIC_MIN_STAGGER_MS the taps merge into a
+    // continuous buzz (N≥6), so the deal relies on the box-open haptic alone.
+    // The reveal-all burst fires a single haptic at the page level, so no
+    // per-card gate is needed there.
+    const perCardHaptics = staggerMs >= DEAL_HAPTIC_MIN_STAGGER_MS
+    hapticTimersRef.current = perCardHaptics
+      ? displayMembers.map((_, index) =>
+          setTimeout(
+            () => haptics('light'),
+            DEAL_ANTICIPATION_MS + index * staggerMs + Math.round(DEAL_CARD_ENTER_MS * 0.7),
+          ),
+        )
+      : []
 
     return () => {
       if (dealStartTimerRef.current) clearTimeout(dealStartTimerRef.current)
@@ -164,40 +184,29 @@ export default function SquadDeckStage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instant, dealTotalMs, staggerMs, memberKey])
 
-  // One-shot auto-peek: the centre card lifts briefly once the deal settles.
-  useEffect(() => {
-    if (!dealComplete || instant) return undefined
-    const startTimer = setTimeout(() => setPeekActive(true), PEEK_DELAY_MS)
-    const endTimer = setTimeout(() => setPeekActive(false), PEEK_DELAY_MS + PEEK_HOLD_MS)
-    peekTimersRef.current = [startTimer, endTimer]
-    return () => {
-      peekTimersRef.current.forEach(clearTimeout)
-      peekTimersRef.current = []
-    }
-  }, [dealComplete, instant])
-
   // Swipe-back re-entry: settle to a clean revealed state (no flight replay),
-  // clearing any in-flight peek and all timers.
+  // clearing all timers. Flip state is controller-owned and survives — a warm
+  // re-entry keeps the user's mid-game progress.
   useEffect(() => {
     if (prevResetSignalRef.current === resetSignal) return
     prevResetSignalRef.current = resetSignal
     clearAllTimers()
-    setPeekActive(false)
     setDealt(true)
     setDealComplete(true)
+    // Interrupted-deal recovery (A1): if the flight never settled (e.g. the
+    // app was backgrounded mid-deal before dealDoneTimer fired), seed the
+    // flip session now — without this the session keeps visibleIds=[] and
+    // interactive=false, so the hint chip no-ops, all_revealed never fires,
+    // and the 我 auto-flip is skipped. Instant=true: the recovered session
+    // behaves like a reduced-motion settle.
+    if (!dealSettledRef.current) {
+      dealSettledRef.current = true
+      onDealSettledRef.current(true)
+    }
   }, [resetSignal, clearAllTimers])
 
   // Final safety net: clear everything on unmount.
   useEffect(() => () => clearAllTimers(), [clearAllTimers])
-
-  const handleFocus = useCallback((index: number) => {
-    // A deliberate tap cancels the one-shot auto-peek so the centre card's
-    // peek lift can never compete with a deliberate card focus.
-    peekTimersRef.current.forEach(clearTimeout)
-    peekTimersRef.current = []
-    setPeekActive(false)
-    onFocusChange(index)
-  }, [onFocusChange])
 
   if (members.length === 0) {
     return (
@@ -209,7 +218,11 @@ export default function SquadDeckStage({
     )
   }
 
-  const holoSweep = dealComplete && !instant
+  // One-time back shimmer (AC-07): a single sweep across the face-down backs
+  // after the deal settles. Suppressed under reduce-motion/degradation and on
+  // all-up re-entry. The class is derived (not state), so a warm re-entry
+  // never replays it — the animation only fires when the class first appears.
+  const shimmerArmed = dealComplete && !instant && interactive
 
   return (
     <View
@@ -226,9 +239,13 @@ export default function SquadDeckStage({
     >
       <View className='squad-unboxing__deck-shadow' />
 
-      {/* Epic holo sweep — one element, plays once on deal then static. */}
-      {holoSweep ? (
-        <View className='squad-unboxing__deck-holo squad-unboxing__deck-holo--sweep' aria-hidden='true' />
+      {/* One-time shimmer sweep across the face-down backs (transform-only
+          band; replays never — see shimmerArmed derivation). */}
+      {shimmerArmed ? (
+        <View
+          className='squad-unboxing__deck-back-shimmer squad-unboxing__deck-back-shimmer--armed'
+          aria-hidden='true'
+        />
       ) : null}
 
       {/* The fan: two flex-centred rows for N≥5, one row otherwise. Card size
@@ -261,6 +278,10 @@ export default function SquadDeckStage({
                 const rosterIndex = rowOffset + indexInRow
                 const isCurrentUser = member.userId === currentUserId
                 const viewerPair = viewerPairByMemberId.get(member.userId) ?? null
+                // Face derives from the controller-owned flip set (single
+                // source of truth — REL-01); all-up re-entry forces face-up.
+                const isFaceUp = allRevealed || flippedIds.has(member.userId)
+                const flipDelayMs = instant ? 0 : flipDelayById.get(member.userId) ?? 0
 
                 return (
                   <TeammateCard
@@ -271,14 +292,18 @@ export default function SquadDeckStage({
                     focused={focusedIndex === rosterIndex}
                     isCurrentUser={isCurrentUser}
                     isBestPartner={member.userId === bestPartnerUserId}
-                    isPeek={peekActive && rosterIndex === layout.peekIndex}
-                    isRevealed={dealt}
+                    isDealt={dealt}
+                    isFaceUp={isFaceUp}
+                    flipDelayMs={flipDelayMs}
+                    sheenActive={!instant && justFlippedIds.has(member.userId)}
+                    sheenDelayMs={flipDelayMs}
                     emergeComplete={dealComplete}
                     emergeDelayMs={reduceMotion ? 0 : rosterIndex * staggerMs}
                     overflowBadge={rosterIndex === displayMembers.length - 1 ? overflowCount : 0}
                     reduceMotion={reduceMotion}
                     isDegradation={isDegradation}
-                    onFocus={() => handleFocus(rosterIndex)}
+                    onTap={() => onCardTap(rosterIndex)}
+                    onLongPress={() => onCardLongPress(rosterIndex)}
                   />
                 )
               })}

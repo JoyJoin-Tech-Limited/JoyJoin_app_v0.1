@@ -27,7 +27,7 @@ describe('TeammateCard longpress trailing-tap guard', () => {
   it('arms a pending-trailing-tap flag on longpress (timestamp kept too)', () => {
     expect(handleLongPressBody).toContain('lastLongPressAtRef.current = Date.now()')
     expect(handleLongPressBody).toContain('pendingTrailingTapRef.current = true')
-    expect(handleLongPressBody).toContain('onFocus()')
+    expect(handleLongPressBody).toContain('onLongPress()')
   })
 
   it('consumes the flag on the first tap regardless of the swallow decision (never double-swallow)', () => {
@@ -36,10 +36,10 @@ describe('TeammateCard longpress trailing-tap guard', () => {
     expect(flagCheck).toBeGreaterThanOrEqual(0)
     expect(flagClear).toBeGreaterThan(flagCheck)
     // The flag is cleared before the swallow return, so a second tap is
-    // always processed and an expired flag still falls through to onFocus().
+    // always processed and an expired flag still falls through to onTap().
     const swallowReturn = handleTapBody.indexOf('TRAILING_TAP_MAX_AGE_MS) return')
     expect(swallowReturn).toBeGreaterThan(flagClear)
-    expect(handleTapBody.indexOf('onFocus()')).toBeGreaterThan(swallowReturn)
+    expect(handleTapBody.indexOf('onTap()')).toBeGreaterThan(swallowReturn)
   })
 
   it('bounds the swallow window to 3s so a stale flag cannot eat an unrelated future tap', () => {
@@ -47,6 +47,15 @@ describe('TeammateCard longpress trailing-tap guard', () => {
     expect(handleTapBody).toContain('Date.now() - lastLongPressAtRef.current < TRAILING_TAP_MAX_AGE_MS')
     // Regression lock: the old pure 600ms time window must not come back.
     expect(handleTapBody).not.toContain('< 600')
+  })
+
+  it('routes tap and long-press to separate parent handlers (AC-12 composition)', () => {
+    // Long-press fires the medium haptic in the card; the page skips its own
+    // light focus haptic for the long-press path so they never stack.
+    expect(handleLongPressBody).toContain("haptics('medium')")
+    expect(handleTapBody).not.toContain("haptics(")
+    expect(source).toContain('onTap: () => void')
+    expect(source).toContain('onLongPress: () => void')
   })
 })
 
@@ -84,8 +93,20 @@ describe('TeammateCard fan template + deal geometry (Cascading Hand Fan)', () =>
   it('shows exactly one connection-point pill on the card (full list in detail)', () => {
     // Visual-fit lock: two 2-line pills overflow the info zone at fan widths
     // and clip at the card bottom (verified in the 2026-07-13 smoke).
-    expect(source).toContain('connectionPointsWithRarity.slice(0, 1)')
-    expect(source).toContain("connectionPoints.slice(0, 1)")
+    expect(source).toMatch(/connectionPointsWithRarity\s*\n?\s*\.slice\(0, 1\)/)
+    expect(source).toMatch(/connectionPoints\s*\n?\s*\.slice\(0, 1\)/)
+  })
+
+  it('strips wrapping full-width parens before the pill text (A3)', () => {
+    // A leading （ under 1-line ellipsis read as a severed fragment
+    // (`（都偏内向…`); the strip helper lives in the pure view-model module.
+    expect(source).toContain('stripConnectionPointParens')
+    expect(source).toContain("from './squadUnboxingViewModels'")
+    const pointsBlock = source.slice(
+      source.indexOf('function getConnectionPoints'),
+      source.indexOf('function getArchetypeAssetUrl'),
+    )
+    expect(pointsBlock.match(/stripConnectionPointParens/g)?.length).toBeGreaterThanOrEqual(2)
   })
 
   it('silently omits privacy-hidden fields (no placeholders)', () => {
@@ -93,24 +114,29 @@ describe('TeammateCard fan template + deal geometry (Cascading Hand Fan)', () =>
     expect(source).toContain('member.industryVisible === false')
   })
 
-  it('derives the flip from isRevealed (dealt), not from per-card local state', () => {
-    // The front face shows once the card is dealt; focus only lifts it.
-    expect(source).toContain("isRevealed ? 'squad-unboxing__deck-card--flipped' : ''")
-    // No useState-backed local flip flag may be reintroduced.
+  it('derives the flip from isDealt && isFaceUp (controller-owned set), never local state', () => {
+    // REL-01: --flipped renders only when dealt, and the face derives from
+    // the single controller-owned flip set passed down as isFaceUp.
+    expect(source).toContain("isDealt && isFaceUp ? 'squad-unboxing__deck-card--flipped' : ''")
+    // No useState-backed local flip flag may be reintroduced (AC-13).
     expect(source).not.toMatch(/useState\(.*flip/i)
     expect(source).not.toContain('const [flipped')
+    expect(source).not.toContain('isRevealed')
   })
 
-  it('toggles fan pose classes (no inline rpx transforms)', () => {
+  it('toggles fan pose classes (no inline rpx transforms), peek retired', () => {
     // The fan pose lives in index.scss per-(row-length,index) rules; the
     // component only toggles state classes. Inline rpx/deg is not transformed
     // by the Taro H5 build and collapsed the cards to ~2px (2026-07-13 smoke).
     expect(source).toContain('squad-unboxing__deck-card--focused-lift')
     expect(source).toContain('squad-unboxing__deck-card--focused-lift-deg')
-    expect(source).toContain('squad-unboxing__deck-card--peek')
+    // No sibling dim (upstream: focus = lift only, layered deck stays legible).
     expect(source).not.toContain('squad-unboxing__deck-card--dimmed')
     expect(source).not.toContain('focusScale')
     expect(source).not.toContain('focusLiftRpx')
+    // MNT-02: the auto-peek code path is deleted, not commented.
+    expect(source).not.toContain('isPeek')
+    expect(source).not.toContain('--peek')
     // Flat-row compact mode is gone.
     expect(source).not.toContain('compact')
   })
@@ -125,37 +151,87 @@ describe('TeammateCard fan template + deal geometry (Cascading Hand Fan)', () =>
   })
 
   it('keeps unfocused siblings fully opaque while another card is focused', () => {
-    expect(source).toContain('const opacity = isRevealed ? 1 : 0')
+    // Upstream: focus = lift only. Dealt siblings render at full opacity so the
+    // layered deck stays legible; the tap-to-reveal model keys opacity on the
+    // deal (not the retired `isRevealed`).
+    expect(source).toContain('const opacity = isDealt ? 1 : 0')
     expect(source).not.toContain('isDimmed')
     expect(source).not.toContain('anyFocused')
   })
 
-  it('renders the 我 badge and the 最佳拍档 stamp', () => {
+  it('drives the flip transition delay from the burst-stagger prop (ms-safe inline)', () => {
+    expect(source).toContain('style={{ transitionDelay: `${flipDelayMs}ms` }}')
+  })
+
+  it('renders the 我 badge and the 最佳拍档 stamp on the front', () => {
     expect(source).toContain('squad-unboxing__deck-card-me-badge')
     expect(source).toContain('squad-unboxing__deck-card-stamp')
     expect(source).toContain('最佳拍档')
     expect(source).toContain('isBestPartner')
   })
 
-  it('builds an aria-label that includes age + industry', () => {
-    const ariaStart = source.indexOf('const ariaLabel = [')
+  it('builds a face-up aria-label with age + industry, and a face-down reveal-invitation label', () => {
+    const ariaStart = source.indexOf('const ariaLabel = isFaceUp')
     expect(ariaStart).toBeGreaterThanOrEqual(0)
-    const ariaBlock = source.slice(ariaStart, source.indexOf(']', ariaStart))
+    const ariaBlock = source.slice(ariaStart, source.indexOf('return (', ariaStart))
     expect(ariaBlock).toContain('agePart')
     expect(ariaBlock).toContain('industry')
     expect(ariaBlock).toContain('最佳拍档')
+    // AC: face-down cards are labelled tap targets with reveal-invitation
+    // semantics (member name + invitation), via the craft-owned builder.
+    expect(ariaBlock).toContain('buildFaceDownCardAriaLabel(name, isCurrentUser)')
   })
 
-  it('renders a premium card back (foil + logo mark)', () => {
+  it('renders the enriched CSS-lattice card back (foil + SCSS-sized logo image, NO identity text)', () => {
+    // AC-09: lattice layer is SCSS-gradient-only; the retired raster pattern
+    // asset is never referenced anywhere in source.
+    expect(source).toContain('squad-unboxing__deck-card-back-lattice')
     expect(source).toContain('squad-unboxing__deck-card-back-foil')
     expect(source).toContain('squad-unboxing__deck-card-back-logo')
-    expect(source).toContain('BrandLogo')
+    expect(source).not.toContain('squad-card-back-pattern')
+    // A8: the back logo is a bundled <Image> sized in SCSS, NOT BrandLogo —
+    // BrandLogo's inline rpx sizing is dropped by the H5 postcss pass and
+    // collapsed the back logo to a broken-image glyph in the H5 preview.
+    expect(source).not.toContain("import BrandLogo")
+    expect(source).not.toContain('<BrandLogo')
+    const backStart = source.indexOf("squad-unboxing__deck-card-face--back',\n")
+    expect(backStart).toBeGreaterThanOrEqual(0)
+    const backBlock = source.slice(backStart, source.indexOf('{/* Card front', backStart))
+    expect(backBlock).toContain('squad-unboxing__deck-card-back-logo-img')
+    expect(backBlock).toContain("/assets/joyjoin-logo-tab.png")
+    // The only image on the back is the logo mark — no archetype art here.
+    expect(backBlock).not.toContain('deck-card-art-img')
+    // Uniform backs: the 我 badge lives on the FRONT only — no identity text
+    // on any back (AC-06).
+    expect(backBlock).not.toContain('squad-unboxing__deck-card-me-badge')
+    expect(backBlock).not.toContain('{name}')
+    expect(backBlock).not.toContain('archetypeName')
   })
 
-  it('animates only transform/opacity/box-shadow (no layout-triggering properties)', () => {
+  it('marks the best-partner back with the gold-foil modifier (only back variant)', () => {
+    // AC-06: the gold tease is the only non-uniform back.
+    expect(source).toContain("isBestPartner ? 'squad-unboxing__deck-card-face--back-gold' : ''")
+  })
+
+  it('mirrors the +N overflow chip on the card back (AC-10)', () => {
+    const backStart = source.indexOf("squad-unboxing__deck-card-face--back',\n")
+    const backBlock = source.slice(backStart, source.indexOf('{/* Card front', backStart))
+    expect(backBlock).toContain('squad-unboxing__deck-card-back-overflow')
+    expect(backBlock).toContain('squad-unboxing__deck-card-meta-chip--overflow')
+    expect(backBlock).toContain('+{overflowBadge}')
+  })
+
+  it('renders the per-flip sheen element with an inline ms animation delay (AC-08)', () => {
+    expect(source).toContain('squad-unboxing__deck-card-sheen')
+    expect(source).toContain("sheenActive ? 'squad-unboxing__deck-card-sheen--active' : ''")
+    expect(source).toContain('animationDelay: `${sheenDelayMs}ms`')
+  })
+
+  it('animates only transform/opacity (no layout-triggering properties)', () => {
     // The component never declares transitionProperty or the transition
     // shorthand inline — the transition property list lives in index.scss
-    // (transform, opacity, box-shadow only).
+    // (transform + opacity only; box-shadow dropped in B1 — per-frame shadow
+    // paint on the focus lift was wasted work).
     expect(source).not.toContain('transitionProperty')
     expect(source).not.toMatch(/[^a-zA-Z]transition\s*:/)
   })

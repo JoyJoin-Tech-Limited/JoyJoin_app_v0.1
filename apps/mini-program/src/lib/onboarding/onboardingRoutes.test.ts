@@ -17,6 +17,8 @@ import {
   MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_ROOT,
   MINI_PROGRAM_ROUTES,
   MINI_PROGRAM_SUBPACKAGES,
+  MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_PAGES,
+  MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT,
   nextStepToMiniProgramRoute,
 } from './onboardingRoutes'
 
@@ -54,6 +56,10 @@ describe('mini-program onboarding routes', () => {
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/invite/index')
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/terms/index')
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/alang/event/index')
+    // D1: squad-unboxing left the main package — the tap-to-reveal revamp grew
+    // the page past the 2 MB zip ceiling.
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/squad-unboxing/index')
+    expect(MINI_PROGRAM_PAGES).toContain('pages/squad-unboxing/index')
     expect(MINI_PROGRAM_SUBPACKAGES).toEqual([
       {
         root: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT,
@@ -74,6 +80,10 @@ describe('mini-program onboarding routes', () => {
       {
         root: MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
         pages: MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_PAGES,
+      },
+      {
+        root: MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT,
+        pages: MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_PAGES,
       },
       {
         root: MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT,
@@ -98,7 +108,18 @@ describe('mini-program onboarding routes', () => {
       },
       'pages/events/index': {
         network: 'all',
-        packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT],
+        packages: [
+          MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
+          MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT,
+        ],
+      },
+      'pages/center-hub/index': {
+        network: 'all',
+        packages: [MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT],
+      },
+      'pages/matching-status/index': {
+        network: 'all',
+        packages: [MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT],
       },
       'pages/discover/index': {
         network: 'all',

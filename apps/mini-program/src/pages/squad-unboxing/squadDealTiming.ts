@@ -22,6 +22,15 @@ export const DEAL_CARD_ENTER_MS = 260
 export const DEAL_STAGGER_MAX_MS = 150
 
 /**
+ * Below this per-card stagger the landing haptics merge into one continuous
+ * buzz (N≥6 compresses the stagger to ~68ms). SquadDeckStage skips per-card
+ * landing haptics entirely under the threshold; the box-open haptic still
+ * carries the moment. At N≤5 the stagger stays ≥ 85ms so every card keeps
+ * its own landing tap.
+ */
+export const DEAL_HAPTIC_MIN_STAGGER_MS = 80
+
+/**
  * Per-card stagger, compressed so the whole deal fits the active budget.
  * The budget is authoritative — the stagger compresses without a floor so
  * the deal can never overrun 600ms, even beyond the product's ≤8-member
@@ -44,4 +53,53 @@ export function computeDealActiveMs(count: number): number {
 /** Total time from reveal mount until the deal is fully settled. */
 export function computeDealTotalMs(count: number): number {
   return DEAL_ANTICIPATION_MS + computeDealActiveMs(count)
+}
+
+// ── Tap-to-reveal flip timing (2026-07-14) ──────────────────────────────────
+// After the deal settles, cards sit face-down. Flips are deliberate: a tap
+// flips one card, the hint chip bursts the rest. The flip animation itself is
+// the rotateY transition on the card inner (0.34s in index.scss).
+
+/** The rotateY flip transition duration — mirrors index.scss (0.34s). */
+export const FLIP_DURATION_MS = 340
+
+/**
+ * The 我 card auto-flips this long after the deal settles — a short beat that
+ * demonstrates the flip gesture without focus chrome or narration (AC-01/17).
+ */
+export const AUTO_ME_FLIP_DELAY_MS = 300
+
+/**
+ * Narration for a one-step flip-to-focus beat lands after the flip ends,
+ * never tap-instant. Flip (340ms) + a small settle beat, bounded ≤500ms so
+ * the bubble never feels detached from the gesture (AC-02).
+ */
+export const FLIP_NARRATION_DELAY_MS = 400
+
+/**
+ * While any flip is in flight, further taps are ignored (no unfocus mid-flip,
+ * no double-flip — AC-02/REL-01). Flip duration + a small guard margin.
+ */
+export const FLIP_IN_FLIGHT_GUARD_MS = 380
+
+/** Reveal-all burst: every remaining card flips within this wall-clock budget. */
+export const BURST_ACTIVE_BUDGET_MS = 600
+export const BURST_STAGGER_MAX_MS = 120
+
+/**
+ * Per-card stagger for the reveal-all burst, compressed so the whole burst
+ * fits the active budget regardless of remaining count (same discipline as
+ * the deal: the budget is authoritative, the stagger compresses without a
+ * floor). Reveal-all covers at most MAX_FAN_CARDS (≤8) visible cards.
+ */
+export function computeBurstStaggerMs(count: number): number {
+  if (count <= 1) return 0
+  const raw = (BURST_ACTIVE_BUDGET_MS - FLIP_DURATION_MS) / (count - 1)
+  return Math.min(BURST_STAGGER_MAX_MS, raw)
+}
+
+/** Total burst wall-clock until the last card's flip has settled. */
+export function computeBurstTotalMs(count: number): number {
+  if (count <= 0) return 0
+  return FLIP_DURATION_MS + computeBurstStaggerMs(count) * Math.max(0, count - 1)
 }

@@ -241,16 +241,57 @@ async function captureSquadUnboxingFocused() {
       await clearAndSeedStorage(page)
       await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
 
-      // Wait for the focused detail panel to expand (on-demand panel:
-      // --open modifier replaces the old reserved --ready shell).
-      await page.waitForSelector('.squad-unboxing__detail-panel--open', { timeout: 10000 })
+      // Wait for the focused card lift (page-owned focus state; the old
+      // on-demand detail panel was retired — narration lives in the dock).
+      await page.waitForSelector('.squad-unboxing__deck-card--focused', { timeout: 10000 })
       await page.waitForTimeout(1200)
 
-      // The on-demand panel sits directly below the fixed stage in normal
-      // flow, so at scroll 0 it is already inside the viewport; the fixed
-      // bottom dock would overlay its tail, so hide the dock only.
+      // Hide the fixed bottom dock so the viewport shot isn't blocked.
       await page.addStyleTag({ content: '.squad-unboxing__bottom-dock { display: none !important; }' })
       await page.waitForTimeout(400)
+      return page.screenshot({ fullPage: false })
+    }
+  )
+}
+
+/**
+ * Story-mode revealed captures (tap-to-reveal, AC-09):
+ * - `revealed-partial`: me + 2 tablemates face-up, hint chip shows the live
+ *   unflipped count and doubles as the reveal-all trigger.
+ * - `revealed-allup`: every card face-up (post-burst resting state).
+ * - `revealed-overflow`: 9-member roster — the fan caps at 8 cards and the
+ *   9th collapses into a "+1" chip on the last card, front AND back (AC-10).
+ * Seeds are controller-side (no timers/analytics) so captures are
+ * deterministic.
+ */
+async function captureSquadUnboxingStoryRevealed(storyName, { groupId = 'group-screenshot-001', waitChip = false } = {}) {
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      await page.goto(
+        `${H5_BASE_URL}/#/pages/squad-unboxing/index?groupId=${groupId}&__story=${storyName}&motion=reduce`,
+        { waitUntil: 'domcontentloaded', timeout: 60000 }
+      )
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+      await page.waitForSelector('.squad-unboxing__deck-stage', { timeout: 10000 })
+      await page.waitForSelector('.squad-unboxing__deck-card', { timeout: 10000 })
+      if (waitChip) {
+        await page.waitForSelector('.squad-unboxing__reveal-chip', { timeout: 10000 })
+      }
+      // Give archetype images time to load over the CDN.
+      await page.waitForTimeout(2500)
+
+      await page.addStyleTag({ content: '.squad-unboxing__action-zone { display: none !important; }' })
+      await page.waitForTimeout(200)
+
+      await page.evaluate(() => {
+        const deck = document.querySelector('.squad-unboxing__deck-stage')
+        if (deck) deck.scrollIntoView({ behavior: 'instant', block: 'start', inline: 'nearest' })
+      })
+      await page.waitForTimeout(400)
+
       return page.screenshot({ fullPage: false })
     }
   )
@@ -368,6 +409,9 @@ register('squad-unboxing-shaking', captureSquadUnboxingShaking)
 register('squad-unboxing-focused', captureSquadUnboxingFocused)
 register('squad-unboxing-revealed', () => captureSquadUnboxingRevealed())
 register('squad-unboxing-revealed-6', () => captureSquadUnboxingRevealed('group-screenshot-006'))
+register('squad-unboxing-revealed-partial', () => captureSquadUnboxingStoryRevealed('revealed-partial', { waitChip: true }))
+register('squad-unboxing-revealed-allup', () => captureSquadUnboxingStoryRevealed('revealed-allup'))
+register('squad-unboxing-revealed-overflow', () => captureSquadUnboxingStoryRevealed('revealed-partial', { groupId: 'group-screenshot-009', waitChip: true }))
 register('profile-review-welcome-coupon', captureProfileReview)
 register('matching-status-puzzle-prelude', captureMatchingStatusPuzzlePrelude)
 

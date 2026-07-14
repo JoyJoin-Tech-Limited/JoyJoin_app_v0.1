@@ -136,7 +136,6 @@ export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.eventDetail,
   MINI_PROGRAM_PAGE_PATHS.eventFeedback,
   MINI_PROGRAM_PAGE_PATHS.eventCoordination,
-  MINI_PROGRAM_PAGE_PATHS.squadUnboxing,
   MINI_PROGRAM_PAGE_PATHS.poolGroupDetail,
   MINI_PROGRAM_PAGE_PATHS.centerTabEmpty,
   MINI_PROGRAM_PAGE_PATHS.cityUnlock,
@@ -157,6 +156,7 @@ export const MINI_PROGRAM_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.tierSelector,
   MINI_PROGRAM_PAGE_PATHS.matchingStatus,
   MINI_PROGRAM_PAGE_PATHS.poolRegistration,
+  MINI_PROGRAM_PAGE_PATHS.squadUnboxing,
 ] as const
 
 export const MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT = 'pages/icebreaker-session' as const
@@ -192,6 +192,12 @@ export const MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_PAGES = [
   'index',
 ] as const
 
+export const MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT = 'pages/squad-unboxing' as const
+
+export const MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_PAGES = [
+  'index',
+] as const
+
 export const MINI_PROGRAM_SUBPACKAGES = [
   {
     root: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT,
@@ -214,6 +220,10 @@ export const MINI_PROGRAM_SUBPACKAGES = [
     pages: MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_PAGES,
   },
   {
+    root: MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_PAGES,
+  },
+  {
     root: MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT,
     pages: MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES,
   },
@@ -234,7 +244,18 @@ export const MINI_PROGRAM_PRELOAD_RULES = {
   },
   [MINI_PROGRAM_PAGE_PATHS.events]: {
     network: 'all',
-    packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT],
+    packages: [
+      MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
+      MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT,
+    ],
+  },
+  [MINI_PROGRAM_PAGE_PATHS.centerHub]: {
+    network: 'all',
+    packages: [MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT],
+  },
+  [MINI_PROGRAM_PAGE_PATHS.matchingStatus]: {
+    network: 'all',
+    packages: [MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT],
   },
   [MINI_PROGRAM_PAGE_PATHS.discover]: {
     network: 'all',

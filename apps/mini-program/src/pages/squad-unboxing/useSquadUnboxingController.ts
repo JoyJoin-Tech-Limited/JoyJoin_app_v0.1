@@ -17,14 +17,22 @@ import { haptics } from '../../lib/utils/haptics'
 import { logError, logInfo } from '../../lib/utils/logger'
 import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, COLOR_DANGER } from '../../lib/utils/uiConstants'
 import { openPoolGroupDetail, switchToEventsTab } from '../../lib/navigation/matchingNavigation'
-import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
+import { squadUnboxingAnalytics, type SquadUnboxingEventType } from '../../lib/analytics/squadUnboxingAnalytics'
 import {
   buildPairKeyMemberMap,
   computeActionDockState,
+  computeBestPartnerUserId,
   getSquadChemistryTokens,
   type ActionDockState,
   type FlowState,
 } from './squadUnboxingViewModels'
+import { MAX_FAN_CARDS } from './computeFanLayout'
+import {
+  computeUnflippedCount,
+  createSquadFlipSession,
+  type FlipSnapshot,
+  type SquadFlipSession,
+} from './squadFlipState'
 
 function getRevealFlagKey(groupId: string): string {
   return `jj_revealed_${groupId}`
@@ -62,12 +70,18 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   const storyName = routerParams['__story']
 
   const [flowState, setFlowState] = useState<FlowState>(() => (groupId ? (readRevealFlag(groupId) ? 'revealed' : 'ready') : 'ready'))
+  // Tap-to-reveal session interactivity (AC-01/AC-03): derived from the
+  // reveal flag AT ARRIVAL only. First visit (flag absent) → interactive
+  // face-down game; re-entry (flag present) → all-up, no chip, no shimmer.
+  // Writing the flag at box-open must NOT flip this back mid-session.
+  const [isInteractiveSession, setIsInteractiveSession] = useState(() => (groupId ? !readRevealFlag(groupId) : false))
   const prevGroupIdRef = useRef<string>(groupId)
   useEffect(() => {
     if (!groupId) return
     if (prevGroupIdRef.current === groupId) return
     prevGroupIdRef.current = groupId
     setFlowState(readRevealFlag(groupId) ? 'revealed' : 'ready')
+    setIsInteractiveSession(!readRevealFlag(groupId))
   }, [groupId])
 
   const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(false)
@@ -86,6 +100,10 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   // present. Only active in builds that opt in via `TARO_APP_ENABLE_STORY_MODE=true`.
   useEffect(() => {
     if (!storyMode) return
+    // Every squad story state is a first-visit interactive session (the
+    // face-down game); re-entry all-up is the non-story default when the
+    // reveal flag is present.
+    setIsInteractiveSession(true)
     if (storyName === 'ready') {
       setFlowState('ready')
       return
@@ -94,7 +112,12 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
       setFlowState('shaking')
       return
     }
-    if (storyName === 'focused' || storyName === 'revealed') {
+    if (
+      storyName === 'focused' ||
+      storyName === 'revealed' ||
+      storyName === 'revealed-partial' ||
+      storyName === 'revealed-allup'
+    ) {
       setFlowState('revealed')
       return
     }
@@ -250,6 +273,113 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
 
     return map
   }, [currentUserId, pairKeyMemberMap, viewerPairs])
+
+  // ── Tap-to-reveal flip session (AC-13: flip state is controller-owned) ────
+  // The session is the single source of truth for which cards are face-up;
+  // focus state stays page-owned. Re-created per groupId so a new table never
+  // inherits the previous table's flips.
+  const visibleIds = useMemo(
+    () => members.slice(0, MAX_FAN_CARDS).map((member) => member.userId),
+    [members],
+  )
+
+  const bestPartnerUserId = useMemo(
+    () => computeBestPartnerUserId(members, currentUserId, viewerPairByMemberId),
+    [members, currentUserId, viewerPairByMemberId],
+  )
+
+  const flipSessionRef = useRef<SquadFlipSession | null>(null)
+  const flipSessionGroupRef = useRef<string | null>(null)
+  // B6: the session has a declared groupId dependency (useMemo); the ref
+  // guard inside the factory keeps creation safe if React discards the memo
+  // cache or double-invokes it — a stale table's session can never survive.
+  useMemo(() => {
+    if (flipSessionRef.current === null || flipSessionGroupRef.current !== groupId) {
+      flipSessionRef.current?.destroy()
+      flipSessionRef.current = createSquadFlipSession({
+        now: () => Date.now(),
+        setTimer: (cb, ms) => setTimeout(cb, ms),
+        clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+        track: (eventType, payload) =>
+          squadUnboxingAnalytics.track(eventType as SquadUnboxingEventType, {
+            groupId,
+            screen: 'squad-unboxing',
+            ...payload,
+          }),
+      })
+      flipSessionGroupRef.current = groupId
+    }
+  }, [groupId])
+
+  const [flipSnapshot, setFlipSnapshot] = useState<FlipSnapshot>(() => flipSessionRef.current!.getSnapshot())
+  useEffect(() => {
+    const session = flipSessionRef.current!
+    setFlipSnapshot(session.getSnapshot())
+    return session.subscribe(() => setFlipSnapshot(session.getSnapshot()))
+  }, [groupId])
+  useEffect(() => () => flipSessionRef.current?.destroy(), [])
+
+  const flipOne = useCallback(
+    (id: string, method: 'tap' | 'auto_me') =>
+      flipSessionRef.current!.flipOne(id, method, {
+        index: members.findIndex((member) => member.userId === id),
+        isBestPartner: id === bestPartnerUserId,
+      }),
+    [members, bestPartnerUserId],
+  )
+
+  const flipAll = useCallback(
+    () =>
+      flipSessionRef.current!.flipAll((id) => ({
+        index: members.findIndex((member) => member.userId === id),
+        isBestPartner: id === bestPartnerUserId,
+      })),
+    [members, bestPartnerUserId],
+  )
+
+  const isFlipInFlight = useCallback(() => flipSessionRef.current!.isFlipInFlight(), [])
+
+  const notifyDealSettled = useCallback(
+    (instant: boolean) => {
+      flipSessionRef.current!.notifyDealSettled({
+        visibleIds,
+        currentUserId,
+        bestPartnerUserId,
+        interactive: isInteractiveSession,
+        instant,
+      })
+    },
+    [visibleIds, currentUserId, bestPartnerUserId, isInteractiveSession],
+  )
+
+  // Re-entry sessions are all-up: nothing left to flip, no hint chip.
+  const unflippedCount = isInteractiveSession
+    ? computeUnflippedCount(visibleIds, flipSnapshot.flippedIds)
+    : 0
+
+  // Story-mode seeding: deterministic face-up sets for the screenshot states.
+  // Seed (no analytics/timers) so captures are timer-independent.
+  useEffect(() => {
+    if (!storyMode || members.length === 0) return
+    const meId = currentUserId
+    if (storyName === 'revealed-partial') {
+      const seeds = [meId, ...visibleIds.filter((id) => id !== meId).slice(0, 2)].filter(
+        (id): id is string => Boolean(id),
+      )
+      flipSessionRef.current?.seedFlipped(seeds)
+      return
+    }
+    if (storyName === 'revealed-allup') {
+      flipSessionRef.current?.seedFlipped(visibleIds)
+      return
+    }
+    if (storyName === 'focused') {
+      const seeds = [meId, ...visibleIds.filter((id) => id !== meId).slice(0, 3)].filter(
+        (id): id is string => Boolean(id),
+      )
+      flipSessionRef.current?.seedFlipped(seeds)
+    }
+  }, [storyMode, storyName, members.length, visibleIds, currentUserId])
 
   const groupThemeHighlights = useMemo(
     () =>
@@ -426,6 +556,16 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     isSubmitting,
     showSuccessOverlay,
     archetypeMixCopy,
+    // Tap-to-reveal flip session (controller-owned per AC-13)
+    flippedIds: flipSnapshot.flippedIds,
+    flipDelayById: flipSnapshot.flipDelayById,
+    unflippedCount,
+    isInteractiveSession,
+    bestPartnerUserId,
+    flipOne,
+    flipAll,
+    isFlipInFlight,
+    notifyDealSettled,
     handleOpenBox,
     handleConfirmAttendance,
     handleOpenGroupDetail,

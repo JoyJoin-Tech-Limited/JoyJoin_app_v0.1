@@ -5,6 +5,7 @@ import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { normalizeMatchingCopy } from '@shared/features/matching-status'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
+import { usePageTTI } from '../../hooks/usePageTTI'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { useJoyJoinNavigation } from '../../hooks/navigation/useJoyJoinNavigation'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
@@ -29,6 +30,7 @@ import SquadDeckStage from './SquadDeckStage'
 import {
   buildEventBriefDate,
   buildFocusedMemberBubbleText,
+  buildRevealChipLabel,
   buildSquadSoulBubbleText,
   getChemistryWord,
   getEventTypeLabel,
@@ -36,7 +38,12 @@ import {
   getPairChemistryWord,
   getVibeLabel,
   resolveCardFocusInteraction,
+  SQUAD_BURST_COMPLETION_BUBBLE_TEXT,
+  SQUAD_SELF_CARD_BUBBLE_TEXT,
+  SQUAD_TEASE_BUBBLE_TEXT,
+  stripConnectionPointParens,
 } from './squadUnboxingViewModels'
+import { scheduleFlipSettleNarration } from './squadFlipState'
 import { getOracleCardCornerAsset } from '../../components/discover/oracleCardAssets'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import { preloadImagesWithDiagnostics } from '../../lib/utils/imagePreload'
@@ -110,6 +117,15 @@ export default function SquadUnboxingPage() {
     isSubmitting,
     showSuccessOverlay,
     archetypeMixCopy,
+    flippedIds,
+    flipDelayById,
+    unflippedCount,
+    isInteractiveSession,
+    bestPartnerUserId,
+    flipOne,
+    flipAll,
+    isFlipInFlight,
+    notifyDealSettled,
     handleOpenBox,
     handleConfirmAttendance,
     handleOpenGroupDetail,
@@ -120,6 +136,8 @@ export default function SquadUnboxingPage() {
   } = useSquadUnboxingController({ groupId, routerParams: router.params })
 
   const { isDegradation } = useDeviceTier()
+  // B5: TTI instrumentation — ready once the auth gate and group fetch settle.
+  usePageTTI({ pageName: 'squad-unboxing', ready: !authLoading && !isLoading })
   const { user: currentUser } = useAuthGuard()
   const aigcEnabled = useAIGCLabelsEnabled()
   const dragRevealEnabled = currentUser?.features?.squadUnboxingDragRevealEnabled ?? true
@@ -137,16 +155,33 @@ export default function SquadUnboxingPage() {
   const [announcement, setAnnouncement] = useState('')
   const [headerReady, setHeaderReady] = useState(false)
   const [briefVignetteFailed, setBriefVignetteFailed] = useState(false)
-  // Bump on swipe-back re-entry to reset transient deal/focus/peek state in
+  // Bump on swipe-back re-entry to reset transient deal/focus state in
   // the deck stage. First mount is excluded so the initial deal can animate.
   const [resetSignal, setResetSignal] = useState(0)
   const hasShownRef = useRef(false)
-  // Mirror of focusedCardIndex so handleCardFocus can compute the next focus
+  // Mirror of focusedCardIndex so handleCardTap can compute the next focus
   // synchronously without running side effects inside a state updater.
   const focusedCardIndexRef = useRef(-1)
   const animateFocusedNarrationRef = useRef(false)
   const seenMemberNarrationsRef = useRef<Set<string>>(new Set())
+  // Dock-bubble narration (AC-02): null = resting voice; 'member' = per-card
+  // narration for the focused card; 'burst' = the group-completion line after
+  // a reveal-all burst. The narration swap for a one-step flip lands AFTER
+  // the flip ends (ref-tracked timer, ≤500ms bound — never tap-instant).
+  const [bubbleNarration, setBubbleNarration] = useState<{ kind: 'member'; userId: string } | { kind: 'burst' } | null>(null)
+  const narrationCancelRef = useRef<(() => void) | null>(null)
   const matchExplanationCopy = normalizeMatchingCopy(group?.matchExplanation)
+
+  const cancelNarrationTimer = useCallback(() => {
+    if (narrationCancelRef.current) {
+      narrationCancelRef.current()
+      narrationCancelRef.current = null
+    }
+  }, [])
+
+  // No setState-after-unmount: an interrupted flip never narrates a stale
+  // card (REL-04).
+  useEffect(() => () => cancelNarrationTimer(), [cancelNarrationTimer])
 
   const reportScrollDepth = useScrollDepthTracking(groupId)
 
@@ -168,12 +203,22 @@ export default function SquadUnboxingPage() {
     if (isStoryFocused && members.length > 0 && focusedCardIndex === -1) {
       const index = Math.min(2, members.length - 1)
       setFocusedCardIndex(index)
+      focusedCardIndexRef.current = index
+      // Focused-after-flip story state: the dock narrates the focused member.
+      const member = members[index]
+      if (member) setBubbleNarration({ kind: 'member', userId: member.userId })
     }
-  }, [isStoryFocused, members.length, focusedCardIndex])
+  }, [isStoryFocused, members.length, focusedCardIndex, members])
 
   useDidShow(() => {
     if (isStoryFocused) return
     setFocusedCardIndex(-1)
+    focusedCardIndexRef.current = -1
+    // Warm re-entry returns the bubble to the resting 团魂 voice and drops any
+    // in-flight narration timer (mid-game flips themselves survive — they are
+    // controller-owned session state).
+    cancelNarrationTimer()
+    setBubbleNarration(null)
     if (hasShownRef.current) {
       // Re-entry (swipe-back / foreground): the reveal already played — keep
       // the chapters, 团魂 bubble, and action dock VISIBLE (headerReady stays
@@ -203,13 +248,31 @@ export default function SquadUnboxingPage() {
     return () => clearTimeout(timer)
   }, [authLoading, isLoading])
 
-  const handleCardFocus = useCallback((index: number) => {
-    // Compute the next focus synchronously from the mirrored ref so all side
-    // effects (haptic, analytics) live outside the state updater — React may
-    // replay updaters, which previously double-fired them.
-    const current = focusedCardIndexRef.current
+  const trackCardFocus = useCallback((index: number, previousIndex: number, interaction?: string) => {
     const member = members[index]
-    const memberKey = member?.userId ?? `index:${index}`
+    squadUnboxingAnalytics.track('squad_unboxing_card_focus', {
+      source: 'deck_tap',
+      ...(interaction ? { interaction } : {}),
+      cardIndex: index,
+      focusedUserId: member?.userId,
+      previousIndex,
+      groupId,
+      screen: 'squad-unboxing',
+    })
+  }, [members, groupId])
+
+  /**
+   * Face-up focus authority (`resolveCardFocusInteraction`):
+   * - different card → focus; narration swaps instantly and the typewriter
+   *   animates only the first time a member is seen.
+   * - same card while narrating → fast-forward the animation (content kept).
+   * - same card when done → dismiss (unfocus → resting voice).
+   */
+  const handleCardFocus = useCallback((index: number, haptic: 'light' | 'none' = 'light') => {
+    const member = members[index]
+    if (!member) return
+    const current = focusedCardIndexRef.current
+    const memberKey = member.userId ?? `index:${index}`
     const resolution = resolveCardFocusInteraction(
       current,
       index,
@@ -224,10 +287,12 @@ export default function SquadUnboxingPage() {
     setAnimateFocusedNarration(resolution.animateNarration)
 
     if (resolution.action === 'dismiss') {
+      cancelNarrationTimer()
+      setBubbleNarration(null)
       squadUnboxingAnalytics.track('squad_unboxing_card_detail_dismiss', {
         source: 'deck_tap',
         cardIndex: index,
-        focusedUserId: member?.userId,
+        focusedUserId: member.userId,
         previousIndex: current,
         groupId,
         screen: 'squad-unboxing',
@@ -235,26 +300,125 @@ export default function SquadUnboxingPage() {
     } else if (resolution.action === 'focus') {
       // Focus haptic is tactile feedback for an explicit tap; suppressed under
       // reduce-motion / degradation per the fallback contract.
-      if (!shouldReduceMotion && !isDegradation) haptics('light')
-      squadUnboxingAnalytics.track('squad_unboxing_card_focus', {
-        source: 'deck_tap',
-        cardIndex: next,
-        focusedUserId: member?.userId,
-        previousIndex: current,
-        groupId,
-        screen: 'squad-unboxing',
-      })
+      if (!shouldReduceMotion && !isDegradation && haptic !== 'none') haptics('light')
+      cancelNarrationTimer()
+      setBubbleNarration({ kind: 'member', userId: member.userId })
+      trackCardFocus(next, current)
     } else {
-      squadUnboxingAnalytics.track('squad_unboxing_card_focus', {
-        source: 'deck_tap',
-        interaction: 'narration_fast_forward',
-        cardIndex: index,
-        focusedUserId: member?.userId,
-        groupId,
-        screen: 'squad-unboxing',
-      })
+      // 'complete' — fast-forward an in-flight narration; content unchanged.
+      trackCardFocus(index, current, 'narration_fast_forward')
     }
-  }, [members, groupId, shouldReduceMotion, isDegradation])
+  }, [members, groupId, shouldReduceMotion, isDegradation, trackCardFocus, cancelNarrationTimer])
+
+  /**
+   * One-step reveal-with-narration (AC-02): tap a face-DOWN card → flip +
+   * focus + narration landing after flip-end (≤500ms bound, never
+   * tap-instant); `card_flip` fires once via the controller, `card_focus`
+   * once here. Tap a face-UP card → delegate to the resolver (focus /
+   * fast-forward / dismiss). Taps while any flip is in flight are ignored.
+   *
+   * `haptic: 'none'` is used by the long-press path — the card already fired
+   * the medium long-press haptic (AC-12).
+   */
+  const handleCardTap = useCallback((index: number, haptic: 'light' | 'none' = 'light') => {
+    const member = members[index]
+    if (!member) return
+    if (isFlipInFlight()) return
+
+    const instant = shouldReduceMotion || isDegradation
+    const isFaceUp = !isInteractiveSession || flippedIds.has(member.userId)
+
+    if (isFaceUp) {
+      handleCardFocus(index, haptic)
+      return
+    }
+
+    // First flip of a card is by definition unseen — animate the narration
+    // when it lands after flip-end (resolver semantics for later re-taps).
+    const current = focusedCardIndexRef.current
+    flipOne(member.userId, 'tap')
+    seenMemberNarrationsRef.current.add(member.userId)
+    animateFocusedNarrationRef.current = true
+    setAnimateFocusedNarration(true)
+    focusedCardIndexRef.current = index
+    setFocusedCardIndex(index)
+    if (!instant && haptic !== 'none') haptics('light')
+    trackCardFocus(index, current)
+    cancelNarrationTimer()
+    if (instant) {
+      setBubbleNarration({ kind: 'member', userId: member.userId })
+    } else {
+      narrationCancelRef.current = scheduleFlipSettleNarration(
+        { setTimer: (cb, ms) => setTimeout(cb, ms), clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>) },
+        () => {
+          narrationCancelRef.current = null
+          setBubbleNarration({ kind: 'member', userId: member.userId })
+        },
+      )
+    }
+  }, [
+    members,
+    isFlipInFlight,
+    shouldReduceMotion,
+    isDegradation,
+    isInteractiveSession,
+    flippedIds,
+    flipOne,
+    trackCardFocus,
+    cancelNarrationTimer,
+    handleCardFocus,
+  ])
+
+  const handleCardLongPress = useCallback((index: number) => {
+    // Long-press = the same one-step beat; the card's own trailing-tap guard
+    // swallows the release tap so nothing double-fires (AC-12).
+    handleCardTap(index, 'none')
+  }, [handleCardTap])
+
+  /**
+   * Hint-chip reveal-all (AC-05): staggered flip burst with NO per-card focus
+   * chrome and NO per-card narration swaps. Any active focus is cleared
+   * BEFORE the burst; on completion the bubble shows one group-level line.
+   */
+  const handleRevealAll = useCallback(() => {
+    if (isFlipInFlight()) return
+    if (unflippedCount <= 0) return
+
+    const instant = shouldReduceMotion || isDegradation
+    if (!instant) haptics('light')
+    squadUnboxingAnalytics.track('squad_unboxing_reveal_all_tap', {
+      remainingCount: unflippedCount,
+      groupId,
+      screen: 'squad-unboxing',
+    })
+
+    focusedCardIndexRef.current = -1
+    setFocusedCardIndex(-1)
+    cancelNarrationTimer()
+    setBubbleNarration(null)
+
+    const { totalMs } = flipAll()
+    if (instant) {
+      setBubbleNarration({ kind: 'burst' })
+    } else {
+      narrationCancelRef.current = scheduleFlipSettleNarration(
+        { setTimer: (cb, ms) => setTimeout(cb, ms), clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>) },
+        () => {
+          narrationCancelRef.current = null
+          setBubbleNarration({ kind: 'burst' })
+        },
+        totalMs,
+      )
+    }
+  }, [
+    isFlipInFlight,
+    unflippedCount,
+    shouldReduceMotion,
+    isDegradation,
+    groupId,
+    flipAll,
+    cancelNarrationTimer,
+  ])
 
   const handleAnalysisRetry = useCallback(() => {
     squadUnboxingAnalytics.track('squad_unboxing_analysis_retry_tap', {
@@ -280,17 +444,30 @@ export default function SquadUnboxingPage() {
   const focusedViewerPair = focusedMember
     ? (viewerPairByMemberId.get(focusedMember.userId) ?? null)
     : null
-  const focusedMemberBubbleText = focusedMember
-    ? focusedMember.userId === currentUserId
-      ? '这张是你的桌友卡。悦仔把你放进这桌，也把属于你的视角带进了今晚。'
-      : buildFocusedMemberBubbleText(
-        getMemberName(focusedMember),
-        normalizeMatchingCopy(focusedViewerPair?.explanation),
-        focusedViewerPair?.connectionPoints ?? [],
-        focusedViewerPair?.introAngle,
-        focusedMember,
-      )
-    : null
+  // Bubble voice: burst-completion line > focused-member narration (only when
+  // the narration matches the currently focused card — a pending flip keeps
+  // the resting voice until flip-end) > resting voice. While face-down cards
+  // remain in an interactive session the resting voice is the tease line (C1);
+  // the soul line is earned once every card is face-up.
+  const bubbleText = bubbleNarration?.kind === 'burst'
+    ? SQUAD_BURST_COMPLETION_BUBBLE_TEXT
+    : bubbleNarration?.kind === 'member' && focusedMember && bubbleNarration.userId === focusedMember.userId
+      ? focusedMember.userId === currentUserId
+        ? SQUAD_SELF_CARD_BUBBLE_TEXT
+        : buildFocusedMemberBubbleText(
+          getMemberName(focusedMember),
+          normalizeMatchingCopy(focusedViewerPair?.explanation),
+          focusedViewerPair?.connectionPoints ?? [],
+          focusedViewerPair?.introAngle,
+          focusedMember,
+        )
+      : isInteractiveSession && unflippedCount > 0
+        ? SQUAD_TEASE_BUBBLE_TEXT
+        : buildSquadSoulBubbleText(
+          archetypeMixCopy,
+          groupAnalysis?.groupThemeCompanion || matchExplanationCopy,
+          groupAnalysis?.groupDynamics,
+        )
 
   // Event-brief card: structured date block + shared OracleCard corner vignette.
   const briefDate = buildEventBriefDate(group?.finalDateTime ?? pool?.dateTime)
@@ -767,7 +944,7 @@ export default function SquadUnboxingPage() {
                               {(pair.connectionPointsWithRarity?.length ?? pair.connectionPoints.length) > 0 ? (
                                 <View className='squad-unboxing__pair-pill-row'>
                                   {(pair.connectionPointsWithRarity ?? pair.connectionPoints.slice(0, 3).map((text) => ({ text, rarity: 'common' as const }))).slice(0, 3).map((point) => (
-                                    <ConnectionPointPill key={point.text} text={point.text} rarity={point.rarity} />
+                                    <ConnectionPointPill key={point.text} text={stripConnectionPointParens(point.text)} rarity={point.rarity} />
                                   ))}
                                 </View>
                               ) : null}
@@ -932,7 +1109,14 @@ export default function SquadUnboxingPage() {
             reduceMotion={shouldReduceMotion}
             isDegradation={isDegradation}
             resetSignal={resetSignal}
-            onFocusChange={handleCardFocus}
+            flippedIds={flippedIds}
+            flipDelayById={flipDelayById}
+            bestPartnerUserId={bestPartnerUserId}
+            allRevealed={!isInteractiveSession}
+            interactive={isInteractiveSession}
+            onDealSettled={notifyDealSettled}
+            onCardTap={handleCardTap}
+            onCardLongPress={handleCardLongPress}
           />
         ) : null}
         {flowState !== 'revealed' ? (
@@ -953,7 +1137,34 @@ export default function SquadUnboxingPage() {
             .filter(Boolean)
             .join(' ')}
         >
-          <View className='squad-unboxing__analysis-bubble squad-unboxing__analysis-bubble--in-dock'>
+          {/* Hint chip (AC-04): progress slot — live unflipped count with an
+              explicit tap verb; doubles as the reveal-all trigger (AC-05).
+              Absent when N=0 and on all-up re-entry. Separate visual slot
+              from the bubble (chip = progress, bubble = voice). */}
+          {isInteractiveSession && unflippedCount > 0 ? (
+            <View
+              className='squad-unboxing__reveal-chip'
+              hoverClass='squad-unboxing__reveal-chip--pressed'
+              role='button'
+              aria-label={buildRevealChipLabel(unflippedCount)}
+              onClick={handleRevealAll}
+            >
+              <Text className='squad-unboxing__reveal-chip-text'>
+                {buildRevealChipLabel(unflippedCount)}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Bubble = voice (AC-18): role=status + aria-live=polite +
+              aria-atomic so the COMPLETE narration string is announced once;
+              the TypewriterText visual is aria-hidden so screen readers never
+              hear per-character typing. */}
+          <View
+            className='squad-unboxing__analysis-bubble squad-unboxing__analysis-bubble--in-dock'
+            role='status'
+            aria-live='polite'
+            aria-atomic='true'
+          >
             <View
               className={[
                 'squad-unboxing__analysis-bubble-inner',
@@ -970,25 +1181,24 @@ export default function SquadUnboxingPage() {
                 aria-hidden='true'
               />
               <View className='squad-unboxing__analysis-bubble-bubble'>
-                <TypewriterText
-                  className='squad-unboxing__analysis-bubble-text'
-                  text={focusedMemberBubbleText || buildSquadSoulBubbleText(
-                    archetypeMixCopy,
-                    groupAnalysis?.groupThemeCompanion || matchExplanationCopy,
-                    groupAnalysis?.groupDynamics,
-                  )}
-                  speed={45}
-                  delay={180}
-                  maxDuration={focusedMember ? undefined : 3000}
-                  enabled={!shouldReduceMotion && (!focusedMember || animateFocusedNarration)}
-                  showCursor={false}
-                  onComplete={() => {
-                    squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
-                      groupId,
-                      screen: 'squad-unboxing',
-                    })
-                  }}
-                />
+                <View aria-hidden='true'>
+                  <TypewriterText
+                    className='squad-unboxing__analysis-bubble-text'
+                    text={bubbleText}
+                    speed={45}
+                    delay={180}
+                    maxDuration={bubbleNarration?.kind === 'member' ? undefined : 3000}
+                    enabled={!shouldReduceMotion && !isDegradation && (bubbleNarration?.kind !== 'member' || animateFocusedNarration)}
+                    showCursor={false}
+                    onComplete={() => {
+                      squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
+                        groupId,
+                        screen: 'squad-unboxing',
+                      })
+                    }}
+                  />
+                </View>
+                <Text className='squad-unboxing__sr-only'>{bubbleText}</Text>
                 <AIGCLabel
                   meta={groupAnalysis?.meta?.aigc}
                   className='squad-unboxing__analysis-bubble-aigc'

@@ -5,6 +5,8 @@
 **Scope:** `apps/mini-program/src/pages/squad-unboxing/` revealed state + gift-box chrome polish
 **Supersedes:** Direction A "Sequential Deal → flat row" (sprint-contract.squad-deal-a.md); flat row is deleted, not flag-gated
 
+> **Postscript (2026-07-14):** Sibling dimming on focus was subsequently removed in commit `13b51fcb6` ("Preserve squad card layers on focus"). Unfocused cards now keep their full-opacity fan pose — no opacity drop and no `×0.97` settle — so the layered deck stays legible. The `anyFocused` prop and `--dimmed` SCSS class were dropped from `TeammateCard`/`SquadDeckStage`. The §3 Interaction block below retains the original locked strategy for historical context; treat the dim/settle clauses as superseded by the 2026-07-14 change.
+
 ---
 
 ## 1. Fan geometry

@@ -8,8 +8,8 @@ import { normalizeMatchingCopy } from '@shared/features/matching-status'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import MissingArchetypePlaceholder from '../../components/mascot/MissingArchetypePlaceholder'
 import ConnectionPointPill from '../../components/ConnectionPointPill'
-import BrandLogo from '../../components/ui/BrandLogo'
 import { haptics } from '../../lib/utils/haptics'
+import { buildFaceDownCardAriaLabel, stripConnectionPointParens } from './squadUnboxingViewModels'
 
 export interface TeammateCardProps {
   member: PoolGroupMemberSummary
@@ -20,10 +20,18 @@ export interface TeammateCardProps {
   isCurrentUser: boolean
   /** This tablemate is the viewer's highest-chemistryScore partner. */
   isBestPartner: boolean
-  /** One-shot auto-peek: the centre card lifts briefly after the deal settles. */
-  isPeek: boolean
-  /** Card has been dealt (face-up in the fan). Drives the flip + entrance. */
-  isRevealed: boolean
+  /** Card has been dealt into the fan (drives the entrance pose). */
+  isDealt: boolean
+  /**
+   * Card shows its front. Derived solely from the controller-owned flip set
+   * (single source of truth — REL-01); per-card local flip state is banned.
+   */
+  isFaceUp: boolean
+  /** Flip transition delay (ms) — burst stagger; 0 for single flips. */
+  flipDelayMs: number
+  /** One-shot sheen across the freshly revealed front (live transitions only). */
+  sheenActive: boolean
+  sheenDelayMs: number
   /** Deal fully settled — clears the stagger delay so focus transitions snap. */
   emergeComplete: boolean
   emergeDelayMs: number
@@ -31,7 +39,8 @@ export interface TeammateCardProps {
   overflowBadge?: number
   reduceMotion: boolean
   isDegradation: boolean
-  onFocus: () => void
+  onTap: () => void
+  onLongPress: () => void
 }
 
 /** Entrance duration for a single dealt card — mirrors DEAL_CARD_ENTER_MS in
@@ -50,11 +59,19 @@ const TRAILING_TAP_MAX_AGE_MS = 3000
 
 function getConnectionPoints(pair?: PairExplanation | null) {
   if (!pair) return []
+  // A3: strip wrapping full-width parens （） before the text reaches the
+  // pill — a leading （ under 1-line ellipsis read as a severed fragment
+  // (`（都偏内向…`). The pill stays 1-line nowrap+ellipsis (Chrome 143
+  // serializes `display: -webkit-box` as flow-root — no 2-line clamp).
   if (pair.connectionPointsWithRarity && pair.connectionPointsWithRarity.length > 0) {
-    return pair.connectionPointsWithRarity.slice(0, 1)
+    return pair.connectionPointsWithRarity
+      .slice(0, 1)
+      .map((point) => ({ ...point, text: stripConnectionPointParens(point.text) }))
   }
   if (pair.connectionPoints && pair.connectionPoints.length > 0) {
-    return pair.connectionPoints.slice(0, 1).map((text) => ({ text, rarity: 'common' as const }))
+    return pair.connectionPoints
+      .slice(0, 1)
+      .map((text) => ({ text: stripConnectionPointParens(text), rarity: 'common' as const }))
   }
   return []
 }
@@ -85,14 +102,18 @@ export default function TeammateCard({
   focused,
   isCurrentUser,
   isBestPartner,
-  isPeek,
-  isRevealed,
+  isDealt,
+  isFaceUp,
+  flipDelayMs,
+  sheenActive,
+  sheenDelayMs,
   emergeComplete,
   emergeDelayMs,
   overflowBadge = 0,
   reduceMotion,
   isDegradation,
-  onFocus,
+  onTap,
+  onLongPress,
 }: TeammateCardProps) {
   const [imageError, setImageError] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
@@ -144,28 +165,27 @@ export default function TeammateCard({
   const showPlaceholder = !assetUrl || imageError
 
   const handleTap = useCallback(() => {
-    if (!isRevealed) return
+    if (!isDealt) return
     // Swallow exactly the first tap following a longpress (within 3s): the
     // flag is consumed by that first tap whether or not it is swallowed, so
     // the guard can never double-swallow, and the 3s max-age means a stale
     // flag cannot eat an unrelated future tap — an expired flag falls
-    // through and the tap is processed normally. Focus (and the per-tap
-    // haptic) is owned by the parent — flip is derived from `isRevealed`,
-    // lift from `focused`.
+    // through and the tap is processed normally. Flip/focus semantics are
+    // owned by the parent — the face derives from the controller flip set.
     if (pendingTrailingTapRef.current) {
       pendingTrailingTapRef.current = false
       if (Date.now() - lastLongPressAtRef.current < TRAILING_TAP_MAX_AGE_MS) return
     }
-    onFocus()
-  }, [isRevealed, onFocus])
+    onTap()
+  }, [isDealt, onTap])
 
   const handleLongPress = useCallback(() => {
-    if (!isRevealed) return
+    if (!isDealt) return
     lastLongPressAtRef.current = Date.now()
     pendingTrailingTapRef.current = true
     haptics('medium')
-    onFocus()
-  }, [isRevealed, onFocus])
+    onLongPress()
+  }, [isDealt, onLongPress])
 
   // Fan pose + state transforms live in SCSS classes (inline `rpx`/`deg` is
   // not transformed by the Taro H5 build). The per-index rotation comes from
@@ -173,11 +193,12 @@ export default function TeammateCard({
   // state classes and sets unitless/ms/colour values inline (safe in both
   // runtimes).
   // - Not dealt: SCSS start pose (below, scaled down, transparent).
-  // - Dealt: parent --dealt gates the per-index fan pose; --flipped shows front.
+  // - Dealt: parent --dealt gates the per-index fan pose, landing face-DOWN.
+  // - Face-up: --flipped (isDealt && isFaceUp) rotates the inner to the front.
   // - Focused: --focused-lift straightens + rises + scales; siblings preserve
-  //   their original opaque fan pose so the layered deck stays legible.
-  // - Peek: --peek lifts the centre card once after settle.
-  const opacity = isRevealed ? 1 : 0
+  //   their original opaque fan pose so the layered deck stays legible (no
+  //   dim — the tap-to-reveal revamp removed sibling dimming entirely).
+  const opacity = isDealt ? 1 : 0
   // z-index ascends left→right via the SCSS per-index rules; a focused card
   // jumps to the top. Undefined lets the SCSS value stand for non-focused.
   const zIndex = focused ? 50 : undefined
@@ -218,14 +239,16 @@ export default function TeammateCard({
     ? `0 28rpx 64rpx ${accent.shadow}, inset 0 0 0 1rpx ${accent.edgeHighlight}`
     : `0 12rpx 32rpx ${accent.shadow}, inset 0 0 0 1rpx ${accent.edgeHighlight}`
 
-  const ariaLabel = [
-    name,
-    archetypeName,
-    agePart,
-    industry,
-    isCurrentUser ? '我' : '',
-    isBestPartner ? '最佳拍档' : '',
-  ].filter(Boolean).join('，')
+  const ariaLabel = isFaceUp
+    ? [
+        name,
+        archetypeName,
+        agePart,
+        industry,
+        isCurrentUser ? '我' : '',
+        isBestPartner ? '最佳拍档' : '',
+      ].filter(Boolean).join('，')
+    : buildFaceDownCardAriaLabel(name, isCurrentUser)
 
   return (
     <View
@@ -233,13 +256,13 @@ export default function TeammateCard({
         'squad-unboxing__deck-card',
         focused ? 'squad-unboxing__deck-card--focused' : '',
         focused ? ((reduceMotion || isDegradation) ? 'squad-unboxing__deck-card--focused-lift-deg' : 'squad-unboxing__deck-card--focused-lift') : '',
-        isPeek ? 'squad-unboxing__deck-card--peek' : '',
         isCurrentUser ? 'squad-unboxing__deck-card--current' : '',
         isBestPartner ? 'squad-unboxing__deck-card--best-partner' : '',
-        // Flip is derived solely from `isRevealed` (dealt): a dealt card shows
-        // its front; a not-yet-dealt card sits in the SCSS start pose — no
-        // per-card local flip state, single source of truth in the parent.
-        isRevealed ? 'squad-unboxing__deck-card--flipped' : '',
+        // Flip is derived solely from the controller-owned flip set (single
+        // source of truth — REL-01) and only ever renders once dealt: a dealt
+        // face-down card shows the enriched back; --flipped reveals the front.
+        // No per-card local flip state may be reintroduced.
+        isDealt && isFaceUp ? 'squad-unboxing__deck-card--flipped' : '',
         reduceMotion ? 'squad-unboxing__deck-card--reduce-motion' : '',
         isDegradation ? 'squad-unboxing__deck-card--degradation' : '',
       ].filter(Boolean).join(' ')}
@@ -256,27 +279,57 @@ export default function TeammateCard({
       hoverClass='squad-unboxing__deck-card--pressed'
       role='listitem'
       aria-label={ariaLabel}
+      aria-current={focused ? 'true' : undefined}
     >
       <View
         className='squad-unboxing__deck-card-inner'
-        style={{ transitionDelay: `${transitionDelay}ms` }}
+        style={{ transitionDelay: `${flipDelayMs}ms` }}
       >
-        {/* Card back — shown face-down during the deal flight. Premium card-back
-            design: brand gradient, foil edge, logo mark. */}
-        <View className='squad-unboxing__deck-card-face squad-unboxing__deck-card-face--back'>
+        {/* Card back — the resting face of the tap-to-reveal game. Enriched
+            CSS lattice (SCSS gradients only — no raster pattern asset), foil
+            edge, logo mark. The logo is a bundled <Image> sized in SCSS:
+            BrandLogo sizes via inline rpx, which the H5 postcss pass drops →
+            the back logo collapsed to a broken-image glyph in H5 (A8). Backs
+            are uniform except the best-partner gold tease; no identity text
+            on any back. */}
+        <View
+          className={[
+            'squad-unboxing__deck-card-face',
+            'squad-unboxing__deck-card-face--back',
+            isBestPartner ? 'squad-unboxing__deck-card-face--back-gold' : '',
+          ].filter(Boolean).join(' ')}
+        >
+          <View className='squad-unboxing__deck-card-back-lattice' aria-hidden='true' />
           <View className='squad-unboxing__deck-card-back-foil' />
           <View className='squad-unboxing__deck-card-back-logo'>
-            <BrandLogo size='sm' ariaLabel='' />
+            <Image
+              className='squad-unboxing__deck-card-back-logo-img'
+              src='/assets/joyjoin-logo-tab.png'
+              mode='aspectFit'
+              lazyLoad={false}
+              aria-hidden='true'
+            />
           </View>
-          {isCurrentUser ? (
-            <View className='squad-unboxing__deck-card-me-badge'>
-              <Text className='squad-unboxing__deck-card-me-badge-text'>我</Text>
+          {overflowBadge > 0 ? (
+            <View className='squad-unboxing__deck-card-meta-chip squad-unboxing__deck-card-meta-chip--overflow squad-unboxing__deck-card-back-overflow'>
+              <Text className='squad-unboxing__deck-card-meta-chip-text'>+{overflowBadge}</Text>
             </View>
           ) : null}
         </View>
 
         {/* Card front — the rich collectible template. */}
         <View className='squad-unboxing__deck-card-face squad-unboxing__deck-card-face--front'>
+          {/* Per-flip sheen — a transform-only band that plays once when the
+              card flips face-up (tap / auto-me / reveal-all). Reuses the
+              retired session holo's keyframe; never fires on all-up re-entry. */}
+          <View
+            className={[
+              'squad-unboxing__deck-card-sheen',
+              sheenActive ? 'squad-unboxing__deck-card-sheen--active' : '',
+            ].filter(Boolean).join(' ')}
+            style={{ animationDelay: `${sheenDelayMs}ms` }}
+            aria-hidden='true'
+          />
           <View className='squad-unboxing__deck-card-art' style={artZoneStyle}>
             {/* Top-left badge row: 我 marker + +N overflow chip. Top-left is
                 the one corner never covered by a neighbour in the fan, so

@@ -459,6 +459,67 @@ const MOCK_SQUAD_MEMBERS_6 = [
   },
 ]
 
+// Nine-member variant for the +N overflow capture (group-screenshot-009).
+// The fan caps at 8 visible cards (MAX_FAN_CARDS); the ninth member collapses
+// into a "+1" chip on the last card — front AND back (AC-10).
+const MOCK_SQUAD_MEMBERS_9 = [
+  ...MOCK_SQUAD_MEMBERS_6,
+  {
+    userId: 'user-screenshot-007',
+    displayName: '小雨',
+    archetype: 'otter',
+    topInterests: ['潜水', '摄影', 'vintage'],
+    ageLabel: '27',
+    industryNicheLabel: '品牌视觉',
+    industryCategoryLabel: '设计创意',
+    ageVisible: true,
+    industryVisible: true,
+    gender: 'female',
+    educationLevel: '本科',
+    hometownRegionCity: '广东 · 珠海',
+    hometownAffinityOptin: true,
+    educationVisible: true,
+    relationshipStatus: 'single',
+    intent: ['fun', 'friends'],
+  },
+  {
+    userId: 'user-screenshot-008',
+    displayName: '老王',
+    archetype: 'owl',
+    topInterests: ['围棋', '历史', '茶'],
+    ageLabel: '35',
+    industryNicheLabel: '高校教师',
+    industryCategoryLabel: '教育科研',
+    ageVisible: true,
+    industryVisible: true,
+    gender: 'male',
+    educationLevel: '博士',
+    hometownRegionCity: '山东 · 青岛',
+    hometownAffinityOptin: false,
+    educationVisible: true,
+    relationshipStatus: 'married',
+    intent: ['discussion', 'friends'],
+  },
+  {
+    userId: 'user-screenshot-009',
+    displayName: '米粒',
+    archetype: 'parrot',
+    topInterests: ['脱口秀', '剧本杀', '探店'],
+    ageLabel: '25',
+    industryNicheLabel: '新媒体运营',
+    industryCategoryLabel: '广告营销',
+    ageVisible: true,
+    industryVisible: true,
+    gender: 'female',
+    educationLevel: '本科',
+    hometownRegionCity: '江苏 · 南京',
+    hometownAffinityOptin: false,
+    educationVisible: true,
+    relationshipStatus: 'single',
+    intent: ['fun', 'networking'],
+  },
+]
+
 const MOCK_SQUAD_GROUP = {
   id: 'group-screenshot-001',
   groupNumber: 3,
@@ -492,14 +553,15 @@ const MOCK_SQUAD_POOL = {
 
 app.get('/api/pool-groups/:id', (req, res) => {
   const isSix = req.params.id === 'group-screenshot-006'
+  const isNine = req.params.id === 'group-screenshot-009'
   res.json({
     group: {
       ...MOCK_SQUAD_GROUP,
       id: req.params.id,
-      memberCount: isSix ? 6 : MOCK_SQUAD_GROUP.memberCount,
+      memberCount: isNine ? 9 : isSix ? 6 : MOCK_SQUAD_GROUP.memberCount,
     },
     pool: MOCK_SQUAD_POOL,
-    members: isSix ? MOCK_SQUAD_MEMBERS_6 : MOCK_SQUAD_MEMBERS,
+    members: isNine ? MOCK_SQUAD_MEMBERS_9 : isSix ? MOCK_SQUAD_MEMBERS_6 : MOCK_SQUAD_MEMBERS,
   })
 })
 
@@ -512,8 +574,10 @@ app.get('/api/pool-groups/:id/analysis', (req, res) => {
       chemistryScore: 88,
       sharedInterests: ['咖啡'],
       connectionPoints: ['都爱在咖啡馆里发呆', '聊天节奏偏慢热'],
+      // The WithRarity text deliberately ships full-width parens so the H5
+      // preview exercises the stripConnectionPointParens renderer path (A3).
       connectionPointsWithRarity: [
-        { text: '都爱在咖啡馆里发呆', rarity: 'common' },
+        { text: '（都爱在咖啡馆里发呆）', rarity: 'common' },
         { text: '聊天节奏偏慢热', rarity: 'rare' },
       ],
       introAngle: '最近有喝到让你惊喜的咖啡吗？',
@@ -596,6 +660,55 @@ app.get('/api/pool-groups/:id/analysis', (req, res) => {
           { text: '都爱听商业播客', rarity: 'common' },
         ],
         introAngle: '最近哪一期播客让你印象最深？',
+      }
+    )
+  }
+
+  // Nine-member fixture (overflow capture): viewer pairs for members 7–9 so
+  // the fan renders full connection-point pills; the 9th member only appears
+  // inside the "+1" overflow chip on the last visible card.
+  if (req.params.id === 'group-screenshot-009') {
+    // Reuse the six-member extra pairs first (fixture id builds on the 6 set).
+    pairExplanations.push(
+      {
+        pairKey: ['user-screenshot-001', 'user-screenshot-005'].sort().join('-'),
+        explanation: '都喜欢慢慢把生活过出细节，聊到咖啡和猫会停不下来。',
+        chemistryScore: 83,
+        sharedInterests: ['咖啡', '猫'],
+        connectionPoints: ['都爱在咖啡馆里画画', '都是猫系人格'],
+        introAngle: '最近有画什么让你满意的小东西吗？',
+      },
+      {
+        pairKey: ['user-screenshot-001', 'user-screenshot-006'].sort().join('-'),
+        explanation: '一个深耕产品，一个冲在创业一线，聊起用户和增长会火花四溅。',
+        chemistryScore: 91,
+        sharedInterests: ['播客'],
+        connectionPoints: ['都相信长期主义', '都爱听商业播客'],
+        introAngle: '最近哪一期播客让你印象最深？',
+      },
+      {
+        pairKey: ['user-screenshot-001', 'user-screenshot-007'].sort().join('-'),
+        explanation: '都爱用镜头收集生活，审美口味意外地合拍。',
+        chemistryScore: 80,
+        sharedInterests: ['摄影'],
+        connectionPoints: ['都喜欢随手拍', '审美偏复古'],
+        introAngle: '最近拍到过最满意的一张是什么？',
+      },
+      {
+        pairKey: ['user-screenshot-001', 'user-screenshot-008'].sort().join('-'),
+        explanation: '一个产品视角，一个学者视角，聊问题都能聊到底层。',
+        chemistryScore: 79,
+        sharedInterests: ['历史'],
+        connectionPoints: ['都爱刨根问底', '聊天节奏稳'],
+        introAngle: '最近在读哪本历史书？',
+      },
+      {
+        pairKey: ['user-screenshot-001', 'user-screenshot-009'].sort().join('-'),
+        explanation: '一个慢热，一个自来熟，组合起来饭局不会冷场。',
+        chemistryScore: 74,
+        sharedInterests: ['探店'],
+        connectionPoints: ['都爱发现小店'],
+        introAngle: '最近探到最惊喜的店是哪家？',
       }
     )
   }

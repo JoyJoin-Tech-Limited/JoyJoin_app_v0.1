@@ -16,6 +16,15 @@
 /** Content width available to the fan (750rpx − 2×32 container padding). */
 export const FAN_CONTENT_WIDTH_RPX = 686
 
+/**
+ * The fan shows at most this many cards; members beyond the cap collapse
+ * into a "+N" overflow chip on the last visible card (front AND back) so
+ * nobody is silently dropped. Canonical home — previously local to
+ * SquadDeckStage; moved here so the controller can bound flip state by the
+ * same cap (SCA-01).
+ */
+export const MAX_FAN_CARDS = 8
+
 /** Horizontal overlap between adjacent cards in a row (negative margin). */
 export const FAN_OVERLAP_RPX = 28
 
@@ -37,7 +46,7 @@ export const FAN_ROTATIONS_BY_ROW_LENGTH: Record<number, readonly number[]> = {
   1: [0],
   2: [-4.5, 4.5],
   3: [-6, 0, 6],
-  4: [-9, -3, 3, 9],
+  4: [-7, -3, 3, 7],
 }
 
 /** Card W×H (rpx) keyed by member count. Matches the locked geometry table.
@@ -68,10 +77,8 @@ export interface FanLayout {
   cardHeight: number
   /** Per-card rotation in flattened roster order (top row first). */
   rotations: number[]
-  /** Roster index (0-based) of the centre card that auto-peeks. */
-  peekIndex: number
-  overlapRpx: number
-  safeInsetRpx: number
+  overlapRpx: number;
+  safeInsetRpx: number;
 }
 
 /** Clamp any real member count into the modelled 1–8 domain. */
@@ -104,9 +111,9 @@ export function computeFanLayout(count: number): FanLayout {
     }
   }
 
-  // The auto-peek target is the visual centre of the top row. Because the top
-  // row renders first, its centre maps to roster index floor(rows[0] / 2).
-  const peekIndex = Math.floor(rows[0] / 2)
+  // The auto-peek was retired with the tap-to-reveal revamp (2026-07-14):
+  // cards land face-down and flip only on a deliberate tap, so there is no
+  // centre-card peek target in the layout anymore.
 
   return {
     count: clamped,
@@ -114,7 +121,6 @@ export function computeFanLayout(count: number): FanLayout {
     cardWidth: size.width,
     cardHeight: size.height,
     rotations,
-    peekIndex,
     overlapRpx: FAN_OVERLAP_RPX,
     safeInsetRpx: FAN_SAFE_INSET_RPX,
   }

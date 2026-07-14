@@ -6,6 +6,7 @@ import {
   FAN_OVERLAP_RPX,
   FAN_ROTATIONS_BY_ROW_LENGTH,
   FAN_SAFE_INSET_RPX,
+  MAX_FAN_CARDS,
   clampFanCount,
   computeFanLayout,
   computeFanRows,
@@ -49,16 +50,16 @@ describe('computeFanLayout — locked geometry table', () => {
   })
 
   it('emits the locked rotations per row shape', () => {
-    // N=4: single row of 4 → -9, -3, +3, +9.
-    expect(computeFanLayout(4).rotations).toEqual([-9, -3, 3, 9])
+    // N=4: single row of 4 → -7, -3, +3, +7 (C2: ±9° read as drunk-tilt).
+    expect(computeFanLayout(4).rotations).toEqual([-7, -3, 3, 7])
     // N=5: row3 (-6,0,+6) then row2 (-4.5,+4.5).
     expect(computeFanLayout(5).rotations).toEqual([-6, 0, 6, -4.5, 4.5])
     // N=6: two rows of 3.
     expect(computeFanLayout(6).rotations).toEqual([-6, 0, 6, -6, 0, 6])
-    // N=7: row4 (±9) then row3 (±6).
-    expect(computeFanLayout(7).rotations).toEqual([-9, -3, 3, 9, -6, 0, 6])
+    // N=7: row4 (±7) then row3 (±6).
+    expect(computeFanLayout(7).rotations).toEqual([-7, -3, 3, 7, -6, 0, 6])
     // N=8: two rows of 4.
-    expect(computeFanLayout(8).rotations).toEqual([-9, -3, 3, 9, -9, -3, 3, 9])
+    expect(computeFanLayout(8).rotations).toEqual([-7, -3, 3, 7, -7, -3, 3, 7])
   })
 
   it('emits exactly one rotation per card', () => {
@@ -67,20 +68,25 @@ describe('computeFanLayout — locked geometry table', () => {
     }
   })
 
-  it('rotation magnitudes stay within ±9°', () => {
+  it('rotation magnitudes stay within ±7°', () => {
     for (let count = 1; count <= 8; count += 1) {
       for (const rotation of computeFanLayout(count).rotations) {
-        expect(Math.abs(rotation)).toBeLessThanOrEqual(9)
+        expect(Math.abs(rotation)).toBeLessThanOrEqual(7)
       }
     }
   })
 
-  it('places the auto-peek target at the centre of the top row', () => {
-    expect(computeFanLayout(4).peekIndex).toBe(2) // floor(4/2)
-    expect(computeFanLayout(5).peekIndex).toBe(1) // floor(3/2)
-    expect(computeFanLayout(6).peekIndex).toBe(1)
-    expect(computeFanLayout(7).peekIndex).toBe(2) // floor(4/2)
-    expect(computeFanLayout(8).peekIndex).toBe(2)
+  it('no longer carries an auto-peek target (peek retired with tap-to-reveal)', () => {
+    // The centre-card auto-peek was deleted, not commented (MNT-02): cards
+    // land face-down and flip only on a deliberate tap.
+    const layout = computeFanLayout(4) as unknown as Record<string, unknown>
+    expect(layout.peekIndex).toBeUndefined()
+    expect('peekIndex' in computeFanLayout(8)).toBe(false)
+  })
+
+  it('caps the fan at MAX_FAN_CARDS with the clamp aligned', () => {
+    expect(MAX_FAN_CARDS).toBe(8)
+    expect(clampFanCount(99)).toBe(MAX_FAN_CARDS)
   })
 })
 

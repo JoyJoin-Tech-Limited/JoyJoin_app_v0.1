@@ -80,7 +80,7 @@ Use the WeChat DevTools **Inspect** panel (or real-device screenshot) and confir
 - [ ] Drag mode blocks parent `ScrollView` scroll; tap-fallback / low-end mode allows vertical scroll.
 - [ ] **Cascading fan deal:** after the box opens, cards deal one-by-one (staggered slide-up + flip face-up) and settle into a rotated hand-fan pose (rotation per position, 28rpx overlap); the whole deal finishes within ~600ms + a ~200ms anticipation beat.
 - [ ] 4–6 members render on a single fanned row; 7–8 members wrap to two fanned rows and both rows stay fully inside the revealed stage (no clipping top or bottom).
-- [ ] In `revealed` state, tapping a card lifts it (scale 1.1 + translateY) and dims siblings to 35%; every dealt card already shows its front face (flip is derived from the deal, not from focus).
+- [ ] In `revealed` state, tapping a card lifts it (scale 1.1 + translateY) while siblings preserve their full-opacity fan pose — **sibling dimming was removed 2026-07-14** so the layered deck stays legible; every dealt card already shows its front face (flip is derived from the deal, not from focus).
 - [ ] The detail panel lives in reserved normal-flow space below the fan: focusing a card causes NO scroll jump/reflow; the idle invite hint shows before the first tap and returns after dismiss.
 - [ ] A longpress on a card fires once and swallows exactly one trailing tap (no double action); a tap more than ~3 s after the longpress behaves as a normal tap.
 - [ ] In `revealed` state, vertical scroll can initiate over the margins around the fan while card taps still register (parent-none/child-auto pointer-events).

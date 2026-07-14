@@ -7,10 +7,18 @@ import {
   DEAL_ACTIVE_BUDGET_MS,
   DEAL_ANTICIPATION_MS,
   DEAL_CARD_ENTER_MS,
+  DEAL_HAPTIC_MIN_STAGGER_MS,
   DEAL_STAGGER_MAX_MS,
+  BURST_ACTIVE_BUDGET_MS,
+  BURST_STAGGER_MAX_MS,
+  FLIP_DURATION_MS,
+  FLIP_NARRATION_DELAY_MS,
+  AUTO_ME_FLIP_DELAY_MS,
   computeDealActiveMs,
   computeDealStaggerMs,
   computeDealTotalMs,
+  computeBurstStaggerMs,
+  computeBurstTotalMs,
 } from './squadDealTiming'
 import {
   FAN_CARD_SIZE_BY_COUNT,
@@ -18,6 +26,7 @@ import {
   FAN_OVERLAP_RPX,
   FAN_ROTATIONS_BY_ROW_LENGTH,
   FAN_SAFE_INSET_RPX,
+  MAX_FAN_CARDS,
 } from './computeFanLayout'
 
 // "Cascading Hand Fan" revealed state. The deal must fit its ≤600ms active
@@ -71,13 +80,60 @@ describe('squadDealTiming — deal budget', () => {
       previous = stagger
     }
   })
+
+  it('crosses the per-card haptic threshold exactly where the storm starts (A4)', () => {
+    // N≤5 keeps per-card landing haptics (stagger ≥ 80ms); N≥6 drops them.
+    for (let count = 2; count <= 5; count += 1) {
+      expect(computeDealStaggerMs(count), `count ${count} keeps haptics`).toBeGreaterThanOrEqual(
+        DEAL_HAPTIC_MIN_STAGGER_MS,
+      )
+    }
+    for (let count = 6; count <= 8; count += 1) {
+      expect(computeDealStaggerMs(count), `count ${count} skips haptics`).toBeLessThan(
+        DEAL_HAPTIC_MIN_STAGGER_MS,
+      )
+    }
+  })
+})
+
+describe('squadDealTiming — reveal-all burst + flip beat (tap-to-reveal)', () => {
+  it('compresses the burst stagger so the whole burst never exceeds 600ms', () => {
+    for (let count = 1; count <= 12; count += 1) {
+      expect(computeBurstTotalMs(count)).toBeLessThanOrEqual(BURST_ACTIVE_BUDGET_MS)
+    }
+  })
+
+  it('caps burst stagger and keeps a tactile floor in the product domain', () => {
+    for (let count = 2; count <= 12; count += 1) {
+      expect(computeBurstStaggerMs(count)).toBeLessThanOrEqual(BURST_STAGGER_MAX_MS)
+    }
+    for (let count = 2; count <= 8; count += 1) {
+      expect(computeBurstStaggerMs(count)).toBeGreaterThanOrEqual(30)
+    }
+  })
+
+  it('mirrors the flip duration in the SCSS inner transition (0.34s)', () => {
+    expect(FLIP_DURATION_MS).toBe(340)
+    const scss = readFileSync(resolve(here, 'index.scss'), 'utf8')
+    expect(scss).toContain('transition: transform 0.34s')
+  })
+
+  it('bounds the flip-settle narration delay to ≤500ms and never tap-instant (AC-02)', () => {
+    expect(FLIP_NARRATION_DELAY_MS).toBeGreaterThan(FLIP_DURATION_MS)
+    expect(FLIP_NARRATION_DELAY_MS).toBeLessThanOrEqual(500)
+  })
+
+  it('auto-flips the 我 card ~300ms after deal settle (AC-01)', () => {
+    expect(AUTO_ME_FLIP_DELAY_MS).toBe(300)
+  })
 })
 
 // Structure: the stage renders the fan (two-row, rotated, overlapping) with a
-// face-up deal, per-card haptic, one-shot peek, best-partner stamp, and a
-// swipe-back reset — and must NOT reintroduce selector-query measurement or the
-// flat-row / chip-strip layout.
-describe('SquadDeckStage structure (Cascading Hand Fan)', () => {
+// face-DOWN deal, per-card haptic, a one-time back shimmer, controller-derived
+// faces, per-flip sheens, and a swipe-back reset — and must NOT reintroduce
+// selector-query measurement, the flat-row layout, the auto-peek, or the
+// session-level front holo.
+describe('SquadDeckStage structure (tap-to-reveal fan)', () => {
   const source = readFileSync(resolve(here, 'SquadDeckStage.tsx'), 'utf8')
 
   it('computes the fan layout from the pure module', () => {
@@ -85,9 +141,12 @@ describe('SquadDeckStage structure (Cascading Hand Fan)', () => {
     expect(source).toContain('computeFanLayout(displayMembers.length)')
   })
 
-  it('deals every card face-up (flip derived from dealt, not focus)', () => {
-    expect(source).toContain('isRevealed={dealt}')
-    // Per-card stagger is handed down as a transition delay in roster order.
+  it('deals every card FACE-DOWN; face derives from the controller flip set (REL-01)', () => {
+    // The entrance is driven by `dealt`; the face by the controller-owned
+    // flippedIds / all-up re-entry — never by the deal itself.
+    expect(source).toContain('isDealt={dealt}')
+    expect(source).toContain('allRevealed || flippedIds.has(member.userId)')
+    // Per-card entrance stagger is handed down as a transition delay in roster order.
     expect(source).toContain('emergeDelayMs={reduceMotion ? 0 : rosterIndex * staggerMs}')
   })
 
@@ -98,24 +157,43 @@ describe('SquadDeckStage structure (Cascading Hand Fan)', () => {
     expect(source).toContain('memberRows')
   })
 
-  it('fires a per-card landing haptic during the deal', () => {
+  it('fires a per-card landing haptic during the deal, gated against the haptic storm (A4)', () => {
     expect(source).toContain("haptics('light')")
     expect(source).toContain('hapticTimersRef')
+    // N≥6 compresses the stagger below 80ms — per-card taps would merge into
+    // a continuous buzz, so the deck skips them entirely under the threshold.
+    expect(source).toContain('DEAL_HAPTIC_MIN_STAGGER_MS')
+    expect(source).toContain('staggerMs >= DEAL_HAPTIC_MIN_STAGGER_MS')
   })
 
-  it('runs a one-shot auto-peek after the deal settles', () => {
-    expect(source).toContain('PEEK_DELAY_MS')
-    expect(source).toContain('PEEK_HOLD_MS')
-    expect(source).toContain('setPeekActive')
+  it('notifies the controller when the deal settles (drives the 我 auto-flip)', () => {
+    // Deal-settle is the session clock for AUTO_ME_FLIP_DELAY_MS and for
+    // all_revealed durationMs. A fresh ref keeps the callback unstale.
+    expect(source).toContain('onDealSettledRef')
+    expect(source).toContain('onDealSettledRef.current(true)')
+    expect(source).toContain('onDealSettledRef.current(false)')
   })
 
-  it('computes the best partner by highest chemistryScore (roster tie-break)', () => {
-    expect(source).toContain('computeBestPartnerUserId')
-    expect(source).toContain('chemistryScore')
-    expect(source).toContain('score > bestScore')
+  it('arms the one-time back shimmer only for interactive sessions (AC-07)', () => {
+    expect(source).toContain('shimmerArmed')
+    expect(source).toContain('dealComplete && !instant && interactive')
+    expect(source).toContain('squad-unboxing__deck-back-shimmer--armed')
   })
 
-  it('resets transient deal/focus/peek state on the resetSignal bump', () => {
+  it('arms per-card flip sheens only on live flip transitions (AC-08)', () => {
+    expect(source).toContain('justFlippedIds')
+    expect(source).toContain('prevFlippedRef')
+    expect(source).toContain('sheenActive={!instant && justFlippedIds.has(member.userId)}')
+  })
+
+  it('receives the best partner from props (controller-computed)', () => {
+    expect(source).toContain('bestPartnerUserId: string | null')
+    expect(source).toContain('member.userId === bestPartnerUserId')
+    // The computation itself moved to squadUnboxingViewModels for reuse.
+    expect(source).not.toContain('function computeBestPartnerUserId')
+  })
+
+  it('resets transient deal state on the resetSignal bump (flip state survives)', () => {
     expect(source).toContain('resetSignal')
     expect(source).toContain('prevResetSignalRef')
     expect(source).toContain('clearAllTimers')
@@ -126,7 +204,7 @@ describe('SquadDeckStage structure (Cascading Hand Fan)', () => {
     expect(source).toContain('() => clearAllTimers()')
   })
 
-  it('contains no selector-query measurement or flat-row geometry', () => {
+  it('contains no selector-query measurement, flat-row geometry, peek, or session holo (MNT-02)', () => {
     expect(source).not.toContain('createSelectorQuery')
     expect(source).not.toContain('computeCardLayout')
     expect(source).not.toContain('computeCardsPerRow')
@@ -134,6 +212,17 @@ describe('SquadDeckStage structure (Cascading Hand Fan)', () => {
     expect(source).not.toContain('deck-chips')
     expect(source).not.toContain('isDeckCollapsed')
     expect(source).not.toContain('collapsed')
+    // Deleted code must not linger commented or flagged.
+    expect(source).not.toContain('peek')
+    expect(source).not.toContain('Peek')
+    expect(source).not.toContain('holo')
+    expect(source).not.toContain('Holo')
+    expect(source).not.toContain('onFocusChange')
+  })
+
+  it('routes taps and long-presses to the parent beat handlers', () => {
+    expect(source).toContain('onCardTap(rosterIndex)')
+    expect(source).toContain('onCardLongPress(rosterIndex)')
   })
 })
 
@@ -159,7 +248,8 @@ describe('SquadUnboxingPage fan orchestration', () => {
   })
 
   it('keeps focused member copy in the Xiaoyue dock without a blank inline panel', () => {
-    expect(source).toContain('focusedMemberBubbleText')
+    expect(source).toContain('bubbleNarration')
+    expect(source).toContain('bubbleText')
     expect(source).not.toContain('squad-unboxing__detail-panel')
   })
 
@@ -282,13 +372,15 @@ describe('SCSS fan poses + anti-collision (Direction: Cascading Hand Fan)', () =
   })
 
   it('emits the fan pose + state transforms from per-(row-length,index) classes', () => {
-    // The dealt fan pose, dim, peek, and both lift variants are generated by the
+    // The dealt fan pose and both lift variants are generated by the
     // @each/@for loops (so no inline rpx/deg reaches the H5 build).
     expect(scss).toContain('&__deck-fan--dealt')
     expect(scss).toContain('squad-unboxing__deck-card--focused-lift')
     expect(scss).toContain('squad-unboxing__deck-card--focused-lift-deg')
-    expect(scss).toContain('squad-unboxing__deck-card--peek')
+    // No sibling dim (upstream: focus = lift only, layered deck stays legible).
     expect(scss).not.toContain('squad-unboxing__deck-card--dimmed')
+    // The auto-peek pose classes were retired with the tap-to-reveal revamp.
+    expect(scss).not.toContain('--peek')
   })
 
   it('keeps the 最佳拍档 stamp out of the covered band on non-rightmost cards', () => {
@@ -305,10 +397,34 @@ describe('SCSS fan poses + anti-collision (Direction: Cascading Hand Fan)', () =
     expect(cardBlock).not.toContain('will-change')
   })
 
-  it('sweeps the holo sheen with transform only (no background-position paint)', () => {
+  it('sweeps the sheen with transform only (no background-position paint)', () => {
     const holoKeyframes = scss.split('@keyframes squad-unboxing-holo-sweep')[1]?.split('@keyframes')[0] ?? ''
     expect(holoKeyframes).toContain('transform: translateX')
     expect(holoKeyframes).not.toContain('background-position')
+  })
+
+  it('renders the enriched card-back lattice + gold-foil best-partner variant in SCSS (AC-06)', () => {
+    expect(scss).toContain('&__deck-card-back-lattice')
+    // Nested modifier: `&--back-gold` under the back-face selector.
+    expect(scss).toContain('&--back-gold')
+    expect(scss).toContain('&__deck-card-back-overflow')
+    // No card-back image asset — the back is pure CSS.
+    expect(scss).not.toContain('squad-card-back-pattern')
+    // A8: the back logo image is sized in the stylesheet (inline rpx is
+    // dropped by the H5 postcss pass).
+    expect(scss).toContain('&__deck-card-back-logo-img')
+    // C3: lattice presence raised so the face-down back reads as collectible.
+    const latticeBlock = scss.split('&__deck-card-back-lattice {')[1]?.split('}')[0] ?? ''
+    expect(latticeBlock).toContain('opacity: 0.7')
+  })
+
+  it('renders the reveal-all hint chip + sr-only a11y pattern in SCSS (AC-11/AC-18)', () => {
+    expect(scss).toContain('&__reveal-chip')
+    // Nested pressed state: `&--pressed` under `&__reveal-chip`.
+    const chipBlock = scss.split('&__reveal-chip {')[1]?.split('}')[0] ?? ''
+    expect(chipBlock).toContain('&--pressed')
+    expect(scss).toContain('&__reveal-chip-text')
+    expect(scss).toContain('&__sr-only')
   })
 
   it('collapses overflow rosters into a +N badge instead of dropping members', () => {
@@ -318,13 +434,11 @@ describe('SCSS fan poses + anti-collision (Direction: Cascading Hand Fan)', () =
     expect(tsx).toContain('members.slice(0, MAX_FAN_CARDS)')
   })
 
-  it('cancels the auto-peek on a deliberate focus tap', () => {
+  it('hands the per-card burst flip delay down to each card (AC-04)', () => {
     const tsx = readFileSync(resolve(here, 'SquadDeckStage.tsx'), 'utf8')
-    expect(tsx).toContain('setPeekActive(false)')
-    // handleFocus clears the peek timers before delegating to the parent.
-    const focusBody = tsx.split('const handleFocus')[1]?.split('}, [onFocusChange])')[0] ?? ''
-    expect(focusBody).toContain('peekTimersRef.current.forEach(clearTimeout)')
-    expect(focusBody).toContain('setPeekActive(false)')
+    expect(tsx).toContain('flipDelayById')
+    expect(tsx).toContain('flipDelayById.get(member.userId)')
+    expect(tsx).toContain('flipDelayMs={flipDelayMs}')
   })
 
   it('keys the deal effect on a stable roster id sequence, not array identity', () => {

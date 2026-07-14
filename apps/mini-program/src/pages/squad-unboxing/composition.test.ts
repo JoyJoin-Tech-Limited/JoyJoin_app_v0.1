@@ -56,7 +56,7 @@ describe('squad-unboxing page composition', () => {
 
   it('routes focused member explanations into the Xiaoyue dock without mounting a blank detail frame', () => {
     expect(pageSource).toContain('buildFocusedMemberBubbleText(')
-    expect(pageSource).toContain('text={focusedMemberBubbleText || buildSquadSoulBubbleText(')
+    expect(pageSource).toContain('buildSquadSoulBubbleText(')
     expect(pageSource).not.toContain('squad-unboxing__detail-panel')
     expect(pageSource).not.toContain("import TeammateCardDetail from './TeammateCardDetail'")
   })
@@ -64,7 +64,58 @@ describe('squad-unboxing page composition', () => {
   it('types each member narration once and lets a second tap fast-forward it', () => {
     expect(pageSource).toContain('seenMemberNarrationsRef')
     expect(pageSource).toContain('resolveCardFocusInteraction(')
-    expect(pageSource).toContain('maxDuration={focusedMember ? undefined : 3000}')
-    expect(pageSource).toContain("interaction: 'narration_fast_forward'")
+    // Member narration types fully (tap fast-forwards); burst/tease/soul are
+    // capped at 3s. Gated on the bubble KIND, not focusedMember — a pending
+    // flip keeps a focused card while the tease line shows.
+    expect(pageSource).toContain("maxDuration={bubbleNarration?.kind === 'member' ? undefined : 3000}")
+    expect(pageSource).toContain("trackCardFocus(index, current, 'narration_fast_forward')")
+  })
+
+  it('renders the reveal-all hint chip above the bubble while cards remain face-down (AC-11)', () => {
+    expect(pageSource).toContain('squad-unboxing__reveal-chip')
+    expect(pageSource).toContain("hoverClass='squad-unboxing__reveal-chip--pressed'")
+    expect(pageSource).toContain('buildRevealChipLabel(unflippedCount)')
+    expect(pageSource).toContain('onClick={handleRevealAll}')
+    expect(pageSource).toContain("role='button'")
+    expect(pageSource).toContain('aria-label={buildRevealChipLabel(unflippedCount)}')
+  })
+
+  it('makes the bubble the voice of the reveal (status + aria-live + sr-only full text, AC-18)', () => {
+    expect(pageSource).toContain("role='status'")
+    expect(pageSource).toContain("aria-live='polite'")
+    expect(pageSource).toContain("aria-atomic='true'")
+    expect(pageSource).toContain("squad-unboxing__sr-only")
+    // The animated TypewriterText visual is aria-hidden so screen readers
+    // announce the complete narration once, not per-character typing.
+    expect(pageSource).toContain("<View aria-hidden='true'>")
+    expect(pageSource).toContain('<Text className=\'squad-unboxing__sr-only\'>{bubbleText}</Text>')
+  })
+
+  it('selects narration by session state: burst completion → self card → member → soul fallback', () => {
+    expect(pageSource).toContain('SQUAD_BURST_COMPLETION_BUBBLE_TEXT')
+    expect(pageSource).toContain('SQUAD_SELF_CARD_BUBBLE_TEXT')
+    expect(pageSource).toContain("bubbleNarration?.kind === 'burst'")
+    expect(pageSource).toContain("bubbleNarration?.kind === 'member'")
+  })
+
+  it('rests on the tease line while face-down cards remain (C1) — the soul line is earned', () => {
+    expect(pageSource).toContain('SQUAD_TEASE_BUBBLE_TEXT')
+    // The tease branch sits strictly after narration and strictly before the
+    // soul fallback: burst/member narration always wins, the soul line only
+    // shows when every card is face-up (or the session is a re-entry).
+    const narrationIdx = pageSource.indexOf("bubbleNarration?.kind === 'burst'")
+    const teaseIdx = pageSource.indexOf('isInteractiveSession && unflippedCount > 0')
+    const soulIdx = pageSource.indexOf('buildSquadSoulBubbleText(')
+    expect(narrationIdx).toBeGreaterThanOrEqual(0)
+    expect(teaseIdx).toBeGreaterThan(narrationIdx)
+    expect(soulIdx).toBeGreaterThan(teaseIdx)
+  })
+
+  it('emits card_detail_dismiss only via the resolver dismiss action (upstream-reinstated, AC-19 superseded)', () => {
+    // The dismiss event fires exactly once in source — inside the resolver's
+    // 'dismiss' branch — never from the flip path or the burst path.
+    expect(pageSource).toContain("resolution.action === 'dismiss'")
+    expect(pageSource.indexOf('squad_unboxing_card_detail_dismiss')).toBeGreaterThanOrEqual(0)
+    expect(pageSource.indexOf('squad_unboxing_card_detail_dismiss')).toBe(pageSource.lastIndexOf('squad_unboxing_card_detail_dismiss'))
   })
 })
