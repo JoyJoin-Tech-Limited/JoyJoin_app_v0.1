@@ -1,4 +1,9 @@
-import { getJoinedEvents, getUserCoupons } from '@shared/api'
+import {
+  getJoinedEvents,
+  getProfileShell,
+  getUserCoupons,
+  getUserGamificationInfo,
+} from '@shared/api'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { useQuery } from '@tanstack/react-query'
@@ -18,19 +23,106 @@ import {
   isUnauthorizedApiError,
 } from '../../lib/api/authSession'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
-import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
 import { shouldShowAlangEntry } from '../../lib/alang/alangAccess'
+import { useAlangAssetSource } from '../../lib/alang/alangAssets'
+import { useStoryArchives } from '../../lib/alang/useAlangMission'
 import { queryClient } from '../../lib/api/queryClient'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
+import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import { haptics } from '../../lib/utils/haptics'
 import { logError, logInfo } from '../../lib/utils/logger'
 import './index.scss'
-import { getProfileCompletion } from './profileConstants'
+import {
+  getProfileCompletion,
+  getProfileGrowthSummary,
+  getProfilePersonalityActionLabel,
+  getProfileV17DataPolicy,
+  isProfileV17Enabled,
+} from './profileConstants'
+
+function getGenderLabel(value?: string | null): string | null {
+  switch (value?.trim().toLowerCase()) {
+    case 'male':
+    case 'man':
+    case '男':
+    case '男生':
+      return '男生'
+    case 'female':
+    case 'woman':
+    case '女':
+    case '女生':
+      return '女生'
+    default:
+      return null
+  }
+}
+
+function ProfilePartnerVisual({
+  archetype,
+  archetypeName,
+  displayName,
+}: {
+  archetype: string | null
+  archetypeName: string | null
+  displayName: string
+}) {
+  const asset = archetype ? ARCHETYPE_ASSET_MAP[archetype] : undefined
+  const [sourceKind, setSourceKind] = useState<'webp' | 'png' | 'fallback'>('webp')
+
+  if (!asset || sourceKind === 'fallback') {
+    return (
+      <View
+        className='profile-page__partner-fallback'
+        role='img'
+        aria-label={archetypeName ? `${archetypeName}伙伴形象` : `${displayName}的伙伴形象待解锁`}
+      >
+        <ArchetypeHead archetype={archetype} size={248} fallbackText={displayName} />
+      </View>
+    )
+  }
+
+  return (
+    <Image
+      className='profile-page__partner-image'
+      src={sourceKind === 'webp' ? asset.webp : asset.png}
+      mode='aspectFit'
+      lazyLoad={false}
+      aria-label={archetypeName ? `${archetypeName}伙伴形象` : '伙伴形象'}
+      onError={() => setSourceKind(sourceKind === 'webp' ? 'png' : 'fallback')}
+    />
+  )
+}
+
+function ProfileStoryArtwork() {
+  const artwork = useAlangAssetSource('resultHero')
+
+  return (
+    <>
+      <Image
+        className='profile-page__story-image'
+        src={artwork.src}
+        mode='aspectFill'
+        lazyLoad
+        aria-hidden='true'
+        onError={artwork.onError}
+      />
+      <View className='profile-page__story-wash' />
+      {artwork.usingFallback && (
+        <Text className='profile-page__story-placeholder'>场景示意</Text>
+      )}
+    </>
+  )
+}
 
 export default function ProfilePage() {
   const { authLoading, authUser, renderGate } = useMiniPageGate()
   const logoutLockRef = useRef(false)
+  const profileV17Enabled = isProfileV17Enabled(authUser)
+  const profileV17DataPolicy = getProfileV17DataPolicy(
+    authUser,
+    shouldShowAlangEntry(authUser),
+  )
 
   useCustomTabBarSync({
     enabled: !authLoading,
@@ -46,6 +138,12 @@ export default function ProfilePage() {
     void queryClient.invalidateQueries({ queryKey: ['mini-program', 'joined-events'] })
     void queryClient.invalidateQueries({ queryKey: ['mini-program', 'coupons'] })
     void queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/profile'] })
+    if (profileV17DataPolicy.gamificationEnabled) {
+      void queryClient.invalidateQueries({ queryKey: ['mini-program', 'gamification'] })
+    }
+    if (profileV17DataPolicy.storyArchivesEnabled) {
+      void queryClient.invalidateQueries({ queryKey: ['alang', 'archives'] })
+    }
   })
 
   const { data: coupons = { count: 0, availableCount: 0, coupons: [] }, isLoading: isLoadingCoupons } = useQuery({
@@ -60,26 +158,34 @@ export default function ProfilePage() {
     enabled: !authLoading && !!authUser,
   })
 
-  const joinedEventsCount = joinedEvents.length
-  const isLoadingStats = isLoadingCoupons || isLoadingEvents
+  const profileShellQuery = useQuery({
+    queryKey: ['mini-program', 'shell/profile'],
+    queryFn: () => getProfileShell(apiRequest),
+    enabled: !authLoading && !!authUser,
+    staleTime: 30_000,
+  })
+
+  const gamificationQuery = useQuery({
+    queryKey: ['mini-program', 'gamification'],
+    queryFn: () => getUserGamificationInfo(apiRequest),
+    enabled: !authLoading && !!authUser && profileV17DataPolicy.gamificationEnabled,
+    staleTime: 30_000,
+  })
+
+  const showAlangStoryEntry = profileV17DataPolicy.storyArchivesEnabled
+  const storyArchivesQuery = useStoryArchives(
+    !authLoading && !!authUser && showAlangStoryEntry,
+  )
+
+  const joinedEventsCount = profileShellQuery.data?.stats.eventsJoined ?? joinedEvents.length
+  const connectionsCount = profileShellQuery.data?.stats.connectionsCount
+  const isLoadingStats = isLoadingEvents || profileShellQuery.isLoading
 
   const handleOpenPayment = () => {
     haptics('light')
     void openMiniProgramPaymentPage({
       currentUserId: authUser?.id,
     })
-  }
-  // new update for handle open personality test
-  const handleOpenPersonalityTest = () => {
-    haptics('light')
-    if(archetype) {
-      void Taro.navigateTo({ 
-        url: `${MINI_PROGRAM_ROUTES.personalityTest}?source=profile`,
-
-      })
-      return
-    } 
-    void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.personalityTest })
   }
   const handleLogout = async () => {
     if (logoutLockRef.current) {
@@ -123,16 +229,23 @@ export default function ProfilePage() {
   const displayName = authUser?.nickname || authUser?.displayName || '悦聚用户'
   const archetype = authUser?.archetype ?? authUser?.primaryArchetype ?? null
   const archetypeName = archetype ? (ARCHETYPE_BY_ID[archetype]?.nameCn || archetype) : null
-  const redesignEnabled = authUser?.features?.profileRedesignEnabled ?? true
-  const [avatarError, setAvatarError] = useState(false)
-  const avatarUrl = redesignEnabled ? (authUser?.profileImageUrl || authUser?.wechatAvatarUrl) : null
-  const showAvatarImage = Boolean(avatarUrl && !avatarError)
   const lifeStage = authUser?.lifeStage
   const bio = typeof authUser?.bio === 'string' ? authUser.bio.trim() : null
-  const nextStep = authUser?.nextStep
+  const genderLabel = getGenderLabel(authUser?.gender)
   const profileCompletion = getProfileCompletion(authUser)
+  const growth = getProfileGrowthSummary(
+    gamificationQuery.data ?? {
+      experiencePoints: authUser?.experiencePoints ?? 0,
+      nextLevelInfo: null,
+    },
+  )
+  const growthLevelLabel = gamificationQuery.data
+    ? `Lv.${gamificationQuery.data.currentLevel} ${gamificationQuery.data.levelConfig?.nameCn ?? ''}`.trim()
+    : '成长进度'
+  const visibleGrowthProgress = gamificationQuery.data ? growth.progress : 0
+  const storyCount = storyArchivesQuery.data?.length ?? 0
+  const personalityActionLabel = getProfilePersonalityActionLabel(archetype)
 
-  // add function to handle open personality type page correct 
   const handleOpenPersonalityType = () => {
     haptics('light')
   
@@ -146,114 +259,217 @@ export default function ProfilePage() {
     })
   }
 
-  const handleAvatarError = () => {
-    setAvatarError(true)
-    profileAnalytics.track('profile_avatar_load_error', {
-      source: authUser?.profileImageUrl ? 'profileImageUrl' : 'wechatAvatarUrl',
-    })
+  const handleOpenSettings = async () => {
+    haptics('light')
+    try {
+      const { tapIndex } = await Taro.showActionSheet({
+        itemList: ['编辑资料', '服务条款', '退出登录'],
+      })
+      if (tapIndex === 0) {
+        haptics('light')
+        void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.editProfile })
+      } else if (tapIndex === 1) {
+        haptics('light')
+        void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.terms })
+      } else if (tapIndex === 2) {
+        void handleLogout()
+      }
+    } catch {
+      // Cancelling the action sheet is an intentional no-op.
+    }
   }
 
   return renderGate(
     <View className='profile-page tab-page-enter'>
       <ScrollView className='profile-page__scroll' scrollY enhanced showScrollbar={false}>
-        {/* Hero section */}
-        <View className='profile-page__hero profile-page__hero--entered'>
-          <View className='profile-page__avatar-ring'>
-            <ArchetypeHead
+        {profileV17Enabled ? (
+          <View className='profile-page__identity-stage profile-page__identity-stage--entered'>
+          <View className='profile-page__identity-glow' aria-hidden='true' />
+          <View
+            className='profile-page__settings'
+            hoverClass='profile-page__settings--pressed'
+            onClick={handleOpenSettings}
+            role='button'
+            aria-label='打开个人设置'
+          >
+            <Text className='profile-page__settings-icon' aria-hidden='true'>⚙</Text>
+          </View>
+
+          <View className='profile-page__identity-copy'>
+            <View className='profile-page__identity-avatar'>
+              <ArchetypeHead
+                archetype={archetype}
+                size={112}
+                fallbackText={displayName}
+              />
+            </View>
+            <View className='profile-page__identity-text'>
+              <Text className='profile-page__identity-name'>{displayName}</Text>
+              <View className='profile-page__identity-tags'>
+                {archetypeName && (
+                  <Text className='profile-page__identity-tag profile-page__identity-tag--primary'>
+                    {archetypeName}
+                  </Text>
+                )}
+                {lifeStage && (
+                  <Text className='profile-page__identity-tag'>{lifeStage}</Text>
+                )}
+                {genderLabel && (
+                  <Text className='profile-page__identity-tag profile-page__identity-tag--blue'>
+                    {genderLabel}
+                  </Text>
+                )}
+              </View>
+              {bio && <Text className='profile-page__identity-bio'>{bio}</Text>}
+            </View>
+          </View>
+
+          <View className='profile-page__partner-visual'>
+            <ProfilePartnerVisual
+              key={archetype ?? 'profile-partner-fallback'}
               archetype={archetype}
-              size={144}
-              fallbackText={displayName}
-              className='profile-page__avatar-head'
+              archetypeName={archetypeName}
+              displayName={displayName}
             />
           </View>
 
-          <Text className='profile-page__name'>{displayName}</Text>
-          <Text className='profile-page__subtitle'>
-            {archetypeName ? '其他' : '还没解锁社交原型'}
-          </Text>
-
-          {archetypeName ? (
-            <View
-              className='profile-page__archetype-pill'
-              hoverClass='profile-page__archetype-pill--pressed'
-              onClick={handleOpenPersonalityType}
-            >
-              <Text className='profile-page__archetype-pill-text'>{archetypeName}</Text>
-            </View>
-          ) : (
-            <View
-              className='profile-page__unlock-pill'
-              hoverClass='profile-page__unlock-pill--pressed'
-              onClick={handleOpenPersonalityType}
-            >
-              <Text className='profile-page__unlock-pill-text'>测一测，解锁你的社交原型</Text>
-            </View>
-          )}
-          {lifeStage ? (
-            <View className='profile-page__life-stage-pill'>
-              <Text className='profile-page__life-stage-pill-text'>{lifeStage}</Text>
-            </View>
-          ) : null}
-          {bio ? (
-            <View className='profile-page__bio-wrap'>
-              <Text className='profile-page__bio-text'>"{bio}"</Text>
-            </View>
-          ) : null}
-        </View>
-
-        {/* Archetype Celebration Card */}
-        {/* {archetype && (
           <View
-            className='profile-page__archetype-card profile-page__archetype-card--visible'
-            style={{ background: ARCHETYPE_FAMILY_GRADIENTS[getArchetypeFamily(archetype)] }}
+            className='profile-page__growth'
+            aria-label={gamificationQuery.isLoading
+              ? '潮流值正在加载'
+              : `潮流值 ${growth.current}，${visibleGrowthProgress}%`}
           >
-            <View className='profile-page__archetype-card-inner'>
-              <ArchetypeHead archetype={archetype} size={64} fallbackText={displayNamePrimary} />
-              <View className='profile-page__archetype-card-text'>
-                <Text className='profile-page__archetype-card-label'>你的社交原型</Text>
-                <Text className='profile-page__archetype-card-name'>
-                  {ARCHETYPE_BY_ID[archetype]?.nameCn || archetype}
+            <View className='profile-page__growth-heading'>
+              <Text className='profile-page__growth-label'>潮流值</Text>
+              <Text className='profile-page__growth-value'>
+                {gamificationQuery.isLoading ? '—' : growth.current}
+              </Text>
+              {!gamificationQuery.isLoading && growth.nextTarget !== null && (
+                <Text className='profile-page__growth-target'>/{growth.nextTarget}</Text>
+              )}
+            </View>
+            <View className='profile-page__growth-progress'>
+              <View
+                className='profile-page__growth-progress-bar'
+                style={{
+                  transform: `scaleX(${visibleGrowthProgress / 100})`,
+                }}
+              />
+            </View>
+            <Text className='profile-page__growth-level'>
+              {gamificationQuery.isError ? '成长记录稍后会自动刷新' : growthLevelLabel}
+            </Text>
+          </View>
+
+          <View
+            className='profile-page__partner-entry'
+            hoverClass='profile-page__partner-entry--pressed'
+            onClick={handleOpenPersonalityType}
+            role='button'
+            aria-label={archetype
+              ? '查看我的社交原型；伙伴装备功能筹备中'
+              : '完成测试，解锁我的伙伴'}
+          >
+            <View className='profile-page__partner-entry-copy'>
+              <ArchetypeHead archetype={archetype} size={56} fallbackText={displayName} />
+              <View>
+                <Text className='profile-page__partner-entry-label'>当前伙伴</Text>
+                <Text className='profile-page__partner-entry-name'>
+                  {archetypeName ?? '等待解锁'}
                 </Text>
               </View>
             </View>
+            <Text className='profile-page__partner-entry-lock'>装备筹备中</Text>
+            <View className='profile-page__partner-entry-action'>
+              <Text className='profile-page__partner-entry-action-text'>查看形象</Text>
+              <View className='profile-page__partner-entry-chevron' />
+            </View>
           </View>
-        )} */}
+          </View>
+        ) : (
+          <View
+            className='profile-page__fallback-hero'
+            role='region'
+            aria-label='个人资料简洁模式'
+          >
+            <View className='profile-page__fallback-avatar'>
+              <ArchetypeHead
+                archetype={archetype}
+                size={136}
+                fallbackText={displayName}
+              />
+            </View>
+            <View className='profile-page__fallback-copy'>
+              <Text className='profile-page__fallback-name'>{displayName}</Text>
+              <Text className='profile-page__fallback-subtitle'>
+                {archetypeName ?? '社交原型等待解锁'}
+              </Text>
+              {bio && <Text className='profile-page__fallback-bio'>{bio}</Text>}
+              <View
+                className='profile-page__fallback-personality'
+                hoverClass='profile-page__fallback-personality--pressed'
+                onClick={handleOpenPersonalityType}
+                role='button'
+                aria-label={personalityActionLabel}
+              >
+                <Text className='profile-page__fallback-personality-text'>
+                  {personalityActionLabel}
+                </Text>
+                <View className='profile-page__fallback-personality-chevron' aria-hidden='true' />
+              </View>
+            </View>
+            <View
+              className='profile-page__fallback-settings'
+              hoverClass='profile-page__fallback-settings--pressed'
+              onClick={handleOpenSettings}
+              role='button'
+              aria-label='打开个人设置'
+            >
+              <Text className='profile-page__fallback-settings-text'>设置</Text>
+            </View>
+          </View>
+        )}
 
-        {/* Quick stats */}
-        {/* <View className='profile-page__stats'>
-          <Card className='profile-page__stat'>
-            <Text className='profile-page__stat-value'>
-              {isLoadingStats ? '—' : (coupons.count ?? 0)}
-            </Text>
-            <Text className='profile-page__stat-label'>优惠券</Text>
-          </Card>
-          <Card className='profile-page__stat'>
-            <Text className='profile-page__stat-value'>
-              {isLoadingStats ? '—' : getOnboardingStepLabel(nextStepToOnboardingStep(nextStep))}
-            </Text>
-            <Text className='profile-page__stat-label'>匹配进度</Text>
-          </Card>
-        </View> */}
         <View className='profile-page__stats profile-page__stats--entered'>
-          <Card className='profile-page__stat'>
+          <Card
+            className='profile-page__stat'
+            hoverClass='profile-page__stat--pressed'
+            onClick={() => { haptics('light'); void Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
+            role='button'
+            aria-label={`已参加 ${joinedEventsCount} 场活动，去浏览足迹`}
+          >
             <Text className='profile-page__stat-value'>
               {isLoadingStats ? '—' : joinedEventsCount}
             </Text>
             <Text className='profile-page__stat-label'>已参加活动</Text>
-            <Text className='profile-page__stat-caption'>去遇见</Text>
+            <Text className='profile-page__stat-caption'>去浏览</Text>
             <View className='profile-page__chevron profile-page__chevron--stat' />
           </Card>
 
-          <Card className='profile-page__stat'>
-            <Text className='profile-page__stat-value'>0</Text>
-            <Text className='profile-page__stat-label'>我的连接数</Text>
-            <Text className='profile-page__stat-caption'>活动后解锁</Text>
+          <Card
+            className='profile-page__stat'
+            hoverClass='profile-page__stat--pressed'
+            onClick={() => { haptics('light'); void Taro.switchTab({ url: MINI_PROGRAM_ROUTES.connections }) }}
+            role='button'
+            aria-label={connectionsCount == null ? '连接数正在加载' : `已有 ${connectionsCount} 个连接，去查看`}
+          >
+            <Text className='profile-page__stat-value'>
+              {profileShellQuery.isLoading || connectionsCount == null ? '—' : connectionsCount}
+            </Text>
+            <Text className='profile-page__stat-label'>我的连接</Text>
+            <Text className='profile-page__stat-caption'>去看看</Text>
             <View className='profile-page__chevron profile-page__chevron--stat' />
           </Card>
 
-          <Card className='profile-page__stat'>
+          <Card
+            className='profile-page__stat'
+            hoverClass='profile-page__stat--pressed'
+            onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.editProfile }) }}
+            role='button'
+            aria-label={`形象完成度 ${profileCompletion}%，去完善资料`}
+          >
             <Text className='profile-page__stat-value'>{profileCompletion}%</Text>
-            <Text className='profile-page__stat-label'>资料完成度</Text>
+            <Text className='profile-page__stat-label'>形象完成度</Text>
             <Text className='profile-page__stat-caption'>去完善</Text>
             <View className='profile-page__stat-progress'>
               <View
@@ -265,16 +481,69 @@ export default function ProfilePage() {
           </Card>
         </View>
 
-        {/* D1 + D2 — Milestone badges row (Batch D) */}
-        {!isLoadingStats && (joinedEventsCount >= 1 || joinedEventsCount >= 3) && (
+        {showAlangStoryEntry && (
+          <View className='profile-page__archive'>
+            <View className='profile-page__archive-heading'>
+              <View className='profile-page__archive-title-wrap'>
+                <Text className='profile-page__archive-spark'>✦</Text>
+                <Text className='profile-page__archive-title'>成长档案</Text>
+              </View>
+              <View
+                className='profile-page__archive-link'
+                hoverClass='profile-page__archive-link--pressed'
+                onClick={() => {
+                  haptics('light')
+                  void Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangEvent}?view=stories` })
+                }}
+                role='button'
+                aria-label='查看全部故事档案'
+              >
+                <Text className='profile-page__archive-link-text'>全部档案</Text>
+                <View className='profile-page__archive-link-chevron' />
+              </View>
+            </View>
+            <View
+              className='profile-page__story-card'
+              hoverClass='profile-page__story-card--pressed'
+              onClick={() => {
+                haptics('light')
+                void Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangEvent}?view=stories` })
+              }}
+              role='button'
+              aria-label={storyArchivesQuery.isLoading
+                ? '我的故事正在加载'
+                : `我的故事，共 ${storyCount} 段已收录故事`}
+            >
+              <ProfileStoryArtwork />
+              <View className='profile-page__story-content'>
+                <Text className='profile-page__story-title'>我的故事</Text>
+                <Text className='profile-page__story-summary'>
+                  {storyArchivesQuery.isLoading
+                    ? '正在整理走过的城市章节…'
+                    : storyArchivesQuery.isError
+                      ? '故事档案稍后会自动刷新'
+                      : storyCount > 0
+                        ? `${storyCount} 段故事收藏 · 继续写下城市相遇`
+                        : '第一章还在等你出发'}
+                </Text>
+                <View className='profile-page__story-action'>
+                  <View className='profile-page__story-action-chevron' />
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {profileV17Enabled && !isLoadingStats && joinedEventsCount >= 1 && (
           <View className='profile-page__milestones'>
-            <Text className='profile-page__milestones-title'>我的成就</Text>
+            <Text className='profile-page__milestones-title'>成就徽章</Text>
             <View className='profile-page__milestones-row'>
               {joinedEventsCount >= 1 && (
                 <View
                   className='profile-page__milestone'
                   hoverClass='profile-page__milestone--pressed'
                   onClick={() => { haptics('light'); Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
+                  role='button'
                   aria-label='已参加 1 场活动'
                 >
                   <Image
@@ -291,6 +560,7 @@ export default function ProfilePage() {
                   className='profile-page__milestone'
                   hoverClass='profile-page__milestone--pressed'
                   onClick={() => { haptics('light'); Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
+                  role='button'
                   aria-label='已参加 3 场活动'
                 >
                   <Image
@@ -306,197 +576,92 @@ export default function ProfilePage() {
           </View>
         )}
 
-        {/* Action cards */}
-        {/* <View className='profile-page__section'>
-          <View
-            className='profile-page__action-row'
-            hoverClass='profile-page__action-row--active'
-            onClick={() => { haptics('light'); Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.editProfile }) }}
-          >
-            <JoyJoinIcon emoji='✏️' size={24} className='profile-page__action-icon' />
-            <Text className='profile-page__action-text'>编辑资料</Text>
-            <Text className='profile-page__action-arrow'>›</Text>
-          </View>
-
-          <View
-            className='profile-page__action-row'
-            hoverClass='profile-page__action-row--active'
-            onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/rewards/index' }) }}
-          >
-            <JoyJoinIcon emoji='🏆' size={24} className='profile-page__action-icon' />
-            <Text className='profile-page__action-text'>奖励福利</Text>
-            <View className='profile-page__action-badge'>
-              <Text className='profile-page__action-count'>{coupons.count ?? 0}</Text>
-            </View>
-            <Text className='profile-page__action-arrow'>›</Text>
-          </View>
-
-          <View
-            className='profile-page__action-row'
-            hoverClass='profile-page__action-row--active'
-            onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/invite/index' }) }}
-          >
-            <JoyJoinIcon emoji='🤝' tier='semantic' size={24} className='profile-page__action-icon' />
-            <Text className='profile-page__action-text'>邀请好友</Text>
-            <Text className='profile-page__action-arrow'>›</Text>
-          </View>
-
-          <View
-            className='profile-page__action-row'
-            hoverClass='profile-page__action-row--active'
-            onClick={handleOpenPayment}
-          >
-            <JoyJoinIcon emoji='🎁' size={24} className='profile-page__action-icon' />
-            <Text className='profile-page__action-text'>我的权益</Text>
-            <Text className='profile-page__action-arrow'>›</Text>
-          </View>
-
-          <View
-            className='profile-page__action-row'
-            hoverClass='profile-page__action-row--active'
-            onClick={() => { haptics('light'); Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
-          >
-            <JoyJoinIcon emoji='🗺️' size={24} className='profile-page__action-icon' />
-            <Text className='profile-page__action-text'>我的足迹</Text>
-            {joinedEventsCount > 0 && (
-              <View className='profile-page__action-badge'>
-                <Text className='profile-page__action-count'>{joinedEventsCount}</Text>
-              </View>
-            )}
-            <Text className='profile-page__action-arrow'>›</Text>
-          </View>
-
-          <View
-            className='profile-page__action-row'
-            hoverClass='profile-page__action-row--active'
-            onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/terms/index' }) }}
-          >
-            <JoyJoinIcon emoji='📄' size={24} className='profile-page__action-icon' />
-            <Text className='profile-page__action-text'>服务条款</Text>
-            <Text className='profile-page__action-arrow'>›</Text>
-          </View>
-        </View> */}
-        {/* Action cards */}
         <View className='profile-page__menu-section profile-page__menu-section--entered'>
-          <Text className='profile-page__menu-title'>常用功能</Text>
-
-          <View className='profile-page__menu'>
+          <Text className='profile-page__menu-title'>更多服务</Text>
+          <View className='profile-page__service-grid'>
             <View
-              className='profile-page__menu-row'
-              hoverClass='profile-page__menu-row--pressed'
-              onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/edit-profile/index' }) }}
+              className='profile-page__service-item'
+              hoverClass='profile-page__service-item--pressed'
+              onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.editProfile }) }}
+              role='button'
+              aria-label='编辑资料'
             >
-              <View className='profile-page__menu-icon-well'>
-                <JoyJoinIcon emoji='✏️' size={44} className='profile-page__menu-icon' />
+              <View className='profile-page__service-icon-well'>
+                <JoyJoinIcon emoji='✏️' size={36} className='profile-page__service-icon' />
               </View>
-              <Text className='profile-page__menu-label'>编辑资料</Text>
-              <View className='profile-page__menu-row-right'>
-                <View className='profile-page__chevron profile-page__chevron--menu' />
-              </View>
+              <Text className='profile-page__service-label'>编辑资料</Text>
             </View>
 
             <View
-              className='profile-page__menu-row'
-              hoverClass='profile-page__menu-row--pressed'
-              onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/rewards/index' }) }}
+              className='profile-page__service-item'
+              hoverClass='profile-page__service-item--pressed'
+              onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.rewards }) }}
+              role='button'
+              aria-label={`奖励福利，${isLoadingCoupons ? '正在加载' : `${coupons.count ?? 0} 项`}`}
             >
-              <View className='profile-page__menu-icon-well'>
-                <JoyJoinIcon emoji='🏆' size={44} className='profile-page__menu-icon' />
+              <View className='profile-page__service-icon-well'>
+                <JoyJoinIcon emoji='🏆' size={36} className='profile-page__service-icon' />
               </View>
-              <Text className='profile-page__menu-label'>奖励福利</Text>
-              <View className='profile-page__menu-row-right'>
-                <View className='profile-page__menu-badge'>
-                  <Text className='profile-page__menu-badge-text'>{coupons.count ?? 0}</Text>
-                </View>
-                <View className='profile-page__chevron profile-page__chevron--menu' />
-              </View>
+              <Text className='profile-page__service-label'>奖励福利</Text>
+              {!isLoadingCoupons && (coupons.count ?? 0) > 0 && (
+                <Text className='profile-page__service-meta'>{coupons.count}</Text>
+              )}
             </View>
 
             <View
-              className='profile-page__menu-row'
-              hoverClass='profile-page__menu-row--pressed'
-              onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/invite/index' }) }}
+              className='profile-page__service-item'
+              hoverClass='profile-page__service-item--pressed'
+              onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.invite }) }}
+              role='button'
+              aria-label='邀请好友'
             >
-              <View className='profile-page__menu-icon-well'>
-                <JoyJoinIcon emoji='🤝' tier='semantic' size={44} className='profile-page__menu-icon' />
+              <View className='profile-page__service-icon-well'>
+                <JoyJoinIcon emoji='🤝' tier='semantic' size={36} className='profile-page__service-icon' />
               </View>
-              <Text className='profile-page__menu-label'>邀请好友</Text>
-              <View className='profile-page__menu-row-right'>
-                <View className='profile-page__chevron profile-page__chevron--menu' />
-              </View>
+              <Text className='profile-page__service-label'>邀请好友</Text>
             </View>
 
             <View
-              className='profile-page__menu-row'
-              hoverClass='profile-page__menu-row--pressed'
+              className='profile-page__service-item'
+              hoverClass='profile-page__service-item--pressed'
               onClick={handleOpenPayment}
+              role='button'
+              aria-label='我的权益'
             >
-              <View className='profile-page__menu-icon-well'>
-                <JoyJoinIcon emoji='🎁' size={44} className='profile-page__menu-icon' />
+              <View className='profile-page__service-icon-well'>
+                <JoyJoinIcon emoji='🎁' size={36} className='profile-page__service-icon' />
               </View>
-              <Text className='profile-page__menu-label'>我的权益</Text>
-              <View className='profile-page__menu-row-right'>
-                <View className='profile-page__chevron profile-page__chevron--menu' />
-              </View>
+              <Text className='profile-page__service-label'>我的权益</Text>
             </View>
 
             <View
-              className='profile-page__menu-row'
-              hoverClass='profile-page__menu-row--pressed'
-              onClick={() => { haptics('light'); Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
+              className='profile-page__service-item'
+              hoverClass='profile-page__service-item--pressed'
+              onClick={() => { haptics('light'); void Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
+              role='button'
+              aria-label='我的足迹'
             >
-              <View className='profile-page__menu-icon-well'>
-                <JoyJoinIcon emoji='🗺️' size={44} className='profile-page__menu-icon' />
+              <View className='profile-page__service-icon-well'>
+                <JoyJoinIcon emoji='👣' tier='ui' size={36} className='profile-page__service-icon' />
               </View>
-              <Text className='profile-page__menu-label'>我的足迹</Text>
-              <View className='profile-page__menu-row-right'>
-                {joinedEventsCount > 0 && (
-                  <View className='profile-page__menu-badge'>
-                    <Text className='profile-page__menu-badge-text'>{joinedEventsCount}</Text>
-                  </View>
-                )}
-                <View className='profile-page__chevron profile-page__chevron--menu' />
-              </View>
+              <Text className='profile-page__service-label'>我的足迹</Text>
             </View>
 
-            {shouldShowAlangEntry(authUser) && (
-              <View
-                className='profile-page__menu-row'
-                hoverClass='profile-page__menu-row--pressed'
-                onClick={() => { haptics('light'); Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangEvent}?view=stories` }) }}
-              >
-                <View className='profile-page__menu-icon-well'>
-                  <JoyJoinIcon emoji='📖' size={44} className='profile-page__menu-icon' />
-                </View>
-                <Text className='profile-page__menu-label'>我的故事</Text>
-                <View className='profile-page__menu-row-right'>
-                  <View className='profile-page__chevron profile-page__chevron--menu' />
-                </View>
-              </View>
-            )}
-
             <View
-              className='profile-page__menu-row'
-              hoverClass='profile-page__menu-row--pressed'
-              onClick={() => { haptics('light'); Taro.navigateTo({ url: '/pages/terms/index' }) }}
+              className='profile-page__service-item'
+              hoverClass='profile-page__service-item--pressed'
+              onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.terms }) }}
+              role='button'
+              aria-label='服务条款'
             >
-              <View className='profile-page__menu-icon-well'>
-                <JoyJoinIcon emoji='📄' size={44} className='profile-page__menu-icon' />
+              <View className='profile-page__service-icon-well'>
+                <JoyJoinIcon emoji='📄' size={36} className='profile-page__service-icon' />
               </View>
-              <Text className='profile-page__menu-label'>服务条款</Text>
-              <View className='profile-page__menu-row-right'>
-                <View className='profile-page__chevron profile-page__chevron--menu' />
-              </View>
+              <Text className='profile-page__service-label'>服务条款</Text>
             </View>
           </View>
         </View>
 
-        {/* Logout */}
-        {/* <View className='profile-page__logout-section'>
-          <Button variant='secondary' className='profile-page__logout-btn' hoverClass='profile-page__logout-btn--active' onClick={handleLogout}>
-            退出登录
-          </Button>
-        </View> */}
         <View className='profile-page__logout'>
           <Button
             variant='secondary'

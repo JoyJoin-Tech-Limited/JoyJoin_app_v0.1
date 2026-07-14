@@ -99,7 +99,7 @@ Boundary:
 - Mini-program payment verification remains separate under `apps/mini-program/src/pages/payment-verification/index.tsx`; keep the JSAPI in-program payment flow there as the canonical launch-primary flow. The browser H5 confirmation path is reference-only.
 - Mini-program personality-test results live in `apps/mini-program/src/pages/onboarding/personality-test/results/index.tsx`; keep reveal replay, native share hooks, and the poster composition helper in `apps/mini-program/src/pages/onboarding/personality-test/results/sharePoster.ts` inside that Taro onboarding surface rather than moving them into server or shared runtime modules.
 
-### 2a. 闪现 NPC｜阿浪 V1.5
+### 2a. 闪现 NPC｜阿浪 V1.5 runtime / V1.7 visual alignment
 
 **Authority chain**
 1. `apps/server/src/routes/domains/alang.ts` owns mission transitions, GPS reports, completion, and archive identity.
@@ -112,7 +112,8 @@ Boundary:
 - Search Map receives only the user's current location. The companion route is fetched only after explicit user action.
 - Tencent walking distance/ETA is presentational. `alangGeoFence.ts` (5 m + consecutive stable reports) remains arrival authority.
 - Alang config/debug pages and target overrides are strict non-production single-test surfaces.
-- Visual implementation is limited to ACTIVE 03/05/06/07. FUTURE 04/08 and REMOVED 09 are not active code surfaces.
+- Visual implementation is limited to ACTIVE 03/05/07 plus APPROVED TARGET 06. FUTURE 04/08 and REMOVED 09 are not active code surfaces.
+- V1.7 changes only the mini-program presentation layer for Discover, search, Profile, and My Stories; server stage authority and privacy boundaries remain V1.5. Formal Alang art is still `awaiting-approved-art`, so labelled placeholders remain intentional.
 
 Canonical implementation and rollback notes: `docs/alang-prototype/implementation-map.md`.
 

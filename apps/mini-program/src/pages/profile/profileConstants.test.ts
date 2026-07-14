@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import {
   getProfileCompletion,
+  getProfileGrowthSummary,
+  getProfilePersonalityActionLabel,
+  getProfileV17DataPolicy,
   getXiaoyueGreeting,
+  isProfileV17Enabled,
   MILESTONES,
   ARCHETYPE_FAMILY_NAME,
 } from './profileConstants'
@@ -18,6 +22,82 @@ function makeUser(partial: Partial<AuthUser>): AuthUser {
 }
 
 describe('profileConstants', () => {
+  describe('isProfileV17Enabled', () => {
+    it('keeps the production default enabled when the server omits the flag', () => {
+      expect(isProfileV17Enabled(null)).toBe(true)
+      expect(isProfileV17Enabled(makeUser({ features: {} }))).toBe(true)
+    })
+
+    it('honours both explicit server-owned rollout paths', () => {
+      expect(isProfileV17Enabled(makeUser({
+        features: { profileRedesignEnabled: true },
+      }))).toBe(true)
+      expect(isProfileV17Enabled(makeUser({
+        features: { profileRedesignEnabled: false },
+      }))).toBe(false)
+    })
+  })
+
+  describe('getProfileV17DataPolicy', () => {
+    it('stops both V1.7-only requests when the redesign flag is off', () => {
+      expect(getProfileV17DataPolicy(makeUser({
+        features: { profileRedesignEnabled: false },
+      }), true)).toEqual({
+        gamificationEnabled: false,
+        storyArchivesEnabled: false,
+      })
+    })
+
+    it('loads archives only when both the redesign and Alang entry are enabled', () => {
+      const user = makeUser({ features: { profileRedesignEnabled: true } })
+
+      expect(getProfileV17DataPolicy(user, false)).toEqual({
+        gamificationEnabled: true,
+        storyArchivesEnabled: false,
+      })
+      expect(getProfileV17DataPolicy(user, true)).toEqual({
+        gamificationEnabled: true,
+        storyArchivesEnabled: true,
+      })
+    })
+  })
+
+  describe('getProfilePersonalityActionLabel', () => {
+    it('keeps the personality result entry in compact rollback mode', () => {
+      expect(getProfilePersonalityActionLabel('corgi')).toBe('查看人格结果')
+    })
+
+    it('keeps the personality test entry before an archetype is available', () => {
+      expect(getProfilePersonalityActionLabel(null)).toBe('完成人格测试')
+    })
+  })
+
+  describe('getProfileGrowthSummary', () => {
+    it('uses the real XP total and next-level delta', () => {
+      expect(getProfileGrowthSummary({
+        experiencePoints: 680,
+        nextLevelInfo: { progress: 40, xpNeeded: 320 },
+      })).toEqual({
+        current: 680,
+        nextTarget: 1000,
+        progress: 40,
+        isMaxLevel: false,
+      })
+    })
+
+    it('clamps malformed values without inventing a next target', () => {
+      expect(getProfileGrowthSummary({
+        experiencePoints: -5,
+        nextLevelInfo: { progress: 140, xpNeeded: 0 },
+      })).toEqual({
+        current: 0,
+        nextTarget: null,
+        progress: 100,
+        isMaxLevel: true,
+      })
+    })
+  })
+
   describe('getProfileCompletion', () => {
     it('returns 0 when user is missing', () => {
       expect(getProfileCompletion(null)).toBe(0)

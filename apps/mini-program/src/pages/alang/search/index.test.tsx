@@ -31,8 +31,9 @@ vi.mock('@tarojs/taro', () => {
 })
 
 vi.mock('@tarojs/components', () => ({
-  View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  View: ({ children, hoverClass: _hoverClass, ...props }: any) => <div {...props}>{children}</div>,
   Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
+  Image: ({ mode: _mode, ...props }: any) => <img {...props} />,
   ScrollView: ({ children, scrollY: _scrollY, ...props }: any) => <div {...props}>{children}</div>,
   Map: (props: any) => {
     mocks.mapProps(props)
@@ -58,6 +59,18 @@ vi.mock('../../../lib/alang/alangAnalytics', () => ({
     mapViewTap: vi.fn(),
     foundAuto: vi.fn(),
   },
+}))
+
+vi.mock('../../../lib/alang/alangAssets', () => ({
+  useAlangAssetSource: (assetId: string) => ({
+    src: `/mock-${assetId}.webp`,
+    onError: vi.fn(),
+    usingFallback: true,
+  }),
+}))
+
+vi.mock('../../../lib/utils/haptics', () => ({
+  haptics: vi.fn(),
 }))
 
 describe('AlangSearchPage', () => {
@@ -92,10 +105,17 @@ describe('AlangSearchPage', () => {
   })
 
   it('keeps distance primary and never passes the hidden target to the auxiliary map', async () => {
-    render(<AlangSearchPage />)
+    const { container } = render(<AlangSearchPage />)
 
     expect(screen.getByText('84')).toBeInTheDocument()
     expect(screen.getByText('定位信号稳定')).toBeInTheDocument()
+    expect(screen.getByText('你已进入阿浪可能出现的范围')).toBeInTheDocument()
+    expect(screen.queryByText('跟着距离，去见一个人')).not.toBeInTheDocument()
+    expect(screen.getByText('区域场景示意')).toBeInTheDocument()
+    expect(screen.getByText('找到后场景示意')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '继续寻找' })).toBeInTheDocument()
+    expect(container.querySelectorAll('.alang-search__signal-bar')).toHaveLength(4)
+    expect(container.querySelector('.alang-search__radar-sweep')).not.toBeInTheDocument()
     expect(screen.getByText('只确认你在哪里，不显示阿浪坐标或路线')).toBeInTheDocument()
 
     fireEvent.click(screen.getByText('打开'))
@@ -123,6 +143,7 @@ describe('AlangSearchPage', () => {
 
     expect(await screen.findByText('定位权限未开启')).toBeInTheDocument()
     expect(screen.getByText('重新定位')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '打开定位并继续' })).toBeInTheDocument()
     const openSetting = screen.getByText('打开定位设置')
     expect(openSetting).toBeInTheDocument()
 

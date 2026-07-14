@@ -1,17 +1,19 @@
-# 闪现 NPC｜阿浪 V1.5 — Active Implementation Map
+# 闪现 NPC｜阿浪 V1.7 — Active Implementation Map
 
-> 当前版本：2026-07-13
-> 产品基准：`JoyJoin_Master_PRD_V1.5_Codex执行版_已清理过时功能参考.docx`
-> Scope ID：`ALANG-V15-PHASE-B`
+> 当前版本：2026-07-14
+> 产品基准：`JoyJoin_Master_PRD_V1.7_Codex执行版_强调Mockup未完全落地.docx`
+> Scope ID：`ALANG-V17-VISUAL-ALIGNMENT`
 
 ## 0. 视觉参考边界
 
-- ACTIVE 03：只约束现有 Discover 闪现入口，不新增一级 Tab。
-- ACTIVE 05：约束寻找阿浪页的距离主视觉与辅助信息层级。
-- ACTIVE 06/07：保留现有“我的”导航，并让阿浪档案进入现有“我的故事”。
+- ACTIVE 03：现有 Discover 闪现入口落为紧凑单 NPC 卡，不新增一级 Tab。
+- ACTIVE 05：寻找页落为区域提示、静态雷达/真实距离信号、找到后说明和用户-only 辅助地图。
+- APPROVED TARGET 06：“我的”落为身份舞台、批准的人格角色图、真实成长/统计/档案和设置；伙伴装备只保留筹备中同级入口。
+- ACTIVE 07：“我的故事”落为真实汇总、筛选 Tab 与时间线档案卡；独立故事缩略图字段暂不实现。
 - FUTURE 04 多 NPC 地图、FUTURE 08 伙伴/装备完整页本轮不实现。
 - REMOVED 09 探索地图不得新增、恢复或借图改导航。
 - 事件详情、配置、对话、陪伴、结果没有 ACTIVE Mockup，必须以仓库现有 UI + PRD 正文为基准。
+- 阿浪正式人物/场景图仍为 `awaiting-approved-art`；占位图必须继续显示“场景示意”。
 
 ## 1. 用户流程与服务端权威
 
@@ -35,6 +37,7 @@ Discover 卡 / 我的故事
 | 能力 | 文件 |
 | --- | --- |
 | Discover 入口 | `apps/mini-program/src/components/alang/AlangDiscoverCard.tsx` |
+| “我的”身份舞台/档案入口 | `apps/mini-program/src/pages/profile/` |
 | 列表/详情 | `apps/mini-program/src/pages/alang/event/`、`event-detail/` |
 | 内部配置 | `apps/mini-program/src/pages/alang/config/`（仅 single-test） |
 | 搜索 | `apps/mini-program/src/pages/alang/search/` |
@@ -152,7 +155,7 @@ Discover 卡 / 我的故事
 | `RETEST-04` | 事务删除、归属限制、幂等和回滚 | `repositories/alangRepo.ts` | reset repository tests | PASS |
 | `RETEST-05` | Query/mutation/local config 缓存清理 | `lib/alang/useAlangMission.ts` | cache helper tests | PASS |
 | `RETEST-06` | 重置后重新配置并可再次 start/complete | Reset route + config reLaunch | route/result/debug tests | PASS |
-| `RETEST-07` | 自动化测试覆盖 P0 安全与交互清单 | server/mini Alang test suites | Server 58 + Mini 52 tests；Shared/Server/Mini 定向 typecheck；Taro 864 modules | PASS |
+| `RETEST-07` | 自动化测试覆盖 P0 安全与交互清单 | server/mini Alang test suites | 最终定向套件 Server Alang/Geo 60 + Mini Alang/Profile 74；Shared/Server/Mini typecheck；Taro 868 modules | PASS |
 
 ## 9. 验证基线
 
@@ -165,17 +168,21 @@ npm run test -w mini-program -- --run src/pages/alang
 
 必须额外在微信开发者工具/真机检查：定位首次授权、拒绝后设置恢复、iOS swipe-back、前后台恢复、polyline、弱网/超时、短屏安全区和 reduced motion。
 
-## 10. V1.5 本地需求追踪矩阵
+## 10. V1.7 本地需求追踪矩阵
 
 > 下列 ID 是仓库内追踪编号，用于把 Word 条款、实现证据和验收状态放在同一处，不替代 Word 原文。
 
-| 本地 ID | V1.5 要求 | 主要实现证据 | 自动验证 | 状态 |
+| 本地 ID | V1.7 要求 | 主要实现证据 | 自动验证 | 状态 |
 | --- | --- | --- | --- | --- |
-| `V15-REF-01` | 只执行 ACTIVE 03/05/06/07；不实现 FUTURE 04/08；不恢复 REMOVED 09 | `alangAssets.ts`、现有路由/Tab | 文档映射、资源 manifest | **PARTIAL**：参考边界已落实；正式美术待审批 |
-| `V15-GEO-01` | 复用现有腾讯地图接入，不新增 SDK/provider/Key | `routes/domains/geo.ts`、`api/geo.ts` | `geoRoutes.test.ts` | PASS |
-| `V15-SEC-01` | 搜索阶段隐藏目标，陪伴阶段才披露路线终点 | `alangDisclosure.ts`、`alangTargetResolver.ts` | disclosure/target resolver tests | PASS |
-| `V15-ARRIVE-01` | 服务端固定 5 米并要求稳定读数 | `alangGeoFence.ts`、`constants.ts` | geofence/content tests | PASS |
-| `V15-STATE-01` | 页面断点由服务端 `stage/currentNodeId` 恢复 | Alang 各阶段页、`useAlangMission.ts` | mini-program Alang tests | PASS |
-| `V15-ARCHIVE-01` | 先展示结果，再由用户主动收录 | `result/index.tsx`、`POST .../complete` | result/server tests | PASS |
-| `V15-PERF-01` | 阿浪子包保持轻量，不拖累主包 | `pages/alang` subpackage | 微信生产编译 + package-size | PASS：Alang 135.6KiB；仓库主包 3.27MB 属全局既有门禁 |
-| `V15-QA-01` | 三类真机、定位/地图/弱网与 ACTIVE 截图验收 | 外部验收清单 | 无法由本地自动化替代 | **BLOCKED EXTERNAL** |
+| `V17-REF-01` | 只执行 ACTIVE 03/05/07 + APPROVED TARGET 06；不实现 FUTURE 04/08；不恢复 REMOVED 09 | `alangAssets.ts`、现有路由/Tab | 文档映射、资源 manifest | **PARTIAL**：结构已落实；阿浪正式美术待审批 |
+| `V17-UI-03` | Discover 单 NPC 紧凑入口、3 个说明 chip、单 CTA | `AlangDiscoverCard.tsx/.scss` | 组件测试 + 750×1624 全页上下文截图 | **F3**：结构与层级已对齐；正式阿浪图、微信真机阻断 F4 |
+| `V17-UI-05` | 区域提示 → 雷达/距离 → 找到后说明；地图只显示用户 | `pages/alang/search/` | 定向测试 + 750×1624 截图 | **F3**：隐私与距离主视觉已对齐；正式区域/找到后图、原生 Map 真机阻断 F4 |
+| `V17-UI-06` | “我的”身份舞台、动态人格、真实成长/统计/档案、设置 | `pages/profile/` | 数据策略/常量测试 + 750×1624 截图 | **F3**：批准的人格图与真实数据已接入；FUTURE 08 仅显示“装备筹备中”，故事正式图与真机阻断 F4 |
+| `V17-UI-07` | 真实故事汇总、筛选 Tab、时间线档案卡 | `pages/alang/event/` | 定向测试 + 750×1624 截图 | **F3**：真实档案路径已对齐；正式故事图与真机阻断 F4，独立缩略图字段按范围暂缓 |
+| `V17-GEO-01` | 复用现有腾讯地图接入，不新增 SDK/provider/Key | `routes/domains/geo.ts`、`api/geo.ts` | `geoRoutes.test.ts` | PASS |
+| `V17-SEC-01` | 搜索阶段隐藏目标，陪伴阶段才披露路线终点 | `alangDisclosure.ts`、`alangTargetResolver.ts` | disclosure/target resolver tests | PASS |
+| `V17-ARRIVE-01` | 服务端固定 5 米并要求稳定读数 | `alangGeoFence.ts`、`constants.ts` | geofence/content tests | PASS |
+| `V17-STATE-01` | 页面断点由服务端 `stage/currentNodeId` 恢复 | Alang 各阶段页、`useAlangMission.ts` | mini-program Alang tests | PASS |
+| `V17-ARCHIVE-01` | 先展示结果，再由用户主动收录 | `result/index.tsx`、`POST .../complete` | result/server tests | PASS |
+| `V17-PERF-01` | 阿浪子包保持轻量，不拖累主包 | `pages/alang` subpackage | 微信生产编译 + package-size | **ALANG PASS / MAIN BLOCK**：Alang 158.7KiB；实际主包 raw 3.268MiB，检查器选取 raw 3.215MiB，本地 Deflate 估算 1.928MiB，尚无官方上传预检结论 |
+| `V17-QA-01` | 真机定位/地图/弱网与 ACTIVE 截图验收 | 外部验收清单 | H5 统一视口截图不能替代真机 | **BLOCKED EXTERNAL** |

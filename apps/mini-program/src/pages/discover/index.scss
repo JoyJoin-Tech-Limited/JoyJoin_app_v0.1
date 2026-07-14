@@ -93,6 +93,10 @@
   }
 
   &__location-pill-icon {
+    display: block;
+    flex: 0 0 28rpx;
+    width: 28rpx !important;
+    height: 28rpx !important;
     font-size: 28rpx;
     line-height: 1;
   }

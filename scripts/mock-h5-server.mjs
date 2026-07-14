@@ -6,6 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
 const PORT = process.env.PORT || 5001
 const DIST_DIR = path.resolve(__dirname, '../apps/mini-program/dist')
+const SOURCE_ASSET_DIR = path.resolve(__dirname, '../apps/mini-program/src/assets')
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -20,12 +21,22 @@ app.use((req, res, next) => {
 
 app.use(express.json())
 
+// H5 visual verification resolves the mini-program's approved local fallbacks
+// from source. The production mini-program build still owns its normal asset
+// copy/CDN rules; this route exists only in the screenshot harness.
+app.use('/assets', express.static(SOURCE_ASSET_DIR))
+
 const MOCK_USER = {
   id: 'user-screenshot-001',
   displayName: '悦仔测试',
   nickname: '悦仔测试',
+  appMode: 'production',
   archetype: 'corgi',
   primaryArchetype: 'corgi',
+  bio: '喜欢晚风、深聊，也喜欢偶尔说走就走的城市漫步。',
+  gender: 'female',
+  lifeStage: '探索生活的新阶段',
+  experiencePoints: 260,
   nextStep: 'discover',
   hasCompletedOnboarding: true,
   profileEssentialComplete: true,
@@ -52,6 +63,8 @@ const MOCK_USER = {
     socialIcebreakerCustomModeEnabled: true,
     profileRedesignEnabled: true,
     matchingPuzzlePreludeEnabled: true,
+    oracleCardCornerStatEnabled: true,
+    alangEnabled: true,
   },
 }
 
@@ -103,6 +116,196 @@ const MOCK_PRICING = {
     { planType: 'pack_6', priceInCents: 37000, originalPriceInCents: 52800 },
   ],
 }
+
+const MOCK_DISCOVER_POOLS = [
+  {
+    ...MOCK_POOL,
+    id: 'pool-screenshot-001',
+    title: '周末松弛感饭局 · 科技园',
+    district: '科技园',
+    dateTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+    registrationCount: 5,
+    currentParticipants: 5,
+    maxParticipants: 8,
+    spotsLeft: 3,
+    topArchetypes: [
+      { archetype: 'corgi', count: 2 },
+      { archetype: 'dolphin_calm', count: 1 },
+    ],
+    userTypeCount: 2,
+    userTypeRarity: 'present',
+    highChemistryCount: 3,
+    topComplementaryType: 'dolphin_calm',
+    narrativePivot: 'present',
+    hoursUntilDeadline: 36,
+  },
+  {
+    ...MOCK_POOL,
+    id: 'pool-screenshot-002',
+    title: '晚风里的深聊局 · 后海',
+    eventType: '畅聊局',
+    district: '后海',
+    dateTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+    registrationCount: 4,
+    currentParticipants: 4,
+    maxParticipants: 6,
+    spotsLeft: 2,
+    sampleArchetypes: ['owl', 'koala', 'corgi'],
+    topArchetypes: [
+      { archetype: 'owl', count: 1 },
+      { archetype: 'koala', count: 1 },
+    ],
+    accentFamily: 'cool',
+    aiHeadline: '慢热也没关系，这里有人愿意认真听',
+    userTypeCount: 1,
+    userTypeRarity: 'rare',
+    highChemistryCount: 2,
+    topComplementaryType: 'owl',
+    narrativePivot: 'rare',
+    hoursUntilDeadline: 72,
+    price: 108,
+  },
+]
+
+const MOCK_ALANG_SLUG = 'meet-alang'
+const MOCK_ALANG_MISSION = {
+  id: 'alang-mission-screenshot-001',
+  slug: MOCK_ALANG_SLUG,
+  title: '阿浪在晚风里等一个答案',
+  description: '南头古城附近出现了一个独自徘徊的身影。',
+  status: 'in_progress',
+  stage: 'searching',
+  currentNodeId: 'search-gate',
+  progressPercent: 38,
+  isDebugSession: false,
+}
+
+// Search-stage content intentionally contains no target coordinate. The mock
+// GPS response below returns distance only, preserving the production privacy
+// boundary while still making the H5 state deterministic.
+const MOCK_ALANG_CONTENT = {
+  version: '1.0',
+  title: MOCK_ALANG_MISSION.title,
+  description: MOCK_ALANG_MISSION.description,
+  startNodeId: 'event-card',
+  nodes: [
+    {
+      id: 'event-card',
+      type: 'event_card',
+      content: { title: '闪现任务', body: '阿浪在城市的晚风里等你。' },
+      nextNodeId: 'event-detail',
+    },
+    {
+      id: 'event-detail',
+      type: 'event_detail',
+      content: {
+        title: '去找找阿浪',
+        subtitle: '约 10 分钟',
+        body: '先走进寻找区域，精确位置会保持神秘。',
+        hints: ['建议在室外开启定位', '进度会从服务端恢复'],
+      },
+      nextNodeId: 'search-gate',
+    },
+    {
+      id: 'search-gate',
+      type: 'search_gate',
+      content: { body: '朝着距离变小的方向慢慢走。' },
+      nextNodeId: 'found-scene',
+    },
+    {
+      id: 'found-scene',
+      type: 'found_scene',
+      content: { body: '路灯下，阿浪折着一张被风吹皱的纸。' },
+      nextNodeId: 'dialogue-hello',
+    },
+    {
+      id: 'dialogue-hello',
+      type: 'dialogue',
+      content: { speaker: '阿浪', body: '你也会在晚上想起没有说完的话吗？' },
+      choices: [
+        { label: '会，有些话需要多一点勇气', response: '阿浪轻轻点了点头。', nextNodeId: 'companion-start' },
+        { label: '我可以陪你走一段', response: '他把纸收进口袋里。', nextNodeId: 'companion-start' },
+      ],
+    },
+    {
+      id: 'companion-start',
+      type: 'companion_start',
+      content: { body: '两个人沿着旧城的石板路往前走。' },
+      nextNodeId: 'companion-move',
+    },
+    {
+      id: 'companion-move',
+      type: 'companion_move',
+      content: { body: '晚风慢了下来，话也慢慢找到了出口。', companionLines: ['不用赶，我们慢慢走。'] },
+      nextNodeId: 'arrival-gate',
+    },
+    {
+      id: 'arrival-gate',
+      type: 'arrival_gate',
+      content: { body: '靠近终点并稳定停留片刻。' },
+      nextNodeId: 'user-confirm',
+    },
+    {
+      id: 'user-confirm',
+      type: 'user_confirm',
+      content: { body: '你们到了。', confirmLabel: '看看这段故事' },
+      nextNodeId: 'closing',
+    },
+    {
+      id: 'closing',
+      type: 'closing',
+      content: { body: '阿浪终于把没说完的话折成了一束光。' },
+      nextNodeId: 'result-card',
+    },
+    {
+      id: 'result-card',
+      type: 'result_card',
+      content: {
+        body: '一段被晚风记住的同行。',
+        finalMood: '释然',
+        summaryLine: '有些答案，是在一起走过一段路后才出现的。',
+      },
+    },
+  ],
+  meta: {
+    estimatedDurationMinutes: 10,
+    difficulty: 'easy',
+    tags: ['城市漫步', '夜晚', '陪伴'],
+    npcName: '阿浪',
+    searchRadiusMeters: 200,
+  },
+}
+
+const MOCK_ALANG_ARCHIVES = [
+  {
+    id: 'alang-archive-screenshot-001',
+    missionId: MOCK_ALANG_MISSION.id,
+    title: '晚风里没说完的话',
+    locationName: '南头古城',
+    completedAt: '2026-07-12T20:42:00+08:00',
+    finalMood: '释然',
+    closingLine: '阿浪把那张纸收好，笑着说今晚可以睡个好觉了。',
+    summaryLine: '有些答案，是在一起走过一段路后才出现的。',
+    nodeHistory: ['event-card', 'event-detail', 'search-gate', 'found-scene', 'dialogue-hello', 'companion-start', 'companion-move', 'arrival-gate', 'user-confirm', 'closing', 'result-card'],
+    choicesMade: [{ nodeId: 'dialogue-hello', choiceIndex: 1, label: '我可以陪你走一段' }],
+    companionLines: ['不用赶，我们慢慢走。', '晚风会帮我们把话带到该去的地方。'],
+    isDebugSession: false,
+  },
+  {
+    id: 'alang-archive-screenshot-002',
+    missionId: 'alang-mission-screenshot-002',
+    title: '雨停以后，城市亮了一点',
+    locationName: '华侨城创意园',
+    completedAt: '2026-07-04T18:26:00+08:00',
+    finalMood: '温暖',
+    closingLine: '他们在屋檐下等到了雨停。',
+    summaryLine: '一场阵雨，让两个陌生人有了同一段回忆。',
+    nodeHistory: ['event-card', 'search-gate', 'found-scene', 'closing', 'result-card'],
+    choicesMade: [],
+    companionLines: ['再等一会吧，雨声挺好听的。'],
+    isDebugSession: false,
+  },
+]
 
 // Joined events for 我的足迹
 app.get('/api/events/joined', (req, res) => {
@@ -244,6 +447,129 @@ app.post('/api/notifications/mark-read', (req, res) => {
 // Auth
 app.get('/api/auth/user', (req, res) => {
   res.json(MOCK_USER)
+})
+
+// Predictive shells used by the V1.7 Profile and Discover visual checks.
+app.get('/api/shell/profile', (req, res) => {
+  res.json({
+    user: MOCK_USER,
+    coupons: MOCK_COUPONS,
+    stats: {
+      eventsJoined: 4,
+      connectionsCount: 11,
+    },
+    meta: {
+      cacheKey: 'screenshot-profile-v17',
+      serverTime: new Date().toISOString(),
+    },
+  })
+})
+
+app.get('/api/user/gamification', (req, res) => {
+  res.json({
+    experiencePoints: 260,
+    joyCoins: 148,
+    currentLevel: 2,
+    levelConfig: {
+      level: 2,
+      name: 'Explorer',
+      nameCn: '探索者',
+      xpRequired: 100,
+      icon: 'compass',
+      benefits: ['View more match profiles'],
+      benefitsCn: ['查看更多匹配档案'],
+    },
+    nextLevelInfo: {
+      progress: 80,
+      xpNeeded: 40,
+    },
+    activityStreak: 3,
+    lastActivityDate: '2026-07-13T20:20:00+08:00',
+    streakFreezeAvailable: true,
+    eventsAttended: 4,
+  })
+})
+
+app.get('/api/shell/discover', (req, res) => {
+  res.json({
+    user: {
+      nextStep: 'discover',
+      primaryArchetype: MOCK_USER.primaryArchetype,
+    },
+    pools: {
+      items: MOCK_DISCOVER_POOLS,
+      hasMore: false,
+    },
+    myRegistrations: {
+      ids: ['pool-screenshot-001'],
+      statuses: { 'pool-screenshot-001': 'confirmed' },
+    },
+    meta: {
+      cacheKey: 'screenshot-discover-alang-v17',
+      serverTime: new Date().toISOString(),
+    },
+  })
+})
+
+// Canonical pool-list fallback if the Discover shell is deliberately disabled
+// while diagnosing the H5 harness.
+app.get('/api/event-pools', (req, res) => {
+  res.json(MOCK_DISCOVER_POOLS)
+})
+
+// Alang V1.7 visual fixtures. The searching detail never includes
+// routeDestination or target coordinates; only the distance-only GPS response
+// below is exposed to the client.
+app.get('/api/alang/missions', (req, res) => {
+  res.json([MOCK_ALANG_MISSION])
+})
+
+app.get('/api/alang/missions/:slug', (req, res) => {
+  if (req.params.slug !== MOCK_ALANG_SLUG) {
+    res.status(404).json({ error: '闪现故事不存在' })
+    return
+  }
+
+  res.json({
+    ...MOCK_ALANG_MISSION,
+    content: MOCK_ALANG_CONTENT,
+    myProgress: {
+      progressId: 'alang-progress-screenshot-001',
+      stage: 'searching',
+      currentNodeId: 'search-gate',
+      nodeHistory: ['event-card', 'event-detail', 'search-gate'],
+      choicesMade: [],
+      status: 'in_progress',
+      isDebugSession: false,
+    },
+  })
+})
+
+app.post('/api/alang/missions/:slug/gps', (req, res) => {
+  if (req.params.slug !== MOCK_ALANG_SLUG) {
+    res.status(404).json({ error: '闪现故事不存在' })
+    return
+  }
+
+  res.json({
+    arrived: false,
+    distanceMeters: 118,
+    radiusMeters: 5,
+    stableCount: 0,
+  })
+})
+
+app.get('/api/alang/archives', (req, res) => {
+  res.json(MOCK_ALANG_ARCHIVES)
+})
+
+app.get('/api/alang/archives/:archiveId', (req, res) => {
+  const archive = MOCK_ALANG_ARCHIVES.find(({ id }) => id === req.params.archiveId)
+  if (!archive) {
+    res.status(404).json({ error: '故事档案不存在' })
+    return
+  }
+  res.json(archive)
 })
 
 // Event pool

@@ -1,6 +1,6 @@
-# 阿浪 V1.5 — 正式视觉资产清单
+# 阿浪 V1.7 — 正式视觉资产清单
 
-> 状态日期：2026-07-13
+> 状态日期：2026-07-14
 > 当前结论：**正式资产尚未批准。** 代码只使用带“场景示意”标签的 bundled WebP 占位图。
 
 运行时 manifest：`apps/mini-program/src/lib/alang/alangAssets.ts`。批准状态从 `awaiting-approved-art` 改为 `approved` 之前，页面不会尝试把计划中的 CDN 文件当成正式图。
@@ -38,3 +38,10 @@
 ## 当前占位图限制
 
 三张现有 Lovart WebP 是通用 JoyJoin 礼盒/场景占位物，不是阿浪人物设定，也不满足 Word 锁定稿的最终视觉品质。它们仅用于结构、布局、断网和错误态验证，不能出现在“视觉资产已完成”的验收结论中。
+
+## V1.7 Profile 与故事缩略图边界
+
+- Reference 06 的人格角色主视觉复用现有已批准的 12 个 V4 `ARCHETYPE_ASSET_MAP` 资产；WebP 失败后依次回退 PNG 与 bundled `ArchetypeHead`。这不等于批准了新的阿浪角色图或霓虹城市场景图。
+- Reference 06 的完整装备库存/套装属于 FUTURE 08。本轮只显示“装备筹备中”的同级入口，不生成装备素材，不新增装备页面。
+- Reference 07 当前没有每段故事独立缩略图字段或已批准素材。档案卡复用带“故事场景示意”标签的 fallback；多故事独立缩略图只保留为后续数据契约与资产建议。
+- Search 顶部区域横幅、找到后场景以及 Story 总览图仍使用现有 manifest fallback；任何正式替换都必须走同一审批步骤。

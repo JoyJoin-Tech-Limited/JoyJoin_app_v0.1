@@ -75,9 +75,12 @@ export default function AlangDiscoverCard() {
         <Text className='alang-discover-card__title'>{storyTitle}</Text>
         <Text className='alang-discover-card__desc'>{storyLine}</Text>
 
-        <View className='alang-discover-card__privacy'>
-          <Text className='alang-discover-card__privacy-dot'>●</Text>
-          <Text className='alang-discover-card__privacy-text'>到达前只给接近提示，精确位置保持神秘</Text>
+        <View className='alang-discover-card__chips' aria-label='闪现体验说明'>
+          <Text className='alang-discover-card__chip'>附近角色</Text>
+          <Text className='alang-discover-card__chip'>位置保持神秘</Text>
+          <Text className='alang-discover-card__chip'>
+            {isContinuing ? '可继续上次进度' : '到达后触发故事'}
+          </Text>
         </View>
 
         <View

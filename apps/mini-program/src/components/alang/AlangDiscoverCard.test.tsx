@@ -60,13 +60,16 @@ describe('AlangDiscoverCard', () => {
   })
 
   it('keeps the Reference 03 entry visible while mission data is loading', () => {
-    render(<AlangDiscoverCard />)
+    const { container } = render(<AlangDiscoverCard />)
 
     expect(screen.getByText('闪现')).toBeInTheDocument()
     expect(screen.getByText('Beta')).toBeInTheDocument()
     expect(screen.getByText('附近有个角色，正等你出发')).toBeInTheDocument()
     expect(screen.getByText('正在看看谁出现了…')).toBeInTheDocument()
-    expect(screen.getByText('到达前只给接近提示，精确位置保持神秘')).toBeInTheDocument()
+    expect(screen.getByText('附近角色')).toBeInTheDocument()
+    expect(screen.getByText('位置保持神秘')).toBeInTheDocument()
+    expect(screen.getByText('到达后触发故事')).toBeInTheDocument()
+    expect(container.querySelectorAll('.alang-discover-card__chip')).toHaveLength(3)
     expect(mockUseAlangMissions).toHaveBeenCalledWith(true)
   })
 
@@ -124,6 +127,7 @@ describe('AlangDiscoverCard', () => {
     render(<AlangDiscoverCard />)
 
     expect(screen.getByText('还没说完的那一晚')).toBeInTheDocument()
+    expect(screen.getByText('可继续上次进度')).toBeInTheDocument()
     expect(screen.queryByText('一段新故事')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '继续这段故事' }))
     expect(Taro.navigateTo).toHaveBeenCalledWith({

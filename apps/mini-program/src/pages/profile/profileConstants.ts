@@ -12,6 +12,81 @@ export interface MilestoneConfig {
   ariaLabel: string
 }
 
+export interface ProfileGrowthInput {
+  experiencePoints?: number | null
+  nextLevelInfo?: {
+    progress?: number | null
+    xpNeeded?: number | null
+  } | null
+}
+
+export interface ProfileGrowthSummary {
+  current: number
+  nextTarget: number | null
+  progress: number
+  isMaxLevel: boolean
+}
+
+/**
+ * Server-owned rollout decision for the V1.7 Profile presentation.
+ * An absent value preserves the existing production default (enabled), while
+ * an explicit false always selects the deterministic compact fallback.
+ */
+export function isProfileV17Enabled(
+  user?: Pick<AuthUser, 'features'> | null,
+): boolean {
+  return user?.features?.profileRedesignEnabled ?? true
+}
+
+export interface ProfileV17DataPolicy {
+  gamificationEnabled: boolean
+  storyArchivesEnabled: boolean
+}
+
+export function getProfilePersonalityActionLabel(archetype?: string | null): string {
+  return archetype ? '查看人格结果' : '完成人格测试'
+}
+
+/**
+ * Keep the visual rollout and its optional data work on the same switch.
+ * This prevents the compact fallback from silently fetching V1.7-only XP or
+ * Alang archive data after the server turns the redesigned Profile off.
+ */
+export function getProfileV17DataPolicy(
+  user: Pick<AuthUser, 'features'> | null | undefined,
+  alangEntryAvailable: boolean,
+): ProfileV17DataPolicy {
+  const profileV17Enabled = isProfileV17Enabled(user)
+
+  return {
+    gamificationEnabled: profileV17Enabled,
+    storyArchivesEnabled: profileV17Enabled && alangEntryAvailable,
+  }
+}
+
+/**
+ * Convert the existing gamification response into the compact progress model
+ * used by the Profile identity stage. No presentation defaults are invented:
+ * the next target is only shown when the API supplies a real xpNeeded value.
+ */
+export function getProfileGrowthSummary(input?: ProfileGrowthInput | null): ProfileGrowthSummary {
+  const rawCurrent = Number(input?.experiencePoints ?? 0)
+  const current = Number.isFinite(rawCurrent) ? Math.max(0, Math.round(rawCurrent)) : 0
+  const rawNeeded = input?.nextLevelInfo?.xpNeeded
+  const hasNextLevel = typeof rawNeeded === 'number' && Number.isFinite(rawNeeded) && rawNeeded > 0
+  const rawProgress = Number(input?.nextLevelInfo?.progress ?? (hasNextLevel ? 0 : 100))
+  const progress = Number.isFinite(rawProgress)
+    ? Math.max(0, Math.min(100, Math.round(rawProgress)))
+    : 0
+
+  return {
+    current,
+    nextTarget: hasNextLevel ? current + Math.round(rawNeeded) : null,
+    progress,
+    isMaxLevel: !hasNextLevel,
+  }
+}
+
 export const MILESTONES: MilestoneConfig[] = [
   {
     key: 'firstEvent',

@@ -1,6 +1,6 @@
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { View, Text, Map, ScrollView } from '@tarojs/components'
+import { View, Text, Image, Map, ScrollView } from '@tarojs/components'
 import {
   ALANG_ARRIVAL_RADIUS_METERS,
   ALANG_DEFAULT_SEARCH_RADIUS_METERS,
@@ -14,6 +14,7 @@ import { useAlangMissionDetail } from '../../../lib/alang/useAlangMission'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangDebugTools } from '../../../lib/alang/alangAccess'
 import { alangEvents } from '../../../lib/alang/alangAnalytics'
+import { useAlangAssetSource } from '../../../lib/alang/alangAssets'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
 import './index.scss'
@@ -34,6 +35,8 @@ export default function AlangSearchPage() {
     !!slug && !!user?.features?.alangEnabled,
   )
   const progress = mission?.myProgress
+  const areaArtwork = useAlangAssetSource('eventHero')
+  const foundSceneArtwork = useAlangAssetSource('foundScene')
 
   const [config, setConfig] = useState<AlangSearchConfig | null>(null)
   const [showMap, setShowMap] = useState(false)
@@ -164,6 +167,7 @@ export default function AlangSearchPage() {
   }, [position])
 
   const handleToggleMap = () => {
+    haptics('light')
     alangEvents.mapViewTap(slug)
     if (!position) {
       setLocationError('还没有收到你的位置，请先重新定位')
@@ -202,6 +206,15 @@ export default function AlangSearchPage() {
       Taro.showToast({ title: '设置没有打开，请稍后再试', icon: 'none' })
     }
   }, [restartLocation])
+
+  const handlePrimarySearchAction = useCallback(() => {
+    haptics('light')
+    if (permissionDenied) {
+      void handleOpenSetting()
+      return
+    }
+    void handleRetryLocation()
+  }, [handleOpenSetting, handleRetryLocation, permissionDenied])
 
   useEffect(() => {
     if (!found || !gpsNodeId) return
@@ -242,6 +255,28 @@ export default function AlangSearchPage() {
         ? '你已进入寻找区域，再慢慢靠近一点'
         : '继续朝阿浪所在的区域走近'
 
+  const areaTitle = distance === null
+    ? '正在确认你所在的寻找区域'
+    : distance <= ALANG_DEFAULT_SEARCH_RADIUS_METERS
+      ? '你已进入阿浪可能出现的范围'
+      : '继续靠近阿浪出现的区域'
+  const signalStrength = signal.tone === 'steady'
+    ? 4
+    : signal.tone === 'fair'
+      ? 3
+      : signal.tone === 'weak'
+        ? 2
+        : signal.tone === 'locating'
+          ? 1
+          : 0
+  const primaryActionLabel = permissionDenied
+    ? '打开定位并继续'
+    : locationError
+      ? '重新定位'
+      : distance === null
+        ? '开始寻找'
+        : '继续寻找'
+
   if (found) {
     return (
       <View className='alang-search__found'>
@@ -256,35 +291,48 @@ export default function AlangSearchPage() {
   return (
     <ScrollView className='alang-search' scrollY>
       <View className='alang-search__content'>
-      <View className='alang-search__header'>
-        <Text className='alang-search__eyebrow'>寻找阿浪 · 距离提示</Text>
-        <Text className='alang-search__title'>跟着距离，去见一个人</Text>
-      </View>
-
       <View className='alang-search__area-card'>
         <View className='alang-search__area-icon'>
           <View className='alang-search__area-icon-core' />
         </View>
         <View className='alang-search__area-copy'>
-          <Text className='alang-search__area-title'>{areaMessage}</Text>
-          <Text className='alang-search__area-detail'>
-            {distance !== null && distance <= ALANG_DEFAULT_SEARCH_RADIUS_METERS
-              ? '已进入阿浪可能出现的范围'
-              : `先靠近约 ${ALANG_DEFAULT_SEARCH_RADIUS_METERS} 米的寻找区域`}
-          </Text>
+          <Text className='alang-search__area-title'>{areaTitle}</Text>
+          <Text className='alang-search__area-detail'>{areaMessage}</Text>
+        </View>
+        <View className='alang-search__area-art' aria-hidden='true'>
+          <Image
+            className='alang-search__area-art-image'
+            src={areaArtwork.src}
+            mode='aspectFill'
+            onError={areaArtwork.onError}
+          />
+          <View className='alang-search__area-art-wash' />
+          {areaArtwork.usingFallback && (
+            <Text className='alang-search__area-placeholder-label'>区域场景示意</Text>
+          )}
         </View>
       </View>
 
       <View className='alang-search__radar-card'>
         <View className='alang-search__radar-heading'>
           <Text className='alang-search__radar-title'>阿浪就在附近</Text>
-          <Text className='alang-search__radar-subtitle'>越靠近，距离提示会越清楚</Text>
+          <Text className='alang-search__radar-subtitle'>他在约 {ALANG_DEFAULT_SEARCH_RADIUS_METERS} 米的寻找区域里，越靠近信号越清楚</Text>
         </View>
-        <View className='alang-search__distance-stage'>
-          <View className='alang-search__orbit alang-search__orbit--outer' />
-          <View className='alang-search__orbit alang-search__orbit--inner' />
-          <View className='alang-search__radar-sweep' />
-          <View className='alang-search__distance-ring'>
+        <View className='alang-search__radar-grid'>
+          <View className='alang-search__radar-visual' aria-hidden='true'>
+            <View className='alang-search__orbit alang-search__orbit--outer' />
+            <View className='alang-search__orbit alang-search__orbit--middle' />
+            <View className='alang-search__orbit alang-search__orbit--inner' />
+            <View className='alang-search__radar-axis alang-search__radar-axis--horizontal' />
+            <View className='alang-search__radar-axis alang-search__radar-axis--vertical' />
+            <View className='alang-search__radar-core'>
+              <Text className='alang-search__radar-core-glyph'>?</Text>
+            </View>
+            <View className='alang-search__radar-clue'>
+              <Text className='alang-search__radar-clue-glyph'>✦</Text>
+            </View>
+          </View>
+          <View className='alang-search__distance-panel'>
             <Text className='alang-search__distance-label'>距离阿浪约</Text>
             <View className='alang-search__distance-readout'>
               <Text className='alang-search__distance-value'>
@@ -292,19 +340,20 @@ export default function AlangSearchPage() {
               </Text>
               <Text className='alang-search__distance-unit'>米</Text>
             </View>
-            <Text className='alang-search__distance-caption'>距离会随你走动更新</Text>
+            <View className='alang-search__signal-bars' aria-label={`信号强度 ${signalStrength} 格`}>
+              {[1, 2, 3, 4].map((level) => (
+                <View
+                  key={level}
+                  className={`alang-search__signal-bar${level <= signalStrength ? ' alang-search__signal-bar--active' : ''}`}
+                />
+              ))}
+            </View>
+            <Text className={`alang-search__signal-label alang-search__signal-label--${signal.tone}`}>{signal.label}</Text>
+            <Text className='alang-search__signal-detail'>{signal.detail}</Text>
           </View>
         </View>
         <View className='alang-search__radar-tip'>
           <Text className='alang-search__radar-tip-text'>小提示：朝距离变小的方向走，信号会越来越稳</Text>
-        </View>
-      </View>
-
-      <View className={`alang-search__signal alang-search__signal--${signal.tone}`}>
-        <View className='alang-search__signal-dot' />
-        <View className='alang-search__signal-copy'>
-          <Text className='alang-search__signal-label'>{signal.label}</Text>
-          <Text className='alang-search__signal-detail'>{signal.detail}</Text>
         </View>
       </View>
 
@@ -340,24 +389,55 @@ export default function AlangSearchPage() {
       <View className='alang-search__after-card'>
         <Text className='alang-search__after-title'>找到阿浪后</Text>
         <Text className='alang-search__after-subtitle'>先看看他怎么了，再决定下一步要不要帮他。</Text>
-        <View className='alang-search__after-steps'>
-          <View className='alang-search__after-step'>
-            <Text className='alang-search__after-index'>1</Text>
-            <Text className='alang-search__after-text'>和阿浪聊三段</Text>
+        <View className='alang-search__after-layout'>
+          <View className='alang-search__after-visual' aria-hidden='true'>
+            <Image
+              className='alang-search__after-image'
+              src={foundSceneArtwork.src}
+              mode='aspectFill'
+              onError={foundSceneArtwork.onError}
+            />
+            {foundSceneArtwork.usingFallback && (
+              <Text className='alang-search__after-placeholder-label'>找到后场景示意</Text>
+            )}
           </View>
-          <View className='alang-search__after-step'>
-            <Text className='alang-search__after-index'>2</Text>
-            <Text className='alang-search__after-text'>听听他的委托</Text>
+          <View className='alang-search__after-steps'>
+            <View className='alang-search__after-step'>
+              <Text className='alang-search__after-index'>聊</Text>
+              <View className='alang-search__after-step-copy'>
+                <Text className='alang-search__after-text'>与阿浪对话</Text>
+                <Text className='alang-search__after-detail'>了解他的情况</Text>
+              </View>
+            </View>
+            <View className='alang-search__after-step'>
+              <Text className='alang-search__after-index'>托</Text>
+              <View className='alang-search__after-step-copy'>
+                <Text className='alang-search__after-text'>触发委托</Text>
+                <Text className='alang-search__after-detail'>可能需要你的帮助</Text>
+              </View>
+            </View>
+            <View className='alang-search__after-step'>
+              <Text className='alang-search__after-index'>藏</Text>
+              <View className='alang-search__after-step-copy'>
+                <Text className='alang-search__after-text'>收录故事</Text>
+                <Text className='alang-search__after-detail'>完成后留下这一章</Text>
+              </View>
+            </View>
           </View>
-          <View className='alang-search__after-step'>
-            <Text className='alang-search__after-index'>3</Text>
-            <Text className='alang-search__after-text'>陪他走一段路</Text>
-          </View>
+        </View>
+        <View
+          className='alang-search__primary-action'
+          hoverClass='alang-search__primary-action--pressed'
+          onClick={handlePrimarySearchAction}
+          role='button'
+          aria-label={primaryActionLabel}
+        >
+          <Text className='alang-search__primary-action-text'>{primaryActionLabel}</Text>
         </View>
         <Text className='alang-search__after-note'>在 {ALANG_ARRIVAL_RADIUS_METERS} 米范围内稳定停留后，故事会自动继续。</Text>
       </View>
 
-        <View className='alang-search__map-section'>
+      <View className='alang-search__map-section'>
         <View className='alang-search__map-heading'>
           <View>
             <Text className='alang-search__map-title'>辅助地图</Text>
@@ -365,6 +445,7 @@ export default function AlangSearchPage() {
           </View>
           <View
             className='alang-search__map-toggle'
+            hoverClass='alang-search__map-toggle--pressed'
             onClick={handleToggleMap}
             role='button'
             aria-label={showMap ? '收起辅助地图' : '打开辅助地图'}
@@ -390,7 +471,7 @@ export default function AlangSearchPage() {
         {mapError && (
           <Text className='alang-search__map-error'>辅助地图暂时没加载出来，距离寻找仍会继续</Text>
         )}
-        </View>
+      </View>
       </View>
     </ScrollView>
   )

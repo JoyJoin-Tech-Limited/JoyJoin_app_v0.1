@@ -1,9 +1,16 @@
 import express from 'express'
+import fs from 'node:fs'
+import path from 'node:path'
 import { chromium, devices } from 'playwright'
 
 const app = express()
 const PORT = process.env.SCREENSHOT_PORT || 9000
 const H5_BASE_URL = process.env.H5_BASE_URL || 'http://localhost:5001'
+const PLAYWRIGHT_EXECUTABLE_PATH = process.env.PLAYWRIGHT_EXECUTABLE_PATH || undefined
+const LOCAL_MINI_PROGRAM_ASSETS = path.resolve(
+  process.cwd(),
+  'apps/mini-program/src/assets',
+)
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -77,11 +84,33 @@ async function screenshotPage(page) {
   return page.screenshot({ fullPage: true })
 }
 
+async function screenshotViewport(page) {
+  return page.screenshot({ fullPage: false })
+}
+
 async function withBrowserPage(viewport, fn) {
-  const browser = await chromium.launch({ headless: true })
+  const browser = await chromium.launch({
+    headless: true,
+    ...(PLAYWRIGHT_EXECUTABLE_PATH
+      ? { executablePath: PLAYWRIGHT_EXECUTABLE_PATH }
+      : {}),
+  })
   const context = await browser.newContext(viewport)
   const page = await context.newPage()
   try {
+    await page.route('https://joyjoinapp.com/static/assets/**', async (route) => {
+      const pathname = new URL(route.request().url()).pathname
+      const relativePath = pathname.replace(/^\/static\/assets\//, '')
+      const localPath = path.resolve(LOCAL_MINI_PROGRAM_ASSETS, relativePath)
+      const staysInAssetRoot = localPath.startsWith(`${LOCAL_MINI_PROGRAM_ASSETS}${path.sep}`)
+
+      if (staysInAssetRoot && fs.existsSync(localPath)) {
+        await route.fulfill({ path: localPath })
+        return
+      }
+
+      await route.continue()
+    })
     return await fn(page)
   } finally {
     await browser.close()
@@ -91,6 +120,22 @@ async function withBrowserPage(viewport, fn) {
 const DEFAULT_VIEWPORT = {
   viewport: { width: 375, height: 812 },
   deviceScaleFactor: 2,
+}
+
+const V17_VIEWPORT = {
+  ...DEFAULT_VIEWPORT,
+  colorScheme: 'light',
+  locale: 'zh-CN',
+  reducedMotion: 'reduce',
+  timezoneId: 'Asia/Shanghai',
+}
+
+const V17_GEO_VIEWPORT = {
+  ...V17_VIEWPORT,
+  permissions: ['geolocation'],
+  // This is the simulated user's position near Shenzhen Science Park. It is
+  // not an NPC target; the search page receives only distance from the API.
+  geolocation: { latitude: 22.5403, longitude: 113.9345, accuracy: 18 },
 }
 
 // ─── Generators ──────────────────────────────────────────────────
@@ -400,6 +445,99 @@ async function captureMatchingStatusPuzzlePrelude() {
   )
 }
 
+async function captureProfileV17() {
+  return withBrowserPage(V17_VIEWPORT, async (page) => {
+    await page.goto(`${H5_BASE_URL}/#/pages/profile/index?motion=reduce`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+    await waitForContent(page, '.profile-page__identity-stage--entered')
+    await page.waitForSelector('.profile-page__story-card', { state: 'visible', timeout: 10000 })
+    await page.waitForFunction(() => {
+      const growth = document.querySelector('.profile-page__growth-value')?.textContent?.trim()
+      const story = document.querySelector('.profile-page__story-summary')?.textContent ?? ''
+      return growth === '260' && story.includes('2 段故事收藏')
+    }, undefined, { timeout: 10000 })
+
+    return screenshotViewport(page)
+  })
+}
+
+async function captureDiscoverAlangV17() {
+  return withBrowserPage(V17_VIEWPORT, async (page) => {
+    await page.goto(`${H5_BASE_URL}/#/pages/discover/index?motion=reduce`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await clearAndSeedStorage(page, {
+      discover_last_location: {
+        clusterId: 'nanshan',
+        districtId: 'keji',
+        timestamp: Date.now(),
+      },
+    })
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+    await waitForContent(page, '.alang-discover-card')
+    await page.waitForFunction(() => {
+      const title = document.querySelector('.alang-discover-card__title')?.textContent ?? ''
+      const cta = document.querySelector('.alang-discover-card__cta-text')?.textContent ?? ''
+      return title.includes('阿浪') && cta === '继续这段故事'
+    }, undefined, { timeout: 10000 })
+    const card = page.locator('.alang-discover-card')
+    await card.scrollIntoViewIfNeeded()
+    await page.waitForTimeout(300)
+
+    // Keep the Alang card in context and use the same 375×812 viewport as the
+    // other V1.7 captures so the four-page acceptance set is directly comparable.
+    return screenshotViewport(page)
+  })
+}
+
+async function captureAlangSearchV17() {
+  return withBrowserPage(V17_GEO_VIEWPORT, async (page) => {
+    await page.goto(
+      `${H5_BASE_URL}/#/pages/alang/search/index?slug=${encodeURIComponent('meet-alang')}&motion=reduce`,
+      { waitUntil: 'domcontentloaded', timeout: 60000 }
+    )
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+    await waitForContent(page, '.alang-search__radar-card')
+    await page.waitForFunction(() => {
+      const distance = document.querySelector('.alang-search__distance-value')?.textContent?.trim()
+      const privacy = document.querySelector('.alang-search__map-subtitle')?.textContent ?? ''
+      return distance === '118' && privacy.includes('不显示阿浪坐标或路线')
+    }, undefined, { timeout: 15000 })
+
+    return screenshotViewport(page)
+  })
+}
+
+async function captureAlangStoriesV17() {
+  return withBrowserPage(V17_VIEWPORT, async (page) => {
+    await page.goto(`${H5_BASE_URL}/#/pages/alang/event/index?view=stories&motion=reduce`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+    await waitForContent(page, '.alang-event__story-summary')
+    await page.waitForSelector('.alang-event__story-feed', { state: 'visible', timeout: 10000 })
+    await page.waitForFunction(() => {
+      const summary = document.querySelector('.alang-event__story-summary')?.getAttribute('aria-label') ?? ''
+      const firstTitle = document.querySelector('.alang-event__card-title')?.textContent ?? ''
+      return summary.includes('2 段故事收藏') && firstTitle.includes('晚风')
+    }, undefined, { timeout: 10000 })
+
+    return screenshotViewport(page)
+  })
+}
+
 register('events-footprint-oracle-card', captureEventsPage)
 register('tier-selector-preset-cards', captureTierSelector)
 register('pool-registration-step-0-brief', capturePoolRegistration)
@@ -414,6 +552,10 @@ register('squad-unboxing-revealed-allup', () => captureSquadUnboxingStoryReveale
 register('squad-unboxing-revealed-overflow', () => captureSquadUnboxingStoryRevealed('revealed-partial', { groupId: 'group-screenshot-009', waitChip: true }))
 register('profile-review-welcome-coupon', captureProfileReview)
 register('matching-status-puzzle-prelude', captureMatchingStatusPuzzlePrelude)
+register('profile-v17', captureProfileV17)
+register('discover-alang-v17', captureDiscoverAlangV17)
+register('alang-search-v17', captureAlangSearchV17)
+register('alang-stories-v17', captureAlangStoriesV17)
 
 const server = app.listen(PORT, () => {
   console.log(`[screenshot-server] listening on http://localhost:${PORT}`)

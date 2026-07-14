@@ -1,7 +1,7 @@
 # JoyJoin Developer Quick Reference Guide
 
 **Version:** 2.3
-**Last Updated:** 2026-07-09
+**Last Updated:** 2026-07-14
 **For:** Tech Team Onboarding & Codebase Navigation
 
 ---
@@ -25,7 +25,7 @@
 - The **`圈子`** nav label — replaced by `连接`
 - **`会员 / VIP会员`** user-facing copy — replaced by `权益`
 - Any reference to the **`shared/` root folder** as the import source — use `packages/shared/src/` instead
-- The removed Alang **“探索地图” / Reference 09** surface. V1.5 allows ACTIVE 03/05/06/07 only; Reference 04/08 are future context and must not trigger implementation.
+- The removed Alang **“探索地图” / Reference 09** surface. V1.7 allows ACTIVE 03/05/07 plus APPROVED TARGET 06 only; Reference 04/08 are future context and must not trigger implementation.
 - The **`/guide` page** as a core onboarding step — **removed**; the active onboarding steps after WeChat login are `/onboarding/setup`, `/onboarding/extended`, and `/onboarding/review`, then directly to `/discover`
 - **Demo code `666666`** — legacy phone-based login. Mini-program uses WeChat auth (`微信一键登录`) exclusively. Dev API testing uses `POST /api/auth/dev-login` (development-only). `createDemoDataForUser` in production — gated on `NODE_ENV !== 'production'`
 
@@ -238,7 +238,7 @@ joyjoin-monorepo/
 | User satisfaction audit (user-perspective, share/return/recommend/pay verdict) | `.github/skills/user-satisfaction-audit/SKILL.md` — first-person persona walk + six-angle scoring; automatic 6th reviewer in the post-implementation-review swarm for user-facing frontend changes (US-01…US-06) |
 | Hero promo banner (discover top surface) | `apps/mini-program/src/components/HeroPromoBanner.tsx` — full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles. The hero image is **CDN-only** (`/assets/promo/banner-hero-lovart-v1.webp`); a gradient overlay skeleton preserves first paint while the asset loads. CTA always wired so it never silently disables; `margin-bottom: 8rpx` prevents boundary clipping. Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`, default `true`). Promo copy must not fabricate social-proof metrics. |
 | Status card (empty/error) | `apps/mini-program/src/components/ui/StatusCard.tsx` — unified status surface with Lovart hero illustration (WebP + PNG fallback), title, description, and optional action. Used on Discover and Events for empty states and on Discover for list-fetch error states. |
-| Profile tab (redesign) | `apps/mini-program/src/pages/profile/index.tsx` — social-passport hero with age/city/bio chips, stat cards, milestone badges, menu grid, profile-card share, and one-time 100% completion ceremony. Consumes `GET /api/shell/profile` via `getProfileShell()` with offline-first React Query config and cached-shell fallback; `PrefetchEngine` warms Events/Connections shells after data stabilizes. Feature-flagged by `user.features.profileRedesignEnabled` (env `PROFILE_REDESIGN_ENABLED`, default `true`). Bio adds +10% completion bonus; `PATCH /api/profile` persists the optional 100-character bio. |
+| Profile tab (V1.7 target) | `apps/mini-program/src/pages/profile/index.tsx` — dark identity stage with the user's approved V4 archetype art (CDN WebP → PNG → bundled head fallback), real XP/level progress from `GET /api/user/gamification`, real event/connection stats from `GET /api/shell/profile`, profile completion, milestones, service grid, settings action sheet, and an Alang story archive card gated by `alangEnabled`. `profileRedesignEnabled=false` selects a deterministic compact profile fallback and skips V1.7 growth/story queries. FUTURE 08 equipment inventory is not implemented; the peer entry is explicitly labelled “装备筹备中”. |
 | Footprint event card | `apps/mini-program/src/components/events/FootprintOracleCard.tsx` — event card for the "足迹" tab. Uses a two-rail layout: left body shows status pulse, title, date/time/location; right rail shows a compact Nothing-design-inspired countdown, group-size hint, price, or a "待公布" placeholder. Venue-disclosure gating and status-aware waiting copy remain. Completed/cancelled cards are muted with no countdown. Venue location is hidden until the server-derived `displayStatus` reaches `confirmed`/`venue_unlocked`; the raw `matched` status means the group is formed but the venue is still being assigned. The card always renders event type + city/district and only appends the venue name once unlocked. Terminal pool states (`completed`/`cancelled`) override the registration-level status. The right rail is not `aria-hidden`; only the decorative `›` cue is hidden, and rail contents are included in the card's `aria-label` via `railAriaLabel`. |
 | Countdown hook | `apps/mini-program/src/hooks/useEventCountdown.ts` — visibility-aware countdown that returns `display`, structured `segments` (`days/hours/minutes/seconds/progress`), `isUrgent`, `hasStarted`, and `isLive`. Ticks are gated by in-viewport state, app background state, `prefers-reduced-motion`, and degradation-tier devices. |
 | Event display helpers | `apps/mini-program/src/lib/utils/eventDisplay.ts` — `formatEventDateTime` with relative near-term prefixes (`今天`/`明天`/`后天`) and `getJoinedEventDisplayDateTime` for display vs matching-time precedence. |
@@ -349,9 +349,9 @@ interface UseAuthResult {
     onboardingForceSkip?: boolean;     // Admin force-skip button on onboarding
     matchingLiveReveal?: boolean;      // Live reveal overlay on matching status
     socialIcebreakerClientForceEnd?: boolean; // Host emergency end button
-    personalityShareEnabled?: boolean; // Share poster generation on results page and profile-card share
+    personalityShareEnabled?: boolean; // Share poster generation on personality results; current V1.7 Profile does not expose a profile-card share action
     personalitySlotAnimationEnabled?: boolean; // Slot machine reveal animation
-    profileRedesignEnabled?: boolean; // Profile tab redesign (social-passport hero, milestones, share card)
+    profileRedesignEnabled?: boolean; // Server-owned V1.7 Profile rollout/rollback switch; false renders the compact fallback
   }; // Feature flags from server (DB-backed, resolved in parallel, see lib/featureFlags.ts)
 }
 ```

@@ -77,19 +77,21 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-07-13)
+## 🆕 Recent Updates (Last updated: 2026-07-14)
 
 ### 2026 Milestones (June 2026)
 
-**51. 闪现 NPC｜阿浪 V1.5 — 腾讯地图复用、服务端恢复与视觉参考治理** *(2026-07-13)*
+**51. 闪现 NPC｜阿浪 V1.7 — 腾讯地图复用、服务端恢复与批准目标 F3 对齐** *(2026-07-14)*
 - **Scope:** Mini Program `pages/alang` subpackage、Discover/Profile 入口、Alang 服务端状态机与现有 `/api/geo` 腾讯地图代理。
 - **Flow:** Discover/我的故事 → 事件详情 → 距离搜索 → 非聊天气泡叙事选择 → 陪伴步行 → 5 米稳定到达 → 结果卡 → 用户主动收录。搜索、对话、陪伴和结果页均以服务端 `myProgress` 纠正陈旧 URL；未收录的 `stage=result` 刷新后仍回到结果卡。
 - **Location secrecy:** 搜索阶段不向客户端返回任务目标、剧情 `gpsTrigger`、陪伴终点或路线；辅助 Map 只显示用户本人。`routeDestination` 只在 `companion` 及以后阶段披露，且路线仅在用户点击后请求。
 - **Tencent Maps reuse:** 沿用 `TENCENT_MAP_KEY` 和原生 WeChat/Taro Map；`/api/geo` 新增 POI 联想、附近搜索和步行路线，含登录态、每用户限流、4 秒超时、受限 TTL/LRU 缓存、polyline 点数上限及稳定错误码。腾讯路线只负责 polyline/距离/ETA；JoyJoin 服务端固定 5 米连续稳定判断仍是到达权威。
 - **Coordinate contract:** GCJ-02，API/运行时只使用 `latitude/longitude`。旧 JSONB `{lat,lng}` 在解析边界兼容归一化；本轮无数据库 DDL 或 migration。
-- **Debug safety:** 内部点位配置只对严格 single-test 客户端开放；非测试 Debug API 返回 404；`APP_MODE` 缺失按 production 处理，生产环境即使误留 single-test env 也不会下发客户端 test marker。
-- **Visual governance:** 只以 ACTIVE 03 Discover、05 寻找阿浪、06 我的、07 我的故事作为当前视觉依据。FUTURE 04 多 NPC 地图、08 伙伴/装备完整页不实现；REMOVED 09 探索地图不得新增、恢复或引用。无 ACTIVE 图的页面沿用仓库现有 UI。
-- **Visual status:** 四类正式人物/场景图仍为 `awaiting-approved-art`，当前 bundled 图均明确标注“场景示意”，不得宣称视觉资产完成。
+- **Debug safety:** 内部点位配置只对严格 single-test 客户端开放；复测 reset 在非 single-test、production 或 `APP_MODE` 缺失时返回 403，其他内部 Debug API 继续按安全策略隐藏为 404。生产环境即使误留 single-test env 也不会下发客户端 test marker。
+- **Repeat testing:** `POST /api/alang/debug/missions/:slug/reset` 只使用当前会话用户，在同一事务内删除指定 mission 的 progress 与对应内部测试 archive；空状态重复调用仍返回 200 和删除数量。成功后客户端清除阿浪查询/路由缓存并重新进入点位配置，不继承旧选择、GPS、地点或情绪。
+- **V1.7 visual landing:** 当前代码是 Current State，Word Mockup 是目标。ACTIVE 03 已对齐紧凑单 NPC 入口卡；ACTIVE 05 已对齐区域提示、静态雷达/真实距离信号、找到后说明和用户-only 辅助地图；APPROVED TARGET 06 已对齐“我的”身份舞台、已批准 V4 人格角色图、真实成长值/活动/连接/档案和设置入口；ACTIVE 07 已对齐真实汇总、筛选 Tab 与时间线档案卡。四页均为 F3，正式素材与微信真机验收仍阻断 F4。
+- **Visual governance:** FUTURE 04 多 NPC 地图、FUTURE 08 伙伴/装备完整页不实现；REMOVED 09 探索地图不得新增、恢复或引用。多故事独立缩略图字段仍仅为后续建议，不在 V1.7 数据契约中实现。
+- **Visual status:** 阿浪专属人物、区域横幅、找到后场景和故事场景正式图仍为 `awaiting-approved-art`；当前 bundled 图均明确标注“场景示意”，不得宣称正式阿浪美术已完成。Profile 只复用现有已批准的 12 个 V4 人格角色资产。
 - **Canonical implementation docs:** `docs/alang-prototype/repository-audit.md`、`implementation-map.md`、`assets-required.md`。
 
 **50. Operator Review Gate for Matching** *(2026-07-09)*
@@ -178,6 +180,8 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Audit scores:** 情绪价值 24/24, Frontend Design Audit 20/20, Completeness Audit 44/44, Performance Audit PASS (50/60).
 
 **41. Profile / “我的” Social-Passport Redesign + Wow Polish** 🪪 *(2026-06-16)*
+> **Superseded for the current mini-program by milestone 51 (2026-07-14).** This section remains a historical record. The active V1.7 Profile is an identity/growth surface with approved V4 archetype art, real gamification and shell statistics, Alang story archive entry, milestones, service grid, and settings action sheet. `profileRedesignEnabled=false` retains a deterministic compact rollback surface. The V1.7 path does not expose the former profile-card share, offline-shell, or predictive-prefetch UI described below.
+
 - **Scope:** Mini-program profile tab (`pages/profile/index`) — the logged-in "我的" surface.
 - **Feature flag:** Gated by `features.profileRedesignEnabled` (DB-backed, env `PROFILE_REDESIGN_ENABLED`, default `true`). When disabled, the page falls back to a simplified legacy-style layout.
 - **Social-passport hero:** Gradient-ring archetype avatar (`ArchetypeHead`), Xiaoyue greeting bubble, name/archetype/identity chip, optional age/city/bio chips, and share/edit CTAs. When `bio` is empty, a dashed CTA invites the user to write a 1–100 character social signature; tapping it fires `profile_edit_tap { field: 'bio', source: 'profile_cta' }`.
@@ -1669,6 +1673,8 @@ CREATE TABLE event_feedback (
 ---
 
 ### 1.8 User Profile Management
+
+> **Current mini-program note (2026-07-14):** the active `pages/profile/index` contract is milestone 51's V1.7 identity/growth surface. The detailed subsection below is retained for legacy web/edit-profile reference and must not be used to reconstruct the former Profile tab.
 
 **Canonical (Mini-Program):** `apps/mini-program/src/pages/profile/index.tsx`, `apps/mini-program/src/pages/profile-linked/edit-profile/index.tsx`
 

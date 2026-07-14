@@ -4,49 +4,13 @@
   height: 100dvh;
   box-sizing: border-box;
   color: $color-text-primary-warm;
-  background:
-    radial-gradient(circle at 12% 12%, rgba($color-category-food, 0.12) 0, rgba($color-category-food, 0) 30%),
-    linear-gradient(180deg, $color-bg-tint-cream 0%, $color-bg-warm-to 100%);
+  background: linear-gradient(180deg, $color-bg-clean 0%, $color-bg-tint-purple 52%, $color-bg-warm-to 100%);
   font-family: $font-ui;
 
   &__content {
     min-height: 100%;
     box-sizing: border-box;
-    padding: calc(env(safe-area-inset-top) + 44rpx) $container-padding calc(env(safe-area-inset-bottom) + 48rpx);
-  }
-
-  &__header {
-    width: 100%;
-    max-width: 670rpx;
-    margin: 0 auto 20rpx;
-  }
-
-  &__eyebrow {
-    display: block;
-    margin-bottom: 12rpx;
-    color: $color-primary-dark;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    letter-spacing: 2rpx;
-  }
-
-  &__title {
-    display: block;
-    color: $color-text-primary-warm;
-    font-family: $font-cn-display;
-    font-size: $font-size-2xl;
-    font-weight: $font-weight-semibold;
-    line-height: $line-height-display;
-  }
-
-  &__distance-stage {
-    position: relative;
-    display: flex;
-    width: 410rpx;
-    height: 410rpx;
-    margin: 4rpx auto 16rpx;
-    align-items: center;
-    justify-content: center;
+    padding: 32rpx 32rpx calc(env(safe-area-inset-bottom) + 48rpx);
   }
 
   &__orbit {
@@ -56,51 +20,44 @@
     border-radius: $radius-circle;
 
     &--outer {
-      width: 404rpx;
-      height: 404rpx;
-      animation: alang-search-breathe 3.6s ease-in-out infinite;
+      width: 272rpx;
+      height: 272rpx;
+      border-color: rgba($color-primary, 0.18);
+    }
+
+    &--middle {
+      width: 192rpx;
+      height: 192rpx;
+      border-color: rgba($color-primary, 0.14);
     }
 
     &--inner {
-      width: 354rpx;
-      height: 354rpx;
-      border-style: dashed;
-      border-color: rgba($color-category-food, 0.24);
+      width: 112rpx;
+      height: 112rpx;
+      border-color: rgba($color-primary, 0.2);
     }
   }
 
-  &__radar-sweep {
+  &__radar-axis {
     position: absolute;
-    z-index: 1;
     top: 50%;
     left: 50%;
-    width: 164rpx;
-    height: 3rpx;
-    border-radius: $radius-pill;
-    background: linear-gradient(90deg, rgba($color-primary, 0.48), rgba($color-primary, 0));
-    transform-origin: left center;
-    animation: alang-search-scan 5.2s linear infinite;
+    background: rgba($color-primary, 0.1);
+
+    &--horizontal {
+      width: 272rpx;
+      height: 2rpx;
+      transform: translate(-50%, -50%);
+    }
+
+    &--vertical {
+      width: 2rpx;
+      height: 272rpx;
+      transform: translate(-50%, -50%);
+    }
   }
 
-  &__distance-ring {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    width: 330rpx;
-    height: 330rpx;
-    box-sizing: border-box;
-    padding: 42rpx 24rpx;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    border: 4rpx solid rgba($color-primary, 0.2);
-    border-radius: $radius-circle;
-    background: rgba($color-surface, 0.9);
-    box-shadow: 0 18rpx 50rpx rgba($color-primary-dark, 0.12), inset 0 0 0 12rpx rgba($color-primary, 0.035);
-  }
-
-  &__distance-label,
-  &__distance-caption {
+  &__distance-label {
     display: block;
     color: $color-text-secondary;
     font-size: $font-size-sm;
@@ -109,17 +66,17 @@
 
   &__distance-readout {
     display: flex;
-    min-height: 112rpx;
-    margin: 4rpx 0 2rpx;
+    min-height: 104rpx;
+    margin: 8rpx 0 4rpx;
     align-items: baseline;
-    justify-content: center;
+    justify-content: flex-start;
   }
 
   &__distance-value {
     display: block;
     color: $color-primary-dark;
     font-family: $font-mono;
-    font-size: 92rpx;
+    font-size: 84rpx;
     font-weight: $font-weight-bold;
     font-variant-numeric: tabular-nums;
     letter-spacing: -4rpx;
@@ -134,14 +91,117 @@
     font-weight: $font-weight-semibold;
   }
 
+  &__radar-grid {
+    display: flex;
+    align-items: center;
+    gap: 24rpx;
+    margin: 24rpx 0;
+  }
+
+  &__radar-visual {
+    position: relative;
+    display: flex;
+    width: 280rpx;
+    height: 280rpx;
+    flex: 0 0 280rpx;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: $radius-circle;
+    background:
+      linear-gradient(35deg, transparent 50%, rgba($color-primary, 0.11) 50%),
+      rgba($color-primary, 0.035);
+  }
+
+  &__radar-core {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    width: 72rpx;
+    height: 72rpx;
+    align-items: center;
+    justify-content: center;
+    border: 5rpx solid rgba($color-surface, 0.94);
+    border-radius: $radius-circle;
+    background: $color-primary;
+    box-shadow: 0 8rpx 20rpx rgba($color-primary-dark, 0.2);
+  }
+
+  &__radar-core-glyph,
+  &__radar-clue-glyph {
+    color: $color-text-white;
+    font-family: $font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    line-height: 1;
+  }
+
+  &__radar-clue {
+    position: absolute;
+    z-index: 2;
+    right: 30rpx;
+    bottom: 72rpx;
+    display: flex;
+    width: 42rpx;
+    height: 42rpx;
+    align-items: center;
+    justify-content: center;
+    border: 4rpx solid $color-surface;
+    border-radius: $radius-circle;
+    background: $color-secondary;
+    box-shadow: $shadow-sm;
+  }
+
+  &__radar-clue-glyph {
+    font-size: $font-size-xs;
+  }
+
+  &__distance-panel {
+    min-width: 0;
+    flex: 1;
+  }
+
+  &__signal-bars {
+    display: flex;
+    height: 52rpx;
+    margin-top: 4rpx;
+    align-items: flex-end;
+    gap: 8rpx;
+  }
+
+  &__signal-bar {
+    width: 13rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-primary, 0.14);
+
+    &:nth-child(1) {
+      height: 18rpx;
+    }
+
+    &:nth-child(2) {
+      height: 28rpx;
+    }
+
+    &:nth-child(3) {
+      height: 39rpx;
+    }
+
+    &:nth-child(4) {
+      height: 50rpx;
+    }
+
+    &--active {
+      background: $color-primary;
+    }
+  }
+
   &__area-card,
   &__radar-card,
-  &__signal,
   &__recovery,
   &__after-card,
   &__map-section {
     width: 100%;
-    max-width: 670rpx;
+    max-width: 686rpx;
     box-sizing: border-box;
     margin-right: auto;
     margin-left: auto;
@@ -151,12 +211,15 @@
   }
 
   &__area-card {
+    position: relative;
     display: flex;
-    margin-bottom: 18rpx;
-    padding: 26rpx 30rpx;
+    min-height: 152rpx;
+    margin-bottom: 24rpx;
+    padding: 24rpx 272rpx 24rpx 28rpx;
     align-items: center;
+    overflow: hidden;
     border: 2rpx solid rgba($color-primary, 0.11);
-    background: linear-gradient(100deg, rgba($color-surface, 0.98), rgba($color-primary-light, 0.72));
+    background: $color-surface;
   }
 
   &__area-icon {
@@ -164,7 +227,7 @@
     display: flex;
     width: 64rpx;
     height: 64rpx;
-    margin-right: 22rpx;
+    margin-right: 18rpx;
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
@@ -194,6 +257,8 @@
   }
 
   &__area-copy {
+    position: relative;
+    z-index: 2;
     min-width: 0;
     flex: 1;
   }
@@ -214,13 +279,45 @@
     line-height: $line-height-normal;
   }
 
+  &__area-art {
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 284rpx;
+    overflow: hidden;
+  }
+
+  &__area-art-image {
+    width: 100%;
+    height: 100%;
+  }
+
+  &__area-art-wash {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, $color-surface 0%, rgba($color-surface, 0.68) 24%, rgba($color-surface, 0.04) 100%);
+  }
+
+  &__area-placeholder-label {
+    position: absolute;
+    right: 10rpx;
+    bottom: 8rpx;
+    padding: 4rpx 10rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.86);
+    color: $color-text-tertiary;
+    font-size: $font-size-2xs;
+  }
+
   &__radar-card {
-    padding: 30rpx 28rpx 24rpx;
+    padding: 32rpx;
     border: 2rpx solid rgba($color-primary, 0.1);
   }
 
   &__radar-heading {
-    padding: 0 8rpx;
+    padding: 0;
   }
 
   &__radar-title,
@@ -237,13 +334,14 @@
   }
 
   &__radar-subtitle {
-    margin-top: 6rpx;
+    margin-top: 8rpx;
     color: $color-text-secondary;
     font-size: $font-size-sm;
+    line-height: $line-height-normal;
   }
 
   &__radar-tip {
-    padding: 18rpx 22rpx;
+    padding: 16rpx 20rpx;
     border-radius: $card-radius-sm;
     background: $color-bg-tint-purple;
     text-align: center;
@@ -255,55 +353,29 @@
     line-height: $line-height-normal;
   }
 
-  &__signal {
-    display: flex;
-    margin-top: 18rpx;
-    padding: 22rpx 26rpx;
-    align-items: center;
-    border: 2rpx solid rgba($color-border, 0.72);
-    box-shadow: none;
-
-    &--steady .alang-search__signal-dot {
-      background: $color-success;
-      box-shadow: 0 0 0 8rpx rgba($color-success, 0.12);
-    }
-
-    &--fair .alang-search__signal-dot,
-    &--weak .alang-search__signal-dot {
-      background: $color-warning;
-      box-shadow: 0 0 0 8rpx rgba($color-warning, 0.12);
-    }
-
-    &--error .alang-search__signal-dot {
-      background: $color-error;
-      box-shadow: 0 0 0 8rpx rgba($color-error, 0.1);
-    }
-  }
-
-  &__signal-dot {
-    width: 14rpx;
-    height: 14rpx;
-    margin: 0 22rpx 0 4rpx;
-    flex: 0 0 auto;
-    border-radius: $radius-circle;
-    background: $color-primary;
-    box-shadow: 0 0 0 8rpx rgba($color-primary, 0.1);
-  }
-
-  &__signal-copy {
-    min-width: 0;
-    flex: 1;
-  }
-
   &__signal-label,
   &__signal-detail {
     display: block;
   }
 
   &__signal-label {
+    margin-top: 8rpx;
     color: $color-text-primary-warm;
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
+
+    &--steady {
+      color: $color-success;
+    }
+
+    &--fair,
+    &--weak {
+      color: $color-warning;
+    }
+
+    &--error {
+      color: $color-error;
+    }
   }
 
   &__signal-detail {
@@ -314,15 +386,15 @@
   }
 
   &__recovery {
-    margin-top: 18rpx;
-    padding: 28rpx;
+    margin-top: 24rpx;
+    padding: 24rpx;
     border: 2rpx solid rgba($color-error, 0.16);
     background: rgba($color-surface, 0.96);
   }
 
   &__after-card {
-    margin-top: 18rpx;
-    padding: 28rpx 30rpx;
+    margin-top: 24rpx;
+    padding: 32rpx;
   }
 
   &__after-title,
@@ -346,51 +418,120 @@
     line-height: $line-height-relaxed;
   }
 
+  &__after-layout {
+    display: flex;
+    align-items: stretch;
+    gap: 24rpx;
+    margin-top: 24rpx;
+  }
+
+  &__after-visual {
+    position: relative;
+    width: 248rpx;
+    min-height: 208rpx;
+    flex: 0 0 248rpx;
+    overflow: hidden;
+    border-radius: $card-radius-sm;
+    background: $color-bg-tint-purple;
+  }
+
+  &__after-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__after-placeholder-label {
+    position: absolute;
+    z-index: 1;
+    right: 10rpx;
+    bottom: 8rpx;
+    padding: 4rpx 10rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.88);
+    color: $color-text-tertiary;
+    font-size: $font-size-2xs;
+  }
+
   &__after-steps {
     display: flex;
-    margin-top: 22rpx;
-    gap: 12rpx;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    gap: 16rpx;
   }
 
   &__after-step {
     display: flex;
     min-width: 0;
-    padding: 16rpx 12rpx;
-    flex: 1;
-    flex-direction: column;
     align-items: center;
-    border-radius: $card-radius-sm;
-    background: $color-bg-tint-cream;
-    text-align: center;
+    gap: 12rpx;
   }
 
   &__after-index {
     display: flex;
-    width: 38rpx;
-    height: 38rpx;
+    width: 48rpx;
+    height: 48rpx;
+    flex: 0 0 48rpx;
     align-items: center;
     justify-content: center;
     border-radius: $radius-circle;
-    color: $color-text-white;
-    background: $color-primary;
-    font-family: $font-mono;
+    color: $color-primary-dark;
+    background: $color-bg-tint-purple;
+    font-family: $font-ui;
     font-size: $font-size-xs;
     font-weight: $font-weight-bold;
   }
 
+  &__after-step-copy {
+    min-width: 0;
+    flex: 1;
+  }
+
   &__after-text {
     display: block;
-    margin-top: 10rpx;
     color: $color-text-primary-warm;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-medium;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
     line-height: $line-height-normal;
   }
 
+  &__after-detail {
+    display: block;
+    margin-top: 2rpx;
+    color: $color-text-secondary;
+    font-size: $font-size-2xs;
+    line-height: $line-height-normal;
+  }
+
+  &__primary-action {
+    display: flex;
+    min-height: $cta-min-tap;
+    margin-top: 28rpx;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-pill;
+    background: $color-primary;
+    box-shadow: $shadow-primary-soft;
+    transition: opacity 180ms ease-out, transform 180ms ease-out;
+
+    &--pressed {
+      opacity: 0.88;
+      transform: scale(0.985);
+    }
+  }
+
+  &__primary-action-text {
+    color: $color-text-white;
+    font-family: $font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+  }
+
   &__after-note {
-    margin-top: 20rpx;
-    padding-top: 18rpx;
-    border-top: 2rpx solid rgba($color-text-primary, 0.06);
+    margin-top: 16rpx;
     color: $color-text-tertiary;
     font-size: $font-size-xs;
     line-height: $line-height-normal;
@@ -456,8 +597,8 @@
   }
 
   &__map-section {
-    margin-top: 18rpx;
-    padding: 28rpx;
+    margin-top: 24rpx;
+    padding: 32rpx;
   }
 
   &__map-heading {
@@ -496,6 +637,12 @@
     justify-content: center;
     border-radius: $radius-pill;
     background: $color-primary-light;
+    transition: opacity 180ms ease-out, transform 180ms ease-out;
+
+    &--pressed {
+      opacity: 0.82;
+      transform: scale(0.985);
+    }
   }
 
   &__map-toggle-text {
@@ -597,25 +744,6 @@
   }
 }
 
-@keyframes alang-search-breathe {
-  0%,
-  100% {
-    opacity: 0.45;
-    transform: scale(0.985);
-  }
-
-  50% {
-    opacity: 0.9;
-    transform: scale(1);
-  }
-}
-
-@keyframes alang-search-scan {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 @keyframes alang-search-found {
   from {
     opacity: 0;
@@ -629,13 +757,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .alang-search__orbit--outer,
-  .alang-search__radar-sweep,
   .alang-search__found-glow {
     animation: none;
   }
 
-  .alang-search__recovery-btn {
+  .alang-search__recovery-btn,
+  .alang-search__primary-action,
+  .alang-search__map-toggle {
     transition: none;
   }
 }
