@@ -241,10 +241,9 @@ describe('SquadUnboxingPage fan orchestration', () => {
     expect(source).not.toContain('collapsed=')
   })
 
-  it('renders the slim revealed title bar inside the fixed stage', () => {
-    expect(source).toContain('revealedTitleBar')
-    expect(source).toContain('squad-unboxing__title-bar')
-    expect(source).toContain('squad-unboxing__title-bar-chem-text')
+  it('keeps the fixed card stage free of the redundant revealed title strip', () => {
+    expect(source).not.toContain('revealedTitleBar')
+    expect(source).not.toContain('squad-unboxing__title-bar')
   })
 
   it('keeps focused member copy in the Xiaoyue dock without a blank inline panel', () => {

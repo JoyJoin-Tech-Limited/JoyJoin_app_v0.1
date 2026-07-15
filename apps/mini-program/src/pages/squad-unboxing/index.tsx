@@ -610,20 +610,6 @@ export default function SquadUnboxingPage() {
         ? null
         : legacyHeader
 
-  const revealedTitleBar = flowState === 'revealed' ? (
-    <View className='squad-unboxing__title-bar'>
-      {group.groupNumber ? (
-        <Text className='squad-unboxing__title-bar-group'>第 {group.groupNumber} 组</Text>
-      ) : null}
-      <View className='squad-unboxing__title-bar-chem'>
-        <Text className='squad-unboxing__title-bar-chem-text'>
-          {getChemistryWord(groupAnalysis?.overallChemistry)}
-        </Text>
-      </View>
-      <Text className='squad-unboxing__title-bar-title'>{getPageTitle(pool.eventType)}</Text>
-    </View>
-  ) : null
-
   return (
     <View className={pageClassName}>
       <ScrollView
@@ -690,6 +676,52 @@ export default function SquadUnboxingPage() {
 
         {flowState === 'revealed' ? (
           <>
+            <View
+              className='squad-unboxing__analysis-bubble'
+              role='status'
+              aria-live='polite'
+              aria-atomic='true'
+            >
+              <View
+                className={[
+                  'squad-unboxing__analysis-bubble-inner',
+                  headerReady ? 'squad-unboxing__analysis-bubble-inner--ready' : '',
+                ].filter(Boolean).join(' ')}
+              >
+                <Image
+                  className={['squad-unboxing__analysis-bubble-mascot', headerReady ? 'squad-unboxing__analysis-bubble-mascot--ready' : ''].filter(Boolean).join(' ')}
+                  mode='aspectFit'
+                  src={getXiaoyueExpressionAsset('matchSuccess')}
+                  aria-hidden='true'
+                />
+                <View className='squad-unboxing__analysis-bubble-bubble'>
+                  <View aria-hidden='true'>
+                    <TypewriterText
+                      className='squad-unboxing__analysis-bubble-text'
+                      text={bubbleText}
+                      speed={45}
+                      delay={180}
+                      maxDuration={bubbleNarration?.kind === 'member' ? undefined : 3000}
+                      enabled={!shouldReduceMotion && !isDegradation && (bubbleNarration?.kind !== 'member' || animateFocusedNarration)}
+                      showCursor={false}
+                      onComplete={() => {
+                        squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
+                          groupId,
+                          screen: 'squad-unboxing',
+                        })
+                      }}
+                    />
+                  </View>
+                  <Text className='squad-unboxing__sr-only'>{bubbleText}</Text>
+                  <AIGCLabel
+                    meta={groupAnalysis?.meta?.aigc}
+                    className='squad-unboxing__analysis-bubble-aigc'
+                    reduceMotion={shouldReduceMotion}
+                  />
+                </View>
+              </View>
+            </View>
+
             <View className={[
               'squad-unboxing__chapter',
               'squad-unboxing__chapter--meta',
@@ -796,13 +828,7 @@ export default function SquadUnboxingPage() {
               ) : null}
             </View>
 
-            <View className={[
-              'squad-unboxing__chapter',
-              'squad-unboxing__chapter--analysis',
-              headerReady ? 'squad-unboxing__chapter--ready' : '',
-            ]
-              .filter(Boolean)
-              .join(' ')}>
+            {false ? <View className='squad-unboxing__chapter squad-unboxing__chapter--analysis'>
               <View
                 className='squad-unboxing__expand-header'
                 onClick={toggleAnalysis}
@@ -1044,7 +1070,7 @@ export default function SquadUnboxingPage() {
                   ) : null}
                 </View>
               ) : null}
-            </View>
+            </View> : null}
             <View className='squad-unboxing__spacer' />
           </>
         ) : null}
@@ -1099,7 +1125,6 @@ export default function SquadUnboxingPage() {
             />
           </View>
         ) : null}
-        {flowState === 'revealed' ? revealedTitleBar : null}
         {flowState === 'revealed' ? (
           <SquadDeckStage
             members={members}
@@ -1154,59 +1179,6 @@ export default function SquadUnboxingPage() {
               </Text>
             </View>
           ) : null}
-
-          {/* Bubble = voice (AC-18): role=status + aria-live=polite +
-              aria-atomic so the COMPLETE narration string is announced once;
-              the TypewriterText visual is aria-hidden so screen readers never
-              hear per-character typing. */}
-          <View
-            className='squad-unboxing__analysis-bubble squad-unboxing__analysis-bubble--in-dock'
-            role='status'
-            aria-live='polite'
-            aria-atomic='true'
-          >
-            <View
-              className={[
-                'squad-unboxing__analysis-bubble-inner',
-                'squad-unboxing__analysis-bubble-inner--in-dock',
-                headerReady ? 'squad-unboxing__analysis-bubble-inner--ready' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            >
-              <Image
-                className={['squad-unboxing__analysis-bubble-mascot', headerReady ? 'squad-unboxing__analysis-bubble-mascot--ready' : ''].filter(Boolean).join(' ')}
-                mode='aspectFit'
-                src={getXiaoyueExpressionAsset('matchSuccess')}
-                aria-hidden='true'
-              />
-              <View className='squad-unboxing__analysis-bubble-bubble'>
-                <View aria-hidden='true'>
-                  <TypewriterText
-                    className='squad-unboxing__analysis-bubble-text'
-                    text={bubbleText}
-                    speed={45}
-                    delay={180}
-                    maxDuration={bubbleNarration?.kind === 'member' ? undefined : 3000}
-                    enabled={!shouldReduceMotion && !isDegradation && (bubbleNarration?.kind !== 'member' || animateFocusedNarration)}
-                    showCursor={false}
-                    onComplete={() => {
-                      squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
-                        groupId,
-                        screen: 'squad-unboxing',
-                      })
-                    }}
-                  />
-                </View>
-                <Text className='squad-unboxing__sr-only'>{bubbleText}</Text>
-                <AIGCLabel
-                  meta={groupAnalysis?.meta?.aigc}
-                  className='squad-unboxing__analysis-bubble-aigc'
-                  reduceMotion={shouldReduceMotion}
-                />
-              </View>
-            </View>
-          </View>
 
           <View className='squad-unboxing__action-zone'>
             <Button

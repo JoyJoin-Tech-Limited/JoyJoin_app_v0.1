@@ -606,51 +606,6 @@ $fan-rotations: (
     align-self: flex-start;
   }
 
-  // Slim revealed-state title bar — the fixed stage's first (in-flow) child.
-  // Replaces the retired mascot header: 第N组 · chemistry word · page title.
-  // pointer-events: none so page scroll can initiate over the top band.
-  &__title-bar {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: $spacing-sm;
-    width: 100%;
-    box-sizing: border-box;
-    padding: $spacing-xs $spacing-md;
-    pointer-events: none;
-  }
-
-  &__title-bar-group {
-    flex-shrink: 0;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    color: $color-text-secondary;
-  }
-
-  &__title-bar-chem {
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    padding: 4rpx $spacing-sm;
-    border-radius: 999rpx;
-    background: rgba($color-secondary, 0.14);
-  }
-
-  &__title-bar-chem-text {
-    font-size: $font-size-xs;
-    font-weight: $font-weight-bold;
-    color: $color-secondary;
-  }
-
-  &__title-bar-title {
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    word-break: keep-all;
-    @include text-truncate;
-  }
-
   // Chapter cards: fewer, grouped surfaces with surface tints.
   &__chapter {
     border-radius: $card-radius;
