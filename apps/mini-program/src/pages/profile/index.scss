@@ -41,6 +41,48 @@
 
   background: var(--profile-bg);
 
+  &__nav {
+    position: relative;
+    flex-shrink: 0;
+    height: calc(env(safe-area-inset-top) + 88rpx);
+    padding-top: env(safe-area-inset-top);
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba($color-bg, 0.94);
+    z-index: 20;
+  }
+
+  &__nav-title {
+    font-family: $font-cn-display;
+    font-size: 34rpx;
+    line-height: 1.4;
+    font-weight: $font-weight-bold;
+    color: var(--profile-text-primary);
+  }
+
+  &__nav-settings {
+    position: absolute;
+    right: 190rpx;
+    bottom: 8rpx;
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba($color-surface, 0.94);
+    border: 1rpx solid var(--profile-divider);
+    box-shadow: $shadow-sm;
+    transition: transform 0.12s ease, background 0.12s ease;
+
+    &--pressed {
+      transform: scale(0.94);
+      background: var(--profile-primary-06);
+    }
+  }
+
   &__scroll {
     flex: 1;
     min-height: 0;
@@ -58,7 +100,7 @@
     min-height: 224rpx;
     margin: $spacing-md $container-padding $spacing-lg;
     padding: $spacing-lg;
-    padding-right: 128rpx;
+    padding-right: $spacing-lg;
     background: var(--profile-surface);
     border: 2rpx solid var(--profile-primary-08);
     border-radius: $card-radius;
@@ -357,7 +399,7 @@
   // Reference 06 — approved Profile identity stage
   &__identity-stage {
     position: relative;
-    min-height: 528rpx;
+    min-height: 560rpx;
     margin: $spacing-md $container-padding $spacing-lg;
     border-radius: 36rpx;
     overflow: hidden;
@@ -378,7 +420,7 @@
       position: absolute;
       left: 0;
       right: 0;
-      bottom: 92rpx;
+      bottom: 112rpx;
       height: 180rpx;
       opacity: 0.3;
       background:
@@ -562,10 +604,10 @@
   &__partner-visual {
     position: absolute;
     z-index: 3;
-    top: 74rpx;
-    right: 18rpx;
-    width: 330rpx;
-    height: 308rpx;
+    top: 58rpx;
+    right: 8rpx;
+    width: 352rpx;
+    height: 334rpx;
     display: flex;
     align-items: flex-end;
     justify-content: center;
@@ -592,7 +634,7 @@
     position: absolute;
     z-index: 4;
     left: 30rpx;
-    bottom: 122rpx;
+    bottom: 142rpx;
     width: 296rpx;
   }
 
@@ -658,13 +700,13 @@
     left: 16rpx;
     right: 16rpx;
     bottom: 16rpx;
-    min-height: 90rpx;
+    min-height: 112rpx;
     padding: $spacing-sm $spacing-md;
     box-sizing: border-box;
     border-radius: 26rpx;
     display: flex;
     align-items: center;
-    gap: $spacing-sm;
+    gap: $spacing-md;
     background: rgba(11, 9, 37, 0.86);
     border: 1rpx solid rgba($color-surface, 0.16);
     transition: transform 0.12s ease, background 0.12s ease;
@@ -675,22 +717,43 @@
     }
   }
 
-  &__partner-entry-copy {
+  &__equipment-preview {
     display: flex;
     align-items: center;
     gap: $spacing-sm;
     min-width: 0;
     flex: 1;
+  }
 
-    > .archetype-head {
-      width: 56rpx !important;
-      height: 56rpx !important;
-    }
+  &__equipment-label {
+    flex-shrink: 0;
+    font-family: $font-ui;
+    font-size: 22rpx;
+    font-weight: $font-weight-semibold;
+    color: rgba($color-text-white, 0.78);
+  }
 
-    .archetype-head__image {
-      width: 50rpx !important;
-      height: 50rpx !important;
-    }
+  &__equipment-slots {
+    display: flex;
+    gap: 8rpx;
+  }
+
+  &__equipment-slot {
+    width: 54rpx;
+    height: 54rpx;
+    border-radius: 14rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba($color-surface, 0.07);
+    border: 1rpx solid rgba($color-surface, 0.22);
+  }
+
+  &__equipment-slot-mark {
+    width: 18rpx;
+    height: 18rpx;
+    border-radius: 50%;
+    border: 2rpx dashed rgba($color-text-white, 0.34);
   }
 
   &__partner-entry-label,
@@ -715,15 +778,12 @@
     color: $color-text-white;
   }
 
-  &__partner-entry-lock {
+  &__partner-entry-count {
     flex-shrink: 0;
-    padding: 4rpx $spacing-xs;
-    border-radius: $radius-pill;
     font-family: $font-ui;
     font-size: 20rpx;
     line-height: $line-height-normal;
     color: rgba($color-text-white, 0.64);
-    background: rgba($color-surface, 0.08);
   }
 
   &__partner-entry-action {
@@ -731,6 +791,9 @@
     align-items: center;
     gap: $spacing-xs;
     flex-shrink: 0;
+    max-width: 188rpx;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   &__partner-entry-action-text {
@@ -738,6 +801,7 @@
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
     color: rgba($color-text-white, 0.94);
+    white-space: nowrap;
   }
 
   &__partner-entry-chevron,
@@ -878,6 +942,27 @@
     font-size: $font-size-xs;
     line-height: $line-height-relaxed;
     color: rgba(36, 22, 79, 0.7);
+  }
+
+  &__story-status,
+  &__story-cta {
+    display: block;
+    max-width: 410rpx;
+    font-family: $font-ui;
+    line-height: $line-height-relaxed;
+  }
+
+  &__story-status {
+    margin-top: 4rpx;
+    font-size: 22rpx;
+    color: rgba(36, 22, 79, 0.56);
+  }
+
+  &__story-cta {
+    margin-top: $spacing-sm;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
   }
 
   &__story-action {
@@ -1093,7 +1178,7 @@
   .profile-page__stat,
   .profile-page__fallback-personality,
   .profile-page__fallback-settings,
-  .profile-page__settings,
+  .profile-page__nav-settings,
   .profile-page__partner-entry,
   .profile-page__archive-link,
   .profile-page__story-card,
