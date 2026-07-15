@@ -80,13 +80,12 @@ jobs:
           if-no-files-found: error
 
   # CVM tunnel upload: rsync dist → SSH → miniprogram-ci on CVM (fixed IP).
-  # continue-on-error: true — CVM availability is best-effort, not a build gate.
-  # If this fails, re-run from Actions UI or use scripts/cvm-upload.sh locally.
+  # Main pushes must surface upload failures; transient SSH transport failures are
+  # retried below, while miniprogram-ci itself is intentionally single-attempt.
   upload-weapp:
     if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && github.event.inputs.should_upload == 'true')
     needs: build-weapp
     runs-on: ubuntu-latest
-    continue-on-error: true
     timeout-minutes: 10
     steps:
       - uses: actions/download-artifact@v4
@@ -97,13 +96,16 @@ jobs:
       - name: Upload to WeChat Mini Program via CVM
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
           SERVER_IP: ${{ secrets.SERVER_IP }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
           WECHAT_PRIVATE_KEY: ${{ secrets.WECHAT_PRIVATE_KEY }}
         run: |
+          set -euo pipefail
+
           if [ -z "${WECHAT_PRIVATE_KEY:-}" ]; then
-            echo "⚠️ WECHAT_PRIVATE_KEY secret not set — skipping upload"
-            exit 0
+            echo "::error::WECHAT_PRIVATE_KEY secret is required for the WeChat upload"
+            exit 1
           fi
 
           REMOTE_DIR="/root/joyjoin-upload"
@@ -113,12 +115,58 @@ jobs:
           SSH_KEY_FILE=$(mktemp)
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$SSH_KEY_FILE"
           chmod 600 "$SSH_KEY_FILE"
-          SSH_CMD="ssh -i $SSH_KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
           # Write WeChat private key to temp file for rsync
           WX_KEY_FILE=$(mktemp)
           printf '%s\n' "$WECHAT_PRIVATE_KEY" > "$WX_KEY_FILE"
           chmod 600 "$WX_KEY_FILE"
+
+          cleanup() {
+            rm -f "$SSH_KEY_FILE" "$WX_KEY_FILE"
+            if [ -n "${SSH_AGENT_PID:-}" ]; then
+              ssh-agent -k >/dev/null 2>&1 || true
+            fi
+          }
+          trap cleanup EXIT
+
+          run_with_ssh_retry() {
+            local attempt=1
+            local exit_code=0
+
+            while true; do
+              if "$@"; then
+                return 0
+              else
+                exit_code=$?
+              fi
+
+              if [ "$exit_code" -ne 255 ] || [ "$attempt" -ge 3 ]; then
+                return "$exit_code"
+              fi
+
+              echo "::warning::SSH transport closed during attempt ${attempt}/3; retrying in 15 seconds"
+              sleep 15
+              attempt=$((attempt + 1))
+            done
+          }
+
+          if [ -n "${SSH_KEY_PASSPHRASE:-}" ]; then
+            eval "$(ssh-agent -s)"
+            echo "$SSH_KEY_PASSPHRASE" | ssh-add "$SSH_KEY_FILE"
+          fi
+
+          SSH_OPTIONS=(
+            -i "$SSH_KEY_FILE"
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o ConnectTimeout=20
+            -o ConnectionAttempts=3
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=3
+            -o StrictHostKeyChecking=no
+            -o UserKnownHostsFile=/dev/null
+          )
+          RSYNC_SSH="ssh -i $SSH_KEY_FILE -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=20 -o ConnectionAttempts=3 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
           API_TARGET="${{ github.event.inputs.api_target || 'staging' }}"
           VERSION="1.0.$(date +%Y%m%d).$(date +%H%M)"
@@ -127,18 +175,19 @@ jobs:
           echo "📱 Uploading mini-program v$VERSION via CVM..."
 
           # Create remote dir
-          $SSH_CMD "$CVM" "mkdir -p $REMOTE_DIR/dist"
+          run_with_ssh_retry ssh "${SSH_OPTIONS[@]}" "$CVM" "mkdir -p $REMOTE_DIR/dist"
 
           # rsync dist
-          rsync -avz --delete -e "$SSH_CMD" \
+          run_with_ssh_retry rsync -avz --delete -e "$RSYNC_SSH" \
             apps/mini-program/dist/ "$CVM:$REMOTE_DIR/dist/"
 
           # rsync WeChat key
-          rsync -avz -e "$SSH_CMD" \
+          run_with_ssh_retry rsync -avz -e "$RSYNC_SSH" \
             "$WX_KEY_FILE" "$CVM:$REMOTE_DIR/private.key"
 
-          # SSH + upload
-          $SSH_CMD "$CVM" \
+          # SSH + upload. Do not retry miniprogram-ci itself because a dropped
+          # return channel does not prove whether WeChat accepted the upload.
+          ssh "${SSH_OPTIONS[@]}" "$CVM" \
             "cd $REMOTE_DIR && \
              NODE_OPTIONS='--dns-result-order=ipv4first' npx --yes miniprogram-ci upload \
                --appid wx5a038ee6dee12032 \
@@ -148,5 +197,11 @@ jobs:
                --ud '$DESCRIPTION' \
                --rp 1"
 
-          rm -f "$SSH_KEY_FILE" "$WX_KEY_FILE"
           echo "✅ WeChat upload complete!"
+          {
+            echo "### WeChat mini-program upload"
+            echo "- Commit: \`${GITHUB_SHA:0:7}\`"
+            echo "- Version: \`$VERSION\`"
+            echo "- API target: \`$API_TARGET\`"
+            echo "- Result: success"
+          } >> "$GITHUB_STEP_SUMMARY"

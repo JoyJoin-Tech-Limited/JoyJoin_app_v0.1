@@ -51,9 +51,40 @@ jobs:
         env:
           SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
         run: |
+          set -euo pipefail
+
           SSH_KEY_FILE=$(mktemp)
           printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > "$SSH_KEY_FILE"
           chmod 600 "$SSH_KEY_FILE"
+
+          cleanup() {
+            rm -f "$SSH_KEY_FILE"
+            if [ -n "${SSH_AGENT_PID:-}" ]; then
+              ssh-agent -k >/dev/null 2>&1 || true
+            fi
+          }
+          trap cleanup EXIT
+
+          run_with_ssh_retry() {
+            local attempt=1
+            local exit_code=0
+
+            while true; do
+              if "$@"; then
+                return 0
+              else
+                exit_code=$?
+              fi
+
+              if [ "$exit_code" -ne 255 ] || [ "$attempt" -ge 3 ]; then
+                return "$exit_code"
+              fi
+
+              echo "::warning::SSH transport closed during rsync attempt ${attempt}/3; retrying in 15 seconds"
+              sleep 15
+              attempt=$((attempt + 1))
+            done
+          }
 
           RSYNC_OPTS=(
             -az --delete
@@ -79,11 +110,11 @@ jobs:
             echo "$SSH_KEY_PASSPHRASE" | ssh-add "$SSH_KEY_FILE"
           fi
 
-          rsync "${RSYNC_OPTS[@]}" \
-            -e "ssh -i $SSH_KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
-            ./ "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:~/JoyJoin/"
+          RSYNC_SSH="ssh -i $SSH_KEY_FILE -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=20 -o ConnectionAttempts=3 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
-          rm -f "$SSH_KEY_FILE"
+          run_with_ssh_retry rsync "${RSYNC_OPTS[@]}" \
+            -e "$RSYNC_SSH" \
+            ./ "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:~/JoyJoin/"
 
       - name: Encode multiline secrets for SSH transport
         env:
