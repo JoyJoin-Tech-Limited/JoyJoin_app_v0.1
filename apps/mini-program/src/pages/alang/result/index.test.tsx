@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => ({
   refetchArchives: vi.fn(),
   callReportProgress: vi.fn(),
   authUser: {
-    current: { appMode: 'production', features: { alangEnabled: true } },
+    current: { appMode: 'production', features: { alangEnabled: true } } as any,
   },
 }))
 
@@ -246,6 +246,7 @@ describe('AlangResultPage', () => {
   it('shows the retest entry only for an archived result in single-test mode', async () => {
     mocks.authUser.current = {
       appMode: 'test',
+      singleTestMode: true,
       features: { alangEnabled: true },
     }
     mocks.useAlangMissionDetail.mockReturnValue({
@@ -267,6 +268,7 @@ describe('AlangResultPage', () => {
   it('asks for confirmation and cancellation does not reset', async () => {
     mocks.authUser.current = {
       appMode: 'test',
+      singleTestMode: true,
       features: { alangEnabled: true },
     }
     mocks.showModal.mockResolvedValue({ confirm: false, cancel: true })
@@ -296,6 +298,7 @@ describe('AlangResultPage', () => {
   it('relaunches the fresh point configuration after a successful reset', async () => {
     mocks.authUser.current = {
       appMode: 'test',
+      singleTestMode: true,
       features: { alangEnabled: true },
     }
     mocks.useAlangMissionDetail.mockReturnValue({
@@ -327,6 +330,7 @@ describe('AlangResultPage', () => {
   it('keeps the result page open when reset fails', async () => {
     mocks.authUser.current = {
       appMode: 'test',
+      singleTestMode: true,
       features: { alangEnabled: true },
     }
     mocks.resetMission.mockRejectedValue(new Error('RESET_FAILED'))
@@ -356,6 +360,7 @@ describe('AlangResultPage', () => {
   it('sends only one reset request when the retest entry is tapped repeatedly', async () => {
     mocks.authUser.current = {
       appMode: 'test',
+      singleTestMode: true,
       features: { alangEnabled: true },
     }
     let resolveReset: ((value: unknown) => void) | undefined

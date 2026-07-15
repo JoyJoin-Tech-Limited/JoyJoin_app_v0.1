@@ -77,11 +77,24 @@ describe("buildAuthUserResponse Alang feature exposure", () => {
 
       expect(response).not.toBeNull();
       expect(response?.appMode).toBe("production");
+      expect(response?.singleTestMode).toBe(false);
       expect(response?.features?.alangEnabled).toBe(alangEnabled);
       expect(mockGetFeatureFlag).toHaveBeenCalledWith("alangEnabled", false);
       expect(mockGetRoleResult).not.toHaveBeenCalled();
     }
   );
+
+  it("exposes explicit single-test mode in staging when enabled", async () => {
+    process.env.ENABLE_SINGLE_TEST_MODE = "true";
+    mockGetFeatureFlag.mockImplementation(
+      async (_key: string, defaultValue: boolean) => defaultValue
+    );
+
+    const response = await buildAuthUserResponse(mockUser.id);
+
+    expect(response?.appMode).toBe("test");
+    expect(response?.singleTestMode).toBe(true);
+  });
 
   it("fails client debug mode closed in production even when the single-test flag is stale", async () => {
     process.env.APP_MODE = "production";
@@ -93,6 +106,7 @@ describe("buildAuthUserResponse Alang feature exposure", () => {
     const response = await buildAuthUserResponse(mockUser.id);
 
     expect(response?.appMode).toBe("production");
+    expect(response?.singleTestMode).toBe(false);
   });
 
   it("fails client debug mode closed when APP_MODE is unset", async () => {
@@ -105,5 +119,6 @@ describe("buildAuthUserResponse Alang feature exposure", () => {
     const response = await buildAuthUserResponse(mockUser.id);
 
     expect(response?.appMode).toBe("production");
+    expect(response?.singleTestMode).toBe(false);
   });
 });

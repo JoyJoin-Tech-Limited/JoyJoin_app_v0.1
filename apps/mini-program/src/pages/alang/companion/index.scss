@@ -215,11 +215,53 @@
   }
 
   &__debug-tools {
-    margin-top: 24rpx;
-    padding: 24rpx;
-    border: 2rpx dashed rgba($color-primary, 0.25);
-    border-radius: 24rpx;
+    padding: 22rpx;
+    border-top: 2rpx solid rgba($color-primary, 0.14);
     background: rgba($color-primary, 0.05);
+  }
+
+  &__quick-test {
+    margin-top: 16rpx;
+    overflow: hidden;
+    border: 2rpx solid rgba($color-primary, 0.22);
+    border-radius: 24rpx;
+    background: rgba($color-surface, 0.9);
+  }
+
+  &__quick-test-toggle {
+    display: flex;
+    min-height: $cta-min-tap;
+    box-sizing: border-box;
+    padding: 18rpx 22rpx;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__quick-test-heading {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+  }
+
+  &__quick-test-title {
+    color: $color-text-primary;
+    font-size: $font-size-base;
+    font-weight: 700;
+  }
+
+  &__quick-test-badge {
+    padding: 5rpx 12rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.11);
+    color: $color-primary-dark;
+    font-size: $font-size-xs;
+    font-weight: 600;
+  }
+
+  &__quick-test-state {
+    color: $color-primary-dark;
+    font-size: $font-size-sm;
+    font-weight: 600;
   }
 
   &__debug-title {
@@ -250,6 +292,7 @@
     font-weight: 600;
 
     &--primary {
+      flex-basis: 100%;
       border-color: $color-primary-dark;
       background: $color-primary-dark;
       color: $color-text-white;

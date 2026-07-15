@@ -7,6 +7,7 @@ type AlangFeatureFlags = Pick<
 
 export type AlangAccessUser = {
   appMode?: AuthUserResponse['appMode']
+  singleTestMode?: AuthUserResponse['singleTestMode']
   features?: AlangFeatureFlags
 }
 
@@ -21,5 +22,7 @@ export function shouldShowAlangEntry(
 export function shouldShowAlangDebugTools(
   user: AlangAccessUser | null | undefined,
 ): boolean {
-  return shouldShowAlangEntry(user) && user?.appMode === 'test'
+  return shouldShowAlangEntry(user)
+    && user?.singleTestMode === true
+    && user?.appMode === 'test'
 }

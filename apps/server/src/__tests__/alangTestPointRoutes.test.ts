@@ -1,6 +1,7 @@
 import express from "express";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createWithServer } from "../test-utils/withServer";
+import { haversine } from "../lib/alang/alangGeoFence";
 
 const state = vi.hoisted(() => ({
   progresses: new Map<string, any>(),
@@ -300,7 +301,10 @@ describe("Alang per-run test point flow", () => {
   });
 
   it("simulates three stable points within 3 metres and advances only the acting user", async () => {
-    const actingProgress = seedProgress("user-1");
+    const actingProgress = seedProgress("user-1", {
+      isDebugSession: false,
+      debugMarkers: [],
+    });
     const otherProgress = seedProgress("user-2");
 
     const response = await request("POST", "/api/alang/debug/missions/alang-demo/mock-gps", {
@@ -311,14 +315,25 @@ describe("Alang per-run test point flow", () => {
     expect(response.status).toBe(200);
     expect(body).toMatchObject({ arrived: true, stableCount: 3, debug: true });
     expect(body.distanceMeters).toBeLessThanOrEqual(3);
-    expect(state.progresses.get(key("user-1"))).toMatchObject({
+    const updatedProgress = state.progresses.get(key("user-1"));
+    expect(updatedProgress).toMatchObject({
       id: actingProgress.id,
       currentNodeId: "arrival",
+      status: "in_progress",
       stage: "arrived",
       isDebugSession: true,
       debugMarkers: expect.arrayContaining(["mock-gps:arrive"]),
     });
-    expect(state.progresses.get(key("user-1")).gpsHistory).toHaveLength(3);
+    expect(updatedProgress.gpsHistory).toHaveLength(3);
+    for (const sample of updatedProgress.gpsHistory) {
+      expect(haversine(
+        sample.latitude,
+        sample.longitude,
+        configuredPoints.companionEndLocation.latitude,
+        configuredPoints.companionEndLocation.longitude,
+      )).toBeLessThanOrEqual(3);
+    }
+    expect(repository.archiveStory).not.toHaveBeenCalled();
     expect(state.progresses.get(key("user-2"))).toEqual(otherProgress);
   });
 

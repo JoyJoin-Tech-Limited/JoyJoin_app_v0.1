@@ -153,14 +153,14 @@ const [
 
   // Never expose client debug surfaces in production, even if a stale
   // ENABLE_SINGLE_TEST_MODE variable is accidentally present.
-  const appMode: 'production' | 'test' =
-    (process.env.APP_MODE ?? 'production') !== 'production' && isSingleTestMode()
-      ? 'test'
-      : 'production';
+  const singleTestMode =
+    (process.env.APP_MODE ?? 'production') !== 'production' && isSingleTestMode();
+  const appMode: 'production' | 'test' = singleTestMode ? 'test' : 'production';
 
   const authUserResponse: AuthUserResponse = {
     ...sanitizeAuthUser(user),
     appMode,
+    singleTestMode,
     nextStep,
     profileEssentialComplete,
     profileExtendedComplete,

@@ -162,7 +162,7 @@ describe('AlangConfigPage test-point start flow', () => {
     vi.clearAllMocks()
     mocks.distanceMeters.current = 150
     mocks.useAuth.mockReturnValue({
-      user: { appMode: 'test', features: { alangEnabled: true } },
+      user: { appMode: 'test', singleTestMode: true, features: { alangEnabled: true } },
       isLoading: false,
     })
     mocks.useAlangMissionDetail.mockReturnValue({

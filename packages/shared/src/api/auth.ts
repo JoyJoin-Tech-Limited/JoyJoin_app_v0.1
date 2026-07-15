@@ -29,6 +29,8 @@ export type SanitizedAuthUser = Omit<User, SensitiveAuthUserField>
 export interface AuthUserResponse extends SanitizedAuthUser {
   /** APP_MODE — 'production' (WeChat OAuth) or 'test' (local phone login). */
   appMode?: 'production' | 'test'
+  /** Server-authoritative marker for non-production single-test tools. */
+  singleTestMode?: boolean
   nextStep: OnboardingNextStep
   profileEssentialComplete: boolean
   profileExtendedComplete: boolean

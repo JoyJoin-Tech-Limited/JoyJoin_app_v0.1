@@ -64,6 +64,7 @@ export default function AlangCompanionPage() {
   const [route, setRoute] = useState<WalkingRouteSuccessResponse | null>(null)
   const [routeUnavailable, setRouteUnavailable] = useState(false)
   const [clientConfigurationInvalid, setClientConfigurationInvalid] = useState(false)
+  const [showTestTools, setShowTestTools] = useState(false)
   const [showTestCoordinates, setShowTestCoordinates] = useState(false)
   const [isMockingArrival, setIsMockingArrival] = useState(false)
   const [destinationRefreshStatus, setDestinationRefreshStatus] = useState<
@@ -311,8 +312,17 @@ export default function AlangCompanionPage() {
       || isMockingArrival
       || arrived) return
     mockArrivalActionRef.current = true
-    setIsMockingArrival(true)
     try {
+      const modal = await Taro.showModal({
+        title: '模拟到达终点',
+        content: '仅用于内部测试。将模拟到达陪伴终点，是否继续？',
+        confirmText: '继续',
+        cancelText: '取消',
+        confirmColor: BRAND_COLORS.primary,
+      })
+      if (!modal.confirm) return
+
+      setIsMockingArrival(true)
       const result = await callDebugMockArrival(slug)
       if (result.arrived) {
         if (!result.nodeId) throw new Error('MOCK_ARRIVAL_NODE_MISSING')
@@ -322,6 +332,8 @@ export default function AlangCompanionPage() {
         })
         setCurrentNodeId(result.nodeId)
         handleArrival()
+        setShowTestTools(false)
+        setShowTestCoordinates(false)
         await refetch()
       } else {
         Taro.showToast({ title: '模拟位置仍在确认，请再试一次', icon: 'none' })
@@ -624,50 +636,69 @@ export default function AlangCompanionPage() {
         >
           <Text className='alang-companion__map-btn-text'>查看步行路线</Text>
         </View>
-      </View>
 
-      {canUseDebugTools && (
-        <View className='alang-companion__debug-tools'>
-          <Text className='alang-companion__debug-title'>内部测试工具</Text>
-          <Text className='alang-companion__debug-copy'>仅在非生产 single test mode 中显示</Text>
-          <View className='alang-companion__debug-actions'>
+        {canUseDebugTools && (
+          <View className='alang-companion__quick-test'>
             <View
-              className={`alang-companion__debug-btn alang-companion__debug-btn--primary${isMockingArrival || arrived ? ' alang-companion__debug-btn--disabled' : ''}`}
-              onClick={() => { void handleMockArrival() }}
+              className='alang-companion__quick-test-toggle'
+              onClick={() => setShowTestTools((visible) => !visible)}
               role='button'
-              aria-label={isMockingArrival ? '正在模拟到达终点' : '模拟到达终点'}
-              aria-disabled={isMockingArrival || arrived}
+              aria-label={showTestTools ? '收起测试工具' : '展开测试工具'}
+              aria-expanded={showTestTools}
             >
-              <Text>{isMockingArrival ? '正在模拟…' : '模拟到达终点'}</Text>
+              <View className='alang-companion__quick-test-heading'>
+                <Text className='alang-companion__quick-test-title'>测试工具</Text>
+                <Text className='alang-companion__quick-test-badge'>内部测试</Text>
+              </View>
+              <Text className='alang-companion__quick-test-state'>
+                {showTestTools ? '收起' : '展开'}
+              </Text>
             </View>
-            <View
-              className={`alang-companion__debug-btn${resetMutation.isPending ? ' alang-companion__debug-btn--disabled' : ''}`}
-              onClick={() => { void handleReconfigure() }}
-              role='button'
-              aria-label={resetMutation.isPending ? '正在清除测试进度' : '重新配置点位'}
-              aria-disabled={resetMutation.isPending}
-            >
-              <Text>重新配置点位</Text>
-            </View>
-            <View
-              className='alang-companion__debug-btn'
-              onClick={() => setShowTestCoordinates((visible) => !visible)}
-              role='button'
-              aria-label={showTestCoordinates ? '收起测试坐标' : '查看测试坐标'}
-              aria-expanded={showTestCoordinates}
-            >
-              <Text>{showTestCoordinates ? '收起测试坐标' : '查看测试坐标'}</Text>
-            </View>
+
+            {showTestTools && (
+              <View className='alang-companion__debug-tools'>
+                <Text className='alang-companion__debug-copy'>仅用于内部测试，将模拟进入终点 5 米范围。</Text>
+                <View className='alang-companion__debug-actions'>
+                  <View
+                    className={`alang-companion__debug-btn alang-companion__debug-btn--primary${isMockingArrival || arrived ? ' alang-companion__debug-btn--disabled' : ''}`}
+                    onClick={() => { void handleMockArrival() }}
+                    role='button'
+                    aria-label={isMockingArrival ? '正在模拟到达终点' : '模拟到达终点'}
+                    aria-disabled={isMockingArrival || arrived}
+                  >
+                    <Text>{isMockingArrival ? '正在模拟…' : '模拟到达终点'}</Text>
+                  </View>
+                  <View
+                    className={`alang-companion__debug-btn${resetMutation.isPending ? ' alang-companion__debug-btn--disabled' : ''}`}
+                    onClick={() => { void handleReconfigure() }}
+                    role='button'
+                    aria-label={resetMutation.isPending ? '正在清除测试进度' : '重新配置点位'}
+                    aria-disabled={resetMutation.isPending}
+                  >
+                    <Text>重新配置点位</Text>
+                  </View>
+                  <View
+                    className='alang-companion__debug-btn'
+                    onClick={() => setShowTestCoordinates((visible) => !visible)}
+                    role='button'
+                    aria-label={showTestCoordinates ? '收起当前测试坐标' : '查看当前测试坐标'}
+                    aria-expanded={showTestCoordinates}
+                  >
+                    <Text>{showTestCoordinates ? '收起当前测试坐标' : '查看当前测试坐标'}</Text>
+                  </View>
+                </View>
+                {showTestCoordinates && (
+                  <View className='alang-companion__debug-coordinates'>
+                    <Text>当前位置：{currentCoordinateText}</Text>
+                    <Text>陪伴终点：{destinationCoordinateText}</Text>
+                    <Text>计算距离：{testDistanceText}</Text>
+                  </View>
+                )}
+              </View>
+            )}
           </View>
-          {showTestCoordinates && (
-            <View className='alang-companion__debug-coordinates'>
-              <Text>当前位置：{currentCoordinateText}</Text>
-              <Text>陪伴终点：{destinationCoordinateText}</Text>
-              <Text>计算距离：{testDistanceText}</Text>
-            </View>
-          )}
-        </View>
-      )}
+        )}
+      </View>
 
         {arrived && (
         <View className='alang-companion__arrival'>

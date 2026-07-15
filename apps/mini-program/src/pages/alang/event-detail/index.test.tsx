@@ -199,7 +199,7 @@ describe('AlangEventDetailPage', () => {
 
   it('allows a strict test-mode user to enter the configuration page', async () => {
     mocks.useAuth.mockReturnValue({
-      user: { appMode: 'test', features: { alangEnabled: true } },
+      user: { appMode: 'test', singleTestMode: true, features: { alangEnabled: true } },
     })
 
     render(<AlangEventDetailPage />)

@@ -38,14 +38,39 @@ describe('Alang access gates', () => {
   it('does not expose debug tools without single-test mode', () => {
     expect(shouldShowAlangDebugTools({
       appMode: 'production',
+      singleTestMode: false,
       features: { alangEnabled: true },
     })).toBe(false)
   })
 
-  it('exposes debug tools only when both single-test mode and Alang are enabled', () => {
+  it('exposes debug tools in staging when the server enables single-test mode', () => {
+    expect(shouldShowAlangDebugTools({
+      appMode: 'test',
+      singleTestMode: true,
+      features: { alangEnabled: true },
+    })).toBe(true)
+  })
+
+  it('exposes debug tools in local test mode', () => {
+    expect(shouldShowAlangDebugTools({
+      appMode: 'test',
+      singleTestMode: true,
+      features: { alangEnabled: true },
+    })).toBe(true)
+  })
+
+  it('fails closed in production even if a stale single-test marker is present', () => {
+    expect(shouldShowAlangDebugTools({
+      appMode: 'production',
+      singleTestMode: true,
+      features: { alangEnabled: true },
+    })).toBe(false)
+  })
+
+  it('requires the explicit server marker instead of inferring from appMode alone', () => {
     expect(shouldShowAlangDebugTools({
       appMode: 'test',
       features: { alangEnabled: true },
-    })).toBe(true)
+    })).toBe(false)
   })
 })

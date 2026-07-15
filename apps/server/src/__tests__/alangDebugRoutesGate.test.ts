@@ -72,6 +72,25 @@ describe("Alang debug route gate", () => {
     expect(isAlangDebugMode()).toBe(false);
   });
 
+  it("rejects mock GPS in production even when the single-test flag is stale", async () => {
+    process.env.APP_MODE = "production";
+    process.env.ENABLE_SINGLE_TEST_MODE = "true";
+
+    await withServer(async (_baseUrl, request) => {
+      const response = await request("/api/alang/debug/missions/demo/mock-gps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "arrive" }),
+      });
+
+      expect(response.status).toBe(404);
+      await expect(response.json()).resolves.toEqual({ error: "NOT_FOUND" });
+    });
+
+    expect(mockGetFeatureFlag).not.toHaveBeenCalled();
+    expect(mockAlangRepositoryCall).not.toHaveBeenCalled();
+  });
+
   it("fails every Alang debug mutation closed before feature or data access", async () => {
     const requests = [
       {

@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   callDebugMockGps: vi.fn(),
   callDebugForceNode: vi.fn(),
   authUser: {
-    current: { appMode: 'production', features: { alangEnabled: true } },
+    current: { appMode: 'production', features: { alangEnabled: true } } as any,
   },
   mission: {
     current: null as any,
@@ -129,6 +129,7 @@ describe('AlangDebugPage', () => {
   it('shows progress, archive presence and story version in single-test mode', () => {
     mocks.authUser.current = {
       appMode: 'test',
+      singleTestMode: true,
       features: { alangEnabled: true },
     }
 
@@ -142,6 +143,7 @@ describe('AlangDebugPage', () => {
   it('resets the current run, shows fresh state and relaunches point configuration', async () => {
     mocks.authUser.current = {
       appMode: 'test',
+      singleTestMode: true,
       features: { alangEnabled: true },
     }
     mocks.resetMission.mockResolvedValue({
@@ -172,6 +174,7 @@ describe('AlangDebugPage', () => {
   it('cancels without resetting', async () => {
     mocks.authUser.current = {
       appMode: 'test',
+      singleTestMode: true,
       features: { alangEnabled: true },
     }
     mocks.showModal.mockResolvedValue({ confirm: false, cancel: true })
@@ -189,6 +192,7 @@ describe('AlangDebugPage', () => {
   it('keeps the debug page open when reset fails', async () => {
     mocks.authUser.current = {
       appMode: 'test',
+      singleTestMode: true,
       features: { alangEnabled: true },
     }
     mocks.resetMission.mockRejectedValue(new Error('RESET_FAILED'))

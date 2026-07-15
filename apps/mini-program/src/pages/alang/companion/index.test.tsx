@@ -19,7 +19,9 @@ const mocks = vi.hoisted(() => ({
   showModal: vi.fn(),
   showToast: vi.fn(),
   callDebugMockArrival: vi.fn(),
-  authUser: { current: { appMode: 'production', features: { alangEnabled: true } } as any },
+  authUser: {
+    current: { appMode: 'production', singleTestMode: false, features: { alangEnabled: true } } as any,
+  },
   useAlangGps: vi.fn(),
   useAlangMissionDetail: vi.fn(),
   useResetAlangMission: vi.fn(),
@@ -182,7 +184,11 @@ describe('AlangCompanionPage walking route', () => {
       stage: 'arrived',
       debug: true,
     })
-    mocks.authUser.current = { appMode: 'production', features: { alangEnabled: true } }
+    mocks.authUser.current = {
+      appMode: 'production',
+      singleTestMode: false,
+      features: { alangEnabled: true },
+    }
     mocks.refetch.mockResolvedValue({ data: mission })
     mocks.useAlangMissionDetail.mockReturnValue({
       data: mission,
@@ -334,7 +340,7 @@ describe('AlangCompanionPage walking route', () => {
   })
 
   it('shows configuration recovery only after a successful authoritative response still has no endpoint', async () => {
-    mocks.authUser.current = { appMode: 'test', features: { alangEnabled: true } }
+    mocks.authUser.current = { appMode: 'test', singleTestMode: true, features: { alangEnabled: true } }
     const missingDestinationMission = { ...mission, routeDestination: undefined }
     mocks.refetch.mockResolvedValue({ isError: false, data: missingDestinationMission })
     mocks.useAlangMissionDetail.mockReturnValue({
@@ -366,35 +372,88 @@ describe('AlangCompanionPage walking route', () => {
     expect(container.querySelector('.alang-companion__map-btn')).not.toBeInTheDocument()
   })
 
-  it('shows coordinates and internal actions only in strict single-test mode', () => {
-    mocks.authUser.current = { appMode: 'test', features: { alangEnabled: true } }
+  it('shows a folded quick-test entry in staging single-test mode directly after the route button', () => {
+    mocks.authUser.current = { appMode: 'test', singleTestMode: true, features: { alangEnabled: true } }
+
+    const { container } = render(<AlangCompanionPage />)
+    const actions = container.querySelector('.alang-companion__actions')!
+    const routeButton = container.querySelector('[aria-label="查看步行路线"]')!
+    const testToggle = container.querySelector('[aria-label="展开测试工具"]')!
+    const children = Array.from(actions.children)
+
+    expect(testToggle).toBeInTheDocument()
+    expect(container.textContent).toContain('测试工具')
+    expect(container.textContent).toContain('内部测试')
+    expect(container.querySelector('[aria-label="模拟到达终点"]')).not.toBeInTheDocument()
+    expect(children.indexOf(testToggle.parentElement!)).toBe(children.indexOf(routeButton) + 1)
+  })
+
+  it('hides quick-test controls in staging when single-test mode is disabled', () => {
+    mocks.authUser.current = {
+      appMode: 'production',
+      singleTestMode: false,
+      features: { alangEnabled: true },
+    }
 
     const { container } = render(<AlangCompanionPage />)
 
-    expect(container.textContent).toContain('内部测试工具')
-    fireEvent.click(container.querySelector('[aria-label="查看测试坐标"]')!)
+    expect(container.querySelector('[aria-label="展开测试工具"]')).not.toBeInTheDocument()
+  })
+
+  it('hides quick-test controls in production even with a stale single-test marker', () => {
+    mocks.authUser.current = {
+      appMode: 'production',
+      singleTestMode: true,
+      features: { alangEnabled: true },
+    }
+
+    const { container } = render(<AlangCompanionPage />)
+
+    expect(container.querySelector('[aria-label="展开测试工具"]')).not.toBeInTheDocument()
+  })
+
+  it('expands three in-page test actions and reveals the current coordinates', () => {
+    mocks.authUser.current = { appMode: 'test', singleTestMode: true, features: { alangEnabled: true } }
+
+    const { container } = render(<AlangCompanionPage />)
+    fireEvent.click(container.querySelector('[aria-label="展开测试工具"]')!)
+
+    expect(container.querySelector('[aria-label="模拟到达终点"]')).toBeInTheDocument()
+    expect(container.querySelector('[aria-label="重新配置点位"]')).toBeInTheDocument()
+    expect(container.querySelector('[aria-label="查看当前测试坐标"]')).toBeInTheDocument()
+    expect(container.textContent).toContain('仅用于内部测试，将模拟进入终点 5 米范围。')
+
+    fireEvent.click(container.querySelector('[aria-label="查看当前测试坐标"]')!)
     expect(container.textContent).toContain('22.541110, 114.055550')
     expect(container.textContent).toContain('22.543210, 114.057890')
     expect(container.textContent).toContain('计算距离：280 米')
   })
 
-  it('uses the debug arrival API and immediately exposes the normal arrival continuation', async () => {
-    mocks.authUser.current = { appMode: 'test', features: { alangEnabled: true } }
+  it('confirms before mock arrival and exposes arrival without automatically completing', async () => {
+    mocks.authUser.current = { appMode: 'test', singleTestMode: true, features: { alangEnabled: true } }
     mocks.callReportProgress.mockResolvedValue({
       stage: 'result',
       currentNodeId: 'result-card',
     })
 
     const { container } = render(<AlangCompanionPage />)
+    fireEvent.click(container.querySelector('[aria-label="展开测试工具"]')!)
     fireEvent.click(container.querySelector('[aria-label="模拟到达终点"]')!)
 
+    await waitFor(() => expect(mocks.showModal).toHaveBeenCalledWith(expect.objectContaining({
+      title: '模拟到达终点',
+      content: '仅用于内部测试。将模拟到达陪伴终点，是否继续？',
+    })))
     await waitFor(() => expect(mocks.callDebugMockArrival).toHaveBeenCalledWith('meet-alang'))
     await waitFor(() => expect(container.textContent).toContain('我们到了'))
+    expect(container.textContent).toContain('确认到达')
     expect(mocks.syncMissionProgress).toHaveBeenCalledWith('meet-alang', {
       stage: 'arrived',
       currentNodeId: 'arrival-gate',
     })
     expect(mocks.refetch).toHaveBeenCalled()
+    expect(mocks.callReportProgress).not.toHaveBeenCalled()
+    expect(mocks.redirectTo).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('button', { name: '确认到达' }))
     await waitFor(() => expect(mocks.callReportProgress).toHaveBeenCalledWith('meet-alang', 'result-card'))
@@ -407,23 +466,42 @@ describe('AlangCompanionPage walking route', () => {
     })
   })
 
-  it('resets server progress before relaunching the point configuration page', async () => {
-    mocks.authUser.current = { appMode: 'test', features: { alangEnabled: true } }
-    mocks.useAlangGps.mockReturnValue({
-      distance: 242_037,
-      accuracy: 12,
-      nodeId: 'companion-walk',
-      position: userPosition,
-      configurationInvalid: false,
-    })
+  it('does not call mock arrival when the confirmation is cancelled', async () => {
+    mocks.authUser.current = { appMode: 'test', singleTestMode: true, features: { alangEnabled: true } }
+    mocks.showModal.mockResolvedValueOnce({ confirm: false, cancel: true })
 
     const { container } = render(<AlangCompanionPage />)
-    fireEvent.click(container.querySelector('[aria-label="查看测试坐标"]')!)
-    expect(container.textContent).toContain('计算距离：242037 米')
-    fireEvent.click(container.querySelector('[aria-label="打开测试工具"]')!)
-    expect(mocks.navigateTo).toHaveBeenCalledWith({
-      url: '/pages/alang/debug/index?slug=meet-alang',
-    })
+    fireEvent.click(container.querySelector('[aria-label="展开测试工具"]')!)
+    fireEvent.click(container.querySelector('[aria-label="模拟到达终点"]')!)
+
+    await waitFor(() => expect(mocks.showModal).toHaveBeenCalled())
+    expect(mocks.callDebugMockArrival).not.toHaveBeenCalled()
+    expect(container.textContent).not.toContain('我们到了')
+  })
+
+  it('stays on the companion page and reports an error when mock arrival fails', async () => {
+    mocks.authUser.current = { appMode: 'test', singleTestMode: true, features: { alangEnabled: true } }
+    mocks.callDebugMockArrival.mockRejectedValueOnce(new Error('MOCK_GPS_FAILED'))
+
+    const { container } = render(<AlangCompanionPage />)
+    fireEvent.click(container.querySelector('[aria-label="展开测试工具"]')!)
+    fireEvent.click(container.querySelector('[aria-label="模拟到达终点"]')!)
+
+    await waitFor(() => expect(mocks.showToast).toHaveBeenCalledWith({
+      title: '模拟到达没有成功，请稍后再试',
+      icon: 'none',
+    }))
+    expect(container.querySelector('[aria-label="查看步行路线"]')).toBeInTheDocument()
+    expect(container.textContent).not.toContain('我们到了')
+    expect(mocks.callReportProgress).not.toHaveBeenCalled()
+    expect(mocks.redirectTo).not.toHaveBeenCalled()
+  })
+
+  it('resets server progress before relaunching the point configuration page', async () => {
+    mocks.authUser.current = { appMode: 'test', singleTestMode: true, features: { alangEnabled: true } }
+
+    const { container } = render(<AlangCompanionPage />)
+    fireEvent.click(container.querySelector('[aria-label="展开测试工具"]')!)
     fireEvent.click(container.querySelector('[aria-label="重新配置点位"]')!)
 
     await waitFor(() => expect(mocks.resetMission).toHaveBeenCalledWith('meet-alang'))

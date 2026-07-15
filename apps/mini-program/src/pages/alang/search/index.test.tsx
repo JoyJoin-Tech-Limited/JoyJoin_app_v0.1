@@ -213,7 +213,7 @@ describe('AlangSearchPage', () => {
 
   it('resets a legacy searching run with invalid server points before reopening config', async () => {
     mocks.useAuth.mockReturnValue({
-      user: { appMode: 'test', features: { alangEnabled: true } },
+      user: { appMode: 'test', singleTestMode: true, features: { alangEnabled: true } },
     })
     mocks.useAlangMissionDetail.mockReturnValue({
       data: {
