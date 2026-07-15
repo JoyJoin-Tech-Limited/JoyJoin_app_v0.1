@@ -8,7 +8,7 @@ import {
   type PoolGroupDetailsResponse,
 } from '@shared/api'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { ARCHETYPE_BY_ID, resolveArchetype } from '@shared/personality/archetypeNames'
 import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
@@ -411,7 +411,8 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
 
     const names = uniqueArchetypes
       .slice(0, 3)
-      .map((id) => ARCHETYPE_BY_ID[id]?.nameCn || '小伙伴')
+      // Values may be IDs or legacy nameCn — resolveArchetype handles both.
+      .map((id) => resolveArchetype(id)?.nameCn ?? ARCHETYPE_BY_ID[id]?.nameCn ?? '小伙伴')
     const suffix = uniqueArchetypes.length > 3 ? '等多种能量' : '三种能量'
     const label = uniqueArchetypes.length >= 3 ? suffix : uniqueArchetypes.length === 2 ? '两种能量' : '一种能量'
 

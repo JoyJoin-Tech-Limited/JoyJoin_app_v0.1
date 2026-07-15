@@ -1,6 +1,6 @@
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import type { PoolGroupMemberSummary } from '@shared/api'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { resolveArchetype } from '@shared/personality/archetypeNames'
 import type { OverallChemistry, PairExplanation } from '@shared/types/groupAnalysis'
 
 import { getVibeLabel as getVibeLabelShared } from '../../lib/matching/groupDisplay'
@@ -187,7 +187,8 @@ export function buildFocusedMemberBubbleText(
     : normalize(member?.industryNicheLabel ?? member?.industryCategoryLabel)
   const interests = (member?.topInterests ?? []).map((interest) => normalize(interest)).filter(Boolean).slice(0, 3)
   const hometown = member?.hometownAffinityOptin === false ? '' : normalize(member?.hometownRegionCity)
-  const archetype = member?.archetype ? ARCHETYPE_BY_ID[member.archetype]?.nameCn : ''
+  // member.archetype may be an ID or a legacy nameCn — resolve either form.
+  const archetype = member?.archetype ? resolveArchetype(member.archetype)?.nameCn ?? '' : ''
   const profileBeats = [
     industry ? `在${industry}领域` : '',
     interests.length > 0 ? `喜欢${interests.join('、')}` : '',

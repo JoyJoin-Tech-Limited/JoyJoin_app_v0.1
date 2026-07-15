@@ -39,6 +39,7 @@ import {
 import { scheduleFlipSettleNarration } from './squadFlipState'
 import { getOracleCardCornerAsset } from '../../components/discover/oracleCardAssets'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
+import { resolveArchetype } from '@shared/personality/archetypeNames'
 import { preloadImagesWithDiagnostics } from '../../lib/utils/imagePreload'
 
 import { useSquadUnboxingController } from './useSquadUnboxingController'
@@ -441,7 +442,12 @@ export default function SquadUnboxingPage() {
     if (flowState !== 'revealed' || members.length === 0) return
     const urls = members
       .slice(0, 8)
-      .map((member) => (member.archetype ? ARCHETYPE_ASSET_MAP[member.archetype]?.webp : undefined))
+      // Archetype may be an ID or a legacy nameCn — resolve before keying.
+      .map((member) => {
+        if (!member.archetype) return undefined
+        const id = resolveArchetype(member.archetype)?.id ?? member.archetype
+        return ARCHETYPE_ASSET_MAP[id]?.webp
+      })
       .filter((url): url is string => Boolean(url))
     if (urls.length > 0) {
       void preloadImagesWithDiagnostics(urls, 'squad-unboxing:fan-archetypes')

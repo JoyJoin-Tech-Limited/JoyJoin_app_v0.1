@@ -1,6 +1,6 @@
 import { View, Text, Image } from '@tarojs/components'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { ARCHETYPE_BY_ID, resolveArchetype } from '@shared/personality/archetypeNames'
 import { getArchetypeHSL, formatHSLAsRGBA, getContrastSafeArchetypeColor } from '@shared/archetypeColors'
 import type { PoolGroupMemberSummary } from '@shared/api'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
@@ -78,7 +78,10 @@ function getConnectionPoints(pair?: PairExplanation | null) {
 
 function getArchetypeAssetUrl(archetype?: string | null): string | undefined {
   if (!archetype) return undefined
-  return ARCHETYPE_ASSET_MAP[archetype]?.webp
+  // Server coalesce may yield an ID ('corgi') or a legacy nameCn ('社牛柯基');
+  // normalize to the canonical ID before keying into the asset map.
+  const id = resolveArchetype(archetype)?.id ?? archetype
+  return ARCHETYPE_ASSET_MAP[id]?.webp
 }
 
 function getMemberName(member: PoolGroupMemberSummary): string {
@@ -87,12 +90,14 @@ function getMemberName(member: PoolGroupMemberSummary): string {
 
 function getArchetypeDisplayName(archetype?: string | null): string {
   if (!archetype) return ''
-  return ARCHETYPE_BY_ID[archetype]?.nameCn || '神秘伙伴'
+  return resolveArchetype(archetype)?.nameCn ?? ARCHETYPE_BY_ID[archetype]?.nameCn ?? '神秘伙伴'
 }
 
 function getGenderGlyph(gender?: string | null): string {
-  if (gender === 'male') return '男'
-  if (gender === 'female') return '女'
+  // DB stores Chinese values ('男性'/'女性', sometimes '男'/'女'); accept the
+  // legacy English pair too so older payloads still render.
+  if (gender === 'male' || gender === '男性' || gender === '男') return '男'
+  if (gender === 'female' || gender === '女性' || gender === '女') return '女'
   return ''
 }
 
@@ -206,8 +211,16 @@ export default function TeammateCard({
   const transitionDuration = reduceMotion ? 0 : emergeComplete ? FOCUS_TRANSITION_MS : DEAL_ENTER_MS
   const transitionDelay = reduceMotion || emergeComplete ? 0 : emergeDelayMs
 
+  // Canonical archetype ID for color/asset lookups — the server payload may
+  // carry an ID ('corgi') or a legacy nameCn ('社牛柯基') depending on which
+  // column won the coalesce; resolveArchetype handles both.
+  const archetypeId = useMemo(
+    () => (member.archetype ? resolveArchetype(member.archetype)?.id ?? null : null),
+    [member.archetype],
+  )
+
   const accent = useMemo(() => {
-    const hsl = getArchetypeHSL(member.archetype)
+    const hsl = getArchetypeHSL(archetypeId)
     return {
       borderColor: formatHSLAsRGBA(hsl, 0.55),
       shadow: formatHSLAsRGBA(hsl, 0.22),
@@ -215,11 +228,11 @@ export default function TeammateCard({
       artStart: formatHSLAsRGBA({ ...hsl, l: Math.min(100, hsl.l + 30) }, 0.5),
       artEnd: formatHSLAsRGBA(hsl, 0.16),
     }
-  }, [member.archetype])
+  }, [archetypeId])
 
   const archetypeTextColor = useMemo(
-    () => getContrastSafeArchetypeColor(member.archetype),
-    [member.archetype],
+    () => getContrastSafeArchetypeColor(archetypeId),
+    [archetypeId],
   )
 
   const artZoneStyle = useMemo(

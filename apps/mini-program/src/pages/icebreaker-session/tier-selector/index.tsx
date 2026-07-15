@@ -145,6 +145,8 @@ function getStartFailureToast(err: unknown): string {
     return '没找到这场破冰，返回上一页重试'
   }
   if (statusCode === 401) return '登录状态失效了，重新进入试试'
+  // A 5xx means the server itself failed — blame the service, not the network.
+  if (typeof statusCode === 'number' && statusCode >= 500) return getErrorMessage('server')
   return getErrorMessage('create-failed')
 }
 
