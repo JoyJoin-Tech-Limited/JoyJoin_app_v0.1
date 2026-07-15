@@ -828,7 +828,7 @@ export default function SquadUnboxingPage() {
               ) : null}
             </View>
 
-            {false ? <View className='squad-unboxing__chapter squad-unboxing__chapter--analysis'>
+            {groupAnalysis && false ? <View className='squad-unboxing__chapter squad-unboxing__chapter--analysis'>
               <View
                 className='squad-unboxing__expand-header'
                 onClick={toggleAnalysis}
@@ -910,15 +910,15 @@ export default function SquadUnboxingPage() {
                             ))}
                           </View>
                         ) : null}
-                        {groupAnalysis.groupThemeCompanion ? (
+                        {groupAnalysis!.groupThemeCompanion ? (
                           <Text className='squad-unboxing__analysis-text'>
-                            {groupAnalysis.groupThemeCompanion}
+                            {groupAnalysis!.groupThemeCompanion}
                           </Text>
                         ) : null}
-                        <Text className='squad-unboxing__analysis-text'>{groupAnalysis.groupDynamics}</Text>
-                        <GroupAnalysisSourceHint analysis={groupAnalysis} />
+                        <Text className='squad-unboxing__analysis-text'>{groupAnalysis!.groupDynamics}</Text>
+                        <GroupAnalysisSourceHint analysis={groupAnalysis!} />
                         <AIGCLabel
-                          meta={groupAnalysis.meta?.aigc}
+                          meta={groupAnalysis!.meta?.aigc}
                           className='squad-unboxing__analysis-aigc-label'
                           reduceMotion={shouldReduceMotion}
                         />
@@ -1033,9 +1033,9 @@ export default function SquadUnboxingPage() {
                           <View key={item} className='squad-unboxing__skeleton squad-unboxing__skeleton--topic' />
                         ))}
                       </View>
-                    ) : groupAnalysis?.iceBreakers && groupAnalysis.iceBreakers.length > 0 ? (
+                    ) : groupAnalysis?.iceBreakers && groupAnalysis!.iceBreakers.length > 0 ? (
                       <View className='squad-unboxing__topic-row'>
-                        {groupAnalysis.iceBreakers.map((topic, index) => (
+                        {groupAnalysis!.iceBreakers.map((topic, index) => (
                           <View
                             key={`${topic}-${index}`}
                             className={[
