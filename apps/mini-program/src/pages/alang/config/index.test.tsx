@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AlangConfigPage, {
+  getAlangStartErrorMessage,
   getTestPointValidationError,
 } from './index'
 
@@ -41,7 +42,9 @@ vi.mock('@tarojs/components', () => ({
   View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
   Map: (props: any) => <div data-testid='map' {...props} />,
-  Button: ({ children, loading: _loading, ...props }: any) => <button {...props}>{children}</button>,
+  Button: ({ children, loading = false, hoverClass: _hoverClass, ...props }: any) => (
+    <button data-loading={String(Boolean(loading))} {...props}>{children}</button>
+  ),
   Input: (props: any) => <input {...props} />,
 }))
 
@@ -158,6 +161,11 @@ describe('AlangConfigPage production access gate', () => {
 })
 
 describe('AlangConfigPage test-point start flow', () => {
+  const setDefaultTestPoints = async () => {
+    fireEvent.click(screen.getByRole('button', { name: '使用当前位置' }))
+    await screen.findByText('直线 150 米')
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.distanceMeters.current = 150
@@ -205,8 +213,7 @@ describe('AlangConfigPage test-point start flow', () => {
   it('starts the run with this round’s GCJ-02 points and does not rely on local storage', async () => {
     render(<AlangConfigPage />)
 
-    fireEvent.click(screen.getByRole('button', { name: '使用当前位置' }))
-    await screen.findByText('直线 150 米')
+    await setDefaultTestPoints()
     fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
 
     await waitFor(() => {
@@ -232,6 +239,80 @@ describe('AlangConfigPage test-point start flow', () => {
     expect(mocks.redirectTo).toHaveBeenCalledWith({
       url: '/pages/alang/search/index?slug=meet-alang&nodeId=search-gate',
     })
+  })
+
+  it('uses a native button, shows loading on the first tap, and blocks duplicate starts', async () => {
+    let resolveStart!: (value: {
+      stage: string
+      currentNodeId: string
+      nodeHistory: string[]
+      choicesMade: never[]
+    }) => void
+    mocks.startMission.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveStart = resolve
+    }))
+
+    render(<AlangConfigPage />)
+    await setDefaultTestPoints()
+
+    const startButton = screen.getByRole('button', { name: '开始测试' })
+    expect(startButton.tagName).toBe('BUTTON')
+
+    fireEvent.click(startButton)
+    fireEvent.click(startButton)
+
+    await waitFor(() => {
+      expect(mocks.startMission).toHaveBeenCalledTimes(1)
+      expect(screen.getByRole('button', { name: '正在准备测试' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: '正在准备测试' })).toHaveAttribute('data-loading', 'true')
+    })
+
+    await act(async () => {
+      resolveStart({
+        stage: 'configuring',
+        currentNodeId: 'event-detail',
+        nodeHistory: ['event-detail'],
+        choicesMade: [],
+      })
+    })
+
+    await waitFor(() => {
+      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('keeps a failed start actionable with a persistent reason and allows retry', async () => {
+    mocks.startMission.mockRejectedValueOnce(new Error('network unavailable'))
+
+    render(<AlangConfigPage />)
+    await setDefaultTestPoints()
+
+    fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+
+    const errorMessage = await screen.findByRole('alert')
+    expect(errorMessage).toHaveTextContent('没有准备好，请检查网络后再试')
+    expect(mocks.showToast).toHaveBeenCalledWith({
+      title: '没有准备好，请检查网络后再试',
+      icon: 'none',
+    })
+    expect(mocks.redirectTo).not.toHaveBeenCalled()
+
+    const retryButton = screen.getByRole('button', { name: '开始测试' })
+    expect(retryButton).toBeEnabled()
+    fireEvent.click(retryButton)
+
+    await waitFor(() => {
+      expect(mocks.startMission).toHaveBeenCalledTimes(2)
+      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+  })
+
+  it('tells stale-progress testers to reset before configuring again', () => {
+    expect(getAlangStartErrorMessage({
+      statusCode: 409,
+      data: { error: 'ALANG_RECONFIG_REQUIRES_RESET' },
+    })).toBe('检测到上一轮测试进度，请返回测试工具重置后再配置点位')
   })
 
   it('rejects zero, invalid, too-near and cross-city test coordinates', () => {

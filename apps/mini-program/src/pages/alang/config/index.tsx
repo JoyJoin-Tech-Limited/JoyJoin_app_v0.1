@@ -1,5 +1,5 @@
 import Taro from '@tarojs/taro'
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { View, Text, Map, Button, Input } from '@tarojs/components'
 import type { MapProps } from '@tarojs/components'
 import type { AlangCoordinate } from '@shared/alang/missionTypes'
@@ -29,6 +29,7 @@ import { haversine, callReportProgress } from '../../../lib/alang/api'
 import { useAlangGpsOnce } from '../../../lib/alang/useAlangGps'
 import { apiRequest } from '../../../lib/api/api'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
+import { logInfo, logWarn } from '../../../lib/utils/logger'
 import StatusCard from '../../../components/ui/StatusCard'
 import './index.scss'
 
@@ -54,6 +55,40 @@ export function getTestPointValidationError(
     return '测试点位无效，请重新选择出现点和陪伴终点'
   }
   return '出现点与陪伴终点需相距 10–2000 米'
+}
+
+type AlangStartError = {
+  statusCode?: number
+  data?: unknown
+  message?: string
+}
+
+function getAlangStartErrorCode(error: unknown): string | undefined {
+  const data = (error as AlangStartError | null)?.data
+  if (data && typeof data === 'object' && 'error' in data) {
+    const code = (data as { error?: unknown }).error
+    if (typeof code === 'string') return code
+  }
+  const message = (error as AlangStartError | null)?.message
+  return typeof message === 'string' ? message : undefined
+}
+
+export function getAlangStartErrorMessage(error: unknown): string {
+  const code = getAlangStartErrorCode(error)
+  const statusCode = (error as AlangStartError | null)?.statusCode
+
+  if (statusCode === 401) return '登录状态已失效，请重新进入小程序'
+  if (code === 'ALANG_RECONFIG_REQUIRES_RESET') return '检测到上一轮测试进度，请返回测试工具重置后再配置点位'
+  if (code === 'ALANG_TEST_POINTS_REQUIRED' || code === 'ALANG_TEST_POINTS_INVALID') {
+    return '测试点位没有保存成功，请重新设置两个点位'
+  }
+  if (code === 'ALANG_DISABLED') return '阿浪测试暂时关闭，请稍后再试'
+  if (code === 'MISSION_NOT_FOUND' || code === 'CONTENT_NOT_LOADED'
+    || code === 'NO_PATH_TO_SEARCH' || code === 'INVALID_SEARCH_PATH'
+    || code === 'SEARCH_NODE_NOT_REACHED') {
+    return '故事配置暂时不可用，请稍后再试'
+  }
+  return '没有准备好，请检查网络后再试'
 }
 
 export default function AlangConfigPage() {
@@ -87,6 +122,8 @@ export default function AlangConfigPage() {
   const [routeEstimate, setRouteEstimate] = useState<WalkingRouteSuccessResponse | null>(null)
   const [routeUnavailable, setRouteUnavailable] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const submitLockRef = useRef(false)
 
   const describePoint = useCallback(async (
     point: AlangCoordinate,
@@ -272,19 +309,31 @@ export default function AlangConfigPage() {
   }, [endPoint, target])
 
   const handleConfirm = async () => {
-    if (!target || !endPoint || !mission || isSubmitting || startMutation.isPending) return
+    if (submitLockRef.current || isSubmitting || startMutation.isPending) return
+    if (!target || !endPoint || !mission) {
+      const message = '请先设置阿浪出现点和陪伴终点'
+      setSubmitError(message)
+      Taro.showToast({ title: message, icon: 'none' })
+      return
+    }
     const validationError = getTestPointValidationError(target, endPoint)
     if (validationError) {
+      setSubmitError(validationError)
       Taro.showToast({ title: validationError, icon: 'none' })
       return
     }
     const searchNode = nodes.find((node) => node.type === 'search_gate')
     if (!searchNode) {
-      Taro.showToast({ title: '故事配置暂时不可用', icon: 'none' })
+      const message = '故事配置暂时不可用，请稍后再试'
+      setSubmitError(message)
+      Taro.showToast({ title: message, icon: 'none' })
       return
     }
 
+    submitLockRef.current = true
+    setSubmitError(null)
     setIsSubmitting(true)
+    logInfo('[AlangConfig] start test tapped', { slug })
     try {
       const started = await startMutation.mutateAsync({
         slug,
@@ -308,9 +357,18 @@ export default function AlangConfigPage() {
       await Taro.redirectTo({
         url: `${MINI_PROGRAM_ROUTES.alangSearch}?slug=${encodeURIComponent(slug)}&nodeId=${encodeURIComponent(searchNode.id)}`,
       })
-    } catch {
-      Taro.showToast({ title: '没有准备好，再试一次即可', icon: 'none' })
+    } catch (error) {
+      const message = getAlangStartErrorMessage(error)
+      const apiError = error as AlangStartError
+      logWarn('[AlangConfig] start test failed', {
+        slug,
+        statusCode: apiError?.statusCode,
+        errorCode: getAlangStartErrorCode(error),
+      })
+      setSubmitError(message)
+      Taro.showToast({ title: message, icon: 'none' })
     } finally {
+      submitLockRef.current = false
       setIsSubmitting(false)
     }
   }
@@ -532,15 +590,22 @@ export default function AlangConfigPage() {
       </View>
 
       <View className='alang-config__actions'>
-        <View
+        {submitError && (
+          <View className='alang-config__submit-error' role='alert' aria-live='polite'>
+            <Text>{submitError}</Text>
+          </View>
+        )}
+        <Button
           className={`alang-config__confirm ${!target || !endPoint || !!pointValidationError || isSubmitting || startMutation.isPending ? 'alang-config__confirm--disabled' : ''}`}
           onClick={() => { void handleConfirm() }}
-          role='button'
+          disabled={!target || !endPoint || !!pointValidationError || isSubmitting || startMutation.isPending}
+          loading={isSubmitting || startMutation.isPending}
+          hoverClass={isSubmitting || startMutation.isPending ? '' : 'alang-config__confirm--pressed'}
           aria-label={isSubmitting ? '正在准备测试' : '开始测试'}
           aria-disabled={!target || !endPoint || !!pointValidationError || isSubmitting || startMutation.isPending}
         >
           <Text className='alang-config__confirm-text'>{isSubmitting ? '正在准备…' : '开始测试'}</Text>
-        </View>
+        </Button>
       </View>
     </View>
   )
