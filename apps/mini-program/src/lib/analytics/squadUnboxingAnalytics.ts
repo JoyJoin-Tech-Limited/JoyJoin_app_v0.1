@@ -23,6 +23,8 @@ export type SquadUnboxingEventType =
   | 'squad_unboxing_connection_story_collapse'
   | 'squad_unboxing_tonights_table_view'
   | 'squad_unboxing_analysis_retry_tap'
+  | 'squad_unboxing_deck_collapse'
+  | 'squad_unboxing_deck_reopen'
   | 'match_reveal_prelude_started'
   | 'match_reveal_prelude_completed'
   | 'match_reveal_prelude_skipped'
@@ -32,6 +34,14 @@ export type SquadUnboxingEventType =
 // (a6ea57284, 2026-07-14) as the `resolveCardFocusInteraction` dismiss action
 // — tapping the focused card a second time unfocuses and returns the bubble
 // to the resting voice. See docs/systems/squad-unboxing-analytics-funnels.md.
+//
+// NOTE: `squad_unboxing_deck_collapse` and `squad_unboxing_deck_reopen`
+// (pocket-the-deck, contract sprint-contract.squad-unboxing-pocket-deck-20260715.md)
+// are accepted by the server whitelist at
+// apps/server/src/routes/domains/analytics.ts (locked by
+// apps/server/src/__tests__/squadUnboxingAnalyticsRoutes.test.ts) as of
+// 2026-07-15. Events emitted before the whitelist follow-up landed were
+// dropped server-side (fail-open) and are not backfilled.
 
 export interface SquadUnboxingAnalyticsEvent {
   eventType: SquadUnboxingEventType

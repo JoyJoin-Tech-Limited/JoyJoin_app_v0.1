@@ -110,6 +110,10 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     matchingOperatorReviewEnabled?: boolean
     /** When true, enables the Alang NPC prototype system. Default: false. */
     alangEnabled?: boolean
+    /** When false, hides the "收起卡组" collapse trigger on squad-unboxing and
+     *  the deck stays in the fan phase (users already collapsed stay collapsed).
+     *  Kill switch for the pocket-deck collapse. Default: true. */
+    squadUnboxingPocketDeckEnabled?: boolean
   }
 }
 

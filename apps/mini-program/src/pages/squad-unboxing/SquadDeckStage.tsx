@@ -13,6 +13,13 @@ import {
   computeDealTotalMs,
 } from './squadDealTiming'
 import { computeFanLayout, MAX_FAN_CARDS } from './computeFanLayout'
+import {
+  FOLD_SETTLE_INSTANT_MS,
+  UNFOLD_RELEASE_MS,
+  computeFoldTotalMs,
+  computeUnfoldTotalMs,
+  type DeckPhase,
+} from './squadDeckCollapseState'
 
 export interface SquadDeckStageProps {
   members: PoolGroupMemberSummary[]
@@ -37,6 +44,21 @@ export interface SquadDeckStageProps {
   onDealSettled: (instant: boolean) => void
   onCardTap: (index: number) => void
   onCardLongPress: (index: number) => void
+  /**
+   * "Pocket the deck" phase (two-phase reveal, 2026-07-15). The stage owns
+   * the transient card-pose windows: `folding` cascades cards into the pill,
+   * `pocketed` holds them at the vanish point (stage hidden), `unfolding`
+   * re-fans them after a visibility-commit frame gap.
+   */
+  deckPhase: DeckPhase
+  /** Per-card fold delay (ms) — 最佳拍档 folds last (controller-computed). */
+  foldDelayById: ReadonlyMap<string, number>
+  /** Per-card re-fan delay (ms) — roster order (controller-computed). */
+  unfoldDelayById: ReadonlyMap<string, number>
+  /** Fired when the fold cascade fully settles (controller → `pocketed`). */
+  onFoldSettled: () => void
+  /** Fired when the re-fan fully settles (controller → `fan`). */
+  onUnfoldSettled: () => void
 }
 
 // Re-export the pure deal budget helpers so existing consumers/tests that
@@ -66,15 +88,32 @@ export default function SquadDeckStage({
   onDealSettled,
   onCardTap,
   onCardLongPress,
+  deckPhase,
+  foldDelayById,
+  unfoldDelayById,
+  onFoldSettled,
+  onUnfoldSettled,
 }: SquadDeckStageProps) {
   const instant = reduceMotion || isDegradation
   const [dealt, setDealt] = useState(() => instant)
   const [dealComplete, setDealComplete] = useState(() => instant)
+  // Pocket-the-deck card pose: true while cards sit at the pill vanish point
+  // (folding + pocketed), released one frame into `unfolding` so the re-fan
+  // transition runs after WeChat commits the stage visibility flip.
+  const [cardsPocketed, setCardsPocketed] = useState(() => deckPhase === 'pocketed')
 
   const dealStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dealDoneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hapticTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const foldTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const prevResetSignalRef = useRef(resetSignal)
+  const prevDeckPhaseRef = useRef<DeckPhase>(deckPhase)
+  // Fresh refs for the fold/unfold settle callbacks so the timers never fire
+  // a stale closure (same pattern as onDealSettledRef).
+  const onFoldSettledRef = useRef(onFoldSettled)
+  onFoldSettledRef.current = onFoldSettled
+  const onUnfoldSettledRef = useRef(onUnfoldSettled)
+  onUnfoldSettledRef.current = onUnfoldSettled
   // Fresh ref for the deal-settle callback so the deal timers never fire a
   // stale closure (the effect deps key on the stable roster id sequence).
   const onDealSettledRef = useRef(onDealSettled)
@@ -96,6 +135,10 @@ export default function SquadDeckStage({
   const layout = useMemo(() => computeFanLayout(displayMembers.length), [displayMembers.length])
   const staggerMs = useMemo(() => computeDealStaggerMs(displayMembers.length), [displayMembers.length])
   const dealTotalMs = useMemo(() => computeDealTotalMs(displayMembers.length), [displayMembers.length])
+  // Pocket-the-deck wall-clock budgets (pure module): fold cascade ≤600ms,
+  // re-fan ≤480ms; reduced-motion/degradation settles on the 150ms crossfade.
+  const foldTotalMs = useMemo(() => computeFoldTotalMs(displayMembers.length), [displayMembers.length])
+  const unfoldTotalMs = useMemo(() => computeUnfoldTotalMs(displayMembers.length), [displayMembers.length])
   // Stable roster identity: a same-content refetch must NOT re-arm the deal
   // timers (React Query structural sharing usually prevents this, but the
   // array identity is not guaranteed). Keyed on the id sequence.
@@ -134,7 +177,41 @@ export default function SquadDeckStage({
     dealDoneTimerRef.current = null
     hapticTimersRef.current.forEach(clearTimeout)
     hapticTimersRef.current = []
+    foldTimersRef.current.forEach(clearTimeout)
+    foldTimersRef.current = []
   }, [])
+
+  // ── Pocket-the-deck phase orchestration ──────────────────────────────────
+  // `folding`: cards take the pocket pose with per-card fold delays (最佳拍档
+  // last — its delay is the largest in foldDelayById); the settle timer flips
+  // the controller to `pocketed` (stage hides). `unfolding`: hold the pocket
+  // pose for one frame gap while the stage re-appears, then release so the
+  // re-fan transition runs; the settle timer flips the controller to `fan`.
+  useEffect(() => {
+    if (prevDeckPhaseRef.current === deckPhase) return
+    prevDeckPhaseRef.current = deckPhase
+    foldTimersRef.current.forEach(clearTimeout)
+    foldTimersRef.current = []
+
+    if (deckPhase === 'folding') {
+      setCardsPocketed(true)
+      const settleMs = instant ? FOLD_SETTLE_INSTANT_MS : foldTotalMs
+      foldTimersRef.current.push(setTimeout(() => onFoldSettledRef.current(), settleMs))
+      return
+    }
+    if (deckPhase === 'pocketed') {
+      setCardsPocketed(true)
+      return
+    }
+    if (deckPhase === 'unfolding') {
+      setCardsPocketed(true)
+      foldTimersRef.current.push(setTimeout(() => setCardsPocketed(false), UNFOLD_RELEASE_MS))
+      const settleMs = UNFOLD_RELEASE_MS + (instant ? FOLD_SETTLE_INSTANT_MS : unfoldTotalMs)
+      foldTimersRef.current.push(setTimeout(() => onUnfoldSettledRef.current(), settleMs))
+      return
+    }
+    setCardsPocketed(false)
+  }, [deckPhase, instant, foldTotalMs, unfoldTotalMs])
 
   // Deal: anticipation beat, then a staggered slide-up per card (landing
   // FACE-DOWN — the deal-flight flip-up was retired with tap-to-reveal), with
@@ -193,6 +270,14 @@ export default function SquadDeckStage({
     clearAllTimers()
     setDealt(true)
     setDealComplete(true)
+    // Pocket-the-deck settle (AC-05): transient fold/unfold windows never
+    // survive a hide/show cycle — snap the phase machine to its target so a
+    // paused timer can't leave the deck stuck half-cascaded. The settle
+    // handlers are phase-guarded in the controller, so these are no-ops when
+    // the phase is already stable.
+    if (deckPhase === 'folding') onFoldSettledRef.current()
+    if (deckPhase === 'unfolding') onUnfoldSettledRef.current()
+    setCardsPocketed(deckPhase === 'pocketed')
     // Interrupted-deal recovery (A1): if the flight never settled (e.g. the
     // app was backgrounded mid-deal before dealDoneTimer fired), seed the
     // flip session now — without this the session keeps visibleIds=[] and
@@ -203,7 +288,7 @@ export default function SquadDeckStage({
       dealSettledRef.current = true
       onDealSettledRef.current(true)
     }
-  }, [resetSignal, clearAllTimers])
+  }, [resetSignal, clearAllTimers, deckPhase])
 
   // Final safety net: clear everything on unmount.
   useEffect(() => () => clearAllTimers(), [clearAllTimers])
@@ -250,12 +335,15 @@ export default function SquadDeckStage({
 
       {/* The fan: two flex-centred rows for N≥5, one row otherwise. Card size
           comes from the per-count SCSS rules; rotation from per-(row-length,
-          index) rules. --dealt gates the fan pose (cards start stacked). */}
+          index) rules. --dealt gates the fan pose (cards start stacked).
+          --pocketing overlays the fold-to-pill transform (comes AFTER the
+          dealt rules in the stylesheet so it wins the source-order tie). */}
       <View
         className={[
           'squad-unboxing__deck-fan',
           `squad-unboxing__deck-fan--count-${layout.count}`,
           dealt ? 'squad-unboxing__deck-fan--dealt' : '',
+          cardsPocketed ? 'squad-unboxing__deck-fan--pocketing' : '',
         ]
           .filter(Boolean)
           .join(' ')}
@@ -282,6 +370,18 @@ export default function SquadDeckStage({
                 // source of truth — REL-01); all-up re-entry forces face-up.
                 const isFaceUp = allRevealed || flippedIds.has(member.userId)
                 const flipDelayMs = instant ? 0 : flipDelayById.get(member.userId) ?? 0
+                // Pocket-the-deck per-card timing: folding uses the fold map
+                // (最佳拍档 last), the unfold release uses the roster-order
+                // re-fan map; instant tiers drop the stagger to 0 so every
+                // card crossfades together. Null outside the pocket windows
+                // so focus/emerge transitions keep their own timing.
+                const pocketTransitionDelayMs = instant
+                  ? 0
+                  : cardsPocketed
+                    ? foldDelayById.get(member.userId) ?? 0
+                    : deckPhase === 'unfolding'
+                      ? unfoldDelayById.get(member.userId) ?? 0
+                      : null
 
                 return (
                   <TeammateCard
@@ -302,6 +402,11 @@ export default function SquadDeckStage({
                     overflowBadge={rosterIndex === displayMembers.length - 1 ? overflowCount : 0}
                     reduceMotion={reduceMotion}
                     isDegradation={isDegradation}
+                    pocketPose={cardsPocketed}
+                    pocketTransitionDelayMs={pocketTransitionDelayMs}
+                    pocketGlowActive={
+                      cardsPocketed && !instant && member.userId === bestPartnerUserId
+                    }
                     onTap={() => onCardTap(rosterIndex)}
                     onLongPress={() => onCardLongPress(rosterIndex)}
                   />

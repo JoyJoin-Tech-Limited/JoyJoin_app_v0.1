@@ -200,6 +200,8 @@ const SQUAD_UNBOXING_EVENT_TYPES = [
   "squad_unboxing_bubble_reveal_complete",
   "squad_unboxing_box_open_milestone",
   "squad_unboxing_all_revealed",
+  "squad_unboxing_deck_collapse",
+  "squad_unboxing_deck_reopen",
   "match_reveal_prelude_started",
   "match_reveal_prelude_completed",
   "match_reveal_prelude_skipped",

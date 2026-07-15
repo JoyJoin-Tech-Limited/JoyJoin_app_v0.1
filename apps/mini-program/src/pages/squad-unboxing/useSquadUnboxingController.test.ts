@@ -82,11 +82,23 @@ describe('useSquadUnboxingController flip-state wiring (tap-to-reveal)', () => {
     )
     expect(flipModule).not.toContain('StorageSync')
     expect(flipModule).not.toContain("from '@tarojs/taro'")
-    // The only persisted key in the controller is the group reveal flag.
+    // Persisted keys are an exact allow-list of group-level flags — never
+    // per-card flip state (REL-02). Pocket-the-deck (2026-07-15) added the
+    // collapse flag + first-collapse hint flag alongside the reveal flag.
     const storageHits = source.match(/Taro\.setStorageSync\([^)]*\)/g) ?? []
-    expect(storageHits).toHaveLength(1)
-    expect(storageHits[0]).toContain('getRevealFlagKey')
+    expect(storageHits).toHaveLength(3)
+    expect(storageHits.some((hit) => hit.includes('getRevealFlagKey'))).toBe(true)
+    expect(storageHits.some((hit) => hit.includes('getDeckCollapseKey'))).toBe(true)
+    expect(storageHits.some((hit) => hit.includes('getDeckCollapseHintKey'))).toBe(true)
     expect(source).toContain('jj_revealed_${groupId}')
+    // The deck key templates live in the pure module (locked here and in
+    // squadDeckCollapseState.test.ts).
+    const collapseModule = readFileSync(
+      resolve(dirname(fileURLToPath(import.meta.url)), 'squadDeckCollapseState.ts'),
+      'utf8',
+    )
+    expect(collapseModule).toContain('jj_deck_collapsed_${groupId}')
+    expect(collapseModule).toContain('jj_deck_collapse_hint_${groupId}')
   })
 
   it('seeds story-mode face-up sets without analytics or timers', () => {

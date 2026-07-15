@@ -22,7 +22,11 @@ $fan-rotations: (
   1: (0),
   2: (-4.5, 4.5),
   3: (-6, 0, 6),
-  4: (-7, -3, 3, 7),
+  // 4-per-row outer rotation capped at ±5° (was ±7°): at 7° the outer card's
+  // rotated bounding box (~756rpx) poked past the 750rpx viewport and the
+  // 4th card was hard-cropped at the right edge; at 5° the box is ~733rpx,
+  // inside the 750 − 8 allowance (G2). Drift-locked with computeFanLayout.ts.
+  4: (-5, -2.5, 2.5, 5),
 );
 
 .squad-unboxing {
@@ -135,12 +139,24 @@ $fan-rotations: (
         height: clamp(560rpx, 62dvh, 700rpx);
       }
     }
+
+    // Pocket-the-deck: the whole fixed stage hides once the cascade settles
+    // (cards already rest at the vanish point, so nothing visible pops).
+    // visibility (not display) keeps React state, image decode, and the
+    // controller-owned flip set alive for an instant re-fan (AC-04).
+    &--pocketed {
+      visibility: hidden;
+    }
   }
 
   // The revealed stage is a static fixed header (title bar + centred fan). It
   // does not scale or collapse on scroll, so there is no transform to snap.
 
   &--reduce-motion &__stage {
+    transition: none;
+  }
+
+  &--reduce-motion &__stage-spacer {
     transition: none;
   }
 
@@ -159,6 +175,27 @@ $fan-rotations: (
     &--composed {
       height: clamp(560rpx, 62vh, 700rpx);
       height: clamp(560rpx, 62dvh, 700rpx);
+    }
+
+    // Pocketed phase footprint: reserves exactly the pill's band (fixed at
+    // page root) so the content-focused phase gets the viewport back (AC-01).
+    // Placed AFTER --composed: when the composed hero is active AND pocketed,
+    // the pocketed footprint must win the equal-specificity source-order tie.
+    &--pocketed {
+      height: calc(148rpx + env(safe-area-inset-top));
+      // Height eases (never jump-cuts) so the first-collapse hint growth
+      // below and the pocketed snap-in glide the 团魂 content instead of
+      // slicing it (G1).
+      transition: height 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    // First-collapse hint clearance (G1): the fixed pocket-hint bubble
+    // bottoms out at ~202rpx while the 团魂 first line sits at ~183rpx, so
+    // glyphs were sliced mid-character for the full 3.6s hint display. Grow
+    // the spacer by 96rpx while the hint is up (first line → ~279rpx).
+    // Placed AFTER --pocketed to win the equal-specificity source-order tie.
+    &--hint {
+      height: calc(244rpx + env(safe-area-inset-top));
     }
   }
 
@@ -1264,6 +1301,14 @@ $fan-rotations: (
     // and the chapter card below. pointer-events stays NONE so page scroll can
     // initiate over the empty margins around the fan; the fan itself re-enables
     // touch for card taps (&__deck-fan).
+    //
+    // flex-direction: column is LOAD-BEARING (G2): without it the main axis is
+    // horizontal, so justify-content: flex-end RIGHT-anchors the fan flush
+    // against the viewport edge (measured fan span [64rpx, 750rpx]) and the
+    // outer card's rotation poke is hard-cropped; align-items: center also
+    // vertically centers instead of bottom-anchoring. With column: main axis
+    // vertical → flex-end bottom-anchors; cross axis horizontal → center
+    // gives the fan its symmetric 37rpx viewport margins.
     position: relative;
     flex: 1;
     min-height: 0;
@@ -1271,6 +1316,7 @@ $fan-rotations: (
     z-index: 4;
     pointer-events: none;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: flex-end;
     padding-bottom: $spacing-md;
@@ -1404,6 +1450,29 @@ $fan-rotations: (
     }
   }
 
+  // ── Pocket-the-deck fold pose (2026-07-15) ────────────────────────────────
+  // Cards cascade toward the pill's vanish point at the top of the stage.
+  // Emitted from the same @each/@for ladder as the dealt poses with IDENTICAL
+  // specificity (0,5,0) and placed AFTER them in source order, so the fold
+  // pose wins the tie whenever both classes are present — including over
+  // --focused-lift (belt-and-braces for REL-01; the page also clears focus
+  // before the cascade starts). Opacity is inline-driven per tier (motion
+  // tiers fade via the component; reduced-motion crossfades without this
+  // transform class; degradation snaps).
+  &__deck-fan--pocketing {
+    pointer-events: none; // the cascade is non-interactive (AC-02)
+
+    @each $len, $rots in $fan-rotations {
+      .squad-unboxing__deck-fan-row--len-#{$len} {
+        @for $i from 1 through $len {
+          .squad-unboxing__deck-card.squad-unboxing__deck-card--pocketing:nth-child(#{$i}) {
+            transform: translateY(-360rpx) rotate(0deg) scale(0.1);
+          }
+        }
+      }
+    }
+  }
+
   // The card. Fan pose + state transforms come from the per-(row-length,index)
   // rules in &__deck-fan--dealt (inline rpx/deg is not transformed by the Taro
   // H5 build). This base only sets the STACKED start pose (below, scaled down,
@@ -1464,6 +1533,15 @@ $fan-rotations: (
     &--degradation {
       transition-duration: 0ms !important;
       transition-delay: 0ms !important;
+    }
+
+    // RM pocket crossfade exception (AC-06): the fold under reduced-motion is
+    // a 150ms opacity-only fade — gentle, non-positional, accessibility-safe.
+    // Must come AFTER the 0ms suppression above (equal specificity + both
+    // !important → source order decides).
+    &--pocket-fade {
+      transition-duration: 150ms !important;
+      transition-property: opacity !important;
     }
   }
 
@@ -2112,6 +2190,266 @@ $fan-rotations: (
     transition: none;
   }
 
+  // ── Pocket-the-deck: collapse trigger (AC-01) ────────────────────────────
+  // Sits in the scroll flow directly below the fixed stage, hugging the fan's
+  // bottom edge. A discreet secondary chip — the fan is the hero, the trigger
+  // is a utility affordance.
+  &__collapse-trigger-wrap {
+    display: flex;
+    justify-content: center;
+    // Tuck slightly up toward the stage bottom edge (stage is pointer-events:
+    // none in revealed, so the overlap never eats the chip's taps).
+    margin-top: -$spacing-lg;
+    padding: 0 0 $spacing-sm;
+  }
+
+  &__collapse-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    min-height: $cta-min-tap;
+    padding: $spacing-xs $spacing-md;
+    box-sizing: border-box;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.94);
+    border: 1rpx solid rgba($color-primary, 0.16);
+    box-shadow: 0 4rpx 16rpx rgba($color-text-primary, 0.05);
+    transition: background 0.12s ease;
+
+    &--pressed {
+      background: rgba($color-primary, 0.08);
+    }
+  }
+
+  &__collapse-trigger-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    white-space: nowrap;
+  }
+
+  // Up-chevron: the deck folds UP into the pill.
+  &__collapse-trigger-chevron {
+    width: 14rpx;
+    height: 14rpx;
+    border-left: 2rpx solid $color-text-secondary;
+    border-top: 2rpx solid $color-text-secondary;
+    transform: rotate(45deg);
+    margin-top: 6rpx; // optical centre of the chevron glyph
+  }
+
+  // ── Pocket-the-deck: floating pill (AC-01/03/04) ─────────────────────────
+  // position: fixed at the page root — CSS sticky is WeChat-fragile inside
+  // <ScrollView>. The resting horizontal centre (translateX(-50%)) is
+  // restated in the drag inline style and in the pop keyframes.
+  &__deck-pill {
+    position: fixed;
+    top: calc(12rpx + env(safe-area-inset-top));
+    left: 50%;
+    z-index: 20; // above the hidden/revealing stage (10), below the dock (100)
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    min-height: $cta-min-tap;
+    padding: $spacing-xs $spacing-md;
+    box-sizing: border-box;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.98);
+    border: 2rpx solid rgba($color-primary, 0.22);
+    box-shadow:
+      0 8rpx 28rpx rgba($color-text-primary, 0.1),
+      0 2rpx 8rpx rgba($color-primary, 0.08);
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    // Pop entrance: fill `backwards` so a completed animation never holds the
+    // final keyframe over the pull-down drag's inline transform.
+    animation: squad-unboxing-pill-pop 0.32s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+
+    // Chemistry tint (AC-03): border + barely-there wash, matching the
+    // chemistry-chip token family.
+    &--fire {
+      border-color: rgba($color-error, 0.4);
+      background: rgba($color-error, 0.05);
+    }
+
+    &--warm {
+      border-color: rgba($color-secondary, 0.42);
+      background: rgba($color-secondary, 0.06);
+    }
+
+    &--cold {
+      border-color: rgba($color-success, 0.4);
+      background: rgba($color-success, 0.05);
+    }
+
+    &--fallback {
+      border-color: rgba($color-primary, 0.24);
+      background: rgba($color-primary, 0.04);
+    }
+
+    // Press feedback via filter — transform/opacity are owned by the drag
+    // inline style and the leaving transition; filter applies cleanly.
+    &--pressed {
+      filter: brightness(0.96);
+    }
+
+    // Unfold window: the pill fades/scales out while the deck re-fans.
+    &--leaving {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-8rpx) scale(0.92);
+      pointer-events: none;
+    }
+
+    // Reduced-motion / degradation: no pop, no leaving transition.
+    &--instant {
+      animation: none;
+      transition: none;
+    }
+  }
+
+  &__deck-pill-strip {
+    display: flex;
+    align-items: center;
+  }
+
+  // Mini avatar / card-back chip. Overlapping strip (−12rpx) reads as a
+  // pocketed deck, not a contact list.
+  &__deck-pill-mini {
+    position: relative;
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: 50%;
+    overflow: hidden;
+    box-sizing: border-box;
+    border: 2rpx solid $color-surface;
+    background: rgba($color-primary, 0.08);
+    margin-left: -12rpx;
+    @include flex-center;
+
+    &:first-child {
+      margin-left: 0;
+    }
+
+    // 最佳拍档 keeps its gold tint ring in the pocket (AC-03).
+    &--best-partner {
+      box-shadow:
+        0 0 0 2rpx rgba(232, 193, 108, 0.9),
+        0 0 12rpx rgba(232, 193, 108, 0.45);
+    }
+
+    // Face-down members render a mini card-back chip — spoiler gating.
+    &--back {
+      background: linear-gradient(145deg, $color-primary 0%, $color-primary-dark 100%);
+    }
+  }
+
+  &__deck-pill-mini-img {
+    width: 100%;
+    height: 100%;
+  }
+
+  &__deck-pill-mini-back-logo {
+    width: 28rpx;
+    height: 28rpx;
+  }
+
+  &__deck-pill-mini-placeholder {
+    width: 56rpx;
+    height: 56rpx;
+  }
+
+  &__deck-pill-overflow {
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: 50%;
+    box-sizing: border-box;
+    border: 2rpx solid $color-surface;
+    background: rgba($color-primary, 0.1);
+    margin-left: -12rpx;
+    @include flex-center;
+  }
+
+  &__deck-pill-overflow-text {
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+  }
+
+  // Pull-down affordance: down-chevron cueing the drag gesture.
+  &__deck-pill-chevron {
+    width: 14rpx;
+    height: 14rpx;
+    border-right: 2rpx solid $color-text-secondary;
+    border-bottom: 2rpx solid $color-text-secondary;
+    transform: rotate(45deg);
+    margin-top: -6rpx; // optical centre of the chevron glyph
+  }
+
+  // ── Pocket-the-deck: first-collapse hint (AC-10) ─────────────────────────
+  // Transient Xiaoyue bubble anchored below the pill; auto-dismissed by the
+  // controller. pointer-events: none — it must never eat a pill tap.
+  &__pocket-hint {
+    position: fixed;
+    top: calc(116rpx + env(safe-area-inset-top));
+    left: 50%;
+    z-index: 19;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    max-width: 620rpx;
+    padding: $spacing-xs $spacing-md;
+    box-sizing: border-box;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.98);
+    box-shadow: 0 8rpx 24rpx rgba($color-text-primary, 0.08);
+    pointer-events: none;
+    animation: squad-unboxing-hint-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  &__pocket-hint-mascot {
+    width: 48rpx;
+    height: 48rpx;
+    flex-shrink: 0;
+  }
+
+  &__pocket-hint-text {
+    font-size: $font-size-xs;
+    line-height: 1.5;
+    color: $color-text-secondary;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &--reduce-motion &__pocket-hint {
+    animation: none;
+  }
+
+  // ── Pocket-the-deck: 最佳拍档 heartbeat glow (AC-02) ─────────────────────
+  // A single opacity-pulse overlay fired as the best-partner card folds into
+  // the pill — the emotional full-stop of the cascade. animationDelay is set
+  // inline to align the pulse with the card's fold delay. Never rendered
+  // under reduced-motion/degradation (component gate).
+  &__deck-card-pocket-glow {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    border-radius: $card-radius;
+    opacity: 0;
+    background: radial-gradient(circle at 50% 42%, rgba(232, 193, 108, 0.26) 0%, rgba(232, 193, 108, 0) 68%);
+    box-shadow:
+      inset 0 0 0 2rpx rgba(232, 193, 108, 0.9),
+      0 0 36rpx rgba(232, 193, 108, 0.5);
+
+    &--active {
+      animation: squad-unboxing-pocket-glow 0.56s ease-out forwards;
+    }
+  }
+
   &__bottom-dock {
     position: fixed;
     left: 0;
@@ -2413,6 +2751,48 @@ $fan-rotations: (
   }
 }
 
+// 最佳拍档 heartbeat glow pulse (AC-02): one soft gold beat, then gone.
+@keyframes squad-unboxing-pocket-glow {
+  0% {
+    opacity: 0;
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+// Pill pop entrance. translateX(-50%) is part of the resting pose and must
+// be restated in every keyframe.
+@keyframes squad-unboxing-pill-pop {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-16rpx) scale(0.85);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+// First-collapse hint entrance.
+@keyframes squad-unboxing-hint-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8rpx);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   // Suppress every entrance / loop animation + transition.
   .squad-unboxing__deck-card,
@@ -2432,9 +2812,22 @@ $fan-rotations: (
   .squad-unboxing__analysis-bubble-inner,
   .squad-unboxing__bottom-dock,
   .squad-unboxing__deck-back-shimmer,
-  .squad-unboxing__deck-card-sheen {
+  .squad-unboxing__deck-card-sheen,
+  .squad-unboxing__deck-card-pocket-glow,
+  .squad-unboxing__deck-pill,
+  .squad-unboxing__pocket-hint,
+  .squad-unboxing__collapse-trigger {
     animation: none !important;
     transition: none !important;
+  }
+
+  // AC-06 exception: the reduced-motion fold is a 150ms opacity-only
+  // crossfade (gentle, non-positional). Must come AFTER the blanket kill
+  // above (equal specificity + !important → source order decides).
+  .squad-unboxing__deck-card--pocket-fade {
+    transition-property: opacity !important;
+    transition-duration: 150ms !important;
+    transition-timing-function: ease-out !important;
   }
 
   // Static surfaces that should be fully visible (no entrance fade). NOTE:

@@ -39,6 +39,17 @@ export interface TeammateCardProps {
   overflowBadge?: number
   reduceMotion: boolean
   isDegradation: boolean
+  /**
+   * Pocket-the-deck fold pose (2026-07-15): true while the card sits at the
+   * pill vanish point. The transform-override class is applied only when
+   * motion is allowed — reduced-motion/degradation tiers fold via the
+   * opacity crossfade alone (AC-06).
+   */
+  pocketPose?: boolean
+  /** Per-card fold/unfold transition delay (ms); null outside pocket windows. */
+  pocketTransitionDelayMs?: number | null
+  /** 最佳拍档 heartbeat glow pulse while this card folds (fires at its fold delay). */
+  pocketGlowActive?: boolean
   onTap: () => void
   onLongPress: () => void
 }
@@ -117,6 +128,9 @@ export default function TeammateCard({
   overflowBadge = 0,
   reduceMotion,
   isDegradation,
+  pocketPose = false,
+  pocketTransitionDelayMs = null,
+  pocketGlowActive = false,
   onTap,
   onLongPress,
 }: TeammateCardProps) {
@@ -203,13 +217,33 @@ export default function TeammateCard({
   // - Focused: --focused-lift straightens + rises + scales; siblings preserve
   //   their original opaque fan pose so the layered deck stays legible (no
   //   dim — the tap-to-reveal revamp removed sibling dimming entirely).
-  const opacity = isDealt ? 1 : 0
+  // - Pocketed: --pocketing folds the card toward the pill vanish point
+  //   (motion tiers only); opacity is inline-driven so every tier can fade.
+  const pocketTransitionActive = pocketTransitionDelayMs != null
+  const opacity = pocketPose ? 0 : isDealt ? 1 : 0
   // z-index ascends left→right via the SCSS per-index rules; a focused card
   // jumps to the top. Undefined lets the SCSS value stand for non-focused.
   const zIndex = focused ? 50 : undefined
 
-  const transitionDuration = reduceMotion ? 0 : emergeComplete ? FOCUS_TRANSITION_MS : DEAL_ENTER_MS
-  const transitionDelay = reduceMotion || emergeComplete ? 0 : emergeDelayMs
+  // Pocket windows override the emerge/focus timing: the fold exit is 300ms
+  // (mirrors FOLD_CARD_EXIT_MS); reduced-motion folds as a 150ms opacity
+  // crossfade (AC-06); degradation snaps directly.
+  const transitionDuration = pocketTransitionActive
+    ? reduceMotion
+      ? 150
+      : isDegradation
+        ? 0
+        : FOCUS_TRANSITION_MS
+    : reduceMotion
+      ? 0
+      : emergeComplete
+        ? FOCUS_TRANSITION_MS
+        : DEAL_ENTER_MS
+  const transitionDelay = pocketTransitionActive
+    ? pocketTransitionDelayMs
+    : reduceMotion || emergeComplete
+      ? 0
+      : emergeDelayMs
 
   // Canonical archetype ID for color/asset lookups — the server payload may
   // carry an ID ('corgi') or a legacy nameCn ('社牛柯基') depending on which
@@ -276,6 +310,12 @@ export default function TeammateCard({
         // face-down card shows the enriched back; --flipped reveals the front.
         // No per-card local flip state may be reintroduced.
         isDealt && isFaceUp ? 'squad-unboxing__deck-card--flipped' : '',
+        // Pocket-the-deck fold transform: motion tiers only. Reduced-motion /
+        // degradation fold via the inline opacity crossfade alone (AC-06).
+        pocketPose && !reduceMotion && !isDegradation ? 'squad-unboxing__deck-card--pocketing' : '',
+        // RM exception: marks the pocket fade so the SCSS can restore the
+        // 150ms opacity-only crossfade past the blanket 0ms suppression.
+        pocketPose && reduceMotion ? 'squad-unboxing__deck-card--pocket-fade' : '',
         reduceMotion ? 'squad-unboxing__deck-card--reduce-motion' : '',
         isDegradation ? 'squad-unboxing__deck-card--degradation' : '',
       ].filter(Boolean).join(' ')}
@@ -294,6 +334,17 @@ export default function TeammateCard({
       aria-label={ariaLabel}
       aria-current={focused ? 'true' : undefined}
     >
+      {/* 最佳拍档 heartbeat glow (AC-02): a single opacity-pulse overlay that
+          fires as this card folds into the pill — the emotional full-stop of
+          the cascade. animationDelay aligns the pulse with the card's fold
+          delay; reduced-motion/degradation never receive pocketGlowActive. */}
+      {pocketGlowActive ? (
+        <View
+          className='squad-unboxing__deck-card-pocket-glow squad-unboxing__deck-card-pocket-glow--active'
+          style={{ animationDelay: `${pocketTransitionDelayMs ?? 0}ms` }}
+          aria-hidden='true'
+        />
+      ) : null}
       <View
         className='squad-unboxing__deck-card-inner'
         style={{ transitionDelay: `${flipDelayMs}ms` }}

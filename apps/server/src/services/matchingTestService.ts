@@ -13,6 +13,9 @@ import {
   socialIcebreakerSessions,
   socialIcebreakerParticipants,
   socialIcebreakerLieTruths,
+  venues,
+  venueTimeSlots,
+  venueTimeSlotBookings,
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 import { logger } from "../lib/logger";
@@ -20,6 +23,7 @@ import { logAdminAudit } from "../lib/adminAuditLogger";
 import { ARCHETYPE_DEFINITIONS } from "@shared/personality/archetypeNames";
 import { INTEREST_TAXONOMY } from "@shared/interests";
 import { isMatchingTestMode } from "../lib/isSingleTestMode";
+import { parseEventDate } from "../venueAssignmentService";
 
 type DbTransaction = NodePgDatabase<typeof schema>;
 
@@ -40,6 +44,13 @@ const MATCHING_TEST_POOL_TITLE = "匹配调试局";
 const MATCHING_TEST_PHONE_PREFIX = "+8613999999"; // distinct from single-test icebreaker prefix
 const BOT_COMMON_PASSWORD = "test123456";
 const BOT_COUNT = 5;
+
+// Reserved test-venue identity. Cleanup matches on name, so never reuse it for
+// a real venue. One venue per (city, area) is created on demand because venue
+// assignment filters strictly on city + district.
+const MATCHING_TEST_VENUE_NAME = "悦聚调试小馆";
+const MATCHING_TEST_SLOT_START = "17:00";
+const MATCHING_TEST_SLOT_END = "23:00";
 
 const CITIES = ["深圳", "香港", "广州", "北京", "上海"];
 const DISTRICTS: Record<string, string[]> = {
@@ -128,19 +139,126 @@ function assertMatchingTestMode() {
   }
 }
 
+/**
+ * Next Friday dinner slot (18:59). Used for pool.dateTime so the mini-program
+ * 今晚这桌 brief renders a realistic dinner time instead of "now + 7 days"
+ * (which landed at whatever time-of-day the test was started, e.g. 14:23).
+ */
+function nextDinnerDateTime(): Date {
+  const now = new Date();
+  const d = new Date(now);
+  d.setHours(18, 59, 0, 0);
+  const delta = (5 - d.getDay() + 7) % 7; // 5 = Friday
+  d.setDate(d.getDate() + delta);
+  if (d.getTime() <= now.getTime()) {
+    d.setDate(d.getDate() + 7);
+  }
+  return d;
+}
+
+/**
+ * Find-or-create the reserved test venue for (city, area) plus weekly dinner
+ * time slots covering every weekday, so venueAssignmentService always finds a
+ * slot for any pool dateTime. Idempotent: safe to call on every pool ensure.
+ *
+ * Venue attributes are chosen to always pass the assignment filters:
+ * - venueType 'restaurant' + isActive/onboardingStatus/partnerStatus 'active'
+ * - cuisines/budgetCategories supersets of the bot registration values
+ * - seatingCapacity 12 >= pool maxGroupSize (BOT_COUNT + 2)
+ */
+async function ensureMatchingTestVenue(city: string, district: string | null): Promise<string> {
+  const area = district ?? "南山区";
+  const [existingVenue] = await db
+    .select({ id: venues.id })
+    .from(venues)
+    .where(and(
+      eq(venues.name, MATCHING_TEST_VENUE_NAME),
+      eq(venues.city, city),
+      eq(venues.area, area),
+    ))
+    .limit(1);
+
+  let venueId = existingVenue?.id;
+  if (!venueId) {
+    const [created] = await db
+      .insert(venues)
+      .values({
+        name: MATCHING_TEST_VENUE_NAME,
+        brandName: MATCHING_TEST_VENUE_NAME,
+        venueType: "restaurant",
+        address: `${city}${area}悦聚测试路 1 号`,
+        city,
+        area,
+        cuisines: [...CUISINE_PREFS],
+        priceRange: "150-200",
+        budgetCategories: [...BUDGET_RANGES],
+        seatingCapacity: 12,
+        capacity: 4,
+        isActive: true,
+        onboardingStatus: "active",
+        partnerStatus: "active",
+        notes: "matching-test-mode seeded venue — removed by /api/test/matching-test/cleanup",
+      })
+      .returning({ id: venues.id });
+    venueId = created.id;
+    logger.info("[MatchingTest] test venue created", { venueId, city, area });
+  }
+
+  // Weekly slots for all 7 days (idempotent — skip days that already exist).
+  const slotRows = await db
+    .select({ dayOfWeek: venueTimeSlots.dayOfWeek })
+    .from(venueTimeSlots)
+    .where(and(eq(venueTimeSlots.venueId, venueId), eq(venueTimeSlots.isActive, true)));
+  const coveredDays = new Set<number>(
+    slotRows
+      .map((row: { dayOfWeek: number | null }) => row.dayOfWeek)
+      .filter((d: number | null): d is number => d !== null),
+  );
+  for (let day = 0; day < 7; day++) {
+    if (coveredDays.has(day)) continue;
+    await db.insert(venueTimeSlots).values({
+      venueId,
+      dayOfWeek: day,
+      startTime: MATCHING_TEST_SLOT_START,
+      endTime: MATCHING_TEST_SLOT_END,
+      maxConcurrentEvents: 4,
+      isActive: true,
+      notes: "matching-test weekly dinner slot",
+    });
+  }
+
+  return venueId;
+}
+
 export async function ensureMatchingTestPool(testerUserId: string): Promise<string> {
   assertMatchingTestMode();
 
   const [existing] = await db
-    .select({ id: eventPools.id })
+    .select({
+      id: eventPools.id,
+      city: eventPools.city,
+      district: eventPools.district,
+      dateTime: eventPools.dateTime,
+    })
     .from(eventPools)
     .where(and(eq(eventPools.title, MATCHING_TEST_POOL_TITLE), eq(eventPools.isTestPool, true)))
     .limit(1);
 
-  if (existing) return existing.id;
+  if (existing) {
+    await ensureMatchingTestVenue(existing.city, existing.district);
+    // Refresh a missing/past dateTime so the 今晚这桌 brief always renders.
+    if (!existing.dateTime || existing.dateTime.getTime() <= Date.now()) {
+      await db
+        .update(eventPools)
+        .set({ dateTime: nextDinnerDateTime(), updatedAt: new Date() })
+        .where(eq(eventPools.id, existing.id));
+    }
+    return existing.id;
+  }
 
-  const now = new Date();
   const city = pick(CITIES);
+  const district = pick(DISTRICTS[city] ?? DISTRICTS["深圳"]);
+  const dinnerDateTime = nextDinnerDateTime();
   const [pool] = await db
     .insert(eventPools)
     .values({
@@ -148,9 +266,9 @@ export async function ensureMatchingTestPool(testerUserId: string): Promise<stri
       description: "匹配调试专用活动池 — 仅限测试模式",
       eventType: "饭局",
       city,
-      district: pick(DISTRICTS[city] ?? DISTRICTS["深圳"]),
-      dateTime: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
-      registrationDeadline: new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000),
+      district,
+      dateTime: dinnerDateTime,
+      registrationDeadline: new Date(dinnerDateTime.getTime() - 24 * 60 * 60 * 1000),
       status: "active",
       minGroupSize: BOT_COUNT + 1,
       maxGroupSize: BOT_COUNT + 2,
@@ -159,6 +277,8 @@ export async function ensureMatchingTestPool(testerUserId: string): Promise<stri
       isTestPool: true,
     })
     .returning({ id: eventPools.id });
+
+  await ensureMatchingTestVenue(city, district);
 
   logger.info("[MatchingTest] pool created", { poolId: pool.id, testerUserId });
   return pool.id;
@@ -338,12 +458,139 @@ export async function seedMatchingTestBots(
   return { botUsers };
 }
 
+/**
+ * Test-only post-match finalizer. The production match pipeline never writes
+ * eventPoolGroups.finalDateTime (the column is read-only fallback territory —
+ * the client uses `group.finalDateTime ?? pool.dateTime`), and venue
+ * assignment only runs when the operator-review gate is open. This function
+ * deterministically completes both so the squad-unboxing 今晚这桌 brief always
+ * renders fully in test mode:
+ *
+ * - finalDateTime ← pool.dateTime for every group in the test pool
+ * - venue fields ← the reserved test venue for groups still not 'assigned'
+ *   (e.g. when matchingOperatorReviewEnabled held the side effects); a
+ *   confirmed booking row is inserted so a later real assignment pass skips
+ *   the group (existingBookingMap idempotency guard).
+ *
+ * Idempotent: safe to call after every match run.
+ */
+export async function finalizeMatchingTestGroups(
+  poolId: string,
+): Promise<{ groupsFinalized: number; venuesAssigned: number }> {
+  assertMatchingTestMode();
+
+  const [pool] = await db
+    .select({
+      id: eventPools.id,
+      city: eventPools.city,
+      district: eventPools.district,
+      dateTime: eventPools.dateTime,
+      isTestPool: eventPools.isTestPool,
+    })
+    .from(eventPools)
+    .where(eq(eventPools.id, poolId))
+    .limit(1);
+
+  if (!pool || !pool.isTestPool) {
+    throw new Error("TEST_POOL_NOT_FOUND");
+  }
+
+  const groups = await db
+    .select({
+      id: eventPoolGroups.id,
+      venueAssignmentStatus: eventPoolGroups.venueAssignmentStatus,
+    })
+    .from(eventPoolGroups)
+    .where(eq(eventPoolGroups.poolId, poolId));
+
+  if (groups.length === 0) {
+    return { groupsFinalized: 0, venuesAssigned: 0 };
+  }
+
+  const finalDateTime = pool.dateTime ?? nextDinnerDateTime();
+  const venueId = await ensureMatchingTestVenue(pool.city, pool.district);
+  const [venue] = await db
+    .select()
+    .from(venues)
+    .where(eq(venues.id, venueId))
+    .limit(1);
+
+  const { dateStr: bookingDate, dayOfWeek } = parseEventDate(finalDateTime);
+  const [slot] = await db
+    .select({ id: venueTimeSlots.id })
+    .from(venueTimeSlots)
+    .where(and(
+      eq(venueTimeSlots.venueId, venueId),
+      eq(venueTimeSlots.dayOfWeek, dayOfWeek),
+      eq(venueTimeSlots.isActive, true),
+    ))
+    .limit(1);
+
+  let venuesAssigned = 0;
+
+  for (const group of groups) {
+    const needsVenue = group.venueAssignmentStatus !== "assigned";
+
+    await db
+      .update(eventPoolGroups)
+      .set({
+        finalDateTime,
+        ...(needsVenue && venue
+          ? {
+              venueId: venue.id,
+              venueName: venue.brandName || venue.name,
+              venueAddress: venue.address,
+              venueAssignmentStatus: "assigned",
+              venueAssignmentReason: null,
+            }
+          : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(eventPoolGroups.id, group.id));
+
+    if (needsVenue && venue) {
+      venuesAssigned++;
+
+      if (slot) {
+        const [existingBooking] = await db
+          .select({ id: venueTimeSlotBookings.id })
+          .from(venueTimeSlotBookings)
+          .where(and(
+            eq(venueTimeSlotBookings.eventGroupId, group.id),
+            eq(venueTimeSlotBookings.status, "confirmed"),
+          ))
+          .limit(1);
+
+        if (!existingBooking) {
+          await db.insert(venueTimeSlotBookings).values({
+            venueId: venue.id,
+            timeSlotId: slot.id,
+            eventPoolId: poolId,
+            eventGroupId: group.id,
+            bookingDate,
+            status: "confirmed",
+          });
+        }
+      }
+    }
+  }
+
+  logger.info("[MatchingTest] groups finalized", {
+    poolId,
+    groupsFinalized: groups.length,
+    venuesAssigned,
+  });
+  return { groupsFinalized: groups.length, venuesAssigned };
+}
+
 export async function cleanupMatchingTestData(): Promise<{
   deletedPools: number;
   deletedRegistrations: number;
   deletedGroups: number;
   deletedBots: number;
   deletedIcebreakerSessions: number;
+  deletedVenueBookings: number;
+  deletedTestVenues: number;
 }> {
   assertMatchingTestMode();
 
@@ -353,6 +600,8 @@ export async function cleanupMatchingTestData(): Promise<{
     deletedGroups: 0,
     deletedBots: 0,
     deletedIcebreakerSessions: 0,
+    deletedVenueBookings: 0,
+    deletedTestVenues: 0,
   };
 
   await db.transaction(async (tx: DbTransaction) => {
@@ -362,6 +611,13 @@ export async function cleanupMatchingTestData(): Promise<{
       .from(eventPools)
       .where(eq(eventPools.isTestPool, true));
     const poolIds = poolRows.map((p: { id: string }) => p.id);
+
+    // Reserved test venues (matched by name — never reused for real venues).
+    const testVenueRows = await tx
+      .select({ id: venues.id })
+      .from(venues)
+      .where(eq(venues.name, MATCHING_TEST_VENUE_NAME));
+    const testVenueIds = testVenueRows.map((v: { id: string }) => v.id);
 
     let groupIds: string[] = [];
 
@@ -393,6 +649,17 @@ export async function cleanupMatchingTestData(): Promise<{
         }
       }
 
+      // Step 3.5: Delete test-venue bookings BEFORE groups — the
+      // venue_time_slot_bookings.event_group_id FK references
+      // event_pool_groups.id, so group deletion would violate it otherwise.
+      if (testVenueIds.length > 0) {
+        const deletedBookings = await tx
+          .delete(venueTimeSlotBookings)
+          .where(inArray(venueTimeSlotBookings.venueId, testVenueIds))
+          .returning({ id: venueTimeSlotBookings.id });
+        result.deletedVenueBookings = deletedBookings.length;
+      }
+
       // Step 4: Delete ALL registrations for test pools (including tester's).
       // The FK constraint on poolId REFERENCES eventPools.id requires this.
       // The real tester's payment records in the payments table are NOT touched.
@@ -415,6 +682,16 @@ export async function cleanupMatchingTestData(): Promise<{
         .where(inArray(eventPools.id, poolIds))
         .returning({ id: eventPools.id });
       result.deletedPools = deletedPools.length;
+    }
+
+    // Step 7: Delete test-venue slots + venues (slots reference venues).
+    if (testVenueIds.length > 0) {
+      await tx.delete(venueTimeSlots).where(inArray(venueTimeSlots.venueId, testVenueIds));
+      const deletedVenues = await tx
+        .delete(venues)
+        .where(inArray(venues.id, testVenueIds))
+        .returning({ id: venues.id });
+      result.deletedTestVenues = deletedVenues.length;
     }
 
     // Step 9: Delete bot users themselves (separate from pool scope so cleanup

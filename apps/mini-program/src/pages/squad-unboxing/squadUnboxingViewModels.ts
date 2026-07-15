@@ -250,6 +250,91 @@ export function buildRevealChipLabel(unflippedCount: number): string {
   return `还有 ${unflippedCount} 位桌友未揭晓 · 轻点全部翻开`
 }
 
+// ── "Pocket the deck" copy set (2026-07-15) ─────────────────────────────────
+// Two-phase reveal: full-screen fan ⇄ pocketed pill. Copy is craft-owned; the
+// strings live here so the copy review has exactly one place to edit.
+
+/** Collapse trigger chip below the card fan (fan phase only). */
+export const SQUAD_DECK_COLLAPSE_TRIGGER_LABEL = '收起卡组'
+
+/** Screen-reader announcement when the deck finishes pocketing (AC-09). */
+export const SQUAD_DECK_POCKETED_ANNOUNCEMENT = '卡组已收起'
+
+/**
+ * One-time Xiaoyue hint shown near the pill after the FIRST collapse
+ * (AC-10). Teaches the pull-down gesture; gated by the same storage flag as
+ * the `firstCollapse` analytics property.
+ */
+export const SQUAD_DECK_POCKETED_HINT_TEXT = '卡组收好啦，随时拉下来看看～'
+
+/** Pill aria-label — tap/pull re-fans the deck (AC-04/AC-09). */
+export function buildDeckPillAriaLabel(memberCount: number): string {
+  return `展开卡组，查看你的${memberCount}位桌友`
+}
+
+/** Mini-strip cap inside the pill; the rest collapses into a +N chip. */
+export const DECK_PILL_STRIP_CAP = 5
+
+export interface DeckPillStripItem {
+  member: PoolGroupMemberSummary
+  /** Face-up members show their avatar/archetype mini; face-down show a card-back chip (spoiler gating). */
+  faceUp: boolean
+  isBestPartner: boolean
+  isCurrentUser: boolean
+}
+
+export interface DeckPillStripModel {
+  items: DeckPillStripItem[]
+  overflowCount: number
+  totalCount: number
+}
+
+/**
+ * Pill strip model (AC-03/SCA-01): the first DECK_PILL_STRIP_CAP members in
+ * roster order; the remainder collapses into a +N overflow chip. Face derives
+ * from the controller-owned flip set (same spoiler gating as the fan); the
+ * 最佳拍档 keeps its tint ring inside the strip.
+ */
+export function buildDeckPillStripModel(
+  members: PoolGroupMemberSummary[],
+  opts: {
+    flippedIds: ReadonlySet<string>
+    allRevealed: boolean
+    bestPartnerUserId: string | null
+    currentUserId?: string | null
+  },
+): DeckPillStripModel {
+  const visible = members.slice(0, DECK_PILL_STRIP_CAP)
+  return {
+    items: visible.map((member) => ({
+      member,
+      faceUp: opts.allRevealed || opts.flippedIds.has(member.userId),
+      isBestPartner: member.userId === opts.bestPartnerUserId,
+      isCurrentUser: member.userId === opts.currentUserId,
+    })),
+    overflowCount: Math.max(0, members.length - DECK_PILL_STRIP_CAP),
+    totalCount: members.length,
+  }
+}
+
+/**
+ * Chemistry-tinted border ring for the pill (AC-03). Mirrors the chemistry
+ * chip token mapping (fire→error, warm→secondary, cold→success, mild→primary)
+ * so the pill reads as the same table the fan just showed.
+ */
+export function getDeckPillChemistryClass(chemistry?: OverallChemistry | null): string {
+  switch (chemistry) {
+    case 'fire':
+      return 'squad-unboxing__deck-pill--fire'
+    case 'warm':
+      return 'squad-unboxing__deck-pill--warm'
+    case 'cold':
+      return 'squad-unboxing__deck-pill--cold'
+    default:
+      return 'squad-unboxing__deck-pill--fallback'
+  }
+}
+
 /**
  * Screen-reader label for a face-down card (AC: labelled tap targets with
  * reveal-invitation semantics). Names are already visible on the front; the

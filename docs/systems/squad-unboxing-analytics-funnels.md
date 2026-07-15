@@ -4,7 +4,7 @@
 > Event union: `apps/mini-program/src/lib/analytics/squadUnboxingAnalytics.ts`.
 > Server whitelist: `apps/server/src/routes/domains/analytics.ts`
 > (`squadUnboxingAnalyticsRoutes.test.ts` locks the accepted set).
-> Last updated: 2026-07-14 (tap-to-reveal revamp).
+> Last updated: 2026-07-15 (pocket-deck events added to server whitelist).
 
 ## 1. Primary funnel (first visit)
 
@@ -51,6 +51,23 @@ wall-clock from deal-settle to completion, not animation time.
 | `squad_unboxing_analysis_retry_tap` | Group-analysis fetch retry |
 | `squad_unboxing_ready_hero_fallback` | Composed-hero image fell back (CDN → bundled → gradient) |
 
+## 2b. Pocket-the-deck events (2026-07-15)
+
+Two-phase reveal: the fan ⇄ pocketed-pill collapse interaction
+(`sprint-contract.squad-unboxing-pocket-deck-20260715.md`).
+
+| Event | Payload | When |
+| --- | --- | --- |
+| `squad_unboxing_deck_collapse` | `{ groupId, screen, firstCollapse, memberCount, faceDownCount }` | User taps the 收起卡组 trigger (fan → folding). `firstCollapse` is `true` only for the group's first-ever collapse (gated by the `jj_deck_collapse_hint_${groupId}` storage flag — the same flag that arms the one-time hint bubble). `faceDownCount` is the unrevealed-card count at collapse time (spoiler-gating sanity signal). |
+| `squad_unboxing_deck_reopen` | `{ groupId, screen, reopenCount }` | Pill pull-down drag or tap re-fans the deck (pocketed → unfolding). `reopenCount` is in-memory per groupId — resets on group change / cold start, not persisted. |
+
+> **Server whitelist:** both events are in the client union and are accepted
+> by the server whitelist (`apps/server/src/routes/domains/analytics.ts`),
+> locked by `apps/server/src/__tests__/squadUnboxingAnalyticsRoutes.test.ts`
+> (whitelisted 2026-07-15, follow-up to the pocket-deck sprint contract §4).
+> Events emitted before the whitelist follow-up landed were dropped
+> server-side (fail-open) and are not backfilled.
+
 ## 3. Reinstated event (upstream `a6ea57284`, 2026-07-14)
 
 | Event | Status | Semantics |
@@ -71,10 +88,17 @@ rows (focus-dismiss) as distinct semantics.
 - Client union contains all events above including `card_detail_dismiss`
   (`lib/analytics/squadUnboxingAnalytics.ts`).
 - Server whitelist accepts the three tap-to-reveal events
-  (`reveal_all_tap`, `card_flip`, `all_revealed`) plus `card_detail_dismiss`,
-  and rejects unknown types
+  (`reveal_all_tap`, `card_flip`, `all_revealed`) plus `card_detail_dismiss`
+  and the two pocket-deck events (`deck_collapse`, `deck_reopen`), and
+  rejects unknown types
   (`apps/server/src/__tests__/squadUnboxingAnalyticsRoutes.test.ts`).
 - `all_revealed` single-fire semantics (both completion paths, no re-entry
   fire) are unit-tested in `squadFlipState.test.ts`.
 - `card_detail_dismiss` is emitted exactly once in page source — inside the
   resolver's `dismiss` branch (`composition.test.ts` lock).
+- Deck-phase timing budgets (fold ≤600ms cascade, 最佳拍档 last; unfold ≤480ms),
+  storage key shapes (`jj_deck_collapsed_`, `jj_deck_collapse_hint_`), and the
+  fan/folding/pocketed/unfolding phase machine are unit-tested in
+  `squadDeckCollapseState.test.ts`; pill view-model gating (strip cap,
+  spoiler-safe face-down chips, chemistry class) in
+  `squadUnboxingViewModels.test.ts`.

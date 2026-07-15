@@ -5,6 +5,7 @@ import type { MatchGroup } from "../../poolMatchingService";
 import {
   ensureMatchingTestPool,
   seedMatchingTestBots,
+  finalizeMatchingTestGroups,
   cleanupMatchingTestData,
 } from "../../services/matchingTestService";
 import { isMatchingTestMode } from "../../lib/isSingleTestMode";
@@ -73,17 +74,25 @@ export function registerMatchingTestRoutes(app: Express): void {
       const groups = await matchEventPool(poolId);
       await saveMatchResults(poolId, groups);
 
+      // Test-only finalizer: sets group.finalDateTime and backfills the
+      // reserved test venue for groups the venue assignment skipped (e.g.
+      // when the operator-review gate held post-match side effects), so the
+      // squad-unboxing 今晚这桌 brief renders fully.
+      const finalize = await finalizeMatchingTestGroups(poolId);
+
       logger.info("[MatchingTest] match completed", {
         testerUserId: userId,
         poolId,
         groupCount: groups.length,
         memberCount: groups.reduce((sum: number, g: MatchGroup) => sum + g.members.length, 0),
+        ...finalize,
       });
 
       res.json({
         poolId,
         groupCount: groups.length,
         totalMatched: groups.reduce((sum: number, g: MatchGroup) => sum + g.members.length, 0),
+        ...finalize,
         groups: groups.map((g: MatchGroup) => ({
           memberCount: g.members.length,
           avgChemistryScore: g.avgChemistryScore,

@@ -41,12 +41,19 @@ export const FAN_SAFE_INSET_RPX = 48
  * Rotation is a function of row length only, so every count decomposes into
  * these four row shapes:
  *   N=4 → one row of 4 · N=5 → 3+2 · N=6 → 3+3 · N=7 → 4+3 · N=8 → 4+4
+ *
+ * 4-per-row outer rotation is capped at ±5° (was ±7°): a 190×332 card at 7°
+ * pokes ~40rpx past its unrotated edge, pushing the row's rotated bounding
+ * box to ~756rpx — past the 750rpx viewport, hard-cropping the 4th card at
+ * the right edge (G2). At 5° the poke is ~29rpx → bounding box ~733rpx,
+ * inside the 750 − 8 allowance. Regression-locked by the viewport-edge
+ * invariant test in computeFanLayout.test.ts.
  */
 export const FAN_ROTATIONS_BY_ROW_LENGTH: Record<number, readonly number[]> = {
   1: [0],
   2: [-4.5, 4.5],
   3: [-6, 0, 6],
-  4: [-7, -3, 3, 7],
+  4: [-5, -2.5, 2.5, 5],
 }
 
 /** Card W×H (rpx) keyed by member count. Matches the locked geometry table.

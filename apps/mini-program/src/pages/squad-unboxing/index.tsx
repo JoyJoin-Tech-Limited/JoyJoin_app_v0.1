@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useRouter, useDidShow } from '@tarojs/taro'
-import { useEffect, useCallback, useRef, useState } from 'react'
+import { useEffect, useCallback, useMemo, useRef, useState } from 'react'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { normalizeMatchingCopy } from '@shared/features/matching-status'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
@@ -22,12 +22,18 @@ import { BlindBoxLid } from './BlindBoxLid'
 import DragRevealRibbon from './DragRevealRibbon'
 import XiaoyueHostImage from './XiaoyueHostImage'
 import SquadDeckStage from './SquadDeckStage'
+import DeckCollapsePill from './DeckCollapsePill'
 import {
+  SQUAD_DECK_COLLAPSE_TRIGGER_LABEL,
+  SQUAD_DECK_POCKETED_ANNOUNCEMENT,
+  SQUAD_DECK_POCKETED_HINT_TEXT,
+  buildDeckPillStripModel,
   buildEventBriefDate,
   buildFocusedMemberBubbleText,
   buildRevealChipLabel,
   buildSquadSoulBubbleText,
   getChemistryWord,
+  getDeckPillChemistryClass,
   getEventTypeLabel,
   getMemberName,
   getVibeLabel,
@@ -111,6 +117,16 @@ export default function SquadUnboxingPage() {
     flipAll,
     isFlipInFlight,
     notifyDealSettled,
+    deckPhase,
+    pocketDeckEnabled,
+    foldDelayById,
+    unfoldDelayById,
+    collapseDeck,
+    reopenDeck,
+    notifyFoldSettled,
+    notifyUnfoldSettled,
+    showPocketHint,
+    dismissPocketHint,
     handleOpenBox,
     handleConfirmAttendance,
     handleOpenGroupDetail,
@@ -407,6 +423,49 @@ export default function SquadUnboxingPage() {
   const focusedViewerPair = focusedMember
     ? (viewerPairByMemberId.get(focusedMember.userId) ?? null)
     : null
+
+  /**
+   * "收起卡组" (AC-01): dismiss any focused-card lift BEFORE the cascade
+   * starts (REL-01 — a lifted card breaks the fold geometry). Focus and the
+   * fold request clear in the same render batch, so the fold's first frame
+   * already shows the unfocused dealt pose. The bubble returns to the
+   * resting voice; flip state is controller-owned and untouched (AC-04).
+   */
+  const handleCollapseDeck = useCallback(() => {
+    if (deckPhase !== 'fan') return
+    focusedCardIndexRef.current = -1
+    setFocusedCardIndex(-1)
+    cancelNarrationTimer()
+    setBubbleNarration(null)
+    collapseDeck()
+  }, [deckPhase, cancelNarrationTimer, collapseDeck])
+
+  // Pill view models (AC-03): strip + chemistry-tinted ring. Memoized on the
+  // flip set so a freshly revealed card swaps its back-chip for a mini.
+  const pillStripModel = useMemo(
+    () =>
+      buildDeckPillStripModel(members, {
+        flippedIds,
+        allRevealed: !isInteractiveSession,
+        bestPartnerUserId,
+        currentUserId,
+      }),
+    [members, flippedIds, isInteractiveSession, bestPartnerUserId, currentUserId],
+  )
+  const pillChemistryClass = getDeckPillChemistryClass(groupAnalysis?.overallChemistry)
+
+  // Screen-reader announcement when the deck finishes pocketing (AC-09).
+  const prevDeckPhaseRef = useRef(deckPhase)
+  useEffect(() => {
+    const prev = prevDeckPhaseRef.current
+    prevDeckPhaseRef.current = deckPhase
+    if (prev !== 'pocketed' && deckPhase === 'pocketed') {
+      setAnnouncement(SQUAD_DECK_POCKETED_ANNOUNCEMENT)
+      const timer = setTimeout(() => setAnnouncement(''), 1200)
+      return () => clearTimeout(timer)
+    }
+    return undefined
+  }, [deckPhase])
   // Bubble voice: burst-completion line > focused-member narration (only when
   // the narration matches the currently focused card — a pending flip keeps
   // the resting voice until flip-end) > resting voice. While face-down cards
@@ -588,10 +647,19 @@ export default function SquadUnboxingPage() {
         onScroll={handleScroll}
       >
         <View className='squad-unboxing__scroll-inner'>
+          {/* Phase-aware spacer: matches the fixed stage height while the fan
+              is up; shrinks to the pill's footprint once pocketed so the
+              content-focused phase gets the viewport back (AC-01). The
+              transient fold/unfold windows keep the fan height so the
+              cascade never fights a reflow. While the first-collapse hint
+              bubble is up, --hint grows the spacer ~96rpx so the fixed
+              bubble never overlaps the 团魂 first line (G1). */}
           <View className={[
             'squad-unboxing__stage-spacer',
-            flowState === 'revealed' ? 'squad-unboxing__stage-spacer--revealed' : '',
+            flowState === 'revealed' && deckPhase !== 'pocketed' ? 'squad-unboxing__stage-spacer--revealed' : '',
+            flowState === 'revealed' && deckPhase === 'pocketed' ? 'squad-unboxing__stage-spacer--pocketed' : '',
             isComposedHeroActive ? 'squad-unboxing__stage-spacer--composed' : '',
+            showPocketHint && deckPhase === 'pocketed' ? 'squad-unboxing__stage-spacer--hint' : '',
           ].filter(Boolean).join(' ')} />
 
           <View className={[
@@ -599,6 +667,28 @@ export default function SquadUnboxingPage() {
             flowState === 'revealed' ? '' : 'squad-unboxing__scroll-content--ready',
             isComposedHeroActive ? 'squad-unboxing__scroll-content--composed' : '',
           ].filter(Boolean).join(' ')}>
+
+        {/* Pocket-the-deck trigger (AC-01): sits in the scroll flow directly
+            below the fixed stage, visually hugging the fan's bottom edge.
+            Fan phase only — the fold hides it in the same frame the cascade
+            starts, and the pill owns the return path once pocketed. Hidden
+            when the pocketDeckEnabled kill switch is off (2026-07-15). */}
+        {flowState === 'revealed' && deckPhase === 'fan' && pocketDeckEnabled && members.length > 0 ? (
+          <View className='squad-unboxing__collapse-trigger-wrap'>
+            <View
+              className='squad-unboxing__collapse-trigger'
+              hoverClass='squad-unboxing__collapse-trigger--pressed'
+              role='button'
+              aria-label={SQUAD_DECK_COLLAPSE_TRIGGER_LABEL}
+              onClick={handleCollapseDeck}
+            >
+              <Text className='squad-unboxing__collapse-trigger-text'>
+                {SQUAD_DECK_COLLAPSE_TRIGGER_LABEL}
+              </Text>
+              <View className='squad-unboxing__collapse-trigger-chevron' aria-hidden='true' />
+            </View>
+          </View>
+        ) : null}
 
         {flowState === 'ready' && !composedHeroEnabled ? (
           <View className='squad-unboxing__ribbon-wrap'>
@@ -809,6 +899,10 @@ export default function SquadUnboxingPage() {
           `squad-unboxing__stage--${flowState}`,
           isComposedHeroActive ? 'squad-unboxing__stage--composed' : '',
           isDegradation ? 'squad-unboxing__stage--degradation' : '',
+          // Pocketed phase hides the whole fixed stage (cards already sit at
+          // the vanish point); visibility keeps React state + flip progress
+          // alive so the re-fan restores exactly what the user had (AC-04).
+          deckPhase === 'pocketed' ? 'squad-unboxing__stage--pocketed' : '',
         ]
           .filter(Boolean)
           .join(' ')}
@@ -816,11 +910,6 @@ export default function SquadUnboxingPage() {
         aria-live={flowState === 'revealed' ? 'polite' : undefined}
         aria-atomic={flowState === 'revealed' ? 'true' : undefined}
       >
-        {announcement ? (
-          <View className='squad-unboxing__stage-announcement' role='status' aria-live='polite' aria-atomic='true'>
-            {announcement}
-          </View>
-        ) : null}
         {isComposedHeroActive ? (
           <XiaoyueHostImage groupId={groupId} shouldReduceMotion={shouldReduceMotion} />
         ) : null}
@@ -867,6 +956,11 @@ export default function SquadUnboxingPage() {
             onDealSettled={notifyDealSettled}
             onCardTap={handleCardTap}
             onCardLongPress={handleCardLongPress}
+            deckPhase={deckPhase}
+            foldDelayById={foldDelayById}
+            unfoldDelayById={unfoldDelayById}
+            onFoldSettled={notifyFoldSettled}
+            onUnfoldSettled={notifyUnfoldSettled}
           />
         ) : null}
         {flowState !== 'revealed' ? (
@@ -877,6 +971,46 @@ export default function SquadUnboxingPage() {
           </View>
         ) : null}
       </View>
+
+      {/* Screen-reader announcements live at the PAGE ROOT (moved out of the
+          stage 2026-07-15): the stage is visibility:hidden while pocketed,
+          and assistive tech skips hidden subtrees — the 卡组已收起 beat must
+          stay announceable (AC-09). */}
+      {announcement ? (
+        <View className='squad-unboxing__stage-announcement' role='status' aria-live='polite' aria-atomic='true'>
+          {announcement}
+        </View>
+      ) : null}
+
+      {/* Pocket-the-deck pill (AC-01/AC-03/AC-04): fixed at the page root —
+          CSS sticky is WeChat-fragile inside <ScrollView>. Rendered while
+          pocketed and through the unfold window (leaving fade). Pull-down or
+          tap re-fans the deck. */}
+      {flowState === 'revealed' && (deckPhase === 'pocketed' || deckPhase === 'unfolding') ? (
+        <DeckCollapsePill
+          model={pillStripModel}
+          chemistryClassName={pillChemistryClass}
+          leaving={deckPhase === 'unfolding'}
+          reduceMotion={shouldReduceMotion}
+          isDegradation={isDegradation}
+          onReopen={reopenDeck}
+        />
+      ) : null}
+
+      {/* One-time first-collapse Xiaoyue hint (AC-10): transient bubble
+          anchored near the pill; auto-dismisses and never replays for this
+          group (same storage flag as the `firstCollapse` property). */}
+      {showPocketHint && deckPhase === 'pocketed' ? (
+        <View className='squad-unboxing__pocket-hint' role='status'>
+          <Image
+            className='squad-unboxing__pocket-hint-mascot'
+            mode='aspectFit'
+            src={getXiaoyueExpressionAsset('homeWelcome')}
+            aria-hidden='true'
+          />
+          <Text className='squad-unboxing__pocket-hint-text'>{SQUAD_DECK_POCKETED_HINT_TEXT}</Text>
+        </View>
+      ) : null}
 
       {flowState === 'revealed' && actionDockState === 'ready' ? (
         <View
@@ -890,8 +1024,10 @@ export default function SquadUnboxingPage() {
           {/* Hint chip (AC-04): progress slot — live unflipped count with an
               explicit tap verb; doubles as the reveal-all trigger (AC-05).
               Absent when N=0 and on all-up re-entry. Separate visual slot
-              from the bubble (chip = progress, bubble = voice). */}
-          {isInteractiveSession && unflippedCount > 0 ? (
+              from the bubble (chip = progress, bubble = voice). Fan phase
+              only: while pocketed the deck is out of reach — the pill's
+              face-down back-chips carry the unrevealed count visually. */}
+          {isInteractiveSession && unflippedCount > 0 && deckPhase === 'fan' ? (
             <View
               className='squad-unboxing__reveal-chip'
               hoverClass='squad-unboxing__reveal-chip--pressed'

@@ -153,8 +153,11 @@ describe('TeammateCard fan template + deal geometry (Cascading Hand Fan)', () =>
   it('keeps unfocused siblings fully opaque while another card is focused', () => {
     // Upstream: focus = lift only. Dealt siblings render at full opacity so the
     // layered deck stays legible; the tap-to-reveal model keys opacity on the
-    // deal (not the retired `isRevealed`).
-    expect(source).toContain('const opacity = isDealt ? 1 : 0')
+    // deal (not the retired `isRevealed`). Pocket-the-deck (2026-07-15) adds a
+    // leading `pocketPose ? 0 :` arm — cards fade out as they fold into the
+    // pill — but the dealt-sibling rule is unchanged: opacity still derives
+    // from `isDealt`, never from a sibling's focus.
+    expect(source).toContain('const opacity = pocketPose ? 0 : isDealt ? 1 : 0')
     expect(source).not.toContain('isDimmed')
     expect(source).not.toContain('anyFocused')
   })

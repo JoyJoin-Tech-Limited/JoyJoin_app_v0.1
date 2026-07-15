@@ -56,6 +56,11 @@ function buildProps(overrides: Partial<Parameters<typeof SquadDeckStage>[0]> = {
     onDealSettled: vi.fn(),
     onCardTap: vi.fn(),
     onCardLongPress: vi.fn(),
+    deckPhase: 'fan' as const,
+    foldDelayById: new Map<string, number>(),
+    unfoldDelayById: new Map<string, number>(),
+    onFoldSettled: vi.fn(),
+    onUnfoldSettled: vi.fn(),
     ...overrides,
   }
 }

@@ -33,6 +33,15 @@ import {
   type FlipSnapshot,
   type SquadFlipSession,
 } from './squadFlipState'
+import {
+  HEARTBEAT_STAGGER_MS,
+  computeFoldDelayById,
+  computeUnfoldDelayById,
+  getDeckCollapseHintKey,
+  getDeckCollapseKey,
+  type DeckPhase,
+} from './squadDeckCollapseState'
+import { useDeviceTier } from '../../hooks/useDeviceTier'
 
 function getRevealFlagKey(groupId: string): string {
   return `jj_revealed_${groupId}`
@@ -57,6 +66,49 @@ function writeRevealFlag(groupId: string): void {
   }
 }
 
+// ── "Pocket the deck" persistence (2026-07-15) ──────────────────────────────
+// Mirrors the reveal-flag pattern: per-group keys, read === true, defensive
+// try/catch with structured error logs. Only the stable phases are persisted
+// (pocketed ⇄ fan); the folding/unfolding windows are transient.
+
+function readDeckCollapsedFlag(groupId: string): boolean {
+  try {
+    return Taro.getStorageSync(getDeckCollapseKey(groupId)) === true
+  } catch {
+    return false
+  }
+}
+
+function writeDeckCollapsedFlag(groupId: string, collapsed: boolean): void {
+  try {
+    Taro.setStorageSync(getDeckCollapseKey(groupId), collapsed)
+  } catch (error) {
+    logError('[SquadUnboxing] Failed to persist deck collapse flag', {
+      groupId,
+      message: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
+function readDeckCollapseHintFlag(groupId: string): boolean {
+  try {
+    return Taro.getStorageSync(getDeckCollapseHintKey(groupId)) === true
+  } catch {
+    return false
+  }
+}
+
+function writeDeckCollapseHintFlag(groupId: string): void {
+  try {
+    Taro.setStorageSync(getDeckCollapseHintKey(groupId), true)
+  } catch (error) {
+    logError('[SquadUnboxing] Failed to persist deck collapse hint flag', {
+      groupId,
+      message: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
 export interface UseSquadUnboxingControllerArgs {
   groupId: string
   routerParams: Record<string, string | undefined>
@@ -65,6 +117,15 @@ export interface UseSquadUnboxingControllerArgs {
 export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUnboxingControllerArgs) {
   const { user: currentUser, isLoading: authLoading } = useAuthGuard()
   const { shouldReduceMotion } = useMiniRevealMotion(routerParams)
+  const { isDegradation } = useDeviceTier()
+  const motionInstant = shouldReduceMotion || isDegradation
+
+  // Pocket-deck kill switch (2026-07-15): when disabled remotely, the page
+  // hides the "收起卡组" trigger and collapseDeck() below is a no-op, so the
+  // deck stays in the fan phase. A user who already pocketed the deck stays
+  // pocketed — the persisted-state restore (deckPhase init + groupId-change
+  // effect) intentionally does NOT consult this flag (no forced re-fan).
+  const pocketDeckEnabled = currentUser?.features?.squadUnboxingPocketDeckEnabled ?? true
 
   const storyMode = process.env.TARO_APP_ENABLE_STORY_MODE === 'true'
   const storyName = routerParams['__story']
@@ -75,6 +136,12 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   // face-down game; re-entry (flag present) → all-up, no chip, no shimmer.
   // Writing the flag at box-open must NOT flip this back mid-session.
   const [isInteractiveSession, setIsInteractiveSession] = useState(() => (groupId ? !readRevealFlag(groupId) : false))
+  // Pocket-the-deck phase (AC-01/AC-05): initialized from the persisted flag
+  // ONLY when the reveal already happened — a first visit can never start
+  // pocketed because the flag is only written from a revealed fan.
+  const [deckPhase, setDeckPhase] = useState<DeckPhase>(() =>
+    groupId && readRevealFlag(groupId) && readDeckCollapsedFlag(groupId) ? 'pocketed' : 'fan',
+  )
   const prevGroupIdRef = useRef<string>(groupId)
   useEffect(() => {
     if (!groupId) return
@@ -82,6 +149,8 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     prevGroupIdRef.current = groupId
     setFlowState(readRevealFlag(groupId) ? 'revealed' : 'ready')
     setIsInteractiveSession(!readRevealFlag(groupId))
+    setDeckPhase(readRevealFlag(groupId) && readDeckCollapsedFlag(groupId) ? 'pocketed' : 'fan')
+    reopenCountRef.current = 0
   }, [groupId])
 
   const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(false)
@@ -357,6 +426,132 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     ? computeUnflippedCount(visibleIds, flipSnapshot.flippedIds)
     : 0
 
+  // ── Pocket-the-deck phase actions (2026-07-15) ────────────────────────────
+  // Two-phase reveal: the full-screen fan is the emotional moment; pocketing
+  // hands the viewport to the event content. The page owns focus dismissal
+  // (REL-01: the focused lift is cleared BEFORE collapseDeck is called, in
+  // the same render batch, so the fold never starts from a lifted pose).
+  const foldDelayById = useMemo(
+    () => computeFoldDelayById(visibleIds, bestPartnerUserId),
+    [visibleIds, bestPartnerUserId],
+  )
+  const unfoldDelayById = useMemo(() => computeUnfoldDelayById(visibleIds), [visibleIds])
+
+  const reopenCountRef = useRef(0)
+  const heartbeatTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // One-time Xiaoyue hint near the pill (AC-10) — true only after the FIRST
+  // collapse of this group (same storage flag as `firstCollapse`).
+  const [showPocketHint, setShowPocketHint] = useState(false)
+
+  const clearHeartbeatTimers = useCallback(() => {
+    heartbeatTimersRef.current.forEach(clearTimeout)
+    heartbeatTimersRef.current = []
+  }, [])
+
+  const clearHintTimer = useCallback(() => {
+    if (hintTimerRef.current) clearTimeout(hintTimerRef.current)
+    hintTimerRef.current = null
+  }, [])
+
+  useEffect(
+    () => () => {
+      clearHeartbeatTimers()
+      clearHintTimer()
+    },
+    [clearHeartbeatTimers, clearHintTimer],
+  )
+
+  const dismissPocketHint = useCallback(() => {
+    clearHintTimer()
+    setShowPocketHint(false)
+  }, [clearHintTimer])
+
+  const collapseDeck = useCallback(() => {
+    if (!pocketDeckEnabled) return
+    if (deckPhase !== 'fan') return
+    if (visibleIds.length === 0) return
+    // Mid-flip fold geometry is undefined — the in-flight guard (≤380ms) also
+    // protects the card taps, so reuse it here.
+    if (flipSessionRef.current!.isFlipInFlight()) return
+
+    haptics('medium')
+
+    // First-collapse detection doubles as the one-time hint gate (AC-07/AC-10).
+    const firstCollapse = !readDeckCollapseHintFlag(groupId)
+    if (firstCollapse) {
+      writeDeckCollapseHintFlag(groupId)
+      setShowPocketHint(true)
+    }
+
+    writeDeckCollapsedFlag(groupId, true)
+    squadUnboxingAnalytics.track('squad_unboxing_deck_collapse', {
+      groupId,
+      screen: 'squad-unboxing',
+      firstCollapse,
+      memberCount: visibleIds.length,
+      faceDownCount: unflippedCount,
+    })
+    setDeckPhase('folding')
+
+    // 最佳拍档 heartbeat (AC-02): two vibrateShort pulses with a ≥80ms
+    // stagger, fired as that card's fold begins. Skipped on instant tiers —
+    // the crossfade has no cascade for the pulses to punctuate.
+    if (!motionInstant && bestPartnerUserId && visibleIds.includes(bestPartnerUserId)) {
+      const foldDelay = foldDelayById.get(bestPartnerUserId) ?? 0
+      clearHeartbeatTimers()
+      heartbeatTimersRef.current.push(
+        setTimeout(() => haptics('medium'), foldDelay),
+        setTimeout(() => haptics('light'), foldDelay + HEARTBEAT_STAGGER_MS),
+      )
+    }
+  }, [
+    pocketDeckEnabled,
+    deckPhase,
+    visibleIds,
+    groupId,
+    unflippedCount,
+    motionInstant,
+    bestPartnerUserId,
+    foldDelayById,
+    clearHeartbeatTimers,
+  ])
+
+  const reopenDeck = useCallback(() => {
+    if (deckPhase !== 'pocketed') return
+    clearHeartbeatTimers()
+    dismissPocketHint()
+    reopenCountRef.current += 1
+    writeDeckCollapsedFlag(groupId, false)
+    squadUnboxingAnalytics.track('squad_unboxing_deck_reopen', {
+      groupId,
+      screen: 'squad-unboxing',
+      reopenCount: reopenCountRef.current,
+    })
+    setDeckPhase('unfolding')
+  }, [deckPhase, groupId, clearHeartbeatTimers, dismissPocketHint])
+
+  // Phase-settle callbacks from the stage (phase-guarded so a late timer or
+  // a swipe-back settle can never regress a stable phase).
+  const notifyFoldSettled = useCallback(() => {
+    setDeckPhase((phase) => (phase === 'folding' ? 'pocketed' : phase))
+  }, [])
+
+  const notifyUnfoldSettled = useCallback(() => {
+    setDeckPhase((phase) => (phase === 'unfolding' ? 'fan' : phase))
+  }, [])
+
+  // Hint auto-dismiss: the bubble lingers 3.6s once the deck is pocketed.
+  useEffect(() => {
+    if (!showPocketHint || deckPhase !== 'pocketed') return undefined
+    clearHintTimer()
+    hintTimerRef.current = setTimeout(() => {
+      hintTimerRef.current = null
+      setShowPocketHint(false)
+    }, 3600)
+    return () => clearHintTimer()
+  }, [showPocketHint, deckPhase, clearHintTimer])
+
   // Story-mode seeding: deterministic face-up sets for the screenshot states.
   // Seed (no analytics/timers) so captures are timer-independent.
   useEffect(() => {
@@ -567,6 +762,17 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     flipAll,
     isFlipInFlight,
     notifyDealSettled,
+    // Pocket-the-deck phase (2026-07-15)
+    deckPhase,
+    pocketDeckEnabled,
+    foldDelayById,
+    unfoldDelayById,
+    collapseDeck,
+    reopenDeck,
+    notifyFoldSettled,
+    notifyUnfoldSettled,
+    showPocketHint,
+    dismissPocketHint,
     handleOpenBox,
     handleConfirmAttendance,
     handleOpenGroupDetail,

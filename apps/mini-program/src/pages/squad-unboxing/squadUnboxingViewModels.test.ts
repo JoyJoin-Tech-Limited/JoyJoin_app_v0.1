@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildDeckPillAriaLabel,
+  buildDeckPillStripModel,
   buildEventBriefDate,
   buildFaceDownCardAriaLabel,
   buildFocusedMemberBubbleText,
@@ -8,7 +10,9 @@ import {
   buildSquadSoulBubbleText,
   computeActionDockState,
   computeBestPartnerUserId,
+  DECK_PILL_STRIP_CAP,
   getChemistryWord,
+  getDeckPillChemistryClass,
   getEventTypeLabel,
   getPairChemistryWord,
   getSquadChemistryTokens,
@@ -282,6 +286,82 @@ describe('squadUnboxingViewModels', () => {
     it('handles empty and degenerate input safely', () => {
       expect(stripConnectionPointParens('')).toBe('')
       expect(stripConnectionPointParens('（）')).toBe('')
+    })
+  })
+
+  describe('pocket-the-deck pill view models (AC-03/04/09)', () => {
+    const members = [
+      { userId: 'me' },
+      { userId: 'a' },
+      { userId: 'b' },
+      { userId: 'c' },
+      { userId: 'd' },
+      { userId: 'e' },
+      { userId: 'f' },
+    ] as never
+
+    it('buildDeckPillAriaLabel counts the full roster', () => {
+      expect(buildDeckPillAriaLabel(6)).toBe('展开卡组，查看你的6位桌友')
+      expect(buildDeckPillAriaLabel(1)).toBe('展开卡组，查看你的1位桌友')
+    })
+
+    it('caps the strip at DECK_PILL_STRIP_CAP and carries the rest as overflow', () => {
+      const model = buildDeckPillStripModel(members, {
+        flippedIds: new Set<string>(),
+        allRevealed: false,
+        bestPartnerUserId: null,
+        currentUserId: 'me',
+      })
+      expect(model.items).toHaveLength(DECK_PILL_STRIP_CAP)
+      expect(model.items.map((item) => item.member.userId)).toEqual(['me', 'a', 'b', 'c', 'd'])
+      expect(model.overflowCount).toBe(2)
+      expect(model.totalCount).toBe(7)
+    })
+
+    it('derives face-up from the controller flip set (spoiler gating) and flags me/best-partner', () => {
+      const model = buildDeckPillStripModel(members, {
+        flippedIds: new Set(['me', 'b']),
+        allRevealed: false,
+        bestPartnerUserId: 'b',
+        currentUserId: 'me',
+      })
+      const byId = new Map(model.items.map((item) => [item.member.userId, item]))
+      expect(byId.get('me')).toMatchObject({ faceUp: true, isCurrentUser: true, isBestPartner: false })
+      expect(byId.get('b')).toMatchObject({ faceUp: true, isCurrentUser: false, isBestPartner: true })
+      // a/c/d are face-down → the pill renders card-back chips, never avatars.
+      expect(byId.get('a')?.faceUp).toBe(false)
+      expect(byId.get('c')?.faceUp).toBe(false)
+    })
+
+    it('allRevealed forces every mini face-up regardless of the flip set', () => {
+      const model = buildDeckPillStripModel(members, {
+        flippedIds: new Set<string>(),
+        allRevealed: true,
+        bestPartnerUserId: null,
+        currentUserId: null,
+      })
+      expect(model.items.every((item) => item.faceUp)).toBe(true)
+    })
+
+    it('overflow never goes negative at or below the cap', () => {
+      const four = [{ userId: 'a' }, { userId: 'b' }, { userId: 'c' }, { userId: 'd' }] as never
+      const model = buildDeckPillStripModel(four, {
+        flippedIds: new Set<string>(),
+        allRevealed: false,
+        bestPartnerUserId: null,
+      })
+      expect(model.items).toHaveLength(4)
+      expect(model.overflowCount).toBe(0)
+      expect(model.totalCount).toBe(4)
+    })
+
+    it('getDeckPillChemistryClass mirrors the chemistry-chip token family', () => {
+      expect(getDeckPillChemistryClass('fire')).toBe('squad-unboxing__deck-pill--fire')
+      expect(getDeckPillChemistryClass('warm')).toBe('squad-unboxing__deck-pill--warm')
+      expect(getDeckPillChemistryClass('cold')).toBe('squad-unboxing__deck-pill--cold')
+      expect(getDeckPillChemistryClass('mild')).toBe('squad-unboxing__deck-pill--fallback')
+      expect(getDeckPillChemistryClass(null)).toBe('squad-unboxing__deck-pill--fallback')
+      expect(getDeckPillChemistryClass(undefined)).toBe('squad-unboxing__deck-pill--fallback')
     })
   })
 })

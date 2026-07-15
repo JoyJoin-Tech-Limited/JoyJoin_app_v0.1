@@ -50,16 +50,18 @@ describe('computeFanLayout — locked geometry table', () => {
   })
 
   it('emits the locked rotations per row shape', () => {
-    // N=4: single row of 4 → -7, -3, +3, +7 (C2: ±9° read as drunk-tilt).
-    expect(computeFanLayout(4).rotations).toEqual([-7, -3, 3, 7])
+    // N=4: single row of 4 → -5, -2.5, +2.5, +5 (G2: ±7° poked ~40rpx past
+    // the unrotated edge and hard-cropped the 4th card at the viewport edge;
+    // ±5° keeps the rotated bounding box ~733rpx ≤ 750 − 8).
+    expect(computeFanLayout(4).rotations).toEqual([-5, -2.5, 2.5, 5])
     // N=5: row3 (-6,0,+6) then row2 (-4.5,+4.5).
     expect(computeFanLayout(5).rotations).toEqual([-6, 0, 6, -4.5, 4.5])
     // N=6: two rows of 3.
     expect(computeFanLayout(6).rotations).toEqual([-6, 0, 6, -6, 0, 6])
-    // N=7: row4 (±7) then row3 (±6).
-    expect(computeFanLayout(7).rotations).toEqual([-7, -3, 3, 7, -6, 0, 6])
+    // N=7: row4 (±5, G2-capped) then row3 (±6).
+    expect(computeFanLayout(7).rotations).toEqual([-5, -2.5, 2.5, 5, -6, 0, 6])
     // N=8: two rows of 4.
-    expect(computeFanLayout(8).rotations).toEqual([-7, -3, 3, 7, -7, -3, 3, 7])
+    expect(computeFanLayout(8).rotations).toEqual([-5, -2.5, 2.5, 5, -5, -2.5, 2.5, 5])
   })
 
   it('emits exactly one rotation per card', () => {
@@ -105,6 +107,33 @@ describe('computeFanLayout — anti-collision safe-zone invariant', () => {
       for (const len of rows) {
         const rowWidth = cardWidth * len - overlapRpx * (len - 1)
         expect(rowWidth, `count ${count} row of ${len}`).toBeLessThanOrEqual(FAN_CONTENT_WIDTH_RPX)
+      }
+    }
+  })
+})
+
+describe('computeFanLayout — viewport-edge invariant (G2 regression)', () => {
+  // A W×H card rotated θ° about its bottom-centre pivot extends
+  // (W/2)(cosθ−1) + H·sinθ past its unrotated outer edge. The fan's rotated
+  // bounding box must never exceed the 750rpx viewport minus an 8rpx
+  // allowance — at ±7° the 4-per-row fan measured ~756rpx and the 4th card
+  // was hard-cropped at the right edge (N=4, N=7, N=8).
+  const VIEWPORT_WIDTH_RPX = 750
+  const VIEWPORT_EDGE_ALLOWANCE_RPX = 8
+
+  it('every row shape keeps its rotated bounding box inside the viewport', () => {
+    for (let count = 1; count <= 8; count += 1) {
+      const { rows, cardWidth, cardHeight, overlapRpx } = computeFanLayout(count)
+      for (const len of rows) {
+        const rowRotations = FAN_ROTATIONS_BY_ROW_LENGTH[len]
+        const rowWidth = cardWidth * len - overlapRpx * (len - 1)
+        const theta = (Math.abs(rowRotations[len - 1]) * Math.PI) / 180
+        const poke = (cardWidth / 2) * (Math.cos(theta) - 1) + cardHeight * Math.sin(theta)
+        const boundingWidth = rowWidth + 2 * poke
+        expect(
+          boundingWidth,
+          `count ${count} row of ${len}: ${boundingWidth.toFixed(1)}rpx`,
+        ).toBeLessThanOrEqual(VIEWPORT_WIDTH_RPX - VIEWPORT_EDGE_ALLOWANCE_RPX)
       }
     }
   })

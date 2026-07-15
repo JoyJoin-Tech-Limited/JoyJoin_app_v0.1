@@ -136,4 +136,32 @@ describe("POST /api/analytics/squad-unboxing", () => {
       expect(mockTransaction).toHaveBeenCalledTimes(newTypes.length);
     });
   });
+
+  it("accepts the pocket-deck event types (deck_collapse / deck_reopen)", async () => {
+    const app = await buildTestApp();
+    const pocketDeckTypes = [
+      "squad_unboxing_deck_collapse",
+      "squad_unboxing_deck_reopen",
+    ];
+    await withServer(app, async (base) => {
+      for (const eventType of pocketDeckTypes) {
+        const res = await fetch(`${base}/api/analytics/squad-unboxing`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eventType,
+            metadata:
+              eventType === "squad_unboxing_deck_collapse"
+                ? { groupId: "group-1", screen: "squad-unboxing", firstCollapse: true }
+                : { groupId: "group-1", screen: "squad-unboxing", reopenCount: 2 },
+            timestamp: Date.now(),
+          }),
+        });
+        const body: any = await res.json();
+        expect(res.status).toBe(200);
+        expect(body.success).toBe(true);
+      }
+      expect(mockTransaction).toHaveBeenCalledTimes(pocketDeckTypes.length);
+    });
+  });
 });

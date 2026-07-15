@@ -97,6 +97,12 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   /** Alang NPC prototype kill-switch. When false, hides all Alang entry
    *  points and routes. Env fallback: ALANG_ENABLED (default: false). */
   alangEnabled: "ALANG_ENABLED",
+  /** Squad-unboxing pocket-deck collapse kill-switch. When false, the
+   *  mini-program hides the "收起卡组" trigger and collapseDeck() is a no-op,
+   *  so the deck stays in the fan phase. Users who previously collapsed stay
+   *  collapsed (no forced re-fan).
+   *  Env fallback: SQUAD_UNBOXING_POCKET_DECK_ENABLED (default: true). */
+  squadUnboxingPocketDeckEnabled: "SQUAD_UNBOXING_POCKET_DECK_ENABLED",
 };
 
 /**

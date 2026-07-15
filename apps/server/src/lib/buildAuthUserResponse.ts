@@ -127,6 +127,7 @@ const [
     aigcLabelsEnabled,
     matchingOperatorReviewEnabled,
     alangEnabled,
+    squadUnboxingPocketDeckEnabled,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
     getFeatureFlag('smartProfession', true),
@@ -149,6 +150,7 @@ const [
     getFeatureFlag('aigcLabelsEnabled', false),
     getFeatureFlag('matchingOperatorReviewEnabled', false),
     getFeatureFlag('alangEnabled', false),
+    getFeatureFlag('squadUnboxingPocketDeckEnabled', true),
   ]);
 
   // Never expose client debug surfaces in production, even if a stale
@@ -193,6 +195,7 @@ const [
       aigcLabelsEnabled,
       matchingOperatorReviewEnabled,
       alangEnabled,
+      squadUnboxingPocketDeckEnabled,
     },
   };
 
