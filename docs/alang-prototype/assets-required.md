@@ -1,6 +1,6 @@
 # 阿浪 V1.7 — 正式视觉资产清单
 
-> 状态日期：2026-07-14
+> 状态日期：2026-07-15
 > 当前结论：**正式资产尚未批准。** 代码只使用带“场景示意”标签的 bundled WebP 占位图。
 
 运行时 manifest：`apps/mini-program/src/lib/alang/alangAssets.ts`。批准状态从 `awaiting-approved-art` 改为 `approved` 之前，页面不会尝试把计划中的 CDN 文件当成正式图。
@@ -41,7 +41,8 @@
 
 ## V1.7 Profile 与故事缩略图边界
 
-- Reference 06 的人格角色主视觉复用现有已批准的 12 个 V4 `ARCHETYPE_ASSET_MAP` 资产；WebP 失败后依次回退 PNG 与 bundled `ArchetypeHead`。这不等于批准了新的阿浪角色图或霓虹城市场景图。
-- Reference 06 的完整装备库存/套装属于 FUTURE 08。本轮只显示“装备筹备中”的同级入口，不生成装备素材，不新增装备页面。
-- Reference 07 当前没有每段故事独立缩略图字段或已批准素材。档案卡复用带“故事场景示意”标签的 fallback；多故事独立缩略图只保留为后续数据契约与资产建议。
-- Search 顶部区域横幅、找到后场景以及 Story 总览图仍使用现有 manifest fallback；任何正式替换都必须走同一审批步骤。
+- Reference 06 的 Profile 已按 2026-07-15 产品决定接入 12 个 Profile-only 全身拟人像素伙伴。本地校验确认 12 张人物层均为 512×768 透明 WebP，共 473,844 bytes 且单张不超过 64 KiB；manifest 路径为 `/assets/profile-pixel/archetypes/<id>/base-v1.webp`。这只证明资源和发布接线完整，不代表远端 CDN 已成功上传；远端状态必须以 CDN workflow 的逐 URL HTTP 验证为准。人物层不携带 UI、文字、城市或霓虹背景，Profile 和“我的形象”继续使用各自现有品牌 UI；CDN 失败时稳定显示 character-only 的 code-native 像素形象，不得回退为空白或普通头像。
+- 用户对 Profile 像素形象的自主设计授权不等于批准阿浪正式人物/场景图；阿浪资产仍必须按本清单单独审批。
+- Reference 06 的 Word 完整伙伴/套装方案仍不照搬；2026-07-15 产品覆盖已授权 Profile-only 的四槽单品换装、活动装备池、保底、碎片与碎片商店。已批准的 12 张基础角色图自带初始服装；穿脱、槽位、库存与显式保存继续使用真实服务端状态。正式 CDN 上装/下装/鞋履/配饰 raster 分层尚待审批和发布，在此之前页面只显示穿着初始服装的基础角色，不得用紫色几何块、code-native 覆盖层或其他假图代替单品。该资产差距不影响状态保存，但不得声称正式分层装备美术已完成。
+- Reference 07 当前没有每段故事独立缩略图字段或已批准素材。“我的故事”已改为私人连续书页，不再渲染活动/阿浪档案卡；封面使用 code-native 书页/星光视觉，多故事独立缩略图只保留为后续建议。
+- Search 顶部区域横幅、找到后场景以及阿浪 result/archive-detail 场景仍使用现有 manifest fallback；任何正式替换都必须走审批。“我的故事”私人连续书页使用独立 code-native 封面，不读取这些阿浪 fallback，也不恢复活动档案总览。

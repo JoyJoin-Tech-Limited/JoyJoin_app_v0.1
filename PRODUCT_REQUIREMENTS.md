@@ -77,21 +77,31 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-07-14)
+## 🆕 Recent Updates (Last updated: 2026-07-15)
 
-### 2026 Milestones (June 2026)
+### 2026 Milestones (June–July 2026)
+
+**52. V1.7 Profile 像素形象、活动装备与私人连续故事** *(2026-07-15)*
+- **Product override:** Word 的 ACTIVE 07 只保留视觉语气，不再把“我的故事”实现为活动/阿浪档案列表；FUTURE 08 也不整套照搬。当前产品权威是新版 Profile 内的私人连续故事入口，以及仅用于新版 Profile 的最小“我的形象”闭环。FUTURE 04 与 REMOVED 09 仍禁止实现。
+- **Profile:** `profileRedesignEnabled=true` 显示 V1.7 身份舞台、12 人格像素伙伴、真实潮流值、活动数、连接数、资料完成度、故事与形象入口；`false` 使用简洁真实数据页，并停止 gamification/equipment/personal-story 专属请求。
+- **Personal Story:** 仅本人可见。用户主动点“更新故事”后，服务端只从本人非 Debug completed 阿浪档案和严格完成的真实盲盒提取结构化关键词。盲盒以本人的 group outcome 锁定所属分组，并额外要求本人已匹配、活动已结束、活动池与分组均非测试/未取消，以及该活动本人的 `event_feedback.completedAt` 非空；group outcome 单独不能证明完整参加。不传姓名、GPS、聊天、反馈正文/分数或客户端自由文本。一次经历一章、按时间追加，旧章节永不覆盖。
+- **AI boundary:** MiniMax 首选、DeepSeek 复用现有客户端做运行时回退。输出只允许整理已给关键词，不得新增人物、关系、对话、行为、地点、时间、天气、情绪或结果。`personalStoryEnabled=true` 时，越界/两 provider 失败不合成替代章，旧章节保持可读，下一次从缺失经历续写。
+- **My Image:** 12 个 canonical V4 动物分别使用仅用于新版 Profile/“我的形象”的 512×768 透明全身拟人像素 WebP；已批准的基础角色图自带安全初始服装，角色层不包含 UI、城市或霓虹背景，两个页面沿用现有暖白/紫色品牌界面。四槽为上装/下装/鞋履/配饰；可脱下，预览只改草稿，必须显式“保存形象”，穿脱/保存/库存均保留真实服务端状态。单品 raster 尚未审批和发布时不请求已知不存在的 CDN 文件，也不绘制紫色几何块或其他伪造装备层；画面继续显示穿着初始服装的基础角色，正式分层装备美术仍待审批。
+- **Equipment economy:** 每人格四件初始装备。真实完成活动产生永久保留、手动领取的地点池抽取资格；测试阿浪和测试池不产奖励。池绑定 `venues.id`，同餐厅跨活动共享；阿浪池绑定 mission。每池 4 普通 + 2 稀有，权重 80/20；第 4 抽保证当前池新品（仍有新品时）。重复普通/稀有转 10/30 通用碎片，商店价格 40/120，只收碎片，不接现金。
+- **Flags and rollout:** `profilePixelAvatarEnabled`、`equipmentRewardsEnabled`、`personalStoryEnabled` 独立、默认关闭。`personalStoryEnabled=false` 时入口及 GET/POST/status 在访问故事表前关闭；开关为 `true` 但 provider 不可用时才允许读取旧章并让更新显式失败。先应用 `20260715010000_add_equipment_personal_story.sql` 和 `20260715011000_seed_equipment_catalog_pools.sql`，再在 staging 开启并做真实 provider/真机 smoke。
+- **APIs:** `GET /api/personal-story`、`POST /api/personal-story/update`、`GET /api/personal-story/update-status`；`GET /api/equipment/me`、`PUT /api/equipment/me/outfit`、`POST /api/equipment/entitlements/:id/draw`、`GET /api/equipment/shop`、`POST /api/equipment/shop/items/:id/redeem`。所有身份来自 session；装备兑换使用幂等键。
 
 **51. 闪现 NPC｜阿浪 V1.7 — 腾讯地图复用、服务端恢复与批准目标 F3 对齐** *(2026-07-14)*
-- **Scope:** Mini Program `pages/alang` subpackage、Discover/Profile 入口、Alang 服务端状态机与现有 `/api/geo` 腾讯地图代理。
-- **Flow:** Discover/我的故事 → 事件详情 → 距离搜索 → 非聊天气泡叙事选择 → 陪伴步行 → 5 米稳定到达 → 结果卡 → 用户主动收录。搜索、对话、陪伴和结果页均以服务端 `myProgress` 纠正陈旧 URL；未收录的 `stage=result` 刷新后仍回到结果卡。
+- **Scope:** Mini Program `pages/alang` subpackage、Discover 入口、Alang 服务端状态机与现有 `/api/geo` 腾讯地图代理。
+- **Flow:** Discover → 事件详情 → 距离搜索 → 非聊天气泡叙事选择 → 陪伴步行 → 5 米稳定到达 → 结果卡 → 用户主动收录。搜索、对话、陪伴和结果页均以服务端 `myProgress` 纠正陈旧 URL；未收录的 `stage=result` 刷新后仍回到结果卡。收录只保存真实经历来源，不直接跳入旧档案列表；用户之后在 Profile 的私人故事页主动更新，才会按事实追加新章。
 - **Location secrecy:** 搜索阶段不向客户端返回任务目标、剧情 `gpsTrigger`、陪伴终点或路线；辅助 Map 只显示用户本人。`routeDestination` 只在 `companion` 及以后阶段披露，且路线仅在用户点击后请求。
 - **Tencent Maps reuse:** 沿用 `TENCENT_MAP_KEY` 和原生 WeChat/Taro Map；`/api/geo` 新增 POI 联想、附近搜索和步行路线，含登录态、每用户限流、4 秒超时、受限 TTL/LRU 缓存、polyline 点数上限及稳定错误码。腾讯路线只负责 polyline/距离/ETA；JoyJoin 服务端固定 5 米连续稳定判断仍是到达权威。
 - **Coordinate contract:** GCJ-02，API/运行时只使用 `latitude/longitude`。旧 JSONB `{lat,lng}` 在解析边界兼容归一化；本轮无数据库 DDL 或 migration。
 - **Debug safety:** 内部点位配置只对严格 single-test 客户端开放；复测 reset 在非 single-test、production 或 `APP_MODE` 缺失时返回 403，其他内部 Debug API 继续按安全策略隐藏为 404。生产环境即使误留 single-test env 也不会下发客户端 test marker。
 - **Repeat testing:** `POST /api/alang/debug/missions/:slug/reset` 只使用当前会话用户，在同一事务内删除指定 mission 的 progress 与对应内部测试 archive；空状态重复调用仍返回 200 和删除数量。成功后客户端清除阿浪查询/路由缓存并重新进入点位配置，不继承旧选择、GPS、地点或情绪。
-- **V1.7 visual landing:** 当前代码是 Current State，Word Mockup 是目标。ACTIVE 03 已对齐紧凑单 NPC 入口卡；ACTIVE 05 已对齐区域提示、静态雷达/真实距离信号、找到后说明和用户-only 辅助地图；APPROVED TARGET 06 已对齐“我的”身份舞台、已批准 V4 人格角色图、真实成长值/活动/连接/档案和设置入口；ACTIVE 07 已对齐真实汇总、筛选 Tab 与时间线档案卡。四页均为 F3，正式素材与微信真机验收仍阻断 F4。
-- **Visual governance:** FUTURE 04 多 NPC 地图、FUTURE 08 伙伴/装备完整页不实现；REMOVED 09 探索地图不得新增、恢复或引用。多故事独立缩略图字段仍仅为后续建议，不在 V1.7 数据契约中实现。
-- **Visual status:** 阿浪专属人物、区域横幅、找到后场景和故事场景正式图仍为 `awaiting-approved-art`；当前 bundled 图均明确标注“场景示意”，不得宣称正式阿浪美术已完成。Profile 只复用现有已批准的 12 个 V4 人格角色资产。
+- **V1.7 visual landing:** 当前代码是 Current State，Word Mockup 与 2026-07-15 产品覆盖共同定义 Target。ACTIVE 03 已对齐紧凑单 NPC 入口卡；ACTIVE 05 已对齐区域提示、静态雷达/真实距离信号、找到后说明和用户-only 辅助地图；APPROVED TARGET 06 已接入 12 人格透明像素角色、真实成长值/活动/连接、私人故事、我的形象和设置入口，并保留当前暖白/紫色 Profile UI；ACTIVE 07 只保留连续书页/时间线视觉语气，不再实现活动档案筛选列表。最终 Fidelity 仍以五张 390×844 CSS viewport（2× 输出为 780×1688）截图和微信真机验收为准。
+- **Visual governance:** FUTURE 04 多 NPC 地图和 FUTURE 08 的 Word 完整伙伴/套装方案不照搬；2026-07-15 明确授权的 Profile-only 四槽换装、地点装备池、保底、碎片与碎片商店是当前 Active 覆盖。REMOVED 09 探索地图不得新增、恢复或引用。多故事独立缩略图字段仍仅为后续建议，不在 V1.7 数据契约中实现。
+- **Visual status:** 阿浪专属人物、区域横幅、找到后场景和结果场景正式图仍为 `awaiting-approved-art`；当前 bundled 图均明确标注“场景示意”，不得宣称正式阿浪美术已完成。Profile 使用经产品授权自主设计的 12 个 512×768 透明 V4 动物像素角色并从 CDN 加载，基础角色已包含初始服装，图片失败时回退到 character-only 角色。未获批的装备 raster 不产生任何可见伪层；穿搭状态仍由服务端保存，正式分层装备美术继续等待审批。
 - **Canonical implementation docs:** `docs/alang-prototype/repository-audit.md`、`implementation-map.md`、`assets-required.md`。
 
 **50. Operator Review Gate for Matching** *(2026-07-09)*
@@ -180,7 +190,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Audit scores:** 情绪价值 24/24, Frontend Design Audit 20/20, Completeness Audit 44/44, Performance Audit PASS (50/60).
 
 **41. Profile / “我的” Social-Passport Redesign + Wow Polish** 🪪 *(2026-06-16)*
-> **Superseded for the current mini-program by milestone 51 (2026-07-14).** This section remains a historical record. The active V1.7 Profile is an identity/growth surface with approved V4 archetype art, real gamification and shell statistics, Alang story archive entry, milestones, service grid, and settings action sheet. `profileRedesignEnabled=false` retains a deterministic compact rollback surface. The V1.7 path does not expose the former profile-card share, offline-shell, or predictive-prefetch UI described below.
+> **Superseded for the current mini-program by milestones 51–52 (2026-07-14 to 2026-07-15).** This section remains a historical record. The active V1.7 Profile is an identity/growth surface with 12 Profile-only transparent V4 archetype pixel characters on the existing warm-white/purple UI, real gamification and shell statistics, a private continuous-story entry, a Profile-only My Image/equipment loop, milestones, service grid, and settings. Approved base-character assets include initial clothing; character-image failure uses a character-only fallback. Equip/unequip/save/inventory remain server state, but unpublished item raster is omitted instead of being replaced by fabricated geometry; formal layered equipment art remains pending. `profileRedesignEnabled=false` retains the compact real-data rollback surface and stops V1.7 special requests. The V1.7 path does not expose the former profile-card share, offline-shell, or predictive-prefetch UI described below.
 
 - **Scope:** Mini-program profile tab (`pages/profile/index`) — the logged-in "我的" surface.
 - **Feature flag:** Gated by `features.profileRedesignEnabled` (DB-backed, env `PROFILE_REDESIGN_ENABLED`, default `true`). When disabled, the page falls back to a simplified legacy-style layout.

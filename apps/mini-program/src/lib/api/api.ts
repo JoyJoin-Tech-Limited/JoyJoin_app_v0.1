@@ -147,6 +147,7 @@ async function executeMiniProgramRequest(options: {
   method: HttpMethod
   data?: unknown
   timeout?: number
+  headers?: Record<string, string>
 }): Promise<Taro.request.SuccessCallbackResult<MiniProgramRequestResponse>> {
   const sessionToken = getSessionToken()
 
@@ -160,6 +161,7 @@ async function executeMiniProgramRequest(options: {
       'content-type': 'application/json',
       'Cache-Control': 'no-cache',
       Pragma: 'no-cache',
+      ...options.headers,
       ...(sessionToken ? { 'X-Session-Token': sessionToken } : {}),
     },
   })
@@ -241,6 +243,7 @@ export async function apiRequest<T>(options: {
   data?: unknown
   handleUnauthorized?: boolean
   timeout?: number
+  headers?: Record<string, string>
 }): Promise<T> {
   const requestUrl = buildApiUrl(options.path)
   const method = options.method ?? 'GET'
@@ -252,6 +255,7 @@ export async function apiRequest<T>(options: {
       method,
       data: options.data,
       timeout: options.timeout,
+      headers: options.headers,
     })
 
     // WeChat dev/runtime can surface a cached GET as 304 directly to JS.
@@ -262,6 +266,7 @@ export async function apiRequest<T>(options: {
         method,
         data: options.data,
         timeout: options.timeout,
+        headers: options.headers,
       })
     }
   } catch (error) {
@@ -279,6 +284,7 @@ export async function apiRequest<T>(options: {
           method,
           data: options.data,
           timeout: options.timeout,
+          headers: options.headers,
         })
 
         if (response.statusCode === 304 && method === 'GET') {
@@ -287,6 +293,7 @@ export async function apiRequest<T>(options: {
             method,
             data: options.data,
             timeout: options.timeout,
+            headers: options.headers,
           })
         }
       } catch {
@@ -499,4 +506,3 @@ export async function fetchEventsShell(): Promise<EventsShellResponse> {
 export async function fetchConnectionsShell(): Promise<ConnectionsShellResponse> {
   return apiRequest<ConnectionsShellResponse>({ path: '/api/shell/connections' })
 }
-

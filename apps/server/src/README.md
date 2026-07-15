@@ -100,6 +100,41 @@ Key invariants:
 
 Skill: `xiaoyue-writing-craft`
 
+### Private continuous story
+
+Owns the user's private, append-only story generated only from server-verified completed real experiences.
+
+Primary files:
+- `apps/server/src/routes/domains/personalStory.ts` — authenticated read/update/status endpoints
+- `apps/server/src/services/personalStoryGenerationService.ts` — fact-only prompt construction, validation, and MiniMax → DeepSeek provider fallback
+- `apps/server/src/jobs/personalStoryWorker.ts` — durable one-active-job-per-user worker with resumable partial success
+- `apps/server/src/repositories/personalStoryRepo.ts` — current-user story, chapter, source, and job persistence
+- `packages/shared/src/schema/personalStory.ts` — database authority
+
+Boundary:
+- One eligible real experience becomes at most one chapter; chapters are ordered oldest to newest and are never overwritten by an update.
+- Eligible sources are non-debug completed Alang archives and strict completed blind-box participation. The acting user's group outcome binds the group; eligibility additionally requires the current user to be matched, the non-test pool/group to be uncancelled and finished, and that event's current-user `event_feedback.completedAt` to be non-null. A submitted group outcome alone is insufficient.
+- Model input contains allowlisted factual keywords only. It excludes GPS, tokens, raw chat, PII, and user free text; generated text may not add unprovided setting, dialogue, thoughts, actions, people, or events.
+- MiniMax is primary and DeepSeek is the runtime fallback. Provider failure or fact-validation failure inserts no replacement chapter and preserves all previous chapters.
+- `personalStoryEnabled=false` closes GET/POST/status before any personal-story table access. With the flag `true`, provider failure still allows authenticated reads of existing chapters while update attempts fail without replacing or deleting history.
+
+### Profile equipment rewards
+
+Owns the current user's four-slot outfit, permanent inventory, manual activity reward draws, global pity counter, duplicate fragments, and fragment-only exchange.
+
+Primary files:
+- `apps/server/src/routes/domains/equipment.ts` — current-user inventory, outfit, draw, and exchange endpoints
+- `apps/server/src/services/equipmentRewardService.ts` — entitlement validation, weighted draw, fourth-draw guarantee, duplicate conversion, and exchange rules
+- `apps/server/src/repositories/equipmentRepo.ts` — transactional equipment persistence
+- `packages/shared/src/schema/equipment.ts` — database authority
+
+Boundary:
+- A draw entitlement is issued only for a server-verified completed, non-test real activity. Client-provided user IDs, ownership, rarity, reward, and fragment balances are never trusted.
+- Pools are independent by `venues.id`; Alang uses its mission ID. Each seeded pool has four common and two rare single items with aggregate 80/20 weighting.
+- Duplicate common/rare items grant 10/30 universal fragments. The fourth global draw guarantees an unowned item in the current pool when one exists; a complete pool freezes pity instead of fabricating an item.
+- The exchange spends universal fragments only (common 40, rare 120). No payment or paid shop is part of this domain.
+- `equipmentRewardsEnabled` is enforced server-side and independently from `profilePixelAvatarEnabled`.
+
 ### Payments, subscriptions, and commerce
 
 Owns payment initiation, webhook handling, subscription access, and monetization rules.

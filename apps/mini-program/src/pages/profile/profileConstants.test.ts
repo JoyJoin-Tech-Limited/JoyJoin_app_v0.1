@@ -42,22 +42,26 @@ describe('profileConstants', () => {
     it('stops both V1.7-only requests when the redesign flag is off', () => {
       expect(getProfileV17DataPolicy(makeUser({
         features: { profileRedesignEnabled: false },
-      }), true)).toEqual({
+      }))).toEqual({
         gamificationEnabled: false,
-        storyArchivesEnabled: false,
+        equipmentEnabled: false,
+        personalStoryEnabled: false,
       })
     })
 
-    it('loads archives only when both the redesign and Alang entry are enabled', () => {
-      const user = makeUser({ features: { profileRedesignEnabled: true } })
-
-      expect(getProfileV17DataPolicy(user, false)).toEqual({
-        gamificationEnabled: true,
-        storyArchivesEnabled: false,
+    it('keeps pixel inventory and personal story on independent server flags', () => {
+      const user = makeUser({
+        features: {
+          profileRedesignEnabled: true,
+          profilePixelAvatarEnabled: true,
+          personalStoryEnabled: true,
+        },
       })
-      expect(getProfileV17DataPolicy(user, true)).toEqual({
+
+      expect(getProfileV17DataPolicy(user)).toEqual({
         gamificationEnabled: true,
-        storyArchivesEnabled: true,
+        equipmentEnabled: true,
+        personalStoryEnabled: true,
       })
     })
   })

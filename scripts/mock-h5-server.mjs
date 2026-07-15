@@ -65,6 +65,10 @@ const MOCK_USER = {
     matchingPuzzlePreludeEnabled: true,
     oracleCardCornerStatEnabled: true,
     alangEnabled: true,
+    profilePixelAvatarEnabled: true,
+    equipmentRewardsEnabled: true,
+    personalStoryEnabled: true,
+    aigcLabelsEnabled: true,
   },
 }
 
@@ -272,7 +276,7 @@ const MOCK_ALANG_CONTENT = {
     difficulty: 'easy',
     tags: ['城市漫步', '夜晚', '陪伴'],
     npcName: '阿浪',
-    searchRadiusMeters: 200,
+    searchRadiusMeters: 300,
   },
 }
 
@@ -306,6 +310,58 @@ const MOCK_ALANG_ARCHIVES = [
     isDebugSession: false,
   },
 ]
+
+const MOCK_EQUIPMENT_ITEMS = [
+  {
+    id: 'equipment-top-violet',
+    slug: 'violet-city-jacket',
+    name: '紫色街头连帽衫',
+    description: '人格形象的初始上装。',
+    slot: 'top',
+    rarity: 'common',
+    assetKey: 'starter/corgi/violet-city-jacket',
+    compatibleArchetypes: ['corgi'],
+  },
+  {
+    id: 'equipment-bottom-indigo',
+    slug: 'indigo-city-pants',
+    name: '黑色工装裤',
+    description: '人格形象的初始下装。',
+    slot: 'bottom',
+    rarity: 'common',
+    assetKey: 'starter/corgi/indigo-city-pants',
+    compatibleArchetypes: ['corgi'],
+  },
+  {
+    id: 'equipment-shoes-white',
+    slug: 'white-city-sneakers',
+    name: '白紫高帮鞋',
+    description: '人格形象的初始鞋子。',
+    slot: 'shoes',
+    rarity: 'common',
+    assetKey: 'starter/corgi/white-city-sneakers',
+    compatibleArchetypes: ['corgi'],
+  },
+  {
+    id: 'equipment-accessory-star',
+    slug: 'star-city-pin',
+    name: '爪印吊坠',
+    description: '人格形象的初始配饰。',
+    slot: 'accessory',
+    rarity: 'common',
+    assetKey: 'starter/corgi/star-city-pin',
+    compatibleArchetypes: ['corgi'],
+  },
+]
+
+const MOCK_EQUIPMENT_INVENTORY = MOCK_EQUIPMENT_ITEMS.map((item, index) => ({
+  id: `inventory-screenshot-${index + 1}`,
+  itemId: item.id,
+  sourceType: 'starter',
+  sourceId: 'corgi',
+  acquiredAt: `2026-07-${String(10 + index).padStart(2, '0')}T12:00:00+08:00`,
+  item,
+}))
 
 // Joined events for 我的足迹
 app.get('/api/events/joined', (req, res) => {
@@ -570,6 +626,85 @@ app.get('/api/alang/archives/:archiveId', (req, res) => {
     return
   }
   res.json(archive)
+})
+
+// Private continuous story: only verified experience facts are represented.
+app.get('/api/personal-story', (req, res) => {
+  res.json({
+    story: {
+      title: '你的故事，正在慢慢长大',
+      subtitle: '每次真实出发，都会留在同一本故事里。',
+      updatedAt: '2026-07-12T20:42:00+08:00',
+      chapters: [
+        {
+          id: 'personal-story-chapter-001',
+          title: '2026年06月03日 · 盲盒活动',
+          body: '故事发生在2026年6月3日。这次真实经历属于盲盒活动。\n\n这一段发生在悦聚小馆。\n\n本次分组中的伙伴类型包括猫头鹰伙伴。',
+          activityType: '盲盒活动',
+          occurredAt: '2026-06-03T19:00:00+08:00',
+          aigc: { aiGenerated: true, labelType: 'ai-generated' },
+        },
+        {
+          id: 'personal-story-chapter-002',
+          title: '2026年07月12日 · 闪现',
+          body: '故事发生在2026年7月12日。这次真实经历属于闪现。\n\n这一段发生在深圳湾公园。这次经历中出现了阿浪。\n\n最后留下的心情是释然。',
+          activityType: '闪现',
+          occurredAt: '2026-07-12T20:42:00+08:00',
+          aigc: { aiGenerated: true, labelType: 'ai-generated' },
+        },
+      ],
+    },
+    updateJob: null,
+    aiEnabled: true,
+    canUpdate: true,
+  })
+})
+
+app.post('/api/personal-story/update', (req, res) => {
+  res.json({ accepted: true, noNewExperiences: true, updateJob: null })
+})
+
+app.get('/api/equipment/me', (req, res) => {
+  res.json({
+    archetypeId: 'corgi',
+    outfit: {
+      topItemId: 'equipment-top-violet',
+      bottomItemId: 'equipment-bottom-indigo',
+      shoesItemId: 'equipment-shoes-white',
+      accessoryItemId: 'equipment-accessory-star',
+      version: 1,
+    },
+    inventory: MOCK_EQUIPMENT_INVENTORY,
+    recentItems: [...MOCK_EQUIPMENT_INVENTORY].reverse(),
+    wallet: { fragmentBalance: 70, pityMisses: 2, pityTarget: 4 },
+    pendingEntitlements: [
+      {
+        id: 'entitlement-screenshot-001',
+        sourceType: 'blind_box',
+        sourceRecordId: 'registration-screenshot-001',
+        poolId: 'equipment-pool-screenshot-001',
+        createdAt: '2026-07-13T20:00:00+08:00',
+        pool: {
+          id: 'equipment-pool-screenshot-001',
+          slug: 'venue-yueju',
+          name: '悦聚小馆装备池',
+        },
+      },
+    ],
+    rewardsEnabled: true,
+  })
+})
+
+app.get('/api/equipment/shop', (req, res) => {
+  res.json({
+    fragmentBalance: 70,
+    prices: { common: 40, rare: 120 },
+    items: MOCK_EQUIPMENT_ITEMS.map((item) => ({
+      ...item,
+      price: item.rarity === 'rare' ? 120 : 40,
+      owned: true,
+    })),
+  })
 })
 
 // Event pool

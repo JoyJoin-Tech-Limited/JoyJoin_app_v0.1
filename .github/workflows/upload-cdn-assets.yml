@@ -8,6 +8,7 @@ on:
       - apps/mini-program/scripts/cdn-asset-manifest.json
       - apps/mini-program/src/assets/**
       - apps/mini-program/scripts/upload-cdn-assets.mjs
+      - apps/mini-program/scripts/check-profile-pixel-assets.mjs
 
 jobs:
   upload-assets:
@@ -22,12 +23,17 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Build mini-program (to validate asset references)
+      - name: Validate CDN-only profile pixel assets
+        run: |
+          npm ci
+          node apps/mini-program/scripts/check-profile-pixel-assets.mjs
+
+      - name: Compile mini-program without publishing it
         env:
           TARO_APP_CDN_BASE_URL: https://joyjoinapp.com/static
         run: |
-          npm ci
-          npm run build:weapp -w mini-program
+          npm exec --workspace=mini-program -- taro build --type weapp
+          test ! -d apps/mini-program/dist/assets/profile-pixel
 
       - name: Upload manifest assets to CVM /var/www/cdn/
         env:
@@ -42,19 +48,30 @@ jobs:
           chmod 600 /tmp/deploy_key
           export CDN_RSYNC_KEY=/tmp/deploy_key
 
-          # Debug: verify key looks valid (show first/last line only)
-          echo "=== SSH Key Check ==="
-          head -1 /tmp/deploy_key
-          tail -1 /tmp/deploy_key
-          echo "Key file size: $(wc -c < /tmp/deploy_key) bytes"
-
-          # Debug: test TCP connectivity first
+          # Test connectivity without printing any key material.
           echo "=== TCP connectivity test ==="
           timeout 5 bash -c "cat < /dev/null > /dev/tcp/${{ secrets.SERVER_IP }}/22" && echo "Port 22 reachable" || echo "Port 22 NOT reachable (firewall?)"
 
-          # Debug: test SSH handshake (without executing commands)
           echo "=== SSH handshake test ==="
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o BatchMode=yes -o PasswordAuthentication=no -i /tmp/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "echo 'SSH OK'" || echo "SSH handshake failed"
+          connected=false
+          for attempt in 1 2 3; do
+            if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=15 -o BatchMode=yes -o PasswordAuthentication=no -o IdentitiesOnly=yes -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -i /tmp/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "echo 'SSH OK'"; then
+              connected=true
+              break
+            fi
+            echo "SSH handshake attempt ${attempt}/3 failed"
+            sleep $((attempt * 5))
+          done
+          if [ "$connected" != "true" ]; then
+            echo "SSH handshake failed after 3 attempts"
+            exit 255
+          fi
 
           echo "=== Starting upload ==="
           node apps/mini-program/scripts/upload-cdn-assets.mjs
+
+          echo "=== Verifying profile pixel assets ==="
+          for archetype in corgi rooster hamster_praise fox dolphin_calm spider koala octopus owl elephant turtle cat; do
+            curl --fail --silent --show-error --retry 5 --retry-all-errors --output /dev/null \
+              "https://joyjoinapp.com/static/assets/profile-pixel/archetypes/${archetype}/base-v1.webp"
+          done

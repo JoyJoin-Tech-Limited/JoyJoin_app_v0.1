@@ -14,7 +14,7 @@
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { join, extname } from 'node:path'
+import { basename, join, extname } from 'node:path'
 
 const MINI_PROGRAM_SRC = 'apps/mini-program/src'
 
@@ -153,7 +153,7 @@ function main() {
   const violations = []
 
   for (const filePath of scssFiles) {
-    const fileName = filePath.split('/').pop()
+    const fileName = basename(filePath)
     if (EXEMPT_FILES.includes(fileName)) continue
 
     const content = readFileSync(filePath, 'utf-8')

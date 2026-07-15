@@ -1,0 +1,701 @@
+@use '../../styles/variables' as *;
+
+// Intentional code-native pixel-art asset palette: direct color values below define the
+// 12 archetypes and their base outfits. They are not
+// interactive UI colors and remain local so the generated sprite fidelity stays stable.
+.pixel-avatar {
+  --pixel-fur: #F0A030;
+  --pixel-fur-dark: #92400E;
+  --pixel-fur-light: #FFF7D6;
+  --pixel-accent: #ff9b85;
+  position: relative;
+  width: 100%;
+  max-width: 750rpx;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  contain: layout paint;
+
+  &--full {
+    height: 650rpx;
+    min-height: 560rpx;
+  }
+
+  &--compact {
+    height: 320rpx;
+    min-height: 260rpx;
+    border-radius: 28rpx;
+
+    .pixel-avatar__figure {
+      width: 36%;
+      height: 84%;
+      bottom: 1%;
+    }
+
+  }
+
+  &--corgi {
+    --pixel-fur: #F97316;
+    --pixel-fur-dark: #92400E;
+    --pixel-fur-light: #FFF7D6;
+
+    .pixel-avatar__ear {
+      display: block;
+      width: 27%;
+      height: 36%;
+      top: -25%;
+      clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    }
+
+    .pixel-avatar__tail {
+      display: block;
+      width: 32%;
+      height: 15%;
+      right: -17%;
+      bottom: 22%;
+      transform: rotate(-22deg);
+    }
+  }
+
+  &--rooster {
+    --pixel-fur: #FDE68A;
+    --pixel-fur-dark: #92400E;
+    --pixel-fur-light: #FFFBEB;
+    --pixel-accent: #FF6B9D;
+
+    .pixel-avatar__comb,
+    .pixel-avatar__beak,
+    .pixel-avatar__plume {
+      display: block;
+    }
+
+    .pixel-avatar__arm {
+      width: 29%;
+      height: 18%;
+      background: var(--pixel-fur-light);
+    }
+  }
+
+  &--hamster_praise {
+    --pixel-fur: #F0A030;
+    --pixel-fur-dark: #92400E;
+    --pixel-fur-light: #FFF7D6;
+
+    .pixel-avatar__ear,
+    .pixel-avatar__cheek {
+      display: block;
+    }
+
+    .pixel-avatar__ear {
+      width: 26%;
+      height: 26%;
+      top: -15%;
+      border: 6rpx solid var(--pixel-fur-dark);
+      background: #FF9B85;
+    }
+  }
+
+  &--fox {
+    --pixel-fur: #F97316;
+    --pixel-fur-dark: #4A2E00;
+    --pixel-fur-light: #FFFBEB;
+
+    .pixel-avatar__ear {
+      display: block;
+      width: 31%;
+      height: 42%;
+      top: -31%;
+      clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    }
+
+    .pixel-avatar__tail {
+      display: block;
+      width: 42%;
+      height: 36%;
+      right: -31%;
+      bottom: 16%;
+      border-bottom: 18rpx solid var(--pixel-fur-light);
+      transform: rotate(-18deg);
+    }
+  }
+
+  &--dolphin_calm {
+    --pixel-fur: #60A5FA;
+    --pixel-fur-dark: #2563EB;
+    --pixel-fur-light: #CFFAFE;
+
+    .pixel-avatar__dorsal,
+    .pixel-avatar__snout {
+      display: block;
+    }
+
+    .pixel-avatar__arm {
+      height: 13%;
+      clip-path: polygon(0 0, 100% 46%, 0 100%);
+    }
+  }
+
+  &--spider {
+    --pixel-fur: #8B7AAD;
+    --pixel-fur-dark: #23123D;
+    --pixel-fur-light: #DDD6FE;
+    --pixel-accent: #60A5FA;
+
+    .pixel-avatar__extra-limb,
+    .pixel-avatar__spider-eye {
+      display: block;
+    }
+
+    .pixel-avatar__head {
+      width: 62%;
+      border-radius: 26%;
+    }
+
+    .pixel-avatar__body {
+      border-radius: 28%;
+    }
+  }
+
+  &--koala {
+    --pixel-fur: #9CA3AF;
+    --pixel-fur-dark: #2D3142;
+    --pixel-fur-light: #F3F4F6;
+
+    .pixel-avatar__ear {
+      display: block;
+      width: 36%;
+      height: 42%;
+      top: 2%;
+      border: 8rpx solid var(--pixel-fur-dark);
+      background: var(--pixel-fur-light);
+    }
+
+    .pixel-avatar__ear--left { left: -24%; }
+    .pixel-avatar__ear--right { right: -24%; }
+    .pixel-avatar__nose { width: 22%; height: 22%; }
+  }
+
+  &--octopus {
+    --pixel-fur: #A86BFF;
+    --pixel-fur-dark: #4C1D95;
+    --pixel-fur-light: #EDE9FE;
+    --pixel-accent: #60A5FA;
+
+    .pixel-avatar__extra-limb {
+      display: block;
+      width: 10%;
+      height: 25%;
+      bottom: 1%;
+      transform-origin: top center;
+    }
+
+    .pixel-avatar__extra-limb--left-one { left: 13%; transform: rotate(22deg); }
+    .pixel-avatar__extra-limb--left-two { left: 26%; transform: rotate(10deg); }
+    .pixel-avatar__extra-limb--left-three { left: 39%; transform: rotate(2deg); }
+    .pixel-avatar__extra-limb--right-one { right: 13%; transform: rotate(-22deg); }
+    .pixel-avatar__extra-limb--right-two { right: 26%; transform: rotate(-10deg); }
+    .pixel-avatar__extra-limb--right-three { right: 39%; transform: rotate(-2deg); }
+    .pixel-avatar__leg { display: none; }
+    .pixel-avatar__base-shoe { display: none; }
+    .pixel-avatar__body { border-radius: 36% 36% 18% 18%; }
+  }
+
+  &--owl {
+    --pixel-fur: #B38728;
+    --pixel-fur-dark: #4A2E00;
+    --pixel-fur-light: #FFF7D6;
+    --pixel-accent: #FFD55E;
+
+    .pixel-avatar__eye-disc,
+    .pixel-avatar__beak {
+      display: block;
+    }
+
+    .pixel-avatar__head {
+      width: 63%;
+      border-radius: 10% 10% 30% 30%;
+    }
+
+    .pixel-avatar__arm {
+      width: 30%;
+      height: 20%;
+      background: var(--pixel-fur-dark);
+    }
+  }
+
+  &--elephant {
+    --pixel-fur: #9CA3AF;
+    --pixel-fur-dark: #6B7280;
+    --pixel-fur-light: #E2E5ED;
+
+    .pixel-avatar__ear,
+    .pixel-avatar__trunk {
+      display: block;
+    }
+
+    .pixel-avatar__ear {
+      width: 44%;
+      height: 53%;
+      top: 7%;
+      background: var(--pixel-fur-light);
+      border: 6rpx solid var(--pixel-fur-dark);
+    }
+
+    .pixel-avatar__ear--left { left: -32%; }
+    .pixel-avatar__ear--right { right: -32%; }
+  }
+
+  &--turtle {
+    --pixel-fur: #10B981;
+    --pixel-fur-dark: #1E7A4D;
+    --pixel-fur-light: #ECFEFF;
+    --pixel-accent: #ff9b85;
+
+    .pixel-avatar__shell { display: block; }
+    .pixel-avatar__head { width: 48%; height: 25%; }
+    .pixel-avatar__arm { width: 26%; height: 13%; }
+  }
+
+  &--cat {
+    --pixel-fur: #9CA3AF;
+    --pixel-fur-dark: #2D3142;
+    --pixel-fur-light: #F3F4F6;
+    --pixel-accent: #60A5FA;
+
+    .pixel-avatar__ear,
+    .pixel-avatar__tail,
+    .pixel-avatar__whisker {
+      display: block;
+    }
+
+    .pixel-avatar__ear {
+      width: 28%;
+      height: 38%;
+      top: -27%;
+      clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    }
+
+    .pixel-avatar__tail {
+      width: 15%;
+      height: 42%;
+      right: -17%;
+      bottom: 18%;
+      transform: rotate(-12deg);
+    }
+  }
+
+  &__figure {
+    position: absolute;
+    z-index: 2;
+    bottom: 3%;
+    left: 50%;
+    width: 47%;
+    height: 79%;
+    transform: translateX(-50%);
+    animation: pixel-avatar-breathe 3.8s ease-in-out infinite;
+  }
+
+  &__body {
+    position: absolute;
+    z-index: 3;
+    bottom: 20%;
+    left: 28%;
+    width: 44%;
+    height: 40%;
+    border: 5rpx solid var(--pixel-fur-dark);
+    background: var(--pixel-fur);
+    box-shadow: inset 9rpx 0 var(--pixel-fur-light), inset -7rpx 0 var(--pixel-fur-dark);
+  }
+
+  &__head {
+    position: absolute;
+    z-index: 8;
+    top: 4%;
+    left: 50%;
+    width: 56%;
+    height: 35%;
+    border: 5rpx solid var(--pixel-fur-dark);
+    background: var(--pixel-fur);
+    box-shadow: inset 8rpx 0 var(--pixel-fur-light), inset -8rpx 0 var(--pixel-fur-dark);
+    transform: translateX(-50%);
+  }
+
+  &__ear {
+    position: absolute;
+    z-index: -1;
+    display: none;
+    background: var(--pixel-fur);
+
+    &--left { left: -9%; }
+    &--right { right: -9%; }
+  }
+
+  &__eye {
+    position: absolute;
+    z-index: 4;
+    top: 38%;
+    width: 11%;
+    height: 13%;
+    background: #23123D;
+    box-shadow: inset 3rpx 3rpx #FFFFFF;
+
+    &--left { left: 24%; }
+    &--right { right: 24%; }
+  }
+
+  &__eye-disc {
+    position: absolute;
+    z-index: 2;
+    display: none;
+    top: 24%;
+    width: 34%;
+    height: 41%;
+    background: var(--pixel-fur-light);
+
+    &--left { left: 10%; }
+    &--right { right: 10%; }
+  }
+
+  &__spider-eye {
+    position: absolute;
+    display: none;
+    top: 22%;
+    width: 7%;
+    height: 8%;
+    background: #FFFBEB;
+
+    &--left { left: 37%; }
+    &--right { right: 37%; }
+  }
+
+  &__muzzle {
+    position: absolute;
+    z-index: 2;
+    bottom: 13%;
+    left: 32%;
+    width: 36%;
+    height: 24%;
+    background: var(--pixel-fur-light);
+  }
+
+  &__nose {
+    position: absolute;
+    z-index: 5;
+    bottom: 25%;
+    left: 41%;
+    width: 18%;
+    height: 14%;
+    background: var(--pixel-fur-dark);
+  }
+
+  &__cheek {
+    position: absolute;
+    z-index: 4;
+    display: none;
+    bottom: 18%;
+    width: 18%;
+    height: 16%;
+    background: #FF9B85;
+
+    &--left { left: 9%; }
+    &--right { right: 9%; }
+  }
+
+  &__beak {
+    position: absolute;
+    z-index: 6;
+    display: none;
+    bottom: 13%;
+    left: 35%;
+    width: 30%;
+    height: 18%;
+    background: #FFD55E;
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+  }
+
+  &__comb {
+    position: absolute;
+    display: none;
+    top: -31%;
+    width: 21%;
+    height: 34%;
+    background: var(--pixel-accent);
+
+    &--left { left: 22%; height: 25%; top: -24%; }
+    &--middle { left: 40%; }
+    &--right { right: 22%; height: 28%; top: -26%; }
+  }
+
+  &__dorsal {
+    position: absolute;
+    display: none;
+    top: -25%;
+    left: 37%;
+    width: 27%;
+    height: 28%;
+    background: var(--pixel-fur-dark);
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  }
+
+  &__snout {
+    position: absolute;
+    z-index: 7;
+    display: none;
+    right: -28%;
+    bottom: 15%;
+    width: 45%;
+    height: 15%;
+    border-right: 8rpx solid var(--pixel-fur-light);
+    background: var(--pixel-fur);
+  }
+
+  &__trunk {
+    position: absolute;
+    z-index: 7;
+    display: none;
+    left: 45%;
+    width: 19%;
+    background: var(--pixel-fur-dark);
+
+    &--top { top: 56%; height: 48%; }
+    &--bottom { top: 94%; height: 15%; transform: translateX(34%); }
+  }
+
+  &__whisker {
+    position: absolute;
+    z-index: 7;
+    display: none;
+    bottom: 22%;
+    width: 31%;
+    height: 3rpx;
+    background: var(--pixel-fur-light);
+
+    &--left-one { left: -14%; transform: rotate(9deg); }
+    &--left-two { left: -14%; bottom: 13%; transform: rotate(-8deg); }
+    &--right-one { right: -14%; transform: rotate(-9deg); }
+    &--right-two { right: -14%; bottom: 13%; transform: rotate(8deg); }
+  }
+
+  &__arm {
+    position: absolute;
+    z-index: 2;
+    bottom: 31%;
+    width: 18%;
+    height: 28%;
+    border: 4rpx solid var(--pixel-fur-dark);
+    background: var(--pixel-fur);
+
+    &--left { left: 13%; transform: rotate(8deg); }
+    &--right { right: 13%; transform: rotate(-8deg); }
+  }
+
+  &__leg {
+    position: absolute;
+    z-index: 2;
+    bottom: 7%;
+    width: 19%;
+    height: 25%;
+    border: 4rpx solid var(--pixel-fur-dark);
+    background: var(--pixel-fur);
+
+    &--left { left: 27%; }
+    &--right { right: 27%; }
+  }
+
+  &__base-shoe {
+    position: absolute;
+    z-index: 4;
+    bottom: 3%;
+    width: 25%;
+    height: 9%;
+    background: #4C1D95;
+    box-shadow: inset 0 -6rpx #23123D;
+
+    &--left { left: 19%; }
+    &--right { right: 19%; }
+  }
+
+  &__base-top {
+    position: absolute;
+    z-index: 4;
+    bottom: 34%;
+    left: 29%;
+    width: 42%;
+    height: 25%;
+    background: #FFFBEB;
+    box-shadow: inset 8rpx 0 #FFF7D6, inset -8rpx 0 #FDE68A;
+  }
+
+  &__base-top-mark {
+    position: absolute;
+    top: 25%;
+    left: 42%;
+    width: 17%;
+    height: 22%;
+    background: #8b5cf6;
+  }
+
+  &__base-bottom {
+    position: absolute;
+    z-index: 5;
+    bottom: 20%;
+    left: 27%;
+    width: 46%;
+    height: 15%;
+    background: #6B5B8D;
+    box-shadow: inset 0 -7rpx #4C1D95;
+  }
+
+  &__tail,
+  &__plume,
+  &__extra-limb,
+  &__shell {
+    position: absolute;
+    z-index: 1;
+    display: none;
+    border: 4rpx solid var(--pixel-fur-dark);
+    background: var(--pixel-fur);
+  }
+
+  &__plume {
+    right: -2%;
+    bottom: 25%;
+    width: 25%;
+    height: 34%;
+    transform-origin: bottom left;
+
+    &--one { background: #ff9b85; transform: rotate(31deg); }
+    &--two { background: #8b5cf6; transform: rotate(48deg); }
+    &--three { background: #60A5FA; transform: rotate(66deg); }
+  }
+
+  &__extra-limb {
+    width: 33%;
+    height: 7%;
+
+    &--left-one { left: 3%; bottom: 52%; transform: rotate(24deg); }
+    &--left-two { left: -2%; bottom: 41%; transform: rotate(7deg); }
+    &--left-three { left: 1%; bottom: 30%; transform: rotate(-15deg); }
+    &--right-one { right: 3%; bottom: 52%; transform: rotate(-24deg); }
+    &--right-two { right: -2%; bottom: 41%; transform: rotate(-7deg); }
+    &--right-three { right: 1%; bottom: 30%; transform: rotate(15deg); }
+  }
+
+  &__shell {
+    z-index: 1;
+    right: 13%;
+    bottom: 19%;
+    left: 13%;
+    height: 45%;
+    border-width: 9rpx;
+    border-color: #1E7A4D;
+    background:
+      linear-gradient(45deg, transparent 42%, #10B981 43%, #10B981 57%, transparent 58%),
+      #2ECC71;
+  }
+
+  &__equipment {
+    position: absolute;
+    z-index: 10;
+    border: 4rpx solid #4C1D95;
+    background: #8b5cf6;
+    box-shadow: inset 7rpx 0 rgba(255, 255, 255, 0.2), inset -7rpx 0 rgba(26, 15, 58, 0.2);
+
+    &--rare {
+      border-color: #92400E;
+      background: #ff9b85;
+      box-shadow: inset 7rpx 0 rgba(255, 255, 255, 0.28), 0 0 18rpx rgba(255, 155, 133, 0.28);
+    }
+
+    &--top {
+      bottom: 33%;
+      left: 25%;
+      width: 50%;
+      height: 27%;
+    }
+
+    &--bottom {
+      bottom: 19%;
+      left: 24%;
+      width: 52%;
+      height: 16%;
+      background: #7B6A96;
+    }
+
+    &--shoes {
+      bottom: 2%;
+      left: 17%;
+      width: 29%;
+      height: 10%;
+      box-shadow: 76rpx 0 0 -4rpx #8b5cf6, inset 7rpx 0 rgba(255, 255, 255, 0.2);
+    }
+
+    &--accessory {
+      z-index: 11;
+      top: 18%;
+      right: 11%;
+      width: 15%;
+      height: 15%;
+      transform: rotate(45deg);
+    }
+  }
+
+  &__accessory-spark {
+    position: absolute;
+    top: 33%;
+    left: 33%;
+    width: 34%;
+    height: 34%;
+    background: #FFFBEB;
+  }
+
+  &__accessible-copy {
+    position: absolute;
+    width: 1rpx;
+    height: 1rpx;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  @media (max-height: 700px) {
+    &--full {
+      height: 560rpx;
+      min-height: 500rpx;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pixel-avatar__figure {
+      animation: none;
+    }
+  }
+}
+
+@keyframes pixel-avatar-breathe {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-4rpx); }
+}
+
+.pixel-equipment-fallback {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+
+  .pixel-avatar__figure--equipment-only {
+    width: 47%;
+    height: 79%;
+    bottom: 3%;
+    animation: none;
+  }
+
+  &--compact .pixel-avatar__figure--equipment-only {
+    width: 36%;
+    height: 84%;
+    bottom: 1%;
+  }
+}

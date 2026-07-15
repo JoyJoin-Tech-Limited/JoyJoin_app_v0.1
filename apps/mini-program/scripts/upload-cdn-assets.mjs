@@ -39,6 +39,7 @@
  */
 
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
@@ -103,10 +104,30 @@ async function runCommand(cmd, args, options = {}) {
     if (child.stdout) child.stdout.on('data', (d) => { stdout += d; if (DRY_RUN) process.stdout.write(d) })
     if (child.stderr) child.stderr.on('data', (d) => { stderr += d; if (DRY_RUN) process.stderr.write(d) })
     child.on('close', (code) => {
-      if (code !== 0) reject(new Error(`Command failed with exit code ${code}: ${cmd} ${args.join(' ')}\n${stderr}`))
+      if (code !== 0) {
+        const error = new Error(`Command failed with exit code ${code}: ${cmd} ${args.join(' ')}\n${stderr}`)
+        error.exitCode = code
+        reject(error)
+      }
       else resolve(stdout)
     })
   })
+}
+
+async function runTransportCommand(cmd, args, options = {}) {
+  const attempts = 3
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await runCommand(cmd, args, options)
+    } catch (error) {
+      const retryable = error?.exitCode === 255
+      if (!retryable || attempt === attempts) throw error
+      const delayMs = attempt * 5_000
+      console.warn(`   ⚠️ SSH transport closed (attempt ${attempt}/${attempts}); retrying in ${delayMs / 1000}s...`)
+      await new Promise((resolve) => setTimeout(resolve, delayMs))
+    }
+  }
+  throw new Error('SSH transport retry loop exhausted')
 }
 
 // ─── RSYNC BACKEND ───
@@ -117,14 +138,22 @@ async function uploadRsync(files) {
   const remotePath = process.env.CDN_RSYNC_PATH
   const key = process.env.CDN_RSYNC_KEY
 
-  const sshArgs = ['-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null']
-  if (key) sshArgs.push('-i', key)
+  const sshArgs = [
+    '-o', 'StrictHostKeyChecking=no',
+    '-o', 'UserKnownHostsFile=/dev/null',
+    '-o', 'BatchMode=yes',
+    '-o', 'PasswordAuthentication=no',
+    '-o', 'ConnectTimeout=15',
+    '-o', 'ServerAliveInterval=10',
+    '-o', 'ServerAliveCountMax=3',
+  ]
+  if (key) sshArgs.push('-o', 'IdentitiesOnly=yes', '-i', key)
 
   const sshArgsQuoted = sshArgs.map((a) => (a.includes(' ') ? `'${a}'` : a))
 
   // Ensure remote base directory exists
   if (!DRY_RUN) {
-    await runCommand('ssh', [...sshArgs, `${user}@${host}`, `mkdir -p ${remotePath}`])
+    await runTransportCommand('ssh', [...sshArgs, `${user}@${host}`, `mkdir -p ${remotePath}`])
   }
 
   // Full directory mode — rsync whole source dir
@@ -134,13 +163,13 @@ async function uploadRsync(files) {
     if (DRY_RUN) {
       console.log(`   [dry-run] Would rsync: ${src} → ${dest}`)
     } else {
-      await runCommand('rsync', ['-avz', '--delete', '--checksum', '-e', `ssh ${sshArgsQuoted.join(' ')}`, src, dest])
+      await runTransportCommand('rsync', ['-avz', '--delete', '--checksum', '-e', `ssh ${sshArgsQuoted.join(' ')}`, src, dest])
     }
     return
   }
 
   // Manifest mode — stage all files in a temp dir, then rsync once
-  const stagingDir = fs.mkdtempSync('/tmp/cdn-upload-')
+  const stagingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdn-upload-'))
   try {
     let stagedCount = 0
 
@@ -176,11 +205,11 @@ async function uploadRsync(files) {
       console.log(`   [dry-run] Would rsync: ${stagedCount} staged files → ${dest}`)
     } else {
       console.log(`   🚀 Syncing ${stagedCount} files in one batch...`)
-      await runCommand('rsync', ['-avz', '--checksum', '-e', `ssh ${sshArgsQuoted.join(' ')}`, src, dest])
+      await runTransportCommand('rsync', ['-avz', '--checksum', '-e', `ssh ${sshArgsQuoted.join(' ')}`, src, dest])
 
       // Ensure nginx can read all uploaded assets regardless of the umask on the remote host.
       console.log(`   🔧 Fixing permissions on ${remotePath}...`)
-      await runCommand('ssh', [
+      await runTransportCommand('ssh', [
         ...sshArgs,
         `${user}@${host}`,
         `chmod 755 ${remotePath} && find ${remotePath}/assets -type f -exec chmod 644 {} \\; && find ${remotePath}/assets -type d -exec chmod 755 {} \\;`,
@@ -350,7 +379,7 @@ async function main() {
 
     logStep(`Backend: ${BACKEND}  |  Files: ${files.length}  |  Total size: ${formatSize(totalSize)}`)
     if (missingCount > 0) {
-      console.warn(`   ⚠️ ${missingCount} source files are missing in both dist/ and src/`)
+      throw new Error(`${missingCount} manifest source file(s) are missing in both dist/ and src/`)
     }
   }
 

@@ -116,7 +116,13 @@ function makeUser(profileRedesignEnabled: boolean) {
     experiencePoints: 0,
     profileEssentialComplete: false,
     profileExtendedComplete: false,
-    features: { profileRedesignEnabled, alangEnabled: true },
+    features: {
+      profileRedesignEnabled,
+      alangEnabled: true,
+      profilePixelAvatarEnabled: true,
+      equipmentRewardsEnabled: true,
+      personalStoryEnabled: true,
+    },
   }
 }
 
@@ -127,6 +133,34 @@ describe('Profile approved V4 layout', () => {
     state.enabledByKey.clear()
     state.storyState = { data: [] }
     state.storyEnabled = false
+    state.queryStates.set('mini-program/equipment/me', {
+      data: {
+        archetypeId: 'corgi',
+        outfit: {
+          topItemId: 'top-1',
+          bottomItemId: 'bottom-1',
+          shoesItemId: 'shoes-1',
+          accessoryItemId: 'accessory-1',
+          version: 1,
+        },
+        inventory: [
+          ['top-1', 'top', '像素夹克'],
+          ['bottom-1', 'bottom', '像素长裤'],
+          ['shoes-1', 'shoes', '像素球鞋'],
+          ['accessory-1', 'accessory', '像素徽章'],
+        ].map(([id, slot, name]) => ({
+          id: `inventory-${id}`,
+          itemId: id,
+          acquiredAt: '2026-07-15T00:00:00.000Z',
+          sourceType: 'initial',
+          item: { id, slug: id, slot, name, rarity: 'common', assetKey: id },
+        })),
+        recentItems: [],
+        wallet: { fragmentBalance: 0, pityMisses: 0, pityTarget: 4 },
+        pendingEntitlements: [],
+        rewardsEnabled: true,
+      },
+    })
     state.navigateTo.mockReset()
     state.switchTab.mockReset()
   })
@@ -139,21 +173,27 @@ describe('Profile approved V4 layout', () => {
     const { getByTestId, getByText } = render(<ProfilePage />)
 
     expect(getByTestId('profile-v4')).toBeTruthy()
-    expect(getByText('0 段故事收藏 · 第一章还在等你出发')).toBeTruthy()
+    expect(getByText('只根据你真实参加过的相遇，一章一章继续写下去。')).toBeTruthy()
     expect(getByText('当前装备')).toBeTruthy()
-    expect(getByText('0 件')).toBeTruthy()
+    expect(getByText('4 件')).toBeTruthy()
     expect(getByText('更多服务')).toBeTruthy()
+  })
+
+  it('does not layer the code placeholder behind an available pixel character', () => {
+    const { container } = render(<ProfilePage />)
+
+    expect(container.querySelector('.profile-page__partner-pixel-layer--base')).toBeTruthy()
+    expect(container.querySelector('.pixel-avatar')).toBeNull()
   })
 
   it('keeps V4 visible when one optional request fails', () => {
     state.queryStates.set('mini-program/gamification', { isError: true })
-    state.storyState = { isError: true }
 
     const { getByTestId, getByText, queryByText } = render(<ProfilePage />)
 
     expect(getByTestId('profile-v4')).toBeTruthy()
     expect(getByText('成长记录稍后会自动刷新')).toBeTruthy()
-    expect(getByText('局部加载失败 · 点按仍可进入')).toBeTruthy()
+    expect(getByText('不使用姓名、定位或未发生的情节')).toBeTruthy()
     expect(queryByText('个人资料简洁模式')).toBeNull()
   })
 
@@ -165,7 +205,7 @@ describe('Profile approved V4 layout', () => {
     expect(queryByTestId('profile-v4')).toBeNull()
     expect(getByLabelText('个人资料简洁模式')).toBeTruthy()
     expect(state.enabledByKey.get('mini-program/gamification')).toBe(false)
-    expect(state.storyEnabled).toBe(false)
+    expect(state.enabledByKey.get('mini-program/equipment/me')).toBe(false)
   })
 
   it('keeps partner/story entries actionable and services after growth assets', () => {
@@ -180,6 +220,21 @@ describe('Profile approved V4 layout', () => {
 
     expect(state.navigateTo).toHaveBeenCalledTimes(2)
     expect(growthArchive.compareDocumentPosition(services) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('hides the personal story surface while its rollout flag is disabled', () => {
+    state.user = {
+      ...makeUser(true),
+      features: {
+        ...makeUser(true).features,
+        personalStoryEnabled: false,
+      },
+    }
+
+    const { queryByTestId } = render(<ProfilePage />)
+
+    expect(queryByTestId('profile-story-entry')).toBeNull()
+    expect(state.navigateTo).not.toHaveBeenCalled()
   })
 
   it('places settings in the top navigation, outside the partner card', () => {

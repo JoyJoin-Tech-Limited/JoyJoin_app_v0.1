@@ -40,7 +40,8 @@ export function isProfileV17Enabled(
 
 export interface ProfileV17DataPolicy {
   gamificationEnabled: boolean
-  storyArchivesEnabled: boolean
+  equipmentEnabled: boolean
+  personalStoryEnabled: boolean
 }
 
 export function getProfilePersonalityActionLabel(archetype?: string | null): string {
@@ -54,13 +55,15 @@ export function getProfilePersonalityActionLabel(archetype?: string | null): str
  */
 export function getProfileV17DataPolicy(
   user: Pick<AuthUser, 'features'> | null | undefined,
-  alangEntryAvailable: boolean,
 ): ProfileV17DataPolicy {
   const profileV17Enabled = isProfileV17Enabled(user)
 
   return {
     gamificationEnabled: profileV17Enabled,
-    storyArchivesEnabled: profileV17Enabled && alangEntryAvailable,
+    equipmentEnabled: profileV17Enabled
+      && user?.features?.profilePixelAvatarEnabled === true,
+    personalStoryEnabled: profileV17Enabled
+      && user?.features?.personalStoryEnabled === true,
   }
 }
 

@@ -125,6 +125,10 @@ export default function AlangResultPage() {
   }
 
   const handleViewStory = () => {
+    if (user?.features?.personalStoryEnabled) {
+      Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.personalStory })
+      return
+    }
     if (archiveId) {
       Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangStoryDetail}?archiveId=${archiveId}` })
     }
@@ -195,17 +199,25 @@ export default function AlangResultPage() {
     return (
       <View className='alang-result__completed'>
         <Text className='alang-result__completed-title'>故事已收录</Text>
-        <Text className='alang-result__completed-sub'>你可以在「我的故事」中回看这段经历</Text>
+        <Text className='alang-result__completed-sub'>
+          {user?.features?.personalStoryEnabled
+            ? '这次真实经历已保存；进入「我的故事」后，可由你手动更新下一章'
+            : '这次经历已保存，可以随时回看已收录故事'}
+        </Text>
         <View className='alang-result__completed-actions'>
           <View
             className='alang-result__completed-btn'
             onClick={archiveId ? handleViewStory : handleRefreshArchive}
             hoverClass='alang-result__completed-btn--pressed'
             role='button'
-            aria-label={archiveId ? '查看已收录故事' : '同步故事记录'}
+            aria-label={archiveId
+              ? user?.features?.personalStoryEnabled ? '进入我的故事' : '查看已收录故事'
+              : '同步故事记录'}
           >
             <Text className='alang-result__completed-btn-text'>
-              {archiveId ? '查看故事' : '同步故事记录'}
+              {archiveId
+                ? user?.features?.personalStoryEnabled ? '进入我的故事' : '查看故事'
+                : '同步故事记录'}
             </Text>
           </View>
           <View

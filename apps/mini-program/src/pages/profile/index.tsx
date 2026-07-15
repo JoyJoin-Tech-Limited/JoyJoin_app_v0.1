@@ -11,6 +11,7 @@ import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useRef, useState } from 'react'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
+import PixelAvatarFallback from '../../components/profile/PixelAvatarFallback'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
@@ -23,13 +24,16 @@ import {
   isUnauthorizedApiError,
 } from '../../lib/api/authSession'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
-import { shouldShowAlangEntry } from '../../lib/alang/alangAccess'
 import { useAlangAssetSource } from '../../lib/alang/alangAssets'
-import { useStoryArchives } from '../../lib/alang/useAlangMission'
 import { queryClient } from '../../lib/api/queryClient'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
+import { fetchMyEquipment, type EquipmentItem, type EquipmentOutfit } from '../../lib/profile/equipmentApi'
 import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
+import {
+  getPixelAvatarBaseUrl,
+  getPixelEquipmentLayerUrl,
+} from '../../lib/profile/pixelAvatarAssets'
 import { haptics } from '../../lib/utils/haptics'
 import { logError, logInfo } from '../../lib/utils/logger'
 import './index.scss'
@@ -62,13 +66,67 @@ function ProfilePartnerVisual({
   archetype,
   archetypeName,
   displayName,
+  pixelEnabled,
+  outfit,
+  itemsById,
 }: {
   archetype: string | null
   archetypeName: string | null
   displayName: string
+  pixelEnabled: boolean
+  outfit?: EquipmentOutfit
+  itemsById: Map<string, EquipmentItem>
 }) {
   const asset = archetype ? ARCHETYPE_ASSET_MAP[archetype] : undefined
   const [sourceKind, setSourceKind] = useState<'webp' | 'png' | 'fallback'>('webp')
+  const [pixelBaseFailed, setPixelBaseFailed] = useState(false)
+  const [failedPixelLayers, setFailedPixelLayers] = useState<Set<string>>(new Set())
+
+  if (pixelEnabled && archetype && outfit && !pixelBaseFailed) {
+    const equippedItemIds = [
+      outfit.bottomItemId,
+      outfit.shoesItemId,
+      outfit.topItemId,
+      outfit.accessoryItemId,
+    ].filter((itemId): itemId is string => !!itemId)
+
+    return (
+      <View className='profile-page__partner-pixel' role='img' aria-label={`${archetypeName ?? '我的'}像素伙伴形象`}>
+        <Image
+          className='profile-page__partner-pixel-layer profile-page__partner-pixel-layer--base'
+          src={getPixelAvatarBaseUrl(archetype)}
+          mode='aspectFit'
+          lazyLoad={false}
+          onError={() => setPixelBaseFailed(true)}
+        />
+        {equippedItemIds.map((itemId) => {
+          const item = itemsById.get(itemId)
+          const layerUrl = item ? getPixelEquipmentLayerUrl(item.assetKey, archetype) : null
+          if (!item || failedPixelLayers.has(itemId) || !layerUrl) return null
+          return (
+            <Image
+              key={itemId}
+              className={`profile-page__partner-pixel-layer profile-page__partner-pixel-layer--${item.slot}`}
+              src={layerUrl}
+              mode='aspectFit'
+              lazyLoad={false}
+              onError={() => setFailedPixelLayers((current) => new Set(current).add(itemId))}
+            />
+          )
+        })}
+      </View>
+    )
+  }
+
+  if (pixelEnabled && archetype && outfit && pixelBaseFailed) {
+    return (
+      <PixelAvatarFallback
+        archetypeId={archetype}
+        variant='compact'
+        className='profile-page__partner-pixel-code'
+      />
+    )
+  }
 
   if (!asset || sourceKind === 'fallback') {
     return (
@@ -111,6 +169,7 @@ function ProfileStoryArtwork() {
       {artwork.usingFallback && (
         <Text className='profile-page__story-placeholder'>场景示意</Text>
       )}
+      <View className='profile-page__story-bookmark'><Text>PRIVATE STORY</Text></View>
     </>
   )
 }
@@ -119,10 +178,9 @@ export default function ProfilePage() {
   const { authLoading, authUser, renderGate } = useMiniPageGate()
   const logoutLockRef = useRef(false)
   const profileV17Enabled = isProfileV17Enabled(authUser)
-  const profileV17DataPolicy = getProfileV17DataPolicy(
-    authUser,
-    shouldShowAlangEntry(authUser),
-  )
+  const profileV17DataPolicy = getProfileV17DataPolicy(authUser)
+  const pixelAvatarEnabled = profileV17Enabled
+    && authUser?.features?.profilePixelAvatarEnabled === true
 
   useCustomTabBarSync({
     enabled: !authLoading,
@@ -141,8 +199,8 @@ export default function ProfilePage() {
     if (profileV17DataPolicy.gamificationEnabled) {
       void queryClient.invalidateQueries({ queryKey: ['mini-program', 'gamification'] })
     }
-    if (profileV17DataPolicy.storyArchivesEnabled) {
-      void queryClient.invalidateQueries({ queryKey: ['alang', 'archives'] })
+    if (profileV17DataPolicy.equipmentEnabled) {
+      void queryClient.invalidateQueries({ queryKey: ['mini-program', 'equipment', 'me'] })
     }
   })
 
@@ -171,11 +229,12 @@ export default function ProfilePage() {
     enabled: !authLoading && !!authUser && profileV17DataPolicy.gamificationEnabled,
     staleTime: 30_000,
   })
-
-  const showAlangStoryEntry = profileV17DataPolicy.storyArchivesEnabled
-  const storyArchivesQuery = useStoryArchives(
-    !authLoading && !!authUser && showAlangStoryEntry,
-  )
+  const equipmentQuery = useQuery({
+    queryKey: ['mini-program', 'equipment', 'me'],
+    queryFn: fetchMyEquipment,
+    enabled: !authLoading && !!authUser && profileV17DataPolicy.equipmentEnabled,
+    staleTime: 30_000,
+  })
 
   const joinedEventsCount = profileShellQuery.data?.stats.eventsJoined ?? joinedEvents.length
   const connectionsCount = profileShellQuery.data?.stats.connectionsCount
@@ -243,8 +302,12 @@ export default function ProfilePage() {
     ? `Lv.${gamificationQuery.data.currentLevel} ${gamificationQuery.data.levelConfig?.nameCn ?? ''}`.trim()
     : '成长进度'
   const visibleGrowthProgress = gamificationQuery.data ? growth.progress : 0
-  const storyCount = storyArchivesQuery.data?.length ?? 0
-  const latestStory = storyArchivesQuery.data?.[0]
+  const equipmentInventory = equipmentQuery.data?.inventory ?? []
+  const equipmentItemsById = new Map(equipmentInventory.map((entry) => [entry.item.id, entry.item]))
+  const outfit = equipmentQuery.data?.outfit
+  const equippedCount = outfit
+    ? [outfit.topItemId, outfit.bottomItemId, outfit.shoesItemId, outfit.accessoryItemId].filter(Boolean).length
+    : 0
   const personalityActionLabel = getProfilePersonalityActionLabel(archetype)
 
   const handleOpenPersonalityType = () => {
@@ -335,6 +398,9 @@ export default function ProfilePage() {
               archetype={archetype}
               archetypeName={archetypeName}
               displayName={displayName}
+              pixelEnabled={pixelAvatarEnabled}
+              outfit={outfit}
+              itemsById={equipmentItemsById}
             />
           </View>
 
@@ -366,30 +432,44 @@ export default function ProfilePage() {
             </Text>
           </View>
 
-          <View
-            className='profile-page__partner-entry'
-            hoverClass='profile-page__partner-entry--pressed'
-            onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.editProfile }) }}
-            role='button'
-            aria-label='进入我的伙伴与装备'
-            data-testid='profile-partner-equipment-entry'
-          >
-            <View className='profile-page__equipment-preview' aria-label='当前装备，0 件，4 个空槽'>
-              <Text className='profile-page__equipment-label'>当前装备</Text>
-              <View className='profile-page__equipment-slots'>
-                {[0, 1, 2, 3].map((slot) => (
-                  <View key={slot} className='profile-page__equipment-slot' aria-label={`空装备槽 ${slot + 1}`}>
-                    <View className='profile-page__equipment-slot-mark' />
-                  </View>
-                ))}
+          {pixelAvatarEnabled && (
+            <View
+              className='profile-page__partner-entry'
+              hoverClass='profile-page__partner-entry--pressed'
+              onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.myImage }) }}
+              role='button'
+              aria-label='进入我的形象与装备'
+              data-testid='profile-partner-equipment-entry'
+            >
+              <View className='profile-page__equipment-preview' aria-label={`当前装备 ${equippedCount} 件`}>
+                <Text className='profile-page__equipment-label'>当前装备</Text>
+                <View className='profile-page__equipment-slots'>
+                  {(['top', 'bottom', 'shoes', 'accessory'] as const).map((slot) => {
+                    const itemId = outfit?.[`${slot}ItemId`]
+                    const item = itemId ? equipmentItemsById.get(itemId) : undefined
+                    return (
+                      <View
+                        key={slot}
+                        className={`profile-page__equipment-slot${item ? ' profile-page__equipment-slot--filled' : ''}`}
+                        aria-label={item ? item.name : `空${slot}装备槽`}
+                      >
+                        {item
+                          ? <Text className='profile-page__equipment-slot-glyph'>{item.name.slice(0, 1)}</Text>
+                          : <View className='profile-page__equipment-slot-mark' />}
+                      </View>
+                    )
+                  })}
+                </View>
+              </View>
+              <View className='profile-page__partner-entry-action'>
+                <Text className='profile-page__partner-entry-count'>
+                  {equipmentQuery.isLoading ? '—' : `${equipmentInventory.length} 件`}
+                </Text>
+                <Text className='profile-page__partner-entry-action-text'>我的形象</Text>
+                <View className='profile-page__partner-entry-chevron' />
               </View>
             </View>
-            <View className='profile-page__partner-entry-action'>
-              <Text className='profile-page__partner-entry-count'>0 件</Text>
-              <Text className='profile-page__partner-entry-action-text'>我的伙伴与装备</Text>
-              <View className='profile-page__partner-entry-chevron' />
-            </View>
-          </View>
+          )}
           </View>
         ) : (
           <View
@@ -462,10 +542,10 @@ export default function ProfilePage() {
             hoverClass='profile-page__stat--pressed'
             onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.editProfile }) }}
             role='button'
-            aria-label={`形象完成度 ${profileCompletion}%，去完善资料`}
+            aria-label={`资料完成度 ${profileCompletion}%，去完善资料`}
           >
             <Text className='profile-page__stat-value'>{profileCompletion}%</Text>
-            <Text className='profile-page__stat-label'>形象完成度</Text>
+            <Text className='profile-page__stat-label'>资料完成度</Text>
             <Text className='profile-page__stat-caption'>去完善</Text>
             <View className='profile-page__stat-progress'>
               <View
@@ -477,24 +557,24 @@ export default function ProfilePage() {
           </Card>
         </View>
 
-        {profileV17Enabled && (
+        {profileV17DataPolicy.personalStoryEnabled && (
           <View className='profile-page__archive' data-testid='profile-growth-archive'>
             <View className='profile-page__archive-heading'>
               <View className='profile-page__archive-title-wrap'>
                 <Text className='profile-page__archive-spark'>✦</Text>
-                <Text className='profile-page__archive-title'>成长档案</Text>
+                <Text className='profile-page__archive-title'>我的故事</Text>
               </View>
               <View
                 className='profile-page__archive-link'
                 hoverClass='profile-page__archive-link--pressed'
                 onClick={() => {
                   haptics('light')
-                  void Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangEvent}?view=stories` })
+                  void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.personalStory })
                 }}
                 role='button'
-                aria-label='查看全部故事档案'
+                aria-label='进入仅本人可见的故事'
               >
-                <Text className='profile-page__archive-link-text'>全部档案</Text>
+                <Text className='profile-page__archive-link-text'>仅自己可见</Text>
                 <View className='profile-page__archive-link-chevron' />
               </View>
             </View>
@@ -503,32 +583,20 @@ export default function ProfilePage() {
               hoverClass='profile-page__story-card--pressed'
               onClick={() => {
                 haptics('light')
-                void Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangEvent}?view=stories` })
+                void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.personalStory })
               }}
               role='button'
               data-testid='profile-story-entry'
-              aria-label={storyArchivesQuery.isLoading
-                ? '我的故事正在加载'
-                : `我的故事，共 ${storyCount} 段已收录故事`}
+              aria-label='进入我的连续故事'
             >
               <ProfileStoryArtwork />
               <View className='profile-page__story-content'>
                 <Text className='profile-page__story-title'>我的故事</Text>
                 <Text className='profile-page__story-summary'>
-                  {storyArchivesQuery.isLoading
-                    ? '正在整理走过的城市章节…'
-                    : storyArchivesQuery.isError
-                      ? '故事档案稍后会自动刷新'
-                      : storyCount > 0
-                        ? `${storyCount} 段故事收藏 · 最近：${latestStory?.title ?? '城市相遇'}`
-                        : '0 段故事收藏 · 第一章还在等你出发'}
+                  只根据你真实参加过的相遇，一章一章继续写下去。
                 </Text>
                 <Text className='profile-page__story-status'>
-                  {storyArchivesQuery.isError
-                    ? '局部加载失败 · 点按仍可进入'
-                    : storyCount > 0
-                      ? '继续中的故事：等待下一次相遇'
-                      : '继续中的故事：暂时没有'}
+                  不使用姓名、定位或未发生的情节
                 </Text>
                 <Text className='profile-page__story-cta'>进入我的故事</Text>
                 <View className='profile-page__story-action'>
