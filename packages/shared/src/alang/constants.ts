@@ -5,7 +5,7 @@ export const ALANG_GPS_INTERVAL_MS = 3000;
 export const ALANG_GPS_DESIRED_ACCURACY = 10;
 export const ALANG_ARRIVAL_RADIUS_METERS = 5;
 export const ALANG_ARRIVAL_MIN_STABLE_COUNT = 3;
-export const ALANG_DEFAULT_SEARCH_RADIUS_METERS = 100;
+export const ALANG_DEFAULT_SEARCH_RADIUS_METERS = 300;
 
 export const ALANG_HAPTIC_LIGHT = "light" as const;
 export const ALANG_HAPTIC_MEDIUM = "medium" as const;

@@ -6,6 +6,7 @@ import {
   ALANG_DEFAULT_SEARCH_RADIUS_METERS,
 } from '@shared/alang/constants'
 import { useAlangGps } from '../../../lib/alang/useAlangGps'
+import { callDebugMockArrival } from '../../../lib/alang/api'
 import {
   useAlangMissionDetail,
   useResetAlangMission,
@@ -42,10 +43,12 @@ export default function AlangSearchPage() {
   const [permissionDenied, setPermissionDenied] = useState(false)
   const [locationError, setLocationError] = useState<string | null>(null)
   const [mapError, setMapError] = useState(false)
+  const [isMockingFound, setIsMockingFound] = useState(false)
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const recoveryNavigationKeyRef = useRef('')
   const reconfigureActionRef = useRef(false)
+  const mockFoundActionRef = useRef(false)
 
   const restartLocation = useCallback(() => {
     if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
@@ -233,6 +236,44 @@ export default function AlangSearchPage() {
       reconfigureActionRef.current = false
     }
   }, [canUseDebugTools, resetMutation, slug])
+
+  const handleMockFound = useCallback(async () => {
+    if (!canUseDebugTools || !slug || mockFoundActionRef.current || isMockingFound) return
+    mockFoundActionRef.current = true
+    try {
+      const modal = await Taro.showModal({
+        title: '模拟找到阿浪',
+        content: '仅用于内部测试。将模拟进入阿浪 5 米范围，是否继续？',
+        confirmText: '继续',
+        cancelText: '取消',
+        confirmColor: BRAND_COLORS.primary,
+      })
+      if (!modal.confirm) return
+
+      setIsMockingFound(true)
+      const result = await callDebugMockArrival(slug)
+      if (!result.arrived || !result.nodeId) {
+        Taro.showToast({ title: '模拟位置仍在确认，请再试一次', icon: 'none' })
+        return
+      }
+
+      syncMissionProgress(slug, {
+        stage: result.stage,
+        currentNodeId: result.nodeId,
+      })
+      haptics('success')
+      setFound(true)
+      // The synchronous cache update above is the single navigation trigger.
+      // The stage-recovery effect observes it and redirects exactly once; a
+      // second imperative redirect here races the real Query Cache on device.
+      await refetch()
+    } catch {
+      Taro.showToast({ title: '模拟找到没有成功，请稍后再试', icon: 'none' })
+    } finally {
+      mockFoundActionRef.current = false
+      setIsMockingFound(false)
+    }
+  }, [canUseDebugTools, isMockingFound, refetch, slug, syncMissionProgress])
 
   useEffect(() => {
     if (!found || !gpsNodeId) return
@@ -496,6 +537,23 @@ export default function AlangSearchPage() {
           <Text className='alang-search__primary-action-text'>{primaryActionLabel}</Text>
         </View>
         <Text className='alang-search__after-note'>在 {ALANG_ARRIVAL_RADIUS_METERS} 米范围内稳定停留后，故事会自动继续。</Text>
+        {canUseDebugTools && (
+          <View className='alang-search__quick-test' data-testid='alang-search-quick-test'>
+            <View className='alang-search__quick-test-heading'>
+              <Text className='alang-search__quick-test-title'>内部测试</Text>
+              <Text className='alang-search__quick-test-copy'>无需步行，不会修改手机系统定位</Text>
+            </View>
+            <View
+              className={`alang-search__quick-test-action${isMockingFound ? ' alang-search__quick-test-action--disabled' : ''}`}
+              onClick={() => { void handleMockFound() }}
+              role='button'
+              aria-label={isMockingFound ? '正在模拟找到阿浪' : '模拟找到阿浪'}
+              aria-disabled={isMockingFound}
+            >
+              <Text>{isMockingFound ? '正在模拟…' : '模拟找到阿浪'}</Text>
+            </View>
+          </View>
+        )}
       </View>
 
       <View className='alang-search__map-section'>
