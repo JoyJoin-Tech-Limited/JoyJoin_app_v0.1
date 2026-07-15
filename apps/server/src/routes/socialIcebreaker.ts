@@ -74,6 +74,7 @@ import {
   invalidatePreGenerationForSession,
 } from '../lib/socialIcebreakerStore';
 import { getSocialIcebreakerAccess } from '../lib/socialIcebreakerAccess';
+import { sendApiError } from '../lib/errorResponse';
 import { buildMomentCardPayload } from '../lib/momentCardPayload';
 import { renderMomentCardToPng } from '../lib/momentCardRenderer';
 import { curateMedals } from '../lib/medalCuration';
@@ -286,7 +287,20 @@ router.post('/start', async (req: any, res) => {
     return res.status(400).json({ error: 'sessionId is required' });
   }
 
-  const access = await getSocialIcebreakerAccess(sessionId, userId);
+  let access: Awaited<ReturnType<typeof getSocialIcebreakerAccess>>;
+  try {
+    access = await getSocialIcebreakerAccess(sessionId, userId);
+  } catch (accessErr) {
+    // A failing access check must still produce a response — an uncaught
+    // throw here becomes an unhandled rejection that hangs the request until
+    // the client times out and misreports it as a network problem.
+    logger.error('[SocialIcebreaker] /start access check failed', {
+      sessionId,
+      userId,
+      error: accessErr instanceof Error ? accessErr.message : String(accessErr),
+    });
+    return sendApiError(res, 500, 'Internal error', 'START_FAILED');
+  }
   if (!access.allowed) {
     logger.warn('[SocialIcebreaker] /start access denied', {
       sessionId,
@@ -502,12 +516,22 @@ router.post('/start', async (req: any, res) => {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
       });
-      throw error;
+      // Return a real 500 instead of rethrowing: an uncaught async throw hangs
+      // the request until the client times out and shows a misleading
+      // "network" toast for what is actually a server-side failure.
+      return sendApiError(res, 500, 'Internal error', 'START_FAILED');
     }
 
     const concurrent = await getSessionByIcebreakerSessionId(sessionId);
-    if (!concurrent || concurrent.expired) {
-      throw error;
+    if (!concurrent) {
+      logger.error('Unique constraint on session create but no concurrent session found', {
+        sessionId,
+        userId,
+      });
+      return sendApiError(res, 500, 'Internal error', 'START_FAILED');
+    }
+    if (concurrent.expired) {
+      return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
     }
 
     const concurrentParticipant = await getParticipant(concurrent.socialSessionId, userId);

@@ -1458,7 +1458,9 @@ export function registerUserEventPoolRoutes(app: Express): void {
             profileImageUrl: users.profileImageUrl,
             wechatAvatarUrl: users.wechatAvatarUrl,
             isTestBot: users.isTestBot,
-            archetype: users.archetype,
+            // V4 users + matching-test bots only populate primary_archetype;
+            // legacy rows only have archetype (nameCn). Coalesce so both work.
+            archetype: sql<string | null>`coalesce(${users.primaryArchetype}, ${users.archetype})`,
             topInterests: users.interestsRankedTop3,
             birthdate: users.birthdate,
             // UPDATED: Use 3-tier industry classification
